@@ -154,6 +154,8 @@ sub DELETE
 
 #############################################################################
 # See if an attribute/key exists in the entry (could still be undefined).
+# The exists() (lowercase) is a kludge, kept for backward compatibility.
+# Please use the EXISTS method (or just exists ... instead).
 #
 sub EXISTS
 {
@@ -161,6 +163,14 @@ sub EXISTS
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if defined($self->{"_${attr}_deleted_"});
+
+  return exists $self->{$attr};
+}
+
+
+sub exists
+{
+  my ($self, $attr) = @_;
 
   return exists $self->{$attr};
 }
@@ -552,6 +562,11 @@ sub setValue
 
   $self->{$attr} = [ @vals ];
   $self->{"_${attr}_modified_"} = 1;
+  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
+    {
+      push(@{$self->{"_oc_order_"}}, $attr);
+      $self->{"_oc_numattr_"}++;
+    }
 
   return 1;
 }
@@ -690,21 +705,6 @@ sub size
   return 0 unless defined($self->{$attr});
 
   return scalar(@{$self->{$attr}});
-}
-
-
-#############################################################################
-#
-# Return TRUE if the attribute name is in the LDAP entry.
-#
-sub exists
-{
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
-
-  return 0 unless (defined($attr) && ($attr ne ""));
-  return 0 unless defined($self->{$attr});
-
-  return 1;
 }
 
 
