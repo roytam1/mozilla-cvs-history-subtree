@@ -996,13 +996,12 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       // compatibility, this should spit out an message on the JS
       // console.
 
-      nsCOMPtr<nsISupports> native;
       wrapper->GetNative(getter_AddRefs(native));
 
       nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
       nsCOMPtr<nsIDOMWindow> content;
 
-      nsresult rv = window->GetContent(getter_AddRefs(content));
+      rv = window->GetContent(getter_AddRefs(content));
       NS_ENSURE_SUCCESS(rv, rv);
 
       return WrapNative(cx, obj, content, NS_GET_IID(nsISupports), vp);
@@ -1092,7 +1091,6 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                            ::JS_GetStringChars(jsstr)),
                        ::JS_GetStringLength(jsstr));
 
-  nsIScriptContext *script_cx = (nsIScriptContext *)::JS_GetContextPrivate(cx);
 
 
 
@@ -1100,6 +1098,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 #if 0 // Do we really need to do this???
 
 
+  nsIScriptContext *script_cx = (nsIScriptContext *)::JS_GetContextPrivate(cx);
 
   nsCOMPtr<nsIScriptContext> my_context;
   nsJSUtils::nsGetStaticScriptContext(cx, obj,
@@ -1831,15 +1830,15 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
     if (!result) {
       nsCOMPtr<nsIContent> content(do_QueryInterface(native));
-      nsCOMPtr<nsIDOMHTMLFormElement> form(do_QueryInterface(native));
+      nsCOMPtr<nsIDOMHTMLFormElement> form_element(do_QueryInterface(native));
 
       nsCOMPtr<nsIDocument> doc;
       content->GetDocument(*getter_AddRefs(doc));
 
       nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(doc));
 
-      if (html_doc && form) {
-        html_doc->ResolveName(name, form, getter_AddRefs(result));
+      if (html_doc && form_element) {
+        html_doc->ResolveName(name, form_element, getter_AddRefs(result));
       }
     }
 
