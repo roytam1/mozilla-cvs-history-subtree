@@ -1,1 +1,0 @@
-content,profile,url,resource://app/chrome/content/sample/

@@ -4,13 +4,13 @@
          xmlns:chrome="http://www.mozilla.org/rdf/chrome#">
 
   <RDF:Seq about="urn:mozilla:package:root">
-    <RDF:li resource="urn:mozilla:package:sample"/>
+    <RDF:li resource="urn:mozilla:package:simple"/>
   </RDF:Seq>
 
-  <RDF:Description about="urn:mozilla:package:sample"
-        chrome:displayName="Sample XUL App"
+  <RDF:Description about="urn:mozilla:package:simple"
+        chrome:displayName="Simple App"
         chrome:author="Sparky"
-        chrome:name="sample">
+        chrome:name="simple">
   </RDF:Description>
 
 </RDF:RDF> 
