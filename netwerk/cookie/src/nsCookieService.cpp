@@ -1351,8 +1351,8 @@ static inline PRBool istokenseparator (char c) { return isvalueseparator(c) || c
 PRBool
 nsCookieService::GetTokenValue(nsASingleFragmentCString::const_char_iterator &aIter,
                                nsASingleFragmentCString::const_char_iterator &aEndIter,
-                               nsDependentSingleFragmentCSubstring           &aTokenString,
-                               nsDependentSingleFragmentCSubstring           &aTokenValue,
+                               nsDependentCSubstring                         &aTokenString,
+                               nsDependentCSubstring                         &aTokenValue,
                                PRBool                                        &aEqualsFound)
 {
   nsASingleFragmentCString::const_char_iterator start, lastSpace;
@@ -1450,8 +1450,8 @@ nsCookieService::ParseAttributes(nsDependentCString &aCookieHeader,
 
   aCookieAttributes.isSecure = PR_FALSE;
 
-  nsDependentSingleFragmentCSubstring tokenString(cookieStart, cookieStart);
-  nsDependentSingleFragmentCSubstring tokenValue (cookieStart, cookieStart);
+  nsDependentCSubstring tokenString(cookieStart, cookieStart);
+  nsDependentCSubstring tokenValue (cookieStart, cookieStart);
   PRBool newCookie, equalsFound;
 
   // extract cookie <NAME> & <VALUE> (first attribute), and copy the strings.
