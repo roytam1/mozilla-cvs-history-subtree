@@ -100,7 +100,10 @@ AddrImportField		extraUserFields[kExtraUserFields] = {
 CWAB::CWAB(nsIFileSpec *file)
 {
     // Here we load the WAB Object and initialize it
-    m_bInitialized = PR_FALSE;
+    m_pUniBuff = NULL;
+	m_uniBuffLen = 0;
+
+	m_bInitialized = PR_FALSE;
 	m_lpAdrBook = NULL;
 	m_lpWABObject = NULL;
 	m_hinstWAB = NULL;
@@ -168,6 +171,9 @@ CWAB::CWAB(nsIFileSpec *file)
 //
 CWAB::~CWAB()
 {
+	if (m_pUniBuff)
+		delete [] m_pUniBuff;
+
     if(m_bInitialized)
     {
         if(m_lpAdrBook)
@@ -436,19 +442,41 @@ LPSPropValue CWAB::GetUserProperty( LPMAILUSER pUser, ULONG tag)
 	if (!pUser)
 		return( NULL);
 
+	ULONG	uTag = tag;
+	/* 
+		Getting Unicode does not help with getting the right
+		international charset.  Windoze bloze.
+	*/
+	/*
+	if (PROP_TYPE( uTag) == PT_STRING8) {
+		uTag = CHANGE_PROP_TYPE( tag, PT_UNICODE);
+	}
+	*/
+
 	int	sz = CbNewSPropTagArray( 1);
 	SPropTagArray *pTag = (SPropTagArray *) new char[sz];
 	pTag->cValues = 1;
-	pTag->aulPropTag[0] = tag;
+	pTag->aulPropTag[0] = uTag;
 	LPSPropValue	lpProp = NULL;
 	ULONG	cValues = 0;
 	HRESULT hr = pUser->GetProps( pTag, 0, &cValues, &lpProp);
-	delete pTag;
 	if (HR_FAILED( hr) || (cValues != 1)) {
 		if (lpProp)
 			m_lpWABObject->FreeBuffer( lpProp);
-		return( NULL);
+		lpProp = NULL;
+		if (uTag != tag) {
+			pTag->cValues = 1;
+			pTag->aulPropTag[0] = tag;
+			cValues = 0;
+			hr = pUser->GetProps( pTag, 0, &cValues, &lpProp);
+			if (HR_FAILED( hr) || (cValues != 1)) {
+				if (lpProp)
+					m_lpWABObject->FreeBuffer( lpProp);
+				lpProp = NULL;
+			}
+		}
 	}
+	delete pTag;
 	return( lpProp);
 }
 
@@ -461,26 +489,47 @@ void CWAB::GetValueString( LPSPropValue pVal, nsString& val)
 		return;
 
     switch( PROP_TYPE( pVal->ulPropTag)) {
-		case PT_TSTRING:
-			val = (LPCTSTR) (pVal->Value.LPSZ);
+	case PT_STRING8: {
+			// Do we need to call OS routines like MultiByteToWideChar?
+			int wLen = MultiByteToWideChar( CP_ACP, 0, (char *) (pVal->Value.lpszA), -1, m_pUniBuff, 0);
+			if (wLen >= m_uniBuffLen) {
+				if (m_pUniBuff)
+					delete [] m_pUniBuff;
+				m_pUniBuff = new PRUnichar[wLen + 64];
+				m_uniBuffLen = wLen + 64;
+			}
+			if (wLen) {
+				MultiByteToWideChar( CP_ACP, 0, (char *) (pVal->Value.lpszA), -1, m_pUniBuff, m_uniBuffLen);
+				val = m_pUniBuff;
+			}
+		}
         break;
-
-		case PT_MV_TSTRING: {
+		case PT_UNICODE:
+			val = (PRUnichar *) (pVal->Value.lpszW);
+		break;
+		case PT_MV_STRING8: {
             ULONG	j;
-            for(j = 0; j < pVal->Value.MVSZ.cValues; j++) {
-                val += (LPCTSTR) (pVal->Value.MVSZ.LPPSZ[j]);
+            for(j = 0; j < pVal->Value.MVszA.cValues; j++) {
+                val += (char *) (pVal->Value.MVszA.lppszA[j]);
+                val += TR_OUTPUT_EOL;
+            }
+        }
+        break;
+		case PT_MV_UNICODE: {
+            ULONG	j;
+            for(j = 0; j < pVal->Value.MVszW.cValues; j++) {
+                val += (PRUnichar *) (pVal->Value.MVszW.lppszW[j]);
                 val += TR_OUTPUT_EOL;
             }
         }
         break;
 
-
 		case PT_I2:
 		case PT_LONG:
 		case PT_R4:
 		case PT_DOUBLE:
-		case PT_BOOLEAN: {
-            /*
+		case PT_BOOLEAN: {    
+			/*
 			TCHAR sz[256];
             wsprintf(sz,"%d", pVal->Value.l);
             val = sz;

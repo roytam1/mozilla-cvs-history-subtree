@@ -64,7 +64,8 @@ public:
 
 
 private:
- 
+	PRUnichar *	m_pUniBuff;
+	int			m_uniBuffLen;
 	PRBool      m_bInitialized;
     HINSTANCE   m_hinstWAB;
     LPWABOPEN   m_lpfnWABOpen;

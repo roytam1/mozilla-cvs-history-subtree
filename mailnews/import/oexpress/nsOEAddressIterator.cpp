@@ -204,8 +204,8 @@ PRBool nsOEAddressIterator::BuildCard( LPCTSTR pName, nsIMdbRow *newRow, LPMAILU
 		SanitizeValue( nickName);
 		m_pWab->FreeProperty( pProp);
 	}
-	if (nickName.IsEmpty())
-		nickName = pName;
+	// if (nickName.IsEmpty())
+	//	nickName = pName;
 	if (firstName.IsEmpty()) {
 		firstName = nickName;
 		middleName.Truncate();
