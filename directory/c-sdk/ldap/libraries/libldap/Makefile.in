@@ -238,17 +238,6 @@ ltest::	$(LIBLDAP) test.o
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
-$(LIBLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
-	@echo ======= making $(LIBLDAP)
-ifdef SO_FILES_TO_REMOVE
-	-$(RM) $(SO_FILES_TO_REMOVE)
-endif
-ifneq (,$(filter AIX Linux HP-UX Darwin BeOS, $(OS_ARCH)))
-	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
-else
-	$(LINK_LIB) $(EXTRA_LIBS)
-endif
-
 ifeq ($(OS_ARCH),OS2)
 DEF_FILE = $(LDAP_LIBNAME).def
 $(DEF_FILE):
@@ -257,7 +246,24 @@ $(DEF_FILE):
 	echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $@
 	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
 	echo EXPORTS >> $@
-	$(FILTER) $(LIBLDAP) | grep -v _DLL_InitTerm >> $@
+	$(FILTER) $(OBJS) >> $@
+endif
+
+$(LIBLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS) $(DEF_FILE)
+	@echo ======= making $(LIBLDAP)
+ifdef SO_FILES_TO_REMOVE
+	-$(RM) $(SO_FILES_TO_REMOVE)
+endif
+ifneq (,$(filter AIX Linux HP-UX Darwin BeOS, $(OS_ARCH)))
+	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
+else
+ifeq ($(OS_ARCH),OS2)
+# create import library for OS/2
+	rm -f $@
+	$(IMPLIB) $@ $(DEF_FILE)
+else
+	$(LINK_LIB) $(EXTRA_LIBS)
+endif
 endif
 
 $(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS) $(DEF_FILE)

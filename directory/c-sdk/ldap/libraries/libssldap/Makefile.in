@@ -102,6 +102,20 @@ endif
 EXTRA_LIBS += $(dist_libdir)/$(SSL_LIBNAME).lib
 endif
 
+ifeq ($(OS_ARCH),OS2)
+EXTRA_LIBS = $(OS_LIBS)
+EXTRA_LIBS += $(dist_libdir)/$(LDAP_LIBNAME).lib
+EXTRA_LIBS += $(dist_libdir)/$(PRLDAP_LIBNAME).lib
+EXTRA_LIBS += $(dist_libdir)/$(PLCBASE).lib
+EXTRA_LIBS += $(dist_libdir)/$(PLDSBASE).lib
+EXTRA_LIBS += $(dist_libdir)/$(NSPRBASE).lib
+EXTRA_LIBS += $(dist_libdir)/$(NSS_LIBNAME).lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += $(dist_libdir)/$(SOFTOKN_LIBNAME).lib
+endif
+EXTRA_LIBS += $(dist_libdir)/$(SSL_LIBNAME).lib
+endif
+
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME)
 EXTRA_LIBS += $(DYNAMICNSPR)
