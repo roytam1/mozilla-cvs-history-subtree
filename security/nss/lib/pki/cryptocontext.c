@@ -68,9 +68,6 @@ NSSCryptoContext_Destroy
   NSSCryptoContext *cc
 )
 {
-    if (cc->certStore) {
-	nssCertificateStore_Destroy(cc->certStore);
-    }
     nssArena_Destroy(cc->arena);
     return PR_SUCCESS;
 }

@@ -205,9 +205,6 @@ static PRStatus
 nsslist_add_element(nssList *list, void *data)
 {
     nssListElement *node = nss_ZNEW(list->arena, nssListElement);
-    if (!node) {
-	return PR_FAILURE;
-    }
     PR_INIT_CLIST(&node->link);
     node->data = data;
     if (list->head) {
@@ -330,7 +327,7 @@ nssList_Clone(nssList *list)
 {
     nssList *rvList;
     nssListElement *node;
-    rvList = nssList_Create(NULL, (list->lock != NULL));
+    rvList = nssList_Create(list->arena, (list->lock != NULL));
     if (!rvList) {
 	return NULL;
     }
@@ -353,22 +350,11 @@ NSS_IMPLEMENT nssListIterator *
 nssList_CreateIterator(nssList *list)
 {
     nssListIterator *rvIterator;
-    rvIterator = nss_ZNEW(NULL, nssListIterator);
-    if (!rvIterator) {
-	return NULL;
-    }
+    rvIterator = nss_ZNEW(list->arena, nssListIterator);
     rvIterator->list = nssList_Clone(list);
-    if (!rvIterator->list) {
-	nss_ZFreeIf(rvIterator);
-	return NULL;
-    }
     rvIterator->current = rvIterator->list->head;
     if (list->lock) {
 	rvIterator->lock = PZ_NewLock(nssILockOther);
-	if (!rvIterator->lock) {
-	    nssList_Destroy(rvIterator->list);
-	    nss_ZFreeIf(rvIterator);
-	}
     }
     return rvIterator;
 }

@@ -248,7 +248,6 @@ PK11SymKey *PK11_KeyGen(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 				SECItem *param,	int keySize,void *wincx);
 PK11SymKey * PK11_ListFixedKeysInSlot(PK11SlotInfo *slot, char *nickname,
 								void *wincx);
-PK11SymKey *PK11_GetNextSymKey(PK11SymKey *symKey);
 
 /* Key Generation specialized for SDR (fixed DES3 key) */
 PK11SymKey *PK11_GenDES3TokenKey(PK11SlotInfo *slot, SECItem *keyid, void *cx);
@@ -375,7 +374,6 @@ SECKEYPrivateKeyList* PK11_ListPrivKeysInSlot(PK11SlotInfo *slot,
 						 char *nickname, void *wincx);
 SECKEYPublicKeyList* PK11_ListPublicKeysInSlot(PK11SlotInfo *slot,
 							char *nickname);
-SECKEYPQGParams *PK11_GetPQGParamsFromPrivateKey(SECKEYPrivateKey *privKey);
 /* depricated */
 SECKEYPrivateKeyList* PK11_ListPrivateKeysInSlot(PK11SlotInfo *slot);
 

@@ -1,0 +1,19 @@
+DEPTH	 = ../../../..
+srcdir = @srcdir@
+ldaptopsrcdir = @top_srcdir@
+
+include ../build/autoconf.mk
+
+ifeq ($(OS_ARCH),WINNT)
+DIRS		= libldap
+else
+DIRS		= liblber libldap
+endif
+
+all:: export install
+
+install::
+	+$(LOOP_OVER_DIRS)
+
+include $(NSPR_TREE)/config/rules.mk
+

@@ -516,8 +516,6 @@ nssDecodedPKIXCertificate_Destroy
 )
 {
     CERTCertificate *cert = (CERTCertificate *)dc->data;
-    PRBool freeSlot = cert->ownSlot;
-    PK11SlotInfo *slot = cert->slot;
     PRArenaPool *arena  = cert->arena;
     /* zero cert before freeing. Any stale references to this cert
      * after this point will probably cause an exception.  */
@@ -525,9 +523,6 @@ nssDecodedPKIXCertificate_Destroy
     /* free the arena that contains the cert. */
     PORT_FreeArena(arena, PR_FALSE);
     nss_ZFreeIf(dc);
-    if (slot && freeSlot) {
-	PK11_FreeSlot(slot);
-    }
     return PR_SUCCESS;
 }
 
@@ -690,6 +685,8 @@ fill_CERTCertificateFields(NSSCertificate *c, CERTCertificate *cc)
 	if (nssTrust) {
 	    cc->trust = cert_trust_from_stan_trust(nssTrust, cc->arena);
 	    nssPKIObject_Destroy(&nssTrust->object);
+	} else {
+	    cc->trust = nssTrust_GetCERTCertTrustForCert(c, cc);
 	}
     } else if (instance) {
 	/* slot */
@@ -726,11 +723,7 @@ STAN_GetCERTCertificate(NSSCertificate *c)
     if (cc) {
 	if (!cc->nssCertificate) {
 	    fill_CERTCertificateFields(c, cc);
-	} else if (!cc->trust && !c->object.cryptoContext) {
-	    /* if it's a perm cert, it might have been stored before the
-	     * trust, so look for the trust again.  But a temp cert can be
-	     * ignored.
-	     */
+	} else if (!cc->trust) {
 	    cc->trust = nssTrust_GetCERTCertTrustForCert(c, cc);
 	}
     }

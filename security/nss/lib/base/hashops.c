@@ -82,7 +82,7 @@ nss_arena_hash_alloc_entry
   const void *key
 )
 {
-  NSSArena *arena = NULL;
+  NSSArena *arena = (NSSArena *)pool;
 
 #ifdef NSSDEBUG
   if( (void *)NULL != arena ) {

@@ -244,8 +244,7 @@ ssl_ds_dist_stress()
                compaqtor-10"
 
   #clientlist=" huey-2 dewey-2 hornet-2 shabadoo-2" #FIXME ADJUST
-  clientlist="  box-200 washer-200 huey-200 dewey-200 hornet-200 shabadoo-200 louie-200"
-  #clientlist="  box-2 huey-2 "
+  clientlist="  box-200 washer-200 huey-200 dewey-200 hornet-200 shabadoo-200 "
   #clientlist="washer-200 huey-200 dewey-200 hornet-200 "
 
   html_head "SSL Distributed Stress Test"
@@ -261,7 +260,7 @@ ssl_ds_dist_stress()
   fi
 
   #sparam=" -t 128 -D -r "
-  sparam=" -t 16 -D -r -r -y "
+  sparam=" -t 16 -D -r -r "
   start_selfserv
 
   for c in $clientlist
@@ -286,7 +285,7 @@ ssl_ds_dist_stress()
   echo cd "${CLIENTDIR}"
   cd "${CLIENTDIR}"
 
-  sleep 500 # give the clients time to finish #FIXME ADJUST
+  sleep 600 # give the clients time to finish #FIXME ADJUST
  
   echo "GET /stop HTTP/1.0\n\n" > stdin.txt #check to make sure it has /r/n
   echo "tstclnt -h $HOSTADDR -p  8443 -d ${CLIENTDIR} -n TestUser0 "

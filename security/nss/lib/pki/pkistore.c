@@ -55,10 +55,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #include "pkistore.h"
 #endif /* PKISTORE_H */
 
-#ifdef NSS_3_4_CODE
-#include "cert.h"
-#endif
-
 /* 
  * Certificate Store
  *
@@ -186,7 +182,7 @@ add_certificate_entry
 {
     PRStatus nssrv;
     certificate_hash_entry *entry;
-    entry = nss_ZNEW(cert->object.arena, certificate_hash_entry);
+    entry = nss_ZNEW(store->arena, certificate_hash_entry);
     if (!entry) {
 	return PR_FAILURE;
     }
@@ -213,7 +209,7 @@ add_subject_entry
 	nssrv = nssList_AddUnique(subjectList, cert);
     } else {
 	/* Create a new subject list for the subject */
-	subjectList = nssList_Create(NULL, PR_FALSE);
+	subjectList = nssList_Create(store->arena, PR_FALSE);
 	if (!subjectList) {
 	    return PR_FAILURE;
 	}
@@ -246,10 +242,6 @@ nssCertificateStore_Add
 {
     PRStatus nssrv;
     PZ_Lock(store->lock);
-    if (nssHash_Exists(store->issuer_and_serial, cert)) {
-	PZ_Unlock(store->lock);
-	return PR_SUCCESS;
-    }
     nssrv = add_certificate_entry(store, cert);
     if (nssrv == PR_SUCCESS) {
 	nssrv = add_subject_entry(store, cert);
@@ -298,17 +290,9 @@ remove_subject_entry
     if (subjectList) {
 	/* Remove the cert from the subject hash */
 	nssList_Remove(subjectList, cert);
-	nssHash_Remove(store->subject, &cert->subject);
 	if (nssList_Count(subjectList) == 0) {
+	    nssHash_Remove(store->subject, &cert->subject);
 	    nssList_Destroy(subjectList);
-	} else {
-	    /* The cert being released may have keyed the subject entry.
-	     * Since there are still subject certs around, get another and
-	     * rekey the entry just in case.
-	     */
-	    NSSCertificate *subjectCert;
-	    (void)nssList_GetArray(subjectList, (void **)&subjectCert, 1);
-	    nssHash_Add(store->subject, &subjectCert->subject, subjectList);
 	}
     }
 }
@@ -320,11 +304,8 @@ nssCertificateStore_Remove
   NSSCertificate *cert
 )
 {
-    certificate_hash_entry *entry;
     PZ_Lock(store->lock);
-    entry = (certificate_hash_entry *)
-                              nssHash_Lookup(store->issuer_and_serial, cert);
-    if (entry && entry->cert == cert) {
+    if (nssHash_Exists(store->issuer_and_serial, cert)) {
 	remove_certificate_entry(store, cert);
 	remove_subject_entry(store, cert);
 	NSSCertificate_Destroy(cert); /* release the store's reference */
@@ -342,15 +323,11 @@ nssCertificateStore_FindCertificatesBySubject
   NSSArena *arenaOpt
 )
 {
-    PRUint32 count;
+    PRUint32 i, count;
     NSSCertificate **rvArray = NULL;
     nssList *subjectList;
     PZ_Lock(store->lock);
     subjectList = (nssList *)nssHash_Lookup(store->subject, subject);
-    if (subjectList) {
-	/* get references before leaving the store's lock protection */
-	nssCertificateList_AddReferences(subjectList);
-    }
     PZ_Unlock(store->lock);
     if (subjectList) {
 	count = nssList_Count(subjectList);
@@ -359,12 +336,14 @@ nssCertificateStore_FindCertificatesBySubject
 	}
 	if (rvOpt) {
 	    nssList_GetArray(subjectList, (void **)rvOpt, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvOpt[i]);
 	} else {
 	    rvArray = nss_ZNEWARRAY(arenaOpt, NSSCertificate *, count + 1);
 	    if (!rvArray) {
 		return (NSSCertificate **)NULL;
 	    }
 	    nssList_GetArray(subjectList, (void **)rvArray, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvArray[i]);
 	}
     }
     return rvArray;
@@ -414,17 +393,13 @@ nssCertificateStore_FindCertificatesByNickname
   NSSArena *arenaOpt
 )
 {
-    PRUint32 count;
+    PRUint32 i, count;
     NSSCertificate **rvArray = NULL;
     struct nickname_template_str nt;
     nt.nickname = nickname;
     nt.subjectList = NULL;
     PZ_Lock(store->lock);
     nssHash_Iterate(store->subject, match_nickname, &nt);
-    if (nt.subjectList) {
-	/* get references before leaving the store's lock protection */
-	nssCertificateList_AddReferences(nt.subjectList);
-    }
     PZ_Unlock(store->lock);
     if (nt.subjectList) {
 	count = nssList_Count(nt.subjectList);
@@ -433,12 +408,14 @@ nssCertificateStore_FindCertificatesByNickname
 	}
 	if (rvOpt) {
 	    nssList_GetArray(nt.subjectList, (void **)rvOpt, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvOpt[i]);
 	} else {
 	    rvArray = nss_ZNEWARRAY(arenaOpt, NSSCertificate *, count + 1);
 	    if (!rvArray) {
 		return (NSSCertificate **)NULL;
 	    }
 	    nssList_GetArray(nt.subjectList, (void **)rvArray, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvArray[i]);
 	}
     }
     return rvArray;
@@ -487,20 +464,16 @@ nssCertificateStore_FindCertificatesByEmail
   NSSArena *arenaOpt
 )
 {
-    PRUint32 count;
+    PRUint32 i, count;
     NSSCertificate **rvArray = NULL;
     struct email_template_str et;
     et.email = email;
-    et.emailList = nssList_Create(NULL, PR_FALSE);
+    et.emailList = nssList_Create(store->arena, PR_FALSE);
     if (!et.emailList) {
 	return NULL;
     }
     PZ_Lock(store->lock);
     nssHash_Iterate(store->subject, match_email, &et);
-    if (et.emailList) {
-	/* get references before leaving the store's lock protection */
-	nssCertificateList_AddReferences(et.emailList);
-    }
     PZ_Unlock(store->lock);
     if (et.emailList) {
 	count = nssList_Count(et.emailList);
@@ -509,13 +482,15 @@ nssCertificateStore_FindCertificatesByEmail
 	}
 	if (rvOpt) {
 	    nssList_GetArray(et.emailList, (void **)rvOpt, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvOpt[i]);
 	} else {
 	    rvArray = nss_ZNEWARRAY(arenaOpt, NSSCertificate *, count + 1);
-	    if (rvArray) {
-		nssList_GetArray(et.emailList, (void **)rvArray, count);
+	    if (!rvArray) {
+		return (NSSCertificate **)NULL;
 	    }
+	    nssList_GetArray(et.emailList, (void **)rvArray, count);
+	    for (i=0; i<count; i++) nssCertificate_AddRef(rvArray[i]);
 	}
-	nssList_Destroy(et.emailList);
     }
     return rvArray;
 }
@@ -530,48 +505,46 @@ nssCertificateStore_FindCertificateByIssuerAndSerialNumber
 {
     certificate_hash_entry *entry;
     NSSCertificate index;
-    NSSCertificate *rvCert = NULL;
     index.issuer = *issuer;
     index.serial = *serial;
     PZ_Lock(store->lock);
     entry = (certificate_hash_entry *)
                            nssHash_Lookup(store->issuer_and_serial, &index);
-    if (entry) {
-	rvCert = nssCertificate_AddRef(entry->cert);
-    }
     PZ_Unlock(store->lock);
-    return rvCert;
+    if (entry) {
+	return nssCertificate_AddRef(entry->cert);
+    }
+    return NULL;
 }
 
-#ifdef NSS_3_4_CODE
-static PRStatus
-issuer_and_serial_from_encoding
-(
-  NSSBER *encoding, 
-  NSSDER *issuer, 
-  NSSDER *serial
-)
+/* XXX Get this to use issuer/serial! */
+
+struct der_template_str
 {
-    SECItem derCert, derIssuer, derSerial;
-    SECStatus secrv;
-    derCert.data = (unsigned char *)encoding->data;
-    derCert.len = encoding->size;
-    secrv = CERT_IssuerNameFromDERCert(&derCert, &derIssuer);
-    if (secrv != SECSuccess) {
-	return PR_FAILURE;
+    NSSDER *encoding;
+    NSSCertificate *cert;
+};
+
+static void match_encoding(const void *k, void *v, void *a)
+{
+    PRStatus nssrv;
+    NSSCertificate *c;
+    nssList *subjectList = (nssList *)v;
+    struct der_template_str *der = (struct der_template_str *)a;
+    nssListIterator *iter = nssList_CreateIterator(subjectList);
+    if (iter) {
+	for (c  = (NSSCertificate *)nssListIterator_Start(iter);
+	     c != (NSSCertificate *)NULL;
+	     c  = (NSSCertificate *)nssListIterator_Next(iter))
+	{
+	    if (nssItem_Equal(&c->encoding, der->encoding, &nssrv)) {
+		der->cert = c;
+	    }
+	}
+	nssListIterator_Finish(iter);
+	nssListIterator_Destroy(iter);
     }
-    secrv = CERT_SerialNumberFromDERCert(&derCert, &derSerial);
-    if (secrv != SECSuccess) {
-	PORT_Free(derIssuer.data);
-	return PR_FAILURE;
-    }
-    issuer->data = derIssuer.data;
-    issuer->size = derIssuer.len;
-    serial->data = derSerial.data;
-    serial->size = derSerial.len;
-    return PR_SUCCESS;
 }
-#endif
 
 NSS_IMPLEMENT NSSCertificate *
 nssCertificateStore_FindCertificateByEncodedCertificate
@@ -580,23 +553,13 @@ nssCertificateStore_FindCertificateByEncodedCertificate
   NSSDER *encoding
 )
 {
-    PRStatus nssrv = PR_FAILURE;
-    NSSDER issuer, serial;
-    NSSCertificate *rvCert = NULL;
-#ifdef NSS_3_4_CODE
-    nssrv = issuer_and_serial_from_encoding(encoding, &issuer, &serial);
-#endif
-    if (nssrv != PR_SUCCESS) {
-	return NULL;
-    }
-    rvCert = nssCertificateStore_FindCertificateByIssuerAndSerialNumber(store, 
-                                                                     &issuer, 
-                                                                     &serial);
-#ifdef NSS_3_4_CODE
-    PORT_Free(issuer.data);
-    PORT_Free(serial.data);
-#endif
-    return rvCert;
+    struct der_template_str der;
+    der.encoding = encoding;
+    der.cert = NULL;
+    PZ_Lock(store->lock);
+    nssHash_Iterate(store->subject, match_encoding, &der);
+    PZ_Unlock(store->lock);
+    return nssCertificate_AddRef(der.cert);
 }
 
 NSS_EXTERN PRStatus

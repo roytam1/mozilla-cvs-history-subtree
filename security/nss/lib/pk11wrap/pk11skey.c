@@ -3007,8 +3007,6 @@ PK11_VerifyRecover(SECKEYPublicKey *key,
 		return SECFailure;
 	}
 	id = PK11_ImportPublicKey(slot,key,PR_FALSE);
-    } else {
-	PK11_ReferenceSlot(slot);
     }
 
     session = pk11_GetNewSession(slot,&owner);
@@ -3018,7 +3016,6 @@ PK11_VerifyRecover(SECKEYPublicKey *key,
 	if (!owner || !(slot->isThreadSafe)) PK11_ExitSlotMonitor(slot);
 	pk11_CloseSession(slot,session,owner);
 	PORT_SetError( PK11_MapError(crv) );
-	PK11_FreeSlot(slot);
 	return SECFailure;
     }
     len = dsig->len;
@@ -3029,10 +3026,8 @@ PK11_VerifyRecover(SECKEYPublicKey *key,
     dsig->len = len;
     if (crv != CKR_OK) {
 	PORT_SetError( PK11_MapError(crv) );
-	PK11_FreeSlot(slot);
 	return SECFailure;
     }
-    PK11_FreeSlot(slot);
     return SECSuccess;
 }
 
@@ -4897,57 +4892,4 @@ PK11_SetPublicKeyNickname(SECKEYPublicKey *pubKey, const char *nickname)
 {
     return PK11_SetObjectNickname(pubKey->pkcs11Slot,
 					pubKey->pkcs11ID,nickname);
-}
-
-SECKEYPQGParams *
-PK11_GetPQGParamsFromPrivateKey(SECKEYPrivateKey *privKey)
-{
-    CK_ATTRIBUTE pTemplate[] = {
-	{ CKA_PRIME, NULL, 0 },
-	{ CKA_SUBPRIME, NULL, 0 },
-	{ CKA_BASE, NULL, 0 },
-    };
-    int pTemplateLen = sizeof(pTemplate)/sizeof(pTemplate[0]);
-    PRArenaPool *arena = NULL;
-    SECKEYPQGParams *params;
-    CK_RV crv;
-
-
-    arena = PORT_NewArena(2048);
-    if (arena == NULL) {
-	goto loser;
-    }
-    params=(SECKEYPQGParams *)PORT_ArenaZAlloc(arena,sizeof(SECKEYPQGParams));
-    if (params == NULL) {
-	goto loser;
-    }
-
-    crv = PK11_GetAttributes(arena, privKey->pkcs11Slot, privKey->pkcs11ID, 
-						pTemplate, pTemplateLen);
-    if (crv != CKR_OK) {
-        PORT_SetError( PK11_MapError(crv) );
-	goto loser;
-    }
-
-    params->arena = arena;
-    params->prime.data = pTemplate[0].pValue;
-    params->prime.len = pTemplate[0].ulValueLen;
-    params->subPrime.data = pTemplate[1].pValue;
-    params->subPrime.len = pTemplate[1].ulValueLen;
-    params->base.data = pTemplate[2].pValue;
-    params->base.len = pTemplate[2].ulValueLen;
-
-    return params;
-
-loser:
-    if (arena != NULL) {
-	PORT_FreeArena(arena,PR_FALSE);
-    }
-    return NULL;
-}
-
-PK11SymKey *
-PK11_GetNextSymKey(PK11SymKey *symKey)
-{
-    return symKey ? symKey->next : NULL;
 }

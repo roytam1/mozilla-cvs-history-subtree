@@ -144,14 +144,12 @@ nssCKFWFindObjects_Create
   mdToken = nssCKFWToken_GetMDToken(fwToken);
   mdInstance = nssCKFWInstance_GetMDInstance(fwInstance);
 
-#ifdef notdef
   arena = nssCKFWSession_GetArena(fwSession, pError);
   if( (NSSArena *)NULL == arena ) {
     goto loser;
   }
-#endif
 
-  fwFindObjects = nss_ZNEW(NULL, NSSCKFWFindObjects);
+  fwFindObjects = nss_ZNEW(arena, NSSCKFWFindObjects);
   if( (NSSCKFWFindObjects *)NULL == fwFindObjects ) {
     *pError = CKR_HOST_MEMORY;
     goto loser;
@@ -166,7 +164,7 @@ nssCKFWFindObjects_Create
   fwFindObjects->fwInstance = fwInstance;
   fwFindObjects->mdInstance = mdInstance;
 
-  fwFindObjects->mutex = nssCKFWInstance_CreateMutex(fwInstance, NULL, pError);
+  fwFindObjects->mutex = nssCKFWInstance_CreateMutex(fwInstance, arena, pError);
   if( (NSSCKFWMutex *)NULL == fwFindObjects->mutex ) {
     goto loser;
   }

@@ -1600,8 +1600,7 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
     ret = PR_FALSE;
     type = 0;
     
-    if ( cert->trust && (cert->trust->sslFlags|cert->trust->emailFlags|
-				cert->trust->objectSigningFlags)) {
+    if ( cert->trust ) {
 	trust = cert->trust;
 	if ( ( ( trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
 	   ( ( trust->sslFlags & CERTDB_TRUSTED_CA ) == CERTDB_TRUSTED_CA ) ) {

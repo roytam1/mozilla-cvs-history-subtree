@@ -1059,7 +1059,7 @@ static PRBool pt_solaris_sendfile_cont(pt_Continuation *op, PRInt16 revents)
 }
 #endif  /* SOLARIS */
 
-void _PR_InitIO(void)
+void _PR_InitIO()
 {
 #if defined(DEBUG)
     memset(&pt_debug, 0, sizeof(PTDebug));
@@ -1081,34 +1081,6 @@ void _PR_InitIO(void)
     PR_ASSERT(_pr_stdin && _pr_stdout && _pr_stderr);
 
 }  /* _PR_InitIO */
-
-void _PR_CleanupIO(void)
-{
-    _PR_Putfd(_pr_stdin);
-    _pr_stdin = NULL;
-    _PR_Putfd(_pr_stdout);
-    _pr_stdout = NULL;
-    _PR_Putfd(_pr_stderr); 
-    _pr_stderr = NULL;
-
-    _PR_CleanupFdCache();
-    
-    if (_pr_flock_cv)
-    {
-        PR_DestroyCondVar(_pr_flock_cv);
-        _pr_flock_cv = NULL;
-    }
-    if (_pr_flock_lock)
-    {
-        PR_DestroyLock(_pr_flock_lock);
-        _pr_flock_lock = NULL;
-    }
-    if (_pr_rename_lock)
-    {
-        PR_DestroyLock(_pr_rename_lock);
-        _pr_rename_lock = NULL;
-    }
-}  /* _PR_CleanupIO */
 
 PR_IMPLEMENT(PRFileDesc*) PR_GetSpecialFD(PRSpecialFD osfd)
 {
@@ -3086,27 +3058,27 @@ static PRFileDesc *pt_SetMethods(
     return fd;
 }  /* pt_SetMethods */
 
-PR_IMPLEMENT(const PRIOMethods*) PR_GetFileMethods(void)
+PR_IMPLEMENT(const PRIOMethods*) PR_GetFileMethods()
 {
     return &_pr_file_methods;
 }  /* PR_GetFileMethods */
 
-PR_IMPLEMENT(const PRIOMethods*) PR_GetPipeMethods(void)
+PR_IMPLEMENT(const PRIOMethods*) PR_GetPipeMethods()
 {
     return &_pr_pipe_methods;
 }  /* PR_GetPipeMethods */
 
-PR_IMPLEMENT(const PRIOMethods*) PR_GetTCPMethods(void)
+PR_IMPLEMENT(const PRIOMethods*) PR_GetTCPMethods()
 {
     return &_pr_tcp_methods;
 }  /* PR_GetTCPMethods */
 
-PR_IMPLEMENT(const PRIOMethods*) PR_GetUDPMethods(void)
+PR_IMPLEMENT(const PRIOMethods*) PR_GetUDPMethods()
 {
     return &_pr_udp_methods;
 }  /* PR_GetUDPMethods */
 
-static const PRIOMethods* PR_GetSocketPollFdMethods(void)
+static const PRIOMethods* PR_GetSocketPollFdMethods()
 {
     return &_pr_socketpollfd_methods;
 }  /* PR_GetSocketPollFdMethods */
@@ -4017,14 +3989,14 @@ PR_IMPLEMENT(PRDirEntry*) PR_ReadDir(PRDir *dir, PRDirFlags flags)
     return &dir->d;
 }  /* PR_ReadDir */
 
-PR_IMPLEMENT(PRFileDesc*) PR_NewUDPSocket(void)
+PR_IMPLEMENT(PRFileDesc*) PR_NewUDPSocket()
 {
     PRIntn domain = PF_INET;
 
     return PR_Socket(domain, SOCK_DGRAM, 0);
 }  /* PR_NewUDPSocket */
 
-PR_IMPLEMENT(PRFileDesc*) PR_NewTCPSocket(void)
+PR_IMPLEMENT(PRFileDesc*) PR_NewTCPSocket()
 {
     PRIntn domain = PF_INET;
 
@@ -4122,7 +4094,7 @@ PR_IMPLEMENT(PRStatus) PR_SetFDInheritable(
         {
             return PR_FAILURE;
         }
-        fd->secret->inheritable = (_PRTriStateBool) inheritable;
+        fd->secret->inheritable = inheritable;
     }
     return PR_SUCCESS;
 }

@@ -3632,10 +3632,10 @@ PK11_GenerateRandom(unsigned char *data,int len) {
     slot = PK11_GetBestSlot(CKM_FAKE_RANDOM,NULL);
     if (slot == NULL) return SECFailure;
 
-    if (!slot->isInternal) PK11_EnterSlotMonitor(slot);
+    PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_GenerateRandom(slot->session,data, 
 							(CK_ULONG)len);
-    if (!slot->isInternal) PK11_ExitSlotMonitor(slot);
+    PK11_ExitSlotMonitor(slot);
     PK11_FreeSlot(slot);
     return (crv != CKR_OK) ? SECFailure : SECSuccess;
 }

@@ -716,12 +716,7 @@ nssBestCertificate_SetArgs
   NSSPolicies *policies
 )
 {
-    if (timeOpt) {
-	best->time = timeOpt;
-    } else {
-	NSSTime_Now(&best->sTime);
-	best->time = &best->sTime;
-    }
+    best->time = (timeOpt) ? timeOpt : NSSTime_Now(NULL);
     best->usage = usage;
     best->policies = policies;
     best->cert = NULL;
@@ -845,20 +840,5 @@ nssCertificateList_DoCallback
     nssListIterator_Finish(certs);
     nssListIterator_Destroy(certs);
     return PR_SUCCESS;
-}
-
-static PRStatus add_ref_callback(NSSCertificate *c, void *a)
-{
-    nssCertificate_AddRef(c);
-    return PR_SUCCESS;
-}
-
-NSS_IMPLEMENT void
-nssCertificateList_AddReferences
-(
-  nssList *certList
-)
-{
-    (void)nssCertificateList_DoCallback(certList, add_ref_callback, NULL);
 }
 
