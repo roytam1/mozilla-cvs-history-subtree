@@ -20,14 +20,14 @@
 // Plugin Manager Methods to support the JVM Plugin API
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "nsJVMManager.h"
+#include "jvmmgr.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
 
 NS_IMPL_AGGREGATED(nsSymantecDebugManager);
 
-nsSymantecDebugManager::nsSymantecDebugManager(nsISupports* outer, nsJVMManager* jvmMgr)
+nsSymantecDebugManager::nsSymantecDebugManager(nsISupports* outer, nsJVMMgr* jvmMgr)
     : fJVMMgr(jvmMgr)
 {
     NS_INIT_AGGREGATED(outer);
@@ -50,7 +50,7 @@ nsSymantecDebugManager::AggregatedQueryInterface(const nsIID& aIID, void** aInst
 
 NS_METHOD
 nsSymantecDebugManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr, 
-                               nsJVMManager* jvmMgr)
+                               nsJVMMgr* jvmMgr)
 {
     if (outer && !aIID.Equals(kISupportsIID))
         return NS_NOINTERFACE;   // XXX right error?

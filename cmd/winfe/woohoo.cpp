@@ -1243,7 +1243,11 @@ inline UINT CMapStringToObNoCase::HashKey(LPCTSTR key) const
 void WFE_LJ_StartupJava(void)
 {
 #ifdef OJI
-    JVM_StartupJVM();
+    nsJVMMgr* jvmMgr = JVM_GetJVMMgr();
+    if (jvmMgr) {
+        jvmMgr->StartupJVM();
+        jvmMgr->Release();
+    }
 #elif defined(JAVA)
     LJ_StartupJava();
 #endif

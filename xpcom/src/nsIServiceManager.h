@@ -134,11 +134,9 @@ public:
 
     static nsresult ShutdownService(const nsCID& aClass);
 
-    // Since the global Service Manager is truly global, there's no need to
-    // release it.
+protected:
     static nsresult GetGlobalServiceManager(nsIServiceManager* *result);
 
-protected:
     static nsIServiceManager* globalServiceManager;
 
 };

@@ -138,9 +138,6 @@ protected:
 
 #else // !NEW_PLUGIN_STREAM_API
 
-#include "nsIPluginStreamPeer2.h"
-#include "nsISeekablePluginStreamPeer.h"
-
 class nsPluginStreamPeer : public nsIPluginStreamPeer2, 
                            public nsISeekablePluginStreamPeer
 {

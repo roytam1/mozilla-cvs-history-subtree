@@ -105,7 +105,7 @@ nsPluginManager* thePluginManager = NULL;
 #endif // PRE_SERVICE_MANAGER
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fWaiting(0), fOldCursor(NULL), fAllocatedMenuIDs(NULL)
+    : fAllocatedMenuIDs(NULL), fWaiting(0), fOldCursor(NULL)
 #ifdef PRE_SERVICE_MANAGER
     , fJVMMgr(NULL), fMalloc(NULL), fFileUtils(NULL), fCapsManager(NULL), fLiveconnect(NULL)
 #endif
@@ -1031,32 +1031,26 @@ static NS_DEFINE_CID(kFileUtilitiesCID, NS_FILEUTILITIES_CID);
 extern "C" nsresult
 np_RegisterPluginMgr(void)
 {
-    nsresult err;
     nsPluginFactory* pluginFact = new nsPluginFactory();
     if (pluginFact == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
 
     pluginFact->AddRef();
-    err = nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
-    if (err != NS_OK) return err;
+    nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
 
     pluginFact->AddRef();
-    err = nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
-    if (err != NS_OK) return err;
+    nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
 
 #if 0
     pluginFact->AddRef();
-    err = nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
-    if (err != NS_OK) return err;
+    nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
 #endif
 
     pluginFact->AddRef();
-    err = nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
-    if (err != NS_OK) return err;
+    nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
 
     pluginFact->AddRef();
-    err = nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
-    if (err != NS_OK) return err;
+    nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
 
     return NS_OK;
 }

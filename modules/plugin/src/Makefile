@@ -22,23 +22,9 @@ LIBRARY_NAME	= plug
 
 CSRCS		= npassoc.c
 
-CPPSRCS		= nsFileUtilities.cpp	    \
-		  nsMalloc.cpp		    \
-		  nsPluginInputStream.cpp   \
-		  nsPluginInstancePeer.cpp  \
-		  nsPluginManager.cpp	    \
-		  nsPluginManagerStream.cpp \
-		  nsPluginTagInfo.cpp	    \
-		  npglue.cpp
+CPPSRCS		= nsplugin.cpp npglue.cpp nsMalloc.cpp
 
-EXPORTS		= nppg.h npglue.h nppriv.h \
-                  nsFileUtilities.h	   \
-                  nsMalloc.h		   \
-                  nsPluginInputStream.h	   \
-                  nsPluginInstancePeer.h   \
-                  nsPluginManager.h	   \
-                  nsPluginManagerStream.h  \
-                  nsPluginTagInfo.h
+EXPORTS		= nppg.h npglue.h nppriv.h nsMalloc.h
 
 REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom raptor netcnvts plugin plugimpl oji ojiimpl caps
 

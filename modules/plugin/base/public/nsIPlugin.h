@@ -57,7 +57,6 @@
 struct nsIPlugin : public nsIFactory {
 public:
 
-#ifdef PRE_SERVICE_MANAGER
     /**
      * Initializes the plugin and will be called before any new instances are
      * created. It is passed browserInterfaces on which QueryInterface
@@ -80,8 +79,6 @@ public:
      */
     NS_IMETHOD
     Shutdown(void) = 0;
-#endif // PRE_SERVICE_MANAGER
-    /* NPP_Shutdown gets mapped to NSCanUnload when it is about to return true. */
 
     /**
      * Returns the MIME description for the plugin. The MIME description 

@@ -2361,10 +2361,7 @@ void CGenericFrame::OnDisplayPrivacyTutorial()
 void CGenericFrame::OnToggleJavaConsole()
 {
 #ifdef OJI
-    if (JVM_IsConsoleVisible())
-        JVM_HideConsole();
-    else
-        JVM_ShowConsole();
+    JVM_ToggleConsole();
 #else
     if( LJ_IsConsoleShowing() ) {
       LJ_HideConsole();

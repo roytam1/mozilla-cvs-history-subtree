@@ -112,12 +112,16 @@ typedef struct _PlatformInstance
 } PlatformInstance;
 #endif /* macintosh */
 
+/*------------------------------------------------------------------------------
+ * We'll keep a global execution environment around to make our life simpler
+ *----------------------------------------------------------------------------*/
+
+JRIEnv* env;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Simple Plugin Classes
 ////////////////////////////////////////////////////////////////////////////////
-
-class SimplePluginShutdownListener;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePlugin represents the class of all simple plugins. One 
@@ -138,6 +142,18 @@ public:
     
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPlugin:
+
+    // This call initializes the plugin and will be called before any new
+    // instances are created. It is passed browserInterfaces on which QueryInterface
+    // may be used to obtain an nsIPluginManager, and other interfaces.
+    NS_IMETHOD
+    Initialize(nsISupports* browserInterfaces);
+
+    // (Corresponds to NPP_Shutdown.)
+    // Called when the browser is done with the plugin factory, or when
+    // the plugin is disabled by the user.
+    NS_IMETHOD
+    Shutdown(void);
 
     // (Corresponds to NPP_GetMIMEDescription.)
     NS_IMETHOD
@@ -169,47 +185,15 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // SimplePlugin specific methods:
 
-    SimplePlugin(nsIServiceManager* servMgr);
+    SimplePlugin(void);
     virtual ~SimplePlugin(void);
 
     NS_DECL_ISUPPORTS
 
-    nsIServiceManager* GetServiceManager(void) { return mServMgr; }
-    nsresult Cleanup(void);
-
-    // This counter is used to keep track of the number of outstanding objects.
-    // It is used to determine whether the plugin's DLL can be unloaded.
-    static PRUint32 gPluginObjectCount;
-
-    // This flag is used to keep track of whether the plugin's DLL is explicitly
-    // being retained by some client.
-    static PRBool gPluginLocked;
-
-    // The Java execution environment.
-    static JRIEnv* gEnv;
+    nsIPluginManager* GetPluginManager(void) { return mgr; }
 
 protected:
-    nsIServiceManager* mServMgr;
-    SimplePluginShutdownListener* mEnvShutdownListener;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// SimplePluginShutdownListener: handles requests to shutdown the plugin
-// and cleans up any global state
-
-class SimplePluginShutdownListener : public nsIShutdownListener {
-public:
-
-    NS_DECL_ISUPPORTS
-
-    NS_IMETHOD
-    OnShutdown(const nsCID& aClass, nsISupports* service);
-
-    SimplePluginShutdownListener(SimplePlugin* plugin);
-    virtual ~SimplePluginShutdownListener(void);
-
-protected:
-    SimplePlugin* mPlugin;
+    nsIPluginManager* mgr;
 
 };
 
@@ -446,9 +430,7 @@ static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 static NS_DEFINE_IID(kIJRILiveConnectPluginIID, NS_IJRILIVECONNECTPLUGIN_IID);
 static NS_DEFINE_IID(kIJRILiveConnectPluginInstancePeerIID, NS_IJRILIVECONNECTPLUGININSTANCEPEER_IID);
 static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
-static NS_DEFINE_IID(kJRIEnvCID, NS_JRIENV_CID);
 static NS_DEFINE_IID(kIJRIEnvIID, NS_IJRIENV_IID);
-static NS_DEFINE_IID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 
 #ifdef NEW_PLUGIN_STREAM_API
@@ -463,20 +445,18 @@ static NS_DEFINE_IID(kIPluginStreamIID, NS_IPLUGINSTREAM_IID);
 
 // This counter is used to keep track of the number of outstanding objects.
 // It is used to determine whether the plugin's DLL can be unloaded.
-PRUint32 SimplePlugin::gPluginObjectCount = 0;
+static PRUint32 gPluginObjectCount = 0;
 
 // This flag is used to keep track of whether the plugin's DLL is explicitly
 // being retained by some client.
-PRBool SimplePlugin::gPluginLocked = PR_FALSE;
-
-JRIEnv* SimplePlugin::gEnv = NULL;
+static PRBool gPluginLocked = PR_FALSE;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePlugin Methods
 ////////////////////////////////////////////////////////////////////////////////
 
-SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
-    : mServMgr(servMgr), mEnvShutdownListener(NULL)
+SimplePlugin::SimplePlugin()
+    : mgr(NULL)
 {
     NS_INIT_REFCNT();
     gPluginObjectCount++;
@@ -485,6 +465,8 @@ SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
 SimplePlugin::~SimplePlugin(void)
 {
     gPluginObjectCount--;
+    if (env)
+        Simple::_unuse(env);
 }
 
 // These macros produce simple version of QueryInterface and AddRef.
@@ -533,15 +515,14 @@ NS_IMPL_RELEASE(SimplePlugin);
 SimplePlugin* gPlugin = NULL;
 
 extern "C" NS_EXPORT nsresult
-NSGetFactory(const nsCID &aClass, nsIFactory **aFactory,
-             nsIServiceManager* serviceMgr)
+NSGetFactory(const nsCID &aClass, nsIFactory **aFactory)
 {
     if (aClass.Equals(kIPluginIID)) {
         if (gPlugin) {
             *aFactory = gPlugin;
             return NS_OK;
         }
-        SimplePlugin* fact = new SimplePlugin(serviceMgr);
+        SimplePlugin* fact = new SimplePlugin();
         if (fact == NULL) 
             return NS_ERROR_OUT_OF_MEMORY;
         fact->AddRef();
@@ -555,22 +536,12 @@ NSGetFactory(const nsCID &aClass, nsIFactory **aFactory,
 extern "C" NS_EXPORT PRBool
 NSCanUnload(void)
 {
-    PRBool canUnload = SimplePlugin::gPluginObjectCount <= 1
-        && !SimplePlugin::gPluginLocked;
-    if (canUnload && SimplePlugin::gPluginObjectCount == 1) {
-        // shutdown code
-        gPlugin->Cleanup();	// release any references to services obtained
-        gPlugin->Release();
-        gPlugin = NULL;
-    }
-    return canUnload;
+    return gPluginObjectCount == 1 && !gPluginLocked;
 }
 
 NS_METHOD
 SimplePlugin::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
-    if (aOuter != NULL)
-        return NS_ERROR_NO_AGGREGATION;
     SimplePluginInstance* inst = new SimplePluginInstance();
     if (inst == NULL) 
         return NS_ERROR_OUT_OF_MEMORY;
@@ -586,14 +557,21 @@ SimplePlugin::LockFactory(PRBool aLock)
     return NS_OK;
 }
 
-nsresult
-SimplePlugin::Cleanup(void)
+NS_METHOD
+SimplePlugin::Initialize(nsISupports* browserInterfaces)
 {
-    if (gEnv) {
-        Simple::_unuse(gEnv);
-        mServMgr->ReleaseService(kJRIEnvCID, (nsISupports*)gEnv, mEnvShutdownListener);
-        gEnv = NULL;
+    if (browserInterfaces->QueryInterface(kIPluginManagerIID, 
+                                          (void**)&mgr) != NS_OK) {
+        return NS_ERROR_FAILURE;
     }
+    return NS_OK;
+}
+
+NS_METHOD
+SimplePlugin::Shutdown(void)
+{
+    mgr->Release();     // QueryInterface in Initialize
+    mgr = NULL;
     return NS_OK;
 }
 
@@ -644,51 +622,20 @@ NS_METHOD
 SimplePlugin::GetJavaClass(jref *result)
 {
     struct java_lang_Class* myClass;
-    if (gEnv == NULL) {
-        mEnvShutdownListener = new SimplePluginShutdownListener(this);
-        // mEnvShutdownListener->AddRef() done by GetService
-        nsresult err = mServMgr->GetService(kJRIEnvCID, kIJRIEnvIID, 
-                                            (nsISupports**)&gEnv,
-                                            mEnvShutdownListener);
-        if (err != NS_OK) return err;
-    }
-    PR_ASSERT(gEnv);
+    if (mgr->QueryInterface(kIJRIEnvIID, (void**)&env) == NS_NOINTERFACE)
+        return NS_ERROR_FAILURE;    // Java disabled
 
-    myClass = Simple::_use(gEnv);
+    myClass = Simple::_use(env);
 
     if (myClass == NULL) {
         /*
         ** If our class doesn't exist (the user hasn't installed it) then
         ** don't allow any of the Java stuff to happen.
         */
-        gEnv = NULL;
+        env = NULL;
     }
     *result = (jref)myClass;
     return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// SimplePluginShutdownListener: handles requests to shutdown the plugin
-
-static NS_DEFINE_IID(kIShutdownListenerIID, NS_ISHUTDOWNLISTENER_IID);
-NS_IMPL_ISUPPORTS(SimplePluginShutdownListener, kIShutdownListenerIID);
-
-SimplePluginShutdownListener::SimplePluginShutdownListener(SimplePlugin* plugin)
-    : mPlugin(plugin)
-{
-    NS_INIT_REFCNT();
-    mPlugin->AddRef();
-}
-
-SimplePluginShutdownListener::~SimplePluginShutdownListener(void)
-{
-    mPlugin->Release();
-}
-
-NS_METHOD
-SimplePluginShutdownListener::OnShutdown(const nsCID& aClass, nsISupports* service)
-{
-    return mPlugin->Cleanup();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -699,12 +646,12 @@ SimplePluginInstance::SimplePluginInstance(void)
     : fPeer(NULL), fWindow(NULL), fMode(nsPluginMode_Embedded)
 {
     NS_INIT_REFCNT();
-    SimplePlugin::gPluginObjectCount++;
+    gPluginObjectCount++;
 }
 
 SimplePluginInstance::~SimplePluginInstance(void)
 {
-    SimplePlugin::gPluginObjectCount--;
+    gPluginObjectCount--;
     PlatformDestroy(); // Perform platform specific cleanup
     DisplayJavaMessage("Calling SimplePluginInstance::Release.", -1);
 }
@@ -746,13 +693,11 @@ SimplePluginInstance::GetPeer(nsIPluginInstancePeer* *result)
     return NS_OK;
 }
 
-#include "nsIPrefsManager.h"
-
 NS_METHOD
 SimplePluginInstance::Start(void)
 {
     /* Show off some of that Java functionality: */
-    if (SimplePlugin::gEnv) {
+    if (env) {
         jint v;
         char factString[60];
 
@@ -767,53 +712,27 @@ SimplePluginInstance::Start(void)
         ** method, so we'll need to use the class object in order to call
         ** it:
         */
-        v = Simple::fact(SimplePlugin::gEnv, Simple::_class(SimplePlugin::gEnv), 10);
+        v = Simple::fact(env, Simple::_class(env), 10);
         sprintf(factString, "my favorite function returned %d\n", v);
         DisplayJavaMessage(factString, -1);
     }
 
 #ifdef NEW_PLUGIN_STREAM_API
-    nsIServiceManager* servMgr = gPlugin->GetServiceManager();
-    nsresult err;
-
     // Try getting some streams:
-    nsIPluginManager* pMgr = NULL;
-    err = servMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
-                              (nsISupports**)&pMgr);
-    if (err == NS_OK) {
-        pMgr->GetURL(this, "http://warp", NULL,
-                     new SimplePluginStreamListener(this, "http://warp (Normal)"));
+    gPlugin->GetPluginManager()->GetURL(this, "http://warp", NULL,
+                                        new SimplePluginStreamListener(this, "http://warp (Normal)"));
 
-        pMgr->GetURL(this, "http://home.netscape.com", NULL,
-                     new SimplePluginStreamListener(this, "http://home.netscape.com (AsFile)"),
-                     nsPluginStreamType_AsFile);
+    gPlugin->GetPluginManager()->GetURL(this, "http://home.netscape.com", NULL,
+                                        new SimplePluginStreamListener(this, "http://home.netscape.com (AsFile)"),
+                                        nsPluginStreamType_AsFile);
 
-        pMgr->GetURL(this, "http://warp/java", NULL,
-                     new SimplePluginStreamListener(this, "http://warp/java (AsFileOnly)"),
-                     nsPluginStreamType_AsFileOnly);
+    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java", NULL,
+                                        new SimplePluginStreamListener(this, "http://warp/java (AsFileOnly)"),
+                                        nsPluginStreamType_AsFileOnly);
 
-        pMgr->GetURL(this, "http://warp/java/oji", NULL,
-                     new SimplePluginStreamListener(this, "http://warp/java/oji (Seek)"),
-                     nsPluginStreamType_Seek);
-
-        servMgr->ReleaseService(kPluginManagerCID, pMgr);
-    }
-
-    // Try to access a preference
-    nsIPrefsManager* prefs = NULL;
-    static NS_DEFINE_IID(kIPrefsManagerIID, NS_IPREFSMANAGER_IID);
-    static NS_DEFINE_IID(kPrefsManagerCID, NS_PREFSMANAGER_CID);
-    err = servMgr->GetService(kPrefsManagerCID, kIPrefsManagerIID, 
-                              (nsISupports**)&prefs);
-    if (err == NS_OK) {
-        char home[128];
-        int homeLen = 128;
-        err = prefs->GetCharPref("browser.startup.homepage", home, &homeLen); 
-        home[homeLen] = '\0';
-        DisplayJavaMessage(home, -1);
-        servMgr->ReleaseService(kPrefsManagerCID, prefs);
-    }
-    
+    gPlugin->GetPluginManager()->GetURL(this, "http://warp/java/oji", NULL,
+                                        new SimplePluginStreamListener(this, "http://warp/java/oji (Seek)"),
+                                        nsPluginStreamType_Seek);
 #endif
 
     return NS_OK;
@@ -1012,7 +931,7 @@ SimplePluginStreamListener::SimplePluginStreamListener(SimplePluginInstance* ins
                                                        const char* msgName)
     : fInst(inst), fMessageName(msgName)
 {
-    SimplePlugin::gPluginObjectCount++;
+    gPluginObjectCount++;
     NS_INIT_REFCNT();
     char msg[256];
     sprintf(msg, "### Creating SimplePluginStreamListener for %s\n", fMessageName);
@@ -1021,7 +940,7 @@ SimplePluginStreamListener::SimplePluginStreamListener(SimplePluginInstance* ins
 
 SimplePluginStreamListener::~SimplePluginStreamListener(void)
 {
-    SimplePlugin::gPluginObjectCount--;
+    gPluginObjectCount--;
     char msg[256];
     sprintf(msg, "### Destroying SimplePluginStreamListener for %s\n", fMessageName);
     fInst->DisplayJavaMessage(msg, -1);
@@ -1092,13 +1011,13 @@ SimplePluginStream::SimplePluginStream(nsIPluginStreamPeer* peer,
                                        SimplePluginInstance* inst)
     : fPeer(peer), fInst(inst)
 {
-    SimplePlugin::gPluginObjectCount++;
+    gPluginObjectCount++;
     NS_INIT_REFCNT();
 }
 
 SimplePluginStream::~SimplePluginStream(void)
 {
-    SimplePlugin::gPluginObjectCount--;
+    gPluginObjectCount--;
     fInst->DisplayJavaMessage("Calling SimplePluginStream::Release.", -1);
 }
 
@@ -1215,7 +1134,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     Simple* javaPeer;   // instance of the java class (there's no package qualifier)
     java_lang_String* str;
 
-    if (!SimplePlugin::gEnv) { /* Java failed to initialize, so do nothing. */
+    if (!env) { /* Java failed to initialize, so do nothing. */
         return;
     }
 
@@ -1232,7 +1151,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     ** Use the JRI (see jri.h) to create a Java string from the input
     ** message:
     */
-    str = JRI_NewStringUTF(SimplePlugin::gEnv, msg, len);
+    str = JRI_NewStringUTF(env, msg, len);
 
     /*
     ** Use the GetJavaPeer operation to get the Java instance that
@@ -1246,7 +1165,7 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     ** passing the execution environment, the object, and the java
     ** string:
     */
-    javaPeer->doit(SimplePlugin::gEnv, str);
+    javaPeer->doit(env, str);
 }
 
 

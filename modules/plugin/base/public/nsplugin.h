@@ -80,7 +80,6 @@
 #define nsplugins_h___
 
 #include "nsRepository.h"       // for NSGetFactory
-#include "nsIServiceManager.h"  // for other services
 
 ////////////////////////////////////////////////////////////////////////////////
 /**

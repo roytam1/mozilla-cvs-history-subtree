@@ -37,8 +37,6 @@
 #endif
 #endif
 
-#include "nsIServiceManager.h"
-
 nsHashtable *nsRepository::factories = NULL;
 PRMonitor *nsRepository::monitor = NULL;
 
@@ -244,11 +242,7 @@ nsresult nsRepository::loadFactory(FactoryEntry *aEntry,
     nsFactoryProc proc = (nsFactoryProc) PR_FindSymbol(aEntry->instance,
                                                        "NSGetFactory");
     if (proc != NULL) {
-      nsIServiceManager* serviceMgr = NULL;
-      nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
-      if (res == NS_OK) {
-        res = proc(aEntry->cid, aFactory, serviceMgr);
-      }
+      nsresult res = proc(aEntry->cid, aFactory);
       return res;
     }
     PR_LOG(logmodule, PR_LOG_ERROR, 

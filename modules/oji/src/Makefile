@@ -13,9 +13,7 @@ MODULE		= ojiimpl
 ifdef MOZ_OJI
 LIBRARY_NAME	= oji
 
-CPPSRCS         = jvmmgr.cpp		 \
-                  nsJVMManager.cpp	 \
-                  nsJVMPluginTagInfo.cpp \
+CPPSRCS         = jvmmgr.cpp \
                   scd.cpp
 
 REQUIRES	= img java js lay layer plugin plugimpl pref style util xpcom raptor oji caps
@@ -24,9 +22,7 @@ INCLUDES += 		-I$(DIST)/include/private
 
 endif # MOZ_OJI
 
-EXPORTS         = jvmmgr.h	 \
-		  nsJVMManager.h \
-		  nsJVMPluginTagInfo.h
+EXPORTS         = jvmmgr.h
 
 include $(DEPTH)/config/rules.mk
 

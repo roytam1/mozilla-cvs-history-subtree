@@ -186,15 +186,6 @@ public:
     {0x81, 0x64, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
 }
 
-// CLSID for the browser's global plugin manager object.
-#define NS_PLUGINMANAGER_CID                         \
-{ /* ce768990-5a4e-11d2-8164-006008119d7a */         \
-    0xce768990,                                      \
-    0x5a4e,                                          \
-    0x11d2,                                          \
-    {0x81, 0x64, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif /* nsIPluginManager_h___ */
