@@ -1,31 +1,16 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+/*
+ * Copyright (c) 1998-2001 Mountain View Compiler Company
+ * All rights reserved.
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
+ * Author: Jeff Dyer <jeff@compilercompany.com>
  */
 
-/**
- * Scanner.java
+/*
+ * Partitions input character stream into tokens.
  */
 
 
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.util.Vector;
 import java.io.*;
 
@@ -39,6 +24,7 @@ public class Scanner implements Tokens, States, CharacterClasses {
     private   String codebase;
     private   boolean foundNewlineInComment;
     private   boolean isFirstTokenOnLine;
+	protected int     errorCount = 0;
     
     InputBuffer input;
 
@@ -305,8 +291,8 @@ public class Scanner implements Tokens, States, CharacterClasses {
     };
 
     public final void error(int kind, String msg, int tokenid) {
+	    errorCount++;
         String loc = null;
-        int pos;
         switch(kind) {
             case lexical_error:
             case lexical_lineterminatorinsinglequotedstringliteral_error:
@@ -320,10 +306,9 @@ public class Scanner implements Tokens, States, CharacterClasses {
                 msg = msg==null?error_messages[kind]:msg;
                 break;
         }
-        pos = loc.length()-1;
         System.err.println(loc+msg);
         System.err.println(input.getLineText(input.positionOfMark()));
-        System.err.println(getLinePointer(input.markCol));
+        System.err.println(getLinePointer(input.markCol-1));
         skiperror(kind);
     }
 
@@ -376,10 +361,13 @@ public class Scanner implements Tokens, States, CharacterClasses {
                     }
                 }
             case syntax_error:
-                err.println("Syntax error");
-                break;
             default:
-                break;
+                while ( true ) {
+                    char nc = nextchar();
+                    if( nc == ';' || nc == '\n' || nc == 0 ) {
+                        return;
+                    }
+                }
         } 
         } catch (Exception x) {
             x.printStackTrace();

@@ -2,18 +2,10 @@
  * Sanity test.
  */
 
-const result = 'okay';
-
-function title() {
-    return "sanity";
-}
-
-
-function run() {
-}
-
-result;
+print('hello','world');
+print('world');
 
 /**
- * Copyright (c) 1999, Mountain View Compiler Company. All rights reserved.
+ * Copyright (c) 1999-2001, Mountain View Compiler Company. 
+ * All rights reserved.
  */

@@ -1,36 +1,14 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.util.Vector;
 import java.util.Enumeration;
 
 /**
- * class ReferenceValue
+ * A reference value.
  */
 
 public class ReferenceValue extends Value {
 
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     Scope  scope;
     Vector namespaces;
@@ -45,7 +23,7 @@ public class ReferenceValue extends Value {
 
         if( debug ) {
             Debugger.trace( "creating reference scope = " + scope + 
-                            " name = " + name + " namespaces = " + namespaces );
+                            " name = " + name + " used_namespaces = " + namespaces );
         }
 
         this.scope      = scope;
@@ -91,6 +69,10 @@ public class ReferenceValue extends Value {
                     break;
                 }
             }
+
+			if( slot==null ) {
+                slot = scope.get(qualifier/*=null*/,name);
+			}
         }
         if( debug ) {
             Debugger.trace("leaving getSlotInScope() with slot="+slot);
@@ -101,7 +83,7 @@ public class ReferenceValue extends Value {
     public Slot getSlot(Context context) throws Exception {
 
         if( debug ) {
-            Debugger.trace("ReferenceType.getSlot() with context = " + context );
+            Debugger.trace("ReferenceValue.getSlot() with namespaces = " + namespaces + ", name = " + name );
         }
 
         Slot slot = null;
@@ -140,7 +122,7 @@ public class ReferenceValue extends Value {
     public Value getValue(Context context) throws Exception {
 
         if( debug ) {
-            Debugger.trace("ReferenceType.getValue() with context = " + context );
+            Debugger.trace("ReferenceValue.getValue() with namespaces = " + namespaces + ", name = " + name );
         }
 
         Value value = UndefinedValue.undefinedValue;
@@ -169,7 +151,7 @@ public class ReferenceValue extends Value {
     public Value getType(Context context) throws Exception {
 
         if( debug ) {
-            Debugger.trace("ReferenceType.getValue() with context = " + context );
+            Debugger.trace("ReferenceValue.getType() with namespaces = " + namespaces + ", name = " + name );
         }
 
         Value type = ObjectType.type;
@@ -183,7 +165,7 @@ public class ReferenceValue extends Value {
     Value getAttrs(Context context) throws Exception {
 
         if( debug ) {
-            Debugger.trace("ReferenceType.getAttrs() with context = " + context );
+            Debugger.trace("ReferenceValue.getAttrs() with namespaces = " + namespaces + ", name = " + name );
         }
 
         Value attrs = null;

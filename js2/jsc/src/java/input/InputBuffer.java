@@ -1,38 +1,14 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
+/*
+ * Filters and buffers characters from a input reader.
  */
 
-/**
- * InputBuffer.java
- *
- * Filters and buffers characters from a Reader.
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.io.*;
 
 public class InputBuffer implements CharacterClasses {
 
     private static final boolean debug = false;
-    private static final boolean debug_nextchar = false;
+    private static final boolean debug_nextchar = true;
     private static final boolean debug_retract = false;
 
     StringBuffer lineA = new StringBuffer();
@@ -459,7 +435,7 @@ public class InputBuffer implements CharacterClasses {
                        text.charAt(len)!=0x2029) ; len++) {
         }
 
-        return text.substring(offset,len);
+        return text.toString().substring(offset,len);
     }
 
     static boolean test_getLineText() {
@@ -490,13 +466,13 @@ public class InputBuffer implements CharacterClasses {
     }
 
     public int getColPos(int pos) {
-        Debugger.trace("pos " + pos);
+        //Debugger.trace("pos " + pos);
         int i,len;
         for(i = 0; line_breaks[i] <= pos && i <= lnNum; i++)
             ;
         
         int offset = line_breaks[i-1];
-        Debugger.trace("offset " + offset);
+        //Debugger.trace("offset " + offset);
         
         return pos-offset;
     }

@@ -1,26 +1,4 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.util.Vector;
 
 /**
@@ -29,7 +7,7 @@ import java.util.Vector;
 
 public class ObjectType implements Type {
 
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     public static final TypeValue type = new TypeValue(new ObjectType());
 
@@ -108,11 +86,9 @@ public class ObjectType implements Type {
 
     public boolean includes(Value value) {
 
-        // A type is always a member of itself.
-
-        if(value.type==ObjectType.type) {
-           return true;
-        }
+	    if( debug ) {
+		    Debugger.trace("ObjectType.includes() with this = " + this + ", value.type = " + value.type + ", values_ = " + values_);
+		}
 
         return values_.contains(value.type);
     }

@@ -1,31 +1,9 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.util.*;
 import java.io.StringReader;
 
 /**
- * ConstantEvaluator
+ * Computes the compile-time values of a program.
  *
  * The ConstantEvaluator evaluates all expressions to either Undefined or
  * a definite constant value. Each statement evaluates to a CompletionValue
@@ -38,12 +16,16 @@ import java.io.StringReader;
 
 public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
 
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     // Expressions
 
     /**
      * IdentifierNode
+	 *
+	 * The reference value serves as a weak alias to the object being
+	 * bound to. It is interpreted by its context (e.g. a member expr
+	 * as a selector for a member of the base activation frame.
      */
 
     Value evaluate( Context context, IdentifierNode node ) throws Exception { 
@@ -81,7 +63,7 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         }
 
         if( qualifier != null && 
-            !(NamespaceType.type.includes(qualifier) || ClassType.type.includes(qualifier)) ) {
+            !(NamespaceType.type.includes(qualifier) || TypeType.type.includes(qualifier)) ) {
             error(context,0,"Identifier qualifier must evaluate to a namespace or type.",node.qualifier.pos());
             return UndefinedValue.undefinedValue;
         } 
@@ -304,7 +286,7 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             Debugger.trace("evaluating LiteralObjectNode = " + node);
         }
 
-        Value value;
+        ObjectValue value;
         Type  type;
 
         type  = new ObjectType("");
@@ -315,6 +297,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             node.fieldlist.evaluate(context,this);
             context.popScope();
         }
+
+		node.value = value; // save it for code generation.
 
         return value;
     }
@@ -376,16 +360,18 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             Debugger.trace("evaluating LiteralArrayNode = " + node);
         }
 
-        Value value;
+        ListValue value;
         Type  type;
 
         type = ArrayType.type;
 
         if( node.elementlist != null ) {
-            value = node.elementlist.evaluate(context,this);
+            value = (ListValue)node.elementlist.evaluate(context,this);
         } else {
-            value = NullValue.nullValue;
+            value = null;
         }
+
+        node.value = value; // save for code generation.
 
         return type.convert(context,value);
     }
@@ -405,6 +391,41 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         };
 
         testEvaluator("ArrayLiteral",input,expected);
+    }
+
+    /**
+     * ElementListNode
+     */
+
+    Value evaluate( Context context, ElementListNode node ) throws Exception { 
+
+        if( debug ) {
+            Debugger.trace("evaluating ElementListNode = " + node);
+        }
+
+        ListValue list;
+
+        if( node.list != null ) {
+            if( node.list instanceof ListNode ) {
+                list = (ListValue) node.list.evaluate(context,this);
+            } else {
+                list = new ListValue();
+                list.push(node.list.evaluate(context,this));
+            }
+        }
+        else {
+            list = new ListValue();
+        }
+
+        if( node.item != null ) {
+            list.push(node.item.evaluate(context,this));
+        }
+        else {
+            // do nothing.
+        }
+
+        return list;
+
     }
 
     /**
@@ -492,6 +513,10 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
      * MemberExpressionNode
      *
      * { base:NewSubexpressionNode name:IdentifierNode }
+	 *
+	 * A member expression evaluates to a reference value. If the value of the
+	 * reference is a compile-time constant, then return the value as a literal.
+	 * Otherwise return undefined.
      */
 
     Value evaluate( Context context, MemberExpressionNode node ) throws Exception {
@@ -502,17 +527,16 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
 
         Value          value;
         Value          base;
-        ReferenceValue ref;
         String         name;
 
         base  = node.base.evaluate(context,this).getValue(context);
         value = node.name.evaluate(context,this);
 
         if( value instanceof ReferenceValue ) {
-            ref       = (ReferenceValue) value;
-            ref.scope = base;
+            node.ref       = value;
+            ((ReferenceValue)node.ref).scope = base;
         } else {
-            error(context,0,"Expecting reference expression after dot operator.",node.pos());
+            error(context,0,"Expecting reference expression after dot operator.",node.name.pos());
         }
 
         return value;
@@ -619,13 +643,15 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         Value expr = UndefinedValue.undefinedValue;
 
         if( !TypeType.type.includes(typeValue) ) {
-            error(context,"A constant type expression expected on right hand side of coerce operator." +
-                                typeValue,node.pos());
+            error(context,"A constant type expression expected on right hand side of coerce operator.",node.type.pos());
         } else {
             Value value;
             expr  = node.expr.evaluate(context,this);
             value = ((TypeValue)typeValue).coerce(context,expr);
         }
+
+        // Save the typename for code generation.
+        //node.typename = ((ReferenceValue)ref).getName();
 
         return expr;
     }
@@ -705,6 +731,23 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         if( debug ) {
             Debugger.trace("evaluating BinaryExpressionNode = " + node);
         }
+
+		// if rhs is a constant, then replace with a literal.
+		// if it is a local definition, then load it directly.
+		// otherwise, put result in temporary and use it directly.
+
+
+        Value value;
+
+		value = node.lhs.evaluate(context,this);
+        if( value instanceof ReferenceValue ) {
+            node.lhs_slot = ((ReferenceValue)value).getSlot(context);
+        }
+		value = node.rhs.evaluate(context,this);
+        if( value instanceof ReferenceValue ) {
+            node.rhs_slot = ((ReferenceValue)value).getSlot(context);
+        }
+
         return UndefinedValue.undefinedValue;
     }
 
@@ -736,11 +779,14 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         Value value = UndefinedValue.undefinedValue;
         if( lref != UndefinedValue.undefinedValue ) {
             Slot slot = ((ReferenceValue)lref).getSlot(context);
-            Debugger.trace("slot " + slot);
+            Debugger.trace("ConstantEvaluator.evaluat(AssignmentExpression) with slot " + slot);
             if( slot != null ) {
                 Value rref = node.rhs.evaluate(context,this);
                 slot.value = rref.getValue(context);
             }
+            node.ref = (ReferenceValue)lref;
+        } else {
+            throw new Exception("internal error: assignment lhs is not a reference.");
         }
 
         return value;
@@ -1080,6 +1126,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             Debugger.trace("evaluating ReturnStatementNode = " + node);
         }
 
+		node.expr.evaluate(context,this);
+
         return new CodeValue(node);
     }
 
@@ -1209,7 +1257,7 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
 
     static {
     try {
-    	namespace_parameters = new ObjectValue(new NamespaceType("_parameters_"));
+    	namespace_parameters = new ObjectValue(new TypeValue(new NamespaceType("_parameters_")));
 	} catch ( Exception x ) {
 	    x.printStackTrace();
 		Debugger.trace("oops, something is not right.");
@@ -1578,12 +1626,17 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
      * 2. Save result in code slot.
      */
 
+    private int local_offset;
+
     public Value evaluate( Context context, FunctionDefinitionNode node ) throws Exception {
 
         if( debug ) {
             Debugger.trace( "evaluating FunctionDefinitionNode: " + node );
         }
 
+		local_offset = 0;   // start a new activation frame.
+
+        used_namespaces.addElement(namespace_parameters);
         Value value = node.decl.evaluate(context,this);
 
         if( node.body!=null) {
@@ -1595,6 +1648,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             slot.attrs = modifier_attributes; // ACTION: do attrs
             context.popScope();
         }
+
+		node.fixedCount = local_offset;
 
         return UndefinedValue.undefinedValue;
     }
@@ -1634,7 +1689,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
             Debugger.trace( "evaluating FunctionDeclarationNode: " + node );
         }
 
-        ReferenceValue ref = (ReferenceValue) node.name.evaluate(context,this);
+        ReferenceValue ref;
+		node.ref = ref = (ReferenceValue) node.name.evaluate(context,this);
         String name = ref.getName();
         ref.scope = context.getLocal();
 
@@ -1784,8 +1840,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         ref  = (ReferenceValue) node.identifier.evaluate(context,this);
         name = ref.getName();
 
-        node.slot = local.add(namespace_parameters,name);
-        //node.identifier.slot.block = context.getBlock();
+        node.slot       = local.add(namespace_parameters,name);
+		node.slot.store = new Store(local,local_offset++);
 
         return ref;
     }
@@ -1957,8 +2013,8 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
 
         // Put the new namespace into the current local scope.
 
-        Scope local = context.getLocal();
-        Slot slot   = local.add(null,name);
+        Scope scope = context.getGlobal();
+        Slot slot   = scope.add(null,name);
         slot.type   = NamespaceType.type;
         slot.value  = value;
         slot.attrs  = null; // ACTION: do attrs.
@@ -1993,18 +2049,23 @@ public class ConstantEvaluator extends Evaluator implements Tokens, Attributes {
         Scope scope;
         Slot slot;
 
-        Vector prev_namespaces = used_namespaces;
-        used_namespaces = (Vector)prev_namespaces.clone();
+        if( node.statements != null ) {
+		
+			Vector prev_namespaces = used_namespaces;
+			used_namespaces = (Vector)prev_namespaces.clone();
 
-        scope      = context.getGlobal();
-        slot       = scope.add(null,"_code_");
-        slot.value = node.statements.evaluate(context,this);
-        slot.type  = ObjectType.type;
-        slot.attrs = null; // ACTION: do attrs
+			scope      = context.getGlobal();
+			slot       = scope.add(null,"_code_");
+			slot.value = node.statements.evaluate(context,this);
+			slot.type  = ObjectType.type;
+			slot.attrs = null; // ACTION: do attrs
 
-        used_namespaces = prev_namespaces;
+			used_namespaces = prev_namespaces;
+            return slot.value;
+        } else {
+		    return UndefinedValue.undefinedValue;
+		}
 
-        return slot.value;
     }
 
 /*
@@ -2334,6 +2395,7 @@ class Flow {
         }
         return preds;
     }
+
 }
 
 /*

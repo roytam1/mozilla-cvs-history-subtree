@@ -1,32 +1,10 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.util.Hashtable;
 import java.util.Vector;
 import java.util.Enumeration;
 
 /**
- * ObjectValue
+ * An object value.
  */
 
 public class ObjectValue extends Value implements Attributes, Scope {
@@ -37,8 +15,7 @@ public class ObjectValue extends Value implements Attributes, Scope {
      *
      */
 
-    Hashtable slots      = new Hashtable();
-    Hashtable attributes = new Hashtable();
+    Hashtable slots = new Hashtable();
     String name;
 
     /**
@@ -46,6 +23,7 @@ public class ObjectValue extends Value implements Attributes, Scope {
      */
 
     public ObjectValue() {
+	    this.type = null;
     }
 
     /**
@@ -122,20 +100,28 @@ public class ObjectValue extends Value implements Attributes, Scope {
      */
 
     public Slot get(Value namespace, String name) {
+
         if( debug ) {
             Debugger.trace("ObjectValue.get() namespace="+namespace+", name="+name);
         }
-        Hashtable names;
+
+        Slot slot;
         if( namespace == null ) {
-            names = slots;
+            slot = (Slot) slots.get(name);
         } else {
-            names = (Hashtable) ((ObjectValue)slots.get(namespace)).slots;
+            ObjectValue names = (ObjectValue)slots.get(namespace);
+			if( names == null ) {
+			    slot = null;
+			} else {
+                slot = (Slot) names.slots.get(name);
+			}
         }
-        return (Slot) names.get(name);
+
+        return slot;
     }
 
     /**
-     *
+     * Add a name to a namespace and return the resulting slot.
      */
 
     public Slot add(Value namespace, String name) throws Exception {
@@ -167,6 +153,14 @@ public class ObjectValue extends Value implements Attributes, Scope {
 
         return slot;
     }
+
+    /**
+     *
+     */
+
+    int size() {
+	    return slots.size();
+	}
 
     /**
      *

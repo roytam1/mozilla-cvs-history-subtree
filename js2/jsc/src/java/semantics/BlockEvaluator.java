@@ -1,38 +1,15 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
- */
-
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * class BlockEvaluator
+ * Delineates the program into its basic execution blocks.
  *
- * The purpose of this pass is to delineate the basic
- * blocks of the program. It is necessary to know all
- * the blocks in the program before we can mark the
- * flow-control edges and compute the dominance relationship
- * between a reference and definition.
+ * It is necessary to know all the blocks in the program 
+ * before we can mark the flow-control edges and compute 
+ * the dominance relationship between a reference and 
+ * definition.
  *
  * The algorithm for partitioning the program into basic
  * blocks goes like this:
@@ -877,9 +854,11 @@ public class BlockEvaluator extends Evaluator {
             Debugger.trace( "defining ProgramNode: " + node );
         }
 
-        node.statements.first().markLeader();
-        node.statements.evaluate(context,this);
-        context.exitBlock(node.statements.last());
+        if( node.statements != null ) {
+    		node.statements.first().markLeader();
+            node.statements.evaluate(context,this);
+            context.exitBlock(node.statements.last());
+		}
         return UndefinedValue.undefinedValue;
 
     }

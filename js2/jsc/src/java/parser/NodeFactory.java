@@ -1,26 +1,8 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
+/*
+ * Creates parse tree nodes.
  */
 
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 
 public final class NodeFactory {
 
@@ -75,7 +57,7 @@ public final class NodeFactory {
         return new LiteralUndefinedNode();
     }
     static ParenthesizedExpressionNode ParenthesizedExpression( Node expr ) {
-        return new ParenthesizedExpressionNode(expr);
+        return new ParenthesizedExpressionNode(expr,in.positionOfMark());
     }
     static ParenthesizedListExpressionNode ParenthesizedListExpression( Node expr ) {
         return new ParenthesizedListExpressionNode(expr);
@@ -98,9 +80,6 @@ public final class NodeFactory {
     static SuperExpressionNode SuperExpression() {
         return new SuperExpressionNode();
     }
-    static EvalExpressionNode EvalExpression( Node expr ) {
-        return new EvalExpressionNode(expr);
-    }
     static ListNode List( Node list, Node item ) {
         return new ListNode(list,item,item.pos());
     }
@@ -120,13 +99,13 @@ public final class NodeFactory {
         return new CallExpressionNode(member,args);
     }
     static IndexedMemberExpressionNode IndexedMemberExpression( Node base, Node member ) {
-        return new IndexedMemberExpressionNode(base,member);
+        return new IndexedMemberExpressionNode(base,member,in.positionOfMark());
     }
     static MemberExpressionNode MemberExpression( Node base, Node name ) {
-        return new MemberExpressionNode(base,name);
+        return new MemberExpressionNode(base,name,in.positionOfMark());
     }
     static CoersionExpressionNode CoersionExpression( Node expr, Node type ) {
-        return new CoersionExpressionNode(expr,type);
+        return new CoersionExpressionNode(expr,type,in.positionOfMark());
     }
     static UnaryExpressionNode UnaryExpression( int op, Node expr ) {
         return new UnaryExpressionNode(op,expr);

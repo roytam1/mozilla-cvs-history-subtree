@@ -1,26 +1,8 @@
-/* 
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Mountain View Compiler
- * Company.  Portions created by Mountain View Compiler Company are
- * Copyright (C) 1998-2000 Mountain View Compiler Company. All
- * Rights Reserved.
- *
- * Contributor(s):
- * Jeff Dyer <jeff@compilercompany.com>
+/*
+ * Parse tree nodes.
  */
 
-package com.compilercompany.ecmascript;
+package com.compilercompany.es3c.v1;
 
 /**
  * AnnotatedBlockNode
@@ -82,6 +64,7 @@ final class AssignmentExpressionNode extends Node implements Tokens {
 
     Node lhs, rhs;
     int  op;
+    Value ref;
 
     AssignmentExpressionNode( Node lhs, int op, Node rhs ) {
         this.lhs = lhs;
@@ -135,6 +118,7 @@ final class BinaryExpressionNode extends Node {
 
     protected Node lhs, rhs;
     protected int  op;
+	Slot      lhs_slot,rhs_slot;
 
     BinaryExpressionNode( int op, Node lhs, Node rhs ) {
         this.op  = op;
@@ -327,8 +311,10 @@ final class ClassofExpressionNode extends Node {
 final class CoersionExpressionNode extends Node {
 
     Node expr, type;
+    String typename;
 
-    CoersionExpressionNode( Node expr, Node type ) {
+    CoersionExpressionNode( Node expr, Node type, int pos ) {
+	    super(pos);
         this.expr = expr;
         this.type = type;
     }
@@ -422,11 +408,11 @@ final class DoStatementNode extends Node {
 
 final class ElementListNode extends Node {
 
-    Node list, expr;
+    Node list, item;
 
-    ElementListNode( Node list, Node expr ) {
+    ElementListNode( Node list, Node item ) {
         this.list = list;
-        this.expr = expr;
+        this.item = item;
     }
 
     public Value evaluate( Context context, Evaluator evaluator ) throws Exception {
@@ -434,7 +420,7 @@ final class ElementListNode extends Node {
     }
 
     public String toString() {
-        return "elementlist( " + list + ", " + expr + " )";
+        return "elementlist( " + list + ", " + item + " )";
     }
 }
 
@@ -471,27 +457,6 @@ final class ExpressionStatementNode extends Node {
 
     public String toString() {
         return "expressionstatement( " + expr + " )";
-    }
-}
-
-/**
- * EvalExpressionNode
- */
-
-final class EvalExpressionNode extends Node {
-
-    Node expr;
-
-    EvalExpressionNode( Node expr ) {
-        this.expr = expr;
-    }
-
-    public Value evaluate( Context context, Evaluator evaluator ) throws Exception {
-        return evaluator.evaluate( context, this );
-    }
-
-    public String toString() {
-        return "evalexpression( " + expr + " )";
     }
 }
 
@@ -721,6 +686,7 @@ final class FunctionDeclarationNode extends Node {
 
     Node name, signature;
     Slot slot;
+	Value ref;
 
     FunctionDeclarationNode( Node name, Node signature ) {
         this.name      = name;
@@ -743,6 +709,7 @@ final class FunctionDeclarationNode extends Node {
 final class FunctionDefinitionNode extends Node {
 
     Node decl, body;
+	int fixedCount;
 
     FunctionDefinitionNode( Node decl, Node body ) {
         this.decl = decl;
@@ -777,7 +744,7 @@ final class FunctionNameNode extends Node {
 
     FunctionNameNode( int kind, Node name ) {
 	    this.kind = kind;
-        this.name = name;
+        this.name = (IdentifierNode)name;
     }
 
     public Value evaluate( Context context, Evaluator evaluator ) throws Exception {
@@ -819,6 +786,7 @@ final class FunctionSignatureNode extends Node {
 class IdentifierNode extends Node {
 
     String name;
+	Value ref;
 
     IdentifierNode( String name, int pos ) {
         super(pos);
@@ -949,7 +917,8 @@ final class IndexedMemberExpressionNode extends Node {
 
     Node base, expr;
 
-    IndexedMemberExpressionNode( Node base, Node expr ) {
+    IndexedMemberExpressionNode( Node base, Node expr, int pos ) {
+	    super(pos);
         this.base = base;
 	    this.expr = expr;
     }
@@ -1122,6 +1091,7 @@ final class ListNode extends Node {
 final class LiteralArrayNode extends Node {
 
     Node elementlist;
+	Value value;
 
     LiteralArrayNode( Node elementlist ) {
         this.elementlist = elementlist;
@@ -1165,6 +1135,7 @@ final class LiteralFieldNode extends Node {
 
     Node name;
     Node value;
+	Value ref;
 
     LiteralFieldNode( Node name, Node value ) {
         this.name  = name;
@@ -1226,6 +1197,7 @@ final class LiteralNumberNode extends Node {
 final class LiteralObjectNode extends Node {
 
     Node fieldlist;
+	Value value;
 
     LiteralObjectNode( Node fieldlist ) {
         this.fieldlist = fieldlist;
@@ -1328,8 +1300,10 @@ final class LiteralUndefinedNode extends Node {
 final class MemberExpressionNode extends Node {
 
     Node base, name;
+    Value ref;
 
-    MemberExpressionNode( Node base, Node name ) {
+    MemberExpressionNode( Node base, Node name, int pos ) {
+	    super(pos);
         this.base = base;
 	    this.name = name;
     }
@@ -1490,7 +1464,8 @@ final class ParenthesizedExpressionNode extends Node {
 
     Node expr;
 
-    public ParenthesizedExpressionNode( Node expr ) {
+    public ParenthesizedExpressionNode( Node expr, int pos ) {
+	    super(pos);
         this.expr = expr;
     }
 
