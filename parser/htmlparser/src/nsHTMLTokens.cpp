@@ -514,44 +514,48 @@ CCommentToken::CCommentToken(const nsString& aName) : CHTMLToken(aName) {
   mTypeID=eHTMLTag_comment;
 }
 
-/*
- *  Consume the identifier portion of the comment. 
- *  Note that we've already eaten the "<!" portion.
- *  
- *  @update  gess 3/25/98
- *  @param   aChar -- last char consumed from stream
- *  @param   aScanner -- controller of underlying input source
- *  @return  error result
- */
-nsresult CCommentToken::Consume(PRUnichar, CScanner& aScanner) {
 
-  PRUnichar ch,ch2;
-  nsresult   result=NS_OK;
+/* 
+ *  Consume the identifier portion of the comment. 
+ *  Note that we've already eaten the "<!" portion. 
+ * 
+ *  @update  gess 3/25/98 
+ *  @param   aChar -- last char consumed from stream 
+ *  @param   aScanner -- controller of underlying input source 
+ *  @return  error result 
+ */ 
+nsresult CCommentToken::Consume(PRUnichar aChar, CScanner& aScanner) { 
+
+  nsresult  result=NS_OK; 
   
-  static nsAutoString terminals(">");
+  static nsAutoString terminals(">"); 
   
-  aScanner.GetChar(ch);
-  mTextValue="<!";
-  if(kMinus==ch) {
-    result=aScanner.GetChar(ch2);
-    if(NS_OK==result) {
-      if(kMinus==ch2) {
-           //in this case, we're reading a long-form comment <-- xxx -->
-        mTextValue+="--";
-        PRInt32 findpos=-1;
-        while((findpos==kNotFound) && (NS_OK==result)) {
-          result=aScanner.ReadUntil(mTextValue,terminals,PR_TRUE);
-          findpos=mTextValue.RFind("-->");
+  aScanner.GetChar(aChar); 
+  mTextValue="<!"; 
+  if(kMinus==aChar) { 
+    mTextValue+="-"; 
+    result=aScanner.GetChar(aChar); 
+    if(NS_OK==result) { 
+      if(kMinus==aChar) { 
+           //in this case, we're reading a long-form comment <-- xxx --> 
+        mTextValue+="-"; 
+        PRInt32 findpos=-1; 
+        while((findpos==kNotFound) && (NS_OK==result)) { 
+          result=aScanner.ReadUntil(mTextValue,terminals,PR_TRUE); 
+          findpos=mTextValue.RFind("-->"); 
         }
-      }
-    }
-    return result;
-  }
-     //if you're here, we're consuming a "short-form" comment
-  mTextValue+=ch;
-  result=aScanner.ReadUntil(mTextValue,terminals,PR_TRUE);
-  return result;
-};
+        return result;
+      } 
+    } 
+  } 
+
+  if(NS_OK==result) { 
+     //if you're here, we're consuming a "short-form" comment 
+    mTextValue+=aChar; 
+    result=aScanner.ReadUntil(mTextValue,terminals,PR_TRUE); 
+  } 
+  return result; 
+} 
 
 /*
  *  
