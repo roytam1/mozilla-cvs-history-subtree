@@ -31,10 +31,10 @@ interface nsIDocument;
 [scriptable, uuid(8781FC88-355F-4439-881F-6504A0A1CEB6)]
 interface nsIAccessibleDocument : nsISupports
 {
-  DOMString getURL();
-  DOMString getTitle();
-  DOMString getMimeType();
-  DOMString getDocType();
+  readonly attribute DOMString URL;
+  readonly attribute DOMString title;
+  readonly attribute DOMString mimeType;
+  readonly attribute DOMString docType;
   DOMString getNameSpaceURIForID(in short nameSpaceID);
   [noscript] nsIDocument getDocument();
 
