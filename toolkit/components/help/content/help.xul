@@ -179,7 +179,7 @@
                     command="Help:Home"/>
                 <toolbarbutton id="help-find-button"
                     class="toolbarbutton-1" label="&findBtn.label;"
-                    command="Help:Find"/>
+                    command="cmd_find"/>
                 <toolbarbutton id="help-zoom-small-button"
                     class="toolbarbutton-1" label="&textZoomReduceBtn.label;"
                     tooltiptext="&textZoomReduceBtn.tooltip;"
