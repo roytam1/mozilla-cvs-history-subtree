@@ -29,14 +29,14 @@
 
 package Mozilla::LDAP::Conn;
 
-use Mozilla::LDAP::Utils 1.4 ();
-use Mozilla::LDAP::API 1.4 qw(/.+/);
-use Mozilla::LDAP::Entry 1.4 ();
+use Mozilla::LDAP::Utils 2.0 ();
+use Mozilla::LDAP::API 2.0 qw(/.+/);
+use Mozilla::LDAP::Entry 2.0 ();
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.4";
+$VERSION = "2.0";
 
 
 #############################################################################
@@ -342,7 +342,7 @@ sub nextEntry
   $self->{"dn"} = "";
   if ($self->{"ldfe"} == 1)
     {
-      return "" unless defined($self->{"ldres"});
+      return undef unless defined($self->{"ldres"});
 
       $self->{"ldfe"} = 0;
       $ldentry = ldap_first_entry($self->{"ld"}, $self->{"ldres"});
@@ -350,7 +350,7 @@ sub nextEntry
     }
   else
     {
-      return "" unless defined($self->{"ldentry"});
+      return undef unless defined($self->{"ldentry"});
 
       $ldentry = ldap_next_entry($self->{"ld"}, $self->{"ldentry"}); 
       $self->{"ldentry"} = $ldentry;
@@ -363,7 +363,7 @@ sub nextEntry
 	  undef $self->{"ldres"};
 	}
 
-      return "";
+      return undef;
     }
 
   $dn = ldap_get_dn($self->{"ld"}, $self->{"ldentry"});
