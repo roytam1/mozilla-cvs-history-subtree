@@ -68,10 +68,12 @@ void _PR_InitIO(void)
     /*
      * WINCE has some oddity of _getstdfilex to determine stdin, et. al.
      * As unsure what that code actually does, just get fileno here.
+     *
+     * How odd, _fileno returns a void*, so cast it...
      */
-    _pr_stdin = PR_AllocFileDesc(_fileno(stdin), methods);
-    _pr_stdout = PR_AllocFileDesc(_fileno(stdout), methods);
-    _pr_stderr = PR_AllocFileDesc(_fileno(stderr), methods);
+    _pr_stdin = PR_AllocFileDesc((PRInt32)_fileno(stdin), methods);
+    _pr_stdout = PR_AllocFileDesc((PRInt32)_fileno(stdout), methods);
+    _pr_stderr = PR_AllocFileDesc((PRInt32)_fileno(stderr), methods);
 #endif
 #else
     _pr_stdin = PR_AllocFileDesc(0, methods);

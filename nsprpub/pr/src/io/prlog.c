@@ -507,7 +507,12 @@ PR_IMPLEMENT(void) PR_LogFlush(void)
 PR_IMPLEMENT(void) PR_Abort(void)
 {
     PR_LogPrint("Aborting");
+
+#if !defined(WINCE)
     abort();
+#else
+    TerminateProcess(GetCurrentProcess(), 3 /* exit code, same as abort */);
+#endif
 }
 
 #if defined(XP_OS2)
@@ -541,7 +546,7 @@ PR_IMPLEMENT(void) PR_Assert(const char *s, const char *file, PRIntn ln)
     DebugBreak();
 #endif
 #ifndef XP_MAC
-    abort();
+    PR_Abort();
 #endif
 }
 
