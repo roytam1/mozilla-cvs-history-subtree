@@ -32,6 +32,7 @@ typedef long nsMsgViewNotificationCodeValue;
 typedef long nsMsgViewCommandCheckStateValue;
 typedef long nsMsgViewCommandTypeValue;
 typedef long nsMsgViewFlagsTypeValue;
+typedef long nsMsgNavigationTypeValue;
 
 [scriptable, uuid(682a18be-fd18-11d4-a5be-0060b0fc04b7)]
 interface nsMsgViewSortOrder
@@ -151,6 +152,38 @@ interface nsMsgViewCommandType
 
 };
 
+[scriptable, uuid(65903eb2-1dd2-11b2-ac45-c5b69c1618d7)]
+interface nsMsgNavigationType
+{
+  const nsMsgNavigationTypeValue firstMessage = 1;
+  const nsMsgNavigationTypeValue NextMessage = 2;
+  const nsMsgNavigationTypeValue previousMessage = 3;
+  const nsMsgNavigationTypeValue lastMessage = 4;
+  const nsMsgNavigationTypeValue firstUnreadMessage = 5;
+  const nsMsgNavigationTypeValue nextUnreadMessage = 6;
+  const nsMsgNavigationTypeValue previousUnreadMessage = 7;
+  const nsMsgNavigationTypeValue lastUnreadMessage = 8;
+  const nsMsgNavigationTypeValue nextUnreadThread = 9;
+  const nsMsgNavigationTypeValue nextUnreadFolder = 10;
+  const nsMsgNavigationTypeValue nextFolder = 11;
+  const nsMsgNavigationTypeValue readMore = 12;
+  const nsMsgNavigationTypeValue laterMessage = 13;
+  /**
+   * Go back to the previous visited message
+   */
+  const nsMsgNavigationTypeValue back = 14;
+  /**
+   * Go forward to the previous visited message 
+   */
+  const nsMsgNavigationTypeValue forward = 15;
+  const nsMsgNavigationTypeValue firstFlagged = 16;
+  const nsMsgNavigationTypeValue nextFlagged = 17;
+  const nsMsgNavigationTypeValue previousFlagged = 18;
+  const nsMsgNavigationTypeValue firstNew = 19;
+  const nsMsgNavigationTypeValue editUndo = 20;
+  const nsMsgNavigationTypeValue editRedo = 21;
+};
+
 [scriptable, uuid(4063bcf8-fd19-11d4-a5be-0060b0fc04b7)]
 interface nsMsgDBViewType
 {
@@ -197,7 +230,19 @@ interface nsIMsgDBView : nsISupports
     attribute nsMsgViewFlagsTypeValue viewFlags;
 
     /**
+     * this method will automatically expand the destination thread, 
+     * if needs be. 
+     */
+    void viewNavigate(in nsMsgNavigationTypeValue motion, in nsMsgViewIndex startIndex, out nsMsgKey selection, in unsigned long numSelected, out nsMsgKey resultId, out nsMsgViewIndex resultIndex, out nsMsgViewIndex pThreadIndex, out nsIMsgFolder resultFolderInfo);
+
+    /**
+     * Indicates if navigation of the passed motion type is valid. 
+     */
+    boolean navigateStatus(in nsMsgNavigationTypeValue command, in nsMsgViewIndex index, out nsMsgKey selection, in unsigned long numSelected);
+
+    /**
      * temporary, so we can inspect from js
      */
     void dumpView();
 };
+

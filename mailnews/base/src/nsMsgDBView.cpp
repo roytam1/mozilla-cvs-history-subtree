@@ -1213,3 +1213,21 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
     return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgViewIndex startIndex, nsMsgKey *selection, PRUint32 numSelected, nsMsgKey *resultId, nsMsgViewIndex *resultIndex, nsMsgViewIndex *pThreadIndex, nsIMsgFolder **resultFolderInfo)
+{
+    NS_ENSURE_ARG_POINTER(selection);
+    NS_ENSURE_ARG_POINTER(resultId);
+    NS_ENSURE_ARG_POINTER(resultIndex);
+    NS_ENSURE_ARG_POINTER(pThreadIndex);
+    NS_ENSURE_ARG_POINTER(resultFolderInfo);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::NavigateStatus(nsMsgNavigationTypeValue command, nsMsgViewIndex index, nsMsgKey *selection, PRUint32 numSelected, PRBool *_retval)
+{
+    NS_ENSURE_ARG_POINTER(selection);
+    NS_ENSURE_ARG_POINTER(_retval);
+
+    return NS_OK;
+}
