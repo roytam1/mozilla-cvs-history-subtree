@@ -7606,10 +7606,9 @@ ResDef(MK_IMAP_STATUS_GETTING_NAMESPACE, XP_MSG_BASE + 1367,
 
 ResDef(MK_LDAP_REPL_CHANGELOG_BOGUS, XP_MSG_BASE + 1368,
        "Can't replicate because the server's change log appears incomplete.")
-ResDef(MK_LDAP_REPL_DSE_BOGUS, XP_MSG_BASE + 1369,
-       "Can't replicate because the server's replication information appears incomplete.")
-ResDef(MK_LDAP_REPL_CANT_SYNC_REPLICA, XP_MSG_BASE + 1370,
-       "Can't replicate at this time.  MOZ_NAME_BRAND" may be out of memory or busy.")
+ResDef(MK_LDAP_REPL_DSE_BOGUS, XP_MSG_BASE + 1369, "Can't replicate because the server's replication information appears incomplete.")
+ResDef(MK_LDAP_REPL_CANT_SYNC_REPLICA, XP_MSG_BASE + 1370,"Can't replicate at this time. "MOZ_NAME_BRAND" may be out of memory or busy.")
+	   
 ResDef(MK_ADD_ADDRESSBOOK, XP_MSG_BASE + 1371,
        "New Address Book...")
 ResDef(MK_ADD_LDAPDIRECTORY, XP_MSG_BASE + 1372,
