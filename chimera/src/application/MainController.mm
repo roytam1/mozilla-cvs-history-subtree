@@ -331,18 +331,18 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
     [browserController saveDocument:NO filterView:mFilterView filterList: mFilterList];
 }
 
+-(IBAction) pageSetup:(id)aSender
+{
+  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  if (browserController)
+    [browserController pageSetup:aSender];
+}
+
 -(IBAction) printPage:(id)aSender
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
     [browserController printDocument:aSender];
-}
-
--(IBAction) printPreview:(id)aSender
-{
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
-  if (browserController)
-    [browserController printPreview];
 }
 
 -(IBAction) toggleOfflineMode:(id)aSender
@@ -769,6 +769,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
         /* ... many more items go here ... */
         /* action == @selector(goHome:) || */			// always enabled
         /* action == @selector(doSearch:) || */		// always enabled
+        action == @selector(pageSetup:) ||
         action == @selector(findInPage:) ||
         action == @selector(doReload:) ||
         action == @selector(viewSource:) ||

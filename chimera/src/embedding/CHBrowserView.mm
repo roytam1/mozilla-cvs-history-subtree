@@ -50,10 +50,13 @@
 #include "nsIChromeEventHandler.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIWidget.h"
+#include "nsIPrefBranch.h"
 
 // Printing
 #include "nsIWebBrowserPrint.h"
-//#include "nsIPrintSettings.h"
+#include "nsIPrintSettings.h"
+#include "nsIPrintingPromptService.h"
+#include "nsIPrintSettingsService.h"
 
 // Saving of links/images/docs
 #include "nsIWebBrowserFocus.h"
@@ -138,6 +141,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     [self registerForDraggedTypes: [NSArray arrayWithObjects:
               @"MozURLType", NSStringPboardType, NSURLPboardType, NSFilenamesPboardType, nil]];
               
+    // The value of mUseGlobalPrintSettings can't change during our lifetime. 
+    nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
+    PRBool tempBool = PR_TRUE;
+    pref->GetBoolPref("print.use_global_printsettings", &tempBool);
+    mUseGlobalPrintSettings = tempBool;
+              
     // hookup the listener for creating our own native menus on <SELECTS>
     CHClickListener* clickListener = new CHClickListener();
     if (!clickListener)
@@ -156,6 +165,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (void)destroyWebBrowser
 {
+  NS_IF_RELEASE(mPrintSettings);
+  
   nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
   if ( baseWin ) {
     // clean up here rather than in the dtor so that if anyone tries to get our
@@ -464,7 +475,51 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   nsCOMPtr<nsIInterfaceRequestor> ir(do_QueryInterface(domWindow));
   nsCOMPtr<nsIWebBrowserPrint> print;
   ir->GetInterface(NS_GET_IID(nsIWebBrowserPrint), getter_AddRefs(print));
-  print->Print(nsnull, nsnull);
+  [self ensurePrintSettings];
+  print->Print(mPrintSettings, nsnull);
+}
+
+-(void)pageSetup
+{
+  if (!_webBrowser)
+    return;
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+
+  nsCOMPtr<nsIPrintingPromptService> ppService =
+      do_GetService("@mozilla.org/embedcomp/printingprompt-service;1");
+  if (!ppService)
+    return;
+  [self ensurePrintSettings];
+  if (NS_SUCCEEDED(ppService->ShowPageSetup(domWindow, mPrintSettings, nsnull)) &&
+      mUseGlobalPrintSettings) {
+      nsCOMPtr<nsIPrintSettingsService> psService =
+          do_GetService("@mozilla.org/gfx/printsettings-service;1");
+      if (!psService)
+        return;
+      psService->SavePrintSettingsToPrefs(mPrintSettings, PR_FALSE,
+                                          nsIPrintSettings::kInitSaveNativeData);
+  }
+}
+
+- (void)ensurePrintSettings
+{
+  if (mPrintSettings)
+    return;
+  
+  nsCOMPtr<nsIPrintSettingsService> psService =
+      do_GetService("@mozilla.org/gfx/printsettings-service;1");
+  if (!psService)
+    return;
+    
+  if (mUseGlobalPrintSettings) {
+    psService->GetGlobalPrintSettings(&mPrintSettings);
+    if (mPrintSettings)
+      psService->InitPrintSettingsFromPrefs(mPrintSettings, PR_FALSE,
+                                            nsIPrintSettings::kInitSaveNativeData);
+  }
+  else
+    psService->GetNewPrintSettings(&mPrintSettings);
 }
 
 - (BOOL)findInPageWithPattern:(NSString*)inText caseSensitive:(BOOL)inCaseSensitive

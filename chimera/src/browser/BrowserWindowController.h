@@ -215,7 +215,7 @@ typedef enum
 - (void)saveURL: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
             url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;
 - (IBAction)printDocument:(id)aSender;
-- (void)printPreview;
+- (IBAction)pageSetup:(id)aSender;
 - (IBAction)performSearch:(id)aSender;
 
 - (void)startThrobber;

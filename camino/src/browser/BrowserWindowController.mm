@@ -900,11 +900,9 @@ static NSArray* sToolbarDefaults = nil;
   [[mBrowserView getBrowserView] printDocument];
 }
 
-- (void)printPreview
+- (IBAction)pageSetup:(id)aSender
 {
-  NS_WARNING("Print Preview stopped in BrowserWindowController, not implemented");
-  //XXX there is no printPreview on CHBrowserView...so this isn't implemented
-  //[[mBrowserView getBrowserView] printPreview];
+  [[mBrowserView getBrowserView] pageSetup];
 }
 
 - (IBAction)performSearch:(id)aSender

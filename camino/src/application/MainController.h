@@ -91,7 +91,7 @@
 -(IBAction) openFile:(id)aSender;
 -(IBAction) openLocation:(id)aSender;
 -(IBAction) savePage:(id)aSender;
--(IBAction) printPreview:(id)aSender;
+-(IBAction) pageSetup:(id)aSender;
 -(IBAction) printPage:(id)aSender;
 -(IBAction) toggleOfflineMode:(id)aSender;
 

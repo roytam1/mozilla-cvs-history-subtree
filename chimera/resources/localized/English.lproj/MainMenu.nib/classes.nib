@@ -34,9 +34,9 @@
                 openFile = id; 
                 openLocation = id; 
                 openMenuBookmark = id; 
+                pageSetup = id; 
                 previousTab = id; 
                 printPage = id; 
-                printPreview = id; 
                 savePage = id; 
                 showAboutBox = id; 
                 smallerTextSize = id; 

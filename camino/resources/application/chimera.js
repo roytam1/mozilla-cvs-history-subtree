@@ -41,8 +41,7 @@
 // What to load in a new tab: 0 = blank, 1 = homepage, 2 = last page
 pref("browser.tabs.startPage", 0);
 
-// Disable the print progress dialog
-pref("print.show_print_progress", false);
+pref("print.use_global_printsettings", true);
 
 // Pick some reasonable OS X default fonts
 pref("font.name.serif.x-western", "Lucida Grande");

@@ -50,6 +50,7 @@ class nsIDOMEvent;
 class nsIWebBrowserFind;
 class nsIEventSink;
 class nsIDragHelperService;
+class nsIPrintSettings;
 
 
 // Protocol implemented by anyone interested in progress
@@ -124,6 +125,9 @@ enum {
   nsIDragHelperService* mDragHelper;
   NSPoint               mLastTrackedLocation;
   NSWindow*             mLastTrackedWindow;
+  
+  nsIPrintSettings*     mPrintSettings; // we own this
+  BOOL                  mUseGlobalPrintSettings;
 }
 
 // NSView overrides
@@ -158,6 +162,8 @@ enum {
             url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;
 
 - (void)printDocument;
+- (void)pageSetup;
+- (void)ensurePrintSettings;
 
 - (BOOL)findInPageWithPattern:(NSString*)inText caseSensitive:(BOOL)inCaseSensitive
             wrap:(BOOL)inWrap backwards:(BOOL)inBackwards;
