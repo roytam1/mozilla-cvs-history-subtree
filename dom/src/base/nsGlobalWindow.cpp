@@ -2548,7 +2548,14 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
                          PRUint32 aSavePassword,
                          nsAString& aReturn)
 {
-  nsCOMPtr<nsIAuthPrompt> prompter(do_GetInterface(mDocShell));
+  nsresult rv;
+  nsCOMPtr<nsIWindowWatcher> wwatch =
+    do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIAuthPrompt> prompter;
+  wwatch->GetNewAuthPrompter(this, getter_AddRefs(prompter));
+
   NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
 
   // Reset popup state while opening a modal dialog, and firing events
@@ -2574,9 +2581,8 @@ GlobalWindowImpl::Prompt(const nsAString& aMessage,
 
   // Test whether title needs to prefixed with [script]
   nsAutoString title;
-  PRBool isChrome = PR_FALSE;
-  nsresult rv = CheckSecurityIsChromeCaller(&isChrome);
-  if (NS_FAILED(rv) || !isChrome) {
+  PRBool isChrome = IsCallerChrome();
+  if (!isChrome) {
       MakeScriptDialogTitle(aTitle, title);
   } else {
       title.Assign(aTitle);
