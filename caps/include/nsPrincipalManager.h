@@ -22,6 +22,10 @@
 #include "nsIPrincipalManager.h"
 #include "nsHashtable.h"
 
+#define NS_PRINCIPALMANAGER_CID \
+{ 0x7ee2a4c0, 0x4b91, 0x11d3, \
+{ 0xba, 0x18, 0x00, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
+
 class nsPrincipalManager : public nsIPrincipalManager {
 
 public:

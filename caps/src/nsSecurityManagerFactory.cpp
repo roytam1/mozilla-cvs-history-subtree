@@ -29,16 +29,19 @@
 #include "nsPrivilegeManager.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsScriptSecurityManager.h"
+#include "nsIPrincipal.h"
+#include "nsCodebasePrincipal.h"
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+//static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kGenericFactoryCID, NS_GENERICFACTORY_CID);
 static NS_DEFINE_CID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
 static NS_DEFINE_CID(kPrivilegeManagerCID, NS_PRIVILEGEMANAGER_CID);
 static NS_DEFINE_CID(kPrincipalManagerCID, NS_PRINCIPALMANAGER_CID);
 static NS_DEFINE_CID(kScriptSecurityManagerCID, NS_SCRIPTSECURITYMANAGER_CID);
+static NS_DEFINE_CID(kCodebasePrincipalCID,NS_CODEBASEPRINCIPAL_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptSecurityManager)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCodebasePrincipal)
 
 static NS_IMETHODIMP
 Construct_nsIScriptSecurityManager(nsISupports * aOuter, REFNSIID aIID, void * * aResult)
@@ -167,13 +170,12 @@ NSGetFactory(nsISupports * aServMgr, const nsCID & aClass, const char * aClassNa
 	else if(aClass.Equals(kPrivilegeManagerCID)) rv = factory->SetConstructor(Construct_nsIPrivilegeManager);
 	else if(aClass.Equals(kPrincipalManagerCID)) rv = factory->SetConstructor(Construct_nsIPrincipalManager);
   else if(aClass.Equals(kScriptSecurityManagerCID)) rv = factory->SetConstructor(Construct_nsIScriptSecurityManager);
-	else
-	{
+  else if(aClass.Equals(kCodebasePrincipalCID)) rv = factory->SetConstructor(nsCodebasePrincipalConstructor);
+	else {
 		NS_ASSERTION(0, "incorrectly registered");
 		rv = NS_ERROR_NO_INTERFACE;
 	}
-	if (NS_FAILED(rv)) 
-  {
+	if (NS_FAILED(rv)) {
 		NS_RELEASE(factory);
 		return rv;
 	}
@@ -202,6 +204,7 @@ NSRegisterSelf(nsISupports * aServMgr, const char * aPath)
 	rv = compMgr->RegisterComponent(kPrivilegeManagerCID,NS_PRIVILEGEMANAGER_CLASSNAME,NS_PRIVILEGEMANAGER_PROGID, aPath, PR_TRUE, PR_TRUE);
 	rv = compMgr->RegisterComponent(kPrincipalManagerCID,NS_PRINCIPALMANAGER_CLASSNAME,NS_PRINCIPALMANAGER_PROGID, aPath, PR_TRUE, PR_TRUE);
   rv = compMgr->RegisterComponent(kScriptSecurityManagerCID,NS_SCRIPTSECURITYMANAGER_CLASSNAME,NS_SCRIPTSECURITYMANAGER_PROGID, aPath, PR_TRUE, PR_TRUE);
+  rv = compMgr->RegisterComponent(kCodebasePrincipalCID,NS_CODEBASEPRINCIPAL_CLASSNAME,NS_CODEBASEPRINCIPAL_PROGID, aPath, PR_TRUE, PR_TRUE);  
 	return rv;
 }
 extern "C" NS_EXPORT nsresult
@@ -211,11 +214,12 @@ NSUnregisterSelf(nsISupports * aServMgr, const char * aPath)
 #ifdef DEBUG
 	printf("*** Unregistering Security***\n");
 #endif
-	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID,& rv);
-	if (NS_FAILED(rv)) return rv;
-	rv = compMgr->UnregisterComponent(kCCapsManagerCID, aPath);
-	rv = compMgr->UnregisterComponent(kPrivilegeManagerCID, aPath);
-	rv = compMgr->UnregisterComponent(kPrincipalManagerCID, aPath);
+  NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID,& rv);
+  if (NS_FAILED(rv)) return rv;
+  rv = compMgr->UnregisterComponent(kCCapsManagerCID, aPath);
+  rv = compMgr->UnregisterComponent(kPrivilegeManagerCID, aPath);
+  rv = compMgr->UnregisterComponent(kPrincipalManagerCID, aPath);
   rv = compMgr->UnregisterComponent(kScriptSecurityManagerCID, aPath);
+  rv = compMgr->UnregisterComponent(kCodebasePrincipalCID, aPath);
 	return rv;
 }

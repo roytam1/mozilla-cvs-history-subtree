@@ -517,7 +517,7 @@ nsScriptSecurityManager::GetSitePolicy(const char *org)
   if (!NS_SUCCEEDED(rv)) return nsnull;
   rv = compMan->CreateInstance(kURLCID,NULL,NS_GET_IID(nsIURL),(void**)&url);
   if (!NS_SUCCEEDED(rv)) return nsnull;
-  nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref::GetIID(), (nsISupports**)&mPrefs);
+  nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref), (nsISupports * *)& mPrefs);
   if (NS_OK != mPrefs->CopyCharPref("js_security.site_policy", &sitepol)) return 0;
   /* Site policy comprises text of the form site1-policy,site2-policy,siteNpolicy
    * where each site-policy is site|policy and policy is presumed to be one of strict/moderate/default

@@ -24,6 +24,9 @@
 #include "nsVector.h"
 #include "nsHashtable.h"
 
+#define NS_PRINCIPALARRAY_CID \
+{ 0x7ff2a4c0, 0x4bff, 0x17d3, \
+{ 0xba, 0x18, 0x42, 0x60, 0xbb, 0xf1, 0x99, 0xa2 }}
 
 class nsPrincipalArray : public nsIPrincipalArray {
 public:

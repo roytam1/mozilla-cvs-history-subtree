@@ -68,7 +68,7 @@ nsCertificatePrincipal::GetFingerPrint(char * * fingerPrint)
 NS_IMETHODIMP
 nsCertificatePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
 {
-  *jsprin = NS_STATIC_CAST(JSPrincipals *,this);
+//  *jsprin = NS_STATIC_CAST(JSPrincipals *,this);
   return NS_OK;
 }
 

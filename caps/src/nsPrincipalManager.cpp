@@ -87,37 +87,30 @@ nsPrincipalManager::HasSystemPrincipal(nsIPrincipalArray * prinArray)
 }
 
 NS_IMETHODIMP
-nsPrincipalManager::CreateCodebasePrincipal(const char *codebaseURL, 
-                                            nsIURI *url, 
-                                            nsIPrincipal **prin) 
+nsPrincipalManager::CreateCodebasePrincipal(const char * codebaseURL, nsIURI * url, nsIPrincipal * * prin) 
 {
-    if (!codebaseURL && !url) 
-        return NS_ERROR_FAILURE;
-    if (!url) {
-        nsresult rv;
-        NS_WITH_SERVICE(nsIComponentManager, compMan, kComponentManagerCID, &rv);
-        if (!NS_SUCCEEDED(rv))
-            return rv;
-        rv = compMan->CreateInstance(kURLCID, nsnull, NS_GET_IID(nsIURL),
-                                     (void **) &url);
-        if (!NS_SUCCEEDED(rv))
-            return rv;
-        if (!NS_SUCCEEDED(rv = url->SetSpec((char *) codebaseURL))) {
-            NS_RELEASE(url);
-            return rv;
-        }
+  nsresult rv;
+  if (!codebaseURL && !url) return NS_ERROR_FAILURE;
+  NS_WITH_SERVICE(nsIComponentManager, compMan, kComponentManagerCID, &rv);
+  if (!url) {
+    if (!NS_SUCCEEDED(rv)) return rv;
+    rv = compMan->CreateInstance(kURLCID, nsnull, NS_GET_IID(nsIURL), (void **) &url);
+    if (!NS_SUCCEEDED(rv)) return rv;
+    if (!NS_SUCCEEDED(rv = url->SetSpec((char *) codebaseURL))) {
+      NS_RELEASE(url);
+      return rv;
     }
-    nsCodebasePrincipal *codebasePrin = new nsCodebasePrincipal();
-    if (codebasePrin == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    nsresult result = codebasePrin->Init(nsIPrincipal::PrincipalType_CodebaseExact, 
-                                         url);
-    if (!NS_SUCCEEDED(result)) {
-        NS_RELEASE(codebasePrin);
-        return result;
-    }
-    *prin = codebasePrin;
-    return NS_OK;
+  }
+  nsCodebasePrincipal * codebasePrin;
+  compMan->CreateInstance(NS_CODEBASEPRINCIPAL_PROGID, nsnull, NS_GET_IID(nsICodebasePrincipal),(void * *)& codebasePrin);
+  if (codebasePrin == nsnull) return NS_ERROR_OUT_OF_MEMORY;
+  rv = codebasePrin->Init(nsIPrincipal::PrincipalType_CodebaseExact, url);
+  if (!NS_SUCCEEDED(rv)) {
+    NS_RELEASE(codebasePrin);
+    return rv;
+  }
+  * prin = codebasePrin;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

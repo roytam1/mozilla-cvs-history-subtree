@@ -19,7 +19,7 @@
 #include "nsISupports.idl"
 interface nsIURI;
 %{C++
- struct JSPrincipals;
+struct JSPrincipals;
 %}
 
 [ptr] native JSPrincipals(JSPrincipals);
@@ -42,13 +42,23 @@ interface nsIPrincipal : nsISupports {
   void Equals(in nsIPrincipal other, out boolean result);
 };
 
-[uuid(c29fe440-25e1-11d2-8160-006008119d7a)]
+%{C++
+#define NS_CODEBASEPRINCIPAL_PROGID "component://netscape/codebaseprincipal"
+#define NS_CODEBASEPRINCIPAL_CLASSNAME "codebaseprincipal"
+%}
+
+[uuid(829fe440-25e1-11d2-8160-006008119d7a)]
 interface nsICodebasePrincipal : nsIPrincipal {
   void GetURLString(out string ppCodeBaseURL);
   void GetURL(out nsIURI url);
   void IsCodebaseExact(out boolean result);
   void IsCodebaseRegex(out boolean result);
 };
+
+%{C++
+#define NS_CERTIFICATEPRINCIPAL_PROGID "component://netscape/codebaseprincipal"
+#define NS_CERTIFICATEPRINCIPAL_CLASSNAME "codebaseprincipal"
+%}
 
 [uuid(ebfefcd0-25e1-11d2-8160-006008119d7a)]
 interface nsICertificatePrincipal : nsIPrincipal {
