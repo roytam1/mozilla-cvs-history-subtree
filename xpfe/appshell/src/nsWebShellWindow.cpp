@@ -1246,6 +1246,11 @@ nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader,
 #ifdef DEBUG_MENUSDEL
   printf("OnEndDocumentLoad\n");
 #endif
+  
+  // if we are being canceled or an error occurred trying to load the document,
+  // don't pretend that the document loaded successfully by doing useful things.
+  // return to the caller.
+  if (NS_FAILED(aStatus)) return NS_OK;
 
   /* We get notified every time a page/Frame is loaded. But we need to
    * Load the menus, run the startup script etc.. only once. So, Use
