@@ -632,7 +632,7 @@ NS_IMETHODIMP nsRegistry::GetLongLong( nsRegistryKey baseKey, const char *path, 
     PR_Lock(mregLock);
     
     uint32 length = sizeof(PRInt64);
-    err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, &length);
+    err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path,(void*)result,&length);
     
     PR_Unlock(mregLock);
     
@@ -671,7 +671,7 @@ NS_IMETHODIMP nsRegistry::SetLongLong( nsRegistryKey baseKey, const char *path, 
                         (RKEY)baseKey,
                         (char*)path,
                         REGTYPE_ENTRY_BYTES,
-                        &value,
+                        (void*)value,
                         sizeof(PRInt64) );
 
     PR_Unlock(mregLock);

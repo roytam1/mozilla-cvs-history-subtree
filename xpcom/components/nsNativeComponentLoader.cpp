@@ -996,7 +996,12 @@ nsNativeComponentLoader::CreateDll(nsIFile *aSpec, const char *aLocation,
 
     if (!dll)
     {
-        if (modificationTime == 0 && fileSize == 0)
+        PR_ASSERT(modificationTime != NULL);
+        PR_ASSERT(fileSize != NULL);
+
+        PRInt64 zit = LL_Zero();
+        
+        if (LL_EQ(*modificationTime,zit) && LL_EQ(*fileSize,zit))
         {
             // Get the modtime and filesize from the registry
             rv = GetRegistryDllInfo(aLocation, modificationTime, fileSize);
