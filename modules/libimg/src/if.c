@@ -2141,7 +2141,7 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
 #else
             IMGCBIF_DisplayPixmap(img_cx->img_cb, dpy_cx, ic->image, ic->mask,
                                   x, y, display_left, display_top,
-                                  display_width, display_height);
+                                  display_width, display_height, ic->dest_width, ic->dest_height);
 #endif /* STANDALONE_IMAGE_LIB */
         }
     }
@@ -2158,7 +2158,7 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
                                           width, height);
 #else
             IMGCBIF_DisplayPixmap(img_cx->img_cb, dpy_cx, ic->image, ic->mask,
-                                  x, y, x_offset, y_offset, width, height);
+                                  x, y, x_offset, y_offset, width, height, ic->dest_width, ic->dest_height);
 #endif /* STANDALONE_IMAGE_LIB */
         }
     }
