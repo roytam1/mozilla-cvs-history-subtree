@@ -60,7 +60,7 @@
 // Helper Classes
 #include "nsDOMError.h"
 #include "nsEscape.h"
-#include "nsHTTPEnums.h"
+//#include "nsHTTPEnums.h"
 
 // Interfaces Needed
 #include "nsIHttpChannel.h"
