@@ -165,7 +165,6 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
 #define XPC_MAP_QUOTED_CLASSNAME   "BackstagePass"
 #define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
                             nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_GETPROPERTY   | \
                             nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
 #include "xpc_map_end.h" /* This will #undef the above */
 

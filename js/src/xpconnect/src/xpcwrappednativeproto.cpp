@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -56,7 +56,7 @@ XPCWrappedNativeProto::~XPCWrappedNativeProto()
     NS_ASSERTION(!mJSProtoObject, "JSProtoObject still alive");
 }
 
-JSBool 
+JSBool
 XPCWrappedNativeProto::Init(XPCCallContext& ccx)
 {
     // Get the class scriptable helper (if present)
@@ -76,28 +76,22 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
                 if(NS_FAILED(rv))
                     return JS_FALSE;
 
-                mScriptableInfo = new XPCNativeScriptableInfo(helper, flags);
+                mScriptableInfo = XPCNativeScriptableInfo::NewInfo(helper, flags);
                 if(!mScriptableInfo)
                     return JS_FALSE;
-
-                JSClass* clazz = mScriptableInfo->GetJSClass();
-                // XXX fill in the JSClass...
-                // remember that name must be nsMemory::Alloc'd
-                    
-
             }
         }
     }
 
-    mJSProtoObject = JS_NewObject(ccx.GetJSContext(), 
+    mJSProtoObject = JS_NewObject(ccx.GetJSContext(),
                                   &XPC_WN_Proto_JSClass,
                                   mScope->GetPrototypeJSObject(),
-                                  mScope->GetGlobalJSObject()); 
-    return mJSProtoObject && 
+                                  mScope->GetGlobalJSObject());
+    return mJSProtoObject &&
            JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, this);
 }
 
-void 
+void
 XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
 {
     NS_ASSERTION(obj == mJSProtoObject, "huh?");
@@ -105,14 +99,14 @@ XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
     delete this;
 }
 
-// static 
-XPCWrappedNativeProto* 
+// static
+XPCWrappedNativeProto*
 XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
                                     XPCWrappedNativeScope* Scope,
                                     nsIClassInfo* ClassInfo)
 {
     ClassInfo2WrappedNativeProtoMap* map = Scope->GetWrappedNativeProtoMap();
-    
+
     // XXX locking
 
     XPCWrappedNativeProto* proto = map->Find(ClassInfo);
@@ -124,7 +118,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
 
     proto = new XPCWrappedNativeProto(Scope, ClassInfo, set);
-    
+
     if(proto && !proto->Init(ccx))
     {
         delete proto;
@@ -137,19 +131,19 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     return proto;
 }
 
-// static 
-XPCWrappedNativeProto* 
-XPCWrappedNativeProto::BuildOneOff(XPCCallContext& ccx, 
+// static
+XPCWrappedNativeProto*
+XPCWrappedNativeProto::BuildOneOff(XPCCallContext& ccx,
                                    XPCWrappedNativeScope* Scope,
                                    XPCNativeSet* Set)
 {
-    XPCWrappedNativeProto* proto = 
+    XPCWrappedNativeProto* proto =
         new XPCWrappedNativeProto(Scope, nsnull, Set);
-    
+
     if(proto && !proto->Init(ccx))
     {
         delete proto;
-        proto = nsnull;    
+        proto = nsnull;
     }
     return proto;
 }

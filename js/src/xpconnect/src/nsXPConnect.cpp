@@ -317,6 +317,7 @@ nsXPConnect::CreateRuntime()
 /***************************************************************************/
 // nsIXPConnect interface methods...
 
+#if 0
 // XXX hacky test code...
 #include "xpctest.h"
 
@@ -347,6 +348,7 @@ AttachEcho(XPCCallContext& ccx, XPCWrappedNativeScope* aScope, JSObject* aGlobal
                                     nsnull, nsnull,
                                     JSPROP_ENUMERATE);
 }        
+#endif
 
 /* void initClasses (in JSContextPtr aJSContext, in JSObjectPtr aGlobalJSObj); */
 NS_IMETHODIMP
@@ -374,9 +376,11 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
         return NS_ERROR_FAILURE;
 
+#if 0
     // XXX hacky test code...
     if(!AttachEcho(ccx, scope, aGlobalJSObj)) 
         return NS_ERROR_FAILURE;
+#endif
 
     return NS_OK;
 }        
@@ -626,7 +630,9 @@ nsXPConnect::GetCurrentNativeCallContext(nsIXPCNativeCallContext * *aCurrentNati
     XPCPerThreadData* data = XPCPerThreadData::GetData();
     if(data)
     {
-        *aCurrentNativeCallContext = data->GetCallContext();
+        nsIXPCNativeCallContext* temp = data->GetCallContext();
+        NS_IF_ADDREF(temp);
+        *aCurrentNativeCallContext = temp;
         return NS_OK;
     }
     //else...

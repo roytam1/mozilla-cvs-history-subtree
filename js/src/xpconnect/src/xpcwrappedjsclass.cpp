@@ -1290,7 +1290,6 @@ done:
         DoPostScriptEvaluated(cx);
     }
 
-    NS_IF_RELEASE(xpc);
 #ifdef DEBUG_stats_jband
     endTime = PR_IntervalNow();
     printf("%s::%s %d ( c->js ) \n", GetInterfaceName(), info->GetName(), PR_IntervalToMilliseconds(endTime-startTime));

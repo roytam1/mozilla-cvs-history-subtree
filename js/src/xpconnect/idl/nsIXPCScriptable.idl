@@ -48,23 +48,22 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 WANT_SETPROPERTY                 = 1 <<  4;
     const PRUint32 WANT_ENUMERATE                   = 1 <<  5;
     const PRUint32 WANT_NEWENUMERATE                = 1 <<  6;
-    const PRUint32 WANT_RESOLVE                     = 1 <<  7;
-    const PRUint32 WANT_NEWRESOLVE                  = 1 <<  8;
-    const PRUint32 WANT_CONVERT                     = 1 <<  9;
-    const PRUint32 WANT_FINALIZE                    = 1 << 10;
-    const PRUint32 WANT_CHECKACCESS                 = 1 << 11;
-    const PRUint32 WANT_CALL                        = 1 << 12;
-    const PRUint32 WANT_CONSTRUCT                   = 1 << 13;
-    const PRUint32 WANT_HASINSTANCE                 = 1 << 14;
-    const PRUint32 WANT_MARK                        = 1 << 15;
-    const PRUint32 USE_JSSTUB_FOR_ADDPROPERTY       = 1 << 16;
-    const PRUint32 USE_JSSTUB_FOR_DELPROPERTY       = 1 << 17;
-    const PRUint32 USE_JSSTUB_FOR_GETPROPERTY       = 1 << 18;
-    const PRUint32 USE_JSSTUB_FOR_SETPROPERTY       = 1 << 19;
-    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 20;
-    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 21;
-    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 22;
-    const PRUint32 NO_TEAROFFS                      = 1 << 23;
+    const PRUint32 WANT_NEWRESOLVE                  = 1 <<  7;
+    const PRUint32 WANT_CONVERT                     = 1 <<  8;
+    const PRUint32 WANT_FINALIZE                    = 1 <<  9;
+    const PRUint32 WANT_CHECKACCESS                 = 1 << 10;
+    const PRUint32 WANT_CALL                        = 1 << 11;
+    const PRUint32 WANT_CONSTRUCT                   = 1 << 12;
+    const PRUint32 WANT_HASINSTANCE                 = 1 << 13;
+    const PRUint32 WANT_MARK                        = 1 << 14;
+    const PRUint32 USE_JSSTUB_FOR_ADDPROPERTY       = 1 << 15;
+    const PRUint32 USE_JSSTUB_FOR_DELPROPERTY       = 1 << 16;
+    const PRUint32 USE_JSSTUB_FOR_SETPROPERTY       = 1 << 17;
+    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 18;
+    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 19;
+    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 20;
+    const PRUint32 NO_TEAROFFS                      = 1 << 21;
+    const PRUint32 ALLOW_PROP_MODS_DURING_RESOLVE   = 1 << 22;
 
 
     readonly attribute string   className;
@@ -95,9 +94,6 @@ interface nsIXPCScriptable : nsISupports
     PRBool newEnumerate(in nsIXPConnectWrappedNative wrapper,
                         in JSContextPtr cx, in JSObjectPtr obj,
                         in PRUint32 enum_op, in JSValPtr statep, out JSID idp);
-
-    PRBool resolve(in nsIXPConnectWrappedNative wrapper,
-                   in JSContextPtr cx, in JSObjectPtr obj, in JSVal id);
 
     PRBool newResolve(in nsIXPConnectWrappedNative wrapper,
                       in JSContextPtr cx, in JSObjectPtr obj, in JSVal id,

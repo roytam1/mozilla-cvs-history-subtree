@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -52,7 +52,7 @@ XPCCallContext::GetXPConnect() const
     CHECK_STATE(HAVE_CONTEXT);
     return mXPC;
 }
-    
+
 inline XPCJSRuntime*
 XPCCallContext::GetRuntime() const
 {
@@ -61,27 +61,27 @@ XPCCallContext::GetRuntime() const
 }
 
 inline XPCPerThreadData*
-XPCCallContext::GetThreadData() const 
+XPCCallContext::GetThreadData() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mThreadData;
 }
 
 inline XPCContext*
-XPCCallContext::GetXPCContext() const 
+XPCCallContext::GetXPCContext() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mXPCContext;
 }
 
 inline JSContext*
-XPCCallContext::GetJSContext() const 
+XPCCallContext::GetJSContext() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mJSContext;
 }
 
-inline JSContext* 
+inline JSContext*
 XPCCallContext::GetSafeJSContext() const
 {
     CHECK_STATE(HAVE_CONTEXT);
@@ -92,63 +92,63 @@ XPCCallContext::GetSafeJSContext() const
 }
 
 inline JSBool
-XPCCallContext::GetContextPopRequired() const 
+XPCCallContext::GetContextPopRequired() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mContextPopRequired;
 }
 
 inline XPCContext::LangType
-XPCCallContext::GetCallerLanguage() const 
+XPCCallContext::GetCallerLanguage() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mCallerLanguage;
 }
 
 inline XPCContext::LangType
-XPCCallContext::GetPrevCallerLanguage() const 
+XPCCallContext::GetPrevCallerLanguage() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mPrevCallerLanguage;
 }
 
 inline XPCCallContext*
-XPCCallContext::GetPrevCallContext() const 
+XPCCallContext::GetPrevCallContext() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mPrevCallContext;
 }
 
 inline JSObject*
-XPCCallContext::GetOperandJSObject() const 
+XPCCallContext::GetOperandJSObject() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mOperandJSObject;
 }
 
 inline JSObject*
-XPCCallContext::GetCurrentJSObject() const 
+XPCCallContext::GetCurrentJSObject() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mCurrentJSObject;
 }
 
 inline JSObject*
-XPCCallContext::GetFlattenedJSObject() const 
+XPCCallContext::GetFlattenedJSObject() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mFlattenedJSObject;
 }
 
 inline nsISupports*
-XPCCallContext::GetIdentityObject() const 
+XPCCallContext::GetIdentityObject() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mWrapper->GetIdentityObject();
 }
 
 inline XPCWrappedNative*
-XPCCallContext::GetWrapper() const 
+XPCCallContext::GetWrapper() const
 {
     if(mState == INIT_FAILED)
         return nsnull;
@@ -158,14 +158,14 @@ XPCCallContext::GetWrapper() const
 }
 
 inline XPCWrappedNativeTearOff*
-XPCCallContext::GetTearOff() const 
+XPCCallContext::GetTearOff() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mTearOff;
 }
 
 inline XPCWrappedNativeTearOff*
-XPCCallContext::GetTearOffForScriptable() const 
+XPCCallContext::GetTearOffForScriptable() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mTearOffForScriptable;
@@ -179,21 +179,21 @@ XPCCallContext::GetScriptableInfo() const
 }
 
 inline XPCNativeSet*
-XPCCallContext::GetSet() const 
+XPCCallContext::GetSet() const
 {
     CHECK_STATE(HAVE_JSID);
     return mSet;
 }
 
 inline XPCNativeInterface*
-XPCCallContext::GetInterface() const 
+XPCCallContext::GetInterface() const
 {
     CHECK_STATE(HAVE_JSID);
     return mInterface;
 }
 
 inline XPCNativeMember*
-XPCCallContext::GetMember() const 
+XPCCallContext::GetMember() const
 {
     CHECK_STATE(HAVE_JSID);
     return mMember;
@@ -206,49 +206,49 @@ XPCCallContext::HasInterfaceAndMember() const
 }
 
 inline jsid
-XPCCallContext::GetJSID() const 
+XPCCallContext::GetJSID() const
 {
     CHECK_STATE(HAVE_JSID);
     return mJSID;
 }
 
 inline JSBool
-XPCCallContext::GetStaticMemberIsLocal() const 
+XPCCallContext::GetStaticMemberIsLocal() const
 {
     CHECK_STATE(HAVE_JSID);
     return mStaticMemberIsLocal;
 }
 
 inline uintN
-XPCCallContext::GetArgc() const 
+XPCCallContext::GetArgc() const
 {
     CHECK_STATE(READY_TO_CALL);
     return mArgc;
 }
 
 inline jsval*
-XPCCallContext::GetArgv() const 
+XPCCallContext::GetArgv() const
 {
     CHECK_STATE(READY_TO_CALL);
     return mArgv;
 }
 
 inline jsval*
-XPCCallContext::GetRetVal() const 
+XPCCallContext::GetRetVal() const
 {
     CHECK_STATE(READY_TO_CALL);
     return mRetVal;
 }
 
 inline JSBool
-XPCCallContext::GetExceptionWasThrown() const 
+XPCCallContext::GetExceptionWasThrown() const
 {
     CHECK_STATE(READY_TO_CALL);
     return mExceptionWasThrown;
 }
 
 inline JSBool
-XPCCallContext::GetReturnValueWasSet() const 
+XPCCallContext::GetReturnValueWasSet() const
 {
     CHECK_STATE(READY_TO_CALL);
     return mReturnValueWasSet;
@@ -257,32 +257,47 @@ XPCCallContext::GetReturnValueWasSet() const
 inline void
 XPCCallContext::SetRetVal(jsval val)
 {
-    CHECK_STATE(READY_TO_CALL);
+    CHECK_STATE(HAVE_ARGS);
     if(mRetVal)
         *mRetVal = val;
 }
 
-inline jsid 
-XPCCallContext::GetHackyResolveBugID() const 
+inline jsword
+XPCCallContext::GetHackyResolveBugID() const
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mThreadData->GetHackyResolveBugID();
 }
-inline jsid 
-XPCCallContext::SetHackyResolveBugID(jsid id)
+
+inline jsword
+XPCCallContext::SetHackyResolveBugID(jsword id)
 {
     CHECK_STATE(HAVE_CONTEXT);
     return mThreadData->SetHackyResolveBugID(id);
 }
 
-inline PRUint16                     
+inline XPCWrappedNative* 
+XPCCallContext::GetResolvingWrapper() const
+{
+    CHECK_STATE(HAVE_OBJECT);
+    return mThreadData->GetResolvingWrapper();
+}
+
+inline XPCWrappedNative* 
+XPCCallContext::SetResolvingWrapper(XPCWrappedNative* w)
+{
+    CHECK_STATE(HAVE_OBJECT);
+    return mThreadData->SetResolvingWrapper(w);
+}
+
+inline PRUint16
 XPCCallContext::GetMethodIndex() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mMethodIndex;
 }
 
-inline void                         
+inline void
 XPCCallContext::SetMethodIndex(PRUint16 index)
 {
     CHECK_STATE(HAVE_OBJECT);
@@ -291,15 +306,15 @@ XPCCallContext::SetMethodIndex(PRUint16 index)
 
 /***************************************************************************/
 
-inline const nsIID* XPCNativeInterface::GetIID() const 
+inline const nsIID* XPCNativeInterface::GetIID() const
 {
-    const nsIID* iid; 
+    const nsIID* iid;
     return NS_SUCCEEDED(mInfo->GetIIDShared(&iid)) ? iid : nsnull;
 }
 
 inline const char* XPCNativeInterface::GetName() const
 {
-    const char* name; 
+    const char* name;
     return NS_SUCCEEDED(mInfo->GetNameShared(&name)) ? name : nsnull;
 }
 
@@ -314,8 +329,8 @@ inline XPCNativeMember* XPCNativeInterface::FindMember(jsid id) const
 
 /***************************************************************************/
 
-inline JSBool 
-XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember, 
+inline JSBool
+XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
                          PRUint16* pInterfaceIndex) const
 {
     int count = (int) mInterfaceCount;
@@ -330,7 +345,7 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
             *pMember = nsnull;
             *pInterfaceIndex = (PRUint16) i;
             return JS_TRUE;
-        }        
+        }
     }
 
     // look for method names
@@ -347,8 +362,8 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
     return JS_FALSE;
 }
 
-inline JSBool 
-XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember, 
+inline JSBool
+XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
                          XPCNativeInterface** pInterface) const
 {
     PRUint16 index;
@@ -369,62 +384,103 @@ inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 
 /***************************************************************************/
 
-inline XPCWrappedNative* 
-XPCWrappedNativeTearOff::GetPrivateWrapper() const 
+inline XPCWrappedNative*
+XPCWrappedNativeTearOff::GetPrivateWrapper() const
 {
     return NS_REINTERPRET_CAST(XPCWrappedNative*, mWrapper);
 }
 
-inline XPCNativeInterface* 
-XPCWrappedNativeTearOff::GetPrivateInterface() const 
+inline XPCNativeInterface*
+XPCWrappedNativeTearOff::GetPrivateInterface() const
 {
     return NS_REINTERPRET_CAST(XPCNativeInterface*, mInterface);
 }
 
-inline void 
-XPCWrappedNativeTearOff::SetWrapper(XPCWrappedNative*  Wrapper) 
+inline void
+XPCWrappedNativeTearOff::SetWrapper(XPCWrappedNative*  Wrapper)
 {
     mWrapper = Wrapper;
 }
 
-inline void 
-XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObject) 
+inline void
+XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObject)
 {
     mJSObject = JSObject;
 }
 
-inline void 
-XPCWrappedNativeTearOff::SetNative(nsISupports*  Native) 
+inline void
+XPCWrappedNativeTearOff::SetNative(nsISupports*  Native)
 {
     mNative = Native;
 }
 
-inline void 
-XPCWrappedNativeTearOff::SetInterface(XPCNativeInterface*  Interface) 
+inline void
+XPCWrappedNativeTearOff::SetInterface(XPCNativeInterface*  Interface)
 {
     mInterface = Interface;
 }
 
 /***************************************************************************/
 
-inline XPCWrappedNativeTearOff* 
-XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface, 
+inline JSBool 
+XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(XPCNativeInterface* aInterface)
+{
+    // XXX locking !
+ 
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(chunk = this; chunk; chunk = chunk->mNextChunk)
+    {
+        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        {
+            if(to->GetInterface() == aInterface)
+                return JS_TRUE;
+        }
+    }
+    return JS_FALSE;
+}
+
+inline JSBool 
+XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(const nsIID& iid)
+{
+    // XXX locking !
+ 
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(chunk = this; chunk; chunk = chunk->mNextChunk)
+    {
+        const XPCWrappedNativeTearOff* to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        {
+            XPCNativeInterface* iface = to->GetPrivateInterface();
+            if(iface)
+            {
+                const nsIID* curIID = iface->GetIID();
+                if(curIID && curIID->Equals(iid))
+                    return JS_TRUE;
+            }
+        }
+    }
+    return JS_FALSE;
+}
+
+inline XPCWrappedNativeTearOff*
+XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface,
                                           XPCWrappedNative* aWrappedNative)
 {
     // XXX locking !
     XPCWrappedNativeTearOff* firstAvailable = nsnull;
-    
+
     XPCWrappedNativeTearOffChunk* lastChunk;
     XPCWrappedNativeTearOffChunk* chunk;
-    for(lastChunk = chunk = this; 
-        chunk; 
+    for(lastChunk = chunk = this;
+        chunk;
         lastChunk = chunk, chunk = chunk->mNextChunk)
     {
         XPCWrappedNativeTearOff* to = chunk->mTearOffs;
         for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
         {
             if(to->GetInterface() == aInterface)
-                return to;   
+                return to;
             if(!to->GetInterface() && !firstAvailable)
                 firstAvailable = to;
         }
@@ -435,14 +491,14 @@ XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface,
     const nsIID* iid = aInterface->GetIID();
     nsISupports* identity = aWrappedNative->GetIdentityObject();
     nsISupports* obj;
-    
+
     identity->QueryInterface(*iid, (void**)&obj);
     if(!obj)
         return nsnull;
 
     if(!firstAvailable)
     {
-        XPCWrappedNativeTearOffChunk* newChunk = 
+        XPCWrappedNativeTearOffChunk* newChunk =
             new XPCWrappedNativeTearOffChunk();
         if(!newChunk)
         {
@@ -456,9 +512,9 @@ XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface,
     firstAvailable->SetWrapper(aWrappedNative);
     firstAvailable->SetInterface(aInterface);
     firstAvailable->SetNative(obj);
-    
+
     return firstAvailable;
-}           
+}
 
 /***************************************************************************/
 

@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -40,10 +40,10 @@
 
 XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
                                JSContext* cx   /* = nsnull  */,
-                               JSObject* obj   /* = nsnull  */, 
+                               JSObject* obj   /* = nsnull  */,
                                jsid id         /* = 0       */,
-                               uintN argc      /* = NO_ARGS */, 
-                               jsval *argv     /* = nsnull  */, 
+                               uintN argc      /* = NO_ARGS */,
+                               jsval *argv     /* = nsnull  */,
                                jsval *rval     /* = nsnull  */)
     :   mState(INIT_FAILED),
         mXPC(dont_AddRef(nsXPConnect::GetXPConnect())),
@@ -87,12 +87,12 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
             return;
         }
         mContextPopRequired = JS_TRUE;
-    }                    
+    }
 
 
     if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
         return;
-    
+
     // XXX we might hook into a list on the contexts???
 
 
@@ -104,17 +104,19 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     mState = HAVE_CONTEXT;
 
     if(!obj)
-        return; 
+        return;
 
     mMethodIndex = 0xDEAD;
     mOperandJSObject = obj;
 
+    mState = HAVE_OBJECT;
+
     mTearOff = nsnull;
-    mWrapper = XPCWrappedNative::GetWrappedNativeOfJSObject(mJSContext, obj, 
+    mWrapper = XPCWrappedNative::GetWrappedNativeOfJSObject(mJSContext, obj,
                                                             &mCurrentJSObject,
                                                             &mTearOff);
     if(!mWrapper)
-        return; 
+        return;
 
     mFlattenedJSObject = mWrapper->GetFlatJSObject();
 
@@ -125,7 +127,7 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     }
     else
     {
-        mScriptableInfo = mWrapper->GetDynamicInfo();
+        mScriptableInfo = mWrapper->GetScriptableInfo();
         if(mScriptableInfo)
         {
             mScratchTearOff.SetWrapper(mWrapper);
@@ -135,8 +137,6 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
             mTearOffForScriptable = &mScratchTearOff;
         }
     }
-
-    mState = HAVE_OBJECT;
 
     if(id)
         SetJSID(id);
@@ -151,7 +151,7 @@ void
 XPCCallContext::SetJSID(jsid id)
 {
     CHECK_STATE(HAVE_OBJECT);
-    
+
     mJSID = id;
 
     if(mTearOff)
@@ -160,6 +160,8 @@ XPCCallContext::SetJSID(jsid id)
         mInterface = mTearOff->GetPrivateInterface();
         mMember = mInterface->FindMember(id);
         mStaticMemberIsLocal = JS_TRUE;
+        if(mMember && !mMember->IsConstant())
+            mMethodIndex = mMember->GetIndex();
     }
     else
     {
@@ -167,32 +169,35 @@ XPCCallContext::SetJSID(jsid id)
 
         if(mSet->FindMember(id, &mMember, &mInterface))
         {
+            if(mMember && !mMember->IsConstant())
+                mMethodIndex = mMember->GetIndex();
+    
             PRUint16 ignored;
             XPCNativeMember* protoMember;
             XPCNativeSet* mProtoSet = mWrapper->GetProto()->GetSet();
 
-            mStaticMemberIsLocal = 
+            mStaticMemberIsLocal =
                         mProtoSet != mSet &&
-                        (!mProtoSet->FindMember(id, &protoMember, &ignored) || 
+                        (!mProtoSet->FindMember(id, &protoMember, &ignored) ||
                          protoMember != mMember);
         }
         else
         {
             // XXX Need to add support for looking up tearoffs by interface name
             // This will have a to check if our scriptable allows this, then
-            // do a lookup in the jsid -> iid/interface map to find the 
-            // interface and then use FindTearoff to try to QI for this 
+            // do a lookup in the jsid -> iid/interface map to find the
+            // interface and then use FindTearoff to try to QI for this
             // interface. If found, we'll have to mutate our wrapper's set.
 
             mMember = nsnull;
             mInterface = nsnull;
-        }        
+        }
     }
-    
+
     mState = HAVE_JSID;
 }
 
-void 
+void
 XPCCallContext::SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter)
 {
     // We are going straight to the method info and need not do a lookup
@@ -214,7 +219,7 @@ XPCCallContext::SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter)
 
 void
 XPCCallContext::SetArgsAndResultPtr(uintN argc,
-                                    jsval *argv, 
+                                    jsval *argv,
                                     jsval *rval)
 {
     CHECK_STATE(HAVE_OBJECT);
@@ -222,22 +227,22 @@ XPCCallContext::SetArgsAndResultPtr(uintN argc,
     mArgc   = argc;
     mArgv   = argv;
     mRetVal = rval;
-    
+
     mExceptionWasThrown = mReturnValueWasSet = JS_FALSE;
     mState = HAVE_ARGS;
 }
 
-JSBool  
+JSBool
 XPCCallContext::CanCallNow()
 {
-    if(!HasInterfaceAndMember()) 
+    if(!HasInterfaceAndMember())
         return JS_FALSE;
     if(mState < HAVE_ARGS)
         return JS_FALSE;
 
     if(!mTearOff)
         mTearOff = mWrapper->FindTearOff(mInterface);
-    
+
     if(mTearOff)
     {
         mState = READY_TO_CALL;
@@ -246,7 +251,7 @@ XPCCallContext::CanCallNow()
     return JS_FALSE;
 }
 
-void 
+void
 XPCCallContext::SystemIsBeingShutDown()
 {
     // XXX This is pretty questionable since the per thread cleanup stuff
@@ -281,7 +286,7 @@ XPCCallContext::~XPCCallContext()
 #ifdef DEBUG
                 JSContext* poppedCX;
                 nsresult rv = stack->Pop(&poppedCX);
-                NS_ASSERTION(NS_SUCCEEDED(rv) && poppedCX == mJSContext, "bad pop");         
+                NS_ASSERTION(NS_SUCCEEDED(rv) && poppedCX == mJSContext, "bad pop");
 #else
                 (void) stack->Pop(nsnull);
 #endif
@@ -297,7 +302,7 @@ XPCCallContext::~XPCCallContext()
     {
 #ifdef DEBUG
         XPCCallContext* old = mThreadData->SetCallContext(mPrevCallContext);
-        NS_ASSERTION(old == this, "bad pop from per thread data");       
+        NS_ASSERTION(old == this, "bad pop from per thread data");
 #else
         (void) mThreadData->SetCallContext(mPrevCallContext);
 #endif
@@ -307,7 +312,7 @@ XPCCallContext::~XPCCallContext()
 NS_IMPL_QUERY_INTERFACE1(XPCCallContext, nsIXPCNativeCallContext)
 NS_IMPL_ADDREF(XPCCallContext)
 
-NS_IMETHODIMP_(nsrefcnt) 
+NS_IMETHODIMP_(nsrefcnt)
 XPCCallContext::Release(void)
 {
   NS_PRECONDITION(0 != mRefCnt, "dup release");
@@ -322,73 +327,87 @@ XPCCallContext::Release(void)
 NS_IMETHODIMP
 XPCCallContext::GetCallee(nsISupports * *aCallee)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsISupports* temp = mWrapper->GetIdentityObject();
+    NS_IF_ADDREF(temp);
+    *aCallee = temp;
+    return NS_OK;
 }
 
 /* readonly attribute PRUint16 CalleeMethodIndex; */
 NS_IMETHODIMP
 XPCCallContext::GetCalleeMethodIndex(PRUint16 *aCalleeMethodIndex)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aCalleeMethodIndex = mMethodIndex;
+    return NS_OK;
 }
 
 /* readonly attribute nsIXPConnectWrappedNative CalleeWrapper; */
 NS_IMETHODIMP
 XPCCallContext::GetCalleeWrapper(nsIXPConnectWrappedNative * *aCalleeWrapper)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsIXPConnectWrappedNative* temp = mWrapper;
+    NS_IF_ADDREF(temp);
+    *aCalleeWrapper = temp;
+    return NS_OK;
 }
 
 /* readonly attribute JSContextPtr JSContext; */
 NS_IMETHODIMP
 XPCCallContext::GetJSContext(JSContext * *aJSContext)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aJSContext = mJSContext;
+    return NS_OK;
 }
 
 /* readonly attribute PRUint32 Argc; */
 NS_IMETHODIMP
 XPCCallContext::GetArgc(PRUint32 *aArgc)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aArgc = (PRUint32) mArgc;
+    return NS_OK;
 }
 
 /* readonly attribute JSValPtr ArgvPtr; */
 NS_IMETHODIMP
 XPCCallContext::GetArgvPtr(jsval * *aArgvPtr)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aArgvPtr = mArgv;
+    return NS_OK;
 }
 
 /* readonly attribute JSValPtr RetValPtr; */
 NS_IMETHODIMP
 XPCCallContext::GetRetValPtr(jsval * *aRetValPtr)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aRetValPtr = mRetVal;
+    return NS_OK;
 }
 
 /* attribute PRBool ExceptionWasThrown; */
 NS_IMETHODIMP
 XPCCallContext::GetExceptionWasThrown(PRBool *aExceptionWasThrown)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aExceptionWasThrown = mExceptionWasThrown;
+    return NS_OK;
 }
 NS_IMETHODIMP
 XPCCallContext::SetExceptionWasThrown(PRBool aExceptionWasThrown)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mExceptionWasThrown = aExceptionWasThrown;
+    return NS_OK;
 }
 
 /* attribute PRBool ReturnValueWasSet; */
 NS_IMETHODIMP
 XPCCallContext::GetReturnValueWasSet(PRBool *aReturnValueWasSet)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aReturnValueWasSet = mReturnValueWasSet;
+    return NS_OK;
 }
 NS_IMETHODIMP
 XPCCallContext::SetReturnValueWasSet(PRBool aReturnValueWasSet)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mReturnValueWasSet = aReturnValueWasSet;
+    return NS_OK;
 }
-
 

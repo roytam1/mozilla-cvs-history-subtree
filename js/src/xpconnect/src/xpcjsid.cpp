@@ -268,10 +268,11 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSIID, nsIJSID, nsIJSIID, nsIXPCScriptable)
 // The nsIXPCScriptable map declaration that will generate stubs for us...
 #define XPC_MAP_CLASSNAME           nsJSIID
 #define XPC_MAP_QUOTED_CLASSNAME   "nsJSIID"
-#define                             XPC_MAP_WANT_RESOLVE
+#define                             XPC_MAP_WANT_NEWRESOLVE
 #define                             XPC_MAP_WANT_ENUMERATE
 #define                             XPC_MAP_WANT_HASINSTANCE
-#define XPC_MAP_FLAGS               nsIXPCScriptable::DONT_ENUM_STATIC_PROPS
+#define XPC_MAP_FLAGS               nsIXPCScriptable::DONT_ENUM_STATIC_PROPS |\
+                                    nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE
 #include "xpc_map_end.h" /* This will #undef the above */
 
 nsJSIID::nsJSIID()
@@ -372,9 +373,10 @@ nsJSIID::NewID(const char* str)
 
 /* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP
-nsJSIID::Resolve(nsIXPConnectWrappedNative *wrapper,
-                 JSContext * cx, JSObject * obj,
-                 jsval id, PRBool *_retval)
+nsJSIID::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                    JSContext * cx, JSObject * obj,
+                    jsval id, PRUint32 flags, 
+                    JSObject * *objp, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
@@ -397,6 +399,7 @@ nsJSIID::Resolve(nsIXPConnectWrappedNative *wrapper,
         if(!member->GetValue(ccx, iface, &val))
             return NS_ERROR_OUT_OF_MEMORY;
 
+        *objp = obj;
         *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, val,
                                        nsnull, nsnull,
                                        JSPROP_ENUMERATE |
@@ -564,9 +567,9 @@ nsJSCID::CreateInstance(nsISupports **_retval)
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
-    // These suckers can't leak
-    nsIXPCNativeCallContext* ccxp;
-    if(NS_FAILED(xpc->GetCurrentNativeCallContext(&ccxp)) || !ccxp)
+    nsCOMPtr<nsIXPCNativeCallContext> ccxp;
+    xpc->GetCurrentNativeCallContext(getter_AddRefs(ccxp));
+    if(!ccxp)
         return NS_ERROR_UNEXPECTED;
 
     PRUint32 argc;
@@ -650,9 +653,9 @@ nsJSCID::GetService(nsISupports **_retval)
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
-    // These suckers can't leak
-    nsIXPCNativeCallContext* ccxp;
-    if(NS_FAILED(xpc->GetCurrentNativeCallContext(&ccxp)) || !ccxp)
+    nsCOMPtr<nsIXPCNativeCallContext> ccxp;
+    xpc->GetCurrentNativeCallContext(getter_AddRefs(ccxp));
+    if(!ccxp)
         return NS_ERROR_UNEXPECTED;
 
     PRUint32 argc;
@@ -791,9 +794,9 @@ xpc_JSObjectToID(JSContext *cx, JSObject* obj)
         XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
     if(wrapper)
     {
-        if(wrapper->GetIID().Equals(NS_GET_IID(nsIJSID))  ||
-           wrapper->GetIID().Equals(NS_GET_IID(nsIJSIID)) ||
-           wrapper->GetIID().Equals(NS_GET_IID(nsIJSCID)))
+        if(wrapper->HasInterfaceNoQI(NS_GET_IID(nsIJSID))  ||
+           wrapper->HasInterfaceNoQI(NS_GET_IID(nsIJSIID)) ||
+           wrapper->HasInterfaceNoQI(NS_GET_IID(nsIJSCID)))
         {
             ((nsIJSID*)wrapper->GetIdentityObject())->GetId(&id);
         }
