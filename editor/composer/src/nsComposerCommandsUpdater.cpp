@@ -262,9 +262,11 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
     nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject;
     theDoc->GetScriptGlobalObject(getter_AddRefs(scriptGlobalObject));
 
-    nsCOMPtr<nsIDocShell>   docShell;
-    scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
-    mDocShell = docShell.get();     
+	if (scriptGlobalObject) {
+        nsCOMPtr<nsIDocShell>   docShell;
+        scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+        mDocShell = docShell.get();
+    }     
   }
 
   if (!mDocShell) return NS_ERROR_FAILURE;
