@@ -767,8 +767,6 @@ function FolderPaneSelectionChange()
     var startRange = {value: 0};
     var endRange = {value: 0};
 
-    GetOutlinerSelection(startRange, endRange);
-
     outliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
     if (startRange.value >=0 && startRange.value == endRange.value)
         ChangeFolderByIndex(startRange.value);
