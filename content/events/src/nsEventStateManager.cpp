@@ -1948,6 +1948,8 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
         }
       }
     }
+    break;
+
   case NS_MOUSE_ENTER:
     nsCOMPtr<nsIContent> targetContent;
     if (mCurrentTarget) {
