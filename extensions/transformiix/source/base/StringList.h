@@ -130,11 +130,15 @@ public:
 
 private:
 
-   StringListItem* currentItem;
+   StringList::StringListItem* currentItem;
 
    StringList* stringList;
    MBool allowRemove;
 };
 
 #endif
+
+
+
+
 

@@ -178,7 +178,7 @@ private:
 
    int count;
    //-- points to the current list item
-   ListItem* currentItem;
+   List::ListItem* currentItem;
 
    //-- points to the list to iterator over
    List* list;
