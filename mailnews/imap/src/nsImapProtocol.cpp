@@ -2336,10 +2336,10 @@ nsresult nsImapProtocol::BeginMessageDownLoad(
 }
 
 void
-nsImapProtocol::GetShouldDownloadArbitraryHeaders(PRBool *aResult)
+nsImapProtocol::GetShouldDownloadAllHeaders(PRBool *aResult)
 {
   if (m_imapServerSink)
-    m_imapServerSink->GetShouldDownloadArbitraryHeaders(aResult);
+    m_imapServerSink->GetShouldDownloadAllHeaders(aResult);
 }
 
 void
@@ -2625,20 +2625,19 @@ nsImapProtocol::FetchMessage(const char * messageIds,
       {
         PRUint32 server_capabilityFlags = GetServerStateParser().GetCapabilityFlag();
 		    PRBool aolImapServer = ((server_capabilityFlags & kAOLImapCapability) != 0);
-        PRBool useArbitraryHeaders = PR_FALSE;
-        GetShouldDownloadArbitraryHeaders(&useArbitraryHeaders); // checks filter headers, etc.
-        if (/***** Fix me *** gOptimizedHeaders &&  */// preference -- able to turn it off
-          useArbitraryHeaders)  // if it's ok -- no filters on any header, etc.
+        PRBool downloadAllHeaders = PR_FALSE;
+        GetShouldDownloadAllHeaders(&downloadAllHeaders); // checks if we're filtering on "any header"
+        if (!downloadAllHeaders)  // if it's ok -- no filters on any header, etc.
         {
           char *headersToDL = nsnull;
           char *what = nsnull;
           const char *dbHeaders = (gUseEnvelopeCmd) ? IMAP_DB_HEADERS : IMAP_ENV_AND_DB_HEADERS;
           nsXPIDLCString arbitraryHeaders;
           GetArbitraryHeadersToDownload(getter_Copies(arbitraryHeaders));
-          if (arbitraryHeaders)
-            headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
-          else
+          if (arbitraryHeaders.IsEmpty())
             headersToDL = nsCRT::strdup(dbHeaders);
+          else
+            headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
 
           if (aolImapServer)
             what = nsCRT::strdup(" XAOL-ENVELOPE INTERNALDATE)");
