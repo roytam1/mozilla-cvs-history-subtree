@@ -26,6 +26,8 @@
 #include "mkutils.h"
 #include "mkfsort.h"
 #include "mkgeturl.h"
+#include "plstr.h"
+#include "plstr2.h"
 
 #ifdef PROFILE
 #pragma profile on
@@ -50,7 +52,7 @@ NET_PrintFileType(int special_type)
 		case NET_SYM_LINK_TO_FILE:
 			return("SYM-FILE");
 		default:
-			XP_ASSERT(0);
+			PR_ASSERT(0);
 			return("FILE");
 	  }
 }
@@ -67,18 +69,18 @@ MODULE_PRIVATE void NET_FreeEntryInfoStruct(NET_FileEntryInfo *entry_info)
       {
         FREEIF(entry_info->filename);
         /* free the struct */
-        XP_FREE(entry_info);
+        PR_Free(entry_info);
       }
 }
 
 MODULE_PRIVATE NET_FileEntryInfo * NET_CreateFileEntryInfoStruct (void)
 {
-    NET_FileEntryInfo * new_entry = XP_NEW(NET_FileEntryInfo);
+    NET_FileEntryInfo * new_entry = PR_NEW(NET_FileEntryInfo);
 
     if(!new_entry) 
        return(NULL);
 
-	XP_MEMSET(new_entry, 0, sizeof(NET_FileEntryInfo));
+	PL_memset(new_entry, 0, sizeof(NET_FileEntryInfo));
 
 	new_entry->permissions = -1;
 
@@ -106,7 +108,7 @@ NET_CompareFileEntryInfoStructs (const void *ent2, const void *ent1)
         case SORT_BY_SIZE:
                         /* both equal or both 0 */
                         if(entry1->size == entry2->size)
-                            return(XP_STRCMP(entry2->filename, entry1->filename));
+                            return(PL_strcmp(entry2->filename, entry1->filename));
                         else
                             if(entry1->size > entry2->size)
                                 return(-1);
@@ -117,16 +119,16 @@ NET_CompareFileEntryInfoStructs (const void *ent2, const void *ent1)
                         if(entry1->cinfo && entry1->cinfo->desc && 
 										entry2->cinfo && entry2->cinfo->desc) 
                           {
-                            status = XP_STRCMP(entry1->cinfo->desc, entry2->cinfo->desc);
+                            status = PL_strcmp(entry1->cinfo->desc, entry2->cinfo->desc);
                             if(status)
                                 return(status);
                             /* else fall to filename comparison */
                           }
-                        return (XP_STRCMP(entry2->filename, entry1->filename));
+                        return (PL_strcmp(entry2->filename, entry1->filename));
                         /* break; NOT NEEDED */
         case SORT_BY_DATE:
                         if(entry1->date == entry2->date) 
-                            return(XP_STRCMP(entry2->filename, entry1->filename));
+                            return(PL_strcmp(entry2->filename, entry1->filename));
                         else
                             if(entry1->size > entry2->size)
                                 return(-1);
@@ -135,7 +137,7 @@ NET_CompareFileEntryInfoStructs (const void *ent2, const void *ent1)
                         /* break; NOT NEEDED */
         case SORT_BY_NAME:
         default:
-                        return (XP_STRCMP(entry2->filename, entry1->filename));
+                        return (PL_strcmp(entry2->filename, entry1->filename));
       }
 }
 

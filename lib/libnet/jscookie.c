@@ -405,7 +405,7 @@ newCookieObject(void)
     if( (JSObject *)0 == rv )
         return (JSObject *)0;
 
-    cookie_data = XP_NEW_ZAP(JSCookieData);
+    cookie_data = PR_NEWZAP(JSCookieData);
 
     if( (JSCookieData *)0 == cookie_data )
         return (JSObject *)0;
@@ -448,7 +448,7 @@ jscookie_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report
         return;
 
     FE_Alert(context, msg);
-    XP_FREE(msg);
+    PR_Free(msg);
 
     return;
 }
@@ -511,7 +511,7 @@ compileJSCookieFilters(void)
 
             XP_Trace("+Done.\n");
             
-            XP_FREE(buffer);
+            PR_Free(buffer);
 
             need_compile = JS_FALSE;
         }

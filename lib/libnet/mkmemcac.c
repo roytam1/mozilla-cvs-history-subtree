@@ -29,7 +29,11 @@
 
 #include "mkcache.h"
 #include "glhist.h"
-#include "xp_hash.h"
+#include "plctype.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "pllist.h"
+#include "plhash.h"
 #include "xp_mcom.h"
 #include "client.h"
 #include "mkgeturl.h"
@@ -63,7 +67,7 @@ extern int MK_OUT_OF_MEMORY;
 #else
 #define MAX_MEMORY_ALLOC_SIZE (((unsigned) (~0) << 1) >> 1)  /* MAXINT */
 
-/* @@@@@@@@@ there is currently a limit on XP_ALLOC to less than 32 K */
+/* @@@@@@@@@ there is currently a limit on PR_Malloc to less than 32 K */
 #undef  MAX_MEMORY_ALLOC_SIZE
 #define MAX_MEMORY_ALLOC_SIZE 32767 /* MAXINT */
 #endif
@@ -81,7 +85,7 @@ extern int MK_OUT_OF_MEMORY;
  * in net.h
  */
 struct _net_MemoryCacheObject {
-	XP_List         *list;
+	PLList          *list;
 	net_CacheObject  cache_obj;
 	int              external_locks;       /* locks set by other modules calling in */
 	int              mem_read_lock;        /* the number of current readers */
@@ -116,7 +120,7 @@ typedef struct _net_MemorySegment {
 /* the hash table pointer that holds all the memory cache
  * objects for quick lookup
  */
-PRIVATE XP_HashList * net_MemoryCacheHashList = 0;
+PRIVATE PLHashTable * net_MemoryCacheHashList = 0;
 
 /* semaphore counter set when calling any of the list add functions
  */
@@ -128,7 +132,7 @@ PRIVATE int net_cache_adding_object=0;
  * The net_MemoryCacheList is used as a delete queue
  * and is ordered by last-accessed time.
  */
-PRIVATE XP_List   *net_MemoryCacheList=0;
+PRIVATE PLList    *net_MemoryCacheList=0;
 PRIVATE uint32     net_MemoryCacheSize=0;
 PRIVATE uint32     net_MaxMemoryCacheSize=0;
 
@@ -156,7 +160,7 @@ net_FreeMemoryCopy(net_MemoryCacheObject * mem_copy)
 {
     net_MemorySegment * mem_seg;
 
-	XP_ASSERT(mem_copy);
+	PR_ASSERT(mem_copy);
 
 	if(!mem_copy)
 		return;
@@ -180,7 +184,7 @@ net_FreeMemoryCopy(net_MemoryCacheObject * mem_copy)
 			/* remove it from the hash list so it won't be found
 			 * by NET_GetURLInMemCache
 			 */
-			XP_HashListRemoveObject(net_MemoryCacheHashList, mem_copy);
+			PL_HashTableRemove(net_MemoryCacheHashList, mem_copy);
 			return;
 		  }
 	}
@@ -189,7 +193,7 @@ net_FreeMemoryCopy(net_MemoryCacheObject * mem_copy)
 
 	/* free and delete the memory segment list
 	 */
-    while((mem_seg = (net_MemorySegment *)XP_ListRemoveTopObject(mem_copy->list)) != NULL)
+    while((mem_seg = (net_MemorySegment *)PL_ListRemoveFirst(mem_copy->list)) != NULL)
       {
 		/* reduce the global memory cache size
 		 */
@@ -198,14 +202,14 @@ net_FreeMemoryCopy(net_MemoryCacheObject * mem_copy)
         FREE(mem_seg);
       }
 
-    XP_ListDestroy(mem_copy->list);
+    PL_ListDestroy(mem_copy->list);
 
 	/* Remove it from the hash and delete lists,
 	 * If the object isn't in these lists anymore
 	 * the call will be ignored.
 	 */
-	XP_HashListRemoveObject(net_MemoryCacheHashList, mem_copy);
-	XP_ListRemoveObject(net_MemoryCacheList, mem_copy);
+	PL_HashTableRemove(net_MemoryCacheHashList, mem_copy);
+	PL_ListRemove(net_MemoryCacheList, mem_copy);
 
     FREEIF(mem_copy->cache_obj.address);
     FREEIF(mem_copy->cache_obj.post_data);
@@ -233,7 +237,7 @@ net_remove_last_memory_cache_object(void)
         return -1;
 
     mem_cache_obj = (net_MemoryCacheObject *) 
-								XP_ListRemoveEndObject(net_MemoryCacheList);
+								PL_ListRemoveLast(net_MemoryCacheList);
 
     if(!mem_cache_obj)
         return -1;
@@ -245,7 +249,7 @@ net_remove_last_memory_cache_object(void)
 	  {
 		int status = net_remove_last_memory_cache_object(); /* recurse */
 		/* add the object back in */
-		XP_ListAddObject(net_MemoryCacheList, mem_cache_obj);
+		PL_ListAdd(net_MemoryCacheList, mem_cache_obj);
 		return status;
 	  }
 
@@ -372,36 +376,36 @@ PRIVATE int net_CacheHashComp(net_MemoryCacheObject * obj1,
 	 * so that "news:MSGID" and "news:MSGID?headers=all" share the same cache
 	 * file.
 	 */
-	if((XP_TO_UPPER(obj1->cache_obj.address[0]) == 'N'
-		|| XP_TO_UPPER(obj1->cache_obj.address[0]) == 'S')
+	if((PL_TO_UPPER(obj1->cache_obj.address[0]) == 'N'
+		|| PL_TO_UPPER(obj1->cache_obj.address[0]) == 'S')
 	    &&  NET_URL_Type(obj1->cache_obj.address) == NEWS_TYPE_URL)
 	  {
-		ques1 = XP_STRCHR(obj1->cache_obj.address, '?');
+		ques1 = PL_strchr(obj1->cache_obj.address, '?');
 		if(ques1) 
 			*ques1 = '\0';
 	  }
 
-    if((XP_TO_UPPER(obj2->cache_obj.address[0]) == 'N'
-        || XP_TO_UPPER(obj2->cache_obj.address[0]) == 'S')
+    if((PL_TO_UPPER(obj2->cache_obj.address[0]) == 'N'
+        || PL_TO_UPPER(obj2->cache_obj.address[0]) == 'S')
         &&  NET_URL_Type(obj2->cache_obj.address) == NEWS_TYPE_URL)
       {
-        ques2 = XP_STRCHR(obj2->cache_obj.address, '?');
+        ques2 = PL_strchr(obj2->cache_obj.address, '?');
         if(ques2)
             *ques2 = '\0';
       }
 
 
 	/* do the same for IMAP */
-	if(!strncasecomp(obj1->cache_obj.address,"mailbox://",10))
+	if(!PL_strncasecmp(obj1->cache_obj.address,"mailbox://",10))
 	  {
-		ques3 = XP_STRSTR(obj1->cache_obj.address, "&part=");
+		ques3 = PL_strstr(obj1->cache_obj.address, "&part=");
 		if(ques3) 
 			*ques3 = '\0';
 	  }
 
-	if(!strncasecomp(obj2->cache_obj.address,"mailbox://",10))
+	if(!PL_strncasecmp(obj2->cache_obj.address,"mailbox://",10))
       {
-        ques4 = XP_STRSTR(obj2->cache_obj.address, "&part=");
+        ques4 = PL_strstr(obj2->cache_obj.address, "&part=");
         if(ques4)
             *ques4 = '\0';
       }
@@ -411,15 +415,15 @@ PRIVATE int net_CacheHashComp(net_MemoryCacheObject * obj1,
 	 * really represent the same
 	 * document
 	 */
-	hash1 = XP_STRCHR(obj1->cache_obj.address, '#');
-	hash2 = XP_STRCHR(obj2->cache_obj.address, '#');
+	hash1 = PL_strchr(obj1->cache_obj.address, '#');
+	hash2 = PL_strchr(obj2->cache_obj.address, '#');
 
 	if(hash1)
 		*hash1 = '\0';
 	if(hash2)
 		*hash2 = '\0';
 
-    result = XP_STRCMP(obj1->cache_obj.address, obj2->cache_obj.address);
+    result = PL_strcmp(obj1->cache_obj.address, obj2->cache_obj.address);
 
 	/* set them back to previous values
 	 */
@@ -445,7 +449,7 @@ PRIVATE int net_CacheHashComp(net_MemoryCacheObject * obj1,
 
     if(obj1->cache_obj.post_data && obj2->cache_obj.post_data)
       {
-        result = XP_STRCMP(obj1->cache_obj.post_data, 
+        result = PL_strcmp(obj1->cache_obj.post_data, 
 						   obj2->cache_obj.post_data);
         return(result);
       }
@@ -478,13 +482,13 @@ PRIVATE uint32 net_CacheHashFunc(net_MemoryCacheObject * obj1)
     x = (unsigned const char *) obj1->cache_obj.address;
 
 	/* figure out if it's a news type URL */
-    if((XP_TO_UPPER(obj1->cache_obj.address[0]) == 'N'
-        || XP_TO_UPPER(obj1->cache_obj.address[0]) == 'S')
+    if((PL_TO_UPPER(obj1->cache_obj.address[0]) == 'N'
+        || PL_TO_UPPER(obj1->cache_obj.address[0]) == 'S')
         &&  NET_URL_Type(obj1->cache_obj.address) == NEWS_TYPE_URL)
 		news_type_url = TRUE;
 	/* figure out if it's an IMAP type URL */
-	else if (XP_TO_UPPER(obj1->cache_obj.address[0]) == 'M' &&
-		!strncasecomp(obj1->cache_obj.address,"Mailbox://",10))
+	else if (PL_TO_UPPER(obj1->cache_obj.address[0]) == 'M' &&
+		!PL_strncasecmp(obj1->cache_obj.address,"Mailbox://",10))
 		imap_type_url = TRUE;
 
     /* modify the default String hash function
@@ -551,8 +555,8 @@ PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int3
 		 * lets get it
 		 */
 		mem_seg = (net_MemorySegment *)
-							XP_ListGetEndObject(obj->memory_copy->list);
-		XP_ASSERT(mem_seg);
+							PL_ListLast(obj->memory_copy->list);
+		PR_ASSERT(mem_seg);
 	
 		if(mem_seg->in_use+len > mem_seg->seg_size)
 		  {
@@ -575,12 +579,12 @@ PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int3
 			 */
 			if(size_for_new_buffer > MEMORY_CACHE_SEGMENT_SIZE)
 			  {
-				new_mem_seg->segment = (char*)XP_ALLOC(size_for_new_buffer);
+				new_mem_seg->segment = (char*)PR_Malloc(size_for_new_buffer);
 				new_mem_seg->seg_size = size_for_new_buffer;
 			  }
 			else
 			  {
-				new_mem_seg->segment = (char*)XP_ALLOC(
+				new_mem_seg->segment = (char*)PR_Malloc(
 													MEMORY_CACHE_SEGMENT_SIZE);
 				new_mem_seg->seg_size = MEMORY_CACHE_SEGMENT_SIZE;
 			  }
@@ -606,7 +610,7 @@ PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int3
 			 */
 			if(size_left_in_old_buffer)
 			  {
-				XP_MEMCPY(cur_mem_seg_ptr+mem_seg->in_use, 
+				PL_memcpy(cur_mem_seg_ptr+mem_seg->in_use, 
 						  buffer, 
 						  (size_t) size_left_in_old_buffer);
 				mem_seg->in_use = mem_seg->seg_size;  /* seg new size */
@@ -614,13 +618,13 @@ PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int3
 
 			/* fill in the new buffer
 			 */
-			XP_MEMCPY(new_mem_seg_ptr, 
+			PL_memcpy(new_mem_seg_ptr, 
 					  buffer+size_left_in_old_buffer, 
 					  (size_t) size_for_new_buffer);
 			new_mem_seg->in_use = size_for_new_buffer;
 
 			net_cache_adding_object++; /* semaphore */
-			XP_ListAddObjectToEnd(obj->memory_copy->list, new_mem_seg);
+			PL_ListAddLast(obj->memory_copy->list, new_mem_seg);
 			net_cache_adding_object--; /* semaphore */
 
 			TRACEMSG(("Adding %d to New memory segment %p", len, new_mem_seg));
@@ -632,7 +636,7 @@ PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int3
 
 			/* fill in some more into the existing segment
 			 */
-			XP_MEMCPY(cur_mem_seg_ptr + mem_seg->in_use, buffer, (size_t) len);
+			PL_memcpy(cur_mem_seg_ptr + mem_seg->in_use, buffer, (size_t) len);
 			mem_seg->in_use += len;
 
 			TRACEMSG(("Adding %d to existing memory segment %p", len, mem_seg));
@@ -646,8 +650,8 @@ EndOfMemWrite:  /* target of a goto from an error above */
 	  {
     	int status=0;
 	
-		XP_ASSERT (buffer);
-		XP_ASSERT (len > -1);
+		PR_ASSERT (buffer);
+		PR_ASSERT (len > -1);
         status = (*obj->next_stream->put_block)
 									(obj->next_stream, buffer, len);
 
@@ -739,16 +743,15 @@ PRIVATE void net_MemCacheComplete (NET_StreamClass *stream)
 */
 PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 {
-    int status;
-
 	/* if the hash table doesn't exist yet, initialize it now 
 	 */
     if(!net_MemoryCacheHashList)
       {
  
-        net_MemoryCacheHashList = XP_HashListNew(499, 
-									(XP_HashingFunction) net_CacheHashFunc,
-                                    (XP_HashCompFunction) net_CacheHashComp); 
+        net_MemoryCacheHashList = PL_NewHashTable(499, 
+									(PLHashFunction) net_CacheHashFunc,
+                                    (PLHashComparator) net_CacheHashComp,
+                                    PL_CompareStrings, NULL, NULL); 
         if(!net_MemoryCacheHashList)
           {
 			net_FreeMemoryCopy(obj->memory_copy);
@@ -762,7 +765,7 @@ PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 	 */
 	if(!net_MemoryCacheList)
 	  {
-		net_MemoryCacheList = XP_ListNew();
+		net_MemoryCacheList = PL_ListNew();
 		if(!net_MemoryCacheList)
 		  {
 			net_FreeMemoryCopy(obj->memory_copy);
@@ -791,22 +794,16 @@ PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 		
 		/* add the struct to the delete list */
 		net_cache_adding_object++; /* semaphore */
-        XP_ListAddObject(net_MemoryCacheList, obj->memory_copy);
-		net_cache_adding_object--; /* semaphore */
-
-		/* add the struct to the hash list */
-		net_cache_adding_object++; /* semaphore */
-        status = XP_HashListAddObject(net_MemoryCacheHashList, 
-									  obj->memory_copy);
+        PL_ListAdd(net_MemoryCacheList, obj->memory_copy);
 		net_cache_adding_object--; /* semaphore */
 
 		/* check for hash collision */
-		if(status == XP_HASH_DUPLICATE_OBJECT)
+		if(PL_HashTableLookup(net_MemoryCacheHashList, obj->memory_copy))
 		  {
 			net_MemoryCacheObject * tmp_obj;
 
             tmp_obj = (net_MemoryCacheObject *)
-                          		XP_HashListFindObject(net_MemoryCacheHashList, 
+                          		PL_HashTableLookup(net_MemoryCacheHashList, 
 													  obj->memory_copy);
 
 			if ((tmp_obj->mem_read_lock == 0) && tmp_obj->completed)
@@ -822,8 +819,8 @@ PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 				/* re add the object 
 				 */
 				net_cache_adding_object++; /* semaphore */
-				XP_HashListAddObject(net_MemoryCacheHashList, 
-									 obj->memory_copy);
+				PL_HashTableAdd(net_MemoryCacheHashList, 
+                                obj->memory_copy, "x");
 				net_cache_adding_object--; /* semaphore */
 			}
 			else
@@ -833,6 +830,11 @@ PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 				 */
 				net_FreeMemoryCopy(obj->memory_copy);
 			}
+            /* add the struct to the hash list */
+            net_cache_adding_object++; /* semaphore */
+            PL_HashTableAdd(net_MemoryCacheHashList, 
+                            obj->memory_copy, "x");
+            net_cache_adding_object--; /* semaphore */ 
 		  }
       }
 
@@ -910,20 +912,20 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 		 */
 		if(URL_s->content_length > MAX_MEMORY_ALLOC_SIZE)
 		  {
-		    mem_seg->segment =  (char*)XP_ALLOC(MAX_MEMORY_ALLOC_SIZE);
+		    mem_seg->segment =  (char*)PR_Malloc(MAX_MEMORY_ALLOC_SIZE);
 	        mem_seg->seg_size = MAX_MEMORY_ALLOC_SIZE;
 		  }
 		else
 		  {
 		    /* add 10 just in case it's needed due to a bad content type :) */
-		    mem_seg->segment =  (char*)XP_ALLOC(URL_s->content_length+10);
+		    mem_seg->segment =  (char*)PR_Malloc(URL_s->content_length+10);
 	        mem_seg->seg_size = URL_s->content_length+10;
 		  }
 	  }
 	else
 	  {
 		/* this is a case of no content length, use standard size segments */
-		mem_seg->segment  = (char*)XP_ALLOC(MEMORY_CACHE_SEGMENT_SIZE);
+		mem_seg->segment  = (char*)PR_Malloc(MEMORY_CACHE_SEGMENT_SIZE);
 	    mem_seg->seg_size = MEMORY_CACHE_SEGMENT_SIZE;
 	  }
 
@@ -943,7 +945,7 @@ NET_MemCacheConverter (FO_Present_Types format_out,
       }
 	memset(memory_copy, 0, sizeof(net_MemoryCacheObject));
 
-	memory_copy->list = XP_ListNew();
+	memory_copy->list = PL_ListNew();
 	if(!memory_copy->list)
 	  {
 		FREE(mem_seg);
@@ -960,7 +962,7 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 
 	/* add the segment malloced above to the segment list */
 	net_cache_adding_object++; /* semaphore */
-	XP_ListAddObject(memory_copy->list, mem_seg);
+	PL_ListAdd(memory_copy->list, mem_seg);
 	net_cache_adding_object--; /* semaphore */
 
     StrAllocCopy(memory_copy->cache_obj.address, URL_s->address);
@@ -1019,7 +1021,7 @@ NET_MemCacheConverter (FO_Present_Types format_out,
       }
 
     /* init the object */
-    XP_MEMSET(data_object, 0, sizeof(CacheDataObject));
+    PL_memset(data_object, 0, sizeof(CacheDataObject));
 
 	/* assign the cache object to the stream data object
 	 */
@@ -1068,19 +1070,22 @@ malloc_failure: /* target of malloc failure */
 PRIVATE net_MemoryCacheObject *
 net_FindObjectInMemoryCache(URL_Struct *URL_s)
 {
-	net_MemoryCacheObject tmp_cache_obj, *return_obj;
+    net_MemoryCacheObject tmp_cache_obj, *return_obj;
+
+    if (net_MemoryCacheHashList == NULL)
+        return NULL;
 
 	/* fill in the temporary cache object so we can
 	 * use it for searching
 	 */
-	XP_MEMSET(&tmp_cache_obj, 0, sizeof(tmp_cache_obj));
+	PL_memset(&tmp_cache_obj, 0, sizeof(tmp_cache_obj));
 	tmp_cache_obj.cache_obj.method    = URL_s->method;
 	tmp_cache_obj.cache_obj.address   = URL_s->address;
 	tmp_cache_obj.cache_obj.post_data = URL_s->post_data;
 	tmp_cache_obj.cache_obj.post_data_size = URL_s->post_data_size;
 
 	return_obj = (net_MemoryCacheObject *)
-		XP_HashListFindObject(net_MemoryCacheHashList, &tmp_cache_obj);
+		PL_HashTableLookup(net_MemoryCacheHashList, &tmp_cache_obj);
 	if (return_obj)
 		return (return_obj);
 	else 
@@ -1088,7 +1093,7 @@ net_FindObjectInMemoryCache(URL_Struct *URL_s)
 		/*	try unescaping the URL address - MHTML parts are
 			escaped, and weren't getting picked up in the
 			cache */
-		tmp_cache_obj.cache_obj.address = XP_STRDUP(URL_s->address);
+		tmp_cache_obj.cache_obj.address = PL_strdup(URL_s->address);
 		if (tmp_cache_obj.cache_obj.address)
 		{
 			/* unescape it */
@@ -1096,8 +1101,8 @@ net_FindObjectInMemoryCache(URL_Struct *URL_s)
 			if (tmp_cache_obj.cache_obj.address)
 			{
 				return_obj = (net_MemoryCacheObject *)
-					XP_HashListFindObject(net_MemoryCacheHashList, &tmp_cache_obj);
-				XP_FREE(tmp_cache_obj.cache_obj.address);
+                  PL_HashTableLookup(net_MemoryCacheHashList, &tmp_cache_obj);
+				PR_Free(tmp_cache_obj.cache_obj.address);
 			}
 		}
 		return (return_obj);
@@ -1116,7 +1121,7 @@ NET_ChangeMemCacheLock(URL_Struct *URL_s, Bool set)
 
 	if(found_cache_obj && found_cache_obj->completed)
 	  {
-		XP_ASSERT(found_cache_obj->external_locks >= 0);
+		PR_ASSERT(found_cache_obj->external_locks >= 0);
 
 		if(set)
 		  {
@@ -1128,7 +1133,7 @@ NET_ChangeMemCacheLock(URL_Struct *URL_s, Bool set)
 			/* decrement lock counter */
 			found_cache_obj->external_locks--;
 
-			XP_ASSERT(found_cache_obj->external_locks >= 0);
+			PR_ASSERT(found_cache_obj->external_locks >= 0);
 
 			if(found_cache_obj->external_locks < 0)
 				found_cache_obj->external_locks = 0;
@@ -1249,8 +1254,8 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 
 		net_cache_adding_object++; /* semaphore */
 		/* reorder objects so that the list is in last accessed order */
-		XP_ListRemoveObject(net_MemoryCacheList, found_cache_obj);
-		XP_ListAddObject(net_MemoryCacheList, found_cache_obj);
+		PL_ListRemove(net_MemoryCacheList, found_cache_obj);
+		PL_ListAdd(net_MemoryCacheList, found_cache_obj);
 		net_cache_adding_object--; /* semaphore */
 
 		TRACEMSG(("Cached copy is valid. returning method"));
@@ -1273,7 +1278,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 /* used to hold data between invokations of ProcessNet
  */
 typedef struct _MemCacheConData {
-	XP_List         *cur_list_ptr;
+	PLListEntry     *cur_list_ptr;
 	uint32           bytes_written_in_segment;
 	NET_StreamClass *stream;
 } MemCacheConData;
@@ -1328,7 +1333,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		 * in the hash table, which means we have not deleted it
 		 * and we have not set the delete_me flag.
 		 */
-		XP_ASSERT(FALSE);
+		PR_ASSERT(FALSE);
 		CE_STATUS = MK_OBJECT_NOT_IN_CACHE;
 		return (CE_STATUS);
 	}
@@ -1338,7 +1343,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 	/* point to the first list struct that contains data
 	 */
-	CD_CUR_LIST_PTR = CE_URL_S->memory_copy->list->next;
+	CD_CUR_LIST_PTR = PL_ListFirstEntry(CE_URL_S->memory_copy->list);
 	CD_BYTES_WRITTEN_IN_SEGMENT = 0;
 
 	/* put a read lock on the data
@@ -1370,7 +1375,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
             return cur_entry->status;
           }
       }
-      else if (!XP_STRNCMP(CE_URL_S->address, "Mailbox://", 10))
+      else if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
       {
         /* #### DISGUSTING KLUDGE to make cacheing work for imap articles. */
         cur_entry->status = IMAP_InitializeImapFeData (cur_entry);
@@ -1408,7 +1413,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 #define FIRST_BUFF_SIZE 1024
 	if (CE_URL_S->memory_copy->completed)
 	{
-		mem_seg = (net_MemorySegment *) CD_CUR_LIST_PTR->object;
+		mem_seg = (net_MemorySegment *) PL_ListEntryValue(CD_CUR_LIST_PTR);
 
 		mem_seg_ptr = mem_seg->segment;
 
@@ -1419,7 +1424,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
  		 * the NET_SocketBuffer in calls from NET_GetURL 
 		 * because of reentrancy
 		 */
-		first_buffer = (char *) XP_ALLOC(chunk_size);
+		first_buffer = (char *) PR_Malloc(chunk_size);
 
 		if(!first_buffer)
 		  {
@@ -1430,7 +1435,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 		/* copy the segment because the parser will muck with it
 		 */
-		XP_MEMCPY(first_buffer,
+		PL_memcpy(first_buffer,
 				  mem_seg_ptr+CD_BYTES_WRITTEN_IN_SEGMENT,
 				  (size_t) chunk_size);
 
@@ -1462,7 +1467,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		 */
 		if(CD_BYTES_WRITTEN_IN_SEGMENT >= mem_seg->in_use)
 		  {
-			CD_CUR_LIST_PTR = CD_CUR_LIST_PTR->next;
+			CD_CUR_LIST_PTR = PL_ListEntryNext(CD_CUR_LIST_PTR);
 			CD_BYTES_WRITTEN_IN_SEGMENT = 0;
 		  }
 
@@ -1579,7 +1584,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
                                     CE_BYTES_RECEIVED);
 
 #ifdef MOZ_MAIL_NEWS
-	if (!XP_STRNCMP(CE_URL_S->address, "Mailbox://", 10))
+	if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
         /* #### DISGUSTING KLUDGE to make cacheing work for imap articles. */
         IMAP_URLFinished(CE_URL_S);
 #endif
@@ -1590,7 +1595,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	/* CD_CUR_LIST_PTR is pointing to the most current
 	 * memory segment list object
  	 */
-    mem_seg = (net_MemorySegment *) CD_CUR_LIST_PTR->object;
+    mem_seg = (net_MemorySegment *) PL_ListEntryValue(CD_CUR_LIST_PTR);
 
 	TRACEMSG(("ProcessMemoryCache: printing segment %p",mem_seg));
 
@@ -1610,7 +1615,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 
     /* copy the segment because the parser will muck with it
      */
-    XP_MEMCPY(NET_Socket_Buffer, 
+    PL_memcpy(NET_Socket_Buffer, 
 			  mem_seg_ptr+CD_BYTES_WRITTEN_IN_SEGMENT, 
 			  (size_t) chunk_size);
 
@@ -1626,7 +1631,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	 */
 	if(CD_BYTES_WRITTEN_IN_SEGMENT >= mem_seg->in_use)
 	  {
-	    CD_CUR_LIST_PTR = CD_CUR_LIST_PTR->next;
+	    CD_CUR_LIST_PTR = PL_ListEntryNext(CD_CUR_LIST_PTR);
         CD_BYTES_WRITTEN_IN_SEGMENT = 0;
 	  }
 
@@ -1698,7 +1703,7 @@ net_InterruptMemoryCache (ActiveEntry * cur_entry)
 MODULE_PRIVATE void 
 NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
 {
-	char *buffer = (char*)XP_ALLOC(2048);
+	char *buffer = (char*)PR_Malloc(2048);
 	char *address;
 	char *escaped;
    	NET_StreamClass * stream;
@@ -1706,7 +1711,6 @@ NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
     net_MemoryCacheObject * mem_cache_obj;
 	Bool long_form = FALSE;
 	int32 number_in_memory_cache;
-	XP_List *list_ptr;
 	int i;
 
 	if(!buffer)
@@ -1715,11 +1719,11 @@ NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
 		return;
 	  }
 
-	if(strcasestr(cur_entry->URL_s->address, "?long"))
+	if(PL_strcasestr(cur_entry->URL_s->address, "?long"))
 		long_form = TRUE;
-	else if(strcasestr(cur_entry->URL_s->address, "?traceon"))
+	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceon"))
 		NET_CacheTraceOn = TRUE;
-	else if(strcasestr(cur_entry->URL_s->address, "?traceoff"))
+	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceoff"))
 		NET_CacheTraceOn = FALSE;
 
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
@@ -1742,21 +1746,21 @@ NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
 #define PUT_PART(part)													\
 cur_entry->status = (*stream->put_block)(stream,			\
 										part ? part : "Unknown",		\
-										part ? XP_STRLEN(part) : 7);	\
+										part ? PL_strlen(part) : 7);	\
 if(cur_entry->status < 0)												\
   goto END;
 
 	if(!net_MemoryCacheList)
 	  {
-		XP_STRCPY(buffer, "There are no objects in the memory cache");
+		PL_strcpy(buffer, "There are no objects in the memory cache");
 		PUT_PART(buffer);
 		goto END;
 	  }
 
-	number_in_memory_cache = XP_ListCount(net_MemoryCacheList);
+	number_in_memory_cache = PL_ListCount(net_MemoryCacheList);
 
 	/* add the header info */
-	XP_SPRINTF(buffer, 
+	sprintf(buffer, 
 "<TITLE>Information about the Netscape memory cache</TITLE>\n"
 "<h2>Memory Cache statistics</h2>\n"
 "<TABLE>\n"
@@ -1790,57 +1794,57 @@ number_in_memory_cache ? net_MemoryCacheSize/number_in_memory_cache : 0);
 #if 0
 
 #define TABLE_TOP(arg1)				\
-	XP_SPRINTF(buffer, 				\
+	sprintf(buffer, 				\
 "<TR><TD ALIGN=RIGHT><b>%s</TD>\n"	\
 "<TD>", arg1);						\
 PUT_PART(buffer);
 
 #define TABLE_BOTTOM				\
-	XP_SPRINTF(buffer, 				\
+	sprintf(buffer, 				\
 "</TD></TR>");						\
 PUT_PART(buffer);
 
 #else
 
 #define TABLE_TOP(arg1)					\
-	XP_STRCPY(buffer, "<tt>");			\
-	for(i=XP_STRLEN(arg1); i < 16; i++)	\
-		XP_STRCAT(buffer, "&nbsp;");	\
-	XP_STRCAT(buffer, arg1);			\
-	XP_STRCAT(buffer, " </tt>");		\
+	PL_strcpy(buffer, "<tt>");			\
+	for(i=PL_strlen(arg1); i < 16; i++)	\
+		PL_strcat(buffer, "&nbsp;");	\
+	PL_strcat(buffer, arg1);			\
+	PL_strcat(buffer, " </tt>");		\
 	PUT_PART(buffer);
 
 #define TABLE_BOTTOM					\
-	XP_STRCPY(buffer, "<BR>\n");		\
+	PL_strcpy(buffer, "<BR>\n");		\
 	PUT_PART(buffer);
 
 #endif
 
-	list_ptr = net_MemoryCacheList;
+	PL_ListEnumReset(net_MemoryCacheList);
 
-    while((mem_cache_obj = (net_MemoryCacheObject *) XP_ListNextObject(list_ptr)) != NULL)
+    while((mem_cache_obj = (net_MemoryCacheObject *) PL_ListEnumNext(net_MemoryCacheList)) != NULL)
       {
 
 		cache_obj = &mem_cache_obj->cache_obj;
-		address = XP_STRDUP(mem_cache_obj->cache_obj.address);
+		address = PL_strdup(mem_cache_obj->cache_obj.address);
 
 		/* put the URL out there */
 		TABLE_TOP("URL:");
-		XP_STRCPY(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
+		PL_strcpy(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
 		PUT_PART(buffer);
 		PUT_PART(address);
-		XP_STRCPY(buffer, ">");
+		PL_strcpy(buffer, ">");
 		PUT_PART(buffer);
 		escaped = NET_EscapeHTML(address);
 		PUT_PART(escaped);
 		FREE(address);
 		FREE(escaped);
-		XP_STRCPY(buffer, "</A>");
+		PL_strcpy(buffer, "</A>");
 		PUT_PART(buffer);
 		TABLE_BOTTOM;
 
 		TABLE_TOP("Content Length:");
-		XP_SPRINTF(buffer, "%lu", cache_obj->content_length);
+		sprintf(buffer, "%lu", cache_obj->content_length);
 		PUT_PART(buffer);
 		TABLE_BOTTOM;
 
@@ -1855,7 +1859,7 @@ PUT_PART(buffer);
 		  }
 		else
 		  {
-			XP_STRCPY(buffer, "No date sent");
+			PL_strcpy(buffer, "No date sent");
 			PUT_PART(buffer);
 		  }
 		TABLE_BOTTOM;
@@ -1867,7 +1871,7 @@ PUT_PART(buffer);
 		  }
 		else
 		  {
-			XP_STRCPY(buffer, "No expiration date sent");
+			PL_strcpy(buffer, "No expiration date sent");
 			PUT_PART(buffer);
 		  }
 		TABLE_BOTTOM;
@@ -1883,17 +1887,17 @@ PUT_PART(buffer);
 		  }
 		else
 		  {
-			XP_STRCPY(buffer, "iso-8859-1 (default)");
+			PL_strcpy(buffer, "iso-8859-1 (default)");
 			PUT_PART(buffer);
 		  }
 		TABLE_BOTTOM;
 
 		TABLE_TOP("Secure:");
-		XP_SPRINTF(buffer, "%s", cache_obj->security_on ? "TRUE" : "FALSE");
+		sprintf(buffer, "%s", cache_obj->security_on ? "TRUE" : "FALSE");
 		PUT_PART(buffer);
 		TABLE_BOTTOM;
 
-		XP_STRCPY(buffer, "\n<P>\n");
+		PL_strcpy(buffer, "\n<P>\n");
 		PUT_PART(buffer);
 	
 	
@@ -1908,6 +1912,8 @@ END:
 
 	return;
 }
+
+#ifdef MK_USELESS_FUNCTIONS
 
 /*Accessor for use by Cache Browser */
 PUBLIC net_CacheObject* 
@@ -1937,6 +1943,8 @@ NET_NextMemCacheObject(XP_List* list_ptr)
 	return 0;
 }
 
+#endif
+
 #include "libmocha.h"
 
 NET_StreamClass *
@@ -1948,7 +1956,6 @@ net_CloneWysiwygMemCacheEntry(MWContext *window_id, URL_Struct *URL_s,
 	PRCList *link;
 	CacheDataObject *data_object;
 	NET_StreamClass *stream;
-	XP_List *list;
 	net_MemorySegment *seg;
 	uint32 len;
 
@@ -1974,9 +1981,10 @@ found:
 					  wysiwyg_url, base_href);
 	if (!stream)
 		return 0;
-	list = memory_copy->list;
+	PL_ListEnumReset(memory_copy->list);
 	while (nbytes != 0 &&
-		   (seg = (net_MemorySegment *) XP_ListNextObject(list)) != NULL)
+		   (seg = (net_MemorySegment *) 
+            PL_ListEnumNext(memory_copy->list)) != NULL)
 	  {
 		len = seg->seg_size;
 		if (len > nbytes)
@@ -1990,7 +1998,7 @@ found:
 	  {
 		/* NB: Our caller must clear top_state->mocha_write_stream. */
 		stream->abort(stream, MK_UNABLE_TO_CONVERT);
-		XP_DELETE(stream);
+		PR_DELETE(stream);
 		return 0;
 	  }
 	return stream;

@@ -158,12 +158,43 @@ extern void NET_InitNFSProtocol(void);
  */
 extern void NET_InitWAISProtocol(void);
 
+/*
+ * Malloc'd string manipulation
+ *
+ * notice that they are dereferenced by the define!
+ */
+#define StrAllocCopy(dest, src) NET_SACopy (&(dest), src)
+#define StrAllocCat(dest, src)  NET_SACat  (&(dest), src)
+extern char * NET_SACopy (char **dest, const char *src);
+extern char * NET_SACat  (char **dest, const char *src);
+
+/*
+ * Malloc'd block manipulation
+ *
+ * Lengths are necessary here :(
+ *
+ * notice that they are dereferenced by the define!
+ */
+#define BlockAllocCopy(dest, src, src_length) NET_BACopy((char**)&(dest), src, src_length)
+#define BlockAllocCat(dest, dest_length, src, src_length)  NET_BACat(&(dest), dest_length, src, src_length)
+extern char * NET_BACopy (char **dest, const char *src, size_t src_length);
+extern char * NET_BACat  (char **dest, size_t dest_length, const char *src, size_t src_length);
+
+/*
+** Concatenate s1 to s2. If s1 is NULL then a copy of s2 is
+** returned. Otherwise, s1 is realloc'd and s2 is concatenated, with the
+** new value of s1 being returned.
+*/
+extern char *XP_AppendStr(char *s1, const char *s2);
+
+extern char * XP_StripLine (char *s);
+
 XP_END_PROTOS
 #ifndef FREE
-#define FREE(obj)    XP_FREE(obj)
+#define FREE(obj)    PR_Free(obj)
 #endif
 #ifndef FREEIF
-#define FREEIF(obj)  {if(obj) {XP_FREE(obj); obj=0;}}
+#define FREEIF(obj)  {if(obj) {PR_Free(obj); obj=0;}}
 #endif
 
 

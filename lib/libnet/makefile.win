@@ -52,6 +52,8 @@ DEFFILE=net.def
 #//
 #//------------------------------------------------------------------------
 OBJS=                                   \
+	.\$(OBJDIR)\pllist.obj		\
+	.\$(OBJDIR)\plstr2.obj		\
         .\$(OBJDIR)\bamwrap.obj         \
         .\$(OBJDIR)\net_serv.obj        \
         .\$(OBJDIR)\net_strm.obj        \
@@ -96,6 +98,7 @@ DLL=.\$(OBJDIR)\$(DLLNAME)
 #//------------------------------------------------------------------------
 LCFLAGS=-DNETSCAPE  -DB1M
 LLIBS=$(LLIBS)  $(LIBNSPR)                  \
+		$(DIST)\lib\libplc21.lib    \
                 $(DIST)\lib\js3240.lib      \
                 $(DIST)\lib\xppref32.lib    \
                 $(DIST)\lib\xpcom32.lib     \

@@ -17,6 +17,7 @@
  */
 #include "mkutils.h"
 #include "mktrace.h"
+#include "prmem.h"
 
 /* If you want to trace netlib, set this to 1, or use CTRL-ALT-T
  * stroke (preferred method) to toggle it on and off */
@@ -51,7 +52,7 @@ PRIVATE void net_Trace(char *msg) {
 
 /* Called to trace a message */
 void NET_NTrace(char *msg, int32 length) {
-	char * new_string = XP_ALLOC(length+1);
+	char * new_string = PR_Malloc(length+1);
 	if(!new_string)
 		return;
 	strncpy(new_string, msg, length);

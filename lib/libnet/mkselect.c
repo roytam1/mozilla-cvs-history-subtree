@@ -29,6 +29,8 @@
 
 #include "mkutils.h"
 #include "mkselect.h"
+#include "plstr.h"
+#include "plstr2.h"
 
 typedef enum {
 	ConnectSelect,
@@ -50,7 +52,7 @@ typedef enum {
 PRPollDesc poll_desc_array[MAX_SIMULTANIOUS_SOCKETS];
 unsigned int fd_set_size = 0;               
 PRIVATE int net_calling_all_the_time_count=0;
-PRIVATE XP_Bool net_slow_timer_on=FALSE;
+PRIVATE PRBool net_slow_timer_on=FALSE;
 
 /*  Add a select entry, no duplicates. */
 PRIVATE void 
@@ -92,7 +94,7 @@ net_add_select(SelectType stType, PRFileDesc *prFD)
 	else if(stType == ReadSelect)
 		poll_desc_array[index].in_flags = READ_FLAGS;
 	else
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 }
 
 /*  Remove a select if it exists. */
@@ -114,7 +116,7 @@ net_remove_select(SelectType stType, PRFileDesc *prFD)
 
 				fd_set_size--;
 				if(count < fd_set_size)
-					XP_MEMCPY(&poll_desc_array[count], &poll_desc_array[count+1], (fd_set_size - count) * sizeof(PRPollDesc));
+					PL_memcpy(&poll_desc_array[count], &poll_desc_array[count+1], (fd_set_size - count) * sizeof(PRPollDesc));
 
 				return;
 			}
@@ -152,7 +154,7 @@ NET_ClearConnectPoll(PRFileDesc *fd)
  *
  * return FALSE if nothing to do.
  */
-PUBLIC XP_Bool 
+PUBLIC PRBool 
 NET_PollSockets(void)
 {
 	static PRIntervalTime interval = 0;
@@ -165,12 +167,12 @@ NET_PollSockets(void)
 		interval = PR_MillisecondsToInterval(1); 
 
 	if(1 > fd_set_size)
-		return FALSE;
+		return PR_FALSE;
 
 	itmp = PR_Poll(poll_desc_array, fd_set_size, interval);
 
 	if(itmp < 1)
-		return TRUE; /* potential for doing stuff in the future. */
+		return PR_TRUE; /* potential for doing stuff in the future. */
 
 	/* for now call on all active sockets. */
 	/* if this is too much call only one, but reorder the list each time. */
@@ -180,7 +182,7 @@ NET_PollSockets(void)
 			NET_ProcessNet(poll_desc_array[itmp].fd, NET_SOCKET_FD);
 	}
 
-	return TRUE;
+	return PR_TRUE;
 }
 
 void 
@@ -198,7 +200,7 @@ NET_SetCallNetlibAllTheTime(MWContext *context, char *caller)
 {
 	if(net_calling_all_the_time_count < 0)
 	{
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 		net_calling_all_the_time_count = 0;
 	}
 
@@ -228,7 +230,7 @@ net_process_slow_net_timer_callback(void *closure)
  * source of our events.
  */
 MODULE_PRIVATE void
-NET_SetNetlibSlowKickTimer(XP_Bool set)
+NET_SetNetlibSlowKickTimer(PRBool set)
 {
 	if(net_slow_timer_on == set)
 		return; /* do nothing */
@@ -247,7 +249,7 @@ NET_ClearCallNetlibAllTheTime(MWContext *context, char *caller)
 {
 	if(net_calling_all_the_time_count < 1)
 	{
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 		net_calling_all_the_time_count = 1;
 	}
 
@@ -255,21 +257,21 @@ NET_ClearCallNetlibAllTheTime(MWContext *context, char *caller)
 
 }
 
-MODULE_PRIVATE XP_Bool
+MODULE_PRIVATE PRBool
 NET_IsCallNetlibAllTheTimeSet(MWContext *context, char *caller)
 {
 	if(caller == NULL)
 	{
 		if(net_calling_all_the_time_count > 0)
-			return TRUE;
+			return PR_TRUE;
 	}
 	else
 	{
 		/* not implemented */
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 	}
 
-	return FALSE;
+	return PR_FALSE;
 }
 
 MODULE_PRIVATE void

@@ -22,31 +22,33 @@
 #include "mkpadpac.h"
 #include "mkgeturl.h" /* for NET_GetProxyStyle() */
 #include "prefapi.h" /* for js prefs stuff */
+#include "plstr.h"
+#include "plstr2.h"
 
 /* Global pad variables */
-PUBLIC XP_Bool foundPADPAC=FALSE;
+PUBLIC PRBool foundPADPAC=FALSE;
 PUBLIC char *MK_padPacURL=NULL;
-PUBLIC XP_Bool MK_PadEnabled=TRUE;
+PUBLIC PRBool MK_PadEnabled=TRUE;
 
-MODULE_PRIVATE void net_UsePadPac(XP_Bool useIt) {
+MODULE_PRIVATE void net_UsePadPac(PRBool useIt) {
 	if(useIt) {
 		net_PadPacURLPrefChanged(NULL, NULL);
 	} else {
 		MK_PadEnabled=FALSE;
 		NET_ProxyAcLoaded=FALSE;
-		XP_FREEIF(MK_padPacURL);
+		PR_FREEIF(MK_padPacURL);
 		MK_padPacURL=NULL;
 		net_SetPACUrl(NULL);
 	}
 }
 
 /* Return whether we're currently using a pac file via proxy autodiscovery. */
-PUBLIC XP_Bool NET_UsingPadPac(void) {
+PUBLIC PRBool NET_UsingPadPac(void) {
 	return (MK_PadEnabled && foundPADPAC && (NET_GetProxyStyle() == PROXY_STYLE_NONE) );
 }
 
 /* Set the MK_padPacURL varialbe to point to the string passed in. */
-PUBLIC XP_Bool NET_SetPadPacURL(char * u) {
+PUBLIC PRBool NET_SetPadPacURL(char * u) {
 	char *url=NULL;
 	if(!u || *u == '\0')
 		return FALSE;
@@ -55,15 +57,15 @@ PUBLIC XP_Bool NET_SetPadPacURL(char * u) {
 		char *host=NET_ParseURL(url, GET_HOST_PART);
 		if(host	&& *host && (sizeof(host) <= MAXHOSTNAMELEN) ) {
 			if(MK_padPacURL)
-				XP_FREE(MK_padPacURL);
+				PR_Free(MK_padPacURL);
 			MK_padPacURL=url;
 			return TRUE;
 		} else {
-			XP_FREE(url);
-			XP_FREEIF(host);
+			PR_Free(url);
+			PR_FREEIF(host);
 		}
 	} else {
-		XP_FREEIF(url);
+		PR_FREEIF(url);
 	}
 	return FALSE;
 }
@@ -73,7 +75,7 @@ MODULE_PRIVATE int PR_CALLBACK
 net_PadPacURLPrefChanged(const char *pref, void *data) {
 	char s[128];
     int len = sizeof(s);
-	XP_MEMSET(s, 0, len);
+	PL_memset(s, 0, len);
 
     PREF_GetCharPref(pref_padPacURL, s, &len);
 	NET_SetPadPacURL(s);
@@ -83,7 +85,7 @@ net_PadPacURLPrefChanged(const char *pref, void *data) {
 /* Pref for allowing (or not) proxy autodiscovery. */
 MODULE_PRIVATE int PR_CALLBACK 
 net_EnablePadPrefChanged(const char *pref, void *data) {
-	XP_Bool x;
+	PRBool x;
 	PREF_GetBoolPref(pref_enablePad, &x);
 	MK_PadEnabled=x;
 	return PREF_NOERROR;
@@ -93,10 +95,10 @@ net_EnablePadPrefChanged(const char *pref, void *data) {
  * Initializes the pad variables and registers pad callbacks */
 PUBLIC void
 NET_RegisterPadPrefCallbacks(void) {
-	XP_Bool x;
+	PRBool x;
     char s[128];
     int len=sizeof(s);
-	XP_MEMSET(s, 0, len);
+	PL_memset(s, 0, len);
 
 	PREF_GetBoolPref(pref_enablePad, &x);
 	MK_PadEnabled=x;

@@ -23,7 +23,7 @@
 
 /* XXX: Declare NET_PollSockets(...) for the blocking stream hack... */
 extern "C" {
-    XP_Bool NET_PollSockets(void);
+    PRBool NET_PollSockets(void);
 };
 
 

@@ -23,6 +23,8 @@
  */
 
 #include "mkutils.h"
+#include "plstr.h"
+#include "plstr2.h"
 #include "mkgeturl.h"
 #include "mkstream.h"
 #include "mkformat.h"
@@ -141,7 +143,7 @@ typedef struct _FILEConData {
 #define CD_RANGE_LENGTH             connection_data->range_length
 
 #define PUTS(s)           (*connection_data->stream->put_block) \
-                                 (connection_data->stream, s, XP_STRLEN(s))
+                                 (connection_data->stream, s, PL_strlen(s))
 #define IS_WRITE_READY    (*connection_data->stream->is_write_ready) \
                                  (connection_data->stream)
 #define PUTB(b,l)         (*connection_data->stream->put_block) \
@@ -198,7 +200,7 @@ net_check_file_type (ActiveEntry * cur_entry)
         /* if the current address doesn't end with a
          * slash, add it now.
          */
-        if(CE_URL_S->address[XP_STRLEN(CE_URL_S->address)-1] != '/')
+        if(CE_URL_S->address[PL_strlen(CE_URL_S->address)-1] != '/')
             StrAllocCat(CE_URL_S->address, "/");
 
 		CE_URL_S->is_directory = TRUE;
@@ -269,7 +271,7 @@ net_check_file_type (ActiveEntry * cur_entry)
             break;
 
 		default:
-			XP_ASSERT(0);
+			PR_ASSERT(0);
     		CD_NEXT_STATE = NET_FILE_DONE;
 			break;
 	  }
@@ -281,7 +283,7 @@ PRIVATE int
 net_delete_file (ActiveEntry * ce)
 {
 #ifndef LIVEWIRE
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 	return(MK_OUT_OF_MEMORY);
 
 #else
@@ -322,14 +324,14 @@ PRIVATE int
 net_move_file (ActiveEntry * ce)
 {
 #ifndef LIVEWIRE
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 	return(MK_OUT_OF_MEMORY);
 
 #else
 	FILEConData * cd = (FILEConData *) ce->con_data;
 	char *destination;
 
-	XP_ASSERT(ce->URL_s->destination);
+	PR_ASSERT(ce->URL_s->destination);
 	if(!ce->URL_s->destination)
 		return(MK_UNABLE_TO_LOCATE_FILE);
 
@@ -343,7 +345,7 @@ net_move_file (ActiveEntry * ce)
 	if(0 != XP_FileRename(cd->filename, xpURL, destination, xpURL))
 	  {
 	  	/* error! */
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 		/* @@@@@ */
 		return(MK_UNABLE_TO_LOCATE_FILE);
 	  }
@@ -358,7 +360,7 @@ PRIVATE int
 net_put_file (ActiveEntry * ce)
 {
 #ifndef LIVEWIRE
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 	return(MK_OUT_OF_MEMORY);
 
 #else
@@ -374,8 +376,8 @@ net_put_file (ActiveEntry * ce)
 		return(MK_UNABLE_TO_OPEN_FILE);
 	  }
 		
-	XP_ASSERT(ce->URL_s->post_data);
-	XP_ASSERT(!ce->URL_s->post_data_is_file);
+	PR_ASSERT(ce->URL_s->post_data);
+	PR_ASSERT(!ce->URL_s->post_data_is_file);
 
 	status = XP_FileWrite(ce->URL_s->post_data, ce->URL_s->post_data_size, fp);
 
@@ -399,7 +401,7 @@ PRIVATE int
 net_make_directory (ActiveEntry * ce)
 {
 #ifndef LIVEWIRE
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 	return(MK_OUT_OF_MEMORY);
 
 #else
@@ -436,7 +438,7 @@ net_file_setup_stream(ActiveEntry * cur_entry)
 
 	if (status >= 0 && pUrl) {
 		StrAllocCopy(CE_URL_S->content_type, pUrl);
-		XP_FREE(pUrl);
+		PR_Free(pUrl);
 	} else {
  		StrAllocCopy(CE_URL_S->content_type, APPLICATION_HTTP_INDEX);
 	}
@@ -606,7 +608,7 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 
 #if defined(XP_MAC) 
 				if (macType)
-					XP_FREE(macType);
+					PR_Free(macType);
 #endif				
 
 				StrAllocCopy(CE_URL_S->content_type, type->type); 
@@ -640,11 +642,11 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 		int32 low=0, high=0;
 		char *cp, *dash;
 
-		cp = XP_STRCHR(CD_BYTERANGE_STRING, ',');
+		cp = PL_strchr(CD_BYTERANGE_STRING, ',');
 		if(cp)
 		    *cp = '\0';
 
-		dash = XP_STRCHR(CD_BYTERANGE_STRING, '-');
+		dash = PL_strchr(CD_BYTERANGE_STRING, '-');
 
 		if(!dash)
 		  {
@@ -711,7 +713,7 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 		CD_RANGE_LENGTH = (high-low)+1;
 
 		if(cp)
-		    XP_MEMCPY(CD_BYTERANGE_STRING, cp+1, XP_STRLEN(cp+1)+1);
+		    PL_memcpy(CD_BYTERANGE_STRING, cp+1, PL_strlen(cp+1)+1);
 		else
 			CD_BYTERANGE_STRING = 0;
 	  }
@@ -731,10 +733,10 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 		  }
 #endif /* MOZ_MAIL_NEWS */        
 #else
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 #endif /* MOZILLA_CLIENT */
 	  }
-	  else if (!XP_STRNCMP(CE_URL_S->address, "Mailbox://", 10))
+	  else if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
 	  {
 #ifdef MOZILLA_CLIENT
 #ifdef MOZ_MAIL_NEWS
@@ -747,7 +749,7 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 		  }
 #endif /* MOZ_MAIL_NEWS */        
 #else
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 #endif /* MOZILLA_CLIENT */
 	  }
 	}
@@ -806,8 +808,8 @@ net_open_directory (ActiveEntry * cur_entry)
 
     /* make sure the last character isn't a slash
      */
-    if(CD_FILENAME[XP_STRLEN(CD_FILENAME)-1] == '/')
-        CD_FILENAME[XP_STRLEN(CD_FILENAME)-1] = '\0';
+    if(CD_FILENAME[PL_strlen(CD_FILENAME)-1] == '/')
+        CD_FILENAME[PL_strlen(CD_FILENAME)-1] = '\0';
 
     return(0);  /* ok */
 }
@@ -906,7 +908,7 @@ net_read_directory_chunk (ActiveEntry * cur_entry)
 	
 		/* skip . and ..
 		 */
-		if(!XP_STRCMP(dir_entry->d_name, "..") || !XP_STRCMP(dir_entry->d_name, "."))
+		if(!PL_strcmp(dir_entry->d_name, "..") || !PL_strcmp(dir_entry->d_name, "."))
 			continue;
 
         file_entry = NET_CreateFileEntryInfoStruct();
@@ -921,16 +923,16 @@ net_read_directory_chunk (ActiveEntry * cur_entry)
 		file_entry->filename = NET_Escape(dir_entry->d_name, URL_PATH);
 
         /* make a full path */
-		len = XP_STRLEN(CD_FILENAME) + XP_STRLEN(dir_entry->d_name) + 30;
+		len = PL_strlen(CD_FILENAME) + PL_strlen(dir_entry->d_name) + 30;
 		FREEIF(full_path);
-		full_path = (char *)XP_ALLOC(len*sizeof(char));
+		full_path = (char *)PR_Malloc(len*sizeof(char));
 
 		if(!full_path)
 			return(MK_OUT_OF_MEMORY);
 
-        XP_STRCPY(full_path, CD_FILENAME);
-        XP_STRCAT(full_path, "/");
-        XP_STRCAT(full_path, dir_entry->d_name);
+        PL_strcpy(full_path, CD_FILENAME);
+        PL_strcat(full_path, "/");
+        PL_strcat(full_path, dir_entry->d_name);
 
         if(XP_Stat(full_path, &stat_entry, xpURL) != -1)
           {
@@ -982,7 +984,7 @@ net_BeginPrintDirectory(ActiveEntry * ce)
 #define PD_PUTS(s)  \
 do { \
 if(status > -1) \
-	status = (*stream->put_block)(stream, s, XP_STRLEN(s)); \
+	status = (*stream->put_block)(stream, s, PL_strlen(s)); \
 } while(0)
 
 PUBLIC int
@@ -997,16 +999,16 @@ NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path
     NET_DoFileSort(*sort_base);
 
 	/* emit 300: URL CRLF */
-	XP_STRCPY(out_buf, "300: ");
+	PL_strcpy(out_buf, "300: ");
     PD_PUTS(out_buf);
     PR_snprintf(out_buf, sizeof(out_buf), URL_s->address);
     PD_PUTS(out_buf);
 
-	XP_STRCPY(out_buf, CRLF);
+	PL_strcpy(out_buf, CRLF);
     PD_PUTS(out_buf);
 
 	/* emit 200: Filename Size Content-Type File-type Last-Modified */
-	XP_STRCPY(out_buf, "200: Filename Content-Length Content-Type File-type Last-Modified"CRLF);
+	PL_strcpy(out_buf, "200: Filename Content-Length Content-Type File-type Last-Modified"CRLF);
     PD_PUTS(out_buf);
 
     for(i=0; status > -1 && (file_entry = (NET_FileEntryInfo *) 
@@ -1017,7 +1019,7 @@ NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path
 
 		char * esc_time = NET_Escape(ctime(&file_entry->date), URL_XALPHAS);
 
-		XP_STRTOK(file_entry->filename, "/");
+		PL_strtok(file_entry->filename, "/");
         PR_snprintf(out_buf, sizeof(out_buf), "201: %s %ld %s %s %s"CRLF, 
                     file_entry->filename, 
                     file_entry->size,
@@ -1061,24 +1063,24 @@ net_return_local_file_part_from_url(char *address)
 		return NULL;
 
 	/* imap urls are never local */
-	if (!strncasecomp(address,"mailbox://",10))
+	if (!PL_strncasecmp(address,"mailbox://",10))
 		return NULL;
 
 	/* mailbox url's are always local, but don't always point to a file */
-	if(!strncasecomp(address, "mailbox:", 8))
+	if(!PL_strncasecmp(address, "mailbox:", 8))
 	{
 		char *filename = NET_ParseURL(address, GET_PATH_PART);
 		if (!filename)
-			filename = XP_STRDUP("");
+			filename = PL_strdup("");
 		return filename;
 	}
 
-	if(strncasecomp(address, "file:", 5))
+	if(PL_strncasecmp(address, "file:", 5))
 		return(NULL);
 	
 	host = NET_ParseURL(address, GET_HOST_PART);
 
-    if(!host || *host == '\0' || !strcasecomp(host, "LOCALHOST"))
+    if(!host || *host == '\0' || !PL_strcasecmp(host, "LOCALHOST"))
 	  {
 		FREEIF(host);
 		return(NET_UnEscape(NET_ParseURL(address, GET_PATH_PART)));
@@ -1092,13 +1094,13 @@ net_return_local_file_part_from_url(char *address)
 
 	/* check for local drives as hostnames
 	 */
-	if(XP_STRLEN(host) == 2
+	if(PL_strlen(host) == 2
 		&& isalpha(host[0]) 
 		&& (host[1] == '|' || host[1] == ':'))
 	  {
 		FREE(host);
 		/* skip "file:/" */
-		rv = XP_STRDUP(new_address+6);
+		rv = PL_strdup(new_address+6);
 		FREE(new_address);
 		return(rv);
 	  }
@@ -1114,7 +1116,7 @@ net_return_local_file_part_from_url(char *address)
 		  {
 			FREE(host);
 			/* skip "file:" */
-			rv = XP_STRDUP(address+5);
+			rv = PL_strdup(address+5);
 			FREE(new_address);
 			return(rv);
 		  }
@@ -1129,7 +1131,7 @@ net_return_local_file_part_from_url(char *address)
 /* returns TRUE if the url is a local file
  * url
  */
-PUBLIC XP_Bool
+PUBLIC PRBool
 NET_IsLocalFileURL(char *address)
 {
 	char * cp = net_return_local_file_part_from_url(address);
@@ -1137,11 +1139,11 @@ NET_IsLocalFileURL(char *address)
 	if(cp)
 	  {
 		FREE(cp);
-		return(TRUE);
+		return(PR_TRUE);
 	  }
 	else
 	  {
-		return(FALSE);
+		return(PR_FALSE);
 	  }
 }
 
@@ -1175,7 +1177,7 @@ net_FileLoad (ActiveEntry * cur_entry)
 
     /* zero out the structure 
      */
-    XP_MEMSET(cur_entry->con_data, 0, sizeof(FILEConData));
+    PL_memset(cur_entry->con_data, 0, sizeof(FILEConData));
 
 	/* set this to make the CD_ macros work */
 	connection_data = cur_entry->con_data;
@@ -1228,17 +1230,17 @@ net_FileLoad (ActiveEntry * cur_entry)
      * away
 	 */
 #define URL_BYTERANGE_TOKEN ";"BYTERANGE_TOKEN
-	if (CD_IS_CACHE_FILE && (cp = strcasestr(CE_URL_S->address, URL_BYTERANGE_TOKEN)) != NULL)
+	if (CD_IS_CACHE_FILE && (cp = PL_strcasestr(CE_URL_S->address, URL_BYTERANGE_TOKEN)) != NULL)
 	  {
-		StrAllocCopy(CD_BYTERANGE_STRING, cp+XP_STRLEN(URL_BYTERANGE_TOKEN));
-		XP_STRTOK(CD_BYTERANGE_STRING, ";");
+		StrAllocCopy(CD_BYTERANGE_STRING, cp+PL_strlen(URL_BYTERANGE_TOKEN));
+		PL_strtok(CD_BYTERANGE_STRING, ";");
 	  }
-	else if ((cp = strcasestr(CD_FILENAME, URL_BYTERANGE_TOKEN)) != NULL)
+	else if ((cp = PL_strcasestr(CD_FILENAME, URL_BYTERANGE_TOKEN)) != NULL)
 	  {
 		*cp = '\0';
 		/* remove any other weird ; stuff */
-		XP_STRTOK(cp+1, ";");
-		StrAllocCopy(CD_BYTERANGE_STRING, cp+XP_STRLEN(URL_BYTERANGE_TOKEN));
+		PL_strtok(cp+1, ";");
+		StrAllocCopy(CD_BYTERANGE_STRING, cp+PL_strlen(URL_BYTERANGE_TOKEN));
 	  }
 #endif /* URL_BYTERANGE_METHOD */
 
@@ -1246,9 +1248,9 @@ net_FileLoad (ActiveEntry * cur_entry)
 	 * both the URL byterange and the header
 	 * byterange methods can coexist peacefully
 	 */
-	if(CE_URL_S->range_header && !XP_STRNCMP(CE_URL_S->range_header, BYTERANGE_TOKEN, XP_STRLEN(BYTERANGE_TOKEN)))
+	if(CE_URL_S->range_header && !PL_strncmp(CE_URL_S->range_header, BYTERANGE_TOKEN, PL_strlen(BYTERANGE_TOKEN)))
 	  {
-		StrAllocCopy(CD_BYTERANGE_STRING, CE_URL_S->range_header+XP_STRLEN(BYTERANGE_TOKEN));
+		StrAllocCopy(CD_BYTERANGE_STRING, CE_URL_S->range_header+PL_strlen(BYTERANGE_TOKEN));
 	  }
 
     /* lets do a local file read 
@@ -1477,7 +1479,7 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
         	int end;
         	NET_UnEscape(path);
 
-        	end = XP_STRLEN(path)-1;
+        	end = PL_strlen(path)-1;
         	/* if the path ends with a slash kill it.
          	 * that includes the path "/"
          	 */
@@ -1496,14 +1498,14 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 
 	if(NET_HTTPIndexParserGetHTMLMessage(obj->parse_data))
 	  {
-		XP_STRCPY(out_buf, CRLF"<HR>"CRLF);
+		PL_strcpy(out_buf, CRLF"<HR>"CRLF);
 		PD_PUTS(out_buf);
 
 		PD_PUTS(NET_HTTPIndexParserGetHTMLMessage(obj->parse_data));
 
 		if(!NET_HTTPIndexParserGetTextMessage(obj->parse_data))
 		{
-			XP_STRCPY(out_buf, CRLF"<HR>"CRLF);
+			PL_strcpy(out_buf, CRLF"<HR>"CRLF);
 			PD_PUTS(out_buf);
 		}
 	  }
@@ -1515,18 +1517,18 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 	  {
 		char *msg;
 
-		XP_STRCPY(out_buf, "<HR>");
+		PL_strcpy(out_buf, "<HR>");
 		PD_PUTS(out_buf);
 
 		msg = NET_HTTPIndexParserGetTextMessage(obj->parse_data);
 
         status = NET_ScanForURLs (NULL, msg,
-                                  XP_STRLEN(msg),
+                                  PL_strlen(msg),
                                   out_buf, sizeof(out_buf),
                                   TRUE);
 		PD_PUTS(out_buf);
 
-		XP_STRCPY(out_buf, "<HR>");
+		PL_strcpy(out_buf, "<HR>");
 		PD_PUTS(out_buf);
 	  }
 
@@ -1534,18 +1536,18 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
     */
     if(path && *path != '\0')
     {
-        char *cp = XP_STRRCHR(path, '/');
-        XP_STRCPY(out_buf, "<A HREF=\"");
+        char *cp = PL_strrchr(path, '/');
+        PL_strcpy(out_buf, "<A HREF=\"");
         PD_PUTS(out_buf);
         if(cp)
         {
             *cp = '\0';
             PD_PUTS(path);
             *cp = '/';
-            XP_STRCPY(out_buf, "/");
+            PL_strcpy(out_buf, "/");
 			PD_PUTS(out_buf);
         }
-        XP_STRNCPY_SAFE(out_buf, 
+        PL_strncpyz(out_buf, 
                 		XP_GetString(XP_UPTO_HIGHER_LEVEL_DIRECTORY), 
 						sizeof(out_buf));
 		PD_PUTS(out_buf);
@@ -1617,22 +1619,22 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 			/* print the filename
 			 */
 			name = NET_UnEscape (file_entry->filename);
-			len = XP_STRLEN (name);
+			len = PL_strlen (name);
 			max_size_for_this_name = max_name_length;
 			if(!file_entry->size)
 				max_size_for_this_name += SIZE_LISTING_OVERHEAD;
 
 			if(len > max_size_for_this_name)
 			  {
-				  XP_STRCPY (out_buf, " ");
-				  XP_MEMCPY (out_buf + 1, name, max_name_length - 3);
-				  XP_STRCPY (out_buf + 1 + max_name_length - 3, "...</A>");
+				  PL_strcpy (out_buf, " ");
+				  PL_memcpy (out_buf + 1, name, max_name_length - 3);
+				  PL_strcpy (out_buf + 1 + max_name_length - 3, "...</A>");
 				}
 			  else
 				{
-				  XP_STRCPY (out_buf, " ");
-				  XP_STRCAT (out_buf, name);
-				  XP_STRCAT (out_buf, "</A>");
+				  PL_strcpy (out_buf, " ");
+				  PL_strcat (out_buf, name);
+				  PL_strcat (out_buf, "</A>");
 				}
        		PD_PUTS(out_buf); /* output the line */
 			
@@ -1650,8 +1652,8 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 			 */
             if(file_entry->size)
               {
-                 PR_snprintf(&out_buf[XP_STRLEN(out_buf)], 
-						sizeof(out_buf) - XP_STRLEN(out_buf), 
+                 PR_snprintf(&out_buf[PL_strlen(out_buf)], 
+						sizeof(out_buf) - PL_strlen(out_buf), 
 						" %5ld %s %s ",
 						file_entry->size > 1024 ?
 							file_entry->size/1024 : file_entry->size,
@@ -1660,8 +1662,8 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 			  }
 			else
 			  {
-				PR_snprintf(&out_buf[XP_STRLEN(out_buf)],
-						   sizeof(out_buf) - XP_STRLEN(out_buf), 
+				PR_snprintf(&out_buf[PL_strlen(out_buf)],
+						   sizeof(out_buf) - PL_strlen(out_buf), 
 						   " %s ", date+4);
 			  }
 
@@ -1683,18 +1685,18 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
 							sizeof(out_buf)-1, 
 							"%s", 
 							cinfo->desc);
-                XP_STRCAT(out_buf, "\n");
+                PL_strcat(out_buf, "\n");
 		      }
 		    else
 		      {
-                XP_STRCPY(out_buf, "\n");
+                PL_strcpy(out_buf, "\n");
 		      }
 		    	
 		    PD_PUTS(out_buf);
 		  }
       }
 
-    XP_STRCPY(out_buf, "\n</PRE>");
+    PL_strcpy(out_buf, "\n</PRE>");
     PD_PUTS(out_buf);
 
 cleanup:
@@ -1730,7 +1732,7 @@ NET_HTTPIndexFormatToHTMLConverter(int         format_out,
         return(NULL);
 	  }
 
-    XP_MEMSET(obj, 0, sizeof(index_format_conv_data_object));
+    PL_memset(obj, 0, sizeof(index_format_conv_data_object));
 
 	obj->parse_data = NET_HTTPIndexParserInit();
 
@@ -1787,7 +1789,7 @@ net_CloneWysiwygLocalFile(MWContext *window_id, URL_Struct *URL_s,
 	buflen = stream->is_write_ready(stream);
 	if (buflen > SANE_BUFLEN)
 		buflen = SANE_BUFLEN;
-	buf = (char *)XP_ALLOC(buflen * sizeof(char));
+	buf = (char *)PR_Malloc(buflen * sizeof(char));
 	if (!buf)
 	  {
 		XP_FileClose(fromfp);

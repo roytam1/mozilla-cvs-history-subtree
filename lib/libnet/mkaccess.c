@@ -25,6 +25,9 @@
  * and HTTP cookies
  */
 #include "mkutils.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "pllist.h"
 #include "mkparse.h"
 #include "mkaccess.h"
 #include "prefapi.h"
@@ -82,8 +85,8 @@ extern int MK_ACCESS_END_OF_SESSION;
  * on separate lists, but both lists consist of net_AuthStruct's.
  */
 
-PRIVATE XP_List * net_auth_list = NULL;
-PRIVATE XP_List * net_proxy_auth_list = NULL;
+PRIVATE PLList * net_auth_list = NULL;
+PRIVATE PLList * net_proxy_auth_list = NULL;
 
 PRIVATE Bool cookies_changed = FALSE;
 
@@ -128,14 +131,14 @@ typedef struct _net_AuthStruct {
     char *			domain;			/* SimpleMD5 only */
     char *			nonce;			/* SimpleMD5 only */
     char *			opaque;			/* SimpleMD5 only */
-    XP_Bool			oldNonce;		/* SimpleMD5 only */
+    PRBool			oldNonce;		/* SimpleMD5 only */
 	int				oldNonce_retries;
 #endif
     char *                      challenge;
     char *                      certChain;
     char *                      signature;
     char *                      clientRan;
-    XP_Bool                     oldChallenge;
+    PRBool                     oldChallenge;
     int                         oldChallenge_retries;
 } net_AuthStruct;
 
@@ -147,16 +150,19 @@ PRIVATE net_AuthStruct *
 net_CheckForAuthorization(char * address, Bool exact_match)
 {
 
-    XP_List * list_ptr = net_auth_list;
     net_AuthStruct * auth_s;
 
 	TRACEMSG(("net_CheckForAuthorization: checking for auth on: %s", address));
 
-    while((auth_s = (net_AuthStruct *) XP_ListNextObject(list_ptr))!=0)
+    if (net_auth_list == NULL)
+      return(NULL);
+
+    PL_ListEnumReset(net_auth_list);
+    while((auth_s = (net_AuthStruct *) PL_ListEnumNext(net_auth_list))!=0)
       {
 		if(exact_match)
 		  {
-		    if(!XP_STRCMP(address, auth_s->path))
+		    if(!PL_strcmp(address, auth_s->path))
 			    return(auth_s);
 		  }
 		else
@@ -164,7 +170,7 @@ net_CheckForAuthorization(char * address, Bool exact_match)
 			/* shorter strings always come last so there can be no
 			 * ambiquity
 			 */
-		    if(!strncasecomp(address, auth_s->path, XP_STRLEN(auth_s->path)))
+		    if(!PL_strncasecmp(address, auth_s->path, PL_strlen(auth_s->path)))
 			    return(auth_s);
 		  }
       }
@@ -178,7 +184,7 @@ PUBLIC Bool
 NET_AuthorizationRequired(char * address)
 {
     net_AuthStruct * rv;
-	char * last_slash = XP_STRRCHR(address, '/');
+	char * last_slash = PL_strrchr(address, '/');
 
 	if(last_slash)
 		*last_slash = '\0';
@@ -214,7 +220,7 @@ NET_BuildAuthString(MWContext * context, URL_Struct *URL_s)
 	  	static char * auth_header = 0;
 		
 		if(auth_header)
-			XP_FREE(auth_header);
+			PR_Free(auth_header);
 		auth_header = PR_smprintf("Authorization: Basic %s"CRLF, auth_s->auth_string);
 		return(auth_header);
 	  }
@@ -224,22 +230,22 @@ PRIVATE net_AuthStruct *
 net_ScanForHostnameRealmMatch(char * address, char * realm)
 {
 	char * proto_host = NET_ParseURL(address, GET_HOST_PART | GET_PROTOCOL_PART);
-    XP_List * list_ptr = net_auth_list;
     net_AuthStruct * auth_s;
 
-    while((auth_s = (net_AuthStruct *) XP_ListNextObject(list_ptr))!=0)
+    PL_ListEnumReset(net_auth_list);
+    while((auth_s = (net_AuthStruct *) PL_ListEnumNext(net_auth_list))!=0)
       {
         /* shorter strings always come last so there can be no
          * ambiquity
          */
-        if(!strncasecomp(proto_host, auth_s->path, XP_STRLEN(proto_host))
-			&& !strcasecomp(realm, auth_s->realm))
+        if(!PL_strncasecmp(proto_host, auth_s->path, PL_strlen(proto_host))
+			&& !PL_strcasecmp(realm, auth_s->realm))
 		{
-			XP_FREE(proto_host);
+			PR_Free(proto_host);
             return(auth_s);
 		}
       }
-	XP_FREE(proto_host);
+	PR_Free(proto_host);
     return(NULL);
 }
 
@@ -268,12 +274,11 @@ PUBLIC void
 NET_RemoveAllAuthorizations()
 {
 	net_AuthStruct * victim;
-	if(XP_ListIsEmpty(net_auth_list)) /* XP_ListIsEmpty handles null list */
-		return;
 
-    while((victim = (net_AuthStruct *) XP_ListNextObject(net_auth_list)) != 0)
+    PL_ListEnumReset(net_auth_list);
+    while((victim = (net_AuthStruct *) PL_ListEnumNext(net_auth_list)) != 0)
 		net_free_auth_struct(victim);
-	XP_ListDestroy(net_auth_list);
+	PL_ListDestroy(net_auth_list);
 	net_auth_list = NULL;
 }
 
@@ -283,12 +288,12 @@ net_remove_exact_auth_match_on_cancel(net_AuthStruct *prev_auth, char *cur_path)
 	if(!prev_auth || !cur_path)
 		return;
 
-	if(!XP_STRCMP(prev_auth->path, cur_path))
+	if(!PL_strcmp(prev_auth->path, cur_path))
       {
         /* if the paths are exact and the user cancels
          * remove the mapping
          */
-        XP_ListRemoveObject(net_auth_list, prev_auth);
+        PL_ListRemove(net_auth_list, prev_auth);
 		net_free_auth_struct(prev_auth);
 	  }
 }
@@ -320,7 +325,7 @@ separate_http_key(char *key, char **address, char **realm)
 	if(!key)
 		return;
 
-	tab = XP_STRCHR(key, '\t');
+	tab = PL_strchr(key, '\t');
 
 	if(!tab)
 		return;
@@ -380,25 +385,25 @@ net_http_password_data_interp(
 	username = PC_FindInNameValueArray(array, HTTP_PW_NAME_TOKEN);
 	password = PC_FindInNameValueArray(array, HTTP_PW_PASSWORD_TOKEN);
 	
-	XP_STRNCPY_SAFE(type_buffer, "HTTP basic authorization", type_buffer_size);
+	PL_strncpyz(type_buffer, "HTTP basic authorization", type_buffer_size);
 
 	separate_http_key(key, &address, &realm);
 
 	if(address)
 	{
-		XP_STRNCPY_SAFE(url_buffer, address, url_buffer_size);
+		PL_strncpyz(url_buffer, address, url_buffer_size);
 	}
 
 	if(username)
 	{
-		XP_STRNCPY_SAFE(username_buffer, username, username_buffer_size);
-		XP_FREE(username);
+		PL_strncpyz(username_buffer, username, username_buffer_size);
+		PR_Free(username);
 	}
 	
 	if(password)
 	{
-		XP_STRNCPY_SAFE(password_buffer, password, password_buffer_size);
-		XP_FREE(password);
+		PL_strncpyz(password_buffer, password, password_buffer_size);
+		PR_Free(password);
 	}
 }
 
@@ -416,7 +421,7 @@ net_initialize_http_access()
  * string
  */
 /* HARDTS: I took a whack at fixing up some of the strings leaked in this 
- * function.  All the XP_FREEIF()s are new. 
+ * function.  All the PR_FREEIF()s are new. 
  */
 PUBLIC Bool 
 NET_AskForAuthString(MWContext *context,
@@ -425,7 +430,7 @@ NET_AskForAuthString(MWContext *context,
 					 char * prot_template,
 					 Bool   already_sent_auth)
 {
-	static XP_Bool first_time=TRUE;
+	static PRBool first_time=TRUE;
 	net_AuthStruct *prev_auth;
 	char *address=URL_s->address;
 	char *host=NET_ParseURL(address, GET_HOST_PART);
@@ -439,7 +444,7 @@ NET_AskForAuthString(MWContext *context,
 	char *buf=NULL;
 	int32 len=0;
 	int status;
-	XP_Bool re_authorize=FALSE;
+	PRBool re_authorize=FALSE;
 
 	TRACEMSG(("Entering NET_AskForAuthString"));
 
@@ -458,14 +463,14 @@ NET_AskForAuthString(MWContext *context,
 
 #define COMPUSERVE_HEADER_NAME "Remote-Passphrase"
 
-		if(!strncasecomp(authenticate_header_value, 
+		if(!PL_strncasecmp(authenticate_header_value, 
 					 COMPUSERVE_HEADER_NAME, 
 					 sizeof(COMPUSERVE_HEADER_NAME) - 1))
 	  	{
 	  		/* This is a compuserv style header 
 	  	 	*/
 
-		XP_FREEIF(host);
+		PR_FREEIF(host);
 #if defined(XP_WIN) && defined(MOZILLA_CLIENT)
 		return(WFE_DoCompuserveAuthenticate(context, URL_s, authenticate_header_value));
 #else
@@ -473,7 +478,7 @@ NET_AskForAuthString(MWContext *context,
 #endif	
 	  	}			 
 #define HTTP_BASIC_AUTH_TOKEN "BASIC"
-		else if(strncasecomp(authenticate_header_value, 
+		else if(PL_strncasecmp(authenticate_header_value, 
 					 HTTP_BASIC_AUTH_TOKEN, 
 					 sizeof(HTTP_BASIC_AUTH_TOKEN) - 1))
 		{
@@ -484,18 +489,18 @@ NET_AskForAuthString(MWContext *context,
 
 	new_address = NET_ParseURL(address,	GET_PROTOCOL_PART | GET_HOST_PART | GET_PATH_PART);
 	if(!new_address) {
-		XP_FREEIF(host);
+		PR_FREEIF(host);
 		return NET_AUTH_FAILED_DISPLAY_DOCUMENT;
 	}
 
 	unamePwd=NET_ParseURL(address, GET_USERNAME_PART | GET_PASSWORD_PART);
 	/* get the username & password out of the combo string */
-	if( (colon = XP_STRCHR(unamePwd, ':')) != NULL ) {
+	if( (colon = PL_strchr(unamePwd, ':')) != NULL ) {
 		*colon='\0';
-		username=XP_STRDUP(unamePwd);
-		password=XP_STRDUP(colon+1);
+		username=PL_strdup(unamePwd);
+		password=PL_strdup(colon+1);
 		*colon=':';
-		XP_FREE(unamePwd);
+		PR_Free(unamePwd);
 	} else {
 		username=unamePwd;
 	}
@@ -506,10 +511,10 @@ NET_AskForAuthString(MWContext *context,
 		FREE_AND_CLEAR(password);
 
 	/*if last char is not a slash then */
-	if (new_address[XP_STRLEN(new_address)-1] != '/')
+	if (new_address[PL_strlen(new_address)-1] != '/')
 	{
 		/* remove everything after the last slash */
-		slash = XP_STRRCHR(new_address, '/');
+		slash = PL_strrchr(new_address, '/');
 		if(++slash)
 			*slash = '\0';
 	}
@@ -520,17 +525,17 @@ NET_AskForAuthString(MWContext *context,
 	  }
 	else
 	  {
-		realm = XP_STRCHR(authenticate, '"');
+		realm = PL_strchr(authenticate, '"');
 	
 		if(realm)
 		  {
 			realm++;
 
 			/* terminate at next quote */
-			XP_STRTOK(realm, "\"");
+			PL_strtok(realm, "\"");
 
 #define MAX_REALM_SIZE 128
-			if(XP_STRLEN(realm) > MAX_REALM_SIZE)
+			if(PL_strlen(realm) > MAX_REALM_SIZE)
 				realm[MAX_REALM_SIZE] = '\0';
 	
       }
@@ -553,10 +558,10 @@ NET_AskForAuthString(MWContext *context,
 		 * In this case we want to just retry the connection
 		 * since it will probably succede now.
 		 */
-		XP_FREEIF(host);
-		XP_FREEIF(new_address);
-		XP_FREEIF(username);
-		XP_FREEIF(password);
+		PR_FREEIF(host);
+		PR_FREEIF(new_address);
+		PR_FREEIF(username);
+		PR_FREEIF(password);
 		return(NET_RETRY_WITH_AUTH);
       }
     else if(prev_auth)
@@ -567,24 +572,24 @@ NET_AskForAuthString(MWContext *context,
 		  {
         	TRACEMSG(("User canceled login!!!"));
 
-			if(!XP_STRCMP(prev_auth->path, new_address))
+			if(!PL_strcmp(prev_auth->path, new_address))
 			  {
 				/* if the paths are exact and the user cancels
 				 * remove the mapping
 				 */
 				net_remove_exact_auth_match_on_cancel(prev_auth, new_address);
-				XP_FREEIF(host);
-				XP_FREEIF(new_address);
-				XP_FREEIF(username);
-				XP_FREEIF(password);
+				PR_FREEIF(host);
+				PR_FREEIF(new_address);
+				PR_FREEIF(username);
+				PR_FREEIF(password);
             	return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);
 			  }
 		  }
 		
 		if (!username)
-			username = XP_STRDUP(prev_auth->username);
+			username = PL_strdup(prev_auth->username);
 		if (!password)
-			password = XP_STRDUP(prev_auth->password);
+			password = PL_strdup(prev_auth->password);
 		re_authorize = TRUE;
       }
 	else
@@ -646,10 +651,10 @@ NET_AskForAuthString(MWContext *context,
 					 
 	/* Use username and/or password specified in URL_struct if exists. */
 	if (!username && URL_s->username && *URL_s->username) {
-		username = XP_STRDUP(URL_s->username);
+		username = PL_strdup(URL_s->username);
 	}
 	if (!password && URL_s->password && *URL_s->password) {
-		password = XP_STRDUP(URL_s->password);
+		password = PL_strdup(URL_s->password);
 	}
 
 	if(!username && !password)
@@ -674,14 +679,14 @@ NET_AskForAuthString(MWContext *context,
 	 */
 	if(!password || re_authorize)
 	  {
-		XP_Bool remember_password;
+		PRBool remember_password;
 	   	host = NET_ParseURL(address, GET_HOST_PART);
 
 		/* malloc memory here to prevent buffer overflow */
-		len = XP_STRLEN(XP_GetString(XP_ACCESS_ENTER_USERNAME));
-		len += XP_STRLEN(realm) + XP_STRLEN(host) + 10;
+		len = PL_strlen(XP_GetString(XP_ACCESS_ENTER_USERNAME));
+		len += PL_strlen(realm) + PL_strlen(host) + 10;
 		
-		buf = (char *)XP_ALLOC(len*sizeof(char));
+		buf = (char *)PR_Malloc(len*sizeof(char));
 		
 		if(buf)
 		  {
@@ -692,8 +697,8 @@ NET_AskForAuthString(MWContext *context,
 
 			NET_Progress(context, XP_GetString( XP_CONNECT_PLEASE_ENTER_PASSWORD_FOR_HOST) );
 			if (username && !(*username))
-				XP_FREE(username);
-			XP_FREEIF(password);
+				PR_Free(username);
+			PR_FREEIF(password);
 			status = PC_PromptUsernameAndPassword(context, buf, 
 											  	  &username, &password, 
 												  &remember_password,
@@ -717,16 +722,16 @@ NET_AskForAuthString(MWContext *context,
 			 */
 			net_remove_exact_auth_match_on_cancel(prev_auth, new_address);
 
-			XP_FREEIF(username);
-			XP_FREEIF(password);
-			XP_FREEIF(new_address);
+			PR_FREEIF(username);
+			PR_FREEIF(password);
+			PR_FREEIF(new_address);
 			return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);
 		  }
 		else if(!username || !password)
 		  {
-			XP_FREEIF(username);
-			XP_FREEIF(password);
-			XP_FREEIF(new_address);
+			PR_FREEIF(username);
+			PR_FREEIF(password);
+			PR_FREEIF(new_address);
 			return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);
 		  }
 		else if(remember_password)
@@ -739,14 +744,14 @@ NET_AskForAuthString(MWContext *context,
 	StrAllocCat(u_pass_string, ":");
 	StrAllocCat(u_pass_string, password);
 
-	len = XP_STRLEN(u_pass_string);
-	auth_string = (char*) XP_ALLOC((((len+1)*4)/3)+10);
+	len = PL_strlen(u_pass_string);
+	auth_string = (char*) PR_Malloc((((len+1)*4)/3)+10);
 
 	if(!auth_string)
 	  {
-		XP_FREEIF(username);
-		XP_FREEIF(password);
-		XP_FREEIF(u_pass_string);
+		PR_FREEIF(username);
+		PR_FREEIF(password);
+		PR_FREEIF(u_pass_string);
 		FREE(new_address);
 		return(NET_RETRY_WITH_AUTH);
 	  }
@@ -757,27 +762,28 @@ NET_AskForAuthString(MWContext *context,
 
 	if(prev_auth)
 	  {
-	    XP_FREEIF(prev_auth->auth_string);
+	    PR_FREEIF(prev_auth->auth_string);
         prev_auth->auth_string = auth_string;
-		XP_FREEIF(prev_auth->username);
+		PR_FREEIF(prev_auth->username);
 		prev_auth->username = username;
-        XP_FREEIF(prev_auth->password);
+        PR_FREEIF(prev_auth->password);
         prev_auth->password = password;
 	  }
 	else
 	  {
-		XP_List * list_ptr = net_auth_list;
 		net_AuthStruct * tmp_auth_ptr;
 		size_t new_len;
+        if (net_auth_list)
+          PL_ListEnumReset(net_auth_list);
 
 		/* construct a new auth_struct
 		 */
-		prev_auth = XP_NEW_ZAP(net_AuthStruct);
+		prev_auth = PR_NEWZAP(net_AuthStruct);
 	    if(!prev_auth)
 		  {
-			XP_FREEIF(auth_string);
-			XP_FREEIF(username);
-			XP_FREEIF(password);
+			PR_FREEIF(auth_string);
+			PR_FREEIF(username);
+			PR_FREEIF(password);
 		    FREE(new_address);
 		    return(NET_RETRY_WITH_AUTH);
 		  }
@@ -792,7 +798,7 @@ NET_AskForAuthString(MWContext *context,
 
 		if(!net_auth_list)
 		  {
-			net_auth_list = XP_ListNew();
+			net_auth_list = PL_ListNew();
 		    if(!net_auth_list)
 			  {
           /* Maybe should free prev_auth here. */
@@ -804,18 +810,18 @@ NET_AskForAuthString(MWContext *context,
 		/* add it to the list so that it is before any strings of
 		 * smaller length
 		 */
-		new_len = XP_STRLEN(prev_auth->path);
-		while((tmp_auth_ptr = (net_AuthStruct *) XP_ListNextObject(list_ptr))!=0)
+		new_len = PL_strlen(prev_auth->path);
+		while((tmp_auth_ptr = (net_AuthStruct *) PL_ListEnumNext(net_auth_list))!=0)
 		  { 
-			if(new_len > XP_STRLEN(tmp_auth_ptr->path))
+			if(new_len > PL_strlen(tmp_auth_ptr->path))
 			  {
-				XP_ListInsertObject(net_auth_list, tmp_auth_ptr, prev_auth);
+				PL_ListInsertBefore(net_auth_list, tmp_auth_ptr, prev_auth);
 		   		FREE(new_address);
 				return(NET_RETRY_WITH_AUTH);
 			  }
 		  }
 		/* no shorter strings found in list */	
-		XP_ListAddObjectToEnd(net_auth_list, prev_auth);
+		PL_ListAddLast(net_auth_list, prev_auth);
 	  }
 
 	FREE(new_address);
@@ -827,7 +833,7 @@ NET_AskForAuthString(MWContext *context,
  * Set-Cookie: / Cookie: headers
  */
 
-PRIVATE XP_List * net_cookie_list=0;
+PRIVATE PLList * net_cookie_list=0;
 
 typedef struct _net_CookieStruct {
     char * path;
@@ -884,7 +890,7 @@ net_unlock_cookie_list()
 
 #ifdef DEBUG
     /* make sure someone doesn't try to free a lock they don't own */
-    XP_ASSERT(cookie_lock_owner == PR_CurrentThread());
+    PR_ASSERT(cookie_lock_owner == PR_CurrentThread());
 #endif
 
     cookie_lock_count--;
@@ -907,12 +913,12 @@ net_FreeCookie(net_CookieStruct * cookie)
 	if(!cookie)
 		return;
 
-	XP_ListRemoveObject(net_cookie_list, cookie);
+	PL_ListRemove(net_cookie_list, cookie);
 
-	XP_FREEIF(cookie->path);
-	XP_FREEIF(cookie->host);
-	XP_FREEIF(cookie->name);
-	XP_FREEIF(cookie->cookie);
+	PR_FREEIF(cookie->path);
+	PR_FREEIF(cookie->host);
+	PR_FREEIF(cookie->name);
+	PR_FREEIF(cookie->cookie);
 
 	FREE(cookie);
 
@@ -928,21 +934,19 @@ PUBLIC void
 NET_RemoveAllCookies()
 {
 	net_CookieStruct * victim;
-	XP_List * cookieList;
 
 	/* check for NULL or empty list */
 	net_lock_cookie_list();
-	cookieList = net_cookie_list;
-	if(XP_ListIsEmpty(cookieList)) {
+	if(PL_ListIsEmpty(net_cookie_list)) {
 		net_unlock_cookie_list();
 		return;
 	}
 
-    while((victim = (net_CookieStruct *) XP_ListNextObject(cookieList)) != 0) {
+	PL_ListEnumReset(net_cookie_list);
+    while((victim = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0) {
 		net_FreeCookie(victim);
-		cookieList=net_cookie_list;
 	}
-	XP_ListDestroy(net_cookie_list);
+	PL_ListDestroy(net_cookie_list);
 	net_cookie_list = NULL;
 	net_unlock_cookie_list();
 }
@@ -950,21 +954,20 @@ NET_RemoveAllCookies()
 PRIVATE void
 net_remove_oldest_cookie(void)
 {
-    XP_List * list_ptr;
     net_CookieStruct * cookie_s;
     net_CookieStruct * oldest_cookie;
 
 	net_lock_cookie_list();
-	list_ptr = net_cookie_list;
+	PL_ListEnumReset(net_cookie_list);
 
-	if(XP_ListIsEmpty(list_ptr)) {
+	if(PL_ListIsEmpty(net_cookie_list)) {
 		net_unlock_cookie_list();
 		return;
 	}
 
-	oldest_cookie = (net_CookieStruct*) list_ptr->next->object;
-	
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
+	oldest_cookie = (net_CookieStruct*) PL_ListFirst(net_cookie_list);
+    
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0)
       {
 		if(cookie_s->last_accessed < oldest_cookie->last_accessed)
 			oldest_cookie = cookie_s;
@@ -984,26 +987,20 @@ net_remove_oldest_cookie(void)
 PRIVATE void
 net_remove_expired_cookies(void)
 {
-    XP_List * list_ptr = net_cookie_list;
     net_CookieStruct * cookie_s;
 	time_t cur_time = time(NULL);
 
-	if(XP_ListIsEmpty(list_ptr))
+	if(PL_ListIsEmpty(net_cookie_list))
 		return;
 
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
+    PL_ListEnumReset(net_cookie_list);
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0)
       {
 		/* Don't get rid of expire time 0 because these need to last for 
 		 * the entire session. They'll get cleared on exit.
 		 */
 		if( cookie_s->expires && (cookie_s->expires < cur_time) ) {
 			net_FreeCookie(cookie_s);
-			/* Reset the list_ptr to the beginning of the list.
-			 * Do this because list_ptr's object was just freed
-			 * by the call to net_FreeCookie struct, even
-			 * though it's inefficient.
-			 */
-			list_ptr = net_cookie_list;
 		}
 	  }
 }
@@ -1016,17 +1013,17 @@ net_remove_expired_cookies(void)
 PRIVATE void
 net_CheckForMaxCookiesFromHost(const char * cur_host)
 {
-    XP_List * list_ptr = net_cookie_list;
     net_CookieStruct * cookie_s;
     net_CookieStruct * oldest_cookie = 0;
 	int cookie_count = 0;
 
-    if(XP_ListIsEmpty(list_ptr))
+    if(PL_ListIsEmpty(net_cookie_list))
         return;
 
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
+    PL_ListEnumReset(net_cookie_list);
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0)
       {
-	    if(!strcasecomp(cookie_s->host, cur_host))
+	    if(!PL_strcasecmp(cookie_s->host, cur_host))
 		  {
 			cookie_count++;
 			if(!oldest_cookie 
@@ -1052,19 +1049,19 @@ net_CheckForPrevCookie(char * path,
                    char * name)
 {
 
-    XP_List * list_ptr = net_cookie_list;
     net_CookieStruct * cookie_s;
 
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
+    PL_ListEnumReset(net_cookie_list);
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0)
       {
 		if(path 
 			&& hostname 
 				&& cookie_s->path
 				   && cookie_s->host
 					  && cookie_s->name
-					 	 && !XP_STRCMP(name, cookie_s->name)
-							&& !XP_STRCMP(path, cookie_s->path)
-								&& !XP_STRCASECMP(hostname, cookie_s->host))
+					 	 && !PL_strcmp(name, cookie_s->name)
+							&& !PL_strcmp(path, cookie_s->path)
+								&& !PL_strcasecmp(hostname, cookie_s->host))
                 return(cookie_s);
 			
       }
@@ -1091,9 +1088,9 @@ NET_SetCookieWarningPref(Bool x)
 PRIVATE void
 NET_SetCookieScriptPref(const char *name)
 {
-    XP_FREEIF(net_scriptName);
+    PR_FREEIF(net_scriptName);
 	if( name && *name )
-		net_scriptName=XP_STRDUP(name);
+		net_scriptName=PL_strdup(name);
 	else
 		net_scriptName=NULL;
 }
@@ -1180,7 +1177,6 @@ NET_GetCookie(MWContext * context, char * address)
 	char *name=0;
 	char *host = NET_ParseURL(address, GET_HOST_PART);
 	char *path = NET_ParseURL(address, GET_PATH_PART);
-    XP_List * list_ptr;
     net_CookieStruct * cookie_s;
 	Bool first=TRUE;
 	Bool secure_path=FALSE;
@@ -1196,14 +1192,17 @@ NET_GetCookie(MWContext * context, char * address)
 	if(NET_GetCookieBehaviorPref() == NET_DontUse)
 		return NULL;
 
-	if(!strncasecomp(address, "https", 5))
+    if (net_cookie_list==NULL)
+      return(NULL);
+
+	if(!PL_strncasecmp(address, "https", 5))
 		secure_path = TRUE;
 
 	/* search for all cookies
 	 */
 	net_lock_cookie_list();
-	list_ptr = net_cookie_list;
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0)
+	PL_ListEnumReset(net_cookie_list);
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0)
       {
 		if(!cookie_s->host)
 			continue;
@@ -1213,7 +1212,7 @@ NET_GetCookie(MWContext * context, char * address)
 		if(cookie_s->is_domain)
 		  {
 			char *cp;
-			domain_length = XP_STRLEN(cookie_s->host);
+			domain_length = PL_strlen(cookie_s->host);
 
 			/* calculate the host length by looking at all characters up to
 			 * a colon or '\0'.  That way we won't include port numbers
@@ -1224,7 +1223,7 @@ NET_GetCookie(MWContext * context, char * address)
 
 			host_length = cp - host;
 			if(domain_length > host_length 
-				|| strncasecomp(cookie_s->host, 
+				|| PL_strncasecmp(cookie_s->host, 
 								&host[host_length - domain_length], 
 								domain_length))
 			  {
@@ -1234,7 +1233,7 @@ NET_GetCookie(MWContext * context, char * address)
 			  }
 			
 		  }
-		else if(strcasecomp(host, cookie_s->host))
+		else if(PL_strcasecmp(host, cookie_s->host))
 		  {
 			/* hostname matchup failed. FAIL
 			 */
@@ -1244,9 +1243,9 @@ NET_GetCookie(MWContext * context, char * address)
         /* shorter strings always come last so there can be no
          * ambiquity
          */
-        if(cookie_s->path && !XP_STRNCMP(path,
+        if(cookie_s->path && !PL_strncmp(path,
                                          cookie_s->path,
-                                         XP_STRLEN(cookie_s->path)))
+                                         PL_strlen(cookie_s->path)))
           {
 
 			/* if the cookie is secure and the path isn't
@@ -1267,7 +1266,7 @@ NET_GetCookie(MWContext * context, char * address)
 				 * we must also start the string over
 				 */
 				FREE_AND_CLEAR(rv);
-				list_ptr = net_cookie_list;
+				PL_ListEnumReset(net_cookie_list); /* not sure we need this */
 				first = TRUE; /* reset first */
 				continue;
 			  }
@@ -1287,7 +1286,7 @@ NET_GetCookie(MWContext * context, char * address)
 				/* make sure we don't have a previous
 				 * name mapping already in the string
 				 */
-				if(!rv || !XP_STRSTR(rv, name))
+				if(!rv || !PL_strstr(rv, name))
 			      {	
             	    StrAllocCat(rv, name);
             	    StrAllocCat(rv, cookie_s->cookie);
@@ -1305,7 +1304,7 @@ NET_GetCookie(MWContext * context, char * address)
 	  }
 
 	  net_unlock_cookie_list();
-	XP_FREEIF(name);
+	PR_FREEIF(name);
 	FREE(path);
 	FREE(host);
 
@@ -1330,12 +1329,12 @@ net_IntSetCookieString(MWContext * context,
 	char *cur_host = NET_ParseURL(cur_url, GET_HOST_PART);
 	char *semi_colon, *ptr, *equal;
 	const char *script_name;
-	XP_Bool set_secure=FALSE, is_domain=FALSE, ask=FALSE, accept=FALSE;
+	PRBool set_secure=FALSE, is_domain=FALSE, ask=FALSE, accept=FALSE;
 	MWContextType type;
 
 	if(!context) {
-		XP_FREE(cur_path);
-		XP_FREE(cur_host);
+		PR_Free(cur_path);
+		PR_Free(cur_host);
 		return;
 	}
 
@@ -1346,14 +1345,14 @@ net_IntSetCookieString(MWContext * context,
 	if(!( (type == MWContextBrowser)
 		|| (type == MWContextHTMLHelp)
 		|| (type == MWContextPane) )) {
-		XP_FREE(cur_path);
-		XP_FREE(cur_host);
+		PR_Free(cur_path);
+		PR_Free(cur_host);
 		return;
 	}
 	
 	if(NET_GetCookieBehaviorPref() == NET_DontUse) {
-		XP_FREE(cur_path);
-		XP_FREE(cur_host);
+		PR_Free(cur_path);
+		PR_Free(cur_host);
 		return;
 	}
 
@@ -1367,7 +1366,7 @@ net_IntSetCookieString(MWContext * context,
 	/* parse path and expires attributes from header if
  	 * present
 	 */
-	semi_colon = XP_STRCHR(set_cookie_header, ';');
+	semi_colon = PL_strchr(set_cookie_header, ';');
 
 	if(semi_colon)
 	  {
@@ -1377,12 +1376,12 @@ net_IntSetCookieString(MWContext * context,
 
 		/* there must be some attributes. (hopefully)
 		 */
-		if(strcasestr(semi_colon, "secure"))
+		if(PL_strcasestr(semi_colon, "secure"))
 			set_secure = TRUE;
 
 		/* look for the path attribute
 		 */
-		ptr = strcasestr(semi_colon, "path=");
+		ptr = PL_strcasestr(semi_colon, "path=");
 
 		if(ptr) {
 			/* allocate more than we need */
@@ -1403,7 +1402,7 @@ net_IntSetCookieString(MWContext * context,
 		 */
 
 		/* look for a domain */
-        ptr = strcasestr(semi_colon, "domain=");
+        ptr = PL_strcasestr(semi_colon, "domain=");
 
         if(ptr) {
 			char *domain_from_header=NULL;
@@ -1431,16 +1430,16 @@ net_IntSetCookieString(MWContext * context,
 			 * Also make sure that there is more stuff after
 			 * the second dot to prevent ".com."
              */
-            dot = XP_STRCHR(domain_from_header, '.');
+            dot = PL_strchr(domain_from_header, '.');
 			if(dot)
-                dot = XP_STRCHR(dot+1, '.');
+                dot = PL_strchr(dot+1, '.');
 
 			if(!dot || *(dot+1) == '\0') {
 				/* did not pass two dot test. FAIL
 				 */
-				XP_FREE(domain_from_header);
-				XP_FREE(cur_path);
-				XP_FREE(cur_host);
+				PR_Free(domain_from_header);
+				PR_Free(cur_path);
+				PR_Free(cur_host);
 				TRACEMSG(("DOMAIN failed two dot test"));
 				return;
 			  }
@@ -1448,24 +1447,24 @@ net_IntSetCookieString(MWContext * context,
 			/* strip port numbers from the current host
 			 * for the domain test
 			 */
-			colon = XP_STRCHR(cur_host, ':');
+			colon = PL_strchr(cur_host, ':');
 			if(colon)
 			   *colon = '\0';
 
-			domain_length   = XP_STRLEN(domain_from_header);
-			cur_host_length = XP_STRLEN(cur_host);
+			domain_length   = PL_strlen(domain_from_header);
+			cur_host_length = PL_strlen(cur_host);
 
 			/* check to see if the host is in the domain
 			 */
 			if(domain_length > cur_host_length
-				|| strcasecomp(domain_from_header, 
+				|| PL_strcasecmp(domain_from_header, 
 							   &cur_host[cur_host_length-domain_length]))
 			  {
 				TRACEMSG(("DOMAIN failed host within domain test."
 					  " Domain: %s, Host: %s", domain_from_header, cur_host));
-				XP_FREE(domain_from_header);
-				XP_FREE(cur_path);
-				XP_FREE(cur_host);
+				PR_Free(domain_from_header);
+				PR_Free(cur_path);
+				PR_Free(cur_host);
 				return;
               }
 
@@ -1483,7 +1482,7 @@ net_IntSetCookieString(MWContext * context,
 		 * NOTE: that this part of the parsing
 		 * destroys the original part of the string
 		 */
-		ptr = strcasestr(semi_colon, "expires=");
+		ptr = PL_strcasestr(semi_colon, "expires=");
 
 		if(ptr) {
 			char *date =  ptr+8;
@@ -1507,26 +1506,26 @@ net_IntSetCookieString(MWContext * context,
         /* strip down everything after the last slash
          * to get the path.
          */
-        char * slash = XP_STRRCHR(cur_path, '/');
+        char * slash = PL_strrchr(cur_path, '/');
         if(slash)
             *slash = '\0';
 
 		path_from_header = cur_path;
 	  } else {
-		XP_FREE(cur_path);
+		PR_Free(cur_path);
 	  }
 
 	if(!host_from_header)
 		host_from_header = cur_host;
 	else
-		XP_FREE(cur_host);
+		PR_Free(cur_host);
 
 	/* keep cookies under the max bytes limit */
-	if(XP_STRLEN(set_cookie_header) > MAX_BYTES_PER_COOKIE)
+	if(PL_strlen(set_cookie_header) > MAX_BYTES_PER_COOKIE)
 		set_cookie_header[MAX_BYTES_PER_COOKIE-1] = '\0';
 
 	/* separate the name from the cookie */
-	equal = XP_STRCHR(set_cookie_header, '=');
+	equal = PL_strchr(set_cookie_header, '=');
 
 	if(equal) {
 		*equal = '\0';
@@ -1545,12 +1544,12 @@ net_IntSetCookieString(MWContext * context,
         Bool changed = FALSE;
         JSCFResult result;
 
-        cd = XP_NEW_ZAP(JSCFCookieData);
+        cd = PR_NEWZAP(JSCFCookieData);
         if( (JSCFCookieData *)0 == cd ) {
-            XP_FREEIF(path_from_header);
-            XP_FREEIF(host_from_header);
-            XP_FREEIF(name_from_header);
-            XP_FREEIF(cookie_from_header);
+            PR_FREEIF(path_from_header);
+            PR_FREEIF(host_from_header);
+            PR_FREEIF(name_from_header);
+            PR_FREEIF(cookie_from_header);
             /* FREEIF(cur_path); */
             /* FREEIF(cur_host); */
             return;
@@ -1577,20 +1576,20 @@ net_IntSetCookieString(MWContext * context,
 		if( result != JSCF_error) {
 			if( changed ) {
 				if( cd->path_from_header != path_from_header ) {
-					XP_FREEIF(path_from_header);
-					path_from_header = XP_STRDUP(cd->path_from_header);
+					PR_FREEIF(path_from_header);
+					path_from_header = PL_strdup(cd->path_from_header);
 				}
 				if( cd->host_from_header != host_from_header ) {
-					XP_FREEIF(host_from_header);
-					host_from_header = XP_STRDUP(cd->host_from_header);
+					PR_FREEIF(host_from_header);
+					host_from_header = PL_strdup(cd->host_from_header);
 				}
 				if( cd->name_from_header != name_from_header ) {
-					XP_FREEIF(name_from_header);
-					name_from_header = XP_STRDUP(cd->name_from_header);
+					PR_FREEIF(name_from_header);
+					name_from_header = PL_strdup(cd->name_from_header);
 				}
 				if( cd->cookie_from_header != cookie_from_header ) {
-					XP_FREEIF(cookie_from_header);
-				  cookie_from_header = XP_STRDUP(cd->cookie_from_header);
+					PR_FREEIF(cookie_from_header);
+				  cookie_from_header = PL_strdup(cd->cookie_from_header);
 			  }
 			  if( cd->expires != expires )
 				  expires = cd->expires;
@@ -1602,11 +1601,11 @@ net_IntSetCookieString(MWContext * context,
 			}
 			switch( result ) {
 				case JSCF_reject:
-					XP_FREEIF(path_from_header);
-					XP_FREEIF(host_from_header);
-					XP_FREEIF(name_from_header);
-					XP_FREEIF(cookie_from_header);
-					XP_FREE(cd);
+					PR_FREEIF(path_from_header);
+					PR_FREEIF(host_from_header);
+					PR_FREEIF(name_from_header);
+					PR_FREEIF(cookie_from_header);
+					PR_Free(cd);
 					/* FREEIF(cur_path); */
 					/* FREEIF(cur_host); */
 				return;
@@ -1619,7 +1618,7 @@ net_IntSetCookieString(MWContext * context,
 				break;
 			}
 		}
-		XP_FREE(cd);
+		PR_Free(cd);
     }
  
 
@@ -1639,7 +1638,7 @@ net_IntSetCookieString(MWContext * context,
 		StrAllocCat(new_string, tmp_host ? tmp_host : "");
 		StrAllocCat(new_string, XP_GetString(MK_ACCESS_COOKIES_WISHES));
 
-		XP_FREE(tmp_host);
+		PR_Free(tmp_host);
 
 		if(is_domain) {
 			StrAllocCat(new_string, XP_GetString(MK_ACCESS_COOKIES_TOANYSERV));
@@ -1667,10 +1666,10 @@ net_IntSetCookieString(MWContext * context,
 		 *   is allowed to post dialogs so, if need be, go over there
 		 */
 		if(!ET_PostMessageBox(context, new_string, TRUE)) {
-			XP_FREEIF(new_string);
+			PR_FREEIF(new_string);
 			return;
 		}
-		XP_FREEIF(new_string);
+		PR_FREEIF(new_string);
 	  }
 
 	TRACEMSG(("mkaccess.c: Setting cookie: %s for host: %s for path: %s",
@@ -1685,7 +1684,7 @@ net_IntSetCookieString(MWContext * context,
 	/* limit the number of cookies from a specific host or domain */
 	net_CheckForMaxCookiesFromHost(host_from_header);
 
-	if(XP_ListCount(net_cookie_list) > MAX_NUMBER_OF_COOKIES-1)
+	if(PL_ListCount(net_cookie_list) > MAX_NUMBER_OF_COOKIES-1)
 		net_remove_oldest_cookie();
 
 
@@ -1695,10 +1694,10 @@ net_IntSetCookieString(MWContext * context,
 
     if(prev_cookie) {
         prev_cookie->expires = expires;
-        XP_FREEIF(prev_cookie->cookie);
-        XP_FREEIF(prev_cookie->path);
-        XP_FREEIF(prev_cookie->host);
-        XP_FREEIF(prev_cookie->name);
+        PR_FREEIF(prev_cookie->cookie);
+        PR_FREEIF(prev_cookie->path);
+        PR_FREEIF(prev_cookie->host);
+        PR_FREEIF(prev_cookie->name);
         prev_cookie->cookie = cookie_from_header;
         prev_cookie->path = path_from_header;
         prev_cookie->host = host_from_header;
@@ -1707,18 +1706,17 @@ net_IntSetCookieString(MWContext * context,
         prev_cookie->is_domain = is_domain;
 		prev_cookie->last_accessed = time(NULL);
       }	else {
-		XP_List * list_ptr = net_cookie_list;
 		net_CookieStruct * tmp_cookie_ptr;
 		size_t new_len;
 
         /* construct a new cookie_struct
          */
-        prev_cookie = XP_NEW(net_CookieStruct);
+        prev_cookie = PR_NEW(net_CookieStruct);
         if(!prev_cookie) {
-			XP_FREEIF(path_from_header);
-			XP_FREEIF(host_from_header);
-			XP_FREEIF(name_from_header);
-			XP_FREEIF(cookie_from_header);
+			PR_FREEIF(path_from_header);
+			PR_FREEIF(host_from_header);
+			PR_FREEIF(name_from_header);
+			PR_FREEIF(cookie_from_header);
 			net_unlock_cookie_list();
             return;
           }
@@ -1735,13 +1733,13 @@ net_IntSetCookieString(MWContext * context,
 		prev_cookie->last_accessed = time(NULL);
 
 		if(!net_cookie_list) {
-			net_cookie_list = XP_ListNew();
+			net_cookie_list = PL_ListNew();
 		    if(!net_cookie_list) {
-				XP_FREEIF(path_from_header);
-				XP_FREEIF(name_from_header);
-				XP_FREEIF(host_from_header);
-				XP_FREEIF(cookie_from_header);
-				XP_FREE(prev_cookie);
+				PR_FREEIF(path_from_header);
+				PR_FREEIF(name_from_header);
+				PR_FREEIF(host_from_header);
+				PR_FREEIF(cookie_from_header);
+				PR_Free(prev_cookie);
 				net_unlock_cookie_list();
 				return;
 			  }
@@ -1750,17 +1748,18 @@ net_IntSetCookieString(MWContext * context,
 		/* add it to the list so that it is before any strings of
 		 * smaller length
 		 */
-		new_len = XP_STRLEN(prev_cookie->path);
-		while((tmp_cookie_ptr = (net_CookieStruct *) XP_ListNextObject(list_ptr))!=0) { 
-			if(new_len > XP_STRLEN(tmp_cookie_ptr->path)) {
-				XP_ListInsertObject(net_cookie_list, tmp_cookie_ptr, prev_cookie);
+		new_len = PL_strlen(prev_cookie->path);
+		PL_ListEnumReset(net_cookie_list);
+		while((tmp_cookie_ptr = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list))!=0) { 
+			if(new_len > PL_strlen(tmp_cookie_ptr->path)) {
+				PL_ListInsertBefore(net_cookie_list, tmp_cookie_ptr, prev_cookie);
 				net_unlock_cookie_list();
 				cookies_changed = TRUE;
 				return;
 			  }
 		  }
 		/* no shorter strings found in list */	
-		XP_ListAddObjectToEnd(net_cookie_list, prev_cookie);
+		PL_ListAddLast(net_cookie_list, prev_cookie);
 	  }
 
 	/* At this point we know a cookie has changed. Write the cookies to file. */
@@ -1790,11 +1789,11 @@ NET_SameDomain(char * currentHost, char * inlineHost)
 		return 0;
 
 	/* case insensitive compare */
-	if(XP_STRCASECMP(currentHost, inlineHost) == 0)
+	if(PL_strcasecmp(currentHost, inlineHost) == 0)
 		return 1;
 
-	currentDomain = XP_STRCHR(currentHost, '.');
-	inlineDomain = XP_STRCHR(inlineHost, '.');
+	currentDomain = PL_strchr(currentHost, '.');
+	inlineDomain = PL_strchr(inlineHost, '.');
 
 	if(!currentDomain || !inlineDomain)
 		return 0;
@@ -1802,9 +1801,9 @@ NET_SameDomain(char * currentHost, char * inlineHost)
 	/* check for at least two dots before continuing, if there are
 	   not two dots we don't have enough information to determine
 	   whether or not the inlineDomain is within the currentDomain */
-	dot = XP_STRCHR(inlineDomain, '.');
+	dot = PL_strchr(inlineDomain, '.');
 	if(dot)
-		dot = XP_STRCHR(dot+1, '.');
+		dot = PL_strchr(dot+1, '.');
 	else
 		return 0;
 
@@ -1812,7 +1811,7 @@ NET_SameDomain(char * currentHost, char * inlineHost)
 	if(!dot || (*(dot+1) == '\0') )
 		return 0;
 
-	if(!XP_STRCASECMP(inlineDomain, currentDomain))
+	if(!PL_strcasecmp(inlineDomain, currentDomain))
 		return 1;
 	return 0;
 }
@@ -1853,28 +1852,28 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 			}
 			if(!curHost || !curSessionHistHost)
 			{
-				XP_FREEIF(curHost);
-				XP_FREEIF(curSessionHistHost);
+				PR_FREEIF(curHost);
+				PR_FREEIF(curSessionHistHost);
 				return;
 			}
 
 			/* strip ports */
-			theColon = XP_STRCHR(curHost, ':');
+			theColon = PL_strchr(curHost, ':');
 			if(theColon)
 			   *theColon = '\0';
-			theColon = XP_STRCHR(curSessionHistHost, ':');
+			theColon = PL_strchr(curSessionHistHost, ':');
 			if(theColon)
 				*theColon = '\0';
 
 			/* if it's foreign, get out of here after a little clean up */
 			if(!NET_SameDomain(curHost, curSessionHistHost))
 			{
-				XP_FREEIF(curHost);	
-				XP_FREEIF(curSessionHistHost);
+				PR_FREEIF(curHost);	
+				PR_FREEIF(curSessionHistHost);
 				return;
 			}
-			XP_FREEIF(curHost);	
-			XP_FREEIF(curSessionHistHost);
+			PR_FREEIF(curHost);	
+			PR_FREEIF(curSessionHistHost);
 		}
 	}
 
@@ -1884,7 +1883,7 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 	   not the TZ environment variable was set on the client. */
 
 	/* Get the time the cookie is supposed to expire according to the attribute*/
-	ptr = strcasestr(set_cookie_header, "expires=");
+	ptr = PL_strcasestr(set_cookie_header, "expires=");
 	if(ptr)
 	{
 		char *date =  ptr+8;
@@ -1928,7 +1927,6 @@ NET_SetCookieStringFromHttp(FO_Present_Types outputFormat,
 PUBLIC int
 NET_SaveCookies(char * filename)
 {
-    XP_List * list_ptr;
     net_CookieStruct * cookie_s;
 	time_t cur_date = time(NULL);
 	XP_File fp;
@@ -1942,8 +1940,7 @@ NET_SaveCookies(char * filename)
 	  return(-1);
 
 	net_lock_cookie_list();
-	list_ptr = net_cookie_list;
-	if(XP_ListIsEmpty(list_ptr)) {
+	if(PL_ListIsEmpty(net_cookie_list)) {
 		net_unlock_cookie_list();
 		return(-1);
 	}
@@ -1974,7 +1971,8 @@ NET_SaveCookies(char * filename)
 	 * expires is a time_t integer
 	 * cookie can have tabs
 	 */
-    while((cookie_s = (net_CookieStruct *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_cookie_list);
+    while((cookie_s = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list)) != NULL)
       {
 		if(cookie_s->expires < cur_date)
 			continue;  /* don't write entry if cookie has expired 
@@ -2043,7 +2041,6 @@ NET_SaveCookies(char * filename)
 PUBLIC int
 NET_ReadCookies(char * filename)
 {
-    XP_List * list_ptr;
     net_CookieStruct *new_cookie, *tmp_cookie_ptr;
 	size_t new_len;
     XP_File fp;
@@ -2055,7 +2052,6 @@ NET_ReadCookies(char * filename)
         return(-1);
 
 	net_lock_cookie_list();
-	list_ptr = net_cookie_list;
 
     /* format is:
      *
@@ -2076,37 +2072,37 @@ NET_ReadCookies(char * filename)
 
 		host = buffer;
 		
-		if( !(is_domain = XP_STRCHR(host, '\t')) )
+		if( !(is_domain = PL_strchr(host, '\t')) )
 			continue;
 		*is_domain++ = '\0';
 		if(*is_domain == CR || *is_domain == LF || *is_domain == 0)
 			continue;
 		
-		if( !(path = XP_STRCHR(is_domain, '\t')) )
+		if( !(path = PL_strchr(is_domain, '\t')) )
 			continue;
 		*path++ = '\0';
 		if(*path == CR || *path == LF || *path == 0)
 			continue;
 
-		if( !(secure = XP_STRCHR(path, '\t')) )
+		if( !(secure = PL_strchr(path, '\t')) )
 			continue;
 		*secure++ = '\0';
 		if(*secure == CR || *secure == LF || *secure == 0)
 			continue;
 
-		if( !(expires = XP_STRCHR(secure, '\t')) )
+		if( !(expires = PL_strchr(secure, '\t')) )
 			continue;
 		*expires++ = '\0';
 		if(*expires == CR || *expires == LF || *expires == 0)
 			continue;
 
-        if( !(name = XP_STRCHR(expires, '\t')) )
+        if( !(name = PL_strchr(expires, '\t')) )
 			continue;
 		*name++ = '\0';
 		if(*name == CR || *name == LF || *name == 0)
 			continue;
 
-        if( !(cookie = XP_STRCHR(name, '\t')) )
+        if( !(cookie = PL_strchr(name, '\t')) )
 			continue;
 		*cookie++ = '\0';
 		if(*cookie == CR || *cookie == LF || *cookie == 0)
@@ -2117,14 +2113,14 @@ NET_ReadCookies(char * filename)
 
         /* construct a new cookie_struct
          */
-        new_cookie = XP_NEW(net_CookieStruct);
+        new_cookie = PR_NEW(net_CookieStruct);
         if(!new_cookie)
           {
 			net_unlock_cookie_list();
             return(-1);
           }
 
-		XP_MEMSET(new_cookie, 0, sizeof(net_CookieStruct));
+		PL_memset(new_cookie, 0, sizeof(net_CookieStruct));
     
         /* copy
          */
@@ -2133,18 +2129,18 @@ NET_ReadCookies(char * filename)
         StrAllocCopy(new_cookie->path, path);
         StrAllocCopy(new_cookie->host, host);
         new_cookie->expires = atol(expires);
-		if(!XP_STRCMP(secure, "FALSE"))
+		if(!PL_strcmp(secure, "FALSE"))
         	new_cookie->secure = FALSE;
 		else
         	new_cookie->secure = TRUE;
-        if(!XP_STRCMP(is_domain, "TRUE"))
+        if(!PL_strcmp(is_domain, "TRUE"))
         	new_cookie->is_domain = TRUE;
         else
         	new_cookie->is_domain = FALSE;
 
 		if(!net_cookie_list)
 		  {
-			net_cookie_list = XP_ListNew();
+			net_cookie_list = PL_ListNew();
 		    if(!net_cookie_list)
 			  {
 				net_unlock_cookie_list();
@@ -2155,12 +2151,13 @@ NET_ReadCookies(char * filename)
 		/* add it to the list so that it is before any strings of
 		 * smaller length
 		 */
-		new_len = XP_STRLEN(new_cookie->path);
-		while((tmp_cookie_ptr = (net_CookieStruct *) XP_ListNextObject(list_ptr)) != NULL)
+		new_len = PL_strlen(new_cookie->path);
+        PL_ListEnumReset(net_cookie_list);
+		while((tmp_cookie_ptr = (net_CookieStruct *) PL_ListEnumNext(net_cookie_list)) != NULL)
 		  { 
-			if(new_len > XP_STRLEN(tmp_cookie_ptr->path))
+			if(new_len > PL_strlen(tmp_cookie_ptr->path))
 			  {
-				XP_ListInsertObject(net_cookie_list, tmp_cookie_ptr, new_cookie);
+				PL_ListInsertBefore(net_cookie_list, tmp_cookie_ptr, new_cookie);
 				added_to_list = TRUE;
 				break;
 			  }
@@ -2168,7 +2165,7 @@ NET_ReadCookies(char * filename)
 
 		/* no shorter strings found in list */	
 		if(!added_to_list)
-		    XP_ListAddObjectToEnd(net_cookie_list, new_cookie);
+		    PL_ListAddLast(net_cookie_list, new_cookie);
 	  }
 
     XP_FileClose(fp);
@@ -2196,14 +2193,14 @@ net_auth_type(char *name)
 	if (name) {
 		while (*name && XP_IS_SPACE(*name))
 			name++;
-		if (!strncasecomp(name, "basic", 5))
+		if (!PL_strncasecmp(name, "basic", 5))
 			return AUTH_BASIC;
 #ifdef SIMPLE_MD5
-		else if (!strncasecomp(name, "simplemd5", 9))
+		else if (!PL_strncasecmp(name, "simplemd5", 9))
 			return AUTH_SIMPLEMD5;
 #endif
 		/*FORTEZZA checks*/
-		else if (!strncasecomp(name, "fortezzaproxy", 13))
+		else if (!PL_strncasecmp(name, "fortezzaproxy", 13))
 			return AUTH_FORTEZZA;
 	}
 	return AUTH_INVALID;
@@ -2216,7 +2213,7 @@ net_auth_type(char *name)
  * enum values.
  *
  */
-MODULE_PRIVATE XP_Bool
+MODULE_PRIVATE PRBool
 net_IsBetterAuth(char *new_auth, char *old_auth)
 {
 	if (!old_auth || net_auth_type(new_auth) >= net_auth_type(old_auth))
@@ -2234,7 +2231,7 @@ net_IsBetterAuth(char *new_auth, char *old_auth)
 PRIVATE char *
 bin2hex(unsigned char *data, int len)
 {
-    char *buf = (char *)XP_ALLOC(2 * len + 1);
+    char *buf = (char *)PR_Malloc(2 * len + 1);
     char *p = buf;
 
 	if(!buf)
@@ -2257,7 +2254,7 @@ bin2hex(unsigned char *data, int len)
  */
 #define SKIP_WS(p) while((*(p)) && XP_IS_SPACE(*(p))) p++
 
-PRIVATE XP_Bool
+PRIVATE PRBool
 next_params(char **pp, char **name, char **value)
 {
     char *q, *p = *pp;
@@ -2293,7 +2290,7 @@ net_parse_authenticate_line(char *auth, net_AuthStruct *ret)
 		return NULL;
 
 	if (!ret)
-		ret = XP_NEW_ZAP(net_AuthStruct);
+		ret = PR_NEWZAP(net_AuthStruct);
 
 	if(!ret)
 		return NULL;
@@ -2303,36 +2300,36 @@ net_parse_authenticate_line(char *auth, net_AuthStruct *ret)
     while (*p && !XP_IS_SPACE(*p)) p++;
 
     while (next_params(&p, &name, &value)) {
-		if (!strcasecomp(name, "realm"))
+		if (!PL_strcasecmp(name, "realm"))
 		  {
 			  StrAllocCopy(ret->realm, value);
 		  }
 #ifdef SIMPLE_MD5
-		else if (!strcasecomp(name, "domain"))
+		else if (!PL_strcasecmp(name, "domain"))
 		  {
 			  StrAllocCopy(ret->domain, value);
 		  }
-		else if (!strcasecomp(name, "nonce"))
+		else if (!PL_strcasecmp(name, "nonce"))
 		  {
 			  StrAllocCopy(ret->nonce, value);
 		  }
-		else if (!strcasecomp(name, "opaque"))
+		else if (!PL_strcasecmp(name, "opaque"))
 		  {
 			  StrAllocCopy(ret->opaque, value);
 		  }
-		else if (!strcasecomp(name, "oldnonce"))
+		else if (!PL_strcasecmp(name, "oldnonce"))
 		  {
-			  ret->oldNonce = (!strcasecomp(value, "TRUE")) ? TRUE : FALSE;
+			  ret->oldNonce = (!PL_strcasecmp(value, "TRUE")) ? TRUE : FALSE;
 		  }
 #endif /* SIMPLE_MD5 */
 		/* Some FORTEZZA checks */
-		else if (!strcasecomp(name, "challenge"))
+		else if (!PL_strcasecmp(name, "challenge"))
 		  {
 			  StrAllocCopy(ret->challenge, value);
 		  }
-		else if (!strcasecomp(name, "oldchallenge"))
+		else if (!PL_strcasecmp(name, "oldchallenge"))
 		  {
-			  ret->oldChallenge = (!strcasecomp(value, "TRUE")) ? TRUE : FALSE;
+			  ret->oldChallenge = (!PL_strcasecmp(value, "TRUE")) ? TRUE : FALSE;
 		  }
 		/* End FORTEZZA checks  */
     }
@@ -2381,7 +2378,7 @@ char *net_generate_md5_challenge_response(char *challenge,
 {
     unsigned char digest[16];
     unsigned char *cookie =
-	  (unsigned char *)XP_ALLOC(strlen(challenge) + strlen(password) +
+	  (unsigned char *)PR_Malloc(strlen(challenge) + strlen(password) +
 								strlen(url) + 10);
 
 	if(!cookie)
@@ -2426,13 +2423,13 @@ char *net_generate_auth_string(URL_Struct *url_s,
 			StrAllocCat (u_pass_string, ":");
 			StrAllocCat (u_pass_string, auth_s->password);
 
-			len = XP_STRLEN(u_pass_string);
-			if (!(auth_s->auth_string = (char*) XP_ALLOC((((len+1)*4)/3)+20)))
+			len = PL_strlen(u_pass_string);
+			if (!(auth_s->auth_string = (char*) PR_Malloc((((len+1)*4)/3)+20)))
 			  {
 				  return NULL;
 			  }
 
-			XP_STRCPY(auth_s->auth_string, "Basic ");
+			PL_strcpy(auth_s->auth_string, "Basic ");
 			NET_UUEncode((unsigned char *)u_pass_string,
 						 (unsigned char *)&auth_s->auth_string[6],
 						 len);
@@ -2458,11 +2455,11 @@ char *net_generate_auth_string(URL_Struct *url_s,
 															  url_s->address)))
 				{
 					if ((auth_s->auth_string =
-						 (char *)XP_ALLOC(XP_STRLEN(auth_s->username) +
-										  XP_STRLEN(auth_s->realm)    +
-										  XP_STRLEN(auth_s->nonce)    +
-										  XP_STRLEN(resp)             +
-										  XP_STRLEN(auth_s->opaque)   +
+						 (char *)PR_Malloc(PL_strlen(auth_s->username) +
+										  PL_strlen(auth_s->realm)    +
+										  PL_strlen(auth_s->nonce)    +
+										  PL_strlen(resp)             +
+										  PL_strlen(auth_s->opaque)   +
 										  100)))
 					  {
 						  sprintf(auth_s->auth_string,
@@ -2487,9 +2484,9 @@ char *net_generate_auth_string(URL_Struct *url_s,
 			  FREEIF(auth_s->auth_string);
 			  auth_s->auth_string = NULL;
 
-			  len = XP_STRLEN(auth_s->signature) + XP_STRLEN(auth_s->challenge)
-			        + XP_STRLEN(auth_s->certChain) + XP_STRLEN(auth_s->clientRan) + 100;
-			  auth_s->auth_string = (char *)XP_ALLOC(len);
+			  len = PL_strlen(auth_s->signature) + PL_strlen(auth_s->challenge)
+			        + PL_strlen(auth_s->certChain) + PL_strlen(auth_s->clientRan) + 100;
+			  auth_s->auth_string = (char *)PR_Malloc(len);
 			  if (auth_s->auth_string) {
 				sprintf(auth_s->auth_string,"signature=\"%s\" challenge=\"%s\" "
 					"clientRan=\"%s\" certChain=\"%s\"",auth_s->signature,
@@ -2509,12 +2506,12 @@ char *net_generate_auth_string(URL_Struct *url_s,
 PRIVATE net_AuthStruct *
 net_CheckForProxyAuth(char * proxy_addr)
 {
-	XP_List * lp = net_proxy_auth_list;
 	net_AuthStruct * s;
 
-	while ((s = (net_AuthStruct *)XP_ListNextObject(lp)) != NULL)
+	PL_ListEnumReset(net_proxy_auth_list);
+	while ((s = (net_AuthStruct *)PL_ListEnumNext(net_proxy_auth_list)) != NULL)
       {
-		  if (!strcasecomp(s->proxy_addr, proxy_addr))
+		  if (!PL_strcasecmp(s->proxy_addr, proxy_addr))
 			  return s;
 	  }
 
@@ -2546,14 +2543,14 @@ NET_BuildProxyAuthString(MWContext * context,
 
 #define LOOPING_OLD_NONCES XP_GetString( XP_LOOPING_OLD_NONCES )
 
-PUBLIC XP_Bool
+PUBLIC PRBool
 NET_AskForProxyAuth(MWContext * context,
 					char *   proxy_addr,
 					char *   pauth_params,
-					XP_Bool  already_sent_auth)
+					PRBool  already_sent_auth)
 {
 	net_AuthStruct * prev;
-	XP_Bool new_entry = FALSE;
+	PRBool new_entry = FALSE;
 	char * username = NULL;
 	char * password = NULL;
 	char * buf;
@@ -2641,8 +2638,8 @@ NET_AskForProxyAuth(MWContext * context,
 	username = prev->username;
 	password = prev->password;
 
-	len = XP_STRLEN(prev->realm) + XP_STRLEN(proxy_addr) + 50;
-	buf = (char*)XP_ALLOC(len*sizeof(char));
+	len = PL_strlen(prev->realm) + PL_strlen(proxy_addr) + 50;
+	buf = (char*)PR_Malloc(len*sizeof(char));
 	
 	if(buf)
 	  {
@@ -2680,13 +2677,13 @@ NET_AskForProxyAuth(MWContext * context,
 	  {
 		  if (!net_proxy_auth_list)
 			{
-				net_proxy_auth_list = XP_ListNew();
+				net_proxy_auth_list = PL_ListNew();
 				if (!net_proxy_auth_list)
 				  {
 					  return TRUE;
 				  }
 			}
-		  XP_ListAddObjectToEnd(net_proxy_auth_list, prev);
+		  PL_ListAddLast(net_proxy_auth_list, prev);
 	  }
 
 	return TRUE;
@@ -2711,10 +2708,9 @@ NET_AskForProxyAuth(MWContext * context,
  */
 MODULE_PRIVATE void 
 NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
-	char *buffer=(char*)XP_ALLOC(BUFLEN), *expireDate=NULL;
+	char *buffer=(char*)PR_Malloc(BUFLEN), *expireDate=NULL;
    	NET_StreamClass *stream;
 	int i, g, numOfCookies;
-	XP_List *list=net_cookie_list;
 	net_CookieStruct *cookie;
 
 	if(!buffer) {
@@ -2732,7 +2728,7 @@ NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
 
 	if(!stream) {
 		cur_entry->status = MK_UNABLE_TO_CONVERT;
-		XP_FREE(buffer);
+		PR_Free(buffer);
 		return;
 	  }
 
@@ -2741,7 +2737,7 @@ NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
 #define PUT_PART(part)													\
 cur_entry->status = (*stream->put_block)(stream,			\
 										part ? part : "Unknown",		\
-										part ? XP_STRLEN(part) : 7);	\
+										part ? PL_strlen(part) : 7);	\
 	if(cur_entry->status < 0)												\
 	  goto END;
 /* End PUT_PART macro */
@@ -2750,7 +2746,7 @@ cur_entry->status = (*stream->put_block)(stream,			\
 	 * think/see that we're keeping cookies in mem.
 	 */
 	net_remove_expired_cookies();
-	numOfCookies=XP_ListCount(net_cookie_list);
+	numOfCookies=PL_ListCount(net_cookie_list);
 
 	/* Write out the initial statistics. */
 	g = PR_snprintf(buffer, BUFLEN,
@@ -2798,63 +2794,64 @@ cur_entry->status = (*stream->put_block)(stream,			\
 	PUT_PART(buffer);
 
 	if(!numOfCookies) {
-		XP_STRCPY(buffer, XP_GetString(MK_ACCESS_NO_COOKIES));
+		PL_strcpy(buffer, XP_GetString(MK_ACCESS_NO_COOKIES));
 		PUT_PART(buffer);
 		goto END;
 	  }
 
 /* define some macros to help us output HTML */
 #define HEADING(arg1)					\
-	XP_STRCPY(buffer, "<tt>");			\
-	for(i=XP_STRLEN(arg1); i < 16; i++)	\
-		XP_STRCAT(buffer, "&nbsp;");	\
-	XP_STRCAT(buffer, arg1);			\
-	XP_STRCAT(buffer, " </tt>");		\
+	PL_strcpy(buffer, "<tt>");			\
+	for(i=PL_strlen(arg1); i < 16; i++)	\
+		PL_strcat(buffer, "&nbsp;");	\
+	PL_strcat(buffer, arg1);			\
+	PL_strcat(buffer, " </tt>");		\
 	PUT_PART(buffer);
 
 #define BRCRLF					\
-	XP_STRCPY(buffer, "<BR>\n");		\
+	PL_strcpy(buffer, "<BR>\n");		\
 	PUT_PART(buffer);
 /* End html macros */
 
 	/* Write out each cookie */
-	while ( (cookie=(net_CookieStruct *) XP_ListNextObject(list)) ) {
+	PL_ListEnumReset(net_cookie_list);
+	while ( (cookie=(net_CookieStruct *) PL_ListEnumNext(net_cookie_list)) ) {
 
 		HEADING(XP_GetString(MK_ACCESS_NAME));
-		XP_STRCPY(buffer, cookie->name);
+		PL_strcpy(buffer, cookie->name);
 		PUT_PART(buffer);
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_VALUE));
-		XP_STRCPY(buffer, cookie->cookie);
+		PL_strcpy(buffer, cookie->cookie);
 		PUT_PART(buffer);
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_HOST));
-		XP_STRCPY(buffer, cookie->host);
+		PL_strcpy(buffer, cookie->host);
 		PUT_PART(buffer);
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_SEND_TO_HOST));
 		if(cookie->is_domain)
-			XP_STRCPY(buffer, XP_GetString(MK_ACCESS_IS_DOMAIN));
+			PL_strcpy(buffer, XP_GetString(MK_ACCESS_IS_DOMAIN));
 		else
-			XP_STRCPY(buffer, XP_GetString(MK_ACCESS_IS_NOT_DOMAIN));
+			PL_strcpy(buffer, XP_GetString(MK_ACCESS_IS_NOT_DOMAIN));
 		PUT_PART(buffer);
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_SEND_TO_PATH));
-		XP_STRCPY(buffer, cookie->path);
+		PL_strcpy(buffer, cookie->path);
 		PUT_PART(buffer);
-		XP_STRCPY(buffer, XP_GetString(MK_ACCESS_AND_BELOW));
+		PL_strcpy(buffer, XP_GetString(MK_ACCESS_AND_BELOW));
 		PUT_PART(buffer);
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_SECURE));
 		if(cookie->secure)
-			XP_STRCPY(buffer, "Yes");
+			PL_strcpy(buffer, "Yes");
 		else
-			XP_STRCPY(buffer, "No");
+			PL_strcpy(buffer, "No");
 		PUT_PART(buffer);
 		BRCRLF;
 
@@ -2862,18 +2859,18 @@ cur_entry->status = (*stream->put_block)(stream,			\
 		if(cookie->expires) {
 			expireDate=ctime(&(cookie->expires));
 			if(expireDate)
-				XP_STRCPY(buffer, expireDate);
+				PL_strcpy(buffer, expireDate);
 			else
-				XP_STRCPY(buffer, "NULL");
+				PL_strcpy(buffer, "NULL");
 		} else {
-			XP_STRCPY(buffer, XP_GetString(MK_ACCESS_END_OF_SESSION));
+			PL_strcpy(buffer, XP_GetString(MK_ACCESS_END_OF_SESSION));
 		}
 		PUT_PART(buffer);
-		XP_STRCPY(buffer, " GMT");
+		PL_strcpy(buffer, " GMT");
 		PUT_PART(buffer);
 		BRCRLF;
 
-		XP_STRCPY(buffer, "\n<P>\n");
+		PL_strcpy(buffer, "\n<P>\n");
 		PUT_PART(buffer);
 	}
 	/* End each cookie */

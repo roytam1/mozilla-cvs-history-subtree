@@ -23,9 +23,12 @@
  */
 #include "mkutils.h"    /* LF */
 #include "mkpadpac.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "pllist.h"
+#include "prmem.h"
 #include <time.h>
 #include "mkautocf.h"
-#include "xp_mem.h"     /* XP_NEW_ZAP() */
 #ifndef XP_MAC
 #include <sys/types.h>
 #endif
@@ -162,11 +165,11 @@ PRIVATE Bool    pacf_ok           = FALSE;
 PRIVATE char *  pacf_url          = NULL;
 PRIVATE char *  pacf_src_buf      = NULL;
 PRIVATE int     pacf_src_len      = 0;
-PRIVATE XP_List*pacf_all_nodes    = NULL;
+PRIVATE PLList *pacf_all_nodes    = NULL;
 PRIVATE time_t  pacf_direct_until = (time_t)0;
 PRIVATE int     pacf_direct_cnt   = 0;
 PRIVATE PACF_QueuedState *queued_state = NULL;
-PRIVATE XP_List*pacf_bad_keywords = NULL;
+PRIVATE PLList *pacf_bad_keywords = NULL;
 
 PRIVATE Bool	pacf_find_proxy_undefined = FALSE;
 
@@ -225,41 +228,41 @@ PRIVATE char *mkMethodString( int method ) {
 
   switch ( method ) {
 	  case  URL_GET_METHOD: 
-		mstr = XP_STRDUP("GET");
+		mstr = PL_strdup("GET");
 		break;
 	  case URL_POST_METHOD:
-		mstr = XP_STRDUP("POST");
+		mstr = PL_strdup("POST");
 		break;
 	  case  URL_HEAD_METHOD:
-		mstr = XP_STRDUP("HEAD");
+		mstr = PL_strdup("HEAD");
 		break;
 	  case  URL_PUT_METHOD:
-		mstr = XP_STRDUP("PUT");
+		mstr = PL_strdup("PUT");
 		break;
 	  case  URL_DELETE_METHOD:
-		mstr = XP_STRDUP("DELETE");
+		mstr = PL_strdup("DELETE");
 		break;
 	  case  URL_MKDIR_METHOD :
-		mstr = XP_STRDUP("MKDIR");
+		mstr = PL_strdup("MKDIR");
 		break;
 	  case  URL_MOVE_METHOD:
-		mstr = XP_STRDUP("MOVE");
+		mstr = PL_strdup("MOVE");
 		break;
 	  case  URL_INDEX_METHOD:
-		mstr = XP_STRDUP("INDEX");
+		mstr = PL_strdup("INDEX");
 		break;
 	  case  URL_GETPROPERTIES_METHOD:
-		mstr = XP_STRDUP("GETPROPERTIES");
+		mstr = PL_strdup("GETPROPERTIES");
 		break;
   }
   return mstr;
 }
 
 PRIVATE char *msg2(char *fmt, char *prm) {
-    char *msg = (char *)XP_ALLOC(XP_STRLEN(fmt) + 100 +
-				 (prm ? XP_STRLEN(prm) : 0));
+    char *msg = (char *)PR_Malloc(PL_strlen(fmt) + 100 +
+				 (prm ? PL_strlen(prm) : 0));
     if (msg)
-	XP_SPRINTF(msg, fmt, prm ? prm : "-");
+	sprintf(msg, fmt, prm ? prm : "-");
 
     return msg;
 }
@@ -269,7 +272,7 @@ PRIVATE Bool confirm2(MWContext *context, char *fmt, char *prm) {
     char *msg = msg2(fmt, prm);
     if (msg) {
 	rv = FE_Confirm(context, msg);
-	XP_FREE(msg);
+	PR_Free(msg);
     }
     return rv;
 }
@@ -278,7 +281,7 @@ PRIVATE void alert2(MWContext *context, char *fmt, char *prm) {
     char *msg = msg2(fmt, prm);
     if (msg) {
 	FE_Alert(context, msg);
-	XP_FREE(msg);
+	PR_Free(msg);
     }
 }
 
@@ -287,10 +290,10 @@ PRIVATE void alert2(MWContext *context, char *fmt, char *prm) {
  * was already created for that address. */
 PRIVATE PACF_Node *lookup_create_node(PACF_Type type, char *addr) {
     if (!pacf_all_nodes)
-	pacf_all_nodes = XP_ListNew();
+	pacf_all_nodes = PL_ListNew();
 
     /* Truncate at 64 characters -- gethostbyname() is evil */
-    if (addr && XP_STRLEN(addr) > 64)
+    if (addr && PL_strlen(addr) > 64)
 	addr[64] = '\0';
 
     if (!type || (!addr && (type == PACF_TYPE_PROXY ||
@@ -300,10 +303,10 @@ PRIVATE PACF_Node *lookup_create_node(PACF_Type type, char *addr) {
       }
     else
       {
-	  XP_List *cur = pacf_all_nodes;
 	  PACF_Node *node;
 
-	  while ((node = (PACF_Node *)XP_ListNextObject(cur)) != NULL) {
+	  PL_ListEnumReset(pacf_all_nodes);
+	  while ((node = (PACF_Node *)PL_ListEnumNext(pacf_all_nodes)) != NULL) {
 	      if (node->type == type &&
 		  ((!node->addr && !addr) ||
 		   ( node->addr &&  addr  && !strcmp(node->addr, addr))))
@@ -312,12 +315,12 @@ PRIVATE PACF_Node *lookup_create_node(PACF_Type type, char *addr) {
 		}
 	  }
 
-	  node = XP_NEW_ZAP(PACF_Node);
+	  node = PR_NEWZAP(PACF_Node);
       if (node) {
 	      node->type = type;
-	      node->addr = XP_STRDUP(addr);
+	      node->addr = PL_strdup(addr);
 
-	      XP_ListAddObject(pacf_all_nodes, node);
+	      PL_ListAdd(pacf_all_nodes, node);
       }
 
 	  return node;
@@ -329,11 +332,11 @@ PRIVATE PACF_Node * pacf_proxy_is_down(MWContext *context,
 				       char *proxy_addr,
 				       u_long socks_addr,
 				       short socks_port) {
-    XP_List *cur = pacf_all_nodes;
     PACF_Node *node;
 
-    while ((node = (PACF_Node *)XP_ListNextObject(cur)) != NULL) {
-	if ((proxy_addr && node->addr && !XP_STRCMP(node->addr, proxy_addr)) ||
+    PL_ListEnumReset(pacf_all_nodes);
+    while ((node = (PACF_Node *)PL_ListEnumNext(pacf_all_nodes)) != NULL) {
+	if ((proxy_addr && node->addr && !PL_strcmp(node->addr, proxy_addr)) ||
 	    (socks_addr &&
 	     node->socks_addr == socks_addr &&
 	     node->socks_port == socks_port))
@@ -368,7 +371,7 @@ PRIVATE Bool fill_return_values(PACF_Type   type,
 	char *p, *host = NULL;
 
 	StrAllocCopy(host, node->addr);
-	p = XP_STRCHR(host, ':');
+	p = PL_strchr(host, ':');
 	if (p) {
 	    *p++ = '\0';
 	    node->socks_port = (short)atoi(p);
@@ -411,7 +414,7 @@ PRIVATE Bool fill_return_values(PACF_Type   type,
 	    if (!hp)
 		return FALSE;  /* Fail? */
 
-	    XP_MEMCPY(&node->socks_addr, hp->h_addr, hp->h_length);
+	    PL_memcpy(&node->socks_addr, hp->h_addr, hp->h_length);
 	}
     }
 
@@ -495,12 +498,12 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
     *ret_socks_addr = 0;
     *ret_socks_port = 0;
 
-    cur = my_copy = XP_STRDUP(list);
+    cur = my_copy = PL_strdup(list);
 
     TRACEMSG(("Getting proxy addr from config list: %s", list));
 
 	do {
-	    p = XP_STRCHR(cur, ';');
+	    p = PL_strchr(cur, ';');
 		if (p) {
 		    do {
 				*p++ = '\0';
@@ -515,9 +518,9 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
 		    } while (*addr &&  XP_IS_SPACE(*addr));
 		}
 
-		type = ((!strcasecomp(cur, "DIRECT")) ? PACF_TYPE_DIRECT  :
-			(!strcasecomp(cur, "PROXY"))  ? PACF_TYPE_PROXY   :
-			(!strcasecomp(cur, "SOCKS"))  ? PACF_TYPE_SOCKS   :
+		type = ((!PL_strcasecmp(cur, "DIRECT")) ? PACF_TYPE_DIRECT  :
+			(!PL_strcasecmp(cur, "PROXY"))  ? PACF_TYPE_PROXY   :
+			(!PL_strcasecmp(cur, "SOCKS"))  ? PACF_TYPE_SOCKS   :
 							PACF_TYPE_INVALID );
 
 		if (type == PACF_TYPE_DIRECT)           /* don't use a proxy */
@@ -580,22 +583,23 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
 
 		    if (!pacf_bad_keywords)
 			{
-			    pacf_bad_keywords = XP_ListNew();
+			    pacf_bad_keywords = PL_ListNew();
 			}
 		    else
 			{
-			    XP_List *ptr = pacf_bad_keywords;
+			    PL_ListEnumReset(pacf_bad_keywords);
 
-			    while ((key = (char *)XP_ListNextObject(ptr)) != NULL) {
+			    while ((key = (char *)PL_ListEnumNext(pacf_bad_keywords))
+                       != NULL) {
 				if (!strcmp(key, cur))
 				    break;
 			    }
 			}
 
-		      if (!key && XP_ListCount(pacf_bad_keywords) < 3)
+		      if (!key && PL_ListCount(pacf_bad_keywords) < 3)
 			{
-			    key = XP_STRDUP(cur);
-			    XP_ListAddObject(pacf_bad_keywords, key);
+			    key = PL_strdup(cur);
+			    PL_ListAdd(pacf_bad_keywords, key);
 			    alert2(context, XP_GetString(XP_BAD_KEYWORD_IN_PROXY_AUTOCFG), cur);
 			}
 		  }
@@ -604,7 +608,7 @@ pacf_get_proxy_addr(MWContext *context, char *list, char **ret_proxy_addr,
 
 	    } while (cur && *cur);
 
-    XP_FREE(my_copy);
+    PR_Free(my_copy);
 
     if (rv)
 	  return TRUE;
@@ -713,7 +717,7 @@ PRIVATE int pacf_read_config(void) {
 	return -1;
 
     pacf_src_len = st.st_size;
-    pacf_src_buf = (char *)XP_ALLOC(pacf_src_len + 1);
+    pacf_src_buf = (char *)PR_Malloc(pacf_src_len + 1);
     if (!pacf_src_buf) {
 	XP_FileClose(fp);
 	pacf_src_len = 0;
@@ -726,7 +730,7 @@ PRIVATE int pacf_read_config(void) {
       }
     else
       {
-	  XP_FREE(pacf_src_buf);
+	  PR_Free(pacf_src_buf);
 	  pacf_src_buf = NULL;
 	  pacf_src_len = 0;
       }
@@ -741,9 +745,9 @@ PRIVATE int pacf_write(NET_StreamClass *stream, CONST char *buf, int32 len) {
 	PACF_Object *obj=stream->data_object;	
     if (len > 0) {
 	if (!pacf_src_buf)
-	    pacf_src_buf = (char*)XP_ALLOC(len + 1);
+	    pacf_src_buf = (char*)PR_Malloc(len + 1);
 	else
-	    pacf_src_buf = (char*)XP_REALLOC(pacf_src_buf,
+	    pacf_src_buf = (char*)PR_Realloc(pacf_src_buf,
 					     pacf_src_len + len + 1);
 
 	if (!pacf_src_buf) {    /* Out of memory */
@@ -751,7 +755,7 @@ PRIVATE int pacf_write(NET_StreamClass *stream, CONST char *buf, int32 len) {
 	    return MK_DATA_LOADED;
 	}
 
-	XP_MEMCPY(pacf_src_buf + pacf_src_len, buf, len);
+	PL_memcpy(pacf_src_buf + pacf_src_len, buf, len);
 	pacf_src_len += len;
 	pacf_src_buf[pacf_src_len] = '\0';
     }
@@ -853,7 +857,7 @@ retry:
 		} else if (XP_Stat("", &st, xpProxyConfig) == -1) {
 				alert2(obj->context, XP_GetString(XP_BAD_CONFIG_IGNORED), pacf_url);
 		} else if (confirm2(obj->context, XP_GetString(XP_BAD_CONFIG_USE_PREV), pacf_url)) {
-			  XP_FREE(pacf_src_buf);
+			  PR_Free(pacf_src_buf);
 			  pacf_src_buf = NULL;
 			  pacf_src_len = 0;
 			  pacf_read_config();
@@ -868,7 +872,7 @@ retry:
 		}
     }
 
-    XP_FREE(obj);
+    PR_Free(obj);
 
 out:
 	;
@@ -878,7 +882,7 @@ PRIVATE void pacf_abort(NET_StreamClass *stream, int status) {
 	PACF_Object *obj=stream->data_object;	
     pacf_loading = FALSE;
 		FE_Alert(obj->context, XP_GetString(XP_GLOBAL_CONFIG_LOAD_ABORTED));
-    XP_FREE(obj);
+    PR_Free(obj);
 }
 
 #endif /* MOCHA */
@@ -906,16 +910,16 @@ NET_ProxyAutoConfig(int fmt, void *data_obj, URL_Struct *URL_s,
     }
 
     if (pacf_src_buf) {
-	XP_FREE(pacf_src_buf);
+	PR_Free(pacf_src_buf);
 	pacf_src_buf = NULL;
 	pacf_src_len = 0;
     }
 
-    if (!(stream = XP_NEW_ZAP(NET_StreamClass)))
+    if (!(stream = PR_NEWZAP(NET_StreamClass)))
 	return NULL;
 
-    if (!(obj = XP_NEW_ZAP(PACF_Object))) {
-	XP_FREE(stream);
+    if (!(obj = PR_NEWZAP(PACF_Object))) {
+	PR_Free(stream);
 	return NULL;
     }
 
@@ -970,7 +974,7 @@ static void pacf_restart_queued(URL_Struct *URL_s, int status,
 		 ? FE_Confirm(window_id, XP_GetString(XP_CONF_LOAD_FAILED_USE_PREV))
 		 : confirm2(window_id, XP_GetString(XP_BAD_TYPE_USE_PREV), pacf_url))
 	  {
-	      PACF_Object *obj = XP_NEW_ZAP(PACF_Object);
+	      PACF_Object *obj = PR_NEWZAP(PACF_Object);
 		  NET_StreamClass stream;
 		  stream.data_object=obj;
 
@@ -996,7 +1000,7 @@ static void pacf_restart_queued(URL_Struct *URL_s, int status,
 
     }
 
-    XP_FREE(queued_state);
+    PR_Free(queued_state);
     queued_state = NULL;
 }
 
@@ -1030,7 +1034,7 @@ MODULE_PRIVATE int NET_LoadProxyConfig(char *autoconf_url,
     if (!autoconf_url)
 	return -1;
 
-	if (!XP_STRCMP(autoconf_url,"BAD-NOAUTOADMNLIB")) {
+	if (!PL_strcmp(autoconf_url,"BAD-NOAUTOADMNLIB")) {
 	    FE_Alert(window_id, XP_GetString( XP_AUTOADMIN_MISSING ));
 		return -1;
 	}
@@ -1040,7 +1044,7 @@ MODULE_PRIVATE int NET_LoadProxyConfig(char *autoconf_url,
 
     if (exit_routine) {
 
-	queued_state = XP_NEW_ZAP(PACF_QueuedState);
+	queued_state = PR_NEWZAP(PACF_QueuedState);
 	queued_state->URL_s = URL_s;
 	queued_state->output_format = output_format;
 	queued_state->window_id = window_id;
@@ -1095,12 +1099,12 @@ MODULE_PRIVATE char *pacf_find_proxies_for_url(MWContext *context,
     if (!orig_url || !pacf_ok || pacf_loading || pacf_find_proxy_undefined)
 	return NULL;
 
-    if (!(bad_url = XP_STRDUP(orig_url)))
+    if (!(bad_url = PL_strdup(orig_url)))
 	goto out;
 
     len = NET_UnEscapeCnt(bad_url);
 
-    if (!(safe_url = XP_ALLOC(2 * len + 1)))    /* worst case */
+    if (!(safe_url = PR_Malloc(2 * len + 1)))    /* worst case */
 	goto out;
 
     p = bad_url;
@@ -1135,31 +1139,31 @@ MODULE_PRIVATE char *pacf_find_proxies_for_url(MWContext *context,
 
     len  = (int)(q - safe_url);
 
-    if (!(host = XP_ALLOC(len + 1)))
+    if (!(host = PR_Malloc(len + 1)))
 	goto out;
 
-    if (!(buf  = XP_ALLOC(len*2 + 50)))
+    if (!(buf  = PR_Malloc(len*2 + 50)))
 	goto out;
 
     host[0] = '\0';
 
-    p = XP_STRSTR(safe_url, "://");
+    p = PL_strstr(safe_url, "://");
     if (p) {
 	p += 3;
-	q = XP_STRCHR(p, '/');
+	q = PL_strchr(p, '/');
 	if (q)
 	    *q = '\0';
-	r = XP_STRCHR(p, '@');
+	r = PL_strchr(p, '@');
 	if (r)
 		p = r + 1;
-	XP_STRCPY(host, p);
+	PL_strcpy(host, p);
 	if (q)
 	    *q = '/';
-	p = XP_STRCHR(host, ':');
+	p = PL_strchr(host, ':');
 	if (p)
 	    *p = '\0';
     }
-	    XP_SPRINTF(buf, "FindProxyForURL(\"%s\",\"%s\",\"%s\")", safe_url, host,
+	    sprintf(buf, "FindProxyForURL(\"%s\",\"%s\",\"%s\")", safe_url, host,
 	       method ? method : "" );
 
     if (!JS_AddRoot(configContext, &rv))
@@ -1173,7 +1177,7 @@ MODULE_PRIVATE char *pacf_find_proxies_for_url(MWContext *context,
 	    const char *name =
 		JS_GetStringBytes(JSVAL_TO_STRING(rv));
 	    if (*name)
-		result = XP_STRDUP(name);
+		result = PL_strdup(name);
 	}
     }
 
@@ -1246,7 +1250,7 @@ proxy_isPlainHostName(JSContext *mc, JSObject *obj, unsigned int argc,
     if (argc >= 1 && JSVAL_IS_STRING(argv[0])) {
 	const char *h = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
 
-	if (h && !XP_STRCHR(h, '.')) {
+	if (h && !PL_strchr(h, '.')) {
 	    *rval = JSVAL_TRUE;
 	    return JS_TRUE;
 	}
@@ -1290,8 +1294,8 @@ proxy_dnsDomainIs(JSContext *mc, JSObject *obj, unsigned int argc,
 	const char *p = JS_GetStringBytes(JSVAL_TO_STRING(argv[1]));
 	int len1, len2;
 
-	if (h && p && (len1 = XP_STRLEN(h)) >= (len2 = XP_STRLEN(p)) &&
-	    (!strcasecomp(h + len1 - len2, p))) {
+	if (h && p && (len1 = PL_strlen(h)) >= (len2 = PL_strlen(p)) &&
+	    (!PL_strcasecmp(h + len1 - len2, p))) {
 	    *rval = JSVAL_TRUE;
 	    return JS_TRUE;
 	}
@@ -1313,16 +1317,16 @@ proxy_localHostOrDomainIs(JSContext *mc, JSObject *obj, unsigned int argc,
 	char *hp, *pp;
 
 	if (h && p) {
-	    hp = XP_STRCHR(h, '.');
-	    pp = XP_STRCHR(p, '.');
+	    hp = PL_strchr(h, '.');
+	    pp = PL_strchr(p, '.');
 
 	    if (hp || !pp) {
-		if (!strcasecomp(h,p)) {
+		if (!PL_strcasecmp(h,p)) {
 		    *rval = JSVAL_TRUE;
 		    return JS_TRUE;
 		}
 	    }
-	    else if (!strncasecomp(h, p, pp - p)) {
+	    else if (!PL_strncasecmp(h, p, pp - p)) {
 		*rval = JSVAL_TRUE;
 		return JS_TRUE;
 	    }
@@ -1350,8 +1354,8 @@ proxy_isResolvable(JSContext *mc, JSObject *obj, unsigned int argc,
 #endif
 
 	if (h) {
-	    char *safe = XP_STRDUP(h);
-	    if (XP_STRLEN(safe) > 64)
+	    char *safe = PL_strdup(h);
+	    if (PL_strlen(safe) > 64)
 		safe[64] = '\0';
 #ifdef NSPR20
 	    rv = PR_GetHostByName(safe, dbbuf, sizeof(dbbuf),  &hpbuf);
@@ -1361,7 +1365,7 @@ proxy_isResolvable(JSContext *mc, JSObject *obj, unsigned int argc,
 #else
 	    hp = gethostbyname(safe);
 #endif
-	    XP_FREE(safe);
+	    PR_Free(safe);
 	}
 
 	if (hp) {
@@ -1410,15 +1414,15 @@ PRIVATE char *proxy_dns_resolve(const char *host) {
 	    }
 	}
 	if (is_numeric_ip) {
-	    return XP_STRDUP(host);
+	    return PL_strdup(host);
 	}
 
-	if (cache_host && cache_ip && !XP_STRCMP(cache_host, host)) {
-	    return XP_STRDUP(cache_ip);
+	if (cache_host && cache_ip && !PL_strcmp(cache_host, host)) {
+	    return PL_strdup(cache_ip);
 	}
-	safe = XP_STRDUP(host);
+	safe = PL_strdup(host);
 	if (safe) {
-	    if (XP_STRLEN(safe) > 64)
+	    if (PL_strlen(safe) > 64)
 		safe[64] = '\0';
 
 #ifdef NSPR20
@@ -1429,20 +1433,20 @@ PRIVATE char *proxy_dns_resolve(const char *host) {
 #else
 	    hp = gethostbyname(safe);
 #endif
-	    XP_FREE(safe);
+	    PR_Free(safe);
 	}
 	if (hp) {
 	    char *ip = NULL;
 	    struct in_addr in;
 
-	    XP_MEMCPY(&in.s_addr, hp->h_addr, hp->h_length);
+	    PL_memcpy(&in.s_addr, hp->h_addr, hp->h_length);
 
 	    ip = inet_ntoa(in);
 	    if (ip) {
 		StrAllocCopy(cache_host, host);
 		StrAllocCopy(cache_ip, ip);
 
-		return XP_STRDUP(ip);
+		return PL_strdup(ip);
 	    }
 	}
     }
@@ -1460,7 +1464,7 @@ proxy_dnsResolve(JSContext *mc, JSObject *obj, unsigned int argc,
 	if (ip) {
 	    JSString * str = JS_NewString(mc, ip, strlen(ip));
 	    if (!str) {
-		XP_FREE(ip);
+		PR_Free(ip);
 		return JS_FALSE;
 	    }
 	    *rval = STRING_TO_JSVAL(str);
@@ -1519,10 +1523,10 @@ PRIVATE unsigned long convert_addr(const char *ip) {
     unsigned char b[4];
     unsigned long addr = 0L;
 
-	p = buf = XP_STRDUP(ip);
+	p = buf = PL_strdup(ip);
     if (ip && p) {
 	for(i=0; p && i<4; i++) {
-	    q = XP_STRCHR(p, '.');
+	    q = PL_strchr(p, '.');
 	    if (q) {
 		*q = '\0';
 	    }
@@ -1536,7 +1540,7 @@ PRIVATE unsigned long convert_addr(const char *ip) {
 		((unsigned long)b[2] <<  8) |
 		((unsigned long)b[3]));
 
-	XP_FREE(buf);
+	PR_Free(buf);
     }
 
     return htonl(addr);
@@ -1560,7 +1564,7 @@ proxy_isInNet(JSContext *mc, JSObject *obj, unsigned int argc,
 	      unsigned long pat  = convert_addr(patstr);
 	      unsigned long mask = convert_addr(maskstr);
 
-	      XP_FREE(ip);
+	      PR_Free(ip);
 
 	      if ((mask & host) == (mask & pat)) {
 		  TRACEMSG(("~~~~~~~~~~~~ isInNet(%s(%s), %s, %s) returns TRUE\n",
@@ -1605,7 +1609,7 @@ struct tm * get_struct_tm(JSContext *mc,
 
     if (*argc > 0 &&  JSVAL_IS_STRING(argv[*argc-1])) {
 	const char *laststr = JS_GetStringBytes(JSVAL_TO_STRING(argv[*argc-1]));
-	if (!strcasecomp(laststr, "GMT")) {
+	if (!PL_strcasecmp(laststr, "GMT")) {
 	    (*argc)--;
 	    return gmtime(&now);
 	}
@@ -1617,7 +1621,7 @@ char *weekdays = "SUNMONTUEWEDTHUFRISAT";
 char *monnames = "JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC";
 
 PRIVATE int get_no(const char *nam, char *arr) {
-    char *p = strcasestr(arr, nam);
+    char *p = PL_strcasestr(arr, nam);
     return p ? (((int)(p - arr)) / 3) : -1;
 }
 
