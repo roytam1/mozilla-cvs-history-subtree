@@ -1,0 +1,40 @@
+    var iconpackname="Grayrest Icons";
+    var regname="/grayrest/icons";
+    var version="20020115";
+    var targ="default";
+    initInstall(iconpackname,regname,version);
+    iconFolder = getFolder("Chrome","icons");
+    addDirectory(regname,version,"icons",iconFolder,targ,true);
+    addFile(regname,version,"abcardWindow.ico",targ,"",true);
+    addFile(regname,version,"addressbookWindow.ico",targ,"",true);
+    addFile(regname,version,"bookmark-window.ico",targ,"",true);
+    addFile(regname,version,"calendar-window.ico",targ,"",true);
+    addFile(regname,version,"chatzilla-window.ico",targ,"",true);
+    addFile(regname,version,"downloadManager.ico",targ,"",true);
+    addFile(regname,version,"editorWindow.ico",targ,"",true);
+    addFile(regname,version,"fullpack.ico",targ,"",true);
+    addFile(regname,version,"gif.ico",targ,"",true);
+    addFile(regname,version,"history-window.ico",targ,"",true);
+    addFile(regname,version,"html.ico",targ,"",true);
+    addFile(regname,version,"jpeg.ico",targ,"",true);
+    addFile(regname,version,"js.ico",targ,"",true);
+    addFile(regname,version,"jsconsoleWindow.ico",targ,"",true);
+    addFile(regname,version,"main-window.ico",targ,"",true);
+    addFile(regname,version,"messengerWindow.ico",targ,"",true);
+    addFile(regname,version,"mng.ico",targ,"",true);
+    addFile(regname,version,"mozapp.ico",targ,"",true);
+    addFile(regname,version,"mozfile.ico",targ,"",true);
+    addFile(regname,version,"mozfiletemplate.ico",targ,"",true);
+    addFile(regname,version,"mozilla.ico",targ,"",true);
+    addFile(regname,version,"msgcomposeWindow.ico",targ,"",true);
+    addFile(regname,version,"png.ico",targ,"",true);
+    addFile(regname,version,"svg.ico",targ,"",true);
+    addFile(regname,version,"venkman-window.ico",targ,"",true);
+    addFile(regname,version,"winInspectorWindow.ico",targ,"",true);
+    addFile(regname,version,"xml.ico",targ,"",true);
+    addFile(regname,version,"xul.ico",targ,"",true);
+    if(getLastError()){
+	performInstall();
+    }else{
+	cancelInstall();
+    } //if(getLastError())))
