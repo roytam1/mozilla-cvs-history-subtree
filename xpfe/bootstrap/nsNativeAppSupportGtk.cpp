@@ -25,7 +25,7 @@
 
 #include "nsNativeAppSupportBase.h"
 #include "gdk/gdk.h"
-#ifdef MOZ_PHOENIX
+#if defined(MOZ_PHOENIX) || defined(MOZ_XRE_APP)
 extern char* splash_xpm[];
 #else
 #include SPLASH_XPM
@@ -64,7 +64,7 @@ nsSplashScreenGtk::~nsSplashScreenGtk()
 
 NS_IMETHODIMP nsSplashScreenGtk::Show()
 {
-#ifdef MOZ_PHOENIX
+#if defined(MOZ_PHOENIX) || defined(MOZ_XRE_APP)
   if (!splash_xpm[0])
     return NS_OK;
 #endif

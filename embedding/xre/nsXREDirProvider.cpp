@@ -65,10 +65,23 @@
 nsXREDirProvider::nsXREDirProvider(const nsACString& aProductName)
 {
 #if defined(XP_UNIX) && !defined(XP_MACOSX)
+
+  // XXX minotaur should have its own directory provider.
+#ifdef MOZ_MINOTAUR
+  mProductDir.Assign(NS_LITERAL_CSTRING(".mozilla"));
+#else
   mProductDir.Assign(NS_LITERAL_CSTRING(".") + aProductName);
   ToLowerCase(mProductDir);
+#endif
+
+#else
+
+#ifdef MOZ_MINOTAUR
+  mProductDir.Assign(NS_LITERAL_CSTRING("Mozilla"));
 #else
   mProductDir.Assign(aProductName);
+#endif
+
 #endif
 }
 
@@ -167,13 +180,7 @@ nsXREDirProvider::GetProductDirectory(nsILocalFile** aFile)
 #endif
 
   NS_ENSURE_SUCCESS(rv, rv);
-#ifdef MOZ_MINOTAUR
-  // XXX temporary hack, force minotaur to use your regular mozilla profiles...minotaur
-  // should really be a directory provider instead of hacking here.
-  rv = localDir->AppendRelativeNativePath(NS_LITERAL_CSTRING("mozilla"));
-#else
   rv = localDir->AppendRelativeNativePath(mProductDir);
-#endif
   NS_ENSURE_SUCCESS(rv, rv);
   rv = EnsureDirectoryExists(localDir);
   NS_ENSURE_SUCCESS(rv, rv);

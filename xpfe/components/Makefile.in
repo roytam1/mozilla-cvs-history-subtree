@@ -51,10 +51,6 @@ ifndef MOZ_PHOENIX
 DIRS += autocomplete history urlbarhistory download-manager
 endif
 
-ifdef MOZ_ENABLE_XREMOTE
-DIRS		+= xremote
-endif
-
 ifeq ($(OS_ARCH),WINNT)
 DIRS		+= winhooks urlwidget alerts
 endif
@@ -78,6 +74,10 @@ DIRS    = \
 
 ifeq ($(OS_ARCH),WINNT)
 DIRS    += alerts winhooks
+endif
+
+ifdef MOZ_ENABLE_XREMOTE
+DIRS		+= xremote
 endif
 
 DIRS    += build2

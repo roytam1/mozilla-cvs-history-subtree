@@ -92,21 +92,13 @@ include $(topsrcdir)/config/config.mk
 ## subsytem
 
 ifndef MOZ_DEBUG
-OS_LIBS += /SUBSYSTEM:WINDOWS
+WIN32_EXE_LDFLAGS += /SUBSYSTEM:WINDOWS
 endif
 
 ifeq ($(OS_ARCH),WINNT)
 OS_LIBS += comctl32.lib comdlg32.lib uuid.lib shell32.lib ole32.lib oleaut32.lib version.lib winspool.lib
 RCINCLUDE = splash.rc
 RCFLAGS += -DMOZ_MINOTAUR -I$(srcdir)
-endif
-
-ifndef MOZ_WINCONSOLE
-ifdef MOZ_DEBUG
-MOZ_WINCONSOLE = 1
-else
-MOZ_WINCONSOLE = 0
-endif
 endif
 
 include $(topsrcdir)/config/rules.mk
@@ -125,3 +117,19 @@ libs:: $(DESKTOP_ICONS)
 
 install:: $(DESKTOP_ICONS)
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/chrome/icons/default
+
+ifneq (,$(filter-out OS2 WINNT Darwin,$(OS_ARCH)))
+minotaur:: mozilla.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
+	cat $< | sed -e "s|%MOZAPPDIR%|$(mozappdir)|" \
+		-e "s|%MREDIR%|$(mredir)|" \
+		-e "s|mozilla-bin|$(PROGRAM)|g" > $@
+	chmod +x $@
+
+libs:: minotaur
+	$(INSTALL) $< $(DIST)/bin
+
+install:: minotaur
+	$(SYSINSTALL) $< $(DESTDIR)$(bindir)
+
+GARBAGE += minotaur
+endif
