@@ -640,26 +640,18 @@ nsBox::GetBorder(nsMargin& aMargin)
   const nsStyleDisplay* disp = frame->GetStyleDisplay();
   if (disp->mAppearance && gTheme) {
     // Go to the theme for the border.
-    nsIContent* content = frame->GetContent();
-    if (content) {
-      nsCOMPtr<nsIDocument> doc = content->GetDocument();
-      if (doc) {
-        nsIPresShell *shell = doc->GetShellAt(0);
-        nsCOMPtr<nsIPresContext> context;
-        shell->GetPresContext(getter_AddRefs(context));
-        if (gTheme->ThemeSupportsWidget(context, frame, disp->mAppearance)) {
-          nsMargin margin(0,0,0,0);
-          gTheme->GetWidgetBorder(context->DeviceContext(), frame, 
-                                  disp->mAppearance, &margin);
-          float p2t;
-          context->GetScaledPixelsToTwips(&p2t);
-          aMargin.top = NSIntPixelsToTwips(margin.top, p2t);
-          aMargin.right = NSIntPixelsToTwips(margin.right, p2t);
-          aMargin.bottom = NSIntPixelsToTwips(margin.bottom, p2t);
-          aMargin.left = NSIntPixelsToTwips(margin.left, p2t);
-          return NS_OK;
-        }
-      }
+    nsIPresContext *context = frame->GetPresContext();
+    if (gTheme->ThemeSupportsWidget(context, frame, disp->mAppearance)) {
+      nsMargin margin(0,0,0,0);
+      gTheme->GetWidgetBorder(context->DeviceContext(), frame, 
+                              disp->mAppearance, &margin);
+      float p2t;
+      context->GetScaledPixelsToTwips(&p2t);
+      aMargin.top = NSIntPixelsToTwips(margin.top, p2t);
+      aMargin.right = NSIntPixelsToTwips(margin.right, p2t);
+      aMargin.bottom = NSIntPixelsToTwips(margin.bottom, p2t);
+      aMargin.left = NSIntPixelsToTwips(margin.left, p2t);
+      return NS_OK;
     }
   }
 
@@ -673,6 +665,29 @@ nsBox::GetPadding(nsMargin& aMargin)
 {
   nsIFrame* frame = nsnull;
   GetFrame(&frame);
+
+  const nsStyleDisplay* disp = frame->GetStyleDisplay();
+  if (disp->mAppearance && gTheme) {
+    // Go to the theme for the padding.
+    nsIPresContext *context = frame->GetPresContext();
+    if (gTheme->ThemeSupportsWidget(context, frame, disp->mAppearance)) {
+      nsMargin margin(0,0,0,0);
+      PRBool useThemePadding;
+
+      useThemePadding = gTheme->GetWidgetPadding(context->DeviceContext(),
+                                                 frame, disp->mAppearance,
+                                                 &margin);
+      if (useThemePadding) {
+        float p2t;
+        context->GetScaledPixelsToTwips(&p2t);
+        aMargin.top = NSIntPixelsToTwips(margin.top, p2t);
+        aMargin.right = NSIntPixelsToTwips(margin.right, p2t);
+        aMargin.bottom = NSIntPixelsToTwips(margin.bottom, p2t);
+        aMargin.left = NSIntPixelsToTwips(margin.left, p2t);
+        return NS_OK;
+      }
+    }
+  }
 
   aMargin.SizeTo(0,0,0,0);
   frame->GetStylePadding()->GetPadding(aMargin);
