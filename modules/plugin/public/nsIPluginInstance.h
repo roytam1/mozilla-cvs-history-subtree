@@ -61,7 +61,7 @@ public:
     // displaying another plugin manager window, causing the page containing 
     // the plugin to become removed from the display).
     //
-    // Release -- called once, before the plugin instance peer is to be 
+    // Destroy -- called once, before the plugin instance peer is to be 
     // destroyed. This method is used to destroy the plugin instance.
 
     NS_IMETHOD_(nsPluginError)
