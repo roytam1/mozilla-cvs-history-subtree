@@ -2198,6 +2198,26 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
   var cmd = document.getElementById("cmd_CustomizeToolbars");
   cmd.removeAttribute("disabled");
 
+  // fix up the personal toolbar folder
+  var bt = document.getElementById("bookmarks-ptf");
+  if (bt) {
+    var btf = BMSVC.getBookmarksToolbarFolder().Value;
+    var btchevron = document.getElementById("bookmarks-chevron");
+    bt.ref = btf;
+    btchevron.ref = btf;
+    // no uniqueness is guaranteed, so we have to remove first
+    try {
+      bt.database.RemoveObserver(BookmarksToolbarRDFObserver);
+      bt.controllers.removeController(BookmarksMenuController);
+    } catch (ex) {
+      // ignore
+    }
+    bt.database.AddObserver(BookmarksToolbarRDFObserver);
+    bt.controllers.appendController(BookmarksMenuController);
+    bt.builder.rebuild();
+    btchevron.builder.rebuild();
+  }
+
   // XXX Shouldn't have to do this, but I do
   window.focus();
 }
