@@ -877,7 +877,7 @@ nsresult nsDiskCacheDevice::getFileForKey(const char* key, PRBool meta,
     		return rv;
         // generate the hash code for this entry, and use that as a file name.
         char name[32];
-        PLDHashNumber hash = ::PL_DHashStringKey(NULL, key);
+        PLDHashNumber hash = nsDiskCacheEntry::Hash(key);
         ::sprintf(name, "%08X%c%02X", hash, (meta ? 'm' : 'd'), generation);
         entryFile->Append(name);
         NS_ADDREF(*result = entryFile);
