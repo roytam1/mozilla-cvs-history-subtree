@@ -174,7 +174,13 @@ js_ReportErrorVA(JSContext *cx, uintN flags, const char *format, va_list ap)
     char *last;
 
     fp = cx->fp;
-    if (fp && fp->script && fp->pc) {
+
+    /* Walk stack until we find a frame that is associated with
+       some script rather than a native frame. */
+    while (fp && (!fp->script || !fp->pc))
+        fp = fp->down;
+
+    if (fp) {
 	report.filename = fp->script->filename;
 	report.lineno = js_PCToLineNumber(fp->script, fp->pc);
 	/* XXX should fetch line somehow */
