@@ -19,10 +19,11 @@
 # Config stuff for HPUX
 #
 
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall -Wno-format
+CC = gcc -Wall -Wno-format -fPIC
+CCC = g++ -Wall -Wno-format -fPIC
 
 RANLIB = echo
+MKSHLIB = $(LD) -b
 
 #.c.o:
 #	$(CC) -c -MD $*.d $(CFLAGS) $<
