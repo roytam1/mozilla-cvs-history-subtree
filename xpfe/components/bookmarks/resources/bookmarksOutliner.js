@@ -107,6 +107,21 @@ nsBookmarksShell.prototype =
     return last.value;
   },
   
+  get selectedIndices()
+  {
+    var selection = this.element.outlinerBoxObject.selection;
+    var rangeCount = selection.getRangeCount();
+    var selnIndices = [];
+    for (var i = 0; i < rangeCount; ++i) {
+      var from = { };
+      var to = { };
+      selection.getRangeAt(i, from, to);
+      for (var k = from.value; k <= to.value; ++k)
+        selnIndices.push(k);
+    }
+    return selnIndices;
+  },
+
   //////////////////////////////////////////////////////////////////////////////
   // Mouse down on outliner. Need to get some mouse coords for use when figuring
   // out where we clicked during context menu creation. 
@@ -206,22 +221,9 @@ nsBookmarksShell.prototype =
     
     var selection = bo.selection;
     
-    // We used to have a check here to see if type was non-null. Do we still
-    // need it? 
-    // var currIndex = selection.currentIndex;
-    // var res = this.outlinerBuilder.getResourceAtIndex(currIndex);
-    
     // Iterate over the ranges in the selection, and push the selected indices
     // onto a flat array. 
-    var rangeCount = selection.getRangeCount();
-    var selnIndices = [];
-    for (var i = 0; i < rangeCount; ++i) {
-      var from = { };
-      var to = { };
-      selection.getRangeAt(i, from, to);
-      for (var k = from.value; k <= to.value; ++k)
-        selnIndices.push(k);
-    }
+    var selnIndices = this.selectedIndices;
       
     var commonCommands = [];
     for (var i = 0; i < selnIndices.length; ++i) {
@@ -439,74 +441,158 @@ nsBookmarksShell.prototype =
     var dialogMsg     = this.getLocaleString("newfolder_dialog_msg");
     var stringValue   = { value: defaultValue };
     if (kPromptSvc.prompt(window, dialogTitle, dialogMsg, stringValue, null, { value: 0 })) {
-      // relativeIndex is the index of the resource that we will create the new
-      // folder adjacent to. 
-      var relativeIndex = this.lastSelectedIndex;
-      var parentIndex = -1;
+      // Find the best place to insert this item. 
+      var insertionPoint = this.getBestCreationIndices();
+      var parent = insertionPoint.parent.resource;
+      var relative = insertionPoint.relative.resource;
+      var relativeIndex = insertionPoint.relative.index;
 
-      var bo = this.element.outlinerBoxObject;
-      var view = bo.view;
-
-      if (view.isContainer(relativeIndex) && view.isContainerOpen(relativeIndex)) {
-        // the selected item is an open container, so we'll append to it rather
-        // than creating adjacent to it. 
-        
-        // To do this, first
-        // 1) Obtain the resource for the relative item
-        var folder = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
-        
-        // 2) Make a container with it
-        const kRDFCtrContractID = "@mozilla.org/rdf/container;1"
-        const kRDFCtrIID = Components.interfaces.nsIRDFContainer;
-        const kRDFCtr = Components.classes[kRDFCtrContractID].getService(kRDFCtrIID);
-        var container = kRDFCtr.Init(this.bookmarksDB, folder);
-
-        // 3) The relative item is the parent. 
-        parentIndex = relativeIndex;
-        
-        // 4) Get the last item in the container. Note that if there's aggregation,
-        //    we'll just use the first _idx we get back. Note also that this sucks,
-        //    and it'd be much nicer if nsIRDFContainer had a method that would
-        //    give back the element at an index. 
-        var ordinalURI = "http://www.w3.org/TR/WD-rdf-syntax#_%idx%";
-        ordinalURI = ordinalURI.replace(/%idx%/, container.GetCount());
-        var ordinal = kRDFSvc.GetResource(ordinalURI);
-        try {
-          var lastItem = this.bookmarksDB.GetTarget(folder, ordinal, true);
-          lastItem = lastItem.QueryInterface(Components.interfaces.nsIRDFResource);
-          relativeIndex = this.outlinerBuilder.getIndexOfResource(lastItem);
-        }
-        catch (e) {
-        }
-      }
-      else {
-        // If the selected item isn't a container or anything interesting like that,
-        // we'll use it as the relative index, and the parent container to create
-        // the new folder in will be its parent. 
-        parentIndex = view.getParentIndex(relativeIndex);
-      }
-      
-      var relative = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
-      var parent = kRDFSvc.GetResource("NC:BookmarksRoot");
-      if (parentIndex >= 0)
-        parent = this.outlinerBuilder.getResourceAtIndex(parentIndex);
-
+      // Create the bookmark    
       var args = [{ property: NC_NS + "parent",
                     resource: parent.Value },
                   { property: NC_NS + "Name",
                     literal:  stringValue.value }];
-      
       BookmarksUtils.doBookmarksCommand(relative.Value, NC_NS_CMD + "newfolder", args);
       
       // Select the newly created folder. 
+      var bo = this.element.outlinerBoxObject;
       bo.selection.select(relativeIndex + 1);
 
       // Ensure that the element we just created is visible.
       bo.ensureRowIsVisible(relativeIndex + 1);
     }
     return; 
-  }
+  },
+  
+  createSeparator: function ()
+  {
+    // Find the best place to insert this item. 
+    var insertionPoint = this.getBestCreationIndices();
+    var parent = insertionPoint.parent.resource;
+    var relative = insertionPoint.relative.resource;
+    var relativeIndex = insertionPoint.relative.index;
 
+    // Create the bookmark    
+    var args = [{ property: NC_NS + "parent", 
+                  resource: parent.Value }];
+    BookmarksUtils.doBookmarksCommand(relative.Value, NC_NS_CMD + "newseparator", args);
+    
+    // Select the newly created folder. 
+    var bo = this.element.outlinerBoxObject;
+    bo.selection.select(relativeIndex + 1);
+
+    // Ensure that the element we just created is visible.
+    bo.ensureRowIsVisible(relativeIndex + 1);
+    
+    bo.view.rowCountChanged(relativeIndex + 1, 1);
+  },
+
+  getBestCreationIndices: function ()
+  {
+    // relativeIndex is the index of the resource that we will create the new
+    // folder adjacent to. 
+    var relativeIndex = this.lastSelectedIndex;
+    var parentIndex = -1;
+
+    var bo = this.element.outlinerBoxObject;
+    var view = bo.view;
+
+    if (view.isContainer(relativeIndex) && view.isContainerOpen(relativeIndex)) {
+      // the selected item is an open container, so we'll append to it rather
+      // than creating adjacent to it. 
+      
+      // To do this, first
+      // 1) Obtain the resource for the relative item
+      var folder = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
+      
+      // 2) Make a container with it
+      const kRDFCtrContractID = "@mozilla.org/rdf/container;1"
+      const kRDFCtrIID = Components.interfaces.nsIRDFContainer;
+      const kRDFCtr = Components.classes[kRDFCtrContractID].getService(kRDFCtrIID);
+      var container = kRDFCtr.Init(this.bookmarksDB, folder);
+
+      // 3) The relative item is the parent. 
+      parentIndex = relativeIndex;
+      
+      // 4) Get the last item in the container. Note that if there's aggregation,
+      //    we'll just use the first _idx we get back. Note also that this sucks,
+      //    and it'd be much nicer if nsIRDFContainer had a method that would
+      //    give back the element at an index. 
+      var ordinalURI = "http://www.w3.org/TR/WD-rdf-syntax#_%idx%";
+      ordinalURI = ordinalURI.replace(/%idx%/, container.GetCount());
+      var ordinal = kRDFSvc.GetResource(ordinalURI);
+      try {
+        var lastItem = this.bookmarksDB.GetTarget(folder, ordinal, true);
+        lastItem = lastItem.QueryInterface(Components.interfaces.nsIRDFResource);
+        relativeIndex = this.outlinerBuilder.getIndexOfResource(lastItem);
+      }
+      catch (e) {
+      }
+    }
+    else {
+      // If the selected item isn't a container or anything interesting like that,
+      // we'll use it as the relative index, and the parent container to create
+      // the new folder in will be its parent. 
+      parentIndex = view.getParentIndex(relativeIndex);
+    }
+
+    var relative = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
+    var parent = kRDFSvc.GetResource("NC:BookmarksRoot");
+    if (parentIndex >= 0)
+      parent = this.outlinerBuilder.getResourceAtIndex(parentIndex);
+    return { relative: { resource: relative, index: relativeIndex },
+             parent  : { resource: parent,   index: parentIndex } };
+  },
+  
+  deleteSelection: function ()
+  {
+    const kRDFCContractID = "@mozilla.org/rdf/container;1";
+    const kRDFCIID = Components.interfaces.nsIRDFContainer;
+    const ksRDFC = Components.classes[kRDFCContractID].getService(kRDFCIID);
+
+    var bo = this.element.outlinerBoxObject;
+    
+    // To get the complete selection in the outliner, we need to visit each
+    // of the ranges and fill a scratch array of the indices covered by each
+    // range. 
+    var selnIndices = this.selectedIndices;
+    
+    var nextElement;
+    var count = 0;
+    
+    for (var i = 0; i < selnIndices.length; ++i) {
+      var currentIndex  = selnIndices[i];
+      var parentIndex   = bo.view.getParentIndex(selnIndices[i]);
+      var current       = this.outlinerBuilder.getResourceAtIndex(currentIndex);
+      var parent        = kRDFSvc.GetResource("NC:BookmarksRoot");
+      if (parentIndex >= 0) 
+        parent          = this.outlinerBuilder.getResourceAtIndex(parentIndex);
+      
+      // Prevent the removal of some 'special' nodes
+      if (current.Value == "NC:BookmarksRoot")
+        continue;
+
+      // If the current bookmark is the IE Favorites folder, we have a little
+      // extra work to do - set the pref |browser.bookmarks.import_system_favorites|
+      // to ensure that we don't re-import next time. 
+      if (this.resolveType(current) == NC_NS + "IEFavoriteFolder") {
+        const kPrefSvcContractID = "@mozilla.org/preferences;1";
+        const kPrefSvcIID = Components.interfaces.nsIPref;
+        const kPrefSvc = Components.classes[kPrefSvcContractID].getService(kPrefSvcIID);
+        kPrefSvc.SetBoolPref("browser.bookmarks.import_system_favorites", false);
+      }
+        
+      ksRDFC.Init(this.bookmarksDB, parent);
+      ksRDFC.RemoveElement(current, true);
+      
+      // XXX We can do better than this... later. 
+      bo.rowCountChanged(currentIndex, 1);
+    }
+    
+    // XXX - need to determine the correct policy for selecting items. 
+    this.element.focus();
+  },  
+  
 }
 
 function CommandArrayEnumerator (aCommandArray)
@@ -611,10 +697,12 @@ nsBookmarksOutlinerController.prototype =
       // that it is possible to create an item as a child of some immutable folders
       // like IE Favorites, but it will do for now. 
       return true;
+    case "cmd_bm_delete":
+      var boxObject = this.shell.element.outlinerBoxObject;
+      return boxObject.selection.count >= 1;
     case "cmd_bm_cut":
     case "cmd_bm_copy":
     case "cmd_bm_paste":
-    case "cmd_bm_delete":
     case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":
@@ -660,13 +748,14 @@ nsBookmarksOutlinerController.prototype =
     case "cmd_bm_newbookmark":
       return true;
     case "cmd_bm_newfolder":
-      this.shell.createFolder();
-      return true;
+      return this.shell.createFolder();
     case "cmd_bm_newseparator":
+      return this.shell.createSeparator();
+    case "cmd_bm_delete":
+      return this.shell.deleteSelection();
     case "cmd_bm_cut":
     case "cmd_bm_copy":
     case "cmd_bm_paste":
-    case "cmd_bm_delete":
     case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
     case "cmd_bm_rename":

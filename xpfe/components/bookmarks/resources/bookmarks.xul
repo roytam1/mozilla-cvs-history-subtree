@@ -257,16 +257,21 @@
                   onclick="gBookmarksShell.bodyClicked(event);"
                   onmousedown="gBookmarksShell.bodyMouseDown(event);">
       <template>
-        <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading">
-          <outlinercell ref="Name"
-                        label="rdf:http://home.netscape.com/NC-rdf#Name" />
-          <outlinercell ref="URL"
-                        label="rdf:http://home.netscape.com/NC-rdf#URL" />
-          <outlinercell ref="AddDate"
-                        label="rdf:http://home.netscape.com/NC-rdf#BookmarkAddDate" />
-          <outlinercell ref="LastModDate"
-                        label="rdf:http://home.netscape.com/NC-rdf#LastModifiedDate" />
-        </outlinerrow>
+        <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
+          <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator"/>
+        </rule>
+        <rule>
+          <outlinerrow uri="rdf:*" properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading">
+            <outlinercell ref="Name"
+                          label="rdf:http://home.netscape.com/NC-rdf#Name" />
+            <outlinercell ref="URL"
+                          label="rdf:http://home.netscape.com/NC-rdf#URL" />
+            <outlinercell ref="AddDate"
+                          label="rdf:http://home.netscape.com/NC-rdf#BookmarkAddDate" />
+            <outlinercell ref="LastModDate"
+                          label="rdf:http://home.netscape.com/NC-rdf#LastModifiedDate" />
+          </outlinerrow>
+        </rule>
       </template>
     </outlinerbody>
   </outliner>
