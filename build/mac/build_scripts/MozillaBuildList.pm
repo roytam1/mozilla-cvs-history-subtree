@@ -1485,6 +1485,9 @@ sub BuildSecurityProjects()
     if($main::options{psm2}) {
     	BuildOneProject(":mozilla:security:manager:ssl:macbuild:PIPNSS.mcp", "PIPNSS$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     	BuildOneProject(":mozilla:security:manager:pki:macbuild:PIPPKI.mcp", "PIPPKI$D.$S", 1, $main::ALIAS_SYM_FILES, 1); 
+    	if ($main::options{static_build}) {
+            BuildOneProject(":mozilla:modules:staticmod:macbuild:cryptoComponent.mcp",    "MetaCrypto$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+        }
     } else {
     	BuildOneProject(":mozilla:security:psm:lib:macbuild:PSMClient.mcp","PSMClient$D.o", 0, 0, 0);
     	BuildOneProject(":mozilla:security:psm:lib:macbuild:PSMProtocol.mcp","PSMProtocol$D.o", 0, 0, 0); 
@@ -1525,7 +1528,7 @@ sub BuildSecurityProjects()
 
 	# NSS doesn't properly load the shared library created above if it's an alias, so we'll just copy it so that
 	# all builds will just work.  It's 140K optimized and 164K debug so it's not too much disk space.
-	copy(":mozilla:security:nss:macbuild:NSSckbi$D.$S",$dist_dir."Essential Files:NSSckbi$D.shlb");
+	copy(":mozilla:security:nss:macbuild:NSSckbi$D.shlb",$dist_dir."Essential Files:NSSckbi$D.shlb");
 	
     EndBuildModule("security");
 } # Security
@@ -1982,6 +1985,10 @@ sub BuildMailNewsProjects()
     BuildOneProject(":mozilla:mailnews:import:text:macbuild:msgImportText.mcp",         "msgImportText$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:mailnews:import:eudora:macbuild:msgImportEudora.mcp",     "msgImportEudora$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
              
+    if ($main::options{static_build}) {
+        BuildOneProject(":mozilla:modules:staticmod:macbuild:mailnewsComponent.mcp",  "MetaMailNews$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    }
+
     InstallResources(":mozilla:mailnews:addrbook:src:MANIFEST_COMPONENTS",              "${dist_dir}Components");
 
     EndBuildModule("mailnews");
