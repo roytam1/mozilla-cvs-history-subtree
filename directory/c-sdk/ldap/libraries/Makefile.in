@@ -26,7 +26,11 @@ topsrcdir = @top_srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
-DIRS		= liblber libldif libiutil libldap libprldap libssldap
+DIRS		= liblber libldif libiutil libldap libprldap
+
+ifdef USE_NSS
+DIRS		+= libssldap
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 DIRS		+= libutil

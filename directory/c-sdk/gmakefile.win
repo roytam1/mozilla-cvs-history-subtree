@@ -54,7 +54,8 @@ LDAP_CONFIGURE := ../configure \
 		--with-mozilla \
 		--with-dist-prefix=$(MOZ_DIST_FLIPPED) \
 		--with-dist-bindir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/bin \
-		--with-dist-libdir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/lib
+		--with-dist-libdir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/lib \
+		--without-nss
 
 ifeq (,$(MOZ_DEBUG)$(MOZ_TRACE_MALLOC))
 LDAP_CONFIGURE := $(LDAP_CONFIGURE) --enable-optimize --disable-debug
