@@ -243,13 +243,21 @@ nsReflowTree::MergeCommand(nsHTMLReflowCommand *command, nsReflowType type)
     return n;
 }
 
+// Construct the reflow path by walking up the through the frames'
+// parent chain until we reach either a `reflow root' or the root
+// frame in the frame hierarchy.
+
 nsReflowTree::Node *
 nsReflowTree::AddToTree(nsIFrame *frame)
 {
     nsIFrame *parent;
-    frame->GetParent(&parent);
+    nsFrameState state;
 
-    if (!parent) {
+    frame->GetFrameState(&state);
+
+    if ((state & NS_FRAME_REFLOW_ROOT) ||
+        (frame->GetParent(&parent), parent == nsnull)) {
+
         // no root so far, this is the one.
         if (!mRoot)
             return mRoot = Node::Create(frame);
@@ -414,6 +422,7 @@ nsReflowTree::FrameIsTarget(const nsIFrame *frame)
     return entry && PL_DHASH_ENTRY_IS_BUSY(entry);
 }
 
+#ifdef NS_DEBUG
 void
 nsReflowTree::Node::Dump(FILE *f, int depth)
 {
@@ -489,3 +498,4 @@ nsReflowTree::Dump()
         TREE_FRAME_DUMP(NS_FRAME_TRACE_TREE,mRoot->Dump(f,0));
     }
 }
+#endif

@@ -206,8 +206,6 @@ protected:
    */
   nsresult BuildPath();
 
-  nsIFrame* GetContainingBlock(nsIFrame* aFloater) const;
-
 private:
   nsReflowType    mType;
   nsIFrame*       mTargetFrame;

@@ -664,8 +664,6 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
                       aReflowState.availableHeight));
 
   nsIFrame* kidFrame = mFrames.FirstChild();
-  nsIFrame* targetFrame;
-  nsIFrame* nextFrame;
   nsresult rv = NS_OK;
 
   nsRect oldKidBounds;
@@ -713,7 +711,7 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
     return rv;  // traditionally this returned if it was a target
   }
   // we aren't the target, or we are but we also have a targetted child
-  NS_ASSERTION(childFrame == kidFrame, "Reflow ScrollFrame - wrong child");
+  NS_ASSERTION(!childFrame || childFrame == kidFrame, "Reflow ScrollFrame - wrong child");
 
   // Calculate the amount of space needed for borders
   nsMargin border;

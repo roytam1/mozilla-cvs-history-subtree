@@ -358,7 +358,8 @@ nsBoxLayoutState::GetBoxForFrame(nsIFrame* aFrame, PRBool& aIsAdaptor)
     nsIFrame* parent = nsnull;
     aFrame->GetParent(&parent);
     nsIBox* parentBox = nsnull;
-    if (NS_FAILED(parent->QueryInterface(NS_GET_IID(nsIBox), (void**)&parentBox))) 
+    if (!parent ||
+        NS_FAILED(parent->QueryInterface(NS_GET_IID(nsIBox), (void**)&parentBox))) 
        return nsnull;
 
     if (parentBox) {

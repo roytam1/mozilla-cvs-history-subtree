@@ -46,7 +46,7 @@
 #include "nsHTMLIIDs.h"
 #include "nsFrame.h"
 #include "nsContainerFrame.h"
-
+#include "nsLayoutAtoms.h"
 
 nsresult
 NS_NewHTMLReflowCommand(nsHTMLReflowCommand**           aInstancePtrResult,
@@ -145,35 +145,22 @@ nsHTMLReflowCommand::~nsHTMLReflowCommand()
   NS_IF_RELEASE(mListName);
 }
 
-nsIFrame* nsHTMLReflowCommand::GetContainingBlock(nsIFrame* aFloater) const
-{
-  nsIFrame* containingBlock;
-  aFloater->GetParent(&containingBlock);
-  return containingBlock;
-}
-
 nsresult nsHTMLReflowCommand::BuildPath()
 {
 
   if (mPath.Count() != 0)
     return NS_OK; // already built
 
-  // Floating frames are handled differently. The path goes from the target
-  // frame to the containing block, and then up the hierarchy
-  const nsStyleDisplay* display;
-  mTargetFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
-  if (NS_STYLE_FLOAT_NONE != display->mFloats) {
-    mPath.AppendElement((void*)mTargetFrame);
+  // Construct the reflow path by walking up the through the frames'
+  // parent chain until we reach either a `reflow root' or the root
+  // frame in the frame hierarchy.
+  nsIFrame *f = mTargetFrame;
+  nsFrameState state;
+  do {
+    mPath.AppendElement(f);
+    f->GetFrameState(&state);
+  } while (!(state & NS_FRAME_REFLOW_ROOT) && (f->GetParent(&f), f != nsnull));
 
-    for (nsIFrame* f = GetContainingBlock(mTargetFrame); nsnull != f; f->GetParent(&f)) {
-      mPath.AppendElement((void*)f);
-    }
-
-  } else {
-    for (nsIFrame* f = mTargetFrame; nsnull != f; f->GetParent(&f)) {
-      mPath.AppendElement((void*)f);
-    }
-  }
 #ifdef DEBUG_jesup
   if (mPath.Count() == 0)
     gReflowsZero++;
@@ -192,42 +179,54 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
                               const nsSize&        aMaxSize,
                               nsIRenderingContext& aRendContext)
 {
-  // Build the path from the target frame (index 0) to the root frame
+  // Build the path from the target frame (index 0)
   BuildPath();
 
-  // Send an incremental reflow notification to the root frame
-  nsIFrame* root = (nsIFrame*)mPath[mPath.Count() - 1];
+  // Send an incremental reflow notification to the first frame in the
+  // path.
+  nsIFrame* first = (nsIFrame*)mPath[mPath.Count() - 1];
 
-#ifdef NS_DEBUG
   nsCOMPtr<nsIPresShell> shell;
   if (aPresContext)
     aPresContext->GetShell(getter_AddRefs(shell));
-  if (shell) {
-    nsIFrame* rootFrame;
-    shell->GetRootFrame(&rootFrame);
-    NS_ASSERTION(rootFrame == root, "bad root frame");
-  }
-#endif
 
-  if (nsnull != root) {    
+  nsIFrame* root;
+  shell->GetRootFrame(&root);
 
+  first->WillReflow(aPresContext);
+  nsContainerFrame::PositionFrameView(aPresContext, first);
 
-    nsHTMLReflowState reflowState(aPresContext, root, *this,
-                                  &aRendContext, aMaxSize);
-    nsReflowStatus    status;
+  // If the first frame in the path is the root of the frame
+  // hierarchy, then use all the available space. If it's simply a
+  // `reflow root', then use the first frame's size as the available
+  // space.
+  nsSize size;
+  if (first == root)
+    size = aMaxSize;
+  else
+    first->GetSize(size);
 
-    root->WillReflow(aPresContext);
-    nsContainerFrame::PositionFrameView(aPresContext, root);
-    root->Reflow(aPresContext, aDesiredSize, reflowState, status);
-    root->SizeTo(aPresContext, aDesiredSize.width, aDesiredSize.height);
-    nsIView* view;
-    root->GetView(aPresContext, &view);
-    if (view) {
-      nsContainerFrame::SyncFrameViewAfterReflow(aPresContext, root, view,
-                                                 nsnull);
-    }
-    root->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
-  }
+  nsHTMLReflowState reflowState(aPresContext, first, *this,
+                                &aRendContext, size);
+
+  nsReflowStatus status;
+  first->Reflow(aPresContext, aDesiredSize, reflowState, status);
+
+  // If an incremental reflow is initiated at a frame other than the
+  // root frame, then its desired size had better not change!
+  NS_ASSERTION(first == root ||
+               (aDesiredSize.width == size.width && aDesiredSize.height == size.height),
+               "non-root frame's desired size changed during an incremental reflow");
+
+  first->SizeTo(aPresContext, aDesiredSize.width, aDesiredSize.height);
+
+  nsIView* view;
+  first->GetView(aPresContext, &view);
+  if (view)
+    nsContainerFrame::SyncFrameViewAfterReflow(aPresContext, first, view, nsnull);
+
+  first->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
+
   mPath.Clear();
 
   return NS_OK;
@@ -327,17 +326,8 @@ nsHTMLReflowCommand::List(FILE* out) const
   // Show the path, but without using mPath which is in an undefined
   // state at this point.
   if (mTargetFrame) {
-    // Floating frames are handled differently. The path goes from the target
-    // frame to the containing block, and then up the hierarchy
     PRBool didOne = PR_FALSE;
-    nsIFrame* start = mTargetFrame;
-    const nsStyleDisplay* display;
-    mTargetFrame->GetStyleData(eStyleStruct_Display,
-                               (const nsStyleStruct*&) display);
-    if (NS_STYLE_FLOAT_NONE != display->mFloats) {
-      start = GetContainingBlock(mTargetFrame);
-    }
-    for (nsIFrame* f = start; nsnull != f; f->GetParent(&f)) {
+    for (nsIFrame* f = mTargetFrame; nsnull != f; f->GetParent(&f)) {
       if (f != mTargetFrame) {
         fprintf(out, " ");
         nsFrame::ListTag(out, f);

@@ -306,6 +306,11 @@ protected:
                                        line_iterator &aLine,
                                        nsIFrame *aPrevInFlow);
 
+  /** Support method to recurse down the tree, retargetting frames
+    */
+  void ResetInlineReflowTree(nsReflowTree::Node::Iterator aReflowIterator,
+                             PRInt32 aLineCount);
+
   /** set up the conditions necessary for an resize reflow
     * the primary task is to mark the minimumly sufficient lines dirty. 
     */

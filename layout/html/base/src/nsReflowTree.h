@@ -136,7 +136,9 @@ public:
 
         void MakeTarget();
         PRBool IsTarget() { return mFlags & NODE_IS_TARGET; }
+#ifdef NS_DEBUG
         void Dump(FILE *f, int depth);
+#endif
                 
     private:
         Node() { }

@@ -6409,7 +6409,9 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
       curr->SetReflowTree(&tree);
       curr->SetCurrentReflowNode(tree.Root());
+#ifdef NS_DEBUG
       tree.Dump();
+#endif
 
       // removes the command when done
       ProcessReflowCommand(mReflowCommands, aInterruptible, desiredSize, maxSize, *rcx);
@@ -6467,7 +6469,9 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
         curr->SetReflowTree(&tree);
         curr->SetCurrentReflowNode(tree.Root());
+#ifdef NS_DEBUG
         tree.Dump();
+#endif
 
         // removes the command when done
         ProcessReflowCommand(mTimeoutReflowCommands, PR_TRUE, desiredSize, maxSize, *rcx);

@@ -840,9 +840,6 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         // Now reflow...
         rv = ReflowDirty(state,aReflowState,aStatus);
         if (NS_FAILED(rv)) return rv;
-
-        // reset state for the next line
-        state.SetFlag(BRS_ISINLINEINCRREFLOW, PR_FALSE);
       }
 
       // set reflow state for child
@@ -945,9 +942,9 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   
   // If this is an incremental reflow and we changed size, then make sure our
   // border is repainted if necessary
-  //
-  // XXXwaterson are we sure we can skip this if !amTarget?
-  if (amTarget || eReflowReason_Dirty == aReflowState.reason) {
+  // XXXrjesup Do we need to check amTarget here?
+  if ((eReflowReason_Incremental == aReflowState.reason) ||
+       (eReflowReason_Dirty == aReflowState.reason)) {
     if (isStyleChange) {
       // This is only true if it's a style change reflow targeted at this
       // frame (rather than an ancestor) (I think).  That seems to be
@@ -1031,9 +1028,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   // child frames that need to be reflowed, e.g., elements with a percentage
   // based width/height
   //
-  // XXXwaterson are we sure we can skip this if !amTarget?
-  if (NS_SUCCEEDED(rv) && mAbsoluteContainer.HasAbsoluteFrames()
-      && amTarget) {
+  // XXXrjesup can we skip this if !amTarget?
+  if (NS_SUCCEEDED(rv) && mAbsoluteContainer.HasAbsoluteFrames()) {
     nscoord containingBlockWidth;
     nscoord containingBlockHeight;
     nsRect  childBounds;
@@ -1576,7 +1572,8 @@ nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
   // Determine the line being impacted
   PRBool isFloater;
   line_iterator line;
-  // mNextRCFrame is the child in the reflow tree of the current block.
+  // mNextRCFrame is the child in the reflow tree of the current block
+  // that we're preparing for reflow
   FindLineFor(aState.mNextRCFrame, &isFloater, &line);
   if (line == end_lines()) {
     // This assertion actually fires on lots of pages
@@ -1587,7 +1584,7 @@ nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
     // it has something to do with the interaction of the unconstrained
     // reflow in multi-pass reflow with the reflow command's chain, but
     // I don't remember the details.
-#if defined(DEBUG_dbaron) || defined(DEBUG_waterson)
+#if defined(DEBUG_dbaron) || defined(DEBUG_waterson) || defined(DEBUG_jesup)
     NS_NOTREACHED("We don't have a line for the target of the reflow.  "
                   "Being inefficient");
 #endif
@@ -1602,8 +1599,6 @@ nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
   }
 
   if (line->IsInline()) {
-    aState.SetFlag(BRS_ISINLINEINCRREFLOW, PR_TRUE);
-
     if (aState.GetFlag(BRS_COMPUTEMAXWIDTH)) {
       // We've been asked to compute the maximum width of the block
       // frame, which ReflowLine() will handle this by performing an
@@ -1634,6 +1629,38 @@ nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
   line->MarkDirty();
 
   return NS_OK;
+}
+
+void
+nsBlockFrame::ResetInlineReflowTree(nsReflowTree::Node::Iterator aReflowIterator,
+                                    PRInt32 aLineCount)
+{
+  nsIFrame *frame;
+
+  while (aReflowIterator.NextChild(&frame))
+  {
+    // Stop if we encounter a non-inline frame in the reflow path.
+    const nsStyleDisplay *display;
+    ::GetStyleData(frame, &display);
+
+    if (NS_STYLE_DISPLAY_INLINE != display->mDisplay)
+      break;
+
+    // Walk back to the primary frame.
+    PRInt32 count = aLineCount;
+    nsIFrame *prevInFlow;
+    do {
+      frame->GetPrevInFlow(&prevInFlow);
+    } while (--count >= 0 && prevInFlow && (frame = prevInFlow));
+
+    // modify the tree to match the retargeting we're doing.
+    aReflowIterator.CurrentNode()->SetFrame(frame);
+    // XXX fix? stack usage?  Not a lot...
+    nsReflowTree::Node::Iterator reflowIterator(aReflowIterator.CurrentNode());
+
+    // recurse
+    ResetInlineReflowTree(reflowIterator,aLineCount);
+  }
 }
 
 void
@@ -1687,41 +1714,15 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
     // XXX? should we start with the children of this node, or the node itself?
     // Let's try starting with the node...
 
-    nsIFrame *frame;
     if (reflowNode.CurrentNode())
     {
       // modify the tree to match the retargeting we're doing.
       // This might not be necessary, but probably better to be safe and
       // keep the structures in sync.
       reflowNode.CurrentNode()->SetFrame(aState.mNextRCFrame);
-      reflowNode = reflowNode.NextChild(&frame);
     }
 
-    while (reflowNode.CurrentNode())
-    {
-      // 'frame' is set already
-      // Stop if we encounter a non-inline frame in the reflow path.
-      const nsStyleDisplay *display;
-      ::GetStyleData(frame, &display);
-
-      if (NS_STYLE_DISPLAY_INLINE != display->mDisplay)
-        break;
-
-      // Walk back to the primary frame.
-      PRInt32 count = lineCount;
-      nsIFrame *prevInFlow;
-      do {
-        frame->GetPrevInFlow(&prevInFlow);
-      } while (--count >= 0 && prevInFlow && (frame = prevInFlow));
-
-      // modify the tree to match the retargeting we're doing.
-      reflowNode.CurrentNode()->SetFrame(frame);
-      nsReflowTree::Node::Iterator reflowIterator(reflowNode.CurrentNode());
-      // FIX!!! this doesn't walk more than one branch of the tree!
-      // THIS WILL NOT WORK for release!  We'll need to walk the tree, which
-      // requires recursion or a stack or extra state in the nodes.
-      reflowNode = reflowIterator.NextChild(&frame);
-    }
+    ResetInlineReflowTree(reflowNode,lineCount);
   }
 }
 
@@ -2172,26 +2173,22 @@ nsBlockFrame::ReflowDirty(nsBlockReflowState& aState,
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
 
-  if (!aState.GetFlag(BRS_ISINLINEINCRREFLOW)) {
-    // XXXwaterson are we sure we don't need to do this work if BRS_ISINLINEINCRREFLOW?
-    // XXXrjesup Do we have to do anything with aStatus now that we call this
-    // multiple times?
-    aStatus = aState.mReflowStatus;
-    if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
-      if (NS_STYLE_OVERFLOW_HIDDEN == aReflowState.mStyleDisplay->mOverflow) {
-        aStatus = NS_FRAME_COMPLETE;
-      }
-      else {
-#ifdef DEBUG_kipp
-        ListTag(stdout); printf(": block is not complete\n");
-#endif
-      }
+  // XXXrjesup Do we have to do anything with aStatus now that we call this
+  // multiple times?
+  aStatus = aState.mReflowStatus;
+  if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
+    if (NS_STYLE_OVERFLOW_HIDDEN == aReflowState.mStyleDisplay->mOverflow) {
+      aStatus = NS_FRAME_COMPLETE;
     }
-    
-    // XXX_perf get rid of this!  This is one of the things that makes
-    // incremental reflow O(N^2).
-    BuildFloaterList();
+    else {
+#ifdef DEBUG_kipp
+      ListTag(stdout); printf(": block is not complete\n");
+#endif
+    }
   }
+  // XXX_perf get rid of this!  This is one of the things that makes
+  // incremental reflow O(N^2).
+  BuildFloaterList();
 
   return rv;
 }
@@ -2213,9 +2210,8 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
       aState.mReflowState.reflowCommand->GetType(type);
       IndentBy(stdout, gNoiseIndent);
       ListTag(stdout);
-      printf(": incrementally reflowing dirty lines: type=%s(%d) isInline=%s",
-             kReflowCommandType[type], type,
-             aState.GetFlag(BRS_ISINLINEINCRREFLOW) ? "true" : "false");
+      printf(": incrementally reflowing dirty lines: type=%s(%d)",
+             kReflowCommandType[type], type);
     }
     else {
       IndentBy(stdout, gNoiseIndent);
@@ -3285,6 +3281,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
     Invalidate(aState.mPresContext, mRect);
   }
 
+  // frame is aLine->mFirstChild
   if (frame == aState.mNextRCFrame) {
     // NULL out mNextRCFrame so if we reflow it again we don't think it's still
     // an incremental reflow
