@@ -2728,11 +2728,11 @@ JS_ClearPendingException(JSContext *cx)
 }
 
 #if JS_HAS_EXCEPTIONS
-typedef struct JSExceptionState 
+struct JSExceptionState 
 {
     JSBool throwing; 
     jsval  exception;
-} JSExceptionState;
+};
 #endif
 
 JS_PUBLIC_API(JSExceptionState *)
