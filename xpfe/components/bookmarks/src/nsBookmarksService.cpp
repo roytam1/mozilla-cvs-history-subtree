@@ -3098,30 +3098,39 @@ nsBookmarksService::ResolveKeyword(const PRUnichar *aUserInput, char **aShortcut
     if (! aShortcutURL)
         return NS_ERROR_NULL_POINTER;
 
-    nsresult rv;
-
-    // shortcuts are always lowercased internally
-    nsAutoString        shortcut(aUserInput);
+    // Shortcuts are always lowercased internally.
+    nsAutoString shortcut(aUserInput);
     ToLowerCase(shortcut);
 
     nsCOMPtr<nsIRDFLiteral> literalTarget;
-    rv = gRDF->GetLiteral(shortcut.get(), getter_AddRefs(literalTarget));
-    if (NS_FAILED(rv)) return rv;
+    nsresult rv = gRDF->GetLiteral(shortcut.get(),
+                                   getter_AddRefs(literalTarget));
+    if (NS_FAILED(rv))
+        return rv;
 
-    if (rv != NS_RDF_NO_VALUE)
-    {
-        nsCOMPtr<nsIRDFResource> source;
-        rv = GetSource(kNC_ShortcutURL, literalTarget,
-                   PR_TRUE, getter_AddRefs(source));
+    nsCOMPtr<nsIRDFResource> source;
+    rv = GetSource(kNC_ShortcutURL, literalTarget, PR_TRUE,
+                   getter_AddRefs(source));
+    if (NS_FAILED(rv))
+        return rv;
 
-        if (NS_FAILED(rv)) return rv;
+    if (source) {
+        nsCOMPtr<nsIRDFNode> node;
+        rv = GetTarget(source, kNC_URL, PR_TRUE, getter_AddRefs(node));
+        if (NS_FAILED(rv))
+           return rv;
 
-        if (rv != NS_RDF_NO_VALUE)
-        {
-            rv = source->GetValue(aShortcutURL);
-            if (NS_FAILED(rv)) return rv;
+        if (node) {
+            nsCOMPtr<nsIRDFLiteral> url = do_QueryInterface(node);
+            if (url) {
+                const PRUnichar* value;
+                rv = url->GetValueConst(&value);
+                if (NS_FAILED(rv))
+                    return rv;
 
-            return NS_OK;
+                *aShortcutURL = ToNewUTF8String(nsDependentString(value));
+                return NS_OK;
+            }
         }
     }
 
