@@ -21,6 +21,8 @@
 #include "net.h"
 #include "mktrace.h"
 
+#include "nsIProtocolConnection.h"
+
 /* XXX: Legacy definitions... */
 MWContext *new_stub_context();
 void free_stub_context(MWContext *window_id);
@@ -30,6 +32,9 @@ extern "C" {
 extern char *XP_AppCodeName;
 extern char *XP_AppVersion;
 };
+
+static NS_DEFINE_IID(kIProtocolConnectionIID,  NS_IPROTOCOLCONNECTION_IID);
+
 
 
 nsNetlibService::nsNetlibService()
@@ -71,6 +76,8 @@ NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl,
 {
     URL_Struct *URL_s;
     nsConnectionInfo *pConn;
+    nsIProtocolConnection *pProtocol;
+    nsresult result;
 
     if ((NULL == aConsumer) || (NULL == aUrl)) {
         return NS_FALSE;
@@ -106,6 +113,18 @@ NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl,
      */
     URL_s->fe_data = pConn;
 
+    /*
+     * Give the protocol a chance to initialize any URL_Struct fields...
+     *
+     * XXX:  Currently the return value form InitializeURLInfo(...) is 
+     *       ignored...  Should the connection abort if it fails?
+     */
+     result = aUrl->QueryInterface(kIProtocolConnectionIID, (void**)&pProtocol);
+     if (NS_OK == result) {
+         pProtocol->InitializeURLInfo(URL_s);
+         NS_RELEASE(pProtocol);
+     }
+
     /* Start the URL load... */
     NET_GetURL (URL_s,                      /* URL_Struct      */
                 FO_CACHE_AND_PRESENT,       /* FO_Present_type */
@@ -125,6 +144,9 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(nsIURL *aUrl,
     URL_Struct *URL_s;
     nsConnectionInfo *pConn;
     nsNetlibStream *pBlockingStream;
+    nsIProtocolConnection *pProtocol;
+    nsresult result;
+
 
     if (NULL == aNewStream) {
         return NS_FALSE;
@@ -173,6 +195,18 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(nsIURL *aUrl,
          * necessary.
          */
         URL_s->fe_data = pConn;
+
+        /*
+         * Give the protocol a chance to initialize any URL_Struct fields...
+         *
+         * XXX:  Currently the return value form InitializeURLInfo(...) is 
+         *       ignored...  Should the connection abort if it fails?
+         */
+         result = aUrl->QueryInterface(kIProtocolConnectionIID, (void**)&pProtocol);
+         if (NS_OK == result) {
+             pProtocol->InitializeURLInfo(URL_s);
+             NS_RELEASE(pProtocol);
+         }
 
 /*        printf("+++ Loading %s\n", aUrl); */
 
@@ -249,9 +283,13 @@ static void bam_exit_routine(URL_Struct *URL_s, int status, MWContext *window_id
                 pConn->pNetStream = NULL;
             }
 
-            /* Notify the Data Consumer that the Binding has completed... */
+            /* 
+             * Notify the Data Consumer that the Binding has completed... 
+             * Since the Consumer is still available, the stream was never
+             * closed (or possibly created).  So, the binding has failed...
+             */
             if (pConn->pConsumer) {
-                pConn->pConsumer->OnStopBinding();
+                pConn->pConsumer->OnStopBinding(NS_BINDING_FAILED, nsnull);
                 pConn->pConsumer->Release();
                 pConn->pConsumer = NULL;
             }
