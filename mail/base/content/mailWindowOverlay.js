@@ -106,7 +106,7 @@ function menu_new_init()
   EnableMenuItem("menu_newFolder", !isIMAPFolder || !ioService.offline);
   EnableMenuItem("menu_newVirtualFolder", true);
   if (showNew)
-    SetMenuItemLabel("menu_newFolder", gMessengerBundle.getString((isServer || isInbox) ? "newFolder" : "newSubfolder");
+    SetMenuItemLabel("menu_newFolder", gMessengerBundle.getString((isServer || isInbox) ? "newFolder" : "newSubfolder"));
 }
 
 function goUpdateMailMenuItems(commandset)
