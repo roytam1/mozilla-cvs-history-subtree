@@ -50,6 +50,8 @@ REQUIRES	= xpcom \
 		  string\
                   js \
 		  xpconnect \
+		  caps \
+		  necko \
 		  $(NULL)
 include <$(DEPTH)/config/config.mak>
 

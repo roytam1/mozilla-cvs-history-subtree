@@ -49,6 +49,9 @@ REQUIRES	= js \
 		  string \
 		  xpcom \
 		  xpconnect \
+		  caps \
+		  necko \
+		  string \
 		  $(NULL)
 
 CSRCS		= \
