@@ -1169,8 +1169,6 @@ SubDocInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry, const void *key)
 NS_IMETHODIMP
 nsDocument::SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc)
 {
-  // Assert if aContent is not in mSubDocuments
-
   if (!aSubDoc) {
     // aSubDoc is nsnull, remove the mapping
 
@@ -3702,6 +3700,25 @@ nsDocument::RemoveReference(void *aKey, nsISupports **aOldReference)
   nsVoidKey key(aKey);
 
   mContentWrapperHash.Remove(&key, aOldReference);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::SetContainer(nsISupports *aContainer)
+{
+  mDocumentContainer = getter_AddRefs(NS_GetWeakReference(aContainer));
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::GetContainer(nsISupports **aContainer)
+{
+  nsCOMPtr<nsISupports> container = do_QueryReferent(mDocumentContainer);
+
+  *aContainer = container;
+  NS_IF_ADDREF(*aContainer);
 
   return NS_OK;
 }

@@ -496,6 +496,8 @@ public:
   NS_IMETHOD GetNodeInfoManager(nsINodeInfoManager*& aNodeInfoManager);
   NS_IMETHOD AddReference(void *aKey, nsISupports *aReference);
   NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference);
+  NS_IMETHOD SetContainer(nsISupports *aContainer);
+  NS_IMETHOD GetContainer(nsISupports **aContainer);
 
   // nsIDOMNode
   NS_DECL_NSIDOMNODE
@@ -580,7 +582,8 @@ protected:
   nsCOMPtr<nsIURI> mDocumentBaseURL;
   nsIPrincipal* mPrincipal;
   nsWeakPtr mDocumentLoadGroup;
-  
+  nsWeakPtr mDocumentContainer;
+
   nsString mCharacterSet;
   PRInt32 mCharacterSetSource;
   

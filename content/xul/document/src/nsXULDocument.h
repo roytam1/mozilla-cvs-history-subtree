@@ -332,6 +332,8 @@ public:
 
     NS_IMETHOD AddReference(void *aKey, nsISupports *aReference);
     NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference);
+    NS_IMETHOD SetContainer(nsISupports *aContainer);
+    NS_IMETHOD GetContainer(nsISupports **aContainer);
 
     virtual void SetDisplaySelection(PRInt8 aToggle);
 
@@ -561,6 +563,7 @@ protected:
     nsCOMPtr<nsIURI>           mDocumentURL;        // [OWNER] ??? compare with loader
     nsCOMPtr<nsIURI>           mDocumentBaseURL;
     nsWeakPtr                  mDocumentLoadGroup;  // [WEAK] leads to loader
+    nsWeakPtr                  mDocumentContainer;  // [WEAK] leads to container
     nsCOMPtr<nsIPrincipal>     mDocumentPrincipal;  // [OWNER]
     nsCOMPtr<nsIContent>       mRootContent;        // [OWNER]
     nsIDocument*               mParentDocument;     // [WEAK]

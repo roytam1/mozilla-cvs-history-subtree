@@ -80,7 +80,6 @@
 
 
 class nsFrameLoader : public nsIFrameLoader,
-                      public nsIDOMEventListener,
                       public nsIWebProgressListener,
                       public nsSupportsWeakReference
 {
@@ -96,9 +95,6 @@ public:
   NS_IMETHOD LoadFrame();
   NS_IMETHOD GetDocShell(nsIDocShell **aDocShell);
   NS_IMETHOD Destroy();
-
-  // nsIDOMEventListener
-  NS_DECL_NSIDOMEVENTLISTENER
 
   // nsIWebProgressListener
   NS_DECL_NSIWEBPROGRESSLISTENER
@@ -255,12 +251,7 @@ nsFrameLoader::LoadFrame()
 
     loadInfo->SetInheritOwner(PR_TRUE);
 
-    nsCOMPtr<nsIDocument> doc;
-    mOwnerContent->GetDocument(*getter_AddRefs(doc));
-
-    if (doc) {
-      doc->GetBaseURL(*getter_AddRefs(referrer));
-    }
+    referrer = base_uri;
   }
 
   loadInfo->SetReferrer(referrer);
@@ -308,13 +299,6 @@ nsFrameLoader::Destroy()
   }
 
   mDocShell = nsnull;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFrameLoader::HandleEvent(nsIDOMEvent *aEvent)
-{
 
   return NS_OK;
 }
@@ -589,11 +573,13 @@ nsFrameLoader::OnStateChange(nsIWebProgress *aWebProgress,
   if (!((~aStateFlags) & (nsIWebProgressListener::STATE_IS_DOCUMENT |
                           nsIWebProgressListener::STATE_TRANSFERRING))) {
     nsCOMPtr<nsIDOMWindow> win(do_GetInterface(mDocShell));
-    nsCOMPtr<nsIDOMEventTarget> eventTarget(do_QueryInterface(win));
+    nsCOMPtr<nsIDOMEventTarget> event_target(do_QueryInterface(win));
+    nsCOMPtr<nsIDOMEventListener> event_listener =
+      do_QueryInterface(mOwnerContent);
 
-    if (eventTarget) {
-      eventTarget->AddEventListener(NS_LITERAL_STRING("load"), this,
-                                    PR_FALSE);
+    if (event_target) {
+      event_target->AddEventListener(NS_LITERAL_STRING("load"), event_listener,
+                                     PR_FALSE);
     }
   }
 

@@ -375,6 +375,9 @@ public:
 
   NS_IMETHOD AddReference(void *aKey, nsISupports *aReference) = 0;
   NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference) = 0;
+
+  NS_IMETHOD SetContainer(nsISupports *aContainer) = 0;
+  NS_IMETHOD GetContainer(nsISupports **aContainer) = 0;
 };
 
 
