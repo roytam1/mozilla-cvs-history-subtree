@@ -132,7 +132,7 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -Y proxyid\tproxied authorization id,\n" );
     fprintf( stderr, "              \te.g, dn:uid=bjensen,dc=example,dc=com\n" );
     fprintf( stderr, "    -H\t\tdisplay usage information\n" );
-    fprintf( stderr, "    -J oid[:criticality[:value|::b64value|:<fileurl]]\n" );
+    fprintf( stderr, "    -J controloid[:criticality[:value|::b64value|:<fileurl]]\n" );
     fprintf( stderr, "\t\tcriticality is a boolean value (default is false)\n" );
 }
 
@@ -149,7 +149,7 @@ char			*ldaptool_progname = "";
 char			*ldaptool_nls_lang = NULL;
 char                    *proxyauth_id = NULL;
 int			proxyauth_version = 2;	/* use newer proxy control */
-LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS];
+LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS] = {0};
 #ifdef LDAP_DEBUG
 int			ldaptool_dbg_lvl = 0;
 #endif /* LDAP_DEBUG */
@@ -1424,6 +1424,36 @@ ldaptool_reset_control_array( LDAPControl **array )
 }
 
 /*
+ * This function calculates control value and its length. *value can
+ * be pointing to plain value, ":b64encoded value" or "<fileurl".
+ */
+static int
+calculate_ctrl_value( const char *value,
+	char **ctrl_value, int *vlen)
+{
+    int b64;
+    if (*value == ':') {
+	value++;
+	b64 = 1;
+    } else {
+	b64 = 0;
+    }
+    *ctrl_value = value;
+
+    if ( b64 ) {
+	if (( *vlen = ldif_base64_decode( value, (unsigned char *)value ))
+		< 0 ) {
+	    fprintf( stderr, 
+		"Unable to decode base64 control value \"%s\"\n", value);
+	    return( -1 );
+	}
+    } else {
+	*vlen = (int)strlen(*ctrl_value);
+    }
+    return( 0 );
+}
+
+/*
  * Parse the optarg from -J option of ldapsearch
  * and within LDIFfile for ldapmodify. Take ctrl_arg 
  * (the whole string) and divide it into oid, criticality
@@ -1505,35 +1535,6 @@ ldaptool_parse_ctrl_arg(char *ctrl_arg, char sep,
     }
 }
 
-/*
- * This function calculates control value and its length. *value can
- * be pointing to plain value, ":b64encoded value" or "<fileurl".
- */
-static int
-calculate_ctrl_value( const char *value,
-	char **ctrl_value, int *vlen)
-{
-    int b64;
-    if (*value == ':') {
-	value++;
-	b64 = 1;
-    } else {
-	b64 = 0;
-    }
-    *ctrl_value = value;
-
-    if ( b64 ) {
-	if (( *vlen = ldif_base64_decode( value, (unsigned char *)value ))
-		< 0 ) {
-	    fprintf( stderr, 
-		"Unable to decode base64 control value \"%s\"\n", value);
-	    return( -1 );
-	}
-    } else {
-	*vlen = (int)strlen(*ctrl_value);
-    }
-    return( 0 );
-}
 
 /*
  * callback function for LDAP bind credentials
