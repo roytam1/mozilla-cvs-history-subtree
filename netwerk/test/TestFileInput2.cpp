@@ -388,7 +388,7 @@ Test(CreateFun create, PRUint32 count,
         rv = inSpec->GetLeafName(&leafName);
         if (NS_FAILED(rv)) goto done;
 
-        rv = outSpec->AppendPath(leafName);
+        rv = outSpec->Append(leafName);
         nsCRT::free(leafName);
         if (NS_FAILED(rv)) goto done;
 
