@@ -282,11 +282,6 @@ nsBox::MarkDirty(nsBoxLayoutState& aState)
 
   NeedsRecalc();
 
-  nsCOMPtr<nsIBoxLayout> layout;
-  GetLayoutManager(getter_AddRefs(layout));
-  if (layout)
-    layout->BecameDirty(this, aState);
-
   if (GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN) {   
 #ifdef DEBUG_COELESCED
       Coelesced();
@@ -319,11 +314,6 @@ nsBox::MarkStyleChange(nsBoxLayoutState& aState)
 
   // iterate through all children making them dirty
   MarkChildrenStyleChange();
-
-  nsCOMPtr<nsIBoxLayout> layout;
-  GetLayoutManager(getter_AddRefs(layout));
-  if (layout)
-    layout->BecameDirty(this, aState);
 
   nsIBox* parent = nsnull;
   GetParentBox(&parent);
@@ -381,13 +371,6 @@ nsBox::MarkChildrenStyleChange()
 NS_IMETHODIMP
 nsBox::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
 {
-    if (aChild != nsnull) {
-        nsCOMPtr<nsIBoxLayout> layout;
-        GetLayoutManager(getter_AddRefs(layout));
-        if (layout)
-          layout->ChildBecameDirty(this, aState, aChild);
-    }
-
     // if we are not dirty mark ourselves dirty and tell our parent we are dirty too.
     if (!(GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)) {      
       // Mark yourself as dirty and needing to be recalculated

@@ -199,18 +199,6 @@ nsBoxLayout::ChildrenSet(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildL
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsBoxLayout::ChildBecameDirty(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChild)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBoxLayout::BecameDirty(nsIBox* aBox, nsBoxLayoutState& aState)
-{
-  return NS_OK;
-}
-
 // nsISupports
 NS_IMPL_ADDREF(nsBoxLayout)
 NS_IMPL_RELEASE(nsBoxLayout)
