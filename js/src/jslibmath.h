@@ -335,7 +335,6 @@ extern double fd_copysign __P((double, double));
 #define fd_cosh cosh
 #define fd_erf erf
 #define fd_erfc erfc
-#define fd_exp exp
 #define fd_fabs fabs
 #define fd_finite finite
 #define fd_floor floor
@@ -367,6 +366,7 @@ extern double fd_copysign __P((double, double));
 
 extern double fd_asin __P((double));
 extern double fd_acos __P((double));
+extern double fd_exp __P((double));
 extern double fd_log __P((double));
 extern double fd_pow __P((double, double));
 extern double fd_copysign __P((double, double));
