@@ -1774,6 +1774,11 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     //---------------------------------------/
     process(sourceNode, sourceNode, ps);
 
+    // XXX Hack, ProcessorState::addToResultTree should do the right thing
+    // for adding several consecutive text nodes
+    // Normalize the result document 
+    aOutputDoc->Normalize();    
+
     if (aObserver) {
         nsresult res = NS_OK;
         nsAutoString topic; topic.Assign(NS_LITERAL_STRING("xslt-done"));
