@@ -19,6 +19,10 @@
 #include "nsDebug.h"
 #include "prlog.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 /**
  * Implementation of the nsDebug methods. Note that this code is
  * always compiled in, in case some other module that uses it is
