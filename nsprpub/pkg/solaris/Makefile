@@ -14,20 +14,25 @@ MOD_DEPTH = ../..
 
 ifeq ($(USE_64), 1)
 DIRS = \
-	SUNWprx
+	SUNWprx \
+	SUNWprx-devl
 else
 DIRS = \
-	SUNWpr
+	SUNWpr \
+	SUNWpr-devl
 endif
 
 PROTO = \
 	$(ROOT) \
 	$(ROOT)/usr \
 	$(ROOT)/usr/lib \
-	$(ROOT)/usr/lib/mps
+	$(ROOT)/usr/lib/mps \
+	$(ROOT)/usr/include \
+	$(ROOT)/usr/include/mps 
 
 ifdef USE_64
-PROTO += $(ROOT)/usr/lib/mps/sparcv9
+PROTO += $(ROOT)/usr/lib/mps/sparcv9 \
+	$(ROOT)/usr/include/mps/sparcv9
 endif
 
 include Makefile.com
@@ -47,9 +52,13 @@ $(ROOT) $(ROOT)/%:
 	mkdir -p $@
 
 ifdef USE_64
-$(ROOT)/usr/lib/mps/sparcv9:
+$(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
 	$(LN) -sf ../../../../$(DIST)/lib $@
+$(ROOT)/usr/include/mps/sparcv9: $(ROOT)/usr/include
+	$(LN) -sf ../../../../$(DIST)/include $@
 else
-$(ROOT)/usr/lib/mps:
+$(ROOT)/usr/lib/mps: $(ROOT)/usr/lib
 	$(LN) -sf ../../../$(DIST)/lib $@
+$(ROOT)/usr/include/mps: $(ROOT)/usr/include
+	$(LN) -sf ../../../$(DIST)/include $@
 endif
