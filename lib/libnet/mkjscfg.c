@@ -225,7 +225,11 @@ jsc_try_failover(MWContext* w)
 
 	bytes[num_bytes] = '\0';
 
-	if ( !PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE /*, FALSE*/) )goto failed;
+#ifdef NEW_PREF_ARCH
+	if ( !PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE, FALSE) )goto failed;
+#else
+    if ( !PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE) )goto failed;
+#endif
 
 	XP_FileClose(fp);
 	XP_FREEIF(bytes);
@@ -276,7 +280,11 @@ jsc_complete(void* bytes, int32 num_bytes)
 #endif
 
 	if ( bytes ) {
-		PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE /*, FALSE*/);
+#ifdef NEW_PREF_ARCH
+        PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE, FALSE);
+#else
+		PREF_EvaluateConfigScript(bytes, num_bytes, NULL, TRUE, TRUE);
+#endif
 	} else {
 		/* If failover is ok, read the local cached config */
 	}
