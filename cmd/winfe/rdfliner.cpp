@@ -240,6 +240,52 @@ void CRDFOutliner::HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatH
 	{
 		FinishExpansion(HT_GetNodeIndex(m_View, n));
 	}
+	else if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGING)
+	{
+		PRBool openState;
+		HT_GetOpenState(n, &openState);
+		if (openState)
+		{
+			// Node is closing.  We need to iterate over our list of loading images and
+			// if the node(s) that are observing the resource are children of this node,
+			// we need to remove them from the observation list of the image.
+			for (POSITION pos = loadingImagesList.GetHeadPosition(); pos != NULL; )
+			{
+				// Enumerate over the list of loading images.
+				CRDFImage* pImage = (CRDFImage*)loadingImagesList.GetNext(pos);
+				
+				// Figure out which of our resources are listening to this image.
+				for (POSITION pos2 = pImage->resourceList.GetHeadPosition();
+						pos2 != NULL; )
+				{
+					// Enumerate over the list and call remove listener on each image.
+					CIconCallbackInfo* pInfo = (CIconCallbackInfo*)(pImage->resourceList.GetNext(pos2));
+					if (pInfo->pObject == this)
+					{
+						// We are currently observing this image.
+						// Find out if the resource that is observing the image is a direct
+						// descendant of the parent node that is closing.
+						
+						HT_Resource child;
+						for (child = pInfo->pResource;
+							 child != NULL && child != n;
+							 child = HT_GetParent(child));
+						if (child == n)
+						{
+							// Do a removal.
+							if (pos2 != NULL) // Not at the end
+							{
+								pImage->resourceList.GetPrev(pos2);
+								if (pos2 == NULL)
+									pos2 = pImage->resourceList.GetHeadPosition();
+							}
+							pImage->RemoveListenerForSpecificResource(this, pInfo->pResource);
+						}
+					}
+				}
+			}
+		}
+	}
 	else if (whatHappened == HT_EVENT_NODE_SELECTION_CHANGED)
 	{
 		int i = HT_GetNodeIndex(m_View, n);
@@ -527,18 +573,18 @@ HICON DrawLocalFileIcon(HT_Resource r, int left, int top, HDC hDC)
 	return hIcon;
 }
 
-NSNavCenterImage* DrawArbitraryURL(HT_Resource r, int left, int top, int imageWidth, int imageHeight, HDC hDC, COLORREF bkColor, 
+CRDFImage* DrawArbitraryURL(HT_Resource r, int left, int top, int imageWidth, int imageHeight, HDC hDC, COLORREF bkColor, 
 					  CCustomImageObject* pObject, BOOL largeIcon)
 {
-	NSNavCenterImage* pImage = FetchCustomIcon(r, pObject, largeIcon);
-	if (pImage && pImage->CompletelyLoaded()) 
+	CRDFImage* pImage = FetchCustomIcon(r, pObject, largeIcon);
+	if (pImage && pImage->FrameLoaded()) 
 	{
 		// Now we draw this bad boy.
 		if (pImage->m_BadImage) 
 		{ 
 			// display broken icon.
 			HDC tempDC = ::CreateCompatibleDC(hDC);
-			HBITMAP hOldBmp = (HBITMAP)::SelectObject(tempDC,  NSNavCenterImage::m_hBadImageBitmap);
+			HBITMAP hOldBmp = (HBITMAP)::SelectObject(tempDC,  CRDFImage::m_hBadImageBitmap);
 			::StretchBlt(hDC, 
 					 left, top,
 					 imageWidth, imageHeight, 
@@ -700,9 +746,9 @@ HICON FetchLocalFileIcon(HT_Resource r)
 	return hIcon;
 }
 
-NSNavCenterImage* FetchCustomIcon(HT_Resource r, CCustomImageObject* imageObject, BOOL largeIcon)
+CRDFImage* FetchCustomIcon(HT_Resource r, CCustomImageObject* imageObject, BOOL largeIcon)
 {
-	NSNavCenterImage* pImage = NULL;
+	CRDFImage* pImage = NULL;
 	CString hashString;
 	if (largeIcon)
 		hashString = HT_GetNodeLargeIconURL(r);
@@ -1777,7 +1823,7 @@ void CRDFOutliner::OnPaint()
 		m_pBackgroundImage = LookupImage(m_BackgroundImageURL, NULL);
 	}
 
-	if (m_pBackgroundImage && m_pBackgroundImage->SuccessfullyLoaded())
+	if (m_pBackgroundImage && m_pBackgroundImage->FrameSuccessfullyLoaded())
 	{
 		int imageHeight = m_pBackgroundImage->bmpInfo->bmiHeader.biHeight;
 		int ySrcOffset = (bgFillRect.top + m_iTopLine*m_itemHeight) % imageHeight;
@@ -1815,7 +1861,7 @@ void CRDFOutliner::OnPaint()
 	VERIFY(DeleteObject( hHighPen ));
 }
 
-void DrawBGSubimage(NSNavCenterImage* pImage, HDC hDC, int xSrcOffset, int ySrcOffset, int xDstOffset, int yDstOffset,
+void DrawBGSubimage(CRDFImage* pImage, HDC hDC, int xSrcOffset, int ySrcOffset, int xDstOffset, int yDstOffset,
 								  int width, int height)
 {
 	if (pImage->bits) 
@@ -1851,7 +1897,7 @@ void DrawBGSubimage(NSNavCenterImage* pImage, HDC hDC, int xSrcOffset, int ySrcO
 	}
 }
 
-void PaintBackground(HDC hdc, CRect rect, NSNavCenterImage* pImage, int ySrcOffset)
+void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int ySrcOffset)
 { 
 	int totalWidth = rect.Width();
 	int totalHeight = rect.Height();
@@ -2000,7 +2046,7 @@ void CRDFOutliner::PaintLine ( int iLineNo, HDC hdc, LPRECT lpPaintRect,
     rectColumn.left = offset;
 	rectColumn.right = WinRect.right;
 
-	if (!(m_pBackgroundImage && m_pBackgroundImage->SuccessfullyLoaded()))
+	if (!(m_pBackgroundImage && m_pBackgroundImage->FrameSuccessfullyLoaded()))
 	{
 		if (m_bDrawDividers)
 			rectColumn.bottom--; // Handle the divider
@@ -3274,7 +3320,7 @@ void CRDFOutlinerParent::OnPaint ( )
 		m_pBackgroundImage = LookupImage(m_BackgroundImageURL, NULL);
 	}
 
-	BOOL shouldPaintBG = m_pBackgroundImage && m_pBackgroundImage->SuccessfullyLoaded();
+	BOOL shouldPaintBG = m_pBackgroundImage && m_pBackgroundImage->FrameSuccessfullyLoaded();
 	if (shouldPaintBG)
 	{
 		PaintBackground(pdc, rectClient, m_pBackgroundImage);

@@ -63,7 +63,7 @@
 
 class CRDFContentView;
 
-class CSelectorButton : public CLinkToolbarButton
+class CSelectorButton : public CRDFToolbarButton
 {
 friend class CSelector;
 

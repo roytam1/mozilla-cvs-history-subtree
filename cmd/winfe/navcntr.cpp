@@ -226,7 +226,7 @@ int CSelectorButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButton
 	HT_View theView = HT_GetSelectedView(m_Pane);
 	
 	BOOKMARKITEM bookmark; // For now, create with the pictures style. No text ever.
-	return CLinkToolbarButton::Create(pParent, TB_PICTURES, noviceButtonSize, advancedButtonSize,
+	return CRDFToolbarButton::Create(pParent, TB_PICTURES, noviceButtonSize, advancedButtonSize,
 		   pButtonText, pToolTipText, pStatusText, bitmapSize, nMaxTextChars, nMinTextChars,
 		   bookmark, HT_TopNode(theView), dwButtonStyle);
 }
