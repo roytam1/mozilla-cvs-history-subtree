@@ -24,7 +24,7 @@
 #include "primpl.h"
 
 
-PR_IMPLEMENT(void) 
+void
 _PR_MD_NEW_SEM(_MDSemaphore *md, PRUintn value)
 {
    int rv;
@@ -36,7 +36,7 @@ _PR_MD_NEW_SEM(_MDSemaphore *md, PRUintn value)
     PR_ASSERT(rv == NO_ERROR);
 }
 
-PR_IMPLEMENT(void) 
+void
 _PR_MD_DESTROY_SEM(_MDSemaphore *md)
 {
    int rv;
@@ -45,7 +45,7 @@ _PR_MD_DESTROY_SEM(_MDSemaphore *md)
 
 }
 
-PR_IMPLEMENT(PRStatus) 
+PRStatus
 _PR_MD_TIMED_WAIT_SEM(_MDSemaphore *md, PRIntervalTime ticks)
 {
     int rv;
@@ -57,13 +57,13 @@ _PR_MD_TIMED_WAIT_SEM(_MDSemaphore *md, PRIntervalTime ticks)
         return PR_FAILURE;
 }
 
-PR_IMPLEMENT(PRStatus) 
+PRStatus
 _PR_MD_WAIT_SEM(_MDSemaphore *md)
 {
     return _PR_MD_TIMED_WAIT_SEM(md, PR_INTERVAL_NO_TIMEOUT);
 }
 
-PR_IMPLEMENT(void) 
+void
 _PR_MD_POST_SEM(_MDSemaphore *md)
 {
    int rv;
