@@ -432,6 +432,11 @@ AC_PATH_PROG(XARGS, xargs)
 if test -z "$XARGS" || test "$XARGS" = ":"; then
     AC_MSG_ERROR([xargs not found in \$PATH .])
 fi
+case "$target_os" in
+darwin*)
+    AC_PATH_PROGS(PBBUILD, pbbuild pbxbuild)
+    ;;
+esac
 
 dnl Be sure the make we use is GNU make.
 dnl on win32, gmake.exe is the generally the wrong version
@@ -850,8 +855,8 @@ case "$target" in
 
 *-darwin*) 
     _PEDANTIC=
-    CFLAGS="$CFLAGS -fpascal-strings -traditional-cpp -fno-common"
-    CXXFLAGS="$CXXFLAGS -fpascal-strings -traditional-cpp -fno-common"
+    CFLAGS="$CFLAGS -fpascal-strings -no-cpp-precomp -fno-common"
+    CXXFLAGS="$CXXFLAGS -fpascal-strings -no-cpp-precomp -fno-common"
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS=''
     STRIP="$STRIP -x -S"
@@ -3530,7 +3535,7 @@ dnl ========================================================
 
 MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices"
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview layout-debug"
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],
@@ -4855,6 +4860,21 @@ if test "$MOZ_PROFILESHARING"; then
   MOZ_IPCD=1
   AC_DEFINE(MOZ_PROFILESHARING)
 fi
+
+dnl ========================================================
+dnl disable profile locking
+dnl   do no use this in applications that can have more than
+dnl   one process accessing the profile directory.
+dnl ========================================================
+MOZ_PROFILELOCKING=1
+MOZ_ARG_DISABLE_BOOL(profilelocking,
+[  --disable-profilelocking           Disable profile locking],
+    MOZ_PROFILELOCKING=,
+    MOZ_PROFILELOCKING=1 )
+if test "$MOZ_PROFILELOCKING"; then
+  AC_DEFINE(MOZ_PROFILELOCKING)
+fi
+
 
 dnl ========================================================
 dnl necko configuration options

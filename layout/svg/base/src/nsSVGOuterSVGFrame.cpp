@@ -204,8 +204,6 @@ public:
                                PRInt32         aModType,
                                PRInt32         aHint);
 
-//  NS_IMETHOD SetView(nsIPresContext* aPresContext, nsIView* aView);
-
   NS_IMETHOD  GetFrameForPoint(nsIPresContext* aPresContext,
                                const nsPoint& aPoint, 
                                nsFramePaintLayer aWhichLayer,
@@ -231,7 +229,6 @@ public:
   NS_IMETHOD SuspendRedraw();
   NS_IMETHOD UnsuspendRedraw();
   NS_IMETHOD GetRenderer(nsISVGRenderer**renderer);
-  NS_IMETHOD GetPresContext(nsIPresContext**presContext);
   NS_IMETHOD CreateSVGRect(nsIDOMSVGRect **_retval);
   NS_IMETHOD NotifyViewportChange();
 
@@ -624,18 +621,18 @@ nsSVGOuterSVGFrame::InsertFrames(nsIPresContext* aPresContext,
   SuspendRedraw();
 
   // call InitialUpdate() on all new frames:
-  nsIFrame* kid = aFrameList;
+  
   nsIFrame* end = nsnull;
   if (lastNewFrame)
     lastNewFrame->GetNextSibling(&end);
 
-  while (kid != end) {
+  for (nsIFrame* kid = aFrameList; kid != end;
+       kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->InitialUpdate(); 
     }
-    kid->GetNextSibling(&kid);
   }
 
   UnsuspendRedraw();
@@ -702,15 +699,6 @@ nsSVGOuterSVGFrame::AttributeChanged(nsIPresContext* aPresContext,
 }
 
 
-//----------------------------------------------------------------------
-//
-// NS_IMETHODIMP
-// nsSVGOuterSVGFrame::SetView(nsIPresContext* aPresContext, nsIView* aView)
-// {
-//   mView = aView;
-//   return nsSVGOuterSVGFrameBase::SetView(aPresContext, aView);  
-// }
-
 nsresult
 nsSVGOuterSVGFrame::GetFrameForPoint(nsIPresContext* aPresContext,
                                      const nsPoint& aPoint,
@@ -735,10 +723,10 @@ nsSVGOuterSVGFrame::GetFrameForPoint(nsIPresContext* aPresContext,
   }
 
   *aFrame = this;
-  nsIFrame* kid = mFrames.FirstChild();
   nsIFrame* hit = nsnull;
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       nsresult rv = SVGFrame->GetFrameForPoint(x, y, &hit);
@@ -748,7 +736,6 @@ nsSVGOuterSVGFrame::GetFrameForPoint(nsIPresContext* aPresContext,
         // have a singly linked list...
       }
     }
-    kid->GetNextSibling(&kid);
   }
     
   return NS_OK;
@@ -827,8 +814,8 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 
   float pxPerTwips = GetPxPerTwips();
   // XXX why do we need to inflate the rect here? 
-  nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips-1, aDirtyRect.y*pxPerTwips-1,
-                     aDirtyRect.width*pxPerTwips+2, aDirtyRect.height*pxPerTwips+2);
+  nsRect dirtyRectPx((int)(aDirtyRect.x*pxPerTwips-1), (int)(aDirtyRect.y*pxPerTwips-1),
+                     (int)(aDirtyRect.width*pxPerTwips+2), (int)(aDirtyRect.height*pxPerTwips+2));
   
   nsCOMPtr<nsISVGRendererCanvas> canvas;
   mRenderer->CreateCanvas(&aRenderingContext, aPresContext, dirtyRectPx,
@@ -837,13 +824,12 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   canvas->Clear(NS_RGB(255,255,255));
 
   // paint children:
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(canvas, aDirtyRect);
-    kid->GetNextSibling(&kid);
   }
   
   canvas->Flush();
@@ -902,14 +888,10 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
   mPresShell->IsPaintingSuppressed(&suppressed);
   if (suppressed) return NS_OK;
   
-  nsCOMPtr<nsIPresContext> presCtx;
-  mPresShell->GetPresContext(getter_AddRefs(presCtx));
-  NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
-  nsIView* view = GetClosestView(presCtx);
+  nsIView* view = GetClosestView();
   NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIViewManager> vm;
-  view->GetViewManager(*getter_AddRefs(vm));
+  nsIViewManager* vm = view->GetViewManager();
 
   vm->BeginUpdateViewBatch();
   if (region) {
@@ -935,21 +917,17 @@ nsSVGOuterSVGFrame::SuspendRedraw()
 
  // get the view manager, so that we can wrap this up in a batch
   // update.
-  NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
-  nsCOMPtr<nsIViewManager> vm;
-  mPresShell->GetViewManager(getter_AddRefs(vm));
+  nsIViewManager* vm = GetPresContext()->GetViewManager();
 
   vm->BeginUpdateViewBatch();
  
-  
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawSuspended();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }
@@ -972,18 +950,15 @@ nsSVGOuterSVGFrame::UnsuspendRedraw()
   
   // get the view manager, so that we can wrap this up in a batch
   // update.
-  NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
-  nsCOMPtr<nsIViewManager> vm;
-  mPresShell->GetViewManager(getter_AddRefs(vm));
+  nsIViewManager* vm = GetPresContext()->GetViewManager();
   
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
-    kid->GetNextSibling(&kid);
   }
 
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
@@ -1009,13 +984,6 @@ nsSVGOuterSVGFrame::GetRenderer(nsISVGRenderer**renderer)
   *renderer = mRenderer;
   NS_IF_ADDREF(*renderer);
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGOuterSVGFrame::GetPresContext(nsIPresContext** presContext)
-{
-  NS_ASSERTION(mPresShell, "null presshell");
-  return mPresShell->GetPresContext(presContext);
 }
 
 NS_IMETHODIMP
@@ -1074,13 +1042,8 @@ float nsSVGOuterSVGFrame::GetPxPerTwips()
 
 float nsSVGOuterSVGFrame::GetTwipsPerPx()
 {
-  float twipsPerPx=16.0f;
-  NS_ASSERTION(mPresShell, "need presshell");
-  if (mPresShell) {
-    nsCOMPtr<nsIPresContext> presContext;
-    mPresShell->GetPresContext(getter_AddRefs(presContext));
-    presContext->GetScaledPixelsToTwips(&twipsPerPx);
-  }
+  float twipsPerPx;
+  GetPresContext()->GetScaledPixelsToTwips(&twipsPerPx);
   return twipsPerPx;
 }
 

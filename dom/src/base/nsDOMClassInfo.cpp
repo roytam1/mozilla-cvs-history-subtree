@@ -282,6 +282,7 @@
 #include "nsITreeSelection.h"
 #include "nsITreeContentView.h"
 #include "nsITreeView.h"
+#include "nsIXULTemplateBuilder.h"
 #endif
 #include "nsIDOMXPathEvaluator.h"
 
@@ -845,6 +846,10 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOCUMENT_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_ENUMERATE)
 
+#ifdef MOZ_XUL
+  NS_DEFINE_CLASSINFO_DATA(XULTreeBuilder, nsDOMGenericSH,
+                           DEFAULT_SCRIPTABLE_FLAGS)
+#endif
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -915,6 +920,7 @@ jsval nsDOMClassInfo::sDocument_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sWindow_id          = JSVAL_VOID;
 jsval nsDOMClassInfo::sFrames_id          = JSVAL_VOID;
 jsval nsDOMClassInfo::sSelf_id            = JSVAL_VOID;
+jsval nsDOMClassInfo::sOpener_id          = JSVAL_VOID;
 
 const JSClass *nsDOMClassInfo::sObjectClass   = nsnull;
 
@@ -1018,6 +1024,7 @@ nsDOMClassInfo::DefineStaticJSVals(JSContext *cx)
   SET_JSVAL_TO_STRING(sWindow_id,          cx, "window");
   SET_JSVAL_TO_STRING(sFrames_id,          cx, "frames");
   SET_JSVAL_TO_STRING(sSelf_id,            cx, "self");
+  SET_JSVAL_TO_STRING(sOpener_id,          cx, "opener");
 
   return NS_OK;
 }
@@ -2281,6 +2288,13 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
   DOM_CLASSINFO_MAP_END
 
+#ifdef MOZ_XUL
+  DOM_CLASSINFO_MAP_BEGIN(XULTreeBuilder, nsIXULTreeBuilder)
+    DOM_CLASSINFO_MAP_ENTRY(nsIXULTreeBuilder)
+    DOM_CLASSINFO_MAP_ENTRY(nsITreeView)
+  DOM_CLASSINFO_MAP_END
+#endif
+
 #ifdef NS_DEBUG
   {
     PRUint32 i = sizeof(sClassInfoData) / sizeof(sClassInfoData[0]);
@@ -2890,6 +2904,7 @@ nsDOMClassInfo::ShutDown()
   sWindow_id          = JSVAL_VOID;
   sFrames_id          = JSVAL_VOID;
   sSelf_id            = JSVAL_VOID;
+  sOpener_id          = JSVAL_VOID;
 
   NS_IF_RELEASE(sXPConnect);
   NS_IF_RELEASE(sSecMan);

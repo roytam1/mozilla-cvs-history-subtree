@@ -340,8 +340,8 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
   y -= height/2.0f;
 
   // move ourselves to (x,y):
-  MoveTo(aPresContext, (nscoord) (x*twipsPerPx), (nscoord) (y*twipsPerPx));
-  // XXX: if we have a view, move that 
+  SetPosition(nsPoint((nscoord) (x*twipsPerPx), (nscoord) (y*twipsPerPx)));
+  // Xxx: if zewe have a view, move that 
   
   // create a new reflow state, setting our max size to (width,height):
   nsSize availableSpace((nscoord)(width*twipsPerPx), (nscoord)(height*twipsPerPx));
@@ -452,8 +452,7 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirty
     nsCOMPtr<nsISVGRendererRegion> region = DoReflow();
   }
 
-  nsCOMPtr<nsIPresContext> presContext;
-  canvas->GetPresContext(getter_AddRefs(presContext));
+  nsIPresContext *presContext = GetPresContext();
 
   float pxPerTwips = GetPxPerTwips();
   nsRect r(mRect.x*pxPerTwips, mRect.y*pxPerTwips,
@@ -510,11 +509,7 @@ nsSVGForeignObjectFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 {
   *hit = nsnull;
 
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) return NS_ERROR_FAILURE;
-  
-  nsCOMPtr<nsIPresContext> presContext;
-  outerSVGFrame->GetPresContext(getter_AddRefs(presContext));
+  nsIPresContext *presContext = GetPresContext();
 
   nsPoint p( (nscoord)(x*GetTwipsPerPx()),
              (nscoord)(y*GetTwipsPerPx()));
@@ -653,14 +648,8 @@ nsSVGForeignObjectFrame::DoReflow()
 #ifdef DEBUG
   printf("**nsSVGForeignObjectFrame::DoReflow()\n");
 #endif
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return nsnull;
-  }
-  
-  nsCOMPtr<nsIPresContext> presContext;
-  outerSVGFrame->GetPresContext(getter_AddRefs(presContext));
+
+  nsIPresContext *presContext = GetPresContext();
 
   // remember the area we have to invalidate after this reflow:
   nsCOMPtr<nsISVGRendererRegion> area_before = GetCoveredRegion();
@@ -690,7 +679,7 @@ nsSVGForeignObjectFrame::DoReflow()
   
   WillReflow(presContext);
   Reflow(presContext, desiredSize, reflowState, status);
-  SizeTo(presContext, desiredSize.width, desiredSize.height);
+  SetSize(nsSize(desiredSize.width, desiredSize.height));
   DidReflow(presContext, &reflowState, NS_FRAME_REFLOW_FINISHED);
 
   mIsDirty = PR_FALSE;
@@ -716,14 +705,7 @@ float nsSVGForeignObjectFrame::GetTwipsPerPx()
 {
   float twipsPerPx=16.0f;
 
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  NS_ASSERTION(outerSVGFrame, "null outerSVGFrame");
-  
-  if (outerSVGFrame) {
-    nsCOMPtr<nsIPresContext> presContext;
-    outerSVGFrame->GetPresContext(getter_AddRefs(presContext));
-    presContext->GetScaledPixelsToTwips(&twipsPerPx);
-  }
+  GetPresContext()->GetScaledPixelsToTwips(&twipsPerPx);
   return twipsPerPx;
 }
 

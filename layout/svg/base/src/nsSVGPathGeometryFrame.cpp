@@ -256,13 +256,10 @@ nsSVGPathGeometryFrame::DidModifySVGObservable (nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::GetPresContext(nsIPresContext * *aPresContext)
 {
-   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return NS_ERROR_FAILURE;
-  }
-
-  return outerSVGFrame->GetPresContext(aPresContext);
+  // XXX gcc 3.2.2 requires the explicit 'nsSVGPathGeometryFrameBase::' qualification
+  *aPresContext = nsSVGPathGeometryFrameBase::GetPresContext();
+  NS_ADDREF(*aPresContext);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGMatrix CTM; */

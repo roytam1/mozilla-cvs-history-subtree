@@ -432,13 +432,9 @@ nsSVGGlyphFrame::GetBBox(nsIDOMSVGRect **_retval)
 NS_IMETHODIMP
 nsSVGGlyphFrame::GetPresContext(nsIPresContext * *aPresContext)
 {
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return NS_ERROR_FAILURE;
-  }
-  
-  return outerSVGFrame->GetPresContext(aPresContext);
+  // XXX gcc 3.2.2 requires the explicit 'nsSVGGlyphFrameBase::' qualification
+  *aPresContext = nsSVGGlyphFrameBase::GetPresContext();
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGMatrix CTM; */
@@ -743,9 +739,8 @@ nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *fore
     return NS_ERROR_FAILURE;
   }
 
-  nsCOMPtr<nsIPresContext> presContext;
-  GetPresContext(getter_AddRefs(presContext));
-  NS_ASSERTION(presContext, "no prescontext");
+  // XXX gcc 3.2.2 requires the explicit 'nsSVGGlyphFrameBase::' qualification
+  nsIPresContext *presContext = nsSVGGlyphFrameBase::GetPresContext();
 
   nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
   NS_ASSERTION(tc, "no textcontent interface");

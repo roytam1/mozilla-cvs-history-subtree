@@ -217,18 +217,16 @@ nsSVGGenericContainerFrame::InsertFrames(nsIPresContext* aPresContext,
   mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
 
   // call InitialUpdate() on all new frames:
-  nsIFrame* kid = aFrameList;
   nsIFrame* end = nsnull;
   if (lastNewFrame)
-    lastNewFrame->GetNextSibling(&end);
+    end = lastNewFrame->GetNextSibling();
 
-  while (kid != end) {
+  for (nsIFrame*kid=aFrameList; kid != end; kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->InitialUpdate(); 
     }
-    kid->GetNextSibling(&kid);
   }
   
   return NS_OK;
@@ -305,14 +303,12 @@ nsSVGGenericContainerFrame::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGGenericContainerFrame::DidModifySVGObservable(nsISVGValue* observable)
 {
-  
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->NotifyCTMChanged();
-    kid->GetNextSibling(&kid);
   }  
   return NS_OK;
 }
@@ -327,13 +323,12 @@ nsSVGGenericContainerFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& di
 #ifdef DEBUG
 //  printf("nsSVGGenericContainer(%p)::Paint\n", this);
 #endif
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(canvas, dirtyRectTwips);
-    kid->GetNextSibling(&kid);
   }
 
   return NS_OK;
@@ -346,9 +341,9 @@ nsSVGGenericContainerFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 //  printf("nsSVGGenericContainerFrame(%p)::GetFrameForPoint\n", this);
 #endif
   *hit = nsnull;
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       nsIFrame* temp=nsnull;
@@ -359,7 +354,6 @@ nsSVGGenericContainerFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
         // have a singly linked list...
       }
     }
-    kid->GetNextSibling(&kid);
   }
   
   return *hit ? NS_OK : NS_ERROR_FAILURE;
@@ -411,14 +405,13 @@ nsSVGGenericContainerFrame::InitialUpdate()
 NS_IMETHODIMP
 nsSVGGenericContainerFrame::NotifyCTMChanged()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyCTMChanged();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }
@@ -426,14 +419,13 @@ nsSVGGenericContainerFrame::NotifyCTMChanged()
 NS_IMETHODIMP
 nsSVGGenericContainerFrame::NotifyRedrawSuspended()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawSuspended();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }
@@ -441,14 +433,13 @@ nsSVGGenericContainerFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGGenericContainerFrame::NotifyRedrawUnsuspended()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
-    kid->GetNextSibling(&kid);
   }
  return NS_OK;
 }

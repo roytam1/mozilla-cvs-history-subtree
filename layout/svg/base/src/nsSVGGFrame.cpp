@@ -232,18 +232,17 @@ nsSVGGFrame::InsertFrames(nsIPresContext* aPresContext,
   mFrames.InsertFrames(this, aPrevFrame, aFrameList);
 
   // call InitialUpdate() on all new frames:
-  nsIFrame* kid = aFrameList;
   nsIFrame* end = nsnull;
   if (lastNewFrame)
     lastNewFrame->GetNextSibling(&end);
   
-  while (kid != end) {
+  for (nsIFrame* kid = aFrameList; kid != end;
+       kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->InitialUpdate(); 
     }
-    kid->GetNextSibling(&kid);
   }
   
   return NS_OK;
@@ -298,14 +297,12 @@ nsSVGGFrame::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGGFrame::DidModifySVGObservable (nsISVGValue* observable)
 {
-  
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->NotifyCTMChanged();
-    kid->GetNextSibling(&kid);
   }  
   return NS_OK;
 }
@@ -317,13 +314,12 @@ nsSVGGFrame::DidModifySVGObservable (nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGGFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(canvas, dirtyRectTwips);
-    kid->GetNextSibling(&kid);
   }
 
   return NS_OK;
@@ -333,9 +329,9 @@ NS_IMETHODIMP
 nsSVGGFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 {
   *hit = nsnull;
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       nsIFrame* temp=nsnull;
@@ -346,7 +342,6 @@ nsSVGGFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
         // have a singly linked list...
       }
     }
-    kid->GetNextSibling(&kid);
   }
   
   return *hit ? NS_OK : NS_ERROR_FAILURE;
@@ -398,14 +393,13 @@ nsSVGGFrame::InitialUpdate()
 NS_IMETHODIMP
 nsSVGGFrame::NotifyCTMChanged()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyCTMChanged();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }
@@ -413,14 +407,13 @@ nsSVGGFrame::NotifyCTMChanged()
 NS_IMETHODIMP
 nsSVGGFrame::NotifyRedrawSuspended()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawSuspended();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }
@@ -428,14 +421,13 @@ nsSVGGFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGGFrame::NotifyRedrawUnsuspended()
 {
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsISVGChildFrame* SVGFrame=0;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
-    kid->GetNextSibling(&kid);
   }
   return NS_OK;
 }

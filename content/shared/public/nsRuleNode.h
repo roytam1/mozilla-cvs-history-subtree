@@ -494,16 +494,6 @@ protected:
                                            const RuleDetail& aRuleDetail, PRBool aInherited);
 #endif
   
-  typedef const nsStyleStruct*
-  (nsRuleNode::*ComputeStyleDataFn)(nsStyleStruct* aStartStruct,
-                                    const nsRuleDataStruct& aStartData,
-                                    nsStyleContext* aContext,
-                                    nsRuleNode* aHighestNode,
-                                    const RuleDetail& aRuleDetail,
-                                    PRBool aInherited);
-
-  static ComputeStyleDataFn gComputeStyleDataFn[];
-
   inline RuleDetail CheckSpecifiedProperties(const nsStyleStructID aSID, const nsRuleDataStruct& aRuleDataStruct);
 
   const nsStyleStruct* GetParentData(const nsStyleStructID aSID);
@@ -531,9 +521,6 @@ protected:
   const nsStyleStruct* GetSVGData(nsStyleContext* aContext);
   const nsStyleStruct* GetSVGResetData(nsStyleContext* aContext);
 #endif
-
-  typedef const nsStyleStruct* (nsRuleNode::*GetStyleDataFn)(nsStyleContext*);
-  static GetStyleDataFn gGetStyleDataFn[];
 
 public:
   nsRuleNode(nsIPresContext* aPresContext, nsIStyleRule* aRule,
