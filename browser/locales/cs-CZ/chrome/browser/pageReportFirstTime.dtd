@@ -1,7 +1,0 @@
-<!ENTITY startDescription.label            "Prohlížená stránka se pokusila otevřít pop-up okno bez vašeho souhlasu. Kdykoliv &brandShortName; zablokuje tyto pop-okna, uvidíte na stavové liště ikonu.">
-
-<!ENTITY endDescription.label              "Můžete klepnout na tuto ikonu pro zjištění toho, co &brandShortName; blokuje a povolit otevřít pop-okno z tohoto serveru, pokud je vyžadováno pro správnou funkci.">
-
-<!ENTITY caption.label                     "O blokování pop-up oken">
-
-<!ENTITY done.label "Hotovo">

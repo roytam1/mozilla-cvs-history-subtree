@@ -1,9 +1,0 @@
-<!ENTITY allowScripts.title "Opciones avanzadas de JavaScript">
-<!ENTITY allowScripts.label "Permitir a los scripts:">
-<!ENTITY allowWindowOpen.label "Abrir ventanas no solicitadas">
-<!ENTITY allowWindowMoveResize.label "Mover o cambiar tamaño de las ventanas existentes">
-<!ENTITY allowWindowFlip.label "Subir o bajar ventanas">
-<!ENTITY allowWindowStatusChange.label "Cambiar texto de la barra de estado">
-<!ENTITY allowWindowImageSrcChange.label "Cambiar imágenes">
-<!ENTITY allowControlContextMenu.label "Deshabilitar o reemplazar los menús contextuales">
-<!ENTITY allowHideStatusBar.label "Ocultar la barra de estado">

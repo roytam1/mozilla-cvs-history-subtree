@@ -1,9 +1,0 @@
-<!ENTITY setPassword.oldPassword.label "Aktuelles Passwort:">
-<!ENTITY masterPasswordWarning.label "Bitte stellen Sie sicher, dass Sie das Master-Passwort, das Sie festgelegt haben nicht vergessen. Falls Sie das Master-Passwort vergessen sollten, gibt es keine Möglichkeit an die Informationen zu gelangen, die von ihm geschützt werden.">
-<!ENTITY setPassword.reenterPassword.label "Neues Passwort (nochmals):">
-<!ENTITY setPassword.meter.loading "Lade">
-<!ENTITY masterPasswordDescription.label "Ein Master-Passwort wird benutzt, um sensible Daten wie Website-Passwörter zu schützen. Falls Sie ein Master-Passwort festlegen, werden Sie einmal pro Sitzung danach gefragt, wenn &brandShortName; gespeicherte Daten abruft, die von dem Passwort gesichert weden.">
-<!ENTITY setPassword.tokenName.label "Kryptographie-Modul">
-<!ENTITY setPassword.title "Master-Passwort ändern">
-<!ENTITY setPassword.meter.label "Passwort-Qualitäts-Messer">
-<!ENTITY setPassword.newPassword.label "Neues Passwort:">

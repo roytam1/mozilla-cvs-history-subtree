@@ -1,9 +1,0 @@
-<!ENTITY window.title "Excepciones">
-<!ENTITY treehead.sitename.label "Sitio">
-<!ENTITY treehead.status.label "Estado">
-<!ENTITY addpermission.label "Nuevo sitio">
-<!ENTITY removepermission.label "Remover sitio">
-<!ENTITY removeallpermissions.label "Remover todos los sitios">
-<!ENTITY address.label "Dirección del sitio:">
-<!ENTITY block.label "Bloquear">
-<!ENTITY allow.label "Permitir">

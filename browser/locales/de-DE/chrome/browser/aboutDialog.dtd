@@ -1,8 +1,0 @@
-<!ENTITY copyright "Credits">
-<!ENTITY aboutDialog.title "Über &brandFullName;">
-<!ENTITY aboutVersion "Version &version;">
-<!ENTITY copyrightText "©1998-2004 Contributors. All Rights Reserved. Firefox and the 
-                                 Firefox logos are trademarks of the Mozilla Foundation.  All rights 
-                                 reserved. Some trademark rights used under license from The 
-                                 Charlton Company.">
-<!ENTITY aboutLink "&lt; Über &brandFullName;">

@@ -1,5 +1,0 @@
-<!ENTITY window.title               "Správce obrázků">
-<!ENTITY treehead.sitename.label    "Server">
-<!ENTITY treehead.status.label      "Stav">
-<!ENTITY removepermission.label     "Odebrat server">
-<!ENTITY removeallpermissions.label "Odebrat všechny servery">

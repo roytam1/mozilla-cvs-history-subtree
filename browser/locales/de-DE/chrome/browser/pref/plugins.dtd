@@ -1,6 +1,0 @@
-<!ENTITY pluginInfo2.label "Wenn Sie die Plugins für einen Dateitypen deaktivieren, werden die Dateien dieses Types heruntergeladen, anstatt im Viewer des Plugins angezeigt zu werden.">
-<!ENTITY typeHeader.label "Dateityp">
-<!ENTITY enabledHeader.label "Aktiviert">
-<!ENTITY extensionsHeader.label "Erweiterung">
-<!ENTITY plugins.title "Plugins">
-<!ENTITY pluginInfo.label "Momentan sind Plugins für die folgenden Dateitypen verfügbar:">

@@ -1,4 +1,0 @@
-<!ENTITY startDescription.label "Un sitio ha intentado abrir una nueva ventana sin su permiso. &brandShortName;  ha automáticamente cerrado la ventana emergente.  Mientras &brandShortName;  bloquea estas ventanas, se mostrará un ícono en la barra de estado.">
-<!ENTITY endDescription.label "Puede hacer click en este ícono para ver que sitios están bloqueados por &brandShortName;  y permitirles que abran ventanas si son necesarias para el correcto funcionamiento.">
-<!ENTITY caption.label "Acerca del bloqueo de ventanas">
-<!ENTITY done.label "Listo">

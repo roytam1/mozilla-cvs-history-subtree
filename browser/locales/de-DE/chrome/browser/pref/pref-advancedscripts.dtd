@@ -1,9 +1,0 @@
-<!ENTITY allowScripts.label "Scripts folgende Aktionen erlauben:">
-<!ENTITY allowWindowOpen.label "Unaufgeforderte Fenster öffnen">
-<!ENTITY allowWindowStatusChange.label "Statuszeilentext ändern">
-<!ENTITY allowWindowFlip.label "Fenster vor oder hinter andere Fenster legen">
-<!ENTITY allowWindowMoveResize.label "Existierende Fenster verschieben oder deren Größe ändern">
-<!ENTITY allowScripts.title "Erweiterte JavaScript-Optionen">
-<!ENTITY allowHideStatusBar.label "Statusleiste ausblenden">
-<!ENTITY allowWindowImageSrcChange.label "Grafiken verändern">
-<!ENTITY allowControlContextMenu.label "Das Kontextmenü deaktivieren oder ersetzen">

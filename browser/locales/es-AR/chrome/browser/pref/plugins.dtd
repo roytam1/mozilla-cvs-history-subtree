@@ -1,6 +1,0 @@
-<!ENTITY plugins.title "Plugins">
-<!ENTITY pluginInfo.label "Hay plugins actualmente disponibles para los siguientes tipos de archivo:">
-<!ENTITY pluginInfo2.label "Deshabilitar plugins para un tipo de archivo causará que esos archivos sean descargados en lugar de ser vistos en el plugin.">
-<!ENTITY typeHeader.label "Tipo de archivo">
-<!ENTITY enabledHeader.label "Habilitado">
-<!ENTITY extensionsHeader.label "Extensión">
