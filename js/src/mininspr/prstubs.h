@@ -33,17 +33,20 @@ typedef struct PRLock {int dummy;} PRLock;
 typedef struct PRFileDesc {int dummy;} PRFileDesc;
 typedef struct PRThread {int dummy;} PRThread;
 
-PR_EXTERN(PRLock*) PR_NewLock(void);
-PR_EXTERN(void) PR_DestroyLock(PRLock *lock);
-PR_EXTERN(void) PR_Lock(PRLock *lock);
-PR_EXTERN(PRStatus) PR_Unlock(PRLock *lock);
-PR_EXTERN(PRThread*) PR_GetCurrentThread(void);
+#ifndef JS_THREADSAFE
+#define PR_NewLock() NULL
+#define PR_DestroyLock(lock)
+#define PR_Lock(lock)
+#define PR_Unlock(lock) PR_SUCCESS
+#define PR_GetCurrenThread() NULL
+#endif  /* JS_THREADSAFE */
+
+#define PR_SetError(x, y) errno=x
+#define PR_GetEnv getenv
 
 extern PRBool _pr_initialized;
 extern void _PR_ImplicitInitialization(void);
 
-#define PR_SetError(x, y)
-#define PR_GetEnv getenv
 
 /*
 ** Abort the process in a non-graceful manner. This will cause a core file,
