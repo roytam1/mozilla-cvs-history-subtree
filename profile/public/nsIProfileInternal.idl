@@ -126,7 +126,12 @@ interface nsIProfileInternal : nsIProfile {
                        in wstring regEmail,
                        in wstring regOption);
     [noscript] string isRegStringSet(in wstring profileName);
-    
+    [noscript] void getRegStrings(in wstring profileName,
+                       out wstring regString,
+                       out wstring regName,
+                       out wstring regEmail,
+                       out wstring regOption);
+                       
     void createNewProfileWithLocales(in wstring profileName,
                           in wstring nativeProfileDir,
                           in wstring UILocale,
