@@ -1574,7 +1574,19 @@ nsExtensionManager.prototype = {
     // extensions.
     // XXXben I think this might impose unnecessary restarts if needsRestart is
     //        false.
-    this._writeComponentManifest(false);
+    try {
+      // Wrap this in try..catch so that if the account is restricted we don't
+      // completely fail here for lack of permissions to write to the bin
+      // dir (and cause apprunner to go into a restart loop). 
+      //
+      // This means that making changes to install-dir extensions only possible
+      // for people with write access to bin dir (i.e. uninstall, disable, 
+      // enable)
+      this._writeComponentManifest(false);
+    }
+    catch (e) { 
+      dump("*** ExtensionManager:checkForMismatches: no access privileges to application directory!\n"); 
+    };
     this._writeComponentManifest(true);
     
     return needsRestart;
