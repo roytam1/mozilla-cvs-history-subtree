@@ -29,17 +29,17 @@
  * ldaptool_fileurl2path() convert a file URL to a local path.
  *
  * If successful, LDAPTOOL_FILEURL_SUCCESS is returned and *localpathp is
- * set point to an allocated string.  If not, an differnet LDAPTOOL_FILEURL_
+ * set point to an allocated string.  If not, a different LDAPTOOL_FILEURL_
  * error code is returned.
  */
-int ldaptool_fileurl2path( char *fileurl, char **localpathp );
+int ldaptool_fileurl2path( const char *fileurl, char **localpathp );
 
 
 /*
  * Convert a local path to a file URL.
  *
  * If successful, LDAPTOOL_FILEURL_SUCCESS is returned and *urlp is
- * set point to an allocated string.  If not, an different LDAPTOOL_FILEURL_
+ * set point to an allocated string.  If not, a different LDAPTOOL_FILEURL_
  * error code is returned.  At present, the only possible error is
  * LDAPTOOL_FILEURL_NOMEMORY.
  *
@@ -48,10 +48,37 @@ int ldaptool_path2fileurl( char *path, char **urlp );
 
 
 /*
- * Possible return codes for ldaptool_fileurl2path and ldaptool_path2fileurl.
+ * Populate *bvp from "value" of length "vlen."
+ *
+ * If recognize_url_syntax is non-zero, :<fileurl is recognized.
+ * If always_try_file is recognized and no file URL was found, an
+ * attempt is made to stat and read the value as if it were the name
+ * of a file.
+ *
+ * If reporterrs is non-zero, specific error messages are printed to
+ * stderr.
+ *
+ * If successful, LDAPTOOL_FILEURL_SUCCESS is returned and bvp->bv_len
+ * and bvp->bv_val are set (the latter is set to malloc'd memory).
+ * Upon failure, a different LDAPTOOL_FILEURL_ error code is returned.
+ */
+int ldaptool_berval_from_ldif_value( const char *value, int vlen,
+	struct berval *bvp, int recognize_url_syntax, int always_try_file,
+	int reporterrs );
+
+
+/*
+ * Map an LDAPTOOL_FILEURL_ error code to an LDAP error code (crude).
+ */
+int ldaptool_fileurlerr2ldaperr( int lderr );
+
+
+/*
+ * Possible return codes for the functions declared in this file:
  */
 #define LDAPTOOL_FILEURL_SUCCESS	0
 #define LDAPTOOL_FILEURL_NOTAFILEURL	1
 #define LDAPTOOL_FILEURL_MISSINGPATH	2
 #define LDAPTOOL_FILEURL_NONLOCAL	3
 #define LDAPTOOL_FILEURL_NOMEMORY	4
+#define LDAPTOOL_FILEURL_FILEIOERROR	5

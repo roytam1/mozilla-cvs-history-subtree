@@ -29,10 +29,12 @@
 #include "fileurl.h"
 #include <ctype.h>	/* for isalpha() */
 
-static int str_starts_with( char *s, char *prefix );
+static int str_starts_with( const char *s, char *prefix );
 static void hex_unescape( char *s );
 static int unhex( char c );
 static void strcpy_escaped_and_convert( char *s1, char *s2 );
+static int berval_from_file( const char *path, struct berval *bvp,
+	int reporterrs );
 
 /*
  * Convert a file URL to a local path.
@@ -58,9 +60,10 @@ static void strcpy_escaped_and_convert( char *s1, char *s2 );
  *
  */
 int
-ldaptool_fileurl2path( char *fileurl, char **localpathp )
+ldaptool_fileurl2path( const char *fileurl, char **localpathp )
 {
-    char	*path;
+    const char	*path;
+    char	*pathcopy;
 
     /*
      * Make sure this is a file URL we can handle.
@@ -107,10 +110,10 @@ ldaptool_fileurl2path( char *fileurl, char **localpathp )
      * Duplicate the path so we can safely alter it.
      * Unescape any %HH sequences.
      */
-    if (( path = strdup( path )) == NULL ) {
+    if (( pathcopy = strdup( path )) == NULL ) {
 	return( LDAPTOOL_FILEURL_NOMEMORY );
     }
-    hex_unescape( path );
+    hex_unescape( pathcopy );
 
 #ifdef _WINDOWS
     /*
@@ -121,19 +124,19 @@ ldaptool_fileurl2path( char *fileurl, char **localpathp )
     {
 	char	*p;
 
-	for ( p = path; *p != '\0'; ++p ) {
+	for ( p = pathcopy; *p != '\0'; ++p ) {
 	    if ( *p == '/' ) {
 		*p = '\\';
 	    }
 	}
     }
 
-    if ( isalpha( path[0] ) && path[1] == '|' ) {
-	path[1] = ':';
+    if ( isalpha( pathcopy[0] ) && pathcopy[1] == '|' ) {
+	pathcopy[1] = ':';
     }
 #endif /* _WINDOWS */
 
-    *localpathp = path;
+    *localpathp = pathcopy;
     return( LDAPTOOL_FILEURL_SUCCESS );
 }
 
@@ -197,10 +200,193 @@ ldaptool_path2fileurl( char *path, char **urlp )
 
 
 /*
+ * Populate *bvp from "value" of length "vlen."
+ *
+ * If recognize_url_syntax is non-zero, :<fileurl is recognized.
+ * If always_try_file is recognized and no file URL was found, an
+ * attempt is made to stat and read the value as if it were the name
+ * of a file.
+ *
+ * If reporterrs is non-zero, specific error messages are printed to
+ * stderr.
+ *
+ * If successful, LDAPTOOL_FILEURL_SUCCESS is returned and bvp->bv_len
+ * and bvp->bv_val are set (the latter is set to malloc'd memory).
+ * Upon failure, a different LDAPTOOL_FILEURL_ error code is returned.
+ */
+int
+ldaptool_berval_from_ldif_value( const char *value, int vlen,
+	struct berval *bvp, int recognize_url_syntax, int always_try_file,
+	int reporterrs )
+{
+    int	rc = LDAPTOOL_FILEURL_SUCCESS;	/* optimistic */
+    struct stat	fstats;
+
+    /* recognize "attr :< url" syntax if LDIF version is >= 1 */
+    if ( recognize_url_syntax && *value == '<' ) {
+	const char	*url;
+	char		*path;
+
+	for ( url = value + 1; isspace( *url ); ++url ) {
+	    ;	/* NULL */
+	}
+
+	/*
+	 * We only support file:// URLs for now.
+	 */
+	rc = ldaptool_fileurl2path( url, &path );
+	switch( rc ) {
+	case LDAPTOOL_FILEURL_NOTAFILEURL:
+	    if ( reporterrs ) fprintf( stderr, "%s: unsupported URL \"%s\";"
+		" use a file:// URL instead.\n", ldaptool_progname, url );
+	    break;
+
+	case LDAPTOOL_FILEURL_MISSINGPATH:
+	    if ( reporterrs ) fprintf( stderr,
+		    "%s: unable to process URL \"%s\" --"
+		    " missing path.\n", ldaptool_progname, url );
+	    break;
+
+	case LDAPTOOL_FILEURL_NONLOCAL:
+	    if ( reporterrs ) fprintf( stderr,
+		    "%s: unable to process URL \"%s\" -- only"
+		    " local file:// URLs are supported.\n",
+		    ldaptool_progname, url );
+	    break;
+
+	case LDAPTOOL_FILEURL_NOMEMORY:
+	    if ( reporterrs ) perror( "ldaptool_fileurl2path" );
+	    break;
+
+	case LDAPTOOL_FILEURL_SUCCESS:
+	    if ( stat( path, &fstats ) != 0 ) {
+		if ( reporterrs ) perror( path );
+	    } else if ( fstats.st_mode & S_IFDIR ) {	
+		if ( reporterrs ) fprintf( stderr,
+			"%s: %s is a directory, not a file\n",
+			ldaptool_progname, path );
+		rc = LDAPTOOL_FILEURL_FILEIOERROR;
+	    } else {
+		rc = berval_from_file( path, bvp, reporterrs );
+	    }
+	    free( path );
+	    break;
+
+	default:
+	    if ( reporterrs ) fprintf( stderr,
+		    "%s: unable to process URL \"%s\""
+		    " -- unknown error\n", ldaptool_progname, url );
+	}
+
+    } else if ( always_try_file && (stat( value, &fstats ) == 0) &&
+	     !(fstats.st_mode & S_IFDIR)) {	/* get value from file */
+	rc = berval_from_file( value, bvp, reporterrs );
+    } else {
+	bvp->bv_len = vlen;
+	if (( bvp->bv_val = (char *)malloc( vlen + 1 )) == NULL ) {
+	    if ( reporterrs ) perror( "malloc" );
+	    rc = LDAPTOOL_FILEURL_NOMEMORY;
+	} else {
+	    SAFEMEMCPY( bvp->bv_val, value, vlen );
+	    bvp->bv_val[ vlen ] = '\0';
+	}
+    }
+
+    return( rc );
+}
+
+
+/*
+ * Map an LDAPTOOL_FILEURL_ error code to an LDAP error code (crude).
+ */
+int
+ldaptool_fileurlerr2ldaperr( int lderr )
+{
+    int		rc;
+
+    switch( lderr ) {
+    case LDAPTOOL_FILEURL_SUCCESS:
+	rc = LDAP_SUCCESS;
+	break;
+    case LDAPTOOL_FILEURL_NOMEMORY:
+	rc = LDAP_NO_MEMORY;
+	break;
+    default:
+	rc = LDAP_PARAM_ERROR;
+    }
+
+    return( rc );
+} 
+
+
+/*
+ * Populate *bvp with the contents of the file named by "path".
+ *
+ * If reporterrs is non-zero, specific error messages are printed to
+ * stderr.
+ *
+ * If successful, LDAPTOOL_FILEURL_SUCCESS is returned and bvp->bv_len
+ * and bvp->bv_val are set (the latter is set to malloc'd memory).
+ * Upon failure, a different LDAPTOOL_FILEURL_ error code is returned.
+ */
+
+static int
+berval_from_file( const char *path, struct berval *bvp, int reporterrs )
+{
+    FILE	*fp;
+    long	rlen;
+    int		eof;
+#if defined( XP_WIN32 )
+    char	mode[20] = "r+b";
+#else
+    char	mode[20] = "r";
+#endif
+
+    if (( fp = fopen( path, mode )) == NULL ) {
+	if ( reporterrs ) perror( path );
+	return( LDAPTOOL_FILEURL_FILEIOERROR );
+    }
+
+    if ( fseek( fp, 0L, SEEK_END ) != 0 ) {
+	if ( reporterrs ) perror( path );
+	fclose( fp );
+	return( LDAPTOOL_FILEURL_FILEIOERROR );
+    }
+
+    bvp->bv_len = ftell( fp );
+
+    if (( bvp->bv_val = (char *)malloc( bvp->bv_len + 1 )) == NULL ) {
+	if ( reporterrs ) perror( "malloc" );
+	fclose( fp );
+	return( LDAPTOOL_FILEURL_NOMEMORY );
+    }
+
+    if ( fseek( fp, 0L, SEEK_SET ) != 0 ) {
+	if ( reporterrs ) perror( path );
+	fclose( fp );
+	return( LDAPTOOL_FILEURL_FILEIOERROR );
+    }
+
+    rlen = fread( bvp->bv_val, 1, bvp->bv_len, fp );
+    eof = feof( fp );
+    fclose( fp );
+
+    if ( rlen != (long)bvp->bv_len ) {
+	if ( reporterrs ) perror( path );
+	free( bvp->bv_val );
+	return( LDAPTOOL_FILEURL_FILEIOERROR );
+    }
+
+    bvp->bv_val[ bvp->bv_len ] = '\0';
+    return( LDAPTOOL_FILEURL_SUCCESS );
+}
+
+
+/*
  * Return a non-zero value if the string s begins with prefix and zero if not.
  */
 static int
-str_starts_with( char *s, char *prefix )
+str_starts_with( const char *s, char *prefix )
 {
     size_t	prefix_len;
 

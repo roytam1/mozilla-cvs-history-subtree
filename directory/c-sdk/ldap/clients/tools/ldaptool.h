@@ -97,6 +97,10 @@ extern "C" {
 /*
  * shared macros, structures, etc.
  */
+#define LDAPTOOL_RESULT_IS_AN_ERROR( rc ) \
+		( (rc) != LDAP_SUCCESS && (rc) != LDAP_COMPARE_TRUE \
+		&& (rc) != LDAP_COMPARE_FALSE )
+
 #define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
 #define LDAPTOOL_DEFHOST	"localhost"
 #define LDAPTOOL_DEFCERTDBPATH	"."
@@ -122,7 +126,6 @@ extern FILE		*ldaptool_fp;
 extern char		*ldaptool_charset;
 extern char		*ldaptool_convdir;
 extern LDAPControl	*ldaptool_request_ctrls[];
-extern int		pw_expiring;
 
 
 /*
@@ -146,6 +149,7 @@ void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
 void ldaptool_reset_control_array( LDAPControl **array );
 char *ldaptool_get_tmp_dir( void );
 char *ldaptool_local2UTF8( const char * );
+int ldaptool_berval_is_ascii( const struct berval *bvp );
 int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
         const struct berval *cred, LDAPControl **serverctrls,
         LDAPControl **clientctrls, struct berval **servercredp, char *msg );
@@ -160,6 +164,10 @@ int ldaptool_delete_ext_s( LDAP *ld, const char *dn, LDAPControl **serverctrls,
 int ldaptool_rename_s(  LDAP *ld, const char *dn, const char *newrdn,
         const char *newparent, int deleteoldrdn, LDAPControl **serverctrls,
         LDAPControl **clientctrls, char *msg );
+int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
+	    const struct berval *bvalue, LDAPControl **serverctrls,
+	    LDAPControl **clientctrls, char *msg );
+int ldaptool_boolean_str2value ( const char *s );
 
 #ifdef __cplusplus
 }

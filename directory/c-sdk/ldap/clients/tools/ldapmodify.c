@@ -70,7 +70,6 @@ static int dodelete( char *dn );
 static int dorename( char *dn, char *newrdn, char *newparent,
 	int deleteoldrdn );
 static void freepmods( LDAPMod **pmods );
-static int fromfile( char *path, struct berval *bv );
 static char *read_one_record( FILE *fp );
 static char *strdup_and_trim( char *s );
 
@@ -701,9 +700,8 @@ static void
 addmodifyop( LDAPMod ***pmodsp, int modop, char *attr, char *value, int vlen )
 {
     LDAPMod		**pmods;
-    int			i, j;
+    int			i, j, rc;
     struct berval	*bvp;
-	struct stat fstats;
 
     pmods = *pmodsp;
     modop |= LDAP_MOD_BVALUES;
@@ -759,83 +757,12 @@ addmodifyop( LDAPMod ***pmodsp, int modop, char *attr, char *value, int vlen )
 	}
 	pmods[ i ]->mod_bvalues[ j ] = bvp;
 
-	/* recognize "attr :< url" syntax if LDIF version is >= 1 */
-	if ( ldif_version >= LDIF_VERSION_ONE && *value == '<' ) {
-	    char	*url, *path;
-	    int		rc = LDAP_SUCCESS;
 
-	    for ( url = value + 1; isspace( *url ); ++url ) {
-		;	/* NULL */
-	    }
-
-	    /*
-	     * We only support file:// URLs for now.
-	     */
-	    switch( ldaptool_fileurl2path( url, &path )) {
-	    case LDAPTOOL_FILEURL_NOTAFILEURL:
-		fprintf( stderr, "%s: unsupported URL \"%s\";"
-		    " use a file:// URL instead.\n", ldaptool_progname, url );
-		rc = LDAP_PARAM_ERROR;
-		break;
-
-	    case LDAPTOOL_FILEURL_MISSINGPATH:
-		fprintf( stderr, "%s: unable to process URL \"%s\" --"
-			" missing path.\n", ldaptool_progname, url );
-		rc = LDAP_PARAM_ERROR;
-		break;
-
-	    case LDAPTOOL_FILEURL_NONLOCAL:
-		fprintf( stderr, "%s: unable to process URL \"%s\" -- only"
-			" local file:// URLs are supported.\n",
-			ldaptool_progname, url );
-		rc = LDAP_PARAM_ERROR;
-		break;
-
-	    case LDAPTOOL_FILEURL_NOMEMORY:
-		perror( "ldaptool_fileurl2path" );
-		rc = LDAP_NO_MEMORY;
-		break;
-
-	    case LDAPTOOL_FILEURL_SUCCESS:
-		if ( stat( path, &fstats ) != 0 ) {
-		    perror( path );
-		    rc = LDAP_LOCAL_ERROR;
-		} else if ( fstats.st_mode & S_IFDIR ) {	
-		    fprintf( stderr, "%s: %s is a directory, not a file\n",
-			    ldaptool_progname, path );
-		    rc = LDAP_LOCAL_ERROR;
-		} else if ( fromfile( path, bvp ) < 0 ) {
-		    rc = LDAP_LOCAL_ERROR;
-		}
-		free( path );
-		break;
-
-	    default:
-		fprintf( stderr, "%s: unable to process URL \"%s\""
-			" -- unknown error\n", ldaptool_progname, url );
-		rc = LDAP_LOCAL_ERROR;
-	    }
-
-
-	    if ( rc != LDAP_SUCCESS ) {
-		exit( rc );
-	    }
-
-	} else if ( valsfromfiles && 
-		 (stat( value, &fstats ) == 0) &&
-		 !(fstats.st_mode & S_IFDIR)) {	
-		/* get value from file */
-	    if ( fromfile( value, bvp ) < 0 ) {
-		exit( LDAP_LOCAL_ERROR );
-	    }
-	} else {
-	    bvp->bv_len = vlen;
-	    if (( bvp->bv_val = (char *)malloc( vlen + 1 )) == NULL ) {
-		perror( "malloc" );
-		exit( LDAP_NO_MEMORY );
-	    }
-	    SAFEMEMCPY( bvp->bv_val, value, vlen );
-	    bvp->bv_val[ vlen ] = '\0';
+	rc = ldaptool_berval_from_ldif_value( value, vlen, bvp,
+		    ( ldif_version >= LDIF_VERSION_ONE ), valsfromfiles,
+			1 /* report errors */ );
+	if ( rc != LDAPTOOL_FILEURL_SUCCESS ) {
+	    exit( ldaptool_fileurlerr2ldaperr( rc ));
 	}
     }
 }
@@ -845,7 +772,6 @@ static int
 domodify( char *dn, LDAPMod **pmods, int newentry )
 {
     int			i, j, notascii, op;
-    unsigned long	k;
     struct berval	*bvp;
 
     if ( pmods == NULL ) {
@@ -865,12 +791,7 @@ domodify( char *dn, LDAPMod **pmods, int newentry )
 		    bvp = pmods[ i ]->mod_bvalues[ j ];
 		    notascii = 0;
 		    if ( !display_binary_values ) {
-			for ( k = 0; k < bvp->bv_len; ++k ) {
-			    if ( !isascii( bvp->bv_val[ k ] )) {
-				notascii = 1;
-				break;
-			    }
-			}
+			notascii = !ldaptool_berval_is_ascii( bvp );
 		    }
 		    if ( notascii ) {
 			printf( "\tNOT ASCII (%ld bytes)\n", bvp->bv_len );
@@ -1003,58 +924,6 @@ freepmods( LDAPMod **pmods )
 	free( pmods[ i ] );
     }
     free( pmods );
-}
-
-
-static int
-fromfile( char *path, struct berval *bv )
-{
-	FILE		*fp;
-	long		rlen;
-	int		eof;
-#if defined( XP_WIN32 )
-	char	mode[20] = "r+b";
-#else
-	char	mode[20] = "r";
-#endif
-
-	if (( fp = fopen( path, mode )) == NULL ) {
-	    	perror( path );
-		return( -1 );
-	}
-
-	if ( fseek( fp, 0L, SEEK_END ) != 0 ) {
-		perror( path );
-		fclose( fp );
-		return( -1 );
-	}
-
-	bv->bv_len = ftell( fp );
-
-	if (( bv->bv_val = (char *)malloc( bv->bv_len + 1 )) == NULL ) {
-		perror( "malloc" );
-		fclose( fp );
-		return( -1 );
-	}
-
-	if ( fseek( fp, 0L, SEEK_SET ) != 0 ) {
-		perror( path );
-		fclose( fp );
-		return( -1 );
-	}
-
-	rlen = fread( bv->bv_val, 1, bv->bv_len, fp );
-	eof = feof( fp );
-	fclose( fp );
-
-	if ( rlen != (long)bv->bv_len ) {
-		perror( path );
-		free( bv->bv_val );
-		return( -1 );
-	}
-
-	bv->bv_val[ bv->bv_len ] = '\0';
-	return( bv->bv_len );
 }
 
 

@@ -565,13 +565,7 @@ print_entry( ld, entry, attrsonly )
 		} else {
 		    notascii = 0;
 		    if ( !ldif && !allow_binary ) {
-			unsigned long	j;
-			for ( j = 0; j < bvals[ i ]->bv_len; ++j ) {
-			    if ( !isascii( bvals[ i ]->bv_val[ j ] )) {
-				notascii = 1;
-				break;
-			    }
-			}
+			notascii = !ldaptool_berval_is_ascii( bvals[ i ] );
 		    }
 
 		    if ( ldif ) {
