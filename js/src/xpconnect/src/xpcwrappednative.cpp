@@ -70,16 +70,56 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return wrapper;
     }
 
-    XPCWrappedNativeProto* proto;
+
+    // There is a chance that the object wants to have the self-same JSObject
+    // reflection regardless of the scope into which we are reflecting it.
+    // Many DOM objects require this. The scriptable helper specifies this
+    // in preCreate by indicating a 'parent' of a particular scope.
+    //
+    // To handle this we need to get the scriptable helper early and ask it.
+    // It is possible that we will then end up forwarding this entire call
+    // to this same function but with a different scope.
 
     nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
 
     // If we are making a wrapper for the nsIClassInfo interface then
     // We *don't* want to have it use the prototype meant for instances
     // of that class.
-    if(info && !Interface->GetIID()->Equals(NS_GET_IID(nsIClassInfo)))
+    JSBool isClassInfo = Interface->GetIID()->Equals(NS_GET_IID(nsIClassInfo));
+
+    XPCNativeScriptableInfo siProto;
+    XPCNativeScriptableInfo siWrapper;
+    
+    if(NS_FAILED(GatherScriptableInfo(identity,
+                                      isClassInfo ? nsnull : info,
+                                      &siProto, &siWrapper)))
+        return nsnull;
+
+    JSObject* parent = Scope->GetGlobalJSObject();
+    
+    if(siWrapper.WantPreCreate())
     {
-        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info);
+        JSObject* plannedParent = parent;
+        if(NS_FAILED(siWrapper.GetScriptable()->
+            PreCreate(identity, ccx.GetJSContext(), parent, &parent)))
+        {
+            return nsnull;
+        }
+        
+        if(parent != plannedParent)
+        {
+            XPCWrappedNativeScope* betterScope = 
+                XPCWrappedNativeScope::FindInJSObjectScope(ccx, parent);
+            if(betterScope != Scope)
+                return GetNewOrUsed(ccx, Object, betterScope, Interface);
+        }
+    }
+
+    XPCWrappedNativeProto* proto;
+
+    if(info && !isClassInfo)
+    {
+        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &siProto);
     }
     else
     {
@@ -102,7 +142,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
     }
 
-    if(!wrapper->Init(ccx))
+    if(!wrapper->Init(ccx, parent, siWrapper))
     {
         wrapper->Release();
         wrapper->Release();
@@ -210,8 +250,66 @@ XPCWrappedNative::~XPCWrappedNative()
     NS_IF_RELEASE(mIdentity);
 }
 
+// static
+nsresult
+XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
+                                       nsIClassInfo* classInfo,
+                                       XPCNativeScriptableInfo* siProto,
+                                       XPCNativeScriptableInfo* siWrapper)
+{
+    nsCOMPtr<nsIXPCScriptable> helper;
+
+    NS_ASSERTION(siProto   && !siProto->GetScriptable(), "bad param");
+    NS_ASSERTION(siWrapper && !siWrapper->GetScriptable(), "bad param");
+
+    // Get the class scriptable helper (if present)
+    if(classInfo)
+    {
+        nsCOMPtr<nsISupports> possibleHelper;
+        nsresult rv = classInfo->GetHelperForLanguage(
+                                        nsIClassInfo::LANGUAGE_JAVASCRIPT,
+                                        getter_AddRefs(possibleHelper));
+        if(NS_SUCCEEDED(rv) && possibleHelper)
+        {
+            helper = do_QueryInterface(possibleHelper);
+            if(helper)
+            {
+                JSUint32 flags;
+                rv = helper->GetScriptableFlags(&flags);
+                if(NS_FAILED(rv))
+                    return rv;
+
+                siProto->SetScriptable(helper);
+                siProto->SetFlags(flags);
+                
+                siWrapper->SetScriptable(helper);
+                siWrapper->SetFlags(flags);
+
+                if(siProto->DontAskInstanceForScriptable())
+                    return NS_OK;    
+            }
+        }
+    }
+
+    // Do the same for the wrapper specific scriptable
+    helper = do_QueryInterface(obj);
+    if(helper)
+    {
+        JSUint32 flags;
+        nsresult rv = helper->GetScriptableFlags(&flags);
+        if(NS_FAILED(rv))
+            return rv;
+
+        siWrapper->SetScriptable(helper);
+        siWrapper->SetFlags(flags);
+    }
+
+    return NS_OK;
+}
+
 JSBool
-XPCWrappedNative::Init(XPCCallContext& ccx)
+XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
+                       const XPCNativeScriptableInfo& scriptableInfo)
 {
     // Do double addref first. So failure here means object can be deleted
     // by double release.
@@ -227,60 +325,25 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
     JS_AddNamedRoot(cx, &mFlatJSObject, "XPCWrappedNative::mFlatJSObject");
 
     // setup our scriptable info...
-
-    nsCOMPtr<nsIXPCScriptable> helper;
-
-    if(HasSharedProto())
+    
+    if(scriptableInfo.GetScriptable())
     {
-        XPCNativeScriptableInfo* si = mProto->GetScriptableInfo();
-        if(si && si->GetScriptable())
+        XPCNativeScriptableInfo* siProto = GetProto()->GetScriptableInfo();
+        if(siProto && siProto->GetScriptable() == scriptableInfo.GetScriptable())
+            mScriptableInfo = siProto;
+        else
         {
-            if(si->DontAskInstanceForScriptable())
-                mScriptableInfo = si;
-            else
-            {
-                helper = do_QueryInterface(mIdentity);
-                if(!helper || helper.get() == si->GetScriptable())
-                {
-                    mScriptableInfo = si;
-                }
-            }
-        }
-    }
-
-    if(!mScriptableInfo)
-    {
-        if(!helper)
-            helper = do_QueryInterface(mIdentity);
-        if(helper)
-        {
-            JSUint32 flags;
-            nsresult rv = helper->GetScriptableFlags(&flags);
-            if(NS_FAILED(rv))
+            mScriptableInfo = scriptableInfo.Clone();
+            if(!mScriptableInfo || !mScriptableInfo->BuildJSClass())
                 return JS_FALSE;
 
-            mScriptableInfo = XPCNativeScriptableInfo::NewInfo(helper, flags);
-            if(!mScriptableInfo)
-                return JS_FALSE;
-        }
-    }
-
-    // If we have a one-off proto, then it should share our scriptable.
-    // This allows the prototypes JSClass callbacks to do the right things
-    // (like respecting the DONT_ENUM_STATIC_PROPS flag) w/o requiring 
-    // scriptable objects to have an nsIClassInfo.
-    if(!HasSharedProto())
-        mProto->SetScriptableInfo(mScriptableInfo);
-
-    JSObject* parent = mProto->GetScope()->GetGlobalJSObject();
-
-    if(mScriptableInfo && mScriptableInfo->WantPreCreate())
-    {
-        if(NS_FAILED(mScriptableInfo->GetScriptable()->
-            PreCreate(mIdentity, cx, parent, &parent)))
-        {
-            return JS_FALSE;        
-        }
+            // If we have a one-off proto, then it should share our scriptable.
+            // This allows the proto's JSClass callbacks to do the right things
+            // (like respecting the DONT_ENUM_STATIC_PROPS flag) w/o requiring 
+            // scriptable objects to have an nsIClassInfo.
+            if(!HasSharedProto())
+                mProto->SetScriptableInfo(mScriptableInfo);
+        }       
     }
 
     XPCWrappedNativeScope* scope = mProto->GetScope();

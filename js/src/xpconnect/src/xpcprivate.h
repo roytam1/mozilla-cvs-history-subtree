@@ -1703,12 +1703,19 @@ private:
 class XPCNativeScriptableInfo
 {
 public:
-    static XPCNativeScriptableInfo* NewInfo(nsIXPCScriptable* scriptable, 
-                                            JSUint32 flags);
-
     nsIXPCScriptable* GetScriptable() const  {return mScriptable;}
     JSUint32          GetFlags() const       {return mFlags;}
     JSClass*          GetJSClass()           {return &mJSClass;}
+
+    JSBool            BuildJSClass();
+    
+    void              SetScriptable(nsIXPCScriptable* s)
+                                {NS_ASSERTION(!ClassBuilt(), "too late!");
+                                 mScriptable = s;}
+
+    void              SetFlags(JSUint32 f)
+                                {NS_ASSERTION(!ClassBuilt(), "too late!"); 
+                                 mFlags = f;}
 
 #ifdef GET_IT
 #undef GET_IT
@@ -1744,15 +1751,18 @@ public:
 #undef GET_IT
 
     ~XPCNativeScriptableInfo();
+    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull, 
+                            JSUint32 flags = 0);
+
+    XPCNativeScriptableInfo* Clone() const 
+        {return new XPCNativeScriptableInfo(mScriptable, mFlags);}
 
 private:
-    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable, JSUint32 flags);
+    JSBool ClassBuilt() const {return mJSClass.name != 0;} 
 
-private:
     // disable copy ctor and assignment
     XPCNativeScriptableInfo(const XPCNativeScriptableInfo& r); // not implemented
     XPCNativeScriptableInfo& operator= (const XPCNativeScriptableInfo& r); // not implemented
-    XPCNativeScriptableInfo();  // not implemented
 
 private:
     nsCOMPtr<nsIXPCScriptable> mScriptable;
@@ -1765,13 +1775,16 @@ private:
 class XPCWrappedNativeProto
 {
 public:
-    static XPCWrappedNativeProto* GetNewOrUsed(XPCCallContext& ccx,
-                                               XPCWrappedNativeScope* Scope,
-                                               nsIClassInfo* ClassInfo);
+    static XPCWrappedNativeProto* 
+    GetNewOrUsed(XPCCallContext& ccx,
+                 XPCWrappedNativeScope* Scope,
+                 nsIClassInfo* ClassInfo,
+                 const XPCNativeScriptableInfo* scriptableInfo);
 
-    static XPCWrappedNativeProto* BuildOneOff(XPCCallContext& ccx,
-                                              XPCWrappedNativeScope* Scope,
-                                              XPCNativeSet* Set);
+    static XPCWrappedNativeProto* 
+    BuildOneOff(XPCCallContext& ccx,
+                XPCWrappedNativeScope* Scope,
+                XPCNativeSet* Set);
 
     XPCWrappedNativeScope*   GetScope()   const {return mScope;}
     XPCJSRuntime*            GetRuntime() const {return mScope->GetRuntime();}
@@ -1808,7 +1821,8 @@ private:
 
     ~XPCWrappedNativeProto();
 
-    JSBool Init(XPCCallContext& ccx);
+    JSBool Init(XPCCallContext& ccx,
+                const XPCNativeScriptableInfo* scriptableInfo);
 
 private:
 #ifdef DEBUG
@@ -1977,7 +1991,8 @@ private:
                      XPCWrappedNativeProto* aProto);
     virtual ~XPCWrappedNative();
 
-    JSBool Init(XPCCallContext& ccx);
+    JSBool Init(XPCCallContext& ccx, JSObject* parent,
+                const XPCNativeScriptableInfo& scriptableInfo);
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
     
@@ -1988,6 +2003,11 @@ private:
      
     JSBool InitTearOffJSObject(XPCCallContext& ccx, 
                                XPCWrappedNativeTearOff* to);
+
+    static nsresult GatherScriptableInfo(nsISupports* obj,
+                                         nsIClassInfo* classInfo,
+                                         XPCNativeScriptableInfo* siProto,
+                                         XPCNativeScriptableInfo* siWrapper);
 
     XPCJSRuntime* GetRuntime() const {return mProto->GetScope()->GetRuntime();}
 

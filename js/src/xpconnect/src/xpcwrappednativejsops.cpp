@@ -1014,102 +1014,94 @@ XPCNativeScriptableInfo::~XPCNativeScriptableInfo()
         nsMemory::Free((void*)mJSClass.name);
 }
 
-// static 
-XPCNativeScriptableInfo* 
-XPCNativeScriptableInfo::NewInfo(nsIXPCScriptable* scriptable, 
-                                 JSUint32 flags)
+JSBool            
+XPCNativeScriptableInfo::BuildJSClass()
 {
-    XPCNativeScriptableInfo* self = 
-        new XPCNativeScriptableInfo(scriptable, flags);
-
-    if(!self)
-        return nsnull;
-
-    JSClass* clazz = self->GetJSClass();
+    NS_ASSERTION(mScriptable, "bad call!");
     
-    if(NS_FAILED(scriptable->GetClassName((char**)&clazz->name)) || !clazz->name)
+    if(NS_FAILED(mScriptable->GetClassName((char**)&mJSClass.name)) || 
+       !mJSClass.name)
     {
-        delete self;
-        return nsnull;    
+        return JS_FALSE;
     }
     
-    clazz->flags = JSCLASS_HAS_PRIVATE | 
-                   JSCLASS_PRIVATE_IS_NSISUPPORTS |
-                   JSCLASS_NEW_RESOLVE;
+    mJSClass.flags = JSCLASS_HAS_PRIVATE | 
+                     JSCLASS_PRIVATE_IS_NSISUPPORTS |
+                     JSCLASS_NEW_RESOLVE;
 
-    if(self->WantAddProperty())
-        clazz->addProperty = XPC_WN_Helper_AddProperty;
-    else if(self->UseJSStubForAddProperty())
-        clazz->addProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->addProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantAddProperty())
+        mJSClass.addProperty = XPC_WN_Helper_AddProperty;
+    else if(UseJSStubForAddProperty())
+        mJSClass.addProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.addProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->addProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.addProperty = XPC_WN_CannotModifyPropertyStub;
 
-    if(self->WantDelProperty())
-        clazz->delProperty = XPC_WN_Helper_DelProperty;
-    else if(self->UseJSStubForDelProperty())
-        clazz->delProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->delProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantDelProperty())
+        mJSClass.delProperty = XPC_WN_Helper_DelProperty;
+    else if(UseJSStubForDelProperty())
+        mJSClass.delProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.delProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->delProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.delProperty = XPC_WN_CannotModifyPropertyStub;
 
-    if(self->WantGetProperty())
-        clazz->getProperty = XPC_WN_Helper_GetProperty;
+    if(WantGetProperty())
+        mJSClass.getProperty = XPC_WN_Helper_GetProperty;
     else
-        clazz->getProperty = JS_PropertyStub;
+        mJSClass.getProperty = JS_PropertyStub;
 
-    if(self->WantSetProperty())
-        clazz->setProperty = XPC_WN_Helper_SetProperty;
-    else if(self->UseJSStubForSetProperty())
-        clazz->setProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->setProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantSetProperty())
+        mJSClass.setProperty = XPC_WN_Helper_SetProperty;
+    else if(UseJSStubForSetProperty())
+        mJSClass.setProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.setProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->setProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.setProperty = XPC_WN_CannotModifyPropertyStub;
 
     // We figure out most of the enumerate strategy at call time.
-    // Note that we *must* set clazz->getObjectOps = XPC_WN_GetObjectOpsStub
+    // Note that we *must* set mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub
     // (even for the cases were it does not do much) because with these 
     // dynamically generated JSClasses, the code in 
     // XPCWrappedNative::GetWrappedNativeOfJSObject() needs to look for
     // that XPC_WN_GetObjectOpsStub pointer in order to identify that a given
     // JSObject represents a wrapper.
 
-    clazz->getObjectOps = XPC_WN_GetObjectOpsStub;
-    if(self->WantNewEnumerate() || self->WantEnumerate() || 
-       self->DontEnumStaticProps())
-        clazz->enumerate = JS_EnumerateStub;
+    mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub;
+    if(WantNewEnumerate() || WantEnumerate() || 
+       DontEnumStaticProps())
+        mJSClass.enumerate = JS_EnumerateStub;
     else
-        clazz->enumerate = XPC_WN_Shared_Enumerate;
+        mJSClass.enumerate = XPC_WN_Shared_Enumerate;
 
     // We have to figure out resolve strategy at call time
-    clazz->resolve = (JSResolveOp) XPC_WN_Helper_NewResolve;
+    mJSClass.resolve = (JSResolveOp) XPC_WN_Helper_NewResolve;
 
-    if(self->WantConvert())
-        clazz->convert = XPC_WN_Helper_Convert;
+    if(WantConvert())
+        mJSClass.convert = XPC_WN_Helper_Convert;
     else
-        clazz->convert = XPC_WN_Shared_Convert;
+        mJSClass.convert = XPC_WN_Shared_Convert;
 
-    if(self->WantFinalize())
-        clazz->finalize = XPC_WN_Helper_Finalize;
+    if(WantFinalize())
+        mJSClass.finalize = XPC_WN_Helper_Finalize;
     else
-        clazz->finalize = XPC_WN_NoHelper_Finalize;
+        mJSClass.finalize = XPC_WN_NoHelper_Finalize;
 
     // We let the rest default to nsnull unless the helper wants them...
-    if(self->WantCheckAccess())
-        clazz->checkAccess = XPC_WN_Helper_CheckAccess;
-    if(self->WantCall())
-        clazz->call = XPC_WN_Helper_Call;
-    if(self->WantConstruct())
-        clazz->construct = XPC_WN_Helper_Construct;
-    if(self->WantHasInstance())
-        clazz->hasInstance = XPC_WN_Helper_HasInstance;
-    if(self->WantMark())
-        clazz->mark = XPC_WN_Helper_Mark;
+    if(WantCheckAccess())
+        mJSClass.checkAccess = XPC_WN_Helper_CheckAccess;
+    if(WantCall())
+        mJSClass.call = XPC_WN_Helper_Call;
+    if(WantConstruct())
+        mJSClass.construct = XPC_WN_Helper_Construct;
+    if(WantHasInstance())
+        mJSClass.hasInstance = XPC_WN_Helper_HasInstance;
+    if(WantMark())
+        mJSClass.mark = XPC_WN_Helper_Mark;
                                                             
-    return self;
+    return JS_TRUE;
 }
 
 /***************************************************************************/

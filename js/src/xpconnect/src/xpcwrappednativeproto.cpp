@@ -71,30 +71,14 @@ XPCWrappedNativeProto::~XPCWrappedNativeProto()
 }
 
 JSBool
-XPCWrappedNativeProto::Init(XPCCallContext& ccx)
+XPCWrappedNativeProto::Init(XPCCallContext& ccx,
+                            const XPCNativeScriptableInfo* scriptableInfo)
 {
-    // Get the class scriptable helper (if present)
-    if(mClassInfo)
+    if(scriptableInfo && scriptableInfo->GetScriptable())
     {
-        nsCOMPtr<nsISupports> possibleHelper;
-        nsresult rv = mClassInfo->GetHelperForLanguage(
-                                        nsIClassInfo::LANGUAGE_JAVASCRIPT,
-                                        getter_AddRefs(possibleHelper));
-        if(NS_SUCCEEDED(rv) && possibleHelper)
-        {
-            nsCOMPtr<nsIXPCScriptable> helper(do_QueryInterface(possibleHelper));
-            if(helper)
-            {
-                JSUint32 flags;
-                rv = helper->GetScriptableFlags(&flags);
-                if(NS_FAILED(rv))
-                    return JS_FALSE;
-
-                mScriptableInfo = XPCNativeScriptableInfo::NewInfo(helper, flags);
-                if(!mScriptableInfo)
-                    return JS_FALSE;
-            }
-        }
+        mScriptableInfo = scriptableInfo->Clone();
+        if(!mScriptableInfo || !mScriptableInfo->BuildJSClass())
+            return JS_FALSE;
     }
 
     JSClass* jsclazz = mScriptableInfo && 
@@ -165,7 +149,8 @@ XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
 XPCWrappedNativeProto*
 XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
                                     XPCWrappedNativeScope* Scope,
-                                    nsIClassInfo* ClassInfo)
+                                    nsIClassInfo* ClassInfo,
+                                    const XPCNativeScriptableInfo* scriptableInfo)
 {
     XPCWrappedNativeProto* proto;
 
@@ -187,7 +172,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
 
     proto = new XPCWrappedNativeProto(Scope, ClassInfo, set);
 
-    if(!proto || !proto->Init(ccx))
+    if(!proto || !proto->Init(ccx, scriptableInfo))
     {
         delete proto;
         return nsnull;
@@ -212,7 +197,7 @@ XPCWrappedNativeProto::BuildOneOff(XPCCallContext& ccx,
     XPCWrappedNativeProto* proto =
         new XPCWrappedNativeProto(Scope, nsnull, Set);
 
-    if(!proto || !proto->Init(ccx))
+    if(!proto || !proto->Init(ccx, nsnull))
     {
         delete proto;
         return nsnull;
