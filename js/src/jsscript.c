@@ -349,7 +349,7 @@ js_XDRScript(JSXDRState *xdr, JSScript **scriptp, JSBool *magic)
         !JS_XDRUint32(xdr, &notelen) ||
         /* malloc on decode only */
         (!(xdr->mode == JSXDR_ENCODE ||
-           (script->notes = JS_malloc(xdr->cx, notelen)))) ||
+           (script->notes = JS_malloc(xdr->cx, notelen)) != NULL)) ||
         !JS_XDRBytes(xdr, (char **)&script->notes, notelen) ||
 	!JS_XDRCStringOrNull(xdr, (char **)&script->filename) ||
 	!JS_XDRUint32(xdr, &lineno) ||
@@ -371,9 +371,9 @@ js_XDRScript(JSXDRState *xdr, JSScript **scriptp, JSBool *magic)
     }
     for (; numtrys; numtrys--) {
         JSTryNote *tn = &script->trynotes[numtrys - 1];
-        if (!JS_XDRUint32(xdr, &tn->start) ||
-            !JS_XDRUint32(xdr, &tn->length) ||
-            !JS_XDRUint32(xdr, &tn->catchStart))
+        if (!JS_XDRUint32(xdr, (uint32*)&tn->start) ||
+            !JS_XDRUint32(xdr, (uint32*)&tn->length) ||
+            !JS_XDRUint32(xdr, (uint32*)&tn->catchStart))
             goto error;
     }
     return JS_TRUE;
