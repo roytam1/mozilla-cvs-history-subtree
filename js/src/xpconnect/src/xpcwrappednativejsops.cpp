@@ -1,4 +1,3 @@
-
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
@@ -940,7 +939,8 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
 
 extern "C" JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
-static JSObjectOps XPC_WN_JSOps;
+static JSObjectOps XPC_WN_WithCall_JSOps;
+static JSObjectOps XPC_WN_NoCall_JSOps;
 
 /*
     Here are the enumerator cases:
@@ -1038,17 +1038,29 @@ XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 }
 
 JSObjectOps * JS_DLL_CALLBACK
-XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz)
+XPC_WN_GetObjectOpsNoCall(JSContext *cx, JSClass *clazz)
 {
-    return &XPC_WN_JSOps;
+    return &XPC_WN_NoCall_JSOps;
+}
+
+JSObjectOps * JS_DLL_CALLBACK
+XPC_WN_GetObjectOpsWithCall(JSContext *cx, JSClass *clazz)
+{
+    return &XPC_WN_WithCall_JSOps;
 }
 
 JSBool xpc_InitWrappedNativeJSOps()
 {
-    if(!XPC_WN_JSOps.newObjectMap)
+    if(!XPC_WN_NoCall_JSOps.newObjectMap)
     {
-        memcpy(&XPC_WN_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
-        XPC_WN_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
+        memcpy(&XPC_WN_NoCall_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
+        XPC_WN_NoCall_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
+        
+        memcpy(&XPC_WN_WithCall_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
+        XPC_WN_WithCall_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
+        
+        XPC_WN_NoCall_JSOps.call = nsnull;
+        XPC_WN_NoCall_JSOps.construct = nsnull;
     }
     return JS_TRUE;
 }
@@ -1116,14 +1128,7 @@ XPCNativeScriptableInfo::BuildJSClass()
         mJSClass.setProperty = XPC_WN_CannotModifyPropertyStub;
 
     // We figure out most of the enumerate strategy at call time.
-    // Note that we *must* set mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub
-    // (even for the cases were it does not do much) because with these 
-    // dynamically generated JSClasses, the code in 
-    // XPCWrappedNative::GetWrappedNativeOfJSObject() needs to look for
-    // that XPC_WN_GetObjectOpsStub pointer in order to identify that a given
-    // JSObject represents a wrapper.
 
-    mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub;
     if(WantNewEnumerate() || WantEnumerate() || 
        DontEnumStaticProps())
         mJSClass.enumerate = JS_EnumerateStub;
@@ -1146,10 +1151,30 @@ XPCNativeScriptableInfo::BuildJSClass()
     // We let the rest default to nsnull unless the helper wants them...
     if(WantCheckAccess())
         mJSClass.checkAccess = XPC_WN_Helper_CheckAccess;
-    if(WantCall())
-        mJSClass.call = XPC_WN_Helper_Call;
-    if(WantConstruct())
-        mJSClass.construct = XPC_WN_Helper_Construct;
+
+    // Note that we *must* set 
+    //   mJSClass.getObjectOps = XPC_WN_GetObjectOpsNoCall
+    // or
+    //   mJSClass.getObjectOps = XPC_WN_GetObjectOpsWithCall
+    // (even for the cases were it does not do much) because with these 
+    // dynamically generated JSClasses, the code in 
+    // XPCWrappedNative::GetWrappedNativeOfJSObject() needs to look for
+    // that this callback pointer in order to identify that a given
+    // JSObject represents a wrapper.
+
+    if(WantCall() || WantConstruct())
+    {
+        mJSClass.getObjectOps = XPC_WN_GetObjectOpsWithCall;
+        if(WantCall())
+            mJSClass.call = XPC_WN_Helper_Call;
+        if(WantConstruct())
+            mJSClass.construct = XPC_WN_Helper_Construct;
+    }
+    else
+    {
+        mJSClass.getObjectOps = XPC_WN_GetObjectOpsNoCall;
+    }
+
     if(WantHasInstance())
         mJSClass.hasInstance = XPC_WN_Helper_HasInstance;
     if(WantMark())

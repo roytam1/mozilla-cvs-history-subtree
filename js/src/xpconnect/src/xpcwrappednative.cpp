@@ -619,7 +619,8 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
         JSClass* clazz = JS_GET_CLASS(cx, cur);
 
         if(clazz == &XPC_WN_NoHelper_JSClass ||
-           clazz->getObjectOps == XPC_WN_GetObjectOpsStub)
+           clazz->getObjectOps == XPC_WN_GetObjectOpsNoCall ||
+           clazz->getObjectOps == XPC_WN_GetObjectOpsWithCall)
         {
             if(pobj2)
                 *pobj2 = cur;

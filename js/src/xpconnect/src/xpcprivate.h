@@ -1131,7 +1131,10 @@ extern JSClass XPC_WN_ModsAllowed_Proto_JSClass;
 extern JSClass XPC_WN_Tearoff_JSClass;
 
 extern JSObjectOps * JS_DLL_CALLBACK
-XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz);
+XPC_WN_GetObjectOpsNoCall(JSContext *cx, JSClass *clazz);
+
+extern JSObjectOps * JS_DLL_CALLBACK
+XPC_WN_GetObjectOpsWithCall(JSContext *cx, JSClass *clazz);
 
 extern JSBool JS_DLL_CALLBACK
 XPC_WN_CallMethod(JSContext *cx, JSObject *obj,
