@@ -571,8 +571,8 @@ nsStandardURL::WriteSegment(nsIBinaryOutputStream *stream, const URLSegment &seg
 // nsStandardURL::nsISupports
 //----------------------------------------------------------------------------
 
-NS_IMPL_ADDREF(nsStandardURL)
-NS_IMPL_RELEASE(nsStandardURL)
+NS_IMPL_THREADSAFE_ADDREF(nsStandardURL)
+NS_IMPL_THREADSAFE_RELEASE(nsStandardURL)
 
 NS_INTERFACE_MAP_BEGIN(nsStandardURL)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStandardURL)
