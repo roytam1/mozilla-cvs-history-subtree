@@ -97,7 +97,11 @@ SHIP_BINS     := $(addprefix $(SHIP_DIST)/bin/, $(SHIP_BINS))
 ifdef BUILD_OPT
   JSREFJAR = jsref_opt.jar
 else
+ifdef BUILD_IDG
+  JSREFJAR = jsref_idg.jar
+else
   JSREFJAR = jsref_dbg.jar
+endif
 endif
 
 ship:

@@ -37,10 +37,15 @@ GFX_ARCH = win32
 # /GX      - enable C++ exception support
 WIN_CFLAGS = /nologo /W3 /Fp$(OBJDIR)/js.pch
 
-# MSVC compiler options for debug builds
+# MSVC compiler options for debug builds linked to MSVCRTD.DLL
 # /MDd     - link with MSVCRTD.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
 # /Od      - minimal optimization
-WIN_DEBUG_CFLAGS = /MDd /Od /Z7 
+WIN_IDG_CFLAGS = /MDd /Od /Z7 
+
+# MSVC compiler options for debug builds linked to MSVCRT.DLL
+# /MD      - link with MSVCRT.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
+# /Od      - minimal optimization
+WIN_DEBUG_CFLAGS = /MD /Od /Z7 
 
 # MSVC compiler options for release (optimized) builds
 # /MD      - link with MSVCRT.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
@@ -51,7 +56,11 @@ WIN_OPT_CFLAGS = /MD /O2
 ifdef BUILD_OPT
 OPTIMIZER = $(WIN_OPT_CFLAGS)
 else
+ifdef BUILD_IDG
+OPTIMIZER = $(WIN_IDG_CFLAGS)
+else
 OPTIMIZER = $(WIN_DEBUG_CFLAGS)
+endif
 endif
 
 OS_CFLAGS = -DXP_PC -DWIN32 -D_WINDOWS -D_WIN32 $(WIN_CFLAGS)
