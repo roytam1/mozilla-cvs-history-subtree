@@ -1,6 +1,4 @@
-/*
- * DO NOT EDIT.  THIS FILE IS GENERATED FROM nsIAccessibleDocumentInternal.idl
- */
+// There is no .idl file for this header file
 
 #ifndef __gen_nsIAccessibleDocumentInternal_h__
 #define __gen_nsIAccessibleDocumentInternal_h__
@@ -14,7 +12,6 @@
 #include "nsIAccessible.h"
 #endif
 
-/* For IDL files that don't want to include root IDL files. */
 #ifndef NS_NO_VTABLE
 #define NS_NO_VTABLE
 #endif
@@ -49,44 +46,5 @@ class NS_NO_VTABLE nsIAccessibleDocumentInternal : public nsISupports {
 /* Use this macro to declare functions that forward the behavior of this interface to another object in a safe way. */
 #define NS_FORWARD_SAFE_NSIACCESSIBLEDOCUMENTINTERNAL(_to) \
   NS_IMETHOD GetDocument(nsIDocument **_retval) { return !_to ## ? NS_ERROR_NULL_POINTER : _to ##-> GetDocument(_retval); } 
-
-#if 0
-/* Use the code below as a template for the implementation class for this interface. */
-
-/* Header file */
-class nsAccessibleDocumentInternal : public nsIAccessibleDocumentInternal
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
-
-  nsAccessibleDocumentInternal();
-  virtual ~nsAccessibleDocumentInternal();
-  /* additional members */
-};
-
-/* Implementation file */
-NS_IMPL_ISUPPORTS1(nsAccessibleDocumentInternal, nsIAccessibleDocumentInternal)
-
-nsAccessibleDocumentInternal::nsAccessibleDocumentInternal()
-{
-  NS_INIT_ISUPPORTS();
-  /* member initializers and constructor code */
-}
-
-nsAccessibleDocumentInternal::~nsAccessibleDocumentInternal()
-{
-  /* destructor code */
-}
-
-/* nsIDocument getDocument (); */
-NS_IMETHODIMP nsAccessibleDocumentInternal::GetDocument(nsIDocument **_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* End of implementation class template. */
-#endif
-
 
 #endif /* __gen_nsIAccessibleDocumentInternal_h__ */
