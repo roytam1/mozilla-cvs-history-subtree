@@ -19,14 +19,11 @@
 #include "CPrefsDialog.h"
 
 #include "CMenuTable.h"
-#ifdef MOZ_MAIL_NEWS
-#include "MailNewsAddressBook.h"
-#endif
-
-#include "MailNewsMediators.h"
 #include "CAssortedMediators.h"
 
 #ifdef MOZ_MAIL_NEWS
+#include "MailNewsAddressBook.h"
+#include "MailNewsMediators.h"
 #include "CReceiptsMediator.h"
 #endif // MOZ_MAIL_NEWS
 #include "CSpecialFoldersMediator.h"
@@ -471,8 +468,8 @@ void CPrefsDialog::RegisterViewClasses()
 	RegisterClass_(CAdvancedProxiesMediator);
 	
 	CBrowserApplicationsMediator::RegisterViewClasses();
-	RegisterClass_(CMailNewsIdentityMediator);
 #ifdef MOZ_MAIL_NEWS
+	RegisterClass_(CMailNewsIdentityMediator);
 	RegisterClass_(CMailNewsMainMediator);
 	RegisterClass_(CMailNewsMessagesMediator);
 	RegisterClass_(CMailNewsOutgoingMediator);
