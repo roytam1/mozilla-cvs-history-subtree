@@ -165,7 +165,15 @@ void charData(void* userData, const XML_Char* s, int len)
     ParserState* ps = (ParserState*)userData;
     String data;
     data.append((UNICODE_CHAR*)s, len);
-    ps->currentNode->appendChild(ps->document->createTextNode(data));
+    Node* prevSib = ps->currentNode->getLastChild();
+    if (prevSib && prevSib->getNodeType()==Node::TEXT_NODE){
+      ((CharacterData*)prevSib)->appendData(data);
+#ifdef DEBUG
+      cout<< "Another abundant text object spared?" << endl;
+#endif
+    } else {
+      ps->currentNode->appendChild(ps->document->createTextNode(data));
+    };
 } //-- charData
 
 /**
