@@ -5341,8 +5341,9 @@ NS_METHOD nsWindow::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
 #define ZH_CN_INTELLEGENT_ABC_IME ((HKL)0xe0040804L)
 #define ZH_CN_MS_PINYIN_IME_3_0 ((HKL)0xe00e0804L)
 #define ZH_CN_NEIMA_IME ((HKL)0xe0050804L)
-#define USE_OVERTHESPOT_IME(kl) ((nsToolkit::mIsWinXP) \
+#define PINYIN_IME_ON_XP(kl) ((nsToolkit::mIsWinXP) \
           && (ZH_CN_MS_PINYIN_IME_3_0 == (kl)))
+PRBool gPinYinIMECaretCreated = PR_FALSE;
 
 void
 nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
@@ -5422,6 +5423,11 @@ nsWindow::HandleTextEvent(HIMC hIMEContext,PRBool aCheckAttr)
     candForm.rcArea.bottom = candForm.ptCurrentPos.y + 
                              event.theReply.mCursorPosition.height;
  
+    if (gPinYinIMECaretCreated)  
+    {
+      SetCaretPos(candForm.ptCurrentPos.x, candForm.ptCurrentPos.y);
+    }
+
     NS_IMM_SETCANDIDATEWINDOW(hIMEContext,&candForm);
     // somehow the "Intellegent ABC IME" in Simplified Chinese
     // window listen to the caret position to decide where to put the
@@ -5459,27 +5465,6 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
 	//
 	// Post process event
 	//
-  if (USE_OVERTHESPOT_IME(gKeyboardLayout))  {
-    LOGFONT lf;
-    NS_IMM_GETCOMPOSITIONFONT(hIMEContext, &lf);
-    lf.lfHeight = event.theReply.mCursorPosition.height;
-    NS_IMM_SETCOMPOSITIONFONT(hIMEContext, &lf);
-
-    COMPOSITIONFORM cf;
-    memset(&cf, NULL, sizeof(COMPOSITIONFORM));
-    cf.dwStyle = CFS_POINT;       
-    cf.ptCurrentPos.x = event.theReply.mCursorPosition.x + IME_X_OFFSET;
-    cf.ptCurrentPos.y = event.theReply.mCursorPosition.y + IME_Y_OFFSET;
-    NS_IMM_SETCOMPOSITIONWINDOW(hIMEContext, &cf);
-
-    InitEvent(event,NS_COMPOSITION_END,&point);
-    event.eventStructType = NS_COMPOSITION_END;
-    event.compositionMessage = NS_COMPOSITION_END;
-    (void)DispatchWindowEvent(&event);
-    NS_RELEASE(event.widget);
-    return PR_FALSE;
-  }
-
   if((0 != event.theReply.mCursorPosition.width) ||
      (0 != event.theReply.mCursorPosition.height) )
   {
@@ -5495,6 +5480,13 @@ nsWindow::HandleStartComposition(HIMC hIMEContext)
 #ifdef DEBUG_IME2
     printf("Candidate window position: x=%d, y=%d\n",candForm.ptCurrentPos.x,candForm.ptCurrentPos.y);
 #endif
+    
+    if (!gPinYinIMECaretCreated && PINYIN_IME_ON_XP(gKeyboardLayout))  
+    {
+      gPinYinIMECaretCreated = CreateCaret(mWnd, nsnull, 1, 1);
+      SetCaretPos(candForm.ptCurrentPos.x, candForm.ptCurrentPos.y);
+    }
+
     NS_IMM_SETCANDIDATEWINDOW(hIMEContext, &candForm);
   } else {
     // for some reason we don't know yet, theReply may contains invalid result
@@ -5521,6 +5513,12 @@ nsWindow::HandleEndComposition(void)
 
 	point.x	= 0;
 	point.y = 0;
+
+  if (gPinYinIMECaretCreated)  
+  {
+    DestroyCaret();
+    gPinYinIMECaretCreated = PR_FALSE;
+  }
 
 	InitEvent(event,NS_COMPOSITION_END,&point);
 	event.eventStructType = NS_COMPOSITION_END;
@@ -5728,9 +5726,6 @@ BOOL nsWindow::OnIMEChar(BYTE aByte1, BYTE aByte2, LPARAM aKeyState)
 //==========================================================================
 BOOL nsWindow::OnIMEComposition(LPARAM  aGCS)			
 {
-	if (USE_OVERTHESPOT_IME(gKeyboardLayout))
-		return PR_FALSE;
-
 #ifdef DEBUG_IME
 	printf("OnIMEComposition\n");
 #endif
@@ -5984,9 +5979,6 @@ BOOL nsWindow::OnIMECompositionFull()
 //==========================================================================
 BOOL nsWindow::OnIMEEndComposition()			
 {
-	if (USE_OVERTHESPOT_IME(gKeyboardLayout))
-		return PR_FALSE;
-
 #ifdef DEBUG_IME
 	printf("OnIMEEndComposition\n");
 #endif
@@ -6221,8 +6213,7 @@ BOOL nsWindow::OnIMESetContext(BOOL aActive, LPARAM& aISC)
 	if(! aActive)
 		ResetInputState();
 
-	if (!USE_OVERTHESPOT_IME(gKeyboardLayout))
-		aISC &= ~ ISC_SHOWUICOMPOSITIONWINDOW;
+	aISC &= ~ ISC_SHOWUICOMPOSITIONWINDOW;
 
 	// We still return false here because we need to pass the 
 	// aISC w/ ISC_SHOWUICOMPOSITIONWINDOW clear to the default
