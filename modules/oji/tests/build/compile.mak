@@ -34,6 +34,10 @@ INCLUDES = $(INCLUDES) \
 	-I$(MOZILLA_HOME)/dist/$(WIN32DIR)/include/obsolete 
 
 
+!if defined(MOZ_DEBUG)
 DEFINES=-DXP_PC -DXP_WIN -DDEBUG
+!else
+DEFINES=-DXP_PC -DXP_WIN
+!endif
 
 CC_OBJ=@cl $(DEFINES) /Zi /nologo $(INCLUDES) /c /Fo$(OBJ_DIR)\ /Fd$(OBJ_DIR)/default.pdb
