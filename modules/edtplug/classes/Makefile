@@ -16,7 +16,7 @@
 # 
 
 DEPTH	= ../../..
-ifdef NSJVM
+ifdef JAVA_OR_NSJVM
 DIRS	= netscape
 else
 endif
