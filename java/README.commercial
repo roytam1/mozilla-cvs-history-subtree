@@ -70,9 +70,9 @@ RUN INSTRUCTIONS
 -------------------------------------------------------------------------
 
 PLUGLETS 
-- Launch the browser using the shell script "netscape"
-- Navigate to the url file:///opt/SUNWns6/res/javadev/pluglets/test.html
-
+- Launch the browser using the shell script "netscape_pluglets"
+- Navigate to the url file:///<your_Netscape6_install_dir>/res/javadev/pluglets/test.html
+  
 This contains several Pluglet examples.
 
 
