@@ -4038,11 +4038,16 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
 #ifdef SUNCTL
         }
         else {
-          PRInt32 mPreviousOffset;
-          mCtlObj->PrevCluster((const PRUnichar*)paintBuffer.mBuffer,
+          if (aPos->mStartOffset < 1) {
+            // go to prev
+            i = -1;
+          } else {
+            PRInt32 mPreviousOffset;
+            mCtlObj->PrevCluster(NS_REINTERPRET_CAST(const PRUnichar*, paintBuffer.mBuffer),
                                textLength,aPos->mStartOffset, 
                                &mPreviousOffset);
-          aPos->mContentOffset = i = mPreviousOffset;
+            aPos->mContentOffset = i = mPreviousOffset;
+          }
         }
 #endif /* SUNCTL */
 
@@ -4082,11 +4087,16 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
 #ifdef SUNCTL
         }
         else {
-          PRInt32 mNextOffset;
-          mCtlObj->NextCluster((const PRUnichar*)paintBuffer.mBuffer,
+          if (aPos->mStartOffset >= textLength) {
+            // go to next
+            i = mContentLength + 1;
+          } else {
+            PRInt32 mNextOffset;
+            mCtlObj->NextCluster(NS_REINTERPRET_CAST(const PRUnichar*, paintBuffer.mBuffer),
                                textLength, aPos->mStartOffset,
                                &mNextOffset);
-          aPos->mContentOffset = i = mNextOffset;
+            aPos->mContentOffset = i = mNextOffset;
+          }
         }
 #endif /* SUNCTL */
 
