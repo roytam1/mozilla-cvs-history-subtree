@@ -33,7 +33,6 @@
 #include "nsHTMLIIDs.h"
 #include "nsHTMLAtoms.h"
 #include "nsIPresState.h"
-#include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nsIView.h"
 #include "nsHTMLParts.h"

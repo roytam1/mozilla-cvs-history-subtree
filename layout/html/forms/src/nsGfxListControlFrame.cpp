@@ -530,11 +530,10 @@ nsGfxListControlFrame::Reflow(nsIPresContext*          aPresContext,
             viewIsVisible = PR_FALSE;
           } else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
             // If it has a widget, hide the view because the widget can't deal with it
-            nsIWidget* widget = nsnull;
-            view->GetWidget(widget);
+            nsCOMPtr<nsIWindow> window;
+            view->GetWidget(getter_AddRefs(widget));
             if (widget) {
               viewIsVisible = PR_FALSE;
-              NS_RELEASE(widget);
             } else {
             }
             viewIsVisible = PR_TRUE;
@@ -867,9 +866,7 @@ nsGfxListControlFrame::Reflow(nsIPresContext*          aPresContext,
       if (isInDropDownMode) {
         nscoord screenHeightInPixels = 0;
         if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
-          float   p2t;
-          aPresContext->GetPixelsToTwips(&p2t);
-          nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
+          nscoord screenHeight = screenHeightInPixels;
 
           nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
           availDropHgt -= (border.top + border.bottom + padding.top + padding.bottom);
@@ -1450,14 +1447,13 @@ nsGfxListControlFrame::CaptureMouseEvents(nsIPresContext* aPresContext, PRBool a
       // XXX this is temp code
 #if 1
       //if (!mIsScrollbarVisible) {
-        nsIWindow * window;
-        view->GetWidget(window);
+        nsCOMPtr<nsIWindow> window;
+        view->GetWidget(getter_AddRefs(window));
         if (nsnull != window) {
           printf("Capture is set on widget to %s\n", aGrabMouseEvents?"On":"Off");
 
           // XXX pav
           //          widget->CaptureMouse(aGrabMouseEvents);
-          NS_RELEASE(window);
         }
       //}
 #endif
@@ -1670,7 +1666,7 @@ nsGfxListControlFrame::GetVerticalInsidePadding(nsIPresContext* aPresContext,
                                              float aPixToTwip, 
                                              nscoord aInnerHeight) const
 {
-   return NSIntPixelsToTwips(0, aPixToTwip); 
+   return 0;
 }
 
 
@@ -3278,14 +3274,13 @@ nsGfxListControlFrame::MouseDown(nsIDOMEvent* aMouseEvent)
         nsIView * pView;
         parentFrame->GetView(mPresContext, &pView);
         if (nsnull != pView) {
-          nsIWidget *window = nsnull;
+          nsCOMPtr<nsIWindow> window;
 
           nsIView *ancestor = pView;
           while (nsnull != ancestor) {
-            ancestor->GetWidget(window); // addrefs
+            ancestor->GetWidget(getter_AddRefs(window)); // addrefs
             if (nsnull != window) {
               window->SetFocus();
-              NS_IF_RELEASE(window);
 	            break;
 	          }
 	          ancestor->GetParent(ancestor);

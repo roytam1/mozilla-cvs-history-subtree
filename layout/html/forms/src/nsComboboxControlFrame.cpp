@@ -551,7 +551,7 @@ nsComboboxControlFrame::ShowList(nsIPresContext* aPresContext, PRBool aShowList)
     listFrame->GetView(aPresContext, &view);
     NS_ASSERTION(view != nsnull, "nsComboboxControlFrame view is null");
     if (view) {
-    	view->GetWidget(*getter_AddRefs(window));
+    	view->GetWidget(getter_AddRefs(window));
     }
   }
 
@@ -683,9 +683,7 @@ nsComboboxControlFrame::PositionDropdown(nsIPresContext* aPresContext,
   nscoord screenHeightInPixels = 0;
   if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
      // Get the height of the dropdown list in pixels.
-     float t2p;
-     aPresContext->GetTwipsToPixels(&t2p);
-     nscoord absoluteDropDownHeight = NSTwipsToIntPixels(dropdownRect.height, t2p);
+     nscoord absoluteDropDownHeight = dropdownRect.height;
     
       // Check to see if the drop-down list will go offscreen
     if (NS_SUCCEEDED(rv) && ((aAbsolutePixelRect.y + aAbsolutePixelRect.height + absoluteDropDownHeight) > screenHeightInPixels)) {
@@ -799,7 +797,7 @@ nsComboboxControlFrame::ReflowItems(nsIPresContext* aPresContext,
  
   nsAutoString maxStr;
   nscoord maxWidth = 0;
-  //nsIRenderingContext * rc = aReflowState.rendContext;
+  //nsIDrawable * rc = aReflowState.rendContext;
   nsresult rv = NS_ERROR_FAILURE; 
   nsCOMPtr<nsIDOMHTMLCollection> options = getter_AddRefs(GetOptions(mContent));
   if (options) {
@@ -1193,15 +1191,11 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
     SystemAttrStruct info;
     dx->GetSystemAttribute(eSystemAttr_Size_ScrollbarWidth, &info);
     // Get the pixels to twips conversion for the current device (screen or printer)
-    float p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
     // Get the scale factor for mapping from one device (screen) 
     //   to another device (screen or printer)
     // Typically when it is a screen the scale 1.0
     //   when it is a printer is could be anything
-    float scale;
-    dx->GetCanonicalPixelScale(scale); 
-    scrollbarWidth = NSIntPixelsToTwips(info.mSize, p2t*scale);
+    scrollbarWidth = info.mSize;
   }  
 #endif
 
@@ -2278,7 +2272,7 @@ nsComboboxControlFrame::Destroy(nsIPresContext* aPresContext)
       listFrame->GetView(aPresContext, &view);
       NS_ASSERTION(view != nsnull, "nsComboboxControlFrame view is null");
       if (view) {
-    	  view->GetWidget(*getter_AddRefs(window));
+    	  view->GetWidget(getter_AddRefs(window));
         if (window) {
           // XXX pav
           //widget->CaptureRollupEvents((nsIRollupListener *)this, PR_FALSE, PR_TRUE);
@@ -2470,29 +2464,30 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
       nsresult rv = mPresContext->GetEventStateManager(getter_AddRefs(stateManager));
       if (NS_SUCCEEDED(rv)) {
         if (NS_SUCCEEDED(rv) && !nsFormFrame::GetDisabled(this) && mFocused == this) {
-          aDrawable.SetLineStyle(nsLineStyle_kDotted);
-          aDrawable.SetForegroundColor(0);
+
+          // XXX pav
+          //          aDrawable->SetLineStyle(nsLineStyle_kDotted);
+          aDrawable->SetForegroundColor(0);
         } else {
           const nsStyleColor* myColor = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
-          aDrawable.SetForegroundColor(myColor->mBackgroundColor);
-          aDrawable.SetLineStyle(nsLineStyle_kSolid);
+          aDrawable->SetForegroundColor(myColor->mBackgroundColor);
+
+          // XXX pav
+          //          aDrawable->SetLineStyle(nsLineStyle_kSolid);
         }
-        //aRenderingContext.DrawRect(clipRect);
-        float p2t;
-        aPresContext->GetPixelsToTwips(&p2t);
-        nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-        clipRect.width -= onePixel;
-        clipRect.height -= onePixel;
-        aRenderingContext.DrawLine(clipRect.x, clipRect.y, 
-                                   clipRect.x+clipRect.width, clipRect.y);
-        aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y, 
-                                   clipRect.x+clipRect.width, clipRect.y+clipRect.height);
-        aRenderingContext.DrawLine(clipRect.x+clipRect.width, clipRect.y+clipRect.height, 
-                                   clipRect.x, clipRect.y+clipRect.height);
-        aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
-                                   clipRect.x, clipRect.y);
-        aRenderingContext.DrawLine(clipRect.x, clipRect.y+clipRect.height, 
-                                   clipRect.x, clipRect.y);
+        //aDrawable->DrawRect(clipRect);
+        clipRect.width -= 1;
+        clipRect.height -= 1;
+        aDrawable->DrawLine(clipRect.x, clipRect.y, 
+                            clipRect.x+clipRect.width, clipRect.y);
+        aDrawable->DrawLine(clipRect.x+clipRect.width, clipRect.y, 
+                            clipRect.x+clipRect.width, clipRect.y+clipRect.height);
+        aDrawable->DrawLine(clipRect.x+clipRect.width, clipRect.y+clipRect.height, 
+                            clipRect.x, clipRect.y+clipRect.height);
+        aDrawable->DrawLine(clipRect.x, clipRect.y+clipRect.height, 
+                            clipRect.x, clipRect.y);
+        aDrawable->DrawLine(clipRect.x, clipRect.y+clipRect.height, 
+                            clipRect.x, clipRect.y);
       }
       /////////////////////
 

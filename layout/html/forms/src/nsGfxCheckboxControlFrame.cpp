@@ -274,9 +274,6 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
   // XXX pav
   //  aRenderingContext.PushState();
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-
   const nsStyleSpacing* spacing =
     (const nsStyleSpacing*)mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
@@ -296,11 +293,11 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
     CheckState checked = GetCheckboxState();
     switch ( checked ) {   
       case eOn:
-        nsFormControlHelper::PaintCheckMark(aDrawable, p2t, checkRect);
+        nsFormControlHelper::PaintCheckMark(aDrawable, 1, checkRect);
         break;
 
       case eMixed:
-        PaintMixedMark(aDrawable, p2t, checkRect);
+        PaintMixedMark(aDrawable, 1, checkRect);
         break;
 
 			  // no special drawing otherwise
@@ -315,7 +312,7 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
     PRBool checked = PR_FALSE;
     GetCurrentCheckState(&checked);
     if ( checked ) {
-      nsFormControlHelper::PaintCheckMark(aDrawable, p2t, checkRect);
+      nsFormControlHelper::PaintCheckMark(aDrawable, 1, checkRect);
     }
   }
   

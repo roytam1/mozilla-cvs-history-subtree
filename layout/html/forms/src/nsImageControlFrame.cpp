@@ -290,10 +290,8 @@ nsImageControlFrame::HandleEvent(nsIPresContext* aPresContext,
     {
       // Store click point for GetNamesValues
       // Do this on MouseUp because the specs don't say and that's what IE does.
-      float t2p;
-      aPresContext->GetTwipsToPixels(&t2p);
-      mLastClickPoint.x = NSTwipsToIntPixels(aEvent->point.x, t2p);
-      mLastClickPoint.y = NSTwipsToIntPixels(aEvent->point.y, t2p);
+      mLastClickPoint.x = aEvent->point.x;
+      mLastClickPoint.y = aEvent->point.y;
 
       mGotFocus = PR_TRUE;
       break;

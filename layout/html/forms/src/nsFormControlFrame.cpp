@@ -775,7 +775,7 @@ nsFormControlFrame::HandleEvent(nsIPresContext* aPresContext,
 	   case NS_KEY_DOWN:
 	    if (NS_KEY_EVENT == aEvent->eventStructType) {
 	      nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
-	      if (NS_VK_RETURN == keyEvent->keyCode) {
+	      if (nsIDOMKeyEvent::DOM_VK_RETURN == keyEvent->keyCode) {
 	        EnterPressed(aPresContext);
 	      }
 	      //else if (NS_VK_SPACE == keyEvent->keyCode) {
@@ -987,12 +987,6 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
   aAbsoluteTwipsRect.x = 0;
   aAbsoluteTwipsRect.y = 0;
 
-    // Get conversions between twips and pixels
-  float t2p;
-  float p2t;
-  aPresContext->GetTwipsToPixels(&t2p);
-  aPresContext->GetPixelsToTwips(&p2t);
-  
    // Add in frame's offset from it it's containing view
   nsIView *containingView = nsnull;
   nsPoint offset;
@@ -1009,8 +1003,8 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
     // if we don't have a parent view then 
     // check to see if we have a widget and adjust our offset for the widget
     if (parent == nsnull) {
-      nsIWindow * window;
-      containingView->GetWidget(window);
+      nsCOMPtr<nsIWindow> window;
+      containingView->GetWidget(getter_AddRefs(window));
       if (nsnull != window) {
         // Add in the absolute offset of the widget.
         nsRect absBounds;
@@ -1019,9 +1013,8 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
         // XXX pav
         //        window->WidgetToScreen(lc, absBounds);
         // Convert widget coordinates to twips   
-        aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
-        aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-        NS_RELEASE(window);
+        aAbsoluteTwipsRect.x += absBounds.x;
+        aAbsoluteTwipsRect.y += absBounds.y;
       }
       rv = NS_OK;
     } else {
@@ -1039,8 +1032,8 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
           viewOffset.x -= x;
           viewOffset.y -= y;
         }
-        nsIWindow * window;
-        parent->GetWidget(window);
+        nsCOMPtr<nsIWindow> window;
+        parent->GetWidget(getter_AddRefs(window));
         if (nsnull != window) {
           // Add in the absolute offset of the widget.
           nsRect absBounds;
@@ -1049,9 +1042,8 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
           // XXX pav
           //          widget->WidgetToScreen(lc, absBounds);
           // Convert widget coordinates to twips   
-          aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
-          aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-          NS_RELEASE(window);
+          aAbsoluteTwipsRect.x += absBounds.x;
+          aAbsoluteTwipsRect.y += absBounds.y;
           break;
         }
         parent->GetParent(parent);
@@ -1063,10 +1055,10 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
 
    // convert to pixel coordinates
   if (NS_SUCCEEDED(rv)) {
-   aAbsolutePixelRect.x = NSTwipsToIntPixels(aAbsoluteTwipsRect.x, t2p);
-   aAbsolutePixelRect.y = NSTwipsToIntPixels(aAbsoluteTwipsRect.y, t2p);
-   aAbsolutePixelRect.width = NSTwipsToIntPixels(aAbsoluteTwipsRect.width, t2p);
-   aAbsolutePixelRect.height = NSTwipsToIntPixels(aAbsoluteTwipsRect.height, t2p);
+   aAbsolutePixelRect.x = aAbsoluteTwipsRect.x;
+   aAbsolutePixelRect.y = aAbsoluteTwipsRect.y;
+   aAbsolutePixelRect.width = aAbsoluteTwipsRect.width;
+   aAbsolutePixelRect.height = aAbsoluteTwipsRect.height;
   }
 
   return rv;

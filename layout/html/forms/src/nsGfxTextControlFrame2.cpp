@@ -1243,7 +1243,7 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
   nsSize minSize;
   
   PRBool usingDefaultSize = PR_FALSE;
-  PRInt32 ignore;
+  gfx_coord ignore;
   PRInt32 type;
   GetType(&type);
   if ((NS_FORM_INPUT_TEXT == type) || (NS_FORM_INPUT_PASSWORD == type)) {
@@ -1270,8 +1270,6 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
   // textarea, this means the scrollbar sizes hav already been added to
   // its overall size and do not need to be added here.
   if (NS_FORM_TEXTAREA == type) {
-    float   p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
 
     nscoord scrollbarWidth  = 0;
     nscoord scrollbarHeight = 0;
@@ -1334,8 +1332,6 @@ nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContex
     return 0;
   }
 
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
 
   nscoord fontHeight  = 0;
   // get leading
@@ -1367,8 +1363,6 @@ nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContex
   fontMet->GetStringWidth(aveStr.GetUnicode(), aveStr.Length(), &charWidth);
   charWidth /= aveStr.Length();
   // Round to the nearest twip
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);  // get the rounding right
-  charWidth = nscoord((float(charWidth) / float(onePixel)) + 0.5)*onePixel;
 #endif
   aDesiredSize.width = charWidth;
 
@@ -1513,7 +1507,7 @@ nsGfxTextControlFrame2::ReflowNavQuirks(nsIPresContext*          aPresContext,
                                         nsMargin&                aPadding)
 {
   PRBool usingDefaultSize = PR_FALSE;
-  PRInt32 ignore;
+  nscoord ignore;
   PRInt32 type;
   GetType(&type);
   if ((NS_FORM_INPUT_TEXT == type) || (NS_FORM_INPUT_PASSWORD == type)) {
@@ -2245,7 +2239,7 @@ nsGfxTextControlFrame2::GetVerticalInsidePadding(nsIPresContext* aPresContext,
                                              float aPixToTwip, 
                                              nscoord aInnerHeight) const
 {
-   return NSIntPixelsToTwips(0, aPixToTwip); 
+   return 0;
 }
 
 
@@ -2876,7 +2870,7 @@ nsGfxTextControlFrame2::InternalContentChanged()
   nsEventStatus status = nsEventStatus_eIgnore;
   nsGUIEvent event;
   event.eventStructType = NS_GUI_EVENT;
-  event.widget = nsnull;
+  event.window = nsnull;
   event.message = NS_FORM_INPUT;
   event.flags = NS_EVENT_FLAG_INIT;
 
@@ -2902,7 +2896,7 @@ nsGfxTextControlFrame2::CallOnChange()
     nsEventStatus status = nsEventStatus_eIgnore;
     nsInputEvent event;
     event.eventStructType = NS_INPUT_EVENT;
-    event.widget = nsnull;
+    event.window = nsnull;
     event.message = NS_FORM_CHANGE;
     event.flags = NS_EVENT_FLAG_INIT;
     event.isShift = PR_FALSE;

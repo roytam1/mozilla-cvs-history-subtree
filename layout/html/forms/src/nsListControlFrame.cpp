@@ -617,8 +617,8 @@ nsListControlFrame::Reflow(nsIPresContext*          aPresContext,
 #endif
 
   // Convert to nscoord's by rounding
-  nscoord scrollbarWidth  = NSToCoordRound(sbWidth);
-  //nscoord scrollbarHeight = NSToCoordRound(sbHeight);
+  nscoord scrollbarWidth  = sbWidth;
+  //nscoord scrollbarHeight = sbHeight;
 
   // Subtract out the borders
   nsMargin border;
@@ -743,9 +743,7 @@ nsListControlFrame::Reflow(nsIPresContext*          aPresContext,
       if (isInDropDownMode) {
         nscoord screenHeightInPixels = 0;
         if (NS_SUCCEEDED(nsFormControlFrame::GetScreenHeight(aPresContext, screenHeightInPixels))) {
-          float   p2t;
-          aPresContext->GetPixelsToTwips(&p2t);
-          nscoord screenHeight = NSIntPixelsToTwips(screenHeightInPixels, p2t);
+          nscoord screenHeight = screenHeightInPixels;
 
           nscoord availDropHgt = (screenHeight / 2) - (heightOfARow*2); // approx half screen minus combo size
           availDropHgt -= (border.top + border.bottom + padding.top + padding.bottom);
@@ -1486,7 +1484,7 @@ nsListControlFrame::GetVerticalInsidePadding(nsIPresContext* aPresContext,
                                              float aPixToTwip, 
                                              nscoord aInnerHeight) const
 {
-   return NSIntPixelsToTwips(0, aPixToTwip); 
+   return 0;
 }
 
 
