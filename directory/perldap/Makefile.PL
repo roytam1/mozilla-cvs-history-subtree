@@ -37,7 +37,7 @@ $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # Y to include SSL
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
 print     "================================\n";
 
-if (!$include_ldap)
+if (!$ldapsdk_loc)
 {
    print "Directory containing 'include' and 'lib' directory of the Netscape\n";
    print "LDAP Software Developer Kit (default: /usr): ";
