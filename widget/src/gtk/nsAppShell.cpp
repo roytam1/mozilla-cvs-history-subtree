@@ -195,7 +195,7 @@ NS_METHOD nsAppShell::Run()
 
 done:
   printf("Calling gdk_input with event queue\n");
-  gdk_input_add(PR_GetEventQueueSelectFD(EQueue),
+  gdk_input_add(EQueue->GetEventQueueSelectFD(),
                 GDK_INPUT_READ,
                 event_processor_callback,
                 EQueue);

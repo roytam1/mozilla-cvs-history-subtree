@@ -150,7 +150,7 @@ nsresult nsAppShell::Run()
  done:
   printf("Getting the xlib connection number.\n");
   xlib_fd = ConnectionNumber(gDisplay);
-  queue_fd = PR_GetEventQueueSelectFD(EQueue);
+  queue_fd = EQueue->GetEventQueueSelectFD();
   if (xlib_fd >= queue_fd) {
     max_fd = xlib_fd + 1;
   } else {
