@@ -34,6 +34,7 @@ SDK_XPIDLSRCS =                                 \
 	domstubs.idl				\
 	nsIDOMBarProp.idl			\
 	nsIDOMWindow.idl			\
+	nsIDOMWindow2.idl			\
 	nsIDOMWindowCollection.idl		\
 	$(NULL)
 
