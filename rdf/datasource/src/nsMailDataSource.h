@@ -77,7 +77,7 @@ __class::EqualsString(const char* uri, PRBool* result) const {\
     return NS_OK;\
 }
 
-
+////////////////////////////////////////////////////////////////////////
 
 /**
  * The mail data source.
@@ -171,6 +171,7 @@ public:
     nsIRDFDataSource* mMiscMailData;
 };
 
+////////////////////////////////////////////////////////////////////////
 
 class MailAccount : public nsIRDFMailAccount 
 {
@@ -193,6 +194,7 @@ public:
     NS_IMETHOD RemoveFolder (nsIRDFMailFolder* folder);
 };
 
+////////////////////////////////////////////////////////////////////////
 
 class MailFolder : public nsIRDFMailFolder 
 {
@@ -244,7 +246,7 @@ public:
     nsresult ReadSummaryFile(char* uri);
 };
 
-
+////////////////////////////////////////////////////////////////////////
 
 class MailMessage : public nsIRDFMailMessage  
 {
@@ -285,6 +287,8 @@ public:
                            nsIRDFLiteral* messageID);
 };
 
+////////////////////////////////////////////////////////////////////////
+
 class SingletonMailCursor : public nsIRDFAssertionCursor 
 {
 private:
@@ -316,6 +320,7 @@ public:
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 };
 
+////////////////////////////////////////////////////////////////////////
 
 class ArrayMailCursor : public nsIRDFAssertionCursor , 
                         public nsIRDFArcsOutCursor
