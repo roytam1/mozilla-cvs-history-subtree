@@ -438,15 +438,15 @@ sub do_component
 		print "[$component]\n";
 	}
 	# create component directory
-#  if (!$flat) {
-#	  if ( -d "$destdir$PD$component" ) {
-#	    warn "Warning: component directory \"$component\" already exists in \"$destdir\".\n";
-#	  } else {
+  if (!$flat) {
+	  if ( -d "$destdir$PD$component" ) {
+	    warn "Warning: component directory \"$component\" already exists in \"$destdir\".\n";
+	  } else {
 	    ($debug >= 4) && print " mkdir $destdir$PD$component\n";
 	    mkdir ("$destdir$PD$component") ||
 	      die "Error: couldn't create component directory \"$component\": $!.  Exiting...\n";
-#	  }
-#	}
+	  }
+	}
 }
 
 
