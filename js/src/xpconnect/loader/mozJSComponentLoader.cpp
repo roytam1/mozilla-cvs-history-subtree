@@ -671,7 +671,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
 
     JSScript *script = JS_CompileFileHandle(mContext, obj, (const char *)displayPath, fileHandle);
     
-    fclose( fileHandle );
+    /* JS will close the filehandle after compilation is complete. */
 
     if (!script) {
 #ifdef DEBUG_shaver_off
