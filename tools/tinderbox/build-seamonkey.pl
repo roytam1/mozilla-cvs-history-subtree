@@ -577,16 +577,16 @@ sub PrintEnv {
     print "$key=$ENV{$key}\n";
   }
   if (-e $ENV{MOZCONFIG}) {
-    print LOG '-->mozconfig<----------------------------------------\n';
-    print     '-->mozconfig<----------------------------------------\n';
+    print LOG "-->mozconfig<----------------------------------------\n";
+    print     "-->mozconfig<----------------------------------------\n";
     open CONFIG, "$ENV{MOZCONFIG}";
     while (<CONFIG>) {
       print LOG "$_";
       print     "$_";
     }
     close CONFIG;
-    print LOG '-->end mozconfig<----------------------------------------\n';
-    print     '-->end mozconfig<----------------------------------------\n';
+    print LOG "-->end mozconfig<----------------------------------------\n";
+    print     "-->end mozconfig<----------------------------------------\n";
   }
 }
 
