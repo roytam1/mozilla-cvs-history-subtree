@@ -365,6 +365,13 @@ modules/plugin/base/public/Makefile
 modules/plugin/samples/simple/Makefile
 modules/plugin/samples/SanePlugin/Makefile
 modules/plugin/samples/default/unix/Makefile
+modules/plugin/tools/sdk/Makefile
+modules/plugin/tools/sdk/samples/Makefile
+modules/plugin/tools/sdk/samples/common/Makefile
+modules/plugin/tools/sdk/samples/basic/windows/Makefile
+modules/plugin/tools/sdk/samples/scriptable/windows/Makefile
+modules/plugin/tools/sdk/samples/simple/Makefile
+modules/plugin/tools/sdk/samples/winless/windows/Makefile
 "
 
 MAKEFILES_access_builtin="
@@ -825,14 +832,35 @@ extensions/typeaheadfind/Makefile
 
 MAKEFILES_phoenix="
 browser/Makefile
+browser/app/Makefile
 browser/base/Makefile
 browser/components/Makefile
+browser/components/bookmarks/Makefile
+browser/components/build/Makefile
+browser/components/console/Makefile
+browser/components/downloads/Makefile
+browser/components/downloads/public/Makefile
+browser/components/downloads/src/Makefile
 browser/components/prefwindow/Makefile
+browser/components/prefwindow/content/Makefile
+browser/components/prefwindow/content/unix/Makefile
+browser/components/prefwindow/content/win/Makefile
+browser/components/prefwindow/locale/Makefile
+browser/components/prefwindow/locale/unix/Makefile
+browser/components/prefwindow/locale/win/Makefile
 browser/components/search/Makefile
 browser/components/search/resources/Makefile
 toolkit/Makefile
+toolkit/components/autocomplete/Makefile
+toolkit/components/autocomplete/public/Makefile
+toolkit/components/autocomplete/src/Makefile
+toolkit/components/build/Makefile
+toolkit/components/satchel/Makefile
+toolkit/components/satchel/public/Makefile
+toolkit/components/satchel/src/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
+toolkit/xre/Makefile
 "
 
 MAKEFILES_minotaur="

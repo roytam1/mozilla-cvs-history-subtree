@@ -46,6 +46,7 @@ using namespace Gdiplus;
 #include "nsIRenderingContext.h"
 #include "nsTransform2D.h"
 #include "nsIPresContext.h"
+#include "nsRect.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGGDIPlusRenderContext class
@@ -55,7 +56,8 @@ class nsSVGGDIPlusRenderContext : public nsISVGGDIPlusRenderContext
 public:
   nsSVGGDIPlusRenderContext();
   ~nsSVGGDIPlusRenderContext();
-  nsresult Init(nsIRenderingContext* ctx, nsIPresContext* presContext);
+  nsresult Init(nsIRenderingContext* ctx, nsIPresContext* presContext,
+                const nsRect & dirtyRect);
 
   // nsISupports interface:
   NS_DECL_ISUPPORTS
@@ -71,18 +73,32 @@ private:
   nsCOMPtr<nsIRenderingContext> mMozContext;
   nsCOMPtr<nsIPresContext> mPresContext;
   Graphics *mGraphics;
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  Bitmap *mOffscreenBitmap;
+  Graphics *mOffscreenGraphics;
+#endif
 };
 
 //----------------------------------------------------------------------
 // implementation:
 
-nsSVGGDIPlusRenderContext::nsSVGGDIPlusRenderContext() : mGraphics(nsnull)
+nsSVGGDIPlusRenderContext::nsSVGGDIPlusRenderContext()
+    : mGraphics(nsnull)
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+    , mOffscreenBitmap(nsnull), mOffscreenGraphics(nsnull)
+#endif
 {
   NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusRenderContext::~nsSVGGDIPlusRenderContext()
 {
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  if (mOffscreenGraphics)
+    delete mOffscreenGraphics;
+  if (mOffscreenBitmap)
+    delete mOffscreenBitmap;
+#endif
   if (mGraphics)
     delete mGraphics;
   mMozContext = nsnull;
@@ -90,7 +106,8 @@ nsSVGGDIPlusRenderContext::~nsSVGGDIPlusRenderContext()
 
 nsresult
 nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
-                                nsIPresContext* presContext)
+                                nsIPresContext* presContext,
+                                const nsRect & dirtyRect)
 {
   mPresContext = presContext;
   mMozContext = ctx;
@@ -107,7 +124,22 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
   mMozContext->GetCurrentTransform(xform);
   float dx, dy;
   xform->GetTranslation(&dx, &dy);
-  mGraphics->TranslateTransform(dx, dy);
+
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  mGraphics->TranslateTransform(dx+dirtyRect.x, dy+dirtyRect.y);
+
+  // GDI+ internally works on 32bpp surfaces. Writing directly to
+  // Mozilla's backbuffer can be very slow if it hasn't got the right
+  // format (!=32bpp).  For complex SVG docs it is advantageous to
+  // render to a 32bppPARGB bitmap first:
+  mOffscreenBitmap = new Bitmap(dirtyRect.width, dirtyRect.height, PixelFormat32bppPARGB);
+  if (!mOffscreenBitmap) return NS_ERROR_FAILURE;
+  mOffscreenGraphics = new Graphics(mOffscreenBitmap);
+  if (!mOffscreenGraphics) return NS_ERROR_FAILURE;
+  mOffscreenGraphics->TranslateTransform((float)-dirtyRect.x, (float)-dirtyRect.y);
+#else
+    mGraphics->TranslateTransform(dx, dy);
+#endif
   
   return NS_OK;
 }
@@ -115,14 +147,15 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
 nsresult
 NS_NewSVGGDIPlusRenderContext(nsISVGRendererRenderContext **result,
                               nsIRenderingContext *ctx,
-                              nsIPresContext *presContext)
+                              nsIPresContext *presContext,
+                              const nsRect & dirtyRect)
 {
   nsSVGGDIPlusRenderContext* pg = new nsSVGGDIPlusRenderContext();
   if (!pg) return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(pg);
 
-  nsresult rv = pg->Init(ctx, presContext);
+  nsresult rv = pg->Init(ctx, presContext, dirtyRect);
 
   if (NS_FAILED(rv)) {
     NS_RELEASE(pg);
@@ -180,9 +213,16 @@ nsSVGGDIPlusRenderContext::GetPresContext(nsIPresContext **_retval)
 NS_IMETHODIMP
 nsSVGGDIPlusRenderContext::Clear(nscolor color)
 {
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  mOffscreenGraphics->Clear(Color(NS_GET_R(color),
+                                  NS_GET_G(color),
+                                  NS_GET_B(color)));
+#else
   mGraphics->Clear(Color(NS_GET_R(color),
                          NS_GET_G(color),
                          NS_GET_B(color)));
+#endif
+  
   return NS_OK;
 }
 
@@ -190,7 +230,14 @@ nsSVGGDIPlusRenderContext::Clear(nscolor color)
 NS_IMETHODIMP
 nsSVGGDIPlusRenderContext::Flush()
 {
-  mGraphics->Flush(FlushIntentionSync);
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  mGraphics->SetCompositingMode(CompositingModeSourceCopy);
+  mGraphics->DrawImage(mOffscreenBitmap, 0, 0,
+                       mOffscreenBitmap->GetWidth(),
+                       mOffscreenBitmap->GetHeight());
+#endif
+
+//  mGraphics->Flush(FlushIntentionSync);
   return NS_OK;
 }
 
@@ -200,5 +247,9 @@ nsSVGGDIPlusRenderContext::Flush()
 NS_IMETHODIMP_(Graphics*)
 nsSVGGDIPlusRenderContext::GetGraphics()
 {
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  return mOffscreenGraphics;
+#else
   return mGraphics;
+#endif
 }

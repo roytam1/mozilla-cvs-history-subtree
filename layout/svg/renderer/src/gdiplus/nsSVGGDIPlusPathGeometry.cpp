@@ -175,7 +175,7 @@ nsSVGGDIPlusPathGeometry::GetFill()
   mFill = path->Clone();
   Matrix m;
   GetGlobalTransform(&m);
-  mFill->Transform(&m);
+  mFill->Flatten(&m);
 
   return mFill;
 }
@@ -274,11 +274,11 @@ nsSVGGDIPlusPathGeometry::GetStroke()
     m.Scale(width,width);
   }
   
-  mStroke->Widen(&pen);
+  mStroke->Widen(&pen, &m);
 
   
 //  mStroke->Outline();
-  mStroke->Transform(&m);
+//  mStroke->Transform(&m);
   
   return mStroke;
 }
@@ -298,10 +298,16 @@ nsSVGGDIPlusPathGeometry::GetHitTestRegion()
 
   PRUint16 mask=0;
   mSource->GetHittestMask(&mask);
-  if (mask & nsISVGPathGeometrySource::HITTEST_MASK_FILL)
-    mHitTestRegion->Union(GetFill());
-  if (mask & nsISVGPathGeometrySource::HITTEST_MASK_STROKE)
-    mHitTestRegion->Union(GetStroke());
+  if (mask & nsISVGPathGeometrySource::HITTEST_MASK_FILL) {
+    GraphicsPath *fill = GetFill();
+    if (fill)
+      mHitTestRegion->Union(fill);
+  }
+  if (mask & nsISVGPathGeometrySource::HITTEST_MASK_STROKE) {
+    GraphicsPath *stroke = GetStroke();
+    if (stroke)
+      mHitTestRegion->Union(stroke);
+  }
 
   return mHitTestRegion;
 }
@@ -356,6 +362,7 @@ nsSVGGDIPlusPathGeometry::Render(nsISVGRendererRenderContext *ctx)
   NS_ASSERTION(gdiplusCtx, "wrong svg render context for geometry!");
   if (!gdiplusCtx) return NS_ERROR_FAILURE;
   gdiplusCtx->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
+  gdiplusCtx->GetGraphics()->SetCompositingQuality(CompositingQualityHighSpeed);
 //  gdiplusCtx->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
 
   nscolor color;

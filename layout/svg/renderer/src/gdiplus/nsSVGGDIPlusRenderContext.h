@@ -42,10 +42,12 @@
 class nsIRenderingContext;
 class nsISVGRendererRenderContext;
 class nsIPresContext;
+struct nsRect;
 
 nsresult
 NS_NewSVGGDIPlusRenderContext(nsISVGRendererRenderContext **result,
                               nsIRenderingContext *mozctx,
-                              nsIPresContext *presContext);
+                              nsIPresContext *presContext,
+                              const nsRect & dirtyRect);
 
 #endif // __NS_SVGGDIPLUS_RENDERCONTEXT_H__

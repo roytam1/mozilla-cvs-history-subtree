@@ -132,13 +132,15 @@ nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGPositionedGlyphGeometrySource *s
   return NS_NewSVGGDIPlusGlyphGeometry(_retval, src);
 }
 
-/* nsISVGRendererRenderContext createRenderContext (in nsIRenderingContext ctx); */
+/* [noscript] nsISVGRendererRenderContext createRenderContext (in nsIRenderingContext ctx,
+   in nsIPresContext presContext, [const] in nsRectRef dirtyRect); */
 NS_IMETHODIMP
 nsSVGRendererGDIPlus::CreateRenderContext(nsIRenderingContext *ctx,
                                           nsIPresContext *presContext,
+                                          const nsRect & dirtyRect,
                                           nsISVGRendererRenderContext **_retval)
 {
-  return NS_NewSVGGDIPlusRenderContext(_retval, ctx, presContext);
+  return NS_NewSVGGDIPlusRenderContext(_retval, ctx, presContext, dirtyRect);
 }
 
 /* nsISVGRendererRegion createRectRegion (in float x, in float y, in float width, in float height); */

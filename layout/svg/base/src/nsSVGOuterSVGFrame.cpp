@@ -762,15 +762,21 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 
   // initialize Mozilla rendering context
   aRenderingContext.PushState();
-
-  nsRect clipRect(0,0,aDirtyRect.width, aDirtyRect.height);
-
+  
   PRBool clipState;
   aRenderingContext.SetClipRect(aDirtyRect,nsClipCombine_kIntersect,clipState);
 
+#if defined(DEBUG) && defined(SVG_DEBUG_PAINT_TIMING)
+  PRTime start = PR_Now();
+#endif
+
+  float pxPerTwips = GetPxPerTwips();  
+  nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips, aDirtyRect.y*pxPerTwips,
+                     aDirtyRect.width*pxPerTwips, aDirtyRect.height*pxPerTwips);
   
   nsCOMPtr<nsISVGRendererRenderContext> SVGCtx;
-  mRenderer->CreateRenderContext(&aRenderingContext, aPresContext, getter_AddRefs(SVGCtx));
+  mRenderer->CreateRenderContext(&aRenderingContext, aPresContext, dirtyRectPx,
+                                 getter_AddRefs(SVGCtx));
 
   SVGCtx->Clear(NS_RGB(255,255,255));
 
@@ -787,7 +793,12 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   SVGCtx->Flush();
 
   SVGCtx = nsnull;
-  
+
+#if defined(DEBUG) && defined(SVG_DEBUG_PAINT_TIMING)
+  PRTime end = PR_Now();
+  printf("SVG Paint Timing: %f ms\n", (end-start)/1000.0);
+#endif
+
   aRenderingContext.PopState(clipState);
   
   return NS_OK;

@@ -686,7 +686,7 @@ statictag_svg:
 	cvs -z3 tag -F -rHEAD SVG_20020806_BASE $(SVG_BRANCH_MODIFIED_FILES)
 
 diff_svg:
-	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) 
+	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES)
 
 #branchtag_svg:
 #	cvs -z3 tag -b SVG_20020806_BRANCH $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_OBSOLETE_FILES)

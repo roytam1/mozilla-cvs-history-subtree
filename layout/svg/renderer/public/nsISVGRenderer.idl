@@ -38,6 +38,13 @@
 
 #include "nsISupports.idl"
 
+%{C++
+struct nsRect;
+%}
+
+[ref] native nsRectRef(nsRect);
+
+
 interface nsISVGPathGeometrySource;
 interface nsISVGGlyphGeometrySource;
 interface nsISVGPositionedGlyphGeometrySource;
@@ -56,8 +63,9 @@ interface nsISVGRenderer : nsISupports
   nsISVGRendererPathGeometry createPathGeometry(in nsISVGPathGeometrySource src);
   nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphGeometrySource src);
   nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGPositionedGlyphGeometrySource src);
-  nsISVGRendererRenderContext createRenderContext(in nsIRenderingContext ctx,
-                                                  in nsIPresContext presContext);
+  [noscript] nsISVGRendererRenderContext createRenderContext(in nsIRenderingContext ctx,
+                                                             in nsIPresContext presContext,
+                                                             [const] in nsRectRef dirtyRect);
   nsISVGRendererRegion createRectRegion(in float x, in float y, in float width, in float height);
 };
 
