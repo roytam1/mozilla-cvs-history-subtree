@@ -34,9 +34,9 @@ var bc:BaseClass = BaseClass.makeBC();
 if (BaseClass.gBC != 12) badTest += test + " ";
 BaseClass.gBC = 0;
 
-test++;
+test++; //2
 if ((bc + 3) != 20) badTest += test + " ";
-test++;
+test++; //3
 if (BaseClass.gBC != 1) badTest += test + " ";
 
 class Extended extends BaseClass {
@@ -58,9 +58,9 @@ class Extended extends BaseClass {
 }
 
 var ex:Extended = new Extended;
-test++;
+test++; //4
 if (ex.t != 49200) badTest += test + " ";
-test++;
+test++; //5
 if ((ex + bc) != 19) badTest += test + " ";
 
 function loopy(a)
@@ -76,22 +76,22 @@ function loopy(a)
     return x;
 }
 
-test++;
+test++; //6
 if (loopy(17) != 3) badTest += test + " ";
 
 BaseClass.gBC *= ex.mEx;
-test++;
+test++; //7
 if (BaseClass.gBC != 2) badTest += test + " ";
 
 var a = 3, b = 2;
 a &&= b;
-test++;
+test++; //8
 if (a != 2) badTest += test + " ";
 
-test++;
+test++; //9
 if (bc.Q != 13) badTest += test + " ";
 bc.Q = 1;
-test++;
+test++; //10
 if (BaseClass.gBC != 100) badTest += test + " ";
 
 
@@ -99,11 +99,11 @@ var cnX = 'X'
 var s = '';
 function f(n) { var ret = ''; for (var i = 0; i < n; i++) { ret += cnX; } return ret; }
 s = f(5);
-test++;
+test++; //11
 if (s != 'XXXXX') badTest += test + " ";
 
 var t = "abcdeXXXXXghij";
-test++;
+test++; //12
 if (t.split('XXXXX').length != 2) badTest += test + " ";
 
 
@@ -119,15 +119,15 @@ function ZZ(b)
     var c = b * 5;
     try {
         x();
-        test++;
+        test++; //13    <-- shouldn't execute
         badTest += test + " ";
     }
     catch (e) {
-        test++;
+        test++; //13
         if (a != 12) badTest += test + " ";
-        test++;
+        test++; //14
         if (b != c / 5) badTest += test + " ";
-        test++;
+        test++; //15
         if (e != "frisbee") badTest += test + " ";
     }
 }
@@ -151,24 +151,71 @@ function sw(t)
     }
     return result;
 }
-test++;
+test++; //16
 if (sw(2) != "02d") badTest += test + " ";
 
 
 class A { static var x = 2; var y; }
 class B extends A { static var i = 4; var j; }
 
-test++;
+test++; //17
 if (A.x != 2) badTest += test + " ";
 
-test++;
+test++; //18
 if (B.x != 2) badTest += test + " ";
 
-test++;
+test++; //19
 if (B.i != 4) badTest += test + " ";
 
 
+var sNAME_UNINITIALIZED:String = '(NO NAME HAS BEEN ASSIGNED)';
+var sNAME_MOTHER:String = 'Bessie';
+var sNAME_FATHER:String = 'Red';
+var sNAME_CHILD:String = 'Junior';
 
 
+class Cow
+{
+  static var count:Integer = 0;
+  var name:String = sNAME_UNINITIALIZED;
+
+  constructor function Cow(sName:String)
+  {
+    count++;
+    name = sName;
+  }
+}
+
+
+class Calf extends Cow
+{
+  var mother:Cow;
+  var father:Cow;
+
+  constructor function Calf(sName:String, objMother:Cow, objFather:Cow)
+  {
+    Cow(sName);
+    mother = objMother;
+    father = objFather;
+  }
+}
+
+
+var cowMOTHER = new Cow(sNAME_MOTHER);
+var cowFATHER = new Cow(sNAME_FATHER);
+var cowCHILD = new Calf(sNAME_CHILD, cowMOTHER, cowFATHER);
+
+test++; //20
+if (cowCHILD.name != "Junior") badTest += test + " ";
+test++; //21
+if (cowCHILD.father.name != "Red") badTest += test + " ";
+
+test++; //22
+if (this.toString() != "[object Object]") badTest += test + " ";
+
+
+function f1(a,b,...c) { return a - (b + c["e"]); }
+test++; //23
+if (f1(2, "a":13, "e":5) != 6)  badTest += test + " ";
 
 if (badTest == 0) print("still sane") else print("gone off the deep end at test #" + badTest);

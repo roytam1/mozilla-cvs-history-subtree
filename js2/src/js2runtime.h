@@ -529,41 +529,41 @@ XXX ...couldn't get this to work...
 
 
         // add a property
-        virtual Property *defineVariable(const String &name, AttributeStmtNode *attr, JSType *type);
-        virtual Property *defineVariable(const String &name, NamespaceList *names, JSType *type);
+        virtual Property *defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type);
+        virtual Property *defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type);
 
-        virtual Property *defineStaticVariable(const String &name, AttributeStmtNode *attr, JSType *type)
+        virtual Property *defineStaticVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type)
         {
-            return JSObject::defineVariable(name, attr, type);   
+            return JSObject::defineVariable(cx, name, attr, type);   
             // XXX or error?  (Note that this implementation is invoked by JSType::defineStaticXXXX
             // - the question is, is static var X (etc) at global scope an error?
         }
         // add a method property
-        virtual void defineMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineVariable(name, attr, Function_Type, JSValue(f));
+            defineVariable(cx, name, attr, Function_Type, JSValue(f));
         }
-        virtual void defineStaticMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            JSObject::defineVariable(name, attr, Function_Type, JSValue(f));    // XXX or error?
+            JSObject::defineVariable(cx, name, attr, Function_Type, JSValue(f));    // XXX or error?
         }
-        virtual void defineConstructor(const String& name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineConstructor(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
-            JSObject::defineVariable(name, attr, Function_Type, JSValue(f));    // XXX or error?
+            JSObject::defineVariable(cx, name, attr, Function_Type, JSValue(f));    // XXX or error?
         }
-        virtual void defineStaticGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            JSObject::defineGetterMethod(name, attr, f);    // XXX or error?
+            JSObject::defineGetterMethod(cx, name, attr, f);    // XXX or error?
         }
-        virtual void defineStaticSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            JSObject::defineSetterMethod(name, attr, f);    // XXX or error?
+            JSObject::defineSetterMethod(cx, name, attr, f);    // XXX or error?
         }
-        virtual void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
-        virtual void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
+        virtual void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        virtual void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
 
-        virtual Property *defineVariable(const String &name, AttributeStmtNode *attr, JSType *type, JSValue v);
-        virtual Property *defineVariable(const String &name, NamespaceList *names, JSType *type, JSValue v);
+        virtual Property *defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type, JSValue v);
+        virtual Property *defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type, JSValue v);
         
         virtual Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
 
@@ -688,25 +688,25 @@ XXX ...couldn't get this to work...
         virtual JSInstance *newInstance(Context *cx);
            
 
-        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type);
+        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type);
 
 
    // XXX
    // XXX why doesn't the virtual function in JSObject get found?
    // XXX
-        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
+        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
         {
-            return JSObject::defineVariable(name, attr, type, v);
+            return JSObject::defineVariable(cx, name, attr, type, v);
         }
 
 
 
 
-        void defineMethod(const String& name, AttributeStmtNode *attr, JSFunction *f);
+        void defineMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f);
         
-        void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
 
-        void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
 
         void defineUnaryOperator(Operator which, JSFunction *f)
         {
@@ -718,13 +718,13 @@ XXX ...couldn't get this to work...
             return mUnaryOperators[which];
         }
 
-        void setDefaultConstructor(JSFunction *f)
+        void setDefaultConstructor(Context *cx, JSFunction *f)
         {
-            defineConstructor(mClassName, NULL, f);    // XXX attr?
+            defineConstructor(cx, mClassName, NULL, f);    // XXX attr?
         }
 
-        void addMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
-        void addStaticMethod( const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void addMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void addStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
 
         // return true if 'other' is on the chain of supertypes
         bool derivesFrom(JSType *other);
@@ -965,60 +965,60 @@ XXX ...couldn't get this to work...
         }
 
         // add a new name to the current scope
-        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type)
+        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(name, attr, type);
+            return top->defineVariable(cx, name, attr, type);
         }
-        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
+        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(name, attr, type, v);
+            return top->defineVariable(cx, name, attr, type, v);
         }
-        Property *defineStaticVariable(const String& name, AttributeStmtNode *attr, JSType *type)
+        Property *defineStaticVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            return top->defineStaticVariable(name, attr, type);
+            return top->defineStaticVariable(cx, name, attr, type);
         }
-        void defineMethod(const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineMethod(name, attr, f);
+            top->defineMethod(cx, name, attr, f);
         }   
-        void defineStaticMethod(const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticMethod(name, attr, f);
+            top->defineStaticMethod(cx, name, attr, f);
         }   
-        void defineConstructor(const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineConstructor(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineConstructor(name, attr, f);
+            top->defineConstructor(cx, name, attr, f);
         }   
-        void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineGetterMethod(name, attr, f);
+            top->defineGetterMethod(cx, name, attr, f);
         }
-        void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineSetterMethod(name, attr, f);
+            top->defineSetterMethod(cx, name, attr, f);
         }
-        void defineStaticGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticGetterMethod(name, attr, f);
+            top->defineStaticGetterMethod(cx, name, attr, f);
         }
-        void defineStaticSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticSetterMethod(name, attr, f);
+            top->defineStaticSetterMethod(cx, name, attr, f);
         }
         void defineUnaryOperator(Operator which, JSFunction *f)
         {
@@ -1063,7 +1063,7 @@ XXX ...couldn't get this to work...
             return false;
         }
 
-        void getNameValue(const String& name, AttributeStmtNode *attr, Context *cx);
+        void getNameValue(Context *cx, const String& name, AttributeStmtNode *attr);
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
@@ -1096,7 +1096,7 @@ XXX ...couldn't get this to work...
 
 
 
-        void setNameValue(const String& name, AttributeStmtNode *attr, Context *cx);
+        void setNameValue(Context *cx, const String& name, AttributeStmtNode *attr);
 
         // return the number of local vars used by all the 
         // Activations on the top of the chain
@@ -1154,14 +1154,14 @@ XXX ...couldn't get this to work...
 
         // XXX these should be Function_Type->newInstance() calls, no?
 
-        JSFunction(JSType *resultType, uint32 argCount, ScopeChain *scopeChain) 
+        JSFunction(JSType *resultType, ScopeChain *scopeChain) 
                     : JSObject(Function_Type), 
                         mParameterBarrel(NULL),
                         mActivation(),
                         mByteCode(NULL), 
                         mCode(NULL), 
-                        mResultType(resultType), 
-                        mExpectedArgs(argCount),
+                        mResultType(resultType),
+                        mRequiredArgs(0),
                         mOptionalArgs(0),
                         mArguments(NULL),
                         mScopeChain(NULL), 
@@ -1185,7 +1185,7 @@ XXX ...couldn't get this to work...
                         mByteCode(NULL), 
                         mCode(code), 
                         mResultType(resultType), 
-                        mExpectedArgs(0),
+                        mRequiredArgs(0),
                         mOptionalArgs(0),
                         mArguments(NULL),
                         mScopeChain(NULL),
@@ -1208,21 +1208,17 @@ XXX ...couldn't get this to work...
 
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
         void setResultType(JSType *r)           { mResultType = r; }
-        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; mArguments = new ArgumentData[mExpectedArgs]; }
+        void setArgCounts(uint32 r, uint32 o, bool hasRest);
         void setArgument(uint32 index, const String *n, JSType *t)
-                                                { ASSERT(mArguments && (index < mExpectedArgs)); mArguments[index].mType = t; mArguments[index].mName = n; }
+                                                { ASSERT(mArguments && (index < (mRequiredArgs + mOptionalArgs + ((mHasRestParameter) ? 1 : 0) ))); mArguments[index].mType = t; mArguments[index].mName = n; }
         void setArgumentInitializer(uint32 index, uint32 offset)
-                                                { ASSERT(mArguments && (index < mExpectedArgs)); mArguments[index].mInitializer = offset; }
+                                                { ASSERT(mArguments && (index < (mRequiredArgs + mOptionalArgs + ((mHasRestParameter) ? 1 : 0) ))); mArguments[index].mInitializer = offset; }
 
         void setIsPrototype(bool i)             { mIsPrototype = i; }
         void setIsConstructor(bool i)           { mIsConstructor = i; }
         void setIsUnchecked()                   { mIsChecked = false; }
         void setFunctionName(const String &n)   { mFunctionName = n; }
         void setClass(JSType *c)                { mClass = c; }
-        void setOptionalArgumentCount(uint32 r) { mOptionalArgs = r; }
-        void setHasRestParameter()              { mHasRestParameter = true; }
-        void setRestParameterName(const String *n)
-                                                { mRestParameterName = n; }
 
         virtual bool hasBoundThis()             { return false; }
         virtual bool isNative()                 { return (mCode != NULL); }
@@ -1232,9 +1228,8 @@ XXX ...couldn't get this to work...
         virtual NativeCode *getNativeCode()     { ASSERT(isNative()); return mCode; }
 
         virtual JSType *getResultType()         { return mResultType; }
-        virtual uint32 getExpectedArgs()        { return mExpectedArgs; }
-        virtual JSType *getArgType(uint32 a)    { ASSERT(mArguments && (a < mExpectedArgs)); return mArguments[a].mType; }
-        virtual bool argHasInitializer(uint32 a){ ASSERT(mArguments && (a < mExpectedArgs)); return (mArguments[a].mInitializer != (uint32)(-1)); }
+        virtual JSType *getArgType(uint32 a)    { ASSERT(mArguments && (a < (mRequiredArgs + mOptionalArgs))); return mArguments[a].mType; }
+        virtual bool argHasInitializer(uint32 a){ ASSERT(mArguments && (a < (mRequiredArgs + mOptionalArgs))); return (mArguments[a].mInitializer != (uint32)(-1)); }
         virtual JSValue runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc);
         virtual ScopeChain *getScopeChain()     { return mScopeChain; }
         virtual JSValue getThisValue()          { return kNullValue; }         
@@ -1242,13 +1237,15 @@ XXX ...couldn't get this to work...
         virtual String &getFunctionName()       { return mFunctionName; }
         virtual uint32 findParameterName(const String *name);
         virtual uint32 getRequiredArgumentCount()   
-                                                { return (mExpectedArgs - mOptionalArgs); }
+                                                { return mRequiredArgs; }
+        virtual uint32 getOptionalArgumentCount()   
+                                                { return mOptionalArgs; }
         virtual bool hasOptionalArguments()     { return (mOptionalArgs > 0); }
         virtual bool isChecked()                { return mIsChecked; }
         virtual bool hasRestParameter()         { return mHasRestParameter; }
         virtual const String *getRestParameterName()  
-                                                { return mRestParameterName; }
-
+                                                { ASSERT(mHasRestParameter); return mArguments[(mRequiredArgs + mOptionalArgs)].mName; }
+        virtual JSType *getRestParameterType()  { ASSERT(mHasRestParameter); return mArguments[(mRequiredArgs + mOptionalArgs)].mType; }
 
 
         ParameterBarrel *mParameterBarrel;
@@ -1258,7 +1255,7 @@ XXX ...couldn't get this to work...
         ByteCodeModule *mByteCode;
         NativeCode *mCode;
         JSType *mResultType;
-        uint32 mExpectedArgs;                   // total # parameters
+        uint32 mRequiredArgs;                   // total # parameters
         uint32 mOptionalArgs;
         ArgumentData *mArguments;
         ScopeChain *mScopeChain;
@@ -1289,7 +1286,6 @@ XXX ...couldn't get this to work...
         NativeCode *getNativeCode()     { return mFunction->getNativeCode(); }
 
         JSType *getResultType()         { return mFunction->getResultType(); }
-        uint32 getExpectedArgs()        { return mFunction->getExpectedArgs(); }
         JSType *getArgType(uint32 a)    { return mFunction->getArgType(a); }
         bool argHasInitializer(uint32 a){ return mFunction->argHasInitializer(a); }
         JSValue runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc)
@@ -1302,11 +1298,14 @@ XXX ...couldn't get this to work...
                                         { return mFunction->findParameterName(name); } 
         uint32 getRequiredArgumentCount()   
                                         { return mFunction->getRequiredArgumentCount(); }
+        uint32 getOptionalArgumentCount()   
+                                        { return mFunction->getOptionalArgumentCount(); }
         bool hasOptionalArguments()     { return mFunction->hasOptionalArguments(); }
         bool isChecked()                { return mFunction->isChecked(); }
         bool hasRestParameter()         { return mFunction->hasRestParameter(); }
         const String *getRestParameterName()  
                                         { return mFunction->getRestParameterName(); }
+        JSType *getRestParameterType()  { return mFunction->getRestParameterType(); }
 
         void getProperty(Context *cx, const String &name, NamespaceList *names) 
                                         { mFunction->getProperty(cx, name, names); }
@@ -1548,6 +1547,8 @@ XXX ...couldn't get this to work...
         
         void reportError(Exception::Kind kind, char *message, size_t pos, const char *arg = NULL);
         void reportError(Exception::Kind kind, char *message, const char *arg = NULL);
+        void Context::reportError(Exception::Kind kind, char *message, const String& name);
+        void Context::reportError(Exception::Kind kind, char *message, size_t pos, const String& name);
 
         
         /* utility routines */
@@ -1651,14 +1652,14 @@ XXX ...couldn't get this to work...
     {
     }
 
-    inline void JSType::addStaticMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+    inline void JSType::addStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
     {
-        defineStaticMethod(name, attr, f);
+        defineStaticMethod(cx, name, attr, f);
     }
 
-    inline void JSType::addMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
+    inline void JSType::addMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
     {
-        defineMethod(name, attr, f);
+        defineMethod(cx, name, attr, f);
     }
 
 

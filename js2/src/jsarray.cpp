@@ -69,7 +69,7 @@ JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, 
             arrInst->mLength = argc;
             for (uint32 i = 0; i < argc; i++) {
                 String *id = numberToString(i);
-                arrInst->defineVariable(*id, (NamespaceList *)(NULL), Object_Type, argv[i]);
+                arrInst->defineVariable(cx, *id, (NamespaceList *)(NULL), Object_Type, argv[i]);
                 delete id;
             }
         }
@@ -132,7 +132,7 @@ static JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue * /
     
 }
 
-static JSValue Array_push(Context * /*cx*/, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -141,7 +141,7 @@ static JSValue Array_push(Context * /*cx*/, const JSValue& thisValue, JSValue *a
 
     for (uint32 i = 0; i < argc; i++) {
         String *id = numberToString(i + arrInst->mLength);
-        arrInst->defineVariable(*id, (NamespaceList *)(NULL), Object_Type, argv[i]);
+        arrInst->defineVariable(cx, *id, (NamespaceList *)(NULL), Object_Type, argv[i]);
         delete id;
     }
     arrInst->mLength += argc;

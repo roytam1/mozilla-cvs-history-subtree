@@ -405,25 +405,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 
                     if (!target->isNative()) {
 
-                        uint32 expectedArgCount = target->getExpectedArgs();
+                        // XXX Optimize the more typical case in which there are no named arguments, no optional arguments
+                        // and the appropriate number of arguments have been supplied.
+
+                        uint32 maxExpectedArgCount = target->getRequiredArgumentCount() + target->getOptionalArgumentCount();
                         if (target->isChecked()) {
                             if (argCount < target->getRequiredArgumentCount())
                                 reportError(Exception::referenceError, "Insufficient quantity of arguments");
                         
-                            if ((argCount > expectedArgCount) && !target->hasRestParameter())
+                            if ((argCount > maxExpectedArgCount) && !target->hasRestParameter())
                                 reportError(Exception::referenceError, "Oversufficient quantity of arguments");
                         }
 
                         uint32 i;
-                        argBase = new JSValue[expectedArgCount];        // room for all required & optional arguments
-                                                                        // any left-overs will go into the rest parameter
-
+                        argBase = new JSValue[maxExpectedArgCount + (target->hasRestParameter() ? 1 : 0)];     
+                                                                        // room for all required & optional arguments
+                                                                        // plus the rest parameter if it exists.
                         bool *argUsed = new bool[argCount];
                         for (i = 0; i < argCount; i++)
                             argUsed[i] = false;
-
                         uint32 argStart = stackSize() - argCount;
-
                         uint32 argIndex = 0;      // the index into argBase, the resolved outgoing arguments
                         uint32 posArgIndex = 0;   // next positional arg from the incoming set
                         for (i = 0; i < argCount; i++) {    // find the first positional (i.e. non-named arg)
@@ -433,7 +434,10 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                 break;
                             }
                         }
-                        while (argIndex < expectedArgCount) {                        
+                        // for each parameter - see if there's a named arg that matches
+                        // otherwise take the next non-named argument. (unless the parameter
+                        // is an optional one)
+                        while (argIndex < maxExpectedArgCount) {                        
                             bool foundNamedArg = false;
                             // find a matching named argument
                             for (uint32 i = 0; i < argCount; i++) {
@@ -451,7 +455,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             }
                             if (!foundNamedArg) {
                                 if (target->argHasInitializer(argIndex)) {
-                                    argBase[argIndex] = target->runArgInitializer(this, argIndex, mThis, argBase, expectedArgCount);
+                                    argBase[argIndex] = target->runArgInitializer(this, argIndex, mThis, argBase, maxExpectedArgCount);
                                 }
                                 else {
                                     if (posArgIndex < argCount) {
@@ -470,9 +474,12 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         }
 
                         JSValue restArgument;
-                        if (target->hasRestParameter() && target->getRestParameterName())
-                            restArgument = Object_Type->newInstance(this);
-                        posArgIndex = 0;
+                        if (target->hasRestParameter() && target->getRestParameterName()) {
+                            restArgument = target->getRestParameterType()->newInstance(this);
+                            argBase[maxExpectedArgCount] = JSValue(restArgument);
+                        }
+                        posArgIndex = 0;    // re-number the non-named arguments that end up in the rest arg
+                        // now find a place for any left-overs
                         for (i = 0; i < argCount; i++) {
                             if (!argUsed[i]) {
                                 JSValue v = getValue(i + argStart);
@@ -485,6 +492,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                     else {
                                         if (target->hasRestParameter()) {
                                             if (!restArgument.isUndefined())
+                                                // XXX is it an error to have duplicate named rest properties?
                                                 restArgument.object->setProperty(this, *arg->mName, (NamespaceList *)(NULL), arg->mValue);
                                         }
                                         else
@@ -494,7 +502,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                 else {
                                     if (target->hasRestParameter()) {
                                         if (!restArgument.isUndefined()) {
-                                            String *id = numberToString(i);
+                                            String *id = numberToString(posArgIndex++);
                                             restArgument.object->setProperty(this, *id, (NamespaceList *)(NULL), v);
                                         }
                                     }
@@ -739,7 +747,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    mScopeChain->getNameValue(name, CURRENT_ATTR, this);
+                    mScopeChain->getNameValue(this, name, CURRENT_ATTR);
                 }
                 break;
             case GetTypeOfNameOp:
@@ -748,7 +756,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
                     if (mScopeChain->hasNameValue(name, CURRENT_ATTR)) {
-                        mScopeChain->getNameValue(name, CURRENT_ATTR, this);
+                        mScopeChain->getNameValue(this, name, CURRENT_ATTR);
                     }
                     else
                         pushValue(kUndefinedValue);
@@ -759,7 +767,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    mScopeChain->setNameValue(name, CURRENT_ATTR, this);
+                    mScopeChain->setNameValue(this, name, CURRENT_ATTR);
                 }
                 break;
             case GetElementOp:
@@ -1015,18 +1023,18 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     }
                     
                     ASSERT(target);
-                    uint32 expectedArgCount = target->getExpectedArgs();
-                    for (uint32 i = argCount; i < expectedArgCount; i++) {
+                    uint32 maxExpectedArgCount = target->getRequiredArgumentCount() + target->getOptionalArgumentCount();
+                    for (uint32 i = argCount; i < maxExpectedArgCount; i++) {
                         pushValue(kUndefinedValue);
                     }
                     
                     if (isPrototypeFunctionCall)
                         // don't care what it returns, we have the 'this' already
-                        invokeFunction(target, newThis, getBase(argBase), expectedArgCount);
+                        invokeFunction(target, newThis, getBase(argBase), maxExpectedArgCount);
                     else
                         // constructor has potentially made the 'this', so retain it
-                        newThis = invokeFunction(target, newThis, getBase(argBase), expectedArgCount);
-                    resizeStack(stackSize() - expectedArgCount);
+                        newThis = invokeFunction(target, newThis, getBase(argBase), maxExpectedArgCount);
+                    resizeStack(stackSize() - maxExpectedArgCount);
                     popValue();             // don't need the type anymore
                     pushValue(newThis);
                  }

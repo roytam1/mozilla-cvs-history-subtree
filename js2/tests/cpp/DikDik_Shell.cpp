@@ -245,25 +245,31 @@ int main(int argc, char **argv)
     using namespace JavaScript;
     using namespace Shell;
 
-    JSObject *globalObject;
-    Context cx(&globalObject, world, a, Pragma::js2);
+    try {
+        JSObject *globalObject;
+        Context cx(&globalObject, world, a, Pragma::js2);
 
-    globalObject->defineVariable(widenCString("load"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(load, NULL)));
-    globalObject->defineVariable(widenCString("print"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(print, NULL)));
-    globalObject->defineVariable(widenCString("debug"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(debug, NULL)));
-    globalObject->defineVariable(widenCString("trace"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(trace, NULL)));
-    globalObject->defineVariable(widenCString("dikdik"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(dikdik, NULL)));
+        globalObject->defineVariable(&cx, widenCString("load"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(load, NULL)));
+        globalObject->defineVariable(&cx, widenCString("print"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(print, NULL)));
+        globalObject->defineVariable(&cx, widenCString("debug"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(debug, NULL)));
+        globalObject->defineVariable(&cx, widenCString("trace"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(trace, NULL)));
+        globalObject->defineVariable(&cx, widenCString("dikdik"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(dikdik, NULL)));
 
-    bool doInteractive = true;
-    int result = 0;
-    if (argc > 1) {
-        doInteractive = processArgs(&cx, argc - 1, argv + 1, &result);
+        bool doInteractive = true;
+        int result = 0;
+        if (argc > 1) {
+            doInteractive = processArgs(&cx, argc - 1, argv + 1, &result);
+        }
+        if (doInteractive)
+            result = readEvalPrint(&cx, stdin);
+
+        if (gTraceFlag)
+            trace_dump(JavaScript::stdOut);
+
+        return result;
     }
-    if (doInteractive)
-        result = readEvalPrint(&cx, stdin);
-
-    if (gTraceFlag)
-        trace_dump(JavaScript::stdOut);
-
-    return result;
+    catch (Exception &e) {
+        stdOut << '\n' << e.fullMessage();
+        return EXITCODE_RUNTIME_ERROR;
+    }
 }
