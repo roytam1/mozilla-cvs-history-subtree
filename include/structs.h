@@ -146,7 +146,7 @@ class TImapServerState;
 
 
 #if defined(SMOOTH_PROGRESS) && defined(__cplusplus)
-class nsITransferObserver;
+class nsITransferListener;
 #endif
 
 struct MWContext_ {
@@ -343,7 +343,7 @@ struct MWContext_ {
 
 #if defined(SMOOTH_PROGRESS)
 #if defined(__cplusplus)
-    nsITransferObserver* progressManager;
+    nsITransferListener* progressManager;
 #else
     void* progressManager;
 #endif /* __cplusplus */
