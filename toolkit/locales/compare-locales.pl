@@ -122,7 +122,11 @@ sub compareProperties
         if (exists $entities2{$entity}) {
             delete $entities2{$entity};
         } else {
+# hack around xslt.properties, one additional property for 1.0.1
+	  if ($path !~ /global\/layout\/xslt\.properties$/ or
+	      $entity != "27") {
             push @extra1, $entity;
+	  }
         }
     }
 
