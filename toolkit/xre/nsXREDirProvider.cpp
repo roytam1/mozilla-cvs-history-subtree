@@ -497,6 +497,18 @@ nsXREDirProvider::DoShutdown()
   }
 }
 
+static void 
+GetProfileFolderName(char* aProfileFolderName, const char* aSource)
+{
+  const char* reading = aSource;
+
+  while (*reading) {
+    *aProfileFolderName = tolower(*reading);
+    ++aProfileFolderName; ++reading;
+  }
+  *aProfileFolderName = '\0';
+}
+
 nsresult
 nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
 {
@@ -507,8 +519,8 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   nsCOMPtr<nsILocalFile> localDir;
 
 #if defined(XP_MACOSX)
-  FSRef fsRef;
-  OSErr err = ::FSFindFolder(kUserDomain, kDomainLibraryFolderType, kCreateFolder, &fsRef);
+   FSRef fsRef;
+  OSErr err = ::FSFindFolder(kUserDomain, kApplicationSupportFolderType, kCreateFolder, &fsRef);
   if (err) return NS_ERROR_FAILURE;
 
   rv = NS_NewNativeLocalFile(EmptyCString(), PR_TRUE, getter_AddRefs(localDir));
@@ -520,9 +532,11 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   rv = dirFileMac->InitWithFSRef(&fsRef);
   NS_ENSURE_SUCCESS(rv, rv);
 
+  // Note that MacOS ignores the vendor when creating the profile hierarchy - all
+  // application preferences directories live alongside one another in 
+  // ~/Library/Application Support/
   rv = dirFileMac->AppendNative(nsDependentCString(gAppData->appName));
   NS_ENSURE_SUCCESS(rv, rv);
-
 #elif defined(XP_WIN)
   LPMALLOC pMalloc;
   LPITEMIDLIST pItemIDList = NULL;
@@ -548,6 +562,10 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
                              PR_TRUE, getter_AddRefs(localDir));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  if (gAppData->appVendor) {
+    rv = localDir->AppendNative(nsDependentCString(gAppData->appVendor));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   rv = localDir->AppendNative(nsDependentCString(gAppData->appName));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -575,6 +593,10 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
+  if (gAppData->appVendor) {
+    rv = localDir->AppendNative(nsDependentCString(gAppData->appVendor));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   rv = localDir->AppendNative(nsDependentCString(gAppData->appName));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -591,6 +613,10 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
                              getter_AddRefs(localDir));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  if (gAppData->appVendor) {
+    rv = localDir->AppendNative(nsDependentCString(gAppData->appVendor));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
   rv = localDir->AppendNative(nsDependentCString(gAppData->appName));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -602,19 +628,27 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   rv = NS_NewNativeLocalFile(nsDependentCString(homeDir), PR_TRUE,
                              getter_AddRefs(localDir));
   NS_ENSURE_SUCCESS(rv, rv);
-
-  char dotAppName[MAXPATHLEN] = ".";
-
-  char* writing = dotAppName + 1;
-  const char* reading = gAppData->appName;
-
-  while (*reading) {
-    *writing = tolower(*reading);
-    ++writing; ++reading;
+ 
+  char* appNameFolder = nsnull;
+  char profileFolderName[MAXPATHLEN] = ".";
+ 
+  // Offset 1 for the outermost folder to make it hidden (i.e. using the ".")
+  char* writing = profileFolderName + 1;
+  if (gAppData->appVendor) {
+    GetProfileFolderName(writing, gAppData->appVendor);
+    
+    rv = localDir->AppendNative(nsDependentCString(profileFolderName));
+    NS_ENSURE_SUCCESS(rv, rv);
+ 
+    char temp[MAXPATHLEN];
+    GetProfileFolderName(temp, gAppData->appName);
+    appNameFolder = temp;
   }
-  *writing = '\0';
-
-  rv = localDir->AppendNative(nsDependentCString(dotAppName));
+  else {
+    GetProfileFolderName(writing, gAppData->appName);
+    appNameFolder = profileFolderName;
+  }
+  rv = localDir->AppendNative(nsDependentCString(appNameFolder));
   NS_ENSURE_SUCCESS(rv, rv);
 #else
 #error dont_know_how_to_get_product_dir_on_your_platform

@@ -50,6 +50,12 @@ class nsILocalFile;
 struct nsXREAppData
 {
   /**
+   * The name of the application vendor. This must be ASCII, and is normally
+   * mixed-case, e.g. "Mozilla".
+   */
+  const char *appVendor;
+
+  /**
    * The name of the application. This must be ASCII, and is normally
    * mixed-case, e.g. "Firefox".
    */

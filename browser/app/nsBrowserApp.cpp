@@ -44,6 +44,7 @@
 #include "nsBuildID.h"
 
 static const nsXREAppData kAppData = {
+  "Mozilla",
   "Firefox",
   APP_VERSION,
   BUILD_ID,

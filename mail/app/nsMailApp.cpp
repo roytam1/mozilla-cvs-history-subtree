@@ -42,8 +42,10 @@
 #include <stdlib.h>
 #endif
 #include "nsBuildID.h"
+#include "prtypes.h"
 
 static const nsXREAppData kAppData = {
+  0,
   "Thunderbird",
   APP_VERSION,
   BUILD_ID,
