@@ -35,18 +35,25 @@
 #include "nsSVGRenderingContext.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
+#include "nsWeakReference.h"
+#include "nsISVGValue.h"
+#include "nsISVGValueObserver.h"
+#include "nsHTMLParts.h"
 
 //typedef nsHTMLContainerFrame nsSVGOuterSVGFrameBase;
 typedef nsContainerFrame nsSVGOuterSVGFrameBase;
 
 class nsSVGOuterSVGFrame : public nsSVGOuterSVGFrameBase,
-                           public nsISVGFrame
+                           public nsISVGFrame,
+                           public nsISVGValueObserver,
+                           public nsSupportsWeakReference
 {
   friend nsresult
   NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 protected:
   nsSVGOuterSVGFrame();
   virtual ~nsSVGOuterSVGFrame();
+  nsresult Init();
   
    // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -54,7 +61,13 @@ private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
 public:
-
+  // nsIFrame:
+  NS_IMETHOD Init(nsIPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsIStyleContext* aContext,
+                  nsIFrame*        aPrevInFlow);
+  
   NS_IMETHOD Reflow(nsIPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -104,6 +117,13 @@ public:
                     nsFramePaintLayer aWhichLayer,
                     PRUint32 aFlags = 0);
 
+  // nsISVGValueObserver
+  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
+  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
+
+  // nsISupportsWeakReference
+  // implementation inherited from nsSupportsWeakReference
+  
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
   NS_IMETHOD InvalidateRegion(ArtUta* uta, PRBool bRedraw);
@@ -116,12 +136,16 @@ public:
   
 protected:
   // implementation helpers:
+  void InitiateReflow();
+  
   float GetPxPerTwips();
   float GetTwipsPerPx();
+
   
 //  nsIView* mView;
   nsIPresShell* mPresShell; // XXX is a non-owning ref ok?
   PRBool mRedrawSuspended;
+  PRBool mNeedsReflow;
 };
 
 //----------------------------------------------------------------------
@@ -132,8 +156,8 @@ NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame*
 {
   *aNewFrame = nsnull;
   
-  nsCOMPtr<nsIDOMSVGSVGElement> svgel = do_QueryInterface(aContent);
-  if (!svgel) {
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(aContent);
+  if (!svgElement) {
 #ifdef DEBUG
     printf("warning: trying to construct an SVGOuterSVGFrame for a content element that doesn't support the right interfaces\n");
 #endif
@@ -153,11 +177,9 @@ NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame*
 }
 
 nsSVGOuterSVGFrame::nsSVGOuterSVGFrame()
-    : mRedrawSuspended(PR_FALSE)
+    : mRedrawSuspended(PR_FALSE),
+      mNeedsReflow(PR_FALSE)
 {
-#ifdef DEBUG
-  printf("nsSVGOuterSVGFrame %p CTOR\n", this);
-#endif
 }
 
 nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
@@ -165,6 +187,65 @@ nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 #ifdef DEBUG
   printf("~nsSVGOuterSVGFrame %p\n", this);
 #endif
+
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+  NS_ASSERTION(svgElement, "wrong content element");  
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetWidth(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "null length object");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "null length object");
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(length);
+    if (value)
+      value->RemoveObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetHeight(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "null length object");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "null length object");
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(length);
+    if (value)
+      value->RemoveObserver(this);
+  }
+}
+
+nsresult nsSVGOuterSVGFrame::Init()
+{
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+  NS_ASSERTION(svgElement, "wrong content element");  
+ 
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetWidth(getter_AddRefs(animLength));
+    NS_ENSURE_TRUE(animLength, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(length);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetHeight(getter_AddRefs(animLength));
+    NS_ENSURE_TRUE(animLength, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(length);
+    if (value)
+      value->AddObserver(this);
+  }
+  
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -172,11 +253,31 @@ nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 
 NS_INTERFACE_MAP_BEGIN(nsSVGOuterSVGFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGFrame)
-//  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-//  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGOuterSVGFrameBase)
 
+//----------------------------------------------------------------------
+// nsIFrame methods
 
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::Init(nsIPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsIStyleContext* aContext,
+                  nsIFrame*        aPrevInFlow)
+{
+  nsresult rv;
+  rv = nsSVGOuterSVGFrameBase::Init(aPresContext, aContent, aParent,
+                                    aContext, aPrevInFlow);
+
+  Init();
+
+  return rv;
+}
+
+
+  
 //----------------------------------------------------------------------
 // reflowing
 
@@ -343,7 +444,7 @@ nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
   viewport->SetHeight(mRect.height * pxPerTwips);
 
 #ifdef DEBUG
-  printf("reflowed nsSVGOuterSVGFrame viewport: (%f, %f, %f, %f)",
+  printf("reflowed nsSVGOuterSVGFrame viewport: (%f, %f, %f, %f)\n",
          origin.x * pxPerTwips,
          origin.y * pxPerTwips,
          mRect.width  * pxPerTwips,
@@ -678,6 +779,28 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 }
 
 //----------------------------------------------------------------------
+// nsISVGValueObserver methods:
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::WillModifySVGObservable(nsISVGValue* observable)
+{
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::DidModifySVGObservable(nsISVGValue* observable)
+{
+  mNeedsReflow = PR_TRUE;
+  if (!mRedrawSuspended) {
+    InitiateReflow();
+  }
+  
+  return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
 // nsISVGFrame methods
 
 NS_IMETHODIMP
@@ -789,6 +912,11 @@ nsSVGOuterSVGFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::NotifyRedrawUnsuspended()
 {
+  // If we need to reflow, do so before we update any of our
+  // children. Reflows are likely to affect the display of children:
+  if (mNeedsReflow)
+    InitiateReflow();
+  
   mRedrawSuspended = PR_FALSE;
 
   // get the view manager, so that we can wrap this up in a batch
@@ -855,4 +983,20 @@ float nsSVGOuterSVGFrame::GetTwipsPerPx()
     presContext->GetScaledPixelsToTwips(&twipsPerPx);
   }
   return twipsPerPx;
+}
+
+void nsSVGOuterSVGFrame::InitiateReflow()
+{
+  mNeedsReflow = PR_FALSE;
+  
+  // Generate a reflow command to reflow ourselves
+  nsCOMPtr<nsIReflowCommand> reflowCmd;
+  NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), this, nsIReflowCommand::ReflowDirty);
+  if (!reflowCmd) {
+    NS_ERROR("error creating reflow command object");
+    return;
+  }
+  
+  mPresShell->AppendReflowCommand(reflowCmd);
+  mPresShell->FlushPendingNotifications(PR_FALSE);  
 }
