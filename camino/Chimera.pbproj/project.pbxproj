@@ -6405,12 +6405,6 @@
 			path = xhtml11.dtd;
 			refType = 4;
 		};
-		F5949A49030D58A2014E8430 = {
-			fileRef = F5949A47030D58A1014E8430;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F5949A4A030D58F5014E8430 = {
 			buildActionMask = 2147483647;
 			dstPath = res/dtd;
@@ -6678,66 +6672,6 @@
 			name = "gopher-unknown.gif";
 			path = "../dist/Embed/res/html/gopher-unknown.gif";
 			refType = 2;
-		};
-		F5A7091B036DB4B201202892 = {
-			fileRef = F5A70907036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A7091C036DB4B201202892 = {
-			fileRef = F5A70908036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A7091D036DB4B201202892 = {
-			fileRef = F5A70909036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A7091E036DB4B201202892 = {
-			fileRef = F5A7090A036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A7091F036DB4B201202892 = {
-			fileRef = F5A7090B036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A70920036DB4B201202892 = {
-			fileRef = F5A7090C036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A70921036DB4B201202892 = {
-			fileRef = F5A7090D036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A70922036DB4B201202892 = {
-			fileRef = F5A7090E036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A70923036DB4B201202892 = {
-			fileRef = F5A7090F036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5A70924036DB4B201202892 = {
-			fileRef = F5A70910036DB4B201202892;
-			isa = PBXBuildFile;
-			settings = {
-			};
 		};
 		F5A70925036DB55501202892 = {
 			buildActionMask = 2147483647;
@@ -7707,19 +7641,8 @@
 				F5F190C002D217C201026D5D,
 				F5CA1A1C02D3957001F34900,
 				F5EB9378030C92450100010C,
-				F5949A49030D58A2014E8430,
 				F520BEC9036041D501026D5D,
 				F520BECA036041D501026D5D,
-				F5A7091B036DB4B201202892,
-				F5A7091C036DB4B201202892,
-				F5A7091D036DB4B201202892,
-				F5A7091E036DB4B201202892,
-				F5A7091F036DB4B201202892,
-				F5A70920036DB4B201202892,
-				F5A70921036DB4B201202892,
-				F5A70922036DB4B201202892,
-				F5A70923036DB4B201202892,
-				F5A70924036DB4B201202892,
 				F5566DC8038E075F01A80166,
 				F5566DC9038E075F01A80166,
 				F5566DCA038E075F01A80166,
