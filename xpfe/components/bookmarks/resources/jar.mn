@@ -32,7 +32,6 @@ comm.jar:
 	content/communicator/bookmarks/bookmarksPanel.js
 	content/communicator/bookmarks/findBookmark.js
 	content/communicator/bookmarks/findBookmark.xul
-	content/communicator/bookmarks/pref-bookmarks.xul
 
 en-US.jar:
 	locale/en-US/communicator/bookmarks/addBookmark.dtd         (locale/en-US/addBookmark.dtd)
@@ -41,4 +40,3 @@ en-US.jar:
 	locale/en-US/communicator/bookmarks/bookmark.properties     (locale/en-US/bookmark.properties)
 	locale/en-US/communicator/bookmarks/bookmarksOverlay.dtd    (locale/en-US/bookmarksOverlay.dtd)
 	locale/en-US/communicator/bookmarks/findBookmark.dtd	    (locale/en-US/findBookmark.dtd)
-	locale/en-US/communicator/bookmarks/pref-bookmarks.dtd	    (locale/en-US/pref-bookmarks.dtd)
