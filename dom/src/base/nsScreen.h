@@ -29,7 +29,7 @@
 #include "nsIScriptContext.h"
 
 class nsIDocShell;
-class nsIDeviceContext;
+class nsIOutputDevice;
 
 // Script "screen" object
 class ScreenImpl : public nsIScriptObjectOwner, public nsIDOMScreen {
@@ -57,7 +57,7 @@ public:
 
 
 protected:
-	nsIDeviceContext* GetDeviceContext();
+	nsIOutputDevice* GetOutputDevice();
 	
   void *mScriptObject;
   nsIDocShell* mDocShell; // Weak Reference

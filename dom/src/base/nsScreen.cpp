@@ -26,11 +26,18 @@
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
-#include "nsIDeviceContext.h"
+#include "nsIOutputDevice.h"
 #include "nsIPresContext.h"
 #include "nsCOMPtr.h"
 #include "nsIDocumentViewer.h"
 #include "nsIDocumentLoader.h"
+
+
+
+// XXX pav -- this file is mostly commented out.. please fix it:)
+
+
+
 
 
 //
@@ -71,8 +78,9 @@ ScreenImpl::SetScriptObject(void *aScriptObject)
 NS_IMETHODIMP
 ScreenImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
 {
-  NS_PRECONDITION(nsnull != aScriptObject, "null arg");
   nsresult res = NS_OK;
+#if 0
+  NS_PRECONDITION(nsnull != aScriptObject, "null arg");
   if (nsnull == mScriptObject) {
     nsIScriptGlobalObject *global = aContext->GetGlobalObject();
     res = NS_NewScriptScreen(aContext, NS_STATIC_CAST(nsIDOMScreen *, this),
@@ -81,6 +89,7 @@ ScreenImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
   }
   
   *aScriptObject = mScriptObject;
+#endif
   return res;
 }
 
@@ -88,17 +97,17 @@ ScreenImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject)
 NS_IMETHODIMP
 ScreenImpl::GetTop(PRInt32* aTop)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
 		nsRect rect;
-		context->GetRect( rect );
-		float devUnits;
-		context->GetDevUnitsToAppUnits(devUnits);
-		*aTop = NSToIntRound(float(rect.y) / devUnits );
+		context->GetRect( &rect );
+		*aTop = rect.y;
 		return NS_OK;
 	}
   *aTop = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
@@ -106,17 +115,18 @@ ScreenImpl::GetTop(PRInt32* aTop)
 NS_IMETHODIMP
 ScreenImpl::GetLeft(PRInt32* aLeft)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
 		nsRect rect;
-		context->GetRect( rect );
+		context->GetRect( &rect );
 		float devUnits;
-		context->GetDevUnitsToAppUnits(devUnits);
-		*aLeft = NSToIntRound(float(rect.x) / devUnits );
+		*aLeft = rect.x;
 		return NS_OK;
 	}
   *aLeft = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
@@ -124,75 +134,80 @@ ScreenImpl::GetLeft(PRInt32* aLeft)
 NS_IMETHODIMP
 ScreenImpl::GetWidth(PRInt32* aWidth)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
-		PRInt32 height;
-		context->GetDeviceSurfaceDimensions( *aWidth, height  );
-		float devUnits;
-		context->GetDevUnitsToAppUnits(devUnits);
-		*aWidth = NSToIntRound(float( *aWidth) / devUnits );
+		nsSize size;
+		context->GetSize( &size );
+		*aWidth = size.width;
 		return NS_OK;
 	}
 
   *aWidth = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetHeight(PRInt32* aHeight)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
-		PRInt32 width;
-		context->GetDeviceSurfaceDimensions( width, *aHeight  );
-		float devUnits;
-		context->GetDevUnitsToAppUnits(devUnits);
-		*aHeight = NSToIntRound(float( *aHeight) / devUnits );
+    nsSize size;
+    context->GetSize( &size );
+		*aHeight = size.height;
 		return NS_OK;
 	}
 	
   *aHeight = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetPixelDepth(PRInt32* aPixelDepth)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
-		PRUint32 depth;
-		context->GetDepth( depth  );
+		gfx_depth depth;
+		context->GetDepth( &depth  );
 		*aPixelDepth = depth;
 		return NS_OK;
 	}
   //XXX not implmented
   *aPixelDepth = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetColorDepth(PRInt32* aColorDepth)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
 	if ( context )
 	{
-		PRUint32 depth;
-		context->GetDepth( depth  );
+		gfx_depth depth;
+		context->GetDepth( &depth );
 		*aColorDepth = depth;
 		return NS_OK;
 	}
   
   *aColorDepth = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetAvailWidth(PRInt32* aAvailWidth)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
   if ( context )
   {
 	  nsRect rect;
@@ -204,6 +219,7 @@ ScreenImpl::GetAvailWidth(PRInt32* aAvailWidth)
   }
 
   *aAvailWidth = -1;
+#endif
   return NS_ERROR_FAILURE;
 
 }
@@ -211,7 +227,8 @@ ScreenImpl::GetAvailWidth(PRInt32* aAvailWidth)
 NS_IMETHODIMP
 ScreenImpl::GetAvailHeight(PRInt32* aAvailHeight)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
   if ( context )
   {
 	  nsRect rect;
@@ -223,14 +240,15 @@ ScreenImpl::GetAvailHeight(PRInt32* aAvailHeight)
   }
 
   *aAvailHeight = -1;
+#endif
   return NS_ERROR_FAILURE;
-
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetAvailLeft(PRInt32* aAvailLeft)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
   if ( context )
   {
 	  nsRect rect;
@@ -242,13 +260,15 @@ ScreenImpl::GetAvailLeft(PRInt32* aAvailLeft)
  }
 
   *aAvailLeft = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 ScreenImpl::GetAvailTop(PRInt32* aAvailTop)
 {
-	nsCOMPtr<nsIDeviceContext> context ( getter_AddRefs(GetDeviceContext()) );
+#if 0
+	nsCOMPtr<nsIOutputDevice> context ( getter_AddRefs(GetOutputDevice()) );
   if ( context )
   {
 	  nsRect rect;
@@ -260,30 +280,34 @@ ScreenImpl::GetAvailTop(PRInt32* aAvailTop)
   }
 
   *aAvailTop = -1;
+#endif
   return NS_ERROR_FAILURE;
 }
 
-nsIDeviceContext* ScreenImpl::GetDeviceContext()
+nsIOutputDevice* ScreenImpl::GetOutputDevice()
 {
-  
-   if(!mDocShell)
-      return nsnull;
+#if 0
+  if(!mDocShell)
+    return nsnull;
 
 	nsCOMPtr<nsIContentViewer> contentViewer;
-   mDocShell->GetContentViewer(getter_AddRefs(contentViewer));
+  mDocShell->GetContentViewer(getter_AddRefs(contentViewer));
 
-   nsCOMPtr<nsIDocumentViewer> docViewer(do_QueryInterface(contentViewer));
-   if(!docViewer)
-      return nsnull;
+  nsCOMPtr<nsIDocumentViewer> docViewer(do_QueryInterface(contentViewer));
+  if(!docViewer)
+    return nsnull;
 
-   nsCOMPtr<nsIPresContext> presContext;
-   docViewer->GetPresContext(*getter_AddRefs(presContext));
+  nsCOMPtr<nsIPresContext> presContext;
+  docViewer->GetPresContext(*getter_AddRefs(presContext));
 
-	nsIDeviceContext* context = nsnull;
-   if(presContext)
-      presContext->GetDeviceContext(&context);
-
-   return context;
+	nsIOutputDevice* context = nsnull;
+  if(presContext)
+    presContext->GetOutputDevice(&context);
+  
+  return context;
+#else
+  return nsnull;
+#endif
 }
 
 
