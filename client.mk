@@ -328,6 +328,8 @@ SVG_BRANCH_FILES := \
 	aclocal.m4 \
 	allmakefiles.sh \
 	build/autoconf/libart.m4 \
+	client.mk \
+	client.mak \
 	config/autoconf.mk.in \
 	configure \
 	configure.in \
@@ -450,6 +452,17 @@ real_checkout:
 	else true; \
 	fi
 
+merge:
+	cvs up -jHEAD -jSVG_20010721_TAG $(SVG_BRANCH_FILES)
+
+statictag:
+	cvs tag -F -rHEAD SVG_20010721_TAG $(SVG_BRANCH_FILES)
+
+commitmerge:
+	cvs ci $(SVG_BRANCH_FILES)
+
+diffsvg:
+	cvs diff $(SVG_BRANCH_FILES)
 
 ####################################
 # Web configure

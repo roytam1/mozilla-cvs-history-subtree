@@ -103,10 +103,11 @@ nsSVGRenderingContext::PaintSVGRenderItem(nsSVGRenderItem* item)
   col[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
 #endif
   
-//  printf("Rendering color R=%d, G=%d, B=%d\n",
-//         NS_GET_R(rgb),
-//         NS_GET_G(rgb),
-//         NS_GET_B(rgb));
+  printf("Rendering color R=%d, G=%d, B=%d, a=%f\n",
+         NS_GET_R(rgb),
+         NS_GET_G(rgb),
+         NS_GET_B(rgb),
+         item->GetOpacity());
   
   art_render_image_solid(render, col);
   

@@ -412,24 +412,18 @@ nsRuleNode::GetRule(nsIStyleRule** aResult)
   return NS_OK;
 }
 
-PRBool PR_CALLBACK ClearCachedDataHelper(nsHashKey* aKey, void* aData, void* aClosure)
-{
-  nsRuleNode* ruleNode = (nsRuleNode*)aData;
-  ruleNode->ClearPath();
-  return PR_TRUE;
-}
-
 NS_IMETHODIMP
-nsRuleNode::ClearPath()
+nsRuleNode::PathContainsRule(nsIStyleRule* aRule, PRBool* aMatched)
 {
-  // Any children must not be allowed to obtain cached data from parents.  We must
-  // clear any bits in descendants that indicate inheritance.
-  mInheritBits &= ~NS_STYLE_INHERIT_MASK;
-  if (mStyleData.mResetData || mStyleData.mInheritedData)
-    mStyleData.Destroy(0, mPresContext);
-
-  if (mChildren)
-    mChildren->Enumerate(ClearCachedDataHelper);
+  *aMatched = PR_FALSE;
+  nsRuleNode* ruleDest = this;
+  while (ruleDest) {
+    if (ruleDest->mRule == aRule) {
+      *aMatched = PR_TRUE;
+      break;
+    }
+    ruleDest = ruleDest->mParent;
+  }
 
   return NS_OK;
 }
@@ -446,7 +440,10 @@ nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
 
   if (ruleDest) {
     // The rule was contained along our branch.  We need to blow away
-    // all cached data along this path.
+    // all cached data along this path.  Note that, because of the definition
+    // of inline style, all nodes along this path must have exactly one child.  This
+    // is not a bushy subtree, and so we know that by clearing this path, we've
+    // invalidated everything that we need to.
     nsRuleNode* curr = this;
     while (curr) {
       curr->mNoneBits &= ~NS_STYLE_INHERIT_MASK;
@@ -475,12 +472,13 @@ PRBool PR_CALLBACK ClearCachedDataInSubtreeHelper(nsHashKey* aKey, void* aData, 
 NS_IMETHODIMP
 nsRuleNode::ClearCachedDataInSubtree(nsIStyleRule* aRule)
 {
-  if (mRule == aRule) {
+  if (aRule == nsnull || mRule == aRule) {
     // We have a match.  Blow away all data stored at this node.
     if (mStyleData.mResetData || mStyleData.mInheritedData)
       mStyleData.Destroy(0, mPresContext);
     mNoneBits &= ~NS_STYLE_INHERIT_MASK;
-    mInheritBits &= ~NS_STYLE_INHERIT_MASK;  // XXXdwh need to clear all data in descendants!
+    mInheritBits &= ~NS_STYLE_INHERIT_MASK;
+    aRule = nsnull;
   }
 
   if (mChildren)
@@ -841,6 +839,7 @@ nsRuleNode::GetXULData(nsIStyleContext* aContext)
 const nsStyleStruct*
 nsRuleNode::GetSVGData(nsIStyleContext* aContext)
 {
+  printf("In GetSVGData!\n");
   nsCSSSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVG, mPresContext, aContext);
   ruleData.mSVGData = &svgData;
@@ -3628,6 +3627,7 @@ SetSVGOpacity(const nsCSSValue& aValue, float parentOpacity, float& opacity, PRB
   else if (aValue.GetUnit() == eCSSUnit_Number) {
     opacity = aValue.GetFloatValue();
   }
+  printf("Opacity set to %f\n",opacity);
 }
 
 const nsStyleStruct* 
@@ -3636,13 +3636,14 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
+  printf("NEW SVG CREATED!!!\n");
   nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
 
   nsStyleSVG* svg = nsnull;
   nsStyleSVG* parentSVG = svg;
   PRBool inherited = aInherited;
   
-  const nsCSSSVG& svgData = NS_STATIC_CAST(nsCSSSVG&, aData);
+  const nsCSSSVG& svgData = NS_STATIC_CAST(const nsCSSSVG&, aData);
   nsStyleSVG* aStartSVG = NS_STATIC_CAST(nsStyleSVG*, aStartStruct);
 
   if (aStartSVG)
@@ -3656,6 +3657,8 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
       inherited = PR_TRUE;
       if (parentContext)
         parentSVG = (nsStyleSVG*)parentContext->GetStyleData(eStyleStruct_SVG);
+      printf("my parent{context,SVG} is %p,%p\n",parentContext.get(),parentSVG);
+      //parentSVG = nsnull;
       if (parentSVG)
         svg = new (mPresContext) nsStyleSVG(*parentSVG);
     }

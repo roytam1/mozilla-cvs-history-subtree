@@ -68,11 +68,15 @@
 #include "nsIAppleFileDecoder.h"
 #endif // XP_MAC
 
+#include "nsIPluginHost.h"
+
 const char *FORCE_ALWAYS_ASK_PREF = "browser.helperApps.alwaysAsk.force";
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID, NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
+
 
 // forward declaration of a private helper function
 static PRBool PR_CALLBACK DeleteEntry(nsHashKey *aKey, void *aData, void* closure);
@@ -566,7 +570,7 @@ nsresult nsExternalHelperAppService::ExpungeTemporaryFiles()
     {
       localFile = do_QueryInterface(element);
       if (localFile)
-        localFile->Delete(PR_FALSE);
+        localFile->Remove(PR_FALSE);
     }
   }
 
@@ -867,7 +871,8 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   mTempFile->CreateUnique(nsnull, nsIFile::NORMAL_FILE_TYPE, 0644);
 
   NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
-  NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
+  nsCOMPtr<nsIFileTransportService> fts = 
+           do_GetService(kFileTransportServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsITransport> fileTransport;
@@ -1110,7 +1115,7 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
     fileToUse->Equals(mTempFile, &equalToTempFile);
     fileToUse->Exists(&filetoUseAlreadyExists);
     if (filetoUseAlreadyExists && !equalToTempFile)
-      fileToUse->Delete(PR_FALSE);
+      fileToUse->Remove(PR_FALSE);
 
      // extract the new leaf name from the file location
      nsXPIDLCString fileName;
@@ -1246,7 +1251,7 @@ NS_IMETHODIMP nsExternalAppHandler::Cancel()
   // clean up after ourselves and delete the temp file...
   if (mTempFile)
   {
-    mTempFile->Delete(PR_TRUE);
+    mTempFile->Remove(PR_TRUE);
     mTempFile = nsnull;
   }
 
@@ -1401,7 +1406,27 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromExtension(const char *aFile
   nsresult rv = NS_OK;
   nsCOMPtr<nsIMIMEInfo> info;
   rv = GetFromExtension(aFileExt, getter_AddRefs(info));
-  if (NS_FAILED(rv)) return rv;
+  if (NS_FAILED(rv)) {
+    /* Try the plugins */
+    const char* mimeType;
+    nsCOMPtr<nsIPluginHost> pluginHost (do_GetService(kPluginManagerCID, &rv));
+    if (NS_SUCCEEDED(rv)) {
+      if (pluginHost->IsPluginEnabledForExtension(aFileExt, mimeType) == NS_OK)
+      {
+        *aContentType = nsCRT::strdup(mimeType);
+        rv = NS_OK;
+        return rv;
+      }
+      else 
+      {
+        rv = NS_ERROR_FAILURE;
+      }
+    }
+  }
+  if (NS_FAILED(rv)) {
+    return rv;
+  } /* endif */
+
   return info->GetMIMEType(aContentType);
 }
 
