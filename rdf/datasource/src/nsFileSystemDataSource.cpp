@@ -77,6 +77,8 @@
 #include "nsICharsetAlias.h"
 #include "windef.h"
 #include "winbase.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsILineInputStream.h"
 #endif
 
 #ifdef  XP_BEOS
@@ -289,8 +291,9 @@ FileSystemDataSource::FileSystemDataSource(void)
 
         nsCOMPtr<nsIURI> furi;
         NS_NewFileURI(getter_AddRefs(furi), file); 
-        lf->GetSpec(ieFavoritesDir);
-        file->GetNativePath(&ieFavoritesDir)
+        nsCAutoString favoritesDir;
+        file->GetNativePath(favoritesDir);
+        ieFavoritesDir = ToNewCString(favoritesDir);
 
         gRDFService->GetResource(NC_NAMESPACE_URI "IEFavorite",       &kNC_IEFavoriteObject);
         gRDFService->GetResource(NC_NAMESPACE_URI "IEFavoriteFolder", &kNC_IEFavoriteFolder);
@@ -1670,11 +1673,11 @@ FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL
     NS_NewLocalFile(aFileURL, true, getter_AddRefs(lf));
     PRBool value;
 
-    if (NS_SUCCEEDED(lf->IsDirectory(&value) && value)
+    if (NS_SUCCEEDED(lf->IsDirectory(&value)) && value)
     {
         if (isValidFolder(source))
             return(NS_RDF_NO_VALUE);
-        uri += "desktop.ini";
+        aFileURL += NS_LITERAL_STRING("desktop.ini");
     }
     else if (aFileURL.Length() > 4)
     {
@@ -1691,12 +1694,11 @@ FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL
     NS_NewLocalFileInputStream(getter_AddRefs(strm),lf);
     nsCOMPtr<nsILineInputStream> linereader = do_QueryInterface(strm, &rv);
 
-    char        buffer[256];
     nsAutoString    line;
     while(NS_SUCCEEDED(rv))
     {
         PRBool  isEOF;
-        rv = linereader.ReadLine(line, &isEOF);
+        rv = linereader->ReadLine(line, &isEOF);
 
         if (isEOF)
         {
