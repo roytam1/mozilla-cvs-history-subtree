@@ -949,6 +949,7 @@ sub run_all_tests {
 											  $Settings::XULOpenWindowTestTimeout,
 											  "__xulWinOpenTime",
 											  ":");
+			chomp($open_time);
 		}
 		if($open_time) {
 			$test_result = 'success';
