@@ -48,6 +48,10 @@ function nsPluginInstallerWizard(){
   this.mPluginInfoArray = new Object();
   this.mPluginInfoArrayLength = 0;
 
+  // holds plugins w ecouldn't find
+  this.mPluginNotFoundArray = new Object();
+  this.mPluginNotFoundArrayLength = 0;
+
   // array holding pids of plugins that require a license
   this.mPluginLicenseArray = new Array();
 
@@ -92,6 +96,9 @@ nsPluginInstallerWizard.prototype.pluginInfoReceived = function (aPluginInfo){
     // hash by id
     this.mPluginInfoArray[aPluginInfo.pid] = new PluginInfo(aPluginInfo);
     this.mPluginInfoArrayLength++;
+  } else {
+    this.mPluginNotFoundArray[aPluginInfo.requestedMimetype] = new PluginInfo(aPluginInfo);
+    this.mPluginNotFoundArrayLength++;
   }
 
   var progressMeter = document.getElementById("ws_request_progress");
@@ -348,6 +355,49 @@ nsPluginInstallerWizard.prototype.pluginInstallationProgressMeter = function (aP
   progressElm.setAttribute("value", Math.ceil((aValue / aMaxValue) * 100) + "%")
 }
 
+nsPluginInstallerWizard.prototype.addPluginResultRow = function (aImgSrc, aName, aNameTooltip, aStatus, aStatusTooltip, aManualUrl){
+  var myRows = document.getElementById("pluginResultList");
+
+  var myRow = document.createElement("row");
+  myRow.setAttribute("align", "center");
+
+  // create the image
+  var myImage = document.createElement("image");
+  myImage.setAttribute("src", aImgSrc);
+  myImage.setAttribute("height", "16px");
+  myImage.setAttribute("width", "16px");
+  myRow.appendChild(myImage)
+
+  // create the labels
+  var myLabel = document.createElement("label");
+  myLabel.setAttribute("value", aName);
+  if (aNameTooltip)
+    myLabel.setAttribute("tooltiptext", aNameTooltip);
+  myRow.appendChild(myLabel);
+
+  if (aStatus) {
+    myLabel = document.createElement("label");
+    myLabel.setAttribute("value", aStatus);
+    myRow.appendChild(myLabel);
+  }
+
+  // manual install
+  if (aManualUrl) {
+   var myButton = document.createElement("button");
+      
+    var manualInstallLabel = this.getString("pluginInstallationSummary.manualInstall.label");
+    var manualInstallTooltip = this.getString("pluginInstallationSummary.manualInstall.tooltip");
+
+    myButton.setAttribute("label", manualInstallLabel);
+    myButton.setAttribute("tooltiptext", manualInstallTooltip);
+
+    myButton.setAttribute("oncommand","gPluginInstaller.loadURL('" + aManualUrl + "')");
+    myRow.appendChild(myButton);
+  }
+
+  myRows.appendChild(myRow);
+}
+
 nsPluginInstallerWizard.prototype.showPluginResults = function (){
   var needsRestart = false;
   var myRows = document.getElementById("pluginResultList");
@@ -366,27 +416,11 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
 
     if (myPluginItem.toBeInstalled) {
 
-      var myRow = document.createElement("row");
-      myRow.setAttribute("align", "center");
-
-      // create the image
-      var myImage = document.createElement("image");
-      myImage.setAttribute("src", myPluginItem.IconUrl);
-      myImage.setAttribute("height", "16px");
-      myImage.setAttribute("width", "16px");
-      myRow.appendChild(myImage)
-    
-      // create the labels
-      var myLabel = document.createElement("label");
-      myLabel.setAttribute("value", myPluginItem.name + " " + (myPluginItem.version ? myPluginItem.version : ""));
-      myRow.appendChild(myLabel)
-
-      myLabel = document.createElement("label");
-
       var statusMsg;
+      var statusTooltip;
       if (myPluginItem.error){
         statusMsg = this.getString("pluginInstallationSummary.failed");
-        myLabel.setAttribute("tooltiptext", myPluginItem.error);
+        statusTooltip = myPluginItem.error;
       } else if (!myPluginItem.licenseAccepted) {
         statusMsg = this.getString("pluginInstallationSummary.licenseNotAccepted");
       } else if (!myPluginItem.XPILocation) {
@@ -394,28 +428,37 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
       } else {
         this.mSuccessfullPluginInstallation++;
         statusMsg = this.getString("pluginInstallationSummary.success");
-      }  
-
-      myLabel.setAttribute("value", statusMsg);
-      myRow.appendChild(myLabel)
+      }
 
       // manual url - either returned from the webservice or the pluginspage attribute
+      var manualUrl;
       if ((myPluginItem.error || !myPluginItem.XPILocation) && (myPluginItem.manualInstallationURL || this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage)){
-        var myButton = document.createElement("button");
-      
-        var manualInstallLabel = this.getString("pluginInstallationSummary.manualInstall.label");
-        var manualInstallTooltip = this.getString("pluginInstallationSummary.manualInstall.tooltip");
-
-        myButton.setAttribute("label", manualInstallLabel);
-        myButton.setAttribute("tooltiptext", manualInstallTooltip);
-
-        var manualUrl = myPluginItem.manualInstallationURL ? myPluginItem.manualInstallationURL : this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage;
-
-        myButton.setAttribute("oncommand","gPluginInstaller.loadURL('" + manualUrl + "')");
-        myRow.appendChild(myButton);
+        manualUrl = myPluginItem.manualInstallationURL ? myPluginItem.manualInstallationURL : this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage;
       }  
-    
-      myRows.appendChild(myRow);
+
+      this.addPluginResultRow(
+          myPluginItem.IconUrl, 
+          myPluginItem.name + " " + (myPluginItem.version ? myPluginItem.version : ""),
+          null,
+          statusMsg, 
+          statusTooltip, 
+          manualUrl);
+    }
+  }
+
+  // handle plugins we couldn't find
+  for (pluginInfoItem in this.mPluginNotFoundArray){
+    var pluginRequest = this.mPluginRequestArray[pluginInfoItem];
+
+    // if there is a pluginspage, show UI
+    if (pluginRequest && pluginRequest.pluginsPage) {
+      this.addPluginResultRow(
+          "",
+          this.getString("pluginInstallation.unknownPlugin"),
+          pluginInfoItem,
+          null,
+          null,
+          this.mPluginRequestArray[pluginInfoItem].pluginsPage);
     }
   }
 
