@@ -30,6 +30,7 @@
  * Modifications/Addition: Gagan Saksena, 97
  */
 
+#include "plstr2.h"
 #ifndef EXT_DB_ROUTINES
 #include "secnav.h"
 #include "sechash.h"
