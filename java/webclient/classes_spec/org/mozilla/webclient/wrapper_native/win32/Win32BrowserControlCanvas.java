@@ -59,6 +59,8 @@ public class Win32BrowserControlCanvas extends BrowserControlCanvas {
         System.loadLibrary("webclient");
     }
 
+    //New method for obtaining access to the Native Peer handle
+    private native int getHandleToPeer();
 
 	/**
 	 * Obtain the native window handle for this
@@ -66,8 +68,7 @@ public class Win32BrowserControlCanvas extends BrowserControlCanvas {
 	 *
 	 * @returns The native window handle. 
 	 */
-	protected int getWindow(DrawingSurfaceInfo dsi) {
-		WDrawingSurfaceInfo ds = (WDrawingSurfaceInfo)dsi;
-		return ds.getHWnd();
+	protected int getWindow() {
+		return this.getHandleToPeer();
 	}
 }
