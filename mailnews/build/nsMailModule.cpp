@@ -100,6 +100,8 @@
 #include "nsSpamSettings.h"
 #include "nsMsgContentPolicy.h"
 #include "nsCidProtocolHandler.h"
+#include "nsRssIncomingServer.h"
+#include "nsRssService.h"
 
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
@@ -446,6 +448,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMovemailService)
 #endif /* HAVE_MOVEMAIL */
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsNoIncomingServer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLocalStringService)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsRssIncomingServer)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsRssService)
 
 ////////////////////////////////////////////////////////////////////////////////
 // msgdb factories
@@ -1039,6 +1043,14 @@ static const nsModuleComponentInfo gComponents[] = {
     { "Pop String Bundle Service", NS_MSG_LOCALSTRINGSERVICE_CID,
       NS_MSG_POPSTRINGSERVICE_CONTRACTID, nsLocalStringServiceConstructor },
     
+    { "RSS Service", NS_RSSSERVICE_CID,
+      NS_RSSSERVICE_CONTRACTID, nsRssServiceConstructor },
+    
+    { "RSS Protocol Information", NS_RSSSERVICE_CID,
+      NS_RSSPROTOCOLINFO_CONTRACTID, nsRssServiceConstructor },
+        
+    { "RSS Incoming Server", NS_RSSINCOMINGSERVER_CID,
+      NS_RSSINCOMINGSERVER_CONTRACTID, nsRssIncomingServerConstructor },
     ////////////////////////////////////////////////////////////////////////////////
     // msgdb components
     ////////////////////////////////////////////////////////////////////////////////

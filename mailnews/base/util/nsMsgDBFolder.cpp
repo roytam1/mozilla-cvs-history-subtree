@@ -1042,10 +1042,10 @@ NS_IMETHODIMP nsMsgDBFolder::GetFlags(PRUint32 *_retval)
 
 NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *element)
 {
-	nsresult rv = NS_OK;
-	nsXPIDLCString charset;
+  nsresult rv = NS_OK;
+  nsXPIDLCString charset;
 
-	element->GetInt32Property("flags", (PRInt32 *) &mFlags);
+  element->GetInt32Property("flags", (PRInt32 *) &mFlags);
 
   PRBool persistElided = PR_TRUE;
   rv = GetPersistElided(&persistElided);

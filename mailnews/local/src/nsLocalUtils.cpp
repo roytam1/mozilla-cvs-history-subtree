@@ -82,6 +82,18 @@ nsGetMailboxServer(char *username, char *hostname, nsIMsgIncomingServer** aResul
 	  return rv;
   }
 
+  // if that fails, look for the rss hosts matching the given hostname
+  nsCOMPtr<nsIMsgIncomingServer> rss_server;
+  rv = accountManager->FindServer(username,
+    hostname,
+    "rss",
+    getter_AddRefs(rss_server));
+  if (NS_SUCCEEDED(rv))
+  {
+     *aResult = rss_server;
+     NS_ADDREF(*aResult);
+     return rv;
+  }
 #ifdef HAVE_MOVEMAIL
   // find all movemail "servers" matching the given hostname
   nsCOMPtr<nsIMsgIncomingServer> movemail_server;
