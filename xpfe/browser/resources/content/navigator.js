@@ -1307,11 +1307,38 @@ function stylesheetSwitch(forDocument, title)
 
 function applyTheme(themeName)
 {
-  if (themeName.getAttribute("name") == "")
+  // XXX XXX BAD BAD BAD BAD !! XXX XXX
+  // we STILL haven't fixed editor skin switch problems
+  // hacking around it yet again
+  try {
+    // While we've got this try/catch, load up chrome registry while we're at it
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+    var chromeRegistry = Components.classes["@mozilla.org/chrome/chrome-registry;1"].getService(Components.interfaces.nsIChromeRegistry);
+  }
+  catch(e)
+  {
+    return;
+  }
+  
+  if (promptService)
+  {
+    try {
+      var dialogTitle = gNavigatorBundle.getString("switchskinstitle");
+      var brandName = gBrandBundle.getString("brandShortName");
+      var msg = gNavigatorBundle.stringBundle.formatStringFromName("switchskins",
+                                                                   [brandName, brandName],
+                                                                   2);
+      if (!promptService.confirm(window, dialogTitle, msg))
+        return;
+    }
+    catch(e) {
+    }
+  }
+  else
     return;
 
-  var chromeRegistry = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-    .getService(Components.interfaces.nsIChromeRegistry);
+  if (themeName.getAttribute("name") == "")
+    return;
 
   try {
     oldTheme = !chromeRegistry.checkThemeVersion(themeName.getAttribute("name"));
