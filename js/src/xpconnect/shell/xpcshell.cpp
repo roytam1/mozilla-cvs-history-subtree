@@ -871,6 +871,8 @@ main(int argc, char **argv)
                                          PR_TRUE, getter_AddRefs(baz));
     bar = nsnull;
     baz = nsnull;
+    js_ForceGC(foo);
+    JS_DestroyContext(foo);
 #endif
 
 //#define TEST_CALL_ON_WRAPPED_JS_AFTER_SHUTDOWN 1

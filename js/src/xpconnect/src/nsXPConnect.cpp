@@ -362,12 +362,20 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     return NS_OK;
 }        
 
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+TempGlobalResolve(JSContext *cx, JSObject *obj, jsval id)
+{
+    JSBool resolved;
+    return JS_ResolveStandardClass(cx, obj, id, &resolved);
+}
+
 static JSClass xpcTempGlobalClass = {
     "xpcTempGlobalClass", 0,
     JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   JS_FinalizeStub
+    JS_EnumerateStub, TempGlobalResolve, JS_ConvertStub,   JS_FinalizeStub,
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
-
 
 /* nsIXPConnectJSObjectHolder initClassesWithNewWrappedGlobal (in JSContextPtr aJSContext, in nsISupports aCOMObj, in nsIIDRef aIID, in PRBool aCallJS_InitStandardClasses); */
 NS_IMETHODIMP 
@@ -387,8 +395,7 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     JSObject* tempGlobal = JS_NewObject(aJSContext, &xpcTempGlobalClass, 
                                         nsnull, nsnull);
 
-    if(!tempGlobal ||
-       !JS_InitStandardClasses(aJSContext, tempGlobal))
+    if(!tempGlobal)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if(NS_FAILED(InitClasses(aJSContext, tempGlobal)))

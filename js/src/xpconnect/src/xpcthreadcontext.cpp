@@ -103,10 +103,18 @@ XPCJSContextStack::Push(JSContext * cx)
     return NS_OK;
 }
 
+JS_STATIC_DLL_CALLBACK(JSBool)
+SafeGlobalResolve(JSContext *cx, JSObject *obj, jsval id)
+{
+    JSBool resolved;
+    return JS_ResolveStandardClass(cx, obj, id, &resolved);
+}
+
 static JSClass global_class = {
     "global_for_XPCJSContextStack_SafeJSContext", 0,
-    JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   JS_FinalizeStub
+    JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
+    JS_EnumerateStub, SafeGlobalResolve, JS_ConvertStub, JS_FinalizeStub,
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
 /* attribute JSContext safeJSContext; */
@@ -131,7 +139,6 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
                     JSObject *glob;
                     glob = JS_NewObject(mSafeJSContext, &global_class, NULL, NULL);
                     if(!glob || 
-                       !JS_InitStandardClasses(mSafeJSContext, glob) ||
                        NS_FAILED(xpc->InitClasses(mSafeJSContext, glob)))
                     {
                         // Explicitly end the request since we are about to kill

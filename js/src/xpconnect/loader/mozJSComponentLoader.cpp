@@ -365,10 +365,29 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
 // The nsIXPCScriptable map declaration that will generate stubs for us...
 #define XPC_MAP_CLASSNAME           BackstagePass
 #define XPC_MAP_QUOTED_CLASSNAME   "BackstagePass"
+#define                             XPC_MAP_WANT_NEWRESOLVE
 #define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
                             nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
                             nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
 #include "xpc_map_end.h" /* This will #undef the above */
+
+/* PRBool newResolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in PRUint32 flags, out JSObjectPtr objp); */
+NS_IMETHODIMP
+BackstagePass::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                          JSContext * cx, JSObject * obj,
+                          jsval id, PRUint32 flags, 
+                          JSObject * *objp, PRBool *_retval)
+{
+    JSBool resolved;
+    if(JS_ResolveStandardClass(cx, obj, id, &resolved))
+    {
+        if(resolved)
+            *objp = obj;
+    }
+    else
+        *_retval = JS_FALSE;
+    return NS_OK;
+}
 
 mozJSComponentLoader::mozJSComponentLoader()
     : mCompMgr(nsnull),
@@ -1092,7 +1111,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     rv = xpc->InitClassesWithNewWrappedGlobal(cx, backstagePass,
                                               NS_GET_IID(nsISupports),
-                                              PR_TRUE,
+                                              PR_FALSE,
                                               getter_AddRefs(holder));
     if (NS_FAILED(rv))
         return nsnull;
