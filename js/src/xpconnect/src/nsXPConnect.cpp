@@ -407,7 +407,7 @@ nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
     {
         if (aIID->Equals(NSID_IDISPATCH))
         {
-            *info = new XPCCOMIDispatchInfo();
+            *info = new IDispatchInfo();
             if (*info)
             {
                 NS_ADDREF(*info);
@@ -430,7 +430,7 @@ nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
     {
         if (strcmp(name, IDISPATCH_NAME) == 0)
         {
-            *info = new XPCCOMIDispatchInfo();
+            *info = new IDispatchInfo();
             if (*info)
             {
                 NS_ADDREF(*info);
@@ -484,7 +484,7 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     // Add IDispatch support objects
     if (IsIDispatchSupported())
     {
-        XPCCOMObject::IDispatchRegisterCOMObject(ccx, aGlobalJSObj);
+        IDispObject::IDispatchRegisterCOMObject(ccx, aGlobalJSObj);
     }
 #endif
     return NS_OK;

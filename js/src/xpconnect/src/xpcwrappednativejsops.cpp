@@ -260,7 +260,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     const char* name;
     jsid id;
 #ifdef XPC_IDISPATCH_SUPPORT
-    XPCCOMIDispatchInterface::Member * IDispatchMember = 0;
+    IDispatchInterface::Member * IDispatchMember = 0;
 #endif
     if(set)
     {
@@ -389,7 +389,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                                                  JS_TRUE)) != nsnull &&
                 (jso = to->GetJSObject()) != nsnull)
         {
-            XPCCOMIDispatchInterface * pInfo = to->GetIDispatchInfo();
+            IDispatchInterface * pInfo = to->GetIDispatchInfo();
             IDispatchMember = pInfo->FindMember(idval);
         }
         else
@@ -657,11 +657,11 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
             XPCWrappedNativeTearOff* tearoff = wrapper->FindTearOff(ccx, iface);
             if (tearoff)
             {
-                XPCCOMIDispatchInterface* pInfo = tearoff->GetIDispatchInfo();
+                IDispatchInterface* pInfo = tearoff->GetIDispatchInfo();
                 PRUint32 members = pInfo->GetMemberCount();
                 for (PRUint32 index = 0; index < members; ++index)
                 {
-                    XPCCOMIDispatchInterface::Member & member = pInfo->GetMember(index);
+                    IDispatchInterface::Member & member = pInfo->GetMember(index);
                     jsval name = member.GetName();
                     if (!xpc_ForcePropertyResolve(cx, obj, name))
                         return JS_FALSE;

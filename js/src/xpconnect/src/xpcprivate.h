@@ -841,7 +841,7 @@ public:
 #ifdef XPC_IDISPATCH_SUPPORT
     void SetIDispatchInfo(XPCNativeInterface* iface, void * member);
     // This has to be void* because of icky Microsoft macros that
-    // would be introduced if we included the XPCCOMIDispatchInterface header
+    // would be introduced if we included the IDispatchInterface header
     void* GetIDispatchMember() const { return mIDispatchMember; }
 #endif
 private:
@@ -1639,7 +1639,8 @@ private:
 };
 
 #ifdef XPC_IDISPATCH_SUPPORT
-class XPCCOMIDispatchInterface;
+class IDispatchInterface;
+class IDispTypeInfo;
 #endif
 
 /***********************************************/
@@ -1682,7 +1683,7 @@ public:
     void Unmark()     {mJSObject = (JSObject*)(((jsword)mJSObject) & ~ MARK_BIT);}
     JSBool IsMarked() const {return (JSBool)(((jsword)mJSObject) & MARK_BIT);}
 #ifdef XPC_IDISPATCH_SUPPORT
-    XPCCOMIDispatchInterface*   GetIDispatchInfo() const;
+    IDispatchInterface*   GetIDispatchInfo() const;
     JSBool IsIDispatch() const { return (JSBool)(((jsword)mJSObject) & IDISPATCH_BIT);}
     void SetIDispatch(JSContext* cx);
     JSObject* GetIDispatchJSObject() const;
@@ -2085,10 +2086,6 @@ private:
     uint32* mDescriptors;
 };
 
-#ifdef XPC_IDISPATCH_SUPPORT
-class XPCCOMTypeInfo;
-#endif
-
 /*************************/
 // nsXPCWrappedJS is a wrapper for a single JSObject for use from native code.
 // nsXPCWrappedJS objects are chained together to represent the various
@@ -2183,9 +2180,9 @@ private:
     nsXPCWrappedJS* mNext;
     nsISupports* mOuter;    // only set in root
 #ifdef XPC_IDISPATCH_SUPPORT
-    XPCCOMTypeInfo * mCOMTypeInfo;
+    IDispTypeInfo * mCOMTypeInfo;
 
-    XPCCOMTypeInfo * GetCOMTypeInfo();
+    IDispTypeInfo * GetCOMTypeInfo();
 #endif
 };
 
@@ -3252,7 +3249,7 @@ inline JSBool
 xpc_ForcePropertyResolve(JSContext* cx, JSObject* obj, jsval idval);
 
 #ifdef XPC_IDISPATCH_SUPPORT
-#include "XPCCOMPrivate.h"
+#include "idispprivate.h"
 #endif
 
 /***************************************************************************/
