@@ -28,6 +28,9 @@
 
 #include <iostream.h>
 #include "baseutils.h"
+#ifndef XML_UNICODE
+#define XML_UNICODE
+#endif
 #include "xmlparse.h"
 #include "dom.h"
 
