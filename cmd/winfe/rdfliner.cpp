@@ -2893,13 +2893,12 @@ DROPEFFECT CRDFOutliner::DropSelect(int iLineNo, COleDataObject *object)
 DropPosition RDFGLOBAL_TranslateDropPosition(HT_Resource dropTarget, int position)
 {
 	HT_Resource targetParent = HT_GetParent(dropTarget);
-
-	BOOL sortImposed = !HT_ContainerSupportsNaturalOrderSort(targetParent); // Is a sort imposed on the parent?
-
+	BOOL sortImposed = FALSE;
+	if (targetParent != NULL)
+		sortImposed = !HT_ContainerSupportsNaturalOrderSort(targetParent); // Is a sort imposed on the parent?
+	
 	DropPosition res;
-	if (targetParent == NULL) // Top Node of the view.  Can't drop before or after.
-		res = DROP_ON;
-	else if (!sortImposed) // Can only drop/before or after if sort is not imposed on the view.
+	if (!sortImposed) // Can only drop/before or after if sort is not imposed on the view.
 	{
 		if (position == 1)
 		{
