@@ -82,7 +82,7 @@ Contributor(s): Pete Collins, Doug Turner, Brendan Eich, Warren Harris
 /****************** Globals **********************/
 
 const FilePath    = new Components.Constructor( "@mozilla.org/file/local;1", "nsILocalFile", "initWithPath");
-const FileChannel = new Components.Constructor( "@mozilla.org/network/local-file-channel;1", "nsIFileChannel" );
+const FileChannel = new Components.Constructor( "@mozilla.org/network/local-file-;1", "nsIFileChannel" );
 const InputStream = new Components.Constructor( "@mozilla.org/scriptableinputstream;1", "nsIScriptableInputStream" );
 
 const READ        = 0x01;     // 1
@@ -293,7 +293,7 @@ write : function(buffer, perms) {
 
     var fileSize            = parseInt( this.fileInst.fileSize );
 
-    var outStream           = this.fileChannel.openOutputStream();
+    var outStream           = this.fileChannel.openOutputStream(0, -1);
 
     if( outStream.write(buffer, buffSize) )
       dump("io.js:write: Write to file successful . . . \n\n");
@@ -341,7 +341,7 @@ read : function() {
 
     this.fileChannel.init(this.fileInst, READ, perm);
 
-    var inStream = this.fileChannel.openInputStream();
+    var inStream = this.fileChannel.openInputStream(0, -1);
 
     this.inputStream.init(inStream);
 

@@ -114,10 +114,13 @@ function (iid) {
 }
 
 TelnetContentHandler.prototype.handleContent =
-function (aContentType, aCommand, aWindowTarget, aSourceContext, aChannel)
+function (aContentType, aCommand, aWindowTarget, aSourceContext, aRequest)
 {
     var e;
 
+	var aChannel aRequest.GetParent;
+	aChannel = aChannel.QueryInterface(Components.interfaces.nsIChannel);
+		
     dump ("telnetLoader.handleContent (" + aContentType + ", " +
           aCommand + ", " + aWindowTarget + ", " + aSourceContext + ", " +
           aChannel.URI.spec + ")\n");
@@ -218,8 +221,11 @@ function (aURI)
     //dump("gSystemPrincipal="+gSystemPrincipal+"\n");
 
     // Cancel XUL request and release channel
-    temChannel.cancel(Components.results.NS_BINDING_ABORTED);
-    temChannel = null;
+    
+	// why are you canceling here?! you have not even opened anything yet - dougt.
+	// temChannel.cancel(Components.results.NS_BINDING_ABORTED);
+    
+	temChannel = null;
 
     // Get current process directory
     var dscontractid = "@mozilla.org/file/directory_service;1";
@@ -279,8 +285,6 @@ function (iid) {
 }
 
 /* nsIChannel */
-BogusChannel.prototype.transferOffset = 0;
-BogusChannel.prototype.transferCount = 0;
 BogusChannel.prototype.loadAttributes = null;
 BogusChannel.prototype.contentType = "x-application-telnet";
 BogusChannel.prototype.contentLength = 0;
@@ -288,10 +292,8 @@ BogusChannel.prototype.owner = null;
 BogusChannel.prototype.loadGroup = null;
 BogusChannel.prototype.notificationCallbacks = null;
 BogusChannel.prototype.securityInfo = null;
-BogusChannel.prototype.bufferSegmentSize = 0;
-BogusChannel.prototype.bufferMaxSize = 0;
 BogusChannel.prototype.shouldCache = false;
-BogusChannel.prototype.pipeliningAllowed = false;
+BogusChannel.prototype.parent = null;
 
 BogusChannel.prototype.openInputStream =
 BogusChannel.prototype.openOutputStream =
@@ -302,13 +304,13 @@ function ()
 }
 
 BogusChannel.prototype.asyncOpen =
-function (observer, ctxt)
+function (observer, ctxt, transferOffset, transferCount)
 {
     observer.onStartRequest (this, ctxt);
 }
 
 BogusChannel.prototype.asyncRead =
-function (listener, ctxt)
+function (listener, ctxt, transferOffset, transferCount)
 {
     return listener.onStartRequest (this, ctxt);
 }
@@ -328,6 +330,7 @@ function (aStatus)
     this.status = aStatus;
 }
 
+BogusChannel.prototype.parent =
 BogusChannel.prototype.suspend =
 BogusChannel.prototype.resume =
 function ()

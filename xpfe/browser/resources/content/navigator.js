@@ -191,9 +191,9 @@ nsXULBrowserWindow.prototype =
     statusTextFld.setAttribute("value", text);
   },
 
-  onProgress : function (channel, current, max)
+  onProgress : function (request, current, max)
   {
-    if (!this.useRealProgressFlag && channel)
+    if (!this.useRealProgressFlag && request)
       return;
 
     if (!statusMeter)
@@ -212,7 +212,7 @@ nsXULBrowserWindow.prototype =
     }
   },
 
-  onStateChange : function(channel, state)
+  onStateChange : function(request, state)
   {
     const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;
 
@@ -259,9 +259,11 @@ nsXULBrowserWindow.prototype =
         if (!this.useRealProgressFlag)
           this.onProgress(null, this.finishedRequests, this.totalRequests);
       }
-
       if (state & nsIWebProgressListener.STATE_IS_NETWORK) {
-        var location = channel.URI.spec;
+        var channel = request.parent;
+		channel = channel.QueryInterface(Components.interfaces.nsIChannel);
+		
+		var location = channel.URI.spec;
         var msg = "";
         if (location != "about:blank") {
           // Record page loading time.
@@ -290,7 +292,8 @@ nsXULBrowserWindow.prototype =
     }
     else if (state & nsIWebProgressListener.STATE_TRANSFERRING) {
       if (state & nsIWebProgressListener.STATE_IS_DOCUMENT) {
-        var ctype=channel.contentType;
+        var contentInfo = request.QueryInterface(Components.interfaces.nsIStreamContentInfo);
+		var ctype=contentInfo.contentType;
 
         if (ctype != "text/html")
           this.useRealProgressFlag = true;
@@ -320,7 +323,7 @@ nsXULBrowserWindow.prototype =
     UpdateBackForwardButtons();
   },
 
-  onStatus : function(channel, status, msg)
+  onStatus : function(request, status, msg)
   {
     this.setOverLink(msg);
     //this.setDefaultStatus(msg);
