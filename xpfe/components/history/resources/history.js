@@ -31,6 +31,7 @@ var gDeleteByHostname;
 var gDeleteByDomain;
 var gHistoryBundle;
 var gHistoryStatus;
+var gHistoryGrouping = "";
 var gWindowManager = null;
 
 function HistoryInit()
@@ -61,17 +62,14 @@ function HistoryInit()
         gPrefService = Components.classes["@mozilla.org/preferences;1"]
                                  .getService(Components.interfaces.nsIPref);
         try {
-            var grouping = gPrefService.GetCharPref("browser.history.grouping");
+            gHistoryGrouping = gPrefService.getCharPref("browser.history.grouping");
         }
         catch(e) {
-            grouping = "";
+            gHistoryGrouping = "day";
         }
-        GroupBy(grouping);
+        GroupBy(gHistoryGrouping);
         if (gHistoryStatus) {  // must be the window
-            switch(grouping) {
-            case "site":
-                document.getElementById("groupBySite").setAttribute("checked", "true");
-                break;
+            switch(gHistoryGrouping) {
             case "none":
                 document.getElementById("groupByNone").setAttribute("checked", "true");
                 break;
@@ -98,7 +96,7 @@ function historyOnSelect()
     gLastDomain = "";
     var match;
     var currentIndex = gHistoryOutliner.currentIndex;
-    var rowIsContainer = isContainer(gHistoryOutliner, currentIndex);
+    var rowIsContainer = gHistoryGrouping == "day" ? isContainer(gHistoryOutliner, currentIndex) : false;
     var url = gHistoryOutliner.outlinerBoxObject.view.getCellText(currentIndex, "URL");
 
     if (url && !rowIsContainer) {
@@ -255,14 +253,16 @@ function GroupBy(groupingType)
 {
     var outlinerBody = document.getElementById("historyOutlinerBody");
     switch(groupingType) {
-    case "day":
-        outlinerBody.setAttribute("ref", "NC:HistoryByDate");
-        break;
-    case "site":
-        outlinerBody.setAttribute("ref", "find:groupby=hostname");
-        break;
     case "none":
         outlinerBody.setAttribute("ref", "NC:HistoryRoot");
+        break;
+    case "site":
+        // xxx for now
+        outlinerBody.setAttribute("ref", "NC:HistoryByDate");
+        break;
+    case "day":
+    default:
+        outlinerBody.setAttribute("ref", "NC:HistoryByDate");
         break;
     }
     gPrefService.SetCharPref("browser.history.grouping", groupingType);
