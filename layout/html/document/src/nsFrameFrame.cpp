@@ -66,7 +66,6 @@
 #include "nsIPrintContext.h"
 
 // For Accessibility 
-#include "nsIMutableAccessible.h"
 #include "nsIAccessibilityService.h"
 #include "nsIServiceManager.h"
 
