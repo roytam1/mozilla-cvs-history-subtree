@@ -310,7 +310,7 @@ Contributor(s):
      </hbox>
 
      <hbox id="throbber-box" align="center">
-      <button id="navigator-throbber" oncommand="goClickThrobber('addressbook.throbber.url')" tooltiptext="&throbber.tooltip;">
+      <button id="navigator-throbber" oncommand="loadThrobberUrl('addressbook.throbber.url')" tooltiptext="&throbber.tooltip;">
         <observes element="broadcaster_throbber" attribute="busy"/>
       </button>
      </hbox>

@@ -409,7 +409,11 @@ function HandleLink(node, value, box, link)
 function MapIt(id)
 {
   var button = document.getElementById(id);
-  openTopWin(button.getAttribute('url'));
+  var url = button.getAttribute('url');
+
+  var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+  messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+  messenger.loadURL(window, url);
 }
 
 function CreateMapItURL(address1, address2, city, state, zip, country)
@@ -429,8 +433,9 @@ function CreateMapItURL(address1, address2, city, state, zip, country)
 
 function openLink(id)
 {
-  openTopWin(document.getElementById(id).getAttribute("href"));
-  // return false, so we don't load the href in the addressbook window
+  var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+  messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+  messenger.loadURL(window, document.getElementById(id).getAttribute("href"));
   return false;
 }
 
