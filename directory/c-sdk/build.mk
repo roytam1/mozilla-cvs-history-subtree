@@ -160,8 +160,13 @@ endif
 #LIBNLS_INCLUDES_LOC = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 #LIBNLS_LIB_LOC	    = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
 # regular location
+ifdef RELEASE_TREE
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+else
 LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(OS_ARCH), WINNT)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
