@@ -59,6 +59,8 @@ public:
     virtual nsresult OnDataSizeChange( nsCacheEntry * entry, PRInt32 deltaSize );
 
     virtual nsresult Visit( nsICacheVisitor * visitor );
+
+    virtual nsresult        EvictEntries(const char * clientID);
     
     static int PR_CALLBACK MemoryCacheSizeChanged(const char * pref, void * closure);
  
