@@ -285,13 +285,21 @@ nsHttpTransaction::HandleContent(char *buf,
     NS_PRECONDITION(mConnection, "no connection");
 
     if (!mFiredOnStart) {
-
         if (mResponseHead) {
 #if defined(PR_LOGGING)
             nsCAutoString headers;
             mResponseHead->Flatten(headers);
             LOG2(("http response [\n%s]\n", headers.get()));                        
 #endif
+            // we ignore a 100 response, which means that we must reset
+            // our state so that we'll parse from the beginning again.
+            if (mResponseHead->Status() == 100) {
+                LOG(("ignoring 100 response\n"));
+                mHaveAllHeaders = PR_FALSE;
+                mHaveStatusLine = PR_FALSE;
+                mResponseHead->Reset();
+                return NS_OK;
+            }
 
             // notify the connection first
             if (mConnection)
@@ -319,7 +327,6 @@ nsHttpTransaction::HandleContent(char *buf,
             else if (mContentLength == -1) {
                 // check if this is a no-content response
                 switch (mResponseHead->Status()) {
-                case 100:
                 case 204:
                 case 205:
                 case 304:

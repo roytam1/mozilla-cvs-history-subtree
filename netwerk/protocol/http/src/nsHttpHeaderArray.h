@@ -34,7 +34,7 @@ class nsHttpHeaderArray
 {
 public:
     nsHttpHeaderArray() {}
-   ~nsHttpHeaderArray() {}
+   ~nsHttpHeaderArray() { Clear(); }
 
     const char *PeekHeader(nsHttpAtom header);
 
@@ -48,6 +48,8 @@ public:
     PRUint32 Count() { return (PRUint32) mHeaders.Count(); }
 
     const char *PeekHeaderAt(PRUint32 i, nsHttpAtom &header);
+
+    void Clear();
 
 private:
     struct nsEntry

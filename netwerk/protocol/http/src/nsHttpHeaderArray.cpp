@@ -127,6 +127,15 @@ nsHttpHeaderArray::PeekHeaderAt(PRUint32 index, nsHttpAtom &header)
     return entry->value.get();
 }
 
+void
+nsHttpHeaderArray::Clear()
+{
+    PRInt32 i, count = mHeaders.Count();
+    for (i=0; i<count; ++i)
+        delete (nsEntry *) mHeaders[i];
+    mHeaders.Clear();
+}
+
 //-----------------------------------------------------------------------------
 // nsHttpHeaderArray <private>
 //-----------------------------------------------------------------------------

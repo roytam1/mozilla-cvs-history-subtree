@@ -310,6 +310,18 @@ nsHttpResponseHead::UpdateHeaders(nsHttpHeaderArray &headers)
     return NS_OK;
 }
 
+void
+nsHttpResponseHead::Reset()
+{
+    LOG(("nsHttpResponseHead::Reset\n"));
+
+    ClearHeaders();
+
+    mVersion = NS_HTTP_VERSION_1_1;
+    mStatus = 200;
+    mStatusText = 0;
+}
+
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead <private>
 //-----------------------------------------------------------------------------

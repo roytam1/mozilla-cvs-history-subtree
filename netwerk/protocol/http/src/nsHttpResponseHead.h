@@ -52,6 +52,7 @@ public:
     const char *PeekHeader(nsHttpAtom h)            { return mHeaders.PeekHeader(h); }
     nsresult SetHeader(nsHttpAtom h, const char *v) { return mHeaders.SetHeader(h, v); }
     nsresult GetHeader(nsHttpAtom h, char **v)      { return mHeaders.GetHeader(h, v); }
+    void     ClearHeaders()                         { mHeaders.Clear(); }
 
     nsresult Flatten(nsACString &);
 
@@ -71,6 +72,9 @@ public:
 
     // update headers...
     nsresult UpdateHeaders(nsHttpHeaderArray &headers); 
+
+    // reset the response head to it's initial state
+    void     Reset();
 
 private:
     void     ParseVersion(const char *);
