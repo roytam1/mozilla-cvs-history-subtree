@@ -211,11 +211,11 @@ MenuSpec XFE_Frame::window_menu_spec[] = {
 #endif
 	{ "bookmarksSubmenu",	CASCADEBUTTON, bookmark_submenu_spec },
 	{ xfeCmdOpenHistory,		PUSHBUTTON },
-#if JAVA
+#ifdef JAVA
 	{ xfeCmdJavaConsole,		PUSHBUTTON },
 #endif
 	HG87782
-#	MENU_SEPARATOR,
+	MENU_SEPARATOR,
 	{ "toolsSubmenu",	CASCADEBUTTON, tools_submenu_spec },
 	{ "serverToolsSubmenu",	CASCADEBUTTON, servertools_submenu_spec },
 	MENU_SEPARATOR,
