@@ -23,10 +23,12 @@
 #include "msgCore.h"
 #include "nsMsgDBView.h"
 #include "nsISupports.h"
+#include "nsIMsgFolder.h"
+#include "nsIDBFolderInfo.h"
 
 /* Implementation file */
 
-NS_IMPL_ISUPPORTS1(nsMsgDBView, nsIMsgDBView)
+NS_IMPL_ISUPPORTS2(nsMsgDBView, nsIMsgDBView, nsIDBChangeListener)
 
 nsMsgDBView::nsMsgDBView()
 {
@@ -35,7 +37,7 @@ nsMsgDBView::nsMsgDBView()
   /* member initializers and constructor code */
   m_sortValid = PR_TRUE;
   m_sortOrder = nsMsgViewSortOrder::none;
-  //m_viewFlags = (ViewFlags) 0;
+  m_viewFlags = (nsMsgDBViewFlags) 0;
 }
 
 nsMsgDBView::~nsMsgDBView()
@@ -43,9 +45,26 @@ nsMsgDBView::~nsMsgDBView()
   /* destructor code */
 }
 
-NS_IMETHODIMP nsMsgDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG(folder);
+  nsCOMPtr <nsIDBFolderInfo> folderInfo;
+
+  nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
+	m_db->AddListener(this);
+#ifdef HAVE_PORT
+	if (viewType == ViewAny)
+		viewType = ViewAllThreads;
+	m_viewType = viewType;
+	if (messageDB && messageDB->GetNeoFolderInfo()->GetFlags() & MSG_FOLDER_PREF_SHOWIGNORED)
+		m_viewFlags = (ViewFlags) ((int32) kShowIgnored | (int32) m_viewFlags);
+	if (messageDB && messageDB->GetNeoFolderInfo() 
+		&& (viewType == ViewOnlyNewHeaders))
+		m_viewFlags = (ViewFlags) ((int32) kUnreadOnly | (int32) m_viewFlags);
+
+	CacheAdd ();
+#endif
+	return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::Close()
@@ -516,6 +535,40 @@ PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
 {
   return PR_TRUE; // default is to want all threads.
 }
+
+NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, 
+                                       PRUint32, nsIDBChangeListener *aInstigator)
+{
+  return NS_OK;
+}
+NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
+                            nsIDBChangeListener *aInstigator)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::OnKeyAdded(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
+                          nsIDBChangeListener *aInstigator)
+{
+  return NS_OK;
+}
+                          
+NS_IMETHODIMP nsMsgDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldParent, nsMsgKey newParent, nsIDBChangeListener *aInstigator)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
+{
+  return NS_OK;
+}
+
+    
+NS_IMETHODIMP nsMsgDBView::OnReadChanged(nsIDBChangeListener *instigator)
+{
+  return NS_OK;
+}
+
 
 void	nsMsgDBView::EnableChangeUpdates()
 {

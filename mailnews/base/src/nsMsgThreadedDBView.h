@@ -34,7 +34,7 @@ public:
   nsMsgThreadedDBView();
   virtual ~nsMsgThreadedDBView();
 
-  NS_IMETHOD Open(nsIMsgDatabase *msgDB, nsMsgViewSortTypeValue viewType, PRInt32 *count);
+  NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *count);
   NS_IMETHOD Close();
   NS_IMETHOD Init(PRInt32 *pCount);
   NS_IMETHOD AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd);

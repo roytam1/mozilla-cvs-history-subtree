@@ -29,6 +29,7 @@
 #include "nsMsgLineBuffer.h" // for nsByteArray
 #include "nsMsgKeyArray.h"
 #include "nsUint8Array.h"
+#include "nsIDBChangeListener.h"
 
 enum eFieldType {
     kString,
@@ -52,7 +53,7 @@ const int kUnreadOnly = 0x10;
 // I think this will be an abstract implementation class.
 // The classes that implement the outliner support will probably
 // inherit from this class.
-class nsMsgDBView : public nsIMsgDBView
+class nsMsgDBView : public nsIMsgDBView, public nsIDBChangeListener
 {
 public:
   nsMsgDBView();
@@ -60,7 +61,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIMSGDBVIEW
-
+  NS_DECL_NSIDBCHANGELISTENER
 protected:
   // routines used in building up view
   PRBool WantsThisThread(nsIMsgThread * thread);

@@ -36,10 +36,10 @@ nsMsgThreadedDBView::~nsMsgThreadedDBView()
   /* destructor code */
 }
 
-NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
 {
 	nsresult rv;;
-	rv = nsMsgDBView::Open(msgDB, viewType, pCount);
+	rv = nsMsgDBView::Open(folder, viewType, pCount);
   NS_ENSURE_SUCCESS(rv, rv);
 
 	if (pCount)
@@ -54,7 +54,6 @@ NS_IMETHODIMP nsMsgThreadedDBView::Close()
 
 NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 {
-#ifndef DEBUG_seth
 	nsresult rv;
 	nsMsgViewSortOrderValue sortOrder;
 	nsMsgViewSortTypeValue sortType;
@@ -74,7 +73,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 	nsMsgKey startMsg = 0; 
 	do
 	{
-		const int kIdChunkSize = 200;
+		const PRInt32 kIdChunkSize = 200;
 		PRInt32			numListed = 0;
 		nsMsgKey	idArray[kIdChunkSize];
 		PRInt32		flagArray[kIdChunkSize];
@@ -96,15 +95,36 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 		InitSort(sortType, sortOrder);
 	}
 	return rv;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
 NS_IMETHODIMP nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
 
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+	PRInt32	numAdded = 0;
+	for (PRInt32 i = 0; i < numKeysToAdd; i++)
+	{
+		PRInt32 threadFlag = pFlags[i];
+		PRInt32 flag = threadFlag;
+
+		// skip ignored threads.
+		if ((threadFlag & MSG_FLAG_IGNORED) && !(m_viewFlags & kShowIgnored))
+			continue;
+		// by default, make threads collapsed, unless we're in only viewing new msgs
+
+		if (flag & MSG_VIEW_FLAG_HASCHILDREN)
+			flag |= MSG_FLAG_ELIDED;
+		// should this be persistent? Doesn't seem to need to be.
+		flag |= MSG_VIEW_FLAG_ISTHREAD;
+		m_keys.Add(pKeys[i]);
+		m_flags.Add(flag);
+		m_levels.Add(pLevels[i]);
+		numAdded++;
+		if ((/*m_viewFlags & kUnreadOnly || */(sortType != nsMsgViewSortType::byThread)) && flag & MSG_FLAG_ELIDED)
+		{
+			ExpandByIndex(m_keys.GetSize() - 1, NULL);
+		}
+	}
+	return numAdded;
 }
 
 NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
@@ -122,7 +142,6 @@ NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgVi
 nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnly, nsMsgKey *pOutput, PRInt32 *pFlags, char *pLevels, 
 									 PRInt32 numToList, PRInt32 *pNumListed, PRInt32 *pTotalHeaders)
 {
-#ifndef DEBUG_seth
 	nsresult rv = NS_OK;
 	// N.B..don't ret before assigning numListed to *pNumListed
 	PRInt32				numListed = 0;
@@ -154,7 +173,6 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
     NS_ENSURE_SUCCESS(rv,rv);
     threadHdr = do_QueryInterface(supports);
 
-		PRInt32	threadCount;
 		PRInt32	threadsRemoved = 0;
 		for (PRInt32 i = 0; i < numToList && threadHdr != nsnull; i++)
 		{
@@ -222,9 +240,6 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 	}
   *pNumListed = numListed;
 	return rv;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
 nsresult	nsMsgThreadedDBView::ExpandAll()
