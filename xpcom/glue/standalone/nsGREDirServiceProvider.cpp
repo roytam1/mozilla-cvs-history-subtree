@@ -311,9 +311,10 @@ nsGREDirServiceProvider::GetGREDirectoryPath()
   char buf[MAXPATHLEN];
   const char* env = PR_GetEnv("GRE_HOME");
   if (env && *env) {
+#ifndef XP_OS2
     if (realpath(env, buf))
       return strdup(buf);
-
+#endif
     return strdup(env);
   }
 
