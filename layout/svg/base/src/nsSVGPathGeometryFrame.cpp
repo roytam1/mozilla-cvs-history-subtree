@@ -287,7 +287,7 @@ nsSVGPathGeometryFrame::GetStrokeDashArray(float **arr, PRUint32 *count)
   *count = 0;
   
   const nsString &dasharrayString = ((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mStrokeDasharray;
-  if (dasharrayString.Length == 0) return NS_OK;
+  if (dasharrayString.Length() == 0) return NS_OK;
 
   // XXX parsing of the dasharray string should be done elsewhere
 
