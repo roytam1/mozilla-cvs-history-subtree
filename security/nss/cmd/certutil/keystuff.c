@@ -60,6 +60,8 @@ extern char *sys_errlist[];
 #include "prlong.h"
 
 #include "pk11func.h"
+#include "secrng.h"
+#include "pqgutil.h"
 
 #define NUM_KEYSTROKES 120
 #define RAND_BUF_SIZE 60

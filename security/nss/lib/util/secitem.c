@@ -143,11 +143,6 @@ SECITEM_CompareItem(const SECItem *a, const SECItem *b)
     unsigned m;
     SECComparison rv;
 
-    if (!a || !a->len || !a->data) 
-        return (!b || !b->len || !b->data) ? SECEqual : SECLessThan;
-    if (!b || !b->len || !b->data) 
-    	return SECGreaterThan;
-
     m = ( ( a->len < b->len ) ? a->len : b->len );
     
     rv = (SECComparison) PORT_Memcmp(a->data, b->data, m);
@@ -166,15 +161,10 @@ SECITEM_CompareItem(const SECItem *a, const SECItem *b)
 PRBool
 SECITEM_ItemsAreEqual(const SECItem *a, const SECItem *b)
 {
-    if (a->len != b->len)
-        return PR_FALSE;
-    if (!a->len)
-    	return PR_TRUE;
-    if (!a->data || !b->data) {
-        /* avoid null pointer crash. */
-	return (PRBool)(a->data == b->data);
-    }
-    return (PRBool)!PORT_Memcmp(a->data, b->data, a->len);
+    if (SECITEM_CompareItem(a, b) == SECEqual)
+	return PR_TRUE;
+
+    return PR_FALSE;
 }
 
 SECItem *

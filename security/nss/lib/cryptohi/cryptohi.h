@@ -38,7 +38,7 @@
 #ifndef _CRYPTOHI_H_
 #define _CRYPTOHI_H_
 
-#include "blapit.h"
+#include "blapi.h"
 
 #include "seccomon.h"
 #include "secoidt.h"

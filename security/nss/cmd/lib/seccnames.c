@@ -44,6 +44,7 @@
 
 #include "secutil.h"
 #include "secpkcs7.h"
+#include "secrng.h"
 #if !defined(_WIN32_WCE)
 #include <sys/stat.h>
 #endif

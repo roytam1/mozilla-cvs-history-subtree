@@ -43,7 +43,6 @@
 extern const SEC_ASN1Template SECKEY_PointerToEncryptedPrivateKeyInfoTemplate[];
 extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PointerToEncryptedPrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_EncryptedPrivateKeyInfoTemplate[];
-extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_EncryptedPrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_PrivateKeyInfoTemplate[];
 extern SEC_ASN1TemplateChooser NSS_Get_SECKEY_PrivateKeyInfoTemplate;
 extern const SEC_ASN1Template SECKEY_PointerToPrivateKeyInfoTemplate[];

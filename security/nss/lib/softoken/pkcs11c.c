@@ -55,7 +55,6 @@
 #include "secitem.h"
 #include "secport.h"
 #include "blapi.h"
-#include "pqgutil.h"
 #include "pkcs11.h"
 #include "pkcs11i.h"
 #include "lowkeyi.h"
@@ -4482,20 +4481,14 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
 		/* 
 		** client_write_IV[CipherSpec.IV_size]
 		*/
-		if (IVSize > 0) {
-		    PORT_Memcpy(ssl3_keys_out->pIVClient, 
-		                &key_block[i], IVSize);
-		    i += IVSize;
-		}
+		PORT_Memcpy(ssl3_keys_out->pIVClient, &key_block[i], IVSize);
+		i += IVSize;
 
 		/* 
 		** server_write_IV[CipherSpec.IV_size]
 		*/
-		if (IVSize > 0) {
-		    PORT_Memcpy(ssl3_keys_out->pIVServer, 
-		                &key_block[i], IVSize);
-		    i += IVSize;
-		}
+		PORT_Memcpy(ssl3_keys_out->pIVServer, &key_block[i], IVSize);
+	    	i += IVSize;
 		PORT_Assert(i <= sizeof key_block);
 
 	    } else if (!isTLS) {
