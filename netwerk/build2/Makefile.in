@@ -35,6 +35,7 @@ LIBRARY_NAME	= necko2
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= necko_secondary_protocols
+
 REQUIRES	= xpcom \
 		  string \
 		  necko \
@@ -46,7 +47,6 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= \
-		nsNetModule2.cpp \
 		../protocol/ftp/src/nsFtpProtocolHandler.cpp \
 		../protocol/ftp/src/nsFTPChannel.cpp \
 		../protocol/ftp/src/nsFtpConnectionThread.cpp \
@@ -55,11 +55,10 @@ CPPSRCS		= \
 		../protocol/gopher/src/nsGopherChannel.cpp \
 		../protocol/viewsource/src/nsViewSourceHandler.cpp \
 		../protocol/viewsource/src/nsViewSourceChannel.cpp \
+		nsNetModule2.cpp \
 		$(NULL)
 
-EXPORTS_SUB_MODULES = necko_ftp
-
-necko_ftp_EXPORTS = $(srcdir)/../protocol/ftp/public/ftpCore.h
+EXPORTS		= ../protocol/ftp/public/ftpCore.h
 
 XPIDLSRCS_SUB_MODULES = necko_ftp necko_viewsource
 
@@ -70,6 +69,7 @@ necko_viewsource_XPIDLSRCS = nsIViewSourceChannel.idl
 LOCAL_INCLUDES	= \
 		-I$(srcdir)/../protocol/gopher/src \
 		-I$(srcdir)/../protocol/ftp/src \
+		-I$(srcdir)/../protocol/ftp/public \
 		-I$(srcdir)/../protocol/viewsource/src \
 		$(NULL)
 
@@ -91,6 +91,9 @@ DEFINES		:= $(if $(findstring protocol/ftp,$@),$(DEFINES) -DFORCE_PR_LOG),$(DEFI
 endif
 endif
 endif # WINNT
+
+PWD := $(shell pwd)
+MAKE_DIRS = $(addprefix $(PWD)/,../protocol/ftp/src ../protocol/gopher/src ../protocol/viewsource/src)
 
 include $(topsrcdir)/config/rules.mk
 
