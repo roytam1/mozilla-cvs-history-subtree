@@ -45,7 +45,6 @@ all:	FORCE
 	@echo 
 	@echo "   BUILD_OPT=1		for optimized build"
 	@echo "   USE_PTHREADS=1	for using pthreads"
-	@echo "   NS_USE_GCC=1		for using gcc"
 	@echo "   USE_64=1		for building 64 bit versions"
 	@echo 
 	@echo iPlanet internal options
