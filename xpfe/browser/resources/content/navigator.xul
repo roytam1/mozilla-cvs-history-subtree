@@ -164,8 +164,8 @@ Contributor(s): ______________________________________. -->
                      ontextcommand="return handleURLBarCommand(userAction);"
                      ontextrevert="return handleURLBarRevert();"
                      onmouseup="URLBarMouseupHandler(event);"
-                     onblur="URLBarBlurHandler(event);"
-                     onkeyup="URLBarKeyupHandler(event);">
+                     onkeyup="URLBarKeyupHandler(event);"
+                     onblur="URLBarBlurHandler(event);">
               <image id="page-proxy-button" allowevents="true"
                      ondraggesture="PageProxyDragGesture(event);"/>
               <menupopup id="ubhist-popup" class="autocomplete-history-popup"
