@@ -80,7 +80,9 @@ ifneq (,$(filter SunOS HP-UX,$(OS_ARCH)))
 ifneq ($(OS_TEST),i86pc)
 ifndef HAVE_64BIT_OS
 	$(INSTALL) -m 755 $(DIST)/lib/$(FREEBL_PURE32_MODULE) $(DIST)/bin
+ifneq ($(OS_TEST),ia64)
 	$(INSTALL) -m 755 $(DIST)/lib/$(FREEBL_HYBRID_MODULE) $(DIST)/bin
+endif
 endif
 endif
 endif

@@ -2078,8 +2078,14 @@ initializeEncoding(XML_Parser parser)
 #else
   s = protocolEncodingName;
 #endif
-  if ((ns ? XmlInitEncodingNS : XmlInitEncoding)(&initEncoding, &encoding, s))
-    return XML_ERROR_NONE;
+  //if ((ns ? XmlInitEncodingNS : XmlInitEncoding)(&initEncoding, &encoding, s))
+  if (ns) {
+    if (XmlInitEncodingNS(&initEncoding, &encoding, s))
+      return XML_ERROR_NONE;
+  } else {
+    if (XmlInitEncoding(&initEncoding, &encoding, s))
+      return XML_ERROR_NONE;
+  }
   return handleUnknownEncoding(parser, protocolEncodingName);
 }
 
@@ -2091,18 +2097,13 @@ processXmlDecl(XML_Parser parser, int isGeneralTextEntity,
   const ENCODING *newEncoding = 0;
   const char *version;
   int standalone = -1;
-  if (!(ns
-        ? XmlParseXmlDeclNS
-	: XmlParseXmlDecl)(isGeneralTextEntity,
-		           encoding,
-		           s,
-		           next,
-		           &eventPtr,
-		           &version,
-		           &encodingName,
-		           &newEncoding,
-		           &standalone))
-    return XML_ERROR_SYNTAX;
+  if (ns) {
+    if (!XmlParseXmlDeclNS(isGeneralTextEntity, encoding, s, next, &eventPtr, &version, &encodingName, &newEncoding, &standalone))
+      return XML_ERROR_SYNTAX;
+  }  else  {
+    if (!XmlParseXmlDecl(isGeneralTextEntity, encoding, s, next, &eventPtr, &version, &encodingName, &newEncoding, &standalone))
+      return XML_ERROR_SYNTAX;
+  }
   if (!isGeneralTextEntity && standalone == 1) {
     dtd.standalone = 1;
 #ifdef XML_DTD
@@ -2158,12 +2159,10 @@ handleUnknownEncoding(XML_Parser parser, const XML_Char *encodingName)
 	  info.release(info.data);
 	return XML_ERROR_NO_MEMORY;
       }
-      enc = (ns
-	     ? XmlInitUnknownEncodingNS
-	     : XmlInitUnknownEncoding)(unknownEncodingMem,
-				       info.map,
-				       info.convert,
-				       info.data);
+      if (ns)
+        enc = XmlInitUnknownEncodingNS(unknownEncodingMem, info.map, info.convert, info.data);
+      else
+        enc = XmlInitUnknownEncoding(unknownEncodingMem, info.map, info.convert, info.data);
       if (enc) {
 	unknownEncodingData = info.data;
 	unknownEncodingRelease = info.release;

@@ -62,7 +62,7 @@ static const char* GetLinebreakString(nsLinebreakConverter::ELinebreakType aBrea
 	Wee inline method to append a line break. Modifies ioDest.
 ----------------------------------------------------------------------------*/
 template<class T>
-static void AppendLinebreak(T*& ioDest, const char* lineBreakStr)
+void AppendLinebreak(T*& ioDest, const char* lineBreakStr)
 {
   *ioDest++ = *lineBreakStr;
 
@@ -76,7 +76,7 @@ static void AppendLinebreak(T*& ioDest, const char* lineBreakStr)
 	Counts occurrences of breakStr in aSrc
 ----------------------------------------------------------------------------*/
 template<class T>
-static PRInt32 CountLinebreaks(const T* aSrc, PRInt32 inLen, const char* breakStr)
+PRInt32 CountLinebreaks(const T* aSrc, PRInt32 inLen, const char* breakStr)
 {
   const T* src = aSrc;
   const T* srcEnd = aSrc + inLen;
@@ -108,7 +108,7 @@ static PRInt32 CountLinebreaks(const T* aSrc, PRInt32 inLen, const char* breakSt
 	ioLen *includes* a terminating null, if any
 ----------------------------------------------------------------------------*/
 template<class T>
-static T* ConvertBreaks(const T* inSrc, PRInt32& ioLen, const char* srcBreak, const char* destBreak)
+T* ConvertBreaks(const T* inSrc, PRInt32& ioLen, const char* srcBreak, const char* destBreak)
 {
   NS_ASSERTION(inSrc && srcBreak && destBreak, "Got a null string");
   
@@ -202,7 +202,7 @@ static T* ConvertBreaks(const T* inSrc, PRInt32& ioLen, const char* srcBreak, co
   does not change.
 ----------------------------------------------------------------------------*/
 template<class T>
-static void ConvertBreaksInSitu(T* inSrc, PRInt32 inLen, char srcBreak, char destBreak)
+void ConvertBreaksInSitu(T* inSrc, PRInt32 inLen, char srcBreak, char destBreak)
 {
   T* src = inSrc;
   T* srcEnd = inSrc + inLen;
@@ -225,7 +225,7 @@ static void ConvertBreaksInSitu(T* inSrc, PRInt32 inLen, char srcBreak, char des
   This will convert CRLF pairs to one break, and single CR or LF to a break.
 ----------------------------------------------------------------------------*/
 template<class T>
-static T* ConvertUnknownBreaks(const T* inSrc, PRInt32& ioLen, const char* destBreak)
+T* ConvertUnknownBreaks(const T* inSrc, PRInt32& ioLen, const char* destBreak)
 {
   const T* src = inSrc;
   const T* srcEnd = inSrc + ioLen;		// includes null, if any
