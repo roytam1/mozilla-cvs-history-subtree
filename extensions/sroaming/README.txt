@@ -12,7 +12,7 @@ Also following Conrad's advise, I do not store the roaming prefs in the prefs sy
 
 
 
-OURDATED:
+OUTDATED:
 (I just scribbled this down, written thoughts, probably not very useful)
 
 We compare the modification times of files and ask the user (-> GUI) before overwriting

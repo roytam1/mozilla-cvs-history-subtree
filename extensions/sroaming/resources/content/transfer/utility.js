@@ -138,6 +138,9 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
     case kAccessDenied:
       statusMessage = GetStringWithFile("AccessDenied", aFilename);
       break;
+    case kFTPCWD:
+      statusMessage = GetStringWithFile("FTPCWD", aFilename);
+      break;
     case kErrorAbort:
       statusMessage = GetStringWithFile("Abort");
       break;
@@ -273,7 +276,7 @@ function NameForStatusCode(aStatusCode)
   else if (aStatusCode == kStatusFTPPWD)
     return "FTP_PWD";
   else if (aStatusCode == kStatusBeginFTPTransaction)
-    return "NET_STATUS_BEGIN_FTP_TRANSACTION ";
+    return "NET_STATUS_BEGIN_FTP_TRANSACTION";
   else if (aStatusCode == kStatusEndFTPTransaction)
     return "NET_STATUS_END_FTP_TRANSACTION";
   else if (aStatusCode == kFilesBase + 1) // nsError.h

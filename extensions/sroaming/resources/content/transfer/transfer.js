@@ -91,7 +91,8 @@ function Transfer(download, serial,
   this.files = new Array();
   for (var i = 0, l = files.length; i < l; i++)
   {
-    this.files[i] = this.makeFileVar(files[i].filename,
+    this.files[i] = new TransferFile(this, i,
+                                     files[i].filename,
                                      files[i].mimetype,
                                      files[i].size);
   }
@@ -114,30 +115,6 @@ function Transfer(download, serial,
 }
 Transfer.prototype =
 {
-  /* factory function.
-     returns a new object to be added to the this.files[] array.
-  */
-  makeFileVar : function(filename, mimetype, size) // private, static
-  {
-    // sanitize input
-    if (mimetype == undefined || mimetype == "")
-      mimetype = "application/octet-stream";
-    if (size == undefined)
-      size = 0;
-
-    // for explanations, see this.dump()
-    var file = new Object();
-    file.filename = filename;
-    file.mimetype = mimetype;
-    file.size = size;
-    ddump("got file " + filename + " with mimetype " + mimetype);
-    file.status = "pending";
-    file.statusCode = 0;
-    file.progress = 0.0;
-    file.channel = null;
-    file.progressListener = null;
-    return file;
-  },
 
   /* Called when all files finished
      @param  success  bool  no file failed
@@ -227,7 +204,7 @@ Transfer.prototype =
       var localURL = ioserv.newURI(this.localDir, null, null);
       var channel = ioserv.newChannel(file.filename, null, baseURL);
       this.files[id].channel = channel;
-      var progress = new SRoamingProgressListener(this, id);
+      var progress = new TransferProgressListener(this, id);
       this.files[id].progressListener = progress;
       channel.notificationCallbacks = progress;
       ddumpCont("Trying to "+ (this.download ? "download from" : "upload to"));
@@ -250,11 +227,14 @@ Transfer.prototype =
                        .QueryInterface(Components.interfaces.nsIFileURL)
                        .file.clone();
         ddump("to local file " + lf.path);
-        try {
+        try
+        {
           fos.init(lf, -1, -1, 0);//odd params from NS_NewLocalFileOutputStream
-        } catch(e) {
+        }
+        catch(e)
+        {
           var dir = lf.parent;
-          if (e.result == kFileNotFound // XXX test
+          if (e.result == kFileNotFound
                // we get this error, if the directory does no exist yet locally
               && dir && !dir.exists())
           {
@@ -278,14 +258,6 @@ Transfer.prototype =
         var lfURL = ioserv.newURI(file.filename, null, localURL);
         ddump("from local file <" + lfURL.spec + ">");
 
-        // way 1
-        /*
-        var lf = lfURL.QueryInterface(Components.interfaces.nsIFileURL)
-                 .file.clone();
-        uploadChannel.setUploadFile(lf, file.mimetype, -1);
-        */
-
-        // way 2  -- this is the way brade used. why didn't she use way 1?
         var fileChannel = ioserv.newChannelFromURI(lfURL);
         var is = fileChannel.open(); // maybe async? WFM.
         var bis = Components
@@ -299,11 +271,20 @@ Transfer.prototype =
 
         channel.asyncOpen(progress, null);
       }
-    } catch(e) {
-      dumpError("Transfer failed:\n" + e);
-      file.status = "failed";
-      file.statusCode = e.result;
-      file.statusText = e.message;
+    }
+    catch(e)
+    {
+      if (e.result) // XPCOM error, we can report that to the user and we
+             // partially even expect it (file not found in new profiles etc.)
+      {
+        ddump("Transfer problem, will later report it to user:\n" + e);
+        file.setStatus("failed", e.result, e.message);
+      }
+      else
+      {
+        dumpError("Transfer failed:\n" + e);
+        throw e;
+      }
     }
   },
 
@@ -340,7 +321,7 @@ Transfer.prototype =
       if (channel && channel.isPending && this.files[i].status != "done")
       {
         channel.cancel(kErrorAbort);
-        this.files[i].progressListener.setStatus("failed", kErrorAbort);
+        this.files[i].setStatus("failed", kErrorAbort);
         /* the above line sets all files in the UI to failed, but that does
            not close the dialog. */
       }
@@ -362,7 +343,7 @@ Transfer.prototype =
      transfer progress of a certain file changed.
      This function will update the file's progress this.files[].progress
      and the overall progress this.progress.
-     It will also call the creator's callbacks.
+     It will also call the owner's callbacks.
 
      @param filei  int  index of the file whose progress changed
      @param aProgress  float 0..1  progress of that file
@@ -524,33 +505,13 @@ Transfer.prototype =
         // float, 0..1, how much of the files (measured by filesizes) has
         // already been transfered
     ddump(" progressSizeAll: " + this.progressSizeAll);
-        // int, in bytes, cumulated filesizes as reported by the creator
+        // int, in bytes, cumulated filesizes as reported by the owner
 
     ddump(" Files: (" + this.files.length + " files)");
     for (var i = 0, l = this.files.length; i < l; i++)
     {
-      var file = this.files[i];
       ddump("  File " + i + ":");
-      ddump("   filename: " + file.filename);
-          // String: relative pathname from profile root
-      ddump("   mimetype: " + file.mimetype);
-          // String. might be undefined.
-      ddump("   size: " + file.size);
-          // int, in bytes. might be 0 for undefined.
-      ddump("   status: " + file.status);
-          // String: "pending" (not started), "busy", "done", "failed"
-      ddumpCont("   statusCode: " + file.statusCode + " (");
-      ddump(NameForStatusCode(file.statusCode) + ")");
-          // int: nsresult error code that we got from Necko
-      ddump("   httpResponse: " + file.httpResponse);
-          // int: HTTP response code that we got from the server
-      ddump("   statusText: " + file.statusText);
-          // String: Text corresponding to error (usually with httpResponse
-          // or fatal errors). Might be in English or the server's language.
-          // Text (usually translated) corresponding to statusCode can be
-          // gotten from ...utility.js; it may include this text.
-      ddump("   progress: " + file.progress);
-          // float: 0 (nothing) .. 1 (complete)
+      this.files[i].dump();
     }
     //ddump(" finished callback: " + this.finishedCallback);
     //ddump(" progress callback: " + this.progressCallback);
@@ -560,6 +521,105 @@ Transfer.prototype =
 }
 
 
+/* 
+   @param transfer  Transfer  the owner
+   @param filei  int  index of this file in the transfer's files array
+
+   @param filename, mimetype, size  see Transfer
+*/
+function TransferFile(transfer, filei, // hooks to owner
+                      filename, mimetype, size)
+{
+  // sanitize input
+  if (mimetype == undefined || mimetype == "")
+    mimetype = "application/octet-stream";
+  if (size == undefined)
+    size = 0;
+
+  // for explanations, see this.dump()
+  this.filename = filename;
+  this.mimetype = mimetype;
+  this.size = size;
+  ddump("got file " + filename + " with mimetype " + mimetype);
+  this.status = "pending";
+  this.statusCode = 0;
+  this.progress = 0.0;
+  this.channel = null;
+  this.progressListener = null;
+
+  this.transfer = transfer;
+  this.filei = filei;
+}
+TransferFile.prototype =
+{
+  dump : function()
+  {
+    ddump("   filename: " + this.filename);
+      // String: relative pathname from profile root
+    ddump("   mimetype: " + this.mimetype);
+      // String. might be undefined.
+    ddump("   size: " + this.size);
+      // int, in bytes. might be 0 for undefined.
+    ddump("   status: " + this.status);
+      // String: "pending" (not started), "busy", "done", "failed"
+    ddumpCont("   statusCode: " + this.statusCode + " (");
+    ddump(NameForStatusCode(this.statusCode) + ")");
+      // int: nsresult error code that we got from Necko
+    ddump("   httpResponse: " + this.httpResponse);
+      // int: HTTP response code that we got from the server
+    ddump("   statusText: " + this.statusText);
+      // String: Text corresponding to error (usually with httpResponse
+      // or fatal errors). Might be in English or the server's language.
+      // Text (usually translated) corresponding to statusCode can be
+      // gotten from ...utility.js; it may include this text.
+    ddump("   progress: " + this.progress);
+      // float: 0 (nothing) .. 1 (complete)
+  },
+
+  /* Use this function to change this.status
+
+     @param aStatus  String  like this.status, i.e. "done", "pending" etc.
+     @param aStatusCode  Mozilla error code
+     @param aMessage  String  Sets statusText, a long explanation specific
+                              to this error case. Optional.
+  */
+  setStatus : function(aStatus, aStatusCode, aMessage)
+  {
+    ddumpCont("request to change "+this.filename+" from "+this.status+" (");
+    ddumpCont(NameForStatusCode(this.statusCode)+") to "+aStatus+" (");
+    var undef = aStatusCode == undefined;
+    ddump((undef ? "no new status code" : NameForStatusCode(aStatusCode))+")");
+
+    if (this.statusCode == aStatusCode && this.status == aStatus)
+    {
+      ddump("  (no changes)");
+      return;
+    }
+
+    var was_failed = (this.status == "failed");
+    var was_done = (this.status == "done");
+    if (!was_failed)  /* prevent overwriting older errors with newer, bogus
+                         OK status codes, or the real problem with
+                         consequential problems. */
+    {
+      this.status = aStatus;
+      if (aStatusCode != undefined)
+      {
+        this.statusCode = aStatusCode;
+        this.statusText = aMessage; // might be undefined, but it must match
+                                    // this.statusCode
+      }
+
+      if(this.transfer.progressCallback)
+        this.transfer.progressCallback(this.filei);
+    }
+    if (
+        !(was_done || was_failed)
+        && (aStatus == "done" || aStatus == "failed")
+       )  // file just completed or failed
+     this.transfer.fileFinished(this.filei);
+  }
+}
 
 
 
@@ -568,14 +628,13 @@ Transfer.prototype =
    @param filei  integer  index of file in transfer.files
    @param transfer  Transfer  the context
 */
-function SRoamingProgressListener(transfer, filei)
+function TransferProgressListener(transfer, filei)
 {
   this.transfer = transfer;  // this creates a cyclic reference :-(
   this.filei = filei;
 }
-SRoamingProgressListener.prototype =
+TransferProgressListener.prototype =
 {
-
 
   // Progress
 
@@ -584,10 +643,7 @@ SRoamingProgressListener.prototype =
   onStartRequest : function(aRequest, aContext)
   {
     ddump("onStartRequest: " + aRequest.name);
-    this.setStatus("busy");
-    //this.transfer.files[this.filei].status = "busy";
-    //if(this.transfer.progressCallback)
-    //  this.transfer.progressCallback(this.filei);
+    this.transfer.files[this.filei].setStatus("busy");
   },
 
   onStopRequest : function(aRequest, aContext, aStatusCode)
@@ -602,12 +658,12 @@ SRoamingProgressListener.prototype =
          code, so check for that */
       var channel = this.transfer.files[this.filei].channel;
       if (!channel || !channel.URI)
-        this.setStatus("failed", kErrorUnexpected);
+        this.transfer.files[this.filei].setStatus("failed", kErrorUnexpected);
       else if (channel.URI.scheme == "http")
         this.privateHTTPResponse();
       else
         // let's hope that the other protocol impl. are saner
-        this.setStatus("done", aStatusCode);
+        this.transfer.files[this.filei].setStatus("done", aStatusCode);
     }
     else
       this.privateStatusChange(aStatusCode);
@@ -681,7 +737,7 @@ SRoamingProgressListener.prototype =
     else
       status = "failed";
 
-    this.setStatus(status, aStatusCode);
+    this.transfer.files[this.filei].setStatus(status, aStatusCode);
   },
 
   /* Use this function to get and interpret HTTP status/error codes and
@@ -693,20 +749,20 @@ SRoamingProgressListener.prototype =
 
     // Get HTTP response code
     var responseCode;
+    var respText;
     try
     {
       var httpchannel = this.transfer.files[this.filei].channel
                         .QueryInterface(Components.interfaces.nsIHttpChannel);
       responseCode = httpchannel.responseStatus;
       this.transfer.files[this.filei].httpResponse = responseCode;
-      this.transfer.files[this.filei].statusText =
-                                               httpchannel.responseStatusText;
+      respText = httpchannel.responseStatusText;
       ddump(responseCode);
     }
     catch(e)
     {
       ddump("  Error while trying to get HTTP response: " + e);
-      this.setStatus("failed", kErrorNoInterface);
+      this.transfer.files[this.filei].setStatus("failed", kErrorNoInterface);
       return;
     }
 
@@ -723,47 +779,7 @@ SRoamingProgressListener.prototype =
     else // what?
       return;
 
-    this.setStatus(status, kStatusHTTP);
-  },
-
-  /* Use this function to change this.status. Maybe you want to use
-     this.privateStatusChange, though.
-
-     @param aStatus  string  like this.status, i.e. "done", "pending" etc.
-     @param aStatusCode  Mozilla error code
-  */
-  setStatus : function(aStatus, aStatusCode)
-  {
-    ddumpCont("file " + this.filei + " changed from ");
-    ddumpCont(this.transfer.files[this.filei].status + " (");
-    ddumpCont(NameForStatusCode(this.transfer.files[this.filei].statusCode));
-    ddumpCont(") to " + aStatus + " (");
-    var undef = aStatusCode == undefined;
-    ddump((undef ? "no new status code" : NameForStatusCode(aStatusCode))+")");
-    if (this.transfer.files[this.filei].statusCode == aStatusCode
-        && this.transfer.files[this.filei].status == aStatus)
-    {
-      ddump("  (no changes)");
-      return;
-    }
-
-    var was_failed = (this.transfer.files[this.filei].status == "failed");
-    var was_done = (this.transfer.files[this.filei].status == "done");
-    if (!was_failed)  /* prevent overwriting older errors with newer, bogus
-                         OK status codes, or the real problem with
-                         consequential problems. */
-    {
-      this.transfer.files[this.filei].status = aStatus;
-      if (aStatusCode != undefined)
-        this.transfer.files[this.filei].statusCode = aStatusCode;
-      if(this.transfer.progressCallback)
-        this.transfer.progressCallback(this.filei);
-    }
-    if (
-        !(was_done || was_failed)
-        && (aStatus == "done" || aStatus == "failed")
-       )  // file just completed or failed
-     this.transfer.fileFinished(this.filei);
+    this.transfer.files[this.filei].setStatus(status, kStatusHTTP, respText);
   },
 
 
@@ -950,7 +966,7 @@ SRoamingProgressListener.prototype =
     var ret = promptServ.prompt(window, dlgTitle, label,
                                 inputvalueObj, checkBoxLabel, checkObj);
     if (!ret)
-      setTimeout(this.transfer.cancel, 0);
+      this.transfer.cancel();
     return ret;
   },
   privatePromptPassword : function(dlgTitle, label, pwrealm,
@@ -989,11 +1005,13 @@ SRoamingProgressListener.prototype =
                                       pwObj, savePWLabel, savePWObj);
 
       if (!ret)
-        setTimeout(this.transfer.cancel, 0);
+        this.transfer.cancel();
       else
         this.updateUsernamePasswordFromPrompt(this.transfer.username,
                                               pwObj.value, savePWObj.value);
-    } catch(e) {}
+    } catch (e) {
+      dumpError(e);
+    }
 
     return ret;
   },
@@ -1064,11 +1082,13 @@ SRoamingProgressListener.prototype =
                                         savePWLabel, savePWObj);
 
       if (!ret)
-        setTimeout(this.transfer.cancel, 0);
+        this.transfer.cancel();
       else
         this.updateUsernamePasswordFromPrompt(userObj.value, pwObj.value,
                                               savePWObj.value);
-    } catch (e) {}
+    } catch (e) {
+      dumpError(e);
+    }
     ddump("  done. result:");
     ddump("  userObj.value: " + userObj.value);
     ddump("  pwObj.value: " + pwObj.value);

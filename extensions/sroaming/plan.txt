@@ -1,30 +1,35 @@
 now
+- pref
+- conflict
+- rewrite dialog
+
+
 - XXXs
   - pref dialog loses state
   - pref dialog saves (only) "," as files pref
   - small stuff
 - error handling
-  - (local profile) files missing
   - empty pref
-  m cancel by user in progress dialog: xpconnect errors
   - ftp
-    - offline
-    - xpconnect errors after upload
+    - malformed url (or cancelled auth?) stops and then goes back to busy.
+      reports success, but failed.
+    - offline (trunk)
   - http
     m wrong path in url (but working server)
     - test same situations with ftp
-    - cancel pw dialog gives "transfer.js line 332: this.files has
-      no properties"
     - no user name (upload to <http://checker/roaming/ben/localstore.rdf>
            gives NS_OK) v
-  - non existant files: stops during upload, doesn't during download
+  - ui: (error/success) messages
+  - cancel by user in progress dialog: xpconnect errors
   m if something fails horribly (e.g. a JS error in the prompt* functions),
     then the UI reports success or is completely malfunctional.
-  - ui: (error/success) messages
+  - pressing cancel after finished with failed, all files are set to abort
   - copy protocol
     - no remote files yet
-m mod/upload times
-- ddump, xpcom not defined after done
+m conflictresolve: mod/upload times
+- world gone
+  - ddump, xpcom not defined after done
+  - xpconnect errors after ftp upload
 
 Later:
 - license headers

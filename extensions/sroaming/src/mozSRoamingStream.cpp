@@ -121,7 +121,8 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
     }
     mRemoteBaseUrl = remoteUrlPref;
 
-    /* For easier mass-personalisation via scripts in corporate setups,
+    /* For easier mass-personalisation via scripts in corporate setups and
+       for easier instructed setup by normal users,
        we allow the username to be separate from the URL. */
     nsXPIDLString usernamePref;
     rv = registry->GetString(regkey, kRegKeyUsername.get(),
@@ -151,6 +152,10 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
         }
       }
     }
+
+    // we need a / at the end (base URL), fix up, if user error
+    if (mRemoteBaseUrl.Last() != (PRUnichar) '/')
+      mRemoteBaseUrl += (PRUnichar) '/';
 
     nsXPIDLString passwordPref;
     rv = registry->GetString(regkey, kRegKeyPassword.get(),
