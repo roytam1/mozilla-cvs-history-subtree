@@ -1429,7 +1429,7 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, char * setCookieHead
     *semi_colon++ = '\0';
 
     /* there must be some attributes. (hopefully) */
-    if ((ptr=PL_strcasestr(semi_colon, "secure="))) {
+    if ((ptr=PL_strcasestr(semi_colon, "secure"))) {
       char cPre=*(ptr-1), cPost=*(ptr+6);
       if (((cPre==' ') || (cPre==';')) && (!cPost || (cPost==' ') || (cPost==';'))) {
         xxx = PR_TRUE;
