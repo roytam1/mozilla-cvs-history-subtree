@@ -86,8 +86,10 @@ protected:
   nsresult DownloadStarted(const PRUnichar* aPersistentDescriptor);
   nsresult AssertProgressInfoFor(const PRUnichar* aPersistentDescriptor);
   nsresult GetInternalListener(nsIDownloadProgressListener** aListener);
-  PRBool   NeedsUIUpdate() { return mListener != nsnull; }
   nsresult PauseResumeDownload(const PRUnichar* aPath, PRBool aPause);
+  nsresult RemoveDownload(nsIRDFResource* aDownload);
+  PRBool   NeedsUIUpdate() { return mListener != nsnull; }
+  PRInt32  GetRetentionBehavior();
 
 private:
   nsCOMPtr<nsIDownloadProgressListener> mListener;

@@ -59,6 +59,8 @@
 #include "nsIWindowMediator.h"
 #include "nsIPromptService.h"
 #include "nsIObserverService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -105,6 +107,9 @@ nsDownloadManager::~nsDownloadManager()
     return;
 
   gRDFService->UnregisterDataSource(mDataSource);
+
+  gObserverService->RemoveObserver(this, "quit-application");
+  gObserverService->RemoveObserver(this, "quit-application-requested");
 
   NS_IF_RELEASE(gNC_DownloadsRoot);                                             
   NS_IF_RELEASE(gNC_File);                                                      
@@ -182,6 +187,20 @@ nsDownloadManager::Init()
   if (NS_FAILED(rv)) return rv;
   
   return bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(mBundle));
+}
+
+PRInt32 
+nsDownloadManager::GetRetentionBehavior()
+{
+  PRInt32 val = 0;
+  nsCOMPtr<nsIPrefBranch> pref(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  if (pref) {
+    nsresult rv = pref->GetIntPref("browser.download.retention", &val);
+    if (NS_FAILED(rv))
+      val = 0; // Use 0 as the default ("remove when done")
+  }
+
+  return val;
 }
 
 nsresult
@@ -646,16 +665,26 @@ nsDownloadManager::RemoveDownload(const PRUnichar* aPath)
   if (inProgress)
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIRDFContainer> downloads;
-    nsresult rv = GetDownloadsContainer(getter_AddRefs(downloads));
-  if (NS_FAILED(rv)) return rv;
-  
   nsCOMPtr<nsIRDFResource> res;
   gRDFService->GetUnicodeResource(nsDependentString(aPath), getter_AddRefs(res));
 
+  return RemoveDownload(res);
+}
+
+// This is an internal method only because it does NOT check to see whether
+// or not a download is in progress or not before removing it. The FE should use
+// RemoveDownload(const PRUnichar* aPath) as supplied by nsIDownloadManager which
+// does the appropriate checking. 
+nsresult
+nsDownloadManager::RemoveDownload(nsIRDFResource* aDownload)
+{
+  nsCOMPtr<nsIRDFContainer> downloads;
+  nsresult rv = GetDownloadsContainer(getter_AddRefs(downloads));
+  if (NS_FAILED(rv)) return rv;
+  
   // remove all the arcs for this resource, and then remove it from the Seq
   nsCOMPtr<nsISimpleEnumerator> arcs;
-  rv = mDataSource->ArcLabelsOut(res, getter_AddRefs(arcs));
+  rv = mDataSource->ArcLabelsOut(aDownload, getter_AddRefs(arcs));
   if (NS_FAILED(rv)) return rv;
 
   PRBool moreArcs;
@@ -671,7 +700,7 @@ nsDownloadManager::RemoveDownload(const PRUnichar* aPath)
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsISimpleEnumerator> targets;
-    rv = mDataSource->GetTargets(res, arc, PR_TRUE, getter_AddRefs(targets));
+    rv = mDataSource->GetTargets(aDownload, arc, PR_TRUE, getter_AddRefs(targets));
     if (NS_FAILED(rv)) return rv;
 
     PRBool moreTargets;
@@ -686,7 +715,7 @@ nsDownloadManager::RemoveDownload(const PRUnichar* aPath)
       if (NS_FAILED(rv)) return rv;
 
       // and now drop this assertion from the graph
-      rv = mDataSource->Unassert(res, arc, target);
+      rv = mDataSource->Unassert(aDownload, arc, target);
       if (NS_FAILED(rv)) return rv;
 
       rv = targets->HasMoreElements(&moreTargets);
@@ -697,7 +726,7 @@ nsDownloadManager::RemoveDownload(const PRUnichar* aPath)
   }
 
   PRInt32 itemIndex;
-  downloads->IndexOf(res, &itemIndex);
+  downloads->IndexOf(aDownload, &itemIndex);
   if (itemIndex <= 0)
     return NS_ERROR_FAILURE;
   
@@ -897,6 +926,48 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
 
     // Now go and update the datasource so that we "cancel" all paused downloads. 
     SaveState();
+
+    // Now that active downloads have been canceled, remove all downloads if 
+    // the user's retention policy specifies it. 
+    if (GetRetentionBehavior() == 1) {
+      nsCOMPtr<nsIRDFContainer> ctr;
+      GetDownloadsContainer(getter_AddRefs(ctr));
+
+      StartBatchUpdate();
+
+      nsCOMPtr<nsISupportsArray> ary;
+      NS_NewISupportsArray(getter_AddRefs(ary));
+
+      if (ary) {
+        nsCOMPtr<nsISimpleEnumerator> e;
+        ctr->GetElements(getter_AddRefs(e));
+
+        PRBool hasMore;
+        e->HasMoreElements(&hasMore);
+        while(hasMore) {
+          nsCOMPtr<nsIRDFResource> curr;
+          e->GetNext(getter_AddRefs(curr));
+          
+          ary->AppendElement(curr);
+          
+          e->HasMoreElements(&hasMore);
+        }
+
+        // Now Remove all the downloads. 
+        PRUint32 cnt;
+        ary->Count(&cnt);
+        for (PRInt32 i = 0; i < cnt; ++i) {
+          nsCOMPtr<nsIRDFResource> download(do_QueryElementAt(ary, i));
+          // Here we use the internal RemoveDownload method, and only here
+          // because this is _after_ the download table |mCurrDownloads| has been 
+          // cleared of active downloads, so we know we're not accidentally
+          // clearing active downloads. 
+          RemoveDownload(download);
+        }
+      }
+
+      EndBatchUpdate();
+    }
   }
   else if (nsCRT::strcmp(aTopic, "quit-application-requested") == 0 && 
            (currDownloadCount = mCurrDownloads.Count())) {
@@ -1132,8 +1203,8 @@ nsDownload::OnStatusChange(nsIWebProgress *aWebProgress,
     nsAutoString path;
     nsresult rv = mTarget->GetPath(path);
     if (NS_SUCCEEDED(rv)) {
-      mDownloadManager->DownloadEnded(path.get(), nsnull);
       gObserverService->NotifyObservers(NS_STATIC_CAST(nsIDownload *, this), "dl-failed", nsnull);                     
+      mDownloadManager->DownloadEnded(path.get(), nsnull);
     }
 
     // Get title for alert.
@@ -1200,6 +1271,14 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
     // break the cycle we created in AddDownload
     if (mPersist)
       mPersist->SetProgressListener(nsnull);
+
+    // Now remove the download if the user's retention policy is "Remove when Done"
+    if (mDownloadManager->GetRetentionBehavior() == 0) {
+      nsAutoString path;
+      mTarget->GetPath(path);
+
+      mDownloadManager->RemoveDownload(path.get());
+    }
   }
 
   if (mDownloadManager->NeedsUIUpdate()) {

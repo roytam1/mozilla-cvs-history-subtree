@@ -178,7 +178,7 @@ function onDownloadShow(aEvent)
     if (parent) {
       var pref = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
-      var browserURL = pref.copyCharPref("browser.chromeURL");                          
+      var browserURL = pref.GetCharPref("browser.chromeURL");                          
       window.openDialog(browserURL, "_blank", "chrome,all,dialog=no", parent.path);
     }
 #else
@@ -335,6 +335,13 @@ function Shutdown()
   
   // Assert the current progress for all the downloads in case the window is reopened
   gDownloadManager.saveState();
+
+  var observerService = Components.classes[kObserverServiceProgID]
+                                  .getService(Components.interfaces.nsIObserverService);
+  observerService.removeObserver(gDownloadObserver, "dl-done");
+  observerService.removeObserver(gDownloadObserver, "dl-cancel");
+  observerService.removeObserver(gDownloadObserver, "dl-failed");  
+  observerService.removeObserver(gDownloadObserver, "dl-start");  
 }
 
 function saveStatusMessages()
