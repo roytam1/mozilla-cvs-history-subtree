@@ -71,7 +71,7 @@
 
 <commandset id="chatzillaCommands">
   <command id="cmd_reload_ui"
-    oncommand="if (!client || client.getConnectionCount() == 0) window.location.href = window.location.href;"/>
+    oncommand="if (!('client' in window) || client.getConnectionCount() == 0) window.location.href = window.location.href;"/>
   <command id="cmd_focus_input" oncommand="focusInput();"/>
   <command id="cmd_debug" oncommand="onToggleTraceHook()"/>
   <command id="cmd_toggletabstrip" oncommand="onToggleVisibility('tabstrip');"/>
@@ -211,6 +211,7 @@
           observes="cmd_popup_version"
           showfor="targetUser"/>
 
+    <!--
         <menu format="&PopupHighlightStyle.label;" 
           accesskey="&PopupHighlightStyle.aKey;"
           showfor="targetUser">
@@ -218,6 +219,7 @@
             <menuitem/>
           </menupopup>
         </menu>
+    -->
 
         <menuseparator
           showfor="targetUser"/>
@@ -464,7 +466,7 @@
                 </hbox>
                 <hbox flex="1">
                   <hbox flex="1">
-                    <text class="header-data" id="channel-topic"
+                    <text class="header-data" id="channel-topic" flex="1"
                       crop="right" onclick="onTopicEditStart()"/>
                     <textbox flex="1" id="channel-topicedit" collapsed="true"/>
                   </hbox>
@@ -477,6 +479,7 @@
 
         <iframe id="output-iframe" class="output-container" type="content"
           flex="1" tooltip="aHTMLTooltip" context="outputContext"
+          onload="scrollDown();"
           onmouseover="onMouseOver(event);"
           ondragover="nsDragAndDrop.dragOver(event, contentDropObserver);"
           ondragdrop="nsDragAndDrop.drop(event, contentDropObserver);"
