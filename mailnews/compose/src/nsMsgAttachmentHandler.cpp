@@ -479,7 +479,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
       // the old fe_MakeAppleDoubleEncodeStream() stream in 4.x
       // 
 
-      printf("...and then magic happens...which converts %s to appledouble encoding\n", url_string);
+      printf("...and then magic happens...which converts %s to appledouble encoding\n", (const char*)url_string);
 
       //
       // Now that we have morphed this file, we need to change where mURL is pointing.
