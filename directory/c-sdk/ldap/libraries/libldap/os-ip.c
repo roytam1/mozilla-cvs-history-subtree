@@ -33,14 +33,33 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 #endif
 
-/* On Solaris we currently have a problem with > 1024 socket descriptors in */
-/* the non-blocking connect code due to the select() implementation  */
-/* We will temporarily get around this problem by upping the max number  */
-/* of socket descriptors for select as described on the select() man page */
+/* we currently have a problem with the max number of filedescriptors due */
+/* to the usage of select().  Since I don't have time to do a proper fix */
+/* at the moment and since we are not able to test a poll fix immediately */
+/* I will allow for the continued use of select() by uppping FD_SETSIZE */
+/* See the document fdsetsize.txt in this directory for a description of */
+/* the setting of FD_SETSIZE for the OS'es we care about.  Note that the */
+/* Linux documentation was a bit weak on this subject */
 /* (mhein) */
 
 #ifdef SOLARIS
 #define FD_SETSIZE	65536
+#endif
+
+#ifdef HPUX
+#define FD_SETSIZE	30000
+#endif
+
+#ifdef OSF1
+#define FD_SETSIZE	65536
+#endif
+
+#ifdef AIX
+#define FD_SETSIZE	30000
+#endif
+
+#ifdef _WINDOWS
+#define FD_SETSIZE	30000
 #endif
 
 #include "ldap-int.h"

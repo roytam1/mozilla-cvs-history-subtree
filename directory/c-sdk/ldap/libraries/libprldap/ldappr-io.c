@@ -153,7 +153,21 @@ static int LDAP_CALLBACK
 prldap_write( int s, const void *buf, int len,
 	struct lextiof_socket_private *socketarg )
 {
-    return( PR_Write( PRLDAP_GET_PRFD(socketarg), buf, len ));
+    PRErrorCode pr_err;
+    PRInt32	rc;
+
+    /* Note the 4th parameter flags has been obsoleted and must */
+    /* always be 0 */
+    if (( rc = PR_Send( PRLDAP_GET_PRFD(socketarg), buf, len, 0,
+	PR_MillisecondsToInterval( 120000 ))) < 0) {
+	/* Did PR_Send operation return a failure? */
+	if (rc == -1) {
+	    if ((pr_err = PR_GetError()) == PR_IO_TIMEOUT_ERROR)
+		return (-1);
+	}
+    } 
+
+    return ((int) rc);
 }
 
 

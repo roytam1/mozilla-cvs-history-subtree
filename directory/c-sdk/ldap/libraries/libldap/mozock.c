@@ -19,6 +19,11 @@
  *
  * Contributor(s):
  */
+
+#ifdef _WINDOWS
+#define FD_SETSIZE	30000
+#endif
+
 #include <windows.h>
 #include <winsock.h>
 #include <string.h>
