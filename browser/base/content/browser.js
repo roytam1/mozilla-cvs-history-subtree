@@ -5709,15 +5709,20 @@ function livemarkOnLinkAdded(event)
     return Components.lookupMethod(obj, propname).call(obj);
   }
 
+  var erel = event.target.rel;
   var etype = event.target.type;
   var etitle = event.target.title;
 
+  // this is a blogger post service URL; so skip it
+  if (erel && erel == "service.post")
+    return;
+
   if (etype == "application/rss+xml" ||
       etype == "application/atom+xml" ||
-      etype == "application/x.atom+xml" || // this is, apparently, the "official" Atom type.
-      etitle == "rss" ||
-      etitle == "RSS" ||
-      etitle == "Atom")
+      etype == "application/x.atom+xml" ||
+      etitle.indexOf("RSS") != -1 ||
+      etitle.indexOf("Atom") != -1 ||
+      etitle.indexOf("rss") != -1)
   {
     const targetDoc = safeGetProperty(event.target, "ownerDocument");
 
@@ -5793,7 +5798,9 @@ function livemarkFillPopup(menuPopup)
     var markinfo = livemarkLinks[i];
 
     var menuItem = document.createElement("menuitem");
-    menuItem.setAttribute("label", markinfo.title || markinfo.href);
+    var baseTitle = markinfo.title || markinfo.href;
+    var labelStr = gNavigatorBundle.getFormattedString("livemarkSubscribeTo", [baseTitle]);
+    menuItem.setAttribute("label", labelStr);
     menuItem.setAttribute("data", markinfo.href);
     menuItem.setAttribute("tooltiptext", markinfo.href);
     menuPopup.appendChild(menuItem);
