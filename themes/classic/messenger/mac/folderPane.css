@@ -189,3 +189,13 @@ treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twist
 {               
   visibility: hidden;
 }      
+
+outlinerbody.folderOutlinerBody:-moz-outliner-row
+{
+  height: 18px;
+}
+
+outlinerbody.folderOutlinerBody:-moz-outliner-line
+{
+  visibility: hidden;
+}
