@@ -268,7 +268,7 @@ void txStandaloneXSLTProcessor::parseStylesheetPI(String& data,
 }
 
 Document*
-txStandaloneXSLTProcessor::parsePath(String& aPath, ErrorObserver& aErr)
+txStandaloneXSLTProcessor::parsePath(const String& aPath, ErrorObserver& aErr)
 {
     ifstream xmlInput(NS_LossyConvertUCS2toASCII(aPath).get(), ios::in);
     if (!xmlInput) {

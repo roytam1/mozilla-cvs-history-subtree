@@ -156,7 +156,7 @@ protected:
      * @param aErr  ErrorObserver
      * @result Document XML Document, or null on error
      */
-    static Document* parsePath(String& aPath, ErrorObserver& aErr);
+    static Document* parsePath(const String& aPath, ErrorObserver& aErr);
 };
 
 #endif
