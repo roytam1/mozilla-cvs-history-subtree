@@ -41,7 +41,7 @@
 
 //-- Global Strings
 const String HTML              = "html";
-const String HTML_NS           = "http://www.w3.org/TR/REC-html40";
+const String HTML_NS           = "http://www.w3.org/1999/xhtml";
 const String STYLESHEET_PI     = "xml-stylesheet";
 const String STYLESHEET_PI_OLD = "xml:stylesheet";
 const String XML_SPACE         = "xml:space";
