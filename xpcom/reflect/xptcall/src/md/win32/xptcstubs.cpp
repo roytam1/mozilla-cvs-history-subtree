@@ -141,7 +141,9 @@ static __declspec(naked) void SharedStub(void)
         add  ecx, 8         // for 'this' and return address
         mov  esp, ebp
         pop  ebp
+#if !defined(WINCE)
         add  esp, ecx       // fix up stack pointer
+#endif /* WINCE */
         jmp  edx            // simulate __stdcall return
     }
 }
