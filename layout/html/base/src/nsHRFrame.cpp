@@ -213,7 +213,24 @@ HRuleFrame::Reflow(nsIPresContext*          aPresContext,
   else {
     thickness = NSIntPixelsToTwips(DEFAULT_THICKNESS, p2t);
   }
+  // fix up thickness based on noshade and mode.  see bug 53568
+  // XXX: we really should query for the border thickness, and use that
+  //      instead of the hardcoded "2"
+  if (eCompatibility_NavQuirks == mode)
+  {
+    thickness += NSIntPixelsToTwips(2, p2t);  // adjust for -moz-bg-inset
+    PRBool noShadeAttribute = GetNoShade();
+    if (thickness != onePixel)
+    {
+      if (!noShadeAttribute) {
+        thickness += onePixel;
+      }
+    }
+      
+  }
+  // remember the computed thickness
   mThickness = thickness;
+  NS_ASSERTION(mThickness>=0, "negative height calculated for HR");
 
   // Compute height of "line" that hrule will layout within. Use the
   // font-size to do this.
