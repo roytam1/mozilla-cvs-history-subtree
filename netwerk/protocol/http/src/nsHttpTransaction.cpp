@@ -179,10 +179,7 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 		}
 
 		mListener->OnStopRequest(this, nsnull, status);
-		mListener = 0;
 	}
-    mCallbacks = 0;
-
     return NS_OK;
 }
 

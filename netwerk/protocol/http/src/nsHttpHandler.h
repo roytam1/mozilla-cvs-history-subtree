@@ -33,6 +33,7 @@
 #include "nsIProxy.h"
 #include "nsIStreamConverterService.h"
 #include "nsICacheSession.h"
+#include "nsIEventQueueService.h"
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -117,6 +118,7 @@ public:
     // provides the following helper routines for accessing those services:
     //
     nsresult GetProxyObjectManager(nsIProxyObjectManager **);
+    nsresult GetEventQueueService(nsIEventQueueService **);
     nsresult GetStreamConverterService(nsIStreamConverterService **);
 
     // Called by the channel before writing a request
@@ -177,6 +179,7 @@ private:
     // cached services
     nsCOMPtr<nsIPref>                   mPrefs;
     nsCOMPtr<nsIProxyObjectManager>     mProxyMgr;
+    nsCOMPtr<nsIEventQueueService>      mEventQueueService;
     nsCOMPtr<nsINetModuleMgr>           mNetModuleMgr;
     nsCOMPtr<nsIStreamConverterService> mStreamConvSvc;
 

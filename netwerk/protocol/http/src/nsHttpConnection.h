@@ -30,6 +30,7 @@
 #include "nsISocketTransport.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInterfaceRequestor.h"
+#include "nsIEventQueue.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "plstr.h"
@@ -98,12 +99,16 @@ private:
     nsresult ActivateConnection();
     nsresult CreateTransport();
 
+    // proxy the release of the transaction
+    nsresult ProxyReleaseTransaction(nsHttpTransaction *);
+
 private:
     nsCOMPtr<nsISocketTransport>    mSocketTransport;
     nsCOMPtr<nsIRequest>            mWriteRequest;
     nsCOMPtr<nsIRequest>            mReadRequest;
 
     nsCOMPtr<nsIProgressEventSink>  mProgressSink;
+    nsCOMPtr<nsIEventQueue>         mEventQ;
 
     nsHttpTransaction              *mTransaction;    // hard ref
     nsHttpConnectionInfo           *mConnectionInfo; // hard ref
