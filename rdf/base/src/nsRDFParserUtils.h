@@ -28,6 +28,7 @@
 #define nsRDFParserUtils_h__
 
 #include "nscore.h"
+#include "nsError.h"
 class nsIURL;
 class nsString;
 
