@@ -328,6 +328,10 @@ pref("mail.server.default.allows_specialfolders_usage", true);
 pref("mail.server.default.canCreateFolders", true);
 pref("mail.server.default.canFileMessages", true);
 
+// copy to local folders on read or sent is off by default
+pref("mail.server.default.store_read_mail_in_pfc", false);
+pref("mail.server.default.store_sent_mail_in_pfc", false);
+
 pref("mail.smtpserver.default.auth_method", 1); // auth any
 pref("mail.smtpserver.default.try_ssl", 0);
 
@@ -448,3 +452,5 @@ pref("mailnews.message_display.allow.plugins", true);
 
 // auto absync
 pref("mail.absync.performAutoSync", true);
+
+
