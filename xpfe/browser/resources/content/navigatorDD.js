@@ -80,6 +80,17 @@ var personalToolbarObserver = {
       if (navigator.platform != "Win32" && aEvent.target.localName != "button")
         return;
         
+       if (aEvent.target.localName == "menu") {
+         var child = aEvent.target.childNodes[0];
+         if (child.localName == "menupopup")
+           child.closePopup();
+         else {
+           var parent = aEvent.target.parentNode;
+           if (parent.localName == "menupopup")
+             parent.closePopup();
+         }
+      }
+
       var personalToolbar = document.getElementById("PersonalToolbar");
       if (aEvent.target == personalToolbar) return;
 
@@ -129,7 +140,17 @@ var personalToolbarObserver = {
       var linkCharset = aDragSession.sourceDocument ? aDragSession.sourceDocument.characterSet : null;
       // determine title of link
       var linkTitle;
-      if (xferData.length >= 2)
+      
+      // look it up in bookmarks
+      var bookmarksDS = gRDFService.GetDataSource("rdf:bookmarks");
+      var nameRes = RDFUtils.getResource(NC_RDF("Name"));
+      var nameFromBookmarks = bookmarksDS.GetTarget(elementRes, nameRes, true);
+      if (nameFromBookmarks)
+        nameFromBookmarks = nameFromBookmarks.QueryInterface(Components.interfaces.nsIRDFLiteral);
+      if (nameFromBookmarks) {
+        linkTitle = nameFromBookmarks.Value;
+      }
+      else if (xferData.length >= 2)
         linkTitle = xferData[1]
       else
         {
@@ -199,7 +220,12 @@ var personalToolbarObserver = {
 
   onDragOver: function (aEvent, aFlavour, aDragSession)
     {
-      var dropPosition = this.determineDropPosition(aEvent);
+      var dropPosition
+      if (aEvent.target.getAttribute("type") == "http://home.netscape.com/NC-rdf#Folder"
+          && aEvent.target.getAttribute("container") == "true")
+        dropPosition = this.DROP_ON;
+      else
+        dropPosition = this.determineDropPosition(aEvent);
 
       // bail if drop target is not a valid bookmark item or folder
       var inner = document.getElementById("innermostBox");
@@ -304,7 +330,10 @@ var personalToolbarObserver = {
             return RDFUtils.getResource(menu.id);
           case "treecell":
             var treeitem = aElement.parentNode.parentNode.parentNode.parentNode;
-            return RDFUtils.getResource(treeitem.id);
+            var res = treeitem.getAttribute("ref");
+            if (!res)
+              res = treeitem.id;            
+            return RDFUtils.getResource(res);
         }
       return null;
     },
