@@ -36,48 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-function toNavigator()
-{
-  if (!CycleWindow("navigator:browser"))
-    OpenBrowserWindow();
-}
-
-function toDownloadManager()
-{
-  var dlmgr = Components.classes['@mozilla.org/download-manager;1'].getService();
-  dlmgr = dlmgr.QueryInterface(Components.interfaces.nsIDownloadManager);
-
-  var windowMediator = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
-  windowMediator = windowMediator.QueryInterface(Components.interfaces.nsIWindowMediator);
-
-  var dlmgrWindow = windowMediator.getMostRecentWindow("Download:Manager");
-  if (dlmgrWindow) {
-    dlmgrWindow.focus();
-  }
-  else {
-    dlmgr.open(window);
-  }
-}
-  
 function toJavaScriptConsole()
 {
     toOpenWindowByType("global:console", "chrome://global/content/console.xul");
-}
-
-function javaItemEnabling()
-{
-    var element = document.getElementById("java");
-    if (navigator.javaEnabled())
-      element.removeAttribute("disabled");
-    else
-      element.setAttribute("disabled", "true");
-}
-            
-function toJavaConsole()
-{
-    var jvmMgr = Components.classes['@mozilla.org/oji/jvm-mgr;1']
-                            .getService(Components.interfaces.nsIJVMManager)
-    jvmMgr.showJavaConsole();
 }
 
 function toOpenWindowByType( inType, uri )
@@ -94,33 +55,6 @@ function toOpenWindowByType( inType, uri )
 		window.open(uri, "_blank", "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
 }
 
-
-function OpenBrowserWindow()
-{
-  var charsetArg = new String();
-  var handler = Components.classes['@mozilla.org/commandlinehandler/general-startup;1?type=browser'];
-  handler = handler.getService();
-  handler = handler.QueryInterface(Components.interfaces.nsICmdLineHandler);
-  var startpage = handler.defaultArgs;
-  var url = handler.chromeUrlForTask;
-  var wintype = document.firstChild.getAttribute('windowtype');
-
-  // if and only if the current window is a browser window and it has a document with a character
-  // set, then extract the current charset menu setting from the current document and use it to
-  // initialize the new browser window...
-  if (window && (wintype == "navigator:browser") && window._content && window._content.document)
-  {
-    var DocCharset = window._content.document.characterSet;
-    charsetArg = "charset="+DocCharset;
-
-    //we should "inherit" the charset menu setting in a new window
-    window.openDialog(url, "_blank", "chrome,all,dialog=no", startpage, charsetArg);
-  }
-  else // forget about the charset information.
-  {
-    window.openDialog(url, "_blank", "chrome,all,dialog=no", startpage);
-  }
-}
 
 function CycleWindow( aType )
 {
