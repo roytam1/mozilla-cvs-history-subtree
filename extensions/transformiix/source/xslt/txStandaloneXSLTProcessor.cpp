@@ -187,6 +187,7 @@ txStandaloneXSLTProcessor::transform(Document* aXMLDoc, ostream& aOut,
 
     nsRefPtr<txStylesheet> style;
     nsresult rv = TX_CompileStylesheetPath(stylePath, getter_AddRefs(style));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // transform
     rv = transform(aXMLDoc, style, aOut, aErr);
