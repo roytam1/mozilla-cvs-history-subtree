@@ -123,6 +123,16 @@ static void blinkRgn(RgnHandle rgn);
 
 #pragma mark -
 
+static void SetSafePort()
+{
+  static CGrafPtr sSafePort = NULL;
+  if (!sSafePort)
+    sSafePort = ::CreateNewPort();
+  
+  if (sSafePort)
+    SetPort(sSafePort);
+}
+
 //
 // Convenience routines to go from a gecko rect to cocoa NSRects and back
 //
@@ -2240,8 +2250,8 @@ nsChildView::Idle()
 
 - (void) dealloc
 {
-  //NSLog(@"view dealloc setting port to %x", _savePort);
-  [super dealloc];
+  [super dealloc];    // this sets the current port to _savePort
+  SetSafePort();
 }
 
 
@@ -2532,8 +2542,6 @@ nsChildView::Idle()
 
 - (void)otherMouseDown:(NSEvent *)theEvent
 {
-  NSLog(@"otherMouseDown");
-
   nsMouseEvent geckoEvent;
   geckoEvent.eventStructType = NS_MOUSE_EVENT;
   geckoEvent.nativeMsg = nsnull;
