@@ -261,26 +261,24 @@ nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
 {
    nsresult rv;
 
-   nsXPIDLCString path;
-   rv = GetPath(getter_Copies(path));
-   if (NS_SUCCEEDED(rv) && nsCRT::strlen((const char *)path)) {
-    if (PL_strchr((const char *)path, '@') || PL_strstr((const char *)path,"%40")) {
-      // this is a message id url, perhaps we should return the msgFolder for the server?
-      return NS_ERROR_FAILURE;
-    }
+   if (mOriginalMessageURI.IsEmpty()) {
+    // this could be a autosubscribe url (news://host/group)
+    // or a message id url (news://host/message-id)
+    // either way, we won't have a msgFolder for you
+    return NS_ERROR_UNEXPECTED;
    }
 
    nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
    NS_ENSURE_SUCCESS(rv,rv);
 
    nsMsgKey msgKey;
-   rv = nntpService->DecomposeNewsURI(mURI.get(), msgFolder, &msgKey);
+   rv = nntpService->DecomposeNewsURI(mOriginalMessageURI.get(), msgFolder, &msgKey);
    NS_ENSURE_SUCCESS(rv,rv);
    return NS_OK;
 }
 
 NS_IMETHODIMP 
-nsNntpUrl::GetFolderCharset(PRUnichar ** aCharacterSet)
+nsNntpUrl::GetFolderCharset(PRUnichar **aCharacterSet)
 {
   nsCOMPtr<nsIMsgFolder> folder;
   nsresult rv = GetMsgFolder(getter_AddRefs(folder));

@@ -3205,7 +3205,6 @@ PRInt32 nsNNTPProtocol::FigureNextChunk()
 	  if (NS_FAILED(rv)) return status;
 	}
 										 
-
 	if (m_numArticlesLoaded >= m_numArticlesWanted) 
 	{
 	  m_nextState = NEWS_PROCESS_XOVER;
@@ -3221,6 +3220,7 @@ PRInt32 nsNNTPProtocol::FigureNextChunk()
       rv = m_runningURL->GetGetOldMessages(&getOldMessages);
       if (NS_FAILED(rv)) return status;
     }
+
     rv = m_newsgroupList->SetGetOldMessages(getOldMessages);
     if (NS_FAILED(rv)) return status;
     
@@ -3232,7 +3232,6 @@ PRInt32 nsNNTPProtocol::FigureNextChunk()
       &(m_firstArticle),
       &(m_lastArticle),
       &status);
-	
 
 	if (NS_FAILED(rv)) return status;
 

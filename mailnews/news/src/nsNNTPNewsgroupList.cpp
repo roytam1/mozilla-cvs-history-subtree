@@ -156,7 +156,7 @@ openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialo
 {
     nsresult rv;
 
-	if (!aMsgWindow) return NS_ERROR_NULL_POINTER;
+    NS_ENSURE_ARG_POINTER(aMsgWindow);
 
 	nsCOMPtr<nsIDocShell> docShell;
 	rv = aMsgWindow->GetRootDocShell(getter_AddRefs(docShell));
@@ -202,19 +202,20 @@ openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL, nsINewsDownloadDialo
 }       
 
 nsresult
-nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
+nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow *aMsgWindow,
                                               PRInt32 first_possible,
                                               PRInt32 last_possible,
                                               PRInt32 maxextra,
-                                              PRInt32* first,
-                                              PRInt32* last,
+                                              PRInt32 *first,
+                                              PRInt32 *last,
                                               PRInt32 *status)
 {
 	nsresult rv = NS_OK;
 
-	NS_ASSERTION(first && last, "no first or no last");
-	if (!first || !last) return NS_MSG_FAILURE;
-
+    NS_ENSURE_ARG_POINTER(first);
+    NS_ENSURE_ARG_POINTER(last);
+    NS_ENSURE_ARG_POINTER(status);
+    
 	*first = 0;
 	*last = 0;
 
@@ -222,7 +223,7 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
     NS_ENSURE_SUCCESS(rv,rv);
 
 	if (!m_newsDB) {
-      rv = folder->GetMsgDatabase(nsnull /* msgWindow */, getter_AddRefs(m_newsDB));
+      rv = folder->GetMsgDatabase(nsnull /* use aMsgWindow? */, getter_AddRefs(m_newsDB));
 	}
 	
     nsCOMPtr<nsINewsDatabase> db(do_QueryInterface(m_newsDB, &rv));
@@ -285,7 +286,7 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
     
 	if (maxextra <= 0 || last_possible < first_possible || last_possible < 1) 
 	{
-	  if (status) *status=0;
+	  *status=0;
       return NS_OK;
 	}
 
@@ -323,7 +324,7 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
             m_knownArts.set->LastMissingRange(first_possible, last_possible,
                                               first, last);
 		if (result < 0) {
-            if (status) *status=result;
+            *status=result;
 			return NS_ERROR_NOT_INITIALIZED;
         }
 		if (*first > 0 && *last - *first >= maxextra) 
@@ -354,12 +355,26 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
                 rv = args->SetServerKey((const char *)serverKey);
                 NS_ENSURE_SUCCESS(rv,rv);
 
-				rv = openWindow(aMsgWindow, DOWNLOAD_HEADERS_URL, args);
-                NS_ENSURE_SUCCESS(rv,rv);
+                // we many not have a msgWindow if we are running an autosubscribe url from the browser
+                // and there isn't a 3 pane open.
+                //
+                // if we don't have one, bad things will happen when we fail to open up the "download headers dialog"
+                // (we will subscribe to the newsgroup, but it will appear like there are no messages!)
+                //
+                // for now, act like the "download headers dialog" came up, and the user hit cancel.  (very safe)
+                //
+                // TODO, figure out why we aren't opening and using a 3 pane when the autosubscribe url is run.
+                // perhaps we can find an available 3 pane, and use it.
 
-                PRBool download = PR_TRUE;  
-                rv = args->GetHitOK(&download);
-                NS_ENSURE_SUCCESS(rv,rv);
+                PRBool download = PR_FALSE;  
+
+                if (aMsgWindow) {
+			  	  rv = openWindow(aMsgWindow, DOWNLOAD_HEADERS_URL, args);
+                  NS_ENSURE_SUCCESS(rv,rv);
+
+                  rv = args->GetHitOK(&download);
+                  NS_ENSURE_SUCCESS(rv,rv);
+                }
 
 				if (download) {
                     rv = args->GetDownloadAll(&m_downloadAll);
@@ -397,7 +412,7 @@ nsNNTPNewsgroupList::GetRangeOfArtsToDownload(nsIMsgWindow * aMsgWindow,
 
 	m_firstMsgToDownload = *first;
 	m_lastMsgToDownload = *last;
-    if (status) *status=0;
+    *status=0;
 	return NS_OK;
 }
 
