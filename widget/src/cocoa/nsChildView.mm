@@ -1972,6 +1972,16 @@ NS_IMETHODIMP nsChildView::WidgetToScreen(const nsRect& aLocalRect, nsRect& aGlo
   ConvertGeckoToCocoaRect(aLocalRect, temp);
   temp = [mView convertRect:temp toView:nil];                       // convert to window coords
   temp.origin = [[mView getNativeWindow] convertBaseToScreen:temp.origin];   // convert to screen coords
+
+  // need to flip the point relative to the main screen
+  if ([NSScreen screens])   // paranoia
+  {
+    // "global" coords are relative to the upper left of the main screen,
+    // which is the first screen in the array (not [NSScreen mainScreen]).
+    NSRect mainScreenFrame = [[[NSScreen screens] objectAtIndex:0] frame];
+    temp.origin.y = NSMaxY(mainScreenFrame) - temp.origin.y;
+  }
+
   ConvertCocoaToGeckoRect(temp, aGlobalRect);
     
   return NS_OK;
@@ -1989,6 +1999,16 @@ NS_IMETHODIMP nsChildView::ScreenToWidget(const nsRect& aGlobalRect, nsRect& aLo
 {
   NSRect temp;
   ConvertGeckoToCocoaRect(aGlobalRect, temp);
+
+  // need to flip the point relative to the main screen
+  if ([NSScreen screens])   // paranoia
+  {
+    // "global" coords are relative to the upper left of the main screen,
+    // which is the first screen in the array (not [NSScreen mainScreen]).
+    NSRect mainScreenFrame = [[[NSScreen screens] objectAtIndex:0] frame];
+    temp.origin.y = NSMaxY(mainScreenFrame) - temp.origin.y;
+  }
+
   temp.origin = [[mView getNativeWindow] convertScreenToBase:temp.origin];   // convert to screen coords
   temp = [mView convertRect:temp fromView:nil];                     // convert to window coords
   ConvertCocoaToGeckoRect(temp, aLocalRect);
