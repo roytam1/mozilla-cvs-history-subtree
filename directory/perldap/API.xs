@@ -184,8 +184,9 @@ avref2charptrptr(SV *avref)
    SV **current_val;
    char **tmp_cpp;
 
-   if (SvTYPE(SvRV(avref)) != SVt_PVAV ||
-        (avref_arraylen = av_len((AV *)SvRV(avref))) < 0)
+   if ((! SvROK(avref)) ||
+       (SvTYPE(SvRV(avref)) != SVt_PVAV) ||
+       ((avref_arraylen = av_len((AV *)SvRV(avref))) < 0))
    {
       return NULL;
    }
@@ -212,8 +213,9 @@ avref2berptrptr(SV *avref)
    char *tmp_char,*tmp2;
    struct berval **tmp_ber;
 
-   if (SvTYPE(SvRV(avref)) != SVt_PVAV || 
-        (avref_arraylen = av_len((AV *)SvRV(avref))) < 0)
+   if ((! SvROK(avref)) ||
+       (SvTYPE(SvRV(avref)) != SVt_PVAV) || 
+       ((avref_arraylen = av_len((AV *)SvRV(avref))) < 0))
    {
       return NULL;
    }
