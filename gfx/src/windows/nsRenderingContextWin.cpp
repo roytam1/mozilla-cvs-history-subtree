@@ -3785,3 +3785,101 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 
 
 
+
+
+#include "nsSize2.h"
+#include "nsRect2.h"
+#include "nsPoint2.h"
+#include "nsUnitConverters.h"
+#include "nsIImageContainer.h"
+#include "nsIImageFrame.h"
+
+/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
+NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIImageFrame> img;
+  rv = aImage->GetCurrentFrame(getter_AddRefs(img));
+
+  if (NS_FAILED(rv))
+    return rv;
+
+#if 1
+  // XXX this is ugly.
+  nsPoint2 pt;
+  nsRect2 sr;
+
+	pt = *aDestPoint;
+	mTranMatrix->Transform(&pt.x, &pt.y);
+
+  sr = *aSrcRect;
+//	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
+#endif
+
+  PRUint32 len;
+  PRUint8 *bits;
+  rv = img->GetBits(&bits, &len);
+  if (NS_FAILED(rv))
+    return rv;
+
+  nsSize2 size;
+  img->GetWidth(&size.width);
+  img->GetHeight(&size.height);
+
+  PRUint32 bpr;
+  img->GetBytesPerRow(&bpr);
+
+  LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
+
+  mBHead->biSize = sizeof(BITMAPINFOHEADER);
+	mBHead->biWidth = GFXCoordToIntCeil(size.width);
+	mBHead->biHeight = -GFXCoordToIntCeil(size.height - sr.y);
+	mBHead->biPlanes = 1;
+	mBHead->biBitCount = 24; // XXX
+	mBHead->biCompression = BI_RGB;
+	mBHead->biSizeImage = len;            // not compressed, so we dont need this to be set
+	mBHead->biXPelsPerMeter = 0;
+	mBHead->biYPelsPerMeter = 0;
+	mBHead->biClrUsed = 0;
+	mBHead->biClrImportant = 0;
+
+
+  HBITMAP memBM = ::CreateDIBitmap(mDC,mBHead,CBM_INIT,bits + PRInt32(sr.y * bpr),(LPBITMAPINFO)mBHead,
+				                           DIB_RGB_COLORS);
+
+//  void* oldThing = ::SelectObject(mDC, memBM);
+
+//	mBHead->biHeight = -mBHead->biHeight;
+
+
+  ::StretchDIBits(mDC, pt.x, pt.y, sr.width, sr.height,
+    sr.x, 0, sr.width, sr.height, bits, (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
+
+
+//  ::SelectObject(mDC, oldThing);
+
+  DeleteObject(memBM);
+
+  delete[] mBHead;
+
+    return NS_OK;
+}
+
+/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

@@ -199,6 +199,12 @@ public:
                      PRInt32*           aFontID);
 #endif
 
+  NS_IMETHOD DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint);
+  NS_IMETHOD DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect);
+  NS_IMETHOD DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect);
+  NS_IMETHOD DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect);
+
+
 protected:
   void SetupFontAndColor(void);
 

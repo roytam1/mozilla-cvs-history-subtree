@@ -115,7 +115,7 @@ nsTransform2D       *theTransform;
 
       // copy the initial image to our buffer, this takes twips and converts to pixels.. 
       // which is what the image is in
-      this->DrawImage(aImage,0,0,aWidth,aHeight);
+      NS_STATIC_CAST(nsIRenderingContext*, this)->DrawImage(aImage,0,0,aWidth,aHeight);
 
       // duplicate the image in the upperleft corner to fill up the nsDrawingSurface
       srcRect.SetRect(0,0,aWidth,aHeight);
@@ -143,7 +143,7 @@ nsTransform2D       *theTransform;
     // slow blitting, one tile at a time.... ( will create a mask and fall into code below -next task-)
     for(y=aY0;y<aY1;y+=aHeight){
       for(x=aX0;x<aX1;x+=aWidth){
-        this->DrawImage(aImage,x,y,aWidth,aHeight);
+        NS_STATIC_CAST(nsIRenderingContext*, this)->DrawImage(aImage,x,y,aWidth,aHeight);
       }
     }
   }
@@ -662,4 +662,29 @@ float         avx,avy,av1x,av1y;
   }
 
   return result;
+}
+
+
+/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

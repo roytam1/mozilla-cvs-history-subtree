@@ -44,6 +44,12 @@ struct nsRect;
 struct nsBoundingMetrics;
 #endif
 
+
+/* gfx2 */
+#include "gfxtypes.h"
+class nsIImageContainer;
+
+
 //cliprect/region combination methods
 
 typedef enum
@@ -756,6 +762,21 @@ public:
                      nsBoundingMetrics& aBoundingMetrics,
                      PRInt32*           aFontID = nsnull) = 0;
 #endif
+
+  /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
+  NS_IMETHOD DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint) = 0;
+
+  /* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+  NS_IMETHOD DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect) = 0;
+
+  /* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
+  NS_IMETHOD DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect) = 0;
+
+  /* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
+  NS_IMETHOD DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect) = 0;
+
+
+
 };
 
 //modifiers for text rendering
