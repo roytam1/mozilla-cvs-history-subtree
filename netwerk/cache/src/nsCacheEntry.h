@@ -122,8 +122,13 @@ public:
         eStreamDataMask      = 0x00001000,
         eActiveMask          = 0x00002000,
         eInitializedMask     = 0x00004000,
-        eValidMask           = 0x00008000
+        eValidMask           = 0x00008000,
+        eBindingMask         = 0x00010000
     };
+    
+    void MarkBinding()         { mFlags |=  eBindingMask; }
+    void ClearBinding()        { mFlags &= ~eBindingMask; }
+    PRBool IsBinding()         { return (mFlags & eBindingMask) != 0; }
 
     void MarkEntryDirty()      { mFlags |=  eEntryDirtyMask; }
     void MarkEntryClean()      { mFlags &= ~eEntryDirtyMask; }

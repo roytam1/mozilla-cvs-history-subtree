@@ -155,6 +155,10 @@ nsMemoryCacheDevice::DeactivateEntry(nsCacheEntry * entry)
 #if debug
         // XXX verify we've removed it from mMemCacheEntries & eviction list
 #endif
+        // update statistics
+        mTotalSize    -= entry->Size();
+        --mEntryCount;
+
         delete entry;
         return NS_OK;
     }
@@ -177,15 +181,17 @@ nsMemoryCacheDevice::BindEntry(nsCacheEntry * entry)
 {
     NS_ASSERTION(PR_CLIST_IS_EMPTY(entry),"entry is already on a list!");
 
-    // append entry to the eviction list
-    PR_APPEND_LINK(entry, &mEvictionList);
+	if (!entry->IsDoomed()) {
+        // append entry to the eviction list
+	    PR_APPEND_LINK(entry, &mEvictionList);
 
-    // add entry to hashtable of mem cache entries
-    nsresult  rv = mMemCacheEntries.AddEntry(entry);
-    if (NS_FAILED(rv)) {
-        PR_REMOVE_AND_INIT_LINK(entry);
-        return rv;
-    }
+        // add entry to hashtable of mem cache entries
+        nsresult  rv = mMemCacheEntries.AddEntry(entry);
+        if (NS_FAILED(rv)) {
+            PR_REMOVE_AND_INIT_LINK(entry);
+            return rv;
+        }
+	}
 
     // add size of entry to memory totals
     ++mEntryCount;
@@ -206,10 +212,6 @@ nsMemoryCacheDevice::DoomEntry(nsCacheEntry * entry)
 
     // remove entry from our eviction list
     PR_REMOVE_AND_INIT_LINK(entry);
-
-    // adjust our totals
-    mTotalSize    -= entry->Size();
-    mInactiveSize -= entry->Size();
 }
 
 

@@ -717,7 +717,9 @@ nsCacheService::EnsureEntryHasDevice(nsCacheEntry * entry)
 
     if (device == nsnull)  return nsnull;
 
+	entry->MarkBinding(); // XXX
     nsresult  rv = device->BindEntry(entry);
+    entry->ClearBinding(); // XXX
     if (NS_FAILED(rv)) return nsnull;
 
     entry->SetCacheDevice(device);
@@ -761,6 +763,7 @@ nsCacheService::DoomEntry_Locked(nsCacheEntry * entry)
     nsresult  rv = NS_OK;
     entry->MarkDoomed();
 
+	NS_ASSERTION(!entry->IsBinding(), "Dooming entry while binding device.");
     nsCacheDevice * device = entry->CacheDevice();
     if (device)  device->DoomEntry(entry);
 
@@ -846,9 +849,7 @@ nsCacheService::CloseDescriptor(nsCacheEntryDescriptor * descriptor)
     nsresult       rv          = NS_OK;
 
     if (!entry->IsValid()) {
-        if (PR_CLIST_IS_EMPTY(&entry->mRequestQ)) {
-            rv = ProcessPendingRequests(entry);
-        }
+        rv = ProcessPendingRequests(entry);
     }
 
     if (!stillActive) {
