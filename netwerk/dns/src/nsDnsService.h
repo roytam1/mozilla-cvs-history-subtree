@@ -122,11 +122,15 @@ private:
 #if defined(XP_WIN)
     friend static
     LRESULT CALLBACK        nsDNSEventProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    LRESULT                 ProcessLookup( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    PRUint32                AllocMsgID( void);
-    void                    FreeMsgID( PRUint32 msgID);
+public:
 
+    PRUint32                AllocMsgID( void);
     HWND                    mDNSWindow;
+
+private:
+    void                    FreeMsgID( PRUint32 msgID);
+	LRESULT                 ProcessLookup( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+ 
     PRUint32                mMsgIDBitVector[4];
 #endif /* XP_WIN */
 

@@ -191,9 +191,10 @@ public:
                                                     OTEventCode  code,
                                                     OTResult     result,
                                                     void *       cookie);
-
-    void                ConvertHostEntry();
+public:
+    void               ConvertHostEntry();
     PRBool              mStringToAddrComplete;
+private:
     InetHostInfo        mInetHostInfo;
 
 #define GET_LOOKUP_FROM_ELEM(_this) \
@@ -462,6 +463,9 @@ nsDNSLookup::nsDNSLookup()
     , mComplete(PR_FALSE)
     , mCacheable(PR_TRUE)
     , mExpires(0)
+#if defined(XP_UNIX)
+    , mNextLookup(nsnull)
+#endif
 {
 	NS_INIT_REFCNT();
 	MOZ_COUNT_CTOR(nsDNSLookup);
@@ -882,7 +886,8 @@ nsDNSService::nsDNSService()
 NS_IMETHODIMP
 nsDNSService::Init()
 {
-    nsresult rv = NS_OK;
+    nsresult rv     = NS_OK;
+	PRStatus status = PR_SUCCESS;
 
     NS_ASSERTION(mDNSServiceLock == nsnull, "nsDNSService not shut down");
     if (mDNSServiceLock)  return NS_ERROR_ALREADY_INITIALIZED;
@@ -916,6 +921,7 @@ nsDNSService::Init()
 #endif
 
 #if defined(XP_WIN)
+	{
     nsAutoLock  dnsLock(mDNSServiceLock);
 #endif
 
@@ -929,13 +935,16 @@ nsDNSService::Init()
 
 #if defined(XP_WIN)
     // sync with DNS thread to allow it to create the DNS window
-    PRStatus  status = PR_WaitCondVar(mDNSCondVar, PR_INTERVAL_NO_TIMEOUT);
+    status = PR_WaitCondVar(mDNSCondVar, PR_INTERVAL_NO_TIMEOUT);
     NS_ASSERTION(status == PR_SUCCESS, "PR_WaitCondVar failed.");
 #endif
 
     mState = DNS_RUNNING;
     return NS_OK;
 
+#if defined(XP_WIN)
+    }
+#endif
 error_exit:
 
 #if defined(XP_UNIX) || defined(XP_WIN)
@@ -1617,7 +1626,6 @@ LRESULT
 nsDNSService::ProcessLookup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     nsAutoLock    dnsLock(mDNSServiceLock);
-    nsDNSLookup * lookup = nsnull;
 
     // walk pending queue to find lookup for this (HANDLE)wParam
     nsDNSLookup * lookup = (nsDNSLookup *)PR_LIST_HEAD(&mPendingQ);
@@ -1630,14 +1638,14 @@ nsDNSService::ProcessLookup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     
     
     int error = WSAGETASYNCERROR(lParam);
-    nsresult rv = lookup->MarkComplete(error ? NS_ERROR_UNKNOWN_HOST : NS_OK);
+    lookup->MarkComplete(error ? NS_ERROR_UNKNOWN_HOST : NS_OK);
     FreeMsgID(lookup->mMsgID);
 
     PR_REMOVE_AND_INIT_LINK(lookup);
     lookup->ProcessRequests();
     AddToEvictionQ(lookup);
 
-    return NS_SUCCEEDED(rv) ? 0 : -1;
+    return error ? -1 : 0;
 }
 
 
