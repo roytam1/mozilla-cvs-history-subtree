@@ -22,14 +22,10 @@
 #include "nsIAllocator.h"
 #include "nsStorageStream.h"
 
-#define MEM_CACHE_SEGMENT_SIZE       (1 << 12)
-#define MEM_CACHE_MAX_ENTRY_SIZE     (1 << 20)
-
 static NS_DEFINE_IID(kINetDataCacheRecord, NS_INETDATACACHERECORD_IID);
 
 nsMemCacheRecord::nsMemCacheRecord()
-    : mKey(0), mKeyLength(0), mMetaData(0), mMetaDataLength(0),
-      mDeletePending(0)
+    : mKey(0), mKeyLength(0), mMetaData(0), mMetaDataLength(0), mNumChannels(0)
 {
     NS_INIT_REFCNT();
 }
@@ -43,7 +39,6 @@ nsMemCacheRecord::~nsMemCacheRecord()
 }	
      
 NS_IMPL_ISUPPORTS(nsMemCacheRecord, NS_GET_IID(nsINetDataCacheRecord))
-    // Fixme: on refcount == 1, process deletePending, truncatePending flags
 
 NS_IMETHODIMP
 nsMemCacheRecord::GetKey(PRUint32 *aLength, char **aResult)
@@ -128,14 +123,21 @@ nsMemCacheRecord::GetStoredContentLength(PRUint32 *aStoredContentLength)
 NS_IMETHODIMP
 nsMemCacheRecord::SetStoredContentLength(PRUint32 aStoredContentLength)
 {
-    return mStorageStream->SetLength(aStoredContentLength);
+    PRUint32 before, after;
+    mStorageStream->GetLength(&before);
+    nsresult rv = mStorageStream->SetLength(aStoredContentLength);
+    mStorageStream->GetLength(&after);
+    mCache->mOccupancy -= (before - after);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsMemCacheRecord::Delete(void)
 {
-    mDeletePending = true;
-    return NS_OK;
+    if (mNumChannels)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    return mCache->Delete(this);
 }
 
 NS_IMETHODIMP

@@ -31,6 +31,12 @@
 
 #include "nsINetDataCache.h"
 
+// Maximum number of URIs that may be resident in the cache
+#define MEM_CACHE_MAX_ENTRIES 1000
+
+#define MEM_CACHE_SEGMENT_SIZE       (1 << 12)
+#define MEM_CACHE_MAX_ENTRY_SIZE     (1 << 20)
+
 class nsHashtable;
 class nsMemCacheRecord;
 
@@ -69,6 +75,7 @@ protected:
     NS_METHOD Delete(nsMemCacheRecord* aRecord);
 
     friend class nsMemCacheRecord;
+    friend class nsMemCacheChannel;
 };
 
 #endif // _nsMemCache_h_

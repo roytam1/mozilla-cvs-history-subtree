@@ -22,9 +22,10 @@
 #include "nsMemCacheRecord.h"
 #include "nsIChannel.h"
 #include "nsIInputStream.h"
-#include "nsIStreamListener.h"
 #include "nsCOMPtr.h"
 
+
+class AsyncReadStreamAdaptor;
 
 class nsMemCacheChannel : public nsIChannel
 {
@@ -43,12 +44,15 @@ public:
     NS_DECL_NSICHANNEL
 
 protected:
+    void NotifyStorageInUse(PRInt32 aBytesUsed);
 
     nsCOMPtr<nsMemCacheRecord>   mRecord;
     nsCOMPtr<nsIInputStream>     mInputStream;
-    nsCOMPtr<nsIStreamListener>  mStreamListener;
     nsCOMPtr<nsILoadGroup>       mLoadGroup;
     nsCOMPtr<nsISupports>        mOwner;
+    nsCOMPtr<AsyncReadStreamAdaptor>  mAsyncReadStream;
+
+    friend class WriteStreamWrapper;
 };
 
 #endif // _nsMemCacheChannel_h_

@@ -49,12 +49,11 @@ protected:
     char*       mMetaData;         // opaque URI metadata
     PRUint32    mMetaDataLength;   // length, in bytes, of mMetaData
 
-    bool        mDeletePending;    // destroy record on last Release() ?
-
     nsMemCache* mCache;            // weak pointer to the cache database
                                    //  that this record inhabits
 
     nsCOMPtr<nsIStorageStream> mStorageStream;
+    PRUint32    mNumChannels;      // Count un-Release'ed nsIChannels
 
     friend class nsMemCache;
     friend class nsMemCacheChannel;

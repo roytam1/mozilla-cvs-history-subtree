@@ -34,9 +34,6 @@
 #include "nsHashtableEnumerator.h"
 #include "nsEnumeratorUtils.h"
 
-// Maximum number of URIs that may be resident in the cache
-#define MEM_CACHE_MAX_ENTRIES 1000
-
 PRInt32 nsMemCache::gRecordSerialNumber = 0;
 
 nsMemCache::nsMemCache()
@@ -174,11 +171,11 @@ nsMemCache::GetCachedNetData(const char *aKey, PRUint32 aKeyLength,
         
         delete opaqueKey2;
         delete opaqueKey3;
+        mNumEntries++;
     }
 
     record->AddRef();
     *aRecord = record;
-    mNumEntries++;
     return NS_OK;
 
  out_of_memory:
@@ -210,7 +207,7 @@ nsMemCache::Delete(nsMemCacheRecord* aRecord)
     removedRecord = (nsMemCacheRecord*)mHashTable->Remove(&opaqueRecordIDKey);
     NS_ASSERTION(removedRecord == aRecord, "memory cache database inconsistent");
 
-    nsOpaqueKey opaqueKey(aRecord->mMetaData, aRecord->mMetaDataLength);
+    nsOpaqueKey opaqueKey(aRecord->mKey, aRecord->mKeyLength);
     removedRecord = (nsMemCacheRecord*)mHashTable->Remove(&opaqueKey);
     NS_ASSERTION(removedRecord == aRecord, "memory cache database inconsistent");
 
@@ -333,7 +330,10 @@ NS_IMETHODIMP
 nsMemCache::GetStorageInUse(PRUint32 *aStorageInUse)
 {
     NS_ENSURE_ARG(aStorageInUse);
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+    // Convert from bytes to KB
+    *aStorageInUse = (mOccupancy >> 10);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -357,9 +357,13 @@ nsMemCache::RemoveAll(void)
         
         iterator->GetNext(getter_AddRefs(recordSupports));
         record = do_QueryInterface(recordSupports);
+
+        PRUint32 bytesUsed;
+        record->GetStoredContentLength(&bytesUsed);
         rv = record->Delete();
         if (NS_FAILED(rv))
             break;
+        mOccupancy -= bytesUsed;
     }
 
     return rv;
