@@ -570,6 +570,7 @@ CDISTINCLUDES1= \
 !elseif defined(MOZ_JAVA)
     /I$(XPDIST)\public\applet \
     /I$(XPDIST)\public\softupdt \
+!endif
     /I$(XPDIST)\public\oji \
     /I$(XPDIST)\public\libreg \
     /I$(XPDIST)\public\hook \
