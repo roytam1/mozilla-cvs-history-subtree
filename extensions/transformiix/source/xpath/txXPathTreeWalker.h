@@ -73,7 +73,7 @@ class nsIDOMDocument;
 class txXPathTreeWalker
 {
 public:
-    explicit txXPathTreeWalker(const txXPathTreeWalker& aOther);
+    txXPathTreeWalker(const txXPathTreeWalker& aOther);
     explicit txXPathTreeWalker(const txXPathNode& aNode);
     ~txXPathTreeWalker();
 
