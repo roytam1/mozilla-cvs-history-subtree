@@ -98,9 +98,17 @@ nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
   }
 
   PRBool sourceExists;
-  rv = bpm->GetSourceExists(&sourceExists);
-  NS_ENSURE_SUCCESS(rv, rv);
-  if (!sourceExists) return NS_ERROR_FAILURE;
+  bpm->GetSourceExists(&sourceExists);
+  if (!sourceExists) {
+#ifdef XP_WIN
+    // The "Default Browser" key in the registry was set to a browser for which
+    // no profile data exists. On Windows, this means the Default Browser settings
+    // in the registry are bad, and we should just fall back to IE in this case.
+    bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie");
+#else
+    return NS_ERROR_FAILURE;
+#endif
+  }
 
   nsCOMPtr<nsISupportsCString> cstr
     (do_CreateInstance("@mozilla.org/supports-cstring;1"));
