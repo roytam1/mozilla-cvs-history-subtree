@@ -188,7 +188,7 @@ struct Components {
 };
 
 // The list of components we register
-static Components gComponents[] = {
+Components NSGetModule_components[] = {
     { "Mail DB", &kCMailDB,
       nsnull },
     { "News DB", &kCNewsDB,
@@ -202,7 +202,7 @@ static Components gComponents[] = {
 };
 
 
-#define NUM_COMPONENTS (sizeof(gComponents) / sizeof(gComponents[0]))
+PRUint32 NSGetModule_components_count =  (sizeof(NSGetModule_components) / sizeof(NSGetModule_components[0]));
 
 NS_IMETHODIMP nsMsgDBModule::RegisterSelf(nsIComponentManager *aCompMgr,
                                           nsIFile* aPath,
@@ -211,8 +211,8 @@ NS_IMETHODIMP nsMsgDBModule::RegisterSelf(nsIComponentManager *aCompMgr,
 {
     nsresult rv = NS_OK;
 
-    Components* cp = gComponents;
-    Components* end = cp + NUM_COMPONENTS;
+    Components* cp = NSGetModule_components;
+    Components* end = cp + NSGetModule_components_count;
     while (cp < end) 
     {
         rv = aCompMgr->RegisterComponentSpec(*cp->mCID, cp->mDescription,
@@ -229,8 +229,8 @@ NS_IMETHODIMP nsMsgDBModule::RegisterSelf(nsIComponentManager *aCompMgr,
 NS_IMETHODIMP nsMsgDBModule::UnregisterSelf(nsIComponentManager* aCompMgr, nsIFile* aPath, 
                                             const char* registryLocation)
 {
-    Components* cp = gComponents;
-    Components* end = cp + NUM_COMPONENTS;
+    Components* cp = NSGetModule_components;
+    Components* end = cp + NSGetModule_components_count;
     while (cp < end) 
     {
         aCompMgr->UnregisterComponentSpec(*cp->mCID, aPath);
