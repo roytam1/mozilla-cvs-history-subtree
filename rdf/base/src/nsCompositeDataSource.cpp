@@ -269,6 +269,9 @@ CompositeEnumeratorImpl::HasMoreElements(PRBool* aResult)
             rv = mCurrent->GetNext(getter_AddRefs(result));
             if (NS_FAILED(rv)) return rv;
 
+            if (!result)
+              continue;
+
             rv = result->QueryInterface(NS_GET_IID(nsIRDFNode), (void**) &mResult);
             if (NS_FAILED(rv)) return rv;
 
