@@ -327,8 +327,10 @@ js_SuspendThread(JSThinLock *p)
 
     while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1) /* busy wait */
 	PR_Sleep(PR_INTERVAL_NO_WAIT);
-    if (fl == NULL)
+    if (fl == NULL) {
+        js_AtomicSet((jsword*)&p->fat,(jsword)fl);
 	return 1;
+    }
     PR_Lock(fl->slock);
     js_AtomicSet((jsword*)&p->fat,(jsword)fl);
     fl->susp++;
@@ -353,8 +355,10 @@ js_ResumeThread(JSThinLock *p)
 
     while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1)
 	PR_Sleep(PR_INTERVAL_NO_WAIT);
-    if (fl == NULL)
+    if (fl == NULL) {
+        js_AtomicSet((jsword*)&p->fat,(jsword)fl);
 	return;
+    }
     PR_Lock(fl->slock);
     js_AtomicSet((jsword*)&p->fat,(jsword)fl);
     fl->susp--;
