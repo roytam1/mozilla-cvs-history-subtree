@@ -334,6 +334,7 @@ pref("print.xprint.font.rejectfontpattern",
 
 /* Xprint print module prefs */
 pref("print.xprint.font.force_outline_scaled_fonts", true);
+pref("print.xprint.font.scale_bitmap_fonts_with_devscale", true);
 
 /* PostScript print module prefs */
 pref("print.postscript.paper_size",    "letter");
