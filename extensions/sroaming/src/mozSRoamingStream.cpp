@@ -239,7 +239,7 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
     if (NS_FAILED(rv))
         return rv;
 
-    /* nsIDialogParamBlock is a cool method to pass ints and strings
+    /* nsIDialogParamBlock is a method to pass ints and strings
        to and from XUL dialogs.
        To dialog (upon open)
          Int array
