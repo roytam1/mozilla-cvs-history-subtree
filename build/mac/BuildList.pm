@@ -129,9 +129,15 @@ sub BuildMozilla()
 		
 		BuildProject(":network:macbuild:network.mcp",													"Network$D.o");
 		
-		if ( $main::MOZ_LITE == 0 )
+		if ( $main::MOZ_MEDIUM == 1 || $main::MOZ_DARK == 1 )
 			{
 				BuildProject(":cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
+
+				if ( $main::MOZ_DARK == 1 )
+					{
+						BuildProject(":lib:libmsg:macbuild:MsgLib.mcp",						"MsgLib$D.o");
+						BuildProject(":cmd:macfe:MailNews:build:MailNews.mcp",				"MailNews$D.o");
+					}
 				
 				# Build the appropriate resources target
 				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
@@ -140,6 +146,8 @@ sub BuildMozilla()
 			{
 				# Build a project with dummy targets to make stub libraries
 				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"Composer$D.o");
+				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
+				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
 				
 				# Build the appropriate resources target
 				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Nav_Resources");
