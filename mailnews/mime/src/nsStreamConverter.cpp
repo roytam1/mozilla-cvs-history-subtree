@@ -314,7 +314,7 @@ NS_IMETHODIMP nsStreamConverter::QueryInterface(REFNSIID aIID, void** aInstanceP
 // nsStreamConverter definitions....
 ///////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutListener)
+NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutListener, nsIChannel *aChannel)
 {
 	nsresult rv = NS_OK;
 	if (!aURI || !aOutListener)
@@ -413,7 +413,7 @@ NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutList
 	// initialize our emitter
 	if (NS_SUCCEEDED(rv) && mEmitter)
 	{
-	  mEmitter->Initialize(aURI);
+	  mEmitter->Initialize(aURI, aChannel);
 	  mEmitter->SetPipe(mInputStream, mOutputStream);
 	  mEmitter->SetOutputListener(aOutListener);
 	}
@@ -434,9 +434,9 @@ NS_IMETHODIMP nsStreamConverter::GetContentType(char **aOutputContentType)
 	// since this method passes a string through an IDL file we need to use nsAllocator to allocate it 
 	// and not PL_strdup!
 	if (PL_strcasecmp(mOutputFormat, "raw") == 0)
-		*aOutputContentType = (char *) nsAllocator::Clone(UNKNOWN_CONTENT_TYPE, nsCRT::strlen(UNKNOWN_CONTENT_TYPE));
+		*aOutputContentType = (char *) nsAllocator::Clone(UNKNOWN_CONTENT_TYPE, nsCRT::strlen(UNKNOWN_CONTENT_TYPE) + 1);
 	else
-		*aOutputContentType = (char *) nsAllocator::Clone(mOutputFormat, nsCRT::strlen(mOutputFormat));
+		*aOutputContentType = (char *) nsAllocator::Clone(mOutputFormat, nsCRT::strlen(mOutputFormat) + 1);
 	return NS_OK;
 }
 
