@@ -32,7 +32,7 @@
 
 BEGIN { $| = 1; print "1..8\n"; }
 END {print "modinit  - not ok\n" unless $loaded;}
-use Mozilla::LDAP::API;
+use Mozilla::LDAP::API qw(:constant :api :ssl);
 $loaded = 1;
 print "modinit  - ok\n";
 
@@ -86,10 +86,6 @@ if (ldap_search_s($ld,$BASEDN,LDAP_SCOPE_SUBTREE,$filter,$attrs,0,$result) != LD
    print  "search   - not ok\n";
 }
 print "search   - ok\n";
-
-$status = ldap_parse_result($ld,$result,$a,$b,$c,$d,$e,0);
-
-print "parse    - ok	- $a:$b:$c:" . join(@{$d},":") . "\n";
 
 ##
 ## ldap_count_entries - Count Matched Entries

@@ -25,12 +25,12 @@
 #
 #############################################################################
 
-use Mozilla::LDAP::API;
+use Mozilla::LDAP::API (:api :constant);
 use strict;
 
 
-my $ldap_host = "ilms04.cig.mot.com";
-my $BASEDN = "o=Motorola,c=US";
+my $ldap_host = "localhost";
+my $BASEDN = "o=Org,c=US";
 my $filter = $ARGV[0];
 
 my $attrs = [];
