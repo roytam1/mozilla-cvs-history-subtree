@@ -5403,35 +5403,54 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
 
         // Ignore return value from execution, and don't block
         *aBlock = PR_FALSE;
+        return NS_OK;
+    }
+
+    // Try the XUL script cache, in case two XUL documents source the same
+    // .js file (e.g., strres.js from navigator.xul and utilityOverlay.xul).
+    // XXXbe the cache relies on aScriptProto's GC root!
+    PRBool useXULCache;
+    gXULCache->GetEnabled(&useXULCache);
+
+    if (useXULCache && IsChromeURI(aScriptProto->mSrcURI)) {
+        gXULCache->GetScript(aScriptProto->mSrcURI,
+                             NS_REINTERPRET_CAST(void**, &aScriptProto->mJSObject));
+
+        if (aScriptProto->mJSObject) {
+            rv = ExecuteScript(aScriptProto->mJSObject);
+
+            // Ignore return value from execution, and don't block
+            *aBlock = PR_FALSE;
+            return NS_OK;
+        }
+    }
+
+    // Set the current script prototype so that OnStreamComplete can report
+    // the right file if there are errors in the script.
+    NS_ASSERTION(!mCurrentScriptProto,
+                 "still loading a script when starting another load?");
+    mCurrentScriptProto = aScriptProto;
+
+    if (aScriptProto->mSrcLoading) {
+        // Another XULDocument load has started, which is still in progress.
+        // Remember to ResumeWalk this document when the load completes.
+        mNextSrcLoadWaiter = aScriptProto->mSrcLoadWaiters;
+        aScriptProto->mSrcLoadWaiters = this;
+        NS_ADDREF_THIS();
     }
     else {
-        // Set the current script prototype so that OnUnicharStreamComplete
-        // can get report the right file if there are errors in the script.
-        NS_ASSERTION(!mCurrentScriptProto,
-                     "still loading a script when starting another load?");
-        mCurrentScriptProto = aScriptProto;
+        nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
 
-        if (aScriptProto->mSrcLoading) {
-            // Another XULDocument load has started, which is still in progress.
-            // Remember to ResumeWalk this document when the load completes.
-            mNextSrcLoadWaiter = aScriptProto->mSrcLoadWaiters;
-            aScriptProto->mSrcLoadWaiters = this;
-            NS_ADDREF_THIS();
-        }
-        else {
-            nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
+        // N.B., the loader will be released in OnStreamComplete
+        nsIStreamLoader* loader;
+        rv = NS_NewStreamLoader(&loader, aScriptProto->mSrcURI, this, nsnull, group);
+        if (NS_FAILED(rv)) return rv;
 
-            // N.B., the loader will be released in OnUnicharStreamComplete
-            nsIStreamLoader* loader;
-            rv = NS_NewStreamLoader(&loader, aScriptProto->mSrcURI, this, nsnull, group);
-            if (NS_FAILED(rv)) return rv;
-
-            aScriptProto->mSrcLoading = PR_TRUE;
-        }
-
-        // Block until OnUnicharStreamComplete resumes us.
-        *aBlock = PR_TRUE;
+        aScriptProto->mSrcLoading = PR_TRUE;
     }
+
+    // Block until OnStreamComplete resumes us.
+    *aBlock = PR_TRUE;
     return NS_OK;
 }
 
@@ -5514,6 +5533,16 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         aStatus = rv;
         if (NS_SUCCEEDED(rv) && scriptProto->mJSObject) {
             rv = ExecuteScript(scriptProto->mJSObject);
+
+            // If the XUL cache is enabled, save the script object there in
+            // case different XUL documents source the same script.
+            PRBool useXULCache;
+            gXULCache->GetEnabled(&useXULCache);
+
+            if (useXULCache && IsChromeURI(scriptProto->mSrcURI)) {
+                gXULCache->PutScript(scriptProto->mSrcURI,
+                                     NS_REINTERPRET_CAST(void*, scriptProto->mJSObject));
+            }
         }
         // ignore any evaluation errors
     }

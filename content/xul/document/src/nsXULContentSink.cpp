@@ -1574,27 +1574,27 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
             globalObject->GetContext(getter_AddRefs(scriptContext));
             NS_ASSERTION(scriptContext != nsnull, "no prototype script context!");
 
-            // XXXbe If we want to pass a genuine nsIURI* to StartMuxedDocument,
-            // we must create the script's src URI object before we deserialize
-            // the one that was serialized for this script, just to select the
-            // mux!  Instead, let's cheat, by taking advantage of the nature of
-            // StartMuxedDocument's nsISupports* first formal parameter: pass
-            // this content sink instead.  The nsISupports* formal is used only
-            // as a ref-counted hash key; it's never QI'd to nsIURI or another
-            // interface type.
+            // XXXbe we must create the script's src URI object before we
+            // deserialize the one that was serialized for this script, just
+            // to select the mux!  We also must create the URI in case of a
+            // relative URI in the src attribute value.
             nsresult rv2 = NS_OK;
-            nsISupports* srcKey = NS_STATIC_CAST(nsISupports*, this);
+            nsCOMPtr<nsIURI> srcURI;
             if (! src.IsEmpty()) {
-                rv2 = fastLoadService->StartMuxedDocument(srcKey, NS_ConvertUCS2toUTF8(src).get());
-                if (NS_SUCCEEDED(rv2))
-                    rv2 = fastLoadService->SelectMuxedDocument(srcKey);
+                rv2 = NS_NewURI(getter_AddRefs(srcURI), src, mDocumentURL);
+                if (NS_SUCCEEDED(rv2)) {
+                    const char* srcspec = NS_ConvertUCS2toUTF8(src).get();
+                    rv2 = fastLoadService->StartMuxedDocument(srcURI, srcspec);
+                    if (NS_SUCCEEDED(rv2))
+                        rv2 = fastLoadService->SelectMuxedDocument(srcURI);
+                }
             }
 
             // XXXbe we should serialize everything, including line-number...
             rv = script->Deserialize(objectInput, scriptContext);
 
             if (! src.IsEmpty() && NS_SUCCEEDED(rv2))
-                rv2 = fastLoadService->EndMuxedDocument(srcKey);
+                rv2 = fastLoadService->EndMuxedDocument(srcURI);
             // XXXbe if (NS_FAILED(rv2)) AbortFastLoads...
         } else {
             // If there is a SRC attribute...
