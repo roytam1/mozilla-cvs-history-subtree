@@ -56,7 +56,7 @@ String::String(const UNICODE_CHAR* aSource,
     length = unicodeLength(aSource);
   }
   if (!ensureCapacity(length)) {
-    return
+    return;
   }
   memcpy(mBuffer, aSource, length * sizeof(UNICODE_CHAR));
   mLength = length;
