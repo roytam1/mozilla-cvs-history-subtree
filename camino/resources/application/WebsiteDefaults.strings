@@ -1,7 +1,0 @@
-HomePageDefault = "http://www.mozilla.org/projects/camino/homepage.html";
-SearchPageDefault = "http://www.google.com/";
-StartPageDefault = "http://www.mozilla.org/projects/camino/welcome.html";
-ThrobberPageDefault = "http://www.mozilla.org/projects/camino/";
-FeedbackPageDefault = "http://www.mozilla.org/projects/camino/feedback.html";
-InfoPageDefault = "http://www.mozilla.org/projects/camino/";
-RendezvousPageDefault="http://www.zeroconf.org/webbrowsers.html";
