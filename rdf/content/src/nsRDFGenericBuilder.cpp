@@ -1831,47 +1831,6 @@ RDFGenericBuilderImpl::EnsureElementHasGenericChild(nsIContent* parent,
     return NS_OK;
 }
 
-nsresult
-RDFGenericBuilderImpl::FindWidgetRootElement(nsIContent* aElement,
-                                             nsIContent** aWidgetElement)
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIAtom>       rootAtom;
-    if (NS_FAILED(rv = GetRootWidgetAtom(getter_AddRefs(rootAtom)))) {
-        return rv;
-    }
-
-    // walk up the tree until you find rootAtom
-    nsCOMPtr<nsIContent> element(do_QueryInterface(aElement));
-
-    while (element) {
-        PRInt32 nameSpaceID;
-        if (NS_FAILED(rv = element->GetNameSpaceID(nameSpaceID)))
-            return rv; // XXX fatal
-
-        if (nameSpaceID == kNameSpaceID_XUL) {
-            nsCOMPtr<nsIAtom> tag;
-            if (NS_FAILED(rv = element->GetTag(*getter_AddRefs(tag))))
-                return rv;
-
-            if (tag == rootAtom) {
-                *aWidgetElement = element;
-                NS_ADDREF(*aWidgetElement);
-                return NS_OK;
-            }
-        }
-
-        // up to the parent...
-        nsCOMPtr<nsIContent> parent;
-        element->GetParent(*getter_AddRefs(parent));
-        element = parent;
-    }
-
-    //NS_ERROR("must not've started from within the XUL widget");
-    return NS_ERROR_FAILURE;
-}
-
 
 PRBool
 RDFGenericBuilderImpl::IsItemOrFolder(nsIContent* aElement)
