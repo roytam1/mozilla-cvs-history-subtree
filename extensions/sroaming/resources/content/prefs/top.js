@@ -39,19 +39,50 @@
 /* See all.js */
 
 var _elementIDs = []; // no prefs (nsIPref) needed, see above
+var addedHandler = false; /* Communicator's broken prefwindow
+                   makes onload/onunload trigger every time the user
+                   switches a pane (i.e. several times for the same pane).
+                   This does not happen with the tabs in Firebird, and while
+                   trying to make it work with both at once, I was almost
+                   going insane. This onload/onunload/okHandler stuff here is
+                   extremely fragile. This version happens to work, I don't
+                   know why, but I can't see it anymore, after fighting
+                   with it for maybe 2 days in Communicatior and slmost
+                   another day in Firebird, only on this
+                   onload/onunload/okHandler crap. */
 
-function Startup()
+function Load()
 {
+  parent.initPanel('chrome://sroaming/content/prefs/top.xul');
+
   // dataManager.pageData doesn't work, because it needs to work on both panes
   if (!parent.roaming)
     parent.roaming = new RoamingPrefs();
   DataToUI();
+
+  if (parent.firebird)
+  {
+    if (!parent.firebird.topLoad)
+      parent.firebird.topLoad = Load;
+    if (!parent.firebird.topUnload)
+      parent.firebird.topUnload = Unload;
+  }
+
+  if (!addedHandler)
+  {
+    addedHandler = true;
+    parent.hPrefWindow.registerOKCallbackFunc(function()
+    {
+      UIToData();
+      parent.roaming.okClicked();
+    });
+  }
 }
 
 
 // UI
 
-// write gData to widgets
+// write data to widgets
 function DataToUI()
 {
   var data = parent.roaming;

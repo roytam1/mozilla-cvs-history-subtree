@@ -43,7 +43,7 @@
 
 <page id="winPref"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-      onload="parent.initPanel('chrome://sroaming/content/prefs/files.xul');"
+      onload="Load();"
       onunload="Unload();"
       headertitle="&sroamingFiles-header.label;">
 
@@ -60,13 +60,10 @@
   <groupbox id="files" flex="1">
     <caption label="&files.label;" />
     <vbox flex="1">
+
 <!--
-      <label control="filesList"
-        value="&filesDescr.label;"
-        accesskey="&filesList.accesskey;" />
--->
-<!--
-  Defaults are set in the default pref "roaming.default.files".
+  Defaults are set in the default pref "roaming.default.files", displayed
+  names in filedescr.properties.
   If you want to hide something from the normal user, don't mark it hidden,
   but comment it out. Otherwise it will not show up as expected, if the user
   added it manually (in prefs.js).

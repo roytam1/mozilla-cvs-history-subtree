@@ -43,7 +43,7 @@
 
 <page id="winPref"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-      onload="parent.initPanel('chrome://sroaming/content/prefs/top.xul');"
+      onload="Load();"
       onunload="Unload();"
       headertitle="&sroaming-header.label;">
 

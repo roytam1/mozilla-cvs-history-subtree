@@ -15,11 +15,16 @@
 
   <!-- package information -->
   <RDF:Description about="urn:mozilla:package:sroaming"
-        chrome:displayName="Roaming per session"
-        chrome:author="Ben Bucksch"
         chrome:name="sroaming"
+        chrome:displayName="Roaming"
+        chrome:description="Session-Roaming up-/downloads selected profile files to/from a server during application shutdown/start, to faciliate working on different computers (but not at the same time)"
+        chrome:author="Ben Bucksch, Beonex"
+        chrome:authorURL="http://www.beonex.com"
         chrome:localeVersion="0.9.4"
-        chrome:skinVersion="1.0">
+        chrome:skinVersion="1.0"
+        chrome:extension="true"
+        chrome:settingsURL="chrome://sroaming/content/prefs/firebird.xul"
+        >
   </RDF:Description>
 
   <!-- overlay information -->

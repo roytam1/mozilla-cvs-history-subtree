@@ -16,9 +16,11 @@
 # Copyright (C) 1998-1999 Netscape Communications Corporation. All
 # Rights Reserved.
 
-prefsOverlay.js
 all.js
 top.xul
 top.js
 files.xul
 files.js
+prefsOverlay.js
+firebird.xul
+firebird.js

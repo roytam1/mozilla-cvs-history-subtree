@@ -38,18 +38,37 @@
 
 /* See all.js */
 
-const kXULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-
 var _elementIDs = []; // no prefs (nsIPref) needed, see above
+var addedHandler = false; // see top.js
 
-function Startup()
+function Load()
 {
+  parent.initPanel('chrome://sroaming/content/prefs/files.xul');
+
   FileLabels();
   SetFiles();
   // dataManager.pageData doesn't work, because it needs to work on both panes
   if (!parent.roaming)
     parent.roaming = new RoamingPrefs();
   DataToUI();
+
+  if (parent.firebird)
+  {
+    if (!parent.firebird.filesLoad)
+      parent.firebird.filesLoad = Load;
+    if (!parent.firebird.filesUnload)
+      parent.firebird.filesUnload = Unload;
+  }
+
+  if (!addedHandler)
+  {
+    addedHandler = true;
+    parent.hPrefWindow.registerOKCallbackFunc(function()
+    {
+      UIToData();
+      parent.roaming.okClicked();
+    });
+  }
 }
 
 
@@ -129,7 +148,7 @@ function DataToUI()
     }
     if (!found)
     {
-      var li = document.createElementNS(kXULNS, "listitem");
+      var li = document.createElement("listitem");
       if (li)
       {
         li.setAttribute("type", "checkbox");

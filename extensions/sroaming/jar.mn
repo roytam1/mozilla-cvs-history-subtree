@@ -13,6 +13,8 @@ sroaming.jar:
   content/sroaming/prefs/files.xul               (resources/content/prefs/files.xul)
   content/sroaming/prefs/files.js                (resources/content/prefs/files.js)
   content/sroaming/prefs/prefsOverlay.xul        (resources/content/prefs/prefsOverlay.xul)
+  content/sroaming/prefs/firebird.xul            (resources/content/prefs/firebird.xul)
+  content/sroaming/prefs/firebird.js             (resources/content/prefs/firebird.js)
   locale/en-US/sroaming/contents.rdf             (resources/locale/en-US/contents.rdf)
   locale/en-US/sroaming/transfer.properties      (resources/locale/en-US/transfer.properties)
   locale/en-US/sroaming/progressDialog.dtd       (resources/locale/en-US/progressDialog.dtd)

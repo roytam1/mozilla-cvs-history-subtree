@@ -45,7 +45,7 @@ var params = window.arguments[0].QueryInterface(
 var gIsDownload = true; // otherwise upload
 var gCount = 0; // number of files
 
-function StartUp()
+function Startup()
 {
   centerWindowOnScreen();
   LoadElements();

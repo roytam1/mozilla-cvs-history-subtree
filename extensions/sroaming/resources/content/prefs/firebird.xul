@@ -44,66 +44,46 @@
 
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
 
-<!DOCTYPE window SYSTEM "chrome://sroaming/locale/conflictResolve.dtd">
+<!DOCTYPE window SYSTEM "chrome://sroaming/locale/prefs.dtd">
 
 <dialog
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
-  xmlns:html="http://www.w3.org/1999/xhtml"
-  id="conflictResolve"
-  class="color-dialog"
-  title="&windowtitle.label;"
+  id="roamingPrefsFirebird"
+  class="color-dialog non-resizable"
+  title="&sroaming-header.label;"
   orient="vertical"
-  style="width: 60em;"
-  onload="Startup();"
-  ondialogaccept="return onOK();"
-  ondialogcancel="return onCancel();"
+  style="width: 41em; height: 41em;"
+  onload=""
+  ondialogaccept="return hPrefWindow.onOK();"
+  ondialogcancel="return hPrefWindow.onCancel();"
   >
 
   <script type="application/x-javascript"
-          src="chrome://sroaming/content/transfer/conflictResolve.js"/>
-  <script type="application/x-javascript"
-          src="chrome://sroaming/content/transfer/utility.js"/>
+          src="chrome://sroaming/content/prefs/firebird.js"/>
+  <script type="application/x-javascript">
+    var hPrefWindow = new nsPrefWindow();
+    var firebird = new Object();
+  </script>
 
-  <keyset id="dialogKeys"/>
+  <tabbox flex="1">
+    <tabs>
+      <tab label="&sroamingTop-header.label;"
+           oncommand="firebird.filesUnload(); firebird.topLoad();" />
+      <tab label="&sroamingTop-header.label;"
+           oncommand="firebird.topUnload(); firebird.filesLoad();" />
+    </tabs>
+    <tabpanels flex="1">
+      <tabpanel flex="1">
+        <iframe id="top"
+                src="chrome://sroaming/content/prefs/top.xul"
+                flex="1" />
+      </tabpanel>
+      <tabpanel flex="1">
+        <iframe id="files"
+                src="chrome://sroaming/content/prefs/files.xul"
+                flex="1" />
+      </tabpanel>
+    </tabpanels>
+  </tabbox>
 
-
-
-  <dialogheader class="header-large"
-                id="header"
-                title="&windowtitle.label;"
-                description="&subheader.label;"/>
-
-  <separator orient="vertical"/>
-
-  <deck id="intro">
-    <description style="width: 17em; border: 1px solid transparent;" flex="1">
-      &intro-download.label;
-    </description>
-    <description style="width: 17em; border: 1px solid transparent;" flex="1">
-      &intro-upload.label;
-    </description>
-  </deck>
-
-  <separator orient="vertical"/>
-
-  <!-- files with radios will be added here -->
-  <vbox valign="center">
-  <grid>
-    <columns>
-      <column flex="1"/>
-      <column flex="1"/>
-      <column flex="1"/>
-    </columns>
-    <rows id="filerows">
-      <row>
-        <description><html:b>&filedescr.label;</html:b></description>
-        <description><html:b>&server.label;</html:b></description>
-        <description><html:b>&local.label;</html:b></description>
-      </row>
-    </rows>
-  </grid>
-  </vbox>
-
-  <separator orient="vertical"/>
-  
 </dialog>

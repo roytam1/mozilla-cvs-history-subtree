@@ -37,6 +37,7 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <!ENTITY sroaming-header.label    "Roaming User">
+<!ENTITY sroamingTop-header.label "Server"> <!-- for Firebird -->
 <!ENTITY sroamingFiles-header.label "Item Selection">
 <!ENTITY descr.label              "Roaming Access allows you to retrieve and store your user profile information from/on a Roaming Access server. Your profile information will then be retrieved from the server on startup and transferred to it on shutdown.">
 <!ENTITY descrFiles.label         "If Roaming Access is enabled (in the Roaming User pane), the following parts of your profile will be transferred to and from the Roaming Access server.">
