@@ -138,6 +138,9 @@ CMainFrame::~CMainFrame()
 }
 
 
+#include "nsIDocument.h"
+#include "nsError.h"
+
 //
 // Create the ledges
 //
@@ -146,6 +149,18 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext *pContext)
 	//	Call the base, have it do the creation magic.
 	BOOL bRetval = CGenericFrame::OnCreateClient(lpcs, pContext);
 	if(bRetval == TRUE)	{
+    // Try out some raptor stuff.
+    nsIDocument *doc;
+    nsresult res = NS_NewHTMLDocument(&doc);
+    if (NS_SUCCEEDED(res)) {
+      TRACE("success");
+      doc->Release();
+    }
+    else {
+      TRACE("failure");
+    }
+
+
 		//	Context Forever
 		//	We know that the view that was made for the frame was the very last one
 		//		created, use it to construct the context.
