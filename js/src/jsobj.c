@@ -2350,6 +2350,8 @@ js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
     uint32 generation;
     JSNewResolveOp newresolve;
     uintN flags;
+    jsbytecode *pc;
+    const JSCodeSpec *cs;
     uint32 format;
     JSBool ok;
 
@@ -2404,13 +2406,20 @@ js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
                 if (clasp->flags & JSCLASS_NEW_RESOLVE) {
                     newresolve = (JSNewResolveOp)resolve;
                     flags = 0;
-                    if (cx->fp && cx->fp->pc) {
-                        format = js_CodeSpec[*cx->fp->pc].format;
+                    if (cx->fp && (pc = cx->fp->pc)) {
+                        cs = &js_CodeSpec[*pc];
+                        format = cs->format;
                         if ((format & JOF_MODEMASK) != JOF_NAME)
                             flags |= JSRESOLVE_QUALIFIED;
                         if ((format & JOF_ASSIGNING) ||
                             (cx->fp->flags & JSFRAME_ASSIGNING)) {
                             flags |= JSRESOLVE_ASSIGNING;
+                        } else {
+                            pc += cs->length;
+                            while (*pc == JSOP_GROUP)
+                                pc++;
+                            if (js_CodeSpec[*pc].format & JOF_DETECTING)
+                                flags |= JSRESOLVE_DETECTING;
                         }
                     }
                     obj2 = (clasp->flags & JSCLASS_NEW_RESOLVE_GETS_START)
