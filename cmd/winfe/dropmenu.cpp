@@ -2606,7 +2606,7 @@ void CDropMenu::LoadComplete(HT_Resource r)
 		if (parent == HT_TopNode(HT_GetView(r)))
 			parentIndex = -1;
 
-		// Need to count up from the parent index to the child index and only includes nodes
+		// Need to count up from the parent index to the child index and only include nodes
 		// with indentation equal to the child index.
 		int indentation = HT_GetItemIndentation(r);
 		int offset = 0;
