@@ -64,7 +64,6 @@
 #include "nsINameSpaceManager.h"  // for Pref-related rule management (bugs 22963,20760,31816)
 #include "nsIServiceManager.h"
 #include "nsFrame.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsIViewManager.h"
 #include "nsCRT.h"
 #include "prlog.h"
@@ -84,7 +83,6 @@
 #include "nsContentUtils.h"
 #include "nsISelection.h"
 #include "nsISelectionController.h"
-#include "nsReflowPath.h"
 #include "nsLayoutCID.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMRange.h"
@@ -256,7 +254,6 @@ ShowVerifyReflowFlags()
 class ReflowCountMgr;
 
 static const char kGrandTotalsStr[] = "Grand Totals";
-#define NUM_REFLOW_TYPES 5
 
 // Counting Class
 class ReflowCounter {
@@ -269,22 +266,22 @@ public:
   void DisplayDiffTotals(const char * aStr);
   void DisplayHTMLTotals(const char * aStr);
 
-  void Add(nsReflowReason aType)                  { mTotals[aType]++;         }
-  void Add(nsReflowReason aType, PRUint32 aTotal) { mTotals[aType] += aTotal; }
+  void Add()                { mTotal++;         }
+  void Add(PRUint32 aTotal) { mTotal += aTotal; }
 
   void CalcDiffInTotals();
   void SetTotalsCache();
 
   void SetMgr(ReflowCountMgr * aMgr) { mMgr = aMgr; }
 
-  PRUint32 GetTotalByType(nsReflowReason aType) { if (aType >= eReflowReason_Initial && aType <= eReflowReason_Dirty) return mTotals[aType]; else return 0; }
+  PRUint32 GetTotal() { return mTotal; }
   
 protected:
-  void DisplayTotals(PRUint32 * aArray, const char * aTitle);
-  void DisplayHTMLTotals(PRUint32 * aArray, const char * aTitle);
+  void DisplayTotals(PRUint32 aTotal, const char * aTitle);
+  void DisplayHTMLTotals(PRUint32 aTotal, const char * aTitle);
 
-  PRUint32 mTotals[NUM_REFLOW_TYPES];
-  PRUint32 mCacheTotals[NUM_REFLOW_TYPES];
+  PRUint32 mTotal;
+  PRUint32 mCacheTotal;
 
   ReflowCountMgr * mMgr; // weak reference (don't delete)
 };
@@ -326,7 +323,7 @@ public:
   void DisplayHTMLTotals(const char * aStr);
   void DisplayDiffsInTotals(const char * aStr);
 
-  void Add(const char * aName, nsReflowReason aType, nsIFrame * aFrame);
+  void Add(const char * aName, nsIFrame * aFrame);
   ReflowCounter * LookUp(const char * aName);
 
   void PaintCount(const char * aName, nsIRenderingContext* aRenderingContext, nsPresContext* aPresContext, nsIFrame * aFrame, PRUint32 aColor);
@@ -343,8 +340,8 @@ public:
   void SetPaintFrameCounts(PRBool aVal)        { mPaintFrameByFrameCounts = aVal; }
 
 protected:
-  void DisplayTotals(PRUint32 * aArray, PRUint32 * aDupArray, char * aTitle);
-  void DisplayHTMLTotals(PRUint32 * aArray, PRUint32 * aDupArray, char * aTitle);
+  void DisplayTotals(PRUint32 aTotal, PRUint32 * aDupArray, char * aTitle);
+  void DisplayHTMLTotals(PRUint32 aTotal, PRUint32 * aDupArray, char * aTitle);
 
   PR_STATIC_CALLBACK(PRIntn) RemoveItems(PLHashEntry *he, PRIntn i, void *arg);
   PR_STATIC_CALLBACK(PRIntn) RemoveIndiItems(PLHashEntry *he, PRIntn i, void *arg);
@@ -1046,7 +1043,7 @@ public:
 
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD DumpReflows();
-  NS_IMETHOD CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame);
+  NS_IMETHOD CountReflows(const char * aName, nsIFrame * aFrame);
   NS_IMETHOD PaintCount(const char * aName, nsIRenderingContext* aRenderingContext, nsPresContext* aPresContext, nsIFrame * aFrame, PRUint32 aColor);
 
   NS_IMETHOD SetPaintFrameCount(PRBool aOn);
@@ -3233,8 +3230,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
     return NS_OK;
   }  
   if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-    printf("\nPresShell@%p: adding reflow command\n", (void*)this);
-    aReflowCommand->List(stdout);
+    printf("\nPresShell@%p: frame %p needs reflow\n", (void*)this, (void*)aFrame);
     if (VERIFY_REFLOW_REALLY_NOISY_RC & gVerifyReflowFlags) {
       printf("Current content model:\n");
       nsIContent *rootContent = mDocument->GetRootContent();
@@ -3246,11 +3242,11 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
 #endif
 
   // XXX Add to the set of roots needing reflow!
-  nsIFrame reflowRoot = aFrame;
+  nsIFrame *reflowRoot = aFrame;
   do {
     reflowRoot = reflowRoot->GetParent();
-  } while (!(frame->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
-           (frame = frame->GetParent()) != nsnull);
+  } while (!(reflowRoot->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
+           (reflowRoot = reflowRoot->GetParent()) != nsnull);
   if (mDirtyRoots.IndexOf(reflowRoot) == -1)
     mDirtyRoots.AppendElement(reflowRoot);
 
@@ -3267,7 +3263,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
       PostReflowEvent();
   }
 
-  return rv;
+  return NS_OK;
 }
 
 
@@ -6759,10 +6755,10 @@ PresShell::DumpReflows()
 
 //-------------------------------------------------------------
 NS_IMETHODIMP
-PresShell::CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame)
+PresShell::CountReflows(const char * aName, nsIFrame * aFrame)
 {
   if (mReflowCountMgr) {
-    mReflowCountMgr->Add(aName, (nsReflowReason)aType, aFrame);
+    mReflowCountMgr->Add(aName, aFrame);
   }
 
   return NS_OK;
@@ -6809,81 +6805,59 @@ ReflowCounter::~ReflowCounter()
 //------------------------------------------------------------------
 void ReflowCounter::ClearTotals()
 {
-  for (PRUint32 i=0;i<NUM_REFLOW_TYPES;i++) {
-    mTotals[i] = 0;
-  }
+  mTotal = 0;
 }
 
 //------------------------------------------------------------------
 void ReflowCounter::SetTotalsCache()
 {
-  for (PRUint32 i=0;i<NUM_REFLOW_TYPES;i++) {
-    mCacheTotals[i] = mTotals[i];
-  }
+  mCacheTotal = mTotal;
 }
 
 //------------------------------------------------------------------
 void ReflowCounter::CalcDiffInTotals()
 {
-  for (PRUint32 i=0;i<NUM_REFLOW_TYPES;i++) {
-    mCacheTotals[i] = mTotals[i] - mCacheTotals[i];
-  }
+  mCacheTotal = mTotal - mCacheTotal;
 }
 
 //------------------------------------------------------------------
 void ReflowCounter::DisplayTotals(const char * aStr)
 {
-  DisplayTotals(mTotals, aStr?aStr:"Totals");
+  DisplayTotals(mTotal, aStr?aStr:"Totals");
 }
 
 //------------------------------------------------------------------
 void ReflowCounter::DisplayDiffTotals(const char * aStr)
 {
-  DisplayTotals(mCacheTotals, aStr?aStr:"Diff Totals");
+  DisplayTotals(mCacheTotal, aStr?aStr:"Diff Totals");
 }
 
 //------------------------------------------------------------------
 void ReflowCounter::DisplayHTMLTotals(const char * aStr)
 {
-  DisplayHTMLTotals(mTotals, aStr?aStr:"Totals");
+  DisplayHTMLTotals(mTotal, aStr?aStr:"Totals");
 }
 
 //------------------------------------------------------------------
-void ReflowCounter::DisplayTotals(PRUint32 * aArray, const char * aTitle)
+void ReflowCounter::DisplayTotals(PRUint32 aTotal, const char * aTitle)
 {
   // figure total
-  PRUint32 total = 0;
-  PRUint32 i;
-  for (i=0;i<NUM_REFLOW_TYPES;i++) {
-    total += aArray[i];
-  }
-
-  if (total == 0) {
+  if (aTotal == 0) {
     return;
   }
   ReflowCounter * gTots = (ReflowCounter *)mMgr->LookUp(kGrandTotalsStr);
 
   printf("%25s\t", aTitle);
-  for (i=0;i<NUM_REFLOW_TYPES;i++) {
-    printf("%d\t", aArray[i]);
-    if (gTots != this &&  aArray[i] > 0) {
-      gTots->Add((nsReflowReason)i, aArray[i]);
-    }
+  printf("%d\t", aTotal);
+  if (gTots != this && aTotal > 0) {
+    gTots->Add(aTotal);
   }
-  printf("%d\n", total);
 }
 
 //------------------------------------------------------------------
-void ReflowCounter::DisplayHTMLTotals(PRUint32 * aArray, const char * aTitle)
+void ReflowCounter::DisplayHTMLTotals(PRUint32 aTotal, const char * aTitle)
 {
-  // figure total
-  PRUint32 total = 0;
-  PRUint32 i;
-  for (i=0;i<NUM_REFLOW_TYPES;i++) {
-    total += aArray[i];
-  }
-
-  if (total == 0) {
+  if (aTotal == 0) {
     return;
   }
 
@@ -6894,19 +6868,11 @@ void ReflowCounter::DisplayHTMLTotals(PRUint32 * aArray, const char * aTitle)
   }
 
   fprintf(fd, "<tr><td><center>%s</center></td>", aTitle);
-  for (i=0;i<NUM_REFLOW_TYPES;i++) {
-    fprintf(fd, "<td><center>");
-    if (aArray[i]) {
-      fprintf(fd, "%d", aArray[i]);
-    } else {
-      fprintf(fd, "&nbsp;");
-    }
-    fprintf(fd, "</center></td>");
-    if (gTots != this &&  aArray[i] > 0) {
-      gTots->Add((nsReflowReason)i, aArray[i]);
-    }
+  fprintf(fd, "<td><center>%d</center></td></tr>\n", aTotal);
+
+  if (gTots != this && aTotal > 0) {
+    gTots->Add(aTotal);
   }
-  fprintf(fd, "<td><center>%d</center></td></tr>\n", total);
 }
 
 //------------------------------------------------------------------
@@ -6942,7 +6908,7 @@ ReflowCounter * ReflowCountMgr::LookUp(const char * aName)
 }
 
 //------------------------------------------------------------------
-void ReflowCountMgr::Add(const char * aName, nsReflowReason aType, nsIFrame * aFrame)
+void ReflowCountMgr::Add(const char * aName, nsIFrame * aFrame)
 {
   NS_ASSERTION(aName != nsnull, "Name shouldn't be null!");
 
@@ -6955,7 +6921,7 @@ void ReflowCountMgr::Add(const char * aName, nsReflowReason aType, nsIFrame * aF
       NS_ASSERTION(name != nsnull, "null ptr");
       PL_HashTableAdd(mCounts, name, counter);
     }
-    counter->Add(aType);
+    counter->Add();
   }
 
   if ((mDumpFrameByFrameCounts || mPaintFrameByFrameCounts) && 
@@ -6974,7 +6940,7 @@ void ReflowCountMgr::Add(const char * aName, nsReflowReason aType, nsIFrame * aF
     // this eliminates extra counts from super classes
     if (counter != nsnull && counter->mName.EqualsASCII(aName)) {
       counter->mCount++;
-      counter->mCounter.Add(aType, 1);
+      counter->mCounter.Add(1);
     }
   }
 }
@@ -7100,14 +7066,8 @@ void ReflowCountMgr::DoGrandTotals()
       gTots->ClearTotals();
     }
 
-    static const char * title[] = {"Init", "Incrm", "Resze", "Style", "Dirty", "Total"};
-    printf("\t\t\t");
-    PRUint32 i;
-    for (i=0;i<NUM_REFLOW_TYPES+1;i++) {
-      printf("\t%s", title[i]);
-    }
-    printf("\n");
-    for (i=0;i<78;i++) {
+    printf("\t\t\t\tTotal\n");
+    for (PRUint32 i=0;i<78;i++) {
       printf("-");
     }
     printf("\n");
@@ -7132,10 +7092,7 @@ static void RecurseIndiTotals(nsPresContext* aPresContext,
     char * name = ToNewCString(counter->mName);
     for (PRInt32 i=0;i<aLevel;i++) printf(" ");
     printf("%s - %p   [%d][", name, (void*)aParentFrame, counter->mCount);
-    for (PRInt32 inx=0;inx<5;inx++) {
-      if (inx != 0) printf(",");
-      printf("%d", counter->mCounter.GetTotalByType(nsReflowReason(inx)));
-    }
+    printf("%d", counter->mCounter.GetTotal());
     printf("]\n");
     nsMemory::Free(name);
   }
@@ -7155,10 +7112,7 @@ PRIntn ReflowCountMgr::DoSingleIndi(PLHashEntry *he, PRIntn i, void *arg)
   if (counter && !counter->mHasBeenOutput) {
     char * name = ToNewCString(counter->mName);
     printf("%s - %p   [%d][", name, (void*)counter->mFrame, counter->mCount);
-    for (PRInt32 inx=0;inx<5;inx++) {
-      if (inx != 0) printf(",");
-      printf("%d", counter->mCounter.GetTotalByType(nsReflowReason(inx)));
-    }
+    printf("%d", counter->mCounter.GetTotal());
     printf("]\n");
     nsMemory::Free(name);
   }
@@ -7207,10 +7161,9 @@ void ReflowCountMgr::DoGrandHTMLTotals()
       gTots->ClearTotals();
     }
 
-    static const char * title[] = {"Class", "Init", "Incrm", "Resze", "Style", "Dirty", "Total"};
+    static const char * title[] = {"Class", "Reflows"};
     fprintf(mFD, "<tr>");
-    PRUint32 i;
-    for (i=0;i<NUM_REFLOW_TYPES+2;i++) {
+    for (PRUint32 i=0; i < NS_ARRAY_LENGTH(title); i++) {
       fprintf(mFD, "<td><center><b>%s<b></center></td>", title[i]);
     }
     fprintf(mFD, "</tr>\n");

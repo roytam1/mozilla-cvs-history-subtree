@@ -327,6 +327,8 @@ public:
    */
   NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame) = 0;
 
+  NS_IMETHOD CancelAllPendingReflows() = 0;
+
   /**
    * Recreates the frames for a node
    */
@@ -636,7 +638,7 @@ public:
 
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD DumpReflows() = 0;
-  NS_IMETHOD CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame) = 0;
+  NS_IMETHOD CountReflows(const char * aName, nsIFrame * aFrame) = 0;
   NS_IMETHOD PaintCount(const char * aName, 
                         nsIRenderingContext* aRenderingContext, 
                         nsPresContext * aPresContext, 
