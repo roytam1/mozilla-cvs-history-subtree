@@ -317,7 +317,7 @@ NS_IMPL_ISUPPORTS1(nsProxyLoadStream, nsIInputStream);
 //   model.
 //
 
-class PlaceHolderRequest : public nsIRequest
+class PlaceHolderRequest : public nsIRequest, public nsIChannel
 {
 protected:
     PlaceHolderRequest();
@@ -343,8 +343,27 @@ public:
     NS_IMETHOD Cancel(nsresult status)  { return NS_OK; }
     NS_IMETHOD Suspend(void) { return NS_OK; }
     NS_IMETHOD Resume(void)  { return NS_OK; }
-    NS_IMETHOD GetParent(nsISupports * *aParent) { *aParent = nsnull; return NS_OK; }
+    NS_IMETHOD GetParent(nsISupports * *aParent) { NS_ADDREF(*aParent = (nsIChannel*)this); return NS_OK; }
     NS_IMETHOD SetParent(nsISupports * aParent) { return NS_ERROR_NOT_IMPLEMENTED; }
+
+ 	// nsIChannel    
+    NS_IMETHOD GetOriginalURI(nsIURI* *aOriginalURI) { *aOriginalURI = gURI; NS_ADDREF(*aOriginalURI); return NS_OK; }
+    NS_IMETHOD SetOriginalURI(nsIURI* aOriginalURI) { gURI = aOriginalURI; NS_ADDREF(gURI); return NS_OK; }
+    NS_IMETHOD GetURI(nsIURI* *aURI) { *aURI = gURI; NS_ADDREF(*aURI); return NS_OK; }
+    NS_IMETHOD SetURI(nsIURI* aURI) { gURI = aURI; NS_ADDREF(gURI); return NS_OK; }
+    NS_IMETHOD OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt, PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
+   	NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
+ 	NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
+ 	NS_IMETHOD SetOwner(nsISupports * aOwner) { return NS_OK; }
+ 	NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup) { *aLoadGroup = mLoadGroup; NS_IF_ADDREF(*aLoadGroup); return NS_OK; }
+ 	NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup) { mLoadGroup = aLoadGroup; return NS_OK; }
+ 	NS_IMETHOD GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) { *aNotificationCallbacks = nsnull; return NS_OK; }
+ 	NS_IMETHOD SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) { return NS_OK; }
+    NS_IMETHOD GetSecurityInfo(nsISupports **info) {*info = nsnull; return NS_OK;}
 };
 
 PRInt32 PlaceHolderRequest::gRefCnt;
@@ -352,7 +371,7 @@ nsIURI* PlaceHolderRequest::gURI;
 
 NS_IMPL_ADDREF(PlaceHolderRequest);
 NS_IMPL_RELEASE(PlaceHolderRequest);
-NS_IMPL_QUERY_INTERFACE1(PlaceHolderRequest, nsIRequest);
+NS_IMPL_QUERY_INTERFACE2(PlaceHolderRequest, nsIRequest, nsIChannel);
 
 nsresult
 PlaceHolderRequest::Create(nsIRequest** aResult)
@@ -4864,6 +4883,10 @@ nsXULDocument::PrepareToWalk()
         nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
         
         if (group) {
+            nsCOMPtr<nsIChannel> channel;
+            mPlaceHolderRequest->GetParent(getter_AddRefs(channel));
+            rv = channel->SetLoadGroup(group);
+            if (NS_FAILED(rv)) return rv;
             rv = group->AddRequest(mPlaceHolderRequest, nsnull);
             if (NS_FAILED(rv)) return rv;
         }

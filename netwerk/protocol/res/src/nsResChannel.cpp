@@ -127,7 +127,8 @@ nsResChannel::Substitutions::Init()
     nsresult rv;
     nsResChannel* channel = GET_SUBSTITUTIONS_CHANNEL(this);
     
-    NS_ASSERTION(mSubstitutions == nsnull, "failed to call destructor");
+    if (mSubstitutions)
+        return NS_ERROR_FAILURE;
 
     char* root;
     rv = channel->mResourceURI->GetHost(&root);
@@ -723,7 +724,7 @@ NS_IMETHODIMP nsResChannel::GetFile(nsIFile * *result)
     } while (NS_FAILED(rv));
 
     *result = nsnull;
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 }
 
 /* attribute long ioFlags; */

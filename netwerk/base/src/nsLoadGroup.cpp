@@ -417,7 +417,7 @@ nsLoadGroup::AddRequest(nsIRequest *request, nsISupports* ctxt)
     nsLoadFlags flags;
     rv = MergeLoadAttributes(request, flags);
     if (NS_FAILED(rv)) return rv;
-
+    
     //
     // Add the request to the list of active requests...
     //
