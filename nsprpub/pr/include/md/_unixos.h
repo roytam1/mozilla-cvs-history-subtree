@@ -64,8 +64,7 @@
 #define PR_PATH_SEPARATOR_STR		":"
 #define GCPTR 
 
-#ifndef DEFFARPROC
-#define DEFFARPROC
+#if !defined(XP_UNIX)
 typedef int (*FARPROC)();
 #endif /* DEFFARPROC */
 
