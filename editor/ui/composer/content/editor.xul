@@ -116,10 +116,6 @@
     <!-- tasks menu filled from tasksOverlay -->
     <menu id="tasksMenu" accesskey="t"/>
 
-    <!-- DEBUG only -->
-    <menu id="debugMenu" />
-    <!-- end DEBUG only -->
-  
     <!-- help menu filled from globalOverlay -->
     <menu id="menu_Help" accesskey="h"/>
 
