@@ -1,6 +1,0 @@
-nsICategoryHandler.idl
-nsICategoryManager.idl
-nsIComponentLoader.idl
-nsIComponentManager.idl
-nsIFactory.idl
-nsIRegistry.idl
