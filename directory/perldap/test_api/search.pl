@@ -29,9 +29,15 @@ use Mozilla::LDAP::API qw(:api :constant);
 use strict;
 
 
-my $ldap_host = "localhost";
+my $ldap_host = "";
 my $BASEDN = "o=Org,c=US";
 my $filter = $ARGV[0];
+
+if (!$ldap_host)
+{
+   print "Edit the top portion of this file before continuing.\n";
+   exit -1;
+}
 
 my $attrs = [];
 

@@ -40,7 +40,13 @@ my $ENTRYDN = "cn=Test Guy, o=Org, c=US";
 my $ROOTDN = "cn=DSManager,o=Org,c=US";
 my $ROOTPW = "";
 
-my $ldap_server = "localhost";
+my $ldap_server = "";
+
+if (!$ldap_server)
+{
+   print "Edit the top portion of this file before continuing.\n";
+   exit -1;
+}
 
 my $ld = ldap_init($ldap_server,LDAP_PORT);
 

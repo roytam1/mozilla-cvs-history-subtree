@@ -35,8 +35,14 @@ use strict;
 my $BASE = "ou=Test,o=Test,c=US";
 my $DN = "cn=Directory Manager";
 my $PASS = "abcd1234";
-my $HOST = "localhost";
+my $HOST = "";
 my $PORT = 389;
+
+if (!$HOST)
+{
+   print "Please edit the variables at the top of this file.\n";
+   exit -1;
+}
 
 my $howmany = 10;
 
