@@ -486,11 +486,6 @@ PL_ProcessPendingEvents(PLEventQueue* self)
     
     
     PR_EnterMonitor(self->monitor);
-    
-    if (self->processingEvents) {
-      PR_ExitMonitor(self->monitor);
-      return;
-    }
     self->processingEvents = PR_TRUE;
 
     /* Only process the events that are already in the queue, and
