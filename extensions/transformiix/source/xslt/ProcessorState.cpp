@@ -37,6 +37,13 @@
 #include "ProcessorState.h"
 #include "XSLTFunctions.h"
 #include "URIUtils.h"
+#ifdef MOZ_XSL
+  #include "nslog.h"
+  #define PRINTF NS_LOG_PRINTF(XPATH)
+  #define FLUSH  NS_LOG_FLUSH(XPATH)
+#else
+  #include "TxLog.h"
+#endif
 
   //-------------/
  //- Constants -/
@@ -250,10 +257,15 @@ MBool ProcessorState::addToResultTree(Node* node) {
             break;
         case Node::TEXT_NODE :
             //-- if current node is the document, create wrapper element
-            if ( current == resultDocument ) {
+            if ( current == resultDocument && 
+                 !XMLUtils::isWhitespace(node->getNodeValue())) {
                 String nodeName(wrapperName);
                 Element* wrapper = resultDocument->createElement(nodeName);
                 resultNodeStack->push(wrapper);
+                while (current->hasChildNodes()){
+                    wrapper->appendChild(current->getFirstChild());
+                    current->removeChild(current->getFirstChild());
+                }
                 current->appendChild(wrapper);
                 current = wrapper;
             }
@@ -428,6 +440,9 @@ Document* ProcessorState::getInclude(const String& href) {
 } //-- getInclude(String)
 
 Expr* ProcessorState::getExpr(const String& pattern) {
+    NS_IMPL_LOG(XPATH)
+    PRINTF("Resolving XPath Expr %s",pattern.toCharArray());
+    FLUSH();
     Expr* expr = (Expr*)exprHash.get(pattern);
     if ( !expr ) {
         expr = exprParser.createExpr(pattern);
