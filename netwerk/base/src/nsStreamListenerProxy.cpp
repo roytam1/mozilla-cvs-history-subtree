@@ -92,16 +92,16 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamGuard,
 
 nsStreamListenerProxy::nsStreamListenerProxy()
     : mListenerStatus(NS_OK)
-    , mLMonitor(nsnull)
+    //, mLMonitor(nsnull)
     , mCMonitor(nsnull)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
 {
-    if (mLMonitor) {
-        nsAutoMonitor::DestroyMonitor(mLMonitor);
-        mLMonitor = nsnull;
-    }
+    //if (mLMonitor) {
+    //    nsAutoMonitor::DestroyMonitor(mLMonitor);
+    //    mLMonitor = nsnull;
+    //}
     if (mCMonitor) {
         nsAutoMonitor::DestroyMonitor(mCMonitor);
         mCMonitor = nsnull;
@@ -202,7 +202,7 @@ nsOnDataAvailableEvent::HandleEvent()
         //
         // Update the listener status
         //
-        nsAutoMonitor mon(listenerProxy->mLMonitor);
+        //nsAutoMonitor mon(listenerProxy->mLMonitor);
         listenerProxy->mListenerStatus = rv;
     }
 #ifdef NS_ENABLE_LOGGING
@@ -281,10 +281,11 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     // Any non-successful listener status gets passed back to the caller
     //
     {
-        nsAutoMonitor mon(mLMonitor);
-        PRINTF("mListenerStatus=%x\n", mListenerStatus);
-        if (NS_FAILED(mListenerStatus)) 
-            return mListenerStatus;
+        nsresult status = mListenerStatus;
+        if (NS_FAILED(status)) {
+            PRINTF("listener failed [status=%x]\n", status);
+            return status;
+        }
     }
     
     //
@@ -358,8 +359,8 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
     NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
-    mLMonitor = nsAutoMonitor::NewMonitor("ListenerStatus");
-    if (!mLMonitor) return NS_ERROR_OUT_OF_MEMORY;
+    //mLMonitor = nsAutoMonitor::NewMonitor("ListenerStatus");
+    //if (!mLMonitor) return NS_ERROR_OUT_OF_MEMORY;
     mCMonitor = nsAutoMonitor::NewMonitor("ChannelToResume");
     if (!mCMonitor) return NS_ERROR_OUT_OF_MEMORY;
 

@@ -33,7 +33,7 @@ public:
     // listener's status.
     //
     nsresult   mListenerStatus;
-    PRMonitor *mLMonitor;
+//    PRMonitor *mLMonitor;
 
     nsCOMPtr<nsIChannel> mChannelToResume;
     PRMonitor           *mCMonitor;
