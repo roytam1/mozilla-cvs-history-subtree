@@ -95,7 +95,9 @@ ifdef MAKE_DLL
 # used by anything that wants to link with this library. Don't try this at home.
 IMPORT_LIBRARY          := $(LIBRARY)
 SHARED_LIBRARY		:= $(LIBRARY:.$(LIB_SUFFIX)=.dll)
+ifdef XP_OS2_VACPP
 MAPS			:= $(LIBRARY:.$(LIB_SUFFIX)=.map)
+endif
 LIBRARY			:= $(LIBRARY:.$(LIB_SUFFIX)=_s.$(LIB_SUFFIX))
 ifdef TARGETS
 TARGETS			+= $(IMPORT_LIBRARY)
@@ -753,3 +755,20 @@ endif
 #
 .PHONY: all all_platforms alltags boot clean clobber clobber_all export install libs realclean $(OBJDIR) $(DIRS)
 
+ifeq ($(OS_ARCH),OS2)
+# This rule displays build configuration information (for OS/2 builds).
+display_os2_config:
+	@echo OS/2 Build Configuration Info
+	@echo =============================
+	@set
+	-@which which
+	-@which uname
+	-@which gmake
+ifdef XP_OS2_EMX
+	-@which gcc
+	-@emxrev
+else
+	-@which icc
+	-@cmd.exe /c type $(subst \,\\,$(subst bin\ICC.EXE,syslevel\syslevel.ct3,$(word $(words $(shell which icc)),$(shell which icc))))
+endif
+endif
