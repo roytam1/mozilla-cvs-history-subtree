@@ -1111,7 +1111,7 @@ fe_EventLoop ()
 #ifdef QUANTIFY
 quantify_start_recording_data();
 #endif /* QUANTIFY */
-      NET_ProcessNet (-1, NET_EVERYTIME_TYPE);
+      NET_ProcessNet (0, NET_EVERYTIME_TYPE);
 #ifdef QUANTIFY
 quantify_stop_recording_data();
 #endif /* QUANTIFY */
@@ -1307,7 +1307,7 @@ plonk (MWContext *context)
 #ifdef QUANTIFY
 quantify_start_recording_data();
 #endif /* QUANTIFY */
-	    NET_ProcessNet (-1, NET_EVERYTIME_TYPE);
+	    NET_ProcessNet (0, NET_EVERYTIME_TYPE);
 #ifdef QUANTIFY
 quantify_stop_recording_data();
 #endif /* QUANTIFY */
@@ -2378,7 +2378,7 @@ main
     PREF_Init((char*) fe_globalData.user_prefs_file);
 }
 
-#ifdef MOZ_MAIL_NEWS
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
   fe_mailNewsPrefs = MSG_CreatePrefs();
 #endif
 
@@ -4032,6 +4032,8 @@ fe_mailto_browse_cb(Widget widget, XtPointer closure, XtPointer call_data)
   fe_browse_file_of_text(context, CONTEXT_DATA(context)->mcFcc, FALSE); 
 }
 
+#endif  /* MOZ_MAIL_NEWS */
+
 #define Off(field) XtOffset(fe_ContextData*, field)
 #define ISLABEL		0x0001
 #define ADDBROWSE	0x0002
@@ -4056,8 +4058,6 @@ static struct {
 /*
   {"subject", 	Off(mcSubject),		MSG_SUBJECT_HEADER_MASK, 0},
 */
-
-#endif  /* MOZ_MAIL_NEWS */
 
 void resize(Widget w, XtPointer clientData, XtPointer callData)
 {
@@ -4228,6 +4228,9 @@ fe_create_composition_widgets(MWContext* context, Widget pane, int *numkids)
 
 }
 
+#endif  /* MOZ_MAIL_NEWS */
+
+#ifdef MOZ_MAIL_COMPOSE
 
 void
 FE_MsgShowHeaders (MSG_Pane* comppane, MSG_HEADER_SET headers)
