@@ -42,7 +42,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = base components extensions app
+DIRS = base components extensions themes app
 
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER
@@ -50,9 +50,4 @@ DIRS += installer/windows
 endif
 endif
 
-ifeq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-ifdef MOZ_PHOENIX
-DIRS += themes
-endif
-endif
 include $(topsrcdir)/config/rules.mk

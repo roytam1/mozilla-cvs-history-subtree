@@ -45,11 +45,8 @@ DIRS += helpOnHelp
 
 include $(DEPTH)/config/autoconf.mk
 
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-# Use Pinstripe on MacOS X
-DIRS	+= skin/mac
-else
-# Use Qute on Windows and Linux for non-Phoenix apps
+# Use Qute on non-Mac non-Phoenix apps
+ifeq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifndef MOZ_PHOENIX
 DIRS    += skin 
 endif

@@ -53,21 +53,22 @@ DIRS	= \
 		mozapps \
 		$(NULL)
 
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-# Use Pinstripe on MacOS X
-DIRS	+= skin/mac
-else
+#
+# Theme Selection
+#
+# Firefox       : *stripe, all platforms
+# Other apps    : Pinstripe (OS X), Qute (remainder)
+#
 ifdef MOZ_PHOENIX
 DIRS    += themes
 else
-# everything else sticks with Qute for now. 
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+DIRS    += themes
+else 
 DIRS    += skin/win
-
-# skin/gtk2 contains css rules that more closely match gtk widgets
 ifneq (,$(filter gtk2,$(MOZ_WIDGET_TOOLKIT)))
-DIRS  += skin/gtk2
+DIRS    += skin/gtk2
 endif
-
 endif
 endif
 

@@ -19,8 +19,7 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#  Brian Ryner <bryner@brianryner.com>
-#  Pierre Chanial <chanial@noos.fr>
+#   Ben Goodger <ben@mozilla.org>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,13 +42,20 @@ VPATH     = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS	= winstripe
+# Theme Selection
+#
+# MacOS X                 Pinstripe (toolkit/themes/pinstripe)
+# Windows (9x, 2000, XP)  Winstripe (toolkit/themes/winstripe)
+# GNOME/Linux             Winstripe (toolkit/themes/winstripe) + 
+#                         GNOMEStripe overrides (toolkit/themes/gnomestripe)
 
-# "GNOMEStripe" currently consists of a few stylesheets
-# that override the windows ones to provide a more GTK/GNOME
-# -like look and feel. 
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+DIRS	= pinstripe
+else
+DIRS	= winstripe
 ifneq (,$(filter gtk2,$(MOZ_WIDGET_TOOLKIT)))
 DIRS    += gnomestripe
+endif
 endif
 
 include $(topsrcdir)/config/rules.mk
