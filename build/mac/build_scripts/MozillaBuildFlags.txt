@@ -49,12 +49,12 @@ libart_lgpl     0
 mng             1
 ldap            1      MOZ_LDAP_XPCOM
 ldap_experimental 0    MOZ_LDAP_XPCOM_EXPERIMENTAL
-xmlextras       1
+xmlextras       0
 wsp             0      MOZ_WSP
 inspector       1
 mailextras      1
 xptlink         0
-psm             0      MOZ_PSM
+psm             1      MOZ_PSM
 embedding_test  1
 embedding_chrome 0
 embedding_xulprefs 0
@@ -65,14 +65,14 @@ lowmem          0      MOZ_MAC_LOWMEM
 accessible      1      ACCESSIBILITY
 bidi            1      IBMBIDI
 p3p             0
-jsd             1
-venkman         1
+jsd             0
+venkman         0
 moz_logging     1      MOZ_LOGGING
 chatzilla       1
 content_packs   1
-xml_rpc         1
-cview           1
-help            1
+xml_rpc         0
+cview           0
+help            0
 timeline        0      MOZ_TIMELINE
 static_build    0      MOZ_STATIC_COMPONENT_LIBS
 string_debug    0      DEBUG_STRING
