@@ -1,3 +1,19 @@
+<!ENTITY file.newDownload.label           "New Download...">
+<!ENTITY file.newDownload.accesskey       "N">
+<!ENTITY file.open.label                  "Open Selected Item...">
+<!ENTITY file.open.accesskey              "O">
+<!ENTITY file.stop.label                  "Stop">
+<!ENTITY file.stop.accesskey              "S">
+<!ENTITY file.remove.label                "Remove from list">
+<!ENTITY file.remove.accesskey            "t">
+<!-- The Mac version of this string is stored in downloadmanager.properties -->
+<!ENTITY file.properties.label            "Properties">
+<!ENTITY file.properties.accesskey        "i">
+<!ENTITY file.reveal.label                "Reveal Location">
+<!ENTITY file.reveal.accesskey            "v">
+<!ENTITY edit.prefs.label                 "Download Manager Preferences...">
+<!ENTITY edit.prefs.accesskey             "e">
+
 <!ENTITY view.header.name.label           "Name">
 <!ENTITY view.header.progress.label       "Progress">
 <!ENTITY view.header.status.label         "Status">
