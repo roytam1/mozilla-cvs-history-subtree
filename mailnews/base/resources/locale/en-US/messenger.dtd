@@ -428,7 +428,7 @@ Rights Reserved.
 
 <!-- Toolbar items -->
 <!ENTITY getMsgButton.label "Get Msgs">
-<!ENTITY newMsgButton.label "Compose">
+<!ENTITY newMsgButton.label "Write">
 <!ENTITY replyButton.label "Reply">
 <!ENTITY replyAllButton.label "Reply All">
 <!ENTITY forwardButton.label "Forward">
