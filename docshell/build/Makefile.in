@@ -104,7 +104,10 @@ LOCAL_INCLUDES	= \
 		$(NULL)
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-LOCAL_INCLUDES += -I$(srcdir)/../exthandler/mac
+LOCAL_INCLUDES += -I$(topsrcdir)/uriloader/exthandler/mac
+EXTRA_DSO_LDOPTS += \
+        $(TK_LIBS) \
+        $(NULL)
 endif
 
 ifeq ($(OS_ARCH),WINNT)
