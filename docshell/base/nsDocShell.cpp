@@ -62,7 +62,6 @@
 // Helper Classes
 #include "nsDOMError.h"
 #include "nsEscape.h"
-//#include "nsHTTPEnums.h"
 
 // Interfaces Needed
 #include "nsIHttpChannel.h"
@@ -3722,7 +3721,6 @@ nsDocShell::AddHeadersToChannel(nsIInputStream * aHeadersData,
     nsCAutoString headerValue;
     PRInt32 crlf = 0;
     PRInt32 colon = 0;
-    nsCOMPtr<nsIAtom> headerAtom;
 
     //
     // Suck all the data out of the nsIInputStream into a char * buffer.
@@ -4244,7 +4242,8 @@ nsDocShell::RefreshURIFromHeader(nsIURI * aBaseURI,
 
 NS_IMETHODIMP nsDocShell::SetupRefreshURI(nsIChannel * aChannel)
 {
-    nsresult rv;
+    nsresult
+        rv;
     nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aChannel, &rv));
     if (NS_SUCCEEDED(rv)) {
         nsCOMPtr<nsIURI> referrer;
