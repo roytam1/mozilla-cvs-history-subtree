@@ -271,9 +271,9 @@ nsresult nsSOAPUtils::GetLocalName(const nsAReadableString & aQName,
 }
 
 nsresult 
-MakeNamespacePrefix(nsIDOMElement* aScope,
-                   const nsAReadableString & aURI,
-                   nsAWritableString & aPrefix)
+nsSOAPUtils::MakeNamespacePrefix(nsIDOMElement* aScope,
+                                 const nsAReadableString & aURI,
+                                 nsAWritableString & aPrefix)
 {
 //  This may change for level 3 serialization, so be sure to gut this
 //  and call the standardized level 3 method when it is available.
@@ -389,7 +389,7 @@ MakeNamespacePrefix(nsIDOMElement* aScope,
 
 nsresult 
 nsSOAPUtils::MakeNamespacePrefixFixed(nsIDOMElement* aScope,
-		                      nsAReadableString & aURI,
+		                      const nsAReadableString & aURI,
 				      nsAWritableString & aPrefix)
 {
   if (aURI.Equals(kSOAPEncodingURI))

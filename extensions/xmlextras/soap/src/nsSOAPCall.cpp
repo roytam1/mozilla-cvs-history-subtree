@@ -42,9 +42,14 @@ nsSOAPCall::~nsSOAPCall()
 {
 }
 
-NS_IMPL_ISUPPORTS_INHERITED1(nsSOAPCall, 
-                   nsSOAPMessage,
-                   nsISOAPCall)
+NS_IMPL_CI_INTERFACE_GETTER2(nsSOAPCall, nsISOAPMessage, nsISOAPCall)
+NS_IMPL_ADDREF_INHERITED(nsSOAPCall, nsSOAPMessage)
+NS_IMPL_RELEASE_INHERITED(nsSOAPCall, nsSOAPMessage)
+
+NS_INTERFACE_MAP_BEGIN(nsSOAPCall)
+NS_INTERFACE_MAP_ENTRY(nsISOAPCall)
+NS_IMPL_QUERY_CLASSINFO(nsSOAPCall)
+NS_INTERFACE_MAP_END_INHERITING(nsSOAPMessage)
 
 /* attribute DOMString transportURI; */
 NS_IMETHODIMP nsSOAPCall::GetTransportURI(nsAWritableString & aTransportURI)

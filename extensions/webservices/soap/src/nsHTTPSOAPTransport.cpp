@@ -38,7 +38,7 @@ nsHTTPSOAPTransport::~nsHTTPSOAPTransport()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsHTTPSOAPTransport, nsISOAPTransport)
+NS_IMPL_ISUPPORTS1_CI(nsHTTPSOAPTransport, nsISOAPTransport)
 
 /* void syncCall (in nsISOAPCall aCall, in nsISOAPResponse aResponse); */
 NS_IMETHODIMP nsHTTPSOAPTransport::SyncCall(nsISOAPCall *aCall, nsISOAPResponse *aResponse)
@@ -98,7 +98,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
 protected:
   nsCOMPtr<nsISOAPCall> mCall;
@@ -116,7 +116,7 @@ nsHTTPSOAPTransportCompletion::nsHTTPSOAPTransportCompletion()
 nsHTTPSOAPTransportCompletion::~nsHTTPSOAPTransportCompletion()
 {
 }
-nsresult
+NS_IMETHODIMP
 nsHTTPSOAPTransportCompletion::HandleEvent(nsIDOMEvent* aEvent)
 {
   nsresult rv;

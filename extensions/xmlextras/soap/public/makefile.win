@@ -21,7 +21,12 @@
 
 DEPTH=..\..\..\..
 
-XPIDLSRCS =     .\nsISOAPCall.idl \
+MODULE		= xmlextras
+XPIDL_MODULE	= xmlsoap
+
+XPIDLSRCS =  \
+		.\nsISOAPAttachments.idl \
+		.\nsISOAPCall.idl \
 		.\nsISOAPDecoder.idl \
 		.\nsISOAPEncoder.idl \
 		.\nsISOAPEncoding.idl \
@@ -35,10 +40,7 @@ XPIDLSRCS =     .\nsISOAPCall.idl \
 		.\nsISOAPServiceRegistry.idl \
 		.\nsISOAPTransport.idl \
 		.\nsISOAPTransportListener.idl \
-		.\nsISOAPType.idl \
 	        $(NULL)
-
-MODULE=xmlsoap
 
 include <$(DEPTH)\config\rules.mak>
 

@@ -36,10 +36,10 @@ nsSOAPParameter::~nsSOAPParameter()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsSOAPParameter, 
-                   nsISOAPParameter, 
-                   nsISecurityCheckedComponent,
-                   nsIJSNativeInitializer)
+NS_IMPL_ISUPPORTS3_CI(nsSOAPParameter, 
+                      nsISOAPParameter, 
+                      nsISecurityCheckedComponent,
+                      nsIJSNativeInitializer)
 
 /* attribute AString namespaceURI; */
 NS_IMETHODIMP nsSOAPParameter::GetNamespaceURI(nsAWritableString & aNamespaceURI)
