@@ -56,6 +56,7 @@
 #include "nsIStringBundle.h"
 #include "nsCRT.h"
 #include "nsIWindowMediator.h"
+#include "nsIObserverService.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -118,6 +119,11 @@ nsDownloadManager::Init()
   nsresult rv;
   mRDFContainerUtils = do_GetService("@mozilla.org/rdf/container-utils;1", &rv);
   if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1", &rv);
+  if (NS_FAILED(rv)) return rv;
+  
+  obsService->AddObserver(this, "quit-application", PR_FALSE);
 
   rv = nsServiceManager::GetService(kRDFServiceCID, NS_GET_IID(nsIRDFService),
                                     (nsISupports**) &gRDFService);
@@ -231,33 +237,28 @@ nsDownloadManager::GetDataSource(nsIRDFDataSource** aDataSource)
 nsresult
 nsDownloadManager::AssertProgressInfo()
 {
-  // get the downloads container
-  nsCOMPtr<nsIRDFContainer> downloads;
-  nsresult rv = GetDownloadsContainer(getter_AddRefs(downloads));
-  if (NS_FAILED(rv)) return rv;
-
-  // get the container's elements (nsIRDFResource's)
-  nsCOMPtr<nsISimpleEnumerator> items;
-  rv = downloads->GetElements(getter_AddRefs(items));
-  if (NS_FAILED(rv)) return rv;
-
   if (!mCurrDownloads)
     mCurrDownloads = new nsHashtable();
 
-  // enumerate the resources, use their ids to retrieve the corresponding
-  // nsIDownloads from the hashtable (if they don't exist, the download isn't
-  // a current transfer), get the items' progress information,
-  // and assert it into the graph
+  nsCOMPtr<nsISupports> supports;
+  nsCOMPtr<nsIRDFResource> res;
+  const char* uri;
+  nsCOMPtr<nsIRDFInt> intLiteral;
 
-  PRBool moreElements;
-  items->HasMoreElements(&moreElements);
-  for( ; moreElements; items->HasMoreElements(&moreElements)) {
-    nsCOMPtr<nsISupports> supports;
-    items->GetNext(getter_AddRefs(supports));
-    nsCOMPtr<nsIRDFResource> res = do_QueryInterface(supports);
-    char* id;
-    res->GetValue(&id);
-    rv = AssertProgressInfoFor(id);
+  gRDFService->GetIntLiteral(DOWNLOADING, getter_AddRefs(intLiteral));
+  nsCOMPtr<nsISimpleEnumerator> downloads;
+  nsresult rv = mDataSource->GetSources(gNC_DownloadState, intLiteral, PR_TRUE, getter_AddRefs(downloads));
+  if (NS_FAILED(rv)) return rv;
+  
+  PRBool hasMoreElements;
+  downloads->HasMoreElements(&hasMoreElements);
+
+  while (hasMoreElements) {
+    downloads->GetNext(getter_AddRefs(supports));
+    res = do_QueryInterface(supports);
+    res->GetValueConst(&uri);
+    AssertProgressInfoFor(uri);
+    downloads->HasMoreElements(&hasMoreElements);
   }
   return rv;
 }
@@ -865,6 +866,28 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
       
       return CancelDownload(path.get());  
     }
+  }
+  else if (nsCRT::strcmp(aTopic, "quit-application") == 0) {
+    nsCOMPtr<nsISupports> supports;
+    nsCOMPtr<nsIRDFResource> res;
+    const char* uri;
+    nsCOMPtr<nsIRDFInt> intLiteral;
+
+    gRDFService->GetIntLiteral(DOWNLOADING, getter_AddRefs(intLiteral));
+    nsCOMPtr<nsISimpleEnumerator> downloads;
+    rv = mDataSource->GetSources(gNC_DownloadState, intLiteral, PR_TRUE, getter_AddRefs(downloads));
+    if (NS_FAILED(rv)) return rv;
+    
+    PRBool hasMoreElements;
+    downloads->HasMoreElements(&hasMoreElements);
+
+    while (hasMoreElements) {
+      downloads->GetNext(getter_AddRefs(supports));
+      res = do_QueryInterface(supports);
+      res->GetValueConst(&uri);
+      CancelDownload(uri);
+      downloads->HasMoreElements(&hasMoreElements);
+    }    
   }
   return NS_OK;
 }
