@@ -108,7 +108,7 @@ struct JSXDRState {
     uintN       numclasses;
     uintN       maxclasses;
     void        *reghash;
-    void        *data;
+    void        *userdata;
 };
 
 extern JS_PUBLIC_API(void)
