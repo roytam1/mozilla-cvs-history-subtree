@@ -2147,6 +2147,64 @@ NS_IMETHODIMP nsViewManager::GetKeyEventGrabber(nsIView *&aView)
   return NS_OK;
 }
 
+
+// Recursively reparent widgets if necessary 
+
+void nsViewManager::ReparentChildWidgets(nsIView* aView, nsIWidget *aNewWidget)
+{
+  PRBool hasWidget;
+  aView->HasWidget(&hasWidget);
+  if (hasWidget) {
+    // Check to see if the parent widget is the
+    // same as the new parent. If not then reparent
+    // the widget, otherwise there is nothing more
+    // to do for the view and its descendants
+    nsCOMPtr<nsIWidget> widget;
+    aView->GetWidget(*getter_AddRefs(widget));
+    nsCOMPtr<nsIWidget> parentWidget;
+    parentWidget = widget->GetParent();
+    if (parentWidget.get() != aNewWidget) {
+      widget->SetParent(aNewWidget);
+    }
+    return;
+  }
+
+  // Need to check each of the views children to see
+  // if they have a widget and reparent it.
+
+  nsView* view = NS_STATIC_CAST(nsView*, aView);
+  nsView *kid = view->GetFirstChild();
+  while (kid) {
+    ReparentChildWidgets(kid, aNewWidget);
+    kid = kid->GetNextSibling();
+  }
+}
+
+// Reparent a view and its descendant views widgets if necessary
+
+void nsViewManager::ReparentWidgets(nsIView* aView, nsIView *aParent)
+{
+  // Quickly determine whether the view has pre-existing children or a
+  // widget. In most cases the view will not have any pre-existing 
+  // children when this is called.  Only in the case
+  // where a view has been reparented by removing it from
+  // a reinserting it into a new location in the view hierarchy do we
+  // have to consider reparenting the existing widgets for the view and
+  // it's descendants.
+  nsView* view = NS_STATIC_CAST(nsView*, aView);
+  PRBool hasWidget;
+  aView->HasWidget(&hasWidget);
+  if (hasWidget || view->GetFirstChild()) {
+    nsCOMPtr<nsIWidget> parentWidget;
+    GetWidgetForView(aParent, getter_AddRefs(parentWidget));
+    if (parentWidget) {
+      ReparentChildWidgets(aView, parentWidget);
+      return;
+    }
+    NS_WARNING("Can not find a widget for the parent view");
+  }
+}
+
 NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, nsIView *aSibling,
                                          PRBool aAfter)
 {
@@ -2186,14 +2244,16 @@ NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, nsIV
       // OR kid == null, the sibling was null or not there, and prev == last child view
       // The following code works in both cases.
 
-      if (PR_TRUE == aAfter)
+      if (PR_TRUE == aAfter) 
         // the child views are ordered in REVERSE document order;
         // LAST view in document order is the FIRST child
         // so we insert the new view just in front of sibling, or as the first child
         // if sibling is null
         parent->InsertChild(child, prev);
-      else
+      else 
         parent->InsertChild(child, kid);
+
+      ReparentWidgets(child, parent);
 #else // for now, don't keep consistent document order, but order things by z-index instead
       // essentially we're emulating the old InsertChild(parent, child, zindex)
       PRInt32 zIndex = child->GetZIndex();
@@ -2209,6 +2269,7 @@ NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, nsIV
         }
 
       parent->InsertChild(child, prev);
+      ReparentWidgets(child, parent);
 #endif
 
       UpdateTransCnt(nsnull, child);
@@ -2282,6 +2343,7 @@ NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, PRIn
 
       child->SetZIndex(child->GetZIndexIsAuto(), aZIndex);
       parent->InsertChild(child, prev);
+      ReparentWidgets(child, parent);
 
       UpdateTransCnt(nsnull, child);
 
