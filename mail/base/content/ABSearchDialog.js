@@ -347,6 +347,12 @@ function onCompose()
   AbNewMessage();
 }
 
+function AbResultsPaneKeyPress(event)
+{
+  if (event.keyCode == 13)
+    AbEditSelectedCard();
+}
+
 function AbResultsPaneDoubleClick(card)
 {
   AbEditCard(card);
