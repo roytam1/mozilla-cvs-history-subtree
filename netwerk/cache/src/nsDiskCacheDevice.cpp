@@ -773,7 +773,7 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
         NS_ASSERTION(binding->mRecord.DataFileGeneration() == binding->mGeneration, "error generations out of sync");
     } else {
         binding->mRecord.SetDataFileGeneration(binding->mGeneration);
-        binding->mRecord.SetDataFileSize(1);    // 1k minimum
+        binding->mRecord.SetDataFileSize(0);    // 1k minimum
     }
 
     if (!binding->mDoomed) {
@@ -823,7 +823,7 @@ nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
         NS_ASSERTION(binding->mRecord.DataFileGeneration() == binding->mGeneration, "error generations out of sync");
     } else {
         binding->mRecord.SetDataFileGeneration(binding->mGeneration);
-        binding->mRecord.SetDataFileSize(1);    // 1k minimum
+        binding->mRecord.SetDataFileSize(0);    // 1k minimum
     }
         
      if (!binding->mDoomed) {
@@ -855,23 +855,15 @@ nsDiskCacheDevice::OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize)
 
     NS_ASSERTION(binding->mRecord.ValidRecord(), "bad record");
 
-    PRUint32  sizeK = ((entry->DataSize() + 0x0400) >> 10); // round up to next 1k
-    
-    NS_ASSERTION(binding->mRecord.DataFileSize() == sizeK, "data size out of sync");
-    if (binding->mRecord.DataFileSize() != sizeK) {
-        printf("\n");
-        printf("### binding->mRecord.DataFileSize = %x\n", binding->mRecord.DataFileSize());
-        printf("### sizeK =                         %x\n", sizeK);
-        printf("\n");
-    }
-    
-    
-    mCacheMap->DecrementTotalSize(binding->mRecord.DataFileSize());
-    
-    // calc new size
-    sizeK = ((entry->DataSize() + deltaSize + 0x400) >> 10);
-    binding->mRecord.SetDataFileSize(sizeK);     // update binding->mRecord
-    mCacheMap->IncrementTotalSize(sizeK);
+    PRUint32  sizeK = ((entry->DataSize() + 0x0399) >> 10); // round up to next 1k
+    PRUint32  newSizeK =  ((entry->DataSize() + deltaSize + 0x399) >> 10);
+
+    NS_ASSERTION((sizeK < USHRT_MAX) && (sizeK == binding->mRecord.DataFileSize()),
+                 "data size out of sync");
+
+    mCacheMap->IncrementTotalSize((newSizeK - sizeK) * 1024);
+    newSizeK = (newSizeK < USHRT_MAX) ? newSizeK : USHRT_MAX;   // record file size ceiling
+    binding->mRecord.SetDataFileSize(newSizeK);     // update binding->mRecord
 
     EvictDiskCacheEntries();
     

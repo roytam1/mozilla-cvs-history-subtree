@@ -98,18 +98,20 @@ nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
 {
     PRUint32 recordsDeleted = 0;
     PRInt32  rv = kVisitNextRecord;
-    PRInt32  i  = CountRecords();
+    PRInt32  last  = CountRecords() - 1;
     
     // call visitor for each entry (equal or greater than evictionRank)
-    while (i--) {
+    for (int i = last; i >= 0; i--) {
         if (evictionRank > mRecords[i].EvictionRank())  continue;
     
         rv = visitor->VisitRecord(&mRecords[i]);
         if (rv == kVisitNextRecord) continue;
         
         if (rv == kDeleteRecordAndContinue) {
-            mRecords[i].SetHashNumber(0);
-            recordsDeleted++;
+            mRecords[i] = mRecords[last];
+            mRecords[last].SetHashNumber(0);
+            --last;
+            ++recordsDeleted;
             continue;
         }
 
@@ -164,6 +166,9 @@ nsDiskCacheMap::Open(nsILocalFile *  cacheDirectory)
         mHeader.mDataSize   = 0;
         mHeader.mEntryCount = 0;
         mHeader.mIsDirty = PR_TRUE;
+        for (int i = 0; i < kBucketsPerTable; ++i) {
+            mHeader.mEvictionRank[i] = 0;
+        }
 
         nsCRT::zero(mHeader.reserved, nsDiskCacheHeader::kReservedBytes);
         nsCRT::zero(mBuckets, sizeof(nsDiskCacheBucket) * kBucketsPerTable);
@@ -324,6 +329,7 @@ nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
             if (mHeader.mEvictionRank[bucketIndex] < mapRecord->EvictionRank())
                 mHeader.mEvictionRank[bucketIndex] = mapRecord->EvictionRank();
 
+NS_ASSERTION(mHeader.mEvictionRank[bucketIndex] == bucket->EvictionRank(), "whao!");
             return NS_OK;
         }
         
@@ -340,7 +346,8 @@ nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
          
         mHeader.mEvictionRank[bucketIndex] = bucket->EvictionRank();
     }
-    
+
+NS_ASSERTION(mHeader.mEvictionRank[bucketIndex] == bucket->EvictionRank(), "whao!");    
     return NS_OK;
 }
 
@@ -355,14 +362,19 @@ nsDiskCacheMap::UpdateRecord( nsDiskCacheRecord *  mapRecord)
 
     for (int i = 0; i < kRecordsPerBucket; ++i) {
         if (bucket->mRecords[i].HashNumber() == mapRecord->HashNumber()) {
-            // stick the new record here
+            PRUint32 oldRank = bucket->mRecords[i].EvictionRank();
+
+            // stick the new record here            
             bucket->mRecords[i] = *mapRecord;
-            
+
             // update eviction rank in header if necessary
             PRUint32  bucketIndex = GetBucketIndex(mapRecord->HashNumber());
             if (mHeader.mEvictionRank[bucketIndex] < mapRecord->EvictionRank())
                 mHeader.mEvictionRank[bucketIndex] = mapRecord->EvictionRank();
-            
+            else if (mHeader.mEvictionRank[bucketIndex] == oldRank)
+                mHeader.mEvictionRank[bucketIndex] = bucket->EvictionRank();
+
+NS_ASSERTION(mHeader.mEvictionRank[bucketIndex] == bucket->EvictionRank(), "whao!");
             return NS_OK;
         }
     }
@@ -401,6 +413,8 @@ nsDiskCacheMap::DeleteRecord( nsDiskCacheRecord *  mapRecord)
     for (PRUint32 i = 0; i < count; ++i) {        
         if (bucket->mRecords[i].HashNumber() == mapRecord->HashNumber()) {
             // found it, now delete it.
+            PRUint32  evictionRank = bucket->mRecords[i].EvictionRank();
+            NS_ASSERTION(evictionRank == mapRecord->EvictionRank(), "evictionRank out of sync");
             if (i != (count - 1)) { // if not the last record, shift last record into opening
                 bucket->mRecords[i] = bucket->mRecords[count - 1];
             }
@@ -408,9 +422,11 @@ nsDiskCacheMap::DeleteRecord( nsDiskCacheRecord *  mapRecord)
             mHeader.mEntryCount--;
             // update eviction rank
             PRUint32  bucketIndex = GetBucketIndex(mapRecord->HashNumber());
-            if (mHeader.mEvictionRank[bucketIndex] <= mapRecord->EvictionRank()) {
+            if (mHeader.mEvictionRank[bucketIndex] <= evictionRank) {
                 mHeader.mEvictionRank[bucketIndex] = bucket->EvictionRank();
             }
+
+NS_ASSERTION(mHeader.mEvictionRank[bucketIndex] == bucket->EvictionRank(), "whao!");
             return NS_OK;
         }
     }
@@ -436,6 +452,7 @@ nsDiskCacheMap::VisitRecords( nsDiskCacheRecordVisitor *  visitor)
             mHeader.mEntryCount -= recordsDeleted;
             // XXX write bucket
         }
+NS_ASSERTION(mHeader.mEvictionRank[i] == mBuckets[i].EvictionRank(), "whao!");
         if (!continueFlag)  break;
     }
     
@@ -463,6 +480,9 @@ nsDiskCacheMap::EvictRecords( nsDiskCacheRecordVisitor * visitor)
             }
         }
         
+NS_ASSERTION(mHeader.mEvictionRank[index] == mBuckets[index].EvictionRank(),
+    "header eviction rank out of sync");
+            
         // visit records in bucket with eviction ranks >= target eviction rank
         PRUint32 recordsDeleted;
         PRBool continueFlag = mBuckets[index].VisitEachRecord(visitor, rank, &recordsDeleted);
@@ -615,8 +635,8 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
 
         if ((metaFile == 0) && (fileIndex == 0)) {  // keeping the separate file
             // just decrement total
-            // XXX if bindRecord.MetaFileSize == 0, stat the file to see how big it is
-            DecrementTotalSize(binding->mRecord.MetaFileSize());
+            // XXX if bindRecord.MetaFileSize == USHRT_MAX, stat the file to see how big it is
+            DecrementTotalSize(binding->mRecord.MetaFileSize() * 1024);
             NS_ASSERTION(binding->mRecord.MetaFileGeneration() == binding->mGeneration,
                          "generations out of sync");
         } else {
@@ -627,10 +647,15 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         
     if (fileIndex == 0) {
         // Write entry data to separate file
-        PRUint32 metaFileSizeK = ((size + 0x0400) >> 10); // round up to nearest 1k
+        PRUint32 metaFileSizeK = ((size + 0x0399) >> 10); // round up to nearest 1k
         nsCOMPtr<nsILocalFile> localFile;
+        
+        // XXX handle metaFileSizeK > USHRT_MAX
         binding->mRecord.SetMetaFileGeneration(binding->mGeneration);
         binding->mRecord.SetMetaFileSize(metaFileSizeK);
+        rv = UpdateRecord(&binding->mRecord);
+        if (NS_FAILED(rv))  goto exit;
+
         rv = GetLocalFileForDiskCacheRecord(&binding->mRecord,
                                             nsDiskCache::kMetaData,
                                             getter_AddRefs(localFile));
@@ -650,7 +675,8 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
             rv = NS_ERROR_UNEXPECTED;
             goto exit;
         }
-        IncrementTotalSize(metaFileSizeK);
+        // XXX handle metaFileSizeK == USHRT_MAX
+        IncrementTotalSize(metaFileSizeK * 1024);
         
     } else {
         // write entry data to disk cache block file
@@ -709,13 +735,13 @@ nsDiskCacheMap::DeleteStorage(nsDiskCacheRecord * record, PRBool metaData)
     if (fileIndex == 0) {
         // delete the file
         PRUint32  sizeK = metaData ? record->MetaFileSize() : record->DataFileSize();
-        // XXX if sizeK == 0, stat file for actual size
+        // XXX if sizeK == USHRT_MAX, stat file for actual size
 
         rv = GetFileForDiskCacheRecord(record, metaData, getter_AddRefs(file));
         if (NS_SUCCEEDED(rv)) {
             rv = file->Delete(PR_FALSE);    // false == non-recursive
         }
-        DecrementTotalSize(sizeK);
+        DecrementTotalSize(sizeK * 1024);
         
     } else if (fileIndex < 4) {
         // deallocate blocks

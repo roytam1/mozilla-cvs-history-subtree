@@ -441,6 +441,7 @@ public:
      */
     void     IncrementTotalSize( PRInt32  delta)
              {
+                NS_ASSERTION(mHeader.mDataSize >= 0, "disk cache size negative?");
                 mHeader.mDataSize += delta;
                 mHeader.mIsDirty   = PR_TRUE;
              }
@@ -449,6 +450,7 @@ public:
              {
                 mHeader.mDataSize -= delta;
                 mHeader.mIsDirty   = PR_TRUE;
+                NS_ASSERTION(mHeader.mDataSize >= 0, "disk cache size negative?");
              }
     
     PRInt32  TotalSize()   { return mHeader.mDataSize; }

@@ -279,7 +279,7 @@ nsDiskCacheBlockFile::WriteBlocks( void *   buffer,
     if (bytesWritten < bytesToWrite)  return NS_ERROR_UNEXPECTED;
     
     // write the bit map and flush the file
-    rv = FlushBitMap();
+    // XXX rv = FlushBitMap();
     return rv;
 }
 
