@@ -22,8 +22,8 @@
 # Alex Fritze <alex.fritze@crocodile-clips.com>
 #
 
-DEPTH=..\..
+DEPTH=..\..\..
 
-DIRS= document content
+DIRS=src
 
 include <$(DEPTH)\config\rules.mak>
