@@ -1,0 +1,542 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+#include "net_strm.h"
+#include "net.h"
+#include "mktrace.h"
+
+
+/* XXX: Declare NET_PollSockets(...) for the blocking stream hack... */
+extern "C" {
+    XP_Bool NET_PollSockets(void);
+};
+
+
+NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
+
+#define BUFFER_BLOCK_SIZE   8192
+
+
+
+
+nsConnectionInfo::nsConnectionInfo(nsNetlibStream *pStream, 
+                                   nsIStreamNotification *pNotify)
+{
+    pNetStream = pStream;
+    pConsumer  = pNotify;
+}
+
+
+NS_IMPL_ISUPPORTS(nsConnectionInfo,kISupportsIID);
+
+
+nsConnectionInfo::~nsConnectionInfo()
+{
+    TRACEMSG(("nsConnectionInfo is being destroyed...\n"));
+
+    pNetStream = NULL;
+    pConsumer  = NULL;
+}
+
+
+
+nsNetlibStream::nsNetlibStream(void)
+{
+    NS_INIT_REFCNT();
+
+    m_Lock = PR_NewMonitor();
+    m_bIsClosed = PR_FALSE;
+}
+
+
+NS_IMPL_ISUPPORTS(nsNetlibStream,kIInputStreamIID);
+
+
+nsNetlibStream::~nsNetlibStream()
+{
+    if (m_Lock) {
+        PR_DestroyMonitor(m_Lock);
+        m_Lock = NULL;
+    }
+}
+
+
+void nsNetlibStream::Close()
+{
+    LockStream();
+    m_bIsClosed = PR_TRUE;
+    UnlockStream();
+}
+
+
+
+
+nsBufferedStream::nsBufferedStream(void)
+{
+    m_BufferLength = BUFFER_BLOCK_SIZE;
+
+    m_Buffer = new char[m_BufferLength];
+    /* If the allocation failed, mark the stream as closed... */
+    if (NULL == m_Buffer) {
+        m_bIsClosed = PR_TRUE;
+        m_BufferLength = 0;
+    }
+
+    m_DataLength = 0;
+    m_ReadOffset = m_WriteOffset = 0;
+}
+
+
+
+
+nsBufferedStream::~nsBufferedStream()
+{
+    TRACEMSG(("nsBufferedStream is being destroyed...\n"));
+
+    if (m_Buffer) {
+        free(m_Buffer);
+        m_Buffer = NULL;
+    }
+}
+
+
+PRInt32 nsBufferedStream::GetAvailableSpace(void)
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_bIsClosed ? 0 : m_BufferLength - m_WriteOffset;
+    UnlockStream();
+
+    return size;
+}
+
+
+PRInt32 nsBufferedStream::Write(const char *aBuf, PRInt32 aLen)
+{
+    PRInt32 bytesWritten = 0;
+    PRInt32 bytesFree;
+
+    LockStream();
+
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+    NS_PRECONDITION((m_WriteOffset >= m_ReadOffset), "Read past the end of buffer.");
+
+    if (!m_bIsClosed && aBuf) {
+        /* Grow the buffer if necessary */
+        bytesFree = GetAvailableSpace();
+        if (aLen > bytesFree) {
+            char *newBuffer;
+
+            m_BufferLength += (((aLen - bytesFree) / BUFFER_BLOCK_SIZE)+1) * BUFFER_BLOCK_SIZE;
+            newBuffer = (char *)realloc(m_Buffer, m_BufferLength);
+            /* If the allocation failed, close the stream and free the buffer... */
+            if (NULL == newBuffer) {
+                m_bIsClosed = PR_TRUE;
+                free(m_Buffer);
+                m_Buffer = NULL;
+                m_BufferLength = 0;
+
+                goto done;
+            } else {
+                m_Buffer = newBuffer;
+            }
+        }
+
+        memcpy(&m_Buffer[m_WriteOffset], aBuf, aLen);
+        m_WriteOffset += aLen;
+
+        bytesWritten  = aLen;
+        m_DataLength += aLen;
+    }
+
+done:
+    UnlockStream();
+
+    return bytesWritten;
+}
+
+
+PRInt32 nsBufferedStream::Read(PRInt32 *aErrorCode, 
+                               char *aBuf, 
+                               PRInt32 aOffset, 
+                               PRInt32 aCount)
+{
+    PRInt32 bytesRead = 0;
+
+    LockStream();
+
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+    NS_PRECONDITION((m_WriteOffset >= m_ReadOffset), "Read past the end of buffer.");
+
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed && (0 == m_DataLength)) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        bytesRead = -1;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
+    if (m_Buffer && m_DataLength) {
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
+        }
+
+        /* Do not read more data than there is available... */
+        if (aCount > m_DataLength) {
+            aCount = m_DataLength;
+        }
+
+        memcpy(aBuf, &m_Buffer[m_ReadOffset], aCount);
+        m_ReadOffset += aCount;
+
+        bytesRead     = aCount;
+        m_DataLength -= aCount;
+    }
+
+done:
+    UnlockStream();
+
+    return bytesRead;
+}
+
+
+
+
+
+
+nsAsyncStream::nsAsyncStream(PRInt32 buffer_size)
+{
+    m_BufferLength = buffer_size;
+
+    m_Buffer = (char *)malloc(m_BufferLength);
+    /* If the allocation failed, mark the stream as closed... */
+    if (NULL == m_Buffer) {
+        m_bIsClosed = PR_TRUE;
+        m_BufferLength = 0;
+    }
+
+    m_DataLength = 0;
+    m_ReadOffset = m_WriteOffset = 0;
+}
+
+
+nsAsyncStream::~nsAsyncStream()
+{
+    TRACEMSG(("nsAsyncStream is being destroyed...\n"));
+
+    if (m_Buffer) {
+        free(m_Buffer);
+        m_Buffer = NULL;
+    }
+}
+
+
+PRInt32 nsAsyncStream::GetAvailableSpace(void)
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_bIsClosed ? 0 : m_BufferLength - m_DataLength;
+    UnlockStream();
+
+    return size;
+}
+
+
+PRInt32 nsAsyncStream::Write(const char *aBuf, PRInt32 aLen)
+{
+    PRInt32 bytesWritten = 0;
+    PRInt32 bytesFree;
+
+    LockStream();
+    
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+
+    if (!m_bIsClosed && aBuf) {
+        /* Do not store more data than there is space for... */
+        bytesFree = GetAvailableSpace();
+        if (aLen > bytesFree) {
+            aLen = bytesFree;
+        }
+
+        /* Storing the data will cause m_WriteOffset to wrap */
+        if (m_WriteOffset + aLen > m_BufferLength) {
+            PRInt32 delta;
+
+            /* Store the first chunk through the end of the buffer */
+            delta = m_BufferLength - m_WriteOffset;
+            memcpy(&m_Buffer[m_WriteOffset], aBuf, delta);
+
+            /* Store the second chunk from the beginning of the buffer */
+            m_WriteOffset = aLen-delta;
+            memcpy(m_Buffer, &aBuf[delta], m_WriteOffset);
+        } else {
+            memcpy(&m_Buffer[m_WriteOffset], aBuf, aLen);
+            m_WriteOffset += aLen;
+        }
+
+        bytesWritten  = aLen;
+        m_DataLength += aLen;
+    }
+
+    UnlockStream();
+
+    return bytesWritten;
+}
+
+
+PRInt32 nsAsyncStream::Read(PRInt32 *aErrorCode, 
+                            char *aBuf, 
+                            PRInt32 aOffset, 
+                            PRInt32 aCount)
+{
+    PRInt32 bytesRead   = 0;
+
+    LockStream();
+
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed && (0 == m_DataLength)) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        bytesRead = -1;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
+    if (m_Buffer && m_DataLength) {
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
+        }
+
+        /* Do not read more data than there is available... */
+        if (aCount > m_DataLength) {
+            aCount = m_DataLength;
+        }
+
+        /* Reading the data will cause m_ReadOffset to wrap */
+        if (m_ReadOffset + aCount > m_BufferLength) {
+            PRInt32 delta;
+
+            /* Read the first chunk through the end of the buffer */
+            delta = m_BufferLength - m_ReadOffset;
+            memcpy(aBuf, &m_Buffer[m_ReadOffset], delta);
+
+            /* Read the second chunk from the beginning of the buffer */
+            m_ReadOffset = aCount-delta;
+            memcpy(&aBuf[delta], m_Buffer, m_ReadOffset);
+        } else {
+            memcpy(aBuf, &m_Buffer[m_ReadOffset], aCount);
+            m_ReadOffset += aCount;
+        }
+
+        bytesRead     = aCount;
+        m_DataLength -= aCount;
+    }
+
+done:
+    UnlockStream();
+
+    return bytesRead;
+}
+
+
+
+
+
+
+
+
+
+nsBlockingStream::nsBlockingStream()
+{
+    m_BufferLength = BUFFER_BLOCK_SIZE;
+
+    m_Buffer = (char *)malloc(m_BufferLength);
+    /* If the allocation failed, mark the stream as closed... */
+    if (NULL == m_Buffer) {
+        m_bIsClosed = PR_TRUE;
+        m_BufferLength = 0;
+    }
+
+    m_DataLength = 0;
+    m_ReadOffset = m_WriteOffset = 0;
+}
+
+
+nsBlockingStream::~nsBlockingStream()
+{
+    TRACEMSG(("nsBlockingStream is being destroyed...\n"));
+
+    if (m_Buffer) {
+        free(m_Buffer);
+        m_Buffer = NULL;
+    }
+}
+
+
+PRInt32 nsBlockingStream::GetAvailableSpace(void)
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_bIsClosed ? 0 : m_BufferLength - m_DataLength;
+    UnlockStream();
+
+    return size;
+}
+
+
+PRInt32 nsBlockingStream::Write(const char *aBuf, PRInt32 aLen)
+{
+    PRInt32 bytesWritten = 0;
+    PRInt32 bytesFree;
+
+    LockStream();
+
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+    
+    if (!m_bIsClosed && aBuf) {
+        /* Do not store more data than there is space for... */
+        bytesFree = GetAvailableSpace();
+        if (aLen > bytesFree) {
+            aLen = bytesFree;
+        }
+
+        /* Storing the data will cause m_WriteOffset to wrap */
+        if (m_WriteOffset + aLen > m_BufferLength) {
+            PRInt32 delta;
+
+            /* Store the first chunk through the end of the buffer */
+            delta = m_BufferLength - m_WriteOffset;
+            memcpy(&m_Buffer[m_WriteOffset], aBuf, delta);
+
+            /* Store the second chunk from the beginning of the buffer */
+            m_WriteOffset = aLen-delta;
+            memcpy(m_Buffer, &aBuf[delta], m_WriteOffset);
+        } else {
+            memcpy(&m_Buffer[m_WriteOffset], aBuf, aLen);
+            m_WriteOffset += aLen;
+        }
+
+        bytesWritten  = aLen;
+        m_DataLength += aLen;
+    }
+
+    UnlockStream();
+
+    return bytesWritten;
+}
+
+
+PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode, 
+                               char *aBuf, 
+                               PRInt32 aOffset, 
+                               PRInt32 aCount)
+{
+    PRInt32 bytesRead   = 0;
+
+    LockStream();
+
+    NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
+
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed && (0 == m_DataLength)) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        bytesRead = -1;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
+    if (m_Buffer) {
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
+        }
+
+        /* Not enough data is available... Must block. */
+        if (aCount > m_DataLength) {
+            UnlockStream();
+            do {
+                NET_PollSockets();
+                bytesRead += ReadBuffer(aBuf, aCount);
+                /* XXX m_bIsClosed is checked outside of the lock! */
+            } while ((aCount > bytesRead) && !m_bIsClosed); 
+            LockStream();
+        } else {
+            bytesRead = ReadBuffer(aBuf, aCount);
+        }
+    }
+    
+done:
+    UnlockStream();
+
+    return bytesRead;
+}
+
+
+PRInt32 nsBlockingStream::ReadBuffer(char *aBuf, PRInt32 aCount)
+{
+    PRInt32 bytesRead = 0;
+
+    LockStream();
+
+    /* Do not read more data than there is available... */
+    if (aCount > m_DataLength) {
+        aCount = m_DataLength;
+    }
+
+    /* Reading the data will cause m_ReadOffset to wrap */
+    if (m_ReadOffset + aCount > m_BufferLength) {
+        PRInt32 delta;
+
+        /* Read the first chunk through the end of the buffer */
+        delta = m_BufferLength - m_ReadOffset;
+        memcpy(aBuf, &m_Buffer[m_ReadOffset], delta);
+
+        /* Read the second chunk from the beginning of the buffer */
+        m_ReadOffset = aCount-delta;
+        memcpy(&aBuf[delta], m_Buffer, m_ReadOffset);
+    } else {
+        memcpy(aBuf, &m_Buffer[m_ReadOffset], aCount);
+        m_ReadOffset += aCount;
+    }
+
+    bytesRead     = aCount;
+    m_DataLength -= aCount;
+
+    UnlockStream();
+
+    return bytesRead;
+}
+
