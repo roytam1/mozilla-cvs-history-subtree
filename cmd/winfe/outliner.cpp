@@ -3348,6 +3348,15 @@ void COutlinerParent::GetColumnRect( int iCol, RECT &rc )
 	}
 }
 
+void COutlinerParent::EnableHeaders(BOOL bEnable)
+{
+	m_bDisableHeaders = !bEnable; 
+	CRect rect;
+	GetClientRect(&rect);
+	Invalidate();
+	OnSize(0, rect.Width(), rect.Height());
+}
+
 void COutlinerParent::InvalidateColumn( int iCol )
 {
 	RECT rc;

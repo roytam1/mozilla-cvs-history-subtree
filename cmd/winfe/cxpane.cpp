@@ -1532,7 +1532,6 @@ void CPaneCX::FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin
 {
 	// This code assumed a type of builtin/tree.  Will have to be changed.
 
-	CRDFOutliner* pWnd = (CRDFOutliner*)pBuiltin->FE_Data;
-	HT_DeletePane(HT_GetPane(pWnd->GetHTView()));
-	pWnd->GetParent()->GetParent()->DestroyWindow();
+	CRDFContentView* pWnd = (CRDFContentView*)pBuiltin->FE_Data;
+	pWnd->DestroyWindow();
 }

@@ -1381,8 +1381,11 @@ void CRDFToolbar::HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatHa
 			else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED)
 			{
 				CRDFToolbarButton* pButton = (CRDFToolbarButton*)HT_GetNodeFEData(n);
-				pButton->SetText(HT_GetNodeName(n)); // Update our name.
-				LayoutButtons(-1);
+				if (pButton->m_hWnd)
+				{
+					pButton->SetText(HT_GetNodeName(n)); // Update our name.
+					LayoutButtons(-1);
+				}
 			}
 		}
 	}

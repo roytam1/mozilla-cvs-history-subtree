@@ -451,7 +451,7 @@ public:
     ~COutlinerParent();
 
     void EnableBorder ( BOOL bEnable = TRUE ) { m_bHasBorder = bEnable; }
-    void EnableHeaders ( BOOL bEnable = TRUE) { m_bDisableHeaders = !bEnable; Invalidate ( ); }
+    void EnableHeaders ( BOOL bEnable = TRUE);
    	void EnableFocusFrame ( BOOL bEnable = TRUE) { m_bEnableFocusFrame = bEnable; }
 	void SetOutliner ( COutliner * pOutliner );
 

@@ -983,7 +983,6 @@ void CRDFOutliner::SetNavigationMode(BOOL mode)
 {
 	m_bInNavigationMode = mode;
 	((CRDFOutlinerParent*)GetParent())->EnableHeaders(!m_bInNavigationMode);
-	Invalidate();
 }
 
 void CRDFOutliner::OnSelDblClk(int iLine)
