@@ -856,10 +856,11 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
     return NS_OK;
   }
 
-  if (!line->mBounds.width)
+  if (line->mBounds.width == 0)
     return NS_ERROR_FAILURE;
 
   nsRect r1, r2;
+  nsIFrame *stoppingFrame = nsnull;
 
   if (aX < line->mBounds.x) {
     nsIFrame* frame;
@@ -870,13 +871,17 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
       frame = line->mFirstChild;
     }
     frame->GetRect(r1);
-    if (r1.width)
+    if (r1.width > 0)
     {
       *aFrameFound = frame;
       *aXIsBeforeFirstFrame = PR_TRUE;
       *aXIsAfterLastFrame = PR_FALSE;
       return NS_OK;
     }
+    else if (mRightToLeft)
+      stoppingFrame = frame;
+    else
+      stoppingFrame = line->LastChild();
   }
   else if (aX >= line->mBounds.XMost()) {
     nsIFrame* frame;
@@ -887,13 +892,17 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
       frame = line->LastChild();
     }
     frame->GetRect(r1);
-    if (r1.width)
+    if (r1.width > 0)
     {
       *aFrameFound = frame;
       *aXIsBeforeFirstFrame = PR_FALSE;
       *aXIsAfterLastFrame = PR_TRUE;
       return NS_OK;
     }
+    else if (mRightToLeft)
+      stoppingFrame = line->mFirstChild;
+    else
+      stoppingFrame = frame;
   }
 
   // Find the frame closest to the X coordinate. Gaps can occur
@@ -966,6 +975,8 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
         *aXIsBeforeFirstFrame = PR_TRUE;
       }
       frame = nextFrame;
+      if (nextFrame == stoppingFrame)
+        break;
     }
   }
   else {
@@ -1021,12 +1032,15 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
         *aXIsAfterLastFrame = PR_TRUE;
       }
       frame = nextFrame;
+      if (nextFrame == stoppingFrame)
+        break;
     }
   }
 
   *aFrameFound = frame;
   return NS_OK;
 }
+
 
 NS_IMETHODIMP
 nsLineIterator::GetNextSiblingOnLine(nsIFrame*& aFrame, PRInt32 aLineNumber)

@@ -4670,7 +4670,7 @@ nsFrame::GetFrameFromDirection(nsIFrame *aCurrentFrame, nsIPresContext* aPresCon
       continue;  //we should NOT be getting stuck on the same piece of content on the same line. skip to next line.
   }
   newFrame->GetRect(testRect);
-  if (lineIsReordered && testRect.IsEmpty()) { // this must be a non-renderable frame creatd at the end of the line by Bidi reordering
+  if (testRect.IsEmpty()) { // this must be a non-renderable frame creatd at the end of the line by Bidi reordering
     lineJump = PR_TRUE;
     aPos->mAmount = eSelectNoAmount;
   }
