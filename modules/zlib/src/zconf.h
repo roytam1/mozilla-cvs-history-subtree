@@ -240,6 +240,10 @@
 #  endif
 #endif
 
+#ifdef HAVE_VISIBILITY_PRAGMA
+#define ZEXTERN __attribute__((visibility ("default"))) extern
+#endif
+
 #ifndef ZEXTERN
 #  define ZEXTERN extern
 #endif
