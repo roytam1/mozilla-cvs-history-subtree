@@ -64,6 +64,9 @@ JSec_Target        RDFJSec_NewTarget(char* targetName, char *principalID);
 char*              RDFJSec_AttributeOfTarget(JSec_Target tr, char* attributeType);
 JSec_Error         RDFJSec_SetTargetAttribute(JSec_Target tr, char* attributeType, char* attValue);
 
+char *		   RDFJSec_GetPrincipalURLString(char *principalID);
+const char *	   RDFJSec_PrincipalUseID(JSec_PrincipalUse prUse);
+
 
 NSPR_END_EXTERN_C
 
