@@ -55,6 +55,16 @@ txHandlerTable* gTxTextHandler = 0;
 txHandlerTable* gTxApplyTemplatesHandler = 0;
 txHandlerTable* gTxCallTemplateHandler = 0;
 
+nsresult
+txFnStartLRE(PRInt32 aNamespaceID,
+             nsIAtom* aLocalName,
+             nsIAtom* aPrefix,
+             txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             txStylesheetCompilerState& aState);
+nsresult
+txFnEndLRE(txStylesheetCompilerState& aState);
+
 
 #define TX_RETURN_IF_WHITESPACE(_str, _state)                               \
     do {                                                                    \
@@ -290,7 +300,7 @@ getAtomAttr(txStylesheetAttr* aAttributes,
 }
 
 /**
- * Standard handlers
+ * Ignore and error handlers
  */
 nsresult
 txFnTextIgnore(const nsAString& aStr, txStylesheetCompilerState& aState)
@@ -382,6 +392,58 @@ nsresult
 txFnEndStylesheet(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
+    return NS_OK;
+}
+
+nsresult
+txFnStartLREStylesheet(PRInt32 aNamespaceID,
+                       nsIAtom* aLocalName,
+                       nsIAtom* aPrefix,
+                       txStylesheetAttr* aAttributes,
+                       PRInt32 aAttrCount,
+                       txStylesheetCompilerState& aState)
+{
+    if (!getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_XSLT,
+                      txXSLTAtoms::version)) {
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+
+    nsresult rv = aState.pushHandlerTable(gTxTemplateHandler);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txExpandedName nullExpr;
+    double prio = Double::NaN;
+    txPattern* match = new txRootPattern(MB_TRUE);
+    NS_ENSURE_TRUE(match, NS_ERROR_OUT_OF_MEMORY);
+
+    txTemplateItem* templ = new txTemplateItem(match, nullExpr, nullExpr,
+                                               prio);
+    NS_ENSURE_TRUE(templ, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addToplevelItem(templ);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    aState.openInstructionContainer(templ);
+
+    return txFnStartLRE(aNamespaceID, aLocalName, aPrefix, aAttributes,
+                        aAttrCount, aState);
+}
+
+nsresult
+txFnEndLREStylesheet(txStylesheetCompilerState& aState)
+{
+    nsresult rv = txFnEndLRE(aState);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txInstruction* instr = new txReturn();
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.closeInstructionContainer();
+    aState.popHandlerTable();
+
     return NS_OK;
 }
 
@@ -1099,7 +1161,7 @@ txHandlerTableData gTxRootTableData = {
   // Other
   { 0, 0, txFnStartElementError, txFnEndElementError },
   // LRE
-  { 0, 0, txFnStartElementError, txFnEndElementError }, // XXX enable fcp if version attribute is missing
+  { 0, 0, txFnStartLREStylesheet, txFnEndLREStylesheet },
   // Text
   txFnTextError
 };
