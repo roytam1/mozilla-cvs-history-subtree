@@ -294,7 +294,7 @@ nsMsgAttachmentHandler::PickEncoding(const char *charset)
   else if (!PL_strcasecmp(m_encoding, ENCODING_UUENCODE))
   {
     char        *tailName = NULL;
-    const char  *turl;
+    char  *turl;
     
     if (mURL)
     {
@@ -319,7 +319,8 @@ nsMsgAttachmentHandler::PickEncoding(const char *charset)
         PR_FREEIF(tmp);
       }
     }
-    
+
+    nsCRT::free(turl);
     m_encoder_data = MIME_UUEncoderInit((char *)(tailName ? tailName : ""),
       mime_encoder_output_fn,
       m_mime_delivery_state);
@@ -401,7 +402,7 @@ nsresult
 nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
 {
   nsresult      status = 0;
-  const char    *url_string = nsnull;
+  char    *url_string = nsnull;
 
   NS_ASSERTION (! m_done, "Already done");
 
@@ -478,7 +479,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
         return MK_OUT_OF_MEMORY;
       }
 
-      if (NS_FAILED(nsMsgNewURL(&mURL, nsString(newURLSpec))))
+      if (NS_FAILED(nsMsgNewURL(&mURL, newURLSpec)))
       {
         PR_FREEIF(src_filename);
   		  PR_FREEIF(separator);
@@ -552,7 +553,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
   // Ok, here we are, we need to fire the URL off and get the data
   // in the temp file
   //
-
+  nsCRT::free(url_string);
   // Create a fetcher for the URL attachment...
   mFetcher = new nsURLFetcher();
   if (!mFetcher)
