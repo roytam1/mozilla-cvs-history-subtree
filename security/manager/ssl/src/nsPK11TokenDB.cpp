@@ -45,8 +45,16 @@ nsPK11Token::nsPK11Token(PK11SlotInfo *slot)
 
   PK11_ReferenceSlot(slot);
   mSlot = slot;
-  
-  mTokenName = NS_ConvertUTF8toUCS2(PK11_GetTokenName(slot));
+  mSeries = PK11_GetSlotSeries(slot);
+
+  refreshTokenInfo();
+  mUIContext = new PipUIContext();
+}
+
+void  
+nsPK11Token::refreshTokenInfo()
+{
+  mTokenName = NS_ConvertUTF8toUCS2(PK11_GetTokenName(mSlot));
 
   SECStatus srv;
 
@@ -87,7 +95,6 @@ nsPK11Token::nsPK11Token(PK11SlotInfo *slot)
     mTokenSerialNum.Trim(" ", PR_FALSE, PR_TRUE);
   }
 
-  mUIContext = new PipUIContext();
 }
 
 nsPK11Token::~nsPK11Token()
@@ -119,6 +126,10 @@ void nsPK11Token::destructorSafeDestroyNSSReference()
 /* readonly attribute wstring tokenName; */
 NS_IMETHODIMP nsPK11Token::GetTokenName(PRUnichar * *aTokenName)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokenName = ToNewUnicode(mTokenName);
   if (!*aTokenName) return NS_ERROR_OUT_OF_MEMORY;
 
@@ -128,6 +139,10 @@ NS_IMETHODIMP nsPK11Token::GetTokenName(PRUnichar * *aTokenName)
 /* readonly attribute wstring tokenDesc; */
 NS_IMETHODIMP nsPK11Token::GetTokenLabel(PRUnichar **aTokLabel)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokLabel = ToNewUnicode(mTokenLabel);
   if (!*aTokLabel) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;
@@ -136,6 +151,10 @@ NS_IMETHODIMP nsPK11Token::GetTokenLabel(PRUnichar **aTokLabel)
 /* readonly attribute wstring tokenManID; */
 NS_IMETHODIMP nsPK11Token::GetTokenManID(PRUnichar **aTokManID)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokManID = ToNewUnicode(mTokenManID);
   if (!*aTokManID) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;
@@ -144,6 +163,10 @@ NS_IMETHODIMP nsPK11Token::GetTokenManID(PRUnichar **aTokManID)
 /* readonly attribute wstring tokenHWVersion; */
 NS_IMETHODIMP nsPK11Token::GetTokenHWVersion(PRUnichar **aTokHWVersion)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokHWVersion = ToNewUnicode(mTokenHWVersion);
   if (!*aTokHWVersion) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;
@@ -152,6 +175,10 @@ NS_IMETHODIMP nsPK11Token::GetTokenHWVersion(PRUnichar **aTokHWVersion)
 /* readonly attribute wstring tokenFWVersion; */
 NS_IMETHODIMP nsPK11Token::GetTokenFWVersion(PRUnichar **aTokFWVersion)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokFWVersion = ToNewUnicode(mTokenFWVersion);
   if (!*aTokFWVersion) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;
@@ -160,6 +187,10 @@ NS_IMETHODIMP nsPK11Token::GetTokenFWVersion(PRUnichar **aTokFWVersion)
 /* readonly attribute wstring tokenSerialNumber; */
 NS_IMETHODIMP nsPK11Token::GetTokenSerialNumber(PRUnichar **aTokSerialNum)
 {
+  // handle removals/insertions
+  if (mSeries != PK11_GetSlotSeries(mSlot)) {
+    refreshTokenInfo();
+  }
   *aTokSerialNum = ToNewUnicode(mTokenSerialNum);
   if (!*aTokSerialNum) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;

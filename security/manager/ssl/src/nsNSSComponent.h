@@ -34,11 +34,13 @@
 #include "nsIEntropyCollector.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
+#include "nsIDOMEventTarget.h"
 #include "nsIPref.h"
 #include "nsIObserver.h"
 #include "nsIObserverService.h"
 #include "nsWeakReference.h"
 #include "nsIScriptSecurityManager.h"
+#include "nsSmartCardMonitor.h"
 #include "nsITimer.h"
 #include "nsNetUtil.h"
 #include "nsHashtable.h"
@@ -125,11 +127,23 @@ class NS_NO_VTABLE nsINSSComponent : public nsISupports {
   NS_IMETHOD DownloadCRLDirectly(nsAutoString, nsAutoString) = 0;
   
   NS_IMETHOD LogoutAuthenticatedPK11() = 0;
-  
+
+  NS_IMETHOD LaunchSmartCardThread(SECMODModule *module) = 0;
+
+  NS_IMETHOD ShutdownSmartCardThread(SECMODModule *module) = 0;
+
+  NS_IMETHOD RegisterTarget(nsIDOMNode *node) = 0;
+
+  NS_IMETHOD DeregisterTarget(nsIDOMNode *node) = 0;
+
+  NS_IMETHOD PostEvent(const nsAString &eventType, const char *token) = 0;
+
+  NS_IMETHOD DispatchEvent(const nsAString &eventType, const char *token) = 0;
 };
 
 struct PRLock;
 class nsNSSShutDownList;
+class nsNSSDOMNode;
 
 // Implementation of the PSM component interface.
 class nsNSSComponent : public nsISignatureVerifier,
@@ -170,6 +184,13 @@ public:
   NS_IMETHOD RememberCert(CERTCertificate *cert);
   static nsresult GetNSSCipherIDFromPrefString(const nsACString &aPrefString, PRUint16 &aCipherId);
 
+  NS_IMETHOD LaunchSmartCardThread(SECMODModule *module);
+  NS_IMETHOD ShutdownSmartCardThread(SECMODModule *module);
+  NS_IMETHOD RegisterTarget(nsIDOMNode *node);
+  NS_IMETHOD DeregisterTarget(nsIDOMNode *node);
+  NS_IMETHOD PostEvent(const nsAString &eventType, const char *token);
+  NS_IMETHOD DispatchEvent(const nsAString &eventType, const char *token);
+
 private:
 
   nsresult InitializeNSS(PRBool showWarningBox);
@@ -188,6 +209,8 @@ private:
   
   void ShowAlert(AlertIdentifier ai);
   void InstallLoadableRoots();
+  void LaunchSmartCardThreads();
+  void ShutdownSmartCardThreads();
   nsresult InitializePIPNSSBundle();
   nsresult ConfigureInternalPKCS11Token();
   nsresult RegisterPSMContentListener();
@@ -204,6 +227,7 @@ private:
   nsCOMPtr<nsIURIContentListener> mPSMContentListener;
   nsCOMPtr<nsIPref> mPref;
   nsCOMPtr<nsITimer> mTimer;
+  nsNSSDOMNode *mNodeList;
   PRBool mNSSInitialized;
   PRBool mObserversRegistered;
   PLHashTable *hashTableCerts;
@@ -215,6 +239,7 @@ private:
   PRBool mUpdateTimerInitialized;
   static int mInstanceCount;
   nsNSSShutDownList *mShutdownObjectList;
+  SmartCardThreadList *mThreadList;
 };
 
 class PSMContentListener : public nsIURIContentListener,

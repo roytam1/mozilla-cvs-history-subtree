@@ -42,8 +42,6 @@
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIXPConnect.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 #include "nsIRunnable.h"
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
@@ -126,17 +124,6 @@ typedef struct nsKeyPairInfoStr {
   SECKEYPrivateKey *privKey;    /* The private key we generated */ 
   nsKeyGenType      keyGenType; /* What type of key gen are we doing.*/
 } nsKeyPairInfo;
-
-//
-// This is the class we'll use to run the keygen done code
-// as an nsIRunnable object;
-//
-struct CryptoRunnableEvent : PLEvent {
-  CryptoRunnableEvent(nsIRunnable* runnable);
-  ~CryptoRunnableEvent();
-
-   nsIRunnable* mRunnable;
-};
 
 
 //This class is just used to pass arguments
@@ -244,29 +231,47 @@ static NS_DEFINE_CID(kNSSComponentCID, NS_NSSCOMPONENT_CID);
 
 nsCrypto::nsCrypto()
 {
+  mNode = nsnull;
+  mRegistered = PR_FALSE;
 }
 
 nsCrypto::~nsCrypto()
 {
+  if (mRegistered && mNode) {
+    nsresult rv;
+    nsCOMPtr<nsINSSComponent> 
+		nssComponent(do_GetService(kNSSComponentCID, &rv));
+    if (NS_FAILED(rv))
+      return; 
+
+    nssComponent->DeregisterTarget(mNode);
+  }
 }
 
-//Grab the UI event queue so that we can post some events to it.
-nsIEventQueue* 
-nsCrypto::GetUIEventQueue()
+NS_IMETHODIMP
+nsCrypto::EnableSmartCardEvents(nsIDOMNode *aNode)
 {
   nsresult rv;
-  nsCOMPtr<nsIEventQueueService> service = 
-                        do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) 
-    return nsnull;
-  
-  nsIEventQueue* result = nsnull;
-  rv = service->GetThreadEventQueue(NS_UI_THREAD, &result);
-  if (NS_FAILED(rv)) 
-    return nsnull;
-  
-  return result;
+  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(kNSSComponentCID, &rv));
+
+  if (NS_FAILED(rv)) {
+    mNode = aNode;
+    return NS_ERROR_FAILURE; 
+  }
+  if (mRegistered) {
+    nssComponent->DeregisterTarget(mNode);
+    mRegistered = PR_FALSE;
+  }
+  mNode = aNode;
+
+  rv = nssComponent->RegisterTarget(mNode);
+  if (NS_FAILED(rv))
+     return rv;
+
+  mRegistered = PR_TRUE;
+  return NS_OK;
 }
+
 
 //These next few functions are based on implementation in
 //the script security manager to get the principals from
@@ -1406,6 +1411,7 @@ loser:
   nsFreeCertReqMessages(certReqMsgs,numRequests);
   return nsnull;;
 }
+
                                                  
 //The top level method which is a member of nsIDOMCrypto
 //for generate a base64 encoded CRMF request.
@@ -1621,41 +1627,11 @@ nsCrypto::GenerateCRMFRequest(nsIDOMCRMFObject** aReturn)
   if (!cryptoRunnable)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  CryptoRunnableEvent *runnable = new CryptoRunnableEvent(cryptoRunnable);
-  if (!runnable) {
-    delete cryptoRunnable;
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  nsCOMPtr<nsIEventQueue>uiQueue = dont_AddRef(GetUIEventQueue());
-  uiQueue->PostEvent(runnable);
-  return NS_OK;
-}
+  nsresult rv = nsNSSEventPostToUIEventQueue(cryptoRunnable);
+  if (NS_FAILED(rv))
+	delete cryptoRunnable;
 
-//A wrapper for PLEvent that we can use to post
-//our nsIRunnable Events.
-static void PR_CALLBACK
-handleCryptoRunnableEvent(CryptoRunnableEvent* aEvent)
-{
-  aEvent->mRunnable->Run();
-}
-
-static void PR_CALLBACK
-destroyCryptoRunnableEvent(CryptoRunnableEvent* aEvent)
-{
-  delete aEvent;
-}
-
-CryptoRunnableEvent::CryptoRunnableEvent(nsIRunnable* runnable)
-  :  mRunnable(runnable)
-{
-  NS_ADDREF(mRunnable);
-  PL_InitEvent(this, nsnull, PLHandleEventProc(handleCryptoRunnableEvent),
-               PLDestroyEventProc(&destroyCryptoRunnableEvent));
-}
-
-CryptoRunnableEvent::~CryptoRunnableEvent()
-{
-  NS_RELEASE(mRunnable);
+  return rv;
 }
 
 
@@ -2025,7 +2001,6 @@ nsCrypto::ImportUserCertificates(const nsAString& aNickname,
     // later.
     nsCOMPtr<nsIRunnable> p12Runnable = new nsP12Runnable(certArr, numResponses,
                                                           token);
-    CryptoRunnableEvent *runnable;
     if (!p12Runnable) {
       rv = NS_ERROR_FAILURE;
       goto loser;
@@ -2036,13 +2011,9 @@ nsCrypto::ImportUserCertificates(const nsAString& aNickname,
     // memory on the way out.
     certArr = nsnull;
 
-    runnable = new CryptoRunnableEvent(p12Runnable);
-    if (!runnable) {
-      rv = NS_ERROR_FAILURE;
+    rv = nsNSSEventPostToUIEventQueue(p12Runnable);
+    if (NS_FAILED(rv))
       goto loser;
-    }
-    nsCOMPtr<nsIEventQueue>uiQueue = dont_AddRef(GetUIEventQueue());
-    uiQueue->PostEvent(runnable);
   }
 
  loser:
@@ -2605,6 +2576,11 @@ nsPkcs11::Deletemodule(const nsAString& aModuleName, PRInt32* aReturn)
   PRInt32 modType;
   SECStatus srv = SECMOD_DeleteModule(modName, &modType);
   if (srv == SECSuccess) {
+    SECMODModule *module = SECMOD_FindModule(modName);
+    if (module) {
+      nssComponent->ShutdownSmartCardThread(module);
+      SECMOD_DestroyModule(module);
+    }
     if (modType == SECMOD_EXTERNAL) {
       nssComponent->GetPIPNSSBundleString("DelModuleExtSuccess", errorMessage);
       *aReturn = JS_OK_DEL_EXTERNAL_MOD;
@@ -2674,6 +2650,14 @@ nsPkcs11::Addmodule(const nsAString& aModuleName,
   PRUint32 cipherFlags = SECMOD_PubCipherFlagstoInternal(aCipherFlags);
   SECStatus srv = SECMOD_AddNewModule(moduleName, fullPath, 
                                       mechFlags, cipherFlags);
+  if (srv == SECSuccess) {
+    SECMODModule *module = SECMOD_FindModule(moduleName);
+    if (module) {
+      nssComponent->LaunchSmartCardThread(module);
+      SECMOD_DestroyModule(module);
+    }
+  }
+	
   nsMemory::Free(moduleName);
   nsMemory::Free(fullPath);
 

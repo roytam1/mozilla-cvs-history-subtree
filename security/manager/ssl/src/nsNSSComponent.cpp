@@ -28,6 +28,7 @@
 #include "nsNSSComponent.h"
 #include "nsNSSCallbacks.h"
 #include "nsNSSIOLayer.h"
+#include "nsNSSEvent.h"
 
 #include "nsNetUtil.h"
 #include "nsAppDirectoryServiceDefs.h"
@@ -35,6 +36,7 @@
 #include "nsIStreamListener.h"
 #include "nsIStringBundle.h"
 #include "nsIDirectoryService.h"
+#include "nsIDOMNode.h"
 #include "nsCURILoader.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIProxyObjectManager.h"
@@ -43,13 +45,15 @@
 #include "nsIProfileChangeStatus.h"
 #include "nsNSSCertificate.h"
 #include "nsNSSHelper.h"
+#include "nsSmartCardMonitor.h"
 #include "prlog.h"
 #include "nsIPref.h"
 #include "nsIDateTimeFormat.h"
 #include "nsDateTimeFormatCID.h"
 #include "nsAutoLock.h"
-#include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
+#include "nsIDOMEvent.h"
+#include "nsIDOMDocumentEvent.h"
 #include "nsIRunnable.h"
 #include "plevent.h"
 #include "nsCRT.h"
@@ -182,6 +186,7 @@ struct CRLDownloadEvent : PLEvent {
   nsCAutoString *urlString;
   nsIStreamListener *psmDownloader;
 };
+
 //Note that nsNSSComponent is a singleton object across all threads, and automatic downloads
 //are always scheduled sequentially - that is, once one crl download is complete, the next one
 //is scheduled
@@ -205,8 +210,84 @@ static void PR_CALLBACK DestroyCRLImportPLEvent(CRLDownloadEvent* aEvent)
   delete aEvent;
 }
 
+// self linking an removing double linked entry
+class nsNSSDOMNode {
+private:
+   nsNSSDOMNode *next;
+   nsNSSDOMNode *prev;
+   nsNSSDOMNode **head;
+   nsIDOMNode *node;
+   
+public:
+   nsNSSDOMNode(nsIDOMNode *node_,
+    nsNSSDOMNode *next_, nsNSSDOMNode *prev_,
+    nsNSSDOMNode **head_) : 
+    next(next_), prev(prev_), head(head_), node(node_) { 
+     if (prev) { prev->next = this; } else { *head = this; }
+     if (next) { next->prev = this; }
+    }
+   ~nsNSSDOMNode() {
+     if (prev) { prev->next = next; } else { *head = next; }
+     if (next) { next->prev = prev; }
+    }
+    nsIDOMNode *getNode() { return node; }
+    nsNSSDOMNode *getNext() { return next; }
+    nsNSSDOMNode *getPrev() { return prev; }
+};
+
+
+//This class is used to run the callback code
+//passed to the event handlers for smart card notification
+class nsTokenEventRunnable : public nsIRunnable {
+public:
+  nsTokenEventRunnable(const nsAString &aType, const char *aTokenName);
+  virtual ~nsTokenEventRunnable();
+
+  NS_IMETHOD Run ();
+  NS_DECL_ISUPPORTS
+private:
+  nsString mType;
+  char *mTokenName;
+};
+
+// QueryInterface implementation for nsCryptoRunnable
+NS_INTERFACE_MAP_BEGIN(nsTokenEventRunnable)
+  NS_INTERFACE_MAP_ENTRY(nsIRunnable)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END_THREADSAFE
+
+NS_IMPL_THREADSAFE_ADDREF(nsTokenEventRunnable)
+NS_IMPL_THREADSAFE_RELEASE(nsTokenEventRunnable)
+
+nsTokenEventRunnable::nsTokenEventRunnable(const nsAString &aType, 
+						const char *aTokenName): 
+     mType(aType)
+{
+  mTokenName = strdup(aTokenName);
+}
+
+nsTokenEventRunnable::~nsTokenEventRunnable()
+{
+  if (mTokenName) {
+	free(mTokenName);
+   }
+}
+
+//Implementation that runs the callback passed to 
+//crypto.generateCRMFRequest as an event.
+NS_IMETHODIMP
+nsTokenEventRunnable::Run()
+{ 
+  nsresult rv;
+  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(kNSSComponentCID, &rv));
+  if (NS_FAILED(rv))
+    return NS_ERROR_FAILURE; 
+
+  return nssComponent->DispatchEvent(mType, mTokenName);
+}
+
 nsNSSComponent::nsNSSComponent()
-:mNSSInitialized(PR_FALSE)
+:mNSSInitialized(PR_FALSE), mThreadList(NULL)
 {
   mutex = PR_NewLock();
   
@@ -221,6 +302,7 @@ nsNSSComponent::nsNSSComponent()
   mTimer = nsnull;
   mCrlTimerLock = nsnull;
   mObserversRegistered = PR_FALSE;
+  mNodeList = NULL;
   
   NS_ASSERTION( (0 == mInstanceCount), "nsNSSComponent is a singleton, but instantiated multiple times!");
   ++mInstanceCount;
@@ -246,6 +328,10 @@ nsNSSComponent::~nsNSSComponent()
       delete crlsScheduledForDownload;
     }
 
+    while (mNodeList) {
+	delete mNodeList;
+    }
+
     mUpdateTimerInitialized = PR_FALSE;
   }
 
@@ -262,6 +348,79 @@ nsNSSComponent::~nsNSSComponent()
   }
 
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("nsNSSComponent::dtor finished\n"));
+}
+
+
+
+NS_IMETHODIMP
+nsNSSComponent::RegisterTarget(nsIDOMNode *aNode)
+{
+   nsAutoLock lock(mutex);
+
+   nsNSSDOMNode *node = 
+		new nsNSSDOMNode(aNode, mNodeList, NULL, &mNodeList);
+   return node ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsNSSComponent::DeregisterTarget(nsIDOMNode *aNode)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+  nsNSSDOMNode *node;
+  nsAutoLock lock(mutex);
+  for (node = mNodeList; node; node = node->getNext()) {
+    if (node->getNode() == aNode) {
+      delete node;
+      node = NULL;
+      rv = NS_OK;
+      break;
+    }
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
+nsNSSComponent::PostEvent(const nsAString &eventType, const char *token)
+{
+  nsresult rv;
+  nsTokenEventRunnable *runnable = new nsTokenEventRunnable(eventType,token);
+
+  rv = nsNSSEventPostToUIEventQueue(runnable);
+  if (NS_FAILED(rv))
+    delete runnable;
+
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsNSSComponent::DispatchEvent(const nsAString &eventType, const char *TokenName)
+{
+  //nsAutoLock lock(mutex);
+  nsNSSDOMNode *node;
+  PRBool rv;
+
+  for (node = mNodeList; node; node = node->getNext()) {
+    // get the DocumentEvent
+    nsIDOMNode *aNode = node->getNode();
+    nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(aNode);
+    nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(aNode);
+    if (!doc) {
+      continue;
+    }
+
+    // build the event
+    nsCOMPtr<nsIDOMEvent> event;
+    doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+    if (!event) {	
+      continue;
+    }
+
+    // send it
+    event->InitEvent(eventType, false, true);
+    target->DispatchEvent(event, &rv);
+   }
+   return NS_OK;
 }
 
 #ifdef XP_MAC
@@ -333,6 +492,53 @@ nsNSSComponent::SkipOcspOff()
 }
 
 void
+nsNSSComponent::LaunchSmartCardThreads()
+{
+  nsNSSShutDownPreventionLock locker;
+  {
+    SECMODModuleList *list = SECMOD_GetDefaultModuleList();
+    SECMODListLock *lock = SECMOD_GetDefaultModuleListLock();
+    SECMOD_GetReadLock(lock);
+
+    while (list) {
+      SECMODModule *module = list->module;
+      LaunchSmartCardThread(module);
+      list = list->next;
+    }
+    SECMOD_ReleaseReadLock(lock);
+  }
+}
+
+NS_IMETHODIMP
+nsNSSComponent::LaunchSmartCardThread(SECMODModule *module)
+{
+  if (SECMOD_HasRemovableSlots(module)) {
+    if (mThreadList == NULL) {
+	mThreadList = new SmartCardThreadList();
+    }
+    mThreadList->Add(new SmartCardMonitoringThread(module));
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsNSSComponent::ShutdownSmartCardThread(SECMODModule *module)
+{
+  if (!mThreadList) {
+     return NS_OK;
+  }
+  mThreadList->Remove(module);
+  return NS_OK;
+}
+
+void
+nsNSSComponent::ShutdownSmartCardThreads()
+{
+  delete mThreadList;
+  mThreadList = NULL;
+}
+
+void
 nsNSSComponent::InstallLoadableRoots()
 {
   nsNSSShutDownPreventionLock locker;
@@ -352,7 +558,7 @@ nsNSSComponent::InstallLoadableRoots()
         PK11SlotInfo *slot = module->slots[i];
         if (PK11_IsPresent(slot)) {
           if (PK11_HasRootCerts(slot)) {
-            RootsModule = module;
+            RootsModule = SECMOD_ReferenceModule(module);
             break;
           }
         }
@@ -369,6 +575,7 @@ nsNSSComponent::InstallLoadableRoots()
     CK_INFO info;
     if (SECSuccess != PK11_GetModInfo(RootsModule, &info)) {
       // Do not use this module
+      SECMOD_DestroyModule(RootsModule);
       RootsModule = nsnull;
     }
     else {
@@ -385,13 +592,16 @@ nsNSSComponent::InstallLoadableRoots()
          ) {
         PRInt32 modType;
         SECMOD_DeleteModule(RootsModule->commonName, &modType);
+	SECMOD_DestroyModule(RootsModule);
 
         RootsModule = nsnull;
       }
     }
   }
 
-  if (!RootsModule) {
+  if (RootsModule) {
+    SECMOD_DestroyModule(RootsModule);
+  } else { /* !RootsModule */
     // Load roots module from our installation path
   
     nsresult rv;
@@ -628,8 +838,6 @@ static void setOCSPOptions(nsIPref * pref)
 nsresult
 nsNSSComponent::PostCRLImportEvent(nsCAutoString *urlString, PSMContentDownloader *psmDownloader)
 {
-  nsresult rv;
-  
   //Create the event
   CRLDownloadEvent *event = new CRLDownloadEvent;
   PL_InitEvent(event, this, (PLHandleEventProc)HandleCRLImportPLEvent, (PLDestroyEventProc)DestroyCRLImportPLEvent);
@@ -637,17 +845,8 @@ nsNSSComponent::PostCRLImportEvent(nsCAutoString *urlString, PSMContentDownloade
   event->psmDownloader = (nsIStreamListener *)psmDownloader;
   
   //Get a handle to the ui event queue
-  nsCOMPtr<nsIEventQueueService> service = 
-                        do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) 
-    return rv;
   
-  nsIEventQueue* result = nsnull;
-  rv = service->GetThreadEventQueue(NS_UI_THREAD, &result);
-  if (NS_FAILED(rv)) 
-    return rv;
-  
-  nsCOMPtr<nsIEventQueue>uiQueue = dont_AddRef(result);
+  nsCOMPtr<nsIEventQueue>uiQueue = dont_AddRef(nsNSSEventGetUIEventQueue());
 
   //Post the event
   return uiQueue->PostEvent(event);
@@ -1189,6 +1388,8 @@ nsNSSComponent::InitializeNSS(PRBool showWarningBox)
 
       InstallLoadableRoots();
 
+      LaunchSmartCardThreads();
+
       PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("NSS Initialization done\n"));
     }
   }
@@ -1235,6 +1436,7 @@ nsNSSComponent::ShutdownNSS()
                                 (void*) this);
     }
 
+    ShutdownSmartCardThreads();
     SSL_ClearSessionCache();
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("evaporating psm resources\n"));
     mShutdownObjectList->evaporateAllNSSResources();

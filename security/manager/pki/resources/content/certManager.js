@@ -48,6 +48,10 @@ var userTreeView;
 
 function LoadCerts()
 {
+  window.crypto.enableSmartCardEvents(document);
+  document.addEventListener("smartcard-insert",onSmartCardChange,false);
+  document.addEventListener("smartcard-remove",onSmartCardChange,false);
+
   certdb = Components.classes[nsX509CertDB].getService(nsIX509CertDB);
   var certcache = Components.classes[nsNSSCertCache].createInstance(nsINSSCertCache);
   
@@ -430,6 +434,31 @@ function addCACerts()
     caTreeView.loadCerts(nsIX509Cert.CA_CERT);
     caTreeView.selection.clearSelection();
   }
+}
+
+function onSmartCardChange()
+{
+  var certcache = Components.classes[nsNSSCertCache].createInstance(nsINSSCertCache);
+  // force the reauthentication.
+  // load the CA and user certs only, since they are the most likely type
+  // of cert in the token, and the load is fairly expensive.
+  // What should happen here is we should mark each view as stale and reload
+  // them as they are selected
+  //userTreeView.loadCerts(nsIX509Cert.USER_CERT);
+  //caTreeView.loadCerts(certcache, nsIX509Cert.CA_CERT);
+  //serverTreeView.loadCerts(certcache, nsIX509Cert.SERVER_CERT);
+  //emailTreeView.loadCerts(certcache, nsIX509Cert.EMAIL_CERT);
+
+  certcache.cacheAllCerts();
+  userTreeView.loadCertsFromCache(certcache, nsIX509Cert.USER_CERT);
+  userTreeView.selection.clearSelection();
+  caTreeView.loadCertsFromCache(certcache, nsIX509Cert.CA_CERT);
+  caTreeView.selection.clearSelection();
+  serverTreeView.loadCertsFromCache(certcache, nsIX509Cert.SERVER_CERT);
+  serverTreeView.selection.clearSelection();
+  emailTreeView.loadCertsFromCache(certcache, nsIX509Cert.EMAIL_CERT);
+  emailTreeView.selection.clearSelection();
+
 }
 
 function addEmailCert()

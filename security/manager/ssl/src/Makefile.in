@@ -82,6 +82,8 @@ CPPSRCS = 				\
   nsCRLManager.cpp \
   nsNSSShutDown.cpp \
   nsNTLMAuthModule.cpp \
+  nsNSSEvent.cpp \
+  nsSmartCardMonitor.cpp \
 	$(NULL)
 
 ifdef MOZ_XUL
