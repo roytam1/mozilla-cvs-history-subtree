@@ -441,7 +441,6 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 		ber_dump( ber, 1 );
 	}
 #endif
-
 	for ( rc = 0, p = (char *) fmt; *p && rc != LBER_DEFAULT; p++ ) {
 		switch ( *p ) {
 		case 'a':	/* octet string - allocate storage as needed */
@@ -568,7 +567,7 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 
 		case '{':	/* begin sequence */
 		case '[':	/* begin set */
-			if ( *(fmt + 1) != 'v' && *(fmt + 1) != 'V' )
+			if ( *(p + 1) != 'v' && *(p + 1) != 'V' )
 				rc = ber_skip_tag( ber, &len );
 			break;
 
@@ -579,7 +578,7 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 		default:
 			{
 				char msg[80];
-				sprintf( msg, "unknown fmt %c\n", *fmt );
+				sprintf( msg, "unknown fmt %c\n", *p );
 				ber_err_print( msg );
 			}
 			rc = LBER_DEFAULT;
@@ -589,7 +588,7 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 
 	va_end( ap );
 
-	if (rc != LBER_DEFAULT) {
+	if (rc == LBER_DEFAULT) {
 	  va_start( ap, fmt );
 	  for ( p--; fmt < p && *fmt; fmt++ ) {
 		switch ( *fmt ) {
