@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -36,7 +36,6 @@
 #include "nsCDocShell.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIContentViewerContainer.h"
-#include "nsIDeviceContext.h"
 
 #include "nsIDocumentLoader.h"
 #include "nsIDocumentLoaderObserver.h"
@@ -50,6 +49,8 @@
 #include "nsCOMPtr.h"
 #include "nsPoint.h" // mCurrent/mDefaultScrollbarPreferences
 #include "nsString.h"
+
+#include "nsIWindow.h"
 
 #define SH_IN_FRAMES 1
 
@@ -106,7 +107,7 @@ public:
    NS_DECL_ISUPPORTS
      
    // nsITimerCallback interface
-   NS_IMETHOD_(void) Notify(nsITimer *timer);
+   NS_IMETHOD Notify(nsITimer *timer);
 
    nsCOMPtr<nsIDocShell>   mDocShell;
    nsCOMPtr<nsIURI>        mURI;
@@ -187,7 +188,6 @@ protected:
 
    // Content Viewer Management
    NS_IMETHOD EnsureContentViewer();
-   NS_IMETHOD EnsureDeviceContext();
    NS_IMETHOD CreateAboutBlankContentViewer();
    NS_IMETHOD CreateContentViewer(const char* aContentType, 
       nsIChannel* aOpenedChannel, nsIStreamListener** aContentHandler);
@@ -271,10 +271,9 @@ protected:
    nsDocShellInitInfo*        mInitInfo;
    nsCOMPtr<nsIContentViewer> mContentViewer;
    nsCOMPtr<nsIDocumentCharsetInfo> mDocumentCharsetInfo;
-   nsCOMPtr<nsIDeviceContext> mDeviceContext;
    nsCOMPtr<nsIDocumentLoader>mDocLoader;
    nsCOMPtr<nsIDocumentLoaderObserver> mDocLoaderObserver;
-   nsCOMPtr<nsIWidget>        mParentWidget;
+   nsCOMPtr<nsIWindow>        mParentWidget;
    nsCOMPtr<nsIPref>          mPrefs;
    nsCOMPtr<nsIURI>           mCurrentURI;
    nsCOMPtr<nsIURI>           mReferrerURI;

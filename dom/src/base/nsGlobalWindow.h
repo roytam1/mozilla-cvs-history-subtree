@@ -213,8 +213,7 @@ protected:
    NS_IMETHOD GetTreeOwner(nsIDocShellTreeOwner** aTreeOwner);
    NS_IMETHOD GetTreeOwner(nsIBaseWindow** aTreeOwner);
    NS_IMETHOD GetWebBrowserChrome(nsIWebBrowserChrome** aBrowserChrome);
-   NS_IMETHOD GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
-      float* aT2P);
+   NS_IMETHOD GetScrollInfo(nsIScrollableView** aScrollableView);
    nsresult RegisterEventListener(const char* aEventName,
                                   REFNSIID aIID);
    void FlushPendingNotifications();

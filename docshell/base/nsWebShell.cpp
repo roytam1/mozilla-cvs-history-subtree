@@ -59,8 +59,6 @@ typedef unsigned long HMTX;
 #include "nsCRT.h"
 #include "nsVoidArray.h"
 #include "nsString.h"
-#include "nsWidgetsCID.h"
-#include "nsGfxCIID.h"
 #include "plevent.h"
 #include "prprf.h"
 #include "nsIPluginHost.h"
@@ -194,7 +192,6 @@ nsWebShell::~nsWebShell()
 
   NS_IF_RELEASE(mThreadEventQueue);
   mContentViewer=nsnull;
-  mDeviceContext=nsnull;
   NS_IF_RELEASE(mContainer);
 
   if (mScriptGlobal) {

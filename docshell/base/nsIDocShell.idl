@@ -22,6 +22,7 @@
  */
 
 #include "nsISupports.idl"
+#include "gfxtypes.idl"
 #include "domstubs.idl"
 #include "nsIURIContentListener.idl"
 #include "nsIURI.idl"
@@ -167,11 +168,11 @@ interface nsIDocShell : nsISupports
 	/*
 	XXX Comment here!
 	*/
-	attribute long marginWidth;
+	attribute gfx_dimension marginWidth;
 
 	/*
 	XXX Comment here!
 	*/
-	attribute long marginHeight;
+	attribute gfx_dimension marginHeight;
 };
 

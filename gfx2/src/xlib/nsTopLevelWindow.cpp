@@ -81,7 +81,8 @@ NS_IMETHODIMP nsTopLevelWindow::Init(nsIWindow *aParent,
                                      gfx_coord aX,
                                      gfx_coord aY,
                                      gfx_dimension aWidth,
-                                     gfx_dimension aHeight)
+                                     gfx_dimension aHeight,
+                                     PRInt32 aBorder)
 {
   mBounds.SetRect(aX, aY, aWidth, aHeight);
   mDepth = 24; // this could be wrong :)

@@ -40,12 +40,15 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsPoint.h"
-#include "nsGfxCIID.h"
 #include "nsIPrompt.h"
 #include "nsTextFormatter.h"
 #include "nsIHTTPEventSink.h"
 #include "nsISecurityEventSink.h"
 #include "nsScriptSecurityManager.h"
+
+#include "nsIOutputDevice.h"
+
+#include "nsIWindow.h"
 
 // Local Includes
 #include "nsDocShell.h"
@@ -87,7 +90,6 @@
 #include "nsIDOMXULDocument.h"
 #include "nsIDOMXULCommandDispatcher.h"
 
-static NS_DEFINE_IID(kDeviceContextCID, NS_DEVICE_CONTEXT_CID);
 static NS_DEFINE_CID(kPlatformCharsetCID, NS_PLATFORMCHARSET_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 static NS_DEFINE_CID(kSimpleURICID,            NS_SIMPLEURI_CID);
@@ -713,17 +715,15 @@ NS_IMETHODIMP nsDocShell::SetViewMode(PRInt32 aViewMode)
 NS_IMETHODIMP nsDocShell::GetZoom(float* zoom)
 {
    NS_ENSURE_ARG_POINTER(zoom);
-   NS_ENSURE_SUCCESS(EnsureDeviceContext(), NS_ERROR_FAILURE);
 
-   NS_ENSURE_SUCCESS(mDeviceContext->GetZoom(*zoom), NS_ERROR_FAILURE);
+   // XXX pav
 
    return NS_OK;
 }
 
 NS_IMETHODIMP nsDocShell::SetZoom(float zoom)
 {
-   NS_ENSURE_SUCCESS(EnsureDeviceContext(), NS_ERROR_FAILURE);
-   mDeviceContext->SetZoom(zoom);
+    // XXX pav
 
    // get the pres shell
    nsCOMPtr<nsIPresShell> presShell;
@@ -750,7 +750,7 @@ NS_IMETHODIMP nsDocShell::SetZoom(float zoom)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::GetMarginWidth(PRInt32* aWidth)
+NS_IMETHODIMP nsDocShell::GetMarginWidth(gfx_dimension* aWidth)
 {
   NS_ENSURE_ARG_POINTER(aWidth);
 
@@ -758,13 +758,13 @@ NS_IMETHODIMP nsDocShell::GetMarginWidth(PRInt32* aWidth)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::SetMarginWidth(PRInt32 aWidth)
+NS_IMETHODIMP nsDocShell::SetMarginWidth(gfx_dimension aWidth)
 {
   mMarginWidth = aWidth;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::GetMarginHeight(PRInt32* aHeight)
+NS_IMETHODIMP nsDocShell::GetMarginHeight(gfx_dimension* aHeight)
 {
   NS_ENSURE_ARG_POINTER(aHeight);
 
@@ -772,7 +772,7 @@ NS_IMETHODIMP nsDocShell::GetMarginHeight(PRInt32* aHeight)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::SetMarginHeight(PRInt32 aHeight)
+NS_IMETHODIMP nsDocShell::SetMarginHeight(gfx_dimension aHeight)
 {
   mMarginHeight = aHeight;
   return NS_OK;
@@ -1631,8 +1631,8 @@ NS_IMETHODIMP nsDocShell::GetSessionHistory(nsISHistory** aSessionHistory)
 // nsDocShell::nsIBaseWindow
 //*****************************************************************************   
 
-NS_IMETHODIMP nsDocShell::InitWindow(nativeWindow parentNativeWindow,
-   nsIWidget* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
+NS_IMETHODIMP nsDocShell::InitWindow(void* parentNativeWindow,
+   nsIWindow* parentWidget, PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy)   
 {
    NS_ENSURE_ARG(parentWidget);  // DocShells must get a widget for a parent
 
@@ -1835,7 +1835,7 @@ NS_IMETHODIMP nsDocShell::Repaint(PRBool aForce)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::GetParentWidget(nsIWidget** parentWidget)
+NS_IMETHODIMP nsDocShell::GetParentWidget(nsIWindow** parentWidget)
 {
    NS_ENSURE_ARG_POINTER(parentWidget);
 
@@ -1845,30 +1845,13 @@ NS_IMETHODIMP nsDocShell::GetParentWidget(nsIWidget** parentWidget)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::SetParentWidget(nsIWidget* aParentWidget)
+NS_IMETHODIMP nsDocShell::SetParentWidget(nsIWindow* aParentWidget)
 {
    NS_ENSURE_STATE(!mContentViewer);
 
    mParentWidget = aParentWidget;
 
    return NS_OK;
-}
-
-NS_IMETHODIMP nsDocShell::GetParentNativeWindow(nativeWindow* parentNativeWindow)
-{
-   NS_ENSURE_ARG_POINTER(parentNativeWindow);
-
-   if(mParentWidget)
-      *parentNativeWindow = mParentWidget->GetNativeData(NS_NATIVE_WIDGET);
-   else
-      *parentNativeWindow = nsnull;
-
-   return NS_OK;
-}
-
-NS_IMETHODIMP nsDocShell::SetParentNativeWindow(nativeWindow parentNativeWindow)
-{
-   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsDocShell::GetVisibility(PRBool* aVisibility)
@@ -1918,7 +1901,7 @@ NS_IMETHODIMP nsDocShell::SetVisibility(PRBool aVisibility)
    return NS_OK;
 }
 
-NS_IMETHODIMP nsDocShell::GetMainWidget(nsIWidget** aMainWidget)
+NS_IMETHODIMP nsDocShell::GetMainWindow(nsIWindow** aMainWidget)
 {
    // We don't create our own widget, so simply return the parent one. 
    return GetParentWidget(aMainWidget);
@@ -1926,10 +1909,12 @@ NS_IMETHODIMP nsDocShell::GetMainWidget(nsIWidget** aMainWidget)
 
 NS_IMETHODIMP nsDocShell::SetFocus()
 {
-   nsCOMPtr<nsIWidget> mainWidget;
-   GetMainWidget(getter_AddRefs(mainWidget));
-   if(mainWidget)
-      mainWidget->SetFocus();
+   nsCOMPtr<nsIWindow> mainWidget;
+   GetMainWindow(getter_AddRefs(mainWidget));
+   if(mainWidget) {
+       // XXX pav
+       //  mainWidget->SetFocus();
+   }
    return NS_OK;
 }
 
@@ -2163,8 +2148,8 @@ NS_IMETHODIMP nsDocShell::GetScrollRange(PRInt32 scrollOrientation,
        return NS_ERROR_FAILURE;
    }
 
-   PRInt32 cx;
-   PRInt32 cy;
+   gfx_coord cx;
+   gfx_coord cy;
    
    NS_ENSURE_SUCCESS(scrollView->GetContainerSize(&cx, &cy), NS_ERROR_FAILURE);
    *minPos = 0;
@@ -2449,11 +2434,11 @@ NS_IMETHODIMP nsDocShell::RefreshURI(nsIURI *aURI, PRInt32 aDelay, PRBool aRepea
          NS_ERROR_FAILURE);
    }
    
-   nsCOMPtr<nsITimer> timer = do_CreateInstance("@mozilla.org/timer;1");
+   nsCOMPtr<nsITimer> timer = do_CreateInstance("@mozilla.org/gfx.timer;2");
    NS_ENSURE_TRUE(timer, NS_ERROR_FAILURE);
     
    mRefreshURIList->AppendElement(timer);    // owning timer ref
-   timer->Init(refreshTimer, aDelay);
+   timer->Init(refreshTimer, aDelay, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_ONE_SHOT);
 
    return NS_OK;
 }
@@ -2595,30 +2580,6 @@ NS_IMETHODIMP nsDocShell::EnsureContentViewer()
       return NS_OK;
 
    return CreateAboutBlankContentViewer();
-}
-
-NS_IMETHODIMP nsDocShell::EnsureDeviceContext()
-{
-   if(mDeviceContext)
-      return NS_OK;
-
-   mDeviceContext = do_CreateInstance(kDeviceContextCID);
-   NS_ENSURE_TRUE(mDeviceContext, NS_ERROR_FAILURE);
-
-   nsCOMPtr<nsIWidget> widget;
-   GetMainWidget(getter_AddRefs(widget));
-   NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
-
-   mDeviceContext->Init(widget->GetNativeData(NS_NATIVE_WIDGET));
-   float dev2twip;
-   mDeviceContext->GetDevUnitsToTwips(dev2twip);
-   mDeviceContext->SetDevUnitsToAppUnits(dev2twip);
-   float twip2dev;
-   mDeviceContext->GetTwipsToDevUnits(twip2dev);
-   mDeviceContext->SetAppUnitsToDevUnits(twip2dev);
-   mDeviceContext->SetGamma(1.0f);
-
-   return NS_OK;
 }
 
 NS_IMETHODIMP nsDocShell::CreateAboutBlankContentViewer()
@@ -2856,18 +2817,24 @@ NS_IMETHODIMP nsDocShell::SetupNewViewer(nsIContentViewer* aNewViewer)
 
    mContentViewer = aNewViewer;
 
-   nsCOMPtr<nsIWidget> widget;
-   NS_ENSURE_SUCCESS(GetMainWidget(getter_AddRefs(widget)), NS_ERROR_FAILURE);
+   nsCOMPtr<nsIWindow> widget;
+   NS_ENSURE_SUCCESS(GetMainWindow(getter_AddRefs(widget)), NS_ERROR_FAILURE);
 
    nsRect bounds(x, y, cx, cy);
-   NS_ENSURE_SUCCESS(EnsureDeviceContext(), NS_ERROR_FAILURE);
+
+
+   // XXX pav
+
+   nsCOMPtr<nsIOutputDevice> mOutputDevice;
+
    if(NS_FAILED(mContentViewer->Init(widget,
-      mDeviceContext, bounds)))
-      {
-      mContentViewer = nsnull;
-      NS_ERROR("ContentViewer Initialization failed");
-      return NS_ERROR_FAILURE;
-      }
+                                     mOutputDevice,
+                                     bounds)))
+   {
+       mContentViewer = nsnull;
+       NS_ERROR("ContentViewer Initialization failed");
+       return NS_ERROR_FAILURE;
+   }
 
 // XXX: It looks like the LayoutState gets restored again in Embed()
 //      right after the call to SetupNewViewer(...)
@@ -4429,7 +4396,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 // nsRefreshTimer::nsITimerCallback
 //*****************************************************************************   
 
-NS_IMETHODIMP_(void) nsRefreshTimer::Notify(nsITimer *aTimer)
+NS_IMETHODIMP nsRefreshTimer::Notify(nsITimer *aTimer)
 {
     NS_ASSERTION(mDocShell, "DocShell is somehow null");
 
@@ -4446,5 +4413,7 @@ NS_IMETHODIMP_(void) nsRefreshTimer::Notify(nsITimer *aTimer)
     * LoadURL(...) will cancel all refresh timers... This causes the Timer and
     * its refreshData instance to be released...
     */
+
+    return NS_OK;
 }
 

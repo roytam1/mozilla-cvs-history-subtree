@@ -38,6 +38,11 @@ typedef enum
   nsImageType_kART = 6
 } nsImageType;
 
+#define NS_IMAGEMANAGER_CID    \
+{ 0x140d2dd1, 0x96f4, 0x11d3,    \
+{ 0x8a, 0xf3, 0x0, 0x10, 0x5a, 0x1b, 0x88, 0x60 } }
+
+
 // IID for the nsIImageManager interface
 #define NS_IIMAGEMANAGER_IID    \
 { 0x9f327100, 0xad5a, 0x11d1,   \

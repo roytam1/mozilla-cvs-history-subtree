@@ -150,18 +150,7 @@ interface nsIBaseWindow : nsISupports
 	On controls that don't support widgets, setting this will return a 
 	NS_ERROR_NOT_IMPLEMENTED error.
 	*/
-	[noscript] attribute nsIWindow parentWidget;
-
-	/*
-	This is the native window parent of the control.
-
-	Setting this after Create() has been called may not be supported by some
-	implementations.
-
-	On controls that don't support setting nativeWindow parents, setting this
-	will return a NS_ERROR_NOT_IMPLEMENTED error.
-	*/
-	attribute nativeWindow parentNativeWindow;
+	attribute nsIWindow parentWidget;
 
 	/*
 	Attribute controls the visibility of the object behind this interface.
@@ -175,7 +164,7 @@ interface nsIBaseWindow : nsISupports
 	on the object, this may return the parent widget in which this object
 	lives if it has not had to create it's own widget.
 	*/
-	readonly attribute nsIWindow mainWidget;
+	readonly attribute nsIWindow mainWindow;
 	
 	/**
 	* Give the window focus.

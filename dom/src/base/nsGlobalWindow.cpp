@@ -1411,17 +1411,16 @@ NS_IMETHODIMP GlobalWindowImpl::GetScrollX(PRInt32* aScrollX)
   NS_ENSURE_ARG_POINTER(aScrollX);
   nsresult result = NS_OK;
   nsIScrollableView *view;      // no addref/release for views
-  float p2t, t2p;
 
   *aScrollX = 0;
 
   FlushPendingNotifications();
 
-  GetScrollInfo(&view, &p2t, &t2p);
+  GetScrollInfo(&view);
   if (view) {
     gfx_coord xPos, yPos;
     result = view->GetScrollPosition(xPos, yPos);
-    *aScrollX = xPos; // pixels
+    *aScrollX = GFXCoordToIntRound(xPos); // pixels
   }
 
   return result;
@@ -1432,17 +1431,16 @@ NS_IMETHODIMP GlobalWindowImpl::GetScrollY(PRInt32* aScrollY)
   NS_ENSURE_ARG_POINTER(aScrollY);
   nsresult result = NS_OK;
   nsIScrollableView *view;      // no addref/release for views
-  float p2t, t2p;
 
   *aScrollY = 0;
 
   FlushPendingNotifications();
 
-  GetScrollInfo(&view, &p2t, &t2p);
+  GetScrollInfo(&view);
   if (view) {
     gfx_coord xPos, yPos;
     result = view->GetScrollPosition(xPos, yPos);
-    *aScrollY = yPos; // pixels
+    *aScrollY = GFXCoordToIntRound(yPos); // pixels
   }
 
   return result;
@@ -1804,9 +1802,8 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollTo(PRInt32 aXScroll, PRInt32 aYScroll)
 {
   nsresult result;
   nsIScrollableView *view;      // no addref/release for views
-  float p2t, t2p;
 
-  result = GetScrollInfo(&view, &p2t, &t2p);
+  result = GetScrollInfo(&view);
 
   if (view) {
     result = view->ScrollTo(aXScroll,
@@ -1822,9 +1819,8 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollBy(PRInt32 aXScrollDif,
 {
   nsresult result;
   nsIScrollableView *view;      // no addref/release for views
-  float p2t, t2p;
 
-  result = GetScrollInfo(&view, &p2t, &t2p);
+  result = GetScrollInfo(&view);
 
   if (view) {
     gfx_coord xPos, yPos;
@@ -1843,9 +1839,8 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollByLines(PRInt32 numLines)
 {
   nsresult result;
   nsIScrollableView *view = nsnull;   // no addref/release for views
-  float p2t, t2p;
 
-  result = GetScrollInfo(&view, &p2t, &t2p);
+  result = GetScrollInfo(&view);
   if (view)
   {
     result = view->ScrollByLines(0, numLines);
@@ -1858,9 +1853,8 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollByPages(PRInt32 numPages)
 {
   nsresult result;
   nsIScrollableView *view = nsnull;   // no addref/release for views
-  float p2t, t2p;
 
-  result = GetScrollInfo(&view, &p2t, &t2p);
+  result = GetScrollInfo(&view);
   if (view)
   {
     result = view->ScrollByPages(numPages);
@@ -2012,7 +2006,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetCursor(const nsAReadableString& aCursor)
       NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
       nsCOMPtr<nsIWindow> window;
-      rootView->GetWidget(*getter_AddRefs(window));
+      rootView->GetWidget(getter_AddRefs(window));
       NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
       // Call esm and set cursor.
@@ -2728,7 +2722,7 @@ NS_IMETHODIMP GlobalWindowImpl::Activate()
   NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIWindow> window;
-  rootView->GetWidget(*getter_AddRefs(window));
+  rootView->GetWidget(getter_AddRefs(window));
   NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
   nsEventStatus status;
@@ -2767,7 +2761,7 @@ NS_IMETHODIMP GlobalWindowImpl::Deactivate()
   NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIWindow> window;
-  rootView->GetWidget(*getter_AddRefs(window));
+  rootView->GetWidget(getter_AddRefs(window));
   NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
   nsEventStatus status;
@@ -4105,14 +4099,11 @@ GlobalWindowImpl::GetWebBrowserChrome(nsIWebBrowserChrome **aBrowserChrome)
 }
 
 NS_IMETHODIMP
-GlobalWindowImpl::GetScrollInfo(nsIScrollableView **aScrollableView,
-                                float *aP2T, float *aT2P)
+GlobalWindowImpl::GetScrollInfo(nsIScrollableView **aScrollableView)
 {
   nsCOMPtr<nsIPresContext> presContext;
   mDocShell->GetPresContext(getter_AddRefs(presContext));
   if (presContext) {
-    presContext->GetPixelsToTwips(aP2T);
-    presContext->GetTwipsToPixels(aT2P);
 
     nsCOMPtr<nsIPresShell> presShell;
     presContext->GetShell(getter_AddRefs(presShell));
