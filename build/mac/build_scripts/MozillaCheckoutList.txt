@@ -7,13 +7,13 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/psm,   
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
+mozilla/nsprpub,          FONT_20011307_BRANCH
+mozilla/security/nss,     FONT_20011307_BRANCH
+mozilla/security/psm,     FONT_20011307_BRANCH
+mozilla/security/manager, FONT_20011307_BRANCH
+mozilla/accessible,       FONT_20011307_BRANCH
+DirectorySDKSourceC,      FONT_20011307_BRANCH
 mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/gfx2,             FONT_20011307_BRANCH
+mozilla/modules/libpr0n,  FONT_20011307_BRANCH
+SeaMonkeyAll,             FONT_20011307_BRANCH
