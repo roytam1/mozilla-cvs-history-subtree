@@ -43,6 +43,7 @@
 #include "pcertt.h"
 #include "lowkeyi.h"
 #include "pcert.h"
+#include "secrng.h"
 #include "cdbhdl.h"
 #include "pkcs11i.h"
 

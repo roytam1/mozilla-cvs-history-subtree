@@ -30,7 +30,7 @@ sub getTime () {
     return &$timesub 
 	if $^O eq "MacOS"; # don't know a better way on Mac
 
-    if ($^O eq "MSWin32") {
+    if ($^O eq "MSWin32" || $^O eq "cygwin") { #XXX not tested on cygwin
 	eval "use Win32::API;";
 	$timesub = sub { 
 	    # pass pointer to struct, void return 
@@ -45,7 +45,7 @@ sub getTime () {
 
     # ass-u-me if not mac/win32, then we're on a unix flavour
     else {
-	eval "use Time::HiRes qw(gettimeofday);";
+	eval "use Time::HiRes (gettimeofday);";
 	$timesub = sub { 
 	    my @t = gettimeofday();
 	    $t[0]*1000 + int($t[1]/1000);	    

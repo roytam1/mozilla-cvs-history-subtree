@@ -43,6 +43,7 @@
 #include "key.h"
 #include "secasn1.h"
 #include "secoid.h"
+#include "secrng.h"
 #include "secitem.h"
 #include "pk11func.h"
 #include "secerr.h"

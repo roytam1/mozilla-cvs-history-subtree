@@ -902,7 +902,7 @@ PRBool displayCategoryNodeProcessor(STRequest* inRequest, STOptions* inOptions, 
     memcpy(&customOps, inOptions, sizeof(customOps));
     PR_snprintf(customOps.mCategoryName, sizeof(customOps.mCategoryName), "%s", node->categoryName);
 
-    htmlAnchor(inRequest, "top_callsites.html", node->categoryName, NULL, "category-callsites", &customOps);
+    htmlAnchor(inRequest, "top_callsites.html", node->categoryName, NULL, &customOps);
     PR_fprintf(inRequest->mFD,
                "</td>\n"
                "  <td align=right>%u</td>\n"
@@ -920,8 +920,8 @@ PRBool displayCategoryNodeProcessor(STRequest* inRequest, STOptions* inOptions, 
 int displayCategoryReport(STRequest* inRequest, STCategoryNode *root, int depth)
 {
     PR_fprintf(inRequest->mFD,
-               "<table class=\"category-list data\">\n"
-               " <tr class=\"row-header\">\n"
+               "<table border=1>\n"
+               " <tr>\n"
                "  <th>Category</th>\n"
                "  <th>Composite Byte Size</th>\n"
                "  <th>%% of Total Size</th>\n"

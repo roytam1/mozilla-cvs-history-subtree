@@ -38,7 +38,6 @@
 #include "secitem.h"
 #include <stdarg.h>
 #include "secerr.h"
-#include "certi.h"
 
 static const SEC_ASN1Template cert_AVATemplate[] = {
     { SEC_ASN1_SEQUENCE,
@@ -118,7 +117,7 @@ SetupAVAType(PRArenaPool *arena, SECOidTag type, SECItem *it, unsigned *maxLenp)
     unsigned char *oid;
     unsigned oidLen;
     unsigned char *cp;
-    int      maxLen;
+    unsigned maxLen;
     SECOidData *oidrec;
 
     oidrec = SECOID_FindOIDByTag(type);
@@ -128,8 +127,41 @@ SetupAVAType(PRArenaPool *arena, SECOidTag type, SECItem *it, unsigned *maxLenp)
     oid = oidrec->oid.data;
     oidLen = oidrec->oid.len;
 
-    maxLen = cert_AVAOidTagToMaxLen(type);
-    if (maxLen < 0) {
+    switch (type) {
+      case SEC_OID_AVA_COUNTRY_NAME:
+	maxLen = 2;
+	break;
+      case SEC_OID_AVA_ORGANIZATION_NAME:
+	maxLen = 64;
+	break;
+      case SEC_OID_AVA_COMMON_NAME:
+	maxLen = 64;
+	break;
+      case SEC_OID_AVA_LOCALITY:
+	maxLen = 128;
+	break;
+      case SEC_OID_AVA_STATE_OR_PROVINCE:
+	maxLen = 128;
+	break;
+      case SEC_OID_AVA_ORGANIZATIONAL_UNIT_NAME:
+	maxLen = 64;
+	break;
+      case SEC_OID_AVA_DC:
+	maxLen = 128;
+	break;
+      case SEC_OID_AVA_DN_QUALIFIER:
+	maxLen = 0x7fff;
+	break;
+      case SEC_OID_PKCS9_EMAIL_ADDRESS:
+	maxLen = 128;
+	break;
+      case SEC_OID_RFC1274_UID:
+	maxLen = 256;  /* RFC 1274 specifies 256 */
+	break;
+      case SEC_OID_RFC1274_MAIL:
+	maxLen = 256;  /* RFC 1274 specifies 256 */
+	break; 
+      default:
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
@@ -140,7 +172,7 @@ SetupAVAType(PRArenaPool *arena, SECOidTag type, SECItem *it, unsigned *maxLenp)
     }
     it->len = oidLen;
     PORT_Memcpy(cp, oid, oidLen);
-    *maxLenp = (unsigned)maxLen;
+    *maxLenp = maxLen;
     return SECSuccess;
 }
 

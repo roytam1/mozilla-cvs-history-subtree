@@ -39,7 +39,6 @@
 #include "secmodi.h"
 #include "pkcs11t.h"
 #include "pk11pqg.h"
-#include "pqgutil.h"
 #include "secerr.h"
 
 

@@ -69,7 +69,7 @@
 ** Ugh, MSVC6's qsort is too slow...
 */
 #include "nsQuickSort.h"
-#include "prlong.h"
+
 /*
 **  strcasecmp API please.
 */
@@ -380,24 +380,9 @@ gdImagePtr createGraph(int* aTransparencyColor)
 ** This function mainly exists to simplify putitng all the pretty lace
 **  around a home made graph.
 */
-void drawGraph(gdImagePtr aImage, int aColor,
-               const char* aGraphTitle,
-               const char* aXAxisTitle,
-               const char* aYAxisTitle,
-               PRUint32 aXMarkCount,
-               PRUint32* aXMarkPercents,
-               const char** aXMarkTexts,
-               PRUint32 aYMarkCount,
-               PRUint32* aYMarkPercents,
-               const char** aYMarkTexts,
-               PRUint32 aLegendCount,
-               int* aLegendColors, const char** aLegendTexts)
+void drawGraph(gdImagePtr aImage, int aColor, const char* aGraphTitle, const char* aXAxisTitle, const char* aYAxisTitle, PRUint32 aXMarkCount, PRUint32* aXMarkPercents, const char** aXMarkTexts, PRUint32 aYMarkCount, PRUint32* aYMarkPercents, const char** aYMarkTexts, PRUint32 aLegendCount, int* aLegendColors, const char** aLegendTexts)
 {
-    if(NULL != aImage && NULL != aGraphTitle &&
-       NULL != aXAxisTitle && NULL != aYAxisTitle &&
-       (0 == aXMarkCount || (NULL != aXMarkPercents && NULL != aXMarkTexts)) &&
-       (0 == aYMarkCount || (NULL != aYMarkPercents && NULL != aYMarkTexts)) &&
-       (0 == aLegendCount || (NULL != aLegendColors && NULL != aLegendTexts)))
+    if(NULL != aImage && NULL != aGraphTitle && NULL != aXAxisTitle && NULL != aYAxisTitle && (0 == aXMarkCount || (NULL != aXMarkPercents && NULL != aXMarkTexts)) && (0 == aYMarkCount || (NULL != aYMarkPercents && NULL != aYMarkTexts)) && (0 == aLegendCount || (NULL != aLegendColors && NULL != aLegendTexts)))
     {
         int margin = 1;
         PRUint32 traverse = 0;
@@ -697,10 +682,8 @@ int recalculateAllocationCost(STOptions* inOptions, STContext* inContext, STRun*
         aRun->mStats[inContext->mIndex].mCompositeCount++;
         aRun->mStats[inContext->mIndex].mHeapRuntimeCost += heapCost;
         aRun->mStats[inContext->mIndex].mSize += size;
-        LL_ADD(aRun->mStats[inContext->mIndex].mTimeval64,
-               aRun->mStats[inContext->mIndex].mTimeval64, timeval64);
-        LL_ADD(aRun->mStats[inContext->mIndex].mWeight64,
-               aRun->mStats[inContext->mIndex].mWeight64, weight64);
+        LL_ADD(aRun->mStats[inContext->mIndex].mTimeval64, aRun->mStats[inContext->mIndex].mTimeval64, timeval64);
+        LL_ADD(aRun->mStats[inContext->mIndex].mWeight64, aRun->mStats[inContext->mIndex].mWeight64, weight64);
 
         /*
         ** Use the first event of the allocation to update the parent
@@ -724,13 +707,10 @@ int recalculateAllocationCost(STOptions* inOptions, STContext* inContext, STRun*
                     /*
                     ** Do we init it?
                     */
-                    if(callsiteRun->mStats[inContext->mIndex].mStamp !=
-                       aRun->mStats[inContext->mIndex].mStamp)
+                    if(callsiteRun->mStats[inContext->mIndex].mStamp != aRun->mStats[inContext->mIndex].mStamp)
                     {
-                        memset(&callsiteRun->mStats[inContext->mIndex], 0,
-                               sizeof(STCallsiteStats));
-                        callsiteRun->mStats[inContext->mIndex].mStamp =
-                            aRun->mStats[inContext->mIndex].mStamp;
+                        memset(&callsiteRun->mStats[inContext->mIndex], 0, sizeof(STCallsiteStats));
+                        callsiteRun->mStats[inContext->mIndex].mStamp = aRun->mStats[inContext->mIndex].mStamp;
                     }
                             
                     /*
@@ -750,15 +730,10 @@ int recalculateAllocationCost(STOptions* inOptions, STContext* inContext, STRun*
                     **  is perhaps good enough for now.
                     */
                     callsiteRun->mStats[inContext->mIndex].mCompositeCount++;
-                    callsiteRun->mStats[inContext->mIndex].mHeapRuntimeCost +=
-                        heapCost;
+                    callsiteRun->mStats[inContext->mIndex].mHeapRuntimeCost += heapCost;
                     callsiteRun->mStats[inContext->mIndex].mSize += size;
-                    LL_ADD(callsiteRun->mStats[inContext->mIndex].mTimeval64,
-                           callsiteRun->mStats[inContext->mIndex].mTimeval64,
-                           timeval64);
-                    LL_ADD(callsiteRun->mStats[inContext->mIndex].mWeight64,
-                           callsiteRun->mStats[inContext->mIndex].mWeight64,
-                           weight64);
+                    LL_ADD(callsiteRun->mStats[inContext->mIndex].mTimeval64, callsiteRun->mStats[inContext->mIndex].mTimeval64, timeval64);
+                    LL_ADD(callsiteRun->mStats[inContext->mIndex].mWeight64, callsiteRun->mStats[inContext->mIndex].mWeight64, weight64);
                 }
                         
                 callsite = callsite->parent;
@@ -781,9 +756,7 @@ int recalculateAllocationCost(STOptions* inOptions, STContext* inContext, STRun*
 **  such information when it was created.
 ** Returns !0 on success.
 */
-int
-appendAllocation(STOptions* inOptions, STContext* inContext,
-                 STRun* aRun, STAllocation* aAllocation)
+int appendAllocation(STOptions* inOptions, STContext* inContext, STRun* aRun, STAllocation* aAllocation)
 {
     int retval = 0;
 
@@ -794,8 +767,7 @@ appendAllocation(STOptions* inOptions, STContext* inContext,
         /*
         ** Expand the size of the array if needed.
         */
-        expand = (STAllocation**)realloc(aRun->mAllocations,
-                                         sizeof(STAllocation*) * (aRun->mAllocationCount + 1));
+        expand = (STAllocation**)realloc(aRun->mAllocations, sizeof(STAllocation*) * (aRun->mAllocationCount + 1));
         if(NULL != expand)
         {
             /*
@@ -856,8 +828,7 @@ int hasCallsiteMatch(tmcallsite* aCallsite, const char* aMatch, int aDirection)
 {
     int retval = 0;
 
-    if(NULL != aCallsite && NULL != aCallsite->method &&
-       NULL != aMatch && '\0' != *aMatch)
+    if(NULL != aCallsite && NULL != aCallsite->method && NULL != aMatch && '\0' != *aMatch)
     {
         const char* methodName = NULL;
 
@@ -913,9 +884,7 @@ int hasCallsiteMatch(tmcallsite* aCallsite, const char* aMatch, int aDirection)
 **
 ** Returns !0 on error, though aOutRun may contain a partial data set.
 */
-int
-harvestRun(const STRun* aInRun, STRun* aOutRun,
-           STOptions* aOptions, STContext* inContext)
+int harvestRun(const STRun* aInRun, STRun* aOutRun, STOptions* aOptions, STContext* inContext)
 {
     int retval = 0;
 
@@ -929,8 +898,7 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
         PRUint32 traverse = 0;
         STAllocation* current = NULL;
 
-        for(traverse = 0;
-            0 == retval && traverse < aInRun->mAllocationCount; traverse++)
+        for(traverse = 0; 0 == retval && traverse < aInRun->mAllocationCount; traverse++)
         {
             current = aInRun->mAllocations[traverse];
             if(NULL != current)
@@ -959,10 +927,11 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 ** We have to slide the recorded timevals to be zero
                 **  based, so that the comparisons make sense.
                 */
-                if ((aOptions->mAllocationTimevalMin >
-                     (current->mMinTimeval - globals.mMinTimeval)) ||
-                    (aOptions->mAllocationTimevalMax <
-                     (current->mMinTimeval - globals.mMinTimeval)))
+                if(aOptions->mAllocationTimevalMin > (current->mMinTimeval - globals.mMinTimeval))
+                {
+                    continue;
+                }
+                else if(aOptions->mAllocationTimevalMax < (current->mMinTimeval - globals.mMinTimeval))
                 {
                     continue;
                 }
@@ -972,10 +941,11 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 ** We have to slide the recorded timevals to be zero
                 **  based, so that the comparisons make sense.
                 */
-                if ((aOptions->mTimevalMin >
-                     (current->mMinTimeval - globals.mMinTimeval)) ||
-                    (aOptions->mTimevalMax <
-                     (current->mMinTimeval - globals.mMinTimeval)))
+                if(aOptions->mTimevalMin > (current->mMaxTimeval - globals.mMinTimeval))
+                {
+                    continue;
+                }
+                else if(aOptions->mTimevalMax < (current->mMinTimeval - globals.mMinTimeval))
                 {
                     continue;
                 }
@@ -984,8 +954,11 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 ** Check lifetime restrictions.
                 */
                 lifetime = current->mMaxTimeval - current->mMinTimeval;
-                if ((lifetime < aOptions->mLifetimeMin) ||
-                    (lifetime > aOptions->mLifetimeMax))
+                if(lifetime < aOptions->mLifetimeMin)
+                {
+                    continue;
+                }
+                else if(lifetime > aOptions->mLifetimeMax)
                 {
                     continue;
                 }
@@ -994,8 +967,11 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 ** Check byte size restrictions.
                 */
                 bytesize = byteSize(aOptions, current);
-                if ((bytesize < aOptions->mSizeMin) ||
-                    (bytesize > aOptions->mSizeMax))
+                if(bytesize < aOptions->mSizeMin)
+                {
+                    continue;
+                }
+                else if(bytesize > aOptions->mSizeMax)
                 {
                     continue;
                 }
@@ -1006,8 +982,11 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 LL_UI2L(bytesize64, bytesize);
                 LL_UI2L(lifetime64, lifetime);
                 LL_MUL(weight64, bytesize64, lifetime64);
-                if(LL_UCMP(weight64, <, aOptions->mWeightMin64) ||
-                   LL_UCMP(weight64, >, aOptions->mWeightMax64))
+                if(LL_UCMP(weight64, <, aOptions->mWeightMin64))
+                {
+                    continue;
+                }
+                else if(LL_UCMP(weight64, >, aOptions->mWeightMax64))
                 {
                     continue;
                 }
@@ -1023,9 +1002,7 @@ harvestRun(const STRun* aInRun, STRun* aOutRun,
                 {
                     if('\0' != aOptions->mRestrictText[looper][0])
                     {
-                        if(0 == hasCallsiteMatch(current->mEvents[0].mCallsite,
-                                                 aOptions->mRestrictText[looper],
-                                                 ST_FOLLOW_PARENTS))
+                        if(0 == hasCallsiteMatch(current->mEvents[0].mCallsite, aOptions->mRestrictText[looper], ST_FOLLOW_PARENTS))
                         {
                             break;
                         }
@@ -2124,12 +2101,7 @@ void optionGetDataOut(PRFileDesc* inFD, STOptions* inOptions)
 **
 ** Output an HTML anchor, or just the text depending on the mode.
 */
-void htmlAnchor(STRequest* inRequest,
-                const char* aHref,
-                const char* aText,
-                const char* aTarget,
-                const char* aClass,
-                STOptions* inOptions)
+void htmlAnchor(STRequest* inRequest, const char* aHref, const char* aText, const char* aTarget, STOptions* inOptions)
 {
     if(NULL != aHref && '\0' != *aHref && NULL != aText && '\0' != *aText)
     {
@@ -2177,7 +2149,7 @@ void htmlAnchor(STRequest* inRequest,
         */
         if(0 != anchorLive)
         {
-            PR_fprintf(inRequest->mFD, "<a class=\"%s\" ", aClass);
+            PR_fprintf(inRequest->mFD, "<a ");
             if(NULL != aTarget && '\0' != *aTarget)
             {
                 PR_fprintf(inRequest->mFD, "target=\"%s\" ", aTarget);
@@ -2193,7 +2165,7 @@ void htmlAnchor(STRequest* inRequest,
         }
         else
         {
-            PR_fprintf(inRequest->mFD, "<span class=\"%s\">%s</span>\n", aClass, aText);
+            PR_fprintf(inRequest->mFD, "%s\n", aText);
         }
     }
     else
@@ -2220,7 +2192,7 @@ void htmlAllocationAnchor(STRequest* inRequest, STAllocation* aAllocation, const
         */
         PR_snprintf(buffer, sizeof(buffer), "allocation_%u.html", aAllocation->mRunIndex);
 
-        htmlAnchor(inRequest, buffer, aText, NULL, "allocation", &inRequest->mOptions);
+        htmlAnchor(inRequest, buffer, aText, NULL, &inRequest->mOptions);
     }
     else
     {
@@ -2335,16 +2307,16 @@ void htmlCallsiteAnchor(STRequest* inRequest, tmcallsite* aCallsite, const char*
             {
                 char lxrHREFBuf[512];
 
-                PR_snprintf(lxrHREFBuf, sizeof(lxrHREFBuf), " [<a href=\"http://lxr.mozilla.org/mozilla/source/%s#%u\" class=\"lxr\" target=\"_st_lxr\">%s:%u</a>]", namesite->method->sourcefile + 8, namesite->method->linenumber, sourceFile, namesite->method->linenumber);
-                PR_snprintf(textBuf, sizeof(textBuf), "<span class=\"source mozilla-source\">%s</span>%s", methodName, lxrHREFBuf);
+                PR_snprintf(lxrHREFBuf, sizeof(lxrHREFBuf), "<a href=\"http://lxr.mozilla.org/mozilla/source/%s#%u\" target=\"_st_lxr\">(%s:%u)</a>", namesite->method->sourcefile + 8, namesite->method->linenumber, sourceFile, namesite->method->linenumber);
+                PR_snprintf(textBuf, sizeof(textBuf), "<b>%s</b>%s", methodName, lxrHREFBuf);
             }
             else if(NULL != sourceFile)
             {
-                PR_snprintf(textBuf, sizeof(textBuf), "<span class=\"source external-source\">%s [<span class=\"source-extra\">%s:%u</span>]</span>", methodName, sourceFile, namesite->method->linenumber);
+                PR_snprintf(textBuf, sizeof(textBuf), "<b>%s</b>(%s:%u)", methodName, sourceFile, namesite->method->linenumber);
             }
             else
             {
-                PR_snprintf(textBuf, sizeof(textBuf), "<span class=\"source binary-source\">%s [<span class=\"source-extra\">+%u(%u)</span>]</span>", methodName, namesite->offset, (PRUint32)namesite->entry.key);
+                PR_snprintf(textBuf, sizeof(textBuf), "<b>%s</b>+%u(%u)", methodName, namesite->offset, (PRUint32)namesite->entry.key);
             }
 
             aText = textBuf;
@@ -2352,7 +2324,7 @@ void htmlCallsiteAnchor(STRequest* inRequest, tmcallsite* aCallsite, const char*
 
         PR_snprintf(hrefBuf, sizeof(hrefBuf), "callsite_%u.html", (PRUint32)aCallsite->entry.key);
 
-        htmlAnchor(inRequest, hrefBuf, aText, NULL, "callsite", &inRequest->mOptions);
+        htmlAnchor(inRequest, hrefBuf, aText, NULL, &inRequest->mOptions);
     }
     else
     {
@@ -2368,31 +2340,27 @@ void htmlCallsiteAnchor(STRequest* inRequest, tmcallsite* aCallsite, const char*
 void htmlHeader(STRequest* inRequest, const char* aTitle)
 {
     PR_fprintf(inRequest->mFD,
-               "<html>\n"
-               "<head>\n"
-               "<title>%s</title>\n"
-               "<link rel=\"stylesheet\" href=\"spacetrace.css\" type=\"text/css\""
-               "</head>\n"
-               "<body>\n"
-               "<div class=spacetrace-header>\n"
-               "<span class=spacetrace-title>Spacetrace</span>"
-               "<span class=navigate>\n"
-               "<span class=\"category-title header-text\">Category:</span>\n"
-               "<span class=\"current-category\">%s</span>\n",
-               aTitle,
+"<html>\n"
+"<head>\n"
+"<title>%s</title>\n"
+"</head>\n"
+"<body>\n"
+"<div align=right>\n"
+"<table border=0><tr><td bgcolor=lightgrey>Category: <b>%s</b></td>\n"
+               , aTitle,
                inRequest->mOptions.mCategoryName);
 
-    PR_fprintf(inRequest->mFD,"<span class=\"header-item\">");
-    htmlAnchor(inRequest, "index.html", "Index", NULL, "header-menuitem", &inRequest->mOptions);
-    PR_fprintf(inRequest->mFD,"</span>\n");
+    PR_fprintf(inRequest->mFD,"<td>");
+    htmlAnchor(inRequest, "index.html", "[Index]", NULL, &inRequest->mOptions);
+    PR_fprintf(inRequest->mFD,"</td>\n");
 
-    PR_fprintf(inRequest->mFD,"<span class=\"header-item\">");
-    htmlAnchor(inRequest, "options.html", "Options", NULL, "header-menuitem", &inRequest->mOptions);
-    PR_fprintf(inRequest->mFD,"</span>\n"); 
+    PR_fprintf(inRequest->mFD,"<td>");
+    htmlAnchor(inRequest, "options.html", "[Options]", NULL, &inRequest->mOptions);
+    PR_fprintf(inRequest->mFD,"</td>\n");
 
-    PR_fprintf(inRequest->mFD,"</span>\n"); /* class=navigate */
+    PR_fprintf(inRequest->mFD,"</tr></table>\n");
 
-    PR_fprintf(inRequest->mFD, "</div>\n<div class=\"header-separator\"></div>\n");
+    PR_fprintf(inRequest->mFD, "</div>\n<hr>\n");
 }
 
 /*
@@ -2403,9 +2371,9 @@ void htmlHeader(STRequest* inRequest, const char* aTitle)
 void htmlFooter(STRequest* inRequest)
 {
     PR_fprintf(inRequest->mFD,
-"<div class=\"footer-separator\"></div>\n"
-"<div class=\"footer\">\n"
-"<span class=\"footer-text\">SpaceTrace</span>\n"
+"<hr>\n"
+"<div align=right>\n"
+"<i>SpaceTrace</i>\n"
 "</div>\n"
 "</body>\n"
 "</html>\n"
@@ -2709,17 +2677,17 @@ int displayTopAllocations(STRequest* inRequest, STRun* aRun, int aWantCallsite)
             PRUint32 loop = 0;
             STAllocation* current = NULL;
 
-            PR_fprintf(inRequest->mFD, "<table class=\"data\">\n");
-            PR_fprintf(inRequest->mFD, "<tr class=\"row-header\">\n");
-            PR_fprintf(inRequest->mFD, "<th>Rank</th>\n");
-            PR_fprintf(inRequest->mFD, "<th>Index</th>\n");
-            PR_fprintf(inRequest->mFD, "<th>Byte Size</th>\n");
-            PR_fprintf(inRequest->mFD, "<th>Lifespan Seconds</th>\n");
-            PR_fprintf(inRequest->mFD, "<th>Weight</th>\n");
-            PR_fprintf(inRequest->mFD, "<th>Heap Operation Seconds</th>\n");
+            PR_fprintf(inRequest->mFD, "<table border=1>\n");
+            PR_fprintf(inRequest->mFD, "<tr>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Rank</b></td>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Index</b></td>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Byte Size</b></td>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Lifespan Seconds</b></td>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Weight</b></td>\n");
+            PR_fprintf(inRequest->mFD, "<td><b>Heap Operation Seconds</b></td>\n");
             if(0 != aWantCallsite)
             {
-                PR_fprintf(inRequest->mFD, "<th>Origin Callsite</th>\n");
+                PR_fprintf(inRequest->mFD, "<td><b>Origin Callsite</b></td>\n");
             }
             PR_fprintf(inRequest->mFD, "</tr>\n");
 
@@ -2822,15 +2790,15 @@ int displayMemoryLeaks(STRequest* inRequest, STRun* aRun)
         PRUint32 displayed = 0;
         STAllocation* current = NULL;
 
-        PR_fprintf(inRequest->mFD, "<table class=\"data\">\n");
-        PR_fprintf(inRequest->mFD, "<tr class=\"row-header\">\n");
-        PR_fprintf(inRequest->mFD, "<th>Rank</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Index</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Byte Size</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Lifespan Seconds</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Weight</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Heap Operation Seconds</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Origin Callsite</th>\n");
+        PR_fprintf(inRequest->mFD, "<table border=1>\n");
+        PR_fprintf(inRequest->mFD, "<tr>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Rank</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Index</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Byte Size</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Lifespan Seconds</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Weight</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Heap Operation Seconds</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Origin Callsite</b></td>\n");
         PR_fprintf(inRequest->mFD, "</tr>\n");
 
         /*
@@ -2968,16 +2936,15 @@ int displayCallsites(STRequest* inRequest, tmcallsite* aCallsite, int aFollow, P
                     {
                         headerDisplayed = __LINE__;
 
-                        PR_fprintf(inRequest->mFD,
-                                   "<table  class=\"data\">\n"
-                                   "<tr class=\"row-header\">\n"
-                                   "<th class=\"callsite\">Callsite</th>\n"
-                                   "<th><abbr title=\"Composite Size\">C. Size</abbr></th>\n"
-                                   "<th><abbr title=\"Composite Seconds\">C. Seconds</abbr></th>\n"
-                                   "<th><abbr title=\"Composite Weight\">C. Weight</abbr></th>\n"
-                                   "<th><abbr title=\"Heap Object Count\">H.O. Count</abbr></th>\n"
-                                   "<th><abbr title=\"Composite Heap Operation Seconds\">C.H. Operation (sec)</abbr></th>\n"
-                                   "</tr>\n");
+                        PR_fprintf(inRequest->mFD, "<table border=1>\n");
+                        PR_fprintf(inRequest->mFD, "<tr>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Callsite</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Composite Byte Size</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Composite Seconds</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Composite Weight</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Heap Object Count</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "<td><b>Composite Heap Operation Seconds</b></td>\n");
+                        PR_fprintf(inRequest->mFD, "</tr>\n");
                     }
 
                     /*
@@ -3092,7 +3059,7 @@ int displayAllocationDetails(STRequest* inRequest, STAllocation* aAllocation)
 
         PR_fprintf(inRequest->mFD, "Allocation %u Details:<p>\n", aAllocation->mRunIndex);
 
-        PR_fprintf(inRequest->mFD, "<table class=\"data summary\">\n");
+        PR_fprintf(inRequest->mFD, "<table>\n");
         PR_fprintf(inRequest->mFD, "<tr><td align=left>Final Size:</td><td align=right>%u</td></tr>\n", bytesize);
         PR_fprintf(inRequest->mFD, "<tr><td align=left>Lifespan Seconds:</td><td align=right>" ST_TIMEVAL_FORMAT "</td></tr>\n", ST_TIMEVAL_PRINTABLE(timeval));
         PR_fprintf(inRequest->mFD, "<tr><td align=left>Weight:</td><td align=right>%llu</td></tr>\n", weight64);
@@ -3103,12 +3070,12 @@ int displayAllocationDetails(STRequest* inRequest, STAllocation* aAllocation)
         ** The events.
         */
         PR_fprintf(inRequest->mFD, "%u Life Event(s):<br>\n", aAllocation->mEventCount);
-        PR_fprintf(inRequest->mFD, "<table class=\"data\">\n");
+        PR_fprintf(inRequest->mFD, "<table border=1>\n");
         PR_fprintf(inRequest->mFD, "<tr>\n");
         PR_fprintf(inRequest->mFD, "<td></td>\n");
-        PR_fprintf(inRequest->mFD, "<th>Operation</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Size</th>\n");
-        PR_fprintf(inRequest->mFD, "<th>Seconds</th>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Operation</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Size</b></td>\n");
+        PR_fprintf(inRequest->mFD, "<td><b>Seconds</b></td>\n");
         PR_fprintf(inRequest->mFD, "<td></td>\n");
         PR_fprintf(inRequest->mFD, "</tr>\n");
 
@@ -3387,17 +3354,17 @@ int displayTopCallsites(STRequest* inRequest, tmcallsite** aCallsites, PRUint32 
                 {
                     headerDisplayed = __LINE__;
 
-                    PR_fprintf(inRequest->mFD,
-                               "<table class=\"data\">\n"
-                               "<tr class=\"row-header\">\n"
-                               "<th>Rank</th>\n"
-                               "<th class=\"callsite\">Callsite</th>\n"
-                               "<th><abbr title=\"Composite Size\">C. Size</abbr></th>\n"
-                               "<th><abbr title=\"Composite Seconds\">C. Seconds</abbr></th>\n"
-                               "<th><abbr title=\"Composite Weight\">C. Weight</abbr></th>\n"
-                               "<th><abbr title=\"Heap Object Count\">H.O. Count</abbr></th>\n"
-                               "<th><abbr title=\"Composite Heap Operation Seconds\">C.H. Operation (sec)</abbr></th>\n"
-                               "</tr>\n");
+                    PR_fprintf(inRequest->mFD, "<table border=1>\n");
+
+                    PR_fprintf(inRequest->mFD, "<tr>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Rank</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Callsite</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Composite Size</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Composite Seconds</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Composite Weight</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Heap Object Count</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "<td><b>Heap Operation Seconds</b></td>\n");
+                    PR_fprintf(inRequest->mFD, "</tr>\n");
                 }
 
                 displayed++;
@@ -3497,7 +3464,7 @@ int displayCallsiteDetails(STRequest* inRequest, tmcallsite* aCallsite)
         if(NULL != sourceFile)
         {
             PR_fprintf(inRequest->mFD, "<b>%s</b>", tmmethodnode_name(aCallsite->method));
-            PR_fprintf(inRequest->mFD, "<a href=\"http://lxr.mozilla.org/mozilla/source/%s#%u\" class=\"lxr\" target=\"_st_lxr\">(%s:%u)</a>", aCallsite->method->sourcefile, aCallsite->method->linenumber, sourceFile, aCallsite->method->linenumber);
+            PR_fprintf(inRequest->mFD, "<a href=\"http://lxr.mozilla.org/mozilla/source/%s#%u\" target=\"_st_lxr\">(%s:%u)</a>", aCallsite->method->sourcefile, aCallsite->method->linenumber, sourceFile, aCallsite->method->linenumber);
             PR_fprintf(inRequest->mFD, " Callsite Details:<p>\n");
         }
         else
@@ -3505,7 +3472,7 @@ int displayCallsiteDetails(STRequest* inRequest, tmcallsite* aCallsite)
             PR_fprintf(inRequest->mFD, "<b>%s</b>+%u(%u) Callsite Details:<p>\n", tmmethodnode_name(aCallsite->method), aCallsite->offset, (PRUint32)aCallsite->entry.key);
         }
 
-        PR_fprintf(inRequest->mFD, "<table class=\"data summary\">\n");
+        PR_fprintf(inRequest->mFD, "<table border=0>\n");
         PR_fprintf(inRequest->mFD, "<tr><td>Composite Byte Size:</td><td align=right>%u</td></tr>\n", thisRun->mStats[inRequest->mContext->mIndex].mSize);
         PR_fprintf(inRequest->mFD, "<tr><td>Composite Seconds:</td><td align=right>" ST_TIMEVAL_FORMAT "</td></tr>\n", ST_TIMEVAL_PRINTABLE64(thisRun->mStats[inRequest->mContext->mIndex].mTimeval64));
         PR_fprintf(inRequest->mFD, "<tr><td>Composite Weight:</td><td align=right>%llu</td></tr>\n", thisRun->mStats[inRequest->mContext->mIndex].mWeight64);
@@ -4581,107 +4548,6 @@ void fillOptions(STOptions* outOptions, const FormData* inFormData)
     }
 }
 
-/* no bool options yet */
-#if 0
-void displayOptionBool(const char* option_name, option_genre, option_help)
-{
-PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
-    PR_fprintf(inRequest->mFD, "<input type=radio name=%s value=%d%s>Disabled</input>\n", #option_name, PR_FALSE, PR_FALSE == inRequest->mOptions.m##option_name ? " checked" : ""); \
-    PR_fprintf(inRequest->mFD, "<input type=radio name=%s value=%d%s>Enabled</input>\n", #option_name, PR_TRUE, PR_FALSE != inRequest->mOptions.m##option_name ? " checked" : ""); \
-    PR_fprintf(inRequest->mFD, "Disabled by default.\n%s\n", option_help);
-}
-#endif
-
-void displayOptionString(STRequest* inRequest,
-                         const char* option_name,
-                         const char* option_genre,
-                         const char* default_value,
-                         const char* option_help,
-                         const char* value)
-{
-#if 0
-    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", option_name);
-#endif
-    PR_fprintf(inRequest->mFD, "<div class=option-box>\n");
-    PR_fprintf(inRequest->mFD, "<p class=option-name>%s</p>\n", option_name);
-    PR_fprintf(inRequest->mFD, "<input type=text name=\"%s\" value=\"%s\">\n", option_name, value); 
-    PR_fprintf(inRequest->mFD, "<p class=option-default>Default value is \"%s\".</p>\n<p class=option-help>%s</p>\n", default_value, option_help);
-    PR_fprintf(inRequest->mFD, "</div>\n");
-};
-
-static void
-displayOptionStringArray(STRequest* inRequest,
-                         const char* option_name,
-                         const char* option_genre,
-                         PRUint32 array_size,
-                         const char* option_help,
-                         const char values[5][ST_OPTION_STRING_MAX])
-{
-    // values should not be a fixed length!
-    PR_ASSERT(array_size==5);
-
-#if 0
-    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", option_name);
-#endif
-    PR_fprintf(inRequest->mFD, "<div class=\"option-box\">\n");
-    PR_fprintf(inRequest->mFD, "<p class=option-name>%s</p>\n", option_name);
-    {
-        PRUint32 loop = 0;
-       
-        for(loop = 0; loop < array_size; loop++)
-        {
-            PR_fprintf(inRequest->mFD, "<input type=text name=\"%s\" value=\"%s\"><br>\n", option_name, values[loop]);
-        }
-    }
-    PR_fprintf(inRequest->mFD, "<p class=option-default>Up to %u occurrences allowed.</p>\n<p class=option-help>%s</p>\n", array_size, option_help);
-    PR_fprintf(inRequest->mFD, "</div>\n");
-}
-
-static void
-displayOptionInt(STRequest *inRequest,
-                 const char* option_name,
-                 const char* option_genre,
-                 PRUint32 default_value,
-                 PRUint32 multiplier,
-                 const char* option_help,
-                 PRUint32 value)
-{
-#if 0
-    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", option_name);
-#endif
-    PR_fprintf(inRequest->mFD, "<div class=\"option-box\">\n");
-    PR_fprintf(inRequest->mFD, "<p class=option-name>%s</p>\n", option_name);
-    PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%u>\n", option_name, value / multiplier);
-    PR_fprintf(inRequest->mFD, "<p class=option-default>Default value is %u.</p>\n<p class=option-help>%s</p>\n", default_value, option_help);
-    PR_fprintf(inRequest->mFD, "</div>\n");
-}
-
-static void
-displayOptionInt64(STRequest* inRequest,
-                   const char* option_name,
-                   const char* option_genre,
-                   PRUint64 default_value,
-                   PRUint64 multiplier,
-                   const char* option_help,
-                   PRUint64 value)
-{
-#if 0
-    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", option_name);
-#endif
-    
-    PR_fprintf(inRequest->mFD, "<div class=\"option-box\">\n");
-    PR_fprintf(inRequest->mFD, "<p class=option-name>%s</p>\n", option_name);
-    {
-        PRUint64 def64 = default_value;
-        PRUint64 mul64 = multiplier;
-        PRUint64 div64;
-
-        LL_DIV(div64, value, mul64);
-        PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%llu>\n", option_name, div64);
-        PR_fprintf(inRequest->mFD, "<p class=option-default>Default value is %llu.</p>\n<p class=option-help>%s</p>\n", def64, option_help);
-    }
-    PR_fprintf(inRequest->mFD, "</div>\n");
-}
 
 /*
 **  displaySettings
@@ -4700,27 +4566,44 @@ void displaySettings(STRequest* inRequest)
     /*
     **  Respect newlines in help text.
     */
-#if 0
     PR_fprintf(inRequest->mFD, "<pre>\n");
-#endif
 
 #define ST_WEB_OPTION_BOOL(option_name, option_genre, option_help) \
-    displayOptionBool(option_name, option_genre, option_help)
-    
+    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
+    PR_fprintf(inRequest->mFD, "<input type=radio name=%s value=%d%s>Disabled</input>\n", #option_name, PR_FALSE, PR_FALSE == inRequest->mOptions.m##option_name ? " checked" : ""); \
+    PR_fprintf(inRequest->mFD, "<input type=radio name=%s value=%d%s>Enabled</input>\n", #option_name, PR_TRUE, PR_FALSE != inRequest->mOptions.m##option_name ? " checked" : ""); \
+    PR_fprintf(inRequest->mFD, "Disabled by default.\n%s\n", option_help);
 #define ST_WEB_OPTION_STRING(option_name, option_genre, default_value, option_help) \
-    displayOptionString(inRequest, #option_name, #option_genre, default_value, option_help, inRequest->mOptions.m##option_name);
-
+    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
+    PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%s>\n", #option_name, inRequest->mOptions.m##option_name); \
+    PR_fprintf(inRequest->mFD, "Default value is \"%s\".\n%s\n", default_value, option_help);
 #define ST_WEB_OPTION_STRING_ARRAY(option_name, option_genre, array_size, option_help) \
-    displayOptionStringArray(inRequest, #option_name, #option_genre, array_size, option_help, inRequest->mOptions.m##option_name);
-    
+    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
+    { \
+        PRUint32 loop = 0; \
+        \
+        for(loop = 0; loop < array_size; loop++) \
+        { \
+            PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%s>\n", #option_name, inRequest->mOptions.m##option_name[loop]); \
+        } \
+    } \
+    PR_fprintf(inRequest->mFD, "Up to %u occurrences allowed.\n%s\n", array_size, option_help);
 #define ST_WEB_OPTION_STRING_PTR_ARRAY(option_name, option_genre, option_help) /* no implementation */
-    
 #define ST_WEB_OPTION_UINT32(option_name, option_genre, default_value, multiplier, option_help) \
-    displayOptionInt(inRequest, #option_name, #option_genre, default_value, multiplier, option_help, inRequest->mOptions.m##option_name);
-
+    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
+    PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%u>\n", #option_name, inRequest->mOptions.m##option_name / multiplier); \
+    PR_fprintf(inRequest->mFD, "Default value is %u.\n%s\n", default_value, option_help);
 #define ST_WEB_OPTION_UINT64(option_name, option_genre, default_value, multiplier, option_help) \
-    displayOptionInt64(inRequest, #option_name, #option_genre, default_value, multiplier, option_help, inRequest->mOptions.m##option_name##64);
-    
+    PR_fprintf(inRequest->mFD, "<input type=submit value=%s>\n", #option_name); \
+    { \
+        PRUint64 def64 = default_value; \
+        PRUint64 mul64 = multiplier; \
+        PRUint64 div64; \
+        \
+        LL_DIV(div64, inRequest->mOptions.m##option_name##64, mul64); \
+        PR_fprintf(inRequest->mFD, "<input type=text name=%s value=%llu>\n", #option_name, div64); \
+        PR_fprintf(inRequest->mFD, "Default value is %llu.\n%s\n", def64, option_help); \
+    }
 
 #include "stoptions.h"
 
@@ -4728,61 +4611,13 @@ void displaySettings(STRequest* inRequest)
     **  Give a submit/reset button, obligatory.
     **  Done respecting newlines in help text.
     */
-    PR_fprintf(inRequest->mFD, "<input type=submit value=\"Save Options\"> <input type=reset>\n");
-#if 0
+    PR_fprintf(inRequest->mFD, "<input type=submit> <input type=reset>\n");
     PR_fprintf(inRequest->mFD, "</pre>\n");
-#endif
 
     /*
     ** Done with form.
     */
     PR_fprintf(inRequest->mFD, "</form>\n");
-}
-
-int handleLocalFile(STRequest* inRequest, const char* aFilename)
-{
-    static const char* const local_files[] = {
-        "spacetrace.css",
-    };
-
-    static const size_t local_file_count =
-        sizeof(local_files) / sizeof(local_files[0]);
-    
-    size_t i;
-    
-    for (i=0; i<local_file_count; i++) {
-        if (0 == strcmp(local_files[i], aFilename))
-            return 1;
-    }
-    return 0;
-}
-
-/*
-** displayFile
-**
-** reads a file from disk, and streams it to the request
-*/
-int displayFile(STRequest* inRequest, const char* aFilename)
-{
-    PRFileDesc* inFd;
-
-    const char* filepath = PR_smprintf("res%c%s", PR_GetDirectorySeparator(), aFilename);
-    char buffer[2048];
-    PRInt32 readRes;
-
-    inFd = PR_Open(filepath, PR_RDONLY, PR_IRUSR);
-    if (!inFd) return -1;
-
-
-    while ((readRes = PR_Read(inFd, buffer, sizeof(buffer))) > 0) {
-        PR_Write(inRequest->mFD, buffer, readRes);
-    }
-    if (readRes != 0)
-        return -1;
-
-    PR_Close(inFd);
-    
-    return 0;
 }
 
 /*
@@ -4802,19 +4637,19 @@ int displayIndex(STRequest* inRequest)
     PR_fprintf(inRequest->mFD, "<ul>");
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "root_callsites.html", "Root Callsites", NULL, "mainmenu", options);
+    htmlAnchor(inRequest, "root_callsites.html", "Root Callsites", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "categories_summary.html", "Categories Report", NULL, "mainmenu", options);
+    htmlAnchor(inRequest, "categories_summary.html", "Categories Report", NULL, options);
 
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "top_callsites.html", "Top Callsites Report", NULL, "mainmenu", options);
+    htmlAnchor(inRequest, "top_callsites.html", "Top Callsites Report", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "top_allocations.html", "Top Allocations Report", NULL, "mainmenu", options);
+    htmlAnchor(inRequest, "top_allocations.html", "Top Allocations Report", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "memory_leaks.html", "Memory Leak Report", NULL, "mainmenu", options);
+    htmlAnchor(inRequest, "memory_leaks.html", "Memory Leak Report", NULL, options);
 
 #if ST_WANT_GRAPHS    
     PR_fprintf(inRequest->mFD, "\n<li>Graphs");
@@ -4822,16 +4657,16 @@ int displayIndex(STRequest* inRequest)
     PR_fprintf(inRequest->mFD, "<ul>");
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "footprint_graph.html", "Footprint", NULL, "mainmenu graph", options);
+    htmlAnchor(inRequest, "footprint_graph.html", "Footprint", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "lifespan_graph.html", "Allocation Lifespans", NULL, "mainmenu graph", options);
+    htmlAnchor(inRequest, "lifespan_graph.html", "Allocation Lifespans", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "times_graph.html", "Allocation Times", NULL, "mainmenu graph", options);
+    htmlAnchor(inRequest, "times_graph.html", "Allocation Times", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n<li>");
-    htmlAnchor(inRequest, "weight_graph.html", "Allocation Weights", NULL, "mainmenu graph", options);
+    htmlAnchor(inRequest, "weight_graph.html", "Allocation Weights", NULL, options);
     
     PR_fprintf(inRequest->mFD, "\n</ul>\n");
 #endif /* ST_WANT_GRAPHS */
@@ -5322,18 +5157,13 @@ int handleRequest(tmreader* aTMR, PRFileDesc* aFD, const char* aFileName, const 
         **  Get our cached context for this client.
         **  Simply based on the options.
         */
-
-        
         request.mContext = contextLookup(&request.mOptions);
         if(NULL != request.mContext)
         {
             /*
             ** Attempt to find the file of interest.
             */
-            if (handleLocalFile(&request, aFileName)) {
-                displayFile(&request, aFileName);
-            }
-            else if(0 == strcmp("index.html", aFileName))
+            if(0 == strcmp("index.html", aFileName))
             {
                 int displayRes = 0;
                 
@@ -5348,8 +5178,7 @@ int handleRequest(tmreader* aTMR, PRFileDesc* aFD, const char* aFileName, const 
                 
                 htmlFooter(&request);
             }
-            else if(0 == strcmp("settings.html", aFileName) ||
-                    0 == strcmp("options.html", aFileName))
+            else if(0 == strcmp("settings.html", aFileName) || 0 == strcmp("options.html", aFileName))
             {
                 htmlHeader(&request, "SpaceTrace Options");
                 
@@ -5785,10 +5614,6 @@ void handleClient(void* inArg)
                 {
                     PR_fprintf(aFD, "text/plain");
                 }
-                else if(NULL != strstr(start, ".css"))
-                {
-                    PR_fprintf(aFD, "text/css");
-                }
                 else
                 {
                     PR_fprintf(aFD, "text/html");
@@ -5892,7 +5717,7 @@ int serverMode(void)
                 /*
                 ** Output a little message saying we are receiving.
                 */
-                PR_snprintf(message, sizeof(message), "server accepting connections at http://localhost:%u/", globals.mCommandLineOptions.mHttpdPort);
+                PR_snprintf(message, sizeof(message), "server accepting connections on port %u....", globals.mCommandLineOptions.mHttpdPort);
                 REPORT_INFO(message);
 
                 PR_fprintf(PR_STDOUT, "Peak memory used: %s bytes\n", FormatNumber(globals.mPeakMemoryUsed));

@@ -574,7 +574,6 @@ get_tag( Sockbuf *sb, BerElement *ber)
                 return( LBER_DEFAULT );
         }
 
-	/* we only handle small (one byte) tags */
         if ( (xbyte & LBER_BIG_TAG_MASK) == LBER_BIG_TAG_MASK ) {
                 return( LBER_DEFAULT );
         }
@@ -654,7 +653,7 @@ unsigned long
 LDAP_CALL
 ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 {
-	unsigned long	toread;
+	unsigned long	tag, toread, newlen;
 	long		rc;
 
 #ifdef LDAP_DEBUG
@@ -669,10 +668,7 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 
 	if ( ber->ber_rwptr == NULL ) {
 	  /* read the tag */
-	  unsigned long tag = get_tag(sb, ber);
-	  unsigned long newlen;
-
-	  if (tag == LBER_DEFAULT ) {
+	  if ((tag = get_tag(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
 	  }
 
@@ -681,6 +677,8 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	    return( LBER_DEFAULT);
           }
 
+	  ber->ber_tag_contents[0] = (char)tag; /* we only handle 1 byte tags */
+	  
 	  /* read the length */
 	  if ((newlen = read_len_in_ber(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
@@ -734,7 +732,7 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	if ( lber_debug ) {
 	  char msg[80];
 	  sprintf( msg, "ber_get_next: tag 0x%lx len %ld contents:\n",
-		   ber->ber_tag_contents[0], ber->ber_len );
+		   tag, ber->ber_len );
 	  ber_err_print( msg );
 	  if ( lber_debug > 1 )
 	    ber_dump( ber, 1 );
@@ -742,8 +740,9 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 #endif
 		
 	ber->ber_rwptr = NULL;
-	*len = ber->ber_struct[BER_STRUCT_VAL].ldapiov_len = ber->ber_len;
-	return(ber->ber_tag_contents[0]);
+	*len = newlen;
+	ber->ber_struct[BER_STRUCT_VAL].ldapiov_len = newlen;
+	return(tag);
 }
 
 Sockbuf *

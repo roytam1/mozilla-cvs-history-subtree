@@ -43,10 +43,6 @@
 #endif
 #include "prlog.h"
 #include "plhash.h"
-/* make sure this happens before tmreader.h */
-#define PL_ARENA_CONST_ALIGN_MASK 2
-#include "plarena.h"
-
 #include "prnetdb.h"
 #include "nsTraceMalloc.h"
 #include "tmreader.h"
@@ -278,37 +274,31 @@ static int get_tmevent(FILE *fp, tmevent *event)
     return 1;
 }
 
-static void *arena_alloc(void* pool, PRSize size)
-{
-    PLArenaPool* arena = (PLArenaPool*)pool;
-    void* result;
-    PL_ARENA_ALLOCATE(result, arena, size);
-    memset(result, 0, size);
-    return result;
-}
-
 static void *generic_alloctable(void *pool, PRSize size)
 {
-    return arena_alloc(pool, size);
+    return malloc(size);
 }
 
 static void generic_freetable(void *pool, void *item)
 {
-    /* do nothing - arena-allocated */
+    free(item);
 }
 
 static PLHashEntry *filename_allocentry(void *pool, const void *key)
 {
-    return (PLHashEntry*)arena_alloc(pool, sizeof(PLHashEntry));
+    return calloc(1, sizeof(PLHashEntry));
 }
 
 static PLHashEntry *callsite_allocentry(void *pool, const void *key)
 {
-    return (PLHashEntry*)arena_alloc(pool, sizeof(tmcallsite));
+    return calloc(1, sizeof(tmcallsite));
 }
 
-static  init_graphnode(tmgraphnode* node)
+static PLHashEntry *graphnode_allocentry(void *pool, const void *key)
 {
+    tmgraphnode *node = (tmgraphnode*) malloc(sizeof(tmgraphnode));
+    if (!node)
+        return NULL;
     node->in = node->out = NULL;
     node->up = node->down = node->next = NULL;
     node->low = 0;
@@ -318,19 +308,14 @@ static  init_graphnode(tmgraphnode* node)
     node->frees.calls.direct = node->frees.calls.total = 0;
     node->sqsum = 0;
     node->sort = -1;
-}
-
-static PLHashEntry *graphnode_allocentry(void *pool, const void *key)
-{
-    tmgraphnode* node = (tmgraphnode*)arena_alloc(pool, sizeof(tmgraphnode));
-    if (!node)
-        return NULL;
-    init_graphnode(node);
     return &node->entry;
 }
 
-static void init_method(tmmethodnode *node)
+static PLHashEntry *method_allocentry(void *pool, const void *key)
 {
+    tmmethodnode *node = (tmmethodnode*) malloc(sizeof(tmmethodnode));
+    if (!node)
+        return NULL;
     node->graphnode.in = node->graphnode.out = NULL;
     node->graphnode.up = node->graphnode.down = node->graphnode.next = NULL;
     node->graphnode.low = 0;
@@ -342,15 +327,6 @@ static void init_method(tmmethodnode *node)
     node->graphnode.sort = -1;
     node->sourcefile = NULL;
     node->linenumber = 0;
-}
-
-static PLHashEntry *method_allocentry(void *pool, const void *key)
-{
-    tmmethodnode *node =
-        (tmmethodnode*) arena_alloc(pool, sizeof(tmmethodnode));
-    if (!node)
-        return NULL;
-    init_method(node);
     return &node->graphnode.entry;
 }
 
@@ -358,11 +334,10 @@ static void graphnode_freeentry(void *pool, PLHashEntry *he, PRUintn flag)
 {
     /* Always free the value, which points to a strdup'd string. */
     free(he->value);
-#if 0                           /* using arenas now, no freeing! */
+
     /* Free the whole thing if we're told to. */
     if (flag == HT_FREE_ENTRY)
         free((void*) he);
-#endif
 }
 
 static void component_freeentry(void *pool, PLHashEntry *he, PRUintn flag)
@@ -372,9 +347,7 @@ static void component_freeentry(void *pool, PLHashEntry *he, PRUintn flag)
 
         /* Free the key, which was strdup'd (N.B. value also points to it). */
         free((void*) tmcomponent_name(comp));
-#if 0                           /* using arenas now, no freeing! */
         free((void*) comp);
-#endif
     }
 }
 
@@ -417,23 +390,22 @@ tmreader *tmreader_new(const char *program, void *data)
         return NULL;
     tmr->program = program;
     tmr->data = data;
-    PL_INIT_ARENA_POOL(&tmr->arena, "TMReader", 256*1024);
 
     tmr->libraries = PL_NewHashTable(100, hash_serial, PL_CompareValues,
                                      PL_CompareStrings, &graphnode_hashallocops,
-                                     &tmr->arena);
+                                     NULL);
     tmr->filenames = PL_NewHashTable(100, hash_serial, PL_CompareValues,
                                      PL_CompareStrings, &filename_hashallocops,
-                                     &tmr->arena);
+                                     NULL);
     tmr->components = PL_NewHashTable(10000, PL_HashString, PL_CompareStrings,
                                       PL_CompareValues, &component_hashallocops,
-                                      &tmr->arena);
+                                      NULL);
     tmr->methods = PL_NewHashTable(10000, hash_serial, PL_CompareValues,
                                    PL_CompareStrings, &method_hashallocops,
-                                   &tmr->arena);
+                                   NULL);
     tmr->callsites = PL_NewHashTable(200000, hash_serial, PL_CompareValues,
                                      PL_CompareValues, &callsite_hashallocops,
-                                     &tmr->arena);
+                                     NULL);
     tmr->calltree_root.entry.value = (void*) strdup("root");
 
     if (!tmr->libraries || !tmr->components || !tmr->methods ||
@@ -457,7 +429,6 @@ void tmreader_destroy(tmreader *tmr)
         PL_HashTableDestroy(tmr->methods);
     if (tmr->callsites)
         PL_HashTableDestroy(tmr->callsites);
-    PL_FinishArenaPool(&tmr->arena);
     free(tmr);
 }
 
@@ -698,12 +669,12 @@ int tmreader_eventloop(tmreader *tmr, const char *filename,
             size = event.u.alloc.size;
             oldsize = event.u.alloc.oldsize;
             delta = (double)size - (double)oldsize;
-            site->allocs.bytes.direct += (unsigned long)delta;
+            site->allocs.bytes.direct += delta;
             if (event.type != TM_EVENT_REALLOC)
                 site->allocs.calls.direct++;
             meth = site->method;
             if (meth) {
-                meth->graphnode.allocs.bytes.direct += (unsigned long)delta;
+                meth->graphnode.allocs.bytes.direct += delta;
                 sqdelta = delta * delta;
                 if (event.type == TM_EVENT_REALLOC) {
                     sqszdelta = ((double)size * size)
@@ -715,7 +686,7 @@ int tmreader_eventloop(tmreader *tmr, const char *filename,
                 }
                 comp = meth->graphnode.up;
                 if (comp) {
-                    comp->allocs.bytes.direct += (unsigned long)delta;
+                    comp->allocs.bytes.direct += delta;
                     if (event.type == TM_EVENT_REALLOC) {
                         comp->sqsum += sqszdelta;
                     } else {
@@ -724,7 +695,7 @@ int tmreader_eventloop(tmreader *tmr, const char *filename,
                     }
                     lib = comp->up;
                     if (lib) {
-                        lib->allocs.bytes.direct += (unsigned long)delta;
+                        lib->allocs.bytes.direct += delta;
                         if (event.type == TM_EVENT_REALLOC) {
                             lib->sqsum += sqszdelta;
                         } else {

@@ -55,6 +55,7 @@
 #include "ssl.h"
 #include "certt.h"
 #include "nss.h"
+#include "secrng.h"
 #include "secder.h"
 #include "key.h"
 #include "sslproto.h"

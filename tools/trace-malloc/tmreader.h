@@ -38,7 +38,6 @@
 #include "prtypes.h"
 #include "plhash.h"
 #include "nsTraceMalloc.h"
-#include "plarena.h"
 
 PR_BEGIN_EXTERN_C
 
@@ -169,7 +168,6 @@ struct tmreader {
     PLHashTable     *components;
     PLHashTable     *methods;
     PLHashTable     *callsites;
-    PLArenaPool     arena;
     tmcallsite      calltree_root;
     uint32          ticksPerSec;
 };

@@ -124,8 +124,7 @@ int main()
         memset(buf, 0, sizeof(buf));
         nBytes = PR_Read(sock[0], buf, sizeof(buf));
         if (nBytes == -1) {
-            fprintf(stderr, "PR_Read failed: (%d, %d)\n",
-                    PR_GetError(), PR_GetOSError());
+            fprintf(stderr, "PR_Read failed\n");
             exit(1);
         }
         printf("ping process: received \"%s\"\n", buf);
