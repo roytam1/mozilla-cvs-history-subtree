@@ -57,7 +57,7 @@ nsUNIXCharset::nsUNIXCharset()
       nsURLProperties *info = new nsURLProperties( propertyURL );
       if( info )
       {
-          nsAutoString platformLocaleKey("locale." OSTYPE ".");
+          nsAutoString platformLocaleKey("locale." TARGET_OS ".");
           platformLocaleKey.Append(locale);
 
           nsresult res = info->Get(platformLocaleKey, mCharset);
