@@ -1396,8 +1396,7 @@ SI_PromptUsernameAndPassword
 /* Browser-generated prompt for password */
 PUBLIC char *
 SI_PromptPassword
-    (MWContext *context, char *prompt, char *URLName,
-    Bool pickFirstUser, Bool useLastPassword)
+    (MWContext *context, char *prompt, char *URLName, Bool pickFirstUser)
 {
     char *password=0, *username=0, *copyOfPrompt=0, *result;
 
@@ -1412,10 +1411,8 @@ SI_PromptPassword
     }
 
     /* get previous password used  with this username */
-    if (useLastPassword) {
-	si_RestoreOldSignonDataFromBrowser
-	    (context, URLName, pickFirstUser, &username, &password);
-    }
+    si_RestoreOldSignonDataFromBrowser
+	(context, URLName, pickFirstUser, &username, &password);
     if (password && XP_STRLEN(password)) {
 	XP_FREEIF(copyOfPrompt);
 	return password;
