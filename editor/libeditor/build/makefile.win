@@ -45,6 +45,7 @@ REQUIRES  = string \
             xuldoc \
             txtsvc \
             content_xul \
+            commandhandler \
             $(NULL)
 
 include <$(DEPTH)/config/config.mak>
