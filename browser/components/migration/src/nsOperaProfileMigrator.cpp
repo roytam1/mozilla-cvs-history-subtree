@@ -1257,7 +1257,7 @@ nsOperaProfileMigrator::ParseBookmarksFolder(nsILineInputStream* aStream,
     
     if (!moreData) break;
 
-    CopyASCIItoUTF16(cBuffer, buffer);
+    CopyUTF8toUTF16(cBuffer, buffer);
     nsXPIDLString data;
     LineType type = GetLineType(buffer, getter_Copies(data));
     switch(type) {
