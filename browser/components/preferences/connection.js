@@ -37,6 +37,10 @@
 var gConnectionsDialog = {
   beforeAccept: function ()
   {
+    var proxyTypePref = document.getElementById("network.proxy.type");
+    if (proxyTypePref.value != 1)
+      return true;
+
     var httpProxyURLPref = document.getElementById("network.proxy.http");
     var httpProxyPortPref = document.getElementById("network.proxy.http_port");
     var shareProxiesPref = document.getElementById("network.proxy.share_proxy_settings");
@@ -144,16 +148,16 @@ var gConnectionsDialog = {
     pps.configureFromPAC(autoURL.value);
   },
   
-  fixupURI: function ()
+  writeAutoconfigURL: function ()
   {
     var autoURL = document.getElementById("networkProxyAutoconfigURL");
     var URIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
-                            .getService(Components.interfaces.nsIURIFixup);
+                             .getService(Components.interfaces.nsIURIFixup);
     try {
-      var fixedUpURI = URIFixup.createFixupURI(autoURL.value, 0);
-      autoURL.value = fixedUpURI.spec;
+      return URIFixup.createFixupURI(autoURL.value, 0).spec;
     }
     catch(ex) {
     }
+    return undefined;
   },
 };

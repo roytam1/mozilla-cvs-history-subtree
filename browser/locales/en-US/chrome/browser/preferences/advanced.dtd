@@ -1,7 +1,7 @@
 
 <!ENTITY generalTab.label               "General">
 <!ENTITY accessibility.label            "Accessibility">
-<!ENTITY moveSystemCaret.label          "Move system caret with focus/selection changes">
+<!ENTITY moveSystemCaret.label          "Allow text to be selected with the keyboard">
 <!ENTITY useTypeAheadFind.label         "Begin finding when you begin typing">
 <!ENTITY browsing.label                 "Browsing">
 <!ENTITY enableAutoImageResizing.label  "Resize large images to fit in the browser window">

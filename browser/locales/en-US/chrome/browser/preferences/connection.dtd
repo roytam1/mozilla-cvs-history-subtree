@@ -5,7 +5,7 @@
 <!ENTITY  directTypeRadio.accesskey     "d">
 <!ENTITY  WPADTypeRadio.label           "Auto-detect proxy settings for this network">
 <!ENTITY  WPADTypeRadio.accesskey       "w">
-<!ENTITY  manualTypeRadio.label         "Manual proxy configuration">
+<!ENTITY  manualTypeRadio.label         "Manual proxy configuration:">
 <!ENTITY  manualTypeRadio.accesskey     "m">
 <!ENTITY  autoTypeRadio.label           "Automatic proxy configuration URL:">
 <!ENTITY  autoTypeRadio.accesskey       "a">

@@ -55,31 +55,18 @@ var gAdvancedPane = {
     return undefined;
   },
 
-  _getMostRecentWindow: function (aType)
-  {
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                       .getService(Components.interfaces.nsIWindowMediator);
-    return wm.getMostRecentWindow(aType);
-  },
-
   showCertificates: function ()
   {
-    var win = this._getMostRecentWindow("mozilla:certmanager");
-    if (win)
-      win.focus();
-    else
-      document.documentElement.openWindow("chrome://pippki/content/certManager.xul",
-                                          "width=600,height=400,resizable,centerscreen", null);
+    document.documentElement.openWindow("mozilla:certmanager",
+                                        "chrome://pippki/content/certManager.xul",
+                                        "width=600,height=400,resizable,centerscreen", null);
   },
   
   showCRLs: function ()
   {
-    var win = this._getMostRecentWindow("Mozilla:CRLManager");
-    if (win)
-      win.focus();
-    else
-      document.documentElement.openWindow("chrome://pippki/content/crlManager.xul",
-                                          "width=600,height=400,resizable", null);
+    document.documentElement.openWindow("Mozilla:CRLManager", 
+                                        "chrome://pippki/content/crlManager.xul",
+                                        "width=600,height=400,resizable", null);
   },
   
   showOCSP: function ()
@@ -90,12 +77,9 @@ var gAdvancedPane = {
   
   showSecurityDevices: function ()
   {
-    var win = this._getMostRecentWindow("mozilla:devicemanager");
-    if (win)
-      win.focus();
-    else
-      document.documentElement.openWindow("chrome://pippki/content/device_manager.xul",
-                                          "width=600,height=400,resizable,centerscreen", null);
+    document.documentElement.openWindow("mozilla:devicemanager",
+                                        "chrome://pippki/content/device_manager.xul",
+                                        "width=600,height=400,resizable,centerscreen", null);
   },
   
   updateAppUpdateUI: function ()

@@ -35,7 +35,7 @@
 # ***** END LICENSE BLOCK *****
 
 var gPrivacyPane = {
-  
+  _sanitizer: null,
   init: function ()
   {
     var itemList = document.getElementById("itemList");
@@ -43,15 +43,36 @@ var gPrivacyPane = {
     if (itemList.hasAttribute("lastSelected"))
       lastSelected = parseInt(itemList.getAttribute("lastSelected"));
     itemList.selectedIndex = lastSelected;
+    
+    // Update the clear buttons
+    if (!this._sanitizer)
+      this._sanitizer = new Sanitizer();
+    this._updateClearButtons();
+    
+    window.addEventListenre("unload", this.uninit, false);
   },
   
+  uninit: function ()
+  {
+    if (this._updateInterval != -1)
+      clearInterval(this._updateInterval);
+  },
+  
+  _updateInterval: -1,
+  _updateClearButtons: function ()
+  {
+    var buttons = document.getElementsByAttribute("item", "*");
+    var buttonCount = buttons.length;
+    for (var i = 0; i < buttonCount; ++i)
+      buttons[i].disabled = !this._sanitizer.canClearItem(buttons[i].getAttribute("item"));
+  },
+    
   onItemSelect: function ()
   {
     var itemList = document.getElementById("itemList");
     var itemPreferences = document.getElementById("itemPreferences");
     itemPreferences.setAttribute("selectedIndex", itemList.selectedIndex);
     itemList.setAttribute("lastSelected", itemList.selectedIndex);
-    dump("*** selindex = " + itemList.selectedIndex + "\n");
     document.persist("itemList", "lastSelected");
   },
   
@@ -107,6 +128,33 @@ var gPrivacyPane = {
   {
     var cacheSize = document.getElementById("cacheSize");
     return cacheSize * 1000;
+  },
+  
+  _sanitizer: null,
+  clear: function (aButton) 
+  {
+    var category = aButton.getAttribute("item");
+    this._sanitizer.clearItem(category);
+    aButton.disabled = !this._sanitizer.canClearItem(category);
+    if (this._updateInterval == -1)
+      this._updateInterval = setInterval("gPrivacyPane._updateClearButtons()", 10000);
+  },
+  
+  viewCookies: function (aCategory) 
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/cookieviewer/CookieViewer.xul",
+                                           "resizable", "cookieManager");
+  },
+  viewDownloads: function (aCategory) 
+  {
+    document.documentElement.openWindow("Download:Manager", 
+                                        "chrome://mozapps/content/downloads/downloads.xul",
+                                        "dialog=no,resizable", null);
+  },
+  viewPasswords: function (aCategory) 
+  {
+    document.documentElement.openSubDialog("chrome://passwordmgr/content/passwordManager.xul",
+                                           "resizable", "8");
   },
 };
 

@@ -506,7 +506,7 @@
                 oldPane.selected = !(aPaneElement.selected = true);
                 if (!this._initialized || oldPane.id != aPaneElement.id) {
                   this.lastSelected = aPaneElement.id;
-                  aPaneElement.style.opacity = 0.0;
+                  aPaneElement.style.opacity = 0.5;
                   this.animate(oldPane, aPaneElement);
                   this._initialized = true;
                 }
@@ -531,8 +531,8 @@
 
           // Compute the opacity step, using 0.2 as a maximum step size. 
           this._opacityStepSize = sizeDelta != 0 ? this._animateIncrement / sizeDelta : 1.0;
-          if (this._opacityStepSize > 0.2)
-            this._opacityStepSize = 0.2;
+          if (this._opacityStepSize > 0.1)
+            this._opacityStepSize = 0.1;
 
           this._setUpTimer(aOldPane.contentHeight);
         ]]>
@@ -638,11 +638,19 @@
       </method>
       
       <method name="openWindow">
+        <parameter name="aWindowType"/>
         <parameter name="aURL"/>
         <parameter name="aFeatures"/>
         <parameter name="aParams"/>
         <body>
-          return openDialog(aURL, "", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+          var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                             .getService(Components.interfaces.nsIWindowMediator);
+          var win = aWindowType ? wm.getMostRecentWindow(aWindowType) : null;
+          if (win)
+            win.focus();
+          else 
+            win = openDialog(aURL, "", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+          return win;
         </body>
       </method>
     </implementation>
