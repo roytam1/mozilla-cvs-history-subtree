@@ -88,8 +88,6 @@ void stub_Alert(MWContext *context,
         nsString str(msg);
         ins->Alert(str);
         ins->Release();
-    } else {
-        printf("Alert: %s", msg);
     }
 }
 
@@ -109,8 +107,6 @@ XP_Bool stub_Confirm(MWContext *context,
         res = ins->Confirm(str);
         ins->Release();
         return res;
-    } else {
-        printf("Confirm: %s", msg);
     }
     return FALSE;
 }
@@ -130,15 +126,7 @@ char *stub_Prompt(MWContext *context,
             return res.ToNewCString();
         }
         ins->Release();
-    } else {
-        char buf[256];
-        printf("%s\n", msg);
-        printf("Prompt: ");
-        scanf("%s", buf);
-        if (PL_strlen(buf)) {
-            return PL_strdup(buf);
-        }
-    }
+    } 
 
     return NULL;
 }
@@ -162,20 +150,6 @@ stub_PromptUsernameAndPassword(MWContext *context,
             return TRUE;
         }
         ins->Release();
-    } else {
-        char buf[256];
-        printf("%s\n", msg);
-        printf("Username: ");
-        scanf("%s", buf);
-        *username = PL_strdup(buf);
-        printf("Password: ");
-        scanf("%s", buf);
-        *password = PL_strdup(buf);
-        if (**username) {
-             return TRUE;
-        }
-        PR_FREEIF(*username);
-        PR_FREEIF(*password);
     }
 
     return FALSE;
@@ -194,14 +168,6 @@ char *stub_PromptPassword(MWContext *context,
             return res.ToNewCString();
         }
         ins->Release();
-    } else {
-        char buf[256];
-        printf("%s\n", msg);
-        printf("Password: ");
-        scanf("%s", buf);
-        if (PL_strlen(buf)) {
-            return PL_strdup(buf);
-        }
     }
 
     return NULL;
@@ -276,8 +242,6 @@ PRIVATE void stub_Progress(MWContext *context, const char *msg)
         nsAutoString status(msg);
         pListener->OnStatus(pConn->pURL, status);
         pListener->Release();
-    } else {
-        printf("%s\n", msg);
     }
 }
 

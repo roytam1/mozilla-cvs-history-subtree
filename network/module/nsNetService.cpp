@@ -103,8 +103,8 @@ nsNetlibService::nsNetlibService(nsINetContainerApplication *aContainerApp)
       m_stubContext = new_stub_context();
     */
 
-    /* Initialize netlib with 32 sockets... */
-    NET_InitNetLib(0, 32);
+    /* Initialize netlib with 16 sockets... */
+    NET_InitNetLib(0, 16);
 
     /* Initialize the file extension -> content-type mappings */
     NET_InitFileFormatTypes(nsnull, nsnull);
