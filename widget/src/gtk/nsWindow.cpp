@@ -64,6 +64,7 @@ nsWindow::nsWindow()
   mFont = nsnull;
   mSuperWin = 0;
   mMozArea = 0;
+  mMozAreaClosestParent = 0;
   
   mMenuBar = nsnull;
   mIsTooSmall = PR_FALSE;
@@ -1915,20 +1916,28 @@ nsWindow::GetMozArea()
   GdkWindow *parent = mSuperWin->shell_window;
   GtkWidget *widget;
 
-  if (mMozArea == nsnull)
-    while (parent)
-      {
-        gdk_window_get_user_data (parent, (void **)&widget);
-        if (widget != nsnull && GTK_IS_MOZAREA (widget))
-          {
-            mMozArea = widget;
-            break;
-          }
-        parent = gdk_window_get_parent (parent);
-        parent = gdk_window_get_parent (parent);
-      }
+  if (mMozAreaClosestParent)
+  {
+    return (GtkWidget *)mMozAreaClosestParent;
+  }
+  if ((mMozAreaClosestParent == nsnull) && mMozArea)
+  {
+    mMozAreaClosestParent = mMozArea;
+    return (GtkWidget *)mMozAreaClosestParent;
+  }
+  while (parent)
+  {
+    gdk_window_get_user_data (parent, (void **)&widget);
+    if (widget != nsnull && GTK_IS_MOZAREA (widget))
+    {
+      mMozAreaClosestParent = widget;
+      break;
+    }
+    parent = gdk_window_get_parent (parent);
+    parent = gdk_window_get_parent (parent);
+  }
   
-  return (GtkWidget *)mMozArea;
+  return (GtkWidget *)mMozAreaClosestParent;
 }
 
 

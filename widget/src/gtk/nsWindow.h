@@ -169,6 +169,7 @@ protected:
   GtkWidget *mShell;  /* used for toplevel windows */
   GdkSuperWin *mSuperWin;
   GtkWidget   *mMozArea;
+  GtkWidget   *mMozAreaClosestParent;
 
   nsIMenuBar *mMenuBar;
 private:
