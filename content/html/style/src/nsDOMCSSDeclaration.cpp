@@ -199,6 +199,9 @@ nsDOMCSSDeclaration::RemoveProperty(const nsAString& aPropertyName,
   }
 
   nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
+  if (prop == eCSSProperty_UNKNOWN) {
+    return NS_OK;
+  }
 
   decl->GetValue(prop, aReturn);
 
