@@ -582,6 +582,16 @@ public:
 
   virtual PRBool IsScriptEnabled() = 0;
 
+  // Get the security info (i.e. SSL state etc) that the document got
+  // from the channel/document that created the content of the
+  // document.
+  //
+  // @see nsIChannel
+  nsISupports *GetSecurityInfo()
+  {
+    return mSecurityInfo;
+  }
+
 protected:
   nsString mDocumentTitle;
   nsCOMPtr<nsIURI> mDocumentURI;
@@ -613,6 +623,9 @@ protected:
 
   nsXPIDLCString mContentLanguage;
   nsCString mContentType;
+
+  // The document's security info
+  nsCOMPtr<nsISupports> mSecurityInfo;
 };
 
 
