@@ -90,7 +90,27 @@ World world;
 const String ConsoleName = widenCString("<console>");
 const bool showTokens = false;
 
-#define INTERPRET_INPUT 0
+#define INTERPRET_INPUT 1
+#define SHOW_ICODE 1
+
+
+JSValue load(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue result = kUndefinedValue;
+    if ((argc >= 1) && (argv[0].isString())) {    
+        const String& fileName = *argv[0].string;
+        result = cx->readEvalFile(fileName);
+    }    
+    return result;
+}
+JSValue print(Context *cx, JSValue *argv, uint32 argc)
+{
+    for (uint32 i = 0; i < argc; i++) {
+        stdOut << argv[i] << "\n";
+    }
+    return kUndefinedValue;
+}
+
 
 static void readEvalPrint(FILE *in, World &world)
 {
@@ -134,6 +154,9 @@ static void readEvalPrint(FILE *in, World &world)
 #ifdef INTERPRET_INPUT
 				// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
+                globalObject.defineVariable(widenCString("load"), NULL, JSValue(new JSFunction(load, NULL)));
+                globalObject.defineVariable(widenCString("print"), NULL, JSValue(new JSFunction(print, NULL)));
+
                 cx.buildRuntime(parsedStatements);
                 stdOut << globalObject;
                 JS2Runtime::ByteCodeModule* bcm = cx.genCode(parsedStatements, ConsoleName);
@@ -144,6 +167,7 @@ static void readEvalPrint(FILE *in, World &world)
                     JSValue result = cx.interpret(bcm, JSValueList());
                     stdOut << "result = " << result << "\n";
                     delete bcm;
+                    stdOut << globalObject;
                 }
 #endif
             }
