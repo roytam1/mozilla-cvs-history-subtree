@@ -1226,11 +1226,17 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	stmt = cg->treeContext.topStmt;
 	atom = pn->pn_atom;
 	if (atom) {
+            /* Find the loop statement enclosed by the matching label. */
+            JSStmtInfo *loop = NULL;
 	    ale = js_IndexAtom(cx, atom, &cg->atomList);
 	    if (!ale)
 		return JS_FALSE;
-	    while (stmt->type != STMT_LABEL || stmt->label != atom)
+            while (stmt->type != STMT_LABEL || stmt->label != atom) {
+                if (STMT_IS_LOOP(stmt))
+                    loop = stmt;
 		stmt = stmt->down;
+            }
+            stmt = loop;
 	} else {
 	    ale = NULL;
 	    while (!STMT_IS_LOOP(stmt))
