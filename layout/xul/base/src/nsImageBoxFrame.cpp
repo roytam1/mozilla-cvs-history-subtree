@@ -57,6 +57,7 @@
 #include "nsImageMap.h"
 #include "nsILinkHandler.h"
 #include "nsIURL.h"
+#include "nsILoadGroup.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsHTMLContainerFrame.h"
@@ -247,7 +248,10 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
     if (NS_FAILED(rv))
       return rv;
 
-    il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+
+    il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
   }
 #else
   if (!src.IsEmpty()) {
@@ -341,7 +345,10 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
   nsresult rv;
   nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
 
-  il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  nsCOMPtr<nsILoadGroup> loadGroup;
+  GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+
+  il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
 
   aResize = PR_TRUE;
 
@@ -590,7 +597,22 @@ nsImageBoxFrame::GetBaseURI(nsIURI **uri)
   NS_IF_ADDREF(*uri);
 }
 
+void
+nsImageBoxFrame::GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup)
+{
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
 
+  if (!shell)
+    return;
+
+  nsCOMPtr<nsIDocument> doc;
+  shell->GetDocument(getter_AddRefs(doc));
+  if (!doc)
+    return;
+
+  doc->GetDocumentLoadGroup(aLoadGroup);
+}
 
 
 #ifdef USE_IMG2

@@ -40,6 +40,7 @@
 class nsIFrame;
 class nsImageMap;
 class nsIURI;
+class nsILoadGroup;
 struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
@@ -184,6 +185,7 @@ protected:
 #endif
 
   void GetBaseURI(nsIURI **uri);
+  void GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup);
 
   nsHTMLImageLoader   mImageLoader;
   nsHTMLImageLoader * mLowSrcImageLoader;

@@ -41,6 +41,7 @@
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"
+#include "nsILoadGroup.h"
 #include "nsIServiceManager.h"
 #include "nsNetUtil.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -230,13 +231,17 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
   if (NS_FAILED(rv))
     return rv;
+
+  nsCOMPtr<nsILoadGroup> loadGroup;
+  GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
 #endif
 
   if (NS_CONTENT_ATTR_HAS_VALUE == lowSrcResult && lowSrc.Length() > 0) {
 #ifdef USE_IMG2
     nsCOMPtr<nsIURI> lowURI;
     NS_NewURI(getter_AddRefs(lowURI), src, baseURL);
-    il->LoadImage(lowURI, mListener, aPresContext, getter_AddRefs(mLowImageRequest));
+
+    il->LoadImage(lowURI, loadGroup, mListener, aPresContext, getter_AddRefs(mLowImageRequest));
 #else
     mLowSrcImageLoader = new nsHTMLImageLoader;
     if (mLowSrcImageLoader) {
@@ -252,7 +257,7 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
 
   nsCOMPtr<nsIURI> srcURI;
   NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
-  il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
   // if the image was found in the cache, it is possible that LoadImage will result in a call to OnStartContainer()
 #else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
@@ -1428,12 +1433,15 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
       nsCOMPtr<nsIURI> baseURI;
       GetBaseURI(getter_AddRefs(baseURI));
 
+      nsCOMPtr<nsILoadGroup> loadGroup;
+      GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+
       mImageRequest->GetImageStatus(&loadStatus);
       if (loadStatus & imgIRequest::STATUS_SIZE_AVAILABLE) {
         nsCOMPtr<nsIURI> uri;
         NS_NewURI(getter_AddRefs(uri), newSRC, baseURI);
         nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1"));
-        il->LoadImage(uri, mListener, aPresContext, getter_AddRefs(mImageRequest));
+        il->LoadImage(uri, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
 
         mImageRequest->GetImageStatus(&loadStatus);
         if (loadStatus & imgIRequest::STATUS_SIZE_AVAILABLE) {
@@ -1459,7 +1467,7 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
         nsCOMPtr<nsIURI> uri;
         NS_NewURI(getter_AddRefs(uri), newSRC, baseURI);
         nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1"));
-        il->LoadImage(uri, mListener, aPresContext, getter_AddRefs(mImageRequest));
+        il->LoadImage(uri, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
 #else
         mImageLoader.StopLoadImage(aPresContext);
 
@@ -1548,6 +1556,24 @@ nsImageFrame::GetBaseURI(nsIURI **uri)
   *uri = baseURI;
   NS_IF_ADDREF(*uri);
 }
+
+void
+nsImageFrame::GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup)
+{
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+
+  if (!shell)
+    return;
+
+  nsCOMPtr<nsIDocument> doc;
+  shell->GetDocument(getter_AddRefs(doc));
+  if (!doc)
+    return;
+
+  doc->GetDocumentLoadGroup(aLoadGroup);
+}
+
 
 #ifdef DEBUG
 NS_IMETHODIMP
