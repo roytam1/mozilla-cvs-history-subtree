@@ -723,8 +723,11 @@ _posturl(NPP npp,
 // A little helper class used to wrap up plugin manager streams (that is,
 // streams from the plugin to the browser).
 
-class ns4xStreamWrapper
+class ns4xStreamWrapper : public nsISupports
 {
+public:
+  NS_DECL_ISUPPORTS
+
 protected:
   nsIOutputStream *fStream;
   NPStream        fNPStream;
@@ -740,6 +743,8 @@ public:
     return &fNPStream;
   };
 };
+
+NS_IMPL_ISUPPORTS1(ns4xStreamWrapper, nsISupports);
 
 ns4xStreamWrapper::ns4xStreamWrapper(nsIOutputStream* stream)
   : fStream(stream)

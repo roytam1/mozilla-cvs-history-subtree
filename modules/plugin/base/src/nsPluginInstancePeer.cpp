@@ -207,7 +207,7 @@ nsPluginStreamToFile::nsPluginStreamToFile(const char* target, nsIPluginInstance
 	tpath[0] = 0;
 #endif // XP_PC
 
-	PR_snprintf(buf, sizeof(buf), "%s%08X.html", tpath, this);
+	PR_snprintf(buf, sizeof(buf), "%s%08X", tpath, this);
 
 
 	// Create and validate the file spec object. (When we have a constructor for the temp
@@ -270,7 +270,7 @@ nsPluginStreamToFile::Write(const char* aBuf, PRUint32 aCount, PRUint32 *aWriteC
 	// write the data to the file and update the target
 	nsCOMPtr<nsIOpenFile> thing;
 	thing = do_QueryInterface(mFileThing);
-	thing->Open(mFileSpec, (PR_RDWR|PR_APPEND), 0700);
+	thing->Open(mFileSpec, (PR_WRONLY | PR_CREATE_FILE | PR_APPEND), 0700);
 	PRUint32 actualCount;
 	mFileThing->Write(aBuf, aCount, &actualCount);
 	mFileThing->Close();
