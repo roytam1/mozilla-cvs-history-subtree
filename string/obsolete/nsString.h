@@ -51,7 +51,6 @@
 #include "nsIAtom.h"
 
 #include "nsAString.h"
-#include "nsLocalString.h"
 
 
 class NS_COM nsSubsumeCStr;

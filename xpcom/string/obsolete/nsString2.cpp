@@ -165,7 +165,7 @@ nsString::do_AppendFromElement( PRUnichar inChar )
   }
 
 
-nsString::nsString( const nsAReadableString& aReadable ) {
+nsString::nsString( const nsAString& aReadable ) {
   Initialize(*this,eTwoByte);
   Assign(aReadable);
 }
@@ -1647,7 +1647,7 @@ nsAutoString::nsAutoString( const nsString& aString )
   Append(aString);
 }
 
-nsAutoString::nsAutoString( const nsAReadableString& aString )
+nsAutoString::nsAutoString( const nsAString& aString )
   : nsString()
 {
   Initialize(*this, mBuffer, (sizeof(mBuffer)>>eTwoByte)-1, 0, eTwoByte, PR_FALSE);

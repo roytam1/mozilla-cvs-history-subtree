@@ -34,7 +34,7 @@
    *
    */
 
-class nsAPromiseString : public nsAString { };
-class nsAPromiseCString : public nsACString { };
+class NS_COM nsAPromiseString : public nsAString { };
+class NS_COM nsAPromiseCString : public nsACString { };
 
 #endif /* !defined(nsAPromiseString_h___) */
