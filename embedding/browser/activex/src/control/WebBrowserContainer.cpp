@@ -96,7 +96,7 @@ NS_IMETHODIMP CWebBrowserContainer::OnShowContextMenu(PRUint32 aContextFlags, ns
 // nsIPrompt
 
 /* void alert (in wstring text); */
-NS_IMETHODIMP CWebBrowserContainer::Alert(const PRUnichar* dialogTitle, const PRUnichar *text)
+NS_IMETHODIMP CWebBrowserContainer::Alert(const PRUnichar* dialogTitle, const PRUnichar *text, nsresult status)
 {
 	USES_CONVERSION;
 	m_pOwner->MessageBox(W2T(text), W2T(dialogTitle), MB_OK | MB_ICONEXCLAMATION);
@@ -104,7 +104,7 @@ NS_IMETHODIMP CWebBrowserContainer::Alert(const PRUnichar* dialogTitle, const PR
 }
 
 /* boolean confirmCheck (in wstring text, in wstring checkMsg, out boolean checkValue); */
-NS_IMETHODIMP CWebBrowserContainer::AlertCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue)
+NS_IMETHODIMP CWebBrowserContainer::AlertCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, nsresult status)
 {
 // TODO show dialog with check box
 	USES_CONVERSION;
@@ -114,7 +114,7 @@ NS_IMETHODIMP CWebBrowserContainer::AlertCheck(const PRUnichar* dialogTitle, con
 
 
 /* boolean confirm (in wstring text); */
-NS_IMETHODIMP CWebBrowserContainer::Confirm(const PRUnichar* dialogTitle, const PRUnichar *text, PRBool *_retval)
+NS_IMETHODIMP CWebBrowserContainer::Confirm(const PRUnichar* dialogTitle, const PRUnichar *text, nsresult status, PRBool *_retval)
 {
 	USES_CONVERSION;
 	int nAnswer = m_pOwner->MessageBox(W2T(text), W2T(dialogTitle), MB_YESNO | MB_ICONQUESTION);
@@ -123,7 +123,7 @@ NS_IMETHODIMP CWebBrowserContainer::Confirm(const PRUnichar* dialogTitle, const 
 }
 
 /* boolean confirmCheck (in wstring text, in wstring checkMsg, out boolean checkValue); */
-NS_IMETHODIMP CWebBrowserContainer::ConfirmCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+NS_IMETHODIMP CWebBrowserContainer::ConfirmCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, nsresult status, PRBool *_retval)
 {
 	USES_CONVERSION;
 

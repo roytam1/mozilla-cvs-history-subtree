@@ -27,33 +27,55 @@ interface nsIPrompt : nsISupports
 {
     /**
      * Puts up an alert dialog with an OK button.
+     * @param dialogTitle - text to be displayed in the window
+     *    title bar.
+     * @param text - text to be displayed in the dialog.
+     * @param status - the result code which prompted the method call
      */
     void alert(in wstring dialogTitle,
-               in wstring text);
+               in wstring text,
+               in nsresult status);
 
     /**
      * Puts up an alert dialog with an OK button.
+     * @param dialogTitle - text to be displayed in the window
+     *    title bar.
+     * @param text - text to be displayed in the dialog.
+     * @param checkMsg - text to be displayed next to the checkbox
+     * @param status - the result code which prompted the method call
+     * @return the value of the check box
      */
-    void alertCheck(in wstring dialogTitle,
+    boolean alertCheck(in wstring dialogTitle,
                     in wstring text,
                     in wstring checkMsg,
-                    out boolean checkValue);
+                    in nsresult status);
 
     /**
      * Puts up a dialog with OK and Cancel buttons.
+     * @param dialogTitle - text to be displayed in the window
+     *    title bar.
+     * @param text - text to be displayed in the dialog.
+     * @param status - the result code which prompted the method call
      * @return true for OK, false for Cancel
      */
     boolean confirm(in wstring dialogTitle,
-                    in wstring text);
+                    in wstring text,
+                    in nsresult status);
 
     /**
      * Puts up a dialog with OK and Cancel buttons, and
      * a message with a single checkbox.
+     * @param dialogTitle - text to be displayed in the window
+     *    title bar.
+     * @param text - text to be displayed in the dialog.
+     * @param checkMsg - text to be displayed next to the checkbox
+     * @return the value of the checkbox               
      * @return true for OK, false for Cancel
      */
     boolean confirmCheck(in wstring dialogTitle,
                          in wstring text,
                          in wstring checkMsg,
+                         in nsresult status,
                          out boolean checkValue);
 
     /**

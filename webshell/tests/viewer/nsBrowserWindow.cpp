@@ -2195,7 +2195,7 @@ nsBrowserWindow::OnStatus(nsIChannel* channel, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::Alert(const PRUnichar *dialogTitle, const PRUnichar *text)
+nsBrowserWindow::Alert(const PRUnichar *dialogTitle, const PRUnichar *text, nsresult status)
 {
   nsCAutoString str; str.AssignWithConversion(text);
   printf("%cBrowser Window Alert: %s\n", '\007', str.GetBuffer());
@@ -2207,7 +2207,8 @@ NS_IMETHODIMP
 nsBrowserWindow::AlertCheck(const PRUnichar *dialogTitle, 
                             const PRUnichar *text, 
                             const PRUnichar *checkMsg, 
-                            PRBool *checkValue)
+                            PRBool *checkValue,
+                            nsresult status)
 {
   nsCAutoString str; str.AssignWithConversion(text);
   printf("%cBrowser Window AlertCheck: %s\n", '\007', str.GetBuffer());
@@ -2219,6 +2220,7 @@ nsBrowserWindow::AlertCheck(const PRUnichar *dialogTitle,
 NS_IMETHODIMP
 nsBrowserWindow::Confirm(const PRUnichar *dialogTitle, 
                          const PRUnichar *text,
+                         nsresult status,
                          PRBool *result)
 {
   nsCAutoString str; str.AssignWithConversion(text);
@@ -2247,6 +2249,7 @@ nsBrowserWindow::ConfirmCheck(const PRUnichar *dialogTitle,
                               const PRUnichar *text,
                               const PRUnichar *checkMsg,
                               PRBool *checkValue,
+                              nsresult status,
                               PRBool *result)
 {
   return Confirm(dialogTitle, text, result);

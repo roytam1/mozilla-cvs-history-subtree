@@ -2401,7 +2401,7 @@ void nsInstall::SetInstallURL(const nsString& url)  { mInstallURL = url; }
 
 
 PRInt32    
-nsInstall::Alert(nsString& string)
+nsInstall::Alert(nsString& string, nsresult status)
 {
     nsresult res;
 
@@ -2409,7 +2409,7 @@ nsInstall::Alert(nsString& string)
     if (NS_FAILED(res)) 
         return res;
 
-    return dialog->Alert(mParent, nsnull, string.GetUnicode());
+    return dialog->Alert(mParent, nsnull, string.GetUnicode(), status);
 }
 
 PRInt32    

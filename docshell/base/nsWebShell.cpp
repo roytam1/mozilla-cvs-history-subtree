@@ -1082,7 +1082,7 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
              PRUnichar *msg = nsTextFormatter::smprintf(messageStr, (const char*)host);
              if (!msg) return NS_ERROR_OUT_OF_MEMORY;
 
-             prompter->Alert(nsnull, msg);
+             prompter->Alert(nsnull, msg, NS_ERROR_UNKNOWN_HOST);
              nsTextFormatter::smprintf_free(msg);
              }
          } 
@@ -1112,7 +1112,7 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
            PRUnichar *msg = nsTextFormatter::smprintf(messageStr, combo.GetBuffer());
            if (!msg) return NS_ERROR_OUT_OF_MEMORY;
 
-           prompter->Alert(nsnull, msg);
+           prompter->Alert(nsnull, msg, NS_ERROR_CONNECTION_REFUSED);
            nsTextFormatter::smprintf_free(msg);
            } 
         else if(aStatus == NS_ERROR_NET_TIMEOUT)
@@ -1133,7 +1133,7 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
            PRUnichar *msg = nsTextFormatter::smprintf(messageStr, (const char*)host);
            if (!msg) return NS_ERROR_OUT_OF_MEMORY;
 
-           prompter->Alert(nsnull, msg);            
+           prompter->Alert(nsnull, msg, NS_ERROR_NET_TIMEOUT);            
            nsTextFormatter::smprintf_free(msg);
            } // end NS_ERROR_NET_TIMEOUT
         } // if we have a host

@@ -520,7 +520,7 @@ NS_IMETHODIMP CWebBrowserChrome::SetTitle(const PRUnichar* aTitle)
 // CWebBrowserChrome::nsIPrompt
 //*****************************************************************************   
 
-NS_IMETHODIMP CWebBrowserChrome::Alert(const PRUnichar *dialogTitle, const PRUnichar *text)
+NS_IMETHODIMP CWebBrowserChrome::Alert(const PRUnichar *dialogTitle, const PRUnichar *text, nsresult status)
 {
     RegisterClass_(LIconControl);
     
@@ -550,12 +550,14 @@ NS_IMETHODIMP CWebBrowserChrome::Alert(const PRUnichar *dialogTitle, const PRUni
 NS_IMETHODIMP CWebBrowserChrome::AlertCheck(const PRUnichar *dialogTitle, 
                                             const PRUnichar *text, 
                                             const PRUnichar *checkMsg, 
-                                            PRBool *checkValue)
+                                            PRBool *checkValue,
+                                            nsresult status)
 {
     return NS_OK;
 }
 
-NS_IMETHODIMP CWebBrowserChrome::Confirm(const PRUnichar *dialogTitle, const PRUnichar *text, PRBool *_retval)
+NS_IMETHODIMP CWebBrowserChrome::Confirm(const PRUnichar *dialogTitle, const PRUnichar *text, 
+                                         nsresult status, PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
     
@@ -590,7 +592,8 @@ NS_IMETHODIMP CWebBrowserChrome::Confirm(const PRUnichar *dialogTitle, const PRU
     return NS_OK;
 }
 
-NS_IMETHODIMP CWebBrowserChrome::ConfirmCheck(const PRUnichar *dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+NS_IMETHODIMP CWebBrowserChrome::ConfirmCheck(const PRUnichar *dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, 
+                                              PRBool *checkValue, nsresult status, PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(checkValue);
     NS_ENSURE_ARG_POINTER(_retval);

@@ -1862,7 +1862,8 @@ nsDOMWindowPrompter::GetLocaleString(const PRUnichar* aString, PRUnichar** aResu
 
 NS_IMETHODIMP
 nsDOMWindowPrompter::Alert(const PRUnichar* dialogTitle, 
-                           const PRUnichar* text)
+                           const PRUnichar* text,
+                           nsresult status)
 {
   nsresult rv;
  
@@ -1886,7 +1887,8 @@ NS_IMETHODIMP
 nsDOMWindowPrompter::AlertCheck(const PRUnichar* dialogTitle, 
                                   const PRUnichar* text,
                                   const PRUnichar* checkMsg,
-                                  PRBool *checkValue)
+                                  PRBool *checkValue,
+                                  nsresult status)
 {
   nsresult rv;
 
@@ -1909,6 +1911,7 @@ nsDOMWindowPrompter::AlertCheck(const PRUnichar* dialogTitle,
 NS_IMETHODIMP
 nsDOMWindowPrompter::Confirm(const PRUnichar* dialogTitle, 
                              const PRUnichar* text,
+                             nsresult status,
                              PRBool *_retval)
 {
   nsresult rv;
@@ -1933,6 +1936,7 @@ nsDOMWindowPrompter::ConfirmCheck(const PRUnichar* dialogTitle,
                                   const PRUnichar* text,
                                   const PRUnichar* checkMsg,
                                   PRBool *checkValue,
+                                  nsresult status,
                                   PRBool *_retval)
 {
   nsresult rv;

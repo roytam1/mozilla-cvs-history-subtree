@@ -968,7 +968,7 @@ nsFtpConnectionThread::R_pass() {
         nsAutoString    text;
         text.AssignWithConversion(mResponseMsg);
 
-        rv = proxyprompter->Alert(title.GetUnicode(), text.GetUnicode());
+        rv = proxyprompter->Alert(title.GetUnicode(), text.GetUnicode(), NS_ERROR_FTP_LOGIN);
         return FTP_ERROR;
     } else {
         // kick back out to S_pass() and ask the user again.

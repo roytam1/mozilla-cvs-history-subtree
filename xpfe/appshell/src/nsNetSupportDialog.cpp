@@ -64,13 +64,13 @@ nsNetSupportDialog::~nsNetSupportDialog()
 
 
 
-NS_IMETHODIMP nsNetSupportDialog::Alert(const PRUnichar *dialogTitle, const PRUnichar *text)
+NS_IMETHODIMP nsNetSupportDialog::Alert(const PRUnichar *dialogTitle, const PRUnichar *text, nsresult status)
 {
 
 	 nsresult rv = NS_ERROR_FAILURE;
 	 nsCOMPtr< nsIPrompt> dialogService;
      if( GetNSIPrompt( dialogService ) )
-        rv = dialogService->Alert(dialogTitle, text);
+        rv = dialogService->Alert(dialogTitle, text, status);
 
 	 return rv;
 }
@@ -78,25 +78,27 @@ NS_IMETHODIMP nsNetSupportDialog::Alert(const PRUnichar *dialogTitle, const PRUn
 NS_IMETHODIMP	nsNetSupportDialog::AlertCheck(const PRUnichar *dialogTitle, 
                                                const PRUnichar *text, 
                                                const PRUnichar *checkMsg, 
-                                               PRBool *checkValue)
+                                               PRBool *checkValue,
+                                               nsresult status)
 {
 
 	nsresult rv = NS_ERROR_FAILURE;
 	nsCOMPtr< nsIPrompt> dialogService;
     if( GetNSIPrompt( dialogService ) )
-    	rv = dialogService->AlertCheck(dialogTitle, text, checkMsg, checkValue);
+    	rv = dialogService->AlertCheck(dialogTitle, text, checkMsg, checkValue, status);
 
 	return rv;
 }
 
 
-NS_IMETHODIMP nsNetSupportDialog::Confirm(const PRUnichar *dialogTitle, const PRUnichar *text, PRBool *returnValue)
+NS_IMETHODIMP nsNetSupportDialog::Confirm(const PRUnichar *dialogTitle, const PRUnichar *text,
+                                          nsresult status, PRBool *returnValue)
 {
 
 	nsresult rv = NS_ERROR_FAILURE;
 	nsCOMPtr< nsIPrompt> dialogService;
     if( GetNSIPrompt( dialogService ) )
-    	rv = dialogService->Confirm(dialogTitle, text, returnValue);
+    	rv = dialogService->Confirm(dialogTitle, text, status, returnValue);
 
 	return rv;
 }
@@ -105,13 +107,14 @@ NS_IMETHODIMP	nsNetSupportDialog::ConfirmCheck(const PRUnichar *dialogTitle,
                                                const PRUnichar *text, 
                                                const PRUnichar *checkMsg, 
                                                PRBool *checkValue, 
+                                               nsresult status,
                                                PRBool *returnValue)
 {
 
 	nsresult rv = NS_ERROR_FAILURE;
 	nsCOMPtr< nsIPrompt> dialogService;
     if( GetNSIPrompt( dialogService ) )
-    	rv = dialogService->ConfirmCheck(dialogTitle, text, checkMsg, checkValue, returnValue);
+    	rv = dialogService->ConfirmCheck(dialogTitle, text, checkMsg, checkValue, status, returnValue);
 
 	return rv;
 }

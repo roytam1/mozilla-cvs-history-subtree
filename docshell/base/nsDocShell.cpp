@@ -1367,7 +1367,7 @@ NS_IMETHODIMP nsDocShell::LoadURI(const PRUnichar* aURI, PRUint32 aLoadFlags)
       PRUnichar *msg = nsTextFormatter::smprintf(messageStr, cScheme.GetBuffer());
       if (!msg) return NS_ERROR_OUT_OF_MEMORY;
 
-      prompter->Alert(nsnull, msg);
+      (void)prompter->Alert(nsnull, msg, NS_ERROR_UNKNOWN_PROTOCOL);
       nsTextFormatter::smprintf_free(msg);
       } // end unknown protocol
 
