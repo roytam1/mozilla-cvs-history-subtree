@@ -204,6 +204,7 @@ nsXMLDocument::~nsXMLDocument()
   }
 }
 
+
 // XPConnect interface list for nsXMLDocument
 NS_CLASSINFO_MAP_BEGIN(Document)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMDocument)
@@ -226,8 +227,10 @@ NS_INTERFACE_MAP_BEGIN(nsXMLDocument)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Document)
 NS_INTERFACE_MAP_END_INHERITING(nsDocument)
 
+
 NS_IMPL_ADDREF_INHERITED(nsXMLDocument, nsDocument)
 NS_IMPL_RELEASE_INHERITED(nsXMLDocument, nsDocument)
+
 
 NS_IMETHODIMP 
 nsXMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)

@@ -1592,7 +1592,7 @@ NS_IMETHODIMP
 GlobalWindowImpl::Prompt(const nsAReadableString& aMessage,
                          const nsAReadableString& aInitial,
                          const nsAReadableString& aTitle,
-                         const PRUint32 aSavePassword,
+                         PRUint32 aSavePassword,
                          nsAWritableString& aReturn)
 {
   NS_ENSURE_STATE(mDocShell);
@@ -3721,6 +3721,7 @@ NavigatorImpl::~NavigatorImpl()
 //*****************************************************************************
 //    NavigatorImpl::nsISupports
 //*****************************************************************************
+
 
 // XPConnect interface list for NavigatorImpl
 NS_CLASSINFO_MAP_BEGIN(Navigator)

@@ -360,5 +360,5 @@ static nsModuleComponentInfo components[] = {
 };
 
 
-NS_IMPL_NSGETMODULE("Stream Transfer", components);
+NS_IMPL_NSGETMODULE(nsStreamTransferModule, components);
 
