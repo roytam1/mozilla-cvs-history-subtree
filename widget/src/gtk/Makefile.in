@@ -26,12 +26,6 @@ LIBRARY_NAME	= widget_gtk
 
 REQUIRES	= util img xpcom raptor netlib
 
-CSRCS           = \
-                gdksuperwin.c \
-                gtkmozarea.c \
-                gtkmozbox.c
-
-
 CPPSRCS		= \
 		nsAppShell.cpp \
 		nsButton.cpp \
@@ -73,14 +67,10 @@ EXTRA_DSO_LDOPTS = \
 		$(NULL)
 
 ifndef MOZ_MONOLITHIC_TOOLKIT
-EXTRA_DSO_LDOPTS += $(MOZ_GTK_LDFLAGS)
+EXTRA_DSO_LDOPTS +=  -L$(DIST)/lib -lgtksuperwin $(MOZ_GTK_LDFLAGS)
 else
 EXTRA_DSO_LDOPTS += $(TK_LIBS)
 endif
-
-EXPORTS         = gdksuperwin.h \
-		  gtkmozarea.h \
-		  gtkmozbox.h
 
 include $(topsrcdir)/config/rules.mk
 
