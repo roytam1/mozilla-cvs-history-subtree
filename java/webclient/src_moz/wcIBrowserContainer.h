@@ -61,7 +61,7 @@ public:
   NS_IMETHOD RemoveAllListeners(); \
   NS_IMETHOD RemoveMouseListener(); \
   NS_IMETHOD RemoveDocumentLoadListener(); \
-  NS_IMETHOD GetInstanceCount(PRInt32 *outCount); \
+  NS_IMETHOD GetInstanceCount(PRInt32 *outCount); 
 
 
 #endif
