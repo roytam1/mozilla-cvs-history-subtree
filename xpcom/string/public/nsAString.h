@@ -73,6 +73,7 @@ class NS_COM nsAString
       PRBool IsEmpty() const { return Length() == 0; }
 
       inline PRBool Equals( const self_type& ) const;
+      PRBool Equals( const char_type* ) const;
 
       
         /**
@@ -302,6 +303,7 @@ class NS_COM nsACString
       PRBool IsEmpty() const { return Length() == 0; }
 
       inline PRBool Equals( const self_type& ) const;
+      PRBool Equals( const char_type* ) const;
 
       
         /**
@@ -595,7 +597,7 @@ NS_COM int Compare( const nsAString& lhs, const nsAString& rhs );
 
 inline
 PRBool
-nsAString::Equals( const nsAString& rhs ) const
+nsAString::Equals( const self_type& rhs ) const
   {
     return Length()==rhs.Length() && Compare(*this, rhs)==0;
   }
