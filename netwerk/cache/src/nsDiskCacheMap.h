@@ -62,6 +62,10 @@ class nsDiskCacheMap {
 public:
     nsDiskCacheMap();
     ~nsDiskCacheMap();
+    
+    PRUint32& DataSize() { return mHeader.mDataSize; }
+
+    PRUint32& EntryCount() { return mHeader.mEntryCount; }
 
     nsDiskCacheRecord* GetRecord(PRUint32 hashNumber);
     
@@ -78,8 +82,8 @@ private:
         nsDiskCacheRecord   mRecords[kRecordsPerBucket];
     };
     
-    nsDiskCacheHeader mHeader;
-    nsDiskCacheBucket mBuckets[kBucketsPerTable];
+    nsDiskCacheHeader       mHeader;
+    nsDiskCacheBucket       mBuckets[kBucketsPerTable];
 };
 
 #endif // _nsDiskCacheMap_h_

@@ -22,14 +22,12 @@
  */
 
 #include "nsDiskCacheMap.h"
-#include "nsIInputStream.h"
-#include "nsIOutputStream.h"
+#include "nsIFileStreams.h"
 
 #include <string.h>
 
 nsDiskCacheMap::nsDiskCacheMap()
 {
-    ::memset(&mBuckets, 0, sizeof(mBuckets));
 }
 
 nsDiskCacheMap::~nsDiskCacheMap()
@@ -58,13 +56,29 @@ nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
 
 nsresult nsDiskCacheMap::Read(nsIInputStream* input)
 {
-    // XXX need a header, etc.
+    nsresult rv;
     PRUint32 count;
-    nsresult rv = input->Read((char*)&mBuckets, sizeof(mBuckets), &count);
+
+    // read the header.
+    rv = input->Read((char*)&mHeader, sizeof(mHeader), &count);
+    if (NS_FAILED(rv)) return rv;
+    mHeader.Unswap();
+    
+    // validate the version.
+    if (mHeader.mVersion != nsDiskCacheHeader::kCurrentVersion) return NS_ERROR_FAILURE;
+
+    // seek to beginning of first bucket.
+    nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(input, &rv);
+    if (NS_FAILED(rv)) return rv;
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, sizeof(nsDiskCacheBucket));
+    if (NS_FAILED(rv)) return rv;
+
+    // read the buckets.
+    rv = input->Read((char*)&mBuckets[1], sizeof(mBuckets) - sizeof(nsDiskCacheBucket), &count);
     if (NS_FAILED(rv)) return rv;
     
     // unswap all of the active records.
-    for (int b = 0; b < kBucketsPerTable; ++b) {
+    for (int b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
         for (int r = 0; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
@@ -82,16 +96,10 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     nsresult rv;
     PRUint32 count;
     
-    // write the header.
-    mHeader.Swap();
-    rv = output->Write((char*)&mHeader, sizeof(mHeader), &count);
-    mHeader.Unswap();
-    if (NS_FAILED(rv)) return rv;
-
     // swap all of the active records.
-    for (int b = 0; b < kBucketsPerTable; ++b) {
+    for (int b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
-        for (int r = 0; r < kRecordsPerBucket; ++r) {
+        for (int r = 1; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
             if (record->HashNumber() == 0)
                 break;
@@ -103,7 +111,7 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     rv = output->Write((char*)&mBuckets, sizeof(mBuckets), &count);
 
     // unswap all of the active records.
-    for (int b = 0; b < kBucketsPerTable; ++b) {
+    for (int b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
         for (int r = 0; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
@@ -112,6 +120,18 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
             record->Unswap();
         }
     }
+    if (NS_FAILED(rv)) return rv;
+
+    // seek back to beginning of file.
+    nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(output, &rv);
+    if (NS_FAILED(rv)) return rv;
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, 0);
+    if (NS_FAILED(rv)) return rv;
+    
+    // write the header.
+    mHeader.Swap();
+    rv = output->Write((char*)&mHeader, sizeof(mHeader), &count);
+    mHeader.Unswap();
     
     return rv;
 }
