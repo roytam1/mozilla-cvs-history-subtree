@@ -30,13 +30,13 @@
 #include "nsHashtable.h"
 
 #include "nsIDOMDocument.h"
-
 // 
 #include "nsIDOMNode.h"
 #include "nsIContent.h"
 #include "nsIStyledContent.h"
 #include "nsIDOMCSSRule.h"
 #include "nsIDOMCSSStyleRule.h"
+#include "nsIDOMHTMLElement.h"
 
 #include "nsICSSStyleRule.h"
 #include "nsIStyleRule.h"
@@ -74,6 +74,9 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
 
  private:
 
+    // HTML stuff
+    nsresult createHTMLElementArcs(nsIDOMHTMLElement *element,
+                                   nsISupportsArray *arcs);
     // DOM stuff
     nsresult createDOMNodeArcs(nsIDOMNode *node,
                                nsISupportsArray *arcs);
@@ -115,6 +118,11 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
                                        nsIRDFResource *property,
                                        nsIRDFNode **aResult);
 
+    // nsIDOMCSSStyleDeclaration
+    nsresult getDOMCSSStyleDeclTarget(nsIDOMCSSStyleDeclaration *decl,
+                                          nsIRDFResource *property,
+                                          nsIRDFNode **aResult);
+    
     // nsIDOMCSSStyleRule
     // nsIDOMCSSRule
     nsresult getDOMCSSStyleRuleTarget(nsIDOMCSSStyleRule *rule,

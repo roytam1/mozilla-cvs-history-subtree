@@ -43,6 +43,7 @@
 
 
 #include "nsICSSDeclaration.h"
+#include "nsIDOMCSSStyleDeclaration.h"
 #include "nsIDocument.h"
 
 #include "prprf.h"
@@ -405,6 +406,25 @@ nsRDFDOMDataSource::createStyledContentClassArcs(nsIStyledContent *content,
 }
 
 nsresult
+nsRDFDOMDataSource::getDOMCSSStyleDeclTarget(nsIDOMCSSStyleDeclaration *decl,
+                                             nsIRDFResource *property,
+                                             nsIRDFNode **aResult)
+{
+  nsAutoString str;
+  if (property == kNC_Name)
+    str = "DOM CSS Style Declaration";
+  
+  else if (property == kNC_Value)
+    decl->GetCssText(str);
+  
+  else if (property == kNC_Type)
+    str = "domcssstyledecl";
+
+  return createLiteral(str, aResult);
+}
+                                       
+
+nsresult
 nsRDFDOMDataSource::getCSSStyleRuleTarget(nsICSSStyleRule *rule,
                                           nsIRDFResource *property,
                                           nsIRDFNode **aResult)
@@ -413,15 +433,17 @@ nsRDFDOMDataSource::getCSSStyleRuleTarget(nsICSSStyleRule *rule,
 
   nsAutoString str;
   if (property == kNC_Name)
-    str = "CSS Rule";
+    str = "DOM CSS Style Rule";
+  
   else if (property == kNC_Value) {
     decl = rule->GetDeclaration();
     if (decl) {
       decl->ToString(str);
-    }
-  } else if (property == kNC_Type) {
-    str="cssstyle";
-  }
+    } else
+      str = "<unavailable>";
+    
+  } else if (property == kNC_Type)
+    str="domcssstylerule";
     
   return createLiteral(str, aResult);
 
@@ -434,11 +456,11 @@ nsRDFDOMDataSource::getDOMCSSRuleTarget(nsIDOMCSSRule *rule,
 {
   nsAutoString str;
   if (property == kNC_Name)
-    str = "DOMCSSStyle";
+    str = "DOM CSS Rule";
   else if (property == kNC_Value)
     rule->GetCssText(str);
   else
-    str = "cssrule";
+    str = "domcssrule";
 
   return createLiteral(str, aResult);
 }
@@ -462,7 +484,7 @@ nsRDFDOMDataSource::getCSSRuleTarget(nsICSSRule *rule,
   if (property == kNC_Name)
     str = "CSSRule";
   else if (property == kNC_Value)
-    str = "<unavail>";
+    str = "<unavailable>";
   else if (property == kNC_Type)
     str = "cssrule";
 
@@ -475,21 +497,35 @@ nsRDFDOMDataSource::getStyleRuleTarget(nsIStyleRule *rule,
                                        nsIRDFNode **aResult)
 {
   nsAutoString str;
-  if (property == kNC_Name) {
-    str = "style";
-  } else if (property == kNC_Value) {
-    PRInt32 strength;
-    rule->GetStrength(strength);
-    
-    str = "strength = ";
-    str.Append(strength);
-    
-  } else if (property == kNC_Type) {
-    str = "style";
+  if (property == kNC_Name)
+    str = "styleRule";
+  else if (property == kNC_Value)
+    str = "<unavailable>";
+  else if (property == kNC_Type) {
+    str = "stylerule";
   }
 
   return createLiteral(str, aResult);
 }
+
+nsresult
+nsRDFDOMDataSource::createHTMLElementArcs(nsIDOMHTMLElement* element,
+                                          nsISupportsArray* arcs)
+{
+  nsresult rv;
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> decl;
+  
+  rv = element->GetStyle(getter_AddRefs(decl));
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsIRDFResource> resource;
+    rv = getResourceForObject(decl, getter_AddRefs(resource));
+    arcs->AppendElement(resource);
+  }
+
+  return createDOMNodeArcs(element, arcs);
+    
+}
+
 
 nsresult
 nsRDFDOMDataSource::createDOMNodeArcs(nsIDOMNode *node,
@@ -631,6 +667,7 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
 
   nsStringKey domMode(nsAutoString("dom"));
   if (mModeTable.Get(&domMode)) {
+    
     // nsIDOMNode
     nsCOMPtr<nsIDOMNode> node =
       do_QueryInterface(object, &rv);
@@ -663,6 +700,13 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
   if (NS_SUCCEEDED(rv))
     return viewerObject->GetTarget(aProperty, aResult);
 
+  // nsIDOMCSSStyleDeclaration
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> decl =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return getDOMCSSStyleDeclTarget(decl, aProperty, aResult);
+    
+  
   // nsIDOMCSSStyleRule
   // nsIDOMCSSRule
   nsCOMPtr<nsIDOMCSSStyleRule> domCSSStyleRule =
@@ -737,14 +781,22 @@ nsRDFDOMDataSource::getTargetsForKnownObject(nsISupports *object,
     return NS_OK;
   }
   
-
   // nsIDOMNode hierarchy
   nsStringKey domKey("dom");
   if (mModeTable.Get(&domKey) || useDOM) {
-    nsCOMPtr<nsIDOMNode> node =
-      do_QueryInterface(object, &rv);
-    if (NS_SUCCEEDED(rv))
-      rv = createDOMNodeArcs(node, arcs);
+
+    // try HTML first
+    //    nsCOMPtr<nsIDOMHTMLElement> htmlElement =
+    //      do_QueryInterface(object, &rv);
+    //    if (NS_SUCCEEDED(rv))
+    //      rv = createHTMLElementArcs(htmlElement, arcs);
+    //    else {
+      
+      nsCOMPtr<nsIDOMNode> node =
+        do_QueryInterface(object, &rv);
+      if (NS_SUCCEEDED(rv))
+        rv = createDOMNodeArcs(node, arcs);
+      //    }
   }
 
   // nsIContent hierarchy
