@@ -39,6 +39,9 @@
 #include "nsCRT.h"
 #include "OEDebugLog.h"
 #include "nsMsgUtils.h"
+#include "msgCore.h"
+#include "prprf.h"
+#include "nsMsgLocalFolderHdrs.h"
 
 
 #define	kIndexGrowBy		100
@@ -225,12 +228,7 @@ PRUint32 nsOE5File::ReadMsgIndex( nsIFileSpec *file, PRUint32 offset, PRUint32Ar
 
 PRBool nsOE5File::IsFromLine( char *pLine, PRUint32 len)
 {
-	if (len >= 5) {
-		if ( (*pLine == 'F') && (pLine[1] = 'r') && (pLine[2] == 'o') && (pLine[3] == 'm') && (pLine[4] == ' '))
-			return( PR_TRUE);
-	}
-
-	return( PR_FALSE);
+   return (len > 5 && (pLine[0] == 'F') && (pLine[1] == 'r') && (pLine[2] == 'o') && (pLine[3] == 'm') && (pLine[4] == ' '));
 }
 
 // Anything over 16K will be assumed BAD, BAD, BAD!
@@ -335,6 +333,15 @@ nsresult nsOE5File::ImportMailbox( PRUint32 *pBytesDone, PRBool *pAbort, nsStrin
 				if (NS_FAILED( rv))
 					break;
 			}
+
+      char statusLine[50];
+      PRUint32 msgFlags = 0; // need to convert from OE flags to mozilla flags
+      PR_snprintf(statusLine, sizeof(statusLine), X_MOZILLA_STATUS_FORMAT MSG_LINEBREAK, msgFlags & 0xFFFF);
+      rv = pDestination->Write(statusLine, strlen(statusLine), &written);
+      NS_ENSURE_SUCCESS(rv,rv);
+      PR_snprintf(statusLine, sizeof(statusLine), X_MOZILLA_STATUS2_FORMAT MSG_LINEBREAK, msgFlags & 0xFFFF0000);
+      rv = pDestination->Write(statusLine, strlen(statusLine), &written);
+      NS_ENSURE_SUCCESS(rv,rv);
 
       do 
       {

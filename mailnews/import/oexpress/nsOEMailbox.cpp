@@ -38,6 +38,9 @@
 #include "nsOEMailbox.h"
 
 #include "OEDebugLog.h"
+#include "msgCore.h"
+#include "prprf.h"
+#include "nsMsgLocalFolderHdrs.h"
 
 
 class CMbxScanner {
@@ -58,7 +61,7 @@ protected:
 private:
 	void	ReportWriteError( nsIFileSpec * file, PRBool fatal = PR_TRUE);
 	void	ReportReadError( nsIFileSpec * file, PRBool fatal = PR_TRUE);
-	PRBool	CopyMbxFileBytes( PRUint32 numBytes);
+  PRBool CopyMbxFileBytes(PRUint32 flags, PRUint32 numBytes);
 	PRBool	IsFromLineKey( PRUint8 *pBuf, PRUint32 max);
 
 public:
@@ -345,23 +348,19 @@ PRBool CMbxScanner::WriteMailItem( PRUint32 flags, PRUint32 offset, PRUint32 siz
 
 	// everything looks kosher...
 	// the actual message text follows and is values[3] bytes long...
-	return( CopyMbxFileBytes( values[3]));
+  return( CopyMbxFileBytes(flags,  values[3]));
 }
 
 PRBool CMbxScanner::IsFromLineKey( PRUint8 * pBuf, PRUint32 max)
 {
-	if (max < 5)
-		return( PR_FALSE);
-	if ((pBuf[0] == 'F') && (pBuf[1] == 'r') && (pBuf[2] == 'o') && (pBuf[3] == 'm') && (pBuf[4] == ' '))
-		return( PR_TRUE);
-	return( PR_FALSE);
+  return (max > 5 && (pBuf[0] == 'F') && (pBuf[1] == 'r') && (pBuf[2] == 'o') && (pBuf[3] == 'm') && (pBuf[4] == ' '));
 }
 
 
 #define IS_ANY_SPACE( _ch) ((_ch == ' ') || (_ch == '\t') || (_ch == 10) || (_ch == 13))
 
 
-PRBool CMbxScanner::CopyMbxFileBytes( PRUint32 numBytes)
+PRBool CMbxScanner::CopyMbxFileBytes(PRUint32 flags, PRUint32 numBytes)
 {
 	if (!numBytes)
 		return( PR_TRUE);
@@ -425,6 +424,19 @@ PRBool CMbxScanner::CopyMbxFileBytes( PRUint32 numBytes)
 				ReportWriteError( m_dstFile);
 				return( PR_FALSE);
 			}
+      char statusLine[50];
+      PRUint32 msgFlags = flags; // need to convert from OE flags to mozilla flags
+      PR_snprintf(statusLine, sizeof(statusLine), X_MOZILLA_STATUS_FORMAT MSG_LINEBREAK, msgFlags & 0xFFFF);
+      rv = m_dstFile->Write(statusLine, strlen(statusLine), &cntRead);
+      if (NS_SUCCEEDED(rv) && cntRead == fromLen)
+      {
+        PR_snprintf(statusLine, sizeof(statusLine), X_MOZILLA_STATUS2_FORMAT MSG_LINEBREAK, msgFlags & 0xFFFF0000);
+        rv = m_dstFile->Write(statusLine, strlen(statusLine), &cntRead);
+      }
+      if (NS_FAILED( rv) || (cntRead != fromLen)) {
+        ReportWriteError( m_dstFile);
+        return( PR_FALSE);
+      }
 			first = PR_FALSE;
 		}
 
