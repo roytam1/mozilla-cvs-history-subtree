@@ -757,6 +757,23 @@ nsNntpCacheStreamListener::OnDataAvailable(nsIRequest *request, nsISupports * aC
     return mListener->OnDataAvailable(ourRequest, aCtxt, aInStream, aSourceOffset, aCount);
 }
 
+NS_IMETHODIMP nsNNTPProtocol::GetOriginalURI(nsIURI* *aURI)
+{
+    // News does not seem to have the notion of an original URI (See Bug #193317)
+    // *aURI = m_originalUrl ? m_originalUrl : m_url;
+    *aURI = m_url;
+    NS_IF_ADDREF(*aURI);
+    return NS_OK; 
+}
+ 
+NS_IMETHODIMP nsNNTPProtocol::SetOriginalURI(nsIURI* aURI)
+{
+    // News does not seem to have the notion of an original URI (See Bug #193317)
+    //    NS_NOTREACHED("nsImapMockChannel::SetOriginalURI");
+    //    return NS_ERROR_NOT_IMPLEMENTED; 
+    return NS_OK;       // ignore
+}
+ 
 nsresult nsNNTPProtocol::SetupPartExtractorListener(nsIStreamListener * aConsumer)
 {
   PRBool convertData;
