@@ -19,10 +19,13 @@
 # Config stuff for HPUX
 #
 
-# CC = gcc -Wall -Wno-format -fPIC
-# CCC = g++ -Wall -Wno-format -fPIC
-CC  = cc -Ae +Z
-CCC = CC -Ae +a1 +eh +Z
+ifdef NS_USE_NATIVE
+  CC  = cc +Z +DAportable +DS2.0
+  LD  = aCC +Z -b -Wl,+s -Wl,-B,symbolic
+else
+  CC = gcc -Wall -Wno-format -fPIC
+  CCC = g++ -Wall -Wno-format -fPIC
+endif
 
 RANLIB = echo
 MKSHLIB = $(LD) -b
