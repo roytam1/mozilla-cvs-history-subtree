@@ -98,6 +98,11 @@ Rights Reserved.
            <spacer flex="2"/>
            <button label="&helpButton.label;" align="end" oncommand="openHelp('mail_advanced_ab_search');" accesskey="&helpButton.accesskey;"/> 
          </hbox>  
+
+         <hbox align="center">
+           <spacer flex="2"/>
+           <button label="&closeButton.label;" align="end" oncommand="window.close();" accesskey="&closeButton.accesskey;"/> 
+         </hbox>  
       </vbox>
 
       <hbox flex="1">

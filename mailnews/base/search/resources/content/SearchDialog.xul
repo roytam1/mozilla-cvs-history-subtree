@@ -72,22 +72,27 @@ Rights Reserved.
     <vbox flex="1">
       <vbox>
          <hbox align="center">
-         <label value="&searchHeading.label;" accesskey="&searchHeading.accesskey;"
+           <label value="&searchHeading.label;" accesskey="&searchHeading.accesskey;"
                 control="searchableFolders"/>
-         <menulist id="searchableFolders" flex="2"/>
-         <spacer flex="10"/>
-         <button label="&searchButton.label;" id="search-button" oncommand="onSearchButton(event);" default="true" accesskey="&searchButton.accesskey;"/>
- 
-        </hbox>
-        <hbox align="center">
+           <menulist id="searchableFolders" flex="2"/>
+           <spacer flex="10"/>
+           <button label="&searchButton.label;" id="search-button" oncommand="onSearchButton(event);" default="true" accesskey="&searchButton.accesskey;"/>
+         </hbox>
+         <hbox align="center">
            <spacer flex="2"/>
            <button label="&resetButton.label;" oncommand="onReset(event);" accesskey="&resetButton.accesskey;"/>
          </hbox>
+
          <hbox align="center">
            <checkbox id="checkSearchSubFolders" label="&searchSubfolders.label;" checked="true" accesskey="&searchSubfolders.accesskey;"/>
            <spacer flex="2"/>
            <button label="&helpButton.label;" align="end" oncommand="openHelp('search_messages');" accesskey="&helpButton.accesskey;"/> 
          </hbox>
+
+         <hbox align="center">
+           <spacer flex="2"/>
+           <button label="&closeButton.label;" align="end" oncommand="window.close();" accesskey="&closeButton.accesskey;"/> 
+         </hbox> 
       </vbox>
 
       <hbox flex="1">

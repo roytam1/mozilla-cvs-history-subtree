@@ -1,6 +1,6 @@
-<!ENTITY more.label         "More">
+<!ENTITY more.label         "More Conditions">
 <!ENTITY more.accesskey     "M">
-<!ENTITY less.label         "Fewer">
+<!ENTITY less.label         "Fewer Conditions">
 <!ENTITY less.accesskey     "F">
 <!ENTITY matchAll.label     "Match all of the following">
 <!ENTITY matchAll.accesskey "a">
