@@ -217,7 +217,7 @@ CBrowserApp::StartUp()
     NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
     ThrowIfNil_(observerService);
     observerService->AddObserver(this, PROFILE_APPROVE_CHANGE_TOPIC);
-    observerService->AddObserver(this, PROFILE_BEFORE_CHANGE_TOPIC);
+    observerService->AddObserver(this, PROFILE_CHANGE_TEARDOWN_TOPIC);
     observerService->AddObserver(this, PROFILE_AFTER_CHANGE_TOPIC);
 
 #else
@@ -244,7 +244,7 @@ CBrowserApp::StartUp()
 
     InitializePrefs();
 
-	ObeyCommand(PP_PowerPlant::cmd_New, nil);	// EXAMPLE, create a new window
+	  ObeyCommand(PP_PowerPlant::cmd_New, nil);	// EXAMPLE, create a new window
 }
 
 
@@ -497,35 +497,28 @@ NS_IMETHODIMP CBrowserApp::Observe(nsISupports *aSubject, const PRUnichar *aTopi
             status->BlockChange();
         }
     }
-    else if (nsCRT::strcmp(aTopic, PROFILE_BEFORE_CHANGE_TOPIC) == 0)
+    else if (nsCRT::strcmp(aTopic, PROFILE_CHANGE_TEARDOWN_TOPIC) == 0)
     {
-    	WindowPeek	theWindowP = (WindowPeek) LMGetWindowList();
-    	
-    	while (theWindowP) {
-    	    WindowPeek nextWindow = theWindowP->nextWindow;
-    		LWindow *window = LWindow::FetchWindowObject((WindowPtr) theWindowP);
-    		CBrowserWindow *browserWindow = dynamic_cast<CBrowserWindow *>(window);
-    		if (browserWindow != nil) {
-                
-#if CLOSE_WINDOWS_ON_SWITCH
-                delete browserWindow;
-#else
-                if (browserWindow->IsBusy())
-                    browserWindow->Stop();
-#endif
-    		}
-    		theWindowP = nextWindow;
-    	}
-
+        // Close all open windows. Alternatively, we could just call CBrowserWindow::Stop()
+        // on each. Either way, we have to stop all network activity on this phase.
+        
+        TArrayIterator<LCommander*> iterator(mSubCommanders, LArrayIterator::from_End);
+        LCommander*		theSub;
+        while (iterator.Previous(theSub)) {
+            CBrowserWindow *browserWindow = dynamic_cast<CBrowserWindow*>(theSub);
+            if (browserWindow) {
+                browserWindow->Stop();
+        	    mSubCommanders.RemoveItemsAt(1, iterator.GetCurrentIndex());
+        	    delete browserWindow;
+        	}
+        }
     }
     else if (nsCRT::strcmp(aTopic, PROFILE_AFTER_CHANGE_TOPIC) == 0)
     {
-        CBrowserApp::InitCachePrefs();
+        InitCachePrefs();
         
-#if CLOSE_WINDOWS_ON_SWITCH
+        // Make a new default window
         ObeyCommand(PP_PowerPlant::cmd_New, nil);
-#endif
-
     }
     return rv;
 }
