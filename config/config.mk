@@ -479,7 +479,7 @@ ifdef CROSS_COMPILE
 XPIDL_COMPILE 	= $(DIST)/host/bin/host_xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/host/bin/host_xpt_link$(BIN_SUFFIX)
 else
-XPIDL_COMPILE 	= $(DIST)/bin/xpidl$(BIN_SUFFIX)
+XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(DIST)/bin/xpidl$(BIN_SUFFIX)
 XPIDL_LINK	= $(DIST)/bin/xpt_link$(BIN_SUFFIX)
 endif
 MIDL		= midl
