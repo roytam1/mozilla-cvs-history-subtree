@@ -122,6 +122,7 @@ sub BuildMozilla()
 		BuildProject(":mozilla:modules:oji:macbuild:oji.mcp",								"oji$D.o");
 		BuildProject(":mozilla:lib:libmocha:macbuild:LibMocha.mcp",							"LibMocha$D.o");	
 		BuildProject(":mozilla:network:macbuild:network.mcp",								"Network$D.o");
+		BuildProject(":mozilla:caps:macbuild:Caps.mcp",										"Caps$D.o");
 
 		BuildProject(":mozilla:build:mac:CustomLib:CustomLib.mcp",							"CustomStaticLib$D.o");
 		
