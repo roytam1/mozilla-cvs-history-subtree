@@ -130,7 +130,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
         return JS_TRUE;
 
     if (!JSVAL_IS_STRING(id))
-	return JS_TRUE;
+        return JS_TRUE;
     subPath = JS_GetStringBytes(JSVAL_TO_STRING(id));
 
     /*
@@ -222,13 +222,18 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
                 return JS_FALSE;
             }
         }
+
+        /* Painful hack for pre_define_java_packages() */
+        if (quiet_resolve_failure)
+            return JS_FALSE;
+
         if (!define_JavaPackage(cx, obj, subPath, newPath, 0)) {
             ok = JS_FALSE;
             goto out;
         }
         
 #ifdef DEBUG
-        printf("JavaPackage \'%s/%s\' created\n", subPath, newPath);
+        /* printf("JavaPackage \'%s\' created\n", newPath); */
 #endif
 
     }
@@ -315,7 +320,7 @@ JSClass JavaPackage_class = {
 
 JavaPackageDef
 standard_java_packages[] = {
-    /* {"java",                NULL,   PKG_USER},
+    {"java",                NULL,   PKG_USER},
     {"java.applet",         NULL,   PKG_USER},
     {"java.awt",            NULL,   PKG_USER},
     {"java.awt.datatransfer",
@@ -358,7 +363,7 @@ standard_java_packages[] = {
     {"netscape.security",   NULL,   PKG_SYSTEM},
     {"netscape.WAI",        NULL,   PKG_SYSTEM},
 
-    {"sun",                 NULL,   PKG_USER}, */
+    {"sun",                 NULL,   PKG_USER},
     {"Packages",            "",     PKG_USER},
     0
 };
@@ -489,8 +494,8 @@ jsj_init_JavaPackage(JSContext *cx, JSObject *global_obj,
     /* Add top-level packages, e.g. : java, netscape, sun */
     if (!pre_define_java_packages(cx, global_obj, standard_java_packages))
         return JS_FALSE;
-    /* if (!pre_define_java_packages(cx, global_obj, additional_predefined_packages))
-        return JS_FALSE; */
+    if (!pre_define_java_packages(cx, global_obj, additional_predefined_packages))
+        return JS_FALSE;
     
     return JS_TRUE;
 }
