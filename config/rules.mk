@@ -155,14 +155,7 @@ if test ! -d $(@D); then rm -rf $(@D); $(NSINSTALL) -D $(@D); fi
 endef
 endif
 
-# The OS/2 VACPP library utility can't handle spaces or hyphens in object names unless
-# each filename is in this format: \"OBJ\".  Don't ask me why.  
-ifdef XP_OS2_VACPP
-AR_OBJS			:= $(addprefix \", $(OBJS))
-AR_OBJS			:= $(addsuffix \", $(AR_OBJS))
-else
 AR_OBJS			:= $(OBJS)
-endif
 
 ifndef PACKAGE
 PACKAGE			= .
