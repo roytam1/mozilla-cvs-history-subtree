@@ -278,7 +278,7 @@ sub BuildIt {
 		  $BuildStatus = 
 			&RunFileBasedTest("MailNewsTest", 
 							  "mozilla-bin http://www.mozilla.org/quality/mailnews/APITest.html", 
-							  60, "enablePrivile33");
+							  60, "enablePrivilege");
 		}
 
         # Run Editor test.
