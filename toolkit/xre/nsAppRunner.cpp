@@ -1798,7 +1798,6 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   }
 
   PRBool needsRestart = PR_FALSE;
-  nsCOMPtr<nsIAppShellService> appShellService;
   {
     // Start the real application
     ScopedXPCOMStartup xpcom;
@@ -1820,6 +1819,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         NS_TIMELINE_LEAVE("startupNotifier");
       }
 
+      nsCOMPtr<nsIAppShellService> appShellService;
       appShellService = do_GetService("@mozilla.org/appshell/appShellService;1");
       NS_ENSURE_TRUE(appShellService, 1);
 

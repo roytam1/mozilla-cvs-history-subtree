@@ -119,17 +119,6 @@ nsAppShellService::nsAppShellService() :
 
 nsAppShellService::~nsAppShellService()
 {
-  mDeleteCalled = PR_TRUE;
-  nsCOMPtr<nsIWebShellWindow> hiddenWin(do_QueryInterface(mHiddenWindow));
-  if(hiddenWin) {
-    ClearXPConnectSafeContext();
-    hiddenWin->Close();
-  }
-  /* Note we don't unregister with the observer service
-     (RegisterObserver(PR_FALSE)) because, being refcounted, we can't have
-     reached our own destructor until after the ObserverService has shut down
-     and released us. This means we leak until the end of the application, but
-     so what; this is the appshell service. */
 }
 
 
@@ -216,8 +205,10 @@ nsresult nsAppShellService::ClearXPConnectSafeContext()
 
   nsCOMPtr<nsIThreadJSContextStack> cxstack =
     do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
-  if (NS_FAILED(rv))
+  if (NS_FAILED(rv)) {
+    NS_ASSERTION(0, "Someone is using a JS component that has out-lived the AppShellService?");
     return rv;
+  }
 
   nsCOMPtr<nsIDOMWindowInternal> junk;
   JSContext *cx;
@@ -1443,6 +1434,13 @@ NS_IMETHODIMP nsAppShellService::Observe(nsISupports *aSubject,
     CreateStartupState(SIZE_TO_CONTENT, SIZE_TO_CONTENT, &openedWindow);
     if (!openedWindow)
       OpenBrowserWindow(SIZE_TO_CONTENT, SIZE_TO_CONTENT);
+  } else if (!strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {
+    mDeleteCalled = PR_TRUE;
+    nsCOMPtr<nsIWebShellWindow> hiddenWin(do_QueryInterface(mHiddenWindow));
+    if(hiddenWin) {
+      ClearXPConnectSafeContext();
+      hiddenWin->Close();
+    }
   }
   return NS_OK;
 }
@@ -1470,6 +1468,7 @@ void nsAppShellService::RegisterObserver(PRBool aRegister)
       os->AddObserver(weObserve, gInstallRestartTopic, PR_TRUE);
       os->AddObserver(weObserve, gProfileChangeTeardownTopic, PR_TRUE);
       os->AddObserver(weObserve, gProfileInitialStateTopic, PR_TRUE);
+      os->AddObserver(weObserve, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_TRUE);
     } else {
       os->RemoveObserver(weObserve, gEQActivatedNotification);
       os->RemoveObserver(weObserve, gEQDestroyedNotification);
@@ -1478,6 +1477,7 @@ void nsAppShellService::RegisterObserver(PRBool aRegister)
       os->RemoveObserver(weObserve, gInstallRestartTopic);
       os->RemoveObserver(weObserve, gProfileChangeTeardownTopic);
       os->RemoveObserver(weObserve, gProfileInitialStateTopic);
+      os->RemoveObserver(weObserve, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
     }
     NS_RELEASE(glop);
   }
