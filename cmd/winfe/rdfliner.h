@@ -430,11 +430,7 @@ public:
 public:
 	CRDFContentView();
 	
-	~CRDFContentView() 
-	{
-		delete m_pOutlinerParent;
-		delete m_pHTMLView;
-	}
+	~CRDFContentView();
 
 	void OnDraw(CDC* pDC) {};
 

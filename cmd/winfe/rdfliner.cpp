@@ -997,10 +997,10 @@ void CRDFOutliner::OnSelDblClk(int iLine)
 		else if (!HT_IsSeparator(m_Node))// && !IsDocked()) For now always do double-click behavior
 		{
 			DisplayURL();
-			if (m_bIsPopup)
+			if (IsPopup())
 			{	
 				// Destroy the entire tree.
-				GetParent()->GetParent()->GetParent()->DestroyWindow();
+				GetParentFrame()->PostMessage(WM_CLOSE);
 			}
 		}
 	}
@@ -1659,13 +1659,6 @@ void CRDFOutliner::OnKillFocus ( CWnd * pNewWnd )
 	((COutlinerParent*)GetParent())->UpdateFocusFrame();
 
 	FocusCheck(pNewWnd, FALSE);
-
-	if (IsPopup() && GetParent()->GetParent() != pNewWnd)
-	{
-		// Need to destroy the window
-		GetParentFrame()->SetParent(NULL);
-		GetParentFrame()->DestroyWindow();
-	}
 }
 	
 void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
@@ -1681,6 +1674,11 @@ void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
 			{
 				// Invalidate for a redraw
 				m_NavTitleBar->NotifyFocus(FALSE);
+				if (IsPopup())
+				{		
+					// Need to destroy the window
+					pFrame->PostMessage(WM_CLOSE);
+				}
 			}
 		}
 	}
@@ -3891,6 +3889,17 @@ int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 	m_pNavBar->Create(NULL, "", WS_CHILD | WS_VISIBLE, CRect(0,0,100,100), this, NC_IDW_NAVMENU);
 	
     return iRetVal;
+}
+
+CRDFContentView::~CRDFContentView()
+{
+	CRDFOutliner* pOutliner = (CRDFOutliner*)(GetOutlinerParent()->GetOutliner());
+	HT_View v = pOutliner->GetHTView();
+	HT_SetViewFEData(v, NULL);
+	HT_DeletePane(HT_GetPane(v));
+
+	delete m_pOutlinerParent;
+	delete m_pHTMLView;
 }
 
 void CRDFContentView::OnSize ( UINT nType, int cx, int cy )

@@ -219,6 +219,24 @@ BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 		this , NC_IDW_OUTLINER, pContext);
 */
 	m_nsContent = CRDFContentView::DisplayRDFTreeFromResource(this, 0, 0, 100, 100, m_Node, pContext); 
+
+	// Read in our float rect pref.
+	int16 left,right,top, bottom;
+	PREF_GetRectPref(gPrefFloatRect,&left, &top, &right, &bottom);
+
+	// Create the window there.
+	m_rectFloat.SetRect(left, top, right, bottom);
+	m_rectDrag = m_rectFloat;
+
+	// Determine the pixels we should consume if docked
+	int32 width;
+	PREF_GetIntPref(gPrefDockPercentage, &width);
+    m_DockSize = (int)width;
+	
+	// Read in our dockstyle
+	m_dwOverDockStyle = DOCKSTYLE_VERTLEFT;
+	PREF_GetIntPref(gPrefDockOrientation, &m_dwOverDockStyle);
+
 	return TRUE;
 }
 

@@ -418,7 +418,7 @@ void CNavTitleBar::OnLButtonDown (UINT nFlags, CPoint point )
 	if (edgeRect.PtInRect(point))
 	{
 		// Destroy the window.
-		GetParentFrame()->DestroyWindow();
+		GetParentFrame()->PostMessage(WM_CLOSE);
 
 		// Collapse the view
 		/*if (m_pSelectorButton)
@@ -442,7 +442,6 @@ void CNavTitleBar::OnLButtonDown (UINT nFlags, CPoint point )
 
 void CNavTitleBar::OnMouseMove(UINT nFlags, CPoint point)
 {
-/*
 	if (GetCapture() == this)
 	{
 		CNSNavFrame* navFrameParent = (CNSNavFrame*)GetParentFrame();
@@ -457,7 +456,6 @@ void CNavTitleBar::OnMouseMove(UINT nFlags, CPoint point)
 			navFrameParent->StartDrag(point);
 		}
 	}
-*/
 }
 
 void CNavTitleBar::OnLButtonUp(UINT nFlags, CPoint point)
