@@ -29,16 +29,18 @@
 
 // these probably shouldn't live here, but in some central repository shared
 // by the entire app.
-#define kTextMime      "text/plain"
-#define kUnicodeMime   "text/unicode"
-#define kHTMLMime      "text/html"
-#define kAOLMailMime   "AOLMAIL"
-#define kPNGImageMime  "image/png"
-#define kJPEGImageMime "image/jpg"
-#define kGIFImageMime  "image/gif"
-#define kFileMime      "application/x-moz-file"
-#define kURLMime       "text/x-moz-url"
-#define kNativeImageMime "application/x-moz-nativeimage"
+#define kTextMime           "text/plain"
+#define kUnicodeMime        "text/unicode"
+#define kHTMLMime           "text/html"
+#define kAOLMailMime        "AOLMAIL"
+#define kPNGImageMime       "image/png"
+#define kJPEGImageMime      "image/jpg"
+#define kGIFImageMime       "image/gif"
+#define kFileMime           "application/x-moz-file"
+#define kFilePromiseMime    "application/x-moz-file-promise"
+#define kFilePromiseURLMime "application/x-moz-file-promise-url"
+#define kURLMime            "text/x-moz-url"
+#define kNativeImageMime    "application/x-moz-nativeimage"
 
 %}
 
