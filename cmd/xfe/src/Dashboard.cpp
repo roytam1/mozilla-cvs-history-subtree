@@ -224,6 +224,32 @@ XFE_Dashboard::~XFE_Dashboard()
 	// Unregister progress notifications with parent
 	if (m_parentFrame && m_progressBar)
 	{
+#if defined(GLUE_COMPO_CONTEXT)
+		m_parentFrame->unregisterInterest(
+			XFE_Component::progressBarCylonStart,
+			this,
+			startCylonNotice_cb);
+		
+		m_parentFrame->unregisterInterest(
+			XFE_Component::progressBarCylonStop,
+			this,
+			stopCylonNotice_cb);
+		
+		m_parentFrame->unregisterInterest(
+			XFE_Component::progressBarCylonTick,
+			this,
+			tickCylonNotice_cb);
+		
+		m_parentFrame->unregisterInterest(
+			XFE_Component::progressBarUpdatePercent,
+			this,
+			progressBarUpdatePercentNotice_cb);
+
+		m_parentFrame->unregisterInterest(
+			XFE_Component::progressBarUpdateText,
+			this,
+			progressBarUpdateTextNotice_cb);
+#else
 		m_parentFrame->unregisterInterest(
 			XFE_Frame::progressBarCylonStart,
 			this,
@@ -248,6 +274,7 @@ XFE_Dashboard::~XFE_Dashboard()
 			XFE_Frame::progressBarUpdateText,
 			this,
 			progressBarUpdateTextNotice_cb);
+#endif /* GLUE_COMPO_CONTEXT */
 	}
 
 	// Unregister parent frame update chrome notifications if needed
@@ -261,6 +288,71 @@ XFE_Dashboard::~XFE_Dashboard()
 
 	D(	printf ("Leaving XFE_Dashboard::~XFE_Dashboard\n");)
 }
+
+#if defined(GLUE_COMPO_CONTEXT)
+void XFE_Dashboard::connect2Dashboard(XFE_Component *compo)
+{
+	if (compo) {
+		// register dashboard events
+		compo->registerInterest(XFE_View::statusNeedsUpdating,
+								this,
+								(XFE_FunctionNotification)setStatusTextNotice_cb);
+		
+		// Register progress notifications with parent
+		compo->registerInterest(XFE_Component::progressBarCylonStart,
+								this,
+								startCylonNotice_cb);
+			
+		compo->registerInterest(XFE_Component::progressBarCylonStop,
+								this,
+								stopCylonNotice_cb);
+			
+		compo->registerInterest(XFE_Component::progressBarCylonTick,
+								this,
+								tickCylonNotice_cb);
+		
+		compo->registerInterest(XFE_Component::progressBarUpdatePercent,
+								this,
+								progressBarUpdatePercentNotice_cb);
+		
+		compo->registerInterest(XFE_Component::progressBarUpdateText,
+								this,
+								progressBarUpdateTextNotice_cb);
+	}/* compo */
+}
+
+void XFE_Dashboard::disconnectFromDashboard(XFE_Component *compo)
+{
+	if (compo) {
+		// register dashboard events
+		compo->unregisterInterest(XFE_View::statusNeedsUpdating,
+								  this,
+								  (XFE_FunctionNotification)setStatusTextNotice_cb);
+		
+		// Register progress notifications with parent
+		compo->unregisterInterest(XFE_Component::progressBarCylonStart,
+								  this,
+								  startCylonNotice_cb);
+		
+		compo->unregisterInterest(XFE_Component::progressBarCylonStop,
+								  this,
+								  stopCylonNotice_cb);
+		
+		compo->unregisterInterest(XFE_Component::progressBarCylonTick,
+								  this,
+								  tickCylonNotice_cb);
+		
+		compo->unregisterInterest(XFE_Component::progressBarUpdatePercent,
+								  this,
+								  progressBarUpdatePercentNotice_cb);
+			
+		compo->unregisterInterest(XFE_Component::progressBarUpdateText,
+								  this,
+								  progressBarUpdateTextNotice_cb);
+	}/* compo */
+}
+#endif /* GLUE_COMPO_CONTEXT */		
+
 //////////////////////////////////////////////////////////////////////////
 void
 XFE_Dashboard::createStatusBar()
@@ -331,6 +423,32 @@ XFE_Dashboard::createProgressBar()
 	// Register progress notifications with parent
 	if (m_parentFrame)
 	{
+#if defined(GLUE_COMPO_CONTEXT)
+		m_parentFrame->registerInterest(
+			XFE_Component::progressBarCylonStart,
+			this,
+			startCylonNotice_cb);
+		
+		m_parentFrame->registerInterest(
+			XFE_Component::progressBarCylonStop,
+			this,
+			stopCylonNotice_cb);
+		
+		m_parentFrame->registerInterest(
+			XFE_Component::progressBarCylonTick,
+			this,
+			tickCylonNotice_cb);
+		
+		m_parentFrame->registerInterest(
+			XFE_Component::progressBarUpdatePercent,
+			this,
+			progressBarUpdatePercentNotice_cb);
+
+		m_parentFrame->registerInterest(
+			XFE_Component::progressBarUpdateText,
+			this,
+			progressBarUpdateTextNotice_cb);
+#else
 		m_parentFrame->registerInterest(
 			XFE_Frame::progressBarCylonStart,
 			this,
@@ -355,6 +473,7 @@ XFE_Dashboard::createProgressBar()
 			XFE_Frame::progressBarUpdateText,
 			this,
 			progressBarUpdateTextNotice_cb);
+#endif /* GLUE_COMPO_CONTEXT */		
 	}
 }
 //////////////////////////////////////////////////////////////////////////
@@ -509,8 +628,11 @@ XFE_Dashboard::setStatusText(const char * text)
 		Widget top = m_toplevel->getBaseWidget();
 		printf("%s: setStatusText: %s\n", XtName(top), text);
 	)
-
 	XP_ASSERT( XfeIsAlive(m_statusBar) );
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::setStatusText=%s\n", text?text:"");
+#endif
+
 	XfeLabelSetStringPSZ(m_statusBar,(String) text);
 }
 //////////////////////////////////////////////////////////////////////////
@@ -519,6 +641,9 @@ XFE_Dashboard::setProgressBarText(const char * text)
 {
 	XP_ASSERT( XfeIsAlive(m_progressBar) );
 
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::setProgressBarText=%s\n", text?text:"");
+#endif
 	XfeLabelSetStringPSZ(m_progressBar,(String) text);
 }
 //////////////////////////////////////////////////////////////////////////
@@ -527,6 +652,9 @@ XFE_Dashboard::setProgressBarPercent(int percent)
 {
 	XP_ASSERT( XfeIsAlive(m_progressBar) );
 
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::setProgressBarPercent=%d\n", percent);
+#endif
 	if (percent < 0)
 	{
 		percent = 0;
@@ -543,7 +671,9 @@ void
 XFE_Dashboard::startCylon()
 {
 	XP_ASSERT( XfeIsAlive(m_progressBar) );
-
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::startCylon\n");
+#endif
 	XfeProgressBarCylonStart(m_progressBar);
 }
 //////////////////////////////////////////////////////////////////////////
@@ -551,6 +681,9 @@ void
 XFE_Dashboard::stopCylon()
 {
 	XP_ASSERT( XfeIsAlive(m_progressBar) );
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::stopCylon\n");
+#endif
 
 	XfeProgressBarCylonStop(m_progressBar);
 }
@@ -560,6 +693,9 @@ XFE_Dashboard::tickCylon()
 {
 	XP_ASSERT( XfeIsAlive(m_progressBar) );
 
+#if defined(DEBUG_tao_)
+	printf("\nXFE_Dashboard::tickCylon\n");
+#endif
 	XfeProgressBarCylonTick(m_progressBar);
 }
 //////////////////////////////////////////////////////////////////////////

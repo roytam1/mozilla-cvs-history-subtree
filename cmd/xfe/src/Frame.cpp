@@ -127,7 +127,7 @@ extern "C" {
 	XP_Bool fe_IsPolarisInstalled();
 	XP_Bool fe_IsConferenceInstalled();
 	URL_Struct *fe_GetBrowserStartupUrlStruct();
-};
+}
 
 extern MWContext *last_documented_xref_context;
 extern LO_Element *last_documented_xref;
@@ -157,6 +157,27 @@ MenuSpec XFE_Frame::bookmark_submenu_spec[] = {
 	{ "placesSubmenu",            CASCADEBUTTON, XFE_Frame::places_menu_spec},
 	MENU_SEPARATOR,
 	{ "bookmarkPlaceHolder",	DYNA_MENUITEMS, NULL, NULL, False, (void*)False, XFE_BookmarkMenu::generate },
+	{ NULL }
+};
+
+MenuSpec XFE_Frame::tools_submenu_spec[] = {
+	{ xfeCmdOpenHistory,		PUSHBUTTON },
+	{ xfeCmdViewSecurity,		PUSHBUTTON },
+#ifndef MOZ_LITE
+	{ xfeCmdOpenFolders,			PUSHBUTTON },
+#endif
+	{ xfeCmdJavaConsole,		PUSHBUTTON },
+	{ NULL }
+};
+
+MenuSpec XFE_Frame::servertools_submenu_spec[] = {
+	{ xfeCmdPageServices,		PUSHBUTTON },
+#ifndef MOZ_LITE
+        { xfeCmdEditConfiguration,      PUSHBUTTON }, // Mail Account
+        { xfeCmdManageMailingList,      PUSHBUTTON }, // Mail Account
+        { xfeCmdManagePublicFolders,      PUSHBUTTON },
+	{ xfeCmdModerateDiscussion,     PUSHBUTTON }, // Newsgroup
+#endif
 	{ NULL }
 };
 
@@ -194,6 +215,9 @@ MenuSpec XFE_Frame::window_menu_spec[] = {
 #ifndef NO_SECURITY
 	{ xfeCmdViewSecurity,		PUSHBUTTON },
 #endif
+	MENU_SEPARATOR,
+	{ "toolsSubmenu",	CASCADEBUTTON, tools_submenu_spec },
+	{ "serverToolsSubmenu",	CASCADEBUTTON, servertools_submenu_spec },
 	MENU_SEPARATOR,
  	{ "frameListPlaceHolder",	DYNA_MENUITEMS, NULL, NULL, False, NULL, XFE_FrameListMenu::generate },
 	{ NULL }
@@ -237,6 +261,9 @@ MenuSpec XFE_Frame::mark_submenu_spec[] = {
 	{ xfeCmdMarkAllMessagesRead,	PUSHBUTTON },
 	{ xfeCmdMarkMessageByDate,	PUSHBUTTON },
 	{ xfeCmdMarkMessageForLater,	PUSHBUTTON },
+	MENU_SEPARATOR,
+        { xfeCmdMarkMessage,                    PUSHBUTTON },
+        { xfeCmdUnmarkMessage,          PUSHBUTTON },
 	{ NULL }
 };
 
@@ -523,6 +550,7 @@ const char *XFE_Frame::userActivityHere = "XFE_Frame::userActivityHere";
 const char *XFE_Frame::encodingChanged = "XFE_Frame::encodingChanged";
 const char *XFE_Frame::allConnectionsCompleteCallback = "XFE_Frame::allConnectionsCompleteCallback";
 
+#if !defined(GLUE_COMPO_CONTEXT)
 // Progress bar cylon notifications
 const char * XFE_Frame::progressBarCylonStart = "XFE_Frame::progressBarCylonStart";
 const char * XFE_Frame::progressBarCylonStop = "XFE_Frame::progressBarCylonStop";
@@ -535,6 +563,7 @@ const char * XFE_Frame::progressBarUpdateText = "XFE_Frame::progressBarUpdateTex
 // Logo animation notifications
 const char * XFE_Frame::logoStartAnimation = "XFE_Frame::logoStartAnimation";
 const char * XFE_Frame::logoStopAnimation = "XFE_Frame::logoStopAnimation";
+#endif /* GLUE_COMPO_CONTEXT */
 
 const char* XFE_Frame::frameBusyCallback = "XFE_Frame::frameBusyCallback";
 const char* XFE_Frame::frameNotBusyCallback = "XFE_Frame::frameNotBusyCallback";
@@ -543,6 +572,9 @@ const char* XFE_Frame::frameNotBusyCallback = "XFE_Frame::frameNotBusyCallback";
 static void resizeHandler(Widget, XtPointer, XEvent *, Boolean *);
 
 static XFE_CommandList* my_commands;
+
+//
+static char myClassName[] = "XFE_Frame::className";
 
 XFE_Command*
 XFE_Frame::getCommand(CommandType cmd)
@@ -1025,6 +1057,15 @@ XFE_Frame::XFE_Frame(char *name,
 									doCommandCallback_cb);
 		
 		// Register the logo animation notifications with ourselves
+#if defined(GLUE_COMPO_CONTEXT)
+		registerInterest(XFE_Component::logoStartAnimation,
+						 this,
+						 logoAnimationStartNotice_cb);
+		
+		registerInterest(XFE_Component::logoStopAnimation,
+						 this,
+						 logoAnimationStopNotice_cb);
+#else
 		registerInterest(XFE_Frame::logoStartAnimation,
 						 this,
 						 logoAnimationStartNotice_cb);
@@ -1032,6 +1073,7 @@ XFE_Frame::XFE_Frame(char *name,
 		registerInterest(XFE_Frame::logoStopAnimation,
 						 this,
 						 logoAnimationStopNotice_cb);
+#endif /* GLUE_COMPO_CONTEXT */
 	}
 	
 	XFE_MozillaApp::theApp()->registerInterest(XFE_MozillaApp::changeInToplevelFrames,
@@ -1173,6 +1215,12 @@ XFE_Frame::~XFE_Frame()
 	//    and never return.
 	//
 	XFE_MozillaApp::theApp()->unregisterFrame(this);
+}
+
+const char* 
+XFE_Frame::getClassName()
+{
+	return myClassName;
 }
 //////////////////////////////////////////////////////////////////////////
 //
@@ -1897,12 +1945,12 @@ XFE_Frame::initializeMWContext(EFrameType frame_type,
 }
 
 void
-XFE_Frame::allConnectionsComplete()
+XFE_Frame::allConnectionsComplete(MWContext  *context)
 {
 	/* Tao_17dec96
 	 * Notify whoever interested in "allConnectionsComplete" event
 	 */
-	notifyInterested(XFE_Frame::allConnectionsCompleteCallback);
+	notifyInterested(XFE_Frame::allConnectionsCompleteCallback, (void*) context);
 	notifyInterested(XFE_View::chromeNeedsUpdating);
 }
 
