@@ -45,9 +45,6 @@ public:
                             nsString& aValue);
 
 
-    static void
-    FullyQualifyURI(const nsIURL* base, nsString& spec);
-
     static PRBool
     IsJavaScriptLanguage(const nsString& aName);
 
