@@ -42,6 +42,7 @@
 #include "nsIPK11TokenDB.h"
 #include "nsNSSHelper.h"
 #include "nsIPK11Token.h"
+#include "nsIArray.h"
 
 #include "nss.h"
 
@@ -79,7 +80,7 @@ public:
 private:
 
   nsCOMPtr<nsIPK11Token>          mToken;
-  nsCOMPtr<nsISupportsArray>      mCertArray;
+  nsCOMPtr<nsIMutableArray>       mCertArray;
   nsCOMPtr<nsIInterfaceRequestor> mUIContext;
 
   // local helper functions
