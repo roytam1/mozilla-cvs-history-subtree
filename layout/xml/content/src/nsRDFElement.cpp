@@ -53,7 +53,7 @@
 #include "nsIRDFNode.h"
 #include "nsIRDFResourceManager.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFDataSource.h"
+#include "nsIRDFDataBase.h"
 #include "nsIRDFCursor.h"
 #include "nsISupportsArray.h"
 #include "nsITextContent.h"
@@ -85,7 +85,7 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, resource);
 static NS_DEFINE_IID(kIDOMNodeListIID,        NS_IDOMNODELIST_IID);
 static NS_DEFINE_IID(kIDocumentIID,           NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFContentIID,         NS_IRDFCONTENT_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIRDFDataBaseIID,        NS_IRDFDATABASE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
 static NS_DEFINE_IID(kITextContentIID,        NS_ITEXT_CONTENT_IID); // XXX grr...
@@ -122,7 +122,7 @@ rdf_IsOrdinalProperty(const nsString& uri)
 
 static PRBool
 rdf_IsContainer(nsIRDFResourceManager* mgr,
-                nsIRDFDataSource* ds,
+                nsIRDFDataBase* db,
                 nsIRDFNode* resource)
 {
     PRBool result = PR_FALSE;
@@ -137,7 +137,7 @@ rdf_IsContainer(nsIRDFResourceManager* mgr,
     if (NS_FAILED(rv = mgr->GetNode(kURIRDF_Bag, RDF_Bag)))
         goto done;
 
-    rv = ds->HasAssertion(resource, RDF_instanceOf, RDF_Bag, PR_TRUE, result);
+    rv = db->HasAssertion(resource, RDF_instanceOf, RDF_Bag, PR_TRUE, result);
 
 done:
     NS_IF_RELEASE(RDF_Bag);
@@ -867,11 +867,11 @@ nsRDFElement::GetAttribute(const nsString& aName, nsString& aResult) const
                                                     (nsISupports**) &mgr)))
         return rv;
     
-    nsIRDFDataSource* ds = NULL;
+    nsIRDFDataBase* db    = NULL;
     nsIRDFNode* property = NULL;
     nsIRDFNode* value    = NULL;
 
-    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+    if (NS_FAILED(rv = mDocument->GetDataBase(db)))
         goto done;
 
     if (NS_FAILED(rv = mgr->GetNode(aName, property)))
@@ -880,7 +880,7 @@ nsRDFElement::GetAttribute(const nsString& aName, nsString& aResult) const
     // XXX Only returns the first value. yer screwed for
     // multi-attributes, I guess.
 
-    if (NS_FAILED(rv = ds->GetTarget(mResource, property, PR_TRUE, value)))
+    if (NS_FAILED(rv = db->GetTarget(mResource, property, PR_TRUE, value)))
         goto done;
 
     rv = value->GetStringValue(aResult);
@@ -888,7 +888,7 @@ nsRDFElement::GetAttribute(const nsString& aName, nsString& aResult) const
 done:
     NS_IF_RELEASE(property);
     NS_IF_RELEASE(value);
-    NS_IF_RELEASE(ds);
+    NS_IF_RELEASE(db);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
 
     return rv;
@@ -914,14 +914,14 @@ nsRDFElement::GetAllAttributeNames(nsISupportsArray* aArray, PRInt32& aResult) c
                                                     (nsISupports**) &mgr)))
         return rv;
     
-    nsIRDFDataSource* ds     = NULL;
+    nsIRDFDataBase* db       = NULL;
     nsIRDFCursor* properties = NULL;
     PRBool moreProperties;
 
-    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+    if (NS_FAILED(rv = mDocument->GetDataBase(db)))
         goto done;
 
-    if (NS_FAILED(rv = ds->ArcLabelsOut(mResource, properties)))
+    if (NS_FAILED(rv = db->ArcLabelsOut(mResource, properties)))
         goto done;
 
     aArray->Clear(); // XXX or did you want me to append?
@@ -953,7 +953,7 @@ nsRDFElement::GetAllAttributeNames(nsISupportsArray* aArray, PRInt32& aResult) c
 
 done:
     NS_IF_RELEASE(properties);
-    NS_IF_RELEASE(ds);
+    NS_IF_RELEASE(db);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
 
     return rv;
@@ -1188,7 +1188,7 @@ nsRDFElement::SetProperty(const nsString& aPropertyURI, const nsString& aValue)
     
     nsIRDFNode* property = NULL;
     nsIRDFNode* value = NULL;
-    nsIRDFDataSource* ds = NULL;
+    nsIRDFDataBase* db = NULL;
 
     if (NS_FAILED(rv = mgr->GetNode(aPropertyURI, property)))
         goto done;
@@ -1196,13 +1196,13 @@ nsRDFElement::SetProperty(const nsString& aPropertyURI, const nsString& aValue)
     if (NS_FAILED(rv = mgr->GetNode(aValue, value)))
         goto done;
 
-    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+    if (NS_FAILED(rv = mDocument->GetDataBase(db)))
         goto done;
 
-    rv = ds->Assert(mResource, property, value, PR_TRUE);
+    rv = db->Assert(mResource, property, value, PR_TRUE);
 
 done:
-    NS_IF_RELEASE(ds);
+    NS_IF_RELEASE(db);
     NS_IF_RELEASE(value);
     NS_IF_RELEASE(property);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
@@ -1255,20 +1255,20 @@ nsRDFElement::GenerateChildren(void) const
                                                     (nsISupports**) &mgr)))
         return rv;
 
-    nsIRDFDataSource* ds = NULL;
+    nsIRDFDataBase* db = NULL;
     nsIRDFCursor* properties = NULL;
     PRBool moreProperties;
 
-    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+    if (NS_FAILED(rv = mDocument->GetDataBase(db)))
         goto done;
 
 #ifdef ONLY_CREATE_RDF_CONTAINERS_AS_CONTENT
-    if (! rdf_IsContainer(mgr, ds, mResource))
+    if (! rdf_IsContainer(mgr, db, mResource))
         goto done;
 #endif
 
     // Create a cursor that'll enumerate all of the outbound arcs
-    if (NS_FAILED(rv = ds->ArcLabelsOut(mResource, properties)))
+    if (NS_FAILED(rv = db->ArcLabelsOut(mResource, properties)))
         goto done;
 
     while (NS_SUCCEEDED(rv = properties->HasMoreElements(moreProperties)) && moreProperties) {
@@ -1294,7 +1294,7 @@ nsRDFElement::GenerateChildren(void) const
         // Create a second cursor that'll enumerate all of the values
         // for all of the arcs.
         nsIRDFCursor* values;
-        if (NS_FAILED(rv = ds->GetTargets(mResource, property, PR_TRUE, values))) {
+        if (NS_FAILED(rv = db->GetTargets(mResource, property, PR_TRUE, values))) {
             NS_RELEASE(property);
             break;
         }
@@ -1331,7 +1331,7 @@ nsRDFElement::GenerateChildren(void) const
 
 done:
     NS_IF_RELEASE(properties);
-    NS_IF_RELEASE(ds);
+    NS_IF_RELEASE(db);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
 
     return rv;
