@@ -275,7 +275,7 @@ nsresult CopyMozMapiToWinSysDir()
     nsCAutoString filePath;
     if (!mapiFilePath.IsEmpty()) {
         filePath.AppendWithConversion(mapiFilePath.get());
-        filePath.Append("Mapi32.dll");
+        filePath.Append("Mapi32_moz_bak.dll");
     }
 
     nsCOMPtr<nsILocalFile> pCurrentMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
@@ -298,12 +298,17 @@ nsresult CopyMozMapiToWinSysDir()
 
     PRBool bExist;
     rv = pMozMapiFile->Exists(&bExist);
-    if (NS_SUCCEEDED(rv) && bExist) 
+    if (NS_FAILED(rv) || !bExist) return rv;
+
+    rv = pCurrentMapiFile->Exists(&bExist);
+    if (NS_SUCCEEDED(rv) && bExist)
     {
-        rv = pMozMapiFile->Remove(PR_FALSE);
+        rv = pCurrentMapiFile->Remove(PR_FALSE);
     }
     if (NS_FAILED(rv)) return rv;
-
+    filePath.AssignWithConversion(mapiFilePath.get());
+    filePath.Append("Mapi32.dll");
+    pCurrentMapiFile->InitWithPath(filePath.get());
     rv = pCurrentMapiFile->Exists(&bExist);
     if (NS_SUCCEEDED(rv) && bExist)
     {
@@ -316,7 +321,7 @@ nsresult CopyMozMapiToWinSysDir()
     filePath.AssignWithConversion(mapiFilePath.get());
     pCurrentMapiFile->InitWithPath(filePath.get());
     rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
-    return rv ;
+    return rv;
 }
 
 /** deletes the Mapi32.dll in system directory and renames Mapi32_moz_bak.dll
