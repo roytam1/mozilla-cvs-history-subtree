@@ -407,7 +407,7 @@ Contributor(s):
              ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);">
     <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusbar-display" label="&statusText.label;" flex="1"/>
-    <statusbarpanel class="statusbarpanel-progress">
+    <statusbarpanel class="statusbarpanel-progress" id="progress-panel" hidden="true">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>
     </statusbarpanel>
     <statusbarpanel class="statusbarpanel-iconic" id="offline-status"/>
