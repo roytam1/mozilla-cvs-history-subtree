@@ -403,10 +403,10 @@ nsContentList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
       // Flush pending content changes Bug 4891
       mDocument->FlushPendingNotifications(PR_FALSE);
     }
-      
+
     nsISupports *element = NS_STATIC_CAST(nsISupports *,
                                           mElements.ElementAt(aIndex));
-    
+
     if (element) {
       result = CallQueryInterface(element, aReturn);
     }
@@ -414,7 +414,7 @@ nsContentList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
       *aReturn = nsnull;
     }
   }
-  
+
   return result;
 }
 
@@ -422,7 +422,7 @@ NS_IMETHODIMP
 nsContentList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn)
 {
   nsresult result = CheckDocumentExistence();
-  
+
   if (NS_SUCCEEDED(result)) {
     if (mDocument) {
       mDocument->FlushPendingNotifications(PR_FALSE); // Flush pending content changes Bug 4891

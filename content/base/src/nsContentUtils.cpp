@@ -42,12 +42,28 @@
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMCID.h"
 #include "nsContentUtils.h"
-#include "nsVoidArray.h"
 #include "nsIXPConnect.h"
+#include "nsIContent.h"
+#include "nsIDocument.h"
+#include "nsINodeInfo.h"
 
 
-nsVoidArray *nsContentUtils::sKungFuDeathGripArray = nsnull;
 nsIDOMScriptObjectFactory *nsContentUtils::sDOMScriptObjectFactory = nsnull;
+nsIXPConnect *nsContentUtils::sXPConnect = nsnull;
+
+// static
+nsresult
+nsContentUtils::Init()
+{
+  NS_ENSURE_TRUE(!sXPConnect, NS_ERROR_ALREADY_INITIALIZED);
+
+  nsresult rv = nsServiceManager::GetService(nsIXPConnect::GetCID(),
+                                             nsIXPConnect::GetIID(),
+                                             (nsISupports **)&sXPConnect);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return rv;
+}
 
 // static 
 nsresult
@@ -287,44 +303,11 @@ nsContentUtils::CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSr
 }
 
 // static
-nsresult
-nsContentUtils::ReleaseOnShutdown(nsISupports **aPointer)
-{
-  NS_ENSURE_ARG_POINTER(aPointer);
-  NS_ENSURE_TRUE(*aPointer, NS_ERROR_UNEXPECTED);
-
-  if (!sKungFuDeathGripArray) {
-    sKungFuDeathGripArray = new nsVoidArray;
-    NS_ENSURE_TRUE(sKungFuDeathGripArray, NS_ERROR_OUT_OF_MEMORY);
-  }
-
-  NS_ADDREF(*aPointer);
-
-  sKungFuDeathGripArray->AppendElement(aPointer);
-
-  return NS_OK;
-}
-
-// static
 void
 nsContentUtils::Shutdown()
 {
-  if (sKungFuDeathGripArray) {
-    PRInt32 count = sKungFuDeathGripArray->Count();
-
-    while (count--) {
-      nsISupports **ptr =
-        NS_STATIC_CAST(nsISupports **, sKungFuDeathGripArray->ElementAt(count));
-
-      NS_RELEASE(*ptr);
-    }
-
-    delete sKungFuDeathGripArray;
-
-    sKungFuDeathGripArray = nsnull;
-  }
-
   NS_IF_RELEASE(sDOMScriptObjectFactory);
+  NS_IF_RELEASE(sXPConnect);
 }
 
 // static
@@ -349,3 +332,177 @@ nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
   return sDOMScriptObjectFactory->GetClassInfoInstance(aID, aGetIIDsFptr,
                                                        aName);
 }
+
+// static
+nsresult
+nsContentUtils::doReparentContentWrapper(nsIContent *aChild,
+                                         nsIDocument *aNewDocument,
+                                         nsIDocument *aOldDocument,
+                                         JSContext *cx,
+                                         JSObject *parent_obj)
+{
+  nsCOMPtr<nsIXPConnectJSObjectHolder> old_wrapper;
+
+  nsresult rv;
+
+  rv = sXPConnect->ReparentWrappedNativeIfFound(cx, ::JS_GetGlobalObject(cx),
+                                                parent_obj, aChild,
+                                                getter_AddRefs(old_wrapper));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!old_wrapper) {
+    // If aChild isn't wrapped none of it's children are wrapped so
+    // there's no need to walk into aChild's children.
+
+    return NS_OK;
+  }
+
+  if (aOldDocument) {
+    nsCOMPtr<nsISupports> old_ref;
+
+    aOldDocument->RemoveReference(aChild, getter_AddRefs(old_ref));
+
+    if (old_ref) {
+      // Transfer the reference from aOldDocument to aNewDocument
+
+      aNewDocument->AddReference(aChild, old_ref);
+    }
+  }
+
+  JSObject *old;
+
+  rv = old_wrapper->GetJSObject(&old);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIContent> child;
+  PRInt32 count = 0, i;
+
+  aChild->ChildCount(count);
+
+  for (i = 0; i < count; i++) {
+    aChild->ChildAt(i, *getter_AddRefs(child));
+    NS_ENSURE_TRUE(child, NS_ERROR_UNEXPECTED);
+
+    rv = doReparentContentWrapper(child, aNewDocument, aOldDocument, cx, old);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  return rv;
+}
+
+static
+nsresult GetContextFromDocument(nsIDocument *aDocument, JSContext **cx)
+{
+  *cx = nsnull;
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
+  aDocument->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+  if (!sgo) {
+    // No script global, no context.
+
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIScriptContext> scx;
+  sgo->GetContext(getter_AddRefs(scx));
+
+  if (!scx) {
+    // No context left in the old scope...
+
+    return NS_OK;
+  }
+
+  *cx = (JSContext *)scx->GetNativeContext();
+
+  return NS_OK;
+}
+
+// static
+nsresult
+nsContentUtils::ReparentContentWrapper(nsIContent *aContent,
+                                       nsIContent *aNewParent,
+                                       nsIDocument *aNewDocument,
+                                       nsIDocument *aOldDocument)
+{
+  if (!aNewDocument || aNewDocument == aOldDocument) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIDocument> old_doc(aOldDocument);
+
+  if (!old_doc) {
+    nsCOMPtr<nsINodeInfo> ni;
+
+    aContent->GetNodeInfo(*getter_AddRefs(ni));
+
+    if (ni) {
+      ni->GetDocument(*getter_AddRefs(old_doc));
+    }
+
+    if (!aOldDocument) {
+      // If we can't find our old document we don't know what our old
+      // scope was so there's no way to find the old wrapper
+
+      return NS_OK;
+    }
+  }
+
+  NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_INITIALIZED);
+
+  nsCOMPtr<nsISupports> new_parent;
+
+  if (!aNewParent) {
+    nsCOMPtr<nsIContent> root(dont_AddRef(old_doc->GetRootContent()));
+
+    if (root.get() == aContent) {
+      new_parent = old_doc;
+    }
+  } else {
+    new_parent = aNewParent;
+  }
+
+  JSContext *cx = nsnull;
+
+  GetContextFromDocument(old_doc, &cx);
+
+  if (!cx) {
+    // No JSContext left in the old scope, can't find the old wrapper
+    // w/o the old context.
+
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+
+  nsresult rv;
+
+  rv = sXPConnect->GetWrappedNativeOfNativeObject(cx, ::JS_GetGlobalObject(cx),
+                                                  aContent,
+                                                  NS_GET_IID(nsISupports),
+                                                  getter_AddRefs(wrapper));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!wrapper) {
+    // aContent is not wrapped (and thus none of it's children are
+    // wrapped) so there's no need to reparent anything.
+
+    return NS_OK;
+  }
+
+  // Wrap the new parent and reparent aContent
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+  rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), new_parent,
+                              NS_GET_IID(nsISupports),
+                              getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject *obj;
+  rv = holder->GetJSObject(&obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return doReparentContentWrapper(aContent, aNewDocument, aOldDocument, cx,
+                                  obj);
+}
+

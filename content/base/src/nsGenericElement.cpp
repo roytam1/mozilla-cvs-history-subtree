@@ -1294,18 +1294,6 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     // If we were part of a document, make sure we get rid of the
     // script context reference to our script object so that our
     // script object can be freed (or collected).
-    if (mDocument) {
-      nsCOMPtr<nsIScriptGlobalObject> globalObject;
-      mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
-      if (globalObject) {
-        nsCOMPtr<nsIScriptContext> context;
-        if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          // XXX: Remove root!
-          //          context->RemoveReference((void *)&mDOMSlots->mScriptObject,
-          //                                   mDOMSlots->mScriptObject);
-        }
-      }
-    }
 
     if (mDocument && aDeep) {
       // Notify XBL- & nsIAnonymousContentCreator-generated
@@ -1327,24 +1315,6 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
     }
 
     mDocument = aDocument;
-
-    // If we already have a script object and now we're being added
-    // to a document, make sure that the script context adds a
-    // reference to our script object. This will ensure that it
-    // won't be freed (or collected) out from under us.
-    if (mDocument) {
-      nsCOMPtr<nsIScriptGlobalObject> globalObject;
-      mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
-      if (globalObject) {
-        nsCOMPtr<nsIScriptContext> context;
-        if (NS_OK == globalObject->GetContext(getter_AddRefs(context)) && context) {
-          // XXX: Add root!
-          //          context->AddNamedReference((void *)&mDOMSlots->mScriptObject,
-          //                                     mDOMSlots->mScriptObject,
-          //                                     "nsGenericElement::mScriptObject");
-        }
-      }
-    }
   }
 
   if (PR_TRUE == aDeep) {
@@ -1367,6 +1337,7 @@ nsresult
 nsGenericElement::SetParent(nsIContent* aParent)
 {
   mParent = aParent;
+
   return NS_OK;
 }
 
@@ -2078,6 +2049,10 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
       return res;
     }
 
+    nsCOMPtr<nsIDocument> old_doc;
+
+    newContent->GetDocument(*getter_AddRefs(old_doc));
+
     /*
      * Remove the element from the old parent if one exists, since oldParent
      * is a nsIDOMNode this will do the right thing even if the parent of
@@ -2125,6 +2100,9 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
         }
       }
     }
+
+    nsContentUtils::ReparentContentWrapper(newContent, this, mDocument,
+                                           old_doc);
 
     res = InsertChildAt(newContent, refPos, PR_TRUE, PR_TRUE);
 

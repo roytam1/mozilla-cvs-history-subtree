@@ -138,6 +138,8 @@ nsContentModule::Initialize()
   nsXULContentUtils::Init();
 #endif
 
+  nsContentUtils::Init();
+
   return rv;
 }
 

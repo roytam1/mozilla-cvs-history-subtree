@@ -44,11 +44,20 @@
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
-class nsVoidArray;
+class nsIXPConnect;
+class nsIContent;
+class nsIDocument;
+
 
 class nsContentUtils
 {
 public:
+  static nsresult Init();
+
+  static nsresult ReparentContentWrapper(nsIContent *aContent,
+                                         nsIContent *aNewParent,
+                                         nsIDocument *aNewDocument,
+                                         nsIDocument *aOldDocument);
 
   // These are copied from nsJSUtils.h
 
@@ -78,14 +87,19 @@ public:
                        GetDOMClassIIDsFnc aGetIIDsFptr,
                        const char *aName);
 
-  static nsresult ReleaseOnShutdown(nsISupports **aPointer);
-
   static void Shutdown();
 
 private:
-  static nsVoidArray *sKungFuDeathGripArray;
+  static nsresult doReparentContentWrapper(nsIContent *aChild,
+                                           nsIDocument *aNewDocument,
+                                           nsIDocument *aOldDocument,
+                                           JSContext *cx,
+                                           JSObject *parent_obj);
+
 
   static nsIDOMScriptObjectFactory *sDOMScriptObjectFactory;
+
+  static nsIXPConnect *sXPConnect;
 };
 
 #define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \
