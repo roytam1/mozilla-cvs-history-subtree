@@ -911,7 +911,7 @@ void nsFileSpec::MakeUnique()
 {
     nsCOMPtr<nsISupports> file;
     nsresult rv = NS_NewIOFileStream(getter_AddRefs(file), this, 
-                                     PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0666);
+                                     PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0600);
     if (NS_SUCCEEDED(rv))
         return; // the stream will be closed automatically
 
@@ -937,7 +937,7 @@ void nsFileSpec::MakeUnique()
         sprintf(newName, "%s-%d%s", leafName, indx, suffix);
         SetLeafName(newName);
         rv = NS_NewIOFileStream(getter_AddRefs(file), this, 
-                                PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0666);
+                                PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0600);
         if (NS_SUCCEEDED(rv))
             break;
     }
