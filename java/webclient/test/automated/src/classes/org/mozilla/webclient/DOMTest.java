@@ -73,7 +73,7 @@ public class DOMTest extends WebclientTestCase {
     // Testcases
     // 
 
-    public void testHttpLoad() throws Exception {
+    public void testGetDOM() throws Exception {
 	BrowserControl firstBrowserControl = null;
 	DocumentLoadListenerImpl listener = null;
 	Selection selection = null;
