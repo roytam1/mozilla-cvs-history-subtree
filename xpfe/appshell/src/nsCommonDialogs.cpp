@@ -27,7 +27,7 @@
 #include "nsXPComFactory.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
-#include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_CID( kDialogParamBlockCID,          NS_DialogParamBlock_CID);
  
@@ -432,18 +432,18 @@ nsCommonDialogs::DoDialog(nsIDOMWindowInternal* inParent,
     nsresult rv = NS_ERROR_NULL_POINTER;
 
     if ( win && ioParamBlock &&inChromeURL ) {
-        nsCOMPtr<nsISupportsArray> array;
-
-        rv = NS_NewISupportsArray(getter_AddRefs(array));
+        nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+            do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        array->AppendElement(ioParamBlock);
+        ifptr->SetData(ioParamBlock);
+        ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
 
         nsCOMPtr<nsIDOMWindow> newWindow;
         rv = win->OpenDialog(NS_ConvertASCIItoUCS2(inChromeURL),
                              NS_LITERAL_STRING("_blank"),
                              NS_LITERAL_STRING("centerscreen,chrome,modal,titlebar"),
-                             array, getter_AddRefs(newWindow) );
+                             ifptr, getter_AddRefs(newWindow) );
     }
 
     return rv;
