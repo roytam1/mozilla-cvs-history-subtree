@@ -49,6 +49,8 @@
 #ifdef XP_MAC
 #define COMPONENT_REG "\pComponent Registry"
 #include "MoreFilesExtras.h"
+#include "nsLocalFileMac.h"
+#include "nsILocalFileMac.h"
 #endif
 
 #ifdef XP_UNIX
@@ -90,15 +92,16 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     // Initialize XPCOM and AutoRegister() its components
     //--------------------------------------------------------------------
 #ifdef XP_MAC
-    nsCOMPtr<nsIFile> file;
-    rv = NS_NewLocalFile(getter_AddRefs(file));
-    if (NS_SUCCEEDED(rv) && file)
-    {   
-        nsCOMPtr<nsILocalFileMac> macFile = do_QueryInterface(file);
-        if (macFile)
-            macFile->InitWithFSSpec(aXPIStubDir);
+    nsLocalFile* localFile = new nsLocalFile;
+	if (localFile)
+	{
+		localFile->InitWithFSSpec(&aXPIStubDir);
+    	rv = NS_InitXPCOM(&gServiceMgr, localFile);
     }
-    rv = NS_InitXPCOM(&gServiceMgr, file); 
+    else
+    {
+    	rv = NS_ERROR_FAILURE;
+    }
 #elif defined(XP_PC) || defined(XP_UNIX)
     
     nsCOMPtr<nsILocalFile> file;
