@@ -96,6 +96,10 @@ NON_LD_FLAGS		= -ieee_with_inexact
 
 OS_CFLAGS		= -DOSF1 -D_REENTRANT
 
+ifeq ($(HAVE_CCONF), 1)
+OS_CFLAGS		+= -DIS_64
+endif
+
 ifneq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
 OS_CFLAGS		+= -DOSF1_HAVE_MACHINE_BUILTINS_H
 endif
