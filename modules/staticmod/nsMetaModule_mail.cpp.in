@@ -28,9 +28,22 @@
 #include "nsIGenericFactory.h"
 #include "prmem.h"
 
+#define META_DESTRUCTOR_FUNC MetaModuleDestructorMail
+
+#define NS_METAMODULE_NAME "nsMetaModuleMail"
+#define NS_METAMODULE_DESC "Meta Component Mail"
+#define NS_METAMODULE_CID \
+{ 0xda364d3c, 0x1dd1, 0x11b2, { 0xbd, 0xfd, 0x9d, 0x6f, 0xb7, 0x55, 0x30, 0x35 } }
+#define NS_METAMODULE_CONTRACTID "@mozilla.org/metamodule_mail;1"
+
+
+/*
+ * NO USER EDITABLE PORTIONS AFTER THIS POINT
+ *
+ */
+
 #define REGISTER_MODULE_USING(mod) { \
     nsCOMPtr<nsIModule> module; \
-    fprintf(stderr, "NS_RegisterMetaModules: %s (%s, %s)\n", (#mod), aRegistryLocation, aComponentType); \
     mod##(aCompMgr, aPath, getter_AddRefs(module)); \
     module->RegisterSelf(aCompMgr, aPath, aRegistryLocation, aComponentType); \
 }
@@ -49,11 +62,6 @@ NS_RegisterMetaModules(nsIComponentManager *aCompMgr,
                        const char *aComponentType)
 {
     nsresult rv = NS_OK;
-    //nsIComponentManager *compMgr = nsnull;
-
-    //rv = NS_GetGlobalComponentManager(&compMgr);
-    
-    //NS_ASSERTION(NS_SUCCEEDED(rv), "Meta module cannot get global component manager.");
     
     @COMPONENT_NS_GET_MODULE@
     
@@ -62,19 +70,10 @@ NS_RegisterMetaModules(nsIComponentManager *aCompMgr,
     return rv;
 }
 
-void MetaModuleDestructorMail(nsIModule *self, nsModuleComponentInfo *components)
+void META_DESTRUCTOR_FUNC(nsIModule *self, nsModuleComponentInfo *components)
 {
     PR_Free(components);
 }
-
-
-// da364d3c-1dd1-11b2-bdfd-9d6fb7553035
-#define NS_METAMODULE_CID \
-{ 0xda364d3c, 0x1dd1, 0x11b2, { 0xbd, 0xfd, 0x9d, 0x6f, 0xb7, 0x55, 0x30, 0x35 } }
-
-#define NS_METAMODULE_CONTRACTID "@mozilla.org/metamodule_mail;1"
-
-
 
 class nsMetaModuleImpl : public nsISupports
 {
@@ -118,7 +117,7 @@ static NS_METHOD nsMetaModuleUnregistrationProc(nsIComponentManager *aCompMgr,
 
 static nsModuleComponentInfo components[] =
 {
-  { "Meta Component Mail", 
+  { NS_METAMODULE_DESC,
     NS_METAMODULE_CID, 
     NS_METAMODULE_CONTRACTID, 
     nsMetaModuleImplConstructor,
@@ -154,8 +153,7 @@ extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
         k+= inList[i].count;
         i++;
     }
-    fprintf(stderr, "meta_NSGetModule: %d\n", count);
-    return NS_NewGenericModule("nsMetaModuleMail", count, outList, nsnull, result);
+    return NS_NewGenericModule(NS_METAMODULE_NAME, count, outList, nsnull, result);
 }
 
 
