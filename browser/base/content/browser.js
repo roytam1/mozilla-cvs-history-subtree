@@ -125,7 +125,9 @@ function loadEventHandlers(event)
     UpdateBookmarksLastVisitedDate(event);
     checkForDirectoryListing();
     charsetLoadListener(event);
+#ifdef SHOW_ALT_SS_UI
     updatePageTheme();
+#endif
     updatePageLivemarks();
   }
 
@@ -3406,7 +3408,10 @@ nsBrowserStatusHandler.prototype =
     // clear missing plugins
     gMissingPluginInstaller.clearMissingPlugins(getBrowser().selectedTab);
        
-    setTimeout(function () { updatePageTheme(); updatePageLivemarks(); }, 0);
+    setTimeout(function () { updatePageLivemarks(); }, 0);
+#ifdef SHOW_ALT_SS_UI
+    setTimeout(function () { updatePageTheme(); }, 0);
+#endif
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
