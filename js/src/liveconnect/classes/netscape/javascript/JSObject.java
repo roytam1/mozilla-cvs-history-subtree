@@ -23,7 +23,7 @@ import java.applet.Applet;
  *   which can be used to access methods and fields of the java object.
  *   Converting this wrapper to a string will call the toString method
  *   on the original object, converting to a number will call the
- *   floatValue method if possible and fail otherwise.  Converting
+ *   doubleValue method if possible and fail otherwise.  Converting
  *   to a boolean will try to call the booleanValue method in the
  *   same way.
  * <li>Java arrays are wrapped with a JavaScript object that understands
@@ -35,7 +35,7 @@ import java.applet.Applet;
  * Values passed from JavaScript to Java are converted as follows:<ul>
  * <li>objects which are wrappers around java objects are unwrapped
  * <li>other objects are wrapped with a JSObject
- * <li>strings, numbers and booleans are converted to String, Float,
+ * <li>strings, numbers and booleans are converted to String, Double,
  *   and Boolean objects respectively
  * </ul>
  * This means that all JavaScript values show up as some kind
