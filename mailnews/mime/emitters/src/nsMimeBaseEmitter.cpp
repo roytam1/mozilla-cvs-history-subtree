@@ -22,6 +22,7 @@
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   Henrik Gemal <mozilla@gemal.dk>
+ *   Dan Mosedale <dmose@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -668,7 +669,8 @@ nsMimeBaseEmitter::WriteHeaderFieldHTML(const char *field, const char *value)
     nsXPIDLCString tValue;
 
     // we're going to need a converter to convert
-    nsresult rv = mUnicodeConverter->DecodeMimeHeader(value, getter_Copies(tValue));
+    nsresult rv = mUnicodeConverter->DecodeMimeHeaderToCString(
+      value, nsnull, PR_FALSE, PR_TRUE, getter_Copies(tValue));
     if (NS_SUCCEEDED(rv) && tValue)
     {
       newValue = nsEscapeHTML(tValue);

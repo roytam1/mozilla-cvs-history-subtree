@@ -80,7 +80,7 @@ MimeEncoderData *MimeQPEncoderInit (nsresult (*output_fn) (const char *buf,
 													  PRInt32 size,
 													  void *closure),
 									void *closure);
-MimeEncoderData *MimeUUEncoderInit (char *filename,
+MimeEncoderData *MimeUUEncoderInit (const char *filename,
 									nsresult (*output_fn) (const char *buf,
 													  PRInt32 size,
 													  void *closure),

@@ -202,10 +202,10 @@ nsresult nsMailtoUrl::ParseMailtoUrl(char * searchPart)
 		nsUnescape(NS_CONST_CAST(char*, m_toPart.get()));
     if (mimeConverter)
     {
-      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeader(m_toPart.get(),
-                                                       getter_Copies(decodedString),
-                                                       "UTF-8", PR_FALSE))
-                                                       && decodedString)
+      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeaderToCString(
+                           m_toPart.get(), "UTF-8", PR_FALSE, PR_TRUE, 
+                           getter_Copies(decodedString)))
+          && decodedString)
         m_toPart = decodedString;
     }
   }
@@ -214,10 +214,10 @@ nsresult nsMailtoUrl::ParseMailtoUrl(char * searchPart)
 		nsUnescape(NS_CONST_CAST(char*, m_ccPart.get()));
     if (mimeConverter)
     {
-      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeader(m_ccPart.get(),
-                                                       getter_Copies(decodedString),
-                                                       "UTF-8", PR_FALSE))
-                                                       && decodedString)
+      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeaderToCString(
+                           m_ccPart.get(), "UTF-8", PR_FALSE, PR_TRUE,
+                           getter_Copies(decodedString)))
+          && decodedString)
         m_ccPart = decodedString;
     }
   }
@@ -226,10 +226,10 @@ nsresult nsMailtoUrl::ParseMailtoUrl(char * searchPart)
     nsUnescape(NS_CONST_CAST(char*, m_subjectPart.get()));
     if (mimeConverter)
     {
-      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeader(m_subjectPart.get(),
-                                                       getter_Copies(decodedString),
-                                                       "UTF-8", PR_FALSE))
-                                                       && decodedString)
+      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeaderToCString(
+                           m_subjectPart.get(), "UTF-8", PR_FALSE, PR_TRUE,
+                           getter_Copies(decodedString)))
+          && decodedString)
         m_subjectPart = decodedString;
     }
   }
@@ -242,11 +242,10 @@ nsresult nsMailtoUrl::ParseMailtoUrl(char * searchPart)
 		nsUnescape(NS_CONST_CAST(char*, m_bodyPart.get()));
     if (mimeConverter)
     {
-      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeader(m_bodyPart.get(),
-                                                       getter_Copies(decodedString),
-                                                       "UTF-8", PR_FALSE,
-                                                       PR_FALSE))
-                                                       && decodedString)
+      if (NS_SUCCEEDED(mimeConverter->DecodeMimeHeaderToCString(
+                           m_bodyPart.get(), "UTF-8", PR_FALSE, PR_FALSE,
+                           getter_Copies(decodedString)))
+          && decodedString)
         m_bodyPart = decodedString;
     }
   }

@@ -368,8 +368,8 @@ nsMimeHtmlDisplayEmitter::StartAttachment(const char *name, const char *contentT
 
   rv = NS_ERROR_FAILURE;  // use failure to mean that we couldn't decode
   if (mUnicodeConverter)
-  	rv = mUnicodeConverter->DecodeMimeHeader(name,
-                                             getter_Copies(unicodeHeaderValue));
+  	rv = mUnicodeConverter->DeprecatedDecodeMimeHeaderToWString(
+      name, nsnull, PR_FALSE, PR_TRUE, getter_Copies(unicodeHeaderValue));
 
   if (NS_FAILED(rv))
   {

@@ -368,7 +368,8 @@ PRBool NS_MsgStripRE(const char **stringP, PRUint32 *lengthP, char **modifiedSub
   {
     mimeConverter = do_GetService(kCMimeConverterCID, &rv);
     if (NS_SUCCEEDED(rv))
-      rv = mimeConverter->DecodeMimeHeader(*stringP, getter_Copies(decodedString));
+      rv = mimeConverter->DecodeMimeHeaderToCString(
+        *stringP, nsnull, PR_FALSE, PR_TRUE, getter_Copies(decodedString));
   }
 
   s = decodedString ? decodedString.get() : *stringP;

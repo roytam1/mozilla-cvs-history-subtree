@@ -1105,7 +1105,7 @@ MimeQPEncoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 }
 
 MimeEncoderData *
-MimeUUEncoderInit (char *filename,
+MimeUUEncoderInit (const char *filename,
 					nsresult (*output_fn) (const char *, PRInt32, void *),
 					void *closure)
 {

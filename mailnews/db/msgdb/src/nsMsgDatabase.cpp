@@ -2844,7 +2844,8 @@ nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_to
       m_dbFolderInfo->GetConstCharPtrCharacterSet(&charSet);
       m_dbFolderInfo->GetCharacterSetOverride(&characterSetOverride);
       
-      err = m_mimeConverter->DecodeMimeHeader(nakedString, resultStr, charSet, characterSetOverride);
+      err = m_mimeConverter->DeprecatedDecodeMimeHeaderToWString(
+          nakedString, charSet, characterSetOverride, PR_TRUE, resultStr);
     }
   }
   return err;
@@ -2872,8 +2873,8 @@ nsresult nsMsgDatabase::RowCellColumnToAddressCollationKey(nsIMdbRow *row, mdb_t
         m_dbFolderInfo->GetCharPtrCharacterSet(&charset);
         m_dbFolderInfo->GetCharacterSetOverride(&characterSetOverride);
         
-        ret = converter->DecodeMimeHeader(cSender, &resultStr,
-          charset, characterSetOverride);
+        ret = converter->DecodeMimeHeaderToCString(cSender, 
+          charset, characterSetOverride, PR_TRUE, &resultStr);
         if (NS_SUCCEEDED(ret) && resultStr)
         {
           ret = headerParser->ExtractHeaderAddressName ("UTF-8", resultStr, getter_Copies(name));

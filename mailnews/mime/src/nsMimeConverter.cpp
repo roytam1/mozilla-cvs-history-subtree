@@ -71,11 +71,11 @@ nsMimeConverter::~nsMimeConverter()
 }
 
 nsresult
-nsMimeConverter::DecodeMimeHeader(const char *header, 
-                                  char **decodedString,
-                                  const char *default_charset, 
-                                  PRBool override_charset,
-                                  PRBool eatContinuations)
+nsMimeConverter::DecodeMimeHeaderToCString(const char *header, 
+                                           const char *default_charset, 
+                                           PRBool override_charset,
+                                           PRBool eatContinuations,
+                                           char **decodedString)
 {
   *decodedString = MIME_DecodeMimeHeader(header, default_charset, 
                                           override_charset,
@@ -85,11 +85,12 @@ nsMimeConverter::DecodeMimeHeader(const char *header,
 
 // Decode routine (also converts output to unicode)
 nsresult 
-nsMimeConverter::DecodeMimeHeader(const char *header, 
-                                  PRUnichar **decodedString,
-                                  const char *default_charset,
-                                  PRBool override_charset,
-                                  PRBool eatContinuations)
+nsMimeConverter::DeprecatedDecodeMimeHeaderToWString(
+  const char *header, 
+  const char *default_charset,
+  PRBool override_charset,
+  PRBool eatContinuations,
+  PRUnichar **decodedString)
 {
   char *decodedCstr = nsnull;
   nsresult res = NS_OK;
@@ -111,10 +112,10 @@ nsMimeConverter::DecodeMimeHeader(const char *header,
 // Decode routine (also converts output to unicode)
 nsresult 
 nsMimeConverter::DecodeMimeHeader(const char *header, 
-                                  nsAString& decodedString,
                                   const char *default_charset,
                                   PRBool override_charset,
-                                  PRBool eatContinuations)
+                                  PRBool eatContinuations,
+                                  nsAString& decodedString)
 {
   char *decodedCstr = nsnull;
 
@@ -200,7 +201,7 @@ MimeEncoderData   *ptr;
 }
 
 nsresult
-nsMimeConverter::UUEncoderInit (char *filename, nsresult (*output_fn) 
+nsMimeConverter::UUEncoderInit (const char *filename, nsresult (*output_fn) 
                      (const char *buf, PRInt32 size, void *closure), void *closure, 
                      MimeEncoderData ** returnEncoderData)
 {

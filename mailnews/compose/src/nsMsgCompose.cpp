@@ -24,6 +24,7 @@
  *     Ben Bucksch <mozilla@bucksch.org>
  *     Håkan Waara <hwaara@chello.se>
  *     Pierre Phaneuf <pp@ludusdesign.com>
+ *     Dan Mosedale <dmose@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -1503,9 +1504,9 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
 
             subjectStr.Append("Re: ");
             subjectStr.Append(subject);
-            rv = mimeConverter->DecodeMimeHeader(subjectStr.get(),
-                getter_Copies(decodedString),
-                charset, charsetOverride);
+            rv = mimeConverter->DeprecatedDecodeMimeHeaderToWString(
+              subjectStr.get(), charset, charsetOverride, PR_TRUE,
+              getter_Copies(decodedString));
             if (NS_SUCCEEDED(rv))
               m_compFields->SetSubject(decodedString);
             else
@@ -1516,9 +1517,9 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
             if (NS_FAILED(rv))
               return rv;
 
-            rv = mimeConverter->DecodeMimeHeader(author,
-                getter_Copies(decodedCString),
-                charset, charsetOverride);
+            rv = mimeConverter->DecodeMimeHeaderToCString(
+              author, charset, charsetOverride,
+              PR_TRUE, getter_Copies(decodedCString));
             if (NS_SUCCEEDED(rv) && decodedCString)
               m_compFields->SetTo(decodedCString);
             else
@@ -1540,9 +1541,9 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
               subjectStr.Append("Re: ");
             subjectStr.Append(subject);
 
-            rv = mimeConverter->DecodeMimeHeader(subjectStr.get(), 
-                getter_Copies(decodedString),
-                charset, charsetOverride);
+            rv = mimeConverter->DeprecatedDecodeMimeHeaderToWString(
+              subjectStr.get(), charset, charsetOverride, PR_TRUE, 
+              getter_Copies(decodedString));
             if (NS_SUCCEEDED(rv))
               decodedSubject.Assign(decodedString);
             else
@@ -1776,7 +1777,9 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
         mMimeConverter = do_GetService(kCMimeConverterCID);
         // Decode header, the result string is null if the input is non MIME encoded ASCII.
         if (mMimeConverter)
-          mMimeConverter->DecodeMimeHeader(author.get(), getter_Copies(decodedString), charset, charetOverride);
+          mMimeConverter->DecodeMimeHeaderToCString(
+            author.get(), charset, charetOverride, PR_TRUE,
+            getter_Copies(decodedString));
 
         nsCOMPtr<nsIMsgHeaderParser> parser (do_GetService(NS_MAILNEWS_MIME_HEADER_PARSER_CONTRACTID));
 
@@ -1914,13 +1917,15 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
           mHeaders->ExtractHeader(HEADER_TO, PR_TRUE, getter_Copies(outCString));
           if (outCString)
           {
-            mMimeConverter->DecodeMimeHeader(outCString, recipient, charset);
+            mMimeConverter->DecodeMimeHeader(outCString, charset, 
+                                             PR_FALSE, PR_TRUE, recipient);
           }
               
           mHeaders->ExtractHeader(HEADER_CC, PR_TRUE, getter_Copies(outCString));
           if (outCString)
           {
-            mMimeConverter->DecodeMimeHeader(outCString, cc, charset);
+            mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                             PR_TRUE, cc);
           }
               
           if (recipient.Length() > 0 && cc.Length() > 0)
@@ -1934,31 +1939,36 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
         mHeaders->ExtractHeader(HEADER_REPLY_TO, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mMimeConverter->DecodeMimeHeader(outCString, replyTo, charset);
+          mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                           PR_TRUE, replyTo);
         }
         
         mHeaders->ExtractHeader(HEADER_NEWSGROUPS, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mMimeConverter->DecodeMimeHeader(outCString, newgroups, charset);
+          mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                           PR_TRUE, newgroups);
         }
         
         mHeaders->ExtractHeader(HEADER_FOLLOWUP_TO, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mMimeConverter->DecodeMimeHeader(outCString, followUpTo, charset);
+          mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                           PR_TRUE, followUpTo);
         }
         
         mHeaders->ExtractHeader(HEADER_MESSAGE_ID, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mMimeConverter->DecodeMimeHeader(outCString, messageId, charset);
+          mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                           PR_TRUE, messageId);
         }
         
         mHeaders->ExtractHeader(HEADER_REFERENCES, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mMimeConverter->DecodeMimeHeader(outCString, references, charset);
+          mMimeConverter->DecodeMimeHeader(outCString, charset, PR_FALSE,
+                                           PR_TRUE, references);
         }
         
         if (! replyTo.IsEmpty())
@@ -1997,7 +2007,8 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
               if (outCString)
               {
                 nsAutoString from;
-                mMimeConverter->DecodeMimeHeader(outCString, from, charset);
+                mMimeConverter->DecodeMimeHeader(outCString, charset,
+                                                 PR_FALSE, PR_TRUE, from);
                 compFields->SetTo(from.get());
               }
             }

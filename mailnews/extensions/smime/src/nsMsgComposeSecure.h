@@ -22,6 +22,7 @@
 #ifndef _nsMsgComposeSecure_H_
 #define _nsMsgComposeSecure_H_
 
+#include "nsString.h"
 #include "nsIMsgComposeSecure.h"
 #include "nsIMsgSMIMECompFields.h"
 #include "nsCOMPtr.h"

@@ -826,10 +826,8 @@ nsresult nsMsgSearchTerm::MatchRfc2047String (const char *rfc2047string,
 
     nsCOMPtr<nsIMimeConverter> mimeConverter = do_GetService(kCMimeConverterCID);
 	char *stringToMatch = 0;
-    nsresult res = mimeConverter->DecodeMimeHeader(rfc2047string,
-                                                   &stringToMatch,
-                                                   charset, charsetOverride,
-                                                   PR_FALSE);
+    nsresult res = mimeConverter->DecodeMimeHeaderToCString(
+        rfc2047string, charset, charsetOverride, PR_FALSE, &stringToMatch);
 
 	res = MatchString(stringToMatch ? stringToMatch : rfc2047string,
                       nsnull, pResult);
