@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Cocoa/Cocoa.h>
-#import <Cocoa/Cocoa.h>
 
 #import <SystemConfiguration/SystemConfiguration.h>
 #import "PreferenceManager.h"
