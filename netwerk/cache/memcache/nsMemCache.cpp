@@ -1,0 +1,366 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+/**
+ * nsMemCache is the implementation of an in-memory network-data
+ * cache, used to cache the responses to network retrieval commands.
+ * Each cache entry may contain both content, e.g. GIF image data, and
+ * associated metadata, e.g. HTTP headers.  Each entry is indexed by
+ * two different keys: a record id number and an opaque key, which is
+ * created by the cache manager by combining the URI with a "secondary
+ * key", e.g. HTTP post data.
+ */
+
+#include "nsMemCache.h"
+#include "nsMemCacheRecord.h"
+#include "nsIGenericFactory.h"
+#include "nsString.h"
+#include "nsHashtable.h"
+#include "nsHashtableEnumerator.h"
+#include "nsEnumeratorUtils.h"
+
+// Maximum number of URIs that may be resident in the cache
+#define MEM_CACHE_MAX_ENTRIES 1000
+
+PRInt32 nsMemCache::gRecordSerialNumber = 0;
+
+nsMemCache::nsMemCache()
+    : mNumEntries(0), mEnabled(PR_TRUE), mCapacity(0), mOccupancy(0),
+      mHashTable(0)
+{
+    NS_INIT_REFCNT();
+}
+
+nsMemCache::~nsMemCache()
+{
+    nsresult rv;
+
+    rv = RemoveAll();
+    NS_ASSERTION(NS_SUCCEEDED(rv) && (mNumEntries == 0),
+                 "Failure to shut down memory cache");
+    delete mHashTable;
+}
+
+nsresult
+nsMemCache::Init()
+{
+    mHashTable = new nsHashtable(256);
+    if (!mHashTable)
+        return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
+
+// Factory method to create a new nsMemCache instance.  Used
+// by nsNetDataCacheModule
+NS_METHOD
+nsMemCache::nsMemCacheConstructor(nsISupports *aOuter, REFNSIID aIID,
+                                  void **aResult)
+{
+    nsresult rv;
+
+    nsMemCache * inst;
+
+    if (NULL == aResult) {
+        rv = NS_ERROR_NULL_POINTER;
+        goto done;
+    }
+    *aResult = NULL;
+    if (NULL != aOuter) {
+        rv = NS_ERROR_NO_AGGREGATION;
+        goto done;
+    }
+
+    NS_NEWXPCOM(inst, nsMemCache);
+    if (NULL == inst) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+        goto done;
+    }
+    rv = inst->Init();
+    if(NS_FAILED(rv)) {
+        NS_DELETEXPCOM(inst);
+        goto done;
+    }
+    NS_ADDREF(inst);
+    rv = inst->QueryInterface(aIID, aResult);
+    NS_RELEASE(inst);
+
+ done:
+    return rv;
+}
+
+NS_IMPL_ISUPPORTS(nsMemCache, NS_GET_IID(nsINetDataCache))
+
+NS_IMETHODIMP
+nsMemCache::GetDescription(PRUnichar * *aDescription)
+{
+    nsAutoString description("Memory Cache");
+    *aDescription = description.ToNewUnicode();
+    if (!*aDescription)
+        return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::Contains(const char *aKey, PRUint32 aKeyLength, PRBool *aFound)
+{
+    nsOpaqueKey *opaqueKey = new nsOpaqueKey(aKey, aKeyLength);
+    if (!opaqueKey)
+        return NS_ERROR_OUT_OF_MEMORY;
+    *aFound = mHashTable->Exists(opaqueKey);
+    delete opaqueKey;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetCachedNetData(const char *aKey, PRUint32 aKeyLength,
+                             nsINetDataCacheRecord* *aRecord)
+{
+    nsresult rv;
+    nsMemCacheRecord* record = 0;
+    nsOpaqueKey *opaqueKey2 = 0;
+    nsOpaqueKey *opaqueKey3 = 0;
+    nsOpaqueKey *opaqueKey;
+
+    opaqueKey = new nsOpaqueKey(aKey, aKeyLength);
+    if (!opaqueKey)
+        goto out_of_memory;
+    record = (nsMemCacheRecord*)mHashTable->Get(opaqueKey);
+    delete opaqueKey;
+
+    // No existing cache database entry was found.  Create a new one.
+    // This requires two mappings in the hash table:
+    //    Record ID  ==> record
+    //    Opaque key ==> record
+    if (!record) {
+        record = new nsMemCacheRecord;
+        if (!record)
+            goto out_of_memory;
+        rv = record->Init(aKey, aKeyLength, ++gRecordSerialNumber, this);
+        if (NS_FAILED(rv)) goto out_of_memory;
+
+        // Index the record by opaque key
+        opaqueKey2 = new nsOpaqueKey(record->mKey, record->mKeyLength);
+        if (!opaqueKey2) goto out_of_memory;
+        mHashTable->Put(opaqueKey2, record);
+        
+        // Index the record by it's record ID
+        char *recordIDbytes = NS_REINTERPRET_CAST(char *, &record->mRecordID);
+        opaqueKey3 = new nsOpaqueKey(recordIDbytes,
+                                     sizeof record->mRecordID);
+        if (!opaqueKey3) {
+            // Clean up the first record from the hash table
+            mHashTable->Remove(opaqueKey);
+            goto out_of_memory;
+        }
+        mHashTable->Put(opaqueKey3, record);
+        
+        // The hash table holds on to the record
+        record->AddRef();
+        
+        delete opaqueKey2;
+        delete opaqueKey3;
+    }
+
+    record->AddRef();
+    *aRecord = record;
+    mNumEntries++;
+    return NS_OK;
+
+ out_of_memory:
+    delete opaqueKey2;
+    delete opaqueKey3;
+    delete record;
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetCachedNetDataByID(PRInt32 RecordID,
+                                 nsINetDataCacheRecord* *aRecord)
+{
+    nsOpaqueKey opaqueKey(NS_REINTERPRET_CAST(const char *, &RecordID),
+                          sizeof RecordID);
+    *aRecord = (nsINetDataCacheRecord*)mHashTable->Get(&opaqueKey);
+    NS_IF_ADDREF(*aRecord);
+    return NS_OK;
+}
+
+NS_METHOD
+nsMemCache::Delete(nsMemCacheRecord* aRecord)
+{
+    nsMemCacheRecord *removedRecord;
+
+    char *recordIDbytes = NS_REINTERPRET_CAST(char *, &aRecord->mRecordID);
+    nsOpaqueKey opaqueRecordIDKey(recordIDbytes,
+                                  sizeof aRecord->mRecordID);
+    removedRecord = (nsMemCacheRecord*)mHashTable->Remove(&opaqueRecordIDKey);
+    NS_ASSERTION(removedRecord == aRecord, "memory cache database inconsistent");
+
+    nsOpaqueKey opaqueKey(aRecord->mMetaData, aRecord->mMetaDataLength);
+    removedRecord = (nsMemCacheRecord*)mHashTable->Remove(&opaqueKey);
+    NS_ASSERTION(removedRecord == aRecord, "memory cache database inconsistent");
+
+    aRecord->Release();
+
+    mNumEntries--;
+    
+    return NS_OK;
+}
+    
+
+NS_IMETHODIMP
+nsMemCache::GetEnabled(PRBool *aEnabled)
+{
+    NS_ENSURE_ARG(aEnabled);
+    *aEnabled = mEnabled;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::SetEnabled(PRBool aEnabled)
+{
+    mEnabled = aEnabled;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetReadOnly(PRBool *aReadOnly)
+{
+    NS_ENSURE_ARG(aReadOnly);
+    *aReadOnly = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetNumEntries(PRUint32 *aNumEntries)
+{
+    NS_ENSURE_ARG(aNumEntries);
+    *aNumEntries = mNumEntries;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetMaxEntries(PRUint32 *aMaxEntries)
+{
+    NS_ENSURE_ARG(aMaxEntries);
+    return MEM_CACHE_MAX_ENTRIES;
+}
+
+static NS_METHOD
+HashEntryConverter(nsHashKey *aKey, void *aValue,
+                   void *unused, nsISupports **retval)
+{
+    nsMemCacheRecord *record;
+    nsOpaqueKey *opaqueKey;
+
+    record = (nsMemCacheRecord*)aValue;
+    opaqueKey = (nsOpaqueKey*)aKey;
+
+    // Hash table keys that index cache entries by their record ID
+    // shouldn't be enumerated.
+    if ((opaqueKey->GetKeyLength() == sizeof PRInt32)) {
+
+#ifdef DEBUG
+        PRInt32 recordID;
+        record->GetRecordID(&recordID);
+        NS_ASSERTION(*((PRInt32*)opaqueKey->GetKey()) == recordID,
+                     "Key has incorrect key length");
+#endif
+        return NS_ERROR_FAILURE;
+    }
+
+    NS_IF_ADDREF(record);
+    *retval = NS_STATIC_CAST(nsISupports*, record);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::NewCacheEntryIterator(nsISimpleEnumerator* *aIterator)
+{
+    nsCOMPtr<nsIEnumerator> iterator;
+
+    NS_ENSURE_ARG(aIterator);
+    NS_NewHashtableEnumerator(mHashTable, HashEntryConverter,
+                              mHashTable, getter_AddRefs(iterator));
+    return NS_NewAdapterEnumerator(aIterator, iterator);
+}
+
+NS_IMETHODIMP
+nsMemCache::GetNextCache(nsINetDataCache* *aNextCache)
+{
+    NS_ENSURE_ARG(aNextCache);
+    *aNextCache = mNextCache;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::SetNextCache(nsINetDataCache* aNextCache)
+{
+    mNextCache = aNextCache;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetCapacity(PRUint32 *aCapacity)
+{
+    NS_ENSURE_ARG(aCapacity);
+    *aCapacity = mCapacity;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::SetCapacity(PRUint32 aCapacity)
+{
+    mCapacity = aCapacity;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemCache::GetStorageInUse(PRUint32 *aStorageInUse)
+{
+    NS_ENSURE_ARG(aStorageInUse);
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMemCache::RemoveAll(void)
+{
+    nsCOMPtr<nsISimpleEnumerator> iterator;
+    nsCOMPtr<nsISupports> recordSupports;
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    nsresult rv;
+
+    rv = NewCacheEntryIterator(getter_AddRefs(iterator));
+    if (NS_FAILED(rv))
+        return rv;
+
+    PRBool notDone;
+    while (1) {
+        rv = iterator->HasMoreElements(&notDone);
+        if (NS_FAILED(rv)) return rv;
+        if (!notDone)
+            break;
+        
+        iterator->GetNext(getter_AddRefs(recordSupports));
+        record = do_QueryInterface(recordSupports);
+        rv = record->Delete();
+        if (NS_FAILED(rv))
+            break;
+    }
+
+    return rv;
+}
