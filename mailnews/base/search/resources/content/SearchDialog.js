@@ -342,7 +342,7 @@ function setupDatasource() {
     var count = new Object;
     var cmdupdator = new nsMsgSearchCommandUpdater();
     gSearchView.init(messenger, msgWindow, cmdupdator);
-    gSearchView.open(null, nsMsgViewSortType.byId, nsMsgViewSortOrder.ascending, nsMsgViewFlagsType.kFlatDisplay, count);
+    gSearchView.open(null, nsMsgViewSortType.byId, nsMsgViewSortOrder.ascending, nsMsgViewFlagsType.kNone, count);
 
     var outlinerView = gSearchView.QueryInterface(Components.interfaces.nsIOutlinerView);
     if (outlinerView)

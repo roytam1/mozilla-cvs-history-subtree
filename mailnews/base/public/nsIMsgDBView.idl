@@ -62,7 +62,6 @@ interface nsMsgViewFlagsType
      */
     const nsMsgViewFlagsTypeValue kNone = 0x0;
     const nsMsgViewFlagsTypeValue kThreadedDisplay = 0x1;
-    const nsMsgViewFlagsTypeValue kFlatDisplay = 0x2;
     const nsMsgViewFlagsTypeValue kShowIgnored = 0x8;
     const nsMsgViewFlagsTypeValue kUnreadOnly = 0x10;
 };

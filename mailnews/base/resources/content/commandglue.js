@@ -524,7 +524,7 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
         viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
       }
       else {
-        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
+        viewFlags &= nsMsgViewFlagsType.kThreadedDisplay;
       }
     }
 

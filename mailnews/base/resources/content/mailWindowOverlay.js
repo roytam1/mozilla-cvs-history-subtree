@@ -104,36 +104,31 @@ function view_init()
 
 function InitViewMessagesMenu()
 {
-//  dump("init view messages\n");
+  dump("init view messages\n");
 
   var allMenuItem = document.getElementById("viewAllMessagesMenuItem");
-  var hidden = allMenuItem.getAttribute("hidden") == "true";
   var viewFlags = gDBView.viewFlags;
   var viewType = gDBView.viewType;
 
-  if(allMenuItem && !hidden)
-      allMenuItem.setAttribute("checked", !(viewFlags & nsMsgViewFlagsType.kUnreadOnly));
+  if(allMenuItem)
+      allMenuItem.setAttribute("checked",  (viewFlags & nsMsgViewFlagsType.kUnreadOnly) == 0);
 
   var unreadMenuItem = document.getElementById("viewUnreadMessagesMenuItem");
-  hidden = unreadMenuItem.getAttribute("hidden") == "true";
-  if(unreadMenuItem && !hidden)
-      unreadMenuItem.setAttribute("checked", viewFlags & nsMsgViewFlagsType.kUnreadOnly);
+  if(unreadMenuItem)
+      unreadMenuItem.setAttribute("checked", (viewFlags & nsMsgViewFlagsType.kUnreadOnly) != 0);
 
   var theadedMenuItem = document.getElementById("menu_showThreads");
-  hidden = theadedMenuItem.getAttribute("hidden") == "true";
-  if (theadedMenuItem && !hidden)
-    theadedMenuItem.setAttribute("checked", viewFlags & nsMsgViewFlagsType.kThreadedDisplay);
+  if (theadedMenuItem)
+    theadedMenuItem.setAttribute("checked", (viewFlags & nsMsgViewFlagsType.kThreadedDisplay) != 0);
   document.commandDispatcher.updateCommands('create-menu-view');
 
   var theadsWithUnreadMenuItem = document.getElementById("viewThreadsWithUnreadMenuItem");
-  hidden = theadsWithUnreadMenuItem.getAttribute("hidden") == "true";
-  if(theadsWithUnreadMenuItem && !hidden)
-      theadsWithUnreadMenuItem.setAttribute("checked", viewType & nsMsgViewType.eShowThreadsWithUnread);
+  if(theadsWithUnreadMenuItem)
+      theadsWithUnreadMenuItem.setAttribute("checked", viewType == nsMsgViewType.eShowThreadsWithUnread);
 
   var watchedTheadsWithUnreadMenuItem = document.getElementById("viewWatchedThreadsWithUnreadMenuItem");
-  hidden = watchedTheadsWithUnreadMenuItem.getAttribute("hidden") == "true";
-  if(watchedTheadsWithUnreadMenuItem && !hidden)
-      watchedTheadsWithUnreadMenuItem.setAttribute("checked", viewType & nsMsgViewType.eShowWatchedThreadsWithUnread);
+  if(watchedTheadsWithUnreadMenuItem)
+      watchedTheadsWithUnreadMenuItem.setAttribute("checked", viewType == nsMsgViewType.eShowWatchedThreadsWithUnread);
 }
 
 function InitMessageMenu()
