@@ -16,7 +16,7 @@
  * Reserved.
  */
 
-#include <prlog.h>
+#include "prlog.h"
 #include "nsCacheBkgThd.h"
 #include "nsCacheManager.h"
 #include "nsCacheModule.h"

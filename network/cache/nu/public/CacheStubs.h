@@ -27,8 +27,8 @@
 #ifndef CacheStubs_h__
 #define CacheStubs_h__
 
-#include <prtypes.h>
-#include <prinrval.h>
+#include "prtypes.h"
+#include "prinrval.h"
 
 #define MEM_MODULE_ID 0
 #define DISK_MODULE_ID 1

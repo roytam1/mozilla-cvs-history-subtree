@@ -16,9 +16,9 @@
  * Reserved.
  */
 
-#include <prtypes.h>
-#include <plstr.h>
-#include <prlog.h>
+#include "prtypes.h"
+#include "plstr.h"
+#include "prlog.h"
 
 #include "nsMemModule.h"
 #include "nsMemCacheObject.h"

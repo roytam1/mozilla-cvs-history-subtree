@@ -165,9 +165,11 @@ inline void nsCacheModule::Next(nsCacheModule* pNext)
 	PR_ASSERT(m_pNext == 0);
 	if (m_pNext)
 	{
-		/* ERROR */
+                /* ERROR */
+                delete m_pNext; //Worst case. 
+
 	}
-    m_pNext = pNext;
+        m_pNext = pNext;
 }
 
 inline const PRUint32 nsCacheModule::Size() const

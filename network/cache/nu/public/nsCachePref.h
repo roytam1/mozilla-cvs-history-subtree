@@ -20,7 +20,7 @@
 #define nsCachePref_h__
 
 //#include "nsISupports.h"
-#include <prtypes.h>
+#include "prtypes.h"
 
 class nsCachePref //: public nsISupports
 {

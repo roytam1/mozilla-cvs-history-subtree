@@ -31,7 +31,7 @@
 
 //#include "nsHash.h" // TODO - replace with nsHashtable when the XPCOM_BRANCH merges
 
-//#include <nsHashtable.h>
+//#include "nsHashtable.h"
 /*
 // {5D51B250-E6C2-11d1-AFE5-006097BFC036}
 static const NS_MEMMODULE_IID = 

@@ -80,16 +80,18 @@ PRBool nsCacheModule::RemoveAll(void)
     return status;
 }
 
+#if 0
 // Caller must free this 
 const char* nsCacheModule::Trace() const
 {
     char linebuffer[128];
     char* total;
 
-    sprintf(linebuffer, "nsCacheModule: Objects = %d\n", Entries());
+    PR_sprintf(linebuffer, "nsCacheModule: Objects = %d\n", Entries());
 
-    total = new char[strlen(linebuffer) + 1];
+    total = new char[PR_strlen(linebuffer) + 1];
     strcpy(total, linebuffer);
 
     return total;
 }
+#endif

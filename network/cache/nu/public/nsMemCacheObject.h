@@ -19,7 +19,7 @@
 #ifndef _nsMemCacheObject_h_
 #define _nsMemCacheObject_h_
 
-#include <prtypes.h>
+#include "prtypes.h"
 
 #include "nsCacheObject.h"
 

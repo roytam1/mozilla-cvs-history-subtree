@@ -23,8 +23,8 @@
 #include "nsISupports.h"
 #endif
 
-#include <prtypes.h>
-#include <prinrval.h>
+#include "prtypes.h"
+#include "prinrval.h"
 
 static const PRUint32 kCACHE_VERSION = 5;
 

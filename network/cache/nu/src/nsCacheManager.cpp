@@ -21,12 +21,12 @@
  * 
  */
 
-#include <prtypes.h>
-#include <prinrval.h>
+#include "prtypes.h"
+#include "prinrval.h"
 
-#include <xp_core.h>
-#include <xpassert.h> 
-#include <xp_str.h>
+#include "xp_core.h"
+#include "xpassert.h" 
+#include "xp_str.h"
 
 #include "nsCacheManager.h"
 #include "nsCacheTrace.h"

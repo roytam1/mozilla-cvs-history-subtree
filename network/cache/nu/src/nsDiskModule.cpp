@@ -23,10 +23,10 @@
  * 
  */
 
-#include <prtypes.h>
-#include <prmem.h>
-#include <plstr.h>
-#include <prlog.h>
+#include "prtypes.h"
+#include "prmem.h"
+#include "plstr.h"
+#include "prlog.h"
 
 #include "nsDiskModule.h"
 #include "nsCacheObject.h"
@@ -103,6 +103,7 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
 
 PRBool nsDiskModule::Contains(nsCacheObject* io_pObject) const
 {
+    //return Contains(io_oObject->Address());
 
     ENSURE_INIT;
 
@@ -112,7 +113,7 @@ PRBool nsDiskModule::Contains(nsCacheObject* io_pObject) const
     nsCacheObject* pTemp = GetObject(io_pObject->Address());
     if (pTemp)
     {
-        io_pObject = pTemp;
+        io_pObject = pTemp;  /*bug */
         return PR_TRUE;
     }
     return PR_FALSE;
@@ -147,7 +148,7 @@ nsCacheObject* nsDiskModule::GetObject(const PRUint32 i_index) const
     ENSURE_INIT;
     if (!m_pDB)
         return 0;
-
+//todo
     return 0;
 }
 

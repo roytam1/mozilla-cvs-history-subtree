@@ -29,7 +29,7 @@
 #   include "nsISupports.h"
 #endif
 
-#include <prlog.h>
+#include "prlog.h"
 
 #include "nsMonitorable.h"
 #include "nsCacheModule.h"
@@ -88,11 +88,23 @@ protected:
     PRBool                  ContainsExactly(const char* i_url) const;
 
     void                    Init();
-    
+  
     nsCacheModule*          LastModule() const;
+    PRBool                  Lock(void);
+    void                    Unlock(void);
+
+    class MgrMonitor
+    {
+    public:
+        MgrMonitor() { nsCacheManager::GetInstance()->Lock();}
+        ~MgrMonitor() { nsCacheManager::GetInstance()->Unlock();}
+    };
+
+    friend MgrMonitor;
 
 private:
-    nsCacheModule*  m_pFirstModule;
+    nsCacheModule*      m_pFirstModule;
+    PRMonitor*          m_pMonitor;
 
     nsCacheManager(const nsCacheManager& cm);
     nsCacheManager& operator=(const nsCacheManager& cm);
@@ -121,9 +133,30 @@ PRBool nsCacheManager::IsOffline(void) const
 }
 
 inline
+PRBool nsCacheManager::Lock(void)
+{
+    if (!m_pMonitor)
+    {
+        m_pMonitor = PR_NewMonitor();
+        if (!m_pMonitor)
+            return PR_FALSE;
+    }
+    PR_EnterMonitor(m_pMonitor);
+    return PR_TRUE;
+}
+
+inline
 void  nsCacheManager::Offline(PRBool i_bSet) 
 {
     m_bOffline = i_bSet;
+}
+
+inline
+void nsCacheManager::Unlock(void)
+{
+    PR_ASSERT(m_pMonitor);
+    if (m_pMonitor)
+        PR_ExitMonitor(m_pMonitor);
 }
 
 #endif

@@ -58,8 +58,6 @@ protected:
         nsMonitorable* m_pMonitorable;
     };
 
-	//friend MonitorLocker;
-
     PRMonitor*          m_pMonitor;
 
 private:
@@ -75,11 +73,11 @@ nsMonitorable::nsMonitorable(void):m_pMonitor(PR_NewMonitor())
 inline
 nsMonitorable::~nsMonitorable()
 {
-	if (m_pMonitor)
-	{
-		PR_DestroyMonitor(m_pMonitor);
-		m_pMonitor = 0;
-	}
+    if (m_pMonitor)
+    {
+	PR_DestroyMonitor(m_pMonitor);
+	m_pMonitor = 0;
+    }
 }
 
 inline
