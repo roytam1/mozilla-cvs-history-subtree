@@ -33,7 +33,7 @@ Rights Reserved.
 
 <outliner id="threadOutliner" flex="1">
   <outlinercol id="threadCol" display="&threadColumn.label;" class="outlinercol-header outlinercol-image outlinercol-inset-header threadColumnHeader" currentView="unthreaded"/>
-  <outlinercol id="subjectCol" class="outlinercol-header outlinercell-inset-header sortDirectionIndicator" sortDirection="ascending" persist="hidden width" width="0" flex="7" value="&subjectColumn.label;"/>
+  <outlinercol id="subjectCol" class="outlinercol-header outlinercell-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="7" value="&subjectColumn.label;"/>
   <splitter class="tree-splitter"/>
   <outlinercol id="senderCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="4" value="&senderColumn.label;"/>
   <splitter class="tree-splitter"/>
