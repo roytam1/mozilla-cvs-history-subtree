@@ -62,6 +62,9 @@ NS_NAMED_LITERAL_STRING(kVoidType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");
 NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
 
+NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaIDPrefix, "#schema#");
+NS_NAMED_LITERAL_STRING(kXMLNameSchemaIDPrefix, "#name#");
+
 void 
 nsSOAPUtils::GetSpecificChildElement(
   nsIDOMElement *aParent, 
@@ -225,6 +228,17 @@ nsSOAPUtils::GetNextSibling(nsIDOMNode* aSibling, nsIDOMNode **aNext)
   }
   *aNext = current;
   NS_IF_ADDREF(*aNext);
+}
+nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aElement,
+                                  const nsAReadableString & aQName, 
+                                  nsAWritableString & aURI)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+nsresult nsSOAPUtils::GetLocalName(const nsAReadableString & aQName, 
+                                  nsAWritableString & aURI)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 #if 0
 nsresult 

@@ -238,10 +238,24 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::UnmarshallCall(nsISOAPMessage *aMessage, nsI
       rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
       if (NS_FAILED(rv)) return rv;
       if (attr) {
-	attr->GetNodeValue(type);
+        type = nsSOAPUtils::kXMLSchemaSchemaIDPrefix;
+	nsAutoString t1;
+	nsAutoString t2;
+	attr->GetNodeValue(t1);
+	nsSOAPUtils::GetNamespaceURI(current, t1, t2);
+	type.Append(t2);
+	type.Append(nsSOAPUtils::kTypeSeparator);
+	nsSOAPUtils::GetLocalName(t1, t2);
+	type.Append(t2);
       }
       else {
-	type.Truncate(0);
+        type = nsSOAPUtils::kXMLNameSchemaIDPrefix;
+	nsAutoString t1;
+	current->GetNamespaceURI(t1);
+	type.Append(t1);
+	type.Append(nsSOAPUtils::kTypeSeparator);
+	current->GetLocalName(t1);
+	type.Append(t1);
       }
       rv = types->Unmarshall(aMessage, current, encoding, type, getter_AddRefs(result));
       if (NS_FAILED(rv)) return rv;

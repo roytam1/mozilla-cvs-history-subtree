@@ -50,10 +50,12 @@ public:
   static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
-  static nsresult GetNamespaceURI(nsIDOMElement* aElement,
-                                  const nsAReadableString & aPrefix, 
-                                  nsAWritableString & aURI);
 #endif
+  static nsresult GetNamespaceURI(nsIDOMElement* aElement,
+                                  const nsAReadableString & aQName, 
+                                  nsAWritableString & aURI);
+  static nsresult GetLocalName(const nsAReadableString & aQName, 
+                                  nsAWritableString & aURI);
   static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
                                         nsAWritableString & aEncodingStyle);
 
@@ -92,6 +94,8 @@ public:
   static const nsString kVoidType;
   static const nsString kUnknownType;
   static const nsString kLiteralType;
+  static const nsString kXMLSchemaSchemaIDPrefix;
+  static const nsString kXMLNameSchemaIDPrefix;
 };
 
 #endif
