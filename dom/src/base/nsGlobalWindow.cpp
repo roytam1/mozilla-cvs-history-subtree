@@ -4724,7 +4724,8 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
       nsCOMPtr<nsIDOMChromeWindow> thisChrome =
         do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
       PRBool chromeTab = PR_FALSE;
-      tabURI->SchemeIs("chrome", &chromeTab);
+      if (tabURI)
+        tabURI->SchemeIs("chrome", &chromeTab);
       if (!thisChrome && !chromeTab) {
 
         PRInt32 restrictionPref = 0;
