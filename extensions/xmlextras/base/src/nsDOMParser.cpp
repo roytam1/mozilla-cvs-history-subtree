@@ -78,7 +78,7 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 
 class nsDOMParserChannel : public nsIChannel {
 public:
-  nsDOMParserChannel(nsIURI* aURI, const char* aContentType);
+  nsDOMParserChannel(nsIURI* aURI, const nsACString& aContentType);
   virtual ~nsDOMParserChannel();
 
   NS_DECL_ISUPPORTS
@@ -95,7 +95,7 @@ protected:
   nsCOMPtr<nsILoadGroup> mLoadGroup;
 };
 
-nsDOMParserChannel::nsDOMParserChannel(nsIURI* aURI, const char* aContentType)
+nsDOMParserChannel::nsDOMParserChannel(nsIURI* aURI, const nsACString& aContentType)
 {
   mURI = aURI;
   mContentType.Assign(aContentType);
@@ -414,11 +414,10 @@ ConvertWStringToStream(const PRUnichar* aStr,
 /* nsIDOMDocument parseFromString (in wstring str, in string contentType); */
 NS_IMETHODIMP 
 nsDOMParser::ParseFromString(const PRUnichar *str, 
-                             const char *contentType, 
+                             const char *contentType,
                              nsIDOMDocument **_retval)
 {
   NS_ENSURE_ARG(str);
-  NS_ENSURE_ARG(contentType);
   NS_ENSURE_ARG_POINTER(_retval);
 
   nsCOMPtr<nsIInputStream> stream;
@@ -451,7 +450,7 @@ nsDOMParser::ParseFromBuffer(const PRUint8 *buf,
     *_retval = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
- 
+
   // The new stream takes ownership of the buffer
   nsresult rv = NS_NewByteArrayInputStream(getter_AddRefs(baiStream), (char*)streamBuf, bufLen);
   if (NS_FAILED(rv)) {
@@ -459,7 +458,7 @@ nsDOMParser::ParseFromBuffer(const PRUint8 *buf,
     *_retval = nsnull;
     return rv;
   }
- 
+
   stream = do_QueryInterface(baiStream);
   if (!stream) {
     *_retval = nsnull;
@@ -475,7 +474,7 @@ NS_IMETHODIMP
 nsDOMParser::ParseFromStream(nsIInputStream *stream, 
                              const char *charset, 
                              PRInt32 contentLength,
-                             const char *contentType, 
+                             const char *contentType,
                              nsIDOMDocument **_retval)
 {
   NS_ENSURE_ARG(stream);
@@ -484,9 +483,9 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
   *_retval = nsnull;
 
   // For now, we can only create XML documents.
-  if (nsCRT::strcmp(contentType, "text/xml") != 0 &&
-      nsCRT::strcmp(contentType, "application/xml") != 0 &&
-      nsCRT::strcmp(contentType, "application/xhtml+xml") != 0)
+  if ((nsCRT::strcmp(contentType, "text/xml") != 0) &&
+      (nsCRT::strcmp(contentType, "application/xml") != 0) &&
+      (nsCRT::strcmp(contentType, "application/xhtml+xml") != 0))
     return NS_ERROR_NOT_IMPLEMENTED;
 
   nsresult rv;
@@ -576,7 +575,7 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
   }
 
   // Create a fake channel 
-  nsDOMParserChannel* parserChannel = new nsDOMParserChannel(baseURI, contentType);
+  nsDOMParserChannel* parserChannel = new nsDOMParserChannel(baseURI, nsDependentCString(contentType));
   if (!parserChannel) return NS_ERROR_OUT_OF_MEMORY;
 
   // Hold a reference to it in this method
