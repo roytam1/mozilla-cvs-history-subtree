@@ -263,6 +263,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 		if (filename[0] == '-' && filename[1] == '\0')
 		    filename = NULL;
 		Process(cx, obj, filename);
+                filename = NULL;
 		i++;
 		break;
 	    default:
