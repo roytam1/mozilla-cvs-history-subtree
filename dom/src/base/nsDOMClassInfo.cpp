@@ -1281,16 +1281,6 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
 
   NS_ENSURE_TRUE(gNameSpaceManager, NS_ERROR_NOT_INITIALIZED);
 
-  nsCOMPtr<nsIScriptContext> my_context;
-  nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(my_context));
-
-  if (!my_context || NS_FAILED(my_context->IsContextInitialized())) {
-    // The context is not yet initialized so there's nothing we can do
-    // here yet.
-
-    return NS_OK;
-  }
-
   nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar*,
                                            ::JS_GetStringChars(str)),
                        ::JS_GetStringLength(str));
@@ -1408,7 +1398,19 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
-    NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+    NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsIScriptContext> my_context;
+    sgo->GetContext(getter_AddRefs(my_context));
+
+    if (!my_context || NS_FAILED(my_context->IsContextInitialized())) {
+      // The context is not yet initialized so there's nothing we can do
+      // here yet.
+
+      return NS_OK;
+    }
 
     nsresult rv = GlobalResolve(native, cx, obj, str, flags, &did_resolve);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1425,12 +1427,9 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // method on an interface that would let us just call into the
     // window code directly...
 
-    nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(native));
-    NS_ENSURE_TRUE(global, NS_ERROR_UNEXPECTED);
-
     nsCOMPtr<nsIDocShell> docShell;
 
-    global->GetDocShell(getter_AddRefs(docShell));
+    sgo->GetDocShell(getter_AddRefs(docShell));
 
     nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(docShell));
 
