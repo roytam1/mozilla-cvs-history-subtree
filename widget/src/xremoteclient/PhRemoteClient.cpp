@@ -35,14 +35,6 @@
 #include <unistd.h>
 #include <Pt.h>
 
-#if defined(MOZ_PHOENIX) || defined(MOZ_THUNDERBIRD)
-#define BrowserRemoteServerName			"FirebirdRemoteServer"
-#define MailRemoteServerName				"ThunderbirdRemoteServer"
-#else
-#define BrowserRemoteServerName			"MozillaRemoteServer"
-#define MailRemoteServerName				"MozillaRemoteServer"
-#endif
-
 #define MOZ_REMOTE_MSG_TYPE					100
 
 XRemoteClient::XRemoteClient()
@@ -80,20 +72,9 @@ XRemoteClient::SendCommand (const char *aProgram, const char *aUsername,
 {
   *aWindowFound = PR_TRUE;
 
-	char *RemoteServerName;
+	char RemoteServerName[128];
 
-	/* ATENTIE: register connections based on ProfileName and find the appropiate connection
-		based on the aProfile argument */
-
-	if( !strncmp( aCommand, "mping", 5 ) ) {
-		RemoteServerName = MailRemoteServerName;
-		aCommand++;
-		}
-	else {
-		if( PL_strstr( aCommand, "mailto" ) )
-			RemoteServerName = MailRemoteServerName;
-		else RemoteServerName = BrowserRemoteServerName;
-		}
+	sprintf( RemoteServerName, "%s_RemoteServer", aProgram ? aProgram : "mozilla" );
 
 	PtConnectionClient_t *cnt = PtConnectionFindName( RemoteServerName, 0, 0 );
 	if( !cnt ) {
