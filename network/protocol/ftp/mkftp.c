@@ -4751,5 +4751,5 @@ NET_InitFTPProtocol(void)
 	ftp_proto_impl.interrupt = net_InterruptFTP;
 	ftp_proto_impl.cleanup = net_CleanupFTP;
 
-	NET_RegisterProtocolImplementation(&ftp_proto_impl, FTP_TYPE_URL);
+	NET_RegisterProtocolImplementation(&ftp_proto_impl, FTP_PROTOCOL);
 }

@@ -174,9 +174,9 @@ NET_InitRemoteProtocol(void)
     remote_proto_impl.interrupt = net_InterruptRemote;
     remote_proto_impl.cleanup = net_CleanupRemote;
 
-    NET_RegisterProtocolImplementation(&remote_proto_impl, RLOGIN_TYPE_URL);
-    NET_RegisterProtocolImplementation(&remote_proto_impl, TELNET_TYPE_URL);
-    NET_RegisterProtocolImplementation(&remote_proto_impl, TN3270_TYPE_URL);
+    NET_RegisterProtocolImplementation(&remote_proto_impl, RLOGIN_PROTOCOL);
+    NET_RegisterProtocolImplementation(&remote_proto_impl, TELNET_PROTOCOL);
+    NET_RegisterProtocolImplementation(&remote_proto_impl, TN3270_PROTOCOL);
 }
 
 #endif /* MOZILLA_CLIENT */

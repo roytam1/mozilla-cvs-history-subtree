@@ -791,7 +791,7 @@ NET_InitMailboxProtocol(void)
     mailbox_proto_impl.interrupt = net_InterruptMailbox;
     mailbox_proto_impl.cleanup = net_CleanupMailbox;
 
-    NET_RegisterProtocolImplementation(&mailbox_proto_impl, MAILBOX_TYPE_URL);
+    NET_RegisterProtocolImplementation(&mailbox_proto_impl, MAILBOX_PROTOCOL);
 }
 
 /* Since each search may be composed of multiple distinct URLs to
@@ -850,5 +850,5 @@ NET_InitMsgSearchProtocol(void)
     msgsearch_proto_impl.interrupt = net_InterruptMsgSearch;
     msgsearch_proto_impl.cleanup = net_CleanupMsgSearch;
 
-    NET_RegisterProtocolImplementation(&msgsearch_proto_impl, MSG_SEARCH_TYPE_URL);
+    NET_RegisterProtocolImplementation(&msgsearch_proto_impl, MSG_SEARCH_PROTOCOL);
 }

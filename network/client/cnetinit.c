@@ -204,7 +204,7 @@ net_ProtoCleanupStub(void)
 }
 
 PRIVATE void
-net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, int type)
+net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, const char *proto)
 {
     NET_ProtoImpl *random_proto_impl;
 
@@ -218,7 +218,7 @@ net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, int type)
     random_proto_impl->interrupt = net_ProtoMainStub;
     random_proto_impl->cleanup = net_ProtoCleanupStub;
 
-    NET_RegisterProtocolImplementation(random_proto_impl, type);
+    NET_RegisterProtocolImplementation(random_proto_impl, proto);
 }
 
 /* don't you just hate it when people come along and hack this
@@ -229,11 +229,11 @@ net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, int type)
 PRIVATE void
 net_InitTotallyRandomStuffPeopleAddedProtocols(void)
 {
-	net_reg_random_protocol(net_SecurityURLLoad, SECURITY_TYPE_URL);
-	net_reg_random_protocol(net_SeclibURLLoad, INTERNAL_SECLIB_TYPE_URL);
-	net_reg_random_protocol(net_HTMLPanelLoad, HTML_PANEL_HANDLER_TYPE_URL);
-	net_reg_random_protocol(net_HTMLDialogLoad, HTML_DIALOG_HANDLER_TYPE_URL);
-	net_reg_random_protocol(net_WysiwygLoad, WYSIWYG_TYPE_URL);
+	net_reg_random_protocol(net_SecurityURLLoad, SECURITY_PROTOCOL);
+	net_reg_random_protocol(net_SeclibURLLoad, INTERNAL_SECLIB_PROTOCOL);
+	net_reg_random_protocol(net_HTMLPanelLoad, HTML_PANEL_HANDLER_PROTOCOL);
+	net_reg_random_protocol(net_HTMLDialogLoad, HTML_DIALOG_HANDLER_PROTOCOL);
+	net_reg_random_protocol(net_WysiwygLoad, WYSIWYG_PROTOCOL);
 }
 
 #ifdef XP_UNIX

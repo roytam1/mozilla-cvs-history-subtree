@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -677,8 +677,7 @@ NET_WritePostData(MWContext  *context,
 
 		int type = NET_URL_Type (URL_s->address);
 		XP_Bool quote_lines_p = (type == MAILTO_TYPE_URL ||
-								 type == NEWS_TYPE_URL ||
-								 type == INTERNAL_NEWS_TYPE_URL);
+								 type == NEWS_TYPE_URL);
 
         /* do file based operations
          */
@@ -3136,6 +3135,17 @@ NET_URL_Type (CONST char *URL)
     return(0);
 }
 
+PUBLIC char *NET_GetURLProtocol(const char *url)
+{
+    char *proto = NET_ParseURL(url, GET_PROTOCOL_PART);
+    if (proto) {
+        char *colon = PL_strchr(proto, ':');
+        if (colon)
+            *colon = '\0';
+    }
+    return proto;
+}
+
 PUBLIC void
 NET_PlusToSpace(char *str)
 {
@@ -3318,7 +3328,7 @@ NET_InitURNProtocol(void)
     urn_proto_impl.interrupt = net_URNProtoStub;
     urn_proto_impl.cleanup = net_URNProtoCleanupStub;
 
-    NET_RegisterProtocolImplementation(&urn_proto_impl, URN_TYPE_URL);
+    NET_RegisterProtocolImplementation(&urn_proto_impl, URN_PROTOCOL);
 }
 
 PRIVATE int32
@@ -3360,7 +3370,7 @@ NET_InitNFSProtocol(void)
     nfs_proto_impl.interrupt = net_NFSProtoStub;
     nfs_proto_impl.cleanup = net_NFSProtoCleanupStub;
 
-    NET_RegisterProtocolImplementation(&nfs_proto_impl, NFS_TYPE_URL);
+    NET_RegisterProtocolImplementation(&nfs_proto_impl, NFS_PROTOCOL);
 }
 
 PRIVATE int32
@@ -3400,7 +3410,7 @@ NET_InitWAISProtocol(void)
     wais_proto_impl.interrupt = net_WAISProtoStub;
     wais_proto_impl.cleanup = net_WAISProtoCleanupStub;
 
-    NET_RegisterProtocolImplementation(&wais_proto_impl, WAIS_TYPE_URL);
+    NET_RegisterProtocolImplementation(&wais_proto_impl, WAIS_PROTOCOL);
 }
 
 #ifdef MOZ_MAIL_NEWS    

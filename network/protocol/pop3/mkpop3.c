@@ -3060,7 +3060,7 @@ NET_InitPop3Protocol(void)
     pop3_proto_impl.interrupt = net_InterruptPop3;
     pop3_proto_impl.cleanup = net_CleanupPop3;
 
-    NET_RegisterProtocolImplementation(&pop3_proto_impl, POP3_TYPE_URL);
+    NET_RegisterProtocolImplementation(&pop3_proto_impl, POP3_PROTOCOL);
 }
 
 #endif /* MOZILLA_CLIENT */

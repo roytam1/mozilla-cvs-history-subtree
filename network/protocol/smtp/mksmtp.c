@@ -1562,7 +1562,7 @@ NET_InitMailtoProtocol(void)
         mailto_proto_impl.interrupt = net_InterruptMailto;
         mailto_proto_impl.cleanup = net_CleanupMailto;
 
-        NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_TYPE_URL);
+        NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_PROTOCOL);
 }
 
 #endif /* defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE) */

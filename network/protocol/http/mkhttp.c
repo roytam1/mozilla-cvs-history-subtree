@@ -457,7 +457,7 @@ net_start_http_connect(ActiveEntry * ce)
 	int def_port;
 
 	def_port = DEF_HTTP_PORT;
-	if(ce->protocol == SECURE_HTTP_TYPE_URL)
+	if(NET_ProtocolEquals(ce->protocol, SECURE_HTTP_PROTOCOL))
 	  {
 
 		if(CD_PROXY_SERVER)
@@ -614,7 +614,7 @@ net_finish_http_connect(ActiveEntry * ce)
     int def_port;
 
     def_port = DEF_HTTP_PORT;
-    if(ce->protocol == SECURE_HTTP_TYPE_URL)
+    if(NET_ProtocolEquals(ce->protocol, SECURE_HTTP_PROTOCOL))
       {
         def_port = DEF_HTTPS_PORT;
       }
@@ -3876,8 +3876,8 @@ NET_InitHTTPProtocol(void)
 	http_proto_impl.interrupt = net_InterruptHTTP;
 	http_proto_impl.cleanup = net_CleanupHTTP;
 
-	NET_RegisterProtocolImplementation(&http_proto_impl, HTTP_TYPE_URL);
-	NET_RegisterProtocolImplementation(&http_proto_impl, SECURE_HTTP_TYPE_URL);
+	NET_RegisterProtocolImplementation(&http_proto_impl, HTTP_PROTOCOL);
+	NET_RegisterProtocolImplementation(&http_proto_impl, SECURE_HTTP_PROTOCOL);
 
 }
 

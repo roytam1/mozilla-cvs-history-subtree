@@ -748,6 +748,6 @@ NET_InitMochaProtocol(void)
         mocha_proto_impl.interrupt = net_InterruptMocha;
         mocha_proto_impl.cleanup = net_CleanupMocha;
 
-        NET_RegisterProtocolImplementation(&mocha_proto_impl, MOCHA_TYPE_URL);
+        NET_RegisterProtocolImplementation(&mocha_proto_impl, MOCHA_PROTOCOL);
 }
 

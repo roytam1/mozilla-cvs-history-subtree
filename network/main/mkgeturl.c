@@ -82,20 +82,18 @@
 /* nglayout should render the prefered image load hack obsolete */
 #ifndef MODULAR_NETLIB
 #include "libimg.h"             /* Image Lib public API. */ 
-#include "il_strm.h"             /* Image Lib public API. */
 #endif
+#include "il_strm.h"             /* Image Lib public API. */
 
 #include "libi18n.h"
 
 #include "np.h"
 #include "prefapi.h"
-#ifdef NSPR20
 #ifdef XP_MAC
 #include "prpriv.h"             /* for NewNamedMonitor */
 #else
 #include "private/prpriv.h"
 #endif
-#endif /* NSPR20 */
 
 #include "sslerr.h"
 #include "merrors.h"
@@ -259,7 +257,7 @@ PRIVATE void NET_InitSecurityProtocol(void);
 PRIVATE NET_TimeBombActive = FALSE;
 
 typedef struct _WaitingURLStruct {
-	int                 type;
+    const char         *proto;
 	URL_Struct         *URL_s;
 	FO_Present_Types    format_out;
     MWContext          *window_id;
@@ -271,12 +269,6 @@ typedef struct _WaitingURLStruct {
  * a proxy environment variable
  * was found or they are zero if not.
  */
-PRIVATE char * MKftp_proxy=0;
-PRIVATE char * MKgopher_proxy=0;
-PRIVATE char * MKhttp_proxy=0;
-PRIVATE char * MKhttps_proxy=0;
-PRIVATE char * MKwais_proxy=0;
-PRIVATE char * MKnews_proxy=0;
 PRIVATE char * MKno_proxy=0;
 PRIVATE char * MKproxy_ac_url=0;
 PRIVATE NET_ProxyStyle MKproxy_style = PROXY_STYLE_UNSET;
@@ -305,6 +297,9 @@ MODULE_PRIVATE int NET_TotalNumberOfOpenConnections=0;
 MODULE_PRIVATE int NET_MaxNumberOfOpenConnections=100;
 MODULE_PRIVATE int NET_MaxNumberOfOpenConnectionsPerContext=4;
 MODULE_PRIVATE int NET_TotalNumberOfProcessingURLs=0;
+MODULE_PRIVATE PLHashTable *NET_ProtocolLookupTable = NULL;
+MODULE_PRIVATE PLHashTable *NET_ProxyLookupTable = NULL;
+
 PRIVATE XP_List  * net_waiting_for_actives_url_list=0;
 PRIVATE XP_List  * net_waiting_for_connection_url_list=0;
 
@@ -378,84 +373,90 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.ftp") || 
 		!PL_strcmp(prefChanged, "network.proxy.ftp_port")) {
 		PREF_CopyCharPref("network.proxy.ftp",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, FTP_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.ftp_port",&iPort);
 			sprintf(text,"%s:%d", proxy, iPort);
-		    StrAllocCopy(MKftp_proxy, text);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            FTP_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKftp_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.gopher") || 
 		!PL_strcmp(prefChanged, "network.proxy.gopher_port")) {
 		PREF_CopyCharPref("network.proxy.gopher",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, GOPHER_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.gopher_port",&iPort);
-			sprintf(text,"%s:%d", proxy, iPort);  
-		    StrAllocCopy(MKgopher_proxy, text);
+			sprintf(text,"%s:%d", proxy, iPort);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            GOPHER_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKgopher_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.http") || 
 		!PL_strcmp(prefChanged, "network.proxy.http_port")) {
 		PREF_CopyCharPref("network.proxy.http",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, HTTP_PROTOCOL);
+        PL_HashTableRemove(NET_ProxyLookupTable, URN_PROTOCOL);
+        PL_HashTableRemove(NET_ProxyLookupTable, NFS_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.http_port",&iPort);
 			sprintf(text,"%s:%d", proxy, iPort);  
-		    StrAllocCopy(MKhttp_proxy, text);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            HTTP_PROTOCOL, PL_strdup(text));
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            URN_PROTOCOL, PL_strdup(text));
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            NFS_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKhttp_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.ssl") || 
 		!PL_strcmp(prefChanged, "network.proxy.ssl_port")) {
 		PREF_CopyCharPref("network.proxy.ssl",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, SECURE_HTTP_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.ssl_port",&iPort);
-			sprintf(text,"%s:%d", proxy, iPort);  
-		    StrAllocCopy(MKhttps_proxy, text);
+			sprintf(text,"%s:%d", proxy, iPort);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            SECURE_HTTP_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKhttps_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.news") || 
 		!PL_strcmp(prefChanged, "network.proxy.news_port")) {
 		PREF_CopyCharPref("network.proxy.news",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, NEWS_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.news_port",&iPort);
-			sprintf(text,"%s:%d", proxy, iPort);  
-		    StrAllocCopy(MKnews_proxy, text);
+			sprintf(text,"%s:%d", proxy, iPort);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            NEWS_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKnews_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
 	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.wais") || 
 		!PL_strcmp(prefChanged, "network.proxy.wais_port")) {
 		PREF_CopyCharPref("network.proxy.wais",&proxy);
+        PL_HashTableRemove(NET_ProxyLookupTable, WAIS_PROTOCOL);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.wais_port",&iPort);
 			sprintf(text,"%s:%d", proxy, iPort);  
-		    StrAllocCopy(MKwais_proxy, text);
+            PL_HashTableAdd(NET_ProxyLookupTable, 
+                            WAIS_PROTOCOL, PL_strdup(text));
 			iPort=0;
 		}
-		else 
-			FREE_AND_CLEAR(MKwais_proxy);
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
@@ -545,12 +546,6 @@ NET_SelectProxyStyle(NET_ProxyStyle style)
 
 	/* If we're not in manual (proxies) clear the un-needed internal info. */
 	if (MKproxy_style != PROXY_STYLE_MANUAL) {
-		FREE_AND_CLEAR(MKftp_proxy);
-		FREE_AND_CLEAR(MKgopher_proxy);
-		FREE_AND_CLEAR(MKhttp_proxy);
-		FREE_AND_CLEAR(MKhttps_proxy);
-		FREE_AND_CLEAR(MKwais_proxy);
-		FREE_AND_CLEAR(MKnews_proxy);
 		FREE_AND_CLEAR(MKno_proxy);
 
 		NET_SetSocksHost(NULL);
@@ -654,14 +649,32 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 {
     int status;
 
-#if defined(NSPR20) && defined(DEBUG)
-        if (NETLIB==NULL)
-           NETLIB = PR_NewLogModule("NETLIB");
+#ifdef DEBUG
+    if (NETLIB==NULL)
+        NETLIB = PR_NewLogModule("NETLIB");
 #endif
 
 	TRACEMSG(("Initializing Network library"));
 
 	NET_StartupTime = time(NULL);
+
+    /* init protocol lookup table
+     */
+
+    NET_ProtocolLookupTable = PL_NewHashTable(32, 
+                                              PL_HashString, 
+                                              PL_CompareStrings,
+                                              PL_CompareValues,
+                                              NULL, NULL);
+
+    /* init proxy lookup table
+     */
+
+    NET_ProxyLookupTable = PL_NewHashTable(8, 
+                                           PL_HashString, 
+                                           PL_CompareStrings,
+                                           PL_CompareValues,
+                                           NULL, NULL);
 
 	/* seed the random generator
 	 */
@@ -1050,13 +1063,13 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
 }
 
 PRIVATE XP_Bool
-net_does_url_require_socket_limit(int urltype)
+net_does_url_require_socket_limit(const char *proto)
 {
-	if( urltype == HTTP_TYPE_URL
-	|| urltype == SECURE_HTTP_TYPE_URL
-	|| urltype == FTP_TYPE_URL
-	|| urltype == NEWS_TYPE_URL
-	|| urltype == GOPHER_TYPE_URL)
+	if( NET_ProtocolEquals(proto, HTTP_PROTOCOL)
+	|| NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL)
+	|| NET_ProtocolEquals(proto, FTP_PROTOCOL)
+	|| NET_ProtocolEquals(proto, NEWS_PROTOCOL)
+	|| NET_ProtocolEquals(proto, GOPHER_PROTOCOL))
 		return TRUE;
 
 	return(FALSE);
@@ -1064,12 +1077,12 @@ net_does_url_require_socket_limit(int urltype)
 
 
 PRIVATE XP_Bool
-net_is_one_url_allowed_to_run(MWContext *context, int url_type)
+net_is_one_url_allowed_to_run(MWContext *context, const char *proto)
 {
     /* put a limit on the total number of open connections
      */
     if(NET_TotalNumberOfOpenConnections < NET_MaxNumberOfOpenConnectionsPerContext
-	|| !net_does_url_require_socket_limit(url_type))
+	|| !net_does_url_require_socket_limit(proto))
       {
 		return(TRUE);
 	  }
@@ -1095,7 +1108,7 @@ net_is_one_url_allowed_to_run(MWContext *context, int url_type)
 	while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
 	  {
 		if(cur_win_id == FE_GetContextID(tmpEntry->window_id)
-				&& net_does_url_require_socket_limit(url_type))
+				&& net_does_url_require_socket_limit(proto))
 			  {
 				real_number_of_connections++;
 		  }
@@ -1115,7 +1128,7 @@ net_is_one_url_allowed_to_run(MWContext *context, int url_type)
 }
  
 static int
-net_push_url_on_wait_queue(int                 url_type,
+net_push_url_on_wait_queue(const char         *proto,
 						   URL_Struct         *URL_s,
 						   FO_Present_Types    format_out,
 						   MWContext          *context,
@@ -1136,7 +1149,7 @@ net_push_url_on_wait_queue(int                 url_type,
 		return(MK_OUT_OF_MEMORY);
 	  }
 
-	wus->type         = url_type;
+	wus->proto        = proto;
 	wus->URL_s        = URL_s;
 	wus->format_out   = format_out;
 	wus->window_id    = context;
@@ -1283,7 +1296,7 @@ net_release_prefetch_urls_for_processing(void)
  * FE_AllConnectionsComplete on every loop cycle.
 */
 PRIVATE void
-net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
+net_CheckForWaitingURL(MWContext * window_id, Bool was_background)
 {
 #ifdef NSPR
 	PR_ASSERT(LIBNET_IS_LOCKED());
@@ -1677,7 +1690,7 @@ NET_ShutdownNetLib(void)
 #ifdef MOZILLA_CLIENT
 	NET_SaveCookies("");
 #if defined(SingleSignon)
-        SI_SaveSignonData("");
+    SI_SaveSignonData("");
 #endif
 	GH_SaveGlobalHistory();
 #endif /* MOZILLA_CLIENT */
@@ -1700,12 +1713,20 @@ NET_ShutdownNetLib(void)
 	NET_CleanupFileFormat();
 #endif
 
+    /* free protocol lookup table
+     */
+    PL_HashTableDestroy(NET_ProtocolLookupTable);
+
+    /* free proxy lookup table
+     */
+    PL_HashTableDestroy(NET_ProxyLookupTable);
+
 /* #ifdef XP_WIN */
 #ifdef JAVA
     if (libnet_asyncIO) LIBNET_UNLOCK();
 #else
     LIBNET_UNLOCK();
-#endif
+#endif    
 }
 
 static PRBool warn_on_mailto_post = PR_TRUE;
@@ -1725,70 +1746,52 @@ NET_WarnOnMailtoPost(PRBool warn)
  * URL types should really be dynamic so that we dont have
  * to define types in net.h
  */
-#define MAX_NUMBER_OF_PROTOCOL_IMPLS LAST_URL_TYPE
-
-typedef struct {
-	NET_ProtoImpl *impl;
-	int            url_type;
-} net_ProtoImplAndTypeAssoc;
-
-PRIVATE net_ProtoImplAndTypeAssoc net_proto_impls[MAX_NUMBER_OF_PROTOCOL_IMPLS];
-PRIVATE net_number_of_proto_impls = 0;
 
 /* registers a protocol impelementation for a particular url_type
  * see NET_URL_Type() for types
  */
-void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, int for_url_type)
+void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, 
+                                        const char *for_proto)
 {
 
-	if(!impl || for_url_type < 0 || for_url_type > LAST_URL_TYPE)
+	if(!impl || !for_proto)
 	{
 		PR_ASSERT(0);
 		return;
 	}
 
-	net_proto_impls[net_number_of_proto_impls].impl = impl;
-	net_proto_impls[net_number_of_proto_impls].url_type = for_url_type;
-	
-	net_number_of_proto_impls++;
+    PL_HashTableAdd(NET_ProtocolLookupTable, for_proto, impl);
 }
 
 /* get a handle to a protocol implemenation
  */
 NET_ProtoImpl *
-net_get_protocol_impl(int for_url_type)
+net_get_protocol_impl(const char *for_proto)
 {
-	int count=0;
+    NET_ProtoImpl *res = NULL;
+    if (!for_proto) {
+        PR_ASSERT(0);
+        return NULL;
+    }
 
-	/* if we ever get around to doing dynamic protocol loading
-	 * this would be a good place to plug it in.
-	 * just load a DLL with the implementation and
-	 * return the handle.
-	 * The integer URL_TYPE would need to be replaced with
-	 * strings or some other identifier so that it can all be
-	 * handled dynamically
-	 */
+    res = (NET_ProtoImpl *) PL_HashTableLookup(NET_ProtocolLookupTable,
+                                               for_proto);
 
-	for(; count < net_number_of_proto_impls; count++)
-	{
-		if(net_proto_impls[count].url_type == for_url_type)
-			return net_proto_impls[count].impl;
-	}
+	PR_ASSERT(res);  /* should always find one */
+	return res; 
+}
 
-	PR_ASSERT(0);  /* should always find one */
-	return NULL; 
+PRIntn PR_CALLBACK net_cleanup_proto_enum(PLHashEntry *he, PRIntn i, void *arg)
+{
+    ((NET_ProtoImpl *)he->value)->cleanup();
+    return HT_ENUMERATE_NEXT;
 }
 
 void
 net_cleanup_reg_protocol_impls(void)
 {
-	int count=0;
-
-	for(; count < net_number_of_proto_impls; count++)
-	{
-        (*net_proto_impls[count].impl->cleanup)();
-	}
-
+    PL_HashTableEnumerateEntries(NET_ProtocolLookupTable, 
+                                 net_cleanup_proto_enum, NULL);
 }
 
 /* register and begin a transfer.
@@ -1808,8 +1811,8 @@ NET_GetURL (URL_Struct *URL_s,
 {
     int          status=MK_MALFORMED_URL_ERROR;
     int          pacf_status=TRUE;
-    int          type;
-    int          cache_method=0;
+    char        *proto=NULL;
+    char        *cache_method=NULL;
     ActiveEntry *this_entry=0;  /* a new entry */
 	char        *new_address;
 	int processcallbacks = 0;
@@ -1911,16 +1914,16 @@ NET_GetURL (URL_Struct *URL_s,
 		 * continuing. See mkautocf.c for more info. */
 		(MKglobal_config_url || MKproxy_ac_url)
 		&& (CLEAR_CACHE_BIT(output_format) == FO_PRESENT)
-		&& (!(type = NET_URL_Type(URL_s->address))
-		 || type == HTTP_TYPE_URL
-		 || type == SECURE_HTTP_TYPE_URL
-		 || type == GOPHER_TYPE_URL
-		 || type == FTP_TYPE_URL
-		 || type == WAIS_TYPE_URL
-		 || type == URN_TYPE_URL
-		 || type == NFS_TYPE_URL
-		 || type == POP3_TYPE_URL
-		 || (type == NEWS_TYPE_URL && !PL_strncasecmp(URL_s->address, "snews:", 6)))
+		&& (!(proto = NET_GetURLProtocol(URL_s->address))
+		 || NET_ProtocolEquals(proto, HTTP_PROTOCOL)
+		 || NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL)
+		 || NET_ProtocolEquals(proto, GOPHER_PROTOCOL)
+		 || NET_ProtocolEquals(proto, FTP_PROTOCOL)
+		 || NET_ProtocolEquals(proto, WAIS_PROTOCOL)
+		 || NET_ProtocolEquals(proto, URN_PROTOCOL)
+		 || NET_ProtocolEquals(proto, NFS_PROTOCOL)
+		 || NET_ProtocolEquals(proto, POP3_PROTOCOL)
+		 || (NET_ProtocolEquals(proto, NEWS_PROTOCOL) && !PL_strncasecmp(URL_s->address, "snews:", 6)))
 		 ) {
 		int status=-1;
 		/* Figure out which auto config we're dealing (global or pac file
@@ -1969,10 +1972,11 @@ NET_GetURL (URL_Struct *URL_s,
 
 	/* get the protocol type
 	 */
-    type = NET_URL_Type(URL_s->address);
+    PR_FREEIF(proto);
+    proto = NET_GetURLProtocol(URL_s->address);
 
 	if (URL_s->method == URL_HEAD_METHOD &&
-		type != HTTP_TYPE_URL && type != SECURE_HTTP_TYPE_URL && type != FILE_TYPE_URL) {
+		!NET_ProtocolEquals(proto, HTTP_PROTOCOL) && !NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL) && !NET_ProtocolEquals(proto, FILE_PROTOCOL)) {
 	  /* We can only do HEAD on http connections. */
 	  net_CallExitRoutine(exit_routine,
 						  URL_s,
@@ -1981,7 +1985,7 @@ NET_GetURL (URL_Struct *URL_s,
 						  window_id);
 	  /* increment since it will get decremented */
 	  NET_TotalNumberOfProcessingURLs++;
-	  net_CheckForWaitingURL(window_id, 0, load_background);
+	  net_CheckForWaitingURL(window_id, load_background);
 
 	  LIBNET_UNLOCK_AND_RETURN(MK_MALFORMED_URL_ERROR);
 	}
@@ -1996,7 +2000,7 @@ NET_GetURL (URL_Struct *URL_s,
 	 */
 	if(URL_s->priority == Prefetch_priority)
 	{
-		LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(type,
+		LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(proto,
 															URL_s,
 															output_format,
 															window_id,
@@ -2008,7 +2012,7 @@ NET_GetURL (URL_Struct *URL_s,
     if((NET_TotalNumberOfProcessingURLs >= MAX_NUMBER_OF_PROCESSING_URLS) && 
        ((output_format & FO_ONLY_FROM_CACHE) == 0))
 	  {
-	LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(type,
+        LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(proto,
 															URL_s,
 															output_format,
 															window_id,
@@ -2020,7 +2024,7 @@ NET_GetURL (URL_Struct *URL_s,
 	 */
 	NET_TotalNumberOfProcessingURLs++;
 
-	if(type == VIEW_SOURCE_TYPE_URL)
+	if(NET_ProtocolEquals(proto, VIEW_SOURCE_URL_PREFIX))
 	  {
 		/* this is a view-source: URL
 		 * strip off the front stuff 
@@ -2031,7 +2035,8 @@ NET_GetURL (URL_Struct *URL_s,
 		FREE(URL_s->address);
 		URL_s->address = new_address;
 
-		type = NET_URL_Type(URL_s->address);
+        PR_FREEIF(proto);
+		proto = NET_GetURLProtocol(URL_s->address);
 
 		/* remap the format out for the fo_present type
 		 */
@@ -2039,7 +2044,7 @@ NET_GetURL (URL_Struct *URL_s,
 			output_format = FO_VIEW_SOURCE;
 	  }
 
-	if(type == MARIMBA_TYPE_URL)
+	if(NET_ProtocolEquals(proto, MARIMBA_PROTOCOL))
 	  {
 		/* If this a castanet URL, and Netcaster is not installed, try http://
 		 * Otherwise, we let the castanet protocol handler do its thing.
@@ -2059,11 +2064,12 @@ NET_GetURL (URL_Struct *URL_s,
 			FREE(URL_s->address);
 			URL_s->address = new_address;
 
-			type = NET_URL_Type(URL_s->address);
+            PR_FREEIF(proto);
+			proto = NET_GetURLProtocol(URL_s->address);
 		}
 	  }
 
-	if(type == NETHELP_TYPE_URL)
+	if(NET_ProtocolEquals(proto, NETHELP_URL_PREFIX))
 	  {
 		/* this is a nethelp: URL
 		 * separate into its component parts, the mapping file in URL_s->address,
@@ -2074,7 +2080,8 @@ NET_GetURL (URL_Struct *URL_s,
 			LIBNET_UNLOCK_AND_RETURN(MK_OUT_OF_MEMORY);
 		}
 		
-		type = NET_URL_Type(URL_s->address);
+        PR_FREEIF(proto);
+		proto = NET_GetURLProtocol(URL_s->address);
 
 		output_format = FO_LOAD_HTML_HELP_MAP_FILE;
 	  }
@@ -2089,7 +2096,7 @@ NET_GetURL (URL_Struct *URL_s,
 		/* don't call the exit routine since the
 		 * External protocol module will call it
 		 */
-	net_CheckForWaitingURL(window_id, 0, load_background);
+	net_CheckForWaitingURL(window_id, load_background);
  
 	LIBNET_UNLOCK_AND_RETURN(-1); /* all done */
       }
@@ -2100,17 +2107,17 @@ NET_GetURL (URL_Struct *URL_s,
 		 *
 		 * limit URL's to FTP and anything in our domains
 		 */
-		if(type != FTP_TYPE_URL
-			&& type != ABOUT_TYPE_URL
-			 && type != FILE_TYPE_URL
-			  && type != MAILBOX_TYPE_URL
-			   && type != IMAP_TYPE_URL
-			   && type != POP3_TYPE_URL
-			    && type != MOCHA_TYPE_URL
-			     && type != DATA_TYPE_URL
-			  && type != HTML_DIALOG_HANDLER_TYPE_URL
-				   && type != HTML_PANEL_HANDLER_TYPE_URL
-					&& type != INTERNAL_SECLIB_TYPE_URL
+		if(!NET_ProtocolEquals(proto, FTP_PROTOCOL)
+			&& !NET_ProtocolEquals(proto, ABOUT_PROTOCOL)
+			 && !NET_ProtocolEquals(proto, FILE_PROTOCOL)
+			  && !NET_ProtocolEquals(proto, MAILBOX_PROTOCOL)
+			   && !NET_ProtocolEquals(proto, IMAP_PROTOCOL)
+			   && !NET_ProtocolEquals(proto, POP3_PROTOCOL)
+			    && !NET_ProtocolEquals(proto, MOCHA_PROTOCOL)
+			     && !NET_ProtocolEquals(proto, DATA_PROTOCOL)
+			  && !NET_ProtocolEquals(proto, HTML_DIALOG_HANDLER_PROTOCOL)
+				   && !NET_ProtocolEquals(proto, HTML_PANEL_HANDLER_PROTOCOL)
+					&& !NET_ProtocolEquals(proto, INTERNAL_SECLIB_PROTOCOL)
 
 			  && !PL_strcasestr(URL_s->address, "mcom.com")
 			       &&  !PL_strcasestr(URL_s->address, "netscape.com"))
@@ -2129,7 +2136,7 @@ NET_GetURL (URL_Struct *URL_s,
 							output_format,
 			    window_id);
 
-			net_CheckForWaitingURL(window_id, 0, load_background);
+			net_CheckForWaitingURL(window_id, load_background);
 
 		LIBNET_UNLOCK_AND_RETURN(MK_TIMEBOMB_URL_PROHIBIT);
 		  }
@@ -2160,15 +2167,15 @@ NET_GetURL (URL_Struct *URL_s,
 		 * And, of course, anything not a MAILTO link will fall
 		 * into the if as well.
 		 */
-		if(type != MAILTO_TYPE_URL
+		if(!NET_ProtocolEquals(proto, MAILTO_PROTOCOL)
 			|| !URL_s->post_headers
 			 || !PL_strncmp("Content-type", URL_s->post_headers, 12))
 		  {
 		    if(h && h->security_on)
 		      {
 				/* if this is not a secure transaction */
-			    if(type != SECURE_HTTP_TYPE_URL
-					&& !(type == NEWS_TYPE_URL &&
+			    if(!NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL)
+					&& !(NET_ProtocolEquals(proto, NEWS_PROTOCOL) &&
 						 toupper(*URL_s->address) == 'S') )
 			      {
 				    if(URL_s->method == URL_POST_METHOD)
@@ -2177,9 +2184,9 @@ NET_GetURL (URL_Struct *URL_s,
 										   SD_INSECURE_POST_FROM_SECURE_DOC);
 				      }
 				    else if(!URL_s->redirecting_url
-							 && type != MAILTO_TYPE_URL
-								&& type != ABOUT_TYPE_URL
-							       && type != MOCHA_TYPE_URL)
+							 && !NET_ProtocolEquals(proto, MAILTO_PROTOCOL)
+								&& !NET_ProtocolEquals(proto, ABOUT_PROTOCOL)
+							       && !NET_ProtocolEquals(proto, MOCHA_PROTOCOL))
 				      {
 					    /* don't put up in case of redirect or mocha
 					     */
@@ -2194,13 +2201,12 @@ NET_GetURL (URL_Struct *URL_s,
 				 * except news and mail posts
 				 */
 			    if(URL_s->method == URL_POST_METHOD
-					&& type != SECURE_HTTP_TYPE_URL
-					 && type != INTERNAL_NEWS_TYPE_URL
-					 && type != NEWS_TYPE_URL
-					  && type != HTML_DIALOG_HANDLER_TYPE_URL
-					   && type != HTML_PANEL_HANDLER_TYPE_URL
-					   && type != INTERNAL_SECLIB_TYPE_URL
-					    && type != MAILTO_TYPE_URL)
+					&& !NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL)
+					 && !NET_ProtocolEquals(proto, NEWS_PROTOCOL)
+					  && !NET_ProtocolEquals(proto, HTML_DIALOG_HANDLER_PROTOCOL)
+					   && !NET_ProtocolEquals(proto, HTML_PANEL_HANDLER_PROTOCOL)
+					   && !NET_ProtocolEquals(proto, INTERNAL_SECLIB_PROTOCOL)
+					    && !NET_ProtocolEquals(proto, MAILTO_PROTOCOL))
 		  {
 				    continue_loading_url = (Bool)SECNAV_SecurityDialog(window_id,
 					   SD_INSECURE_POST_FROM_INSECURE_DOC);
@@ -2216,7 +2222,7 @@ NET_GetURL (URL_Struct *URL_s,
 									MK_INTERRUPTED,
 									output_format,
 									window_id);
-		net_CheckForWaitingURL(window_id, 0, load_background);
+		net_CheckForWaitingURL(window_id, load_background);
 
 		LIBNET_UNLOCK_AND_RETURN(MK_INTERRUPTED);
 		      }
@@ -2228,12 +2234,13 @@ NET_GetURL (URL_Struct *URL_s,
 	 * if the string is not a valid URL we are just going
      * to punt, so we may as well try it as http
 	 */
-	if(type==0)
+	if(proto==NULL)
 	{
 		char *munged;
 
 #define INT_SEARCH_URL "http://cgi.netscape.com/cgi-bin/url_search.cgi?search="
-#define INT_SEARCH_URL_TYPE HTTP_TYPE_URL
+#define INT_SEARCH_URL_TYPE HTTP_URL_TYPE
+#define INT_SEARCH_PROTOCOL HTTP_PROTOCOL
 
 		if(!(munged = (char*) PR_Malloc(PL_strlen(URL_s->address)+20)))
 		{
@@ -2289,7 +2296,7 @@ NET_GetURL (URL_Struct *URL_s,
 					FREE(escaped);
 					PR_Free(pUrl);
 				}
-			    type = INT_SEARCH_URL_TYPE;
+			    StrAllocCopy(proto, INT_SEARCH_PROTOCOL);
 			  }
 		  }
 		else
@@ -2297,28 +2304,28 @@ NET_GetURL (URL_Struct *URL_s,
 			if(*URL_s->address == '/')
 			  {
 			    PL_strcpy(munged, "file:");
-			    type = FILE_TYPE_URL;
+			    StrAllocCopy(proto, FILE_PROTOCOL);
 		      }
 		    else if(!PL_strncasecmp(URL_s->address, "ftp", 3))
 		      {
 			    PL_strcpy(munged, "ftp://");
-			    type = FTP_TYPE_URL;
+			    StrAllocCopy(proto, FTP_PROTOCOL);
 		      }
 		    else if(!PL_strncasecmp(URL_s->address, "gopher", 6))
 		      {
 			    PL_strcpy(munged, "gopher://");
-			    type = GOPHER_TYPE_URL;
+			    StrAllocCopy(proto, GOPHER_PROTOCOL);
 		      }
 		    else if(!PL_strncasecmp(URL_s->address, "news", 4)
 				    || !PL_strncasecmp(URL_s->address, "nntp", 4))
 		      {
 			    PL_strcpy(munged, "news://");
-			    type = NEWS_TYPE_URL;
+			    StrAllocCopy(proto, NEWS_PROTOCOL);
 		      }
 			else
 		      {
 			    PL_strcpy(munged, "http://");
-			    type = HTTP_TYPE_URL;
+			    StrAllocCopy(proto, HTTP_PROTOCOL);
 		      }
     
 		    PL_strcat(munged, URL_s->address);
@@ -2340,18 +2347,18 @@ NET_GetURL (URL_Struct *URL_s,
 			/* don't call the exit routine since the
 			 * External protocol module will call it
 			 */
-		net_CheckForWaitingURL(window_id, 0, load_background);
+		net_CheckForWaitingURL(window_id, load_background);
  
 		LIBNET_UNLOCK_AND_RETURN(-1); /* all done */
 	      }
 #endif /* MOZILLA_CLIENT */
 	}
 
-    if(type == HTTP_TYPE_URL || type == FILE_TYPE_URL ||
-		type == SECURE_HTTP_TYPE_URL || type == GOPHER_TYPE_URL
+    if(NET_ProtocolEquals(proto, HTTP_PROTOCOL) || NET_ProtocolEquals(proto, FILE_PROTOCOL) ||
+		NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL) || NET_ProtocolEquals(proto, GOPHER_PROTOCOL)
 #ifdef JAVA
 	/* Castanet URLs don't work when there's no Java */
-		|| type == MARIMBA_TYPE_URL
+		|| NET_ProtocolEquals(proto, MARIMBA_PROTOCOL)
 #endif
 		)
 	add_slash_to_URL(URL_s);
@@ -2367,7 +2374,7 @@ NET_GetURL (URL_Struct *URL_s,
 		CLEAR_CACHE_BIT(output_format) == FO_VIEW_SOURCE))
 	  {
 		StrAllocCopy(URL_s->address, URL_s->wysiwyg_url);
-		type = WYSIWYG_TYPE_URL;
+        StrAllocCopy(proto, WYSIWYG_PROTOCOL);
 	  }
 
 	/* the FE's were screwing up the use of force_reload
@@ -2383,7 +2390,10 @@ NET_GetURL (URL_Struct *URL_s,
 
     /* check for the url in the cache
      */
+    cache_method = NULL;
+/* XXX WHS
     cache_method = NET_FindURLInCache(URL_s, window_id);
+*/
 
 	if (!cache_method)
 	  {
@@ -2398,7 +2408,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  }
 
 		/* if wysiwyg, there must be a cache entry or we retry the real url */
-		if(type == WYSIWYG_TYPE_URL)
+		if(NET_ProtocolEquals(proto, WYSIWYG_PROTOCOL))
 		  {
 			const char *real_url = LM_SkipWysiwygURLPrefix(URL_s->address);
 
@@ -2436,7 +2446,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  {
 	    /* the cached file is valid so use it unilaterally
 	     */
-	    type = cache_method;
+	    StrAllocCopy(proto, cache_method);
 		  }
 		else if(URL_s->real_content_length > URL_s->content_length)
 		  {
@@ -2470,8 +2480,8 @@ NET_GetURL (URL_Struct *URL_s,
 	    /* strip the cache file and
 	     * memory pointer
 	     */
-	    if (type == WYSIWYG_TYPE_URL)
-		type = cache_method;
+	    if (NET_ProtocolEquals(proto, WYSIWYG_PROTOCOL))
+		StrAllocCopy(proto, cache_method);
 	    else
 	      {
 		FREE_AND_CLEAR(URL_s->cache_file);
@@ -2504,17 +2514,17 @@ NET_GetURL (URL_Struct *URL_s,
 			  {
 			/* the cached file is valid so use it unilaterally
 			 */
-		type = cache_method;
+		StrAllocCopy(proto, cache_method);
 			  }
 		  }
 		else if((NET_CacheUseMethod == CU_NEVER_CHECK || URL_s->history_num)
 				  && !URL_s->expires)
 		  {
-	    type = cache_method;
+	    StrAllocCopy(proto, cache_method);
 		  }
 		else if(NET_CacheUseMethod == CU_CHECK_ALL_THE_TIME
 			    && CLEAR_CACHE_BIT(output_format) == FO_PRESENT
-				  && (type == HTTP_TYPE_URL || type == SECURE_HTTP_TYPE_URL)
+				  && (NET_ProtocolEquals(proto, HTTP_PROTOCOL) || NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL))
 					  && !URL_s->expires)
 		  {
 			/* cache testing stuff */
@@ -2544,7 +2554,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  }
 		else if(!URL_s->last_modified
 				&& CLEAR_CACHE_BIT(output_format) == FO_PRESENT
-				&& (type == HTTP_TYPE_URL || type == SECURE_HTTP_TYPE_URL) 
+				&& (NET_ProtocolEquals(proto, HTTP_PROTOCOL) || NET_ProtocolEquals(proto, SECURE_HTTP_PROTOCOL)) 
 #ifdef MOZ_OFFLINE            
 	    && !NET_IsOffline() 
 #endif /* MOZ_OFFLINE */
@@ -2574,7 +2584,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  {
 		    /* the cached file is valid so use it unilaterally
 		     */
-	    type = cache_method;
+	    StrAllocCopy(proto, cache_method);
 		  }
       }
 #endif /* MOZILLA_CLIENT */
@@ -2594,7 +2604,7 @@ NET_GetURL (URL_Struct *URL_s,
 								MK_OBJECT_NOT_IN_CACHE,
 								output_format,
 								window_id);
-			net_CheckForWaitingURL(window_id, type, load_background);
+			net_CheckForWaitingURL(window_id, load_background);
 
 			LIBNET_UNLOCK_AND_RETURN(MK_OBJECT_NOT_IN_CACHE);
 		  }
@@ -2612,10 +2622,10 @@ NET_GetURL (URL_Struct *URL_s,
 
     /* put a limit on the total number of open connections
      */
-	if(!net_is_one_url_allowed_to_run(window_id, type))
+	if(!net_is_one_url_allowed_to_run(window_id, proto))
 	  {
 		NET_TotalNumberOfProcessingURLs--; /* waiting not processing */
-		LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(type,
+		LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(proto,
 															URL_s,
 															output_format,
 															window_id,
@@ -2642,7 +2652,7 @@ NET_GetURL (URL_Struct *URL_s,
     this_entry->con_sock     = NULL;
     this_entry->exit_routine = exit_routine;
     this_entry->window_id    = window_id;
-	this_entry->protocol     = type;
+	this_entry->protocol     = proto;
 
     /* set the format out for the entry
      */
@@ -2677,8 +2687,7 @@ NET_GetURL (URL_Struct *URL_s,
 									output_format,
 									window_id);
 				/* will get decremented */
-				net_CheckForWaitingURL(window_id, this_entry->protocol, 
-									   load_background);
+				net_CheckForWaitingURL(window_id, load_background);
 
 				PR_Free(this_entry);  /* not needed any more */
 
@@ -2712,8 +2721,7 @@ NET_GetURL (URL_Struct *URL_s,
 								MK_INTERRUPTED,
 								output_format,
 								window_id);
-			net_CheckForWaitingURL(window_id, this_entry->protocol,
-								   load_background);
+			net_CheckForWaitingURL(window_id, load_background);
 
 			PR_Free(this_entry);  /* not needed any more */
 
@@ -2729,16 +2737,14 @@ redo_load_switch:   /* come here on file/ftp retry */
 	 * See mkautocf.c for more info. */
 	pacf_status = TRUE;
 	if ((NET_ProxyAcLoaded || NET_GlobalAcLoaded) 
-		&& (this_entry->protocol == HTTP_TYPE_URL
-			|| this_entry->protocol == SECURE_HTTP_TYPE_URL
-			|| this_entry->protocol == GOPHER_TYPE_URL
-			|| this_entry->protocol == FTP_TYPE_URL
-			|| this_entry->protocol == WAIS_TYPE_URL
-			|| this_entry->protocol == URN_TYPE_URL
-			|| this_entry->protocol == NFS_TYPE_URL
-			|| (this_entry->protocol == NEWS_TYPE_URL 
-				&& !PL_strncasecmp(URL_s->address, "snews:", 6)
-				)
+		&& (NET_ProtocolEquals(this_entry->protocol, HTTP_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, SECURE_HTTP_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, GOPHER_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, FTP_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, WAIS_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, URN_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, NFS_PROTOCOL)
+			|| NET_ProtocolEquals(this_entry->protocol, NEWS_PROTOCOL)
 			)
 		&& ((this_entry->proxy_conf =
 		     pacf_find_proxies_for_url(window_id, URL_s)) != NULL)
@@ -2753,17 +2759,19 @@ redo_load_switch:   /* come here on file/ftp retry */
 		TRACEMSG(("PAC returned \"%s\" for \"%s\".", this_entry->proxy_conf, URL_s->address));
 		/* Secure protocols need to be kept in their own protocol
 		 * to make SSL tunneling happen. */
-		if (this_entry->protocol != SECURE_HTTP_TYPE_URL 
-			&& this_entry->protocol != NEWS_TYPE_URL) {
-				this_entry->protocol = HTTP_TYPE_URL;
+		if (!NET_ProtocolEquals(this_entry->protocol, SECURE_HTTP_PROTOCOL) 
+			&& !NET_ProtocolEquals(this_entry->protocol, NEWS_PROTOCOL)) {
+				StrAllocCopy(this_entry->protocol, HTTP_PROTOCOL);
 		}
 
 		/* Everything else except SNEWS gets loaded by HTTP loader,
 		 * including HTTPS. */
-		if (this_entry->protocol != NEWS_TYPE_URL) {
-			this_entry->proto_impl = net_get_protocol_impl(HTTP_TYPE_URL);
+		if (!NET_ProtocolEquals(this_entry->protocol, SECURE_NEWS_PROTOCOL)) {
+			this_entry->proto_impl = 
+              net_get_protocol_impl(HTTP_PROTOCOL);
 		} else {
-			this_entry->proto_impl = net_get_protocol_impl(NEWS_TYPE_URL);
+			this_entry->proto_impl = 
+              net_get_protocol_impl(SECURE_NEWS_PROTOCOL);
 		}
 
 		if(this_entry->proto_impl)
@@ -2776,11 +2784,11 @@ redo_load_switch:   /* come here on file/ftp retry */
       } 
 	else
 	  {
-		  char *proxy_address = NET_FindProxyHostForUrl(type, this_entry->URL_s->address);
+		  char *proxy_address = NET_FindProxyHostForUrl(proto, this_entry->URL_s->address);
 		
   		  if(proxy_address)
 			{
-				this_entry->protocol = HTTP_TYPE_URL;
+				this_entry->protocol = HTTP_PROTOCOL;
 				this_entry->proxy_addr = proxy_address;
 			}
 			
@@ -2814,8 +2822,8 @@ redo_load_switch:   /* come here on file/ftp retry */
      */
     if(status == MK_USE_FTP_INSTEAD)
       {
-		type = FTP_TYPE_URL;
-	    this_entry->protocol = type; /* change protocol designator */
+		StrAllocCopy(proto, FTP_PROTOCOL);
+	    StrAllocCopy(this_entry->protocol, proto); /* change protocol designator */
 		this_entry->status = 0; /* reset */
 		goto redo_load_switch;
       }
@@ -2842,7 +2850,6 @@ redo_load_switch:   /* come here on file/ftp retry */
 				   this_entry->exit_routine);
 
 		net_CheckForWaitingURL(this_entry->window_id,
-							   this_entry->protocol,
 							   this_entry->URL_s->load_background);
 
 		PR_Free(this_entry);
@@ -2859,7 +2866,6 @@ redo_load_switch:   /* come here on file/ftp retry */
 						   this_entry->window_id,
 						   this_entry->exit_routine);
 		net_CheckForWaitingURL(this_entry->window_id, 
-							   this_entry->protocol,
 							   load_background);
 		PR_Free(this_entry);  /* not needed any more */
 		LIBNET_UNLOCK_AND_RETURN(0);
@@ -2870,7 +2876,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 		 */
 		XP_ListRemoveObject(net_EntryList, this_entry);
 		status = net_push_url_on_wait_queue(
-						NET_URL_Type(this_entry->URL_s->address),
+						NET_GetURLProtocol(this_entry->URL_s->address),
 						this_entry->URL_s,
 						this_entry->format_out,
 						this_entry->window_id,
@@ -2910,7 +2916,6 @@ redo_load_switch:   /* come here on file/ftp retry */
 
 		/* Check for WaitingURL decrements TotalNumberofProcessingURLS */
 		net_CheckForWaitingURL(this_entry->window_id, 
-							   this_entry->protocol,
 							   load_background);
 
 		PR_Free(this_entry);
@@ -2933,7 +2938,6 @@ redo_load_switch:   /* come here on file/ftp retry */
 							this_entry->format_out,
 							this_entry->window_id);
 		net_CheckForWaitingURL(this_entry->window_id, 
-							   this_entry->protocol,
 							   load_background);
 		PR_Free(this_entry);  /* not needed any more */
       }
@@ -3196,7 +3200,6 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 								   tmpEntry->exit_routine);
 
 					net_CheckForWaitingURL(tmpEntry->window_id,
-											   tmpEntry->protocol,
 											   tmpEntry->URL_s->load_background);
 
 		  		}
@@ -3211,7 +3214,6 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 				   		tmpEntry->exit_routine);
 
 					net_CheckForWaitingURL(tmpEntry->window_id,
-											   tmpEntry->protocol,
 											   tmpEntry->URL_s->load_background);                  
 				}
 				else if(tmpEntry->status == MK_TOO_MANY_OPEN_FILES)
@@ -3219,7 +3221,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 					/* Queue this URL so it gets tried again
 					 */
 					LIBNET_UNLOCK_AND_RETURN(net_push_url_on_wait_queue(
-						NET_URL_Type(tmpEntry->URL_s->address),
+						NET_GetURLProtocol(tmpEntry->URL_s->address),
 						tmpEntry->URL_s,
 						tmpEntry->format_out,
 						tmpEntry->window_id,
@@ -3274,7 +3276,6 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 			       			tmpEntry->exit_routine);
 
 		    		net_CheckForWaitingURL(tmpEntry->window_id,
-					   						tmpEntry->protocol,
 											tmpEntry->URL_s->load_background);
 				}
 				else
@@ -3305,7 +3306,6 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 											tmpEntry->window_id);
 
 					net_CheckForWaitingURL(tmpEntry->window_id,
-										   tmpEntry->protocol,
 										   load_background);
 
 	#ifdef MILAN
@@ -4320,7 +4320,7 @@ PRIVATE Bool override_proxy (CONST char * URL)
       }
     else
       {                          /* Use default port */
-	char * access = NET_ParseURL(URL, GET_PROTOCOL_PART);
+	char * access = NET_GetURLProtocol(URL);
 	if (access) {
 	    if      (!PL_strcmp(access,"http"))    port = 80;
 	    else if (!PL_strcmp(access,"gopher"))  port = 70;
@@ -4412,40 +4412,52 @@ NET_SetProxyServer(NET_ProxyType type, const char * org_host_port)
 			break;
 
 		case FTP_PROXY:
-			if(host_port)
-			StrAllocCopy(MKftp_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKftp_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, FTP_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, FTP_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 		case GOPHER_PROXY:
-			if(host_port)
-			StrAllocCopy(MKgopher_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKgopher_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, GOPHER_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, GOPHER_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 		case HTTP_PROXY:
-			if(host_port)
-			StrAllocCopy(MKhttp_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKhttp_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, HTTP_PROTOCOL);
+            PL_HashTableRemove(NET_ProxyLookupTable, URN_PROTOCOL);
+            PL_HashTableRemove(NET_ProxyLookupTable, NFS_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, HTTP_PROTOCOL,
+                                PL_strdup(host_port));
+                PL_HashTableAdd(NET_ProxyLookupTable, URN_PROTOCOL,
+                                PL_strdup(host_port));
+                PL_HashTableAdd(NET_ProxyLookupTable, NFS_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 		case HTTPS_PROXY:
-			if(host_port)
-			StrAllocCopy(MKhttps_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKhttps_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, SECURE_HTTP_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, SECURE_HTTP_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 		case NEWS_PROXY:
-			if(host_port)
-			StrAllocCopy(MKnews_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKnews_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, NEWS_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, NEWS_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 		case WAIS_PROXY:
-			if(host_port)
-			StrAllocCopy(MKwais_proxy, host_port);
-			else
-				FREE_AND_CLEAR(MKno_proxy);
+            PL_HashTableRemove(NET_ProxyLookupTable, WAIS_PROTOCOL);
+			if(host_port) {
+                PL_HashTableAdd(NET_ProxyLookupTable, WAIS_PROTOCOL,
+                                PL_strdup(host_port));
+            }
 			break;
 
 		case NO_PROXY:
@@ -4467,47 +4479,12 @@ NET_SetProxyServer(NET_ProxyType type, const char * org_host_port)
  * and not switch() based [LJM]
  */
 MODULE_PRIVATE char *
-NET_FindProxyHostForUrl(int url_type, char *url_address)
+NET_FindProxyHostForUrl(const char *proto, char *url_address)
 {
-
 	if(override_proxy(url_address))
 		return NULL;
 
-    switch(url_type)
-	  {
-		case FTP_TYPE_URL:
-			return MKftp_proxy;
-			break;
-
-		case GOPHER_TYPE_URL:
-			return(MKgopher_proxy);
-			break;
-
-		case HTTP_TYPE_URL:
-		case URN_TYPE_URL:
-		case NFS_TYPE_URL:
-			return(MKhttp_proxy);
-			break;
-
-		case SECURE_HTTP_TYPE_URL:
-			return(MKhttps_proxy);
-			break;
-
-		case NEWS_TYPE_URL:
-		case INTERNAL_NEWS_TYPE_URL:
-			return(MKnews_proxy);
-			break;
-
-		case WAIS_TYPE_URL:
-			return(MKwais_proxy);
-			break;
-
-		default:
-			/* ignore */
-			break;
-	  }
-
-	return NULL;
+	return (char *) PL_HashTableLookup(NET_ProxyLookupTable, proto);
 }
 
 /* Force it to reload automatic proxy config.
@@ -4862,14 +4839,14 @@ net_CleanupMailtoStub(void)
 MODULE_PRIVATE void
 NET_InitMailtoProtocol(void)
 {
-        static NET_ProtoImpl mailto_proto_impl;
-
-        mailto_proto_impl.init = net_MailtoLoad;
-        mailto_proto_impl.process = net_MailtoStub;
-        mailto_proto_impl.interrupt = net_MailtoStub;
-        mailto_proto_impl.cleanup = net_CleanupMailtoStub;
-
-        NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_TYPE_URL);
+    static NET_ProtoImpl mailto_proto_impl;
+  
+    mailto_proto_impl.init = net_MailtoLoad;
+    mailto_proto_impl.process = net_MailtoStub;
+    mailto_proto_impl.interrupt = net_MailtoStub;
+    mailto_proto_impl.cleanup = net_CleanupMailtoStub;
+    
+    NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_PROTOCOL);
 }
 
 #endif /* MOZ_MAIL_NEWS */

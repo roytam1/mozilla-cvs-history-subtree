@@ -78,6 +78,6 @@ NET_InitAddressBookProtocol(void)
     abook_proto_impl.interrupt = net_InterruptAddressBook;
     abook_proto_impl.cleanup = net_CleanupAddressBook;
 
-    NET_RegisterProtocolImplementation(&abook_proto_impl, ADDRESS_BOOK_TYPE_URL);
+    NET_RegisterProtocolImplementation(&abook_proto_impl, ADDRESS_BOOK_PROTOCOL);
 }
 

@@ -49,7 +49,7 @@ typedef struct _ActiveEntry {
     PRFileDesc    *con_sock;        /* socket waiting for connection */
     Bool           local_file;      /* are we reading a local file */
 	Bool           memory_file;     /* are we reading from memory? */
-    int            protocol;        /* protocol used for transfer */
+    char*          protocol;        /* protocol used for transfer */
 	NET_ProtoImpl *proto_impl;	    /* handle to protocol implemenation */
     void          *con_data;        /* data about the transfer connection and status */
                                     /* routine to call when finished */
@@ -116,12 +116,15 @@ extern void net_SetPACUrl(char *u);
 
 /* return a proxy server host and port to the caller or NULL
  */
-extern char * NET_FindProxyHostForUrl(int urltype, char *urladdress);
+extern char * NET_FindProxyHostForUrl(const char *proto, char *urladdress);
 
 /* registers a protocol impelementation for a particular url_type
  * see NET_URL_Type() for types
  */
-extern void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, int for_url_type);
+extern void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, 
+                                               const char *for_proto);
+
+#define NET_ProtocolEquals(_a, _b) (PL_strcasecmp(_a, _b) == 0)
 
 PR_END_EXTERN_C
 #endif /* not MKGetURL_H */

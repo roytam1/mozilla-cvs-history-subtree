@@ -43,7 +43,7 @@ net_DataURLLoad (ActiveEntry * ce)
 	NET_StreamClass *stream;
 	char *comma;
 
-    ce->protocol = DATA_TYPE_URL;
+    StrAllocCopy(ce->protocol, DATA_PROTOCOL);
 
 	/* we need a buffer equal to or smaller than the size of the URL
 	 */
@@ -158,6 +158,6 @@ NET_InitDataURLProtocol(void)
         dataurl_proto_impl.interrupt = net_InterruptDataURL;
         dataurl_proto_impl.cleanup = net_CleanupDataURL;
 
-        NET_RegisterProtocolImplementation(&dataurl_proto_impl, DATA_TYPE_URL);
+        NET_RegisterProtocolImplementation(&dataurl_proto_impl, DATA_PROTOCOL);
 }
 

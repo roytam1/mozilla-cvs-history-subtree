@@ -1998,6 +1998,39 @@ NET_UploadDirectory(MWContext *context, char *local_dir, char *remote_dir_url);
  */
 extern void NET_PlusToSpace(char *str);
 
+/* some standard protocol types */
+#define FILE_PROTOCOL           "file"
+#define FTP_PROTOCOL            "ftp"
+#define GOPHER_PROTOCOL         "gopher"
+#define HTTP_PROTOCOL           "http"
+#define MAILTO_PROTOCOL         "mailto"
+#define NEWS_PROTOCOL           "news"
+#define RLOGIN_PROTOCOL         "rlogin"
+#define TELNET_PROTOCOL         "telnet"
+#define TN3270_PROTOCOL         "tn3270"
+#define WAIS_PROTOCOL           "wais"
+#define ABOUT_PROTOCOL          "about"
+#define SECURE_HTTP_PROTOCOL    "shttp"
+#define SECURE_NEWS_PROTOCOL    "snews"
+#define POP3_PROTOCOL           "pop3"
+#define MAILBOX_PROTOCOL        "mailbox"
+#define ADDRESS_BOOK_PROTOCOL   "addbook"
+#define ADDRESS_BOOK_LDAP_PROTOCOL "addbook-ldap"
+#define URN_PROTOCOL            "URN"
+#define NFS_PROTOCOL            "nfs"
+#define MARIMBA_PROTOCOL        "castanet"
+#define IMAP_PROTOCOL           "imap"
+#define MOCHA_PROTOCOL          "javascript"
+#define DATA_PROTOCOL           "data"
+#define HTML_DIALOG_HANDLER_PROTOCOL "internal-dialog-handler"
+#define HTML_PANEL_HANDLER_PROTOCOL "internal-panel-handler"
+#define WYSIWYG_PROTOCOL        "wysiwyg"
+#define SECURITY_PROTOCOL       "security"
+#define INTERNAL_SECLIB_PROTOCOL "internal-seclib"
+#define INTERNAL_LDAPCERT_PROTOCOL "internal-ldapcert"
+#define FILE_CACHE_PROTOCOL     "file-cache"
+#define MEMORY_CACHE_PROTOCOL   "memory-cache"
+
 /* url_type return types */
 #define FILE_TYPE_URL           1
 #define FTP_TYPE_URL            2
@@ -2017,7 +2050,7 @@ extern void NET_PlusToSpace(char *str);
 #define URN_TYPE_URL            16
 #define POP3_TYPE_URL           17
 #define MAILBOX_TYPE_URL        18
-#define INTERNAL_NEWS_TYPE_URL  19
+#define INTERNAL_NEWS_UNUSED    19
 #define SECURITY_TYPE_URL		20
 #define MOCHA_TYPE_URL			21
 #define VIEW_SOURCE_TYPE_URL	22

@@ -60,6 +60,7 @@ NET_DNSExpirationPrefChanged(const char * newpref, void * data);
 extern int NET_URL_Type (CONST char *URL);
 extern void del_front_spaces (char *string);
 extern void NET_f_a_c (char **obj);
+extern char *NET_GetURLProtocol(const char *url);
 
 /*
  * This function takes an error code and associated error data

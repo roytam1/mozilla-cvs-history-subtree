@@ -4197,14 +4197,6 @@ net_NewsLoad (ActiveEntry *ce)
 	  got_enabled_pref = TRUE;
   }
 
-  /* fail on protected url types */
-  if(ce->protocol == INTERNAL_NEWS_TYPE_URL
-	 && !ce->URL_s->internal_url)
-  {
-	status = MK_MALFORMED_URL_ERROR;
-	goto FAIL;
-  }
-
   if (!collabra_enabled)
   {
 	status = MK_MSG_COLLABRA_DISABLED;
@@ -5330,8 +5322,8 @@ NET_InitNewsProtocol(void)
     news_proto_impl.interrupt = net_InterruptNews;
     news_proto_impl.cleanup = net_CleanupNews;
 
-    NET_RegisterProtocolImplementation(&news_proto_impl, NEWS_TYPE_URL);
-    NET_RegisterProtocolImplementation(&news_proto_impl, INTERNAL_NEWS_TYPE_URL);
+    NET_RegisterProtocolImplementation(&news_proto_impl, NEWS_PROTOCOL);
+    NET_RegisterProtocolImplementation(&news_proto_impl, SNEWS_PROTOCOL);
 }
 
 #ifdef PROFILE

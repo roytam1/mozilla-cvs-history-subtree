@@ -1758,6 +1758,6 @@ NET_InitFileProtocol(void)
     file_proto_impl.interrupt = net_InterruptFile;
     file_proto_impl.cleanup = net_CleanupFile;
 
-    NET_RegisterProtocolImplementation(&file_proto_impl, FILE_TYPE_URL);
-    NET_RegisterProtocolImplementation(&file_proto_impl, FILE_CACHE_TYPE_URL);
+    NET_RegisterProtocolImplementation(&file_proto_impl, FILE_PROTOCOL);
+    NET_RegisterProtocolImplementation(&file_proto_impl, FILE_CACHE_PROTOCOL);
 }

@@ -1326,7 +1326,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		return (CE_STATUS);
 	}
 
-    cur_entry->protocol = MEMORY_CACHE_TYPE_URL;
+    StrAllocCopy(cur_entry->protocol, MEMORY_CACHE_PROTOCOL);
 	cur_entry->memory_file = TRUE;
 
 	/* point to the first list struct that contains data
@@ -2004,7 +2004,8 @@ NET_InitMemCacProtocol(void)
     mem_cac_proto_impl.interrupt = net_InterruptMemoryCache;
     mem_cac_proto_impl.cleanup = net_CleanupMemoryCacheProtocol;
 
-    NET_RegisterProtocolImplementation(&mem_cac_proto_impl, MEMORY_CACHE_TYPE_URL);
+    NET_RegisterProtocolImplementation(&mem_cac_proto_impl, 
+                                       MEMORY_CACHE_PROTOCOL);
 }
 
 #endif /* MOZILLA_CLIENT */

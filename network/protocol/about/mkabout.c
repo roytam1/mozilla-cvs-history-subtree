@@ -868,7 +868,7 @@ NET_InitAboutProtocol(void)
     about_proto_impl.interrupt = net_AboutStub;
     about_proto_impl.cleanup = net_CleanupAbout;
 
-    NET_RegisterProtocolImplementation(&about_proto_impl, ABOUT_TYPE_URL);
+    NET_RegisterProtocolImplementation(&about_proto_impl, ABOUT_PROTOCOL);
 
     net_AboutTable = PL_NewHashTable(32, 
                                      net_HashAbout, 
