@@ -171,6 +171,12 @@ function enableEditableFields()
 
 var gComposeRecyclingListener = {
   onClose: function() {
+    //Reset focus to work around bug 141648
+    var identityElement = document.getElementById("msgIdentity");
+    if (identityElement)
+      identityElement.focus();
+
+    //Reset recipients and attachments
 	  awResetAllRows();
 	  RemoveAllAttachments();
 
