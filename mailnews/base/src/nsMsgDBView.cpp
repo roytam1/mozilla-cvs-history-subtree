@@ -368,6 +368,8 @@ NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 
 NS_IMETHODIMP nsMsgDBView::IsContainerEmpty(PRInt32 index, PRBool *_retval)
 {
+  PRUint32 flags = m_flags[index];
+  *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) == 0;
   return NS_OK;
 }
 
@@ -441,7 +443,9 @@ NS_IMETHODIMP nsMsgDBView::SetOutliner(nsIOutlinerBoxObject *outliner)
 
 NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
 {
-  return NS_OK;
+  PRUint32 numChanged;
+  nsresult rv = ToggleExpansion(index, &numChanged);
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement * aElement)
