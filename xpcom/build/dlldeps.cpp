@@ -40,6 +40,7 @@
 #include "xpt_xdr.h"
 #include "nsInterfaceInfo.h"
 #include "xptcall.h"
+#include "nsIFileSpec.h"
 
 void XXXNeverCalled()
 {
@@ -73,4 +74,5 @@ void XXXNeverCalled()
     info->print(NULL);
 #endif
     XPTC_InvokeByIndex(NULL, 0, 0, NULL);
+    NS_NewFileSpec(NULL);
 }

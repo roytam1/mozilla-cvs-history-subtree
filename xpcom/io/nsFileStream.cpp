@@ -353,7 +353,7 @@ void nsSaveViaTempStream::close()
 		nsFileSpec thirdSpec(mFileToSave);
 		thirdSpec.MakeUnique();
 		nsSimpleCharString originalName(mFileToSave.GetLeafName());
-		mFileToSave.Rename(nsSimpleCharString(thirdSpec.GetLeafName()));
+		((nsFileSpec&)mFileToSave).Rename(nsSimpleCharString(thirdSpec.GetLeafName()));
 		if (NS_SUCCEEDED(mTempFileSpec->Rename(originalName)) && mTempFileSpec->Valid())
 			mFileToSave.Delete(PR_FALSE);
 	}

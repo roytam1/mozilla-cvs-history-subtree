@@ -16,13 +16,13 @@
  * Reserved.
  */
 
+#define FILE_WIDGET_DEPENDENCY // because the interface file is here with us in base, now.
+
 #include "nsIFileSpec.h" // Always first, to ensure that it compiles alone.
 
 #include "nsFileSpec.h"
 #include "nsIFileStream.h"
 #include "nsFileStream.h"
-
-#define FILE_WIDGET_DEPENDENCY // because the interface file is here with us in base, now.
 
 #ifdef FILE_WIDGET_DEPENDENCY
 #include "nsIFileWidget.h"
@@ -284,6 +284,8 @@ NS_IMETHODIMP nsFileSpecImpl::chooseInputFile(
 //----------------------------------------------------------------------------------------
 {
 	nsresult rv = NS_OK;
+	nsString* nextTitle;
+	nsString* nextFilter;
 #ifdef FILE_WIDGET_DEPENDENCY
     nsCOMPtr<nsIFileWidget> fileWidget; 
     rv = nsComponentManager::CreateInstance(
@@ -307,8 +309,8 @@ NS_IMETHODIMP nsFileSpecImpl::chooseInputFile(
 		rv = NS_ERROR_OUT_OF_MEMORY;
 		goto Clean;
 	}
-	nsString* nextTitle = titles;
-	nsString* nextFilter = filters;
+	nextTitle = titles;
+	nextFilter = filters;
 	if (inMask & eAllReadable)
 	{
 		*nextTitle++ = "All Readable Files";
