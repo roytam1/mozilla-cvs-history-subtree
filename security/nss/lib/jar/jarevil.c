@@ -394,7 +394,7 @@ struct EVIL_certkey
   int error;
   CERTCertificate *cert;
   CERTCertDBHandle *certdb;
-  CERTIssuerAndSN *seckey;
+  SECItem *seckey;
   };
 
 
@@ -407,7 +407,7 @@ PR_STATIC_CALLBACK(void) jar_moz_certkey_fn (void *data)
 
   PORT_SetError (certkey_data->error);
 
-  cert=CERT_FindCertByIssuerAndSN(certkey_data->certdb, certkey_data->seckey);
+  cert = CERT_FindCertByKey (certkey_data->certdb, certkey_data->seckey);
 
   certkey_data->cert = cert;
   certkey_data->error = PORT_GetError();
@@ -416,8 +416,7 @@ PR_STATIC_CALLBACK(void) jar_moz_certkey_fn (void *data)
 
 /* Wrapper for the ET_MOZ call */
  
-CERTCertificate *jar_moz_certkey (CERTCertDBHandle *certdb, 
-						CERTIssuerAndSN *seckey)
+CERTCertificate *jar_moz_certkey (CERTCertDBHandle *certdb, SECItem *seckey)
   {
   CERTCertificate *cert;
   ALLOC_OR_DEFINE(struct EVIL_certkey, certkey_data, NULL);

@@ -42,22 +42,155 @@
 /* these are for displaying error messages */
 
 static  SECMODModuleList *modules = NULL;
-static  SECMODModuleList *modulesDB = NULL;
-static  SECMODModuleList *modulesUnload = NULL;
 static  SECMODModule *internalModule = NULL;
-static  SECMODModule *defaultDBModule = NULL;
 static SECMODListLock *moduleLock = NULL;
+
+extern SECStatus
+PK11_UpdateSlotAttribute(PK11SlotInfo *slot, PK11DefaultArrayEntry *entry,
+                        PRBool add);
+                        
+
+extern int XP_SEC_MODULE_NO_LIB;
 
 extern PK11DefaultArrayEntry PK11_DefaultArray[];
 extern int num_pk11_default_mechanisms;
 
+static PRBool secmod_ModuleHasRoots(SECMODModule *module)
+{
+    int i;
 
-void SECMOD_Init() {
+    for (i=0; i < module->slotInfoCount; i++) {
+	if (module->slotInfo[i].hasRootCerts) {
+	    return PR_TRUE;
+	}
+    }
+    return PR_FALSE;
+}
+
+
+/*
+ * The following code is an attempt to automagically find the external root
+ * module. NOTE: This code should be checked out on the MAC! There must be
+ * some cross platform support out there to help out with this?
+ * Note: Keep the #if-defined chunks in order. HPUX must select before UNIX.
+ */
+
+static char *dllnames[]= {
+#if defined(XP_WIN32) || defined(XP_OS2)
+	"nssckbi.dll",
+	"roots.dll", 
+	"netckbi.dll",
+	"mozckbi.dll",
+#elif defined(HPUX)
+	"libnssckbi.sl",
+	"libroots.sl",
+	"libnetckbi.sl",
+	"libmozckbi.sl",
+#elif defined(XP_UNIX)
+	"libnssckbi.so",
+	"libroots.so",
+	"libnetckbi.so",
+	"libmozckbi.so",
+#elif defined(XP_MAC)
+	"NSS Builtin Root Certs",
+	"Root Certs",
+	"Netscape Builtin Root Certs",
+	"Mozilla Builtin Root Certs",
+#else
+	#error "Uh! Oh! I don't know about this platform."
+#endif
+	0 };
+	
+
+#define MAXDLLNAME 40
+
+/* Should we have platform ifdefs here??? */
+#define FILE_SEP '/'
+
+static void
+secmod_FindExternalRoot(char *dbname)
+{
+	char *path, *cp, **cur_name;
+	int len = PORT_Strlen(dbname);
+	int path_len;
+
+	
+	path = PORT_Alloc(len+MAXDLLNAME);
+	if (path == NULL) return;
+
+	/* back up to the top of the directory */
+	for (cp = &dbname[len]; cp != dbname && (*cp != FILE_SEP); cp--) ;
+	path_len = cp-dbname;
+	PORT_Memcpy(path,dbname,path_len);
+	path[path_len++] = FILE_SEP;
+
+	/* now walk our tree of dll names looking for the file of interest. */
+	for (cur_name= dllnames; *cur_name != 0; cur_name++) {
+	    PORT_Memcpy(&path[path_len],*cur_name,PORT_Strlen(*cur_name)+1);
+	    if (SECMOD_AddNewModule("Root Certs",path, 0, 0) == SECSuccess) {
+		break;
+	    }
+	}
+	PORT_Free(path);
+	return;
+}
+
+void SECMOD_init(char *dbname) {
+    SECMODModuleList *thisModule;
+    int found=0;
+    int rootFound=0;
+    SECStatus rv = SECFailure;
+
+
     /* don't initialize twice */
-    if (moduleLock) return;
+    if (modules) return;
+
+    PK11_InitSlotLists();
+
+    SECMOD_InitDB(dbname);
+
+    /*
+     * read in the current modules from the database
+     */
+    modules = SECMOD_ReadPermDB();
+
+    /* make sure that the internal module is loaded */
+    for (thisModule = modules; thisModule ; thisModule = thisModule->next) {
+	if (thisModule->module->internal) {
+	    found++;
+	    internalModule = SECMOD_ReferenceModule(thisModule->module);
+	}
+	if (secmod_ModuleHasRoots(thisModule->module)) {
+	    rootFound++;
+	}
+    }
+
+    if (!found) {
+	thisModule = modules;
+	modules = SECMOD_NewModuleListElement();
+	modules->module = SECMOD_NewInternal();
+	PORT_Assert(modules->module != NULL);
+	modules->next = thisModule;
+	SECMOD_AddPermDB(modules->module);
+	internalModule = SECMOD_ReferenceModule(modules->module);
+    }
+
+    /* load it first... we need it to verify the external modules
+     * which we are loading.... */
+    rv = SECMOD_LoadModule(internalModule);
+    if( rv != SECSuccess )
+        internalModule = NULL;
+
+    if (! rootFound ) {
+	secmod_FindExternalRoot(dbname);
+    }
+    /* Load each new module */
+    for (thisModule = modules; thisModule ; thisModule = thisModule->next) {
+        if( !( thisModule->module->internal ) )
+	    SECMOD_LoadModule(thisModule->module);
+    }
 
     moduleLock = SECMOD_NewListLock();
-    PK11_InitSlotLists();
 }
 
 
@@ -77,16 +210,6 @@ void SECMOD_Shutdown() {
 	SECMOD_DestroyModuleList(modules);
 	modules = NULL;
     }
-   
-    if (modulesDB) {
-	SECMOD_DestroyModuleList(modulesDB);
-	modulesDB = NULL;
-    }
-
-    if (modulesUnload) {
-	SECMOD_DestroyModuleList(modulesUnload);
-	modulesUnload = NULL;
-    }
 
     /* make all the slots and the lists go away */
     PK11_DestroySlotLists();
@@ -101,54 +224,20 @@ SECMOD_GetInternalModule(void) {
    return internalModule;
 }
 
-
-SECStatus
-secmod_AddModuleToList(SECMODModuleList **moduleList,SECMODModule *newModule) {
-    SECMODModuleList *mlp, *newListElement, *last = NULL;
-
-    newListElement = SECMOD_NewModuleListElement();
-    if (newListElement == NULL) {
-	return SECFailure;
-    }
-
-    newListElement->module = SECMOD_ReferenceModule(newModule);
-
-    SECMOD_GetWriteLock(moduleLock);
-    /* Added it to the end (This is very inefficient, but Adding a module
-     * on the fly should happen maybe 2-3 times through the life this program
-     * on a given computer, and this list should be *SHORT*. */
-    for(mlp = *moduleList; mlp != NULL; mlp = mlp->next) {
-	last = mlp;
-    }
-
-    if (last == NULL) {
-	*moduleList = newListElement;
-    } else {
-	SECMOD_AddList(last,newListElement,NULL);
-    }
-    SECMOD_ReleaseWriteLock(moduleLock);
-    return SECSuccess;
-}
-
-SECStatus
-SECMOD_AddModuleToList(SECMODModule *newModule) {
-    if (newModule->internal && !internalModule) {
-	internalModule = SECMOD_ReferenceModule(newModule);
-    }
-    return secmod_AddModuleToList(&modules,newModule);
-}
-
-SECStatus
-SECMOD_AddModuleToDBOnlyList(SECMODModule *newModule) {
-    if (defaultDBModule == NULL) {
-	defaultDBModule = SECMOD_ReferenceModule(newModule);
-    }
-    return secmod_AddModuleToList(&modulesDB,newModule);
-}
-
-SECStatus
-SECMOD_AddModuleToUnloadList(SECMODModule *newModule) {
-    return secmod_AddModuleToList(&modulesUnload,newModule);
+/* called from  security/cmd/swfort/instinit, which doesn't need a full 
+ * security LIBRARY (it used the swfortezza code, but it does have to verify
+ * cert chains against it's own list of certs. We need to initialize the 
+ * security code without any database.
+ */
+void
+SECMOD_SetInternalModule( SECMODModule *mod) {
+   internalModule = SECMOD_ReferenceModule(mod);
+   modules = SECMOD_NewModuleListElement();
+   modules->module = SECMOD_ReferenceModule(mod);
+   modules->next = NULL;
+   if (!moduleLock) {
+       moduleLock = SECMOD_NewListLock();
+   }
 }
 
 /*
@@ -290,14 +379,12 @@ SECMOD_DeleteInternalModule(char *name) {
 	SECMODModule *newModule,*oldModule;
 
 	if (mlp->module->isFIPS) {
-    	    newModule = SECMOD_CreateModule(NULL,SECMOD_INT_NAME,NULL,
-			SECMOD_INT_FLAGS);
+	    newModule = SECMOD_NewInternal();
 	} else {
-    	    newModule = SECMOD_CreateModule(NULL,SECMOD_FIPS_NAME,NULL,
-			SECMOD_FIPS_FLAGS);
+	    newModule = SECMOD_GetFIPSInternal();
 	}
 	if (newModule == NULL) {
-	    SECMODModuleList *last = NULL,*mlp2;
+	    SECMODModuleList *last,*mlp2;
 	   /* we're in pretty deep trouble if this happens...Security
 	    * not going to work well... try to put the old module back on
 	    * the list */
@@ -314,8 +401,6 @@ SECMOD_DeleteInternalModule(char *name) {
 	   SECMOD_ReleaseWriteLock(moduleLock);
 	   return SECFailure; 
 	}
-	newModule->libraryParams = 
-	     PORT_ArenaStrdup(mlp->module->arena,mlp->module->libraryParams);
 	oldModule = internalModule;
 	internalModule = SECMOD_ReferenceModule(newModule);
 	SECMOD_AddModule(internalModule);
@@ -329,7 +414,7 @@ SECMOD_DeleteInternalModule(char *name) {
 SECStatus
 SECMOD_AddModule(SECMODModule *newModule) {
     SECStatus rv;
-    int i;
+    SECMODModuleList *mlp, *newListElement, *last = NULL;
 
     /* Test if a module w/ the same name already exists */
     /* and return SECWouldBlock if so. */
@@ -341,23 +426,34 @@ SECMOD_AddModule(SECMODModule *newModule) {
         /* module already exists. */
     }
 
-    rv = SECMOD_LoadPKCS11Module(newModule);
+    rv = SECMOD_LoadModule(newModule);
     if (rv != SECSuccess) {
 	return rv;
     }
 
-    if (newModule->parent == NULL) {
-	newModule->parent = SECMOD_ReferenceModule(defaultDBModule);
+    newListElement = SECMOD_NewModuleListElement();
+    if (newListElement == NULL) {
+	return SECFailure;
     }
 
     SECMOD_AddPermDB(newModule);
-    SECMOD_AddModuleToList(newModule);
 
-    for (i=0; i < newModule->slotCount; i++) {
-	PK11SlotInfo *slot = newModule->slots[i];
-	STAN_AddNewSlotToDefaultTD(slot);
+    newListElement->module = newModule;
+
+    SECMOD_GetWriteLock(moduleLock);
+    /* Added it to the end (This is very inefficient, but Adding a module
+     * on the fly should happen maybe 2-3 times through the life this program
+     * on a given computer, and this list should be *SHORT*. */
+    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
+	last = mlp;
     }
 
+    if (last == NULL) {
+	modules = newListElement;
+    } else {
+	SECMOD_AddList(last,newListElement,NULL);
+    }
+    SECMOD_ReleaseWriteLock(moduleLock);
     return SECSuccess;
 }
 
@@ -416,7 +512,19 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
     int s,i;
     PK11SlotInfo* slot;
 
-    module = SECMOD_CreateModule(dllPath,moduleName,NULL, NULL);
+    module = SECMOD_NewModule();
+    
+    if (moduleName) {	
+        module->commonName=PORT_ArenaStrdup(module->arena,moduleName);
+    } else {
+        module->commonName=NULL;
+    }
+
+    if (dllPath) {
+        module->dllName=PORT_ArenaStrdup(module->arena,dllPath);
+    } else {
+        module->dllName=NULL;
+    }
 
     if (module->dllName != NULL) {
         if (module->dllName[0] != 0) {
@@ -445,23 +553,19 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
                 } /* for each slot of this module */
 
                 /* delete and re-add module in order to save changes to the module */
-		result = SECMOD_UpdateModule(module);
+                result = SECMOD_DeletePermDB(module);
+                
+                if (result == SECSuccess) {          
+                    result = SECMOD_AddPermDB(module);
+                    if (result == SECSuccess) {
+                        return SECSuccess;
+                    }                    
+                }
+                
             }
         }
     }
     SECMOD_DestroyModule(module);
-    return result;
-}
-
-SECStatus SECMOD_UpdateModule(SECMODModule *module)
-{
-    SECStatus result;
-
-    result = SECMOD_DeletePermDB(module);
-                
-    if (result == SECSuccess) {          
-    }
-	result = SECMOD_AddPermDB(module);
     return result;
 }
 
@@ -510,6 +614,7 @@ SECMOD_IsModulePresent( unsigned long int pubCipherEnableFlags )
 {
     PRBool result = PR_FALSE;
     SECMODModuleList *mods = SECMOD_GetDefaultModuleList();
+    SECMODListLock *modsLock = SECMOD_GetDefaultModuleListLock();
     SECMOD_GetReadLock(moduleLock);
 
 
@@ -522,117 +627,3 @@ SECMOD_IsModulePresent( unsigned long int pubCipherEnableFlags )
     SECMOD_ReleaseReadLock(moduleLock);
     return result;
 }
-
-/* create a new ModuleListElement */
-SECMODModuleList *SECMOD_NewModuleListElement(void) {
-    SECMODModuleList *newModList;
-
-    newModList= (SECMODModuleList *) PORT_Alloc(sizeof(SECMODModuleList));
-    if (newModList) {
-	newModList->next = NULL;
-	newModList->module = NULL;
-    }
-    return newModList;
-}
-/*
- * make a new reference to a module so It doesn't go away on us
- */
-SECMODModule *
-SECMOD_ReferenceModule(SECMODModule *module) {
-    PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
-    PORT_Assert(module->refCount > 0);
-
-    module->refCount++;
-    PK11_USE_THREADS(PZ_Unlock((PZLock*)module->refLock);)
-    return module;
-}
-
-
-/* destroy an existing module */
-void
-SECMOD_DestroyModule(SECMODModule *module) {
-    PRBool willfree = PR_FALSE;
-    int slotCount;
-    int i;
-
-    PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
-    if (module->refCount-- == 1) {
-	willfree = PR_TRUE;
-    }
-    PORT_Assert(willfree || (module->refCount > 0));
-    PK11_USE_THREADS(PZ_Unlock((PZLock *)module->refLock);)
-
-    if (!willfree) {
-	return;
-    }
-
-    /* slots can't really disappear until our module starts freeing them,
-     * so this check is safe */
-    slotCount = module->slotCount;
-    if (slotCount == 0) {
-	SECMOD_SlotDestroyModule(module,PR_FALSE);
-	return;
-    }
-
-    /* now free all out slots, when they are done, they will cause the
-     * module to disappear altogether */
-    for (i=0 ; i < slotCount; i++) {
-	if (!module->slots[i]->disabled) {
-		PK11_ClearSlotList(module->slots[i]);
-	}
-	PK11_FreeSlot(module->slots[i]);
-    }
-    /* WARNING: once the last slot has been freed is it possible (even likely)
-     * that module is no more... touching it now is a good way to go south */
-}
-
-
-/* we can only get here if we've destroyed the module, or some one has
- * erroneously freed a slot that wasn't referenced. */
-void
-SECMOD_SlotDestroyModule(SECMODModule *module, PRBool fromSlot) {
-    PRBool willfree = PR_FALSE;
-    if (fromSlot) {
-        PORT_Assert(module->refCount == 0);
-	PK11_USE_THREADS(PZ_Lock((PZLock *)module->refLock);)
-	if (module->slotCount-- == 1) {
-	    willfree = PR_TRUE;
-	}
-	PORT_Assert(willfree || (module->slotCount > 0));
-	PK11_USE_THREADS(PZ_Unlock((PZLock *)module->refLock);)
-        if (!willfree) return;
-    }
-    if (module->loaded) {
-	SECMOD_UnloadModule(module);
-    }
-    PK11_USE_THREADS(PZ_DestroyLock((PZLock *)module->refLock);)
-    PORT_FreeArena(module->arena,PR_FALSE);
-}
-
-/* destroy a list element
- * this destroys a single element, and returns the next element
- * on the chain. It makes it easy to implement for loops to delete
- * the chain. It also make deleting a single element easy */
-SECMODModuleList *
-SECMOD_DestroyModuleListElement(SECMODModuleList *element) {
-    SECMODModuleList *next = element->next;
-
-    if (element->module) {
-	SECMOD_DestroyModule(element->module);
-	element->module = NULL;
-    }
-    PORT_Free(element);
-    return next;
-}
-
-
-/*
- * Destroy an entire module list
- */
-void
-SECMOD_DestroyModuleList(SECMODModuleList *list) {
-    SECMODModuleList *lp;
-
-    for ( lp = list; lp != NULL; lp = SECMOD_DestroyModuleListElement(lp)) ;
-}
-

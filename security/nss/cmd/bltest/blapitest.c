@@ -709,7 +709,6 @@ misalignBuffer(PRArenaPool *arena, bltestIO *io, int off)
     int length = io->buf.len;
     if (offset != off) {
 	SECITEM_ReallocItem(arena, &io->buf, length, length + 2*WORDSIZE);
-	io->buf.len = length + 2*WORDSIZE; /* why doesn't realloc do this? */
 	/* offset may have changed? */
 	offset = (ptrdiff_t)io->buf.data % WORDSIZE;
 	if (offset != off) {
@@ -958,7 +957,7 @@ bltest_aes_init(bltestCipherInfo *cipherInfo, PRBool encrypt)
     int i;
     /* XXX */ int keylen, blocklen;
     keylen = aesp->key.buf.len;
-    blocklen = cipherInfo->input.pBuf.len;
+    blocklen = cipherInfo->input.buf.len;
     switch (cipherInfo->mode) {
     case bltestAES_ECB:	    minorMode = NSS_AES;	  break;
     case bltestAES_CBC:	    minorMode = NSS_AES_CBC;	  break;
@@ -1471,10 +1470,6 @@ cipherFinish(bltestCipherInfo *cipherInfo)
     case bltestDES_EDE_CBC:
 	DES_DestroyContext((DESContext *)cipherInfo->cx, PR_TRUE);
 	break;
-    case bltestAES_ECB:
-    case bltestAES_CBC:
-	AES_DestroyContext((AESContext *)cipherInfo->cx, PR_TRUE);
-	break;
     case bltestRC2_ECB:
     case bltestRC2_CBC:
 	RC2_DestroyContext((RC2Context *)cipherInfo->cx, PR_TRUE);
@@ -1640,14 +1635,12 @@ get_params(PRArenaPool *arena, bltestParams *params,
     case bltestDES_CBC:
     case bltestDES_EDE_CBC:
     case bltestRC2_CBC:
-    case bltestAES_CBC:
 	sprintf(filename, "%s/tests/%s/%s%d", testdir, modestr, "iv", j);
 	load_file_data(arena, &params->sk.iv, filename, bltestBinary);
     case bltestDES_ECB:
     case bltestDES_EDE_ECB:
     case bltestRC2_ECB:
     case bltestRC4:
-    case bltestAES_ECB:
 	sprintf(filename, "%s/tests/%s/%s%d", testdir, modestr, "key", j);
 	load_file_data(arena, &params->sk.key, filename, bltestBinary);
 	break;
@@ -1719,7 +1712,7 @@ verify_self_test(bltestIO *result, bltestIO *cmp, bltestCipherMode mode,
 {
     int res;
     char *modestr = mode_strings[mode];
-    res = SECITEM_CompareItem(&result->pBuf, &cmp->buf);
+    res = SECITEM_CompareItem(&result->buf, &cmp->buf);
     if (is_sigCipher(mode)) {
 	if (forward) {
 	    if (res == 0) {
@@ -1894,7 +1887,7 @@ blapi_selftest(bltestCipherMode *modes, int numModes, int inoff, int outoff,
 		bltestCopyIO(arena, &cipherInfo.input, &ct);
 	    else
 		bltestCopyIO(arena, &cipherInfo.input, &pt);
-	    misalignBuffer(arena, &cipherInfo.input, inoff);
+	    misalignBuffer(arena, &cipherInfo.input, outoff);
 	    memset(&cipherInfo.output.buf, 0, sizeof cipherInfo.output.buf);
 	    rv |= cipherInit(&cipherInfo, PR_FALSE);
 	    misalignBuffer(arena, &cipherInfo.output, outoff);
@@ -1998,7 +1991,6 @@ enum {
     opt_SeedFile,
     opt_InputOffset,
     opt_OutputOffset,
-    opt_MonteCarlo,
     opt_CmdLine
 };
 
@@ -2044,7 +2036,6 @@ static secuCommandFlag bltest_options[] =
     { /* opt_SeedFile	  */ 'z', PR_FALSE, 0, PR_FALSE },
     { /* opt_InputOffset  */ '1', PR_TRUE,  0, PR_FALSE },
     { /* opt_OutputOffset */ '2', PR_TRUE,  0, PR_FALSE },
-    { /* opt_MonteCarlo   */ '3', PR_FALSE, 0, PR_FALSE },
     { /* opt_CmdLine	  */ '-', PR_FALSE, 0, PR_FALSE }
 };
 
@@ -2072,12 +2063,11 @@ int main(int argc, char **argv)
     progName = strrchr(argv[0], '/');
     progName = progName ? progName+1 : argv[0];
 
-    rv = RNG_RNGInit();
+    rv = NSS_NoDB_Init(NULL);
     if (rv != SECSuccess) {
     	SECU_PrintPRandOSError(progName);
 	return -1;
     }
-    RNG_SystemInfoForRNG();
 
     rv = SECU_ParseCommandLine(argc, argv, progName, &bltest);
 
@@ -2341,17 +2331,7 @@ int main(int argc, char **argv)
     misalignBuffer(cipherInfo.arena, &cipherInfo.output, outoff);
 
     if (!bltest.commands[cmd_Nonce].activated) {
-	if (bltest.options[opt_MonteCarlo].activated) {
-	    int mciter;
-	    for (mciter=0; mciter<10000; mciter++) {
-		cipherDoOp(&cipherInfo);
-		memcpy(cipherInfo.input.buf.data,
-		       cipherInfo.output.buf.data,
-		       cipherInfo.input.buf.len);
-	    }
-	} else {
-	    cipherDoOp(&cipherInfo);
-	}
+	cipherDoOp(&cipherInfo);
 	cipherFinish(&cipherInfo);
 	finishIO(&cipherInfo.output, outfile);
     }

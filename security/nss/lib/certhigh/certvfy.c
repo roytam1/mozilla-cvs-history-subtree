@@ -42,15 +42,6 @@
 #include "certdb.h"
 #include "cryptohi.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "nsspki.h"
-#include "pkitm.h"
-#include "pkim.h"
-#include "pki3hack.h"
-#include "base.h"
-
 #define PENDING_SLOP (24L*60L*60L)
 
 /*
@@ -317,11 +308,12 @@ done:
 CERTCertificate *
 CERT_FindCertIssuer(CERTCertificate *cert, int64 validTime, SECCertUsage usage)
 {
-#ifdef NSS_CLASSIC
     CERTAuthKeyID *   authorityKeyID = NULL;  
     CERTCertificate * issuerCert     = NULL;
     SECItem *         caName;
     PRArenaPool       *tmpArena = NULL;
+    SECItem           issuerCertKey;
+    SECStatus         rv;
 
     tmpArena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     
@@ -359,16 +351,14 @@ CERT_FindCertIssuer(CERTCertificate *cert, int64 validTime, SECCertUsage usage)
 	     */
 
 	    if (caName != NULL) {
-		CERTIssuerAndSN issuerSN;
-
-		issuerSN.derIssuer.data = caName->data;
-		issuerSN.derIssuer.len = caName->len;
-		issuerSN.serialNumber.data = 
-			authorityKeyID->authCertSerialNumber.data;
-		issuerSN.serialNumber.len = 
-			authorityKeyID->authCertSerialNumber.len;
-		issuerCert = CERT_FindCertByIssuerAndSN(cert->dbhandle,
-								&issuerSN);
+		rv = CERT_KeyFromIssuerAndSN(tmpArena, caName,
+					     &authorityKeyID->authCertSerialNumber,
+					     &issuerCertKey);
+		if ( rv == SECSuccess ) {
+		    issuerCert = CERT_FindCertByKey(cert->dbhandle,
+						    &issuerCertKey);
+		}
+		
 		if ( issuerCert == NULL ) {
 		    PORT_SetError (SEC_ERROR_UNKNOWN_ISSUER);
 		    goto loser;
@@ -400,29 +390,6 @@ loser:
     }
 
     return(issuerCert);
-#else
-    NSSCertificate *me;
-    NSSTime *nssTime;
-    NSSUsage nssUsage;
-    NSSCertificate *chain[3];
-    PRStatus status;
-    me = STAN_GetNSSCertificate(cert);
-    nssTime = NSSTime_SetPRTime(NULL, validTime);
-    nssUsage.anyUsage = PR_FALSE;
-    nssUsage.nss3usage = usage;
-    nssUsage.nss3lookingForCA = PR_TRUE;
-    memset(chain, 0, 3*sizeof(NSSCertificate *));
-    (void)NSSCertificate_BuildChain(me, nssTime, &nssUsage, NULL, 
-                                    chain, 2, NULL, &status);
-    nss_ZFreeIf(nssTime);
-    if (status == PR_SUCCESS) {
-	/* if it's a root, the chain will only have one cert */
-	NSSCertificate *issuer = chain[1] ? chain[1] : chain[0];
-	CERTCertificate *rvc = STAN_GetCERTCertificate(issuer);
-	return rvc;
-    }
-    return NULL;
-#endif
 }
 
 /*
@@ -997,15 +964,13 @@ CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
     PRBool       allowOverride;
     SECCertTimeValidity validity;
     CERTStatusConfig *statusConfig;
-   
-#ifdef notdef 
+    
     /* check if this cert is in the Evil list */
     rv = CERT_CheckForEvilCert(cert);
     if ( rv != SECSuccess ) {
 	PORT_SetError(SEC_ERROR_REVOKED_CERTIFICATE);
 	LOG_ERROR_OR_EXIT(log,cert,0,0);
     }
-#endif
     
     /* make sure that the cert is valid at time t */
     allowOverride = (PRBool)((certUsage == certUsageSSLServer) ||

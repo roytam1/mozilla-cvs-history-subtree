@@ -59,35 +59,6 @@
 #include "nssrwlk.h"
 #include "prthread.h"
 
-#include "sslt.h" /* for some formerly private types, now public */
-
-/* to make some of these old enums public without namespace pollution,
-** it was necessary to prepend ssl_ to the names.
-** These #defines preserve compatibility with the old code here in libssl.
-*/
-typedef SSLKEAType      SSL3KEAType;
-typedef SSLMACAlgorithm SSL3MACAlgorithm;
-typedef SSLSignType     SSL3SignType;
-
-#define sign_null	ssl_sign_null
-#define sign_rsa	ssl_sign_rsa
-#define sign_dsa	ssl_sign_dsa
-
-#define calg_null	ssl_calg_null
-#define calg_rc4	ssl_calg_rc4
-#define calg_rc2	ssl_calg_rc2
-#define calg_des	ssl_calg_des
-#define calg_3des	ssl_calg_3des
-#define calg_idea	ssl_calg_idea
-#define calg_fortezza	ssl_calg_fortezza
-#define calg_aes	ssl_calg_aes
-
-#define mac_null	ssl_mac_null
-#define mac_md5 	ssl_mac_md5
-#define mac_sha 	ssl_mac_sha
-#define hmac_md5	ssl_hmac_md5
-#define hmac_sha	ssl_hmac_sha
-
 
 #if defined(DEBUG) || defined(TRACE)
 #ifdef __cplusplus
@@ -142,7 +113,7 @@ typedef enum { SSLAppOpRead = 0,
 #define SSL_MIN_MASTER_KEY_BYTES	5
 #define SSL_MAX_MASTER_KEY_BYTES	64
 
-#define SSL2_SESSIONID_BYTES		16
+#define SSL_SESSIONID_BYTES		16
 #define SSL3_SESSIONID_BYTES		32
 
 #define SSL_MIN_CHALLENGE_BYTES		16
@@ -161,10 +132,6 @@ typedef enum { SSLAppOpRead = 0,
 
 /* This makes the cert cache entry exactly 4k. */
 #define SSL_MAX_CACHED_CERT_LEN		4060
-
-#ifndef BPB
-#define BPB 8 /* Bits Per Byte */
-#endif
 
 typedef struct sslBufferStr             sslBuffer;
 typedef struct sslConnectInfoStr        sslConnectInfo;
@@ -241,7 +208,7 @@ struct sslBufferStr {
 ** SSL3 cipher suite policy and preference struct.
 */
 typedef struct {
-#if !defined(_WIN32)
+#ifdef AIX
     unsigned int    cipher_suite : 16;
     unsigned int    policy       :  8;
     unsigned int    enabled      :  1;
@@ -254,7 +221,7 @@ typedef struct {
 #endif
 } ssl3CipherSuiteCfg;
 
-#define ssl_V3_SUITES_IMPLEMENTED 25
+#define ssl_V3_SUITES_IMPLEMENTED 19
 
 typedef struct sslOptionsStr {
     unsigned int useSecurity		: 1;  /*  1 */
@@ -276,14 +243,6 @@ typedef enum { sslHandshakingUndetermined = 0,
 	       sslHandshakingAsClient,
 	       sslHandshakingAsServer 
 } sslHandshakingType;
-
-typedef struct sslServerCertsStr {
-    /* Configuration state for server sockets */
-    CERTCertificate *     serverCert;
-    CERTCertificateList * serverCertChain;
-    SECKEYPrivateKey *    serverKey;
-    unsigned int          serverKeyBits;
-} sslServerCerts;
 
 /*
 ** SSL Socket struct
@@ -349,9 +308,9 @@ struct sslSocketStr {
 const unsigned char *  preferredCipher;
 
     /* Configuration state for server sockets */
-    /* server cert and key for each KEA type */
-    sslServerCerts        serverCerts[kt_kea_size];
-
+    CERTCertificate *     serverCert[kt_kea_size];
+    CERTCertificateList * serverCertChain[kt_kea_size];
+    SECKEYPrivateKey *    serverKey[kt_kea_size];
     ssl3KeyPair *         stepDownKeyPair;	/* RSA step down keys */
 
     /* Callbacks */
@@ -519,7 +478,7 @@ typedef SECStatus (*SSLDestroy)(void *context, PRBool freeit);
  */
 
 /*
-** This is "ci", as in "ss->sec->ci".
+** This is "ci", as in "ss->sec.ci".
 **
 ** Protection:  All the variables in here are protected by 
 ** firstHandshakeLock AND (in ssl3) ssl3HandshakeLock 
@@ -581,14 +540,8 @@ struct sslSecurityInfoStr {
     int              cipherType;				/* ssl 2 & 3 */
     int              keyBits;					/* ssl 2 & 3 */
     int              secretKeyBits;				/* ssl 2 & 3 */
-    CERTCertificate *localCert;					/* ssl 2 & 3 */
     CERTCertificate *peerCert;					/* ssl 2 & 3 */
     SECKEYPublicKey *peerKey;					/* ssl3 only */
-
-    SSLSignType      authAlgorithm;
-    PRUint32         authKeyBits;
-    SSLKEAType       keaType;
-    PRUint32         keaKeyBits;
 
     /*
     ** Procs used for SID cache (nonce) management. 
@@ -646,10 +599,42 @@ typedef enum {
     cipher_des40,
     cipher_idea, 
     cipher_fortezza,
-    cipher_aes_128,
-    cipher_aes_256,
     cipher_missing              /* reserved for no such supported cipher */
 } SSL3BulkCipher;
+
+/* The specific cipher algorithm */
+
+typedef enum {
+    calg_null     = (int)0x80000000L, 
+    calg_rc4      = CKM_RC4, 
+    calg_rc2      = CKM_RC2_CBC,
+    calg_des      = CKM_DES_CBC, 
+    calg_3des     = CKM_DES3_CBC, 
+    calg_idea     = CKM_IDEA_CBC,
+    calg_fortezza = CKM_SKIPJACK_CBC64, 
+    calg_init     = (int) 0x7fffffffL
+} CipherAlgorithm;
+
+/* hmac added to help TLS conversion by rjr... */
+typedef enum {
+    malg_null     = (int)0x80000000L, 
+    malg_md5      = CKM_SSL3_MD5_MAC, 
+    malg_sha      = CKM_SSL3_SHA1_MAC, 
+    malg_md5_hmac = CKM_MD5_HMAC,
+    malg_sha_hmac = CKM_SHA_1_HMAC
+} MACAlgorithm;
+
+
+/* Key Exchange values moved to ssl.h */
+typedef SSLKEAType SSL3KEAType;
+
+typedef enum { 
+	mac_null, 
+	mac_md5, 
+	mac_sha, 
+	hmac_md5, 	/* TLS HMAC version of mac_md5 */
+	hmac_sha 	/* TLS HMAC version of mac_sha */
+} SSL3MACAlgorithm;
 
 typedef enum { type_stream, type_block } CipherType;
 
@@ -713,28 +698,20 @@ struct sslSessionIDStr {
     CERTCertificate *     peerCert;
     const char *          peerID;     /* client only */
     const char *          urlSvrName; /* client only */
-    CERTCertificate *     localCert;
 
     PRIPv6Addr            addr;
     PRUint16              port;
 
     SSL3ProtocolVersion   version;
 
-    PRUint32              creationTime;		/* seconds since Jan 1, 1970 */
-    PRUint32              lastAccessTime;	/* seconds since Jan 1, 1970 */
-    PRUint32              expirationTime;	/* seconds since Jan 1, 1970 */
+    PRUint32              time;
     Cached                cached;
     int                   references;
-
-    SSLSignType           authAlgorithm;
-    PRUint32              authKeyBits;
-    SSLKEAType            keaType;
-    PRUint32              keaKeyBits;
 
     union {
 	struct {
 	    /* the V2 code depends upon the size of sessionID.  */
-	    unsigned char         sessionID[SSL2_SESSIONID_BYTES];
+	    unsigned char         sessionID[SSL_SESSIONID_BYTES];
 
 	    /* Stuff used to recreate key and read/write cipher objects */
 	    SECItem               masterKey;
@@ -826,7 +803,7 @@ typedef enum { kg_null, kg_strong, kg_export } SSL3KeyGenMode;
 */
 struct ssl3BulkCipherDefStr {
     SSL3BulkCipher  cipher;
-    SSLCipherAlgorithm calg;
+    CipherAlgorithm calg;
     int             key_size;
     int             secret_key_size;
     CipherType      type;
@@ -840,7 +817,7 @@ struct ssl3BulkCipherDefStr {
 */
 struct ssl3MACDefStr {
     SSL3MACAlgorithm mac;
-    CK_MECHANISM_TYPE mmech;
+    MACAlgorithm     malg;
     int              pad_size;
     int              mac_size;
 };
@@ -1270,13 +1247,8 @@ void ssl_Trace(const char *format, ...);
 SEC_END_PROTOS
 
 
-#if defined(XP_UNIX)
+#ifdef XP_UNIX
 #define SSL_GETPID() getpid()
-#elif defined(WIN32)
-
-extern int __cdecl _getpid(void);
-/* #define SSL_GETPID() GetCurrentProcessId() */
-#define SSL_GETPID() _getpid()
 #else
 #define SSL_GETPID() 0
 #endif

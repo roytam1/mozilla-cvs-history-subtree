@@ -271,8 +271,7 @@ RNG_RNGInit(void)
 ** material
 */
 SECStatus 
-prng_RandomUpdate(RNGContext *rng, const void *data, size_t bytes, 
-	unsigned char *q)
+prng_RandomUpdate(RNGContext *rng, void *data, size_t bytes, unsigned char *q)
 {
     SECStatus rv = SECSuccess;
     unsigned char inputhash[BSIZE];
@@ -344,7 +343,7 @@ prng_RandomUpdate(RNGContext *rng, const void *data, size_t bytes,
 ** material.  Not DSA, so no q.
 */
 SECStatus 
-RNG_RandomUpdate(const void *data, size_t bytes)
+RNG_RandomUpdate(void *data, size_t bytes)
 {
     return prng_RandomUpdate(globalrng, data, bytes, NULL);
 }
