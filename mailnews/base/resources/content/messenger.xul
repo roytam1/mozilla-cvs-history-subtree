@@ -151,7 +151,7 @@ Rights Reserved.
 
   <hbox style="height:100px" flex="1">
     <vbox id="sidebar-box">
-      <tree id="folderTree" style="min-width: 150px" persist="height width" flex="1" context="folderPaneContext"/>
+      <tree id="folderTree" style="min-width: 200px" persist="height width" flex="1" context="folderPaneContext"/>
     </vbox>
           
     <splitter id="sidebar-splitter"/>
