@@ -2114,6 +2114,12 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
                 }
             }
             if (!m_msgWindow) return NS_ERROR_FAILURE;
+
+            // note, this will cause us to close the connection.
+            // this will call nsDocShell::LoadURI(), which will
+            // call nsDocShell::StopLoad(), which will eventually
+            // call nsNNTPProtocol::Cancel(), which will close the socket.
+            // we need to fix this, since the connection is still valid.
             rv = m_msgWindow->DisplayHTMLInMessagePane((const PRUnichar *)titleStr, errorHtml.GetUnicode());
             NS_ENSURE_SUCCESS(rv,rv);
         }
@@ -5085,7 +5091,8 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
 				m_nextState = NEWS_FREE;
 	            break;
 	        case NNTP_ERROR:
-#if 0
+                // XXX do we really want to remove the connection from
+                // the cache on error?
                 /* check if this connection came from the cache or if it was
                  * a new connection.  If it was not new lets start it over
 				 * again.  But only if we didn't have any successful protocol
@@ -5093,7 +5100,6 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
                  */
                 if (m_nntpServer)
                     m_nntpServer->RemoveConnection(this);
-#endif
 				m_nextState = NEWS_FREE;
 				break;
             case NEWS_FREE:
