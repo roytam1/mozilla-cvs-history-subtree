@@ -4981,7 +4981,7 @@ nsImapMailFolder::SetTransactionManager(nsITransactionManager* txnMgr)
 
 NS_IMETHODIMP
 nsImapMailFolder::CopyFileMessage(nsIFileSpec* fileSpec,
-                                  nsIMessage* msgToReplace,
+                                  nsIMsgDBHdr* msgToReplace,
                                   PRBool isDraftOrTemplate,
                                   nsIMsgWindow *msgWindow,
                                   nsIMsgCopyServiceListener* listener)
