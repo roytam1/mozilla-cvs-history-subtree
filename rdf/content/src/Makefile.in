@@ -28,11 +28,14 @@ LIBRARY_NAME = rdfcontent_s
 
 CPPSRCS =				\
 	nsRDFContentSink.cpp            \
+	nsRDFDOMNodeList.cpp		\
 	nsRDFDocument.cpp               \
 	nsRDFDocumentContentSink.cpp	\
-	nsRDFElement.cpp                \
-	nsRDFHTMLDocument.cpp		\
-	nsRDFTreeDocument.cpp		\
+	nsRDFGenericElement.cpp         \
+	nsRDFHTMLBuilder.cpp		\
+	nsRDFResourceElement.cpp	\
+	nsRDFSimplContentSink.cpp	\
+	nsRDFTreeBuilder.cpp		\
 	$(NULL)
 
 EXPORTS = \
