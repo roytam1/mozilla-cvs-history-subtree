@@ -71,7 +71,7 @@ public:
   static nsIPrincipal* GetScriptPrincipal(JSContext *cx);
   static const char *kPSMComponentContractID;
 
- private:
+private:
 
   nsIPSMComponent *mPSM;
   nsString         mVersionString;
