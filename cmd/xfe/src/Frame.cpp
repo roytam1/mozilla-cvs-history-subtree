@@ -138,7 +138,7 @@ extern LO_AnchorData *last_documented_anchor_data;
 
 MenuSpec XFE_Frame::new_menu_spec[] = {
   { xfeCmdOpenBrowser,		PUSHBUTTON },
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   { xfeCmdComposeMessage,	PUSHBUTTON },
 #endif
 #ifdef EDITOR
@@ -204,7 +204,7 @@ MenuSpec XFE_Frame::window_menu_spec[] = {
 // Is there is a reason why this is here? It's the same as new_menu_spec
 MenuSpec XFE_Frame::new_submenu_spec[] = {
   { xfeCmdOpenBrowser,		PUSHBUTTON },
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   { xfeCmdComposeMessage,	PUSHBUTTON },
 #endif
 #ifdef EDITOR
@@ -3222,7 +3222,7 @@ XFE_Frame::isCommandEnabled(CommandType cmd,
 		|| cmd == xfeCmdToggleMenubar
 		|| cmd == xfeCmdToggleNavigationToolbar
 		|| cmd == xfeCmdWindowListRaiseItem
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 		|| cmd == xfeCmdComposeMessage
 		|| cmd == xfeCmdComposeMessageHTML
 		|| cmd == xfeCmdComposeMessagePlain
@@ -3438,7 +3438,7 @@ XFE_Frame::doCommand(CommandType cmd, void *calldata, XFE_CommandInfo* info)
 				else
 					hide();
 			}
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 	        else if ( cmd == xfeCmdComposeMessage)
 			{
 			  if (info) {
@@ -3703,7 +3703,7 @@ XFE_Frame::handlesCommand(CommandType cmd,
 		|| cmd == xfeCmdFloatingTaskBarAlwaysOnTop
 		|| cmd == xfeCmdFloatingTaskBarClose
 #endif
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 		|| cmd == xfeCmdComposeMessage
 		|| cmd == xfeCmdComposeMessageHTML
 		|| cmd == xfeCmdComposeMessagePlain

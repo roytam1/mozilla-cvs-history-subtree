@@ -866,7 +866,7 @@ XFE_HTMLView::doCommand(CommandType cmd, void *callData, XFE_CommandInfo* info)
       if (
 #if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
           MSG_RequiresComposeWindow(m_urlUnderMouse->address) ||
-#endif  // MOZ_MAIL_NEWS
+#endif  // MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
           ! XP_STRNCMP ("telnet:", m_urlUnderMouse->address, 7) ||
           ! XP_STRNCMP ("tn3270:", m_urlUnderMouse->address, 7) ||
           ! XP_STRNCMP ("rlogin:", m_urlUnderMouse->address, 7)

@@ -36,7 +36,7 @@
 #include "dirprefs.h"
 #endif
 
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 #include "ComposeFrame.h"
 #endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
@@ -258,7 +258,7 @@ XFE_MNView::commandToMsgCmd(CommandType cmd)
 #define BEGIN_MN_MSG_MAP() if (0)
 #define MN_MSGMAP(the_cmd, the_msg_cmd) else if (cmd == (the_cmd)) msg_cmd = (the_msg_cmd)
   BEGIN_MN_MSG_MAP();
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   MN_MSGMAP(xfeCmdComposeArticle, MSG_PostNew);
   MN_MSGMAP(xfeCmdComposeArticleHTML, MSG_PostNew);
   MN_MSGMAP(xfeCmdComposeArticlePlain, MSG_PostNew);
@@ -822,7 +822,7 @@ FE_UpdateToolbar (MWContext *context)
 
 #endif  // MOZ_MAIL_NEWS
 
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 
 extern "C" void
 FE_UpdateCompToolbar(MSG_Pane* comppane)

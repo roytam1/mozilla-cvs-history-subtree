@@ -117,7 +117,7 @@ static _name_and_group_t _iconGroups[] =
 	{ "Reload",			&TB_Reload_group },
 	{ "Stop",			&TB_Stop_group },
 	{ "MixSecurity",	&TB_MixSecurity_group },
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 	// Compose
 	{ "Send",			&MNC_Send_group },
 	{ "Quote",			&MNC_Quote_group },
