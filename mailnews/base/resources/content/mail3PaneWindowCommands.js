@@ -394,11 +394,12 @@ var DefaultController =
 				break;
 			case "button_delete":
 			case "cmd_delete":
+        SetNextMessageAfterDelete();
         gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
-				// MsgDeleteMessage(false, false);
 				break;
 			case "cmd_shiftDelete":
-				MsgDeleteMessage(true, false);
+        SetNextMessageAfterDelete();
+        gDBView.doCommand(nsMsgViewCommandType.deleteNoTrash);
 				break;
 			case "cmd_editDraft":
 				var threadTree = GetThreadTree();

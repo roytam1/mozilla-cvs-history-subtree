@@ -2248,7 +2248,7 @@ NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKe
   {
     nsMsgViewIndex deletedIndex = m_keys.FindIndex(aKeyChanged);
     if (deletedIndex != nsMsgViewIndex_None)
-      mOutliner->RowsRemoved(deletedIndex, 1);
+      RemoveByIndex(deletedIndex);
   }
   return NS_OK;
 }

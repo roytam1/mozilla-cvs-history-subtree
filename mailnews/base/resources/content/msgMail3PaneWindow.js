@@ -44,6 +44,7 @@ var gCurrentLoadingFolderViewType = "";
 var gCurrentDisplayedMessage = null;
 var gNextMessageAfterDelete = null;
 var gNextMessageAfterLoad = false;
+var gNextMessageViewIndexAfterDelete = -1;
 
 var gActiveThreadPaneSortColumn = "";
 
@@ -180,6 +181,7 @@ function HandleDeleteOrMoveMsgFailed(folder)
   if(IsCurrentLoadedFolder(folder)) {
     if(gNextMessageAfterDelete) {
       gNextMessageAfterDelete = null;
+      gNextMessageViewIndexAfterDelete = -1;
     }
   }
 
@@ -195,20 +197,32 @@ function HandleDeleteOrMoveMsgFailed(folder)
 
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
-/*
 	var threadTree = GetThreadTree();
-
-	if(IsCurrentLoadedFolder(folder))
-	{
+  dump("handling delete or move msg completed\n");
+//	if(IsCurrentLoadedFolder(folder)) ### rewrite/implement this
+//	{
+    dump("current folder loaded handling delete or move msg completed\n");
 		msgNavigationService.EnsureDocumentIsLoaded(document);
-		if(gNextMessageAfterDelete)
+		if(gNextMessageViewIndexAfterDelete != -1)
 		{
-            var nextMessage = document.getElementById(gNextMessageAfterDelete);
-			gNextMessageAfterDelete = null;
-			SelectNextMessage(nextMessage);
-			if(threadTree)
-				threadTree.ensureElementIsVisible(nextMessage);
+      dump("gNextMessageViewIndexAfterDelete != -1 handling delete or move msg completed\n");
+
+      var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+      var outlinerSelection = outlinerView.selection;
+      viewSize = outlinerView.rowCount;
+      if (viewSize.value < gNextMessageViewIndexAfterDelete - 1)
+        if (viewSize.value > 0)
+          gNextMessageViewIndexAfterDelete = viewSize.value;
+        else
+          gNextMessageViewIndexAfterDelete = -1;
+      outlinerSelection.clearSelection(); /* clear selection in either case  */
+      if (gNextMessageViewIndexAfterDelete != -1)
+        outlinerSelection.select(gNextMessageViewIndexAfterDelete);
+			gNextMessageViewIndexAfterDelete = -1;
+//			if(threadTree)
+//				threadTree.ensureElementIsVisible(nextMessage);
 		}
+/*
 		//if there's nothing to select then see if the tree has any messages.
 		//if not, then clear the message pane.
 		else
@@ -218,7 +232,7 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 			if(!topmost)
 				ClearMessagePane()
 		}
-	}
+//	}
 
     if (gBatching) {
       gBatching = false;
@@ -227,7 +241,7 @@ function HandleDeleteOrMoveMsgCompleted(folder)
     }
 
     ThreadPaneSelectionChange(true);
-  */
+*/
 }
 
 
@@ -907,6 +921,11 @@ function GetCompositeDataSource(command)
 function SetNextMessageAfterDelete()
 {
   // this needs re-written
+    var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+    var selection = outlinerView.selection;
+    dump("setting next msg view index after delete to " + selection.currentIndex + "\n");
+    gNextMessageViewIndexAfterDelete = selection.currentIndex;
+
 /*
 	var tree = GetThreadTree();
 
