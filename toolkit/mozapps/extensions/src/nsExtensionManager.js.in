@@ -2147,7 +2147,12 @@ nsExtensionItemUpdater.prototype = {
   
   onError: function (aStatus, aMessage)
   {
-    this._os.notifyObservers(null, "Update:Extension:Item-Error", aMessage);
+    this._os.notifyObservers(null, "Update:Extension:Item-Error", null);
+    
+    for (var i = 0; i < this._items.length; ++i) {
+      if (!this._items[i].updateRDF)
+        this._checkForDone();
+    }
   },
   
   onDatasourceLoaded: function (aDatasource, aItem)
@@ -2189,7 +2194,8 @@ nsExtensionItemUpdater.prototype = {
   
   onDatasourceError: function (aItem)
   {
-    // XXXben - some way of indicating an error in the update process
+    this._os.notifyObservers(aItem, "Update:Extension:Item-Error", "");
+
     this._checkForDone();
   },
   

@@ -243,6 +243,14 @@ nsUpdateService.prototype = {
                       .getService(Components.interfaces.nsIObserverService);
     os.notifyObservers(null, "Update:App:Ended", "");
   },
+  
+  datasourceError: function ()
+  {
+    var os = Components.classes["@mozilla.org/observer-service;1"]
+                      .getService(Components.interfaces.nsIObserverService);
+    os.notifyObservers(null, "Update:App:Error", "");
+    os.notifyObservers(null, "Update:App:Ended", "");
+  },
 
   get updateCount()
   {
@@ -454,6 +462,8 @@ nsAppUpdateXMLRDFDSObserver.prototype =
   onError: function(aSink, aStatus, aErrorMsg)
   {
     aSink.removeXMLSinkObserver(this);
+    
+    this._updateService.datasourceError();
   }
 }
 
