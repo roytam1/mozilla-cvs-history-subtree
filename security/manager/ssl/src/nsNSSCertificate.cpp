@@ -1045,9 +1045,15 @@ ProcessVersion(SECItem         *versionItem,
   // Now to figure out what version this certificate is.
   unsigned long version;
 
-  rv = GetIntValue(versionItem, &version);
-  if (NS_FAILED(rv))
-    return rv;
+  if (versionItem->data) {
+    rv = GetIntValue(versionItem, &version);
+    if (NS_FAILED(rv))
+      return rv;
+  } else {
+    // If there is no version present in the cert, then rfc2459
+    // says we default to v1 (0)
+    version = 0;
+  }
 
   switch (version){
   case 0:
