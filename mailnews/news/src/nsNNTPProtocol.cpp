@@ -474,6 +474,7 @@ nsNNTPProtocol::nsNNTPProtocol(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
 	m_runningURL = nsnull;
   m_connectionBusy = PR_FALSE;
   m_fromCache = PR_FALSE;
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("creating a new nsNNTPProtocol(%x)",(int)this));
     PR_LOG(NNTP,PR_LOG_ALWAYS,("initialize m_currentGroup to null"));
 	m_currentGroup = "";
   LL_I2L(m_lastActiveTimeStamp, 0);
@@ -581,6 +582,9 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
 	
   if (!m_socketIsOpen)
   {
+     PR_LOG(NNTP,PR_LOG_ALWAYS,("opening connection on nsNNTPProtocol(%x)",(int)this));
+     PR_LOG(NNTP,PR_LOG_ALWAYS,("to %s",(const char *)hostName));
+     PR_LOG(NNTP,PR_LOG_ALWAYS,("on port %d",port));
   // call base class to set up the transport
     if (isSecure) {
 	    rv = OpenNetworkSocket(m_url, "ssl-forcehandshake");
@@ -956,6 +960,9 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 		  {
 			  m_typeWanted = IDS_WANTED;
 			  m_commandSpecificData = nsCRT::strdup(commandSpecificData);
+
+              rv = m_nntpServer->FindGroup((const char *)group, getter_AddRefs(m_newsFolder));
+              if (!m_newsFolder) goto FAIL;
 		  }
 		  else
 		  {

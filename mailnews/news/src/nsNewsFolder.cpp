@@ -507,7 +507,8 @@ NS_IMETHODIMP nsMsgNewsFolder::SetNewsrcHasChanged(PRBool newsrcHasChanged)
 NS_IMETHODIMP nsMsgNewsFolder::CreateSubfolder(const PRUnichar *uninewsgroupname, nsIMsgWindow *msgWindow)
 {
 	nsresult rv = NS_OK;
-	if (!uninewsgroupname) return NS_ERROR_NULL_POINTER;
+
+    NS_ENSURE_ARG_POINTER(uninewsgroupname);
 	if (nsCRT::strlen(uninewsgroupname) == 0) return NS_ERROR_FAILURE;
 
     nsCAutoString newsgroupname; newsgroupname.AssignWithConversion(uninewsgroupname);
@@ -1108,7 +1109,7 @@ nsMsgNewsFolder::HandleNewsrcLine(char* line, PRUint32 line_size)
   setStr = s+1;
 	*s = '\0';
   
-	if (PL_strlen(line) == 0) {
+	if (*line == '\0') {
 		return 0;
 	}
  

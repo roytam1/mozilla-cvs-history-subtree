@@ -82,9 +82,6 @@ nsNNTPArticleList::AddArticleKey(PRInt32 key)
 		// we have a copy of the article offline.
 		while (idInDBToCheck < key)
 		{
-#ifdef DEBUG_seth
-            printf("XXX removing %d\n",idInDBToCheck);
-#endif
             m_newsFolder->RemoveMessage(idInDBToCheck);
 #ifdef DEBUG_seth
 			m_idsDeleted.Add(idInDBToCheck);
@@ -105,7 +102,7 @@ nsNNTPArticleList::FinishAddingArticleKeys()
 #ifdef DEBUG_seth
 	// make sure none of the deleted turned up on the idsOnServer list
 	for (PRUint32 i = 0; i < m_idsDeleted.GetSize(); i++) {
-		NS_ASSERTION(m_idsOnServer.FindIndex(m_idsDeleted.GetAt(i), 0) != nsMsgViewIndex_None, "a deleted turned up on the idsOnServer list");
+		NS_ASSERTION(m_idsOnServer.FindIndex((nsMsgKey)(m_idsDeleted.GetAt(i)), 0) == nsMsgViewIndex_None, "a deleted turned up on the idsOnServer list");
     }
 #endif
 	return NS_OK;

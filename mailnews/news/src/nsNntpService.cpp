@@ -36,7 +36,6 @@
 #include "nsNewsDatabase.h"
 #include "nsMsgDBCID.h"
 #include "nsMsgBaseCID.h"
-#include "nsMsgNewsCID.h"
 #include "nsIPref.h"
 #include "nsCRT.h"  // for nsCRT::strtok
 #include "nsNntpService.h"
@@ -65,9 +64,7 @@
 #define PREF_NETWORK_HOSTS_NNTP_SERVER	"network.hosts.nntp_server"
 #define PREF_MAIL_ROOT_NNTP 	"mail.root.nntp"
 
-static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
-static NS_DEFINE_CID(kCNNTPNewsgroupPostCID, NS_NNTPNEWSGROUPPOST_CID);
 static NS_DEFINE_CID(kCPrefServiceCID, NS_PREF_CID); 
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kMessengerMigratorCID, NS_MESSENGERMIGRATOR_CID);
@@ -454,7 +451,7 @@ nsNntpService::FindServerWithNewsgroup(nsCString &host, nsCString &groupName)
   	serverInfo.newsgroup = (const char *)groupName;
 
 #ifdef DEBUG_seth
-    printf("this only looks at the list of subscribed newsgroups.  fix to use the hostinfo.dat information\n");
+    printf("XXX this only looks at the list of subscribed newsgroups.  fix to use the hostinfo.dat information\n");
 #endif
 
 	servers->EnumerateForwards(findNewsServerWithGroup, (void *)&serverInfo);
@@ -488,10 +485,11 @@ nsresult
 nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroupsNames, const char *newshost, char **newsUrlSpec)
 {
   nsresult rv = NS_OK;
-  nsCAutoString host;
+  NS_ENSURE_ARG_POINTER(nntpUrl);
+  NS_ENSURE_ARG_POINTER(newsgroupsNames);
+  if (*newsgroupsNames == '\0') return NS_ERROR_FAILURE;
 
-  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
-  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
+  nsCAutoString host;
 
   // newsgroupsNames can be a comma seperated list of these:
   // news://host/group
@@ -538,7 +536,7 @@ nsNntpService::SetUpNntpUrlForPosting(nsINntpUrl *nntpUrl, const char *newsgroup
         theRest.Left(currentHost, slashpos);
         theRest.Right(currentGroup, slashpos);
       }
-      else if (newshost && nsCRT::strlen(newshost) > 0) {
+      else if (newshost && (*newshost != '\0')) {
         currentHost.Assign(newshost);
       }
       else {
@@ -604,14 +602,10 @@ NS_IMETHODIMP
 nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retval)
 {
   nsresult rv = NS_OK;
-  
-  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
-  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
+  NS_ENSURE_ARG_POINTER(newsgroupsNames);
+  NS_ENSURE_ARG_POINTER(_retval);
+  if (*newsgroupsNames == '\0') return NS_ERROR_INVALID_ARG;
 
-#ifdef DEBUG_NEWS
-  printf("newsgroupsNames == %s\n",newsgroupsNames);
-#endif
-  
   // newsgroupsNames can be a comma seperated list of these:
   // news://host/group
   // news://group
@@ -719,28 +713,28 @@ nsNntpService::ConvertNewsgroupsString(const char *newsgroupsNames, char **_retv
 NS_IMETHODIMP
 nsNntpService::PostMessage(nsIFileSpec *fileToPost, const char *newsgroupsNames, const char *newshost, nsIUrlListener * aUrlListener, nsIMsgWindow *aMsgWindow, nsIURI **_retval)
 {
-#ifdef DEBUG_NEWS
-  printf("nsNntpService::PostMessage(??,%s,??,??)\n",newsgroupsNames);
-#endif
-  if (!aMsgWindow) return NS_ERROR_NULL_POINTER;
-  if (!newsgroupsNames) return NS_ERROR_NULL_POINTER;
-  if (PL_strlen(newsgroupsNames) == 0) return NS_ERROR_FAILURE;
+  NS_ENSURE_ARG_POINTER(aMsgWindow);
+  NS_ENSURE_ARG_POINTER(newsgroupsNames);
+  
+  if (*newsgroupsNames == '\0') return NS_ERROR_INVALID_ARG;
     
   NS_LOCK_INSTANCE();
   
-  nsCOMPtr <nsINntpUrl> nntpUrl;
   nsresult rv = NS_OK;
   
-  rv = nsComponentManager::CreateInstance(kCNntpUrlCID, nsnull, NS_GET_IID(nsINntpUrl), getter_AddRefs(nntpUrl));
-  if (NS_FAILED(rv) || !nntpUrl) return rv;
+  nsCOMPtr <nsINntpUrl> nntpUrl = do_CreateInstance(NS_NNTPURL_CONTRACTID,&rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!nntpUrl) return NS_ERROR_FAILURE;
 
-  nntpUrl->SetNewsAction(nsINntpUrl::ActionPostArticle);
+  rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionPostArticle);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   nsXPIDLCString newsUrlSpec;
   rv = SetUpNntpUrlForPosting(nntpUrl, newsgroupsNames, newshost, getter_Copies(newsUrlSpec));
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
+  nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
   if (!mailnewsurl) return NS_ERROR_FAILURE;
 
   mailnewsurl->SetSpec((const char *)newsUrlSpec);
@@ -748,27 +742,19 @@ nsNntpService::PostMessage(nsIFileSpec *fileToPost, const char *newsgroupsNames,
   if (aUrlListener) // register listener if there is one...
     mailnewsurl->RegisterListener(aUrlListener);
   
-  // almost there...now create a nntp protocol instance to run the url in...
-  nsCOMPtr <nsIURI> nntpURI = do_QueryInterface(nntpUrl);;
-  nsCOMPtr<nsINNTPProtocol> nntpProtocol ;
-  rv = GetProtocolForUri(nntpURI, aMsgWindow, getter_AddRefs(nntpProtocol));
-
-  if (!nntpProtocol) return NS_ERROR_OUT_OF_MEMORY;
-  
-  rv = nntpProtocol->Initialize(mailnewsurl, aMsgWindow);
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCOMPtr <nsINNTPNewsgroupPost> post;
-  rv = nsComponentManager::CreateInstance(kCNNTPNewsgroupPostCID, nsnull, NS_GET_IID(nsINNTPNewsgroupPost), getter_AddRefs(post));
-  if (NS_FAILED(rv) || !post) return rv;
+  nsCOMPtr <nsINNTPNewsgroupPost> post = do_CreateInstance(NS_NNTPNEWSGROUPPOST_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!post) return NS_ERROR_FAILURE;
 
   rv = post->SetPostMessageFile(fileToPost);
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv,rv);
   
   rv = nntpUrl->SetMessageToPost(post);
-  if (NS_FAILED(rv)) return rv;
-            
-  rv = nntpProtocol->LoadNewsUrl(mailnewsurl, /* aConsumer */ nsnull);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr <nsIURI> url = do_QueryInterface(nntpUrl);
+  rv = RunNewsUrl(url, aMsgWindow, nsnull /* consumer */);
+  NS_ENSURE_SUCCESS(rv,rv);
 		
   if (_retval)
 	  nntpUrl->QueryInterface(NS_GET_IID(nsIURI), (void **) _retval);
@@ -779,13 +765,13 @@ nsNntpService::PostMessage(nsIFileSpec *fileToPost, const char *newsgroupsNames,
 }
 
 nsresult 
-nsNntpService::ConstructNntpUrl(const char * urlString, nsIUrlListener *aUrlListener, nsIMsgWindow * aMsgWindow, nsIURI ** aUrl)
+nsNntpService::ConstructNntpUrl(const char *urlString, nsIUrlListener *aUrlListener, nsIMsgWindow *aMsgWindow, nsIURI ** aUrl)
 {
-  nsCOMPtr <nsINntpUrl> nntpUrl;
   nsresult rv = NS_OK;
 
-  rv = nsComponentManager::CreateInstance(kCNntpUrlCID, nsnull, NS_GET_IID(nsINntpUrl), getter_AddRefs(nntpUrl));
-  if (NS_FAILED(rv) || !nntpUrl) return rv;
+  nsCOMPtr <nsINntpUrl> nntpUrl = do_CreateInstance(NS_NNTPURL_CONTRACTID,&rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!nntpUrl) return NS_ERROR_FAILURE;
   
   nsCOMPtr <nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
   mailnewsurl->SetMsgWindow(aMsgWindow);
@@ -799,7 +785,6 @@ nsNntpService::ConstructNntpUrl(const char * urlString, nsIUrlListener *aUrlList
   (*aUrl) = mailnewsurl;
   NS_IF_ADDREF(*aUrl);
   return rv;
-
 }
 
 nsresult
@@ -1118,10 +1103,13 @@ NS_IMETHODIMP nsNntpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI 
 {
 	nsresult rv = NS_OK;
 
-	nsCOMPtr<nsINntpUrl> nntpUrl;
-	rv = nsComponentManager::CreateInstance(kCNntpUrlCID, nsnull, NS_GET_IID(nsINntpUrl), getter_AddRefs(nntpUrl));
-	if (NS_FAILED(rv)) return rv;
-	nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
+    nsCOMPtr <nsINntpUrl> nntpUrl = do_CreateInstance(NS_NNTPURL_CONTRACTID,&rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (!nntpUrl) return NS_ERROR_FAILURE;
+
+    // XXX is this always the case?
+	rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
+    NS_ENSURE_SUCCESS(rv,rv);
 
 	nntpUrl->QueryInterface(NS_GET_IID(nsIURI), (void **) _retval);
 
@@ -1131,7 +1119,7 @@ NS_IMETHODIMP nsNntpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI 
 
 NS_IMETHODIMP nsNntpService::NewChannel(nsIURI *aURI, nsIChannel **_retval)
 {
-	nsresult rv = NS_OK;
+  nsresult rv = NS_OK;
   nsCOMPtr <nsINNTPProtocol> nntpProtocol;
   rv = GetProtocolForUri(aURI, nsnull, getter_AddRefs(nntpProtocol));
   if (NS_SUCCEEDED(rv))
@@ -1319,10 +1307,7 @@ NS_IMETHODIMP
 nsNntpService::UpdateCounts(nsINntpIncomingServer *aNntpServer, nsIMsgWindow *aMsgWindow)
 {
 	nsresult rv;
-#ifdef DEBUG_NEWS
-	printf("in UpdateCountsForNewsgroup()\n");
-#endif
-	if (!aNntpServer) return NS_ERROR_NULL_POINTER;
+    NS_ENSURE_ARG_POINTER(aNntpServer);
 
 	nsCOMPtr<nsIURI> url;
 	nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(aNntpServer, &rv);

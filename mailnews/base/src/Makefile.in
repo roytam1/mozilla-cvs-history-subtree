@@ -33,7 +33,6 @@ REQUIRES	= xpcom necko dom js appshell appcomps uconv intl htmlparser widget doc
 CPPSRCS		= \
 		nsMessenger.cpp \
 		nsMessengerBootstrap.cpp \
-		nsMsgKeyArray.cpp \
 		nsUrlListenerManager.cpp \
 		nsMsgMailSession.cpp \
 		nsMsgMD5.cpp \
@@ -68,7 +67,6 @@ CPPSRCS		= \
 EXPORTS		= \
 		nsMessenger.h \
 		nsMessengerBootstrap.h \
-		nsMsgKeyArray.h \
 		nsUrlListenerManager.h \
 		nsMsgMailSession.h \
 		nsMsgAccountManager.h \

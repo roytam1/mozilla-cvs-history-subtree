@@ -33,6 +33,7 @@ EXPORTS=                \
 	nsUInt32Array.h	\
   nsUint8Array.h \
 	nsMsgKeySet.h			\
+	nsMsgKeyArray.h			\
 	nsMsgFolder.h			\
 	nsMsgDBFolder.h			\
 	nsLocalFolderSummarySpec.h	\
@@ -66,6 +67,7 @@ CPP_OBJS=                               \
   .\$(OBJDIR)\nsUint8Array.obj \
 	.\$(OBJDIR)\nsUInt32Array.obj		\
 	.\$(OBJDIR)\nsMsgKeySet.obj			\
+	.\$(OBJDIR)\nsMsgKeyArray.obj		\
 	.\$(OBJDIR)\nsMsgFolder.obj			\
 	.\$(OBJDIR)\nsMsgDBFolder.obj		\
 	.\$(OBJDIR)\nsLocalFolderSummarySpec.obj	\

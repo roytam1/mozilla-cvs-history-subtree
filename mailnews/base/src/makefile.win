@@ -31,7 +31,6 @@ include <$(DEPTH)\config\config.mak>
 EXPORTS=						\
 	nsMessenger.h				\
 	nsMessengerBootstrap.h		\
-	nsMsgKeyArray.h				\
 	nsUrlListenerManager.h		\
 	nsMsgMailSession.h			\
 	nsMsgFolderDataSource.h		\
@@ -66,7 +65,6 @@ LIBRARY_NAME=msgbase_s
 CPP_OBJS=									\
     .\$(OBJDIR)\nsMessenger.obj				\
     .\$(OBJDIR)\nsMessengerBootstrap.obj	\
-	.\$(OBJDIR)\nsMsgKeyArray.obj			\
 	.\$(OBJDIR)\nsUrlListenerManager.obj	\
 	.\$(OBJDIR)\nsMsgMailSession.obj		\
 	.\$(OBJDIR)\nsCopyMessageStreamListener.obj	\

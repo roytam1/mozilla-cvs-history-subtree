@@ -39,6 +39,7 @@ CPPSRCS		= \
 		nsUint8Array.cpp \
 		nsUInt32Array.cpp \
 		nsMsgKeySet.cpp \
+		nsMsgKeyArray.cpp \
 		nsLocalFolderSummarySpec.cpp \
 		nsNewsSummarySpec.cpp \
 		nsMsgIdentity.cpp \
@@ -56,6 +57,7 @@ EXPORTS		= \
 		nsUint8Array.h \
 		nsUInt32Array.h \
 		nsMsgKeySet.h \
+		nsMsgKeyArray.h \
 		nsMsgFolder.h \
 		nsMsgDBFolder.h \
 		nsLocalFolderSummarySpec.h \
