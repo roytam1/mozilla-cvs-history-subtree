@@ -35,6 +35,7 @@ nsSHEntry::nsSHEntry()
 {
    mParent = nsnull;
    mID = gEntryID++;
+   mSaveLayoutState = PR_TRUE;
 }
 
 nsSHEntry::~nsSHEntry() 
@@ -168,6 +169,7 @@ NS_IMETHODIMP nsSHEntry::GetLayoutHistoryState(nsILayoutHistoryState** aResult)
 
 NS_IMETHODIMP nsSHEntry::SetLayoutHistoryState(nsILayoutHistoryState* aState)
 {
+   NS_ENSURE_STATE(mSaveLayoutState || !aState);
    mLayoutHistoryState = aState;
    return NS_OK;
 }
@@ -240,6 +242,12 @@ NS_IMETHODIMP nsSHEntry::GetSaveLayoutStateFlag(PRBool * aFlag)
 NS_IMETHODIMP nsSHEntry::SetSaveLayoutStateFlag(PRBool  aFlag)
 {
    mSaveLayoutState = aFlag;
+
+   // if we are not allowed to hold layout history state, then make sure
+   // that we are not holding it!
+   if (!mSaveLayoutState)
+      mLayoutHistoryState = nsnull;
+
    return NS_OK;
 }
 
@@ -280,7 +288,6 @@ nsSHEntry::Create(nsIURI * aURI, const PRUnichar * aTitle,
   SetTitle(aTitle);
   SetDocument(aDOMDocument);
   SetPostData(aInputStream);
-  SetLayoutHistoryState(aHistoryLayoutState);
   SetCacheKey(aCacheKey);
   SetContentType(aContentType);
     
@@ -294,6 +301,7 @@ nsSHEntry::Create(nsIURI * aURI, const PRUnichar * aTitle,
 
   // By default we save HistoryLayoutState
   SetSaveLayoutStateFlag(PR_TRUE);
+  SetLayoutHistoryState(aHistoryLayoutState);
 
   //By default the page is not expired
   SetExpirationStatus(PR_FALSE);
@@ -317,13 +325,13 @@ nsSHEntry::Clone(nsISHEntry ** aResult)
     dest->SetURI(mURI);
     dest->SetReferrerURI(mReferrerURI);
     dest->SetPostData(mPostData);
+    dest->SetSaveLayoutStateFlag(mSaveLayoutState);
     dest->SetLayoutHistoryState(mLayoutHistoryState);
     dest->SetTitle(mTitle.get());
     dest->SetParent(mParent);
     dest->SetID(mID);
     dest->SetIsSubFrame(mIsFrameNavigation);
     dest->SetExpirationStatus(mExpired);
-    dest->SetSaveLayoutStateFlag(mSaveLayoutState);
     dest->SetCacheKey(mCacheKey);
 
     rv = dest->QueryInterface(NS_GET_IID(nsISHEntry), (void**) aResult);
