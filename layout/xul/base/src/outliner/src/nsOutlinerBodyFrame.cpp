@@ -498,6 +498,8 @@ NS_IMETHODIMP nsOutlinerBodyFrame::RowCountChanged(PRInt32 aIndex, PRInt32 aCoun
   if (aCount == 0)
     return NS_OK; // Nothing to do.
 
+  PRInt32 count = aCount > 0 ? aCount : -aCount;
+
   // Adjust our selection.
   nsCOMPtr<nsIOutlinerSelection> sel;
   mView->GetSelection(getter_AddRefs(sel));
@@ -521,15 +523,15 @@ NS_IMETHODIMP nsOutlinerBodyFrame::RowCountChanged(PRInt32 aIndex, PRInt32 aCoun
     }
   }
   else if (aCount < 0) {
-    if (mTopRowIndex > aIndex+aCount-1) {
+    if (mTopRowIndex > aIndex+count-1) {
       // No need to invalidate. The remove happened
       // completely offscreen.
-      mTopRowIndex -= aCount;
+      mTopRowIndex -= count;
       UpdateScrollbar();
     }
     else if (mTopRowIndex > aIndex) {
       // This is a full-blown invalidate.
-      mTopRowIndex = aIndex+aCount-1;
+      mTopRowIndex = aIndex+count-1;
       UpdateScrollbar();
       Invalidate();
     }
