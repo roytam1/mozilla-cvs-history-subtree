@@ -685,6 +685,7 @@ protected:
                                     const nsAString *aValue);
 
   nsresult PromoteInlineRange(nsIDOMRange *inRange);
+  nsresult PromoteRangeIfStartsOrEndsInNamedAnchor(nsIDOMRange *inRange);
   nsresult SplitStyleAboveRange(nsIDOMRange *aRange, 
                                 nsIAtom *aProperty, 
                                 const nsAString *aAttribute);
