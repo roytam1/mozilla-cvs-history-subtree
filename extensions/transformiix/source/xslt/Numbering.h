@@ -43,7 +43,7 @@ class Numbering {
 public:
 
     static void doNumbering (Element* xslNumber, String& dest,
-                             txIEvalContext* aContext, ProcessorState* ps);
+                             ProcessorState* ps);
 
 private:
     static int countPreceedingSiblings

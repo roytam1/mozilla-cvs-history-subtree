@@ -75,7 +75,8 @@ void PredicateList::evaluatePredicates(NodeSet* nodes,
          * position
          */
         newNodes.clear();
-        do {
+        while (predContext.hasNext()) {
+            predContext.next();
             ExprResult* exprResult = expr->evaluate(&predContext);
             if (!exprResult)
                 break;
@@ -92,11 +93,7 @@ void PredicateList::evaluatePredicates(NodeSet* nodes,
                     break;
             }
             delete exprResult;
-            if (predContext.hasNext())
-                predContext.next();
-            else
-                break;
-        } while (1);
+        }
         // Move new NodeSet to the current one
         nodes->clear();
         nodes->append(&newNodes);

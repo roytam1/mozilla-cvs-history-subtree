@@ -84,7 +84,7 @@ protected:
      * Returns prefix and localName as well as namespace ID
     **/
     nsresult resolveQName(const String& aQName, String& aPrefix,
-                          String& aLocalName, PRInt32 aNamespace);
+                          String& aLocalName, PRInt32& aNamespace);
 
     /**
      * Using the given lexer, parses the tokens if they represent a predicate list

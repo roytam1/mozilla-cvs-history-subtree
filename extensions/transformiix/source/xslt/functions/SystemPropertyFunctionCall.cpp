@@ -47,7 +47,7 @@ ExprResult* SystemPropertyFunctionCall::evaluate(txIEvalContext* aContext)
                 if (!prefix.isEmpty()) {
                     txAtom* prefixAtom = TX_GET_ATOM(prefix);
                     aNSID = mStylesheetNode->lookupNamespaceID(prefixAtom);
-                    TX_IF_RELEASE_ATOM(nameAtom);
+                    TX_IF_RELEASE_ATOM(prefixAtom);
                 }
                 if (kNameSpaceID_XSLT == aNSID) {
                     String localName;

@@ -113,7 +113,7 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
         return NS_ERROR_XPATH_PARSE_FAILED;
     }
 
-    aPattern = locPath;
+    aPattern = unionPattern;
     return NS_OK;
 }
 
@@ -125,6 +125,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     // Should check for id() and key() first
 
     MBool isChild = MB_TRUE;
+    MBool isAbsolute = MB_FALSE;
     txPattern* stepPattern = 0;
     txLocPathPattern* pathPattern = 0;
 
@@ -136,9 +137,11 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
             break;
         case Token::PARENT_OP:
             aLexer.nextToken();
-            stepPattern = new txRootPattern();
-            if (!stepPattern)
-                return NS_ERROR_OUT_OF_MEMORY;
+            isAbsolute = MB_TRUE;
+            if (Token::END == aLexer.peek()->type) {
+                aPattern = new txRootPattern();
+                return aPattern ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+            }
             break;
         default:
             break;
@@ -150,7 +153,8 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     }
 
     type = aLexer.peek()->type;
-    if (Token::PARENT_OP != type && Token::ANCESTOR_OP != type) {
+    if (!isAbsolute && Token::PARENT_OP != type
+        && Token::ANCESTOR_OP != type) {
         aPattern = stepPattern;
         return NS_OK;
     }
@@ -161,6 +165,22 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
+    if (isAbsolute) {
+        txRootPattern* root = new txRootPattern();
+        if (!root) {
+            delete stepPattern;
+            delete pathPattern;
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        rv = pathPattern->addStep(root, MB_TRUE);
+        if (NS_FAILED(rv)) {
+            delete stepPattern;
+            delete pathPattern;
+            delete root;
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+    }
+
     rv = pathPattern->addStep(stepPattern, isChild);
     if (NS_FAILED(rv)) {
         delete stepPattern;
@@ -169,7 +189,8 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     }
     stepPattern = 0; // stepPattern is part of pathPattern now
 
-    while (Token::PARENT_OP == type && Token::ANCESTOR_OP == type) {
+    while (Token::PARENT_OP == type || Token::ANCESTOR_OP == type) {
+        isChild = Token::PARENT_OP == type;
         aLexer.nextToken();
         rv = createStepPattern(aLexer, stepPattern);
         if (NS_FAILED(rv)) {
@@ -185,6 +206,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
         stepPattern = 0; // stepPattern is part of pathPattern now
         type = aLexer.peek()->type;
     }
+    aPattern = pathPattern;
     return rv;
 }
 
@@ -237,6 +259,7 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
         }
     }
     else {
+        aLexer.pushBack();
         nodeTest = createNodeTest(aLexer);
         if (!nodeTest) {
             // XXX error report NodeTest expected

@@ -156,13 +156,8 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
         return 0;
     }
 
-    if (!buffer.isEmpty()) {
-        // don't really create a AVT, but return null
-        // callers check for this and just use their String
-        delete avt;
-        mContext = 0;
-        return 0;
-    }
+    if (!buffer.isEmpty())
+        avt->addExpr(new StringExpr(buffer));
 
     mContext = 0;
     return avt;
@@ -720,8 +715,6 @@ txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
 Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
 
     Expr* expr = 0;
-    Expr* filter = 0;
-    MBool isFilter = MB_FALSE;
 
     Token* tok = lexer.peek();
 
@@ -738,8 +731,7 @@ Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
     if (tok->type != Token::PARENT_OP &&
         tok->type != Token::ANCESTOR_OP) {
         if (isFilterExprToken(tok)) {
-            filter = createFilterExpr(lexer);
-            isFilter = MB_TRUE;
+            expr = createFilterExpr(lexer);
         }
         else
             expr = createLocationStep(lexer);
@@ -768,10 +760,7 @@ Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
         delete expr;
         return 0;
     }
-    if (!isFilter)
-        pathExpr->addExpr(expr, PathExpr::RELATIVE_OP);
-    else
-        pathExpr->setFilterExpr(filter);
+    pathExpr->addExpr(expr, PathExpr::RELATIVE_OP);
 
     // this is ugly
     while (1) {
@@ -978,7 +967,7 @@ short ExprParser::precedenceLevel(short tokenType) {
 
 nsresult ExprParser::resolveQName(const String& aQName,
                                   String& aPrefix, String& aLocalName,
-                                  PRInt32 aNamespace)
+                                  PRInt32& aNamespace)
 {
     nsresult res = NS_OK;
     aNamespace = kNameSpaceID_None;

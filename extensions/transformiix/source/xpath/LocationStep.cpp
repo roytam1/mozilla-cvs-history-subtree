@@ -28,7 +28,7 @@
 */
 
 #include "Expr.h"
-#include "txForwardContext.h"
+#include "txIXPathContext.h"
 
 /**
  * Creates a new LocationStep using the given NodeExpr and Axis Identifier
@@ -204,7 +204,8 @@ nsresult LocationStep::evalStep(Node* aNode, txIMatchContext* aContext,
     } //-- switch
 
     //-- apply predicates
-    evaluatePredicates(aResult, aContext);
+    if (!isEmpty())
+        evaluatePredicates(aResult, aContext);
 
     if (reverse)
         aResult->reverse();

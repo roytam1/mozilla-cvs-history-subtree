@@ -76,7 +76,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     Document* contextDoc;
     Node* contextNode = aContext->getContextNode();
     if (contextNode->getNodeType() == Node::DOCUMENT_NODE)
-        contextDoc = (Document*)aContext;
+        contextDoc = (Document*)contextNode;
     else
         contextDoc = contextNode->getOwnerDocument();
 
@@ -232,6 +232,7 @@ void txXSLKey::testNode(Node* aNode, NamedMap* aMap, txIMatchContext* aContext)
         if (key->matchPattern->matches(aNode, aContext)) {
             NodeSet contextNodeSet(aNode);
             txNodeSetContext evalContext(&contextNodeSet, aContext);
+            evalContext.next();
             ExprResult* exprResult = key->useExpr->evaluate(&evalContext);
             if (exprResult->getResultType() == ExprResult::NODESET) {
                 NodeSet* res = (NodeSet*)exprResult;

@@ -20,7 +20,6 @@ CurrentFunctionCall::CurrentFunctionCall(ProcessorState* aPs)
  */
 ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
 {
-    // mPs->getEvalContext()->getContextNode()
-    return new NodeSet();
+    return new NodeSet(mPs->getEvalContext()->getContextNode());
 }
 

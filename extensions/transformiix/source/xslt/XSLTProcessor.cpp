@@ -53,6 +53,7 @@
 #include "URIUtils.h"
 #include "txAtoms.h"
 #include "txRtfHandler.h"
+#include "txNodeSetContext.h"
 #ifndef TX_EXE
 #include "nsIObserverService.h"
 #include "nsIURL.h"
@@ -818,9 +819,10 @@ Document* XSLTProcessor::process(Document& xmlDocument,
             ps.addErrorObserver(*(ErrorObserver*)iter.next());
     
         NodeSet nodeSet(&aXMLDocument);
-        ps.pushCurrentNode(&aXMLDocument);
-        ps.getNodeSetStack()->push(&nodeSet);
-    
+        txNodeSetContext evalContext(&nodeSet, &ps);
+        evalContext.next(); //step into the document
+        ps.setEvalContext(&evalContext);
+
         // Index templates and process top level xsl elements
         txListIterator importFrame(ps.getImportFrames());
         importFrame.addAfter(new ProcessorState::ImportFrame(0));
@@ -868,8 +870,9 @@ void XSLTProcessor::process(Document& aXMLDocument,
             ps.addErrorObserver(*(ErrorObserver*)iter.next());
 
         NodeSet nodeSet(&aXMLDocument);
-        ps.pushCurrentNode(&aXMLDocument);
-        ps.getNodeSetStack()->push(&nodeSet);
+        txNodeSetContext evalContext(&nodeSet, &ps);
+        evalContext.next(); //step into the document
+        ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements
         txListIterator importFrame(ps.getImportFrames());
@@ -1104,15 +1107,12 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (!expr)
                     break;
 
-                ExprResult* exprResult = expr->evaluate(aPs);
+                ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
                 if (!exprResult)
                     break;
 
                 if (exprResult->getResultType() == ExprResult::NODESET) {
                     NodeSet* nodeSet = (NodeSet*)exprResult;
-
-                    //-- push nodeSet onto context stack
-                    aPs->getNodeSetStack()->push(nodeSet);
 
                     // Look for xsl:sort elements
                     txNodeSorter sorter(aPs);
@@ -1131,17 +1131,21 @@ void XSLTProcessor::processAction(Node* aNode,
 
                     const String& mode =
                         actionElement->getAttribute(MODE_ATTR);
-                    for (int i = 0; i < nodeSet->size(); i++) {
+
+                    txNodeSetContext evalContext(nodeSet, aPs);
+                    txIEvalContext* priorEC =
+                        aPs->setEvalContext(&evalContext);
+                    while (evalContext.hasNext()) {
+                        evalContext.next();
                         ProcessorState::ImportFrame *frame;
-                        Node* currNode = nodeSet->get(i);
+                        Node* currNode = evalContext.getContextNode();
                         Node* xslTemplate;
                         xslTemplate = aPs->findTemplate(currNode, mode, &frame);
                         processMatchedTemplate(xslTemplate, currNode,
                                                actualParams, mode, frame, aPs);
                     }
 
-                    //-- remove nodeSet from context stack
-                    aPs->getNodeSetStack()->pop();
+                    aPs->setEvalContext(priorEC);
 
                     delete actualParams;
                 }
@@ -1256,7 +1260,8 @@ void XSLTProcessor::processAction(Node* aNode,
                                 if (!expr)
                                     break;
 
-                                ExprResult* result = expr->evaluate(aPs);
+                                ExprResult* result = expr->evaluate
+                                    (aPs->getEvalContext());
                                 if (result && result->booleanValue()) {
                                     processChildren(aNode, xslTemplate, aPs);
                                     caseFound = MB_TRUE;
@@ -1305,7 +1310,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (!expr)
                     break;
 
-                ExprResult* exprResult = expr->evaluate(aPs);
+                ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
                 xslCopyOf(exprResult, aPs);
                 delete exprResult;
                 break;
@@ -1380,15 +1385,15 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (!expr)
                     break;
 
-                ExprResult* exprResult = expr->evaluate(aPs);
+                ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
                 if (!exprResult)
                     break;
 
                 if (exprResult->getResultType() == ExprResult::NODESET) {
                     NodeSet* nodeSet = (NodeSet*)exprResult;
-
-                    //-- push nodeSet onto context stack
-                    aPs->getNodeSetStack()->push(nodeSet);
+                    txNodeSetContext evalContext(nodeSet, aPs);
+                    txIEvalContext* priorEC =
+                        aPs->setEvalContext(&evalContext);
 
                     // Look for xsl:sort elements
                     txNodeSorter sorter(aPs);
@@ -1419,17 +1424,14 @@ void XSLTProcessor::processAction(Node* aNode,
                     oldTemplate = aPs->getCurrentTemplateRule();
                     aPs->setCurrentTemplateRule(0);
 
-                    for (int i = 0; i < nodeSet->size(); i++) {
-                        Node* currNode = nodeSet->get(i);
-                        aPs->pushCurrentNode(currNode);
+                    while (evalContext.hasNext()) {
+                        evalContext.next();
+                        Node* currNode = evalContext.getContextNode();
                         processChildren(currNode, actionElement, aPs);
-                        aPs->popCurrentNode();
                     }
 
                     aPs->setCurrentTemplateRule(oldTemplate);
-
-                    // Remove nodeSet from context stack
-                    aPs->getNodeSetStack()->pop();
+                    aPs->setEvalContext(priorEC);
                 }
                 else {
                     String err("error processing for-each");
@@ -1446,7 +1448,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (!expr)
                     break;
 
-                ExprResult* exprResult = expr->evaluate(aPs);
+                ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
                 if (!exprResult)
                     break;
 
@@ -1482,7 +1484,7 @@ void XSLTProcessor::processAction(Node* aNode,
             case XSLType::NUMBER:
             {
                 String result;
-                Numbering::doNumbering(actionElement, result, aPs, aPs);
+                Numbering::doNumbering(actionElement, result, aPs);
                 NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
                 mResultHandler->characters(result);
                 break;
@@ -1561,7 +1563,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (!expr)
                     break;
 
-                ExprResult* exprResult = expr->evaluate(aPs);
+                ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
                 String value;
                 if (!exprResult) {
                     String err("null ExprResult");
@@ -1847,9 +1849,7 @@ void XSLTProcessor::processMatchedTemplate(Node* aXslTemplate,
         newTemplate.mParams = aParams;
         aPs->setCurrentTemplateRule(&newTemplate);
 
-        aPs->pushCurrentNode(aNode);
         processTemplate(aNode, aXslTemplate, aPs, aParams);
-        aPs->popCurrentNode();
 
         aPs->setCurrentTemplateRule(oldTemplate);
     }
@@ -1878,7 +1878,7 @@ void XSLTProcessor::processDefaultTemplate(Node* node,
             if (!mNodeExpr)
                 break;
 
-            ExprResult* exprResult = mNodeExpr->evaluate(ps);
+            ExprResult* exprResult = mNodeExpr->evaluate(ps->getEvalContext());
             if (!exprResult ||
                 exprResult->getResultType() != ExprResult::NODESET) {
                 String err("None-nodeset returned while processing default template");
@@ -1888,19 +1888,19 @@ void XSLTProcessor::processDefaultTemplate(Node* node,
             }
 
             NodeSet* nodeSet = (NodeSet*)exprResult;
+            txNodeSetContext evalContext(nodeSet, ps);
+            txIEvalContext* priorEC = ps->setEvalContext(&evalContext);
 
-            //-- push nodeSet onto context stack
-            ps->getNodeSetStack()->push(nodeSet);
-            for (int i = 0; i < nodeSet->size(); i++) {
-                Node* currNode = nodeSet->get(i);
+            while (evalContext.hasNext()) {
+                evalContext.next();
+                Node* currNode = evalContext.getContextNode();
 
                 ProcessorState::ImportFrame *frame;
                 Node* xslTemplate = ps->findTemplate(currNode, mode, &frame);
                 processMatchedTemplate(xslTemplate, currNode, 0, mode, frame,
                                        ps);
             }
-            //-- remove nodeSet from context stack
-            ps->getNodeSetStack()->pop();
+            ps->setEvalContext(priorEC);
             delete exprResult;
             break;
         }
@@ -1998,7 +1998,7 @@ ExprResult* XSLTProcessor::processVariable
         Expr* expr = ps->getExpr(xslVariable, ProcessorState::SelectAttr);
         if (!expr)
             return new StringResult("unable to process variable");
-        return expr->evaluate(ps);
+        return expr->evaluate(ps->getEvalContext());
     }
     else if (xslVariable->hasChildNodes()) {
         txResultTreeFragment* rtf = new txResultTreeFragment();
@@ -2315,10 +2315,11 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 
         // XXX Need to add error observers
 
-        // Set current node and nodeset.
+        // Set current txIEvalContext
         NodeSet nodeSet(&sourceDocument);
-        ps.pushCurrentNode(&sourceDocument);
-        ps.getNodeSetStack()->push(&nodeSet);
+        txNodeSetContext evalContext(&nodeSet, &ps);
+        evalContext.next(); //step into the document
+        ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements
         ListIterator importFrame(ps.getImportFrames());

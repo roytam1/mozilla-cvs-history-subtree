@@ -46,7 +46,7 @@ class txDecimalFormat;
 /**
  * Class used for keeping the current state of the XSL Processor
 **/
-class ProcessorState : public txIEvalContext {
+class ProcessorState : public txIMatchContext {
 
 public:
     /**
@@ -145,14 +145,6 @@ public:
      * null if not template is found
      */
     Element* getNamedTemplate(String& aName);
-
-    /**
-     * Returns the NodeStack which keeps track of where we are in the
-     * result tree
-     * @return the NodeStack which keeps track of where we are in the
-     * result tree
-    **/
-    NodeStack* getNodeStack();
 
     /**
      * Returns the OutputFormat which contains information on how
@@ -264,21 +256,9 @@ public:
     **/
     void preserveSpace(String& names);
 
-    /**
-     * Removes and returns the current node being processed from the stack
-     * @return the current node
-    **/
-    Node* popCurrentNode();
-
     void processAttrValueTemplate(const String& aAttValue,
                                   Node* aContext,
                                   String& aResult);
-
-    /**
-     * Sets the given source node as the "current node" being processed
-     * @param node the source node currently being processed
-    **/
-    void pushCurrentNode(Node* node);
 
     /**
      * Adds the set of names to the Whitespace stripping handling list.
@@ -316,7 +296,30 @@ public:
      * Virtual methods from txIEvalContext
      */
 
-    TX_DECL_EVAL_CONTEXT;
+    TX_DECL_MATCH_CONTEXT;
+
+    /*
+     * Set the current txIEvalContext and get the prior one
+     */
+    txIEvalContext* setEvalContext(txIEvalContext* aEContext)
+    {
+        #ifdef DEBUG
+        //cout << "eval context set to "<<
+        //    aEContext->getContextNodeSet()->get(0)->getNodeName() << endl;
+        #endif
+        txIEvalContext* tmp = mEvalContext;
+        mEvalContext = aEContext;
+        return tmp;
+    }
+
+    /*
+     * Get the current txIEvalContext
+     */
+    txIEvalContext* getEvalContext()
+    {
+        return mEvalContext;
+    }
+
 
     /*
      * More other functions
@@ -333,11 +336,6 @@ public:
     nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                  Element* aElem, FunctionCall*& aFunction);
 
-    /*
-     * XXX Die.
-     */
-    Stack* getNodeSetStack();
-
 private:
 
     enum XMLSpaceMode {STRIP = 0, DEFAULT, PRESERVE};
@@ -353,8 +351,6 @@ private:
         txPattern* mMatch;
         double mPriority;
     };
-
-    NodeStack currentNodeStack;
 
     /**
      * The list of ErrorObservers registered with this ProcessorState
@@ -411,11 +407,15 @@ private:
     Map            mPatternHashes[2];
 
     /*
+     * Current txIEvalContext*
+     */
+    txIEvalContext* mEvalContext;
+
+    /*
      * Current template rule
      */
     TemplateRule*  mCurrentTemplateRule;
 
-    Stack          nodeSetStack;
     Document*      mSourceDocument;
     Document*      xslDocument;
     Document*      resultDocument;

@@ -34,7 +34,6 @@
 #include "XMLUtils.h"
 
 void Numbering::doNumbering(Element* xslNumber, String& dest,
-                            txIEvalContext* aContext,
                             ProcessorState* ps)
 {
     if (!xslNumber)
@@ -48,13 +47,13 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
     if (expr) {
         nbrOfCounts = 1;
         counts = new int[1];
-        ExprResult* result = expr->evaluate(aContext);
+        ExprResult* result = expr->evaluate(ps->getEvalContext());
         double dbl = result->numberValue();
         delete result;
         counts[0] = (int)dbl;
     }
     else {
-        Node* context = aContext->getContextNode();
+        Node* context = ps->getEvalContext()->getContextNode();
 
         // create count pattern
         String countAttr;

@@ -589,8 +589,6 @@ public:
     **/
     void addExpr(Expr* expr, PathOperator pathOp);
 
-    void setFilterExpr(Expr* aExpr);
-
     TX_DECL_EXPR;
 
 private:
@@ -602,7 +600,13 @@ private:
     };
 
     txList expressions;
-    Expr* mFilter;
+
+    /*
+     * Creates a txIEvalContext and recursivly calls itself for
+     * each step
+     */
+    nsresult evalStep(txListIterator& aIter, txIMatchContext* aContext,
+                      NodeSet* aNodes, NodeSet& aResult);
 
     /**
      * Selects from the descendants of the context node

@@ -33,7 +33,7 @@
 
 #include "Expr.h"
 #include "XMLUtils.h"
-#include "txIXPathContext.h"
+#include "txNodeSetContext.h"
 
   //------------/
  //- PathExpr -/
@@ -47,7 +47,7 @@ const String PathExpr::NODESET_EXPECTED =
 /**
  * Creates a new PathExpr
 **/
-PathExpr::PathExpr() : mFilter(0)
+PathExpr::PathExpr()
 {
     //-- do nothing
 }
@@ -87,14 +87,6 @@ void PathExpr::addExpr(Expr* expr, PathOperator pathOp)
     }
 } //-- addPattenExpr
 
-void PathExpr::setFilterExpr(Expr* aExpr)
-{
-    NS_ASSERTION(expressions.getLength() == 0,
-                 "FilterExpr must be first step.");
-    NS_ASSERTION(!mFilter, "FilterExpr already set");
-    mFilter = aExpr;
-}
-
     //-----------------------------/
   //- Virtual methods from Expr -/
 //-----------------------------/
@@ -119,68 +111,74 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
         NS_ASSERTION(0, "out of memory");
         return 0;
     }
-
-    // XXX WORK TO DO
-
-    // Evaluate FilterExpr, if set
-    if (mFilter) {
-        ExprResult* result = mFilter->evaluate(aContext);
-        if (!result)
-            return 0;
-        // we do have more steps, or the parser wouldn't have 
-        // created a PathExpr
-        switch (result->getResultType()) {
-            case ExprResult::NODESET:
-                nodes = (NodeSet*)result;
-                break;
-            case ExprResult::TREE_FRAGMENT:
-                aContext->receiveError(RTF_INVALID_OP,
-                                       NS_ERROR_XPATH_INVALID_ARG);
-                return 0;
-            default:
-                aContext->receiveError(NODESET_EXPECTED,
-                                       NS_ERROR_XPATH_INVALID_ARG);
-                return 0;
-        }
+    NodeSet* resNodes = new NodeSet();
+    if (!resNodes) {
+        delete nodes;
+        // XXX ErrorReport: out of memory
+        NS_ASSERTION(0, "out of memory");
+        return 0;
     }
 
     ListIterator iter(&expressions);
-    PathExprItem* pxi;
+    nsresult rv = evalStep(iter, aContext, nodes, *resNodes);
+    if (NS_FAILED(rv)) {
+        NS_ASSERTION(0, "report an error");
+        delete nodes;
+        delete resNodes;
+        return 0;
+    }
+    delete nodes;
+    return resNodes;
+} //-- evaluate
 
-    while ((pxi = (PathExprItem*)iter.next())) {
-        NodeSet* tmpNodes = 0;
-        for (int i = 0; i < nodes->size(); i++) {
-            Node* node = nodes->get(i);
-            
-            NodeSet* resNodes;
+nsresult PathExpr::evalStep(txListIterator& aIter, txIMatchContext* aContext,
+                            NodeSet* aNodes, NodeSet& aResult)
+{
+    NS_ASSERTION(aNodes && aContext, "Internal error");
+
+    PathExprItem* pxi;
+    nsresult rv = NS_OK;
+    if ((pxi = (PathExprItem*)aIter.next())) {
+        txNodeSetContext eContext(aNodes, aContext);
+        while (eContext.hasNext()) {
+            eContext.next();
+            Node* node = eContext.getContextNode();
             if (pxi->pathOp == DESCENDANT_OP) {
-                resNodes = new NodeSet;
-                evalDescendants(pxi->expr, node, aContext, resNodes);
+                NodeSet resNodes;
+                evalDescendants(pxi->expr, node, &eContext, &resNodes);
+                if (!resNodes.isEmpty()) {
+                    rv = evalStep(aIter, aContext, &resNodes, aResult);
+                    if (NS_FAILED(rv))
+                        return rv;
+                }
             }
             else {
-                ExprResult *res = pxi->expr->evaluate(aContext);
+                ExprResult *res = pxi->expr->evaluate(&eContext);
                 if (!res || (res->getResultType() != ExprResult::NODESET)) {
                     //XXX ErrorReport: report nonnodeset error
                     delete res;
-                    res = new NodeSet;
+                    NS_ASSERTION(0,"Step didn't return NodeSet");
+                    return NS_ERROR_XPATH_EVAL_FAILED;
                 }
-                resNodes = (NodeSet*)res;
-            }
-
-            if (tmpNodes) {
-                tmpNodes->add(resNodes);
+                NodeSet* resNodes = (NodeSet*)res;
+                if (!resNodes->isEmpty()) {
+                    rv = evalStep(aIter, aContext, resNodes, aResult);
+                    if (NS_FAILED(rv)) {
+                        delete resNodes;
+                        return rv;
+                    }
+                }
                 delete resNodes;
             }
-            else
-                tmpNodes = resNodes;
-
         }
-        delete nodes;
-        nodes = tmpNodes;
-        if (!nodes || (nodes->size() == 0)) break;
     }
-    return nodes;
-} //-- evaluate
+    else {
+        aResult.add(aNodes);
+    }
+    aIter.previous(); // done with this step, get back
+    return NS_OK;
+}
+
 
 /**
  * Selects from the descendants of the context node
@@ -191,7 +189,10 @@ void PathExpr::evalDescendants (Expr* aStep, Node* aNode,
                                 txIEvalContext* aContext,
                                 NodeSet* resNodes)
 {
-    ExprResult *res = aStep->evaluate(aContext);
+    NodeSet set(aNode);
+    txNodeSetContext eContext(&set, aContext);
+    eContext.next();
+    ExprResult *res = aStep->evaluate(&eContext);
     if (!res || (res->getResultType() != ExprResult::NODESET)) {
         //XXX ErrorReport: report nonnodeset error
     }

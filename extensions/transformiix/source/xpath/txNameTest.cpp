@@ -49,7 +49,7 @@ MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
 
     // Totally wild?
     if (mLocalName == txXPathAtoms::_asterix &&
-        !(kNameSpaceID_None == mNamespace))
+        (kNameSpaceID_None == mNamespace))
         return MB_TRUE;
 
     // Compare namespaces

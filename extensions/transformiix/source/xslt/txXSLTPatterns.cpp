@@ -176,6 +176,18 @@ MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
 {
     NS_ASSERTION(aNode && mSteps.getLength(), "Internal error");
 
+    /*
+     * The idea is to split up a path into blocks separated by descendant
+     * operators. For example "foo/bar//baz/bop//ying/yang" is split up into
+     * three blocks. The "ying/yang" block is handled by the first while-loop
+     * and the "foo/bar" and "baz/bop" blocks are handled by the second
+     * while-loop.
+     * A block is considered matched when we find a list of ancestors that
+     * match the block. If there are more than one list of ancestors that
+     * match a block we only need to find the one furthermost down in the
+     * tree.
+     */
+
     ListIterator iter(&mSteps);
     iter.resetToEnd();
 
@@ -183,20 +195,44 @@ MBool txLocPathPattern::matches(Node* aNode, txIMatchContext* aContext)
     step = (Step*)iter.previous();
     if (!step->pattern->matches(aNode, aContext))
         return MB_FALSE;
-    MBool isChild = step->isChild;
-    Node* node = aNode;
-    MBool matches;
+    Node* node = aNode->getXPathParent();
+
+    while (step->isChild) {
+        step = (Step*)iter.previous();
+        if (!step)
+            return MB_TRUE; // all steps matched
+        if (!node || !step->pattern->matches(node, aContext))
+            return MB_FALSE; // no more ancestors or no match
+
+        node = node->getXPathParent();
+    }
+
+    // We have at least one // path separator
+    Node *blockStart = node;
+    txListIterator blockIter(iter);
 
     while ((step = (Step*)iter.previous())) {
-        while (node && !(matches = step->pattern->matches(node, aContext))
-               && !isChild) {
-            node = node->getXPathParent();
-        }
-        if (!matches)
-            return MB_FALSE;
+        if (!node)
+            return MB_FALSE; // There are more steps in the current block 
+                             // then ancestors of the tested node
 
-        isChild = step->isChild;
+        if (!step->pattern->matches(node, aContext)) {
+            // Didn't match. We restart at beginning of block using a new
+            // start node
+            iter = blockIter;
+            blockStart = blockStart->getXPathParent();
+            node = blockStart;
+        }
+        else {
+            node = node->getXPathParent();
+            if (!step->isChild) {
+                // We've matched an entire block. Set new start iter and start node
+                blockIter = iter;
+                blockStart = node;
+            }
+        }
     }
+
     return MB_TRUE;
 } // txLocPathPattern::matches
 
@@ -216,11 +252,11 @@ void txLocPathPattern::toString(String& aDest)
     aDest.append("txLocPathPattern{");
     #endif
     Step* step;
-    step = (Step*)iter.previous();
+    step = (Step*)iter.next();
     if (step) {
         step->pattern->toString(aDest);
     }
-    while ((step = (Step*)iter.previous())) {
+    while ((step = (Step*)iter.next())) {
         if (step->isChild)
             aDest.append("/");
         else
@@ -285,7 +321,7 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
 
     MBool result = MB_TRUE;
     if (isEmpty()) {
-        if (!mIsAttr && !aNode->getXPathParent())
+        if (!mIsAttr && !aNode->getParentNode())
             return MB_FALSE;
         return MB_TRUE;
     }

@@ -53,11 +53,11 @@ public:
     // Iteration over the given NodeSet
     MBool hasNext()
     {
-        return mPosition < size()-1;
+        return mPosition < size();
     }
     void next()
     {
-        NS_ASSERTION(mPosition < size()-1, "Out of bounds.");
+        NS_ASSERTION(mPosition < size(), "Out of bounds.");
         mPosition++;
     }
 

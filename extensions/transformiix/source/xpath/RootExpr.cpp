@@ -49,6 +49,9 @@ ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
         return 0;
     }
 
+    context = aContext->getContextNode();
+    if (!context)
+      return 0;
     if (context->getNodeType() != Node::DOCUMENT_NODE)
         return new NodeSet(context->getOwnerDocument());
     return new NodeSet(context);

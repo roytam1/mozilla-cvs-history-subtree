@@ -64,7 +64,7 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
                    !aContext->isStripSpaceAllowed(aNode);
         case PI_TYPE:
             if (Node::PROCESSING_INSTRUCTION_NODE == type) {
-                txAtom* localName;
+                txAtom* localName = 0;
                 MBool result;
                 result = !mNodeName ||
                          (aNode->getLocalName(&localName) &&

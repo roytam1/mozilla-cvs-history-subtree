@@ -40,7 +40,7 @@
 
 Node* txNodeSetContext::getContextNode()
 {
-    return mContextSet->get(mPosition);
+    return mContextSet->get(mPosition-1);
 }
 
 PRUint32 txNodeSetContext::size()
@@ -50,7 +50,8 @@ PRUint32 txNodeSetContext::size()
 
 PRUint32 txNodeSetContext::position()
 {
-    return mPosition+1;
+    NS_ASSERTION(mPosition, "Should have called next() at least once");
+    return mPosition;
 }
 
 NodeSet* txNodeSetContext::getContextNodeSet()

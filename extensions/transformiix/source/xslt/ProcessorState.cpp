@@ -48,7 +48,7 @@
 /**
  * Creates a new ProcessorState
 **/
-ProcessorState::ProcessorState() : mSourceDocument(0),
+ProcessorState::ProcessorState() : mEvalContext(0), mSourceDocument(0),
                                    xslDocument(0),
                                    resultDocument(0)
 {
@@ -62,7 +62,7 @@ ProcessorState::ProcessorState() : mSourceDocument(0),
 ProcessorState::ProcessorState(Document* aSourceDocument,
                                Document* aXslDocument,
                                Document* aResultDocument)
-    : mSourceDocument(aSourceDocument),
+    : mEvalContext(0), mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
       resultDocument(aResultDocument)
 {
@@ -191,13 +191,19 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     double priority;
     String prio;
     if ((hasPriority =
-         aXslTemplate->getAttr(txXSLTAtoms::mode, kNameSpaceID_None, prio))) {
+         aXslTemplate->getAttr(txXSLTAtoms::priority, kNameSpaceID_None,
+                               prio))) {
         priority = Double::toDouble(prio);
     }
 
     // Get the pattern
     txPSParseContext context(this, aXslTemplate);
     txPattern* pattern = exprParser.createPattern(match, &context);
+    #ifdef DEBUG
+    String foo;
+    pattern->toString(foo);
+    #endif
+
     if (!pattern) {
         return;
     }
@@ -396,7 +402,12 @@ Node* ProcessorState::findTemplate(Node* aNode,
 
             // Find template with highest priority
             MatchableTemplate* templ;
-            while ((templ = (MatchableTemplate*)templateIter.next())) {
+            while (!matchTemplate &&
+                   (templ = (MatchableTemplate*)templateIter.next())) {
+                #ifdef DEBUG
+                String foo;
+                templ->mMatch->toString(foo);
+                #endif
                 if (templ->mMatch->matches(aNode, this)) {
                     matchTemplate = templ->mTemplate;
                     *aImportFrame = frame;
@@ -446,13 +457,6 @@ NodeSet* ProcessorState::getAttributeSet(const String& aName)
     return attset;
 }
 
-/**
- * Returns the source node currently being processed
-**/
-Node* ProcessorState::getCurrentNode() {
-    return currentNodeStack.peek();
-} //-- setCurrentNode
-
 Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
 {
     NS_ASSERTION(aElem, "missing element while getting expression");
@@ -499,7 +503,7 @@ txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
 {
     NS_ASSERTION(aElem, "missing element while getting pattern");
 
-    txPattern* pattern = (txPattern*)mExprHashes[aAttr].get(aElem);
+    txPattern* pattern = (txPattern*)mPatternHashes[aAttr].get(aElem);
     if (pattern) {
         return pattern;
     }
@@ -577,14 +581,6 @@ MBool ProcessorState::isXSLStripSpaceAllowed(Node* node) {
 
 }
 
-/**
- * Removes and returns the current source node being processed, from the stack
- * @return the current source node
-**/
-Node* ProcessorState::popCurrentNode() {
-   return currentNodeStack.pop();
-} //-- popCurrentNode
-
 void ProcessorState::processAttrValueTemplate(const String& aAttValue,
                                               Node* aContext,
                                               String& aResult)
@@ -618,7 +614,7 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
         return;
     }
 
-    ExprResult* exprResult = avt->evaluate(this);
+    ExprResult* exprResult = avt->evaluate(this->getEvalContext());
     delete avt;
     if (!exprResult) {
         // XXX ErrorReport: out of memory
@@ -628,14 +624,6 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
     exprResult->stringValue(aResult);
     delete exprResult;
 }
-
-/**
- * Sets the source node currently being processed
- * @param node the source node to set as the "current" node
-**/
-void ProcessorState::pushCurrentNode(Node* node) {
-    currentNodeStack.push(node);
-} //-- setCurrentNode
 
 /**
  * Adds the set of names to the Whitespace handling list.
@@ -657,7 +645,7 @@ void ProcessorState::shouldStripSpace(String& aNames, Element* aElement,
         if (!prefix.isEmpty()) {
             txAtom* prefixAtom = TX_GET_ATOM(prefix);
             aNSID = aElement->lookupNamespaceID(prefixAtom);
-            TX_IF_RELEASE_ATOM(nameAtom);
+            TX_IF_RELEASE_ATOM(prefixAtom);
         }
         XMLUtils::getLocalPart(name, lname);
         txNameTestItem* nti = new txNameTestItem(prefix, lname, aNSID,
@@ -847,19 +835,6 @@ txDecimalFormat* ProcessorState::getDecimalFormat(String& name)
 {
     return (txDecimalFormat*)decimalFormats.get(name);
 }
-
-  //--------------------------------------------------/
- //- Virtual Methods from derived from ContextState -/
-//--------------------------------------------------/
-
-
-/**
- * Returns the Stack of context NodeSets
- * @return the Stack of context NodeSets
-**/
-Stack* ProcessorState::getNodeSetStack() {
-    return &nodeSetStack;
-} //-- getNodeSetStack
 
 /**
  * Returns the value of a given variable binding within the current scope

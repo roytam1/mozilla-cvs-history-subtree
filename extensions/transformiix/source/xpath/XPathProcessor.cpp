@@ -43,6 +43,7 @@
 #include "Expr.h"
 #include "nsNodeSet.h"
 #include "nsIDOMClassInfo.h"
+#include "txNodeSetContext.h"
 
 
 // QueryInterface implementation for XPathProcessor
@@ -84,12 +85,35 @@ NS_IMETHODIMP XPathProcessor::SelectNodes(nsIDOMNode *aContextNode,
     nsCOMPtr<nsIDocument> aOwnerDocument = do_QueryInterface(aOwnerDOMDocument);
     Document* aDocument = new Document(aOwnerDOMDocument);
     Node* aNode = aDocument->createWrapper(aContextNode);
+    Element *contextElem = 0;
+    switch (aNode->getNodeType()) {
+        case Node::DOCUMENT_NODE:
+            contextElem = ((Document*)aNode)->getDocumentElement();
+            break;
+        case Node::ELEMENT_NODE:
+            contextElem = (Element*)aNode;
+            break;
+        default:
+            {
+                Node* node = aNode->getXPathParent();
+                if (Node::DOCUMENT_NODE == node->getNodeType()) {
+                    contextElem = ((Document*)node)->getDocumentElement();
+                }
+                else {
+                    contextElem = (Element*)node;
+                }
+            }
+    }
 
     ProcessorState*  aProcessorState = new ProcessorState();
     ExprParser aParser;
 
-    Expr* aExpression = aParser.createExpr(pattern);
-    ExprResult* exprResult = aExpression->evaluate(aNode, aProcessorState);
+    txPSParseContext pContext(aProcessorState, contextElem);
+    Expr* aExpression = aParser.createExpr(pattern, &pContext);
+    NodeSet contextSet(aNode);
+    txNodeSetContext eContext(&contextSet, aProcessorState);
+    eContext.next();
+    ExprResult* exprResult = aExpression->evaluate(&eContext);
     nsNodeSet* resultSet;
     if (exprResult->getResultType() == ExprResult::NODESET) {
         resultSet = new nsNodeSet((NodeSet*)exprResult);
