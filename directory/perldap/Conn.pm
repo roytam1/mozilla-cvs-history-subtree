@@ -93,14 +93,7 @@ sub DESTROY
 
   return unless defined($self->{"ld"});
 
-  ldap_unbind_s($self->{"ld"});
-  if (defined($self->{"ldres"}))
-    {
-      ldap_msgfree($self->{"ldres"});
-      undef $self->{"ldres"};
-    }
-
-  undef $self->{"ld"};
+  $self->close();
 }
 
 
@@ -195,6 +188,7 @@ sub getErrorCode
   my ($self, $match, $msg) = @_;
   my ($ret);
 
+  return LDAP_SUCCESS unless defined($self->{"ld"});
   return ldap_get_lderrno($self->{"ld"}, $match, $msg);
 }
 *getError = \*getErrorCode;
@@ -208,6 +202,7 @@ sub getErrorString
   my ($self) = shift;
   my ($err);
   
+  return LDAP_SUCCESS unless defined($self->{"ld"});
   $err = ldap_get_lderrno($self->{"ld"}, undef, undef);
 
   return ldap_err2string($err);
@@ -220,6 +215,8 @@ sub getErrorString
 sub printError
 {
   my ($self, $str) = @_;
+
+  return unless defined($self->{"ld"});
 
   $str = "LDAP error:" unless defined($str);
   print "$str ", $self->getErrorString(), "\n";
@@ -414,7 +411,12 @@ sub close
   my ($self) = shift;
   my ($ret) = 1;
 
-  $ret = ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
+  ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
+  if (defined($self->{"ldres"}))
+    {
+      ldap_msgfree($self->{"ldres"});
+      undef $self->{"ldres"};
+    }
   undef $self->{"ld"};
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -630,7 +632,7 @@ sub setDefaultRebindProc
 
   $auth = LDAP_AUTH_SIMPLE unless defined($auth);
   die "No LDAP connection"
-    unless defined($self->{ld});
+    unless defined($self->{"ld"});
 
   ldap_set_default_rebind_proc($self->{"ld"}, $dn, $pswd, $auth);
 }
