@@ -117,17 +117,14 @@ protected:
   void Write(const nsString& aString);
   PRBool DoOutput();
   PRBool MayWrap(); 
-  PRBool IsBlockLevel(nsIAtom* aAtom);
-  PRBool IsContainer(nsIAtom* aAtom);
+  PRBool IsBlockLevel(PRInt32 aId);
+  PRBool IsContainer(PRInt32 aId);
   PRBool IsCurrentNodeConverted();
   nsresult GetIdForContent(nsIContent* aContent, PRInt32* aID);
   nsresult GetParserService(nsIParserService** aParserService);
-  nsresult DoOpenContainer(PRInt32 aTag, 
-                           nsIAtom* aName);
-  nsresult DoCloseContainer(PRInt32 aTag, 
-                            nsIAtom* aName);
-  nsresult DoAddLeaf(PRInt32 aTag, 
-                     const nsString& aText);
+  nsresult DoOpenContainer(PRInt32 aTag);
+  nsresult DoCloseContainer(PRInt32 aTag);
+  nsresult DoAddLeaf(PRInt32 aTag, const nsString& aText);
 
 protected:
   nsString         mCurrentLine;

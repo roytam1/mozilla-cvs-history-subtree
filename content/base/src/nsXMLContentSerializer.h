@@ -73,12 +73,14 @@ class nsXMLContentSerializer : public nsIContentSerializer {
                               nsAWritableString& aOutputStr);
   virtual void AppendToString(const nsAReadableString& aStr,
                               nsAWritableString& aOutputStr,
-                              PRBool aTranslateEntities = PR_FALSE);
+                              PRBool aTranslateEntities = PR_FALSE,
+                              PRBool aIncrColumn = PR_TRUE);
   nsresult AppendTextData(nsIDOMNode* aNode, 
                           PRInt32 aStartOffset,
                           PRInt32 aEndOffset,
                           nsAWritableString& aStr,
-                          PRBool aTranslateEntities);
+                          PRBool aTranslateEntities,
+                          PRBool aIncrColumn);
   virtual nsresult PushNameSpaceDecl(const nsAReadableString& aPrefix,
                                      const nsAReadableString& aURI,
                                      nsIDOMElement* aOwner);

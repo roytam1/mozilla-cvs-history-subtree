@@ -63,8 +63,8 @@ public:
                                         PRInt32* aUnicode) const;
   NS_IMETHOD HTMLConvertUnicodeToEntity(PRInt32 aUnicode,
                                         nsCString& aEntity) const;
-  NS_IMETHOD IsContainer(nsString& aTag, PRBool& aIsContainer) const;
-  NS_IMETHOD IsBlock(nsString& aTag, PRBool& aIsBlock) const;
+  NS_IMETHOD IsContainer(PRInt32 aId, PRBool& aIsContainer) const;
+  NS_IMETHOD IsBlock(PRInt32 aId, PRBool& aIsBlock) const;
 };
 
 nsParserService::nsParserService()
@@ -112,24 +112,21 @@ nsParserService::HTMLConvertUnicodeToEntity(PRInt32 aUnicode,
 }
 
 NS_IMETHODIMP 
-nsParserService::IsContainer(nsString& aTag, PRBool& aIsContainer) const
+nsParserService::IsContainer(PRInt32 aId, PRBool& aIsContainer) const
 {
-  PRInt32 id = nsHTMLTags::LookupTag(aTag);
-  aIsContainer = nsHTMLElement::IsContainer((eHTMLTags)id);
+  aIsContainer = nsHTMLElement::IsContainer((eHTMLTags)aId);
   return NS_OK;
 }
 
 NS_IMETHODIMP 
-nsParserService::IsBlock(nsString& aTag, PRBool& aIsBlock) const
+nsParserService::IsBlock(PRInt32 aId, PRBool& aIsBlock) const
 {
-  PRInt32 id = nsHTMLTags::LookupTag(aTag);
-
-  if((id>eHTMLTag_unknown) && (id<eHTMLTag_userdefined)) {
-    aIsBlock=((gHTMLElements[id].IsMemberOf(kBlock))       || 
-              (gHTMLElements[id].IsMemberOf(kBlockEntity)) || 
-              (gHTMLElements[id].IsMemberOf(kHeading))     || 
-              (gHTMLElements[id].IsMemberOf(kPreformatted))|| 
-              (gHTMLElements[id].IsMemberOf(kList))); 
+  if((aId>eHTMLTag_unknown) && (aId<eHTMLTag_userdefined)) {
+    aIsBlock=((gHTMLElements[aId].IsMemberOf(kBlock))       || 
+              (gHTMLElements[aId].IsMemberOf(kBlockEntity)) || 
+              (gHTMLElements[aId].IsMemberOf(kHeading))     || 
+              (gHTMLElements[aId].IsMemberOf(kPreformatted))|| 
+              (gHTMLElements[aId].IsMemberOf(kList))); 
   }
   else {
     aIsBlock = PR_FALSE;
