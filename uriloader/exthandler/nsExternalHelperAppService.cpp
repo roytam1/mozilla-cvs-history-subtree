@@ -1026,7 +1026,8 @@ struct extLoadRequest : PLEvent {
     nsCOMPtr<nsIPrompt>     prompt;
 };
 
-static void *PR_CALLBACK handleExternalLoadEvent(PLEvent *event)
+void *PR_CALLBACK
+nsExternalHelperAppService::handleExternalLoadEvent(PLEvent *event)
 {
   extLoadRequest* req = NS_STATIC_CAST(extLoadRequest*, event);
   if (req && sSrv && sSrv->isExternalLoadOK(req->uri, req->prompt))
@@ -1054,7 +1055,9 @@ NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPr
 
   event->uri    = aURL;
   event->prompt = aPrompt;
-  PL_InitEvent(event, nsnull, handleExternalLoadEvent, destroyExternalLoadEvent);
+  PL_InitEvent(event, nsnull,
+               nsExternalHelperAppService::handleExternalLoadEvent,
+               destroyExternalLoadEvent);
 
   rv = eventQ->PostEvent(event);
   if (NS_FAILED(rv))

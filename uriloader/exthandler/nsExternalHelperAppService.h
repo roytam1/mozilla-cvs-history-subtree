@@ -277,7 +277,7 @@ protected:
   NS_HIDDEN_(PRBool) promptForScheme(nsIURI* aURI, nsIPrompt* aPrompt, PRBool *aRemember);
 
   // friend event handler that accesses the external loading functions
-  friend static void *PR_CALLBACK handleExternalLoadEvent(PLEvent *event);
+  static void *PR_CALLBACK handleExternalLoadEvent(PLEvent *event);
 };
 
 /**
