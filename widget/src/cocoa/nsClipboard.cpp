@@ -46,6 +46,7 @@
 //
 
 #include "nsCOMPtr.h"
+#include "nsCRT.h"
 #include "nsClipboard.h"
 
 #include "nsVoidArray.h"
@@ -60,7 +61,6 @@
 #include "nsPrimitiveHelpers.h"
 #include "nsIImageMac.h"
 #include "nsMemory.h"
-#include "nsCRT.h"
 
 #include <Scrap.h>
 

@@ -146,11 +146,6 @@ printf("shutting down event queue\n");
           break;
         queue->ProcessPendingEvents();
         NS_ASSERTION(NS_SUCCEEDED(rv), "Error processing PLEvents");
-        /*
-        NSWindow* mainWindow = [NSApp mainWindow];
-        if (mainWindow)
-          [mainWindow displayIfNeeded];
-        */
       }
     }
   }

@@ -38,6 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nscore.h"
+#include "nsCRT.h"
 #include "nsIAllocator.h"
 #include "plstr.h"
 #include "nsVoidArray.h"
@@ -64,7 +65,6 @@
 #include <QuickTimeComponents.h>
 
 #include "nsSound.h"
-#include "nsCRT.h"
 
 //#define SOUND_DEBUG
 

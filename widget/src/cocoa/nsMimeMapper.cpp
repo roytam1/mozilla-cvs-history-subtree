@@ -45,8 +45,8 @@
 #include "nsMimeMapper.h"
 #include "nsITransferable.h"
 #include "nsString.h"
-#include "nsReadableUtils.h"
 #include "nsCRT.h"
+#include "nsReadableUtils.h"
 
 #include <Drag.h>
 #include <Scrap.h>

@@ -42,6 +42,7 @@
 #include "nsISupports.h"
 #include "nsBaseWidget.h"
 #include "nsDeleteObserver.h"
+#include "nsIEventSink.h"
 
 #include "nsIWidget.h"
 #include "nsIKBStateControl.h"
@@ -65,7 +66,6 @@ struct nsPluginPort;
 #import <Cocoa/Cocoa.h>
 
 class nsChildView;
-class nsIEventSink;
 
 
 @interface ChildView : NSQuickDrawView<mozView>
@@ -81,6 +81,9 @@ class nsIEventSink;
   
     // tag for our mouse enter/exit tracking rect
   NSTrackingRectTag mMouseEnterExitTag;
+
+  // Whether we're a plugin view.
+  BOOL mIsPluginView;
 }
 
   // sets up our view, attaching it to its owning gecko view
@@ -93,6 +96,12 @@ class nsIEventSink;
 - (void) convert:(NSEvent*)aKeyEvent message:(PRUint32)aMessage 
            isChar:(PRBool*)outIsChar
            toGeckoEvent:(nsKeyEvent*)outGeckoEvent;
+- (void) convert:(NSPoint)inPoint message:(PRInt32)inMsg 
+          modifiers:(unsigned int)inMods toGeckoEvent:(nsInputEvent*)outGeckoEvent;
+
+-(NSMenu*)getContextMenu;
+
+-(void)setIsPluginView:(BOOL)aIsPlugin;
 
 @end
 
@@ -104,7 +113,7 @@ class nsIEventSink;
 //
 //-------------------------------------------------------------------------
 
-class nsChildView : public nsBaseWidget, public nsDeleteObserved, public nsIKBStateControl
+class nsChildView : public nsBaseWidget, public nsDeleteObserved, public nsIKBStateControl, public nsIEventSink
 {
 private:
   typedef nsBaseWidget Inherited;
@@ -114,7 +123,8 @@ public:
   virtual                 ~nsChildView();
   
   NS_DECL_ISUPPORTS_INHERITED
-  
+  NS_DECL_NSIEVENTSINK 
+ 
   // nsIWidget interface
   NS_IMETHOD              Create(nsIWidget *aParent,
                                  const nsRect &aRect,
@@ -245,7 +255,8 @@ protected:
     // does not create something that inherits from NSQuickDrawView!
   virtual GrafPtr GetQuickDrawPort() ;
 
-protected:
+/* protected: */
+public:
 #if DEBUG
   const char*       gInstanceClassName;
 #endif
@@ -264,7 +275,7 @@ protected:
   nsIRenderingContext*    mTempRenderingContext;
   PRBool          mTempRenderingContextMadeHere;
     
-  nsPluginPort*   mPluginPort;
+  nsPluginPort*     mPluginPort;
 
   PRBool          mAcceptFocusOnClick;
     
