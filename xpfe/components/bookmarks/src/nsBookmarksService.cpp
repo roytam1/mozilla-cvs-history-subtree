@@ -3322,7 +3322,7 @@ nsBookmarksService::ParseFavoritesFolder(nsIFile* aDirectory, nsIRDFResource* aP
             ResolveShortcut(path, getter_Copies(resolvedURL));
 
             nsCOMPtr<nsIRDFResource> bookmark;
-            rv = CreateBookmarkInContainer(name.get(), resolvedURL.get(), nsnull, aParentResource, -1, getter_AddRefs(bookmark));
+            rv = CreateBookmarkInContainer(name.get(), resolvedURL.get(), nsnull, nsnull, nsnull, aParentResource, -1, getter_AddRefs(bookmark));
             if (NS_FAILED(rv)) 
                 continue;
         }
