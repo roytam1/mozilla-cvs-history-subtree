@@ -40,6 +40,8 @@ CSRCS		= $(MODULES_LIBREG_SRC_LCSRCS) nr_bufio.c
 BIN_SRCS	= VerReg.c reg.c vr_stubs.c
 PROGOBJS        = $(addprefix R_,$(BIN_SRCS:.c=.o))
 
+EXPORTS		= ../include/VerReg.h ../include/NSReg.h
+
 # We don't want a shared lib.  Static lib only.
 FORCE_STATIC_LIB = 1
 
