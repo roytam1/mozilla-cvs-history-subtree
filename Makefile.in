@@ -252,6 +252,12 @@ ifdef MOZ_CALENDAR
 tier_98_dirs	+= calendar
 endif
 
+ifdef MOZ_XRE_APP
+tier_9_dirs	+= embedding/xre
+endif
+
+
+
 #
 # tier 99 - application binaries
 #
@@ -260,7 +266,10 @@ ifneq (,$(MOZ_STATIC_COMPONENTS)$(MOZ_META_COMPONENTS))
 tier_99_dirs   += modules/staticmod
 endif
 
+ifdef MOZ_XRE_APP
+else
 tier_99_dirs	+= xpfe/bootstrap
+endif
 
 ifdef MOZ_ENABLE_GTK
 tier_99_dirs	+= embedding/browser/gtk/tests
