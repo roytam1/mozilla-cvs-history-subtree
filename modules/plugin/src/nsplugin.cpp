@@ -474,7 +474,12 @@ NS_METHOD
 nsPluginManager::ProcessNextEvent(PRBool *result)
 {
 #ifdef XP_MAC
-    return npl_ProcessNextEventProc(npl_ProcessNextEventData, result);
+	// beard:  what is this result supposed to indicate?
+	*result = PR_TRUE;
+	nsresult status = NS_OK;
+	if (npl_ProcessNextEventProc != NULL)
+		status = npl_ProcessNextEventProc(npl_ProcessNextEventData);
+	return status;
 #else 
     return NS_ERROR_NOT_IMPLEMENTED;
 #endif
