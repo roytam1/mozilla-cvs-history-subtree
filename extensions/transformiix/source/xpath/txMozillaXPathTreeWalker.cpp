@@ -961,33 +961,30 @@ txXPathNodeUtils::getNodeValue(const txXPathNode& aNode, nsAString& aResult)
         return;
     }
 
-    nsCOMPtr<nsIContent> content;
     if (aNode.isDocument()) {
-        aNode.mDocument->GetRootContent(getter_AddRefs(content));
-        if (!content) {
-            return;
+        nsIContent* content = aNode.mDocument->GetRootContent();
+        if (content) {
+            getTextContent(content, aResult);
         }
-    }
-    else {
-        content = aNode.mContent;
-    }
-
-    if (content->IsContentOfType(nsIContent::eELEMENT)) {
-        getTextContent(content, aResult);
         return;
     }
 
-    if (content->IsContentOfType(nsIContent::eTEXT)) {
-        nsCOMPtr<nsITextContent> textContent = do_QueryInterface(content);
+    if (aNode.mContent->IsContentOfType(nsIContent::eELEMENT)) {
+        getTextContent(aNode.mContent, aResult);
+        return;
+    }
+
+    if (aNode.mContent->IsContentOfType(nsIContent::eTEXT)) {
+        nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aNode.mContent);
         textContent->AppendTextTo(aResult);
         return;
     }
 
-    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aNode.mContent);
     PRUint16 nodeType;
     node->GetNodeType(&nodeType);
     if (nodeType == nsIDOMNode::COMMENT_NODE) {
-        nsCOMPtr<nsITextContent> textContent = do_QueryInterface(content);
+        nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aNode.mContent);
         textContent->AppendTextTo(aResult);
     }
     else if (nodeType == nsIDOMNode::PROCESSING_INSTRUCTION_NODE) {
