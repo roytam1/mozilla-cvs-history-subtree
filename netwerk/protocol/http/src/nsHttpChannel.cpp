@@ -1760,6 +1760,26 @@ nsHttpChannel::SetupReplacementChannel(nsIURI       *newURI,
     if (encodedChannel)
         encodedChannel->SetApplyConversion(mApplyConversion);
 
+    // transfer any properties
+    if (mProperties) {
+        nsCOMPtr<nsIProperties> oldProps = do_QueryInterface(mProperties);
+        nsCOMPtr<nsIProperties> newProps = do_QueryInterface(newChannel);
+        if (newProps) {
+            PRUint32 count;
+            char **keys;
+            if (NS_SUCCEEDED(oldProps->GetKeys(&count, &keys))) {
+                nsCOMPtr<nsISupports> val;
+                for (PRUint32 i=0; i<count; ++i) {
+                    oldProps->Get(keys[i],
+                                  NS_GET_IID(nsISupports),
+                                  getter_AddRefs(val));
+                    newProps->Set(keys[i], val);
+                }
+                NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, keys);
+            }
+        }
+    }
+
     return NS_OK;
 }
 
@@ -2694,6 +2714,15 @@ NS_INTERFACE_MAP_BEGIN(nsHttpChannel)
     NS_INTERFACE_MAP_ENTRY(nsIEncodedChannel)
     NS_INTERFACE_MAP_ENTRY(nsIHttpChannelInternal)
     NS_INTERFACE_MAP_ENTRY(nsITransportEventSink)
+    if (aIID.Equals(NS_GET_IID(nsIProperties))) {
+        if (!mProperties) {
+            mProperties =
+                do_CreateInstance(NS_PROPERTIES_CONTRACTID, (nsIChannel *) this);
+            NS_ENSURE_STATE(mProperties);
+        }
+        return mProperties->QueryInterface(aIID, aInstancePtr);
+    }
+    else
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIChannel)
 NS_INTERFACE_MAP_END
 

@@ -5582,6 +5582,14 @@ nsDocShell::DoURILoad(nsIURI * aURI,
       }
     }
 
+    nsCOMPtr<nsIProperties> props(do_QueryInterface(channel));
+    if (props)
+    {
+      // save true referrer for those who need it (e.g. xpinstall whitelisting)
+      // Not all channels support this feature, but ftp and http do.
+      props->Set("docshell.internalReferrer", aReferrerURI);
+    }
+
     //
     // If this is a HTTP channel, then set up the HTTP specific information
     // (ie. POST data, referrer, ...)

@@ -149,6 +149,9 @@ protected:
 
     nsCOMPtr<nsIIOService>          mIOService;
 
+    // mProperties must be nsISupports, not nsIProperties, due to aggregation
+    nsCOMPtr<nsISupports>           mProperties;
+
     nsCOMPtr<nsICacheSession>         mCacheSession;
     nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry;
     nsCOMPtr<nsIProxyInfo>            mProxyInfo;
