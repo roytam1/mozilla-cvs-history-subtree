@@ -23,6 +23,7 @@
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
 #include "nsIIOService.h"
+#include "nsIURI.h"
 
 /* This is the next generation string retrieval call */
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
