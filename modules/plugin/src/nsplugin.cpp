@@ -38,7 +38,11 @@
 #ifdef XP_MAC
 #include "MacMemAllocator.h"
 #include "asyncCursors.h"
+#include "LMenuSharing.h"
+#include <TArray.h>
 #endif
+
+#include "nsHashtable.h"
 
 #include "intl_csi.h"
 
@@ -93,7 +97,7 @@ nsresult fromNPError[] = {
 nsPluginManager* thePluginManager = NULL;
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fJVMMgr(NULL)
+    : fJVMMgr(NULL), fAllocatedMenuIDs(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
@@ -102,6 +106,13 @@ nsPluginManager::~nsPluginManager(void)
 {
     fJVMMgr->Release();
     fJVMMgr = NULL;
+
+#ifdef XP_MAC
+    if (fAllocatedMenuIDs != NULL) {
+        // Fix me, delete all the elements before deleting the table.
+        delete fAllocatedMenuIDs;
+    }
+#endif
 }
 
 NS_IMPL_AGGREGATED(nsPluginManager);
@@ -319,55 +330,137 @@ nsPluginManager::NotifyStatusChange(nsIPlugin* plugin, nsresult error)
     // XXX need to shut down all instances of this plugin
 }
 
+static NPP getNPPFromHandler(nsIEventHandler* handler)
+{
+	NPP npp = NULL;
+    nsIPluginInstance* pluginInst = NULL;
+    if (handler->QueryInterface(kIPluginInstanceIID, (void**)&pluginInst) == NS_OK) {
+        nsPluginInstancePeer* myPeer = (nsPluginInstancePeer*) pluginInst->GetPeer();
+        npp = myPeer->GetNPP();
+        myPeer->Release();
+        pluginInst->Release();
+    }
+    return npp;
+}
+
 NS_METHOD
 nsPluginManager::RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
 {
-    nsIPluginInstance* plugInst;
-    if (handler->QueryInterface(kIPluginInstanceIID, (void**)&plugInst) == NS_OK) {
-        nsIPluginInstancePeer* peer = plugInst->GetPeer();
-        nsPluginInstancePeer* myPeer;
-        if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&myPeer) == NS_OK) {
-            NPP npp = myPeer->GetNPP();
-            npn_registerwindow(npp, window);
-            myPeer->Release();
-        }
-        peer->Release();
-        plugInst->Release();
+#if 1
+	npn_registerwindow(handler, window);
+	return NS_OK;
+#else
+	NPP npp = getNPPFromHandler(handler);
+	if (npp != NULL) {
+        npn_registerwindow(npp, window);
         return NS_OK;
     }
-    else
-        return NS_ERROR_FAILURE;
+    return NS_ERROR_FAILURE;
+#endif
 }
 
 NS_METHOD
 nsPluginManager::UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
 {
-    nsIPluginInstance* plugInst;
-    if (handler->QueryInterface(kIPluginInstanceIID, (void**)&plugInst) == NS_OK) {
-        nsIPluginInstancePeer* peer = plugInst->GetPeer();
-        nsPluginInstancePeer* myPeer;
-        if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&myPeer) == NS_OK) {
-            NPP npp = myPeer->GetNPP();
-            npn_unregisterwindow(npp, window);
-            myPeer->Release();
-        }
-        peer->Release();
-        plugInst->Release();
+#if 1
+	npn_unregisterwindow(handler, window);
+	return NS_OK;
+#else
+	NPP npp = getNPPFromHandler(handler);
+	if (npp != NULL) {
+        npn_unregisterwindow(npp, window);
         return NS_OK;
     }
-    else
-        return NS_ERROR_FAILURE;
+    return NS_ERROR_FAILURE;
+#endif
 }
+
+class nsEventHandlerKey : public nsHashKey {
+public:
+	nsEventHandlerKey(nsIEventHandler* handler) : mHandler(handler) {}
+
+	virtual PRUint32 HashValue(void) const
+	{
+		return PRUint32(mHandler);
+	}
+	
+	virtual PRBool Equals(const nsHashKey *aKey) const
+	{
+		return ((nsEventHandlerKey*)aKey)->mHandler == mHandler;
+	}
+	
+	virtual nsHashKey *Clone(void) const
+	{
+		return new nsEventHandlerKey(mHandler);
+	}
+
+private:
+	nsIEventHandler* mHandler;
+};
 
 NS_METHOD_(PRInt16)
 nsPluginManager::AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu)
 {
 #ifdef XP_MAC
-    return npn_allocateMenuID(fNPP, isSubmenu);
+	PRInt16 menuID = LMenuSharingAttachment::AllocatePluginMenuID(isSubmenu);
+	if (fAllocatedMenuIDs == NULL)
+		fAllocatedMenuIDs  = new nsHashtable(16);
+	if (fAllocatedMenuIDs != NULL) {
+		nsEventHandlerKey key(handler);
+		TArray<PRInt16>* menuIDs = (TArray<PRInt16>*) fAllocatedMenuIDs->Get(&key);
+		if (menuIDs == NULL) {
+			menuIDs = new TArray<PRInt16>;
+			fAllocatedMenuIDs->Put(&key, menuIDs);
+		}
+		if (menuIDs != NULL)
+			menuIDs->AddItem(menuID);
+	}
+	return menuID;
 #else
     return -1;
 #endif
 }
+
+NS_METHOD
+nsPluginManager::ReleaseMenuID(nsIEventHandler* handler, PRInt16 menuID)
+{
+#ifdef XP_MAC
+	if (fAllocatedMenuIDs != NULL) {
+		nsEventHandlerKey key(handler);
+		TArray<PRInt16>* menuIDs = (TArray<PRInt16>*) fAllocatedMenuIDs->Get(&key);
+		if (menuIDs != NULL) {
+			menuIDs->Remove(menuID);
+			if (menuIDs->GetCount() == 0) {
+				// let go of the vector and the hash table entry.
+				fAllocatedMenuIDs->Remove(&key);
+				delete menuIDs;
+			}
+			return NS_OK;
+		}
+	}
+#endif
+    return NS_ERROR_FAILURE;
+}
+
+PRBool
+nsPluginManager::HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID)
+{
+#ifdef XP_MAC
+	if (fAllocatedMenuIDs != NULL) {
+		nsEventHandlerKey key(handler);
+		TArray<PRInt16>* menuIDs = (TArray<PRInt16>*) fAllocatedMenuIDs->Get(&key);
+		if (menuIDs != NULL) {
+			TArray<PRInt16>& menus = *menuIDs;
+			UInt32 count = menus.GetCount();
+			for (UInt32 i = count; i > 0; --i)
+				if (menus[i] == menuID)
+					return PR_TRUE;
+		}
+	}
+#endif
+	return PR_FALSE;
+}
+
 
 NS_METHOD_(PRBool)
 nsPluginManager::Tickle(void)
@@ -377,7 +470,7 @@ nsPluginManager::Tickle(void)
 #endif
     return PR_TRUE;
 }
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 // File Utilities Interface
 
