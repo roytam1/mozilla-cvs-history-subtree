@@ -1,3 +1,4 @@
+/* -*- Mode: c; c-basic-offset: 3  -*- */
 /******************************************************************************
  * $Id$
  *
@@ -1796,6 +1797,7 @@ ldapssl_install_routines(ld)
 
 #endif
 
+
 #ifdef PRLDAP
 
 #include <ldappr.h>
@@ -1804,5 +1806,12 @@ int
 prldap_install_routines(ld, shared)
 	LDAP *		ld
 	int		shared
+
+
+int
+prldap_set_session_option(ld, sessionarg, option)
+	LDAP *		ld
+	int		&sessionarg
+	int		option
 
 #endif

@@ -5,18 +5,28 @@
 #############################################################################
 
 VERSION 1.5 - Dec 2004
-=============================
+======================
 
 This is an update release, with a few goals:
 
    - Support for latest Mozilla and Sun C-SDK (v5.x)
-   - Now defaults to LDAP v3
+   - Now defaults to LDAP v3 protocol, but you can downgrade to v2 easily
    - Fully support Perl 5.005 and later
-   - Easier installation
+   - Added "hash" style prototypes to all class methods that takes more
+     than one argument
 
 
 New functionality
 -----------------
+
+Conn.pm:
+	* setVersion() - Set the LDAP protocol version
+	* getVersion() - Get the current LDAP protocol in use
+	* installNSPR() - Make the connection use NSPR I/O etc.
+	* setNSPRTimeout() - Set the connection timeout, in ms
+
+API.xs:
+	* Added support for prldap_install_routines().
 
 
 

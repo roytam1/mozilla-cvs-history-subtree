@@ -50,18 +50,19 @@ $VERSION = "1.5";
 #
 sub new
 {
-  my ($class, $self) = (shift, {});
+  my $class = shift;
+  my $self = {};
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $self->{"host"} = $hash->{"host"} if defined($hash->{"host"});
       $self->{"port"} = $hash->{"port"} if defined($hash->{"port"});
       $self->{"binddn"} = $hash->{"bind"} if defined($hash->{"bind"});
       $self->{"bindpasswd"} = $hash->{"pswd"} if defined($hash->{"pswd"});
       $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
-      $self->{"version"} = $hash->{"vers"} if defined($hash->{"vers"});
+      $self->{"version"} = $hash->{"vers"} || LDAP_VERSION3;
     }
   else
     {
@@ -73,7 +74,7 @@ sub new
       $self->{"binddn"} = $binddn if defined($binddn);
       $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
       $self->{"certdb"} = $certdb if defined($certdb);
-      $self->{"version"} = $certdb if defined($version);
+      $self->{"version"} = $version || LDAP_VERSION3;
     }
 
   # Anonymous bind is the default...
@@ -104,7 +105,7 @@ sub new
 #
 sub DESTROY
 {
-  my ($self) = shift;
+  my $self = shift;
 
   return unless defined($self->{"ld"});
 
@@ -118,7 +119,7 @@ sub DESTROY
 #
 sub init
 {
-  my ($self) = shift;
+  my $self = shift;
   my ($ret, $ld);
 
   return 0 unless (defined($self->{"host"}));
@@ -138,7 +139,8 @@ sub init
   return 0 unless $ld;
   $self->{"ld"} = $ld;
 
-  $self->setVersion(3) if ($self->{"version"} == LDAP_VERSION3);
+  $self->{"usenspr"} = 0;
+  $self->setVersion($self->{"version"});
   $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -152,7 +154,12 @@ sub init
 #
 sub newEntry
 {
-  return new Mozilla::LDAP::Entry;
+  my ($self, $dn) = @_;
+  my $entry = new Mozilla::LDAP::Entry;
+
+  $entry->setDN($dn) if (defined($dn) && $dn ne "");
+
+  return $entry;
 }
 
 
@@ -173,7 +180,7 @@ sub isURL
 #
 sub getLD
 {
-  my ($self) = shift;
+  my $self = shift;
 
   return $self->{"ld"} if defined($self->{"ld"});
 }
@@ -185,7 +192,7 @@ sub getLD
 #
 sub getRes
 {
-  my ($self) = shift;
+  my $self = shift;
 
   return $self->{"ldres"} if defined($self->{"ldres"});
 }
@@ -205,7 +212,7 @@ sub getErrorCode
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $match = $hash->{"match"} if defined($hash->{"match"});
       $msg = $hash->{"mesg"} if defined($hash->{"mesg"});
@@ -226,8 +233,8 @@ sub getErrorCode
 #
 sub getErrorString 
 {
-  my ($self) = shift;
-  my ($err);
+  my $self = shift;
+  my $err;
   
   return LDAP_SUCCESS unless defined($self->{"ld"});
   if (defined($self->{"searchres"}))
@@ -264,12 +271,11 @@ sub printError
 sub search
 {
   my $self = shift;
-  my ($basedn, $scope, $filter, $attrsonly, @attrs);
-  my $res;
+  my ($basedn, $scope, $filter, $attrsonly, @attrs, $res);
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $basedn = $hash->{"base"} || "";
       $scope = Mozilla::LDAP::Utils::str2Scope($hash->{"scope"});
@@ -338,7 +344,7 @@ sub searchURL
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $url = $hash->{"url"};
       $attrsonly = $hash->{"attrsonly"} || 0;
@@ -387,7 +393,7 @@ sub browse
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $basedn = $hash->{"base"} || "";
       $attrsonly = $hash->{"attrsonly"} || 0;
@@ -415,7 +421,7 @@ sub compare
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $dn = $hash->{"dn"} if defined($hash->{"dn"});
       $attr = $hash->{"attr"} if defined($hash->{"attr"});
@@ -440,7 +446,7 @@ sub nextEntry
   my ($self) = shift;
   my (%entry, @ocorder, @vals);
   my ($attr, $lcattr, $obj, $ldentry, $berv, $dn, $count);
-  my ($ber) = \$berv;
+  my $ber = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
   $obj = tie %entry, 'Mozilla::LDAP::Entry';
@@ -514,11 +520,9 @@ sub nextEntry
 #
 sub close
 {
-  my ($self) = shift;
-  my ($ret) = 1;
+  my $self = shift;
 
   ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
-
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
@@ -527,7 +531,7 @@ sub close
 
   undef $self->{"ld"};
 
-  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+  return 1;
 }
 
 
@@ -537,8 +541,8 @@ sub close
 sub delete
 {
   my ($self, $id) = @_;
-  my ($ret) = 1;
-  my ($dn) = $id;
+  my $ret = LDAP_SUCCESS;
+  my $dn = $id;
 
   if (ref($id) eq 'Mozilla::LDAP::Entry')
     {
@@ -562,7 +566,7 @@ sub delete
 sub add
 {
   my ($self, $entry) = @_;
-  my (%ent);
+  my %ent;
   my ($ref, $key, $val);
   my ($ret, $gotcha) = (1, 0);
 
@@ -612,11 +616,11 @@ sub modifyRDN
 {
   my $self = shift;
   my ($rdn, $dn, $del, @vals);
-  my ($ret) = 1;
+  my $ret = LDAP_SUCCESS;
 
   if (ref $_[$[] eq "HASH")
     {
-      my ($hash) = $_[$[];
+      my $hash = shift;
 
       $rdn = $hash->{"rdn"} if defined($hash->{"rdn"});
       $dn = $hash->{"dn"} if defined($hash->{"dn"});
@@ -655,7 +659,7 @@ sub update
   my ($self, $entry) = @_;
   my ($vals, @add, @remove, %mod, %new);
   my ($key, $val);
-  my ($ret) = LDAP_SUCCESS;
+  my $ret = LDAP_SUCCESS;
   local $_;
 
   foreach $key (@{$entry->{"_oc_order_"}})
@@ -710,7 +714,7 @@ sub update
   # This is here for debug purposes only...
   if ($main::LDAP_DEBUG)
     {
-      my ($op);
+      my $op;
 
       foreach $key (keys(%mod))
 	{
@@ -767,7 +771,7 @@ sub setDefaultRebindProc
 sub simpleAuth
 {
   my ($self, $dn, $pswd) = @_;
-  my ($ret);
+  my $ret;
 
   $ret = ldap_simple_bind_s($self->{"ld"}, $dn, $pswd);
 
@@ -796,10 +800,14 @@ sub setVersion
       $self->{"version"} = LDAP_VERSION3;
     }
 
-  $ret = ldap_set_option($self->{"ld"}, LDAP_OPT_PROTOCOL_VERSION,
-                         $self->{"version"});
+  if ($self->{"version"} ne LDAP_VERSION2)
+    {
+      $ret = ldap_set_option($self->{"ld"}, LDAP_OPT_PROTOCOL_VERSION,
+                             $self->{"version"});
+      return (($ret == LDAP_SUCCESS) ? 1 : 0);
+    }
 
-  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+  return 1;
 }
 
 sub getVersion
@@ -821,6 +829,29 @@ sub installNSPR
   $shared = 0 unless defined($shared) || $shared eq '';
   $ret = prldap_install_routines($self->{"ld"}, $shared);
 
+  if ($ret == LDAP_SUCCESS)
+    {
+      $self->{"usenspr"} = 1;
+      return 1;
+    }
+
+  $self->{"usenspr"} = 0;
+  return 0;
+}
+
+
+#############################################################################
+# Set the NSPR I/O timeout (in milliseconds). This can only be used after
+# you have installed the NSPR layer (using installNSPR).
+#
+sub setNSPRTimeout
+{
+  my ($self, $timeout) = @_;
+  my $ret;
+
+  return 0 unless defined($self->{"usenspr"}) && $self->{"usenspr"};
+  $ret = prldap_set_session_option($self->{"ld"}, $timeout,
+                                   PRLDAP_OPT_IO_MAX_TIMEOUT);
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
 
@@ -1398,6 +1429,11 @@ Install NSPR I/O, threading, and DNS functions so they will be used by
 
 Pass a non-zero value for the 'shared' parameter if you plan to use
 this LDAP * handle from more than one thread.
+
+=item B<setNSPRTimeout>
+
+Set the TCP timeout value, in millisecond, for the NSPR enabled connection.
+It's an error to call this before calling installNSPR().
 
 =back
 

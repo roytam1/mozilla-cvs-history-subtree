@@ -126,9 +126,8 @@ undef $reuseConn;
 
 $filter = "(uid=$UID)";
 $conn = getConn();
-$nentry = $conn->newEntry();
+$nentry = $conn->newEntry("uid=$UID, $PEOPLE, $BASE");
 
-$nentry->setDN("uid=$UID, $PEOPLE, $BASE");
 $nentry->{objectclass} = [ "top", "person", "inetOrgPerson", "mailRecipient" ];
 $nentry->addValue("uid", $UID);
 $nentry->addValue("sn", "Hedstrom");

@@ -1,4 +1,41 @@
+2004-10-17  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm (close): Removed $ret, it was always 1 anyways.
+
+	* Entry.pm (move): Added support for hash-style arguments.
+	(copy): Added support for hash-style arguments.
+	(removeValue): Added support for hash-style arguments, cleaned up some
+	local variable statements.
+	(removeDNValue): Added support for hash-style arguments.
+	(addValue): Added support for hash-style arguments.
+	(addDNValue): Added support for hash-style arguments
+	(getValues): Cleaned up arguments.
+	(hasValue): Added support for hash-style arguments.
+	(hasValue): Make sure to lower-case the attribute, this was a bug.
+	(hasDNValue): Support hash-style arguments.
+	(matchValue): Support hash-style arguments.
+	(matchDNValue): Support hash-style arguments.
+	(setDN): Support hash-style arguments.
+
+2004-10-15  Leif Hedstrom  <leif@ogre.com>
+
+	* API.xs (prldap_set_session_option): New function to set the IO
+	timeout option when using NSPR I/O etc..
+
+	* API.pm: Fixed all indentation, added PRLDAP_OPT_IO_MAX_TIMEOUT and
+	prldap_get_session_option.
+
+	* constant.h (constant): Fixed indentation, and added
+	PRLDAP_OPT_IO_MAX_TIMEOUT.
+
 2004-10-14  Leif Hedstrom  <leif@ogre.com>
+
+	* Entry.pm (isEntryModified): Added new method, which indicates that
+	something in the entry has been modified.
+
+	* Conn.pm (newEntry): You can now provide the DN as an argument.
+
+	* Entry.pm (unRemove): Fixed, old bug solved by Kevin...
 
 	* Conn.pm (newEntry): Simplified this to use the normal constructor.
 	(searchURL): Avoid the warnings...

@@ -47,7 +47,7 @@ $VERSION = "1.5";
 #
 sub new
 {
-  my ($class) = shift;
+  my $class = shift;
   my (%entry, $obj);
 
   tie %entry, $class;
@@ -64,7 +64,8 @@ sub new
 #
 sub TIEHASH
 {
-  my ($class, $self) = (shift, {});
+  my $class = shift;
+  my $self = {};
 
   return bless $self, $class;
 }
@@ -77,7 +78,7 @@ sub TIEHASH
 #
 sub DESTROY
 {
-  my ($self) = shift;
+  my $self = shift;
 
   if (defined($self))
     {
@@ -94,7 +95,9 @@ sub DESTROY
 #
 sub STORE
 {
-  my ($self, $attr, $val) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2]);
+  my $self = shift;
+  my $attr = lc shift;
+  my $val = shift;
 
   return unless (defined($val) && ($val ne ""));
   return unless (defined($attr) && ($attr ne ""));
@@ -131,7 +134,8 @@ sub STORE
 #
 sub FETCH
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return unless defined($self->{$attr});
   return if defined($self->{"_${attr}_deleted_"});
@@ -147,7 +151,8 @@ sub FETCH
 #
 sub DELETE
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return unless (defined($attr) && ($attr ne ""));
   return unless defined($self->{$attr});
@@ -170,7 +175,8 @@ sub DELETE
 #
 sub EXISTS
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if defined($self->{"_${attr}_deleted_"});
@@ -181,7 +187,8 @@ sub EXISTS
 
 sub exists
 {
-  my ($self, $attr) = @_;
+  my $self = shift;
+  my $attr = lc shift;
 
   return exists $self->{$attr};
 }
@@ -193,7 +200,7 @@ sub exists
 #
 sub FIRSTKEY
 {
-  my ($self) = ($_[$[]);
+  my $self = shift;
 
   $self->{"_oc_keyidx_"} = 0;
   return $self->NEXTKEY();
@@ -205,8 +212,8 @@ sub FIRSTKEY
 #
 sub NEXTKEY
 {
-  my ($self) = $_[$[];
-  my ($idx) = $self->{"_oc_keyidx_"};
+  my $self = shift;
+  my $idx = $self->{"_oc_keyidx_"};
   my (@attrs, $key);
 
   return unless defined($self->{"_oc_order_"});
@@ -228,13 +235,30 @@ sub NEXTKEY
 }
 
 
+
+#############################################################################
+# Check if anything in the entry has been modified
+#
+sub isEntryModified {
+  my $self = shift;
+
+  foreach (@{$self->{'_oc_order_'}})
+    {
+      return(1) if ($self->isModified($_) || $self->isDeleted($_));
+    }
+
+  return(0);
+}
+
+
 #############################################################################
 # Mark an attribute as changed. Normally you shouldn't have to use this,
 # unless you're doing something really weird...
 #
 sub attrModified
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
@@ -260,7 +284,8 @@ sub attrModified
 #
 sub attrClean
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if ($attr eq "dn");
@@ -285,7 +310,8 @@ sub attrClean
 #
 sub isModified
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
@@ -301,7 +327,8 @@ sub isModified
 #
 sub isDeleted
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{"_${attr}_deleted_"});
@@ -316,7 +343,8 @@ sub isDeleted
 #
 sub isAttr
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
@@ -333,7 +361,8 @@ sub isAttr
 #
 sub remove
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
@@ -356,8 +385,23 @@ sub remove
 #
 sub move
 {
-  my ($self, $old, $new, $force) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2],
-				    $_[$[ + 3]);
+  my $self = shift;
+  my ($old, $new, $force);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $old = lc $hash->{"old"};
+      $new = lc $hash->{"new"};
+      $force = $hash->{"force"} || 0;
+    }
+  else
+    {
+      $old = lc shift;
+      $new = lc shift;
+      $force = shift;
+    }
 
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
@@ -376,8 +420,23 @@ sub move
 #
 sub copy
 {
-  my ($self, $old, $new, $force) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2],
-				    $_[$[ + 3]);
+  my $self = shift;
+  my ($old, $new, $force);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $old = lc $hash->{"old"};
+      $new = lc $hash->{"new"};
+      $force = $hash->{"force"} || 0;
+    }
+  else
+    {
+      $old = lc shift;
+      $new = lc shift;
+      $force = shift;
+    }
 
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
@@ -394,10 +453,10 @@ sub copy
 #
 sub unRemove
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
-  return 0 unless defined($self->{$attr});
   return 0 if ($attr eq "dn");
 
   # ToDo: We need to verify that this sucker works...
@@ -417,16 +476,29 @@ sub unRemove
 
 #############################################################################
 # Delete a value from an attribute, if it exists. NOTE: If it was the last
-# value, we'll actually remove the entire attribute! We should then also
-# remove it from the _oc_order_ list...
+# value, we'll actually remove the entire attribute!
 #
 sub removeValue
 {
-  my ($self, $attr, $val, $norm) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2],
-				    $_[$[ + 3]);
-  my ($i) = 0;
-  my ($attrval);
+  my $self = shift;
+  my ($attr, $val, $norm);
+  my $i = 0;
+  my $attrval;
   local $_;
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $val = $hash->{"val"};
+      $norm = $hash->{"norm"} || 0;
+    }
+  else
+    {
+      $attr = lc shift;
+      ($val, $norm) = @_;
+    }
 
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
@@ -467,7 +539,21 @@ sub removeValue
 #
 sub removeDNValue
 {
-  my ($self, $attr, $val) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2]);
+  my $self = shift;
+  my ($attr, $val);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $val = $hash->{"val"};
+    }
+  else
+    {
+      $attr = lc shift;
+      $val = shift;
+    }
 
   return $self->removeValue($attr, $val, 1);
 }
@@ -481,10 +567,25 @@ sub removeDNValue
 #
 sub addValue
 {
-  my ($self) = shift;
-  my ($attr, $val, $force, $norm, $nocase) = (lc $_[$[], $_[$[+1], $_[$[+2],
-                                              $_[$[+3], $_[$[+4]);
+  my $self = shift;
+  my ($attr, $val, $force, $norm, $nocase);
   local $_;
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $val = $hash->{"val"};
+      $force = $hash->{"force"};
+      $norm = $hash->{"norm"};
+      $nocase = $hash->{"nocase"};
+    }
+  else
+    {
+      $attr = lc shift;
+      ($val, $force, $norm, $nocase) = @_;
+    }
 
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
@@ -492,8 +593,8 @@ sub addValue
 
   if (defined($self->{$attr}) && (!defined($force) || !$force))
     {
-      my ($attrval);
-      my ($nval) = $val;
+      my $nval = $val;
+      my $attrval;
 
       $nval = normalizeDN($val) if (defined($norm) && $norm);
       foreach $attrval (@{$self->{$attr}})
@@ -544,9 +645,24 @@ sub addValue
 #
 sub addDNValue
 {
-  my ($self) = shift;
-  my ($attr, $val, $force, $norm, $nocase) = (lc $_[$[], $_[$[+1], $_[$[+2],
-                                              $_[$[+3], $_[$[+4]);
+  my $self = shift;
+  my ($attr, $val, $force, $norm, $nocase);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $val = $hash->{"val"};
+      $force = $hash->{"force"};
+      $norm = $hash->{"norm"};
+      $nocase = $hash->{"nocase"};
+    }
+  else
+    {
+      $attr = lc shift;
+      ($val, $force, $norm, $nocase) = @_;
+    }
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
   return $self->addValue($attr, $val, $force, 1, $nocase);
@@ -560,9 +676,9 @@ sub addDNValue
 #
 sub setValues
 {
-  my ($self, $attr) = (shift, lc shift);
-  my (@vals) = @_;
-
+  my $self = shift;
+  my $attr = lc shift;
+  my @vals = @_;
   local $_;
 
   return 0 unless ($#vals >= $[);
@@ -603,7 +719,8 @@ sub setValues
 #
 sub getValues
 {
-  my ($self, $attr) = (shift, lc shift);
+  my $self = shift;
+  my $attr = lc shift;
 
   return unless (defined($attr) && ($attr ne ""));
   return unless defined($self->{$attr});
@@ -616,12 +733,28 @@ sub getValues
 #############################################################################
 # Return TRUE or FALSE, if the attribute has the specified value. The
 # optional third argument says we should do case insensitive search.
+# This is very unfortunate that $nocase and $norm are reversersed ... :-/.
 #
 sub hasValue
 {
-  my ($self, $attr, $val, $nocase, $norm) = @_;
-  my ($attrval);
+  my $self = shift;
+  my ($attr, $val, $nocase, $norm, $attrval);
   local $_;
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $val = $hash->{"val"};
+      $nocase = $hash->{"nocase"};
+      $norm = $hash->{"norm"};
+    }
+  else
+    {
+      $attr = lc shift;
+      ($val, $nocase, $norm) = @_;
+    }
 
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
@@ -654,8 +787,23 @@ sub hasValue
 #
 sub hasDNValue
 {
-  my ($self, $attr, $val, $nocase) = @_;
+  my $self = shift;
+  my ($attr, $val, $nocase);
 
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = $hash->{"attr"};
+      $val = $hash->{"val"};
+      $nocase = $hash->{"nocase"};
+    }
+  else
+    {
+      ($attr, $val, $nocase) = @_;
+    }
+
+  # We don't need to lc the attribute, since hasValue() does that for us.
   return $self->hasValue($attr, $val, $nocase, 1);
 }
 
@@ -667,10 +815,25 @@ sub hasDNValue
 #
 sub matchValue
 {
-  my ($self, $attr, $reg, $nocase, $norm) = @_;
-  my ($attrval);
+  my $self = shift;
+  my ($attr, $regex, $nocase, $norm, $attrval);
 
-  return 0 unless (defined($reg) && ($reg ne ""));
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = lc $hash->{"attr"};
+      $regex = $hash->{"regex"};
+      $nocase = $hash->{"nocase"};
+      $norm = $hash->{"norm"};
+    }
+  else
+    {
+      $attr = lc shift;
+      ($regex, $nocase, $norm) = @_;
+    }
+
+  return 0 unless (defined($regex) && ($regex ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
@@ -679,7 +842,7 @@ sub matchValue
       foreach $attrval (@{$self->{$attr}})
 	{
 	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
-	  return 1 if /$reg/i;
+	  return 1 if /$regex/i;
 	}
     }
   else
@@ -687,7 +850,7 @@ sub matchValue
       foreach $attrval (@{$self->{$attr}})
 	{
 	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
-	  return 1 if /$reg/;
+	  return 1 if /$regex/;
 	}
     }
 
@@ -700,9 +863,24 @@ sub matchValue
 #
 sub matchDNValue
 {
-  my ($self, $attr, $reg, $nocase) = @_;
+  my $self = shift;
+  my ($attr, $regex, $nocase);
 
-  return $self->matchValue($attr, $reg, $nocase, 1);
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $attr = $hash->{"attr"};
+      $regex = $hash->{"regex"};
+      $nocase = $hash->{"nocase"};
+    }
+  else
+    {
+      ($attr, $regex, $nocase) = @_;
+    }
+
+  # We don't need to lc the attribute, since hasValue() does that for us.
+  return $self->matchValue($attr, $regex, $nocase, 1);
 }
 
 
@@ -711,7 +889,20 @@ sub matchDNValue
 #
 sub setDN
 {
-  my ($self, $val, $norm) = @_;
+  my $self = shift;
+  my ($val, $norm);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $val = $hash->{"val"};
+      $norm = $hash->{"norm"};
+    }
+  else
+    {
+      ($val, $norm) = @_;
+    }
 
   return 0 unless (defined($val) && ($val ne ""));
 
@@ -740,7 +931,8 @@ sub getDN
 #
 sub size
 {
-  my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
+  my $self = shift;
+  my $attr = lc shift;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
@@ -755,7 +947,7 @@ sub size
 #
 sub getLDIFrecords # called from LDIF.pm (at least)
 {
-  my ($self) = @_;
+  my $self = shift;
   my (@record) = (dn => $self->getDN());
   my ($attr, $values);
 
@@ -784,7 +976,7 @@ undef $_tested_LDIF_module;
 
 sub printLDIF
 {
-  my ($self) = @_;
+  my $self = shift;
 
 
   if (not defined($_tested_LDIF_module))
@@ -796,7 +988,7 @@ sub printLDIF
 
   if ($_no_LDIF_module)
     {
-      my ($record) = $self->getLDIFrecords();
+      my $record = $self->getLDIFrecords();
       my ($attr, $values);
 
       while (($attr, $values) = splice @$record, 0, 2)
@@ -1042,6 +1234,11 @@ been modified, in any way, we return True (1), otherwise we return False
 (0). For example:
 
     if ($entry->isModified("cn")) { # do something }
+
+=item B<isEntryModified>
+
+This is a wrapper over isModified(), and it will check if any attribute
+in the entry object has been modified or deleted.
 
 =item B<matchValue>
 

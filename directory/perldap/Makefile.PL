@@ -91,17 +91,6 @@ if (!$ldapsdk_ssl)
 }
 $ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
 
-print "Support NSPR API versions (default: no)?  ";
-if (!$ldapsdk_pr)
-{
-   $silent = 0;
-   chomp ($ldapsdk_pr = <STDIN>);
-} else {
-  print "$ldapsdk_pr\n";
-}
-$pr_def = "-DPRLDAP" if ($ldapsdk_pr =~ /^y/i);
-
-
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
@@ -129,9 +118,22 @@ if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
    @nsslib = grep{/^nss[0-9].*$/} @libs if $ssl_def;
    @plclib = grep{/^plc[0-9].*$/} @libs if $ssl_def;
    @pldslib = grep{/^plds[0-9].*$/} @libs if $ssl_def;
-
-   @nsprlib = grep{/^nspr[0-9].*$/} @libs if $pr_def;
 }
+
+@nsprlib = grep{/^nspr[0-9].*$/} @libs;
+if ($#nsprlib >= 0)
+{
+  print "Support NSPR API versions (default: no)?  ";
+  if (!$ldapsdk_pr)
+    {
+      $silent = 0;
+      chomp ($ldapsdk_pr = <STDIN>);
+    } else {
+      print "$ldapsdk_pr\n";
+    }
+}
+$pr_def = "-DPRLDAP" if ($ldapsdk_pr =~ /^y/i);
+@nsprlib = () unless ($ldapsdk_pr =~ /^y/i);
 
 if ($#ldaplib < 0)
 {
