@@ -57,15 +57,6 @@ DIRS = $(DIRS) xpconnect
 #//
 #//------------------------------------------------------------------------
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME	= js$(MOZ_BITS)$(VERSION_NUMBER)
-LIBRARY_1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
-PDBFILE		= $(LIBRARY_NAME).pdb
-MAPFILE		= $(LIBRARY_NAME).map
-RESFILE		= js$(MOZ_BITS)40.res
-LIB		=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAKE_OBJ_TYPE	= LIB
-!else
 DLLNAME		= js$(MOZ_BITS)$(VERSION_NUMBER)
 DLL1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE		= $(DLLNAME).pdb
@@ -73,7 +64,6 @@ MAPFILE		= $(DLLNAME).map
 RESFILE		= js$(MOZ_BITS)40.res
 DLL		=.\$(OBJDIR)\$(DLLNAME).dll
 MAKE_OBJ_TYPE	= DLL
-!endif
 
 !if "$(MOZ_BITS)" != "16"
 LINCS = -I$(PUBLIC)\layout \
@@ -83,21 +73,16 @@ LINCS = -I$(PUBLIC)\layout \
 
 !if "$(MOZ_BITS)" == "16"
 !ifdef NSPR20
-DEFFILE		= $(LIBRARY_1NAME).def
+DEFFILE		= $(DLL1NAME).def
 !else
-DEFFILE		= $(LIBRARY_NAME).def
+DEFFILE		= $(DLLNAME).def
 !endif
 !endif
 
-FDLIBM_LIBRARY	= fdlibm\$(OBJDIR)\fdlibm.lib
+FDLIBM_LIBRARY	=	fdlibm\$(OBJDIR)\fdlibm.lib
 
-SUB_LIBRARIES	= $(FDLIBM_LIBRARY)
-
-# XXX We need to add SUB_LIBRARIES _back_ to $(LLIBS), because
-# although it wants to be, it isn't a proper EXPORT_LIBRARY.
-LLIBS		= $(LIBNSPR) $(SUB_LIBRARIES)
-
-LCFLAGS		= $(LCFLAGS) -DEXPORT_JS_API
+LLIBS=$(LIBNSPR) $(FDLIBM_LIBRARY)
+LCFLAGS= $(LCFLAGS) -DEXPORT_JS_API
 
 #//------------------------------------------------------------------------
 #// 
@@ -213,14 +198,9 @@ $(FDLIBM_LIBRARY):
     @cd $(MAKEDIR) 
 !endif
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-export:: INSTALL_FILES $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
 export:: INSTALL_FILES $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
 
 #//------------------------------------------------------------------------
 #//
