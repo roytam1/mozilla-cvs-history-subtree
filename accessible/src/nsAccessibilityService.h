@@ -27,6 +27,10 @@
 #define __nsAccessibilityService_h__
 
 #include "nsIAccessibilityService.h"
+#include "nsIContent.h"
+#include "nsIPresShell.h"
+#include "nsIDocShell.h"
+
 class nsIFrame;
 class nsIWeakReference;
 class nsIDOMNode;
@@ -47,6 +51,8 @@ public:
 
 private:
   NS_IMETHOD GetInfo(nsISupports* aFrame, nsIFrame** aRealFrame, nsIWeakReference** aShell, nsIDOMNode** aContent);
+  void GetOwnerFor(nsIPresShell *aPresShell, nsIPresShell **aOwnerShell, nsIContent **aOwnerContent);
+  nsIContent* FindContentForDocShell(nsIPresShell* aPresShell, nsIContent* aContent, nsIDocShell*  aDocShell);
 
 };
 

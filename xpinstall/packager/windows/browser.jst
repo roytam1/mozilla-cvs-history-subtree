@@ -332,11 +332,16 @@ if(verifyDiskSpace(fProgram, srDest))
   // check return value
   if( err == SUCCESS )
   {
-    fileToRegister = getFolder(fProgram, "IMozNodeMarshal.dll");
+    fileToRegister = getFolder(fProgram, "ISimpleDOMNodeMarshal.dll");
     err2           = File.windowsRegisterServer(fileToRegister);
     logComment("windowsRegisterServer() returned: " + err2);
-
     updateWinReg();
+
+    fileToRegister = getFolder(fProgram, "ISimpleDOMDocumentMarshal.dll");
+    err2           = File.windowsRegisterServer(fileToRegister);
+    logComment("windowsRegisterServer() returned: " + err2);
+    updateWinReg();
+
     createShortcuts();
     upgradeCleanup();
 

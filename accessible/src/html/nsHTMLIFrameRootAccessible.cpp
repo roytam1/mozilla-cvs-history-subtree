@@ -30,24 +30,28 @@
 #include "nsIDocShell.h"
 #include "nsIWebShell.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIXULDocument.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentType.h"
+#include "nsINameSpaceManager.h"
 #include "nsReadableUtils.h"
 
+NS_IMPL_ISUPPORTS1(nsHTMLIFrameAccessible, nsIAccessibleDocument);
 
-nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell):
-  nsHTMLBlockAccessible(aNode, aShell)
+nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *aDoc):
+  nsHTMLBlockAccessible(aNode, aShell), mRootAccessible(aRoot), nsDocAccessible(aDoc)
 {
-  mRootAccessible = aRoot;
 }
 
   /* attribute wstring accName; */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccName(PRUnichar * *aAccName) 
 { 
-  return mRootAccessible->GetAccName(aAccName);
+  return GetTitle(aAccName);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccValue(PRUnichar * *aAccValue) 
 { 
-  return mRootAccessible->GetAccValue(aAccValue);
+  return GetURL(aAccValue);
 }
 
 /* nsIAccessible getAccFirstChild (); */
@@ -71,8 +75,46 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccChildCount(PRInt32 *_retval)
 /* unsigned long getAccRole (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 {
-  return mRootAccessible->GetAccRole(_retval);
+  *_retval = ROLE_PANE;
+  return NS_OK;
 }
+
+
+// ------- nsIAccessibleDocument Methods (5) ---------------
+
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetURL(PRUnichar **aURL)
+{
+  return nsDocAccessible::GetURL(aURL);
+}
+
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetTitle(PRUnichar **aTitle)
+{
+  return nsDocAccessible::GetTitle(aTitle);
+}
+
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetMimeType(PRUnichar **aMimeType)
+{
+  return nsDocAccessible::GetMimeType(aMimeType);
+}
+
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetDocType(PRUnichar **aDocType)
+{
+  return nsDocAccessible::GetDocType(aDocType);
+}
+
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+{
+  return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
+}
+
+
+
+
+
+//=============================//
+// nsHTMLIFrameRootAccessible  //
+//=============================//
+
 
 //-----------------------------------------------------
 // construction 
@@ -88,52 +130,6 @@ nsHTMLIFrameRootAccessible::nsHTMLIFrameRootAccessible(nsIDOMNode* aNode, nsIWea
 //-----------------------------------------------------
 nsHTMLIFrameRootAccessible::~nsHTMLIFrameRootAccessible()
 {
-}
-  /* attribute wstring accName; */
-NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccName(PRUnichar * *aAccName) 
-{ 
-  *aAccName = nsnull;
-
-  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-  if (!shell) {
-     return NS_ERROR_FAILURE;  
-  }
-
-  nsCOMPtr<nsIDocument> document;
-  if (shell)
-    shell->GetDocument(getter_AddRefs(document));
-  if (document) {
-    const nsString* docTitle = document->GetDocumentTitle();
-    if (docTitle && !docTitle->IsEmpty()) {
-      *aAccName = docTitle->ToNewUnicode();
-      return NS_OK;
-    }
-  }
-  *aAccName = ToNewUnicode(NS_LITERAL_STRING("Frame"));
-  return NS_OK;  
-}
-
-  /* attribute wstring accName; */
-NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccValue(PRUnichar * *aAccValue) 
-{ 
-  *aAccValue = nsnull;
-
-  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-  if (!shell) {
-     return NS_ERROR_FAILURE;  
-  }
-
-  nsCOMPtr<nsIDocument> document;
-  if (shell)
-    shell->GetDocument(getter_AddRefs(document));
-  if (document) {
-    nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
-    char *path;
-    pURI->GetSpec(&path);
-    *aAccValue = ToNewUnicode(nsDependentCString(path));
-    return NS_OK;
-  }
-  return NS_ERROR_NOT_IMPLEMENTED;  
 }
 
   /* readonly attribute nsIAccessible accParent; */
@@ -169,13 +165,6 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccPreviousSibling(nsIAccessible **
 
   *_retval = nsnull;
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* unsigned long getAccRole (); */
-NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccRole(PRUint32 *_retval)
-{
-  *_retval = ROLE_PANE;
-  return NS_OK;
 }
 
 NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible** aAcc)

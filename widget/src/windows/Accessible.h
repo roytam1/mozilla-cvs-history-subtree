@@ -37,7 +37,7 @@
 #include "nsCOMPtr.h"
 #include "nsIAccessible.h"
 #include "nsIAccessibleEventListener.h"
-#include "MozNode.h"
+#include "SimpleDOMNode.h"
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
 
@@ -45,7 +45,7 @@
 
 typedef LRESULT (STDAPICALLTYPE *LPFNNOTIFYWINEVENT)(DWORD event,HWND hwnd,LONG idObjectType,LONG idObject);
 
-class Accessible : public MozNode, public IAccessible
+class Accessible : public SimpleDOMNode, public IAccessible
 {
   public: // construction, destruction
     Accessible(nsIAccessible*, HWND aWin = 0);
@@ -187,15 +187,46 @@ public:
   nsCOMPtr<nsIAccessible> mAccessible;
 };
 
+
+class DocAccessible: public Accessible, public ISimpleDOMDocument
+{
+public:
+    DocAccessible(nsIAccessible*, HWND aWin = 0);
+    virtual ~DocAccessible();
+
+    STDMETHODIMP_(ULONG) AddRef        ();
+    STDMETHODIMP      QueryInterface(REFIID, void**);
+    STDMETHODIMP_(ULONG) Release       ();
+
+
+    // ISimpleDOMDocument
+
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_URL( 
+        /* [out] */ BSTR __RPC_FAR *url);
+    
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_title( 
+        /* [out] */ BSTR __RPC_FAR *title);
+    
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_mimeType( 
+        /* [out] */ BSTR __RPC_FAR *mimeType);
+    
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_docType( 
+        /* [out] */ BSTR __RPC_FAR *docType);
+    
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_nameSpaceURIForID( 
+        /* [in] */ short nameSpaceID,
+        /* [out] */ BSTR __RPC_FAR *nameSpaceURI);
+};
+
 #define MAX_LIST_SIZE 100
 
-class RootAccessible: public Accessible,
-                      public nsIAccessibleEventListener
+class RootAccessible: public DocAccessible, public nsIAccessibleEventListener
 {
 public:
     RootAccessible(nsIAccessible*, HWND aWin = 0);
     virtual ~RootAccessible();
 
+    STDMETHODIMP      QueryInterface(REFIID, void**);
     NS_DECL_ISUPPORTS
 
     // nsIAccessibleEventListener
@@ -214,67 +245,3 @@ private:
 };
 #endif
 
-/*
-protected:
-  static ULONG g_cRef;              // the cum reference count of all instances
-    ULONG        m_cRef;              // the reference count
-    nsCOMPtr<nsIAccessible> mAccessible;
-    nsCOMPtr<nsIAccessible> mCachedChild;
-    HWND mWnd;
-    LONG mCachedIndex;
-
-    protected:
-
-    virtual void GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc);
-    PRBool InState(const nsString& aStates, const char* aState);
-    STDMETHODIMP GetAttribute(const char* aName, VARIANT varChild, BSTR __RPC_FAR *aString);
-
-private:
-    /// the accessible library and cached methods
-    static HINSTANCE gmAccLib;
-    static HINSTANCE gmUserLib;
-    static LPFNACCESSIBLEOBJECTFROMWINDOW gmAccessibleObjectFromWindow;
-    static LPFNLRESULTFROMOBJECT gmLresultFromObject;
-
-    static LPFNNOTIFYWINEVENT gmNotifyWinEvent;
-
-};
-#endif
-
-
-class nsAccessibleEventMap
-{
-public:
-  nsCOMPtr<nsIAccessible> mAccessible;
-  PRInt32 mId;
-};
-
-#define MAX_LIST_SIZE 100
-
-class RootAccessible: public Accessible,
-                      public nsIAccessibleEventListener
-{
-public:
-    RootAccessible(nsIAccessible*, HWND aWin = 0);
-    virtual ~RootAccessible();
-
-    NS_DECL_ISUPPORTS
-
-    // nsIAccessibleEventListener
-    NS_DECL_NSIACCESSIBLEEVENTLISTENER
-
-    virtual PRInt32 GetIdFor(nsIAccessible* aAccessible);
-    virtual void GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc);
-
-private:
-    // list of accessible that may have had
-    // events fire.
-    nsAccessibleEventMap mList[MAX_LIST_SIZE];
-    PRInt32 mListCount;
-    PRInt32 mNextId;
-    PRInt32 mNextPos;
-
-};
-#endif
-
-*/

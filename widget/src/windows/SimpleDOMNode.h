@@ -26,34 +26,37 @@
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
  */
 
-#ifndef _MozNode_H_
-#define _MozNode_H_
+#ifndef _SimpleDOMNode_H_
+#define _SimpleDOMNode_H_
 
 #include "nsCOMPtr.h"
 #include "nsIAccessible.h"
 #include "Accessible.h"
 #include "nsIAccessibleEventListener.h"
-#include "IMozNode.h"
+#include "ISimpleDOMNode.h"
+#include "ISimpleDOMDocument.h"
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
 
 #include "nsString.h"
 
-class MozNode : public IMozNode
+class SimpleDOMNode : public ISimpleDOMNode
 {
   public: // construction, destruction
-    MozNode(nsIAccessible *, HWND);
-    MozNode(nsIDOMNode *, HWND);
-    virtual ~MozNode();
+    SimpleDOMNode(nsIAccessible *, HWND);
+    SimpleDOMNode(nsIDOMNode *, HWND);
+    virtual ~SimpleDOMNode();
 
   public: // IUnknown methods - see iunknown.h for documentation
     STDMETHODIMP_(ULONG) AddRef        ();
     STDMETHODIMP      QueryInterface(REFIID, void**);
     STDMETHODIMP_(ULONG) Release       ();
 
+    nsIDOMNode* GetRealDOMNode();
+
   private:
     void GetAccessibleFor(nsIDOMNode *node, nsIAccessible **newAcc);
-    IMozNode* MozNode::MakeMozNode(nsIDOMNode *node);
+    ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node);
 
   public:
 
@@ -71,18 +74,24 @@ class MozNode : public IMozNode
         /* [length_is][size_is][out] */ short __RPC_FAR *nameSpaceID,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *attribValues);
   
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_styleRules( 
-        /* [in] */ unsigned short maxStyleRules,
-        /* [out] */ unsigned short __RPC_FAR *numStyleRules,
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyle( 
+        /* [in] */ unsigned short maxStyleProperties,
+        /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
-        /* [length_is][size_is][out] */ short __RPC_FAR *styleMediaType,
+        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
+    
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyleForMedia( 
+        /* [in] */ BSTR __RPC_FAR *mediaType,  // W3C media type such as aural, braille, embossed, handheld, print, projection, screen, tty
+        /* [in] */ unsigned short maxStyleProperties,
+        /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
+        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
   
-    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_parentNode(IMozNode __RPC_FAR *__RPC_FAR *node);
-    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_firstChild(IMozNode __RPC_FAR *__RPC_FAR *node);
-    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_lastChild(IMozNode __RPC_FAR *__RPC_FAR *node);
-    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_previousSibling(IMozNode __RPC_FAR *__RPC_FAR *node);
-    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_nextSibling(IMozNode __RPC_FAR *__RPC_FAR *node);
+    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_parentNode(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
+    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_firstChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
+    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_lastChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
+    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_previousSibling(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
+    virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_nextSibling(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
 
   protected:
     nsCOMPtr<nsIDOMNode> mDOMNode;

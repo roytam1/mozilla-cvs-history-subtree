@@ -238,7 +238,9 @@ bin\components\nsHelperAppDlg.js
 bin\components\helperAppDlg.xpt
 bin\components\transformiix.xpt
 bin\components\transformiix.dll
-bin\IMozNodeMarshal.dll
+bin\ISimpleDOMNodeMarshal.dll
+bin\ISimpleDOMDocumentMarshal.dll
+bin\mfcembed.exe
 
 ; chrome stuff
 bin\chrome\help.jar

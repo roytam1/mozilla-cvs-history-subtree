@@ -44,6 +44,7 @@
 #include "nsIDOMHTMLAreaElement.h"
 #include "nsHTMLFormControlAccessible.h"
 #include "nsILink.h"
+#include "nsIDocShellTreeItem.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -391,7 +392,7 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
 
   nsCOMPtr<nsIDocument> doc;
   if (NS_SUCCEEDED(content->GetDocument(*getter_AddRefs(doc))) && doc) {
-    nsCOMPtr<nsIPresShell> presShell = getter_AddRefs(doc->GetShellAt(0));
+    nsCOMPtr<nsIPresShell> presShell(getter_AddRefs(doc->GetShellAt(0)));
     if (presShell) {
       nsCOMPtr<nsISupports> supps;
       presShell->GetSubShellFor(content, getter_AddRefs(supps));
@@ -402,12 +403,16 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
           docShell->GetPresShell(getter_AddRefs(ps));
           if (ps) {
             nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(ps)));
-            //printf("################################## CreateHTMLIFrameAccessible\n");
+            nsCOMPtr<nsIDocument> innerDoc;
+            ps->GetDocument(getter_AddRefs(innerDoc)); 
+            if (innerDoc) {
+              //printf("################################## CreateHTMLIFrameAccessible\n");
 
-            nsCOMPtr<nsIAccessible> root = new nsHTMLIFrameRootAccessible(node,wr);
-            *_retval = new nsHTMLIFrameAccessible(node, root, weakRef);
-            NS_ADDREF(*_retval);
-            return NS_OK;
+              nsCOMPtr<nsIAccessible> root = new nsHTMLIFrameRootAccessible(node, wr);
+              *_retval = new nsHTMLIFrameAccessible(node, root, weakRef, innerDoc);
+              NS_ADDREF(*_retval);
+              return NS_OK;
+            }
           }
         }
       }
@@ -454,6 +459,92 @@ PRBool nsDOMTreeWalker::GetAccessible()
 }
 */
 
+
+//----------------------------------------
+ // This method finds the content node in the parent document
+ // corresponds to the docshell
+ nsIContent* 
+ nsAccessibilityService::FindContentForDocShell(nsIPresShell* aPresShell,
+                                             nsIContent*   aContent,
+                                             nsIDocShell*  aDocShell)
+ {
+   NS_ASSERTION(aPresShell, "Pointer is null!");
+   NS_ASSERTION(aDocShell,  "Pointer is null!");
+   NS_ASSERTION(aContent,   "Pointer is null!");
+ 
+   nsCOMPtr<nsISupports> supps;
+   aPresShell->GetSubShellFor(aContent, getter_AddRefs(supps));
+   if (supps) {
+     nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(supps));
+     if (docShell.get() == aDocShell) {
+       NS_ADDREF(aContent);
+       return aContent;
+     }
+   }
+ 
+   // walk children content
+   PRInt32 count;
+   aContent->ChildCount(count);
+   for (PRInt32 i=0;i<count;i++) {
+     nsCOMPtr<nsIContent> child;
+     aContent->ChildAt(i, *getter_AddRefs(child));
+     nsIContent* foundContent = FindContentForDocShell(aPresShell, child, aDocShell);
+     if (foundContent != nsnull) {
+       return foundContent;
+     }
+   }
+   return nsnull;
+ }
+
+
+void nsAccessibilityService::GetOwnerFor(nsIPresShell *aPresShell, nsIPresShell **aOwnerShell, nsIContent **aOwnerContent)
+{
+  nsCOMPtr<nsIPresContext> presContext;
+  aPresShell->GetPresContext(getter_AddRefs(presContext));
+  if (!presContext) 
+    return;
+  nsCOMPtr<nsISupports> pcContainer;
+  presContext->GetContainer(getter_AddRefs(pcContainer));
+  if (!pcContainer) 
+    return;
+  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(pcContainer));
+
+  nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(docShell));
+  if (!treeItem) 
+    return;
+
+  // Get Parent Doc
+  nsCOMPtr<nsIDocShellTreeItem> treeItemParent;
+  treeItem->GetParent(getter_AddRefs(treeItemParent));
+  if (!treeItemParent) 
+    return;
+
+  nsCOMPtr<nsIDocShell> parentDS = do_QueryInterface(treeItemParent);
+  if (!parentDS) 
+    return;
+
+  nsCOMPtr<nsIPresShell> parentPresShell;
+  parentDS->GetPresShell(getter_AddRefs(parentPresShell));
+  if (!parentPresShell) 
+    return;
+
+  nsCOMPtr<nsIDocument> parentDoc;
+  parentPresShell->GetDocument(getter_AddRefs(parentDoc));
+  if (!parentDoc)
+    return;
+
+  nsCOMPtr<nsIContent> rootContent(getter_AddRefs(parentDoc->GetRootContent()));
+  
+  nsIContent *tempContent;
+  tempContent = FindContentForDocShell(parentPresShell, rootContent, docShell);
+  if (tempContent) {
+    *aOwnerContent = tempContent;
+    *aOwnerShell = parentPresShell;
+    NS_ADDREF(*aOwnerShell);
+    NS_ADDREF(*aOwnerContent);
+  }
+}
+
 /* nsIAccessible GetAccessibleFor (in nsISupports aPresShell, in nsIDOMNode aNode); */
 NS_IMETHODIMP nsAccessibilityService::GetAccessibleFor(nsIWeakReference *aPresShell, nsIDOMNode *aNode, 
                                                        nsIAccessible **_retval) 
@@ -465,21 +556,24 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessibleFor(nsIWeakReference *aPresSh
   if (!shell)
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
-
-  if (!content)
-    return PR_FALSE;
-
   nsCOMPtr<nsIDOMHTMLAreaElement> areaContent(do_QueryInterface(aNode));
   if (areaContent)   // Area elements are implemented in nsHTMLImageAccessible as children of the image
     return PR_FALSE; // Return, otherwise the image frame looks like an accessible object in the wrong place
 
-  nsIFrame* frame = nsnull;
-  if (!shell) {
-    *_retval = nsnull;
-    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(aNode));
+  if (!content && doc) {
+    nsCOMPtr<nsIPresShell> ownerShell;
+    nsCOMPtr<nsIContent> ownerContent;
+    GetOwnerFor(shell, getter_AddRefs(ownerShell), getter_AddRefs(ownerContent));
+    shell = ownerShell;
+    content = ownerContent;
   }
 
+  if (!content)
+    return PR_FALSE;
+
+  nsIFrame* frame = nsnull;
   shell->GetPrimaryFrameFor(content, &frame);
   if (!frame)
     return PR_FALSE;

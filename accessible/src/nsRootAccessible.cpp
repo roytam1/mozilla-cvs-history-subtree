@@ -36,14 +36,19 @@
 #include "nsHTMLLinkAccessible.h"
 #include "nsIURI.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIXULDocument.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentType.h"
+#include "nsINameSpaceManager.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
-  NS_INTERFACE_MAP_ENTRY(nsIAccessibleEventReceiver)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFormListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMFormListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMEventListener, nsIDOMFormListener)
 NS_INTERFACE_MAP_END_INHERITING(nsAccessible)
+
 
 NS_IMPL_ADDREF_INHERITED(nsRootAccessible, nsAccessible);
 NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
@@ -51,7 +56,7 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell)
+nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell), nsDocAccessible(aShell)
 {
   mListener = nsnull;
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -72,12 +77,7 @@ nsRootAccessible::~nsRootAccessible()
   /* attribute wstring accName; */
 NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName) 
 { 
-  const nsString* docTitle = mDocument->GetDocumentTitle();
-  if (docTitle && !docTitle->IsEmpty())
-    *aAccName = docTitle->ToNewUnicode();
-  else *aAccName = ToNewUnicode(NS_LITERAL_STRING("Document"));
-  
-  return NS_OK;  
+  return GetTitle(aAccName);
 }
 
 // helpers
@@ -138,11 +138,7 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole)
 
 NS_IMETHODIMP nsRootAccessible::GetAccValue(PRUnichar * *aAccValue)
 {
-  nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
-  char *path;
-  pURI->GetSpec(&path);
-  *aAccValue = ToNewUnicode(nsDependentCString(path));
-  return NS_OK;
+  return GetURL(aAccValue);
 }
 
 /* void addAccessibleEventListener (in nsIAccessibleEventListener aListener); */
@@ -279,7 +275,7 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-// ------- nsIDOMFocusListener Methods (2) -------------
+// ------- nsIDOMFocusListener Methods (1) -------------
 
 NS_IMETHODIMP nsRootAccessible::Focus(nsIDOMEvent* aEvent) 
 { 
@@ -310,5 +306,122 @@ NS_IMETHODIMP nsRootAccessible::Select(nsIDOMEvent* aEvent) { return NS_OK; }
 // gets Input events when text is entered or deleted in a textarea or input
 NS_IMETHODIMP nsRootAccessible::Input(nsIDOMEvent* aEvent) { return NS_OK; }
 
+
+// ------- nsIAccessibleDocument Methods (5) ---------------
+
+NS_IMETHODIMP nsRootAccessible::GetURL(PRUnichar **aURL)
+{
+  return nsDocAccessible::GetURL(aURL);
+}
+
+NS_IMETHODIMP nsRootAccessible::GetTitle(PRUnichar **aTitle)
+{
+  return nsDocAccessible::GetTitle(aTitle);
+}
+
+NS_IMETHODIMP nsRootAccessible::GetMimeType(PRUnichar **aMimeType)
+{
+  return nsDocAccessible::GetMimeType(aMimeType);
+}
+
+NS_IMETHODIMP nsRootAccessible::GetDocType(PRUnichar **aDocType)
+{
+  return nsDocAccessible::GetDocType(aDocType);
+}
+
+NS_IMETHODIMP nsRootAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+{
+  return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
+}
+
+
+
+// ---------- nsDocAccessible ----------
+// This is a helper for nsRootAccessible, and nsHTMLIFrameAccessible
+
+nsDocAccessible::nsDocAccessible(nsIDocument *aDoc):mDocument(aDoc)
+{
+}
+
+nsDocAccessible::nsDocAccessible(nsIWeakReference *aPresShell)
+{
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(aPresShell));
+  NS_ASSERTION(shell,"Shell is gone!!! What are we doing here?");
+  shell->GetDocument(getter_AddRefs(mDocument));
+}
+
+nsDocAccessible::~nsDocAccessible()
+{
+}
+
+NS_IMETHODIMP nsDocAccessible::GetURL(PRUnichar **aURL)
+{  
+  nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
+  char *path;
+  pURI->GetSpec(&path);
+  *aURL = ToNewUnicode(nsDependentCString(path));
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDocAccessible::GetTitle(PRUnichar **aTitle)
+{
+  const nsString* docTitle = mDocument->GetDocumentTitle();
+  if (docTitle && !docTitle->IsEmpty())
+    *aTitle = docTitle->ToNewUnicode();
+  else *aTitle = ToNewUnicode(NS_LITERAL_STRING("Document"));
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDocAccessible::GetMimeType(PRUnichar **aMimeType)
+{
+  *aMimeType = nsnull;
+  if (mDocument) {
+    nsAutoString mimeType;
+    if (NS_SUCCEEDED(mDocument->GetContentType(mimeType))) {
+       *aMimeType = mimeType.ToNewUnicode();
+      return NS_OK;
+    }
+  }
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsDocAccessible::GetDocType(PRUnichar **aDocType)
+{
+  *aDocType = nsnull;
+  nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
+  nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(mDocument));
+  nsCOMPtr<nsIDOMDocumentType> docType;
+
+  if (xulDoc) {
+    *aDocType = ToNewUnicode(NS_LITERAL_STRING("window")); // doctype not implemented for XUL at time of writing - causes assertion
+    return NS_OK;
+  }
+  else if (domDoc && NS_SUCCEEDED(domDoc->GetDoctype(getter_AddRefs(docType))) && docType) {
+    nsAutoString docTypeString;
+    nsresult rv = docType->GetName(docTypeString);
+    if (NS_SUCCEEDED(rv)) {
+       *aDocType = docTypeString.ToNewUnicode();
+      return NS_OK;
+    }
+  }
+
+  return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsDocAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+{
+  *aNameSpaceURI = nsnull;
+  if (mDocument) {
+    nsCOMPtr<nsINameSpaceManager> nameSpaceManager;
+
+    if (NS_SUCCEEDED(mDocument->GetNameSpaceManager(*getter_AddRefs(nameSpaceManager)))) {
+      nsAutoString nameSpaceURI;
+      nameSpaceManager->GetNameSpaceURI(aNameSpaceID, nameSpaceURI);
+      *aNameSpaceURI = nameSpaceURI.ToNewUnicode();
+      return NS_OK;
+    }
+  }
+  return NS_ERROR_FAILURE;
+}
 
 

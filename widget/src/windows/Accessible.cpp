@@ -21,6 +21,7 @@
  */
 
 #include "nsIAccessible.h"
+#include "nsIAccessibleDocument.h"
 #include "Accessible.h"
 #include "nsIWidget.h"
 #include "nsWindow.h"
@@ -29,8 +30,14 @@
 #include "nsIAccessibleEventReceiver.h"
 #include "nsReadableUtils.h"
 #include "nsITextContent.h"
+#include "nsIDocument.h"
+#include "nsIXULDocument.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentType.h"
+#include "nsINameSpaceManager.h"
+#include "String.h"
 
-/* For documentation of the accessibility architecture, 
+ /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
  */
 
@@ -52,7 +59,7 @@ EXTERN_C GUID CDECL CLSID_Accessible =
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd): MozNode(aAcc, aWnd)
+Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd): SimpleDOMNode(aAcc, aWnd)
 {
   mAccessible = aAcc;  // The nsIAccessible we're proxying from
 
@@ -92,7 +99,7 @@ STDMETHODIMP Accessible::QueryInterface(REFIID iid, void** ppv)
     *ppv = NS_STATIC_CAST(IAccessible*, this);
  
   if (NULL == *ppv)
-    return MozNode::QueryInterface(iid,ppv);
+    return SimpleDOMNode::QueryInterface(iid,ppv);
     
   (NS_REINTERPRET_CAST(IUnknown*, *ppv))->AddRef();
   return S_OK;
@@ -101,14 +108,14 @@ STDMETHODIMP Accessible::QueryInterface(REFIID iid, void** ppv)
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::AddRef()
 {
-  return MozNode::AddRef();
+  return SimpleDOMNode::AddRef();
 }
 
 
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::Release()
 {
-  return MozNode::Release();
+  return SimpleDOMNode::Release();
 }
 
 HINSTANCE Accessible::gmAccLib = 0;
@@ -367,7 +374,8 @@ STDMETHODIMP Accessible::get_accHelp(
       /* [optional][in] */ VARIANT varChild,
       /* [retval][out] */ BSTR __RPC_FAR *pszHelp)
 {
-  return NULL;
+  *pszHelp = NULL;
+  return S_FALSE;
 }
 
 STDMETHODIMP Accessible::get_accHelpTopic( 
@@ -375,6 +383,8 @@ STDMETHODIMP Accessible::get_accHelpTopic(
       /* [optional][in] */ VARIANT varChild,
       /* [retval][out] */ long __RPC_FAR *pidTopic)
 {
+  *pszHelpFile = NULL;
+  *pidTopic = 0;
   return S_FALSE;
 }
 
@@ -382,6 +392,7 @@ STDMETHODIMP Accessible::get_accKeyboardShortcut(
       /* [optional][in] */ VARIANT varChild,
       /* [retval][out] */ BSTR __RPC_FAR *pszKeyboardShortcut)
 {
+  *pszKeyboardShortcut = NULL;
   return S_FALSE;
 }
 
@@ -660,49 +671,182 @@ void Accessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& a
   }  
 }
 
-//----- Root Accessible -----
 
-NS_IMPL_QUERY_INTERFACE1(RootAccessible, nsIAccessibleEventListener)
+
+//----- DocAccessible -----
+
+// Microsoft COM QueryInterface
+STDMETHODIMP DocAccessible::QueryInterface(REFIID iid, void** ppv)
+{
+  *ppv = NULL;
+
+  if (IID_IUnknown == iid || IID_IDispatch == iid || IID_ISimpleDOMDocument == iid)
+    *ppv = NS_STATIC_CAST(ISimpleDOMDocument*, this);
+ 
+  if (NULL == *ppv)
+    return Accessible::QueryInterface(iid,ppv);
+    
+  (NS_REINTERPRET_CAST(IUnknown*, *ppv))->AddRef();
+  return S_OK;
+}
+
 
 NS_IMETHODIMP_(nsrefcnt) 
-RootAccessible::AddRef(void)
+DocAccessible::AddRef(void)
 {
   return Accessible::AddRef();
 }
   
 NS_IMETHODIMP_(nsrefcnt) 
-RootAccessible::Release(void)
+DocAccessible::Release(void)
 {
   return Accessible::Release();
 }
 
-RootAccessible::RootAccessible(nsIAccessible* aAcc, HWND aWnd):Accessible(aAcc,aWnd)
 
+DocAccessible::DocAccessible(nsIAccessible* aAcc, HWND aWnd):Accessible(aAcc,aWnd)
 {
-    mListCount = 0;
-    mNextId = -1;
-    mNextPos = 0;
+}
 
-    nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
-    if (r) 
-      r->AddAccessibleEventListener(this);
+DocAccessible::~DocAccessible()
+{
+}
+
+
+STDMETHODIMP DocAccessible::get_URL(/* [out] */ BSTR __RPC_FAR *aURL)
+{
+  nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
+  if (accDoc) {
+    PRUnichar *pszURL;
+    if (NS_SUCCEEDED(accDoc->GetURL(&pszURL))) {
+      *aURL= ::SysAllocString(pszURL);
+      delete pszURL;
+      return S_OK;
+    }
+  }
+  return S_FALSE;
+}
+
+STDMETHODIMP DocAccessible::get_title( /* [out] */ BSTR __RPC_FAR *aTitle)
+{
+  nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
+  if (accDoc) {
+    PRUnichar *pszTitle;
+    if (NS_SUCCEEDED(accDoc->GetTitle(&pszTitle))) {
+      *aTitle= ::SysAllocString(pszTitle);
+      delete pszTitle;
+      return S_OK;
+    }
+  }
+  return S_FALSE;
+}
+
+STDMETHODIMP DocAccessible::get_mimeType(/* [out] */ BSTR __RPC_FAR *aMimeType)
+{
+  nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
+  if (accDoc) {
+    PRUnichar *pszMimeType;
+    if (NS_SUCCEEDED(accDoc->GetMimeType(&pszMimeType))) {
+      *aMimeType= ::SysAllocString(pszMimeType);
+      delete pszMimeType;
+      return S_OK;
+    }
+  }
+  return S_FALSE;
+}
+
+STDMETHODIMP DocAccessible::get_docType(/* [out] */ BSTR __RPC_FAR *aDocType)
+{
+  nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
+  if (accDoc) {
+    PRUnichar *pszDocType;
+    if (NS_SUCCEEDED(accDoc->GetDocType(&pszDocType))) {
+      *aDocType= ::SysAllocString(pszDocType);
+      delete pszDocType;
+      return S_OK;
+    }
+  }
+  return S_FALSE;
+}
+
+STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID,
+  /* [out] */ BSTR __RPC_FAR *aNameSpaceURI)
+{
+  nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
+  if (accDoc) {
+    *aNameSpaceURI = NULL;
+    PRUnichar *pszNameSpaceURI;
+    if (NS_SUCCEEDED(accDoc->GetNameSpaceURIForID(aNameSpaceID, &pszNameSpaceURI))) {
+      *aNameSpaceURI = ::SysAllocString(pszNameSpaceURI);
+      delete pszNameSpaceURI;
+    }
+    return S_OK;
+   }
+
+  return S_FALSE;
+}
+
+
+
+//----- Root Accessible -----
+
+// XPCOM QueryInterface
+NS_IMPL_QUERY_INTERFACE1(RootAccessible, nsIAccessibleEventListener)
+
+// Microsoft COM QueryInterface
+STDMETHODIMP RootAccessible::QueryInterface(REFIID iid, void** ppv)
+{
+  *ppv = NULL;
+
+  if (IID_IUnknown == iid || IID_IDispatch == iid || IID_ISimpleDOMDocument == iid)
+    *ppv = NS_STATIC_CAST(ISimpleDOMDocument*, this);
+ 
+  if (NULL == *ppv)
+    return DocAccessible::QueryInterface(iid, ppv);
+    
+  (NS_REINTERPRET_CAST(IUnknown*, *ppv))->AddRef();
+  return S_OK;
+}
+
+
+NS_IMETHODIMP_(nsrefcnt) 
+RootAccessible::AddRef(void)
+{
+  return DocAccessible::AddRef();
+}
+  
+NS_IMETHODIMP_(nsrefcnt) 
+RootAccessible::Release(void)
+{
+  return DocAccessible::Release();
+}
+
+RootAccessible::RootAccessible(nsIAccessible* aAcc, HWND aWnd):DocAccessible(aAcc,aWnd)
+{
+  mListCount = 0;
+  mNextId = -1;
+  mNextPos = 0;
+
+  nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
+  if (r) 
+    r->AddAccessibleEventListener(this);
 }
 
 RootAccessible::~RootAccessible()
 {
-    nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
-    if (r) 
-      r->RemoveAccessibleEventListener(this);
+  nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
+  if (r) 
+    r->RemoveAccessibleEventListener(this);
 
-    // free up accessibles
-    for (int i=0; i < mListCount; i++)
-      mList[i].mAccessible = nsnull;
+  // free up accessibles
+  for (int i=0; i < mListCount; i++)
+    mList[i].mAccessible = nsnull;
 }
 
 void RootAccessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc)
 {
   aAcc = nsnull;
-  Accessible::GetNSAccessibleFor(varChild, aAcc);
+  DocAccessible::GetNSAccessibleFor(varChild, aAcc);
 
   if (aAcc)
     return;
@@ -751,5 +895,4 @@ PRInt32 RootAccessible::GetIdFor(nsIAccessible* aAccessible)
 
   return mNextId+1;
 }
-
 

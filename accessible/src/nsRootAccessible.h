@@ -26,11 +26,32 @@
 #include "nsAccessible.h"
 #include "nsIAccessibleEventReceiver.h"
 #include "nsIAccessibleEventListener.h"
+#include "nsIAccessibleDocument.h"
 #include "nsIDOMFormListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDocument.h"
 
+class nsDocAccessible
+{
+  public:
+    nsDocAccessible(nsIDocument *doc);
+    nsDocAccessible(nsIWeakReference *aShell);
+    virtual ~nsDocAccessible();
+    
+    // ----- nsIAccessibleDocument ------------------------
+    NS_IMETHOD GetURL(PRUnichar **aURL);
+    NS_IMETHOD GetTitle(PRUnichar **aTitle);
+    NS_IMETHOD GetMimeType(PRUnichar **aMimeType);
+    NS_IMETHOD GetDocType(PRUnichar **aDocType);
+    NS_IMETHOD GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI);
+
+  protected:
+    nsCOMPtr<nsIDocument> mDocument;
+};
+
 class nsRootAccessible : public nsAccessible,
+                         public nsIAccessibleDocument,
+                         public nsDocAccessible,
                          public nsIAccessibleEventReceiver,
                          public nsIDOMFocusListener,
                          public nsIDOMFormListener
@@ -68,7 +89,15 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD Select(nsIDOMEvent* aEvent);
     NS_IMETHOD Input(nsIDOMEvent* aEvent);
 
-protected:
+  public:
+    // ----- nsIAccessibleDocument ------------------------
+    NS_IMETHOD GetURL(PRUnichar **aURL);
+    NS_IMETHOD GetTitle(PRUnichar **aTitle);
+    NS_IMETHOD GetMimeType(PRUnichar **aMimeType);
+    NS_IMETHOD GetDocType(PRUnichar **aDocType);
+    NS_IMETHOD GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI);
+
+  protected:
   virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);
   virtual nsIFrame* GetFrame();
 
@@ -77,7 +106,6 @@ protected:
   // otherwise we will get into circular referencing problems
   nsIAccessibleEventListener* mListener;
   nsCOMPtr<nsIContent> mCurrentFocus;
-  nsCOMPtr<nsIDocument> mDocument;
 };
 
 

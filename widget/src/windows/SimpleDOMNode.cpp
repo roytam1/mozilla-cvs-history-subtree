@@ -23,9 +23,11 @@
  */
 
 #include "nsIAccessible.h"
+#include "nsIAccessibleDocument.h"
 #include "Accessible.h"
-#include "IMozNode.h"
-#include "IMozNode_iid.h"
+#include "SimpleDOMNode.h"
+#include "ISimpleDOMNode_iid.h"
+#include "ISimpleDOMDocument_iid.h"
 #include "nsIWidget.h"
 #include "nsWindow.h"
 #include "nsCOMPtr.h"
@@ -46,6 +48,8 @@
 #include "nsIAccessibilityService.h"
 #include "nsIServiceManager.h"
 #include "nsIWeakReference.h"
+#include "nsIDocShellTreeItem.h"
+#include "nsIPresContext.h"
 
 /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
@@ -54,7 +58,7 @@
 //#define DEBUG_LEAKS
 
 #ifdef DEBUG_LEAKS
-static gMozNodes = 0;
+static gSimpleDOMNodes = 0;
 #endif
 
 /*
@@ -66,44 +70,44 @@ static gMozNodes = 0;
 // construction 
 //-----------------------------------------------------
 
-MozNode::MozNode(nsIAccessible* aNSAcc, HWND aWnd): mWnd(aWnd), m_cRef(0)
+SimpleDOMNode::SimpleDOMNode(nsIAccessible* aNSAcc, HWND aWnd): mWnd(aWnd), m_cRef(0)
 {
   aNSAcc->AccGetDOMNode(getter_AddRefs(mDOMNode));
   nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDOMNode));
 
 #ifdef DEBUG_LEAKS
-  printf("MozNodes=%d\n", ++gMozNodes);
+  printf("SimpleDOMNodes=%d\n", ++gSimpleDOMNodes);
 #endif
 }
 
-MozNode::MozNode(nsIDOMNode *aNode, HWND aWnd): mDOMNode(aNode), mWnd(aWnd), m_cRef(0)
+SimpleDOMNode::SimpleDOMNode(nsIDOMNode *aNode, HWND aWnd): mDOMNode(aNode), mWnd(aWnd), m_cRef(0)
 {
 #ifdef DEBUG_LEAKS
-  printf("MozNodes=%d\n", ++gMozNodes);
+  printf("SimpleDOMNodes=%d\n", ++gSimpleDOMNodes);
 #endif
 }
 
 //-----------------------------------------------------
 // destruction
 //-----------------------------------------------------
-MozNode::~MozNode()
+SimpleDOMNode::~SimpleDOMNode()
 {
   m_cRef = 0;
 #ifdef DEBUG_LEAKS
-  printf("MozNodes=%d\n", --gMozNodes);
+  printf("SimpleDOMNodes=%d\n", --gSimpleDOMNodes);
 #endif
 }
 
 
 //-----------------------------------------------------
-// IUnknown interface methods - see inknown.h for documentation
+// IUnknown interface methods - see iunknown.h for documentation
 //-----------------------------------------------------
-STDMETHODIMP MozNode::QueryInterface(REFIID iid, void** ppv)
+STDMETHODIMP SimpleDOMNode::QueryInterface(REFIID iid, void** ppv)
 {
   *ppv = NULL;
 
-  if (IID_IUnknown == iid || IID_IMozNode == iid)
-    *ppv = NS_STATIC_CAST(IMozNode*, this);
+  if (IID_IUnknown == iid || IID_ISimpleDOMNode == iid)
+    *ppv = NS_STATIC_CAST(ISimpleDOMNode*, this);
 
   if (NULL == *ppv)
     return E_NOINTERFACE;      //iid not supported.
@@ -113,14 +117,14 @@ STDMETHODIMP MozNode::QueryInterface(REFIID iid, void** ppv)
 }
 
 //-----------------------------------------------------
-STDMETHODIMP_(ULONG) MozNode::AddRef()
+STDMETHODIMP_(ULONG) SimpleDOMNode::AddRef()
 {
   return ++m_cRef;
 }
 
 
 //-----------------------------------------------------
-STDMETHODIMP_(ULONG) MozNode::Release()
+STDMETHODIMP_(ULONG) SimpleDOMNode::Release()
 {
   if (0 != --m_cRef)
     return m_cRef;
@@ -132,44 +136,44 @@ STDMETHODIMP_(ULONG) MozNode::Release()
 
 
 //-----------------------------------------------------
-// IMozNode methods
+// ISimpleDOMNode methods
 //-----------------------------------------------------
 
-STDMETHODIMP MozNode::get_nodeInfo( 
-    /* [out] */ BSTR __RPC_FAR *aTagName,
+STDMETHODIMP SimpleDOMNode::get_nodeInfo( 
+    /* [out] */ BSTR __RPC_FAR *aNodeName,
     /* [out] */ short __RPC_FAR *aNameSpaceID,
     /* [out] */ unsigned short __RPC_FAR *aNodeType,
     /* [out] */ BSTR __RPC_FAR *aNodeValue,
     /* [out] */ unsigned int __RPC_FAR *aNumChildren)
 {
-  *aTagName = NULL;
+  *aNodeName = NULL;
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
   GetElementAndContentFor(domElement, content);
   
-  nsAutoString tagName, nodeValue;
+  PRUint16 nodeType = 0;
+  mDOMNode->GetNodeType(&nodeType);
+  *aNodeType=NS_STATIC_CAST(unsigned short, nodeType);
+
+  if (*aNodeType !=  NODETYPE_TEXT) {
+    nsAutoString nodeName;
+    mDOMNode->GetNodeName(nodeName);
+    PRUnichar *pszNodeName  =  nodeName.ToNewUnicode();
+    *aNodeName =   ::SysAllocString(pszNodeName);
+    delete pszNodeName; 
+  }
+
+  nsAutoString nodeValue;
 
   mDOMNode->GetNodeValue(nodeValue);
-  if (domElement) 
-    domElement->GetTagName(tagName);
-  
-  PRUnichar *pszTagName  =  tagName.ToNewUnicode();
   PRUnichar *pszNodeValue = nodeValue.ToNewUnicode();
-
-  *aTagName =   ::SysAllocString(pszTagName);
   *aNodeValue = ::SysAllocString(pszNodeValue);
-
-  delete pszTagName; 
   delete pszNodeValue;
 
   PRInt32 nameSpaceID = 0;
   if (content)
     content->GetNameSpaceID(nameSpaceID);
   *aNameSpaceID = NS_STATIC_CAST(short, nameSpaceID);
-
-  PRUint16 nodeType = 0;
-  mDOMNode->GetNodeType(&nodeType);
-  *aNodeType=NS_STATIC_CAST(unsigned short, nodeType);
 
   *aNumChildren = 0;
   PRUint32 numChildren = 0;
@@ -183,7 +187,7 @@ STDMETHODIMP MozNode::get_nodeInfo(
 
 
        
-STDMETHODIMP MozNode::get_attributes( 
+STDMETHODIMP SimpleDOMNode::get_attributes( 
     /* [in] */ unsigned short aMaxAttribs,
     /* [out] */ unsigned short __RPC_FAR *aNumAttribs,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aAttribNames,
@@ -193,6 +197,7 @@ STDMETHODIMP MozNode::get_attributes(
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
   GetElementAndContentFor(domElement, content);
+  *aNumAttribs = 0;
 
   if (!content || !domElement) 
     return S_FALSE;
@@ -226,20 +231,30 @@ STDMETHODIMP MozNode::get_attributes(
 }
         
 
-STDMETHODIMP MozNode::get_styleRules( 
-    /* [in] */ unsigned short aMaxStyleRules,
-    /* [out] */ unsigned short __RPC_FAR *aNumStyleRules,
+STDMETHODIMP SimpleDOMNode::get_computedStyle( 
+    /* [in] */ unsigned short aMaxStyleProperties,
+    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
-    /* [length_is][size_is][out] */ short __RPC_FAR *aStyleMediaType,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
 {
-  *aNumStyleRules = 0;
+  return get_computedStyleForMedia(nsnull, aMaxStyleProperties, aNumStyleProperties, aStyleProperties, aStyleValues);
+}
+
+/* To do: use media type if not null */
+STDMETHODIMP SimpleDOMNode::get_computedStyleForMedia( 
+    /* [in] */ BSTR __RPC_FAR *mediaType,
+    /* [in] */ unsigned short aMaxStyleProperties,
+    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
+{
+  *aNumStyleProperties = 0;
 
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
   GetElementAndContentFor(domElement, content);
   if (!domElement || !content) 
-    return S_FALSE;
+    return S_FALSE;   
 
   nsCOMPtr<nsIDocument> doc;
   if (content) 
@@ -268,41 +283,42 @@ STDMETHODIMP MozNode::get_styleRules(
 
   PRUint32 length = 0, index, realIndex;
   cssDecl->GetLength(&length);
-  if (length > aMaxStyleRules)
-    length = aMaxStyleRules;
-  *aNumStyleRules = NS_STATIC_CAST(unsigned short, length);
-  for (index = realIndex = 0; index < length; index ++) {
+  for (index = realIndex = 0; index < length && realIndex < aMaxStyleProperties; index ++) {
     nsAutoString property, value;
     if (NS_SUCCEEDED(cssDecl->Item(index, property)) && property.CharAt(0) != '-')  // Ignore -moz-* properties
       cssDecl->GetPropertyValue(property, value);  // Get property value
-    if (value.IsEmpty())    // If empty, don't bother to send it back as a style property
-      -- *aNumStyleRules;
-    else {
+    if (!value.IsEmpty()) {
       PRUnichar *pszProperty = property.ToNewUnicode();
       PRUnichar *pszValue = value.ToNewUnicode();
       aStyleProperties[realIndex] =   ::SysAllocString(pszProperty);
       aStyleValues[realIndex]     =   ::SysAllocString(pszValue);
-      aStyleMediaType[realIndex] = 0;
       delete pszProperty;
       delete pszValue;
       ++realIndex;
     }
   }
+  *aNumStyleProperties = NS_STATIC_CAST(unsigned short, realIndex);
 
   return S_OK;
 }
 
-IMozNode* MozNode::MakeMozNode(nsIDOMNode *node)
+ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
 {
   if (!node) 
     return NULL;
 
+  ISimpleDOMNode *newNode = NULL;
+  
   nsCOMPtr<nsIContent> content(do_QueryInterface(node));
-  if (!content)
-    return NULL;
-
   nsCOMPtr<nsIDocument> doc;
-  content->GetDocument(*getter_AddRefs(doc));
+
+  if (content) 
+    content->GetDocument(*getter_AddRefs(doc));
+  else {
+    // Get the document via QueryInterface, since there is no content node
+    doc = do_QueryInterface(node);
+  }
+
   if (!doc)
     return NULL;
 
@@ -315,17 +331,33 @@ IMozNode* MozNode::MakeMozNode(nsIDOMNode *node)
   if (!accService)
     return NULL;
 
-  IMozNode *newNode = NULL;
-  
   nsCOMPtr<nsIAccessible> nsAcc;
   nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(shell)));
   accService->GetAccessibleFor(wr, node, getter_AddRefs(nsAcc));
   if (nsAcc) {
-    Accessible *acc = new Accessible(nsAcc, mWnd);
-    acc->QueryInterface(IID_IMozNode, (void**)&newNode);
+    nsCOMPtr<nsIAccessibleDocument> nsAccDoc(do_QueryInterface(nsAcc));
+    if (nsAccDoc) {
+      DocAccessible *accDoc = new DocAccessible(nsAcc, mWnd);
+      accDoc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
+    }
+    else {
+      Accessible *acc = new Accessible(nsAcc, mWnd);
+      acc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
+    }
+  }
+  else if (!content) {  // We're on a the root frame
+    IAccessible * pAcc = NULL;
+    HRESULT hr = Accessible::AccessibleObjectFromWindow(  mWnd, OBJID_CLIENT, IID_IAccessible, (void **) &pAcc );
+    if (pAcc) {
+      ISimpleDOMNode *testNode;
+      pAcc->QueryInterface(IID_ISimpleDOMNode, (void**)&testNode);
+      // if (testNode->GetRealDOMNode() == mDOMNode)  // same dom node as root
+        newNode = testNode;
+      pAcc->Release();
+    }
   }
   else 
-    newNode = new MozNode(node, mWnd);
+    newNode = new SimpleDOMNode(node, mWnd);
 
   if (newNode)
     newNode->AddRef();
@@ -334,47 +366,47 @@ IMozNode* MozNode::MakeMozNode(nsIDOMNode *node)
 }
 
 
-STDMETHODIMP MozNode::get_parentNode(IMozNode __RPC_FAR *__RPC_FAR *aNode)
+STDMETHODIMP SimpleDOMNode::get_parentNode(ISimpleDOMNode __RPC_FAR *__RPC_FAR *aNode)
 {
   nsCOMPtr<nsIDOMNode> node;
   mDOMNode->GetParentNode(getter_AddRefs(node));
-  *aNode = MakeMozNode(node);
+  *aNode = MakeSimpleDOMNode(node);
 
   return S_OK;
 }
 
-STDMETHODIMP MozNode::get_firstChild(IMozNode __RPC_FAR *__RPC_FAR *aNode)
+STDMETHODIMP SimpleDOMNode::get_firstChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *aNode)
 {
   nsCOMPtr<nsIDOMNode> node;
   mDOMNode->GetFirstChild(getter_AddRefs(node));
-  *aNode = MakeMozNode(node);
+  *aNode = MakeSimpleDOMNode(node);
 
   return S_OK;
 }
 
-STDMETHODIMP MozNode::get_lastChild(IMozNode __RPC_FAR *__RPC_FAR *aNode)
+STDMETHODIMP SimpleDOMNode::get_lastChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *aNode)
 {
   nsCOMPtr<nsIDOMNode> node;
   mDOMNode->GetLastChild(getter_AddRefs(node));
-  *aNode = MakeMozNode(node);
+  *aNode = MakeSimpleDOMNode(node);
 
   return S_OK;
 }
 
-STDMETHODIMP MozNode::get_previousSibling(IMozNode __RPC_FAR *__RPC_FAR *aNode)
+STDMETHODIMP SimpleDOMNode::get_previousSibling(ISimpleDOMNode __RPC_FAR *__RPC_FAR *aNode)
 {
   nsCOMPtr<nsIDOMNode> node;
   mDOMNode->GetPreviousSibling(getter_AddRefs(node));
-  *aNode = MakeMozNode(node);
+  *aNode = MakeSimpleDOMNode(node);
 
   return S_OK;
 }
 
-STDMETHODIMP MozNode::get_nextSibling(IMozNode __RPC_FAR *__RPC_FAR *aNode)
+STDMETHODIMP SimpleDOMNode::get_nextSibling(ISimpleDOMNode __RPC_FAR *__RPC_FAR *aNode)
 {
   nsCOMPtr<nsIDOMNode> node;
   mDOMNode->GetNextSibling(getter_AddRefs(node));
-  *aNode = MakeMozNode(node);
+  *aNode = MakeSimpleDOMNode(node);
 
   return S_OK;
 }
@@ -383,9 +415,14 @@ STDMETHODIMP MozNode::get_nextSibling(IMozNode __RPC_FAR *__RPC_FAR *aNode)
         
 //------- Helper methods ---------
 
-void MozNode::GetElementAndContentFor(nsCOMPtr<nsIDOMElement>& aElement, nsCOMPtr<nsIContent> &aContent)
+void SimpleDOMNode::GetElementAndContentFor(nsCOMPtr<nsIDOMElement>& aElement, nsCOMPtr<nsIContent> &aContent)
 {
   aElement = do_QueryInterface(mDOMNode);
   aContent = do_QueryInterface(mDOMNode);
 }
 
+
+nsIDOMNode* SimpleDOMNode::GetRealDOMNode()
+{
+  return mDOMNode;
+}
