@@ -162,7 +162,7 @@ function UpdateMailToolbar(caller)
 
 function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 {
-  //dump("In ChangeFolderByURI uri = " + uri + " sortType = " + sortType + "\n");
+  viewDebug("In ChangeFolderByURI uri = " + uri + " sortType = " + sortType + "\n");
   if (uri == gCurrentLoadingFolderURI)
     return;
 
@@ -284,7 +284,25 @@ function isNewsURI(uri)
 
 function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 {
-  //dump("In reroot folder, sortType = " +  sortType + "viewType = " + viewType + "\n");
+  viewDebug("In reroot folder, sortType = " +  sortType + "viewType = " + viewType + "\n");
+
+  if (sortType == 0)
+  {
+    try
+    {
+      var msgdb = newFolder.getMsgDatabase(msgWindow);
+      var dbFolderInfo = msgdb.dBFolderInfo;
+      sortType = dbFolderInfo.sortType;
+      sortOrder = dbFolderInfo.sortOrder;
+      viewFlags = dbFolderInfo.viewFlags;
+      viewType = dbFolderInfo.viewType;
+      dbFolderInfo = null;
+    }
+    catch(ex)
+    {
+      dump("invalid db in RerootFolder: " + ex + "\n");
+    }
+  }
 
   // workaround for #39655
   gFolderJustSwitched = true;

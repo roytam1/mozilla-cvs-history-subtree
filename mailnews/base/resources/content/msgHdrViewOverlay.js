@@ -237,7 +237,7 @@ function OnUnloadMsgHeaderPane()
 var messageHeaderSink = {
     onStartHeaders: function()
     {
-
+      mSaveHdr = null;
       // clear out any pending collected address timers...
       if (gCollectAddressTimer)
       {
@@ -354,6 +354,20 @@ var messageHeaderSink = {
 
     handleAttachment: function(contentType, url, displayName, uri, notDownloaded) 
     {
+      // presentation level change....don't show vcards as external attachments in the UI.
+      // libmime already renders them inline.
+
+      if (contentType == "text/x-vcard")
+      {
+        var inlineAttachments = pref.getBoolPref("mail.inline_attachments");
+        var displayHtmlAs = pref.getIntPref("mailnews.display.html_as");
+        if (inlineAttachments && !displayHtmlAs)
+        {
+          mSaveHdr = messenger.messageServiceFromURI(uri).messageURIToMsgHdr(uri);
+          return;
+        }
+      }
+
       currentAttachments.push (new createNewAttachmentInfo(contentType, url, displayName, uri, notDownloaded));
       // if we have an attachment, set the MSG_FLAG_ATTACH flag on the hdr
       // this will cause the "message with attachment" icon to show up
@@ -374,6 +388,11 @@ var messageHeaderSink = {
     
     onEndAllAttachments: function()
     {
+      // if we only got a v-card, turn off the attachments flag
+      if (!currentAttachments.length && mSaveHdr)
+        mSaveHdr.markHasAttachments(false);
+      mSaveHdr = null;
+      displayAttachmentsForExpandedView();
       // AddSaveAllAttachmentsMenu();
       if (gCollapsedHeaderViewMode)
         displayAttachmentsForCollapsedView();
@@ -391,6 +410,7 @@ var messageHeaderSink = {
     },
 
     mSecurityInfo  : null,
+    mSaveHdr: null,
     getSecurityInfo: function()
     {
       return this.mSecurityInfo;

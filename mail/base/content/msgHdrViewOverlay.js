@@ -273,7 +273,7 @@ const MsgHdrViewObserver =
 var messageHeaderSink = {
     onStartHeaders: function()
     {
-
+      mSaveHdr = null;
       // clear out any pending collected address timers...
       if (gCollectAddressTimer)
       {
@@ -281,7 +281,7 @@ var messageHeaderSink = {
         clearTimeout(gCollectAddressTimer);
         gCollectAddressTimer = null;
       }
-
+      mSaveHdr = null;
       // every time we start to redisplay a message, check the view all headers pref....
       var showAllHeadersPref = pref.getIntPref("mail.show_headers");
       if (showAllHeadersPref == 2)
