@@ -4221,7 +4221,13 @@ NS_IMETHODIMP nsImapMailFolder::GetCurMoveCopyMessageFlags(nsIImapUrl *runningUr
   {
     nsCOMPtr<nsImapMailCopyState> mailCopyState = do_QueryInterface(copyState);
     if (mailCopyState && mailCopyState->m_message)
+    {
+      nsMsgLabelValue label;
       mailCopyState->m_message->GetFlags(aResult);
+      mailCopyState->m_message->GetLabel(&label);
+      if (label != 0)
+        *aResult |= label << 25;
+    }
   }
   return NS_OK;
 }

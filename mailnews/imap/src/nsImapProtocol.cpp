@@ -74,6 +74,7 @@
 #include "nsReadableUtils.h"
 #include "nsIPipe.h"
 #include "nsIMsgFolder.h"
+#include "nsMsgMessageFlags.h"
 #include "nsImapStringBundle.h"
 #include "nsICopyMsgStreamListener.h"
 #include "nsTextFormatter.h"
@@ -4903,6 +4904,8 @@ void nsImapProtocol::OnAppendMsgFromFile()
         flagsToSet &= ~kImapMsgSeenFlag;
       if (msgFlags & MSG_FLAG_MDN_REPORT_SENT)
         flagsToSet |= kImapMsgMDNSentFlag;
+      if (msgFlags & MSG_FLAG_LABELS)
+        flagsToSet |= (msgFlags & MSG_FLAG_LABELS) >> 16;
       UploadMessageFromFile(fileSpec, mailboxName, flagsToSet);
       PR_Free( mailboxName );
     }
