@@ -47,7 +47,7 @@ using namespace Gdiplus;
 #include "nsCOMPtr.h"
 #include "nsSVGGDIPlusGlyphGeometry.h"
 #include "nsISVGRendererGlyphGeometry.h"
-#include "nsISVGGDIPlusRenderContext.h"
+#include "nsISVGGDIPlusCanvas.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsSVGGDIPlusRegion.h"
 #include "nsISVGRendererRegion.h"
@@ -149,15 +149,15 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererGlyphGeometry methods:
 
-/* void render (in nsISVGRendererRenderContext ctx); */
+/* void render (in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
-nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererRenderContext *ctx)
+nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 {
-  nsCOMPtr<nsISVGGDIPlusRenderContext> gdiplusCtx = do_QueryInterface(ctx);
-  NS_ASSERTION(gdiplusCtx, "wrong svg render context for geometry!");
-  if (!gdiplusCtx) return NS_ERROR_FAILURE;
-  gdiplusCtx->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
-  //gdiplusCtx->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
+  nsCOMPtr<nsISVGGDIPlusCanvas> gdiplusCanvas = do_QueryInterface(canvas);
+  NS_ASSERTION(gdiplusCanvas, "wrong svg canvas for geometry!");
+  if (!gdiplusCanvas) return NS_ERROR_FAILURE;
+  gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
+  //gdiplusCanvas->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
   nsCOMPtr<nsISVGGDIPlusGlyphMetrics> metrics;
   {
     nsCOMPtr<nsISVGRendererGlyphMetrics> xpmetrics;
@@ -182,16 +182,16 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererRenderContext *ctx)
   if (type == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR) {
     mSource->GetFillPaint(&color);
     mSource->GetFillOpacity(&opacity);
-     
+    
     SolidBrush brush(Color((BYTE)(opacity*255),NS_GET_R(color),NS_GET_G(color),NS_GET_B(color)));
 
     // prepare graphics object:
-    GraphicsState state = gdiplusCtx->GetGraphics()->Save();
+    GraphicsState state = gdiplusCanvas->GetGraphics()->Save();
         
     Matrix m;
     GetGlobalTransform(&m);
-    gdiplusCtx->GetGraphics()->MultiplyTransform(&m);
-    gdiplusCtx->GetGraphics()->SetTextRenderingHint(metrics->GetTextRenderingHint());
+    gdiplusCanvas->GetGraphics()->MultiplyTransform(&m);
+    gdiplusCanvas->GetGraphics()->SetTextRenderingHint(metrics->GetTextRenderingHint());
 
     // paint:
     nsAutoString text;
@@ -206,15 +206,15 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererRenderContext *ctx)
                                 StringFormatFlagsMeasureTrailingSpaces);
     stringFormat.SetLineAlignment(StringAlignmentNear);
     
-    gdiplusCtx->GetGraphics()->DrawString(PromiseFlatString(text).get(), -1,
-                                          metrics->GetFont(), PointF(x,y),
-                                          &stringFormat, &brush);
+    gdiplusCanvas->GetGraphics()->DrawString(PromiseFlatString(text).get(), -1,
+                                             metrics->GetFont(), PointF(x,y),
+                                             &stringFormat, &brush);
 #ifdef DEBUG
-//  gdiplusCtx->GetGraphics()->TranslateTransform(x, y);
-//  gdiplusCtx->GetGraphics()->DrawRectangle(&Pen(Color(255,0,0,0)), *(metrics->GetBoundingRect()));
+//  gdiplusCanvas->GetGraphics()->TranslateTransform(x, y);
+//  gdiplusCanvas->GetGraphics()->DrawRectangle(&Pen(Color(255,0,0,0)), *(metrics->GetBoundingRect()));
 #endif
     // restore state:
-    gdiplusCtx->GetGraphics()->Restore(state);
+    gdiplusCanvas->GetGraphics()->Restore(state);
   }
 
   // paint stroke
@@ -223,8 +223,8 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererRenderContext *ctx)
     mSource->GetStrokePaint(&color);
     mSource->GetStrokeOpacity(&opacity);
     SolidBrush brush(Color((BYTE)(opacity*255), NS_GET_R(color), NS_GET_G(color), NS_GET_B(color)));
-    gdiplusCtx->GetGraphics()->SetPageUnit(UnitWorld);
-    gdiplusCtx->GetGraphics()->FillPath(&brush, mStroke);
+    gdiplusCanvas->GetGraphics()->SetPageUnit(UnitWorld);
+    gdiplusCanvas->GetGraphics()->FillPath(&brush, mStroke);
   }
   
   return NS_OK;

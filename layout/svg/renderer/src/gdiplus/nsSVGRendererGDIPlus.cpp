@@ -49,7 +49,7 @@ using namespace Gdiplus;
 #include "nsSVGGDIPlusPathGeometry.h"
 #include "nsSVGGDIPlusGlyphGeometry.h"
 #include "nsSVGGDIPlusGlyphMetrics.h"
-#include "nsSVGGDIPlusRenderContext.h"
+#include "nsSVGGDIPlusCanvas.h"
 #include "nsSVGGDIPlusRegion.h"
 
 class nsSVGRendererGDIPlus : public nsISVGRenderer
@@ -135,15 +135,15 @@ nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGPositionedGlyphGeometrySource *s
   return NS_NewSVGGDIPlusGlyphGeometry(_retval, src);
 }
 
-/* [noscript] nsISVGRendererRenderContext createRenderContext (in nsIRenderingContext ctx,
+/* [noscript] nsISVGRendererCanvas createCanvas (in nsIRenderingContext ctx,
    in nsIPresContext presContext, [const] in nsRectRef dirtyRect); */
 NS_IMETHODIMP
-nsSVGRendererGDIPlus::CreateRenderContext(nsIRenderingContext *ctx,
-                                          nsIPresContext *presContext,
-                                          const nsRect & dirtyRect,
-                                          nsISVGRendererRenderContext **_retval)
+nsSVGRendererGDIPlus::CreateCanvas(nsIRenderingContext *ctx,
+                                   nsIPresContext *presContext,
+                                   const nsRect & dirtyRect,
+                                   nsISVGRendererCanvas **_retval)
 {
-  return NS_NewSVGGDIPlusRenderContext(_retval, ctx, presContext, dirtyRect);
+  return NS_NewSVGGDIPlusCanvas(_retval, ctx, presContext, dirtyRect);
 }
 
 /* nsISVGRendererRegion createRectRegion (in float x, in float y, in float width, in float height); */

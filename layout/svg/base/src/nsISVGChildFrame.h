@@ -44,7 +44,7 @@
 #include "nsCOMPtr.h"
 #include "nsISVGRendererRegion.h"
 
-class nsISVGRendererRenderContext;
+class nsISVGRendererCanvas;
 class nsIPresContext;
 class nsIDOMSVGRect;
 
@@ -57,7 +57,7 @@ public:
 
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCHILDFRAME_IID)
 
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext)=0;
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas)=0;
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit)=0;
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion()=0;
   NS_IMETHOD InitialUpdate()=0;

@@ -53,12 +53,12 @@ REQUIRES = 	xpcom \
 			$(NULL)
 
 CPPSRCS = 	\
+			nsSVGGDIPlusCanvas.cpp \
 			nsSVGGDIPlusGlyphGeometry.cpp \
 			nsSVGGDIPlusGlyphMetrics.cpp \
 			nsSVGGDIPlusPathBuilder.cpp \
 			nsSVGGDIPlusPathGeometry.cpp \
 			nsSVGGDIPlusRegion.cpp \
-			nsSVGGDIPlusRenderContext.cpp \
 			nsSVGRendererGDIPlus.cpp \
 			$(NULL)
 

@@ -40,12 +40,12 @@
 
 interface nsISVGRendererRegion;
 interface nsISVGRendererGlyphMetrics;
-interface nsISVGRendererRenderContext;
+interface nsISVGRendererCanvas;
 
 [scriptable, uuid(cd302675-b093-4018-8081-3e65af962aa8)]
 interface nsISVGRendererGlyphGeometry : nsISupports
 {
-  void render(in nsISVGRendererRenderContext ctx);
+  void render(in nsISVGRendererCanvas canvas);
 
   // updatemask codes:
   const unsigned long UPDATEMASK_NOTHING         = 0x00000000;

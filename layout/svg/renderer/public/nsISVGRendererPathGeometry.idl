@@ -39,12 +39,12 @@
 #include "nsISupports.idl"
 
 interface nsISVGRendererRegion;
-interface nsISVGRendererRenderContext;
+interface nsISVGRendererCanvas;
 
 [scriptable, uuid(86edbfce-7ed8-4ca5-a88e-68447bdac4e9)]
 interface nsISVGRendererPathGeometry : nsISupports
 {
-  void render(in nsISVGRendererRenderContext ctx);
+  void render(in nsISVGRendererCanvas canvas);
   
   // updatemask codes:
   const unsigned long UPDATEMASK_NOTHING         = 0x00000000;

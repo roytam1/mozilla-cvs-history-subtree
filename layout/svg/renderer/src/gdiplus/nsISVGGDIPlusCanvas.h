@@ -36,8 +36,8 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_ISVGGDIPLUS_RENDERCONTEXT_H__
-#define __NS_ISVGGDIPLUS_RENDERCONTEXT_H__
+#ifndef __NS_ISVGGDIPLUS_CANVAS_H__
+#define __NS_ISVGGDIPLUS_CANVAS_H__
 
 #include <windows.h>
 
@@ -47,20 +47,19 @@
 #include <Gdiplus.h>
 using namespace Gdiplus;
 
-#include "nsISVGRendererRenderContext.h"
+#include "nsISVGRendererCanvas.h"
 
+// {D6AFEBFE-819B-46CE-834C-16AE2105925C}
+#define NS_ISVGGDIPLUSCANVAS_IID \
+{ 0xd6afebfe, 0x819b, 0x46ce, { 0x83, 0x4c, 0x16, 0xae, 0x21, 0x05, 0x92, 0x5c } }
 
-// {4D516ED0-D491-42A7-893D-248EEFFC9697}
-#define NS_ISVGGDIPLUSRENDERCONTEXT_IID \
-{ 0x4d516ed0, 0xd491, 0x42a7, { 0x89, 0x3d, 0x24, 0x8e, 0xef, 0xfc, 0x96, 0x97 } }
-
-class nsISVGGDIPlusRenderContext : public nsISVGRendererRenderContext
+class nsISVGGDIPlusCanvas : public nsISVGRendererCanvas
 {
 public:
-  static const nsIID& GetIID() { static nsIID iid = NS_ISVGGDIPLUSRENDERCONTEXT_IID; return iid; }
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGGDIPLUSCANVAS_IID; return iid; }
 
   NS_IMETHOD_(Graphics*) GetGraphics()=0;
 };
 
 
-#endif //__NS_ISVGGDIPLUS_RENDERCONTEXT_H__
+#endif //__NS_ISVGGDIPLUS_CANVAS_H__

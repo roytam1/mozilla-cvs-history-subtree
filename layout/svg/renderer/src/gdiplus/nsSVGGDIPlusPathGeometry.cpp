@@ -47,7 +47,7 @@ using namespace Gdiplus;
 #include "nsCOMPtr.h"
 #include "nsSVGGDIPlusPathGeometry.h"
 #include "nsISVGRendererPathGeometry.h"
-#include "nsISVGGDIPlusRenderContext.h"
+#include "nsISVGGDIPlusCanvas.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsSVGGDIPlusRegion.h"
 #include "nsISVGRendererRegion.h"
@@ -89,7 +89,7 @@ protected:
   
   void GetGlobalTransform(Matrix *matrix);
   void RenderPath(GraphicsPath *path, nscolor color, float opacity,
-                  nsISVGGDIPlusRenderContext *ctx);
+                  nsISVGGDIPlusCanvas *canvas);
 private:
   nsCOMPtr<nsISVGPathGeometrySource> mSource;
   GraphicsPath *mPath; // untransformed path
@@ -349,25 +349,25 @@ nsSVGGDIPlusPathGeometry::GetGlobalTransform(Matrix *matrix)
 
 void
 nsSVGGDIPlusPathGeometry::RenderPath(GraphicsPath *path, nscolor color, float opacity,
-                                     nsISVGGDIPlusRenderContext *ctx)
+                                     nsISVGGDIPlusCanvas *canvas)
 {
   SolidBrush brush(Color((BYTE)(opacity*255),NS_GET_R(color),NS_GET_G(color),NS_GET_B(color)));
-  ctx->GetGraphics()->FillPath(&brush, path);
+  canvas->GetGraphics()->FillPath(&brush, path);
 }
 
 //----------------------------------------------------------------------
 // nsISVGRendererPathGeometry methods:
 
-/* void render (in nsISVGRendererRenderContext ctx); */
+/* void render (in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathGeometry::Render(nsISVGRendererRenderContext *ctx)
+nsSVGGDIPlusPathGeometry::Render(nsISVGRendererCanvas *canvas)
 {
-  nsCOMPtr<nsISVGGDIPlusRenderContext> gdiplusCtx = do_QueryInterface(ctx);
-  NS_ASSERTION(gdiplusCtx, "wrong svg render context for geometry!");
-  if (!gdiplusCtx) return NS_ERROR_FAILURE;
-  gdiplusCtx->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
-  gdiplusCtx->GetGraphics()->SetCompositingQuality(CompositingQualityHighSpeed);
-//  gdiplusCtx->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
+  nsCOMPtr<nsISVGGDIPlusCanvas> gdiplusCanvas = do_QueryInterface(canvas);
+  NS_ASSERTION(gdiplusCanvas, "wrong svg render context for geometry!");
+  if (!gdiplusCanvas) return NS_ERROR_FAILURE;
+  gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
+  gdiplusCanvas->GetGraphics()->SetCompositingQuality(CompositingQualityHighSpeed);
+//  gdiplusCanvas->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
 
   nscolor color;
   float opacity;
@@ -378,7 +378,7 @@ nsSVGGDIPlusPathGeometry::Render(nsISVGRendererRenderContext *ctx)
   if (type == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR && GetFill()) {
     mSource->GetFillPaint(&color);
     mSource->GetFillOpacity(&opacity);
-    RenderPath(GetFill(), color, opacity, gdiplusCtx);
+    RenderPath(GetFill(), color, opacity, gdiplusCanvas);
   }
 
   // paint stroke:
@@ -386,7 +386,7 @@ nsSVGGDIPlusPathGeometry::Render(nsISVGRendererRenderContext *ctx)
   if (type == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR && GetStroke()) {
     mSource->GetStrokePaint(&color);
     mSource->GetStrokeOpacity(&opacity);
-    RenderPath(GetStroke(), color, opacity, gdiplusCtx);
+    RenderPath(GetStroke(), color, opacity, gdiplusCanvas);
   }
   
   return NS_OK;

@@ -42,7 +42,7 @@
 #include "nsISVGChildFrame.h"
 #include "nsISVGContainerFrame.h"
 #include "nsISVGOuterSVGFrame.h"
-#include "nsISVGRendererRenderContext.h"
+#include "nsISVGRendererCanvas.h"
 #include "nsWeakReference.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
@@ -105,7 +105,7 @@ public:
   // implementation inherited from nsSupportsWeakReference
   
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -315,14 +315,14 @@ nsSVGGFrame::DidModifySVGObservable (nsISVGValue* observable)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGFrame::Paint(nsISVGRendererRenderContext* renderingContext)
+nsSVGGFrame::Paint(nsISVGRendererCanvas* canvas)
 {
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->Paint(renderingContext);
+      SVGFrame->Paint(canvas);
     kid->GetNextSibling(&kid);
   }
 

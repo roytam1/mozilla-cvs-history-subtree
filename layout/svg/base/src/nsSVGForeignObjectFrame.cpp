@@ -41,7 +41,7 @@
 #include "nsIPresContext.h"
 #include "nsISVGChildFrame.h"
 #include "nsISVGContainerFrame.h"
-#include "nsISVGRendererRenderContext.h"
+#include "nsISVGRendererCanvas.h"
 #include "nsWeakReference.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
@@ -121,7 +121,7 @@ public:
   // implementation inherited from nsSupportsWeakReference
   
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -445,17 +445,17 @@ nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGForeignObjectFrame::Paint(nsISVGRendererRenderContext* renderingContext)
+nsSVGForeignObjectFrame::Paint(nsISVGRendererCanvas* canvas)
 {
   if (mIsDirty) {
     nsCOMPtr<nsISVGRendererRegion> region = DoReflow();
   }
 
   nsCOMPtr<nsIPresContext> presContext;
-  renderingContext->GetPresContext(getter_AddRefs(presContext));
+  canvas->GetPresContext(getter_AddRefs(presContext));
   
   nsCOMPtr<nsIRenderingContext> ctx;
-  renderingContext->LockMozRenderingContext(getter_AddRefs(ctx));
+  canvas->LockRenderingContext(getter_AddRefs(ctx));
   nsRect dirtyRect;
   PRBool clipStatus;
   ctx->GetClipRect(dirtyRect, clipStatus);
@@ -484,7 +484,7 @@ nsSVGForeignObjectFrame::Paint(nsISVGRendererRenderContext* renderingContext)
                                      0);
   ctx->PopState(clipStatus);
   ctx = nsnull;
-  renderingContext->UnlockMozRenderingContext();
+  canvas->UnlockRenderingContext();
   
   return NS_OK;
 }

@@ -205,6 +205,7 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/public/nsISVGPosGlyphGeometrySrc.idl \
 	layout/svg/renderer/public/nsISVGRectangleSink.idl    \
 	layout/svg/renderer/public/nsISVGRenderer.idl         \
+	layout/svg/renderer/public/nsISVGRendererCanvas.idl   \
 	layout/svg/renderer/public/nsISVGRendererGlyphGeometry.idl \
 	layout/svg/renderer/public/nsISVGRendererGlyphMetrics.idl \
 	layout/svg/renderer/public/nsISVGRendererPathBuilder.idl \
@@ -213,9 +214,12 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/public/nsISVGRendererRenderContext.idl \
 	layout/svg/renderer/src/Makefile.in                   \
 	layout/svg/renderer/src/gdiplus/Makefile.in           \
+	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusCanvas.h \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusGlyphMetrics.h \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRegion.h \
 	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRenderContext.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusCanvas.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusCanvas.h  \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.h \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphMetrics.cpp \

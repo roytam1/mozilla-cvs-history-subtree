@@ -87,7 +87,7 @@ public:
                              nsISupports*    aSubContent);
 
   // nsISVGChildFrame interface:
-  NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
+  NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
@@ -260,12 +260,12 @@ nsSVGGlyphFrame::ContentChanged(nsIPresContext* aPresContext,
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::Paint(nsISVGRendererRenderContext* renderingContext)
+nsSVGGlyphFrame::Paint(nsISVGRendererCanvas* canvas)
 {
 #ifdef DEBUG
   //printf("nsSVGGlyphFrame(%p)::Paint\n", this);
 #endif
-  mGeometry->Render(renderingContext);
+  mGeometry->Render(canvas);
   return NS_OK;
 }
 

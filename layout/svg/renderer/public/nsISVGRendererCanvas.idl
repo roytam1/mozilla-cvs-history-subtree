@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +15,7 @@
  * The Original Code is the Mozilla SVG project.
  *
  * The Initial Developer of the Original Code is 
- * Crocodile Clips Ltd..
+ * Crocodile Clips Ltd.
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
@@ -36,18 +36,21 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_SVGGDIPLUS_RENDERCONTEXT_H__
-#define __NS_SVGGDIPLUS_RENDERCONTEXT_H__
+#include "nsISupports.idl"
 
-class nsIRenderingContext;
-class nsISVGRendererRenderContext;
-class nsIPresContext;
-struct nsRect;
+typedef PRUint32 nscolor;
 
-nsresult
-NS_NewSVGGDIPlusRenderContext(nsISVGRendererRenderContext **result,
-                              nsIRenderingContext *mozctx,
-                              nsIPresContext *presContext,
-                              const nsRect & dirtyRect);
+interface nsIRenderingContext;
+interface nsIPresContext;
 
-#endif // __NS_SVGGDIPLUS_RENDERCONTEXT_H__
+[scriptable, uuid(a1d9f15e-ee63-4ce1-9fe7-b6cdb09a48a0)]
+interface nsISVGRendererCanvas : nsISupports
+{ 
+  nsIRenderingContext lockRenderingContext();
+  void unlockRenderingContext();
+  nsIPresContext getPresContext();
+  
+  void clear(in nscolor color);
+  void flush();
+};
+

@@ -46,7 +46,7 @@
 #include "nsISVGContainerFrame.h"
 #include "nsISVGChildFrame.h"
 #include "nsISVGOuterSVGFrame.h"
-#include "nsISVGRendererRenderContext.h"
+#include "nsISVGRendererCanvas.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsWeakReference.h"
@@ -831,11 +831,11 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips-1, aDirtyRect.y*pxPerTwips-1,
                      aDirtyRect.width*pxPerTwips+2, aDirtyRect.height*pxPerTwips+2);
   
-  nsCOMPtr<nsISVGRendererRenderContext> SVGCtx;
-  mRenderer->CreateRenderContext(&aRenderingContext, aPresContext, dirtyRectPx,
-                                 getter_AddRefs(SVGCtx));
+  nsCOMPtr<nsISVGRendererCanvas> canvas;
+  mRenderer->CreateCanvas(&aRenderingContext, aPresContext, dirtyRectPx,
+                          getter_AddRefs(canvas));
 
-  SVGCtx->Clear(NS_RGB(255,255,255));
+  canvas->Clear(NS_RGB(255,255,255));
 
   // paint children:
   nsIFrame* kid = mFrames.FirstChild();
@@ -843,13 +843,13 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
     nsISVGChildFrame* SVGFrame=0;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->Paint(SVGCtx);
+      SVGFrame->Paint(canvas);
     kid->GetNextSibling(&kid);
   }
   
-  SVGCtx->Flush();
+  canvas->Flush();
 
-  SVGCtx = nsnull;
+  canvas = nsnull;
 
 #if defined(DEBUG) && defined(SVG_DEBUG_PAINT_TIMING)
   PRTime end = PR_Now();

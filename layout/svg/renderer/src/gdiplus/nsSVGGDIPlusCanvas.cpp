@@ -45,8 +45,8 @@
 using namespace Gdiplus;
 
 #include "nsCOMPtr.h"
-#include "nsSVGGDIPlusRenderContext.h"
-#include "nsISVGGDIPlusRenderContext.h"
+#include "nsSVGGDIPlusCanvas.h"
+#include "nsISVGGDIPlusCanvas.h"
 #include "nsIRenderingContext.h"
 #include "nsIDeviceContext.h"
 #include "nsTransform2D.h"
@@ -55,23 +55,23 @@ using namespace Gdiplus;
 #include "nsIRenderingContextWin.h"
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusRenderContext class
+// nsSVGGDIPlusCanvas class
 
-class nsSVGGDIPlusRenderContext : public nsISVGGDIPlusRenderContext
+class nsSVGGDIPlusCanvas : public nsISVGGDIPlusCanvas
 {
 public:
-  nsSVGGDIPlusRenderContext();
-  ~nsSVGGDIPlusRenderContext();
+  nsSVGGDIPlusCanvas();
+  ~nsSVGGDIPlusCanvas();
   nsresult Init(nsIRenderingContext* ctx, nsIPresContext* presContext,
                 const nsRect & dirtyRect);
 
   // nsISupports interface:
   NS_DECL_ISUPPORTS
 
-  // nsISVGRendererRenderContext interface:
-  NS_DECL_NSISVGRENDERERRENDERCONTEXT
+  // nsISVGRendererCanvas interface:
+  NS_DECL_NSISVGRENDERERCANVAS
 
-  // nsISVGGDIPlusRenderContext interface:
+  // nsISVGGDIPlusCanvas interface:
   NS_IMETHOD_(Graphics*) GetGraphics();
   
 
@@ -90,7 +90,7 @@ private:
 //----------------------------------------------------------------------
 // implementation:
 
-nsSVGGDIPlusRenderContext::nsSVGGDIPlusRenderContext()
+nsSVGGDIPlusCanvas::nsSVGGDIPlusCanvas()
     : mGraphics(nsnull)
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
       , mOffscreenBitmap(nsnull), mOffscreenGraphics(nsnull), mOffscreenHDC(nsnull)
@@ -99,7 +99,7 @@ nsSVGGDIPlusRenderContext::nsSVGGDIPlusRenderContext()
   NS_INIT_ISUPPORTS();
 }
 
-nsSVGGDIPlusRenderContext::~nsSVGGDIPlusRenderContext()
+nsSVGGDIPlusCanvas::~nsSVGGDIPlusCanvas()
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   if (mOffscreenGraphics)
@@ -113,9 +113,9 @@ nsSVGGDIPlusRenderContext::~nsSVGGDIPlusRenderContext()
 }
 
 nsresult
-nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
-                                nsIPresContext* presContext,
-                                const nsRect & dirtyRect)
+nsSVGGDIPlusCanvas::Init(nsIRenderingContext* ctx,
+                         nsIPresContext* presContext,
+                         const nsRect & dirtyRect)
 {
   mPresContext = presContext;
   mMozContext = ctx;
@@ -150,7 +150,7 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
   xform->GetTranslation(&dx, &dy);
 
 #if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
-  printf("nsSVGGDIPlusRenderContext(%p)::Init()[\n", this);
+  printf("nsSVGGDIPlusCanvas(%p)::Init()[\n", this);
   printf("pagescale=%f\n", scale);
   printf("page unit=%d\n", mGraphics->GetPageUnit());
   printf("]\n");
@@ -176,12 +176,12 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
 }
 
 nsresult
-NS_NewSVGGDIPlusRenderContext(nsISVGRendererRenderContext **result,
-                              nsIRenderingContext *ctx,
-                              nsIPresContext *presContext,
-                              const nsRect & dirtyRect)
+NS_NewSVGGDIPlusCanvas(nsISVGRendererCanvas **result,
+                       nsIRenderingContext *ctx,
+                       nsIPresContext *presContext,
+                       const nsRect & dirtyRect)
 {
-  nsSVGGDIPlusRenderContext* pg = new nsSVGGDIPlusRenderContext();
+  nsSVGGDIPlusCanvas* pg = new nsSVGGDIPlusCanvas();
   if (!pg) return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(pg);
@@ -200,22 +200,22 @@ NS_NewSVGGDIPlusRenderContext(nsISVGRendererRenderContext **result,
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(nsSVGGDIPlusRenderContext)
-NS_IMPL_RELEASE(nsSVGGDIPlusRenderContext)
+NS_IMPL_ADDREF(nsSVGGDIPlusCanvas)
+NS_IMPL_RELEASE(nsSVGGDIPlusCanvas)
 
-NS_INTERFACE_MAP_BEGIN(nsSVGGDIPlusRenderContext)
-  NS_INTERFACE_MAP_ENTRY(nsISVGRendererRenderContext)
-  NS_INTERFACE_MAP_ENTRY(nsISVGGDIPlusRenderContext)
+NS_INTERFACE_MAP_BEGIN(nsSVGGDIPlusCanvas)
+  NS_INTERFACE_MAP_ENTRY(nsISVGRendererCanvas)
+  NS_INTERFACE_MAP_ENTRY(nsISVGGDIPlusCanvas)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
-//  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsISVGRendererRenderContext)
+//  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsISVGRendererCanvas)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
-// nsISVGRendererRenderContext methods:
+// nsISVGRendererCanvas methods:
 
-/* nsIRenderingContext lockMozRenderingContext (); */
+/* nsIRenderingContext lockRenderingContext (); */
 NS_IMETHODIMP
-nsSVGGDIPlusRenderContext::LockMozRenderingContext(nsIRenderingContext **_retval)
+nsSVGGDIPlusCanvas::LockRenderingContext(nsIRenderingContext **_retval)
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   NS_ASSERTION(!mOffscreenHDC, "offscreen hdc already created! Nested rendering context locking?");
@@ -239,9 +239,9 @@ nsSVGGDIPlusRenderContext::LockMozRenderingContext(nsIRenderingContext **_retval
   return NS_OK;
 }
 
-/* void unlockMozRenderingContext (); */
+/* void unlockRenderingContext (); */
 NS_IMETHODIMP 
-nsSVGGDIPlusRenderContext::UnlockMozRenderingContext()
+nsSVGGDIPlusCanvas::UnlockRenderingContext()
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   NS_ASSERTION(mOffscreenHDC, "offscreen hdc already freed! Nested rendering context locking?");
@@ -260,7 +260,7 @@ nsSVGGDIPlusRenderContext::UnlockMozRenderingContext()
 
 /* nsIPresContext getPresContext (); */
 NS_IMETHODIMP
-nsSVGGDIPlusRenderContext::GetPresContext(nsIPresContext **_retval)
+nsSVGGDIPlusCanvas::GetPresContext(nsIPresContext **_retval)
 {
   *_retval = mPresContext;
   NS_IF_ADDREF(*_retval);
@@ -269,7 +269,7 @@ nsSVGGDIPlusRenderContext::GetPresContext(nsIPresContext **_retval)
 
 /* void clear (in nscolor color); */
 NS_IMETHODIMP
-nsSVGGDIPlusRenderContext::Clear(nscolor color)
+nsSVGGDIPlusCanvas::Clear(nscolor color)
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   mOffscreenGraphics->Clear(Color(NS_GET_R(color),
@@ -286,7 +286,7 @@ nsSVGGDIPlusRenderContext::Clear(nscolor color)
 
 /* void flush (); */
 NS_IMETHODIMP
-nsSVGGDIPlusRenderContext::Flush()
+nsSVGGDIPlusCanvas::Flush()
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   mGraphics->SetCompositingMode(CompositingModeSourceCopy);
@@ -300,10 +300,10 @@ nsSVGGDIPlusRenderContext::Flush()
 }
 
 //----------------------------------------------------------------------
-// nsISVGGDIPlusRenderContext methods:
+// nsISVGGDIPlusCanvas methods:
 
 NS_IMETHODIMP_(Graphics*)
-nsSVGGDIPlusRenderContext::GetGraphics()
+nsSVGGDIPlusCanvas::GetGraphics()
 {
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   return mOffscreenGraphics;

@@ -149,12 +149,12 @@ nsSVGPathGeometryFrame::DidSetStyleContext(nsIPresContext* aPresContext)
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGPathGeometryFrame::Paint(nsISVGRendererRenderContext* renderingContext)
+nsSVGPathGeometryFrame::Paint(nsISVGRendererCanvas* canvas)
 {
 #ifdef DEBUG
   //printf("nsSVGPathGeometryFrame(%p)::Paint\n", this);
 #endif
-  GetGeometry()->Render(renderingContext);
+  GetGeometry()->Render(canvas);
   return NS_OK;
 }
 

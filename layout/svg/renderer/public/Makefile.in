@@ -51,12 +51,12 @@ XPIDLSRCS =                                   \
 	nsISVGPosGlyphGeometrySrc.idl             \
 	nsISVGRectangleSink.idl                   \
 	nsISVGRenderer.idl                        \
+	nsISVGRendererCanvas.idl                  \
 	nsISVGRendererGlyphGeometry.idl           \
 	nsISVGRendererGlyphMetrics.idl            \
 	nsISVGRendererPathBuilder.idl             \
 	nsISVGRendererPathGeometry.idl            \
 	nsISVGRendererRegion.idl                  \
-	nsISVGRendererRenderContext.idl           \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
