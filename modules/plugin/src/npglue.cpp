@@ -4038,9 +4038,10 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
                     XP_MEMCPY(&newEvent.event, event, sizeof(XEvent));
                     // we don't need window for unix -- it's already in the event
 #endif
-                    int result = pluginInst->HandleEvent(&newEvent);
+					PRBool eventHandled = PR_FALSE;
+                    nsresult result = pluginInst->HandleEvent(&newEvent, &eventHandled);
                     pluginInst->Release();
-                    return result;
+                    return eventHandled;
                 }
                 else if (handle->f && ISFUNCPTR(handle->f->event)) {
                     // window is not passed through to old-style plugins

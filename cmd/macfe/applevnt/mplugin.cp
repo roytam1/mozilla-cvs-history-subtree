@@ -1193,7 +1193,9 @@ Boolean CPluginWindow::PassPluginEvent(EventRecord& event)
 {
 #if 1
 	nsPluginEvent pluginEvent = { &event, mMacWindowP };
-	return mEventHandler->HandleEvent(&pluginEvent);
+	PRBool eventHandled = PR_FALSE;
+	mEventHandler->HandleEvent(&pluginEvent, &eventHandled);
+	return eventHandled;
 #else
 	return mPlugin->PassWindowEvent(event, mMacWindowP))
 #endif
