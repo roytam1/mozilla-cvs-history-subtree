@@ -97,6 +97,7 @@ protected:
   nsresult GetInternalListener(nsIDownloadProgressListener** aListener);
   nsresult PauseResumeDownload(const PRUnichar* aPath, PRBool aPause);
   nsresult RemoveDownload(nsIRDFResource* aDownload);
+  nsresult ValidateDownloadsContainer();
 
   static void     OpenTimerCallback(nsITimer* aTimer, void* aClosure);
   static nsresult OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent);

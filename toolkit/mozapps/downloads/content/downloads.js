@@ -62,7 +62,7 @@ function fireEventForElement(aElement, aEventType)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Start/Stop Observers
-function cleanUpOnComplete(aDownload) 
+function downloadCompleted(aDownload) 
 {
   // Wrap this in try...catch since this can be called while shutting down... 
   // it doesn't really matter if it fails then since well.. we're shutting down
@@ -77,8 +77,7 @@ function cleanUpOnComplete(aDownload)
 
     var id = aDownload.target.persistentDescriptor;
     var dlRes = rdf.GetUnicodeResource(id);
-    rdfc.RemoveElement(dlRes, true);
-    
+/*
     var elts = rdfc.GetElements();
     var insertIndex = 1;
     while (elts.hasMoreElements()) {
@@ -89,17 +88,23 @@ function cleanUpOnComplete(aDownload)
         break;
       ++insertIndex;
     }
-    
-    if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
-      rdfc.AppendElement(dlRes);
-    else
-      rdfc.InsertElementAt(dlRes, insertIndex, true);      
+  */
+  
+    var insertIndex = gDownloadManager.activeDownloadCount + 1;
+    // Don't bother inserting the item into the same place!
+    if (insertIndex != rdfc.IndexOf(dlRes)) {
+      rdfc.RemoveElement(dlRes, true);
+      if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
+        rdfc.AppendElement(dlRes);
+      else
+        rdfc.InsertElementAt(dlRes, insertIndex, true);      
 
-    if (gDownloadPercentages[id]) {
-      gDownloadPercentages[id] = false;
-      --gDownloadPercentagesMeta.count;
+      if (gDownloadPercentages[id]) {
+        gDownloadPercentages[id] = false;
+        --gDownloadPercentagesMeta.count;
+      }
     }
-    
+        
     if (gDownloadPercentagesMeta.count == 0)
       window.title = document.documentElement.getAttribute("statictitle");    
   }
@@ -109,15 +114,7 @@ function cleanUpOnComplete(aDownload)
 
 function autoClose(aDownload)
 {
-  var allDownloadsComplete = true;
-  for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
-    var currItem = gDownloadsView.childNodes[i];
-    var dlForItem = gDownloadManager.getDownload(currItem.id);
-    if (dlForItem && dlForItem != aDownload)
-      allDownloadsComplete = false;
-  }
-  
-  if (allDownloadsComplete) {
+  if (gDownloadManager.activeDownloadCount == 0) {
     // For the moment, just use the simple heuristic that if this window was
     // opened by the download process, rather than by the user, it should auto-close
     // if the pref is set that way. If the user opened it themselves, it should
@@ -138,17 +135,15 @@ var gDownloadObserver = {
     var dl = aSubject.QueryInterface(Components.interfaces.nsIDownload);
     switch (aTopic) {
     case "dl-done":
-      cleanUpOnComplete(dl);
+      downloadCompleted(dl);
       
       autoClose(dl);      
       break;
     case "dl-failed":
     case "dl-cancel":
-      cleanUpOnComplete(dl);
+      downloadCompleted(dl);
       break;
     case "dl-start":
-      dump("*** starting + " + aSubject + "\n");
-      
       // Add this download to the percentage average tally
       gDownloadPercentages[dl.target.persistentDescriptor] = true;
       ++gDownloadPercentagesMeta.count;
@@ -390,8 +385,6 @@ function saveStatusMessages()
 
   var db = gDownloadManager.datasource;
   
-  var statusArc = rdf.GetResource(NC_NS + "DownloadStatus");
-  
   for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
     var currItem = gDownloadsView.childNodes[i];
     if (currItem.localName == "download" && currItem.paused)
@@ -473,36 +466,21 @@ var gDownloadDNDObserver =
 var gDownloadViewController = {
   supportsCommand: function dVC_supportsCommand (aCommand)
   {
-    switch (aCommand) {
-    case "cmd_cleanUp":
-      return true;
-    }
-    return false;
+    return aCommand == "cmd_cleanUp";
   },
   
   isCommandEnabled: function dVC_isCommandEnabled (aCommand)
   {
-    switch (aCommand) {
-    case "cmd_cleanUp": 
-      var canCleanUp = false;
-      for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
-        var currDownload = gDownloadsView.childNodes[i];
-        if (currDownload.localName == "download" && currDownload.removable)
-          canCleanUp = true;
-      }
-      
-      return canCleanUp;
-    }
+    if (aCommand == "cmd_cleanUp") 
+      return gDownloadManager.canCleanUp;
     return false;
   },
   
   doCommand: function dVC_doCommand (aCommand)
   {
-    switch (aCommand) {
-    case "cmd_cleanUp":
-      if (this.isCommandEnabled(aCommand))
-        cleanUpDownloadsList();
-      break;
+    if (aCommand == "cmd_cleanUp" && this.isCommandEnabled(aCommand)) {
+      gDownloadManager.cleanUp();
+      this.onCommandUpdate();
     }
   },  
   
@@ -513,19 +491,3 @@ var gDownloadViewController = {
     goSetCommandEnabled(command, enabled);
   }
 };
-
-function cleanUpDownloadsList()
-{
-  gDownloadManager.startBatchUpdate();
-
-  for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
-    var currItem = gDownloadsView.childNodes[i];
-    if (currItem.localName == "download" && currItem.removable)
-      gDownloadManager.removeDownload(currItem.id);
-  }
-  
-  gDownloadManager.endBatchUpdate();
-
-  gDownloadViewController.onCommandUpdate();
-}
-

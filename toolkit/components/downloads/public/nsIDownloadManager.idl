@@ -56,25 +56,24 @@ interface nsIDownloadManager : nsISupports {
   // Methods called by clients to carry out various managing functions
 
   /**
-  * Creates an nsIDownload and adds it to be managed by the download manager.
-  *
-  * @param aSource The source (nsIURI) of the download.
-  *
-  * @param aTarget The local file to which the download is being saved.
-  *
-  * @param aDisplayName The user-readable description of the download.
-  *
-  * @param aPersist The "persist" used to transfer the download.  If set,
-  *                 the manager will set its listener to the download item
-  *                 and use it for cancellation.  If not set, the client
-  *                 is expected to set the download item as the listener on
-  *                 whatever transfer component is being used, and to
-  *                 set an observer on the download item that listens for
-  *                 the "oncancel" topic and cancels the download.
-  *
-  * @return The newly created download item with the passed-in properties.
-  */
-  
+   * Creates an nsIDownload and adds it to be managed by the download manager.
+   *
+   * @param aSource The source (nsIURI) of the download.
+   *
+   * @param aTarget The local file to which the download is being saved.
+   *
+   * @param aDisplayName The user-readable description of the download.
+   *
+   * @param aPersist The "persist" used to transfer the download.  If set,
+   *                 the manager will set its listener to the download item
+   *                 and use it for cancellation.  If not set, the client
+   *                 is expected to set the download item as the listener on
+   *                 whatever transfer component is being used, and to
+   *                 set an observer on the download item that listens for
+   *                 the "oncancel" topic and cancels the download.
+   *
+   * @return The newly created download item with the passed-in properties.
+   */
   nsIDownload addDownload(in nsIURI aSource,
                           in nsILocalFile aTarget,
                           in wstring aDisplayName,
@@ -83,45 +82,52 @@ interface nsIDownloadManager : nsISupports {
                           in nsIWebBrowserPersist aPersist);
 
   /**
-  *  Retrieves an in-progress download managed by the download manager.
-  *
-  *  @param aPersistentDescriptor The unique identifier used to describe a
-  *                               a download, and an attribute of nsILocalFile.
-  *                               On Windows and Linux, this is just the path
-  *                               of the target, but on Mac this is guaranteed
-  *                               to be unique.
-  *
-  *  @return The download with the specified persistent descriptor.
-  */
-
+   *  Retrieves an in-progress download managed by the download manager.
+   *
+   *  @param aPersistentDescriptor The unique identifier used to describe a
+   *                               a download, and an attribute of nsILocalFile.
+   *                               On Windows and Linux, this is just the path
+   *                               of the target, but on Mac this is guaranteed
+   *                               to be unique.
+   *
+   *  @return The download with the specified persistent descriptor.
+   */
   nsIDownload getDownload(in wstring aPersistentDescriptor);
 
   /**
-  * Cancels the download with the specified persistent descriptor if it's
-  * currently in progress.  If a "persist" was specified for the download,
-  * nsIWebBrowserPersist::CancelSave will be called.  If an observer was set
-  * on the nsIDownload, it will be notified with the "oncancel" topic.  Clients
-  * that don't provide a "persist" must listen for this topic and cancel the
-  * download.
-  *
-  * @param aPersistentDescriptor The persistent descriptor of the download to
-  *                              be cancelled.
-  */
-
+   * Cancels the download with the specified persistent descriptor if it's
+   * currently in progress.  If a "persist" was specified for the download,
+   * nsIWebBrowserPersist::CancelSave will be called.  If an observer was set
+   * on the nsIDownload, it will be notified with the "oncancel" topic.  Clients
+   * that don't provide a "persist" must listen for this topic and cancel the
+   * download. 
+   *
+   * @param aPersistentDescriptor The persistent descriptor of the download to
+   *                              be cancelled.
+   */
   void cancelDownload(in wstring aPersistentDescriptor);
 
   /**
-  * Removes the download with the specified persistent descriptor if it's not
-  * currently in progress.  Whereas cancelDownload simply cancels the transfer
-  * but retains information about it, removeDownload removes all knowledge of it.
-  *
-  * @param aPersistentDescriptor The persistent descriptor of the download to
-  *                              be removed.
-  */
-
+   * Removes the download with the specified persistent descriptor if it's not
+   * currently in progress.  Whereas cancelDownload simply cancels the transfer
+   * but retains information about it, removeDownload removes all knowledge of it.
+   *
+   * @param aPersistentDescriptor The persistent descriptor of the download to
+   *                              be removed.
+   */
   void removeDownload(in wstring aPersistentDescriptor);
 
-  // UI-related methods
+  /**
+   * Pause the specified download.
+   */
+  void pauseDownload(in wstring aPersistentDescriptor);
+
+  /**
+   * Resume the specified download.
+   */
+  void resumeDownload(in wstring aPersistentDescriptor);
+
+  // Front end and Front end update methods. 
 
   /** 
    * Opens the Download Manager front end.
@@ -151,22 +157,33 @@ interface nsIDownloadManager : nsISupports {
   
   void endBatchUpdate();
 
-  /**
-  * Pause the specified download.
-  */
+  // Downloads list book-keeping
 
-  void pauseDownload(in wstring aPersistentDescriptor);
+  /** 
+   * Whether or not there are downloads that can be cleaned up (removed)
+   * i.e. downloads that have completed, have failed or have been canceled. 
+   */
+  readonly attribute boolean canCleanUp;
 
-  /**
-  * Resume the specified download.
-  */
+  /** 
+   * Removes completed, failed, and canceled downloads from the list. 
+   */
+  void cleanUp();
 
-  void resumeDownload(in wstring aPersistentDescriptor);
+  /** 
+   * The number of files currently being downloaded.
+   */
+  readonly attribute long activeDownloadCount;
 
   /** 
    * Update the download datasource. 
    */
   void saveState();
+
+  /** 
+   * Flush the download datasource to disk.
+   */
+  void flush();
 
   readonly attribute nsIRDFDataSource datasource;
 };
