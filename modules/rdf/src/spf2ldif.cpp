@@ -188,7 +188,8 @@ ArcToResource::~ArcToResource()
 Resource::Resource(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res) :
 VocabElement(_xmlnamespace, _elementName, _rdf, _res),
 ldiftitle(NULL)
-{}
+{
+}
 
 Resource::~Resource()
 {
@@ -225,6 +226,11 @@ char* Resource::constructLDIFTitle(char* title)
          s++;
       }
       *t = (char)NULL;
+   }
+   else if(!ldiftitle)
+   {
+      ldiftitle = new char[strlen(id) + 1];
+      strcpy(ldiftitle, id);
    }
    ldiftitle = ldapDnEscape(ldiftitle, TRUE);
    return ldiftitle;
