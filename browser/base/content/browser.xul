@@ -352,9 +352,9 @@
              fullscreentoolbar="true" mode="icons" 
              customizable="true"
 #ifdef XP_MACOSX
-             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,search-container,updates-item,throbber-box,window-controls"
+             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,updates-item,throbber-box,window-controls"
 #else
-             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,search-container,window-controls"
+             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,window-controls"
 #endif
              context="toolbar-context-menu">
       <hbox id="window-controls" hidden="true" fullscreencontrol="true">
