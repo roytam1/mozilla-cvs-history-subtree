@@ -19,6 +19,8 @@
  * Contributor(s):
  */
 
+#include "nsISupports.idl"
+
 [scriptable, uuid(a6cf911a-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMNSHTMLFormControlList : nsISupports
 {
