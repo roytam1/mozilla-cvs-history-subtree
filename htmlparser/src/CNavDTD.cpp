@@ -644,7 +644,7 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,
         result = CloseContainersTo(mBodyContext->Last(), PR_FALSE);
         if (NS_FAILED(result)) {
           //No matter what, you need to call did build model.
-          aSink->DidBuildModel(0);
+          aSink->DidBuildModel();
           return result;
         }
       } 
@@ -681,11 +681,11 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,
       if (mComputedCRC32 != mExpectedCRC32) { 
         if (mExpectedCRC32 != 0) { 
           printf("CRC Computed: %u  Expected CRC: %u\n,",mComputedCRC32,mExpectedCRC32); 
-          result = aSink->DidBuildModel(2); 
+          result = aSink->DidBuildModel(); 
         } 
         else { 
           printf("Computed CRC: %u.\n",mComputedCRC32); 
-          result = aSink->DidBuildModel(3); 
+          result = aSink->DidBuildModel(); 
           NS_ENSURE_SUCCESS(result, result);
         } 
       } 
@@ -705,7 +705,7 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,
   } //if aparser
 
   //No matter what, you need to call did build model.
-  return aSink->DidBuildModel(0); 
+  return aSink->DidBuildModel(); 
 }
 
 NS_IMETHODIMP_(void) 
