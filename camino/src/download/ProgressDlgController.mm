@@ -201,7 +201,7 @@ static int gNumActiveDownloads = 0;
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(openFile)];
     } else if ( [itemIdent isEqual:LeaveOpenToolbarItemIdentifier] ) {
-        if ( !mIsFileSave || mDoingAutoFileDownload ) {
+        if ( !mIsFileSave && !mDoingAutoFileDownload ) {
             if ( mSaveFileDialogShouldStayOpen ) {
                 [toolbarItem setLabel:NSLocalizedString(@"Leave Open",@"Leave Open")];
                 [toolbarItem setPaletteLabel:NSLocalizedString(@"Toggle Close Behavior",@"Toggle Close Behavior")];
