@@ -70,6 +70,7 @@ OBJS=											\
 		.\$(OBJDIR)\mimeebod.obj			\
 		.\$(OBJDIR)\mimeenc.obj				\
 		.\$(OBJDIR)\mimeeobj.obj			\
+		.\$(OBJDIR)\mimeobj.obj				\
 		.\$(OBJDIR)\mimehdrs.obj			\
 		.\$(OBJDIR)\mimei.obj				\
 		.\$(OBJDIR)\mimeiimg.obj			\
