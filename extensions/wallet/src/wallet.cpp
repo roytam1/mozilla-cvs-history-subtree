@@ -2605,17 +2605,7 @@ wallet_InitializeCurrentURL(nsIDocument * doc) {
     wallet_lastUrl = url;
   }
 
-  /* get host+file */
-  nsAutoString urlName;
-  wallet_GetHostFile(url, urlName);
-
-  // I don't get this, we get the string urlName for no good reason?
   NS_RELEASE(url);
-
-  // And why do we need this?
-  if (urlName.Length() == 0) {
-    return;
-  }
 }
 
 #define SEPARATOR "#*%$"
