@@ -21,6 +21,7 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsISocketTransportService.h"
 #include "nsIFileTransportService.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
@@ -40,7 +41,7 @@ nsMsgProtocol::~nsMsgProtocol()
 nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on this url
 {
 	nsresult rv = NS_OK;
-	char * hostName = nsnull;
+	nsXPIDLCString hostName;
 	PRInt32 port = 0;
 
     NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
@@ -48,10 +49,9 @@ nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on
 	if (NS_SUCCEEDED(rv) && aURL)
 	{
 		aURL->GetPort(&port);
-		aURL->GetHost(&hostName);
+		aURL->GetHost(getter_Copies(hostName));
 
 		rv = socketService->CreateTransport(hostName, port, getter_AddRefs(m_channel));
-		nsCRT::free(hostName);
 		if (NS_SUCCEEDED(rv) && m_channel)
 		{
 			m_socketIsOpen = PR_FALSE;
