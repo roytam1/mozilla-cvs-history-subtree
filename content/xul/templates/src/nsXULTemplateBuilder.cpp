@@ -670,6 +670,9 @@ nsXULTemplateBuilder::LoadDataSources(nsIDocument* doc)
 
     if (mDB) {
         mDB->RemoveObserver(this);
+
+        // we'll set it again later, after we create a new composite ds
+        mDB = nsnull;
     }
 
     // create a database for the builder
