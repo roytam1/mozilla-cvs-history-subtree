@@ -29,7 +29,7 @@ INCLUDES   += -I. -I..
 #
 # XCFLAGS may be set in the environment or on the gmake command line
 #
-CFLAGS          = $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
+CFLAGS          += $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
                   -DJSFILE $(XCFLAGS)
 LDFLAGS		+= -lm $(XLDFLAGS)
 
