@@ -1834,7 +1834,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
             NS_ENSURE_SUCCESS(rv,rv);
         }
         else {
-            printf("no news folder!\n");
+            NS_ASSERTION(0,"no news folder, fix this");
             rv = NS_ERROR_UNEXPECTED;
         }
 		
