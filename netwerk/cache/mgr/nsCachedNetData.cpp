@@ -291,8 +291,10 @@ static PRTime
 convertSecondsToPRTime(PRUint32 aSeconds)
 {
     PRInt64 t64;
-    LL_L2I(t64, aSeconds);
-    LL_MUL(t64, t64, 1000000);
+    LL_I2L(t64, aSeconds);
+    PRInt64 mil;
+    LL_I2L(mil, 1000000);
+    LL_MUL(t64, t64, mil);
     return t64;
 }
 
@@ -339,7 +341,7 @@ nsCachedNetData::Init(nsINetDataCacheRecord *aRecord, nsINetDataCache *aCache)
     NS_ADDREF(aRecord);
     mCache = aCache;
     
-    return Deserialize(true);
+    return Deserialize(PR_TRUE);
 }
 
 nsresult
@@ -349,7 +351,7 @@ nsCachedNetData::Resurrect(nsINetDataCacheRecord *aRecord)
     mRecord = aRecord;
     NS_ADDREF(aRecord);
     
-    return Deserialize(true);
+    return Deserialize(PR_TRUE);
 }
 
 // Set a boolean flag for the cache entry
@@ -406,7 +408,7 @@ nsCachedNetData::CommitFlags()
 // extract its components, namely the protocol-specific meta-data and the
 // protocol-independent cache manager meta-data.
 nsresult
-nsCachedNetData::Deserialize(bool aDeserializeFlags)
+nsCachedNetData::Deserialize(PRBool aDeserializeFlags)
 {
     nsresult rv;
     PRUint32 metaDataLength;
@@ -458,19 +460,19 @@ nsCachedNetData::Deserialize(bool aDeserializeFlags)
         if (*tag == 0)
             break;
 
-        CacheMetaData *metaData;
-        metaData = new CacheMetaData(tag);
-        if (!metaData)
+        CacheMetaData *annotation;
+        annotation = new CacheMetaData(tag);
+        if (!annotation)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        rv = binaryStream->Read32(&metaData->mLength);
+        rv = binaryStream->Read32(&annotation->mLength);
         if (NS_FAILED(rv)) return rv;
     
-        rv = binaryStream->ReadBytes(&metaData->mOpaqueBytes, metaData->mLength);
+        rv = binaryStream->ReadBytes(&annotation->mOpaqueBytes, annotation->mLength);
         if (NS_FAILED(rv)) return rv;
 
-        metaData->mNext = mMetaData;
-        mMetaData = metaData;
+        annotation->mNext = mMetaData;
+        mMetaData = annotation;
     }
 
     PRUint16 flags;
@@ -612,7 +614,7 @@ nsCachedNetData::GetLastModifiedTime(PRTime *aLastModifiedTime)
     if (GetFlag(LAST_MODIFIED_KNOWN))
         *aLastModifiedTime = convertSecondsToPRTime(mLastModifiedTime);
     else
-        *aLastModifiedTime = 0;
+        *aLastModifiedTime = LL_ZERO;
     return NS_OK;
 }
 
@@ -634,7 +636,7 @@ nsCachedNetData::GetExpirationTime(PRTime *aExpirationTime)
     if (GetFlag(EXPIRATION_KNOWN))
         *aExpirationTime = convertSecondsToPRTime(mExpirationTime);
     else
-        *aExpirationTime = 0;
+        *aExpirationTime = LL_ZERO;
     return NS_OK;
 }
 
@@ -661,7 +663,7 @@ nsCachedNetData::GetStaleTime(PRTime *aStaleTime)
     if (GetFlag(STALE_TIME_KNOWN)) {
         *aStaleTime = convertSecondsToPRTime(mStaleTime);
     } else {
-        *aStaleTime = 0;
+        *aStaleTime = LL_ZERO;
     }
     return NS_OK;
 }
@@ -719,8 +721,6 @@ nsCachedNetData::Commit(void)
     if (NS_FAILED(rv)) return rv;
 
 #ifdef DEBUG
-    if (GetFlag(EXPIRATION_KNOWN))
-        NS_ASSERTION(GetFlag(LAST_MODIFIED_KNOWN), "Protocol handler error");
     NS_ASSERTION(!GetFlag(UPDATE_IN_PROGRESS),
                  "Protocol handler forgot to clear UPDATE_IN_PROGRESS flag");
 #endif
@@ -748,15 +748,15 @@ nsCachedNetData::Commit(void)
     rv = binaryStream->Write8(CACHE_MANAGER_VERSION);
     if (NS_FAILED(rv)) goto error;
 
-    CacheMetaData *metaData;
-    for (metaData = mMetaData; metaData; metaData = metaData->mNext) {
-        rv = binaryStream->WriteStringZ(metaData->mTag);
+    CacheMetaData *annotation;
+    for (annotation = mMetaData; annotation; annotation = annotation->mNext) {
+        rv = binaryStream->WriteStringZ(annotation->mTag);
         if (NS_FAILED(rv)) return rv;
 
-        rv = binaryStream->Write32(metaData->mLength);
+        rv = binaryStream->Write32(annotation->mLength);
         if (NS_FAILED(rv)) return rv;
     
-        rv = binaryStream->WriteBytes(metaData->mOpaqueBytes, metaData->mLength);
+        rv = binaryStream->WriteBytes(annotation->mOpaqueBytes, annotation->mLength);
         if (NS_FAILED(rv)) return rv;
     }
     // Write terminating null for last meta-data chunk
@@ -1057,7 +1057,9 @@ public:
         mCacheEntry(aCacheEntry), mOriginalListener(aOriginalListener) {
     NS_INIT_REFCNT(); }
     
-    virtual ~InterceptStreamListener() {};
+    virtual ~InterceptStreamListener() {
+        mCacheEntry->ClearFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
+    };
 
     nsresult Init(PRUint32 aStartingOffset) {
         nsresult rv;
@@ -1081,7 +1083,6 @@ public:
         else
             mCacheEntry->ClearFlag(nsCachedNetData::TRUNCATED_CONTENT);
         mCacheEntry->ClearFlag(nsCachedNetData::VESTIGIAL);
-        mCacheEntry->ClearFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
             
         return mOriginalListener->OnStopRequest(channel, ctxt, status, errorMsg);
     }

@@ -204,16 +204,22 @@ nsCachedNetData::NoteDownloadTime(PRTime start, PRTime end)
     LL_L2D(endFP, end);
 
     duration = endFP - startFP;
-    // Sanity-check
+
+    // If the data arrives so fast that it can not be timed due to the clock
+    // granularity, assume a data arrival duration of 10 ms
     if (!duration)
-        return;
+        duration = 10000;
 
     // Compute download rate in kB/s
-    rate = mLogicalLength / (duration * (1e-6 /1024.0));
+    rate = mLogicalLength / (duration * (1e-6 * 1024.0));
     
-    // Exponentially smooth download rate
-    const double alpha = 0.5;
-    mDownloadRate = (float)(mDownloadRate * alpha + rate * (1.0 - alpha));
+    if (mDownloadRate) {
+        // Exponentially smooth download rate
+        const double alpha = 0.5;
+        mDownloadRate = (float)(mDownloadRate * alpha + rate * (1.0 - alpha));
+    } else {
+        mDownloadRate = (float)rate;
+    }
 }
 
 // 1 hour
@@ -276,7 +282,7 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
     //  that it corresponds to the document on the server
     double probabilityFreshness;
     PRInt32 halfLife, age, docTime;
-    bool potentiallyStale;
+    PRBool potentiallyStale;
 
     docTime = GetFlag(LAST_MODIFIED_KNOWN) ? mLastModifiedTime : mLastUpdateTime;
     age = now - docTime;
@@ -287,10 +293,10 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
         potentiallyStale = now > mExpirationTime;
         halfLife = mExpirationTime - mLastModifiedTime;
     } else if (GetFlag(STALE_TIME_KNOWN)) {
-        potentiallyStale = true;
+        potentiallyStale = PR_TRUE;
         halfLife = mStaleTime - docTime;
     } else {
-        potentiallyStale = true;
+        potentiallyStale = PR_TRUE;
         halfLife = TYPICAL_HALFLIFE;
     }
     
@@ -301,7 +307,9 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
         probabilityFreshness = pow(0.5, (double)age / (double)halfLife);
     }
 
-    mProfit = (float)(frequencyAccess * probabilityFreshness * mDownloadRate);
+    mProfit = (float)(frequencyAccess * probabilityFreshness);
+    if (mDownloadRate)
+        mProfit /= mDownloadRate;
 }
 
 // Number of entries to grow mRankedEntries array when it's full
@@ -312,8 +320,8 @@ nsCachedNetData::ComputeProfit(PRUint32 aNow)
 int
 nsCachedNetData::Compare(const void *a, const void *b, void *unused)
 {
-    nsCachedNetData* entryA = (nsCachedNetData*)a;
-    nsCachedNetData* entryB = (nsCachedNetData*)b;
+    nsCachedNetData* entryA = *(nsCachedNetData**)a;
+    nsCachedNetData* entryB = *(nsCachedNetData**)b;
 
     // Percolate deleted or empty entries to the end of the mRankedEntries
     // array, so that they can be recycled.
