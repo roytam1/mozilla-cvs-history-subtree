@@ -1,38 +1,38 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
  *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * Definition of Security Module Data Structure. There is a separate data
+ * structure for each loaded PKCS #11 module.
+ */
 #ifndef _SECMOD_H_
 #define _SEDMOD_H_
 #include "seccomon.h"
@@ -92,6 +92,8 @@ SECStatus SECMOD_UnloadUserModule(SECMODModule *mod);
 
 SECMODModule * SECMOD_CreateModule(const char *lib, const char *name,
 					const char *param, const char *nss);
+extern SECStatus SECMOD_Shutdown(void);
+void nss_DumpModuleLog(void);
 
 
 /* Module Management */
@@ -113,8 +115,12 @@ extern SECMODListLock *SECMOD_GetDefaultModuleListLock(void);
 extern SECStatus SECMOD_UpdateModule(SECMODModule *module);
 
 /* lock management */
+extern SECMODListLock *SECMOD_NewListLock(void);
+extern void SECMOD_DestroyListLock(SECMODListLock *);
 extern void SECMOD_GetReadLock(SECMODListLock *);
 extern void SECMOD_ReleaseReadLock(SECMODListLock *);
+extern void SECMOD_GetWriteLock(SECMODListLock *);
+extern void SECMOD_ReleaseWriteLock(SECMODListLock *);
 
 /* Operate on modules by name */
 extern SECMODModule *SECMOD_FindModule(const char *name);
@@ -147,7 +153,10 @@ PRBool SECMOD_IsModulePresent( unsigned long int pubCipherEnableFlags );
 /* Functions used to convert between internal & public representation
  * of Mechanism Flags and Cipher Enable Flags */
 extern unsigned long SECMOD_PubMechFlagstoInternal(unsigned long publicFlags);
+extern unsigned long SECMOD_InternaltoPubMechFlags(unsigned long internalFlags);
+
 extern unsigned long SECMOD_PubCipherFlagstoInternal(unsigned long publicFlags);
+extern unsigned long SECMOD_InternaltoPubCipherFlags(unsigned long internalFlags);
 
 PRBool SECMOD_HasRemovableSlots(SECMODModule *mod);
 PK11SlotInfo *SECMOD_WaitForAnyTokenEvent(SECMODModule *mod, 
