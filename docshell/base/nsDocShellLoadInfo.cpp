@@ -30,9 +30,10 @@
 //*****************************************************************************
 
 nsDocShellLoadInfo::nsDocShellLoadInfo()
+  : mInheritOwner(PR_FALSE),
+    mSendReferrer(PR_TRUE),
+    mLoadType(nsIDocShellLoadInfo::loadNormal)
 {
-   mLoadType = nsIDocShellLoadInfo::loadNormal;
-   mInheritOwner = PR_FALSE;
 }
 
 nsDocShellLoadInfo::~nsDocShellLoadInfo()
@@ -175,6 +176,20 @@ NS_IMETHODIMP nsDocShellLoadInfo::SetHeadersStream(nsIInputStream * aHeadersStre
 {
   mHeadersStream = aHeadersStream;
   return NS_OK;
+}
+
+NS_IMETHODIMP nsDocShellLoadInfo::GetSendReferrer(PRBool* aSendReferrer)
+{
+   NS_ENSURE_ARG_POINTER(aSendReferrer);
+
+   *aSendReferrer = mSendReferrer;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsDocShellLoadInfo::SetSendReferrer(PRBool aSendReferrer)
+{
+   mSendReferrer = aSendReferrer;
+   return NS_OK;
 }
 
 //*****************************************************************************
