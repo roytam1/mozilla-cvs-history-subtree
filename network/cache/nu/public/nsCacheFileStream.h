@@ -45,10 +45,6 @@ public:
     NS_IMETHOD_(nsrefcnt)   AddRef(void);
     NS_IMETHOD_(nsrefcnt)   Release(void);
 */
-#ifdef NU_CACHE_FILE_STREAM
-    PRFileDesc* FileDesc(void);
-#endif
-
     PRInt32     Read(void* o_Buffer, PRUint32 i_Len);
     void        Reset(void);
     PRInt32     Write(const void* i_Buffer, PRUint32 i_Len);
@@ -60,21 +56,9 @@ protected:
 private:
     nsCacheFileStream(const nsCacheFileStream& o);
     nsCacheFileStream& operator=(const nsCacheFileStream& o);
-#ifdef NU_CACHE_FILE_STREAM
-    PRFileDesc* m_pFile;    
-#else
     nsIOFileStream *m_pFile;
-#endif
     char* m_pFilename;
 };
-
-#ifdef NU_CACHE_FILE_STREAM
-inline
-PRFileDesc* nsCacheFileStream::FileDesc(void)
-{
-    return m_pFile;
-}
-#endif
 
 #endif // nsCacheFileStream_h__
 
