@@ -176,13 +176,13 @@ static nsresult MakeFaviconURIFromURI(const nsAString& inURIString, nsAString& o
   PRInt32 port;
   uri->GetPort(&port);
 
-  nsXPIDLCString scheme;
+  nsCAutoString scheme;
   uri->GetScheme(scheme);
   
-  nsXPIDLCString host;
+  nsCAutoString host;
   uri->GetHost(host);
   
-  nsCAutoString faviconURI = scheme;
+  nsCAutoString faviconURI(scheme);
   faviconURI.Append("://");
   faviconURI.Append(host);
   if (port != -1) {
