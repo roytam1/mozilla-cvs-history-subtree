@@ -438,8 +438,7 @@ CERT_ParseRFC1485AVA(PRArenaPool *arena, char **pbp, char *endptr,
                 } else if (Is7Bit((unsigned char *)valBuf, valLen)) {
                     vt = SEC_ASN1_T61_STRING;
 		} else {
-		    /* according to RFC3280, UTF8String is preferred encoding */
-		    vt = SEC_ASN1_UTF8_STRING;
+		    vt = SEC_ASN1_UNIVERSAL_STRING;
 		}
 	    }
 	    a = CERT_CreateAVA(arena, n2k->kind, vt, (char *) valBuf);
