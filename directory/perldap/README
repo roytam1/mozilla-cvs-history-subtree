@@ -1,6 +1,6 @@
 #############################################################################
 #                                                                           #
-#            PerLDAP v1.2.1 - A Perl Developers' Kit for LDAP		    #
+#            PerLDAP v1.4 - A Perl Developers' Kit for LDAP		    #
 #                                                                           #
 #############################################################################
 
@@ -47,8 +47,8 @@ and an FAQ for PerLDAP is at
 
 Instructions for building the source can be found in the INSTALL file
 in the source distribution. The latest stable release of PerLDAP is
-v1.2.1, and the current development branch is v1.3. The next stable
-relesae will be v1.4, scheduled for early June.
+v1.4, the next version is planned to be v2.0 (development continues on the
+v1.9 development branch).
 
 
 Getting Started
