@@ -33,7 +33,11 @@
 #ifndef prtypes_h___
 #define prtypes_h___
 
+#ifdef MDCPUCFG
+#include MDCPUCFG
+#else
 #include "prcpucfg.h"
+#endif
 
 #include <stddef.h>
 
