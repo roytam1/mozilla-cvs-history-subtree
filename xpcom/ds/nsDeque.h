@@ -184,6 +184,7 @@ class NS_COM nsDeque {
    */
   nsDequeIterator End() const;
 
+  void* Last() const;
   /**
    * Call this method when you want to iterate all the
    * members of the container, passing a functor along
