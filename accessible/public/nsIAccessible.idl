@@ -40,7 +40,6 @@ interface nsIAccessible : nsISupports
   wstring getAccName();
   wstring getAccValue();
   void setAccName(in wstring name);
-  void setAccValue(in wstring value);
 
   wstring getAccDescription();
   unsigned long getAccRole();

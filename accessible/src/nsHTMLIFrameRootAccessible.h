@@ -24,14 +24,15 @@
 #define _nsIFrameRootAccessible_H_
 
 #include "nsRootAccessible.h"
-#include "nsGenericAccessible.h"
+#include "nsAccessible.h"
 
 class nsIWebShell;
+class nsIWeakReference;
 
-class nsHTMLIFrameAccessible : public nsDOMAccessible
+class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible
 {
   public:
-    nsHTMLIFrameAccessible(nsIPresShell* aShell, nsIDOMNode* aNode, nsIAccessible* aRoot);
+    nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell);
 
     NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
     NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
@@ -47,7 +48,7 @@ class nsHTMLIFrameRootAccessible : public nsRootAccessible
 {
   
   public:
-    nsHTMLIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode);
+    nsHTMLIFrameRootAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
     virtual ~nsHTMLIFrameRootAccessible();
 
     /* attribute wstring accName; */

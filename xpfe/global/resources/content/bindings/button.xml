@@ -9,53 +9,87 @@
       <stylesheet src="chrome://global/skin/button.css"/>
     </resources>
 
-    <implementation implements="nsIAccessible">
-      <method name="getAccDefaultAction">
+    <!--implementation implements="nsIAccessible">
+
+      <property name="accessible">
+
+        <getter><![CDATA[
+            var service = Components.classes["@mozilla.org/accessibilityService;1"]
+                      .getService(Components.interfaces.nsIAccessibilityService);
+
+			return service.createAccessible(this, document);
+
+		]]></getter>
+
+      </property>
+
+      <method name="accGetDOMNode">
         <body><![CDATA[
-          return 'Click';
+           return this;
         ]]></body>
       </method>
-      <method name="getAccDescription">
+
+      <method name="getAccState">
         <body><![CDATA[
-          return 'This is a button that can be clicked to perform an action';
+           return accessible.getAccState();;
         ]]></body>
       </method>
-      <method name="getAccValue">
+
+      <method name="getAccNextSibling">
         <body><![CDATA[
-          return this.getAttribute('value');
+            return accessible.getAccNextSibling();
         ]]></body>
       </method>
+
+      <method name="getAccParent">
+        <body><![CDATA[
+           return accessible.getAccParent();
+        ]]></body>
+      </method>
+
+      <method name="getAccPrevousSibling">
+        <body><![CDATA[
+           return accessible.getAccPreviousSibling();
+        ]]></body>
+      </method>
+
       <method name="getAccName">
         <body><![CDATA[
           return 'Left Button';
         ]]></body>
       </method>
+
       <method name="getAccRole">
         <body><![CDATA[
           return 'push button';
         ]]></body>
       </method>
+
       <method name="accDoDefaultAction">
         <body><![CDATA[
           this.click();
         ]]></body>
       </method>
+
       <method name="getAccChildCount">
         <body><![CDATA[
           return 0;
         ]]></body>
       </method>
+
       <method name="getAccFirstChild">
         <body><![CDATA[
           return null;
         ]]></body>
       </method>
+
       <method name="getAccLastChild">
         <body><![CDATA[
           return null;
         ]]></body>
       </method>
-    </implementation>
+
+    </implementation-->
   </binding>
 
   <binding id="buttonleft" extends="chrome://global/content/bindings/button.xml#button-base">

@@ -32,8 +32,8 @@
 #include "nsReadableUtils.h"
 #include "nsIDOMElement.h"
 
-nsHTMLLinkAccessible::nsHTMLLinkAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
-nsLinkableAccessible(aShell, aDomNode)
+nsHTMLLinkAccessible::nsHTMLLinkAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell):
+nsLinkableAccessible(aDomNode, aShell)
 { 
 }
 
@@ -61,7 +61,7 @@ NS_IMETHODIMP nsHTMLLinkAccessible::GetAccRole(PRUint32 *_retval)
 NS_IMETHODIMP nsHTMLLinkAccessible::GetAccValue(PRUnichar **_retval)
 {
   *_retval = 0;
-  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mNode));
+  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mDOMNode));
   if (elt) {
     nsAutoString hrefString;
     elt->GetAttribute(NS_LITERAL_STRING("href"), hrefString);

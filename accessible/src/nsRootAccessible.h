@@ -71,7 +71,6 @@ class nsRootAccessible : public nsAccessible,
 protected:
   virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);
   virtual nsIFrame* GetFrame();
-  virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
 
   // not a com pointer. We don't own the listener
   // it is the callers responsibility to remove the listener

@@ -17,36 +17,30 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Original Author: David W. Hyatt (hyatt@netscape.com)
+ * Original Author: Eric Vaughan (evaughan@netscape.com)
  *
  * Contributor(s): 
  */
-#ifndef __nsSelectAccessible_h__
-#define __nsSelectAccessible_h__
+#ifndef __nsHTMLSelectAccessible_h__
+#define __nsHTMLSelectAccessible_h__
 
 #include "nsAccessible.h"
 #include "nsCOMPtr.h"
 #include "nsIAtom.h"
 
-/*
-class nsSelectAccessible : public nsAccessible
+
+class nsHTMLSelectAccessible : public nsAccessible
 {
 public:
   
-  nsSelectAccessible(nsIAtom* aPopupAtom, nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
+  nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
-  NS_IMETHOD GetAccName(PRUnichar **_retval);
-  NS_IMETHOD GetAccValue(PRUnichar **_retval);
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
+  NS_IMETHOD GetAccValue(PRUnichar **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 
-  virtual ~nsSelectAccessible() {}
-  virtual nsIAccessible* CreateNewFirstAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
-  virtual nsIAccessible* CreateNewLastAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
-
-  nsCOMPtr<nsIAtom> mPopupAtom;
+  virtual ~nsHTMLSelectAccessible() {}
 };
-*/
 
 #endif

@@ -33,12 +33,15 @@
 
 // --- image -----
 
-nsHTMLImageAccessible::nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDOMNode, nsIImageFrame *aImageFrame):
-nsLinkableAccessible(aShell, aDOMNode), mPresShell(aShell)
+nsHTMLImageAccessible::nsHTMLImageAccessible(nsIDOMNode* aDOMNode, nsIImageFrame *aImageFrame, nsIWeakReference* aShell):
+nsLinkableAccessible(aDOMNode, aShell)
 { 
   nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aDOMNode));
   nsCOMPtr<nsIDocument> doc;
-  aShell->GetDocument(getter_AddRefs(doc));
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  NS_ASSERTION(shell,"Shell is gone!!! What are we doing here?");
+
+  shell->GetDocument(getter_AddRefs(doc));
   nsAutoString mapElementName;
 
   if (doc && element) {
@@ -55,7 +58,7 @@ nsLinkableAccessible(aShell, aDOMNode), mPresShell(aShell)
 /* wstring getAccName (); */
 NS_IMETHODIMP nsHTMLImageAccessible::GetAccName(PRUnichar **_retval)
 {
-  nsCOMPtr<nsIContent> imageContent(do_QueryInterface(mNode));
+  nsCOMPtr<nsIContent> imageContent(do_QueryInterface(mDOMNode));
   if (imageContent) {
     nsAutoString nameString;
     nsresult rv = AppendFlatStringFromContentNode(imageContent, &nameString);

@@ -33,8 +33,8 @@
 #include "nsReadableUtils.h"
 
 
-nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIPresShell* aShell, nsIDOMNode* aNode, nsIAccessible* aRoot):
-  nsDOMAccessible(aShell, aNode)
+nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell):
+  nsHTMLBlockAccessible(aNode, aShell)
 {
   mRootAccessible = aRoot;
 }
@@ -72,7 +72,7 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsHTMLIFrameRootAccessible::nsHTMLIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode):
+nsHTMLIFrameRootAccessible::nsHTMLIFrameRootAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):
   nsRootAccessible(aShell)
 {
   mRealDOMNode = aNode;
@@ -87,7 +87,13 @@ nsHTMLIFrameRootAccessible::~nsHTMLIFrameRootAccessible()
   /* attribute wstring accName; */
 NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccName(PRUnichar * *aAccName) 
 { 
+  *aAccName = nsnull;
+
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  if (!shell) {
+     return NS_ERROR_FAILURE;  
+  }
+
   nsCOMPtr<nsIDocument> document;
   if (shell)
     shell->GetDocument(getter_AddRefs(document));
@@ -149,6 +155,11 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible*
   // Start by finding our PresShell and from that
   // we get our nsIDocShell in order to walk the DocShell tree
   nsCOMPtr<nsIPresShell> presShell(do_QueryReferent(mPresShell));
+  if (!presShell) {
+     *aAcc = nsnull;
+     return NS_ERROR_FAILURE;  
+  }
+
   nsCOMPtr<nsIDocShell> docShell;
   if (NS_SUCCEEDED(GetDocShellFromPS(presShell, getter_AddRefs(docShell)))) {
     // Now that we have the DocShell QI 
@@ -200,7 +211,7 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible*
               nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
               nsCOMPtr<nsIAccessible> acc(do_QueryInterface(frame));
 
-              *aAcc = CreateNewAccessible(acc, node, wr);
+              *aAcc = acc;
               NS_IF_ADDREF(*aAcc);
 
               return NS_OK;

@@ -24,13 +24,13 @@
 #ifndef _nsHTMLLinkAccessible_H_
 #define _nsHTMLLinkAccessible_H_
 
-#include "nsGenericAccessible.h"
+#include "nsAccessible.h"
 
 class nsHTMLLinkAccessible : public nsLinkableAccessible
 {
 
 public:
-  nsHTMLLinkAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLLinkAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccValue(PRUnichar **_retval); 

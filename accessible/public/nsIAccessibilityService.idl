@@ -28,13 +28,13 @@
 #include "domstubs.idl"
 #include "nsIAccessible.idl"
 
-interface nsIPresShell;
+interface nsIWeakReference;
 
 [scriptable, uuid(68D9720A-0984-42b6-A3F5-8237ED925727)]
 interface nsIAccessibilityService : nsISupports
 {
   nsIAccessible createRootAccessible(in nsISupports aPresContext, in nsISupports aFrame);
-  nsIAccessible createHTMLSelectAccessible(in nsIAtom aAccessible, in nsIDOMNode aNode, in nsISupports aPresShell);
+  nsIAccessible createHTMLSelectAccessible(in nsIDOMNode aNode, in nsISupports aPresShell);
   nsIAccessible createHTMLCheckboxAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLRadioButtonAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLButtonAccessible(in nsISupports aFrame);
@@ -46,7 +46,9 @@ interface nsIAccessibilityService : nsISupports
   nsIAccessible createHTMLTableCellAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLTextFieldAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLIFrameAccessible(in nsIDOMNode aNode, in nsISupports aPresContext);
-  nsIAccessible GetAccessibleFor(in nsIPresShell aPresShell, in nsIDOMNode aNode);
+  nsIAccessible createHTMLBlockAccessible(in nsIDOMNode aNode, in nsISupports aDocument);
+  nsIAccessible createAccessible(in nsIDOMNode aNode, in nsISupports aDocument);
+  nsIAccessible GetAccessibleFor(in nsIWeakReference aPresShell, in nsIDOMNode aNode);
 };
 
 

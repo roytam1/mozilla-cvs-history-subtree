@@ -51,10 +51,12 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,nsnull,aShell)
+nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell)
 {
   mListener = nsnull;
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  NS_ASSERTION(shell,"Shell is gone!!! What are we doing here?");
+
   shell->GetDocument(getter_AddRefs(mDocument));
   mDOMNode = do_QueryInterface(mDocument);
 }
@@ -82,6 +84,9 @@ NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName)
 nsIFrame* nsRootAccessible::GetFrame()
 {
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  if (!shell)
+    return nsnull;
+
   nsIFrame* root = nsnull;
   if (shell) 
     shell->GetRootFrame(&root);
@@ -95,11 +100,6 @@ void nsRootAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelativeFrame)
   (*aRelativeFrame)->GetRect(aBounds);
 }
 
-nsIAccessible* nsRootAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
-{
-  return new nsHTMLBlockAccessible(aAccessible, aNode, aShell);
-}
-
 /* readonly attribute nsIAccessible accParent; */
 NS_IMETHODIMP nsRootAccessible::GetAccParent(nsIAccessible * *aAccParent) 
 { 
@@ -111,6 +111,11 @@ NS_IMETHODIMP nsRootAccessible::GetAccParent(nsIAccessible * *aAccParent)
 NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole) 
 { 
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  if (!shell) {
+    *aAccRole = 0;
+    return NS_ERROR_FAILURE;
+  }
+
   nsCOMPtr<nsIPresContext> context; 
   shell->GetPresContext(getter_AddRefs(context));
   nsCOMPtr<nsISupports> container;
@@ -147,6 +152,9 @@ NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventLis
   {
     // add an event listener to the document
     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+    if (!shell)
+      return NS_ERROR_FAILURE;
+
     nsCOMPtr<nsIDocument> document;
     shell->GetDocument(getter_AddRefs(document));
 
@@ -247,27 +255,24 @@ NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
         #endif
         nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
         if (node)
-          a = new nsHTMLLinkAccessible(shell, node);
+          a = new nsHTMLLinkAccessible(node, mPresShell);
       }
     }
 
     if (a) {
       nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content)); 
-      nsCOMPtr<nsIAccessible> na(CreateNewAccessible(a, node, mPresShell));
-      if ( !na ) 
-        return NS_OK;
 
       if ( eventType.EqualsIgnoreCase("focus") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, na);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, a);
       }
       else if ( eventType.EqualsIgnoreCase("change") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
       }
       else if ( eventType.EqualsIgnoreCase("CheckboxStateChange") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
       }
       else if ( eventType.EqualsIgnoreCase("RadiobuttonStateChange") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
       }
     }
   }

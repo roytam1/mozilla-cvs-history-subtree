@@ -28,7 +28,7 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsRootAccessible.obj    \
         .\$(OBJDIR)\nsHTMLIFrameRootAccessible.obj    \
         .\$(OBJDIR)\nsAccessibilityService.obj    \
-        .\$(OBJDIR)\nsSelectAccessible.obj    \
+        .\$(OBJDIR)\nsHTMLSelectAccessible.obj    \
         .\$(OBJDIR)\nsGenericAccessible.obj    \
         .\$(OBJDIR)\nsHTMLFormControlAccessible.obj    \
         .\$(OBJDIR)\nsHTMLTextAccessible.obj    \

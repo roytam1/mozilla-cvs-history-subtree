@@ -24,7 +24,7 @@
 #ifndef _nsHTMLFormControlAccessible_H_
 #define _nsHTMLFormControlAccessible_H_
 
-#include "nsGenericAccessible.h"
+#include "nsAccessible.h"
 
 class nsICheckboxControlFrame;
 
@@ -33,11 +33,11 @@ class nsICheckboxControlFrame;
  * - walking up to get name from label
  * - support basic state
  */
-class nsHTMLFormControlAccessible : public nsLeafDOMAccessible
+class nsHTMLFormControlAccessible : public nsLeafAccessible
 {
 
 public:
-  nsHTMLFormControlAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTMLFormControlAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval); 
 
@@ -49,7 +49,7 @@ class nsHTMLCheckboxAccessible : public nsHTMLFormControlAccessible
 {
 
 public:
-  nsHTMLCheckboxAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTMLCheckboxAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
   NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
@@ -60,7 +60,7 @@ class nsHTMLRadioButtonAccessible : public nsHTMLFormControlAccessible
 {
 
 public:
-  nsHTMLRadioButtonAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTMLRadioButtonAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
   NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
@@ -71,7 +71,7 @@ class nsHTMLButtonAccessible : public nsHTMLFormControlAccessible
 {
 
 public:
-  nsHTMLButtonAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTMLButtonAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
@@ -79,11 +79,11 @@ public:
   NS_IMETHOD AccDoAction(PRUint8 index);
 };
 
-class nsHTML4ButtonAccessible : public nsDOMAccessible
+class nsHTML4ButtonAccessible : public nsHTMLBlockAccessible
 {
 
 public:
-  nsHTML4ButtonAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTML4ButtonAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval);
@@ -96,7 +96,7 @@ public:
 class nsHTMLTextFieldAccessible : public nsHTMLFormControlAccessible
 {
 public:
-  nsHTMLTextFieldAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  nsHTMLTextFieldAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccValue(PRUnichar **_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval);

@@ -23,7 +23,7 @@
 #ifndef _nsHTMLTextAccessible_H_
 #define _nsHTMLTextAccessible_H_
 
-#include "nsGenericAccessible.h"
+#include "nsAccessible.h"
 
 class nsIWeakReference;
 class nsITextControlFrame;
@@ -32,7 +32,7 @@ class nsHTMLTextAccessible : public nsLinkableAccessible
 {
 
 public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);

@@ -45,6 +45,7 @@
 #include "nsILink.h"
 #include "nsIAccessibilityService.h"
 #include "nsIServiceManager.h"
+#include "nsIWeakReference.h"
 
 /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
@@ -317,7 +318,8 @@ IMozNode* MozNode::MakeMozNode(nsIDOMNode *node)
   IMozNode *newNode = NULL;
   
   nsCOMPtr<nsIAccessible> nsAcc;
-  accService->GetAccessibleFor(shell, node, getter_AddRefs(nsAcc));
+  nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(shell)));
+  accService->GetAccessibleFor(wr, node, getter_AddRefs(nsAcc));
   if (nsAcc) {
     Accessible *acc = new Accessible(nsAcc, mWnd);
     acc->QueryInterface(IID_IMozNode, (void**)&newNode);

@@ -34,7 +34,7 @@ class nsHTMLAreaAccessible : public nsGenericAccessible
 {
 
 public:
-  nsHTMLAreaAccessible(nsIPresShell *presShell, nsIDOMNode *domNode, nsIAccessible *accParent);
+  nsHTMLAreaAccessible(nsIDOMNode *domNode, nsIAccessible *accParent, nsIWeakReference* aShell);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval);

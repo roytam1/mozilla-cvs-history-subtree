@@ -31,8 +31,8 @@
 #include "nsIPresContext.h"
 #include "nsReadableUtils.h"
 
-nsHTMLTextAccessible::nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
-nsLinkableAccessible(aShell, aDomNode)
+nsHTMLTextAccessible::nsHTMLTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell):
+nsLinkableAccessible(aDomNode, aShell)
 { 
 }
 
@@ -46,7 +46,7 @@ NS_IMETHODIMP nsHTMLTextAccessible::GetAccName(PRUnichar **_retval)
   //  rv = AppendFlatStringFromSubtree(mLinkContent, &nameString);
   //}
   //else 
-  mNode->GetNodeValue(nameString);
+  mDOMNode->GetNodeValue(nameString);
   nameString.CompressWhitespace();
   *_retval = nameString.ToNewUnicode();
   return rv;

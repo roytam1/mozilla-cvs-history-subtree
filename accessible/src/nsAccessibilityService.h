@@ -28,7 +28,7 @@
 
 #include "nsIAccessibilityService.h"
 class nsIFrame;
-class nsIPresShell;
+class nsIWeakReference;
 class nsIDOMNode;
 
 class nsAccessibilityService : public nsIAccessibilityService
@@ -46,7 +46,7 @@ public:
 public:
 
 private:
-  NS_IMETHOD GetInfo(nsISupports* aFrame, nsIFrame** aRealFrame, nsIPresShell** aShell, nsIDOMNode** aContent);
+  NS_IMETHOD GetInfo(nsISupports* aFrame, nsIFrame** aRealFrame, nsIWeakReference** aShell, nsIDOMNode** aContent);
 
 };
 

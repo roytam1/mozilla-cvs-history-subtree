@@ -33,8 +33,8 @@
 
 // --- area -----
 
-nsHTMLAreaAccessible::nsHTMLAreaAccessible(nsIPresShell *aPresShell, nsIDOMNode *aDomNode, nsIAccessible *aAccParent):
-nsGenericAccessible(), mPresShell(aPresShell), mDOMNode(aDomNode), mAccParent(aAccParent)
+nsHTMLAreaAccessible::nsHTMLAreaAccessible(nsIDOMNode *aDomNode, nsIAccessible *aAccParent, nsIWeakReference* aShell):
+nsGenericAccessible(), mAccParent(aAccParent)
 { 
 }
 
