@@ -98,7 +98,7 @@ const bool showTokens = false;
 //#define SHOW_ICODE 1
 
 
-JSValue load(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue load(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     if ((argc >= 1) && (argv[0].isString())) {    
         const String& fileName = *argv[0].string;
@@ -106,14 +106,14 @@ JSValue load(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     }    
     return kUndefinedValue;
 }
-JSValue print(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue print(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     for (uint32 i = 0; i < argc; i++) {
         stdOut << argv[i] << "\n";
     }
     return kUndefinedValue;
 }
-JSValue debug(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue debug(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     cx->mDebugFlag = !cx->mDebugFlag;
     return kUndefinedValue;
@@ -164,7 +164,7 @@ static void readEvalPrint(FILE *in)
 #ifdef SHOW_ICODE
                     stdOut << *bcm;
 #endif
-                    JSValue result = cx.interpret(bcm, NULL, NULL, 0);
+                    JSValue result = cx.interpret(bcm, kNullValue, NULL, 0);
                     if (!result.isUndefined())
                         stdOut << result << "\n";
                     delete bcm;

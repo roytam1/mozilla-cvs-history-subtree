@@ -295,7 +295,7 @@ JSValue Context::readEvalFile(const String& fileName)
             buildRuntime(parsedStatements);
             JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
             if (bcm) {
-                result = interpret(bcm, NULL, NULL, 0);
+                result = interpret(bcm, kNullValue, NULL, 0);
                 delete bcm;
             }
         
@@ -357,7 +357,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     JSFunction *target = (*candidate)->mImp;
 
     if (target->isNative()) {
-        JSValue result = target->mCode(this, NULL, getBase(stackSize() - 2), 2);
+        JSValue result = target->mCode(this, kNullValue, getBase(stackSize() - 2), 2);
         popValue();      // XXX
         popValue();
         pushValue(result);
@@ -375,7 +375,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     }
 }
 
-JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     uint8 *pc = bcm->mCodeBase;
     uint8 *endPC = bcm->mCodeBase + bcm->mLength;
@@ -399,10 +399,7 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, JSValue *thisValue, 
 
     for (uint32 i = 0; i < argc; i++)
         pushValue(argv[i]);
-    if (thisValue)
-        mThis = *thisValue;
-    else
-        mThis = kNullValue;
+    mThis = thisValue;
 
     JSValue result = interpret(pc, endPC);
     
@@ -602,7 +599,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mStackTop = 0;
                     }
                     else {
-                        JSValue result = (target->mCode)(this, &mThis, getBase(argBase), argCount);
+                        JSValue result = (target->mCode)(this, mThis, getBase(argBase), argCount);
                         mThis = oldThis;
                         resizeStack(stackSize() - (cleanUp + 1));
                         pushValue(result);
@@ -930,7 +927,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             mStackTop = 0;
                         }
                         else {
-                            JSValue result = (target->mCode)(this, NULL, getBase(argBase), 0);
+                            JSValue result = (target->mCode)(this, kNullValue, getBase(argBase), 0);
                             resizeStack(stackSize() -  1);
                             pushValue(result);
                         }
@@ -1063,7 +1060,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mStackTop = 0;
                     }
                     else {
-                        JSValue result = (target->mCode)(this, &mThis, getBase(argBase), argCount);
+                        JSValue result = (target->mCode)(this, mThis, getBase(argBase), argCount);
                         mThis = oldThis;
                         resizeStack(stackSize() - (cleanUp + 1));
                         pushValue(result);
@@ -1750,17 +1747,17 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
 }
 
-JSValue numberPlus(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue numberPlus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     return JSValue(argv[0].f64 + argv[1].f64);
 }
 
-JSValue numberMinus(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue numberMinus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     return JSValue(argv[0].f64 - argv[1].f64);
 }
 
-JSValue objectPlus(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectPlus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1803,28 +1800,28 @@ JSValue objectPlus(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     }
 }
 
-JSValue objectMinus(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectMinus(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 - r2.toNumber(cx).f64);
 }
 
-JSValue objectMultiply(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectMultiply(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 * r2.toNumber(cx).f64);
 }
 
-JSValue objectDivide(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectDivide(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 / r2.toNumber(cx).f64);
 }
 
-JSValue objectRemainder(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectRemainder(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1833,42 +1830,42 @@ JSValue objectRemainder(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
 
 
 
-JSValue objectShiftLeft(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectShiftLeft(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectShiftRight(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectShiftRight(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectUShiftRight(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectUShiftRight(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-JSValue objectBitAnd(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectBitAnd(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) & (int32)(r2.toInt32(cx).f64) ));
 }
 
-JSValue objectBitXor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectBitXor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) ^ (int32)(r2.toInt32(cx).f64) ));
 }
 
-JSValue objectBitOr(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectBitOr(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1896,7 +1893,7 @@ JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
 
 }
 
-JSValue objectLess(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectLess(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1907,7 +1904,7 @@ JSValue objectLess(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
         return result;
 }
 
-JSValue objectLessEqual(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectLessEqual(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1968,7 +1965,7 @@ JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
     }
 }
 
-JSValue objectEqual(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue objectEqual(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue r1 = argv[0];
     JSValue r2 = argv[1];
@@ -2016,60 +2013,63 @@ void Context::initOperators()
     }
 }
 
-JSValue Object_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue->isNull())
-        thisValue = new JSValue(Object_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    return *thisValue;
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = Object_Type->newInstance(cx);
+    ASSERT(thatValue.isObject());
+    return thatValue;
 }
 
-JSValue Object_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Object_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
+    ASSERT(thisValue.isObject());
     return JSValue(new String(widenCString("[object") + /* [[class]] */ widenCString("]")));
 }
 
 
-JSValue Number_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue->isNull())
-        thisValue = new JSValue(Number_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = Number_Type->newInstance(cx);
+    ASSERT(thatValue.isObject());
+    JSObject *thisObj = thatValue.object;
     if (argc > 0)
         thisObj->mPrivate = (void *)(new double(argv[0].toNumber(cx).f64));
     else
         thisObj->mPrivate = (void *)(new double(0.0));
-    return *thisValue;
+    return thatValue;
 }
 
-JSValue Number_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Number_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     return JSValue(numberToString(*((double *)(thisObj->mPrivate))));
 }
 
 
 
-JSValue Boolean_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue->isNull())
-        thisValue = new JSValue(Boolean_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = Boolean_Type->newInstance(cx);
+    ASSERT(thatValue.isObject());
+    JSObject *thisObj = thatValue.object;
     if (argc > 0)
         thisObj->mPrivate = (void *)(argv[0].toBoolean(cx).boolean);
     else
         thisObj->mPrivate = (void *)(false);
-    return *thisValue;
+    return thatValue;
 }
 
-JSValue Boolean_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Boolean_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
 
     if (thisObj->mPrivate != 0)
         return JSValue(new String(widenCString("true")));
@@ -2079,7 +2079,7 @@ JSValue Boolean_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 
 
 
               
-JSValue JSValue::valueToObject(Context *cx, JSValue& value)
+JSValue JSValue::valueToObject(Context *cx, const JSValue& value)
 {
     switch (value.tag) {
     case f64_tag:
@@ -2090,7 +2090,7 @@ JSValue JSValue::valueToObject(Context *cx, JSValue& value)
             JSValue thisValue = JSValue(obj);
             argv[0] = value;
             if (defCon->mCode) {
-                (defCon->mCode)(cx, &thisValue, &argv[0], 1); 
+                (defCon->mCode)(cx, thisValue, &argv[0], 1); 
             }
             else {
                 ASSERT(false);  // need to throw a hot potato back to
@@ -2106,7 +2106,7 @@ JSValue JSValue::valueToObject(Context *cx, JSValue& value)
             JSValue thisValue = JSValue(obj);
             argv[0] = value;
             if (defCon->mCode) {
-                (defCon->mCode)(cx, &thisValue, &argv[0], 1); 
+                (defCon->mCode)(cx, thisValue, &argv[0], 1); 
             }
             else {
                 ASSERT(false);
@@ -2121,7 +2121,7 @@ JSValue JSValue::valueToObject(Context *cx, JSValue& value)
             JSValue thisValue = JSValue(obj);
             argv[0] = value;
             if (defCon->mCode) {
-                (defCon->mCode)(cx, &thisValue, &argv[0], 1); 
+                (defCon->mCode)(cx, thisValue, &argv[0], 1); 
             }
             else {
                 ASSERT(false);
@@ -2146,7 +2146,7 @@ float64 stringToNumber(const String *string)
     return stringToDouble(string->begin(), string->end(), numEnd);
 }
 
-JSValue JSValue::valueToNumber(Context *cx, JSValue& value)
+JSValue JSValue::valueToNumber(Context *cx, const JSValue& value)
 {
     switch (value.tag) {
     case f64_tag:
@@ -2173,7 +2173,7 @@ String *numberToString(float64 number)
     return new JavaScript::String(widenCString(chrp));
 }
               
-JSValue JSValue::valueToString(Context *cx, JSValue& value)
+JSValue JSValue::valueToString(Context *cx, const JSValue& value)
 {
     const char* chrp = NULL;
     JSObject *obj = NULL;
@@ -2218,7 +2218,7 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
                 ASSERT(false);
             }
             else
-                return (target->mCode)(cx, &value, NULL, 0);
+                return (target->mCode)(cx, value, NULL, 0);
         }
         throw new Exception(Exception::runtimeError, "toString");    // XXX
     }
@@ -2227,7 +2227,7 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
 
 }
 
-JSValue JSValue::toPrimitive(Context *cx, Hint hint)
+JSValue JSValue::toPrimitive(Context *cx, Hint hint) const
 {
     JSObject *obj;
     switch (tag) {
@@ -2337,7 +2337,7 @@ int JSValue::operator==(const JSValue& value) const
 }
 
 
-JSValue JSValue::valueToInt32(Context *cx, JSValue& value)
+JSValue JSValue::valueToInt32(Context *cx, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2370,7 +2370,7 @@ JSValue JSValue::valueToInt32(Context *cx, JSValue& value)
 	return JSValue((float64)d);    
 }
 
-JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
+JSValue JSValue::valueToUInt32(Context *cx, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2403,7 +2403,7 @@ JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
     return JSValue((float64)d);
 }
 
-JSValue JSValue::valueToUInt16(Context *cx, JSValue& value)
+JSValue JSValue::valueToUInt16(Context *cx, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2436,7 +2436,7 @@ JSValue JSValue::valueToUInt16(Context *cx, JSValue& value)
     return JSValue((float64)d);
 }
 
-JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
+JSValue JSValue::valueToBoolean(Context *cx, const JSValue& value)
 {
     JSObject *obj = NULL;
     switch (value.tag) {
@@ -2471,8 +2471,10 @@ JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
             // here we need to get the interpreter to do the job
             ASSERT(false);
         }
-        else
-            return (target->mCode)(cx, NULL, &value, 1);
+        else {
+            JSValue args = value;
+            return (target->mCode)(cx, kNullValue, &args, 1);
+        }
     }
     throw new Exception(Exception::runtimeError, "toBoolean");    // XXX
 }

@@ -50,12 +50,13 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue->isNull())
-        thisValue = new JSValue(Array_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = Array_Type->newInstance(cx);
+    ASSERT(thatValue.isObject());
+    JSObject *thisObj = thatValue.object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
     if (argc > 0) {
@@ -71,14 +72,14 @@ JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32
             }
         }
     }
-    return *thisValue;
+    return thatValue;
 }
 
 
-JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
@@ -101,10 +102,10 @@ JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
     
 }
 
-JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
@@ -129,10 +130,10 @@ JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
     
 }
 
-JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
@@ -145,10 +146,10 @@ JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     return JSValue((float64)arrInst->mLength);
 }
               
-JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
 
@@ -167,9 +168,9 @@ JSValue Array_pop(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
         return kUndefinedValue;
 }
 
-JSValue Array_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_concat(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    JSValue E = *thisValue;
+    JSValue E = thisValue;
 
     JSArrayInstance *A = (JSArrayInstance *)(Array_Type->newInstance(cx));
     uint32 n = 0;
@@ -199,12 +200,12 @@ JSValue Array_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
     return JSValue(A);
 }
 
-JSValue Array_join(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
@@ -234,12 +235,12 @@ JSValue Array_join(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     return JSValue(S);
 }
 
-JSValue Array_reverse(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
@@ -278,15 +279,15 @@ JSValue Array_reverse(Context *cx, JSValue *thisValue, JSValue *argv, uint32 arg
         }
     }
 
-    return *thisValue;
+    return thisValue;
 }
 
-JSValue Array_shift(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
@@ -319,12 +320,12 @@ JSValue Array_shift(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     return result;
 }
 
-JSValue Array_slice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
 
     JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
 
@@ -378,19 +379,19 @@ JSValue Array_slice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     return JSValue(A);
 }
 
-JSValue Array_sort(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_sort(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     return kUndefinedValue;
 }
 
-JSValue Array_splice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     if (argc > 1) {
         uint32 k;
         ContextStackReplacement csr(cx);
 
-        ASSERT(thisValue->isObject());
-        JSObject *thisObj = thisValue->object;
+        ASSERT(thisValue.isObject());
+        JSObject *thisObj = thisValue.object;
         thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
         JSValue result = cx->popValue();
         uint32 length = (uint32)(result.toUInt32(cx).f64);    
@@ -470,12 +471,12 @@ JSValue Array_splice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
     return kUndefinedValue;
 }
 
-JSValue Array_unshift(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
     uint32 length = (uint32)(result.toUInt32(cx).f64);
@@ -499,7 +500,7 @@ JSValue Array_unshift(Context *cx, JSValue *thisValue, JSValue *argv, uint32 arg
     }
     thisObj->setProperty(cx, widenCString("length"), CURRENT_ATTR, JSValue((float64)(length + argc)) );
 
-    return *thisValue;
+    return thisValue;
 }
 
 

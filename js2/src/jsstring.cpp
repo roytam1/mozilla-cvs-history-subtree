@@ -48,12 +48,13 @@ namespace JavaScript {
 namespace JS2Runtime {
 
 
-JSValue String_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue->isNull())
-        thisValue = new JSValue(String_Type->newInstance(cx));
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    JSValue thatValue = thisValue;
+    if (thatValue.isNull())
+        thatValue = String_Type->newInstance(cx);
+    ASSERT(thatValue.isObject());
+    JSObject *thisObj = thatValue.object;
     ASSERT(dynamic_cast<JSStringInstance *>(thisObj));
     JSStringInstance *strInst = (JSStringInstance *)thisObj;
 
@@ -62,10 +63,10 @@ JSValue String_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint3
     else
         thisObj->mPrivate = (void *)(new String(widenCString("")));
     strInst->mLength = ((String *)(thisObj->mPrivate))->size();
-    return *thisValue;
+    return thatValue;
 }
 
-JSValue String_fromCharCode(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_fromCharCode(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     String *resultStr = new String();
     resultStr->reserve(argc);
@@ -75,10 +76,10 @@ JSValue String_fromCharCode(Context *cx, JSValue *thisValue, JSValue *argv, uint
     return JSValue(resultStr);
 }
 
-JSValue String_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
+    ASSERT(thisValue.isObject());
+    JSObject *thisObj = thisValue.object;
     return JSValue((String *)thisObj->mPrivate);
 }
 
@@ -105,12 +106,12 @@ void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
     result.failure = false;
 }
 
-JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_split(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
+    ASSERT(thisValue.isObject());
+    JSValue S = thisValue.toString(cx);
 
     JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
     uint32 lim;
@@ -177,19 +178,19 @@ step11:
 
 }
 
-JSValue String_valueOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_valueOf(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    if (thisValue->isString())
-        return *thisValue;
+    ASSERT(thisValue.isObject());
+    if (thisValue.isString())
+        return thisValue;
     else
         throw Exception(Exception::typeError, "String.valueOf called on");
 }
 
-JSValue String_charAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_charAt(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    const String *str = thisValue->toString(cx).string;
+    ASSERT(thisValue.isObject());
+    const String *str = thisValue.toString(cx).string;
 
     uint32 pos = 0;
     if (argc > 0)
@@ -202,10 +203,10 @@ JSValue String_charAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 arg
     
 }
 
-JSValue String_charCodeAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_charCodeAt(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    const String *str = thisValue->toString(cx).string;
+    ASSERT(thisValue.isObject());
+    const String *str = thisValue.toString(cx).string;
 
     uint32 pos = 0;
     if (argc > 0)
@@ -217,10 +218,10 @@ JSValue String_charCodeAt(Context *cx, JSValue *thisValue, JSValue *argv, uint32
         return JSValue((float64)(*str)[pos]);
 }
 
-JSValue String_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_concat(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    const String *str = thisValue->toString(cx).string;
+    ASSERT(thisValue.isObject());
+    const String *str = thisValue.toString(cx).string;
     String *result = new String(*str);
 
     for (uint32 i = 0; i < argc; i++) {
@@ -230,13 +231,13 @@ JSValue String_concat(Context *cx, JSValue *thisValue, JSValue *argv, uint32 arg
     return JSValue(result);
 }
 
-JSValue String_indexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_indexOf(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
+    ASSERT(thisValue.isObject());
     if (argc == 0)
         return JSValue(-1.0);
 
-    const String *str = thisValue->toString(cx).string;
+    const String *str = thisValue.toString(cx).string;
     const String *searchStr = argv[0].toString(cx).string;
     int32 pos = 0;
 
@@ -254,13 +255,13 @@ JSValue String_indexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 ar
     return JSValue((float64)pos);
 }
 
-JSValue String_lastIndexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_lastIndexOf(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
+    ASSERT(thisValue.isObject());
     if (argc == 0)
         return JSValue(-1.0);
 
-    const String *str = thisValue->toString(cx).string;
+    const String *str = thisValue.toString(cx).string;
     const String *searchStr = argv[0].toString(cx).string;
     int32 pos = 0;
 
@@ -282,15 +283,15 @@ JSValue String_lastIndexOf(Context *cx, JSValue *thisValue, JSValue *argv, uint3
     return JSValue((float64)pos);
 }
 
-JSValue String_localeCompare(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_localeCompare(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     return kUndefinedValue;
 }
 
-JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_toLowerCase(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
+    ASSERT(thisValue.isObject());
+    JSValue S = thisValue.toString(cx);
 
     String *result = new String(*S.string);
     for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
@@ -299,10 +300,10 @@ JSValue String_toLowerCase(Context *cx, JSValue *thisValue, JSValue *argv, uint3
     return JSValue(result);
 }
 
-JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_toUpperCase(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    JSValue S = thisValue->toString(cx);
+    ASSERT(thisValue.isObject());
+    JSValue S = thisValue.toString(cx);
 
     String *result = new String(*S.string);
     for (String::iterator i = result->begin(), end = result->end(); i != end; i++)
@@ -311,10 +312,10 @@ JSValue String_toUpperCase(Context *cx, JSValue *thisValue, JSValue *argv, uint3
     return JSValue(result);
 }
 
-JSValue String_slice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    const String *sourceString = thisValue->toString(cx).string;
+    ASSERT(thisValue.isObject());
+    const String *sourceString = thisValue.toString(cx).string;
 
     uint32 sourceLength = sourceString->size();
     int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
@@ -343,10 +344,10 @@ JSValue String_slice(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
     return JSValue(new String(sourceString->substr(start, end - start)));
 }
 
-JSValue String_substring(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+JSValue String_substring(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    ASSERT(thisValue->isObject());
-    const String *sourceString = thisValue->toString(cx).string;
+    ASSERT(thisValue.isObject());
+    const String *sourceString = thisValue.toString(cx).string;
 
     uint32 sourceLength = sourceString->size();
     int32 start = (argc > 0) ? (int32)(argv[0].toInt32(cx).f64) : 0;
