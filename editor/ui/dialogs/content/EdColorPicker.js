@@ -120,7 +120,8 @@ function Startup()
   }
 
   // Set initial color in input field and in the colorpicker
-  dialog.ColorPicker.color = color;
+  SetCurrentColor(color);
+  dialog.ColorPicker.initColor(color);
 
   // Use last-picked colors passed in, or those persistent on dialog
   if (TextType)
