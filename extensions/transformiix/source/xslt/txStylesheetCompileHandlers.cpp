@@ -57,6 +57,7 @@ txHandlerTable* gTxCallTemplateHandler = 0;
 txHandlerTable* gTxVariableHandler = 0;
 txHandlerTable* gTxForEachHandler = 0;
 txHandlerTable* gTxTopVariableHandler = 0;
+txHandlerTable* gTxChooseHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -898,6 +899,51 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+  xsl:choose
+
+  txCondotionalGoto      --+        \
+  [children]               |         | one for each xsl:when
+  txGoTo           --+     |        /
+                     |     |
+  txCondotionalGoto  |   <-+  --+
+  [children]         |          |
+  txGoTo           --+          |
+                     |          |
+  [children]         |        <-+      for the xsl:otherwise, if there is one
+                   <-+
+*/
+nsresult
+txFnStartChoose(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    nsresult rv = aState.pushChooseGotoList();
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    return aState.pushHandlerTable(gTxChooseHandler);
+}
+
+nsresult
+txFnEndChoose(txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    aState.popHandlerTable();
+    txListIterator iter(aState.mChooseGotoList);
+    txGoTo* gotoinstr;
+    while ((gotoinstr = (txGoTo*)iter.next())) {
+        rv = aState.addGotoTarget(&gotoinstr->mTarget);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    aState.popChooseGotoList();
+
+    return NS_OK;
+}
+
 // xsl:comment
 nsresult
 txFnStartComment(PRInt32 aNamespaceID,
@@ -1234,6 +1280,31 @@ txFnEndMessage(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+    xsl:otherwise
+    
+    (see xsl:choose)
+*/
+nsresult
+txFnStartOtherwise(PRInt32 aNamespaceID,
+                   nsIAtom* aLocalName,
+                   nsIAtom* aPrefix,
+                   txStylesheetAttr* aAttributes,
+                   PRInt32 aAttrCount,
+                   txStylesheetCompilerState& aState)
+{
+    return aState.pushHandlerTable(gTxTemplateHandler);;
+}
+
+nsresult
+txFnEndOtherwise(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+    aState.mHandlerTable = gTxIgnoreHandler; // XXX should be gTxErrorHandler
+
+    return NS_OK;
+}
+
 // xsl:processing-instruction
 nsresult
 txFnStartPI(PRInt32 aNamespaceID,
@@ -1530,6 +1601,58 @@ txFnTextStartRTF(const nsAString& aStr, txStylesheetCompilerState& aState)
     return NS_ERROR_XSLT_GET_NEW_HANDLER;
 }
 
+/*
+    xsl:when
+    
+    (see xsl:choose)
+*/
+nsresult
+txFnStartWhen(PRInt32 aNamespaceID,
+              nsIAtom* aLocalName,
+              nsIAtom* aPrefix,
+              txStylesheetAttr* aAttributes,
+              PRInt32 aAttrCount,
+              txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    Expr* test = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::test, PR_TRUE,
+                     aState, test);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txConditionalGoto* condGoto = new txConditionalGoto(test, nsnull);
+    NS_ENSURE_TRUE(condGoto, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushPtr(condGoto);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(condGoto);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxTemplateHandler);
+}
+
+nsresult
+txFnEndWhen(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+    txGoTo* gotoinstr = new txGoTo(nsnull);
+    NS_ENSURE_TRUE(gotoinstr, NS_ERROR_OUT_OF_MEMORY);
+    
+    nsresult rv = aState.mChooseGotoList->add(gotoinstr);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    rv = aState.addInstruction(gotoinstr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txConditionalGoto* condGoto = (txConditionalGoto*)aState.popPtr();
+    rv = aState.addGotoTarget(&condGoto->mTarget);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 /**
  * Table Datas
  */
@@ -1577,6 +1700,7 @@ txHandlerTableData gTxTemplateTableData = {
   { { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { kNameSpaceID_XSLT, "attribute", txFnStartAttribute, txFnEndAttribute },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
+    { kNameSpaceID_XSLT, "choose", txFnStartChoose, txFnEndChoose },
     { kNameSpaceID_XSLT, "comment", txFnStartComment, txFnEndComment },
     { kNameSpaceID_XSLT, "copy", txFnStartCopy, txFnEndCopy },
     { kNameSpaceID_XSLT, "copy-of", txFnStartCopyOf, txFnEndCopyOf },
@@ -1666,6 +1790,19 @@ txHandlerTableData gTxTopVariableTableData = {
   txFnTextStartTopVar
 };
 
+txHandlerTableData gTxChooseTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "otherwise", txFnStartOtherwise, txFnEndOtherwise },
+    { kNameSpaceID_XSLT, "when", txFnStartWhen, txFnEndWhen },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementError, 0 },
+  // LRE
+  { 0, 0, txFnStartElementError, 0 },
+  // Text
+  txFnTextError
+};
+
 
 
 /**
@@ -1737,6 +1874,7 @@ txHandlerTable::init()
     INIT_HANDLER(Variable);
     INIT_HANDLER(ForEach);
     INIT_HANDLER(TopVariable);
+    INIT_HANDLER(Choose);
 
     return MB_TRUE;
 }
@@ -1755,4 +1893,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Variable);
     SHUTDOWN_HANDLER(ForEach);
     SHUTDOWN_HANDLER(TopVariable);
+    SHUTDOWN_HANDLER(Choose);
 }

@@ -75,6 +75,8 @@ public:
     void popHandlerTable();
     nsresult pushSorter(txPushNewContext* aSorter);
     void popSorter();
+    nsresult pushChooseGotoList();
+    void popChooseGotoList();
     nsresult pushObject(TxObject* aObject);
     TxObject* popObject();
     nsresult pushPtr(void* aPtr);
@@ -105,6 +107,7 @@ public:
     txHandlerTable* mHandlerTable;
     txElementContext* mElementContext;
     txPushNewContext* mSorter;
+    txList* mChooseGotoList;
     MBool mDOE;
     
 private:

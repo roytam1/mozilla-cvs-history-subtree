@@ -365,6 +365,7 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
 txStylesheetCompilerState::~txStylesheetCompilerState()
 {
     delete mElementContext;
+    delete mChooseGotoList;
     while (!mObjectStack.isEmpty()) {
         delete popObject();
     }
@@ -407,6 +408,25 @@ void
 txStylesheetCompilerState::popSorter()
 {
     mSorter = (txPushNewContext*)popPtr();
+}
+
+nsresult
+txStylesheetCompilerState::pushChooseGotoList()
+{
+    nsresult rv = pushObject(mChooseGotoList);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mChooseGotoList = new txList;
+    NS_ENSURE_TRUE(mChooseGotoList, NS_ERROR_OUT_OF_MEMORY);
+
+    return NS_OK;
+}
+
+void
+txStylesheetCompilerState::popChooseGotoList()
+{
+    delete mChooseGotoList;
+    mChooseGotoList = (txList*)popObject();
 }
 
 nsresult
