@@ -58,6 +58,8 @@
       <preference id="browser.cache.disk.capacity"        name="browser.cache.disk.capacity"        type="int"/>
     </preferences>
     
+    <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
+    
     <script type="application/x-javascript" src="chrome://browser/content/sanitize.js"/>
     <script type="application/x-javascript" src="chrome://browser/content/preferences/privacy.js"/>
 
@@ -150,7 +152,8 @@
                         onpreferenceread="return gPrivacyPane.readEnableCookiesPref();"
                         onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
               <spring flex="1"/>
-              <button id="cookieExceptions" label="&exceptions.label;"/>
+              <button id="cookieExceptions" label="&exceptions.label;"
+                      oncommand="gPrivacyPane.viewCookieExceptions();"/>
             </hbox>
             <vbox align="start">
               <checkbox id="enableCookiesForOriginating" class="indent"

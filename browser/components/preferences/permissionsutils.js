@@ -35,17 +35,18 @@
 # ***** END LICENSE BLOCK *****
 
 var gTreeUtils = {
-  deleteAll: function (aTree, aView, aTable, aDeletedTable)
+  deleteAll: function (aTree, aView, aItems, aDeletedItems)
   {
-    for (var i = 0; i < aTable.length; ++i)
-      aDeletedTable.push(aTable[i]);
-    aTable = [];
+    aDeletedItems = [];
+    for (var i = 0; i < aItems.length; ++i)
+      aDeletedItems.push(aItems[i]);
+    aItems = [];
     var oldCount = aView.rowCount;
     aView._rowCount = 0;
     aTree.treeBoxObject.rowCountChanged(0, -oldCount);
   },
   
-  deleteSelectedItems: function (aTree, aView, aTable, aDeletedTable)
+  deleteSelectedItems: function (aTree, aView, aItems, aDeletedItems)
   {
     var selection = aTree.view.selection;
     selection.selectEventsSuppressed = true;
@@ -56,24 +57,24 @@ var gTreeUtils = {
       var min = { }; var max = { };
       selection.getRangeAt(i, min, max);
       for (var j = min.value; i < max.value; ++j) {
-        aDeletedTable.push(aTable[j]);
-        aTable[j] = null;
-        nextSelection = j <= aView.getRowCount() ? j : j - 1;
+        aDeletedItems.push(aItems[j]);
+        aItems[j] = null;
+        nextSelection = j <= aView.rowCount ? j : j - 1;
       }
     }
     
-    for (i = 0; i < aTable.length; ++i) {
-      if (!aTable[i]) {
+    for (i = 0; i < aItems.length; ++i) {
+      if (!aItems[i]) {
         var j = i;
-        while (j < aTable.length && !aTable[j])
+        while (j < aItems.length && !aItems[j])
           ++j;
-        aTable.splice(i, j - i);
+        aItems.splice(i, j - i);
         aView._rowCount -= j - i;
         aTree.treeBoxObject.rowCountChanged(i, i - j);
       }
     }
 
-    if (aTable.length) {
+    if (aItems.length) {
       selection.select(nextSelection);
       aTree.treeBoxObject.ensureRowIsVisible(nextSelection);
     }
@@ -81,7 +82,7 @@ var gTreeUtils = {
   },
   
   sort: function (aTree, aView, aTable, aColumn, 
-                  aLastSortColumn, aLastSortAscending, aUpdateSelection) 
+                  aLastSortColumn, aLastSortAscending) 
   {
     var ascending = (aColumn == aLastSortColumn) ? !aLastSortAscending : true;
     aTable.sort(function (a, b) { return a[aColumn].toLowerCase().localeCompare(b[aColumn].toLowerCase()); });

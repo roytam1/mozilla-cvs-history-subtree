@@ -60,7 +60,6 @@ prefwindow {
   font: message-box;
 }
 
-/* deprecated */
 window.dialog {
   padding: 8px 10px 10px 8px;
 }

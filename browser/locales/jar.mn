@@ -45,6 +45,7 @@
     locale/browser/preferences/general.dtd            (@AB_CD@/chrome/browser/preferences/general.dtd)
     locale/browser/preferences/languages.dtd          (@AB_CD@/chrome/browser/preferences/languages.dtd)
     locale/browser/preferences/ocsp.dtd               (@AB_CD@/chrome/browser/preferences/ocsp.dtd)
+    locale/browser/preferences/permissions.dtd        (@AB_CD@/chrome/browser/preferences/permissions.dtd)
     locale/browser/preferences/preferences.dtd        (@AB_CD@/chrome/browser/preferences/preferences.dtd)
     locale/browser/preferences/preferences.properties (@AB_CD@/chrome/browser/preferences/preferences.properties)
     locale/browser/preferences/privacy.dtd            (@AB_CD@/chrome/browser/preferences/privacy.dtd)

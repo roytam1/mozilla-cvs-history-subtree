@@ -114,6 +114,19 @@ filefield[disabled="true"] .fileFieldIcon {
   margin: 0px;
 }
 
+/* Permissions Manager */
+#PermissionsDialog {
+  padding: 0px;
+}
+
+#permissionsContent {
+  margin: 9px 8px 5px 8px;
+}
+
+#permissionsActionsButtons {
+  margin: 0px 3px 6px 3px !important;
+}
+
 /* Download Actions Manager */
 #DownloadActionsDialogPane {
   padding: 0px; 

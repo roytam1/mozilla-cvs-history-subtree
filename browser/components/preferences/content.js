@@ -128,24 +128,19 @@ var gContentPane = {
   },
 
   _exceptionsParams: {
-    install: { blockVisible: false, sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "install" },
+    install: { blockVisible: false, sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "install", },
     popup:   { blockVisible: false, sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "popup"   },
     image:   { blockVisible: true,  sessionVisible: false, allowVisible: true, prefilledHost: "", permissionType: "image"   },
   },
   showExceptions: function (aPermissionType)
   {
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                      .getService(Components.interfaces.nsIWindowMediator);
-    var existingWindow = wm.getMostRecentWindow("exceptions");
-    if (existingWindow) {
-      existingWindow.setHost("");
-      existingWindow.focus();
-    }
-    else {
-      const kURL = "chrome://browser/content/cookieviewer/CookieExceptions.xul";
-      var params = this._exceptionsParams[aPermissionType];
-      window.openDialog(kURL, "_blank", "chrome,modal,resizable=yes", params);
-    }
+    var bundlePreferences = document.getElementById("bundlePreferences");
+    var params = this._exceptionsParams[aPermissionType];
+    params.windowTitle = bundlePreferences.getString(aPermissionType + "permissionstitle");
+    params.introText = bundlePreferences.getString(aPermissionType + "permissionstext");
+    document.documentElement.openWindow("Browser:Permissions",
+                                        "chrome://browser/content/preferences/permissions.xul",
+                                        "resizable,dialog=no", params);
   },
   
   updateButtons: function (aButtonID, aPreferenceID)

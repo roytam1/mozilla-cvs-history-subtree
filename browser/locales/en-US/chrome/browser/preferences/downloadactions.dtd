@@ -1,4 +1,4 @@
-<!ENTITY  downloadactionsDialog.title         "File Actions">
+<!ENTITY  downloadactionsDialog.title         "Download Actions">
 <!ENTITY  fileTypesDescription.label          "Automatically perform the associated action with each of the following file types:">
 
 <!ENTITY  fileHandlerColumn.label             "Action">

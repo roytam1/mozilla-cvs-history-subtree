@@ -10,7 +10,7 @@
 <!ENTITY showWhenStarting.label       "Show Download Manager when a download begins">
 <!ENTITY closeWhenDone.label          "Close the Download Manager when all downloads are complete">
 
-<!ENTITY fileTypes.label              "File Types">
+<!ENTITY fileTypes.label              "Download Actions">
 <!ENTITY configureActions.label       "Configure Actions...">
 <!ENTITY configureActions.accesskey   "C">
 <!ENTITY fileTypesDescription.label   "&brandShortName; can automatically download or open files of certain types.">

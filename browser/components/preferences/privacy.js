@@ -156,8 +156,24 @@ var gPrivacyPane = {
   },
   viewPasswords: function (aCategory) 
   {
-    document.documentElement.openSubDialog("chrome://passwordmgr/content/passwordManager.xul",
-                                           "resizable", "8");
+    document.documentElement.openWindow("Toolkit:PasswordManager",
+                                        "chrome://passwordmgr/content/passwordManager.xul",
+                                        "resizable,dialog=no", "8");
+  },
+  
+  viewCookieExceptions: function ()
+  {
+    var bundlePreferences = document.getElementById("bundlePreferences");
+    var params = { blockVisible   : true, 
+                   sessionVisible : true, 
+                   allowVisible   : true, 
+                   prefilledHost  : "", 
+                   permissionType : "cookie",
+                   windowTitle    : bundlePreferences.getString("cookiepermissionstitle"),
+                   introText      : bundlePreferences.getString("cookiepermissionstext") };
+    document.documentElement.openWindow("Browser:Permissions",
+                                        "chrome://browser/content/preferences/permissions.xul",
+                                        "resizable,dialog=no", params);
   },
   
   changeMasterPassword: function ()

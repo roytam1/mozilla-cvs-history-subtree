@@ -686,8 +686,11 @@
           var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                              .getService(Components.interfaces.nsIWindowMediator);
           var win = aWindowType ? wm.getMostRecentWindow(aWindowType) : null;
-          if (win)
+          if (win) {
+            if ("initWithParams" in win)
+              win.initWithParams(aParams);
             win.focus();
+          }
           else 
             win = openDialog(aURL, "centerscreen", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
           return win;
