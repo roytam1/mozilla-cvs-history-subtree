@@ -456,7 +456,7 @@ TestRead(nsINetDataCache *cache)
                      "nsINetDataCacheRecord::GetKey failed");
         nsAllocator::Free(storedCacheKey);
 
-        PRUint32 expectedStreamLength = randomStream->Next() & 0xffff;
+        PRUint32 expectedStreamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
 
         TestReadStream(record, randomStream, expectedStreamLength);
     }
@@ -491,7 +491,7 @@ TestTruncation(nsINetDataCache *cache)
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
 
     randomStream->Skip(CACHE_METADATA_LENGTH);
-    PRUint32 initialStreamLength = randomStream->Next() & 0xffff;
+    PRUint32 initialStreamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
     delete randomStream;
 
     PRUint32 i;
@@ -638,7 +638,7 @@ FillCache(nsINetDataCache *cache)
         rv = cache->GetStorageInUse(&beforeOccupancy);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
 
-        int streamLength = randomStream->Next() & 0xffff;
+        int streamLength = randomStream->Next() % MAX_CONTENT_LENGTH;
         int remaining = streamLength;
         while (remaining) {
             PRUint32 numWritten;
