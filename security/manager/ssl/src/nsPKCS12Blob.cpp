@@ -58,7 +58,7 @@
 #include "nsKeygenHandler.h" //For GetSlotWithMechanism
 #include "nsPK11TokenDB.h"
 #include "nsICertificateDialogs.h"
-#include "nsPSMTracker.h"
+#include "nsNSSShutDown.h"
 
 #include "pk11func.h"
 #include "secerr.h"
@@ -102,6 +102,7 @@ nsPKCS12Blob::~nsPKCS12Blob()
 void 
 nsPKCS12Blob::SetToken(nsIPK11Token *token)
 {
+ nsNSSShutDownPreventionLock locker;
  if (token) {
    mToken = token;
  } else {
@@ -124,6 +125,7 @@ nsPKCS12Blob::SetToken(nsIPK11Token *token)
 nsresult
 nsPKCS12Blob::ImportFromFile(nsILocalFile *file)
 {
+  nsNSSShutDownPreventionLock locker;
   nsresult rv;
 
   if (!mToken && !mTokenSet) {
@@ -151,6 +153,7 @@ nsPKCS12Blob::ImportFromFile(nsILocalFile *file)
 nsresult
 nsPKCS12Blob::ImportFromFileHelper(nsILocalFile *file, PRBool &aWantRetry)
 {
+  nsNSSShutDownPreventionLock locker;
   nsresult rv;
   SECStatus srv = SECSuccess;
   SEC_PKCS12DecoderContext *dcx = NULL;
@@ -287,6 +290,7 @@ nsresult
 nsPKCS12Blob::ExportToFile(nsILocalFile *file, 
                            nsIX509Cert **certs, int numCerts)
 {
+  nsNSSShutDownPreventionLock locker;
   nsresult rv;
   SECStatus srv = SECSuccess;
   SEC_PKCS12ExportContext *ecx = NULL;
@@ -510,6 +514,7 @@ nsPKCS12Blob::getPKCS12FilePassword(SECItem *unicodePw)
 nsresult
 nsPKCS12Blob::inputToDecoder(SEC_PKCS12DecoderContext *dcx, nsILocalFile *file)
 {
+  nsNSSShutDownPreventionLock locker;
   nsresult rv;
   SECStatus srv;
   PRUint32 amount;
@@ -645,6 +650,7 @@ nsPKCS12Blob::digest_write(void *arg, unsigned char *buf, unsigned long len)
 SECItem * PR_CALLBACK
 nsPKCS12Blob::nickname_collision(SECItem *oldNick, PRBool *cancel, void *wincx)
 {
+  nsNSSShutDownPreventionLock locker;
   *cancel = PR_FALSE;
   nsresult rv;
   nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(kNSSComponentCID, &rv));
