@@ -555,6 +555,7 @@ case "$target" in
     AC_DEFINE(_POSIX_SOURCE)
     AC_DEFINE(_BSD_SOURCE)
     AC_DEFINE(_SVID_SOURCE)
+    AC_DEFINE(LINUX)
     CFLAGS="$CFLAGS -pipe -ansi"
     CXXFLAGS="$CXXFLAGS -pipe -ansi"
     MDCPUCFG_H=_linux.cfg
