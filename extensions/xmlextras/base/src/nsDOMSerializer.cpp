@@ -221,19 +221,23 @@ nsDOMSerializer::SerializeToString(nsIDOMNode *aRoot, PRUnichar **_retval)
 }
 
 NS_IMETHODIMP
-nsDOMSerializer::SerializeToStream(nsIDOMNode *root, 
-                                   nsIOutputStream *stream, 
-                                   const char *charset)
+nsDOMSerializer::SerializeToStream(nsIDOMNode *aRoot, 
+                                   nsIOutputStream *aStream, 
+                                   const char *aCharset)
 {
-  NS_ENSURE_ARG_POINTER(root);
-  NS_ENSURE_ARG_POINTER(stream);
+  NS_ENSURE_ARG_POINTER(aRoot);
+  NS_ENSURE_ARG_POINTER(aStream);
   // The charset arg can be null, in which case we get the document's
   // charset and use that when serializing.
-  
-  nsCOMPtr<nsIDocumentEncoder> encoder;
-  nsresult rv = SetUpEncoder(root,charset,getter_AddRefs(encoder));
+
+  nsresult rv = CheckSameOrigin(aRoot);
   if (NS_FAILED(rv))
     return rv;
 
-  return encoder->EncodeToStream(stream);
+  nsCOMPtr<nsIDocumentEncoder> encoder;
+  rv = SetUpEncoder(aRoot, aCharset, getter_AddRefs(encoder));
+  if (NS_FAILED(rv))
+    return rv;
+
+  return encoder->EncodeToStream(aStream);
 }
