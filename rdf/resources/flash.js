@@ -48,7 +48,7 @@ function Init()
         registry.Init(flashdb); // this will throw if it's already been opened and registered.
 
         // read it in synchronously.
-        registry.Open(true);
+        registry.Refresh(true);
     }
     catch (ex) {
         // if we get here, then the RDF/XML has been opened and read
