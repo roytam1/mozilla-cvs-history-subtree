@@ -654,7 +654,7 @@ nsPKCS12Blob::nickname_collision(SECItem *oldNick, PRBool *cancel, void *wincx)
 
   newNick->type = siAsciiString;
   newNick->data = (unsigned char*) nsCRT::strdup(nickname);
-  newNick->len  = nsCRT::strlen((char*)newNick->data);
+  newNick->len  = strlen((char*)newNick->data);
   return newNick;
 }
 
