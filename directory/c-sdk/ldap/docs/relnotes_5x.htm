@@ -3,15 +3,15 @@
 <head>
    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
    <meta name="Author" content="Michael Hein">
-   <meta name="GENERATOR" content="Mozilla/4.76 [en] (X11; U; SunOS 5.7 sun4u) [Netscape]">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (X11; U; SunOS 5.7 sun4u) [Netscape]">
    <title>Release notes for LDAP C SDK 5.x</title>
 </head>
 <body>
 
 <h1>
 Release Notes for LDAP C SDK 5.x</h1>
-<i>Michael Hein <a href="mailto:mhein@netscape.com">mhein@sun.com</a></i>
-<br>&nbsp;
+<i>Michael Hein <a href="mailto:mhein@sun.com">mhein@sun.com</a></i>
+<br>Mark Smith&nbsp;&nbsp;&nbsp;<a href="mailto:mcs@netscape.com"> mcs@netscape.com</a>
 <p><font size=+1><a href="#LDAP C SDK 5.0">LDAP C SDK 5.0 (3/28/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.1">LDAP C SDK 5.01 (06/13/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.2">LDAP C SDK 5.02 (07/03/2001)</a></font>
@@ -20,11 +20,11 @@ Release Notes for LDAP C SDK 5.x</h1>
 (08/15/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.05 (10/04/2001)">LDAP C SDK 5.05
 (10/04/2001)</a></font>
-<br><font size=+1><a href="#LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www.">LDAP&nbsp;C&nbsp;SDK
-5.06 (11/07/2001)</a></font>
-<br>&nbsp;
-<p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP C SDK 5.0 (3/28/2001)
-(Available on www.iplanet.com)</font></b>
+<br><font size=+1><a href="#LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www.">LDAP
+C SDK 5.06 (11/07/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www.">LDAP
+C SDK 5.07 (02/02/2001)</a></font>
+<p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP C SDK 5.0 (3/28/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -204,8 +204,7 @@ added the new packaging script for www.iplanet.com</li>
 </ul>
 
 <p><br><a NAME="LDAP C SDK 5.05 (10/04/2001)"></a>
-<br><b><font size=+2>LDAP C SDK 5.05 (10/04/2001) (This release is targeted
-for www.iplanet.com)</font></b>
+<br><b><font size=+2>LDAP C SDK 5.05 (10/04/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -242,10 +241,8 @@ chaining code</li>
 <li>
 support sun4m architecture</li>
 </ul>
-
-<p><a NAME="LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www."></a>
-<br><b><font size=+2>LDAP C SDK 5.06 (11/07/2001) (This release is targeted
-for www.iplanet.com)</font></b>
+<a NAME="LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www."></a>
+<br><b><font size=+2>LDAP C SDK 5.06 (11/07/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -271,6 +268,61 @@ a bunch of misc changes were committed to make the build system "company"
 agnostic which allows the builder of the LDAP C SDK to specify company
 version, company name etc.</li>
 </ul>
+<a NAME="LDAP C SDK 5.07 (11/07/2001) (This release is targeted for www."></a>
+<br><b><font size=+2>LDAP C SDK 5.07 (02/02/2002)</font></b>
+<h2>
+Bugs/enhancements fixed in this release:</h2>
+
+<ul>
+<li>
+fix regression on command line tools with -J option</li>
+
+<li>
+add new prldap functionality to set timeout on PR_Send(), PR_Write() etc.
+calls.</li>
+
+<li>
+A base64 encode value that commences (after decoding) with a '&lt;' is
+incorrectly interpreted as LDIF URL syntax attr:&lt;</li>
+
+<li>
+114041 - previously allocated mutexes leaked when using LDAP_OPT_THREAD_FNS.</li>
+
+<li>
+73830 - Calling ldap_init() with a NULL hostname results in core. The crash
+occurred because the host pointer ("localhost") was being freed twice.
+Now we ensure that the host is set to NULL by ldap_x_hostlist_next() in
+the special case when NULL was passed into ldap_x_hostlist_first(), which
+is more consistent to the caller and eliminates the double free problem.</li>
+
+<li>
+112076 - crash due to double free of ssip->lssei_keypasswd.&nbsp; This
+code was inadvertently not migrated to NSS 3.x as this was a known change
+in behavior from 2.x</li>
+
+<li>
+updated changes for idar writev (io.c, lber-int.h)</li>
+
+<li>
+120406 - can't use more than 127 threads with SSL or NSPR. Previously,
+we allocated one NSPR thread-private data index for each active LDAP *.&nbsp;
+Now we only allocate one for the entire prldap library (this library now
+has its own thread-private DATA layer).</li>
+
+<li>
+include nspr header files in distribution (in include-nspr) as a convenience
+for developers</li>
+
+<li>
+move component version info to a separate file</li>
+
+<li>
+enable COMPONENT_PULL_METHOD=FTP for UNIX builds</li>
+
+<li>
+106057 - the nsldapi_os_connect_with_to() function should use poll()</li>
+
+<br>&nbsp;</ul>
 
 </body>
 </html>
