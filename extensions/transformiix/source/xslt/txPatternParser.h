@@ -54,11 +54,17 @@ public:
     }
 
     txPattern* createPattern(const String& aPattern,
-                             txIParseContext* aContext);
+                             txIParseContext* aContext,
+                             ProcessorState* aPs);
 protected:
     nsresult createUnionPattern(ExprLexer& aLexer, txPattern*& aPattern);
     nsresult createLocPathPattern(ExprLexer& aLexer, txPattern*& aPattern);
+    nsresult createIdPattern(ExprLexer& aLexer, txPattern*& aPattern);
+    nsresult createKeyPattern(ExprLexer& aLexer, txPattern*& aPattern);
     nsresult createStepPattern(ExprLexer& aLexer, txPattern*& aPattern);
+
+private:
+    ProcessorState* mProcessorState;
 };
 
 #endif // TX_PATTERNPARSER_H

@@ -200,7 +200,7 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
 
     // Get the pattern
     txPSParseContext context(this, aXslTemplate);
-    txPattern* pattern = exprParser.createPattern(match, &context);
+    txPattern* pattern = exprParser.createPattern(match, &context, this);
     #ifdef TX_PATTERN_DEBUG
     String foo;
     pattern->toString(foo);
@@ -527,7 +527,7 @@ txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
 
     
     txPSParseContext pContext(this, aElem);
-    pattern = exprParser.createPattern(attr, &pContext);
+    pattern = exprParser.createPattern(attr, &pContext, this);
 
     if (!pattern) {
         String err = "Error in parsing pattern: ";
@@ -689,7 +689,7 @@ MBool ProcessorState::addKey(Element* aKeyElem)
     txPSParseContext pContext(this, aKeyElem);
     String attrVal;
     if (aKeyElem->getAttr(txXSLTAtoms::match, kNameSpaceID_None, attrVal)) {
-        match = exprParser.createPattern(attrVal, &pContext);
+        match = exprParser.createPattern(attrVal, &pContext, this);
     }
     Expr* use = 0;
     attrVal.clear();

@@ -40,6 +40,7 @@
 #define TX_XSLT_PATTERNS_H
 
 #include "Expr.h"
+class ProcessorState;
 
 class txPattern : public TxObject
 {
@@ -146,6 +147,39 @@ public:
     ~txRootPattern();
 
     TX_DECL_PATTERN;
+};
+
+class txIdPattern : public txPattern
+{
+public:
+    txIdPattern(const String aString) : mIds(aString)
+    {
+    }
+
+    ~txIdPattern();
+
+    TX_DECL_PATTERN;
+
+private:
+    const String mIds;
+};
+
+class txKeyPattern : public txPattern
+{
+public:
+    txKeyPattern(ProcessorState* aPs, const String& aName,
+                 const String& aValue)
+        : mProcessorState(aPs), mName(aName), mValue(aValue)
+    {
+    }
+
+    ~txKeyPattern();
+
+    TX_DECL_PATTERN;
+
+private:
+    ProcessorState* mProcessorState;
+    String mName, mValue;
 };
 
 class txStepPattern : public PredicateList, public txPattern

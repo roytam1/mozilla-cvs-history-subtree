@@ -39,6 +39,12 @@
 #include "txXSLTPatterns.h"
 #include "txNodeSetContext.h"
 #include "txForwardContext.h"
+#include "XSLTFunctions.h"
+#ifndef TX_EXE
+#include "nsReadableUtils.h"
+#include "nsIContent.h"
+#include "nsINodeInfo.h"
+#endif
 
 /*
  * txPattern
@@ -295,6 +301,141 @@ void txRootPattern::toString(String& aDest)
     aDest.append("txRootPattern{");
     #endif
     aDest.append("/");
+    #ifdef DEBUG
+    aDest.append("}");
+    #endif
+}
+
+/*
+ * txIdPattern
+ *
+ * txIdPattern matches if the given node has a ID attribute with one
+ * of the space delimited values.
+ * This looks like the id() function, but may only have LITERALs as
+ * argument.
+ */
+
+txIdPattern::~txIdPattern()
+{
+}
+
+MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
+{
+    #ifdef TX_EXE
+    return MB_FALSE; // not implemented
+    #else
+    if (Node::ELEMENT_NODE != aNode->getNodeType()) {
+        return MB_FALSE;
+    }
+
+    // Get a ID attribute, if there is
+
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode->getNSObj());
+    NS_ASSERTION(content, "a Element without nsIContent");
+    if (!content) {
+        return MB_FALSE;
+    }
+    nsCOMPtr<nsINodeInfo> ni;
+    content->GetNodeInfo(*getter_AddRefs(ni));
+    if (!ni) {
+        return MB_FALSE;
+    }
+    nsCOMPtr<nsIAtom> idAttr;
+    ni->GetIDAttributeAtom(getter_AddRefs(idAttr));
+    if (!idAttr) {
+        return MB_FALSE; // no ID for this element defined, can't match
+    }
+    nsAutoString value;
+    nsresult rv = content->GetAttr(kNameSpaceID_None, idAttr, value);
+    if (NS_CONTENT_ATTR_HAS_VALUE != rv) {
+        return MB_FALSE; // no ID attribute given
+    }
+    const nsString ids = mIds.getConstNSString();
+    nsAString::const_iterator pos, begin, end;
+    ids.BeginReading(begin);
+    ids.EndReading(end);
+    pos = begin;
+    const PRUnichar space = PRUnichar(' ');
+    PRBool found = FindCharInReadable(space, pos, end);
+
+    while (found) {
+        if (value.Equals(Substring(begin, pos))) {
+            return MB_TRUE;
+        }
+        while (space == *pos) {
+            ++pos; // skip ' '
+        }
+        begin = pos;
+        found = FindCharInReadable(PRUnichar(' '), pos, end);
+    }
+    if (value.Equals(Substring(begin, pos))) {
+        return MB_TRUE;
+    }
+    return MB_FALSE;
+    #endif // TX_EXE
+}
+
+double txIdPattern::getDefaultPriority()
+{
+    return 0.5;
+}
+
+void txIdPattern::toString(String& aDest)
+{
+    #ifdef DEBUG
+    aDest.append("txIdPattern{");
+    #endif
+    aDest.append("id(");
+    aDest.append(mIds);
+    aDest.append(")");
+    #ifdef DEBUG
+    aDest.append("}");
+    #endif
+}
+
+/*
+ * txKeyPattern
+ *
+ * txKeyPattern matches if the given node is in the evalation of 
+ * the key() function
+ * This resembles the key() function, but may only have LITERALs as
+ * argument.
+ */
+
+txKeyPattern::~txKeyPattern()
+{
+}
+
+MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
+{
+    Document* contextDoc;
+    if (aNode->getNodeType() == Node::DOCUMENT_NODE)
+        contextDoc = (Document*)aNode;
+    else
+        contextDoc = aNode->getOwnerDocument();
+    txXSLKey* key = mProcessorState->getKey(mName);
+    const NodeSet* nodes = key->getNodes(mValue, contextDoc, aContext);
+    if (!nodes || nodes->isEmpty())
+        return MB_FALSE;
+    MBool isTrue = nodes->contains(aNode);
+    return isTrue;
+}
+
+double txKeyPattern::getDefaultPriority()
+{
+    return 0.5;
+}
+
+void txKeyPattern::toString(String& aDest)
+{
+    #ifdef DEBUG
+    aDest.append("txKeyPattern{");
+    #endif
+    aDest.append("key(");
+    aDest.append(mName);
+    aDest.append(", ");
+    aDest.append(mValue);
+    aDest.append(")");
     #ifdef DEBUG
     aDest.append("}");
     #endif
