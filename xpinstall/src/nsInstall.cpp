@@ -457,19 +457,167 @@ nsInstall::AddDirectory(const nsString& aRegName,
         delete qualifiedRegName;
     
     *aReturn = SaveError( result );
-  
     return NS_OK;
 }
 
 PRInt32    
 nsInstall::AddDirectory(const nsString& aRegName, 
-                        const nsIDOMInstallVersion& aVersion, 
+                        nsIDOMInstallVersion* aVersion, 
                         const nsString& aJarSource, 
                         const nsString& aFolder, 
                         const nsString& aSubdir, 
                         PRBool aForceMode, 
                         PRInt32* aReturn)
 {
+    nsInstallFile* ie = nsnull;
+    PRInt32        result;
+    nsString       aVersionStr;
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError(nsInstall::INVALID_ARGUMENTS);
+        return NS_OK;
+    }
+    
+    result = SanityCheck();
+    
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    nsString* qualifiedRegName = nsnull;
+    
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    nsString subdirectory(aSubdir);
+
+    if (subdirectory != "")
+    {
+        subdirectory.Append("/");
+    }
+
+    aVersion->ToString(aVersionStr);
+
+    PRBool bInstall;
+    
+    nsVector paths;
+    
+    result = ExtractDirEntries(aJarSource, &paths);
+    
+    PRInt32  pathsUpperBound = paths.GetUpperBound();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    for (int i=0; i< pathsUpperBound; i++)
+    {
+        nsInstallVersion* newVersion = new nsInstallVersion();
+            
+        nsString *fullRegName = new nsString(*qualifiedRegName);
+        fullRegName->Append("/");
+        fullRegName->Append(*(nsString *)paths[i]);
+        
+        char* fullRegNameCString = fullRegName->ToNewCString();
+        
+        if ( (aForceMode == PR_FALSE) && (aVersionStr == "null") &&
+            (VR_ValidateComponent(fullRegNameCString) == 0))
+        {
+            VERSION versionStruct;
+            VR_GetVersion( fullRegNameCString, &versionStruct);
+
+            //fix: when we have overloading!
+            nsInstallVersion* oldVer = new nsInstallVersion();
+            oldVer->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+             
+            
+            newVersion->Init(aVersionStr);
+            
+            PRInt32 areTheyEqual;
+            newVersion->CompareTo(oldVer, &areTheyEqual);
+            delete newVersion;
+
+            bInstall = ( areTheyEqual > 0 );
+      
+            if (oldVer)
+		        delete oldVer;
+        
+        }
+        else
+        {
+            // file doesn't exist or "forced" install
+            bInstall = PR_TRUE;
+        }
+        
+        delete [] fullRegNameCString;
+        
+        if (bInstall)
+        {
+            nsString *newJarSource = new nsString(aJarSource);
+            newJarSource->Append("/");
+            newJarSource->Append(*(nsString *)paths[i]);
+
+            nsString* newSubDir;
+
+            if (subdirectory != "")
+            {
+                newSubDir = new nsString(subdirectory);
+                newSubDir->Append(*(nsString*)paths[i]);
+            }
+            else
+            {
+                newSubDir = new nsString(*(nsString*)paths[i]);
+            }
+            
+            ie = new nsInstallFile( this,
+                                    *fullRegName,
+                                    newVersion,
+                                    *newJarSource,
+                                    aFolder,
+                                    *newSubDir,
+                                    aForceMode,
+                                    &result);
+            delete fullRegName;
+            delete newJarSource;
+            delete newSubDir;
+            delete newVersion;
+
+            if (result == nsInstall::SUCCESS)
+            {
+                result = ScheduleForInstall( ie );
+            }
+            else
+            {
+                delete ie;
+            }
+        }
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+    
+    *aReturn = SaveError( result );
     return NS_OK;
 }
 
@@ -481,6 +629,155 @@ nsInstall::AddDirectory(const nsString& aRegName,
                         const nsString& aSubdir, 
                         PRInt32* aReturn)
 {
+    nsInstallFile* ie = nsnull;
+    PRInt32        result;
+
+    // defaulting aForceMode to PR_FALSE;
+    PRBool         aForceMode = PR_FALSE; 
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError(nsInstall::INVALID_ARGUMENTS);
+        return NS_OK;
+    }
+    
+    result = SanityCheck();
+    
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    nsString* qualifiedRegName = nsnull;
+    
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    nsString subdirectory(aSubdir);
+
+    if (subdirectory != "")
+    {
+        subdirectory.Append("/");
+    }
+
+    PRBool bInstall;
+    
+    nsVector paths;
+    
+    result = ExtractDirEntries(aJarSource, &paths);
+    
+    PRInt32  pathsUpperBound = paths.GetUpperBound();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    for (int i=0; i< pathsUpperBound; i++)
+    {
+        nsInstallVersion* newVersion = new nsInstallVersion();
+            
+        nsString *fullRegName = new nsString(*qualifiedRegName);
+        fullRegName->Append("/");
+        fullRegName->Append(*(nsString *)paths[i]);
+        
+        char* fullRegNameCString = fullRegName->ToNewCString();
+        
+        if ( (aForceMode == PR_FALSE) && (aVersion == "null") &&
+            (VR_ValidateComponent(fullRegNameCString) == 0))
+        {
+            VERSION versionStruct;
+            VR_GetVersion( fullRegNameCString, &versionStruct);
+
+            //fix: when we have overloading!
+            nsInstallVersion* oldVer = new nsInstallVersion();
+            oldVer->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+             
+            
+            newVersion->Init(aVersion);
+            
+            PRInt32 areTheyEqual;
+            newVersion->CompareTo(oldVer, &areTheyEqual);
+            delete newVersion;
+
+            bInstall = ( areTheyEqual > 0 );
+      
+            if (oldVer)
+		        delete oldVer;
+        
+        }
+        else
+        {
+            // file doesn't exist or "forced" install
+            bInstall = PR_TRUE;
+        }
+        
+        delete [] fullRegNameCString;
+        
+        if (bInstall)
+        {
+            nsString *newJarSource = new nsString(aJarSource);
+            newJarSource->Append("/");
+            newJarSource->Append(*(nsString *)paths[i]);
+
+            nsString* newSubDir;
+
+            if (subdirectory != "")
+            {
+                newSubDir = new nsString(subdirectory);
+                newSubDir->Append(*(nsString*)paths[i]);
+            }
+            else
+            {
+                newSubDir = new nsString(*(nsString*)paths[i]);
+            }
+            
+            ie = new nsInstallFile( this,
+                                    *fullRegName,
+                                    newVersion,
+                                    *newJarSource,
+                                    aFolder,
+                                    *newSubDir,
+                                    aForceMode,
+                                    &result);
+            delete fullRegName;
+            delete newJarSource;
+            delete newSubDir;
+            delete newVersion;
+
+            if (result == nsInstall::SUCCESS)
+            {
+                result = ScheduleForInstall( ie );
+            }
+            else
+            {
+                delete ie;
+            }
+        }
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+    
+    *aReturn = SaveError( result );
     return NS_OK;
 }
 
@@ -491,6 +788,157 @@ nsInstall::AddDirectory(const nsString& aRegName,
                         const nsString& aSubdir, 
                         PRInt32* aReturn)
 {
+    nsInstallFile* ie = nsnull;
+    PRInt32        result;
+
+    // defaulting aForceMode to PR_FALSE;
+    PRBool         aForceMode = PR_FALSE; 
+    // defaulting aVersion to "null";
+    nsString       aVersion   = "null"; 
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError(nsInstall::INVALID_ARGUMENTS);
+        return NS_OK;
+    }
+    
+    result = SanityCheck();
+    
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    nsString* qualifiedRegName = nsnull;
+    
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    nsString subdirectory(aSubdir);
+
+    if (subdirectory != "")
+    {
+        subdirectory.Append("/");
+    }
+
+    PRBool bInstall;
+    
+    nsVector paths;
+    
+    result = ExtractDirEntries(aJarSource, &paths);
+    
+    PRInt32  pathsUpperBound = paths.GetUpperBound();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    for (int i=0; i< pathsUpperBound; i++)
+    {
+        nsInstallVersion* newVersion = new nsInstallVersion();
+            
+        nsString *fullRegName = new nsString(*qualifiedRegName);
+        fullRegName->Append("/");
+        fullRegName->Append(*(nsString *)paths[i]);
+        
+        char* fullRegNameCString = fullRegName->ToNewCString();
+        
+        if ( (aForceMode == PR_FALSE) && (aVersion == "null") &&
+            (VR_ValidateComponent(fullRegNameCString) == 0))
+        {
+            VERSION versionStruct;
+            VR_GetVersion( fullRegNameCString, &versionStruct);
+
+            //fix: when we have overloading!
+            nsInstallVersion* oldVer = new nsInstallVersion();
+            oldVer->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+             
+            
+            newVersion->Init(aVersion);
+            
+            PRInt32 areTheyEqual;
+            newVersion->CompareTo(oldVer, &areTheyEqual);
+            delete newVersion;
+
+            bInstall = ( areTheyEqual > 0 );
+      
+            if (oldVer)
+		        delete oldVer;
+        
+        }
+        else
+        {
+            // file doesn't exist or "forced" install
+            bInstall = PR_TRUE;
+        }
+        
+        delete [] fullRegNameCString;
+        
+        if (bInstall)
+        {
+            nsString *newJarSource = new nsString(aJarSource);
+            newJarSource->Append("/");
+            newJarSource->Append(*(nsString *)paths[i]);
+
+            nsString* newSubDir;
+
+            if (subdirectory != "")
+            {
+                newSubDir = new nsString(subdirectory);
+                newSubDir->Append(*(nsString*)paths[i]);
+            }
+            else
+            {
+                newSubDir = new nsString(*(nsString*)paths[i]);
+            }
+            
+            ie = new nsInstallFile( this,
+                                    *fullRegName,
+                                    newVersion,
+                                    *newJarSource,
+                                    aFolder,
+                                    *newSubDir,
+                                    aForceMode,
+                                    &result);
+            delete fullRegName;
+            delete newJarSource;
+            delete newSubDir;
+            delete newVersion;
+
+            if (result == nsInstall::SUCCESS)
+            {
+                result = ScheduleForInstall( ie );
+            }
+            else
+            {
+                delete ie;
+            }
+        }
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+    
+    *aReturn = SaveError( result );
     return NS_OK;
 }
 
@@ -498,6 +946,161 @@ PRInt32
 nsInstall::AddDirectory(const nsString& aJarSource,
                         PRInt32* aReturn)
 {
+    nsInstallFile* ie = nsnull;
+    PRInt32        result;
+
+    // defaulting aForceMode to PR_FALSE;
+    PRBool         aForceMode = PR_FALSE; 
+    // defaulting aVersion to "null";
+    nsString       aVersion   = "null"; 
+// fix: aFolder should not default to "null".
+    nsString       aFolder    = "null"; 
+    nsString       aSubdir    = ""; 
+    nsString       aRegName   = ""; 
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError(nsInstall::INVALID_ARGUMENTS);
+        return NS_OK;
+    }
+    
+    result = SanityCheck();
+    
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    nsString* qualifiedRegName = nsnull;
+    
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    nsString subdirectory(aSubdir);
+
+    if (subdirectory != "")
+    {
+        subdirectory.Append("/");
+    }
+
+    PRBool bInstall;
+    
+    nsVector paths;
+    
+    result = ExtractDirEntries(aJarSource, &paths);
+    
+    PRInt32  pathsUpperBound = paths.GetUpperBound();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+    
+    for (int i=0; i< pathsUpperBound; i++)
+    {
+        nsInstallVersion* newVersion = new nsInstallVersion();
+            
+        nsString *fullRegName = new nsString(*qualifiedRegName);
+        fullRegName->Append("/");
+        fullRegName->Append(*(nsString *)paths[i]);
+        
+        char* fullRegNameCString = fullRegName->ToNewCString();
+        
+        if ( (aForceMode == PR_FALSE) && (aVersion == "null") &&
+            (VR_ValidateComponent(fullRegNameCString) == 0))
+        {
+            VERSION versionStruct;
+            VR_GetVersion( fullRegNameCString, &versionStruct);
+
+            //fix: when we have overloading!
+            nsInstallVersion* oldVer = new nsInstallVersion();
+            oldVer->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+             
+            
+            newVersion->Init(aVersion);
+            
+            PRInt32 areTheyEqual;
+            newVersion->CompareTo(oldVer, &areTheyEqual);
+            delete newVersion;
+
+            bInstall = ( areTheyEqual > 0 );
+      
+            if (oldVer)
+		        delete oldVer;
+        
+        }
+        else
+        {
+            // file doesn't exist or "forced" install
+            bInstall = PR_TRUE;
+        }
+        
+        delete [] fullRegNameCString;
+        
+        if (bInstall)
+        {
+            nsString *newJarSource = new nsString(aJarSource);
+            newJarSource->Append("/");
+            newJarSource->Append(*(nsString *)paths[i]);
+
+            nsString* newSubDir;
+
+            if (subdirectory != "")
+            {
+                newSubDir = new nsString(subdirectory);
+                newSubDir->Append(*(nsString*)paths[i]);
+            }
+            else
+            {
+                newSubDir = new nsString(*(nsString*)paths[i]);
+            }
+            
+            ie = new nsInstallFile( this,
+                                    *fullRegName,
+                                    newVersion,
+                                    *newJarSource,
+                                    aFolder,
+                                    *newSubDir,
+                                    aForceMode,
+                                    &result);
+            delete fullRegName;
+            delete newJarSource;
+            delete newSubDir;
+            delete newVersion;
+
+            if (result == nsInstall::SUCCESS)
+            {
+                result = ScheduleForInstall( ie );
+            }
+            else
+            {
+                delete ie;
+            }
+        }
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+    
+    *aReturn = SaveError( result );
     return NS_OK;
 }
 
@@ -618,13 +1221,118 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
 
 PRInt32    
 nsInstall::AddSubcomponent(const nsString& aRegName, 
-                           const nsIDOMInstallVersion& aVersion, 
+                           nsIDOMInstallVersion* aVersion, 
                            const nsString& aJarSource, 
                            const nsString& aFolder, 
                            const nsString& aTargetName, 
                            PRBool aForceMode, 
                            PRInt32* aReturn)
 {
+    nsInstallFile*  ie;
+    nsString*       qualifiedRegName = nsnull;
+    nsString        aVersionStr;
+    
+    PRInt32         errcode = nsInstall::SUCCESS;
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError( nsInstall::INVALID_ARGUMENTS );
+        return NS_OK;
+    }
+    
+    PRInt32 result = SanityCheck();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    /* Check for existence of the newer	version	*/
+    
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    aVersion->ToString(aVersionStr);
+    newVersion->Init(aVersionStr);
+
+    PRBool versionNewer = PR_FALSE;
+    char* qualifiedRegNameString = qualifiedRegName->ToNewCString();
+
+    if ( (aForceMode == PR_FALSE ) && (aVersionStr !=  "null") && ( VR_ValidateComponent( qualifiedRegNameString ) == 0 ) ) 
+    {
+        VERSION versionStruct;
+        
+        VR_GetVersion( qualifiedRegNameString, &versionStruct );
+    
+        nsInstallVersion* oldVersion = new nsInstallVersion();
+// FIX.  Once we move to XPConnect, we can have parameterized constructors.
+        oldVersion->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+
+        PRInt32 areTheyEqual;
+        newVersion->CompareTo((nsInstallVersion*)oldVersion, &areTheyEqual);
+        
+        if ( areTheyEqual != nsIDOMInstallVersion::EQUAL )
+            versionNewer = PR_TRUE;
+      
+	    if ( oldVersion )
+		    delete oldVersion;
+    }
+    else 
+    {
+        versionNewer = PR_TRUE;
+    }
+    
+    
+    if (qualifiedRegNameString != nsnull)
+        delete [] qualifiedRegNameString;
+
+    if (versionNewer) 
+    {
+        ie = new nsInstallFile( this, 
+                                *qualifiedRegName, 
+                                newVersion, 
+                                aJarSource,
+                                aFolder,
+                                aTargetName, 
+                                aForceMode, 
+                                &errcode );
+
+        if (errcode == nsInstall::SUCCESS) 
+        {
+            errcode = ScheduleForInstall( ie );
+        }
+        else
+        {
+            delete ie;
+        }    
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+
+    if (newVersion != nsnull)
+        delete newVersion;
+
+    *aReturn = SaveError( errcode );
     return NS_OK;
 }
 
@@ -636,6 +1344,110 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
                            const nsString& aTargetName, 
                            PRInt32* aReturn)
 {
+    nsInstallFile*  ie;
+    nsString*       qualifiedRegName = nsnull;
+    PRBool          aForceMode       = PR_FALSE; 
+    
+    PRInt32         errcode = nsInstall::SUCCESS;
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError( nsInstall::INVALID_ARGUMENTS );
+        return NS_OK;
+    }
+    
+    PRInt32 result = SanityCheck();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    /* Check for existence of the newer	version	*/
+    
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    newVersion->Init(aVersion);
+
+    PRBool versionNewer = PR_FALSE;
+    char* qualifiedRegNameString = qualifiedRegName->ToNewCString();
+
+    if ( (aForceMode == PR_FALSE ) && (aVersion !=  "null") && ( VR_ValidateComponent( qualifiedRegNameString ) == 0 ) ) 
+    {
+        VERSION versionStruct;
+        
+        VR_GetVersion( qualifiedRegNameString, &versionStruct );
+    
+        nsInstallVersion* oldVersion = new nsInstallVersion();
+// FIX.  Once we move to XPConnect, we can have parameterized constructors.
+        oldVersion->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+
+        PRInt32 areTheyEqual;
+        newVersion->CompareTo((nsInstallVersion*)oldVersion, &areTheyEqual);
+        
+        if ( areTheyEqual != nsIDOMInstallVersion::EQUAL )
+            versionNewer = PR_TRUE;
+      
+	    if ( oldVersion )
+		    delete oldVersion;
+    }
+    else 
+    {
+        versionNewer = PR_TRUE;
+    }
+    
+    
+    if (qualifiedRegNameString != nsnull)
+        delete [] qualifiedRegNameString;
+
+    if (versionNewer) 
+    {
+        ie = new nsInstallFile( this, 
+                                *qualifiedRegName, 
+                                newVersion, 
+                                aJarSource,
+                                aFolder,
+                                aTargetName, 
+                                aForceMode, 
+                                &errcode );
+
+        if (errcode == nsInstall::SUCCESS) 
+        {
+            errcode = ScheduleForInstall( ie );
+        }
+        else
+        {
+            delete ie;
+        }    
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+
+    if (newVersion != nsnull)
+        delete newVersion;
+
+    *aReturn = SaveError( errcode );
     return NS_OK;
 }
 
@@ -646,6 +1458,112 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
                            const nsString& aTargetName, 
                            PRInt32* aReturn)
 {
+    nsInstallFile*  ie;
+    nsString*       qualifiedRegName = nsnull;
+    PRInt32         errcode          = nsInstall::SUCCESS;
+
+    // defaulting aForceMode to PR_FALSE and aVersion to "null"
+    PRBool          aForceMode       = PR_FALSE; 
+    nsString        aVersion         = "null"; 
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError( nsInstall::INVALID_ARGUMENTS );
+        return NS_OK;
+    }
+    
+    PRInt32 result = SanityCheck();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    /* Check for existence of the newer	version	*/
+    
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    newVersion->Init(aVersion);
+
+    PRBool versionNewer = PR_FALSE;
+    char* qualifiedRegNameString = qualifiedRegName->ToNewCString();
+
+    if ( (aForceMode == PR_FALSE ) && (aVersion !=  "null") && ( VR_ValidateComponent( qualifiedRegNameString ) == 0 ) ) 
+    {
+        VERSION versionStruct;
+        
+        VR_GetVersion( qualifiedRegNameString, &versionStruct );
+    
+        nsInstallVersion* oldVersion = new nsInstallVersion();
+// FIX.  Once we move to XPConnect, we can have parameterized constructors.
+        oldVersion->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+
+        PRInt32 areTheyEqual;
+        newVersion->CompareTo((nsInstallVersion*)oldVersion, &areTheyEqual);
+        
+        if ( areTheyEqual != nsIDOMInstallVersion::EQUAL )
+            versionNewer = PR_TRUE;
+      
+	    if ( oldVersion )
+		    delete oldVersion;
+    }
+    else 
+    {
+        versionNewer = PR_TRUE;
+    }
+    
+    
+    if (qualifiedRegNameString != nsnull)
+        delete [] qualifiedRegNameString;
+
+    if (versionNewer) 
+    {
+        ie = new nsInstallFile( this, 
+                                *qualifiedRegName, 
+                                newVersion, 
+                                aJarSource,
+                                aFolder,
+                                aTargetName, 
+                                aForceMode, 
+                                &errcode );
+
+        if (errcode == nsInstall::SUCCESS) 
+        {
+            errcode = ScheduleForInstall( ie );
+        }
+        else
+        {
+            delete ie;
+        }    
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+
+    if (newVersion != nsnull)
+        delete newVersion;
+
+    *aReturn = SaveError( errcode );
     return NS_OK;
 }
 
@@ -653,6 +1571,116 @@ PRInt32
 nsInstall::AddSubcomponent(const nsString& aJarSource,
                            PRInt32* aReturn)
 {
+    nsInstallFile*  ie;
+    nsString*       qualifiedRegName = nsnull;
+    PRInt32         errcode          = nsInstall::SUCCESS;
+
+    // defaulting aRegName to "", aForceMode to PR_FALSE, and aVersion to "null"
+    nsString        aTargetName      = aJarSource; 
+    nsString        aRegName         = ""; 
+// fix: aFolder should not default to "null".
+    nsString        aFolder          = "null"; 
+    PRBool          aForceMode       = PR_FALSE; 
+    nsString        aVersion         = "null"; 
+    
+    if ( aJarSource == "null" || aFolder == "null") 
+    {
+        *aReturn = SaveError( nsInstall::INVALID_ARGUMENTS );
+        return NS_OK;
+    }
+    
+    PRInt32 result = SanityCheck();
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+
+    if ( aRegName == "" ) 
+    {
+        // Default subName = location in jar file
+        qualifiedRegName = GetQualifiedRegName( aJarSource );
+    } 
+    else 
+    {
+        qualifiedRegName = GetQualifiedRegName( aRegName );
+    }
+
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+    
+    /* Check for existence of the newer	version	*/
+    
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    newVersion->Init(aVersion);
+
+    PRBool versionNewer = PR_FALSE;
+    char* qualifiedRegNameString = qualifiedRegName->ToNewCString();
+
+    if ( (aForceMode == PR_FALSE ) && (aVersion !=  "null") && ( VR_ValidateComponent( qualifiedRegNameString ) == 0 ) ) 
+    {
+        VERSION versionStruct;
+        
+        VR_GetVersion( qualifiedRegNameString, &versionStruct );
+    
+        nsInstallVersion* oldVersion = new nsInstallVersion();
+// FIX.  Once we move to XPConnect, we can have parameterized constructors.
+        oldVersion->Init(versionStruct.major,
+                         versionStruct.minor,
+                         versionStruct.release,
+                         versionStruct.build);
+
+        PRInt32 areTheyEqual;
+        newVersion->CompareTo((nsInstallVersion*)oldVersion, &areTheyEqual);
+        
+        if ( areTheyEqual != nsIDOMInstallVersion::EQUAL )
+            versionNewer = PR_TRUE;
+      
+	    if ( oldVersion )
+		    delete oldVersion;
+    }
+    else 
+    {
+        versionNewer = PR_TRUE;
+    }
+    
+    
+    if (qualifiedRegNameString != nsnull)
+        delete [] qualifiedRegNameString;
+
+    if (versionNewer) 
+    {
+        ie = new nsInstallFile( this, 
+                                *qualifiedRegName, 
+                                newVersion, 
+                                aJarSource,
+                                aFolder,
+                                aTargetName, 
+                                aForceMode, 
+                                &errcode );
+
+        if (errcode == nsInstall::SUCCESS) 
+        {
+            errcode = ScheduleForInstall( ie );
+        }
+        else
+        {
+            delete ie;
+        }    
+    }
+    
+    if (qualifiedRegName != nsnull)
+        delete qualifiedRegName;
+
+    if (newVersion != nsnull)
+        delete newVersion;
+
+    *aReturn = SaveError( errcode );
     return NS_OK;
 }
 
@@ -742,13 +1770,29 @@ nsInstall::Execute(const nsString& aJarSource, const nsString& aArgs, PRInt32* a
     }
         
     *aReturn = SaveError(result);
-
     return NS_OK;
 }
 
 PRInt32    
 nsInstall::Execute(const nsString& aJarSource, PRInt32* aReturn)
 {
+    PRInt32 result = SanityCheck();
+    nsString aArgs = "";
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+   
+    nsInstallExecute* ie = new nsInstallExecute(this, aJarSource, aArgs, &result);
+
+    if (result == nsInstall::SUCCESS) 
+    {
+        result = ScheduleForInstall( ie );
+    }
+        
+    *aReturn = SaveError(result);
     return NS_OK;
 }
 
@@ -835,6 +1879,8 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
     char* dir;
     char* componentCString;
 
+// FIX: aSubdirectory is not processed at all in this function.
+
     *aFolder = nsnull;
 
     nsString *tempString = GetQualifiedPackageName( aComponentName );
@@ -883,13 +1929,64 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
 
     PR_FREEIF(dir);
     delete [] componentCString;
-
     return NS_OK;
 }
 
 PRInt32    
 nsInstall::GetComponentFolder(const nsString& aComponentName, nsString** aFolder)
 {
+    long err;
+    char* dir;
+    char* componentCString;
+
+    *aFolder = nsnull;
+
+    nsString *tempString = GetQualifiedPackageName( aComponentName );
+    
+    if (tempString == nsnull)
+        return NS_OK;
+    
+    componentCString = tempString->ToNewCString();
+    delete tempString;
+      
+    dir = (char*)PR_Malloc(MAXREGPATHLEN);
+    err = VR_GetDefaultDirectory( componentCString, MAXREGPATHLEN, dir );
+    if (err != REGERR_OK)
+    {
+        PR_FREEIF(dir);
+    }
+
+
+    if ( dir == NULL ) 
+    {
+        dir = (char*)PR_Malloc(MAXREGPATHLEN);
+        err = VR_GetPath( componentCString, MAXREGPATHLEN, dir );
+        if (err != REGERR_OK)
+        {
+            PR_FREEIF(dir);
+        }
+    
+        if ( dir != nsnull ) 
+        {
+            int i;
+
+            nsString dirStr(dir);
+            if (  (i = dirStr.RFind(FILESEP)) > 0 ) 
+            {
+                PR_FREEIF(dir);  
+                dir = (char*)PR_Malloc(i);
+                dir = dirStr.ToCString(dir, i);
+            }
+        }
+    }
+
+    if ( dir != NULL ) 
+    {
+        *aFolder = new nsString(dir);
+    }
+
+    PR_FREEIF(dir);
+    delete [] componentCString;
     return NS_OK;
 }
 
@@ -905,14 +2002,24 @@ nsInstall::GetFolder(const nsString& targetFolder, const nsString& aSubdirectory
     spec->GetDirectoryPath(dirString);
 
     *aFolder = new nsString(dirString);
-    
-
     return NS_OK;    
 }
 
 PRInt32    
 nsInstall::GetFolder(const nsString& targetFolder, nsString** aFolder)
 {
+    nsInstallFolder* spec = nsnull;
+    *aFolder              = nsnull;
+
+    // defaulting aSubdirectory to "".
+    nsString         aSubdirectory = "";
+
+    spec = new nsInstallFolder(targetFolder, aSubdirectory);   
+       
+    nsString dirString;
+    spec->GetDirectoryPath(dirString);
+
+    *aFolder = new nsString(dirString);
     return NS_OK;    
 }
 
@@ -972,13 +2079,91 @@ nsInstall::Patch(const nsString& aRegName, const nsString& aVersion, const nsStr
     }
         
     *aReturn = SaveError(result);
+    return NS_OK;
+}
 
+PRInt32    
+nsInstall::Patch(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn)
+{
+    PRInt32  result = SanityCheck();
+    nsString aVersionStr;
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+    nsString* qualifiedRegName = GetQualifiedRegName( aRegName );
+    
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( nsInstall::BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    aVersion->ToString(aVersionStr);
+    newVersion->Init(aVersionStr);
+
+    nsInstallPatch* ip = new nsInstallPatch( this,
+                                             *qualifiedRegName,
+                                             newVersion,
+                                             aJarSource,
+                                             &result);
+    
+
+    delete newVersion;
+
+    if (result == nsInstall::SUCCESS) 
+    {
+        result = ScheduleForInstall( ip );
+    }
+        
+    *aReturn = SaveError(result);
     return NS_OK;
 }
 
 PRInt32    
 nsInstall::Patch(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn)
 {
+    PRInt32  result   = SanityCheck();
+
+    // defaulting aVersion to "null";
+    nsString aVersion = "null"; 
+
+    if (result != nsInstall::SUCCESS)
+    {
+        *aReturn = SaveError( result );
+        return NS_OK;
+    }
+
+    nsString* qualifiedRegName = GetQualifiedRegName( aRegName );
+    
+    if (qualifiedRegName == nsnull)
+    {
+        *aReturn = SaveError( nsInstall::BAD_PACKAGE_NAME );
+        return NS_OK;
+    }
+
+    nsInstallVersion *newVersion = new nsInstallVersion();
+    newVersion->Init(aVersion);
+
+    nsInstallPatch* ip = new nsInstallPatch( this,
+                                             *qualifiedRegName,
+                                             newVersion,
+                                             aJarSource,
+                                             &result);
+    
+
+    delete newVersion;
+
+    if (result == nsInstall::SUCCESS) 
+    {
+        result = ScheduleForInstall( ip );
+    }
+        
+    *aReturn = SaveError(result);
     return NS_OK;
 }
 
@@ -1018,6 +2203,7 @@ nsInstall::SetPackageFolder(const nsString& aFolder)
 PRInt32    
 nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
+// FIX: aFlags is not processed.
     *aReturn     = nsInstall::SUCCESS;
     
     ResetError();
@@ -1094,19 +2280,177 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
     *mLogStream << nsEndl;
     *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
     *mLogStream << nsEndl;
-         
+
     return NS_OK;
 }
 
 PRInt32    
-nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, nsIDOMInstallVersion* aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
+// FIX: aFlags is not processed.
+    *aReturn     = nsInstall::SUCCESS;
+    nsString     aVersionStr;
+    
+    ResetError();
+        
+    mUserCancelled = PR_FALSE; 
+    
+    if ( aPackageName.Equals("") ) 
+    {
+        *aReturn = nsInstall::INVALID_ARGUMENTS;
+        return NS_OK;
+    }
+    
+    mUIName = aUserPackageName;
+
+
+    nsString *tempString = GetQualifiedPackageName( aPackageName );
+    
+    mRegistryPackageName.SetLength(0);
+    mRegistryPackageName.Append( *tempString );  
+    
+    delete tempString;
+
+    /* Check to see if the PackageName ends in a '/'.  If it does nuke it. */
+
+    if (mRegistryPackageName.Last() == '/')
+    {
+        PRInt32 index = mRegistryPackageName.Length();
+        mRegistryPackageName.Truncate(--index);
+    }
+    
+    if (mVersionInfo != nsnull)
+        delete mVersionInfo;
+
+    mVersionInfo    = new nsInstallVersion();
+    aVersion->ToString(aVersionStr);
+    mVersionInfo->Init(aVersionStr);
+
+    mInstalledFiles = new nsVector();
+    mPatchList      = new nsHashtable();
+
+    /* this function should also check security!!! */
+    *aReturn = OpenJARFile();
+
+    if (*aReturn != nsInstall::SUCCESS)
+    {
+        /* if we can not continue with the javascript return a JAR error*/
+        return -1;  /* FIX: need real error code */
+    }
+ 
+    /* Show our window here */
+    
+    SaveError(*aReturn);
+    
+    if (*aReturn != nsInstall::SUCCESS)
+    {
+        mRegistryPackageName = ""; // Reset!
+    }
+    
+    nsSpecialSystemDirectory logFile(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+    logFile += "Install.log";
+    
+    mLogStream = new nsOutputFileStream(logFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND, 0744 );
+    // XXX because PR_APPEND is broken
+    if (mLogStream == nsnull)
+        return NS_OK;
+
+    mLogStream->seek(logFile.GetFileSize());
+    
+    nsString time;
+    GetTime(time);
+    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsEndl;
+    *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
+    *mLogStream << nsEndl;
+
     return NS_OK;
 }
 
 PRInt32    
 nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32* aReturn)
 {
+// FIX: aFlags is not processed.  A default value needs to be used since this function does not accept an aFlags value.
+    *aReturn     = nsInstall::SUCCESS;
+    
+    ResetError();
+        
+    mUserCancelled = PR_FALSE; 
+    
+    if ( aPackageName.Equals("") ) 
+    {
+        *aReturn = nsInstall::INVALID_ARGUMENTS;
+        return NS_OK;
+    }
+    
+    mUIName = aUserPackageName;
+
+
+    nsString *tempString = GetQualifiedPackageName( aPackageName );
+    
+    mRegistryPackageName.SetLength(0);
+    mRegistryPackageName.Append( *tempString );  
+    
+    delete tempString;
+
+    /* Check to see if the PackageName ends in a '/'.  If it does nuke it. */
+
+    if (mRegistryPackageName.Last() == '/')
+    {
+        PRInt32 index = mRegistryPackageName.Length();
+        mRegistryPackageName.Truncate(--index);
+    }
+    
+    if (mVersionInfo != nsnull)
+        delete mVersionInfo;
+
+    mVersionInfo    = new nsInstallVersion();
+    mVersionInfo->Init(aVersion);
+
+    mInstalledFiles = new nsVector();
+    mPatchList      = new nsHashtable();
+
+    /* this function should also check security!!! */
+    *aReturn = OpenJARFile();
+
+    if (*aReturn != nsInstall::SUCCESS)
+    {
+        /* if we can not continue with the javascript return a JAR error*/
+        return -1;  /* FIX: need real error code */
+    }
+ 
+    /* Show our window here */
+    
+    SaveError(*aReturn);
+    
+    if (*aReturn != nsInstall::SUCCESS)
+    {
+        mRegistryPackageName = ""; // Reset!
+    }
+    
+    nsSpecialSystemDirectory logFile(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
+    logFile += "Install.log";
+    
+    mLogStream = new nsOutputFileStream(logFile, PR_WRONLY | PR_CREATE_FILE | PR_APPEND, 0744 );
+    // XXX because PR_APPEND is broken
+    if (mLogStream == nsnull)
+        return NS_OK;
+
+    mLogStream->seek(logFile.GetFileSize());
+    
+    nsString time;
+    GetTime(time);
+    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsEndl;
+    *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
+    *mLogStream << nsEndl;
+
     return NS_OK;
 }
 
