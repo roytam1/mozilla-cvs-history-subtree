@@ -747,15 +747,12 @@ PRBool nsDOMTreeWalker::GetAccessible()
   if (!mAccService) 
     return PR_FALSE;
 
-  nsCOMPtr<nsIAccessible> nsAcc;
-  mAccService->GetAccessibleFor(mPresShell, mDOMNode, getter_AddRefs(nsAcc));
-
-  mAccessible = nsAcc;
+  mAccService->GetAccessibleFor(mPresShell, mDOMNode, getter_AddRefs(mAccessible));
 
   if (mAccessible)
     return PR_TRUE;
-  else
-    return PR_FALSE;
+
+  return PR_FALSE;
 }
 
 
@@ -1744,24 +1741,26 @@ NS_IMETHODIMP nsLinkableAccessible::GetAccState(PRUint32 *_retval)
 NS_IMETHODIMP nsLinkableAccessible::GetAccNumActions(PRUint8 *_retval)
 {
   *_retval = 1;
-  return NS_OK;;
+  return NS_OK;
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
 NS_IMETHODIMP nsLinkableAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
-  if (index == 0) {
+  // Action 0 (default action): Jump to link
+  if (index == 0) {   
     if (IsALink()) {
       *_retval = ToNewUnicode(NS_LITERAL_STRING("jump")); 
       return NS_OK;
     }
   }
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_FAILURE;
 }
 
 /* void accDoAction (in PRUint8 index); */
 NS_IMETHODIMP nsLinkableAccessible::AccDoAction(PRUint8 index)
 {
+  // Action 0 (default action): Jump to link
   if (index == 0) {
     if (IsALink()) {
       nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -1789,7 +1788,7 @@ NS_IMETHODIMP nsLinkableAccessible::AccDoAction(PRUint8 index)
       }
     }
   }
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_FAILURE;
 }
 
 

@@ -427,7 +427,7 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
 NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 {
   *_retval = 1;
-  return NS_OK;;
+  return NS_OK;
 }
 
 void nsHTMLSelectButtonAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelativeFrame)
