@@ -39,8 +39,8 @@
 #ifndef nsASingleFragmentString_h___
 #define nsASingleFragmentString_h___
 
-#ifndef nsStringBase_h___
-#include "nsStringBase.h"
+#ifndef nsSubstring_h___
+#include "nsSubstring.h"
 #endif
 
 #endif /* !defined(nsASingleFragmentString_h___) */

@@ -41,12 +41,12 @@
    * computes the aggregate string length
    */
 
-nsTStringTuple_CharT::size_type
-nsTStringTuple_CharT::Length() const
+nsTSubstringTuple_CharT::size_type
+nsTSubstringTuple_CharT::Length() const
   {
     // fragments are enumerated right to left
 
-    const string_base_type& b = TO_STRING(mFragB);
+    const substring_type& b = TO_SUBSTRING(mFragB);
 
     PRUint32 len = b.Length();
     if (mHead)
@@ -55,7 +55,7 @@ nsTStringTuple_CharT::Length() const
       }
     else
       {
-        const string_base_type& a = TO_STRING(mFragA);
+        const substring_type& a = TO_SUBSTRING(mFragA);
         len += a.Length();
       }
     return len;
@@ -69,13 +69,13 @@ nsTStringTuple_CharT::Length() const
    */
 
 void
-nsTStringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
+nsTSubstringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
   {
     // we need to write out data into buf, ending at end.  so our data
     // needs to preceed |end| exactly.  we trust that the buffer was
     // properly sized!
 
-    const string_base_type& b = TO_STRING(mFragB);
+    const substring_type& b = TO_SUBSTRING(mFragB);
 
     char_traits::copy(buf + bufLen - b.Length(), b.Data(), b.Length());
 
@@ -87,7 +87,7 @@ nsTStringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
       }
     else
       {
-        const string_base_type& a = TO_STRING(mFragA);
+        const substring_type& a = TO_SUBSTRING(mFragA);
         char_traits::copy(buf + bufLen - a.Length(), a.Data(), a.Length());
       }
   }
@@ -99,11 +99,11 @@ nsTStringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
    */
 
 PRBool
-nsTStringTuple_CharT::IsDependentOn( const char_type *start, const char_type *end ) const
+nsTSubstringTuple_CharT::IsDependentOn( const char_type *start, const char_type *end ) const
   {
     // fragments are enumerated right to left
 
-    const string_base_type& b = TO_STRING(mFragB);
+    const substring_type& b = TO_SUBSTRING(mFragB);
 
     PRBool dependent = b.IsDependentOn(start, end);
     if (!dependent)
@@ -114,7 +114,7 @@ nsTStringTuple_CharT::IsDependentOn( const char_type *start, const char_type *en
         }
       else
         {
-          const string_base_type& a = TO_STRING(mFragA);
+          const substring_type& a = TO_SUBSTRING(mFragA);
           dependent = a.IsDependentOn(start ,end);
         }
     }

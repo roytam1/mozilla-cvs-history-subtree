@@ -40,23 +40,23 @@
   /**
    * nsTDependentSubstring_CharT
    */
-class nsTDependentSubstring_CharT : public nsTStringBase_CharT
+class nsTDependentSubstring_CharT : public nsTSubstring_CharT
   {
     public:
 
       typedef CharT                                     char_type;
 
       typedef nsTDependentSubstring_CharT               self_type;
-      typedef nsTStringBase_CharT                       string_base_type;
+      typedef nsTSubstring_CharT                        substring_type;
 
-      typedef string_base_type::abstract_string_type    abstract_string_type;
-      typedef string_base_type::const_iterator          const_iterator;
-      typedef string_base_type::size_type               size_type;
+      typedef substring_type::abstract_string_type    abstract_string_type;
+      typedef substring_type::const_iterator          const_iterator;
+      typedef substring_type::size_type               size_type;
 
     public:
 
       NS_COM void Rebind( const abstract_string_type&, PRUint32 startPos, PRUint32 length = size_type(-1) );
-      NS_COM void Rebind( const string_base_type&, PRUint32 startPos, PRUint32 length = size_type(-1) );
+      NS_COM void Rebind( const substring_type&, PRUint32 startPos, PRUint32 length = size_type(-1) );
 
       void Rebind( const char_type* start, const char_type* end )
         {
@@ -66,22 +66,22 @@ class nsTDependentSubstring_CharT : public nsTStringBase_CharT
         }
 
       nsTDependentSubstring_CharT( const abstract_string_type& str, PRUint32 startPos, PRUint32 length = size_type(-1) )
-        : string_base_type(F_NONE)
+        : substring_type(F_NONE)
         {
           Rebind(str, startPos, length);
         }
 
-      nsTDependentSubstring_CharT( const string_base_type& str, PRUint32 startPos, PRUint32 length = size_type(-1) )
-        : string_base_type(F_NONE)
+      nsTDependentSubstring_CharT( const substring_type& str, PRUint32 startPos, PRUint32 length = size_type(-1) )
+        : substring_type(F_NONE)
         {
           Rebind(str, startPos, length);
         }
 
       nsTDependentSubstring_CharT( const char_type* start, const char_type* end )
-        : string_base_type(NS_CONST_CAST(char_type*, start), end - start, F_NONE) {}
+        : substring_type(NS_CONST_CAST(char_type*, start), end - start, F_NONE) {}
 
       nsTDependentSubstring_CharT( const const_iterator& start, const const_iterator& end )
-        : string_base_type(NS_CONST_CAST(char_type*, start.get()), end.get() - start.get(), F_NONE) {}
+        : substring_type(NS_CONST_CAST(char_type*, start.get()), end.get() - start.get(), F_NONE) {}
 
       // auto-generated copy-constructor OK (XXX really?? what about base class copy-ctor?)
 
@@ -99,7 +99,7 @@ Substring( const nsTAString_CharT& str, PRUint32 startPos, PRUint32 length = PRU
 
 inline
 const nsTDependentSubstring_CharT
-Substring( const nsTStringBase_CharT& str, PRUint32 startPos, PRUint32 length = PRUint32(-1) )
+Substring( const nsTSubstring_CharT& str, PRUint32 startPos, PRUint32 length = PRUint32(-1) )
   {
     return nsTDependentSubstring_CharT(str, startPos, length);
   }
@@ -127,7 +127,7 @@ StringHead( const nsTAString_CharT& str, PRUint32 count )
 
 inline
 const nsTDependentSubstring_CharT
-StringHead( const nsTStringBase_CharT& str, PRUint32 count )
+StringHead( const nsTSubstring_CharT& str, PRUint32 count )
   {
     return nsTDependentSubstring_CharT(str, 0, count);
   }
@@ -141,7 +141,7 @@ StringTail( const nsTAString_CharT& str, PRUint32 count )
 
 inline
 const nsTDependentSubstring_CharT
-StringTail( const nsTStringBase_CharT& str, PRUint32 count )
+StringTail( const nsTSubstring_CharT& str, PRUint32 count )
   {
     return nsTDependentSubstring_CharT(str, str.Length() - count, count);
   }

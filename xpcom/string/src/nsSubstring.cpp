@@ -45,7 +45,7 @@
 #endif
 
 #include <stdlib.h>
-#include "nsStringBase.h"
+#include "nsSubstring.h"
 #include "nsString.h"
 #include "nsDependentString.h"
 #include "nsMemory.h"
@@ -95,7 +95,7 @@ static nsStringStats gStringStats;
 
   /**
    * This structure preceeds the string buffers "we" allocate.  It may be the
-   * case that nsTStringBase::mData does not point to one of these special
+   * case that nsTSubstring::mData does not point to one of these special
    * buffers.  The mFlags member variable distinguishes the buffer type.
    *
    * When this header is in use, it enables reference counting, and capacity
@@ -173,7 +173,7 @@ class nsStringHeader
         }
 
         /**
-         * Because nsTStringBase allows only single threaded access, if this
+         * Because nsTSubstring allows only single threaded access, if this
          * method returns FALSE, then the caller can be sure that it has
          * exclusive access to the nsStringHeader and associated data.
          * However, if this function returns TRUE, then there is no telling
@@ -190,11 +190,11 @@ class nsStringHeader
 inline void
 ReleaseData( void* data, PRUint32 flags )
   {
-    if (flags & nsStringBase::F_SHARED)
+    if (flags & nsSubstring::F_SHARED)
       {
         nsStringHeader::FromData(data)->Release();
       }
-    else if (flags & nsStringBase::F_OWNED)
+    else if (flags & nsSubstring::F_OWNED)
       {
         nsMemory::Free(data);
         STRING_STAT_INCREMENT(AdoptFree);
@@ -203,12 +203,12 @@ ReleaseData( void* data, PRUint32 flags )
   }
 
 
-  // define nsStringBase
+  // define nsSubstring
 #include "string-template-def-unichar.h"
-#include "nsTStringBase.cpp"
+#include "nsTSubstring.cpp"
 #include "string-template-undef.h"
 
-  // define nsCStringBase
+  // define nsCSubstring
 #include "string-template-def-char.h"
-#include "nsTStringBase.cpp"
+#include "nsTSubstring.cpp"
 #include "string-template-undef.h"

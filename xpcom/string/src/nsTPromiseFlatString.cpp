@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 void
-nsTPromiseFlatString_CharT::Init(const string_base_type& str)
+nsTPromiseFlatString_CharT::Init(const substring_type& str)
   {
     // we have to manually set this here since we are being called on an
     // unitialized object.
@@ -60,7 +60,7 @@ void
 nsTPromiseFlatString_CharT::Init(const abstract_string_type& readable)
   {
     if (readable.mVTable == nsTObsoleteAString_CharT::sCanonicalVTable)
-      Init(*readable.AsString());
+      Init(*readable.AsSubstring());
     else
-      Init(readable.ToString());
+      Init(readable.ToSubstring());
   }

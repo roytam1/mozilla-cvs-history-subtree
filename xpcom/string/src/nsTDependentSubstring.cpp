@@ -49,7 +49,7 @@ nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUin
   }
 
 void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
+nsTDependentSubstring_CharT::Rebind( const substring_type& str, PRUint32 startPos, PRUint32 length )
   {
     size_type strLength = str.Length();
 

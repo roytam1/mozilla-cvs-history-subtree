@@ -58,8 +58,8 @@ class nsTDependentString_CharT : public nsTString_CharT
       typedef nsTString_CharT                      string_type;
 
       typedef string_type::char_traits             char_traits;
-      typedef string_type::string_base_type        string_base_type;
-      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::substring_type          substring_type;
+      typedef string_type::substring_tuple_type    substring_tuple_type;
       typedef string_type::abstract_string_type    abstract_string_type;
       typedef string_type::size_type               size_type;
 
@@ -100,7 +100,7 @@ class nsTDependentString_CharT : public nsTString_CharT
         }
 
       explicit
-      nsTDependentString_CharT( const string_base_type& str )
+      nsTDependentString_CharT( const substring_type& str )
         : string_type(NS_CONST_CAST(char_type*, str.Data()), str.Length(), F_TERMINATED)
         {
           AssertValid();
@@ -138,6 +138,6 @@ class nsTDependentString_CharT : public nsTString_CharT
     private:
       
       // NOT USED
-      nsTDependentString_CharT( const string_tuple_type& );
+      nsTDependentString_CharT( const substring_tuple_type& );
       nsTDependentString_CharT( const abstract_string_type& );
   };

@@ -45,18 +45,18 @@
    * This class is also known as nsAFlat[C]String, where "flat" is used
    * to denote a null-terminated string.
    */
-class NS_COM nsTString_CharT : public nsTStringBase_CharT
+class NS_COM nsTString_CharT : public nsTSubstring_CharT
   {
     public:
 
       typedef CharT                                     char_type;
 
       typedef nsTString_CharT                           self_type;
-      typedef nsTStringBase_CharT                       string_base_type;
+      typedef nsTSubstring_CharT                        substring_type;
 
-      typedef string_base_type::string_tuple_type       string_tuple_type;
-      typedef string_base_type::abstract_string_type    abstract_string_type;
-      typedef string_base_type::size_type               size_type;
+      typedef substring_type::substring_tuple_type      substring_tuple_type;
+      typedef substring_type::abstract_string_type      abstract_string_type;
+      typedef substring_type::size_type                 size_type;
 
     public:
 
@@ -65,37 +65,37 @@ class NS_COM nsTString_CharT : public nsTStringBase_CharT
          */
 
       nsTString_CharT()
-        : string_base_type() {}
+        : substring_type() {}
 
       explicit
       nsTString_CharT( char_type c )
-        : string_base_type()
+        : substring_type()
         {
           Assign(c);
         }
 
       explicit
       nsTString_CharT( const char_type* data, size_type length = size_type(-1) )
-        : string_base_type()
+        : substring_type()
         {
           Assign(data, length);
         }
 
       nsTString_CharT( const self_type& str )
-        : string_base_type()
+        : substring_type()
         {
           Assign(str);
         }
 
-      nsTString_CharT( const string_tuple_type& tuple )
-        : string_base_type()
+      nsTString_CharT( const substring_tuple_type& tuple )
+        : substring_type()
         {
           Assign(tuple);
         }
 
       explicit
       nsTString_CharT( const abstract_string_type& readable )
-        : string_base_type()
+        : substring_type()
         {
           Assign(readable);
         }
@@ -104,8 +104,8 @@ class NS_COM nsTString_CharT : public nsTStringBase_CharT
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
       self_type& operator=( const self_type& str )                                              { Assign(str);      return *this; }
-      self_type& operator=( const string_base_type& str )                                       { Assign(str);      return *this; }
-      self_type& operator=( const string_tuple_type& tuple )                                    { Assign(tuple);    return *this; }
+      self_type& operator=( const substring_type& str )                                         { Assign(str);      return *this; }
+      self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
 
         // returns null-terminated string
@@ -432,11 +432,11 @@ class NS_COM nsTString_CharT : public nsTStringBase_CharT
 
       explicit
       nsTString_CharT( PRUint32 flags )
-        : string_base_type(flags) {}
+        : substring_type(flags) {}
 
         // allow subclasses to initialize fields directly
       nsTString_CharT( char_type* data, size_type length, PRUint32 flags )
-        : string_base_type(data, length, flags) {}
+        : substring_type(data, length, flags) {}
   };
 
 
@@ -455,8 +455,8 @@ class nsTAutoString_CharT : public nsTString_CharT
       typedef nsTAutoString_CharT                  self_type;
       typedef nsTString_CharT                      string_type;
 
-      typedef string_type::string_base_type        string_base_type;
-      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::substring_type          substring_type;
+      typedef string_type::substring_tuple_type    substring_tuple_type;
       typedef string_type::abstract_string_type    abstract_string_type;
       typedef string_type::size_type               size_type;
 
@@ -493,13 +493,13 @@ class nsTAutoString_CharT : public nsTString_CharT
         }
 
       explicit
-      nsTAutoString_CharT( const string_base_type& str )
+      nsTAutoString_CharT( const substring_type& str )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(str);
         }
 
-      nsTAutoString_CharT( const string_tuple_type& tuple )
+      nsTAutoString_CharT( const substring_tuple_type& tuple )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(tuple);
@@ -523,15 +523,15 @@ class nsTAutoString_CharT : public nsTString_CharT
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
       self_type& operator=( const self_type& str )                                              { Assign(str);      return *this; }
-      self_type& operator=( const string_base_type& str )                                       { Assign(str);      return *this; }
-      self_type& operator=( const string_tuple_type& tuple )                                    { Assign(tuple);    return *this; }
+      self_type& operator=( const substring_type& str )                                         { Assign(str);      return *this; }
+      self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
 
       enum { kDefaultStringSize = 64 };
 
     private:
 
-      friend class nsTStringBase_CharT;
+      friend class nsTSubstring_CharT;
 
       NS_COM void Init( const CBufDescriptor& aBufDesc );
 
@@ -549,8 +549,8 @@ class nsTXPIDLString_CharT : public nsTString_CharT
       typedef nsTXPIDLString_CharT                 self_type;
       typedef nsTString_CharT                      string_type;
 
-      typedef string_type::string_base_type        string_base_type;
-      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::substring_type          substring_type;
+      typedef string_type::substring_tuple_type    substring_tuple_type;
       typedef string_type::abstract_string_type    abstract_string_type;
       typedef string_type::size_type               size_type;
       typedef string_type::index_type              index_type;
@@ -581,8 +581,8 @@ class nsTXPIDLString_CharT : public nsTString_CharT
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
       self_type& operator=( const self_type& str )                                              { Assign(str);      return *this; }
-      self_type& operator=( const string_base_type& str )                                       { Assign(str);      return *this; }
-      self_type& operator=( const string_tuple_type& tuple )                                    { Assign(tuple);    return *this; }
+      self_type& operator=( const substring_type& str )                                         { Assign(str);      return *this; }
+      self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
   };
 

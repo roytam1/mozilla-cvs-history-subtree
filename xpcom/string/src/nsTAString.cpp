@@ -43,7 +43,7 @@
    * This class is a bridge between the old string implementation and the new
    * string implementation.  If mVTable points to the canonical vtable for the
    * new string implementation, then we can cast directly to the new string
-   * classes (helped by the AsString() methods).  However, if mVTable is not
+   * classes (helped by the AsSubstring() methods).  However, if mVTable is not
    * ours, then we need to call through the vtable to satisfy the nsTAString
    * methods.
    *
@@ -54,7 +54,7 @@
 nsTAString_CharT::~nsTAString_CharT()
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->ReleaseData();
+      AsSubstring()->ReleaseData();
     else
       AsObsoleteString()->~nsTObsoleteAString_CharT();
   }
@@ -64,7 +64,7 @@ nsTAString_CharT::size_type
 nsTAString_CharT::Length() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Length();
+      return AsSubstring()->Length();
 
     return AsObsoleteString()->Length();
   }
@@ -73,43 +73,43 @@ PRBool
 nsTAString_CharT::Equals( const self_type& readable ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Equals(readable);
+      return AsSubstring()->Equals(readable);
 
-    return ToString().Equals(readable);
+    return ToSubstring().Equals(readable);
   }
 
 PRBool
 nsTAString_CharT::Equals( const self_type& readable, const comparator_type& comparator ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Equals(readable, comparator);
+      return AsSubstring()->Equals(readable, comparator);
 
-    return ToString().Equals(readable, comparator);
+    return ToSubstring().Equals(readable, comparator);
   }
 
 PRBool
 nsTAString_CharT::Equals( const char_type* data ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Equals(data);
+      return AsSubstring()->Equals(data);
 
-    return ToString().Equals(data);
+    return ToSubstring().Equals(data);
   }
 
 PRBool
 nsTAString_CharT::Equals( const char_type* data, const comparator_type& comparator ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Equals(data, comparator);
+      return AsSubstring()->Equals(data, comparator);
 
-    return ToString().Equals(data, comparator);
+    return ToSubstring().Equals(data, comparator);
   }
 
 PRBool
 nsTAString_CharT::IsVoid() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->IsVoid();
+      return AsSubstring()->IsVoid();
 
     return AsObsoleteString()->IsVoid();
   }
@@ -118,7 +118,7 @@ void
 nsTAString_CharT::SetIsVoid( PRBool val )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->SetIsVoid(val);
+      AsSubstring()->SetIsVoid(val);
     else
       AsObsoleteString()->SetIsVoid(val);
   }
@@ -127,7 +127,7 @@ PRBool
 nsTAString_CharT::IsTerminated() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->IsTerminated();
+      return AsSubstring()->IsTerminated();
 
     return AsObsoleteString()->GetFlatBufferHandle() != nsnull;
   }
@@ -136,43 +136,43 @@ CharT
 nsTAString_CharT::First() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->First();
+      return AsSubstring()->First();
 
-    return ToString().First();
+    return ToSubstring().First();
   }
 
 CharT
 nsTAString_CharT::Last() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->Last();
+      return AsSubstring()->Last();
 
-    return ToString().Last();
+    return ToSubstring().Last();
   }
 
 nsTAString_CharT::size_type
 nsTAString_CharT::CountChar( char_type c ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->CountChar(c);
+      return AsSubstring()->CountChar(c);
 
-    return ToString().CountChar(c);
+    return ToSubstring().CountChar(c);
   }
 
 PRInt32
 nsTAString_CharT::FindChar( char_type c, index_type offset ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->FindChar(c, offset);
+      return AsSubstring()->FindChar(c, offset);
 
-    return ToString().FindChar(c, offset);
+    return ToSubstring().FindChar(c, offset);
   }
 
 void
 nsTAString_CharT::SetCapacity( size_type size )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->SetCapacity(size);
+      AsSubstring()->SetCapacity(size);
     else
       AsObsoleteString()->SetCapacity(size);
   }
@@ -181,7 +181,7 @@ void
 nsTAString_CharT::SetLength( size_type size )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->SetLength(size);
+      AsSubstring()->SetLength(size);
     else
       AsObsoleteString()->SetLength(size);
   }
@@ -190,17 +190,17 @@ void
 nsTAString_CharT::Assign( const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Assign(readable);
+      AsSubstring()->Assign(readable);
     else
       AsObsoleteString()->do_AssignFromReadable(*readable.AsObsoleteString());
   }
 
 void
-nsTAString_CharT::Assign( const string_tuple_type& tuple )
+nsTAString_CharT::Assign( const substring_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        AsString()->Assign(tuple);
+        AsSubstring()->Assign(tuple);
       }
     else
       {
@@ -214,7 +214,7 @@ void
 nsTAString_CharT::Assign( const char_type* data )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Assign(data);
+      AsSubstring()->Assign(data);
     else // XXX null check input arg??
       AsObsoleteString()->do_AssignFromElementPtr(data);
   }
@@ -223,7 +223,7 @@ void
 nsTAString_CharT::Assign( const char_type* data, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Assign(data, length);
+      AsSubstring()->Assign(data, length);
     else
       AsObsoleteString()->do_AssignFromElementPtrLength(data, length);
   }
@@ -232,7 +232,7 @@ void
 nsTAString_CharT::Assign( char_type c )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Assign(c);
+      AsSubstring()->Assign(c);
     else
       AsObsoleteString()->do_AssignFromElement(c);
   }
@@ -241,17 +241,17 @@ void
 nsTAString_CharT::Append( const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Append(readable);
+      AsSubstring()->Append(readable);
     else
       AsObsoleteString()->do_AppendFromReadable(*readable.AsObsoleteString());
   }
 
 void
-nsTAString_CharT::Append( const string_tuple_type& tuple )
+nsTAString_CharT::Append( const substring_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        AsString()->Append(tuple);
+        AsSubstring()->Append(tuple);
       }
     else
       {
@@ -265,7 +265,7 @@ void
 nsTAString_CharT::Append( const char_type* data )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Append(data);
+      AsSubstring()->Append(data);
     else // XXX null check data??
       AsObsoleteString()->do_AppendFromElementPtr(data);
   }
@@ -274,7 +274,7 @@ void
 nsTAString_CharT::Append( const char_type* data, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Append(data, length);
+      AsSubstring()->Append(data, length);
     else
       AsObsoleteString()->do_AppendFromElementPtrLength(data, length);
   }
@@ -283,7 +283,7 @@ void
 nsTAString_CharT::Append( char_type c )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Append(c);
+      AsSubstring()->Append(c);
     else
       AsObsoleteString()->do_AppendFromElement(c);
   }
@@ -292,17 +292,17 @@ void
 nsTAString_CharT::Insert( const self_type& readable, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Insert(readable, pos);
+      AsSubstring()->Insert(readable, pos);
     else
       AsObsoleteString()->do_InsertFromReadable(*readable.AsObsoleteString(), pos);
   }
 
 void
-nsTAString_CharT::Insert( const string_tuple_type& tuple, index_type pos )
+nsTAString_CharT::Insert( const substring_tuple_type& tuple, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        AsString()->Insert(tuple, pos);
+        AsSubstring()->Insert(tuple, pos);
       }
     else
       {
@@ -316,7 +316,7 @@ void
 nsTAString_CharT::Insert( const char_type* data, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Insert(data, pos);
+      AsSubstring()->Insert(data, pos);
     else
       AsObsoleteString()->do_InsertFromElementPtr(data, pos);
   }
@@ -325,7 +325,7 @@ void
 nsTAString_CharT::Insert( const char_type* data, index_type pos, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Insert(data, pos, length);
+      AsSubstring()->Insert(data, pos, length);
     else
       AsObsoleteString()->do_InsertFromElementPtrLength(data, pos, length);
   }
@@ -334,7 +334,7 @@ void
 nsTAString_CharT::Insert( char_type c, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Insert(c, pos);
+      AsSubstring()->Insert(c, pos);
     else
       AsObsoleteString()->do_InsertFromElement(c, pos);
   }
@@ -343,7 +343,7 @@ void
 nsTAString_CharT::Cut( index_type cutStart, size_type cutLength )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Cut(cutStart, cutLength);
+      AsSubstring()->Cut(cutStart, cutLength);
     else
       AsObsoleteString()->Cut(cutStart, cutLength);
   }
@@ -352,17 +352,17 @@ void
 nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Replace(cutStart, cutLength, readable);
+      AsSubstring()->Replace(cutStart, cutLength, readable);
     else
       AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *readable.AsObsoleteString());
   }
 
 void
-nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
+nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        AsString()->Replace(cutStart, cutLength, tuple);
+        AsSubstring()->Replace(cutStart, cutLength, tuple);
       }
     else
       {
@@ -377,7 +377,7 @@ nsTAString_CharT::GetReadableBuffer( const char_type **data ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        const string_base_type* str = AsString();
+        const substring_type* str = AsSubstring();
         *data = str->mData;
         return str->mLength;
       }
@@ -393,7 +393,7 @@ nsTAString_CharT::GetWritableBuffer(char_type **data)
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
-        string_base_type* str = AsString();
+        substring_type* str = AsSubstring();
         str->BeginWriting(*data);
         return str->Length();
       }
@@ -409,15 +409,15 @@ nsTAString_CharT::IsDependentOn(const char_type* start, const char_type *end) co
   {
       // this is an optimization...
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      return AsString()->IsDependentOn(start, end);
+      return AsSubstring()->IsDependentOn(start, end);
 
-    return ToString().IsDependentOn(start, end);
+    return ToSubstring().IsDependentOn(start, end);
   }
 
-const nsTAString_CharT::string_base_type
-nsTAString_CharT::ToString() const
+const nsTAString_CharT::substring_type
+nsTAString_CharT::ToSubstring() const
   {
     const char_type* data;
     size_type length = GetReadableBuffer(&data);
-    return string_base_type(NS_CONST_CAST(char_type*, data), length, 0);
+    return substring_type(NS_CONST_CAST(char_type*, data), length, 0);
   }

@@ -45,8 +45,8 @@
 #undef nsTAString_IncompatibleCharT
 #undef nsTString_CharT
 #undef nsTAutoString_CharT
-#undef nsTStringBase_CharT
-#undef nsTStringTuple_CharT
+#undef nsTSubstring_CharT
+#undef nsTSubstringTuple_CharT
 #undef nsTStringComparator_CharT
 #undef nsTDefaultStringComparator_CharT
 #undef nsTDependentString_CharT

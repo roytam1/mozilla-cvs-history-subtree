@@ -120,7 +120,7 @@ class NS_COM nsTObsoleteAString_CharT
     protected:
 
       friend class nsTAString_CharT;
-      friend class nsTStringBase_CharT;
+      friend class nsTSubstring_CharT;
 
       virtual ~nsTObsoleteAString_CharT() { }
 

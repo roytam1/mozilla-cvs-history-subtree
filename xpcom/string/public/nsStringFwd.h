@@ -37,8 +37,8 @@
 
 class nsAString;
 class nsObsoleteAString;
-class nsStringBase;
-class nsStringTuple;
+class nsSubstring;
+class nsSubstringTuple;
 class nsString;
 class nsAutoString;
 class nsDependentString;
@@ -55,8 +55,8 @@ class nsXPIDLString;
 
 class nsACString;
 class nsObsoleteACString;
-class nsCStringBase;
-class nsCStringTuple;
+class nsCSubstring;
+class nsCSubstringTuple;
 class nsCString;
 class nsCAutoString;
 class nsDependentCString;
@@ -73,14 +73,14 @@ class nsXPIDLCString;
 
 typedef nsString              nsSharableString;
 typedef nsString              nsAFlatString;
-typedef nsStringBase          nsASingleFragmentString;
-typedef nsStringTuple         nsDependentConcatenation;
+typedef nsSubstring           nsASingleFragmentString;
+typedef nsSubstringTuple      nsDependentConcatenation;
 typedef nsDependentSubstring  nsDependentSingleFragmentSubstring;
 
 typedef nsCString             nsSharableCString;
 typedef nsCString             nsAFlatCString;
-typedef nsCStringBase         nsASingleFragmentCString;
-typedef nsCStringTuple        nsDependentCConcatenation;
+typedef nsCSubstring          nsASingleFragmentCString;
+typedef nsCSubstringTuple     nsDependentCConcatenation;
 typedef nsDependentCSubstring nsDependentSingleFragmentCSubstring;
 
   

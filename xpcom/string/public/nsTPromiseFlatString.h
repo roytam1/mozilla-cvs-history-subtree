@@ -99,14 +99,14 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
 
       typedef nsTPromiseFlatString_CharT                self_type;
       typedef nsTString_CharT                           string_type;
-      typedef nsTStringBase_CharT                       string_base_type;
+      typedef nsTSubstring_CharT                        substring_type;
 
-      typedef string_base_type::string_tuple_type       string_tuple_type;
-      typedef string_base_type::abstract_string_type    abstract_string_type;
+      typedef substring_type::substring_tuple_type    substring_tuple_type;
+      typedef substring_type::abstract_string_type    abstract_string_type;
 
     private:
 
-      NS_COM void Init( const string_base_type& );
+      NS_COM void Init( const substring_type& );
       NS_COM void Init( const abstract_string_type& );
 
         // NOT TO BE IMPLEMENTED
@@ -115,7 +115,7 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
     public:
 
       explicit
-      nsTPromiseFlatString_CharT( const string_base_type& str )
+      nsTPromiseFlatString_CharT( const substring_type& str )
         : string_type()
         {
           Init(str);
@@ -129,7 +129,7 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
         }
 
       explicit
-      nsTPromiseFlatString_CharT( const string_tuple_type& tuple )
+      nsTPromiseFlatString_CharT( const substring_tuple_type& tuple )
         : string_type()
         {
           // nothing else to do here except assign the value of the tuple
@@ -148,7 +148,7 @@ TPromiseFlatString_CharT( const nsTAString_CharT& str )
   // e.g., PromiseFlatCString(Substring(s))
 inline
 const nsTPromiseFlatString_CharT
-TPromiseFlatString_CharT( const nsTStringBase_CharT& frag )
+TPromiseFlatString_CharT( const nsTSubstring_CharT& frag )
   {
     return nsTPromiseFlatString_CharT(frag);
   }
@@ -156,7 +156,7 @@ TPromiseFlatString_CharT( const nsTStringBase_CharT& frag )
   // e.g., PromiseFlatCString(a + b)
 inline
 const nsTPromiseFlatString_CharT
-TPromiseFlatString_CharT( const nsTStringTuple_CharT& tuple )
+TPromiseFlatString_CharT( const nsTSubstringTuple_CharT& tuple )
   {
     return nsTPromiseFlatString_CharT(tuple);
   }

@@ -53,8 +53,8 @@ class nsReadingIterator
     private:
       friend class nsAString;
       friend class nsACString;
-      friend class nsStringBase;
-      friend class nsCStringBase;
+      friend class nsSubstring;
+      friend class nsCSubstring;
 
         // unfortunately, the API for nsReadingIterator requires that the
         // iterator know its start and end positions.  this was needed when
@@ -191,8 +191,8 @@ class nsWritingIterator
     private:
       friend class nsAString;
       friend class nsACString;
-      friend class nsStringBase;
-      friend class nsCStringBase;
+      friend class nsSubstring;
+      friend class nsCSubstring;
 
         // unfortunately, the API for nsWritingIterator requires that the
         // iterator know its start and end positions.  this was needed when

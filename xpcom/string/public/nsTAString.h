@@ -92,8 +92,8 @@ class NS_COM nsTAString_CharT
       typedef nsTAString_CharT                                self_type;
       typedef nsTAString_CharT                                abstract_string_type;
       typedef nsTObsoleteAString_CharT                        obsolete_string_type;
-      typedef nsTStringBase_CharT                             string_base_type;
-      typedef nsTStringTuple_CharT                            string_tuple_type;
+      typedef nsTSubstring_CharT                              substring_type;
+      typedef nsTSubstringTuple_CharT                         substring_tuple_type;
 
       typedef nsReadingIterator<char_type>                    const_iterator;
       typedef nsWritingIterator<char_type>                    iterator;
@@ -209,14 +209,14 @@ class NS_COM nsTAString_CharT
          */
 
       void Assign( const self_type& readable );
-      void Assign( const string_tuple_type& tuple );
+      void Assign( const substring_tuple_type& tuple );
       void Assign( const char_type* data );
       void Assign( const char_type* data, size_type length );
       void Assign( char_type c );
 
         // copy-assignment operator.  I must define my own if I don't want the compiler to make me one
       self_type& operator=( const self_type& readable )                                             { Assign(readable); return *this; }
-      self_type& operator=( const string_tuple_type& tuple )                                        { Assign(tuple); return *this; }
+      self_type& operator=( const substring_tuple_type& tuple )                                     { Assign(tuple); return *this; }
       self_type& operator=( const char_type* data )                                                 { Assign(data); return *this; }
       self_type& operator=( char_type c )                                                           { Assign(c); return *this; }
 
@@ -227,13 +227,13 @@ class NS_COM nsTAString_CharT
          */ 
 
       void Append( const self_type& readable );
-      void Append( const string_tuple_type& tuple );
+      void Append( const substring_tuple_type& tuple );
       void Append( const char_type* data );
       void Append( const char_type* data, size_type length );
       void Append( char_type c );
 
       self_type& operator+=( const self_type& readable )                                            { Append(readable); return *this; }
-      self_type& operator+=( const string_tuple_type& tuple )                                       { Append(tuple); return *this; }
+      self_type& operator+=( const substring_tuple_type& tuple )                                    { Append(tuple); return *this; }
       self_type& operator+=( const char_type* data )                                                { Append(data); return *this; }
       self_type& operator+=( char_type c )                                                          { Append(c); return *this; }
 
@@ -243,7 +243,7 @@ class NS_COM nsTAString_CharT
          */ 
 
       void Insert( const self_type& readable, index_type pos );
-      void Insert( const string_tuple_type& tuple, index_type pos );
+      void Insert( const substring_tuple_type& tuple, index_type pos );
       void Insert( const char_type* data, index_type pos );
       void Insert( const char_type* data, index_type pos, size_type length );
       void Insert( char_type c, index_type pos );
@@ -251,7 +251,7 @@ class NS_COM nsTAString_CharT
       void Cut( index_type cutStart, size_type cutLength );
 
       void Replace( index_type cutStart, size_type cutLength, const self_type& readable );
-      void Replace( index_type cutStart, size_type cutLength, const string_tuple_type& readable );
+      void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& readable );
 
     private:
         // NOT TO BE IMPLEMENTED
@@ -264,11 +264,11 @@ class NS_COM nsTAString_CharT
 
     protected:
 
-      friend class nsTStringTuple_CharT;
+      friend class nsTSubstringTuple_CharT;
 
       // XXX still needed now that these aren't template types??
       // GCC 3.2 erroneously needs these (they are subclasses!)
-      friend class nsTStringBase_CharT;
+      friend class nsTSubstring_CharT;
       friend class nsTDependentSubstring_CharT;
       friend class nsTPromiseFlatString_CharT;
 
@@ -313,7 +313,7 @@ class NS_COM nsTAString_CharT
          * this is public to support automatic conversion of tuple to abstract
          * string, which is necessary to support our API.
          */
-      nsTAString_CharT(const string_tuple_type& tuple)
+      nsTAString_CharT(const substring_tuple_type& tuple)
         : mVTable(obsolete_string_type::sCanonicalVTable)
         , mData(nsnull)
         , mLength(0)
@@ -338,9 +338,9 @@ class NS_COM nsTAString_CharT
       PRBool IsDependentOn(const char_type *start, const char_type *end) const;
 
         /**
-         * we can be converted to a const nsTStringBase (dependent on this)
+         * we can be converted to a const nsTSubstring (dependent on this)
          */
-      const string_base_type ToString() const;
+      const substring_type ToSubstring() const;
 
     private:
 
@@ -358,14 +358,14 @@ class NS_COM nsTAString_CharT
           return NS_REINTERPRET_CAST(obsolete_string_type*, this);
         }
 
-      const string_base_type* AsString() const
+      const substring_type* AsSubstring() const
         {
-          return NS_REINTERPRET_CAST(const string_base_type*, this);
+          return NS_REINTERPRET_CAST(const substring_type*, this);
         }
 
-      string_base_type* AsString()
+      substring_type* AsSubstring()
         {
-          return NS_REINTERPRET_CAST(string_base_type*, this);
+          return NS_REINTERPRET_CAST(substring_type*, this);
         }
   };
 

@@ -40,8 +40,8 @@
 #define nsString_h___
 
 
-#ifndef nsStringBase_h___
-#include "nsStringBase.h"
+#ifndef nsSubstring_h___
+#include "nsSubstring.h"
 #endif
 
 #ifndef nsDependentSubstring_h___

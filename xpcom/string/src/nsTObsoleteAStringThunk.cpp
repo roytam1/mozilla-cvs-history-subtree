@@ -52,7 +52,7 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
       typedef obsolete_string_type::index_type                   index_type;
 
       typedef nsTObsoleteAStringThunk_CharT                      self_type; 
-      typedef nsTStringBase_CharT                                string_base_type;
+      typedef nsTSubstring_CharT                                 substring_type;
       typedef nsTAString_CharT                                   abstract_string_type;
 
     public:
@@ -61,11 +61,11 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
 
 
         /**
-         * we are a nsTStringBase in disguise!
+         * we are a nsTSubstring in disguise!
          */
 
-            string_base_type* concrete_self()       { return NS_REINTERPRET_CAST(      string_base_type*, this); }
-      const string_base_type* concrete_self() const { return NS_REINTERPRET_CAST(const string_base_type*, this); }
+            substring_type* concrete_self()       { return NS_REINTERPRET_CAST(      substring_type*, this); }
+      const substring_type* concrete_self() const { return NS_REINTERPRET_CAST(const substring_type*, this); }
 
 
         /**
@@ -197,7 +197,7 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
 
       virtual const char_type *GetReadableFragment(const_fragment_type& frag, nsFragmentRequest which, PRUint32 offset) const
       {
-        const string_base_type* s = concrete_self();
+        const substring_type* s = concrete_self();
         switch (which)
           {
             case kFirstFragment:
@@ -215,7 +215,7 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
 
       virtual char_type *GetWritableFragment(fragment_type& frag, nsFragmentRequest which, PRUint32 offset)
       {
-        string_base_type* s = concrete_self();
+        substring_type* s = concrete_self();
         switch (which)
           {
             case kFirstFragment:

@@ -47,18 +47,18 @@ EXPORTS		=				\
 		nsReadableUtils.h		\
 		nsSharableString.h		\
 		nsString.h			\
-		nsStringBase.h			\
 		nsStringFwd.h			\
 		nsStringIterator.h		\
-		nsStringTuple.h			\
+		nsSubstring.h			\
+		nsSubstringTuple.h		\
 		nsTAString.h			\
 		nsTDependentString.h		\
 		nsTDependentSubstring.h		\
 		nsTObsoleteAString.h		\
 		nsTPromiseFlatString.h		\
 		nsTString.h			\
-		nsTStringBase.h			\
-		nsTStringTuple.h		\
+		nsTSubstring.h			\
+		nsTSubstringTuple.h		\
 		nsUTF8Utils.h			\
 		nsXPIDLString.h			\
 		string-template-def-unichar.h	\

@@ -36,21 +36,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsStringTuple.h"
+#ifndef nsSubstringTuple_h___
+#define nsSubstringTuple_h___
 
-  // convert fragment to |const string_base_type&|
-#define TO_STRING(_v)                                           \
-    ( (ptrdiff_t(_v) & 0x1)                                     \
-        ? NS_REINTERPRET_CAST(const abstract_string_type*,      \
-            ((unsigned long)_v & ~0x1))->ToString()             \
-        : *NS_REINTERPRET_CAST(const string_base_type*, (_v)) )
+#ifndef nsSubstring_h___
+#include "nsSubstring.h"
+#endif
 
-  // define nsStringTuple
+  // declare nsSubstringTuple
 #include "string-template-def-unichar.h"
-#include "nsTStringTuple.cpp"
+#include "nsTSubstringTuple.h"
 #include "string-template-undef.h"
 
-  // define nsCStringTuple
+  // declare nsCSubstringTuple
 #include "string-template-def-char.h"
-#include "nsTStringTuple.cpp"
+#include "nsTSubstringTuple.h"
 #include "string-template-undef.h"
+
+#endif // !defined(nsSubstringTuple_h___)

@@ -80,8 +80,8 @@ class NS_COM nsCaseInsensitiveCStringComparator
 
 
   // included here for backwards compatibility
-#ifndef nsStringTuple_h___
-#include "nsStringTuple.h"
+#ifndef nsSubstringTuple_h___
+#include "nsSubstringTuple.h"
 #endif
 
 #endif // !defined(nsAString_h___)

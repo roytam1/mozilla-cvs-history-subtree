@@ -38,7 +38,7 @@
 
 
   /**
-   * nsTStringBase_CharT
+   * nsTSubstring_CharT
    *
    * The base string type.  This type is not instantiated directly.  A sub-
    * class is instantiated instead.  For example, see nsTString.
@@ -47,7 +47,7 @@
    * codebase.  If you need to refer to this string class, use the typedef
    * nsASingleFragment[C]String instead.
    */
-class NS_COM nsTStringBase_CharT : public nsTAString_CharT
+class NS_COM nsTSubstring_CharT : public nsTAString_CharT
   {
     public:
 
@@ -56,9 +56,9 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
 
       typedef char_traits::incompatible_char_type    incompatible_char_type;
 
-      typedef nsTStringBase_CharT                    self_type;
+      typedef nsTSubstring_CharT                     self_type;
       typedef nsTString_CharT                        string_type;
-      typedef nsTStringTuple_CharT                   string_tuple_type;
+      typedef nsTSubstringTuple_CharT                substring_tuple_type;
       typedef nsTAString_CharT                       abstract_string_type;
 
       typedef nsReadingIterator<char_type>           const_iterator;
@@ -219,13 +219,13 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
       void Assign( char_type c )                                                                { Assign(&c, 1); }
       void Assign( const char_type* data, size_type length = size_type(-1) );
       void Assign( const self_type& );
-      void Assign( const string_tuple_type& );
+      void Assign( const substring_tuple_type& );
       void Assign( const abstract_string_type& );
 
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
       self_type& operator=( const self_type& str )                                              { Assign(str);      return *this; }
-      self_type& operator=( const string_tuple_type& tuple )                                    { Assign(tuple);    return *this; }
+      self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
 
       void Adopt( char_type* data, size_type length = size_type(-1) );
@@ -238,25 +238,25 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
       void Replace( index_type cutStart, size_type cutLength, char_type c )                      { Replace(cutStart, cutLength, &c, 1); }
       void Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) );
       void Replace( index_type cutStart, size_type cutLength, const self_type& str )             { Replace(cutStart, cutLength, str.Data(), str.Length()); }
-      void Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple );
+      void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple );
       void Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable );
 
       void Append( char_type c )                                                                 { Replace(mLength, 0, c); }
       void Append( const char_type* data, size_type length = size_type(-1) )                     { Replace(mLength, 0, data, length); }
       void Append( const self_type& str )                                                        { Replace(mLength, 0, str); }
-      void Append( const string_tuple_type& tuple )                                              { Replace(mLength, 0, tuple); }
+      void Append( const substring_tuple_type& tuple )                                           { Replace(mLength, 0, tuple); }
       void Append( const abstract_string_type& readable )                                        { Replace(mLength, 0, readable); }
 
       self_type& operator+=( char_type c )                                                       { Append(c);        return *this; }
       self_type& operator+=( const char_type* data )                                             { Append(data);     return *this; }
       self_type& operator+=( const self_type& str )                                              { Append(str);      return *this; }
-      self_type& operator+=( const string_tuple_type& tuple )                                    { Append(tuple);    return *this; }
+      self_type& operator+=( const substring_tuple_type& tuple )                                 { Append(tuple);    return *this; }
       self_type& operator+=( const abstract_string_type& readable )                              { Append(readable); return *this; }
 
       void Insert( char_type c, index_type pos )                                                 { Replace(pos, 0, c); }
       void Insert( const char_type* data, index_type pos, size_type length = size_type(-1) )     { Replace(pos, 0, data, length); }
       void Insert( const self_type& str, index_type pos )                                        { Replace(pos, 0, str); }
-      void Insert( const string_tuple_type& tuple, index_type pos )                              { Replace(pos, 0, tuple); }
+      void Insert( const substring_tuple_type& tuple, index_type pos )                           { Replace(pos, 0, tuple); }
       void Insert( const abstract_string_type& readable, index_type pos )                        { Replace(pos, 0, readable); }
 
       void Cut( index_type cutStart, size_type cutLength )                                       { Replace(cutStart, cutLength, char_traits::sEmptyBuffer, 0); }
@@ -279,7 +279,7 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
 
         /**
          * string data is never null, but can be marked void.  if true, the
-         * string will be truncated.  @see nsTStringBase_CharT::IsVoid
+         * string will be truncated.  @see nsTSubstring_CharT::IsVoid
          */
 
       void SetIsVoid( PRBool );
@@ -291,7 +291,7 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
          * this is public to support automatic conversion of tuple to string
          * base type, which helps avoid converting to nsTAString.
          */
-      nsTStringBase_CharT(const string_tuple_type& tuple)
+      nsTSubstring_CharT(const substring_tuple_type& tuple)
         : abstract_string_type(nsnull, 0, F_NONE)
         {
           Assign(tuple);
@@ -301,25 +301,25 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
 
       friend class nsTObsoleteAStringThunk_CharT;
       friend class nsTAString_CharT;
-      friend class nsTStringTuple_CharT;
+      friend class nsTSubstringTuple_CharT;
 
         // default initialization 
-      nsTStringBase_CharT()
+      nsTSubstring_CharT()
         : abstract_string_type(
               NS_CONST_CAST(char_type*, char_traits::sEmptyBuffer), 0, F_TERMINATED) {}
 
         // allow subclasses to initialize fields directly
-      nsTStringBase_CharT( char_type *data, size_type length, PRUint32 flags )
+      nsTSubstring_CharT( char_type *data, size_type length, PRUint32 flags )
         : abstract_string_type(data, length, flags) {}
 
         // version of constructor that leaves mData and mLength uninitialized
       explicit
-      nsTStringBase_CharT( PRUint32 flags )
+      nsTSubstring_CharT( PRUint32 flags )
         : abstract_string_type(flags) {}
 
         // copy-constructor, constructs as dependent on given object
         // (NOTE: this is for internal use only)
-      nsTStringBase_CharT( const self_type& str )
+      nsTSubstring_CharT( const self_type& str )
         : abstract_string_type(
               str.mData, str.mLength, str.mFlags & (F_TERMINATED | F_VOIDED)) {}
 

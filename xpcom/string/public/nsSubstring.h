@@ -36,21 +36,30 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsStringTuple_h___
-#define nsStringTuple_h___
+#ifndef nsSubstring_h___
+#define nsSubstring_h___
 
-#ifndef nsStringBase_h___
-#include "nsStringBase.h"
+#ifndef nsAString_h___
+#include "nsAString.h"
 #endif
 
-  // declare nsStringTuple
+static const PRInt32 kNotFound = -1;
+
+
+  // declare nsSubstring
 #include "string-template-def-unichar.h"
-#include "nsTStringTuple.h"
+#include "nsTSubstring.h"
 #include "string-template-undef.h"
 
-  // declare nsCStringTuple
+
+  // declare nsCSubstring
 #include "string-template-def-char.h"
-#include "nsTStringTuple.h"
+#include "nsTSubstring.h"
 #include "string-template-undef.h"
 
-#endif // !defined(nsStringTuple_h___)
+
+#ifndef nsSubstringTuple_h___
+#include "nsSubstringTuple.h"
+#endif
+
+#endif // !defined(nsSubstring_h___)

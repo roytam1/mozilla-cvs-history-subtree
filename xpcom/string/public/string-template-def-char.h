@@ -44,8 +44,8 @@
 #define nsTAString_IncompatibleCharT        nsAString
 #define nsTString_CharT                     nsCString
 #define nsTAutoString_CharT                 nsCAutoString
-#define nsTStringBase_CharT                 nsCStringBase
-#define nsTStringTuple_CharT                nsCStringTuple
+#define nsTSubstring_CharT                  nsCSubstring
+#define nsTSubstringTuple_CharT             nsCSubstringTuple
 #define nsTStringComparator_CharT           nsCStringComparator
 #define nsTDefaultStringComparator_CharT    nsDefaultCStringComparator
 #define nsTDependentString_CharT            nsDependentCString

@@ -45,7 +45,7 @@
    * the old data must be released by the caller.
    */
 PRBool
-nsTStringBase_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags )
+nsTSubstring_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags )
   {
     // initialize to no old data
     *oldData = nsnull;
@@ -128,14 +128,14 @@ nsTStringBase_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint
   }
 
 void
-nsTStringBase_CharT::ReleaseData()
+nsTSubstring_CharT::ReleaseData()
   {
     ::ReleaseData(mData, mFlags);
     // mData, mLength, and mFlags are purposefully left dangling
   }
 
 void
-nsTStringBase_CharT::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen )
+nsTSubstring_CharT::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen )
   {
     // bound cut length
     cutLen = NS_MIN(cutLen, cutStart + mLength);
@@ -189,8 +189,8 @@ nsTStringBase_CharT::ReplacePrep( index_type cutStart, size_type cutLen, size_ty
     mLength = newLen;
   }
 
-nsTStringBase_CharT::size_type
-nsTStringBase_CharT::Capacity() const
+nsTSubstring_CharT::size_type
+nsTSubstring_CharT::Capacity() const
   {
     size_type capacity;
     if (mFlags & F_SHARED)
@@ -221,88 +221,8 @@ nsTStringBase_CharT::Capacity() const
     return capacity;
   }
 
-#if 0
-PRBool
-nsTStringBase_CharT::EnsureCapacity( size_type capacity, PRBool preserveData )
-  {
-    size_type curCapacity = Capacity();
-
-    if (capacity <= curCapacity)
-      return PR_TRUE;
-
-    if (curCapacity > 0)
-      {
-        // use doubling algorithm when forced to increase available capacity,
-        // but always start out with exactly the requested amount.
-        PRUint32 temp = curCapacity;
-        while (temp < capacity)
-          temp <<= 1;
-        capacity = temp;
-      }
-
-    //
-    // several cases:
-    //
-    //  (1) we have a shared buffer (mFlags & F_SHARED)
-    //  (2) we have an owned buffer (mFlags & F_OWNED)
-    //  (3) we have a fixed buffer (mFlags & F_FIXED)
-    //  (4) we have a readonly buffer
-    //
-    // requiring that we in some cases preserve the data before creating
-    // a new buffer complicates things just a bit ;-)
-    //
-
-    // case #1
-    if (mFlags & F_SHARED)
-      {
-        nsStringHeader* hdr = nsStringHeader::FromData(mData);
-        if (!hdr->IsReadonly())
-          {
-            hdr = nsStringHeader::Realloc(hdr, capacity * sizeof(char_type));
-            if (hdr)
-              {
-                mData = (char_type*) hdr->Data();
-                return PR_TRUE;
-              }
-            // out of memory!!  put us in a consistent state at least.
-            mData = NS_CONST_CAST(char_type*, char_traits::sEmptyBuffer);
-            mLength = 0;
-            mFlags = F_TERMINATED;
-            return PR_FALSE;
-          }
-      }
-
-    // if we reach here then, we must allocate a new buffer.  we cannot make
-    // use of our F_OWNED or F_FIXED buffers because they are not large enough
-    // (based on the initial capacity check).  we need to allocate a new
-    // buffer, and possibly copy over the old one, and then we can release the
-    // old buffer, and set our member vars.
-
-    nsStringHeader* newHdr = nsStringHeader::Alloc(capacity * sizeof(char_type));
-    if (!newHdr)
-      return PR_FALSE; // we are still in a consistent state
-
-    char_type* newData = (char_type*) newHdr->Data();
-
-    if (preserveData && mLength > 0)
-        char_traits::copy(newData, mData, NS_MIN(mLength, capacity));
-
-    ::ReleaseData(mData, mFlags);
-
-    mData = newData;
-    mFlags = (F_TERMINATED | F_SHARED);
-
-    // mLength does not change
-
-    // though we are not necessarily terminated at the moment, now is probably
-    // still the best time to set F_TERMINATED.
-
-    return PR_TRUE;
-  }
-#endif
-
 void
-nsTStringBase_CharT::EnsureMutable()
+nsTSubstring_CharT::EnsureMutable()
   {
     if (mFlags & F_SHARED)
       {
@@ -318,7 +238,7 @@ nsTStringBase_CharT::EnsureMutable()
 // ---------------------------------------------------------------------------
 
 void
-nsTStringBase_CharT::Assign( const char_type* data, size_type length )
+nsTSubstring_CharT::Assign( const char_type* data, size_type length )
   {
       // unfortunately, people do pass null sometimes :(
     if (!data)
@@ -342,7 +262,7 @@ nsTStringBase_CharT::Assign( const char_type* data, size_type length )
   }
 
 void
-nsTStringBase_CharT::Assign( const self_type& str )
+nsTSubstring_CharT::Assign( const self_type& str )
   {
     // |str| could be sharable.  we need to check its flags to know how to
     // deal with it.
@@ -374,7 +294,7 @@ nsTStringBase_CharT::Assign( const self_type& str )
   }
 
 void
-nsTStringBase_CharT::Assign( const string_tuple_type& tuple )
+nsTSubstring_CharT::Assign( const substring_tuple_type& tuple )
   {
     if (tuple.IsDependentOn(mData, mData + mLength))
       {
@@ -392,18 +312,18 @@ nsTStringBase_CharT::Assign( const string_tuple_type& tuple )
 
   // this is non-inline to reduce codesize at the callsite
 void
-nsTStringBase_CharT::Assign( const abstract_string_type& readable )
+nsTSubstring_CharT::Assign( const abstract_string_type& readable )
   {
       // promote to string if possible to take advantage of sharing
     if (readable.mVTable == nsTObsoleteAString_CharT::sCanonicalVTable)
-      Assign(*readable.AsString());
+      Assign(*readable.AsSubstring());
     else
-      Assign(readable.ToString());
+      Assign(readable.ToSubstring());
   }
 
 
 void
-nsTStringBase_CharT::Adopt( char_type* data, size_type length )
+nsTSubstring_CharT::Adopt( char_type* data, size_type length )
   {
     ::ReleaseData(mData, mFlags);
     mData = data;
@@ -425,7 +345,7 @@ nsTStringBase_CharT::Adopt( char_type* data, size_type length )
 
 
 void
-nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length )
+nsTSubstring_CharT::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length )
   {
     if (length == size_type(-1))
       length = char_traits::length(data);
@@ -444,7 +364,7 @@ nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const ch
   }
 
 void
-nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
+nsTSubstring_CharT::Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple )
   {
     if (tuple.IsDependentOn(mData, mData + mLength))
       {
@@ -462,13 +382,13 @@ nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const st
   }
 
 void
-nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
+nsTSubstring_CharT::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
   {
-    Replace(cutStart, cutLength, readable.ToString());
+    Replace(cutStart, cutLength, readable.ToSubstring());
   }
 
 void
-nsTStringBase_CharT::SetCapacity( size_type capacity )
+nsTSubstring_CharT::SetCapacity( size_type capacity )
   {
     // capacity does not include room for the terminating null char
 
@@ -500,7 +420,7 @@ nsTStringBase_CharT::SetCapacity( size_type capacity )
   }
 
 void
-nsTStringBase_CharT::SetLength( size_type length )
+nsTSubstring_CharT::SetLength( size_type length )
   {
     if (length == 0)
       {
@@ -519,7 +439,7 @@ nsTStringBase_CharT::SetLength( size_type length )
   }
 
 void
-nsTStringBase_CharT::SetIsVoid( PRBool val )
+nsTSubstring_CharT::SetIsVoid( PRBool val )
   {
     if (val)
       {
@@ -533,19 +453,19 @@ nsTStringBase_CharT::SetIsVoid( PRBool val )
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const self_type& str ) const
+nsTSubstring_CharT::Equals( const self_type& str ) const
   {
     return mLength == str.mLength && char_traits::compare(mData, str.mData, mLength) == 0;
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const self_type& str, const comparator_type& comp ) const
+nsTSubstring_CharT::Equals( const self_type& str, const comparator_type& comp ) const
   {
     return mLength == str.mLength && comp(mData, str.mData, mLength) == 0;
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const abstract_string_type& readable ) const
+nsTSubstring_CharT::Equals( const abstract_string_type& readable ) const
   {
     const char_type* data;
     size_type length = readable.GetReadableBuffer(&data);
@@ -554,7 +474,7 @@ nsTStringBase_CharT::Equals( const abstract_string_type& readable ) const
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const abstract_string_type& readable, const comparator_type& comp ) const
+nsTSubstring_CharT::Equals( const abstract_string_type& readable, const comparator_type& comp ) const
   {
     const char_type* data;
     size_type length = readable.GetReadableBuffer(&data);
@@ -563,19 +483,19 @@ nsTStringBase_CharT::Equals( const abstract_string_type& readable, const compara
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const char_type* data ) const
+nsTSubstring_CharT::Equals( const char_type* data ) const
   {
     return Equals(nsTDependentString_CharT(data));
   }
 
 PRBool
-nsTStringBase_CharT::Equals( const char_type* data, const comparator_type& comp ) const
+nsTSubstring_CharT::Equals( const char_type* data, const comparator_type& comp ) const
   {
     return Equals(nsTDependentString_CharT(data), comp);
   }
 
-nsTStringBase_CharT::size_type
-nsTStringBase_CharT::CountChar( char_type c ) const
+nsTSubstring_CharT::size_type
+nsTSubstring_CharT::CountChar( char_type c ) const
   {
     const char_type *start = mData;
     const char_type *end   = mData + mLength;
@@ -584,7 +504,7 @@ nsTStringBase_CharT::CountChar( char_type c ) const
   }
 
 PRInt32
-nsTStringBase_CharT::FindChar( char_type c, index_type offset ) const
+nsTSubstring_CharT::FindChar( char_type c, index_type offset ) const
   {
     if (offset < mLength)
       {
