@@ -1589,7 +1589,7 @@ nsNativeAppSupportWin::OpenBrowserWindow( const char *args, PRBool newWindow ) {
           NS_NewURI( getter_AddRefs( uri ), urlStr, 0, 0 );
           if ( uri ) {
             nsCOMPtr<nsIDOMWindow> container;
-            rv = bwin->OpenURI( uri,
+            rv = bwin->OpenURI( uri, 0,
                                 nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW,
                                 nsIBrowserDOMWindow::OPEN_EXTERNAL,
                                 getter_AddRefs( container ) );

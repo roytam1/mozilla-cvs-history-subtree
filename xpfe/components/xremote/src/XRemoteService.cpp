@@ -855,7 +855,7 @@ XRemoteService::OpenURL(nsCString &aArgument,
     NS_ASSERTION(bwin && uri, "failed to open remote URL in new tab");
     if (bwin && uri) {
       nsCOMPtr<nsIDOMWindow> container;
-      rv = bwin->OpenURI(uri,
+      rv = bwin->OpenURI(uri, 0,
                          nsIBrowserDOMWindow::OPEN_NEWTAB,
                          nsIBrowserDOMWindow::OPEN_EXTERNAL,
                          getter_AddRefs(container));
@@ -864,7 +864,7 @@ XRemoteService::OpenURL(nsCString &aArgument,
 
   else if (bwin && uri) { // unspecified new browser URL; use prefs
     nsCOMPtr<nsIDOMWindow> container;
-    rv = bwin->OpenURI(uri,
+    rv = bwin->OpenURI(uri, 0,
                        nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW,
                        nsIBrowserDOMWindow::OPEN_EXTERNAL,
                        getter_AddRefs(container));

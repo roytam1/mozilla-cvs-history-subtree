@@ -1146,7 +1146,7 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
 
                 // open a new tab
                 if (bwin) {
-                    rv = bwin->OpenURI(0, nsIBrowserDOMWindow::OPEN_NEWTAB,
+                    rv = bwin->OpenURI(0, 0, nsIBrowserDOMWindow::OPEN_NEWTAB,
                                       nsIBrowserDOMWindow::OPEN_NEW,
                                       getter_AddRefs(newWindow));
                     if (newWindow) {

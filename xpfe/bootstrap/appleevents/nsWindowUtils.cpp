@@ -530,7 +530,7 @@ void nsWindowUtils::LoadURLInXULWindow(nsIXULWindow* inWindow, const char* urlSt
     NS_NewURI(getter_AddRefs(uri), urlStr, 0, 0);
     if (uri) {
       nsCOMPtr<nsIDOMWindow> newBrowserWindow;
-      bwin->OpenURI(uri,
+      bwin->OpenURI(uri, 0,
                     nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW,
                     nsIBrowserDOMWindow::OPEN_EXTERNAL,
                     getter_AddRefs(newBrowserWindow));
