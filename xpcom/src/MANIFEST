@@ -14,3 +14,6 @@ nsISupports.h
 nsISupportsArray.h
 nsRepository.h
 nsIEnumerator.h
+nscore.h
+nsIBaseStream.h
+nsIOutputStream.h
