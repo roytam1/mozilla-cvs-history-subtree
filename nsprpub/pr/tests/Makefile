@@ -39,6 +39,7 @@ endif
 CSRCS =             \
 	accept.c		\
 	acceptread.c	\
+	addrstr.c		\
 	affinity.c		\
 	alarm.c			\
 	anonfm.c		\
