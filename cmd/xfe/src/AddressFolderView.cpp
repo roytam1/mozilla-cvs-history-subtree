@@ -67,7 +67,12 @@ static MSG_HEADER_SET standard_header_set[] = {
 #define TOTAL_HEADERS (sizeof(standard_header_set)/sizeof(MSG_HEADER_SET))
 
 extern "C" char *fe_StringTrim (char *string);
-extern "C" char * xfe_ExpandName(char * pString, int* iconType, short* security);
+
+extern "C" char* xfe_ExpandForNameCompletion(char *pString,
+                                             ABook *pAddrBook,
+                                             DIR_Server *pDirServer);
+extern "C" char * xfe_ExpandName(char *pString, int* iconType, short* security,
+                                 ABook *pAddrBook, DIR_Server *pDirServer);
 
 extern "C"
 {
@@ -137,6 +142,14 @@ XFE_AddressFolderView::XFE_AddressFolderView(
   m_fieldList = XP_ListNew();
 
   m_clearAddressee = True;
+
+  // get the list of directory servers & address books
+  XP_List *pDirectories=FE_GetDirServers();
+  XP_ASSERT(pDirectories);
+  
+  DIR_GetComposeNameCompletionAddressBook(pDirectories, &m_pCompleteServer);
+
+  m_pAddrBook = fe_GetABook(0);
 
   setupAddressHeadings();
 }
@@ -655,8 +668,6 @@ XFE_AddressFolderView::setData(int line, char *recipient)
   return m_fieldData->type;
 }
 
-// in AddressOutliner.cpp:
-extern "C" char* xfe_ExpandForNameCompletion(char*);
 
 // We no longer free the textstr here
 int
@@ -671,7 +682,11 @@ XFE_AddressFolderView::setReceipient(int line, char *textstr)
 
   // Try completion first; MSG_ParseRFC822Addresses() may get the count
   // wrong, especially when completing firstname_lastname w/spaces.
-  char* completestr = xfe_ExpandForNameCompletion(textstr);
+#if defined(DEBUG_tao)
+  printf("\nXFE_AddressFolderView::setReceipient,%d=%s\n", line, textstr);
+#endif
+  char* completestr = xfe_ExpandForNameCompletion(textstr, m_pAddrBook,
+                                                  m_pCompleteServer);
   if (completestr)
   {
       setData(line, completestr);
@@ -1211,27 +1226,30 @@ char *
 XFE_AddressFolderView::changedItem(char *pString, int*  iconType,
                                    short* securityp)
 {
-   return  xfe_ExpandName(pString, iconType, securityp);
+#if defined(DEBUG_tao)
+	printf("\nXFE_AddressFolderView::changedItem,%s\n",pString?pString:"");
+#endif 
+   return  xfe_ExpandName(pString, iconType, securityp,
+                          m_pAddrBook, m_pCompleteServer);
 }
 
 
 //----------- Address Book stuff here ------------
 
-extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security)
+extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security,
+                                 ABook *pAddrBook, DIR_Server *pDirServer)
 {
         ABID entryID;
         ABID field;
         char * fullname;
-        ABook *pAddrBook;
-        XP_List *pDirectories = FE_GetDirServers();
         ABID type;
 
 #if defined(DEBUG_tao)
 		printf("\n  xfe_ExpandName");
 #endif
-		DIR_Server* pDirServer = NULL;
-        pAddrBook = fe_GetABook(0);
-		DIR_GetComposeNameCompletionAddressBook(pDirectories, &pDirServer);
+
+        XP_ASSERT(pAddrBook);
+        XP_ASSERT(pDirServer);
 		AB_GetIDForNameCompletion(pAddrBook,
 								  pDirServer,
 								  &entryID,
@@ -1253,8 +1271,9 @@ extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security)
        AB_GetSecurity(pDirServer, pAddrBook, entryID, security);
 
           AB_GetExpandedName(
-                        (DIR_Server*)XP_ListGetObjectNum(pDirectories,1),
+                        pDirServer,
                         pAddrBook, entryID, &fullname);
+
           if (fullname) return fullname;  
        }
        return NULL; 
@@ -1481,13 +1500,48 @@ XFE_AddressFolderView::processAddressBookDrop(XFE_Outliner *outliner,
 
         int i;
         for (i=0; i<numSelected; i++) {
+            ABID type;
+            char *expName = NULL;
+#if defined(USE_ABCOM)
+		// type, fulladdress
+		uint16 numItem = 2;
+		AB_AttribID *attribs = (AB_AttribID *) XP_CALLOC(numItem, 
+														 sizeof(AB_AttribID));
+		attribs[0] = AB_attribEntryType;
+		attribs[1] = AB_attribFullAddress;
+		AB_AttributeValue *values = NULL;
+
+		int error = 
+			AB_GetEntryAttributesForPane((MSG_Pane *) abPane,
+										 (MSG_ViewIndex) selectedList[i],
+										 attribs,
+										 &values,
+										 &numItem);
+		XP_ASSERT(values);
+		for (int ii=0; ii < numItem; ii++) {
+			switch (values[ii].attrib) {
+			case AB_attribEntryType:
+				type = values[ii].u.entryType;
+				break;
+
+			case AB_attribFullAddress:
+				expName = 
+					!EMPTY_STRVAL(&(values[ii]))?XP_STRDUP(values[ii].u.string)
+					:NULL;
+				break;
+			default:
+				XP_ASSERT(0);
+				break;
+			}/* switch */
+		}/* for i */
+		XP_FREEIF(attribs);
+#else
             ABID entry = AB_GetEntryIDAt(abPane,(uint32)selectedList[i]);
     
             if (entry == MSG_VIEWINDEXNONE) 
                 continue;
 
             // entry type
-            ABID type;
             AB_GetType(abDir, abBook, entry, &type);
 
             //email
@@ -1496,7 +1550,6 @@ XFE_AddressFolderView::processAddressBookDrop(XFE_Outliner *outliner,
             AB_GetEmailAddress(abDir,abBook,entry,email);
 
             // name
-            char *expName=NULL;
             AB_GetExpandedName(abDir,abBook,entry,&expName);
             if (!expName) {
                 char fullName[AB_MAX_STRLEN];
@@ -1504,6 +1557,7 @@ XFE_AddressFolderView::processAddressBookDrop(XFE_Outliner *outliner,
                 AB_GetFullName(abDir,abBook,entry,fullName);
                 expName=XP_STRDUP(fullName);
             }
+#endif /* USE_ABCOM */
 
             // add to address list via AddressFolder Address Picker callback
 
@@ -1511,9 +1565,11 @@ XFE_AddressFolderView::processAddressBookDrop(XFE_Outliner *outliner,
 
             item->type=type;
             item->status=fieldStatus;
+#if !defined(USE_ABCOM)
             item->dir=abDir;
             item->id=entry;
             item->emailAddr=XP_STRDUP(email);
+#endif /* USE_ABCOM */
             item->dplyStr=expName;
             
             itemList[numItems++]=item;

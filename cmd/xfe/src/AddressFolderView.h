@@ -159,6 +159,9 @@ public:
   void processLDAPDrop(fe_dnd_Source*);
 private:
 
+  ABook *m_pAddrBook;
+  DIR_Server *m_pCompleteServer;
+
   XP_Bool m_clearAddressee;
 
   // icons for the outliner
