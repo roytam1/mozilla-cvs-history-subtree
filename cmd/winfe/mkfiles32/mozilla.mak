@@ -203,7 +203,7 @@ MOZ_STACK=33679
 
 !if defined(MOZ_DEBUG)
 VERSTR=Dbg
-CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
+CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
 !IF "$(MOZ_BITS)"=="32"
 	/Gm /Gi \
 !IF 0 #defined(MOZ_BATCH)
@@ -525,10 +525,10 @@ CDEPENDINCLUDES= \
     /I$(DEPTH)\cmd\winfe \
     /I$(DEPTH)\jpeg
 
-# if you add something to CDISTINCLUDES, you must also add it to the exports target
-# at the end of the file.
+# if you add something to CDISTINCLUDES1 or CDISTINCLUDES2, you must also add
+# it to the exports target at the end of the file.
 
-CDISTINCLUDES= \
+CDISTINCLUDES1= \
 !if "$(MOZ_BITS)" == "32"
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
@@ -571,13 +571,15 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\xml \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
-	/I$(XPDIST)\public\jtools \
+    /I$(XPDIST)\public\jtools
 !else
 !endif
+#Add additional include directories to CDISTINCLUDES2
+
+CDISTINCLUDES2= \
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
 !ifndef NO_SECURITY
-    /I$(XPDIST)\public\jar \
     /I$(XPDIST)\public\jar \
 !endif
     /I$(XPDIST)\public\util
@@ -638,7 +640,8 @@ RCDEFINES=$(RCDEFINES) $(MOZ_LITENESS_FLAGS)
 CFILEFLAGS=$(CFLAGS_GENERAL) ^
     $(CDEFINES) ^
     $(CINCLUDES) ^
-    $(CDISTINCLUDES)
+    $(CDISTINCLUDES1) ^
+    $(CDISTINCLUDES2)
 
 
 RCFILEFLAGS=$(RCFLAGS_GENERAL)\
@@ -655,7 +658,7 @@ all: "$(OUTDIR)" $(DEPTH)\cmd\winfe\mkfiles32\makedep.exe $(OUTDIR)\mozilla.dep
 
 $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
     @rem <<$(PROD)$(VERSTR).dep
-	$(CINCLUDES) $(CDISTINCLUDES) $(CDEPENDINCLUDES) -O $(OUTDIR)\mozilla.dep
+	$(CINCLUDES) $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDEPENDINCLUDES) -O $(OUTDIR)\mozilla.dep
 !IF "$(MOZ_BITS)"=="16"
     -16
 !ENDIF
