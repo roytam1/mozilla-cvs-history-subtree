@@ -776,7 +776,9 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     passwordElement->GetValue(pword);
     NSString* username = [NSString stringWith_nsAString:uname];
     NSString* password = [NSString stringWith_nsAString:pword];
-    
+    if ( ![username length] || ![password length] )      // bail if either is empty
+      return NS_OK;
+
     nsCOMPtr<nsIDocument> doc;
     node->GetDocument(*getter_AddRefs(doc));
     if (!doc)
