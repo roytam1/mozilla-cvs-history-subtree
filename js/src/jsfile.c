@@ -21,11 +21,12 @@
  */
 #if JS_HAS_FILE_OBJECT
 
-/* ------------------ Platform-specific includes and defines ------------------- */
+/* ----------------- Platform-specific includes and defines ----------------- */
 #ifdef XP_MAC
 #   define FILESEPARATOR         ':'
 #   define FILESEPARATOR2        '\0'
 #   define CURRENT_DIR          "HARD DISK:Desktop Folder"
+/*  TODO: #include <???> */
 #elif defined(XP_PC) || defined(XP_OS2)
 #   include <direct.h>
 #   include <io.h>
@@ -48,7 +49,7 @@
 #   define PCLOSE               pclose
 #endif
 
-/* ------------------ Platform-independent includes and defines ------------------- */
+/* --------------- Platform-independent includes and defines ---------------- */
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jscntxt.h"
@@ -120,7 +121,8 @@ JSErrorFormatString JSFile_ErrorFormatString[JSFileErr_Limit] = {
 };
 
 const JSErrorFormatString *
-JSFile_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
+JSFile_GetErrorMessage(void *userRef, const char *locale,
+                                                        const uintN errorNumber)
 {
     if ((errorNumber > 0) && (errorNumber < JSFileErr_Limit))
         return &JSFile_ErrorFormatString[errorNumber];
@@ -137,7 +139,9 @@ JSFile_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumbe
 
 #define JSFILE_CHECK_WRITE      \
     if (!file->isOpen){     \
-        JS_ReportWarning(cx, "File %s is closed, will open it for writing, proceeding", file->path);	\
+        JS_ReportWarning(cx,    \
+                "File %s is closed, will open it for writing, proceeding",  \
+                file->path);    \
         js_FileOpen(cx, obj, file, "write,append,create");     \
     }else   \
     if(!js_canWrite(cx, file)){     \
@@ -148,7 +152,9 @@ JSFile_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumbe
 
 #define JSFILE_CHECK_READ      \
     if (!file->isOpen){     \
-        JS_ReportWarning(cx, "File %s is closed, will open it for reading, proceeding", file->path);	\
+        JS_ReportWarning(cx,    \
+                "File %s is closed, will open it for reading, proceeding",  \
+                file->path); \
         js_FileOpen(cx, obj, file, "read");     \
     }else   \
     if(!js_canRead(cx, file)){     \
@@ -206,6 +212,7 @@ typedef struct JSFile {
                                  UTF-encoded files. */
     JSBool      hasAutoflush;   /* should we force a flush for each line break? */
     JSBool      isNative;       /* if the file is using OS-specific file FILE type */
+    /* We can actually put the following two in a union since they should never be used at the same time */
     PRFileDesc  *handle;        /* the handle for the file, if open.  */
     FILE        *nativehandle;  /* native handle, for stuff NSPR doesn't do. */
     JSBool      isPipe;         /* if the file is really an OS pipe */
@@ -227,7 +234,8 @@ js_filenameHasAPipe(const char *filename)
     return JS_FALSE;
 #else
     if(!filename) return JS_FALSE;
-    return filename[0]==PIPE_SYMBOL || filename[strlen(filename)-1]==PIPE_SYMBOL;
+    return  filename[0]==PIPE_SYMBOL ||
+            filename[strlen(filename)-1]==PIPE_SYMBOL;
 #endif
 }
 
@@ -260,12 +268,6 @@ js_combinePath(JSContext *cx, const char *base, const char *name)
     if (!result)  return NULL;
 
     strcpy(result, base);
-#ifdef XP_PC
-    /* TODO: Do we need this, I think we don't ??? */
-    if ((strlen(name)>=2)&&(name[1]==':')) { /* remove a drive selector if there's one.*/
-        name = &name[2];
-    }
-#endif
 
     if (base[len]!=FILESEPARATOR
 #ifdef XP_PC
@@ -293,7 +295,10 @@ js_fileBaseName(JSContext *cx, const char *pathname)
     }
 #endif
     index = strlen(pathname)-1;
-    /* remove trailing separators -- don't necessarily need to check for FILESEPARATOR2, but that's fine */
+    /*
+        remove trailing separators -- don't necessarily need to check for
+        FILESEPARATOR2, but that's fine
+    */
     while ((index>0)&&((pathname[index]==FILESEPARATOR)||
                        (pathname[index]==FILESEPARATOR2))) index--;
     aux = index;
@@ -391,7 +396,8 @@ js_absolutePath(JSContext *cx, const char * path)
         if (!str ) {
             return JS_strdup(cx, path);
         }
-        return js_combinePath(cx, JS_GetStringBytes(str), path); /* should we have an array of current dirs indexed by drive for windows? */
+        /* should we have an array of curr dirs indexed by drive for windows? */
+        return js_combinePath(cx, JS_GetStringBytes(str), path);
     }
 }
 
@@ -406,7 +412,7 @@ js_canonicalPath(JSContext *cx, const char *oldpath)
     jsint back = 0;
     unsigned int i = 0, j = strlen(path)-1;
 
-	/* TODO: this is probably optional */
+    /* This is probably optional */
 	/* Remove possible spaces in the beginning and end */
     while(i<strlen(path)-1 && path[i]==' ') i++;
 	while(j>=0 && path[j]==' ') j--;
@@ -437,7 +443,7 @@ js_canonicalPath(JSContext *cx, const char *oldpath)
     base = js_fileBaseName(cx, current);
     dir = js_fileDirectoryName(cx, current);
 
-    /* TODO: MAC??? */
+    /* TODO: MAC -- not going to work??? */
     while (strcmp(dir, current)) {
         if (!strcmp(base, "..")) {
             back++;
@@ -498,7 +504,7 @@ js_canonicalPath(JSContext *cx, const char *oldpath)
     return result;
 }
 
-/* --------------------------- Text conversion -------------------------------- */
+/* -------------------------- Text conversion ------------------------------- */
 /* The following is ripped from libi18n/unicvt.c and include files.. */
 
 /*
@@ -663,7 +669,7 @@ utf8_to_ucs2_char(const unsigned char *utf8p, int16 buflen, uint16 *ucs2p)
     }
 }
 
-/* ------------------------------- Helper functions ---------------------------- */
+/* ----------------------------- Helper functions --------------------------- */
 /* Ripped off from lm_win.c .. */
 /* where is strcasecmp?.. for now, it's case sensitive..
  *
@@ -736,7 +742,6 @@ js_FileOpen(JSContext *cx, JSObject *obj, JSFile *file, char *mode){
     v[1] = STRING_TO_JSVAL(type);
 
     if (!file_open(cx, obj, 2, v, &rval)) {
-		/* TODO: do we need error reporting here? */
         return JS_FALSE;
     }
     return JS_TRUE;
@@ -968,7 +973,7 @@ js_FileWrite(JSContext *cx, JSFile *file, jschar *buf, int32 len, int32 mode)
     return count;
 }
 
-/* ------------------------------ Property checkers -------------------------- */
+/* ----------------------------- Property checkers -------------------------- */
 static JSBool
 js_exists(JSContext *cx, JSFile *file)
 {
@@ -1007,7 +1012,8 @@ js_canWrite(JSContext *cx, JSFile *file)
             /* pipe open for writing */
             return file->path[strlen(file->path)-1]==PIPE_SYMBOL;
         }else{
-            return !strcmp(file->path, STDOUTPUT_NAME) || !strcmp(file->path, STDERROR_NAME);
+            return  !strcmp(file->path, STDOUTPUT_NAME) ||
+                    !strcmp(file->path, STDERROR_NAME);
         }
     }
 }
@@ -1086,7 +1092,8 @@ js_parent(JSContext *cx, JSFile *file)
     str = js_fileDirectoryName(cx, file->path);
     /* root.parent = null ??? */
     if(!strcmp(file->path, str) ||
-            (!strncmp(str, file->path, strlen(str)-1)&&file->path[strlen(file->path)]-1)==FILESEPARATOR){
+            (!strncmp(str, file->path, strlen(str)-1)&&
+            file->path[strlen(file->path)]-1)==FILESEPARATOR){
         return JSVAL_NULL;
     }else{
         return OBJECT_TO_JSVAL(js_NewFileObject(cx, str));
@@ -1115,18 +1122,22 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     /* A native file that is already open */
     if(file->isOpen && file->isNative){
-        JS_ReportWarning(cx, "Native file %s is already open, proceeding", file->path);
+        JS_ReportWarning(cx, "Native file %s is already open, proceeding",
+            file->path);
         goto good;
     }
 
     /* Close before proceeding */
     if (file->isOpen) {
-        JS_ReportWarning(cx, "File %s is already open, we will close it and reopen, proceeding", file->path);
+        JS_ReportWarning(cx,
+            "File %s is already open, we will close it and reopen, proceeding",
+            file->path);
         if(!file_close(cx, obj, 0, NULL, rval)) goto out;
     }
 
     if(js_isDirectory(cx, file)){
-        JS_ReportWarning(cx, "%s seems to be a directory, there is no point in trying to open it, proceeding", file->path);
+        JS_ReportWarning(cx, "%s seems to be a directory, there is no point in "
+                "trying to open it, proceeding", file->path);
         goto good;
     }
 
@@ -1144,12 +1155,15 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         mode = JS_strdup(cx, JS_GetStringBytes(strmode));
     }else{
         if(file->path[0]==PIPE_SYMBOL){
-            mode = JS_strdup(cx, "read");                     /* pipe default mode */
+            /* pipe default mode */
+            mode = JS_strdup(cx, "read");
         }else
         if(file->path[len-1]==PIPE_SYMBOL){
-            mode = JS_strdup(cx, "write");                    /* pipe default mode */
+            /* pipe default mode */
+            mode = JS_strdup(cx, "write");
         }else{
-            mode = JS_strdup(cx, "readWrite,append,create");  /* non-destructive, permissive defaults. */
+            /* non-destructive, permissive defaults. */
+            mode = JS_strdup(cx, "readWrite,append,create");
         }
     }
 
@@ -1185,7 +1199,8 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             type = UCS2;
         else{
             if(strcmp(ctype, asciistring)){
-                JS_ReportWarning(cx, "File type %s is not supported, using 'text' instead, proceeding", ctype);
+                JS_ReportWarning(cx, "File type %s is not supported, using "
+                        "'text' instead, proceeding", ctype);
             }
             type = ASCII;
         }
@@ -1210,7 +1225,7 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                 goto out;
         }else{
             char pipemode[3];
-            /* special SECURITY */
+            SECURITY_CHECK(cx, NULL, "pipe_open", file);
 
             if(file->path[0] == PIPE_SYMBOL){
                 if(mask & (PR_WRONLY | PR_APPEND | PR_CREATE_FILE | PR_TRUNCATE)){
@@ -1243,7 +1258,7 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             file->hasRandomAccess = JS_FALSE;
         }
     }else{
-        /* TODO: what about the permissions?? Java seems to ignore the problem... */
+        /* TODO: what about the permissions?? Java ignores the problem... */
         file->handle = PR_Open(file->path, mask, 0644);
     }
 
@@ -1278,7 +1293,8 @@ file_close(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     SECURITY_CHECK(cx, NULL, "close", file);
 
     if(!file->isOpen){
-        JS_ReportWarning(cx, "File %s is not open, can't close it, proceeding", file->path);
+        JS_ReportWarning(cx, "File %s is not open, can't close it, proceeding",
+            file->path);
         goto out;
     }
 
@@ -1320,7 +1336,8 @@ file_remove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSFILE_CHECK_NATIVE("remove");
     JSFILE_CHECK_CLOSED("remove");
 
-    if ((js_isDirectory(cx, file) ? PR_RmDir(file->path) : PR_Delete(file->path))==PR_SUCCESS) {
+    if ((js_isDirectory(cx, file) ?
+            PR_RmDir(file->path) : PR_Delete(file->path))==PR_SUCCESS) {
         js_ResetAttributes(file);
         *rval = JSVAL_TRUE;
         return JS_TRUE;
@@ -1345,7 +1362,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsval		count, size;
     JSBool      fileInitiallyOpen=JS_FALSE;
 
-    SECURITY_CHECK(cx, NULL, "copyTo", file);   /* may need a second argument! */
+    SECURITY_CHECK(cx, NULL, "copyTo", file);   /* may need a second argument!*/
     JSFILE_CHECK_ONE_ARG("copyTo");
     JSFILE_CHECK_NATIVE("copyTo");
     /* remeber the state */
@@ -1436,7 +1453,7 @@ file_renameTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     JSFile  *file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
     char    *dest;
 
-    SECURITY_CHECK(cx, NULL, "renameTo", file);     /* may need a second argument! */
+    SECURITY_CHECK(cx, NULL, "renameTo", file); /* may need a second argument!*/
     JSFILE_CHECK_ONE_ARG("renameTo");
     JSFILE_CHECK_NATIVE("renameTo");
     JSFILE_CHECK_CLOSED("renameTo");
@@ -1493,7 +1510,8 @@ file_write(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     for (i = 0; i<argc; i++) {
         str = JS_ValueToString(cx, argv[i]);
-        count = js_FileWrite(cx, file, JS_GetStringChars(str), JS_GetStringLength(str), file->type);
+        count = js_FileWrite(cx, file, JS_GetStringChars(str),
+            JS_GetStringLength(str), file->type);
         if (count==-1){
           *rval = JSVAL_FALSE;
           return JS_FALSE;
@@ -1521,7 +1539,8 @@ file_writeln(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* don't do security here -- we passed the check in file_write */
     str = JS_NewStringCopyZ(cx, "\n");
 
-    if (js_FileWrite(cx, file, JS_GetStringChars(str), JS_GetStringLength(str), file->type)==-1){
+    if (js_FileWrite(cx, file, JS_GetStringChars(str), JS_GetStringLength(str),
+            file->type)==-1){
         *rval = JSVAL_FALSE;
         return JS_FALSE;
     }
@@ -1599,7 +1618,6 @@ file_read(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     count =  js_FileRead(cx, file, buf, want, file->type);
     if (count>0) {
-        /* TODO: do we need unicode here? */
         str = JS_NewUCStringCopyN(cx, buf, count);
         *rval = STRING_TO_JSVAL(str);
         JS_free(cx, buf);
@@ -1737,7 +1755,7 @@ file_seek(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     if(js_isDirectory(cx, file)){
-        JS_ReportWarning(cx, "Seek on directories is not supported, proceeding");
+        JS_ReportWarning(cx,"Seek on directories is not supported, proceeding");
         goto out;
     }
 
@@ -1839,7 +1857,7 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         }
         v = OBJECT_TO_JSVAL(eachFile);
         JS_SetElement(cx, array, len, &v);
-        JS_SetProperty(cx, array, entry->name, &v); /* accessible by name.. make sense I think.. */
+        JS_SetProperty(cx, array, entry->name, &v);
         len++;
     }
 
@@ -1898,7 +1916,7 @@ out:
 }
 
 static JSBool
-file_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+file_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval*rval)
 {
     JSFile *file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
@@ -1988,7 +2006,8 @@ js_NewFileObject(JSContext *cx, char *filename)
 
 /* Internal function, used for cases which NSPR file support doesn't cover */
 JSObject*
-js_NewFileObjectFromFILE(JSContext *cx, FILE *nativehandle, char *filename, int32 mode, JSBool open, JSBool randomAccess)
+js_NewFileObjectFromFILE(JSContext *cx, FILE *nativehandle, char *filename,
+    int32 mode, JSBool open, JSBool randomAccess)
 {
     JSObject *obj;
     JSFile   *file;
@@ -2019,7 +2038,8 @@ js_NewFileObjectFromFILE(JSContext *cx, FILE *nativehandle, char *filename, int3
     Basically, does error processing and calls file_init.
 */
 static JSBool
-file_constructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+file_constructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+    jsval *rval)
 {
     JSString *str;
     JSFile   *file;
@@ -2043,7 +2063,7 @@ out:
     return JS_FALSE;
 }
 
-/* ------------------------- File methods and properties -------------------------------- */
+/* -------------------- File methods and properties ------------------------- */
 static JSFunctionSpec file_functions[] = {
     { "open",           file_open, 0},
     { "close",          file_close, 0},
@@ -2090,31 +2110,31 @@ enum file_tinyid {
 };
 
 static JSPropertySpec file_props[] = {
-    {"length",          FILE_LENGTH,        JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"parent",          FILE_PARENT,        JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"path",            FILE_PATH,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"name",            FILE_NAME,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"isDirectory",     FILE_ISDIR,         JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"isFile",          FILE_ISFILE,        JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"exists",          FILE_EXISTS,        JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"canRead",         FILE_CANREAD,       JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"canWrite",        FILE_CANWRITE,      JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"canAppend",       FILE_APPEND,        JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"canReplace",      FILE_REPLACE,       JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"isOpen",          FILE_OPEN,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"type",            FILE_TYPE,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"mode",            FILE_MODE,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"creationTime",    FILE_CREATED,       JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"lastModified",    FILE_MODIFIED,      JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"size",            FILE_SIZE,          JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"hasRandomAccess", FILE_RANDOMACCESS,  JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"hasAutoFlush",    FILE_AUTOFLUSH,     JSPROP_ENUMERATE | JSPROP_READONLY },
-    {"position",        FILE_POSITION,      JSPROP_ENUMERATE },
-    {"isNative",        FILE_ISNATIVE,      JSPROP_ENUMERATE | JSPROP_READONLY },
-    {0}
+   {"length",          FILE_LENGTH,        JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"parent",          FILE_PARENT,        JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"path",            FILE_PATH,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"name",            FILE_NAME,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"isDirectory",     FILE_ISDIR,         JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"isFile",          FILE_ISFILE,        JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"exists",          FILE_EXISTS,        JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"canRead",         FILE_CANREAD,       JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"canWrite",        FILE_CANWRITE,      JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"canAppend",       FILE_APPEND,        JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"canReplace",      FILE_REPLACE,       JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"isOpen",          FILE_OPEN,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"type",            FILE_TYPE,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"mode",            FILE_MODE,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"creationTime",    FILE_CREATED,       JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"lastModified",    FILE_MODIFIED,      JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"size",            FILE_SIZE,          JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"hasRandomAccess", FILE_RANDOMACCESS,  JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"hasAutoFlush",    FILE_AUTOFLUSH,     JSPROP_ENUMERATE | JSPROP_READONLY },
+   {"position",        FILE_POSITION,      JSPROP_ENUMERATE },
+   {"isNative",        FILE_ISNATIVE,      JSPROP_ENUMERATE | JSPROP_READONLY },
+   {0}
 };
 
-/* ------------------------------- Property getter/setter ------------------------------ */
+/* ------------------------- Property getter/setter ------------------------- */
 static JSBool
 file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
@@ -2171,12 +2191,14 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     case FILE_APPEND :
         SECURITY_CHECK(cx, NULL, "canAppend", file);
         JSFILE_CHECK_OPEN("canAppend");
-        *vp = BOOLEAN_TO_JSVAL(!file->isNative && (file->mode&PR_APPEND)==PR_APPEND);
+        *vp = BOOLEAN_TO_JSVAL(!file->isNative &&
+                (file->mode&PR_APPEND)==PR_APPEND);
         break;
     case FILE_REPLACE :
         SECURITY_CHECK(cx, NULL, "canReplace", file);
         JSFILE_CHECK_OPEN("canReplace");
-        *vp = BOOLEAN_TO_JSVAL(!file->isNative && (file->mode&PR_TRUNCATE)==PR_TRUNCATE);
+        *vp = BOOLEAN_TO_JSVAL(!file->isNative &&
+                (file->mode&PR_TRUNCATE)==PR_TRUNCATE);
         break;
     case FILE_AUTOFLUSH :
         SECURITY_CHECK(cx, NULL, "hasAutoFlush", file);
@@ -2202,7 +2224,8 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
             *vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, unicodestring));
             break;
         default:
-            JS_ReportWarning(cx, "Unsupported file type %d, proceeding", file->type);;
+            JS_ReportWarning(cx, "Unsupported file type %d, proceeding",
+                file->type);
         }
         break;
     case FILE_MODE:
@@ -2261,7 +2284,7 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
             goto out;
         }
 
-        PR_ExplodeTime(info.creationTime, PR_LocalTimeParameters, &expandedTime);
+        PR_ExplodeTime(info.creationTime, PR_LocalTimeParameters,&expandedTime);
         *vp = OBJECT_TO_JSVAL(js_NewDateObject(cx,  expandedTime.tm_year,
                                     expandedTime.tm_month,
                                     expandedTime.tm_mday,
@@ -2351,7 +2374,8 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 goto out;
             }
         }else {
-            JS_ReportWarning(cx, "File %s is closed or not a plain file, can't report position, proceeding");
+            JS_ReportWarning(cx, "File %s is closed or not a plain file,"
+                " can't report position, proceeding");
             goto out;
         }
         break;
@@ -2363,7 +2387,7 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 			PRDirEntry *entry = NULL;
             char *prop_name = JS_GetStringBytes(JS_ValueToString(cx, id));
 
-            /* TODO: Doesn't work for native! */
+            /* no native files past this point */
             dir = PR_OpenDir(file->path);
             if(!dir) {
                 /* This is probably not a directory */
@@ -2406,7 +2430,8 @@ file_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         JSFILE_CHECK_NATIVE("set_position");
 
         if(!file->hasRandomAccess){
-            JS_ReportWarning(cx, "File %s doesn't support random access, can't report the position, proceeding");
+            JS_ReportWarning(cx, "File %s doesn't support random access, can't "
+                "report the position, proceeding");
             goto out;
         }
 
@@ -2430,7 +2455,8 @@ file_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 goto out;
             }
         } else {
-            JS_ReportWarning(cx, "File %s is closed or not a file, can't set position, proceeding", file->path);
+            JS_ReportWarning(cx, "File %s is closed or not a file, can't set "
+                "position, proceeding", file->path);
             goto out;
         }
     }
@@ -2490,7 +2516,7 @@ static JSClass file_class = {
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   file_finalize
 };
 
-/* ----------------------- Functions exposed to the outside ------------------------- */
+/* -------------------- Functions exposed to the outside -------------------- */
 JS_EXPORT_API(JSObject*)
 js_InitFileClass(JSContext *cx, JSObject* obj, JSBool initStandardStreams)
 {
@@ -2507,7 +2533,6 @@ js_InitFileClass(JSContext *cx, JSObject* obj, JSBool initStandardStreams)
         return NULL;
     }
 
-    /* SECURITY -- need to make sure we want to have default streams */
     ctor = JS_GetConstructor(cx, file);
     if (!ctor)  return NULL;
 
@@ -2520,31 +2545,32 @@ js_InitFileClass(JSContext *cx, JSObject* obj, JSBool initStandardStreams)
     JS_free(cx, currentdir);
     vp = OBJECT_TO_JSVAL(afile);
     JS_DefinePropertyWithTinyId(cx, ctor, CURRENTDIR_PROPERTY, 0, vp,
-                JS_PropertyStub, file_currentDirSetter, JSPROP_ENUMERATE | JSPROP_READONLY );
+                JS_PropertyStub, file_currentDirSetter,
+                JSPROP_ENUMERATE | JSPROP_READONLY );
 
     if(initStandardStreams){
-#ifdef XP_MAC
-#   error "Standard streams are not supported on the MAC, turn JS_FILE_HAS_STANDARD_STREAMS off"
-#else
         /* Code to create stdin, stdout, and stderr. Insert in the appropriate place. */
         /* Define input */
-        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stdin,  STDINPUT_NAME, PR_RDONLY, JS_TRUE, JS_FALSE));
+        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stdin,
+                STDINPUT_NAME, PR_RDONLY, JS_TRUE, JS_FALSE));
         JS_SetProperty(cx, ctor, "input", &vp);
- 
+
         /* Define output */
-        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stdout, STDOUTPUT_NAME, PR_WRONLY, JS_TRUE, JS_FALSE));
+        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stdout,
+                STDOUTPUT_NAME, PR_WRONLY, JS_TRUE, JS_FALSE));
         JS_SetProperty(cx, ctor, "output", &vp);
 
         /* Define error */
-        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stderr, STDERROR_NAME, PR_WRONLY, JS_TRUE, JS_FALSE));
+        vp = OBJECT_TO_JSVAL(js_NewFileObjectFromFILE(cx, stderr,
+                STDERROR_NAME, PR_WRONLY, JS_TRUE, JS_FALSE));
         JS_SetProperty(cx, ctor, "error", &vp);
-#endif
     }
     separator[0] = FILESEPARATOR;
     separator[1] = '\0';
     vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, separator));
     JS_DefinePropertyWithTinyId(cx, ctor, SEPARATOR_PROPERTY, 0, vp,
-                JS_PropertyStub, JS_PropertyStub, JSPROP_ENUMERATE | JSPROP_READONLY );
+                JS_PropertyStub, JS_PropertyStub,
+                JSPROP_ENUMERATE | JSPROP_READONLY );
     return file;
 }
 #endif /* JS_HAS_FILE_OBJECT */
