@@ -86,7 +86,7 @@ void nsWebBrowserPersist::CleanUp()
         mOutputStream->Close();
         mOutputStream = nsnull;
     }
-    mOutputChannel = nsnull;
+    mOutputTransport = nsnull;
 }
 
 NS_IMPL_ADDREF(nsWebBrowserPersist)
@@ -184,7 +184,7 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveURI(nsIURI *aURI, nsIInputStream *aPostDa
     }
     
     // Open a channel on the local file
-    nsCOMPtr<nsIChannel> outputChannel;
+    nsCOMPtr<nsITransport> outputChannel;
     rv = fts->CreateTransport(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
                               0664, getter_AddRefs(outputChannel));
     if (NS_FAILED(rv))
@@ -193,11 +193,12 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveURI(nsIURI *aURI, nsIInputStream *aPostDa
         return NS_ERROR_FAILURE;
     }
     
-    mOutputChannel = outputChannel;
+    mOutputTransport = outputChannel;
     
+//dougt wtf?!  why both a async and sync read?
+
     // Read from the input channel
-    nsCOMPtr<nsIRequest> request;
-    rv = inputChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(request));
+    rv = inputChannel->AsyncOpen(this, nsnull);
     if (NS_FAILED(rv))
     {
         OnEndDownload();
@@ -205,7 +206,7 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveURI(nsIURI *aURI, nsIInputStream *aPostDa
     }
     
     nsCOMPtr<nsIInputStream> inStream;
-    rv = inputChannel->OpenInputStream(0, -1, getter_AddRefs(inStream));
+    rv = inputChannel->Open(getter_AddRefs(inStream));
     if (NS_FAILED(rv))
     {
         OnEndDownload();
@@ -218,7 +219,7 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveURI(nsIURI *aURI, nsIInputStream *aPostDa
     // Get the output channel ready for writing
     nsCOMPtr<nsIRequest> writeRequest;
     rv = NS_AsyncWriteFromStream(getter_AddRefs(writeRequest),
-            outputChannel, inStream, 0, -1,
+            outputChannel, inStream, 0, 0, 0,
             NS_STATIC_CAST(nsIStreamObserver*, this), nsnull);
     if (NS_FAILED(rv))
     {
@@ -396,7 +397,7 @@ NS_IMETHODIMP nsWebBrowserPersist::OnProgress(PRUint32 aStatus, nsIURI *aURI, PR
 
 NS_IMETHODIMP nsWebBrowserPersist::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 {
-    nsresult rv = mOutputChannel->OpenOutputStream(0, -1, getter_AddRefs(mOutputStream));
+    nsresult rv = mOutputTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mOutputStream));
     return rv;
 }
  

@@ -356,8 +356,7 @@ nsWebCrawler::OnEndDocumentLoad(nsIDocumentLoader* loader,
   }
 
   nsCOMPtr<nsIURI> aURL;
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   rv = channel->GetURI(getter_AddRefs(aURL));
   if (NS_FAILED(rv)) {
     return rv;

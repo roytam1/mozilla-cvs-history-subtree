@@ -48,7 +48,6 @@
 #include "nsIURIContentListener.h"
 #include "nsIHTTPChannel.h"
 #include "nsIStreamConverterService.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIPref.h"
 
 static NS_DEFINE_CID(kStreamConvServiceCID, NS_STREAMCONVERTERSERVICE_CID);
@@ -297,9 +296,7 @@ ImageConsumer::DoContent(const char * aContentType,
 NS_IMETHODIMP
 ImageConsumer::OnStartRequest(nsIRequest* aRequest, nsISupports* aContext)
 {
-    nsCOMPtr<nsIChannel> channel;
-    NS_ASSERTION(aRequest, "No Request!!");
-    aRequest->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(aRequest);
 
   PRUint32 httpStatus;
   if (mInterrupted) {
@@ -327,8 +324,7 @@ ImageConsumer::OnStartRequest(nsIRequest* aRequest, nsISupports* aContext)
 
   nsresult rv = NS_OK;
   char* aContentType = NULL;
-  nsCOMPtr<nsIStreamContentInfo> pContentRequest(do_QueryInterface(aRequest));
-  rv = pContentRequest->GetContentType(&aContentType); //nsCRT alloc's str
+  rv = channel->GetContentType(&aContentType); //nsCRT alloc's str
   if (NS_FAILED(rv)) {
       if(aContentType){
           nsCRT::free(aContentType);
@@ -366,9 +362,7 @@ ImageConsumer::OnDataAvailable(nsIRequest* request, nsISupports* aContext,
   PRUint32 bytes_read = 0;
   ilINetReader *reader = mURL->GetReader();
 
-    nsCOMPtr<nsIChannel> channel;
-    NS_ASSERTION(request, "No Request!!");
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
   if (mInterrupted || mStatus != 0) {
     mStatus = MK_INTERRUPTED;
@@ -802,8 +796,7 @@ ImageNetContextImpl::GetURL (ilIURL * aURL,
         if (NS_SUCCEEDED(group->GetDefaultLoadRequest(
                         getter_AddRefs(defLoadRequest))) && defLoadRequest)
         {
-            nsCOMPtr<nsIChannel> reqchannel;
-            defLoadRequest->GetParent(getter_AddRefs(reqchannel));
+            nsCOMPtr<nsIChannel> reqchannel = do_QueryInterface(defLoadRequest);
 
             // Get the referrer from the loadchannel-
             nsCOMPtr<nsIURI> referrer;
@@ -903,7 +896,7 @@ Need code to check freshness of necko cache.
      if (NS_SUCCEEDED(group->GetDefaultLoadRequest(
                         getter_AddRefs(defLoadRequest))) && defLoadRequest)
      {
-         defLoadRequest->GetParent(getter_AddRefs(channel));
+         defLoadRequest = do_QueryInterface(channel);
          channel->GetLoadAttributes(&defchan_attribs);
      }
 

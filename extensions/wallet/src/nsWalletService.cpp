@@ -368,8 +368,7 @@ nsWalletlibService::OnEndDocumentLoad(nsIDocumentLoader* aLoader, nsIRequest *re
                           nsCOMPtr<nsIInterfaceRequestor> interfaces;
                           nsCOMPtr<nsIPrompt> prompter;
 
-                          nsCOMPtr<nsIChannel> channel;
-                          request->GetParent(getter_AddRefs(channel));
+                          nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
                           if (channel)
                             channel->GetNotificationCallbacks(getter_AddRefs(interfaces));
                           if (interfaces)

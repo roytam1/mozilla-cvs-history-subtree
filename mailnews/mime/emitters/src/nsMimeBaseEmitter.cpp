@@ -45,7 +45,6 @@
 #include "nsIMimeConverter.h"
 #include "nsMsgMimeCID.h"
 #include "prlog.h"
-#include "nsIStreamContentInfo.h"
 
 static PRLogModuleInfo * gMimeEmitterLogModule = nsnull;
 
@@ -522,12 +521,7 @@ nsMimeBaseEmitter::UpdateCharacterSet(const char *aCharset)
   {
     char    *contentType = nsnull;
     
-    // check if the channel supports direct content info 
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(mChannel);
-    if (!contentInfo)
-      return NS_ERROR_FAILURE;
-
-    if (NS_SUCCEEDED(contentInfo->GetContentType(&contentType)) && contentType)
+    if (NS_SUCCEEDED(mChannel->GetContentType(&contentType)) && contentType)
     {
       char *cPtr = (char *) PL_strcasestr(contentType, "charset=");
 
@@ -552,7 +546,7 @@ nsMimeBaseEmitter::UpdateCharacterSet(const char *aCharset)
       char *newContentType = (char *) PR_smprintf("%s; charset=%s", contentType, aCharset);
       if (newContentType)
       {
-        contentInfo->SetContentType(newContentType); 
+        mChannel->SetContentType(newContentType); 
         PR_FREEIF(newContentType);
       }
       
@@ -858,8 +852,8 @@ nsMimeBaseEmitter::Complete()
     PRUint32 bytesInStream;
     nsresult rv2 = mInputStream->Available(&bytesInStream);
 	NS_ASSERTION(NS_SUCCEEDED(rv2), "Available failed");
-    // DOUGT - where did the request come from??!
-    rv2 = mOutListener->OnDataAvailable(/*mChannel*/nsnull, mURL, mInputStream, 0, bytesInStream);
+    nsCOMPtr<nsIRequest> request = do_QueryInterface(mChannel);
+    rv2 = mOutListener->OnDataAvailable(request, mURL, mInputStream, 0, bytesInStream);
 	NS_ASSERTION(NS_SUCCEEDED(rv2), "OnDataAvailable failed");
   }
 

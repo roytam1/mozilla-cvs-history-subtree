@@ -38,7 +38,6 @@
 #include "nsILoadGroup.h"
 #include "nsIResChannel.h"
 #include "nsIJARChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIStreamListener.h"
 #include "nsIServiceManager.h"
@@ -80,7 +79,7 @@ static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
 //  For logging information, NSPR_LOG_MODULES=nsCachedChromeChannel:5
 //
 
-class nsCachedChromeChannel : public nsIChannel, public nsIRequest, public nsIStreamContentInfo
+class nsCachedChromeChannel : public nsIChannel
 {
 protected:
     nsCachedChromeChannel(nsIURI* aURI);
@@ -123,22 +122,18 @@ public:
     NS_IMETHOD Cancel(nsresult status)  { mStatus = status; return NS_OK; }
     NS_IMETHOD Suspend(void) { return NS_OK; }
     NS_IMETHOD Resume(void)  { return NS_OK; }
-    NS_IMETHOD GetParent(nsISupports * *aParent) { NS_ADDREF(*aParent = (nsIChannel*)this); return NS_OK; }
-    NS_IMETHOD SetParent(nsISupports * aParent) { return NS_ERROR_NOT_IMPLEMENTED; }
     
 // nsIChannel    
     NS_DECL_NSICHANNEL
-    NS_DECL_NSISTREAMCONTENTINFO
+
 };
 
 #ifdef PR_LOGGING
 PRLogModuleInfo* nsCachedChromeChannel::gLog;
 #endif
 
-NS_IMPL_ISUPPORTS3(nsCachedChromeChannel, 
-                     nsIRequest, 
-                     nsIChannel,
-                     nsIStreamContentInfo);
+NS_IMPL_ISUPPORTS1(nsCachedChromeChannel, 
+                   nsIChannel);
 
 nsresult
 nsCachedChromeChannel::Create(nsIURI* aURI, nsIChannel** aResult)
@@ -213,7 +208,7 @@ nsCachedChromeChannel::SetURI(nsIURI* aURI)
 }
 
 NS_IMETHODIMP
-nsCachedChromeChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+nsCachedChromeChannel::Open(nsIInputStream **_retval)
 {
 //    NS_NOTREACHED("don't do that");
     *_retval = nsnull;
@@ -221,16 +216,7 @@ nsCachedChromeChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transfe
 }
 
 NS_IMETHODIMP
-nsCachedChromeChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
-{
-    NS_NOTREACHED("don't do that");
-    *_retval = nsnull;
-    return NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP
-nsCachedChromeChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                                 PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsCachedChromeChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
     if (listener) {
         nsresult rv;
@@ -274,11 +260,9 @@ nsCachedChromeChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
 }
 
 NS_IMETHODIMP
-nsCachedChromeChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
-                                  PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsCachedChromeChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
-    NS_NOTREACHED("don't do that");
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -336,14 +320,6 @@ NS_IMETHODIMP
 nsCachedChromeChannel::SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks)
 {
     return NS_OK;	// ignored
-}
-
-
-NS_IMETHODIMP 
-nsCachedChromeChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
-{
-    *aSecurityInfo = nsnull;
-    return NS_OK;
 }
 
 NS_IMETHODIMP 

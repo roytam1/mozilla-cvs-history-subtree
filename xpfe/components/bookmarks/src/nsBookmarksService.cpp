@@ -2000,13 +2000,12 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
 					if (httpChannel)
 					{
 						bmks->htmlSize = 0;
-                        nsCOMPtr<nsIRequest> request;
 						nsCOMPtr<nsIAtom> headAtom = getter_AddRefs(NS_NewAtom("HEAD"));
 						if (headAtom)
 						{
 							httpChannel->SetRequestMethod(headAtom);
 						}
-						if (NS_SUCCEEDED(rv = channel->AsyncRead(bmks, nsnull, 0, -1, getter_AddRefs(request))))
+						if (NS_SUCCEEDED(rv = channel->AsyncOpen(bmks, nsnull)))
 						{
 							bmks->busySchedule = PR_TRUE;
 						}
@@ -2074,8 +2073,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 		printf("Finished polling '%s'\n", uri);
 #endif
 	}
-    nsCOMPtr<nsIChannel> channel;
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 	nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
 	if (httpChannel)
 	{

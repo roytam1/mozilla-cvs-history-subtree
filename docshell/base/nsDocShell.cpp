@@ -2699,8 +2699,7 @@ NS_IMETHODIMP nsDocShell::CreateContentViewer(const char* aContentType,
    // we've created a new document so go ahead and call OnLoadingSite
    mURIResultedInDocument = PR_TRUE;
    
-   nsCOMPtr<nsIChannel> aOpenedChannel;
-   request->GetParent(getter_AddRefs(aOpenedChannel));
+   nsCOMPtr<nsIChannel> aOpenedChannel = do_QueryInterface(request);
 
    OnLoadingSite(aOpenedChannel);
 
@@ -2776,8 +2775,7 @@ nsresult nsDocShell::NewContentViewerObj(const char* aContentType,
       return NS_ERROR_FAILURE;
   }
    
-  nsCOMPtr<nsIChannel> aOpenedChannel;
-  request->GetParent(getter_AddRefs(aOpenedChannel));
+  nsCOMPtr<nsIChannel> aOpenedChannel = do_QueryInterface(request);
 
   // Now create an instance of the content viewer
   NS_ENSURE_SUCCESS(docLoaderFactory->CreateInstance(

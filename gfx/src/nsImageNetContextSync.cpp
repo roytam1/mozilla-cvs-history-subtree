@@ -37,7 +37,6 @@
 #include "nsIChannel.h"
 #include "nsCRT.h"
 #include "nsIServiceManager.h"
-#include "nsIStreamContentInfo.h"
 
 static NS_DEFINE_IID(kIURLIID, NS_IURL_IID);
 
@@ -213,11 +212,11 @@ ImageNetContextSyncImpl::GetURL(ilIURL*  aURL,
     if (NS_FAILED(rv)) 
         return -1;
 
-    rv = channel->OpenInputStream(0, -1, &stream);
-    nsCOMPtr<nsIStreamContentInfo> continfo = do_QueryInterface(stream);
-    char* aContentType = NULL;
-    if (continfo)
-        rv = continfo->GetContentType(&aContentType); //nsCRT alloc's str
+    char* aContentType;
+    rv = channel->Open( &stream);
+    if (NS_FAILED(rv)) return -1;
+    rv = channel->GetContentType(&aContentType); //nsCRT alloc's str
+    if (NS_FAILED(rv)) return -1;
 
     if (!aContentType) {
         aContentType = nsCRT::strdup("unknown");        

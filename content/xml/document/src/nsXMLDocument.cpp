@@ -350,8 +350,7 @@ nsXMLDocument::Load(const nsAReadableString& aUrl)
   }
 
   // Start an asynchronous read of the XML document
-  nsCOMPtr<nsIRequest> request;
-  rv = channel->AsyncRead(listener, nsnull, 0, -1, getter_AddRefs(request));
+  rv = channel->AsyncOpen(listener, nsnull);
 
   return rv;
 }

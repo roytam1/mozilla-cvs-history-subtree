@@ -40,7 +40,6 @@
 #include "nsMimeTypes.h"
 #include "nsIHTTPChannel.h"
 #include "nsIWebProgress.h"
-#include "nsIStreamContentInfo.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -298,18 +297,17 @@ nsURLFetcher::OnStopRequest(nsIRequest *request, nsISupports * /* ctxt */, nsres
   // Check the content type!
   char    *contentType = nsnull;
   char    *charset = nsnull;
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  if (contentInfo && NS_SUCCEEDED(contentInfo->GetContentType(&contentType)) && contentType)
+
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
+  if(!aChannel) return NS_ERROR_FAILURE;
+
+  if (NS_SUCCEEDED(aChannel->GetContentType(&contentType)) && contentType)
   {
     if (PL_strcasecmp(contentType, UNKNOWN_CONTENT_TYPE))
     {
       mContentType = contentType;
     }
   }
-
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
-  if(!aChannel) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(aChannel);
   if (httpChannel)

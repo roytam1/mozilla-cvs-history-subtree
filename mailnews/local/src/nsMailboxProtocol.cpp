@@ -35,7 +35,6 @@
 #include "nsIMessage.h"
 #include "nsMsgDBCID.h"
 #include "nsIMsgMailNewsUrl.h"
-#include "nsIStreamContentInfo.h"
 
 //#include "allxpstr.h"
 #include "prtime.h"
@@ -86,9 +85,8 @@ NS_IMETHODIMP nsMailboxProtocol::GetContentLength(PRInt32 * aContentLength)
     if (!m_request)
       return NS_OK;
 
-    nsCOMPtr<nsIStreamContentInfo> info = do_QueryInterface(m_request);
-    if (info) 
-        info->GetContentLength(aContentLength);
+    nsCOMPtr<nsIChannel> info = do_QueryInterface(m_request);
+    if (info) info->GetContentLength(aContentLength);
     return NS_OK;
 
   }

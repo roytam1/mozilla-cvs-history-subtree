@@ -23,7 +23,6 @@
 #include "nsDOMParser.h"
 #include "nsIURI.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsILoadGroup.h"
 #include "nsIInputStream.h"
 #include "nsNetUtil.h"
@@ -52,14 +51,13 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 //
 /////////////////////////////////////////////
 
-class nsDOMParserChannel : public nsIChannel, public nsIRequest, public nsIStreamContentInfo {
+class nsDOMParserChannel : public nsIChannel {
 public:
   nsDOMParserChannel(nsIURI* aURI, const char* aContentType);
   virtual ~nsDOMParserChannel();
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIREQUEST
-  NS_DECL_NSISTREAMCONTENTINFO
   NS_DECL_NSICHANNEL
 
 protected:
@@ -84,10 +82,8 @@ nsDOMParserChannel::~nsDOMParserChannel()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsDOMParserChannel, 
-                   nsIRequest, 
-                   nsIChannel,
-                   nsIStreamContentInfo)
+NS_IMPL_ISUPPORTS1(nsDOMParserChannel, 
+                   nsIChannel)
 
 /* boolean isPending (); */
 NS_IMETHODIMP nsDOMParserChannel::GetName(PRUnichar* *result)
@@ -245,44 +241,14 @@ NS_IMETHODIMP nsDOMParserChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-
-/* nsIInputStream openInputStream (); */
-NS_IMETHODIMP nsDOMParserChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+NS_IMETHODIMP nsDOMParserChannel::Open(nsIInputStream **_retval)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* nsIOutputStream openOutputStream (); */
-NS_IMETHODIMP nsDOMParserChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
+NS_IMETHODIMP nsDOMParserChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void asyncRead (in nsIStreamListener listener, in nsISupports ctxt); */
-NS_IMETHODIMP nsDOMParserChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                                            PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void asyncWrite (in nsIInputStream fromStream, in nsIStreamObserver observer, in nsISupports ctxt); */
-NS_IMETHODIMP nsDOMParserChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
-                                             PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP
-nsDOMParserChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP
-nsDOMParserChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /////////////////////////////////////////////

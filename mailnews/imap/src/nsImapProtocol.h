@@ -35,6 +35,7 @@
 #include "nsString.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInterfaceRequestor.h"
+#include "nsITransport.h"
 
 // imap event sinks
 #include "nsIImapMailFolderSink.h"
@@ -62,7 +63,6 @@
 #include "nsXPIDLString.h"
 #include "nsIMsgWindow.h"
 #include "nsIMsgLogonRedirector.h"
-#include "nsIStreamContentInfo.h"
 
 class nsIMAPMessagePartIDArray;
 class nsIMsgIncomingServer;
@@ -316,7 +316,7 @@ private:
   PRUint32        m_curReadIndex;  // current read index
 
 	// Ouput stream for writing commands to the socket
-	nsCOMPtr<nsIChannel>		m_channel; 
+	nsCOMPtr<nsITransport>		m_channel; 
 	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
 	nsCOMPtr<nsIInputStream>    m_inputStream;
 
@@ -577,7 +577,7 @@ private:
 //
 // Threading concern: This class lives entirely in the UI thread.
 
-class nsImapMockChannel : public nsIImapMockChannel, public nsIRequest, public nsIStreamContentInfo
+class nsImapMockChannel : public nsIImapMockChannel
 {
 public:
 
@@ -585,7 +585,6 @@ public:
   NS_DECL_NSIIMAPMOCKCHANNEL
   NS_DECL_NSICHANNEL
   NS_DECL_NSIREQUEST
-  NS_DECL_NSISTREAMCONTENTINFO
 	
   nsImapMockChannel();
 	virtual ~nsImapMockChannel();

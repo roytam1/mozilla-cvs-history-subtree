@@ -118,8 +118,7 @@ function (aContentType, aCommand, aWindowTarget, aSourceContext, aRequest)
 {
     var e;
 
-	var aChannel aRequest.GetParent;
-	aChannel = aChannel.QueryInterface(Components.interfaces.nsIChannel);
+	var aChannel  = aRequest.QueryInterface(Components.interfaces.nsIChannel);
 		
     dump ("telnetLoader.handleContent (" + aContentType + ", " +
           aCommand + ", " + aWindowTarget + ", " + aSourceContext + ", " +
@@ -295,9 +294,8 @@ BogusChannel.prototype.securityInfo = null;
 BogusChannel.prototype.shouldCache = false;
 BogusChannel.prototype.parent = null;
 
-BogusChannel.prototype.openInputStream =
-BogusChannel.prototype.openOutputStream =
-BogusChannel.prototype.asyncWrite =
+BogusChannel.prototype.open =
+BogusChannel.prototype.asyncOpen =
 function ()
 {
     throw Components.results.NS_ERROR_NOT_IMPLEMENTED;

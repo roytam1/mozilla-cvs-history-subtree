@@ -38,7 +38,6 @@
 #include "nsIInputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIURIContentListener.h"
-#include "nsIStreamContentInfo.h"
 
 #include "nsIPref.h"
 #include "nsIProfile.h"
@@ -850,10 +849,11 @@ nsPSMComponent::HandleContent(const char * aContentType,
 
     if (type != -1)
     {
-        // I can't directly open the passed channel cause it fails :-(
-        nsCOMPtr<nsIChannel> aChannel;
-        request->GetParent(getter_AddRefs(aChannel));
+      nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
+      if (!aChannel)
+        return NS_ERROR_FAILURE;
 
+      
         nsCOMPtr<nsIURI> uri;
         rv = aChannel->GetURI(getter_AddRefs(uri));
         if (NS_FAILED(rv)) return rv;
@@ -862,9 +862,8 @@ nsPSMComponent::HandleContent(const char * aContentType,
         rv = NS_OpenURI(getter_AddRefs(channel), uri);
         if (NS_FAILED(rv)) return rv;
 
-        nsCOMPtr<nsIRequest> downloadRequest;
-        return channel->AsyncRead(new CertDownloader(type), NS_STATIC_CAST(nsIPSMComponent*,this), 
-                                  0, -1, getter_AddRefs(downloadRequest));
+        return channel->AsyncOpen(new CertDownloader(type), NS_STATIC_CAST(nsIPSMComponent*,this)); 
+                                 
     }
 
     return NS_ERROR_FAILURE;

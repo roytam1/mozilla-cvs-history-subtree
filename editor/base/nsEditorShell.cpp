@@ -53,7 +53,6 @@
 #include "nsIURI.h"
 #include "nsCURILoader.h"
 #include "nsNetUtil.h"
-#include "nsIStreamContentInfo.h"
 
 #include "nsIScriptGlobalObject.h"
 #include "nsIWebNavigation.h"
@@ -5302,12 +5301,12 @@ nsresult nsEditorShell::EndDocumentLoad(nsIDOMWindow *aDOMWindow,
   // Is this a MIME type we can handle?
   if (request)
   {
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-    if (!contentInfo)
-        return NS_ERROR_FAILURE;
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+    if (!channel)
+      return NS_ERROR_FAILURE;
 
     char  *contentType;
-    contentInfo->GetContentType(&contentType);
+    channel->GetContentType(&contentType);
     if (contentType)
     {
       if ( (nsCRT::strcmp(contentType, "text/html") != 0) &&

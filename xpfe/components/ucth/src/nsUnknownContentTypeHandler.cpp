@@ -99,7 +99,7 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
 
     if ( request ) {
         
-        request->GetParent(getter_AddRefs(aChannel));
+      channel = do_QueryInterface(request);
 
         // Need root nsISupports for later JS_PushArguments call.
         channel = do_QueryInterface( aChannel );

@@ -904,8 +904,7 @@ nsWebShell::OnStateChange(nsIWebProgress *aProgress, nsIRequest *request,
     if (aProgress == webProgress.get()) {
       nsCOMPtr<nsIURI> url;
       
-      nsCOMPtr<nsIChannel> channel;
-      request->GetParent(getter_AddRefs(channel));
+      nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
       nsCOMPtr<nsIDocumentLoaderObserver> dlObserver;
 
       (void) channel->GetURI(getter_AddRefs(url));
@@ -945,8 +944,7 @@ nsWebShell::OnStateChange(nsIWebProgress *aProgress, nsIRequest *request,
   }
 
   if (aStateFlags & STATE_IS_REQUEST) {
-    nsCOMPtr<nsIChannel> channel;
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
       
     if (aStateFlags & STATE_START) {
       /*

@@ -125,7 +125,7 @@ SetupRegistry(void)
 
   // i18n
   nsComponentManager::RegisterComponent(charsetCID, NULL, NULL, UNICHAR_DLL,  PR_FALSE, PR_FALSE);
-  nsresult res = nsServiceManager::GetService(charsetCID, NS_GET_IID(nsIConvMe), (nsISupports **)&ccMan);
+  nsresult res = nsServiceManager::GetService(charsetCID, NS_GET_IID(nsICharsetConverterManager), (nsISupports **)&ccMan);
   if (NS_FAILED(res)) 
   {
     printf("ERROR at GetService() code=0x%x.\n",res);
@@ -182,14 +182,14 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, 
+	NS_IMETHOD OnDataAvailable(nsIRequest *request, 
 							 nsISupports    *ctxt, 
                              nsIInputStream *inStr, 
                              PRUint32       sourceOffset, 
                              PRUint32       count);
 
-	NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt) { return NS_OK;}
-	NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+	NS_IMETHOD OnStartRequest(nsIRequest* request, nsISupports *ctxt) { return NS_OK;}
+	NS_IMETHOD OnStopRequest(nsIRequest* request, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 	{
       if ((mOutFormat == nsMimeOutput::nsMimeMessageSplitDisplay) ||
           (mOutFormat == nsMimeOutput::nsMimeMessageBodyDisplay) ||
@@ -250,7 +250,7 @@ ConsoleOutputStreamListener::DoIndent()
   return NS_OK;
 }
 
-NS_IMETHODIMP ConsoleOutputStreamListener::OnDataAvailable(nsIChannel * aChannel, 
+NS_IMETHODIMP ConsoleOutputStreamListener::OnDataAvailable(nsIRequest *request, 
 							 nsISupports    *ctxt, 
                              nsIInputStream *inStr, 
                              PRUint32       sourceOffset, 
@@ -726,7 +726,7 @@ DoFormattingOnly(char *filename)
     PRUint32    len;
 
     in->GetLength(&len);
-    if (out->OnDataAvailable(tChannel, nsnull, in, 0, len) != NS_OK)
+    if (out->OnDataAvailable(nsnull, nsnull, in, 0, len) != NS_OK)
       break;
   }
 

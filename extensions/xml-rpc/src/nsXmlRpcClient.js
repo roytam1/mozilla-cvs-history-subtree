@@ -125,7 +125,7 @@ nsXmlRpcClient.prototype = {
 
         debug('Do the deed.');
 
-        var input = channel.openInputStream(0, -1);
+        var input = channel.open(0, 0, 0);
         input = toScriptableStream(input);
         
         var now = new Date()
@@ -152,9 +152,8 @@ nsXmlRpcClient.prototype = {
                         channel.responseStatus);
         }
 
-		var contentInfo = channel.QueryInterface(Components.interfaces.nsIStreamContentInfo);
         // check content type
-        if (contentInfo.contentType != 'text/xml') {
+        if (channel.contentType != 'text/xml') {
             this._status = Components.results.NS_ERROR_FAILURE;
             this._errorMsg = 'Server returned unexpected content-type ' +
                 contentInfo.contentType;

@@ -117,8 +117,7 @@ nsInstallTrigger::HandleContent(const char * aContentType,
 
     if (nsCRT::strcasecmp(aContentType, "application/x-xpinstall") == 0) {
         nsCOMPtr<nsIURI> uri;
-        nsCOMPtr<nsIChannel> aChannel;
-        request->GetParent(getter_AddRefs(aChannel));
+        nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
         rv = aChannel->GetURI(getter_AddRefs(uri));
         if (NS_FAILED(rv)) return rv;
 

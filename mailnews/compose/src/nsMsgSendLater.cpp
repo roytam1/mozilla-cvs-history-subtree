@@ -179,8 +179,7 @@ nsMsgSendLater::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult s
   }
   else
   {
-    nsCOMPtr<nsIChannel> channel;
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
     if(!channel) return NS_ERROR_FAILURE;
 
     // extract the prompt object to use for the alert from the url....

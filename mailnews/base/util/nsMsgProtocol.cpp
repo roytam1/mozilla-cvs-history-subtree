@@ -28,7 +28,9 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsILoadGroup.h"
 #include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsFileStream.h"
+#include "nsIFileTransportService.h"
 #include "nsINetSupportDialogService.h"
 #include "nsIDNSService.h"
 #include "nsIMsgWindow.h"
@@ -37,12 +39,10 @@
 static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-NS_IMPL_ISUPPORTS5(nsMsgProtocol, 
+NS_IMPL_ISUPPORTS3(nsMsgProtocol, 
                    nsIStreamListener, 
                    nsIStreamObserver, 
-                   nsIChannel, 
-                   nsIRequest, 
-                   nsIStreamContentInfo)
+                   nsIChannel)
 
 nsMsgProtocol::nsMsgProtocol(nsIURI * aURL)
 {
@@ -88,7 +88,7 @@ nsresult nsMsgProtocol::OpenNetworkSocketWithInfo(const char * aHostName, PRInt3
 	m_readCount = -1; // with socket connections we want to read as much data as arrives
 	m_startPosition = 0;
 
-  rv = socketService->CreateTransportOfType(connectionType, aHostName, aGetPort, nsnull, -1, 0, 0, getter_AddRefs(m_channel));
+  rv = socketService->CreateTransportOfType(connectionType, aHostName, aGetPort, nsnull, -1, 0, 0, getter_AddRefs(m_transport));
   if (NS_FAILED(rv)) return rv;
 
   m_socketIsOpen = PR_FALSE;
@@ -125,11 +125,28 @@ nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSp
 		aURL->GetPath(getter_Copies(filePath));
 		char * urlSpec = PR_smprintf("file://%s", (const char *) filePath);
 
-		rv = netService->NewChannel(urlSpec,
-                                    nsnull,     // null base URI
-                                    getter_AddRefs(m_channel));
+// dougt - there should be an easier way!
+        nsCOMPtr<nsIURI> aIURI;
+        if (NS_FAILED(rv = NS_NewURI(getter_AddRefs(aIURI), urlSpec)))
+            return(PR_FALSE);
+        if (!aIURI) return(PR_FALSE);
+
+        nsCOMPtr<nsIFileURL>    fileURL = do_QueryInterface(aIURI);
+        if (!fileURL)   return(PR_FALSE);
+
+        nsCOMPtr<nsIFile> file;
+        rv = fileURL->GetFile(getter_AddRefs(file));
+        if (NS_FAILED(rv))  return(PR_FALSE);
+// dougt
+
+        NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
+        NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);    
+        if (NS_FAILED(rv)) return PR_FALSE;
+
+        rv = fts->CreateTransport(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
+                                  0664, getter_AddRefs(m_transport));
 		PR_FREEIF(urlSpec);
-    m_socketIsOpen = PR_FALSE;
+        m_socketIsOpen = PR_FALSE;
 	}
 
 	return rv;
@@ -139,9 +156,9 @@ nsresult nsMsgProtocol::SetupTransportState()
 {
 	nsresult rv = NS_OK;
 
-	if (!m_socketIsOpen && m_channel)
+	if (!m_socketIsOpen && m_transport)
 	{
-		rv = m_channel->OpenOutputStream(0, -1, getter_AddRefs(m_outputStream));
+		rv = m_transport->OpenOutputStream(0, 0, 0, getter_AddRefs(m_outputStream));
 
 		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output stream");
 		// we want to open the stream 
@@ -163,7 +180,7 @@ nsresult nsMsgProtocol::CloseSocket()
 		rv = m_request->Cancel(NS_BINDING_ABORTED);
 	}
     m_request = 0;
-	m_channel = 0;
+	m_transport = 0;
 
 	return rv;
 }
@@ -317,10 +334,10 @@ nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 		if (!m_socketIsOpen)
 		{
 			nsCOMPtr<nsISupports> urlSupports = do_QueryInterface(aURL);
-      if (m_channel)
+      if (m_transport)
       {
         // put us in a state where we are always notified of incoming data
-        rv = m_channel->AsyncRead(this, urlSupports, m_startPosition, m_readCount, getter_AddRefs(m_request));
+        rv = m_transport->AsyncRead(this, urlSupports, m_startPosition, m_readCount, 0, getter_AddRefs(m_request));
         NS_ASSERTION(NS_SUCCEEDED(rv), "AsyncRead failed");
         m_socketIsOpen = PR_TRUE; // mark the channel as open
       }
@@ -374,20 +391,13 @@ NS_IMETHODIMP nsMsgProtocol::SetURI(nsIURI* aURI)
     return NS_OK;
 }
  
-NS_IMETHODIMP nsMsgProtocol::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+NS_IMETHODIMP nsMsgProtocol::Open(nsIInputStream **_retval)
 {
-    NS_NOTREACHED("OpenInputStream");
+    NS_NOTREACHED("Open");
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgProtocol::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
-{
-    NS_NOTREACHED("OpenOutputStream");
-	return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsMsgProtocol::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                                       PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+NS_IMETHODIMP nsMsgProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
 	// set the stream listener and then load the url
 	m_channelContext = ctxt;
@@ -412,13 +422,6 @@ NS_IMETHODIMP nsMsgProtocol::AsyncRead(nsIStreamListener *listener, nsISupports 
 	} // if aLoadGroup
 
 	return LoadUrl(m_url, nsnull);
-}
-
-NS_IMETHODIMP nsMsgProtocol::AsyncWrite(nsIStreamProvider*b, nsISupports *ctxt, 
-                                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
-{
-    NS_NOTREACHED("AsyncWrite");
-	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsMsgProtocol::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
@@ -458,6 +461,19 @@ NS_IMETHODIMP nsMsgProtocol::GetContentLength(PRInt32 * aContentLength)
   *aContentLength = -1;
   return NS_OK;
 }
+
+
+NS_IMETHODIMP nsMsgProtocol::GetSecurityInfo(nsISupports * *aSecurityInfo)
+{
+    *aSecurityInfo = nsnull;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgProtocol::GetName(PRUnichar * *aName)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 NS_IMETHODIMP
 nsMsgProtocol::SetContentLength(PRInt32 aContentLength)
@@ -512,25 +528,9 @@ nsMsgProtocol::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCall
   return NS_OK;
 }
 
-
-NS_IMETHODIMP 
-nsMsgProtocol::GetSecurityInfo(nsISupports * *aSecurityInfo)
-{
-    *aSecurityInfo = nsnull;
-    return NS_OK;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // From nsIRequest
 ////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP nsMsgProtocol::GetName(PRUnichar* *result)
-{
-    if (m_request)
-        return m_request->GetName(result);
-    NS_NOTREACHED("nsMsgProtocol::GetName");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
 
 NS_IMETHODIMP nsMsgProtocol::IsPending(PRBool *result)
 {
@@ -568,18 +568,6 @@ NS_IMETHODIMP nsMsgProtocol::Resume()
     NS_NOTREACHED("Resume");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-NS_IMETHODIMP nsMsgProtocol::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgProtocol::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 
 nsresult nsMsgProtocol::PostMessage(nsIURI* url, nsIFileSpec *fileSpec)
 {

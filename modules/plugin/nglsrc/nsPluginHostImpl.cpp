@@ -45,7 +45,6 @@
 #include "nsIURL.h"
 #include "nsIChannel.h"
 #include "nsIHTTPChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIFileStream.h" // for nsIRandomAccessStore
 #include "nsCOMPtr.h"
 #include "nsNetUtil.h"
@@ -1116,16 +1115,13 @@ nsPluginStreamListenerPeer::OnStartRequest(nsIRequest *request, nsISupports* aCo
 {
   nsresult  rv = NS_OK;
 
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-
-  if (!contentInfo || !channel)
+  if (!channel)
       return NS_ERROR_FAILURE;
 
   char* aContentType = nsnull;
-  rv = contentInfo->GetContentType(&aContentType);
+  rv = channel->GetContentType(&aContentType);
   if (NS_FAILED(rv)) return rv;
   nsCOMPtr<nsIURI> aURL;
   rv = channel->GetURI(getter_AddRefs(aURL));
@@ -1184,7 +1180,7 @@ nsPluginStreamListenerPeer::OnStartRequest(nsIRequest *request, nsISupports* aCo
   //
   PRInt32 length;
 
-  rv = contentInfo->GetContentLength(&length);
+  rv = channel->GetContentLength(&length);
 
   // it's possible for the server to not send a Content-Length.  We should
   // still work in this case.
@@ -1228,8 +1224,7 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnDataAvailable(nsIRequest *request,
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIURI> aURL;
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   if (!channel) return NS_ERROR_FAILURE;
   
   rv = channel->GetURI(getter_AddRefs(aURL));
@@ -1273,8 +1268,7 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnStopRequest(nsIRequest *request,
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIURI> aURL;
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   if (!channel) return NS_ERROR_FAILURE;
   rv = channel->GetURI(getter_AddRefs(aURL));
   if (NS_FAILED(rv)) return rv;
@@ -1308,10 +1302,7 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnStopRequest(nsIRequest *request,
 
     // Set the content type to ensure we don't pass null to the plugin
     char* aContentType = nsnull;
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-    if (!contentInfo) return NS_ERROR_FAILURE;
-
-    rv = contentInfo->GetContentType(&aContentType);
+    rv = channel->GetContentType(&aContentType);
     if (NS_FAILED(rv)) return rv;
 
     if (nsnull != aContentType)
@@ -1378,8 +1369,7 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
     do_QueryInterface(mPStreamListener);
   if (headerListener) {
     
-    nsCOMPtr<nsIChannel> channel;
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
     nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
     if (httpChannel) {
       ReadHeadersFromChannelAndPostToListener(httpChannel, headerListener);
@@ -1392,8 +1382,7 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
   
   // get Last-Modified header for plugin info
   
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   nsCOMPtr<nsIHTTPChannel>	theHTTPChannel = do_QueryInterface(channel);
   if (theHTTPChannel) {
      char * lastModified;
@@ -3550,8 +3539,7 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
             }  
 
         }
-       nsCOMPtr<nsIRequest> request;
-       rv = channel->AsyncRead(listenerPeer, nsnull, 0, -1, getter_AddRefs(request));
+       rv = channel->AsyncOpen(listenerPeer, nsnull);
       }
     
     NS_RELEASE(listenerPeer);

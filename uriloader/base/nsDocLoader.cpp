@@ -65,8 +65,7 @@ PRLogModuleInfo* gDocLoaderLog = nsnull;
 #if defined(DEBUG)
 void GetURIStringFromRequest(nsIRequest* request, nsXPIDLCString &aStr)
 {
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
   nsCOMPtr<nsIURI> uri;
   nsresult rv = channel->GetURI(getter_AddRefs(uri));
@@ -448,8 +447,7 @@ nsDocLoaderImpl::OnStartRequest(nsIRequest *request, nsISupports *aCtxt)
     // called each time a channel is added to the group.
     nsresult rv;
     
-    nsCOMPtr<nsIChannel> aChannel;
-    request->GetParent(getter_AddRefs(aChannel));
+    nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
     if (!mIsLoadingDocument) {
         PRUint32 loadAttribs = 0;
@@ -509,8 +507,7 @@ nsDocLoaderImpl::OnStopRequest(nsIRequest *request,
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aChannel);
 
   //
   // Only fire the OnEndDocumentLoad(...) if the document loader 
@@ -578,11 +575,9 @@ nsresult nsDocLoaderImpl::RemoveChildGroup(nsDocLoaderImpl* aLoader)
 
 NS_IMETHODIMP nsDocLoaderImpl::GetDocumentChannel(nsIChannel ** aChannel)
 {
-    
-  nsCOMPtr<nsIChannel> someChannel;
-  mDocumentRequest->GetParent(getter_AddRefs(someChannel));
+    nsCOMPtr<nsIChannel> ourChannel = do_QueryInterface(mDocumentRequest);   
 
-  *aChannel = someChannel.get();
+  *aChannel = ourChannel.get();
   NS_IF_ADDREF(*aChannel);
   return NS_OK;
 }
@@ -743,8 +738,7 @@ void nsDocLoaderImpl::FireOnStartDocumentLoad(nsDocLoaderImpl* aLoadInitiator,
   PRInt32 count;
 
   nsCOMPtr<nsIURI> uri;
-  nsCOMPtr<nsIChannel> aChannel;
-  aDocRequest->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aDocRequest);
 
   aChannel->GetURI(getter_AddRefs(uri));
 
@@ -1086,8 +1080,7 @@ NS_IMETHODIMP nsDocLoaderImpl::OnProgress(nsIRequest *request, nsISupports* ctxt
   //
   // Update the ChannelInfo entry with the new progress data
   //
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
 
   info = GetChannelInfo(aChannel);

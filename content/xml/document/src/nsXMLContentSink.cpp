@@ -1643,7 +1643,7 @@ nsXMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
       nsCOMPtr<nsIRequest> request;
       aLoader->GetRequest(getter_AddRefs(request));
       if (request)
-        request->GetParent(getter_AddRefs(channel));
+        channel = do_QueryInterface(request);
 
       nsCOMPtr<nsIURI> url;
       if (channel) {

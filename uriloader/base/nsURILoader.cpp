@@ -37,7 +37,6 @@
 #include "nsIInputStream.h"
 #include "nsIStreamConverterService.h"
 #include "nsWeakReference.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIHTTPChannel.h"
 
 #include "nsIDocShellTreeItem.h"
@@ -205,8 +204,7 @@ nsresult nsDocumentOpenInfo::Open(nsIChannel *aChannel,
 
   // now just open the channel!
   if (aChannel){
-    nsCOMPtr<nsIRequest> request;
-    rv =  aChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(request));
+    rv =  aChannel->AsyncOpen(this, nsnull);
   }
 
   if (rv == NS_ERROR_DOM_RETVAL_UNDEFINED) {
@@ -288,19 +286,13 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
   nsXPIDLCString contentType;
   nsCOMPtr<nsISupports> originalWindowContext = m_originalContext; // local variable to keep track of this.
   nsCOMPtr<nsIStreamListener> contentStreamListener;
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  if (!contentInfo)
-      return NS_ERROR_FAILURE;
-
-  rv = contentInfo->GetContentType(getter_Copies(contentType));
-  if (NS_FAILED(rv)) return rv;
-
-  // get channel from request
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   if (!aChannel)
       return NS_ERROR_FAILURE;
-      
+
+  rv = aChannel->GetContentType(getter_Copies(contentType));
+  if (NS_FAILED(rv)) return rv;
+
    // go to the uri dispatcher and give them our stuff...
   NS_WITH_SERVICE(nsIURILoader, pURILoader, kURILoaderCID, &rv);
   if (NS_SUCCEEDED(rv))
@@ -760,7 +752,6 @@ NS_IMETHODIMP nsURILoader::OpenURIVia(nsIChannel *channel,
 {
   // we need to create a DocumentOpenInfo object which will go ahead and open the url
   // and discover the content type....
-
   nsresult rv = NS_OK;
   nsDocumentOpenInfo* loader = nsnull;
 

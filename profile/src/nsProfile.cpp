@@ -431,6 +431,7 @@ nsProfile::LoadDefaultProfileDir(nsCString & profileURLStr)
     {
         rv = NS_NewURI(getter_AddRefs(profileURL), (const char *)profileURLStr);
 
+
         if (NS_FAILED(rv)) {
             return rv;
         } 

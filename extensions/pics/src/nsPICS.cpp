@@ -33,7 +33,6 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 #include "nsCOMPtr.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIParser.h"
 #include "nsParserCIID.h"
 #include "nsIHTMLContentSink.h"
@@ -723,18 +722,17 @@ NS_IMETHODIMP
 nsPICS::OnStartURLLoad(nsIDocumentLoader* loader, nsIRequest *request)
 {
   nsresult rv = NS_OK;
-
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+  if (!channel)
+    return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIURI> aURL;
   rv = channel->GetURI(getter_AddRefs(aURL));
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-
   char* aContentType;
-  rv = contentInfo->GetContentType(&aContentType);
+  rv = channel->GetContentType(&aContentType);
   if (NS_FAILED(rv)) return rv;
 
   if(!mPICSRatingsEnabled)
@@ -830,8 +828,7 @@ nsPICS::OnEndURLLoad(nsIDocumentLoader* loader,
 {
   nsresult rv;
 
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
   nsCOMPtr<nsIURI> aURL;
   rv = channel->GetURI(getter_AddRefs(aURL));

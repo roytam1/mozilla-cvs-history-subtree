@@ -109,7 +109,6 @@ private:
   PRBool                          mAuthenticationRunning;
   nsCOMPtr<nsIAbSyncMojo>         mSyncMojo;
   nsCOMPtr<nsIChannel>            mChannel;
-  nsCOMPtr<nsIRequest>            mRequest;
   char                            *mSyncProtocolRequest;
   char                            *mSyncProtocolRequestPrefix;
 

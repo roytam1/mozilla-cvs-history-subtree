@@ -33,8 +33,7 @@
 #include "nsIFileSpec.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIProgressEventSink.h"
-#include "nsIStreamContentInfo.h"
-
+#include "nsITransport.h"
 class nsIPrompt;
 class nsIMsgMailNewsUrl;
 
@@ -45,9 +44,7 @@ class nsIMsgMailNewsUrl;
 // this class and not all of the mailnews protocols.
 class NS_MSG_BASE nsMsgProtocol 
 : public nsIStreamListener, 
-  public nsIChannel, 
-  public nsIRequest, 
-  public nsIStreamContentInfo
+  public nsIChannel
 {
 public:
 	nsMsgProtocol(nsIURI * aURL);
@@ -57,7 +54,6 @@ public:
 	// nsIChannel support
 	NS_DECL_NSICHANNEL
 	NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
   
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSISTREAMOBSERVER
@@ -107,7 +103,7 @@ protected:
   virtual nsresult InitFromURI(nsIURI *aUrl);
 
 	// Ouput stream for writing commands to the socket
-	nsCOMPtr<nsIChannel>		m_channel; 
+	nsCOMPtr<nsITransport>		m_transport; 
 	nsCOMPtr<nsIRequest>        m_request;
 
     nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface

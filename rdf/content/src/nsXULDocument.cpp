@@ -51,7 +51,6 @@
 #include "nsDOMCID.h"
 #include "nsDOMError.h"
 #include "nsIBoxObject.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIChromeRegistry.h"
 #include "nsIComponentManager.h"
 #include "nsICodebasePrincipal.h"
@@ -317,7 +316,7 @@ NS_IMPL_ISUPPORTS1(nsProxyLoadStream, nsIInputStream);
 //   model.
 //
 
-class PlaceHolderRequest : public nsIRequest, public nsIChannel
+class PlaceHolderRequest : public nsIChannel
 {
 protected:
     PlaceHolderRequest();
@@ -343,18 +342,14 @@ public:
     NS_IMETHOD Cancel(nsresult status)  { return NS_OK; }
     NS_IMETHOD Suspend(void) { return NS_OK; }
     NS_IMETHOD Resume(void)  { return NS_OK; }
-    NS_IMETHOD GetParent(nsISupports * *aParent) { NS_ADDREF(*aParent = (nsIChannel*)this); return NS_OK; }
-    NS_IMETHOD SetParent(nsISupports * aParent) { return NS_ERROR_NOT_IMPLEMENTED; }
 
  	// nsIChannel    
     NS_IMETHOD GetOriginalURI(nsIURI* *aOriginalURI) { *aOriginalURI = gURI; NS_ADDREF(*aOriginalURI); return NS_OK; }
     NS_IMETHOD SetOriginalURI(nsIURI* aOriginalURI) { gURI = aOriginalURI; NS_ADDREF(gURI); return NS_OK; }
     NS_IMETHOD GetURI(nsIURI* *aURI) { *aURI = gURI; NS_ADDREF(*aURI); return NS_OK; }
     NS_IMETHOD SetURI(nsIURI* aURI) { gURI = aURI; NS_ADDREF(gURI); return NS_OK; }
-    NS_IMETHOD OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
-    NS_IMETHOD OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval) { *_retval = nsnull; return NS_OK; }
-    NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
-    NS_IMETHOD AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt, PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD Open(nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt) { return NS_OK; }
     NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
    	NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
  	NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
@@ -363,7 +358,11 @@ public:
  	NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup) { mLoadGroup = aLoadGroup; return NS_OK; }
  	NS_IMETHOD GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) { *aNotificationCallbacks = nsnull; return NS_OK; }
  	NS_IMETHOD SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) { return NS_OK; }
-    NS_IMETHOD GetSecurityInfo(nsISupports **info) {*info = nsnull; return NS_OK;}
+    NS_IMETHOD GetSecurityInfo(nsISupports * *aSecurityInfo) { *aSecurityInfo = nsnull; return NS_OK; } 
+    NS_IMETHOD GetContentType(char * *aContentType) { *aContentType = nsnull; return NS_OK; } 
+    NS_IMETHOD SetContentType(const char * aContentType) { return NS_OK; } 
+    NS_IMETHOD GetContentLength(PRInt32 *aContentLength) { return NS_OK; }
+    NS_IMETHOD SetContentLength(PRInt32 aContentLength) { return NS_OK; }
 };
 
 PRInt32 PlaceHolderRequest::gRefCnt;
@@ -750,9 +749,7 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
     // detected.
     
     nsXPIDLCString contentType;
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(aChannel);
-    if (contentInfo)
-        contentInfo->GetContentType(getter_Copies(contentType));
+    aChannel->GetContentType(getter_Copies(contentType));
 
     if (contentType && PL_strcmp(contentType, "text/cached-xul") == 0) {
         // Look in the chrome cache: we've got this puppy loaded
@@ -4884,8 +4881,7 @@ nsXULDocument::PrepareToWalk()
         nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
         
         if (group) {
-            nsCOMPtr<nsIChannel> channel;
-            mPlaceHolderRequest->GetParent(getter_AddRefs(channel));
+            nsCOMPtr<nsIChannel> channel = do_QueryInterface(mPlaceHolderRequest);
             rv = channel->SetLoadGroup(group);
             if (NS_FAILED(rv)) return rv;
             rv = group->AddRequest(mPlaceHolderRequest, nsnull);
@@ -5301,7 +5297,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         nsCOMPtr<nsIChannel> channel;
         aLoader->GetRequest(getter_AddRefs(request));
         if (request)
-            request->GetParent(getter_AddRefs(channel));
+            channel = do_QueryInterface(request);
         if (channel)
         {
           nsCOMPtr<nsIURI> uri;
@@ -6550,8 +6546,7 @@ nsXULDocument::ParserObserver::OnStopRequest(nsIRequest *request,
 #define YELL_IF_MISSING_OVERLAY 1
 #if defined(DEBUG) || defined(YELL_IF_MISSING_OVERLAY)
         
-        nsCOMPtr<nsIChannel> aChannel;
-        request->GetParent(getter_AddRefs(aChannel));
+        nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
         if (!aChannel) return NS_ERROR_FAILURE;
 
         nsCOMPtr<nsIURI> uri;

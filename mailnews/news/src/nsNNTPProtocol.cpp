@@ -766,8 +766,7 @@ nsNntpCacheStreamListener::OnDataAvailable(nsIRequest *request, nsISupports * aC
 }
 
 
-NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
   nsresult rv;
   nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_runningURL, &rv);
@@ -795,20 +794,20 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
       // we want to create a file channel and read the msg from there.
         nsMsgKey key = nsMsgKey_None;
         rv = m_runningURL->GetMessageKey(&key);
-        nsCOMPtr<nsIFileChannel> fileChannel;
+        nsCOMPtr<nsITransport> fileChannel;
         PRUint32 offset=0, size=0;
-        rv = folder->GetOfflineFileChannel(key, &offset, &size, getter_AddRefs(fileChannel));
+        rv = folder->GetOfflineFileTransport(key, &offset, &size, getter_AddRefs(fileChannel));
         // get the file channel from the folder, somehow (through the message or
         // folder sink?) We also need to set the transfer offset to the message offset
         if (fileChannel && NS_SUCCEEDED(rv))
         {
-          fileChannel->SetLoadGroup(m_loadGroup);
+//  dougt why?        fileChannel->SetLoadGroup(m_loadGroup);
           m_typeWanted = ARTICLE_WANTED;
           nsNntpCacheStreamListener * cacheListener = new nsNntpCacheStreamListener();
           NS_ADDREF(cacheListener);
           cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this), mailnewsUrl);
           nsCOMPtr<nsIRequest> request;
-          rv = fileChannel->AsyncRead(cacheListener, m_channelContext, offset, size, getter_AddRefs(request));
+          rv = fileChannel->AsyncRead(cacheListener, m_channelContext, offset, size, 0, getter_AddRefs(request));
           NS_RELEASE(cacheListener);
           MarkCurrentMsgRead();
 
@@ -848,9 +847,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
           rv = cacheEntry->InterceptAsyncRead(anotherListener, 0, getter_AddRefs(m_channelListener));
           nsCOMPtr<nsIRequest> request;
           if (NS_SUCCEEDED(rv))
-            return nsMsgProtocol::AsyncRead(m_channelListener, ctxt, 
-                                            transferOffset, transferCount, 
-                                            getter_AddRefs(request));
+              return nsMsgProtocol::AsyncOpen(m_channelListener, ctxt);
         }
       }
     }
@@ -858,8 +855,8 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
     // to really load the msg with a protocol connection...
     if (cacheEntry && contentLength > 0 && !partialFlag)
     {
-      nsCOMPtr<nsIChannel> cacheChannel;
-      rv = cacheEntry->NewChannel(m_loadGroup, getter_AddRefs(cacheChannel));
+      nsCOMPtr<nsITransport> cacheChannel;
+      rv = cacheEntry->NewTransport(m_loadGroup, getter_AddRefs(cacheChannel));
       if (NS_SUCCEEDED(rv))
       {
         nsNntpCacheStreamListener * cacheListener = new nsNntpCacheStreamListener();
@@ -868,9 +865,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
         m_typeWanted = ARTICLE_WANTED;
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this), mailnewsUrl);
         nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 
-                                     transferOffset, transferCount, 
-                                     getter_AddRefs(request));
+        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, 0, 0, getter_AddRefs(request));  // dougt full read now.  This maybe bad.
         NS_RELEASE(cacheListener);
 
         MarkCurrentMsgRead();
@@ -886,7 +881,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
 
   }
   nsCOMPtr<nsIRequest> parentRequest;
-  return nsMsgProtocol::AsyncRead(listener, ctxt, transferOffset, transferCount, getter_AddRefs(parentRequest));
+  return nsMsgProtocol::AsyncOpen(listener, ctxt);
 }
 
 nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)

@@ -37,7 +37,6 @@
 #include "nsAbSyncPostEngine.h"
 #include "nsIIOService.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 #include "nsIHTTPChannel.h"
@@ -442,24 +441,20 @@ nsAbSyncPostEngine::OnStopRequest(nsIRequest *request, nsISupports * /* ctxt */,
   mStillRunning = PR_FALSE;
 
   // Check the content type!
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  if (contentInfo)
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+  if (channel)
   {
     char    *contentType = nsnull;
     char    *charset = nsnull;
 
-    if (NS_SUCCEEDED(contentInfo->GetContentType(&contentType)) && contentType)
+    if (NS_SUCCEEDED(channel->GetContentType(&contentType)) && contentType)
     {
       if (PL_strcasecmp(contentType, UNKNOWN_CONTENT_TYPE))
       {
         mContentType = contentType;
       }
     }
-    nsCOMPtr<nsIChannel> aChannel;
-    request->GetParent(getter_AddRefs(aChannel));
-    if (!aChannel) return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(aChannel);
+    nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(channel);
     if (httpChannel)
     {
       if (NS_SUCCEEDED(httpChannel->GetCharset(&charset)) && charset)
@@ -712,7 +707,7 @@ nsAbSyncPostEngine::FireURLRequest(nsIURI *aURL, const char *postData)
   if (NS_SUCCEEDED(rv = NS_NewPostDataStream(getter_AddRefs(postStream), PR_FALSE, postData, 0)))
     httpChannel->SetUploadStream(postStream);
   
-  httpChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(mRequest));
+  httpChannel->AsyncOpen(this, nsnull);
 
   return NS_OK;
 }
@@ -849,10 +844,9 @@ nsAbSyncPostEngine::CancelAbSync()
   {
     rv = mSyncMojo->CancelTheMojo();
   }
-  else
+  else if (mChannel)
   {
-    if (mRequest)
-      rv = mRequest->Cancel(NS_BINDING_ABORTED);
+    rv = mChannel->Cancel(NS_BINDING_ABORTED);
   }
 
   return rv;

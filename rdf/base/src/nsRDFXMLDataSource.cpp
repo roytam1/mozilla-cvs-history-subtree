@@ -603,11 +603,12 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     rv = NS_OpenURI(getter_AddRefs(channel), aURL, nsnull);
     if (NS_FAILED(rv)) return rv;
 
+    //xx dougt - what request do we really have here?  I probably broke blocking RDF parsing.
+    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
+
     nsIInputStream* in;
     PRUint32 sourceOffset = 0;
-    rv = channel->OpenInputStream(0, -1, &in);
-
-    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
+    rv = channel->Open(&in);
 
     // If we couldn't open the channel, then just return.
     if (NS_FAILED(rv)) return NS_OK;

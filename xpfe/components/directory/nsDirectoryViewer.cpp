@@ -357,8 +357,7 @@ nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
       return NS_ERROR_FAILURE;
   }  
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
   // Save off some information about the stream we're about to parse.
   nsCOMPtr<nsIURI> mDirectoryURI;
@@ -1329,8 +1328,7 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
         		}
         		if (NS_SUCCEEDED(rv) && (listener))
         		{
-                    nsCOMPtr<nsIRequest> request;
-					rv = channel->AsyncRead(listener, aSource, 0, -1, getter_AddRefs(request));
+                          rv = channel->AsyncOpen(listener, aSource);
         		}
             }
         }
@@ -1699,8 +1697,7 @@ nsDirectoryViewerFactory::CreateInstance(const char *aCommand,
                                aDocViewerResult);
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIRequest> request;
-  rv = channel->AsyncRead(listener, nsnull, 0, -1, getter_AddRefs(request));
+  rv = channel->AsyncOpen(listener, nsnull);
   if (NS_FAILED(rv)) return rv;
 
   // Create an HTTPIndex object so that we can stuff it into the script context

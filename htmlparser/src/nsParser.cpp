@@ -40,7 +40,6 @@
 #include "nsHTMLContentSinkStream.h" //this is here so we can get a null sink, which really should be gotten from nsICOntentSink.h
 #include "nsIStringStream.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInputStream.h"
 #include "CNavDTD.h"
@@ -2094,10 +2093,10 @@ nsresult nsParser::OnStartRequest(nsIRequest *request, nsISupports* aContext) {
   mParserContext->mDTD=0;
   nsresult rv;
   char* contentType = nsnull;
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  NS_ASSERTION(contentInfo, "parser needs a content type to find a dtd");
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+  NS_ASSERTION(channel, "parser needs a channel to find a dtd");
 
-  rv = contentInfo->GetContentType(&contentType);
+  rv = channel->GetContentType(&contentType);
   if (NS_SUCCEEDED(rv))
   {
     mParserContext->SetMimeType( NS_ConvertToString(contentType) );

@@ -1599,8 +1599,7 @@ nsNntpService::HandleContent(const char * aContentType, const char * aCommand, c
   nsresult rv = NS_OK;
   if (!request) return NS_ERROR_NULL_POINTER;
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   if (!aChannel) return NS_ERROR_NULL_POINTER;
 
   if (nsCRT::strcasecmp(aContentType, "x-application-newsgroup") == 0) {

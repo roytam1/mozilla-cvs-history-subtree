@@ -760,7 +760,8 @@ PRInt32 nsSmtpProtocol::SendTLSResponse()
   {
 
       nsCOMPtr<nsISupports> secInfo;
-      rv = m_channel->GetSecurityInfo(getter_AddRefs(secInfo));
+      nsCOMPtr<nsIChannel> channel = do_QueryInterface(m_request);
+      rv = channel->GetSecurityInfo(getter_AddRefs(secInfo));
 
       if (NS_SUCCEEDED(rv) && secInfo) {
           nsCOMPtr<nsISSLSocketControl> sslControl = do_QueryInterface(secInfo, &rv);

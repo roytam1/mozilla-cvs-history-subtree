@@ -632,8 +632,7 @@ InternetSearchDataSource::FireTimer(nsITimer* aTimer, void* aClosure)
 		{
 			httpChannel->SetRequestMethod(headAtom);
 		}
-        nsCOMPtr<nsIRequest> request;
-		if (NS_SUCCEEDED(rv = channel->AsyncRead(search, engineContext, 0, -1, getter_AddRefs(request))))
+		if (NS_SUCCEEDED(rv = channel->AsyncOpen(search, engineContext)))
 		{
 			search->busySchedule = PR_TRUE;
 
@@ -2203,8 +2202,7 @@ InternetSearchDataSource::AddSearchEngine(const char *engineURL, const char *ico
 	if (NS_FAILED(rv = NS_OpenURI(getter_AddRefs(engineChannel), engineURI, nsnull, mBackgroundLoadGroup)))
 		return(rv);
     
-    nsCOMPtr<nsIRequest> request;
-	if (NS_FAILED(rv = engineChannel->AsyncRead(this, engineContext, 0, -1, getter_AddRefs(request))))
+	if (NS_FAILED(rv = engineChannel->AsyncOpen(this, engineContext)))
 		return(rv);
 
 	// download icon
@@ -2223,8 +2221,7 @@ InternetSearchDataSource::AddSearchEngine(const char *engineURL, const char *ico
 		nsCOMPtr<nsIChannel>	iconChannel;
 		if (NS_FAILED(rv = NS_OpenURI(getter_AddRefs(iconChannel), iconURI, nsnull, mBackgroundLoadGroup)))
 			return(rv);
-        nsCOMPtr<nsIRequest> request;
-		if (NS_FAILED(rv = iconChannel->AsyncRead(this, iconContext, 0, -1, getter_AddRefs(request))))
+		if (NS_FAILED(rv = iconChannel->AsyncOpen(this, iconContext)))
 			return(rv);
 	}
 	return(NS_OK);
@@ -3556,7 +3553,7 @@ InternetSearchDataSource::DoSearch(nsIRDFResource *source, nsIRDFResource *engin
 			}
 
             nsCOMPtr<nsIRequest> request;
-			if (NS_SUCCEEDED(rv = channel->AsyncRead(this, context, 0, -1, getter_AddRefs(request))))
+			if (NS_SUCCEEDED(rv = channel->AsyncOpen(this, context)))
 			{
 			}
 		}
@@ -4389,8 +4386,7 @@ InternetSearchDataSource::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
 {
 	if (!mInner)	return(NS_OK);
 
-    nsCOMPtr<nsIChannel> channel;
-    request->GetParent(getter_AddRefs(channel));
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
 	nsCOMPtr<nsIInternetSearchContext>	context = do_QueryInterface(ctxt);
 	if (!ctxt)	return(NS_ERROR_NO_INTERFACE);

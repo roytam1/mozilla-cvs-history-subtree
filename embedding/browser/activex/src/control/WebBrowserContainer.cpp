@@ -853,8 +853,7 @@ CWebBrowserContainer::OnEndDocumentLoad(nsIDocumentLoader* loader, nsIRequest *r
 	char* aString = nsnull;    
     nsIURI* pURI = nsnull;
 
-    nsCOMPtr<nsIChannel> aChannel;
-    request->GetParent(getter_AddRefs(aChannel));
+    nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
     if (!aChannel) return NS_ERROR_NULL_POINTER;
 
     aChannel->GetURI(&pURI);

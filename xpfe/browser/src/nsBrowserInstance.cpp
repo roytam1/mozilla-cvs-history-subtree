@@ -1049,8 +1049,7 @@ nsresult nsBrowserInstance::StartDocumentLoad(nsIDOMWindow *aDOMWindow,
   nsXPIDLCString uriCString;
   nsAutoString urlStr;
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   if (!aChannel) return NS_ERROR_FAILURE;
 
   // Get the URI strign and convert it to unicode...
@@ -1105,8 +1104,7 @@ nsresult nsBrowserInstance::EndDocumentLoad(nsIDOMWindow *aDOMWindow,
 {
   nsresult rv;
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   if (!aChannel) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIURI> uri;
@@ -1667,8 +1665,7 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
   }
 
   
-  nsCOMPtr<nsIChannel> aChannel;
-  aRequest->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aRequest);
   if (!aChannel) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIURI> uri;

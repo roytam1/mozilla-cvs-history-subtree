@@ -408,8 +408,7 @@ NS_IMETHODIMP nsMsgWindow::DoContent(const char *aContentType, nsURILoadCommand 
     nsCOMPtr<nsIURIContentListener> ctnListener = do_QueryInterface(messageWindowDocShell);
     if (ctnListener)
     {
-        nsCOMPtr<nsIChannel> aChannel;
-        request->GetParent(getter_AddRefs(aChannel));
+        nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
         if (!aChannel) return NS_ERROR_FAILURE;
 
       // get the url for the channel...let's hope it is a mailnews url so we can set our msg hdr sink on it..

@@ -292,8 +292,8 @@ nsXULBrowserWindow.prototype =
     }
     else if (state & nsIWebProgressListener.STATE_TRANSFERRING) {
       if (state & nsIWebProgressListener.STATE_IS_DOCUMENT) {
-        var contentInfo = request.QueryInterface(Components.interfaces.nsIStreamContentInfo);
-		var ctype=contentInfo.contentType;
+        var channel = request.QueryInterface(Components.interfaces.nsIChannel);
+		var ctype=channel.contentType;
 
         if (ctype != "text/html")
           this.useRealProgressFlag = true;

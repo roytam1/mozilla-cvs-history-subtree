@@ -110,8 +110,7 @@ nsMsgPrintEngine::OnEndDocumentLoad(nsIDocumentLoader *loader, nsIRequest *reque
   {
     return StartNextPrintOperation();
   }
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   if (!aChannel) return NS_ERROR_FAILURE;
 
   // Make sure this isn't just "about:blank" finishing....

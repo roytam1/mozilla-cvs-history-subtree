@@ -165,7 +165,7 @@ nsCookieHTTPNotify::ModifyRequest(nsISupports *aContext)
       nsCOMPtr<nsIRequest> pRequest;
       rv = pLoadGroup->GetDefaultLoadRequest(getter_AddRefs(pRequest));
       if (pRequest)
-        pRequest->GetParent(getter_AddRefs(pChannel));
+        pChannel = do_QueryInterface(pRequest);
     }
 
     nsCOMPtr<nsIURI> pFirstURL;
@@ -227,7 +227,7 @@ nsCookieHTTPNotify::AsyncExamineResponse(nsISupports *aContext)
       nsCOMPtr<nsIRequest> pRequest;
       rv = pLoadGroup->GetDefaultLoadRequest(getter_AddRefs(pRequest));
       if (NS_FAILED(rv)) return rv;
-      pRequest->GetParent(getter_AddRefs(pChannel));
+      pChannel = do_QueryInterface(pRequest);
     }
     nsCOMPtr<nsIURI> pFirstURL;
     if (pChannel) {

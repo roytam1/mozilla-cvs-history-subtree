@@ -49,7 +49,6 @@
 #include "mozITXTToHTMLConv.h"
 #include "nsIMsgMailNewsUrl.h"
 #include "nsStreamConverter.h"
-#include "nsIStreamContentInfo.h"
 #define PREF_MAIL_DISPLAY_GLYPH "mail.display_glyph"
 #define PREF_MAIL_DISPLAY_STRUCT "mail.display_struct"
 
@@ -598,10 +597,7 @@ NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutList
   // mscott --> my theory is that we don't need this fake outgoing channel. Let's use the
   // original channel and just set our content type ontop of the original channel...
 
-  // check to see if the channel allows this
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(aChannel);
-  if (contentInfo)
-    contentInfo->SetContentType(contentTypeToUse);
+  aChannel->SetContentType(contentTypeToUse);
 
   //rv = NS_NewInputStreamChannel(getter_AddRefs(mOutgoingChannel), aURI, nsnull, contentTypeToUse, -1);
   //if (NS_FAILED(rv)) 
@@ -892,14 +888,13 @@ nsStreamConverter::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   // and the 
   if (request)
   {
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-    if (contentInfo)
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+    if (channel)
     {
       nsXPIDLCString contentType;
       GetContentType(getter_Copies(contentType));
 
-      if (contentInfo)
-        contentInfo->SetContentType(contentType);
+      channel->SetContentType(contentType);
     }
   }
 

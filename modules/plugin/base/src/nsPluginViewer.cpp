@@ -28,7 +28,6 @@
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsNetUtil.h"
 #include "nsIComponentManager.h"
 #include "nsWidgetsCID.h"
@@ -310,8 +309,7 @@ PluginViewerImpl::Init(nsIWidget* aParentWidget,
 nsresult
 PluginViewerImpl::StartLoad(nsIRequest* request, nsIStreamListener*& aResult)
 {
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   if (!channel) return NS_ERROR_FAILURE;
   
   NS_IF_RELEASE(mChannel);
@@ -320,8 +318,7 @@ PluginViewerImpl::StartLoad(nsIRequest* request, nsIStreamListener*& aResult)
 
 #ifdef DEBUG
   char* contentType;
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  contentInfo->GetContentType(&contentType);
+  channel->GetContentType(&contentType);
   printf("PluginViewerImpl::StartLoad: content-type=%s\n", contentType);
   nsCRT::free(contentType);
 #endif
@@ -379,8 +376,8 @@ PluginViewerImpl::CreatePlugin(nsIRequest* request, nsIPluginHost* aHost, const 
 
     char* ct;
   
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-    contentInfo->GetContentType(&ct);
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+    channel->GetContentType(&ct);
     if (NS_FAILED(rv)) return rv;
     rv = aHost->InstantiateFullPagePlugin(ct, str, aResult, mOwner);
     delete[] ct;
@@ -702,8 +699,8 @@ PluginListener::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   nsresult rv;
   char* contentType = nsnull;
 
-  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-  rv = contentInfo->GetContentType(&contentType);
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+  rv = channel->GetContentType(&contentType);
 
   if (NS_FAILED(rv)) {
     return rv;

@@ -39,7 +39,6 @@
 #include "nsIOutputStream.h"
 #include "nsNetUtil.h"
 #include "nsILocalFile.h"
-#include "nsIStreamContentInfo.h"
 
 #include "prprf.h"
 
@@ -61,7 +60,7 @@ NS_IMPL_ISUPPORTS4(nsStreamXferOp, nsIStreamObserver, nsIStreamTransferOperation
 // ctor - save arguments in data members.
 nsStreamXferOp::nsStreamXferOp( nsIChannel *source, nsIFileSpec *target ) 
     : mInputChannel( source ),
-      mOutputChannel( 0 ),
+      mOutputTransport( 0 ),
       mOutputStream( 0 ),
       mOutputSpec( target ),
       mObserver( 0 ),
@@ -161,7 +160,7 @@ nsStreamXferOp::Start( void ) {
     nsresult rv = NS_OK;
 
     if ( mInputChannel ) {
-        if ( !mOutputChannel ) {
+        if ( !mOutputTransport ) {
             // First, get file transport service.
             NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
             NS_WITH_SERVICE( nsIFileTransportService, fts, kFileTransportServiceCID, &rv );
@@ -174,13 +173,13 @@ nsStreamXferOp::Start( void ) {
                 rv = NS_NewLocalFile(target, PR_FALSE, getter_AddRefs(file));
                 if (NS_SUCCEEDED(rv)) {
                     rv = fts->CreateTransport(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
-                                              0664, getter_AddRefs( mOutputChannel));
+                                              0664, getter_AddRefs( mOutputTransport));
                 }
     
                 if ( NS_SUCCEEDED( rv ) ) {
 #ifdef USE_ASYNC_READ
                     // Read the input channel (with ourself as the listener).
-                    rv = mInputChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(mRequest));
+                    rv = mInputChannel->AsyncOpen(this, nsnull);
                     if ( NS_FAILED( rv ) ) {
                         this->OnError( kOpAsyncRead, rv );
                     }
@@ -195,7 +194,7 @@ nsStreamXferOp::Start( void ) {
 
                     // get the input stream from the channel.
                     nsCOMPtr<nsIInputStream> inStream;
-                    rv = mInputChannel->OpenInputStream(0, -1, getter_AddRefs(inStream));
+                    rv = mInputChannel->Open(getter_AddRefs(inStream));
                     if (NS_FAILED(rv)) {
                         this->OnError(0, rv);
                         return rv;
@@ -205,7 +204,7 @@ nsStreamXferOp::Start( void ) {
                     // of reading data from the stream and writing it to disk.
                     nsCOMPtr<nsIRequest> dummyRequest;
                     rv = NS_AsyncWriteFromStream(getter_AddRefs(dummyRequest),
-                            mOutputChannel, inStream, 0, -1,
+                            mOutputTransport, inStream, 0, -1,
                             NS_STATIC_CAST(nsIStreamObserver*, this));
                     if ( NS_FAILED( rv ) ) {
                         this->OnError( kOpAsyncWrite, rv );
@@ -267,7 +266,7 @@ nsStreamXferOp::Stop( void ) {
     }
 
     // Cancel output channel.
-    mOutputChannel = 0;
+    mOutputTransport = 0;
 
     return rv;
 }
@@ -286,7 +285,7 @@ nsStreamXferOp::OnStartRequest(nsIRequest *request, nsISupports* aContext) {
 
 #ifdef USE_ASYNC_READ
     // Open output stream.
-    rv = mOutputChannel->OpenOutputStream(0, -1, getter_AddRefs( mOutputStream ) );
+    rv = mOutputTransport->OpenOutputStream(0,0,0,getter_AddRefs( mOutputStream ) );
 
     if ( NS_FAILED( rv ) ) {
         // Give up all hope.
@@ -351,9 +350,9 @@ nsStreamXferOp::OnDataAvailable( nsIRequest*    request,
         mBytesProcessed += aLength;
         if ( mContentLength == 0 && request ) {
             // Get content length from input channel.
-            nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-            if (!contentInfo) return NS_ERROR_FAILURE;
-            contentInfo->GetContentLength( &mContentLength );
+            nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+            if (!channel) return NS_ERROR_FAILURE;
+            channel->GetContentLength( &mContentLength );
         }
         this->OnProgress( request, 0, mBytesProcessed, mContentLength );
     }
@@ -381,9 +380,9 @@ nsStreamXferOp::OnProgress(nsIRequest *request, nsISupports* aContext,
 
     if (mContentLength < 1) {
         NS_ASSERTION(request, "should have a request");
-        nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-        if (!contentInfo) return NS_ERROR_FAILURE;
-        rv = contentInfo->GetContentLength(&mContentLength);
+        nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+        if (!channel) return NS_ERROR_FAILURE;
+        rv = channel->GetContentLength(&mContentLength);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -456,7 +455,7 @@ nsStreamXferOp::OnStopRequest( nsIRequest      *request,
 
     // Unhook input/output channels (don't need to cancel 'em).
     mInputChannel = 0;
-    mOutputChannel = 0;
+    mOutputTransport = 0;
 
     // Notify observer that the download is complete.
     if ( mObserver ) {

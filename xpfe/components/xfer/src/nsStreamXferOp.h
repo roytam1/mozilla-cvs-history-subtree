@@ -29,7 +29,7 @@
 #include "nsIChannel.h"
 #include "nsIOutputStream.h"
 #include "nsIFileSpec.h"
-
+#include "nsITransport.h"
 #include "nsCOMPtr.h"
 
 class nsIDOMWindowInternal;
@@ -84,7 +84,7 @@ public:
 private:
     nsCOMPtr<nsIRequest>      mRequest;
     nsCOMPtr<nsIChannel>      mInputChannel;
-    nsCOMPtr<nsIChannel>      mOutputChannel;
+    nsCOMPtr<nsITransport>      mOutputTransport;
     nsCOMPtr<nsIOutputStream> mOutputStream;
     nsCOMPtr<nsIFileSpec>     mOutputSpec;
     nsIObserver              *mObserver; // Not owned; owner should call SetObserver(0) prior

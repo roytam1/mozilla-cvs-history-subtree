@@ -299,8 +299,7 @@ nsXBLStreamListener::OnStopRequest(nsIRequest* request, nsISupports* aCtxt, nsre
   if (NS_FAILED(rv) || NS_FAILED(aStatus))
   {
   	
-    nsCOMPtr<nsIChannel> aChannel;
-    request->GetParent(getter_AddRefs(aChannel));
+    nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
     if (aChannel)
   	{
       nsCOMPtr<nsIURI> channelURI;
@@ -1269,24 +1268,20 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
     xblListener->AddRequest(req);
 
     // Now kick off the async read.
-    channel->AsyncRead(xblListener, nsnull, 0, -1, getter_AddRefs(request));
+    channel->AsyncOpen(xblListener, nsnull);
     return NS_OK;
   }
 
   // Now do a blocking synchronous parse of the file.
   nsCOMPtr<nsIInputStream> in;
   PRUint32 sourceOffset = 0;
-  rv = channel->OpenInputStream(0, -1, getter_AddRefs(in));
+  rv = channel->Open(getter_AddRefs(in));
 
   // If we couldn't open the channel, then just return.
   if (NS_FAILED(rv)) return NS_OK;
   
-  // if request is null, qi input stream for it.
-  if (!request) {
-      // dougt - this does not work yet; request = do_QueryInterface(in);
-      request = do_QueryInterface(channel);
-  }
-
+  request = do_QueryInterface(channel);
+  
   NS_ASSERTION(request != nsnull, "no request info");
   
   NS_ASSERTION(in != nsnull, "no input stream");

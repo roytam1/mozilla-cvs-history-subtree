@@ -244,14 +244,13 @@ NS_IMETHODIMP nsSmtpService::GetDefaultPort(PRInt32 *aDefaultPort)
 // But we need to have a channel to return for nsSmtpService::NewChannel
 // that can simulate a real channel such that the uri loader can then get the
 // content type for the channel.
-class nsMailtoChannel : public nsIChannel, public nsIRequest, public nsIStreamContentInfo
+class nsMailtoChannel : public nsIChannel
 {
 public:
 
 	  NS_DECL_ISUPPORTS
     NS_DECL_NSICHANNEL
     NS_DECL_NSIREQUEST
-	NS_DECL_NSISTREAMCONTENTINFO
 
     nsMailtoChannel(nsIURI * aURI);
 	  virtual ~nsMailtoChannel();
@@ -294,13 +293,6 @@ NS_IMETHODIMP nsMailtoChannel::SetNotificationCallbacks(nsIInterfaceRequestor* a
 	return NS_OK;       // don't fail when trying to set this
 }
 
-NS_IMETHODIMP 
-nsMailtoChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
-{
-    *aSecurityInfo = nsnull;
-    return NS_OK;
-}
-
 NS_IMETHODIMP nsMailtoChannel::GetOriginalURI(nsIURI* *aURI)
 {
     *aURI = nsnull;
@@ -325,29 +317,15 @@ NS_IMETHODIMP nsMailtoChannel::SetURI(nsIURI* aURI)
   return NS_OK; 
 }
  
-NS_IMETHODIMP nsMailtoChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+NS_IMETHODIMP nsMailtoChannel::Open(nsIInputStream **_retval)
 {
-  NS_NOTREACHED("OpenInputStream");
+  NS_NOTREACHED("Open");
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMailtoChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
-{
-  NS_NOTREACHED("OpenOutputStream");
-	return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsMailtoChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+NS_IMETHODIMP nsMailtoChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
   return listener->OnStartRequest(this, ctxt);
-}
-
-NS_IMETHODIMP nsMailtoChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
-                                          PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
-{
-    NS_NOTREACHED("AsyncWrite");
-	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsMailtoChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
@@ -397,13 +375,19 @@ NS_IMETHODIMP nsMailtoChannel::SetOwner(nsISupports * aPrincipal)
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+/* readonly attribute nsISupports securityInfo; */
+NS_IMETHODIMP nsMailtoChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // From nsIRequest
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsMailtoChannel::GetName(PRUnichar* *result)
+/* readonly attribute wstring name; */
+NS_IMETHODIMP nsMailtoChannel::GetName(PRUnichar * *aName)
 {
-    NS_NOTREACHED("nsMailtoChannel::GetName");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -436,18 +420,6 @@ NS_IMETHODIMP nsMailtoChannel::Resume()
     NS_NOTREACHED("Resume");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsMailtoChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsMailtoChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 
 // the smtp service is also the protocol handler for mailto urls....
 
@@ -806,7 +778,7 @@ nsSmtpService::findServerByHostname(nsISupports *element, void *aData)
     rv = server->GetHostname(getter_Copies(hostname));
     if (NS_FAILED(rv)) return PR_TRUE;
 
-    nsXPIDLCString username;
+   nsXPIDLCString username;
     rv = server->GetUsername(getter_Copies(username));
     if (NS_FAILED(rv)) return PR_TRUE;
 

@@ -48,7 +48,8 @@
 #include "nsIRefreshURI.h"
 #include "nsIDocumentLoader.h"
 #include "nsIHelperAppLauncherDialog.h"
-
+#include "nsITransport.h"
+#include "nsIFileTransportService.h"
 #include "nsCExternalHandlerService.h" // contains contractids for the helper app service
 
 #include "nsMimeTypes.h"
@@ -607,8 +608,7 @@ nsresult nsExternalAppHandler::RetargetLoadNotifications(nsIRequest *request)
   // so go ahead and force the creation of a load group and doc loader for us to use...
   nsresult rv = NS_OK;
   
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
   NS_ENSURE_TRUE(aChannel, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIURILoader> uriLoader(do_GetService(NS_URI_LOADER_CONTRACTID));
@@ -717,15 +717,16 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   mTempFile->Append(saltedTempLeafName); // make this file unique!!!
   mTempFile->CreateUnique(nsnull, nsIFile::NORMAL_FILE_TYPE, 0644);
 
-  nsCOMPtr<nsIFileChannel> fileChannel = do_CreateInstance(NS_LOCALFILECHANNEL_CONTRACTID);
-  if (fileChannel)
-  {
-    rv = fileChannel->Init(mTempFile, -1, 0);
-    if (NS_FAILED(rv)) return rv; 
-    rv = fileChannel->OpenOutputStream(0, -1, getter_AddRefs(mOutStream));
-    if (NS_FAILED(rv)) return rv; 
-  }
+  NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
+  NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
 
+  nsCOMPtr<nsITransport> fileTransport;
+  rv = fts->CreateTransport(mTempFile, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE, 0664, getter_AddRefs(fileTransport));
+  if (NS_FAILED(rv)) return rv;
+
+  rv = fileTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mOutStream));
+  
   return rv;
 }
 
@@ -737,8 +738,7 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
   if (mCanceled) // then go cancel our underlying channel too
     return request->Cancel(NS_BINDING_ABORTED);
 
-  nsCOMPtr<nsIChannel> aChannel;
-  request->GetParent(getter_AddRefs(aChannel));
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
   nsresult rv = SetUpTempFile(aChannel);
   // retarget all load notifcations to our docloader instead of the original window's docloader...
@@ -935,8 +935,7 @@ NS_IMETHODIMP nsExternalAppHandler::SaveToDisk(nsIFile * aNewFileLocation, PRBoo
      // extract the new leaf name from the file location
      nsXPIDLCString fileName;
      fileToUse->GetLeafName(getter_Copies(fileName));
-     nsCOMPtr<nsIFile> directoryLocation;
-     fileToUse->GetParent(getter_AddRefs(directoryLocation));
+     nsCOMPtr<nsIFile> directoryLocation = do_QueryInterface(fileToUse);
      if (directoryLocation)
      {
        rv = mTempFile->MoveTo(directoryLocation, fileName);

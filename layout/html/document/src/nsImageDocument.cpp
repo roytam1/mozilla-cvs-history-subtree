@@ -118,8 +118,7 @@ ImageListener::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
   nsresult rv;
   nsIURI* uri;
 
-  nsCOMPtr<nsIChannel> channel;
-  request->GetParent(getter_AddRefs(channel));
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
   if (!channel) return NS_ERROR_NULL_POINTER;
 
   rv = channel->GetURI(&uri);

@@ -168,7 +168,7 @@ public:
 
 	NS_IMETHOD Cancel(nsresult status);  // handle stop button
 	NS_IMETHOD GetContentType(char * *aContentType);
-  NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt, PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval);
+  NS_IMETHOD AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt);
   nsresult LoadUrl(nsIURI * aURL, nsISupports * aConsumer);
 
 private:

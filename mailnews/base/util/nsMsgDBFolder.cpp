@@ -35,6 +35,8 @@
 #include "nsLocalFolderSummarySpec.h"
 #include "nsIFileStream.h"
 #include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIFileTransportService.h"
 #include "nsIMsgFolderCompactor.h"
 #if defined(XP_OS2)
 #define MAX_FILE_LENGTH_WITHOUT_EXTENSION 8
@@ -581,7 +583,7 @@ nsresult nsMsgDBFolder::GetOfflineStoreInputStream(nsIInputStream **stream)
   return rv;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::GetOfflineFileChannel(nsMsgKey msgKey, PRUint32 *offset, PRUint32 *size, nsIFileChannel **aFileChannel)
+NS_IMETHODIMP nsMsgDBFolder::GetOfflineFileTransport(nsMsgKey msgKey, PRUint32 *offset, PRUint32 *size, nsITransport **aFileChannel)
 {
   NS_ENSURE_ARG(aFileChannel);
 
@@ -600,7 +602,14 @@ NS_IMETHODIMP nsMsgDBFolder::GetOfflineFileChannel(nsMsgKey msgKey, PRUint32 *of
     rv = NS_NewLocalFile(nativePath, PR_TRUE, getter_AddRefs(localStore));
     if (NS_SUCCEEDED(rv) && localStore)
     {
-      rv = (*aFileChannel)->Init(localStore, PR_CREATE_FILE | PR_RDWR, 0);
+      NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
+      NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
+    
+      if (NS_FAILED(rv))
+        return rv;
+      
+      rv = fts->CreateTransport(localStore, PR_RDWR | PR_CREATE_FILE, 0664, aFileChannel);
+
       if (NS_SUCCEEDED(rv))
       {
 
@@ -642,7 +651,7 @@ nsresult nsMsgDBFolder::GetOfflineStoreOutputStream(nsIOutputStream **outputStre
         if (NS_FAILED(rv)) 
           return rv; 
       //bad see dougt    fileChannel->SetTransferOffset(fileSize);
-      //bad see dougt  rv = fileChannel->OpenOutputStream(outputStream);
+        rv = fileChannel->Open(outputStream);
         if (NS_FAILED(rv)) 
           return rv; 
       }

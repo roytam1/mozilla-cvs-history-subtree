@@ -120,8 +120,7 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
       aLoader->GetRequest(getter_AddRefs(request));
       if (request) {
         nsCOMPtr<nsIURI> uri;
-        nsCOMPtr<nsIChannel> channel;
-        request->GetParent(getter_AddRefs(channel));
+        nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
         if (channel) {
             channel->GetURI(getter_AddRefs(uri));
             if (uri) {

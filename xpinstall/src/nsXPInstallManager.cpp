@@ -32,6 +32,7 @@
 
 #include "nsIURL.h"
 
+#include "nsITransport.h"
 #include "nsIFileTransportService.h"
 #include "nsIOutputStream.h"
 #include "nsNetUtil.h"
@@ -59,8 +60,6 @@
 #include "nsIAppShellComponentImpl.h"
 #include "nsICommonDialogs.h"
 #include "nsIScriptGlobalObject.h"
-
-#include "nsIStreamContentInfo.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
@@ -457,8 +456,7 @@ NS_IMETHODIMP nsXPInstallManager::DownloadNext()
                 
                     if (NS_SUCCEEDED(rv))
                     {
-                        nsCOMPtr<nsIRequest> request;
-                        rv = channel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(request));
+                        rv = channel->AsyncOpen(this, nsnull);
                     }
                 }
             }
@@ -709,7 +707,7 @@ nsXPInstallManager::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 
         if (NS_SUCCEEDED(rv) && !mItem->mOutStream)
         {
-            nsCOMPtr<nsIChannel> outChannel;
+            nsCOMPtr<nsITransport> outChannel;
             
             rv = fts->CreateTransport(mItem->mFile, 
                                       PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
@@ -719,7 +717,7 @@ nsXPInstallManager::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
             if (NS_SUCCEEDED(rv)) 
             {                          
                 // Open output stream.
-                rv = outChannel->OpenOutputStream(0, -1,  getter_AddRefs( mItem->mOutStream ) );
+                rv = outChannel->OpenOutputStream(0, 0, 0,  getter_AddRefs( mItem->mOutStream ) );
             }
         }
     }
@@ -829,9 +827,9 @@ nsXPInstallManager::OnProgress(nsIRequest* request, nsISupports *ctxt, PRUint32 
     if (!mCancelled && TimeToUpdate(now))
     {
         if (mContentLength < 1) {
-            nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-            NS_ASSERTION(contentInfo, "should have a channel");
-            rv = contentInfo->GetContentLength(&mContentLength);
+            nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+            NS_ASSERTION(channel, "should have a channel");
+            rv = channel->GetContentLength(&mContentLength);
             if (NS_FAILED(rv)) return rv;
         }
         mLastUpdate = now;

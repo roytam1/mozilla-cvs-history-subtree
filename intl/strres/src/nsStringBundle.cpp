@@ -243,7 +243,7 @@ nsStringBundle::OnStreamComplete(nsIStreamLoader* aLoader,
       nsCOMPtr<nsIRequest> request;
       nsCOMPtr<nsIChannel> channel;
       aLoader->GetRequest(getter_AddRefs(request));
-      request->GetParent(getter_AddRefs(channel));
+      request = do_QueryInterface(channel);
 
       if (channel) {
         nsCOMPtr<nsIURI> uri;

@@ -89,8 +89,7 @@ NS_IMETHODIMP nsDSURIContentListener::DoContent(const char* aContentType,
 
    // determine if the channel has just been retargeted to us...
    nsLoadFlags loadAttribs = 0;
-   nsCOMPtr<nsIChannel> aOpenedChannel;
-   request->GetParent(getter_AddRefs(aOpenedChannel));
+   nsCOMPtr<nsIChannel> aOpenedChannel = do_QueryInterface(request);
     
    aOpenedChannel->GetLoadAttributes(&loadAttribs);
 
