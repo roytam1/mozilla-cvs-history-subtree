@@ -102,7 +102,7 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
     // Create comparator depending on datatype
     nsAutoString dataType;
     if (aDataTypeExpr) {
-        ExprResult* exprRes = aOrderExpr->evaluate(aContext);
+        ExprResult* exprRes = aDataTypeExpr->evaluate(aContext);
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
         exprRes->stringValue(dataType);
