@@ -126,7 +126,7 @@ ICONLIST	 = $(OBJDIR)/icon.list
 ICONANIMLIST = $(OBJDIR)/iconanim.list
 MKICONS_EXE	 = $(OBJDIR)/mkicons
 
-ifdef JAVA_OR_OJI
+ifdef MOZ_JAVA
 JAVA_JMC = $(DIST)/lib/libjmc.a
 else
 JAVA_JMC = $(DIST)/lib/libstubsj.a
