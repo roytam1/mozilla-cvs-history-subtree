@@ -390,7 +390,7 @@ sub add
 #
 sub modifyRDN
 {
-  my ($self, $rdn, $dn, $del) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2], $_[$[ + 3]);
+  my ($self, $rdn, $dn, $del) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2], $_[$[ + 3]);
   my (@vals);
   my $ret = 1;
 
