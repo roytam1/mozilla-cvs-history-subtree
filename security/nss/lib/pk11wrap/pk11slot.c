@@ -727,6 +727,10 @@ PK11_Logout(PK11SlotInfo *slot)
     PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_Logout(slot->session);
     PK11_ExitSlotMonitor(slot);
+    if (slot->nssToken && !PK11_IsFriendly(slot)) {
+	/* If the slot certs are not public readable, destroy them */
+	nssToken_DestroyCertList(slot->nssToken, PR_TRUE);
+    }
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
 	return SECFailure;
@@ -1142,6 +1146,11 @@ PK11_DoPassword(PK11SlotInfo *slot, PRBool loadCerts, void *wincx)
     }
     if (rv == SECSuccess) {
 	rv = pk11_CheckVerifyTest(slot);
+	if (rv == SECSuccess && slot->nssToken && !PK11_IsFriendly(slot)) {
+	    /* notify stan about the login if certs are not public readable */
+	    nssToken_LoadCerts(slot->nssToken);
+	    nssToken_UpdateTrustForCerts(slot->nssToken);
+	}
     } else if (!attempt) PORT_SetError(SEC_ERROR_BAD_PASSWORD);
     return rv;
 }
@@ -4347,18 +4356,12 @@ PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
 	if (pk11_isAllZero(pPBEparams->pInitVector,iv_len)) {
 	    SECItem param;
 	    PK11SymKey *symKey;
-	    PK11SlotInfo *intSlot = PK11_GetInternalSlot();
-
-	    if (intSlot == NULL) {
-		return CKR_DEVICE_ERROR;
-	    }
 
 	    param.data = pPBEMechanism->pParameter;
 	    param.len = pPBEMechanism->ulParameterLen;
 
-	    symKey = PK11_RawPBEKeyGen(intSlot,
+	    symKey = PK11_RawPBEKeyGen(PK11_GetInternalSlot(),
 		pPBEMechanism->mechanism, &param, pbe_pwd, faulty3DES, NULL);
-	    PK11_FreeSlot(intSlot);
 	    if (symKey== NULL) {
 		return CKR_DEVICE_ERROR; /* sigh */
 	    }

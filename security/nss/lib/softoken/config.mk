@@ -95,7 +95,3 @@ MKSHLIB += -R '$$ORIGIN'
 endif
 endif
 endif
-
-ifeq ($(OS_TARGET),WINCE)
-DEFINES += -DDBM_USING_NSPR
-endif

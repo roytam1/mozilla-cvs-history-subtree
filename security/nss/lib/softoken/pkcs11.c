@@ -1705,7 +1705,7 @@ pk11_mkPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
     if (arena == NULL) return NULL;
 
     privKey = (NSSLOWKEYPrivateKey *)
-			PORT_ArenaZAlloc(arena,sizeof(NSSLOWKEYPrivateKey));
+			PORT_ArenaAlloc(arena,sizeof(NSSLOWKEYPrivateKey));
     if (privKey == NULL)  {
 	PORT_FreeArena(arena,PR_FALSE);
 	return NULL;
@@ -1893,7 +1893,7 @@ pk11_mkSecretKeyRep(PK11Object *object)
     if (arena == NULL) { crv = CKR_HOST_MEMORY; goto loser; }
 
     privKey = (NSSLOWKEYPrivateKey *)
-			PORT_ArenaZAlloc(arena,sizeof(NSSLOWKEYPrivateKey));
+			PORT_ArenaAlloc(arena,sizeof(NSSLOWKEYPrivateKey));
     if (privKey == NULL) { crv = CKR_HOST_MEMORY; goto loser; }
 
     privKey->arena = arena;
@@ -2076,15 +2076,11 @@ PK11Slot * pk11_NewSlotFromID(CK_SLOT_ID slotID)
 	}
     }
     if (nscSlotCount >= nscSlotListSize) {
-	CK_SLOT_ID* oldNscSlotList = nscSlotList;
-	CK_ULONG oldNscSlotListSize = nscSlotListSize;
 	nscSlotListSize += NSC_SLOT_LIST_BLOCK_SIZE;
-	nscSlotList = (CK_SLOT_ID *) PORT_Realloc(oldNscSlotList,
+	nscSlotList = (CK_SLOT_ID *) PORT_Realloc(nscSlotList,
 					nscSlotListSize*sizeof(CK_SLOT_ID));
 	if (nscSlotList == NULL) {
-            nscSlotList = oldNscSlotList;
-            nscSlotListSize = oldNscSlotListSize;
-            return NULL;
+	    return NULL;
 	}
     }
 
@@ -2261,71 +2257,32 @@ pk11_DestroySlotData(PK11Slot *slot)
  * handle the SECMOD.db
  */
 char **
-NSC_ModuleDBFunc(unsigned long function,char *parameters, void *args)
+NSC_ModuleDBFunc(unsigned long function,char *parameters, char *args)
 {
-    char *secmod = NULL;
-    char *appName = NULL;
-    char *filename = NULL;
+    char *secmod;
     PRBool rw;
     static char *success="Success";
     char **rvstr = NULL;
 
-    secmod = secmod_getSecmodName(parameters,&appName,&filename, &rw);
+    secmod = secmod_getSecmodName(parameters,&rw);
 
     switch (function) {
     case SECMOD_MODULE_DB_FUNCTION_FIND:
-	rvstr = secmod_ReadPermDB(appName,filename,secmod,(char *)parameters,rw);
+	rvstr = secmod_ReadPermDB(secmod,parameters,rw);
 	break;
     case SECMOD_MODULE_DB_FUNCTION_ADD:
-	rvstr = (secmod_AddPermDB(appName,filename,secmod,(char *)args,rw) 
-				== SECSuccess) ? &success: NULL;
+	rvstr = (secmod_AddPermDB(secmod,args,rw) == SECSuccess) 
+							? &success: NULL;
 	break;
     case SECMOD_MODULE_DB_FUNCTION_DEL:
-	rvstr = (secmod_DeletePermDB(appName,filename,secmod,(char *)args,rw)
-				 == SECSuccess) ? &success: NULL;
-	break;
-    case SECMOD_MODULE_DB_FUNCTION_RELEASE:
-	rvstr = (secmod_ReleasePermDBData(appName,filename,secmod,
-			(char **)args,rw) == SECSuccess) ? &success: NULL;
+	rvstr = (secmod_DeletePermDB(secmod,args,rw) == SECSuccess) 
+							? &success: NULL;
 	break;
     }
     if (secmod) PR_smprintf_free(secmod);
-    if (appName) PORT_Free(appName);
-    if (filename) PORT_Free(filename);
     return rvstr;
 }
 
-static void nscFreeAllSlots()
-{
-    /* free all the slots */
-    PK11Slot *slot = NULL;
-    CK_SLOT_ID slotID;
-    int i;
-
-    if (nscSlotList) {
-	CK_ULONG tmpSlotCount = nscSlotCount;
-	CK_SLOT_ID_PTR tmpSlotList = nscSlotList;
-	PLHashTable *tmpSlotHashTable = nscSlotHashTable;
-
-	/* now clear out the statics */
-	nscSlotList = NULL;
-	nscSlotCount = 0;
-	nscSlotHashTable = NULL;
-	nscSlotListSize = 0;
-
-	for (i=0; i < tmpSlotCount; i++) {
-	    slotID = tmpSlotList[i];
-	    slot = (PK11Slot *)
-			PL_HashTableLookup(tmpSlotHashTable, (void *)slotID);
-	    PORT_Assert(slot);
-	    if (!slot) continue;
-	    pk11_DestroySlotData(slot);
-	    PL_HashTableRemove(tmpSlotHashTable, (void *)slotID);
-	}
-	PORT_Free(tmpSlotList);
-	PL_HashTableDestroy(tmpSlotHashTable);
-    }
-}
 
 static PRBool nsc_init = PR_FALSE;
 /* NSC_Initialize initializes the Cryptoki library. */
@@ -2337,7 +2294,7 @@ CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS)
     int i;
 
     if (nsc_init) {
-	return CKR_CRYPTOKI_ALREADY_INITIALIZED;
+	return crv;
     }
 
     rv = RNG_RNGInit();         /* initialize random number generator */
@@ -2374,10 +2331,7 @@ CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS)
 	for (i=0; i < paramStrings.token_count; i++) {
 	    crv = 
 		PK11_SlotInit(paramStrings.configdir, &paramStrings.tokens[i]);
-	    if (crv != CKR_OK) {
-                nscFreeAllSlots();
-                break;
-            }
+	    if (crv != CKR_OK) break;
 	}
 loser:
 	secmod_freeParams(&paramStrings);
@@ -2396,11 +2350,38 @@ CK_RV NSC_Initialize(CK_VOID_PTR pReserved)
  * Cryptoki library.*/
 CK_RV NSC_Finalize (CK_VOID_PTR pReserved)
 {
+    PK11Slot *slot = NULL;
+    CK_SLOT_ID slotID;
+    int i;
+
     if (!nsc_init) {
 	return CKR_OK;
     }
 
-    nscFreeAllSlots();
+    /* free all the slots */
+    if (nscSlotList) {
+	CK_ULONG tmpSlotCount = nscSlotCount;
+	CK_SLOT_ID_PTR tmpSlotList = nscSlotList;
+	PLHashTable *tmpSlotHashTable = nscSlotHashTable;
+
+	/* now clear out the statics */
+	nscSlotList = NULL;
+	nscSlotCount = 0;
+	nscSlotHashTable = NULL;
+	nscSlotListSize = 0;
+
+	for (i=0; i < tmpSlotCount; i++) {
+	    slotID = tmpSlotList[i];
+	    slot = (PK11Slot *)
+			PL_HashTableLookup(tmpSlotHashTable, (void *)slotID);
+	    PORT_Assert(slot);
+	    if (!slot) continue;
+	    pk11_DestroySlotData(slot);
+	    PL_HashTableRemove(tmpSlotHashTable, (void *)slotID);
+	}
+	PORT_Free(tmpSlotList);
+	PL_HashTableDestroy(tmpSlotHashTable);
+    }
 
     nsslowcert_DestroyGlobalLocks();
 
@@ -2443,7 +2424,6 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
     pInfo->flags = 0;
     return CKR_OK;
 }
-
 
 /* NSC_GetSlotList obtains a list of slots in the system. */
 CK_RV NSC_GetSlotList(CK_BBOOL tokenPresent,
@@ -3233,6 +3213,7 @@ CK_RV NSC_CopyObject(CK_SESSION_HANDLE hSession,
     if (crv != CKR_OK) {
 	pk11_FreeObject(destObject);
 	pk11_FreeSession(session);
+	return crv;
     }
 
     crv = pk11_handleObject(destObject,session);
@@ -3507,16 +3488,6 @@ pk11_key_collect(DBT *key, DBT *data, void *arg)
 
 	if (keyData->id->len == 0) {
 	    haveMatch = PR_TRUE; /* taking any key */
-	    /* Make sure this isn't a NSC_KEY */
-	    privKey = nsslowkey_FindKeyByPublicKey(keyData->slot->keyDB, 
-					&tmpDBKey, keyData->slot->password);
-	    if (privKey) {
-		haveMatch = isSecretKey(privKey) ?
-				(PRBool)(keyData->classFlags & NSC_KEY) != 0:
-				(PRBool)(keyData->classFlags & 
-					      (NSC_PRIVATE|NSC_PUBLIC)) != 0;
-		nsslowkey_DestroyPrivateKey(privKey);
-	    }
 	} else {
 	    SHA1_HashBuf( hashKey, key->data, key->size ); /* match id */
 	    haveMatch = SECITEM_ItemsAreEqual(keyData->id,&result);
@@ -3600,15 +3571,15 @@ pk11_searchKeys(PK11Slot *slot, SECItem *key_id, PRBool isLoggedIn,
     if (key_id->data) {
 	privKey = nsslowkey_FindKeyByPublicKey(keyHandle, key_id, slot->password);
 	if (privKey) {
-	    if ((classFlags & NSC_KEY) && isSecretKey(privKey)) {
+	    if (classFlags & NSC_KEY) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_KEY));
 	    }
-	    if ((classFlags & NSC_PRIVATE) && !isSecretKey(privKey)) {
+	    if (classFlags & NSC_PRIVATE) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_PRIV));
 	    }
-	    if ((classFlags & NSC_PUBLIC) && !isSecretKey(privKey)) {
+	    if (classFlags & NSC_PUBLIC) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_PUB));
 	    }
@@ -3652,10 +3623,6 @@ static SECStatus
 pk11_cert_collect(NSSLOWCERTCertificate *cert,void *arg)
 {
     pk11CertData *cd = (pk11CertData *)arg;
-
-    if (cert == NULL) {
-	return SECSuccess;
-    }
 
     if (cd->certs == NULL) {
 	return SECFailure;

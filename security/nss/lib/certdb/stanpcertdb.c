@@ -135,17 +135,17 @@ SECStatus
 __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
 		       CERTCertTrust *trust)
 {
+    PRStatus nssrv;
     NSSUTF8 *stanNick;
     PK11SlotInfo *slot;
     NSSToken *internal;
     NSSCryptoContext *context;
-    nssCryptokiObject *permInstance;
     NSSCertificate *c = STAN_GetNSSCertificate(cert);
     context = c->object.cryptoContext;
     if (!context) {
-	return SECFailure; /* wasn't a temp cert */
+	return PR_FAILURE; /* wasn't a temp cert */
     }
-    stanNick = nssCertificate_GetNickname(c, NULL);
+    stanNick = NSSCertificate_GetNickname(c, NULL);
     if (stanNick && nickname && strcmp(nickname, stanNick) != 0) {
 	/* take the new nickname */
 	cert->nickname = NULL;
@@ -157,23 +157,15 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
     /* Delete the temp instance */
     nssCertificateStore_Remove(context->certStore, c);
     c->object.cryptoContext = NULL;
+    /* the perm instance will assume the reference */
+    nssList_Clear(c->object.instanceList, NULL);
     /* Import the perm instance onto the internal token */
     slot = PK11_GetInternalKeySlot();
     internal = PK11Slot_GetNSSToken(slot);
-    permInstance = nssToken_ImportCertificate(internal, NULL,
-                                              NSSCertificateType_PKIX,
-                                              &c->id,
-                                              stanNick,
-                                              &c->encoding,
-                                              &c->issuer,
-                                              &c->subject,
-                                              &c->serial,
-                                              PR_TRUE);
-    PK11_FreeSlot(slot);
-    if (!permInstance) {
+    nssrv = nssToken_ImportCertificate(internal, NULL, c, stanNick, PR_TRUE);
+    if (nssrv != PR_SUCCESS) {
 	return SECFailure;
     }
-    nssPKIObject_AddInstance(&c->object, permInstance);
     /* reset the CERTCertificate fields */
     cert->nssCertificate = NULL;
     cert = STAN_GetCERTCertificate(c); /* will return same pointer */
@@ -196,11 +188,11 @@ __CERT_NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert,
 {
     PRStatus nssrv;
     NSSCertificate *c;
+    NSSCryptoContext *context;
+    NSSArena *arena;
     CERTCertificate *cc;
     NSSCertificate *tempCert;
-    nssPKIObject *pkio;
     NSSCryptoContext *gCC = STAN_GetDefaultCryptoContext();
-    NSSTrustDomain *gTD = STAN_GetDefaultTrustDomain();
     if (!isperm) {
 	NSSDER encoding;
 	NSSITEM_FROM_SECITEM(&encoding, derCert);
@@ -216,24 +208,27 @@ __CERT_NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert,
 	    return STAN_GetCERTCertificate(c);
 	}
     }
-    pkio = nssPKIObject_Create(NULL, NULL, gTD, gCC);
-    if (!pkio) {
+    arena = NSSArena_Create();
+    if (!arena) {
 	return NULL;
     }
-    c = nss_ZNEW(pkio->arena, NSSCertificate);
+    c = nss_ZNEW(arena, NSSCertificate);
     if (!c) {
-	nssPKIObject_Destroy(pkio);
+	nssArena_Destroy(arena);
 	return NULL;
     }
-    c->object = *pkio;
     NSSITEM_FROM_SECITEM(&c->encoding, derCert);
+    nssrv = nssPKIObject_Initialize(&c->object, arena, NULL, NULL);
+    if (nssrv != PR_SUCCESS) {
+	goto loser;
+    }
     /* Forces a decoding of the cert in order to obtain the parts used
      * below
      */
     cc = STAN_GetCERTCertificate(c);
-    nssItem_Create(c->object.arena, 
+    nssItem_Create(arena, 
                    &c->issuer, cc->derIssuer.len, cc->derIssuer.data);
-    nssItem_Create(c->object.arena, 
+    nssItem_Create(arena, 
                    &c->subject, cc->derSubject.len, cc->derSubject.data);
     if (PR_TRUE) {
 	/* CERTCertificate stores serial numbers decoded.  I need the DER
@@ -242,30 +237,31 @@ __CERT_NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert,
 	SECItem derSerial = { 0 };
 	CERT_SerialNumberFromDERCert(&cc->derCert, &derSerial);
 	if (!derSerial.data) goto loser;
-	nssItem_Create(c->object.arena, &c->serial, derSerial.len, derSerial.data);
+	nssItem_Create(arena, &c->serial, derSerial.len, derSerial.data);
 	PORT_Free(derSerial.data);
     }
     if (nickname) {
-	c->object.tempName = nssUTF8_Create(c->object.arena, 
+	c->object.tempName = nssUTF8_Create(arena, 
                                             nssStringType_UTF8String, 
                                             (NSSUTF8 *)nickname, 
                                             PORT_Strlen(nickname));
     }
     if (cc->emailAddr) {
-	c->email = nssUTF8_Create(c->object.arena, 
+	c->email = nssUTF8_Create(arena, 
 	                          nssStringType_PrintableString, 
 	                          (NSSUTF8 *)cc->emailAddr, 
 	                          PORT_Strlen(cc->emailAddr));
     }
+    context = STAN_GetDefaultCryptoContext();
     /* this function cannot detect if the cert exists as a temp cert now, but
      * didn't when CERT_NewTemp was first called.
      */
-    nssrv = NSSCryptoContext_ImportCertificate(gCC, c);
+    nssrv = NSSCryptoContext_ImportCertificate(context, c);
     if (nssrv != PR_SUCCESS) {
 	goto loser;
     }
     /* so find the entry in the temp store */
-    tempCert = NSSCryptoContext_FindCertificateByIssuerAndSerialNumber(gCC,
+    tempCert = NSSCryptoContext_FindCertificateByIssuerAndSerialNumber(context,
                                                                    &c->issuer,
                                                                    &c->serial);
     /* destroy the copy */
@@ -277,6 +273,7 @@ __CERT_NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert,
     } else {
 	return NULL;
     }
+    c->object.trustDomain = STAN_GetDefaultTrustDomain();
     cc->istemp = PR_TRUE;
     cc->isperm = PR_FALSE;
     return cc;
@@ -311,18 +308,17 @@ CERT_FindCertByIssuerAndSN(CERTCertDBHandle *handle, CERTIssuerAndSN *issuerAndS
 static NSSCertificate *
 get_best_temp_or_perm(NSSCertificate *ct, NSSCertificate *cp)
 {
+    nssBestCertificateCB best;
     NSSUsage usage;
-    NSSCertificate *arr[3];
-    if (!ct) {
-	return nssCertificate_AddRef(cp);
-    } else if (!cp) {
-	return nssCertificate_AddRef(ct);
-    }
-    arr[0] = ct;
-    arr[1] = cp;
-    arr[2] = NULL;
     usage.anyUsage = PR_TRUE;
-    return nssCertificateArray_FindBestCertificate(arr, NULL, &usage, NULL);
+    nssBestCertificate_SetArgs(&best, NULL, &usage, NULL);
+    if (ct) {
+	nssBestCertificate_Callback(ct, (void *)&best);
+    }
+    if (cp) {
+	nssBestCertificate_Callback(cp, (void *)&best);
+    }
+    return best.cert;
 }
 
 CERTCertificate *
@@ -829,9 +825,6 @@ loser:
     if (stanProfile) {
 	nssSMIMEProfile_Destroy(stanProfile);
     }
-    if (slot) {
-	PK11_FreeSlot(slot);
-    }
     
     return(rv);
 }
@@ -842,12 +835,11 @@ CERT_FindSMimeProfile(CERTCertificate *cert)
     PK11SlotInfo *slot = NULL;
     NSSCertificate *c;
     NSSCryptoContext *cc;
-    SECItem *rvItem = NULL;
-
     c = STAN_GetNSSCertificate(cert);
     if (!c) return NULL;
     cc = c->object.cryptoContext;
     if (cc != NULL) {
+	SECItem *rvItem = NULL;
 	nssSMIMEProfile *stanProfile;
 	stanProfile = nssCryptoContext_FindSMIMEProfileForCertificate(cc, c);
 	if (stanProfile) {
@@ -860,10 +852,8 @@ CERT_FindSMimeProfile(CERTCertificate *cert)
 	}
 	return rvItem;
     }
-    rvItem =
+    return 
 	PK11_FindSMimeProfile(&slot, cert->emailAddr, &cert->derSubject, NULL);
-    PK11_FreeSlot(slot);
-    return rvItem;
 }
 
 /*

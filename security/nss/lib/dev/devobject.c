@@ -68,7 +68,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #ifdef NSS_3_4_CODE
 #include "pkim.h" /* for cert decoding */
 #include "pk11func.h" /* for PK11_HasRootCerts */
-#include "pki3hack.h" /* for STAN_ForceCERTCertificateUpdate */
 #endif
 
 /* The number of object handles to grab during each call to C_FindObjects */
@@ -84,7 +83,6 @@ nssToken_DeleteStoredObject
     PRStatus nssrv;
     PRBool createdSession = PR_FALSE;
     NSSToken *token = instance->token;
-    void *epv = token->epv;
     nssSession *session = NULL;
     if (nssCKObject_IsAttributeTrue(instance->handle, CKA_TOKEN, 
                                     token->defaultSession,
@@ -100,7 +98,7 @@ nssToken_DeleteStoredObject
 	return PR_FAILURE;
     }
     nssSession_EnterMonitor(session);
-    ckrv = CKAPI(epv)->C_DestroyObject(session->handle, instance->handle);
+    ckrv = CKAPI(token)->C_DestroyObject(session->handle, instance->handle);
     nssSession_ExitMonitor(session);
     if (createdSession) {
 	nssSession_Destroy(session);
@@ -122,7 +120,6 @@ import_object
 {
     nssSession *session = NULL;
     PRBool createdSession = PR_FALSE;
-    void *epv = tok->epv;
     CK_OBJECT_HANDLE object;
     CK_RV ckrv;
     if (nssCKObject_IsTokenObjectTemplate(objectTemplate, otsize)) {
@@ -145,7 +142,7 @@ import_object
 	return CK_INVALID_HANDLE;
     }
     nssSession_EnterMonitor(session);
-    ckrv = CKAPI(epv)->C_CreateObject(session->handle, 
+    ckrv = CKAPI(tok->slot)->C_CreateObject(session->handle, 
                                             objectTemplate, otsize,
                                             &object);
     nssSession_ExitMonitor(session);
@@ -171,22 +168,21 @@ find_object_by_template
     CK_OBJECT_HANDLE rvObject = CK_INVALID_HANDLE;
     CK_ULONG count = 0;
     CK_RV ckrv;
-    void *epv = tok->epv;
     nssSession *session;
     session = (sessionOpt) ? sessionOpt : tok->defaultSession;
     hSession = session->handle;
     nssSession_EnterMonitor(session);
-    ckrv = CKAPI(epv)->C_FindObjectsInit(hSession, cktemplate, ctsize);
+    ckrv = CKAPI(tok)->C_FindObjectsInit(hSession, cktemplate, ctsize);
     if (ckrv != CKR_OK) {
 	nssSession_ExitMonitor(session);
 	return CK_INVALID_HANDLE;
     }
-    ckrv = CKAPI(epv)->C_FindObjects(hSession, &rvObject, 1, &count);
+    ckrv = CKAPI(tok)->C_FindObjects(hSession, &rvObject, 1, &count);
     if (ckrv != CKR_OK) {
 	nssSession_ExitMonitor(session);
 	return CK_INVALID_HANDLE;
     }
-    ckrv = CKAPI(epv)->C_FindObjectsFinal(hSession);
+    ckrv = CKAPI(tok)->C_FindObjectsFinal(hSession);
     nssSession_ExitMonitor(session);
     if (ckrv != CKR_OK) {
 	return CK_INVALID_HANDLE;
@@ -218,19 +214,18 @@ traverse_objects_by_template
     nssSession *session;
     nssList *objectList = NULL;
     int objectStackSize = OBJECT_STACK_SIZE;
-    void *epv = tok->epv;
     slot = tok->slot;
     objectStack = startOS;
     session = (sessionOpt) ? sessionOpt : tok->defaultSession;
     hSession = session->handle;
     nssSession_EnterMonitor(session);
-    ckrv = CKAPI(epv)->C_FindObjectsInit(hSession, obj_template, otsize);
+    ckrv = CKAPI(slot)->C_FindObjectsInit(hSession, obj_template, otsize);
     if (ckrv != CKR_OK) {
 	nssSession_ExitMonitor(session);
 	goto loser;
     }
     while (PR_TRUE) {
-	ckrv = CKAPI(epv)->C_FindObjects(hSession, objectStack, 
+	ckrv = CKAPI(slot)->C_FindObjects(hSession, objectStack, 
 	                                  objectStackSize, &count);
 	if (ckrv != CKR_OK) {
 	    nssSession_ExitMonitor(session);
@@ -254,7 +249,7 @@ traverse_objects_by_template
 	    break;
 	}
     }
-    ckrv = CKAPI(epv)->C_FindObjectsFinal(hSession);
+    ckrv = CKAPI(slot)->C_FindObjectsFinal(hSession);
     nssSession_ExitMonitor(session);
     if (ckrv != CKR_OK) {
 	goto loser;
@@ -564,26 +559,13 @@ retrieve_cert(NSSToken *t, nssSession *session, CK_OBJECT_HANDLE h, void *arg)
 	/* XXX Fix this! */
 	nssListIterator_Destroy(cert->object.instances);
 	cert->object.instances = nssList_CreateIterator(cert->object.instanceList);
-	/* The cert was already discovered.  If it was made into a 
-	 * CERTCertificate, we need to update it here, because we have found
-	 * another instance of it.  This new instance may cause the slot
-	 * and nickname fields of the cert to change.
-	 */
-	if (cert->decoding && inCache) {
-	    (void)STAN_ForceCERTCertificateUpdate(cert);
-	}
     }
     if (!inCache) {
 	nssrv = (*search->callback)(cert, search->cbarg);
     } else {
 	nssrv = PR_SUCCESS; /* cached entries already handled */
     }
-#ifdef NSS_3_4_CODE
-     CERT_DestroyCertificate(STAN_GetCERTCertificate(cert));
-#else
-     NSSCertificate_Destroy(cert);
-#endif
-
+    NSSCertificate_Destroy(cert);
     return nssrv;
 }
 
@@ -1107,33 +1089,5 @@ nssToken_FindTrustForCert
 loser:
     nssPKIObject_Destroy(&rvTrust->object);
     return (NSSTrust *)NULL;
-}
-
-NSS_IMPLEMENT PRBool
-nssToken_HasCrls
-(
-    NSSToken *tok
-)
-{
-    return !tok->hasNoCrls;
-}
-
-NSS_IMPLEMENT PRStatus
-nssToken_SetHasCrls
-(
-    NSSToken *tok
-)
-{
-    tok->hasNoCrls = PR_FALSE;
-    return PR_SUCCESS;
-}
-
-NSS_IMPLEMENT PRBool
-nssToken_IsPresent
-(
-  NSSToken *token
-)
-{
-    return nssSlot_IsTokenPresent(token->slot);
 }
 
