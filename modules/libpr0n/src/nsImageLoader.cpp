@@ -23,7 +23,7 @@
 
 #include "nsImageLoader.h"
 
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 
 #include "nsIServiceManager.h"
 

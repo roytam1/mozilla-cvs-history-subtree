@@ -21,7 +21,7 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 
 #include "nsIRunnable.h"
 

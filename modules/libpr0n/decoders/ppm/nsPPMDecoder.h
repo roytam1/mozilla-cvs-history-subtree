@@ -31,7 +31,7 @@
 #include "nsIImageContainer.h"
 #include "nsIImageDecoderObserver.h"
 #include "nsIImageFrame.h"
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 
 #define NS_PPMDECODER_CID \
 { /* e90bfa06-1dd1-11b2-8217-f38fe5d431a2 */         \

@@ -29,7 +29,7 @@
 #include "nsIImageContainer.h"
 #include "nsIImageDecoderObserver.h"
 #include "nsIImageFrame.h"
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 
 
 #include "nsCOMPtr.h"

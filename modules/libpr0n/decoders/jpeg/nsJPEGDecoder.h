@@ -29,7 +29,7 @@
 #include "nsCOMPtr.h"
 
 #include "nsIImage2.h"
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 #include "nsIInputStream.h"
 
 #include "jpeglib.h"
