@@ -959,7 +959,7 @@ nsresult nsAbSync::AddNewMailingLists()
         //
         char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
         if (ret)
-          *val = NS_ConvertASCIItoUCS2(ret);
+          *val = NS_ConvertUTF8toUCS2(ret);
 
         if (tagVal->Equals(NS_LITERAL_STRING("list_id")))
         {
@@ -1152,7 +1152,7 @@ nsresult nsAbSync::AddNewMailingListMembers()
         // Ok, "val" could still be URL Encoded, so we need to decode first.
         char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
         if (ret)
-          *val = NS_ConvertASCIItoUCS2(ret);
+          *val = NS_ConvertUTF8toUCS2(ret);
 
         if (tagVal->Equals(NS_LITERAL_STRING("list_id")))
           listID = val->ToInteger(&errorCode);
@@ -1598,7 +1598,7 @@ nsresult nsAbSync::AddNewGroups()
         // Ok, "val" could still be URL Encoded, so we need to decode it first.
         char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
         if (ret)
-          *val = NS_ConvertASCIItoUCS2(ret);
+          *val = NS_ConvertUTF8toUCS2(ret);
 
         AddGroupsValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
       }
@@ -1818,7 +1818,7 @@ nsresult nsAbSync::AddNewMailingListEmailMembers()
           // Ok, "val" could still be URL Encoded, so we need to decode it first.
           char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
           if (ret)
-            *val = NS_ConvertASCIItoUCS2(ret);
+            *val = NS_ConvertUTF8toUCS2(ret);
           ParseEmailMemberAddresses(val, memberAddresses);
         }
       }
@@ -2043,6 +2043,12 @@ nsresult nsAbSync::ParseEmailMemberAddresses(nsString *addrString, nsVoidArray &
 
   // Strip off while space (especailly leading & trailing ones)
   addrString->Trim("\b\t\r\n ");
+
+  // This is a workaroud solution for bug 20825 where aol clients have
+  // problems parsing group email addresses separated by Enter (instead 
+  // of comma). Replacing ",," with " " so that "a1@ns.com,,a2@ns.com"
+  // is treated as one address.
+  addrString->ReplaceSubstring(NS_LITERAL_STRING(",,").get(), NS_LITERAL_STRING(" ").get());
 
   nsString  outValue;
   char *tValue = ToNewCString(*addrString);

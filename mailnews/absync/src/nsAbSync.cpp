@@ -814,7 +814,7 @@ nsAbSync::OpenAB(char *aAbName, nsIAddrDatabase **aDatabase)
 NS_IMETHODIMP    
 nsAbSync::GenerateProtocolForList(nsIAbCard *aCard, PRBool aAddId, nsString &protLine)
 {
-  PRUnichar     *aName = nsnull;
+  nsXPIDLString nameStr;
   nsString      tProtLine;
 	nsresult rv = NS_OK;
 
@@ -837,11 +837,10 @@ nsAbSync::GenerateProtocolForList(nsIAbCard *aCard, PRBool aAddId, nsString &pro
     }
   }
  
-  if (NS_SUCCEEDED(aCard->GetCardValue(kDisplayNameColumn, &aName)) && (aName) && (*aName))
+  if (NS_SUCCEEDED(aCard->GetCardValue(kDisplayNameColumn, getter_Copies(nameStr))))
   {
     tProtLine.Append(NS_LITERAL_STRING("&") + NS_LITERAL_STRING("listname") + NS_LITERAL_STRING("="));
-    AddValueToProtocolLine(aName, tProtLine);
-    PR_FREEIF(aName);
+    AddValueToProtocolLine(nameStr.get(), tProtLine);
   }
 
   if (!tProtLine.IsEmpty())
@@ -857,10 +856,15 @@ nsAbSync::GenerateProtocolForList(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   return NS_OK;
 }
 
+//
+// The absync protocol requires that all card fields be added to the protocol
+// string even if there's no value associated with a given field. For example,
+// if screen name has no value then "&screen_name=" is added to the protocol.
+//
 NS_IMETHODIMP    
 nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &protLine)
 {
-  PRUnichar     *aName = nsnull;
+  nsXPIDLString nameStr;
   nsString      tProtLine;
   PRInt32       phoneCount = 1;
   PRBool        foundPhone = PR_FALSE;
@@ -893,108 +897,112 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   nsString birthday, anniversary; // for birthday & anniversary
   for (PRInt32 i=0; i<kMaxColumns; i++)
   {
-    if (NS_SUCCEEDED(aCard->GetCardValue(mSchemaMappingList[i].abField, &aName)) && (aName) && (*aName))
-    {
-      // These are unknown tags we are omitting...
-      const nsAString& prefix =
-        Substring(mSchemaMappingList[i].serverField, 0, 5);
-      if (NS_LITERAL_STRING("OMIT:").Equals(prefix,
-                                            nsCaseInsensitiveStringComparator()))
-        continue;
+    if (NS_FAILED(aCard->GetCardValue(mSchemaMappingList[i].abField, getter_Copies(nameStr))))
+      continue;
 
-      // Handle birthday & anniversary dates here
-      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthYearColumn, strlen(kBirthYearColumn)) ||
-          !nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthDayColumn, strlen(kBirthDayColumn)))
+    // These are unknown tags we are omitting...
+    const nsAString& prefix =
+      Substring(mSchemaMappingList[i].serverField, 0, 5);
+    if (NS_LITERAL_STRING("OMIT:").Equals(prefix,
+                                          nsCaseInsensitiveStringComparator()))
+      continue;
+
+    // Handle birthday & anniversary dates here
+    if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthYearColumn, strlen(kBirthYearColumn)) ||
+        !nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthDayColumn, strlen(kBirthDayColumn)))
+    {
+      if (!nameStr.IsEmpty())
       {
         birthday.Append(NS_LITERAL_STRING("/"));
-        birthday.Append(aName);
-        continue;
+        birthday.Append(nameStr.get());
       }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthMonthColumn, strlen(kBirthMonthColumn)))
-      {
-        birthday.Assign(aName);
-        continue;
-      }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryYearColumn, strlen(kAnniversaryYearColumn)) ||
-               !nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryDayColumn, strlen(kAnniversaryDayColumn)))
+      continue;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kBirthMonthColumn, strlen(kBirthMonthColumn)))
+    {
+      if (!nameStr.IsEmpty())
+        birthday.Assign(nameStr.get());
+      continue;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryYearColumn, strlen(kAnniversaryYearColumn)) ||
+             !nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryDayColumn, strlen(kAnniversaryDayColumn)))
+    {
+      if (!nameStr.IsEmpty())
       {
         anniversary.Append(NS_LITERAL_STRING("/"));
-        anniversary.Append(aName);
-        continue;
+        anniversary.Append(nameStr.get());
       }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryMonthColumn, strlen(kAnniversaryMonthColumn)))
-      {
-        anniversary.Assign(aName);
-        continue;
-      }
-
-      // Reset this flag...
-      foundPhone = PR_FALSE;
-      // If this is a phone number, we have to special case this because
-      // phone #'s are handled differently than all other tags...sigh!
-      //
-      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kWorkPhoneColumn, strlen(kWorkPhoneColumn)))
-      {
-        foundPhone = PR_TRUE;
-        phoneType = ABSYNC_WORK_PHONE_TYPE;
-      }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kHomePhoneColumn, strlen(kHomePhoneColumn)))
-      {
-        foundPhone = PR_TRUE;
-        phoneType = ABSYNC_HOME_PHONE_TYPE;
-      }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kFaxColumn, strlen(kFaxColumn)))
-      {
-        foundPhone = PR_TRUE;
-        phoneType = ABSYNC_FAX_PHONE_TYPE;
-      }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kPagerColumn, strlen(kPagerColumn)))
-      {
-        foundPhone = PR_TRUE;
-        phoneType = ABSYNC_PAGER_PHONE_TYPE;
-      }
-      else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kCellularColumn, strlen(kCellularColumn)))
-      {
-        foundPhone = PR_TRUE;
-        phoneType = ABSYNC_CELL_PHONE_TYPE;
-      }
-
-      if (foundPhone)
-      {
-        char *pVal = PR_smprintf("phone%d", phoneCount);
-        if (pVal)
-        {
-          tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + NS_LITERAL_STRING("="));
-
-          AddValueToProtocolLine(aName, tProtLine);
-
-          tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + 
-                           NS_LITERAL_STRING("_type=") + NS_ConvertASCIItoUCS2(phoneType));
-          PR_FREEIF(pVal);
-          phoneCount++;
-        }
-      }
-      else    // Good ole' normal tag...
-      {
-        tProtLine.Append(NS_LITERAL_STRING("&") + mSchemaMappingList[i].serverField + NS_LITERAL_STRING("="));
-        AddValueToProtocolLine(aName, tProtLine);
-      }
-
-      PR_FREEIF(aName);
+      continue;
     }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kAnniversaryMonthColumn, strlen(kAnniversaryMonthColumn)))
+    {
+      if (!nameStr.IsEmpty())
+        anniversary.Assign(nameStr.get());
+      continue;
+    }
+
+    // Reset this flag...
+    foundPhone = PR_FALSE;
+    // If this is a phone number, we have to special case this because
+    // phone #'s are handled differently than all other tags...sigh!
+    //
+    if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kWorkPhoneColumn, strlen(kWorkPhoneColumn)))
+    {
+      foundPhone = PR_TRUE;
+      phoneType = ABSYNC_WORK_PHONE_TYPE;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kHomePhoneColumn, strlen(kHomePhoneColumn)))
+    {
+      foundPhone = PR_TRUE;
+      phoneType = ABSYNC_HOME_PHONE_TYPE;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kFaxColumn, strlen(kFaxColumn)))
+    {
+      foundPhone = PR_TRUE;
+      phoneType = ABSYNC_FAX_PHONE_TYPE;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kPagerColumn, strlen(kPagerColumn)))
+    {
+      foundPhone = PR_TRUE;
+      phoneType = ABSYNC_PAGER_PHONE_TYPE;
+    }
+    else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kCellularColumn, strlen(kCellularColumn)))
+    {
+      foundPhone = PR_TRUE;
+      phoneType = ABSYNC_CELL_PHONE_TYPE;
+    }
+
+    if (foundPhone)
+    {
+      char *pVal = PR_smprintf("phone%d", phoneCount);
+      if (pVal)
+      {
+        tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + NS_LITERAL_STRING("="));
+
+        AddValueToProtocolLine(nameStr.get(), tProtLine);
+
+        tProtLine.Append(NS_LITERAL_STRING("&") + NS_ConvertASCIItoUCS2(pVal) + 
+                         NS_LITERAL_STRING("_type=") + NS_ConvertASCIItoUCS2(phoneType));
+        PR_FREEIF(pVal);
+        phoneCount++;
+      }
+    }
+    else    // Good ole' normal tag...
+    {
+      tProtLine.Append(NS_LITERAL_STRING("&") + mSchemaMappingList[i].serverField + NS_LITERAL_STRING("="));
+      AddValueToProtocolLine(nameStr.get(), tProtLine);
+    }
+
+    nameStr.Truncate();  // reset string
+
   }
 
   // Now add birthday andd/or anniversary dates assembled earlier.
-  if (!birthday.IsEmpty())
-  {
-    tProtLine.Append(NS_LITERAL_STRING("&") + kServerBirthdayColumn + NS_LITERAL_STRING("="));
-    AddValueToProtocolLine(birthday.get(), tProtLine);
-  }
-  if (!anniversary.IsEmpty())
-  {
-    tProtLine.Append(NS_LITERAL_STRING("&") + kServerAnniversaryColumn + NS_LITERAL_STRING("="));
-    AddValueToProtocolLine(anniversary.get(), tProtLine);
-  }
+  tProtLine.Append(NS_LITERAL_STRING("&") + kServerBirthdayColumn + NS_LITERAL_STRING("="));
+  AddValueToProtocolLine(birthday.get(), tProtLine);
+
+  tProtLine.Append(NS_LITERAL_STRING("&") + kServerAnniversaryColumn + NS_LITERAL_STRING("="));
+  AddValueToProtocolLine(anniversary.get(), tProtLine);
 
   if (!tProtLine.IsEmpty())
   {
@@ -1003,19 +1011,11 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     if (NS_SUCCEEDED(aCard->GetPreferMailFormat(&format)))
     {
+      tProtLine.Append(NS_LITERAL_STRING("&") + kServerPlainTextColumn + NS_LITERAL_STRING("="));
       if (format != nsIAbPreferMailFormat::html)
-        aName = ToNewUnicode(NS_LITERAL_STRING("0"));
-      else  
-        aName = ToNewUnicode(NS_LITERAL_STRING("1"));
-    
-      // Just some sanity...
-      if (aName)
-      {
-        tProtLine.Append(NS_LITERAL_STRING("&") + kServerPlainTextColumn + NS_LITERAL_STRING("="));
-        AddValueToProtocolLine(aName, tProtLine);
-      
-        PR_FREEIF(aName);
-      }
+        AddValueToProtocolLine(NS_LITERAL_STRING("0").get(), tProtLine);
+      else
+        AddValueToProtocolLine(NS_LITERAL_STRING("1").get(), tProtLine);
     }
 
     char *escData = nsEscape((char *)NS_ConvertUCS2toUTF8(tProtLine).get(), url_Path);
@@ -2172,7 +2172,7 @@ nsAbSync::ExtractCurrentLine()
     if (*mProtocolOffset == nsCRT::LF)
       mProtocolOffset++;
 
-    char *tString = ToNewCString(extractString);
+    char *tString = ToNewUTF8String(extractString);
     if (tString)
     {
       char *ret = nsUnescape(tString);
@@ -2440,7 +2440,7 @@ nsresult nsAbSync::LoadInputValuesAndTags(nsStringArray **recordTags, nsStringAr
     if (!*workLine)   // end of this section
       break;
 
-    tagsArray->AppendString(nsString(NS_ConvertASCIItoUCS2(workLine)));
+    tagsArray->AppendString(nsString(NS_ConvertUTF8toUCS2(workLine)));
     PR_FREEIF(workLine);
   }
 
@@ -2456,7 +2456,7 @@ nsresult nsAbSync::LoadInputValuesAndTags(nsStringArray **recordTags, nsStringAr
     // for the tags in question starting at the second since the 
     // first has already been eaten
     //
-    valuesArray->AppendString(nsString(NS_ConvertASCIItoUCS2(workLine)));
+    valuesArray->AppendString(nsString(NS_ConvertUTF8toUCS2(workLine)));
     PR_FREEIF(workLine);
     for (PRInt32 i=0; i<(tagsArray->Count()-1); i++)
     {
@@ -2468,7 +2468,7 @@ nsresult nsAbSync::LoadInputValuesAndTags(nsStringArray **recordTags, nsStringAr
         return NS_ERROR_FAILURE;
       }
       
-      valuesArray->AppendString(nsString(NS_ConvertASCIItoUCS2(workLine)));
+      valuesArray->AppendString(nsString(NS_ConvertUTF8toUCS2(workLine)));
       PR_FREEIF(workLine);
     }
 
@@ -2813,8 +2813,7 @@ nsAbSync::AddNewUsers()
         //
         char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
         if (ret)
-          //val->AssignWithConversion(ret);
-          *val = NS_ConvertASCIItoUCS2(ret);
+          *val = NS_ConvertUTF8toUCS2(ret);
         AddValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
       }
     }
@@ -3097,26 +3096,13 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
   // be handled differently than all other tags. All other tags are unique with no specifiers
   // as to their type...this is not the case with phone numbers.
   //
-  PRUnichar aChar = '_';
-  nsString  outValue;
-  char      *tValue = nsnull;
-
-  tValue = ToNewCString(*aTagValue);
-  if (tValue)
-  {
-    rv = nsMsgI18NConvertToUnicode(nsCAutoString("UTF-8"), nsCAutoString(tValue), outValue);
-    if (NS_SUCCEEDED(rv))
-      aTagValue->Assign(outValue);
-    PR_FREEIF(tValue);
-  }
-
   if (Substring(*aTagName, 0, 5).Equals(NS_LITERAL_STRING("phone"),
                                         nsCaseInsensitiveStringComparator()))
   {
     nsString      tempVal;
     tempVal.Append(*aTagName + NS_LITERAL_STRING("=") + *aTagValue);
 
-    if (aTagName->FindChar(aChar) != -1)
+    if (aTagName->FindChar('_') != -1)
       mPhoneTypes->AppendString(tempVal);
     else
       mPhoneValues->AppendString(tempVal);
