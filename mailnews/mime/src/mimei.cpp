@@ -834,7 +834,6 @@ mime_crypto_object_p(MimeHeaders *hdrs, PRBool clearsigned_counts)
 PRBool
 mime_crypto_stamped_p(MimeObject *obj)
 {
-  PR_ASSERT(obj);
   if (!obj) return PR_FALSE;
   if (mime_typep (obj, (MimeObjectClass *) &mimeMessageClass))
 	return ((MimeMessage *) obj)->crypto_stamped_p;
@@ -855,7 +854,6 @@ mime_get_crypto_state (MimeObject *obj,
 {
   PRBool signed_p, encrypted_p;
 
-  PR_ASSERT(signed_ret || encrypted_ret || signed_ok_ret || encrypted_ok_ret);
   if (signed_ret) *signed_ret = PR_FALSE;
   if (encrypted_ret) *encrypted_ret = PR_FALSE;
   if (signed_ok_ret) *signed_ok_ret = PR_FALSE;

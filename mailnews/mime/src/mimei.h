@@ -220,7 +220,9 @@
 typedef struct MimeObject      MimeObject;
 typedef struct MimeObjectClass MimeObjectClass;
 
+#ifdef ENABLE_SMIME
 class nsICMSMessage;
+#endif // ENABLE_SMIME
 
 /* (I don't pretend to understand this.) */
 #define cpp_stringify_noop_helper(x)#x
@@ -314,6 +316,11 @@ extern char *mime_find_suggested_name_of_part(const char *part,
  */
 extern char *mime_find_content_type_of_part(const char *part, MimeObject *obj);
 
+/* Parse the various "?" options off the URL and into the options struct.
+ */
+extern int mime_parse_url_options(const char *url, MimeDisplayOptions *);
+
+#ifdef ENABLE_SMIME
 /* Given a part ID, looks through the MimeObject tree for a sub-part whose ID
    number matches; if one is found, and if it represents a PKCS7-encrypted
    object, returns information about the security status of that object.
@@ -328,9 +335,6 @@ extern void mime_find_security_info_of_part(const char *part, MimeObject *obj,
 											PRInt32 *decode_error_return,
 											PRInt32 *verify_error_return);
 
-/* Parse the various "?" options off the URL and into the options struct.
- */
-extern int mime_parse_url_options(const char *url, MimeDisplayOptions *);
 
 /* Asks whether the given object is one of the cryptographically signed
    or encrypted objects that we know about.  (MimeMessageClass uses this
@@ -357,6 +361,7 @@ extern PRBool mime_crypto_stamped_p(MimeObject *obj);
    on it says. */
 extern void mime_set_crypto_stamp(MimeObject *obj,
 								  PRBool signed_p, PRBool encrypted_p);
+#endif // ENABLE_SMIME
 
 struct MimeParseStateObject {
 
