@@ -37,6 +37,7 @@
 #include "nsCOMPtr.h"
 #include "nsILocalFile.h"
 #include "nsIPK11TokenDB.h"
+#include "nsNSSHelper.h"
 
 #include "nss.h"
 
@@ -69,8 +70,9 @@ public:
 
 private:
 
-  nsCOMPtr<nsIPK11Token>     mToken;
-  nsCOMPtr<nsISupportsArray> mCertArray;
+  nsCOMPtr<nsIPK11Token>          mToken;
+  nsCOMPtr<nsISupportsArray>      mCertArray;
+  nsCOMPtr<nsIInterfaceRequestor> mUIContext;
 
   // local helper functions
   nsresult getPKCS12FilePassword(SECItem *);
