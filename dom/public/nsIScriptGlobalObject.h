@@ -26,6 +26,7 @@
 #include "nsISupports.h"
 #include "nsIScriptContext.h"
 #include "nsGUIEvent.h"
+#include "jsapi.h"
 
 class nsIScriptContext;
 class nsIDOMDocument;
@@ -34,8 +35,6 @@ class nsIPresContext;
 class nsIDocShell;
 class nsIDOMWindowInternal;
 class nsIScriptGlobalObjectOwner;
-
-struct JSObject;
 
 #define NS_ISCRIPTGLOBALOBJECT_IID \
 { 0x2b16fc80, 0xfa41, 0x11d1,  \
