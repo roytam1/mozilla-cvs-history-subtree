@@ -64,6 +64,7 @@
 #include "nsIRDFObserver.h"
 #include "nsIRDFResourceFactory.h"
 #include "nsIServiceManager.h"
+#include "nsString.h"
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
 #include "rdfutil.h"
@@ -89,8 +90,26 @@ static NS_DEFINE_IID(kIRDFResourceIID,         NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFResourceFactoryIID,  NS_IRDFRESOURCEFACTORY_IID);
 static NS_DEFINE_IID(kIRDFServiceIID,          NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
-
 static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+
+static const char kMailRoot[]  = "MailRoot";
+
+#define NC_NAMESPACE_URI "http://home.netscape.com/NC-rdf#"
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, subject);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, from);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, date);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Name);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Folder);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Column);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Columns);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Title);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, user);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, account);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, host);
+
+
 
 // THE mail data source.
 static nsIRDFDataSource* gMailDataSource = nsnull;
@@ -145,6 +164,7 @@ private:
     nsVoidArray mAccounts;
     nsVoidArray* mObservers;
     nsIRDFService* mSrv;
+    nsIRDFDataSource* mMiscMailData;
 
     // Resources that we use often XXX : got to initialize these and release them!
     nsIRDFResource* mResourceChild;
@@ -157,6 +177,7 @@ private:
     nsIRDFResource* mResourceAccount;
     nsIRDFResource* mResourceName;
     nsIRDFResource* mMailRoot;
+    nsIRDFResource* mResourceColumns;
 
 public:
   
@@ -177,16 +198,18 @@ public:
     }
 
     nsresult InitAccountList (void) ;
-
+    nsresult AddColumns (void);
     MailDataSource(void) {
         NS_INIT_REFCNT();
-
+        
         nsresult rv = nsServiceManager::GetService(kRDFServiceCID,
                                                    kIRDFServiceIID,
                                                    (nsISupports**) &gRDFService);
-
-        
-
+        rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
+                                          nsnull,
+                                          kIRDFDataSourceIID,
+                                          (void**) &mMiscMailData);    
+        AddColumns();
         PR_ASSERT(NS_SUCCEEDED(rv));
     }
 
@@ -209,16 +232,18 @@ public:
     NS_IMETHOD Init(const char* uri) {
         if ((mURI = PL_strdup(uri)) == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
-        gRDFService->GetResource("http://home.netscape.com/NC-rdf#child", &mResourceChild);
-        gRDFService->GetResource("http://home.netscape.com/NC-rdf#Folder", &mResourceFolder);  
-        gRDFService->GetResource("from", &mResourceFrom);
-        gRDFService->GetResource("subject", &mResourceSubject);
-        gRDFService->GetResource("date", &mResourceDate);
-        gRDFService->GetResource("user", &mResourceUser);
-        gRDFService->GetResource("host", &mResourceHost);
-        gRDFService->GetResource("account", &mResourceAccount);
-        gRDFService->GetResource("http://home.netscape.com/NC-rdf#Name", &mResourceName);
+        gRDFService->GetResource(kURINC_child, &mResourceChild);
+        gRDFService->GetResource(kURINC_Folder, &mResourceFolder);  
+        gRDFService->GetResource(kURINC_from, &mResourceFrom);
+        gRDFService->GetResource(kURINC_subject, &mResourceSubject);
+        gRDFService->GetResource(kURINC_date, &mResourceDate);
+        gRDFService->GetResource(kURINC_user, &mResourceUser);
+        gRDFService->GetResource(kURINC_host, &mResourceHost);
+        gRDFService->GetResource(kURINC_account, &mResourceAccount);
+        gRDFService->GetResource(kURINC_Name, &mResourceName);
+        gRDFService->GetResource(kURINC_Columns, &mResourceColumns);
         gRDFService->GetResource("MailRoot", &mMailRoot);
+
         InitAccountList();
         return NS_OK;
     }
@@ -290,7 +315,9 @@ public:
             } 
             else if (peq(mResourceHost, property)) {
                 rv = ac->GetHost((nsIRDFLiteral**)target);
-            }
+            } else  if (peq(mResourceName, property)) {
+                rv = ac->GetName((nsIRDFLiteral**)target);
+            } 
             NS_RELEASE(ac);
             return rv;
         }
@@ -376,6 +403,15 @@ public:
         NS_ADDREF(mUser);
         return NS_OK;
     }
+
+    NS_IMETHOD GetName(nsIRDFLiteral**  result) const {
+       // NS_ADDREF(mName);
+		// XXX Leak Like a Sieve ...
+		gRDFService->GetLiteral((const unsigned short*) mURI, result); 
+        NS_ADDREF(*result);
+        return NS_OK;
+    }
+
 
     NS_IMETHOD GetHost(nsIRDFLiteral**  result) const {
         *result = mHost;
@@ -484,10 +520,17 @@ public:
        // NS_ADDREF(mName);
 		// XXX Leak Like a Sieve ...
 		gRDFService->GetLiteral((const unsigned short*) mURI, result); 
+        NS_ADDREF(*result);
         return NS_OK;
     }
     
+    nsresult ReadSummaryFile (char* url);
+
     NS_IMETHOD GetMessageList (nsVoidArray** result) {
+        if (mStatus == UNINITIALIZED) {
+			mStatus = OK;
+            ReadSummaryFile(mURI);
+        }
         *result = &mMessages;
         return NS_OK;
     }
@@ -504,6 +547,7 @@ public:
 
     MailFolder (const char* uri) {
         mURI = PL_strdup(uri);
+        mStatus = UNINITIALIZED;
         NS_INIT_REFCNT();
     }
 
@@ -522,15 +566,15 @@ public:
         NS_IF_RELEASE(mAccount);
     }
 
-    nsresult ReadSummaryFile (char* url);
+
 
     nsresult 
-    AddMessage(char* uri, MailFolder* folder,
+    AddMessage(PRUnichar* uri, MailFolder* folder,
                nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
                int summaryFileOffset, int mailFileOffset, char* flags, 
                nsIRDFLiteral* messageID) ;
 
-    nsresult AddMessage(char* uri, MailFolder* folder,
+    nsresult AddMessage(PRUnichar* uri, MailFolder* folder,
                  nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
                         int mailFileOffset, char* flags, nsIRDFLiteral* messageID) ;
            
@@ -942,6 +986,9 @@ MailDataSource::GetTargets(nsIRDFResource* source,
         NS_ADDREF(*targets);
         return NS_OK;
     }
+    if (peq(mResourceColumns, property)) {
+        return mMiscMailData->GetTargets(source, property, tv, targets);
+    } 
     *targets = new SingletonMailCursor(source, property, 0);
     return NS_OK;
 }
@@ -953,11 +1000,13 @@ MailDataSource::ArcLabelsOut(nsIRDFResource* source,
     temp->AppendElement(mResourceChild);        
     temp->AppendElement(mResourceFolder);        
     temp->AppendElement(mResourceName);        
+    temp->AppendElement(mResourceSubject);        
+    temp->AppendElement(mResourceFrom);        
+    temp->AppendElement(mResourceDate);        
+    temp->AppendElement(mResourceColumns);        
     *labels = new ArrayMailCursor(source, mResourceChild, temp);
     return NS_OK;
 }
-
-
 
 
 FILE *
@@ -1001,6 +1050,16 @@ endsWith (const char* pattern, const char* uuid)
   return true;
 }
 
+void
+convertSlashes (char* str) {
+	size_t len = strlen(str);
+	size_t n = 0;
+	while (n < len) {
+		if (str[n] == '/') str[n] = '\\';
+        n++;
+	}
+}
+
 nsresult
 MailFolder::ReadSummaryFile (char* url)
 {
@@ -1015,9 +1074,11 @@ MailFolder::ReadSummaryFile (char* url)
     nsIRDFLiteral *rSubject, *rDate;
     nsIRDFResource * rFrom;
     PRBool summaryFileFound = 0;
-    char* flags;
+    char* flags = 0;
      
-    sprintf(fileurl, "Mail\\%s.ssf",  folderURL);
+    sprintf(fileurl, "Mail\\%sssf",  folderURL);
+	fileurl[strlen(fileurl)-4] = '.'; //XXX how do you spell kludge?
+	convertSlashes(fileurl);
     // fileurl = MCDepFileURL(fileurl);
     mSummaryFile = openFileWR(fileurl);
     sprintf(fileurl, "Mail\\%s",  folderURL);
@@ -1025,22 +1086,29 @@ MailFolder::ReadSummaryFile (char* url)
     mf = openFileWR(fileurl);
 
 
-    while (mSummaryFile && fgets(buff, BUFF_SIZE, mSummaryFile)) {
+    while (0 && mSummaryFile && fgets(buff, BUFF_SIZE, mSummaryFile)) {
       if (startsWith("Status:", buff)) {
           summaryFileFound = 1;
           flags = PL_strdup(&buff[8]);
           fgets(buff, BUFF_SIZE, mSummaryFile);
           sscanf(&buff[9], "%d", &summOffset);
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          gRDFService->GetResource(&buff[6], &rFrom);
+          nsAutoString pfrom(&buff[6]);
+          gRDFService->GetUnicodeResource(pfrom, &rFrom);
+           
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          gRDFService->GetLiteral((const PRUnichar*)&buff[8], &rSubject);
+          nsAutoString psubject(&buff[8]);
+          gRDFService->GetLiteral(psubject, &rSubject);
+           
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          gRDFService->GetLiteral((const PRUnichar*)&buff[6], &rDate);
+          nsAutoString pdate(&buff[6]);
+          gRDFService->GetLiteral(pdate, &rDate);
+          
           fgets(buff, BUFF_SIZE, mSummaryFile);
           sscanf(&buff[9], "%d", &messageOffset);
           sprintf(nurl, "%s?%d", url, messageOffset);
-          AddMessage(nurl, this, rFrom, rSubject, rDate, summOffset,
+          nsAutoString purl(nurl);
+          AddMessage(purl, this, rFrom, rSubject, rDate, summOffset,
                      messageOffset, flags, 0);
           PL_strfree(flags);
       }
@@ -1051,28 +1119,41 @@ MailFolder::ReadSummaryFile (char* url)
       /* either a new mailbox or need to read BMF to recreate */
       while (mf && fgets(buff, BUFF_SIZE, mf)) {
         if (strncmp("From ", buff, 5) ==0)  { 
-          if (rFrom) AddMessage(nurl, this, rFrom, rSubject, rDate, messageOffset, flags, 0);
+          if (rFrom) {
+              nsAutoString purl(nurl);
+              AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, 0);
+             
+          }
           messageOffset = ftell(mf);
-          PL_strfree(flags);
+          if (flags) PL_strfree(flags);
           sprintf(nurl, "%s?%i", url, messageOffset);
           flags = nsnull;
           rFrom = nsnull;
           rSubject = rDate = nsnull;
         }
-        if ((rFrom) && (startsWith("From:", buff))) {
-          gRDFService->GetResource(&buff[6], &rFrom);
+		buff[strlen(buff)-1] = '\0';
+        if ((!rFrom) && (startsWith("From:", buff))) {
+            nsAutoString pfrom(&buff[6]);
+            gRDFService->GetUnicodeResource(pfrom, &rFrom);
+             
         } else if ((!rDate) && (startsWith("Date:", buff))) {
-          gRDFService->GetLiteral((const PRUnichar*)&buff[6], &rDate);
+            nsAutoString pdate(&buff[6]);
+            gRDFService->GetLiteral(pdate, &rDate);
         } else if ((!rSubject) && (startsWith("Subject:", buff))) {
-          gRDFService->GetLiteral((const PRUnichar*)&buff[8], &rSubject);
+            nsAutoString psubject(&buff[8]);
+            gRDFService->GetLiteral(psubject, &rSubject);
+            
         } else if ((!flags) && (startsWith("X-Mozilla-Status:", buff))) {
           flags = PL_strdup(&buff[17]);
         }        
       }
-      if (rFrom) AddMessage(nurl, this, rFrom, rSubject, rDate, messageOffset, flags, 0);
+     if (rFrom){
+         nsAutoString purl(nurl);
+         AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, 0);
+     }
       fflush(mSummaryFile);
     }
-    free(fileurl);
+   
     free(buff);
     free(nurl);
   }
@@ -1131,42 +1212,119 @@ MailDataSource::InitAccountList (void) {
 
 
 nsresult 
-MailFolder::AddMessage(char* uri, MailFolder* folder,
+MailFolder::AddMessage(PRUnichar* uri, MailFolder* folder,
                        nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
                        int summaryFileOffset, int mailFileOffset, char* flags, 
                        nsIRDFLiteral* messageID) {
     MailMessage* msg;
-    gRDFService->GetResource(uri, (nsIRDFResource**)&msg);
+    gRDFService->GetUnicodeResource(uri, (nsIRDFResource**)&msg);
     msg->SetupMessage(folder, from, subject, date, summaryFileOffset, mailFileOffset, flags, 
                       messageID);
     mMessages.AppendElement(msg);
     return NS_OK;
 }
 
+
+void
+GetCValue (nsIRDFLiteral *node, char** result) {
+    const PRUnichar* str ;
+    node->GetValue(&str);
+    nsAutoString pstr(str);
+    *result = pstr.ToNewCString();
+    
+}
+
 nsresult 
-MailFolder::AddMessage(char* uri, MailFolder* folder,
+MailFolder::AddMessage(PRUnichar* uri, MailFolder* folder,
                        nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,
                        int mailFileOffset, char* flags, nsIRDFLiteral* messageID) {
     MailMessage* msg;
+	char buff[1000];
     int summaryFileOffset;
-    const  char *sfrom, *ssubject, *sdate;
-    gRDFService->GetResource(uri, (nsIRDFResource**)&msg);
+    char  *xfrom, *xsubject, *xdate;
+    gRDFService->GetUnicodeResource(uri, (nsIRDFResource**)&msg);
     if (!flags) flags = "0000";
     fseek(mSummaryFile, 0L, SEEK_END);
     summaryFileOffset = ftell(mSummaryFile);
     
-    from->GetValue(&sfrom);
-    date->GetValue((const unsigned short**) &sdate);
-    subject->GetValue((const unsigned short**) &ssubject);
+    from->GetValue((const char**) &xfrom);
+
+    GetCValue(date, &xdate);
+    GetCValue(subject, &xsubject);
     
-    fprintf(mSummaryFile, 
+    sprintf(buff,  
             "Status: %s\nSOffset: %d\nFrom: %s\nSubject: %s\nDate: %s\nMOffset: %d\n", 
-            flags, summaryFileOffset, sfrom, ssubject, sdate, mailFileOffset); 
-    
+            flags, summaryFileOffset, xfrom, xsubject, xdate, mailFileOffset); 
+    fprintf(mSummaryFile, buff);
+    delete(xsubject);
+    delete(xdate);
+     fflush(mSummaryFile);
     msg->SetupMessage(folder, from, subject, date, summaryFileOffset, mailFileOffset, flags, 
                       messageID);
     mMessages.AppendElement(msg);
     return NS_OK;
+}
+
+
+nsresult
+MailDataSource::AddColumns(void)
+{
+    // XXX this is unsavory. I really don't like hard-coding the
+    // columns that should be displayed here. What we should do is
+    // merge in a "style" graph that contains just a wee bit of
+    // information about columns, etc.
+    nsresult rv;
+
+    nsIRDFResource* columns = nsnull;
+
+    static const char* gColumnTitles[] = {
+        "name"
+        "subject", 
+        "date",
+        "from",
+        nsnull
+    };
+
+    static const char* gColumnURIs[] = {
+        kURINC_Name,
+        kURINC_subject,
+        kURINC_date,
+        kURINC_from,
+        nsnull
+    };
+
+    const char* const* columnTitle = gColumnTitles;
+    const char* const* columnURI   = gColumnURIs;
+
+    if (NS_FAILED(rv = rdf_CreateAnonymousResource(gRDFService, &columns)))
+        goto done;
+
+    if (NS_FAILED(rv = rdf_MakeSeq(gRDFService, mMiscMailData, columns)))
+        goto done;
+
+    while (*columnTitle && *columnURI) {
+        nsIRDFResource* column = nsnull;
+
+        if (NS_SUCCEEDED(rv = rdf_CreateAnonymousResource(gRDFService, &column))) {
+            rdf_Assert(gRDFService, mMiscMailData, column, kURINC_Title,  *columnTitle);
+            rdf_Assert(gRDFService, mMiscMailData, column, kURINC_Column, *columnURI);
+
+            rdf_ContainerAddElement(gRDFService, mMiscMailData, columns, column);
+            NS_IF_RELEASE(column);
+        }
+
+        ++columnTitle;
+        ++columnURI; 
+
+        if (NS_FAILED(rv))
+            break;
+    }
+
+    rdf_Assert(gRDFService, mMiscMailData, kMailRoot, kURINC_Columns, columns);
+
+done:
+    NS_IF_RELEASE(columns);
+    return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////
