@@ -187,7 +187,7 @@ _IMGCB_getBackwardCompatibleInterface(struct IMGCB* self, const JMCInterfaceID* 
 	return NULL;
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*	******************************************************************************
 	OpenICCProfileFromMem
 	
@@ -340,7 +340,7 @@ _IMGCB_IsColorSyncAvailable(	struct IMGCB*	/*self*/,
 {
 	return (false);
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 void
 ImageGroupObserver(XP_Observable observable,
