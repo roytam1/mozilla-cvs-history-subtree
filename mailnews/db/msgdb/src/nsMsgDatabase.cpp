@@ -567,7 +567,7 @@ NS_IMETHODIMP nsMsgDatabase::NotifyAnnouncerGoingAway(void)
   // on this notification
   PRUint32 count;
   m_ChangeListeners->Count(&count);
-  for (PRUint32 i = count - 1; i >= 0 ; i--)
+  for (PRInt32 i = count - 1; i >= 0 ; i--)
   {
     nsCOMPtr<nsISupports> supports = getter_AddRefs(m_ChangeListeners->ElementAt(i)); //addref because it could be deleted from underneath us
     nsCOMPtr<nsIDBChangeListener> changeListener = do_QueryInterface(supports);
