@@ -67,7 +67,6 @@ private:
 
     nsresult ActivateConnection();
     nsresult CreateTransport();
-    nsresult FlushBuf();
 
 private:
     nsCOMPtr<nsISocketTransport> mSocketTransport;
@@ -76,11 +75,6 @@ private:
 
     nsHttpTransaction           *mTransaction;    // hard ref
     nsHttpConnectionInfo        *mConnectionInfo; // hard ref
-
-    // read buffer
-    char                        *mBuf;
-    char                        *mBufCursor;
-    PRUint32                     mBufUnread;
 
     PRUint32                     mState;
     PRUint32                     mReuseCount;

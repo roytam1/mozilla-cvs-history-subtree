@@ -1,21 +1,11 @@
-#include <stdlib.h> // atoi
 #include "nsHttpHandler.h"
 #include "nsHttpTransaction.h"
 #include "nsHttpConnection.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpResponseHead.h"
+#include "nsHttpChunkedDecoder.h"
 #include "nsIStringStream.h"
-#include "nsIStreamConverterService.h"
-#include "nsISupportsPrimitives.h"
-#include "nsIServiceManager.h"
-#include "nsIFileStreams.h"
-#include "nsHTTPChunkConv.h"
-#include "nsNetCID.h"
-#include "prmem.h"
 #include "pratom.h"
-
-static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
-static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction
@@ -25,10 +15,9 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     : mListener(listener)
     , mConnection(nsnull)
     , mResponseHead(nsnull)
-    //, mReadBuf(0)
     , mContentLength(-1)
     , mContentRead(0)
-    , mChunkConvCtx(0)
+    , mChunkedDecoder(nsnull)
     , mTransactionDone(0)
     , mHaveStatusLine(0)
     , mHaveAllHeaders(0)
@@ -45,6 +34,9 @@ nsHttpTransaction::~nsHttpTransaction()
         nsHttpHandler::get()->ReleaseConnection(mConnection);
         NS_RELEASE(mConnection);
     }
+
+    if (mChunkedDecoder)
+        delete mChunkedDecoder;
 }
 
 nsresult
@@ -95,7 +87,7 @@ nsHttpTransaction::TakeResponseHead()
 
 // called on the socket transport thread
 nsresult
-nsHttpTransaction::OnDataWritable(nsIOutputStream *os, PRUint32 count)
+nsHttpTransaction::OnDataWritable(nsIOutputStream *os)
 {
     PRUint32 n = 0;
 
@@ -104,54 +96,29 @@ nsHttpTransaction::OnDataWritable(nsIOutputStream *os, PRUint32 count)
     // check if we're done writing the headers
     nsresult rv = mReqHeaderStream->Available(&n);
     if (NS_FAILED(rv)) return rv;
+
+    // let at most NS_HTTP_BUFFER_SIZE bytes be written at a time.
     
     if (n != 0)
-        return os->WriteFrom(mReqHeaderStream, count, &n);
+        return os->WriteFrom(mReqHeaderStream, NS_HTTP_BUFFER_SIZE, &n);
 
     if (mReqUploadStream)
-        return os->WriteFrom(mReqUploadStream, count, &n);
+        return os->WriteFrom(mReqUploadStream, NS_HTTP_BUFFER_SIZE, &n);
 
     return NS_BASE_STREAM_CLOSED;
 }
 
 // called on the socket transport thread
 nsresult
-nsHttpTransaction::OnDataReadable(char *buf, PRUint32 count, PRUint32 *countRead)
+nsHttpTransaction::OnDataReadable(nsIInputStream *is)
 {
-    LOG(("nsHttpTransaction::OnDataReadable [this=%x count=%u]\n",
-        this, count));
+    LOG(("nsHttpTransaction::OnDataReadable [this=%x]\n", this));
 
-    *countRead = 0;
+    mSource = is;
 
-    if (mHaveAllHeaders)
-        return HandleContent(buf, count, countRead);
-
-    nsresult rv;
-    PRUint32 offset = 0, bytesConsumed;
-
-    while (count) {
-        bytesConsumed = 0;
-
-        rv = ParseHeaders(buf + offset, count, &bytesConsumed);
-        if (NS_FAILED(rv)) return rv;
-
-        count -= bytesConsumed;
-        offset += bytesConsumed;
-        *countRead += bytesConsumed;
-
-        // see if we're done reading headers
-        if (mHaveAllHeaders)
-            break;
-    }
-
-    if (count) {
-        // try to read some more from the socket
-        rv = HandleContent(buf + offset, count, &bytesConsumed);
-        if (NS_FAILED(rv)) return rv;
-
-        *countRead += bytesConsumed;
-    }
-    return NS_OK;
+    // let our listener try to read up to NS_HTTP_BUFFER_SIZE from us.
+    return mListener->OnDataAvailable(this, nsnull, this,
+                                      mContentRead, NS_HTTP_BUFFER_SIZE);
 }
 
 // called on the socket transport thread
@@ -160,13 +127,6 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 {
     LOG(("nsHttpTransaction::OnStopTransaction [this=%x status=%x]\n",
         this, status));
-
-    /*
-    if (mReadBuf) {
-        PR_Free(mReadBuf);
-        mReadBuf = 0;
-    }
-    */
 
     if (!mFiredOnStart) {
         mFiredOnStart = PR_TRUE;
@@ -260,6 +220,8 @@ nsHttpTransaction::HandleContent(char *buf,
     LOG(("nsHttpTransaction::HandleContent [this=%x count=%u]\n",
         this, count));
 
+    *countRead = 0;
+
     if (mTransactionDone)
         return NS_OK;
 
@@ -291,30 +253,20 @@ nsHttpTransaction::HandleContent(char *buf,
             mResponseHead->PeekHeader(nsHttp::Transfer_Encoding);
         if (val) {
             // we only support the "chunked" transfer encoding right now.
-            /*
-            rv = InstallChunkedDecoder();
-            if (NS_FAILED(rv)) {
-                LOG(("InstallChunkedDecoder failed with [rv=%x]\n", rv));
-                return rv;
-            }
-            */
+            mChunkedDecoder = new nsHttpChunkedDecoder();
+            if (!mChunkedDecoder)
+                return NS_ERROR_OUT_OF_MEMORY;
         }
     }
 
-    // get an input stream to the buffer
-    nsCOMPtr<nsISupports> sup;
-    rv = NS_NewByteInputStream(getter_AddRefs(sup), buf, count);
-    if (NS_FAILED(rv)) return rv;
-    nsCOMPtr<nsIInputStream> stream = do_QueryInterface(sup, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = mListener->OnDataAvailable(this, nsnull, stream, mContentRead, count);
-    if (NS_FAILED(rv)) return rv;
-
-    // figure out how much was read
-    rv = stream->Available(countRead);
-    if (NS_FAILED(rv)) return rv;
-    *countRead = (count - *countRead);
+    if (mChunkedDecoder) {
+        // give the buf over to the chunked decoder so it can reformat the
+        // data and tell us how much is really there.
+        rv = mChunkedDecoder->HandleChunkedContent(buf, count, countRead);
+        if (NS_FAILED(rv)) return rv;
+    }
+    else
+        *countRead = PR_MIN(count, mContentLength - mContentRead);
 
     // update count of content bytes read..
     mContentRead += *countRead;
@@ -323,9 +275,10 @@ nsHttpTransaction::HandleContent(char *buf,
         this, count, *countRead, mContentRead, mContentLength));
 
     // check for end-of-file
-    if ((mContentRead == PRUint32(mContentLength)) ||
-        (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
-
+    if (mContentRead == PRUint32(mContentLength) ||
+        mChunkedDecoder->ReachedEOF()) {
+        // atomically mark the transaction as complete to ensure that
+        // OnTransactionComplete is fired only once!
         PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
         if (priorVal == 0 && mConnection) {
             // let the connection know that we are done with it; this should
@@ -337,72 +290,13 @@ nsHttpTransaction::HandleContent(char *buf,
     return NS_OK;
 }
 
-nsresult
-nsHttpTransaction::InstallChunkedDecoder()
-{
-    nsresult rv;
-
-    LOG(("nsHttpTransaction::InstallChunkedDecoder [this=%x]\n", this));
-
-    nsCOMPtr<nsIStreamConverterService> serv =
-            do_GetService(kStreamConverterServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    mChunkConvCtx = new nsHTTPChunkConvContext();
-    if (!mChunkConvCtx)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    // we need to pass in our converter context as an nsISupports
-    nsCOMPtr<nsISupportsVoid> ctx =
-            do_CreateInstance(kSupportsVoidCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    ctx->SetData(mChunkConvCtx);
-
-    // create the "chunked" decoder
-    nsCOMPtr<nsIStreamListener> listener;
-    rv = serv->AsyncConvertData(NS_LITERAL_STRING("chunked").get(),
-                                NS_LITERAL_STRING("unchunked").get(),
-                                mListener, ctx,
-                                getter_AddRefs(listener));
-    if (NS_FAILED(rv)) return rv;
-
-    // data will now be pushed through the "chunked" decoder
-    mListener = listener;
-
-    // before we start pushing data through the decoder, we have to
-    // tell it about any expected trailer headers, so it can consume
-    // them for us.  if we don't do this, then we won't properly detect
-    // the end of the data stream.
-    const char *val = mResponseHead->PeekHeader(nsHttp::Trailer);
-    if (val) {
-        nsCString ts(val);
-        ts.StripWhitespace();
-
-        //XXXjag convert to new string code sometime
-        char *cp = NS_CONST_CAST(char *, ts.get());
-
-        while (*cp) {
-            char *pp = PL_strchr(cp, ',');
-            if (!pp) {
-                mChunkConvCtx->AddTrailerHeader(cp);
-                break;
-            }
-            else {
-                *pp = 0;
-                mChunkConvCtx->AddTrailerHeader(cp);
-                *pp = ',';
-                cp = pp + 1;
-            }
-        }
-    }
-    return NS_OK;
-}
-
 //-----------------------------------------------------------------------------
 // nsHttpTransaction::nsISupports
 //-----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsHttpTransaction, nsIRequest)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsHttpTransaction,
+                              nsIRequest,
+                              nsIInputStream)
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction::nsIRequest
@@ -481,6 +375,93 @@ nsHttpTransaction::GetLoadFlags(nsLoadFlags *aLoadFlags)
 }
 NS_IMETHODIMP
 nsHttpTransaction::SetLoadFlags(nsLoadFlags aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpTransaction::nsIInputStream
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpTransaction::Close()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpTransaction::Available(PRUint32 *result)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
+{
+    nsresult rv;
+
+    LOG(("nsHttpTransaction::Read [this=%x bufSize=%u]\n", this, bufSize));
+
+    NS_ENSURE_TRUE(mSource, NS_ERROR_NOT_INITIALIZED);
+
+    // read some data from our source and put it in the given buf
+    rv = mSource->Read(buf, bufSize, bytesWritten);
+    if (NS_FAILED(rv) || (*bytesWritten == 0)) return rv;
+
+    // pretend that no bytes were written (since we're just borrowing the
+    // given buf anyways).
+    bufSize = *bytesWritten;
+    *bytesWritten = 0;
+
+    //if (mHaveAllHeaders)
+        return HandleContent(buf, bufSize, bytesWritten);
+
+    PRUint32 offset = 0, count = bufSize, bytesConsumed;
+
+    while (count) {
+        bytesConsumed = 0;
+
+        rv = ParseHeaders(buf + offset, count, &bytesConsumed);
+        if (NS_FAILED(rv)) return rv;
+
+        count -= bytesConsumed;
+        offset += bytesConsumed;
+
+        // see if we're done reading headers
+        if (mHaveAllHeaders)
+            break;
+    }
+
+    if (count) {
+        // buf has some content in it; shift bytes to top of buf.
+        memmove(buf, buf + offset, count);
+
+        return HandleContent(buf, count, bytesWritten);
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHttpTransaction::ReadSegments(nsWriteSegmentFun writer, void *closure,
+                                PRUint32 count, PRUint32 *countRead)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpTransaction::GetNonBlocking(PRBool *result)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpTransaction::GetObserver(nsIInputStreamObserver **obs)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpTransaction::SetObserver(nsIInputStreamObserver *obs)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -11,7 +11,7 @@
 class nsHttpRequestHead;
 class nsHttpResponseHead;
 class nsHttpConnection;
-class nsHTTPChunkConvContext;
+class nsHttpChunkedDecoder;
 
 //-----------------------------------------------------------------------------
 // nsHttpTransaction represents a single HTTP transaction.  It is thread-safe,
@@ -19,10 +19,12 @@ class nsHTTPChunkConvContext;
 //-----------------------------------------------------------------------------
 
 class nsHttpTransaction : public nsIRequest
+                        , public nsIInputStream
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
+    NS_DECL_NSIINPUTSTREAM
 
     // A transaction is constructed from request headers.
     nsHttpTransaction(nsIStreamListener *);
@@ -43,10 +45,10 @@ public:
     nsHttpResponseHead *TakeResponseHead();
 
     // Called to write data to the socket until return NS_BASE_STREAM_CLOSED
-    nsresult OnDataWritable(nsIOutputStream *, PRUint32 count);
+    nsresult OnDataWritable(nsIOutputStream *);
 
     // Called to read data from the socket buffer
-    nsresult OnDataReadable(char *, PRUint32 count, PRUint32 *countRead);
+    nsresult OnDataReadable(nsIInputStream *);
 
     // Called when the transaction should stop, possibly prematurely with an error.
     nsresult OnStopTransaction(nsresult);
@@ -55,7 +57,7 @@ private:
     nsresult ParseLine(char *line);
     nsresult ParseHeaders(char *, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
-    nsresult InstallChunkedDecoder();
+    //nsresult InstallChunkedDecoder();
 
 private:
     nsCOMPtr<nsIStreamListener> mListener;
@@ -66,6 +68,7 @@ private:
     nsCOMPtr<nsIInputStream>    mReqHeaderStream; // header data stream
     nsCOMPtr<nsIInputStream>    mReqUploadStream; // upload data stream
 
+    nsCOMPtr<nsIInputStream>    mSource;
     nsHttpResponseHead         *mResponseHead;
 
     //char                       *mReadBuf;         // read ahead buffer
@@ -74,8 +77,7 @@ private:
     PRInt32                     mContentLength;   // equals -1 if unknown
     PRUint32                    mContentRead;     // count of consumed content bytes
 
-    // we hold onto this context to know when eof has been reached
-    nsHTTPChunkConvContext     *mChunkConvCtx;
+    nsHttpChunkedDecoder       *mChunkedDecoder;
 
     PRInt32                     mTransactionDone; // atomically {in,de}cremented
 
