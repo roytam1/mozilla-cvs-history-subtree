@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape security libraries.
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -446,19 +430,6 @@ _PR_MD_SWITCH_CONTEXT(PRThread *thread)
     _PR_Schedule();
 }
 
-/*
- * The /GT option of MSVC 6.0 SP3 fails to prevent compiler optimizations
- * that are unsafe for fibers' access to static thread local storage.
- * We work around this problem by moving all the code after the
- * SwitchToFiber() call to a separate function.  (Bugzilla bug #39712)
- */
-
-static void
-PostSwitchWork(void)
-{
-    POST_SWITCH_WORK();
-}
-
 void
 _PR_MD_RESTORE_CONTEXT(PRThread *thread)
 {
@@ -476,16 +447,7 @@ _PR_MD_RESTORE_CONTEXT(PRThread *thread)
         _PR_MD_SET_LAST_THREAD(me);
         thread->no_sched = 1;
         SwitchToFiber(thread->md.fiber_id);
-#if 0
         POST_SWITCH_WORK();
-#else
-        /*
-         * Move the code after SwitchToFiber() to another function so
-         * that it is not jointly optimized with the code before the
-         * SwitchToFiber() call.  See comments before PostSwitchWork().
-         */
-        PostSwitchWork();
-#endif
     }
 }
 

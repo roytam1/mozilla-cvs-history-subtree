@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape security libraries.
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef nspr_linux_defs_h___
@@ -47,8 +31,6 @@
 #define _PR_SI_ARCHITECTURE "ppc"
 #elif defined(__alpha)
 #define _PR_SI_ARCHITECTURE "alpha"
-#elif defined(__ia64__)
-#define _PR_SI_ARCHITECTURE "ia64"
 #elif defined(__mc68000__)
 #define _PR_SI_ARCHITECTURE "m68k"
 #elif defined(__sparc__)
@@ -96,7 +78,7 @@ extern PRInt32 _PR_x86_AtomicSet(PRInt32 *val, PRInt32 newval);
 #endif
 #undef _PR_USE_POLL
 #define _PR_STAT_HAS_ONLY_ST_ATIME
-#if defined(__alpha) || defined(__ia64__)
+#if defined(__alpha)
 #define _PR_HAVE_LARGE_OFF_T
 #else
 #define _PR_NO_LARGE_FILES
@@ -108,10 +90,6 @@ extern PRInt32 _PR_x86_AtomicSet(PRInt32 *val, PRInt32 newval);
 #endif
 #define _PR_HAVE_SYSV_SEMAPHORES
 #define PR_HAVE_SYSV_NAMED_SHARED_MEMORY
-#if (__GLIBC__ >= 2) && defined(_PR_PTHREADS)
-#define _PR_HAVE_GETHOST_R
-#define _PR_HAVE_GETHOST_R_INT
-#endif
 
 #ifdef _PR_PTHREADS
 

@@ -47,6 +47,10 @@ ldap_friendly_name( char *filename, char *name, FriendlyMap *map )
 	if ( map == NULL ) {
 		return( name );
 	}
+    if ( NULL == name)
+    {
+        return (name);
+    }
 
 	if ( *map == NULL ) {
 		if ( (fp = fopen( filename, "r" )) == NULL )
