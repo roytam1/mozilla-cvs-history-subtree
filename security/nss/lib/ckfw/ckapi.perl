@@ -325,9 +325,7 @@ static const char NSSCKAPI_CVS_ID[] = "$g{CVS_ID} ; $cvs_id";
 #include "nssckepv.h"
 #endif /* NSSCKEPV_H */
 
-#define ADJOIN(x,y) x##y
-
-#define __ADJOIN(x,y) ADJOIN(x,y)
+#define __ADJOIN(x,y) x##y
 
 /*
  * The anchor.  This object is used to store an "anchor" pointer in
@@ -337,7 +335,7 @@ static const char NSSCKAPI_CVS_ID[] = "$g{CVS_ID} ; $cvs_id";
 
 static NSSCKFWInstance *fwInstance = (NSSCKFWInstance *)0;
 
-static CK_RV CK_ENTRY
+CK_RV CK_ENTRY
 __ADJOIN(MODULE_NAME,C_Initialize)
 (
   CK_VOID_PTR pInitArgs
@@ -357,7 +355,7 @@ C_Initialize
 }
 #endif /* DECLARE_STRICT_CRYPTOKI_NAMES */
 
-static CK_RV CK_ENTRY
+CK_RV CK_ENTRY
 __ADJOIN(MODULE_NAME,C_Finalize)
 (
   CK_VOID_PTR pReserved
@@ -377,7 +375,7 @@ C_Finalize
 }
 #endif /* DECLARE_STRICT_CRYPTOKI_NAMES */
 
-static CK_RV CK_ENTRY
+CK_RV CK_ENTRY
 __ADJOIN(MODULE_NAME,C_GetInfo)
 (
   CK_INFO_PTR pInfo
@@ -405,7 +403,7 @@ EOD
     ;
 
 for( $j = 4; $j <= $count; $j++ ) {
-  print "static CK_RV CK_ENTRY\n";
+  print "CK_RV CK_ENTRY\n";
   print "__ADJOIN(MODULE_NAME,$x[$j]{name})\n";
   print "(\n";
   for( $i = 0; $i < $x[$j]{nargs}; $i++ ) {
@@ -457,7 +455,7 @@ for( $j = 4; $j <= $count; $j++ ) {
 }
 
 print <<EOD
-static CK_RV CK_ENTRY
+CK_RV CK_ENTRY
 __ADJOIN(MODULE_NAME,C_GetFunctionList)
 (
   CK_FUNCTION_LIST_PTR_PTR ppFunctionList
@@ -478,7 +476,7 @@ for( $j = 0; $j <= $count; $j++ ) {
 }
 
 print <<EOD
-static CK_RV CK_ENTRY
+CK_RV CK_ENTRY
 __ADJOIN(MODULE_NAME,C_GetFunctionList)
 (
   CK_FUNCTION_LIST_PTR_PTR ppFunctionList

@@ -993,11 +993,8 @@ cert_getUIDFromObject(nssPKIObject *o, NSSItem *uid)
      */
     NSSDER *derCert;
     derCert = nssCertificate_GetEncoding(c);
-    uid[0].data = NULL; uid[0].size = 0;
+    uid[0] = *derCert;
     uid[1].data = NULL; uid[1].size = 0;
-    if (derCert != NULL) {
-	uid[0] = *derCert;
-    }
 #else
     NSSDER *issuer, *serial;
     issuer = nssCertificate_GetIssuer(c);
@@ -1048,10 +1045,10 @@ cert_createObject(nssPKIObject *o)
     NSSCertificate *cert;
     cert = nssCertificate_Create(o);
 #ifdef NSS_3_4_CODE
-/*    if (STAN_GetCERTCertificate(cert) == NULL) {
+    if (STAN_GetCERTCertificate(cert) == NULL) {
 	nssCertificate_Destroy(cert);
 	return (nssPKIObject *)NULL;
-    } */
+    }
     /* In 3.4, have to maintain uniqueness of cert pointers by caching all
      * certs.  Cache the cert here, before returning.  If it is already
      * cached, take the cached entry.

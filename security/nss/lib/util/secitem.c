@@ -188,7 +188,6 @@ SECITEM_DupItem(const SECItem *from)
     }
 
     to->len = from->len;
-    to->type = from->type;
     PORT_Memcpy(to->data, from->data, to->len);
     
     return(to);

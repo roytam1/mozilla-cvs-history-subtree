@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # -*- Mode: perl; indent-tabs-mode: nil -*-
-#
+# 
 # Requires: tinder-defaults.pl
 #
 # Intent: This is becoming a general-purpose tinderbox
@@ -18,9 +18,8 @@ use strict;
 use POSIX qw(sys_wait_h strftime);
 use Cwd;
 use File::Basename; # for basename();
-use File::Path;     # for rmtree();
-use Config;         # for $Config{sig_name} and $Config{sig_num}
-use File::Find ();
+use Config; # for $Config{sig_name} and $Config{sig_num}
+
 
 $::UtilsVersion = '$Revision$ ';
 
@@ -37,19 +36,20 @@ require "post-mozilla.pl" if -e "post-mozilla.pl";
 require "gettime.pl";
 
 sub Setup {
-    InitVars();
-    my $args = ParseArgs();
-    LoadConfig();
-    ApplyArgs($args); # Apply command-line arguments after the config file.
-    GetSystemInfo();
-    SetupEnv();
-    SetupPath();
+  InitVars();
+  my $args = ParseArgs();
+  LoadConfig();
+  ApplyArgs($args); # Apply command-line arguments after the config file.
+  GetSystemInfo();
+  SetupEnv();
+  SetupPath();
 }
 
 
 sub Build {
-    #my () = @_;
-    BuildIt();
+  #my () = @_;
+
+  BuildIt();
 }
 
 
@@ -94,7 +94,7 @@ sub ParseArgs {
         $args->{TestOnly} = 1, next if $arg eq '--testonly';
         $args->{BuildOnce} = 1, next if $arg eq '--once';
         $args->{UseTimeStamp} = 0, next if $arg eq '--notimestamp';
-
+        
         my %args_with_options = qw(
             --display DisplayServer
             -tag BuildTag
@@ -122,45 +122,48 @@ sub ApplyArgs {
     my ($variable_name, $value);
     while (($variable_name, $value) = each %{$args}) {
         eval "\$Settings::$variable_name = \"$value\";";
-    }
+	}
 }
 
 
-my $tinder_defaults = "tinder-defaults.pl";
-
-sub InitVars {
+{
+  my $tinder_defaults = "tinder-defaults.pl";
+  
+  sub InitVars {
     local $_;
     for (@ARGV) {
-        # Save DATA section for printing the example.
-        return if /^--example-config$/;
+	  # Save DATA section for printing the example.
+	  return if /^--example-config$/;
     }
     no strict 'vars';
-
-    open DEFAULTS, $tinder_defaults or print "can't open $tinder_defaults, $?\n";
-
+	
+	open DEFAULTS, $tinder_defaults or print "can't open $tinder_defaults, $?\n";
+	
     while (<DEFAULTS>) {
-        package Settings;
-        #warn "config:$_";
-        eval;
+      package Settings;
+      #warn "config:$_";
+      eval;
     }
-
-    close DEFAULTS;
-}
-
-sub PrintExampleConfig {
+	
+	close DEFAULTS;
+  }
+  
+  sub PrintExampleConfig {
     local $_;
     print "#- tinder-config.pl - Tinderbox configuration file.\n";
     print "#-    Uncomment the variables you need to set.\n";
     print "#-    The default values are the same as the commented variables.\n";
     print "\n";
-
-    open DEFAULTS, $tinder_defaults or print "can't open $tinder_defaults, $!\n";
+    
+	open DEFAULTS, $tinder_defaults or print "can't open $tinder_defaults, $!\n";
     while (<DEFAULTS>) {
-        s/^\$/\#\$/;
-        print;
+	  s/^\$/\#\$/;
+	  print;
     }
-    close DEFAULTS;
+	close DEFAULTS;
+  }
 }
+
 
 
 sub GetSystemInfo {
@@ -172,81 +175,64 @@ sub GetSystemInfo {
     my $host = ::hostname();
     $host = $1 if $host =~ /(.*?)\./;
     chomp($Settings::OS, $os_ver, $Settings::CPU, $host);
-
-    # Redirecting stderr to stdout works on *nix, winnt, but not on win98.
-    $Settings::TieStderr = '2>&1';
-
+    
     if ($Settings::OS eq 'AIX') {
         my $osAltVer = `uname -v`;
         chomp($osAltVer);
         $os_ver = "$osAltVer.$os_ver";
     }
-
+    
     $Settings::OS = 'BSD_OS' if $Settings::OS eq 'BSD/OS';
     $Settings::OS = 'IRIX'   if $Settings::OS eq 'IRIX64';
-
+    
     if ($Settings::OS eq 'SCO_SV') {
         $Settings::OS = 'SCOOS';
         $os_ver = '5.0';
     }
+    $Settings::DirName = "${Settings::OS}_${os_ver}_$build_type";
     if ($Settings::OS eq 'QNX') {
         $os_ver = `uname -v`;
         chomp($os_ver);
         $os_ver =~ s/^([0-9])([0-9]*)$/$1.$2/;
     }
-
-    if ($Settings::OS =~ /^CYGWIN_(.*?)-(.*)$/) {
-        # the newer cygwin apparently has different output for 'uname'
-        # e.g., CYGWIN_98-4.10 == win98SE, and CYGWIN_NT-5.0 == win2k
-        $Settings::OS = 'WIN' . $1;
-        $os_ver = $2;
+    if ($Settings::OS eq 'WINNT') {
         $host =~ tr/A-Z/a-z/;
     }
-    if ($Settings::OS =~ /^WIN/) {
-        $host =~ tr/A-Z/a-z/;
-        $Settings::TieStderr = "" if $Settings::OS eq 'WIN98';
-    }
-
-    $Settings::DirName = "${Settings::OS}_${os_ver}_$build_type";
-    $Settings::BuildName = "$Settings::OS ${os_ver} $host $build_type";
-
-    $Settings::DistBin = "dist/bin";
-
+    
+    $Settings::BuildName = "$host $Settings::OS ${os_ver} $build_type";
+    
     # Make the build names reflect architecture/OS
-
+    
     if ($Settings::OS eq 'AIX') {
         # $Settings::BuildName set above.
     }
     if ($Settings::OS eq 'BSD_OS') {
-        $Settings::BuildName = "BSD/OS $os_ver $host $build_type";
-    }
-    if ($Settings::OS eq 'Darwin') {
-        $Settings::BuildName = "MacOSX/Darwin $os_ver $host $build_type";
+        $Settings::BuildName = "$host BSD/OS $os_ver $build_type";
     }
     if ($Settings::OS eq 'FreeBSD') {
-        $Settings::BuildName = "$Settings::OS/$Settings::CPU $os_ver $host $build_type";
+        $Settings::BuildName = "$host $Settings::OS/$Settings::CPU $os_ver $build_type";
     }
     if ($Settings::OS eq 'HP-UX') {
-        $Settings::BuildName = "$Settings::OS $os_ver $host $build_type";
+        $Settings::BuildName = "$host $Settings::OS $os_ver $build_type";
     }
     if ($Settings::OS eq 'IRIX') {
         # $Settings::BuildName set above.
     }
     if ($Settings::OS eq 'Linux') {
         if ($Settings::CPU eq 'alpha' or $Settings::CPU eq 'sparc') {
-            $Settings::BuildName = "$Settings::OS/$Settings::CPU $os_ver $host $build_type";
+            $Settings::BuildName = "$host $Settings::OS/$Settings::CPU $os_ver $build_type";
         } elsif ($Settings::CPU eq 'armv4l' or $Settings::CPU eq 'sa110') {
-            $Settings::BuildName = "$Settings::OS/arm $os_ver $host $build_type";
+            $Settings::BuildName = "$host $Settings::OS/arm $os_ver $build_type";
         } elsif ($Settings::CPU eq 'ppc') {
-            $Settings::BuildName = "$Settings::OS/$Settings::CPU $os_ver $host $build_type";
+            $Settings::BuildName = "$host $Settings::OS/$Settings::CPU $os_ver $build_type";
         } elsif (($Settings::CPU eq 'i686') or ($Settings::CPU eq 'i586')) {
-            $Settings::BuildName = "$Settings::OS $host $build_type";
+            $Settings::BuildName = "$host $Settings::OS $build_type";
         } else {
             # $Settings::BuildName set above
         }
     }
     if ($Settings::OS eq 'NetBSD') {
-        $Settings::BuildName = "$Settings::OS/$Settings::CPU $os_ver $host $build_type";
+        $Settings::BuildName = "$host $Settings::OS/$Settings::CPU $os_ver $build_type";
     }
     if ($Settings::OS eq 'OSF1') {
         # Assumes 4.0D for now.
@@ -255,11 +241,11 @@ sub GetSystemInfo {
     }
     if ($Settings::OS eq 'SunOS') {
         if ($Settings::CPU eq 'i86pc') {
-            $Settings::BuildName = "$Settings::OS/i386 $os_ver $host $build_type";
+            $Settings::BuildName = "$host $Settings::OS/i386 $os_ver $build_type";
         } else {
             $Settings::OSVerMajor = substr($os_ver, 0, 1);
             if ($Settings::OSVerMajor ne '4') {
-                $Settings::BuildName = "$Settings::OS/sparc $os_ver $host $build_type";
+                $Settings::BuildName = "$host $Settings::OS/sparc $os_ver $build_type";
             }
         }
     }
@@ -268,18 +254,18 @@ sub GetSystemInfo {
 
 sub LoadConfig {
     if (-r 'tinder-config.pl') {
-        no strict 'vars';
+	no strict 'vars';
 
-        open CONFIG, 'tinder-config.pl' or
-            print "can't open tinder-config.pl, $?\n";
-
-        while (<CONFIG>) {
-            package Settings;
-            #warn "config:$_";
-            eval;
-        }
-
-        close CONFIG;
+	open CONFIG, 'tinder-config.pl' or 
+	    print "can't open tinder-config.pl, $?\n";
+	
+	while (<CONFIG>) {
+	    package Settings;
+	    #warn "config:$_";
+	    eval;
+	}
+	
+	close CONFIG;
     } else {
         warn "Error: Need tinderbox config file, tinder-config.pl\n";
         warn "       To get started, run the following,\n";
@@ -291,56 +277,51 @@ sub LoadConfig {
 sub SetupEnv {
     umask 0;
 
-    # Assume this file lives in the base dir, this will
-    # avoid human error from setting this manually.
-    $Settings::BaseDir = get_system_cwd();
+	# Assume this file lives in the base dir, this will
+	# avoid human error from setting this manually.
+	$Settings::BaseDir = get_system_cwd();
 
     my $topsrcdir = "$Settings::BaseDir/$Settings::DirName/mozilla";
 
-    if ($Settings::ObjDir ne '') {
-        $ENV{LD_LIBRARY_PATH} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin`:" . "$ENV{LD_LIBRARY_PATH}";
-    } else {
-        $ENV{LD_LIBRARY_PATH} = "$topsrcdir/$Settings::DistBin:" . "$ENV{LD_LIBRARY_PATH}";
-    }
+	if ($Settings::ObjDir ne '') {
+	  $ENV{LD_LIBRARY_PATH} = "$topsrcdir/${Settings::ObjDir}/dist/bin:"
+		                      . "$ENV{LD_LIBRARY_PATH}";
+	} else {
+	  $ENV{LD_LIBRARY_PATH} = "$topsrcdir/dist/bin:"
+		                      . "$ENV{LD_LIBRARY_PATH}";	  
+	}
 
-    # MacOSX needs this set.
-    if ($Settings::OS eq 'Darwin') {
-        $ENV{DYLD_LIBRARY_PATH} = "$ENV{LD_LIBRARY_PATH}";
-    }
-
-    $ENV{LIBPATH} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin:"
-        . "$ENV{LIBPATH}";
-    # BeOS requires that components/ be in the library search path per bug 51655
-    $ENV{LIBRARY_PATH} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin:"
-	. "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin/components:"
-        . "$ENV{LIBRARY_PATH}";
-    $ENV{ADDON_PATH} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin:"
-        . "$ENV{ADDON_PATH}";
-    $ENV{MOZILLA_FIVE_HOME} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin";
+    $ENV{LIBPATH} = "$topsrcdir/${Settings::ObjDir}/dist/bin:"
+                          . "$ENV{LIBPATH}";
+    $ENV{LIBRARY_PATH} = "$topsrcdir/${Settings::ObjDir}/dist/bin:"
+                          . "$ENV{LIBRARY_PATH}";
+    $ENV{ADDON_PATH} = "$topsrcdir/${Settings::ObjDir}/dist/bin:"
+                          . "$ENV{ADDON_PATH}";
+    $ENV{MOZILLA_FIVE_HOME} = "$topsrcdir/${Settings::ObjDir}/dist/bin";
     $ENV{DISPLAY} = $Settings::DisplayServer;
-    $ENV{MOZCONFIG} = "$Settings::BaseDir/$Settings::MozConfigFileName"
-        if $Settings::MozConfigFileName ne '' and -e $Settings::MozConfigFileName;
+    $ENV{MOZCONFIG} = "$Settings::BaseDir/$Settings::MozConfigFileName" 
+      if $Settings::MozConfigFileName ne '' and -e $Settings::MozConfigFileName;
 
-    # Mail test needs build-time env set.  -mcafee
-    if($Settings::MailBloatTest) {
-        $ENV{BUILD_MAIL_SMOKETEST} = "1";
-    }
+	# Mail test needs build-time env set.  -mcafee
+	if($Settings::MailBloatTest) {
+	  $ENV{BUILD_MAIL_SMOKETEST} = "1";
+	}
 }
 
 sub SetupPath {
     #print "Path before: $ENV{PATH}\n";
-    $ENV{PATH} .= ":$Settings::BaseDir/$Settings::DirName/mozilla/${Settings::ObjDir}/$Settings::DistBin";
+    $ENV{PATH} .= ":$Settings::BaseDir/$Settings::DirName/mozilla/${Settings::ObjDir}/dist/bin";
     if ($Settings::OS eq 'AIX') {
         $ENV{PATH} = "/builds/local/bin:$ENV{PATH}:/usr/lpp/xlC/bin";
         $Settings::ConfigureArgs   .= '--x-includes=/usr/include/X11 '
-            . '--x-libraries=/usr/lib --disable-shared';
+          . '--x-libraries=/usr/lib --disable-shared';
         $Settings::ConfigureEnvArgs ||= 'CC=xlC_r CXX=xlC_r';
         $Settings::Compiler ||= 'xlC_r';
         $Settings::NSPRArgs .= 'NS_USE_NATIVE=1 USE_PTHREADS=1';
     }
-
+    
     if ($Settings::OS eq 'BSD_OS') {
-        $ENV{PATH}        = "/usr/contrib/bin:/usr/contrib/gnome/bin:/usr/bin:$ENV{PATH}";
+        $ENV{PATH}        = "/usr/contrib/bin:/bin:/usr/bin:$ENV{PATH}";
         #$Settings::ConfigureArgs .= '--disable-shared';
         #$Settings::ConfigureEnvArgs ||= 'CC=shlicc2 CXX=shlicc2';
         #$Settings::Compiler ||= 'shlicc2';
@@ -349,16 +330,7 @@ sub SetupPath {
         #$Settings::MakeOverrides ||= 'CPP_PROG_LINK=0 CCF=shlicc2';
         $Settings::NSPRArgs .= 'NS_USE_GCC=1 NS_USE_NATIVE=';
     }
-
-    if ($Settings::OS eq 'Darwin') {
-        $ENV{PATH} = "/bin:/usr/bin:/sw/bin:$ENV{PATH}";
-        $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
-        $Settings::Compiler = 'cc';
-        $Settings::mail = '/usr/bin/mail';
-        $Settings::Make = '/usr/bin/make';
-        $Settings::DistBin = "dist/Mozilla.app/Contents/MacOS";
-    }
-
+    
     if ($Settings::OS eq 'FreeBSD') {
         $ENV{PATH} = "/bin:/usr/bin:$ENV{PATH}";
         if ($ENV{HOST} eq 'angelus.mcom.com') {
@@ -367,20 +339,20 @@ sub SetupPath {
         }
         $Settings::mail ||= '/usr/bin/mail';
     }
-
+    
     if ($Settings::OS eq 'HP-UX') {
         $ENV{PATH} = "/opt/ansic/bin:/opt/aCC/bin:/builds/local/bin:"
-            . "$ENV{PATH}";
+          . "$ENV{PATH}";
         $ENV{LPATH} = "/usr/lib:$ENV{LD_LIBRARY_PATH}:/builds/local/lib";
         $ENV{SHLIB_PATH} = $ENV{LPATH};
         $Settings::ConfigureArgs   .= '--x-includes=/usr/include/X11 '
-            . '--x-libraries=/usr/lib --disable-gtktest ';
+          . '--x-libraries=/usr/lib --disable-gtktest ';
         $Settings::ConfigureEnvArgs ||= 'CC="cc -Ae" CXX="aCC -ext"';
         $Settings::Compiler ||= 'cc/aCC';
         # Use USE_PTHREADS=1 instead of CLASSIC_NSPR if DCE is installed.
         $Settings::NSPRArgs .= 'NS_USE_NATIVE=1 CLASSIC_NSPR=1';
     }
-
+    
     if ($Settings::OS eq 'IRIX') {
         $ENV{PATH} = "/opt/bin:$ENV{PATH}";
         $ENV{LD_LIBRARY_PATH}   .= ':/opt/lib';
@@ -389,7 +361,7 @@ sub SetupPath {
         $Settings::Compiler ||= 'cc/CC';
         $Settings::NSPRArgs .= 'NS_USE_NATIVE=1 USE_PTHREADS=1';
     }
-
+    
     if ($Settings::OS eq 'NetBSD') {
         $ENV{PATH} = "/bin:/usr/bin:$ENV{PATH}";
         $ENV{LD_LIBRARY_PATH} .= ':/usr/X11R6/lib';
@@ -397,7 +369,7 @@ sub SetupPath {
         $Settings::Compiler ||= 'egcc';
         $Settings::mail ||= '/usr/bin/mail';
     }
-
+    
     if ($Settings::OS eq 'OSF1') {
         $ENV{PATH} = "/usr/gnu/bin:$ENV{PATH}";
         $ENV{LD_LIBRARY_PATH} .= ':/usr/gnu/lib';
@@ -407,23 +379,23 @@ sub SetupPath {
         $Settings::NSPRArgs .= 'NS_USE_NATIVE=1 USE_PTHREADS=1';
         $Settings::ShellOverride ||= '/usr/bin/ksh';
     }
-
+    
     if ($Settings::OS eq 'QNX') {
         $ENV{PATH} = "/usr/local/bin:$ENV{PATH}";
         $ENV{LD_LIBRARY_PATH} .= ':/usr/X11/lib';
         $Settings::ConfigureArgs .= '--x-includes=/usr/X11/include '
-            . '--x-libraries=/usr/X11/lib --disable-shared ';
+          . '--x-libraries=/usr/X11/lib --disable-shared ';
         $Settings::ConfigureEnvArgs ||= 'CC="cc -DQNX" CXX="cc -DQNX"';
         $Settings::Compiler ||= 'cc';
         $Settings::mail ||= '/usr/bin/sendmail';
     }
-
+    
     if ($Settings::OS eq 'SunOS') {
         if ($Settings::OSVerMajor eq '4') {
             $ENV{PATH} = "/usr/gnu/bin:/usr/local/sun4/bin:/usr/bin:$ENV{PATH}";
             $ENV{LD_LIBRARY_PATH} = "/home/motif/usr/lib:$ENV{LD_LIBRARY_PATH}";
             $Settings::ConfigureArgs .= '--x-includes=/home/motif/usr/include/X11 '
-                . '--x-libraries=/home/motif/usr/lib';
+              . '--x-libraries=/home/motif/usr/lib';
             $Settings::ConfigureEnvArgs ||= 'CC="egcc -DSUNOS4" CXX="eg++ -DSUNOS4"';
             $Settings::Compiler ||= 'egcc';
         } else {
@@ -431,12 +403,12 @@ sub SetupPath {
         }
         if ($Settings::CPU eq 'i86pc') {
             $ENV{PATH} = '/opt/gnu/bin:' . $ENV{PATH};
-            $ENV{LD_LIBRARY_PATH} = '/opt/gnu/lib:' . $ENV{LD_LIBRARY_PATH};
-            if ($Settings::ConfigureEnvArgs eq '') {
-                $Settings::ConfigureEnvArgs ||= 'CC=egcc CXX=eg++';
-                $Settings::Compiler ||= 'egcc';
-            }
-
+            $ENV{LD_LIBRARY_PATH} .= ':/opt/gnu/lib';
+ 	    if ($Settings::ConfigureEnvArgs eq '') {
+            	$Settings::ConfigureEnvArgs ||= 'CC=egcc CXX=eg++';
+            	$Settings::Compiler ||= 'egcc';
+	    }
+            
             # Possible NSPR bug... If USE_PTHREADS is defined, then
             #   _PR_HAVE_ATOMIC_CAS gets defined (erroneously?) and
             #   libnspr21 does not work.
@@ -446,7 +418,7 @@ sub SetupPath {
             if ($ENV{HOST} eq 'fugu') {
                 $ENV{PATH} = "/tools/ns/workshop/bin:/usrlocal/bin:$ENV{PATH}";
                 $ENV{LD_LIBRARY_PATH} = '/tools/ns/workshop/lib:/usrlocal/lib:'
-                    . $ENV{LD_LIBRARY_PATH};
+                      . $ENV{LD_LIBRARY_PATH};
                 $Settings::ConfigureEnvArgs ||= 'CC=cc CXX=CC';
                 my $comptmp   = `cc -V 2>&1 | head -1`;
                 chomp($comptmp);
@@ -460,18 +432,18 @@ sub SetupPath {
             }
         }
     }
-    if ($Settings::OS =~ /^WIN/) {
+    if ($Settings::OS eq 'WINNT') {
         $Settings::use_blat = 1;
         $Settings::Compiler = 'cl';
-    }
 
+    }
     $Settings::ConfigureArgs .= '--cache-file=/dev/null';
 
-    # Pass $ObjDir along to the build system.
-    if($Settings::ObjDir) {
-        my $_objdir .= "MOZ_OBJDIR=$Settings::ObjDir";
-        $Settings::MakeOverrides .= $_objdir;
-    }
+	# Pass $ObjDir along to the build system.
+	if($Settings::ObjDir) {
+	  my $_objdir .= "MOZ_OBJDIR=$Settings::ObjDir";
+	  $Settings::MakeOverrides .= $_objdir;
+	}
 
     #print "Path after: $ENV{PATH}\n";
 }
@@ -489,7 +461,7 @@ sub run_shell_command {
     my $status = 0;
     chomp($shell_command);
     print_log "$shell_command\n";
-    open CMD, "$shell_command $Settings::TieStderr |" or die "open: $!";
+    open CMD, "$shell_command 2>&1|" or die "open: $!";
     print_log $_ while <CMD>;
     close CMD or $status = 1;
     return $status;
@@ -512,22 +484,20 @@ sub mail_build_started_message {
     my ($start_time) = @_;
     my $msg_log = "build_start_msg.tmp";
     open LOG, ">$msg_log";
-
+    
     PrintUsage() if $Settings::BuildTree =~ /^\s+$/i;
-
-    my $platform = $Settings::OS =~ /^WIN/ ? 'windows' : 'unix';
 
     print_log "\n";
     print_log "tinderbox: tree: $Settings::BuildTree\n";
     print_log "tinderbox: builddate: $start_time\n";
     print_log "tinderbox: status: building\n";
     print_log "tinderbox: build: $Settings::BuildName\n";
-    print_log "tinderbox: errorparser: $platform\n";
-    print_log "tinderbox: buildfamily: $platform\n";
+    print_log "tinderbox: errorparser: unix\n";
+    print_log "tinderbox: buildfamily: unix\n";
     print_log "tinderbox: version: $::Version\n";
     print_log "tinderbox: END\n";
     print_log "\n";
-
+    
     close LOG;
 
     if ($Settings::blat ne "" && $Settings::use_blat) {
@@ -544,9 +514,7 @@ sub mail_build_finished_message {
 
     # Rewrite LOG to OUTLOG, shortening lines.
     open OUTLOG, ">$logfile.last" or die "Unable to open logfile, $logfile: $!";
-
-    my $platform = $Settings::OS =~ /^WIN/ ? 'windows' : 'unix';
-
+        
     # Put the status at the top of the log, so the server will not
     # have to search through the entire log to find it.
     print OUTLOG "\n";
@@ -554,23 +522,23 @@ sub mail_build_finished_message {
     print OUTLOG "tinderbox: builddate: $start_time\n";
     print OUTLOG "tinderbox: status: $build_status\n";
     print OUTLOG "tinderbox: build: $Settings::BuildName\n";
-    print OUTLOG "tinderbox: errorparser: $platform\n";
-    print OUTLOG "tinderbox: buildfamily: $platform\n";
+    print OUTLOG "tinderbox: errorparser: unix\n";
+    print OUTLOG "tinderbox: buildfamily: unix\n";
     print OUTLOG "tinderbox: version: $::Version\n";
     print OUTLOG "tinderbox: utilsversion: $::UtilsVersion\n";
     print OUTLOG "tinderbox: END\n";
-
+    
     # Make sendmail happy.
     # Split lines longer than 1000 charaters into 1000 character lines.
     # If any line is a dot on a line by itself, replace it with a blank
-    # line. This prevents cases where a <cr>.<cr> occurs in the log file.
+    # line. This prevents cases where a <cr>.<cr> occurs in the log file. 
     # Sendmail interprets that as the end of the mail, and truncates the
     # log before it gets to Tinderbox.  (terry weismann, chris yeh)
-
+    
     open LOG, "$logfile" or die "Couldn't open logfile, $logfile: $!";
     while (<LOG>) {
         my $length = length($_);
-        my $offset;
+	my $offset;
         for ($offset = 0; $offset < $length ; $offset += 1000) {
             my $chars_left = $length - $offset;
             my $output_length = $chars_left < 1000 ? $chars_left : 1000;
@@ -583,7 +551,7 @@ sub mail_build_finished_message {
     close OUTLOG;
     close LOG;
     unlink($logfile);
-
+    
     if ($Settings::ReportStatus and $Settings::ReportFinalStatus) {
         if ($Settings::blat ne "" && $Settings::use_blat) {
             system("$Settings::blat $logfile.last -t $Settings::Tinderbox_server");
@@ -591,26 +559,18 @@ sub mail_build_finished_message {
             system "$Settings::mail $Settings::Tinderbox_server "
                 ." < $logfile.last";
         }
-    }
+    } 
 }
 
 sub BuildIt {
     # $Settings::DirName is set in build-seamonkey-utils.pl
     mkdir $Settings::DirName, 0777;
     chdir $Settings::DirName or die "Couldn't enter $Settings::DirName";
-
+    
     my $build_dir = get_system_cwd();
 
-    if ($Settings::OS =~ /^WIN/ && $build_dir =~ m/^\/cygdrive\//) {
-        $build_dir =~ s/^\/cygdrive\///;
-        substr($build_dir,1,1,":/");
-    }
-
     my $binary_basename = "$Settings::BinaryName";
-
-    my $binary_dir;
-    $binary_dir = "$build_dir/$Settings::Topsrcdir/${Settings::ObjDir}/$Settings::DistBin";
-
+    my $binary_dir = "$build_dir/$Settings::Topsrcdir/${Settings::ObjDir}/dist/bin";
     my $dist_dir = "$build_dir/$Settings::Topsrcdir/${Settings::ObjDir}/dist";
     my $full_binary_name = "$binary_dir/$binary_basename";
 
@@ -627,17 +587,14 @@ sub BuildIt {
 
     # Bypass profile manager at startup.
     $ENV{MOZ_BYPASS_PROFILE_AT_STARTUP} = 1;
-
-    # Avoid debug assertion dialogs (win32)
-    $ENV{XPCOM_DEBUG_BREAK} = "warn";
-
+    
     # Set up tag stuff.
     # Only one tag per file, so -r will override any -D settings.
     $Settings::CVSCO .= " -r $Settings::BuildTag"
-        unless not defined($Settings::BuildTag) or $Settings::BuildTag eq '';
+      unless not defined($Settings::BuildTag) or $Settings::BuildTag eq '';
 
     print "Starting dir is : $build_dir\n";
-
+    
     while (not $exit_early) {
         # $BuildSleep is the minimum amount of time a build is allowed to take.
         # It prevents sending too many messages to the tinderbox server when
@@ -651,143 +608,133 @@ sub BuildIt {
 
         # Set this each time, since post-mozilla.pl can reset this.
         $ENV{MOZILLA_FIVE_HOME} = "$binary_dir";
-
+        
         my $cvsco = '';
 
-        # Note: Pull-by-date works on a branch, but cvs stat won't show
-        # you this.  Thanks to cls for figuring this out.
+		# Note: Pull-by-date works on a branch, but cvs stat won't show
+		# you this.  Thanks to cls for figuring this out.
         if ($Settings::UseTimeStamp) {
             $start_time = adjust_start_time($start_time);
             my $time_str = POSIX::strftime("%m/%d/%Y %H:%M", localtime($start_time));
             my $timezone = POSIX::strftime("%Z", localtime($start_time));
             # assume PST if no timezone is found
             $timezone = "PST" if ($timezone eq "");
-            #XXXjrgm win32 returns the long form, which chokes win32 cvs
-            # so allow the use of value from tinder-config.pl
-            $timezone = $Settings::Timezone
-                if $Settings::Timezone && $Settings::OS =~ /^(Darwin|WIN)/;
             $time_str .= " $timezone";
             $ENV{MOZ_CO_DATE} = "$time_str";
-            # command.com/win9x loathes single quotes in command line
-            $cvsco = "$Settings::CVSCO -D \"$time_str\"";
+            $cvsco = "$Settings::CVSCO -D '$time_str'";
         } else {
             $cvsco = "$Settings::CVSCO -A";
         }
-
+        
         mail_build_started_message($start_time) if $Settings::ReportStatus;
-
+        
         chdir $build_dir;
         my $logfile = "$Settings::DirName.log";
         print "Opening $logfile\n";
         open LOG, ">$logfile"
-            or die "Cannot open logfile, $logfile: $?\n";
+          or die "Cannot open logfile, $logfile: $?\n";
         print_log "current dir is -- " . ($ENV{HOST}||$ENV{HOSTNAME}) . ":$build_dir\n";
         print_log "Build Administrator is $Settings::BuildAdministrator\n";
-
+        
         # Print user comment if there is one.
         if ($Settings::UserComment) {
-            print_log "$Settings::UserComment\n";
+          print_log "$Settings::UserComment\n";
         }
-
+        
         # System id
         print_log "uname -a = " . `uname -a`;
-
+        
         # Print out redhat version if we have it.
         if (-e "/etc/redhat-release") {
-            print_log `cat /etc/redhat-release`;
+          print_log `cat /etc/redhat-release`;
         }
-
+        
         PrintEnv();
-
+        
         # Print out failure count
         if($build_failure_count > 0) {
-            print_log "Previous consecutive build failures: $build_failure_count\n";
+          print_log "Previous consecutive build failures: $build_failure_count\n";
         }
-
+        
         # Make sure we have client.mk
         unless (-e "$TreeSpecific::name/client.mk") {
-
-            # Set CVSROOT here.  We should only need to checkout a new
-            # version of client.mk once; we might have more than one
-            # cvs tree so set CVSROOT here to avoid confusion.
-            $ENV{CVSROOT} = $Settings::moz_cvsroot;
-
-            run_shell_command("$Settings::CVS $cvsco $TreeSpecific::name/client.mk");
+          
+          # Set CVSROOT here.  We should only need to checkout a new
+          # version of client.mk once; we might have more than one
+          # cvs tree so set CVSROOT here to avoid confusion.
+          $ENV{CVSROOT} = $Settings::moz_cvsroot;
+          
+          run_shell_command("$Settings::CVS $cvsco $TreeSpecific::name/client.mk");
         }
-
+        
         # Create toplevel source directory.
         chdir $Settings::Topsrcdir or die "chdir $Settings::Topsrcdir: $!\n";
 
         # Build it
         my $build_status = 'none';
         unless ($Settings::TestOnly) { # Do not build if testing smoke tests.
-            if ($Settings::OS =~ /^WIN/) {
-                DeleteBinaryDir($binary_dir);
-            } else {
-                # Delete binary so we can test for it to determine success after building.
-                DeleteBinary($full_binary_name);
-                if($Settings::EmbedTest or $Settings::BuildEmbed) {
-                    DeleteBinary($full_embed_binary_name);
-                }
 
-                # Delete dist directory to avoid accumulating cruft there, some commercial
-                # build processes also need to do this.
-                if (-e $dist_dir) {
-                    print_log "Deleting $dist_dir\n";
-                    File::Path::rmtree($dist_dir, 0, 0);
-                    if (-e "$dist_dir") {
-                        print_log "Error: rmtree('$dist_dir', 0, 0) failed.\n";
-                    }
-                }
-            }
-            # Build up initial make command.
-            my $make = "$Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs'";
-            if ($Settings::FastUpdate) {
-                $make = "$Settings::Make -f client.mk fast-update && $Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs' build";
-            }
-
-            # Build up target string.
-            my $targets = $TreeSpecific::checkout_target;
-            $targets = $TreeSpecific::checkout_clobber_target unless $Settings::BuildDepend;
-
-            # Make sure we have an ObjDir if we need one.
-            mkdir $Settings::ObjDir, 0777 if ($Settings::ObjDir && ! -e $Settings::ObjDir);
-
-            # Run the make command.
-            $status = run_shell_command "$make $targets";
+          # Delete binary so we can test for it to determine success after building.
+          DeleteBinary($full_binary_name);          
+          if($Settings::EmbedTest or $Settings::BuildEmbed) {
+            DeleteBinary($full_embed_binary_name);
+          }
+          
+          # Delete dist directory to avoid accumulating cruft there, some commercial
+          # build processes also need to do this.
+          if (-e $dist_dir) {
+            print_log "Deleting $dist_dir\n";
+            $status = run_shell_command "\\rm -rf $dist_dir";
             if ($status != 0) {
-                $build_status = 'busted';
-            } elsif (not BinaryExists($full_binary_name)) {
-                print_log "Error: binary not found: $binary_basename\n";
-                $build_status = 'busted';
-            } else {
-                $build_status = 'success';
+              print_log "Error: \\rm -rf $dist_dir failed.\n";
             }
+          }
+          
+          # Build up initial make command.
+          my $make = "$Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs'";
+          if ($Settings::FastUpdate) {
+            $make = "$Settings::Make -f client.mk fast-update && $Settings::Make -f client.mk $Settings::MakeOverrides CONFIGURE_ENV_ARGS='$Settings::ConfigureEnvArgs' build";
+          }
 
-            # TestGtkEmbed is only built by default on certain platforms.
-            if ($build_status ne 'busted' and ($Settings::EmbedTest or $Settings::BuildEmbed)) {
-                if (not BinaryExists($full_embed_binary_name)) {
-                    print_log "Error: binary not found: $Settings::EmbedBinaryName\n";
-                    $build_status = 'busted';
-                } else {
-                    $build_status = 'success';
-                }
+          # Build up target string.
+          my $targets = $TreeSpecific::checkout_target;
+          $targets = $TreeSpecific::checkout_clobber_target unless $Settings::BuildDepend;
+
+          # Make sure we have an ObjDir if we need one.
+          mkdir $Settings::ObjDir, 0777 if ($Settings::ObjDir && ! -e $Settings::ObjDir);
+          
+          # Run the make command.
+          $status = run_shell_command "$make $targets";
+          if ($status != 0) {
+            $build_status = 'busted';
+          } elsif (not BinaryExists($full_binary_name)) {
+            print_log "Error: binary not found: $binary_basename\n";
+            $build_status = 'busted';
+          } else {
+            $build_status = 'success';
+          }
+
+          # TestGtkEmbed is only built by default on certain platforms.
+          if ($build_status ne 'busted' and ($Settings::EmbedTest or $Settings::BuildEmbed)) {
+            if (not BinaryExists($full_embed_binary_name)) {
+              print_log "Error: binary not found: $Settings::EmbedBinaryName\n";
+              $build_status = 'busted';
+            } else {
+              $build_status = 'success';
             }
+          }
         }
 
         if ($build_status ne 'busted' and BinaryExists($full_binary_name)) {
-            print_log "$binary_basename binary exists, build successful.\n";
-
-            # Renamed RunTest to RunMozillaTests, we check both here
-            # in case some clients are relying on RunTest.
-            if ($Settings::RunMozillaTests or $Settings::RunTest) {
-                $build_status = run_all_tests($full_binary_name,
-                                              $full_embed_binary_name,
-                                              $build_dir);
-            } else {
-                print_log "Skipping tests.\n";
-                $build_status = 'success';
-            }
+          print_log "$binary_basename binary exists, build successful.\n";
+          if ($Settings::RunTest) {
+            $build_status = run_all_tests($full_binary_name, 
+                                          $full_embed_binary_name,
+                                          $build_dir);
+          } else {
+            print_log "Skipping tests.\n";
+            $build_status = 'success';
+          }
         }
 
         #
@@ -795,27 +742,21 @@ sub BuildIt {
         #
         my $external_build = "$Settings::BaseDir/post-mozilla.pl";
         if (-e $external_build and $build_status eq 'success') {
-            $build_status = PostMozilla::main($build_dir);
+          $build_status = PostMozilla::main($build_dir);
         }
-
+        
         # Increment failure count if we failed.
         if ($build_status eq 'busted') {
-            $build_failure_count++;
-        } else {
-            $build_failure_count = 0;
+          $build_failure_count++;
+		} else {
+          $build_failure_count = 0;
         }
-
-        # win98 just ain't up to the task of continuous builds
-        print_log "System going down for a reboot!! " . scalar localtime() . "\n"
-            if $Settings::OS eq 'WIN98' && $Settings::RebootSystem;
 
         close LOG;
         chdir $build_dir;
 
         mail_build_finished_message($start_time, $build_status, $logfile)
-            if $Settings::ReportStatus;
-
-        rebootSystem() if $Settings::OS eq 'WIN98' && $Settings::RebootSystem;
+          if $Settings::ReportStatus;
 
         $exit_early++ if $Settings::TestOnly and $build_status ne 'success';
         $exit_early++ if $Settings::BuildOnce;
@@ -823,84 +764,435 @@ sub BuildIt {
 }
 
 
-sub rebootSystem {
-    # assumption is that system has been configured to automatically 
-    # startup tinderbox again on the other side of the reboot
-    if ($Settings::OS eq 'WIN98') {
-        # http://support.microsoft.com/directory/article.asp?ID=KB;EN-US;Q234216
-        #   6 == RESTART | FORCE; applies to win98 and winME
-        print "System going down for a reboot!! ", scalar localtime, "\n";
-        system("rundll32.exe shell32.dll,SHExitWindowsEx 6") == 0 ||
-            warn "Failed to $! $@ $?";
-    } else {
-        print "rebootSystem() called on non-Win9x system. wtf?\n";
-    }
-}
-
-
 # Create a profile named $Settings::MozProfileName in the normal $build_dir place.
 sub create_profile {
-    my ($build_dir, $binary_dir, $binary) = @_;
-    my $result = run_cmd($build_dir, $binary_dir,
-                         $binary . " -CreateProfile $Settings::MozProfileName",
-                         "/dev/null", $Settings::CreateProfileTimeout);
-    return $result;
+  my ($build_dir, $binary_dir, $binary) = @_;
+  my $result = run_cmd($build_dir, $binary_dir,
+					   $binary . " -CreateProfile $Settings::MozProfileName",
+					   "/dev/null", $Settings::CreateProfileTimeout);
+  return $result;
 }
 
 
-sub find_pref_file {
-    my $build_dir = shift;
+#
+# Run all tests.  Had to pass in both binary and embed_binary.
+#
+sub run_all_tests {
+    my ($binary, $embed_binary, $build_dir) = @_;
 
-    # profile $Settings::MozProfileName must exist before calling this sub
+    my $binary_basename       = File::Basename::basename($binary);
+    my $binary_dir            = File::Basename::dirname($binary);
+    my $embed_binary_basename = File::Basename::basename($embed_binary);
+    my $embed_binary_dir      = File::Basename::dirname($embed_binary);
 
-    # default to *nix
-    my $pref_file = "prefs.js";
-    my $profile_dir = "$build_dir/.mozilla";
-    $profile_dir ="/boot/home/config/settings/Mozilla/$Settings::MozProfileName" if ($Settings::OS eq "BeOS");
+    my $test_result = 'success';
 
-    # win32: works on win98 and win2k (file bugs on jrgm@netscape.com if it 
-    # doesn't work on Me, XP, NT4 ...)
-    if ($Settings::OS =~ /^WIN/) {
-        if ($Settings::OS =~ /^WIN9/) { # 98 [but what does uname say on Me?]
-            $profile_dir = $ENV{winbootdir} || $ENV{windir} || "C:\\WINDOWS";
-            $profile_dir .= "\\Application Data";
-        } elsif ($Settings::OS =~ /^WINNT/) { # NT 4, 2K, XP(?)
-            # afaict, %USERPROFILE% should always be there, NT 4.0 and up
-            if ($ENV{USERPROFILE}) {
-                $profile_dir = $ENV{USERPROFILE} . "\\Application Data";
-            } else { # use %APPDATA% as a fallback (or prepare to fail)
-                $profile_dir = $ENV{APPDATA} || "C:\\_UNKNOWN_";
-            }
+    #
+    # Before running tests, run regxpcom so that we don't crash when 
+    # people change contractids on us (since we don't autoreg opt builds)
+    #
+    unlink("$binary_dir/component.reg");
+	if($Settings::RegxpcomTest) {
+	  AliveTest("regxpcom", $build_dir, "$binary_dir/regxpcom", 0,
+				$Settings::RegxpcomTestTimeout);
+	}
+
+	#
+	# Make sure we have a profile to run tests.  This is assumed to be called
+	# $Settings::MozProfileName and will live in $build_dir/.mozilla.
+	# Also assuming only one profile here.
+	#
+	my $cp_result = 0;
+	unless (-d "$build_dir/.mozilla/$Settings::MozProfileName") {
+	  print_log "No profile found, creating profile.\n";
+	  $cp_result = create_profile($build_dir, $binary_dir, $binary);
+	} else {
+	  print_log "Found profile.\n";
+
+	  # Recreate profile if we have $Settings::CleanProfile set.
+	  if ($Settings::CleanProfile) {
+        print_log "Creating clean profile ...\n";
+        system("\\rm -rf $build_dir/.mozilla");
+		$cp_result = create_profile($build_dir, $binary_dir, $binary);
+	  }
+    }
+
+	# Set status, in case create profile failed.
+	if($cp_result) {
+	  if(not $cp_result->{timed_out} and $cp_result->{exit_value} != 0) {
+		$test_result = "success";
+	  } else {
+		$test_result = "testfailed";
+	  }
+	}
+
+
+	#
+	# Find the prefs file, remember we have that random string now
+	# e.g. <build-dir>/.mozilla/default/uldx6pyb.slt/prefs.js
+	# so find command should find the prefs.js file.
+	#
+	# If prefs.js is not found, this little perl blurb fails
+	# with an uninitialized variable error, this needs fixing. -mcafee
+	#
+	my $pref_file = "prefs.js";
+	open PREFS, "find $build_dir/.mozilla -name prefs.js|"
+	  or die "couldn't find prefs file\n";
+	$pref_file = $_ while <PREFS>;
+	chomp $pref_file;
+
+	# Find profile_dir while we're at it.
+	my $profile_dir = $pref_file;
+	$profile_dir =~ s!(.*)/.*!$1!;
+
+	
+
+	#
+	# Set prefs to run tests properly.
+	#
+	if($Settings::LayoutPerformanceTest  or
+	   $Settings::XULWindowOpenTest      or
+	   $Settings::StartupPerformanceTest or
+	   $Settings::MailBloatTest          or
+	   $Settings::BloatTest2             or
+	   $Settings::BloatTest) {
+
+      # Chances are we will be timing these tests.  Bring gettime() into memory
+      # by calling it once, before any tests run.
+      Time::PossiblyHiRes::getTime();
+
+      # Some tests need browser.dom.window.dump.enabled set to true, so
+      # that JS dump() will work in optimized builds.
+	  if (system("\\grep -s browser.dom.window.dump.enabled $pref_file > /dev/null")) {
+		print_log "Setting browser.dom.window.dump.enabled\n";
+		open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+		print PREFS "user_pref(\"browser.dom.window.dump.enabled\", true);\n";
+		close PREFS;
+	  } else {
+		print_log "Already set browser.dom.window.dump.enabled\n";
+	  }
+
+      # Set security prefs to allow us to close our own window, 
+      # pageloader test (and possibly other tests) needs this on.
+	  if (system("\\grep -s dom.allow_scripts_to_close_windows $pref_file > /dev/null")) {
+		print_log "Setting dom.allow_scripts_to_close_windows to 2.\n";
+		open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+		print PREFS "user_pref(\"dom.allow_scripts_to_close_windows\", 2);\n";
+		close PREFS;
+	  } else {
+		print_log "Already set dom.allow_scripts_to_close_windows\n";
+	  }
+      
+	}
+	
+    #
+    # Assume that we want to test modern skin for all tests.
+    #
+    if (system("\\grep -s general.skins.selectedSkin $pref_file > /dev/null")) {
+      print_log "Setting general.skins.selectedSkin to modern/1.0\n";
+      open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+      print PREFS "user_pref(\"general.skins.selectedSkin\", \"modern/1.0\");\n";
+      close PREFS;
+    } else {
+      print_log "Modern skin already set.\n";
+    }
+
+    # Mozilla alive test
+    #
+    # Note: Bloat & MailNews tests depend this on working.
+    # Only disable this test if you know it passes and are
+    # debugging another part of the test sequence.  -mcafee
+    #
+    if ($Settings::AliveTest and $test_result eq 'success') {
+        $test_result = AliveTest("MozillaAliveTest", $build_dir,
+								 $binary, " -P $Settings::MozProfileName",
+								$Settings::AliveTestTimeout);
+    }
+
+	# Mozilla java test
+    if ($Settings::JavaTest and $test_result eq 'success') {
+
+	  # Workaround for rh7.1 & jvm < 1.3.0:
+	  $ENV{LD_ASSUME_KERNEL} = "2.2.5";
+
+	  $test_result = AliveTest("MozillaJavaTest", $build_dir,
+							   $binary, "http://java.sun.com",
+							   $Settings::JavaTestTimeout);
+    }
+	
+
+    # Viewer alive test
+    if ($Settings::ViewerTest and $test_result eq 'success') {
+        $test_result = AliveTest("ViewerAliveTest", $build_dir,
+								 "$binary_dir/viewer", 0,
+								$Settings::ViewerTestTimeout);
+    }
+
+	# Embed test.  Test the embedded app.
+    if ($Settings::EmbedTest and $test_result eq 'success') {
+      $test_result = AliveTest("EmbedAliveTest", $build_dir, 
+							   "$embed_binary_dir/$embed_binary_basename", 0,
+							   $Settings::EmbedTestTimeout);
+    }
+
+    # Bloat test (based on nsTraceRefcnt)
+    if ($Settings::BloatTest and $test_result eq 'success') {
+	  $test_result = BloatTest($binary, $build_dir, " -f bloaturls.txt", "",
+							   $Settings::BloatTestTimeout);
+    }
+    
+    # New and improved bloat/leak test (based on trace-malloc)
+    if ($Settings::BloatTest2 and $test_result eq 'success') {
+        $test_result = BloatTest2($binary, $build_dir, $Settings::BloatTestTimeout);
+    }
+    
+    # MailNews test needs this preference set:
+    #   user_pref("signed.applets.codebase_principal_support",true);
+    # First run gives two dialogs; they set this preference:
+    #   user_pref("security.principal.X0","[Codebase http://www.mozilla.org/quality/mailnews/popTest.html] UniversalBrowserRead=4 UniversalXPConnect=4");
+    #
+    # Only do pop3 test now.
+    #
+    if ($Settings::MailNewsTest and $test_result eq 'success') {
+
+		my $mail_url = "http://www.mozilla.org/quality/mailnews/popTest.html";
+
+        my $cmd = "$binary_basename $mail_url";
+
+        # Stuff prefs in here.
+        if (system("\\grep -s signed.applets.codebase_principal_support $pref_file > /dev/null")) {
+          open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+          print PREFS "user_pref(\"signed.applets.codebase_principal_support\", true);\n";
+          print PREFS "user_pref(\"security.principal.X0\", \"[Codebase $mail_url] UniversalBrowserRead=4 UniversalXPConnect=4\");";
+          close PREFS;
         }
-        $profile_dir .= "\\Mozilla\\Profiles\\$Settings::MozProfileName";
-        $profile_dir =~ s|\\|/|g;
+
+        $test_result = FileBasedTest("MailNewsTest", $build_dir, $binary_dir, 
+                                     $cmd,  90, 
+                                     "POP MAILNEWS TEST: Passed", 1, 
+                                     1);  # Timeout is Ok.
     }
 
-    unless (-e $profile_dir) {
-        print_log "ERROR: profile $profile_dir does not exist\n";
-        #XXX should make 'run_all_tests' throw a 'testfailed' exception
-        # and just skip all the continual checking for $test_result
-        return; # empty list
+	# Mail bloat/leak test.
+	# Needs:
+	#   BUILD_MAIL_SMOKETEST=1 set in environment
+	#   $Settings::CleanProfile = 0
+	#
+	# Manual steps for this test:
+	# 1) Create pop account qatest03/Ne!sc-pe
+	# 2) Login to this mail account, type in password, and select
+	#    "remember password with password manager".
+	# 3) Add first recipient of new Inbox to AB, select "receives plaintext"
+	# 4) If mail send fails, sometimes nsmail-2 flakes, may need
+	#    an occasional machine reboot.
+	#
+    if ($Settings::MailBloatTest and $test_result eq 'success') {
+
+	  print_log "______________MailBloatTest______________\n";	  
+
+	  my $inbox_dir = "Mail/nsmail-2";
+
+	  chdir("$profile_dir/$inbox_dir");
+	  
+	  # Download new, test Inbox on top of existing one.
+	  # wget will not re-download, using -N to check timestamps.
+	  system("wget -N -T 60 http://www.mozilla.org/mailnews/bloat_Inbox");
+
+	  # Replace the Inbox file.
+	  unlink("Inbox");
+	  system("cp bloat_Inbox Inbox");
+
+	  # Remove the Inbox.msf file.
+	  # unlink("Inbox.msf");
+
+	  $test_result = BloatTest($binary, $build_dir, " -mail", "mail",
+				   $Settings::MailBloatTestTimeout);
+
+	  # back to build_dir
+	  chdir($build_dir);
+	}
+
+
+    # DomToTextConversion test
+    if (($Settings::EditorTest or $Settings::DomToTextConversionTest)
+       and $test_result eq 'success') {
+        $test_result =
+          FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
+                        "perl TestOutSinks.pl", $Settings::DomTestTimeout,
+                        "FAILED", 0,
+                        0);  # Timeout means failure.
     }
 
-    my $found = undef;
-    my $sub = sub {$pref_file = $File::Find::name, $found++ if $pref_file eq $_};
-    File::Find::find($sub, $profile_dir);
-    unless ($found) {
-        print_log "ERROR: couldn't find prefs.js in $profile_dir\n";
-        return; # empty list
+	# Layout performance test.  URL is currently inside netscape.com,
+	# bug to push this out to mozilla.org is:
+    #   http://bugzilla.mozilla.org/show_bug.cgi?id=75073
+    if ($Settings::LayoutPerformanceTest and $test_result eq 'success') {
+
+      # Settle OS.
+      run_system_cmd("sync; sleep 10", 35);
+      
+      # XXX we should use a variable to get the host for the page
+      # load tests instead of hard-coding to localhost.
+      $test_result =
+        FileBasedTest("LayoutPerformanceTest", $build_dir, $binary_dir,
+                      $binary . " -P $Settings::MozProfileName \"http://$Settings::pageload_server/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=$Settings::LayoutPerformanceTestPageTimeout&auto=1\"",
+                      $Settings::LayoutPerformanceTestTimeout,
+                      "_x_x_mozilla_page_load", 1, 0);
+      
+      # Run the test a second time.  Getting intermittent crashes, these
+      # are expensive to wait, a 2nd run that is successful is still useful.
+      # Sorry for the cut & paste. -mcafee
+      if($test_result eq 'testfailed') {
+        print_log "TinderboxPrint:Tp:[CRASH]\n";
+        $test_result = 
+          FileBasedTest("LayoutPerformanceTest", $build_dir, $binary_dir,
+                        $binary . " -P $Settings::MozProfileName \"http://$Settings::pageload_server/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=$Settings::LayoutPerformanceTestPageTimeout&auto=1\"",
+                        $Settings::LayoutPerformanceTestTimeout,
+                        "_x_x_mozilla_page_load", 1, 0);
+      }
     }
 
-    # Find full profile_dir while we're at it.
-    $profile_dir = File::Basename::dirname($pref_file);
+	# xul window open test.
+	#
+	if ($Settings::XULWindowOpenTest and $test_result eq 'success') {
+		my $open_time;
+        my $test_name = "XULWindowOpenTest";
+        my $binary_log = "$build_dir/$test_name.log";
 
-    print_log "profile dir = $profile_dir\n";
-    print_log "prefs.js    = $pref_file\n";
+		# Settle OS.
+		run_system_cmd("sync; sleep 10", 35);
 
-    return ($pref_file, $profile_dir);
+		my $url  = "-chrome \"file:$build_dir/mozilla/xpfe/test/winopen.xul\"";
+		if($test_result eq 'success') {
+			$open_time = AliveTestReturnToken($test_name,
+							  $build_dir,
+							  $binary,
+							  " -P $Settings::MozProfileName " . $url,
+							  $Settings::XULWindowOpenTestTimeout,
+							  "__xulWinOpenTime",
+							  ":");
+			chomp($open_time);
+		}
+		if($open_time) {
+			$test_result = 'success';
+
+			print_log "TinderboxPrint:" .
+			  "<a title=\"Best nav open time of 9 runs\" href=\"http://$Settings::results_server/graph/query.cgi?testname=xulwinopen&tbox=" .
+				::hostname() . "&autoscale=1&days=7&avg=1\">Txul:$open_time" . "ms</a>\n";
+
+            # Pull out samples data from log.
+            my $raw_data = extract_token_from_file($binary_log, "openingTimes", "=");
+            chomp($raw_data);
+
+			if($Settings::TestsPhoneHome) {
+			  send_results_to_server($open_time, $raw_data,
+									 "xulwinopen", ::hostname());
+			}
+		} else {
+			$test_result = 'testfailed';
+		}
+	}
+
+	# Startup performance test.  Time how fast it takes the browser
+	# to start up.  Some help from John Morrison to get this going.
+	#
+	# Needs user_pref("browser.dom.window.dump.enabled", 1);
+	# (or CPPFLAGS=-DMOZ_ENABLE_JS_DUMP in mozconfig since we
+	# don't have profiles for tbox right now.)
+	#
+    if ($Settings::StartupPerformanceTest and $test_result eq 'success') {
+	  my $i;
+	  my $startuptime;         # Startup time in ms.
+	  my $agg_startuptime = 0; # Aggregate startup time.
+	  my $startup_count   = 0; # Number of successful runs.
+	  my $avg_startuptime = 0; # Average startup time.
+	  my @times;
+
+	  for($i=0; $i<10; $i++) {
+		# Settle OS.
+		run_system_cmd("sync; sleep 5", 35);
+		
+		# Generate URL of form file:///<path>/startup-test.html?begin=986869495000
+		# Where begin value is current time.
+		my ($time, $url, $cwd, $cmd);
+		
+		# 
+		# Test for Time::HiRes and report the time.
+		$time = Time::PossiblyHiRes::getTime();
+		
+		$cwd = get_system_cwd();
+		print "cwd = $cwd\n";
+		$url  = "\"file:$build_dir/../startup-test.html?begin=$time\"";
+		print "url = $url\n";
+		
+		# Then load startup-test.html, which will pull off the begin argument
+		# and compare it to the current time to compute startup time.
+		# Since we are iterating here, save off logs as StartupPerformanceTest-0,1,2...
+		#
+		# -P $Settings::MozProfileName added 3% to startup time, assume one profile
+		# and get the 3% back. (http://bugzilla.mozilla.org/show_bug.cgi?id=112767)
+		#
+		if($test_result eq 'success') {
+		  $startuptime = 
+			AliveTestReturnToken("StartupPerformanceTest-$i", 
+								 $build_dir,
+								 $binary,
+								 $url,
+								 $Settings::StartupPerformanceTestTimeout,
+								 "__startuptime",
+								 ",");
+		}
+		
+		if($startuptime) {
+		  $test_result = 'success';
+
+		  # Add our test to the total.
+		  $startup_count++;
+		  $agg_startuptime += $startuptime;
+
+		  # Keep track of the results in an array.
+		  push(@times, $startuptime);
+		} else {
+		  $test_result = 'testfailed';
+		}
+
+	  } # for loop
+	
+	  if($test_result eq 'success') {
+		print_log "\nSummary for startup test:\n";
+		
+		# Print startup times.
+		chop(@times);
+		my $times_string = join(" ", @times);
+		print_log "times = [$times_string]\n";
+		
+		# Figure out the average startup time.
+		$avg_startuptime = $agg_startuptime / $startup_count;
+		print_log "Average startup time: $avg_startuptime\n";
+
+		my $min_startuptime = min(@times);
+		print_log "Minimum startup time: $min_startuptime\n";
+
+		# Old mechanism here, new = TinderboxPrint.
+		# print_log "\n\n  __avg_startuptime,$avg_startuptime\n\n";
+		# print_log "\n\n  __avg_startuptime,$min_startuptime\n\n";
+		
+		my $print_string = "\n\nTinderboxPrint:<a title=\"Best startup time out of 10 startups\"href=\"http://$Settings::results_server/graph/query.cgi?testname=startup&tbox=" 
+		  . ::hostname() . "&autoscale=1&days=7&avg=1\">Ts:" . $min_startuptime . "ms</a>\n\n";
+		print_log "$print_string";
+
+		# Report data back to server
+		if($Settings::TestsPhoneHome) {
+		  print_log "phonehome = 1\n";
+		  send_results_to_server($min_startuptime, $times_string, 
+								 "startup", ::hostname());
+		}
+
+	  }
+    }
+
+    return $test_result;
 }
-
-
 
 sub BinaryExists {
     my ($binary) = @_;
@@ -916,16 +1208,16 @@ sub BinaryExists {
         print_log "$binary is not executable.\n";
         0;
     } else {
-        print_log "$binary_basename exists, is nonzero, and executable.\n";
+        print_log "$binary_basename exists, is nonzero, and executable.\n";  
         1;
     }
 }
 
-sub min {
+sub min() {
     my $m = $_[0];
     my $i;
     foreach $i (@_) {
-        $m = $i if ($m > $i);
+	$m = $i if ($m > $i);
     }
     return $m;
 }
@@ -936,37 +1228,24 @@ sub DeleteBinary {
     my ($binary_basename) = File::Basename::basename($binary);
 
     if (BinaryExists($binary)) {
-        print_log "Deleting binary: $binary_basename\n";
-        print_log "unlinking $binary\n";
-        unlink $binary or print_log "Error: Unlinking $binary failed\n";
+      print_log "Deleting binary: $binary_basename\n";
+      print_log "unlinking $binary\n";
+      unlink $binary or print_log "Error: Unlinking $binary failed\n";
     } else {
         print_log "No binary detected; none deleted.\n";
-    }
-}
-
-sub DeleteBinaryDir {
-    my ($binarydir) = @_;
-    if (-e $binarydir) {
-        print_log "Deleting $binarydir\n";
-        my $count = File::Path::rmtree($binarydir, 0, 0);
-        if (-e "$binarydir") {
-            print_log "Error: rmtree('$binarydir', 0, 0) failed.\n";
-        }
-    } else {
-        print_log "No binarydir detected; none deleted.\n";
     }
 }
 
 sub PrintEnv {
     local $_;
 
-    # Print out environment settings.
+	# Print out environment settings.
     my $key;
     foreach $key (sort keys %ENV) {
         print_log "$key=$ENV{$key}\n";
     }
 
-    # Print out mozconfig if found.
+	# Print out mozconfig if found.
     if (defined $ENV{MOZCONFIG} and -e $ENV{MOZCONFIG}) {
         print_log "-->mozconfig<----------------------------------------\n";
         open CONFIG, "$ENV{MOZCONFIG}";
@@ -975,14 +1254,14 @@ sub PrintEnv {
         print_log "-->end mozconfig<----------------------------------------\n";
     }
 
-    # Say if we found post-mozilla.pl
-    if(-e "$Settings::BaseDir/post-mozilla.pl") {
-        print_log "Found post-mozilla.pl\n";
-    } else {
-        print_log "Didn't find $Settings::BaseDir/post-mozilla.pl\n";
-    }
+	# Say if we found post-mozilla.pl
+	if(-e "$Settings::BaseDir/post-mozilla.pl") {
+	  print_log "Found post-mozilla.pl\n";
+	} else {
+	  print_log "Didn't find $Settings::BaseDir/post-mozilla.pl\n";
+	}
 
-    # Print compiler setting
+	# Print compiler setting
     if ($Settings::Compiler ne '') {
         print_log "===============================\n";
         if ($Settings::Compiler eq 'gcc' or $Settings::Compiler eq 'egcc') {
@@ -1047,8 +1326,6 @@ sub kill_process {
         kill $sig => $target_pid;
         my $interval_start = time;
         while (time - $interval_start < 10) {
-            # the following will work with 'cygwin' perl on win32, but not 
-            # with 'MSWin32' (ActiveState) perl
             my $pid = waitpid($target_pid, POSIX::WNOHANG());
             if (($pid == $target_pid and POSIX::WIFEXITED($?)) or $pid == -1) {
                 my $secs = time - $start_time;
@@ -1069,7 +1346,7 @@ BEGIN {
     sub signal_name {
         # Find the name of a signal number
         my ($number) = @_;
-
+        
         unless (@sig_name) {
             unless($Config::Config{sig_name} && $Config::Config{sig_num}) {
                 die "No sigs?";
@@ -1090,20 +1367,10 @@ sub fork_and_log {
     my ($home, $dir, $cmd, $logfile) = @_;
 
     my $pid = fork; # Fork off a child process.
-
+    
     unless ($pid) { # child
-
-        # Chimera doesn't want to reset home dir.
-        if ($Settings::ResetHomeDirForTests) {
-            $ENV{HOME} = $home if ($Settings::OS ne "BeOS");
-        }
-            
-        # Explicitly set cwd to home dir.
-        chdir $home or die "chdir($home): $!\n";
-
-        # Now cd to dir where binary is..
-        chdir $dir or die "chdir($dir): $!\n";
-
+        $ENV{HOME} = $home;
+        chdir $dir;
         open STDOUT, ">$logfile";
         open STDERR, ">&STDOUT";
         select STDOUT; $| = 1;  # make STDOUT unbuffered
@@ -1120,7 +1387,7 @@ sub system_fork_and_log {
     my ($cmd) = @_;
 
     my $pid = fork; # Fork off a child process.
-
+    
     unless ($pid) { # child
         exec $cmd;
         die "Could not exec()";
@@ -1137,18 +1404,15 @@ sub wait_for_pid {
     my $loop_count;
 
     die ("Invalid timeout value passed to wait_for_pid()\n")
-        if ($timeout_secs <= 0);
+	if ($timeout_secs <= 0);
 
     eval {
         $loop_count = 0;
         while (++$loop_count < $timeout_secs) {
             my $wait_pid = waitpid($pid, POSIX::WNOHANG());
-            # the following will work with 'cygwin' perl on win32, but not 
-            # with 'MSWin32' (ActiveState) perl
             last if ($wait_pid == $pid and POSIX::WIFEXITED($?)) or $wait_pid == -1;
             sleep 1;
         }
-
         $exit_value = $? >> 8;
         $signal_num = $? >> 127;
         $dumped_core = $? & 128;
@@ -1157,7 +1421,6 @@ sub wait_for_pid {
         }
         return "done";
     };
-
     if ($@) {
         if ($@ =~ /timeout/) {
             kill_process($pid);
@@ -1168,7 +1431,7 @@ sub wait_for_pid {
     }
     $sig_name = $signal_num ? signal_name($signal_num) : '';
 
-    return { timed_out=>$timed_out,
+    return { timed_out=>$timed_out, 
              exit_value=>$exit_value,
              sig_name=>$sig_name,
              dumped_core=>$dumped_core };
@@ -1176,13 +1439,13 @@ sub wait_for_pid {
 
 #
 # Note that fork_and_log() sets the HOME env variable to do
-# the command, this allows us to have a local profile in the
+# the command, this allows us to have a local profile in the 
 # shared cltbld user account.
 #
 sub run_cmd {
     my ($home_dir, $binary_dir, $cmd, $logfile, $timeout_secs) = @_;
     my $now = localtime();
-
+    
     print_log "Begin: $now\n";
     print_log "cmd = $cmd\n";
 
@@ -1193,17 +1456,17 @@ sub run_cmd {
     print_log "End:   $now\n";
 
     return $result;
-}
+}    
 
 # System version of run_cmd().
 sub run_system_cmd {
     my ($cmd, $timeout_secs) = @_;
 
-    print_log "cmd = $cmd\n";
+	print_log "cmd = $cmd\n";
     my $pid = system_fork_and_log($cmd);
     my $result = wait_for_pid($pid, $timeout_secs);
 
-    return $result;
+	return $result;
 }
 
 sub get_system_cwd {
@@ -1245,10 +1508,10 @@ sub send_results_to_server {
 
     my $tmpurl = "http://$Settings::results_server/graph/collect.cgi";
     $tmpurl .= "?value=$value&data=$data&testname=$testname&tbox=$tbox";
-
-    print_log "send_results_to_server(): \n";
-    print_log "tmpurl = $tmpurl\n";
-
+    
+	print_log "send_results_to_server(): \n";
+	print_log "tmpurl = $tmpurl\n";
+	
     my $res = eval q{
         use LWP::UserAgent;
         use HTTP::Request;
@@ -1258,13 +1521,13 @@ sub send_results_to_server {
         my $res = $ua->request($req);
         return $res;
     };
-    if ($@) {
-        warn "Failed to submit startup results: $@";
-        print_log "send_results_to_server() failed.\n";
+	if ($@) {
+	  warn "Failed to submit startup results: $@";
+	  print_log "send_results_to_server() failed.\n";
     } else {
-        print "Results submitted to server: \n",
-        $res->status_line, "\n", $res->content, "\n";
-        print_log "send_results_to_server() succeeded.\n";
+	  print "Results submitted to server: \n", 
+		$res->status_line, "\n", $res->content, "\n";
+	  print_log "send_results_to_server() succeeded.\n";
     }
 
 }
@@ -1280,477 +1543,6 @@ sub print_logfile {
 }
 
 
-##################################################
-#                                                #
-#  Test definitions start here.                  #
-#                                                #
-##################################################
-
-# Run all tests.  Had to pass in both binary and embed_binary.
-#
-sub run_all_tests {
-    my ($binary, $embed_binary, $build_dir) = @_;
-
-    my $binary_basename       = File::Basename::basename($binary);
-    my $binary_dir            = File::Basename::dirname($binary);
-    my $embed_binary_basename = File::Basename::basename($embed_binary);
-    my $embed_binary_dir      = File::Basename::dirname($embed_binary);
-
-    my $test_result = 'success';
-
-    my $win32_build_dir = $build_dir;
-    if ($Settings::OS =~ /^WIN/ && $win32_build_dir =~ m/^\/cygdrive\//) {
-        $win32_build_dir =~ s/^\/cygdrive\///;
-        substr($win32_build_dir,1,1,'|/');
-    }
-
-    #
-    # Before running tests, run regxpcom so that we don't crash when
-    # people change contractids on us (since we don't autoreg opt builds)
-    #
-    unlink("$binary_dir/component.reg") or warn "$binary_dir/component.reg not removed\n";
-    if($Settings::RegxpcomTest) {
-        AliveTest("regxpcom", $build_dir, "$binary_dir/regxpcom", 0,
-                  $Settings::RegxpcomTestTimeout);
-    }
-
-    my $mozappdir="$build_dir/.mozilla";
-    $mozappdir="/boot/home/config/settings/Mozilla" if ($Settings::OS eq "BeOS");
-    my $profiledir="$mozappdir/$Settings::MozProfileName";
-
-    # no special profiledir on win32
-    if ($Settings::OS !~ /^WIN/) {
-
-        #
-        # Make sure we have a profile to run tests.  This is assumed to be called
-        # $Settings::MozProfileName and will live in $build_dir/.mozilla.
-        # Also assuming only one profile here.
-        #
-        my $cp_result = 0;
-        unless ((-d "$profiledir")||
-                ((-d "$mozappdir/Profiles/$Settings::MozProfileName") and 
-                 ($Settings::OS eq 'Darwin'))) {
-            print_log "No profile found, creating profile.\n";
-            $cp_result = create_profile($build_dir, $binary_dir, $binary);
-        } else {
-            print_log "Found profile.\n";
-
-            # Recreate profile if we have $Settings::CleanProfile set.
-            if ($Settings::CleanProfile) {
-		my $deletedir = $mozappdir;
-		$deletedir = $profiledir if ($Settings::OS eq "BeOS");
-                print_log "Creating clean profile ...\n";
-                print_log "Deleting $deletedir ...\n";
-                File::Path::rmtree([$deletedir], 0, 0);
-                if (-e "$deletedir") {
-                    print_log "Error: rmtree([$deletedir], 0, 0) failed.\n";
-                }
-                $cp_result = create_profile($build_dir, $binary_dir, $binary);
-            }
-        }
-
-        # Set status, in case create profile failed.
-        if($cp_result) {
-            if(not $cp_result->{timed_out} and $cp_result->{exit_value} != 0) {
-                $test_result = "success";
-            } else {
-                $test_result = "testfailed";
-            }
-        }
-
-    }
-
-    #
-    # Find the prefs file, remember we have that random string now
-    # e.g. <build-dir>/.mozilla/default/uldx6pyb.slt/prefs.js
-    # so File::Path::find will find the prefs.js file.
-    #
-    my ($pref_file, $profile_dir) = find_pref_file($build_dir);
-    #XXX this is ugly and hacky 
-    $test_result = 'testfailed' unless $pref_file;;
-
-
-    #
-    # Set prefs to run tests properly.
-    #
-    if ($pref_file) { #XXX lame
-        if($Settings::LayoutPerformanceTest  or
-           $Settings::XULWindowOpenTest      or
-           $Settings::StartupPerformanceTest or
-           $Settings::MailBloatTest          or
-           $Settings::BloatTest2             or
-           $Settings::BloatTest) {
-            
-            # Chances are we will be timing these tests.  Bring gettime() into memory
-            # by calling it once, before any tests run.
-            Time::PossiblyHiRes::getTime();
-            
-            # Some tests need browser.dom.window.dump.enabled set to true, so
-            # that JS dump() will work in optimized builds.
-            if (system("\\grep -s browser.dom.window.dump.enabled $pref_file > /dev/null")) {
-                print_log "Setting browser.dom.window.dump.enabled\n";
-                open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
-                print PREFS "user_pref(\"browser.dom.window.dump.enabled\", true);\n";
-                close PREFS;
-            } else {
-                print_log "Already set browser.dom.window.dump.enabled\n";
-            }
-            
-            # Set security prefs to allow us to close our own window,
-            # pageloader test (and possibly other tests) needs this on.
-            if (system("\\grep -s dom.allow_scripts_to_close_windows $pref_file > /dev/null")) {
-                print_log "Setting dom.allow_scripts_to_close_windows to 2.\n";
-                open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
-                print PREFS "user_pref(\"dom.allow_scripts_to_close_windows\", 2);\n";
-                close PREFS;
-            } else {
-                print_log "Already set dom.allow_scripts_to_close_windows\n";
-            }
-            
-        }
-    }
-
-    #
-    # Assume that we want to test modern skin for all tests.
-    #
-    if ($pref_file) { #XXX lame
-        if (system("\\grep -s general.skins.selectedSkin $pref_file > /dev/null")) {
-            print_log "Setting general.skins.selectedSkin to modern/1.0\n";
-            open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
-            print PREFS "user_pref(\"general.skins.selectedSkin\", \"modern/1.0\");\n";
-            close PREFS;
-        } else {
-            print_log "Modern skin already set.\n";
-        }
-    }
-
-    # Mozilla alive test
-    #
-    # Note: Bloat & other tests depend this on working.
-    # Only disable this test if you know it passes and are
-    # debugging another part of the test sequence.  -mcafee
-    #
-    if ($Settings::AliveTest and $test_result eq 'success') {
-        $test_result = AliveTest("MozillaAliveTest", $build_dir,
-                                 $binary, " -P $Settings::MozProfileName",
-                                 $Settings::AliveTestTimeout);
-    }
-
-    # Mozilla java test
-    if ($Settings::JavaTest and $test_result eq 'success') {
-
-        # Workaround for rh7.1 & jvm < 1.3.0:
-        $ENV{LD_ASSUME_KERNEL} = "2.2.5";
-
-        $test_result = AliveTest("MozillaJavaTest", $build_dir,
-                                 $binary, "http://java.sun.com",
-                                 $Settings::JavaTestTimeout);
-    }
-
-
-    # Viewer alive test
-    if ($Settings::ViewerTest and $test_result eq 'success') {
-        $test_result = AliveTest("ViewerAliveTest", $build_dir,
-                                 "$binary_dir/viewer", 0,
-                                 $Settings::ViewerTestTimeout);
-    }
-
-    # Embed test.  Test the embedded app.
-    if ($Settings::EmbedTest and $test_result eq 'success') {
-        $test_result = AliveTest("EmbedAliveTest", $build_dir,
-                                 "$embed_binary_dir/$embed_binary_basename", 0,
-                                 $Settings::EmbedTestTimeout);
-    }
-
-    # Bloat test (based on nsTraceRefcnt)
-    if ($Settings::BloatTest and $test_result eq 'success') {
-        $test_result = BloatTest($binary, $build_dir, " -f bloaturls.txt", "",
-                                 $Settings::BloatTestTimeout);
-    }
-
-    # New and improved bloat/leak test (based on trace-malloc)
-    if ($Settings::BloatTest2 and $test_result eq 'success') {
-        $test_result = BloatTest2($binary, $build_dir, $Settings::BloatTestTimeout);
-    }
-
-    # Mail bloat/leak test.
-    # Needs:
-    #   BUILD_MAIL_SMOKETEST=1 set in environment
-    #   $Settings::CleanProfile = 0
-    #
-    # Manual steps for this test:
-    # 1) Create pop account qatest03/Ne!sc-pe
-    # 2) Login to this mail account, type in password, and select
-    #    "remember password with password manager".
-    # 3) Add first recipient of new Inbox to AB, select "receives plaintext"
-    # 4) If mail send fails, sometimes nsmail-2 flakes, may need
-    #    an occasional machine reboot.
-    #
-    if ($Settings::MailBloatTest and $test_result eq 'success') {
-
-        print_log "______________MailBloatTest______________\n";
-
-        my $inbox_dir = "Mail/nsmail-2";
-
-        chdir("$profile_dir/$inbox_dir");
-
-        # Download new, test Inbox on top of existing one.
-        # wget will not re-download, using -N to check timestamps.
-        system("wget -N -T 60 http://www.mozilla.org/mailnews/bloat_Inbox");
-
-        # Replace the Inbox file.
-        unlink("Inbox");
-        system("cp bloat_Inbox Inbox");
-
-        # Remove the Inbox.msf file.
-        # unlink("Inbox.msf");
-
-        $test_result = BloatTest($binary, $build_dir, " -mail", "mail",
-                                 $Settings::MailBloatTestTimeout);
-
-        # back to build_dir
-        chdir($build_dir);
-    }
-
-
-    # DomToTextConversion test
-    if (($Settings::EditorTest or $Settings::DomToTextConversionTest)
-        and $test_result eq 'success') {
-        $test_result =
-            FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
-                          "perl TestOutSinks.pl", $Settings::DomTestTimeout,
-                          "FAILED", 0,
-                          0);  # Timeout means failure.
-    }
-
-    # Layout performance test.
-    if ($Settings::LayoutPerformanceTest and $test_result eq 'success') {
-      my $layout_time;
-      my $layout_time_details;
-      my $test_name = "LayoutPerformanceTest";
-      my $binary_log = "$build_dir/$test_name.log";
-      my $url = "http://$Settings::pageload_server/page-loader/loader.pl?delay=1000&nocache=0&maxcyc=4&timeout=$Settings::LayoutPerformanceTestPageTimeout&auto=1";
-
-      # Settle OS.
-      run_system_cmd("sync; sleep 10", 35);
-
-      $layout_time = AliveTestReturnToken($test_name,
-                                          $build_dir,
-                                          $binary,
-                                          " -P $Settings::MozProfileName \"$url\"",
-                                          $Settings::LayoutPerformanceTestTimeout,
-                                          "_x_x_mozilla_page_load",
-                                          ",");
-      
-      if($layout_time) {
-        # Pick off first number.
-        chomp($layout_time);
-        my @times = split(',', $layout_time);
-        $layout_time = $times[0];  # Set layout time to first number that we scraped.
-        
-        
-        
-      } else {
-        print_log "TinderboxPrint:Tp:[CRASH]\n";
-
-        # Run the test a second time.  Getting intermittent crashes, these
-        # are expensive to wait, a 2nd run that is successful is still useful.
-        # Sorry for the cut & paste. -mcafee
-
-        $layout_time = AliveTestReturnToken($test_name,
-                                            $build_dir,
-                                            $binary,
-                                            " -P $Settings::MozProfileName \"$url\"",
-                                            $Settings::LayoutPerformanceTestTimeout,
-                                            "_x_x_mozilla_page_load",
-                                            ",");
-        
-        # Print failure message if we fail 2nd time.
-        unless($layout_time) {
-            print_log "TinderboxPrint:Tp:[CRASH]\n";          
-        } else {
-            # Pick off first number.
-            chomp($layout_time);
-            my @times = split(',', $layout_time);
-            $layout_time = $times[0];  # Set layout time to first number that we scraped.
-        }
-      }
-      
-      # Set test status.
-      if($layout_time) {
-        $test_result = 'success';
-      } else {
-        $test_result = 'testfailed';
-      }
-      
-      if($test_result eq 'success') {
-        my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
-
-        print_log "TinderboxPrint:" .
-          "<a title=\"Avg of the median per url pageload time\" href=\"http://$Settings::results_server/graph/query.cgi?testname=pageload&tbox=" .
-            ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$layout_time\">Tp:$layout_time" . "ms</a>\n";
-        
-        # Pull out detail data from log.
-        my $raw_data = extract_token_from_file($binary_log, "_x_x_mozilla_page_load_details", ",");
-        chomp($raw_data);
-        
-        if($Settings::TestsPhoneHome) {
-          send_results_to_server($layout_time, $raw_data, "pageload", ::hostname());
-        }
-      }
-    }
-
-
-    # xul window open test.
-    #
-    if ($Settings::XULWindowOpenTest and $test_result eq 'success') {
-        my $open_time;
-        my $test_name = "XULWindowOpenTest";
-        my $binary_log = "$build_dir/$test_name.log";
-
-        # Settle OS.
-        run_system_cmd("sync; sleep 10", 35);
-
-        my $url  = "-chrome \"file:$build_dir/mozilla/xpfe/test/winopen.xul\"";
-        if($test_result eq 'success') {
-            $open_time = AliveTestReturnToken($test_name,
-                                              $build_dir,
-                                              $binary,
-                                              " -P $Settings::MozProfileName " . $url,
-                                              $Settings::XULWindowOpenTestTimeout,
-                                              "__xulWinOpenTime",
-                                              ":");
-            chomp($open_time);
-        }
-        if($open_time) {
-            $test_result = 'success';
-            
-            my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
-
-            print_log "TinderboxPrint:" .
-                "<a title=\"Best nav open time of 9 runs\" href=\"http://$Settings::results_server/graph/query.cgi?testname=xulwinopen&tbox=" .
-                    ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$open_time\">Txul:$open_time" . "ms</a>\n";
-
-            # Pull out samples data from log.
-            my $raw_data = extract_token_from_file($binary_log, "openingTimes", "=");
-            chomp($raw_data);
-
-            if($Settings::TestsPhoneHome) {
-                send_results_to_server($open_time, $raw_data,
-                                       "xulwinopen", ::hostname());
-            }
-        } else {
-            $test_result = 'testfailed';
-        }
-    }
-
-    # Startup performance test.  Time how fast it takes the browser
-    # to start up.  Some help from John Morrison to get this going.
-    #
-    # Needs user_pref("browser.dom.window.dump.enabled", 1);
-    # (or CPPFLAGS=-DMOZ_ENABLE_JS_DUMP in mozconfig since we
-    # don't have profiles for tbox right now.)
-    #
-    if ($Settings::StartupPerformanceTest and $test_result eq 'success') {
-        my $i;
-        my $startuptime;         # Startup time in ms.
-        my $agg_startuptime = 0; # Aggregate startup time.
-        my $startup_count   = 0; # Number of successful runs.
-        my $avg_startuptime = 0; # Average startup time.
-        my @times;
-
-        for($i=0; $i<10; $i++) {
-            # Settle OS.
-            run_system_cmd("sync; sleep 5", 35);
-
-            # Generate URL of form file:///<path>/startup-test.html?begin=986869495000
-            # Where begin value is current time.
-            my ($time, $url, $cwd, $cmd);
-
-            #
-            # Test for Time::HiRes and report the time.
-            $time = Time::PossiblyHiRes::getTime();
-
-            $cwd = get_system_cwd();
-            print "cwd = $cwd\n";
-            if ($Settings::OS =~ /^WIN/) {
-                $url  = "\"file:$win32_build_dir/../startup-test.html?begin=$time\"";
-            } else {
-                $url  = "\"file:$build_dir/../startup-test.html?begin=$time\"";
-            }
-            print "url = $url\n";
-
-            # Then load startup-test.html, which will pull off the begin argument
-            # and compare it to the current time to compute startup time.
-            # Since we are iterating here, save off logs as StartupPerformanceTest-0,1,2...
-            #
-            # -P $Settings::MozProfileName added 3% to startup time, assume one profile
-            # and get the 3% back. (http://bugzilla.mozilla.org/show_bug.cgi?id=112767)
-            #
-            if($test_result eq 'success') {
-                $startuptime =
-                    AliveTestReturnToken("StartupPerformanceTest-$i",
-                                         $build_dir,
-                                         "$binary -P $Settings::MozProfileName",
-                                         $url,
-                                         $Settings::StartupPerformanceTestTimeout,
-                                         "__startuptime",
-                                         ",");
-            }
-
-            if($startuptime) {
-                $test_result = 'success';
-
-                # Add our test to the total.
-                $startup_count++;
-                $agg_startuptime += $startuptime;
-
-                # Keep track of the results in an array.
-                push(@times, $startuptime);
-            } else {
-                $test_result = 'testfailed';
-            }
-
-        } # for loop
-
-        if($test_result eq 'success') {
-            print_log "\nSummary for startup test:\n";
-
-            # Print startup times.
-            chop(@times);
-            my $times_string = join(" ", @times);
-            print_log "times = [$times_string]\n";
-
-            # Figure out the average startup time.
-            $avg_startuptime = $agg_startuptime / $startup_count;
-            print_log "Average startup time: $avg_startuptime\n";
-
-            my $min_startuptime = min(@times);
-            print_log "Minimum startup time: $min_startuptime\n";
-
-            # Old mechanism here, new = TinderboxPrint.
-            # print_log "\n\n  __avg_startuptime,$avg_startuptime\n\n";
-            # print_log "\n\n  __avg_startuptime,$min_startuptime\n\n";
-
-            my $time = POSIX::strftime "%Y:%m:%d:%H:%M:%S", localtime;
-            my $print_string = "\n\nTinderboxPrint:<a title=\"Best startup time out of 10 startups\"href=\"http://$Settings::results_server/graph/query.cgi?testname=startup&tbox="
-                . ::hostname() . "&autoscale=1&days=7&avg=1&showpoint=$time,$min_startuptime\">Ts:" . $min_startuptime . "ms</a>\n\n";
-            print_log "$print_string";
-
-            # Report data back to server
-            if($Settings::TestsPhoneHome) {
-                print_log "phonehome = 1\n";
-                send_results_to_server($min_startuptime, $times_string,
-                                       "startup", ::hostname());
-            }
-
-        }
-    }
-
-    return $test_result;
-}
-
-
 # Start up Mozilla, test passes if Mozilla is still alive
 # after $timeout_secs (seconds).
 #
@@ -1759,33 +1551,33 @@ sub AliveTest {
     my $binary_basename = File::Basename::basename($binary);
     my $binary_dir = File::Basename::dirname($binary);
     my $binary_log = "$build_dir/$test_name.log";
-    my $cmd = $binary_basename;
+	my $cmd = $binary_basename;
     local $_;
 
-    # Build up command string, if we have arguments
-    if($args) {
-        $cmd .= " " . $args;
-    }
+	# Build up command string, if we have arguments
+	if($args) {
+	  $cmd .= " " . $args;
+	}
 
-    # Print out testname
-    print_log "\n\nRunning $test_name test ...\n";
+	# Print out testname
+	print_log "\n\nRunning $test_name test ...\n";
 
-    # Debug
-    #print_log "\n\nbuild_dir = $build_dir ...\n";
-    #print_log "\n\nbinary_dir = $binary_dir ...\n";
-    #print_log "\n\nbinary = $binary ...\n";
+	# Debug
+	#print_log "\n\nbuild_dir = $build_dir ...\n";
+	#print_log "\n\nbinary_dir = $binary_dir ...\n";
+	#print_log "\n\nbinary = $binary ...\n";
 
-    # Print out timeout.
-    print_log "Timeout = $timeout_secs seconds.\n";
+	# Print out timeout.
+	print_log "Timeout = $timeout_secs seconds.\n";
 
     my $result = run_cmd($build_dir, $binary_dir, $cmd,
-                         $binary_log, $timeout_secs);
+						 $binary_log, $timeout_secs);
 
     print_logfile($binary_log, "$test_name");
 
     if ($result->{timed_out}) {
         print_log "$test_name: $binary_basename successfully stayed up"
-            ." for $timeout_secs seconds.\n";
+                  ." for $timeout_secs seconds.\n";
         return 'success';
     } else {
         print_test_errors($result, $binary_basename);
@@ -1796,26 +1588,26 @@ sub AliveTest {
 # Same as AliveTest, but look for a token in the log and return
 # the value.  (used for startup iteration test).
 sub AliveTestReturnToken {
-    my ($test_name, $build_dir, $binary, $args, $timeout_secs, $token, $delimiter) = @_;
-    my $status;
-    my $rv = 0;
-
-    # Same as in AliveTest, needs to match in order to find the log file.
-    my $binary_basename = File::Basename::basename($binary);
-    my $binary_dir = File::Basename::dirname($binary);
-    my $binary_log = "$build_dir/$test_name.log";
-
-    $status = AliveTest($test_name, $build_dir, $binary, $args, $timeout_secs);
-
-    # Look for and return token
-    if ($status) {
-        $rv = extract_token_from_file($binary_log, $token, $delimiter);
-        if ($rv) {
-            print "AliveTestReturnToken: token value = $rv\n";
-        }
-    }
-
-    return $rv;
+  my ($test_name, $build_dir, $binary, $args, $timeout_secs, $token, $delimiter) = @_;
+  my $status;
+  my $rv = 0;
+  
+  # Same as in AliveTest, needs to match in order to find the log file.
+  my $binary_basename = File::Basename::basename($binary);
+  my $binary_dir = File::Basename::dirname($binary);
+  my $binary_log = "$build_dir/$test_name.log";
+  
+  $status = AliveTest($test_name, $build_dir, $binary, $args, $timeout_secs);
+  
+  # Look for and return token
+  if ($status) {
+	$rv = extract_token_from_file($binary_log, $token, $delimiter);
+	if ($rv) {
+	  print "AliveTestReturnToken: token value = $rv\n";
+	}
+  }
+  
+  return $rv;
 }
 
 
@@ -1823,10 +1615,10 @@ sub AliveTestReturnToken {
 # file, parse the file looking for failure token and report status based
 # on that.  A hack, but should be useful for many tests.
 #
-# test_name = Name of test we're gonna run, in $Settings::DistBin.
+# test_name = Name of test we're gonna run, in dist/bin.
 # testExecString = How to run the test
 # testTimeoutSec = Timeout for hung tests, minimum test time.
-# statusToken = What string to look for in test output to
+# statusToken = What string to look for in test output to 
 #     determine test status.
 # statusTokenMeansPass = Default use of status token is to look for
 #     failure string.  If this is set to 1, then invert logic to look for
@@ -1838,7 +1630,7 @@ sub AliveTestReturnToken {
 #       the process flow control got too confusing :(  -mcafee
 #
 sub FileBasedTest {
-    my ($test_name, $build_dir, $binary_dir, $test_command, $timeout_secs,
+    my ($test_name, $build_dir, $binary_dir, $test_command, $timeout_secs, 
         $status_token, $status_token_means_pass, $timeout_is_ok) = @_;
     local $_;
 
@@ -1846,14 +1638,14 @@ sub FileBasedTest {
     my ($binary_basename) = (split /\s+/, $test_command)[0];
     my $binary_log = "$build_dir/$test_name.log";
 
-    # Print out test name
-    print_log "\n\nRunning $test_name ...\n";
+	# Print out test name
+	print_log "\n\nRunning $test_name ...\n";
 
     my $result = run_cmd($build_dir, $binary_dir, $test_command,
-                         $binary_log, $timeout_secs);
+						 $binary_log, $timeout_secs);
 
     print_logfile($binary_log, $test_name);
-
+    
     if (($result->{timed_out}) and (!$timeout_is_ok)) {
         print_log "Error: $test_name timed out after $timeout_secs seconds.\n";
         return 'testfailed';
@@ -1870,7 +1662,7 @@ sub FileBasedTest {
     } else {
         print_log "Status token, $status_token, not found\n";
     }
-
+    
     if (($status_token_means_pass and $found_token) or
         (not $status_token_means_pass and not $found_token)) {
         return 'success';
@@ -1881,10 +1673,7 @@ sub FileBasedTest {
 } # FileBasedTest
 
 
-
-
-
-# Page loader/cycling mechanism (mozilla -f option):
+# Page loader (-f option):
 # If you are building optimized, you need to add
 #   --enable-logrefcnt
 # to turn the pageloader code on.  These are on by default for debug.
@@ -1898,7 +1687,7 @@ sub BloatTest {
     local $_;
 
     rename($binary_log, $old_binary_log);
-
+    
     unless (-e "$binary_dir/bloaturls.txt") {
         print_log "Error: bloaturls.txt does not exist.\n";
         return 'testfailed';
@@ -1909,24 +1698,23 @@ sub BloatTest {
     # Build up binary command, look for profile.
     my $cmd = "$binary_basename";
     unless ($Settings::MozProfileName eq "") {
-        $cmd .= " -P $Settings::MozProfileName";
+      $cmd .= " -P $Settings::MozProfileName";
     }
     $cmd .= " $args";
-
+    
     my $result = run_cmd($build_dir, $binary_dir, $cmd, $binary_log,
-                         $timeout_secs);
-    $ENV{XPCOM_MEM_BLOAT_LOG} = 0;
+						 $timeout_secs);
     delete $ENV{XPCOM_MEM_BLOAT_LOG};
 
     print_logfile($binary_log, "$bloatdiff_label bloat test");
-
+    
     if ($result->{timed_out}) {
-        print_log "Error: bloat test timed out after"
-            ." $timeout_secs seconds.\n";
-        return 'testfailed';
+      print_log "Error: bloat test timed out after"
+        ." $timeout_secs seconds.\n";
+      return 'testfailed';
     } elsif ($result->{exit_value}) {
-        print_test_errors($result, $binary_basename);
-        return 'testfailed';
+      print_test_errors($result, $binary_basename);
+      return 'testfailed';
     }
 
     # Print out bloatdiff stats, also look for TOTAL line for leak/bloat #s.
@@ -1934,24 +1722,24 @@ sub BloatTest {
     my $found_total_line = 0;
     my @total_line_array;
     open DIFF, "perl $build_dir/../bloatdiff.pl $build_dir/bloat-prev.log $binary_log $bloatdiff_label|"
-        or die "Unable to run bloatdiff.pl";
+      or die "Unable to run bloatdiff.pl";
     while (<DIFF>) {
-        print_log $_;
-
-        # Look for fist TOTAL line
-        unless ($found_total_line) {
-            if (/TOTAL/) {
-                @total_line_array = split(" ", $_);
-                $found_total_line = 1;
-            }
+      print_log $_;
+      
+      # Look for fist TOTAL line
+      unless ($found_total_line) {
+        if (/TOTAL/) {
+          @total_line_array = split(" ", $_);
+          $found_total_line = 1;
         }
+      }
     }
     close DIFF;
     print_log "######################## END BLOAT STATISTICS\n</a>\n";
-
+    
 
     # Scrape for leak/bloat totals from TOTAL line
-    # TOTAL 23 0% 876224
+    # TOTAL 23 0% 876224 
     my $leaks = $total_line_array[1];
     my $bloat = $total_line_array[3];
 
@@ -1962,42 +1750,42 @@ sub BloatTest {
     my $label_prefix = "";
     my $testname_prefix = "";
     unless($bloatdiff_label eq "") {
-        $label_prefix = "$bloatdiff_label ";
-        $testname_prefix = "$bloatdiff_label" . "_";
+      $label_prefix = "$bloatdiff_label ";
+      $testname_prefix = "$bloatdiff_label" . "_";
     }
 
     # Figure out testnames to send to server
     my $leaks_testname = "refcnt_leaks";
     my $bloat_testname = "refcnt_bloat";
     unless($bloatdiff_label eq "") {
-        $leaks_testname = $testname_prefix . "refcnt_leaks";
-        $bloat_testname = $testname_prefix . "refcnt_bloat";
+      $leaks_testname = $testname_prefix . "refcnt_leaks";
+      $bloat_testname = $testname_prefix . "refcnt_bloat";
     }
 
     # Figure out testname labels
     my $leaks_testname_label = "refcnt Leaks";
     my $bloat_testname_label = "refcnt Bloat";
     unless($bloatdiff_label eq "") {
-        $leaks_testname_label = $label_prefix . $leaks_testname_label;
-        $bloat_testname_label = $label_prefix . $bloat_testname_label;
+      $leaks_testname_label = $label_prefix . $leaks_testname_label;
+      $bloat_testname_label = $label_prefix . $bloat_testname_label;
     }
 
 
     if($Settings::TestsPhoneHome) {
-        # Generate and print tbox output strings for leak, bloat.
-        my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $label_prefix . "Lk:" . PrintSize($leaks) . "B</a>\n\n";
-        print_log $leaks_string;
-
-        my $bloat_string = "\n\nTinderboxPrint:<a title=\"" . $bloat_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $bloat_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $label_prefix . "Bl:" . PrintSize($bloat) . "B</a>\n\n";
-        print_log $bloat_string;
-
-        # Report numbers to server.
-        send_results_to_server($leaks, "--", $leaks_testname, ::hostname() );
-        send_results_to_server($bloat, "--", $bloat_testname, ::hostname() );
+      # Generate and print tbox output strings for leak, bloat.
+      my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $label_prefix . "Lk:" . PrintSize($leaks) . "B</a>\n\n";
+      print_log $leaks_string;
+      
+      my $bloat_string = "\n\nTinderboxPrint:<a title=\"" . $bloat_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $bloat_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">" . $label_prefix . "Bl:" . PrintSize($bloat) . "B</a>\n\n";
+      print_log $bloat_string;
+      
+      # Report numbers to server.
+      send_results_to_server($leaks, "--", $leaks_testname, ::hostname() );
+      send_results_to_server($bloat, "--", $bloat_testname, ::hostname() );
 
     } else {
-        print_log "TinderboxPrint:" . $label_prefix . "Lk:<a title=\"" . $leaks_testname_label . "\">" . PrintSize($leaks) . "B</a>\n\n";
-        print_log "TinderboxPrint:" . $label_prefix . "Bl:<a title=\"" . $bloat_testname_label . "\">" . PrintSize($bloat) . "B</a>\n\n";
+      print_log "TinderboxPrint:" . $label_prefix . "Lk:<a title=\"" . $leaks_testname_label . "\">" . PrintSize($leaks) . "B</a>\n\n";
+      print_log "TinderboxPrint:" . $label_prefix . "Bl:<a title=\"" . $bloat_testname_label . "\">" . PrintSize($bloat) . "B</a>\n\n";
     }
 
     return 'success';
@@ -2020,7 +1808,7 @@ sub ReadLeakstatsLog($) {
     my $allocs = 0;
 
     open LEAKSTATS, "$filename"
-        or die "unable to open $filename";
+      or die "unable to open $filename";
     while (<LEAKSTATS>) {
         chop;
         my $line = $_;
@@ -2036,12 +1824,12 @@ sub ReadLeakstatsLog($) {
     }
 
     return {
-        'leaks' => $leaks,
-        'leaked_allocs' => $leaked_allocs,
-        'mhs' => $mhs,
-        'bytes' => $bytes,
-        'allocs' => $allocs
-        };
+             'leaks' => $leaks,
+             'leaked_allocs' => $leaked_allocs,
+             'mhs' => $mhs,
+             'bytes' => $bytes,
+             'allocs' => $allocs
+           };
 }
 
 sub PercentChange($$) {
@@ -2088,12 +1876,6 @@ sub BloatTest2 {
     my ($binary, $build_dir, $timeout_secs) = @_;
     my $binary_basename = File::Basename::basename($binary);
     my $binary_dir = File::Basename::dirname($binary);
-    my $PERL = "";
-    if ($Settings::OS =~ /^WIN/ && $build_dir =~ m/^\/cygdrive\//) {
-        $build_dir =~ s/^\/cygdrive\///;
-        substr($build_dir,1,1,':/');
-        $PERL = "perl";
-    }
     my $binary_log = "$build_dir/bloattest2.log";
     my $malloc_log = "$build_dir/malloc.log";
     my $sdleak_log = "$build_dir/sdleak.log";
@@ -2110,30 +1892,24 @@ sub BloatTest2 {
 
     rename($sdleak_log, $old_sdleak_log);
 
-    my $cmd = "$binary_basename -P $Settings::MozProfileName -f bloaturls.txt --trace-malloc $malloc_log";
-    # win32 builds crash on multiple runs when --shutdown-leaks is used
-    $cmd .= " --shutdown-leaks $sdleak_log" unless $Settings::OS =~ /^WIN/;
+    my $cmd = "$binary_basename -f bloaturls.txt --trace-malloc $malloc_log --shutdown-leaks $sdleak_log";
     my $result = run_cmd($build_dir, $binary_dir, $cmd, $binary_log,
-                         $timeout_secs);
+						 $timeout_secs);
 
     print_logfile($binary_log, "trace-malloc bloat test");
-
+    
     if ($result->{timed_out}) {
-        print_log "Error: bloat test timed out after"
-            ." $timeout_secs seconds.\n";
-        return 'testfailed';
+      print_log "Error: bloat test timed out after"
+        ." $timeout_secs seconds.\n";
+      return 'testfailed';
     } elsif ($result->{exit_value}) {
-        print_test_errors($result, $binary_basename);
-        return 'testfailed';
+      print_test_errors($result, $binary_basename);
+      return 'testfailed';
     }
 
     rename($leakstats_log, $old_leakstats_log);
 
-    if ($Settings::OS =~ /^WIN/) {
-        $cmd = "leakstats $malloc_log";
-    } else {
-        $cmd = "run-mozilla.sh ./leakstats $malloc_log";
-    }
+    $cmd = "run-mozilla.sh ./leakstats $malloc_log";
     $result = run_cmd($build_dir, $binary_dir, $cmd, $leakstats_log,
                       $timeout_secs);
     print_logfile($leakstats_log, "trace-malloc bloat test: leakstats");
@@ -2153,38 +1929,38 @@ sub BloatTest2 {
     my $allocs_testname_label  = "Allocations: number of calls to 'malloc' and friends";
 
     if($Settings::TestsPhoneHome) {
-        my $leaks_testname       = "trace_malloc_leaks";
-        my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">Lk:" . PrintSize($newstats->{'leaks'}) . "B</a>\n\n";
-        print_log $leaks_string;
+      my $leaks_testname       = "trace_malloc_leaks";
+      my $leaks_string = "\n\nTinderboxPrint:<a title=\"" . $leaks_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $leaks_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">Lk:" . PrintSize($newstats->{'leaks'}) . "B</a>\n\n";
+      print_log $leaks_string;
 
-        my $maxheap_testname       = "trace_malloc_maxheap";
-        my $maxheap_string = "\n\nTinderboxPrint:<a title=\"" . $maxheap_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $maxheap_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">MH:" . PrintSize($newstats->{'mhs'}) . "B</a>\n\n";
-        print_log $maxheap_string;
+      my $maxheap_testname       = "trace_malloc_maxheap";
+      my $maxheap_string = "\n\nTinderboxPrint:<a title=\"" . $maxheap_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $maxheap_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">MH:" . PrintSize($newstats->{'mhs'}) . "B</a>\n\n";
+      print_log $maxheap_string;
 
-        my $allocs_testname       = "trace_malloc_allocs";
-        my $allocs_string = "\n\nTinderboxPrint:<a title=\"" . $allocs_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $allocs_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">A:" . PrintSize($newstats->{'allocs'}) . "</a>\n\n";
-        print_log $allocs_string;
+      my $allocs_testname       = "trace_malloc_allocs";
+      my $allocs_string = "\n\nTinderboxPrint:<a title=\"" . $allocs_testname_label . "\"href=\"http://$Settings::results_server/graph/query.cgi?testname=" . $allocs_testname . "&units=bytes&tbox=" . ::hostname() . "&autoscale=1&days=7&avg=1\">A:" . PrintSize($newstats->{'allocs'}) . "</a>\n\n";
+      print_log $allocs_string;
 
-        # Send results to server.
-        send_results_to_server($newstats->{'leaks'},  "--", $leaks_testname,   ::hostname() );
-        send_results_to_server($newstats->{'mhs'},    "--", $maxheap_testname, ::hostname() );
-        send_results_to_server($newstats->{'allocs'}, "--", $allocs_testname,  ::hostname() );
+      # Send results to server.
+      send_results_to_server($newstats->{'leaks'},  "--", $leaks_testname,   ::hostname() );
+      send_results_to_server($newstats->{'mhs'},    "--", $maxheap_testname, ::hostname() );
+      send_results_to_server($newstats->{'allocs'}, "--", $allocs_testname,  ::hostname() );
 
     } else {
-        print_log "TinderboxPrint:";
-        print_log "<abbr title=\"$leaks_testname_label\">Lk</abbr>:" . PrintSize($newstats->{'leaks'}) . "B,";
-        print_log "<abbr title=\"$maxheap_testname_label\">MH</abbr>:" . PrintSize($newstats->{'mhs'}) . "B,";
-        print_log "<abbr title=\"$allocs_testname_label\">A</abbr>:" . PrintSize($newstats->{'allocs'}) . "\n";
+      print_log "TinderboxPrint:";
+      print_log "<abbr title=\"$leaks_testname_label\">Lk</abbr>:" . PrintSize($newstats->{'leaks'}) . "B,";
+      print_log "<abbr title=\"$maxheap_testname_label\">MH</abbr>:" . PrintSize($newstats->{'mhs'}) . "B,";
+      print_log "<abbr title=\"$allocs_testname_label\">A</abbr>:" . PrintSize($newstats->{'allocs'}) . "\n";
     }
 
     if (-e $old_sdleak_log && -e $sdleak_log) {
-        print_logfile($old_leakstats_log, "previous run of trace-malloc bloat test leakstats");
-        $cmd = "$PERL $build_dir/mozilla/tools/trace-malloc/diffbloatdump.pl --depth=15 $old_sdleak_log $sdleak_log";
-        $result = run_cmd($build_dir, $binary_dir, $cmd, $sdleak_diff_log,
-                          $timeout_secs);
-        print_logfile($sdleak_diff_log, "trace-malloc leak stats differences");
+      print_logfile($old_leakstats_log, "previous run of trace-malloc bloat test leakstats");
+      $cmd = "$build_dir/mozilla/tools/trace-malloc/diffbloatdump.pl --depth=15 $old_sdleak_log $sdleak_log";
+      $result = run_cmd($build_dir, $binary_dir, $cmd, $sdleak_diff_log,
+                        $timeout_secs);
+      print_logfile($sdleak_diff_log, "trace-malloc leak stats differences");
     }
-
+    
     return 'success';
 }
 

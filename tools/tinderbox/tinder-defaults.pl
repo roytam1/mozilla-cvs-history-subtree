@@ -11,15 +11,12 @@ $ReportStatus      = 1;      # Send results to server, or not
 $ReportFinalStatus = 1;      # Finer control over $ReportStatus.
 $UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 $BuildOnce         = 0;      # Build once, don't send results to server
+$RunTest           = 1;      # Run the smoke tests on successful build, or not
 $TestOnly          = 0;      # Only run tests, don't pull/build
 $BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 
 # Tests
 $CleanProfile             = 0;
-$ResetHomeDirForTests     = 1;
-
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-                                # renamed from RunTest, to be more descriptive.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 $JavaTest                 = 0;
@@ -27,6 +24,7 @@ $ViewerTest               = 0;
 $BloatTest                = 0;
 $BloatTest2               = 0;
 $DomToTextConversionTest  = 0;
+$MailNewsTest             = 0;  # Bit-rotted, currently not working.
 $MailBloatTest            = 0;
 $EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
 $LayoutPerformanceTest    = 0;
@@ -35,7 +33,7 @@ $StartupPerformanceTest   = 0;
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
 $results_server           = "tegu.mozilla.org";
-$pageload_server          = "spider";  # localhost
+$pageload_server          = "10.169.115.168";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -82,9 +80,6 @@ $Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 #- Set if you want to build in a separate object tree
 $ObjDir = '';
 
-# Extra build name, if needed.
-$BuildNameExtra = '';
-
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
 $UserComment = 0;
@@ -119,16 +114,3 @@ $ConfigureEnvArgs = '';
 $Compiler = 'gcc';
 $NSPRArgs = '';
 $ShellOverride = '';
-
-# allow override of timezone value (for win32 POSIX::strftime)
-$Timezone = '';
-
-# Reboot the OS at the end of build-and-test cycle. This is primarily
-# intended for Win9x, which can't last more than a few cycles before
-# locking up (and testing would be suspect even after a couple of cycles).
-# Right now, there is only code to force the reboot for Win9x, so even
-# setting this to 1, will not have an effect on other platforms. Setting
-# up win9x to automatically logon and begin running tinderbox is left 
-# as an exercise to the reader. 
-$RebootSystem = 0;
-

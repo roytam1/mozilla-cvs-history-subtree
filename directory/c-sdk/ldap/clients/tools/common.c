@@ -97,7 +97,6 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -m pathname\tpath to security module database\n");
 #endif /* LDAP_TOOL_PKCS11 */
     fprintf( stderr, "    -W\t\tSSL key password\n" );
-    fprintf( stderr, "    -3\t\tcheck hostnames in SSL certificates\n" );
 
 #ifdef LDAP_TOOL_PKCS11
     fprintf( stderr, "    -Q [token][:certificate name]\tPKCS 11\n" );
@@ -182,9 +181,11 @@ static int		isW = 0;
 static int		isw = 0;
 static int		isD = 0;
 static int		isj = 0;
-static int		ssl_strength = LDAPTOOL_DEFSSLSTRENGTH;
-static char		*ssl_certdbpath = NULL;
-static char		*ssl_keydbpath = NULL;
+static char		*ssl_certdbpath = LDAPTOOL_DEFCERTDBPATH;
+static char		*ssl_keydbpath = LDAPTOOL_DEFKEYDBPATH;
+/*
+static char		*ssl_keyname = NULL;
+*/
 static char		*ssl_certname = NULL;
 static char		*ssl_passwd = NULL;
 
@@ -298,18 +299,8 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	if ( lib_version_mismatch_is_fatal ) {
 	    exit( LDAP_LOCAL_ERROR );
 	}
-    } else if ( strcmp( ldai.ldapai_vendor_name, LDAP_VENDOR_NAME ) != 0 ) {
-	fprintf( stderr, "%s: this program requires %s's LDAP\n"
-		"\tlibrary version %2.2f or greater; running with\n"
-		"\t%s's version %2.2f.\n",
-		ldaptool_progname, LDAP_VENDOR_NAME,
-		(float)LDAP_VENDOR_VERSION / 100,
-		ldai.ldapai_vendor_name,
-		(float)ldai.ldapai_vendor_version / 100 );
-	if ( lib_version_mismatch_is_fatal ) {
-	    exit( LDAP_LOCAL_ERROR );
-	}
-    } else if ( ldai.ldapai_vendor_version < LDAP_VENDOR_VERSION ) {
+    } else if ( strcmp( ldai.ldapai_vendor_name, LDAP_VENDOR_NAME ) == 0
+	    && ldai.ldapai_vendor_version < LDAP_VENDOR_VERSION ) {
 	fprintf( stderr, "%s: this program requires %s's LDAP\n"
 		"\tlibrary version %2.2f or greater; running with"
 		" version %2.2f.\n",
@@ -328,7 +319,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	extra_opts = "";
     }
 
-    common_opts = "nvEMRHZ03d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
+    common_opts = "nvEMRHZ0d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
 
     /* note: optstring must include room for liblcache "C:" option */
     if (( optstring = (char *) malloc( strlen( extra_opts ) + strlen( common_opts )
@@ -375,9 +366,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	case 'f':	/* input file */
 	    if ( optarg[0] == '-' && optarg[1] == '\0' ) {
 		ldaptool_fp = stdin;
-	    } else if (( ldaptool_fp = ldaptool_open_file( optarg, "r" )) == NULL ) {
-			perror( optarg );
-			exit( LDAP_PARAM_ERROR );
+	    } else if (( ldaptool_fp = fopen( optarg, "r" )) == NULL ) {
+		perror( optarg );
+		exit( LDAP_PARAM_ERROR );
 	    }
 	    break;
 	case 'h':	/* ldap host */
@@ -409,10 +400,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	case 'P':	/* path to security database */
 	    secure = 1; /* do SSL encryption */
 	    ssl_certdbpath = strdup( optarg );
-	    if (NULL == ssl_certdbpath)
+	    if (NULL== ssl_keydbpath)
 	    {
-		perror("malloc");
-		exit( LDAP_NO_MEMORY );
+		ssl_keydbpath = certpath2keypath( ssl_certdbpath );
 	    }
 	    break;
 	case 'Z':	/* do SSL encryption */
@@ -429,6 +419,12 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    isN = 1;
 	    break;
 	case 'K':	/* location of key database */
+	    /* if keydb path is not null, then it was probably strdup by the 
+	     * cert db option.  free it first 
+	     */
+	    if (ssl_keydbpath)
+		free( ssl_keydbpath);
+
 	    ssl_keydbpath = strdup( optarg );
 	    if (NULL == ssl_keydbpath)
 	    {
@@ -445,11 +441,6 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    }
 	    isW = 1;
 	    break;
-
-	case '3':	/* check hostnames in SSL certificates ("no third") */
-	    ssl_strength = LDAPSSL_AUTH_CNCHECK;
-	    break;
-
 #ifdef LDAP_TOOL_PKCS11
 	case 'm':	/* SSL secmod path */
 	    ssl_secmodpath = strdup( optarg);
@@ -489,7 +480,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    else
 		passwd = strdup( optarg );
 	    break;
-	case 'j':       /* bind password from file */
+	    case 'j':       /* bind password from file */
 	    isj = 1;
 	    if ((password_fp = fopen( optarg, "r" )) == NULL ) {
 		fprintf(stderr, "%s: Unable to open '%s' file\n",
@@ -546,8 +537,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
  	case '0':	/* zero -- override LDAP library version check */
 	    break;	/* already handled above */
-
-	case 'J':	/* send an arbitrary control */
+	case 'J':
 	    if ( (ctrl_arg = strdup( optarg)) == NULL ) {
 		perror ("strdup");
 		exit (LDAP_NO_MEMORY);
@@ -580,15 +570,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
     /* If '-Z' is specified, check if '-P' is specified too. */
     if ( isN || isW ) {
 	if ( !isZ ) {
-		fprintf( stderr, "%s: with -N, -W options, please specify -Z\n\n", ldaptool_progname ); 
+		printf( "%s: with -N, -W options, please specify -Z\n\n", ldaptool_progname ); 
 		return (-1);
 	}
-    }
-
-    /* if '-N' is specified, -W is needed too */
-    if ( isN && NULL == ssl_passwd ) {
-	fprintf( stderr, "%s: with the -N option, please specify -W also\n\n", ldaptool_progname ); 
-	return (-1);
     }
 
     if ( isj && isw ) {
@@ -601,23 +585,11 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	return (-1);
     }
 
-    /* use default key and cert DB paths if not set on the command line */
-    if ( NULL == ssl_keydbpath ) {
-	if ( NULL == ssl_certdbpath ) {
-	    ssl_keydbpath = LDAPTOOL_DEFKEYDBPATH;
-	} else {
-	    ssl_keydbpath = certpath2keypath( ssl_certdbpath );
-	}
-    }
-    if ( NULL == ssl_certdbpath ) {
-	ssl_certdbpath = LDAPTOOL_DEFCERTDBPATH;
-    }
-
     if (prompt_password != 0) {
 	char *password_string = "Enter bind password: ";
+	char pbuf[257];
 
 #if defined(_WIN32)
-	char pbuf[257];
 	fputs(password_string,stdout);
 	fflush(stdout);
 	if (fgets(pbuf,256,stdin) == NULL) {
@@ -781,7 +753,7 @@ static int PinArgRegistration( void )
 #ifndef _WIN32
     if ( SVRCORE_CreateStdPinObj(&StdPinObj, filename, PR_TRUE) !=
 	 SVRCORE_Success) {
-	fprintf(stderr, "Security Initialization: Unable to create PinObj "
+	printf("Security Initialization: Unable to create PinObj "
 	       "(%d)", PR_GetError());
 	return -1;
     }
@@ -800,14 +772,14 @@ static int PinArgRegistration( void )
     {
 	local_pkcs_fns.pkcs_gettokenname(NULL, &tokenName);
 	if ((err = SVRCORE_CreateNTUserPinObj(&NTUserPinObj)) != SVRCORE_Success){
-	    fprintf(stderr, "Security Initialization: Unable to create NTUserPinObj "
+	    printf("Security Initialization: Unable to create NTUserPinObj "
 		   "(%d)", PR_GetError());
 	    exit( LDAP_LOCAL_ERROR );
 	}
 	if ((err = SVRCORE_CreateArgPinObj(&ArgPinObj, tokenName, pin,
 					   (SVRCOREPinObj *)NTUserPinObj)) != SVRCORE_Success)
 	{
-	    fprintf(stderr, "Security Initialization: Unable to create ArgPinObj "
+	    printf("Security Initialization: Unable to create ArgPinObj "
 		   "(%d)", PR_GetError());
 	    return -1;
 
@@ -818,7 +790,7 @@ static int PinArgRegistration( void )
     else
     {
 	if ((err = SVRCORE_CreateNTUserPinObj(&NTUserPinObj)) != SVRCORE_Success){
-	    fprintf( stderr, "Security Initialization: Unable to create NTUserPinObj "
+	    printf("Security Initialization: Unable to create NTUserPinObj "
 		   "(%d)", PR_GetError());
 		return -1;
 	}
@@ -826,14 +798,14 @@ static int PinArgRegistration( void )
 	{
 	    if ((err = SVRCORE_CreateFilePinObj(&FilePinObj, filename)) !=
 		SVRCORE_Success) {
-		fprintf( stderr, "Security Initialization: Unable to create FilePinObj "
+		printf("Security Initialization: Unable to create FilePinObj "
 		       "(%d)", PR_GetError());
 		return -1;
 
 	    }
 	    if ((err = SVRCORE_CreateAltPinObj(&AltPinObj, (SVRCOREPinObj *)FilePinObj,
 					       (SVRCOREPinObj *)NTUserPinObj)) != SVRCORE_Success) {
-		fprintf( stderr, "Security Initialization: Unable to create AltPinObj "
+		printf("Security Initialization: Unable to create AltPinObj "
 		       "(%d)", PR_GetError());
 		return -1;
 	    }
@@ -917,12 +889,6 @@ ldaptool_ldap_init( int second_host )
 	    exit( LDAP_LOCAL_ERROR );
     }
 #endif /* LDAP_TOOL_PKCS11 */
-
-    /* set the default SSL strength (used for all future ld's we create) */
-    if ( ldapssl_set_strength( NULL, ssl_strength ) < 0 ) {
-	perror( "ldapssl_set_strength" );
-	exit( LDAP_LOCAL_ERROR );
-    }
 
     if (secure) {
 	if ( !user_port ) {
@@ -1106,8 +1072,7 @@ ldaptool_print_lderror( LDAP *ld, char *msg, int check4ssl )
     ldap_perror( ld, msg );
     if ( secure && check4ssl != LDAPTOOL_CHECK4SSL_NEVER ) {
 	if ( check4ssl == LDAPTOOL_CHECK4SSL_ALWAYS
-		|| ( lderr == LDAP_SERVER_DOWN )
-		|| ( lderr == LDAP_CONNECT_ERROR )) {
+		|| ( lderr == LDAP_SERVER_DOWN )) {
 	    int		sslerr = PORT_GetError();
 
 	    fprintf( stderr, "\tSSL error %d (%s)\n", sslerr,
@@ -1590,7 +1555,7 @@ ldaptool_parse_ctrl_arg(char *ctrl_arg, char sep,
 		char **ctrl_oid, int *ctrl_criticality,
 		char **ctrl_value, int *vlen)
 {
-    char *s, *p;
+    char *s, *p, *d;
     int strict;
 
     /* Initialize passed variables with default values */
@@ -2220,13 +2185,3 @@ ldaptool_boolean_str2value ( const char *ptr, int strict )
 	}	
     }
 } 
-
-FILE *
-ldaptool_open_file(const char *filename, const char *mode)
-{
-#ifdef _LARGEFILE64_SOURCE 
-	return fopen64(filename, mode);
-#else
-	return fopen(filename, mode);
-#endif
-}
