@@ -280,21 +280,14 @@ NS_METHOD nsBMPDecoder::ProcessData(const char* aBuffer, PRUint32 aCount)
         PR_LOG(gBMPLog, PR_LOG_DEBUG, ("BMP image is %lix%lix%lu. compression=%lu\n",
             mBIH.width, mBIH.height, mBIH.bpp, mBIH.compression));
 
+        // Verify we support this bit depth
+        if (mBIH.bpp != 1 && mBIH.bpp != 4 && mBIH.bpp != 8 &&
+            mBIH.bpp != 16 && mBIH.bpp != 24 && mBIH.bpp != 32)
+          return NS_ERROR_UNEXPECTED;
+
         if (mBIH.bpp <= 8) {
-            switch (mBIH.bpp) {
-                case 1:
-                    mNumColors = 2;
-                    break;
-                case 4:
-                    mNumColors = 16;
-                    break;
-                case 8:
-                    mNumColors = 256;
-                    break;
-                default:
-                    return NS_ERROR_FAILURE;
-            }
-            if (mBIH.colors)
+            mNumColors = 1 << mBIH.bpp;
+            if (mBIH.colors && mBIH.colors < mNumColors)
                 mNumColors = mBIH.colors;
 
             mColors = new colorTable[mNumColors];
