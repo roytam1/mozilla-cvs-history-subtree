@@ -118,7 +118,7 @@ public:
                            PRInt32 aNameSpaceID,
                            nsIAtom* aTag);
 
-    ~RDFResourceElementImpl(void);
+    virtual ~RDFResourceElementImpl(void);
 
     // nsISupports
     NS_DECL_ISUPPORTS

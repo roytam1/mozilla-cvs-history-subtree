@@ -87,7 +87,7 @@ class RDFGenericElementImpl : public nsIDOMXULNode,
 {
 public:
     RDFGenericElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag);
-    ~RDFGenericElementImpl(void);
+    virtual ~RDFGenericElementImpl(void);
 
     // nsISupports
     NS_DECL_ISUPPORTS
