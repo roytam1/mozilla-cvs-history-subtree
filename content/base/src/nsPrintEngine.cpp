@@ -2623,6 +2623,8 @@ nsPrintEngine::ReflowPrintObject(nsPrintObject * aPO, PRBool aDoCalcShrink)
     return rv;
   }
 
+  aPO->mStyleSet->EndUpdate();
+  
   // The pres shell now owns the style set object.
 
   PRInt32 pageWidth, pageHeight;
