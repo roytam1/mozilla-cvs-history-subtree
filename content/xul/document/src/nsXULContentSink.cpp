@@ -952,8 +952,9 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
         if (! script->mSrcURI && ! script->mJSObject) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
-            rv = script->Compile(mText, mTextLength, mDocumentURL,
-                                 script->mLineNo, doc, mPrototype);
+            if (doc)
+                script->Compile(mText, mTextLength, mDocumentURL,
+                                script->mLineNo, doc, mPrototype);
         }
 
         FlushText(PR_FALSE);
