@@ -157,7 +157,8 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
             for (UInt32 i = 0; i < nl->getLength(); i++) {
                 nodeType = nl->item(i)->getNodeType();
                 if ((nodeType == Node::TEXT_NODE) ||
-                    (nodeType == Node::ELEMENT_NODE))
+                    (nodeType == Node::ELEMENT_NODE) ||
+                    (nodeType == Node::CDATA_SECTION_NODE))
                     {
                         getNodeValue(nl->item(i),target);
                     }
@@ -165,6 +166,7 @@ void XMLDOMUtils::getNodeValue(Node* node, String* target) {
             break;
         }
         case Node::TEXT_NODE :
+        case Node::CDATA_SECTION_NODE :
             target->append ( ((Text*)node)->getData() );
             break;
         case Node::COMMENT_NODE :
