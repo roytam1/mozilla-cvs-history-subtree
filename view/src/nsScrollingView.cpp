@@ -1172,12 +1172,20 @@ nsScrollingView :: ScrollTo(nscoord aX, nscoord aY, PRUint32 aUpdateFlags)
       }
 
       // Move the scrollbar's thumb
+
+      PRUint32  oldpos = mOffsetY;
+      nscoord dy;
+
       PRUint32 newpos =
         NSIntPixelsToTwips(NSTwipsToIntPixels(aY, t2p), p2t);
       scrollv->SetPosition(newpos);
 
+      dy = oldpos - newpos;
+
       // Update offsets
       SetVisibleOffset(aX, aY);
+
+      AdjustChildWidgets(this, this, 0, 0, t2p);
 
       // Damage the updated area
       r.x = 0;
