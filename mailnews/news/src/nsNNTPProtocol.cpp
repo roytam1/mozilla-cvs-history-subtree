@@ -2105,7 +2105,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 			NET_SACopy(&command, "HEAD ");
 		else
 			NET_SACopy(&command, "ARTICLE ");
-		if (*m_path != '<')
+		if (m_path && *m_path != '<')
 			NET_SACat(&command,"<");
 		NET_SACat(&command, m_path);
 		if (PL_strchr(command+8, '>')==0) 
