@@ -1492,6 +1492,7 @@ NS_IMETHODIMP
 nsScriptSecurityManager::CanCreateWrapper(JSContext *aJSContext, 
                                           const nsIID &aIID, 
                                           nsISupports *aObj,
+                                          nsIClassInfo *aClassInfo,
                                           void **aPolicy)
 {
 #if 0

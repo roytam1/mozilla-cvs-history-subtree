@@ -71,6 +71,7 @@ interface nsIXPCSecurityManager : nsISupports
     void CanCreateWrapper(in JSContextPtr aJSContext,
                           in nsIIDRef aIID,
                           in nsISupports aObj,
+                          in nsIClassInfo aClassInfo,
                           inout voidPtr aPolicy);
 
     void CanCreateInstance(in JSContextPtr aJSContext,

@@ -324,7 +324,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                             nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
     if(sm && NS_FAILED(sm->
                 CanCreateWrapper(ccx, *Interface->GetIID(),
-                                 identity, pSecurityInfoSpace)))
+                                 identity, info, pSecurityInfoSpace)))
     {
         // the security manager vetoed. It should have set an exception.
         return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
