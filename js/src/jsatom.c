@@ -599,7 +599,10 @@ js_alloc_temp_space(void *priv, size_t size)
 {
     JSContext *cx = priv;
     void *space;
+
     JS_ARENA_ALLOCATE(space, &cx->tempPool, size);
+    if (!space)
+        JS_ReportOutOfMemory(cx);
     return space;
 }
 
@@ -611,8 +614,15 @@ js_free_temp_space(void *priv, void *item)
 JS_STATIC_DLL_CALLBACK(JSHashEntry *)
 js_alloc_temp_entry(void *priv, const void *key)
 {
-    JS_ASSERT(0);
-    return NULL;
+    JSContext *cx = priv;
+    JSAtomListElement *ale;
+
+    JS_ARENA_ALLOCATE(ale, &cx->tempPool, sizeof(JSAtomListElement));
+    if (!ale) {
+        JS_ReportOutOfMemory(cx);
+        return NULL;
+    }
+    return &ale->entry;
 }
 
 JS_STATIC_DLL_CALLBACK(void)
@@ -633,17 +643,13 @@ js_IndexAtom(JSContext *cx, JSAtom *atom, JSAtomList *al)
 
     ATOM_LIST_LOOKUP(ale, hep, al, atom);
     if (!ale) {
-	JS_ARENA_ALLOCATE(ale, &cx->tempPool, sizeof(JSAtomListElement));
-	if (!ale) {
-	    JS_ReportOutOfMemory(cx);
-	    return NULL;
-	}
-	ALE_SET_ATOM(ale, atom);
-	ALE_SET_INDEX(ale, al->count++);
-
         if (al->count <= 5) {
             /* Few enough for linear search, no hash table needed. */
             JS_ASSERT(!al->table);
+            ale = (JSAtomListElement *)js_alloc_temp_entry(cx, atom);
+            if (!ale)
+                return NULL;
+            ALE_SET_ATOM(ale, atom);
             ALE_SET_NEXT(ale, al->list);
             al->list = ale;
         } else {
@@ -654,10 +660,8 @@ js_IndexAtom(JSContext *cx, JSAtom *atom, JSAtomList *al)
                 al->table = JS_NewHashTable(8, js_hash_atom_ptr,
                                             JS_CompareValues, JS_CompareValues,
                                             &temp_alloc_ops, cx);
-                if (!al->table) {
-                    JS_ReportOutOfMemory(cx);
+                if (!al->table)
                     return NULL;
-                }
 
                 /* Insert each ale on al->list into the new hash table. */
                 for (ale2 = al->list; ale2; ale2 = next) {
@@ -674,11 +678,14 @@ js_IndexAtom(JSContext *cx, JSAtom *atom, JSAtomList *al)
                 hep = JS_HashTableRawLookup(al->table, atom->number, atom);
             }
 
-            /* Finally, insert atom's ale into the hash bucket at hep. */
-            ale->entry.keyHash = atom->number;
-            ALE_SET_NEXT(ale, *hep);
-            *hep = &ale->entry;
+            /* Finally, add an entry for atom into the hash bucket at hep. */
+            ale = (JSAtomListElement *)
+                JS_HashTableRawAdd(al->table, hep, atom->number, atom, NULL);
+            if (!ale)
+                return NULL;
         }
+
+	ALE_SET_INDEX(ale, al->count++);
     }
     return ale;
 }
