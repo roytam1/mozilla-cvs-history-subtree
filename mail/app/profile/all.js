@@ -49,7 +49,7 @@ pref("keyword.enabled", false);
 pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
 pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region.properties");
 pref("general.useragent.vendor", "Thunderbird");
-pref("general.useragent.vendorSub", "0.4RC2");
+pref("general.useragent.vendorSub", "0.4");
 
 pref("general.startup.browser",             false);
 pref("general.startup.mail",                false);
@@ -464,7 +464,7 @@ pref("security.enable_java",                true);
 pref("advanced.mailftp",                    false);
 pref("image.animation_mode",                "normal");
 
-pref("offline.startup_state",            0);
+pref("offline.startup_state",            2);
 pref("offline.send.unsent_messages",            0);
 pref("offline.download.download_messages",  0);
 pref("offline.prompt_synch_on_exit",            true);
