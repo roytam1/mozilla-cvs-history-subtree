@@ -14,7 +14,7 @@
  *
  * The Original Code is Mozilla Communicator client code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -58,7 +58,7 @@ RCDATA NP_INFO_ProductName       { "Mozilla Default Plug-in\0" }
 // Dialog
 //
 
-DLGTEMPLATE IDD_PLUGIN_DOWNLOAD DISCARDABLE  
+DLGTEMPLATE IDD_PLUGIN_DOWNLOAD DISCARDABLE
 BEGIN
   DIALOG "Title", IDD_PLUGIN_DOWNLOAD,   0, 125, 225, 122,
   WS_VISIBLE | FS_DLGBORDER | FS_SCREENALIGN,
@@ -66,7 +66,7 @@ BEGIN
   PRESPARAMS PP_FONTNAMESIZE, "8.Helv"
   BEGIN
     LTEXT         "Information on this page requires a plug-in for:",IDC_STATIC_INFO,   7, 108, 211,   8,SS_TEXT | DT_WORDBREAK | DT_MNEMONIC
-    LTEXT         "Communicator can retrieve the plug-in for you from:",IDC_STATIC_LOCATION,   7,  89, 211,   7,SS_TEXT | DT_WORDBREAK | DT_MNEMONIC
+    LTEXT         "Firefox can retrieve the plug-in for you from:",IDC_STATIC_LOCATION,   7,  89, 211,   7,SS_TEXT | DT_WORDBREAK | DT_MNEMONIC
     CTEXT         "What would you like to do?",IDC_STATIC_QUESTION,   7,  21, 211,   7,SS_TEXT | DT_WORDBREAK | DT_MNEMONIC
     DEFPUSHBUTTON "Get the Plug-in",IDC_GET_PLUGIN,  41,   6,  64,  12,
     PUSHBUTTON    "Cancel", DID_CANCEL, 109,   6,  64,  12,
@@ -90,19 +90,19 @@ ICON            IDI_PLUGICON    DISCARDABLE     "npnulos2.ico"
 // String Table
 //
 
-STRINGTABLE DISCARDABLE 
+STRINGTABLE DISCARDABLE
 BEGIN
     IDS_INFO                "Information on this page requires a plug-in for:"
 END
 
-STRINGTABLE DISCARDABLE 
+STRINGTABLE DISCARDABLE
 BEGIN
-    IDS_LOCATION            "Navigator can retrieve the plug-in for you from:"
+    IDS_LOCATION            "You can retrieve the plug-in from:"
     IDS_TITLE               "Plug-in Not Loaded"
     IDS_QUESTION            "What would you like to do?"
-    IDS_WARNING_JS          "The SmartUpdate feature makes it easy to install new plug-ins. To take advantage of SmartUpdate, you must enable Java, JavaScript and AutoInstall in the Advanced panel of the Preferences, then click the plug-in icon on the page."
-    IDS_WARNING_OFFLINE     "However, you are currently offline. If you would like to get the plug-in, click Cancel, select ""Go Online"" from the File menu, then click the plug-in icon on the page."
-    IDS_FINDER_PAGE         "Netscape's Plug-in Finder page"
+    IDS_WARNING_JS          "To retrieve the plug-in now, click the Get the Plug-in button and then select the plug-in you need from the page that appears."
+    IDS_WARNING_OFFLINE     "However, you are currently offline. If you would like to get the plug-in, click Cancel, select ""Work Online"" from the File menu, then click the plug-in icon on the page."
+    IDS_FINDER_PAGE         "Plug-in Finder page"
     IDS_CLICK_TO_GET        "Click here to get the plugin"
-    IDS_CLICK_WHEN_DONE     "Click here after installing the plugin"
+    IDS_CLICK_WHEN_DONE     "After installing the plugin, click here."
 END
