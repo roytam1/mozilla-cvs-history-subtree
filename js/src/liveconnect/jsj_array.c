@@ -39,6 +39,7 @@ jsj_GetJavaArrayElement(JSContext *cx, JNIEnv *jEnv, jarray java_array, jsize in
 {
     jvalue java_value;
     JavaSignatureChar component_type;
+    JSBool success;
 
 #define GET_ELEMENT_FROM_PRIMITIVE_JAVA_ARRAY(Type,member)                   \
     (*jEnv)->Get##Type##ArrayRegion(jEnv, java_array, index, 1,              \
@@ -91,7 +92,9 @@ jsj_GetJavaArrayElement(JSContext *cx, JNIEnv *jEnv, jarray java_array, jsize in
             jsj_ReportJavaError(cx, jEnv, "Error reading Java object array");
             return JS_FALSE;
         }
-        break;
+        success = jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value.l, vp);
+        (*jEnv)->DeleteLocalRef(jEnv, java_value.l);
+        return success;
 
 #undef GET_ELEMENT_FROM_PRIMITIVE_JAVA_ARRAY
     case JAVA_SIGNATURE_UNKNOWN:
