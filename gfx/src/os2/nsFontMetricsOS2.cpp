@@ -1360,8 +1360,7 @@ nsFontMetricsOS2::GetVectorSubstitute(HPS aPS, const char* aFamilyname,
     return PR_TRUE;
   }
 
-  if( stricmp( aFamilyname, "Helv" ) == 0 ||
-      stricmp( aFamilyname, "WarpSans" ) == 0 )
+  if( stricmp( aFamilyname, "Helv" ) == 0)
   {
     if( !isBold && !isItalic )
       strcpy( alias, "Helvetica" );
@@ -1379,7 +1378,8 @@ nsFontMetricsOS2::GetVectorSubstitute(HPS aPS, const char* aFamilyname,
    // When printing, substitute vector fonts for these common bitmap fonts
   if( !mDeviceContext->SupportsRasterFonts() )
   {
-    if( stricmp( aFamilyname, "System Proportional" ) == 0 )
+    if( stricmp( aFamilyname, "System Proportional" ) == 0 ||
+        stricmp( aFamilyname, "WarpSans" ) == 0 )
     {
       if( !isBold && !isItalic )
         strcpy( alias, "Helvetica" );
@@ -1790,16 +1790,16 @@ nsFontMetricsOS2::FindWesternFont()
   mWesternFont = font;
 }
 
-
-#define IS_SPECIAL(x) ((x == 0x20AC) ||  /* euro */ \
+#define IS_SPECIAL_WO_ELLIPSE(x) ((x == 0x20AC) ||  /* euro */ \
                        (x == 0x2022) ||  /* bull */ \
                        (x == 0x201C) ||  /* ldquo */ \
                        (x == 0x201D) ||  /* rdquo */ \
                        (x == 0x2018) ||  /* lsquo */ \
                        (x == 0x2019) ||  /* rsquo */ \
-                       (x == 0x2026) ||  /* hellip */ \
                        (x == 0x2013) ||  /* ndash */ \
                        (x == 0x2014))    /* mdash */
+
+#define IS_SPECIAL(x)(IS_SPECIAL_WO_ELLIPSE(x) || (x == 0x2026)) /* hellip */
 
 nsresult
 nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
@@ -1853,14 +1853,14 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
   {
     while (running && firstChar < lastChar)
     {
-      if ((*currChar >= 0x0080 && *currChar <= 0x00FF) || IS_SPECIAL(*currChar))
+      if ((*currChar >= 0x0080 && *currChar <= 0x00FF) || IS_SPECIAL_WO_ELLIPSE(*currChar))
       { 
         if (!mWesternFont) {
           FindWesternFont();
         }
         fontSwitch.mFont = mWesternFont;
         while( ++currChar < lastChar ) {
-          if ((*currChar < 0x0080 || *currChar > 0x00FF) && !IS_SPECIAL(*currChar))
+          if ((*currChar < 0x0080 || *currChar > 0x00FF) && !IS_SPECIAL_WO_ELLIPSE(*currChar))
             break;
         }
         running = (*aFunc)(&fontSwitch, firstChar, currChar - firstChar, aData);
@@ -1870,7 +1870,7 @@ nsFontMetricsOS2::ResolveForwards(HPS                  aPS,
          // Use currently selected font
         fontSwitch.mFont = mFontHandle;
         while( ++currChar < lastChar ) {
-          if ((*currChar >= 0x0080 && *currChar <= 0x00FF) || IS_SPECIAL(*currChar))
+          if ((*currChar >= 0x0080 && *currChar <= 0x00FF) || IS_SPECIAL_WO_ELLIPSE(*currChar))
             break;
         }
         running = (*aFunc)(&fontSwitch, firstChar, currChar - firstChar, aData);
