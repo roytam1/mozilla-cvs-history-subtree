@@ -889,6 +889,7 @@ jsval nsDOMClassInfo::sEnumerate_id       = JSVAL_VOID;
 jsval nsDOMClassInfo::sNavigator_id       = JSVAL_VOID;
 jsval nsDOMClassInfo::sDocument_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sWindow_id          = JSVAL_VOID;
+jsval nsDOMClassInfo::sFrames_id          = JSVAL_VOID;
 
 const JSClass *nsDOMClassInfo::sObjectClass   = nsnull;
 
@@ -986,6 +987,7 @@ nsDOMClassInfo::DefineStaticJSVals(JSContext *cx)
   SET_JSVAL_TO_STRING(sNavigator_id,       cx, "navigator");
   SET_JSVAL_TO_STRING(sDocument_id,        cx, "document");
   SET_JSVAL_TO_STRING(sWindow_id,          cx, "window");
+  SET_JSVAL_TO_STRING(sFrames_id,          cx, "frames");
 
   return NS_OK;
 }
@@ -2834,6 +2836,7 @@ nsDOMClassInfo::ShutDown()
   sNavigator_id       = JSVAL_VOID;
   sDocument_id        = JSVAL_VOID;
   sWindow_id          = JSVAL_VOID;
+  sFrames_id          = JSVAL_VOID;
 
   NS_IF_RELEASE(sXPConnect);
   NS_IF_RELEASE(sSecMan);
@@ -3378,6 +3381,7 @@ DOMJSClass_Construct(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
   if ((name_struct->mType != nsGlobalNameStruct::eTypeExternalClassInfo ||
        !name_struct->mData->mConstructorCID) &&
+      name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructor &&
       name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructorAlias) {
     // ignore return value, we return JS_FALSE anyway
     NS_ERROR("object instantiated without constructor");
@@ -3852,14 +3856,18 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructor) {
-    // If there was a JS_DefineUCFunction() I could use it here, but
-    // no big deal...
-    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
-                                        DOMJSClass_Construct, 0,
-                                        JSPROP_READONLY);
+    // If there was a JS_DefineUCObject() we could use it here...
+    JSObject* class_obj = ::JS_DefineObject(cx, obj, ::JS_GetStringBytes(str),
+                                            &sDOMJSClass, 0, 0);
+    if (!class_obj) {
+      return NS_ERROR_UNEXPECTED;
+    }
 
-    if (!f) {
-      return NS_ERROR_OUT_OF_MEMORY;
+    if (!::JS_SetPrivate(cx, class_obj,
+                         NS_CONST_CAST(void *,
+                                       NS_STATIC_CAST(const void *,
+                                                      class_name)))) {
+      return NS_ERROR_UNEXPECTED;
     }
 
     *did_resolve = PR_TRUE;
@@ -4604,14 +4612,10 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   // the DOM computed style API.  We can get rid of this hack if we merge
   // the jsdom library with layout.
 
-  const nsStyleDisplay* display;
-  pctx->ResolveStyleContextAndGetStyleData(content, eStyleStruct_Display,
-                                           (const nsStyleStruct*&) display);
-  NS_ENSURE_TRUE(display, NS_ERROR_UNEXPECTED);
-
-  if (display->mBinding.IsEmpty()) {
+  nsAutoString bindingURL;
+  pctx->GetXBLBindingURL(content, bindingURL);
+  if (bindingURL.IsEmpty()) {
     // No binding, nothing left to do here.
-
     return NS_OK;
   }
 
@@ -4621,7 +4625,7 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));
   NS_ENSURE_TRUE(xblService, NS_ERROR_NOT_AVAILABLE);
 
-  xblService->LoadBindings(content, display->mBinding, PR_FALSE,
+  xblService->LoadBindings(content, bindingURL, PR_FALSE,
                            getter_AddRefs(binding), &dummy);
 
   if (binding) {

@@ -78,8 +78,7 @@ inline nscoord CalcSideFor(const nsIFrame* aFrame, const nsStyleCoord& aCoord,
       nsIFrame* parentFrame;
       aFrame->GetParent(&parentFrame);  // XXX may not be direct parent...
       if (nsnull != parentFrame) {
-        nsIStyleContext* parentContext;
-        parentFrame->GetStyleContext(&parentContext);
+        nsStyleContext* parentContext = parentFrame->GetStyleContext();
         if (nsnull != parentContext) {
           nsMargin  parentSpacing;
           switch (aSpacing) {
@@ -111,7 +110,6 @@ inline nscoord CalcSideFor(const nsIFrame* aFrame, const nsStyleCoord& aCoord,
             case NS_SIDE_RIGHT:   result = parentSpacing.right;  break;
             case NS_SIDE_BOTTOM:  result = parentSpacing.bottom; break;
           }
-          NS_RELEASE(parentContext);
         }
       }
       break;
@@ -963,8 +961,15 @@ nsStyleTableBorder::nsStyleTableBorder(const nsStyleTableBorder& aSource)
 
 nsChangeHint nsStyleTableBorder::CalcDifference(const nsStyleTableBorder& aOther) const
 {
-  if ((mBorderCollapse == aOther.mBorderCollapse) &&
-      (mCaptionSide == aOther.mCaptionSide) &&
+  // Border-collapse changes need a reframe, because we use a different frame
+  // class for table cells in the collapsed border model.  This is used to
+  // conserve memory when using the separated border model (collapsed borders
+  // require extra state to be stored).
+  if (mBorderCollapse != aOther.mBorderCollapse) {
+    return NS_STYLE_HINT_FRAMECHANGE;
+  }
+  
+  if ((mCaptionSide == aOther.mCaptionSide) &&
       (mBorderSpacingX == aOther.mBorderSpacingX) &&
       (mBorderSpacingY == aOther.mBorderSpacingY)) {
     if (mEmptyCells == aOther.mEmptyCells)

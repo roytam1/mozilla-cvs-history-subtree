@@ -436,14 +436,6 @@ nsSVGElement::SetBindingParent(nsIContent* aParent)
   return rv;
 }
 
-NS_IMETHODIMP
-nsSVGElement::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const
-{
-//  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
-}  
-
-
 //----------------------------------------------------------------------
 // nsIStyledContent methods
 

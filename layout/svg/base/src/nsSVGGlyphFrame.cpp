@@ -81,7 +81,7 @@ public:
   Init(nsIPresContext*  aPresContext,
        nsIContent*      aContent,
        nsIFrame*        aParent,
-       nsIStyleContext* aContext,
+       nsStyleContext* aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD  ContentChanged(nsIPresContext* aPresContext,
@@ -209,7 +209,7 @@ NS_IMETHODIMP
 nsSVGGlyphFrame::Init(nsIPresContext*  aPresContext,
                       nsIContent*      aContent,
                       nsIFrame*        aParent,
-                      nsIStyleContext* aContext,
+                      nsStyleContext*  aContext,
                       nsIFrame*        aPrevInFlow)
 {
   nsresult rv;
@@ -608,9 +608,8 @@ nsSVGGlyphFrame::GetFont(nsFont *aFont)
   // fonts, because they can have a different color than the current
   // glyph.
   
-  nsCOMPtr<nsIStyleContext> parentContext;
   NS_ASSERTION(mParent, "no parent");
-  mParent->GetStyleContext(getter_AddRefs(parentContext));
+  nsStyleContext parentContext = mParent->GetStyleContext();
   NS_ASSERTION(parentContext, "no style context on parent");
   
   PRUint8 styleDecorations =

@@ -75,7 +75,7 @@ public:
   Init(nsIPresContext*  aPresContext,
        nsIContent*      aContent,
        nsIFrame*        aParent,
-       nsIStyleContext* aContext,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD  AttributeChanged(nsIPresContext* aPresContext,

@@ -52,6 +52,7 @@
 #include "nsThemeConstants.h"
 #include "nsITheme.h"
 #include "pldhash.h"
+#include "nsStyleContext.h"
 
 /*
  * For storage of an |nsRuleNode|'s children in a linked list.
@@ -198,7 +199,7 @@ nsString& Unquote(nsString& aString)
 
 nscoord CalcLength(const nsCSSValue& aValue,
                    const nsFont* aFont, 
-                   nsIStyleContext* aStyleContext,
+                   nsStyleContext* aStyleContext,
                    nsIPresContext* aPresContext,
                    PRBool& aInherited)
 {
@@ -269,7 +270,7 @@ nscoord CalcLength(const nsCSSValue& aValue,
 
 static PRBool SetCoord(const nsCSSValue& aValue, nsStyleCoord& aCoord, 
                        const nsStyleCoord& aParentCoord,
-                       PRInt32 aMask, nsIStyleContext* aStyleContext,
+                       PRInt32 aMask, nsStyleContext* aStyleContext,
                        nsIPresContext* aPresContext, PRBool& aInherited)
 {
   PRBool  result = PR_TRUE;
@@ -1213,7 +1214,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
 }
 
 const nsStyleStruct*
-nsRuleNode::GetDisplayData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetDisplayData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataDisplay displayData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Display, mPresContext, aContext);
@@ -1227,7 +1228,7 @@ nsRuleNode::GetDisplayData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetVisibilityData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataDisplay displayData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Visibility, mPresContext, aContext);
@@ -1237,7 +1238,7 @@ nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetTextData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetTextData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataText textData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Text, mPresContext, aContext);
@@ -1247,7 +1248,7 @@ nsRuleNode::GetTextData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetTextResetData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetTextResetData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataText textData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_TextReset, mPresContext, aContext);
@@ -1257,7 +1258,7 @@ nsRuleNode::GetTextResetData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetUserInterfaceData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetUserInterfaceData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataUserInterface uiData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_UserInterface, mPresContext, aContext);
@@ -1269,7 +1270,7 @@ nsRuleNode::GetUserInterfaceData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetUIResetData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetUIResetData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataUserInterface uiData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_UIReset, mPresContext, aContext);
@@ -1281,7 +1282,7 @@ nsRuleNode::GetUIResetData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetFontData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetFontData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataFont fontData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Font, mPresContext, aContext);
@@ -1291,7 +1292,7 @@ nsRuleNode::GetFontData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetColorData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetColorData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataColor colorData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Color, mPresContext, aContext);
@@ -1301,7 +1302,7 @@ nsRuleNode::GetColorData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetBackgroundData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetBackgroundData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataColor colorData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Background, mPresContext, aContext);
@@ -1311,7 +1312,7 @@ nsRuleNode::GetBackgroundData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetMarginData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetMarginData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Margin, mPresContext, aContext);
@@ -1327,7 +1328,7 @@ nsRuleNode::GetMarginData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetBorderData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetBorderData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Border, mPresContext, aContext);
@@ -1357,7 +1358,7 @@ nsRuleNode::GetBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetPaddingData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetPaddingData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Padding, mPresContext, aContext);
@@ -1373,7 +1374,7 @@ nsRuleNode::GetPaddingData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetOutlineData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetOutlineData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Outline, mPresContext, aContext);
@@ -1389,7 +1390,7 @@ nsRuleNode::GetOutlineData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetListData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetListData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataList listData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_List, mPresContext, aContext);
@@ -1404,7 +1405,7 @@ nsRuleNode::GetListData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetPositionData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetPositionData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataPosition posData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Position, mPresContext, aContext);
@@ -1419,7 +1420,7 @@ nsRuleNode::GetPositionData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetTableData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetTableData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataTable tableData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Table, mPresContext, aContext);
@@ -1429,7 +1430,7 @@ nsRuleNode::GetTableData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetTableBorderData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataTable tableData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_TableBorder, mPresContext, aContext);
@@ -1439,7 +1440,7 @@ nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetContentData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetContentData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataContent contentData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Content, mPresContext, aContext);
@@ -1452,7 +1453,7 @@ nsRuleNode::GetContentData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetQuotesData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetQuotesData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataContent contentData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Quotes, mPresContext, aContext);
@@ -1465,7 +1466,7 @@ nsRuleNode::GetQuotesData(nsIStyleContext* aContext, PRBool aComputeData)
 
 #ifdef INCLUDE_XUL
 const nsStyleStruct*
-nsRuleNode::GetXULData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetXULData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataXUL xulData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_XUL, mPresContext, aContext);
@@ -1477,7 +1478,7 @@ nsRuleNode::GetXULData(nsIStyleContext* aContext, PRBool aComputeData)
 
 #ifdef MOZ_SVG
 const nsStyleStruct*
-nsRuleNode::GetSVGData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetSVGData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVG, mPresContext, aContext);
@@ -1487,7 +1488,7 @@ nsRuleNode::GetSVGData(nsIStyleContext* aContext, PRBool aComputeData)
 }
 
 const nsStyleStruct*
-nsRuleNode::GetSVGResetData(nsIStyleContext* aContext, PRBool aComputeData)
+nsRuleNode::GetSVGResetData(nsStyleContext* aContext, PRBool aComputeData)
 {
   nsRuleDataSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVGReset, mPresContext, aContext);
@@ -1499,7 +1500,7 @@ nsRuleNode::GetSVGResetData(nsIStyleContext* aContext, PRBool aComputeData)
 
 const nsStyleStruct*
 nsRuleNode::WalkRuleTree(const nsStyleStructID aSID,
-                         nsIStyleContext* aContext, 
+                         nsStyleContext* aContext, 
                          nsRuleData* aRuleData,
                          nsRuleDataStruct* aSpecificData,
                          PRBool aComputeData)
@@ -1607,7 +1608,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID aSID,
     // All information must necessarily be inherited from our parent style context.
     // In the absence of any computed data in the rule tree and with
     // no rules specified that didn't have values of 'inherit', we should check our parent.
-    nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+    nsStyleContext* parentContext = aContext->GetParent();
     if (parentContext) {
       // We have a parent, and so we should just inherit from the parent.
       // Set the inherit bits on our context.  These bits tell the style context that
@@ -1670,7 +1671,7 @@ IsChrome(nsIPresContext* aPresContext)
 }
 
 const nsStyleStruct*
-nsRuleNode::SetDefaultOnRoot(const nsStyleStructID aSID, nsIStyleContext* aContext)
+nsRuleNode::SetDefaultOnRoot(const nsStyleStructID aSID, nsStyleContext* aContext)
 {
   switch (aSID) {
     case eStyleStruct_Font: 
@@ -1840,7 +1841,7 @@ nsRuleNode::gComputeStyleDataFn[] = {
 };
 
 static void
-SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
+SetFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
         nscoord aMinFontSize, PRBool aUseDocumentFonts, PRBool aChromeOverride,
         PRBool aIsGeneric, const nsRuleDataFont& aFontData,
         const nsFont& aDefaultFont, const nsStyleFont* aParentFont,
@@ -2129,14 +2130,14 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 //    up to the root where default values come from the presentation context)
 //  - re-apply cascading rules from there without caching intermediate values
 static void
-SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
+SetGenericFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
                const nsRuleDataFont& aFontData, PRUint8 aGenericFontID,
                nscoord aMinFontSize, PRBool aUseDocumentFonts,
                PRBool aChromeOverride, nsStyleFont* aFont)
 {
   // walk up the contexts until a context with the desired generic font
   nsAutoVoidArray contextPath;
-  nsCOMPtr<nsIStyleContext> higherContext = aContext->GetParent();
+  nsStyleContext* higherContext = aContext->GetParent();
   while (higherContext) {
     contextPath.AppendElement(higherContext);
     const nsStyleFont* higherFont = (const nsStyleFont*)higherContext->GetStyleData(eStyleStruct_Font);
@@ -2158,7 +2159,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
   PRInt32 i = contextPath.Count() - 1;
   PRBool zoom = PR_TRUE;
   if (higherContext) {
-    nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
+    nsStyleContext* context = (nsStyleContext*)contextPath[i];
     nsStyleFont* tmpFont = (nsStyleFont*)context->GetStyleData(eStyleStruct_Font);
     parentFont.mFlags = tmpFont->mFlags;
     parentFont.mFont = tmpFont->mFont;
@@ -2178,7 +2179,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
   nsCOMPtr<nsIStyleRule> rule;
 
   for (; i >= 0; --i) {
-    nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
+    nsStyleContext* context = (nsStyleContext*)contextPath[i];
     nsRuleDataFont fontData; // Declare a struct with null CSS values.
     nsRuleData ruleData(eStyleStruct_Font, aPresContext, context);
     ruleData.mFontData = &fontData;
@@ -2226,11 +2227,11 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 const nsStyleStruct* 
 nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
                             const nsRuleDataStruct& aData, 
-                            nsIStyleContext* aContext, 
+                            nsStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
 
   const nsRuleDataFont& fontData = NS_STATIC_CAST(const nsRuleDataFont&, aData);
   nsStyleFont* font = nsnull;
@@ -2356,11 +2357,11 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
                             const nsRuleDataStruct& aData, 
-                            nsIStyleContext* aContext, 
+                            nsStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
 
   const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
   nsStyleText* text = nsnull;
@@ -2477,11 +2478,11 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData,
                                  const nsRuleDataStruct& aData, 
-                                 nsIStyleContext* aContext, 
+                                 nsStyleContext* aContext, 
                                  nsRuleNode* aHighestNode,
                                  const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
 
   const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
   nsStyleTextReset* text;
@@ -2560,12 +2561,12 @@ nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData,
 const nsStyleStruct*
 nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
                                      const nsRuleDataStruct& aData, 
-                                     nsIStyleContext* aContext, 
+                                     nsStyleContext* aContext, 
                                      nsRuleNode* aHighestNode,
                                      const RuleDetail& aRuleDetail,
                                      PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUserInterface* ui = nsnull;
@@ -2672,11 +2673,11 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
 const nsStyleStruct*
 nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
                                const nsRuleDataStruct& aData, 
-                               nsIStyleContext* aContext, 
+                               nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUIReset* ui;
@@ -2762,11 +2763,11 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
 const nsStyleStruct*
 nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
                                const nsRuleDataStruct& aData, 
-                               nsIStyleContext* aContext, 
+                               nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleDisplay* display;
@@ -2778,8 +2779,7 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
     display = new (mPresContext) nsStyleDisplay();
   const nsStyleDisplay* parentDisplay = display;
 
-  nsCOMPtr<nsIAtom> pseudoTag;
-  aContext->GetPseudoType(*getter_AddRefs(pseudoTag));
+  nsCOMPtr<nsIAtom> pseudoTag = aContext->GetPseudoType();
   PRBool generatedContent = (pseudoTag == nsCSSPseudoElements::before || 
                              pseudoTag == nsCSSPseudoElements::after);
 
@@ -3021,11 +3021,11 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
                                   const nsRuleDataStruct& aData, 
-                                  nsIStyleContext* aContext, 
+                                  nsStyleContext* aContext, 
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleVisibility* visibility = nsnull;
@@ -3130,11 +3130,11 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
                              const nsRuleDataStruct& aData, 
-                             nsIStyleContext* aContext, 
+                             nsStyleContext* aContext, 
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleColor* color = nsnull;
@@ -3187,11 +3187,11 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
                                   const nsRuleDataStruct& aData, 
-                                  nsIStyleContext* aContext, 
+                                  nsStyleContext* aContext, 
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleBackground* bg;
@@ -3377,11 +3377,11 @@ static const CSSRectSide gCSSSides[] = {
 const nsStyleStruct*
 nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
                               const nsRuleDataStruct& aData, 
-                              nsIStyleContext* aContext, 
+                              nsStyleContext* aContext, 
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleMargin* margin;
@@ -3434,11 +3434,11 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
                               const nsRuleDataStruct& aData, 
-                              nsIStyleContext* aContext, 
+                              nsStyleContext* aContext, 
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleBorder* border;
@@ -3540,7 +3540,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
           // computed (unlike for the element where this will be used, for
           // which the color could be specified on a more specific rule).
           const nsStyleColor *parentColor;
-          ::GetStyleData(parentContext.get(), &parentColor);
+          ::GetStyleData(parentContext, &parentColor);
           border->SetBorderColor(side, parentColor->mColor);
         } else
           border->SetBorderColor(side, borderColor);
@@ -3602,11 +3602,11 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
                                const nsRuleDataStruct& aData, 
-                               nsIStyleContext* aContext, 
+                               nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStylePadding* padding;
@@ -3659,11 +3659,11 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
 const nsStyleStruct*
 nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
                                const nsRuleDataStruct& aData, 
-                               nsIStyleContext* aContext, 
+                               nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleOutline* outline;
@@ -3732,11 +3732,11 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
                             const nsRuleDataStruct& aData, 
-                            nsIStyleContext* aContext, 
+                            nsStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataList& listData = NS_STATIC_CAST(const nsRuleDataList&, aData);
   nsStyleList* list = nsnull;
@@ -3849,11 +3849,11 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
                                 const nsRuleDataStruct& aData, 
-                                nsIStyleContext* aContext, 
+                                nsStyleContext* aContext, 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataPosition& posData = NS_STATIC_CAST(const nsRuleDataPosition&, aData);
   nsStylePosition* pos;
@@ -3958,11 +3958,11 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
                              const nsRuleDataStruct& aData, 
-                             nsIStyleContext* aContext, 
+                             nsStyleContext* aContext, 
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTable* table;
@@ -4029,11 +4029,11 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
                                    const nsRuleDataStruct& aData, 
-                                   nsIStyleContext* aContext, 
+                                   nsStyleContext* aContext, 
                                    nsRuleNode* aHighestNode,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTableBorder* table = nsnull;
@@ -4128,11 +4128,11 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
                                const nsRuleDataStruct& aData, 
-                               nsIStyleContext* aContext, 
+                               nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleContent* content;
@@ -4324,11 +4324,11 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
                               const nsRuleDataStruct& aData, 
-                              nsIStyleContext* aContext, 
+                              nsStyleContext* aContext, 
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleQuotes* quotes = nsnull;
@@ -4418,11 +4418,11 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
 const nsStyleStruct* 
 nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
                            const nsRuleDataStruct& aData, 
-                           nsIStyleContext* aContext, 
+                           nsStyleContext* aContext, 
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
   
   const nsRuleDataXUL& xulData = NS_STATIC_CAST(const nsRuleDataXUL&, aData);
   nsStyleXUL* xul = nsnull;
@@ -4540,7 +4540,7 @@ SetSVGOpacity(const nsCSSValue& aValue, float parentOpacity, float& opacity, PRB
 
 static void
 SetSVGLength(const nsCSSValue& aValue, float parentLength, float& length,
-             nsIStyleContext* aContext, nsIPresContext* aPresContext, PRBool& aInherited)
+             nsStyleContext* aContext, nsIPresContext* aPresContext, PRBool& aInherited)
 {
   nsStyleCoord coord;
   PRBool dummy;
@@ -4568,11 +4568,11 @@ SetSVGLength(const nsCSSValue& aValue, float parentLength, float& length,
 const nsStyleStruct* 
 nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
                            const nsRuleDataStruct& aData, 
-                           nsIStyleContext* aContext, 
+                           nsStyleContext* aContext, 
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
 
   nsStyleSVG* svg = nsnull;
   nsStyleSVG* parentSVG = svg;
@@ -4708,11 +4708,11 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
 
 const nsStyleStruct* 
 nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
-                                nsIStyleContext* aContext, 
+                                nsStyleContext* aContext, 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
+  nsStyleContext* parentContext = aContext->GetParent();
 
   const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
   nsStyleSVGReset* svgReset = nsnull;
@@ -4794,7 +4794,7 @@ nsRuleNode::gGetStyleDataFn[] = {
 
 const nsStyleStruct* 
 nsRuleNode::GetStyleData(nsStyleStructID aSID, 
-                         nsIStyleContext* aContext,
+                         nsStyleContext* aContext,
                          PRBool aComputeData)
 {
   const nsStyleStruct* cachedData = mStyleData.GetStyleData(aSID);

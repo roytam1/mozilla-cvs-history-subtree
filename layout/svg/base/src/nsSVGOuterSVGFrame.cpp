@@ -166,7 +166,7 @@ public:
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
-                  nsIStyleContext* aContext,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
   
   NS_IMETHOD Reflow(nsIPresContext*          aPresContext,
@@ -340,7 +340,7 @@ NS_IMETHODIMP
 nsSVGOuterSVGFrame::Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
-                  nsIStyleContext* aContext,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow)
 {
   nsresult rv;
@@ -788,7 +788,7 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 
 //        nsRect  rect(0, 0, mRect.width, mRect.height);
 // //       nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
-// //                                       aDirtyRect, rect, *border, *padding, 0, 0);
+// //                                       aDirtyRect, rect, *border, *padding, PR_TRUE);
 //        nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
 //                                    aDirtyRect, rect, *border, mStyleContext, 0);
 //        nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,

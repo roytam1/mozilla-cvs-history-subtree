@@ -126,6 +126,7 @@
 #include "nsIPrintContext.h"
 #include "nsIAutoCopy.h"
 #include "nsIPrintPreviewContext.h"
+#include "nsCSSLoader.h"
 
 class nsIDocumentLoaderFactory;
 
@@ -271,6 +272,7 @@ Shutdown(nsIModule* aSelf)
   nsEventListenerManager::Shutdown();
   nsContentList::Shutdown();
   nsComputedDOMStyle::Shutdown();
+  CSSLoaderImpl::Shutdown();
 
   // Release all of our atoms
   nsColorNames::ReleaseTable();
