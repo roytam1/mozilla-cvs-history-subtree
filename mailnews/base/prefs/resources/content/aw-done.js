@@ -84,13 +84,8 @@ function donePageInit() {
         if ( currentAccountData && 
              currentAccountData.incomingServer.prettyName)
         {
-            var prettyName = currentAccountData.incomingServer.prettyName; 
-            // Get the polished account name 
-            accountName = gPrefsBundle.getFormattedString("accountName",
-                                                          [prettyName,
-                                                           userName]);
             // Set that to be the name in the pagedata 
-            pageData.accname.prettyName.value = accountName;
+            pageData.accname.prettyName.value = currentAccountData.incomingServer.prettyName; 
         }
     }
     setDivTextFromForm("account.name", accountName);
