@@ -35,6 +35,7 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
 ////////////////////////////////////////////////////////////////////////
 
+
 class ResourceImpl;
 
 class ServiceImpl : public nsIRDFService {
@@ -65,7 +66,7 @@ public:
 
 class ResourceImpl : public nsIRDFResource {
 public:
-    ResourceImpl(ServiceImpl* mgr, const char* uri);
+    ResourceImpl(ServiceImpl* mgr, const char* uri, char** inturi);
     virtual ~ResourceImpl(void);
 
     // nsISupports
@@ -90,12 +91,13 @@ private:
 };
 
 
-ResourceImpl::ResourceImpl(ServiceImpl* mgr, const char* uri)
+ResourceImpl::ResourceImpl(ServiceImpl* mgr, const char* uri, char** inturi)
     : mMgr(mgr)
 {
     NS_INIT_REFCNT();
     NS_IF_ADDREF(mMgr);
     mURI = PL_strdup(uri);
+    *inturi = mURI;
 }
 
 
@@ -298,22 +300,37 @@ ServiceImpl::~ServiceImpl(void)
 
 NS_IMPL_ISUPPORTS(ServiceImpl, kIRDFServiceIID);
 
+nsIRDFResource* MakeMailAccount(const char* uri, char** key);
+nsIRDFResource* MakeMailFolder(const char* uri, char** key);
+nsIRDFResource* MakeMailMessage(const char* uri, char** key);
 
 NS_IMETHODIMP
 ServiceImpl::GetResource(const char* uri, nsIRDFResource** resource)
 {
-    ResourceImpl* result =
+    nsIRDFResource* result =
         NS_STATIC_CAST(ResourceImpl*, PL_HashTableLookup(mResources, uri));
 
     if (! result) {
-        result = new ResourceImpl(this, uri);
+        char* key;
+        if (strncmp(uri, "mailaccount:", 12) == 0) {
+            result = MakeMailAccount(uri, &key);
+        } else if (strncmp(uri, "mailbox:", 8) == 0) {
+            if (uri[strlen(uri)-1] == '/') {
+                result = MakeMailFolder(uri, &key);
+            } else {
+                result = MakeMailMessage(uri, &key);
+            }
+        } else {
+            result = new ResourceImpl(this, uri, &key);
+        }
+
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 
         // This is a little trick to make storage more efficient. For
         // the "key" in the table, we'll use the string value that's
         // stored as a member variable of the ResourceImpl object.
-        PL_HashTableAdd(mResources, result->GetURI(), result);
+        PL_HashTableAdd(mResources, key, result);
 
         // *We* don't AddRef() the resource, because the resource
         // AddRef()s *us*.
