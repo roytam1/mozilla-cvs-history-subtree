@@ -2747,8 +2747,10 @@ nsBookmarksService::CreateGroupInContainer(const PRUnichar* aName,
 }
 
 NS_IMETHODIMP
-nsBookmarksService::CreateBookmark(const PRUnichar* aName, const char* aURL, 
-                                   const PRUnichar* aDocCharSet, 
+nsBookmarksService::CreateBookmark(const PRUnichar* aName,
+                                   const char* aURL,
+                                   const PRUnichar* aShortcutURL,
+                                   const PRUnichar* aDocCharSet,
                                    nsIRDFResource** aResult)
 {
   nsresult rv;
@@ -2785,6 +2787,17 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName, const char* aURL,
   if (NS_FAILED(rv)) 
     return rv;
 
+  // Literal: Shortcut URL
+  if (aShortcutURL && !nsDependentString(aShortcutURL).IsEmpty()) {
+    nsCOMPtr<nsIRDFLiteral> shortcutLiteral;
+    rv = gRDF->GetLiteral(aShortcutURL, getter_AddRefs(shortcutLiteral));
+    if (NS_FAILED(rv)) 
+      return rv;
+    rv = mInner->Assert(bookmarkResource, kNC_ShortcutURL, shortcutLiteral, PR_TRUE);
+    if (NS_FAILED(rv)) 
+      return rv;
+  }
+
   // Date: Date of Creation
   // Convert the current date/time from microseconds (PRTime) to seconds.
   nsCOMPtr<nsIRDFDate> dateLiteral;
@@ -2815,12 +2828,15 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName, const char* aURL,
 }
 
 NS_IMETHODIMP
-nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName, const char* aURL, 
+nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName,
+                                              const char* aURL, 
+                                              const PRUnichar* aShortcutURL, 
                                               const PRUnichar* aDocCharSet, 
-                                              nsIRDFResource* aParentFolder, PRInt32 aIndex,
+                                              nsIRDFResource* aParentFolder,
+                                              PRInt32 aIndex,
                                               nsIRDFResource** aResult)
 {
-  nsresult rv = CreateBookmark(aName, aURL, aDocCharSet, aResult);
+  nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDocCharSet, aResult);
   if (NS_SUCCEEDED(rv))
     rv = InsertResource(*aResult, aParentFolder, aIndex);
   return rv;
@@ -2874,7 +2890,7 @@ nsBookmarksService::AddBookmarkImmediately(const char *aURI,
     return rv;
 
   nsCOMPtr<nsIRDFResource> bookmark;
-  return CreateBookmarkInContainer(aTitle, aURI, aCharset, destinationFolder, -1, 
+  return CreateBookmarkInContainer(aTitle, aURI, nsnull, aCharset, destinationFolder, -1, 
                                    getter_AddRefs(bookmark));
 }
 

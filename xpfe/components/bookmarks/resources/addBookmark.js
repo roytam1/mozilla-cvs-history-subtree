@@ -96,6 +96,7 @@
 
 var gFld_Name   = null;
 var gFld_URL    = null; 
+var gFld_ShortcutURL = null; 
 var gFolderTree = null;
 var gCB_AddGroup = null;
 
@@ -113,6 +114,7 @@ function Startup()
 {
   gFld_Name = document.getElementById("name");
   gFld_URL = document.getElementById("url");
+  gFld_ShortcutURL = document.getElementById("shortcutUrl");
   gCB_AddGroup = document.getElementById("addgroup");
   var bookmarkView = document.getElementById("bookmarks-view");
 
@@ -248,12 +250,12 @@ function onOK()
       const groups = window.arguments[5];
       for (var i = 0; i < groups.length; ++i) {
         url = getNormalizedURL(groups[i].url);
-        kBMS.createBookmarkInContainer(groups[i].name, url,
+        kBMS.createBookmarkInContainer(groups[i].name, url, null,
                                        groups[i].charset, group, -1);
       }
     } else if (gFld_URL.value) {
       url = getNormalizedURL(gFld_URL.value);
-      var newBookmark = kBMS.createBookmarkInContainer(gFld_Name.value, url, gBookmarkCharset, rFolder, -1);
+      var newBookmark = kBMS.createBookmarkInContainer(gFld_Name.value, url, gFld_ShortcutURL.value, gBookmarkCharset, rFolder, -1);
       if (window.arguments.length > 4 && window.arguments[4] == "newBookmark") {
         window.arguments[5].newBookmark = newBookmark;
       }
@@ -307,6 +309,7 @@ function useDefaultFolder ()
 
 var gOldNameValue = "";
 var gOldURLValue = "";
+var gOldShortcutURLValue = "";
 
 function toggleGroup()
 {
@@ -320,6 +323,12 @@ function toggleGroup()
   gOldURLValue = gFld_URL.value;
   gFld_URL.value = temp;
   gFld_URL.disabled = gCB_AddGroup.checked;
+
+  // swap between single bookmark and group shortcut url
+  temp = gOldShortcutURLValue;
+  gOldShortcutURLValue = gFld_ShortcutURL.value;
+  gFld_ShortcutURL.value = temp;
+  gFld_ShortcutURL.disabled = gCB_AddGroup.checked;
 
   gFld_Name.select();
   gFld_Name.focus();

@@ -64,9 +64,16 @@ interface nsIBookmarksService : nsISupports
     nsIRDFResource createGroupInContainer(in wstring aName, in nsIRDFResource aParentFolder, 
                                           in long aIndex);
 
-    nsIRDFResource createBookmark(in wstring aName, in string aURL, in wstring docCharSet);
-    nsIRDFResource createBookmarkInContainer(in wstring aName, in string aURI, in wstring docCharSet, 
-                                             in nsIRDFResource aFolder, in long aIndex);
+    nsIRDFResource createBookmark(in wstring aName,
+                                  in string aURL,
+                                  in wstring aShortcutURL,
+                                  in wstring docCharSet);
+    nsIRDFResource createBookmarkInContainer(in wstring aName,
+                                             in string aURL,
+                                             in wstring aShortcutURL,
+                                             in wstring docCharSet, 
+                                             in nsIRDFResource aFolder,
+                                             in long aIndex);
 
     nsIRDFResource createSeparator();
 

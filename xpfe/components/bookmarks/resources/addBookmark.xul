@@ -74,12 +74,12 @@
         </hbox>
         <textbox id="url" oninput="onFieldInput();"/>
       </row>
-<!--
       <row align="center">
-        <label value="&keyword.label;" accesskey="&keyword.accesskey;" control="keyword"/>
-        <textbox id="keyword" oninput="onFieldInput();"/>
+        <hbox pack="end">
+          <label value="&shortcutURL.label;" accesskey="&shortcutURL.accesskey;" control="shortcutURL"/>
+        </hbox>
+        <textbox id="shortcutUrl"/>
       </row>
--->
     </rows>
   </grid>
 

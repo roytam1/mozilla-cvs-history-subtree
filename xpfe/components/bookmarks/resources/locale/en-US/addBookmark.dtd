@@ -26,8 +26,8 @@
 <!ENTITY name.accesskey             "N">
 <!ENTITY url.label                  "Address:">
 <!ENTITY url.accesskey              "A">
-<!ENTITY keyword.label              "Keyword:">
-<!ENTITY keyword.accesskey          "K">
+<!ENTITY shortcutURL.label          "Keyword:">
+<!ENTITY shortcutURL.accesskey      "K">
 <!ENTITY destination.label          "Destination:">
 <!ENTITY destination.accesskey      "D">
 <!ENTITY newFolder.label            "New Folder...">

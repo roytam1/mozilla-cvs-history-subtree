@@ -1501,7 +1501,7 @@ var BookmarksUtils = {
       if (fw)
         aCharSet = fw.document.characterSet;
     }
-    return BMSVC.createBookmark(aName, aURL, aCharSet);
+    return BMSVC.createBookmark(aName, aURL, null, aCharSet);
   },
 
   flushDataSource: function ()
