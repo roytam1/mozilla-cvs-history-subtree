@@ -30,7 +30,7 @@
 #############################################################################
 
 use strict;
-use Mozilla::LDAP::API (:constant :api);
+use Mozilla::LDAP::API qw(:constant :api);
 
 
 # This is the entry we will be adding.  Do not use a pre-existing entry.

@@ -25,7 +25,7 @@
 #
 #############################################################################
 
-use Mozilla::LDAP::API (:api :constant);
+use Mozilla::LDAP::API qw(:api :constant);
 use strict;
 
 
