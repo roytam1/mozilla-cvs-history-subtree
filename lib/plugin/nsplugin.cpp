@@ -493,11 +493,13 @@ nsPluginInstancePeer::UnregisterWindow(void* window)
     npn_unregisterwindow(npp, window);
 }
 
+#ifdef XP_MAC
 NS_METHOD_(PRInt16)
 nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
 {
     return npn_allocateMenuID(npp, isSubmenu);
 }
+#endif // XP_MAC
 
 NS_METHOD_(jref)
 nsPluginInstancePeer::GetJavaPeer(void)

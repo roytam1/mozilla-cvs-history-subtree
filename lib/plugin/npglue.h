@@ -443,9 +443,11 @@ public:
 	
     NS_IMETHOD_(void)
     UnregisterWindow(void* window);	
-    
+
+#ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu);
+#endif // XP_MAC
 
     ////////////////////////////////////////////////////////////////////////////
     // Methods specific to NPILiveConnectPluginInstancePeer:

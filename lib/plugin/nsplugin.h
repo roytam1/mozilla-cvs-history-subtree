@@ -800,7 +800,7 @@ public:
 #ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu) = 0;
-#endif
+#endif // XP_MAC
 
 };
 
