@@ -8,8 +8,8 @@ var prettyName = "US English profile default";
 var regName    = "defaults/mozilla/en-US";
 // --- END CHANGABLE STUFF ---
 
-srDest = $SpaceRequired$:bin;
-err    = initInstall(prettyName, regName, "$Version$"); 
+srDest = @XPI_SpaceRequired@:bin;
+err    = initInstall(prettyName, regName, "@XPI_Version@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
@@ -20,7 +20,7 @@ if(verifyDiskSpace(fProgram, srDest))
   setPackageFolder(fProgram);
 
   err = addDirectory("",
-                     "$Version$",
+                     "@XPI_Version@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram
