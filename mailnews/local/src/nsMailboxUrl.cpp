@@ -360,7 +360,7 @@ nsresult nsMailboxUrl::ParseUrl(const nsString& aSpec)
 {
 	if (m_filePath)
 		delete m_filePath;
-	GetPath(getter_Copies(m_file));
+	DirFile(getter_Copies(m_file));
 	ParseSearchPart();
 	m_filePath = new nsFileSpec(nsFilePath(m_file));
     return NS_OK;
