@@ -551,8 +551,11 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   // them or we may get this event at startup before we've had time to load
   // our window.
   BrowserWindowController* controller = [self getMainWindowBrowserController];
-  if (reuseWindow && controller && [controller newTabsAllowed]) {
-    [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
+  if (reuseWindow && controller /*&& [controller newTabsAllowed]*/) {
+    // simon wanted to open a new tab here instead of reusing the content area,
+    // but people really want it to reuse the content.
+//    [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
+    [controller loadURL: inURLString referrer:nil activate:YES];
   }
   else {
     // should use BrowserWindowController openNewWindowWithURL, but that method
