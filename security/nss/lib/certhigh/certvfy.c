@@ -90,78 +90,45 @@ CERT_CertTimesValid(CERTCertificate *c)
 }
 
 /*
- * verify the signature of a signed data object with the given DER publickey
- */
-SECStatus
-CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd, 
-                                   SECKEYPublicKey *pubKey,
-		                   void *wincx)
-{
-    SECStatus        rv;
-    SECOidTag        algid;
-    SECItem          sig;
-
-    if ( !pubKey || !sd ) {
-	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
-	return SECFailure;
-    }
-
-    /* check the signature */
-    sig = sd->signature;
-    /* convert sig->len from bit counts to byte count. */
-    DER_ConvertBitString(&sig);
-
-    algid = SECOID_GetAlgorithmTag(&sd->signatureAlgorithm);
-    rv = VFY_VerifyData(sd->data.data, sd->data.len, pubKey, &sig,
-			algid, wincx);
-
-    return rv ? SECFailure : SECSuccess;
-}
-
-/*
- * verify the signature of a signed data object with the given DER publickey
- */
-SECStatus
-CERT_VerifySignedDataWithPubKeyInfo(CERTSignedData *sd, 
-                                    CERTSubjectPublicKeyInfo *pubKeyInfo,
-		                    void *wincx)
-{
-    SECKEYPublicKey *pubKey;
-    SECStatus        rv		= SECFailure;
-
-    /* get cert's public key */
-    pubKey = SECKEY_ExtractPublicKey(pubKeyInfo);
-    if (pubKey) {
-	rv =  CERT_VerifySignedDataWithPublicKey(sd, pubKey, wincx);
-	SECKEY_DestroyPublicKey(pubKey);
-    }
-    return rv;
-}
-
-/*
  * verify the signature of a signed data object with the given certificate
  */
 SECStatus
 CERT_VerifySignedData(CERTSignedData *sd, CERTCertificate *cert,
 		      int64 t, void *wincx)
 {
+    SECItem sig;
     SECKEYPublicKey *pubKey = 0;
-    SECStatus        rv     = SECFailure;
+    SECStatus rv;
     SECCertTimeValidity validity;
+    SECOidTag algid;
 
     /* check the certificate's validity */
     validity = CERT_CheckCertValidTimes(cert, t, PR_FALSE);
     if ( validity != secCertTimeValid ) {
-	return rv;
+	return(SECFailure);
     }
 
     /* get cert's public key */
     pubKey = CERT_ExtractPublicKey(cert);
-    if (pubKey) {
-	rv =  CERT_VerifySignedDataWithPublicKey(sd, pubKey, wincx);
-	SECKEY_DestroyPublicKey(pubKey);
+    if ( !pubKey ) {
+	return(SECFailure);
     }
-    return rv;
+
+    /* check the signature */
+    sig = sd->signature;
+    DER_ConvertBitString(&sig);
+
+    algid = SECOID_GetAlgorithmTag(&sd->signatureAlgorithm);
+    rv = VFY_VerifyData(sd->data.data, sd->data.len, pubKey, &sig,
+			algid, wincx);
+
+    SECKEY_DestroyPublicKey(pubKey);
+
+    if ( rv ) {
+	return(SECFailure);
+    }
+
+    return(SECSuccess);
 }
 
 

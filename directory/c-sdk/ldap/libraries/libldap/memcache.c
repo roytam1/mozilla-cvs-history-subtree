@@ -1101,8 +1101,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
     if (nRes != LDAP_SUCCESS)
 	return nRes;
 
-    LDAP_MUTEX_LOCK( ld, LDAP_RESP_LOCK );
-
     for (r = &(ld->ld_responses); *r; r = &((*r)->lm_next))
 	if ((*r)->lm_msgid == msgid)
 	    break;
@@ -1113,8 +1111,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
 	}
 
     *r = pCopy;
-
-    LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
     
     return nRes;
 }
@@ -1416,9 +1412,8 @@ memcache_access(LDAPMemCache *cache, int mode,
 	unsigned long key = *((unsigned long*)pData1);
 	char *basedn = (char*)pData3;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData2, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData2, (void**)&pRes);
 	if (nRes == LDAP_SUCCESS)
 	    return( LDAP_ALREADY_EXISTS );
 
@@ -1447,13 +1442,11 @@ memcache_access(LDAPMemCache *cache, int mode,
 	LDAPMessage *pMsg = (LDAPMessage*)pData2;
 	LDAPMessage *pCopy = NULL;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData1, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData1, (void**)&pRes);
 	if (nRes != LDAP_SUCCESS)
 	    return nRes;
 
-	pRes = (ldapmemcacheRes*) hashResult;
 	nRes = memcache_dup_message(pMsg, pMsg->lm_msgid, 0, &pCopy, &size);
 	if (nRes != LDAP_SUCCESS) {
 	    nRes = htable_remove(cache->ldmemc_resTmp, pData1, NULL);
@@ -1521,11 +1514,10 @@ memcache_access(LDAPMemCache *cache, int mode,
     /* Remove cached entries in the temporary cache. */
     else if (mode == MEMCACHE_ACCESS_DELETE) {
 
-	void* hashResult = NULL;
+	ldapmemcacheRes *pCurRes = NULL;
 
 	if ((nRes = htable_remove(cache->ldmemc_resTmp, pData1,
-	                          &hashResult)) == LDAP_SUCCESS) {
-	    ldapmemcacheRes *pCurRes = (ldapmemcacheRes*) hashResult;
+	                          (void**)&pCurRes)) == LDAP_SUCCESS) {
 	    memcache_free_from_list(cache, pCurRes, LIST_TMP);
 	    memcache_free_entry(cache, pCurRes);
 	}

@@ -80,6 +80,9 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
             html_failed "<TR><TD>$*"
         fi
         echo "</TABLE><BR>" >> ${RESULTS}
+        if [ -n "${TAILPID}" ]; then
+            ${KILL} "${TAILPID}"
+        fi
         if [ -n "${SERVERPID}" -a -f "${SERVERPID}" ]; then
             ${KILL} `cat ${SERVERPID}`
         fi

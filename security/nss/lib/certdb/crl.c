@@ -567,7 +567,6 @@ SEC_FindCrlByKeyOnSlot(PK11SlotInfo *slot, SECItem *crlKey, int type,
     SECItem *derCrl = NULL;
     CK_OBJECT_HANDLE crlHandle = 0;
     char *url = NULL;
-    int nsserror;
 
     PORT_Assert(decoded);
     if (!decoded) {
@@ -581,15 +580,8 @@ SEC_FindCrlByKeyOnSlot(PK11SlotInfo *slot, SECItem *crlKey, int type,
 
     /* XXX it would be really useful to be able to fetch the CRL directly into an
        arena. This would avoid a copy later on in the decode step */
-    PORT_SetError(0);
     derCrl = PK11_FindCrlByName(&slot, &crlHandle, crlKey, type, &url);
     if (derCrl == NULL) {
-	/* if we had a problem other than the CRL just didn't exist, return
-	 * a failure to the upper level */
-	nsserror = PORT_GetError();
-	if ((nsserror != 0) && (nsserror != SEC_ERROR_CRL_NOT_FOUND)) {
-	    rv = SECFailure;
-	}
 	goto loser;
     }
     PORT_Assert(crlHandle != CK_INVALID_HANDLE);
@@ -1052,9 +1044,7 @@ SECStatus ShutdownCRLCache(void)
     /* empty the cache */
     PL_HashTableEnumerateEntries(crlcache.issuers, &FreeIssuer, NULL);
     PL_HashTableDestroy(crlcache.issuers);
-    crlcache.issuers = NULL;
     PR_DestroyLock(crlcache.lock);
-    crlcache.lock = NULL;
     return SECSuccess;
 }
 
@@ -1172,7 +1162,7 @@ PRBool CRLStillExists(CERTSignedCrl* crl)
 }
 
 SECStatus DPCache_Refresh(CRLDPCache* cache, CERTSignedCrl* crlobject,
-                          void* wincx)
+                          int64 t, void* wincx)
 {
     SECStatus rv = SECSuccess;
     /*  Check if it is an invalid CRL
@@ -1194,20 +1184,17 @@ SECStatus DPCache_Refresh(CRLDPCache* cache, CERTSignedCrl* crlobject,
     } else {
         SECStatus signstatus = SECFailure;
         if (cache->issuer) {
-            int64 issuingDate = 0;
-            signstatus = DER_UTCTimeToTime(&issuingDate, &crlobject->crl.lastUpdate);
-            if (SECSuccess == signstatus) {
-                signstatus = CERT_VerifySignedData(&crlobject->signatureWrap,
-                                                    cache->issuer, issuingDate, wincx);
-            }
+            signstatus = CERT_VerifySignedData(&crlobject->signatureWrap,
+                                                cache->issuer, t, wincx);
         }
         if (SECSuccess != signstatus) {
-            if (!cache->issuer) {
-                /* we tried to verify without an issuer cert . This is
-                   because this CRL came through a call to SEC_FindCrlByName.
+            if (0 == t) {
+                /* we tried to verify with a time of t=0 . Most likely this is
+                   because this CRL came through a call to SEC_FindCrlByName,
+                   not because the signature fails to verify.
                    So we don't cache this verification failure. We'll try
                    to verify the CRL again when a certificate from that issuer
-                   becomes available */
+                   gets verified */
                 GetOpaqueCRLFields(crlobject)->unverified = PR_TRUE;
             } else {
                 GetOpaqueCRLFields(crlobject)->unverified = PR_FALSE;
@@ -1303,7 +1290,7 @@ void DPCache_Empty(CRLDPCache* cache)
     }
 }
 
-SECStatus DPCache_Fetch(CRLDPCache* cache, void* wincx)
+SECStatus DPCache_Fetch(CRLDPCache* cache, int64 t, void* wincx)
 {
     SECStatus rv = SECSuccess;
     CERTSignedCrl* crlobject = NULL;
@@ -1363,7 +1350,7 @@ SECStatus DPCache_Fetch(CRLDPCache* cache, void* wincx)
 
     /* update the cache with this new CRL */
     if (SECSuccess == rv) {
-        rv = DPCache_Refresh(cache, crlobject, wincx);
+        rv = DPCache_Refresh(cache, crlobject, t, wincx);
     }
     return rv;
 }
@@ -1426,7 +1413,7 @@ SECStatus DPCache_Lookup(CRLDPCache* cache, SECItem* sn, CERTCrlEntry** returned
 
 #endif
 
-SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer,
+SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer, int64 t,
                          void* wincx, PRBool readlocked)
 {
     /* Update the CRLDPCache now. We don't cache token CRL lookup misses
@@ -1441,10 +1428,10 @@ SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer,
     }
 
     /* verify CRLs that couldn't be checked when inserted into the cache
-       because the issuer cert was unavailable. These are CRLs that were
-       inserted into the cache through SEC_FindCrlByName, rather than
-       through a certificate verification (CERT_CheckCRL) */
-    if (issuer) {
+       because issuer and time was unavailable. These are CRLs that were
+       inserted through SEC_FindCrlByName, rather than through a certificate
+       verification */
+    if (t && issuer) {
         /* if we didn't have a valid issuer cert yet, but we do now. add it */
         if (NULL == cache->issuer) {
             /* save the issuer cert */
@@ -1452,25 +1439,23 @@ SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer,
         }
 
         /* re-process all unverified CRLs */
-        if (cache->issuer) {
-            for (i = 0; i < cache->ncrls ; i++) {
-                CERTSignedCrl* acrl = cache->crls[i];
+        for (i = 0; i < cache->ncrls ; i++) {
+            CERTSignedCrl* acrl = cache->crls[i];
+            if (PR_TRUE == GetOpaqueCRLFields(acrl)->unverified) {
+                DPCache_LockWrite();
+                /* check that we are the first thread to update */
                 if (PR_TRUE == GetOpaqueCRLFields(acrl)->unverified) {
-                    DPCache_LockWrite();
-                    /* check that we are the first thread to update */
-                    if (PR_TRUE == GetOpaqueCRLFields(acrl)->unverified) {
-                        DPCache_Refresh(cache, acrl, wincx);
-                        /* also check all the other CRLs */
-                        for (i = i+1 ; i < cache->ncrls ; i++) {
-                            acrl = cache->crls[i];
-                            if (acrl && (PR_TRUE == GetOpaqueCRLFields(acrl)->unverified)) {
-                                DPCache_Refresh(cache, acrl, wincx);
-                            }
+                    DPCache_Refresh(cache, acrl, t, wincx);
+                    /* also check all the other CRLs */
+                    for (i = i+1 ; i < cache->ncrls ; i++) {
+                        acrl = cache->crls[i];
+                        if (acrl && (PR_TRUE == GetOpaqueCRLFields(acrl)->unverified)) {
+                            DPCache_Refresh(cache, acrl, t, wincx);
                         }
                     }
-                    DPCache_UnlockWrite();
-                    break;
                 }
+                DPCache_UnlockWrite();
+                break;
             }
         }
     }
@@ -1500,7 +1485,7 @@ SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer,
                         }
                     }
                     /* and try to fetch a new one */
-                    rv = DPCache_Fetch(cache, wincx);
+                    rv = DPCache_Fetch(cache, t, wincx);
                     updated = PR_TRUE;
                     if (SECSuccess == rv) {
                         rv = DPCache_Cleanup(cache); /* clean up deleted CRLs
@@ -1517,7 +1502,7 @@ SECStatus DPCache_Update(CRLDPCache* cache, CERTCertificate* issuer,
         if (0 == cache->ncrls)
         {
             /* we are the first */
-            rv = DPCache_Fetch(cache, wincx);
+            rv = DPCache_Fetch(cache, t, wincx);
         }
         DPCache_UnlockWrite();
     }
@@ -1801,7 +1786,7 @@ SECStatus AcquireDPCache(CERTCertificate* issuer, SECItem* subject, SECItem* dp,
         if (*dpcache)
         {
             /* make sure the DP cache is up to date before using it */
-            rv = DPCache_Update(*dpcache, issuer, wincx, PR_FALSE == *writeLocked);
+            rv = DPCache_Update(*dpcache, issuer, t, wincx, PR_FALSE == *writeLocked);
         }
         else
         {
@@ -1841,6 +1826,18 @@ CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer, SECItem* dp,
     CRLDPCache* dpcache = NULL;
     if (!cert || !issuer) {
         return SECFailure;
+    }
+    /* we must check the cert issuer (or more appropriately, the CRL
+       signer)'s validity time first. If it's expired, then don't go to the
+       cache.
+       If we do and the cache is empty, a CRL will be fetched, but it won't
+       verify because of the expired issuer, causing us to put the cache in
+       the invalid state.
+       If we do and the cache is already populated, we will lookup the cert
+       in the CRL for no good reason. */
+    validity = CERT_CheckCertValidTimes(issuer, t, PR_FALSE);
+    if ( validity != secCertTimeValid ) {
+	return SECFailure;
     }
 
     rv = AcquireDPCache(issuer, &issuer->derSubject, dp, t, wincx, &dpcache, &lockedwrite);
