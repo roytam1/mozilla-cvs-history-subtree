@@ -1787,9 +1787,8 @@ nsWindow::OnDragMotionEvent(GtkWidget *aWidget,
     }
     else {
         // if there was no other motion window, then we're starting a
-        // drag.
-        dragService->StartDragSession();
-        // if there was no other motion window, send an enter event
+        // drag. Send an enter event to initiate the drag.
+
         innerMostWidget->OnDragEnter(retx, rety);
     }
 
@@ -1894,10 +1893,8 @@ nsWindow::OnDragDropEvent(GtkWidget *aWidget,
         }
     }
     else {
-        // ok, fire up the drag session so that we think that a drag is in
-        // progress
-        dragService->StartDragSession();
-        // if there was no other motion window, send an enter event
+        // if there was no other motion window, send an enter event to
+        // initiate the drag session.
         innerMostWidget->OnDragEnter(retx, rety);
     }
 
@@ -1954,9 +1951,9 @@ nsWindow::OnDragDropEvent(GtkWidget *aWidget,
     // and clear the mLastDragMotion window
     mLastDragMotionWindow = 0;
 
-    // and end our drag session
+    // Make sure to end the drag session. If this drag started in a
+    // different app, we won't get a drag_end signal to end it from.
     dragService->EndDragSession();
-
 
     return TRUE;
 }
@@ -1993,6 +1990,26 @@ nsWindow::OnDragLeave(void)
     nsEventStatus status;
     DispatchEvent(&event, status);
 
+    nsCOMPtr<nsIDragService> dragService = do_GetService(kCDragServiceCID);
+
+    if (dragService) {
+        nsCOMPtr<nsIDragSession> currentDragSession;
+        dragService->GetCurrentSession(getter_AddRefs(currentDragSession));
+
+        if (currentDragSession) {
+            nsCOMPtr<nsIDOMNode> sourceNode;
+            currentDragSession->GetSourceNode(getter_AddRefs(sourceNode));
+
+            if (!sourceNode) {
+                // We're leaving a window while doing a drag that was
+                // initiated in a differnt app. End the drag session,
+                // since we're done with it for now (until the user
+                // drags back into mozilla).
+                dragService->EndDragSession();
+            }
+        }
+    }
+
     Release();
 }
 
@@ -2010,6 +2027,13 @@ nsWindow::OnDragEnter(nscoord aX, nscoord aY)
 
     nsEventStatus status;
     DispatchEvent(&event, status);
+
+    nsCOMPtr<nsIDragService> dragService = do_GetService(kCDragServiceCID);
+
+    if (dragService) {
+        // Make sure that the drag service knows we're now dragging.
+        dragService->StartDragSession();
+    }
 
     Release();
 }
@@ -3566,6 +3590,7 @@ drag_leave_event_cb(GtkWidget *aWidget,
     nsWindow *window = get_window_for_gtk_widget(aWidget);
     if (!window)
         return;
+
     window->OnDragLeaveEvent(aWidget, aDragContext, aTime, aData);
 }
 
@@ -3695,10 +3720,6 @@ nsWindow::FireDragLeaveTimer(void)
         // send our leave signal
         mLastDragMotionWindow->OnDragLeave();
         mLastDragMotionWindow = 0;
-        // since we're leaving a toplevel window, inform the drag service
-        // that we're ending the drag
-        nsCOMPtr<nsIDragService> dragService = do_GetService(kCDragServiceCID);
-        dragService->EndDragSession();
     }
 }
 
