@@ -85,7 +85,7 @@
   <script type="application/x-javascript" src="chrome://browser/content/pref/nsPrefWindow.js"/>
 
   <hbox flex="1">
-    <vbox id="prefsCategories" class="listBox buttonBox" oncommand="switchPage(event.target.id);" orient="vertical" onmouseover="focus();">
+    <vbox id="prefsCategories" class="listBox buttonBox" oncommand="switchPage(event.target.id);" orient="vertical">
       <button id="catGeneralButton"   orient="vertical" class="buttonBoxButton" type="radio" group="categories" label="&general.label;"   
               url="chrome://browser/content/pref/pref-navigator.xul"/>
       <button id="catPrivacyButton"   orient="vertical" class="buttonBoxButton" type="radio" group="categories" label="&privacy.label;"   
