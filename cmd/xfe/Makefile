@@ -203,6 +203,13 @@ DTWIDGETS_LIB		= $(DIST)/lib/libDtWidgets.a
 XFE_WIDGETS_LIB		= $(DIST)/lib/libXfeWidgets.a
 XFE_WIDGETS_BM_LIB	= $(DIST)/lib/libXfeBm.a
 
+DYNAMIC_SYMBOLS_F	= -r dyanmic # default
+ifeq ($(OS_ARCH),SunOS) 
+ifdef NS_USE_NATIVE
+DYNAMIC_SYMBOLS_F	= -Bdynamic
+endif
+endif
+
 ifeq ($(OS_ARCH),AIX)
 NSPR_LIB	= 
 else
@@ -959,7 +966,7 @@ $(OBJDIR)/$(DSO_PROGNAME)-export.quantify: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLI
 $(OBJDIR)/$(XFE_PROGNAME)-export: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-	$(CCLD) -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(EXPORT_LDFLAGS) $(DNS_LIB)
+	$(CCLD) -o $@ $(DYNAMIC_SYMBOLS_F) $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(EXPORT_LDFLAGS) $(DNS_LIB)
 	@$(EXTRA_POST_LINK_CMD) $@
 
 $(OBJDIR)/$(XFE_PROGNAME)-export.pure: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
