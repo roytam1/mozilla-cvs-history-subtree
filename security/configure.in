@@ -9,7 +9,7 @@ dnl IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
 dnl implied. See the License for the specific language governing
 dnl rights and limitations under the License.
 dnl
-dnl The Original Code is the configure.in script for NSS/PSM.
+dnl The Original Code is the configure.in script for NSS.
 dnl
 dnl The Initial Developer of the Original Code is Netscape
 dnl Communications. Portions created by Netscape Communications are
@@ -34,13 +34,11 @@ dnl = Defaults
 dnl ========================================================
 USE_PTHREADS=
 ENABLE_CMD=1
-ENABLE_PSM=1
 MOZILLA_CLIENT=
 _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 MOZ_DEBUG=1
 MOZ_OPTIMIZE=
-PSM_LOG=
 
 dnl ========================================================
 dnl =
@@ -119,22 +117,6 @@ AC_ARG_ENABLE(cmd,
            ENABLE_CMD=
            fi])
 
-AC_ARG_ENABLE(psm,
-    [  --disable-psm           Don't build Personal Security Manager],
-    [  if test "$enableval" = "no"; then
-           ENABLE_PSM=
-           fi])
-
-AC_ARG_ENABLE(psm-log,
-    [  --enable-psm-log        Enable verbose logging in PSM (only in debug builds)],
-    PSM_LOG=1)
-
-dnl AC_ARG_ENABLE(mdupdate,
-dnl    [  --enable-mdupdate       Enable use of certain compilers' mdupdate feature],
-dnl    [ if test "$enableval" = "yes"; then
-dnl	    USE_MDUPDATE=1
-dnl      fi ])
-
 AC_PATH_PROG(WHOAMI, whoami, :)
 if test -n "$MOZ_DEBUG"; then
     AC_DEFINE(DEBUG)
@@ -143,7 +125,6 @@ if test -n "$MOZ_DEBUG"; then
 else
     AC_DEFINE(NDEBUG)
     DEFINES="$DEFINES -UDEBUG"    
-    PSM_LOG=
 fi
 
 dnl ========================================================
@@ -264,7 +245,7 @@ _make_try=`$MAKE --version 2>/dev/null`
 if test ! "$_make_try"
 then
         echo
-        echo "*** $MAKE is not GNU Make.  You will not be able to build NSS and PSM without GNU Make."
+        echo "*** $MAKE is not GNU Make.  You will not be able to build NSS without GNU Make."
         echo
         exit 1
 fi
@@ -275,7 +256,7 @@ then
         echo
         echo "*** Found GNU Make 3.77.  This version is known to have problems with the"
         echo "*** wildcard function in certain circumstances.  You may experience infinite"
-        echo "*** looping while building NSS and PSM with 3.77.  If this happens, you can"
+        echo "*** looping while building NSS with 3.77.  If this happens, you can"
         echo "*** either downgrade to 3.76.1 or try configuring with --disable-md."
         echo
 fi
@@ -516,8 +497,6 @@ dnl ========================================================
 dnl Build options
 AC_SUBST(MOZILLA_CLIENT)
 AC_SUBST(ENABLE_CMD)
-AC_SUBST(ENABLE_PSM)
-AC_SUBST(PSM_LOG)
 
 dnl Program locations
 AC_SUBST(HOST_CC)

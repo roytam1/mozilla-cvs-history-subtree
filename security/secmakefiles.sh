@@ -54,20 +54,6 @@ coreconf/nsinstall/Makefile
 
 MAKEFILES_nss=`cat ${srcdir}/nss/makefiles`
 
-if [ "$ENABLE_PSM" ]; then
-  MAKEFILES_psm="
-	psm/Makefile
-	psm/lib/Makefile
-	psm/lib/client/Makefile
-	psm/lib/nlslayer/Makefile
-	psm/lib/protocol/Makefile
-	psm/server/Makefile
-	psm/ui/Makefile
-"
-fi
-
 add_makefiles "
 $MAKEFILES_nss
-$MAKEFILES_psm
 "
-

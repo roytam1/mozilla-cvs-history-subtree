@@ -49,10 +49,6 @@ include $(CORE_DEPTH)/coreconf/autoconf.mk
 
 DIRS = coreconf nss
 
-ifdef ENABLE_PSM
-DIRS += psm
-endif
-
 #######################################################################
 # (2) Include "global" configuration information. (OPTIONAL)          #
 #######################################################################
