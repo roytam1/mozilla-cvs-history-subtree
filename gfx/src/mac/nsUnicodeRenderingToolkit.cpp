@@ -694,12 +694,12 @@ PRBool nsUnicodeRenderingToolkit :: TransliterateFallbackDrawChar(
 #define NCount (VCount * TCount)
 static void UnicodePrecomposedHangulTo4EUCKR(PRUnichar in, char *out)
 {
-        static const PRUint8 lMap[LCount] = {
+        static PRUint8 lMap[LCount] = {
           0xa1, 0xa2, 0xa4, 0xa7, 0xa8, 0xa9, 0xb1, 0xb2, 0xb3, 0xb5,
           0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe
         };
 
-        static const PRUint8 tMap[TCount] = {
+        static PRUint8 tMap[TCount] = {
           0xd4, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa9, 0xaa, 
           0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb4, 0xb5, 
           0xb6, 0xb7, 0xb8, 0xba, 0xbb, 0xbc, 0xbd, 0xbe
@@ -1367,7 +1367,7 @@ nsUnicodeRenderingToolkit::GetTextDimensions(const PRUnichar *aString, PRUint32 
   nsTextDimensions thisDim;
   
   const short *scriptFallbackFonts = fontmap->GetScriptFallbackFonts();
-  for(i = 0, start = 0; i < aLength; i++)
+  for(i =0, start = 0; i < aLength; i++)
   {
     fontNum[ i % 2] = fontmap->GetFontID(aString[i]);
     if ((fontNum[0] != fontNum[1]) && (0 != i))

@@ -44,11 +44,9 @@
 
 #include "nsRenderingContextImpl.h"
 #include "nsDrawingSurfaceMac.h"
+#include "nsUnicodeRenderingToolkit.h"
 
 #include "nsVoidArray.h"
-
-#include "nsMacTextRenderer.h"
-#include "nsCRT.h"
 
 class nsIFontMetrics;
 class nsIDeviceContext;
@@ -57,6 +55,7 @@ class nsFont;
 class nsTransform2D;
 
 class nsGraphicState;
+class nsUnicodeFallbackCache;
 
 class nsIGraphics;
 
@@ -135,9 +134,8 @@ public:
   NS_IMETHOD GetWidth(const char* aString, PRUint32 aLength, nscoord& aWidth);
   NS_IMETHOD GetWidth(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth,
                       PRInt32 *aFontID);
-  NS_IMETHOD DrawString(const char *aString, PRUint32 aLength, nscoord aX, nscoord aY,const nscoord* aSpacing);
-  NS_IMETHOD DrawString(const PRUnichar *aString, PRUint32 aLength,
-                        nscoord aX, nscoord aY,
+  NS_IMETHOD DrawString(const char *aString, PRUint32 aLength,nscoord aX, nscoord aY,const nscoord* aSpacing);
+  NS_IMETHOD DrawString(const PRUnichar *aString, PRUint32 aLength, nscoord aX, nscoord aY,
                         PRInt32 aFontID,
                         const nscoord* aSpacing);
   NS_IMETHOD DrawString(const nsString& aString, nscoord aX, nscoord aY,
@@ -148,26 +146,6 @@ public:
                                nsTextDimensions& aDimensions);
   NS_IMETHOD GetTextDimensions(const PRUnichar *aString, PRUint32 aLength,
                                nsTextDimensions& aDimensions, PRInt32 *aFontID);
-
-  NS_IMETHOD GetTextDimensions(const char*       aString,
-                               PRInt32           aLength,
-                               PRInt32           aAvailWidth,
-                               PRInt32*          aBreaks,
-                               PRInt32           aNumBreaks,
-                               nsTextDimensions& aDimensions,
-                               PRInt32&          aNumCharsFit,
-                               nsTextDimensions& aLastWordDimensions,
-                               PRInt32*          aFontID = nsnull);
-
-  NS_IMETHOD GetTextDimensions(const PRUnichar*  aString,
-                               PRInt32           aLength,
-                               PRInt32           aAvailWidth,
-                               PRInt32*          aBreaks,
-                               PRInt32           aNumBreaks,
-                               nsTextDimensions& aDimensions,
-                               PRInt32&          aNumCharsFit,
-                               nsTextDimensions& aLastWordDimensions,
-                               PRInt32*          aFontID = nsnull);
 
   NS_IMETHOD DrawImage(nsIImage *aImage, nscoord aX, nscoord aY);
   NS_IMETHOD DrawImage(nsIImage *aImage, nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight); 
@@ -212,11 +190,10 @@ public:
   //locals
   nsresult   SetPortTextState();
   nsresult   Init(nsIDeviceContext* aContext, CGrafPtr aPort);
-  nsresult   CommonInit();
 
     // useful for determining if we're running on MacOSX
   static PRBool OnMacOSX();
-  
+
 protected:
   enum GraphicStateChanges {
 		kFontChanged	= (1 << 0),
@@ -230,7 +207,7 @@ protected:
   void      SetupPortState();
 
 protected:
-    float                   mP2T;               // Pixel to Twips conversion factor
+    float                   mP2T;               // Pixel to Twip conversion factor
     nsIDeviceContext *      mContext;
 
     nsDrawingSurfaceMac*    mFrontSurface;
@@ -238,7 +215,7 @@ protected:
 
     CGrafPtr                mPort;              // current grafPort - shortcut for mCurrentSurface->GetPort()
     nsGraphicState *        mGS;                // current graphic state - shortcut for mCurrentSurface->GetGS()
-    nsMacTextRenderer       *mTextRenderer;     // NOT owned
+    nsUnicodeRenderingToolkit mUnicodeRenderingToolkit;
     nsAutoVoidArray         mGSStack;           // GraphicStates stack, used for PushState/PopState
     PRUint32                mChanges;           // bit mask of attributes that have changed since last Push().
 #ifdef IBMBIDI

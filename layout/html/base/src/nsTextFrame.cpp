@@ -1734,7 +1734,7 @@ RenderSelectionCursor(nsIRenderingContext& aRenderingContext,
 
 // XXX letter-spacing
 // XXX word-spacing
-#if defined(XP_PC) || defined(XP_UNIX) || defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_PC) || defined(XP_UNIX) || defined(XP_MAC)
 #define USE_INVERT_FOR_SELECTION
 #endif
 
@@ -4568,7 +4568,7 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   PRBool  endsInNewline = PR_FALSE;
   PRBool  justDidFirstLetter = PR_FALSE;
   nsTextDimensions dimensions, lastWordDimensions;
-#if defined(_WIN32) || defined(XP_OS2) || defined(XP_MACOSX)
+#if defined(_WIN32) || defined(XP_OS2)
   PRBool  measureTextRuns = !aTextData.mComputeMaxWordWidth && !aTs.mPreformatted &&
                             !aTs.mSmallCaps && !aTs.mWordSpacing && !aTs.mLetterSpacing &&
                             aTextData.mWrapping;
@@ -4869,7 +4869,7 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
     continue;
 
   MeasureTextRun:
-#if defined(_WIN32) || defined(XP_OS2) || defined(XP_MACOSX)
+#if defined(_WIN32) || defined(XP_OS2)
     PRInt32 numCharsFit;
     // These calls can return numCharsFit not positioned at a break in the textRun. Beware.
     if (aTx.TransformedTextIsAscii()) {

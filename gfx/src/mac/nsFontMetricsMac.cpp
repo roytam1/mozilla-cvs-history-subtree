@@ -39,7 +39,6 @@
 #include "nsCarbonHelpers.h"
 
 #include "nsFontMetricsMac.h"
-#include "nsFontEnumerator.h"
 #include "nsDeviceContextMac.h"
 #include "nsUnicodeFontMappingMac.h"
 #include "nsUnicodeMappingUtil.h"
@@ -50,11 +49,11 @@
 
 
 nsFontMetricsMac :: nsFontMetricsMac()
-: mFont(nsnull)
-, mFontNum(BAD_FONT_NUM)
-, mFontMapping(nsnull)
 {
   NS_INIT_REFCNT();
+  mFont = nsnull;
+  mFontNum = BAD_FONT_NUM;
+  mFontMapping = nsnull;
 }
   
 nsFontMetricsMac :: ~nsFontMetricsMac()
@@ -134,6 +133,7 @@ nsUnicodeFontMappingMac* nsFontMetricsMac::GetUnicodeFontMapping()
 	return mFontMapping;
 }
 
+
 static void MapGenericFamilyToFont(const nsString& aGenericFamily, nsString& aFontFace, ScriptCode aScriptCode)
 {
   // the CSS generic names (conversions from the old Mac Mozilla code for now)
@@ -142,7 +142,7 @@ static void MapGenericFamilyToFont(const nsString& aGenericFamily, nsString& aFo
   {
     nsString*   foundFont = unicodeMappingUtil->GenericFontNameForScript(
           aScriptCode,
-          nsUnicodeMappingUtil::MapGenericFontNameType(aGenericFamily));
+          unicodeMappingUtil->MapGenericFontNameType(aGenericFamily));
     if (foundFont)
     {
       aFontFace = *foundFont;
@@ -218,8 +218,12 @@ static PRBool FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *a
 void nsFontMetricsMac::RealizeFont()
 {
 	nsAutoString	fontName;
+	nsUnicodeMappingUtil	*unicodeMappingUtil;
 	ScriptCode				theScriptCode;
 
+	unicodeMappingUtil = nsUnicodeMappingUtil::GetSingleton ();
+	if (unicodeMappingUtil)
+	{
 		nsAutoString	theLangGroupString;
 
 		if (mLangGroup)
@@ -227,12 +231,17 @@ void nsFontMetricsMac::RealizeFont()
 		else
 			theLangGroupString.Assign(NS_LITERAL_STRING("ja"));
 
-	theScriptCode = nsUnicodeMappingUtil::MapLangGroupToScriptCode(NS_ConvertUCS2toUTF8(theLangGroupString).get());
+		theScriptCode = unicodeMappingUtil->MapLangGroupToScriptCode(
+		    NS_ConvertUCS2toUTF8(theLangGroupString).get());
+
+	}
+	else
+		theScriptCode = GetScriptManagerVariable (smSysScript);
 
 	FontEnumData  fontData(mContext, fontName, theScriptCode);
 	mFont->EnumerateFamilies(FontEnumCallback, &fontData);
   
-	nsFontEnumeratorMac::GetMacFontID(fontName, mFontNum);
+	nsDeviceContextMac::GetMacFontNumber(fontName, mFontNum);
 }
 
 

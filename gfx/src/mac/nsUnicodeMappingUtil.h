@@ -38,7 +38,6 @@
 #include <Script.h>
 
 #include "prtypes.h"
-#include "nsCOMPtr.h"
 #include "nsUnicodeBlock.h"
 #include "nsDebug.h"
 #include "nscore.h"
@@ -58,75 +57,56 @@ typedef enum {
 } nsGenericFontNameType;
 //--------------------------------------------------------------------------
 
-class nsUnicodeMappingUtil
-{
+class nsUnicodeMappingUtil {
 public:
 	nsUnicodeMappingUtil();
 	~nsUnicodeMappingUtil();
-
 	void Init();
 	void CleanUp();
 	void Reset();
-
 	inline PRBool ScriptEnabled(ScriptCode script) 
-		{
-		  return (0 != (mScriptEnabled & (1L << script)));
-		}
-
+		{ return (0 != (mScriptEnabled & (1L << script))); };
 	inline ScriptCode BlockToScript(nsUnicodeBlock blockID) 
 		{ 
 			NS_PRECONDITION(blockID < kUnicodeBlockSize, "illegal value");
 			return (ScriptCode) mBlockToScriptMapping[blockID]; 
-		}
-
+		};
 	inline short ScriptFont(ScriptCode script) 
 		{ 
 			NS_PRECONDITION(script < smPseudoTotalScripts, "bad script code");
 			return  mScriptFontMapping[script]; 
-		}
-
+		};		
+	nsGenericFontNameType MapGenericFontNameType(const nsString& aGenericName);
 	inline nsString* GenericFontNameForScript(ScriptCode aScript, nsGenericFontNameType aType) const 
 	{
 			NS_PRECONDITION(aScript < smPseudoTotalScripts, "bad script code");
 			NS_PRECONDITION(aType <= kUknownGenericFontName, "illegal value");
 			if( aType >= kUknownGenericFontName)
 				return nsnull;
-			
+			else
 				return mGenericFontMapping[aScript][aType]; 
 	}
 	
-  // utilities
-	static nsGenericFontNameType MapGenericFontNameType(const nsString& aGenericName);
-  static ScriptCode MapLangGroupToScriptCode(const char* aLangGroup);
-
-
-public:
-
+  ScriptCode MapLangGroupToScriptCode(const char* aLangGroup);
 	static nsUnicodeMappingUtil* GetSingleton();
 	static void FreeSingleton();
+	nsString *mGenericFontMapping[smPseudoTotalScripts][kUknownGenericFontName];
 	
 protected:
-
 	void InitScriptEnabled();
     void InitGenericFontMapping();
     void InitBlockToScriptMapping();
     void InitScriptFontMapping();
     void InitFromPref();
    
-  // internal method that does not Init() the singleton
-  static nsUnicodeMappingUtil* InternalFetchSingleton();
-  
   static int  PR_CALLBACK_DECL PrefChangedCallback( const char* aPrefName, void* instance_data);
   static void PR_CALLBACK_DECL PrefEnumCallback(const char* aName, void* aClosure);
     
 private:
-  PRPackedBool                mInitialized;
 	PRUint32 mScriptEnabled;
 	short 	 mScriptFontMapping[smPseudoTotalScripts];
 	PRInt8   mBlockToScriptMapping[kUnicodeBlockSize];
 	nsCOMPtr<nsIPref> mPref;
-
-	nsString*                   mGenericFontMapping[smPseudoTotalScripts][kUknownGenericFontName];
 	
 	static nsUnicodeMappingUtil* gSingleton;
 

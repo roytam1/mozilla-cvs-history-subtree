@@ -37,7 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIServiceManager.h"
 #include "nsIInterfaceRequestorUtils.h" 
 #include "nsRenderingContextMac.h"
 #include "nsDeviceContextMac.h"
@@ -64,64 +63,10 @@
 #include "nsRegionPool.h"
 #include "nsFontUtils.h"
 
-#include "nsQuickDrawTextRenderer.h"
-#include "nsUnicodeTextRenderer.h"
-
 #include "nsCarbonHelpers.h"
-#include "nsNativeThemeMac.h" // for OnMacOSX
 
-#include "nsIPrefBranch.h"
-#include "nsIPref.h"
+#define STACK_THRESHOLD 1000
 
-// this class should be used as a static class
-class nsTextRendererFactory
-{
-public:
-
-  enum ETextRendererKind {
-    eTextRendererKindUnknown,
-    eTextRendererKindQuickDraw,
-    eTextRendererKindATSUI
-  };
-
-  nsTextRendererFactory()
-  : mTextRenderer(nsnull)
-  , mTextRendererKind(eTextRendererKindUnknown)
-  {
-  }
-
-  ~nsTextRendererFactory()
-  {
-    delete mTextRenderer;
-  }
-  
-  nsMacTextRenderer* GexTextRenderer(ETextRendererKind inTextRendererKind, PRBool inHighQuality)
-  {
-    if (inTextRendererKind != mTextRendererKind)
-    {
-      delete mTextRenderer;
-      
-      if (inTextRendererKind == eTextRendererKindATSUI)
-        mTextRenderer = new nsUnicodeTextRenderer(inHighQuality);
-      else
-        mTextRenderer = new nsQuickDrawTextRenderer(inHighQuality);
-
-      mTextRendererKind = inTextRendererKind;
-    }
-    
-    return mTextRenderer;
-  }
-
-private:  
-
-  nsMacTextRenderer*    mTextRenderer;
-  ETextRendererKind     mTextRendererKind;
-  
-};
-
-static nsTextRendererFactory sTextRendererFactory;
-
-#pragma mark -
 
 //------------------------------------------------------------------------
 
@@ -130,7 +75,6 @@ nsRenderingContextMac::nsRenderingContextMac()
 , mContext(nsnull)
 , mCurrentSurface(nsnull)
 , mPort(nsnull)
-, mTextRenderer(nsnull)
 , mGS(nsnull)
 , mChanges(kEverythingChanged)
 #ifdef IBMBIDI
@@ -148,12 +92,6 @@ nsRenderingContextMac::nsRenderingContextMac()
 
 nsRenderingContextMac::~nsRenderingContextMac()
 {
-  if (mTextRenderer)
-  {
-    mTextRenderer->ClearDrawingState();
-    mTextRenderer = nsnull;   // we don't own this
-  }
-  
 	// restore stuff
 	NS_IF_RELEASE(mContext);
 
@@ -198,9 +136,6 @@ NS_IMETHODIMP nsRenderingContextMac::Init(nsIDeviceContext* aContext, nsIWidget*
 		NS_IF_ADDREF(mContext);
 	}
 
-  nsresult rv = CommonInit();
-  if (NS_FAILED(rv)) return rv;
-
  	// select the surface
 	mFrontSurface->Init(aWindow);
 	SelectDrawingSurface(mFrontSurface);
@@ -212,7 +147,7 @@ NS_IMETHODIMP nsRenderingContextMac::Init(nsIDeviceContext* aContext, nsIWidget*
 	// with the children already clipped out (as well as the areas masked by the 
 	// widget's parents).
 
-	return rv;
+	return NS_OK;
 }
 
 //------------------------------------------------------------------------
@@ -227,14 +162,11 @@ NS_IMETHODIMP nsRenderingContextMac::Init(nsIDeviceContext* aContext, nsDrawingS
 	mContext = aContext;
 	NS_IF_ADDREF(mContext);
 
-  nsresult rv = CommonInit();
-  if (NS_FAILED(rv)) return rv;
-
 	// select the surface
 	nsDrawingSurfaceMac* surface = static_cast<nsDrawingSurfaceMac*>(aSurface);
 	SelectDrawingSurface(surface);
 
-	return rv;
+	return NS_OK;
 }
 
 //------------------------------------------------------------------------
@@ -249,60 +181,10 @@ nsresult nsRenderingContextMac::Init(nsIDeviceContext* aContext, CGrafPtr aPort)
 	mContext = aContext;
 	NS_IF_ADDREF(mContext);
 
-  nsresult rv = CommonInit();
-  if (NS_FAILED(rv)) return rv;
-
  	// select the surface
 	mFrontSurface->Init(aPort);
 	SelectDrawingSurface(mFrontSurface);
 
-	return rv;
-}
-
-//------------------------------------------------------------------------
-
-enum {
-  eTextRenderingPrefQuickdraw = 0,
-  eTextRenderingPrefATSUIFast = 1,
-  eTextRenderingPrefATSUISlow = 2
-};
-
-
-// this function can get called more than once
-nsresult nsRenderingContextMac::CommonInit()
-{
-  if (mTextRenderer == nsnull)
-  {  
-    PRInt32 prefValue = 1;
-    nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREF_CONTRACTID));
-    if (prefs)
-      prefs->GetIntPref("nglayout.mac.renderingmode", &prefValue);
-
-    nsTextRendererFactory::ETextRendererKind textRenderer = nsTextRendererFactory::eTextRendererKindQuickDraw;
-
-    PRBool  useHighQualityRendering = PR_TRUE;
-    // read a pref here    
-    switch (prefValue)
-    {
-      case eTextRenderingPrefQuickdraw:
-        textRenderer = nsTextRendererFactory::eTextRendererKindQuickDraw;
-        break;
-        
-      case eTextRenderingPrefATSUIFast:
-        useHighQualityRendering = PR_FALSE;
-      case eTextRenderingPrefATSUISlow:
-        // fall through
-        if (OnMacOSX())
-          textRenderer = nsTextRendererFactory::eTextRendererKindATSUI;
-        break;
-    }
-
-     mTextRenderer = sTextRendererFactory.GexTextRenderer(textRenderer, useHighQualityRendering);
-
-    if (!mTextRenderer)
-      return NS_ERROR_OUT_OF_MEMORY;
-  }
-  
 	return NS_OK;
 }
 
@@ -330,7 +212,6 @@ void nsRenderingContextMac::SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, 
 	aSurface->GetGrafPtr(&newPort);
 	mPort = newPort;
 	mGS = aSurface->GetGS();
-	
 	mTranMatrix = &(mGS->mTMatrix);
 
   nsGraphicsUtils::SafeSetPort(mPort);
@@ -352,7 +233,6 @@ void nsRenderingContextMac::SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, 
 	if (mGS->mFontMetrics && (aChanges & kFontChanged))
 		SetFont(mGS->mFontMetrics);
 	
-	NS_ASSERTION(mContext, "should have device context here");
 	if (!mContext) return;
 	
 	// GS and context initializations
@@ -883,7 +763,7 @@ NS_IMETHODIMP nsRenderingContextMac::SetColor(nscolor aColor)
 	color.green = COLOR8TOCOLOR16(NS_GET_G(aColor));
 	color.blue = COLOR8TOCOLOR16(NS_GET_B(aColor));
 	::RGBForeColor(&color);
-	mGS->mColor = aColor;
+	mGS->mColor = aColor ;
 
 	mChanges |= kColorChanged;
   	
@@ -1322,7 +1202,9 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(char ch, nscoord &aWidth)
 		return mGS->mFontMetrics->GetSpaceWidth(aWidth);
 	}
 
-	return GetWidth(&ch, 1, aWidth);
+	char buf[1];
+	buf[0] = ch;
+	return GetWidth(buf, 1, aWidth);
 }
 
 //------------------------------------------------------------------------
@@ -1333,7 +1215,9 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(PRUnichar ch, nscoord &aWidth, PRI
 		return mGS->mFontMetrics->GetSpaceWidth(aWidth);
 	}
 
-	return GetWidth(&ch, 1, aWidth, aFontID);
+	PRUnichar buf[1];
+	buf[0] = ch;
+	return GetWidth(buf, 1, aWidth, aFontID);
 }
 
 //------------------------------------------------------------------------
@@ -1355,24 +1239,34 @@ NS_IMETHODIMP nsRenderingContextMac::GetWidth(const char *aString, nscoord &aWid
 NS_IMETHODIMP
 nsRenderingContextMac::GetWidth(const char* aString, PRUint32 aLength, nscoord& aWidth)
 {
-  nsresult rv = NS_OK;
 	SetupPortState();
 
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextWidth(aString, 0, aLength, aWidth);
+	// set native font and attributes
+	SetPortTextState();
 
-	return rv;
+//   below is a bad assert, aString is not guaranteed null terminated...
+//    NS_ASSERTION(strlen(aString) >= aLength, "Getting width on garbage string");
+  
+	// measure text
+	short textWidth = ::TextWidth(aString, 0, aLength);
+	aWidth = NSToCoordRound(float(textWidth) * mP2T);
+
+	return NS_OK;
 }
 
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::GetWidth(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
 {
-  nsresult rv = NS_OK;
 	SetupPortState();
 	
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextWidth(aString, 0, aLength, aWidth);
+ 	nsresult rv = SetPortTextState();
+ 	if (NS_FAILED(rv))
+ 		return rv;
+
+	rv = mUnicodeRenderingToolkit.PrepareToDraw(mP2T, mContext, mGS, mPort, mRightToLeftText);
+	if (NS_SUCCEEDED(rv))
+    rv = mUnicodeRenderingToolkit.GetWidth(aString, aLength, aWidth, aFontID);
     
 	return rv;
 }
@@ -1383,11 +1277,12 @@ NS_IMETHODIMP
 nsRenderingContextMac::GetTextDimensions(const char* aString, PRUint32 aLength,
                                         nsTextDimensions& aDimensions)
 {
-  nsresult rv = NS_OK;
-  SetupPortState();
-  
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextDimensions(aString, 0, aLength, aDimensions);
+  nsresult rv= GetWidth(aString, aLength, aDimensions.width);
+  if (NS_SUCCEEDED(rv) && (mGS->mFontMetrics))
+  {
+    mGS->mFontMetrics->GetMaxAscent(aDimensions.ascent);
+    mGS->mFontMetrics->GetMaxDescent(aDimensions.descent);
+  }
   return rv;
 }
 
@@ -1395,88 +1290,87 @@ NS_IMETHODIMP
 nsRenderingContextMac::GetTextDimensions(const PRUnichar* aString, PRUint32 aLength,
                                          nsTextDimensions& aDimensions, PRInt32* aFontID)
 {
-  nsresult rv = NS_OK;
   SetupPortState();
   
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextDimensions(aString, 0, aLength, aDimensions);
+  nsresult rv = SetPortTextState();
+  if (NS_FAILED(rv))
+    return rv;
+
+  rv = mUnicodeRenderingToolkit.PrepareToDraw(mP2T, mContext, mGS, mPort, mRightToLeftText);
+	if (NS_SUCCEEDED(rv))
+    rv = mUnicodeRenderingToolkit.GetTextDimensions(aString, aLength, aDimensions, aFontID);
     
   return rv;
 }
 
-
-//------------------------------------------------------------------------
-NS_IMETHODIMP nsRenderingContextMac::GetTextDimensions(const char* aString,
-                             PRInt32           aLength,
-                             PRInt32           aAvailWidth,
-                             PRInt32*          aBreaks,
-                             PRInt32           aNumBreaks,
-                             nsTextDimensions& aDimensions,
-                             PRInt32&          aNumCharsFit,
-                             nsTextDimensions& aLastWordDimensions,
-                             PRInt32*          aFontID)
-{
-  nsresult rv = NS_OK;
-	SetupPortState();
-
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextDimensions(aString, aLength, aAvailWidth, aBreaks,
-                aNumBreaks, aDimensions, aNumCharsFit, aLastWordDimensions);
-	
-  return rv;
-}
-
-
-//------------------------------------------------------------------------
-NS_IMETHODIMP nsRenderingContextMac::GetTextDimensions(const PRUnichar*  aString,
-                             PRInt32           aLength,
-                             PRInt32           aAvailWidth,
-                             PRInt32*          aBreaks,
-                             PRInt32           aNumBreaks,
-                             nsTextDimensions& aDimensions,
-                             PRInt32&          aNumCharsFit,
-                             nsTextDimensions& aLastWordDimensions,
-                             PRInt32*          aFontID)
-{
-  nsresult rv = NS_OK;
-  SetupPortState();
-
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->GetTextDimensions(aString, aLength, aAvailWidth, aBreaks,
-                aNumBreaks, aDimensions, aNumCharsFit, aLastWordDimensions);
-
-  return rv;
-}
-
-
 #pragma mark -
-
 //------------------------------------------------------------------------
+
 NS_IMETHODIMP nsRenderingContextMac::DrawString(const char *aString, PRUint32 aLength,
                                          nscoord aX, nscoord aY,
                                          const nscoord* aSpacing)
 {
-  nsresult rv = NS_OK;
 	SetupPortState();
 
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->DrawText(aString, 0, aLength, aX, aY, aSpacing);
+	PRInt32 x = aX;
+	PRInt32 y = aY;
+	
+	if (mGS->mFontMetrics) {
+		// set native font and attributes
+		SetPortTextState();
+	}
 
- 		return rv;
+	mGS->mTMatrix.TransformCoord(&x,&y);
+
+	::MoveTo(x,y);
+	if ( aSpacing == NULL )
+		::DrawText(aString,0,aLength);
+	else
+	{
+		int buffer[STACK_THRESHOLD];
+		int* spacing = (aLength <= STACK_THRESHOLD ? buffer : new int[aLength]);
+		if (spacing)
+		{
+			mGS->mTMatrix.ScaleXCoords(aSpacing, aLength, spacing);
+			PRInt32 currentX = x;
+			for (PRInt32 i = 0; i < aLength; i++)
+			{
+				::DrawChar(aString[i]);
+				currentX += spacing[i];
+				::MoveTo(currentX, y);
+			}
+			if (spacing != buffer)
+				delete[] spacing;
+		}
+		else
+			return NS_ERROR_OUT_OF_MEMORY;
+	}
+
+	return NS_OK;
 }
 
-	
+
+
+
 //------------------------------------------------------------------------
 NS_IMETHODIMP nsRenderingContextMac::DrawString(const PRUnichar *aString, PRUint32 aLength,
                                          nscoord aX, nscoord aY, PRInt32 aFontID,
                                          const nscoord* aSpacing)
 {
-  nsresult rv = NS_OK;
-
 	SetupPortState();
 
-  rv = mTextRenderer->SetupDrawingState(mPort, mContext, mGS);
-  rv = mTextRenderer->DrawText(aString, 0, aLength, aX, aY, aSpacing);
+ 	nsresult rv = SetPortTextState();
+ 	if (NS_FAILED(rv))
+ 		return rv;
+
+	NS_PRECONDITION(mGS->mFontMetrics != nsnull, "No font metrics in SetPortTextState");
+	
+	if (nsnull == mGS->mFontMetrics)
+		return NS_ERROR_NULL_POINTER;
+
+	rv = mUnicodeRenderingToolkit.PrepareToDraw(mP2T, mContext, mGS, mPort,mRightToLeftText);
+	if (NS_SUCCEEDED(rv))
+		rv = mUnicodeRenderingToolkit.DrawString(aString, aLength, aX, aY, aFontID, aSpacing);
 
 	return rv;        
 }

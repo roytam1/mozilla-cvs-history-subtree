@@ -126,7 +126,6 @@ int std::printf(const char* format, ...)
 #define call_quartz_proc(name, args) \
     if (quartz_func(name)) quartz_func(name) args
 
-/*
 decl_quartz_func(OSStatus, QDBeginCGContext, (CGrafPtr inPort, CGContextRef *  outContext))
 {
     call_quartz_func(QDBeginCGContext, (inPort, outContext), cfragNoSymbolErr);
@@ -136,19 +135,12 @@ decl_quartz_func(OSStatus, QDEndCGContext, (CGrafPtr inPort, CGContextRef *  ino
 {
     call_quartz_func(QDEndCGContext, (inPort, inoutContext), cfragNoSymbolErr);
 }
-*/
 
-decl_quartz_func(void, CGContextRelease, (CGContextRef ctx))
-{
-    call_quartz_proc(CGContextRelease, (ctx));
-}
-
-/*
 decl_quartz_func(OSStatus, ClipCGContextToRegion, (CGContextRef ctx, const Rect * portRect, RgnHandle region))
 {
     call_quartz_func(ClipCGContextToRegion, (ctx, portRect, region), cfragNoSymbolErr);
 }
-*/
+
 decl_quartz_func(void, CGContextScaleCTM, (CGContextRef ctx, float sx, float sy))
 {
     call_quartz_proc(CGContextScaleCTM, (ctx, sx, sy));

@@ -607,7 +607,7 @@ public:
   NS_IMETHOD GetTextDimensions(const PRUnichar* aString, PRUint32 aLength,
                                nsTextDimensions& aDimensions, PRInt32* aFontID = nsnull) = 0;
 
-#if defined(_WIN32) || defined(XP_OS2) || defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(_WIN32) || defined(XP_OS2)
   /**
    * Given an available width and an array of break points,
    * returns the dimensions (in app units) of the text that fit and
