@@ -63,12 +63,12 @@ USE_MSVC = 1
 
 LIB_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
- /subsystem:windows /dll /incremental:yes /debug\
+ /subsystem:windows /dll /debug /pdb:none\
  /machine:I386
 
 EXE_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
- /subsystem:console /incremental:yes /debug\
+ /subsystem:console /debug /pdb:none\
  /machine:I386
 
 CAFEDIR = t:/cafe
