@@ -36,7 +36,7 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE overlay SYSTEM "chrome://communicator/locale/xml/prettyprint.dtd">
+<!DOCTYPE overlay SYSTEM "chrome://global/locale/xml/prettyprint.dtd">
 
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -45,8 +45,8 @@
   <xsl:output method="xml"/>
 
   <xsl:template match="/">
-    <link href="chrome://communicator/content/xml/XMLPrettyPrint.css" type="text/css" rel="stylesheet"/>
-    <link title="Monospace" href="chrome://communicator/content/xml/XMLMonoPrint.css" type="text/css" rel="alternate stylesheet"/>
+    <link href="chrome://global/content/xml/XMLPrettyPrint.css" type="text/css" rel="stylesheet"/>
+    <link title="Monospace" href="chrome://global/content/xml/XMLMonoPrint.css" type="text/css" rel="alternate stylesheet"/>
     <div id="header">
       <p>
         &xml.nostylesheet;
