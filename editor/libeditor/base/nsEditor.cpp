@@ -5081,6 +5081,14 @@ nsEditor::CreateHTMLContent(const nsAString& aTag, nsIContent** aContent)
 
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(tempDoc);
 
+   // XXX Wallpaper over editor bug (editor tries to create elements with an
+   //     empty nodename).
+   if (aTag.IsEmpty()) {
+     NS_ERROR("Don't pass an empty tag to nsEditor::CreateHTMLContent, "
+              "check caller.");
+     return NS_ERROR_FAILURE;
+   }
+ 
   nsINodeInfoManager *nodeInfoManager = doc->GetNodeInfoManager();
   NS_ENSURE_TRUE(nodeInfoManager, NS_ERROR_FAILURE);
 
