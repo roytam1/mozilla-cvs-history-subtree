@@ -237,7 +237,7 @@
 #define DEFINED_CSS_PROP_SVG
 #endif
 #ifndef CSS_PROP_SVGRESET
-#define CSS_PROP_SVGRESET(name_, id_, method_, hint_, datastruct_, member_, type_, iscoord_) /* nothing */
+#define CSS_PROP_SVGRESET(name_, id_, method_, datastruct_, member_, type_, iscoord_) /* nothing */
 #define DEFINED_CSS_PROP_SVGRESET
 #endif
 #endif /* defined(MOZ_SVG) */
