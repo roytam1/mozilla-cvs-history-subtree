@@ -498,7 +498,7 @@ function AbExport()
     if (!selectedABURI) return;
     
     var directory = GetDirectoryFromURI(selectedABURI);
-    addressbook.exportAddressBook(directory);
+    addressbook.exportAddressBook(window, directory);
   }
   catch (ex) {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
