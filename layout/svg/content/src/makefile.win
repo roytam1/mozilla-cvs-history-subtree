@@ -31,6 +31,10 @@ REQUIRES = \
 
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
+CPPSRCS=					\
+	nsSVGAtoms.cpp				\
+	$(NULL)
+
 CPP_OBJS=					\
 	.\$(OBJDIR)\nsSVGAtoms.obj		\
 	$(NULL)
@@ -49,7 +53,7 @@ LCFLAGS = \
 
 include <$(DEPTH)\config\rules.mak>
 
-libs:: $(LIBRARY)
+install:: $(LIBRARY)
 	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 
 clobber::
