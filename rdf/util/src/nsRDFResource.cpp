@@ -50,10 +50,6 @@ nsRDFResource::~nsRDFResource(void)
 {
     gRDFService->UnregisterResource(this);
 
-    // N.B. that we need to free the URI *after* we un-cache the resource,
-    // due to the way that the resource manager is implemented.
-    delete[] mURI;
-
     if (--gRefCnt == 0) {
         nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
         gRDFService = nsnull;
@@ -85,17 +81,17 @@ nsRDFResource::QueryInterface(REFNSIID iid, void** result)
 // nsIRDFNode methods:
 
 NS_IMETHODIMP
-nsRDFResource::Init(const char* uri)
+nsRDFResource::Init(char* uri)
 {
-    mURI = nsCRT::strdup(uri);
-    if (mURI == nsnull)
+    mURI = uri;
+    if (! mURI.get())
         return NS_ERROR_OUT_OF_MEMORY;
 
     return gRDFService->RegisterResource(this, PR_TRUE);
 }
 
 NS_IMETHODIMP
-nsRDFResource::EqualsNode(nsIRDFNode* node, PRBool* result) const
+nsRDFResource::EqualsNode(nsIRDFNode* node, PRBool* result)
 {
     nsresult rv;
     nsIRDFResource* resource;
@@ -114,30 +110,32 @@ nsRDFResource::EqualsNode(nsIRDFNode* node, PRBool* result) const
 // nsIRDFResource methods:
 
 NS_IMETHODIMP
-nsRDFResource::GetValue(const char* *uri) const
+nsRDFResource::GetValue(char* *uri)
 {
+    NS_PRECONDITION(uri != nsnull, "null ptr");
     if (!uri)
         return NS_ERROR_NULL_POINTER;
-    *uri = mURI;
+
+    *uri = mURI.ToNewCString();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsRDFResource::EqualsResource(const nsIRDFResource* resource, PRBool* result) const
+nsRDFResource::EqualsResource(nsIRDFResource* resource, PRBool* result)
 {
     if (!resource || !result)
         return NS_ERROR_NULL_POINTER;
 
-    const char *uri;
-    if (NS_SUCCEEDED(resource->GetValue(&uri))) {
-        return NS_SUCCEEDED(EqualsString(uri, result)) ? NS_OK : NS_ERROR_FAILURE;
+    nsCOMCString uri;
+    if (NS_SUCCEEDED(resource->GetValue( getter_Copies(uri) ))) {
+        return NS_SUCCEEDED(EqualsString(NS_CONST_CAST(char*, uri.get()), result)) ? NS_OK : NS_ERROR_FAILURE;
     }
 
     return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
-nsRDFResource::EqualsString(const char* uri, PRBool* result) const
+nsRDFResource::EqualsString(char* uri, PRBool* result)
 {
     if (!uri || !result)
         return NS_ERROR_NULL_POINTER;

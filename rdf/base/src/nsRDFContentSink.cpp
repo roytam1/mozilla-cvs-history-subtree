@@ -703,7 +703,7 @@ RDFContentSinkImpl::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
                 value.Trim(" \t\n\r");
 
                 nsIRDFLiteral* literal;
-                if (NS_SUCCEEDED(rv = mRDFService->GetLiteral(value, &literal))) {
+                if (NS_SUCCEEDED(rv = mRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)value, &literal))) {
                     rv = rdf_ContainerAppendElement(mDataSource,
                                                     GetContextElement(1),
                                                     literal);
@@ -780,14 +780,14 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
             nsAutoString uri = aNode.GetValueAt(i);
             nsRDFParserUtils::StripAndConvert(uri);
 
-            return mRDFService->GetUnicodeResource(uri, aResource);
+            return mRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
         }
 
         if (attr.Equals(kTagRDF_ID)) {
             const char* docURI;
             mDocumentURL->GetSpec(&docURI);
 
-            if (NS_FAILED(rv = mRDFService->GetResource(docURI, aResource)))
+            if (NS_FAILED(rv = mRDFService->GetResource((char*)docURI, aResource)))
                 return rv;
 
             nsAutoString uri(docURI);
@@ -799,7 +799,7 @@ RDFContentSinkImpl::GetIdAboutAttribute(const nsIParserNode& aNode,
 
             uri.Append(tag);
 
-            return mRDFService->GetUnicodeResource(uri, aResource);
+            return mRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
         }
 
         if (attr.Equals(kTagRDF_aboutEach)) {
@@ -846,7 +846,7 @@ RDFContentSinkImpl::GetResourceAttribute(const nsIParserNode& aNode,
             mDocumentURL->GetSpec(&documentURL);
             rdf_PossiblyMakeAbsolute(documentURL, uri);
 
-            return mRDFService->GetUnicodeResource(uri, aResource);
+            return mRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
         }
     }
     return NS_ERROR_FAILURE;
@@ -1035,7 +1035,7 @@ RDFContentSinkImpl::OpenProperty(const nsIParserNode& aNode)
     // name. We can do this 'cause we don't need it anymore...
     ns.Append(tag);
     nsIRDFResource* rdfProperty;
-    if (NS_FAILED(rv = mRDFService->GetUnicodeResource(ns, &rdfProperty)))
+    if (NS_FAILED(rv = mRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)ns, &rdfProperty)))
         return rv;
 
     nsIRDFResource* rdfResource;

@@ -97,19 +97,19 @@ rdf_EnsureRDFService(void)
                                                     (nsISupports**) &gRDFService)))
         goto done;
 
-    if (NS_FAILED(rv = gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_instanceOf)))
+    if (NS_FAILED(rv = gRDFService->GetResource((char*) kURIRDF_instanceOf, &kRDF_instanceOf)))
         goto done;
 
-    if (NS_FAILED(rv = gRDFService->GetResource(kURIRDF_Bag, &kRDF_Bag)))
+    if (NS_FAILED(rv = gRDFService->GetResource((char*) kURIRDF_Bag, &kRDF_Bag)))
         goto done;
 
-    if (NS_FAILED(rv = gRDFService->GetResource(kURIRDF_Seq, &kRDF_Seq)))
+    if (NS_FAILED(rv = gRDFService->GetResource((char*) kURIRDF_Seq, &kRDF_Seq)))
         goto done;
 
-    if (NS_FAILED(rv = gRDFService->GetResource(kURIRDF_Alt, &kRDF_Alt)))
+    if (NS_FAILED(rv = gRDFService->GetResource((char*) kURIRDF_Alt, &kRDF_Alt)))
         goto done;
 
-    if (NS_FAILED(rv = gRDFService->GetResource(kURIRDF_nextVal, &kRDF_nextVal)))
+    if (NS_FAILED(rv = gRDFService->GetResource((char*) kURIRDF_nextVal, &kRDF_nextVal)))
         goto done;
 
 done:
@@ -130,9 +130,9 @@ done:
 ////////////////////////////////////////////////////////////////////////
 
 PRBool
-rdf_IsOrdinalProperty(const nsIRDFResource* property)
+rdf_IsOrdinalProperty(nsIRDFResource* property)
 {
-    const char* s;
+    char* s;
     if (NS_FAILED(property->GetValue(&s)))
         return PR_FALSE;
 
@@ -158,7 +158,7 @@ rdf_IsOrdinalProperty(const nsIRDFResource* property)
 nsresult
 rdf_OrdinalResourceToIndex(nsIRDFResource* aOrdinal, PRInt32* aIndex)
 {
-    const char* s;
+    char* s;
     if (NS_FAILED(aOrdinal->GetValue(&s)))
         return PR_FALSE;
 
@@ -322,7 +322,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     NS_ASSERTION(object,    "null ptr");
 
 #ifdef DEBUG_waterson
-    const char* s;
+    char* s;
     predicate->GetValue(&s);
     printf(" %s", (strchr(s, '#') ? strchr(s, '#')+1 : s));
     subject->GetValue(&s);
@@ -338,7 +338,7 @@ rdf_Assert(nsIRDFDataSource* ds,
         NS_RELEASE(objectResource);
     }
     else if (NS_SUCCEEDED(object->QueryInterface(kIRDFLiteralIID, (void**) &objectLiteral))) {
-        const PRUnichar* p;
+        PRUnichar* p;
         objectLiteral->GetValue(&p);
         nsAutoString s2(p);
         char buf[1024];
@@ -364,7 +364,7 @@ rdf_Assert(nsIRDFDataSource* ds,
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
 
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(subjectURI, &subject)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)subjectURI, &subject)))
         return rv;
 
     rv = rdf_Assert(ds, subject, predicateURI, objectURI);
@@ -393,14 +393,14 @@ rdf_Assert(nsIRDFDataSource* ds,
     // literal. If you don't like it, then call ds->Assert() yerself.
     if (rdf_IsResource(objectURI)) {
         nsIRDFResource* resource;
-        if (NS_FAILED(rv = gRDFService->GetUnicodeResource(objectURI, &resource)))
+        if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)objectURI, &resource)))
             return rv;
 
         object = resource;
     }
     else {
         nsIRDFLiteral* literal;
-        if (NS_FAILED(rv = gRDFService->GetLiteral(objectURI, &literal)))
+        if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)objectURI, &literal)))
             return rv;
 
         object = literal;
@@ -429,7 +429,7 @@ rdf_Assert(nsIRDFDataSource* ds,
         return rv;
 
     nsIRDFResource* predicate;
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(predicateURI, &predicate)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)predicateURI, &predicate)))
         return rv;
 
     rv = rdf_Assert(ds, subject, predicate, objectURI);
@@ -454,7 +454,7 @@ rdf_Assert(nsIRDFDataSource* ds,
         return rv;
 
     nsIRDFResource* predicate;
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(predicateURI, &predicate)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)predicateURI, &predicate)))
         return rv;
 
     rv = rdf_Assert(ds, subject, predicate, object);
@@ -477,7 +477,7 @@ rdf_Assert(nsIRDFDataSource* ds,
         return rv;
 
     nsIRDFResource* subject;
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(subjectURI, &subject)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)subjectURI, &subject)))
         return rv;
 
     rv = rdf_Assert(ds, subject, predicateURI, object);
@@ -503,7 +503,7 @@ static PRUint32 gCounter = 0;
         s.Append(++gCounter, 10);
 
         nsIRDFResource* resource;
-        if (NS_FAILED(rv = gRDFService->GetUnicodeResource(s, &resource)))
+        if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)s, &resource)))
             return rv;
 
         // XXX an ugly but effective way to make sure that this
@@ -524,7 +524,7 @@ PRBool
 rdf_IsAnonymousResource(const nsString& aContextURI, nsIRDFResource* aResource)
 {
     nsresult rv;
-    const char* s;
+    char* s;
     if (NS_FAILED(rv = aResource->GetValue(&s))) {
         NS_ASSERTION(PR_FALSE, "unable to get resource URI");
         return PR_FALSE;
@@ -688,7 +688,7 @@ rdf_ContainerSetNextValue(nsIRDFDataSource* aDataSource,
     s.Append(aIndex, 10);
 
     nsCOMPtr<nsIRDFLiteral> nextVal;
-    if (NS_FAILED(rv = gRDFService->GetLiteral(s, getter_AddRefs(nextVal)))) {
+    if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)s, getter_AddRefs(nextVal)))) {
         NS_ERROR("unable to get nextVal literal");
         return rv;
     }
@@ -715,7 +715,7 @@ rdf_ContainerGetNextValue(nsIRDFDataSource* ds,
 
     nsIRDFNode* nextValNode       = nsnull;
     nsIRDFLiteral* nextValLiteral = nsnull;
-    const PRUnichar* s;
+    PRUnichar* s;
     nsAutoString nextValStr;
     PRInt32 nextVal;
     PRInt32 err;
@@ -741,7 +741,7 @@ rdf_ContainerGetNextValue(nsIRDFDataSource* ds,
     nextValStr.Append("_");
     nextValStr.Append(nextVal, 10);
 
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(nextValStr, result)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)nextValStr, result)))
         goto done;
 
     // Now increment the RDF:nextVal property.
@@ -754,7 +754,7 @@ rdf_ContainerGetNextValue(nsIRDFDataSource* ds,
     nextValStr.Truncate();
     nextValStr.Append(nextVal, 10);
 
-    if (NS_FAILED(rv = gRDFService->GetLiteral(nextValStr, &nextValLiteral)))
+    if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)nextValStr, &nextValLiteral)))
         goto done;
 
     if (NS_FAILED(rv = rdf_Assert(ds, container, kRDF_nextVal, nextValLiteral)))
@@ -826,7 +826,7 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
 
     while (NS_SUCCEEDED(rv = elements->Advance())) {
         nsCOMPtr<nsIRDFNode> element;
-        if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
+        if (NS_FAILED(rv = elements->GetTarget(getter_AddRefs(element)))) {
             NS_ERROR("unable to read cursor");
             return rv;
         }
@@ -844,7 +844,7 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
 
         // What was it's index?
         nsCOMPtr<nsIRDFResource> ordinal;
-        if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
+        if (NS_FAILED(rv = elements->GetLabel(getter_AddRefs(ordinal)))) {
             NS_ERROR("unable to get element's ordinal index");
             return rv;
         }
@@ -864,12 +864,12 @@ rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
         // Now slide the rest of the collection backwards to fill in
         // the gap.
         while (NS_SUCCEEDED(rv = elements->Advance())) {
-            if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
+            if (NS_FAILED(rv = elements->GetTarget(getter_AddRefs(element)))) {
                 NS_ERROR("unable to get element from cursor");
                 return rv;
             }
 
-            if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
+            if (NS_FAILED(rv = elements->GetLabel(getter_AddRefs(ordinal)))) {
                 NS_ERROR("unable to get element's ordinal index");
                 return rv;
             }
@@ -949,7 +949,7 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
 
     // Advance the cursor to the aIndex'th element.
     while (NS_SUCCEEDED(rv = elements->Advance())) {
-        if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
+        if (NS_FAILED(rv = elements->GetLabel(getter_AddRefs(ordinal)))) {
             NS_ERROR("unable to get element's ordinal index");
             return rv;
         }
@@ -1008,13 +1008,13 @@ rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
     // Now slide the rest of the container "up" by one...
     if (! cursorExhausted) {
         do {
-            if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
+            if (NS_FAILED(rv = elements->GetLabel(getter_AddRefs(ordinal)))) {
                 NS_ERROR("unable to get element's ordinal index");
                 return rv;
             }
 
             nsCOMPtr<nsIRDFNode> element;
-            if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
+            if (NS_FAILED(rv = elements->GetTarget(getter_AddRefs(element)))) {
                 NS_ERROR("unable to get element from cursor");
                 return rv;
             }
@@ -1084,14 +1084,14 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
     // Advance the cursor until we find the element we want
     while (NS_SUCCEEDED(rv = elements->Advance())) {
         nsCOMPtr<nsIRDFNode> element;
-        if (NS_FAILED(rv = elements->GetObject(getter_AddRefs(element)))) {
+        if (NS_FAILED(rv = elements->GetTarget(getter_AddRefs(element)))) {
             NS_ERROR("unable to get element from cursor");
             return rv;
         }
 
         // Okay, we've found it.
         nsCOMPtr<nsIRDFResource> ordinal;
-        if (NS_FAILED(rv = elements->GetPredicate(getter_AddRefs(ordinal)))) {
+        if (NS_FAILED(rv = elements->GetLabel(getter_AddRefs(ordinal)))) {
             NS_ERROR("unable to get element's ordinal index");
             return rv;
         }

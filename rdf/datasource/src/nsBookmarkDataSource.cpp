@@ -159,14 +159,14 @@ BookmarkParser::BookmarkParser(void)
             return;
         }
 
-        gRDFService->GetResource(kURINC_Bookmark,          &kNC_Bookmark);
-        gRDFService->GetResource(kURINC_BookmarkAddDate,   &kNC_BookmarkAddDate);
-        gRDFService->GetResource(kURINC_Description,       &kNC_Description);
-        gRDFService->GetResource(kURINC_Folder,            &kNC_Folder);
-        gRDFService->GetResource(kURINC_Name,              &kNC_Name);
-        gRDFService->GetResource(kURIRDF_type,             &kRDF_type);
-        gRDFService->GetResource(kURIWEB_LastModifiedDate, &kWEB_LastModifiedDate);
-        gRDFService->GetResource(kURIWEB_LastVisitDate,    &kWEB_LastVisitDate);
+        gRDFService->GetResource((char*) kURINC_Bookmark,          &kNC_Bookmark);
+        gRDFService->GetResource((char*) kURINC_BookmarkAddDate,   &kNC_BookmarkAddDate);
+        gRDFService->GetResource((char*) kURINC_Description,       &kNC_Description);
+        gRDFService->GetResource((char*) kURINC_Folder,            &kNC_Folder);
+        gRDFService->GetResource((char*) kURINC_Name,              &kNC_Name);
+        gRDFService->GetResource((char*) kURIRDF_type,             &kRDF_type);
+        gRDFService->GetResource((char*) kURIWEB_LastModifiedDate, &kWEB_LastModifiedDate);
+        gRDFService->GetResource((char*) kURIWEB_LastVisitDate,    &kWEB_LastVisitDate);
     }    
 }
 
@@ -278,7 +278,7 @@ BookmarkParser::NextToken(void)
                 folderURI.Append(++mCounter, 10);
             }
 
-            if (NS_FAILED(rv = gRDFService->GetUnicodeResource(folderURI, &folder))) {
+            if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)folderURI, &folder))) {
                 NS_ERROR("unable to get resource");
                 return rv;
             }
@@ -288,7 +288,7 @@ BookmarkParser::NextToken(void)
         }
         else {
             // it's the root
-            if (NS_FAILED(rv = gRDFService->GetResource(kURINC_BookmarksRoot, &folder))) {
+            if (NS_FAILED(rv = gRDFService->GetResource((char*) kURINC_BookmarksRoot, &folder))) {
                 NS_ERROR("unable to get resource");
                 return rv;
             }
@@ -310,7 +310,7 @@ BookmarkParser::NextToken(void)
 
         if (mState != eBookmarkParserState_InTitle) {
             nsIRDFLiteral* literal;
-            gRDFService->GetLiteral(mLine, &literal);
+            gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*) mLine, &literal);
             mDataSource->Assert(mLastItem, kNC_Name, literal, PR_TRUE);
             NS_RELEASE(literal);
         }
@@ -321,14 +321,14 @@ BookmarkParser::NextToken(void)
             return NS_ERROR_UNEXPECTED;
 
         nsIRDFLiteral* literal;
-        gRDFService->GetLiteral(mLine, &literal);
+        gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)mLine, &literal);
         mDataSource->Assert(mLastItem, kNC_Name, literal, PR_TRUE);
         NS_RELEASE(literal);
         NS_RELEASE(mLastItem);
     }
     else if (mState == eBookmarkParserState_InItemDescription) {
         nsIRDFLiteral* literal;
-        gRDFService->GetLiteral(mLine, &literal);
+        gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)mLine, &literal);
         mDataSource->Assert(mLastItem, kNC_Description, literal, PR_TRUE);
         NS_RELEASE(literal);
     }
@@ -386,7 +386,7 @@ BookmarkParser::DoStateTransition(void)
         // XXX in the original bmk2rdf.c, we only added the
         // description in the case that it wasn't set already...why?
         nsIRDFLiteral* literal;
-        gRDFService->GetLiteral(mLine, &literal);
+        gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)mLine, &literal);
         mDataSource->Assert(mLastItem, kNC_Description, literal, PR_TRUE);
         NS_RELEASE(literal);
     }
@@ -433,7 +433,7 @@ BookmarkParser::CreateBookmark(void)
         return NS_OK;
 
     nsIRDFResource* bookmark;
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(values[eBmkAttribute_URL], &bookmark)))
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)values[eBmkAttribute_URL], &bookmark)))
         return rv;
 
     mDataSource->Assert(bookmark, kRDF_type, kNC_Bookmark, PR_TRUE);
@@ -476,7 +476,7 @@ BookmarkParser::AssertTime(nsIRDFResource* object,
     // XXX Convert to a time
     nsresult rv;
     nsIRDFLiteral* literal;
-    if (NS_FAILED(rv = gRDFService->GetLiteral(time, &literal))) {
+    if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)time, &literal))) {
         NS_ERROR("unable to get literal for time");
         return rv;
     }
@@ -514,9 +514,9 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFDataSource
-    NS_IMETHOD Init(const char* uri);
+    NS_IMETHOD Init(char* uri);
 
-    NS_IMETHOD GetURI(const char* *uri) const {
+    NS_IMETHOD GetURI(char* *uri) {
         return mInner->GetURI(uri);
     }
 
@@ -593,11 +593,11 @@ public:
 
     NS_IMETHOD Flush(void);
 
-    NS_IMETHOD IsCommandEnabled(const char* aCommand,
+    NS_IMETHOD IsCommandEnabled(char* aCommand,
                                 nsIRDFResource* aCommandTarget,
                                 PRBool* aResult);
 
-    NS_IMETHOD DoCommand(const char* aCommand,
+    NS_IMETHOD DoCommand(char* aCommand,
                          nsIRDFResource* aCommandTarget);
 };
 
@@ -637,7 +637,7 @@ BookmarkDataSourceImpl::~BookmarkDataSourceImpl(void)
 NS_IMPL_ISUPPORTS(BookmarkDataSourceImpl, kIRDFDataSourceIID);
 
 NS_IMETHODIMP
-BookmarkDataSourceImpl::Init(const char* uri)
+BookmarkDataSourceImpl::Init(char* uri)
 {
     nsresult rv;
 
@@ -658,7 +658,7 @@ BookmarkDataSourceImpl::Init(const char* uri)
     if (NS_SUCCEEDED(rv = nsServiceManager::GetService(kRDFServiceCID,
                                                        kIRDFServiceIID,
                                                        (nsISupports**) &rdfService))) {
-        rdfService->RegisterDataSource(this);
+        rdfService->RegisterDataSource(this, PR_FALSE);
         nsServiceManager::ReleaseService(kRDFServiceCID, rdfService);
     }
 
@@ -673,7 +673,7 @@ BookmarkDataSourceImpl::Flush(void)
 
 
 NS_IMETHODIMP
-BookmarkDataSourceImpl::IsCommandEnabled(const char* aCommand,
+BookmarkDataSourceImpl::IsCommandEnabled(char* aCommand,
                                          nsIRDFResource* aCommandTarget,
                                          PRBool* aResult)
 {
@@ -682,7 +682,7 @@ BookmarkDataSourceImpl::IsCommandEnabled(const char* aCommand,
 }
 
 NS_IMETHODIMP
-BookmarkDataSourceImpl::DoCommand(const char* aCommand,
+BookmarkDataSourceImpl::DoCommand(char* aCommand,
                                   nsIRDFResource* aCommandTarget)
 {
     PR_ASSERT(0);

@@ -19,6 +19,7 @@
 #ifndef nsRDFResource_h__
 #define nsRDFResource_h__
 
+#include "nsCOMCString.h"
 #include "nsIRDFNode.h"
 #include "nscore.h"
 class nsIRDFService;
@@ -27,26 +28,26 @@ class nsIRDFService;
  * This simple base class implements nsIRDFResource, and can be used as a
  * superclass for more sophisticated resource implementations.
  */
-class NS_RDF nsRDFResource : public nsIRDFResource {
+class nsRDFResource : public nsIRDFResource {
 public:
 
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode methods:
-    NS_IMETHOD Init(const char* uri);
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD Init(char* uri);
+    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result);
 
     // nsIRDFResource methods:
-    NS_IMETHOD GetValue(const char* *uri) const;
-    NS_IMETHOD EqualsResource(const nsIRDFResource* resource, PRBool* result) const;
-    NS_IMETHOD EqualsString(const char* uri, PRBool* result) const;
+    NS_IMETHOD GetValue(char* *uri);
+    NS_IMETHOD EqualsResource(nsIRDFResource* resource, PRBool* result);
+    NS_IMETHOD EqualsString(char* uri, PRBool* result);
 
     // nsRDFResource methods:
     nsRDFResource(void);
     virtual ~nsRDFResource(void);
 
 protected:
-    char* mURI;
+    nsCOMCString mURI;
 
     static PRInt32        gRefCnt;
     static nsIRDFService* gRDFService;

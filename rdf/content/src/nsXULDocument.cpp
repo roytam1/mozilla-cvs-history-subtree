@@ -29,6 +29,7 @@
 
  */
 
+#include "nsCOMCString.h"
 #include "nsCOMPtr.h"
 #include "nsIArena.h"
 #include "nsIContent.h"
@@ -922,7 +923,7 @@ XULDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         return rv;
     }
 
-    if (NS_FAILED(rv = mDocumentDataSource->Init(uri))) {
+    if (NS_FAILED(rv = mDocumentDataSource->Init((char*)uri))) {
         NS_ERROR("unable to initialize XUL data source");
         return rv;
     }
@@ -1815,8 +1816,8 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
     //    specified property's URI has any of them as a substring.
     //
 
-    const char* p;
-    aProperty->GetValue(&p);
+    nsCOMCString p;
+    aProperty->GetValue( getter_Copies(p) );
     nsAutoString uri(p);
 
     PRInt32 index;
@@ -2221,7 +2222,7 @@ XULDocumentImpl::GetElementById(const nsString& aId, nsIDOMElement** aReturn)
     rdf_PossiblyMakeAbsolute(documentURL, uri);
 
     nsCOMPtr<nsIRDFResource> resource;
-    if (NS_FAILED(rv = mRDFService->GetUnicodeResource(uri, getter_AddRefs(resource)))) {
+    if (NS_FAILED(rv = mRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, getter_AddRefs(resource)))) {
         NS_ERROR("unable to get resource");
         return rv;
     }
@@ -2858,7 +2859,7 @@ XULDocumentImpl::AddNamedDataSource(const char* uri)
     nsresult rv;
     nsCOMPtr<nsIRDFDataSource> ds;
 
-    if (NS_FAILED(rv = mRDFService->GetDataSource(uri, getter_AddRefs(ds)))) {
+    if (NS_FAILED(rv = mRDFService->GetDataSource((char*) uri, getter_AddRefs(ds)))) {
         NS_ERROR("unable to get named datasource");
         return rv;
     }

@@ -104,7 +104,7 @@ static PRBool
 isFileURI(nsIRDFResource *r)
 {
 	PRBool		isFileURI = PR_FALSE;
-	const char	*uri;
+	char	*uri;
 	
 	r->GetValue(&uri);
 	if (!strncmp(uri, "file://", 7))
@@ -174,30 +174,30 @@ NS_IMPL_ISUPPORTS(FileSystemDataSource, kIRDFDataSourceIID);
 
 
 NS_IMETHODIMP
-FileSystemDataSource::Init(const char *uri)
+FileSystemDataSource::Init(char *uri)
 {
 	nsresult	rv = NS_ERROR_OUT_OF_MEMORY;
 
 	if ((mURI = PL_strdup(uri)) == nsnull)
 		return rv;
 
-	gRDFService->GetResource(kURINC_FileSystemRoot, &kNC_FileSystemRoot);
-	gRDFService->GetResource(kURINC_child, &kNC_Child);
-	gRDFService->GetResource(kURINC_Name, &kNC_Name);
-	gRDFService->GetResource(kURINC_URL, &kNC_URL);
-//	gRDFService->GetResource(kURINC_Columns, &kNC_Columns);
-	gRDFService->GetResource(kURINC_Folder, &kNC_Folder);
+	gRDFService->GetResource((char*) kURINC_FileSystemRoot, &kNC_FileSystemRoot);
+	gRDFService->GetResource((char*) kURINC_child, &kNC_Child);
+	gRDFService->GetResource((char*) kURINC_Name, &kNC_Name);
+	gRDFService->GetResource((char*) kURINC_URL, &kNC_URL);
+//	gRDFService->GetResource((char*) kURINC_Columns, &kNC_Columns);
+	gRDFService->GetResource((char*) kURINC_Folder, &kNC_Folder);
 
-	gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_InstanceOf);
-	gRDFService->GetResource(kURIRDF_type, &kRDF_type);
-	gRDFService->GetResource(kURIRDF_Seq, &kRDF_Seq);
+	gRDFService->GetResource((char*) kURIRDF_instanceOf, &kRDF_InstanceOf);
+	gRDFService->GetResource((char*) kURIRDF_type, &kRDF_type);
+	gRDFService->GetResource((char*) kURIRDF_Seq, &kRDF_Seq);
 
 
 	//   if (NS_FAILED(rv = AddColumns()))
 	//       return rv;
 
 	// register this as a named data source with the service manager
-	if (NS_FAILED(rv = gRDFService->RegisterDataSource(this)))
+	if (NS_FAILED(rv = gRDFService->RegisterDataSource(this, PR_FALSE)))
 		return rv;
 
 	return NS_OK;
@@ -206,7 +206,7 @@ FileSystemDataSource::Init(const char *uri)
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetURI(const char **uri) const
+FileSystemDataSource::GetURI(char **uri)
 {
 	*uri = mURI;
 	return NS_OK;
@@ -484,7 +484,7 @@ FileSystemDataSource::Flush()
 
 
 NS_IMETHODIMP
-FileSystemDataSource::IsCommandEnabled(const char* aCommand,
+FileSystemDataSource::IsCommandEnabled(char* aCommand,
                                  nsIRDFResource* aCommandTarget,
                                  PRBool* aResult)
 {
@@ -494,7 +494,7 @@ FileSystemDataSource::IsCommandEnabled(const char* aCommand,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::DoCommand(const char* aCommand,
+FileSystemDataSource::DoCommand(char* aCommand,
                           nsIRDFResource* aCommandTarget)
 {
 	return NS_OK;
@@ -682,7 +682,7 @@ FileSystemCursor::GetDataSource(nsIRDFDataSource **aDataSource)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetSubject(nsIRDFResource **aResource)
+FileSystemCursor::GetSource(nsIRDFResource **aResource)
 {
 	NS_ADDREF(mSource);
 	*aResource = mSource;
@@ -692,7 +692,7 @@ FileSystemCursor::GetSubject(nsIRDFResource **aResource)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetPredicate(nsIRDFResource **aPredicate)
+FileSystemCursor::GetLabel(nsIRDFResource **aPredicate)
 {
 	NS_ADDREF(mProperty);
 	*aPredicate = mProperty;
@@ -702,7 +702,7 @@ FileSystemCursor::GetPredicate(nsIRDFResource **aPredicate)
 
 
 NS_IMETHODIMP
-FileSystemCursor::GetObject(nsIRDFNode **aObject)
+FileSystemCursor::GetTarget(nsIRDFNode **aObject)
 {
 	if (nsnull != mTarget)
 		NS_ADDREF(mTarget);
@@ -800,7 +800,7 @@ GetFolderList(nsIRDFResource *source, nsVoidArray **array /* out */)
 		return(NS_ERROR_OUT_OF_MEMORY);
 	}
 
-	const char		*uri;
+	char		*uri;
 	source->GetValue(&uri);
 	if (nsnull == uri)
 	{
@@ -845,21 +845,17 @@ GetName(nsIRDFResource *source, nsVoidArray **array)
 		return(NS_ERROR_OUT_OF_MEMORY);
 	}
 
-	const char		*uri;
+	char		*uri;
 	source->GetValue(&uri);
 	nsFileURL		url(uri);
 	nsNativeFileSpec	native(url);
 	char			*basename = native.GetLeafName();
 	if (basename)
 	{
-		nsString *name = new nsString(basename);
-		if (nsnull != name)
-		{
-			nsIRDFLiteral *literal;
-			gRDFService->GetLiteral(*name, &literal);
-			nameArray->AppendElement(literal);
-			delete name;
-		}
+		nsAutoString name(basename);
+                nsIRDFLiteral *literal;
+                gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)name, &literal);
+                nameArray->AppendElement(literal);
 	}
 	return(NS_OK);
 }
@@ -876,12 +872,12 @@ GetURL(nsIRDFResource *source, nsVoidArray **array)
 		return(NS_ERROR_OUT_OF_MEMORY);
 	}
 
-	const char	*uri;
+	char	*uri;
 	source->GetValue(&uri);
 	nsAutoString	url(uri);
 
 	nsIRDFLiteral	*literal;
-	gRDFService->GetLiteral(url, &literal);
+	gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)url, &literal);
 	urlArray->AppendElement(literal);
 	return(NS_OK);
 }

@@ -25,6 +25,7 @@
  */
 
 
+#include "nsCOMCString.h"
 #include "nsIContent.h"
 #include "nsIRDFNode.h"
 #include "nsITextContent.h"
@@ -52,14 +53,14 @@ nsRDFContentUtils::AttachTextNode(nsIContent* parent, nsIRDFNode* value)
     nsIRDFLiteral* literal   = nsnull;
     
     if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-        const char* p;
-        if (NS_FAILED(rv = resource->GetValue(&p)))
+        nsCOMCString p;
+        if (NS_FAILED(rv = resource->GetValue( getter_Copies(p) )))
             goto error;
 
         s = p;
     }
     else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
-        const PRUnichar* p;
+        PRUnichar* p;
         if (NS_FAILED(rv = literal->GetValue(&p)))
             goto error;
 

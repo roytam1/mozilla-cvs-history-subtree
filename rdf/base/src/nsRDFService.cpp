@@ -27,6 +27,7 @@
 
  */
 
+#include "nsCOMCString.h"
 #include "nsIAtom.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
@@ -38,6 +39,7 @@
 #include "plstr.h"
 #include "prprf.h"
 #include "prlog.h"
+#include "rdf.h"
 
 #if 0
 #ifdef XP_MAC
@@ -84,26 +86,26 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 //
 class LiteralImpl : public nsIRDFLiteral {
 public:
-    LiteralImpl(const PRUnichar* s);
+    LiteralImpl(PRUnichar* s);
     virtual ~LiteralImpl(void);
 
     // nsISupports
     NS_DECL_ISUPPORTS
 
     // nsIRDFNode
-    NS_IMETHOD Init(const char* uri);
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
+    NS_IMETHOD Init(char* uri);
+    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result);
 
     // nsIRDFLiteral
-    NS_IMETHOD GetValue(const PRUnichar* *value) const;
-    NS_IMETHOD EqualsLiteral(const nsIRDFLiteral* literal, PRBool* result) const;
+    NS_IMETHOD GetValue(PRUnichar* *value);
+    NS_IMETHOD EqualsLiteral(nsIRDFLiteral* literal, PRBool* result);
 
 private:
     nsAutoString mValue;
 };
 
 
-LiteralImpl::LiteralImpl(const PRUnichar* s)
+LiteralImpl::LiteralImpl(PRUnichar* s)
     : mValue(s)
 {
     NS_INIT_REFCNT();
@@ -134,7 +136,7 @@ LiteralImpl::QueryInterface(REFNSIID iid, void** result)
 }
 
 NS_IMETHODIMP
-LiteralImpl::Init(const char* uri)
+LiteralImpl::Init(char* uri)
 {
     // Literals should always be constructed by calling nsIRDFService::GetLiteral,
     // so this method should never get called.
@@ -143,7 +145,7 @@ LiteralImpl::Init(const char* uri)
 }
 
 NS_IMETHODIMP
-LiteralImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
+LiteralImpl::EqualsNode(nsIRDFNode* node, PRBool* result)
 {
     nsresult rv;
     nsIRDFLiteral* literal;
@@ -159,26 +161,26 @@ LiteralImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
 }
 
 NS_IMETHODIMP
-LiteralImpl::GetValue(const PRUnichar* *value) const
+LiteralImpl::GetValue(PRUnichar* *value)
 {
     NS_ASSERTION(value, "null ptr");
     if (! value)
         return NS_ERROR_NULL_POINTER;
 
-    *value = mValue.GetUnicode();
+    *value = (PRUnichar*) mValue.GetUnicode();
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-LiteralImpl::EqualsLiteral(const nsIRDFLiteral* literal, PRBool* result) const
+LiteralImpl::EqualsLiteral(nsIRDFLiteral* literal, PRBool* result)
 {
     NS_ASSERTION(literal && result, "null ptr");
     if (!literal || !result)
         return NS_ERROR_NULL_POINTER;
 
     nsresult rv;
-    const PRUnichar* p;
+    PRUnichar* p;
     if (NS_FAILED(rv = literal->GetValue(&p)))
         return rv;
 
@@ -212,16 +214,14 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFService
-    NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
-    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
-    NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
+    NS_IMETHOD GetResource(char* uri, nsIRDFResource** resource);
+    NS_IMETHOD GetUnicodeResource(PRUnichar* uri, nsIRDFResource** resource);
+    NS_IMETHOD GetLiteral(PRUnichar* value, nsIRDFLiteral** literal);
     NS_IMETHOD RegisterResource(nsIRDFResource* aResource, PRBool replace = PR_FALSE);
     NS_IMETHOD UnregisterResource(nsIRDFResource* aResource);
     NS_IMETHOD RegisterDataSource(nsIRDFDataSource* dataSource, PRBool replace = PR_FALSE);
     NS_IMETHOD UnregisterDataSource(nsIRDFDataSource* dataSource);
-    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
-    NS_IMETHOD CreateDatabase(const char** uris, nsIRDFDataBase** dataBase);
-    NS_IMETHOD CreateBrowserDatabase(nsIRDFDataBase** dataBase);
+    NS_IMETHOD GetDataSource(char* uri, nsIRDFDataSource** dataSource);
 };
 
 nsIRDFService* ServiceImpl::gRDFService = nsnull;
@@ -243,6 +243,8 @@ ServiceImpl::ServiceImpl(void)
                                         PL_CompareStrings,
                                         PL_CompareValues,
                                         nsnull, nsnull);
+
+    
 }
 
 
@@ -294,7 +296,7 @@ NS_IMPL_QUERY_INTERFACE(ServiceImpl, kIRDFServiceIID);
 
 
 NS_IMETHODIMP
-ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
+ServiceImpl::GetResource(char* aURI, nsIRDFResource** aResource)
 {
     // Sanity checks
     NS_PRECONDITION(aURI != nsnull, "null ptr");
@@ -420,7 +422,7 @@ ServiceImpl::GetResource(const char* aURI, nsIRDFResource** aResource)
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsIRDFResource** aResource)
+ServiceImpl::GetUnicodeResource(PRUnichar* aURI, nsIRDFResource** aResource)
 {
     nsString uriStr(aURI);
     char buf[128];
@@ -441,7 +443,7 @@ ServiceImpl::GetUnicodeResource(const PRUnichar* aURI, nsIRDFResource** aResourc
 
 
 NS_IMETHODIMP
-ServiceImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
+ServiceImpl::GetLiteral(PRUnichar* uri, nsIRDFLiteral** literal)
 {
     LiteralImpl* result = new LiteralImpl(uri);
     if (! result)
@@ -461,8 +463,8 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
 
     nsresult rv;
 
-    const char* uri;
-    rv = aResource->GetValue(&uri);
+    nsCOMCString uri;
+    rv = aResource->GetValue( getter_Copies(uri) );
     if (NS_FAILED(rv)) {
         NS_ERROR("unable to get URI from resource");
         return rv;
@@ -505,8 +507,8 @@ ServiceImpl::UnregisterResource(nsIRDFResource* resource)
 
     nsresult rv;
 
-    const char* uri;
-    if (NS_FAILED(rv = resource->GetValue(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = resource->GetValue( getter_Copies(uri) )))
         return rv;
 
     PL_HashTableRemove(mResources, uri);
@@ -522,8 +524,8 @@ ServiceImpl::RegisterDataSource(nsIRDFDataSource* aDataSource, PRBool replace)
 
     nsresult rv;
 
-    const char* uri;
-    if (NS_FAILED(rv = aDataSource->GetURI(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = aDataSource->GetURI( getter_Copies(uri) )))
         return rv;
 
     nsIRDFDataSource* ds =
@@ -549,8 +551,8 @@ ServiceImpl::UnregisterDataSource(nsIRDFDataSource* aDataSource)
 
     nsresult rv;
 
-    const char* uri;
-    if (NS_FAILED(rv = aDataSource->GetURI(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = aDataSource->GetURI( getter_Copies(uri) )))
         return rv;
 
     nsIRDFDataSource* ds =
@@ -564,7 +566,7 @@ ServiceImpl::UnregisterDataSource(nsIRDFDataSource* aDataSource)
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
+ServiceImpl::GetDataSource(char* uri, nsIRDFDataSource** aDataSource)
 {
     // First, check the cache to see if we already have this
     // datasource loaded and initialized.
@@ -651,21 +653,6 @@ ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** aDataSource)
     }
 
     return NS_OK;
-}
-
-NS_IMETHODIMP
-ServiceImpl::CreateDatabase(const char** uri, nsIRDFDataBase** dataBase)
-{
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
-NS_IMETHODIMP
-ServiceImpl::CreateBrowserDatabase(nsIRDFDataBase** dataBase)
-{
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult

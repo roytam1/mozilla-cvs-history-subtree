@@ -85,6 +85,7 @@
 #include "nsIStyledContent.h"
 #include "nsIStyleRule.h"
 #include "nsIURL.h"
+#include "nsXULTreeElement.h"
 #include "rdfutil.h"
 
 // The XUL interfaces implemented by the RDF content node.
@@ -284,6 +285,7 @@ private:
     static nsIAtom*             kClassAtom;
     static nsIAtom*             kStyleAtom;
     static nsIAtom*             kContainerAtom;
+    static nsIAtom*             kTreeAtom;
 
     nsIDocument*      mDocument;
     void*             mScriptObject;
@@ -296,8 +298,11 @@ private:
     nsIEventListenerManager* mListenerManager;
     nsXULAttributes*  mAttributes;
     PRBool            mContentsMustBeGenerated;
+
     nsVoidArray*		  mBroadcastListeners;
     nsIDOMXULElement* mBroadcaster;
+    nsXULElement*     mInnerXULElement;
+
 };
 
 
@@ -308,6 +313,7 @@ nsIAtom*             RDFElementImpl::kIdAtom;
 nsIAtom*             RDFElementImpl::kClassAtom;
 nsIAtom*             RDFElementImpl::kStyleAtom;
 nsIAtom*             RDFElementImpl::kContainerAtom;
+nsIAtom*             RDFElementImpl::kTreeAtom;
 PRInt32              RDFElementImpl::kNameSpaceID_RDF;
 PRInt32              RDFElementImpl::kNameSpaceID_XUL;
 
@@ -325,6 +331,7 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
       mListenerManager(nsnull),
       mAttributes(nsnull),
       mContentsMustBeGenerated(PR_FALSE),
+      mInnerXULElement(nsnull),
       mBroadcastListeners(nsnull),
       mBroadcaster(nsnull)
 {
@@ -343,6 +350,7 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
         kClassAtom     = NS_NewAtom("class");
         kStyleAtom     = NS_NewAtom("style");
         kContainerAtom = NS_NewAtom("container");
+        kTreeAtom      = NS_NewAtom("tree");
 
         rv = nsRepository::CreateInstance(kNameSpaceManagerCID,
                                           nsnull,
@@ -402,8 +410,11 @@ RDFElementImpl::~RDFElementImpl()
         NS_IF_RELEASE(kClassAtom);
         NS_IF_RELEASE(kStyleAtom);
         NS_IF_RELEASE(kContainerAtom);
+        NS_IF_RELEASE(kTreeAtom);
         NS_IF_RELEASE(gNameSpaceManager);
     }
+
+    delete mInnerXULElement;
 }
 
 
@@ -457,6 +468,16 @@ RDFElementImpl::QueryInterface(REFNSIID iid, void** result)
     }
     else if (iid.Equals(kIJSScriptObjectIID)) {
         *result = NS_STATIC_CAST(nsIJSScriptObject*, this);
+    }
+    else if (iid.Equals(nsIDOMXULTreeElement::GetIID()) &&
+             (mNameSpaceID == kNameSpaceID_XUL) &&
+             (mTag == kTreeAtom)) {
+        if (! mInnerXULElement) {
+            if ((mInnerXULElement = new nsXULTreeElement(this)) == nsnull)
+                return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        return mInnerXULElement->QueryInterface(iid, result);
     }
     else {
         *result = nsnull;
@@ -1040,11 +1061,16 @@ RDFElementImpl::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject
 
     if (! mScriptObject) {
         nsIScriptGlobalObject *global = aContext->GetGlobalObject();
-        rv = NS_NewScriptXULElement(aContext,
-                                    (nsISupports*)(nsIDOMXULElement*) this,
-                                    global,
-                                    (void**) &mScriptObject);
 
+        nsresult (*fn)(nsIScriptContext* aContext, nsISupports* aSupports, nsISupports* aParent, void** aReturn);
+        if (mTag == kTreeAtom) {
+            fn = NS_NewScriptXULTreeElement;
+        }
+        else {
+            fn = NS_NewScriptXULElement;
+        }
+
+        rv = fn(aContext, (nsIDOMXULElement*) this, global, (void**) &mScriptObject);
         NS_RELEASE(global);
 
         // Ensure that a reference exists to this element
@@ -2374,7 +2400,7 @@ RDFElementImpl::GetResource(nsIRDFResource** aResource)
             NS_RELEASE(docURL);
           }
         }
-        return gRDFService->GetUnicodeResource(uri, aResource);
+        return gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
     }
 
     *aResource = nsnull;

@@ -19,7 +19,7 @@ DEPTH=..\..\..
 MODULE=rdf
 LIBRARY_NAME=rdfcontent_s
 
-DEFINES=-D_IMPL_NS_DOM
+DEFINES=-D_IMPL_NS_DOM -DXPIDL_JS_STUBS
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -27,11 +27,12 @@ LCFLAGS = \
         $(NULL)
 
 CPP_OBJS=\
-		.\$(OBJDIR)\nsXULAttributes.obj		  \
+	.\$(OBJDIR)\nsXULAttributes.obj		  \
         .\$(OBJDIR)\nsJSElementObserver.obj       \
         .\$(OBJDIR)\nsJSNodeObserver.obj          \
         .\$(OBJDIR)\nsJSXULDocument.obj           \
         .\$(OBJDIR)\nsJSXULElement.obj            \
+        .\$(OBJDIR)\nsJSXULTreeElement.obj        \
         .\$(OBJDIR)\nsRDFContentUtils.obj         \
         .\$(OBJDIR)\nsRDFDOMNodeList.obj          \
         .\$(OBJDIR)\nsRDFHTMLBuilder.obj          \
@@ -39,6 +40,7 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsRDFTreeBuilder.obj          \
         .\$(OBJDIR)\nsRDFXULBuilder.obj           \
         .\$(OBJDIR)\nsXULDocument.obj             \
+        .\$(OBJDIR)\nsXULTreeElement.obj          \
         .\$(OBJDIR)\nsXULSortService.obj          \
 	$(NULL)
 

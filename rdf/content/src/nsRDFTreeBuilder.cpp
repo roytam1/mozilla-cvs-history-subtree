@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -50,6 +50,7 @@
 
  */
 
+#include "nsCOMCString.h"
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
 #include "nsIAtom.h"
@@ -58,6 +59,7 @@
 #include "nsIDOMElementObserver.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeObserver.h"
+#include "nsIDOMXULTreeElement.h"
 #include "nsIDocument.h"
 #include "nsINameSpaceManager.h"
 #include "nsIRDFContentModelBuilder.h"
@@ -377,19 +379,19 @@ static const char kRDFNameSpaceURI[]
             NS_ERROR("couldnt' get RDF service");
         }
 
-        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURINC_Title,  &kNC_Title)),
+        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURINC_Title,  &kNC_Title)),
                   "couldn't get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURINC_child,  &kNC_child)),
+        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURINC_child,  &kNC_child)),
                   "couldn't get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURINC_Column, &kNC_Column)),
+        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURINC_Column, &kNC_Column)),
                   "couldn't get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURINC_Folder,  &kNC_Folder)),
+        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURINC_Folder,  &kNC_Folder)),
                   "couldn't get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIRDF_child,  &kRDF_child)),
+        NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIRDF_child,  &kRDF_child)),
                   "couldn't get resource");
     }
 
@@ -489,13 +491,27 @@ RDFTreeBuilderImpl::SetDataBase(nsIRDFCompositeDataSource* aDataBase)
     if (! aDataBase)
         return NS_ERROR_NULL_POINTER;
 
+    NS_PRECONDITION(mRoot != nsnull, "not initialized");
+    if (! mRoot)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    // XXX maybe someday we'll allow you to change the database once
+    // it's already been set.
     NS_PRECONDITION(mDB == nsnull, "already initialized");
     if (mDB)
         return NS_ERROR_ALREADY_INITIALIZED;
 
+    NS_ADDREF(aDataBase);
     mDB = aDataBase;
-    NS_ADDREF(mDB);
-    return NS_OK;
+
+    // Now set the database on the tree root, so that script writers
+    // can access it.
+    nsCOMPtr<nsIDOMXULTreeElement> element( do_QueryInterface(mRoot) );
+    NS_ASSERTION(element, "not a XULTreeElement");
+    if (! element)
+        return NS_ERROR_UNEXPECTED;
+
+    return element->SetDatabase(aDataBase);
 }
 
 
@@ -506,8 +522,12 @@ RDFTreeBuilderImpl::GetDataBase(nsIRDFCompositeDataSource** aDataBase)
     if (! aDataBase)
         return NS_ERROR_NULL_POINTER;
 
-    *aDataBase = mDB;
+    NS_PRECONDITION(mDB != nsnull, "not initialized");
+    if (! mDB)
+        return NS_ERROR_NOT_INITIALIZED;
+
     NS_ADDREF(mDB);
+    *aDataBase = mDB;
     return NS_OK;
 }
 
@@ -614,8 +634,8 @@ rdfSortCallback(const void *data1, const void *data2, void *sortData)
 
 	nsIRDFResource	*res1;
 	nsIRDFResource	*res2;
-	const PRUnichar	*uniStr1 = nsnull;
-	const PRUnichar	*uniStr2 = nsnull;
+	PRUnichar	*uniStr1 = nsnull;
+	PRUnichar	*uniStr2 = nsnull;
 
 	if (NS_SUCCEEDED(node1->QueryInterface(kIRDFResourceIID, (void **) &res1)))
 	{
@@ -728,7 +748,7 @@ RDFTreeBuilderImpl::CreateContents(nsIContent* aElement)
     while (NS_SUCCEEDED(rv = properties->Advance())) {
         nsCOMPtr<nsIRDFResource> property;
 
-        if (NS_FAILED(rv = properties->GetPredicate(getter_AddRefs(property))))
+        if (NS_FAILED(rv = properties->GetLabel(getter_AddRefs(property))))
             break;
 
         // If it's not a tree property, then it doesn't specify an
@@ -1058,7 +1078,7 @@ RDFTreeBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& aNam
         nsAutoString oldValue;
         if (NS_CONTENT_ATTR_HAS_VALUE == element->GetAttribute(attrNameSpaceID, attrNameAtom, oldValue)) {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(oldValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)oldValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1070,7 +1090,7 @@ RDFTreeBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& aNam
         // Assert the new value
         {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(aValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)aValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1162,7 +1182,7 @@ RDFTreeBuilderImpl::OnRemoveAttribute(nsIDOMElement* aElement, const nsString& a
         nsAutoString oldValue;
         if (NS_CONTENT_ATTR_HAS_VALUE == element->GetAttribute(attrNameSpaceID, attrNameAtom, oldValue)) {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(oldValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)oldValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1404,7 +1424,7 @@ RDFTreeBuilderImpl::AddTreeRow(nsIContent* aElement,
 
     while (NS_SUCCEEDED(rv = arcs->Advance())) {
         nsCOMPtr<nsIRDFResource> property;
-        if (NS_FAILED(rv = arcs->GetPredicate(getter_AddRefs(property)))) {
+        if (NS_FAILED(rv = arcs->GetLabel(getter_AddRefs(property)))) {
             NS_ERROR("unable to get cursor value");
             return rv;
         }
@@ -1431,12 +1451,12 @@ RDFTreeBuilderImpl::AddTreeRow(nsIContent* aElement,
 
         nsAutoString s;
         if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFResourceIID, getter_AddRefs(resource)))) {
-            const char* uri;
-            resource->GetValue(&uri);
+            nsCOMCString uri;
+            resource->GetValue( getter_Copies(uri) );
             s = uri;
         }
         else if (NS_SUCCEEDED(rv = value->QueryInterface(kIRDFLiteralIID, getter_AddRefs(literal)))) {
-            const PRUnichar* p;
+            PRUnichar* p;
             literal->GetValue(&p);
             s = p;
         }
@@ -1701,7 +1721,7 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
 
             // First construct a property resource from the URI...
             nsCOMPtr<nsIRDFResource> property;
-            if (NS_FAILED(gRDFService->GetUnicodeResource(uri, getter_AddRefs(property)))) {
+            if (NS_FAILED(gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, getter_AddRefs(property)))) {
                 NS_ERROR("unable to construct resource for xul:treecell");
                 return rv; // XXX fatal
             }
@@ -1746,8 +1766,8 @@ RDFTreeBuilderImpl::GetColumnForProperty(nsIContent* aTreeElement,
 {
     nsresult rv;
 
-    const char* propertyURI;
-    if (NS_FAILED(rv = aProperty->GetValue(&propertyURI))) {
+    nsCOMCString propertyURI;
+    if (NS_FAILED(rv = aProperty->GetValue( getter_Copies(propertyURI) ))) {
         NS_ERROR("unable to get property's URI");
         return rv;
     }
@@ -1901,8 +1921,8 @@ RDFTreeBuilderImpl::IsTreeProperty(nsIContent* aElement, nsIRDFResource* aProper
         return PR_TRUE;
 
     nsresult rv;
-    const char* propertyURI;
-    if (NS_FAILED(rv = aProperty->GetValue(&propertyURI))) {
+    nsCOMCString propertyURI;
+    if (NS_FAILED(rv = aProperty->GetValue( getter_Copies(propertyURI) ))) {
         NS_ERROR("unable to get property URI");
         return PR_FALSE;
     }
@@ -2048,11 +2068,11 @@ RDFTreeBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
     if (NS_FAILED(rv = NS_NewRDFElement(aNameSpaceID, aTag, getter_AddRefs(result))))
         return rv;
 
-    const char* uri;
-    if (NS_FAILED(rv = aResource->GetValue(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = aResource->GetValue( getter_Copies(uri) )))
         return rv;
 
-    if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, uri, PR_FALSE)))
+    if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, (const char*) uri, PR_FALSE)))
         return rv;
 
     *aResult = result;
@@ -2087,7 +2107,7 @@ RDFTreeBuilderImpl::GetResource(PRInt32 aNameSpaceID,
 
     uri.Append(tag);
 
-    nsresult rv = gRDFService->GetUnicodeResource(uri, aResource);
+    nsresult rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource");
     return rv;
 }
@@ -2188,7 +2208,7 @@ RDFTreeBuilderImpl::GetElementResource(nsIContent* aElement, nsIRDFResource** aR
         }
     }
 
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(uri, aResult))) {
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResult))) {
         NS_ERROR("unable to create resource");
         return rv;
     }

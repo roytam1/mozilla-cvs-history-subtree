@@ -90,9 +90,9 @@ public:
     NS_IMETHOD Advance(void);
 
     NS_IMETHOD GetDataSource(nsIRDFDataSource** aDataSource);
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetSource(nsIRDFResource** aResource);
+    NS_IMETHOD GetLabel(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetTarget(nsIRDFNode** aObject);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 };
@@ -123,7 +123,7 @@ ContainerCursorImpl::ContainerCursorImpl(nsIRDFDataSource* ds,
         if (! service)
             return;
 
-        NS_VERIFY(NS_SUCCEEDED(rv = service->GetResource(kURIRDF_nextVal, &kRDF_nextVal)),
+        NS_VERIFY(NS_SUCCEEDED(rv = service->GetResource((char*) kURIRDF_nextVal, &kRDF_nextVal)),
                   "unable to get resource");
 
     }
@@ -172,7 +172,7 @@ ContainerCursorImpl::Advance(void)
 
     nsIRDFNode* nextNode        = nsnull;
     nsIRDFLiteral* nextVal      = nsnull;
-    const PRUnichar* p;
+    PRUnichar* p;
     nsAutoString s;
     PRInt32 last;
     PRInt32 err;
@@ -237,7 +237,7 @@ ContainerCursorImpl::GetDataSource(nsIRDFDataSource** aDataSource)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetSubject(nsIRDFResource** aSubject)
+ContainerCursorImpl::GetSource(nsIRDFResource** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -250,7 +250,7 @@ ContainerCursorImpl::GetSubject(nsIRDFResource** aSubject)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetPredicate(nsIRDFResource** aPredicate)
+ContainerCursorImpl::GetLabel(nsIRDFResource** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -267,7 +267,7 @@ ContainerCursorImpl::GetPredicate(nsIRDFResource** aPredicate)
 
 
 NS_IMETHODIMP
-ContainerCursorImpl::GetObject(nsIRDFNode** aObject)
+ContainerCursorImpl::GetTarget(nsIRDFNode** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)

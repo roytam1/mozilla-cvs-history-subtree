@@ -32,6 +32,7 @@
 
   */
 
+#include "nsCOMCString.h"
 #include "nsCOMPtr.h"
 #include "nsDebug.h"
 #include "nsIAtom.h"
@@ -287,19 +288,19 @@ RDFXULBuilderImpl::RDFXULBuilderImpl(void)
                                                            kIRDFServiceIID,
                                                            (nsISupports**) &gRDFService))) {
 
-            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_instanceOf)),
+            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIRDF_instanceOf, &kRDF_instanceOf)),
                       "unable to get resource");
 
-            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIRDF_nextVal, &kRDF_nextVal)),
+            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIRDF_nextVal, &kRDF_nextVal)),
                       "unable to get resource");
 
-            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIRDF_type, &kRDF_type)),
+            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIRDF_type, &kRDF_type)),
                       "unable to get resource");
 
-            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIRDF_child, &kRDF_child)),
+            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIRDF_child, &kRDF_child)),
                       "unable to get resource");
 
-            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource(kURIXUL_element, &kXUL_element)),
+            NS_VERIFY(NS_SUCCEEDED(gRDFService->GetResource((char*) kURIXUL_element, &kXUL_element)),
                       "unable to get resource");
         }
         else {
@@ -530,7 +531,7 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
 
     while (NS_SUCCEEDED(rv = children->Advance())) {
         nsCOMPtr<nsIRDFNode> child;
-        if (NS_FAILED(rv = children->GetObject(getter_AddRefs(child)))) {
+        if (NS_FAILED(rv = children->GetTarget(getter_AddRefs(child)))) {
             NS_ERROR("error reading cursor");
             return rv;
         }
@@ -1047,7 +1048,7 @@ RDFXULBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& aName
         nsAutoString oldValue;
         if (NS_CONTENT_ATTR_HAS_VALUE == element->GetAttribute(nameSpaceID, nameAtom, oldValue)) {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(oldValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)oldValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1059,7 +1060,7 @@ RDFXULBuilderImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& aName
         // Assert the new value
         {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(aValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)aValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1121,7 +1122,7 @@ RDFXULBuilderImpl::OnRemoveAttribute(nsIDOMElement* aElement, const nsString& aN
         nsAutoString oldValue;
         if (NS_CONTENT_ATTR_HAS_VALUE == element->GetAttribute(nameSpaceID, nameAtom, oldValue)) {
             nsCOMPtr<nsIRDFLiteral> value;
-            if (NS_FAILED(rv = gRDFService->GetLiteral(oldValue, getter_AddRefs(value)))) {
+            if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)oldValue, getter_AddRefs(value)))) {
                 NS_ERROR("unable to construct literal");
                 return rv;
             }
@@ -1315,8 +1316,8 @@ RDFXULBuilderImpl::CreateHTMLElement(nsIRDFResource* aResource,
 
     // Make sure our ID is set. Unlike XUL elements, we want to make sure
     // that our ID is relative if possible.
-    const char* uri;
-    if (NS_FAILED(rv = aResource->GetValue(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = aResource->GetValue( getter_Copies(uri) )))
         return rv;
 
     nsString fullURI(uri);
@@ -1352,7 +1353,7 @@ RDFXULBuilderImpl::CreateHTMLElement(nsIRDFResource* aResource,
     while (NS_SUCCEEDED(rv = properties->Advance())) {
         nsCOMPtr<nsIRDFResource> property;
 
-        if (NS_FAILED(rv = properties->GetPredicate(getter_AddRefs(property)))) {
+        if (NS_FAILED(rv = properties->GetLabel(getter_AddRefs(property)))) {
             NS_ERROR("unable to get property from cursor");
             return rv;
         }
@@ -1418,7 +1419,7 @@ RDFXULBuilderImpl::CreateHTMLContents(nsIContent* aElement,
 
     while (NS_SUCCEEDED(rv = children->Advance())) {
         nsCOMPtr<nsIRDFNode> child;
-        if (NS_FAILED(rv = children->GetObject(getter_AddRefs(child)))) {
+        if (NS_FAILED(rv = children->GetTarget(getter_AddRefs(child)))) {
             NS_ERROR("error reading cursor");
             return rv;
         }
@@ -1468,7 +1469,7 @@ RDFXULBuilderImpl::CreateXULElement(nsIRDFResource* aResource,
     while (NS_SUCCEEDED(rv = properties->Advance())) {
         nsCOMPtr<nsIRDFResource> property;
 
-        if (NS_FAILED(rv = properties->GetPredicate(getter_AddRefs(property)))) {
+        if (NS_FAILED(rv = properties->GetLabel(getter_AddRefs(property)))) {
             NS_ERROR("unable to get property from cursor");
             return rv;
         }
@@ -1585,13 +1586,13 @@ RDFXULBuilderImpl::AddAttribute(nsIContent* aElement,
     // whether we're aValue is a resource or a literal.
     if (NS_SUCCEEDED(rv = aValue->QueryInterface(kIRDFResourceIID,
                                                  (void**) getter_AddRefs(resource)))) {
-        const char* uri;
-        resource->GetValue(&uri);
-        rv = aElement->SetAttribute(nameSpaceID, tag, uri, PR_TRUE);
+        nsCOMCString uri;
+        resource->GetValue( getter_Copies(uri) );
+        rv = aElement->SetAttribute(nameSpaceID, tag, (const char*) uri, PR_TRUE);
     }
     else if (NS_SUCCEEDED(rv = aValue->QueryInterface(kIRDFLiteralIID,
                                                       (void**) getter_AddRefs(literal)))) {
-        const PRUnichar* s;
+        PRUnichar* s;
         literal->GetValue(&s);
         rv = aElement->SetAttribute(nameSpaceID, tag, s, PR_TRUE);
     }
@@ -1779,11 +1780,11 @@ RDFXULBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
     nsCOMPtr<nsIDocument> document( do_QueryInterface(mDocument) );
     result->SetDocument(document, PR_FALSE);
 
-    const char* uri;
-    if (NS_FAILED(rv = aResource->GetValue(&uri)))
+    nsCOMCString uri;
+    if (NS_FAILED(rv = aResource->GetValue( getter_Copies(uri) )))
         return rv;
 
-    if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, uri, PR_FALSE)))
+    if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_None, kIdAtom, (const char*) uri, PR_FALSE)))
         return rv;
 
     *aResult = result;
@@ -1817,7 +1818,7 @@ RDFXULBuilderImpl::GetResource(PRInt32 aNameSpaceID,
 
     uri.Append(tag);
 
-    nsresult rv = gRDFService->GetUnicodeResource(uri, aResource);
+    nsresult rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get resource");
     return rv;
 }
@@ -1860,7 +1861,7 @@ RDFXULBuilderImpl::GetElementResource(nsIContent* aElement, nsIRDFResource** aRe
         }
     }
 
-    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(uri, aResult))) {
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResult))) {
         NS_ERROR("unable to create resource");
         return rv;
     }

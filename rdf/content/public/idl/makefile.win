@@ -25,6 +25,7 @@ IDLSRCS =  \
         NodeObserver.idl        \
         XULDocument.idl         \
         XULElement.idl          \
+        XULTreeElement.idl      \
         $(NULL)
 
 XPCOM_DESTDIR=$(DEPTH)\rdf\content\public

@@ -118,9 +118,9 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFDataSource
-    NS_IMETHOD Init(const char* uri);
+    NS_IMETHOD Init(char* uri);
 
-    NS_IMETHOD GetURI(const char* *uri) const {
+    NS_IMETHOD GetURI(char* *uri) {
         return mInner->GetURI(uri);
     }
 
@@ -197,13 +197,13 @@ public:
 
     NS_IMETHOD Flush(void);
 
-    NS_IMETHOD IsCommandEnabled(const char* aCommand,
+    NS_IMETHOD IsCommandEnabled(char* aCommand,
                                 nsIRDFResource* aCommandTarget,
                                 PRBool* aResult) {
         return mInner->IsCommandEnabled(aCommand, aCommandTarget, aResult);
     }
 
-    NS_IMETHOD DoCommand(const char* aCommand,
+    NS_IMETHOD DoCommand(char* aCommand,
                          nsIRDFResource* aCommandTarget) {
         // XXX Uh oh, this could cause problems wrt. the "dirty" flag
         // if it changes the in-memory store's internal state.
@@ -324,7 +324,7 @@ XULDataSourceImpl::QueryInterface(REFNSIID iid, void** result)
 
 
 NS_IMETHODIMP
-XULDataSourceImpl::Init(const char* uri)
+XULDataSourceImpl::Init(char* uri)
 {
 static const char kFileURIPrefix[] = "file:";
 static const char kResourceURIPrefix[] = "resource:";
@@ -359,7 +359,7 @@ static const char kResourceURIPrefix[] = "resource:";
                                                     (nsISupports**) &rdfService)))
         goto done;
 
-    if (NS_FAILED(rv = rdfService->RegisterDataSource(this)))
+    if (NS_FAILED(rv = rdfService->RegisterDataSource(this, PR_FALSE)))
         goto done;
 
     if (NS_FAILED(rv = nsRepository::CreateInstance(kNameSpaceManagerCID,

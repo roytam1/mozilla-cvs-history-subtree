@@ -155,9 +155,9 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFDataSource methods
-    NS_IMETHOD Init(const char* uri);
+    NS_IMETHOD Init(char* uri);
 
-    NS_IMETHOD GetURI(const char* *uri) const;
+    NS_IMETHOD GetURI(char* *uri);
 
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
@@ -208,11 +208,11 @@ public:
 
     NS_IMETHOD Flush();
 
-    NS_IMETHOD IsCommandEnabled(const char* aCommand,
+    NS_IMETHOD IsCommandEnabled(char* aCommand,
                                 nsIRDFResource* aCommandTarget,
                                 PRBool* aResult);
 
-    NS_IMETHOD DoCommand(const char* aCommand,
+    NS_IMETHOD DoCommand(char* aCommand,
                          nsIRDFResource* aCommandTarget);
 
     // Implemenatation methods
@@ -269,9 +269,9 @@ public:
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFAssertionCursor interface
-    NS_IMETHOD GetSubject(nsIRDFResource** aResource);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetSource(nsIRDFResource** aResource);
+    NS_IMETHOD GetLabel(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetTarget(nsIRDFNode** aObject);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 };
 
@@ -386,7 +386,7 @@ InMemoryAssertionCursor::GetDataSource(nsIRDFDataSource** aDataSource)
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetSubject(nsIRDFResource** aSubject)
+InMemoryAssertionCursor::GetSource(nsIRDFResource** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -410,7 +410,7 @@ InMemoryAssertionCursor::GetSubject(nsIRDFResource** aSubject)
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetPredicate(nsIRDFResource** aPredicate)
+InMemoryAssertionCursor::GetLabel(nsIRDFResource** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -423,7 +423,7 @@ InMemoryAssertionCursor::GetPredicate(nsIRDFResource** aPredicate)
 
 
 NS_IMETHODIMP
-InMemoryAssertionCursor::GetObject(nsIRDFNode** aObject)
+InMemoryAssertionCursor::GetTarget(nsIRDFNode** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -499,12 +499,12 @@ public:
     NS_IMETHOD GetValue(nsIRDFNode** aValue);
 
     // nsIRDFArcsOutCursor interface
-    NS_IMETHOD GetSubject(nsIRDFResource** aSubject);
-    NS_IMETHOD GetPredicate(nsIRDFResource** aPredicate);
+    NS_IMETHOD GetSource(nsIRDFResource** aSubject);
+    NS_IMETHOD GetLabel(nsIRDFResource** aPredicate);
     NS_IMETHOD GetTruthValue(PRBool* aTruthValue);
 
     // nsIRDFArcsInCursor interface
-    NS_IMETHOD GetObject(nsIRDFNode** aObject);
+    NS_IMETHOD GetTarget(nsIRDFNode** aObject);
 };
 
 InMemoryArcsCursor::InMemoryArcsCursor(InMemoryDataSource* ds,
@@ -641,7 +641,7 @@ InMemoryArcsCursor::GetDataSource(nsIRDFDataSource** aDataSource)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetSubject(nsIRDFResource** aSubject)
+InMemoryArcsCursor::GetSource(nsIRDFResource** aSubject)
 {
     NS_PRECONDITION(aSubject != nsnull, "null ptr");
     if (! aSubject)
@@ -653,7 +653,7 @@ InMemoryArcsCursor::GetSubject(nsIRDFResource** aSubject)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetObject(nsIRDFNode** aObject)
+InMemoryArcsCursor::GetTarget(nsIRDFNode** aObject)
 {
     NS_PRECONDITION(aObject != nsnull, "null ptr");
     if (! aObject)
@@ -665,7 +665,7 @@ InMemoryArcsCursor::GetObject(nsIRDFNode** aObject)
 }
 
 NS_IMETHODIMP
-InMemoryArcsCursor::GetPredicate(nsIRDFResource** aPredicate)
+InMemoryArcsCursor::GetLabel(nsIRDFResource** aPredicate)
 {
     NS_PRECONDITION(aPredicate != nsnull, "null ptr");
     if (! aPredicate)
@@ -930,7 +930,7 @@ InMemoryDataSource::SetReverseArcs(nsIRDFNode* v, Assertion* as)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::Init(const char* uri)
+InMemoryDataSource::Init(char* uri)
 {
     if ((mURL = PL_strdup(uri)) == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -939,7 +939,7 @@ InMemoryDataSource::Init(const char* uri)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::GetURI(const char* *uri) const
+InMemoryDataSource::GetURI(char* *uri)
 {
     NS_PRECONDITION(uri != nsnull, "null ptr");
     if (! uri)
@@ -1415,7 +1415,7 @@ InMemoryDataSource::Flush()
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::IsCommandEnabled(const char* aCommand,
+InMemoryDataSource::IsCommandEnabled(char* aCommand,
                                      nsIRDFResource* aCommandTarget,
                                      PRBool* aResult)
 {
@@ -1423,7 +1423,7 @@ InMemoryDataSource::IsCommandEnabled(const char* aCommand,
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::DoCommand(const char* aCommand,
+InMemoryDataSource::DoCommand(char* aCommand,
                               nsIRDFResource* aCommandTarget)
 {
     return NS_OK;

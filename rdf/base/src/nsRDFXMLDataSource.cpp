@@ -184,9 +184,9 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFDataSource
-    NS_IMETHOD Init(const char* uri);
+    NS_IMETHOD Init(char* uri);
 
-    NS_IMETHOD GetURI(const char* *uri) const {
+    NS_IMETHOD GetURI(char* *uri) {
         return mInner->GetURI(uri);
     }
 
@@ -259,13 +259,13 @@ public:
 
     NS_IMETHOD Flush(void);
 
-    NS_IMETHOD IsCommandEnabled(const char* aCommand,
+    NS_IMETHOD IsCommandEnabled(char* aCommand,
                                 nsIRDFResource* aCommandTarget,
                                 PRBool* aResult) {
         return mInner->IsCommandEnabled(aCommand, aCommandTarget, aResult);
     }
 
-    NS_IMETHOD DoCommand(const char* aCommand,
+    NS_IMETHOD DoCommand(char* aCommand,
                          nsIRDFResource* aCommandTarget) {
         // XXX Uh oh, this could cause problems wrt. the "dirty" flag
         // if it changes the in-memory store's internal state.
@@ -493,7 +493,7 @@ done:
 
 
 NS_IMETHODIMP
-RDFXMLDataSourceImpl::Init(const char* uri)
+RDFXMLDataSourceImpl::Init(char* uri)
 {
 static const char kFileURIPrefix[] = "file:";
 static const char kResourceURIPrefix[] = "resource:";
@@ -528,7 +528,7 @@ static const char kResourceURIPrefix[] = "resource:";
                                                     (nsISupports**) &rdfService)))
         goto done;
 
-    if (NS_FAILED(rv = rdfService->RegisterDataSource(this)))
+    if (NS_FAILED(rv = rdfService->RegisterDataSource(this, PR_FALSE)))
         goto done;
 
     if (NS_FAILED(rv = nsRepository::CreateInstance(kNameSpaceManagerCID,
@@ -646,7 +646,7 @@ RDFXMLDataSourceImpl::Flush(void)
 
     nsresult rv;
 
-    const char* uri;
+    char* uri;
     if (NS_FAILED(rv = mInner->GetURI(&uri)))
         return rv;
 
@@ -925,7 +925,7 @@ RDFXMLDataSourceImpl::MakeQName(nsIRDFResource* resource,
                                 nsString& nameSpacePrefix,
                                 nsString& nameSpaceURI)
 {
-    const char* s;
+    char* s;
     resource->GetValue(&s);
     nsAutoString uri(s);
 
@@ -1030,10 +1030,10 @@ RDFXMLDataSourceImpl::SerializeAssertion(nsIOutputStream* aStream,
     nsIRDFLiteral* literal;
 
     if (NS_SUCCEEDED(aValue->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-        const char* s;
+        char* s;
         resource->GetValue(&s);
 
-        const char* docURI;
+        char* docURI;
         mInner->GetURI(&docURI);
 
         nsAutoString uri(s);
@@ -1049,7 +1049,7 @@ static const char kRDFResource2[] = "\"/>\n";
         NS_RELEASE(resource);
     }
     else if (NS_SUCCEEDED(aValue->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
-        const PRUnichar* value;
+        PRUnichar* value;
         literal->GetValue(&value);
         nsAutoString s(value);
 
@@ -1118,11 +1118,11 @@ static const char kRDFDescription3[] = "  </RDF:Description>\n";
     // as a "typed node" instead of the more verbose "RDF:Description
     // RDF:type='...'".
 
-    const char* s;
+    char* s;
     if (NS_FAILED(rv = aResource->GetValue(&s)))
         return rv;
 
-    const char* docURI;
+    char* docURI;
     mInner->GetURI(&docURI);
 
     nsAutoString uri(s);
@@ -1139,7 +1139,7 @@ static const char kRDFDescription3[] = "  </RDF:Description>\n";
 
     while (NS_SUCCEEDED(rv = arcs->Advance())) {
         nsIRDFResource* property;
-        if (NS_FAILED(rv = arcs->GetPredicate(&property)))
+        if (NS_FAILED(rv = arcs->GetLabel(&property)))
             break;
 
         rv = SerializeProperty(aStream, aResource, property);
@@ -1173,13 +1173,13 @@ RDFXMLDataSourceImpl::SerializeMember(nsIOutputStream* aStream,
     if (NS_FAILED(rv = mInner->GetTargets(aContainer, aProperty, PR_TRUE, &cursor)))
         return rv;
 
-    const char* docURI;
+    char* docURI;
     mInner->GetURI(&docURI);
 
     while (NS_SUCCEEDED(rv = cursor->Advance())) {
         nsIRDFNode* node;
 
-        if (NS_FAILED(rv = cursor->GetObject(&node)))
+        if (NS_FAILED(rv = cursor->GetTarget(&node)))
             break;
 
         // If it's a resource, then output a "<RDF:li resource=... />"
@@ -1191,7 +1191,7 @@ RDFXMLDataSourceImpl::SerializeMember(nsIOutputStream* aStream,
         nsIRDFLiteral* literal = nsnull;
 
         if (NS_SUCCEEDED(rv = node->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-            const char* s;
+            char* s;
             if (NS_SUCCEEDED(rv = resource->GetValue(&s))) {
 static const char kRDFLIResource1[] = "    <RDF:li RDF:resource=\"";
 static const char kRDFLIResource2[] = "\"/>\n";
@@ -1207,7 +1207,7 @@ static const char kRDFLIResource2[] = "\"/>\n";
             NS_RELEASE(resource);
         }
         else if (NS_SUCCEEDED(rv = node->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
-            const PRUnichar* value;
+            PRUnichar* value;
             if (NS_SUCCEEDED(rv = literal->GetValue(&value))) {
 static const char kRDFLILiteral1[] = "    <RDF:li>";
 static const char kRDFLILiteral2[] = "</RDF:li>\n";
@@ -1271,10 +1271,10 @@ static const char kRDFAlt[] = "RDF:Alt";
     // this because we never really know who else might be referring
     // to it...
 
-    const char* docURI;
+    char* docURI;
     mInner->GetURI(&docURI);
 
-    const char* s;
+    char* s;
     if (NS_SUCCEEDED(aContainer->GetValue(&s))) {
         nsAutoString uri(s);
         rdf_PossiblyMakeRelative(docURI, uri);
@@ -1297,7 +1297,7 @@ static const char kRDFAlt[] = "RDF:Alt";
     while (NS_SUCCEEDED(rv = arcs->Advance())) {
         nsIRDFResource* property;
 
-        if (NS_FAILED(rv = arcs->GetPredicate(&property)))
+        if (NS_FAILED(rv = arcs->GetLabel(&property)))
             break;
 
         // If it's a membership property, then output a "LI"
@@ -1310,14 +1310,14 @@ static const char kRDFAlt[] = "RDF:Alt";
                 PRBool eq;
 
                 // don't serialize RDF:instanceOf -- it's implicit in the tag
-                if (NS_FAILED(rv = property->EqualsString(kURIRDF_instanceOf, &eq)))
+                if (NS_FAILED(rv = property->EqualsString((char*) kURIRDF_instanceOf, &eq)))
                     break;
 
                 if (eq)
                     break;
 
                 // don't serialize RDF:nextVal -- it's internal state
-                if (NS_FAILED(rv = property->EqualsString(kURIRDF_nextVal, &eq)))
+                if (NS_FAILED(rv = property->EqualsString((char*) kURIRDF_nextVal, &eq)))
                     break;
 
                 if (eq)

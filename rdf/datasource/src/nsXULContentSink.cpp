@@ -273,16 +273,16 @@ XULContentSinkImpl::XULContentSinkImpl()
 
         NS_VERIFY(NS_SUCCEEDED(rv), "unable to get RDF service");
 
-        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_child, &kRDF_child)),
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource((char*) kURIRDF_child, &kRDF_child)),
                   "unalbe to get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_instanceOf, &kRDF_instanceOf)),
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource((char*) kURIRDF_instanceOf, &kRDF_instanceOf)),
                   "unalbe to get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIRDF_type, &kRDF_type)),
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource((char*) kURIRDF_type, &kRDF_type)),
                   "unalbe to get resource");
 
-        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource(kURIXUL_element, &kXUL_element)),
+        NS_VERIFY(NS_SUCCEEDED(rv = gRDFService->GetResource((char*) kURIXUL_element, &kXUL_element)),
                   "unalbe to get resource");
     }
 }
@@ -382,7 +382,7 @@ XULContentSinkImpl::MakeResourceFromQualifiedTag(PRInt32 aNameSpaceID,
 
     uri.Append(aTag);
 
-    rv = gRDFService->GetUnicodeResource(uri, aResource);
+    rv = gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
     NS_VERIFY(NS_SUCCEEDED(rv), "unable to get resource");
 
     return rv;
@@ -916,7 +916,7 @@ XULContentSinkImpl::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
 
           nsresult rv;
           nsCOMPtr<nsIRDFLiteral> literal;
-          if (NS_FAILED(rv = gRDFService->GetLiteral(value, getter_AddRefs(literal)))) {
+          if (NS_FAILED(rv = gRDFService->GetLiteral((PRUnichar*)(const PRUnichar*)value, getter_AddRefs(literal)))) {
               NS_ERROR("unable to create RDF literal");
               return rv;
           }
@@ -993,7 +993,7 @@ XULContentSinkImpl::GetXULIDAttribute(const nsIParserNode& aNode,
             mDocumentURL->GetSpec(&documentURL);
             rdf_PossiblyMakeAbsolute(documentURL, uri);
 
-            return gRDFService->GetUnicodeResource(uri, aResource);
+            return gRDFService->GetUnicodeResource((PRUnichar*)(const PRUnichar*)uri, aResource);
         }
     }
 
