@@ -33,7 +33,7 @@ OBJDIR_TAG	= _DBG
 endif
 
 # Name of the binary code directories
-OBJDIR_NAME	= $(OS_CONFIG)$(CPU_ARCH_TAG)$(COMPILER_TAG)$(IMPL_STRATEGY)$(OBJDIR_TAG).OBJ
+OBJDIR_NAME	= Linux2.0.31_x86_DBG.OBJ
 endif # !USE_AUTOCONF
 
 MKDEPEND_DIR    = $(DEPTH)/config/mkdepend

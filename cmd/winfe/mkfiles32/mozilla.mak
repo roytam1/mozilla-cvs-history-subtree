@@ -764,6 +764,9 @@ CDEFINES=/DXP_PC /Dx386 /D_WINDOWS /D_X86_ \
 !if defined(EDITOR)
 	/DENDER \
 !endif
+!if defined(MOZ_SMOOTH_PROGRESS)
+        /DSMOOTH_PROGRESS \
+!endif
     /DMOZILLA_CLIENT
 
 

@@ -82,7 +82,7 @@ protected:
 
 public:
     nsTransfer(const URL_Struct* url);
-    ~nsTransfer(void);
+    virtual ~nsTransfer(void);
 
     NS_DECL_ISUPPORTS
 
@@ -148,8 +148,8 @@ nsTransfer::GetTransferRate(void)
     if (fContentLength == 0 || fBytesReceived == 0)
         return 0;
 
-    nsTime dt = nsTime(PR_Now()) - fStart;
-    PRUint32 dtMSec = dt.ToMSec();
+    nsInt64 dt = nsTime(PR_Now()) - fStart;
+    PRUint32 dtMSec = dt / nsInt64((PRUint32) PR_USEC_PER_MSEC);
 
     if (dtMSec == 0)
         return 0;
@@ -580,8 +580,8 @@ nsTopProgressManager::Tick(void)
     }
 
     // Compute how much time has elapsed
-    nsTime dt = nsTime(PR_Now()) - fStart;
-    PRUint32 elapsed = dt.ToMSec();
+    nsInt64 dt = nsTime(PR_Now()) - fStart;
+    PRUint32 elapsed = dt / nsInt64((PRUint32) PR_USEC_PER_MSEC);
 
     TRACE_PROGRESS(("nsProgressManager.Tick: %ld of %ld objects complete, "
                     "%ldms left, "
@@ -607,7 +607,7 @@ nsTopProgressManager::Tick(void)
                             / (1.0 - pctComplete));
 
             PRUint32 dMSec = newElapsed - elapsed;
-            fStart -= nsTime::FromMSec(dMSec);
+            fStart -= nsInt64(dMSec * ((PRUint32) PR_USEC_PER_MSEC));
         } else {
             fProgress = (PRUint32) (100.0 * pctComplete);
             FE_SetProgressBarPercent(fContext, fProgress);

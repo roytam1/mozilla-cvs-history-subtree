@@ -222,7 +222,7 @@ class NS_BASE nsInt64
 /**
  * Add two 64-bit integers.
  */
-const nsInt64
+inline const nsInt64
 operator +(const nsInt64& aObject1, const nsInt64& aObject2) {
     return nsInt64(aObject1) += aObject2;
 }
