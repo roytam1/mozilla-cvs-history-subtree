@@ -61,7 +61,7 @@ ACCESSIBLE_CO_TAG = CHIMERA_M1_0_1_BRANCH
 GFX2_CO_TAG = CHIMERA_M1_0_1_BRANCH
 IMGLIB2_CO_TAG = CHIMERA_M1_0_1_BRANCH
 # Pull mozilla/chimera from the trunk
-# CHIMERA_CO_TAG = CHIMERA_M1_0_1_BRANCH
+CHIMERA_CO_TAG = CHIMERA_M1_0_1_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
