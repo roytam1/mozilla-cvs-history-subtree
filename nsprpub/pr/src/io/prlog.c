@@ -461,7 +461,6 @@ PR_IMPLEMENT(void) PR_Abort(void)
     abort();
 }
 
-#ifdef DEBUG
 #if defined(XP_OS2)
 /*
  * Added definitions for DebugBreak() for 2 different OS/2 compilers.
@@ -496,7 +495,6 @@ PR_IMPLEMENT(void) PR_Assert(const char *s, const char *file, PRIntn ln)
     abort();
 #endif
 }
-#endif /* DEBUG */
 
 #ifdef XP_MAC
 PR_IMPLEMENT(void) PR_Init_Log(void)
