@@ -208,7 +208,9 @@ static REGERR nr_OpenFile(char *path, FILEHANDLE *fh)
             else
                 return REGERR_FAIL;
                 
+#ifdef EMFILE  /* Mac doesn't have EMFILE. */
 		case EMFILE:	/* too many files open */
+#endif
 		default:
 			return REGERR_FAIL;
 		}

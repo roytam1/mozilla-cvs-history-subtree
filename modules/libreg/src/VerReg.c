@@ -352,7 +352,9 @@ static REGERR vr_GetCheck(char *path, int32 *check)
 			return REGERR_NOFILE;
 
 		case EACCES:	/* file in use */
+#ifdef EMFILE  /* Mac doesn't have EMFILE. */
 		case EMFILE:	/* too many files open */
+#endif
 		default:
 			return REGERR_FAIL;
 		}

@@ -25,10 +25,6 @@
 #define _VR_STUBS_H_
 
 #include <errno.h>
-#ifdef XP_MAC
-#define EMFILE 24  /* Too many open files */
-#endif
-
 #include <string.h>
 #ifdef XP_MAC
 #include "macstdlibextras.h"  /* For strcasecmp and strncasecmp */
