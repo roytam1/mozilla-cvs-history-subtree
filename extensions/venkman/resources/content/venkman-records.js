@@ -263,6 +263,7 @@ function ScriptInstanceRecord(scriptInstance)
     this.group = 4;
     this.scriptInstance = scriptInstance;
     this.lastScriptCount = 0;
+    this.sequence = scriptInstance.sequence;
     
     this.shortName = getFileFromPath(this.url);
     var ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
@@ -293,7 +294,7 @@ function ScriptInstanceRecord(scriptInstance)
     }
     
     this.displayName = this.shortName;
-
+    this.sortName = this.shortName.toLowerCase();
     return this;
 }
 
@@ -335,12 +336,19 @@ function scr_compare (a, b)
             return 1;
     }
     
-    if (a.displayName < b.displayName)
+    if (a.sortName < b.sortName)
         return -1;
 
-    if (a.displayName > b.displayName)
+    if (a.sortName > b.sortName)
+        return 1;
+
+    if (a.sequence < b.sequence)
+        return -1;
+
+    if (a.sequence > b.sequence)
         return 1;
     
+    dd ("ack, all equal?");
     return 0;
 }
 
@@ -570,7 +578,7 @@ function vr_refresh ()
             break;
         case TYPE_STRING:
             strval = this.value.stringValue.quote();
-            if (strval.length > MAX_STR_LEN)
+            if (strval.length > console.prefs["maxStringLength"])
                 strval = getMsg(MSN_FMT_LONGSTR, strval.length);
             this.displayValue = strval;
             this.displayType  = MSG_TYPE_STRING;
@@ -615,7 +623,7 @@ function vr_refresh ()
             else
             {
                 strval = this.value.stringValue.quote();
-                if (strval.length > MAX_STR_LEN)
+                if (strval.length > console.prefs["maxStringLength"])
                     strval = getMsg(MSN_FMT_LONGSTR, strval.length);
                 this.displayValue = strval;
             }
@@ -642,14 +650,16 @@ function vr_countprops ()
 {
     var c = 0;
     var jsval = this.value.getWrappedValue();
-    for (var p in jsval)
+    try
     {
-        if (this.showFunctions || typeof jsval[p] != "function")
-        {
-            //dd ("counting " + p);
+        for (var p in jsval)
             ++c;
-        }
     }
+    catch (ex)
+    {
+        dd ("caught exception counting properties\n" + ex);
+    }
+    
     return c;
 }
 
@@ -778,44 +788,52 @@ function vr_refreshkids ()
 }
 
 ValueRecord.prototype.onPreOpen =
-function vr_create()
+function vr_preopen()
 {
-    if (!ASSERT(this.value.jsType == TYPE_OBJECT || 
-                this.value.jsType == TYPE_FUNCTION,
-                "onPreOpen called for non object?"))
+    try
     {
-        return;
-    }
-    
-    this.childData = new Array();
-    this.propertyList = this.listProperties();
-    
-    if (this.showECMAProps)
-    {
-        var rec;
-        if (this.value.jsPrototype)
-        {
-            rec = new ValueRecord(this.value.jsPrototype,
-                                                MSG_VAL_PROTO);
-            rec.isECMAProto = true;
-            this.appendChild (rec);
-        }
-
-        if (this.value.jsParent)
-        {
-            rec = new ValueRecord(this.value.jsParent,
-                                                MSG_VAL_PARENT);
-            rec.isECMAParent = true;
-            this.appendChild (rec);
-        }
-    }
         
-    for (var i = 0; i < this.propertyList.length; ++i)
+        if (!ASSERT(this.value.jsType == TYPE_OBJECT || 
+                    this.value.jsType == TYPE_FUNCTION,
+                    "onPreOpen called for non object?"))
+        {
+            return;
+        }
+        
+        this.childData = new Array();
+        this.propertyList = this.listProperties();
+        
+        if (this.showECMAProps)
+        {
+            var rec;
+            if (this.value.jsPrototype)
+            {
+                rec = new ValueRecord(this.value.jsPrototype,
+                                      MSG_VAL_PROTO);
+                rec.isECMAProto = true;
+                this.appendChild (rec);
+            }
+            
+            if (this.value.jsParent)
+            {
+                rec = new ValueRecord(this.value.jsParent,
+                                      MSG_VAL_PARENT);
+                rec.isECMAParent = true;
+                this.appendChild (rec);
+            }
+        }
+        
+        for (var i = 0; i < this.propertyList.length; ++i)
+        {
+            var prop = this.propertyList[i];
+            this.appendChild(new ValueRecord(prop.value,
+                                             prop.name,
+                                             prop.flags));
+        }
+    }
+    catch (ex)
     {
-        var prop = this.propertyList[i];
-        this.appendChild(new ValueRecord(prop.value,
-                                         prop.name,
-                                         prop.flags));
+        display (getMsg (MSN_ERR_FAILURE, ex), MT_ERROR);
     }
 }
 

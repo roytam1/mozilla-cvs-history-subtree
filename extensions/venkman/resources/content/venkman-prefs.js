@@ -51,6 +51,7 @@ function initPrefs()
     console.prefs.prefNameMap = new Object();
     
     //    console.addPref ("input.commandchar", "/");
+    console.addPref ("maxStringLength", 100);
     console.addPref ("startupCount", 0);
     console.addPref ("enableChromeFilter", true);
     console.addPref ("tabWidth", 4);

@@ -78,7 +78,7 @@ function isWindowFiltered (window)
               href.search (/test/) == -1) ||
               (console.prefs["enableChromeFilter"] &&
                href.search (/navigator.xul($|\?)/) == -1));
-    dd ("isWindowFiltered " + window.location.href + ", returning " + rv);
+    //dd ("isWindowFiltered " + window.location.href + ", returning " + rv);
     return rv;
 }
 
@@ -122,7 +122,7 @@ function con_winclose (win)
     if (isWindowFiltered(win))
         return;
 
-    dd ("window closed: " + win + " ``" + win.location + "''");
+    //dd ("window closed: " + win + " ``" + win.location + "''");
     var i = arrayIndexOf(console.hookedWindows, win);
     ASSERT (i != console.hookedWindows.length,
             "WARNING: Can't find hook window for closed window " + i + ".");
@@ -189,12 +189,15 @@ function con_mouseover (e)
         if (element == console._lastElement)
             return;
         
-        if ("hasAttribute" in element &&
-             element.hasAttribute ("venkmanstatustext"))
+        if ("getAttribute" in element)
         {
-            console.status = element.getAttribute ("venkmanstatustext");
-            console._lastElement = element;
-            return;
+            var status = element.getAttribute ("venkmanstatustext");
+            if (status)
+            {
+                console.status = 
+                    console._lastElement = element;
+                return;
+            }
         }
         else if ("localName" in element && element.localName == "floatingview")
         {

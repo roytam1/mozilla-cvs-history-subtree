@@ -51,7 +51,7 @@ function initDev()
          ["multialias",    "help pref; help props", CMD_CONSOLE | CMD_NO_HELP]];
          
     
-    defineVenkmanCommands (cmdary);
+    console.commandManager.defineCommands (cmdary);
 
     if (!("devState" in console.pluginState))
     {
@@ -156,6 +156,12 @@ function cmdDumpScripts(e)
 
 function cmdReloadUI()
 {
+    if ("frames" in console)
+    {
+        display (MSG_NOTE_NOSTACK, MT_ERROR);
+        return;
+    }
+    
     var bs = Components.classes["@mozilla.org/intl/stringbundle;1"];
     bs = bs.createInstance(Components.interfaces.nsIStringBundleService);
     bs.flushBundles();

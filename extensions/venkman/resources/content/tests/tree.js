@@ -140,7 +140,33 @@ function dbg2()
     var fun = dbg;
     var obj = new Object();
     debugger;
-    guessThis();
+
+    try
+    {        
+        guessThis();
+        throwSomething();    
+    }
+    catch (ex)
+    {
+        dd ("caught " + ex);
+    }
+    
+    var rv = returnSomething();
+    dd ("returned " + rv);
+}
+
+function throwSomething()
+{
+    var str = "this is a test";
+    var obj = { message: "this is only a test" };
+    throw "momma from the train";
+}
+
+function returnSomething()
+{
+    var str = "this is a test";
+    var obj = { message: "this is only a test" };
+    return "your library books on time!";
 }
 
 function dt()
@@ -177,4 +203,3 @@ function switchTest ()
             break;
     }
 }
-

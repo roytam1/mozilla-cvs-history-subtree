@@ -36,6 +36,10 @@
 
 <!ENTITY MainWindow.title "JavaScript Debugger">
 
+<!-- help menu -->
+<!ENTITY Help.commands     "Command Reference">
+<!ENTITY Help.about        "About Venkman">
+
 <!-- toolips -->
 <!ENTITY Cont.tooltip     "Continue debugging">
 <!ENTITY Stop.tooltip     "Stop the current operation">
@@ -58,7 +62,7 @@
 <!ENTITY LocalsCol3.header  "Flags">
 
 <!-- session view -->
-<!ENTITY Session.label      "Session View">
+<!ENTITY Session.label      "Interactive Session">
 
 <!-- script view -->
 <!ENTITY Scripts.label      "Loaded Scripts">

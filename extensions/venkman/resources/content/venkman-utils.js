@@ -251,12 +251,12 @@ function insertLink (matchText, containerTag)
 {
     var href;
     
-    if (matchText.indexOf ("://") == -1)
+    if (matchText.indexOf ("://") == -1 && matchText.indexOf("x-jsd") != 0)
         href = "http://" + matchText;
     else
         href = matchText;
     
-    var anchor = htmlVA (null, href);
+    var anchor = htmlVA (null, href, matchText);
     containerTag.appendChild (anchor);    
 }
 
@@ -538,6 +538,37 @@ function keys (o)
     
 }
 
+function parseSections (str, sections)
+{
+    var rv = new Object();
+    var currentSection;
+
+    for (var s in sections)
+    {
+        if (!currentSection)
+            currentSection = s;
+        
+        if (sections[s])
+        {
+            var i = str.search(sections[s]);
+            if (i != -1)
+            {
+                rv[currentSection] = str.substr(0, i);
+                currentSection = 0;
+                str = RegExp.rightContext;
+                str = str.replace(/^(\n|\r|\r\n)/, "");
+            }
+        }
+        else
+        {
+            rv[currentSection] = str;
+            str = "";
+            break;
+        }
+    }
+
+    return rv;
+}
 
 function replaceStrings (str, obj)
 {
@@ -554,7 +585,6 @@ function stringTrim (s)
         return "";
     s = s.replace (/^\s+/, "");
     return s.replace (/\s+$/, "");
-    
 }
 
 function formatDateOffset (seconds, format)

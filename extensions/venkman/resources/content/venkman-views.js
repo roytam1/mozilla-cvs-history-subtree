@@ -41,11 +41,10 @@ const DEFAULT_VURLS =
     "x-vloc:/mainwindow/vleft?target=view&id=locals; " +
     "x-vloc:/mainwindow/vleft?target=view&id=stack; ")) +
   ("x-vloc:/mainwindow/outer?target=container&type=vertical&id=vright; " +
-   ("x-vloc:/mainwindow/vright?target=view&id=source; " +     
+   ("x-vloc:/mainwindow/vright?target=view&id=source2; " +
     "x-vloc:/mainwindow/vright?target=view&id=session"))
   )
  );
-
 
 function initViews()
 {
@@ -82,6 +81,7 @@ function initViews()
 function destroyViews()
 {
     console.viewManager.destroyWindows ();
+    console.viewManager.unrealizeViews (console.views);
 }
 
 /**
@@ -450,11 +450,11 @@ function lv_init ()
         [
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
                   "cx.target.value.objectValue.creatorURL"}],
          ["find-ctor",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
                   "cx.target.value.objectValue.constructorURL"}]
         ]
     };
@@ -574,14 +574,14 @@ function sv_save ()
     else
         state.firstVisible = 1;
 
-    if (this.scopeRecord.isContainerOpen)
+    if (this.scopeRecord && this.scopeRecord.isContainerOpen)
     {
         state.scopeState = { name: "scope" };
         this.saveBranchState (state.scopeState, this.scopeRecord.childData,
                               true);
     }
     
-    if (this.thisRecord.isContainerOpen)
+    if (this.thisRecord && this.thisRecord.isContainerOpen)
     {
         state.thisState = { name: "this" };
         this.saveBranchState (state.thisState, this.thisRecord.childData,
@@ -606,13 +606,13 @@ function lv_hookEvalDone (e)
 }
 
 console.views.locals.hooks["find-frame"] =
-function lv_hookDebugStop (e)
+function lv_hookFindFrame (e)
 {
     console.views.locals.changeFrame(console.frames[e.frameIndex]);
 }
 
 console.views.locals.hooks["hook-debug-continue"] =
-function lv_hookDebugStop (e)
+function lv_hookDebugContinue (e)
 {
     console.views.locals.saveState();
     console.views.locals.clear();
@@ -726,7 +726,7 @@ function scv_init ()
         getContext: this.getContext,
         items:
         [
-         ["find-url"],
+         ["find-scriptinstance"],
          ["find-script"],
          ["clear-script", {enabledif: "cx.scriptWrapper.breakpointCount"}],
          ["-"],
@@ -1182,7 +1182,7 @@ function ss_init ()
     this.munger = new CMunger();
     this.munger.enabled = true;
     this.munger.addRule
-        ("link", /((\w+):\/\/[^<>()\'\"\s:]+|www(\.[^.<>()\'\"\s:]+){2,})/,
+        ("link", /((\w+):\/\/[^<>()\'\"\s:]+|www(\.[^.<>()\'\"\s:]+){2,}|x-jsd:help[\w&\?%]*)/,
          insertLink);
     this.munger.addRule ("word-hyphenator",
                          new RegExp ("(\\S{" + MAX_WORD_LEN + ",})"),
@@ -1581,7 +1581,9 @@ function skv_init()
         getContext: this.getContext,
         items:
         [
-         ["find-frame"],
+         ["find-script"],
+         ["where"],
+         ["-"],
          ["debug-script"],
          ["profile-script"]
         ]
@@ -1741,138 +1743,1016 @@ console.views.source2.viewId = VIEW_SOURCE2;
 console.views.source2.init =
 function ss_init ()
 {
-    console.addPref ("source2View.maxSourceCache", 10);
-    this.outputTBody = null;
-    this.outputTable = null;
-    this.outputWindow = null;
-    this.outputDocument = null;
-    this.sourceCache = new Array();
+    console.addPref ("source2View.maxTabs", 7);
+
+    this.cmdary =
+        [
+         ["close-source-tab",          cmdCloseTab,              CMD_CONSOLE],
+         ["save-source-tab",           cmdSaveTab,               CMD_CONSOLE],
+         ["reload-source-tab",         cmdReloadTab,             CMD_CONSOLE],
+         ["source-coloring",           cmdToggleColoring,                  0],
+         ["toggle-source-coloring",    "source-coloring toggle",           0]
+        ];
+
+    console.menuSpecs["context:source2"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["close-source-tab"],
+         ["reload-source-tab"],
+         ["save-source-tab", { enabledif: "console.views.source2.canSave()" }],
+         ["-"],
+         ["break", 
+                 {enabledif: "cx.lineIsExecutable && !has('hasBreak')"}],
+         ["clear",
+                 {enabledif: "has('hasBreak')"}],
+         ["set-fbreak",
+                 {enabledif: "!has('hasFBreak')"}],
+         ["fclear",
+                 {enabledif: "has('hasFBreak')"}],
+         ["-"],
+         ["cont"],
+         ["next"],
+         ["step"],
+         ["finish"],
+         ["-"],
+         ["toggle-source-coloring",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['services.source.sourceColoring'] " +
+                             "== 'true'"} ],
+         ["toggle-pprint",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['prettyprint']"}]
+        ]
+    };
+
+    this.deck  = null;
+    this.tabs  = null;
+    this.sourceTabList = new Array();
+    this.highlightTab = null;
+    this.highlightNodes = new Array();
 }
 
-console.views.source2.getCachedTBody =
-function s2v_getcache (sourceText)
+function cmdCloseTab (e)
 {
-    for (var i in this.sourceCache)
+    var source2View = console.views.source2;
+
+    if (source2View.tabs && e.index == null)
     {
-        if (this.sourceCache[i].sourceText == sourceText)
-        {
-            var tbody = this.sourceCache[i];
-            if (i > 0)
-            {
-                arrayRemoveAt(this.sourceCache[i]);
-                this.sourceCache.unshift(tbody);
-            }
-            return tbody;
-        }
+        e.index = source2View.tabs.selectedIndex;
     }
-
-    return null;
-}
-
-console.views.source2.cacheTBody =
-function s2v_cache (tbody)
-{
-    this.sourceCache.unshift(tbody);
-
-    var max = console.prefs["source2View.maxSourceCache"];
-    if (this.sourceCache.length > max)
-        this.sourceCache.length = max;
-}
-
-console.views.source2.populateTBody =
-function s2v_poptbody (tbody, sourceText)
-{
-    const CHUNK_SIZE = 250;
-    const CHUNK_DELAY = 100;
-    
-    var source2View = this;
-    
-    function populateChunk (tbody, lines, start)
+    else if (!source2View.tabs || e.index < 0 ||
+             e.index > source2View.sourceTabList.length - 1)
     {
-        dd ("chunk " + start + " / " + lines.length);
-        
-        var stop = lines.length - start;
-        for (var i = 0; i < CHUNK_SIZE && i < stop; ++i)
-        {
-            var line = start + i;
-            var tr = htmlTR ({"id": line + 1});
+        display (MSN_ERR_INVALID_PARAM, ["index", e.index], MT_ERROR);
+        return;
+    }
+    
+    source2View.removeSourceTabAtIndex (e.index);
+}
 
-            var td = htmlTD ({"class": "source2-margin"});
-            tr.appendChild (td);
-            
-            td = htmlTD ({"class": "source2-linenumber"});
-            td.appendChild (htmlText(zeroPad(line + 1, 4)));
-            tr.appendChild (td);
-            
-            td = htmlTD ({"class": "source2-text"});
-            td.appendChild (htmlText(lines[line]));
-            tr.appendChild(td);
-            
-            tbody.appendChild (tr);
-        }
+function cmdReloadTab (e)
+{
+    var source2View = console.views.source2;
+    
+    function cb(status)
+    {
+        sourceTab.iframe.reload();
+    };
 
-        if (start + i < lines.length)
+    if (source2View.tabs && e.index == null)
+    {
+        e.index = source2View.tabs.selectedIndex;
+    }
+    else if (!source2View.tabs || e.index < 0 ||
+             e.index > source2View.sourceTabList.length - 1)
+    {
+        display (MSN_ERR_INVALID_PARAM, ["index", e.index], MT_ERROR);
+        return;
+    }
+    
+    var sourceTab = console.views.source2.sourceTabList[e.index];
+    source2View.onSourceTabUnloaded (sourceTab, Components.results.NS_OK);
+    sourceTab.sourceText.reloadSource(cb);
+}
+
+function cmdSaveTab (e)
+{
+    var source2View = console.views.source2;
+
+    if (source2View.tabs && e.index == null)
+    {
+        e.index = source2View.tabs.selectedIndex;    
+    }
+    else if (!source2View.tabs || e.index < 0 ||
+             e.index > source2View.sourceTabList.length - 1)
+    {
+        display (MSN_ERR_INVALID_PARAM, ["index", e.index], MT_ERROR);
+        return null;
+    }
+    
+    var sourceText = source2View.sourceTabList[e.index];
+    var fileString;
+    
+    if (!e.targetFile || e.targetFile == "?")
+    {
+        var fileName = sourceText.url;
+        dd ("fileName is " + fileName);
+        if (fileName.search(/^\w+:/) != -1)
         {
-            setTimeout (populateChunk, CHUNK_DELAY, tbody, lines, start + i);
+            var shortName = getFileFromPath(fileName);
+            if (fileName != shortName)
+                fileName = shortName;
+            else
+                fileName = "";
         }
         else
-        {
-            source2View.outputTable.appendChild(tbody);
-            source2View.outputTBody = tbody;
-        }
-        
-    };
-    
-    this.outputTable.setAttribute ("style", "display: hidden;");
-    populateChunk (tbody, sourceText.lines, 0);
-}
+            fileName = "";
 
-console.views.source2.displaySourceText =
-function s2v_display (sourceText)
-{
-    if (this.outputTBody && "sourceText" in this.outputTBody &&
-        this.outputTBody.sourceText == sourceText)
-    {
-        dd ("source2: already there");
-        return;
-    }
-
-    this.lastSourceText = sourceText;
-    if (!this.outputTable)
-        return;
-
-    if (this.outputTable.firstChild)
-        this.outputTable.removeChild(this.outputTable.firstChild);
-    
-    var tbody = this.getCachedTBody (sourceText);
-    if (!tbody)
-    {
-        tbody = htmlTBody ({id: "source2-tbody"});
-        tbody.sourceText = sourceText;
-        this.populateTBody (tbody, sourceText);
-        this.cacheTBody(tbody);
+        var rv = pickSaveAs(MSG_SAVE_SOURCE, "*.js $xml $text $all", fileName);
+        if (rv.reason == PICK_CANCEL)
+            return null;
+        e.targetFile = rv.file;
+        fileString = rv.file.leafName;
     }
     else
     {
-        this.outputTable.appendChild(tbody);
-        this.outputTBody = tbody;
+        fileString = e.targetFile;
+    }
+
+    var file = fopen (e.targetFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE);
+    if (fileString.search (/xml$/i) == -1)
+    {
+        for (var i = 0; i < sourceText.lines.length; ++i)
+            file.write(sourceText.lines[i] + "\n");
+    }
+    else
+    {
+        if ("markup" in sourceText)
+            file.write (sourceText.markup);
+        else
+            display (MSG_ERR_FORMAT_NOT_AVAILABLE, MT_ERROR);
+    }
+    
+    file.close();
+
+    return file.localFile.path;
+}
+
+function cmdToggleColoring (e)
+{
+    if (e.toggle != null)
+    {
+        if (e.toggle == "toggle")
+        {
+            var currentState = console.prefs["services.source.sourceColoring"];
+            if (currentState == "true")
+                e.toggle = false;
+            else
+                e.toggle = true;
+            
+            if (e.toggle)
+                console.prefs["services.source.sourceColoring"] = "true";
+            else
+                console.prefs["services.source.sourceColoring"] = "false";
+        }
+    }
+    
+    feedback (e, "pref services.source.sourceColoring");
+}
+
+console.views.source2.canSave =
+function s2v_cansave ()
+{
+    return this.tabs && this.sourceTabList.length > 0;
+}
+
+console.views.source2.getContext =
+function s2v_getcontext (cx)
+{
+    var source2View = console.views.source2;
+    
+    cx.lineIsExecutable = false;
+    var sourceText;
+
+    if (document.popupNode.localName == "tab")
+    {
+        cx.index = source2View.getIndexOfTab(document.popupNode);
+        sourceText = source2View.sourceTabList[cx.index].sourceText;
+        cx.url = cx.urlPattern = sourceText.url;
+    }
+    else
+    {
+        cx.index = source2View.tabs.selectedIndex;
+        sourceText = source2View.sourceTabList[cx.index].sourceText;
+        cx.url = cx.urlPattern = sourceText.url;
+
+        var target = document.popupNode;
+        while (target)
+        {
+            if (target.localName == "LINE")
+                break;
+            target = target.parentNode;
+        }
+
+        if (target)
+        {
+            cx.lineNumber = parseInt(target.childNodes[1].firstChild.data);
+
+            var row = cx.lineNumber - 1;
+        
+            if (sourceText.lineMap[row] & LINE_BREAKABLE)
+                cx.lineIsExecutable = true;
+            if (sourceText.lineMap[row] & LINE_BREAK)
+            {
+                cx.hasBreak = true;
+                cx.breakWrapper =
+                    sourceText.scriptInstance.getBreakpoint(cx.lineNumber);
+                if (cx.breakWrapper.parentBP)
+                    cx.hasFBreak = true;
+            }
+            else if (sourceText.lineMap[row] & LINE_FBREAK)
+            {
+                cx.hasFBreak = true;
+                cx.breakWrapper = getFutureBreakpoint(cx.lineNumber);
+            }
+        }
+    }    
+    
+    return cx;
+}
+
+/*
+ * scroll the source so |line| is at either the top, center, or bottom
+ * of the view, depending on the value of |align|.
+ *
+ * line is the one based target line.
+ * if align is negative, the line will be scrolled to the top, if align is
+ * zero the line will be centered, and if align is greater than 0 the line
+ * will be scrolled to the bottom.  0 is the default.
+ */
+console.views.source2.scrollTabTo =
+function s2v_scrollto (sourceTab, line, align)
+{
+    //dd ("scrolling to " + line + ", " + align);
+    
+    if (!sourceTab.content)
+    {
+        dd ("scrollTabTo: sourceTab not loaded yet");
+        sourceTab.scrollPosition = [line, align];
+        return;
+    }
+    
+    var window = sourceTab.iframe.contentWindow;
+    var viewportHeight = window.innerHeight;
+    var documentHeight = window.document.height;
+    var lineCount = sourceTab.sourceText.lines.length;
+    var lineHeight = documentHeight / lineCount;
+
+    var targetPos;
+    
+    if (align < 0)
+        targetPos = (line - 1) * lineHeight;
+    else if (align > 0)
+        targetPos = (line + 1) * lineHeight - viewportHeight;
+    else
+        targetPos = (line - 1) * lineHeight - viewportHeight / 2;
+    
+    if (targetPos < 0)
+        targetPos = 0;
+    else if (targetPos > documentHeight)
+        targetPos = documentHeight;
+    
+    window.scrollTo (window.pageXOffset, targetPos);
+}
+
+console.views.source2.updateLineMargin =
+function s2v_updatemargin (sourceTab, line)
+{
+    if (!("lineMap" in sourceTab.sourceText))
+        return;
+    
+    if (!ASSERT(sourceTab.content, "no content for source tab"))
+        return;
+    
+    var node = sourceTab.content.childNodes[line * 2 - 1];
+    if (!ASSERT(node, "no node at line " + line))
+        return;
+    
+    node = node.childNodes[0];
+    var lineMap = sourceTab.sourceText.lineMap;
+    var data = MSG_MARGIN_NONE;
+    
+    //dd ("updateLineMargin: line " + line);
+    --line;
+
+    if (line in lineMap)
+    {
+        var flags = lineMap[line];
+        
+        //dd ("updateLineMargin: flags " + flags);
+        
+        if (flags & LINE_BREAKABLE)
+        {
+            node.setAttribute ("x", "t");
+            data = MSG_MARGIN_BREAKABLE;
+        }
+        else
+        {
+            node.removeAttribute ("x");
+        }
+
+        if (flags & LINE_FBREAK)
+        {
+            node.setAttribute ("f", "t");
+            data = MSG_MARGIN_FBREAK;
+        }
+        else
+        {
+            node.removeAttribute ("f");
+        }
+
+        if (flags & LINE_BREAK)
+        {
+            node.setAttribute ("b", "t");
+            data = MSG_MARGIN_BREAK;
+        }
+        else
+        {
+            node.removeAttribute ("b");
+        }
+    }
+    else
+    {
+        node.removeAttribute ("x");
+        node.removeAttribute ("f");
+        node.removeAttribute ("b");
+    }
+    
+    //dd ("node data was " + node.firstChild.data + ", wil be ``" + data + "''");
+    //dd (dumpObjectTree(node));
+    
+    node.firstChild.data = data;
+}
+
+console.views.source2.initMargin =
+function s2v_initmargin (sourceTab)
+{
+    if (!("lineMap" in sourceTab.sourceText))
+        return;
+    
+    var CHUNK_SIZE  = 1000;
+    var CHUNK_DELAY = 100;
+    var lineMap = sourceTab.sourceText.lineMap;
+    var source2View = this;
+    
+    function initChunk (start)
+    {
+        var stop = Math.min (lineMap.length, start + CHUNK_SIZE);
+        for (var i = start; i < stop; ++i)
+        {
+            if (i in lineMap && lineMap[i] != LINE_BREAKABLE)
+                source2View.updateLineMargin (sourceTab, i + 1);
+        }
+        
+        if (i != lineMap.length)
+            setTimeout (initChunk, CHUNK_DELAY, i);
+    };
+    
+    initChunk (0);
+}
+
+console.views.source2.markStopLine =
+function s2v_marktab (sourceTab, currentFrame)
+{
+    if (!currentFrame)
+        return;
+    
+    if (!sourceTab.content)
+    {
+        dd ("sourceTab not loaded yet");
+        return;
+    }
+        
+    var tag = currentFrame.script.tag;
+    var sourceText = sourceTab.sourceText;
+    var line = -1;
+
+    if ("scriptInstance" in sourceText &&
+        sourceText.scriptInstance.containsScriptTag (tag))
+    {
+        line = currentFrame.line;
+    }
+    else if ("scriptWrapper" in sourceText &&
+             sourceText.scriptWrapper.tag == tag)
+    {
+        line = currentFrame.script.pcToLine (currentFrame.pc, PCMAP_PRETTYPRINT);
+    }
+
+    if (line != -1)
+    {
+        dd ("marking stop line " + line);
+        var stopNode = sourceTab.content.childNodes[line * 2 - 1];
+        dd ("stopNode: " + stopNode.localName);
+        stopNode.setAttribute ("stoppedAt", "true");
+        sourceTab.stopNode = stopNode;
+    }    
+}
+
+console.views.source2.unmarkStopLine =
+function s2v_unmarktab (sourceTab)
+{
+    if ("stopNode" in sourceTab)
+    {
+        dd ("unmarking stop line");
+        sourceTab.stopNode.removeAttribute ("stoppedAt");
+        delete sourceTab.stopNode;
+    }
+    else
+    {
+        dd ("unmarkStopLine: sourceTab had no stop line");
     }
 }
 
+console.views.source2.markHighlight =
+function s2v_markhigh ()
+{
+    if (!this.highlightTab.content)
+    {
+        dd ("highlight tab is not loaded yet");
+        return;
+    }
+
+    if (!ASSERT(this.highlightNodes.length == 0,
+                "something is already highlighted"))
+    {
+        return;
+    }
+
+    for (var i = this.highlightStart; i <= this.highlightEnd; ++i)
+    {
+        var node = this.highlightTab.content.childNodes[i * 2 - 1];
+        node.setAttribute ("highlighted", "true");
+        this.highlightNodes.push (node);
+    }    
+}
+
+console.views.source2.unmarkHighlight =
+function s2v_unmarkhigh ()
+{
+    if (this.highlightTab)
+    {
+        while (this.highlightNodes.length)
+            this.highlightNodes.pop().removeAttribute ("highlighted");
+    }
+}
+
+console.views.source2.clearHighlight =
+function s2v_clearhigh ()
+{
+    this.unmarkHighlight();    
+    this.highlightTab   = null;
+    this.highlightStart = -1;
+    this.highlightEnd   = -1;
+}
+
+console.views.source2.onSourceClick =
+function s2v_sourceclick (event)
+{
+    var source2View = console.views.source2;
+    if (!source2View.tabs)
+        return;
+    
+    var sourceTab = source2View.sourceTabList[source2View.tabs.selectedIndex];
+    var sourceText = sourceTab.sourceText;
+    
+    if (!("onMarginClick" in sourceText))
+        return;
+
+    var target = event.target;
+    while (target)
+    {
+        if (target.localName == "MARGIN")
+            break;
+        target = target.parentNode;
+    }
+    
+    if (target && target.localName == "MARGIN")
+    {
+        var line = parseInt (target.nextSibling.innerHTML);
+        sourceText.onMarginClick (event, line);
+    }
+}
+
+console.views.source2.onSourceTabUnloaded =
+function s2v_tabunloaded (sourceTab, status)
+{
+    this.unmarkStopLine (sourceTab);
+    sourceTab.content = null;
+    if (sourceTab == this.highlightTab)
+        this.unmarkHighlight();
+}
+
+console.views.source2.onSourceTabLoaded =
+function s2v_tabloaded (sourceTab, status)
+{
+    sourceTab.content = 
+        sourceTab.iframe.contentDocument.getElementById ("source-listing");
+
+    if (!sourceTab.content)
+    {
+        dd ("tab loaded, but had no content, about:blank crap?");
+        return;
+    }
+    
+    this.markStopLine (sourceTab, getCurrentFrame());
+
+    if (sourceTab == this.highlightTab)
+        this.markHighlight();
+
+    if ("scrollPosition" in sourceTab)
+    {
+        this.scrollTabTo (sourceTab, sourceTab.scrollPosition[0],
+                          sourceTab.scrollPosition[1]);
+    }
+
+    this.initMargin (sourceTab);
+}
+
+console.views.source2.syncOutputFrame =
+function s2v_syncframe (iframe)
+{
+    const nsIWebProgress = Components.interfaces.nsIWebProgress;
+    const ALL = nsIWebProgress.NOTIFY_ALL;
+    const DOCUMENT = nsIWebProgress.NOTIFY_STATE_DOCUMENT;
+    const WINDOW = nsIWebProgress.NOTIFY_STATE_WINDOW;
+
+    var source2View = this;
+
+    function tryAgain ()
+    {
+        dd ("source2 view trying again...");
+        source2View.syncOutputFrame(iframe);
+    };
+
+    var doc = this.currentContent.ownerDocument;
+    
+    try
+    {
+        if ("contentDocument" in iframe && "webProgress" in iframe)
+        {
+            if (iframe.hasAttribute ("raiseOnSync"))
+            {
+                var i = this.getIndexOfDOMWindow (iframe.webProgress.DOMWindow);
+                this.showTab(i);
+                iframe.removeAttribute ("raiseOnSync");
+            }
+
+            var listener = console.views.source2.progressListener;
+            iframe.addProgressListener (listener, WINDOW);
+            iframe.loadURI (iframe.getAttribute ("targetSrc"));
+        }
+        else
+        {
+            setTimeout (tryAgain, 500);
+        }
+    }
+    catch (ex)
+    {
+        dd ("caught exception showing session view, will try again later.");
+        dd (dumpObjectTree(ex));
+        setTimeout (tryAgain, 500);
+    }
+
+}
+
+console.views.source2.syncOutputDeck =
+function s2v_syncdeck ()
+{
+    if (!ASSERT("currentContent" in this, "not inserted anywhere"))
+        return;
+
+    for (var i = 0; i < this.sourceTabList.length; ++i)
+    {
+        this.createFrameFor (this.sourceTabList[i], i,
+                             ("lastSelectedTab" in this && 
+                              this.lastSelectedTab == i));
+    }
+
+    delete this.lastSelectedTab;
+}
+
+console.views.source2.clearOutputDeck =
+function s2v_cleardeck ()
+{
+    for (var i = 0; i < this.sourceTabList.length; ++i)
+    {
+        var sourceTab = this.sourceTabList[i];
+        sourceTab.tab = null;
+        sourceTab.iframe = null;
+        this.onSourceTabUnloaded (this.sourceTabList[i],
+                                  Components.results.NS_OK);
+    }
+    
+    while (this.tabs.firstChild)
+        this.tabs.removeChild (this.tabs.firstChild);
+    while (this.deck.firstChild)
+        this.deck.removeChild (this.deck.firstChild);
+
+    var bloke = document.createElement ("tab");
+    bloke.setAttribute ("id", "source2-bloke");
+    bloke.setAttribute ("hidden", "true");
+    this.tabs.appendChild (bloke);
+}
+
+console.views.source2.createFrameFor =
+function s2v_createframe (sourceTab, index, raiseFlag)
+{
+    if (!ASSERT(this.deck, "we're deckless"))
+        return null;
+
+    if (this.tabs.childNodes.length == 1)
+    {
+        var bloke = getChildById (this.tabs, "source2-bloke");
+        if (bloke)
+            this.tabs.removeChild(bloke);
+    }
+
+    var document = this.currentContent.ownerDocument;
+
+    var tab = document.createElement ("tab");
+    tab.setAttribute ("class", "source2-tab");
+    tab.setAttribute ("context", "context:source2");
+    tab.setAttribute ("label", sourceTab.sourceText.shortName);
+    if (index < this.tabs.childNodes.length)
+        this.tabs.insertBefore (tab, this.tabs.childNodes[index]);
+    else
+        this.tabs.appendChild (tab);
+    sourceTab.tab = tab;
+
+    var tabPanel = document.createElement("tabpanel");
+    tabPanel.setAttribute ("flex", "1");
+    var iframe = document.createElement("browser");
+    iframe.setAttribute ("flex", "1");
+    iframe.setAttribute ("context", "context:source2");
+    iframe.setAttribute ("type", "content");
+    iframe.setAttribute ("onclick",
+                         "console.views.source2.onSourceClick(event);");
+    iframe.setAttribute ("targetSrc", sourceTab.sourceText.jsdURL);
+    if (raiseFlag)
+        iframe.setAttribute ("raiseOnSync", "true");
+
+    tabPanel.appendChild (iframe);
+    if (this.deck.childNodes.length > index)
+        this.deck.insertBefore (tabPanel, this.deck.childNodes[index]);
+    else
+        this.deck.appendChild(tabPanel);
+
+    sourceTab.iframe = iframe;
+    this.syncOutputFrame (iframe);
+
+    return iframe;
+}
+
+console.views.source2.loadSourceTextAtIndex =
+function s2v_loadsource (sourceText, index)
+{
+    var sourceTab = {
+        sourceText: sourceText,
+        tab: null,
+        iframe: null,
+        content: null
+    };
+
+    this.sourceTabList[index] = sourceTab;
+    
+    if ("currentContent" in this)
+    {
+        /* XXX ???
+        if (index < this.deck.childNodes.length &&
+            this.deck.childNodes[index].firstChild &&
+            this.deck.childNodes[index].firstChild.contentURI == 
+            sourceText.jsdURL)
+        {
+            this.tabs.childNodes[index].setAttribute ("label",
+                                                      sourceText.shortName);
+            this.deck.childNodes[index].firstChild.loadURI(sourceText.jsdURL);
+            this.showTab(index);
+        }
+        else
+        {
+        */
+        this.createFrameFor(sourceTab, index, true);
+        /*}*/
+    }
+
+    return sourceTab;
+}
+
+console.views.source2.addSourceText =
+function s2v_addsource (sourceText)
+{
+    var index = this.getIndexOfSourceText (sourceText);
+    if (index != -1)
+    {
+        this.showTab(index);
+        return this.sourceTabList[index];
+    }
+    
+    if (this.sourceTabList.length < console.prefs["source2View.maxTabs"])
+        index = this.sourceTabList.length;
+    else
+        index = 0;
+
+    return this.loadSourceTextAtIndex (sourceText, index);
+}
+
+console.views.source2.removeSourceText =
+function s2v_removetext (sourceText)
+{
+    var index = this.getIndexOfSourceText (sourceText);
+    if (index != -1)
+        this.removeSourceTabAtIndex (index);
+}
+
+console.views.source2.removeSourceTabAtIndex =
+function s2v_removeindex (index)
+{
+    var lastIndex = this.tabs.selectedIndex;
+    var sourceTab = this.sourceTabList[index];
+    if (this.highlightTab == sourceTab)
+        this.unmarkHighlight();
+    sourceTab.tab = null;
+    sourceTab.iframe = null;
+    sourceTab.content = null;
+    sourceTab.stopNode = null;
+    arrayRemoveAt (this.sourceTabList, index);
+    this.tabs.removeItemAt(index);
+    this.deck.removeChild(this.deck.childNodes[index]);
+    if (lastIndex >= this.sourceTabList.length)
+        lastIndex = this.sourceTabList.length - 1;
+    if (lastIndex >= 0)
+        this.showTab(lastIndex);
+
+    if (this.sourceTabList.length == 0)
+        this.clearOutputDeck();
+}
+
+console.views.source2.getIndexOfSourceTab =
+function s2v_getstabindex (sourceTab)
+{
+    var index = -1;
+    
+    for (var i = 0; i < this.sourceTabList.length; ++i)
+    {
+        if (this.sourceTabList[i] == sourceTab)
+        {
+            index = i;
+            break;
+        }
+    }
+
+    return index;
+}
+
+console.views.source2.getIndexOfSourceText =
+function s2v_getstextindex (sourceText)
+{
+    var index = -1;
+    
+    for (var i = 0; i < this.sourceTabList.length; ++i)
+    {
+        if (this.sourceTabList[i].sourceText == sourceText)
+        {
+            index = i;
+            break;
+        }
+    }
+
+    return index;
+}
+
+console.views.source2.getIndexOfTab =
+function s2v_gettabindex (tab)
+{
+    var child = this.tabs.firstChild;
+    var i = 0;
+    
+    while (child)
+    {
+        if (child == tab)
+            return i;
+        ++i;
+        child = child.nextSibling;
+    }
+    
+    return -1;
+}
+
+console.views.source2.getIndexOfDOMWindow =
+function s2v_getindex (window)
+{
+    var child = this.deck.firstChild;
+    var i = 0;
+    
+    while (child)
+    {
+        if (child.firstChild.webProgress.DOMWindow == window)
+            return i;
+        ++i;
+        child = child.nextSibling;
+    }
+    
+    return -1;
+}
+
+console.views.source2.getSourceTabForDOMWindow =
+function s2v_getbutton (window)
+{
+    var i = this.getIndexOfDOMWindow(window);
+    if (i == -1)
+        return null;
+    
+    return this.sourceTabList[i];
+}
+
+console.views.source2.showTab =
+function s2v_showtab (index)
+{
+    //dd ("show tab " + index);
+    this.tabs.selectedItem = this.tabs.childNodes[index];
+}
+
+console.views.source2.progressListener = new Object();
+
+console.views.source2.progressListener.QueryInterface =
+function s2v_qi ()
+{
+    dd ("qi!");
+    return this;
+}
+
+console.views.source2.progressListener.onStateChange =
+function s2v_statechange (webProgress, request, stateFlags, status)
+{
+    const nsIWebProgressListener = Components.interfaces.nsIWebProgressListener;
+    const START = nsIWebProgressListener.STATE_START;
+    const STOP = nsIWebProgressListener.STATE_STOP;
+
+    //dd ("state change " + stateFlags + ", " + status);
+    
+    var source2View = console.views.source2;
+    var sourceTab;
+    if (stateFlags & START)
+    {
+        dd ("start load");
+        sourceTab = source2View.getSourceTabForDOMWindow(webProgress.DOMWindow);
+        if (!ASSERT(sourceTab, "can't find tab for window"))
+        {
+            webProgress.removeProgressListener (this);
+            return;
+        }
+
+        sourceTab.tab.setAttribute ("loading", "true");
+    }
+    else if (stateFlags == 786448)
+    {
+        dd ("stop load " + stateFlags + " " + 
+            webProgress.DOMWindow.location.href);
+        sourceTab = source2View.getSourceTabForDOMWindow(webProgress.DOMWindow);
+        if (!ASSERT(sourceTab, "can't find tab for window"))
+        {
+            webProgress.removeProgressListener (this);
+            return;
+        }
+        
+        sourceTab.tab.removeAttribute ("loading");
+        source2View.onSourceTabLoaded (sourceTab, status);
+    }    
+}
+
+console.views.source2.progressListener.onProgressChange =
+function s2v_progresschange (webProgress, request, currentSelf, totalSelf,
+                             currentMax, selfMax)
+{
+    dd ("progress change ");
+}
+
+console.views.source2.progressListener.onLocationChange =
+function s2v_statechange (webProgress, request, uri)
+{
+    dd ("location change " + uri);
+}
+
+console.views.source2.progressListener.onStatusChange =
+function s2v_statechange (webProgress, request, status, message)
+{
+    dd ("status change " + status + ", " + message);
+}
+
+console.views.source2.progressListener.onSecurityChange =
+function s2v_statechange (webProgress, request, state)
+{
+    dd ("security change");
+}
 
 console.views.source2.hooks = new Object();
 
-console.views.source2.hooks["hook-window-resized"] =
-function ss_hookResize (e)
+console.views.source2.hooks["hook-script-instance-destroyed"] =
+function s2v_hookScriptInstanceDestroyed (e)
 {
-    //XXXconsole.views.source2.scrollDown();
+    if ("_sourceText" in e.scriptInstance)
+        console.views.source2.removeSourceText (e.scriptInstance.sourceText);
+}
+
+console.views.source2.hooks["hook-debug-stop"] =
+console.views.source2.hooks["frame"] =
+function s2v_hookDebugStop (e)
+{
+    var source2View = console.views.source2;
+
+    var currentFrame = getCurrentFrame();
+    for (var i = 0; i < source2View.sourceTabList.length; ++i)
+        source2View.markStopLine (source2View.sourceTabList[i], currentFrame);
+}
+
+console.views.source2.hooks["hook-debug-continue"] =
+function s2v_hookDebugCont (e)
+{
+    var source2View = console.views.source2;
+
+    for (var i = 0; i < source2View.sourceTabList.length; ++i)
+        source2View.unmarkStopLine (source2View.sourceTabList[i]);
+}
+
+console.views.source2.hooks["hook-break-set"] =
+console.views.source2.hooks["hook-break-clear"] =
+function s2v_hookBreakSet (e)
+{
+    var source2View = console.views.source2;
+
+    for (var i = 0; i < source2View.sourceTabList.length; ++i)
+    {
+        var jsdScript;
+        var line = -1;
+        var sourceTab = source2View.sourceTabList[i];
+        var sourceText = sourceTab.sourceText;
+
+        if ("scriptInstance" in sourceText &&
+            sourceText.scriptInstance ==
+            e.breakWrapper.scriptWrapper.scriptInstance)
+        {
+            jsdScript = e.breakWrapper.scriptWrapper.jsdScript;
+            if (jsdScript.isValid)
+                line = jsdScript.pcToLine (e.breakWrapper.pc, PCMAP_SOURCETEXT);
+        }
+        else if ("scriptWrapper" in sourceText &&
+                 sourceText.scriptWrapper == e.breakWrapper.scriptWrapper)
+        {
+            jsdScript = e.breakWrapper.scriptWrapper.jsdScript;
+            if (jsdScript.isValid)
+                line = jsdScript.pcToLine (e.breakWrapper.pc, PCMAP_PRETTYPRINT);
+        }
+
+        if (line != -1)
+            source2View.updateLineMargin (sourceTab, line);
+    }
+}
+
+console.views.source2.hooks["hook-fbreak-set"] =
+console.views.source2.hooks["hook-fbreak-clear"] =
+function s2v_hookBreakSet (e)
+{
+    var source2View = console.views.source2;
+
+    for (var i = 0; i < source2View.sourceTabList.length; ++i)
+    {
+        var sourceTab = source2View.sourceTabList[i];
+        var sourceText = sourceTab.sourceText;
+
+        if (sourceText.url.search(e.fbreak.url) != -1)
+            source2View.updateLineMargin (sourceTab, e.fbreak.lineNumber);
+    }
 }
 
 console.views.source2.hooks["hook-display-sourcetext"] =
 console.views.source2.hooks["hook-display-sourcetext-soft"] =
 function s2v_hookDisplay (e)
 {
-    console.views.source2.displaySourceText (e.sourceText);
+    var source2View = console.views.source2;
+
+    source2View.unmarkHighlight();
+    
+    var sourceTab = source2View.addSourceText (e.sourceText);
+    if (e.rangeStart)
+    {
+        source2View.highlightStart = e.rangeStart;
+        source2View.highlightEnd = e.rangeEnd;
+        source2View.highlightTab = sourceTab;
+        source2View.markHighlight();
+    }
+    
+    source2View.scrollTabTo (sourceTab, e.targetLine, 0);
 }
 
 console.views.source2.onShow =
@@ -1881,59 +2761,47 @@ function s2v_show ()
     var source2View = this;
     function tryAgain ()
     {
-        //dd ("source2 view trying again...");
+        dd ("source2 view trying again...");
         source2View.onShow();
     };
 
-    var doc = this.currentContent.ownerDocument;
+    var version;
+    var help;
     
     try
     {
-        if ("contentDocument" in doc.getElementById("source2-iframe"))
-        {
-            this.outputDocument = 
-                doc.getElementById("source2-iframe").contentDocument;
-
-            var win = this.currentContent.ownerWindow;
-            for (var f = 0; f < win.frames.length; ++f)
-            {
-                if (win.frames[f].document == this.outputDocument)
-                {
-                    this.outputWindow = win.frames[f];
-                    break;
-                }
-            }
-
-            this.outputTable =
-                this.outputDocument.getElementById("source2-table");
-        }
+        this.tabs  = getChildById (this.currentContent, "source2-tabs");
+        this.deck  = getChildById (this.currentContent, "source2-deck");
+        //this.bloke = getChildById (this.currentContent, "source2-bloke");
+        version = getChildById (this.currentContent, "source2-version-label");
+        help = getChildById (this.currentContent, "source2-help-label");
     }
     catch (ex)
     {
-        //dd ("caught exception showing source2 view...");
-        //dd (dumpObjectTree(ex));
+        dd ("caught exception showing source2 view...");
+        dd (dumpObjectTree(ex));
     }
     
-    if (!this.outputDocument || !this.outputTable)
+    if (!this.deck || !this.tabs)
     {
         setTimeout (tryAgain, 500);
         return;
     }
 
-    if ("lastSourceText" in this)
-        this.displaySourceText (this.lastSourceText);
+    version.setAttribute ("value", console.userAgent);
+    help.setAttribute ("value", MSG_SOURCE2_HELP);
+    this.syncOutputDeck();
+    initContextMenu(this.currentContent.ownerDocument, "context:source2");
 }
 
 console.views.source2.onHide =
-function ss_hide ()
+function s2v_hide ()
 {
-    this.outputTable.removeChild(this.outputTBody);
-    this.outputTBody = null;
-    this.outputTable = null;
-    this.outputWindow = null;
-    this.outputDocument = null;
+    this.lastSelectedTab = this.tabs.selectedIndex;
+    this.clearOutputDeck();
+    this.deck = null;
+    this.tabs = null;
 }
-
 
 /*******************************************************************************
  * Source View
@@ -2484,16 +3352,20 @@ function wv_init()
         [
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "(cx.target.jsType == jsdIValue.TYPE_OBJECT || " +
-                  "cx.target.jsType == jsdIValue.TYPE_FUNCTION) && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
                   "cx.target.value.objectValue.creatorURL"}],
          ["find-ctor",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "(cx.target.jsType == jsdIValue.TYPE_OBJECT || " +
-                  "cx.target.jsType == jsdIValue.TYPE_FUNCTION) && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
                   "cx.target.value.objectValue.constructorURL"}]
         ]
     };
+}
+
+console.views.watches.destroy =
+function lv_destroy ()
+{
+    delete this.childData;
 }
 
 console.views.watches.hooks = new Object();

@@ -61,14 +61,7 @@ ViewManager.prototype.realizeViews =
 function vmgr_realizeviews (views)
 {
     for (var v in views)
-    {
-        if (ASSERT("init" in views[v],
-                   "View " + v + " does not have an init() property"))
-        {
-            this.views[v] = views[v];
-            this.realizeView(views[v]);
-        }
-    }
+        this.realizeView(views[v]);
 }    
 
 ViewManager.prototype.realizeView =
@@ -77,7 +70,8 @@ function vmgr_realizeview (view)
     var entry;
     var key = view.viewId;
     this.views[key] = view;
-    view.init();
+    if ("init" in view && typeof view.init == "function")
+        view.init();
     
     var toggleName = "toggle-" + key;
     if (!(key in this.commandManager.commands))
@@ -101,14 +95,25 @@ function vmgr_realizeview (view)
         this.commandManager.addHooks (view.hooks, key);
 }
 
+ViewManager.prototype.unrealizeViews =
+function vmgr_unrealizeviews (views)
+{
+    for (var v in views)
+        this.unrealizeView(views[v]);
+}    
+
 ViewManager.prototype.unrealizeView =
 function vmgr_unrealizeview (view)
 {
-    delete this.views[view.viewId];
     if ("commands" in view)
         this.commandManager.uninstallKeys(view.commands);
     if ("hooks" in view)
         this.commandManager.removeHooks (view.hooks, view.viewId);
+
+    if ("destroy" in view && typeof view.destroy == "function")
+        view.destroy();
+
+    delete this.views[view.viewId];
 }
 
 ViewManager.prototype.getWindowById =

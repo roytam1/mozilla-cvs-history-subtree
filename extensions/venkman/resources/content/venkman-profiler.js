@@ -366,44 +366,18 @@ function pro_load (url)
     if (!lines)
         return null;
 
-    var reportTemplate = new Object();
-    var i;
-
     var sections = {
-         "reportHeader"  : /@-section-start/m,
-         "sectionHeader" : /@-range-start/m,
-         "rangeHeader"   : /@-item-start/m,
-         "itemBody"      : /@-item-end/m,
-         "rangeFooter"   : /@-range-end/m,
-         "sectionFooter" : /@-section-end/m,
+         "reportHeader"  : /@-section-start/mi,
+         "sectionHeader" : /@-range-start/mi,
+         "rangeHeader"   : /@-item-start/mi,
+         "itemBody"      : /@-item-end/mi,
+         "rangeFooter"   : /@-range-end/mi,
+         "sectionFooter" : /@-section-end/mi,
          "reportFooter"  : 0
     };
 
-    var currentSection;
-    for (var s in sections)
-    {
-        if (!currentSection)
-            currentSection = s;
-        
-        if (sections[s])
-        {
-            i = lines.search(sections[s]);
-            if (i != -1)
-            {
-                reportTemplate[currentSection] = lines.substr(0, i);
-                currentSection = 0;
-                lines = lines.substr(i + RegExp.lastMatch.length);
-                lines = lines.replace(/^(\n|\r|\r\n)/, "");
-            }
-        }
-        else
-        {
-            reportTemplate[currentSection] = lines;
-            lines = "";
-            break;
-        }
-    }
-
+    var reportTemplate = parseSections (lines, sections);
+    
     //dd(dumpObjectTree (reportTemplate));
     return reportTemplate;
 }

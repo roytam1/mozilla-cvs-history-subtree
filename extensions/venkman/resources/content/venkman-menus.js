@@ -50,6 +50,8 @@ function initMenus()
         }
             
         dispatch (commandName, params);
+
+        delete console.menuManager.cx;
     };
     
     console.onMenuCommand = onMenuCommand;
@@ -84,7 +86,7 @@ function initMenus()
          ["find-file"],
          ["-"],
          ["close"],
-         ["save-source"],
+         ["save-source-tab", { enabledif: "console.views.source2.canSave()" }],
          ["save-profile"],
          ["-"],
          ["quit"]
@@ -97,7 +99,11 @@ function initMenus()
         [
          [">popup:showhide"],
          ["-"],
-         ["reload"],
+         ["reload-source-tab"],
+         ["toggle-source-coloring",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['services.source.sourceColoring'] " +
+                             "== 'true'"} ],
          ["toggle-pprint",
                  {type: "checkbox",
                   checkedif: "console.prefs['prettyprint']"}],
@@ -134,6 +140,18 @@ function initMenus()
                  {type: "checkbox",
                   checkedif: "console.jsds.initAtStartup"}]
          */
+        ]
+    };
+
+    console.menuSpecs["mainmenu:help"] = {
+        label: MSG_MNU_HELP,
+        items:
+        [
+         ["mozilla-help"],
+         ["help"],
+         ["-"],
+         ["version"],
+         ["about-mozilla"]
         ]
     };
     
@@ -220,9 +238,9 @@ function createMainToolbar(document)
     toolbox.removeAttribute ("collapsed");
 }
 
-function getCommandContext (id)
+function getCommandContext (id, event)
 {
-    var cx = {};
+    var cx = { originalEvent: event };
     
     if (id in console.menuSpecs)
     {

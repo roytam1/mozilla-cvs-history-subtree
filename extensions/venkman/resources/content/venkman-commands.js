@@ -44,6 +44,7 @@ function initCommands()
     
     var cmdary =
         [/* "real" commands */
+         ["about-mozilla",  cmdAboutMozilla,                                  0],
          ["break",          cmdBreak,                               CMD_CONSOLE],
          ["chrome-filter",  cmdChromeFilter,                        CMD_CONSOLE],
          ["clear",          cmdClear,                               CMD_CONSOLE],
@@ -64,6 +65,7 @@ function initCommands()
          ["eval",           cmdEval,               CMD_CONSOLE | CMD_NEED_STACK],
          ["evald",          cmdEvald,                               CMD_CONSOLE],
          ["fbreak",         cmdFBreak,                              CMD_CONSOLE],
+         ["set-fbreak",     cmdFBreak,                                        0],
          ["fclear",         cmdFClear,                              CMD_CONSOLE],
          ["fclear-all",     cmdFClearAll,                           CMD_CONSOLE],
          ["find-bp",        cmdFindBp,                                        0],
@@ -74,6 +76,7 @@ function initCommands()
          ["find-sourcetext", cmdFindSourceText,                               0],
          ["find-sourcetext-soft", cmdFindSourceText,                          0],
          ["find-script",    cmdFindScript,                                    0],
+         ["find-scriptinstance", cmdFindScriptInstance,                       0],
          ["find-url",       cmdFindURL,                             CMD_CONSOLE],
          ["find-url-soft",  cmdFindURL,                                       0],
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
@@ -82,6 +85,7 @@ function initCommands()
          ["help",           cmdHelp,                                CMD_CONSOLE],
          ["loadd",          cmdLoadd,                               CMD_CONSOLE],
          ["move-view",      cmdMoveView,                            CMD_CONSOLE],
+         ["mozilla-help",   cmdMozillaHelp,                                   0],
          ["next",           cmdNext,               CMD_CONSOLE | CMD_NEED_STACK],
          ["open-dialog",    cmdOpenDialog,                          CMD_CONSOLE],
          ["open-url",       cmdOpenURL,                                       0],
@@ -95,10 +99,9 @@ function initCommands()
          ["props",          cmdProps,              CMD_CONSOLE | CMD_NEED_STACK],
          ["propsd",         cmdProps,                               CMD_CONSOLE],
          ["quit",           cmdQuit,                                CMD_CONSOLE],
-         ["reload",         cmdReload,                              CMD_CONSOLE],
          ["restore-layout", cmdRestoreLayout,                       CMD_CONSOLE],
+         ["release-notes",  cmdReleaseNotes,                                  0],
          ["save-layout",    cmdSaveLayout,                          CMD_CONSOLE],
-         ["save-source",    cmdSaveSource,                          CMD_CONSOLE],
          ["save-profile",   cmdSaveProfile,                         CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
          ["toggle-float",   cmdToggleFloat,                         CMD_CONSOLE],
@@ -171,53 +174,6 @@ function initCommands()
 }
 
 /**
- * Defines commands stored in |cmdary| on the venkman command manager.  Expects
- * to find "properly named" strings for the commands via getMsg().
- */
-function defineVenkmanCommands (cmdary)
-{
-    var cm = console.commandManager;
-    var len = cmdary.length;
-    var bundle;
-    
-    if ("stringBundle" in cmdary)
-        bundle = cmdary.stringBundle;
-    else
-        bundle = console.defaultBundle;
-    
-    for (var i = 0; i < len; ++i)
-    {
-        var name  = cmdary[i][0];
-        var func  = cmdary[i][1];
-        var flags = cmdary[i][2];
-        var usage = getMsgFrom(bundle, "cmd." + name + ".params", null, "");
-
-        var helpDefault;
-        var labelDefault = name;
-        var aliasFor;
-        if (flags & CMD_NO_HELP)
-            helpDefault = MSG_NO_HELP;
-
-        if (typeof func == "string")
-        {
-            var ary = func.match(/(\S+)/);
-            if (ary)
-                aliasFor = ary[1];
-            helpDefault = getMsg (MSN_DEFAULT_ALIAS_HELP, func); 
-            labelDefault = getMsgFrom (bundle,
-                                       "cmd." + aliasFor + ".label", null, name);
-        }
-
-        var label = getMsgFrom(bundle,
-                               "cmd." + name + ".label", null, labelDefault);
-        var help  = getMsgFrom(bundle,
-                               "cmd." + name + ".help", null, helpDefault);
-        var command = new CommandRecord (name, func, usage, help, label, flags);
-        cm.addCommand(command);
-    }
-}
-
-/**
  * Used as a callback for CommandRecord.getDocumentation() to format the command
  * flags for the "Notes:" field.
  */
@@ -245,7 +201,12 @@ function getToggle (toggle, currentState)
 /********************************************************************************
  * Command implementations from here on down...
  *******************************************************************************/
-    
+
+function cmdAboutMozilla ()
+{
+    openTopWin ("about:mozilla");
+}
+
 function cmdBreak (e)
 {
     if (!("isInteractive" in e))
@@ -432,6 +393,7 @@ function cmdClearAll (e)
     if (breakWrapperList.length)
     {
         dispatch ("clear-break", { isInteractive: e.isInteractive,
+                                   breakWrapper: breakWrapperList[0],
                                    breakWrapperList: breakWrapperList });
     }
 }
@@ -544,7 +506,8 @@ function cmdClose(e)
 
 function cmdCommands (e)
 {
-    display (MSG_TIP_HELP);
+    display (MSG_TIP1_HELP);
+    display (MSG_TIP2_HELP);
     var names = console.commandManager.listNames(e.pattern, CMD_CONSOLE);
     names = names.join(MSG_COMMASP);
     
@@ -809,6 +772,13 @@ function cmdFindScript (e)
     return rv;
 }
 
+function cmdFindScriptInstance (e)
+{
+    var params = Clone(e);
+    params.sourceText = e.scriptInstance.sourceText;
+    dispatch ("find-sourcetext", params);
+}
+
 function cmdFindSourceText (e)
 {
     function cb(status)
@@ -949,7 +919,7 @@ function cmdHelp (e)
     var ary;
     if (!e.pattern)
     {
-        dispatch ("find-url", {url: "x-jsd:help"});
+        openTopWin ("x-jsd:help", "venkman-help");
         return true;
     }
     else
@@ -1031,6 +1001,11 @@ function cmdMoveView (e)
     console.viewManager.moveView (parsedLocation, e.viewId);
 }
 
+function cmdMozillaHelp ()
+{
+    toOpenWindowByType('mozilla:help', 'chrome://help/content/help.xul');
+}
+
 function cmdNext ()
 {
     console._stepOverLevel = 0;
@@ -1072,8 +1047,11 @@ function cmdPPrint (e)
             tb.removeAttribute("state");
         }
 
-        if (console.currentDetails instanceof ScriptWrapper)
+        if ("currentDetails" in console &&
+            console.currentDetails instanceof ScriptWrapper)
+        {
             dispatch ("find-script", { scriptWrapper: console.currentDetails });
+        }
     }
 
     feedback (e, getMsg(MSN_FMT_PPRINT, console.prefs["prettyprint"] ?
@@ -1159,20 +1137,6 @@ function cmdQuit()
     goQuitApplication();
 }
 
-function cmdReload()
-{
-    function cb(status)
-    {
-        enableReloadCommand();
-    }
-        
-    if ("currentSourceText" in console)
-    {
-        disableReloadCommand();
-        console.currentSourceText.reloadSource(cb);
-    }
-}
-
 function cmdRestoreLayout (e)
 {   
     if (!e.name)
@@ -1209,6 +1173,11 @@ function cmdRestoreLayout (e)
     console.viewManager.reconstituteVURLs (layout.split (/\s*;\s*/));
 }
 
+function cmdReleaseNotes (e)
+{
+    openTopWin(MSG_RELEASE_URL);
+}
+
 function cmdSaveLayout (e)
 {
     if (!e.name)
@@ -1232,37 +1201,6 @@ function cmdSaveLayout (e)
     var prefName = "layoutState." + e.name;
     console.addPref(prefName);
     console.prefs[prefName] = ary.join ("; ");
-}
-
-function cmdSaveSource (e)
-{
-    if (!e.targetFile || e.targetFile == "?")
-    {
-        var fileName = console.currentSourceText.url;
-        if (fileName.search(/^\w+:/) < 0)
-        {
-            var shortName = getFileFromPath(fileName);
-            if (fileName != shortName)
-                fileName = shortName;
-            else
-                fileName = "";
-        }
-        else
-            fileName = "";
-
-        var rv = pickSaveAs(MSG_SAVE_SOURCE, "$all $text *.js", fileName);
-        if (rv.reason == PICK_CANCEL)
-            return null;
-        e.targetFile = rv.file;
-    }
-
-    var file = fopen (e.targetFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE);
-    var lines = console.currentSourceText.lines;
-    for (var i = 0; i < lines.length; ++i)
-        file.write(lines[i] + "\n");
-    file.close();
-
-    return file.localFile.path;
 }
 
 function cmdSaveProfile (e)

@@ -69,6 +69,7 @@
     <script src="chrome://venkman/content/venkman-handlers.js"/>
     <script src="chrome://venkman/content/venkman-debugger.js"/>
     <script src="chrome://venkman/content/venkman-profiler.js"/>
+    <script src="chrome://venkman/content/venkman-jsdurl.js"/>
     <script src="chrome://venkman/content/venkman-url-loader.js"/>
     <script src="chrome://venkman/content/venkman-commands.js"/>
     <script src="chrome://venkman/content/venkman-prefs.js"/>

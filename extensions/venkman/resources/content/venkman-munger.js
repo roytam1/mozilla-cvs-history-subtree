@@ -80,8 +80,14 @@ CMunger.prototype.munge =
 function mng_munge (text, containerTag, data)
 {
     var entry;
-    var ary;
-    
+    var ary;    
+
+    if (!text) //(ASSERT(text, "no text to munge"))
+        return "";
+     
+    if (typeof text != "string")
+        text = String(text);
+
     if (!containerTag)
         containerTag =
             document.createElementNS (NS_XHTML, this.tagName);

@@ -140,9 +140,14 @@ function mmgr_showpop (event)
      * return result as this.cx for use if something from this menu is actually
      * dispatched.  this.cx is deleted in |hidePopup|. */
     if (typeof this.contextFunction == "function")
-        cx = this.cx = this.contextFunction (popup.getAttribute("menuName"));
+    {
+        cx = this.cx = this.contextFunction (popup.getAttribute("menuName"),
+                                             event);
+    }
     else
-        cx = this.cx = { menuManager: this };
+    {
+        cx = this.cx = { menuManager: this, originalEvent: event };
+    }
 
     do
     {

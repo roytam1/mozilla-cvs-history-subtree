@@ -41,6 +41,7 @@ function CommandRecord (name, func, usage, help, label, flags, keystr)
     this.scanUsage();
     this.help = help;
     this.label = label ? label : name;
+    this.labelstr = label.replace ("&", "");
     this.flags = flags;
     this._enabled = true;
     this.keyNodes = new Array();
@@ -198,6 +199,8 @@ function cmgr_defcmds (cmdary)
         var keystr = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
         var command = new CommandRecord (name, func, usage, help, label, flags,
                                          keystr);
+        if (aliasFor)
+            command.aliasFor = aliasFor;
         this.addCommand(command);
         commands[name] = command;
     }
@@ -275,7 +278,7 @@ function cmgr_uninstkey (command)
         try
         {
             /* document may no longer exist in a useful state. */
-            command.keyNode.parentNode.removeChild(command.keyNode);
+            command.keyNodes[i].parentNode.removeChild(command.keyNodes[i]);
         }
         catch (ex)
         {
@@ -424,8 +427,8 @@ function cmgr_list (partialName, flags)
      * all commands if |partialName| is not specified */
     function compare (a, b)
     {
-        a = a.label.toLowerCase().replace("&", "");
-        b = b.label.toLowerCase().replace("&", "");
+        a = a.labelstr.toLowerCase();
+        b = b.labelstr.toLowerCase();
 
         if (a == b)
             return 0;

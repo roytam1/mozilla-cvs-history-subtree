@@ -60,7 +60,15 @@ treecol[hideheader="true"] {
 
 tree {
     margin: 0px 0px 0px 0px;
-    min-height: 50px;
+}
+
+tabpanels {
+    background: none;
+    padding: 2px;
+}
+
+browser {
+    border: thin silver inset;
 }
 
 #source-tree {

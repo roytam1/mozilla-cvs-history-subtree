@@ -244,9 +244,9 @@ function jsdExecutionHook (frame, type, rv)
 
     try
     {
-        dd ("debug trap " + formatFrame(frame));
+        //dd ("debug trap " + formatFrame(frame));
         hookReturn = debugTrap(frame, type, rv);
-        dd ("debug trap returned " + hookReturn);
+        //dd ("debug trap returned " + hookReturn);
     }
     catch (ex)
     {
@@ -327,6 +327,7 @@ function ScriptManager (url)
     this.instances = new Array();
     this.transients = new Object();
     this.transientCount = 0;
+    this.instanceSequence = 0;
     this.disableTransients = isURLFiltered(url);
 }
 
@@ -345,6 +346,7 @@ function smgr_created (jsdScript)
     {
         //dd ("instance created for " + jsdScript.fileName);
         instance = new ScriptInstance(this);
+        instance.sequence = this.instanceSequence++;
         this.instances.push(instance);
         dispatchCommand (console.coInstanceCreated,
                          { scriptInstance: instance });
@@ -424,6 +426,18 @@ ScriptManager.prototype.__defineGetter__ ("lineMap", smgr_linemap);
 function smgr_linemap()
 {
     return this.instances[this.instances.length - 1].lineMap;
+}
+
+ScriptManager.prototype.getInstanceBySequence =
+function smgr_bysequence (seq)
+{
+    for (var i = 0; i < this.instances.length; ++i)
+    {
+        if (this.instances[i].sequence == seq)
+            return this.instances[i];
+    }
+    
+    return null;
 }
 
 ScriptManager.prototype.isLineExecutable =
@@ -705,13 +719,22 @@ function si_setbp (line)
     if (this._lineMapInited)
         arrayAndFlag(this._lineMap, line - 1, ~LINE_BREAK);    
     
-    clearBP (this.topLevel);
+    if (this.topLevel)
+        clearBP (this.topLevel);
+
     for (var f in this.functions)
         clearBP (this.functions[f]);
 
     return found;
 }
-    
+
+ScriptInstance.prototype.containsScriptTag =
+function si_contains (tag)
+{
+    return ((this.topLevel && this.topLevel.tag == tag) ||
+            (tag in this.functions));
+}
+
 ScriptInstance.prototype.guessFunctionNames =
 function si_guessnames ()
 {
@@ -1007,6 +1030,7 @@ function debugTrap (frame, type, rv)
             tn = MSG_VAL_DEBUGGER;
             break;
         case jsdIExecutionHook.TYPE_THROW:
+            dd (dumpObjectTree(rv));
             display (getMsg(MSN_EXCEPTION_TRACE,
                             [rv.value.stringValue, formatFrame(frame)]),
                      MT_ETRACE);
@@ -1018,10 +1042,13 @@ function debugTrap (frame, type, rv)
 
             console.currentException = rv.value;
             retcode = jsdIExecutionHook.RETURN_CONTINUE_THROW;
+            rv.value = {message: "my test exception"};
+            
             tn = MSG_VAL_THROW;
             break;
         case jsdIExecutionHook.TYPE_INTERRUPTED:
-            if (isURLFiltered(frame.script.fileName))
+            if (!frame.script.functionName && 
+                isURLFiltered(frame.script.fileName))
             {
                 dd ("filtered url: " + frame.script.fileName);
                 frame.script.flags |= SCRIPT_NOPROFILE | SCRIPT_NODEBUG;
@@ -1095,7 +1122,10 @@ function eventLoopNested ()
 
 function getCurrentFrame()
 {
-    return console.frames[console._currentFrameIndex];
+    if ("frames" in console)
+        return console.frames[console._currentFrameIndex];
+
+    return null;
 }
 
 function getCurrentFrameIndex()
@@ -1270,7 +1300,12 @@ function formatValue (v, formatType)
             break;
         case jsdIValue.TYPE_STRING:
             type = MSG_TYPE_STRING;
-            value = v.stringValue.quote();
+            var strval = v.stringValue;
+            if (strval.length > console.prefs["maxStringLength"])
+                strval = getMsg(MSN_FMT_LONGSTR, strval.length);
+            else
+                strval = strval.quote()
+            value = strval;
             break;
         case jsdIValue.TYPE_VOID:
             type = MSG_TYPE_VOID;
