@@ -230,7 +230,7 @@ nsresult txNodeSet::add(const txNodeSet& aNodes, transferOp aTransfer)
 
     // This is probably a rather common case, so lets try to shortcut.
     if (mStart == mEnd ||
-        txXPathNodeUtils::comparePosition(*(mEnd - 1), *aNodes.mStart) < 0) {
+        txXPathNodeUtils::comparePosition(mEnd[-1], *aNodes.mStart) < 0) {
         aTransfer(mEnd, aNodes.mStart, aNodes.mEnd);
         mEnd += aNodes.size();
 
@@ -277,7 +277,6 @@ nsresult txNodeSet::add(const txNodeSet& aNodes, transferOp aTransfer)
             otherPos -= count;
         }
 
-
         // Find where the last remaining node of the otherNodeset would
         // be inserted in this nodeset.
         if (otherPos > aNodes.mStart) {
@@ -286,8 +285,8 @@ nsresult txNodeSet::add(const txNodeSet& aNodes, transferOp aTransfer)
             if (dupe) {
                 --otherPos; // this is already added
                 // check dupe sequence
-                while (otherPos > aNodes.mStart && pos > mStart
-                       && otherPos[-1] == pos[-1]) {
+                while (otherPos > aNodes.mStart && pos > mStart &&
+                       otherPos[-1] == pos[-1]) {
                     --otherPos;
                     --pos;
                 }
@@ -518,8 +517,8 @@ PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
         mEnd && mEndBuffer && aSize <= mEndBuffer - mEnd) {
         return PR_TRUE;
     }
-    else if (mDirection == kReversed &&
-             mStart && mStartBuffer && aSize <= mStart - mStartBuffer) {
+    if (mDirection == kReversed &&
+        mStart && mStartBuffer && aSize <= mStart - mStartBuffer) {
         return PR_TRUE;
     }
 
@@ -585,7 +584,7 @@ PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
     }
     else {
         mEnd = mEndBuffer;
-        mStart = mEndBuffer - oldSize;
+        mStart = mEnd - oldSize;
     }
 
     return PR_TRUE;
