@@ -17,73 +17,110 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
-#include "nsRDFContentSink.h"
-#include "nsIRDFContent.h"
+/*
+
+  This is an NGLayout-style content sink that knows how to build an
+  RDF content model from XML-serialized RDF.
+
+  For more information on RDF, see http://www.w3.org/TR/WDf-rdf-syntax.
+
+  This code is based on the working draft "last call", which was
+  published on Oct 8, 1998.
+
+  Open Issues ------------------
+
+  1) factoring code with nsXMLContentSink - There's some amount of
+     common code between this and the HTML content sink. This will
+     increase as we support more and more HTML elements. How can code
+     from the code be factored?
+
+  TO DO ------------------------
+
+  1) Using the nsIRDFContent and nsIRDFContainerContent interfaces to
+     actually build the content model is a red herring. What I
+     *really* want to do is just build an RDF graph, then let the
+     presentation actually generate the "content model" on demand.
+
+  2) Handle resource references in properties
+
+  3) Make sure all shortcut syntax works right.
+
+*/
+
+#include "nsCRT.h"
 #include "nsHTMLEntities.h" // XXX for NS_EntityToUnicode()
-#include "nsIStyleSheet.h"
-#include "nsIUnicharInputStream.h"
-#include "nsIDocument.h"
-#include "nsIXMLDocument.h"
-#include "nsIXMLContent.h"
-#include "nsIRDFDocument.h"
-#include "nsIRDFContent.h"
-#include "nsIScriptObjectOwner.h"
-#include "nsIURL.h"
-#include "nsIWebShell.h"
+#include "nsICSSParser.h"
 #include "nsIContent.h"
-#include "nsITextContent.h"
+#include "nsIDOMComment.h"
+#include "nsIDocument.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
-#include "nsIViewManager.h"
-#include "nsIDOMComment.h"
-#include "nsVoidArray.h"
-#include "nsCRT.h"
-#include "nsICSSParser.h"
+#include "nsIRDFContent.h"
+#include "nsIRDFContent.h"
+#include "nsIRDFDataSource.h"
+#include "nsIRDFDocument.h"
+#include "nsIRDFNode.h"
+#include "nsIRDFResourceManager.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptContextOwner.h"
-#include "prtime.h"
+#include "nsIScriptObjectOwner.h"
+#include "nsIServiceManager.h"
+#include "nsIStyleSheet.h"
+#include "nsITextContent.h"
+#include "nsIURL.h"
+#include "nsIUnicharInputStream.h"
+#include "nsIViewManager.h"
+#include "nsIWebShell.h"
+#include "nsIXMLContent.h"
+#include "nsIXMLDocument.h"
+#include "nsRDFCID.h"
+#include "nsRDFContentSink.h"
+#include "nsVoidArray.h"
 #include "prlog.h"
 #include "prmem.h"
-
-#define RDF_NAMESPACE_URI "http://www.w3.org/TR/WD-rdf-syntax#"
+#include "prtime.h"
 
 static const char kNameSpaceSeparator[] = ":";
 static const char kNameSpaceDef[] = "xmlns";
-static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
-static const char kRDFRDFTag[] = "RDF";
-static const char kRDFDescriptionTag[] = "Description";
-static const char  kRDFBag[] = RDF_NAMESPACE_URI "Bag";
-static const char* kRDFBagTag = kRDFBag + sizeof(RDF_NAMESPACE_URI) - 1;
-static const char  kRDFSeq[] = RDF_NAMESPACE_URI "Seq";
-static const char* kRDFSeqTag = kRDFSeq + sizeof(RDF_NAMESPACE_URI) - 1;
-static const char  kRDFAlt[] = RDF_NAMESPACE_URI "Alt";
-static const char* kRDFAltTag = kRDFAlt + sizeof(RDF_NAMESPACE_URI) - 1;
-static const char kRDFIDAttr[] = "ID";
-static const char kRDFAboutAttr[] = "about";
-static const char kRDFBagIDAttr[] = "bagID";
-static const char kRDFAboutEachAttr[] = "aboutEach";
-static const char kRDFResourceAttr[] = "resource";
-static const char kRDFInstanceOf[] = RDF_NAMESPACE_URI "instanceOf";
 static const char kStyleSheetPI[] = "<?xml-stylesheet";
 static const char kCSSType[] = "text/css";
 static const char kQuote = '\"';
 static const char kApostrophe = '\'';
 
+////////////////////////////////////////////////////////////////////////
+// RDF core vocabulary
+
+#include "rdf.h"
+#define RDF_NAMESPACE_URI  "http://www.w3.org/TR/WD-rdf-syntax#"
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, Alt);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, Bag);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, Description);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, ID);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, RDF);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, Seq);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, about);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, aboutEach);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, bagID);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, instanceOf);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, li);
+DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, resource);
+
+static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
+
+////////////////////////////////////////////////////////////////////////
+// XPCOM IIDs
 static NS_DEFINE_IID(kIContentSinkIID,         NS_ICONTENT_SINK_IID); // XXX grr...
 static NS_DEFINE_IID(kIDOMCommentIID,          NS_IDOMCOMMENT_IID);
 static NS_DEFINE_IID(kIRDFContainerContentIID, NS_IRDFCONTAINERCONTENT_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,      NS_IRDFCONTENTSINK_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,         NS_IRDFDOCUMENT_IID);
+static NS_DEFINE_IID(kIRDFResourceManagerIID,  NS_IRDFRESOURCEMANAGER_IID);
 static NS_DEFINE_IID(kIScrollableViewIID,      NS_ISCROLLABLEVIEW_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIXMLContentSinkIID,      NS_IXMLCONTENT_SINK_IID);
 static NS_DEFINE_IID(kIXMLDocumentIID,         NS_IXMLDOCUMENT_IID);
 
-// XXX Open Issues:
-// 1) factoring code with nsXMLContentSink - There's some amount of
-//    common code between this and the HTML content sink. This will
-//    increase as we support more and more HTML elements. How can code
-//    from the code be factored?
+static NS_DEFINE_CID(kRDFResourceManagerCID,   NS_RDFRESOURCEMANAGER_CID);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -91,8 +128,8 @@ static NS_DEFINE_IID(kIXMLDocumentIID,         NS_IXMLDOCUMENT_IID);
 
 static nsresult
 rdf_GetQuotedAttributeValue(nsString& aSource, 
-                        const nsString& aAttribute,
-                        nsString& aValue)
+                            const nsString& aAttribute,
+                            nsString& aValue)
 {
     PRInt32 offset;
     PRInt32 endOffset = -1;
@@ -127,7 +164,7 @@ rdf_GetQuotedAttributeValue(nsString& aSource,
 
 // XXX Code copied from nsHTMLContentSink. It should be shared.
 static void
-rdf_ConvertEntityReferences(nsString& aResult)
+rdf_StripAndConvert(nsString& aResult)
 {
     // Strip quotes if present
     PRUnichar first = aResult.First();
@@ -244,6 +281,19 @@ rdf_ConvertEntityReferences(nsString& aResult)
     }
 }
 
+
+static void
+rdf_FullyQualifyURI(const nsIURL* base, nsString& spec)
+{
+    // This is a fairly heavy-handed way to do this, but...I don't
+    // like typing.
+    nsIURL* url;
+    if (NS_SUCCEEDED(NS_NewURL(&url, base, spec))) {
+        url->ToString(spec);
+        url->Release();
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////
 // Factory method
 
@@ -281,6 +331,9 @@ nsRDFContentSink::nsRDFContentSink()
     mDocumentURL = nsnull;
     mWebShell = nsnull;
     mRootElement = nsnull;
+    mRDFResourceManager = nsnull;
+    mDataSource = nsnull;
+    mGenSym = 0;
     mNameSpaces = nsnull;
     mNestLevel = 0;
     mContextStack = nsnull;
@@ -296,6 +349,10 @@ nsRDFContentSink::~nsRDFContentSink()
     NS_IF_RELEASE(mDocumentURL);
     NS_IF_RELEASE(mWebShell);
     NS_IF_RELEASE(mRootElement);
+    if (mRDFResourceManager) {
+        nsServiceManager::ReleaseService(kRDFResourceManagerCID, mRDFResourceManager);
+    }
+    NS_IF_RELEASE(mDataSource);
     if (mNameSpaces) {
         // There shouldn't be any here except in an error condition
         PRInt32 i, count = mNameSpaces->Count();
@@ -317,10 +374,10 @@ nsRDFContentSink::~nsRDFContentSink()
         // code all the same. If someone left the content stack dirty,
         // pop all the elements off the stack and release them.
         while (GetCurrentNestLevel() > 0) {
-            nsIRDFContent* content;
+            nsIRDFNode* resource;
             RDFContentSinkState state;
-            PopContext(content, state);
-            NS_IF_RELEASE(content);
+            PopContext(resource, state);
+            NS_IF_RELEASE(resource);
         }
 
         delete mContextStack;
@@ -350,9 +407,23 @@ nsRDFContentSink::Init(nsIDocument* aDoc,
     mWebShell = aContainer;
     NS_ADDREF(aContainer);
 
+    nsresult rv;
+    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
+                                                    kIRDFResourceManagerIID,
+                                                    (nsISupports**) &mRDFResourceManager)))
+        return rv;
+
+    nsIRDFDocument* rdfDoc;
+    if (NS_FAILED(rv = mDocument->QueryInterface(kIRDFDocumentIID, (void**) &rdfDoc)))
+        return rv;
+
+    rv = rdfDoc->GetDataSource(mDataSource);
+
+    NS_RELEASE(rdfDoc);
+
     mState = eRDFContentSinkState_InProlog;
 
-    return NS_OK;
+    return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -492,9 +563,8 @@ nsRDFContentSink::CloseContainer(const nsIParserNode& aNode)
 {
     FlushText();
 
-    nsIRDFContent* content;
-
-    if (NS_FAILED(PopContext(content, mState))) {
+    nsIRDFNode* resource;
+    if (NS_FAILED(PopContext(resource, mState))) {
         // XXX parser didn't catch unmatched tags?
         PR_ASSERT(0);
         return NS_ERROR_UNEXPECTED; // XXX
@@ -506,7 +576,7 @@ nsRDFContentSink::CloseContainer(const nsIParserNode& aNode)
 
     CloseNameSpacesAtNestLevel(nestLevel);
       
-    NS_RELEASE(content);
+    NS_IF_RELEASE(resource);
     return NS_OK;
 }
 
@@ -835,23 +905,6 @@ rdf_IsDataInBuffer(PRUnichar* buffer, PRInt32 length)
     return PR_FALSE;
 }
 
-static nsresult
-rdf_Assert(nsIRDFContent* resource,
-           const nsIRDFContent* property,
-           const nsString& value)
-{
-    NS_PRECONDITION(resource && property, "null pointer");
-    if (!resource || !property)
-        return NS_ERROR_NULL_POINTER;
-
-    nsresult rv;
-    nsAutoString propertyURI;
-    if (NS_FAILED(rv = property->GetResource(propertyURI)))
-        return rv;
-
-    return resource->SetProperty(propertyURI, value);
-}
-
 
 nsresult
 nsRDFContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
@@ -869,9 +922,9 @@ nsRDFContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
                 nsAutoString value;
                 value.Append(mText, mTextLength);
 
-                rv = rdf_Assert(GetContextElement(1),
-                                GetContextElement(0),
-                                value);
+                rv = Assert(GetContextElement(1),
+                            GetContextElement(0),
+                            value);
 
                 } break;
 
@@ -925,10 +978,10 @@ nsRDFContentSink::SplitQualifiedName(const nsString& aQualifiedName,
 
 
 nsresult
-nsRDFContentSink::GetDescriptionResource(const nsIParserNode& aNode,
-                                         nsString& rResource)
+nsRDFContentSink::GetIdAboutAttribute(const nsIParserNode& aNode,
+                                      nsString& rResource)
 {
-    // Add tag attributes to the content attributes
+    // This corresponds to the dirty work of production [6.5]
     nsAutoString k;
     nsAutoString ns, attr;
     PRInt32 ac = aNode.GetAttributeCount();
@@ -942,32 +995,72 @@ nsRDFContentSink::GetDescriptionResource(const nsIParserNode& aNode,
         if (! ns.Equals(kRDFNameSpaceURI))
             continue;
 
-        if (attr.Equals(kRDFAboutAttr) ||
-            attr.Equals(kRDFIDAttr)) {
-            // XXX you can't specify both, but we'll just pick up the
-            // first thing that was specified and ignore the other.
+        // XXX you can't specify both, but we'll just pick up the
+        // first thing that was specified and ignore the other.
+
+        if (attr.Equals(kTagRDF_about)) {
             rResource = aNode.GetValueAt(i);
-            rdf_ConvertEntityReferences(rResource);
+            rdf_StripAndConvert(rResource);
 
             return NS_OK;
         }
+
+        if (attr.Equals(kTagRDF_ID)) {
+            mDocumentURL->ToString(rResource);
+            nsAutoString tag = aNode.GetValueAt(i);
+            rdf_StripAndConvert(tag);
+
+            if (rResource.Last() != '#' && tag.First() != '#')
+                rResource.Append('#');
+
+            rResource.Append(tag);
+            return NS_OK;
+        }
+
+        // XXX we don't deal with aboutEach...
     }
 
     // Otherwise, we couldn't find anything, so just gensym one...
-    nsresult rv;
-    nsIRDFDocument* rdfDoc;
-    if (NS_FAILED(rv = mDocument->QueryInterface(kIRDFDocumentIID, (void**) &rdfDoc)))
-        return rv;
-
-    rdfDoc->GenerateAnonymousResource(rResource);
-
-    NS_RELEASE(rdfDoc);
+    mDocumentURL->ToString(rResource);
+    rResource.Append("#anonymous$");
+    rResource.Append(mGenSym++, 10);
     return NS_OK;
+}
+
+
+nsresult
+nsRDFContentSink::GetResourceAttribute(const nsIParserNode& aNode,
+                                       nsString& rResource)
+{
+    nsAutoString k;
+    nsAutoString ns, attr;
+    PRInt32 ac = aNode.GetAttributeCount();
+
+    for (PRInt32 i = 0; i < ac; i++) {
+        // Get upper-cased key
+        const nsString& key = aNode.GetKeyAt(i);
+        if (NS_FAILED(SplitQualifiedName(key, ns, attr)))
+            continue;
+
+        if (! ns.Equals(kRDFNameSpaceURI))
+            continue;
+
+        // XXX you can't specify both, but we'll just pick up the
+        // first thing that was specified and ignore the other.
+
+        if (attr.Equals(kTagRDF_resource)) {
+            rResource = aNode.GetValueAt(i);
+            rdf_StripAndConvert(rResource);
+            rdf_FullyQualifyURI(mDocumentURL, rResource);
+            return NS_OK;
+        }
+    }
+    return NS_ERROR_FAILURE;
 }
 
 nsresult
 nsRDFContentSink::AddProperties(const nsIParserNode& aNode,
-                                nsIRDFContent* aContent)
+                                nsIRDFNode* aSubject)
 {
     // Add tag attributes to the content attributes
     nsAutoString k, v;
@@ -982,19 +1075,19 @@ nsRDFContentSink::AddProperties(const nsIParserNode& aNode,
 
         // skip rdf:about and rdf:ID attributes; we already have them.
         if (ns.Equals(kRDFNameSpaceURI) &&
-            (attr.Equals(kRDFAboutAttr) ||
-             attr.Equals(kRDFIDAttr)))
+            (attr.Equals(kTagRDF_about) ||
+             attr.Equals(kTagRDF_ID)))
             continue;
 
         v = aNode.GetValueAt(i);
-        rdf_ConvertEntityReferences(v);
+        rdf_StripAndConvert(v);
 
         k.Truncate();
         k.Append(ns);
         k.Append(attr);
 
-        // Add attribute to content
-        aContent->SetProperty(k, v);
+        // Add the attribute to RDF
+        Assert(aSubject, k, v);
     }
     return NS_OK;
 }
@@ -1017,19 +1110,10 @@ nsRDFContentSink::OpenRDF(const nsIParserNode& aNode)
     if (! ns.Equals(kRDFNameSpaceURI))
         return NS_ERROR_UNEXPECTED;
 
-    if (! tag.Equals(kRDFRDFTag))
+    if (! tag.Equals(kTagRDF_RDF))
         return NS_ERROR_UNEXPECTED;
 
-    nsIRDFContent* rdfElement;
-    if (NS_FAILED(NS_NewRDFElement(&rdfElement)))
-        return NS_ERROR_UNEXPECTED;
-
-    rdfElement->SetDocument(mDocument, PR_FALSE);
-
-    // XXX this doesn't seem appropriate so, I'm not gonna do it.
-    //mDocument->SetRootContent(rdfElement);
-
-    PushContext(rdfElement, mState);
+    PushContext(NULL, mState);
     mState = eRDFContentSinkState_InDocumentElement;
     return NS_OK;
 }
@@ -1038,51 +1122,49 @@ nsRDFContentSink::OpenRDF(const nsIParserNode& aNode)
 nsresult
 nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
 {
-    nsresult rv;
-
     // an "object" non-terminal is either a "description", a "typed
     // node", or a "container", so this change the content sink's
     // state appropriately.
-    nsAutoString ns, tag;
 
+    if (! mRDFResourceManager)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsAutoString ns, tag;
+    nsresult rv;
     if (NS_FAILED(rv = SplitQualifiedName(aNode.GetText(), ns, tag)))
         return rv;
 
-    nsIRDFContent* rdfElement;
+    // Figure out the URI of this object, and create an RDF node for it.
+    nsAutoString uri;
+    if (NS_FAILED(rv = GetIdAboutAttribute(aNode, uri)))
+        return rv;
 
-    if (ns.Equals(kRDFNameSpaceURI) &&
-        (tag.Equals(kRDFBagTag) ||
-         tag.Equals(kRDFSeqTag) ||
-         tag.Equals(kRDFAltTag))) {
-        // create a container element
-        nsIRDFContainerContent* rdfContainerElement;
-        if (NS_FAILED(rv = NS_NewRDFContainerElement(&rdfContainerElement)))
-            return rv;
-
-        rdfElement = static_cast<nsIRDFContent*>(rdfContainerElement);
-    }
-    else {
-        // create a normal element
-        if (NS_FAILED(rv = NS_NewRDFElement(&rdfElement)))
-            return rv;
-    }
-
-    rdfElement->SetDocument(mDocument, PR_FALSE);
+    nsIRDFNode* rdfResource;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(uri, rdfResource)))
+        return rv;
 
     // Arbitrarily make the document root be the first container
     // element in the RDF.
     if (! mRootElement) {
-        mRootElement = rdfElement;
-        NS_ADDREF(mRootElement);
+        nsIRDFContent* rdfElement;
+        if (NS_FAILED(rv = NS_NewRDFElement(&rdfElement)))
+            return rv;
+
+        if (NS_FAILED(rv = rdfElement->SetDocument(mDocument, PR_FALSE))) {
+            NS_RELEASE(rdfElement);
+            return rv;
+        }
+
+        if (NS_FAILED(rv = rdfElement->SetResource(uri))) {
+            NS_RELEASE(rdfElement);
+            return rv;
+        }
+
+        mRootElement = static_cast<nsIContent*>(rdfElement);
         mDocument->SetRootContent(mRootElement);
+
+        NS_RELEASE(rdfElement);
     }
-
-    nsAutoString uri;
-    if (NS_FAILED(rv = GetDescriptionResource(aNode, uri)))
-        return rv;
-
-    if (NS_FAILED(rv = rdfElement->SetResource(uri)))
-        return rv;
 
     // If we're in a member or property element, then this is the cue
     // that we need to hook the object up into the graph via the
@@ -1090,21 +1172,17 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
     switch (mState) {
     case eRDFContentSinkState_InMemberElement:
     case eRDFContentSinkState_InPropertyElement: {
-        nsAutoString value;
-        value.Append(mText, mTextLength);
-
-        rv = rdf_Assert(GetContextElement(1),
-                        GetContextElement(0),
-                        uri);
-
-        } break;
+        Assert(GetContextElement(1),
+               GetContextElement(0),
+               rdfResource);
+    } break;
 
     default:
         break;
     }
-
+    
     // Push the element onto the context stack
-    PushContext(rdfElement, mState);
+    PushContext(rdfResource, mState);
 
     // Now figure out what kind of state transition we need to
     // make. We'll either be going into a mode where we parse a
@@ -1114,23 +1192,23 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
     if (ns.Equals(kRDFNameSpaceURI)) {
         isaTypedNode = PR_FALSE;
 
-        if (tag.Equals(kRDFDescriptionTag)) {
+        if (tag.Equals(kTagRDF_Description)) {
             // it's a description
             mState = eRDFContentSinkState_InDescriptionElement;
         }
-        else if (tag.Equals(kRDFBagTag)) {
+        else if (tag.Equals(kTagRDF_Bag)) {
             // it's a bag container
-            rdfElement->SetProperty(kRDFInstanceOf, kRDFBag);
+            Assert(rdfResource, kURIRDF_instanceOf, kURIRDF_Bag);
             mState = eRDFContentSinkState_InContainerElement;
         }
-        else if (tag.Equals(kRDFSeqTag)) {
+        else if (tag.Equals(kTagRDF_Seq)) {
             // it's a seq container
-            rdfElement->SetProperty(kRDFInstanceOf, kRDFSeq);
+            Assert(rdfResource, kURIRDF_instanceOf, kURIRDF_Seq);
             mState = eRDFContentSinkState_InContainerElement;
         }
-        else if (tag.Equals(kRDFAltTag)) {
+        else if (tag.Equals(kTagRDF_Alt)) {
             // it's an alt container
-            rdfElement->SetProperty(kRDFInstanceOf, kRDFAlt);
+            Assert(rdfResource, kURIRDF_instanceOf, kURIRDF_Alt);
             mState = eRDFContentSinkState_InContainerElement;
         }
         else {
@@ -1143,12 +1221,14 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
         // XXX destructively alter "ns" to contain the fully qualified
         // tag name. We can do this 'cause we don't need it anymore...
         ns.Append(tag);
-        rdfElement->SetProperty(kRDFInstanceOf, ns);
+        Assert(rdfResource, kURIRDF_instanceOf, ns);
 
         mState = eRDFContentSinkState_InDescriptionElement;
     }
 
-    AddProperties(aNode, rdfElement);
+    AddProperties(aNode, rdfResource);
+    NS_RELEASE(rdfResource);
+
     return NS_OK;
 }
 
@@ -1156,6 +1236,9 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
 nsresult
 nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
 {
+    if (! mRDFResourceManager)
+        return NS_ERROR_NOT_INITIALIZED;
+
     nsresult rv;
 
     // an "object" non-terminal is either a "description", a "typed
@@ -1166,16 +1249,11 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
     if (NS_FAILED(rv = SplitQualifiedName(aNode.GetText(), ns, tag)))
         return rv;
 
-    nsIRDFContent* rdfElement;
-    if (NS_FAILED(rv = NS_NewRDFElement(&rdfElement)))
-        return rv;
-
-    rdfElement->SetDocument(mDocument, PR_FALSE);
-
     // XXX destructively alter "ns" to contain the fully qualified
     // tag name. We can do this 'cause we don't need it anymore...
     ns.Append(tag);
-    if (NS_FAILED(rv = rdfElement->SetResource(ns)))
+    nsIRDFNode* rdfResource;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(ns, rdfResource)))
         return rv;
 
     // XXX I'm not sure what it means to property attributes on a
@@ -1184,9 +1262,10 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
     //AddProperties(aNode, rdfElement);
 
     // Push the element onto the context stack and change state.
-    PushContext(rdfElement, mState);
+    PushContext(rdfResource, mState);
     mState = eRDFContentSinkState_InPropertyElement;
 
+    rdfResource->Release();
     return NS_OK;
 }
 
@@ -1194,37 +1273,57 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
 nsresult
 nsRDFContentSink::OpenMember(const nsIParserNode& aNode)
 {
-    nsIRDFContent* contextElement = GetContextElement(0);
-    if (! contextElement)
-        return NS_ERROR_NULL_POINTER;
+    // ensure that we're actually reading a member element by making
+    // sure that the opening tag is <rdf:li>, where "rdf:" corresponds
+    // to whatever they've declared the standard RDF namespace to be.
+    nsAutoString ns, tag;
 
-    nsIRDFContainerContent* rdfContainer;
-    if (NS_FAILED(contextElement->QueryInterface(kIRDFContainerContentIID,
-                                                 (void**) &rdfContainer)))
+    if (NS_FAILED(SplitQualifiedName(aNode.GetText(), ns, tag)))
         return NS_ERROR_UNEXPECTED;
 
-    PRUint32 count;
-    rdfContainer->GetElementCount(count);
-    NS_RELEASE(rdfContainer);
+    if (! ns.Equals(kRDFNameSpaceURI))
+        return NS_ERROR_UNEXPECTED;
+
+    if (! tag.Equals(kTagRDF_li))
+        return NS_ERROR_UNEXPECTED;
+
+    // The parent element is the container.
+    nsIRDFNode* contextResource = GetContextElement(0);
+    if (! contextResource)
+        return NS_ERROR_NULL_POINTER;
+
+    // XXX err...figure out where we're at
+    PRUint32 count = 1;
+
+    nsAutoString ordinalURI(kRDFNameSpaceURI);
+    ordinalURI.Append('_');
+    ordinalURI.Append(count + 1, 10);
 
     nsresult rv;
-    nsIRDFContent* rdfElement;
-    if (NS_FAILED(rv = NS_NewRDFElement(&rdfElement)))
+    nsIRDFNode* ordinalResource;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(ordinalURI, ordinalResource)))
         return rv;
 
-    rdfElement->SetDocument(mDocument, PR_FALSE);
+    nsAutoString resourceURI;
+    if (NS_SUCCEEDED(GetResourceAttribute(aNode, resourceURI))) {
+        // Okay, this node has an RDF:resource="..." attribute. That
+        // means that it's a "referenced item," as covered in [6.29].
+        rv = Assert(contextResource, ordinalResource, resourceURI);
 
-    nsAutoString uri(kRDFNameSpaceURI);
-    uri.Append('_');
-    uri.Append(count + 1, 10);
-
-    rdfElement->SetResource(uri);
+        // XXX Technically, we should _not_ fall through here and push
+        // the element onto the stack: this is supposed to be a closed
+        // node. But right now I'm lazy and the code will just Do The
+        // Right Thing so long as the RDF is well-formed.
+    }
 
     // Push it on to the content stack and change state.
-    PushContext(rdfElement, mState);
+    PushContext(ordinalResource, mState);
     mState = eRDFContentSinkState_InMemberElement;
-    return NS_OK;
+
+    ordinalResource->Release();
+    return rv;
 }
+
 
 nsresult
 nsRDFContentSink::OpenValue(const nsIParserNode& aNode)
@@ -1234,16 +1333,81 @@ nsRDFContentSink::OpenValue(const nsIParserNode& aNode)
     return OpenObject(aNode);
 }
 
+////////////////////////////////////////////////////////////////////////
+// RDF Helper Methods
+
+nsresult
+nsRDFContentSink::Assert(nsIRDFNode* subject, nsIRDFNode* predicate, nsIRDFNode* object)
+{
+    if (!mDataSource)
+        return NS_ERROR_NOT_INITIALIZED;
+
+#ifdef DEBUG_waterson
+    char buf[256];
+    nsAutoString s;
+
+    printf("assert [\n");
+
+    subject->GetStringValue(s);
+    printf("  %s\n", s.ToCString(buf, sizeof(buf)));
+
+    predicate->GetStringValue(s);
+    printf("  %s\n", s.ToCString(buf, sizeof(buf)));
+
+    object->GetStringValue(s);
+    printf("  %s\n", s.ToCString(buf, sizeof(buf)));
+
+    printf("]\n");
+#endif
+
+    return mDataSource->Assert(subject, predicate, object);
+}
+
+
+nsresult
+nsRDFContentSink::Assert(nsIRDFNode* subject, nsIRDFNode* predicate, const nsString& objectLiteral)
+{
+    if (!mRDFResourceManager)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsresult rv;
+    nsIRDFNode* object;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(objectLiteral, object)))
+        return rv;
+
+    rv = Assert(subject, predicate, object);
+    NS_RELEASE(object);
+
+    return rv;
+}
+
+nsresult
+nsRDFContentSink::Assert(nsIRDFNode* subject, const nsString& predicateURI, const nsString& objectLiteral)
+{
+    if (!mRDFResourceManager)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsresult rv;
+    nsIRDFNode* predicate;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(predicateURI, predicate)))
+        return rv;
+
+    rv = Assert(subject, predicate, objectLiteral);
+    NS_RELEASE(predicate);
+
+    return rv;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // Content stack management
 
 struct RDFContextStackElement {
-    nsIRDFContent*      mContent;
+    nsIRDFNode*         mResource;
     RDFContentSinkState mState;
 };
 
-nsIRDFContent* 
+nsIRDFNode* 
 nsRDFContentSink::GetContextElement(PRInt32 ancestor /* = 0 */)
 {
     if ((nsnull == mContextStack) ||
@@ -1254,11 +1418,11 @@ nsRDFContentSink::GetContextElement(PRInt32 ancestor /* = 0 */)
     RDFContextStackElement* e =
         static_cast<RDFContextStackElement*>(mContextStack->ElementAt(mNestLevel-ancestor-1));
 
-    return e->mContent;
+    return e->mResource;
 }
 
 PRInt32 
-nsRDFContentSink::PushContext(nsIRDFContent *aContent, RDFContentSinkState aState)
+nsRDFContentSink::PushContext(nsIRDFNode *aResource, RDFContentSinkState aState)
 {
     if (! mContextStack) {
         mContextStack = new nsVoidArray();
@@ -1270,15 +1434,16 @@ nsRDFContentSink::PushContext(nsIRDFContent *aContent, RDFContentSinkState aStat
     if (! e)
         return mNestLevel;
 
-    e->mContent = aContent;
-    e->mState   = aState;
+    NS_IF_ADDREF(aResource);
+    e->mResource = aResource;
+    e->mState    = aState;
   
     mContextStack->AppendElement(static_cast<void*>(e));
     return ++mNestLevel;
 }
  
 nsresult
-nsRDFContentSink::PopContext(nsIRDFContent*& rContent, RDFContentSinkState& rState)
+nsRDFContentSink::PopContext(nsIRDFNode*& rResource, RDFContentSinkState& rState)
 {
     RDFContextStackElement* e;
     if ((nsnull == mContextStack) ||
@@ -1290,8 +1455,9 @@ nsRDFContentSink::PopContext(nsIRDFContent*& rContent, RDFContentSinkState& rSta
     e = static_cast<RDFContextStackElement*>(mContextStack->ElementAt(mNestLevel));
     mContextStack->RemoveElementAt(mNestLevel);
 
-    rContent = e->mContent;
-    rState   = e->mState;
+    // don't bother Release()-ing: call it our implicit AddRef().
+    rResource = e->mResource;
+    rState    = e->mState;
 
     delete e;
     return NS_OK;
@@ -1332,7 +1498,7 @@ nsRDFContentSink::FindNameSpaceAttributes(const nsIParserNode& aNode)
 
             // Get the attribute value (the URI for the namespace)
             uri = aNode.GetValueAt(i);
-            rdf_ConvertEntityReferences(uri);
+            rdf_StripAndConvert(uri);
       
             // Open a local namespace
             OpenNameSpace(prefix, uri);

@@ -32,6 +32,8 @@ class nsIContent;
 class nsVoidArray;
 class nsIRDFDocument;
 class nsIRDFContent;
+class nsIRDFNode;
+class nsIRDFResourceManager;
 class nsIUnicharInputStream;
 class nsIStyleSheet;
 
@@ -98,21 +100,27 @@ protected:
                                 nsString& rNameSpaceURI,
                                 nsString& rPropertyURI);
 
-    // content stack management
-    PRInt32        PushContext(nsIRDFContent *aContent, RDFContentSinkState aState);
-    nsresult       PopContext(nsIRDFContent*& rContent, RDFContentSinkState& rState);
-    nsIRDFContent* GetContextElement(PRInt32 ancestor = 0);
-    PRInt32        GetCurrentNestLevel();
-
-    nsresult GetDescriptionResource(const nsIParserNode& aNode, nsString& rResource);
-    nsresult AddProperties(const nsIParserNode& aNode, nsIRDFContent* aContent);
-
     // RDF-specific parsing
+    nsresult GetIdAboutAttribute(const nsIParserNode& aNode, nsString& rResource);
+    nsresult GetResourceAttribute(const nsIParserNode& aNode, nsString& rResource);
+    nsresult AddProperties(const nsIParserNode& aNode, nsIRDFNode* aSubject);
+
     nsresult OpenRDF(const nsIParserNode& aNode);
     nsresult OpenObject(const nsIParserNode& aNode);
     nsresult OpenProperty(const nsIParserNode& aNode);
     nsresult OpenMember(const nsIParserNode& aNode);
     nsresult OpenValue(const nsIParserNode& aNode);
+
+    // RDF helper routines
+    nsresult Assert(nsIRDFNode* subject, nsIRDFNode* predicate, nsIRDFNode* object);
+    nsresult Assert(nsIRDFNode* subject, nsIRDFNode* predicate, const nsString& objectLiteral);
+    nsresult Assert(nsIRDFNode* subject, const nsString& predicateURI, const nsString& objectLiteral);
+
+    // content stack management
+    PRInt32     PushContext(nsIRDFNode *aContext, RDFContentSinkState aState);
+    nsresult    PopContext(nsIRDFNode*& rContext, RDFContentSinkState& rState);
+    nsIRDFNode* GetContextElement(PRInt32 ancestor = 0);
+    PRInt32     GetCurrentNestLevel();
 
     struct NameSpaceStruct {
         nsIAtom* mPrefix;
@@ -124,7 +132,10 @@ protected:
     nsIURL*      mDocumentURL;
     nsIWebShell* mWebShell;
     nsIContent*  mRootElement;
+    PRUint32     mGenSym; // for generating anonymous resources
 
+    nsIRDFResourceManager* mRDFResourceManager;
+    nsIRDFDataSource* mDataSource; // XXX should this really be a rdf *db* vs. a raw datasource?
     RDFContentSinkState mState;
     nsVoidArray* mNameSpaces;
 
