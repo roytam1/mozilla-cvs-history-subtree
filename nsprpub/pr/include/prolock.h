@@ -78,7 +78,18 @@ PR_BEGIN_EXTERN_C
 **
 */
 
+#if defined(DEBUG) || defined(FORCE_NSPR_ORDERED_LOCKS)
 typedef void * PROrderedLock;
+#else
+/*
+** Map PROrderedLock and methods onto PRLock when ordered locking
+** is not compiled in.
+**  
+*/
+#include <prlock.h>
+
+typedef PRLock PROrderedLock;
+#endif
 
 /* -----------------------------------------------------------------------
 ** FUNCTION: PR_CreateOrderedLock() -- Create an Ordered Lock

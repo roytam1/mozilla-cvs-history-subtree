@@ -140,8 +140,8 @@ typedef enum PRTraceOption
 ** 
 ** DESCRIPTION: PR_DEFINE_TRACE() is used to define a trace
 ** handle.
+** 
 */
-#define PR_DEFINE_TRACE(name) PRTraceHandle name
 #define PR_DEFINE_TRACE(name) PRTraceHandle name
 
 /* -----------------------------------------------------------------------
