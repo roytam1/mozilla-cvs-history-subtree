@@ -95,6 +95,11 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
+    // XXX It would be nice if we could get away with doing a GC here and also
+    // calling Release on the natives no longer reachable via XPConnect. As 
+    // noted all over the place, this makes bad things happen since shutdown is
+    // an unstable time for so many modules who have not planned well for it.
+
     mShutingDown = JS_TRUE;
     { // scoped callcontext
         XPCCallContext ccx(NATIVE_CALLER);

@@ -405,7 +405,7 @@ XPCPerThreadData::SetException(nsIXPCException* aException)
     mException = aException;
 }
 
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 xpc_ThreadDataDtorCB(void* ptr)
 {
     XPCPerThreadData* data = (XPCPerThreadData*) ptr;
