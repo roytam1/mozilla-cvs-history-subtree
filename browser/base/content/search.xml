@@ -242,8 +242,7 @@
             if (!searchURL)
               return;
           }
-          gURLBar.value = searchURL; //pch: ugly!
-          BrowserLoadURL(this.mEnterEvent); // from autocomplete.xml
+          SearchLoadURL(searchURL, this.mEnterEvent);
         ]]></body>
       </method>
 
