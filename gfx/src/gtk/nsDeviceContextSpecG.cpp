@@ -1158,15 +1158,17 @@ nsresult GlobalPrinters::InitializeGlobalPrinters ()
             defdest = (*CupsGetDest)(NULL, NULL, num_dests, dests);
 
             /* Add default destination as first in list */
-            mGlobalPrinterList->AppendString(
-            nsString(NS_ConvertASCIItoUCS2(NS_POSTSCRIPT_DRIVER_NAME)) + 
-            nsString(NS_ConvertASCIItoUCS2(defdest->name)));
-            mGlobalNumPrinters++;      
-            added_default_printer = PR_TRUE;
+            if (defdest) { 
+                mGlobalPrinterList->AppendString(
+                        nsString(NS_ConvertASCIItoUCS2(NS_POSTSCRIPT_DRIVER_NAME)) + 
+                        nsString(NS_ConvertASCIItoUCS2(defdest->name)));
+                mGlobalNumPrinters++;      
+                added_default_printer = PR_TRUE;
+            }
 
             for (i = 0; i < num_dests; i ++) {
               /* Don't add the default printer again */
-              if (strcmp(dests[i].name, defdest->name) != 0) {
+              if (!defdest || strcmp(dests[i].name, defdest->name) != 0) {
                 mGlobalPrinterList->AppendString(
                   nsString(NS_ConvertASCIItoUCS2(NS_POSTSCRIPT_DRIVER_NAME)) + 
                   nsString(NS_ConvertASCIItoUCS2(dests[i].name)));
