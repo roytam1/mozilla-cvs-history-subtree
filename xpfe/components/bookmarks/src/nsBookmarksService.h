@@ -189,6 +189,12 @@ protected:
     nsresult
     GetURLFromResource(nsIRDFResource* aResource, nsAString& aURL);
 
+    nsresult
+    CopyResource(nsIRDFResource* aOldResource, nsIRDFResource* aNewResource);
+
+    nsresult
+    SetNewPersonalToolbarFolder(nsIRDFResource* aFolder);
+
     nsresult LoadBookmarks();
     nsresult initDatasource();
 
