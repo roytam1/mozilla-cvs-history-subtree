@@ -23,7 +23,7 @@
 
 #include "nsIImageContainer.h"
 
-#include "nsSize2.h"
+#include "nsSize.h"
 
 #include "nsSupportsArray.h"
 
@@ -47,7 +47,7 @@ public:
 private:
   /* additional members */
   nsSupportsArray mFrames;
-  nsSize2 mSize;
+  nsSize mSize;
   PRUint32 mCurrentFrame;
 };
 

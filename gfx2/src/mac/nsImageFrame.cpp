@@ -23,8 +23,6 @@
 
 #include "nsImageFrame.h"
 
-#include "nsUnitConverters.h"
-
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
 nsImageFrame::nsImageFrame() :
@@ -41,8 +39,8 @@ nsImageFrame::~nsImageFrame()
   delete mAlphaData;
 }
 
-/* void init (in gfx_coord aX, in gfx_coord aY, in gfx_dimension aWidth, in gfx_dimension aHeight, in gfx_format aFormat); */
-NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight, gfx_format aFormat)
+/* void init (in nscoord aX, in nscoord aY, in nscoord aWidth, in nscoord aHeight, in gfx_format aFormat); */
+NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight, gfx_format aFormat)
 {
   if (aWidth <= 0 || aHeight <= 0) {
     printf("error - negative image size\n");
@@ -56,9 +54,6 @@ NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidt
 
   mRect.SetRect(aX, aY, aWidth, aHeight);
   mFormat = aFormat;
-
-  PRInt32 ceilWidth(GFXCoordToIntCeil(mRect.width));
-
 
   // XXX this makes an assumption about what values these have and what is between them.. i'm being bad.
   if (mFormat >= nsIGFXFormat::RGB_A1 && mFormat <= nsIGFXFormat::BGR_A8)
@@ -78,13 +73,13 @@ NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidt
   case nsIGFXFormat::RGB_A1:
     mImageData.depth = 24;
     mAlphaData->depth = 1;
-    mAlphaData->bytesPerRow = (((ceilWidth + 7) / 8) + 3) & ~0x3;
+    mAlphaData->bytesPerRow = (((mRect.width + 7) / 8) + 3) & ~0x3;
     break;
   case nsIGFXFormat::BGR_A8:
   case nsIGFXFormat::RGB_A8:
     mImageData.depth = 24;
     mAlphaData->depth = 8;
-    mAlphaData->bytesPerRow = (ceilWidth + 3) & ~0x3;
+    mAlphaData->bytesPerRow = (mRect.width + 3) & ~0x3;
     break;
 
   default:
@@ -93,28 +88,26 @@ NS_IMETHODIMP nsImageFrame::Init(gfx_coord aX, gfx_coord aY, gfx_dimension aWidt
   }
 
 
-  mImageData.bytesPerRow = (ceilWidth * mImageData.depth) >> 5;
+  mImageData.bytesPerRow = (mRect.width * mImageData.depth) >> 5;
 
-  if ((ceilWidth * mImageData.depth) & 0x1F)
+  if ((mRect.width * mImageData.depth) & 0x1F)
     mImageData.bytesPerRow++;
   mImageData.bytesPerRow <<= 2;
 
 
-  PRInt32 ceilHeight = GFXCoordToIntCeil(mRect.height);
-
-  mImageData.length = mImageData.bytesPerRow * ceilHeight;
+  mImageData.length = mImageData.bytesPerRow * mRect.height;
   mImageData.data = new PRUint8[mImageData.length];
 
   if (mAlphaData) {
-    mAlphaData->length = mAlphaData->bytesPerRow * ceilHeight;
+    mAlphaData->length = mAlphaData->bytesPerRow * mRect.height;
     mAlphaData->data = new PRUint8[mAlphaData->length];
   }
 
   return NS_OK;
 }
 
-/* readonly attribute gfx_coord x; */
-NS_IMETHODIMP nsImageFrame::GetX(gfx_coord *aX)
+/* readonly attribute nscoord x; */
+NS_IMETHODIMP nsImageFrame::GetX(nscoord *aX)
 {
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
@@ -123,8 +116,8 @@ NS_IMETHODIMP nsImageFrame::GetX(gfx_coord *aX)
   return NS_OK;
 }
 
-/* readonly attribute gfx_coord y; */
-NS_IMETHODIMP nsImageFrame::GetY(gfx_coord *aY)
+/* readonly attribute nscoord y; */
+NS_IMETHODIMP nsImageFrame::GetY(nscoord *aY)
 {
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
@@ -134,8 +127,8 @@ NS_IMETHODIMP nsImageFrame::GetY(gfx_coord *aY)
 }
 
 
-/* readonly attribute gfx_dimension width; */
-NS_IMETHODIMP nsImageFrame::GetWidth(gfx_dimension *aWidth)
+/* readonly attribute nscoord width; */
+NS_IMETHODIMP nsImageFrame::GetWidth(nscoord *aWidth)
 {
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
@@ -144,8 +137,8 @@ NS_IMETHODIMP nsImageFrame::GetWidth(gfx_dimension *aWidth)
   return NS_OK;
 }
 
-/* readonly attribute gfx_dimension height; */
-NS_IMETHODIMP nsImageFrame::GetHeight(gfx_dimension *aHeight)
+/* readonly attribute nscoord height; */
+NS_IMETHODIMP nsImageFrame::GetHeight(nscoord *aHeight)
 {
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
@@ -154,8 +147,8 @@ NS_IMETHODIMP nsImageFrame::GetHeight(gfx_dimension *aHeight)
   return NS_OK;
 }
 
-/* readonly attribute nsRect2 rect; */
-NS_IMETHODIMP nsImageFrame::GetRect(nsRect2 **aRect)
+/* readonly attribute nsRect rect; */
+NS_IMETHODIMP nsImageFrame::GetRect(nsRect **aRect)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 
@@ -277,4 +270,3 @@ NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, P
 
   return NS_OK;
 }
-

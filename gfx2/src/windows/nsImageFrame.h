@@ -23,7 +23,7 @@
 
 #include "nsIImageFrame.h"
 
-#include "nsRect2.h"
+#include "nsRect.h"
 
 #define NS_IMAGEFRAME_CID \
 { /* 99b219ea-1dd1-11b2-aa87-cd48e7d50227 */         \
@@ -56,7 +56,7 @@ public:
 
 private:
   /* additional members */
-  nsRect2 mRect;
+  nsRect mRect;
 
   PRPackedBool mInitalized;   // 8 bits
   // ???                      // 8 bits

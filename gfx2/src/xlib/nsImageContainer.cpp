@@ -23,7 +23,7 @@
 
 #include "nsImageContainer.h"
 
-NS_IMPL_ISUPPORTS1(nsImageContainer, nsIImageContainer)
+NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerXlib)
 
 nsImageContainer::nsImageContainer()
 {
