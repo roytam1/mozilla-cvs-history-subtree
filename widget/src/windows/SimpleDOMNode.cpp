@@ -50,6 +50,7 @@
 #include "nsIWeakReference.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIPresContext.h"
+#include "nsPromiseFlatString.h"
 
 /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
@@ -225,30 +226,13 @@ STDMETHODIMP SimpleDOMNode::get_attributes(
 }
         
 
-STDMETHODIMP SimpleDOMNode::get_computedStyle( 
-    /* [in] */ unsigned short aMaxStyleProperties,
-    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
+NS_IMETHODIMP SimpleDOMNode::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclaration **aCssDecl, PRUint32 *aLength)
 {
-  return get_computedStyleForMedia(nsnull, aMaxStyleProperties, aNumStyleProperties, aStyleProperties, aStyleValues);
-}
-
-/* To do: use media type if not null */
-STDMETHODIMP SimpleDOMNode::get_computedStyleForMedia( 
-    /* [in] */ BSTR __RPC_FAR *mediaType,
-    /* [in] */ unsigned short aMaxStyleProperties,
-    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
-{
-  *aNumStyleProperties = 0;
-
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
   GetElementAndContentFor(domElement, content);
   if (!domElement || !content) 
-    return S_FALSE;   
+    return NS_ERROR_FAILURE;   
 
   nsCOMPtr<nsIDocument> doc;
   if (content) 
@@ -259,24 +243,43 @@ STDMETHODIMP SimpleDOMNode::get_computedStyleForMedia(
     shell = doc->GetShellAt(0);
 
   if (!shell || !doc)
-    return S_FALSE;
+    return NS_ERROR_FAILURE;   
 
   nsCOMPtr<nsIScriptGlobalObject> global;
   doc->GetScriptGlobalObject(getter_AddRefs(global));
   nsCOMPtr<nsIDOMViewCSS> viewCSS(do_QueryInterface(global));
 
   if (!viewCSS)
-    return S_FALSE;
+    return NS_ERROR_FAILURE;   
 
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
   nsAutoString empty;
   viewCSS->GetComputedStyle(domElement, empty, getter_AddRefs(cssDecl));
+  if (cssDecl) {
+    *aCssDecl = cssDecl;
+    NS_ADDREF(*aCssDecl);
+    cssDecl->GetLength(aLength);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
 
-  if (!cssDecl) 
+
+/* To do: use media type if not null */
+STDMETHODIMP SimpleDOMNode::get_computedStyle( 
+    /* [in] */ unsigned short aMaxStyleProperties,
+    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
+    /* [in] */ boolean aUseAlternateViewMediaProperties,
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
+{
+  *aNumStyleProperties = 0;
+  PRUint32 length;
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
+  if (NS_FAILED(GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length)))
     return S_FALSE;
 
-  PRUint32 length = 0, index, realIndex;
-  cssDecl->GetLength(&length);
+  PRUint32 index, realIndex;
   for (index = realIndex = 0; index < length && realIndex < aMaxStyleProperties; index ++) {
     nsAutoString property, value;
     if (NS_SUCCEEDED(cssDecl->Item(index, property)) && property.CharAt(0) != '-')  // Ignore -moz-* properties
@@ -295,6 +298,33 @@ STDMETHODIMP SimpleDOMNode::get_computedStyleForMedia(
 
   return S_OK;
 }
+
+
+STDMETHODIMP SimpleDOMNode::get_computedStyleForProperties( 
+    /* [in] */ unsigned short aNumStyleProperties,
+    /* [in] */ boolean aUseAlternateViewMediaProperties,
+    /* [length_is][size_is][in] */ BSTR __RPC_FAR *aStyleProperties,
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
+{
+  PRUint32 length = 0;
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
+  nsresult rv = GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length);
+  if (NS_FAILED(rv))
+    return S_FALSE;
+
+  PRUint32 index;
+  for (index = 0; index < aNumStyleProperties; index ++) {
+    nsAutoString value;
+    if (aStyleProperties[index])
+      cssDecl->GetPropertyValue(nsString((PRUnichar*)aStyleProperties[index]), value);  // Get property value
+    PRUnichar *pszValue = value.ToNewUnicode();
+    aStyleValues[index] = ::SysAllocString(pszValue);
+    delete pszValue;
+  }
+
+  return S_OK;
+}
+
 
 ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
 {
@@ -341,8 +371,7 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
     if (pAcc) {
       ISimpleDOMNode *testNode;
       pAcc->QueryInterface(IID_ISimpleDOMNode, (void**)&testNode);
-      // if (testNode->GetRealDOMNode() == mDOMNode)  // same dom node as root
-        newNode = testNode;
+      newNode = testNode;
       pAcc->Release();
     }
   }

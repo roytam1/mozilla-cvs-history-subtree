@@ -217,6 +217,10 @@ public:
     virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_nameSpaceURIForID( 
         /* [in] */ short nameSpaceID,
         /* [out] */ BSTR __RPC_FAR *nameSpaceURI);
+
+    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE set_alternateViewMediaTypes( 
+        /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes);
+        
 };
 
 

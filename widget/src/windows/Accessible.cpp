@@ -804,12 +804,16 @@ STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID
       delete pszNameSpaceURI;
     }
     return S_OK;
-   }
+  }
 
   return S_FALSE;
 }
 
 
+STDMETHODIMP DocAccessible::set_alternateViewMediaTypes( /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes)
+{
+  return S_FALSE;
+}
 
 //----- Root Accessible -----
 

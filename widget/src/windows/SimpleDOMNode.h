@@ -57,6 +57,8 @@ class SimpleDOMNode : public ISimpleDOMNode
   private:
     void GetAccessibleFor(nsIDOMNode *node, nsIAccessible **newAcc);
     ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node);
+    NS_IMETHOD GetComputedStyleDeclaration(nsIDOMCSSStyleDeclaration **aCssDecl, PRUint32 *aLength);
+
 
   public:
 
@@ -77,16 +79,16 @@ class SimpleDOMNode : public ISimpleDOMNode
     virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyle( 
         /* [in] */ unsigned short maxStyleProperties,
         /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
-        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
-        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
-    
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyleForMedia( 
-        /* [in] */ BSTR __RPC_FAR *mediaType,  // W3C media type such as aural, braille, embossed, handheld, print, projection, screen, tty
-        /* [in] */ unsigned short maxStyleProperties,
-        /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
+        /* [in] */ boolean useAlternateViewMediaProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
   
+    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyleForProperties( 
+        /* [in] */ unsigned short numStyleProperties,
+        /* [in] */ boolean useAlternateViewMediaProperties,
+        /* [length_is][size_is][in] */ BSTR __RPC_FAR *styleProperties,
+        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
+        
     virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_parentNode(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
     virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_firstChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
     virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_lastChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
