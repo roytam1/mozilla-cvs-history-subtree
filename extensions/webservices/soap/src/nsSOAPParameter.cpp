@@ -137,7 +137,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsString(const nsAReadableString & aValue)
 /* void setAsBoolean (in PRBool aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsBoolean(PRBool aValue)
 {
-    mType.Assign(nsSOAPUtils::kPRBoolType);
+    mType.Assign(nsSOAPUtils::kBooleanType);
     nsCOMPtr<nsISupportsPRBool> value = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
     value->SetData(aValue);
     mValue = value;
@@ -167,7 +167,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsFloat(float aValue)
 /* void setAsLong (in PRInt64 aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsLong(PRInt64 aValue)
 {
-    mType.Assign(nsSOAPUtils::kPRInt64Type);
+    mType.Assign(nsSOAPUtils::kLongType);
     nsCOMPtr<nsISupportsPRInt64> value = do_CreateInstance(NS_SUPPORTS_PRINT64_CONTRACTID);
     value->SetData(aValue);
     mValue = value;
@@ -177,7 +177,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsLong(PRInt64 aValue)
 /* void setAsInt (in PRInt32 aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsInt(PRInt32 aValue)
 {
-    mType.Assign(nsSOAPUtils::kPRInt32Type);
+    mType.Assign(nsSOAPUtils::kIntType);
     nsCOMPtr<nsISupportsPRInt32> value = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
     value->SetData(aValue);
     mValue = value;
@@ -187,7 +187,7 @@ NS_IMETHODIMP nsSOAPParameter::SetAsInt(PRInt32 aValue)
 /* void setAsShort (in PRInt16 aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsShort(PRInt16 aValue)
 {
-    mType.Assign(nsSOAPUtils::kPRInt16Type);
+    mType.Assign(nsSOAPUtils::kShortType);
     nsCOMPtr<nsISupportsPRInt16> value = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
     value->SetData(aValue);
     mValue = value;
@@ -197,8 +197,8 @@ NS_IMETHODIMP nsSOAPParameter::SetAsShort(PRInt16 aValue)
 /* void setAsByte (in PRUint8 aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsByte(PRUint8 aValue)
 {
-    mType.Assign(nsSOAPUtils::kCharType);
-    nsCOMPtr<nsISupportsChar> value = do_CreateInstance(NS_SUPPORTS_CHAR_CONTRACTID);
+    mType.Assign(nsSOAPUtils::kByteType);
+    nsCOMPtr<nsISupportsPRInt16> value = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
     value->SetData(aValue);
     mValue = value;
     return NS_OK;

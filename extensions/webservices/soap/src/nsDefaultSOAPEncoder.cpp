@@ -96,13 +96,13 @@ ns##name##Encoder::~ns##name##Encoder() {}
 // All encoders must be first declared and then registered.
 DECLARE_ENCODER(SOAPCall)
 DECLARE_ENCODER(String)
-DECLARE_ENCODER(PRBool)
+DECLARE_ENCODER(Boolean)
 DECLARE_ENCODER(Double)
 DECLARE_ENCODER(Float)
-DECLARE_ENCODER(PRInt64)
-DECLARE_ENCODER(PRInt32)
-DECLARE_ENCODER(PRInt16)
-DECLARE_ENCODER(Char)
+DECLARE_ENCODER(Long)
+DECLARE_ENCODER(Int)
+DECLARE_ENCODER(Short)
+DECLARE_ENCODER(Byte)
 DECLARE_ENCODER(Array)
 DECLARE_ENCODER(Struct)
 DECLARE_ENCODER(Literal)
@@ -114,13 +114,13 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* regist
 {
   REGISTER_ENCODER(SOAPCall)
   REGISTER_ENCODER(String)
-  REGISTER_ENCODER(PRBool)
+  REGISTER_ENCODER(Boolean)
   REGISTER_ENCODER(Double)
   REGISTER_ENCODER(Float)
-  REGISTER_ENCODER(PRInt64)
-  REGISTER_ENCODER(PRInt32)
-  REGISTER_ENCODER(PRInt16)
-  REGISTER_ENCODER(Char)
+  REGISTER_ENCODER(Long)
+  REGISTER_ENCODER(Int)
+  REGISTER_ENCODER(Short)
+  REGISTER_ENCODER(Byte)
   REGISTER_ENCODER(Array)
   REGISTER_ENCODER(Struct)
   REGISTER_ENCODER(Literal)
@@ -443,7 +443,7 @@ NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRBool
 
-NS_IMETHODIMP nsPRBoolEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsBooleanEncoder::Marshall(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -529,7 +529,7 @@ NS_IMETHODIMP nsFloatEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt64
 
-NS_IMETHODIMP nsPRInt64Encoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsLongEncoder::Marshall(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -558,7 +558,7 @@ NS_IMETHODIMP nsPRInt64Encoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt32
 
-NS_IMETHODIMP nsPRInt32Encoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsIntEncoder::Marshall(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -587,7 +587,7 @@ NS_IMETHODIMP nsPRInt32Encoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt16
 
-NS_IMETHODIMP nsPRInt16Encoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsShortEncoder::Marshall(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -616,7 +616,7 @@ NS_IMETHODIMP nsPRInt16Encoder::Marshall(nsISOAPMessage *aMessage,
 
 //  Char
 
-NS_IMETHODIMP nsCharEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsByteEncoder::Marshall(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -628,7 +628,7 @@ NS_IMETHODIMP nsCharEncoder::Marshall(nsISOAPMessage *aMessage,
   nsCOMPtr<nsISupports> value;
   rc = aSource->GetValue(getter_AddRefs(value));
   if (NS_FAILED(rc)) return rc;
-  nsCOMPtr<nsISupportsChar> object = do_QueryInterface(value);
+  nsCOMPtr<nsISupportsPRInt16> object = do_QueryInterface(value);
   if (!object) return NS_ERROR_FAILURE;
   char* pointer;
   rc = object->ToString(&pointer);
@@ -663,19 +663,19 @@ GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName
     aName = kStructElementName;
   else if (aType.Equals(nsSOAPUtils::kStringType))
     aName = kStringElementName;
-  else if (aType.Equals(nsSOAPUtils::kPRBoolType))
+  else if (aType.Equals(nsSOAPUtils::kBooleanType))
     aName = kBooleanElementName;
   else if (aType.Equals(nsSOAPUtils::kDoubleType))
     aName = kDoubleElementName;
   else if (aType.Equals(nsSOAPUtils::kFloatType))
     aName = kFloatElementName;
-  else if (aType.Equals(nsSOAPUtils::kPRInt64Type))
+  else if (aType.Equals(nsSOAPUtils::kLongType))
     aName = kLongElementName;
-  else if (aType.Equals(nsSOAPUtils::kPRInt32Type))
+  else if (aType.Equals(nsSOAPUtils::kIntType))
     aName = kIntElementName;
-  else if (aType.Equals(nsSOAPUtils::kPRInt16Type))
+  else if (aType.Equals(nsSOAPUtils::kShortType))
     aName = kShortElementName;
-  else if (aType.Equals(nsSOAPUtils::kCharType))
+  else if (aType.Equals(nsSOAPUtils::kByteType))
     aName = kByteElementName;
   else if (aType.Equals(nsSOAPUtils::kArrayType))
     aName = kArrayElementName;
@@ -691,19 +691,19 @@ GetTypeForElementName(const nsAReadableString & aName, nsAWritableString & aType
   if (aName.Equals(kStringElementName))
     aType = nsSOAPUtils::kStringType;
   else if (aName.Equals(kBooleanElementName))
-    aType = nsSOAPUtils::kPRBoolType;
+    aType = nsSOAPUtils::kBooleanType;
   else if (aName.Equals(kDoubleElementName))
     aType = nsSOAPUtils::kDoubleType;
   else if (aName.Equals(kFloatElementName))
     aType = nsSOAPUtils::kFloatType;
   else if (aName.Equals(kLongElementName))
-    aType = nsSOAPUtils::kPRInt64Type;
+    aType = nsSOAPUtils::kLongType;
   else if (aName.Equals(kIntElementName))
-    aType = nsSOAPUtils::kPRInt32Type;
+    aType = nsSOAPUtils::kIntType;
   else if (aName.Equals(kShortElementName))
-    aType = nsSOAPUtils::kPRInt16Type;
+    aType = nsSOAPUtils::kShortType;
   else if (aName.Equals(kByteElementName))
-    aType = nsSOAPUtils::kCharType;
+    aType = nsSOAPUtils::kByteType;
   else if (aName.Equals(kArrayElementName))
     aType = nsSOAPUtils::kArrayType;
   else if (aName.Equals(kStructElementName))
@@ -731,7 +731,7 @@ GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespac
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDStringName;
   }
-  else if (aType.Equals(nsSOAPUtils::kPRBoolType)) {
+  else if (aType.Equals(nsSOAPUtils::kBooleanType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDBooleanName;
   }
@@ -743,19 +743,19 @@ GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespac
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDFloatName;
   }
-  else if (aType.Equals(nsSOAPUtils::kPRInt64Type)) {
+  else if (aType.Equals(nsSOAPUtils::kLongType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDLongName;
   }
-  else if (aType.Equals(nsSOAPUtils::kPRInt32Type)) {
+  else if (aType.Equals(nsSOAPUtils::kIntType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDIntName;
   }
-  else if (aType.Equals(nsSOAPUtils::kPRInt16Type)) {
+  else if (aType.Equals(nsSOAPUtils::kShortType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDShortName;
   }
-  else if (aType.Equals(nsSOAPUtils::kCharType)) {
+  else if (aType.Equals(nsSOAPUtils::kByteType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDByteName;
   }
@@ -780,19 +780,19 @@ GetTypeForXSDType(const nsAReadableString & aNamespace, const nsAReadableString 
     if (aLocalName.Equals(kXSDStringName))
       aType = nsSOAPUtils::kStringType;
     else if (aLocalName.Equals(kXSDBooleanName))
-      aType = nsSOAPUtils::kPRBoolType;
+      aType = nsSOAPUtils::kBooleanType;
     else if (aLocalName.Equals(kXSDDoubleName))
       aType = nsSOAPUtils::kDoubleType;
     else if (aLocalName.Equals(kXSDFloatName))
       aType = nsSOAPUtils::kFloatType;
     else if (aLocalName.Equals(kXSDLongName))
-      aType = nsSOAPUtils::kPRInt64Type;
+      aType = nsSOAPUtils::kLongType;
     else if (aLocalName.Equals(kXSDIntName))
-      aType = nsSOAPUtils::kPRInt32Type;
+      aType = nsSOAPUtils::kIntType;
     else if (aLocalName.Equals(kXSDShortName))
-      aType = nsSOAPUtils::kPRInt16Type;
+      aType = nsSOAPUtils::kShortType;
     else if (aLocalName.Equals(kXSDByteName))
-      aType = nsSOAPUtils::kCharType;
+      aType = nsSOAPUtils::kByteType;
     else if (aLocalName.Equals(kXSDStructName))
       aType = nsSOAPUtils::kStructTypePrefix;
     else if (aLocalName.Equals(kXSDUrTypeName))
@@ -1094,7 +1094,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
 
     case nsISOAPParameter::PARAMETER_TYPE_BYTE:
     {
-      nsCOMPtr<nsISupportsChar> val8 = do_QueryInterface(isup);
+      nsCOMPtr<nsISupportsPRInt16> val8 = do_QueryInterface(isup);
       if (val8) {
         val8->ToString(getter_Copies(stringData));
       }
@@ -1486,12 +1486,12 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
 
     case nsISOAPParameter::PARAMETER_TYPE_BYTE:
     {
-      nsCOMPtr<nsISupportsChar> isup8 = do_CreateInstance(NS_SUPPORTS_CHAR_CONTRACTID);
+      nsCOMPtr<nsISupportsPRInt16> isup8 = do_CreateInstance(NS_SUPPORTS_PRInt16_CONTRACTID);
       if (!isup8) return NS_ERROR_FAILURE;
       
-      char val;
+      PRInt16 val;
       nsSOAPUtils::GetElementTextContent(element, text);
-      PR_sscanf(NS_ConvertUCS2toUTF8(text).get(), "%c", &val);
+      PR_sscanf(NS_ConvertUCS2toUTF8(text).get(), "%ld", &val);
       
       isup8->SetData(val);
       value = isup8;

@@ -271,7 +271,7 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
         }
       }
 
-  } else if (aType.Equals(nsSOAPUtils::kPRBoolType)) {
+  } else if (aType.Equals(nsSOAPUtils::kBooleanType)) {
 
       nsCOMPtr<nsISupportsPRBool> prb = do_QueryInterface(aValue);
       if (!prb) return NS_ERROR_FAILURE;
@@ -308,12 +308,12 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
       double* dataPtr = JS_NewDouble(aContext, (jsdouble)data); 
       *vp = DOUBLE_TO_JSVAL(dataPtr);
 
-  } else if (aType.Equals(nsSOAPUtils::kPRInt64Type)) {
+  } else if (aType.Equals(nsSOAPUtils::kLongType)) {
 
       // XXX How to express 64-bit values in JavaScript?
       return NS_ERROR_NOT_IMPLEMENTED;
 
-  } else if (aType.Equals(nsSOAPUtils::kPRInt32Type)) {
+  } else if (aType.Equals(nsSOAPUtils::kIntType)) {
 
       nsCOMPtr<nsISupportsPRInt32> isupint32 = do_QueryInterface(aValue);
       if (!isupint32) return NS_ERROR_FAILURE;
@@ -323,7 +323,7 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
       
       *vp = INT_TO_JSVAL(data);
       
-  } else if (aType.Equals(nsSOAPUtils::kPRInt16Type)) {
+  } else if (aType.Equals(nsSOAPUtils::kShortType)) {
 
       nsCOMPtr<nsISupportsPRInt16> isupint16 = do_QueryInterface(aValue);
       if (!isupint16) return NS_ERROR_FAILURE;
@@ -333,15 +333,15 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
       
       *vp = INT_TO_JSVAL((PRInt32)data);
       
-  } else if (aType.Equals(nsSOAPUtils::kCharType)) {
+  } else if (aType.Equals(nsSOAPUtils::kByteType)) {
 
-      nsCOMPtr<nsISupportsChar> isupchar = do_QueryInterface(aValue);
+      nsCOMPtr<nsISupportsPRInt16> isupchar = do_QueryInterface(aValue);
       if (!isupchar) return NS_ERROR_FAILURE;
 
-      char data;
+      PRInt16 data;
       isupchar->GetData(&data);
       
-      *vp = INT_TO_JSVAL((PRInt32)data);
+      *vp = INT_TO_JSVAL(data);
 
   } else if (aType.Equals(nsSOAPUtils::kArrayType)) {
 
@@ -447,7 +447,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
     NS_ADDREF(*aValue);
   }
   else if (JSVAL_IS_INT(val)) {
-    aType = nsSOAPUtils::kPRInt32Type;
+    aType = nsSOAPUtils::kIntType;
     
     nsCOMPtr<nsISupportsPRInt32> isupint = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
     if (!isupint) return NS_ERROR_FAILURE;
@@ -457,7 +457,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
     NS_ADDREF(*aValue);
   }
   else if (JSVAL_IS_BOOLEAN(val)) {
-    aType = nsSOAPUtils::kPRBoolType;
+    aType = nsSOAPUtils::kBooleanType;
     
     nsCOMPtr<nsISupportsPRBool> isupbool = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
     if (!isupbool) return NS_ERROR_FAILURE;
