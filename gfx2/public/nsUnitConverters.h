@@ -63,6 +63,19 @@
  * @defgroup gfx_coord_functions gfx_coord conversion functions
  */
 
+
+/**
+ * Return the absolute value of \a aValue
+ * @ingroup gfx_coord_functions
+ * @param aValue the value you wish to get the absolute value of
+ * @return the absolute value
+ */
+inline gfx_coord GFXCoordAbs(gfx_coord aValue)
+{
+  return fabs(aValue);
+}
+
+
 /**
  * Round a gfx_coord
  * @ingroup gfx_coord_functions

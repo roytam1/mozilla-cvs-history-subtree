@@ -67,7 +67,7 @@ interface nsISystemLook : nsISupports
   const long color_CaptionText                 = 21;
   const long color_GrayText                    = 22;
   const long color_Highlight                   = 23;
-  const long color_HighlighTtext               = 24;
+  const long color_HighlightText               = 24;
   const long color_InactiveBorder              = 25;
   const long color_InactiveCaption             = 26;
   const long color_InactiveCaptionText         = 27;

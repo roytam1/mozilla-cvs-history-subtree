@@ -45,6 +45,7 @@ XPIDLSRCS	= \
 		nsIImage.idl \
 		nsIPixmap.idl \
 		nsIRegion.idl \
+		nsIRollupListener.idl \
 		nsIRunAppRun.idl \
 		nsISystemLook.idl \
 		nsITimer.idl \

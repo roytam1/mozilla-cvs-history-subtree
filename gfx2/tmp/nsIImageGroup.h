@@ -31,7 +31,7 @@
 class nsIImageGroupObserver;
 class nsIImageRequestObserver;
 class nsIImageRequest;
-class nsIDeviceContext;
+class nsIOutputDevice;
 class nsIStreamListener;
 class nsILoadGroup;
 
@@ -64,7 +64,7 @@ public:
    * Initialize an image group with a device context. All images
    * in this group will be decoded for the specified device context.
    */
-  virtual nsresult Init(nsIDeviceContext *aDeviceContext, nsISupports *aLoadContext) = 0;
+  virtual nsresult Init(nsIOutputDevice *aDevice, nsISupports *aLoadContext) = 0;
 
   /** 
    * Add an observers to be informed of image group notifications.
