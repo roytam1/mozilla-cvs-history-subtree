@@ -569,6 +569,8 @@ void ExprLexer::parse(const String& pattern) {
                     else if ( prevToken->type == Token::SELF_NODE ) {
                         prevToken->type = Token::PARENT_NODE;
                     }
+                    else if ( tokenBuffer.length() > 0 )
+                        tokenBuffer.append(ch);
                     else matchDelimiter(ch);
                     break;
                 case COLON:
