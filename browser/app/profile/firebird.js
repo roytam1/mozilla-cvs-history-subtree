@@ -54,7 +54,9 @@ pref("general.useragent.vendor", "Firebird");
 pref("general.useragent.vendorSub", "0.7+");
 
 pref("general.smoothScroll", false);
-#ifndef XP_UNIX
+#ifdef XP_UNIX
+pref("general.autoScroll", false);
+#else
 pref("general.autoScroll", true);
 #endif
 
