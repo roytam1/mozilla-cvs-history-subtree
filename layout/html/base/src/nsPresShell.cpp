@@ -6422,6 +6422,11 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
     mAccumulatedReflowTime = 0;
     NS_IF_RELEASE(rcx);
+
+    // If any new reflow commands were enqueued during the reflow,
+    // schedule another reflow event to process them.
+    if (mReflowCommands.Count())
+      PostReflowEvent();
     
 #ifdef DEBUG
     if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {
