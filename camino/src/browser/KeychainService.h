@@ -64,11 +64,11 @@ class nsIPrefBranch;
 + (KeychainService*) instance;
 - (void) shutdown:(id)sender;
 
-- (BOOL) getUsernameAndPassword:(NSString*)realm user:(NSMutableString*)username password:(NSMutableString*)pwd;
+- (BOOL) getUsernameAndPassword:(NSString*)realm user:(NSMutableString*)username password:(NSMutableString*)pwd item:(KCItemRef*)outItem;
 - (BOOL) findUsernameAndPassword:(NSString*)realm;
 - (void) storeUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd;
-- (void) removeUsernameAndPassword:(NSString*)realm;
-- (void) updateUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd;
+- (void) removeUsernameAndPassword:(NSString*)realm item:(KCItemRef)item;
+- (void) updateUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd item:(KCItemRef)item;
 
 - (void) addListenerToView:(CHBrowserView*)view;
 
@@ -115,8 +115,11 @@ public:
 
 private:
 
-  BOOL CheckConfirmYN(nsIDOMWindowInternal*);
+  static BOOL CheckStorePasswordYN(nsIDOMWindowInternal*);
+  static BOOL CheckChangeDataYN(nsIDOMWindowInternal*);
   
+  static NSWindow* GetNSWindow(nsIDOMWindowInternal* inWindow);
+
   KeychainService* mKeychain;
 };
 

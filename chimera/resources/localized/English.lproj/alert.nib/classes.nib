@@ -12,6 +12,7 @@
                 alertCheckPanelText = id; 
                 alertPanel = id; 
                 alertPanelText = id; 
+                confirmChangePasswordPanel = id; 
                 confirmCheckPanel = id; 
                 confirmCheckPanelButton1 = id; 
                 confirmCheckPanelButton2 = id; 
