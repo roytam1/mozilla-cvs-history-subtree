@@ -54,6 +54,9 @@ if (gTimelineEnabled) {
 // dialog.
 function menu_new_init()
 {
+  if (!gMessengerBundle)
+    gMessengerBundle = document.getElementById("bundle_messenger");
+
   if (!nsPrefBranch) {
     var prefService = Components.classes["@mozilla.org/preferences-service;1"];
     prefService = prefService.getService();
@@ -63,6 +66,42 @@ function menu_new_init()
   var newAccountItem = document.getElementById('newAccountMenuItem');
   if (nsPrefBranch.prefIsLocked("mail.disable_new_account_addition"))
     newAccountItem.setAttribute("disabled","true");
+
+  // Change "New Folder..." menu according to the context
+  var startIndex = {};
+  var endIndex = {};
+  var folderTree = GetFolderTree();
+  folderTree.treeBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+  if (startIndex.value < 0)
+    return false;
+  var numSelected = endIndex.value - startIndex.value + 1;
+  var folderResource = GetFolderResource(folderTree, startIndex.value);
+  var specialFolder = GetFolderAttribute(folderTree, folderResource,
+    "SpecialFolder");
+  var isServer = GetFolderAttribute(folderTree, folderResource,
+    "IsServer") == 'true';
+  var serverType = GetFolderAttribute(folderTree, folderResource,
+    "ServerType");
+  var canCreateNew = GetFolderAttribute(folderTree, folderResource,
+    "CanCreateSubfolders") == "true";
+  var isInbox = specialFolder == "Inbox";
+  var isIMAPFolder = GetFolderAttribute(folderTree, folderResource,
+    "ServerType") == "imap";
+  var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                         .getService(Components.interfaces.nsIIOService);
+  var showNew = ((numSelected <=1) && (serverType != 'nntp') &&
+    canCreateNew) || isInbox;
+  ShowMenuItem("menu_newFolder", showNew);
+  EnableMenuItem("menu_newFolder", !isIMAPFolder || !ioService.offline);
+  if (showNew)
+  {
+    if (isServer || isInbox)
+      SetMenuItemLabel("menu_NewFolder",
+        gMessengerBundle.getString("newFolder"));
+    else
+      SetMenuItemLabel("menu_NewFolder",
+        gMessengerBundle.getString("newSubfolder"));
+  }
 }
 
 function goUpdateMailMenuItems(commandset)
