@@ -1,5 +1,0 @@
-nsISecureBrowserUI.idl
-nsISecretDecoderRing.idl
-nsISSLSocketProvider.idl
-nsISecurityManagerComponent.idl
-nsISecureSocketInfo.idl
