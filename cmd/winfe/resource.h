@@ -1699,6 +1699,7 @@
 #define IDC_PRIVILEGES                  1783
 #define IDC_EDIT_NEW_HEADER             1784
 #define IDC_CHECK_SEARCH_LOCALLY        1785
+#define IDC_SEARCH                      1786
 #define IDC_SHORTCUT_BASE               1800
 #define IDC_EMAIL_ADDR                  1996
 #define IDC_PROFILE_NAME                1997
