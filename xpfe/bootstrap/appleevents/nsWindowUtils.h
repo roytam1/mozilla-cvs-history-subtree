@@ -31,10 +31,6 @@
 #include "nsAEDefs.h"
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 long CountWindowsOfKind(TWindowKind windowKind);
 
 WindowPtr GetNamedOrFrontmostWindow(TWindowKind windowKind, const char* windowName);
@@ -56,10 +52,6 @@ Boolean WindowIsCloseable(WindowPtr wind);
 Boolean WindowIsFloating(WindowPtr wind);
 Boolean WindowIsModified(WindowPtr wind);
 
-
-#ifdef __cplusplus
-}
-#endif
 
 
 #endif // nsWindowUtils_h_
