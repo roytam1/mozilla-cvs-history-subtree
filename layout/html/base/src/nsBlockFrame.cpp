@@ -637,6 +637,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   }
 #endif
 
+  nsRect oldRect(mRect);
+
   // Should we create a space manager?
   nsSpaceManager* spaceManager;
   nsSpaceManager* oldSpaceManager;
@@ -663,8 +665,10 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 #endif
   }
 
-  // See if it's an incremental reflow command
-  if (eReflowReason_Incremental == aReflowState.reason) {
+  // See if it's an incremental reflow command and we're not the target
+  if (mAbsoluteContainer.HasAbsoluteFrames() &&
+      eReflowReason_Incremental == aReflowState.reason &&
+      !aReflowState.path->mReflowCommand) {
     // Give the absolute positioning code a chance to handle it
     nscoord containingBlockWidth;
     nscoord containingBlockHeight;
@@ -939,7 +943,18 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   // Let the absolutely positioned container reflow any absolutely positioned
   // child frames that need to be reflowed, e.g., elements with a percentage
   // based width/height
-  if (NS_SUCCEEDED(rv) && mAbsoluteContainer.HasAbsoluteFrames()) {
+  // We want to do this under either of two conditions:
+  //  1. If we didn't do the incremental reflow above.
+  //  2. If our size changed.
+  // Even though it's the padding edge that's the containing block, we
+  // can use our rect (the border edge) since if the border style
+  // changed, the reflow would have been targeted at us so we'd satisfy
+  // condition 1.
+  if (NS_SUCCEEDED(rv) &&
+      mAbsoluteContainer.HasAbsoluteFrames() &&
+      (eReflowReason_Incremental != aReflowState.reason ||
+       aReflowState.path->mReflowCommand ||
+       mRect != oldRect)) {
     nscoord containingBlockWidth;
     nscoord containingBlockHeight;
     nsRect  childBounds;
@@ -2102,7 +2117,8 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
 
     // If we're supposed to update our maximum width, then we'll also need to
     // reflow this line if it's line wrapped and any of the continuing lines
-    // are dirty. If we are printing (constrained height), always reflow the line
+    // are dirty.  If we are printing (constrained height), always reflow
+    // the line.
     if ((NS_UNCONSTRAINEDSIZE != aState.mReflowState.availableHeight) ||
         (!line->IsDirty() &&
          aState.GetFlag(BRS_COMPUTEMAXWIDTH) &&
