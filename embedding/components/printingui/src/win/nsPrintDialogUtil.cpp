@@ -934,8 +934,6 @@ ShowNativePrintDialog(HWND              aHWnd,
     }
   }
 
-  prntdlg.nFromPage           = 0xFFFF;
-  prntdlg.nToPage             = 0xFFFF;
   prntdlg.nMinPage            = 1;
   prntdlg.nMaxPage            = 0xFFFF;
   prntdlg.nCopies             = 1;
@@ -948,9 +946,15 @@ ShowNativePrintDialog(HWND              aHWnd,
   prntdlg.lpPrintTemplateName = NULL;
 
   if (!doExtend) {
+    // XXX Windows dialog interprets from/to page differently depending on whether
+    // the dialog is extended or not.(the dialog shows up differently)
+    prntdlg.nFromPage         = 1;
+    prntdlg.nToPage           = 1;
     prntdlg.lCustData         = NULL;
     prntdlg.lpfnPrintHook     = NULL;
   } else {
+    prntdlg.nFromPage         = 0xFFFF;
+    prntdlg.nToPage           = 0xFFFF;
     // Set up print dialog "hook" procedure for extending the dialog
     prntdlg.lCustData         = (DWORD)howToEnableFrameUI;
     prntdlg.lpfnPrintHook     = (LPPRINTHOOKPROC)PrintHookProc;
