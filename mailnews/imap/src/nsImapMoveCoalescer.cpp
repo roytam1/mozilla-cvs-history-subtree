@@ -106,7 +106,7 @@ nsresult nsImapMoveCoalescer::PlaybackMoves(nsIEventQueue *eventQueue)
 			{
 				nsCString messageIds;
 
-				nsImapMailFolder::AllocateUidStringFromKeyArray(*keysToAdd, messageIds);
+				m_sourceFolder->AllocateUidStringFromKeys(keysToAdd->GetArray(), keysToAdd->GetSize(), messageIds);
 
 				destFolder->SetNumNewMessages(keysToAdd->GetSize());
 				//destFolder->SetBiffState(nsIMsgFolder::nsMsgBiffState_NewMail);

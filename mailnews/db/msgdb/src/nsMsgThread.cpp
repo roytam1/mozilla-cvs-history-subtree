@@ -341,7 +341,7 @@ NS_IMETHODIMP nsMsgThread::GetChildAt(PRInt32 aIndex, nsIMsgDBHdr **result)
 	nsIMdbRow *hdrRow = nsnull;
 
 	ret = m_mdbTable->PosToOid( m_mdbDB->GetEnv(), aIndex, &oid);
-	if (NS_SUCCEEDED(ret))
+	if (ret == NS_OK)
 	{
 		//do I have to release hdrRow?
 		ret = m_mdbTable->PosToRow(m_mdbDB->GetEnv(), aIndex, &hdrRow); 
@@ -351,7 +351,7 @@ NS_IMETHODIMP nsMsgThread::GetChildAt(PRInt32 aIndex, nsIMsgDBHdr **result)
 		}
 	}
 
-	return ret;
+  return (ret == NS_OK) ? NS_OK : NS_MSG_MESSAGE_NOT_FOUND;
 }
 
 

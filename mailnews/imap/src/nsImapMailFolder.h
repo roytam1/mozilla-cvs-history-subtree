@@ -269,8 +269,7 @@ public:
 									   nsIMsgDatabase *sourceDB, 
                                      const char *destFolder,
 									   nsIMsgFilter *filter);
-	nsresult StoreImapFlags(imapMessageFlagsType flags, PRBool addFlags, nsMsgKeyArray &msgKeys);
-	static nsresult AllocateUidStringFromKeyArray(nsMsgKeyArray &keyArray, nsCString &msgIds);
+  static nsresult  AllocateUidStringFromKeys(nsMsgKey *keys, PRInt32 numKeys, nsCString &msgIds);
 protected:
     // Helper methods
 

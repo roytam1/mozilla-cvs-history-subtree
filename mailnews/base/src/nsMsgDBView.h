@@ -33,6 +33,7 @@
 #include "nsIOutlinerView.h"
 #include "nsIOutlinerBoxObject.h"
 #include "nsVoidArray.h"
+#include "nsIMsgFolder.h"
 
 enum eFieldType {
     kString,
@@ -104,6 +105,19 @@ protected:
 	void	NoteEndChange(nsMsgViewIndex firstlineChanged, PRInt32 numChanged, 
 							   nsMsgViewNotificationCodeValue changeType);
 
+  // for commands
+  nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
+					PRInt32 numIndices);
+  nsresult ToggleReadByIndex(nsMsgViewIndex index);
+  nsresult SetReadByIndex(nsMsgViewIndex index, PRBool read);
+  nsresult SetThreadOfMsgReadByIndex(nsMsgViewIndex index, nsMsgKeyArray &keysMarkedRead, PRBool read);
+  nsresult SetFlaggedByIndex(nsMsgViewIndex index, PRBool mark);
+  nsresult OrExtraFlag(nsMsgViewIndex index, PRUint32 orflag);
+  nsresult AndExtraFlag(nsMsgViewIndex index, PRUint32 andflag);
+  nsresult SetExtraFlag(nsMsgViewIndex index, PRUint32 extraflag);
+	virtual void		OnExtraFlagChanged(nsMsgViewIndex /*index*/, PRUint32 /*extraFlag*/) {}
+
+  // for sorting
   nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
   nsresult GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUnichar **result);
   nsresult GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result);
@@ -131,6 +145,7 @@ protected:
   nsCOMPtr <nsIMsgDBHdr>  m_cachedHdr;
   nsMsgKey                m_cachedMsgKey;
 
+  nsCOMPtr <nsIMsgFolder> m_folder;
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
   nsMsgViewSortTypeValue  m_sortType;

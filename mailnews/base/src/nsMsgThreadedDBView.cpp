@@ -263,6 +263,39 @@ nsresult	nsMsgThreadedDBView::ExpandAll()
 	return rv;
 }
 
+void	nsMsgThreadedDBView::OnExtraFlagChanged(nsMsgViewIndex index, PRUint32 extraFlag)
+{
+	if (IsValidIndex(index) && m_havePrevView)
+	{
+		nsMsgKey keyChanged = m_keys[index];
+		nsMsgViewIndex prevViewIndex = m_prevIdArray.FindIndex(keyChanged);
+		if (prevViewIndex != nsMsgViewIndex_None)
+		{
+			PRUint32 prevFlag = m_prevFlags.GetAt(prevViewIndex);
+			// don't want to change the elided bit, or has children or is thread
+			if (prevFlag & MSG_FLAG_ELIDED)
+				extraFlag |= MSG_FLAG_ELIDED;
+			else
+				extraFlag &= ~MSG_FLAG_ELIDED;
+			if (prevFlag & MSG_VIEW_FLAG_ISTHREAD)
+				extraFlag |= MSG_VIEW_FLAG_ISTHREAD;
+			else
+				extraFlag &= ~MSG_VIEW_FLAG_ISTHREAD;
+			if (prevFlag & MSG_VIEW_FLAG_HASCHILDREN)
+				extraFlag |= MSG_VIEW_FLAG_HASCHILDREN;
+			else
+				extraFlag &= ~MSG_VIEW_FLAG_HASCHILDREN;
+			m_prevFlags.SetAt(prevViewIndex, extraFlag);	// will this be right?
+		}
+	}
+	// we don't really know what's changed, but to be on the safe side, set the sort invalid
+	// so that reverse sort will pick it up.
+	if (m_sortType == nsMsgViewSortType::byStatus || m_sortType == nsMsgViewSortType::byFlagged || 
+      m_sortType == nsMsgViewSortType::byUnread || m_sortType == nsMsgViewSortType::byPriority)
+		m_sortValid = PR_FALSE;
+}
+
+
 void nsMsgThreadedDBView::ClearPrevIdArray()
 {
   m_prevIdArray.RemoveAll();

@@ -198,7 +198,7 @@ void nsImapOfflineSync::ProcessFlagOperation(nsIMsgOfflineImapOperation *current
   if (matchingFlagKeys.GetSize() > 0)
   {
     nsCAutoString uids;
-	  nsImapMailFolder::AllocateUidStringFromKeyArray(matchingFlagKeys, uids);
+	  nsImapMailFolder::AllocateUidStringFromKeys(matchingFlagKeys.GetArray(), matchingFlagKeys.GetSize(), uids);
     PRUint32 curFolderFlags;
     m_currentFolder->GetFlags(&curFolderFlags);
 
@@ -327,9 +327,6 @@ void nsImapOfflineSync::ProcessMoveOperation(nsIMsgOfflineImapOperation *current
 	} 
   while (currentOp);
 	
-  nsCAutoString uids;
-	nsImapMailFolder::AllocateUidStringFromKeyArray(matchingFlagKeys, uids);
-
   nsresult rv;
 
   nsCOMPtr<nsIRDFResource> res;
@@ -343,8 +340,10 @@ void nsImapOfflineSync::ProcessMoveOperation(nsIMsgOfflineImapOperation *current
     {
       nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(m_currentFolder);
       if (imapFolder)
-        rv = imapFolder->ReplayOfflineMoveCopy(uids.get(), PR_TRUE, destFolder,
+      {
+        rv = imapFolder->ReplayOfflineMoveCopy(matchingFlagKeys.GetArray(), matchingFlagKeys.GetSize(), PR_TRUE, destFolder,
                        this, m_window);
+      }
     }
 	}
 }
@@ -388,7 +387,6 @@ void nsImapOfflineSync::ProcessCopyOperation(nsIMsgOfflineImapOperation *current
   while (currentOp);
 	
   nsCAutoString uids;
-	nsImapMailFolder::AllocateUidStringFromKeyArray(matchingFlagKeys, uids);
 
   nsresult rv;
 
@@ -403,8 +401,10 @@ void nsImapOfflineSync::ProcessCopyOperation(nsIMsgOfflineImapOperation *current
     {
       nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(destFolder);
       if (imapFolder)
-        rv = imapFolder->ReplayOfflineMoveCopy(uids.get(), PR_FALSE, destFolder,
+      {
+        rv = imapFolder->ReplayOfflineMoveCopy(matchingFlagKeys.GetArray(), matchingFlagKeys.GetSize(), PR_FALSE, destFolder,
                        this, m_window);
+      }
     }
 	}
 }

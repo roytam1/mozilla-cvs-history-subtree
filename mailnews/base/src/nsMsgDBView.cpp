@@ -32,6 +32,8 @@
 #include "nsMsgUtils.h"
 #include "nsXPIDLString.h"
 #include "nsQuickSort.h"
+#include "nsIMsgImapMailFolder.h"
+#include "nsImapCore.h"
 
 /* Implementation file */
 
@@ -216,6 +218,7 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
   nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
   NS_ENSURE_SUCCESS(rv,rv);
 	m_db->AddListener(this);
+  m_folder = folder;
 #ifdef HAVE_PORT
 	CacheAdd ();
 #endif
@@ -230,7 +233,7 @@ NS_IMETHODIMP nsMsgDBView::Close()
   	m_db->RemoveListener(this);
     m_db = nsnull;
   }
-    return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::Init(PRInt32 *pCount)
@@ -243,17 +246,268 @@ NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char 
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
-NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numindices)
+int PR_CALLBACK CompareViewIndices (const void *v1, const void *v2, void *)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+	nsMsgViewIndex i1 = *(nsMsgViewIndex*) v1;
+	nsMsgViewIndex i2 = *(nsMsgViewIndex*) v2;
+	return i1 - i2;
+}
+
+/* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
+NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numIndices)
+{
+  nsresult rv = NS_OK;
+  switch (command)
+  {
+
+#if 0  
+	case MSG_MarkMessages:
+	case MSG_UnmarkMessages:
+	case MSG_MarkMessagesRead:
+	case MSG_MarkMessagesUnread:
+	case MSG_ToggleMessageRead:
+	case MSG_DeleteMessage:
+	case MSG_DeleteMessageNoTrash:
+#endif
+  case nsMsgViewCommandType::markMessagesRead:
+  case nsMsgViewCommandType::markMessagesUnread:
+  case nsMsgViewCommandType::toggleMessageRead:
+  case nsMsgViewCommandType::flagMessages:
+  case nsMsgViewCommandType::unflagMessages:
+  case nsMsgViewCommandType::deleteMsg:
+  case nsMsgViewCommandType::deleteNoTrash:
+		// since the FE could have constructed the list of indices in
+		// any order (e.g. order of discontiguous selection), we have to
+		// sort the indices in order to find out which MSG_ViewIndex will
+		// be deleted first.
+		if (numIndices > 1)
+			NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
+#ifdef DOING_UNDO
+		if (command != nsMsgViewCommandType::deleteMsg && 
+			command != nsMsgViewCommandType::deleteNoTrash)
+			GetUndoManager()->AddUndoAction(
+				new MarkMessageUndoAction(this, command, indices, 
+										  numIndices, GetFolder()));
+#endif
+//		FEEnd();
+//		calledFEEnd = TRUE;
+    NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
+		ApplyCommandToIndices(command, indices, numIndices);
+    NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
+
+    break;
+  case nsMsgViewCommandType::markThreadRead:
+    break;
+  case nsMsgViewCommandType::markAllRead:
+    break;
+  case nsMsgViewCommandType::toggleThreadKilled:
+    break;
+  case nsMsgViewCommandType::toggleThreadWatched:
+    break;
+  case nsMsgViewCommandType::expandAll:
+    break;
+  case nsMsgViewCommandType::collapseAll:
+    break;
+  default:
+    NS_ASSERTION(PR_FALSE, "invalid command type");
+    rv = NS_ERROR_FAILURE;
+  }
+  return rv;
 }
 
 /* void getCommandStatus (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices, out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p); */
 NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numindices, PRBool *selectable_p, nsMsgViewCommandCheckStateValue *selected_p)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rv = NS_OK;
+  switch (command)
+  {
+  case nsMsgViewCommandType::markMessagesRead:
+    break;
+  case nsMsgViewCommandType::markMessagesUnread:
+    break;
+  case nsMsgViewCommandType::toggleMessageRead:
+    break;
+  case nsMsgViewCommandType::flagMessages:
+    break;
+  case nsMsgViewCommandType::unflagMessages:
+    break;
+  case nsMsgViewCommandType::toggleThreadKilled:
+    break;
+  case nsMsgViewCommandType::toggleThreadWatched:
+    break;
+  case nsMsgViewCommandType::deleteMsg:
+    break;
+  case nsMsgViewCommandType::deleteNoTrash:
+    break;
+  case nsMsgViewCommandType::markThreadRead:
+    break;
+  case nsMsgViewCommandType::markAllRead:
+    break;
+  case nsMsgViewCommandType::expandAll:
+    break;
+  case nsMsgViewCommandType::collapseAll:
+    break;
+  default:
+    NS_ASSERTION(PR_FALSE, "invalid command type");
+    rv = NS_ERROR_FAILURE;
+  }
+  return rv;
 }
+
+nsresult
+nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
+					PRInt32 numIndices)
+{
+	nsresult rv = NS_OK;
+	nsMsgKeyArray imapUids;
+
+  nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(m_folder);
+	PRBool thisIsImapFolder = (imapFolder != nsnull);
+#ifdef PORTED_YET
+  if (command == nsMsgViewCommandType::deleteMsg)
+		rv = TrashMessages (indices, numIndices);
+	else if (command == nsMsgViewCommandType::deleteNoTrash)
+		rv = DeleteMessages(m_folder, indices, numIndices);
+	else
+#endif /* PORTED YET */
+	{
+		for (int32 i = 0; i < numIndices; i++)
+		{
+			if (thisIsImapFolder && command != nsMsgViewCommandType::markThreadRead)
+				imapUids.Add(GetAt(indices[i]));
+			
+			switch (command)
+			{
+			case nsMsgViewCommandType::markMessagesRead:
+				rv = SetReadByIndex(indices[i], PR_TRUE);
+				break;
+			case nsMsgViewCommandType::markMessagesUnread:
+				rv = SetReadByIndex(indices[i], PR_FALSE);
+				break;
+			case nsMsgViewCommandType::toggleMessageRead:
+				rv = ToggleReadByIndex(indices[i]);
+				break;
+			case nsMsgViewCommandType::flagMessages:
+				rv = SetFlaggedByIndex(indices[i], PR_TRUE);
+				break;
+			case nsMsgViewCommandType::unflagMessages:
+				rv = SetFlaggedByIndex(indices[i], PR_FALSE);
+				break;
+			case nsMsgViewCommandType::markThreadRead:
+				rv = SetThreadOfMsgReadByIndex(indices[i], imapUids, PR_TRUE);
+				break;
+			default:
+				NS_ASSERTION(PR_FALSE, "unhandled command");
+				break;
+			}
+		}
+		
+		if (thisIsImapFolder)
+		{
+			imapMessageFlagsType flags = kNoImapMsgFlag;
+			PRBool addFlags = PR_FALSE;
+			PRBool isRead = PR_FALSE;
+
+			switch (command)
+			{
+			case nsMsgViewCommandType::markThreadRead:
+			case nsMsgViewCommandType::markMessagesRead:
+				flags |= kImapMsgSeenFlag;
+				addFlags = PR_TRUE;
+				break;
+			case nsMsgViewCommandType::markMessagesUnread:
+				flags |= kImapMsgSeenFlag;
+				addFlags = PR_FALSE;
+				break;
+			case nsMsgViewCommandType::toggleMessageRead:
+				{
+					flags |= kImapMsgSeenFlag;
+					m_db->IsRead(GetAt(indices[0]), &isRead);
+					if (isRead)
+						addFlags = PR_TRUE;
+					else
+            addFlags = PR_FALSE;
+				}
+				break;
+			case nsMsgViewCommandType::flagMessages:
+				flags |= kImapMsgFlaggedFlag;
+				addFlags = PR_TRUE;
+				break;
+			case nsMsgViewCommandType::unflagMessages:
+				flags |= kImapMsgFlaggedFlag;
+        addFlags = PR_FALSE;
+				break;
+			default:
+				break;
+			}
+			
+			if (flags != kNoImapMsgFlag)	// can't get here without thisIsImapThreadPane == TRUE
+				imapFolder->StoreImapFlags(flags, addFlags, imapUids.GetArray(), imapUids.GetSize());
+			
+		}
+	}
+	return rv;
+}
+// view modifications methods by index
+
+// read/unread handling.
+nsresult nsMsgDBView::ToggleReadByIndex(nsMsgViewIndex index)
+{
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	return SetReadByIndex(index, !(m_flags[index] & MSG_FLAG_READ));
+}
+
+nsresult nsMsgDBView::SetReadByIndex(nsMsgViewIndex index, PRBool read)
+{
+	nsresult rv;
+
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	if (read)
+		OrExtraFlag(index, MSG_FLAG_READ);
+	else
+		AndExtraFlag(index, ~MSG_FLAG_READ);
+
+	rv = m_db->MarkRead(m_keys[index], read, this);
+	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
+	if (m_sortType == nsMsgViewSortType::byThread)
+	{
+		nsMsgViewIndex threadIndex = ThreadIndexOfMsg(m_keys[index], index, nsnull, nsnull);
+		if (threadIndex != index)
+			NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+	}
+	return rv;
+}
+
+nsresult nsMsgDBView::SetThreadOfMsgReadByIndex(nsMsgViewIndex index, nsMsgKeyArray &keysMarkedRead, XP_Bool /*read*/)
+{
+	nsresult rv;
+
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	rv = MarkThreadOfMsgRead(m_keys[index], index, keysMarkedRead, PR_TRUE);
+	return rv;
+}
+
+nsresult nsMsgDBView::SetFlaggedByIndex(nsMsgViewIndex index, PRBool mark)
+{
+	nsresult rv;
+
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+
+	if (mark)
+		OrExtraFlag(index, MSG_FLAG_MARKED);
+	else
+		AndExtraFlag(index, ~MSG_FLAG_MARKED);
+
+	rv = m_db->MarkMarked(m_keys[index], mark, this);
+	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
+	return rv;
+}
+
+
 
 // reversing threads involves reversing the threads but leaving the
 // expanded messages ordered relative to the thread, so we
@@ -1187,9 +1441,9 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
 			// just make sure flag is right in db.
 			m_db->MarkHdrRead(msgHdr, isRead, nsnull);
 //				if (isRead)
-//					msgHdr->m_flags |= kIsRead;
+//					msgHdr->m_flags |= MSG_FLAG_READ;
 //				else
-//					msgHdr->m_flags &= ~kIsRead;
+//					msgHdr->m_flags &= ~MSG_FLAG_READ;
 			m_keys.InsertAt(viewIndex, msgKey);
       // ### TODO - how about hasChildren flag?
 			m_flags.InsertAt(viewIndex, msgFlags & ~MSG_VIEW_FLAGS);
@@ -1764,6 +2018,40 @@ PRBool nsMsgDBView::IsValidIndex(nsMsgViewIndex index)
 {
     return (index < (nsMsgViewIndex) m_keys.GetSize());
 }
+
+nsresult nsMsgDBView::OrExtraFlag(nsMsgViewIndex index, PRUint32 orflag)
+{
+	PRUint32	flag;
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	flag = m_flags[index];
+	flag |= orflag;
+	m_flags[index] = flag;
+	OnExtraFlagChanged(index, flag);
+	return NS_OK;
+}
+
+nsresult nsMsgDBView::AndExtraFlag(nsMsgViewIndex index, PRUint32 andflag)
+{
+	PRUint32	flag;
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	flag = m_flags[index];
+	flag &= andflag;
+	m_flags[index] = flag;
+	OnExtraFlagChanged(index, flag);
+	return NS_OK;
+}
+
+nsresult nsMsgDBView::SetExtraFlag(nsMsgViewIndex index, PRUint32 extraflag)
+{
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+	m_flags[index] = extraflag;
+	OnExtraFlagChanged(index, extraflag);
+	return NS_OK;
+}
+
 
 nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState)
 {
