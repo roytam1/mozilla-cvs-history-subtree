@@ -3773,11 +3773,8 @@ dnl ========================================================
 MOZ_ARG_WITH_STRING(user-appdir,
 [  --with-user-appdir=DIR  Set user-specific appdir (default=.beonex/comm)],
 [ val=`echo $withval`
-if echo "$val" | grep "\/" >/dev/null; then
-    AC_MSG_ERROR("Homedir must be single relative path.")
-else 
-    AC_DEFINE_UNQUOTED(MOZ_USER_DIR,"$val")
-fi], 
+  AC_DEFINE_UNQUOTED(MOZ_USER_DIR,"$val")
+], 
     AC_DEFINE(MOZ_USER_DIR,".beonex/comm") )
 
 dnl Need the contents of config-defs.h in the build logs
