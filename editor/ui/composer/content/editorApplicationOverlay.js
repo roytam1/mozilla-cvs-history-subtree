@@ -58,12 +58,6 @@ function initEditorContextMenuListener(aEvent)
 
 addEventListener("load", initEditorContextMenuListener, false);
 
-function editLink(aLinkURL)
-{
-  urlSecurityCheck(aLinkURL, window.document);  // XXX what is this? Why do we pass the chrome doc?
-  editPage(aLinkURL, window, false);
-}
-
 function editDocument(aDocument)      
 {
   if (!aDocument)
@@ -74,12 +68,8 @@ function editDocument(aDocument)
 
 function editPageOrFrame()
 {
-  var url;
   var focusedWindow = document.commandDispatcher.focusedWindow;
-  if (isDocumentFrame(focusedWindow))
-    url = focusedWindow.location.href;
-  else
-    url = window._content.location.href;
+  var url = getContentFrameURI(focusedWindow);
 
   editPage(url, window, false)
 }
@@ -91,10 +81,6 @@ function editPageOrFrame()
 //   and we need a delay to let dialog close)
 function editPage(url, launchWindow, delay)
 {
-  var focusedWindow = document.commandDispatcher.focusedWindow;
-  if (isDocumentFrame(focusedWindow))
-    url = focusedWindow.location.href;
-
   // User may not have supplied a window
   if (!launchWindow)
   {
