@@ -483,7 +483,7 @@ pref("network.protocol-handler.external.wais", true);
 pref("network.protocol-handler.external.z3950r", true);
 pref("network.protocol-handler.external.z3950s", true);
 pref("network.protocol-handler.external.dict", true); // dictionary lookup
-pref("network.protocol-handler.useSystemDefaults", false); // this is for url schemes. ask the OS. a lot of dangerous crap might be there (Windows Help with potential exploits), but some useful stuff as well (RealPlayer). We try to enable the useful stuff explicitly above. Mozilla doesn't have this pref at all, hardcoded to true.
+pref("network.protocol-handler.useSystemDefaults", false); // this is for url schemes. ask the OS - or don't. a lot of dangerous crap might be there (Windows Help with potential exploits), but some useful stuff as well (RealPlayer). We try to enable the useful stuff explicitly above. Mozilla (currently) doesn't have this pref at all, hardcoded to true.
 pref("network.protocols.useSystemDefaults", false); // *headbang* this is not for protocols or url schemes, but mimetypes.
 
 pref("network.hosts.smtp_server",           "mail");
