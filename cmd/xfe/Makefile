@@ -401,14 +401,14 @@ endif
 # Post-Java libs
 BASIC_LIBS	+= $(DIST)/lib/libstyle.a
 
-ifndef NO_SECURITY
+ifdef MOZ_SECURITY
 BASIC_LIBS	+= $(DIST)/lib/libjar.a
 else
 EXPORT_LIB	= $(DIST)/lib/libhtmldlgs.a 
 endif
 
 ifndef MOZ_SECURITY
-EXPORT_LIB	= $(DIST)/lib/libsecfree.a 
+EXPORT_LIB	+= $(DIST)/lib/libsecfree.a 
 endif
 
 ifdef MOZ_LDAP

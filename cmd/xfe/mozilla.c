@@ -2122,7 +2122,9 @@ main
   mozilla_thread = PR_CurrentThread();
   fdset_lock = PR_NewNamedMonitor("mozilla-fdset-lock");
 
+#ifdef MOZ_MAIL_NEWS
   NLS_EncInitialize(NULL,NULL);
+#endif
   /*
   ** Create a pipe used to wakeup mozilla from select. A problem we had
   ** to solve is the case where a non-mozilla thread uses the netlib to
