@@ -46,7 +46,7 @@ public:
 					  ToolbarSpec* spec,
 					  Boolean      show_frame);
 
-	~XFE_EditorToolbar();
+	virtual ~XFE_EditorToolbar();
 
 	// contract:
 	void   update();
