@@ -84,7 +84,7 @@ public:
             return mXPIDLString.StartAssignmentByValue();
         }
 
-        friend GetterCopies& getter_Copies(nsXPIDLString& aXPIDLString);
+        friend GetterCopies getter_Copies(nsXPIDLString& aXPIDLString);
     };
 
     friend class GetterCopies;
@@ -104,7 +104,7 @@ public:
             return mXPIDLString.StartAssignmentByReference();
         }
 
-        friend GetterShares& getter_Shares(nsXPIDLString& aXPIDLString);
+        friend GetterShares getter_Shares(nsXPIDLString& aXPIDLString);
     };
 
     friend class GetterShares;
@@ -120,7 +120,7 @@ private:
  * Use this function to "wrap" the nsXPIDLString object that is to
  * receive an |out| value.
  */
-inline nsXPIDLString::GetterCopies&
+inline nsXPIDLString::GetterCopies
 getter_Copies(nsXPIDLString& aXPIDLString)
 {
     return nsXPIDLString::GetterCopies(aXPIDLString);
@@ -130,7 +130,7 @@ getter_Copies(nsXPIDLString& aXPIDLString)
  * Use this function to "wrap" the nsXPIDLString object that is to
  * receive a |[shared] out| value.
  */
-inline nsXPIDLString::GetterShares&
+inline nsXPIDLString::GetterShares
 getter_Shares(nsXPIDLString& aXPIDLString)
 {
     return nsXPIDLString::GetterShares(aXPIDLString);
@@ -189,7 +189,7 @@ public:
             return mXPIDLString.StartAssignmentByValue();
         }
 
-        friend GetterCopies& getter_Copies(nsXPIDLCString& aXPIDLString);
+        friend GetterCopies getter_Copies(nsXPIDLCString& aXPIDLString);
     };
 
     friend class GetterCopies;
@@ -209,7 +209,7 @@ public:
             return mXPIDLString.StartAssignmentByReference();
         }
 
-        friend GetterShares& getter_Shares(nsXPIDLCString& aXPIDLString);
+        friend GetterShares getter_Shares(nsXPIDLCString& aXPIDLString);
     };
 
     friend class GetterShares;
@@ -224,7 +224,7 @@ private:
  * Use this function to "wrap" the nsXPIDLCString object that is to
  * receive an |out| value.
  */
-inline nsXPIDLCString::GetterCopies&
+inline nsXPIDLCString::GetterCopies
 getter_Copies(nsXPIDLCString& aXPIDLString)
 {
     return nsXPIDLCString::GetterCopies(aXPIDLString);
@@ -235,7 +235,7 @@ getter_Copies(nsXPIDLCString& aXPIDLString)
  * Use this function to "wrap" the nsXPIDLCString object that is to
  * receive a |[shared] out| value.
  */
-inline nsXPIDLCString::GetterShares&
+inline nsXPIDLCString::GetterShares
 getter_Shares(nsXPIDLCString& aXPIDLString)
 {
     return nsXPIDLCString::GetterShares(aXPIDLString);
