@@ -116,11 +116,13 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
-
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
+  
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame *) GetOuterSVGFrame();
   
@@ -148,7 +150,7 @@ protected:
   
 private:
   PRUint32 mCharOffset; // index of first character of this node relative to the enclosing <text>-element
-  
+  PRBool mFragmentTreeDirty; 
   
 };
 
@@ -186,7 +188,7 @@ NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent,
 }
 
 nsSVGTSpanFrame::nsSVGTSpanFrame()
-    : mCharOffset(0)
+    : mCharOffset(0), mFragmentTreeDirty(PR_FALSE)
 {
 }
 
@@ -303,9 +305,32 @@ nsSVGTSpanFrame::RemoveFrame(nsIPresContext* aPresContext,
                              nsIAtom*        aListName,
                              nsIFrame*       aOldFrame)
 {
-  // XXX maybe we should invalidate the area covered by the removed frame?
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
+
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
   
   PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+
+  if (SVGFrame && outerSVGFrame) {
+    // XXX We need to rebuild the fragment tree starting from the
+    // removed frame. Let's just rebuild the whole tree for now
+    outerSVGFrame->SuspendRedraw();
+    mFragmentTreeDirty = PR_TRUE;
+    
+    if (dirty_region) {
+      outerSVGFrame->InvalidateRegion(dirty_region, PR_FALSE);
+    }
+
+    outerSVGFrame->UnsuspendRedraw();
+  }
+  
   NS_ASSERTION(result, "didn't find frame to delete");
   return result ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -395,6 +420,13 @@ nsSVGTSpanFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   return *hit ? NS_OK : NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGTSpanFrame::GetCoveredRegion()
+{
+  // XXX
+  return nsnull;
+}
+
 NS_IMETHODIMP
 nsSVGTSpanFrame::InitialUpdate()
 {
@@ -453,6 +485,66 @@ nsSVGTSpanFrame::NotifyRedrawUnsuspended()
     kid->GetNextSibling(&kid);
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGTSpanFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  
+  // iterate over all children and accumulate the bounding rect:
+  // this relies on the fact that children of <text> elements can't
+  // have individual transforms
+  
+  float x1=0.0f, y1=0.0f, x2=0.0f, y2=0.0f;
+  PRBool bFirst=PR_TRUE;
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsIDOMSVGRect> r;
+      SVGFrame->GetBBox(getter_AddRefs(r));
+      NS_ASSERTION(r, "no bounding box");
+      if (!r) continue;
+
+      float x,y,w,h;
+      r->GetX(&x);
+      r->GetY(&y);
+      r->GetWidth(&w);
+      r->GetHeight(&h);
+      
+      if (bFirst) {
+        bFirst = PR_FALSE;
+        x1 = x;
+        y1 = y;
+        x2 = x+w;
+        y2 = y+h;
+      }
+      else {
+        if (x<x1) x1 = x;
+        if (x+w>x2) x2 = x+w;
+        if (y<y1) y1 = y;
+        if (y+h>y2) y2 = y+h;
+      }
+    }
+    kid->GetNextSibling(&kid);
+  }
+
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("null outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+
+  outerSVGFrame->CreateSVGRect(_retval);
+
+  (*_retval)->SetWidth(x2-x1);
+  (*_retval)->SetHeight(y2-y1);
+  (*_retval)->SetX(x1);
+  (*_retval)->SetY(y1);
+
+  return NS_OK;  
 }
 
 //----------------------------------------------------------------------
@@ -615,6 +707,14 @@ nsSVGTSpanFrame::NotifyGlyphFragmentTreeSuspended()
 NS_IMETHODIMP_(void)
 nsSVGTSpanFrame::NotifyGlyphFragmentTreeUnsuspended()
 {
+  if (mFragmentTreeDirty) {
+    nsISVGTextFrame* text_frame = GetTextFrame();
+    NS_ASSERTION(text_frame, "null text frame");
+    if (text_frame)
+      text_frame->NotifyGlyphFragmentTreeChange(this);
+    mFragmentTreeDirty = PR_FALSE;
+  }    
+  
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
     nsISVGGlyphFragmentNode *node = nsnull;

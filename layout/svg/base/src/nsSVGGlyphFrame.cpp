@@ -52,6 +52,7 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "prdtoa.h"
+#include "nsIDOMSVGRect.h"
 
 typedef nsFrame nsSVGGlyphFrameBase;
 
@@ -81,22 +82,19 @@ public:
        nsIStyleContext* aContext,
        nsIFrame*        aPrevInFlow);
 
-  NS_IMETHOD  AttributeChanged(nsIPresContext* aPresContext,
-                               nsIContent*     aChild,
-                               PRInt32         aNameSpaceID,
-                               nsIAtom*        aAttribute,
-                               PRInt32         aModType,
-                               PRInt32         aHint);
-
-  NS_IMETHOD DidSetStyleContext(nsIPresContext* aPresContext);
+  NS_IMETHOD  ContentChanged(nsIPresContext* aPresContext,
+                             nsIContent*     aChild,
+                             nsISupports*    aSubContent);
 
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
   
   // nsISVGGeometrySource interface: 
   NS_DECL_NSISVGGEOMETRYSOURCE
@@ -231,42 +229,28 @@ nsSVGGlyphFrame::Init(nsIPresContext*  aPresContext,
 }
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::AttributeChanged(nsIPresContext* aPresContext,
-                                  nsIContent*     aChild,
-                                  PRInt32         aNameSpaceID,
-                                  nsIAtom*        aAttribute,
-                                  PRInt32         aModType,
-                                  PRInt32         aHint)
+nsSVGGlyphFrame::ContentChanged(nsIPresContext* aPresContext,
+                                nsIContent*     aChild,
+                                nsISupports*    aSubContent)
 {
-  // we don't use this notification mechanism
-  
 #ifdef DEBUG
-//  printf("** nsSVGGlyphFrame::AttributeChanged(");
-//  nsAutoString str;
-//  aAttribute->ToString(str);
-//  nsCAutoString cstr;
-//  cstr.AssignWithConversion(str);
-//  printf(cstr.get());
-//  printf(")\n");
+//  printf("** nsSVGGlyphFrame::ContentChanged\n");
 #endif
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("No outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
   
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGGlyphFrame::DidSetStyleContext(nsIPresContext* aPresContext)
-{
-  // XXX: we'd like to use the style_hint mechanism and the
-  // ContentStateChanged/AttributeChanged functions for style changes
-  // to get slightly finer granularity, but unfortunately the
-  // style_hints don't map very well onto svg. Here seems to be the
-  // best place to deal with style changes:
-  
+  outerSVGFrame->SuspendRedraw();
+  UpdateFragmentTree();
+  UpdateMetrics(nsISVGRendererGlyphMetrics::UPDATEMASK_ALL);
   UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_ALL);
+  outerSVGFrame->UnsuspendRedraw();
 
   return NS_OK;
 }
-  
+
 
 //----------------------------------------------------------------------
 // nsISVGChildFrame methods
@@ -297,12 +281,29 @@ nsSVGGlyphFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGGlyphFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *region = nsnull;
+  mGeometry->GetCoveredRegion(&region);
+  return region;
+}
+
 NS_IMETHODIMP
 nsSVGGlyphFrame::InitialUpdate()
 {
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("No outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+  
+  outerSVGFrame->SuspendRedraw();
   UpdateFragmentTree();
   UpdateMetrics(nsISVGRendererGlyphMetrics::UPDATEMASK_ALL);
   UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_ALL);
+  outerSVGFrame->UnsuspendRedraw();
+  
   return NS_OK;
 }  
 
@@ -340,6 +341,28 @@ nsSVGGlyphFrame::NotifyRedrawUnsuspended()
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("null outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+
+  outerSVGFrame->CreateSVGRect(_retval);
+
+  float width,height;
+  mMetrics->GetAdvance(&width);
+  mMetrics->GetHeight(&height);
+  (*_retval)->SetWidth(width);
+  (*_retval)->SetHeight(height);
+  (*_retval)->SetX(mX);
+  (*_retval)->SetY(mY);
+  
+  return NS_OK;
+}
 
 //----------------------------------------------------------------------
 // nsISVGGeometrySource methods:
@@ -648,9 +671,20 @@ nsSVGGlyphFrame::BuildGlyphFragmentTree(PRUint32 charNum, PRBool lastBranch)
 
   mCharOffset = charNum;
   nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+
+  PRInt32 length;
+  tc->GetTextLength(&length);
+  if (length==0) {
+#ifdef DEBUG
+    printf("Glyph frame with zero length text\n");
+#endif
+    mCharacterData = NS_LITERAL_STRING("");
+    return charNum;
+  }
+  
   tc->CopyText(mCharacterData);
   mCharacterData.CompressWhitespace(charNum==0, lastBranch);
-  
+
   return charNum+mCharacterData.Length();
 }
 

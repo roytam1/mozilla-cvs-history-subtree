@@ -888,8 +888,10 @@ static const PropertyCheckData ColorCheckProperties[] = {
 static const PropertyCheckData BackgroundCheckProperties[] = {
   CHECKDATA_PROP(nsCSSColor, mBackAttachment, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSColor, mBackRepeat, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsCSSColor, mBackClip, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSColor, mBackColor, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSColor, mBackImage, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsCSSColor, mBackOrigin, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSColor, mBackPositionX, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSColor, mBackPositionY, CHECKDATA_VALUE, PR_FALSE)
 };
@@ -1602,8 +1604,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID aSID,
     // All information must necessarily be inherited from our parent style context.
     // In the absence of any computed data in the rule tree and with
     // no rules specified that didn't have values of 'inherit', we should check our parent.
-    nsCOMPtr<nsIStyleContext> parentContext =
-        dont_AddRef(aContext->GetParent());
+    nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
     if (parentContext) {
       // We have a parent, and so we should just inherit from the parent.
       // Set the inherit bits on our context.  These bits tell the style context that
@@ -2096,7 +2097,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 {
   // walk up the contexts until a context with the desired generic font
   nsAutoVoidArray contextPath;
-  nsCOMPtr<nsIStyleContext> higherContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> higherContext = aContext->GetParent();
   while (higherContext) {
     contextPath.AppendElement(higherContext);
     const nsStyleFont* higherFont = (const nsStyleFont*)higherContext->GetStyleData(eStyleStruct_Font);
@@ -2104,7 +2105,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       // done walking up the higher contexts
       break;
     }
-    higherContext = getter_AddRefs(higherContext->GetParent());
+    higherContext = higherContext->GetParent();
   }
 
   // re-apply the cascading rules, starting from the higher context
@@ -2189,7 +2190,7 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
   const nsCSSFont& fontData = NS_STATIC_CAST(const nsCSSFont&, aData);
   nsStyleFont* font = nsnull;
@@ -2318,7 +2319,7 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
   const nsCSSText& textData = NS_STATIC_CAST(const nsCSSText&, aData);
   nsStyleText* text = nsnull;
@@ -2438,7 +2439,7 @@ nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData, const nsCSSStruct& a
                                  nsRuleNode* aHighestNode,
                                  const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
   const nsCSSText& textData = NS_STATIC_CAST(const nsCSSText&, aData);
   nsStyleTextReset* text;
@@ -2524,7 +2525,7 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
                                      const RuleDetail& aRuleDetail,
                                      PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSUserInterface& uiData = NS_STATIC_CAST(const nsCSSUserInterface&, aData);
   nsStyleUserInterface* ui = nsnull;
@@ -2634,7 +2635,7 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData, const nsCSSStruct& aDa
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSUserInterface& uiData = NS_STATIC_CAST(const nsCSSUserInterface&, aData);
   nsStyleUIReset* ui;
@@ -2723,7 +2724,7 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSDisplay& displayData = NS_STATIC_CAST(const nsCSSDisplay&, aData);
   nsStyleDisplay* display;
@@ -2735,18 +2736,19 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
     display = new (mPresContext) nsStyleDisplay();
   const nsStyleDisplay* parentDisplay = display;
 
-  if (parentContext && 
-      aRuleDetail != eRuleFullReset &&
-      aRuleDetail != eRulePartialReset &&
-      aRuleDetail != eRuleNone)
-    parentDisplay = NS_STATIC_CAST(const nsStyleDisplay*,
-                            parentContext->GetStyleData(eStyleStruct_Display));
-  PRBool inherited = aInherited;
-
   nsCOMPtr<nsIAtom> pseudoTag;
   aContext->GetPseudoType(*getter_AddRefs(pseudoTag));
   PRBool generatedContent = (pseudoTag == nsCSSAtoms::beforePseudo || 
                              pseudoTag == nsCSSAtoms::afterPseudo);
+
+  if (parentContext && 
+      ((aRuleDetail != eRuleFullReset &&
+        aRuleDetail != eRulePartialReset &&
+        aRuleDetail != eRuleNone) ||
+       generatedContent))
+    parentDisplay = NS_STATIC_CAST(const nsStyleDisplay*,
+                            parentContext->GetStyleData(eStyleStruct_Display));
+  PRBool inherited = aInherited;
 
   // display: enum, none, inherit
   if (eCSSUnit_Enumerated == displayData.mDisplay.GetUnit()) {
@@ -2908,53 +2910,61 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
   }
 
   // CSS2 specified fixups:
-  // :before and :after elements must not be positioned or floated (CSS2 12.1).
   if (generatedContent) {
+    // According to CSS2 section 12.1, :before and :after
+    // pseudo-elements must not be positioned or floated (CSS2 12.1) and
+    // must be limited to certain display types (depending on the
+    // display type of the element to which they are attached).
+
     if (display->mPosition != NS_STYLE_POSITION_STATIC)
       display->mPosition = NS_STYLE_POSITION_STATIC;
     if (display->mFloats != NS_STYLE_FLOAT_NONE)
       display->mFloats = NS_STYLE_FLOAT_NONE;
-  }
 
-  // 1) if float is not none, and display is not none, then we must set display to block
-  //    XXX - there are problems with following the spec here: what we will do instead of
-  //          following the letter of the spec is to make sure that floated elements are
-  //          some kind of block, not strictly 'block' - see EnsureBlockDisplay method
-  if (display->mDisplay != NS_STYLE_DISPLAY_NONE &&
-      display->mFloats != NS_STYLE_FLOAT_NONE)
-    EnsureBlockDisplay(display->mDisplay);
-  
-  // 2) if position is 'absolute' or 'fixed' then display must be 'block and float must be 'none'
-  //    XXX - see note for fixup 1) above...
-  if (display->IsAbsolutelyPositioned() && display->mDisplay != NS_STYLE_DISPLAY_NONE) {
-    // Backup original display value for calculation of a hypothetical box (CSS2 10.6.4/10.6.5)
-    // See nsHTMLReflowState::CalculateHypotheticalBox
-    display->mOriginalDisplay = display->mDisplay;
-    EnsureBlockDisplay(display->mDisplay);
-    display->mFloats = NS_STYLE_FLOAT_NONE;
-  }
-
-  if (generatedContent) {
     PRUint8 displayValue = display->mDisplay;
-    if (parentDisplay->IsBlockLevel()) {
-      // For block-level elements the only allowed 'display' values are:
-      // 'none', 'inline', 'block', and 'marker'
-      if ((NS_STYLE_DISPLAY_INLINE != displayValue) &&
-          (NS_STYLE_DISPLAY_BLOCK != displayValue) &&
-          (NS_STYLE_DISPLAY_MARKER != displayValue)) {
-        // Pseudo-element behaves as if the value were 'block'
-        displayValue = NS_STYLE_DISPLAY_BLOCK;
+    if (displayValue != NS_STYLE_DISPLAY_NONE &&
+        displayValue != NS_STYLE_DISPLAY_INLINE) {
+      if (parentDisplay->IsBlockLevel()) {
+        // If the subject of the selector is a block-level element,
+        // allowed values are 'none', 'inline', 'block', and 'marker'.
+        // If the value of the 'display' has any other value, the
+        // pseudo-element will behave as if the value were 'block'.
+        if (displayValue != NS_STYLE_DISPLAY_BLOCK &&
+            displayValue != NS_STYLE_DISPLAY_MARKER)
+          display->mDisplay = NS_STYLE_DISPLAY_BLOCK;
+      } else {
+        // If the subject of the selector is an inline-level element,
+        // allowed values are 'none' and 'inline'. If the value of the
+        // 'display' has any other value, the pseudo-element will behave
+        // as if the value were 'inline'.
+        display->mDisplay = NS_STYLE_DISPLAY_INLINE;
       }
-
-    } else {
-      // For inline-level elements the only allowed 'display' values are
-      // 'none' and 'inline'
-      displayValue = NS_STYLE_DISPLAY_INLINE;
     }
-  
-    if (display->mDisplay != displayValue) {
-      // Reset the value
-      display->mDisplay = displayValue;
+  } else if (display->mDisplay != NS_STYLE_DISPLAY_NONE) {
+    // CSS2 9.7 specifies display type corrections dealing with 'float'
+    // and 'position'.  Since generated content can't be floated or
+    // positioned, we can deal with it here.
+
+    // 1) if float is not none, and display is not none, then we must
+    // set display to block
+    //    XXX - there are problems with following the spec here: what we
+    //          will do instead of following the letter of the spec is
+    //          to make sure that floated elements are some kind of
+    //          block, not strictly 'block' - see EnsureBlockDisplay
+    //          method
+    if (display->mFloats != NS_STYLE_FLOAT_NONE)
+      EnsureBlockDisplay(display->mDisplay);
+    
+    // 2) if position is 'absolute' or 'fixed' then display must be
+    // 'block and float must be 'none'
+    //    XXX - see note for fixup 1) above...
+    if (display->IsAbsolutelyPositioned()) {
+      // Backup original display value for calculation of a hypothetical
+      // box (CSS2 10.6.4/10.6.5).
+      // See nsHTMLReflowState::CalculateHypotheticalBox
+      display->mOriginalDisplay = display->mDisplay;
+      EnsureBlockDisplay(display->mDisplay);
+      display->mFloats = NS_STYLE_FLOAT_NONE;
     }
   }
 
@@ -2967,7 +2977,7 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct, const nsCSSStruct
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSDisplay& displayData = NS_STATIC_CAST(const nsCSSDisplay&, aData);
   nsStyleVisibility* visibility = nsnull;
@@ -3077,7 +3087,7 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDa
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSColor& colorData = NS_STATIC_CAST(const nsCSSColor&, aData);
   nsStyleColor* color = nsnull;
@@ -3133,7 +3143,7 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct, const nsCSSStruct
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSColor& colorData = NS_STATIC_CAST(const nsCSSColor&, aData);
   nsStyleBackground* bg;
@@ -3205,6 +3215,28 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct, const nsCSSStruct
     bg->mBackgroundAttachment = parentBG->mBackgroundAttachment;
   }
 
+  // background-clip: enum, inherit, initial
+  if (eCSSUnit_Enumerated == colorData.mBackClip.GetUnit()) {
+    bg->mBackgroundClip = colorData.mBackClip.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == colorData.mBackClip.GetUnit()) {
+    bg->mBackgroundClip = parentBG->mBackgroundClip;
+  }
+  else if (eCSSUnit_Initial == colorData.mBackClip.GetUnit()) {
+    bg->mBackgroundClip = NS_STYLE_BG_CLIP_BORDER;
+  }
+
+  // background-origin: enum, inherit, initial
+  if (eCSSUnit_Enumerated == colorData.mBackOrigin.GetUnit()) {
+    bg->mBackgroundOrigin = colorData.mBackOrigin.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == colorData.mBackOrigin.GetUnit()) {
+    bg->mBackgroundOrigin = parentBG->mBackgroundOrigin;
+  }
+  else if (eCSSUnit_Initial == colorData.mBackOrigin.GetUnit()) {
+    bg->mBackgroundOrigin = NS_STYLE_BG_ORIGIN_PADDING;
+  }
+
   // background-position: enum, length, percent (flags), inherit
   if (eCSSUnit_Percent == colorData.mBackPositionX.GetUnit()) {
     bg->mBackgroundXPosition = (nscoord)(100.0f * colorData.mBackPositionX.GetPercentValue());
@@ -3274,7 +3306,7 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
   nsStyleMargin* margin;
@@ -3339,7 +3371,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
   nsStyleBorder* border;
@@ -3619,7 +3651,7 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
   nsStylePadding* padding;
@@ -3684,7 +3716,7 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
   nsStyleOutline* outline;
@@ -3756,7 +3788,7 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSList& listData = NS_STATIC_CAST(const nsCSSList&, aData);
   nsStyleList* list = nsnull;
@@ -3872,7 +3904,7 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct, const nsCSSStruct& 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSPosition& posData = NS_STATIC_CAST(const nsCSSPosition&, aData);
   nsStylePosition* pos;
@@ -3980,7 +4012,7 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDa
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSTable& tableData = NS_STATIC_CAST(const nsCSSTable&, aData);
   nsStyleTable* table;
@@ -4050,7 +4082,7 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct, const nsCSSStruc
                                    nsRuleNode* aHighestNode,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSTable& tableData = NS_STATIC_CAST(const nsCSSTable&, aData);
   nsStyleTableBorder* table = nsnull;
@@ -4148,7 +4180,7 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSContent& contentData = NS_STATIC_CAST(const nsCSSContent&, aData);
   nsStyleContent* content;
@@ -4343,7 +4375,7 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
                                    nsRuleNode* aHighestNode,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSContent& contentData = NS_STATIC_CAST(const nsCSSContent&, aData);
   nsStyleQuotes* quotes = nsnull;
@@ -4436,7 +4468,7 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
   const nsCSSXUL& xulData = NS_STATIC_CAST(const nsCSSXUL&, aData);
   nsStyleXUL* xul = nsnull;
@@ -4585,7 +4617,7 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
   nsStyleSVG* svg = nsnull;
   nsStyleSVG* parentSVG = svg;
@@ -4713,7 +4745,7 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct, const nsCSSStruct& 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
   const nsCSSSVG& SVGData = NS_STATIC_CAST(const nsCSSSVG&, aData);
   nsStyleSVGReset* svgReset = nsnull;

@@ -78,7 +78,7 @@ _SUBDIR_CONFIG_ARGS="$ac_configure_args"
 dnl Set the version number of the libs included with mozilla
 dnl ========================================================
 MOZJPEG=62
-MOZPNG=10009
+MOZPNG=10205
 MOZMNG="((1<<16)|(0<<8)|(4))"
 NSPR_VERSION=4
 
@@ -1254,6 +1254,7 @@ dnl the qsort routine under solaris is faulty
        NS_USE_NATIVE=1
        AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
        LDFLAGS="-xildoff -zlazyload -zcombreloc $LDFLAGS"
+       MOZ_OPTIMIZE_FLAGS="-xO4"
        MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_FLAGS) $(DSO_LDOPTS) -o $@'
        MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_FLAGS) $(DSO_LDOPTS) -o $@'
        MKSHLIB_FORCE_ALL='-Qoption ld -z,allextract'
@@ -1380,6 +1381,19 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_UID_T
 AC_STRUCT_ST_BLKSIZE
+AC_MSG_CHECKING(for siginfo_t)
+AC_CACHE_VAL(ac_cv_siginfo_t,
+ [AC_TRY_COMPILE([#define _POSIX_C_SOURCE 199506L
+                  #include <signal.h>],
+                 [siginfo_t* info;],
+                 [ac_cv_siginfo_t=true],
+                 [ac_cv_siginfo_t=false])])
+if test "$ac_cv_siginfo_t" = true ; then
+  AC_DEFINE(HAVE_SIGINFO_T)
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+fi
 
 dnl Visual Age for os/2 also defines size_t and off_t in certain 
 dnl  header files.  These defines make Visual Age use the mozilla
@@ -1700,6 +1714,14 @@ else
         AC_CHECK_LIB(Xt, XtFree, [ XT_LIBS="-lXt $XT_LIBS"],
 		    [MISSING_X="$MISSING_X -lXt"], $X_PRE_LIBS $XT_LIBS $XLIBS)
         ])
+
+    # AIX needs the motif library linked before libXt to prevent
+    # crashes in plugins linked against Motif - Bug #98892
+    case "${target_os}" in
+    aix*)
+        XT_LIBS="-lXm $XT_LIBS"
+        ;;
+    esac
 
     AC_SUBST(XT_LIBS)
     dnl ========================================================
@@ -3114,10 +3136,8 @@ fi
 
 if test -z "$_NO_FREETYPE2"; then
     AC_CHECK_FT2(6.1.0, [MOZ_ENABLE_FREETYPE2=1], [MOZ_ENABLE_FREETYPE2=])
-    AC_CHECK_FT2(8.0.2, [MOZ_XFT_SYSTEM_FREETYPE2=1], [MOZ_XFT_SYSTEM_FREETYPE2=])
 fi
 
-AC_SUBST(MOZ_XFT_SYSTEM_FREETYPE2)
 AC_SUBST(MOZ_ENABLE_FREETYPE2)
 
 dnl ========================================================
@@ -3126,15 +3146,28 @@ dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(xft,
 [  --enable-xft            Enable Xft support ],
     MOZ_ENABLE_XFT=1
-    MOZ_XFT_CFLAGS="$X_CFLAGS -I${x_includes}/X11/extensions"
-dnl    MOZ_XFT_CFLAGS="$X_CFLAGS"
-    MOZ_XFT_LIBS="$X_LIBS"
     AC_DEFINE(MOZ_ENABLE_XFT)
 )
+
+if test "$MOZ_ENABLE_XFT"
+then
+    PKG_CHECK_MODULES(MOZ_XFT, xft)
+fi
 
 AC_SUBST(MOZ_ENABLE_XFT)
 AC_SUBST(MOZ_XFT_CFLAGS)
 AC_SUBST(MOZ_XFT_LIBS)
+
+dnl ========================================================
+dnl = disabling x11 core support, enabled by default
+dnl ========================================================
+MOZ_ENABLE_COREXFONTS=${MOZ_ENABLE_COREXFONTS:-1}
+if test "$MOZ_ENABLE_COREXFONTS"
+then
+    AC_DEFINE(MOZ_ENABLE_COREXFONTS)
+fi
+
+AC_SUBST(MOZ_ENABLE_COREXFONTS)
 
 dnl ========================================================
 dnl = PostScript print module
@@ -3245,6 +3278,15 @@ MOZ_ARG_ENABLE_BOOL(plaintext-editor-only,
   MOZ_PLAINTEXT_EDITOR_ONLY=1 )
 dnl Note the #define is MOZILLA, not MOZ, for compat with the Mac build.
 AC_SUBST(MOZ_PLAINTEXT_EDITOR_ONLY)
+
+dnl ========================================================
+dnl Composer is on by default.
+dnl ========================================================
+MOZ_COMPOSER=1
+MOZ_ARG_DISABLE_BOOL(composer,
+[  --disable-composer      Disable building of Composer],
+    MOZ_COMPOSER= )
+AC_SUBST(MOZ_COMPOSER)
 
 dnl ========================================================
 dnl = Enable compilation of specific extension modules
@@ -4848,16 +4890,5 @@ if test "$MOZ_LDAP_XPCOM"; then
         ac_configure_args="$ac_configure_args --enable-64bit"
     fi
     AC_OUTPUT_SUBDIRS(directory/c-sdk)
-    ac_configure_args="$_SUBDIR_CONFIG_ARGS"
-fi
-
-# if we're building Xft, we need our private copy of freetype
-if test "$MOZ_ENABLE_XFT"; then
-    ac_configure_args="$_SUBDIR_CONFIG_ARGS --prefix=$MOZ_BUILD_ROOT/dist"
-    if test -z "$MOZ_XFT_SYSTEM_FREETYPE2"; then
-        AC_OUTPUT_SUBDIRS(other-licenses/freetype)
-    fi
-    ac_configure_args="$ac_configure_args --includedir=$MOZ_BUILD_ROOT/dist/include/expat-1.95"
-    AC_OUTPUT_SUBDIRS(other-licenses/expat)
     ac_configure_args="$_SUBDIR_CONFIG_ARGS"
 fi

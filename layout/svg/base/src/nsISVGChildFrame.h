@@ -41,9 +41,12 @@
 
 
 #include "nsISupports.h"
+#include "nsCOMPtr.h"
+#include "nsISVGRendererRegion.h"
 
 class nsISVGRendererRenderContext;
 class nsIPresContext;
+class nsIDOMSVGRect;
 
 // {1F23A200-B583-40EC-8564-9E6740C4DD3A}
 #define NS_ISVGCHILDFRAME_IID \
@@ -56,10 +59,12 @@ public:
 
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext)=0;
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit)=0;
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion()=0;
   NS_IMETHOD InitialUpdate()=0;
   NS_IMETHOD NotifyCTMChanged()=0;
   NS_IMETHOD NotifyRedrawSuspended()=0;
   NS_IMETHOD NotifyRedrawUnsuspended()=0;
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval)=0; // bbox in local coords
 };
 
 #endif // __NS_ISVGCHILDFRAME_H__

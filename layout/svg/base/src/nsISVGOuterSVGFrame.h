@@ -60,6 +60,7 @@ public:
   NS_IMETHOD UnsuspendRedraw()=0;
   NS_IMETHOD GetRenderer(nsISVGRenderer**renderer)=0;
   NS_IMETHOD GetPresContext(nsIPresContext**presContext)=0;
+  NS_IMETHOD CreateSVGRect(nsIDOMSVGRect **_retval)=0;
 };
 
 #endif // __NS_ISVGOUTERSVGFRAME_H__

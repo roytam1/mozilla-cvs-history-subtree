@@ -1582,8 +1582,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
               NS_NewInlineFrame(aPresShell, aWrapperFrame);
               wrapperPseudo = nsCSSAtoms::mozGCWrapperInline;
             }        
-            nsCOMPtr<nsIStyleContext> parentSC =
-              dont_AddRef(aStyleContext->GetParent()); 
+            nsCOMPtr<nsIStyleContext> parentSC = aStyleContext->GetParent(); 
             nsCOMPtr<nsIStyleContext> wrapperSC;
             aPresContext->ResolvePseudoStyleContextFor(nsnull, wrapperPseudo,
                                           parentSC, getter_AddRefs(wrapperSC));
@@ -3633,6 +3632,9 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   viewManager->GetRootView(rootView);
   viewportFrame->SetView(aPresContext, rootView);
 
+  nsContainerFrame::SyncFrameViewProperties(aPresContext, viewportFrame,
+                                            viewportPseudoStyle, rootView);
+
   // The viewport is the containing block for 'fixed' elements
   mFixedContainingBlock = viewportFrame;
 
@@ -4008,8 +4010,7 @@ nsCSSFrameConstructor::CreatePlaceholderFrameFor(nsIPresShell*    aPresShell,
   if (NS_SUCCEEDED(rv)) {
     // The placeholder frame gets a pseudo style context
     nsCOMPtr<nsIStyleContext>  placeholderStyle;
-    nsCOMPtr<nsIStyleContext> parentContext =
-        dont_AddRef(aStyleContext->GetParent());
+    nsCOMPtr<nsIStyleContext> parentContext = aStyleContext->GetParent();
     aPresContext->ResolveStyleContextForNonElement(parentContext,
                                              getter_AddRefs(placeholderStyle));
     placeholderFrame->Init(aPresContext, aContent, aParentFrame,
@@ -7150,10 +7151,10 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     // a standard xml element, and not be of the right type.
     // The best we can do here is to create a generic svg container frame.
 #ifdef DEBUG
-    printf("Warning: Creating SVGGenericContainerFrame for tag <");
-    nsAutoString str;
-    aTag->ToString(str);
-    printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
+    //printf("Warning: Creating SVGGenericContainerFrame for tag <");
+    //nsAutoString str;
+    //aTag->ToString(str);
+    //printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
 #endif
     processChildren = PR_TRUE;
     rv = NS_NewSVGGenericContainerFrame(aPresShell, aContent, &newFrame);
@@ -13850,6 +13851,7 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
       }
       else {
         // XXX uh oh. the block we need to reframe has no parent!
+        NS_ERROR("uh oh. the block we need to reframe has no parent!");
       }
       return PR_TRUE;
     }

@@ -558,8 +558,7 @@ nsSVGSVGElement::SuspendRedraw(PRUint32 max_wait_milliseconds, PRUint32 *_retval
   // above function call fails although the svg:svg's frame has been
   // build. Strange...
   
-//  NS_ASSERTION(frame, "suspending redraw w/o frame");
-  printf("suspending redraw w/o frame\n");
+  NS_ASSERTION(frame, "suspending redraw w/o frame");
 #endif
   if (frame) {
     nsISVGOuterSVGFrame* svgframe;
@@ -605,8 +604,7 @@ nsSVGSVGElement::UnsuspendRedrawAll()
   nsIFrame* frame;
   presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
 #ifdef DEBUG
-//  NS_ASSERTION(frame, "unsuspending redraw w/o frame");
-  printf("unsuspending redraw w/o frame\n");
+  NS_ASSERTION(frame, "unsuspending redraw w/o frame");
 #endif
   if (frame) {
     nsISVGOuterSVGFrame* svgframe;

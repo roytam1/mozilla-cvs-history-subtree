@@ -115,6 +115,7 @@ SVG_BRANCH_MODIFIED_FILES =                               \
 	content/svg/document/src/nsSVGDocument.h              \
 	dom/public/nsIDOMClassInfo.h                          \
 	dom/src/base/nsDOMClassInfo.cpp                       \
+	gfx/src/windows/nsDrawingSurfaceWin.cpp               \
 	htmlparser/src/CParserContext.cpp                     \
 	htmlparser/src/CNavDTD.cpp                            \
 	htmlparser/src/nsExpatDriver.cpp                      \
@@ -530,6 +531,19 @@ CHECKOUT_PHOENIX := true
 FASTUPDATE_PHOENIX := true
 endif
 
+####################################
+# CVS defines for codesighs (pulled and built if MOZ_MAPINFO is set)
+#
+CVSCO_CODESIGHS := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/tools/codesighs
+
+ifdef MOZ_MAPINFO
+FASTUPDATE_CODESIGHS := fast_update $(CVSCO_CODESIGHS)
+CHECKOUT_CODESIGHS := cvs_co $(CVSCO_CODESIGHS)
+else
+CHECKOUT_CODESIGHS := true
+FASTUPDATE_CODESIGHS := true
+endif
+
 #######################################################################
 # Rules
 # 
@@ -596,6 +610,7 @@ real_checkout:
 	$(CHECKOUT_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	$(CHECKOUT_PHOENIX) && \
+	$(CHECKOUT_CODESIGHS) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
@@ -656,6 +671,7 @@ real_fast-update:
 	$(FASTUPDATE_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	$(FASTUPDATE_PHOENIX) && \
+	$(FASTUPDATE_CODESIGHS) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
 	fast_update $(CVSCO_NOSUBDIRS)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)

@@ -175,6 +175,14 @@ nsSVGPathGeometryFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGPathGeometryFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *region = nsnull;
+  GetGeometry()->GetCoveredRegion(&region);
+  return region;
+}
+
 NS_IMETHODIMP
 nsSVGPathGeometryFrame::InitialUpdate()
 {
@@ -213,7 +221,14 @@ nsSVGPathGeometryFrame::NotifyRedrawUnsuspended()
   }
   return NS_OK;
 }
-  
+
+NS_IMETHODIMP
+nsSVGPathGeometryFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  return NS_ERROR_FAILURE;
+}
+
 //----------------------------------------------------------------------
 // nsISVGValueObserver methods:
 

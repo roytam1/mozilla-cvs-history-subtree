@@ -123,11 +123,13 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
-
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
+  
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame *) GetOuterSVGFrame();
   
@@ -135,7 +137,6 @@ protected:
   // implementation helpers:
   void Update();
   already_AddRefed<nsISVGRendererRegion> DoReflow();
-  already_AddRefed<nsISVGRendererRegion> GetRegion();
   float GetPxPerTwips();
   float GetTwipsPerPx();
   void TransformPoint(float& x, float& y);
@@ -508,6 +509,34 @@ nsSVGForeignObjectFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
                                                        NS_FRAME_PAINT_LAYER_BACKGROUND, hit);
 }
 
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGForeignObjectFrame::GetCoveredRegion()
+{
+  // get a region from our mRect
+  
+  //  if (mRect.width==0 || mRect.height==0) return nsnull;
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("null outerSVGFrame");
+    return nsnull;
+  }
+  
+  nsCOMPtr<nsISVGRenderer> renderer;
+  outerSVGFrame->GetRenderer(getter_AddRefs(renderer));
+  
+  float pxPerTwips = GetPxPerTwips();
+
+  nsISVGRendererRegion *region = nsnull;
+  renderer->CreateRectRegion((mRect.x-1) * pxPerTwips,
+                             (mRect.y-1) * pxPerTwips,
+                             (mRect.width+2) * pxPerTwips,
+                             (mRect.height+2) * pxPerTwips,
+                             &region);
+  
+  return region;
+  
+}
+
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::InitialUpdate()
 {
@@ -540,6 +569,13 @@ nsSVGForeignObjectFrame::NotifyRedrawUnsuspended()
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGForeignObjectFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
@@ -596,7 +632,7 @@ nsSVGForeignObjectFrame::DoReflow()
   outerSVGFrame->GetPresContext(getter_AddRefs(presContext));
 
   // remember the area we have to invalidate after this reflow:
-  nsCOMPtr<nsISVGRendererRegion> area_before = GetRegion();
+  nsCOMPtr<nsISVGRendererRegion> area_before = GetCoveredRegion();
   
   // initiate a synchronous reflow here and now:  
   nsSize availableSpace(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
@@ -627,38 +663,11 @@ nsSVGForeignObjectFrame::DoReflow()
 
   mIsDirty = PR_FALSE;
 
-  nsCOMPtr<nsISVGRendererRegion> area_after = GetRegion();
+  nsCOMPtr<nsISVGRendererRegion> area_after = GetCoveredRegion();
   nsISVGRendererRegion *dirtyRegion;
   area_before->Combine(area_after, &dirtyRegion);
 
   return dirtyRegion;
-}
-
-already_AddRefed<nsISVGRendererRegion>
-nsSVGForeignObjectFrame::GetRegion()
-{
-  // get a region from our mRect
-  
-//  if (mRect.width==0 || mRect.height==0) return nsnull;
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return nsnull;
-  }
-  
-  nsCOMPtr<nsISVGRenderer> renderer;
-  outerSVGFrame->GetRenderer(getter_AddRefs(renderer));
-  
-  float pxPerTwips = GetPxPerTwips();
-
-  nsISVGRendererRegion *region = nsnull;
-  renderer->CreateRectRegion((mRect.x-1) * pxPerTwips,
-                             (mRect.y-1) * pxPerTwips,
-                             (mRect.width+2) * pxPerTwips,
-                             (mRect.height+2) * pxPerTwips,
-                             &region);
-  
-  return region;
 }
 
 float nsSVGForeignObjectFrame::GetPxPerTwips()

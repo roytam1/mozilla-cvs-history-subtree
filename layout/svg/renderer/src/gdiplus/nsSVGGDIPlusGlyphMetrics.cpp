@@ -211,6 +211,15 @@ nsSVGGDIPlusGlyphMetrics::GetAdvance(float *aAdvance)
   return NS_OK;
 }
 
+/* readonly attribute float height; */
+NS_IMETHODIMP
+nsSVGGDIPlusGlyphMetrics::GetHeight(float *aHeight)
+{
+  *aHeight = GetBoundingRect()->Height;
+  return NS_OK;
+}
+
+
 /* boolean update (in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
@@ -237,7 +246,8 @@ NS_IMETHODIMP_(const RectF*)
 nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
 {
   if (!mRectNeedsUpdate) return &mRect;
-
+  mRectNeedsUpdate = PR_FALSE;
+  
   nsCOMPtr<nsIPresContext> presContext;
   mSource->GetPresContext(getter_AddRefs(presContext));
   if (!presContext) {
@@ -268,6 +278,8 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     nsAutoString text;
     mSource->GetCharacterData(text);
 
+    //NS_ASSERTION(text.Length(), "zero length string");
+    
     StringFormat stringFormat(StringFormat::GenericTypographic());
     stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
                                 StringFormatFlagsMeasureTrailingSpaces);

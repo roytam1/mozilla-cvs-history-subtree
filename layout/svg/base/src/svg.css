@@ -23,11 +23,13 @@
  *
  */
 
+/* XXX most xul bindings are switched of because there are too many
+ * issues (see bug #111317) */ 
 
 @namespace url(http://www.w3.org/2000/svg);
 
 a {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#a');
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#a'); 
 }
 
 a * {
@@ -35,35 +37,35 @@ a * {
 }
                
 circle {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#circle');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#circle'); */
 }
 
 ellipse {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#ellipse');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#ellipse'); */
 }
 
 g {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#g');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#g'); */
 }
 
 line {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#line');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#line'); */
 }
 
 path {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#path');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#path'); */
 }
 
 polygon {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#polygon');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#polygon'); */
 }
 
 polyline {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#polyline');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#polyline'); */
 }
 
 rect {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#rect');
+/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#rect'); */
 }
 
 svg {
@@ -72,27 +74,26 @@ svg {
      -moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
   */
   
-  /* XXX Pending bug#172574, We want to give svg elements block
-     display style, so that they reflow correctly when given a
-     relative width/height:   
-     display: block;
-  */
+  /* give svg elements block display style, so that they reflow
+     correctly when given a relative width/height: */
+  display: block;
 
   font-family: Helvetica;
 }
 
 svg:not(:root) {
-	/* <svg> isn't the root element - safe to apply bindings */
-	-moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
+	/* <svg> isn't the root element - we could apply binding if it
+   * wasn't for bug#172574 */
+	/* -moz-binding:url('chrome://svg/content/svgBindings.xml#svg'); */
 }
 
                
 text {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#text');
+  /* -moz-binding:url('chrome://svg/content/svgBindings.xml#text'); */
 }
 
 tspan {
-  -moz-binding:url('chrome://svg/content/svgBindings.xml#tspan');
+  /* -moz-binding:url('chrome://svg/content/svgBindings.xml#tspan'); */
 }
 
 

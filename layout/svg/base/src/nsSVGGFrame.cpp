@@ -107,11 +107,13 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
-
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
+  
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame *) GetOuterSVGFrame();
 
@@ -253,9 +255,21 @@ nsSVGGFrame::RemoveFrame(nsIPresContext* aPresContext,
                      nsIAtom*        aListName,
                      nsIFrame*       aOldFrame)
 {
-  // XXX maybe we should invalidate the area covered by the removed frame?
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
   
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
+
   PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+  if (dirty_region && outerSVGFrame)
+    outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+
   NS_ASSERTION(result, "didn't find frame to delete");
   return result ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -338,6 +352,32 @@ nsSVGGFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   return *hit ? NS_OK : NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGGFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *accu_region=nsnull;
+  
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsISVGRendererRegion> dirty_region = SVGFrame->GetCoveredRegion();
+      if (accu_region) {
+        nsCOMPtr<nsISVGRendererRegion> temp = dont_AddRef(accu_region);
+        dirty_region->Combine(temp, &accu_region);
+      }
+      else {
+        accu_region = dirty_region;
+        NS_IF_ADDREF(accu_region);
+      }
+    }
+    kid->GetNextSibling(&kid);
+  }
+  
+  return accu_region;
+}
+
 NS_IMETHODIMP
 nsSVGGFrame::InitialUpdate()
 {
@@ -396,6 +436,13 @@ nsSVGGFrame::NotifyRedrawUnsuspended()
     kid->GetNextSibling(&kid);
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------

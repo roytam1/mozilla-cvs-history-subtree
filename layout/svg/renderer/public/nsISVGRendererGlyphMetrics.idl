@@ -42,7 +42,8 @@
 interface nsISVGRendererGlyphMetrics : nsISupports
 {
   readonly attribute float advance;
-
+  readonly attribute float height;
+  
   // baseline offset indentifiers:
   const unsigned short BASELINE_ALPHABETIC       = 0;
   const unsigned short BASELINE_HANGING          = 1;

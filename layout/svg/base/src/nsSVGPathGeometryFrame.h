@@ -94,10 +94,12 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
   
   // nsISupportsWeakReference
   // implementation inherited from nsSupportsWeakReference

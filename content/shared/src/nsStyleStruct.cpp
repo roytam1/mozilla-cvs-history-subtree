@@ -1006,6 +1006,8 @@ nsStyleBackground::nsStyleBackground(nsIPresContext* aPresContext)
   mBackgroundFlags = NS_STYLE_BG_COLOR_TRANSPARENT | NS_STYLE_BG_IMAGE_NONE;
   aPresContext->GetDefaultBackgroundColor(&mBackgroundColor);
   mBackgroundAttachment = NS_STYLE_BG_ATTACHMENT_SCROLL;
+  mBackgroundClip = NS_STYLE_BG_CLIP_BORDER;
+  mBackgroundOrigin = NS_STYLE_BG_ORIGIN_PADDING;
   mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
   mBackgroundXPosition = mBackgroundYPosition = 0;
 }
@@ -1015,7 +1017,8 @@ nsStyleBackground::nsStyleBackground(const nsStyleBackground& aSource)
   mBackgroundAttachment = aSource.mBackgroundAttachment;
   mBackgroundFlags = aSource.mBackgroundFlags;
   mBackgroundRepeat = aSource.mBackgroundRepeat;
-
+  mBackgroundClip = aSource.mBackgroundClip;
+  mBackgroundOrigin = aSource.mBackgroundOrigin;
   mBackgroundColor = aSource.mBackgroundColor;
   mBackgroundXPosition = aSource.mBackgroundXPosition;
   mBackgroundYPosition = aSource.mBackgroundYPosition;
@@ -1036,6 +1039,8 @@ nsChangeHint nsStyleBackground::CalcDifference(const nsStyleBackground& aOther) 
       (mBackgroundColor == aOther.mBackgroundColor) &&
       (mBackgroundXPosition == aOther.mBackgroundXPosition) &&
       (mBackgroundYPosition == aOther.mBackgroundYPosition) &&
+      (mBackgroundClip == aOther.mBackgroundClip) &&
+      (mBackgroundOrigin == aOther.mBackgroundOrigin) &&
       (mBackgroundImage == aOther.mBackgroundImage))
     return NS_STYLE_HINT_NONE;
   return NS_STYLE_HINT_VISUAL;
@@ -1266,6 +1271,8 @@ nsStyleQuotes::~nsStyleQuotes(void)
 }
 
 nsStyleQuotes::nsStyleQuotes(const nsStyleQuotes& aSource)
+  : mQuotesCount(0),
+    mQuotes(nsnull)
 {
   if (NS_SUCCEEDED(AllocateQuotes(aSource.QuotesCount()))) {
     PRUint32 count = (mQuotesCount * 2);

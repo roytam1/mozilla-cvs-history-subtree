@@ -68,6 +68,8 @@
 #include "nsINameSpace.h"
 #include "nsThemeConstants.h"
 
+#include "prprf.h"
+
 // XXX TODO:
 // - rework aErrorCode stuff: switch over to nsresult
 // verify ! is followed by important and nothing else
@@ -2555,47 +2557,51 @@ PRBool CSSParserImpl::ParseColor(PRInt32& aErrorCode, nsCSSValue& aValue)
 
   // try 'xxyyzz' without '#' prefix for compatibility with IE and Nav4x (bug 23236 and 45804)
   if (mNavQuirkMode && !IsParsingCompoundProperty()) {
-  	// - If the string starts with 'a-f', the nsCSSScanner builds the token
-  	//   as a eCSSToken_Ident and we can parse the string as a 'xxyyzz' RGB color.
-  	// - If it only contains '0-9' digits, the token is a eCSSToken_Number and it
-  	//   must be converted back to a 6 characters string to be parsed as a RGB color.
-  	// - If it starts with '0-9' and contains any 'a-f', the token is a eCSSToken_Dimension,
-  	//   the mNumber part must be converted back to a string and the mIdent part must be
-  	//   appended to that string so that the resulting string has 6 characters.
-		// Note: This is a hack for Nav compatibility. Do not attempt to simplify it
-		// by hacking into the ncCSSScanner. This would be very bad.
-		nsAutoString str;
-		char  buffer[10];
-		switch (tk->mType) {
-			case eCSSToken_Ident:
-				str.Assign(tk->mIdent);
-				break;
+    // - If the string starts with 'a-f', the nsCSSScanner builds the
+    //   token as a eCSSToken_Ident and we can parse the string as a
+    //   'xxyyzz' RGB color.
+    // - If it only contains '0-9' digits, the token is a
+    //   eCSSToken_Number and it must be converted back to a 6
+    //   characters string to be parsed as a RGB color.
+    // - If it starts with '0-9' and contains any 'a-f', the token is a
+    //   eCSSToken_Dimension, the mNumber part must be converted back to
+    //   a string and the mIdent part must be appended to that string so
+    //   that the resulting string has 6 characters.
+    // Note: This is a hack for Nav compatibility.  Do not attempt to
+    // simplify it by hacking into the ncCSSScanner.  This would be very
+    // bad.
+    nsAutoString str;
+    char buffer[20];
+    switch (tk->mType) {
+      case eCSSToken_Ident:
+        str.Assign(tk->mIdent);
+        break;
 
-			case eCSSToken_Number:
-				if (tk->mIntegerValid) {
-					sprintf(buffer, "%06d", tk->mInteger);
-					str.AssignWithConversion(buffer);
-				}
-				break;
+      case eCSSToken_Number:
+        if (tk->mIntegerValid) {
+          PR_snprintf(buffer, sizeof(buffer), "%06d", tk->mInteger);
+          str.AssignWithConversion(buffer);
+        }
+        break;
 
-			case eCSSToken_Dimension:
-				if (tk->mIdent.Length() <= 6) {
-					sprintf(buffer, "%06.0f", tk->mNumber);
-					nsAutoString temp;
-					temp.AssignWithConversion(buffer);
-					temp.Right(str, 6 - tk->mIdent.Length());
-					str.Append(tk->mIdent);
-				}
-				break;
-			default:
-				// There is a whole bunch of cases that are
-				// not handled by this switch.  Ignore them.
-				break;
-		}
-	  if (NS_HexToRGB(str, &rgba)) {
-	    aValue.SetColorValue(rgba);
-	    return PR_TRUE;
-	  }
+      case eCSSToken_Dimension:
+        if (tk->mIdent.Length() <= 6) {
+          PR_snprintf(buffer, sizeof(buffer), "%06.0f", tk->mNumber);
+          nsAutoString temp;
+          temp.AssignWithConversion(buffer);
+          temp.Right(str, 6 - tk->mIdent.Length());
+          str.Append(tk->mIdent);
+        }
+        break;
+      default:
+        // There is a whole bunch of cases that are
+        // not handled by this switch.  Ignore them.
+        break;
+    }
+    if (NS_HexToRGB(str, &rgba)) {
+      aValue.SetColorValue(rgba);
+      return PR_TRUE;
+    }
   }
 
   // It's not a color
@@ -3748,11 +3754,17 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
   case eCSSProperty_background_attachment:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kBackgroundAttachmentKTable);
+  case eCSSProperty__moz_background_clip:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK,
+                        nsCSSProps::kBackgroundClipKTable);
   case eCSSProperty_background_color:
     return ParseVariant(aErrorCode, aValue, VARIANT_HCK,
                         nsCSSProps::kBackgroundColorKTable);
   case eCSSProperty_background_image:
     return ParseVariant(aErrorCode, aValue, VARIANT_HUO, nsnull);
+  case eCSSProperty__moz_background_origin:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK,
+                        nsCSSProps::kBackgroundOriginKTable);
   case eCSSProperty_background_repeat:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kBackgroundRepeatKTable);
@@ -4250,9 +4262,23 @@ PRBool CSSParserImpl::ParseBackground(PRInt32& aErrorCode, nsCSSDeclaration* aDe
   }
 
   PRInt32 index;
-  for (index = 0; index < numProps; index++) {
+  for (index = 0; index < numProps; ++index) {
     AppendValue(aDeclaration, kBackgroundIDs[index], values[index], aChangeHint);
   }
+
+  // Background properties not settable from the shorthand get reset to their initial value
+  const PRInt32 numResetProps = 2;
+  static const nsCSSProperty kBackgroundResetIDs[numResetProps] = {
+    eCSSProperty__moz_background_clip,
+    eCSSProperty__moz_background_origin
+  };
+
+  nsCSSValue initial;
+  initial.SetInitialValue();
+  for (index = 0; index < numResetProps; ++index) {
+    AppendValue(aDeclaration, kBackgroundResetIDs[index], initial, aChangeHint);
+  }
+
   return PR_TRUE;
 }
 

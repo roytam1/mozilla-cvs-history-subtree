@@ -54,6 +54,13 @@ config/doxygen.cfg
 include/Makefile
 "
 
+if [ "$MOZ_COMPOSER" ]; then
+MAKEFILES_composer="
+editor/composer/Makefile
+editor/ui/Makefile
+"
+fi
+
 MAKEFILES_db="
 db/Makefile
 db/mdb/Makefile
@@ -843,11 +850,7 @@ browser/components/downloads/public/Makefile
 browser/components/downloads/src/Makefile
 browser/components/prefwindow/Makefile
 browser/components/prefwindow/content/Makefile
-browser/components/prefwindow/content/unix/Makefile
-browser/components/prefwindow/content/win/Makefile
 browser/components/prefwindow/locale/Makefile
-browser/components/prefwindow/locale/unix/Makefile
-browser/components/prefwindow/locale/win/Makefile
 browser/components/search/Makefile
 browser/components/search/resources/Makefile
 toolkit/Makefile
@@ -998,6 +1001,11 @@ if [ "$NS_TRACE_MALLOC" ]; then
     MAKEFILES_tracemalloc="tools/trace-malloc/Makefile"
 fi
 
+# tools/codesighs
+if [ "$MOZ_MAPINFO" ]; then
+    MAKEFILES_codesighs="tools/codesighs/Makefile"
+fi
+
 # MathML
 if [ "$MOZ_MATHML" ]; then
     MAKEFILES_intl="$MAKEFILES_intl
@@ -1037,16 +1045,6 @@ if [ "$MOZ_SVG" ]; then
     layout/svg/renderer/public/Makefile
     layout/svg/renderer/src/Makefile
     layout/svg/renderer/src/gdiplus/Makefile
-"
-fi
-
-if [ "$MOZ_ENABLE_XFT" ]; then
-    MAKEFILES_xft="other-licenses/Xft/Makefile
-	other-licenses/Xft/Xft/Makefile
-	other-licenses/Xft/Xrender/Makefile
-	other-licenses/Xft/fontconfig/Makefile
-	other-licenses/Xft/fontconfig/fontconfig/Makefile
-	other-licenses/Xft/fontconfig/src/Makefile
 "
 fi
 
@@ -1208,6 +1206,8 @@ $MAKEFILES_dbm
 $MAKEFILES_docshell
 $MAKEFILES_dom
 $MAKEFILES_editor
+$MAKEFILES_codesighs
+$MAKEFILES_composer
 $MAKEFILES_embedding
 $MAKEFILES_expat
 $MAKEFILES_extensions

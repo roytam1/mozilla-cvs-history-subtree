@@ -45,6 +45,9 @@
 #include "nsIDOMEventTarget.h"
 #include "nsIBindingManager.h"
 #include "nsIDocument.h"
+#include "nsIPresShell.h"
+#include "nsIFrame.h"
+#include "nsISVGChildFrame.h"
 
 //----------------------------------------------------------------------
 // nsISupports methods
@@ -104,8 +107,28 @@ NS_IMETHODIMP nsSVGGraphicElement::GetFarthestViewportElement(nsIDOMSVGElement *
 /* nsIDOMSVGRect getBBox (); */
 NS_IMETHODIMP nsSVGGraphicElement::GetBBox(nsIDOMSVGRect **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *_retval = nsnull;
+  
+  if (!mDocument) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIPresShell> presShell;
+  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  NS_ASSERTION(presShell, "no presShell");
+  if (!presShell) return NS_ERROR_FAILURE;
+
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+
+  NS_ASSERTION(frame, "can't get bounding box for element without frame");
+
+  if (frame) {
+    nsISVGChildFrame* svgframe;
+    frame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&svgframe);
+    NS_ASSERTION(svgframe, "wrong frame type");
+    if (svgframe) {
+      return svgframe->GetBBox(_retval);
+    }
+  }
+  return NS_ERROR_FAILURE;
 }
 
 /* nsIDOMSVGMatrix getCTM (); */

@@ -124,6 +124,9 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 VMRectInvalidator::SinkRectangle(float x, float y, float width, float height)
 {
+#ifdef DEBUG
+  // printf("invalidating %f %f %f %f\n", x,y,width,height);
+#endif
   nsRect rect((nscoord)(x*mTwipsPerPx), (nscoord)(y*mTwipsPerPx),
               (nscoord)(width*mTwipsPerPx), (nscoord)(height*mTwipsPerPx));
   mViewManager->UpdateView(mView, rect, NS_VMREFRESH_NO_SYNC);
@@ -227,7 +230,7 @@ public:
   NS_IMETHOD UnsuspendRedraw();
   NS_IMETHOD GetRenderer(nsISVGRenderer**renderer);
   NS_IMETHOD GetPresContext(nsIPresContext**presContext);
-
+  NS_IMETHOD CreateSVGRect(nsIDOMSVGRect **_retval);
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame*) GetOuterSVGFrame();
   
@@ -629,9 +632,21 @@ nsSVGOuterSVGFrame::RemoveFrame(nsIPresContext* aPresContext,
                      nsIAtom*        aListName,
                      nsIFrame*       aOldFrame)
 {
-  // XXX maybe we should invalidate the area covered by the removed frame?
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
   
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
+
   PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+  if (dirty_region && outerSVGFrame)
+    outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+
   NS_ASSERTION(result, "didn't find frame to delete");
   return result ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -742,12 +757,14 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 //        // Paint our background and border
 //        const nsStyleBorder* border = (const nsStyleBorder*)
 //          mStyleContext->GetStyleData(eStyleStruct_Border);
+//        const nsStylePadding* padding = (const nsStylePadding*)
+//          mStyleContext->GetStyleData(eStyleStruct_Padding);
 //        const nsStyleOutline* outline = (const nsStyleOutline*)
 //          mStyleContext->GetStyleData(eStyleStruct_Outline);
 
 //        nsRect  rect(0, 0, mRect.width, mRect.height);
 // //       nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
-// //                                       aDirtyRect, rect, *border, 0, 0);
+// //                                       aDirtyRect, rect, *border, *padding, 0, 0);
 //        nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
 //                                    aDirtyRect, rect, *border, mStyleContext, 0);
 //        nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
@@ -756,7 +773,6 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 //      }
 //    }
 
-  
   if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND) return NS_OK;
   if (aDirtyRect.width<=0 || aDirtyRect.height<=0) return NS_OK;
 
@@ -771,8 +787,8 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 #endif
 
   float pxPerTwips = GetPxPerTwips();  
-  nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips, aDirtyRect.y*pxPerTwips,
-                     aDirtyRect.width*pxPerTwips, aDirtyRect.height*pxPerTwips);
+  nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips-1, aDirtyRect.y*pxPerTwips-1,
+                     aDirtyRect.width*pxPerTwips+2, aDirtyRect.height*pxPerTwips+2);
   
   nsCOMPtr<nsISVGRendererRenderContext> SVGCtx;
   mRenderer->CreateRenderContext(&aRenderingContext, aPresContext, dirtyRectPx,
@@ -873,6 +889,9 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::SuspendRedraw()
 {
+#ifdef DEBUG
+  //printf("suspend redraw (count=%d)\n", mRedrawSuspendCount);
+#endif
   if (++mRedrawSuspendCount != 1)
     return NS_OK;
 
@@ -913,6 +932,9 @@ nsSVGOuterSVGFrame::SuspendRedraw()
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::UnsuspendRedraw()
 {
+#ifdef DEBUG
+//  printf("unsuspend redraw (count=%d)\n", mRedrawSuspendCount);
+#endif
   if (--mRedrawSuspendCount > 0)
     return NS_OK;
   
@@ -977,6 +999,15 @@ nsSVGOuterSVGFrame::GetPresContext(nsIPresContext** presContext)
 {
   NS_ASSERTION(mPresShell, "null presshell");
   return mPresShell->GetPresContext(presContext);
+}
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::CreateSVGRect(nsIDOMSVGRect **_retval)
+{
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+  NS_ASSERTION(svgElement, "wrong content element");  
+  if(svgElement)
+    return svgElement->CreateSVGRect(_retval);
 }
 
 //----------------------------------------------------------------------

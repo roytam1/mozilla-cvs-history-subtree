@@ -47,6 +47,7 @@ using namespace Gdiplus;
 #include "nsTransform2D.h"
 #include "nsIPresContext.h"
 #include "nsRect.h"
+#include "nsIRenderingContextWin.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGGDIPlusRenderContext class
@@ -76,6 +77,8 @@ private:
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   Bitmap *mOffscreenBitmap;
   Graphics *mOffscreenGraphics;
+  HDC mOffscreenHDC;
+  nsDrawingSurface mTempBuffer; // temp storage for during DC locking
 #endif
 };
 
@@ -85,7 +88,7 @@ private:
 nsSVGGDIPlusRenderContext::nsSVGGDIPlusRenderContext()
     : mGraphics(nsnull)
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
-    , mOffscreenBitmap(nsnull), mOffscreenGraphics(nsnull)
+      , mOffscreenBitmap(nsnull), mOffscreenGraphics(nsnull), mOffscreenHDC(nsnull)
 #endif
 {
   NS_INIT_ISUPPORTS();
@@ -186,17 +189,44 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsSVGGDIPlusRenderContext::LockMozRenderingContext(nsIRenderingContext **_retval)
 {
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  NS_ASSERTION(!mOffscreenHDC, "offscreen hdc already created! Nested rendering context locking?");
+  mOffscreenHDC =  mOffscreenGraphics->GetHDC();
+  
+  nsCOMPtr<nsIRenderingContextWin> wincontext = do_QueryInterface(mMozContext);
+  NS_ASSERTION(wincontext, "no windows rendering context");
+  
+  nsCOMPtr<nsIDrawingSurface> mOffscreenSurface;
+  wincontext->CreateDrawingSurface(mOffscreenHDC, (void*&)*getter_AddRefs(mOffscreenSurface));
+  mMozContext->GetDrawingSurface(&mTempBuffer);
+  mMozContext->SelectOffScreenDrawingSurface(mOffscreenSurface);
+
+#else
+  // XXX do we need to flush?
   Flush();
+#endif
+  
   *_retval = mMozContext;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
 
 /* void unlockMozRenderingContext (); */
-NS_IMETHODIMP
+NS_IMETHODIMP 
 nsSVGGDIPlusRenderContext::UnlockMozRenderingContext()
 {
+#ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
+  NS_ASSERTION(mOffscreenHDC, "offscreen hdc already freed! Nested rendering context locking?");
+
+  // restore original surface
+  mMozContext->SelectOffScreenDrawingSurface(mTempBuffer);
+  mTempBuffer = nsnull;
+
+  mOffscreenGraphics->ReleaseHDC(mOffscreenHDC);
+  mOffscreenHDC = nsnull;
+#else
   // nothing to do
+#endif
   return NS_OK;
 }
 
@@ -237,7 +267,7 @@ nsSVGGDIPlusRenderContext::Flush()
                        mOffscreenBitmap->GetHeight());
 #endif
 
-//  mGraphics->Flush(FlushIntentionSync);
+  mGraphics->Flush(FlushIntentionSync);
   return NS_OK;
 }
 

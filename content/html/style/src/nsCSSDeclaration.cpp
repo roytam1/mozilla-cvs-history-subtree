@@ -166,7 +166,9 @@ nsCSSColor::nsCSSColor(const nsCSSColor& aCopy)
     mBackRepeat(aCopy.mBackRepeat),
     mBackAttachment(aCopy.mBackAttachment),
     mBackPositionX(aCopy.mBackPositionX),
-    mBackPositionY(aCopy.mBackPositionY)
+    mBackPositionY(aCopy.mBackPositionY),
+    mBackClip(aCopy.mBackClip),
+    mBackOrigin(aCopy.mBackOrigin)
 {
   MOZ_COUNT_CTOR(nsCSSColor);
 }
@@ -195,6 +197,8 @@ void nsCSSColor::List(FILE* out, PRInt32 aIndent) const
   mBackAttachment.AppendToString(buffer, eCSSProperty_background_attachment);
   mBackPositionX.AppendToString(buffer, eCSSProperty_background_x_position);
   mBackPositionY.AppendToString(buffer, eCSSProperty_background_y_position);
+  mBackClip.AppendToString(buffer, eCSSProperty__moz_background_clip);
+  mBackOrigin.AppendToString(buffer, eCSSProperty__moz_background_origin);
   fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
 }
 #endif
@@ -1475,7 +1479,9 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
     case eCSSProperty_background_repeat:
     case eCSSProperty_background_attachment:
     case eCSSProperty_background_x_position:
-    case eCSSProperty_background_y_position: {
+    case eCSSProperty_background_y_position:
+    case eCSSProperty__moz_background_clip:
+    case eCSSProperty__moz_background_origin: {
       CSS_ENSURE(Color) {
         switch (aProperty) {
           case eCSSProperty_color:                  theColor->mColor = aValue;           break;
@@ -1485,6 +1491,8 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
           case eCSSProperty_background_attachment:  theColor->mBackAttachment = aValue;  break;
           case eCSSProperty_background_x_position:  theColor->mBackPositionX = aValue;   break;
           case eCSSProperty_background_y_position:  theColor->mBackPositionY = aValue;   break;
+          case eCSSProperty__moz_background_clip:   theColor->mBackClip = aValue;        break;
+          case eCSSProperty__moz_background_origin: theColor->mBackOrigin = aValue;      break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -2318,7 +2326,9 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_background_repeat:
       case eCSSProperty_background_attachment:
       case eCSSProperty_background_x_position:
-      case eCSSProperty_background_y_position: {
+      case eCSSProperty_background_y_position:
+      case eCSSProperty__moz_background_clip:
+      case eCSSProperty__moz_background_origin: {
         CSS_VARONSTACK_GET(Color);
         if (nsnull != theColor) {
           CSS_ENSURE_IMPORTANT(Color) {
@@ -2330,6 +2340,8 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
               CSS_CASE_IMPORTANT(eCSSProperty_background_attachment,  Color, mBackAttachment);
               CSS_CASE_IMPORTANT(eCSSProperty_background_x_position,  Color, mBackPositionX);
               CSS_CASE_IMPORTANT(eCSSProperty_background_y_position,  Color, mBackPositionY);
+              CSS_CASE_IMPORTANT(eCSSProperty__moz_background_clip,   Color, mBackClip);
+              CSS_CASE_IMPORTANT(eCSSProperty__moz_background_origin, Color, mBackOrigin);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -3284,7 +3296,9 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_background_repeat:
     case eCSSProperty_background_attachment:
     case eCSSProperty_background_x_position:
-    case eCSSProperty_background_y_position: {
+    case eCSSProperty_background_y_position:
+    case eCSSProperty__moz_background_clip:
+    case eCSSProperty__moz_background_origin: {
       CSS_CHECK(Color) {
         switch (aProperty) {
           case eCSSProperty_color:                  theColor->mColor.Reset();           break;
@@ -3294,6 +3308,8 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
           case eCSSProperty_background_attachment:  theColor->mBackAttachment.Reset();  break;
           case eCSSProperty_background_x_position:  theColor->mBackPositionX.Reset();   break;
           case eCSSProperty_background_y_position:  theColor->mBackPositionY.Reset();   break;
+          case eCSSProperty__moz_background_clip:   theColor->mBackClip.Reset();        break;
+          case eCSSProperty__moz_background_origin: theColor->mBackOrigin.Reset();      break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -4116,7 +4132,9 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_background_repeat:
     case eCSSProperty_background_attachment:
     case eCSSProperty_background_x_position:
-    case eCSSProperty_background_y_position: {
+    case eCSSProperty_background_y_position:
+    case eCSSProperty__moz_background_clip:
+    case eCSSProperty__moz_background_origin: {
       CSS_VARONSTACK_GET(Color);
       if (nsnull != theColor) {
         switch (aProperty) {
@@ -4127,6 +4145,8 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
           case eCSSProperty_background_attachment:  aValue = theColor->mBackAttachment;  break;
           case eCSSProperty_background_x_position:  aValue = theColor->mBackPositionX;   break;
           case eCSSProperty_background_y_position:  aValue = theColor->mBackPositionY;   break;
+          case eCSSProperty__moz_background_clip:   aValue = theColor->mBackClip;        break;
+          case eCSSProperty__moz_background_origin: aValue = theColor->mBackOrigin;      break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }

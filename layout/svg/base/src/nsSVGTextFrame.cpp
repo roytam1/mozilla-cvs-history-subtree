@@ -57,6 +57,8 @@
 #include "nsISVGGlyphFragmentNode.h"
 #include "nsISVGGlyphFragmentLeaf.h"
 #include "nsISVGRendererGlyphMetrics.h"
+#include "nsISVGOuterSVGFrame.h"
+#include "nsIDOMSVGRect.h"
 
 typedef nsContainerFrame nsSVGTextFrameBase;
 
@@ -101,12 +103,21 @@ public:
                            nsIAtom*        aListName,
                            nsIFrame*       aOldFrame,
                            nsIFrame*       aNewFrame);
+  
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
 
+  NS_IMETHOD  AttributeChanged(nsIPresContext* aPresContext,
+                               nsIContent*     aChild,
+                               PRInt32         aNameSpaceID,
+                               nsIAtom*        aAttribute,
+                               PRInt32         aModType,
+                               PRInt32         aHint);
+
+  NS_IMETHOD DidSetStyleContext(nsIPresContext* aPresContext);
 
   // nsISVGValueObserver
   NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
@@ -118,11 +129,13 @@ public:
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererRenderContext* renderingContext);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
   NS_IMETHOD NotifyCTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
-
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
+  
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame *) GetOuterSVGFrame();
   
@@ -268,6 +281,39 @@ nsSVGTextFrame::Init(nsIPresContext*  aPresContext,
 }
 
 NS_IMETHODIMP
+nsSVGTextFrame::AttributeChanged(nsIPresContext* aPresContext,
+                                 nsIContent*     aChild,
+                                 PRInt32         aNameSpaceID,
+                                 nsIAtom*        aAttribute,
+                                 PRInt32         aModType,
+                                 PRInt32         aHint)
+{
+  // we don't use this notification mechanism
+  
+#ifdef DEBUG
+  printf("** nsSVGTextFrame::AttributeChanged(");
+  nsAutoString str;
+  aAttribute->ToString(str);
+  nsCAutoString cstr;
+  cstr.AssignWithConversion(str);
+  printf(cstr.get());
+  printf(")\n");
+#endif
+  
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGTextFrame::DidSetStyleContext(nsIPresContext* aPresContext)
+{
+#ifdef DEBUG
+  printf("** nsSVGTextFrame::DidSetStyleContext\n");
+#endif
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsSVGTextFrame::AppendFrames(nsIPresContext* aPresContext,
                              nsIPresShell&   aPresShell,
                              nsIAtom*        aListName,
@@ -319,9 +365,33 @@ nsSVGTextFrame::RemoveFrame(nsIPresContext* aPresContext,
                             nsIAtom*        aListName,
                             nsIFrame*       aOldFrame)
 {
-  // XXX maybe we should invalidate the area covered by the removed frame?
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
+
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
   
   PRBool result = mFrames.DestroyFrame(aPresContext, aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+
+  if (SVGFrame && outerSVGFrame) {
+    // XXX We need to rebuild the fragment tree starting from the
+    // removed frame. Let's just rebuild the whole tree for now
+    outerSVGFrame->SuspendRedraw();
+    mFragmentTreeDirty = PR_TRUE;
+    mPositioningDirty = PR_TRUE;
+    
+    if (dirty_region) {
+      outerSVGFrame->InvalidateRegion(dirty_region, PR_FALSE);
+    }
+
+    outerSVGFrame->UnsuspendRedraw();
+  }
+  
   NS_ASSERTION(result, "didn't find frame to delete");
   return result ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -409,6 +479,32 @@ nsSVGTextFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
   }
   
   return *hit ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGTextFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *accu_region=nsnull;
+  
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsISVGRendererRegion> dirty_region = SVGFrame->GetCoveredRegion();
+      if (accu_region) {
+        nsCOMPtr<nsISVGRendererRegion> temp = dont_AddRef(accu_region);
+        dirty_region->Combine(temp, &accu_region);
+      }
+      else {
+        accu_region = dirty_region;
+        NS_IF_ADDREF(accu_region);
+      }
+    }
+    kid->GetNextSibling(&kid);
+  }
+  
+  return accu_region;
 }
 
 NS_IMETHODIMP
@@ -509,6 +605,66 @@ nsSVGTextFrame::NotifyRedrawUnsuspended()
   }
   
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGTextFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  
+  // iterate over all children and accumulate the bounding rect:
+  // this relies on the fact that children of <text> elements can't
+  // have individual transforms
+  
+  float x1=0.0f, y1=0.0f, x2=0.0f, y2=0.0f;
+  PRBool bFirst=PR_TRUE;
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsIDOMSVGRect> r;
+      SVGFrame->GetBBox(getter_AddRefs(r));
+      NS_ASSERTION(r, "no bounding box");
+      if (!r) continue;
+
+      float x,y,w,h;
+      r->GetX(&x);
+      r->GetY(&y);
+      r->GetWidth(&w);
+      r->GetHeight(&h);
+      
+      if (bFirst) {
+        bFirst = PR_FALSE;
+        x1 = x;
+        y1 = y;
+        x2 = x+w;
+        y2 = y+h;
+      }
+      else {
+        if (x<x1) x1 = x;
+        if (x+w>x2) x2 = x+w;
+        if (y<y1) y1 = y;
+        if (y+h>y2) y2 = y+h;
+      }
+    }
+    kid->GetNextSibling(&kid);
+  }
+
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("null outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+
+  outerSVGFrame->CreateSVGRect(_retval);
+
+  (*_retval)->SetWidth(x2-x1);
+  (*_retval)->SetHeight(y2-y1);
+  (*_retval)->SetX(x1);
+  (*_retval)->SetY(y1);
+
+  return NS_OK;  
 }
 
 //----------------------------------------------------------------------
