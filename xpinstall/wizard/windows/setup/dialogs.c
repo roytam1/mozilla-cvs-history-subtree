@@ -29,6 +29,7 @@
 #include "xpistub.h"
 #include "xpi.h"
 #include <shlobj.h>
+// int VR_GetPath(char *component_path, unsigned long sizebuf, char *buf);
 
 static WNDPROC OldListBoxWndProc;
 
@@ -1397,6 +1398,7 @@ void DlgSequenceNext()
 {
   HRESULT hrValue;
   HRESULT hrErr;
+//  char    szPsmPath[MAX_BUF];
 
   switch(dwWizardState)
   {
@@ -1414,6 +1416,9 @@ void DlgSequenceNext()
         InstantiateDialog(dwWizardState, diLicense.szTitle, DlgProcLicense);
       else
         PostMessage(hWndMain, WM_COMMAND, ID_WIZNEXT, 0);
+
+// VR_GetPath("/Netscape/Personal Security Manager/Program/psm.exe", MAX_BUF, szPsmPath);
+
       break;
 
     case DLG_LICENSE:
