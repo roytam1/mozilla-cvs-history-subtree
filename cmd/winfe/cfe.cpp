@@ -100,8 +100,10 @@ void CFE_AllConnectionsComplete(MWContext *pContext)	{
 	} else 
 #endif   
     {
+#if !defined(SMOOTH_PROGRESS)
 		//	Set the progress to be complete.
 		FE_Progress(pContext, szLoadString(IDS_DOC_DONE));
+#endif
 	}
 
     ABSTRACTCX(pContext)->AllConnectionsComplete(pContext);

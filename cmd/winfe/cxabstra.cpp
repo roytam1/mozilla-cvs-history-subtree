@@ -46,6 +46,10 @@
 #include "mozilla.h"
 #include "timing.h"
 
+#if defined(SMOOTH_PROGRESS)
+#include "nsProgressManager.h"
+#endif
+
 CAbstractCX::CAbstractCX()  {
 //	Purpose:    Constructor for the abstract base class.
 //	Arguments:  void
@@ -672,6 +676,15 @@ int CAbstractCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bRea
         			int iOldInProcessNet = winfeInProcessNet; 
         			winfeInProcessNet = TRUE;
         			StartAnimation();
+#if defined(SMOOTH_PROGRESS)
+                    {
+                        nsITransferObserver* progressManager =
+                            new nsProgressManager(GetContext(), pUrl->address);
+                        if (progressManager)
+                            progressManager->AddRef();
+                        GetContext()->progressManager = progressManager;
+                    }
+#endif
 					if ( m_cxType == IconCX)
         				iRetval = NET_GetURL(pUrl, iFormatOut, GetContext(), Icon_GetUrlExitRoutine);
 					else {

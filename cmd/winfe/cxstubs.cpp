@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -24,6 +24,9 @@
 #endif
 #include "timer.h"
 #include "dialog.h"
+#if defined(SMOOTH_PROGRESS)
+#include "nsProgressManager.h"
+#endif
 
 CStubsCX::CStubsCX()    {
 //	Purpose:    Create a CStubCX
@@ -241,6 +244,13 @@ STDMETHODIMP_(ULONG) CStubsCX::Release(void)
 }
 
 void CStubsCX::AllConnectionsComplete(MWContext *pContext)	{
+#if defined(SMOOTH_PROGRESS)
+    // clean up the progress manager
+    if (pContext->progressManager) {
+        pContext->progressManager->Release();
+        pContext->progressManager = NULL;
+    }
+#endif
 }
 
 void CStubsCX::UpdateStopState(MWContext *pContext) {
