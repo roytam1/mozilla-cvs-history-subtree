@@ -911,7 +911,7 @@ nsThemeInstaller.prototype = {
     // Since we're installing a "new type" theme, we assume a file layout
     // within the JAR like so:
     // foo.jar/
-    //         theme.rdf      <-- Theme Manager metadata
+    //         install.rdf      <-- Theme Manager metadata
     //         contents.rdf   <-- Chrome Registry metadata
     //         browser/
     //         global/
