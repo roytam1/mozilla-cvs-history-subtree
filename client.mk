@@ -507,14 +507,14 @@ LOCK_LOCALES := \
 FASTUPDATE_LOCALES := \
   for dir in $(LOCALE_DIRS); do \
     for locale in `cat $$dir/all-locales`; do \
-      fast_update $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $$dir/$$locale; \
+      fast_update $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(CVS_CO_DATE_FLAGS) $$dir/$$locale; \
     done; \
   done 
 
 CHECKOUT_LOCALES := \
   for dir in $(LOCALE_DIRS); do \
     for locale in `cat $$dir/all-locales`; do \
-      cvs_co $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $$dir/$$locale; \
+      cvs_co $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $$dir/$$locale; \
     done; \
   done
 
@@ -527,7 +527,7 @@ UNLOCK_LOCALES := \
 else
 LOCALE_CO_DIRS = $(foreach locale,$(MOZ_CO_LOCALES),$(addsuffix /$(locale),$(LOCALE_DIRS)))
 
-CVSCO_LOCALES := $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $(LOCALE_CO_DIRS)
+CVSCO_LOCALES := $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LOCALE_CO_DIRS)
 
 LOCK_LOCALES := for dir in $(LOCALE_CO_DIRS); do mv $$dir $$dir-tmp || true; done
 FASTUPDATE_LOCALES := fast_update $(CVSCO_LOCALES)
