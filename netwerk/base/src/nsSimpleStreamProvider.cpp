@@ -62,11 +62,11 @@ nsSimpleStreamProvider::OnStopRequest(nsIChannel *aChannel,
 //----------------------------------------------------------------------------
 //
 NS_IMETHODIMP
-nsSimpleStreamProvider::OnProvideData(nsIChannel *aChannel,
-                                      nsISupports *aContext,
-                                      nsIOutputStream *aOutput,
-                                      PRUint32 aOffset,
-                                      PRUint32 aCount)
+nsSimpleStreamProvider::OnDataWritable(nsIChannel *aChannel,
+                                       nsISupports *aContext,
+                                       nsIOutputStream *aOutput,
+                                       PRUint32 aOffset,
+                                       PRUint32 aCount)
 {
     PRUint32 writeCount;
     nsresult rv = aOutput->WriteFrom(mSource, aCount, &writeCount);

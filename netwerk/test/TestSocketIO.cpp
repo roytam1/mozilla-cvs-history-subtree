@@ -177,10 +177,10 @@ TestProvider::OnStopRequest(nsIChannel* channel, nsISupports* context,
 }
 
 NS_IMETHODIMP
-TestProvider::OnProvideData(nsIChannel *channel, nsISupports *context,
-                            nsIOutputStream *output, PRUint32 offset, PRUint32 count)
+TestProvider::OnDataWritable(nsIChannel *channel, nsISupports *context,
+                             nsIOutputStream *output, PRUint32 offset, PRUint32 count)
 {
-    LOG(("TestProvider::OnProvideData [offset=%u, count=%u]\n", offset, count));
+    LOG(("TestProvider::OnDataWritable [offset=%u, count=%u]\n", offset, count));
     PRUint32 writeCount;
     nsresult rv = output->WriteFrom(mData, count, &writeCount);
     // Zero bytes written on success indicates EOF

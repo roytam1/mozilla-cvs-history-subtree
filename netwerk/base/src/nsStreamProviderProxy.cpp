@@ -52,13 +52,13 @@ nsStreamProviderProxy::~nsStreamProviderProxy()
 
 //
 //----------------------------------------------------------------------------
-// nsOnProvideDataEvent internal class...
+// nsOnDataWritableEvent internal class...
 //----------------------------------------------------------------------------
 //
-class nsOnProvideDataEvent : public nsStreamObserverEvent
+class nsOnDataWritableEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnProvideDataEvent(nsStreamProxyBase *aProxy,
+    nsOnDataWritableEvent(nsStreamProxyBase *aProxy,
                          nsIChannel *aChannel,
                          nsISupports *aContext,
                          nsIOutputStream *aSink,
@@ -69,12 +69,12 @@ public:
         , mOffset(aOffset)
         , mCount(aCount)
     {
-        MOZ_COUNT_CTOR(nsOnProvideDataEvent);
+        MOZ_COUNT_CTOR(nsOnDataWritableEvent);
     }
 
-   ~nsOnProvideDataEvent()
+   ~nsOnDataWritableEvent()
     {
-        MOZ_COUNT_DTOR(nsOnProvideDataEvent);
+        MOZ_COUNT_DTOR(nsOnDataWritableEvent);
     }
 
     NS_IMETHOD HandleEvent();
@@ -86,9 +86,9 @@ protected:
 };
 
 NS_IMETHODIMP
-nsOnProvideDataEvent::HandleEvent()
+nsOnDataWritableEvent::HandleEvent()
 {
-    LOG(("HandleEvent -- OnProvideData [event=%x]", this));
+    LOG(("HandleEvent -- OnDataWritable [event=%x]", this));
 
     nsStreamProviderProxy *providerProxy = 
         NS_STATIC_CAST(nsStreamProviderProxy *, mProxy);
@@ -110,9 +110,9 @@ nsOnProvideDataEvent::HandleEvent()
     // have cancelled the channel after _this_ event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
-        LOG(("HandleEvent -- calling the consumer's OnProvideData\n"));
-        rv = provider->OnProvideData(mChannel, mContext, mSink, mOffset, mCount);
-        LOG(("HandleEvent -- done with the consumer's OnProvideData [rv=%x]\n", rv));
+        LOG(("HandleEvent -- calling the consumer's OnDataWritable\n"));
+        rv = provider->OnDataWritable(mChannel, mContext, mSink, mOffset, mCount);
+        LOG(("HandleEvent -- done with the consumer's OnDataWritable [rv=%x]\n", rv));
 
         //
         // Mask NS_BASE_STREAM_WOULD_BLOCK return values.
@@ -127,10 +127,8 @@ nsOnProvideDataEvent::HandleEvent()
         if (rv != NS_BASE_STREAM_WOULD_BLOCK)
             mChannel->Resume();
     }
-#ifdef NS_ENABLE_LOGGING
     else
-        LOG(("not calling OnProvideData"));
-#endif
+        LOG(("not calling OnDataWritable"));
     return NS_OK;
 }
 
@@ -190,15 +188,15 @@ nsWriteToSink(nsIInputStream *source,
 }
 
 NS_IMETHODIMP
-nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
-                                     nsISupports *aContext,
-                                     nsIOutputStream *aSink,
-                                     PRUint32 aOffset,
-                                     PRUint32 aCount)
+nsStreamProviderProxy::OnDataWritable(nsIChannel *aChannel,
+                                      nsISupports *aContext,
+                                      nsIOutputStream *aSink,
+                                      PRUint32 aOffset,
+                                      PRUint32 aCount)
 {
     nsresult rv;
 
-    LOG(("nsStreamProviderProxy::OnProvideData [offset=%u, count=%u]\n",
+    LOG(("nsStreamProviderProxy::OnDataWritable [offset=%u, count=%u]\n",
         aOffset, aCount));
 
     NS_PRECONDITION(aCount > 0, "Invalid parameter");
@@ -236,8 +234,8 @@ nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
     //
     // Post an event requesting the provider for more data.
     //
-    nsOnProvideDataEvent *ev =
-        new nsOnProvideDataEvent(this, aChannel, aContext,
+    nsOnDataWritableEvent *ev =
+        new nsOnDataWritableEvent(this, aChannel, aContext,
                                  mPipeOut, aOffset, aCount);
     if (!ev)
         return NS_ERROR_OUT_OF_MEMORY;

@@ -52,11 +52,11 @@ interface nsIStreamProvider : nsIStreamObserver
      *   becomes available.
      * @return <other-error> - if failure.
      */
-    void onProvideData(in nsIChannel channel,
-                       in nsISupports ctxt,
-                       in nsIOutputStream output,
-                       in unsigned long offset,
-                       in unsigned long count);
+    void onDataWritable(in nsIChannel channel,
+                        in nsISupports ctxt,
+                        in nsIOutputStream output,
+                        in unsigned long offset,
+                        in unsigned long count);
 };
 
 /**

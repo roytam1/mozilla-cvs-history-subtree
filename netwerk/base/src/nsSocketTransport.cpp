@@ -1417,11 +1417,11 @@ nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
 
     PRUint32 transferAmt = PR_MIN(mBufferMaxSize, MAX_IO_TRANSFER_SIZE);
 
-    nsresult rv = mWriteProvider->OnProvideData(this,
-                                                mWriteContext,
-                                                mSocketOutputStream,
-                                                mWriteOffset,
-                                                transferAmt);
+    nsresult rv = mWriteProvider->OnDataWritable(this,
+                                                 mWriteContext,
+                                                 mSocketOutputStream,
+                                                 mWriteOffset,
+                                                 transferAmt);
 
     //
     // Handle the error conditions

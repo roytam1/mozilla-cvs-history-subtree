@@ -661,12 +661,12 @@ nsStreamIOChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* co
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsStreamIOChannel::OnProvideData(nsIChannel* transportChannel, nsISupports* context,
-                                 nsIOutputStream *aOStream, PRUint32 aOffset,
-                                 PRUint32 aLength)
+nsStreamIOChannel::OnDataWritable(nsIChannel* transportChannel, nsISupports* context,
+                                  nsIOutputStream *aOStream, PRUint32 aOffset,
+                                  PRUint32 aLength)
 {
-    return GetProvider()->OnProvideData(this, context, aOStream,
-                                        aOffset, aLength);
+    return GetProvider()->OnDataWritable(this, context, aOStream,
+                                         aOffset, aLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

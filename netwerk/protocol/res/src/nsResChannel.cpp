@@ -743,15 +743,15 @@ nsResChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context
 }
 
 NS_IMETHODIMP
-nsResChannel::OnProvideData(nsIChannel* transportChannel, nsISupports* context,
-                            nsIOutputStream *aOStream, PRUint32 aOffset, PRUint32 aLength)
+nsResChannel::OnDataWritable(nsIChannel* transportChannel, nsISupports* context,
+                             nsIOutputStream *aOStream, PRUint32 aOffset, PRUint32 aLength)
 {
 #ifdef DEBUG
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    return GetUserProvider()->OnProvideData(this, mUserContext, aOStream,
-                                            aOffset, aLength);
+    return GetUserProvider()->OnDataWritable(this, mUserContext, aOStream,
+                                             aOffset, aLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

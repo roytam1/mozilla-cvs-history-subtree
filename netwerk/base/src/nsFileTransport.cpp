@@ -774,9 +774,9 @@ nsFileTransport::Process(void)
         // 
         // Ask the provider for data
         //
-        nsresult status = mProvider->OnProvideData(this, mContext,
-                                                   mSinkWrapper,
-                                                   mOffset, transferAmt);
+        nsresult status = mProvider->OnDataWritable(this, mContext,
+                                                    mSinkWrapper,
+                                                    mOffset, transferAmt);
         
         //
         // Handle the various return codes.
