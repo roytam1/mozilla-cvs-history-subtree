@@ -1,0 +1,10 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/accessibility.xpt
+#if MOZ_WIDGET_TOOLKIT==windows
+!xpt dist/bin/components/accessibility-msaa.xpt
+#elif MOZ_WIDGET_TOOLKIT==gtk2
+!xpt dist/bin/components/accessibility-atk.xpt
+#endif

@@ -1,0 +1,27 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/uconv.xpt
+dist/bin/res/charsetalias.properties
+dist/bin/res/charsetData.properties
+
+#if MOZ_WIDGET_TOOLKIT==os2
+dist/bin/res/os2charset.properties
+#else
+#if MOZ_WIDGET_TOOLKIT==windows
+dist/bin/res/wincharset.properties
+#else
+#if MOZ_WIDGET_TOOLKIT==mac
+dist/bin/res/maccharset.properties
+#else
+#if MOZ_WIDGET_TOOLKIT==cocoa
+dist/bin/res/maccharset.properties
+#else
+#if OS_ARCH!=BeOS
+dist/bin/res/unixcharset.properties
+#endif
+#endif
+#endif
+#endif
+#endif

@@ -1,0 +1,14 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/commandhandler.xpt
+!xpt dist/bin/components/find.xpt
+!xpt dist/bin/components/jsconsole.xpt
+!xpt dist/bin/components/helperAppDlg.xpt
+!xpt dist/bin/components/progressDlg.xpt
+!xpt dist/bin/components/webbrowserpersist.xpt
+!xpt dist/bin/components/windowwatcher.xpt
+#if MOZ_PROFILESHARING
+!xpt dist/bin/components/profilesharingsetup.xpt
+#endif

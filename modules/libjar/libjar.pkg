@@ -1,0 +1,3 @@
+[xpi-boostrap]
+dist/bin/components/@SHARED_LIBRARY@
+!xpt dist/bin/components/jar.xpt

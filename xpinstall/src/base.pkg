@@ -1,0 +1,6 @@
+[xpi-bootstrap]
+dist/bin/@DLLP@xpistub@DLLS@
+dist/bin/components/@SHARED_LIBRARY@
+dist/bin/defaults/pref/xpinstall.js
+!xpt dist/bin/components/xpinstall.xpt
+

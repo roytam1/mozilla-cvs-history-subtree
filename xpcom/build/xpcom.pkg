@@ -1,0 +1,84 @@
+[xpcom]
+dist/bin/@DLLP@xpcom@DLLS@
+!xpt components/xpcom_base.xpt
+!xpt components/xpcom_components.xpt
+!xpt components/xpcom_ds.xpt
+!xpt components/xpcom_io.xpt
+!xpt components/xpcom_nativeapp.xpt
+!xpt components/xpcom_thread.xpt
+!xpt components/xpcom_xpti.xpt
+
+[xpi-bootstrap]
+dist/bin/@DLLP@xpistub@DLLS@
+dist/bin/components/@DLLP@xpinstal@DLLS@
+dist/bin/@DLLP@mozreg@DLLS@
+dist/bin/@DLLP@xpcom_compat@DLLS@
+dist/bin/components/@DLLP@xpcom_compat_c@DLLS@
+!xpt dist/bin/components/xpcom_obsolete.xpt
+
+# we put NSPR here, because hacking the NSPR build system is too painful
+[nspr]
+dist/bin/@DLLP@nspr4@DLLS@
+dist/bin/@DLLP@plc4@DLLS@
+dist/bin/@DLLP@plds4@DLLS@
+
+[nspr-devel]
+dist/lib/libnspr4@LIBS@
+dist/lib/libplc4@LIBS@
+dist/lib/libplds4@LIBS@
+dist/include/nspr/private/pprio.h
+dist/include/nspr/private/pprthred.h
+dist/include/nspr/private/prpriv.h
+dist/include/nspr/prcpucfg.h
+dist/include/nspr/obsolete/pralarm.h
+dist/include/nspr/obsolete/probslet.h
+dist/include/nspr/obsolete/protypes.h
+dist/include/nspr/obsolete/prsem.h
+dist/include/nspr/nspr.h
+dist/include/nspr/pratom.h
+dist/include/nspr/prbit.h
+dist/include/nspr/prclist.h
+dist/include/nspr/prcmon.h
+dist/include/nspr/prcountr.h
+dist/include/nspr/prcvar.h
+dist/include/nspr/prdtoa.h
+dist/include/nspr/prenv.h
+dist/include/nspr/prerr.h
+dist/include/nspr/prerror.h
+dist/include/nspr/prinet.h
+dist/include/nspr/prinit.h
+dist/include/nspr/prinrval.h
+dist/include/nspr/prio.h
+dist/include/nspr/pripcsem.h
+dist/include/nspr/prlink.h
+dist/include/nspr/prlock.h
+dist/include/nspr/prlog.h
+dist/include/nspr/prlong.h
+dist/include/nspr/prmem.h
+dist/include/nspr/prmon.h
+dist/include/nspr/prmwait.h
+dist/include/nspr/prnetdb.h
+dist/include/nspr/prolock.h
+dist/include/nspr/prpdce.h
+dist/include/nspr/prprf.h
+dist/include/nspr/prproces.h
+dist/include/nspr/prrng.h
+dist/include/nspr/prrwlock.h
+dist/include/nspr/prshma.h
+dist/include/nspr/prshm.h
+dist/include/nspr/prsystem.h
+dist/include/nspr/prthread.h
+dist/include/nspr/prtime.h
+dist/include/nspr/prtpool.h
+dist/include/nspr/prtrace.h
+dist/include/nspr/prtypes.h
+dist/include/nspr/prvrsion.h
+dist/include/nspr/prwin16.h
+dist/include/nspr/plarenas.h
+dist/include/nspr/plarena.h
+dist/include/nspr/plhash.h
+dist/include/nspr/plbase64.h
+dist/include/nspr/plerror.h
+dist/include/nspr/plgetopt.h
+dist/include/nspr/plresolv.h
+dist/include/nspr/plstr.h

@@ -1,0 +1,7 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+
+[gecko-support]
+dist/bin/res/sample.unixpsfonts.properties

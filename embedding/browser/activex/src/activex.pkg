@@ -1,0 +1,4 @@
+# win32-only!
+[gecko]
+dist/bin/mozctl.dll
+dist/bin/mozctlx.dll

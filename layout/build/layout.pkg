@@ -1,0 +1,37 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/layout_base.xpt
+!xpt dist/bin/components/layout_xul.xpt
+!xpt dist/bin/components/content_base.xpt
+#if MOZ_XUL
+!xpt dist/bin/components/layout_xul_tree.xpt
+#endif
+dist/bin/res/html.css
+dist/bin/res/quirk.css
+dist/bin/res/viewsource.css
+dist/bin/res/forms.css
+dist/bin/res/platform-forms.css
+dist/bin/res/arrow.gif
+dist/bin/res/arrowd.gif
+dist/bin/res/ua.css
+dist/bin/res/broken-image.gif
+dist/bin/res/builtin/htmlBindings.xml
+dist/bin/res/builtin/platformHTMLBindings.xml
+dist/bin/res/entityTables/html40Special.properties
+dist/bin/res/entityTables/htmlEntityVersions.properties
+dist/bin/res/entityTables/html40Latin1.properties
+dist/bin/res/entityTables/html40Symbols.properties
+dist/bin/res/entityTables/transliterate.properties
+dist/bin/res/html/gopher-audio.gif
+dist/bin/res/html/gopher-binary.gif
+dist/bin/res/html/gopher-find.gif
+dist/bin/res/html/gopher-image.gif
+dist/bin/res/html/gopher-menu.gif
+dist/bin/res/html/gopher-movie.gif
+dist/bin/res/html/gopher-sound.gif
+dist/bin/res/html/gopher-telnet.gif
+dist/bin/res/html/gopher-text.gif
+dist/bin/res/html/gopher-unknown.gif
+dist/bin/res/dtd/xhtml11.dtd

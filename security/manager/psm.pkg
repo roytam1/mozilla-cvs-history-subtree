@@ -1,0 +1,13 @@
+[nss]
+dist/bin/@NSS3_LIB@
+dist/bin/@SMIME3_LIB@
+dist/bin/@SSL3_LIB@
+dist/bin/@SOFTOKEN3_LIB@
+dist/bin/@SOFTOKEN3_CHK@
+dist/bin/@LOADABLE_ROOT_MODULE@
+
+[psm]
+dist/bin/components/@DLLP@pipboot@DLLS@
+!xpt dist/bin/components/pipboot.xpt
+dist/bin/components/@DLLP@pipnss@DLLS@
+!xpt dist/bin/components/pipnss.xpt

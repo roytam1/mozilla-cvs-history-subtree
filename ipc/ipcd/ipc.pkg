@@ -1,0 +1,9 @@
+[gecko]
+dist/bin/mozipcd@BINS@
+#if OS_ARCH==OS2
+dist/bin/ipc/modules/@DLLP@lockmod@DLLS@
+#else
+dist/bin/ipc/modules/@DLLP@lockmodule@DLLS@
+#endif
+dist/bin/ipc/modules/@DLLP@transmngr@DLLS@
+dist/bin/components/@DLLP@ipcdc@DLLS@

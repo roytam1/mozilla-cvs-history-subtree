@@ -1,0 +1,14 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+
+#if OS_ARCH==WINNT
+# WTF?
+!xpt dist/bin/components/docshell_base.xpt
+#else
+!xpt dist/bin/components/docshell.xpt
+#endif
+
+!xpt dist/bin/components/uriloader.xpt
+!xpt dist/bin/components/shistory.xpt

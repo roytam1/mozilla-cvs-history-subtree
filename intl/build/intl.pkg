@@ -1,0 +1,8 @@
+[gecko]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/unicharutil.xpt
+!xpt dist/bin/components/locale.xpt
+dist/bin/res/langGroups.properties
+dist/bin/res/language.properties
