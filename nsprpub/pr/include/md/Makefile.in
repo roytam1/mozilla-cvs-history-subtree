@@ -25,6 +25,7 @@ VPATH		= @srcdir@
 include $(MOD_DEPTH)/config/autoconf.mk
 
 HEADERS = $(wildcard $(srcdir)/*.h)
+CONFIGS = $(wildcard $(srcdir)/*.cfg)
 
 include $(topsrcdir)/config/rules.mk
 
@@ -152,15 +153,15 @@ endif
 
 endif # ! USE_AUTOCONF
 
-export:: $(MDCPUCFG_H)
-	$(INSTALL) -m 444 $(srcdir)/$(MDCPUCFG_H) $(DIST)/include
-ifeq ($(MOZ_BITS),16)
-	cp $(DIST)/include/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h
-	$(INSTALL) -m 444 $(MDCPUCFG_H) $(MOZ_INCL)
-	mv -f $(DIST)/include/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
-else
-	mv -f $(DIST)/include/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h
-endif
+export:: #$(MDCPUCFG_H)
+	$(INSTALL) -m 444 $(CONFIGS) $(DIST)/include/md
+#ifeq ($(MOZ_BITS),16)
+#	cp $(DIST)/include/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h
+#	$(INSTALL) -m 444 $(MDCPUCFG_H) $(MOZ_INCL)
+#	mv -f $(DIST)/include/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
+#else
+	cp -f $(srcdir)/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h
+#endif
 ifeq ($(OS_ARCH),OpenVMS)
 # mv'ing a link causes the file itself to move, not the link, so fix it.
 	rm -f $(DIST)/include/$(MDCPUCFG_H)
