@@ -2316,17 +2316,13 @@ nsHTMLDocument::Writeln(JSContext *cx, jsval *argv, PRUint32 argc)
 }
 
 nsIContent *
-nsHTMLDocument::MatchName(nsIContent *aContent, const nsAReadableString& aName)
+nsHTMLDocument::MatchId(nsIContent *aContent, const nsAReadableString& aId)
 {
   nsAutoString value;
   nsIContent *result = nsnull;
 
   if ((NS_CONTENT_ATTR_HAS_VALUE == aContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::id, value)) &&
-      aName.Equals(value)) {
-    return aContent;
-  }
-  else if ((NS_CONTENT_ATTR_HAS_VALUE == aContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::name, value)) &&
-           aName.Equals(value)) {
+      aId.Equals(value)) {
     return aContent;
   }
   
@@ -2335,7 +2331,7 @@ nsHTMLDocument::MatchName(nsIContent *aContent, const nsAReadableString& aName)
   for (i = 0; i < count && result == nsnull; i++) {
     nsIContent *child;
     aContent->ChildAt(i, child);
-    result = MatchName(child, aName);
+    result = MatchId(child, aId);
     NS_RELEASE(child);
   }  
 
@@ -2354,7 +2350,7 @@ nsHTMLDocument::GetElementById(const nsAReadableString& aElementId, nsIDOMElemen
 
   // XXX For now, we do a brute force search of the content tree.
   // We should come up with a more efficient solution.
-  nsCOMPtr<nsIContent> content = do_QueryInterface(MatchName(mRootContent,aElementId));
+  nsCOMPtr<nsIContent> content = do_QueryInterface(MatchId(mRootContent,aElementId));
 
   nsresult rv = NS_OK;
   if (content) {
