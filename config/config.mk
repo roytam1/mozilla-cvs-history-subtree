@@ -210,9 +210,6 @@ endif
 
 first_match:=$(firstword $(filter $(pattern), $(MOZ_DBGRINFO_MODULES)))
 
-install::
-	@echo "WTF: $(first_match)"
-
 ifeq ($(first_match), $(MODULE))
   # the user specified explicitly that 
   # this module should be compiled with -g
