@@ -226,6 +226,11 @@ NS_IMETHODIMP nsMsgMailNewsUrl::Clone(nsIURI **_retval)
 	return m_baseURL->Clone(_retval);
 }	
 
+NS_IMETHODIMP nsMsgMailNewsUrl::SetRelativePath(const char *i_RelativePath)
+{
+	return m_baseURL->SetRelativePath(i_RelativePath);
+}
+
 NS_IMETHODIMP nsMsgMailNewsUrl::GetDirectory(char * *aDirectory)
 {
 	return m_baseURL->GetDirectory(aDirectory);
@@ -267,4 +272,7 @@ NS_IMETHODIMP nsMsgMailNewsUrl::SetRef(char *aRef)
 	return m_baseURL->SetRef(aRef);
 }
 
-
+NS_IMETHODIMP nsMsgMailNewsUrl::DirFile(char **o_DirFile)
+{
+	return m_baseURL->DirFile(o_DirFile);
+}
