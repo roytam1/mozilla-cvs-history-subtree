@@ -67,15 +67,13 @@ static struct {
 	void *      cookie;
 } dnsContext;
 
+static PRBool gOTInitialized;
 
 static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie);
 static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie);
 static pascal void  RawEndpointNotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie);
 
 static PRBool GetState(PRFileDesc *fd, PRBool *readReady, PRBool *writeReady, PRBool *exceptReady);
-
-void
-WakeUpNotifiedThread(PRThread *thread, OTResult result);
 
 extern void WaitOnThisThread(PRThread *thread, PRIntervalTime timeout);
 extern void DoneWaitingOnThisThread(PRThread *thread);
@@ -124,12 +122,13 @@ void _MD_InitNetAccess()
     errOT = INIT_OPEN_TRANSPORT();
     PR_ASSERT(err == kOTNoError);
 
-	dnsContext.serviceRef = NULL;
 	dnsContext.lock = PR_NewLock();
 	PR_ASSERT(dnsContext.lock != NULL);
 
 	dnsContext.thread = _PR_MD_CURRENT_THREAD();
 	dnsContext.cookie = NULL;
+	
+	gOTInitialized = PR_FALSE;
 	
 /* XXX Does not handle absence of open tpt and tcp yet! */
 }
@@ -138,15 +137,8 @@ static void _MD_FinishInitNetAccess()
 {
     OSStatus    errOT;
 
-	if (dnsContext.serviceRef)
-		return;
-		
     dnsContext.serviceRef = OT_OPEN_INTERNET_SERVICES(kDefaultInternetServicesPath, NULL, &errOT);
-    if (errOT != kOTNoError) {
-        dnsContext.serviceRef = NULL;
-        return;    /* no network -- oh well */
-    }
-    
+    if (errOT != kOTNoError) return;    /* no network -- oh well */
     PR_ASSERT((dnsContext.serviceRef != NULL) && (errOT == kOTNoError));
 
     /* Install notify function for DNR Address To String completion */
@@ -156,47 +148,25 @@ static void _MD_FinishInitNetAccess()
     /* Put us into async mode */
     errOT = OTSetAsynchronous(dnsContext.serviceRef);
     PR_ASSERT(errOT == kOTNoError);
+    
+    gOTInitialized = PR_TRUE;
 }
 
 
-static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode otEvent, OTResult result, void * cookie)
+static pascal void  DNSNotifierRoutine(void * contextPtr, OTEventCode code, OTResult result, void * cookie)
 {
 #pragma unused(contextPtr)
     _PRCPU *    cpu    = _PR_MD_CURRENT_CPU(); 
-	OSStatus    errOT;
-
+	
+	if (code == T_DNRSTRINGTOADDRCOMPLETE) {
 		dnsContext.thread->md.osErrCode = result;
 		dnsContext.cookie = cookie;
-	
-	switch (otEvent) {
-		case T_DNRSTRINGTOADDRCOMPLETE:
-				if (_PR_MD_GET_INTSOFF()) {
-					cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
-					dnsContext.thread->md.missedIONotify = PR_TRUE;
-					return;
-				}
-				DoneWaitingOnThisThread(dnsContext.thread);
-				break;
-		
-        case kOTProviderWillClose:
-                errOT = OTSetSynchronous(dnsContext.serviceRef);
-                // fall through to kOTProviderIsClosed case
-		
-        case kOTProviderIsClosed:
-                errOT = OTCloseProvider((ProviderRef)dnsContext.serviceRef);
-                dnsContext.serviceRef = nil;
-
-				if (_PR_MD_GET_INTSOFF()) {
-					cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
-					dnsContext.thread->md.missedIONotify = PR_TRUE;
-					return;
-				}
-				DoneWaitingOnThisThread(dnsContext.thread);
-                break;
-
-        default: // or else we don't handle the event
-	            PR_ASSERT(otEvent==NULL);
-		
+		if (_PR_MD_GET_INTSOFF()) {
+			cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
+			dnsContext.thread->md.missedIONotify = PR_TRUE;
+			return;
+		}
+		DoneWaitingOnThisThread(dnsContext.thread);
 	}
 	// or else we don't handle the event
 }
@@ -286,7 +256,7 @@ static void PrepareForAsyncCompletion(PRThread * thread, PRInt32 osfd)
 }
 
 
-void
+static void
 WakeUpNotifiedThread(PRThread *thread, OTResult result)
 {
     _PRCPU *      cpu      = _PR_MD_CURRENT_CPU(); 
@@ -311,7 +281,6 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
 	_MDFileDesc * md       = &(secret->md);
 	EndpointRef   endpoint = (EndpointRef)secret->md.osfd;
     PRThread *    thread   = NULL;
-    PRThread *	  pollThread = md->poll.thread;
 	OSStatus      err;
 	OTResult	  resultOT;
     TDiscon		  discon;
@@ -345,6 +314,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             thread = secret->md.write.thread;
             secret->md.write.thread    = NULL;
             secret->md.write.cookie    = cookie;
+            secret->md.connectionOpen  = PR_TRUE;
             break;
 
         case T_DATA:        // Standard data is available
@@ -366,6 +336,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             err = OTRcvDisconnect(endpoint, &discon);
             PR_ASSERT(err == kOTNoError);
             secret->md.exceptReady     = PR_TRUE;
+            secret->md.connectionOpen  = PR_FALSE;
 
 			// wake up waiting threads, if any
 			result = -3199 - discon.reason; // obtain the negative error code
@@ -398,7 +369,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             PR_ASSERT(err == kOTNoError);
             secret->md.readReady      = PR_TRUE;   // mark readable (to emulate bsd sockets)
             // remember connection is closed, so we can return 0 on read or receive
-			secret->md.orderlyDisconnect = PR_TRUE;
+			secret->md.connectionOpen = PR_FALSE;
 	
             thread = secret->md.read.thread;
 	        secret->md.read.thread    = NULL;
@@ -472,11 +443,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             return;
     }
 
-	if (pollThread)
-		WakeUpNotifiedThread(pollThread, kOTNoError);
-
-	if (thread && (thread != pollThread))
-		WakeUpNotifiedThread(thread, result);
+	WakeUpNotifiedThread(thread, result);
 }
 
 
@@ -519,6 +486,7 @@ PRInt32 _MD_socket(int domain, int type, int protocol)
     OSStatus    err;
     EndpointRef endpoint;
     
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     // We only deal with internet domain
@@ -1408,9 +1376,7 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         goto ErrorExit;
     }
     
-    while (bytesLeft > 0)
-    {
-        Boolean disabledNotifications = OTEnterNotifier(endpoint);
+    while (bytesLeft > 0) {
     
         PrepareForAsyncCompletion(me, fd->secret->md.osfd);    
 
@@ -1429,19 +1395,14 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 					if (result != kOTFlowErr)
 						break;
 
-					// Blocking write, but the pipe is full. Turn notifications on and
-					// wait for an event, hoping that it's a T_GODATA event.
-                    if (disabledNotifications) {
-                        OTLeaveNotifier(endpoint);
-                        disabledNotifications = false;
-                    }
+					// Blocking write, but the pipe is full. Wait for an event,
+					// hoping that it's a T_GODATA event.
 					WaitOnThisThread(me, PR_INTERVAL_NO_TIMEOUT);
 					result = me->md.osErrCode;
 					if (result != kOTNoError) // got interrupted, or some other error
 						break;
 
 					// Prepare to loop back and try again
-					disabledNotifications = OTEnterNotifier(endpoint);
   			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);  
 				}
 			}
@@ -1463,22 +1424,18 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 			        	OSErr tmpResult;
 			        	tmpResult = OTCountDataBytes(endpoint, &count);
 				        fd->secret->md.readReady = ((tmpResult == kOTNoError) && (count > 0));
+		
 						break;
 				    }
 
-					// Blocking read, but no data available. Turn notifications on and
-					// wait for an event on this endpoint, and hope that we get a T_DATA event.
-                    if (disabledNotifications) {
-                        OTLeaveNotifier(endpoint);
-                        disabledNotifications = false;
-                    }
+					// Blocking read, but no data available. Wait for an event
+					// on this endpoint, and hope that we get a T_DATA event.
 					WaitOnThisThread(me, PR_INTERVAL_NO_TIMEOUT);
 					result = me->md.osErrCode;
 					if (result != kOTNoError) // interrupted thread, etc.
 						break;
 
 					// Prepare to loop back and try again
-					disabledNotifications = OTEnterNotifier(endpoint);
   			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);  
 				}
 			}
@@ -1487,15 +1444,10 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         }
 
 		me->io_pending = PR_FALSE;
-		
         if (opCode == kSTREAM_SEND)
-            fd->secret->md.write.thread = NULL;
+            fd->secret->md.write.thread = nil;
         else
-            fd->secret->md.read.thread  = NULL;
-
-        // turn notifications back on
-        if (disabledNotifications)
-            OTLeaveNotifier(endpoint);
+            fd->secret->md.read.thread  = nil;
 
         if (result > 0) {
             buf = (void *) ( (UInt32) buf + (UInt32)result );
@@ -1504,6 +1456,9 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
                 return result;
         } else {
 			switch (result) {
+				case kOTOutStateErr:			// it has been closed
+                    return 0;
+				
 				case kOTLookErr:
 				    PR_ASSERT(!"call to OTLook() required after all.");
 					break;
@@ -1523,9 +1478,6 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 						goto ErrorExit;				
 					break;
 					
-				case kOTOutStateErr:	// if provider already closed, fall through to handle error
-					if (fd->secret->md.orderlyDisconnect)
-						return 0;
 				default:
 					err = result;
 					goto ErrorExit;
@@ -1699,13 +1651,8 @@ PRInt32 _MD_writev(PRFileDesc *fd, const struct PRIOVec *iov, PRInt32 iov_size, 
 static PRBool GetState(PRFileDesc *fd, PRBool *readReady, PRBool *writeReady, PRBool *exceptReady)
 {
     OTResult resultOT;
-    // hack to emulate BSD sockets; say that a socket that has disconnected
-    // is still readable.
-    size_t   availableData = 1;
-    if (!fd->secret->md.orderlyDisconnect)
-        OTCountDataBytes((EndpointRef)fd->secret->md.osfd, &availableData);
-
-    *readReady = fd->secret->md.readReady && (availableData > 0);
+    
+	*readReady = fd->secret->md.readReady;
 	*exceptReady = fd->secret->md.exceptReady;
 
     resultOT = OTGetEndpointState((EndpointRef)fd->secret->md.osfd);
@@ -1721,13 +1668,22 @@ static PRBool GetState(PRFileDesc *fd, PRBool *readReady, PRBool *writeReady, PR
     return  *readReady || *writeReady || *exceptReady;
 }
 
-// check to see if any of the poll descriptors have data available
-// for reading or writing.
-static PRInt32 CheckPollDescs(PRPollDesc *pds, PRIntn npds)
+
+PRInt32 _MD_poll(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
 {
     PRInt32 ready = 0;
     PRPollDesc *pd, *epd;
+    PRIntervalTime sleepTime, timein;
     
+    sleepTime = PR_MillisecondsToInterval(5UL);
+    if (PR_INTERVAL_NO_TIMEOUT != timeout)
+    {
+        if (sleepTime > timeout) sleepTime = timeout;
+        timein = PR_IntervalNow();
+    }
+
+    do
+    {
         for (pd = pds, epd = pd + npds; pd < epd; pd++)
         {
             PRInt16  in_flags_read = 0,  in_flags_write = 0;
@@ -1758,105 +1714,48 @@ static PRInt32 CheckPollDescs(PRPollDesc *pds, PRIntn npds)
 
                 pd->out_flags = 0;  /* pre-condition */
                 bottomFD = PR_GetIdentitiesLayer(pd->fd, PR_NSPR_IO_LAYER);
-                /* bottomFD can be NULL for pollable sockets */
-                if (bottomFD)
+                PR_ASSERT(NULL != bottomFD);
+                if ((NULL != bottomFD) && (_PR_FILEDESC_OPEN == bottomFD->secret->state))
                 {
-                    if (_PR_FILEDESC_OPEN == bottomFD->secret->state)
+                    if (GetState(bottomFD, &readReady, &writeReady, &exceptReady))
                     {
-                        if (GetState(bottomFD, &readReady, &writeReady, &exceptReady))
+                        if (readReady)
                         {
-                            if (readReady)
-                            {
-                                if (in_flags_read & PR_POLL_READ)
-                                    pd->out_flags |= PR_POLL_READ;
-                                if (in_flags_write & PR_POLL_READ)
-                                    pd->out_flags |= PR_POLL_WRITE;
-                            }
-                            if (writeReady)
-                            {
-                                if (in_flags_read & PR_POLL_WRITE)
-                                    pd->out_flags |= PR_POLL_READ;
-                                if (in_flags_write & PR_POLL_WRITE)
-                                    pd->out_flags |= PR_POLL_WRITE;
-                            }
-                            if (exceptReady && (pd->in_flags & PR_POLL_EXCEPT))
-                            {
-                                pd->out_flags |= PR_POLL_EXCEPT;
-                            }
-                            if (0 != pd->out_flags) ready++;
+                            if (in_flags_read & PR_POLL_READ)
+                                pd->out_flags |= PR_POLL_READ;
+                            if (in_flags_write & PR_POLL_READ)
+                                pd->out_flags |= PR_POLL_WRITE;
                         }
+                        if (writeReady)
+                        {
+                            if (in_flags_read & PR_POLL_WRITE)
+                                pd->out_flags |= PR_POLL_READ;
+                            if (in_flags_write & PR_POLL_WRITE)
+                                pd->out_flags |= PR_POLL_WRITE;
+                        }
+                        if (exceptReady && (pd->in_flags & PR_POLL_EXCEPT))
+                        {
+                            pd->out_flags |= PR_POLL_EXCEPT;
+                        }
+                        if (0 != pd->out_flags) ready++;
                     }
-                    else    /* bad state */
-                    {
-                        ready += 1;  /* this will cause an abrupt return */
-                        pd->out_flags = PR_POLL_NVAL;  /* bogii */
-                    }
+                }
+                else
+                {
+                    ready += 1;  /* this will cause an abrupt return */
+                    pd->out_flags = PR_POLL_NVAL;  /* bogii */
                 }
             }
         }
 
-    return ready;
-}
+        if (ready > 0) return ready;
 
-// set or clear md.poll.thread on the poll descriptors
-static void SetDescPollThread(PRPollDesc *pds, PRIntn npds, PRThread* thread)
-{
-    PRInt32     ready = 0;
-    PRPollDesc *pd, *epd;
+        (void) PR_Sleep(sleepTime);
 
-    for (pd = pds, epd = pd + npds; pd < epd; pd++)
-    {   
-        if (pd->fd)
-        { 
-            PRFileDesc *bottomFD = PR_GetIdentitiesLayer(pd->fd, PR_NSPR_IO_LAYER);
-            if (bottomFD && (_PR_FILEDESC_OPEN == bottomFD->secret->state))
-            {
-                bottomFD->secret->md.poll.thread = thread;
-            }
-        }        
-    }
-}
+    } while ((timeout == PR_INTERVAL_NO_TIMEOUT) ||
+           (((PRIntervalTime)(PR_IntervalNow() - timein)) < timeout));
 
-PRInt32 _MD_poll(PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
-{
-    PRThread    *thread = _PR_MD_CURRENT_THREAD();
-    intn is;
-    PRInt32 ready;
-    OSErr   result;
-    
-    if (timeout == PR_INTERVAL_NO_WAIT) {        
-        return CheckPollDescs(pds, npds);
-    }
-    
-    _PR_INTSOFF(is);
-    PR_Lock(thread->md.asyncIOLock);
-
-    // ensure that we don't miss the firing of the notifier while checking socket status
-    // need to set up the thread
-    PrepareForAsyncCompletion(thread, 0);
-
-    SetDescPollThread(pds, npds, thread);        
-    ready = CheckPollDescs(pds, npds);
-
-    PR_Unlock(thread->md.asyncIOLock);
-    _PR_FAST_INTSON(is);
-
-    if (ready == 0) {
-        WaitOnThisThread(thread, timeout);
-        result = thread->md.osErrCode;
-        if (result != noErr && result != kETIMEDOUTErr) {
-            PR_ASSERT(0);   /* debug: catch unexpected errors */
-            ready = -1;
-        } else {
-            ready = CheckPollDescs(pds, npds);
-        }
-    } else {
-        thread->io_pending = PR_FALSE;
-    }
-
-    SetDescPollThread(pds, npds, NULL);
-
-    return ready;
+    return 0; /* timed out */
 }
 
 
@@ -1871,7 +1770,7 @@ void _MD_initfiledesc(PRFileDesc *fd)
 		PR_ASSERT(fd->secret->md.miscLock == NULL);
 		fd->secret->md.miscLock = PR_NewLock();
 		PR_ASSERT(fd->secret->md.miscLock != NULL);
-		fd->secret->md.orderlyDisconnect = PR_FALSE;
+		fd->secret->md.connectionOpen = PR_FALSE;	// starts out closed
 		fd->secret->md.readReady = PR_FALSE;		// let's not presume we have data ready to read
 		fd->secret->md.writeReady = PR_TRUE;		// let's presume we can write unless we hear otherwise
 		fd->secret->md.exceptReady = PR_FALSE;
@@ -1995,6 +1894,7 @@ PR_IMPLEMENT(unsigned long) inet_addr(const char *cp)
     OSStatus err;
     InetHost host;    
 
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     err = OTInetStringToHost((char*) cp, &host);
@@ -2017,6 +1917,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyname(const char * name)
     PRUint32 index;
     PRThread *me = _PR_MD_CURRENT_THREAD();
 
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     me->io_pending       = PR_TRUE;
@@ -2057,6 +1958,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyaddr(const void *addr, int addrlen, int 
     PR_ASSERT(type == AF_INET);
     PR_ASSERT(addrlen == sizeof(struct in_addr));
 
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     OTInetHostToString((InetHost)addr, sHostInfo.name);
@@ -2067,6 +1969,7 @@ PR_IMPLEMENT(struct hostent *) gethostbyaddr(const void *addr, int addrlen, int 
 
 PR_IMPLEMENT(char *) inet_ntoa(struct in_addr addr)
 {
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     OTInetHostToString((InetHost)addr.s_addr, sHostInfo.name);
@@ -2080,6 +1983,7 @@ PRStatus _MD_gethostname(char *name, int namelen)
     OSStatus err;
     InetInterfaceInfo info;
 
+    if (!gOTInitialized)
     	_MD_FinishInitNetAccess();
 
     /*

@@ -768,6 +768,15 @@ sec_asn1d_parse_length (sec_asn1d_state *state,
 	    state->place = duringLength;
 	}
     }
+    if (!state->indefinite) {
+	if (state->underlying_kind & SEC_ASN1_ANY ||
+	     state->underlying_kind & SEC_ASN1_SKIP) {
+	    if (state->found_tag_modifiers & SEC_ASN1_CONSTRUCTED) {
+		state->found_tag_modifiers &= ~SEC_ASN1_CONSTRUCTED;
+		return 1;
+	    }
+	}
+    }
 
     return 1;
 }
@@ -863,6 +872,16 @@ sec_asn1d_prepare_for_contents (sec_asn1d_state *state)
      */
     state->pending = state->contents_length;
 
+    if (state->contents_length > 0) {
+	sec_asn1d_state *tmp = state->parent;
+	while (tmp && tmp->depth == state->depth) tmp = tmp->parent;
+	if (tmp && !tmp->indefinite && state->contents_length > tmp->pending)
+	{
+	    state->top->status = decodeError;
+	    return;
+	}
+    }
+
     /*
      * An EXPLICIT is nothing but an outer header, which we have
      * already parsed and accepted.  Now we need to do the inner
@@ -913,10 +932,9 @@ sec_asn1d_prepare_for_contents (sec_asn1d_state *state)
 	} else {
 	    /*
 	     * A group of zero; we are done.
-	     * XXX Should we store a NULL here?  Or set state to
-	     * afterGroup and let that code do it?
+	     * Set state to afterGroup and let that code plant the NULL.
 	     */
-	    state->place = afterEndOfContents;
+	    state->place = afterGroup;
 	}
 	return;
     }
@@ -1297,6 +1315,10 @@ sec_asn1d_reuse_encoding (sec_asn1d_state *state)
     if (SEC_ASN1DecoderUpdate (state->top,
 			       (char *) item->data, item->len) != SECSuccess)
 	return;
+    if (state->top->status == needBytes) {
+	state->top->status = decodeError;
+	return;
+    }
 
     PORT_Assert (state->top->current == state);
     PORT_Assert (state->child == child);
@@ -1376,8 +1398,14 @@ static unsigned long
 sec_asn1d_parse_more_bit_string (sec_asn1d_state *state,
 				 const char *buf, unsigned long len)
 {
-    PORT_Assert (state->pending > 0);
+/*    PORT_Assert (state->pending > 0);
     PORT_Assert (state->place == duringBitString);
+*/
+    if (state->pending == 0 || state->place != duringBitString) {
+	PORT_SetError (SEC_ERROR_BAD_DER);
+	state->top->status = decodeError;
+	return 0;
+    }
 
     len = sec_asn1d_parse_leaf (state, buf, len);
     if (state->place == beforeEndOfContents && state->dest != NULL) {
@@ -1487,7 +1515,11 @@ sec_asn1d_next_substring (sec_asn1d_state *state)
 
     if (state->pending) {
 	PORT_Assert (!state->indefinite);
-	PORT_Assert (child_consumed <= state->pending);
+	if( child_consumed > state->pending ) {
+	    PORT_SetError (SEC_ERROR_BAD_DER);
+	    state->top->status = decodeError;
+	    return;
+	}
 
 	state->pending -= child_consumed;
 	if (state->pending == 0)
@@ -1602,7 +1634,11 @@ sec_asn1d_next_in_group (sec_asn1d_state *state)
      */
     if (state->pending) {
 	PORT_Assert (!state->indefinite);
-	PORT_Assert (child_consumed <= state->pending);
+	if( child_consumed > state->pending ) {
+	    PORT_SetError (SEC_ERROR_BAD_DER);
+	    state->top->status = decodeError;
+	    return;
+	}
 
 	state->pending -= child_consumed;
 	if (state->pending == 0) {
@@ -1621,6 +1657,10 @@ sec_asn1d_next_in_group (sec_asn1d_state *state)
      * Now we do the next one.
      */
     sec_asn1d_scrub_state (child);
+
+    /* Initialize child state from the template */
+    sec_asn1d_init_state_based_on_template(child);
+
     state->top->current = child;
 }
 
@@ -1664,7 +1704,11 @@ sec_asn1d_next_in_sequence (sec_asn1d_state *state)
 	sec_asn1d_free_child (child, PR_FALSE);
 	if (state->pending) {
 	    PORT_Assert (!state->indefinite);
-	    PORT_Assert (child_consumed <= state->pending);
+	    if( child_consumed > state->pending ) {
+		PORT_SetError (SEC_ERROR_BAD_DER);
+		state->top->status = decodeError;
+		return;
+	    }
 	    state->pending -= child_consumed;
 	    if (state->pending == 0) {
 		child->theTemplate++;
@@ -1709,8 +1753,13 @@ sec_asn1d_next_in_sequence (sec_asn1d_state *state)
 	     */
 	    if (state->indefinite && child->endofcontents) {
 		PORT_Assert (child_consumed == 2);
-		state->consumed += child_consumed;
-		state->place = afterEndOfContents;
+		if( child_consumed != 2 ) {
+		    PORT_SetError (SEC_ERROR_BAD_DER);
+		    state->top->status = decodeError;
+		} else {
+		    state->consumed += child_consumed;
+		    state->place = afterEndOfContents;
+		}
 	    } else {
 		PORT_SetError (SEC_ERROR_BAD_DER);
 		state->top->status = decodeError;
@@ -1867,7 +1916,8 @@ sec_asn1d_concat_group (sec_asn1d_state *state)
     PORT_Assert (state->place == afterGroup);
 
     placep = (const void***)state->dest;
-    if (state->subitems_head != NULL) {
+    PORT_Assert(state->subitems_head == NULL || placep != NULL);
+    if (placep != NULL) {
 	struct subitem *item;
 	const void **group;
 	int count;
@@ -1887,7 +1937,6 @@ sec_asn1d_concat_group (sec_asn1d_state *state)
 	    return;
 	}
 
-	PORT_Assert (placep != NULL);
 	*placep = group;
 
 	item = state->subitems_head;
@@ -1903,8 +1952,6 @@ sec_asn1d_concat_group (sec_asn1d_state *state)
 	 * a memory leak (it is just temporarily left dangling).
 	 */
 	state->subitems_head = state->subitems_tail = NULL;
-    } else if (placep != NULL) {
-	*placep = NULL;
     }
 
     state->place = afterEndOfContents;
@@ -2060,8 +2107,12 @@ sec_asn1d_pop_state (sec_asn1d_state *state)
 	state->consumed += state->child->consumed;
 	if (state->pending) {
 	    PORT_Assert (!state->indefinite);
-	    PORT_Assert (state->child->consumed <= state->pending);
-	    state->pending -= state->child->consumed;
+	    if( state->child->consumed > state->pending ) {
+		PORT_SetError (SEC_ERROR_BAD_DER);
+		state->top->status = decodeError;
+	    } else {
+		state->pending -= state->child->consumed;
+	    }
 	}
 	state->child->consumed = 0;
     }
@@ -2146,7 +2197,11 @@ sec_asn1d_during_choice
     /* cargo'd from next_in_sequence innards */
     if( state->pending ) {
       PORT_Assert(!state->indefinite);
-      PORT_Assert(child->consumed <= state->pending);
+      if( child->consumed > state->pending ) {
+	PORT_SetError (SEC_ERROR_BAD_DER);
+	state->top->status = decodeError;
+	return NULL;
+      }
       state->pending -= child->consumed;
       if( 0 == state->pending ) {
         /* XXX uh.. not sure if I should have stopped this
@@ -2350,6 +2405,8 @@ SEC_ASN1DecoderUpdate (SEC_ASN1DecoderContext *cx,
 	    break;
 	  case duringSaveEncoding:
 	    sec_asn1d_reuse_encoding (state);
+	    if (cx->status == decodeError) 
+	      return SECFailure;
 	    break;
 	  case duringSequence:
 	    sec_asn1d_next_in_sequence (state);
@@ -2402,6 +2459,11 @@ SEC_ASN1DecoderUpdate (SEC_ASN1DecoderContext *cx,
 
 	/* We should not consume more than we have.  */
 	PORT_Assert (consumed <= len);
+	if( consumed > len ) {
+	    PORT_SetError (SEC_ERROR_BAD_DER);
+	    cx->status = decodeError;
+	    break;
+	}
 
 	/* It might have changed, so we have to update our local copy.  */
 	state = cx->current;
