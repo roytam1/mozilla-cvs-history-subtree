@@ -75,7 +75,7 @@ Uninstall Filename=$UninstallFile$
 
 ; This key is used as a fail over key.  This url will be used when the
 ; url in the Site Selector fails.
-url=$ArchiveUrl$
+url0=$ArchiveUrl$
 
 ; Default Setup Type values:
 ;   Setup Type 0 - first radio button (default)

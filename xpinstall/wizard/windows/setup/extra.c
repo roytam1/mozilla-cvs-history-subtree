@@ -74,6 +74,8 @@ typedef struct structVer
   ULONGLONG ullBuild;
 } verBlock;
 
+void AddGeneralUrlToIdiFile(siC *siCObject, char *szSection, char *szUrl, DWORD szUrlBufSize,
+                            int idiIndex, char *szFileIdiGetArchives)
 void  TranslateVersionStr(LPSTR szVersion, verBlock *vbVersion);
 BOOL  GetFileVersion(LPSTR szFile, verBlock *vbVersion);
 int   CompareVersion(verBlock vbVersionOld, verBlock vbVersionNew);
@@ -1200,6 +1202,37 @@ int UpdateIdiFile(char  *szPartialUrl,
   return(0);
 }
 
+void AddGeneralUrlToIdiFile(siC *siCObject, char *szSection, char *szUrl, DWORD szUrlBufSize,
+                            int idiIndex, char *szFileIdiGetArchives)
+{
+  int       generalIndex;
+  char      szKey[MAX_BUF_TINY];
+
+  generalIndex = 0;
+  wsprintf(szKey, "url%d", generalIndex);
+  GetPrivateProfileString("General",
+                          szKey,
+                          "",
+                          szUrl,
+                          szUrlBufSize,
+                          szFileIniConfig);
+  while(*szUrl != '\0')
+  {
+    wsprintf(szKey, "url%d", idiIndex);
+    UpdateIdiFile(szUrl, szUrlBufSize, siCObject, szSection, szKey, szFileIdiGetArchives);
+
+    ++idiIndex;
+    ++generalIndex;
+    wsprintf(szKey, "url%d", generalIndex);
+    GetPrivateProfileString("General",
+                            szKey,
+                            "",
+                            szUrl,
+                            szUrlBufSize,
+                            szFileIniConfig);
+  }
+}
+
 HRESULT AddArchiveToIdiFile(siC *siCObject,
                             char *szSection,
                             char *szFileIdiGetArchives)
@@ -1253,18 +1286,7 @@ HRESULT AddArchiveToIdiFile(siC *siCObject,
       ++iIndex;
     }
 
-    /* use the url from the config.ini's [General] section as well */
-    GetPrivateProfileString("General",
-                            "url",
-                            "",
-                            szUrl,
-                            sizeof(szUrl),
-                            szFileIniConfig);
-    if(*szUrl != 0)
-    {
-      wsprintf(szKey, "url%d", iIndex);
-      UpdateIdiFile(szUrl, sizeof(szUrl), siCObject, szSection, szKey, szFileIdiGetArchives);
-    }
+    AddGeneralUrlToIdiFile(siCObject, szSection, szUrl, sizeof(szUrl), iIndex, szFileIdiGetArchives);
   }
   else if(FileExists(szFile))
   {
@@ -1282,34 +1304,13 @@ HRESULT AddArchiveToIdiFile(siC *siCObject,
       ++iIndex;
     }
 
-    /* use the url from the config.ini's [General] section as well */
-    GetPrivateProfileString("General",
-                            "url",
-                            "",
-                            szUrl,
-                            sizeof(szUrl),
-                            szFileIniConfig);
-    if(*szUrl != 0)
-    {
-      wsprintf(szKey, "url%d", iIndex);
-      UpdateIdiFile(szUrl, sizeof(szUrl), siCObject, szSection, szKey, szFileIdiGetArchives);
-    }
+    AddGeneralUrlToIdiFile(siCObject, szSection, szUrl, sizeof(szUrl), iIndex, szFileIdiGetArchives);
   }
   else
   {
     /* redirect.ini is enabled, but the file does not exist,
      * so fail over to the url from the config.ini's [General] section */
-    GetPrivateProfileString("General",
-                            "url",
-                            "",
-                            szUrl,
-                            sizeof(szUrl),
-                            szFileIniConfig);
-    if(*szUrl != 0)
-    {
-      wsprintf(szKey, "url%d", iIndex);
-      UpdateIdiFile(szUrl, sizeof(szUrl), siCObject, szSection, szKey, szFileIdiGetArchives);
-    }
+    AddGeneralUrlToIdiFile(siCObject, szSection, szUrl, sizeof(szUrl), iIndex, szFileIdiGetArchives);
   }
 
   return(0);
