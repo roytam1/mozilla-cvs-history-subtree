@@ -17,6 +17,9 @@
                              onset="this.setAttribute('image', val); return val;"/>
       <property name="label" onget="return this.getAttribute('label');"
                              onset="this.setAttribute('label', val); return val;"/>
+      
+      <field name="_file">null</field>
+      <property name="file"  onget="return this._file" onset="this._file = val; return val;"/>
       <property name="disabled" onget="return this.getAttribute('disabled');"
                                 onset="this.setAttribute('disabled', val); return val;"/>
     </implementation>

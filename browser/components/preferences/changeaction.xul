@@ -67,32 +67,35 @@
       <separator class="thin"/>
       <radio id="openDefault" value="system" 
              label="&openDefault.label;" accesskey="&openDefault.accesskey;"/>
-      <filefield class="indent" id="defaultApp"/>
+      <filefield class="indent" id="defaultApp" disabled="true"/>
       <separator class="thin"/>
       <radio id="openApplication" value="app" 
              label="&openApplication.label;" accesskey="&openApplication.accesskey;"/>
       <hbox align="center">
-        <filefield id="customApp" class="indent" flex="1"/>
+        <filefield id="customApp" class="indent" flex="1" disabled="true"/>
         <button id="changeApp" oncommand="gChangeActionDialog.changeApp();" 
-                label="&changeApp.label;" accesskey="&changeApp.accesskey;"/>
+                label="&changeApp.label;" accesskey="&changeApp.accesskey;"
+                disabled="true"/>
       </hbox>
       <separator class="thin"/>
       <radio id="saveToDisk" value="save" 
-              label="&saveToDisk.label;" accesskey="&saveToDisk.accesskey;"/>
-      <radiogroup id="saveToOptions" class="indent">
-        <radio id="saveToDefault" selected="true" disabled="true"
+             label="&saveToDisk.label;" accesskey="&saveToDisk.accesskey;"/>
+      <radiogroup id="saveToOptions" class="indent" onselect="gChangeActionDialog.doSaveToDiskEnabling(this.selectedItem);">
+        <radio id="saveToDefault" selected="true"
                label="&saveToDefaultFolder.label;" accesskey="&saveToDefaultFolder.accesskey;"/>
-        <radio id="saveToCustom" disabled="true"
+        <radio id="saveToCustom"
                label="&saveToThisFolder.label;" accesskey="&saveToThisFolder.accesskey;"/>
         <hbox align="center" class="indent">
-          <textbox id="customDownloadfolder" flex="1" readonly="true" disabled="true"/>
-          <button label="&chooseFolder.label;" accesskey="&chooseFolder.accesskey;" disabled="true"/>
+          <filefield id="customDownloadFolder" flex="1"/>
+          <button id="chooseCustomDownloadFolder" oncommand="gChangeActionDialog.changeCustomFolder();"
+                  label="&chooseFolder.label;" accesskey="&chooseFolder.accesskey;"/>
         </hbox>
-        <radio id="saveToAskMe" disabled="true"
+        <radio id="saveToAskMe"
                label="&saveToAskMe.label;" accesskey="&saveToAskMe.accesskey;"/>
       </radiogroup>
       <radio id="plugin" value="plugin" 
-              label="&usePlugin.label;" accesskey="&usePlugin.accesskey;"/>
+             label="&usePlugin.label;" accesskey="&usePlugin.accesskey;"/>
+      <filefield class="indent" id="pluginName" disabled="true"/>
     </radiogroup>
   </vbox>
 </dialog>

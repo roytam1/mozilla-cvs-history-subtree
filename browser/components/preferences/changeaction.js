@@ -45,7 +45,8 @@ var gChangeActionDialog = {
   _fileHandlerArc : null,
   _handlerRes     : null,
   _extAppRes      : null,
-  _lastSelected   : null,
+  _lastSelectedModeMode : null,
+  _lastSelectedModeSave : null,
 
   init: function ()
   {
@@ -87,17 +88,40 @@ var gChangeActionDialog = {
 
         var path = this._helperApps.getLiteralValue(this._extAppRes.Value, "path");
         var customApp = document.getElementById("customApp");
-        customApp.setAttribute("path", path);
         try {
           var lf = Components.classes["@mozilla.org/file/local;1"]
-                            .createInstance(Components.interfaces.nsILocalFile);
+                             .createInstance(Components.interfaces.nsILocalFile);
           lf.initWithPath(path);
+          customApp.file = lf;
           customApp.label = this._getDisplayNameForFile(lf);
           customApp.image = this._getIconURLForFile(lf);
         }
         catch (e) {
-          customApp.label = "None Selected";
+          var bundlePreferences = document.getElementById("bundlePreferences");
+          customApp.label = bundlePreferences.getString("downloadHelperNoneSelected");
         }
+      }
+
+      var defaultApp = document.getElementById("defaultApp");
+      var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
+      defaultApp.label = mimeInfo.defaultDescription;
+      defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
+      
+      var pluginName = document.getElementById("pluginName");
+      var foundPlugin = false;
+      for (var i = 0; i < navigator.plugins.length; ++i) {
+        var plugin = navigator.plugins[i];
+        for (var j = 0; j < plugin.length; ++j) {
+          if (contentType == plugin[j].type) {
+            pluginName.label = plugin.name;
+            pluginName.image = "moz-icon://goat.goat?contentType=" + contentType + "&size=16";
+            foundPlugin = true;
+          }
+        }
+      }
+      if (!foundPlugin) {
+        pluginName.label = bundlePreferences.getString("pluginHelperNoneAvailable");
+        document.getElementById("plugin").disabled = true;
       }
       
       // Selected Action Radiogroup
@@ -109,21 +133,18 @@ var gChangeActionDialog = {
         handlerGroup.selectedItem = document.getElementById("saveToDisk");
       else
         handlerGroup.selectedItem = document.getElementById("openApplication");
-        
-      this._lastSelected = handlerGroup.selectedItem;
     }
     else {
       // No Handler/ExtApp Resources for this type for some reason
       handlerGroup.selectedItem = document.getElementById("openDefault");
     }
     
-    dump("*** bailed?1\n");
-    var defaultApp = document.getElementById("defaultApp");
-    var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
-    defaultApp.label = mimeInfo.defaultDescription;
-    defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
-    dump("*** bailed?\n");
+    this._lastSelectedMode = handlerGroup.selectedItem;
     
+    // Figure out the last selected Save As mode
+    var saveToOptions = document.getElementById("saveToOptions");
+    this._lastSelectedSave = saveToOptions.selectedItem;
+
     // We don't let users open .exe files or random binary data directly 
     // from the browser at the moment because of security concerns. 
     var mimeType = mimeInfo.MIMEType;
@@ -174,7 +195,7 @@ var gChangeActionDialog = {
     if (this._extAppRes) {
       var customApp = document.getElementById("customApp");
       if (customApp.label != "") {
-        this._setLiteralValue(this._extAppRes, "path", customApp.getAttribute("path"));
+        this._setLiteralValue(this._extAppRes, "path", customApp.file.path);
         this._setLiteralValue(this._extAppRes, "prettyName", customApp.label);
       }
       
@@ -201,24 +222,56 @@ var gChangeActionDialog = {
   
   doEnabling: function (aSelectedItem)
   {
-    dump("*** goat1\n");
-    if (aSelectedItem.id == "openApplication") {
-      var customApp = document.getElementById("customApp")
-      customApp.disabled = false;
-      document.getElementById("changeApp").disabled = false;
-      
-      if (customApp.label == "" && !this.changeApp()) {
-        this._lastSelected.click();
+    var defaultApp            = document.getElementById("defaultApp");
+    var saveToDefault         = document.getElementById("saveToDefault");
+    var saveToCustom          = document.getElementById("saveToCustom");
+    var customDownloadFolder  = document.getElementById("customDownloadFolder");
+    var chooseCustomDownloadFolder = document.getElementById("chooseCustomDownloadFolder");
+    var saveToAskMe           = document.getElementById("saveToAskMe");
+    var pluginName            = document.getElementById("pluginName");
+    var changeApp             = document.getElementById("changeApp");
+    var customApp             = document.getElementById("customApp");
+    
+    switch (aSelectedItem.id) {
+    case "openDefault":
+      changeApp.disabled = customApp.disabled = saveToDefault.disabled = saveToCustom.disabled = customDownloadFolder.disabled = chooseCustomDownloadFolder.disabled = saveToAskMe.disabled = pluginName.disabled = true;
+      defaultApp.disabled = false;
+      break;
+    case "openApplication":
+      defaultApp.disabled = saveToDefault.disabled = saveToCustom.disabled = customDownloadFolder.disabled = chooseCustomDownloadFolder.disabled = saveToAskMe.disabled = pluginName.disabled = true;
+      changeApp.disabled = customApp.disabled = false;
+      if (!customApp.file && !this.changeApp()) {
+        this._lastSelectedMode.click();
         return;
       }
+      break;
+    case "saveToDisk":
+      changeApp.disabled = customApp.disabled = defaultApp.disabled = pluginName.disabled = true;
+      var saveToOptions = document.getElementById("saveToOptions");
+      customDownloadFolder.disabled = chooseCustomDownloadFolder.disabled = !(saveToOptions.selectedItem.id == "saveToCustom");
+      saveToDefault.disabled = saveToCustom.disabled = saveToAskMe.disabled = false;
+      break;
+    case "plugin":
+      changeApp.disabled = customApp.disabled = defaultApp.disabled = saveToDefault.disabled = saveToCustom.disabled = customDownloadFolder.disabled = chooseCustomDownloadFolder.disabled = saveToAskMe.disabled = true;
+      pluginName.disabled = false;
+      break;
     }
-    else {
-      document.getElementById("customApp").disabled = true;
-      document.getElementById("changeApp").disabled = true;
-    }
+    this._lastSelectedMode = aSelectedItem;
+  },
+  
+  doSaveToDiskEnabling: function (aSelectedItem)
+  {
+    var isSaveToCustom = aSelectedItem.id == "saveToCustom";
+    var customDownloadFolder = document.getElementById("customDownloadFolder");
+    var chooseCustomDownloadFolder = document.getElementById("chooseCustomDownloadFolder");
+    chooseCustomDownloadFolder.disabled = customDownloadFolder.disabled = !isSaveToCustom;
     
-    this._lastSelected = aSelectedItem;
-    dump("*** goat2\n");
+    if (isSaveToCustom && 
+        !customDownloadFolder.file && !this.changeCustomFolder()) {
+      this._lastSelectedSave.click();
+      return;
+    }
+    this._lastSelectedSave = aSelectedItem;
   },
   
   changeApp: function ()
@@ -228,19 +281,40 @@ var gChangeActionDialog = {
                        .createInstance(nsIFilePicker);
 
     // extract the window title
-    var winTitle = document.getElementById('changeApp').getAttribute('filepickertitle');
+    var bundlePreferences = document.getElementById("bundlePreferences");
+    var winTitle = bundlePreferences.getString("fpTitleChooseApp");
     fp.init(window, winTitle, nsIFilePicker.modeOpen);
     
     fp.appendFilters(nsIFilePicker.filterApps);
     if (fp.show() == nsIFilePicker.returnOK && fp.file) {
       var customApp = document.getElementById("customApp");
       customApp.label = this._getDisplayNameForFile(fp.file);
-      customApp.setAttribute("path", fp.file.path);
+      customApp.file = fp.file;
       customApp.image = this._getIconURLForFile(fp.file);
 
       var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
       this._extAppRes = this._rdf.GetResource("urn:mimetype:externalApplication:" + mimeInfo.MIMEType);
       
+      return true;
+    }
+    return false;
+  },
+  
+  changeCustomFolder: function ()
+  {
+    const nsIFilePicker = Components.interfaces.nsIFilePicker;
+    var fp = Components.classes["@mozilla.org/filepicker;1"]
+                       .createInstance(nsIFilePicker);
+
+    // extract the window title
+    var bundlePreferences = document.getElementById("bundlePreferences");
+    var winTitle = bundlePreferences.getString("fpTitleChooseDL");
+    fp.init(window, winTitle, nsIFilePicker.modeGetFolder);
+    if (fp.show() == nsIFilePicker.returnOK && fp.file) {
+      var customDownloadFolder = document.getElementById("customDownloadFolder");
+      customDownloadFolder.label = fp.file.path;
+      customDownloadFolder.file = fp.file;
+      customDownloadFolder.image = this._getIconURLForFile(fp.file);
       return true;
     }
     return false;
