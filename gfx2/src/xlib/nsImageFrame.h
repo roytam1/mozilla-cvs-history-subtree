@@ -58,10 +58,11 @@ private:
   /* additional members */
   nsRect mRect;
 
-  PRPackedBool mInitalized;   // 8 bits
-  // ???                      // 8 bits
+  ImageData mImageData;       // ... (ends with 16 bits)
   gfx_format mFormat;         // 16 bits
 
-  ImageData mImageData;
   ImageData *mAlphaData;
+
+  // should we just make this a PRBool?
+  PRPackedBool mInitalized;   // 8 bits
 };
