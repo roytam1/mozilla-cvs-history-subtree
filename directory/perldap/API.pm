@@ -463,7 +463,7 @@ OUTPUT:
   status - Integer
   msgidp - Integer
 
-AVAILABILITY: V2/V3
+AVAILABILITY: V3
 
 EXAMPLE:
 
@@ -619,7 +619,7 @@ OUTPUT:
   status - Integer
   msgidp - Integer
 
-AVAILABILITY: V2/V3
+AVAILABILITY: V3
 
 EXAMPLE:
 
