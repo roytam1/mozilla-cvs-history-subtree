@@ -371,8 +371,6 @@ protected:
 // document after a change via the DOM - gpk 2/13/99
   void HACKForceRedraw(void);
 
-  static nsString& GetTextNodeTag();
-
 // file handling utils
 
   NS_IMETHOD SaveDocument(PRBool saveAs, PRBool saveCopy);
@@ -380,6 +378,9 @@ protected:
   NS_IMETHOD ScrollIntoView(PRBool aScrollToBegin);
 
 public:
+
+  static nsString& GetTextNodeTag();
+
   /** 
    * SplitNode() creates a new node identical to an existing node, and split the contents between the two nodes
    * @param aExistingRightNode   the node to split.  It will become the new node's next sibling.
