@@ -911,7 +911,7 @@ function serv_353 (e)
 {
     
     e.channel = new CIRCChannel (this, e.params[3]);
-    if ("usersStable" in e.channel)
+    if (e.channel.usersStable)
     {        
         e.channel.users = new Object();
         e.channel.usersStable = false;
@@ -1631,6 +1631,7 @@ function CIRCChannel (parent, name)
     this.users = new Object();
     this.bans = new Object();
     this.mode = new CIRCChanMode (this);
+    this.usersStable = true;
     
     parent.channels[name] = this;
 
