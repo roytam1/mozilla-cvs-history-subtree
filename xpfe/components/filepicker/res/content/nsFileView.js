@@ -38,30 +38,6 @@ const sortType_name = 1;
 const sortType_size = 2;
 const sortType_date = 3;
 
-function nsFileView() {
-  this.mShowHiddenFiles = false;
-  this.mDirectoryFilter = false;
-  this.mFileList = [];
-  this.mDirList = [];
-  this.mFilteredFiles = [];
-  this.mCurrentFilter = ".*";
-  this.mSelectionCallback = null;
-  this.mOutliner = null;
-  this.mReverseSort = false;
-  this.mSortType = 0;
-  this.mTotalRows = 0;
-
-  if (!gDateService) {
-    gDateService = Components.classes[nsScriptableDateFormat_CONTRACTID]
-      .getService(nsIScriptableDateFormat);
-  }
-
-  var atomService = Components.classes[nsAtomService_CONTRACTID]
-                      .getService(nsIAtomService);
-  this.mDirectoryAtom = atomService.getAtom("directory");
-  this.mFileAtom = atomService.getAtom("file");
-}
-
 function numMatchingChars(str1, str2) {
   for (var i = 0; ((i < Math.min(str1.length, str2.length)) && (str1[i] == str2[i])); i++);
   return i;
@@ -95,6 +71,30 @@ function sortDate(a, b) {
   } else {
     return 0;
   }
+}
+
+function nsFileView() {
+  this.mShowHiddenFiles = false;
+  this.mDirectoryFilter = false;
+  this.mFileList = [];
+  this.mDirList = [];
+  this.mFilteredFiles = [];
+  this.mCurrentFilter = ".*";
+  this.mSelectionCallback = null;
+  this.mOutliner = null;
+  this.mReverseSort = false;
+  this.mSortType = 0;
+  this.mTotalRows = 0;
+
+  if (!gDateService) {
+    gDateService = Components.classes[nsScriptableDateFormat_CONTRACTID]
+      .getService(nsIScriptableDateFormat);
+  }
+
+  var atomService = Components.classes[nsAtomService_CONTRACTID]
+                      .getService(nsIAtomService);
+  this.mDirectoryAtom = atomService.getAtom("directory");
+  this.mFileAtom = atomService.getAtom("file");
 }
 
 nsFileView.prototype = {
@@ -147,6 +147,18 @@ nsFileView.prototype = {
 
   /* boolean isContainerEmpty(in long index); */
   isContainerEmpty: function(index) { return false; },
+
+  /* boolean isSorted (); */
+  isSorted: function() { return (this.mSortType > 0); },
+
+  /* boolean canDropOn (in long index); */
+  canDropOn: function(index) { return false; },
+
+  /* boolean canDropBeforeAfter (in long index, in boolean before); */
+  canDropBeforeAfter: function(index, before) { return false; },
+
+  /* void drop (in long row, in long orientation); */
+  drop: function(row, orientation) { },
 
   /* long getParentIndex(in long rowIndex); */
   getParentIndex: function(rowIndex) { return -1; },
@@ -253,7 +265,6 @@ nsFileView.prototype = {
   /* attribute boolean showHiddenFiles */
   set showHiddenFiles(s) {
     this.mShowHiddenFiles = s;
-    //    this.filterFiles();
     this.setDirectory(this.mDirectoryPath);
   },
 
