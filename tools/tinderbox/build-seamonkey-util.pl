@@ -45,7 +45,7 @@ require "gettime.pl";
 # Bundle::LWP      for http (to report data to graph)
 #
 # The "CPAN" way of installing this is to start here:
-#   % perl -MCPAN -e shell
+#   % sudo perl -MCPAN -e shell
 #   <take defaults..>
 #   cpan> install Time::HiRes
 #   [...]
