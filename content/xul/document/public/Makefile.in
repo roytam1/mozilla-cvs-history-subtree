@@ -26,7 +26,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= xul
+MODULE		= xuldoc
 
 XPIDLSRCS	= \
 		nsIController.idl \

@@ -373,10 +373,9 @@ static Components gComponents[] = {
     "@mozilla.org/xul/xul-prototype-cache;1", },
   { "XUL Element Factory", NS_XULELEMENTFACTORY_CID,
     NS_ELEMENT_FACTORY_CONTRACTID_PREFIX "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", },
-  { "Controller Command Manager", NS_CONTROLLERCOMMANDMANAGER_CID,
-    "@mozilla.org/layout/controller-command-manager;1", },
 #endif
-
+  { "Controller Command Manager", NS_CONTROLLERCOMMANDMANAGER_CID,
+    "@mozilla.org/content/controller-command-manager;1", },
 };
 #define NUM_COMPONENTS (sizeof(gComponents) / sizeof(gComponents[0]))
 
