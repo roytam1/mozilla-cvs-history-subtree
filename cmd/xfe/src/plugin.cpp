@@ -941,7 +941,7 @@ FE_LoadPlugin(void *pdesc, NPNetscapeFuncs *funcs, np_handle* handle)
 
             static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 	    nsIPlugin* userPlugin = NULL;
-	    nsresult err = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
+	    nsresult err = nsGetFactory(kIPluginIID, (nsIFactory**)&userPlugin);
 
 	    handle->userPlugin = userPlugin;
 	    plugin->handle = handle;
