@@ -28,7 +28,7 @@
 // Version Numbers //
 
 #define		VERSION_MAJOR			0
-#define		VERSION_MINOR			0x92	// revision & fix in BCD
+#define		VERSION_MINOR			0x93	// revision & fix in BCD
 #define		VERSION_KIND			alpha	// alpha, beta, or final
 #define		VERSION_MICRO			0		// internal stage: alpha or beta number
 
