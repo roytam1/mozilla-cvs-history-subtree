@@ -1794,8 +1794,9 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
             // Create a temporary channel to get nsIDocument->Reset to
             // do the right thing. We want the output document to get
             // much of the input document's characteristics.
-            serv->NewChannelFromURI(inputDocument->GetDocumentURL(),
-                                    getter_AddRefs(channel));
+            nsCOMPtr<nsIURI> docURL;
+            inputDocument->GetDocumentURL(getter_AddRefs(docURL));
+            serv->NewChannelFromURI(docURL, getter_AddRefs(channel));
         }
     }
  
