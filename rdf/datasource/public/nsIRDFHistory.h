@@ -33,11 +33,12 @@
 
 class nsIRDFHistoryDataSource : public nsIRDFDataSource {
 public:
+    static const nsIID& GetIID() { static nsIID iid = NS_IRDFHISTORYDATASOURCE_IID; return iid; }
 
     /**
      * Add the specified item to history
      */
-    NS_IMETHOD AddPage (const char* uri) = 0;
+    NS_IMETHOD AddPage (const char* uri, const char* referer, PRTime date) = 0;
 
     /**
      * Set the title of the page
@@ -52,5 +53,19 @@ public:
     /**
      * Get the uri's last visit date
      */
-    NS_IMETHOD LastVisitDate (const char* uri, unit32 *date) = 0;
+    NS_IMETHOD LastVisitDate (const char* uri, uint32 *date) = 0;
+
+    /** 
+     * Get the preferred completion 
+     */
+    NS_IMETHOD CompleteURL (const char* prefix, char** preferredCompletion) = 0;
 };
+
+#endif nsIRDFHistory_h
+
+
+
+
+
+
+

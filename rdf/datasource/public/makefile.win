@@ -21,6 +21,7 @@ MODULE=rdf
 DEPTH=..\..\..
 
 EXPORTS	= \
+	nsIRDFHistory.h        \
         nsIXULContentSink.h \
 	nsIRDFFileSystem.h \
 	$(NULL)
