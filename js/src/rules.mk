@@ -43,7 +43,7 @@ $(LIBRARY): $(LIB_OBJS)
 else
 ifdef USE_MSVC
 $(LIBRARY): $(LIB_OBJS)
-	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 \
+	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS)\
 	    /out:"$@" /pdb:"$(OBJDIR)/js32.pdb" /implib:"$(OBJDIR)/js32.lib" $?
 else
 $(LIBRARY): $(LIB_OBJS)
@@ -60,12 +60,17 @@ if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
 endef
 
 ifdef DIRS
+ifeq ($(OS_ARCH), WINNT)
+SETOLDDIR = set oldDir='pwd'
+else
+SETOLDDIR = oldDir='pwd'
+endif
 LOOP_OVER_DIRS		=					\
 	@for d in $(DIRS); do					\
 		if test -d $$d; then				\
 			set -e;			\
-			echo "cd $$d; $(MAKE) -f Makefile.ref $@";		\
-			oldDir=`pwd`;				\
+			echo "cd $$d; $(MAKE) -f Makefile.ref $@"; 		\
+			$(SETOLDDIR);				\
 			cd $$d; $(MAKE) -f Makefile.ref $@; cd $$oldDir;	\
 			set +e;					\
 		else						\
