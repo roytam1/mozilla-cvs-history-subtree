@@ -126,7 +126,9 @@ function loadEventHandlers(event)
     UpdateBookmarksLastVisitedDate(event);
     checkForDirectoryListing();
     charsetLoadListener(event);
+#ifdef ALTSS_ICON
     updatePageStyles();
+#endif
     updatePageLivemarks();
   }
 
@@ -3512,7 +3514,9 @@ nsBrowserStatusHandler.prototype =
     gMissingPluginInstaller.clearMissingPlugins(getBrowser().selectedTab);
        
     setTimeout(function () { updatePageLivemarks(); }, 0);
+#ifdef ALTSS_ICON
     setTimeout(function () { updatePageStyles(); }, 0);
+#endif
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
@@ -5403,6 +5407,7 @@ function setStyleDisabled(disabled) {
   getMarkupDocumentViewer().authorStyleDisabled = disabled;
 }
 
+#ifdef ALTSS_ICON
 function updatePageStyles(evt)
 {
   // XXX - Accessing window._content.document can generate an
@@ -5443,6 +5448,7 @@ function updatePageStyles(evt)
   // Restore clear state
   browser.userTypedClear = userTypedClear;
 }
+#endif
 /* End of the Page Style functions */
 
 function clearObsoletePrefs()

@@ -440,6 +440,7 @@
         <menuseparator observes="blockedPopupsSeparator"/>
       </menupopup>
     </statusbarpanel>
+#ifdef ALTSS_ICON
     <statusbarpanel id="page-theme-button" type="menu"
                     class="statusbarpanel-menu-iconic" 
                     tooltiptext="&pageStyleIcon.tooltip;">
@@ -451,6 +452,7 @@
         <menuseparator/>
       </menupopup>
     </statusbarpanel>
+#endif
     <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic">
       <menupopup onpopupshowing="return livemarkFillPopup(this);"
                  oncommand="livemarkAddMark(window._content, event.target.getAttribute('data'));" />

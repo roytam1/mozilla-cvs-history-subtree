@@ -756,17 +756,6 @@ statusbarpanel#statusbar-display {
   display: -moz-box;
 }
 
-#page-theme-button {
-  list-style-image: none;
-  width: 20px;
-  display: none;
-}
-
-#page-theme-button[themes] {
-  list-style-image: url("chrome://browser/skin/page-themes.png");
-  display: -moz-box;
-}
-
 #livemark-button {
   list-style-image: none;
   width: 20px;

@@ -762,16 +762,6 @@ sidebarheader {
   padding: 0px 3px 0px 3px;
 }
 
-#page-theme-button {
-  display: none;
-}
-
-#page-theme-button[themes] {
-  display: -moz-box;
-  list-style-image: url("chrome://browser/skin/page-themes.png");
-  padding: 0px 3px 0px 3px;
-}
-
 #livemark-button {
   display: none;
 }
