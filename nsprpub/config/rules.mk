@@ -394,7 +394,12 @@ $(OBJDIR)/%.$(OBJ_SUFFIX): %.asm
 endif
 
 %.i: %.c
+ifeq (,$(filter-out WIN%,$(OS_TARGET)))
+	$(CC) -C /P $(CFLAGS) $<
+else
 	$(CC) -C -E $(CFLAGS) $< > $*.i
+endif
+
 
 %: %.pl
 	rm -f $@; cp $< $@; chmod +x $@
