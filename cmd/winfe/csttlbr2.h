@@ -120,7 +120,7 @@ public:
 
 class CDragToolbar : public CWnd {
 
-private:
+protected:
 	CToolbarWindow *	m_pToolbar;
 	BOOL				m_bIsOpen;
 	BOOL				m_bIsShowing;
@@ -141,6 +141,8 @@ public:
 	CDragToolbar();
 	~CDragToolbar();
 	int Create(CWnd *pParent, CToolbarWindow *pToolbar);
+
+	virtual BOOL ShouldClipChildren() { return TRUE; }
 
 	CWnd *GetToolbar(void);
 	int   GetToolbarHeight(void);
@@ -341,6 +343,7 @@ protected:
 	void DrawClosedTab(HDC hCompatibleDC, HDC hDestDC, HTAB_BITMAP tabType, int nNumClosedButtons,
 		  			   BOOL bMouseOver, int nStartX, int nBottom);
 
+	virtual CDragToolbar* CreateDragBar();
 	
 	DECLARE_MESSAGE_MAP()
 

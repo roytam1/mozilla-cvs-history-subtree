@@ -98,6 +98,7 @@ public:
 	CToolbarButton* RemoveButtonByCommand(UINT nCommand);
 
 	void DecrementButtonCount() { m_nNumButtons--; }
+	virtual BOOL ShouldClipChildren() { return TRUE; }
 
 	void HideButtonByCommand(UINT nCommand);
 	void ShowButtonByCommand(UINT nCommand, int nPos);

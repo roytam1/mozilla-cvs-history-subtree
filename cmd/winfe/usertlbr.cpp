@@ -30,6 +30,14 @@ extern "C" {
 // The Nav Center vocab element
 extern "C" RDF_NCVocab gNavCenter;
 
+#define TEXT_CHARACTERS_SHOWN 9
+#define BORDERSIZE 2
+#define TEXTVERTMARGIN 1
+#define TEXTONLYVERTMARGIN 2
+#define BITMAPVERTMARGIN 2
+#define TEXT_BITMAPVERTMARGIN 1
+#define HORIZMARGINSIZE 4
+
 #define LEFT_TOOLBAR_MARGIN 10
 #define RIGHT_TOOLBAR_MARGIN 20
 #define SPACE_BETWEEN_BUTTONS 2
@@ -335,6 +343,12 @@ void CRDFToolbarButton::DrawPicturesMode(HDC hDC, CRect rect)
 
 void CRDFToolbarButton::DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CString strTxt)
 {
+	if (foundOnRDFToolbar())
+	{
+		hasCustomTextColor = TRUE;
+		customTextColor = ((CRDFToolbar*)GetParent())->GetForegroundColor();
+	}
+
     CToolbarButton::DrawButtonText(hDC, rcTxt, sizeTxt, strTxt);
 }
 
@@ -516,9 +530,159 @@ BEGIN_MESSAGE_MAP(CRDFToolbarButton, CRDFToolbarButtonBase)
 	ON_MESSAGE(DT_DRAGGINGOCCURRED, OnDropMenuDraggingOccurred)
 	ON_MESSAGE(DM_MENUCLOSED, OnDropMenuClosed)
 	ON_WM_SYSCOLORCHANGE()
+	ON_WM_PAINT()
+	ON_WM_ERASEBKGND()
 	//}}AFX_MSG_MAP
 
 END_MESSAGE_MAP()
+
+BOOL CRDFToolbarButton::OnEraseBkgnd( CDC* pDC )
+{
+	return TRUE;
+}
+
+void CRDFToolbarButton::OnPaint()
+{
+	CRect updateRect;
+
+	GetUpdateRect(&updateRect);
+
+	CPaintDC dcPaint(this);	// device context for painting
+	CRect rcClient;
+	GetClientRect(&rcClient);
+	
+	HDC hSrcDC = dcPaint.m_hDC;
+
+	HPALETTE hPalette;
+	HPALETTE hOldPalette;
+	CFrameWnd* pParent = WFE_GetOwnerFrame(this); 
+	hPalette = WFE_GetUIPalette(pParent);
+	hOldPalette= ::SelectPalette(hSrcDC, hPalette, FALSE);
+	HDC hMemDC = ::CreateCompatibleDC(hSrcDC);
+
+	if(hMemDC)
+	{
+		HPALETTE hOldMemPalette = ::SelectPalette(hMemDC, hPalette, FALSE);
+
+		HBITMAP hbmMem = CreateCompatibleBitmap(hSrcDC,
+										rcClient.Width(),
+										rcClient.Height());
+
+		//
+		// Select the bitmap into the off-screen DC.
+		//
+		HBITMAP hbmOld = (HBITMAP)::SelectObject(hMemDC, hbmMem);
+
+		// if we are not enabled then must make sure that button state is normal
+		if(!m_bEnabled)
+		{
+			m_eState = eNORMAL;
+		}
+
+		CRect innerRect = rcClient;
+
+		innerRect.InflateRect(-BORDERSIZE, -BORDERSIZE);
+
+		int oldMode = ::SetBkMode(hMemDC, TRANSPARENT);
+		BOOL transBlt = FALSE;
+
+		// Always begin by filling with the transparent color.
+		// There will be a background. Fill with the handy transparent color.
+		HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(RGB(255,0,255));
+		::FillRect(hMemDC, rcClient, hRegBrush);
+		
+		if (foundOnRDFToolbar())
+		{
+			CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
+			if (pToolbar->GetBackgroundImage() == NULL ||
+				(pToolbar->GetBackgroundImage() != NULL && 
+				 !pToolbar->GetBackgroundImage()->FrameSuccessfullyLoaded()))
+			{
+				// Fill with our background color.
+				HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(pToolbar->GetBackgroundColor());
+				::FillRect(hMemDC, rcClient, hRegBrush);
+			}
+			else 
+			{
+				// There will be a background. Note that we want to do a transblt.
+				transBlt = TRUE;
+			}
+		}
+		else
+		{
+			::FillRect(hMemDC, rcClient, sysInfo.m_hbrBtnFace);
+		}
+
+		if(m_nToolbarStyle == TB_PICTURESANDTEXT)
+		{
+			DrawPicturesAndTextMode(hMemDC, innerRect);
+		}
+		else if(m_nToolbarStyle == TB_PICTURES)
+		{
+			DrawPicturesMode(hMemDC, innerRect);
+		}
+		else
+		{
+			DrawTextMode(hMemDC, innerRect);
+		}
+
+		// Now, draw 3d visual button effects, depending on our state
+		switch (m_eState)
+		{
+			case eBUTTON_UP:
+			{
+                if( m_nChecked == 0 )
+    				DrawUpButton(hMemDC, rcClient);
+                else
+    			    DrawDownButton(hMemDC, rcClient);
+			}
+			break;
+			
+			case eBUTTON_CHECKED:
+			{
+				// A checked button but NOT mousing over - no black border
+                DrawCheckedButton(hMemDC, rcClient);
+			}
+			break;
+
+			case eBUTTON_DOWN:
+			{
+				DrawDownButton(hMemDC, rcClient);
+			}
+			break;
+
+			case eDISABLED:
+			{
+				if(m_nChecked == 2)
+					DrawCheckedButton(hMemDC, rcClient);
+
+			}
+			break;
+
+			case eNORMAL:
+			{
+				if (m_bDepressed)
+					DrawDownButton(hMemDC, rcClient); // Looks like it's locked down.
+			}
+		}
+
+		::SetBkMode(hMemDC, oldMode);
+
+		if (!transBlt)
+			::BitBlt(hSrcDC, 0, 0, rcClient.Width(), rcClient.Height(), hMemDC, 0, 0,
+						SRCCOPY);
+		else FEU_TransBlt( hSrcDC, 0, 0, rcClient.Width(), rcClient.Height(), hMemDC, 0, 0,
+							WFE_GetUIPalette(NULL), RGB(255,0,255)); 
+
+		::SelectPalette(hMemDC, hOldMemPalette, FALSE);
+		::SelectPalette(hSrcDC, hOldPalette, FALSE);
+
+		::SelectObject(hMemDC, hbmOld);
+		::DeleteObject(hbmMem);
+ 
+		::DeleteDC(hMemDC);
+	}
+}
 
 LRESULT CRDFToolbarButton::OnDragMenuOpen(WPARAM wParam, LPARAM lParam)
 {
@@ -918,9 +1082,12 @@ void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
 			{
 				DrawCustomIcon(hDC, ptDst.x, ptDst.y);
 			}
-			else       
-                ::BitBlt(hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight, 
-					 pBmpDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+			else 
+				FEU_TransBlt( hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight,
+					pBmpDC, bitmapStart.x, bitmapStart.y ,WFE_GetUIPalette(NULL), 
+					GetSysColor(COLOR_BTNFACE));   
+                //::BitBlt(hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight, 
+				//	 pBmpDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
 		}
 		else
 		{
@@ -1642,6 +1809,30 @@ void CRDFToolbar::WidthChanged(int animWidth)
 }
 
 
+void CRDFToolbar::OnPaint(void)
+{
+	CRect rcClient, updateRect, buttonRect, intersectRect;
+	
+	GetClientRect(&rcClient);
+	GetUpdateRect(&updateRect);
+
+	CPaintDC dcPaint(this);
+	
+	for (int i = 0; i < m_nNumButtons; i++)
+	{
+		m_pButtonArray[i]->GetClientRect(&buttonRect);
+
+		m_pButtonArray[i]->MapWindowPoints(this, &buttonRect);
+
+		if(intersectRect.IntersectRect(updateRect, buttonRect))
+		{
+			MapWindowPoints(m_pButtonArray[i], &intersectRect);
+			m_pButtonArray[i]->RedrawWindow(&intersectRect);
+		}
+
+	}
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 //									CRDFToolbar Messages
@@ -1650,6 +1841,7 @@ void CRDFToolbar::WidthChanged(int animWidth)
 BEGIN_MESSAGE_MAP(CRDFToolbar, CNSToolbar2)
 	//{{AFX_MSG_MAP(CNSToolbar2)
 	ON_WM_RBUTTONDOWN()
+	ON_WM_PAINT()
 	//}}AFX_MSG_MAP
 
 END_MESSAGE_MAP()
@@ -1700,6 +1892,153 @@ BOOL CRDFToolbar::OnCommand( WPARAM wParam, LPARAM lParam )
 		return TRUE;
 	}
 	return((BOOL)GetParentFrame()->SendMessage(WM_COMMAND, wParam, lParam));
+}
+
+// ==========================================================
+// CRDFDragToolbar
+// Contains a single RDF toolbar.
+// Handles drawing of backgrounds etc. etc.
+// ==========================================================
+
+BEGIN_MESSAGE_MAP(CRDFDragToolbar, CDragToolbar)
+	//{{AFX_MSG_MAP(CRDFToolbarButton)
+	ON_WM_PAINT()
+	//}}AFX_MSG_MAP
+END_MESSAGE_MAP()
+
+#define OPEN_BUTTON_WIDTH 9
+#define CLOSED_BUTTON_WIDTH 40
+#define CLOSED_BUTTON_HEIGHT 10
+#define DT_RIGHT_MARGIN 1		//Margin between end of toolbar and right border of Navigator
+#define DRAGGING_BORDER_HEIGHT 2
+#define NOTOOL -1
+
+#define HTAB_TOP_START 0
+#define HTAB_TOP_HEIGHT 7
+#define HTAB_MIDDLE_START 8
+#define HTAB_MIDDLE_HEIGHT 6
+#define HTAB_BOTTOM_START 15
+#define HTAB_BOTTOM_HEIGHT 3
+
+extern HBITMAP				m_hTabBitmap;
+
+void CRDFDragToolbar::OnPaint(void)
+{
+	CPaintDC dcPaint(this);	// device context for painting
+	CRect rect;
+
+	GetClientRect(&rect);
+
+	CRDFToolbar* pToolbar = (CRDFToolbar*)m_pToolbar->GetToolbar();
+
+	// background color
+	HT_Resource top = HT_TopNode(pToolbar->GetHTView());
+	void* data;
+	COLORREF backgroundColor = GetSysColor(COLOR_BTNFACE);
+	HT_GetNodeData(top, gNavCenter->treeBGColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &backgroundColor);
+	}
+	pToolbar->SetBackgroundColor(backgroundColor);
+
+	// Foreground color
+	COLORREF foregroundColor = GetSysColor(COLOR_BTNTEXT);
+	HT_GetNodeData(top, gNavCenter->treeFGColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &foregroundColor);
+	}
+	pToolbar->SetForegroundColor(foregroundColor);
+
+	// Background image URL
+	CString backgroundImageURL = "";
+	HT_GetNodeData(top, gNavCenter->treeBGURL, HT_COLUMN_STRING, &data);
+	if (data)
+		backgroundImageURL = (char*)data;
+	pToolbar->SetBackgroundImage(NULL); // Clear out the BG image.
+
+	HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(backgroundColor); 
+	if (backgroundImageURL != "")
+	{
+		// There's a background that needs to be drawn.
+		pToolbar->SetBackgroundImage(LookupImage(backgroundImageURL, NULL));
+	}
+
+	if (pToolbar->GetBackgroundImage() && 
+		pToolbar->GetBackgroundImage()->FrameSuccessfullyLoaded())
+	{
+		PaintBackground(dcPaint.m_hDC, &rect, pToolbar->GetBackgroundImage(), 0);
+	}
+	else
+	{
+		::FillRect(dcPaint.m_hDC, &rect, hRegBrush);
+	}
+
+	CDC *pDC = &dcPaint;
+	HPALETTE hOldPal = ::SelectPalette(pDC->m_hDC, WFE_GetUIPalette(GetParentFrame()), FALSE);
+
+	if(m_hTabBitmap != NULL)
+	{
+
+		// Create a scratch DC and select our bitmap into it.
+		CDC * pBmpDC = new CDC;
+		pBmpDC->CreateCompatibleDC(pDC);
+
+
+		HBITMAP hOldBmp = (HBITMAP)::SelectObject(pBmpDC->m_hDC ,m_hTabBitmap);
+		HPALETTE hOldPalette = ::SelectPalette(pBmpDC->m_hDC, WFE_GetUIPalette(NULL), TRUE);
+		::RealizePalette(pBmpDC->m_hDC);
+		CPoint bitmapStart(!m_bMouseInTab ? 0 : OPEN_BUTTON_WIDTH ,HTAB_TOP_START);
+
+		//First do top of the tab
+
+		::BitBlt(pDC->m_hDC, 0, 0, OPEN_BUTTON_WIDTH, HTAB_TOP_HEIGHT,
+	  			 pBmpDC->m_hDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+	
+		//Now do the middle portion of the tab
+		int y = HTAB_TOP_HEIGHT;
+
+		bitmapStart.y = HTAB_MIDDLE_START;
+
+		while(y < rect.bottom - HTAB_BOTTOM_HEIGHT)
+		{
+			::BitBlt(pDC->m_hDC, 0, y, OPEN_BUTTON_WIDTH, HTAB_MIDDLE_HEIGHT,
+		  			 pBmpDC->m_hDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+
+			y += HTAB_MIDDLE_HEIGHT;
+
+		}
+
+		// Now do the bottom of the tab
+		y = rect.bottom - HTAB_BOTTOM_HEIGHT;
+
+		bitmapStart.y = HTAB_BOTTOM_START;
+
+		::BitBlt(pDC->m_hDC, 0, y, OPEN_BUTTON_WIDTH, HTAB_BOTTOM_HEIGHT,
+	  			 pBmpDC->m_hDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+
+
+		// Cleanup
+		::SelectObject(pBmpDC->m_hDC, hOldBmp);
+		::SelectPalette(pBmpDC->m_hDC, hOldPalette, TRUE);
+		::SelectPalette(pDC->m_hDC, hOldPal, TRUE);
+		pBmpDC->DeleteDC();
+		delete pBmpDC;
+	}
+
+	if(m_bDragging)
+	{
+		CBrush brush(RGB(0, 0, 0));
+		CBrush *pOldBrush = (CBrush*)dcPaint.SelectObject(&brush);
+
+		//rect.left += OPEN_BUTTON_WIDTH;
+
+		dcPaint.FrameRect(&rect, &brush);
+
+		dcPaint.SelectObject(pOldBrush);
+		brush.DeleteObject();
+	}
 }
 
 // ==========================================================

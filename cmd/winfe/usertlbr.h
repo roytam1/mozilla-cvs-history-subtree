@@ -115,7 +115,7 @@ public:
 	virtual HT_View GetHTView() { return HT_GetView(m_Node); }
 
 	virtual BOOL NeedsUpdate();
-
+	
 protected:
 	virtual void DrawPicturesMode(HDC hDC, CRect rect);
 	virtual void DrawPicturesAndTextMode(HDC hDC, CRect rect);
@@ -135,6 +135,8 @@ protected:
 	afx_msg LRESULT OnDropMenuClosed(WPARAM, LPARAM);
 	afx_msg LRESULT OnFillInMenu(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysColorChange( );
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd( CDC* pDC );
 
 	//}}AFX_MSG
 
@@ -191,6 +193,10 @@ private:
 	CRDFToolbarButton* m_pDragButton;
 	int m_iDragFraction;
 
+	COLORREF m_BackgroundColor;
+	COLORREF m_ForegroundColor;
+	CRDFImage* m_pBackgroundImage;
+
 	static int m_nMinToolbarButtonChars;
 	static int m_nMaxToolbarButtonChars;
 	
@@ -235,6 +241,17 @@ public:
 	void SetRowHeight(int i) { m_nRowHeight = i; }
 	int GetRowHeight() { return m_nRowHeight; }
 
+	// Color/background customizability stuff
+	
+	COLORREF GetBackgroundColor() { return m_BackgroundColor; }
+	COLORREF GetForegroundColor() { return m_ForegroundColor; }
+	CRDFImage* GetBackgroundImage() { return m_pBackgroundImage; }
+	void SetBackgroundColor(COLORREF c) { m_BackgroundColor = c; }
+	void SetForegroundColor(COLORREF c) { m_ForegroundColor = c; }
+	void SetBackgroundImage(CRDFImage* p) { m_pBackgroundImage = p; }
+
+	virtual BOOL ShouldClipChildren() { return FALSE; }
+	
 protected:
     // Helper function used in conjunction with LayoutButtons
     void ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, int rowWidth, int& usedSpace);
@@ -243,10 +260,25 @@ protected:
 	//{{AFX_MSG(CRDFToolbar)
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg BOOL OnCommand( WPARAM wParam, LPARAM lParam );
+	afx_msg void OnPaint(void);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 
+};
+
+class CRDFDragToolbar : public CDragToolbar, public CCustomImageObject
+{
+public:
+	virtual BOOL ShouldClipChildren() { return FALSE; }
+	void LoadComplete(HT_Resource r) { Invalidate(); }
+
+	// Generated message map functions
+	//{{AFX_MSG(CDragToolbar)
+	afx_msg void OnPaint(void);
+	//}}AFX_MSG
+
+	DECLARE_MESSAGE_MAP()
 };
 
 class CRDFToolbarHolder : public CCustToolbar
@@ -263,6 +295,11 @@ public:
 	void SetHTPane(HT_Pane p) { m_ToolbarPane = p; }
 	CFrameWnd* GetCachedParentWindow() { return m_pCachedParentWindow; }
 	void InitializeRDFData();
+
+	virtual CDragToolbar* CreateDragBar()
+	{
+		return new CRDFDragToolbar();
+	}
 };
 
 #endif
