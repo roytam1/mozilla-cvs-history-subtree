@@ -67,7 +67,6 @@
 #include "nsIWindowWatcher.h"
 #include "nsHashtable.h"
 
-#include "nsILocale.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIPrincipal.h"
@@ -214,7 +213,7 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   nsCOMPtr<nsIStringBundle> bundle;
   nsCOMPtr<nsIStringBundle> regionalBundle;
   nsCOMPtr<nsIURI> uri;
-  nsILocale* locale = nsnull;
+  char *spec = nsnull;
   PRBool displayDialogPrefValue = PR_FALSE, checkboxState = PR_FALSE;
 
   if (!prefs || !prompt || !io || !strings) {
@@ -232,11 +231,11 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   
   // Taken from mozilla\extensions\wallet\src\wallet.cpp
   // WalletLocalize().
-  rv = strings->CreateBundle(PLUGIN_PROPERTIES_URL, locale, getter_AddRefs(bundle));
+  rv = strings->CreateBundle(PLUGIN_PROPERTIES_URL, getter_AddRefs(bundle));
   if (NS_FAILED(rv)) {
     return;
   }
-  rv = strings->CreateBundle(PLUGIN_REGIONAL_URL, locale, 
+  rv = strings->CreateBundle(PLUGIN_REGIONAL_URL, 
                              getter_AddRefs(regionalBundle));
   if (NS_FAILED(rv)) {
     return;
@@ -1706,7 +1705,7 @@ nsPluginHostImpl::nsPluginHostImpl()
   if (obsService)
   {
     obsService->AddObserver(this, NS_LITERAL_STRING("quit-application").get());
-    obsService->AddObserver(this, NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
+    obsService->AddObserver(this, NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
   }
 }
 
@@ -1719,7 +1718,7 @@ nsPluginHostImpl::~nsPluginHostImpl()
   if (obsService)
   {
     obsService->RemoveObserver(this, NS_LITERAL_STRING("quit-application").get());
-    obsService->RemoveObserver(this, NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
+    obsService->RemoveObserver(this, NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
   }
   Destroy();
 }
@@ -4372,8 +4371,8 @@ NS_IMETHODIMP nsPluginHostImpl::Observe(nsISupports *aSubject,
   if (newString)
     nsCRT::free(newString);
 #endif
-//  if (NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID) == aTopic || 
-//      NS_LITERAL_STRING("quit-application") == aTopic)
+  if (NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).Equals(aTopic) ||
+      NS_LITERAL_STRING("quit-application").Equals(aTopic))
   {
     Destroy();
   }
@@ -4418,7 +4417,6 @@ NS_IMETHODIMP nsPluginHostImpl::HandleBadPlugin(PRLibrary* aLibrary)
   nsCOMPtr<nsIStringBundle> bundle;
   nsCOMPtr<nsIURI> uri;
   char *spec = nsnull;
-  nsILocale* locale = nsnull;
 
   PRInt32 buttonPressed;
   PRBool checkboxState = PR_FALSE;
@@ -4434,7 +4432,7 @@ NS_IMETHODIMP nsPluginHostImpl::HandleBadPlugin(PRLibrary* aLibrary)
     return rv;
   }
 
-  rv = strings->CreateBundle(spec, locale, getter_AddRefs(bundle));
+  rv = strings->CreateBundle(spec, getter_AddRefs(bundle));
   nsCRT::free(spec);
   if (NS_FAILED(rv))
     return rv;
