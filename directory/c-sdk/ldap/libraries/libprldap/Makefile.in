@@ -39,8 +39,12 @@ OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
 DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
+ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 LIBPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
 			$(LIB_PREFIX)$(PRLDAP_LIBNAME).$(LIB_SUFFIX))
+else
+LIBPRLDAP =
+endif
 DLLPRLDAP	= $(addprefix $(OBJDIR_NAME)/, \
 			$(LIB_PREFIX)$(PRLDAP_LIBNAME).$(DLL_SUFFIX))
 
@@ -161,7 +165,18 @@ all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(DLLPRLDAP)
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
-$(LIBPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS)
+ifeq ($(OS_ARCH),OS2)
+DEF_FILE = $(PRLDAP_LIBNAME).def
+$(DEF_FILE):
+	echo LIBRARY $(PRLDAP_LIBNAME) INITINSTANCE TERMINSTANCE > $@
+	echo PROTMODE >> $@
+	echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $@
+	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
+	echo EXPORTS >> $@
+	$(FILTER) $(OBJS) >> $@
+endif
+
+$(LIBPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS) $(DEF_FILE)
 	@echo ======= making $(LIBPRLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
@@ -172,14 +187,20 @@ ifeq ($(OS_ARCH), OpenVMS)
 	    create_opt_uni $(OBJS); \
 	fi
 endif
+ifeq ($(OS_ARCH),OS2)
+# create import library for OS/2
+	rm -f $@
+	$(IMPLIB) $@ $(DEF_FILE)
+else
 	$(LINK_LIB) $(EXTRA_LIBS)
+endif
 
-$(DLLPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS)
+$(DLLPRLDAP): $(OBJS) $(LIBDIR) $(PRLDAP_EXPORT_DEFS) $(DEF_FILE)
 	@echo ======= making $(DLLPRLDAP)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-	$(LINK_DLL) $(PRLDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+	$(LINK_DLL) $(PRLDAP_EXPORT_FLAGS) $(EXTRA_LIBS) $(DEF_FILE)
 
 veryclean:: clean
 
@@ -189,10 +210,13 @@ $(OBJDEST):
 # the $(dist_bindir) line is for the mozilla client, which for reasons
 # unknown wants shared libraries in /bin also
 #
-install:: $(DLLPRLDAP)	
+install:: $(LIBPRLDAP) $(DLLPRLDAP)	
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBPRLDAP) $(dist_libdir)
 	$(INSTALL) -m 555 $(DLLPRLDAP) $(dist_libdir)
+endif
+ifeq ($(OS_ARCH),OS2)
+	$(INSTALL) -m 444 $(LIBPRLDAP) $(dist_libdir)
 endif
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(DLLPRLDAP) $(dist_libdir)
