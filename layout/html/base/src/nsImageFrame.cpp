@@ -121,6 +121,12 @@ nsImageFrame::Destroy(nsIPresContext* aPresContext)
       NS_RELEASE(mImageMap);
     }
 
+    if (mImageRequest)
+      mImageRequest->Cancel(NS_ERROR_FAILURE); // NS_BINDING_ABORT ?
+    if (mLowImageRequest)
+      mLowImageRequest->Cancel(NS_ERROR_FAILURE); // NS_BINDING_ABORT ?
+
+
 #ifndef USE_IMG2
   // Release image loader first so that it's refcnt can go to zero
   mImageLoader.StopAllLoadImages(aPresContext);
@@ -283,6 +289,18 @@ NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresCon
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
 
+  // XXX we need to make sure that the reflow from the OnContainerStart has been
+  // processed before we start calling invalidate
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+  nsRect2 r(*rect);
+  r *= p2t; // convert to twips
+
+  Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
+
+
+#if 0
   if (mParent) {
     mState |= NS_FRAME_IS_DIRTY;
 	  mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
@@ -290,6 +308,7 @@ NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresCon
   else {
     NS_ASSERTION(0, "No parent to pass the reflow request up to.");
   }
+#endif
   return NS_OK;
 }
 
@@ -892,11 +911,23 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 
 #ifdef USE_IMG2
         if (imgCon) {
-          nsRect2 r(0,0,0,0);
           nsPoint2 p(inner.x, inner.y);
+
+#define DONTPAINTEVERYTHING 1
+
+#ifdef DONTPAINTEVERYTHING
+          inner.IntersectRect(inner, aDirtyRect);
+          nsRect2 r(inner.x, inner.y, inner.width, inner.height);
+
+          float t2p;
+          aPresContext->GetTwipsToPixels(&t2p);
+
+          r *= t2p;
+#else
+          nsRect2 r(0,0,0,0);
           imgCon->GetWidth(&r.width);
           imgCon->GetHeight(&r.height);
-
+#endif
           aRenderingContext.DrawImage(imgCon, &r, &p);
         }
 #else

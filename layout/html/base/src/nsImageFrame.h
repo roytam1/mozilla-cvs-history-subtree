@@ -180,7 +180,6 @@ protected:
 
   nsCOMPtr<nsIImageDecoderObserver> mListener;
 
-  nsSize mNaturalSize;
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
 #endif
