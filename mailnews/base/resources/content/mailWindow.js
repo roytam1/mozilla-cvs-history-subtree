@@ -53,7 +53,6 @@ var messageDSContractID        = datasourceContractIDPrefix + "mailnewsmessages"
 
 var accountManagerDataSource;
 var folderDataSource;
-var messageDataSource;
  
 var messagesBox = null;
 var accountCentralBox = null;
@@ -79,14 +78,11 @@ function OnMailWindowUnload()
 	var msgDS = folderDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
 	msgDS.window = null;
 
-	msgDS = messageDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
-	msgDS.window = null;
-
 	msgDS = accountManagerDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
 	msgDS.window = null;
 
 
-  	msgWindow.closeWindow();
+	msgWindow.closeWindow();
 
 }
 
@@ -154,10 +150,9 @@ function CreateMailWindowGlobals()
 	//Create datasources
 	accountManagerDataSource = Components.classes[accountManagerDSContractID].createInstance();
 	folderDataSource         = Components.classes[folderDSContractID].createInstance();
-	messageDataSource        = Components.classes[messageDSContractID].createInstance();
 
-        messagesBox       = document.getElementById("messagesBox");
-        accountCentralBox = document.getElementById("accountCentralBox");
+  messagesBox       = document.getElementById("messagesBox");
+  accountCentralBox = document.getElementById("accountCentralBox");
 }
 
 function InitMsgWindow()
@@ -191,9 +186,6 @@ function AddDataSources()
 	//Add statusFeedback
 
 	var msgDS = folderDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
-	msgDS.window = msgWindow;
-
-	msgDS = messageDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
 	msgDS.window = msgWindow;
 
 	msgDS = accountManagerDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);

@@ -68,6 +68,9 @@ var folderListener = {
 
 	OnItemIntPropertyChanged: function(item, property, oldValue, newValue)
 	{
+  // fix me!!!
+
+  /*
 		var currentLoadedFolder = GetThreadTreeFolder();
 		var currentURI = currentLoadedFolder.getAttribute('ref');
 
@@ -89,8 +92,9 @@ var folderListener = {
 						}
 					}
 				}
-			}
+			}      
 		}
+    */
 	},
 
 	OnItemBoolPropertyChanged: function(item, property, oldValue, newValue) {},
@@ -102,7 +106,6 @@ var folderListener = {
         var eventType = event.GetUnicode();
 
         if (eventType == "FolderLoaded") {
-            
 		if(folder)
 		{
 			var resource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
@@ -183,7 +186,6 @@ function HandleDeleteOrMoveMsgFailed(folder)
 
   if (gBatching) {
     gBatching = false;
-    var threadTree = GetThreadTree();
     //threadTree.treeBoxObject.endBatch();
     //dump("XXX end tree batch (delete or move failed)\n");
   }
@@ -194,6 +196,7 @@ function HandleDeleteOrMoveMsgFailed(folder)
 
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
+/*
 	var threadTree = GetThreadTree();
 
 	if(IsCurrentLoadedFolder(folder))
@@ -225,6 +228,7 @@ function HandleDeleteOrMoveMsgCompleted(folder)
     }
 
     ThreadPaneSelectionChange(true);
+  */
 }
 
 
@@ -523,9 +527,9 @@ function AddToSession()
 
 function InitPanes()
 {
-	var threadTree = GetThreadTree();
-	if(threadTree);
-		OnLoadThreadPane(threadTree);
+//	var threadTree = GetThreadTree();
+//	if(threadTree);
+//  	OnLoadThreadPane(threadTree);
 
 	var folderTree = GetFolderTree();
 	if(folderTree)
@@ -571,15 +575,6 @@ function GetFolderDatasource()
 
 function OnLoadThreadPane(threadTree)
 {
-    gThreadTree = threadTree;
-	//Sort by date by default
-
-	//Add message data source
-	messageDataSource = messageDataSource.QueryInterface(Components.interfaces.nsIRDFDataSource);
-	threadTree.database.AddDataSource(messageDataSource);
-
-    //FIX ME: Tempory patch for bug 24182
-    //ShowThreads(false);
 	setTimeout("ShowThreads(false);", 0);
 }
 
@@ -666,26 +661,17 @@ function RefreshThreadTreeView()
 {
 	SetBusyCursor(window, true);
 
-	var selection = SaveThreadPaneSelection();
-
 	var currentFolder = GetThreadTreeFolder();  
 	var currentFolderID = currentFolder.getAttribute('ref');
 	ClearThreadTreeSelection();
 	currentFolder.setAttribute('ref', currentFolderID);
-
-	RestoreThreadPaneSelection(selection);
 	SetBusyCursor(window, false);
 
 }
 
 function ClearThreadTreeSelection()
 {
-	var tree = GetThreadTree();
-	if(tree)
-	{
-		tree.clearItemSelection();
-	}
-
+  // mscott --> implement me
 }
 
 function ClearMessagePane()
@@ -850,48 +836,17 @@ function GetSelectedMsgFolders()
 
 function GetSelectedMessage(index)
 {
-	var threadTree = GetThreadTree();
-	var selectedMessages = threadTree.selectedItems;
-	var numMessages = selectedMessages.length;
-	if(index <0 || index > (numMessages - 1))
-		return null;
-
-	var messageNode = selectedMessages[index];
-	var messageUri = messageNode.getAttribute("id");
-	var messageResource = RDF.GetResource(messageUri);
-	var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-	return message;
-
+  // this isn't going to work anymore.
 }
 
 function GetNumSelectedMessages()
 {
-	var threadTree = GetThreadTree();
-	var selectedMessages = threadTree.selectedItems;
-	var numMessages = selectedMessages.length;
-	return numMessages;
+// this needs re-written 
 }
 
 function GetSelectedMessages()
 {
-	var threadTree = GetThreadTree();
-	var selectedMessages = threadTree.selectedItems;
-	var numMessages = selectedMessages.length;
-
-	var messageArray = new Array(numMessages);
-
-	for(var i = 0; i < numMessages; i++)
-	{
-		var messageNode = selectedMessages[i];
-		var messageUri = messageNode.getAttribute("id");
-		var messageResource = RDF.GetResource(messageUri);
-		var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-		if(message)
-		{
-			messageArray[i] = message;	
-		}
-	}
-	return messageArray;
+  // this isn't going to work anymore
 }
 
 function GetLoadedMsgFolder()
@@ -945,13 +900,6 @@ function GetCompositeDataSource(command)
 	{
         return GetFolderDatasource();
 	}
-	else if(command == "MarkMessageRead" || 
-			command == "MarkMessageFlagged" || command == "MarkThreadAsRead" ||
-			command == "DownloadSelected" || command == "MessageProperty")
-	{
-		var threadTree = GetThreadTree();
-		return threadTree.database;
-	}
 
 	return null;
 
@@ -959,6 +907,8 @@ function GetCompositeDataSource(command)
 
 function SetNextMessageAfterDelete()
 {
+  // this needs re-written
+/*
 	var tree = GetThreadTree();
 
 	var nextMessage = GetNextMessageAfterDelete(tree.selectedItems);
@@ -973,6 +923,7 @@ function SetNextMessageAfterDelete()
      //tree.treeBoxObject.beginBatch();
      //dump("XXX begin tree batch\n");
    }
+*/
 }
 
 function SelectFolder(folderUri)
@@ -985,11 +936,7 @@ function SelectFolder(folderUri)
 
 function SelectMessage(messageUri)
 {
-	var tree = GetThreadTree();
-	var treeitem = document.getElementById(messageUri);
-	if(tree && treeitem)
-		ChangeSelection(tree, treeitem);
-
+  // this isn't going to work anymore
 }
 
 function ReloadMessage()

@@ -243,8 +243,7 @@ function InitializeDataSources()
 	AddDataSources();
 	//Now add datasources to composite datasource
 	gCompositeDataSource.AddDataSource(accountManagerDataSource);
-    gCompositeDataSource.AddDataSource(folderDataSource);
-	gCompositeDataSource.AddDataSource(messageDataSource);
+  gCompositeDataSource.AddDataSource(folderDataSource);
 }
 
 function GetSelectedMsgFolders()

@@ -255,7 +255,6 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   // workaround for #39655
   gFolderJustSwitched = true;
 
-  var folder = GetThreadTreeFolder();
   ClearThreadTreeSelection();
 
   //Set the window's new open folder.
@@ -268,6 +267,7 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   SetViewType(viewType);
 
   //Clear the new messages of the old folder
+/*
   var oldFolderURI = folder.getAttribute("ref");
   if(oldFolderURI && (oldFolderURI != "null") && (oldFolderURI !=""))
   {
@@ -278,7 +278,7 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
            oldFolder.clearNewMessages();
    }
   }
-
+*/
   //the new folder being selected should have its biff state get cleared.   
   if(newFolder)
   {
@@ -287,25 +287,18 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   }
 
   //Clear out the thread pane so that we can sort it with the new sort id without taking any time.
-  folder.setAttribute('ref', "");
+  // folder.setAttribute('ref', "");
    if (isNewsURI(uri))
        SetNewsFolderColumns(true);
    else
        SetNewsFolderColumns(false);
 
 
-  var column = FindThreadPaneColumnBySortResource(sortID);
-
 
   // null this out, so we don't try sort.
   gDBView = null;
-
-  if(column)
-	SortThreadPane(column, sortID, "http://home.netscape.com/NC-rdf#Date", false, sortDirection, false);
-  else
-	SortThreadPane("DateColumn", "http://home.netscape.com/NC-rdf#Date", "", false, null, false);
-
-  SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
+  // fix me
+  // SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
 
   // now create the db view, which will sort it.
 
@@ -323,12 +316,10 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   // we need to explicitly force the builder to recompile its rules.
   //when switching folders, switch back to closing threads
   SetTemplateTreeItemOpen(false);
-  folder.builder.rebuild();
 
   SetUpToolbarButtons(uri);
 
-  folder.setAttribute('ref', uri);
-    msgNavigationService.EnsureDocumentIsLoaded(document);
+  msgNavigationService.EnsureDocumentIsLoaded(document);
 
   UpdateStatusMessageCounts(newFolder);
 }
@@ -359,26 +350,28 @@ function SetSentFolderColumns(isSentFolder)
 
 function SetNewsFolderColumns(isNewsFolder)
 {
+  // mscott - i don't know what this does but it's going to need to be re-written...
+/* 
 	var sizeColumn = document.getElementById("SizeColumnHeader");
-        var sizeColumnTemplate = document.getElementById("SizeColumnTemplate");
+  var sizeColumnTemplate = document.getElementById("SizeColumnTemplate");
 
-        var memoryColumnHeader = document.getElementById("MemoryColumn");
+  var memoryColumnHeader = document.getElementById("MemoryColumn");
 
-        if (isNewsFolder)
-        { 
-               sizeColumn.setAttribute("value",Bundle.GetStringFromName("linesColumnHeader"));
-               sizeColumn.setAttribute("onclick", "return top.MsgSortByLines();");
-               sizeColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Lines");
-               memoryColumnHeader.setAttribute("resource","http://home.netscape.com/NC-rdf#Lines");
-        }
-        else
-        {
-               sizeColumn.setAttribute("value", Bundle.GetStringFromName("sizeColumnHeader"));
-               sizeColumn.setAttribute("onclick", "return top.MsgSortBySize();");
-               sizeColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Size");
-               memoryColumnHeader.setAttribute("resource","http://home.netscape.com/NC-rdf#Size");
-        }
-
+  if (isNewsFolder)
+  { 
+     sizeColumn.setAttribute("value",Bundle.GetStringFromName("linesColumnHeader"));
+     sizeColumn.setAttribute("onclick", "return top.MsgSortByLines();");
+     sizeColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Lines");
+     memoryColumnHeader.setAttribute("resource","http://home.netscape.com/NC-rdf#Lines");
+  }
+  else
+  {
+     sizeColumn.setAttribute("value", Bundle.GetStringFromName("sizeColumnHeader"));
+     sizeColumn.setAttribute("onclick", "return top.MsgSortBySize();");
+     sizeColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Size");
+     memoryColumnHeader.setAttribute("resource","http://home.netscape.com/NC-rdf#Size");
+  }
+*/
 } 
         
         
@@ -403,66 +396,6 @@ function UpdateStatusMessageCounts(folder)
 
 }
 
-function SaveThreadPaneSelection()
-{
-	var tree = GetThreadTree();
-	var selectedItems = tree.selectedItems;
-	var numSelected = selectedItems.length;
-
-	var selectionArray = new Array(numSelected);
-
-	for(var i = 0; i < numSelected; i++)
-	{
-		selectionArray[i] = selectedItems[i].getAttribute("id");
-	}
-
-	return selectionArray;
-}
-
-function RestoreThreadPaneSelection(selectionArray)
-{
-	var tree = GetThreadTree();
-	var numSelected = selectionArray.length;
-
-	msgNavigationService.EnsureDocumentIsLoaded(document);
-
-	var messageElement;
-	for(var i = 0 ; i < numSelected; i++)
-	{
-		messageElement = document.getElementById(selectionArray[i]);
-
-		if(!messageElement && messageView.showThreads)
-		{
-			var treeFolder = GetThreadTreeFolder();
-			var folderURI = treeFolder.getAttribute('ref');
-			var folderResource = RDF.GetResource(folderURI);
-			var folder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-
-			var messageResource = RDF.GetResource(selectionArray[i]);
-			var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-
-			var topLevelMessage = GetTopLevelMessageForMessage(message, folder);
-			var topLevelResource = topLevelMessage.QueryInterface(Components.interfaces.nsIRDFResource);
-			var topLevelURI = topLevelResource.Value;
-			var topElement = document.getElementById(topLevelURI);
-			if(topElement)
-			{
-				msgNavigationService.OpenTreeitemAndDescendants(topElement);
-			}
-
-			messageElement = document.getElementById(selectionArray[i]);
-
-		}
-		if(messageElement)
-		{
-			//dump("We have a messageElement\n");
-			tree.addItemToSelection(messageElement);
-			if(i==0)
-				tree.ensureElementIsVisible(messageElement);
-		}
-	}
-
-}
 
 function FindOutlinerColumnBySortType(sortKey)
 {
@@ -546,7 +479,6 @@ function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirectio
 
 	SetActiveThreadPaneSortColumn(column);
 
-	var selection = SaveThreadPaneSelection();
 	var beforeSortTime;
 	if(showPerformance) {
         beforeSortTime = new Date();
@@ -564,9 +496,7 @@ function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirectio
 		dump("timeToSort is " + timeToSort + " seconds\n");
     }
 
-	RestoreThreadPaneSelection(selection);
-
-    SortDBView(sortKey,direction);
+  SortDBView(sortKey,direction);
 	return result;
 }
 
@@ -708,53 +638,12 @@ function DumpView()
 //------------------------------------------------------------
 function UpdateSortIndicator(column,sortDirection)
 {
-	// Find the <treerow> element
-	var treerow = document.getElementById("headRow");
-
-	//The SortThreadPane function calls the Sender/Recipient column 'AuthorColumn' 
-	//but it's treecell header id is actually 'SenderColumnHeader', so we need to flip
-	//it here so that the css can handle changing it's style correctly.
-	if(column == "AuthorColumn"){
-		column = "SenderColumn";
-	}
-
-//Similary for the Size/Lines column 
-
-        if(column == "MemoryColumn"){
-                column = "SizeColumn";
-        }
-
-	var id = column + "Header";
-	
-	if (treerow)
-	{
-		// Grab all of the <treecell> elements
-		var treecell = treerow.getElementsByTagName("treecell");
-		if (treecell)
-		{
-			// Loop through each treecell...
-			var node_count = treecell.length;
-			for (var i=0; i < node_count; i++)
-			{
-				// Is this the requested column ?
-				if (id == treecell[i].getAttribute("id"))
-				{
-					// Set the sortDirection so the class (CSS) will add the
-					// appropriate icon to the header cell
-					treecell[i].setAttribute('sortDirection',sortDirection);
-				}
-				else
-				{
-					// This is not the sorted row
-					treecell[i].removeAttribute('sortDirection');
-				}
-			}
-		}
-	}
+  // this is obsolete
 }
 
 function UpdateSortMenu(currentSortColumn)
 {
+/*
 	UpdateSortMenuitem(currentSortColumn, "sortByDateMenuitem", "DateColumn");
 	UpdateSortMenuitem(currentSortColumn, "sortByFlagMenuitem", "FlaggedButtonColumn");
 	UpdateSortMenuitem(currentSortColumn, "sortByOrderReceivedMenuitem", "OrderReceivedColumn");
@@ -764,7 +653,7 @@ function UpdateSortMenu(currentSortColumn)
 	UpdateSortMenuitem(currentSortColumn, "sortByStatusMenuitem", "StatusColumn");
 	UpdateSortMenuitem(currentSortColumn, "sortBySubjectMenuitem", "SubjectColumn");
 	UpdateSortMenuitem(currentSortColumn, "sortByUnreadMenuitem", "UnreadButtonColumn");
-
+*/
 }
 
 function UpdateSortMenuitem(currentSortColumnID, menuItemID, columnID)
@@ -847,7 +736,7 @@ function GetSelectedFolderResource()
 
 function ToggleMessageRead(treeItem)
 {
-
+/* 
 	var tree = GetThreadTree();
 
 	var messageResource = RDF.GetResource(treeItem.getAttribute('id'));
@@ -862,11 +751,12 @@ function ToggleMessageRead(treeItem)
 	messageArray[0] = message;
 
 	MarkMessagesRead(tree.database, messageArray, isUnread);
+*/
 }
 
 function ToggleMessageFlagged(treeItem)
 {
-
+/*
 	var tree = GetThreadTree();
 
 	var messageResource = RDF.GetResource(treeItem.getAttribute('id'));
@@ -881,24 +771,27 @@ function ToggleMessageFlagged(treeItem)
 	messageArray[0] = message;
 
 	MarkMessagesFlagged(tree.database, messageArray, !flagged);
-
+*/
 }
 
 //Called when the splitter in between the thread and message panes is clicked.
 function OnClickThreadAndMessagePaneSplitter()
 {
+/*
 	dump("We are in OnClickThreadAndMessagePaneSplitter()\n");
 	var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
 	//collapsed is the previous state so we know we are opening.
-	if(collapsed){
+	if(collapsed)
+  {
 		LoadSelectionIntoMessagePane();	
-                setTimeout("PositionThreadPane();",0);
-        }
-                
+    setTimeout("PositionThreadPane();",0);
+   }
+*/                
 }
 
 function PositionThreadPane()
 {
+/*
        var tree = GetThreadTree();
   
        var selArray = tree.selectedItems;
@@ -908,26 +801,7 @@ function PositionThreadPane()
        tree.ensureElementIsVisible(selArray[0]);
        }
        catch(e) { }
-
-}
-
-//takes the selection from the thread pane and loads it into the message pane
-function LoadSelectionIntoMessagePane()
-{
-	var tree = GetThreadTree();
-	
-	var selArray = tree.selectedItems;
-	if (!gNextMessageAfterDelete && selArray && (selArray.length == 1) ) {
-		LoadMessage(selArray[0]);
-    }
-	else
-  {
-    // don't necessarily clear the message pane...if you uncomment this,
-    // you'll be introducing a large inefficiency when deleting messages...as deleting
-    // a msg brings us here twice...so we end up clearing the message pane twice for no
-    // good reason...
-		// ClearMessagePane();
-  }
+*/
 }
 
 function FolderPaneSelectionChange()
@@ -952,9 +826,6 @@ function FolderPaneSelectionChange()
 
 function ClearThreadPane()
 {
-	var threadTree = GetThreadTree();
-	ClearThreadTreeSelection();
-	threadTree.setAttribute('ref', null);
 }
 
 function OpenFolderTreeToFolder(folderURI)
@@ -1080,6 +951,7 @@ function ShowThreads(showThreads)
 
 function GetNextMessageAfterDelete(messages)
 {
+/*
 	var count = messages.length;
 
 	var curMessage = messages[0];
@@ -1123,13 +995,16 @@ function GetNextMessageAfterDelete(messages)
 
 	}
 	return nextMessage;
+*/
 }
 
 
 function SelectNextMessage(nextMessage)
 {
+/*
 	var tree = GetThreadTree();
 	ChangeSelection(tree, nextMessage);
+*/
 }
 
 function GetSelectTrashUri(folder)

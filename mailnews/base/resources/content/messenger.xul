@@ -144,8 +144,7 @@ Rights Reserved.
 
 		  <box id="messagesBox" orient="vertical" flex="1">
      
-			<tree id="threadTree" flex="1" persist="height" style="height:0px" context="threadPaneContext"  focusring="false"/>
-      <outliner id="threadOutliner" flex="3"/>
+      <outliner id="threadOutliner" flex="1"/>
 
 			<!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
 			<splitter collapse="after" persist="state" onclick="OnClickThreadAndMessagePaneSplitter()"

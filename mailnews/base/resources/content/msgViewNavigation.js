@@ -289,6 +289,8 @@ function FindTopLevelMessage(startMessage)
 
 function ScrollToFirstNewMessage()
 {
+  // this needs rewritten.
+/*
 	var tree = GetThreadTree();
 	var treeFolder = GetThreadTreeFolder();
 
@@ -323,6 +325,7 @@ function ScrollToFirstNewMessage()
 			tree.ensureElementIsVisible(messageElement); 
 		}
 	}
+  */
 }
 
 function GetTopLevelMessageForMessage(message, folder)

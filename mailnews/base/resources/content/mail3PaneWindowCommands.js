@@ -591,7 +591,8 @@ function FocusRingUpdate_Mail(){
             GetMessagePane().setAttribute("focusring","false");
         }
         else if(currentFocusedElement==GetMessagePane()){
-            GetThreadTree().setAttribute("focusring","false");
+            // mscott --> fix me!!
+            // GetThreadTree().setAttribute("focusring","false");
             GetMessagePane().setAttribute("focusring","true");
         }
         else {
@@ -721,12 +722,12 @@ function WhichPaneHasFocus(){
 	var whichPane= null;
 	var currentNode = top.document.commandDispatcher.focusedElement;	
 
-    var threadTree = GetThreadTree();
+    // var threadTree = GetThreadTree();
     var folderTree = GetFolderTree();
     var messagePane = GetMessagePane();
     
 	while (currentNode) {
-        if (currentNode === threadTree ||
+        if (/*  currentNode === threadTree || */
             currentNode === folderTree ||
             currentNode === messagePane)
             return currentNode;
@@ -1086,8 +1087,9 @@ function SetFocusFolderPane()
 
 function SetFocusThreadPane()
 {
-    var threadTree = GetThreadTree();
-    threadTree.focus();
+// implement me
+//    var threadTree = GetThreadTree();
+//    threadTree.focus();
 	return;
 }
 
