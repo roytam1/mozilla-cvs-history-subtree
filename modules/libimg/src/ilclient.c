@@ -331,6 +331,11 @@ il_image_match(il_container *ic,          /* Candidate for match. */
     if (display_type != ic->display_type)
         return FALSE;
 
+    if((ic->display_type==IL_Printer) &&
+	(ic->dest_width != ic->image->header.width) &&
+	(ic->dest_height != ic->image->header.height ))
+        return FALSE;
+
     /* XXX - temporary */
     if (ic->rendered_with_custom_palette)
         return FALSE;
