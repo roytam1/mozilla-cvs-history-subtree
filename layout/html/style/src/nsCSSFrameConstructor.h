@@ -1075,6 +1075,10 @@ public:
     nsChangeHint  mChangeHint;   // The minimal change hint for "self"
   };
 
+  struct RestyleEnumerateData : public RestyleData {
+    nsCOMPtr<nsIContent> mContent;
+  };
+
   struct RestyleEvent;
   friend struct RestyleEvent;
 

@@ -2535,8 +2535,10 @@ dnl This check is apparently only needed for Linux.
 case "$target" in
 	*-linux*)
 	    dnl ===================================================================
-	    curdir=`pwd`
-	    rm -f conftest* /tmp/conftest*
+	    _curdir=`pwd`
+	    export _curdir
+	    rm -rf conftest* _conftest
+	    mkdir _conftest
 	    cat >> conftest.C <<\EOF
 #include <stdio.h>
 #include <link.h>
@@ -2548,9 +2550,9 @@ void __dump_link_map(void) {
 }
 int main() {
   dlopen("./conftest1.so",RTLD_LAZY);
-  dlopen("./../tmp/conftest1.so",RTLD_LAZY);
-  dlopen("/tmp/conftest1.so",RTLD_LAZY);
-  dlopen("/tmp/../tmp/conftest1.so",RTLD_LAZY);
+  dlopen("./../_conftest/conftest1.so",RTLD_LAZY);
+  dlopen("CURDIR/_conftest/conftest1.so",RTLD_LAZY);
+  dlopen("CURDIR/_conftest/../_conftest/conftest1.so",RTLD_LAZY);
   __dump_link_map();
 }
 #else
@@ -2559,16 +2561,17 @@ int main() { printf("./conftest1.so\n"); }
 #endif
 EOF
 
+	    $PERL -p -i -e "s/CURDIR/\$ENV{_curdir}/g;" conftest.C
+
 	    cat >> conftest1.C <<\EOF
 #include <stdio.h>
 void foo(void) {printf("foo in dll called\n");}
 EOF
-
 	    ${CXX-g++} -fPIC -c -g conftest1.C
 	    ${CXX-g++} -shared -Wl,-h -Wl,conftest1.so -o conftest1.so conftest1.o
 	    ${CXX-g++} -g conftest.C -o conftest -ldl
-	    cp -f conftest1.so conftest /tmp
-	    cd /tmp
+	    cp -f conftest1.so conftest _conftest
+	    cd _conftest
 	    if test `./conftest | grep conftest1.so | wc -l` -gt 1
 	    then
 		echo
@@ -2578,8 +2581,8 @@ EOF
 		echo "*** will be excessive memory usage at runtime."
 		echo
 	    fi
-	    cd ${curdir}
-	    rm -f conftest* /tmp/conftest*
+	    cd ${_curdir}
+	    rm -rf conftest* _conftest
 	    dnl ===================================================================
 	    ;;
 esac
@@ -3372,7 +3375,11 @@ dnl ========================================================
 dnl = Trademarked Branding 
 dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(official-branding,
-[  --enable-official-branding    Enable Official Branding],
+[  --enable-official-branding Enable Official mozilla.org Branding
+                          Do not distribute builds with
+                          --enable-official-branding unless you have
+                          permission to use trademarks per
+                          http://www.mozilla.org/foundation/trademarks/ .],
     MOZ_USE_OFFICIAL_BRANDING=1,
     MOZ_USE_OFFICIAL_BRANDING= )
 
@@ -3391,6 +3398,19 @@ if test "$MOZ_PHOENIX"; then
 fi
 
 AC_SUBST(MOZ_PHOENIX)
+
+dnl ========================================================
+dnl = XUL Runner
+dnl ========================================================
+if test "$MOZ_XULRUNNER"; then
+   AC_DEFINE(MOZ_XULRUNNER)
+   MOZ_XUL_APP=1
+   AC_DEFINE(MOZ_XUL_APP)
+   MOZ_APP_NAME=xulrunner
+   MOZ_APP_VERSION=`cat $topsrcdir/xulrunner/config/version.txt`
+fi
+
+AC_SUBST(MOZ_XULRUNNER)
 
 dnl ========================================================
 dnl = Thunderbird
@@ -3473,10 +3493,6 @@ MOZ_ARG_DISABLE_BOOL(xft,
 [  --disable-xft           Disable Xft support ],
     MOZ_ENABLE_XFT=,
     MOZ_ENABLE_XFT=1)
-
-if test "$MOZ_ENABLE_XFT" && test -z "$MOZ_ENABLE_GTK2"; then
-    AC_MSG_ERROR([Cannot enable XFT support for non-GTK2 toolkits.])
-fi
 
 if test "$MOZ_ENABLE_XFT" && test -z "$MOZ_ENABLE_GTK2"; then
     AC_MSG_ERROR([Cannot enable XFT support for non-GTK2 toolkits.])
@@ -5429,7 +5445,7 @@ dnl ========================================================
 dnl
 dnl option to disable various necko protocols
 dnl
-NECKO_PROTOCOLS_DEFAULT="about data file ftp gopher http jar keyword res viewsource"
+NECKO_PROTOCOLS_DEFAULT="about data file ftp gopher http keyword res viewsource"
 MOZ_ARG_ENABLE_STRING(necko-protocols,
 [  --enable-necko-protocols[={http,ftp,default,all,none}]
                           Enable/disable specific protocol handlers],

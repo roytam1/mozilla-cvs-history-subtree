@@ -61,6 +61,7 @@
 #include "nsIBindingManager.h"
 #include "nsICSSLoader.h"
 #include "nsICSSParser.h"
+#include "nsCSSScanner.h"
 #include "nsICSSStyleSheet.h"
 #include "nsICategoryManager.h"
 #include "nsIComponentManager.h"
@@ -128,6 +129,7 @@
 #include "nsStyleSet.h"
 #include "nsImageFrame.h"
 #include "nsILanguageAtomService.h"
+#include "nsTextControlFrame.h"
 
 // view stuff
 #include "nsViewsCID.h"
@@ -136,6 +138,7 @@
 #include "nsViewManager.h"
 #include "nsContentCreatorFunctions.h"
 #include "nsFrame.h"
+#include "nsXBLWindowKeyHandler.h"
 
 // DOM includes
 #include "nsDOMException.h"
@@ -219,6 +222,8 @@ void NS_InitSVGRendererCairoGlobals();
 void NS_FreeSVGRendererCairoGlobals();
 #endif
 #endif
+
+extern NS_HIDDEN_(void) NS_ShutdownCSSParser();
 
 //-----------------------------------------------------------------------------
 
@@ -410,6 +415,9 @@ Shutdown()
   nsSpaceManager::Shutdown();
   nsImageFrame::ReleaseGlobals();
 
+  NS_ShutdownCSSParser();
+  nsCSSScanner::ReleaseGlobals();
+
   NS_IF_RELEASE(nsContentDLF::gUAStyleSheet);
   NS_IF_RELEASE(nsRuleNode::gLangService);
   nsGenericHTMLElement::Shutdown();
@@ -422,6 +430,8 @@ Shutdown()
 
   GlobalWindowImpl::ShutDown();
   nsDOMClassInfo::ShutDown();
+  nsTextControlFrame::ShutDown();
+  nsXBLWindowKeyHandler::ShutDown();
 }
 
 #ifdef NS_DEBUG

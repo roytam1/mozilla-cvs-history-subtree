@@ -113,6 +113,7 @@
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
+#include "nsIBoxLayout.h"
 #ifdef MOZ_ENABLE_CAIRO
 #include "nsCanvasFrame.h"
 #endif
@@ -464,8 +465,7 @@ GetLastSpecialSibling(nsFrameManager* aFrameManager, nsIFrame* aFrame)
 static nsIFrame*
 GetNifOrSpecialSibling(nsFrameManager *aFrameManager, nsIFrame *aFrame)
 {
-  nsIFrame *result;
-  aFrame->GetNextInFlow(&result);
+  nsIFrame *result = aFrame->GetNextInFlow();
   if (result)
     return result;
 
@@ -480,17 +480,14 @@ SetFrameIsSpecial(nsFrameManager* aFrameManager, nsIFrame* aFrame, nsIFrame* aSp
   NS_PRECONDITION(aFrameManager && aFrame, "bad args!");
 
   // Mark the frame and all of its siblings as "special".
-  for (nsIFrame* frame = aFrame; frame != nsnull; frame->GetNextInFlow(&frame)) {
+  for (nsIFrame* frame = aFrame; frame != nsnull; frame = frame->GetNextInFlow()) {
     frame->AddStateBits(NS_FRAME_IS_SPECIAL);
   }
 
   if (aSpecialSibling) {
-#ifdef DEBUG
     // We should be the first-in-flow
-    nsIFrame* prev;
-    aFrame->GetPrevInFlow(&prev);
-    NS_ASSERTION(! prev, "assigning special sibling to other than first-in-flow!");
-#endif
+    NS_ASSERTION(!aFrame->GetPrevInFlow(),
+                 "assigning special sibling to other than first-in-flow!");
 
     // Store the "special sibling" (if we were given one) with the
     // first frame in the flow.
@@ -5856,11 +5853,9 @@ nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresSh
   nsRefPtr<nsStyleContext> contentStyle = aContentStyle;
 
   if (!gfxScrollFrame) {
-    nsCOMPtr<nsIBox> box = do_QueryInterface(aParentFrame);
-
     // Build a XULScrollFrame when the parent is a box, because XULScrollFrames
     // do box layout well. Otherwise build an HTMLScrollFrame.
-    if (box) {
+    if (aParentFrame->IsBoxFrame()) {
       NS_NewXULScrollFrame(aPresShell, &gfxScrollFrame, aIsRoot);
     } else {
       NS_NewHTMLScrollFrame(aPresShell, &gfxScrollFrame, aIsRoot);
@@ -7992,12 +7987,9 @@ FindNextAnonymousSibling(nsIPresShell* aPresShell,
     nsIFrame* nextSibling;
     aPresShell->GetPrimaryFrameFor(child, &nextSibling);
     if (nextSibling) {
-#ifdef DEBUG
       // The primary frame should never be a continuation
-      nsIFrame* prevInFlow;
-      nextSibling->GetPrevInFlow(&prevInFlow);
-      NS_ASSERTION(!prevInFlow, "primary frame is a continuation!?");
-#endif
+      NS_ASSERTION(!nextSibling->GetPrevInFlow(),
+                   "primary frame is a continuation!?");
 
       // If the frame is out-of-flow, GPFF() will have returned the
       // out-of-flow frame; we want the placeholder.
@@ -8178,12 +8170,9 @@ nsCSSFrameConstructor::FindNextSibling(nsIPresShell*     aPresShell,
     aPresShell->GetPrimaryFrameFor(nsCOMPtr<nsIContent>(*iter), &nextSibling);
 
     if (nextSibling) {
-#ifdef DEBUG
       // The frame primary frame should never be a continuation
-      nsIFrame* prevInFlow;
-      nextSibling->GetPrevInFlow(&prevInFlow);
-      NS_ASSERTION(!prevInFlow, "primary frame is a continuation!?");
-#endif
+      NS_ASSERTION(!nextSibling->GetPrevInFlow(),
+                   "primary frame is a continuation!?");
 
       // If the frame is out-of-flow, GPFF() will have returned the
       // out-of-flow frame; we want the placeholder.
@@ -9480,7 +9469,7 @@ DeletingFrameSubtree(nsPresContext*  aPresContext,
       // recursing over a subtree, because those continuing frames should be
       // found as part of the walk over the top-most frame's continuing frames.
       // Walking them again will make this an N^2/2 algorithm
-      aFrame->GetNextInFlow(&aFrame);
+      aFrame = aFrame->GetNextInFlow();
     } while (aFrame);
 
     // Now destroy any frames that have been enqueued for destruction.
@@ -10008,12 +9997,9 @@ nsCSSFrameConstructor::StyleChangeReflow(nsPresContext* aPresContext,
 #endif
 
   // Is it a box? If so we can coelesce.
-  nsresult rv;
-  nsIBox *box;
-  rv = CallQueryInterface(aFrame, &box);
-  if (NS_SUCCEEDED(rv) && box) {
+  if (aFrame->IsBoxFrame()) {
     nsBoxLayoutState state(aPresContext);
-    box->MarkStyleChange(state);
+    aFrame->MarkStyleChange(state);
   }
   else {
     // If the frame is part of a split block-in-inline hierarchy, then
@@ -10025,10 +10011,10 @@ nsCSSFrameConstructor::StyleChangeReflow(nsPresContext* aPresContext,
 
     // Target a style-change reflow at the frame.
     nsHTMLReflowCommand *reflowCmd;
-    rv = NS_NewHTMLReflowCommand(&reflowCmd, aFrame,
-                                 eReflowType_StyleChanged,
-                                 nsnull,
-                                 aAttribute);
+    nsresult rv = NS_NewHTMLReflowCommand(&reflowCmd, aFrame,
+                                          eReflowType_StyleChanged,
+                                          nsnull,
+                                          aAttribute);
   
     if (NS_SUCCEEDED(rv))
       aPresContext->PresShell()->AppendReflowCommand(reflowCmd);
@@ -10873,8 +10859,7 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
       if ((NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == display->mDisplay) ||
           (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == display->mDisplay)) {
         // If the row group has was continued, then don't replicate it
-        nsIFrame* rgNextInFlow;
-        rowGroupFrame->GetNextInFlow(&rgNextInFlow);
+        nsIFrame* rgNextInFlow = rowGroupFrame->GetNextInFlow();
         if (rgNextInFlow) {
           ((nsTableRowGroupFrame*)rowGroupFrame)->SetRepeatable(PR_FALSE);
         }
@@ -10928,9 +10913,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
   nsStyleContext*            styleContext = aFrame->GetStyleContext();
   nsIFrame*                  newFrame = nsnull;
   nsresult                   rv = NS_OK;
-  nsIFrame*                  nextInFlow = nsnull;
-
-  aFrame->GetNextInFlow(&nextInFlow);
+  nsIFrame*                  nextInFlow = aFrame->GetNextInFlow();
 
   // Use the frame type to determine what type of frame to create
   nsIAtom* frameType = aFrame->GetType();
@@ -11126,8 +11109,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     return NS_ERROR_UNEXPECTED;
   }
 
-  nsIFrame* prevPage;
-  pageFrame->GetPrevInFlow(&prevPage);
+  nsIFrame* prevPage = pageFrame->GetPrevInFlow();
   if (!prevPage) {
     return NS_OK;
   }
@@ -12059,8 +12041,7 @@ nsCSSFrameConstructor::InsertFirstLineFrames(
         // need to be pulled out of the line-frame and become children
         // of the block.
         nsIFrame* nextSibling = aPrevSibling->GetNextSibling();
-        nsIFrame* nextLineFrame;
-        prevSiblingParent->GetNextInFlow(&nextLineFrame);
+        nsIFrame* nextLineFrame = prevSiblingParent->GetNextInFlow();
         if (nextSibling || nextLineFrame) {
           // Oy. We have work to do. Create a list of the new frames
           // that are going into the block by stripping them away from
@@ -12073,7 +12054,7 @@ nsCSSFrameConstructor::InsertFirstLineFrames(
 
           nsLineFrame* nextLineFrame = (nsLineFrame*) lineFrame;
           for (;;) {
-            nextLineFrame->GetNextInFlow(&nextLineFrame);
+            nextLineFrame = nextLineFrame->GetNextInFlow();
             if (!nextLineFrame) {
               break;
             }
@@ -12506,8 +12487,7 @@ nsCSSFrameConstructor::RemoveFloatingFirstLetterFrames(
 
   // Destroy the old text frame's continuations (the old text frame
   // will be destroyed when its letter frame is destroyed).
-  nsIFrame* nextTextFrame;
-  textFrame->GetNextInFlow(&nextTextFrame);
+  nsIFrame* nextTextFrame = textFrame->GetNextInFlow();
   if (nextTextFrame) {
     nsIFrame* nextTextParent = nextTextFrame->GetParent();
     if (nextTextParent) {
@@ -13450,8 +13430,7 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsPresContext* aPresContext,
 
   // If we have a continuation frame, then we need to break the
   // continuation.
-  nsIFrame* nextInFlow;
-  aFrame->GetNextInFlow(&nextInFlow);
+  nsIFrame* nextInFlow = aFrame->GetNextInFlow();
   if (nextInFlow) {
     aFrame->SetNextInFlow(nsnull);
     nextInFlow->SetPrevInFlow(nsnull);
@@ -13597,39 +13576,22 @@ nsresult nsCSSFrameConstructor::RemoveFixedItems(nsPresContext* aPresContext,
 }
 
 PR_STATIC_CALLBACK(PLDHashOperator)
-ProcessRestyle(nsISupports* aContent,
-               nsCSSFrameConstructor::RestyleData& aData,
-               void* aPresContext)
+CollectRestyles(nsISupports* aContent,
+                nsCSSFrameConstructor::RestyleData& aData,
+                void* aRestyleArrayPtr)
 {
-  nsPresContext* context = NS_STATIC_CAST(nsPresContext*, aPresContext);
-  nsIContent* content = NS_STATIC_CAST(nsIContent*, aContent);
+  nsCSSFrameConstructor::RestyleEnumerateData** restyleArrayPtr =
+    NS_STATIC_CAST(nsCSSFrameConstructor::RestyleEnumerateData**,
+                   aRestyleArrayPtr);
+  nsCSSFrameConstructor::RestyleEnumerateData* currentRestyle =
+    *restyleArrayPtr;
+  currentRestyle->mContent = NS_STATIC_CAST(nsIContent*, aContent);
+  currentRestyle->mRestyleHint = aData.mRestyleHint;
+  currentRestyle->mChangeHint = aData.mChangeHint;
 
-  if (!content->GetDocument() ||
-      content->GetDocument() != context->GetDocument()) {
-    // Content node has been removed from our document; nothing else to do here
-    return PL_DHASH_NEXT;
-  }
-  
-  nsIPresShell* shell = context->PresShell();
+  // Increment to the next slot in the array
+  *restyleArrayPtr = currentRestyle + 1; 
 
-  nsIFrame* primaryFrame = nsnull;
-  shell->GetPrimaryFrameFor(content, &primaryFrame);
-  if (aData.mRestyleHint & eReStyle_Self) {
-    shell->FrameConstructor()->RestyleElement(context, content, primaryFrame,
-                                              aData.mChangeHint);
-  } else if (aData.mChangeHint &&
-             (primaryFrame ||
-              (aData.mChangeHint & nsChangeHint_ReconstructFrame))) {
-    // Don't need to recompute style; just apply the hint
-    nsStyleChangeList changeList;
-    changeList.AppendChange(primaryFrame, content, aData.mChangeHint);
-    shell->FrameConstructor()->ProcessRestyledFrames(changeList, context);
-  }
-
-  if (aData.mRestyleHint & eReStyle_LaterSiblings) {
-    shell->FrameConstructor()->RestyleLaterSiblings(context, content);
-  }
-  
   return PL_DHASH_NEXT;
 }
 
@@ -13640,8 +13602,59 @@ nsCSSFrameConstructor::ProcessPendingRestyles()
   nsIPresShell* shell = mDocument->GetShellAt(0);
   nsPresContext* context = shell->GetPresContext();
 
-  mPendingRestyles.Enumerate(ProcessRestyle, context);
+  nsCSSFrameConstructor::RestyleEnumerateData* restylesToProcess =
+    new nsCSSFrameConstructor::RestyleEnumerateData[mPendingRestyles.Count()];
+  if (!restylesToProcess) {
+    return;
+  }
+
+  nsCSSFrameConstructor::RestyleEnumerateData* lastRestyle = restylesToProcess;
+  mPendingRestyles.Enumerate(CollectRestyles, &lastRestyle);
+
+  NS_ASSERTION(lastRestyle - restylesToProcess ==
+               PRInt32(mPendingRestyles.Count()),
+               "Enumeration screwed up somehow");
+
+  // Clear the hashtable so we don't end up trying to process a restyle we're
+  // already processing, sending us into an infinite loop.
   mPendingRestyles.Clear();
+
+  for (nsCSSFrameConstructor::RestyleEnumerateData* currentRestyle =
+         restylesToProcess;
+       currentRestyle != lastRestyle;
+       ++currentRestyle) {
+    nsIContent* content = currentRestyle->mContent;
+
+    if (!content->GetDocument() ||
+        content->GetDocument() != context->GetDocument()) {
+      // Content node has been removed from our document; nothing else
+      // to do here
+      continue;
+    }
+  
+    nsChangeHint changeHint = currentRestyle->mChangeHint;
+    nsReStyleHint restyleHint = currentRestyle->mRestyleHint;
+
+    nsIFrame* primaryFrame = nsnull;
+    shell->GetPrimaryFrameFor(content, &primaryFrame);
+    if (restyleHint & eReStyle_Self) {
+      shell->FrameConstructor()->RestyleElement(context, content, primaryFrame,
+                                                currentRestyle->mChangeHint);
+    } else if (changeHint &&
+               (primaryFrame ||
+                (changeHint & nsChangeHint_ReconstructFrame))) {
+      // Don't need to recompute style; just apply the hint
+      nsStyleChangeList changeList;
+      changeList.AppendChange(primaryFrame, content, changeHint);
+      shell->FrameConstructor()->ProcessRestyledFrames(changeList, context);
+    }
+
+    if (restyleHint & eReStyle_LaterSiblings) {
+      shell->FrameConstructor()->RestyleLaterSiblings(context, content);
+    }
+  }
+
+  delete [] restylesToProcess;
 }
 
 void

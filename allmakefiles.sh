@@ -151,6 +151,7 @@ gfx/src/Makefile
 gfx/src/beos/Makefile
 gfx/src/gtk/Makefile
 gfx/src/ps/Makefile
+gfx/src/psshared/Makefile
 gfx/src/photon/Makefile
 gfx/src/mac/Makefile
 gfx/src/xlib/Makefile
@@ -300,8 +301,6 @@ content/xbl/Makefile
 content/xbl/public/Makefile
 content/xbl/src/Makefile
 content/xbl/builtin/Makefile
-content/xbl/builtin/unix/Makefile
-content/xbl/builtin/win/Makefile
 content/xsl/Makefile
 content/xsl/public/Makefile
 content/shared/Makefile
@@ -429,9 +428,6 @@ netwerk/protocol/gopher/src/Makefile
 netwerk/protocol/http/Makefile
 netwerk/protocol/http/public/Makefile
 netwerk/protocol/http/src/Makefile
-netwerk/protocol/jar/Makefile
-netwerk/protocol/jar/public/Makefile
-netwerk/protocol/jar/src/Makefile
 netwerk/protocol/keyword/Makefile
 netwerk/protocol/keyword/src/Makefile
 netwerk/protocol/res/Makefile
@@ -485,6 +481,7 @@ rdf/base/idl/Makefile
 rdf/base/public/Makefile
 rdf/base/src/Makefile
 rdf/chrome/Makefile
+rdf/chrome/public/Makefile
 rdf/chrome/build/Makefile
 rdf/chrome/src/Makefile
 rdf/chrome/tools/Makefile
@@ -900,6 +897,14 @@ browser/installer/unix/Makefile
 browser/installer/windows/Makefile
 "
 
+MAKEFILES_xulrunner="
+xulrunner/Makefile
+xulrunner/app/Makefile
+xulrunner/app/profile/Makefile
+xulrunner/app/profile/chrome/Makefile
+xulrunner/app/profile/extensions/Makefile
+"
+
 MAKEFILES_xulapp="
 chrome/Makefile
 chrome/src/Makefile
@@ -958,6 +963,7 @@ mail/app/profile/Makefile
 mail/base/Makefile
 mail/base/skin/mac/Makefile
 mail/base/skin/Makefile
+mail/locales/Makefile
 mail/components/Makefile
 mail/components/compose/Makefile
 mail/components/compose/skin/mac/Makefile
@@ -1504,6 +1510,10 @@ fi
 
 if test -n "$MOZ_XUL_APP"; then
     add_makefiles "$MAKEFILES_xulapp"
+fi
+
+if test -n "$MOZ_XULRUNNER"; then
+    add_makefiles "$MAKEFILES_xulrunner"
 fi
 
 if test -n "$MOZ_THUNDERBIRD"; then
