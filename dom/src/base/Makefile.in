@@ -53,7 +53,7 @@ override NO_STATIC_LIB=
 
 include $(topsrcdir)/config/rules.mk
 
-CFLAGS          += -I$(srcdir)/../build
+CXXFLAGS        += -I$(srcdir)/../build
 
 DEFINES		+= -D_IMPL_NS_DOM
 
