@@ -3059,6 +3059,25 @@ fi
 AC_SUBST(MOZ_CALENDAR)
 
 dnl ========================================================
+dnl = Minotaur
+dnl ========================================================
+if test "$MOZ_MINOTAUR"; then
+   AC_DEFINE(MOZ_MINOTAUR)
+fi
+
+AC_SUBST(MOZ_MINOTAUR)
+
+dnl ========================================================
+dnl = XRE_App
+dnl ========================================================
+if test "$MOZ_XRE_APP"; then
+   AC_DEFINE(MOZ_XRE_APP)
+fi
+
+AC_SUBST(MOZ_XRE_APP)
+
+
+dnl ========================================================
 dnl = FreeType2
 dnl ========================================================
 MOZ_ARG_DISABLE_BOOL(freetype2,
