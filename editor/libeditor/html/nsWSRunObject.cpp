@@ -1238,9 +1238,9 @@ nsWSRunObject::GetPreviousWSNode(DOMPoint aPoint,
 
 nsresult 
 nsWSRunObject::GetPreviousWSNode(nsIDOMNode *aStartNode,
-                                PRInt16      aOffset, 
-                                nsIDOMNode  *aBlockParent, 
-                                nsCOMPtr<nsIDOMNode> *aPriorNode)
+                                 PRInt32     aOffset, 
+                                 nsIDOMNode *aBlockParent, 
+                                 nsCOMPtr<nsIDOMNode> *aPriorNode)
 {
   // can't really recycle various getnext/prior routines because we have special needs
   // here.  Need to step into inline containers but not block containers.
@@ -1346,7 +1346,7 @@ nsWSRunObject::GetNextWSNode(DOMPoint aPoint,
 
 nsresult 
 nsWSRunObject::GetNextWSNode(nsIDOMNode *aStartNode,
-                             PRInt16     aOffset, 
+                             PRInt32     aOffset, 
                              nsIDOMNode *aBlockParent, 
                              nsCOMPtr<nsIDOMNode> *aNextNode)
 {
