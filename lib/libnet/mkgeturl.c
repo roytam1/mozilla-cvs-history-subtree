@@ -23,8 +23,13 @@
  * Designed and originally implemented by Lou Montulli '94
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997.
  */
+
 #include "mkutils.h"
 #include "mkgeturl.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "pllist.h"
+#include "prmem.h"
 #include "shist.h"
 #include "mkparse.h"
 #include "mkformat.h"
@@ -71,22 +76,24 @@
 #endif
 #endif
 
+#if !defined(B1M)
 #include "libimg.h"             /* Image Lib public API. */ 
 #include "il_strm.h"             /* Image Lib public API. */
+#endif
 
 #include "libi18n.h"
 #include "mkmocha.h"
+#if !defined(B1M)
 #include "htmldlgs.h"
+#endif /* B1M */
 
 #include "np.h"
 #include "prefapi.h"
-#ifdef NSPR20
 #ifdef XP_MAC
 #include "prpriv.h"             /* for NewNamedMonitor */
 #else
 #include "private/prpriv.h"
 #endif
-#endif /* NSPR20 */
 
 #include "sslerr.h"
 #include "xp_error.h"
@@ -114,7 +121,9 @@
 #include "xplocale.h"
 
 /* This is only until all platforms have libfont/ checked in */
+#if !defined(B1M)
 #define WEBFONTS
+#endif /* B1M */
 
 #ifdef WEBFONTS
 #include "nf.h"
@@ -275,7 +284,6 @@ PRIVATE int net_output_security_url(ActiveEntry * this_entry, MWContext *cx);
 PRIVATE Bool net_about_kludge(URL_Struct *URL_s);
 PRIVATE void net_FreeURLAllHeaders(URL_Struct * URL_s);
 PRIVATE void NET_InitAboutProtocol(void);
-PRIVATE void NET_InitSecurityProtocol(void);
 
 PRIVATE NET_TimeBombActive = FALSE;
 
@@ -304,7 +312,7 @@ PRIVATE NET_ProxyStyle MKproxy_style = PROXY_STYLE_UNSET;
 
 PRIVATE char * MKglobal_config_url = 0;
 
-PRIVATE XP_List * net_EntryList=0;
+PRIVATE PLList * net_EntryList=0;
 
 MODULE_PRIVATE CacheUseEnum NET_CacheUseMethod=CU_CHECK_PER_SESSION;
 
@@ -318,21 +326,23 @@ MODULE_PRIVATE CacheUseEnum NET_CacheUseMethod=CU_CHECK_PER_SESSION;
 #define MULT_ALL_HEADER_COUNT   2
 #define MAX_ALL_HEADER_COUNT    16000
 
+#if !defined(B1M)
 #ifndef XP_MAC
 	/* I don't want these annoying asserts in the Mac build but in case some other platform does... */
 	#define DO_ANNOYING_ASSERTS_IN_STUBS	1
 #endif
+#endif /* B1M */
 
 MODULE_PRIVATE time_t NET_StartupTime=0;
 
-MODULE_PRIVATE XP_Bool NET_ProxyAcLoaded = FALSE;
-MODULE_PRIVATE XP_Bool NET_GlobalAcLoaded = FALSE;
+MODULE_PRIVATE PRBool NET_ProxyAcLoaded = FALSE;
+MODULE_PRIVATE PRBool NET_GlobalAcLoaded = FALSE;
 MODULE_PRIVATE int NET_TotalNumberOfOpenConnections=0;
 MODULE_PRIVATE int NET_MaxNumberOfOpenConnections=100;
 MODULE_PRIVATE int NET_MaxNumberOfOpenConnectionsPerContext=4;
 MODULE_PRIVATE int NET_TotalNumberOfProcessingURLs=0;
-PRIVATE XP_List  * net_waiting_for_actives_url_list=0;
-PRIVATE XP_List  * net_waiting_for_connection_url_list=0;
+PRIVATE PLList  * net_waiting_for_actives_url_list=0;
+PRIVATE PLList  * net_waiting_for_connection_url_list=0;
 
 typedef struct NETExitCallbackNode {
 	struct NETExitCallbackNode *next;
@@ -358,7 +368,7 @@ NET_AddExitCallback( void (* func)(void *arg), void *arg)
 	NETExitCallbackNode *node;
 	
 	/* alloc node */
-	node = XP_ALLOC(sizeof(NETExitCallbackNode));
+	node = PR_Malloc(sizeof(NETExitCallbackNode));
 	if ( node != NULL ) {
 		/* fill it in */
 		node->func = func;
@@ -382,7 +392,7 @@ NET_ProcessExitCallbacks(void)
 		(* node->func)(node->arg);
 		freenode = node;
 		node = node->next;
-		XP_FREE(freenode);
+		PR_Free(freenode);
 	}
 	
 	NETExitCallbackHead = NULL;
@@ -395,7 +405,7 @@ NET_ProcessExitCallbacks(void)
 PRIVATE void
 NET_UpdateManualProxyInfo(const char * prefChanged) {
 
-	XP_Bool bSetupAll=FALSE;
+	PRBool bSetupAll=FALSE;
 	char * proxy = NULL;
 	int32 iPort=0;
 	char text[MAXHOSTNAMELEN + 8];
@@ -403,8 +413,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	if (!prefChanged)
 		bSetupAll = TRUE;
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.ftp") || 
-		!XP_STRCMP(prefChanged, "network.proxy.ftp_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.ftp") || 
+		!PL_strcmp(prefChanged, "network.proxy.ftp_port")) {
 		PREF_CopyCharPref("network.proxy.ftp",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.ftp_port",&iPort);
@@ -417,8 +427,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.gopher") || 
-		!XP_STRCMP(prefChanged, "network.proxy.gopher_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.gopher") || 
+		!PL_strcmp(prefChanged, "network.proxy.gopher_port")) {
 		PREF_CopyCharPref("network.proxy.gopher",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.gopher_port",&iPort);
@@ -431,8 +441,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.http") || 
-		!XP_STRCMP(prefChanged, "network.proxy.http_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.http") || 
+		!PL_strcmp(prefChanged, "network.proxy.http_port")) {
 		PREF_CopyCharPref("network.proxy.http",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.http_port",&iPort);
@@ -445,8 +455,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.ssl") || 
-		!XP_STRCMP(prefChanged, "network.proxy.ssl_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.ssl") || 
+		!PL_strcmp(prefChanged, "network.proxy.ssl_port")) {
 		PREF_CopyCharPref("network.proxy.ssl",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.ssl_port",&iPort);
@@ -459,8 +469,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.news") || 
-		!XP_STRCMP(prefChanged, "network.proxy.news_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.news") || 
+		!PL_strcmp(prefChanged, "network.proxy.news_port")) {
 		PREF_CopyCharPref("network.proxy.news",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.news_port",&iPort);
@@ -473,8 +483,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.wais") || 
-		!XP_STRCMP(prefChanged, "network.proxy.wais_port")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.wais") || 
+		!PL_strcmp(prefChanged, "network.proxy.wais_port")) {
 		PREF_CopyCharPref("network.proxy.wais",&proxy);
 		if(proxy && *proxy) {
 			PREF_GetIntPref("network.proxy.wais_port",&iPort);
@@ -487,8 +497,8 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.hosts.socks_server") || 
-		!XP_STRCMP(prefChanged, "network.hosts.socks_serverport")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.hosts.socks_server") || 
+		!PL_strcmp(prefChanged, "network.hosts.socks_serverport")) {
 		PREF_CopyCharPref("network.hosts.socks_server",&proxy);
 		if (proxy && *proxy) {
 			PREF_GetIntPref("network.hosts.socks_serverport",&iPort);
@@ -502,7 +512,7 @@ NET_UpdateManualProxyInfo(const char * prefChanged) {
 	}
 	if (proxy) FREE_AND_CLEAR(proxy);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.no_proxies_on")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.no_proxies_on")) {
 		PREF_CopyCharPref("network.proxy.no_proxies_on",&proxy);
 		if(proxy && *proxy) {
 		    StrAllocCopy(MKno_proxy, proxy);
@@ -593,10 +603,10 @@ up */
 PUBLIC void
 NET_SetupPrefs(const char * prefChanged)
 {
-	XP_Bool bSetupAll=FALSE;
+	PRBool bSetupAll=FALSE;
 	char * proxy = NULL;
 
-	/* if prefChanged is null the following XP_STRCMP's are never executed because the
+	/* if prefChanged is null the following PL_strcmp's are never executed because the
 	   || statement never gets that far because when prefChanged is null bSetupAll is
 	   set to true and is always checked first in the if statement. Don't set prefChanged
 	   to "" if it is null because the UpdateManualProxyInfo below needs null not "" if
@@ -604,56 +614,56 @@ NET_SetupPrefs(const char * prefChanged)
 	if (!prefChanged)
 		bSetupAll = TRUE;
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.sendRefererHeader")) {
-		Bool b;
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.sendRefererHeader")) {
+		PRBool b;
 		PREF_GetBoolPref("network.sendRefererHeader", &b);
 		NET_SetSendRefererHeader(b);
 	}
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.dnsCacheExpiration")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.dnsCacheExpiration")) {
 		int32 n;
 		PREF_GetIntPref("network.dnsCacheExpiration",&n);
 		NET_SetDNSExpirationPref(n);
 	}
 	
-	if (bSetupAll || !XP_STRCMP(prefChanged,"browser.prefetch")) {
-		XP_Bool enabled;
+	if (bSetupAll || !PL_strcmp(prefChanged,"browser.prefetch")) {
+		PRBool enabled;
 		PREF_GetBoolPref("browser.prefetch",&enabled);
     	PRE_Enable(enabled);
 	}
 		
-	if (bSetupAll || !XP_STRCMP(prefChanged,"browser.cache.memory_cache_size")) {
+	if (bSetupAll || !PL_strcmp(prefChanged,"browser.cache.memory_cache_size")) {
 		int32 nMemCache;
 		PREF_GetIntPref("browser.cache.memory_cache_size",&nMemCache);
 		NET_SetMemoryCacheSize(nMemCache * 1024);
 	}
 
-	if (bSetupAll || !XP_STRCMP(prefChanged,"browser.cache.disk_cache_size")) {
+	if (bSetupAll || !PL_strcmp(prefChanged,"browser.cache.disk_cache_size")) {
 		int32 nDiskCache;
 		PREF_GetIntPref("browser.cache.disk_cache_size",&nDiskCache);
 	    NET_SetDiskCacheSize(nDiskCache * 1024);
 	}
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "browser.cache.check_doc_frequency")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "browser.cache.check_doc_frequency")) {
 		int32 nDocReqFreq;
 		PREF_GetIntPref("browser.cache.check_doc_frequency" ,&nDocReqFreq);
 		NET_SetCacheUseMethod((CacheUseEnum)nDocReqFreq);
 	}
 	
-	if (bSetupAll || !XP_STRCMP(prefChanged,"browser.cache.disk_cache_ssl")) {
-		XP_Bool prefBool;
+	if (bSetupAll || !PL_strcmp(prefChanged,"browser.cache.disk_cache_ssl")) {
+		PRBool prefBool;
 		PREF_GetBoolPref("browser.cache.disk_cache_ssl",&prefBool);
 		NET_DontDiskCacheSSL(!prefBool);
 	}
 #ifdef MOZ_MAIL_NEWS
-	if (bSetupAll || !XP_STRCMP(prefChanged,"mail.allow_at_sign_in_user_name")) {
-		XP_Bool prefBool;
+	if (bSetupAll || !PL_strcmp(prefChanged,"mail.allow_at_sign_in_user_name")) {
+		PRBool prefBool;
 		PREF_GetBoolPref("mail.allow_at_sign_in_user_name",&prefBool);
 		NET_SetAllowAtSignInMailUserName (prefBool);
 	}
 #endif /* MOZ_MAIL_NEWS */
 	
-	if (bSetupAll || !XP_STRCMP(prefChanged,"network.proxy.autoconfig_url")) {
+	if (bSetupAll || !PL_strcmp(prefChanged,"network.proxy.autoconfig_url")) {
 		PREF_CopyCharPref("network.proxy.autoconfig_url",&proxy);
 		if (proxy && *proxy) {
 			StrAllocCopy(MKproxy_ac_url, proxy);
@@ -666,7 +676,7 @@ NET_SetupPrefs(const char * prefChanged)
 	
 	NET_UpdateManualProxyInfo(prefChanged);
 
-	if (bSetupAll || !XP_STRCMP(prefChanged, "network.proxy.type")) {
+	if (bSetupAll || !PL_strcmp(prefChanged, "network.proxy.type")) {
 		int32 iType;
 		PREF_GetIntPref("network.proxy.type",&iType);
 	NET_SelectProxyStyle((NET_ProxyStyle)iType);
@@ -688,7 +698,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 {
     int status;
 
-#if defined(NSPR20) && defined(DEBUG)
+#ifdef DEBUG
         if (NETLIB==NULL)
            NETLIB = PR_NewLogModule("NETLIB");
 #endif
@@ -712,10 +722,10 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
     status = NET_ChangeSocketBufferSize(socket_buffer_size);
 
 	NET_ChangeMaxNumberOfConnections(max_number_of_connections);
-	net_waiting_for_actives_url_list = XP_ListNew();
-	net_waiting_for_connection_url_list = XP_ListNew();
+	net_waiting_for_actives_url_list = PL_ListNew();
+	net_waiting_for_connection_url_list = PL_ListNew();
 
-    net_EntryList = XP_ListNew();
+    net_EntryList = PL_ListNew();
 
 #ifdef MOZILLA_CLIENT
     NET_ReadCacheFAT("", TRUE);
@@ -923,7 +933,7 @@ NET_CheckForTimeBomb(MWContext *context)
 								&relative_timebomb_prefs_name);
 		if (relative_timebomb_prefs_name == NULL)
 			relative_timebomb_prefs_name = 
-								XP_STRDUP("general.bproxy_cert_digest");
+								PL_strdup("general.bproxy_cert_digest");
 		relative_timebomb_start_date = 0;
 		PREF_GetIntPref(relative_timebomb_prefs_name,
 								(int32 *)&relative_timebomb_start_date);
@@ -936,7 +946,7 @@ NET_CheckForTimeBomb(MWContext *context)
 			PREF_SetIntPref(relative_timebomb_prefs_name,
 							(int32)relative_timebomb_start_date);
 		}
-		XP_FREE(relative_timebomb_prefs_name);
+		PR_Free(relative_timebomb_prefs_name);
 		relative_timebomb_time = relative_timebomb_start_date +
 								(relative_timebomb_days * 24 * 60 * 60);
 		if (cur_time > relative_timebomb_time)
@@ -1024,10 +1034,10 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
     /* Do this for both Browser and Editor windows */
     if( /* EDT_IS_EDITOR(window_id) && */
 	URL_s && URL_s->address &&
-	0 == XP_STRCMP(URL_s->address, XP_NEW_DOC_URL) )
+	0 == PL_strcmp(URL_s->address, XP_NEW_DOC_URL) )
     {
-	XP_FREE(URL_s->address);
-	URL_s->address = XP_STRDUP(XP_NEW_DOC_NAME);
+	PR_Free(URL_s->address);
+	URL_s->address = PL_strdup(XP_NEW_DOC_NAME);
        
 	/* Not sure if this is the best place to do this,
 	 * but it needs to go someplace!        
@@ -1042,7 +1052,7 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
 	 *  to test for new doc and update title (in exit_routine)
 	*/
 	if ( window_id->title ) {
-	    XP_FREE(window_id->title);
+	    PR_Free(window_id->title);
 	    window_id->title = NULL;
 	}
 	/* Note: We replace "about:editfilenew" with "file:///Untitled"
@@ -1088,7 +1098,7 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
 	}
 }
 
-PRIVATE XP_Bool
+PRIVATE PRBool
 net_does_url_require_socket_limit(int urltype)
 {
 	if( urltype == HTTP_TYPE_URL
@@ -1102,7 +1112,7 @@ net_does_url_require_socket_limit(int urltype)
 }
 
 
-PRIVATE XP_Bool
+PRIVATE PRBool
 net_is_one_url_allowed_to_run(MWContext *context, int url_type)
 {
     /* put a limit on the total number of open connections
@@ -1118,7 +1128,6 @@ net_is_one_url_allowed_to_run(MWContext *context, int url_type)
 	  }
 	else
 	  {
-	XP_List * list_ptr;
 	ActiveEntry * tmpEntry;
 	int32 cur_win_id = FE_GetContextID(context);
 	int real_number_of_connections = 0;
@@ -1130,8 +1139,8 @@ net_is_one_url_allowed_to_run(MWContext *context, int url_type)
 		 * connections to only apply to each window not
 		 * to the whole program
 		 */
-	list_ptr = net_EntryList;
-	while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_EntryList);
+	while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != NULL)
 	  {
 		if(cur_win_id == FE_GetContextID(tmpEntry->window_id)
 				&& net_does_url_require_socket_limit(url_type))
@@ -1161,7 +1170,7 @@ net_push_url_on_wait_queue(int                 url_type,
 						   Net_GetUrlExitFunc  exit_routine)
 {
 
-	WaitingURLStruct * wus = XP_NEW(WaitingURLStruct);
+	WaitingURLStruct * wus = PR_NEW(WaitingURLStruct);
 
 	TRACEMSG(("Pushing URL on wait queue with %d open connections",
 					 NET_TotalNumberOfOpenConnections ));
@@ -1184,10 +1193,10 @@ net_push_url_on_wait_queue(int                 url_type,
 	/* add "text/ *" to beginning of list so it gets processed first */
 	if (CLEAR_CACHE_BIT(format_out) == FO_INTERNAL_IMAGE)
 		/* low priority */
-		XP_ListAddObjectToEnd(net_waiting_for_connection_url_list, wus);
+		PL_ListAddLast(net_waiting_for_connection_url_list, wus);
 	else
 		/* higher priority */
-		XP_ListAddObject(net_waiting_for_connection_url_list, wus);
+		PL_ListAdd(net_waiting_for_connection_url_list, wus);
 
 	return(0);
 }
@@ -1201,20 +1210,19 @@ PUBLIC char *
 NET_PrintNetlibStatus()
 {
 	char small_buf[128];
-    XP_List * list_ptr;
 	ActiveEntry *tmpEntry;
 	char *rv=0;
 
 	LIBNET_LOCK();
-	list_ptr = net_EntryList;
+	PL_ListEnumReset(net_EntryList);
 
 	sprintf(small_buf, XP_GetString( XP_URLS_WAITING_FOR_AN_OPEN_SOCKET ),
-						XP_ListCount(net_waiting_for_connection_url_list),
+						PL_ListCount(net_waiting_for_connection_url_list),
 						NET_MaxNumberOfOpenConnectionsPerContext);
     StrAllocCat(rv, small_buf);
 
 	sprintf(small_buf, XP_GetString( XP_URLS_WAITING_FOR_FEWER_ACTIVE_URLS ),
-					XP_ListCount(net_waiting_for_actives_url_list));
+					PL_ListCount(net_waiting_for_actives_url_list));
     StrAllocCat(rv, small_buf);
 
 	sprintf(small_buf, XP_GetString( XP_CONNECTIONS_OPEN ),
@@ -1225,7 +1233,7 @@ NET_PrintNetlibStatus()
 	NET_TotalNumberOfProcessingURLs);
     StrAllocCat(rv, small_buf);
 
-    while((tmpEntry = (ActiveEntry *)XP_ListNextObject(list_ptr)) != 0)
+    while((tmpEntry = (ActiveEntry *)PL_ListEnumNext(net_EntryList)) != 0)
 	 {
 	   sprintf(small_buf, "------------------------------------\nURL:");
        StrAllocCat(rv, small_buf);
@@ -1240,12 +1248,7 @@ NET_PrintNetlibStatus()
 #if defined(DEBUG) && defined(JAVA)
 	{
 		static int loggingOn = 0;
-#ifndef NSPR20
-		NETLIBLog.level = (loggingOn ? PRLogLevel_none : PRLogLevel_debug);
-		NETLIBLog.depth = 0;    /* keep it from auto-initializing */
-#else
 		NETLIB->level = (loggingOn ? PR_LOG_NONE : PR_LOG_DEBUG);
-#endif /* NSPR20 */
 		loggingOn = !loggingOn;
 	}
 #endif /*  defined(DEBUG) && defined(JAVA) */
@@ -1259,13 +1262,13 @@ NET_PrintNetlibStatus()
 #define RELEASE_PREFETCH_URLS TRUE
 #define DONT_RELEASE_PREFETCH_URLS FALSE
 PRIVATE void
-net_release_urls_for_processing(XP_Bool release_prefered, XP_Bool release_prefetch)
+net_release_urls_for_processing(PRBool release_prefered, PRBool release_prefetch)
 {
-	XP_List * list_ptr = net_waiting_for_connection_url_list;
     WaitingURLStruct * wus;
+	PL_ListEnumReset(net_waiting_for_connection_url_list);
 
 	while((wus = (WaitingURLStruct *)
-						XP_ListNextObject(list_ptr)) != NULL)
+           PL_ListEnumNext(net_waiting_for_connection_url_list)) != NULL)
 	  {
 
 		if(!release_prefered
@@ -1282,7 +1285,7 @@ net_release_urls_for_processing(XP_Bool release_prefered, XP_Bool release_prefet
 			 */
 			if(release_prefetch || wus->URL_s->priority != Prefetch_priority)
 			{
-				XP_ListRemoveObject(net_waiting_for_connection_url_list, wus);
+				PL_ListRemove(net_waiting_for_connection_url_list, wus);
 
 				/* change prefetch to active prefetch to allow it to load */
 				if(wus->URL_s->priority == Prefetch_priority)
@@ -1325,7 +1328,7 @@ PRIVATE void
 net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
 {
 #ifdef NSPR
-	XP_ASSERT(LIBNET_IS_LOCKED());
+	PR_ASSERT(LIBNET_IS_LOCKED());
 #endif
 
 	/* decrement here since this function is called
@@ -1346,8 +1349,8 @@ net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
 	  }
 
 	TRACEMSG(("In: net_CheckForWaitingURL with %d connection waiting URL's, %d active waiting URL's and %d open connections",
-	      XP_ListCount(net_waiting_for_connection_url_list),
-	      XP_ListCount(net_waiting_for_actives_url_list),
+	      PL_ListCount(net_waiting_for_connection_url_list),
+	      PL_ListCount(net_waiting_for_actives_url_list),
 	      NET_TotalNumberOfOpenConnections));
 
 	/* release preferred streams first */
@@ -1378,11 +1381,9 @@ net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
 }
 
 PRIVATE int
-net_AbortWaitingURL(MWContext * window_id, Bool all, XP_List *list)
+net_AbortWaitingURL(MWContext * window_id, Bool all, PLList *list)
 {
-	XP_List * list_ptr;                     /* Can't initialize here as list might be null */
-	XP_List * prev_list_ptr = list;
-	XP_List * tmp_list_ptr;
+	PLListEntry * list_ptr;                     /* Can't initialize here as list might be null */
 	WaitingURLStruct * wus;
     int32 cur_win_id=0;
 	int number_killed = 0;
@@ -1392,14 +1393,14 @@ net_AbortWaitingURL(MWContext * window_id, Bool all, XP_List *list)
 		return(number_killed);
 	
 	/* Now initialize the list pointer */
-	list_ptr = list->next;
+	list_ptr = PL_ListFirstEntry(list);
 	
 	if(!all && window_id)
 		cur_win_id = FE_GetContextID(window_id);
 
 	while(list_ptr)
 	  {
-		wus = (WaitingURLStruct *)list_ptr->object;
+		wus = (WaitingURLStruct *)PL_ListEntryValue(list_ptr);
 
 		if(all || (window_id && cur_win_id == FE_GetContextID(wus->window_id)))
 		  {
@@ -1414,22 +1415,20 @@ net_AbortWaitingURL(MWContext * window_id, Bool all, XP_List *list)
 
 			number_killed += 1;
 
-			tmp_list_ptr = list_ptr;
-			list_ptr = list_ptr->next;
+			list_ptr = PL_ListEntryNext(list_ptr);
 
 			/* remove the element from the list
 			 *
 			 * we have to use the function since it does
 			 * funky doubly linked list stuff.
 			 */
-			XP_ListRemoveObject(list, wus);
+			PL_ListRemove(list, wus);
 
 			FREE(wus);
 		  }
 		else
 		  {
-			prev_list_ptr = list_ptr;
-			list_ptr = list_ptr->next;
+			list_ptr = PL_ListEntryNext(list_ptr);
 		  }
 	  }
 
@@ -1445,15 +1444,10 @@ net_IsHostResolvable (CONST char *hostname, MWContext *context)
 	int rv;
 	PRHostEnt hpbuf;
 	char dbbuf[PR_NETDB_BUF_SIZE];
-#ifndef NSPR20
-	rv = (PR_gethostbyname(hostname, &hpbuf, dbbuf, sizeof(dbbuf), 0)
-		  ? TRUE : FALSE);
-#else
         if (PR_GetHostByName(hostname, dbbuf, sizeof(dbbuf), &hpbuf) == PR_FAILURE)
 	    rv = FALSE;
 	else
 	    rv = TRUE;
-#endif
 	return rv;
 #else
 	return(FALSE);
@@ -1486,22 +1480,22 @@ NET_SanityCheckDNS (MWContext *context)
   if (done) return;
   done = TRUE;
 
-  message = (char *) XP_ALLOC (3000);
+  message = (char *) PR_Malloc (3000);
   if (! message)
 	return;
   *message = 0;
 
   if (proxy)
-	proxy = XP_STRDUP (proxy);
+	proxy = PL_strdup (proxy);
   if (socks)
-	socks = XP_STRDUP (socks);
+	socks = PL_strdup (socks);
 
   /* Strip off everything after last colon. */
   {
     char *s;
-    if (proxy && (s = XP_STRRCHR (proxy, ':')))
+    if (proxy && (s = PL_strrchr (proxy, ':')))
 	  *s = 0;
-    if (socks && (s = XP_STRRCHR (socks, ':')))
+    if (socks && (s = PL_strrchr (socks, ':')))
 	  *s = 0;
   }
 
@@ -1513,9 +1507,9 @@ NET_SanityCheckDNS (MWContext *context)
   /* If the hosts are specified as IP numbers, don't try and resolve them.
      (Yes, hostnames can't begin with digits.) */
   if (proxy && proxy[0] >= '0' && proxy[0] <= '9')
-    XP_FREE (proxy), proxy = 0;
+    PR_Free (proxy), proxy = 0;
   if (socks && socks[0] >= '0' && socks[0] <= '9')
-    XP_FREE (socks), socks = 0;
+    PR_Free (socks), socks = 0;
 
   if (proxy && *proxy)
     {
@@ -1537,10 +1531,10 @@ NET_SanityCheckDNS (MWContext *context)
 	{
 		  sprintf(message, XP_GetString(XP_UNKNOWN_SOCKS_HOST), socks);
 #ifdef XP_UNIX
-			XP_STRCAT (message, XP_GetString(XP_SOCKS_NS_ENV_VAR));
+			PL_strcat (message, XP_GetString(XP_SOCKS_NS_ENV_VAR));
 		  /* Only Unix has the $SOCKS_NS environment variable. */
 #endif /* XP_UNIX */
-			XP_STRCAT (message, XP_GetString(XP_CONSULT_SYS_ADMIN));
+			PL_strcat (message, XP_GetString(XP_CONSULT_SYS_ADMIN));
 	}
       else
 	{
@@ -1562,22 +1556,13 @@ NET_SanityCheckDNS (MWContext *context)
 
 	  /* gethostname() and gethostbyname() often return different data -
 	     on many systems, the former is basename, the latter is FQDN. */
-#ifndef NSPR20
-	  if (local &&
-	      (hent = PR_gethostbyname (local, &hpbuf, dbbuf, sizeof(dbbuf), 0)) &&
-	      XP_STRCMP (local, hent->h_name))
-	    local2 = XP_STRDUP (hent->h_name);
-	  else
-	    local2 = 0;
-#else
           local2 = 0;
 	  if (local &&
 	      (PR_GetHostByName (local, dbbuf, sizeof(dbbuf), &hpbuf) == PR_SUCCESS)) { 
 	  hent = &hpbuf;
-	  if (XP_STRCMP (local, hent->h_name))
-	    local2 = XP_STRDUP (hent->h_name);
+	  if (PL_strcmp (local, hent->h_name))
+	    local2 = PL_strdup (hent->h_name);
       }
-#endif
 	  if (local && *local && !net_IsHostResolvable (local, context))
 	    losers [loser_count++] = local;
 	  if (local2 && *local2 && !net_IsHostResolvable (local2, context))
@@ -1599,22 +1584,22 @@ NET_SanityCheckDNS (MWContext *context)
 		  sprintf(message, XP_GetString(XP_UNKNOWN_HOSTS));
 		  for (i = 0; i < loser_count; i++)
 		    {
-		      XP_STRCAT (message, "                    ");
-		      XP_STRCAT (message, losers [i]);
-		      XP_STRCAT (message, "\n");
+		      PL_strcat (message, "                    ");
+		      PL_strcat (message, losers [i]);
+		      PL_strcat (message, "\n");
 		    }
 		}
 	      else
 		{
 				  sprintf(message, XP_GetString(XP_UNKNOWN_HOST), losers[0]);
 		}
-	      XP_STRCAT (message, XP_GetString(XP_SOME_HOSTS_UNREACHABLE));
+	      PL_strcat (message, XP_GetString(XP_SOME_HOSTS_UNREACHABLE));
 #ifdef XP_UNIX
 # if defined(__sun) && !defined(__svr4__)       /* compiled on SunOS 4.1.3 */
 			  if (fe_HaveDNS)
 				/* Don't talk about $SOCKS_NS in the YP/NIS version. */
 # endif
-				XP_STRCAT (message, XP_GetString(XP_SOCKS_NS_ENV_VAR));
+				PL_strcat (message, XP_GetString(XP_SOCKS_NS_ENV_VAR));
 
 #if defined(__sun) && !defined(__svr4__)        /* compiled on SunOS 4.1.3 */
 			  assert (XP_AppName);
@@ -1628,24 +1613,24 @@ NET_SanityCheckDNS (MWContext *context)
 					sprintf(temp, XP_GetString(XP_THIS_IS_YP_VERSION),
 						XP_AppName);
 				}
-			  XP_STRCAT(message, temp);
+			  PL_strcat(message, temp);
 # endif /*  SunOS 4.* */
 #endif /* XP_UNIX */
-	      XP_STRCAT (message, XP_GetString(XP_CONSULT_SYS_ADMIN));
+	      PL_strcat (message, XP_GetString(XP_CONSULT_SYS_ADMIN));
 	    }
 
 #ifdef XP_UNIX
-	  if (local2) XP_FREE (local2);
+	  if (local2) PR_Free (local2);
 #endif /* XP_UNIX */
 	}
     }
 
-  if (proxy) XP_FREE (proxy);
-  if (socks) XP_FREE (socks);
+  if (proxy) PR_Free (proxy);
+  if (socks) PR_Free (socks);
 
   if (*message)
     FE_Alert (context, message);
-  XP_FREE (message);
+  PR_Free (message);
 #endif /* XP_UNIX full function wrap */
 }
 
@@ -1668,20 +1653,20 @@ NET_ShutdownNetLib(void)
 
     if(net_waiting_for_actives_url_list) {
 	    net_AbortWaitingURL(0, TRUE, net_waiting_for_actives_url_list);
-	XP_ListDestroy(net_waiting_for_actives_url_list);
+	PL_ListDestroy(net_waiting_for_actives_url_list);
 	net_waiting_for_actives_url_list = 0;
     }
 
     if(net_waiting_for_connection_url_list) {
 	net_AbortWaitingURL(0, TRUE, net_waiting_for_connection_url_list);
-	XP_ListDestroy(net_waiting_for_connection_url_list);
+	PL_ListDestroy(net_waiting_for_connection_url_list);
 	net_waiting_for_connection_url_list = 0;
     }
 
     /* run through list of
      * connections
      */
-    while((tmpEntry = (ActiveEntry *)XP_ListRemoveTopObject(net_EntryList)) != 0)
+    while((tmpEntry = (ActiveEntry *)PL_ListRemoveFirst(net_EntryList)) != 0)
       {
 
 		if(tmpEntry->proto_impl)
@@ -1690,7 +1675,7 @@ NET_ShutdownNetLib(void)
 		}
 		else
 		{
-			XP_ASSERT(0);
+			PR_ASSERT(0);
 		}
 
      	/* XP_OS2_FIX IBM-MAS: limit length of output to keep from blowing trace buffer! */
@@ -1703,10 +1688,10 @@ NET_ShutdownNetLib(void)
 							 tmpEntry->status,
 							 tmpEntry->format_out,
 							 tmpEntry->window_id);
-	 	XP_FREE(tmpEntry);  /* free the no longer active entry */
+	 	PR_Free(tmpEntry);  /* free the no longer active entry */
       }
 
-	XP_ListDestroy(net_EntryList);
+	PL_ListDestroy(net_EntryList);
 	net_EntryList = 0;
 
     /* free any memory in the protocol modules
@@ -1779,7 +1764,7 @@ void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, int for_url_type)
 
 	if(!impl || for_url_type < 0 || for_url_type > LAST_URL_TYPE)
 	{
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 		return;
 	}
 
@@ -1811,7 +1796,7 @@ net_get_protocol_impl(int for_url_type)
 			return net_proto_impls[count].impl;
 	}
 
-	XP_ASSERT(0);  /* should always find one */
+	PR_ASSERT(0);  /* should always find one */
 	return NULL; 
 }
 
@@ -1855,7 +1840,7 @@ NET_GetURL (URL_Struct *URL_s,
 	TRACEMSG(("Entering NET_GetURL"));
 	LIBNET_LOCK();
 
-#if !defined(NSPR20_DISABLED) && defined(XP_UNIX)
+#ifdef XP_UNIX
 	/* temporarily use busy poll to ease transition */
 	NET_SetCallNetlibAllTheTime(window_id, "mkgeturl");
 #endif
@@ -1868,7 +1853,7 @@ NET_GetURL (URL_Struct *URL_s,
 	NET_SetNetlibSlowKickTimer(TRUE);
 #endif
 
-	XP_ASSERT (URL_s && URL_s->address);
+	PR_ASSERT (URL_s && URL_s->address);
 #ifdef MOZILLA_CLIENT
 	if ( URL_s->mailto_post && warn_on_mailto_post) {
 		confirmstring = NULL;
@@ -1879,7 +1864,7 @@ NET_GetURL (URL_Struct *URL_s,
 		
 		if ( confirmstring ) {
 			confirm = FE_Confirm(window_id, confirmstring);
-			XP_FREE(confirmstring);
+			PR_Free(confirmstring);
 		}
 		
 		if ( !confirm ) {
@@ -1904,14 +1889,14 @@ NET_GetURL (URL_Struct *URL_s,
     }
 
     /* Test for "Untitled" URL */
-    if( 0 == XP_STRCMP(URL_s->address, XP_NEW_DOC_NAME) ) {
+    if( 0 == PL_strcmp(URL_s->address, XP_NEW_DOC_NAME) ) {
     	/* Change request to load "file:///Untitled" into "about:editfilenew"  */
-	    XP_FREE(URL_s->address);
-	    URL_s->address = XP_STRDUP(XP_NEW_DOC_URL);
+	    PR_Free(URL_s->address);
+	    URL_s->address = PL_strdup(XP_NEW_DOC_URL);
 	    /* Set flag so FE can quickly detect new doc */
 	    window_id->is_new_document = TRUE;
     }
-    else if( 0 == XP_STRCMP(URL_s->address, XP_NEW_DOC_URL) ) {
+    else if( 0 == PL_strcmp(URL_s->address, XP_NEW_DOC_URL) ) {
 		window_id->is_new_document = TRUE;
     }
     else {
@@ -1956,7 +1941,7 @@ NET_GetURL (URL_Struct *URL_s,
 		 || type == URN_TYPE_URL
 		 || type == NFS_TYPE_URL
 		 || type == POP3_TYPE_URL
-		 || (type == NEWS_TYPE_URL && !strncasecomp(URL_s->address, "snews:", 6)))
+		 || (type == NEWS_TYPE_URL && !PL_strncasecmp(URL_s->address, "snews:", 6)))
 		 ) {
 		int status=-1;
 		/* Figure out which auto config we're dealing (global or pac file
@@ -2000,7 +1985,7 @@ NET_GetURL (URL_Struct *URL_s,
 	new_address = XP_StripLine(URL_s->address);
 	if(new_address != URL_s->address)
 	  {
-		XP_MEMMOVE(URL_s->address, new_address, XP_STRLEN(new_address)+1);
+		PL_memmove(URL_s->address, new_address, PL_strlen(new_address)+1);
 	  }
 
 	/* get the protocol type
@@ -2063,7 +2048,7 @@ NET_GetURL (URL_Struct *URL_s,
 		 */
 		char *new_address=0;
 		/* the colon is guarenteed to be there */
-		StrAllocCopy(new_address, XP_STRCHR(URL_s->address, ':')+1);
+		StrAllocCopy(new_address, PL_strchr(URL_s->address, ':')+1);
 		FREE(URL_s->address);
 		URL_s->address = new_address;
 
@@ -2085,12 +2070,12 @@ NET_GetURL (URL_Struct *URL_s,
 			char *new_address;
 			/* Replace castanet:// with http:// */
 			/* Allocate space for 'http' + the rest of the string */
-			new_address = XP_ALLOC(XP_STRLEN(XP_STRCHR(URL_s->address, ':'))+5);
+			new_address = PR_Malloc(PL_strlen(PL_strchr(URL_s->address, ':'))+5);
 
-			XP_ASSERT(new_address);
+			PR_ASSERT(new_address);
 			*new_address=0;
-			XP_STRCAT(new_address,"http");
-			XP_STRCAT(new_address,XP_STRCHR(URL_s->address, ':'));
+			PL_strcat(new_address,"http");
+			PL_strcat(new_address,PL_strchr(URL_s->address, ':'));
 
 			FREE(URL_s->address);
 			URL_s->address = new_address;
@@ -2148,8 +2133,8 @@ NET_GetURL (URL_Struct *URL_s,
 				   && type != HTML_PANEL_HANDLER_TYPE_URL
 					&& type != INTERNAL_SECLIB_TYPE_URL
 
-			  && !strcasestr(URL_s->address, "mcom.com")
-			       &&  !strcasestr(URL_s->address, "netscape.com"))
+			  && !PL_strcasestr(URL_s->address, "mcom.com")
+			       &&  !PL_strcasestr(URL_s->address, "netscape.com"))
 		  {
 			char * alert = NET_ExplainErrorDetails(MK_TIMEBOMB_URL_PROHIBIT);
 
@@ -2198,7 +2183,7 @@ NET_GetURL (URL_Struct *URL_s,
 		 */
 		if(type != MAILTO_TYPE_URL
 			|| !URL_s->post_headers
-			 || !XP_STRNCMP("Content-type", URL_s->post_headers, 12))
+			 || !PL_strncmp("Content-type", URL_s->post_headers, 12))
 		  {
 		    if(h && h->security_on)
 		      {
@@ -2271,7 +2256,7 @@ NET_GetURL (URL_Struct *URL_s,
 #define INT_SEARCH_URL "http://cgi.netscape.com/cgi-bin/url_search.cgi?search="
 #define INT_SEARCH_URL_TYPE HTTP_TYPE_URL
 
-		if(!(munged = (char*) XP_ALLOC(XP_STRLEN(URL_s->address)+20)))
+		if(!(munged = (char*) PR_Malloc(PL_strlen(URL_s->address)+20)))
 		{
 		    net_CallExitRoutine(exit_routine,
 								URL_s,
@@ -2305,7 +2290,7 @@ NET_GetURL (URL_Struct *URL_s,
 		/* if it starts with a question mark or has a space it's
 		 * a search URL
 		 */
-		if(*URL_s->address == '?' || XP_STRCHR(URL_s->address, ' '))
+		if(*URL_s->address == '?' || PL_strchr(URL_s->address, ' '))
 		  {
 			/* URL contains spaces.  Treat it as search text. */
 			char *escaped;
@@ -2323,7 +2308,7 @@ NET_GetURL (URL_Struct *URL_s,
 				if (pUrl) {
 					munged = PR_smprintf("%s%s", pUrl, escaped);
 					FREE(escaped);
-					XP_FREE(pUrl);
+					PR_Free(pUrl);
 				}
 			    type = INT_SEARCH_URL_TYPE;
 			  }
@@ -2332,35 +2317,35 @@ NET_GetURL (URL_Struct *URL_s,
 		  {
 			if(*URL_s->address == '/')
 			  {
-			    XP_STRCPY(munged, "file:");
+			    PL_strcpy(munged, "file:");
 			    type = FILE_TYPE_URL;
 		      }
-		    else if(!strncasecomp(URL_s->address, "ftp", 3))
+		    else if(!PL_strncasecmp(URL_s->address, "ftp", 3))
 		      {
-			    XP_STRCPY(munged, "ftp://");
+			    PL_strcpy(munged, "ftp://");
 			    type = FTP_TYPE_URL;
 		      }
-		    else if(!strncasecomp(URL_s->address, "gopher", 6))
+		    else if(!PL_strncasecmp(URL_s->address, "gopher", 6))
 		      {
-			    XP_STRCPY(munged, "gopher://");
+			    PL_strcpy(munged, "gopher://");
 			    type = GOPHER_TYPE_URL;
 		      }
-		    else if(!strncasecomp(URL_s->address, "news", 4)
-				    || !strncasecomp(URL_s->address, "nntp", 4))
+		    else if(!PL_strncasecmp(URL_s->address, "news", 4)
+				    || !PL_strncasecmp(URL_s->address, "nntp", 4))
 		      {
-			    XP_STRCPY(munged, "news://");
+			    PL_strcpy(munged, "news://");
 			    type = NEWS_TYPE_URL;
 		      }
 			else
 		      {
-			    XP_STRCPY(munged, "http://");
+			    PL_strcpy(munged, "http://");
 			    type = HTTP_TYPE_URL;
 		      }
     
-		    XP_STRCAT(munged, URL_s->address);
+		    PL_strcat(munged, URL_s->address);
 		  }
 
-		XP_FREE(URL_s->address);
+		PR_Free(URL_s->address);
 		URL_s->address = munged;
 
 #ifdef MOZILLA_CLIENT
@@ -2439,12 +2424,12 @@ NET_GetURL (URL_Struct *URL_s,
 			const char *real_url = LM_SkipWysiwygURLPrefix(URL_s->address);
 
 			/* XXX can't use StrAllocCopy because it frees dest first */
-			if (real_url && (new_address = XP_STRDUP(real_url)) != NULL)
+			if (real_url && (new_address = PL_strdup(real_url)) != NULL)
 			  {
 				/* cache miss: we must clear this flag so scripts rerun */
 				URL_s->resize_reload = FALSE;
 
-				XP_FREE(URL_s->address);
+				PR_Free(URL_s->address);
 				URL_s->address = new_address;
 				FREE_AND_CLEAR(URL_s->wysiwyg_url);
 				/* 
@@ -2659,7 +2644,7 @@ NET_GetURL (URL_Struct *URL_s,
 	  }
 
     /* start a new entry */
-    this_entry = XP_NEW(ActiveEntry);
+    this_entry = PR_NEW(ActiveEntry);
     if(!this_entry)
 	  {
 	net_CallExitRoutine(exit_routine,
@@ -2672,7 +2657,7 @@ NET_GetURL (URL_Struct *URL_s,
 	  }
 
     /* init new entry */
-    XP_MEMSET(this_entry, 0, sizeof(ActiveEntry));
+    PL_memset(this_entry, 0, sizeof(ActiveEntry));
     this_entry->URL_s        = URL_s;
     this_entry->socket       = NULL;
     this_entry->con_sock     = NULL;
@@ -2689,7 +2674,7 @@ NET_GetURL (URL_Struct *URL_s,
 
 	/* add it to the processing list now
 	 */
-    XP_ListAddObjectToEnd(net_EntryList, this_entry);
+    PL_ListAddLast(net_EntryList, this_entry);
 
 	/* this will protect against multiple posts unknown to the
 	 * user
@@ -2706,7 +2691,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  {
 			if(!FE_Confirm(window_id, XP_GetString(XP_CONFIRM_REPOST_FORMDATA)))
 			  {
-				XP_ListRemoveObject(net_EntryList, this_entry);
+				PL_ListRemove(net_EntryList, this_entry);
 				net_CallExitRoutine(exit_routine,
 									URL_s,
 									MK_INTERRUPTED,
@@ -2716,7 +2701,7 @@ NET_GetURL (URL_Struct *URL_s,
 				net_CheckForWaitingURL(window_id, this_entry->protocol, 
 									   load_background);
 
-				XP_FREE(this_entry);  /* not needed any more */
+				PR_Free(this_entry);  /* not needed any more */
 
 				LIBNET_UNLOCK_AND_RETURN(MK_INTERRUPTED);
 			  }
@@ -2734,14 +2719,14 @@ NET_GetURL (URL_Struct *URL_s,
 										window_id);
 			if(stream)
 			  {
-				XP_STRCPY(buffer, XP_GetString(XP_HTML_MISSING_REPLYDATA));
+				PL_strcpy(buffer, XP_GetString(XP_HTML_MISSING_REPLYDATA));
 				(*stream->put_block)(stream,
 									 buffer,
-									 XP_STRLEN(buffer));
+									 PL_strlen(buffer));
 				(*stream->complete)(stream);
 			  }
 
-			XP_ListRemoveObject(net_EntryList, this_entry);
+			PL_ListRemove(net_EntryList, this_entry);
 
 			net_CallExitRoutine(exit_routine,
 								URL_s,
@@ -2751,7 +2736,7 @@ NET_GetURL (URL_Struct *URL_s,
 			net_CheckForWaitingURL(window_id, this_entry->protocol,
 								   load_background);
 
-			XP_FREE(this_entry);  /* not needed any more */
+			PR_Free(this_entry);  /* not needed any more */
 
 			LIBNET_UNLOCK_AND_RETURN(MK_INTERRUPTED);
 		  }
@@ -2773,7 +2758,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 			|| this_entry->protocol == URN_TYPE_URL
 			|| this_entry->protocol == NFS_TYPE_URL
 			|| (this_entry->protocol == NEWS_TYPE_URL 
-				&& !strncasecomp(URL_s->address, "snews:", 6)
+				&& !PL_strncasecmp(URL_s->address, "snews:", 6)
 				)
 			)
 		&& (this_entry->proxy_conf =
@@ -2871,7 +2856,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 
 	    /* restart the transfer
 	     */
-		XP_ListRemoveObject(net_EntryList, this_entry);
+		PL_ListRemove(net_EntryList, this_entry);
 	    status = NET_GetURL(this_entry->URL_s,
 				   this_entry->format_out,
 				   this_entry->window_id,
@@ -2881,7 +2866,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 							   this_entry->protocol,
 							   this_entry->URL_s->load_background);
 
-		XP_FREE(this_entry);
+		PR_Free(this_entry);
 		LIBNET_UNLOCK_AND_RETURN(0);
 	  }
 	else if(this_entry->status == MK_DO_REDIRECT)
@@ -2889,7 +2874,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 		/* this redirect should just call GetURL again
 		 */
 		int status;
-		XP_ListRemoveObject(net_EntryList, this_entry);
+		PL_ListRemove(net_EntryList, this_entry);
 		status =NET_GetURL(this_entry->URL_s, 
 						   this_entry->format_out,
 						   this_entry->window_id,
@@ -2897,14 +2882,14 @@ redo_load_switch:   /* come here on file/ftp retry */
 		net_CheckForWaitingURL(this_entry->window_id, 
 							   this_entry->protocol,
 							   load_background);
-		XP_FREE(this_entry);  /* not needed any more */
+		PR_Free(this_entry);  /* not needed any more */
 		LIBNET_UNLOCK_AND_RETURN(0);
 	  }
     else if(this_entry->status == MK_TOO_MANY_OPEN_FILES)
       {
 		/* Queue this URL so it gets tried again
 		 */
-		XP_ListRemoveObject(net_EntryList, this_entry);
+		PL_ListRemove(net_EntryList, this_entry);
 		status = net_push_url_on_wait_queue(
 						NET_URL_Type(this_entry->URL_s->address),
 						this_entry->URL_s,
@@ -2912,14 +2897,14 @@ redo_load_switch:   /* come here on file/ftp retry */
 						this_entry->window_id,
 						this_entry->exit_routine);
 		NET_TotalNumberOfProcessingURLs--;
-		XP_FREE(this_entry);
+		PR_Free(this_entry);
 		LIBNET_UNLOCK_AND_RETURN(status);
       }
     else if(this_entry->status == MK_OFFLINE)
       {
 		/*  Stop the stars and put up a nice message
 		 */
-		XP_ListRemoveObject(net_EntryList, this_entry);
+		PL_ListRemove(net_EntryList, this_entry);
 		{
 			if (window_id->type != MWContextMail && window_id->type != MWContextMailMsg &&
 				(CLEAR_CACHE_BIT(output_format) != FO_INTERNAL_IMAGE) &&
@@ -2930,7 +2915,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 				/* We only display the message for top-level items (i.e., not for
 				   inline images, plugins, or java classes */
 				   
-				char * alert = XP_STRDUP(XP_GetString(XP_ALERT_OFFLINE_MODE_SELECTED));
+				char * alert = PL_strdup(XP_GetString(XP_ALERT_OFFLINE_MODE_SELECTED));
 				FE_Alert(window_id, alert);
 				FREE(alert);
 			}
@@ -2948,7 +2933,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 							   this_entry->protocol,
 							   load_background);
 
-		XP_FREE(this_entry);
+		PR_Free(this_entry);
 		LIBNET_UNLOCK_AND_RETURN(MK_OFFLINE);
       }
 
@@ -2960,7 +2945,7 @@ redo_load_switch:   /* come here on file/ftp retry */
              this_entry->socket, this_entry->con_sock, this_entry->status,
              this_entry->URL_s->address));
 
-		XP_ListRemoveObject(net_EntryList, this_entry);
+		PL_ListRemove(net_EntryList, this_entry);
 
 		net_CallExitRoutine(this_entry->exit_routine,
 							this_entry->URL_s,
@@ -2970,11 +2955,11 @@ redo_load_switch:   /* come here on file/ftp retry */
 		net_CheckForWaitingURL(this_entry->window_id, 
 							   this_entry->protocol,
 							   load_background);
-		XP_FREE(this_entry);  /* not needed any more */
+		PR_Free(this_entry);  /* not needed any more */
       }
 
     TRACEMSG(("Leaving GetURL with %d items in list",
-			  XP_ListCount(net_EntryList)));
+			  PL_ListCount(net_EntryList)));
 
 	/* XXX - hack for chromeless windows - jsw 10/27/95 */
 	LIBNET_UNLOCK();
@@ -2996,7 +2981,6 @@ redo_load_switch:   /* come here on file/ftp retry */
 PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 {
     ActiveEntry * tmpEntry;
-    XP_List * list_item;
     int rv= -1;
 	Bool load_background;
 
@@ -3009,7 +2993,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 	TRACEMSG(("Entering ProcessNet!  ready_fd: %d", ready_fd));
 	LIBNET_LOCK();
 
-	if(XP_ListIsEmpty(net_EntryList))
+	if(PL_ListIsEmpty(net_EntryList))
 	  {
 		TRACEMSG(("Invalid call to NET_ProcessNet with fd: %d - No active entries\n", ready_fd));
 
@@ -3040,7 +3024,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 	if(NET_InGetHostByName)
 	  {
 		TRACEMSG(("call to processnet while doing gethostbyname call"));
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 		LIBNET_UNLOCK_AND_RETURN(1);
 	  }
 
@@ -3058,13 +3042,13 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 		unsigned int fd_set_size=0;
 
 		/* reorder the list so that we get a round robin effect */
-		XP_ListMoveTopToBottom(net_EntryList);
+		PL_ListMoveFirstToLast(net_EntryList);
 
 		fd_type = NET_SOCKET_FD;
 
 		/* process one socket ready for reading */
-		list_item = net_EntryList;
-		while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_item)) != 0)
+		PL_ListEnumReset(net_EntryList);
+		while((tmpEntry = (ActiveEntry *)PL_ListEnumNext(net_EntryList)) != 0)
 		  {
 
 			if(tmpEntry->busy)
@@ -3087,11 +3071,11 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 					}
 
 					fd_set_size++;
-					XP_ASSERT(fd_set_size < MAX_SIMULTANIOUS_SOCKETS);
+					PR_ASSERT(fd_set_size < MAX_SIMULTANIOUS_SOCKETS);
 				  }
 			  }
 			else if(tmpEntry == 
-					(ActiveEntry *) XP_ListGetObjectNum(net_EntryList, 1))
+					(ActiveEntry *) PL_ListAt(net_EntryList, 0))
 			  {
 				/* if this is the very first object in the list
 				 * and it's a local file or a memory cache copy
@@ -3114,9 +3098,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 			int count=0;
 			int ret;
 			
-#ifndef NSPR20_DISABLED
 			PR_Sleep(PR_INTERVAL_NO_WAIT); /* thread yeild */
-#endif
 
 			ret = PR_Poll(poll_desc_array,
 							 fd_set_size,
@@ -3127,14 +3109,14 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 
 				TRACEMSG(("Select returned no active sockets! "
 						  "WASTED CALL TO PROCESS NET"));
-				LIBNET_UNLOCK_AND_RETURN(XP_ListIsEmpty(net_EntryList) ? 0 : 1);
+				LIBNET_UNLOCK_AND_RETURN(PL_ListIsEmpty(net_EntryList) ? 0 : 1);
 			  }
 
 			/* process one socket ready for reading,
 			 * find the first one ready
 			 */
-			list_item = net_EntryList;
-			while((tmpEntry=(ActiveEntry *) XP_ListNextObject(list_item)) != 0)
+			PL_ListEnumReset(net_EntryList);
+			while((tmpEntry=(ActiveEntry *) PL_ListEnumNext(net_EntryList)) != 0)
 			  {
 
 				if(tmpEntry->busy)
@@ -3145,7 +3127,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 					/* count should line up to the appropriate socket since
 					 * it was added in the same order
 					 */
-					XP_ASSERT(poll_desc_array[count].fd == tmpEntry->socket
+					PR_ASSERT(poll_desc_array[count].fd == tmpEntry->socket
 							  || poll_desc_array[count].fd == tmpEntry->con_sock);
 					if(poll_desc_array[count].out_flags & (PR_POLL_READ | PR_POLL_WRITE | PR_POLL_EXCEPT))
 					  {
@@ -3159,20 +3141,20 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 			if(!ready_fd)
 			{
 				/* couldn't find the active socket.  Shouldn't ever happen */
-				XP_ASSERT(0);
-				LIBNET_UNLOCK_AND_RETURN(XP_ListIsEmpty(net_EntryList) ? 0 : 1);
+				PR_ASSERT(0);
+				LIBNET_UNLOCK_AND_RETURN(PL_ListIsEmpty(net_EntryList) ? 0 : 1);
 			}
 
 		  }
       }
 
-    list_item = net_EntryList;
+    PL_ListEnumReset(net_EntryList);
 
     /* process one socket ready for reading
      *
 	 * find the ready socket in the active entry list
      */
-    while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_item)) != 0)
+    while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != 0)
       {
 		TRACEMSG(("Found item in Active Entry List. sock #%d  con_sock #%d",
 			    tmpEntry->socket, tmpEntry->con_sock));
@@ -3210,7 +3192,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 	    	if(rv < 0)
 	      	{
 
-				XP_ListRemoveObject(net_EntryList, tmpEntry);
+				PL_ListRemove(net_EntryList, tmpEntry);
 
 				if(tmpEntry->status == MK_USE_COPY_FROM_CACHE)
 		  		{
@@ -3357,14 +3339,14 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 	#endif /* MILAN */
 		  		}
 
-				XP_FREE(tmpEntry);  /* free the now non active entry */
+				PR_Free(tmpEntry);  /* free the now non active entry */
 
 			} /* end if  rv < 0 */
 
 			TRACEMSG(("Leaving process net with %d items in list",
-						  XP_ListCount(net_EntryList)));
+						  PL_ListCount(net_EntryList)));
 
-			LIBNET_UNLOCK_AND_RETURN(XP_ListIsEmpty(net_EntryList) ? 0 : 1); /* all done */
+			LIBNET_UNLOCK_AND_RETURN(PL_ListIsEmpty(net_EntryList) ? 0 : 1); /* all done */
 
 		  } /* end if */
 
@@ -3375,7 +3357,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
      */
 	TRACEMSG(("Invalid call to NET_ProcessNet: Active item with passed in fd: %d not found\n", ready_fd));
 
-    LIBNET_UNLOCK_AND_RETURN(XP_ListIsEmpty(net_EntryList) ? 0 : 1);
+    LIBNET_UNLOCK_AND_RETURN(PL_ListIsEmpty(net_EntryList) ? 0 : 1);
 }
 
 /*
@@ -3396,7 +3378,7 @@ net_InterruptActiveStream (ActiveEntry *entry)
 	/* remove it from the active list first to prevent
 	 * reentrant problem
 	 */
-	XP_ListRemoveObject(net_EntryList, entry);
+	PL_ListRemove(net_EntryList, entry);
 
 	if(entry->proto_impl)
 	{
@@ -3404,7 +3386,7 @@ net_InterruptActiveStream (ActiveEntry *entry)
 	}
 	else
 	{
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 	}
 
     /* XP_OS2_FIX IBM-MAS: limit length of output string to keep from blowing trace buffer */
@@ -3426,7 +3408,7 @@ net_InterruptActiveStream (ActiveEntry *entry)
 		FE_AllConnectionsComplete(entry->window_id);
 
 	/* free the no longer active entry */
-	XP_FREE(entry);
+	PR_Free(entry);
 
 	return 0;
 }
@@ -3438,10 +3420,10 @@ net_InterruptActiveStream (ActiveEntry *entry)
 PRIVATE ActiveEntry *
 net_find_ac_from_url(URL_Struct *nurl)
 {
-    XP_List * iter = net_EntryList;
 	ActiveEntry *tmpEntry = NULL, *rv = NULL;
+    PL_ListEnumReset(net_EntryList);
 
-    while ((tmpEntry = (ActiveEntry *) XP_ListNextObject(iter)) != NULL) 
+    while ((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList))!=NULL) 
 	  {
 		if (tmpEntry->URL_s == nurl) 
 		{
@@ -3509,12 +3491,11 @@ NET_InterruptSocket (PRFileDesc *socket)
 {
     /* Find the ActiveEntry structure for this URL */
     ActiveEntry *tmpEntry = NULL, *entryToKill = NULL;
-    XP_List * iter;
     int status;
 
     TRACEMSG(("Entering NET_InterruptSocket"));
     LIBNET_LOCK();
-    iter = net_EntryList;
+    PL_ListEnumReset(net_EntryList);
 
     if(NET_InGetHostByName)
       {
@@ -3522,7 +3503,7 @@ NET_InterruptSocket (PRFileDesc *socket)
 	LIBNET_UNLOCK_AND_RETURN(1);
       }
 
-    while ((tmpEntry = (ActiveEntry *) XP_ListNextObject(iter)) != NULL) {
+    while ((tmpEntry = (ActiveEntry *)PL_ListEnumNext(net_EntryList))!=NULL) {
 	if (tmpEntry->con_sock == socket || tmpEntry->socket == socket) {
 	    entryToKill = tmpEntry;
 	    break;
@@ -3547,13 +3528,12 @@ NET_SetNewContext(URL_Struct *URL_s, MWContext * new_context, Net_GetUrlExitFunc
 {
     /* Find the ActiveEntry structure for this URL */
     ActiveEntry *tmpEntry = NULL;
-    XP_List * iter;
 	MWContext *old_window_id;
 
 	LIBNET_LOCK();
-	iter = net_EntryList;
+	PL_ListEnumReset(net_EntryList);
 
-    while ((tmpEntry = (ActiveEntry *) XP_ListNextObject(iter)) != NULL)
+    while ((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList))!=NULL)
 	  {
 	if (tmpEntry->URL_s == URL_s)
 		  {
@@ -3596,7 +3576,7 @@ NET_SetNewContext(URL_Struct *URL_s, MWContext * new_context, Net_GetUrlExitFunc
       }
 
 	/* couldn't find it :( */
-    XP_ASSERT (0);
+    PR_ASSERT (0);
 
 	LIBNET_UNLOCK();
     return(-1);
@@ -3630,16 +3610,15 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
     int starting_list_count;
     ActiveEntry * tmpEntry;
     ActiveEntry * tmpEntry2;
-    XP_List * list_item;
     int32 cur_win_id = FE_GetContextID(window_id);
 	int number_killed=0;
-	XP_Bool call_all_connections_complete = TRUE;
+	PRBool call_all_connections_complete = TRUE;
 
 	TRACEMSG(("-------Interrupt Transfer called!"));
 
 	LIBNET_LOCK();
-	list_item = net_EntryList;
-	starting_list_count = XP_ListCount(net_EntryList);
+	PL_ListEnumReset(net_EntryList);
+	starting_list_count = PL_ListCount(net_EntryList);
 
 #ifdef DEBUG
 	if(NET_InGetHostByName)
@@ -3660,12 +3639,12 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
      * interrupt any of them that have a matching window
      * id.
      */
-	tmpEntry = (ActiveEntry *) XP_ListNextObject(list_item);
+	tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList);
 
     while(tmpEntry)
       {
 	/* advance to the next item NOW in case we free this one */
-	tmpEntry2 = (ActiveEntry *) XP_ListNextObject(list_item);
+	tmpEntry2 = (ActiveEntry *) PL_ListEnumNext(net_EntryList);
 
 	if(FE_GetContextID(tmpEntry->window_id) == cur_win_id)
 	  {
@@ -3713,9 +3692,9 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
 
 
     TRACEMSG(("Leaving Interrupt transfer with %d items in list",
-				XP_ListCount(net_EntryList)));
+				PL_ListCount(net_EntryList)));
 
-    LIBNET_UNLOCK_AND_RETURN(starting_list_count - XP_ListCount(net_EntryList));
+    LIBNET_UNLOCK_AND_RETURN(starting_list_count - PL_ListCount(net_EntryList));
 
 }
 
@@ -3770,7 +3749,6 @@ NET_AreThereActiveConnectionsForWindow(MWContext * window_id)
 {
     ActiveEntry * tmpEntry;
     int32 cur_win_id = FE_GetContextID(window_id);
-    XP_List * list_ptr;
     WaitingURLStruct * wus;
 
 	LIBNET_LOCK();
@@ -3779,8 +3757,9 @@ NET_AreThereActiveConnectionsForWindow(MWContext * window_id)
 
 	/* check for connections in the wait queue
 	 */
-    list_ptr = net_waiting_for_actives_url_list;
-    while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+    PL_ListEnumReset(net_waiting_for_actives_url_list);
+    while((wus = (WaitingURLStruct*) 
+           PL_ListEnumNext(net_waiting_for_actives_url_list)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(wus->window_id) &&
 	   !wus->URL_s->load_background)
@@ -3792,8 +3771,9 @@ NET_AreThereActiveConnectionsForWindow(MWContext * window_id)
 
     /* check for connections in the connections wait queue
      */
-	list_ptr = net_waiting_for_connection_url_list;
-    while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_waiting_for_connection_url_list);
+    while((wus = (WaitingURLStruct*)
+           PL_ListEnumNext(net_waiting_for_connection_url_list)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(wus->window_id) &&
 	   !wus->URL_s->load_background)
@@ -3806,8 +3786,8 @@ NET_AreThereActiveConnectionsForWindow(MWContext * window_id)
     /* run through the whole list of active connections and
      * return true if any of them have the passed in window id
      */
-	list_ptr = net_EntryList;
-    while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_EntryList);
+    while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(tmpEntry->window_id) &&
 	   !tmpEntry->URL_s->load_background)
@@ -3832,7 +3812,6 @@ NET_AreThereNonBusyActiveConnectionsForWindow(MWContext * window_id)
 {
     ActiveEntry * tmpEntry;
     int32 cur_win_id = FE_GetContextID(window_id);
-    XP_List * list_ptr;
     WaitingURLStruct * wus;
 
 	LIBNET_LOCK();
@@ -3841,8 +3820,9 @@ NET_AreThereNonBusyActiveConnectionsForWindow(MWContext * window_id)
 
 	/* check for connections in the wait queue
 	 */
-    list_ptr = net_waiting_for_actives_url_list;
-    while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+    PL_ListEnumReset(net_waiting_for_actives_url_list);
+    while((wus = (WaitingURLStruct*) 
+           PL_ListEnumNext(net_waiting_for_actives_url_list)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(wus->window_id) &&
 	   !wus->URL_s->load_background)
@@ -3854,8 +3834,9 @@ NET_AreThereNonBusyActiveConnectionsForWindow(MWContext * window_id)
 
     /* check for connections in the connections wait queue
      */
-	list_ptr = net_waiting_for_connection_url_list;
-    while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_waiting_for_connection_url_list);
+    while((wus = (WaitingURLStruct*)
+           PL_ListEnumNext(net_waiting_for_connection_url_list)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(wus->window_id) &&
 	   !wus->URL_s->load_background)
@@ -3868,8 +3849,8 @@ NET_AreThereNonBusyActiveConnectionsForWindow(MWContext * window_id)
     /* run through the whole list of active connections and
      * return true if any of them have the passed in window id
      */
-	list_ptr = net_EntryList;
-    while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_EntryList);
+    while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != NULL)
       {
 	if(cur_win_id == FE_GetContextID(tmpEntry->window_id) &&
 	   !tmpEntry->URL_s->load_background &&
@@ -3897,7 +3878,6 @@ NET_AreThereActiveConnectionsForWindowWithOtherActiveEntry(ActiveEntry *thisEntr
 {
     ActiveEntry * tmpEntry;
     int32 cur_win_id = FE_GetContextID(thisEntry->window_id);
-    XP_List * list_ptr;
 
 	LIBNET_LOCK();
 	
@@ -3905,8 +3885,8 @@ NET_AreThereActiveConnectionsForWindowWithOtherActiveEntry(ActiveEntry *thisEntr
      * return true if any of them have the passed in window id
      * with a different entry
      */
-	list_ptr = net_EntryList;
-    while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_EntryList);
+    while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != NULL)
       {
 	if((cur_win_id == FE_GetContextID(tmpEntry->window_id)) &&
 	   (tmpEntry != thisEntry))
@@ -3949,7 +3929,6 @@ PUBLIC Bool
 NET_HasNetworkActivity(MWContext * window_id, Bool waiting, Bool background)
 {
     ActiveEntry * tmpEntry;
-    XP_List * list_ptr;
     WaitingURLStruct * wus;
 
 	LIBNET_LOCK();
@@ -3960,8 +3939,9 @@ NET_HasNetworkActivity(MWContext * window_id, Bool waiting, Bool background)
 	 */
     if(waiting)
       {
-	list_ptr = net_waiting_for_actives_url_list;
-	while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_waiting_for_actives_url_list);
+	while((wus = (WaitingURLStruct*) 
+           PL_ListEnumNext(net_waiting_for_actives_url_list)) != NULL)
 	  {
 	    if((window_id == NULL ||
 		FE_GetContextID(window_id) ==
@@ -3975,8 +3955,9 @@ NET_HasNetworkActivity(MWContext * window_id, Bool waiting, Bool background)
 
 	/* check for connections in the connections wait queue
 	 */
-	    list_ptr = net_waiting_for_connection_url_list;
-	while((wus = (WaitingURLStruct*) XP_ListNextObject(list_ptr)) != NULL)
+    PL_ListEnumReset(net_waiting_for_connection_url_list);
+	while((wus = (WaitingURLStruct*) 
+           PL_ListEnumNext(net_waiting_for_connection_url_list)) != NULL)
 	  {
 	    if((window_id == NULL ||
 		FE_GetContextID(window_id) ==
@@ -3991,8 +3972,8 @@ NET_HasNetworkActivity(MWContext * window_id, Bool waiting, Bool background)
 
     /* run through the whole list of active connections
      */
-	list_ptr = net_EntryList;
-    while((tmpEntry = (ActiveEntry *) XP_ListNextObject(list_ptr)) != NULL)
+	PL_ListEnumReset(net_EntryList);
+    while((tmpEntry = (ActiveEntry *) PL_ListEnumNext(net_EntryList)) != NULL)
       {
 	if((window_id == NULL ||
 	    FE_GetContextID(window_id) ==
@@ -4019,7 +4000,7 @@ PUBLIC URL_Struct *
 NET_CreateURLStruct (CONST char *url, NET_ReloadMethod force_reload)
 {
     uint32 all_headers_size;
-    URL_Struct * URL_s  = XP_NEW(URL_Struct);
+    URL_Struct * URL_s  = PR_NEW(URL_Struct);
 
     if(!URL_s)
 	  {
@@ -4027,7 +4008,7 @@ NET_CreateURLStruct (CONST char *url, NET_ReloadMethod force_reload)
 	  }
 
     /* zap the whole structure */
-    XP_MEMSET (URL_s, 0, sizeof (URL_Struct));
+    PL_memset (URL_s, 0, sizeof (URL_Struct));
 
     URL_s->SARCache = NULL;
 
@@ -4045,23 +4026,23 @@ NET_CreateURLStruct (CONST char *url, NET_ReloadMethod force_reload)
     /* Allocate space for pointers to hold message (http, news etc) headers */
     all_headers_size = 
 	INITIAL_MAX_ALL_HEADERS * sizeof (URL_s->all_headers.key[0]);
-    URL_s->all_headers.key = (char **) XP_ALLOC(all_headers_size);
+    URL_s->all_headers.key = (char **) PR_Malloc(all_headers_size);
     if(!URL_s->all_headers.key)
       {
 	NET_FreeURLStruct(URL_s);
 	return NULL;
       }
-    XP_MEMSET (URL_s->all_headers.key, 0, all_headers_size);
+    PL_memset (URL_s->all_headers.key, 0, all_headers_size);
 
     all_headers_size = 
 	INITIAL_MAX_ALL_HEADERS * sizeof (URL_s->all_headers.value[0]);
-    URL_s->all_headers.value = (char **) XP_ALLOC(all_headers_size);
+    URL_s->all_headers.value = (char **) PR_Malloc(all_headers_size);
     if(!URL_s->all_headers.value)
       {
 	NET_FreeURLStruct(URL_s);
 	return NULL;
       }
-    XP_MEMSET (URL_s->all_headers.value, 0, all_headers_size);
+    PL_memset (URL_s->all_headers.value, 0, all_headers_size);
 
     URL_s->all_headers.max_index = INITIAL_MAX_ALL_HEADERS;
 
@@ -4092,11 +4073,11 @@ net_EnlargeURLAllHeaders (URL_Struct * URL_s)
 
     if (number_of_entries < MAX_ALL_HEADER_COUNT) {
 
-	temp = (char **) XP_REALLOC(URL_s->all_headers.key, realloc_size);
+	temp = (char **) PR_Realloc(URL_s->all_headers.key, realloc_size);
 	if (temp) {
 	    URL_s->all_headers.key = temp;
 
-	    temp = (char **) XP_REALLOC(URL_s->all_headers.value, realloc_size);
+	    temp = (char **) PR_Realloc(URL_s->all_headers.value, realloc_size);
 	    if (temp) {
 		URL_s->all_headers.value = temp;
 
@@ -4118,9 +4099,9 @@ NET_AddToAllHeaders(URL_Struct * URL_s, char *name, char *value)
     char *key_ptr;
     char *value_ptr;
 
-    XP_ASSERT(URL_s);
-    XP_ASSERT(name);
-    XP_ASSERT(value);
+    PR_ASSERT(URL_s);
+    PR_ASSERT(name);
+    PR_ASSERT(value);
 
     if ((URL_s->all_headers.empty_index >= URL_s->all_headers.max_index) &&
 	(!net_EnlargeURLAllHeaders(URL_s))) {
@@ -4128,16 +4109,16 @@ NET_AddToAllHeaders(URL_Struct * URL_s, char *name, char *value)
     }
 
     key_ptr = URL_s->all_headers.key[URL_s->all_headers.empty_index] =
-	XP_STRDUP(name);
+	PL_strdup(name);
     if (!key_ptr) {
 	net_FreeURLAllHeaders(URL_s);
 	return(FALSE);
 	}
 
     value_ptr = URL_s->all_headers.value[URL_s->all_headers.empty_index] = 
-	XP_STRDUP(value);
+	PL_strdup(value);
     if (!value_ptr) {
-	XP_FREE(key_ptr);
+	PR_Free(key_ptr);
 	URL_s->all_headers.key[URL_s->all_headers.empty_index] = NULL;
 	net_FreeURLAllHeaders(URL_s);
 	return(FALSE);
@@ -4154,7 +4135,7 @@ NET_AddToAllHeaders(URL_Struct * URL_s, char *name, char *value)
 PUBLIC int
 NET_SetURLIPAddressString (URL_Struct * URL_s, CONST char *ip_string)
 {
-    XP_ASSERT(URL_s);
+    PR_ASSERT(URL_s);
 
     FREEIF(URL_s->IPAddressString);
     URL_s->IPAddressString = NULL;
@@ -4168,7 +4149,7 @@ PUBLIC URL_Struct *
 NET_HoldURLStruct (URL_Struct * URL_s)
 {
     if(URL_s) {
-	XP_ASSERT(URL_s->ref_count > 0);
+	PR_ASSERT(URL_s->ref_count > 0);
 	URL_s->ref_count++;
     }
     return URL_s;
@@ -4184,7 +4165,7 @@ NET_FreeURLStruct (URL_Struct * URL_s)
 	return;
     
     /* if someone is holding onto a pointer to us don't die */
-    XP_ASSERT(URL_s->ref_count > 0);
+    PR_ASSERT(URL_s->ref_count > 0);
     URL_s->ref_count--;
     if(URL_s->ref_count > 0)
 	return;
@@ -4246,11 +4227,11 @@ NET_FreeURLStruct (URL_Struct * URL_s)
 
 
   /* free the array */
-  XP_FREEIF(URL_s->add_crlf);
+  PR_FREEIF(URL_s->add_crlf);
 
-	 XP_FREEIF(URL_s->page_services_url);
+	 PR_FREEIF(URL_s->page_services_url);
 
-    XP_FREE(URL_s);
+    PR_Free(URL_s);
 
 }
 
@@ -4283,13 +4264,13 @@ net_FreeURLAllHeaders (URL_Struct * URL_s)
  */
 PRIVATE void add_slash_to_URL (URL_Struct *URL_s)
 {
-	char *colon=XP_STRCHR(URL_s->address,':');  /* must find colon */
+	char *colon=PL_strchr(URL_s->address,':');  /* must find colon */
 	char *slash;
 
 	/* make sure there is a hostname
 	 */
 	if(*(colon+1) == '/' && *(colon+2) == '/')
-	    slash = XP_STRCHR(colon+3,'/');
+	    slash = PL_strchr(colon+3,'/');
 	else
 		return;
 
@@ -4423,7 +4404,7 @@ net_OutputURLDocInfo(MWContext *ctxt, char *which, char **data, int32 *length)
 	ADD_CELL("Last Modified:", URL_s->last_modified ? buf :  "Unknown");
 #endif
 
-	XP_SPRINTF(buf, "%lu", URL_s->content_length);
+	PR_snprintf(buf, 64, "%lu", URL_s->content_length);
 	ADD_CELL(XP_GetString(XP_CONTENT_LENGTH_), URL_s->content_length 
 								 ? buf
 									:  XP_GetString(XP_MSG_UNKNOWN));
@@ -4453,7 +4434,7 @@ net_OutputURLDocInfo(MWContext *ctxt, char *which, char **data, int32 *length)
 		sec_msg = SECNAV_PrettySecurityStatus(URL_s->security_on, 
                                               URL_s->sec_info);
 	else
-		sec_msg = XP_STRDUP(XP_GetString(XP_STATUS_UNKNOWN));
+		sec_msg = PL_strdup(XP_GetString(XP_STATUS_UNKNOWN));
 
 	if(sec_msg)
 	  {
@@ -4465,25 +4446,34 @@ net_OutputURLDocInfo(MWContext *ctxt, char *which, char **data, int32 *length)
 
 	if(sec_msg)
 	  {
+<<<<<<< mkgeturl.c
+=======
+		char *extstring;
+		extstring = SECNAV_MakeCertButtonString(URL_s->certificate);
+		if ( extstring ) {
+			StrAllocCat(sec_msg, extstring);
+			PR_Free(extstring);
+		}
+>>>>>>> 3.1.10.5
 		ADD_CELL(XP_GetString(XP_CERTIFICATE_), sec_msg);
 		FREE(sec_msg);
 	  }
 	StrAllocCat(output, "</TABLE>");
 
 	if(URL_s->content_type 
-		&& !strncasecomp(URL_s->content_type, "image", 5))
+		&& !PL_strncasecmp(URL_s->content_type, "image", 5))
 	  {
 	/* Have a seat. Lie down.  Tell me about yourself. */
 	il_msg = IL_HTMLImageInfo(URL_s->address);
 	if (il_msg) {
 	  StrAllocCat(output, "<HR>\n");
 	  StrAllocCat(output, il_msg);
-	  XP_FREE(il_msg);
+	  PR_Free(il_msg);
 	}
 	  }
 		
 	*data = output;
-	*length = XP_STRLEN(output);
+	*length = PL_strlen(output);
 
 	NET_FreeURLStruct(URL_s);
 	return;
@@ -4519,18 +4509,18 @@ net_PrintContextInfo(ActiveEntry *cur_entry, MWContext *context)
     if(!stream)
 	return(MK_UNABLE_TO_CONVERT);
 
-    XP_STRCPY(buf, "<FONT SIZE=+2><b>");
-	(*stream->put_block)(stream, buf, XP_STRLEN(buf));
+    PL_strcpy(buf, "<FONT SIZE=+2><b>");
+	(*stream->put_block)(stream, buf, PL_strlen(buf));
 
     if(his && his->title)
-		tmp = XP_STRDUP(his->title);
+		tmp = PL_strdup(his->title);
 	else
-		tmp = XP_STRDUP(XP_GetString(XP_UNTITLED_DOCUMENT));
+		tmp = PL_strdup(XP_GetString(XP_UNTITLED_DOCUMENT));
 
-	(*stream->put_block)(stream, tmp, XP_STRLEN(tmp));
+	(*stream->put_block)(stream, tmp, PL_strlen(tmp));
 
-    XP_STRCPY(buf, XP_GetString(XP_HAS_THE_FOLLOWING_STRUCT));
-	(*stream->put_block)(stream, buf, XP_STRLEN(buf));
+    PL_strcpy(buf, XP_GetString(XP_HAS_THE_FOLLOWING_STRUCT));
+	(*stream->put_block)(stream, buf, PL_strlen(buf));
 
 	LO_DocumentInfo(context, stream);
 
@@ -4553,7 +4543,7 @@ net_gen_pics_document(ActiveEntry *cur_entry)
 
     if(help_dir)
     {
-		if (help_dir[XP_STRLEN(help_dir)-1] != '/')
+		if (help_dir[PL_strlen(help_dir)-1] != '/')
 			StrAllocCat(help_dir, "/");
 		
 		if (!help_dir)
@@ -4607,31 +4597,35 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		net_OutputURLDocInfo(cur_entry->window_id, which, &data, &length);
 		StrAllocCopy(content_type, TEXT_HTML);
 	  }
-	else if(!strncasecomp(which, "pics", 4))
+	else if(!PL_strncasecmp(which, "pics", 4))
 	  {
 		data = net_gen_pics_document(cur_entry);
    		if (data) {
-			length = XP_STRLEN(data);
-			content_type = XP_STRDUP(TEXT_HTML);
+			length = PL_strlen(data);
+			content_type = PL_strdup(TEXT_HTML);
             uses_fe_data = FALSE;
         } 
 	  }
-	else if(!strcasecomp(which, "cookies"))
+	else if(!PL_strcasecmp(which, "cookies"))
 	{
 		NET_DisplayCookieInfoAsHTML(cur_entry);
 		return(-1);
 	}
-	else if(!strncasecomp(which, "cache", 5))
+	else if(!PL_strncasecmp(which, "cache", 5))
 	  {
 		NET_DisplayCacheInfoAsHTML(cur_entry);
 		return(-1);
 	  }
-	else if(!strcasecomp(which, "memory-cache"))
+	else if(!PL_strcasecmp(which, "memory-cache"))
 	  {
 		NET_DisplayMemCacheInfoAsHTML(cur_entry);
 		return(-1);
 	  }
+<<<<<<< mkgeturl.c
 	else if(!strcasecomp(which, "logout"))
+=======
+	else if(!PL_strcasecmp(which, "image-cache"))
+>>>>>>> 3.1.10.5
 	  {
 		NET_RemoveAllAuthorizations();
 		return(-1);
@@ -4643,13 +4637,13 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		return(-1);
 	  }
 #ifdef DEBUG
-    else if(!strcasecomp(which, "streams"))
+    else if(!PL_strcasecmp(which, "streams"))
       {
 	NET_DisplayStreamInfoAsHTML(cur_entry);
 	return(-1);
       }
 #endif /* DEBUG */
-	else if(!strcasecomp(which, "document"))
+	else if(!PL_strcasecmp(which, "document"))
 	  {
 		char buf[64];
 		History_entry *his;
@@ -4699,11 +4693,11 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 
 		StrAllocCopy(cur_entry->URL_s->window_target, "%DocInfoWindow");
 		/* add a Chrome Struct so that we can control the window */
-		cur_entry->URL_s->window_chrome = XP_NEW(Chrome);
+		cur_entry->URL_s->window_chrome = PR_NEW(Chrome);
 
 		if(cur_entry->URL_s->window_chrome)
 		  {
-			XP_MEMSET(cur_entry->URL_s->window_chrome, 0, sizeof(Chrome));
+			PL_memset(cur_entry->URL_s->window_chrome, 0, sizeof(Chrome));
 			/* it should be MWContextDialog
 			 * but X isn't ready for it yet...
 			 */
@@ -4732,11 +4726,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 
 		    if(!cur_entry->URL_s->post_data)
 		      {
-#if defined(__sun) && !defined(SVR4) /* sun 4.1.3 */
-			    XP_SPRINTF(buf, "%lu", context);
-#else
-			    XP_SPRINTF(buf, "%p", context);
-#endif
+			    PR_snprintf(buf, 64, "%p", context);
 			    StrAllocCat(data, buf);
 			    StrAllocCopy(cur_entry->URL_s->post_data, buf);
 		      }
@@ -4755,10 +4745,10 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 
 		StrAllocCat(data, "></frameset>");
 
-		length = XP_STRLEN(data);
+		length = PL_strlen(data);
 		StrAllocCopy(content_type, TEXT_HTML);
 	  }
-	else if(!strncasecomp(which, "Global", 6))
+	else if(!PL_strncasecmp(which, "Global", 6))
 	  {
 		cur_entry->status = NET_DisplayGlobalHistoryInfoAsHTML(
 													cur_entry->window_id,
@@ -4768,7 +4758,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		return(-1);
 
 	  }
-	else if(!XP_STRNCMP(which, "FeCoNtExT=", 10))
+	else if(!PL_strncmp(which, "FeCoNtExT=", 10))
 	  {
 		MWContext *old_ctxt;
 		
@@ -4790,12 +4780,12 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 			return(net_PrintContextInfo(cur_entry, old_ctxt));
 		  }             
     
-	    length = XP_STRLEN(data);
+	    length = PL_strlen(data);
 	    StrAllocCopy(content_type, TEXT_HTML);
 
       }
 #endif /* MOZILLA_CLIENT */
-	else if(!strncasecomp(which, "authors", 7))
+	else if(!PL_strncasecmp(which, "authors", 7))
 	  {
 		static const char *d =
 		  ("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html\" "
@@ -4804,22 +4794,22 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		   "<TABLE width=\"100%\" height=\"100%\"><TR><TD ALIGN=CENTER>"
 		   "<FONT SIZE=5><FONT COLOR=\"#0000EE\">about:authors</FONT> "
 		   "removed.</FONT></TD></TR></TABLE>");
-	    data = XP_STRDUP(d);
-		length = (d ? XP_STRLEN(d) : 0);
-	    content_type = XP_STRDUP(TEXT_HTML);
+	    data = PL_strdup(d);
+		length = (d ? PL_strlen(d) : 0);
+	    content_type = PL_strdup(TEXT_HTML);
 	    uses_fe_data = FALSE;
 	  }
 	/* Admin Kit/xp prefs diagnostic support */
-	else if (!strncasecomp(which, "config", 6))
+	else if (!PL_strncasecmp(which, "config", 6))
 	{
 		data = PREF_AboutConfig();
 		if (data) {
-			length = XP_STRLEN(data);
-			content_type = XP_STRDUP(TEXT_HTML);
+			length = PL_strlen(data);
+			content_type = PL_strdup(TEXT_HTML);
 		}
 	}
-#ifdef XP_UNIX
-	else if (!strncasecomp(which, "minibuffer", 10))
+#if defined(XP_UNIX) && !defined(B1M)
+	else if (!PL_strncasecmp(which, "minibuffer", 10))
 	{
 		extern void FE_ShowMinibuffer(MWContext *);
 
@@ -4827,7 +4817,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 	}
 #endif
 #ifdef WEBFONTS
-	else if (!strncasecomp(which, "fonts", 5))
+	else if (!PL_strcasecmp(which, "fonts", 5))
 	{
 		NF_AboutFonts(cur_entry->window_id, which);
 		return (-1);
@@ -4864,9 +4854,9 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		if (status >= 0) {
 			/* Append optional Admin Kit-specified about page text */
 			char* custom_text = NULL;
-			if (XP_STRCMP(which, "") == 0 &&
+			if (PL_strcmp(which, "") == 0 &&
 				PREF_CopyConfigString("about_text", &custom_text) == PREF_NOERROR) {
-				(*stream->put_block)(stream, custom_text, XP_STRLEN(custom_text));
+				(*stream->put_block)(stream, custom_text, PL_strlen(custom_text));
 			}
 		
 			(*stream->complete) (stream);
@@ -4905,25 +4895,25 @@ PRIVATE int net_output_security_url(ActiveEntry * cur_entry, MWContext *cx)
     NET_StreamClass * stream;
 	char * content_type;
 	char * which = cur_entry->URL_s->address;
-	char * colon = XP_STRCHR (which, ':');
+	char * colon = PL_strchr (which, ':');
 
 	if (colon)
 	  {
 		/* found the first colon; now find the question mark
 		   (as in "about:security?certs"). */
 		which = colon + 1;
-		colon = XP_STRCHR (which, '?');
+		colon = PL_strchr (which, '?');
 		if (colon)
 		  which = colon + 1;
 		else
-		  which = which + XP_STRLEN (which); /* give it "" */
+		  which = which + PL_strlen (which); /* give it "" */
 	  }
 
 	content_type = SECNAV_SecURLContentType(which);
 	if (!content_type) {
 		cur_entry->status = MK_MALFORMED_URL_ERROR;
 
-	} else if (!strcasecomp(content_type, "advisor")) {
+	} else if (!PL_strcasecmp(content_type, "advisor")) {
 	    cur_entry->status = SECNAV_SecHandleSecurityAdvisorURL(cx, which);
 
 	} else {
@@ -4997,9 +4987,9 @@ net_WysiwygLoad(ActiveEntry *ce)
 	char *new_address;
 
 	/* XXX can't use StrAllocCopy because it frees dest first */
-	if (real_url && (new_address = XP_STRDUP(real_url)) != NULL)
+	if (real_url && (new_address = PL_strdup(real_url)) != NULL)
 	{
-		XP_FREE(ce->URL_s->address);
+		PR_Free(ce->URL_s->address);
 		ce->URL_s->address = new_address;
 		FREE_AND_CLEAR(ce->URL_s->wysiwyg_url);
 	}
@@ -5014,7 +5004,7 @@ PRIVATE int32
 net_ProtoMainStub(ActiveEntry *ce)
 {
 #ifdef DO_ANNOYING_ASSERTS_IN_STUBS
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 #endif
 	return -1;
 }
@@ -5029,7 +5019,7 @@ net_reg_random_protocol(NET_ProtoInitFunc *LoadRoutine, int type)
 {
     NET_ProtoImpl *random_proto_impl;
 
-	random_proto_impl = XP_NEW(NET_ProtoImpl);
+	random_proto_impl = PR_NEW(NET_ProtoImpl);
 
 	if(!random_proto_impl)
 		return;
@@ -5062,7 +5052,7 @@ NET_InitTotallyRandomStuffPeopleAddedProtocols(void)
 PRIVATE Bool net_about_kludge(URL_Struct *URL_s)
 {
   unsigned char *url = (unsigned char *) URL_s->address;
-  unsigned char *user = (unsigned char *) XP_STRDUP ((char*)(url + 6));
+  unsigned char *user = (unsigned char *) PL_strdup ((char*)(url + 6));
   unsigned char *tmp;
  
   if (user == NULL)
@@ -5070,159 +5060,160 @@ PRIVATE Bool net_about_kludge(URL_Struct *URL_s)
 
   for (tmp = user; *tmp; tmp++) *tmp += 23;
 
-  if (	 !XP_STRCMP((char*)user, "\170\202\202\170\205\170") ||	/* akkana */
-	 !XP_STRCMP((char*)user, "\170\211\200") ||				/* ari */
-	 !XP_STRCMP((char*)user, "\170\211\212\177\170\173") ||			/* arshad */
-	 !XP_STRCMP((char*)user, "\170\213\206\213\200\172") ||			/* atotic */
-	 !XP_STRCMP((char*)user, "\171\176\170\220") ||				/* bgay */
-	 !XP_STRCMP((char*)user, "\171\201\206\205\174\212") ||			/* bjones */
-	 !XP_STRCMP((char*)user, "\171\203\220\213\177\174") ||			/* blythe */
-	 !XP_STRCMP((char*)user, "\171\205\174\203\212\206\205") ||		/* bnelson */
-	 !XP_STRCMP((char*)user, "\171\206\171") ||				/* bob */
-	 !XP_STRCMP((char*)user, "\171\206\171\201") ||				/* bobj */
-	 !XP_STRCMP((char*)user, "\171\211\170\173\174") ||			/* brade */
-	 !XP_STRCMP((char*)user, "\171\211\200\170\205\206") ||			/* briano */
-	 !XP_STRCMP((char*)user, "\171\211\200\173\176\174") ||			/* bridge */
-	 !XP_STRCMP((char*)user, "\172\170\213\177\203\174\174\204") ||		/* cathleen */
-	 !XP_STRCMP((char*)user, "\172\177\206\214\172\202") ||			/* chouck */
-	 !XP_STRCMP((char*)user, "\172\177\211\200\212\175") ||			/* chrisf */
-	 !XP_STRCMP((char*)user, "\172\202\211\200\213\221\174\211") ||		/* ckritzer */
-	 !XP_STRCMP((char*)user, "\172\204\170\205\212\202\174") ||		/* cmanske */
-	 !XP_STRCMP((char*)user, "\172\206\205\215\174\211\212\174") ||		/* converse */
-	 !XP_STRCMP((char*)user, "\172\206\211\171\170\205") ||			/* corban */
-	 !XP_STRCMP((char*)user, "\172\217\214\174") ||				/* cxue */
-	 !XP_STRCMP((char*)user, "\172\220\174\177") ||				/* cyeh */
-	 !XP_STRCMP((char*)user, "\173\170\205\173\170") ||             /* danda */
-	 !XP_STRCMP((char*)user, "\173\170\205\204") ||				/* danm */
-	 !XP_STRCMP((char*)user, "\173\170\215\200\173\204") ||			/* davidm */
-	 !XP_STRCMP((char*)user, "\173\174\172\170\212\213\211\200") || /* decastri */
-	 !XP_STRCMP((char*)user, "\173\201\216") ||				/* djw */
-	 !XP_STRCMP((char*)user, "\173\202\170\211\203\213\206\205") ||		/* dkarlton */
-	 !XP_STRCMP((char*)user, "\173\204\206\212\174") ||			/* dmose */
-	 !XP_STRCMP((char*)user, "\173\206\205") ||				/* don */
-	 !XP_STRCMP((char*)user, "\173\206\211\170") ||				/* dora */
-	 !XP_STRCMP((char*)user, "\173\206\214\176") ||				/* doug */
-	 !XP_STRCMP((char*)user, "\173\207") ||					/* dp */
-	 !XP_STRCMP((char*)user, "\174\171\200\205\170") ||			/* ebina */
-	 !XP_STRCMP((char*)user, "\174\204\170\173\174\211") ||			/* emader */
-	 !XP_STRCMP((char*)user, "\174\211\200\202") ||				/* erik */
-	 !XP_STRCMP((char*)user, "\175\211\200\174\173\204\170\205") ||		/* friedman */
-	 !XP_STRCMP((char*)user, "\175\213\170\205\176") ||			/* ftang */
-	 !XP_STRCMP((char*)user, "\175\214\171\200\205\200") ||			/* fubini */
-	 !XP_STRCMP((char*)user, "\175\214\211") ||				/* fur */
-	 !XP_STRCMP((char*)user, "\176\170\176\170\205") ||			/* gagan */
-	 !XP_STRCMP((char*)user, "\176\203\220\205\205") ||			/* glynn */\
-	 !XP_STRCMP((char*)user, "\176\211\206\216\203\213\200\176\174\211") ||	/* growltiger */\
-	 !XP_STRCMP((char*)user, "\177\170\176\170\205") ||			/* hagan */
-	 !XP_STRCMP((char*)user, "\177\170\211\173\213\212") ||			/* hardts */
- 	 !XP_STRCMP((char*)user, "\177\212\177\170\216") ||			/* hshaw */
- 	 !XP_STRCMP((char*)user, "\177\220\170\213\213") ||			/* hyatt */
-	 !XP_STRCMP((char*)user, "\200\211\174\205\174") ||			/* irene */
-	 !XP_STRCMP((char*)user, "\201\170\211") ||				/* jar */
-	 !XP_STRCMP((char*)user, "\201\174\175\175") ||				/* jeff */
-	 !XP_STRCMP((char*)user, "\201\174\215\174\211\200\205\176") ||		/* jevering */  
-	 !XP_STRCMP((char*)user, "\201\176") ||					/* jg */
-	 !XP_STRCMP((char*)user, "\201\176\174\203\203\204\170\205") ||		/* jgellman */
-	 !XP_STRCMP((char*)user, "\201\201") ||					/* jj */
-	 !XP_STRCMP((char*)user, "\201\206\174\211\214\175\175") ||		/* joeruff */
-	 !XP_STRCMP((char*)user, "\201\206\202\200") ||				/* joki */
-	 !XP_STRCMP((char*)user, "\201\206\205\170\212") ||			/* jonas */
-	 !XP_STRCMP((char*)user, "\201\207\204") ||				/* jpm */
-	 !XP_STRCMP((char*)user, "\201\212\216") ||				/* jsw */
-	 !XP_STRCMP((char*)user, "\201\216\221") ||				/* jwz */
-	 !XP_STRCMP((char*)user, "\202\170\177\174\211\205") ||			/* kahern */
-	 !XP_STRCMP((char*)user, "\202\170\211\203\213\206\205") ||		/* karlton */
-	 !XP_STRCMP((char*)user, "\202\200\207\207") ||				/* kipp */
-	 !XP_STRCMP((char*)user, "\202\204\172\174\205\213\174\174") ||		/* kmcentee */
-	 !XP_STRCMP((char*)user, "\202\206\174\177\204") ||			/* koehm */
-	 !XP_STRCMP((char*)user, "\202\211\200\212\213\200\205") ||		/* kristin */
-	 !XP_STRCMP((char*)user, "\203\170\211\214\171\171\200\206") ||		/* larubbio */
-    !XP_STRCMP((char*)user, "\203\170\216") ||                     /* law */
-	 !XP_STRCMP((char*)user, "\203\174\205\221") ||				/* lenz */
-	 !XP_STRCMP((char*)user, "\203\206\211\200\202") ||			/* lorik */
-	 !XP_STRCMP((char*)user, "\203\213\170\171\171") ||			/* ltabb */
-	 !XP_STRCMP((char*)user, "\204\170\203\204\174\211") ||			/* malmer */
-	 !XP_STRCMP((char*)user, "\204\170\211\172\170") ||			/* marca */
-	 !XP_STRCMP((char*)user, "\204\170\213\213") ||				/* matt */ 
-	 !XP_STRCMP((char*)user, "\204\172\170\175\174\174") ||			/* mcafee */
-	 !XP_STRCMP((char*)user, "\204\172\204\214\203\203\174\205") ||		/* mcmullen */
-	 !XP_STRCMP((char*)user, "\204\174\173\200\213\170\213\200\206\205") ||	/* meditation */
-	 !XP_STRCMP((char*)user, "\204\203\204") ||				/* mlm */
-	 !XP_STRCMP((char*)user, "\204\206\205\200\210\214\174") ||		/* monique */
-	 !XP_STRCMP((char*)user, "\204\206\205\213\214\203\203\200")||		/* montulli */
-	 !XP_STRCMP((char*)user, "\204\206\211\212\174") ||			/* morse */
-	 !XP_STRCMP((char*)user, "\204\206\214\211\174\220")||			/* mourey */
-	 !XP_STRCMP((char*)user, "\204\213\206\220") ||				/* mtoy */
-	 !XP_STRCMP((char*)user, "\204\216\174\203\172\177") ||			/* mwelch */
-	 !XP_STRCMP((char*)user, "\205\174\203\212\206\205\171") ||		/* nelsonb */
-	 !XP_STRCMP((char*)user, "\205\200\212\177\174\174\213\177") ||		/* nisheeth */
-	 !XP_STRCMP((char*)user, "\206\200\205\202") ||				/* oink */
-	 !XP_STRCMP((char*)user, "\207\170\203\174\215\200\172\177") ||		/* palevich */
-	 !XP_STRCMP((char*)user, "\207\170\210\214\200\205") ||			/* paquin */
-	 !XP_STRCMP((char*)user, "\207\170\214\203\173") ||			/* pauld */
-	 !XP_STRCMP((char*)user, "\207\172\177\174\205") ||			/* pchen */
-	 !XP_STRCMP((char*)user, "\207\200\174\211\211\174") ||			/* pierre */
-	 !XP_STRCMP((char*)user, "\207\200\176\203\174\213") ||			/* piglet */
-	 !XP_STRCMP((char*)user, "\207\200\205\202\174\211\213\206\205") ||	/* pinkerton */
-	 !XP_STRCMP((char*)user, "\211\170\204\170\205") ||			/* raman */
-	 !XP_STRCMP((char*)user, "\211\170\204\200\211\206") ||			/* ramiro */
-	 !XP_STRCMP((char*)user, "\211\174\172\214\211\212\200\206\205") ||	/* recursion */
-	 !XP_STRCMP((char*)user, "\211\174\207\202\170") ||			/* repka */
-	 !XP_STRCMP((char*)user, "\211\200\172\170\211\173\206\171") ||		/* ricardob */
-	 !XP_STRCMP((char*)user, "\211\201\172") ||				/* rjc */
-	 !XP_STRCMP((char*)user, "\211\204\216") ||				/* rmw */
-	 !XP_STRCMP((char*)user, "\211\170\204\211\170\201") ||		/* ramraj */
-	 !XP_STRCMP((char*)user, "\211\206\171\204") ||				/* robm */
-	 !XP_STRCMP((char*)user, "\211\206\174\171\174\211") ||			/* roeber */
-	 !XP_STRCMP((char*)user, "\211\207\206\213\213\212") ||			/* rpotts */
-	 !XP_STRCMP((char*)user, "\211\214\212\203\170\205") ||			/* ruslan */
-	 !XP_STRCMP((char*)user, "\212\172\172") ||				/* scc */
-	 !XP_STRCMP((char*)user, "\212\173\170\176\203\174\220") ||		/* sdagley */
-	 !XP_STRCMP((char*)user, "\212\177\170\211\206\205\200") ||		/* sharoni */
-	 !XP_STRCMP((char*)user, "\212\177\214\170\205\176") ||			/* shuang */
-	 !XP_STRCMP((char*)user, "\212\202") ||					/* sk */
-	 !XP_STRCMP((char*)user, "\212\202\220\174") ||				/* skye */
-	 !XP_STRCMP((char*)user, "\212\203\170\204\204") ||			/* slamm */
-	 !XP_STRCMP((char*)user, "\212\204\212\200\203\215\174\211") ||		/* smsilver */
-	 !XP_STRCMP((char*)user, "\212\207\174\205\172\174") ||			/* spence */
-	 !XP_STRCMP((char*)user, "\212\207\200\173\174\211") ||			/* spider */
-	 !XP_STRCMP((char*)user, "\212\212\207\200\213\221\174\211") ||		/* sspitzer */
-	 !XP_STRCMP((char*)user, "\212\213\174\211\205") ||			/* stern */
-	 !XP_STRCMP((char*)user, "\213\170\211\170\177") ||			/* tarah */
-	 !XP_STRCMP((char*)user, "\213\174\211\211\220") ||			/* terry */
-    !XP_STRCMP((char*)user, "\213\175\203\200\205\213") ||         /* tflint */
-	 !XP_STRCMP((char*)user, "\213\200\204\204") ||				/* timm */
-	 !XP_STRCMP((char*)user, "\213\206\212\177\206\202") ||			/* toshok */
-	 !XP_STRCMP((char*)user, "\213\211\170\172\220") ||			/* tracy */
-	 !XP_STRCMP((char*)user, "\213\211\200\212\213\170\205") ||		/* tristan */
-	 !XP_STRCMP((char*)user, "\213\211\214\173\174\203\203\174") ||		/* trudelle */
-	 !XP_STRCMP((char*)user, "\215\170\203\174\212\202\200") ||		/* valeski */
-	 !XP_STRCMP((char*)user, "\216\170\211\211\174\205") ||			/* warren */
-	 !XP_STRCMP((char*)user, "\216\201\212") )				/* wjs */
+  if (	 !PL_strcmp((char*)user, "\170\202\202\170\205\170") ||	/* akkana */
+	 !PL_strcmp((char*)user, "\170\211\200") ||				/* ari */
+	 !PL_strcmp((char*)user, "\170\211\212\177\170\173") ||			/* arshad */
+	 !PL_strcmp((char*)user, "\170\213\206\213\200\172") ||			/* atotic */
+	 !PL_strcmp((char*)user, "\171\176\170\220") ||				/* bgay */
+	 !PL_strcmp((char*)user, "\171\201\206\205\174\212") ||			/* bjones */
+	 !PL_strcmp((char*)user, "\171\203\220\213\177\174") ||			/* blythe */
+	 !PL_strcmp((char*)user, "\171\205\174\203\212\206\205") ||		/* bnelson */
+	 !PL_strcmp((char*)user, "\171\206\171") ||				/* bob */
+	 !PL_strcmp((char*)user, "\171\206\171\201") ||				/* bobj */
+	 !PL_strcmp((char*)user, "\171\211\170\173\174") ||			/* brade */
+	 !PL_strcmp((char*)user, "\171\211\200\170\205\206") ||			/* briano */
+	 !PL_strcmp((char*)user, "\171\211\200\173\176\174") ||			/* bridge */
+	 !PL_strcmp((char*)user, "\172\170\213\177\203\174\174\204") ||		/* cathleen */
+	 !PL_strcmp((char*)user, "\172\177\206\214\172\202") ||			/* chouck */
+	 !PL_strcmp((char*)user, "\172\177\211\200\212\175") ||			/* chrisf */
+	 !PL_strcmp((char*)user, "\172\202\211\200\213\221\174\211") ||		/* ckritzer */
+	 !PL_strcmp((char*)user, "\172\204\170\205\212\202\174") ||		/* cmanske */
+	 !PL_strcmp((char*)user, "\172\206\205\215\174\211\212\174") ||		/* converse */
+	 !PL_strcmp((char*)user, "\172\206\211\171\170\205") ||			/* corban */
+	 !PL_strcmp((char*)user, "\172\217\214\174") ||				/* cxue */
+	 !PL_strcmp((char*)user, "\172\220\174\177") ||				/* cyeh */
+	 !PL_strcmp((char*)user, "\173\170\205\173\170") ||             /* danda */
+	 !PL_strcmp((char*)user, "\173\170\205\204") ||				/* danm */
+	 !PL_strcmp((char*)user, "\173\170\215\200\173\204") ||			/* davidm */
+	 !PL_strcmp((char*)user, "\173\174\172\170\212\213\211\200") || /* decastri */
+	 !PL_strcmp((char*)user, "\173\201\216") ||				/* djw */
+	 !PL_strcmp((char*)user, "\173\202\170\211\203\213\206\205") ||		/* dkarlton */
+	 !PL_strcmp((char*)user, "\173\204\206\212\174") ||			/* dmose */
+	 !PL_strcmp((char*)user, "\173\206\205") ||				/* don */
+	 !PL_strcmp((char*)user, "\173\206\211\170") ||				/* dora */
+	 !PL_strcmp((char*)user, "\173\206\214\176") ||				/* doug */
+	 !PL_strcmp((char*)user, "\173\207") ||					/* dp */
+	 !PL_strcmp((char*)user, "\174\171\200\205\170") ||			/* ebina */
+	 !PL_strcmp((char*)user, "\174\204\170\173\174\211") ||			/* emader */
+	 !PL_strcmp((char*)user, "\174\211\200\202") ||				/* erik */
+	 !PL_strcmp((char*)user, "\175\211\200\174\173\204\170\205") ||		/* friedman */
+	 !PL_strcmp((char*)user, "\175\213\170\205\176") ||			/* ftang */
+	 !PL_strcmp((char*)user, "\175\214\171\200\205\200") ||			/* fubini */
+	 !PL_strcmp((char*)user, "\175\214\211") ||				/* fur */
+	 !PL_strcmp((char*)user, "\176\170\176\170\205") ||			/* gagan */
+	 !PL_strcmp((char*)user, "\176\203\220\205\205") ||			/* glynn */\
+	 !PL_strcmp((char*)user, "\176\211\206\216\203\213\200\176\174\211") ||	/* growltiger */\
+	 !PL_strcmp((char*)user, "\177\170\176\170\205") ||			/* hagan */
+	 !PL_strcmp((char*)user, "\177\170\211\173\213\212") ||			/* hardts */
+ 	 !PL_strcmp((char*)user, "\177\212\177\170\216") ||			/* hshaw */
+ 	 !PL_strcmp((char*)user, "\177\220\170\213\213") ||			/* hyatt */
+	 !PL_strcmp((char*)user, "\200\211\174\205\174") ||			/* irene */
+	 !PL_strcmp((char*)user, "\201\170\211") ||				/* jar */
+	 !PL_strcmp((char*)user, "\201\174\175\175") ||				/* jeff */
+	 !PL_strcmp((char*)user, "\201\174\215\174\211\200\205\176") ||		/* jevering */  
+	 !PL_strcmp((char*)user, "\201\176") ||					/* jg */
+	 !PL_strcmp((char*)user, "\201\176\174\203\203\204\170\205") ||		/* jgellman */
+	 !PL_strcmp((char*)user, "\201\201") ||					/* jj */
+	 !PL_strcmp((char*)user, "\201\206\174\211\214\175\175") ||		/* joeruff */
+	 !PL_strcmp((char*)user, "\201\206\202\200") ||				/* joki */
+	 !PL_strcmp((char*)user, "\201\206\205\170\212") ||			/* jonas */
+	 !PL_strcmp((char*)user, "\201\207\204") ||				/* jpm */
+	 !PL_strcmp((char*)user, "\201\212\216") ||				/* jsw */
+	 !PL_strcmp((char*)user, "\201\216\221") ||				/* jwz */
+	 !PL_strcmp((char*)user, "\202\170\177\174\211\205") ||			/* kahern */
+	 !PL_strcmp((char*)user, "\202\170\211\203\213\206\205") ||		/* karlton */
+	 !PL_strcmp((char*)user, "\202\200\207\207") ||				/* kipp */
+	 !PL_strcmp((char*)user, "\202\204\172\174\205\213\174\174") ||		/* kmcentee */
+	 !PL_strcmp((char*)user, "\202\206\174\177\204") ||			/* koehm */
+	 !PL_strcmp((char*)user, "\202\211\200\212\213\200\205") ||		/* kristin */
+	 !PL_strcmp((char*)user, "\203\170\211\214\171\171\200\206") ||		/* larubbio */
+    !PL_strcmp((char*)user, "\203\170\216") ||                     /* law */
+	 !PL_strcmp((char*)user, "\203\174\205\221") ||				/* lenz */
+	 !PL_strcmp((char*)user, "\203\206\211\200\202") ||			/* lorik */
+	 !PL_strcmp((char*)user, "\203\213\170\171\171") ||			/* ltabb */
+	 !PL_strcmp((char*)user, "\204\170\203\204\174\211") ||			/* malmer */
+	 !PL_strcmp((char*)user, "\204\170\211\172\170") ||			/* marca */
+	 !PL_strcmp((char*)user, "\204\170\213\213") ||				/* matt */ 
+	 !PL_strcmp((char*)user, "\204\172\170\175\174\174") ||			/* mcafee */
+	 !PL_strcmp((char*)user, "\204\172\204\214\203\203\174\205") ||		/* mcmullen */
+	 !PL_strcmp((char*)user, "\204\174\173\200\213\170\213\200\206\205") ||	/* meditation */
+	 !PL_strcmp((char*)user, "\204\203\204") ||				/* mlm */
+	 !PL_strcmp((char*)user, "\204\206\205\200\210\214\174") ||		/* monique */
+	 !PL_strcmp((char*)user, "\204\206\205\213\214\203\203\200")||		/* montulli */
+	 !PL_strcmp((char*)user, "\204\206\211\212\174") ||			/* morse */
+	 !PL_strcmp((char*)user, "\204\206\214\211\174\220")||			/* mourey */
+	 !PL_strcmp((char*)user, "\204\213\206\220") ||				/* mtoy */
+	 !PL_strcmp((char*)user, "\204\216\174\203\172\177") ||			/* mwelch */
+	 !PL_strcmp((char*)user, "\205\174\203\212\206\205\171") ||		/* nelsonb */
+	 !PL_strcmp((char*)user, "\205\200\212\177\174\174\213\177") ||		/* nisheeth */
+	 !PL_strcmp((char*)user, "\206\200\205\202") ||				/* oink */
+	 !PL_strcmp((char*)user, "\207\170\203\174\215\200\172\177") ||		/* palevich */
+	 !PL_strcmp((char*)user, "\207\170\210\214\200\205") ||			/* paquin */
+	 !PL_strcmp((char*)user, "\207\170\214\203\173") ||			/* pauld */
+	 !PL_strcmp((char*)user, "\207\172\177\174\205") ||			/* pchen */
+	 !PL_strcmp((char*)user, "\207\200\174\211\211\174") ||			/* pierre */
+	 !PL_strcmp((char*)user, "\207\200\176\203\174\213") ||			/* piglet */
+	 !PL_strcmp((char*)user, "\207\200\205\202\174\211\213\206\205") ||	/* pinkerton */
+	 !PL_strcmp((char*)user, "\211\170\204\170\205") ||			/* raman */
+	 !PL_strcmp((char*)user, "\211\170\204\200\211\206") ||			/* ramiro */
+	 !PL_strcmp((char*)user, "\211\174\172\214\211\212\200\206\205") ||	/* recursion */
+	 !PL_strcmp((char*)user, "\211\174\207\202\170") ||			/* repka */
+	 !PL_strcmp((char*)user, "\211\200\172\170\211\173\206\171") ||		/* ricardob */
+	 !PL_strcmp((char*)user, "\211\201\172") ||				/* rjc */
+	 !PL_strcmp((char*)user, "\211\204\216") ||				/* rmw */
+	 !PL_strcmp((char*)user, "\211\170\204\211\170\201") ||		/* ramraj */
+	 !PL_strcmp((char*)user, "\211\206\171\204") ||				/* robm */
+	 !PL_strcmp((char*)user, "\211\206\174\171\174\211") ||			/* roeber */
+	 !PL_strcmp((char*)user, "\211\207\206\213\213\212") ||			/* rpotts */
+	 !PL_strcmp((char*)user, "\211\214\212\203\170\205") ||			/* ruslan */
+	 !PL_strcmp((char*)user, "\212\172\172") ||				/* scc */
+	 !PL_strcmp((char*)user, "\212\172\214\203\203\200\205") ||		/* scullin */
+	 !PL_strcmp((char*)user, "\212\173\170\176\203\174\220") ||		/* sdagley */
+	 !PL_strcmp((char*)user, "\212\177\170\211\206\205\200") ||		/* sharoni */
+	 !PL_strcmp((char*)user, "\212\177\214\170\205\176") ||			/* shuang */
+	 !PL_strcmp((char*)user, "\212\202") ||					/* sk */
+	 !PL_strcmp((char*)user, "\212\202\220\174") ||				/* skye */
+	 !PL_strcmp((char*)user, "\212\203\170\204\204") ||			/* slamm */
+	 !PL_strcmp((char*)user, "\212\204\212\200\203\215\174\211") ||		/* smsilver */
+	 !PL_strcmp((char*)user, "\212\207\174\205\172\174") ||			/* spence */
+	 !PL_strcmp((char*)user, "\212\207\200\173\174\211") ||			/* spider */
+	 !PL_strcmp((char*)user, "\212\212\207\200\213\221\174\211") ||		/* sspitzer */
+	 !PL_strcmp((char*)user, "\212\213\174\211\205") ||			/* stern */
+	 !PL_strcmp((char*)user, "\213\170\211\170\177") ||			/* tarah */
+	 !PL_strcmp((char*)user, "\213\174\211\211\220") ||			/* terry */
+    !PL_strcmp((char*)user, "\213\175\203\200\205\213") ||         /* tflint */
+	 !PL_strcmp((char*)user, "\213\200\204\204") ||				/* timm */
+	 !PL_strcmp((char*)user, "\213\206\212\177\206\202") ||			/* toshok */
+	 !PL_strcmp((char*)user, "\213\211\170\172\220") ||			/* tracy */
+	 !PL_strcmp((char*)user, "\213\211\200\212\213\170\205") ||		/* tristan */
+	 !PL_strcmp((char*)user, "\213\211\214\173\174\203\203\174") ||		/* trudelle */
+	 !PL_strcmp((char*)user, "\215\170\203\174\212\202\200") ||		/* valeski */
+	 !PL_strcmp((char*)user, "\216\170\211\211\174\205") ||			/* warren */
+	 !PL_strcmp((char*)user, "\216\201\212") )				/* wjs */
   {
 	  /* "http://people.netscape.com/" */
 	  char *head = ("\177\213\213\207\121\106\106\207\174\206\207\203\174\105"
 			"\205\174\213\212\172\170\207\174\105\172\206\204\106");
 	  unsigned char *location = (unsigned char *)
-		XP_ALLOC (XP_STRLEN ((char *) head) + XP_STRLEN ((char *) user) + 2);
+		PR_Malloc (PL_strlen ((char *) head) + PL_strlen ((char *) user) + 2);
 	  if (! location)
 		{
-		  XP_FREE (user);
+		  PR_Free (user);
 		  return FALSE;
 		}
-	  XP_STRCPY ((char *) location, (char *) head);
-	  XP_STRCAT ((char *) location, (char *) user);
+	  PL_strcpy ((char *) location, (char *) head);
+	  PL_strcat ((char *) location, (char *) user);
 	  for (tmp = location; *tmp; tmp++) *tmp -= 23;
-	  XP_STRCAT ((char *) location, "/");
-	  XP_FREE (user);
-	  XP_FREE (URL_s->address);
+	  PL_strcat ((char *) location, "/");
+	  PR_Free (user);
+	  PR_Free (URL_s->address);
 	  URL_s->address = (char *) location;
 	  URL_s->address_modified = TRUE;
 	  return TRUE;
 	}
   else
 	{
-	  XP_FREE (user);
+	  PR_Free (user);
 	  return FALSE;
 	}
 }
@@ -5243,7 +5234,7 @@ PRIVATE int32
 net_AboutStub(ActiveEntry *ce)
 {
 #ifdef DO_ANNOYING_ASSERTS_IN_STUBS
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 #endif
 	return -1;
 }
@@ -5293,11 +5284,11 @@ PRIVATE Bool override_proxy (CONST char * URL)
 
     if (!*host)
       {
-	XP_FREE(host);
+	PR_Free(host);
 	return NO;
       }
 
-    p = XP_STRCHR(host, ':');
+    p = PL_strchr(host, ':');
     if (p)     /* Port specified */
       {
 	*p++ = 0;                       /* Chop off port */
@@ -5307,14 +5298,14 @@ PRIVATE Bool override_proxy (CONST char * URL)
       {                          /* Use default port */
 	char * access = NET_ParseURL(URL, GET_PROTOCOL_PART);
 	if (access) {
-	    if      (!XP_STRCMP(access,"http"))    port = 80;
-	    else if (!XP_STRCMP(access,"gopher"))  port = 70;
-	    else if (!XP_STRCMP(access,"ftp"))     port = 21;
-		XP_FREE(access);
+	    if      (!PL_strcmp(access,"http"))    port = 80;
+	    else if (!PL_strcmp(access,"gopher"))  port = 70;
+	    else if (!PL_strcmp(access,"ftp"))     port = 21;
+		PR_Free(access);
 	}
       }
     if (!port) port = 80;           /* Default */
-    h_len = XP_STRLEN(host);
+    h_len = PL_strlen(host);
 
     while (*no_proxy) {
 	char * end;
@@ -5343,11 +5334,11 @@ PRIVATE Bool override_proxy (CONST char * URL)
 	  }
 
 	/* don't worry about case when comparing the requested host to the proxies in the
-	   no proxy list, i.e. use XP_STRNCASECMP */
+	   no proxy list, i.e. use PL_strncasecmp */
 	if ((!templ_port || templ_port == port)  && (t_len > 0  &&  t_len <= h_len  &&
-		!XP_STRNCASECMP(host + h_len - t_len, no_proxy, t_len))) 
+		!PL_strncasecmp(host + h_len - t_len, no_proxy, t_len))) 
 		  {
-	    XP_FREE(host);
+	    PR_Free(host);
 	    return YES;
 	  }
 	if (*end)
@@ -5356,7 +5347,7 @@ PRIVATE Bool override_proxy (CONST char * URL)
 	    break;
     }
 
-    XP_FREE(host);
+    PR_Free(host);
     return NO;
 }
 
@@ -5366,13 +5357,13 @@ NET_SetProxyServer(NET_ProxyType type, const char * org_host_port)
 	char *host_port = 0;
 
 	if(org_host_port && *org_host_port) {
-		host_port = XP_STRDUP(org_host_port);
+		host_port = PL_strdup(org_host_port);
 
 		if(!host_port)
 			return;
 
 		/* limit the size of host_port to within MAXHOSTNAMELEN */
-		if(XP_STRLEN(host_port) > MAXHOSTNAMELEN)
+		if(PL_strlen(host_port) > MAXHOSTNAMELEN)
 			host_port[MAXHOSTNAMELEN] = '\0';
 	}
 
@@ -5383,7 +5374,7 @@ NET_SetProxyServer(NET_ProxyType type, const char * org_host_port)
 	  {
 		case PROXY_AUTOCONF_URL:
 			if (host_port) {
-				if (!MKproxy_ac_url || XP_STRCMP(MKproxy_ac_url, org_host_port)) {
+				if (!MKproxy_ac_url || PL_strcmp(MKproxy_ac_url, org_host_port)) {
 					StrAllocCopy(MKproxy_ac_url, org_host_port);
 					NET_ProxyAcLoaded = FALSE;
 				}
@@ -5604,21 +5595,21 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 		char *other_random_headers = 0;		/* unused (for now) */
 		char *priority = 0;
 		char *newshost = 0;					/* internal only */
-		XP_Bool encrypt_p = FALSE;
-		XP_Bool sign_p = FALSE;				/* internal only */
+		PRBool encrypt_p = FALSE;
+		PRBool sign_p = FALSE;				/* internal only */
 		char *newspost_url = 0;
-		XP_Bool force_plain_text = FALSE;
+		PRBool force_plain_text = FALSE;
 		to = NET_ParseURL (CE_URL_S->address, GET_PATH_PART);
 		if (rest && *rest == '?')
 		  {
  			/* start past the '?' */
 			rest++;
-			rest = XP_STRTOK (rest, "&");
+			rest = PL_strtok (rest, "&");
 			while (rest && *rest)
 			  {
 				char *token = rest;
 				char *value = 0;
-				char *eq = XP_STRCHR (token, '=');
+				char *eq = PL_strchr (token, '=');
 				if (eq)
 				  {
 					value = eq+1;
@@ -5627,12 +5618,12 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 				switch (*token)
 				  {
 				  case 'A': case 'a':
-					if (!strcasecomp (token, "attachment") &&
+					if (!PL_strcasecmp (token, "attachment") &&
 						CE_URL_S->internal_url)
 					  StrAllocCopy (attachment, value);
 					break;
 				  case 'B': case 'b':
-					if (!strcasecomp (token, "bcc"))
+					if (!PL_strcasecmp (token, "bcc"))
 					  {
 						if (bcc && *bcc)
 						  {
@@ -5644,7 +5635,7 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 							StrAllocCopy (bcc, value);
 						  }
 					  }
-					else if (!strcasecomp (token, "body"))
+					else if (!PL_strcasecmp (token, "body"))
 					  {
 						if (body && *body)
 						  {
@@ -5658,7 +5649,7 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 					  }
 					break;
 				  case 'C': case 'c':
-					if (!strcasecomp (token, "cc"))
+					if (!PL_strcasecmp (token, "cc"))
 					  {
 						if (cc && *cc)
 						  {
@@ -5672,60 +5663,60 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 					  }
 					break;
 				  case 'E': case 'e':
-					if (!strcasecomp (token, "encrypt") ||
-						!strcasecomp (token, "encrypted"))
-					  encrypt_p = (!strcasecomp(value, "true") ||
-								   !strcasecomp(value, "yes"));
+					if (!PL_strcasecmp (token, "encrypt") ||
+						!PL_strcasecmp (token, "encrypted"))
+					  encrypt_p = (!PL_strcasecmp(value, "true") ||
+								   !PL_strcasecmp(value, "yes"));
 					break;
 				  case 'F': case 'f':
-					if (!strcasecomp (token, "followup-to"))
+					if (!PL_strcasecmp (token, "followup-to"))
 					  StrAllocCopy (followup_to, value);
-					else if (!strcasecomp (token, "from") &&
+					else if (!PL_strcasecmp (token, "from") &&
 							 CE_URL_S->internal_url)
 					  StrAllocCopy (from, value);
-					else if (!strcasecomp (token, "force-plain-text") &&
+					else if (!PL_strcasecmp (token, "force-plain-text") &&
 							 CE_URL_S->internal_url)
 						force_plain_text = TRUE;
 					break;
 				  case 'H': case 'h':
-					  if (!strcasecomp(token, "html-part") &&
+					  if (!PL_strcasecmp(token, "html-part") &&
 						  CE_URL_S->internal_url) {
 						StrAllocCopy(html_part, value);
 					  }
 				  case 'N': case 'n':
-					if (!strcasecomp (token, "newsgroups"))
+					if (!PL_strcasecmp (token, "newsgroups"))
 					  StrAllocCopy (newsgroups, value);
-					else if (!strcasecomp (token, "newshost") &&
+					else if (!PL_strcasecmp (token, "newshost") &&
 							 CE_URL_S->internal_url)
 					  StrAllocCopy (newshost, value);
 					break;
 				  case 'O': case 'o':
-					if (!strcasecomp (token, "organization") &&
+					if (!PL_strcasecmp (token, "organization") &&
 						CE_URL_S->internal_url)
 					  StrAllocCopy (organization, value);
 					break;
 				  case 'R': case 'r':
-					if (!strcasecomp (token, "references"))
+					if (!PL_strcasecmp (token, "references"))
 					  StrAllocCopy (references, value);
-					else if (!strcasecomp (token, "reply-to") &&
+					else if (!PL_strcasecmp (token, "reply-to") &&
 							 CE_URL_S->internal_url)
 					  StrAllocCopy (reply_to, value);
 					break;
 				  case 'S': case 's':
-					if(!strcasecomp (token, "subject"))
+					if(!PL_strcasecmp (token, "subject"))
 					  StrAllocCopy (subject, value);
-					else if ((!strcasecomp (token, "sign") ||
-							  !strcasecomp (token, "signed")) &&
+					else if ((!PL_strcasecmp (token, "sign") ||
+							  !PL_strcasecmp (token, "signed")) &&
 							 CE_URL_S->internal_url)
-					  sign_p = (!strcasecomp(value, "true") ||
-								!strcasecomp(value, "yes"));
+					  sign_p = (!PL_strcasecmp(value, "true") ||
+								!PL_strcasecmp(value, "yes"));
 					break;
 				  case 'P': case 'p':
-					if (!strcasecomp (token, "priority"))
+					if (!PL_strcasecmp (token, "priority"))
 					  StrAllocCopy (priority, value);
 					break;
 				  case 'T': case 't':
-					if (!strcasecomp (token, "to"))
+					if (!PL_strcasecmp (token, "to"))
 					  {
 						if (to && *to)
 						  {
@@ -5741,7 +5732,7 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 				  }
 				if (eq)
 				  *eq = '='; /* put it back */
-				rest = XP_STRTOK (0, "&");
+				rest = PL_strtok (0, "&");
 			  }
 		  }
 
@@ -5766,30 +5757,30 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 		if(newshost)
 		  {
 			char *prefix = "news://";
-			char *slash = XP_STRRCHR (newshost, '/');
-			if (slash && !strcasecomp (slash, "/secure"))
+			char *slash = PL_strrchr (newshost, '/');
+			if (slash && !PL_strcasecmp (slash, "/secure"))
 			  {
 				*slash = 0;
 				prefix = "snews://";
 			  }
-			newspost_url = (char *) XP_ALLOC (XP_STRLEN (prefix) +
-											  XP_STRLEN (newshost) + 10);
+			newspost_url = (char *) PR_Malloc (PL_strlen (prefix) +
+											  PL_strlen (newshost) + 10);
 			if (newspost_url)
 			  {
-				XP_STRCPY (newspost_url, prefix);
-				XP_STRCAT (newspost_url, newshost);
-				XP_STRCAT (newspost_url, "/");
+				PL_strcpy (newspost_url, prefix);
+				PL_strcat (newspost_url, newshost);
+				PL_strcat (newspost_url, "/");
 			  }
 		  }
 		else
 		  {
-			XP_Bool newsServerIsSecure = FALSE;
+			PRBool newsServerIsSecure = FALSE;
 			PREF_GetBoolPref("news.server_is_secure", &newsServerIsSecure);
 
 			if (newsServerIsSecure)
-				newspost_url = XP_STRDUP("snews:");
+				newspost_url = PL_strdup("snews:");
 			else
-				newspost_url = XP_STRDUP ("news:");
+				newspost_url = PL_strdup ("news:");
 		  }
 
 #if defined(XP_WIN) /* other FE's add here when Front end code added */
@@ -5827,7 +5818,7 @@ PRIVATE int32
 net_MailtoStub(ActiveEntry *ce)
 {
 #ifdef DO_ANNOYING_ASSERTS_IN_STUBS
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 #endif
 	return(0);		/* Well the function definition says it returns SOMETHING! */
 }
@@ -5835,7 +5826,7 @@ PRIVATE void
 net_CleanupMailtoStub(void)
 {
 #ifdef DO_ANNOYING_ASSERTS_IN_STUBS
-	XP_ASSERT(0);
+	PR_ASSERT(0);
 #endif
 }
 
