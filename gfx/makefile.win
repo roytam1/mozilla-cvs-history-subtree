@@ -21,10 +21,6 @@
 
 DEPTH=..
 
-DIRS= public src \
-!if !defined(DISABLE_TESTS)
-    tests \
-!endif
-    idl
+DIRS= public src idl
 
 include <$(DEPTH)\config\rules.mak>

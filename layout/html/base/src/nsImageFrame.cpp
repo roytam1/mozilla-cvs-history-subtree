@@ -383,7 +383,7 @@ NS_IMETHODIMP nsImageFrame::OnStopDecode(imgIRequest *aRequest, nsIPresContext *
       mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::usemap, usemap);    
       // We failed to load the image. Notify the pres shell if we aren't an image map
       if (usemap.IsEmpty()) {
-        presShell->CantRenderReplacedElement(aPresContext, this);      
+        presShell->CantRenderReplacedElement(aPresContext, this);
       }
     }
     mFailureReplace = PR_TRUE;
@@ -840,10 +840,12 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
       // indicating the status
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
           !mInitialLoadCompleted) {
-        DisplayAltFeedback(aPresContext, aRenderingContext,
+        DisplayAltFeedback(aPresContext, aRenderingContext, 0);
+#ifndef USE_IMG2
                            (loadStatus & imgIRequest::STATUS_ERROR)
                            ? NS_ICON_BROKEN_IMAGE
                            : NS_ICON_LOADING_IMAGE);
+#endif
       }
     }
     else {
@@ -1237,20 +1239,13 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
     nsAutoString newSRC;
     aChild->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::src, newSRC);
 
-    PRUint32 loadStatus = imgIRequest::STATUS_ERROR;
-
-    if (mImageRequest)
-      mImageRequest->GetImageStatus(&loadStatus);
-
-    if (!(loadStatus & imgIRequest::STATUS_SIZE_AVAILABLE)) {
-      if (mImageRequest) {
-        mFailureReplace = PR_FALSE; // don't cause a CantRenderReplacedElement call
-        mImageRequest->Cancel(NS_ERROR_FAILURE);
-        mImageRequest = nsnull;
-      }
-
-      mCanSendLoadEvent = PR_TRUE;
+    if (mImageRequest) {
+      mFailureReplace = PR_FALSE; // don't cause a CantRenderReplacedElement call
+      mImageRequest->Cancel(NS_ERROR_FAILURE);
+      mImageRequest = nsnull;
     }
+
+    mCanSendLoadEvent = PR_TRUE;
 
     LoadImage(newSRC, aPresContext, getter_AddRefs(mImageRequest));
   }
@@ -1400,7 +1395,7 @@ nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresCon
   /* set this back to FALSE before we do the real load */
   mInitialLoadCompleted = PR_FALSE;
 
-  return il->LoadImage(uri, loadGroup, mListener, aPresContext, aRequest);
+  return il->LoadImage(uri, loadGroup, mListener, aPresContext, nsIRequest::LOAD_NORMAL, aRequest);
 }
 
 #define INTERNAL_GOPHER_LENGTH 16 /* "internal-gopher-" length */
