@@ -188,9 +188,11 @@ BEGIN
     "G",            ID_EDIT_FINDAGAIN,      VIRTKEY, CONTROL, NOINVERT
     "H",            ID_GO_HISTORY,          VIRTKEY, CONTROL, NOINVERT
     "I",            ID_FILE_DOCINFO,        VIRTKEY, CONTROL, NOINVERT
+#ifdef MOZ_SECURITY
     "I",            ID_SECURITY,            VIRTKEY, SHIFT, CONTROL, 
                                                     NOINVERT
-    "M",            ID_FILE_MAILNEW,        VIRTKEY, CONTROL, NOINVERT
+#endif
+	"M",            ID_FILE_MAILNEW,        VIRTKEY, CONTROL, NOINVERT
     "N",            ID_NEW_FRAME,           VIRTKEY, CONTROL, NOINVERT
     "N",            ID_EDT_NEW_DOC_BLANK,   VIRTKEY, SHIFT, CONTROL, 
                                                     NOINVERT
@@ -284,9 +286,11 @@ BEGIN
     "F",            ID_EDIT_FIND,           VIRTKEY, CONTROL, NOINVERT
     "G",            ID_EDIT_FINDAGAIN,      VIRTKEY, CONTROL, NOINVERT
     "H",            ID_GO_HISTORY,          VIRTKEY, CONTROL, NOINVERT
+#ifdef MOZ_SECURITY
     "I",            ID_SECURITY,            VIRTKEY, SHIFT, CONTROL, 
                                                     NOINVERT
-    "M",            ID_FILE_MAILNEW,        VIRTKEY, CONTROL, NOINVERT
+#endif
+	"M",            ID_FILE_MAILNEW,        VIRTKEY, CONTROL, NOINVERT
     "N",            ID_NEW_FRAME,           VIRTKEY, CONTROL, NOINVERT
     "N",            ID_EDT_NEW_DOC_BLANK,   VIRTKEY, SHIFT, CONTROL, 
                                                     NOINVERT
@@ -318,8 +322,10 @@ BEGIN
     "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
     "E",            ID_EDIT_REDO,           VIRTKEY, CONTROL, NOINVERT
     "F",            ID_EDIT_SEARCH,         VIRTKEY, CONTROL, NOINVERT
+#ifdef MOZ_SECURITY
     "I",            ID_SECURITY,            VIRTKEY, SHIFT, CONTROL, 
                                                     NOINVERT
+#endif
     "S",            ID_FILE_SAVEAS,         VIRTKEY, CONTROL, NOINVERT
     VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT, NOINVERT
     VK_BACK,        ID_EDIT_REDO,           VIRTKEY, SHIFT, ALT, NOINVERT
@@ -2586,7 +2592,9 @@ END
 
 STRINGTABLE DISCARDABLE 
 BEGIN
+#ifdef MOZ_SECURITY
     IDS_STATBAR_SECURITY    "Show security information for this page"
+#endif
     IDS_STATBAR_ONLINE      "Show online/offline state"
 END
 
