@@ -1539,6 +1539,11 @@ nsDNSService::Shutdown()
     if (dnsServiceThread)
         PR_Mac_PostAsyncNotify(dnsServiceThread);
 
+#elif defined(XP_UNIX)
+
+    PRStatus status = PR_NotifyCondVar(mDNSCondVar);
+    NS_ASSERTION(status == PR_SUCCESS, "unable to notify dns cond var");
+
 #elif defined(XP_WIN)
 
     SendMessage(mDNSWindow, WM_DNS_SHUTDOWN, 0, 0);
