@@ -99,6 +99,9 @@ sub BuildMozilla()
 		BuildProject(":mozilla:js:macbuild:JavaScriptPPC.mcp",								"JavaScript$D.shlb");
 		MakeAlias(":mozilla:js:macbuild:JavaScript$D.shlb", "$dist_dir");
 		
+		BuildProject(":mozilla:js:macbuild:LiveConnect.mcp",								"LiveConnect$D.shlb");
+		MakeAlias(":mozilla:js:macbuild:LiveConnect$D.shlb", "$dist_dir");
+		
 		BuildProject(":mozilla:nav-java:stubs:macbuild:NavJavaStubs.mcp",					"NavJava$D.shlb");
 		MakeAlias(":mozilla:nav-java:stubs:macbuild:NavJava$D.shlb", "$dist_dir");
 
