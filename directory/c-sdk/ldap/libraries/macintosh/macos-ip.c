@@ -53,11 +53,7 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host, unsigned long addres
 	void			*tcps;
 	short 			i;
 	int				err;
-#ifdef SUPPORT_OPENTRANSPORT
     InetHostInfo	hi;
-#else /* SUPPORT_OPENTRANSPORT */
-    struct hostInfo	hi;
-#endif /* SUPPORT_OPENTRANSPORT */
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "connect_to_host: %s:%d\n",
 	    ( host == NULL ) ? "(by address)" : host, ntohs( port ), 0 );
@@ -91,17 +87,10 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host, unsigned long addres
 		return( -1 );
 	}
 
-#ifdef SUPPORT_OPENTRANSPORT
     for ( i = 0; host == NULL || hi.addrs[ i ] != 0; ++i ) {
     	if ( host != NULL ) {
 			SAFEMEMCPY( (char *)&address, (char *)&hi.addrs[ i ], sizeof( long ));
 		}
-#else /* SUPPORT_OPENTRANSPORT */
-    for ( i = 0; host == NULL || hi.addr[ i ] != 0; ++i ) {
-    	if ( host != NULL ) {
-			SAFEMEMCPY( (char *)&address, (char *)&hi.addr[ i ], sizeof( long ));
-		}
-#endif /* SUPPORT_OPENTRANSPORT */
 
 
 		if ( ld->ld_connect_fn == NULL ) {
@@ -161,25 +150,15 @@ host_connected_to( Sockbuf *sb )
 {
 	ip_addr addr;
 	
-#ifdef SUPPORT_OPENTRANSPORT
     InetHostInfo	hi;
-#else /* SUPPORT_OPENTRANSPORT */
-    struct hostInfo	hi;
-#endif /* SUPPORT_OPENTRANSPORT */
 
 	if ( tcpgetpeername( (tcpstream *)sb->sb_sd, &addr, NULL ) != noErr ) {
 		return( NULL );
 	}
 
-#ifdef SUPPORT_OPENTRANSPORT
 	if ( gethostinfobyaddr( addr, &hi ) == noErr ) {
 		return( strdup( hi.name ));
 	}
-#else /* SUPPORT_OPENTRANSPORT */
-	if ( gethostinfobyaddr( addr, &hi ) == noErr ) {
-		return( strdup( hi.cname ));
-	}
-#endif /* SUPPORT_OPENTRANSPORT */
 
 	return( NULL );
 }
@@ -442,6 +421,7 @@ nsldapi_do_ldap_select( LDAP *ld, struct timeval *timeout )
 	unsigned long		ticks, endticks;
 	short				i, err;
 	static int			tblsize = 0;
+	EventRecord			dummyEvent;
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "do_ldap_select\n", 0, 0, 0 );
 
@@ -498,8 +478,8 @@ nsldapi_do_ldap_select( LDAP *ld, struct timeval *timeout )
 		}
 
 		if ( !ready && !gotselecterr ) {
-			Delay( 2L, &ticks );
-			SystemTask();
+			(void)WaitNextEvent(nullEvent, &dummyEvent, 1, NULL);
+			ticks = TickCount();
 		}
 	} while ( !ready && !gotselecterr && ( timeout == NULL || ticks < endticks ));
 
