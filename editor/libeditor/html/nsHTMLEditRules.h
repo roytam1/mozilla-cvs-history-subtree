@@ -47,12 +47,26 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsEditorUtils.h"
+#include "TypeInState.h"
 
 class nsISupportsArray;
 class nsVoidArray;
 class nsIDOMElement;
 class nsIEditor;
 class nsHTMLEditor;
+
+struct StyleCache : public PropItem
+{
+  PRBool mPresent;
+  
+  StyleCache() : PropItem(nsnull, nsString(), nsString()), mPresent(PR_FALSE){};
+  StyleCache(nsIAtom *aTag, const nsAString &aAttr, const nsAString &aValue) : 
+             PropItem(aTag, aAttr, aValue), mPresent(PR_FALSE) {};
+  ~StyleCache() {};
+};
+
+
+#define SIZE_STYLE_TABLE 19
 
 class nsHTMLEditRules : public nsIHTMLEditRules, public nsTextEditRules, public nsIEditActionListener
 {
@@ -100,6 +114,10 @@ public:
   NS_IMETHOD WillDeleteSelection(nsISelection *aSelection);
   NS_IMETHOD DidDeleteSelection(nsISelection *aSelection);
 
+  nsresult InsertBRIfNeeded(nsISelection *aSelection);
+  nsresult GetGoodSelPointForNode(nsIDOMNode *aNode, nsIEditor::EDirection aAction, 
+                                  nsCOMPtr<nsIDOMNode> *outSelNode, PRInt32 *outSelOffset);
+
 protected:
 
   enum RulesEndpoint
@@ -113,8 +131,6 @@ protected:
     kBeforeBlock,
     kBlockEnd
   };
-
-
 
   // nsHTMLEditRules implementation methods
   nsresult WillInsert(nsISelection *aSelection, PRBool *aCancel);
@@ -232,6 +248,9 @@ protected:
   nsresult GetTopEnclosingMailCite(nsIDOMNode *aNode, nsCOMPtr<nsIDOMNode> *aOutCiteNode, PRBool aPlaintext);
   nsresult PopListItem(nsIDOMNode *aListItem, PRBool *aOutOfList);
   nsresult RemoveListStructure(nsIDOMNode *aList);
+  nsresult CacheInlineStyles(nsIDOMNode *aNode);
+  nsresult ReapplyCachedStyles(); 
+  nsresult ClearCachedStyles();
   nsresult AdjustSpecialBreaks(PRBool aSafeToAskFrames = PR_FALSE);
   nsresult AdjustWhitespace(nsISelection *aSelection);
   nsresult PinSelectionToNewBlock(nsISelection *aSelection);
@@ -261,10 +280,13 @@ protected:
   nsCOMPtr<nsIDOMRange>   mDocChangeRange;
   PRBool                  mListenerEnabled;
   PRBool                  mReturnInEmptyLIKillsList;
+  PRBool                  mDidRangedDelete;
+  PRBool                  mDidDeleteSelection;
   nsCOMPtr<nsIDOMRange>   mUtilRange;
   PRUint32                mJoinOffset;  // need to remember an int across willJoin/didJoin...
   nsCOMPtr<nsIDOMNode>    mNewBlock;
   nsRangeStore            mRangeItem;
+  StyleCache              mCachedStyles[SIZE_STYLE_TABLE];
 };
 
 nsresult NS_NewHTMLEditRules(nsIEditRules** aInstancePtrResult);

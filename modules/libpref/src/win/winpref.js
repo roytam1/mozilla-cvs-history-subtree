@@ -52,8 +52,8 @@ pref("font.name.sans-serif.he", "Arial");
 pref("font.name.monospace.he", "Courier New");
 pref("font.name.cursive.he", "Comic Sans MS");
 
-pref("font.name.serif.ja", "MS UI Gothic");
-pref("font.name.sans-serif.ja", "ＭＳ Ｐ明朝"); // "MS PMincho"
+pref("font.name.serif.ja", "ＭＳ Ｐ明朝"); // "MS PMincho"
+pref("font.name.sans-serif.ja", "ＭＳ Ｐゴシック"); // "MS PGothic"
 pref("font.name.monospace.ja", "ＭＳ ゴシック"); // "MS Gothic"
 pref("font.name-list.serif.ja", "MS PMincho, MS PGothic, MS Mincho, MS Gothic");
 pref("font.name-list.sans-serif.ja", "MS PGothic, MS PMincho, MS Gothic, MS Mincho");
@@ -126,7 +126,7 @@ pref("font.size.variable.he", 16);
 pref("font.size.fixed.he", 13);
 
 pref("font.size.variable.ja", 16);
-pref("font.size.fixed.ja", 16);
+pref("font.size.fixed.ja", 14);
 
 pref("font.size.variable.ko", 16);
 pref("font.size.fixed.ko", 16);

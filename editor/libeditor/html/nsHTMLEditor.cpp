@@ -123,6 +123,7 @@
 #include "nsITransferable.h"
 #include "nsIDragService.h"
 #include "nsIDOMNSUIEvent.h"
+#include "nsIContentFilter.h"
 
 // Transactionas
 #include "nsStyleSheetTxns.h"
@@ -182,6 +183,7 @@ nsHTMLEditor::nsHTMLEditor()
 , mIsShowingResizeHandles(PR_FALSE)
 , mIsResizing(PR_FALSE)
 , mResizedObject(nsnull)
+, mPastePolicy(eNoAddedStyle)
 {
 // Done in nsEditor
 // NS_INIT_ISUPPORTS();
@@ -227,6 +229,9 @@ nsHTMLEditor::~nsHTMLEditor()
 
   if (mHTMLCSSUtils)
     delete mHTMLCSSUtils;
+  
+  // free and default style propItems
+  RemoveAllDefaultProperties();
 }
 
 NS_IMPL_ADDREF_INHERITED(nsHTMLEditor, nsEditor)
@@ -371,7 +376,7 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
   }
 
   if (NS_FAILED(rulesRes)) return rulesRes;
-
+  
   return result;
 }
 
@@ -559,9 +564,43 @@ NS_IMETHODIMP nsHTMLEditor::BeginningOfDocument()
     }
     else if (visType==nsWSRunObject::eOtherBlock)
     {
-      curNode = visNode;
-      curOffset = 0;
-      // keep looping
+      // By definition of nsWSRunObject, a block element terminates 
+      // a whitespace run. That is, although we are calling a method 
+      // that is named "NextVisibleNode", the node returned
+      // might not be visible/editable!
+      // If the given block does not contain any visible/editable items,
+      // we want to skip it and continue our search.
+
+      if (!IsContainer(visNode))
+      {
+        // However, we were given a block that is not a container.
+        // Since the block can not contain anything that's visible,
+        // such a block only makes sense if it is visible by itself,
+        // like a <hr>
+        // We want to place the caret in front of that block.
+
+        res = GetNodeLocation(visNode, address_of(selNode), &selOffset);
+        if (NS_FAILED(res)) return res; 
+        done = PR_TRUE;
+      }
+      else
+      {
+        PRBool isEmptyBlock;
+        if (NS_SUCCEEDED(IsEmptyNode(visNode, &isEmptyBlock)) &&
+            isEmptyBlock)
+        {
+          // skip the empty block
+          res = GetNodeLocation(visNode, address_of(curNode), &curOffset);
+          if (NS_FAILED(res)) return res; 
+          ++curOffset;
+        }
+        else
+        {
+          curNode = visNode;
+          curOffset = 0;
+        }
+        // keep looping
+      }
     }
     else
     {
@@ -1702,7 +1741,7 @@ nsHTMLEditor::CollapseSelectionToDeepestNonTableFirstChild(nsISelection *aSelect
 }
 
 
-// This is mostly like InsertHTMLWithCharset, 
+// This is mostly like InsertHTMLWithCharsetAndContext, 
 //  but we can't use that because it is selection-based and 
 //  the rules code won't let us edit under the <head> node
 NS_IMETHODIMP
@@ -4488,7 +4527,7 @@ void nsHTMLEditor::IsTextPropertySetByContent(nsIDOMNode        *aNode,
                                               const nsAString   *aValue, 
                                               PRBool            &aIsSet,
                                               nsIDOMNode       **aStyleNode,
-                                              nsAString *outValue) const
+                                              nsAString *outValue) 
 {
   nsresult result;
   aIsSet = PR_FALSE;  // must be initialized to false for code below to work
@@ -6081,5 +6120,27 @@ nsHTMLEditor::GetElementOrigin(nsIDOMElement * aElement, PRInt32 & aX, PRInt32 &
   aY = NSTwipsToIntPixels(offsetY , t2p);
 
   return NS_OK;
+}
+
+nsresult
+nsHTMLEditor::EndUpdateViewBatch()
+{
+  nsresult res = nsEditor::EndUpdateViewBatch();
+  if (NS_FAILED(res)) return res;
+
+  // We may need to show resizing handles or update existing ones after
+  // all transactions are done. This way of doing is preferred to DOM
+  // mutation events listeners because all the changes the user can apply
+  // to a document may result in multiple events, some of them quite hard
+  // to listen too (in particular when an ancestor of the selection is
+  // changed but the selection itself is not changed).
+  if (mUpdateCount == 0) {
+    nsCOMPtr<nsISelection> selection;
+    res = GetSelection(getter_AddRefs(selection));
+    if (NS_FAILED(res)) return res;
+    if (!selection) return NS_ERROR_NOT_INITIALIZED;
+    res = CheckResizingState(selection);
+  }
+  return res;
 }
 

@@ -65,9 +65,12 @@
  *  moves the caret or selects an element as it does for normal click
  */
 
-nsHTMLEditorMouseListener::nsHTMLEditorMouseListener() 
+nsHTMLEditorMouseListener::nsHTMLEditorMouseListener(nsHTMLEditor *aHTMLEditor)
+  : mHTMLEditor(aHTMLEditor)
 {
   NS_INIT_ISUPPORTS();
+
+  SetEditor(mHTMLEditor); // Tell the base class about the editor.
 }
 
 nsHTMLEditorMouseListener::~nsHTMLEditorMouseListener() 
@@ -85,7 +88,6 @@ nsHTMLEditorMouseListener::MouseUp(nsIDOMEvent* aMouseEvent)
     //non-ui event passed in.  bad things.
     return NS_OK;
   }
-  nsresult res;
 
   // Don't do anything special if not an HTML editor
   nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
@@ -225,6 +227,23 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
         //   and not the entire body, or table-related elements
         if (element)
         {
+          nsCOMPtr<nsIDOMNode> eleNode = do_QueryInterface(element);
+
+          if (eleNode)
+          {
+            nsCOMPtr<nsIDOMNode> selectAllNode = mHTMLEditor->FindUserSelectAllNode(eleNode);
+
+            if (selectAllNode)
+            {
+              nsCOMPtr<nsIDOMElement> newElement = do_QueryInterface(selectAllNode);
+              if (newElement)
+              {
+                node = selectAllNode;
+                element = newElement;
+              }
+            }
+          }
+
           if (nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("body")) ||
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("td")) ||
               nsTextEditUtils::NodeIsType(node, NS_LITERAL_STRING("th")) ||
@@ -254,7 +273,7 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
         return NS_OK;
       }
     }
-    else if (!isContextClick & buttonNumber == 0 && clickCount == 1)
+    else if (!isContextClick && buttonNumber == 0 && clickCount == 1)
     {
       // if the target element is an image, we have to display resizers
       nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(htmlEditor);
@@ -270,13 +289,11 @@ nsHTMLEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
 
 nsresult
 NS_NewHTMLEditorMouseListener(nsIDOMEventListener ** aInstancePtrResult, 
-                              nsIEditor *aEditor)
+                              nsHTMLEditor *aHTMLEditor)
 {
-  nsHTMLEditorMouseListener* listener = new nsHTMLEditorMouseListener();
+  nsHTMLEditorMouseListener* listener = new nsHTMLEditorMouseListener(aHTMLEditor);
   if (!listener)
     return NS_ERROR_OUT_OF_MEMORY;
-
-  listener->SetEditor(aEditor);
 
   return listener->QueryInterface(NS_GET_IID(nsIDOMEventListener), (void **) aInstancePtrResult);   
 }
