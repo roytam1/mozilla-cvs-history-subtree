@@ -24,13 +24,11 @@ REQUIRES=xpcom raptor pref
 DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
-        nsRDFContainerElement.cpp               \
         nsRDFElement.cpp                        \
 	nsXMLElement.cpp			\
 	$(NULL)
 
 CPP_OBJS=					\
-        .\$(OBJDIR)\nsRDFContainerElement.obj   \
         .\$(OBJDIR)\nsRDFElement.obj            \
 	.\$(OBJDIR)\nsXMLElement.obj		\
 	$(NULL)
