@@ -42,10 +42,7 @@ interface nsILocalFile : nsIFile
      * initWithPath
      *
      * This function will initialize the nsIFile object.  Any
-     * internal state information will be reset.  Non-terminal
-     * nodes will be resolved. An error will be returned if a
-     * non-terminal is a file (NS_ERROR_FILE_INVALID_PATH)
-     * 
+     * internal state information will be reset.  
      *
      *  NOTE:  This function has a known bug on the macintosh and
      *         other OSes which do not represent file locations 
