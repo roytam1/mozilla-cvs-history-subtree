@@ -177,20 +177,11 @@ txExecutionState::init(const txXPathNode& aNode,
     mResultHandler = handler;
     mOutputHandler->startDocument();
 
-    // Initiate first instruction
-    txStylesheet::ImportFrame* frame = 0;
-    txExpandedName nullName;
-    txInstruction* templ = mStylesheet->findTemplate(aNode, nullName,
-                                                     this, nsnull, &frame);
-    pushTemplateRule(frame, nullName, nsnull);
-    rv = runTemplate(templ);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     // Set up loaded-documents-hash
     rv = mLoadedDocuments.init(txXPathNodeUtils::getOwnerDocument(aNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Init members    
+    // Init members
     rv = mKeyHash.init();
     NS_ENSURE_SUCCESS(rv, rv);
     
@@ -205,7 +196,16 @@ txExecutionState::init(const txXPathNode& aNode,
     mGlobalVarPlaceholderValue = new StringResult(NS_LITERAL_STRING("Error"), nsnull);
     NS_ENSURE_TRUE(mGlobalVarPlaceholderValue, NS_ERROR_OUT_OF_MEMORY);
 
-    return NS_OK;
+    // Initiate first instruction. This has to be done last since findTemplate
+    // might use us.
+    txStylesheet::ImportFrame* frame = 0;
+    txExpandedName nullName;
+    txInstruction* templ = mStylesheet->findTemplate(aNode, nullName,
+                                                     this, nsnull, &frame);
+    rv = pushTemplateRule(frame, nullName, nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return runTemplate(templ);
 }
 
 nsresult
