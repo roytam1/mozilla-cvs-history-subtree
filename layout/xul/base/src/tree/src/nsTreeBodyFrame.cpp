@@ -2293,9 +2293,9 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
     // The row is a separator. Paint only a double horizontal line.
 
     // Find the primary cell.
-    nscoord currX = rowRect.x;
-    nsTreeColumn* currCol;
-    for (currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width;
+    nscoord currX, primaryX1, primaryX2;
+    currX = primaryX1 = primaryX2 = rowRect.x;
+    for (nsTreeColumn* currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width;
          currCol = currCol->GetNext()) {
       if (currCol->IsPrimary()) {
         nsRect cellRect(currX, rowRect.y, currCol->GetWidth(), rowRect.height);
@@ -2304,12 +2304,19 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
           cellRect.width -= overflow;
         nsRect dirtyRect;
         if (dirtyRect.IntersectRect(aDirtyRect, cellRect))
-          PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect, currX); 
+          PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect, primaryX2); 
+
+        primaryX1 = currX;
+        PRInt32 level;
+        mView->GetLevel(aRowIndex, &level);
+        if (level == 0) {
+          primaryX1 += mIndentation;
+        }
+
         break;
       }
       currX += currCol->GetWidth();
     }
-    rowRect.x = currX;
 
     // Resolve style for the separator.
     nsStyleContext* separatorContext = GetPseudoStyleContext(nsCSSAnonBoxes::moztreeseparator);
@@ -2323,9 +2330,10 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
     }
 
     // use -moz-appearance if provided.
-    if ( useTheme ) 
+    if (useTheme) {
       theme->DrawWidgetBackground(&aRenderingContext, this, 
-                                    displayData->mAppearance, rowRect, aDirtyRect); 
+                                  displayData->mAppearance, rowRect, aDirtyRect); 
+    }
     else {
       // Get border style
       const nsStyleBorder* borderStyle = (const nsStyleBorder*)separatorContext->GetStyleData(eStyleStruct_Border);
@@ -2343,7 +2351,10 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
         style = borderStyle->GetBorderStyle(side);
         aRenderingContext.SetLineStyle(ConvertBorderStyleToLineStyle(style));
 
-        aRenderingContext.DrawLine(rowRect.x, currY, rowRect.x + rowRect.width, currY);
+        if (primaryX1 > rowRect.x) {
+          aRenderingContext.DrawLine(rowRect.x, currY, primaryX1, currY);
+        }
+        aRenderingContext.DrawLine(primaryX2, currY, rowRect.x + rowRect.width, currY);
 
         side = NS_SIDE_BOTTOM;
         currY += 16;
