@@ -666,7 +666,7 @@ sub BuildIt {
             #XXXjrgm win32 returns the long form, which chokes win32 cvs
             # so allow the use of value from tinder-config.pl
             $timezone = $Settings::Timezone
-                if $Settings::Timezone && $Settings::OS =~ /^WIN/;
+                if $Settings::Timezone && $Settings::OS =~ /^(Darwin|WIN)/;
             $time_str .= " $timezone";
             $ENV{MOZ_CO_DATE} = "$time_str";
             # command.com/win9x loathes single quotes in command line
