@@ -161,7 +161,7 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
     if (!profileFile)
       continue;
 #if defined (XP_MACOSX)
-	rv = profileFile->SetPersistentDescriptor(nsDependentCString(profilePath));
+    rv = profileFile->SetPersistentDescriptor(nsDependentCString(profilePath));
 #else
     rv = profileFile->InitWithNativePath(nsDependentCString(profilePath));
 #endif
