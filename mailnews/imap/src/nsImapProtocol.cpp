@@ -18,9 +18,13 @@
 
 // sorry, this has to be before the pre-compiled header
 #define FORCE_PR_LOG /* Allow logging in the release build */
-
+// as does this
+#define NS_IMPL_IDS
+#include "nsIServiceManager.h"
+#include "nsICharsetConverterManager.h"
 
 #include "msgCore.h"  // for pre-compiled headers
+
 #include "nsMsgImapCID.h"
 
 #ifdef XP_PC
@@ -1539,15 +1543,13 @@ void nsImapProtocol::ProcessSelectedStateURL()
 					char *convertedCanonicalName = NULL;
 					if (nameStruct)
 					{
-    					nameStruct->toUtf7Imap = PR_FALSE;
-						nameStruct->sourceString = (unsigned char *) GetServerStateParser().GetSelectedMailboxName();
-						nameStruct->convertedString = NULL;
-#ifdef DO_UTF7_YET
-						ConvertImapUtf7(nameStruct, NULL);
-#endif
-						if (nameStruct->convertedString)
-							m_runningUrl->AllocateCanonicalPath((char *) nameStruct->convertedString, 
+						char *convertedName = CreateUtf7ConvertedString(GetServerStateParser().GetSelectedMailboxName(), PR_FALSE);
+						if (convertedName)
+						{
+							m_runningUrl->AllocateCanonicalPath(convertedName, 
 											kOnlineHierarchySeparatorUnknown, &convertedCanonicalName);
+							PR_Free(convertedName);
+						}
 					}
 
 					deleteMsg->onlineFolderName = convertedCanonicalName;
@@ -1581,15 +1583,13 @@ void nsImapProtocol::ProcessSelectedStateURL()
 						char *convertedCanonicalName = NULL;
 						if (nameStruct)
 						{
-    						nameStruct->toUtf7Imap = PR_FALSE;
-							nameStruct->sourceString = (unsigned char *) GetServerStateParser().GetSelectedMailboxName();
-							nameStruct->convertedString = NULL;
-#ifdef DO_UTF7
-							ConvertImapUtf7(nameStruct, NULL);
-#endif
-							if (nameStruct->convertedString)
-								m_runningUrl->AllocateCanonicalPath((char *) nameStruct->convertedString,
-								kOnlineHierarchySeparatorUnknown, &convertedCanonicalName);
+							char *convertedName = CreateUtf7ConvertedString(GetServerStateParser().GetSelectedMailboxName(), PR_FALSE);
+							if (convertedName )
+							{
+								m_runningUrl->AllocateCanonicalPath(convertedName,
+									kOnlineHierarchySeparatorUnknown, &convertedCanonicalName);
+								PR_Free(convertedName);
+							}
 						}
 
 						deleteMsg->onlineFolderName = convertedCanonicalName;
@@ -3707,16 +3707,98 @@ nsImapProtocol::PercentProgressUpdateEvent(char *message, PRInt32 percent)
         m_imapMiscellaneousSink->PercentProgress(this, &aProgressInfo);
 }
 
-	// utility function calls made by the server
+// convert back and forth between imap utf7 and unicode.
 char*
-nsImapProtocol::CreateUtf7ConvertedString(const char * aSourceString, PRBool
-                                          aConvertToUtf7Imap)
+nsImapProtocol::CreateUtf7ConvertedString(const char * aSourceString, 
+										  PRBool aConvertToUtf7Imap)
 {
+	nsresult res;
+	char *dstPtr = nsnull;
+	PRInt32 dstLength = 0;
+	// this seems to work, but we'll leave this for a little while in in case we
+	// need to disable it
+	static PRBool tryCharsetConversion = PR_TRUE;
     // ***** temporary **** Fix me ****
-    if (aSourceString)
-        return PL_strdup(aSourceString);
-    else
-        return nsnull;
+	if (!tryCharsetConversion)
+	{
+		if (aSourceString)
+			return PL_strdup(aSourceString);
+		else
+			return nsnull;
+	}
+	// we haven't turned this code on yet - we're working on it.
+	char *convertedString = NULL;
+	
+	NS_WITH_SERVICE(nsICharsetConverterManager, ccm, kCharsetConverterManagerCID, &res); 
+
+	if(NS_SUCCEEDED(res) && (nsnull != ccm))
+	{
+		nsString aCharset("x-imap4-modified-utf7");
+		PRUnichar *unichars = nsnull;
+		PRInt32 unicharLength;
+
+		if (!aConvertToUtf7Imap)
+		{
+			// convert utf7 to unicode
+			nsIUnicodeDecoder* decoder = nsnull;
+
+			res = ccm->GetUnicodeDecoder(&aCharset, &decoder);
+			if(NS_SUCCEEDED(res) && (nsnull != decoder)) 
+			{
+				PRInt32 srcLen = PL_strlen(aSourceString);
+				res = decoder->Length(aSourceString, 0, srcLen, &unicharLength);
+				// temporary buffer to hold unicode string
+				unichars = new PRUnichar[unicharLength + 1];
+				if (unichars == nsnull) 
+				{
+					res = NS_ERROR_OUT_OF_MEMORY;
+				}
+				else 
+				{
+					res = decoder->Convert(unichars, 0, &unicharLength, aSourceString, 0, &srcLen);
+					unichars[unicharLength] = 0;
+				}
+				NS_IF_RELEASE(decoder);
+				// convert the unicode to 8 bit ascii.
+				nsString2 unicodeStr(unichars, eTwoByte);
+				convertedString = (char *) PR_Malloc(unicharLength + 1);
+				if (convertedString)
+					unicodeStr.ToCString(convertedString, unicharLength + 1, 0);
+			}
+		}
+		else
+		{
+			// convert from 8 bit ascii string to modified utf7
+			nsString2 unicodeStr(aSourceString, eTwoByte);
+			nsIUnicodeEncoder* encoder = nsnull;
+			aCharset.SetString("x-imap4-modified-utf7");
+			res = ccm->GetUnicodeEncoder(&aCharset, &encoder);
+			if(NS_SUCCEEDED(res) && (nsnull != encoder)) 
+			{
+				res = encoder->GetMaxLength(unicodeStr.GetUnicode(), unicodeStr.Length(), &dstLength);
+				// allocale an output buffer
+				dstPtr = (char *) PR_CALLOC(dstLength + 1);
+				unicharLength = unicodeStr.Length();
+				if (dstPtr == nsnull) 
+				{
+					res = NS_ERROR_OUT_OF_MEMORY;
+				}
+				else 
+				{
+					res = encoder->Convert(unicodeStr.GetUnicode(), &unicharLength, dstPtr, &dstLength);
+					dstPtr[dstLength] = 0;
+				}
+			}
+			NS_IF_RELEASE(encoder);
+			nsString2 unicodeStr2(dstPtr, eTwoByte);
+			convertedString = (char *) PR_Malloc(dstLength + 1);
+			if (convertedString)
+				unicodeStr2.ToCString(convertedString, dstLength + 1, 0);
+        }
+        delete [] unichars;
+      }
+    
+    return convertedString;
 }
 
 	// imap commands issued by the parser
@@ -4405,10 +4487,12 @@ void nsImapProtocol::DiscoverMailboxList()
 			const char *prefix = ns->GetPrefix();
 			if (prefix)
 			{
+				static PRBool gHideUnusedNamespaces = PR_TRUE;
 				// mscott -> WARNING!!! i where are we going to get this
                 // global variable for unusued name spaces from??? *wince*
-#ifdef NOT_YET
-				if (/* !gHideUnusedNamespaces && */ *prefix &&
+				// dmb - we should get this from a per-host preference,
+				// I'd say. But for now, just make it TRUE;
+				if (!gHideUnusedNamespaces && *prefix &&
                     PL_strcasecmp(prefix, "INBOX."))	// only do it for
                     // non-empty namespace prefixes, and for non-INBOX prefix 
 				{
@@ -4452,7 +4536,6 @@ void nsImapProtocol::DiscoverMailboxList()
 					else
 						HandleMemoryFailure();
 				}
-#endif 
 
 				// now do the folders within this namespace
 				nsString2 pattern("",eOneByte);
