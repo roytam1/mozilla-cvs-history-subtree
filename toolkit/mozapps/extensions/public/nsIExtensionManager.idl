@@ -77,6 +77,8 @@ interface nsIExtensionManager : nsISupports
   // Installing Themes
   void installTheme(in nsIFile aJARFile, in unsigned long aFlags);
   void uninstallTheme(in string aThemeID);
+  void enableTheme(in string aThemeID);
+  void disableTheme(in string aThemeID);
 
   // Downloads
   void addDownloads([array, size_is(aItemCount)] in nsIUpdateItem aItems,

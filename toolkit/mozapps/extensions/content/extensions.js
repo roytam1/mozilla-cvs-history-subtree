@@ -457,7 +457,8 @@ var gExtensionContextMenus = ["menuitem_options", "menuitem_homepage", "menuitem
                               "menuitem_enable", "menuitem_disable", "menuseparator_2", 
                               "menuitem_moveTop", "menuitem_moveUp", "menuitem_moveDn"];
 var gThemeContextMenus = ["menuitem_useTheme", "menuitem_homepage", "menuitem_about", 
-                          "menuseparator_1", "menuitem_uninstall", "menuitem_update"];
+                          "menuseparator_1", "menuitem_uninstall", "menuitem_update",
+                          "menuitem_enable"];
 
 function buildContextMenu(aEvent)
 {
@@ -495,6 +496,16 @@ function buildContextMenu(aEvent)
     }
     menuitemToShow.hidden = false;
     menuitemToHide.hidden = true;
+  }
+  else {
+    var canEnable = gExtensionsViewController.isCommandEnabled("cmd_enable");
+    var enableMenu = document.getElementById("menuitem_enable_clone");
+    if (gExtensionsView.selected.getAttribute("compatible") == "false" ||
+        gExtensionsView.selected.disabled) 
+      enableMenu.hidden = false;
+    else {
+      enableMenu.hidden = true;
+    }
   }
     
   return true;
@@ -610,7 +621,7 @@ var gExtensionsViewController = {
     case "cmd_close":
       return true;
     case "cmd_useTheme":
-      return selectedItem && gCurrentTheme != selectedItem.getAttribute("internalName");
+      return selectedItem && !selectedItem.disabled && gCurrentTheme != selectedItem.getAttribute("internalName");
     case "cmd_options":
       return selectedItem && !selectedItem.disabled && selectedItem.getAttribute("optionsURL") != "";
     case "cmd_about":
@@ -803,7 +814,10 @@ var gExtensionsViewController = {
     
     cmd_enable: function (aSelectedItem)
     {
-      gExtensionManager.enableExtension(stripPrefix(aSelectedItem.id));
+      if (gWindowState == "extensions")
+        gExtensionManager.enableExtension(stripPrefix(aSelectedItem.id));
+      else
+        gExtensionManager.enableTheme(stripPrefix(aSelectedItem.id));
     },
 #ifdef MOZ_THUNDERBIRD
     cmd_install: function(aSelectedItem)

@@ -2034,6 +2034,7 @@ nsExtensionManager.prototype = {
               gPref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, KEY_DEFAULT_THEME);
               cr.selectSkin(KEY_DEFAULT_THEME, true);
             }
+            this._ds.disableTheme(items[i].id);
           }
         }
         var updates = Components.classes["@mozilla.org/updates/update-service;1"]
@@ -2588,7 +2589,17 @@ nsExtensionManager.prototype = {
     // Update the Defaults Manifest
     this._writeDefaults(isProfile);
   },
-
+  
+  enableTheme: function nsExtensionsDataSource_enableTheme (aThemeID)
+  {
+    this._ds.enableTheme(aThemeID);
+  },
+    
+  disableTheme: function nsExtensionsDataSource_disableTheme (aThemeID)
+  {
+    this._ds.disableTheme(aThemeID);
+  },
+  
   update: function nsExtensionManager_update (aItems, aItemCount, aVersionUpdateOnly)
   {
     var appID = gPref.getCharPref(PREF_EM_APP_ID);
@@ -3550,6 +3561,13 @@ nsExtensionsDataSource.prototype = {
 
   getTargetApplicationInfo: function nsExtensionsDataSource_getTargetApplicationInfo (aExtensionID, aDataSource, aType)
   {
+    var internalName = this.getItemProperty(aExtensionID, "internalName");
+    // The default theme is always compatible. 
+    if (internalName == KEY_DEFAULT_THEME) {
+      var ver = gPref.getCharPref(PREF_EM_APP_EXTENSIONS_VERSION);
+      return { minVersion: ver, maxVersion: ver };
+    }
+
     var appID = gPref.getCharPref(PREF_EM_APP_ID);
     var r = gRDF.GetResource(getItemPrefix(aType) + aExtensionID);
     var targetApps = aDataSource.GetTargets(r, this._emR("targetApplication"), true);
@@ -3817,6 +3835,20 @@ nsExtensionsDataSource.prototype = {
       for (var i = 0; i < this._observers.length; ++i)
         this._observers[i].onAssert(this, theme, iconURLArc, iconURL);
     }
+  },
+  
+  enableTheme: function nsExtensionsDataSource_enableTheme (aThemeID)
+  {
+    this.setItemProperty(aThemeID, this._emR("disabled"), 
+                         null, this.isProfileItem(aThemeID), 
+                         nsIUpdateItem.TYPE_THEME);
+  },
+    
+  disableTheme: function nsExtensionsDataSource_disableTheme (aThemeID)
+  {
+    this.setItemProperty(aThemeID, this._emR("disabled"), 
+                         this._emL("true"), this.isProfileItem(aThemeID), 
+                         nsIUpdateItem.TYPE_THEME);
   },
   
   uninstallTheme: function nsExtensionsDataSource_uninstallTheme(aThemeID)
@@ -4129,7 +4161,7 @@ nsExtensionsDataSource.prototype = {
       var type = getItemType(aSource.Value);
       var id = stripPrefix(aSource.Value, type);
       var targetAppInfo = this.getTargetApplicationInfo(id, this, type);
-      
+      dump("*** info = " + targetAppInfo.toSource() + "\n");
       getVersionChecker();
       
       var appVersion = gPref.getCharPref(PREF_EM_APP_EXTENSIONS_VERSION);
