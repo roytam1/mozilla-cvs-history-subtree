@@ -75,6 +75,8 @@ LINCS= \
     -I$(PUBLIC)\netcache	\
     -I$(PUBLIC)\network \
     -I$(PUBLIC)\mimetype \
+    -I$(PUBLIC)\perf \
+    $(NULL)
 #!endif
 
 include <$(DEPTH)\config\rules.mak> 
