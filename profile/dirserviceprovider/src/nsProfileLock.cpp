@@ -44,8 +44,10 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdlib.h>
 #include "prnetdb.h"
 #include "prsystem.h"
+#include "prprf.h"
 #endif
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
