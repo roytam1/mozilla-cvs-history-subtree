@@ -57,6 +57,7 @@
 #include "jsnum.h"
 #include "jsobj.h"
 #include "jsopcode.h"
+#include "jsregexp.h"
 #include "jsscope.h"
 #include "jsscript.h"
 #include "jsstr.h"
@@ -976,8 +977,10 @@ CheckRedeclaration(JSContext *cx, JSObject *obj, JSObject *obj2, jsid id,
 
     if (!OBJ_GET_ATTRIBUTES(cx, obj2, id, prop, &oldAttrs))
         return JS_FALSE;
-    if (oldAttrs == attrs && !JS_HAS_STRICT_OPTION(cx))
+    if ((oldAttrs & JSPROP_READONLY) == (attrs & JSPROP_READONLY) &&
+        !JS_HAS_STRICT_OPTION(cx)) {
         return JS_TRUE;
+    }
 
     isFunction = (attrs & (JSPROP_GETTER | JSPROP_SETTER)) != 0;
     if (!isFunction) {
