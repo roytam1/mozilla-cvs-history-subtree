@@ -37,6 +37,19 @@
 
 #include "xpcprivate.h"
 
+#if defined(DEBUG_jst) || defined(DEBUG_jband)
+#define XPC_CHECK_CLASSINFO_CLAIMS
+#if defined(DEBUG_jst)
+#define XPC_ASSERT_CLASSINFO_CLAIMS
+#endif
+#endif
+
+#ifdef XPC_CHECK_CLASSINFO_CLAIMS
+static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper);
+#else
+#define DEBUG_CheckClassInfoClaims(wrapper) ((void)0)
+#endif
+
 // static
 XPCWrappedNative*
 XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
@@ -201,6 +214,8 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         // Second reference will be released by the FlatJSObject's finializer.
         wrapperToKill->Release();
     }
+
+    DEBUG_CheckClassInfoClaims(wrapper);
 
     return wrapper;
 }
@@ -1595,6 +1610,64 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
 #endif
     return NS_OK;
 }
+
+#ifdef XPC_CHECK_CLASSINFO_CLAIMS
+static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
+{
+    if(wrapper && wrapper->GetProto()->GetClassInfo())
+    {
+        nsISupports* obj = wrapper->GetIdentityObject();
+        for(PRUint16 i = 0; i < wrapper->GetSet()->GetInterfaceCount(); i++)
+        {
+            nsIClassInfo* clsInfo = wrapper->GetProto()->GetClassInfo();
+            XPCNativeInterface* iface = wrapper->GetSet()->GetInterfaceAt(i);
+            nsIInterfaceInfo* info = iface->GetInterfaceInfo();
+            const nsIID* iid;
+            nsISupports* ptr;
+
+            info->GetIIDShared(&iid);
+            nsresult rv = obj->QueryInterface(*iid, (void**)&ptr);
+            if(NS_SUCCEEDED(rv))
+            {
+                NS_RELEASE(ptr);
+                continue;    
+            }
+
+            // Houston, We have a problem...
+
+            char* className = nsnull;
+            char* contractID = nsnull;
+            const char* interfaceName;
+
+            info->GetNameShared(&interfaceName);
+            clsInfo->GetContractID(&contractID);
+            if(wrapper->GetScriptableInfo())
+            {
+                wrapper->GetScriptableInfo()->GetScriptable()->
+                    GetClassName(&className);
+            }
+
+
+            printf("\n!!! Object's nsIClassInfo lies about it's interfaces!!!\n"
+                   "   classname: %s \n"
+                   "   contractid: %s \n"
+                   "   unimplmented interface name: %s\n\n",
+                   className ? className : "<unknown>",
+                   contractID ? contractID : "<unknown>",
+                   interfaceName);
+
+#ifdef XPC_ASSERT_CLASSINFO_CLAIMS
+            NS_ERROR("Fix this QueryInterface or nsIClassInfo");
+#endif
+
+            if(className) 
+                nsMemory::Free(className);
+            if(contractID) 
+                nsMemory::Free(contractID);
+        }
+    }    
+}        
+#endif
 
 /***************************************************************************/
 /***************************************************************************/
