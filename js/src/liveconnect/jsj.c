@@ -466,7 +466,7 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
         thread_list_monitor =
             (struct PRMonitor *) PR_NewMonitor();
     }
-#endif JSJ_THREADSAFE
+#endif	/* JSJ_THREADSAFE */
 
     /* Put this VM on the list of all created VMs */
     jsjava_vm->next = jsjava_vm_list;
@@ -580,7 +580,7 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
         PR_DestroyMonitor(thread_list_monitor);
         thread_list_monitor = NULL;
     }
-#endif JSJ_THREADSAFE
+#endif	/* JSJ_THREADSAFE */
     
     free(jsjava_vm);
 }
@@ -765,7 +765,7 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
 
 #ifdef JSJ_THREADSAFE
     PR_EnterMonitor(thread_list_monitor);
-#endif JSJ_THREADSAFE
+#endif	/* JSJ_THREADSAFE */
 
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e == jsj_env) {
@@ -776,7 +776,7 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
 
 #ifdef JSJ_THREADSAFE
     PR_ExitMonitor(thread_list_monitor);
-#endif JSJ_THREADSAFE
+#endif	/* JSJ_THREADSAFE */
 
     free(jsj_env);
     return JS_TRUE;
