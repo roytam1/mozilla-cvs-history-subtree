@@ -58,8 +58,8 @@ interface nsIAccessible : nsISupports
 
   void accGetBounds(out long x, 
                     out long y, 
-					out long width, 
-					out long height);
+                    out long width, 
+                    out long height);
 
   void accAddSelection();
   void accRemoveSelection();

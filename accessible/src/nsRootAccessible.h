@@ -35,9 +35,9 @@
 class nsRootAccessible : public nsAccessible,
                          public nsIAccessibleEventReceiver,
                          public nsIDOMFocusListener,
-						 public nsIDOMFormListener,
-						 public nsIDOMTextListener,
-						 public nsIDOMMutationListener
+             public nsIDOMFormListener,
+             public nsIDOMTextListener,
+             public nsIDOMMutationListener
 
 {
   
@@ -63,17 +63,17 @@ class nsRootAccessible : public nsAccessible,
     virtual nsresult Focus(nsIDOMEvent* aEvent);
     virtual nsresult Blur(nsIDOMEvent* aEvent);
 
-	// ----- nsIDOMFormListener ---------------------------
+  // ----- nsIDOMFormListener ---------------------------
     virtual nsresult Submit(nsIDOMEvent* aEvent);
     virtual nsresult Reset(nsIDOMEvent* aEvent);
     virtual nsresult Change(nsIDOMEvent* aEvent);
     virtual nsresult Select(nsIDOMEvent* aEvent);
     virtual nsresult Input(nsIDOMEvent* aEvent);
 
-	// ----- nsIDOMTextListener ---------------------------
-	virtual nsresult HandleText(nsIDOMEvent* aTextEvent);
+  // ----- nsIDOMTextListener ---------------------------
+  virtual nsresult HandleText(nsIDOMEvent* aTextEvent);
 
-	// ----- nsIDOMMutationEventListener ------------------
+  // ----- nsIDOMMutationEventListener ------------------
     NS_IMETHOD SubtreeModified(nsIDOMEvent* aMutationEvent);
     NS_IMETHOD NodeInserted(nsIDOMEvent* aMutationEvent);
     NS_IMETHOD NodeRemoved(nsIDOMEvent* aMutationEvent);

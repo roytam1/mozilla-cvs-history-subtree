@@ -51,7 +51,7 @@
 
 nsAccessibilityService::nsAccessibilityService()
 {
-	NS_INIT_REFCNT();
+  NS_INIT_REFCNT();
   //printf("################################## nsAccessibilityService\n");
 }
 

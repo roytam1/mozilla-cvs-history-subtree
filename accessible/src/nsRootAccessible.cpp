@@ -151,13 +151,13 @@ NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventLis
      nsCOMPtr<nsIDocument> document;
      shell->GetDocument(getter_AddRefs(document));
 
-	 // use AddEventListenerByIID from the nsIDOMEventReceiver interface
+   // use AddEventListenerByIID from the nsIDOMEventReceiver interface
      nsCOMPtr<nsIDOMEventReceiver> receiver;
      if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), getter_AddRefs(receiver))) && receiver)
      {
-		nsresult rv = NS_OK;
+    nsresult rv = NS_OK;
         // add this as a FocusListener to the document
-		rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFocusListener *, this), NS_GET_IID(nsIDOMFocusListener));
+    rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFocusListener *, this), NS_GET_IID(nsIDOMFocusListener));
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
         // add this as a FormListener to the document
         rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFormListener*, this), NS_GET_IID(nsIDOMFormListener));
@@ -169,22 +169,22 @@ NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventLis
         rv = receiver->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMMutationListener*, this), NS_GET_IID(nsIDOMMutationListener));
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
      }
-	 // use AddEventListener from the nsIDOMEventTarget interface -- for UserDefinedTypes
+   // use AddEventListener from the nsIDOMEventTarget interface -- for UserDefinedTypes
      nsCOMPtr<nsIDOMEventTarget> target;
      if (NS_SUCCEEDED(document->QueryInterface(NS_GET_IID(nsIDOMEventTarget), getter_AddRefs(target))) && target)
      {
         nsresult rv = NS_OK;
-		// we're a DOMEventListener now!!
+    // we're a DOMEventListener now!!
         nsCOMPtr<nsIDOMEventListener> listener;
-		rv = this->QueryInterface( NS_GET_IID(nsIDOMEventListener), getter_AddRefs(listener) );
+    rv = this->QueryInterface( NS_GET_IID(nsIDOMEventListener), getter_AddRefs(listener) );
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to QI");
-		// add ourself as a CheckboxStateChange listener
-		rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("CheckboxStateChange")) , listener, PR_TRUE );
+    // add ourself as a CheckboxStateChange listener
+    rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("CheckboxStateChange")) , listener, PR_TRUE );
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-		// add ourself as a RadiobuttonStateChange listener
-		rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("RadiobuttonStateChange")) , listener, PR_TRUE );
+    // add ourself as a RadiobuttonStateChange listener
+    rv = target->AddEventListener( nsAutoString(NS_LITERAL_STRING("RadiobuttonStateChange")) , listener, PR_TRUE );
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register listener");
-	 }
+   }
 
   }
 
@@ -243,7 +243,7 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       if (mCurrentFocus == content)
         return NS_OK;
       mCurrentFocus = content;
-	}
+  }
 
     nsIFrame* frame = nsnull;
     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -273,21 +273,21 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       nsCOMPtr<nsIAccessible> na(CreateNewAccessible(a, node, mPresShell));
       if ( !na ) {
         return NS_OK;
-	  }
+    }
 
       if ( eventType.EqualsIgnoreCase("focus") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, na);
-	  }
+    }
       else if ( eventType.EqualsIgnoreCase("change") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
-	  }
+    }
       else if ( eventType.EqualsIgnoreCase("CheckboxStateChange") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
-	  }
+    }
       else if ( eventType.EqualsIgnoreCase("RadiobuttonStateChange") ) {
         mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, na);
-	  }
-	}
+    }
+  }
   }
   return NS_OK;
 }

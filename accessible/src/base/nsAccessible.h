@@ -52,9 +52,9 @@ class nsAccessible : public nsIAccessible
 
   //NS_IMETHOD AccGetWidget(nsIWidget**);
 
-	public:
-		nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
-		virtual ~nsAccessible();
+  public:
+    nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
+    virtual ~nsAccessible();
 
     virtual void GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aList) { aList = nsnull; }
 

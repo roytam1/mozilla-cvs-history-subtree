@@ -51,7 +51,7 @@ Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd)
 {
   mAccessible = aAcc;
   mWnd = aWnd;
-	m_cRef	        = 0;
+  m_cRef = 0;
   mCachedIndex = 0;
   mCachedChild = NULL;
 
@@ -79,33 +79,33 @@ Accessible::~Accessible()
 //-----------------------------------------------------
 STDMETHODIMP Accessible::QueryInterface(REFIID riid, void** ppv)
 {
-	*ppv=NULL;
+  *ppv=NULL;
 
-	if ( (IID_IUnknown == riid) || (IID_IAccessible	== riid) || (IID_IDispatch	== riid)) {
-		*ppv = this;
-		AddRef();
-		return S_OK;
-	}
+  if ( (IID_IUnknown == riid) || (IID_IAccessible == riid) || (IID_IDispatch  == riid)) {
+    *ppv = this;
+    AddRef();
+    return S_OK;
+  }
 
-	return E_NOINTERFACE;
+  return E_NOINTERFACE;
 }
 
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::AddRef()
 {
-	return ++m_cRef;
+  return ++m_cRef;
 }
 
 
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::Release()
 {
-	if (0 != --m_cRef)
-		return m_cRef;
+  if (0 != --m_cRef)
+    return m_cRef;
 
-	delete this;
+  delete this;
 
-	return 0;
+  return 0;
 }
 
 //-----------------------------------------------------
@@ -512,28 +512,28 @@ STDMETHODIMP Accessible::put_accValue(
 STDMETHODIMP 
 Accessible::GetTypeInfoCount(UINT *p)
 {
-	*p = 0;
-	return E_NOTIMPL;
+  *p = 0;
+  return E_NOTIMPL;
 }
 
 STDMETHODIMP Accessible::GetTypeInfo(UINT i, LCID lcid, ITypeInfo **ppti)
 {
-	*ppti = 0;
-	return E_NOTIMPL;
+  *ppti = 0;
+  return E_NOTIMPL;
 }
 
 STDMETHODIMP 
 Accessible::GetIDsOfNames(REFIID riid, LPOLESTR *rgszNames,
                            UINT cNames, LCID lcid, DISPID *rgDispId)
 {
-	return E_NOTIMPL;
+  return E_NOTIMPL;
 }
 
 STDMETHODIMP Accessible::Invoke(DISPID dispIdMember, REFIID riid,
     LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
 {
-	return E_NOTIMPL;
+  return E_NOTIMPL;
 }
 
 //------- Helper methods ---------

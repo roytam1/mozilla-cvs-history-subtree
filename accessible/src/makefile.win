@@ -36,13 +36,13 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsHTMLAreaAccessible.obj    \
         .\$(OBJDIR)\nsHTMLTableAccessible.obj    \
         .\$(OBJDIR)\nsHTMLLinkAccessible.obj    \
-	$(NULL)
+  $(NULL)
 
 LINCS=                                  \
-	-I..\..\layout\html\forms\public \
-	-I..\..\layout\html\forms\src \
-	-I..\..\layout\html\base\src \
-	$(NULL)
+  -I..\..\layout\html\forms\public \
+  -I..\..\layout\html\forms\src \
+  -I..\..\layout\html\base\src \
+  $(NULL)
 
 
 include <$(DEPTH)\config\rules.mak>

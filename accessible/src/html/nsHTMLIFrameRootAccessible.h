@@ -46,9 +46,9 @@ class nsHTMLIFrameAccessible : public nsDOMAccessible
 class nsHTMLIFrameRootAccessible : public nsRootAccessible
 {
   
-	public:
-		nsHTMLIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode);
-		virtual ~nsHTMLIFrameRootAccessible();
+  public:
+    nsHTMLIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode);
+    virtual ~nsHTMLIFrameRootAccessible();
 
     /* attribute wstring accName; */
     NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);

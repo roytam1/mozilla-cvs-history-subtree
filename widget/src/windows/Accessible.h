@@ -38,19 +38,19 @@
 
 class Accessible : public IAccessible
 {
-	public: // construction, destruction
-		Accessible(nsIAccessible*, HWND aWin = 0);
-		virtual ~Accessible();
+  public: // construction, destruction
+    Accessible(nsIAccessible*, HWND aWin = 0);
+    virtual ~Accessible();
 
-	public: // IUnknown methods - see iunknown.h for documentation
-		STDMETHODIMP_(ULONG) AddRef        ();
-		STDMETHODIMP 			QueryInterface(REFIID, void**);
-		STDMETHODIMP_(ULONG) Release       ();
+  public: // IUnknown methods - see iunknown.h for documentation
+    STDMETHODIMP_(ULONG) AddRef        ();
+    STDMETHODIMP      QueryInterface(REFIID, void**);
+    STDMETHODIMP_(ULONG) Release       ();
 
     // Return the registered OLE class ID of this object's CfDataObj.
-		CLSID GetClassID() const;
+    CLSID GetClassID() const;
 
-	public: 
+  public: 
 
   virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accParent( 
       /* [retval][out] */ IDispatch __RPC_FAR *__RPC_FAR *ppdispParent);
@@ -138,8 +138,8 @@ class Accessible : public IAccessible
       /* [in] */ BSTR szValue);
 
 
- 	STDMETHODIMP GetTypeInfoCount(UINT *p);
-	STDMETHODIMP GetTypeInfo(UINT i, LCID lcid, ITypeInfo **ppti);
+  STDMETHODIMP GetTypeInfoCount(UINT *p);
+  STDMETHODIMP GetTypeInfo(UINT i, LCID lcid, ITypeInfo **ppti);
   STDMETHODIMP GetIDsOfNames(REFIID riid, LPOLESTR *rgszNames,
                                UINT cNames, LCID lcid, DISPID *rgDispId);
   STDMETHODIMP Invoke(DISPID dispIdMember, REFIID riid,
@@ -148,8 +148,8 @@ class Accessible : public IAccessible
 
 
 
-   	static ULONG g_cRef;              // the cum reference count of all instances
-		ULONG        m_cRef;              // the reference count
+    static ULONG g_cRef;              // the cum reference count of all instances
+    ULONG        m_cRef;              // the reference count
     nsCOMPtr<nsIAccessible> mAccessible;
     nsCOMPtr<nsIAccessible> mCachedChild;
     HWND mWnd;

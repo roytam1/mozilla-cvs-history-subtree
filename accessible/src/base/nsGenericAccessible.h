@@ -43,7 +43,7 @@ class nsGenericAccessible : public nsIAccessible
   NS_DECL_ISUPPORTS
   NS_DECL_NSIACCESSIBLE
 
-	public:
+  public:
     nsGenericAccessible();
     virtual ~nsGenericAccessible();
 };
