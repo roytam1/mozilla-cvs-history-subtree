@@ -52,7 +52,7 @@ span_array_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   lo_NameList *span;
   int32 active_layer_id;
 
-  XP_TRACE (("span_array_getProperty called\n"));
+  /* XP_TRACE (("span_array_getProperty called\n")); */
 
   if (!JSVAL_IS_INT(id))
 	return JS_TRUE;

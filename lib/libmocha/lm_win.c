@@ -3321,6 +3321,7 @@ lm_DefineWindowProps(JSContext *cx, MochaDecoder *decoder)
            lm_InitAnchorClass(decoder) &&
 #ifdef DOM
 		   lm_InitSpanClass(decoder) &&
+		   lm_InitTransclusionClass(decoder) &&
 #endif
            lm_InitInputClasses(decoder) &&
            lm_DefinePkcs11(decoder));

@@ -839,6 +839,7 @@ struct lo_TopState_struct {
     PRPackedBool flushing_blockage;
     PRPackedBool wedged_on_mocha;
 	Bool in_cell_relayout;
+ 	int16 table_nesting_level;	/* Counter to keep track of depth of nesting within tables */
 #ifdef DEBUG_ScriptPlugin
 	char * mimetype;
 #endif 

@@ -786,6 +786,9 @@ et_reflect_handler(Reflect_Event * e)
 			LM_ReflectSpan(e->ce.context, e->lo_ele, e->pa_tag, 
 				e->layer_id, e->index);
 		break;
+	case LM_TRANSCLUSIONS:
+			LM_ReflectTransclusion(e->ce.context, e->lo_ele, e->layer_id, e->index);
+		break;
 #endif
     default:
 	XP_ASSERT(0);

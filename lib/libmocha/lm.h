@@ -73,6 +73,7 @@ extern char lm_images_str[];            /* "images" */
 extern char lm_layers_str[];            /* "layers" */
 #ifdef DOM
 extern char lm_spans_str[];				/* "spans" */
+extern char lm_transclusions_str[];		/* "transclusions" */
 #endif
 
 extern char lm_location_str[];          /* "location" */
@@ -230,6 +231,12 @@ extern JSObject         *lm_GetLinkArray(MochaDecoder *decoder,
                                          JSObject *document);
 extern JSObject         *lm_GetNameArray(MochaDecoder *decoder,
                                          JSObject *document);
+#ifdef DOM
+extern JSObject         *lm_GetSpanArray(MochaDecoder *decoder,
+                                         JSObject *document);
+extern JSObject         *lm_GetTransclusionArray(MochaDecoder *decoder,
+                                         JSObject *document);
+#endif
 extern JSObject         *lm_GetAppletArray(MochaDecoder *decoder,
                                            JSObject *document);
 extern JSObject         *lm_GetEmbedArray(MochaDecoder *decoder,
@@ -332,6 +339,7 @@ typedef struct JSDocument {
     JSObject	        *layers;
 #ifdef DOM
 	JSObject	        *spans;
+	JSObject	        *transclusions;
 #endif
 } JSDocument;
 
@@ -511,6 +519,9 @@ lm_InitAnchorClass(MochaDecoder *decoder);
 #ifdef DOM
 extern JSBool
 lm_InitSpanClass(MochaDecoder *decoder);
+
+extern JSBool
+lm_InitTransclusionClass(MochaDecoder *decoder);
 #endif
 
 extern JSBool

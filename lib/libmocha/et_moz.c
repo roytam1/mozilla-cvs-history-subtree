@@ -2964,4 +2964,65 @@ ET_TweakSpan(MWContext * context, void *name_rec, void *param_ptr,
 
     return (int)et_PostEvent(&event->ce, TRUE);
 }
+
+/* Tweak XML Transclusion stuff starts here */
+typedef struct {
+    ETEvent				ce;
+	ETTransclusionOp	op;
+	void *param_ptr;
+	int32 param_val;
+	void *xmlFile;
+} MozillaEvent_TweakTransclusion; 
+
+PR_STATIC_CALLBACK(int)
+et_HandleEvent_TweakTransclusion(MozillaEvent_TweakTransclusion* e)
+{
+    Bool ret = TRUE;
+
+    /* check that the doc_id is valid */
+    if(XP_DOCID(e->ce.context) != e->ce.doc_id)
+	return FALSE;
+
+    switch(e->op) {
+    case TR_SetHref:
+        XMLSetTransclusionProperty(e->xmlFile, e->param_val, "href", e->param_ptr);
+        if (e->param_ptr)
+            XP_FREE((void*)e->param_ptr);
+        break;
+    default:
+        XP_ASSERT(0);
+    }
+
+    return (int)ret;
+}
+
+PR_STATIC_CALLBACK(void)
+et_DestroyEvent_TweakTransclusion(MozillaEvent_TweakTransclusion * event)
+{
+    XP_FREE(event);
+}
+
+
+int
+ET_TweakTransclusion(MWContext * context, void *xmlFile, void *param_ptr,
+	int32 param_val, ETTransclusionOp op, int32 doc_id)
+{
+    MozillaEvent_TweakTransclusion * event;
+    event = PR_NEW(MozillaEvent_TweakTransclusion);
+    if (event == NULL) 
+        return NULL;
+
+    PR_InitEvent(&event->ce.event, context,
+		 (PRHandleEventProc)et_HandleEvent_TweakTransclusion,
+		 (PRDestroyEventProc)et_DestroyEvent_TweakTransclusion);
+    event->ce.context = context;
+    event->ce.doc_id = doc_id;
+    event->op = op;
+	event->param_ptr = param_ptr;
+    event->param_val = param_val;
+	event->xmlFile = xmlFile;
+
+    return (int)et_PostEvent(&event->ce, FALSE);
+}
+
 #endif
