@@ -103,7 +103,7 @@ nsMapiRegistry::UnsetDefaultMailClient() {
  * showMapiDialog is set
  */
 NS_IMETHODIMP
-nsMapiRegistry::ShowMailIntegrationDialog() {
+nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
     nsresult rv;
     if (!m_ShowDialog || !getShowDialog()) return NS_OK;
     nsCOMPtr<nsIPromptService> promptService(do_GetService(
@@ -157,7 +157,7 @@ nsMapiRegistry::ShowMailIntegrationDialog() {
 
         PRBool checkValue = PR_FALSE;
         PRInt32 buttonPressed = 0;
-        rv = promptService->ConfirmEx(nsnull,
+        rv = promptService->ConfirmEx(aParentWindow,
                                       dialogTitle,
                                       dialogText.get(),
                                       (nsIPromptService::BUTTON_TITLE_YES * 

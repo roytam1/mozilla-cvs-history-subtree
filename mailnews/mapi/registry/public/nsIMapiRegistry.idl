@@ -37,6 +37,8 @@
 
 #include "nsISupports.idl"
 
+interface nsIDOMWindow;
+
 /**
  * This interface provides support for registering Mozilla as the default
  * Mail Client. This interface can also be used to get/set the user preference
@@ -66,7 +68,7 @@ interface nsIMapiRegistry: nsISupports {
     * Mozilla as default Mail Client.
     * Call this only if Mozilla is not the default Mail client
     */
-   void showMailIntegrationDialog();
+   void showMailIntegrationDialog(in nsIDOMWindow parentWindow);
    
 };
 
