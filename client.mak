@@ -121,9 +121,6 @@ pull_client_source_product:
     @echo +++ client.mak: checking out the client with "$(CVS_BRANCH)"
     cd $(MOZ_SRC)\.
     -cvs -q co $(CVS_BRANCH)      MozillaSourceWin
-!ifdef MOZ_NGLAYOUT
-	-cvs -q co $(CVS_BRANCH)      $(MOZ_TOP)/cmd/winfe/nglglue.cpp
-!endif
 
 
 !if defined(MOZ_NGLAYOUT)
