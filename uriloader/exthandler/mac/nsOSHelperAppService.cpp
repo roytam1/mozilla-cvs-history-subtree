@@ -34,6 +34,11 @@
 
 #include "nsIInternetConfigService.h"
 
+#ifdef XP_MACOSX
+#include <CFURL.h>
+#include <LaunchServices.h>
+#endif
+
 // chrome URL's
 #define HELPERAPPLAUNCHER_BUNDLE_URL "chrome://global/locale/helperAppLauncher.properties"
 #define BRAND_BUNDLE_URL "chrome://global/locale/brand.properties"
@@ -74,6 +79,24 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
   *aHandlerExists = PR_FALSE;
   // ask the internet config service to look it up for us...
   nsresult rv = NS_ERROR_FAILURE;
+  
+#ifdef XP_MACOSX
+  // Use LaunchServices directly when we're building for XP_MACOSX to avoid the problem of some protocols
+  // apparently not being reflected into the IC mappings (webcal for one)
+  
+  // Since aProtocolScheme comes in with _just_ the protocol we have to add a ':' to the end of it or
+  // LaunchServices will be very unhappy with the CFURLRef created from it and crash trying to look
+  // up a handler for it with LSGetApplicationForURL (at least under 10.2.1)
+  nsCAutoString scheme(aProtocolScheme);
+  scheme += ":";
+  CFURLRef myURLRef = ::CFURLCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)scheme.get(), scheme.Length(), kCFStringEncodingUTF8, NULL);
+  if (myURLRef)
+  {
+    if (::LSGetApplicationForURL(myURLRef, kLSRolesAll, NULL, NULL) == noErr)
+      *aHandlerExists = PR_TRUE;
+    ::CFRelease(myURLRef);
+  }
+#else
   nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
   if (icService)
   {
@@ -115,6 +138,7 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
       }
     }
   }
+#endif
   return rv;
 }
 
