@@ -373,44 +373,29 @@ function Create3PaneGlobals()
 {
 }
 
-function PerformExpandForAllOpenServers(tree)
+function PerformExpandForAllOpenServers()
 {
-	//dump("PerformExpandForAllOpenServers()\n");
-
-	var uri = null;
-	var open = null;
-	var treechild = null;
-    var server = null;
-
-	if ( tree && tree.childNodes ) {
-		for ( var i = tree.childNodes.length - 1; i >= 0; i-- ) {
-			treechild = tree.childNodes[i];
-			if (treechild.localName == 'treechildren') {
-				var treeitems = treechild.childNodes;
-				for ( var j = treeitems.length - 1; j >= 0; j--) {
-					open = treeitems[j].getAttribute('open');
-					//dump("open="+open+"\n");
-					if (open == "true") {
-						var isServer = (treeitems[j].getAttribute('IsServer') == "true");
-						//dump("isServer="+isServer+"\n");
-						if (isServer) {
-							uri = treeitems[j].getAttribute('id');
-							//dump("uri="+uri+"\n");
-							server = GetServer(uri);
-							if (server) {
-								// don't do this for imap servers.
-								// see bug #41943
-								if (server.type != "imap") {
-									//dump("PerformExpand on " + uri + "\n");
-									server.PerformExpand(msgWindow);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+    var folderOutliner = GetFolderOutliner();
+    var view = folderOutliner.outlinerBoxObject.view;
+    for (var i = 0; i < view.rowCount; i++)
+    {
+        if (view.isContainer(i))
+        {
+            if (view.isContainerOpen(i))
+            {
+                 var folderResource = GetFolderResource(i);
+                 var isServer = GetFolderAttribute(folderResource, "IsServer"); 
+                 if (isServer == "true")
+                 {
+                     var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+                     var server = msgFolder.server;
+                     // Don't do this for imap servers. See bug #41943
+                     if (server.type != "imap")
+                         server.PerformExpand(msgWindow);
+                 }
+            }
+        }
+    }
 }
 
 function loadStartFolder(initialUri)
@@ -485,7 +470,7 @@ function loadStartFolder(initialUri)
 
         // because the "open" state persists, we'll call
         // PerformExpand() for all servers that are open at startup.
-        PerformExpandForAllOpenServers(folderOutliner);
+        PerformExpandForAllOpenServers();
     }
     catch(ex)
     {
