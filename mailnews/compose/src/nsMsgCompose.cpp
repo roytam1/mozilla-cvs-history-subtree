@@ -469,11 +469,6 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
   TranslateLineEnding(aBuf);
   TranslateLineEnding(aSignature);
 
-  // this is probably a mapi send, so we need to replace '\n' with <br>
-  // so that the line breaks won't be lost by html.
-  if (!aQuoted && aHTMLEditor)
-    aBuf.ReplaceSubstring(NS_LITERAL_STRING("\n").get(), NS_LITERAL_STRING("<br>").get());
-
   // We're going to be inserting stuff, and MsgComposeCommands
   // may have set the editor to readonly in the recycled case.
   // So set it back to writable.
@@ -964,25 +959,32 @@ NS_IMETHODIMP nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity 
   if (!prompt && m_window)
      m_window->GetPrompter(getter_AddRefs(prompt));
 
-  if (m_editor && m_compFields && !m_composeHTML)
+  if (m_compFields && !m_composeHTML)
   {
-    // Reset message body previously stored in the compose fields
-    // There is 2 nsIMsgCompFields::SetBody() functions using a pointer as argument,
-    // therefore a casting is required.
-    m_compFields->SetBody((const char *)nsnull);
-
     // The plain text compose window was used
     const char contentType[] = "text/plain";
     nsAutoString msgBody;
     nsAutoString format; format.AssignWithConversion(contentType);
     PRUint32 flags = nsIDocumentEncoder::OutputFormatted;
+    if (m_editor)
+    {
+      // Reset message body previously stored in the compose fields
+      // There is 2 nsIMsgCompFields::SetBody() functions using a pointer as argument,
+      // therefore a casting is required.
+      m_compFields->SetBody((const char *)nsnull);
 
     const char *charset = m_compFields->GetCharacterSet();
     if(UseFormatFlowed(charset))
         flags |= nsIDocumentEncoder::OutputFormatFlowed;
     
     rv = m_editor->OutputToString(format, flags, msgBody);
-    
+    }
+    else
+    {
+      PRUnichar *msgBodyStr;
+      m_compFields->GetBody(&msgBodyStr);
+      msgBody.Adopt(msgBodyStr);
+    }
     if (NS_SUCCEEDED(rv) && !msgBody.IsEmpty())
     {
       // Convert body to mail charset
@@ -998,8 +1000,8 @@ NS_IMETHODIMP nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity 
       {
         // body contains characters outside the repertoire of the current 
         // charset. ask whether to convert to UTF-8 or go back to reset
-        // charset with a wider repertoire. (bug 233361)
-        if (NS_ERROR_UENC_NOMAPPING == rv) {
+        // charset with a wider repertoire. (bug 233361) (if not mapi blind send)
+        if (NS_ERROR_UENC_NOMAPPING == rv && m_editor) {
           PRBool sendInUTF8;
           rv = nsMsgAskBooleanQuestionByID(prompt,
                NS_ERROR_MSG_MULTILINGUAL_SEND, &sendInUTF8);
@@ -3547,6 +3549,13 @@ nsMsgCompose::BuildBodyMessageAndSignature()
 
   if (addSignature)
     ProcessSignature(m_identity, PR_FALSE, &tSignature);
+
+  // if type is new, but we have body, this is probably a mapi send, so we need to 
+  // replace '\n' with <br> so that the line breaks won't be lost by html.
+  // if mailtourl, do the same.
+  if (m_composeHTML && (mType == nsIMsgCompType::New || mType == nsIMsgCompType::MailToUrl))
+    bodStr.ReplaceSubstring(NS_LITERAL_STRING("\n").get(), NS_LITERAL_STRING("<br>").get());
+
 
   rv = ConvertAndLoadComposeWindow(empty, bodStr, tSignature,
                                    PR_FALSE, m_composeHTML);
