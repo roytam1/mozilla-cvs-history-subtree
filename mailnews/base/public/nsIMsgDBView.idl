@@ -209,10 +209,8 @@ interface nsIMsgDBView : nsISupports
 
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
 
-    void doCommand(in nsIMsgWindow window, in nsMsgViewCommandTypeValue command,
-						 out nsMsgViewIndex indices, in long numindices);
+    void doCommand(in nsMsgViewCommandTypeValue command);
     void getCommandStatus(in nsMsgViewCommandTypeValue command,
-						 out nsMsgViewIndex indices, in long numindices,
 						 out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p);
 
     attribute nsMsgViewFlagsTypeValue viewFlags;

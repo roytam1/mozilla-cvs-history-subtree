@@ -227,7 +227,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
     NS_ENSURE_SUCCESS(rv, NS_OK); // outliner doesn't care if we failed
 
-    if (startRange >= 0 && startRange == endRange)
+    if (startRange >= 0 && startRange == endRange && startRange < GetSize())
     {
       // get the msgkey for the message
       nsMsgKey msgkey = m_keys.GetAt(startRange);
@@ -237,6 +237,26 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     }
   }
 
+  return NS_OK;
+}
+
+nsresult nsMsgDBView::GetSelectedIndices(nsUInt32Array *selection)
+{
+  PRInt32 selectionCount; 
+  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
+  for (PRInt32 i = 0; i < selectionCount; i++)
+  {
+    PRInt32 startRange;
+    PRInt32 endRange;
+    rv = mOutlinerSelection->GetRangeAt(i, &startRange, &endRange);
+    NS_ENSURE_SUCCESS(rv, NS_OK); 
+    PRInt32 viewSize = GetSize();
+    if (startRange >= 0 && startRange < viewSize)
+    {
+      for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < viewSize; rangeIndex++)
+        selection->Add(rangeIndex);
+    }
+  }
   return NS_OK;
 }
 
@@ -505,8 +525,15 @@ int PR_CALLBACK CompareViewIndices (const void *v1, const void *v2, void *)
 }
 
 /* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
-NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numIndices)
+NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
 {
+  nsUInt32Array selection;
+
+  GetSelectedIndices(&selection);
+
+  nsMsgViewIndex *indices = selection.GetData();
+  PRInt32 numIndices = selection.GetSize();
+
   nsresult rv = NS_OK;
   switch (command)
   {
@@ -534,7 +561,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeV
 //		FEEnd();
 //		calledFEEnd = TRUE;
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
-		ApplyCommandToIndices(command, window, indices, numIndices);
+		ApplyCommandToIndices(command, indices, numIndices);
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
 
     break;
@@ -558,30 +585,29 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeV
 }
 
 /* void getCommandStatus (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices, out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p); */
-NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numindices, PRBool *selectable_p, nsMsgViewCommandCheckStateValue *selected_p)
+NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, PRBool *selectable_p, nsMsgViewCommandCheckStateValue *selected_p)
 {
+  nsUInt32Array selection;
+
+  GetSelectedIndices(&selection);
+
+  nsMsgViewIndex *indices = selection.GetData();
+  PRInt32 numindices = selection.GetSize();
+
   nsresult rv = NS_OK;
   switch (command)
   {
   case nsMsgViewCommandType::markMessagesRead:
-    break;
   case nsMsgViewCommandType::markMessagesUnread:
-    break;
   case nsMsgViewCommandType::toggleMessageRead:
-    break;
   case nsMsgViewCommandType::flagMessages:
-    break;
   case nsMsgViewCommandType::unflagMessages:
-    break;
   case nsMsgViewCommandType::toggleThreadKilled:
-    break;
   case nsMsgViewCommandType::toggleThreadWatched:
-    break;
   case nsMsgViewCommandType::deleteMsg:
-    break;
   case nsMsgViewCommandType::deleteNoTrash:
-    break;
   case nsMsgViewCommandType::markThreadRead:
+    *selectable_p = (numindices > 0);
     break;
   case nsMsgViewCommandType::markAllRead:
     break;
@@ -597,7 +623,7 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, n
 }
 
 nsresult
-nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsIMsgWindow *window, nsMsgViewIndex* indices,
+nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
 					PRInt32 numIndices)
 {
 	nsresult rv = NS_OK;
@@ -606,9 +632,9 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsIMsgWind
   nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(m_folder);
 	PRBool thisIsImapFolder = (imapFolder != nsnull);
   if (command == nsMsgViewCommandType::deleteMsg)
-		rv = DeleteMessages (window, indices, numIndices, PR_FALSE);
+		rv = DeleteMessages (mMsgWindow, indices, numIndices, PR_FALSE);
 	else if (command == nsMsgViewCommandType::deleteNoTrash)
-		rv = DeleteMessages(window, indices, numIndices, PR_TRUE);
+		rv = DeleteMessages(mMsgWindow, indices, numIndices, PR_TRUE);
 	else
 	{
 		for (int32 i = 0; i < numIndices; i++)
@@ -1623,9 +1649,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 {
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread;
-#ifdef HAVE_PORT
-    nsMsgKey        startMsg = nsMsgKey_None;
-#endif
+  nsMsgKey        startMsg = nsMsgKey_None;
 	nsresult		rv = NS_OK;
 	PRUint32			numExpanded = 0;
 
@@ -1649,14 +1673,9 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
   NoteChange(index, 1, nsMsgViewNotificationCode::changed);
 	if (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)
 	{
-//		if (flags & MSG_FLAG_READ)
-//			unreadLevelArray.Add(0);	// keep top level hdr in thread, even though read.
-    nsMsgKey threadId;
-    msgHdr->GetThreadId(&threadId);
-#ifdef HAVE_PORT
-		rv = m_db->ListUnreadIdsInThread(pThread,  &startMsg, unreadLevelArray, 
-										listChunk, listIDs, listFlags, listLevels, &numExpanded);
-#endif
+		if (flags & MSG_FLAG_READ)
+			m_levels.Add(0);	// keep top level hdr in thread, even though read.
+		rv = ListUnreadIdsInThread(pThread,  index, &numExpanded);
 	}
 	else
 		rv = ListIdsInThread(pThread,  index, &numExpanded);
@@ -2040,6 +2059,70 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
   return NS_OK;
 }
 
+nsresult	nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
+{
+  NS_ENSURE_ARG(threadHdr);
+	// these children ids should be in thread order.
+  nsMsgViewIndex viewIndex = startOfThreadViewIndex + 1;
+	*pNumListed = 0;
+  nsUint8Array levelStack;
+
+
+  PRUint32 numChildren;
+  threadHdr->GetNumChildren(&numChildren);
+	PRUint32 i;
+	for (i = 0; i < numChildren; i++)
+	{
+		nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    threadHdr->GetChildHdrAt(i, getter_AddRefs(msgHdr));
+		if (msgHdr != nsnull)
+		{
+      nsMsgKey msgKey;
+      PRUint32 msgFlags;
+      msgHdr->GetMessageKey(&msgKey);
+      msgHdr->GetFlags(&msgFlags);
+			PRBool isRead = PR_FALSE;
+			m_db->IsRead(msgKey, &isRead);
+			// just make sure flag is right in db.
+			m_db->MarkHdrRead(msgHdr, isRead, nsnull);
+      // determining the level is going to be tricky, since we're not storing the
+      // level in the db anymore. It will mean looking up the view for each of the
+      // ancestors of the current msg until we find one in the view. I guess we could
+      // check each ancestor to see if it's unread before looking for it in the view.
+#if 0
+			// if the current header's level is <= to the top of the level stack,
+			// pop off the top of the stack.
+			while (levelStack.GetSize() > 1 && 
+						msgHdr->GetLevel()  <= levelStack.GetAt(levelStack.GetSize() - 1))
+			{
+				levelStack.RemoveAt(levelStack.GetSize() - 1);
+			}
+#endif
+			if (!isRead)
+			{
+				PRUint8 levelToAdd;
+				// just make sure flag is right in db.
+				m_db->MarkHdrRead(msgHdr, PR_FALSE, nsnull);
+				m_keys.InsertAt(viewIndex, msgKey);
+        m_flags.InsertAt(viewIndex, msgFlags);
+//					pLevels[i] = msgHdr->GetLevel();
+				if (levelStack.GetSize() == 0)
+					levelToAdd = 0;
+				else
+					levelToAdd = levelStack.GetAt(levelStack.GetSize() - 1) + 1;
+        m_levels.InsertAt(viewIndex, levelToAdd);
+#ifdef DEBUG_bienvenu
+//					XP_Trace("added at level %d\n", levelToAdd);
+#endif
+				levelStack.Add(levelToAdd);
+        viewIndex++;
+				(*pNumListed)++;
+			}
+		}
+	}
+	return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, 
                                        PRUint32 aNewFlags, nsIDBChangeListener *aInstigator)
 {
@@ -2075,6 +2158,12 @@ NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags,
 NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                             nsIDBChangeListener *aInstigator)
 {
+  if (mOutliner)
+  {
+    nsMsgViewIndex deletedIndex = m_keys.FindIndex(aKeyChanged);
+    if (deletedIndex != nsMsgViewIndex_None)
+      mOutliner->RowsRemoved(deletedIndex, 1);
+  }
   return NS_OK;
 }
 
@@ -2110,9 +2199,27 @@ void	nsMsgDBView::EnableChangeUpdates()
 void	nsMsgDBView::DisableChangeUpdates()
 {
 }
-void	nsMsgDBView::NoteChange(nsMsgViewIndex firstlineChanged, PRInt32 numChanged, 
+void	nsMsgDBView::NoteChange(nsMsgViewIndex firstLineChanged, PRInt32 numChanged, 
 							 nsMsgViewNotificationCodeValue changeType)
 {
+  if (mOutliner)
+  {
+    switch (changeType)
+    {
+    case nsMsgViewNotificationCode::changed:
+      mOutliner->InvalidateRange(firstLineChanged, numChanged);
+      break;
+    case nsMsgViewNotificationCode::insertOrDelete:
+      if (numChanged > 0)
+      {
+        mOutliner->RowsInserted(firstLineChanged, numChanged);
+      }
+      else if (numChanged < 0)
+      {
+        mOutliner->RowsRemoved(firstLineChanged, numChanged);
+      }
+    }
+  }
 }
 
 void	nsMsgDBView::NoteStartChange(nsMsgViewIndex firstlineChanged, PRInt32 numChanged, 

@@ -503,6 +503,7 @@ function SortThreadPane(column, sortKey, secondarySortKey, toggleCurrentDirectio
 var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
+var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
 
 var gDBView = null;
 

@@ -234,8 +234,21 @@ var DefaultController =
 
 	isCommandEnabled: function(command)
 	{
+    var enabled = new Object();
+    enabled.value = false;
+    var checkStatus = new Object();
 		switch ( command )
 		{
+			case "button_delete":
+			case "cmd_delete":
+        if (gDBView)
+          gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
+        return enabled.value;
+ 			case "cmd_shiftDelete":
+        if (gDBView)
+         gDBView.getCommandStatus(nsMsgViewCommandType.deleteNoTrash, enabled, checkStatus);
+       return enabled.value;
+
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -247,9 +260,6 @@ var DefaultController =
 			case "cmd_forwardInline":
 			case "cmd_forwardAttachment":
 			case "cmd_editAsNew":
-			case "cmd_delete":
-			case "button_delete":
-			case "cmd_shiftDelete":
 			case "cmd_openMessage":
 			case "cmd_print":
 			case "cmd_saveAsFile":
@@ -382,14 +392,13 @@ var DefaultController =
 			case "cmd_editAsNew":
 				MsgEditMessageAsNew();
 				break;
+			case "button_delete":
 			case "cmd_delete":
-				MsgDeleteMessage(false, false);
+        gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
+				// MsgDeleteMessage(false, false);
 				break;
 			case "cmd_shiftDelete":
 				MsgDeleteMessage(true, false);
-				break;
-			case "button_delete":
-				MsgDeleteMessage(false, true);
 				break;
 			case "cmd_editDraft":
 				var threadTree = GetThreadTree();
@@ -535,10 +544,12 @@ function GetUriForFirstSelectedMessage()
 
 function GetNumSelectedMessages()
 {
-	var threadTree = GetThreadTree();
+	var threadTree = GetThreadOutliner(); // GetThreadTree();
 	var numSelected = 0;
-	if ( threadTree && threadTree.selectedItems )
-		numSelected = threadTree.selectedItems.length;
+  var selection = threadTree.selection;
+  if (selection)
+    numSelected = selection.rangeCount;
+
 	return numSelected;
 }
 

@@ -390,8 +390,17 @@ var MessageWindowController =
 
 	isCommandEnabled: function(command)
 	{
+    var enabled = new Object();
+    var checkStatus = new Object();
 		switch ( command )
 		{
+			case "cmd_delete":
+      if (gDBView)
+      {
+         gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
+         dump("mw enabled value = " + enabled.value + "\n");
+         return enabled.value;
+      }
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -403,7 +412,7 @@ var MessageWindowController =
 			case "cmd_forwardInline":
 			case "cmd_forwardAttachment":
 			case "cmd_editAsNew":
-			case "cmd_delete":
+
 			case "button_delete":
 			case "cmd_shiftDelete":
 			case "cmd_print":
@@ -478,7 +487,8 @@ var MessageWindowController =
 				MsgEditMessageAsNew();
 				break;
 			case "cmd_delete":
-				MsgDeleteMessage(false, false);
+        gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
+				// MsgDeleteMessage(false, false);
 				break;
 			case "cmd_shiftDelete":
 				MsgDeleteMessage(true, false);

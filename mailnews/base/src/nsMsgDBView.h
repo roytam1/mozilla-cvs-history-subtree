@@ -80,6 +80,7 @@ protected:
 
   nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI);
 
+  nsresult GetSelectedIndices(nsUInt32Array *selection);
   // routines used in building up view
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
   virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
@@ -114,6 +115,7 @@ protected:
 	virtual nsMsgViewIndex	FindKey(nsMsgKey key, PRBool expand);
 
   nsresult	ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
+  nsresult	ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed);
   PRInt32   FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgKey msgKey, nsMsgViewIndex startOfThreadViewIndex);
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
@@ -128,7 +130,7 @@ protected:
 							   nsMsgViewNotificationCodeValue changeType);
 
   // for commands
-  nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsIMsgWindow *window, nsMsgViewIndex* indices,
+  nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
 					PRInt32 numIndices);
   nsresult DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool deleteStorage);
   nsresult ToggleReadByIndex(nsMsgViewIndex index);
