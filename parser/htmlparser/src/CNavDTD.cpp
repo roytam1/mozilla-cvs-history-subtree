@@ -1215,7 +1215,7 @@ void WriteTokenToLog(CToken* aToken) {
 /**
  * This gets called before we've handled a given start tag.
  * It's a generic hook to let us do pre processing.
- * @param   aToken contains the tag in question
+ * @param   aToken contains the tag in question 
  * @param   aChildTag is the tag itself.
  * @param   aNode is the node (tag) with associated attributes.
  * @return  TRUE if tag processing should continue; FALSE if the tag has been handled.
@@ -1241,16 +1241,23 @@ nsresult CNavDTD::WillHandleStartTag(CToken* aToken,eHTMLTags aTag,nsCParserNode
     }
   }
 
+
     /**************************************************************************************
      *
      * Now a little code to deal with bug #49687 (crash when layout stack gets too deep)
      * I've also opened this up to any container (not just inlines): re bug 55095
+     * Improved to handle bug 55980 (infinite loop caused when DEPTH is exceeded and
+     * </P> is encountered by itself (<P>) is continuously produced.
      *
      **************************************************************************************/
-
-  if(MAX_REFLOW_DEPTH<mBodyContext->GetCount()) {
-    return kHierarchyTooDeep;  
-  }
+  
+  if(MAX_REFLOW_DEPTH<mBodyContext->GetCount()) { 
+    if(nsHTMLElement::IsContainer(aTag)) { 
+      if(!gHTMLElements[aTag].HasSpecialProperty(kHandleStrayTag)) { 
+        return kHierarchyTooDeep; //drop the container on the floor. 
+      } 
+    } 
+  } 
 
   STOP_TIMER()
   MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::WillHandleStartTag(), this=%p\n", this));
@@ -2389,6 +2396,14 @@ PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
       }
     }
   }
+
+  if(eHTMLTag_nobr==aChild) { 
+    if(IsInlineElement(aParent,aParent)){ 
+      if(HasOpenContainer((eHTMLTags)aChild)) { 
+        return PR_FALSE; 
+      } 
+    } 
+  } 
 
   return result;
 } 

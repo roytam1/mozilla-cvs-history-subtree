@@ -22,7 +22,7 @@
 
 
 /**
- * MODULE NOTES:
+ * MODULE NOTES: 
  * @update  gess 4/1/98
  * 
  */ 
@@ -2025,6 +2025,19 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
     }
     
   }
+
+  else if(gHTMLElements[mTagID].IsTableElement()) {
+    
+    //This fixes 57378... 
+    //example: <TABLE><THEAD><TR><TH></THEAD> which didn't close the <THEAD> 
+
+    PRInt32 theLastTable=aContext.LastOf(eHTMLTag_table); 
+    PRInt32 theLastOfMe=aContext.LastOf(mTagID); 
+    if(theLastTable<theLastOfMe) { 
+      return mTagID; 
+    } 
+
+  } 
   return result;
 }
 
