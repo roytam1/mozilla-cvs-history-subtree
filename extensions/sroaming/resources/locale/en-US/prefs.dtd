@@ -1,0 +1,49 @@
+<!ENTITY sroaming-header.label    "Roaming User">
+<!ENTITY sroamingFiles-header.label "Item Selection">
+<!ENTITY generic.label            "All XXX">
+<!ENTITY descr.label              "Roaming Access allows you to retrieve and store your user profile information from/on a Roaming Access server. Your profile information will then be retrieved from the server on startup and transferred to it on shutdown.">
+<!ENTITY descrFiles.label         "If Roaming Access is enabled (in the Roaming User pane), the following parts of your profile will be transferred to and from the Roaming Access server.">
+<!ENTITY enabled.label            "Enable remote profile storage">
+<!ENTITY enabled.accesskey        "e">
+<!ENTITY protocol.label           "Server Information">
+<!ENTITY protocolSelect.label     "Transfer Method">
+<!ENTITY protocolSelect.accesskey "m">
+<!ENTITY files.label              "Item Selection">
+<!ENTITY filesDescr.label         "User profile items selected below will be transferred to/from the server.">
+<!ENTITY filesList.accesskey      "i">
+
+
+<!ENTITY protocolCopy.label       "File copy">
+<!ENTITY protocolStream.label     "HTTP / FTP">
+
+<!ENTITY streamURL.label          "Base URL">
+<!ENTITY streamURL.accesskey      "u">
+<!ENTITY streamUsername.label     "Username">
+<!ENTITY streamUsername.accesskey "Username">
+<!ENTITY streamSavePW.label       "Save password">
+<!ENTITY streamSavePW.accesskey   "s">
+<!ENTITY streamPassword.label     "Password">
+<!ENTITY streamPassword.accesskey "p">
+
+<!ENTITY copyDir.label            "Copy to/from directory">
+<!ENTITY copyDir.accesskey        "d">
+
+
+<!ENTITY bookmarks.label          "Bookmarks">
+<!ENTITY addressbook.label        "Personal Addressbook">
+<!ENTITY ab-history.label         "Collected Addressbook">
+<!ENTITY cookies.label            "Cookies">
+<!ENTITY cookperm.label           "Cookie Permissions">
+<!ENTITY history.label            "Browsing history">
+<!ENTITY passwords.label          "Passwords (dangerous)">
+<!ENTITY wallet.label             "Fill Form data (dangerous?)">
+<!ENTITY helperapps.label         "Helper App Settings">
+<!ENTITY sidebar.label            "Sidebar panel list">
+<!ENTITY localstorerdf.label      "Window settings">
+<!ENTITY userstuff.label          "Files for user edition (user*)">
+<!ENTITY mailViews.label          "Message views XXX">
+<!ENTITY filters.label            "Mail filters">
+<!ENTITY newsrc.label             "Newsgroup subscriptions">
+<!ENTITY emailcerts.label         "Client Certificates, mostly for crypto emailXXX">
+<!ENTITY cryptokeys.label         "Private Keys (?)">
+<!ENTITY secmod.label             "Security module database (XXX)">

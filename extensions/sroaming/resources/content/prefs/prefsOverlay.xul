@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE overlay SYSTEM "chrome://sroaming/locale/prefs.dtd">
+
+<overlay id="ovPrefs" 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  
+  <treechildren id="panelChildren">
+    <treeitem container="true" id="sroamingItem">
+      <treerow>
+        <treecell class="treecell-indent"
+                  url="chrome://sroaming/content/prefs/top.xul"
+                  label="&sroaming-header.label;" />
+      </treerow>
+      <treechildren id="sroamingChildren">
+        <treeitem id="sroamingFiles">
+          <treerow>
+            <treecell class="treecell-indent"
+                      url="chrome://sroaming/content/prefs/files.xul"
+                      label="&sroamingFiles-header.label;" />
+          </treerow>  
+        </treeitem> 
+      </treechildren>
+    </treeitem>
+  </treechildren>
+
+</overlay>

@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+
+<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://sroaming/locale/prefs.dtd" >
+
+<page id="winPref"
+      xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="parent.initPanel('chrome://sroaming/content/prefs/top.xul');"
+      headertitle="&sroaming-header.label;">
+
+  <script type="application/x-javascript" src="chrome://sroaming/content/prefs/top.js"/>
+
+  <description>&descr.label;</description>
+
+<!-- <groupbox id="generic">
+    <caption label="&generic.label;" />
+-->
+  <checkbox id="enabled"
+    oncommand="EnableTree(this.checked, E('roamingSettings'));"
+    class="indent"
+    label="&enabled.label;"
+    accesskey="&enabled.accesskey;" />
+<!--  </groupbox>-->
+  <vbox id="roamingSettings" flex="1">
+
+  <groupbox id="protocol">
+    <caption label="&protocol.label;" />
+    <vbox>
+      <menulist id="protocolSelect"
+         oncommand="SwitchDeck(this.selectedItem.value,
+                               'protocolSettingsDeck');">
+         <menupopup>
+           <menuitem
+             value="0"
+             regVal="stream"
+             label="&protocolStream.label;" />
+         <menuitem
+            value="1"
+            regVal="copy"
+            label="&protocolCopy.label;" />
+         </menupopup>
+      </menulist>
+   </vbox>
+
+   <deck id="protocolSettingsDeck">
+      <vbox id="streamSettings">
+         <grid flex="1">
+            <columns>
+               <column/>
+               <column flex="1"/>
+            </columns>
+            <rows>
+               <row>
+                  <hbox align="center">
+                    <label control="streamURL"
+                      value="&streamURL.label;"
+                      accesskey="&streamURL.accesskey;" />
+                  </hbox>
+                  <textbox id="streamURL" />
+               </row>
+               <row>
+                  <hbox align="center">
+                    <label control="streamUsername"
+                      value="&streamUsername.label;"
+                      accesskey="&streamUsername.accesskey;" />
+                  </hbox>
+                  <textbox id="streamUsername" />
+               </row>
+               <row>
+                  <hbox />
+                  <checkbox id="streamSavePW"
+                    oncommand="EnableElement(this.checked, this,
+                                             'streamPassword');"
+                    label="&streamSavePW.label;"
+                    accesskey="&streamSavePW.accesskey;" />
+               </row>
+               <row>
+                  <hbox align="center">
+                    <label control="streamPassword"
+                      value="&streamPassword.label;"
+                      accesskey="&streamPassword.accesskey;" />
+                  </hbox>
+                  <textbox type="password" id="streamPassword" />
+               </row>
+            </rows>
+         </grid>
+      </vbox>
+      <vbox id="copySettings">
+        <label control="copyDir"
+          value="&copyDir.label;"
+          accesskey="&copyDir.accesskey;" />
+        <textbox id="copyDir" />
+      </vbox>
+    </deck>
+  </groupbox>
+
+  </vbox>
+
+</page>
