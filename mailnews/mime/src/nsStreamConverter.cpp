@@ -42,7 +42,7 @@ nsresult
 nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNewType)
 {
   // Default to html the entire document...
-  *aNewType = nsMimeMessageQuoting;
+	*aNewType = nsMimeOutput::nsMimeMessageQuoting;
 
   // Do sanity checking...
   if ( (!url) || (!*url) )
@@ -98,7 +98,7 @@ nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNe
       } while (*ptr++);
   
       // Don't muck with this data!
-      *aNewType = nsMimeMessageRaw;
+      *aNewType = nsMimeOutput::nsMimeMessageRaw;
       return NS_OK;
     }
   }
@@ -113,13 +113,13 @@ nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNe
       {
         PR_FREEIF(mOutputFormat);
         mOutputFormat = PL_strdup("text/xml");
-        *aNewType = nsMimeMessageHeaderDisplay;
+        *aNewType = nsMimeOutput::nsMimeMessageHeaderDisplay;
       }
       else if (ptr3)
       {
         PR_FREEIF(mOutputFormat);
         mOutputFormat = PL_strdup("text/html");
-        *aNewType = nsMimeMessageQuoting;
+        *aNewType = nsMimeOutput::nsMimeMessageQuoting;
       }
     }
     else
@@ -133,7 +133,7 @@ nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNe
   {
     PR_FREEIF(mOutputFormat);
     mOutputFormat = PL_strdup("raw");
-    *aNewType = nsMimeMessageRaw;
+    *aNewType = nsMimeOutput::nsMimeMessageRaw;
   }
 
   return NS_OK;
@@ -220,7 +220,7 @@ NS_IMPL_ISUPPORTS(nsStreamConverter, nsIStreamConverter::GetIID());
 // 
 nsresult 
 nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, nsMimeOutputType aType,
-                                   nsMimeOutputType *aOutFormat, char **aOutputContentType)
+                                   nsMimeOutputType * aOutFormat, char **aOutputContentType)
 {
   nsresult            res;
   nsMimeOutputType    newType;
@@ -231,28 +231,28 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
   newType = aType;
   switch (aType) 
   {
-    case nsMimeMessageSplitDisplay:    // the wrapper HTML output to produce the split header/body display
+  case nsMimeOutput::nsMimeMessageSplitDisplay:    // the wrapper HTML output to produce the split header/body display
       mWrapperOutput = PR_TRUE;
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("text/html");
       break;
 
-    case nsMimeMessageHeaderDisplay:   // the split header/body display
+  case nsMimeOutput::nsMimeMessageHeaderDisplay:   // the split header/body display
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("text/xml");
       break;
 
-    case nsMimeMessageBodyDisplay:   // the split header/body display
+  case nsMimeOutput::nsMimeMessageBodyDisplay:   // the split header/body display
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("text/html");
       break;
 
-    case nsMimeMessageQuoting:   // all HTML quoted output
+  case nsMimeOutput::nsMimeMessageQuoting:   // all HTML quoted output
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("text/html");
       break;
 
-    case nsMimeMessageRaw:       // the raw RFC822 data (view source) and attachments
+  case nsMimeOutput::nsMimeMessageRaw:       // the raw RFC822 data (view source) and attachments
       PR_FREEIF(mOutputFormat);
       mOutputFormat = PL_strdup("raw");
       break;
