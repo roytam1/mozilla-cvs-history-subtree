@@ -452,7 +452,6 @@ NS_IMETHODIMP nsRegistry::Open( nsIFile *regFile ) {
 static void
 EnsureDefaultRegistryDirectory() {
     #if defined(XP_UNIX) && !defined(XP_MACOSX)
-#define NS_MOZILLA_DIR_PERMISSION	00700
     // Create ~/.mozilla as that is the default place for the registry file
 
     /* The default registry on the unix system is $HOME/.mozilla/registry per
@@ -476,7 +475,7 @@ EnsureDefaultRegistryDirectory() {
     {
         char dotMozillaDir[1024];
         PR_snprintf(dotMozillaDir, sizeof(dotMozillaDir),
-                    "%s/" MOZ_USER_DIR, home);
+                    "%s/" NS_MOZILLA_DIR_NAME, home);
         if (PR_Access(dotMozillaDir, PR_ACCESS_EXISTS) != PR_SUCCESS)
         {
             PR_MkDir(dotMozillaDir, NS_MOZILLA_DIR_PERMISSION);
@@ -487,14 +486,13 @@ EnsureDefaultRegistryDirectory() {
 #endif /* XP_UNIX */
 
 #ifdef XP_BEOS
-#define NS_MOZILLA_DIR_PERMISSION	00700
     BPath p;
     const char *settings = "/boot/home/config/settings";
     if(find_directory(B_USER_SETTINGS_DIRECTORY, &p) == B_OK)
         settings = p.Path();
     char settingsMozillaDir[1024];
     PR_snprintf(settingsMozillaDir, sizeof(settingsMozillaDir),
-                "%s/" MOZ_USER_DIR, settings);
+                "%s/" NS_MOZILLA_DIR_NAME, settings);
     if (PR_Access(settingsMozillaDir, PR_ACCESS_EXISTS) != PR_SUCCESS) {
         PR_MkDir(settingsMozillaDir, NS_MOZILLA_DIR_PERMISSION);
         printf("nsComponentManager: Creating Directory %s\n", settingsMozillaDir);
