@@ -50,11 +50,11 @@
 #include "txVariableMap.h"
 #include "nsDoubleHashtable.h"
 #include "txKey.h"
+#include "txStylesheet.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
 class ExprResult;
-class txStylesheet;
 class txRecursionCheckpointStart;
 class txExpandedNameMap;
 
@@ -97,6 +97,16 @@ public:
 
     TX_DECL_MATCH_CONTEXT;
 
+    /**
+     * Struct holding information about a current template rule
+     */
+    struct TemplateRule {
+        txStylesheet::ImportFrame* mFrame;
+        PRInt32 mModeNsId;
+        nsIAtom* mModeLocalName;
+        txExpandedNameMap* mParams;
+    };
+
     // Stack functions
     nsresult pushEvalContext(txIEvalContext* aContext);
     txIEvalContext* popEvalContext();
@@ -106,6 +116,12 @@ public:
     PRInt32 popInt();
     nsresult pushResultHandler(txAXMLEventHandler* aHandler);
     txAXMLEventHandler* popResultHandler();
+    nsresult pushTemplateRule(txStylesheet::ImportFrame* aFrame,
+                              const txExpandedName& aMode,
+                              txExpandedNameMap* aParams);
+    void popTemplateRule();
+    nsresult pushParamMap();
+    txExpandedNameMap* popParamMap();
 
     // state-getting functions
     txIEvalContext* getEvalContext();
@@ -114,6 +130,7 @@ public:
     nsresult getKeyNodes(const txExpandedName& aKeyName, Document* aDocument,
                          const nsAString& aKeyValue, PRBool aIndexIfNotFound,
                          const NodeSet** aResult);
+    TemplateRule* getCurrentTemplateRule();
 
     // state-modification functions
     txInstruction* getNextInstruction();
@@ -125,8 +142,6 @@ public:
     nsresult bindVariable(const txExpandedName& aName,
                           ExprResult* aValue, MBool aOwned);
     void removeVariable(const txExpandedName& aName);
-    nsresult pushParamMap();
-    void popParamMap();
 
     // Other
     nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
@@ -139,7 +154,7 @@ public:
 
     txExpandedNameMap* mTemplateParams;
 
-    txStylesheet* mStylesheet;
+    nsRefPtr<txStylesheet> mStylesheet;
 
 private:
     txStack mReturnStack;
@@ -152,6 +167,10 @@ private:
     txInstruction* mNextInstruction;
     txVariableMap* mLocalVariables;
     txVariableMap mGlobalVariableValues;
+
+    TemplateRule* mTemplateRules;
+    PRInt32 mTemplateRulesBufferSize;
+    PRInt32 mTemplateRuleCount;
 
     txIEvalContext* mEvalContext;
     txIEvalContext* mInitialEvalContext;

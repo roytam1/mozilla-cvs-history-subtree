@@ -41,6 +41,7 @@
 #include "txAtoms.h"
 #include "txLog.h"
 #include "txStylesheetCompileHandlers.h"
+#include "txExecutionState.h"
 #ifdef TX_EXE
 #include "txHTMLOutput.h"
 #endif

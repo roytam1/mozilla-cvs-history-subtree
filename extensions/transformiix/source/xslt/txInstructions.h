@@ -40,7 +40,6 @@
 #define TRANSFRMX_TXINSTRUCTIONS_H
 
 #include "txError.h"
-#include "txExecutionState.h"
 #include "nsCOMPtr.h"
 #include "TxObject.h"
 #include "nsIAtom.h"
@@ -51,6 +50,8 @@
 #include "Expr.h"
 #include "txXSLTNumber.h"
 #include "txXSLTPatterns.h"
+
+class txExecutionState;
 
 class txInstruction : public TxObject
 {
@@ -172,16 +173,6 @@ public:
     TX_DECL_TXINSTRUCTION
 };
 
-class txForEach : public txInstruction
-{
-public:
-    txForEach();
-
-    TX_DECL_TXINSTRUCTION
-
-    txInstruction* mEndTarget;
-};
-
 class txGoTo : public txInstruction
 {
 public:
@@ -200,6 +191,16 @@ public:
     TX_DECL_TXINSTRUCTION
 
     txExpandedName mName;
+};
+
+class txLoopNodeSet : public txInstruction
+{
+public:
+    txLoopNodeSet(txInstruction* aTarget);
+
+    TX_DECL_TXINSTRUCTION
+    
+    txInstruction* mTarget;
 };
 
 class txLREAttribute : public txInstruction
@@ -274,8 +275,6 @@ public:
                      nsAutoPtr<Expr> aDataTypeExpr, nsAutoPtr<Expr> aOrderExpr,
                      nsAutoPtr<Expr> aCaseOrderExpr);
 
-    nsAutoPtr<Expr> mSelect;
-
     struct SortKey {
         SortKey(nsAutoPtr<Expr> aSelectExpr, nsAutoPtr<Expr> aLangExpr,
                 nsAutoPtr<Expr> aDataTypeExpr, nsAutoPtr<Expr> aOrderExpr,
@@ -289,6 +288,14 @@ public:
     };
     
     nsVoidArray mSortKeys;
+    nsAutoPtr<Expr> mSelect;
+    txInstruction* mBailTarget;
+};
+
+class txPushNullTemplateRule : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
 };
 
 class txPushParams : public txInstruction

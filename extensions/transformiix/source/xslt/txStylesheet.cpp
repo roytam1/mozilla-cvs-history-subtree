@@ -44,6 +44,7 @@
 #include "primitives.h"
 #include "XSLTFunctions.h"
 #include "TxLog.h"
+#include "txKey.h"
 
 txStylesheet::txStylesheet()
     : mRootFrame(nsnull),
@@ -74,16 +75,22 @@ txStylesheet::init()
     NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
 
     instrp = &(*instrp)->mNext;
-    *instrp = new txPushNewContext(nodeExpr);
+    txPushNewContext* pushContext = new txPushNewContext(nodeExpr);
+    *instrp = pushContext;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
     // XXX ToDo: need special instruction that gets the correct mode
     instrp = &(*instrp)->mNext;
-    *instrp = new txApplyTemplates(txExpandedName());
+    txApplyTemplates* applyTemplates = new txApplyTemplates(txExpandedName());
+    *instrp = applyTemplates;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
     instrp = &(*instrp)->mNext;
-    *instrp = new txPopParams;
+    *instrp = new txLoopNodeSet(applyTemplates);
+    NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
+
+    instrp = &(*instrp)->mNext;
+    pushContext->mBailTarget = *instrp = new txPopParams;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
     instrp = &(*instrp)->mNext;
@@ -142,8 +149,9 @@ txStylesheet::findTemplate(Node* aNode,
     NS_ASSERTION(aImportFrame, "missing ImportFrame pointer");
     NS_ASSERTION(aNode, "missing node");
 
-    txInstruction* matchTemplate = 0;
-    ImportFrame* endFrame = 0;
+    *aImportFrame = nsnull;
+    txInstruction* matchTemplate = nsnull;
+    ImportFrame* endFrame = nsnull;
     txListIterator frameIter(&mImportFrames);
 
     if (aImportedBy) {

@@ -1202,9 +1202,10 @@ txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 
   txPushParams
   [params]
-  txPushNewContext  (holds <xsl:sort>s)
-  txApplyTemplates
-  txPopParams
+  txPushNewContext    -+   (holds <xsl:sort>s)
+  txApplyTemplate <-+  |
+  txLoopNodeSet    -+  |
+  txPopParams        <-+
 */
 nsresult
 txFnStartApplyTemplates(PRInt32 aNamespaceID,
@@ -1268,21 +1269,28 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
 
-    // txPushNewContext
-    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
+    txPushNewContext* pushcontext = (txPushNewContext*)aState.popObject();
+    nsAutoPtr<txInstruction> instr(pushcontext); // txPushNewContext
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     aState.popSorter();
 
-    // txApplyTemplates
-    instr = (txInstruction*)aState.popObject();
+    instr = (txInstruction*)aState.popObject(); // txApplyTemplates
+    nsAutoPtr<txLoopNodeSet> loop = new txLoopNodeSet(instr);
+    NS_ENSURE_TRUE(loop, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    instr = loop.forget();
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     instr = new txPopParams;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
-
+    
+    pushcontext->mBailTarget = instr;
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1657,11 +1665,11 @@ txFnEndFallback(txStylesheetCompilerState& aState)
 /*
   xsl:for-each
 
-  txPushNewContext  (holds <xsl:sort>s)
-  txForEach  -+  <-+
-  [children]  |    |
-  txGoTo      |  --+
-            <-+
+  txPushNewContext            -+    (holds <xsl:sort>s)
+  txPushNullTemplateRule  <-+  |
+  [children]                |  |
+  txLoopNodeSet            -+  |
+                             <-+
 */
 nsresult
 txFnStartForEach(PRInt32 aNamespaceID,
@@ -1681,6 +1689,9 @@ txFnStartForEach(PRInt32 aNamespaceID,
     nsAutoPtr<txPushNewContext> pushcontext(new txPushNewContext(select));
     NS_ENSURE_TRUE(pushcontext, NS_ERROR_OUT_OF_MEMORY);
 
+    rv = aState.pushPtr(pushcontext);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     rv = aState.pushSorter(pushcontext);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1688,21 +1699,12 @@ txFnStartForEach(PRInt32 aNamespaceID,
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    nsAutoPtr<txForEach> forEach(new txForEach);
-    NS_ENSURE_TRUE(forEach, NS_ERROR_OUT_OF_MEMORY);
-
-    rv = aState.pushPtr(forEach);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    instr = new txGoTo(forEach);
+    instr = new txPushNullTemplateRule;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.pushObject(instr);
+    rv = aState.pushPtr(instr);
     NS_ENSURE_SUCCESS(rv, rv);
-    
-    instr.forget();
 
-    instr = forEach.forget();
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1714,16 +1716,15 @@ txFnEndForEach(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
 
-    // txGoTo
-    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
+    txInstruction* pnullrule = (txInstruction*)aState.popPtr(); // txPushNullTemplateRule
+
+    nsAutoPtr<txInstruction> instr = new txLoopNodeSet(pnullrule);
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txForEach* forEach = (txForEach*)aState.popPtr();
-    rv = aState.addGotoTarget(&forEach->mEndTarget);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     aState.popSorter();
+    txPushNewContext* pushcontext = (txPushNewContext*)aState.popPtr();
+    aState.addGotoTarget(&pushcontext->mBailTarget);
 
     return NS_OK;
 }

@@ -105,6 +105,9 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
       mNextInstruction(nsnull),
       mLocalVariables(nsnull),
       mTemplateParams(nsnull),
+      mTemplateRules(nsnull),
+      mTemplateRulesBufferSize(0),
+      mTemplateRuleCount(0),
       mEvalContext(nsnull),
       mInitialEvalContext(nsnull),
       mRTFDocument(nsnull),
@@ -160,8 +163,10 @@ txExecutionState::init(Node* aNode,
 
     // Initiate first instruction
     txStylesheet::ImportFrame* frame = 0;
-    txInstruction* templ = mStylesheet->findTemplate(aNode, txExpandedName(),
+    txExpandedName nullName;
+    txInstruction* templ = mStylesheet->findTemplate(aNode, nullName,
                                                      this, nsnull, &frame);
+    pushTemplateRule(frame, nullName, nsnull);
     rv = runTemplate(templ);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -186,6 +191,7 @@ txExecutionState::init(Node* aNode,
 nsresult
 txExecutionState::end()
 {
+    popTemplateRule();
     mOutputHandler->endDocument();
     
     return NS_OK;
@@ -261,12 +267,13 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
         rv = runTemplate(var->mFirstInstruction, nsnull);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        // XXX reset current-template-rule
+        rv = pushTemplateRule(nsnull, txExpandedName(), nsnull);
+        NS_ENSURE_SUCCESS(rv, rv);
 
         rv = txXSLTProcessor::execute(*this);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        // XXX unreset current-template-rule
+        popTemplateRule();
 
         mNextInstruction = prevInstr;
         rtfHandler = (txRtfHandler*)popResultHandler();
@@ -374,6 +381,40 @@ txExecutionState::popResultHandler()
     return oldHandler;
 }
 
+nsresult
+txExecutionState::pushTemplateRule(txStylesheet::ImportFrame* aFrame,
+                                   const txExpandedName& aMode,
+                                   txExpandedNameMap* aParams)
+{
+    if (mTemplateRuleCount == mTemplateRulesBufferSize) {
+        PRInt32 newSize =
+            mTemplateRulesBufferSize ? mTemplateRulesBufferSize * 2 : 10;
+        TemplateRule* newRules = new TemplateRule[newSize];
+        NS_ENSURE_TRUE(newRules, NS_ERROR_OUT_OF_MEMORY);
+        
+        memcpy(newRules, mTemplateRules,
+               mTemplateRuleCount * sizeof(TemplateRule));
+        delete [] mTemplateRules;
+        mTemplateRules = newRules;
+        mTemplateRulesBufferSize = newSize;
+    }
+
+    mTemplateRules[mTemplateRuleCount].mFrame = aFrame;
+    mTemplateRules[mTemplateRuleCount].mModeNsId = aMode.mNamespaceID;
+    mTemplateRules[mTemplateRuleCount].mModeLocalName = aMode.mLocalName;
+    mTemplateRules[mTemplateRuleCount].mParams = aParams;
+    NS_IF_ADDREF(mTemplateRules[mTemplateRuleCount].mModeLocalName);
+    ++mTemplateRuleCount;
+    
+    return NS_OK;
+}
+
+void
+txExecutionState::popTemplateRule()
+{
+    NS_IF_RELEASE(mTemplateRules[--mTemplateRuleCount].mModeLocalName);
+}
+
 txIEvalContext*
 txExecutionState::getEvalContext()
 {
@@ -458,6 +499,16 @@ txExecutionState::getKeyNodes(const txExpandedName& aKeyName,
                                 aIndexIfNotFound, *this, aResult);
 }
 
+txExecutionState::TemplateRule*
+txExecutionState::getCurrentTemplateRule()
+{
+    if (!mTemplateRules[mTemplateRuleCount - 1].mFrame) {
+        return nsnull;
+    }
+    
+    return mTemplateRules + mTemplateRuleCount - 1;
+}
+
 txInstruction*
 txExecutionState::getNextInstruction()
 {
@@ -533,11 +584,13 @@ txExecutionState::pushParamMap()
     return NS_OK;
 }
 
-void
+txExpandedNameMap*
 txExecutionState::popParamMap()
 {
-    delete mTemplateParams;
+    txExpandedNameMap* oldParams = mTemplateParams;
     mTemplateParams = (txExpandedNameMap*)mParamStack.pop();
+
+    return oldParams;
 }
 
 nsresult

@@ -50,6 +50,7 @@
 #include "txRtfHandler.h"
 #include "txNodeSorter.h"
 #include "txXSLTNumber.h"
+#include "txExecutionState.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -59,21 +60,15 @@ txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
 nsresult
 txApplyTemplates::execute(txExecutionState& aEs)
 {
-    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
-    if (!context->hasNext()) {
-        delete aEs.popEvalContext();
-        
-        return NS_OK;
-    }
-
-    context->next();
-    
     txStylesheet::ImportFrame* frame = 0;
     txInstruction* templ =
-        aEs.mStylesheet->findTemplate(context->getContextNode(), mMode, &aEs,
-                                      nsnull, &frame);
+        aEs.mStylesheet->findTemplate(aEs.getEvalContext()->getContextNode(),
+                                      mMode, &aEs, nsnull, &frame);
 
-    return aEs.runTemplate(templ, this);
+    nsresult rv = aEs.pushTemplateRule(frame, mMode, aEs.mTemplateParams);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aEs.runTemplate(templ);
 }
 
 txAttribute::txAttribute(nsAutoPtr<Expr> aName, nsAutoPtr<Expr> aNamespace,
@@ -447,27 +442,6 @@ txErrorInstruction::execute(txExecutionState& aEs)
     return NS_ERROR_XSLT_EXECUTION_FAILURE;
 }
 
-txForEach::txForEach()
-    : mEndTarget(nsnull)
-{
-}
-
-nsresult
-txForEach::execute(txExecutionState& aEs)
-{
-    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
-    if (!context->hasNext()) {
-        delete aEs.popEvalContext();
-        aEs.gotoInstruction(mEndTarget);
-
-        return NS_OK;
-    }
-
-    context->next();
-    
-    return NS_OK;
-}
-
 txGoTo::txGoTo(txInstruction* aTarget)
     : mTarget(aTarget)
 {
@@ -496,6 +470,26 @@ txInsertAttrSet::execute(txExecutionState& aEs)
     NS_ENSURE_SUCCESS(rv, rv);
     
     return NS_OK;
+}
+
+txLoopNodeSet::txLoopNodeSet(txInstruction* aTarget)
+    : mTarget(aTarget)
+{
+}
+
+nsresult
+txLoopNodeSet::execute(txExecutionState& aEs)
+{
+    aEs.popTemplateRule();
+    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
+    if (!context->hasNext()) {
+        delete aEs.popEvalContext();
+
+        return NS_OK;
+    }
+
+    context->next();
+    aEs.gotoInstruction(mTarget);
 }
 
 txLREAttribute::txLREAttribute(PRInt32 aNamespaceID, nsIAtom* aLocalName,
@@ -585,7 +579,7 @@ txNumber::execute(txExecutionState& aEs)
 nsresult
 txPopParams::execute(txExecutionState& aEs)
 {
-    aEs.popParamMap();
+    delete aEs.popParamMap();
 
     return NS_OK;
 }
@@ -623,7 +617,7 @@ txProcessingInstruction::execute(txExecutionState& aEs)
 }
 
 txPushNewContext::txPushNewContext(nsAutoPtr<Expr> aSelect)
-    : mSelect(aSelect)
+    : mSelect(aSelect), mBailTarget(nsnull)
 {
 }
 
@@ -651,26 +645,32 @@ txPushNewContext::execute(txExecutionState& aEs)
     
     NodeSet* nodes = (NodeSet*)exprRes;
     
-    if (!nodes->isEmpty()) {
-        txNodeSorter sorter;
-        PRInt32 i, count = mSortKeys.Count();
-        for (i = 0; i < count; ++i) {
-            SortKey* sort = (SortKey*)mSortKeys[i];
-            rv = sorter.addSortElement(sort->mSelectExpr, sort->mLangExpr,
-                                       sort->mDataTypeExpr, sort->mOrderExpr,
-                                       sort->mCaseOrderExpr,
-                                       aEs.getEvalContext());
-            NS_ENSURE_SUCCESS(rv, rv);
-        }
-        rv = sorter.sortNodeSet(nodes, &aEs);
+    if (nodes->isEmpty()) {
+        aEs.gotoInstruction(mBailTarget);
+        
+        return NS_OK;
+    }
+
+    txNodeSorter sorter;
+    PRInt32 i, count = mSortKeys.Count();
+    for (i = 0; i < count; ++i) {
+        SortKey* sort = (SortKey*)mSortKeys[i];
+        rv = sorter.addSortElement(sort->mSelectExpr, sort->mLangExpr,
+                                   sort->mDataTypeExpr, sort->mOrderExpr,
+                                   sort->mCaseOrderExpr,
+                                   aEs.getEvalContext());
         NS_ENSURE_SUCCESS(rv, rv);
     }
+    rv = sorter.sortNodeSet(nodes, &aEs);
+    NS_ENSURE_SUCCESS(rv, rv);
     
     txNodeSetContext* context = new txOwningNodeSetContext(nodes, &aEs);
     if (!context) {
         delete exprRes;
         return NS_ERROR_OUT_OF_MEMORY;
     }
+
+    context->next();
 
     rv = aEs.pushEvalContext(context);
     if (NS_FAILED(rv)) {
@@ -709,6 +709,12 @@ txPushNewContext::SortKey::SortKey(nsAutoPtr<Expr> aSelectExpr,
       mDataTypeExpr(aDataTypeExpr), mOrderExpr(aOrderExpr),
       mCaseOrderExpr(aCaseOrderExpr)
 {
+}
+
+nsresult
+txPushNullTemplateRule::execute(txExecutionState& aEs)
+{
+    return aEs.pushTemplateRule(nsnull, txExpandedName(), nsnull);
 }
 
 nsresult
