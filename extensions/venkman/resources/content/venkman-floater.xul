@@ -100,6 +100,8 @@
     ]]>
   </script>
 
+  <popupset id="dynamic-popups"/>
+
   <overlaytarget id="views-overlay-target"/>
 
   <vbox id="view-container" flex="1" view-container="true"/>

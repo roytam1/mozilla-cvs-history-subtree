@@ -40,9 +40,7 @@ const CMD_NO_HELP    = 0x08; // don't whine if there is no help for this command
 
 function initCommands()
 {
-    console.commandManager = new CommandManager();
-    
-    CommandManager.contextFunction = getCommandContext;
+    console.commandManager = new CommandManager(getCommandContext);
     
     var cmdary =
         [/* "real" commands */
@@ -201,58 +199,8 @@ function defineVenkmanCommands (cmdary)
 
         var key = getMsg ("cmd." + name + ".key", null, "");
         if (key)
-            cm.setKey("dynamicKeys", command, key);
+            cm.setKey("dynamic-keys", command, key);
     }
-}
-
-/**
- * Used as CommandManager.contextFunction.
- */
-function getCommandContext (id, cx)
-{
-    switch (id)
-    {
-        case "popup:project":
-            cx = console.projectView.getContext(cx);
-            break;
-
-        case "popup:source":
-            cx = console.sourceView.getContext(cx);
-            break;
-            
-        case "popup:script":
-            cx = console.scriptsView.getContext(cx);
-            break;
-            
-        case "popup:stack":
-            cx = console.stackView.getContext(cx);
-            break;
-
-        default:
-            dd ("getCommandContext: unknown id '" + id + "'");
-
-        case "mainmenu:file-popup":
-        case "mainmenu:view-popup":
-        case "mainmenu:debug-popup":            
-        case "mainmenu:profile-popup":
-        case "popup:console":
-            cx = {
-                commandManager: console.commandManager,
-                contextSource: "default"
-            };
-            break;
-    }
-
-    if (typeof cx == "object")
-    {
-        cx.commandManager = console.commandManager;
-        if (!("contextSource" in cx))
-            cx.contextSource = id;
-        if ("dbgContexts" in console && console.dbgContexts)
-            dd ("context '" + id + "'\n" + dumpObjectTree(cx));
-    }
-
-    return cx;
 }
 
 /**
@@ -1034,7 +982,7 @@ function cmdPPrint (e)
             console.prefs["prettyprint"] = e.toggle;
         }
         
-        var tb = document.getElementById("maintoolbar-toggle-pprint");
+        var tb = document.getElementById("maintoolbar:toggle-pprint");
         if (e.toggle)
         {
             tb.setAttribute("state", "true");
@@ -1346,11 +1294,11 @@ function cmdTMode (e)
                 console.throwMode = TMODE_IGNORE;
                 break;
             case "trace": 
-                console.jsds.throwHook = console._executionHook;
+                console.jsds.throwHook = console.executionHook;
                 console.throwMode = TMODE_TRACE;
                 break;
             case "break":
-                console.jsds.throwHook = console._executionHook;
+                console.jsds.throwHook = console.executionHook;
                 console.throwMode = TMODE_BREAK;
                 break;
             default:
@@ -1418,7 +1366,7 @@ function cmdToggleView (e)
 function cmdVersion ()
 {
     display(MSG_HELLO, MT_HELLO);
-    display(getMsg(MSN_VERSION, console.version), MT_HELLO);
+    display(getMsg(MSN_VERSION, __vnk_version + __vnk_versionSuffix), MT_HELLO);
 }
 
 function cmdWatchExpr (e)

@@ -33,218 +33,200 @@
  *
  */
 
-/*
- * The _C(), _M(), __m(), and __t() functions are defined below.  They are
- * Venkman specific wrappers around calls the the CommandManager.
- *
- * _C(id, name)
- *  Creates a new context menu attached to the object with the id |id|.
- *  The label will be derived from the string named "mnu." + |name|.
- *
- * _M(parent, name)
- *  Creates a new menu dropdown in an existing menu bar with the id |parent|.
- *  The label will be derived from the string named "mnu." + |name|.
- *
- * __m(commandName)
- *  Creates a menuitem for the command named commandName.
- *
- * __t(parent, commandName)
- *  Creates a toolbaritem for the command named |commandName| in the toolbar
- *  with the id |parent|.
- */
-
-function initMainMenus()
-{
-    
-    /* main toolbar */
-    __t("maintoolbar", "stop");
-    __t("maintoolbar", "-");
-    __t("maintoolbar", "cont");
-    __t("maintoolbar", "next");
-    __t("maintoolbar", "step");
-    __t("maintoolbar", "finish");
-    __t("maintoolbar", "-");
-    __t("maintoolbar", "profile-tb");
-    __t("maintoolbar", "toggle-pprint");
-
-
-    _M("mainmenu", "file");
-    __m("open-url");
-    __m("find-file");
-    __m("-");
-    __m("close");
-    __m("save-source");
-    __m("save-profile");
-    __m("-");
-    __m("quit");
-    
-    /* View menu */
+function initMenus()
+{    
     function isVisible (view)
     {
         return "'currentContent' in console.views." + view;
     };
 
-    _M("mainmenu", "view");
-    _M("mainmenu:view", "toggle-views");
-    __m("toggle-breaks",  {type: "checkbox", checkedif: isVisible("breaks")});
-    __m("toggle-stack",   {type: "checkbox", checkedif: isVisible("stack")});
-    __m("toggle-session", {type: "checkbox", checkedif: isVisible("session")});
-    __m("toggle-locals",  {type: "checkbox", checkedif: isVisible("locals")});
-    __m("toggle-scripts", {type: "checkbox", checkedif: isVisible("scripts")});
-    __m("toggle-windows", {type: "checkbox", checkedif: isVisible("windows")});
-    __m("toggle-source",  {type: "checkbox", checkedif: isVisible("source")});
-    __m("toggle-watch",   {type: "checkbox", checkedif: isVisible("watches")});
-    console.lastMenu = "mainmenu:view";
-    __m("-");
-    __m("reload");
-    __m("toggle-pprint", {type: "checkbox",
-                          checkedif: "console.prefs['prettyprint']"});
-    __m("-");
-    __m("toggle-chrome", {type: "checkbox",
-                          checkedif: "console.enableChromeFilter"});
+    console.menuSpecs = new Object();
+    var menuManager = 
+        console.menuManager = new MenuManager(console.commandManager,
+                                              console.menuSpecs,
+                                              getCommandContext);
 
+    console.menuSpecs["maintoolbar"] = {
+        items:
+        [
+         ["stop"],
+         ["-"],
+         ["cont"],
+         ["next"],
+         ["step"],
+         ["finish"],
+         ["-"],
+         ["profile-tb"],
+         ["toggle-pprint"]
+        ]
+    };
+
+    console.menuSpecs["mainmenu:file"] = {
+        label: MSG_MNU_FILE,
+        items:
+        [
+         ["open-url"],
+         ["find-file"],
+         ["-"],
+         ["close"],
+         ["save-source"],
+         ["save-profile"],
+         ["-"],
+         ["quit"]
+        ]
+    };
+
+    console.menuSpecs["mainmenu:view"] = {
+        label: MSG_MNU_VIEW,
+        items:
+        [
+         [">popup:showhide"],
+         ["-"],
+         ["reload"],
+         ["toggle-pprint",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['prettyprint']"}],
+         ["-"],
+         ["toggle-chrome",
+                 {type: "checkbox",
+                  checkedif: "console.enableChromeFilter"}]
+        ]
+    };
     
-     
-    /* Debug menu */
-    _M("mainmenu", "debug");
-    __m("stop", {type: "checkbox",
-                 checkedif: "console.jsds.interruptHook"});
-    __m("cont");
-    __m("next");
-    __m("step");
-    __m("finish");
-    __m("-");
-    __m("em-ignore", {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_IGNORE"});
-    __m("em-trace",  {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_TRACE"});
-    __m("em-break",  {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_BREAK"});
-    __m("-");
-    __m("tm-ignore",  {type: "radio", name: "tm",
-                       checkedif: "console.throwMode == TMODE_IGNORE"});
-    __m("tm-trace",   {type: "radio", name: "tm",
-                       checkedif: "console.throwMode == TMODE_TRACE"});
-    __m("tm-break",   {type: "radio", name: "tm",
-                       checkedif: "console.throwMode == TMODE_BREAK"});
-    __m("-");
-    __m("toggle-ias", {type: "checkbox",
-                       checkedif: "console.jsds.initAtStartup"});
-
-    _M("mainmenu", "profile");
-    __m("toggle-profile", {type: "checkbox",
-                           checkedif:
-                            "console.jsds.flags & COLLECT_PROFILE_DATA"});
-    __m("clear-profile");
-    __m("save-profile");
-}
-
-function initViewMenus()
-{
-    /* Context menu for console view */
-    _C("output-iframe", "console");
-    __m("stop", {type: "checkbox",
-                 checkedif: "console.jsds.interruptHook"});
-    __m("cont");
-    __m("next");
-    __m("step");
-    __m("finish");
-    __m("-");
-    __m("em-ignore", {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_IGNORE"});
-    __m("em-trace",  {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_TRACE"});
-    __m("em-break",  {type: "radio", name: "em",
-                      checkedif: "console.errorMode == EMODE_BREAK"});
-    __m("-");
-    __m("tm-ignore", {type: "radio", name: "tm",
-                      checkedif: "console.throwMode == TMODE_IGNORE"});
-    __m("tm-trace",  {type: "radio", name: "tm",
-                      checkedif: "console.throwMode == TMODE_TRACE"});
-    __m("tm-break",  {type: "radio", name: "tm",
-                      checkedif: "console.throwMode == TMODE_BREAK"});
-     
-    /* Context menu for project view */
-    _C("project-tree", "project");
-    __m("find-url");
-    __m("-");
-    __m("clear-all", {enabledif:
-                      "cx.target instanceof BPRecord || " +
-                      "(has('breakpointLabel') && cx.target.childData.length)"});
-    __m("clear");
-    __m("-");
-    __m("save-profile", {enabledif: "has('url')"});
-
-    /* Context menu for source view */
-    _C("source-tree", "source");
-    __m("save-source");
-    __m("-");
-    __m("break",  {enabledif: "cx.lineIsExecutable && !has('breakpointRec')"});
-    __m("fbreak", {enabledif: "!cx.lineIsExecutable && !has('breakpointRec')"});
-    __m("clear");
-    __m("-");
-    __m("cont");
-    __m("next");
-    __m("step");
-    __m("finish");
-    __m("-");
-    __m("toggle-pprint", {type: "checkbox",
-                          checkedif: "console.prefs['prettyprint']"});
-
-    /* Context menu for script view */
-    _C("script-list-tree", "script");
-    __m("find-url");
-    __m("find-script");
-    __m("clear-script", {enabledif: "cx.target.bpcount"});
-    __m("-");
-    __m("save-profile");
-    __m("clear-profile");
-     
-    /* Context menu for stack view */
-    _C("stack-tree", "stack");
-    __m("frame",        {enabledif: "cx.target instanceof FrameRecord"});
-    __m("find-creator",
-         {enabledif: "cx.target instanceof ValueRecord && " +
-                     "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
-    __m("find-ctor",
-         {enabledif: "cx.target instanceof ValueRecord && " +
-                     "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
+    console.menuSpecs["mainmenu:debug"] = {
+        label: MSG_MNU_DEBUG,
+        items:
+        [
+         ["stop",
+                 {type: "checkbox",
+                  checkedif: "console.jsds.interruptHook"}],
+         ["cont"],
+         ["next"],
+         ["step"],
+         ["finish"],
+         ["-"],
+         [">popup:emode"],
+         [">popup:tmode"],
+         ["-"],
+         ["toggle-ias",
+                 {type: "checkbox",
+                  checkedif: "console.jsds.initAtStartup"}],
+        ]
+    };
     
+    console.menuSpecs["mainmenu:profile"] = {
+        label: MSG_MNU_PROFILE,
+        items:
+        [
+         ["toggle-profile",
+                 {type: "checkbox",
+                  checkedif: "console.jsds.flags & COLLECT_PROFILE_DATA"}],
+         ["clear-profile"],
+         ["save-profile"]
+        ]
+    };
+
+    console.menuSpecs["popup:emode"] = {
+        label: MSG_MNU_EMODE,
+        items:
+        [
+         ["em-ignore",
+                 {type: "radio", name: "em",
+                  checkedif: "console.errorMode == EMODE_IGNORE"}],
+         ["em-trace",
+                 {type: "radio", name: "em",
+                  checkedif: "console.errorMode == EMODE_TRACE"}],
+         ["em-break",
+                 {type: "radio", name: "em",
+                  checkedif: "console.errorMode == EMODE_BREAK"}]
+        ]
+    };
+    
+    console.menuSpecs["popup:tmode"] = {
+        label: MSG_MNU_TMODE,
+        items:
+        [
+         ["tm-ignore",
+                 {type: "radio", name: "tm",
+                  checkedif: "console.throwMode == TMODE_IGNORE"}],
+         ["tm-trace",
+                 {type: "radio", name: "tm",
+                  checkedif: "console.throwMode == TMODE_TRACE"}],
+         ["tm-break",
+                 {type: "radio", name: "tm",
+                  checkedif: "console.throwMode == TMODE_BREAK"}]
+        ]
+    };
+
+    console.menuSpecs["popup:showhide"] = {
+        label: MSG_MNU_SHOWHIDE,
+        items:
+        [
+         ["toggle-breaks", 
+                 {type: "checkbox", checkedif: isVisible("breaks")}],
+         ["toggle-stack",
+                 {type: "checkbox", checkedif: isVisible("stack")}],
+         ["toggle-session",
+                 {type: "checkbox", checkedif: isVisible("session")}],
+         ["toggle-locals",
+                 {type: "checkbox", checkedif: isVisible("locals")}],
+         ["toggle-scripts",
+                 {type: "checkbox", checkedif: isVisible("scripts")}],
+         ["toggle-windows",
+                 {type: "checkbox", checkedif: isVisible("windows")}],
+         ["toggle-source",
+                 {type: "checkbox", checkedif: isVisible("source")}],
+         ["toggle-watch",
+                 {type: "checkbox", checkedif: isVisible("watches")}]
+        ]
+    };
 }
 
-function _M(parent, id, attribs)
+function createMainMenu(document)
 {
-    console.lastMenu = parent + ":" + id;
-    console.commandManager.appendSubMenu(parent, console.lastMenu,
-                                         getMsg("mnu." + id));
-}
-
-function _C(elementId, id)
-{
-    console.lastMenu = "popup:" + id;
-    console.commandManager.appendPopupMenu("dynamicPopups", console.lastMenu,
-                                           getMsg("popup." + id));
-    var elemObject = document.getElementById(elementId);
-    elemObject.setAttribute ("context", console.lastMenu);
-}
-
-function __m(command, attribs)
-{            
-    if (command != "-")
+    var mainmenu = document.getElementById("mainmenu");
+    var menuManager = console.menuManager;
+    for (var id in console.menuSpecs)
     {
-        if (!(command in console.commandManager.commands))
-        {
-            dd("no such command: " + command)
-                return;
-        }
-        command = console.commandManager.commands[command];
+        if (id.indexOf("mainmenu:") == 0)
+            menuManager.createMenu (mainmenu, null, id);
     }
-    console.commandManager.appendMenuItem(console.lastMenu, command, attribs);
 }
 
-function __t(parent, command, attribs)
+function createMainToolbar(document)
 {
-    if (command != "-")
-        command = console.commandManager.commands[command];
-    console.commandManager.appendToolbarItem(parent, command, attribs);
+    var maintoolbar = document.getElementById("maintoolbar");
+    var menuManager = console.menuManager;
+    var spec = console.menuSpecs["maintoolbar"];
+    for (var i in spec.items)
+    {
+        menuManager.appendToolbarItem (maintoolbar, null, spec.items[i]);
+    }
+}
+
+function getCommandContext (id)
+{
+    var cx = {};
+    
+    if (id in console.menuSpecs)
+    {
+        if ("getContext" in console.menuSpecs[id])
+            cx = console.menuSpecs[id].getContext(cx);
+    }
+    else
+    {
+        dd ("getCommandContext: unknown menu id " + id);
+    }
+
+    if (typeof cx == "object")
+    {
+        if (!("menuManager" in cx))
+            cx.menuManager = console.menuManager;
+        if (!("contextSource" in cx))
+            cx.contextSource = id;
+        if ("dbgContexts" in console && console.dbgContexts)
+            dd ("context '" + id + "'\n" + dumpObjectTree(cx));
+    }
+
+    return cx;
 }

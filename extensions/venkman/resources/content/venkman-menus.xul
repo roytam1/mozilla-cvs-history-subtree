@@ -45,11 +45,11 @@
 
   <overlaytarget id="menu-overlay-target">
     <!-- parents for the command manager-managed objects -->
-    <keyset id="dynamicKeys"/>
-    <popupset id="dynamicPopups"/>
+    <keyset id="dynamic-keys"/>
+    <popupset id="dynamic-popups"/>
 
     <!-- Commands -->
-    <commandset id="venkmanCommands">
+    <commandset id="venkman-commands">
 
       <!-- Edit commands -->
       <commandset id="selectEditMenuItems"/>

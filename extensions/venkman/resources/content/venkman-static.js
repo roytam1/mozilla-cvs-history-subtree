@@ -33,6 +33,9 @@
  *
  */
 
+const __vnk_version = "0.9.1";
+var   __vnk_versionSuffix = "";
+
 /* dd is declared first in venkman-utils.js */
 var warn;
 var ASSERT;
@@ -67,13 +70,11 @@ const LINE_FBREAK    = 0x04;
 
 var console = new Object();
 
-console.version = "0.9.1";
-
 /* |this|less functions */
 
 function setStopState(state)
 {
-    var tb = document.getElementById("maintoolbar-stop");
+    var tb = document.getElementById("maintoolbar:stop");
     if (state)
     {
         console.jsds.interruptHook = console.executionHook;
@@ -88,7 +89,7 @@ function setStopState(state)
 
 function setProfileState(state)
 {
-    var tb = document.getElementById("maintoolbar-profile-tb");
+    var tb = document.getElementById("maintoolbar:profile-tb");
     if (state)
     {
         console.jsds.flags |= COLLECT_PROFILE_DATA;
@@ -401,46 +402,15 @@ function formatEvalException (ex)
 
 function init()
 {    
-    var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
-    if (ary)
-    {
-        console.userAgent = "Venkman " + console.version + " [Mozilla " + 
-            ary[1] + "/" + ary[2] + "]";
-    }
-    else
-    {
-        console.userAgent = "Venkman " + console.version + " [" + 
-            navigator.userAgent + "]";
-    }
-
     const WW_CTRID = "@mozilla.org/embedcomp/window-watcher;1";
     const nsIWindowWatcher = Components.interfaces.nsIWindowWatcher;
+
     console.windowWatcher =
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
     console.floatingWindows = new Array();    
 
-    initMsgs();
-    initPrefs();
-    initCommands();
-
-    console.commandManager.addHooks (console.hooks);
-
-    initMainMenus();
-    initViews();
-    initRecords();
-    initDebugger();
-    initHandlers();
-
-    /* save a reference to this to make calls to display() slightly faster. */
-    console.coDisplayHook = 
-        console.commandManager.commands["hook-session-display"];
-    console.coFindScript = 
-        console.commandManager.commands["find-script"];
-
-    disableDebugCommands();
-    
     console.files = new Object();
 
     console._lastStackDepth = -1;
@@ -450,20 +420,45 @@ function init()
     console._statusStack = new Array();
     console.pluginState = new Object();
 
-    dispatch("version");
+    initMsgs();
+    initPrefs();
+    initHandlers();
+    initCommands();
 
-    ary = console.prefs["initialScripts"].split();
+    /* save a reference to this to make calls to display() slightly faster. */
+    console.coDisplayHook = 
+        console.commandManager.commands["hook-session-display"];
+    console.coFindScript = 
+        console.commandManager.commands["find-script"];
+
+    console.commandManager.addHooks (console.hooks);
+
+    initMenus();
+
+    var ary = console.prefs["initialScripts"].split();
     for (var i = 0; i < ary.length; ++i)
     {
         var url = stringTrim(ary[i]);
         if (url)
-            dispatch ("loadd", {url: ary[i]});
+            dispatch ("loadd", { url: ary[i] });
     }
+
+    dispatch ("hook-venkman-init");
+
+    initViews();
+    initRecords();
+    createMainMenu(document);
+    createMainToolbar(document);
+
+    disableDebugCommands();
     
+    initDebugger();
+
     console.sourceText = new HelpText();
 
-    dispatch("commands");
-    dispatch("help");
+    dispatch ("version");
+    dispatch ("commands");
+    dispatch ("help");
 
     dispatch ("toggle-view windows");
     dispatch ("toggle-view breaks");
@@ -477,7 +472,7 @@ function init()
     dispatch ("toggle-view stack");
 
     dispatch ("pprint", { toggle: console.prefs["prettyprint"] });
-              
+
     dispatch ("hook-venkman-started");
 }
 
@@ -486,6 +481,21 @@ function destroy ()
     destroyViews(document);
     destroyHandlers();
     detachDebugger();
+}
+
+console.__defineGetter__ ("userAgent", con_ua);
+function con_ua ()
+{
+    var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
+    if (ary)
+    {
+        return ("Venkman " + __vnk_version + __vnk_versionSuffix + 
+                " [Mozilla " + ary[1] + "/" + ary[2] + "]");
+        
+    }
+
+    return ("Venkman " + __vnk_version + __vnk_versionSuffix + " [" + 
+            navigator.userAgent + "]");
 }
 
 console.hooks = new Object();

@@ -1130,7 +1130,12 @@ function formatScript (script)
     if (!script)
         throw new BadMojo (ERR_REQUIRED_PARAM, "script");
 
-    return getMsg (MSN_FMT_SCRIPT, [script.functionName, script.fileName]);
+    var functionName;
+    if (script.tag in console.scriptWrappers)
+        functionName = console.scriptWrappers[script.tag].functionName;
+    else
+        functionName = script.functionName;
+    return getMsg (MSN_FMT_SCRIPT, [functionName, script.fileName]);
 }
 
 function formatFrame (f)

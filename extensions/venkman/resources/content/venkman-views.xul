@@ -50,7 +50,8 @@
       splitter-collapse="after" default-container="view-container-1">
       <vbox id="break-view-content" flex="1">
         <tree flex="1" id="break-tree" persist="height" hidecolumnpicker="true"
-          ondblclick="console.views.breaks.onDblClick(event);">
+          ondblclick="console.views.breaks.onDblClick(event);"
+          context="context:breaks">
 
           <treecols>
             <treecol id="breaks:col-0" label="&BreakCol0.label;"
@@ -73,7 +74,8 @@
       splitter-collapse="after" default-container="view-container-1">
       <vbox id="locals-view-content" flex="1">
         <tree flex="1" id="locals-tree" persist="height"
-          ondblclick="console.views.locals.onDblClick(event);">
+          ondblclick="console.views.locals.onDblClick(event);"
+          context="context:locals">
 
           <treecols>
             <treecol id="locals:col-0" label="&LocalsCol0.header;" primary="true"
@@ -102,7 +104,8 @@
       <vbox id="session-view-content" flex="1" persist="width">
 
          <iframe id="session-output-iframe" flex="1" type="content"
-           src="chrome://venkman/content/venkman-output-window.html"/>
+           src="chrome://venkman/content/venkman-output-window.html"
+           context="context:session"/>
          <textbox id="session-sl-input" class="input-widget"
            onkeypress="console.views.session.onSLKeyPress(event);"/>
 
@@ -115,7 +118,8 @@
       splitter-collapse="after" default-container="view-container-2">
       <vbox id="scripts-view-content" flex="1">
         <tree flex="1" id="scripts-tree" persist="height"
-          ondblclick="console.views.scripts.onDblClick(event);">
+          ondblclick="console.views.scripts.onDblClick(event);"
+          context="context:scripts">
 
           <treecols>
             <treecol id="scripts:col-0" label="&ScriptsCol0.header;"
@@ -140,7 +144,8 @@
       splitter-collapse="after" default-container="view-container-2">
       <vbox id="source-view-content" flex="1">
         <tree id="source-tree" flex="1" persist="width"
-          onclick="console.views.source.onClick(event);">
+          onclick="console.views.source.onClick(event);"
+          context="context:source">
 
           <treecols>
             <treecol id="source:col-0" flex="3" display="&SourceCol0.display;"
@@ -188,7 +193,8 @@
      splitter-collapse="after" default-container="view-container-1">
       <vbox id="watch-view-content" flex="1">
         <tree flex="1" id="watch-tree" persist="height"
-          ondblclick="console.views.watches.onDblClick(event);">
+          ondblclick="console.views.watches.onDblClick(event);"
+          context="context:watches">
 
           <treecols>
             <treecol id="watches:col-0" flex="1" persist="hidden width"

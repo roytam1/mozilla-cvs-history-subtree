@@ -26,6 +26,7 @@ venkman.jar:
   content/venkman/file-utils.js         (content/file-utils.js)
   content/venkman/html-consts.js        (content/html-consts.js)
   content/venkman/command-manager.js    (content/command-manager.js)
+  content/venkman/menu-manager.js       (content/menu-manager.js)
   content/venkman/tests/testpage.html   (content/tests/testpage.html)
   content/venkman/tests/tree.js         (content/tests/tree.js)
   content/venkman/tests/tree.xul        (content/tests/tree.xul)

@@ -115,6 +115,28 @@ function syncTreeView (treeContent, treeView, cb)
         cb();
 }
 
+function initContextMenu (document, id)
+{
+    dd ("init context menu " + id + " {");
+    if (!document.getElementById(id))
+    {
+        if (!ASSERT(id in console.menuSpecs, "unknown context menu " + id))
+            return;
+
+        dd ("making a new context menu");
+        var dp = document.getElementById("dynamic-popups");
+        var popup = console.menuManager.appendPopupMenu (dp, null, id);
+        var items = console.menuSpecs[id].items;
+        console.menuManager.createMenuItems (popup, null, items);
+    }
+    else
+    {
+        dd ("already there");
+    }
+
+    dd ("}");
+}
+
 console.views = new Object();
 
 /*******************************************************************************
@@ -183,6 +205,17 @@ function bv_hookBreakClear (e)
 console.views.breaks.init =
 function bv_init ()
 {
+    console.menuSpecs["context:breaks"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["find-url"],
+         ["-"],
+         ["clear-all"],
+         ["clear"]
+        ]
+    };
+
     this.atomBreak = console.atomService.getAtom("item-breakpoint");
     this.atomFBreak = console.atomService.getAtom("future-breakpoint");
 }
@@ -191,6 +224,7 @@ console.views.breaks.onShow =
 function bv_show()
 {
     syncTreeView (getChildById(this.currentContent, "break-tree"), this);
+    initContextMenu(this.currentContent.ownerDocument, "context:breaks");
 }
 
 console.views.breaks.onHide =
@@ -222,9 +256,12 @@ function bv_getcx(cx)
     if (!cx)
         cx = new Object();
 
-    var selection = this.tree.selection;
+    var breaksView = console.views.breaks;
+    
+    var selection = breaksView.tree.selection;
 
-    var rec = this.childData.locateChildByVisualRow(selection.currentIndex);
+    var rec =
+        breaksView.childData.locateChildByVisualRow(selection.currentIndex);
     
     if (!rec)
     {
@@ -237,34 +274,31 @@ function bv_getcx(cx)
     if (rec instanceof BPRecord)
     {
         cx.breakpointRec = rec;
-        cx.url = cx.fileName = rec.fileName;
-        cx.lineNumber = rec.line;
-        cx.breakpointIndex = rec.childIndex;
+        cx.url = rec.url;
+        cx.lineNumber = rec.lineNumber;
     }
     
-    var rangeCount = this.tree.selection.getRangeCount();
+    var rangeCount = selection.getRangeCount();
     if (rangeCount > 0)
     {
         cx.breakpointRecList = new Array();
-        cx.breakpointIndexList = new Array();
-        cx.fileList = cx.urlList = new Array();
+        cx.urlList = new Array();
     }
     
     for (var range = 0; range < rangeCount; ++range)
     {
         var min = new Object();
         var max = new Object();
-        this.tree.selection.getRangeAt(range, min, max);
+        selection.getRangeAt(range, min, max);
         min = min.value;
         max = max.value;
         for (var i = min; i <= max; ++i)
         {
-            rec = this.childData.locateChildByVisualRow(i);
+            rec = breaksView.childData.locateChildByVisualRow(i);
             if (rec instanceof BPRecord)
             {
                 cx.breakpointRecList.push(rec);
-                cx.breakpointIndexList.push(rec.childIndex);
-                cx.fileList.push (rec.fileName);
+                cx.urlList.push (rec.url);
             }
         }
     }
@@ -303,6 +337,20 @@ function lv_init ()
     console.addPref("localsView.autoOpenMax", 25);
     /* max number of functions to keep open/close states for. */
     console.addPref("localsView.savedStatesMax", 20);
+
+    console.menuSpecs["context:locals"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["find-creator",
+                 {enabledif: "cx.target instanceof ValueRecord && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}],
+         ["find-ctor",
+                 {enabledif: "cx.target instanceof ValueRecord && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}]
+        ]
+    };
+
     this.jsdFrame = null;
     this.savedStates = new Object();
     this.stateTags = new Array();
@@ -415,11 +463,6 @@ function lv_restore (state)
     this.scrollTo (state.firstVisible, -1);
 }
 
-function showState()
-{
-    dd(dumpObjectTree(console.views.locals.savedStates[console.frames[0].script.tag], 2));
-}
-
 console.views.locals.saveState =
 function sv_save ()
 {
@@ -495,6 +538,7 @@ console.views.locals.onShow =
 function lv_show ()
 {
     syncTreeView (getChildById(this.currentContent, "locals-tree"), this);
+    initContextMenu(this.currentContent.ownerDocument, "context:locals");
 }
 
 console.views.locals.onHide =
@@ -526,6 +570,50 @@ function lv_cellprops (index, colID, properties)
     }
 
     return null;
+}
+
+console.views.locals.getContext =
+function lv_getcx(cx)
+{
+    var view = console.views.locals;
+    var selection = view.tree.selection;
+    var row = selection.currentIndex;
+    var rec = view.childData.locateChildByVisualRow (row);
+    
+    if (!rec)
+    {
+        dd ("no record at currentIndex " + row);
+        return cx;
+    }
+    
+    cx.target = rec;
+    
+    if (rec instanceof ValueRecord)
+    {
+        cx.jsdValue = rec.value;
+        cx.jsdValueList = [rec.value];
+    }
+
+    var rangeCount = selection.getRangeCount();
+
+
+    for (var range = 0; range < rangeCount; ++range)
+    {
+        var min = new Object();
+        var max = new Object();
+        selection.getRangeAt(range, min, max);
+        min = min.value;
+        max = max.value;
+
+        for (row = min; row <= max; ++row)
+        {
+            rec = this.childData.locateChildByVisualRow(row);
+            if (rec instanceof ValueRecord)
+                cx.jsdValueList.push(rec.value);
+        }
+    }
+
+    return cx;
 }
 
 console.views.locals.refresh =
@@ -561,6 +649,19 @@ console.views.scripts.init =
 function scv_init ()
 {
     console.addPref ("scriptsView.groupFiles", true);    
+
+    console.menuSpecs["context:scripts"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["find-url"],
+         ["find-script"],
+         ["clear-script", {enabledif: "cx.target.bpcount"}],
+         ["-"],
+         ["save-profile"],
+         ["clear-profile"]
+        ]
+    };
 
     this.childData.setSortColumn("baseLineNumber");
     this.groupFiles = console.prefs["scriptsView.groupFiles"];
@@ -701,6 +802,7 @@ console.views.scripts.onShow =
 function scv_show ()
 {
     syncTreeView (getChildById(this.currentContent, "scripts-tree"), this);
+    initContextMenu(this.currentContent.ownerDocument, "context:scripts");
 }
 
 console.views.scripts.onHide =
@@ -830,9 +932,6 @@ function scv_getcprops (index, colID, properties)
 console.views.scripts.getContext =
 function scv_getcx(cx)
 {
-    if (!cx)
-        cx = new Object();
-
     var selection = this.tree.selection;
     var row = selection.currentIndex;
     var rec = this.childData.locateChildByVisualRow (row);
@@ -920,6 +1019,22 @@ function ss_init ()
 {
     console.addPref ("sessionView.commandHistory", 20);
     console.addPref ("sessionView.dtabTime", 500);
+
+    console.menuSpecs["context:session"] = {
+        items:
+        [
+         ["stop",
+                 {type: "checkbox",
+                  checkedif: "console.jsds.interruptHook"}],
+         ["cont"],
+         ["next"],
+         ["step"],
+         ["finish"],
+         ["-"],
+         [">popup:emode"],
+         [">popup:tmode"],         
+        ]
+    };
 
     /* input history (up/down arrow) related vars */
     this.inputHistory = new Array();
@@ -1054,6 +1169,7 @@ function ss_show ()
     this.outputTable.appendChild (this.outputTBody);
     this.scrollDown();
     this.hooks["focus-input"]();
+    initContextMenu(this.currentContent.ownerDocument, "context:session");
 }
 
 console.views.session.onHide =
@@ -1395,6 +1511,29 @@ console.views.source.init =
 function sv_init()
 {
     this.savedState = new Object();
+
+    console.menuSpecs["context:source"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["save-source"],
+         ["-"],
+         ["break", 
+                 {enabledif: "cx.lineIsExecutable && !has('breakpointRec')"}],
+         ["fbreak",
+                 {enabledif: "!cx.lineIsExecutable && !has('breakpointRec')"}],
+         ["clear"],
+         ["-"],
+         ["cont"],
+         ["next"],
+         ["step"],
+         ["finish"],
+         ["-"],
+         ["toggle-pprint",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['prettyprint']"}]
+        ]
+    };
     
     var atomsvc = console.atomService;
 
@@ -1507,6 +1646,7 @@ function sv_show ()
     };
     
     syncTreeView (getChildById(this.currentContent, "source-tree"), this, cb);
+    initContextMenu(this.currentContent.ownerDocument, "context:source");
 }
 
 console.views.source.onHide =
@@ -1852,12 +1992,25 @@ console.views.watches.viewId = "watches";
 console.views.watches.init =
 function wv_init()
 {
+    console.menuSpecs["context:watches"] = {
+        getContext: this.getContext,
+        items:
+        [
+         ["find-creator",
+                 {enabledif: "cx.target instanceof ValueRecord && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}],
+         ["find-ctor",
+                 {enabledif: "cx.target instanceof ValueRecord && " +
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}]
+        ]
+    };
 }
 
 console.views.watches.onShow =
 function wv_show()
 {
     syncTreeView (getChildById(this.currentContent, "watch-tree"), this);
+    initContextMenu(this.currentContent.ownerDocument, "context:watches");
 }
 
 console.views.watches.onHide =
@@ -1883,6 +2036,50 @@ function wv_cellprops (index, colID, properties)
     }
 
     return null;
+}
+
+console.views.watches.getContext =
+function wv_getcx(cx)
+{
+    var view = console.views.watches;
+    var selection = view.tree.selection;
+    var row = selection.currentIndex;
+    var rec = view.childData.locateChildByVisualRow (row);
+    
+    if (!rec)
+    {
+        dd ("no record at currentIndex " + row);
+        return cx;
+    }
+    
+    cx.target = rec;
+    
+    if (rec instanceof ValueRecord)
+    {
+        cx.jsdValue = rec.value;
+        cx.jsdValueList = [rec.value];
+    }
+
+    var rangeCount = selection.getRangeCount();
+
+
+    for (var range = 0; range < rangeCount; ++range)
+    {
+        var min = new Object();
+        var max = new Object();
+        selection.getRangeAt(range, min, max);
+        min = min.value;
+        max = max.value;
+
+        for (row = min; row <= max; ++row)
+        {
+            rec = view.childData.locateChildByVisualRow(row);
+            if (rec instanceof ValueRecord)
+                cx.jsdValueList.push(rec.value);
+        }
+    }
+
+    return cx;
 }
 
 console.views.watches.refresh =
