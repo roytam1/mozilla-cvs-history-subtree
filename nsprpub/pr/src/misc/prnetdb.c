@@ -2075,17 +2075,16 @@ PR_IMPLEMENT(PRAddrInfo *) PR_GetAddrInfoByName(const char  *hostname,
         PRADDRINFO *res, hints;
         PRStatus rv;
 
+        /*
+         * we assume a RFC 2553 compliant getaddrinfo.  this may at some
+         * point need to be customized as platforms begin to adopt the
+         * RFC 3493.
+         */
+
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_CANONNAME;
         hints.ai_family = AF_UNSPEC;
 
-#ifdef AI_ADDRCONFIG
-        /* By default, only look up addresses using address types for
-         * which a local interface is configured (i.e. no IPv6 if no IPv6
-         * interfaces. NOTE: do this only if ai_family is PF_UNSPEC. */
-        hints.ai_flags |= AI_ADDRCONFIG;
-#endif
-        
         rv = GETADDRINFO(hostname, NULL, &hints, &res);
         if (rv == 0)
             return (PRAddrInfo *) res;
