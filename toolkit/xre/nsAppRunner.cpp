@@ -1505,8 +1505,7 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative,
 
   ar = CheckArg("p", &arg);
   if (ar == ARG_BAD) {
-    PR_fprintf(PR_STDERR, "Error: argument -P requires a profile name\n");
-    return NS_ERROR_FAILURE;
+    return ShowProfileManager(profileSvc, aNative);
   }
   if (ar) {
     nsCOMPtr<nsIToolkitProfile> profile;
