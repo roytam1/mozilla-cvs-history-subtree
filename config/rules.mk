@@ -1134,7 +1134,7 @@ $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.mm Makefile Makefile.in
 $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.m Makefile Makefile.in
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_AUTO)
-	$(ELOG) $(CCC) -o $@ -c $(COMPILE_CXXFLAGS) $(_VPATH_SRCS)
+	$(ELOG) $(CC) -o $@ -c $(COMPILE_CFLAGS) $(_VPATH_SRCS)
 
 %.s: %.cpp
 	$(CCC) -S $(COMPILE_CXXFLAGS) $(_VPATH_SRCS)
