@@ -722,6 +722,7 @@ nsXMLDocument::EndLoad()
     event.message = NS_PAGE_LOAD;
     HandleDOMEvent(nsnull, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
   }    
+  FlushPendingNotifications();
   return nsDocument::EndLoad();  
 }
 
