@@ -45,6 +45,10 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper);
 #define DEBUG_CheckClassInfoClaims(wrapper) ((void)0)
 #endif
 
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+PRThread* XPCWrappedNative::gMainThread = nsnull;
+#endif
+
 /***************************************************************************/
 
 // braindead local helper
@@ -87,6 +91,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
             return nsnull;
         }
         SET_ERROR_CODE(NS_OK);
+        DEBUG_CheckWrapperThreadSafety(wrapper);
         return wrapper;
     }
 
@@ -271,10 +276,6 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
 {
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
-
-#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
-    mThread = PR_GetCurrentThread();
-#endif
 }
 
 XPCWrappedNative::~XPCWrappedNative()
@@ -421,7 +422,25 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
         return JS_FALSE;
     }
 
-    // XXX and so on....
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+    if(!gMainThread)
+    {
+        nsCOMPtr<nsIThread> t;
+        nsresult rv;
+        rv = nsIThread::GetMainThread(getter_AddRefs(t));
+        NS_ASSERTION(NS_SUCCEEDED(rv) && t, "bad");
+        rv = t->GetPRThread(&gMainThread);
+        NS_ASSERTION(NS_SUCCEEDED(rv) && gMainThread, "bad");
+    }
+    mThread = PR_GetCurrentThread();
+
+    if(mProto->ClassIsMainThreadOnly() && gMainThread != mThread)
+        DEBUG_ReportWrapperThreadSafetyError(ccx,
+            "MainThread only wrapper created on the wrong thread", this);
+
+#endif
+
     return JS_TRUE;
 }
 
@@ -1553,6 +1572,75 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
 
 /***************************************************************************/
 
+char*
+XPCWrappedNative::ToString(XPCCallContext& ccx, 
+                           XPCWrappedNativeTearOff* to /* = nsnull */ ) const
+{
+#ifdef DEBUG
+#  define FMT_ADDR " @ 0x%p" 
+#  define PARAM_ADDR(w) , w
+#else
+#  define FMT_ADDR ""
+#  define PARAM_ADDR(w)
+#endif
+        
+    char* sz = nsnull;
+    char* name = nsnull;
+
+    XPCNativeScriptableInfo* si = GetScriptableInfo();
+    if(si)
+        name = JS_smprintf("%s", si->GetJSClass()->name);
+    if(to)
+    {
+        const char* fmt = name ? " (%s)" : "%s";
+        name = JS_sprintf_append(name, fmt, 
+                                 to->GetInterface()->GetNameString());
+    }    
+    else if(!name)
+    {
+        XPCNativeSet* set = GetSet();
+        XPCNativeInterface** array = set->GetInterfaceArray();
+        PRUint16 count = set->GetInterfaceCount();
+
+        if(count == 1)
+            name = JS_sprintf_append(name, "%s", array[0]->GetNameString());
+        else if(count == 2 && 
+                array[0] == XPCNativeInterface::GetISupports(ccx))
+        {
+            name = JS_sprintf_append(name, "%s", array[1]->GetNameString());
+        }
+        else
+        {
+            for(PRUint16 i = 0; i < count; i++)
+            {
+                const char* fmt = (i == 0) ? 
+                                    "(%s" : (i == count-1) ? 
+                                        ", %s)" : ", %s";
+                name = JS_sprintf_append(name, fmt, 
+                                         array[i]->GetNameString());
+            }       
+        }
+    }
+
+    if(!name)
+    {
+        return nsnull;
+    }
+
+    sz = JS_smprintf("[xpconnect wrapped %s" FMT_ADDR "]",
+                       name PARAM_ADDR(this));
+
+    JS_smprintf_free(name);    
+    
+
+    return sz;
+
+#undef FMT_ADDR
+#undef PARAM_ADDR
+}
+
+/***************************************************************************/
+
 #ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
 // static
 void
@@ -1954,9 +2042,52 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 #endif
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+void DEBUG_ReportWrapperThreadSafetyError(XPCCallContext& ccx,
+                                          const char* msg,
+                                          const XPCWrappedNative* wrapper)
+{
+    printf("---------------------------------------------------------------\n");
+    printf("!!!!! XPConnect wrapper thread use error...\n");
+
+    char* wrapperDump = wrapper->ToString(ccx);
+    if(wrapperDump)
+    {
+        printf("  %s\n  wrapper: %s\n", msg, wrapperDump);
+        JS_smprintf_free(wrapperDump);
+    }
+    else
+        printf("  %s\n  wrapper @ 0x%p\n", msg, wrapper);
+
+    printf("  JS call stack...\n");
+    xpc_DumpJSStack(ccx, JS_TRUE, JS_TRUE, JS_TRUE);
+    printf("---------------------------------------------------------------\n");
+
+}
+
 void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper)
 {
-    
+    XPCWrappedNativeProto* proto = wrapper->GetProto();
+    if(proto->ClassIsThreadSafe())
+        return;
+
+    PRThread* currentThread = PR_GetCurrentThread();
+
+    if(proto->ClassIsMainThreadOnly())
+    {
+        if(currentThread != wrapper->gMainThread)
+        {
+            XPCCallContext ccx(NATIVE_CALLER);
+            DEBUG_ReportWrapperThreadSafetyError(ccx,
+                "Main Thread Only wrapper accessed on another thread", wrapper);
+        }
+    }
+    else if(currentThread != wrapper->mThread)
+    {
+        XPCCallContext ccx(NATIVE_CALLER);
+        DEBUG_ReportWrapperThreadSafetyError(ccx,
+            "Wrapper accessed on multiple threads without having an "
+            "nsIClassInfo that set the 'THREADSAFE' flag", wrapper);
+    }
 }
 #endif
 

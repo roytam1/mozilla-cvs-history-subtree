@@ -81,6 +81,7 @@
 #include "nsReadableUtils.h"
 #include "nsXPIDLString.h"
 
+#include "nsIThread.h"
 #include "nsIJSContextStack.h"
 #include "prthread.h"
 #include "nsDeque.h"
@@ -149,6 +150,9 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 #endif
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+void DEBUG_ReportWrapperThreadSafetyError(XPCCallContext& ccx,
+                                          const char* msg,
+                                          const XPCWrappedNative* wrapper); 
 void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
 #else
 #define DEBUG_CheckWrapperThreadSafety(w) ((void)0)
@@ -2242,6 +2246,10 @@ public:
 
     inline void SweepTearOffs();
 
+    // Returns a string that shuld be free'd using JS_smprintf_free (or null).
+    char* ToString(XPCCallContext& ccx, 
+                   XPCWrappedNativeTearOff* to = nsnull) const;
+
     // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
 protected:
     XPCWrappedNative(nsISupports* aIdentity,
@@ -2280,7 +2288,9 @@ private:
     XPCWrappedNativeTearOffChunk mFirstChunk;
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
-    PRThread*   mThread; // Don't want to overload _mOwningThread
+public:
+    PRThread*          mThread; // Don't want to overload _mOwningThread
+    static PRThread*   gMainThread;
 #endif
 };
 

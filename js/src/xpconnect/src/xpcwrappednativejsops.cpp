@@ -84,75 +84,14 @@ static JSBool Throw(uintN errNum, JSContext* cx)
 static JSBool
 ToStringGuts(XPCCallContext& ccx)
 {
-#ifdef DEBUG
-#  define FMT_ADDR " @ 0x%p" 
-#  define PARAM_ADDR(w) , w
-#else
-#  define FMT_ADDR ""
-#  define PARAM_ADDR(w)
-#endif
-
+    char* sz;
     XPCWrappedNative* wrapper = ccx.GetWrapper();
-
-    char* sz = nsnull;
-
+    
     if(wrapper)
-    {
-        char* name = nsnull;
-
-        XPCNativeScriptableInfo* si = ccx.GetScriptableInfo();
-        if(si)
-            name = JS_smprintf("%s", si->GetJSClass()->name);
-
-        XPCWrappedNativeTearOff* to = ccx.GetTearOff();
-        if(to)
-        {
-            const char* fmt = name ? " (%s)" : "%s";
-            name = JS_sprintf_append(name, fmt, 
-                                     to->GetInterface()->GetNameString());
-        }    
-        else if(!name)
-        {
-            XPCNativeSet* set = wrapper->GetSet();
-            XPCNativeInterface** array = set->GetInterfaceArray();
-            PRUint16 count = set->GetInterfaceCount();
-
-            if(count == 1)
-                name = JS_sprintf_append(name, "%s", array[0]->GetNameString());
-            else if(count == 2 && 
-                    array[0] == XPCNativeInterface::GetISupports(ccx))
-            {
-                name = JS_sprintf_append(name, "%s", array[1]->GetNameString());
-            }
-            else
-            {
-                for(PRUint16 i = 0; i < count; i++)
-                {
-                    const char* fmt = (i == 0) ? 
-                                        "(%s" : (i == count-1) ? 
-                                            ", %s)" : ", %s";
-                    name = JS_sprintf_append(name, fmt, 
-                                             array[i]->GetNameString());
-                }       
-            }
-        }
-
-        if(!name)
-        {
-            JS_ReportOutOfMemory(ccx);
-            return JS_FALSE;
-        }
-
-        sz = JS_smprintf("[xpconnect wrapped %s" FMT_ADDR "]",
-                           name PARAM_ADDR(wrapper));
-
-        JS_smprintf_free(name);    
-    }
+        sz = wrapper->ToString(ccx, ccx.GetTearOff());
     else
-    {
         sz = JS_smprintf("[xpconnect wrapped native prototype]");
-    }
-
+    
     if(!sz)
     {
         JS_ReportOutOfMemory(ccx);
@@ -169,9 +108,6 @@ ToStringGuts(XPCCallContext& ccx)
 
     ccx.SetRetVal(STRING_TO_JSVAL(str));
     return JS_TRUE;
-
-#undef FMT_ADDR
-#undef PARAM_ADDR
 }
 
 /***************************************************************************/

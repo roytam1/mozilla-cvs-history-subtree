@@ -1680,7 +1680,7 @@ nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx,
     if(!iface)
         return JS_FALSE;
 
-    nsCOMPtr<XPCWrappedNative> wrapper(dont_AddRef(
+    nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper(dont_AddRef(
         XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface, nsnull)));
     if(!wrapper)
         return JS_FALSE;
