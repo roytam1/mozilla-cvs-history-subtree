@@ -110,7 +110,7 @@ $SENDMAIL = "/usr/lib/sendmail";
 $SEARCH = "(&(uid=*)(!(objectclass=pseudoAccount)))";
 $MAILTO = "leif\@netscape.com";
 
-$LDAP_DEBUG = 1;
+#$LDAP_DEBUG = 1;
 
 
 #############################################################################
