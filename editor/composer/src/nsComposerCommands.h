@@ -217,6 +217,19 @@ protected:
   virtual nsresult SetState(nsIEditor *aEditor, nsString& newState);
 };
 
+class nsFontSizeStateCommand : public nsMultiStateCommand
+{
+public:
+                   nsFontSizeStateCommand();
+
+protected:
+
+  virtual nsresult GetCurrentState(nsIEditor *aEditor, nsString& outStateString, PRBool& outMixed);
+  virtual nsresult GetCurrentState(nsIEditor *aEditor,
+                                   nsICommandParams* aParams);
+  virtual nsresult SetState(nsIEditor *aEditor, nsString& newState);
+};
+
 class nsHighlightColorStateCommand : public nsMultiStateCommand
 {
 public:

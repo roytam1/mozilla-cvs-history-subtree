@@ -918,6 +918,109 @@ nsFontFaceStateCommand::SetState(nsIEditor *aEditor, nsString& newState)
 
 #ifdef XP_MAC
 #pragma mark -
+#endif      
+
+nsFontSizeStateCommand::nsFontSizeStateCommand()
+  : nsMultiStateCommand()
+{
+}
+
+
+nsresult
+nsFontSizeStateCommand::GetCurrentState(nsIEditor *aEditor, nsString& outStateString, PRBool& outMixed)
+{
+  NS_ASSERTION(aEditor, "Need an editor here");
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(aEditor);
+  if (!htmlEditor) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIAtom> fontAtom = do_GetAtom("font");
+  PRBool firstHas, anyHas, allHas;
+  nsresult rv = htmlEditor->GetInlinePropertyWithAttrValue(fontAtom,
+                                         NS_LITERAL_STRING("size"),
+                                         NS_LITERAL_STRING(""),
+                                         &firstHas, &anyHas, &allHas,
+                                         outStateString);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCAutoString tOutStateString;
+  tOutStateString.AssignWithConversion(outStateString);
+  outMixed = anyHas && !allHas;
+  return NS_OK;
+}
+
+//  nsCAutoString tOutStateString;
+//  tOutStateString.AssignWithConversion(outStateString);
+nsresult
+nsFontSizeStateCommand::GetCurrentState(nsIEditor *aEditor,
+                                        nsICommandParams *aParams)
+{
+  NS_ASSERTION(aEditor, "Need an editor here");
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(aEditor);
+  if (!htmlEditor) return NS_ERROR_INVALID_ARG;   
+
+  nsAutoString outStateString;
+  nsCOMPtr<nsIAtom> fontAtom = do_GetAtom("font");
+  PRBool firstHas, anyHas, allHas;
+  nsresult rv = htmlEditor->GetInlinePropertyWithAttrValue(fontAtom,
+                                         NS_LITERAL_STRING("size"),
+                                         NS_LITERAL_STRING(""),    
+                                         &firstHas, &anyHas, &allHas,
+                                         outStateString);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCAutoString tOutStateString;
+  tOutStateString.AssignWithConversion(outStateString);
+  aParams->SetBooleanValue(STATE_MIXED, anyHas && !allHas);
+  aParams->SetCStringValue(STATE_ATTRIBUTE, tOutStateString.get());
+  aParams->SetBooleanValue(STATE_ENABLED, PR_TRUE);
+
+  return rv;
+}
+
+
+// acceptable values for "newState" are:
+//   -2
+//   -1     
+//    0
+//   +1
+//   +2 
+//   +3
+//   medium
+//   normal
+nsresult
+nsFontSizeStateCommand::SetState(nsIEditor *aEditor, nsString& newState)
+{
+  NS_ASSERTION(aEditor, "Need an editor here");
+  nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(aEditor);
+  if (!htmlEditor) return NS_ERROR_INVALID_ARG;
+
+  nsresult rv;
+  nsCOMPtr<nsIAtom> fontAtom = do_GetAtom("font");
+  if (newState.IsEmpty() ||
+      newState.Equals(NS_LITERAL_STRING("normal")) ||
+      newState.Equals(NS_LITERAL_STRING("medium"))) {
+    // remove any existing font size, big or small
+    rv = htmlEditor->RemoveInlineProperty(fontAtom, NS_LITERAL_STRING("size"));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIAtom> bigAtom = do_GetAtom("big");
+    rv = htmlEditor->RemoveInlineProperty(bigAtom, NS_LITERAL_STRING(""));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIAtom> smallAtom = do_GetAtom("small");
+    rv = htmlEditor->RemoveInlineProperty(smallAtom, NS_LITERAL_STRING(""));
+    if (NS_FAILED(rv)) return rv;
+  } else {
+    // set the size
+    rv = htmlEditor->SetInlineProperty(fontAtom, NS_LITERAL_STRING("size"),
+                                       newState);
+  }
+
+  return rv;
+}
+
+#ifdef XP_MAC
+#pragma mark -
 #endif
 
 nsFontColorStateCommand::nsFontColorStateCommand()
