@@ -813,6 +813,14 @@ JSString *nsDOMClassInfo::sStatusbar_id       = nsnull;
 JSString *nsDOMClassInfo::sDirectories_id     = nsnull;
 JSString *nsDOMClassInfo::sControllers_id     = nsnull;
 JSString *nsDOMClassInfo::sLength_id          = nsnull;
+JSString *nsDOMClassInfo::sInnerHeight_id     = nsnull;
+JSString *nsDOMClassInfo::sInnerWidth_id      = nsnull;
+JSString *nsDOMClassInfo::sOuterHeight_id     = nsnull;
+JSString *nsDOMClassInfo::sOuterWidth_id      = nsnull;
+JSString *nsDOMClassInfo::sScreenX_id         = nsnull;
+JSString *nsDOMClassInfo::sScreenY_id         = nsnull;
+JSString *nsDOMClassInfo::sStatus_id          = nsnull;
+JSString *nsDOMClassInfo::sName_id            = nsnull;
 JSString *nsDOMClassInfo::sOnmousedown_id     = nsnull;
 JSString *nsDOMClassInfo::sOnmouseup_id       = nsnull;
 JSString *nsDOMClassInfo::sOnclick_id         = nsnull;
@@ -860,6 +868,14 @@ nsDOMClassInfo::DefineStaticJSStrings(JSContext *cx)
   sDirectories_id    = ::JS_InternString(cx, "directories");
   sControllers_id    = ::JS_InternString(cx, "controllers");
   sLength_id         = ::JS_InternString(cx, "length");
+  sInnerHeight_id    = ::JS_InternString(cx, "innerHeight");
+  sInnerWidth_id     = ::JS_InternString(cx, "innerWidth");
+  sOuterHeight_id    = ::JS_InternString(cx, "outerWidth");
+  sOuterWidth_id     = ::JS_InternString(cx, "outerWidth");
+  sScreenX_id        = ::JS_InternString(cx, "screenX");
+  sScreenY_id        = ::JS_InternString(cx, "screenY");
+  sStatus_id         = ::JS_InternString(cx, "status");
+  sName_id           = ::JS_InternString(cx, "name");
   sOnmousedown_id    = ::JS_InternString(cx, "onmousedown");
   sOnmouseup_id      = ::JS_InternString(cx, "onmouseup");
   sOnclick_id        = ::JS_InternString(cx, "onclick");
@@ -2219,7 +2235,7 @@ nsDOMClassInfo::PostCreate(nsIXPConnectWrappedNative *wrapper,
   if (ci_data.mHasClassInterface) {
     nsCOMPtr<nsIInterfaceInfoManager> iim =
       dont_AddRef(XPTI_GetInterfaceInfoManager());
- 
+
     if (iim) {
       nsCOMPtr<nsIInterfaceInfo> if_info;
       iim->GetInfoForIID(ci_data.mProtoChainInterface,
@@ -2491,6 +2507,14 @@ nsDOMClassInfo::ShutDown()
   sDirectories_id     = jsnullstring;
   sControllers_id     = jsnullstring;
   sLength_id          = jsnullstring;
+  sInnerHeight_id     = jsnullstring;
+  sInnerWidth_id      = jsnullstring;
+  sOuterHeight_id     = jsnullstring;
+  sOuterWidth_id      = jsnullstring;
+  sScreenX_id         = jsnullstring;
+  sScreenY_id         = jsnullstring;
+  sStatus_id          = jsnullstring;
+  sName_id            = jsnullstring;
   sOnmousedown_id     = jsnullstring;
   sOnmouseup_id       = jsnullstring;
   sOnclick_id         = jsnullstring;
@@ -3376,7 +3400,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                        nsCAutoString("_content"),
                                        0,
                                        nsnull,
-                                       NS_LITERAL_STRING("return this.content;"), 
+                                       NS_LITERAL_STRING("return this.content;"),
                                        "",
                                        0,
                                        PR_FALSE,
@@ -3416,20 +3440,12 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         return NS_OK;
       }
 
-      if (str == sTop_id          ||
-          str == sScrollbars_id   ||
-          str == sContent_id      ||
-          str == sSidebar_id      ||
-          str == sMenubar_id      ||
-          str == sToolbar_id      ||
-          str == sLocationbar_id  ||
-          str == sPersonalbar_id  ||
-          str == sStatusbar_id    ||
-          str == sDirectories_id  ||
-          str == sControllers_id  ||
-          str == sLength_id) {
-        // A "replaceable" property is being set, define the property on
-        // obj with the value undefined.
+      if (IsReadonlyReplaceable(str) ||
+          (!(flags & JSRESOLVE_QUALIFIED) && IsWritableReplaceable(str))) {
+        // A readonly "replaceable" property is being set, or a
+        // readwrite "replaceable" property is being set w/o being
+        // fully qualified. Define the property on obj with the value
+        // undefined to override the predefined property.
 
         *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
                                          ::JS_GetStringLength(str),
@@ -4188,7 +4204,7 @@ nsHTMLElementSH::ScrollIntoView(JSContext *cx, JSObject *obj, uintN argc,
   }
 
   rv = element->ScrollIntoView(top);
-  
+
   *rval = JSVAL_VOID;
 
   return NS_SUCCEEDED(rv);
