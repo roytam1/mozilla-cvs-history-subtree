@@ -5769,6 +5769,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       nsCOMPtr<nsIDocument> doc;
       aContent->GetDocument(*getter_AddRefs(doc));
       nsCOMPtr<nsIBindingManager> bindingManager;
+      NS_ASSERTION(doc, "no document, bailing out");
+      if (!doc) return NS_ERROR_FAILURE;
       doc->GetBindingManager(getter_AddRefs(bindingManager));
       if (processChildren) {
         bindingManager->ShouldBuildChildFrames(aContent, &processChildren);
