@@ -450,6 +450,9 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 				PhPoint_t space = { 0, 0 };
 				PhPoint_t rep = { aDWidth, aDHeight };
 
+				/* is this a 1x1 transparent image used for spacing? */
+				if( mWidth == 1 && mHeight == 1 && mAlphaDepth == 1 && mAlphaBits[0] == 0x0 ) return NS_OK;
+
     		PgSetMultiClip( 1, &clip );
     		if ((mAlphaDepth == 1) || (mAlphaDepth == 0))
     		  PgDrawRepPhImagemx( &mPhImage, 0, &pos, &rep, &space );
@@ -487,6 +490,7 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 					mDirtyFlags = 0;
 
         	if ( mPhImageZoom ) {
+						PgFlush();
         	  mPhImageZoom->flags = Ph_RELEASE_IMAGE_ALL;
         	  PhReleaseImage( mPhImageZoom );
         	  free( mPhImageZoom );
@@ -591,6 +595,9 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 NS_IMETHODIMP nsImagePh::DrawTile(nsIRenderingContext &aContext, nsDrawingSurface aSurface, nsRect &aSrcRect, nsRect &aTileRect ) {
 	PhPoint_t pos, space, rep;
 
+	/* is this a 1x1 transparent image used for spacing? */
+	if( mWidth == 1 && mHeight == 1 && mAlphaDepth == 1 && mAlphaBits[0] == 0x0 ) return NS_OK;
+
 	pos.x = aTileRect.x;
 	pos.y = aTileRect.y;
 
@@ -644,6 +651,9 @@ NS_IMETHODIMP nsImagePh::DrawTile(nsIRenderingContext &aContext, nsDrawingSurfac
 NS_IMETHODIMP nsImagePh::DrawTile( nsIRenderingContext &aContext, nsDrawingSurface aSurface, PRInt32 aSXOffset, PRInt32 aSYOffset, const nsRect &aTileRect ) 
 {
 	PhPoint_t pos, space, rep;
+
+	/* is this a 1x1 transparent image used for spacing? */
+	if( mWidth == 1 && mHeight == 1 && mAlphaDepth == 1 && mAlphaBits[0] == 0x0 ) return NS_OK;
 
 	// since there is an offset into the image and I only want to draw full
 	// images, shift the position back and set clipping so that it looks right

@@ -16,7 +16,7 @@
  * Christopher Blizzard.  All Rights Reserved.
  * 
  * Contributor(s):
- *   Adrian Mardare <amaradre@qnx.com>
+ *   Christopher Blizzard <blizzard@mozilla.org>
  */
 
 #ifndef __nsPhMozRemoteHelper_h__

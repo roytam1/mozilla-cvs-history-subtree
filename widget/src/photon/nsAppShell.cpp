@@ -143,8 +143,14 @@ static int event_processor_callback(int fd, void *data, unsigned mode)
 #ifdef MOZ_ENABLE_XREMOTE
 
 /* the connector name that a client can use to remote control this instance of mozilla */
-#define BrowserRemoteServerName			"FullMozillaBrowserRemoteServer"
-#define MailRemoteServerName				"MozillaMailRemoteServer"
+
+#if defined(MOZ_PHOENIX)
+#define RemoteServerName			"FirebirdRemoteServer"
+#elif defined(MOZ_THUNDERBIRD)
+#define RemoteServerName			"ThunderbirdRemoteServer"
+#else
+#define RemoteServerName			"MozillaRemoteServer"
+#endif
 
 #define MOZ_REMOTE_MSG_TYPE					100
 
@@ -223,23 +229,8 @@ NS_IMETHODIMP nsAppShell::Create(int *bac, char **bav)
 		mPtInited = PR_TRUE;
 
 #ifdef MOZ_ENABLE_XREMOTE
-
-		char *RemoteServerName = BrowserRemoteServerName;
-		char *RemoteServerNameExtra = nsnull;
-
-		if( argc > 0 && argv && argv[0] ) {
-			if( PL_strstr( argv[0], "Firebird" ) ) RemoteServerName = BrowserRemoteServerName;
-			else if( PL_strstr( argv[0], "thunderbird" ) ) RemoteServerName = MailRemoteServerName;
-			else {
-				/* full mozilla creates 2 connectors one for the browser side and another one for the mail side */
-				RemoteServerName = BrowserRemoteServerName;
-				RemoteServerNameExtra = MailRemoteServerName;
-				}
-			}
-
 		/* create a connector for the xremote control */
 		PtConnectorCreate( RemoteServerName, client_connect, NULL );
-		if( RemoteServerNameExtra ) PtConnectorCreate( RemoteServerNameExtra, client_connect, NULL );
 #endif
 	}
 

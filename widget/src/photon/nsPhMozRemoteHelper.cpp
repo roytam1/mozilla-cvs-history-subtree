@@ -16,7 +16,7 @@
  * Christopher Blizzard.  All Rights Reserved.
  * 
  * Contributor(s):
- *   Adrian Mardare <amardare@qnx.com>
+ *   Christopher Blizzard <blizzard@mozilla.org>
  */
 
 /* the XRemoteService.cpp insists on getting the "widget helper service" */

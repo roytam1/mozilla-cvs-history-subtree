@@ -346,22 +346,22 @@ void nsDeviceContextPh :: DefaultSystemFonts( ) const
 {
 	FaceMessageFont = "MessageFont";
 	SizeMessageFont = 9;
-	StyleMessageFont = NS_FONT_STYLE_NORMAL | NS_FONT_STYLE_ANTIALIAS;
+	StyleMessageFont = NS_FONT_STYLE_NORMAL;
 	WeightMessageFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceMenuFont = "MenuFont";
 	SizeMenuFont = 9;
-	StyleMenuFont = NS_FONT_STYLE_NORMAL | NS_FONT_STYLE_ANTIALIAS;
+	StyleMenuFont = NS_FONT_STYLE_NORMAL;
 	WeightMenuFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceBalloonFont = "BalloonFont";
 	SizeBalloonFont = 9;
-	StyleBalloonFont = NS_FONT_STYLE_NORMAL | NS_FONT_STYLE_ANTIALIAS;
+	StyleBalloonFont = NS_FONT_STYLE_NORMAL;
 	WeightBalloonFont = NS_FONT_WEIGHT_NORMAL;
 
 	FaceGeneralFont = "TextFont";
 	SizeGeneralFont = 9;
-	StyleGeneralFont = NS_FONT_STYLE_NORMAL | NS_FONT_STYLE_ANTIALIAS;
+	StyleGeneralFont = NS_FONT_STYLE_NORMAL;
 	WeightGeneralFont = NS_FONT_WEIGHT_NORMAL;
 }
 
@@ -576,11 +576,9 @@ NS_IMETHODIMP nsDeviceContextPh :: AbortDocument( void ) {
 NS_IMETHODIMP nsDeviceContextPh :: BeginPage( void ) {
 	if( mSpec ) {
 		PpPrintContext_t *pc = ((nsDeviceContextSpecPh *)mSpec)->GetPrintContext();
-		if( mIsPrintingStart ) {
-			PpPrintNewPage( pc );
-			mIsPrintingStart = 0;
-			}
 		PpContinueJob( pc );
+		if( !mIsPrintingStart ) PpPrintNewPage( pc );
+		mIsPrintingStart = 0;
 		}
 	return NS_OK;
 	}
