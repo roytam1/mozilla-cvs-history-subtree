@@ -156,6 +156,15 @@ important that a module or method doesn't work without it). The oustanding
     <LI>Strange 'Out of Memory' bug in PerLDAP, as reported by
     richard_jones@my-dejanews.com. Could this be a problem in API.xs, as
     suggested by Clayton (in string conversion code)?
+
+    <LI><B>Makefile.PL</B>: The version "check" isn't done properly, it
+    needs to do string compare (using eq) instead of numerical. Reported
+    by david d zuhn <dzuhn@netscape.com>.
+
+    <LI><B>Conn.pm</B>: Apparently ldap_explode_dn() can fail, as used in
+    the modifyRDN() method. This is reported by LHOIR Sébastien"
+    <lhoir@smd.ucl.ac.be>. <B><I>[leif]</I></B>
+
   </UL>
 
   <LI><FONT size=+1>Additional methods, changes to methods, or new
