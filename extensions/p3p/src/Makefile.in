@@ -52,7 +52,6 @@ PACKAGE_FILE = p3p.pkg
 REQUIRES	= xpcom \
 		  string \
 		  necko \
-		  cookie \
 		  xmlextras \
 		  dom \
 		  $(NULL)

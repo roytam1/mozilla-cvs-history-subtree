@@ -55,7 +55,6 @@ PACKAGE_FILE = tridentprofile.pkg
 REQUIRES = xpcom  \
 	necko \
 	string \
-	cookie \
 	pref \
 	$(NULL)
 
