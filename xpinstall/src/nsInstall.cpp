@@ -53,6 +53,7 @@
 #include "nsInstallExecute.h"
 #include "nsInstallPatch.h"
 #include "nsInstallUninstall.h"
+#include "nsWinReg.h"
 
 #ifdef XP_PC
 #define FILESEP "\\"
@@ -258,6 +259,30 @@ nsInstall::SetScriptObject(void *aScriptObject)
 {
   mScriptObject = (JSObject*) aScriptObject;
   return NS_OK;
+}
+
+nsInstall::SaveWinRegPrototype(void *aScriptObject)
+{
+  mWinRegObject = (JSObject*) aScriptObject;
+  return NS_OK;
+}
+
+nsInstall::SaveWinProfilePrototype(void *aScriptObject)
+{
+  mWinProfileObject = (JSObject*) aScriptObject;
+  return NS_OK;
+}
+
+JSObject*
+nsInstall::RetrieveWinRegPrototype()
+{
+  return mWinRegObject;
+}
+
+JSObject*
+nsInstall::RetrieveWinProfilePrototype()
+{
+  return mWinProfileObject;
 }
 
 PRInt32    
@@ -2313,12 +2338,33 @@ nsInstall::GetLastError(PRInt32* aReturn)
 PRInt32    
 nsInstall::GetWinProfile(const nsString& aFolder, const nsString& aFile, PRInt32* aReturn)
 {
+#ifdef WIN32
+#endif /* WIN32 */
+
     return NS_OK;
 }
 
 PRInt32    
-nsInstall::GetWinRegistry(PRInt32* aReturn)
+nsInstall::GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aReturn)
 {
+#ifdef WIN32
+    JSObject* winRegObject;
+    nsWinReg* nativeWinRegObject = new nsWinReg(this);
+    JSObject* winRegPrototype    = this->RetrieveWinRegPrototype();
+
+    winRegObject = JS_NewObject(jscontext, WinRegClass, winRegPrototype, NULL);
+    if(winRegObject == NULL)
+    {
+      return PR_FALSE;
+    }
+
+    JS_SetPrivate(jscontext, winRegObject, nativeWinRegObject);
+
+    *aReturn = OBJECT_TO_JSVAL(winRegObject);
+#else
+    aReturn = JSVAL_NULL;
+#endif /* WIN32 */
+
     return NS_OK;
 }
 

@@ -44,6 +44,8 @@
 #include "nsInstallObject.h"
 #include "nsInstallVersion.h"
 
+static void PR_CALLBACK WinRegCleanup(JSContext *cx, JSObject *obj);
+
 class nsInstallInfo
 {
   public:
@@ -91,6 +93,8 @@ class nsInstallInfo
 
 class nsInstall
 {
+    friend class nsWinReg;
+
     public:
        
         enum 
@@ -139,7 +143,13 @@ class nsInstall
         nsInstall();
         ~nsInstall();
         
-        PRInt32      SetScriptObject(void* aScriptObject);
+        PRInt32    SetScriptObject(void* aScriptObject);
+        
+        PRInt32    SaveWinRegPrototype(void* aScriptObject);
+        PRInt32    SaveWinProfilePrototype(void* aScriptObject);
+        
+        JSObject*  RetrieveWinRegPrototype(void);
+        JSObject*  RetrieveWinProfilePrototype(void);
         
         PRInt32    GetUserPackageName(nsString& aUserPackageName);
         PRInt32    GetRegPackageName(nsString& aRegPackageName);
@@ -170,7 +180,7 @@ class nsInstall
         PRInt32    GetFolder(const nsString& aTargetFolder, nsString** aFolder);
         PRInt32    GetLastError(PRInt32* aReturn);
         PRInt32    GetWinProfile(const nsString& aFolder, const nsString& aFile, PRInt32* aReturn);
-        PRInt32    GetWinRegistry(PRInt32* aReturn);
+        PRInt32    GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aReturn);
         PRInt32    Patch(const nsString& aRegName, const nsString& aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
         PRInt32    Patch(const nsString& aRegName, nsIDOMInstallVersion* aVersion, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
         PRInt32    Patch(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn);
@@ -197,6 +207,9 @@ class nsInstall
 
     private:
         JSObject*           mScriptObject;
+        
+        JSObject*           mWinRegObject;
+        JSObject*           mWinProfileObject;
         
         nsString            mJarFileLocation;
         void*               mJarFileData;
