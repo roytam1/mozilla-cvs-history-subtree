@@ -128,6 +128,89 @@ function GetTopLevelMessageForMessage(message, folder)
 
 }
 
+
+function CrossFolderNavigation (type, supportsFolderPane )
+{
+  if (type != nsMsgNavigationType.nextUnreadMessage) 
+  {
+      // only do cross folder navigation for "next unread message"
+      return nsnull;
+  }
+
+  var nextMode = pref.GetIntPref("mailnews.nav_crosses_folders");
+  // 0: "next" goes to the next folder, without prompting
+  // 1: "next" goes to the next folder, and prompts (the default)
+  // 2: "next" does nothing when there are no unread messages
+
+  // not crossing folders, don't find next
+  if (nextMode == 2) return;
+
+  var originalFolderURI = gDBView.msgFolder.URI;
+  var nextFolderURI = null;
+  var done = false;
+  var startAtURI = originalFolderURI;
+  var i = 0;
+  var allServers = accountManager.allServers;
+  var numServers = allServers.Count();
+
+  // XXX fix this
+  // this will search the originalFolderURI server twice
+  while (!done) 
+  {
+     dump("start looking at " + startAtURI + "\n");
+     nextFolderURI = FindNextFolder(startAtURI);
+     if (!nextFolderURI) 
+     {
+       if (i == numServers) 
+       {
+          // no more servers, we're done
+          done = true;
+       }
+       else 
+       {
+         // get the uri for the next server and start there
+         startAtURI = allServers.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgIncomingServer).serverURI;
+         i++;
+        }
+      }
+      else 
+      {
+         // got a folder with unread messages, start with it
+         done = true;    
+      }
+    }
+
+    if (nextFolderURI && (originalFolderURI != nextFolderURI)) 
+    {
+      var nextFolderResource = RDF.GetResource(nextFolderURI);
+      var nextFolder = nextFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+      switch (nextMode) 
+      {
+        case 0:
+            // do this unconditionally
+            gNextMessageAfterLoad = true;
+            if (supportsFolderPane)
+              SelectFolder(nextFolderURI);
+            dump("XXX we need code to select the correct type of message, after we load the folder\n");
+            break;
+        case 1:
+            var promptText = gMessengerBundle.formatStringFromName("advanceNextPrompt", [ nextFolder.name ], 1); 
+            if (commonDialogs.Confirm(window, promptText, promptText)) {
+                gNextMessageAfterLoad = true;
+                if (supportsFolderPane)
+                  SelectFolder(nextFolderURI);
+                dump("XXX we need code to select the correct type of message, after we load the folder\n");
+            }
+            break;
+        default:
+            dump("huh?");
+            break;
+        }
+    }
+
+    return nextFolderURI;
+}
+
 function GoNextMessage(type, startFromBeginning)
 {
   try {
@@ -160,73 +243,8 @@ function GoNextMessage(type, startFromBeginning)
         EnsureRowInThreadOutlinerIsVisible(resultIndex.value); 
         return;
     }
-
-    if (type != nsMsgNavigationType.nextUnreadMessage) {
-        // only do cross folder navigation for "next unread message"
-        return;
-    }
-
-    var nextMode = pref.GetIntPref("mailnews.nav_crosses_folders");
-    // 0: "next" goes to the next folder, without prompting
-    // 1: "next" goes to the next folder, and prompts (the default)
-    // 2: "next" does nothing when there are no unread messages
-
-    // not crossing folders, don't find next
-    if (nextMode == 2) return;
-
-    var originalFolderURI = gDBView.msgFolder.URI;
-    var nextFolderURI = null;
-    var done = false;
-    var startAtURI = originalFolderURI;
-    var i = 0;
-    var allServers = accountManager.allServers;
-    var numServers = allServers.Count();
-
-    // XXX fix this
-    // this will search the originalFolderURI server twice
-    while (!done) {
-        dump("start looking at " + startAtURI + "\n");
-        nextFolderURI = FindNextFolder(startAtURI);
-        if (!nextFolderURI) {
-            if (i == numServers) {
-                // no more servers, we're done
-                done = true;
-            }
-            else {
-                // get the uri for the next server and start there
-                startAtURI = allServers.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgIncomingServer).serverURI;
-                i++;
-            }
-        }
-        else {
-            // got a folder with unread messages, start with it
-            done = true;    
-        }
-    }
-
-    if (nextFolderURI && (originalFolderURI != nextFolderURI)) {
-        var nextFolderResource = RDF.GetResource(nextFolderURI);
-        var nextFolder = nextFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-        switch (nextMode) {
-            case 0:
-                // do this unconditionally
-                gNextMessageAfterLoad = true;
-                SelectFolder(nextFolderURI);
-                dump("XXX we need code to select the correct type of message, after we load the folder\n");
-                break;
-            case 1:
-                var promptText = gMessengerBundle.formatStringFromName("advanceNextPrompt", [ nextFolder.name ], 1); 
-                if (commonDialogs.Confirm(window, promptText, promptText)) {
-                    gNextMessageAfterLoad = true;
-                    SelectFolder(nextFolderURI);
-                    dump("XXX we need code to select the correct type of message, after we load the folder\n");
-                }
-                break;
-            default:
-                dump("huh?");
-                break;
-        }
-    }
+    
+    CrossFolderNavigation(type, true);
   }
   catch (ex) {
     dump("XXX ex = " + ex + "\n");
