@@ -31,7 +31,7 @@ menupopup, popup
  **/
 .tooltip, tooltip
   {
-    border                : 1px solid WindowFrame;
+    border                : 1px solid InfoText;
     padding               : 2px;
     max-width             : 40em;
     background-color      : InfoBackground;
