@@ -70,45 +70,42 @@ function acctTypePageUnload() {
       skipPanels = gCurrentAccountData.wizardSkipPanels.toString().toLowerCase();
     } catch(ex) {}
 
-    // Support old syntax of true/false for wizardSkipPanels
-    if (skipPanels == "true") {
-      setNextPage("identitypage", "done");
-    }
-    else {
-      // "done" is the only required panel for all accounts. We used to require an identity panel but not anymore.
-      // initialize wizardPanels with the optional mail/news panels
-      var wizardPanels, i;
-      var isMailAccount = pageData.accounttype.mailaccount;
-      if (isMailAccount && isMailAccount.value)
-        wizardPanels = new Array("identitypage", "serverpage", "loginpage", "accnamepage");
+    // "done" is the only required panel for all accounts. We used to require an identity panel but not anymore.
+    // initialize wizardPanels with the optional mail/news panels
+    var wizardPanels, i;
+    var isMailAccount = pageData.accounttype.mailaccount;
+    if (skipPanels == "true") // Support old syntax of true/false for wizardSkipPanels
+      wizardPanels = new Array("identitypage"); 
+    else if (isMailAccount && isMailAccount.value)
+      wizardPanels = new Array("identitypage", "serverpage", "loginpage", "accnamepage");
+    else
+      wizardPanels = new Array("identitypage", "newsserver", "accnamepage");
+
+    // Create a hash table of the panels to skip
+    skipArray  = skipPanels.split(",");
+    var skipHash = new Array();
+    for (i = 0; i < skipArray.length; i++)
+      skipHash[skipArray[i]] = skipArray[i];
+
+    // Remove skipped panels
+    i = 0;
+    while (i < wizardPanels.length) {
+      if (wizardPanels[i] in skipHash)
+        wizardPanels.splice(i, 1);
       else
-        wizardPanels = new Array("identitypage", "newsserver", "accnamepage");
-
-      // Create a hash table of the panels to skip
-      skipArray  = skipPanels.split(",");
-      var skipHash = new Array();
-      for (i = 0; i < skipArray.length; i++)
-        skipHash[skipArray[i]] = skipArray[i];
-
-      // Remove skipped panels
-      i = 0;
-      while (i < wizardPanels.length) {
-        if (wizardPanels[i] in skipHash)
-          wizardPanels.splice(i, 1);
-        else
-          i++;
-      }
-     
-      wizardPanels.push("done");
-
-      // Set up order of panels
-      for (i = 0; i < (wizardPanels.length-1); i++)
-        setNextPage(wizardPanels[i], wizardPanels[i+1]);
-    
-      // make the account type page go to the very first of our approved wizard panels...this is usually going to
-      // be accounttype --> identitypage unless we were configured to skip the identity page
-      setNextPage("accounttype",wizardPanels[0]);
+        i++;
     }
+   
+    wizardPanels.push("done");
+
+    // Set up order of panels
+    for (i = 0; i < (wizardPanels.length-1); i++)
+      setNextPage(wizardPanels[i], wizardPanels[i+1]);
+  
+    // make the account type page go to the very first of our approved wizard panels...this is usually going to
+    // be accounttype --> identitypage unless we were configured to skip the identity page
+    setNextPage("accounttype",wizardPanels[0]);
+
     return true;
 }
 
