@@ -36,10 +36,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+
   /**
    * nsTStringTuple_CharT
    *
    * Represents a tuple of string fragments.  Built as a recursive binary tree.
+   * It is used to implement the concatenation of two or more string objects.
+   *
+   * NOTE: This class is a private implementation detail and should never be 
+   * referenced outside the string code.
    */
 class nsTStringTuple_CharT
   {
@@ -91,8 +96,8 @@ class nsTStringTuple_CharT
       const void*      mFragA;
       const void*      mFragB;
 
-      // type of mFrag? is given by the low-order bit.  if set, the type
-      // is nsTAString_CharT, else it is nsTStringBase_CharT.
+      // type of mFrag? is given by the least significant bit.  if set, the
+      // type is nsTAString_CharT, else it is nsTStringBase_CharT.
   };
 
 

@@ -41,6 +41,9 @@
    * This is the canonical null-terminated string class.  All subclasses
    * promise null-terminated storage.  Instances of this class allocate
    * strings on the heap.
+   *
+   * This class is also known as nsAFlat[C]String, where "flat" is used
+   * to denote a null-terminated string.
    */
 class NS_COM nsTString_CharT : public nsTStringBase_CharT
   {
@@ -438,10 +441,10 @@ class NS_COM nsTString_CharT : public nsTStringBase_CharT
 
 
   /**
-   * nsTAutoString
+   * nsTAutoString_CharT
    *
-   * Subclass of nsTString_CharT that adds support for stack-based string allocation.
-   * Do not allocate this class on the heap! ;-)
+   * Subclass of nsTString_CharT that adds support for stack-based string
+   * allocation.  Do not allocate this class on the heap! ;-)
    */
 class nsTAutoString_CharT : public nsTString_CharT
   {

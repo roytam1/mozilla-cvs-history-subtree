@@ -42,6 +42,10 @@
    *
    * The base string type.  This type is not instantiated directly.  A sub-
    * class is instantiated instead.  For example, see nsTString.
+   *
+   * NOTE: This class name should never be referenced outside the string
+   * codebase.  If you need to refer to this string class, use the typedef
+   * nsASingleFragment[C]String instead.
    */
 class NS_COM nsTStringBase_CharT : public nsTAString_CharT
   {
