@@ -541,7 +541,7 @@ static SECStatus
 DecodeDBCertEntry(certDBEntryCert *entry, SECItem *dbentry)
 {
     unsigned int nnlen;
-    unsigned int headerlen;
+    int headerlen;
     int lenoff;
 
     /* allow updates of old versions of the database */
@@ -2602,7 +2602,6 @@ ReadDBVersionEntry(NSSLOWCERTCertDBHandle *handle)
     certDBEntryVersion *entry;
     SECItem dbkey;
     SECItem dbentry;
-    SECStatus rv;
     
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if ( arena == NULL ) {
@@ -2634,10 +2633,7 @@ ReadDBVersionEntry(NSSLOWCERTCertDBHandle *handle)
     PORT_Memcpy(&dbkey.data[SEC_DB_KEY_HEADER_LEN], SEC_DB_VERSION_KEY,
 	      SEC_DB_VERSION_KEY_LEN);
 
-    rv = ReadDBEntry(handle, &entry->common, &dbkey, &dbentry, tmparena);
-    if (rv != SECSuccess) {
-	goto loser;
-    }
+    ReadDBEntry(handle, &entry->common, &dbkey, &dbentry, tmparena);
 
     PORT_FreeArena(tmparena, PR_FALSE);
     return(entry);
@@ -2762,11 +2758,11 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
 								char *nickname)
 {
     SECItem *newCertKeys, *newKeyIDs;
-    unsigned int i;
+    int i;
     SECStatus rv;
     NSSLOWCERTCertificate *cmpcert;
     unsigned int nnlen;
-    unsigned int ncerts;
+    int ncerts;
     
 
     PORT_Assert(entry);    
@@ -2864,7 +2860,7 @@ nsslowcert_TraversePermCertsForSubject(NSSLOWCERTCertDBHandle *handle,
 				 NSSLOWCERTCertCallback cb, void *cbarg)
 {
     certDBEntrySubject *entry;
-    unsigned int i;
+    int i;
     NSSLOWCERTCertificate *cert;
     SECStatus rv = SECSuccess;
     
@@ -3539,24 +3535,13 @@ nsslowcert_CertNicknameConflict(char *nickname, SECItem *derSubject,
     return(rv);
 }
 
-#ifdef DBM_USING_NSPR
-#define NO_RDONLY	PR_RDONLY
-#define NO_RDWR		PR_RDWR
-#define NO_CREATE	(PR_RDWR | PR_CREATE_FILE | PR_TRUNCATE)
-#else
-#define NO_RDONLY	O_RDONLY
-#define NO_RDWR		O_RDWR
-#define NO_CREATE	(O_RDWR | O_CREAT | O_TRUNC)
-#endif
-
 /*
  * Open the certificate database and index databases.  Create them if
  * they are not there or bad.
  */
 static SECStatus
 nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
-		   		const char *appName, const char *prefix,
-				NSSLOWCERTDBNameFunc namecb, void *cbarg)
+		   NSSLOWCERTDBNameFunc namecb, void *cbarg)
 {
     SECStatus rv;
     int openflags;
@@ -3571,17 +3556,17 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
     if ( certdbname == NULL ) {
 	return(SECFailure);
     }
-
-    openflags = readOnly ? NO_RDONLY : NO_RDWR;
-
+    
+    if ( readOnly ) {
+	openflags = O_RDONLY;
+    } else {
+	openflags = O_RDWR;
+    }
+    
     /*
      * first open the permanent file based database.
      */
-    if (appName) {
-	handle->permCertDB = rdbopen( appName, prefix, "cert", openflags);
-    } else {
-	handle->permCertDB = dbopen( certdbname, openflags, 0600, DB_HASH, 0 );
-    }
+    handle->permCertDB = dbopen( certdbname, openflags, 0600, DB_HASH, 0 );
 
     /* check for correct version number */
     if ( handle->permCertDB ) {
@@ -3602,6 +3587,7 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
 	}
     }
 
+
     /* if first open fails, try to create a new DB */
     if ( handle->permCertDB == NULL ) {
 
@@ -3610,19 +3596,9 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
 	    goto loser;
 	}
 	
-	if (appName) {
-	    handle->permCertDB=rdbopen( appName, prefix, "cert", NO_CREATE);
-
-	    updatedb = dbopen(certdbname, NO_RDONLY, 0600, DB_HASH, 0);
-	    if (updatedb) {
-		db_Copy(handle->permCertDB,updatedb);
-		(*updatedb->close)(updatedb);
-		PORT_Free(certdbname);
-		return(SECSuccess);
-	    }
-	} else {
-	    handle->permCertDB=dbopen(certdbname, NO_CREATE, 0600, DB_HASH, 0);
-	}
+	handle->permCertDB = dbopen(certdbname,
+				    O_RDWR | O_CREAT | O_TRUNC,
+				    0600, DB_HASH, 0);
 
 	/* if create fails then we lose */
 	if ( handle->permCertDB == 0 ) {
@@ -3645,7 +3621,7 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
 	/* try to upgrade old db here */
 	tmpname = (* namecb)(cbarg, 6);	/* get v6 db name */
 	if ( tmpname ) {
-	    updatedb = dbopen( tmpname, NO_RDONLY, 0600, DB_HASH, 0 );
+	    updatedb = dbopen( tmpname, O_RDONLY, 0600, DB_HASH, 0 );
 	    PORT_Free(tmpname);
 	    if ( updatedb ) {
 		rv = UpdateV6DB(handle, updatedb);
@@ -3656,7 +3632,7 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
 	    } else { /* no v6 db, so try v5 db */
 		tmpname = (* namecb)(cbarg, 5);	/* get v5 db name */
 		if ( tmpname ) {
-		    updatedb = dbopen( tmpname, NO_RDONLY, 0600, DB_HASH, 0 );
+		    updatedb = dbopen( tmpname, O_RDONLY, 0600, DB_HASH, 0 );
 		    PORT_Free(tmpname);
 		    if ( updatedb ) {
 			rv = UpdateV5DB(handle, updatedb);
@@ -3668,8 +3644,8 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
 			/* try to upgrade v4 db */
 			tmpname = (* namecb)(cbarg, 4);	/* get v4 db name */
 			if ( tmpname ) {
-			    updatedb = dbopen( tmpname, NO_RDONLY, 0600, 
-			                       DB_HASH, 0 );
+			    updatedb = dbopen( tmpname, O_RDONLY, 0600,
+					      DB_HASH, 0 );
 			    PORT_Free(tmpname);
 			    if ( updatedb ) {
 				/* NES has v5 db's with v4 db names! */
@@ -4069,7 +4045,6 @@ done:
  */
 SECStatus
 nsslowcert_OpenCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
-	        const char *appName, const char *prefix,
 		NSSLOWCERTDBNameFunc namecb, void *cbarg, PRBool openVolatile)
 {
     int rv;
@@ -4079,8 +4054,7 @@ nsslowcert_OpenCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
     handle->dbMon = PZ_NewMonitor(nssILockCertDB);
     PORT_Assert(handle->dbMon != NULL);
 
-    rv = nsslowcert_OpenPermCertDB(handle, readOnly, appName, prefix, 
-							namecb, cbarg);
+    rv = nsslowcert_OpenPermCertDB(handle, readOnly, namecb, cbarg);
     if ( rv ) {
 	goto loser;
     }

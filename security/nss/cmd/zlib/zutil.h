@@ -15,8 +15,7 @@
 
 #include "zlib.h"
 
-#if defined(_WIN32_WCE)
-#elif defined(MSDOS)||defined(VMS)||defined(CRAY)||defined(WIN32)||defined(RISCOS)
+#if defined(MSDOS)||defined(VMS)||defined(CRAY)||defined(WIN32)||defined(RISCOS)
 #   include <stddef.h>
 #   include <errno.h>
 #else

@@ -68,14 +68,6 @@ extern char *sys_errlist[];
 
 #define ERROR_BREAK rv = SECFailure;break;
 
-const SEC_ASN1Template SECKEY_PQGParamsTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYPQGParams) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,prime) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,subPrime) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,base) },
-    { 0, }
-};
-
 /* returns 0 for success, -1 for failure (EOF encountered) */
 static int
 UpdateRNG(void)
@@ -134,7 +126,8 @@ UpdateRNG(void)
 	    rv = -1;
 	    break;
 	}
-	PK11_RandomUpdate(randbuf, sizeof(randbuf));
+	RNG_GetNoise(&randbuf[1], sizeof(randbuf)-1);
+	RNG_RandomUpdate(randbuf, sizeof(randbuf));
 	if (c != randbuf[0]) {
 	    randbuf[0] = c;
 	    FPS "\r|");
@@ -196,27 +189,27 @@ static unsigned char G[] = { 0x00, 0x62, 0x6d, 0x02, 0x78, 0x39, 0xea, 0x0a,
 			     0x8c, 0xc5, 0x72, 0xaf, 0x53, 0xe6, 0xd7, 0x88,
 			     0x02 };
 
-static SECKEYPQGParams default_pqg_params = {
+static PQGParams default_pqg_params = {
     NULL,
     { 0, P, sizeof(P) },
     { 0, Q, sizeof(Q) },
     { 0, G, sizeof(G) }
 };
 
-static SECKEYPQGParams *
+static PQGParams *
 decode_pqg_params(char *str)
 {
     char *buf;
     unsigned int len;
     PRArenaPool *arena;
-    SECKEYPQGParams *params;
+    PQGParams *params;
     SECStatus status;
  
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (arena == NULL)
         return NULL;
  
-    params = PORT_ArenaZAlloc(arena, sizeof(SECKEYPQGParams));
+    params = PORT_ArenaZAlloc(arena, sizeof(PQGParams));
     if (params == NULL)
         goto loser;
     params->arena = arena;
@@ -236,19 +229,11 @@ loser:
         PORT_FreeArena(arena, PR_FALSE);
     return NULL;
 }
-
-void  
-CERTUTIL_DestroyParamsPQG(SECKEYPQGParams *params)
-{
-    if (params->arena) {
-        PORT_FreeArena(params->arena, PR_FALSE);
-    }
-}
-
+ 
 static int
 pqg_prime_bits(char *str)
 {
-    SECKEYPQGParams *params = NULL;
+    PQGParams *params = NULL;
     int primeBits = 0, i;
  
     params = decode_pqg_params(str);
@@ -261,7 +246,7 @@ pqg_prime_bits(char *str)
  
 done:
     if (params != NULL)
-        CERTUTIL_DestroyParamsPQG(params);
+        PQG_DestroyParams(params);
     return primeBits;
 }
 
@@ -285,7 +270,7 @@ SECU_GetpqgString(char *filename)
     return NULL;
 }
 
-SECKEYPQGParams*
+PQGParams*
 getpqgfromfile(int keyBits, char *pqgFile)
 {
     char *end, *str, *pqgString;
@@ -317,26 +302,6 @@ found_match:
     return decode_pqg_params(str);
 }
 
-void CERTUTIL_FileForRNG(char *noise)
-{
-    char buf[2048];
-    PRFileDesc *fd;
-    PRInt32 count;
-
-    fd = PR_OpenFile(noise,PR_RDONLY,0666);
-    if (!fd) return;
-
-    do {
-	count = PR_Read(fd,buf,sizeof(buf));
-	if (count > 0) {
-	    PK11_RandomUpdate(buf,count);
-	}
-    } while (count > 0);
-
-    PR_Close(fd);
-   
-}
-
 SECKEYPrivateKey *
 CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
 			    int publicExponent, char *noise, 
@@ -346,16 +311,17 @@ CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
     CK_MECHANISM_TYPE mechanism;
     SECOidTag algtag;
     PK11RSAGenParams rsaparams;
-    SECKEYPQGParams *dsaparams = NULL;
+    PQGParams *dsaparams = NULL;
     void *params;
     PRArenaPool *dsaparena;
 
     /*
      * Do some random-number initialization.
      */
+    RNG_SystemInfoForRNG();
 
     if (noise) {
-    	CERTUTIL_FileForRNG(noise);
+    	RNG_FileForRNG(noise);
     } else {
 	int rv = UpdateRNG();
 	if (rv) {
@@ -380,7 +346,7 @@ CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
 	} else {
 	    dsaparena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
 	    if (dsaparena == NULL) return NULL;
-	    dsaparams = PORT_ArenaZAlloc(dsaparena, sizeof(SECKEYPQGParams));
+	    dsaparams = PORT_ArenaZAlloc(dsaparena, sizeof(PQGParams));
 	    if (dsaparams == NULL) return NULL;
 	    dsaparams->arena = dsaparena;
 	    SECITEM_AllocItem(dsaparena, &dsaparams->prime, sizeof P);
