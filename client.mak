@@ -69,6 +69,7 @@ SVG_BRANCH_FILES = \
 	content/Makefile.in \
 	content/base/public/nsIDocument.h \
 	content/base/public/nsIElementFactory.h \
+	content/base/src/nsRuleNode.cpp \
 	content/base/src/nsStyleContext.cpp \
 	content/build/Makefile.in \
 	content/build/makefile.win \
@@ -76,13 +77,10 @@ SVG_BRANCH_FILES = \
 	content/build/nsContentDLF.cpp \
 	content/build/nsContentModule.cpp \
 	content/html/document/src/nsHTMLDocument.cpp \
-	content/html/style/public/nsIRuleNode.h \
 	content/html/style/src/nsCSSDeclaration.cpp \
 	content/html/style/src/nsCSSParser.cpp \
 	content/html/style/src/nsCSSStyleRule.cpp \
 	content/html/style/src/nsICSSDeclaration.h \
-	content/html/style/src/nsRuleNode.cpp \
-	content/html/style/src/nsRuleNode.h \
 	content/makefile.win \
 	content/shared/public/MANIFEST \
 	content/shared/public/Makefile.in \
@@ -97,7 +95,6 @@ SVG_BRANCH_FILES = \
 	content/shared/src/Makefile.in \
 	content/shared/src/makefile.win \
 	content/shared/src/nsCSSProps.cpp \
-	content/shared/src/nsRuleNode.cpp \
 	content/shared/src/nsSVGAtoms.cpp \
 	content/shared/src/nsStyleStruct.cpp \
 	content/shared/src/nsStyleUtil.cpp \
