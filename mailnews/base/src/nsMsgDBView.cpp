@@ -494,6 +494,7 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
   // so we can extract the name part of the address...then convert it back to 
   // unicode again.
   if (mHeaderParser)
+#ifdef PRETTY_NAME
   {
     nsXPIDLCString name;
     rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUCS2toUTF8(unparsedAuthor).get(), getter_Copies(name));
@@ -503,7 +504,24 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
       return NS_OK;
     }
   }
+#else
+  // instead of doing display name, do email address.  some clients want this
+  {
+     PRUint32 numAddresses;
+     char    *names;
+     char    *addresses;
+     rv = mHeaderParser->ParseHeaderAddresses("UTF-8", NS_ConvertUCS2toUTF8(unparsedAuthor).get(), &names, &addresses, &numAddresses);
+     if (NS_SUCCEEDED(rv)) {
+       //printf("%d %s %s\n", numAddresses, names, addresses);
+       *aSenderString = nsCRT::strdup(NS_ConvertUTF8toUCS2(addresses).get());
+     }
+     PR_FREEIF(addresses);
+     PR_FREEIF(names);
 
+     if (NS_SUCCEEDED(rv))
+       return NS_OK;
+  }
+#endif
   // if we got here then just return the original string
   *aSenderString = nsCRT::strdup(unparsedAuthor);
   return NS_OK;
