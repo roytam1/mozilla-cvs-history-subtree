@@ -91,6 +91,14 @@ JS_BEGIN_EXTERN_C
 #undef  CLEAR_BIT_FLAG
 #define CLEAR_BIT_FLAG(f,b) ((f)&=(~(b)))
 
+
+/***************************************************************************/
+/* These are not exposed in jsdebug.h - typedef here for consistency */
+
+typedef struct JSDExecHook          JSDExecHook;
+typedef struct JSDAtom              JSDAtom;
+typedef struct JSDContextWrapper    JSDContextWrapper;
+
 /***************************************************************************/
 /* Our structures */
 
@@ -100,7 +108,7 @@ JS_BEGIN_EXTERN_C
 * a JSDContextWrapper. arg!
 */
 
-typedef struct JSDContext
+struct JSDContext
 {
     JSCList                 links;      /* we are part of a JSCList */
     JSBool                  inited;
@@ -141,17 +149,17 @@ typedef struct JSDContext
     void*                   dangerousThread;
 #endif /* JSD_HAS_DANGEROUS_THREAD */
 
-} JSDContext;
+};
 
-typedef struct JSDContextWrapper
+struct JSDContextWrapper
 {
     JSContext*          context;
     JSDContext*         jsdc;
     JSErrorReporter     originalErrorReporter;
 
-} JSDContextWrapper;
+};
 
-typedef struct JSDScript
+struct JSDScript
 {
     JSCList     links;      /* we are part of a JSCList */
     JSDContext* jsdc;       /* JSDContext for this jsdscript */
@@ -165,9 +173,9 @@ typedef struct JSDScript
     LWDBGApp*    app;
     LWDBGScript* lwscript;
 #endif
-} JSDScript;
+};
 
-typedef struct JSDSourceText
+struct JSDSourceText
 {
     JSCList          links;      /* we are part of a JSCList */
     char*            url;
@@ -178,41 +186,41 @@ typedef struct JSDSourceText
     JSDSourceStatus  status;
     uintN            alterCount;
     JSBool           doingEval;
-} JSDSourceText;
+};
 
-typedef struct JSDExecHook
+struct JSDExecHook
 {
     JSCList               links;        /* we are part of a JSCList */
     JSDScript*            jsdscript;
     jsuword               pc;
     JSD_ExecutionHookProc hook;
     void*                 callerdata;
-} JSDExecHook;
+};
 
-typedef struct JSDThreadState
+struct JSDThreadState
 {
     JSCList             links;        /* we are part of a JSCList */
     JSContext*          context;
     void*               thread;
     JSCList             stack;
     uintN               stackDepth;
-} JSDThreadState;
+};
 
-typedef struct JSDStackFrameInfo
+struct JSDStackFrameInfo
 {
     JSCList             links;        /* we are part of a JSCList */
     JSDThreadState*     jsdthreadstate;
     JSDScript*          jsdscript;
     jsuword             pc;
     JSStackFrame*       fp;
-} JSDStackFrameInfo;
+};
 
 #define GOT_PROTO   ((short) (1 << 0))
 #define GOT_PROPS   ((short) (1 << 1))
 #define GOT_PARENT  ((short) (1 << 2))
 #define GOT_CTOR    ((short) (1 << 3))
 
-typedef struct JSDValue
+struct JSDValue
 {
     jsval       val;
     intN        nref;
@@ -224,9 +232,9 @@ typedef struct JSDValue
     JSDValue*   parent;
     JSDValue*   ctor;
     uintN       flags;
-} JSDValue;
+};
 
-typedef struct JSDProperty
+struct JSDProperty
 {
     JSCList     links;      /* we are part of a JSCList */
     intN        nref;
@@ -235,15 +243,15 @@ typedef struct JSDProperty
     JSDValue*   alias;
     uintN       slot;
     uintN       flags;
-} JSDProperty;
+};
 
-typedef struct JSDAtom
+struct JSDAtom
 {
     char* str;      /* must be first element in stuct for compare */
     intN  refcount;
-} JSDAtom;
+};
 
-typedef struct JSDObject
+struct JSDObject
 {
     JSCList     links;      /* we are part of a JSCList */
     JSObject*   obj;
@@ -252,7 +260,7 @@ typedef struct JSDObject
     JSDAtom*    ctorURL;
     uintN       ctorLineno;
     JSDAtom*    ctorName;
-} JSDObject;
+};
 
 /***************************************************************************/
 /* Code validation support */
