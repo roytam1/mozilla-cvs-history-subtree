@@ -516,6 +516,13 @@ nsContextMenu.prototype = {
                                          Components.interfaces.nsIClipboardHelper );
         clipboard.copyString(addresses);
     },    
+    // Copy Link
+    copyLink : function () {
+        var url = this.linkURL();
+        var clipboard = this.getService( "@mozilla.org/widget/clipboardhelper;1",
+                                         Components.interfaces.nsIClipboardHelper );
+        clipboard.copyString(url);
+    },    
     // Open Metadata window for node
     showMetadata : function () {
         window.openDialog(  "chrome://navigator/content/metadata.xul",

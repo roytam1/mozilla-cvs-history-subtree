@@ -163,7 +163,7 @@
       <menuitem id="context-copylink"
                 label="&copyLinkCmd.label;"
                 accesskey="&copyLinkCmd.accesskey;"
-                command="cmd_copyLink"/>
+                oncommand="gContextMenu.copyLink();"/>
       <menuitem id="context-copyimage"
                 label="&copyImageCmd.label;"
                 accesskey="&copyImageCmd.accesskey;"
