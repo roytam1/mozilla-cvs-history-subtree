@@ -179,22 +179,6 @@ treechildren:-moz-tree-image(subjectCol, imapdeleted) {
   list-style-image: url("chrome://messenger/skin/icons/message-mail-imapdelete.gif");
 }
 
-treechildren:-moz-tree-image(subjectCol, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-offl.gif");
-}
-
-treechildren:-moz-tree-image(subjectCol, new, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-new-offl.gif");
-}
-
-treechildren:-moz-tree-image(subjectCol, attach, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-attach-offl.gif");
-}
-
-treechildren:-moz-tree-image(subjectCol, imapdeleted, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-imapdel-offl.gif");
-}
-
 treechildren:-moz-tree-image(subjectCol, news) {
   list-style-image: url("chrome://messenger/skin/icons/message-news.gif");
 }
@@ -215,18 +199,6 @@ treechildren:-moz-tree-image(subjectCol, news, new, attach) {
   list-style-image: url("chrome://messenger/skin/icons/message-news-new-attach.gif");
 }
 
-treechildren:-moz-tree-image(subjectCol, news, new, attach, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-news-new-attach-off.gif");
-}
-
-treechildren:-moz-tree-image(subjectCol, news, new, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-news-new-offl.gif");
-}
-
-treechildren:-moz-tree-image(subjectCol, news, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/message-news-offl.gif");
-}
-
 /* ..... new thread icons for watch and ignore ..... */
 
 treechildren:-moz-tree-image(news, threadCol, watch) {
@@ -237,28 +209,12 @@ treechildren:-moz-tree-image(news, threadCol, ignore) {
   list-style-image: url("chrome://messenger/skin/icons/thread-closed-kill.gif");
 }
 
-treechildren:-moz-tree-image(news, threadCol, watch, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-closed-offl-eye.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, ignore, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-closed-offl-kill.gif");
-}
-
 treechildren:-moz-tree-image(news, threadCol, container, hasUnread, watch) {
   list-style-image: url("chrome://messenger/skin/icons/thread-new-closed-eye.gif");
 }
 
 treechildren:-moz-tree-image(news, threadCol, container, hasUnread, ignore) {
   list-style-image: url("chrome://messenger/skin/icons/thread-new-closed-kill.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, container, hasUnread, watch, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-new-closed-offl-eye.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, container, hasUnread, ignore, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-new-closed-offl-kill.gif");
 }
 
 treechildren:-moz-tree-image(news, threadCol, container, hasUnread, watch, open) {
@@ -269,28 +225,12 @@ treechildren:-moz-tree-image(news, threadCol, container, hasUnread, ignore, open
   list-style-image: url("chrome://messenger/skin/icons/thread-new-open-kill.gif");
 }
 
-treechildren:-moz-tree-image(news, threadCol, container, hasUnread, watch, open, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-new-open-offl-eye.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, container, hasUnread, ignore, open, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-new-open-offl-kill.gif");
-}
-
 treechildren:-moz-tree-image(news, threadCol, container, watch, open) {
   list-style-image: url("chrome://messenger/skin/icons/thread-open-eye.gif");
 }
 
 treechildren:-moz-tree-image(news, threadCol, container, ignore, open) {
   list-style-image: url("chrome://messenger/skin/icons/thread-open-kill.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, container, watch, open, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-open-offl-eye.gif");
-}
-
-treechildren:-moz-tree-image(news, threadCol, container, ignore, open, offline) {
-  list-style-image: url("chrome://messenger/skin/icons/thread-open-offl-kill.gif");
 }
 
 
