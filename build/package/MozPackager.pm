@@ -1069,7 +1069,7 @@ sub makeBZ2 {
     my $vFlag = ($MozPackager::verbosity > 1) ? '-v ' : '';
 
     chdir $stageDir;
-    MozPackager::system("tar $qFlag -chf - * | bzip2 -f $qFlag $vFlag > $bz2File");
+    MozPackager::system("tar $vFlag -chf - * | bzip2 -f $qFlag $vFlag > $bz2File");
     chdir $savedCwd;
 }
 
