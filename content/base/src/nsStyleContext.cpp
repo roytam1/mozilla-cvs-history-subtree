@@ -627,18 +627,6 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, nsChangeHint& aHint
         }
       }
     }
-
-    if (aHint < maxHint) {
-      const nsStyleSVGReset* svg = (const nsStyleSVGReset*)PeekStyleData(eStyleStruct_SVGReset);
-      if (svg) {
-        const nsStyleSVGReset* otherSVG = (const nsStyleSVGReset*)aOther->GetStyleData(eStyleStruct_SVGReset);
-        if (svg != otherSVG) {
-          hint = svg->CalcDifference(*otherSVG);
-          if (aHint < hint)
-            aHint = hint;
-        }
-      }
-    }
 #endif
 
     // If the quotes implementation is ever going to change we might not need
