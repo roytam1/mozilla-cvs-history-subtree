@@ -377,4 +377,4 @@ jsdtoa.obj: jsdtoa.c
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_AUTO)
 	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(filter-out /O+, $(COMPILE_CFLAGS)) $(_VPATH_SRCS)
-#endif
+endif
