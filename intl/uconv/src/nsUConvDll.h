@@ -26,7 +26,7 @@
 #include "nsISupports.h"
 class nsIComponentManager;
 class nsIFile;
-class nsModuleComponentInfo;
+struct nsModuleComponentInfo;
 
 // Factory methods
 
