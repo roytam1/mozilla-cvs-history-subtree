@@ -56,7 +56,7 @@ class nsIDragHelperService;
 // related to a BrowserView. A listener should explicitly
 // register itself with the view using the addListener
 // method.
-@protocol NSBrowserListener
+@protocol CHBrowserListener
 
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
@@ -81,7 +81,7 @@ typedef enum {
   NSStatusTypeLink              = 0x0003,
 } NSStatusType;
 
-@protocol NSBrowserContainer
+@protocol CHBrowserContainer
 
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type;
 - (NSString *)title;
@@ -134,9 +134,9 @@ enum {
 - (void)setFrame:(NSRect)frameRect;
 
 // nsIWebBrowser methods
-- (void)addListener:(id <NSBrowserListener>)listener;
-- (void)removeListener:(id <NSBrowserListener>)listener;
-- (void)setContainer:(id <NSBrowserContainer>)container;
+- (void)addListener:(id <CHBrowserListener>)listener;
+- (void)removeListener:(id <CHBrowserListener>)listener;
+- (void)setContainer:(id <CHBrowserContainer>)container;
 - (nsIDOMWindow*)getContentWindow;
 
 // nsIWebNavigation methods

@@ -41,7 +41,7 @@
 @class BrowserWindowController;
 @class ToolTip;
 
-@interface BrowserWrapper : NSView <NSBrowserListener, NSBrowserContainer>
+@interface BrowserWrapper : NSView <CHBrowserListener, CHBrowserContainer>
 {
   NSTextField*              mUrlbar;
   NSTextField*              mStatus;
@@ -96,7 +96,7 @@
 - (NSMenu*)getContextMenu;
 - (void)setIsBookmarksImport:(BOOL)aIsImport;
 
-// NSBrowserListener messages
+// CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
 - (void)onProgressChange:(int)currentBytes outOf:(int)maxBytes;
@@ -106,7 +106,7 @@
 - (void)onShowTooltip:(NSPoint)where withText:(NSString*)text;
 - (void)onHideTooltip;
 
-// NSBrowserContainer messages
+// CHBrowserContainer messages
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type;
 - (NSString *)title;
 - (void)setTitle:(NSString *)title;

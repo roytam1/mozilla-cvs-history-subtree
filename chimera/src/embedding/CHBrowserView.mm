@@ -176,17 +176,17 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   }
 }
 
-- (void)addListener:(id <NSBrowserListener>)listener
+- (void)addListener:(id <CHBrowserListener>)listener
 {
   _listener->AddListener(listener);
 }
 
-- (void)removeListener:(id <NSBrowserListener>)listener
+- (void)removeListener:(id <CHBrowserListener>)listener
 {
   _listener->RemoveListener(listener);
 }
 
-- (void)setContainer:(id <NSBrowserContainer>)container
+- (void)setContainer:(id <CHBrowserContainer>)container
 {
   _listener->SetContainer(container);
 }
@@ -750,9 +750,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 -(NSMenu*)getContextMenu
 {
-  if ([[self superview] conformsToProtocol:@protocol(NSBrowserContainer)])
+  if ([[self superview] conformsToProtocol:@protocol(CHBrowserContainer)])
   {
-    id<NSBrowserContainer> browserContainer = [self superview];
+    id<CHBrowserContainer> browserContainer = [self superview];
   	return [browserContainer getContextMenu];
   }
   
@@ -772,9 +772,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   
   // Finally, see if our parent responds to the getNativeWindow selector,
   // and if they do, let them handle it.
-  if ([[self superview] conformsToProtocol:@protocol(NSBrowserContainer)])
+  if ([[self superview] conformsToProtocol:@protocol(CHBrowserContainer)])
   {
-    id<NSBrowserContainer> browserContainer = [self superview];
+    id<CHBrowserContainer> browserContainer = [self superview];
     return [browserContainer getNativeWindow];
   }
     
@@ -805,9 +805,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (BOOL)shouldAcceptDrag:(id <NSDraggingInfo>)sender
 {
-  if ([[self superview] conformsToProtocol:@protocol(NSBrowserContainer)])
+  if ([[self superview] conformsToProtocol:@protocol(CHBrowserContainer)])
   {
-    id<NSBrowserContainer> browserContainer = [self superview];
+    id<CHBrowserContainer> browserContainer = [self superview];
     return [browserContainer shouldAcceptDragFromSource:[sender draggingSource]];
   }
   return YES;

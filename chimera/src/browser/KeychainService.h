@@ -121,7 +121,7 @@ private:
 //
 // Keychain browser listener to auto fill username/passwords.
 //
-@interface KeychainBrowserListener : NSObject<NSBrowserListener>
+@interface KeychainBrowserListener : NSObject<CHBrowserListener>
 {
   KeychainService* mKeychain;
   CHBrowserView* mBrowserView;

@@ -518,7 +518,7 @@ CHBrowserListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequ
                                         PRUint32 aStateFlags, PRUint32 aStatus)
 {
   NSEnumerator* enumerator = [mListeners objectEnumerator];
-  id<NSBrowserListener> obj;
+  id<CHBrowserListener> obj;
   
   if (aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK) {
     if (aStateFlags & nsIWebProgressListener::STATE_START) {
@@ -541,7 +541,7 @@ CHBrowserListener::OnProgressChange(nsIWebProgress *aWebProgress, nsIRequest *aR
                                           PRInt32 aCurTotalProgress, PRInt32 aMaxTotalProgress)
 {
   NSEnumerator* enumerator = [mListeners objectEnumerator];
-  id<NSBrowserListener> obj;
+  id<CHBrowserListener> obj;
   while ((obj = [enumerator nextObject]))
     [obj onProgressChange:aCurTotalProgress outOf:aMaxTotalProgress];
   
@@ -561,7 +561,7 @@ CHBrowserListener::OnLocationChange(nsIWebProgress *aWebProgress, nsIRequest *aR
   NSString* str = [NSString stringWithCString:spec.get()];
 
   NSEnumerator* enumerator = [mListeners objectEnumerator];
-  id<NSBrowserListener> obj;
+  id<CHBrowserListener> obj;
   while ((obj = [enumerator nextObject]))
     [obj onLocationChange:str];
 
@@ -576,7 +576,7 @@ CHBrowserListener::OnStatusChange(nsIWebProgress *aWebProgress, nsIRequest *aReq
   NSString* str = [NSString stringWithPRUnichars:aMessage];
   
   NSEnumerator* enumerator = [mListeners objectEnumerator];
-  id<NSBrowserListener> obj; 
+  id<CHBrowserListener> obj; 
   while ((obj = [enumerator nextObject]))
     [obj onStatusChange: str];
 
@@ -588,7 +588,7 @@ NS_IMETHODIMP
 CHBrowserListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 state)
 {
   NSEnumerator* enumerator = [mListeners objectEnumerator];
-  id<NSBrowserListener> obj; 
+  id<CHBrowserListener> obj; 
   while ((obj = [enumerator nextObject]))
     [obj onSecurityStateChange: state];
 
@@ -596,19 +596,19 @@ CHBrowserListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aR
 }
 
 void 
-CHBrowserListener::AddListener(id <NSBrowserListener> aListener)
+CHBrowserListener::AddListener(id <CHBrowserListener> aListener)
 {
   [mListeners addObject:aListener];
 }
 
 void 
-CHBrowserListener::RemoveListener(id <NSBrowserListener> aListener)
+CHBrowserListener::RemoveListener(id <CHBrowserListener> aListener)
 {
   [mListeners removeObject:aListener];
 }
 
 void 
-CHBrowserListener::SetContainer(id <NSBrowserContainer> aContainer)
+CHBrowserListener::SetContainer(id <CHBrowserContainer> aContainer)
 {
   [mContainer autorelease];
 
