@@ -46,9 +46,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= \
-		nsAutoCopy.cpp \
 		nsCaret.cpp \
-		nsCopySupport.cpp \
 		nsFrameList.cpp \
 		nsFrameTraversal.cpp \
 		nsFrameUtil.cpp \
@@ -65,6 +63,13 @@ CPPSRCS		= \
 		nsSpaceManager.cpp \
 		nsStyleChangeList.cpp \
 		$(NULL)
+
+ifdef MOZ_SERIALIZE 
+CPPSCRS		+= \
+		nsAutoCopy.cpp \
+		nsCopySupport.cpp \
+		$(NULL)
+endif
 
 ifdef IBMBIDI
 CPPSRCS		+= \

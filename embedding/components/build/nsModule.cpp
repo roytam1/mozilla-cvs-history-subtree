@@ -56,7 +56,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsWindowWatcher, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppStartupNotifier)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFind)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWebBrowserFind)
+#ifdef MOZ_SERIALIZE
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWebBrowserPersist)
+#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsControllerCommandTable)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCommandManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCommandParams, Init)
@@ -87,7 +89,9 @@ static const nsModuleComponentInfo gComponents[] = {
   { "Find",           NS_FIND_CID, NS_FIND_CONTRACTID, nsFindConstructor },
   { "WebBrowserFind",           NS_WEB_BROWSER_FIND_CID, NS_WEB_BROWSER_FIND_CONTRACTID, nsWebBrowserFindConstructor },
   { NS_APPSTARTUPNOTIFIER_CLASSNAME, NS_APPSTARTUPNOTIFIER_CID, NS_APPSTARTUPNOTIFIER_CONTRACTID, nsAppStartupNotifierConstructor },
+#ifdef MOZ_SERIALIZE
   { "WebBrowserPersist Component", NS_WEBBROWSERPERSIST_CID, NS_WEBBROWSERPERSIST_CONTRACTID, nsWebBrowserPersistConstructor },
+#endif
   { "Controller Command Table", NS_CONTROLLERCOMMANDTABLE_CID, NS_CONTROLLERCOMMANDTABLE_CONTRACTID, nsControllerCommandTableConstructor },
   { "Command Manager", NS_COMMAND_MANAGER_CID, NS_COMMAND_MANAGER_CONTRACTID, nsCommandManagerConstructor },
   { "Command Params", NS_COMMAND_PARAMS_CID, NS_COMMAND_PARAMS_CONTRACTID, nsCommandParamsConstructor },

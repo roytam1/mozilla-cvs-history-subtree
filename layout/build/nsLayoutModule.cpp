@@ -57,7 +57,6 @@
 #include "nsGenericDOMDataNode.h"
 #include "nsHTMLAtoms.h"
 #include "nsHTMLAtoms.h"
-#include "nsHTMLContentSerializer.h"
 #include "nsGenericHTMLElement.h"
 #include "nsIBindingManager.h"
 #include "nsICSSLoader.h"
@@ -67,7 +66,6 @@
 #include "nsIComponentManager.h"
 #include "nsIComputedDOMStyle.h"
 #include "nsIContentIterator.h"
-#include "nsIContentSerializer.h"
 #include "nsIController.h"
 #include "nsIControllers.h"
 #include "nsIDOMDOMImplementation.h"
@@ -104,11 +102,8 @@
 #include "nsIFrameLoader.h"
 #include "nsICaret.h"
 #include "nsLayoutAtoms.h"
-#include "nsPlainTextSerializer.h"
-#include "mozSanitizingSerializer.h"
 #include "nsRange.h"
 #include "nsComputedDOMStyle.h"
-#include "nsXMLContentSerializer.h"
 #include "nsRuleNode.h"
 #include "nsWyciwygProtocolHandler.h"
 #include "nsContentAreaDragDrop.h"
@@ -131,6 +126,12 @@
 #include "nsXULAtoms.h"
 #include "nsLayoutCID.h"
 #include "nsImageLoadingContent.h"
+
+#include "nsHTMLContentSerializer.h"
+#include "nsIContentSerializer.h"
+#include "nsPlainTextSerializer.h"
+#include "mozSanitizingSerializer.h"
+#include "nsXMLContentSerializer.h"
 
 // view stuff
 #include "nsViewsCID.h"
@@ -420,7 +421,6 @@ MAKE_CTOR(CreateNewIFrameBoxObject,     nsIBoxObject,           NS_NewIFrameBoxO
 MAKE_CTOR(CreateNewScrollBoxObject,     nsIBoxObject,           NS_NewScrollBoxObject)
 MAKE_CTOR(CreateNewTreeBoxObject,       nsIBoxObject,           NS_NewTreeBoxObject)
 #endif
-MAKE_CTOR(CreateNewAutoCopyService,     nsIAutoCopyService,     NS_NewAutoCopyService)
 MAKE_CTOR(CreateSelectionImageService,  nsISelectionImageService,NS_NewSelectionImageService)
 MAKE_CTOR(CreateCaret,                  nsICaret,               NS_NewCaret)
 
@@ -459,14 +459,20 @@ MAKE_CTOR(CreateGeneratedSubtreeIterator, nsIContentIterator,          NS_NewGen
 MAKE_CTOR(CreateSubtreeIterator,          nsIContentIterator,          NS_NewContentSubtreeIterator)
 // CreateHTMLImgElement, see below
 // CreateHTMLOptionElement, see below
+
+#ifdef MOZ_SERIALIZE
+MAKE_CTOR(CreateNewAutoCopyService,       nsIAutoCopyService,          NS_NewAutoCopyService)
+
 MAKE_CTOR(CreateTextEncoder,              nsIDocumentEncoder,          NS_NewTextEncoder)
 MAKE_CTOR(CreateHTMLCopyTextEncoder,      nsIDocumentEncoder,          NS_NewHTMLCopyTextEncoder)
 MAKE_CTOR(CreateXMLContentSerializer,     nsIContentSerializer,        NS_NewXMLContentSerializer)
 MAKE_CTOR(CreateHTMLContentSerializer,    nsIContentSerializer,        NS_NewHTMLContentSerializer)
 MAKE_CTOR(CreatePlainTextSerializer,      nsIContentSerializer,        NS_NewPlainTextSerializer)
+MAKE_CTOR(CreateSanitizingHTMLSerializer, nsIContentSerializer,        NS_NewSanitizingHTMLSerializer)
+#endif
+
 MAKE_CTOR(CreateHTMLFragmentSink,         nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink)
 MAKE_CTOR(CreateHTMLFragmentSink2,        nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink2)
-MAKE_CTOR(CreateSanitizingHTMLSerializer, nsIContentSerializer,        NS_NewSanitizingHTMLSerializer)
 MAKE_CTOR(CreateXBLService,               nsIXBLService,               NS_NewXBLService)
 MAKE_CTOR(CreateBindingManager,           nsIBindingManager,           NS_NewBindingManager)
 MAKE_CTOR(CreateContentPolicy,            nsIContentPolicy,            NS_NewContentPolicy)
@@ -494,10 +500,12 @@ MAKE_CTOR(CreateContentDLF,               nsIDocumentLoaderFactory,    NS_NewCon
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCSSOMFactory)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsInspectorCSSUtils)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWyciwygProtocolHandler)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
 MAKE_CTOR(CreateSyncLoadDOMService,       nsISyncLoadDOMService,       NS_NewSyncLoadDOMService)
 MAKE_CTOR(CreatePluginDocument,           nsIDocument,                 NS_NewPluginDocument)
 
+#ifdef MOZ_SERIALIZE
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
+#endif
 // views are not refcounted, so this is the same as
 // NS_GENERIC_FACTORY_CONSTRUCTOR without the NS_ADDREF/NS_RELEASE
 #define NS_GENERIC_FACTORY_CONSTRUCTOR_NOREFS(_InstanceClass)                 \
@@ -741,11 +749,6 @@ static const nsModuleComponentInfo gComponents[] = {
     CreateNewTreeBoxObject },
 #endif
 
-  { "AutoCopy Service",
-    NS_AUTOCOPYSERVICE_CID,
-    "@mozilla.org/autocopy;1",
-    CreateNewAutoCopyService },
-
   { "Namespace manager",
     NS_NAMESPACEMANAGER_CID,
     NS_NAMESPACEMANAGER_CONTRACTID,
@@ -933,6 +936,13 @@ static const nsModuleComponentInfo gComponents[] = {
     RegisterHTMLOptionElement,
     UnregisterHTMLOptionElement },
 
+#ifdef MOZ_SERIALIZE
+
+  { "AutoCopy Service",
+    NS_AUTOCOPYSERVICE_CID,
+    "@mozilla.org/autocopy;1",
+    CreateNewAutoCopyService },
+
   { "XML document encoder",
     NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_CONTRACTID_BASE "text/xml",
@@ -1012,6 +1022,12 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_PLAINTEXTSINK_CONTRACTID,
     CreatePlainTextSerializer },
 
+  { "HTML sanitizing content serializer",
+    MOZ_SANITIZINGHTMLSERIALIZER_CID,
+    MOZ_SANITIZINGHTMLSERIALIZER_CONTRACTID,
+    CreateSanitizingHTMLSerializer },
+#endif
+
   { "html fragment sink",
     NS_HTMLFRAGMENTSINK_CID,
     NS_HTMLFRAGMENTSINK_CONTRACTID,
@@ -1022,10 +1038,6 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_HTMLFRAGMENTSINK2_CONTRACTID,
     CreateHTMLFragmentSink2 },
 
-  { "HTML sanitizing content serializer",
-    MOZ_SANITIZINGHTMLSERIALIZER_CID,
-    MOZ_SANITIZINGHTMLSERIALIZER_CONTRACTID,
-    CreateSanitizingHTMLSerializer },
 
   { "XBL Service",
     NS_XBLSERVICE_CID,
@@ -1146,12 +1158,12 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_WYCIWYGPROTOCOLHANDLER_CID,
     NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "wyciwyg",
     nsWyciwygProtocolHandlerConstructor },
-
+#ifdef MOZ_SERIALIZE
   { "Content Area DragDrop",
     NS_CONTENTAREADRAGDROP_CID,
     NS_CONTENTAREADRAGDROP_CONTRACTID,
     nsContentAreaDragDropConstructor },
-
+#endif
   { "SyncLoad DOM Service",
     NS_SYNCLOADDOMSERVICE_CID,
     NS_SYNCLOADDOMSERVICE_CONTRACTID,

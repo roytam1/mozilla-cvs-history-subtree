@@ -197,11 +197,12 @@ protected:
     */
   NS_IMETHOD GetLayoutObject(nsIDOMNode *aInNode, nsISupports **aOutLayoutObject);
   // Helpers for output routines
+#ifdef MOZ_SERIALIZE
   NS_IMETHOD GetAndInitDocEncoder(const nsAString& aFormatType,
                                   PRUint32 aFlags,
                                   const nsACString& aCharset,
                                   nsIDocumentEncoder** encoder);
-
+#endif
   // key event helpers
   NS_IMETHOD CreateBR(nsIDOMNode *aNode, PRInt32 aOffset, 
                       nsCOMPtr<nsIDOMNode> *outBRNode, EDirection aSelect = eNone);
@@ -217,11 +218,13 @@ protected:
                                         nsIDOMNode *aDestinationNode,
                                         PRInt32 aDestOffset,
                                         PRBool aDoDeleteSelection);
+#ifdef MOZ_SERIALIZE
   virtual nsresult SetupDocEncoder(nsIDocumentEncoder **aDocEncoder);
   virtual nsresult PutDragDataInTransferable(nsITransferable **aTransferable);
 
   /** shared outputstring; returns whether selection is collapsed and resulting string */
   nsresult SharedOutputString(PRUint32 aFlags, PRBool* aIsCollapsed, nsAString& aResult);
+#endif
 
   /** simple utility to handle any error with event listener allocation or registration */
   void HandleEventListenerError();

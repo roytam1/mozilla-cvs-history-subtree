@@ -349,6 +349,9 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDr
 
 NS_IMETHODIMP nsPlaintextEditor::DoDrag(nsIDOMEvent *aDragEvent)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_OK;
+#else
   nsresult rv;
 
   nsCOMPtr<nsITransferable> trans;
@@ -395,6 +398,7 @@ NS_IMETHODIMP nsPlaintextEditor::DoDrag(nsIDOMEvent *aDragEvent)
     nsevent->PreventBubble();
 
   return rv;
+#endif
 }
 
 NS_IMETHODIMP nsPlaintextEditor::Paste(PRInt32 aSelectionType)
@@ -472,6 +476,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPa
   return NS_OK;
 }
 
+#ifdef MOZ_SERIALIZE
 nsresult
 nsPlaintextEditor::SetupDocEncoder(nsIDocumentEncoder **aDocEncoder)
 {
@@ -584,3 +589,4 @@ nsPlaintextEditor::PutDragDataInTransferable(nsITransferable **aTransferable)
   NS_ADDREF(*aTransferable);
   return NS_OK;
 }
+#endif

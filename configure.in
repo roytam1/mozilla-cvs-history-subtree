@@ -3483,6 +3483,18 @@ if test "$MOZ_XPINSTALL"; then
 fi
 
 dnl ========================================================
+dnl serialize support on by default
+dnl ========================================================
+MOZ_SERIALIZE=1
+MOZ_ARG_DISABLE_BOOL(serialize,
+[  --disable-serialize     Disable serialize support],
+    MOZ_SERIALIZE=,
+    MOZ_SERIALIZE=1 )
+if test "$MOZ_SERIALIZE"; then
+    AC_DEFINE(MOZ_SERIALIZE)
+fi
+
+dnl ========================================================
 dnl Single profile support off by default
 dnl ========================================================
 MOZ_SINGLE_PROFILE=
@@ -5077,6 +5089,7 @@ AC_SUBST(IBMBIDI)
 AC_SUBST(SUNCTL)
 AC_SUBST(ACCESSIBILITY)
 AC_SUBST(MOZ_XPINSTALL)
+AC_SUBST(MOZ_SERIALIZE)
 AC_SUBST(MOZ_VIEW_SOURCE)
 AC_SUBST(MOZ_SINGLE_PROFILE)
 AC_SUBST(MOZ_XPFE_COMPONENTS)

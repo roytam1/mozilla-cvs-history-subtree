@@ -4565,6 +4565,9 @@ PresShell::GetImageLocation(nsIDOMNode* aNode, nsAString& aLocationString)
 // DoCopyImageContents: copy image contents to clipboard
 NS_IMETHODIMP PresShell::DoCopyImageContents(nsIDOMNode* aNode)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   NS_ENSURE_ARG_POINTER(aNode);
 
   nsresult rv;
@@ -4578,6 +4581,7 @@ NS_IMETHODIMP PresShell::DoCopyImageContents(nsIDOMNode* aNode)
 
   // if no image, fail.
   return NS_ERROR_FAILURE;
+#endif
 }
 
 nsresult
@@ -4630,6 +4634,9 @@ PresShell::GetSelectionForCopy(nsISelection** outSelection)
 NS_IMETHODIMP
 PresShell::DoGetContents(const nsACString& aMimeType, PRUint32 aFlags, PRBool aSelectionOnly, nsAString& aOutValue)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   aOutValue.Truncate();
   
   nsCOMPtr<nsIDocument> doc;
@@ -4654,11 +4661,15 @@ PresShell::DoGetContents(const nsACString& aMimeType, PRUint32 aFlags, PRBool aS
   
   // call the copy code
   return nsCopySupport::GetContents(aMimeType, aFlags, sel, doc, aOutValue);
+#endif
 }
 
 NS_IMETHODIMP
 PresShell::DoCopy()
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   nsCOMPtr<nsIDocument> doc;
   GetDocument(getter_AddRefs(doc));
   if (!doc) return NS_ERROR_FAILURE;
@@ -4691,6 +4702,7 @@ PresShell::DoCopy()
   }
   
   return NS_OK;
+#endif
 }
 
 NS_IMETHODIMP

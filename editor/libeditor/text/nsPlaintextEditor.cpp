@@ -1302,7 +1302,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanCopy(PRBool *aCanCopy)
   return NS_OK;
 }
 
-
+#ifdef MOZ_SERIALIZE
 // Shared between OutputToString and OutputToStream
 NS_IMETHODIMP
 nsPlaintextEditor::GetAndInitDocEncoder(const nsAString& aFormatType,
@@ -1390,13 +1390,16 @@ nsPlaintextEditor::GetAndInitDocEncoder(const nsAString& aFormatType,
   NS_ADDREF(*encoder = docEncoder);
   return rv;
 }
-
+#endif
 
 NS_IMETHODIMP 
 nsPlaintextEditor::OutputToString(const nsAString& aFormatType,
                                   PRUint32 aFlags,
                                   nsAString& aOutputString)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   nsString resultString;
   nsTextRulesInfo ruleInfo(nsTextEditRules::kOutputText);
   ruleInfo.outString = &resultString;
@@ -1422,6 +1425,7 @@ nsPlaintextEditor::OutputToString(const nsAString& aFormatType,
   if (NS_FAILED(rv))
     return rv;
   return encoder->EncodeToString(aOutputString);
+#endif // MOZ_SERIALIZE
 }
 
 NS_IMETHODIMP
@@ -1430,6 +1434,9 @@ nsPlaintextEditor::OutputToStream(nsIOutputStream* aOutputStream,
                              const nsACString& aCharset,
                              PRUint32 aFlags)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   nsresult rv;
 
   // special-case for empty document when requesting plain text,
@@ -1453,8 +1460,8 @@ nsPlaintextEditor::OutputToStream(nsIOutputStream* aOutputStream,
     return rv;
 
   return encoder->EncodeToStream(aOutputStream);
+#endif // MOZ_SERIALIZE
 }
-
 
 #ifdef XP_MAC
 #pragma mark -
@@ -1610,6 +1617,7 @@ nsPlaintextEditor::InsertAsCitedQuotation(const nsAString& aQuotedText,
   return InsertAsQuotation(aQuotedText, aNodeInserted);
 }
 
+#ifdef MOZ_SERIALIZE
 nsresult
 nsPlaintextEditor::SharedOutputString(PRUint32 aFlags, PRBool* aIsCollapsed, nsAString& aResult)
 {
@@ -1627,10 +1635,14 @@ nsPlaintextEditor::SharedOutputString(PRUint32 aFlags, PRBool* aIsCollapsed, nsA
 
   return OutputToString(NS_LITERAL_STRING("text/plain"), aFlags, aResult);
 }
+#endif
 
 NS_IMETHODIMP
 nsPlaintextEditor::Rewrap(PRBool aRespectNewlines)
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   PRInt32 wrapCol;
   nsresult rv = GetWrapWidth(&wrapCol);
   if (NS_FAILED(rv))
@@ -1665,11 +1677,15 @@ nsPlaintextEditor::Rewrap(PRBool aRespectNewlines)
     SelectAll();
 
   return InsertTextWithQuotations(wrapped);
+#endif
 }
 
 NS_IMETHODIMP    
 nsPlaintextEditor::StripCites()
 {
+#ifndef MOZ_SERIALIZE
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
 #ifdef DEBUG_akkana
   printf("nsPlaintextEditor::StripCites()\n");
 #endif
@@ -1695,6 +1711,7 @@ nsPlaintextEditor::StripCites()
   }
 
   return InsertText(stripped);
+#endif
 }
 
 NS_IMETHODIMP

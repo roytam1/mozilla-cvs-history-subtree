@@ -70,7 +70,6 @@ CPPSRCS		= \
 		nsContentList.cpp \
 		nsContentPolicy.cpp \
 		nsDocument.cpp \
-		nsDocumentEncoder.cpp \
 		nsDocumentFragment.cpp \
 		nsDocumentViewer.cpp \
 		nsDOMAttribute.cpp \
@@ -93,18 +92,24 @@ CPPSRCS		= \
 		nsTextContentChangeData.cpp \
 		nsTextNode.cpp \
 		nsTreeWalker.cpp \
-		nsXMLContentSerializer.cpp \
-		nsHTMLContentSerializer.cpp \
 		nsParserUtils.cpp \
-		nsPlainTextSerializer.cpp \
-		mozSanitizingSerializer.cpp \
 		nsScriptLoader.cpp \
 		nsStyleLinkElement.cpp \
-		nsContentAreaDragDrop.cpp \
 		nsFrameLoader.cpp \
 		nsScriptEventManager.cpp \
 		nsImageLoadingContent.cpp \
 		$(NULL)
+
+ifdef MOZ_SERIALIZE
+CPPSRCS        +=\
+		nsDocumentEncoder.cpp \
+		nsContentAreaDragDrop.cpp \
+		nsXMLContentSerializer.cpp \
+		nsHTMLContentSerializer.cpp \
+		nsPlainTextSerializer.cpp \
+		mozSanitizingSerializer.cpp \
+		$(NULL)
+endif
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.
