@@ -261,7 +261,7 @@ struct RDF_FileStruct {
 };
 
 
-
+RDFT NewRemoteStore (char* url);
 RDF_Resource nextFindValue (RDF_Cursor c) ;
 PRBool isTypeOf (RDF rdf, RDF_Resource u,  RDF_Resource v); 
 RDF getRDFDB (void);

@@ -724,7 +724,7 @@ MakeCookieStore (char* url)
 {
   if (startsWith("rdf:CookieStore", url)) {
     if (gCookieStore == 0) {
-      RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
+      RDFT ntr = NewRemoteStore(url);
       ntr->assert = CookieAssert;
       ntr->unassert = CookieUnassert;
       ntr->getSlotValue = CookieGetSlotValue;
@@ -733,7 +733,6 @@ MakeCookieStore (char* url)
       ntr->nextValue = CookieGetNextValue;
       ntr->disposeCursor = CookieDisposeCursor;
       gCookieStore = ntr;
-      ntr->url = copyString(url);
       NET_InitRDFCookieResources (    ) ;
       return ntr;
     } else return gCookieStore;

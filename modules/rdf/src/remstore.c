@@ -31,7 +31,7 @@
 
 
 	/* globals */
-PLHashTable	*RDFFileDBHash = NULL;
+
 
 
 
@@ -40,30 +40,12 @@ MakeRemoteStore (char* url)
 {
   if (startsWith("rdf:remoteStore", url)) {
     if (gRemoteStore == 0) {
-      RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
-      ntr->assert = NULL;
-      ntr->unassert = NULL;
-      ntr->getSlotValue = remoteStoreGetSlotValue;
-      ntr->getSlotValues = remoteStoreGetSlotValues;
-      ntr->hasAssertion = remoteStoreHasAssertion;
-      ntr->nextValue = remoteStoreNextValue;
-      ntr->disposeCursor = remoteStoreDisposeCursor;     
-      gRemoteStore = ntr;
-      ntr->url = copyString(url);
-      return ntr;
+      gRemoteStore = NewRemoteStore(url);
+      return gRemoteStore;
     } else return gRemoteStore;
   } else return NULL;
 }
 
-
-
-RDFT
-existingRDFFileDB (char* url)
-{
-	if (RDFFileDBHash == 0) 
-		RDFFileDBHash = PL_NewHashTable(100, PL_HashString, PL_CompareStrings, PL_CompareValues, NULL, NULL);
-	return  PL_HashTableLookup(RDFFileDBHash, url);
-}
 
 
 
@@ -71,20 +53,8 @@ RDFT
 MakeFileDB (char* url)
 {
   if (strchr(url, ':')) {
-    RDFT ntr = existingRDFFileDB(url);
-    if (ntr) return ntr;    
-    ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
-    ntr->assert = NULL;
-    ntr->unassert = NULL;
-    ntr->getSlotValue = remoteStoreGetSlotValue;
-    ntr->getSlotValues = remoteStoreGetSlotValues;
-    ntr->hasAssertion = remoteStoreHasAssertion;
-    ntr->nextValue = remoteStoreNextValue;
-    ntr->disposeCursor = remoteStoreDisposeCursor;
+    RDFT ntr = NewRemoteStore(url);
     ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ;
-    ntr->url = copyString(url);
-    PL_HashTableAdd(RDFFileDBHash, url, ntr);
-    ntr->possiblyAccessFile = RDFFilePossiblyAccessFile ; 
     if (endsWith("navcntr.rdf", url)) 
       readRDFFile(url, RDF_GetResource(NULL, url, 1), 0, ntr); 
     return ntr;
@@ -374,33 +344,75 @@ remoteStoreGetSlotValues (RDFT mcf, RDF_Resource u, RDF_Resource s, RDF_ValueTyp
 }
 
 
+RDF_Cursor
+remoteStoreArcLabelsIn (RDFT mcf, RDF_Resource u) {
+  if (u->rarg2) {
+    RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
+    c->u = u;
+    c->type = RDF_ARC_LABELS_IN_QUERY;
+    c->pdata = u->rarg2;
+    return c;
+  } else return NULL;
+}
+
+RDF_Cursor
+remoteStoreArcLabelsOut (RDFT mcf, RDF_Resource u) {
+  if (u->rarg1) {
+    RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
+    c->u = u;
+    c->type = RDF_ARC_LABELS_OUT_QUERY;
+    c->pdata = u->rarg2;
+    return c;
+  } else return NULL;
+}
+
+void* arcLabelsOutNextValue (RDFT mcf, RDF_Cursor c) {
+  while (c->pdata != null) {
+    Assertion as = (Assertion) c->pdata;
+    if ((as->db == mcf) && (as->u == c->u)) {
+      c->value = as->s;
+      c->pdata = as->next;
+      return c->value;
+    }
+    c->pdata = as->next;
+  }  
+  return null;
+}
+
+
+void* arcLabelsInNextValue (RDFT mcf, RDF_Cursor c) {
+  while (c->pdata != null) {
+    Assertion as = (Assertion) c->pdata;
+    if ((as->db == mcf) && (as->value == c->u)) {
+      c->value = as->s;
+      c->pdata = as->invNext;
+      return c->value;
+    }
+    c->pdata = as->invNext;
+  }  
+  return null;
+}
+
 
 void *
 remoteStoreNextValue (RDFT mcf, RDF_Cursor c)
 {
-  while (c->pdata != null) {
-    Assertion as = (Assertion) c->pdata;
-    if ((as->db == mcf) && (as->s == c->s) && (as->tv == c->tv) && (c->type == as->type)) {
-      if (c->s == gCoreVocab->RDF_slotsHere) {
-        c->value = as->s;
-      } else { 
+  if (c->queryType == RDF_ARC_LABELS_OUT_QUERY) {
+    return arcLabelsOutNextValue(mcf, c);
+  } else if (c->queryType == RDF_ARC_LABELS_IN_QUERY) {
+    return arcLabelsInNextValue(mcf, c);
+  } else {
+    while (c->pdata != null) {
+      Assertion as = (Assertion) c->pdata;
+      if ((as->db == mcf) && (as->s == c->s) && (as->tv == c->tv) && (c->type == as->type)) {
         c->value = (c->inversep ? as->u : as->value);
+        c->pdata = (c->inversep ? as->invNext : as->next);
+        return c->value;
       }
       c->pdata = (c->inversep ? as->invNext : as->next);
-      if (c->type == RDF_RESOURCE_TYPE) {
-#ifdef MOZILLA_CLIENT
-#ifdef DEBUG
-        FE_Trace(resourceID(c->value));
-        FE_Trace("\n");
-#endif
-#endif
-      }
-      return c->value;
-    }
-    c->pdata = (c->inversep ? as->invNext : as->next);
-  }
-  
+    }  
   return null;
+  }
 }
 
 
@@ -503,13 +515,11 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return NULL;
   } else {
     RDFFile newFile = makeRDFFile(url, top, localp);  
-#if defined(DEBUG) && defined(MOZILLA_CLIENT)
-#ifdef XP_WIN
+#if defined(DEBUG) && defined(MOZILLA_CLIENT) && defined(XP_WIN)
     char* traceLine = getMem(500);
     sprintf(traceLine, "\nAccessing %s (%s)\n", url, db->url);
     FE_Trace(traceLine);
     freeMem(traceLine);
-#endif
 #endif
   
     if (db->pdata) {  
@@ -575,22 +585,26 @@ SCookPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool invers
   } */
 }
 
-
+RDFT NewRemoteStore (char* url) {
+  RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
+  ntr->getSlotValue = remoteStoreGetSlotValue;
+  ntr->getSlotValues = remoteStoreGetSlotValues;
+  ntr->hasAssertion = remoteStoreHasAssertion;
+  ntr->nextValue = remoteStoreNextValue;
+  ntr->disposeCursor = remoteStoreDisposeCursor;
+  ntr->url = copyString(url);
+  ntr->arcLabelsIn = remoteStoreArcLabelsIn;
+  ntr->arcLabelsOut = remoteStoreArcLabelsOut;
+  return ntr;
+}
+  
 
 RDFT
 MakeSCookDB (char* url)
 {
   if (startsWith("rdf:scook:", url) || (startsWith("rdf:ht", url))) {
-    RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
-    ntr->assert = NULL;
-    ntr->unassert = NULL;
-    ntr->getSlotValue = remoteStoreGetSlotValue;
-    ntr->getSlotValues = remoteStoreGetSlotValues;
-    ntr->hasAssertion = remoteStoreHasAssertion;
-    ntr->nextValue = remoteStoreNextValue;
-    ntr->disposeCursor = remoteStoreDisposeCursor;
+    RDFT ntr = NewRemoteStore(url);
     ntr->possiblyAccessFile = SCookPossiblyAccessFile;
-    ntr->url = copyString(url);
     return ntr;
   } else return NULL;
 }

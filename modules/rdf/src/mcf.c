@@ -139,6 +139,16 @@ RDF_AddDataSource(RDF rdf, char* dataSource)
   while ((next = rdf->translators[n++]) && (n < rdf->numTranslators)) {
     if (strcmp(next->url, dataSource) == 0) return next;
   }
+#ifdef MOZILLA_CLIENT
+#ifdef DEBUG
+  {
+    char* traceLine = getMem(500);
+    sprintf(traceLine, "\nAdding %s \n", dataSource);
+    FE_Trace(traceLine);
+    freeMem(traceLine);
+  }
+#endif
+#endif
   if (rdf->numTranslators == rdf->translatorArraySize) {
     RDFT* tmp = (RDFT*)getMem((rdf->numTranslators+5)*(sizeof(RDFT)));
     memcpy(tmp, rdf->translators, (rdf->numTranslators * sizeof(RDFT)));
@@ -685,7 +695,7 @@ RDF_NextValue (RDF_Cursor c)
   rdf =  c->rdf;
   ans = (*rdf->translators[c->count]->nextValue)(rdf->translators[c->count], c->current);
   while (ans != NULL) {
-    if (c->count == 0) {
+    if ((c->count == 0) || (c->queryType != RDF_GET_SLOT_VALUES_QUERY)) {
       if (c->type == RDF_RESOURCE_TYPE)  return addDep(c->rdf, ans);
       else				 return ans;
       }
@@ -704,8 +714,19 @@ RDF_NextValue (RDF_Cursor c)
   c->current = NULL;
   while ((c->count < rdf->numTranslators - 1) && (!c->current)) {
     c->count++;
-    c->current = callGetSlotValues(c->count,rdf, c->u, c->s, c->type, 
-				   c->inversep, c->tv);
+    switch (c->queryType) {
+    case RDF_GET_SLOT_VALUES_QUERY : 
+      c->current = callGetSlotValues(c->count,rdf, c->u, c->s, c->type, 
+                                     c->inversep, c->tv);
+      break;
+    case RDF_ARC_LABELS_OUT_QUERY :
+      c->current = callArcLabelsOut(c->count, rdf, c->u);
+      break;
+    case RDF_ARC_LABELS_IN_QUERY :
+      c->current = callArcLabelsIn(c->count, rdf, c->u);
+      break;
+    }
+    
   }
   if (c->current == NULL) return NULL;
   return RDF_NextValue(c);

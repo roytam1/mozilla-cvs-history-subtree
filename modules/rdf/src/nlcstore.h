@@ -108,6 +108,7 @@ void		deleteSlotsIn (RDFT rdf, RDF_Resource u, RDF_Resource s);
 void		nlclStoreKill (RDFT rdf, RDF_Resource u);
 PRBool		nlocalStoreAddChildAt(RDFT rdf, RDF_Resource parent, RDF_Resource ref, RDF_Resource new, PRBool beforep);
 RDFT		MakeLocalStore (char* url);
+RDF_Resource  nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c) ;
 
 XP_END_PROTOS
 

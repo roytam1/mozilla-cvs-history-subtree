@@ -36,16 +36,10 @@ extern	RDF	gNCDB;
 RDFT
 MakeESFTPStore (char* url)
 {
-  RDFT ntr = (RDFT)getMem(sizeof(struct RDF_TranslatorStruct));
+  RDFT ntr = NewRemoteStore(url);
   ntr->assert = ESAssert;
   ntr->unassert = ESUnassert;
-  ntr->getSlotValue = remoteStoreGetSlotValue;
-  ntr->getSlotValues = remoteStoreGetSlotValues;
-  ntr->hasAssertion = remoteStoreHasAssertion;
-  ntr->nextValue = remoteStoreNextValue;
-  ntr->disposeCursor = remoteStoreDisposeCursor;
   ntr->possiblyAccessFile =  ESFTPPossiblyAccessFile;
-  ntr->url = copyString(url);
   return ntr;
 }
 

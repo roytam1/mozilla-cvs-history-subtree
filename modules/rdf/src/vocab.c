@@ -52,13 +52,20 @@ createVocabs ()
   createCoreVocab();
   createNavCenterVocab();
   createWebDataVocab();
-  while (n < (sizeof(RDF_CoreVocabStruct)/sizeof(RDF_Resource))) {*(gAllVocab + m++) = *((RDF_Resource*)gCoreVocab + n++);}
+
+  while (n < (sizeof(RDF_CoreVocabStruct)/sizeof(RDF_Resource))) {
+    *(gAllVocab + m++) = *((RDF_Resource*)gCoreVocab + n++);
+  }
 
   n = 0;
-  while (n < (sizeof(RDF_NCVocabStruct)/sizeof(RDF_Resource))) {*(gAllVocab + m++) = *((RDF_Resource*)gNavCenter + n++);}
+  while (n < (sizeof(RDF_NCVocabStruct)/sizeof(RDF_Resource))) {
+    *(gAllVocab + m++) = *((RDF_Resource*)gNavCenter + n++);
+  }
 
   n = 0;
-  while (n < (sizeof(RDF_WDVocabStruct)/sizeof(RDF_Resource))) {*(gAllVocab + m++) = *((RDF_Resource*)gWebData + n++);}
+  while (n < (sizeof(RDF_WDVocabStruct)/sizeof(RDF_Resource))) {
+    *(gAllVocab + m++) = *((RDF_Resource*)gWebData + n++);
+  }
 }
 
 

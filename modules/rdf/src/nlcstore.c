@@ -409,14 +409,16 @@ nlocalStoreNextValue (RDFT rdf, RDF_Cursor c)
   void* ans;
   void* data;
   if ((c == NULL) || (c->pdata == NULL)) return NULL;
-  data = c->pdata;
+  if ((c->type == RDF_ARC_LABELS_IN_QUERY) || (c->type == RDF_ARC_LABELS_OUT_QUERY)) 
+    return  nlcStoreArcsInOutNextValue(rdf, c);
+  data = c->pdata;  
   while (c->count < c->size) {
     DBMAs     nas = nthdbmas(data, c->count);
     if (nas == NULL) break;
     if ((c->tv == tvOfAs(nas)) && (c->type == valueTypeOfAs(nas))) {
       if (c->type == RDF_RESOURCE_TYPE) {
         RDF_Resource nu = RDF_GetResource(NULL, dataOfDBMAs(nas), 1);
-        if (nu && 0 && strstr(resourceID(nu), ".rdf")) {
+        if (nu  && strstr(resourceID(nu), ".rdf")) {
           RDFL rl = rdf->rdf;
           char* dburl = getBaseURL(resourceID(nu));
           while (rl) {
@@ -811,11 +813,11 @@ nlocalStoreAddChildAt(RDFT rdf, RDF_Resource parent, RDF_Resource ref,
     return 1;
 }
 
-/*
+
 
 RDF_Cursor 
 nlcStoreArcsIn (RDFT rdf, RDF_Resource u) {
-  RDF_Cursor c = (RDF_Cursor) getMem(sizeof(RDF_CursorStruc));
+  RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   c->u = u;
   c->queryType = RDF_ARC_LABELS_IN_QUERY;
   c->inversep = 1;
@@ -825,7 +827,7 @@ nlcStoreArcsIn (RDFT rdf, RDF_Resource u) {
 
 RDF_Cursor 
 nlcStoreArcsOut (RDFT rdf, RDF_Resource u) {
-  RDF_Cursor c = (RDF_Cursor) getMem(sizeof(RDF_CursorStruc));
+  RDF_Cursor c = (RDF_Cursor) getMem(sizeof(struct RDF_CursorStruct));
   c->u = u;
   c->queryType =  RDF_ARC_LABELS_OUT_QUERY;
   c->count = 0;
@@ -834,11 +836,11 @@ nlcStoreArcsOut (RDFT rdf, RDF_Resource u) {
 
 
 RDF_Resource 
-nlcStoreArcsInOutNextValue (RDF_Cursor c) {
-  while (c->count < gCoreVocabSize) {
+nlcStoreArcsInOutNextValue (RDFT rdf, RDF_Cursor c) {
+  while (c->count < (int16) gCoreVocabSize) {
     RDF_Resource s = *(gAllVocab + c->count);
     size_t size;
-    void* data = DBM_GetSlotValue(c->rdf, u, s, c->inversep, &size);
+    void* data = DBM_GetSlotValue(rdf, c->u, s, c->inversep, &size);
     c->count++;
     if (data) {
       freeMem(data);
@@ -850,7 +852,7 @@ nlcStoreArcsInOutNextValue (RDF_Cursor c) {
   return NULL;
 }
       
-*/
+
 
 
 RDFT
@@ -879,6 +881,8 @@ MakeLocalStore (char* url)
     ntr->nextValue = nlocalStoreNextValue;
     ntr->disposeCursor = nlocalStoreDisposeCursor;
     ntr->destroy = DBM_CloseRDFDBMStore;
+    ntr->arcLabelsIn = nlcStoreArcsIn;
+    ntr->arcLabelsOut = nlcStoreArcsOut;
     ntr->pdata = db;
     DBM_OpenDBMStore(db, (startsWith(url, "rdf:localStore") ? "NavCen" : &url[4]));
     return ntr;
