@@ -79,9 +79,11 @@ extern int MK_MSG_REMOVE_MAILHOST_CONFIRM;
 
 BOOL	g_bReloadAllWindows;
 
+#ifdef MOZ_MAIL_NEWS
 extern "C" void GetFolderServerNames
 (char* lpName, int nDefaultID, CString& folder, CString& server);
 extern "C" MSG_Host *DoAddNewsServer(CWnd* pParent, int nFromWhere);
+#endif
 
 extern "C" char *FE_GetProgramDirectory(char *buffer, int length);
 
