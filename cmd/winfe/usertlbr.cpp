@@ -1026,6 +1026,7 @@ BOOL CRDFToolbarDropTarget::OnDrop(CWnd * pWnd, COleDataObject * pDataObject,
 //							Class CRDFToolbar
 ///////////////////////////////////////////////////////////////////////////
 #define LINKTOOLBARHEIGHT 21
+#define COMMANDTOOLBARHEIGHT 42
 #define SPACE_BETWEEN_ROWS 2
 
 // The Event Handler for HT notifications on the toolbars
@@ -1151,12 +1152,20 @@ CRDFToolbar::CRDFToolbar(HT_View htView, int nMaxButtons, int nToolbarStyle, int
 						 int nPicturesHeight, int nTextHeight)
 	 : CNSToolbar2(nMaxButtons, nToolbarStyle, nPicturesAndTextHeight, nPicturesHeight, nTextHeight)
 {
-	m_nNumberOfRows = 1;
-	m_nRowHeight = LINKTOOLBARHEIGHT;
-
 	// Set our view and point HT at us.
 	m_ToolbarView = htView;
 	HT_SetViewFEData(htView, this);
+
+	m_nNumberOfRows = 1;
+	m_nRowHeight = LINKTOOLBARHEIGHT;
+	void* data;
+	HT_GetNodeData(HT_TopNode(GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		CString position((char*)data);
+		if (position == "top")
+			m_nRowHeight = COMMANDTOOLBARHEIGHT;
+	}
 }
 
 CRDFToolbar* CRDFToolbar::CreateUserToolbar(HT_View theView, CWnd* pParent)
@@ -1241,10 +1250,21 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	XP_STRCPY(bookmark.szText, HT_GetNodeName(item));
 	XP_STRCPY(bookmark.szAnchor, HT_GetNodeURL(item));
 
-	CString csAmpersandString = FEU_EscapeAmpersand(CString(bookmark.szText));
+	CString tooltipText(bookmark.szText);  // Default is to use the name for the tooltip
+	CString statusBarText(bookmark.szAnchor); // and the URL for the status bar text.
 
+	// Fetch the button's tooltip and status bar text.
+	void* data;
+	HT_GetNodeData(item, gNavCenter->buttonTooltipText, HT_COLUMN_STRING, &data);
+	if (data)
+		tooltipText = (char*)data;
+	HT_GetNodeData(item, gNavCenter->buttonStatusbarText, HT_COLUMN_STRING, &data);
+	if (data)
+		statusBarText = (char*)data;
+
+	CString csAmpersandString = FEU_EscapeAmpersand(CString(bookmark.szText));
 	pButton->Create(this, theApp.m_pToolbarStyle, CSize(60,42), CSize(85, 25), csAmpersandString,
-					bookmark.szText, bookmark.szAnchor, CSize(23,17), 
+					tooltipText, statusBarText, CSize(23,17), 
 					m_nMaxToolbarButtonChars, m_nMinToolbarButtonChars, bookmark,
 					item, (HT_IsContainer(item) ? TB_HAS_DRAGABLE_MENU | TB_HAS_IMMEDIATE_MENU : 0));
 		
