@@ -625,16 +625,11 @@ NS_METHOD nsDOMEvent::GetScreenY(PRInt32* aScreenY)
 }
 
 NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
-{
+{ 
   if (!mEvent || 
        (mEvent->eventStructType != NS_MOUSE_EVENT && mEvent->eventStructType != NS_DRAGDROP_EVENT) ||
       !mPresContext) {
     *aClientX = 0;
-    return NS_OK;
-  }
-
-  if (!((nsGUIEvent*)mEvent)->widget ) {
-    *aClientX = mClientPoint.x;
     return NS_OK;
   }
 
@@ -646,11 +641,22 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
   //   viewport coordinates for the corresponding 'svg'
   //   element."
   {
-    nsCOMPtr<nsIDOMSVGElement> svgElement = do_QueryInterface(mTarget);
+    nsCOMPtr<nsIDOMSVGElement> svgElement;
+    {
+      nsCOMPtr<nsIDOMEventTarget> target;
+      GetTarget(getter_AddRefs(target));
+      svgElement = do_QueryInterface(target);
+    }
+
     if (svgElement) {
       
       nsCOMPtr<nsIDOMSVGSVGElement> svgSvgElement;
       svgElement->GetOwnerSVGElement(getter_AddRefs(svgSvgElement));
+      if (!svgSvgElement) {
+        // maybe the svgElement is the outermost svg:svg element:
+        svgSvgElement = do_QueryInterface(svgElement);
+      }
+
       if (!svgSvgElement) {
         NS_ERROR("could not get svg:svg element");
         return NS_ERROR_FAILURE;
@@ -700,9 +706,9 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
         
         PRInt32 val;
         GetScreenX(&val);
-        screenPoint->SetX(val);
+        screenPoint->SetX((float)val);
         GetScreenY(&val);
-        screenPoint->SetY(val);
+        screenPoint->SetY((float)val);
         screenPoint->MatrixTransform(screenToViewportTransform,
                                      getter_AddRefs(viewportPoint));
         
@@ -713,7 +719,6 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
       }
 
       // hooray! we've finally got the viewport coords 
-      
       float val;
       viewportPoint->GetX(&val);
       *aClientX = (nscoord)val;
@@ -721,6 +726,11 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
     }
   }
 #endif
+
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aClientX = mClientPoint.x;
+    return NS_OK;
+  }
   
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
@@ -768,11 +778,6 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
     return NS_OK;
   }
 
-  if (!((nsGUIEvent*)mEvent)->widget ) {
-    *aClientY = mClientPoint.y;
-    return NS_OK;
-  }
-
 #ifdef MOZ_SVG
   // Special casing for SVG
   // <<SVG 1.0 Specification,
@@ -781,11 +786,22 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
   //   viewport coordinates for the corresponding 'svg'
   //   element."
   {
-    nsCOMPtr<nsIDOMSVGElement> svgElement = do_QueryInterface(mTarget);
+    nsCOMPtr<nsIDOMSVGElement> svgElement;
+    {
+      nsCOMPtr<nsIDOMEventTarget> target;
+      GetTarget(getter_AddRefs(target));
+      svgElement = do_QueryInterface(target);
+    }
+
     if (svgElement) {
       
       nsCOMPtr<nsIDOMSVGSVGElement> svgSvgElement;
       svgElement->GetOwnerSVGElement(getter_AddRefs(svgSvgElement));
+      if (!svgSvgElement) {
+        // maybe the svgElement is the outermost svg:svg element:
+        svgSvgElement = do_QueryInterface(svgElement);
+      }
+
       if (!svgSvgElement) {
         NS_ERROR("could not get svg:svg element");
         return NS_ERROR_FAILURE;
@@ -835,9 +851,9 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
         
         PRInt32 val;
         GetScreenX(&val);
-        screenPoint->SetX(val);
+        screenPoint->SetX((float)val);
         GetScreenY(&val);
-        screenPoint->SetY(val);
+        screenPoint->SetY((float)val);
         screenPoint->MatrixTransform(screenToViewportTransform,
                                      getter_AddRefs(viewportPoint));
         
@@ -857,6 +873,11 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
   }
 #endif
     
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aClientY = mClientPoint.y;
+    return NS_OK;
+  }
+
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
   nsIWidget* rootWidget = nsnull;
