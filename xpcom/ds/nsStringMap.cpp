@@ -48,11 +48,11 @@
 #   define PR_FALSE false
 
     struct nsCRT {
-	static int strlen(const char *a) {return ::strlen(a);}
-	static int strcmp(const char *a, const char *b) {return ::strcmp(a,b);}
-	static int memcmp(const char *a, const char *b, int c) {
-	    return ::memcmp(a,b,c);
-	}
+        static int strlen(const char *a) {return ::strlen(a);}
+        static int strcmp(const char *a, const char *b) {return ::strcmp(a,b);}
+        static int memcmp(const char *a, const char *b, int c) {
+            return ::memcmp(a,b,c);
+        }
     };
 #else
 #   include "nsCRT.h"
@@ -116,12 +116,12 @@ nsStringMap::searchDown(BitTester &key)
     PRUint32 lastBits;
 
     do {
-	lastBits = x->bit;
+        lastBits = x->bit;
 
-	if(key.isset(lastBits))
-	    x = x->r;
-	else
-	    x = x->l;
+        if(key.isset(lastBits))
+            x = x->r;
+        else
+            x = x->l;
 
     } while(lastBits > x->bit);
 
@@ -136,7 +136,7 @@ nsStringMap::Get(const char *str)
     Patricia *t = searchDown(key);
 
     if(!key.strcmp(t->key)) {
-	return t->obj;
+        return t->obj;
     }
 
     return 0;
@@ -148,10 +148,10 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     PRUint32 slen = nsCRT::strlen(str);
 
     if(copy) {
-	PRUint32 asize = (1+slen+7) & ~7;
+        PRUint32 asize = (1+slen+7) & ~7;
         char *tstr = (char*) PL_ArenaAllocate(&mPool, asize);
-	nsCRT::memcpy(tstr, str, 1+slen);
-	str = tstr;
+        nsCRT::memcpy(tstr, str, 1+slen);
+        str = tstr;
     }
 
     BitTester key(str, slen);
@@ -159,8 +159,8 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     Patricia *t = searchDown(key);
 
     if(!key.strcmp(t->key)) {
-	t->obj = obj;
-	return PR_TRUE;
+        t->obj = obj;
+        return PR_TRUE;
     }
 
     // This is somewhat ugly.  We need to find the maximum bit position that
@@ -170,27 +170,27 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     const PRUint32 tlen = nsCRT::strlen(t->key);
     PRUint32   bpos;
     if(klen>tlen) {
-	bpos = 8 * klen - 1;
-	while(!BitTester::isset_checked(str, bpos)) --bpos;
+        bpos = 8 * klen - 1;
+        while(!BitTester::isset_checked(str, bpos)) --bpos;
     } else if(tlen>klen) {
-	bpos = 8 * tlen - 1;
-	while(!BitTester::isset_checked(t->key, bpos)) --bpos;
+        bpos = 8 * tlen - 1;
+        while(!BitTester::isset_checked(t->key, bpos)) --bpos;
     } else /* equal */ {
-	bpos = 8 * tlen - 1;
-	while(BitTester::bitsequal(t->key, str, bpos)) --bpos;
+        bpos = 8 * tlen - 1;
+        while(BitTester::bitsequal(t->key, str, bpos)) --bpos;
     }
 
     Patricia *p, *x = &head;
 
     do {
-	p = x;
-	x = key.isset(x->bit) ? x->r : x->l;
+        p = x;
+        x = key.isset(x->bit) ? x->r : x->l;
     } while(x->bit > bpos && p->bit > x->bit);
 
     t = newNode();
 
     if(!t) {
-	return PR_FALSE;
+        return PR_FALSE;
     }
 
     t->key = str;
@@ -198,17 +198,17 @@ nsStringMap::Put(const char *str, void *obj, PRBool copy)
     t->bit = bpos;
 
     if(key.isset(t->bit)) {
-	t->r = t;
-	t->l = x;
+        t->r = t;
+        t->l = x;
     } else {
-	t->r = x;
-	t->l = t;
+        t->r = x;
+        t->l = t;
     }
 
     if(key.isset(p->bit)) {
-	p->r = t;
+        p->r = t;
     } else {
-	p->l = t;
+        p->l = t;
     }
 
     return PR_TRUE;
@@ -220,9 +220,9 @@ nsStringMapEnumFunc aEnumFunc, void* aClosure, Patricia *node)
 {
     aEnumFunc(node->key, node->obj, aClosure);
     if(node->l && node->l->bit<node->bit)
-	enumerate_recurse(aEnumFunc, aClosure, node->l);
+        enumerate_recurse(aEnumFunc, aClosure, node->l);
     if(node->r && node->r->bit<node->bit)
-	enumerate_recurse(aEnumFunc, aClosure, node->r);
+        enumerate_recurse(aEnumFunc, aClosure, node->r);
 }
 
 void
@@ -230,9 +230,9 @@ nsStringMap::Enumerate(nsStringMapEnumFunc aEnumFunc, void *aClosure)
 {
     // We dont want to process head, its a sentinal
     if(head.l && head.l->bit<head.bit)
-	enumerate_recurse(aEnumFunc, aClosure, head.l);
+        enumerate_recurse(aEnumFunc, aClosure, head.l);
     if(head.r && head.r->bit<head.bit)
-	enumerate_recurse(aEnumFunc, aClosure, head.r);
+        enumerate_recurse(aEnumFunc, aClosure, head.r);
 }
 
 #if defined(TEST_PATRICIA)
@@ -259,12 +259,12 @@ int main()
 
     int idx;
     for(idx=0; strings[idx]; ++idx) {
-	map.Put(strings[idx], (void*)(1+idx));
+        map.Put(strings[idx], (void*)(1+idx));
     }
 
     while(--idx>=0) {
-	void *ptr = map.Get(strings[idx]);
-	printf("%d: %s\n", (long)ptr, strings[idx]);
+        void *ptr = map.Get(strings[idx]);
+        printf("%d: %s\n", (long)ptr, strings[idx]);
     }
 
     map.Enumerate(etest, 0);

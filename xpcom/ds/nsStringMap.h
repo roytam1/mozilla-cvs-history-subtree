@@ -54,45 +54,45 @@ public:
     void   Enumerate(nsStringMapEnumFunc aEnumFunc, void *aClosure = 0);
 
     struct Patricia {
-	Patricia   *l, *r;
-	PRUint32    bit;    // Bit position for l/r comp
-	const char *key;
-	void       *obj;
+        Patricia   *l, *r;
+        PRUint32    bit;    // Bit position for l/r comp
+        const char *key;
+        void       *obj;
     };
 
     // The BitTester class is used to test a particular bit position in a 
     // 0 terminated string of unknown length.  Bits after the end of the
     // string are treated as zero
     class BitTester {
-	PRUint32    slen;
-	const char *cstr;
+        PRUint32    slen;
+        const char *cstr;
     public:
-	BitTester(const char *s) : slen(nsCRT::strlen(s)), cstr(s) {}
-	BitTester(const char *s, PRUint32 l) : slen(l), cstr(s) {}
+        BitTester(const char *s) : slen(nsCRT::strlen(s)), cstr(s) {}
+        BitTester(const char *s, PRUint32 l) : slen(l), cstr(s) {}
 
-	// We dont know how long ostr is, but by including the terminating
-	// 0 character in the comparison we cover the case where str is a
-	// substring of ostr.
-	PRInt32 strcmp(const char *ostr) const {
-	    return nsCRT::memcmp((void*)cstr, ostr, slen+1);
-	}
+        // We dont know how long ostr is, but by including the terminating
+        // 0 character in the comparison we cover the case where str is a
+        // substring of ostr.
+        PRInt32 strcmp(const char *ostr) const {
+            return nsCRT::memcmp((void*)cstr, ostr, slen+1);
+        }
 
-	PRUint32 strlen() const {return slen;}
+        PRUint32 strlen() const {return slen;}
 
-	static PRBool isset_checked(const char *str, PRUint32 idx) {
-	    return (str[idx/8] & (1<<(idx & 7))) != 0;
-	}
+        static PRBool isset_checked(const char *str, PRUint32 idx) {
+            return (str[idx/8] & (1<<(idx & 7))) != 0;
+        }
 
-	static PRBool
-	bitsequal(const char *str1, const char*str2, PRUint32 idx) {
-	    return (str1[idx/8] & (1<<(idx&7)))==(str2[idx/8] & (1<<(idx&7)));
-	}
+        static PRBool
+        bitsequal(const char *str1, const char*str2, PRUint32 idx) {
+            return (str1[idx/8] & (1<<(idx&7)))==(str2[idx/8] & (1<<(idx&7)));
+        }
 
-	PRBool isset(PRUint32 idx) {
-	    const PRUint32 base = idx/8;
-	    if(base>=slen) return 0;
-	    return (cstr[base] & (1<<(idx & 7))) != 0;
-	}
+        PRBool isset(PRUint32 idx) {
+            const PRUint32 base = idx/8;
+            if(base>=slen) return 0;
+            return (cstr[base] & (1<<(idx & 7))) != 0;
+        }
     };
 
 private:
