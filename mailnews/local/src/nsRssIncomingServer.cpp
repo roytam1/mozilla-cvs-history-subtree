@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ * David Bienvenu <bienvenu@nventure.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -113,10 +114,12 @@ NS_IMETHODIMP nsRssIncomingServer::GetNewMail(nsIMsgWindow *aMsgWindow, nsIUrlLi
       if (folderInfo)
       {
         nsXPIDLCString url;
+        nsXPIDLString folderName;
+        aFolder->GetName(getter_Copies(folderName));
         folderInfo->GetCharPtrProperty("feedUrl", getter_Copies(url));
 
         rv = rssDownloader->DownloadFeed(url.get(), 
-          aFolder, PR_FALSE, "Slashdot", aUrlListener, aMsgWindow);
+          aFolder, PR_FALSE, folderName.get(), aUrlListener, aMsgWindow);
       }
     }
   }
