@@ -214,6 +214,7 @@ public:
                                              const nsAString & aContextStr,
                                              const nsAString & aInfoStr,
                                              const nsAString & aFlavor,
+                                             nsIDOMDocument *aSourceDoc,
                                              nsIDOMNode *aDestinationNode,
                                              PRInt32 aDestinationOffset,
                                              PRBool aDeleteSelection,
@@ -706,6 +707,7 @@ protected:
   NS_IMETHOD PrepareHTMLTransferable(nsITransferable **transferable, PRBool havePrivFlavor);
   nsresult   PutDragDataInTransferable(nsITransferable **aTransferable);
   NS_IMETHOD InsertFromTransferable(nsITransferable *transferable, 
+                                    nsIDOMDocument *aSourceDoc,
                                     const nsAString & aContextStr,
                                     const nsAString & aInfoStr,
                                     nsIDOMNode *aDestinationNode,
@@ -714,6 +716,7 @@ protected:
   PRBool HavePrivateHTMLFlavor( nsIClipboard *clipboard );
   nsresult   ParseCFHTML(nsCString & aCfhtml, PRUnichar **aStuffToPaste, PRUnichar **aCfcontext);
   nsresult   DoContentFilterCallback(const nsAString &aFlavor,
+                                     nsIDOMDocument *sourceDoc,
                                      PRBool aWillDeleteSelection,
                                      nsIDOMNode **aFragmentAsNode,      
                                      nsIDOMNode **aFragStartNode,
