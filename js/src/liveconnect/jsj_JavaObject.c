@@ -463,7 +463,8 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     if (!jEnv)
         return JS_FALSE;
         
-    *vp = JSVAL_VOID;
+    if (vp)
+	*vp = JSVAL_VOID;
     if (!lookup_member_by_id(cx, jEnv, obj, &java_wrapper, id, &member_descriptor, vp))
         return JS_FALSE;
 
