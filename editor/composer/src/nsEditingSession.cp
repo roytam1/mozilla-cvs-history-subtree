@@ -40,8 +40,10 @@
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMDocument.h"
+#include "nsIContentViewer.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsISelectionPrivate.h"
+#include "nsISelectionController.h"
 #include "nsITransactionManager.h"
 
 #include "nsIEditorDocShell.h"
@@ -67,6 +69,45 @@
 #define NOISY_DOC_LOADING   1
 #endif
 
+
+/*
+  Stuff that nsEditorShell does, that we need to handle somehow:
+  
+  * Handle different editor types ("html", "text", "htmlmail", "textmail")
+  * String bundle for UI strings
+  * Handle spell checker
+  * Fend off loads from the sidebar (docShell->SetParentURIContentListener).
+  * Deal with the mouse event listener (for double clicks on tags)
+  * Handle editing stylesheets
+  * Handle doc state listener registration
+  * Do disk document stuff
+  * Update window title
+  * Update recent items menu
+  * Handle display modes
+  * Activate debug menu in debug builds
+  * Mess with focus/selection for non-mail windows
+  * Make the caret visible
+  * Look for open windows with a given file URL loaded
+  * Save dialog
+  * Window closing
+  * Utility method for picking a local file
+  * Find/Replace (old way)
+  * Confirm dialog utility methods
+  * Doc charset stuff
+  * Doc is editable test
+  * Some insert element smarts
+  * Throbber control on doc loading.
+  * Fending off non-editable files.
+  * Do controller command crud
+
+Stuff that should be done elsewhere
+
+  * Delete char/word/line (then scroll into view)
+
+
+*/
+
+
 /*---------------------------------------------------------------------------
 
   nsEditingSession
@@ -74,6 +115,7 @@
 ----------------------------------------------------------------------------*/
 nsEditingSession::nsEditingSession()
 : mDoneSetup(PR_FALSE)
+, mStateMaintainer(nsnull)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -92,7 +134,7 @@ NS_IMPL_ISUPPORTS3(nsEditingSession, nsIEditingSession, nsIWebProgressListener, 
 
 /*---------------------------------------------------------------------------
 
-  GetEditingShell
+  Init
 
   void init (in nsIDOMWindow aWindow)
 ----------------------------------------------------------------------------*/
@@ -109,6 +151,30 @@ nsEditingSession::Init(nsIDOMWindow *aWindow)
   return NS_OK;
 }
 
+/*---------------------------------------------------------------------------
+
+  GetEditorShell
+
+  readonly attribute nsIEditorShell editorShel;
+  
+  Temporary!
+----------------------------------------------------------------------------*/
+NS_IMETHODIMP
+nsEditingSession::GetEditorShell(nsIEditorShell * *aEditorShell)
+{
+  if (!mEditorShell)
+  {
+    mEditorShell = do_CreateInstance("@mozilla.org/editor/editorshell;1");
+    if (!mEditorShell) return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv = mEditorShell->Init();
+    if (NS_FAILED(rv)) return rv;
+  }
+  
+  *aEditorShell = mEditorShell;
+  NS_ADDREF(*aEditorShell);
+  return NS_OK;
+}
 
 /*---------------------------------------------------------------------------
 
@@ -177,12 +243,29 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   nsCOMPtr<nsIEditorDocShell>   editorDocShell(do_QueryInterface(docShell, &rv));
   if (NS_FAILED(rv)) return rv;
   
-  nsCOMPtr<nsIEditor> editor(do_CreateInstance("@mozilla.org/editor/htmleditor;1", &rv));
+  // if there is an editor here already, tear it down
+  {
+    nsCOMPtr<nsIEditor> oldEditor;
+    editorDocShell->GetEditor(getter_AddRefs(oldEditor));
+    if (oldEditor)
+    {
+      TearDownEditorOnWindow(aWindow);
+    }
+  }
+  
+  nsCOMPtr<nsIEditor> editor = do_CreateInstance("@mozilla.org/editor/htmleditor;1", &rv);
   if (NS_FAILED(rv)) return rv;
 
   // set the editor on the docShell. The docShell now owns it.
   rv = editorDocShell->SetEditor(editor);
   if (NS_FAILED(rv)) return rv;
+  
+  // EDITOR_SHELL_TRANSITION
+  nsCOMPtr<nsIEditorShell> editorShell;
+  rv = GetEditorShell(getter_AddRefs(editorShell));
+  if (NS_FAILED(rv)) return rv;
+  editorShell->SetEditor(editor);
+  // end EDITOR_SHELL_TRANSITION
   
   nsCOMPtr<nsIPresShell> presShell;
   rv = docShell->GetPresShell(getter_AddRefs(presShell));
@@ -201,6 +284,7 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   
   nsCOMPtr<nsISelectionController> selCon = do_QueryInterface(presShell);
 
+  // XXX need to get editor flags here
   rv = editor->Init(domDoc, presShell, nsnull /* root content */, selCon, 0);
   if (NS_FAILED(rv)) return rv;
   
@@ -263,6 +347,13 @@ nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow)
   nsCOMPtr<nsIEditorDocShell> editorDocShell;
   rv = GetEditorDocShellFromWindow(aWindow, getter_AddRefs(editorDocShell));
   if (NS_FAILED(rv)) return rv;  
+
+  // EDITOR_SHELL_TRANSITION
+  nsCOMPtr<nsIEditorShell> editorShell;
+  rv = GetEditorShell(getter_AddRefs(editorShell));
+  if (NS_FAILED(rv)) return rv;
+  editorShell->SetEditor(nsnull);
+  // end EDITOR_SHELL_TRANSITION
   
   // null out the editor on the docShell
   rv = editorDocShell->SetEditor(nsnull);
