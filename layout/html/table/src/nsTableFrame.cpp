@@ -3536,7 +3536,7 @@ nsTableFrame::DistributeHeightToRows(nsIPresContext*          aPresContext,
   PRUint32 numRowGroups;
   OrderRowGroups(rowGroups, numRowGroups, nsnull);
 
-#ifdef XP_OS2
+#ifdef XP_OS2_VACPP
   volatile
 #endif
   nscoord amountUsed = 0;
