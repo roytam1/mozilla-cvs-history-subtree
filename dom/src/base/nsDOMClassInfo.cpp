@@ -1206,8 +1206,10 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
     return rv;
   }
 
-  return WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                    NS_GET_IID(nsISupports), rval);
+  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native,
+                  NS_GET_IID(nsISupports), rval);
+
+  return NS_SUCCEEDED(rv) ? JS_TRUE : JS_FALSE;
 }
 
 
