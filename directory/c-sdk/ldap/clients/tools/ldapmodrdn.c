@@ -57,6 +57,10 @@ main( argc, argv )
 
     optind = ldaptool_process_args( argc, argv, "cr", 0, options_callback );
 
+    if ( optind == -1 ) {
+	usage();
+    }
+
     if ( ldaptool_fp == NULL ) {
 	ldaptool_fp = stdin;
     }

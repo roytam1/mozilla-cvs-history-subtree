@@ -67,13 +67,15 @@ usage( void )
     fprintf( stderr, "    -A\t\tretrieve attribute names only (no values)\n" );
     fprintf( stderr, "    -B\t\tprint non-ASCII values when old format (-o) is used\n" );
     fprintf( stderr, "    -x\t\tperforming sorting on server\n" );
-    fprintf( stderr, "    -F sep\tprint `sep' instead of `=' between attribute names and values\n" );
+    fprintf( stderr, "    -F sep\tprint `sep' instead of `%s' between attribute names\n", LDAPTOOL_DEFSEP );
+    fprintf( stderr, "          \tand values\n" );
     fprintf( stderr, "    -S attr\tsort the results by attribute `attr'\n" );
-    fprintf( stderr, "    -s scope\tone of base, one, or sub (search scope)\n" );
-    fprintf( stderr, "    -a deref\tone of never, always, search, or find (alias dereferencing)\n" );
+    fprintf( stderr, "    -s scope\tone of base, one, or sub (default is sub)\n" );
+    fprintf( stderr, "    -a deref\tone of never, always, search, or find (default: never)\n" );
+    fprintf( stderr, "            \t(alias dereferencing)\n" );
     fprintf( stderr, "    -l time lim\ttime limit (in seconds) for search\n" );
     fprintf( stderr, "    -z size lim\tsize limit (in entries) for search\n" );
-    fprintf( stderr, "    -G before:after:index:count | before:after:value where 'before' and\n");
+    fprintf( stderr, "    -G before%cafter%cindex%ccount | before%cafter%cvalue where 'before' and\n", VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP );
     fprintf( stderr, "\t\t'after' are the number of entries surrounding 'index.'\n");
     fprintf( stderr, "\t\t'count' is the content count, 'value' is the search value.\n");
 
@@ -100,7 +102,8 @@ main( int argc, char **argv )
     int			rc, optind, i, first;
     LDAP		*ld;
 
-    deref = allow_binary = vals2tmp = attrsonly = 0;
+    deref = LDAP_DEREF_NEVER;
+    allow_binary = vals2tmp = attrsonly = 0;
     minimize_base64 = produce_file_urls = 0;
     ldif = 1;
     fold = 1;
@@ -119,6 +122,10 @@ main( int argc, char **argv )
 
     optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:",
         0, options_callback );
+
+    if ( optind == -1 ) {
+	usage();
+    }
 
     if ( base == NULL ) {
 	if (( base = getenv( "LDAP_BASEDN" )) == NULL ) {

@@ -38,7 +38,7 @@ usage( void )
     fprintf( stderr, "options:\n" );
     ldaptool_common_usage( 0 );
     fprintf( stderr, "    -c\t\tcontinuous mode (do not stop on errors)\n" );
-    fprintf( stderr, "    -f file\tread DNs to delete from file\n" );
+    fprintf( stderr, "    -f file\tread DNs to delete from file (default: standard input)\n" );
     exit( LDAP_PARAM_ERROR );
 }
 
@@ -61,6 +61,10 @@ main( int argc, char **argv )
     contoper = 0;
 
     optind = ldaptool_process_args( argc, argv, "c", 0, options_callback );
+	
+    if ( optind == -1 ) {
+		usage();
+    }
 
     if ( ldaptool_fp == NULL && optind >= argc ) {
 	ldaptool_fp = stdin;

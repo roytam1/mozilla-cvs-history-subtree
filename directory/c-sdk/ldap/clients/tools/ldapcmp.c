@@ -82,13 +82,18 @@ main( int argc, char **argv )
 #endif /* HPUX11 */
 #endif
 
-    deref = allow_binary = vals2tmp = attrsonly = 0;
+    deref = LDAP_DEREF_NEVER;
+    allow_binary = vals2tmp = attrsonly = 0;
     ldif = 1;
     sizelimit = timelimit = 0;
     scope = LDAP_SCOPE_SUBTREE;
 
     optind = ldaptool_process_args( argc, argv, "Bb:l:s:z:", 0,
 	    options_callback );
+
+    if ( optind == -1 ) {
+	usage();
+    }
 
     if ( base == NULL ) {
 	if (( base = getenv( "LDAP_BASEDN" )) == NULL ) {

@@ -97,6 +97,8 @@ extern "C" {
  */
 #define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
 #define LDAPTOOL_DEFHOST	"localhost"
+#define LDAPTOOL_DEFCERTDBPATH	"."
+#define LDAPTOOL_DEFKEYDBPATH	"."
 
 #define LDAPTOOL_SAFEREALLOC( ptr, size )  ( ptr == NULL ? malloc( size ) : \
 						realloc( ptr, size ))

@@ -74,22 +74,23 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -n\t\tshow what would be done but don't actually do it\n" );
     fprintf( stderr, "    -v\t\trun in verbose mode (diagnostics to standard output)\n" );
     if ( two_hosts ) {
-	fprintf( stderr, "    -h host\tLDAP server1 name or IP address\n" );
-	fprintf( stderr, "    -p port\tLDAP server1 TCP port number\n" );
-	fprintf( stderr, "    -h host\tLDAP server2 name or IP address\n" );
-	fprintf( stderr, "    -p port\tLDAP server2 TCP port number\n" );
+	fprintf( stderr, "    -h host\tLDAP server1 name or IP address (default: %s)\n", LDAPTOOL_DEFHOST );
+	fprintf( stderr, "    -p port\tLDAP server1 TCP port number (default: %d)\n", LDAP_PORT );
+	fprintf( stderr, "    -h host\tLDAP server2 name or IP address (default: %s)\n", LDAPTOOL_DEFHOST );
+	fprintf( stderr, "    -p port\tLDAP server2 TCP port number (default: %d)\n", LDAP_PORT );
     } else {
-	fprintf( stderr, "    -h host\tLDAP server name or IP address\n" );
-	fprintf( stderr, "    -p port\tLDAP server TCP port number\n" );
+	fprintf( stderr, "    -h host\tLDAP server name or IP address (default: %s)\n", LDAPTOOL_DEFHOST );
+	fprintf( stderr, "    -p port\tLDAP server TCP port number (default: %d)\n", LDAP_PORT );
     }
     fprintf( stderr,
 	    "    -V n\tLDAP protocol version number (%d or %d; default is %d)\n",
 	    LDAP_VERSION2, LDAP_VERSION3, LDAP_VERSION3 );
 #if defined(NET_SSL)
     fprintf( stderr, "    -Z\t\tmake an SSL-encrypted connection\n" );
-    fprintf( stderr, "    -P pathname\tpath to SSL certificate database\n" );
+    fprintf( stderr, "    -P pathname\tpath to SSL certificate database (default: .)\n" );
     fprintf( stderr, "    -N\t\tname of certificate to use for SSL client authentication\n" );
     fprintf( stderr, "    -K pathname\tpath to key database to use for SSL client authentication\n" );
+    fprintf( stderr, "    (default: path to SSL certificate database provided with -P option\n" );
     fprintf( stderr, "    -m pathname\tpath to security module database\n");
     fprintf( stderr, "    -W\t\tSSL key password\n" );
 
@@ -112,7 +113,7 @@ ldaptool_common_usage( int two_hosts )
 #ifndef NO_LIBLCACHE
     fprintf( stderr, "    -C cfgfile\tuse local database described by cfgfile\n" );
 #endif
-    fprintf( stderr, "    -i charset\tcharacter set for command line input (default is locale)\n" );
+    fprintf( stderr, "    -i charset\tcharacter set for command line input (default taken from locale)\n" );
     fprintf( stderr, "    -k dir\tconversion routine directory (default is .)\n" );
 #if 0
 /*
@@ -122,7 +123,8 @@ ldaptool_common_usage( int two_hosts )
  */
     fprintf( stderr, "    -y proxydn\tDN used for proxy authorization\n" );
 #endif
-    fprintf( stderr, "    -Y proxyid\tproxied authorization id, e.g, dn:uid=bjensen,dc=example,dc=com\n" );
+    fprintf( stderr, "    -Y proxyid\tproxied authorization id,\n" );
+    fprintf( stderr, "              \te.g, dn:uid=bjensen,dc=example,dc=com\n" );
     fprintf( stderr, "    -H\t\tdisplay usage information\n" );
 }
 
@@ -162,8 +164,11 @@ static char		*cache_config_file = NULL;
 #endif /* !NO_LIBLCACHE */
 #if defined(NET_SSL)
 static int		secure = 0;
-static char		*ssl_certdbpath = NULL;
-static char		*ssl_keydbpath = NULL;
+static int		isZ = 0;
+static int		isN = 0;
+static int		isW = 0;
+static char		*ssl_certdbpath = LDAPTOOL_DEFCERTDBPATH;
+static char		*ssl_keydbpath = LDAPTOOL_DEFKEYDBPATH;
 /*
 static char		*ssl_keyname = NULL;
 */
@@ -371,6 +376,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    break;
 #if defined(NET_SSL)
 	case 'P':	/* path to security database */
+	    secure = 1; /* do SSL encryption */
 	    ssl_certdbpath = strdup( optarg );
 	    if (NULL== ssl_keydbpath)
 	    {
@@ -379,6 +385,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    break;
 	case 'Z':	/* do SSL encryption */
 	    secure = 1;
+	    isZ = 1;
 	    break;
 	case 'N':	/* nickname of cert. to use for client auth. */
 	    ssl_certname = strdup( optarg );
@@ -387,6 +394,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		perror("malloc");
 		exit( LDAP_NO_MEMORY );
 	    }
+	    isN = 1;
 	    break;
 	case 'K':	/* location of key database */
 	    /* if keydb path is not null, then it was probably strdup by the 
@@ -409,6 +417,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		perror("malloc");
 		exit( LDAP_NO_MEMORY );
 	    }
+	    isW = 1;
 	    break;
 	case 'm':	/* SSL secmod path */
 	    ssl_secmodpath = strdup( optarg);
@@ -494,6 +503,14 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    break;	/* already handled above */
 	default:
 	    (*extra_opt_callback)( i, optarg );
+	}
+    }
+
+    /* If '-Z' is specified, check if '-P' is specified too. */
+    if ( isN || isW ) {
+	if ( !isZ ) {
+		printf( "%s: with -N, -W options, please specify -Z\n\n", ldaptool_progname ); 
+		return (-1);
 	}
     }
     /*

@@ -82,12 +82,13 @@ usage( void )
     ldaptool_common_usage( 0 );
     fprintf( stderr, "    -c\t\tcontinuous mode (do not stop on errors)\n" );
     fprintf( stderr, "    -A\t\tdisplay non-ASCII values in conjunction with -v\n" );
-    fprintf( stderr, "    -f file\tread modifications from file instead of standard input\n" );
+    fprintf( stderr, "    -f file\tread modifications from file (default: standard input)\n" );
     if ( strcmp( ldaptool_progname, "ldapmodify" ) == 0 ){
 	fprintf( stderr, "    -a\t\tadd entries\n" );
     }
     fprintf( stderr, "    -b\t\tread values that start with / from files (for bin attrs)\n" );
-    fprintf( stderr, "    -F\t\tforce application of all changes, regardless of replica lines\n" );
+    fprintf( stderr, "    -F\t\tforce application of all changes, regardless of\n" );
+    fprintf( stderr, "      \t\treplica lines\n" );
     fprintf( stderr, "    -e rejfile\tsave rejected entries in \"rejfile\"\n" );
     fprintf( stderr, "    -B suffix\tbulk import to \"suffix\"\n");
     fprintf( stderr, "    -q\t\tbe quiet when adding/modifying entries\n" );
@@ -116,6 +117,11 @@ main( int argc, char **argv )
 
     optind = ldaptool_process_args( argc, argv, "aAbcFe:B:q", 0,
 	    options_callback );
+
+
+    if ( optind == -1 ) {
+	usage();
+    }
 
     if ( !newval && strcmp( ldaptool_progname, "ldapadd" ) == 0 ) {
 	newval = 1;
@@ -374,6 +380,12 @@ evaluate_line:
 		    printf( "Processing a version %d LDIF file...\n",
 			    ldif_version );
 		}
+		
+		/* Now check if there's something left to process   */
+		/* and if not, go get the new record, else continue */
+		if ( *rbuf == '\0' ) {
+			return( 0 );
+		}
 
 	    } else if ( !saw_replica ) {
 		printf( "%s: skipping change record: no dn: line\n",
@@ -381,7 +393,7 @@ evaluate_line:
 		return( 0 );
 	    }
 
-	    continue;	/* skip all lines until we see "dn:" */
+	    continue; /* skip all lines until we see "dn:" */
 	}
 
 	if ( expect_ct ) {
@@ -1064,6 +1076,15 @@ read_one_record( FILE *fp )
 	    } else {
 		break;
 	    }
+	}
+
+	/* Check if the blank line starts with '\r' (CR) */
+	if ( ((len = strlen( line )) == 2) && (line[0] == '\r') ) {
+	    if ( gotnothing ) {
+		continue;
+	    } else {
+		break; 
+	      }
 	}
 
 	if ( *line == '#' ) {
