@@ -643,11 +643,11 @@ nsresult nsIMAP4TestDriver::OnTestUrlParsing()
 		nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(imapUrl);
 		mailnewsurl->SetSpec("imap://nsmail-2.mcom.com:143/test");
 		
-		const char * urlHost = nsnull;
-		PRUint32 urlPort = 0;
+		char * urlHost = nsnull;
+		PRInt32 urlPort = 0;
 
 		mailnewsurl->GetHost(&urlHost);
-		mailnewsurl->GetHostPort(&urlPort);
+		mailnewsurl->GetPort(&urlPort);
 
 		printf("Host name test: %s\n", PL_strcmp(urlHost, hostName) == 0 ? "PASSED." : "FAILED!");
 		if (port > 0) // did the user try to test the port?
