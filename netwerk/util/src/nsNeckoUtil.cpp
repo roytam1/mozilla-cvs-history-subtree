@@ -52,14 +52,15 @@ NS_NewURI(nsIURI* *result, const nsString& spec, nsIURI* baseURI)
 }
 
 NECKO_EXPORT(nsresult)
-NS_OpenURI(nsIChannel* *result, nsIURI* uri, nsILoadGroup *aGroup)
+NS_OpenURI(nsIChannel* *result, nsIURI* uri, nsILoadGroup *aGroup,
+           nsIEventSinkGetter *eventSinkGetter)
 {
     nsresult rv;
     NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsIChannel* channel;
-    rv = serv->NewChannelFromURI("load", uri, aGroup, nsnull, &channel);
+    rv = serv->NewChannelFromURI("load", uri, aGroup, eventSinkGetter, &channel);
     if (NS_FAILED(rv)) return rv;
 
     *result = channel;

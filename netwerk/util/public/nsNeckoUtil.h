@@ -44,7 +44,8 @@ extern nsresult
 NS_NewURI(nsIURI* *result, const nsString& spec, nsIURI* baseURI = nsnull);
 
 extern nsresult
-NS_OpenURI(nsIChannel* *result, nsIURI* uri, nsILoadGroup *aGroup);
+NS_OpenURI(nsIChannel* *result, nsIURI* uri, nsILoadGroup *aGroup,
+           nsIEventSinkGetter *eventSinkGetter = nsnull);
 
 extern nsresult
 NS_OpenURI(nsIInputStream* *result, nsIURI* uri);

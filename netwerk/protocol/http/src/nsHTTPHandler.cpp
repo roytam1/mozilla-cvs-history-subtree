@@ -169,9 +169,8 @@ nsHTTPHandler::NewChannel(const char* verb, nsIURI* i_URL,
         nsCOMPtr<nsIHTTPEventSink>  httpEventSink;
 
         if (eventSinkGetter) {
-            rv = eventSinkGetter->GetEventSink(verb, nsCOMTypeInfo<nsIHTTPEventSink>::GetIID(),
-                                              (nsISupports**)(nsIHTTPEventSink**)getter_AddRefs(httpEventSink));
-            if (NS_FAILED(rv)) return rv;
+            (void) eventSinkGetter->GetEventSink(verb, nsCOMTypeInfo<nsIHTTPEventSink>::GetIID(),
+                                                 (nsISupports**)(nsIHTTPEventSink**)getter_AddRefs(httpEventSink));
         }
         // Create one
         pChannel = new nsHTTPChannel(i_URL, 
