@@ -288,6 +288,9 @@
         <parameter name="aElement"/>
         <body>
         <![CDATA[
+          if (this.locked)
+            aElement.disabled = true;
+
           if (!this.isElementEditable(aElement))
             return;
           
@@ -310,9 +313,6 @@
             aElement.value = val;
           else
             aElement.setAttribute("value", val);
-          
-          if (this.locked)
-            aElement.disabled = true;
         ]]>
         </body>
       </method>
