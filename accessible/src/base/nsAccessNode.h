@@ -61,7 +61,7 @@ class nsIDOMNodeList;
 enum { eChildCountUninitialized = 0xffff };
 enum { eSiblingsUninitialized = -1, eSiblingsWalkNormalDOM = -2 };
 
-#define ACCESSIBLE_BUNDLE_URL "chrome://global-platform/locale/accessible.properties"
+#define ACCESSIBLE_BUNDLE_URL "chrome://global/locale/accessible.properties"
 #define PLATFORM_KEYS_BUNDLE_URL "chrome://global-platform/locale/platformKeys.properties"
 
 /* hashkey wrapper using void* KeyType
