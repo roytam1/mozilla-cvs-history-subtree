@@ -252,11 +252,20 @@ nsTextTransformer::Init(nsIFrame* aFrame,
     
     if (aLeaveAsAscii) { // See if the text fragment is 1-byte text
       SetLeaveAsAscii(PR_TRUE);	    
+#if !defined(XP_MACOSX)
       // XXX Currently we only leave it as ascii for normal text and not for preformatted
       // or preformatted wrapped text or language specific transforms
       if (mFrag->Is2b() || (eNormal != mMode) ||
           (mLanguageSpecificTransformType !=
            eLanguageSpecificTransformType_None))
+#else
+      // Mac specific, no language check to workaround the inconsistency of
+      // text width calculation of non-ASCII text between measurement and drawing.
+      // This makes Ascii only text to be always treat as Ascii regardless of the locale.
+      // A side effect of this is that U+005C will not be swapped to Yen sign and stay as backslash
+      // on Japanese locale. But that can be taken care by OS if the font face is set to Japanese.
+      if (mFrag->Is2b() || (eNormal != mMode))
+#endif
         // We don't step down from Unicode to ascii
         SetLeaveAsAscii(PR_FALSE);           
     } 
@@ -1028,10 +1037,14 @@ nsTextTransformer::GetNextWord(PRBool aInWord,
           }
           break;
         }
+#if !defined(XP_MACOSX)
+        // Disable this for Mac since OS takes care of this if the font face is set to Japanese.
+        // This is releated to the Mac specific change in nsTextTransformer::Init().
         if (mLanguageSpecificTransformType !=
             eLanguageSpecificTransformType_None) {
           LanguageSpecificTransform(result, wordLen, aWasTransformed);
         }
+#endif
 #ifdef IBMBIDI
         if (NeedsArabicShaping()) {
           DoArabicShaping(result, wordLen, aWasTransformed);
