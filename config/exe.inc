@@ -69,28 +69,21 @@ $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefil
 #// Rule to build a 32-bit executable using the PROGRAM target
 #//
 #//------------------------------------------------------------------------
-$(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(LIBFILE) $(MISCDEP) makefile.win  $(DEPTH)\config\exe.inc
+$(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(EXTRA_LIBS_LIST_FILE) $(MISCDEP) makefile.win  $(DEPTH)\config\exe.inc
         echo +++ make: Creating EXE: $@
-        echo /NOLOGO /OUT:$@ /PDB:$(PDBFILE:\=\\)  > $(CFGFILE)
+        cat << $(EXTRA_LIBS_LIST_FILE) << >$(CFGFILE)
 !ifdef DEFFILE
-        echo /DEF:$(DEFFILE:\=\\)                 >> $(CFGFILE)      
+                /DEF:$(DEFFILE)      
 !endif
 !ifdef MAPFILE
-        echo /MAP:$(MAPFILE:\=\\)                 >> $(CFGFILE)
+                /MAP:$(MAPFILE)
 !endif
-!ifdef LFLAGS
-        echo $(LFLAGS)                            >> $(CFGFILE)
-!endif
-!ifdef OBJS
-        echo $(OBJS:\=\\)                         >> $(CFGFILE)
-!endif
-!ifdef LIBFILE
-        cat $(LIBFILE)                            >> $(CFGFILE)
-!endif
-!ifdef RESFILE
-        echo $(RESFILE:\=\\)                      >> $(CFGFILE)
-!endif
-        echo $(LLIBS:\=\\) $(WIN_LIBS) $(OS_LIBS) >> $(CFGFILE)
+                $(LFLAGS)
+                $(OBJS)
+<<NOKEEP
+                $(RESFILE)
+                $(LLIBS) $(WIN_LIBS) $(OS_LIBS)
+<<NOKEEP
         $(LD) @$(CFGFILE)
 !endif
 
