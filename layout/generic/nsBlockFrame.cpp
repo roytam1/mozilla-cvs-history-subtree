@@ -550,6 +550,8 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 {
   mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+
+  // XXX CLEAR CACHED WIDTHS IN LINES
 }
 
 /* virtual */ nscoord
@@ -557,6 +559,22 @@ nsBlockFrame::GetMinWidth()
 {
   if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
     return mMinWidth;
+
+  nscoord result = 0;
+
+  for (line_iterator line = begin_lines(), line_end = end_lines();
+       line != line_end; ++line)
+  {
+    nscoord line_result;
+    if (line->IsBlock()) {
+      line_result = nsLayoutUtils::IntrinsicForContainer(line->mFirstChild,
+                        nsLayoutUtils::MIN_WIDTH);
+    } else {
+      // XXX WRITE ME
+    }
+  }
+
+  return (mMinWidth = result);
 }
 
 /* virtual */ nscoord
@@ -564,6 +582,22 @@ nsBlockFrame::GetPrefWidth()
 {
   if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
     return mPrefWidth;
+
+  nscoord result = 0;
+
+  for (line_iterator line = begin_lines(), line_end = end_lines();
+       line != line_end; ++line)
+  {
+    nscoord line_result;
+    if (line->IsBlock()) {
+      line_result = nsLayoutUtils::IntrinsicForContainer(line->mFirstChild,
+                        nsLayoutUtils::PREF_WIDTH);
+    } else {
+      // XXX WRITE ME
+    }
+  }
+
+  return (mPrefWidth = result);
 }
 
 static void
