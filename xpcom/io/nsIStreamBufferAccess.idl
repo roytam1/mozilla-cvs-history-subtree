@@ -1,0 +1,82 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla FastLoad code.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Brendan Eich <brendan@mozilla.org> (original author)
+ */
+
+#include "nsISupports.idl"
+#include "nsrootidl.idl"
+
+interface nsIObjectInputStream;
+interface nsIObjectOutputStream;
+
+[uuid(ac923b72-ac87-4892-ac7a-ca385d429435)]
+interface nsIStreamBufferAccess : nsISupports
+{
+    [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
+    [notxpcom] void putBuffer(in charPtr aBuffer, in PRUint32 aLength);
+};
+
+%{C++
+
+// Swap macros, used to convert to/from canonical (big-endian) format
+#if defined IS_LITTLE_ENDIAN
+
+# define NS_SWAP16(x) ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
+# define NS_SWAP32(x) ((NS_SWAP16((x) & 0xffff) << 16) | (NS_SWAP16((x) >> 16)))
+
+// XXXbe shouldn't NSPR's LL_INIT work for non-constant arguments in all cases?
+# if defined(HAVE_LONG_LONG)
+#  define NS_SWAP64(x) (((PRUint64)NS_SWAP32(*(PRUint32*)&(x)) << 32)         \
+                        | NS_SWAP32(*((PRUint32*)&(x)+1)))
+# else
+#  define NS_SWAP64(x) LL_INIT(NS_SWAP32(*(PRUint32*)&(x)),                   \
+                               NS_SWAP32(*((PRUint32*)&(x)+1)))
+# endif
+
+#elif defined IS_BIG_ENDIAN
+
+# define NS_SWAP16(x) (x)
+# define NS_SWAP32(x) (x)
+# define NS_SWAP64(x) (x)
+
+#else
+
+# error "Unknown byte order"
+
+#endif
+
+#define NS_GET_BUFFER(sba,n,a)  ((sba)->GetBuffer(n, a))
+#define NS_PUT_BUFFER(sba,p,n)  ((sba)->PutBuffer(p, n))
+
+#define NS_GET8(p)              (*(PRUint8*)(p))
+#define NS_GET16(p)             NS_SWAP16(*(PRUint16*)(p))
+#define NS_GET32(p)             NS_SWAP32(*(PRUint32*)(p))
+#define NS_GET64(p)             NS_SWAP64(*(PRUint64*)(p))
+#define NS_GET_FLOAT(p)         ((float)NS_SWAP32(*(PRUint32*)(p)))
+#define NS_GET_DOUBLE(p)        ((double)NS_SWAP64(*(PRUint64*)(p)))
+
+#define NS_PUT8(p,x)            (*(PRUint8*)(p) = (x))
+#define NS_PUT16(p,x)           (*(PRUint16*)(p) = NS_SWAP16(x))
+#define NS_PUT32(p,x)           (*(PRUint32*)(p) = NS_SWAP32(x))
+#define NS_PUT64(p,x)           (*(PRUint64*)(p) = NS_SWAP64(x))
+#define NS_PUT_FLOAT(p,x)       (*(PRUint32*)(p) = NS_SWAP32(*(PRUint32*)&(x)))
+#define NS_PUT_DOUBLE(p,x)      (*(PRUint64*)(p) = NS_SWAP64(*(PRUint64*)&(x)))
+
+%}

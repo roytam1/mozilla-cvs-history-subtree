@@ -1,0 +1,66 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla FastLoad code.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Brendan Eich <brendan@mozilla.org> (original author)
+ */
+
+#include "nsISupports.idl"
+#include "nsrootidl.idl"
+
+interface nsIObjectInputStream;
+interface nsIObjectOutputStream;
+
+%{C++
+#define NS_FAST_LOAD_SERVICE_CID \
+    {0xc943093c,0xac94,0x4bee,{0x84,0x0b,0x8b,0x5a,0x6e,0x31,0x4f,0xa7}}
+
+#define NS_FAST_LOAD_SERVICE_CONTRACTID \
+    "@mozilla.org/fast-load-service;1"
+%}
+
+[scriptable, uuid(759e475e-0c23-4dbf-b1b8-78c9369e3072)]
+interface nsIFastLoadService : nsISupports
+{
+    /**
+     */
+    PRBool open(in string aFileName);
+
+    /**
+     */
+    void close();
+
+    /**
+     */
+    void addDependency(in string aFileName);
+
+    /**
+     */
+    [noscript] void getFastLoadReferent(inout nsISupports aPtr);
+
+    [noscript] void readFastLoadPtr(in nsIObjectInputStream aInputStream,
+                                    inout nsISupports aPtr);
+
+    [noscript] void writeFastLoadPtr(in nsIObjectOutputStream aOutputStream,
+                                     in nsISupports aPtr,
+                                     in nsCIDRef aCID);
+
+%{C++
+    NS_DEFINE_STATIC_CID_ACCESSOR(NS_FAST_LOAD_SERVICE_CID);
+%}
+};

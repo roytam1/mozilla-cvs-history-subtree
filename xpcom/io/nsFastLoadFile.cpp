@@ -1,0 +1,857 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is Mozilla FastLoad code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Brendan Eich <brendan@mozilla.org> (original author)
+ */
+
+#include <string.h>
+#include "prtypes.h"
+#include "nsDebug.h"
+#include "nsMemory.h"
+
+#include "nsIComponentManager.h"
+#include "nsISeekableStream.h"
+#include "nsISerializable.h"
+#include "nsIStreamBufferAccess.h"
+
+#include "nsBinaryStream.h"
+#include "nsFastLoadFile.h"
+
+/*
+ * Fletcher's 16-bit checksum, using 32-bit two's-complement arithmetic.
+ */
+PR_IMPLEMENT(PRUint32)
+NS_AccumulateFastLoadChecksum(PRUint32 aChecksum,
+                              const char* aBuffer,
+                              PRUint32 aLength)
+{
+    PRUint32 A = aChecksum & 0xffff;
+    PRUint32 B = aChecksum >> 16;
+
+#define FOLD_ONES_COMPLEMENT_CARRY(X)   ((X) = ((X) & 0xffff) + ((X) >> 16))
+#define ONES_COMPLEMENT_ACCUMULATE(X,Y) (X) += (Y); if ((X) & 0x80000000)     \
+                                        FOLD_ONES_COMPLEMENT_CARRY(X)
+
+    PRUint16 U;
+    if (aLength && ((PRWord)aBuffer & 1)) {
+        U = *aBuffer++;        // Big endian: higher address, lower order
+        ONES_COMPLEMENT_ACCUMULATE(A, U);
+        ONES_COMPLEMENT_ACCUMULATE(B, A);
+        aLength--;
+    }
+
+    while (aLength > 1) {
+        U = *NS_REINTERPRET_CAST(const PRUint16 *, aBuffer);
+        U = NS_SWAP16(U);
+        ONES_COMPLEMENT_ACCUMULATE(A, U);
+        ONES_COMPLEMENT_ACCUMULATE(B, A);
+        aBuffer += 2;
+        aLength -= 2;
+    }
+
+    if (aLength) {
+        U = *aBuffer << 8;     // Big endian: lower address, higher order
+        ONES_COMPLEMENT_ACCUMULATE(A, U);
+        ONES_COMPLEMENT_ACCUMULATE(B, A);
+    }
+
+    while (A >> 16)
+        FOLD_ONES_COMPLEMENT_CARRY(A);
+    while (B >> 16)
+        FOLD_ONES_COMPLEMENT_CARRY(B);
+
+#undef FOLD_ONES_COMPLEMENT_CARRY
+#undef ONES_COMPLEMENT_ACCUMULATE
+
+    return (B << 16) | A;
+}
+
+static const char magic[] = MFL_FILE_MAGIC;
+
+// -------------------------- nsFastLoadFileReader --------------------------
+
+NS_IMPL_ISUPPORTS2(nsFastLoadFileReader,
+                   nsIObjectInputStream,
+                   nsISeekableStream)
+
+nsresult
+nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
+{
+    nsresult rv;
+    PRUint32 bytesRead;
+
+    rv = Read(aHeader->mMagic, MFL_FILE_MAGIC_SIZE, &bytesRead);
+    if (NS_FAILED(rv)) return rv;
+
+    if (bytesRead != MFL_FILE_MAGIC_SIZE ||
+        memcmp(aHeader->mMagic, magic, MFL_FILE_MAGIC_SIZE)) {
+        return NS_ERROR_FAILURE;
+    }
+
+    rv = Read32(&aHeader->mChecksum);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read32(&aHeader->mVersion);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read32(&aHeader->mFooterOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read32(&aHeader->mFileSize);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
+{
+    nsresult rv;
+
+    rv = ReadFooterPrefix(aFooter);
+    if (NS_FAILED(rv)) return rv;
+
+    aFooter->mIDMap = new nsID[aFooter->mNumIDs];
+    if (!aFooter->mIDMap)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    PRUint32 i, n;
+    for (i = 0, n = aFooter->mNumIDs; i < n; i++) {
+        rv = ReadID(&aFooter->mIDMap[i]);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    aFooter->mSharpObjectMap =
+        new nsFastLoadSharpObjectEntry[aFooter->mNumSharpObjects];
+    if (!aFooter->mSharpObjectMap)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    for (i = 0, n = aFooter->mNumSharpObjects; i < n; i++) {
+        nsFastLoadSharpObjectEntry& entry = aFooter->mSharpObjectMap[i];
+
+        rv = ReadSharpObjectInfo(&entry);
+        if (NS_FAILED(rv)) return rv;
+
+        entry.mObject = nsnull;
+    }
+
+    for (i = 0, n = aFooter->mNumDependencies; i < n; i++) {
+        char* s;
+        rv = ReadStringZ(&s);
+        if (NS_FAILED(rv)) return rv;
+
+        if (!aFooter->AppendDependency(s, PR_FALSE)) {
+            nsMemory::Free(s);
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+    }
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::ReadFooterPrefix(nsFastLoadFooterPrefix *aFooterPrefix)
+{
+    nsresult rv;
+
+    rv = Read32(&aFooterPrefix->mNumIDs);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read32(&aFooterPrefix->mNumSharpObjects);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read32(&aFooterPrefix->mNumDependencies);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::ReadID(nsID *aID)
+{
+    nsresult rv;
+
+    rv = Read32(&aID->m0);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read16(&aID->m1);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read16(&aID->m2);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 bytesRead;
+    rv = Read(NS_REINTERPRET_CAST(char*, aID->m3), sizeof aID->m3, &bytesRead);
+    if (NS_FAILED(rv)) return rv;
+
+    if (bytesRead != sizeof aID->m3)
+        return NS_ERROR_FAILURE;
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo)
+{
+    nsresult rv;
+
+    rv = Read16(&aInfo->mStrongRefCnt);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Read16(&aInfo->mWeakRefCnt);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::Open()
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+    if (!seekable)
+        return NS_ERROR_FAILURE;
+
+    nsresult rv;
+    
+    rv = ReadHeader(&mHeader);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 dataOffset;
+    rv = seekable->Tell(&dataOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        PRInt32(mHeader.mFooterOffset));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = ReadFooter(&mFooter);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        PRInt32(dataOffset));
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadFileReader::Close()
+{
+#ifdef NS_DEBUG
+    for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
+        const nsFastLoadSharpObjectEntry& entry = mFooter.mSharpObjectMap[i];
+
+        NS_ASSERTION(entry.mStrongRefCnt == 0,
+                     "failed to deserialize all strong refs!");
+        NS_ASSERTION(entry.mWeakRefCnt == 0,
+                     "failed to deserialize all weak refs!");
+    }
+#endif
+
+    return mInputStream->Close();
+}
+
+nsresult
+nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
+{
+    nsresult rv;
+
+    NSFastLoadOID oid;
+    rv = Read32(&oid);
+    if (NS_FAILED(rv)) return rv;
+
+    NS_ASSERTION((oid & MFL_WEAK_REF_TAG) ==
+                 (aIsStrongRef ? 0 : MFL_WEAK_REF_TAG),
+                 "strong vs. weak ref deserialization mismatch!");
+
+    nsFastLoadSharpObjectEntry* entry = nsnull;
+    nsCOMPtr<nsISupports> object;
+
+    if (oid & MFL_OBJECT_DEF_TAG) {
+        NSFastLoadID cid;
+        rv = Read32(&cid);
+        if (NS_FAILED(rv)) return rv;
+
+        object = do_CreateInstance(mFooter.GetID(cid), &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsISerializable> serializable(do_QueryInterface(object));
+        if (!serializable)
+            return NS_ERROR_FAILURE;
+
+        rv = serializable->Read(this);
+        if (NS_FAILED(rv)) return rv;
+
+        if (oid != MFL_DULL_OBJECT_OID) {
+            entry = &mFooter.GetSharpObjectEntry(oid);
+            entry->mObject = object;
+        }
+    } else {
+        entry = &mFooter.GetSharpObjectEntry(oid);
+        NS_ASSERTION(entry->mObject != nsnull, "out of order reference!");
+
+        object = entry->mObject;
+    }
+
+    if (entry) {
+        if (aIsStrongRef) {
+            NS_ASSERTION(entry->mStrongRefCnt != 0, "mStrongRefCnt underflow!");
+            entry->mStrongRefCnt--;
+            nsISupports* rawPtr = object.get();
+            NS_ADDREF(rawPtr);
+        } else {
+            NS_ASSERTION(entry->mWeakRefCnt != 0, "mWeakRefCnt underflow!");
+            entry->mWeakRefCnt--;
+        }
+
+        if (entry->mStrongRefCnt == 0 && entry->mWeakRefCnt == 0)
+            entry->mObject = nsnull;
+    }
+
+    if (oid & MFL_QUERY_INTERFACE_TAG) {
+        NSFastLoadID iid;
+        rv = Read32(&iid);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = object->QueryInterface(mFooter.GetID(iid),
+                                    NS_REINTERPRET_CAST(void**, aObject));
+        if (NS_FAILED(rv)) return rv;
+    } else {
+        *aObject = object;
+        NS_ADDREF(*aObject);
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadFileReader::Seek(PRInt32 aWhence, PRInt32 aOffset)
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+    return seekable->Seek(aWhence, aOffset);
+}
+
+NS_IMETHODIMP
+nsFastLoadFileReader::Tell(PRUint32 *aResult)
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+    return seekable->Tell(aResult);
+}
+
+NS_COM nsresult
+NS_NewFastLoadFileReader(nsIObjectInputStream* *aResult,
+                         nsIInputStream* aSrcStream)
+{
+    nsFastLoadFileReader* reader = new nsFastLoadFileReader(aSrcStream);
+    if (!reader)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    // Stabilize reader's refcnt.
+    nsCOMPtr<nsIObjectInputStream> stream(reader);
+
+    nsresult rv = reader->Open();
+    if (NS_FAILED(rv))
+        return rv;
+
+    // XXXbe checksum, size check, etc.
+
+    *aResult = stream;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+}
+
+// -------------------------- nsFastLoadFileWriter --------------------------
+
+NS_IMPL_ISUPPORTS2(nsFastLoadFileWriter,
+                   nsIObjectOutputStream,
+                   nsISeekableStream)
+
+struct nsIDMapEntry : public PLDHashEntryHdr {
+    NSFastLoadID    mFastID;
+    nsID            mSlowID;            // key, used by PLDHashTableOps below
+};
+
+PR_STATIC_CALLBACK(const void *)
+idmap_GetKey(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
+{
+    nsIDMapEntry* entry = NS_STATIC_CAST(nsIDMapEntry*, aHdr);
+
+    return &entry->mSlowID;
+}
+
+PR_STATIC_CALLBACK(PLDHashNumber)
+idmap_HashKey(PLDHashTable *aTable, const void *aKey)
+{
+    const nsID *idp = NS_REINTERPRET_CAST(const nsID*, aKey);
+    return idp->m0;
+}
+
+PR_STATIC_CALLBACK(PRBool)
+idmap_MatchEntry(PLDHashTable *aTable,
+                const PLDHashEntryHdr *aHdr,
+                const void *aKey)
+{
+    const nsIDMapEntry* entry = NS_STATIC_CAST(const nsIDMapEntry*, aHdr);
+    const nsID *idp = NS_REINTERPRET_CAST(const nsID*, aKey);
+
+    return memcmp(&entry->mSlowID, idp, sizeof(nsID)) == 0;
+}
+
+static PLDHashTableOps idmap_DHashTableOps = {
+    PL_DHashAllocTable,
+    PL_DHashFreeTable,
+    idmap_GetKey,
+    idmap_HashKey,
+    idmap_MatchEntry,
+    PL_DHashMoveEntryStub,
+    PL_DHashClearEntryStub,
+    PL_DHashFinalizeStub,
+    NULL
+};
+
+NSFastLoadID
+nsFastLoadFileWriter::MapID(const nsID& aSlowID)
+{
+    nsIDMapEntry *entry =
+        NS_STATIC_CAST(nsIDMapEntry*,
+                       PL_DHashTableOperate(&mIDMap, &aSlowID, PL_DHASH_ADD));
+
+    if (entry->mFastID == 0) {
+        entry->mFastID = mIDMap.entryCount;
+        entry->mSlowID = aSlowID;
+    }
+
+    return entry->mFastID;
+}
+
+struct nsObjectMapEntry : public PLDHashEntryHdr {
+    nsISupports*                mObject;        // key, must come first
+    NSFastLoadOID               mOID;
+    nsFastLoadSharpObjectInfo   mInfo;
+};
+
+PR_STATIC_CALLBACK(void)
+objmap_ClearEntry(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
+{
+    nsObjectMapEntry* entry = NS_STATIC_CAST(nsObjectMapEntry*, aHdr);
+
+    NS_IF_RELEASE(entry->mObject);
+    PL_DHashClearEntryStub(aTable, aHdr);
+}
+
+static PLDHashTableOps objmap_DHashTableOps = {
+    PL_DHashAllocTable,
+    PL_DHashFreeTable,
+    PL_DHashGetKeyStub,
+    PL_DHashVoidPtrKeyStub,
+    PL_DHashMatchEntryStub,
+    PL_DHashMoveEntryStub,
+    objmap_ClearEntry,
+    PL_DHashFinalizeStub,
+    NULL
+};
+
+nsresult
+nsFastLoadFileWriter::WriteHeader(nsFastLoadHeader *aHeader)
+{
+    nsresult rv;
+    PRUint32 bytesWritten;
+
+    rv = Write(aHeader->mMagic, MFL_FILE_MAGIC_SIZE, &bytesWritten);
+    if (NS_FAILED(rv)) return rv;
+
+    if (bytesWritten != MFL_FILE_MAGIC_SIZE)
+        return NS_ERROR_FAILURE;
+
+    rv = Write32(aHeader->mChecksum);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write32(aHeader->mVersion);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write32(aHeader->mFooterOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write32(aHeader->mFileSize);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::WriteID(const nsID& aID)
+{
+    nsresult rv;
+
+    rv = Write32(aID.m0);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write16(aID.m1);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write16(aID.m2);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 bytesWritten;
+    rv = Write(NS_REINTERPRET_CAST(const char*, aID.m3), sizeof aID.m3,
+               &bytesWritten);
+    if (NS_FAILED(rv)) return rv;
+
+    if (bytesWritten != sizeof aID.m3)
+        return NS_ERROR_FAILURE;
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo)
+{
+    nsresult rv;
+
+    rv = Write16(aInfo.mStrongRefCnt);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write16(aInfo.mWeakRefCnt);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+PLDHashOperator PR_CALLBACK
+nsFastLoadFileWriter::IDMapEnumerate(PLDHashTable *aTable,
+                                     PLDHashEntryHdr *aHdr,
+                                     PRUint32 aNumber,
+                                     void *aData)
+{
+    nsIDMapEntry* entry = NS_STATIC_CAST(nsIDMapEntry*, aHdr);
+    nsID* vector = NS_REINTERPRET_CAST(nsID*, aData);
+
+    NS_ASSERTION(entry->mFastID < aTable->entryCount, "bad nsIDMap index!");
+    vector[entry->mFastID] = entry->mSlowID;
+    return PL_DHASH_NEXT;
+}
+
+PLDHashOperator PR_CALLBACK
+nsFastLoadFileWriter::ObjectMapEnumerate(PLDHashTable *aTable,
+                                         PLDHashEntryHdr *aHdr,
+                                         PRUint32 aNumber,
+                                         void *aData)
+{
+    nsObjectMapEntry* entry = NS_STATIC_CAST(nsObjectMapEntry*, aHdr);
+    PRUint32 index = MFL_OID_TO_SHARP_INDEX(entry->mOID);
+    nsFastLoadSharpObjectInfo* vector =
+        NS_REINTERPRET_CAST(nsFastLoadSharpObjectInfo*, aData);
+
+    NS_ASSERTION(index < aTable->entryCount, "bad nsObjectMap index!");
+    vector[index] = entry->mInfo;
+
+#ifdef NS_DEBUG
+    NS_ASSERTION(entry->mInfo.mStrongRefCnt, "no strong ref in serialization!");
+
+    nsrefcnt rc = entry->mObject->AddRef();
+    NS_ASSERTION(entry->mInfo.mStrongRefCnt <= rc - 2,
+                 "too many strong refs in serialization");
+    entry->mObject->Release();
+#endif
+    NS_RELEASE(entry->mObject);
+
+    return PL_DHASH_NEXT;
+}
+
+nsresult
+nsFastLoadFileWriter::WriteFooter()
+{
+    nsresult rv;
+    PRUint32 i, length, count;
+
+    // Enumerate mIDMap into a vector indexed by mFastID and write it.
+    length = mIDMap.entryCount;
+    nsID* idvec = new nsID[length];
+    if (!idvec)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    count = PL_DHashTableEnumerate(&mIDMap, IDMapEnumerate, idvec);
+    NS_ASSERTION(count == length, "bad mIDMap enumeration!");
+
+    rv = Write32(length);
+    if (NS_SUCCEEDED(rv)) {
+        for (i = 0; i < length; i++) {
+            rv = WriteID(idvec[i]);
+            if (NS_FAILED(rv)) break;
+        }
+    }
+
+    delete idvec;
+    if (NS_FAILED(rv)) return rv;
+
+    // Enumerate mObjectMap into a vector indexed by mOID and write it.
+    nsFastLoadSharpObjectInfo* infovec = new nsFastLoadSharpObjectInfo[length];
+    if (!infovec)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    count = PL_DHashTableEnumerate(&mIDMap, ObjectMapEnumerate, infovec);
+    NS_ASSERTION(count == length, "bad mObjectMap enumeration!");
+
+    rv = Write32(length);
+    if (NS_SUCCEEDED(rv)) {
+        for (i = 0; i < length; i++) {
+            rv = WriteSharpObjectInfo(infovec[i]);
+            if (NS_FAILED(rv)) break;
+        }
+    }
+
+    delete infovec;
+    if (NS_FAILED(rv)) return rv;
+
+    // XXXbe need an interface for adding dependencies
+    rv = Write32(0);         // mNumDependencies
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::Open()
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+    if (!seekable)
+        return NS_ERROR_FAILURE;
+
+    nsresult rv;
+    
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        sizeof(nsFastLoadHeader));
+    if (NS_FAILED(rv)) return rv;
+
+    if (!PL_DHashTableInit(&mIDMap, &idmap_DHashTableOps, (void *)this,
+                           sizeof(nsIDMapEntry), PL_DHASH_MIN_SIZE)) {
+        mIDMap.ops = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (!PL_DHashTableInit(&mObjectMap, &objmap_DHashTableOps, (void *)this,
+                           sizeof(nsObjectMapEntry), PL_DHASH_MIN_SIZE)) {
+        PL_DHashTableFinish(&mIDMap);
+        mIDMap.ops = mObjectMap.ops = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::Close()
+{
+    nsresult rv;
+    nsFastLoadHeader header;
+
+    memcpy(header.mMagic, magic, MFL_FILE_MAGIC_SIZE);
+    header.mChecksum = 0;
+    header.mVersion = MFL_FILE_VERSION_0;
+    
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+
+    rv = seekable->Tell(&header.mFooterOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = WriteFooter();
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Tell(&header.mFileSize);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, 0);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = WriteHeader(&header);
+    if (NS_FAILED(rv)) return rv;
+
+    return mOutputStream->Close();
+}
+
+// Psuedo-tag used as flag between WriteSingleRefObject and WriteCommon.
+#define MFL_SINGLE_REF_PSEUDO_TAG       PR_BIT(MFL_OBJECT_TAG_BITS)
+
+nsresult
+nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
+                                        const nsCID& aCID,
+                                        PRBool aIsStrongRef,
+                                        PRUint32 aTags)
+{
+    nsrefcnt rc;
+    nsresult rv;
+    
+    // Here be manual refcounting dragons!
+    rc = aObject->AddRef();
+    NS_ASSERTION(rc != 0, "bad refcnt when writing aObject!");
+
+    NSFastLoadOID oid;
+
+    if (rc == 2 && (aTags & MFL_SINGLE_REF_PSEUDO_TAG)) {
+        // Dull object: only one strong ref and no weak refs in serialization.
+        // Conservative: we don't trust the caller if there are more than two
+        // refs (one from the AddRef above, one from the data structure that's
+        // being serialized).
+        oid = MFL_DULL_OBJECT_OID;
+        aObject->Release();
+    } else {
+        // Object is presumed to be multiply connected through some combo of
+        // strong and weak refs.  Hold onto it via mObjectMap.
+        nsObjectMapEntry* entry =
+            NS_STATIC_CAST(nsObjectMapEntry*,
+                           PL_DHashTableOperate(&mObjectMap, aObject,
+                                                PL_DHASH_ADD));
+
+        if (!entry->mObject) {
+            // First time we've seen this object address: add it to mObjectMap
+            // and serialize the object at the current stream offset.
+
+            // NB: aObject was already held, and mObject is a raw nsISupports*.
+            entry->mObject = aObject;
+
+            oid = (mObjectMap.entryCount << MFL_OBJECT_TAG_BITS);
+            entry->mOID = oid;
+            entry->mInfo.mStrongRefCnt = aIsStrongRef ? 1 : 0;
+            entry->mInfo.mWeakRefCnt   = aIsStrongRef ? 0 : 1;
+
+            oid |= MFL_OBJECT_DEF_TAG;
+        } else {
+            // Already serialized, recover oid and update the desired refcnt.
+            oid = entry->mOID;
+            if (aIsStrongRef)
+                entry->mInfo.mStrongRefCnt++;
+            else
+                entry->mInfo.mWeakRefCnt++;
+
+            aObject->Release();
+        }
+    }
+
+    if (!aIsStrongRef)
+        oid |= MFL_WEAK_REF_TAG;
+    oid |= (aTags & MFL_QUERY_INTERFACE_TAG);
+
+    rv = Write32(oid);
+    if (NS_FAILED(rv)) return rv;
+
+    if (oid & MFL_OBJECT_DEF_TAG) {
+        NSFastLoadID cid = MapID(aCID);
+        rv = Write32(cid);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsISerializable> serializable(do_QueryInterface(aObject));
+        if (!serializable)
+            return NS_ERROR_FAILURE;
+
+        rv = serializable->Write(this);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::WriteObject(nsISupports* aObject,
+                                  const nsCID& aCID,
+                                  PRBool aIsStrongRef)
+{
+#ifdef NS_DEBUG
+    nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
+
+    NS_ASSERTION(rootObject.get() == aObject,
+                 "bad call to WriteObject -- call WriteAggregatedObject!");
+#endif
+
+    return WriteObjectCommon(aObject, aCID, aIsStrongRef, 0);
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::WriteSingleRefObject(nsISupports* aObject,
+                                           const nsCID& aCID)
+{
+#ifdef NS_DEBUG
+    nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
+
+    NS_ASSERTION(rootObject.get() == aObject,
+                 "bad call to WriteObject -- call WriteAggregatedObject!");
+#endif
+
+    return WriteObjectCommon(aObject, aCID, PR_TRUE, MFL_SINGLE_REF_PSEUDO_TAG);
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::WriteAggregatedObject(nsISupports* aObject,
+                                            const nsCID& aCID,
+                                            const nsIID& aIID,
+                                            PRBool aIsStrongRef)
+{
+    nsresult rv;
+    nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
+
+#ifdef NS_DEBUG
+    nsCOMPtr<nsISupports> roundtrip;
+    rootObject->QueryInterface(aIID, getter_AddRefs(roundtrip));
+
+    NS_ASSERTION(rootObject.get() != aObject,
+                 "wasteful call to WriteAggregatedObject -- call WriteObject!");
+    NS_ASSERTION(roundtrip.get() == aObject,
+                 "bad aggregation detected by call to WriteAggregatedObject!");
+#endif
+
+    rv = WriteObjectCommon(rootObject, aCID, aIsStrongRef,
+                           MFL_QUERY_INTERFACE_TAG);
+    if (NS_FAILED(rv)) return rv;
+
+    NSFastLoadID iid = MapID(aIID);
+    rv = Write32(iid);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::Seek(PRInt32 aWhence, PRInt32 aOffset)
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+    return seekable->Seek(aWhence, aOffset);
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::Tell(PRUint32 *aResult)
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+    return seekable->Tell(aResult);
+}
+
+NS_COM nsresult
+NS_NewFastLoadFileWriter(nsIObjectOutputStream* *aResult,
+                         nsIOutputStream* aDestStream)
+{
+    nsFastLoadFileWriter* writer = new nsFastLoadFileWriter(aDestStream);
+    if (!writer)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    // Stabilize writer's refcnt.
+    nsCOMPtr<nsIObjectOutputStream> stream(writer);
+
+    nsresult rv = writer->Open();
+    if (NS_FAILED(rv))
+        return rv;
+
+    *aResult = stream;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+}

@@ -50,9 +50,9 @@ interface nsIBufferOutputStream : nsIOutputStream
     /**
      * Returns the buffer underlying this output stream.
      */
-    readonly attribute nsIBuffer Buffer;
+    readonly attribute nsIBuffer buffer;
 
-    [noscript] unsigned long WriteSegments(in nsReadSegmentFun reader,
+    [noscript] unsigned long writeSegments(in nsReadSegmentFun reader,
                                            in voidPtr closure,
                                            in unsigned long count);
 
@@ -69,11 +69,11 @@ interface nsIBufferOutputStream : nsIOutputStream
      *         bytes written. if an error occurs, the writecount
      *         is undefined
      */
-    unsigned long WriteFrom(in nsIInputStream inStr,
+    unsigned long writeFrom(in nsIInputStream inStr,
                             in unsigned long count);
 
     /**
      * Set this attribute to put the stream in non-blocking mode.
      */
-    attribute boolean NonBlocking;
+    attribute boolean nonBlocking;
 };

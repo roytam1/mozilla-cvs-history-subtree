@@ -19,11 +19,6 @@
  *
  */
 
-[ptr] native nsString(nsString); 
-%{ C++
-#include "nsString.h"
-%}
-
 #include "nsIOutputStream.idl"
 #include "nsrootidl.idl"
 
@@ -73,11 +68,6 @@ interface nsIBinaryOutputStream : nsIOutputStream {
      * Write an opaque byte array to a binary stream.
      */
     void writeBytes([size_is(aLength)] in string aString, in PRUint32 aLength);
-
-    /**
-     * Write a string (possibly containing embedded NULs) to a binary stream.
-     */
-    [noscript] void writeString(in nsString aString);
 };
 
 %{C++

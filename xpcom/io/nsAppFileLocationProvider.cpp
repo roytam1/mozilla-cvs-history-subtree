@@ -318,7 +318,6 @@ NS_METHOD nsAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aL
     NS_ENSURE_ARG_POINTER(aLocalFile);
     
     nsresult rv;
-    PRBool exists;
     nsCOMPtr<nsILocalFile> localDir;
    
     rv = GetProductDirectory(getter_AddRefs(localDir));
@@ -328,6 +327,8 @@ NS_METHOD nsAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aL
     // These 3 platforms share this part of the path - do them as one
     rv = localDir->AppendRelativePath("Profiles");
     if (NS_FAILED(rv)) return rv;
+
+    PRBool exists;
     rv = localDir->Exists(&exists);
     if (NS_SUCCEEDED(rv) && !exists)
         rv = localDir->Create(nsIFile::DIRECTORY_TYPE, 0775);

@@ -32,26 +32,28 @@ LIBRARY_NAME	= xpcomio_s
 REQUIRES	= uconv string
 
 CPPSRCS		= \
+		nsAppFileLocationProvider.cpp \
+		nsBinaryStream.cpp \
+		nsByteArrayInputStream.cpp \
 		nsDirectoryService.cpp \
 		nsEscape.cpp \
-		nsLinebreakConverter.cpp \
-		nsLocalFileCommon.cpp \
+		nsFastLoadFile.cpp \
+		nsFastLoadService.cpp \
 		nsFileSpec.cpp \
 		nsFileSpecStreaming.cpp \
 		nsFileStream.cpp \
 		nsFileSpecImpl.cpp \
 		nsIFileStream.cpp \
 		nsIStringStream.cpp \
-		nsSegmentedBuffer.cpp \
+		nsInputStreamTee.cpp \
+		nsLinebreakConverter.cpp \
+		nsLocalFileCommon.cpp \
 		nsPipe2.cpp \
-		nsSpecialSystemDirectory.cpp \
-		nsUnicharInputStream.cpp \
-		nsBinaryStream.cpp \
-		nsStorageStream.cpp \
 		nsScriptableInputStream.cpp \
-		nsByteArrayInputStream.cpp \
-		nsAppFileLocationProvider.cpp \
-        nsInputStreamTee.cpp \
+		nsSegmentedBuffer.cpp \
+		nsSpecialSystemDirectory.cpp \
+		nsStorageStream.cpp \
+		nsUnicharInputStream.cpp \
 		$(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
@@ -61,20 +63,21 @@ CPPSRCS		+= nsLocalFileUnix.cpp
 endif
 
 EXPORTS		= \
-		nsEscape.h \
+		nsAppDirectoryServiceDefs.h \
 		nsDirectoryService.h \
 		nsDirectoryServiceDefs.h \
-		nsAppDirectoryServiceDefs.h \
-		nsLocalFile.h \
-		nsLinebreakConverter.h \
+		nsEscape.h \
+		nsFastLoadPtr.h \
 		nsFileSpec.h \
 		nsFileSpecStreaming.h \
 		nsFileStream.h \
+		nsLinebreakConverter.h \
+		nsLocalFile.h \
 		nsIFileStream.h \
 		nsIStringStream.h \
 		nsIUnicharInputStream.h \
-		nsSpecialSystemDirectory.h \
 		nsScriptableInputStream.h \
+		nsSpecialSystemDirectory.h \
 		nsStorageStream.h \
 		nsStringIO.h \
 		$(NULL)			
@@ -88,17 +91,23 @@ endif
 XPIDLSRCS	= \
 		nsIBinaryInputStream.idl \
 		nsIBinaryOutputStream.idl  \
+		nsIByteArrayInputStream.idl \
+		nsIDirectoryService.idl \
+		nsIFastLoadService.idl \
 		nsIFile.idl \
 		nsIFileSpec.idl \
 		nsIInputStream.idl \
+		nsIInputStreamTee.idl \
 		nsILocalFile.idl \
+		nsIObjectInputStream.idl \
+		nsIObjectOutputStream.idl \
 		nsIOutputStream.idl \
 		nsIPipe.idl \
+		nsISerializable.idl \
 		nsIScriptableInputStream.idl \
+                nsISeekableStream.idl \
+                nsIStreamBufferAccess.idl \
 		nsIStorageStream.idl \
-		nsIDirectoryService.idl \
-		nsIByteArrayInputStream.idl \
-        nsIInputStreamTee.idl \
                 $(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
