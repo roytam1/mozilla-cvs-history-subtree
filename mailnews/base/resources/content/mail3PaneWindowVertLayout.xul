@@ -154,8 +154,9 @@ Rights Reserved.
       </box>
       <!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
       <splitter id="threadpane-splitter" collapse="after" persist="state"
-         onclick="OnClickThreadAndMessagePaneSplitter()" orient="vertical" autostretch="never">
-        <grippy/>
+         onmouseup="OnMouseUpThreadAndMessagePaneSplitter()"
+         orient="vertical" autostretch="never">
+        <grippy onclick="OnClickThreadAndMessagePaneSplitterGrippy()"/>
       </splitter>
       <!-- msg header view -->
       <box id="messagepanebox" orient="vertical" flex="4" persist="collapsed height" class="window-focusborder" focusring="false">
