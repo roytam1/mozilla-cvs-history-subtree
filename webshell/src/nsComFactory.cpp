@@ -29,7 +29,10 @@
 #include <windows.h>
 #include <ole2.h>
 
+#include "plstr.h"
+#include "prmem.h"
 #include "prprf.h"
+#include "prlink.h"
 #include "nsIFactory.h"
 #include "nsIWebShell.h"
 #include "nsString.h"
@@ -65,8 +68,11 @@ BOOL WINAPI DllMain(HINSTANCE hDllInst,
     switch (fdwReason)
     {
         case DLL_PROCESS_ATTACH:
+          {
+            // save our instance
             g_DllInst = hDllInst;
-            break;
+          }
+          break;
 
         case DLL_PROCESS_DETACH:
             break;
@@ -102,11 +108,33 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
     // for now here is as good a place as any...
     //
     if (TRUE == isFirstTime) {
-        PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
-        PL_InitializeEventsLib("");
-        NS_SetupRegistry();
 
-        isFirstTime = FALSE;
+      // Get dll directory
+      char binpath[_MAX_PATH];
+      ::GetModuleFileName(g_DllInst, binpath, _MAX_PATH);
+      char *lastslash = PL_strrchr(binpath, '\\');
+      if (lastslash) *lastslash = '\0';
+      
+      // Get existing search path
+      int len = GetEnvironmentVariable("PATH", NULL, 0);
+      char *newpath = (char *) PR_Malloc(sizeof(char) * (len +
+                                                         PL_strlen(binpath) +
+                                                         2)); // ';' + '\0'
+      GetEnvironmentVariable("PATH", newpath, len + 1);
+      PL_strcat(newpath, ";");
+      PL_strcat(newpath, binpath);
+      
+      // Set new search path
+      SetEnvironmentVariable("PATH", newpath);
+      
+      // Clean up
+      PR_Free(newpath);
+      
+      //        PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
+      PL_InitializeEventsLib("");
+      NS_SetupRegistry();
+      
+      isFirstTime = FALSE;
     }
 
     if (WebShellCID == rclsid) {
