@@ -216,12 +216,10 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
     // inherit the top-level window. NS_NATIVE_WIDGET is always a NSView
     // regardless of if we're asking a window or a view (for compatibility
     // with windows).
-    mParentView = (NSView*)aParent->GetNativeData(NS_NATIVE_WIDGET);     
+    mParentView = (NSView*)aParent->GetNativeData(NS_NATIVE_WIDGET);    
   }
   else
     mParentView = NS_REINTERPRET_CAST(NSView*,aNativeParent);
-   
-  NS_ASSERTION(mParentView, "no parent view at all :(");
   
   // create our parallel NSView and hook it up to our parent. Recall
   // that NS_NATIVE_WIDGET is the NSView.
@@ -230,8 +228,23 @@ nsresult nsChildView::StandardCreate(nsIWidget *aParent,
   mView = [CreateCocoaView() retain];
   [mView setFrame:r];
   
-  NS_ASSERTION(mParentView && mView, "couldn't hook up new NSView in hierarchy");
-  if (mParentView && mView ) {
+#if DEBUG
+  // if our parent is a popup window, we're most certainly coming from a <select> list dropdown which
+  // we handle in a different way than other platforms. It's ok that we don't have a parent
+  // view because we bailed before even creating the cocoa widgetry and as a result, we
+  // don't need to assert. However, if that's not the case, we definately want to assert
+  // to show views aren't getting correctly parented.
+  if ( aParent ) {
+    nsWindowType windowType;
+    aParent->GetWindowType(windowType);
+    if ( windowType != eWindowType_popup )
+      NS_ASSERTION(mParentView && mView, "couldn't hook up new NSView in hierarchy");
+  }
+  else
+    NS_ASSERTION(mParentView && mView, "couldn't hook up new NSView in hierarchy");
+#endif
+
+  if (mParentView && mView) {
     if (![mParentView isKindOfClass: [ChildView class]]) {
       [mParentView addSubview:mView];
       mVisible = PR_TRUE;
