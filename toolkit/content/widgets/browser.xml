@@ -819,6 +819,13 @@
       <xul:image        anonid="messageImage"   class="messageImage"/>
       <xul:description  anonid="messageText"    class="messageText" flex="1"/>
       <xul:button       anonid="messageButton"  class="messageButton"/>
+      <xul:spacer class="tabs-right"/>
+      <xul:hbox hidden="true" anonid="messageClose" class="tabs-closebutton-box" 
+                align="center" pack="end">
+        <xul:toolbarbutton ondblclick="event.preventBubble();" 
+                           class="tabs-closebutton close-button" 
+                           oncommand="this.parentNode.parentNode.hide()"/>
+      </xul:hbox>
     </content>
     <implementation>
       <property name="type" onget="return this.getAttribute('type');"
@@ -908,6 +915,27 @@
           ]]>        
         </setter>
       </property>
+      <property name="closeButton">
+        <getter>
+          <![CDATA[
+            return document.getAnonymousElementByAttribute(this, "anonid", "messageClose");
+          ]]>
+        </getter>
+        <setter>
+          <![CDATA[
+            var elm = document.getAnonymousElementByAttribute(this, "anonid", "messageClose");
+            elm.hidden = !val;
+            return val;
+          ]]>        
+        </setter>
+      </property>
+      <method name="hide">
+        <body>
+          <![CDATA[
+            this.hidden = true;
+          ]]>
+        </body>
+      </method>
     </implementation>
     <handlers>
       <handler event="click">

@@ -48,8 +48,11 @@ function nsPluginInstallerWizard(){
   this.mPluginInfoArray = new Object();
   this.mPluginInfoArrayLength = 0;
 
+  // array holding pids of plugins that require a license
+  this.mPluginLicenseArray = new Array();
+
   this.mTab = null;
-  this.mSuccessfulPluginInstallation = 0;
+  this.mSuccessfullPluginInstallation = 0;
 
   // arguments[0] is an array that contains two items:
   //     an array of mimetypes that are missing
@@ -67,6 +70,7 @@ function nsPluginInstallerWizard(){
   }
 
   this.WSPluginCounter = 0;
+  this.licenseAcceptCounter = 0;
 }
 
 nsPluginInstallerWizard.prototype.getPluginData = function (){
@@ -95,6 +99,11 @@ nsPluginInstallerWizard.prototype.pluginInfoReceived = function (aPluginInfo){
   if (aPluginInfo && (aPluginInfo.pid != -1) ) {
     // hash by id
     this.mPluginInfoArray[aPluginInfo.pid] = new PluginInfo(aPluginInfo);
+
+    // only add if a license is provided
+    if (aPluginInfo.licenseURL)
+      this.mPluginLicenseArray.push(aPluginInfo.pid);
+
     this.mPluginInfoArrayLength++
   }
 
@@ -182,6 +191,70 @@ nsPluginInstallerWizard.prototype.canCancel = function (aBool){
   document.documentElement.getButton("cancel").disabled = !aBool;
 }
 
+
+nsPluginInstallerWizard.prototype.showLicenses = function (){
+  this.canAdvance(true);
+  this.canRewind(false);
+
+  if (this.mPluginLicenseArray.length == 0) {
+    // no plugins require licenses  
+    this.advancePage(null, true, false, false);
+  } else {
+    this.licenseAcceptCounter = 0;
+    this.showLicense();
+  }
+} 
+
+nsPluginInstallerWizard.prototype.showLicense = function (){
+  var pluginInfo = this.mPluginInfoArray[this.mPluginLicenseArray[this.licenseAcceptCounter]];
+
+  document.getElementById("licenseIFrame").setAttribute("src", pluginInfo.licenseURL);
+
+  document.getElementById("pluginLicenseLabel").firstChild.nodeValue = 
+    this.getFormattedString("pluginLicenseAgreement.label", [pluginInfo.name]);
+
+  document.getElementById("licenseRadioGroup").selectedIndex = 
+    pluginInfo.licenseAccepted ? 0 : 1;
+}
+
+nsPluginInstallerWizard.prototype.showNextLicense = function (){
+  var rv = true;
+
+  this.storeLicenseRadioGroup();
+
+  this.licenseAcceptCounter++;
+
+  if (this.licenseAcceptCounter < this.mPluginLicenseArray.length) {
+    this.showLicense();
+
+    rv = false;
+    this.canRewind(true);
+  }
+  
+  return rv;
+}
+
+nsPluginInstallerWizard.prototype.showPreviousLicense = function (){
+  this.storeLicenseRadioGroup();
+  this.licenseAcceptCounter--;
+
+  if (this.licenseAcceptCounter > 0)
+    this.canRewind(true);
+  else
+    this.canRewind(false);
+
+  this.showLicense();
+  
+  // don't allow to return from the license screens
+  return false;
+}
+
+nsPluginInstallerWizard.prototype.storeLicenseRadioGroup = function (){
+  var pluginInfo = this.mPluginInfoArray[this.mPluginLicenseArray[this.licenseAcceptCounter]];
+
+  pluginInfo.licenseAccepted = !document.getElementById("licenseRadioGroup").selectedIndex;
+}
+
 nsPluginInstallerWizard.prototype.advancePage = function (aPageId, aCanAdvance, aCanRewind, aCanCancel){
   this.canAdvance(true);
   document.getElementById("plugin-installer-wizard").advance(aPageId);
@@ -203,14 +276,17 @@ nsPluginInstallerWizard.prototype.startPluginInstallation = function (){
   var pluginPidArray = new Array();
 
   for (pluginInfoItem in this.mPluginInfoArray){
-    if (this.mPluginInfoArray[pluginInfoItem].toBeInstalled) {
-      pluginURLArray.push(this.mPluginInfoArray[pluginInfoItem].XPILocation);
-      pluginPidArray.push(this.mPluginInfoArray[pluginInfoItem].pid);
+    var pluginItem = this.mPluginInfoArray[pluginInfoItem];
+    if (pluginItem.toBeInstalled && pluginItem.licenseAccepted) {
+      pluginURLArray.push(pluginItem.XPILocation);
+      pluginPidArray.push(pluginItem.pid);
     }  
   }
 
   if (pluginURLArray.length > 0)
     PluginInstallService.startPluginInsallation(pluginURLArray, pluginPidArray);
+  else
+    this.advancePage(null, true, false, false);
 }
 
 /*
@@ -306,8 +382,10 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
       if (myPluginItem.error){
         statusMsg = this.getString("pluginInstallationSummary.failed");
         myLabel.setAttribute("tooltiptext", myPluginItem.error);
+      } else if (!myPluginItem.licenseAccepted) {
+        statusMsg = this.getString("pluginInstallationSummary.licenseNotAccepted");
       } else {
-        this.mSuccessfulPluginInstallation++;
+        this.mSuccessfullPluginInstallation++;
         statusMsg = this.getString("pluginInstallationSummary.success");
       }  
 
@@ -387,8 +465,13 @@ function PluginInfo(aResult) {
   this.InstallerShowsUI = aResult.InstallerShowsUI;
   this.manualInstallationURL = aResult.manualInstallationURL;
   this.requestedMimetype = aResult.requestedMimetype;
+  this.licenseURL = aResult.licenseURL;
+
   this.error = null;
   this.toBeInstalled = true;
+
+  // no license provided, make it accepted
+  this.licenseAccepted = this.licenseURL ? false : true;
 }
 
 var gPluginInstaller;
@@ -401,7 +484,7 @@ function wizardInit(){
 
 function wizardFinish(){
   // don't refresh if no plugins were found or installed
-  if ((gPluginInstaller.mSuccessfulPluginInstallation > 0) && 
+  if ((gPluginInstaller.mSuccessfullPluginInstallation > 0) && 
       (gPluginInstaller.mPluginInfoArray.length != 0) && 
       gPluginInstaller.mTab) {
     window.opener.getBrowser().reloadTab(gPluginInstaller.mTab);

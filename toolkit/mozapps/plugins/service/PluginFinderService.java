@@ -50,6 +50,7 @@ public class PluginFinderService {
       response.setXPILocation("http://www.nexgenmedia.net/flashlinux/flash-linux.xpi");
       response.setInstallerShowsUI(false);
       response.setManualInstallationURL("");
+      response.setLicenseURL("");
     } else if (aMimetype.equals("application/x-mtx")) {
       response.setPid(2);
       response.setName("Viewpoint Media Player");
@@ -58,6 +59,7 @@ public class PluginFinderService {
       response.setXPILocation("http://www.nexgenmedia.net/flashlinux/invalid.xpi");
       response.setInstallerShowsUI(false);
       response.setManualInstallationURL("http://www.viewpoint.com/pub/products/vmp.html");   
+      response.setLicenseURL("http://www.viewpoint.com/pub/privacy.html");
     } else {
       response.setPid(-1);
     }

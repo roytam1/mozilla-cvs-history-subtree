@@ -199,6 +199,7 @@
         <parameter name="aSource"/>
         <parameter name="aPopup"/>
         <parameter name="aTopBottom"/>
+        <parameter name="aShowCloseButton"/>
         <body>
           <![CDATA[
             var message = this.getMessageForBrowser(aBrowser, aTopBottom);
@@ -215,7 +216,7 @@
               message.source = null;
             }
             message.docShell = aDocShell;
-            
+            message.closeButton = aShowCloseButton;
             aBrowser.isShowingMessage = true;
           ]]>
         </body>

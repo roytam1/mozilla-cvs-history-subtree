@@ -46,6 +46,7 @@ public class PluginInfo {
   private boolean installerShowsUI;
   private java.lang.String manualInstallationURL;
   private java.lang.String requestedMimetype;
+  private java.lang.String licenseURL;
 
   public PluginInfo() {
   }
@@ -112,6 +113,14 @@ public class PluginInfo {
 
   public void setRequestedMimetype(java.lang.String requestedMimetype) {
     this.requestedMimetype = requestedMimetype;
+  }
+
+  public java.lang.String getLicenseURL() {
+    return licenseURL;
+  }
+
+  public void setLicenseURL(java.lang.String licenseURL) {
+    this.licenseURL = licenseURL;
   }
 }
 

@@ -92,6 +92,20 @@
     <description value="&pluginWizard.availablePluginsPage.continueMsg.label;"/>
   </wizardpage>
 
+  <wizardpage label="Plugin Licenses" 
+              onpageshow="gPluginInstaller.showLicenses()"
+              onpageadvanced="return gPluginInstaller.showNextLicense();"
+              onpagerewound="return gPluginInstaller.showPreviousLicense();">
+    <description id="pluginLicenseLabel"> </description>
+
+    <iframe id="licenseIFrame" flex="1" src="" />
+
+    <radiogroup id="licenseRadioGroup">
+      <radio label="&pluginWizard.licensePage.accept.label;"/>
+      <radio selected="true" label="&pluginWizard.licensePage.deny.label;"/>
+    </radiogroup>    
+  </wizardpage>
+
   <wizardpage label="&pluginWizard.installPluginsPage.title;" 
               onpageshow="gPluginInstaller.startPluginInstallation()">
     <description value="&pluginWizard.installPluginsPage.description.label;"/>
