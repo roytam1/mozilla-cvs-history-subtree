@@ -113,7 +113,8 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
                                         getter_AddRefs(result));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (!result)
+  nsCOMPtr<nsIModelElementPrivate> modelPriv = do_QueryInterface(model);
+  if (!result | !modelPriv)
     return NS_OK;
 
   nsCOMPtr<nsIDOMNode> singleNode;
@@ -121,33 +122,27 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
   if (!singleNode)
     return NS_OK;
 
-  PRUint16 nodeType = 0;
-  singleNode->GetNodeType(&nodeType);
+  nsXFormsMDGEngine* MDG;
+  modelPriv->GetMDG(&MDG);
+  if (!MDG)
+    return NS_ERROR_FAILURE;
 
-  switch (nodeType) {
-    case nsIDOMNode::ATTRIBUTE_NODE:
-    case nsIDOMNode::TEXT_NODE:
-      singleNode->SetNodeValue(value);
-      break;
-    case nsIDOMNode::ELEMENT_NODE:
-        nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(singleNode);
-        NS_ASSERTION(node, "DOM Nodes must support DOM3 interfaces");
-        node->SetTextContent(value);
-        break;
+  PRBool changed;
+  rv = MDG->SetNodeValue(singleNode, value, PR_TRUE, &changed);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (changed) {
+    if (aParentAction) {
+      aParentAction->SetRecalculate(dommodel, PR_TRUE);
+      aParentAction->SetRevalidate(dommodel, PR_TRUE);
+      aParentAction->SetRefresh(dommodel, PR_TRUE);
+    } else {
+      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Recalculate);
+      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Revalidate);
+      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Refresh);
+    }
   }
-  
-  //XXX Mark the node changed
-  
-  if (aParentAction) {
-    aParentAction->SetRecalculate(dommodel, PR_TRUE);
-    aParentAction->SetRevalidate(dommodel, PR_TRUE);
-    aParentAction->SetRefresh(dommodel, PR_TRUE);
-  }
-  else {
-    nsXFormsUtils::DispatchEvent(dommodel, eEvent_Recalculate);
-    nsXFormsUtils::DispatchEvent(dommodel, eEvent_Revalidate);
-    nsXFormsUtils::DispatchEvent(dommodel, eEvent_Refresh);
-  }
+
   return NS_OK;
 }
 

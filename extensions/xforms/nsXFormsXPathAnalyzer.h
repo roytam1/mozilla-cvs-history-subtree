@@ -57,21 +57,25 @@
  */
 class nsXFormsXPathAnalyzer {
 private:
-  nsCOMPtr<nsIDOMXPathEvaluator> mEvaluator;
+  nsCOMPtr<nsIDOMXPathEvaluator>  mEvaluator;
   nsCOMPtr<nsIDOMXPathNSResolver> mResolver;
 
-  nsXFormsMDGSet* mCurSet;
+  nsXFormsMDGSet                 *mCurSet;
   nsCOMPtr<nsIDOMXPathExpression> mCurExpression;
-  const nsAString* mCurExprString;
+  const nsAString                *mCurExprString;
 
-  nsresult AnalyzeRecursively(nsIDOMNode* aContextNode, const nsXFormsXPathNode* aNode,
-                              PRUint32 aIndent);
+  nsresult AnalyzeRecursively(nsIDOMNode              *aContextNode,
+                              const nsXFormsXPathNode *aNode,
+                              PRUint32                 aIndent);
 
 public:
-  nsXFormsXPathAnalyzer(nsIDOMXPathEvaluator* aEvaluator, nsIDOMXPathNSResolver* aResolver);
+  nsXFormsXPathAnalyzer(nsIDOMXPathEvaluator  *aEvaluator,
+                        nsIDOMXPathNSResolver *aResolver);
   ~nsXFormsXPathAnalyzer();
   
-  nsresult Analyze(nsIDOMNode* aContextNode, const nsXFormsXPathNode* aNode,
-                   nsIDOMXPathExpression* aExpression, const nsAString* aExprString,
-                   nsXFormsMDGSet* aSet);
+  nsresult Analyze(nsIDOMNode              *aContextNode,
+                   const nsXFormsXPathNode *aNode,
+                   nsIDOMXPathExpression   *aExpression,
+                   const nsAString         *aExprString,
+                   nsXFormsMDGSet          *aSet);
 };

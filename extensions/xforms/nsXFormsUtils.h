@@ -49,6 +49,8 @@ class nsIDOMElement;
 class nsIXFormsModelElement;
 class nsIURI;
 class nsString;
+class nsXFormsMDGSet;
+class nsIMutableArray;
 
 #define NS_NAMESPACE_XFORMS              "http://www.w3.org/2002/xforms"
 #define NS_NAMESPACE_XHTML               "http://www.w3.org/1999/xhtml"
@@ -104,6 +106,15 @@ enum nsXFormsEvent {
   eEvent_LinkError,
   eEvent_ComputeException
 };
+
+struct EventData
+{
+  const char *name;
+  PRBool      canCancel;
+  PRBool      canBubble;
+};
+
+extern const EventData sXFormsEventsEntries[41];
 
 /**
  * This class has static helper methods that don't fit into a specific place
@@ -196,7 +207,8 @@ public:
                         const nsString     &aDefaultRef,
                         PRUint16            aResultType,
                         nsIDOMNode        **aModel,
-                        nsIDOMXPathResult **aResult);
+                        nsIDOMXPathResult **aResult,
+                        nsIMutableArray    *aDeps = nsnull);
 
   /**
    * Given a bind element |aBindElement|, find the model and the context node
@@ -220,7 +232,8 @@ public:
                   nsIDOMNode      *aResolverNode,
                   PRUint16         aResultType,
                   PRInt32          aContextPosition = 1,
-                  PRInt32          aContextSize = 1);
+                  PRInt32          aContextSize = 1,
+                  nsXFormsMDGSet  *aSet = nsnull);
 
   /**
    * Given a node in the instance data, get its string value according

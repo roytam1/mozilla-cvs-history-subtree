@@ -50,7 +50,9 @@
 #include "nsIDOMXPathNSResolver.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMText.h"
+#include "nsIModelElementPrivate.h"
 #include "nsIXFormsModelElement.h"
+#include "nsIXFormsControl.h"
 
 #include "nsIXFormsContextControl.h"
 #include "nsIDOMDocumentEvent.h"
@@ -58,21 +60,22 @@
 #include "nsIDOMEventTarget.h"
 #include "nsDataHashtable.h"
 
+#include "nsAutoPtr.h"
+#include "nsXFormsXPathAnalyzer.h"
+#include "nsXFormsXPathParser.h"
+#include "nsXFormsXPathNode.h"
+#include "nsXFormsMDGSet.h"
+#include "nsIDOMXPathExpression.h"
+#include "nsArray.h"
+
 #include "nsIScriptSecurityManager.h"
 #include "nsIPermissionManager.h"
 #include "nsServiceManagerUtils.h"
 
-struct EventData
-{
-  const char *name;
-  PRBool      canCancel;
-  PRBool      canBubble;
-};
-
 #define CANCELABLE 0x01
 #define BUBBLES    0x02
 
-static const EventData sXFormsEventsEntries[] = {
+const EventData sXFormsEventsEntries[41] = {
   { "xforms-model-construct",      PR_FALSE, PR_TRUE  },
   { "xforms-model-construct-done", PR_FALSE, PR_TRUE  },
   { "xforms-ready",                PR_FALSE, PR_TRUE  },
@@ -328,7 +331,8 @@ nsXFormsUtils::EvaluateXPath(const nsAString &aExpression,
                              nsIDOMNode      *aResolverNode,
                              PRUint16         aResultType,
                              PRInt32          aContextPosition,
-                             PRInt32          aContextSize)
+                             PRInt32          aContextSize,
+                             nsXFormsMDGSet  *aSet)
 {
   nsCOMPtr<nsIDOMDocument> doc;
   aContextNode->GetOwnerDocument(getter_AddRefs(doc));
@@ -342,15 +346,40 @@ nsXFormsUtils::EvaluateXPath(const nsAString &aExpression,
   eval->CreateNSResolver(aResolverNode, getter_AddRefs(resolver));
   NS_ENSURE_TRUE(resolver, nsnull);
 
+  nsCOMPtr<nsIDOMXPathExpression> expression;
+  eval->CreateExpression(aExpression,
+                         resolver,
+                         getter_AddRefs(expression));
+  NS_ENSURE_TRUE(expression, nsnull);
+   
   ///
   /// @todo Evaluate() should use aContextPosition and aContextSize
   nsCOMPtr<nsISupports> supResult;
-  eval->Evaluate(aExpression, aContextNode, resolver, aResultType, nsnull,
-                 getter_AddRefs(supResult));
+  expression->Evaluate(aContextNode,
+                       aResultType,
+                       nsnull,
+                       getter_AddRefs(supResult));
 
   nsIDOMXPathResult *result = nsnull;
-  if (supResult)
+  if (supResult) {
+    /// @todo beaufour: This is somewhat "hackish". Hopefully, this will
+    /// improve when we integrate properly with Transformiix (XXX)
+    /// @see http://bugzilla.mozilla.org/show_bug.cgi?id=265212
+    if (aSet) {
+      nsXFormsXPathParser parser;
+      nsXFormsXPathAnalyzer analyzer(eval, resolver);
+      nsAutoPtr<nsXFormsXPathNode> xNode(parser.Parse(aExpression));
+
+      nsresult rv = analyzer.Analyze(aContextNode,
+                                     xNode,
+                                     expression,
+                                     &aExpression,
+                                     aSet);
+      NS_ENSURE_SUCCESS(rv, nsnull);
+    }
     CallQueryInterface(supResult, &result);  // addrefs
+  }
+
   return result;
 }
 
@@ -386,7 +415,8 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement      *aElement,
                                    const nsString     &aDefaultRef,
                                    PRUint16            aResultType,
                                    nsIDOMNode        **aModel,
-                                   nsIDOMXPathResult **aResult)
+                                   nsIDOMXPathResult **aResult,
+                                   nsIMutableArray    *aDeps)
 {
   if (!aElement || !aModel || !aResult) {
     return NS_OK;
@@ -410,20 +440,19 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement      *aElement,
                                &contextSize);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (bindElement && !outerBind) {
-    // "When you refer to @id on a nested bind it returns an emtpy nodeset
-    // because it has no meaning. The XForms WG will assign meaning in the
-    // future."
-    // @see http://www.w3.org/MarkUp/Group/2004/11/f2f/2004Nov11#resolution6
-
-    return NS_OK;
-  }  
-
   nsAutoString expr;
-
-  // If there is a bind element, we just evaluate its nodeset.
   if (bindElement) {
-    bindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
+    if (!outerBind) {
+      // "When you refer to @id on a nested bind it returns an emtpy nodeset
+      // because it has no meaning. The XForms WG will assign meaning in the
+      // future."
+      // @see http://www.w3.org/MarkUp/Group/2004/11/f2f/2004Nov11#resolution6
+
+      return NS_OK;
+    } else {
+      // If there is a (outer) bind element, we retrive its nodeset.
+      bindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
+    }
   } else {
     // If there's no bind element, we expect there to be a |aBindingAttr| attribute.
     aElement->GetAttribute(aBindingAttr, expr);
@@ -456,12 +485,20 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement      *aElement,
   }
   
   // Evaluate |expr|
+  nsXFormsMDGSet set;
   nsCOMPtr<nsIDOMXPathResult> res = EvaluateXPath(expr,
                                                   contextNode,
                                                   aElement,
                                                   aResultType,
                                                   contextSize,
-                                                  contextPosition);
+                                                  contextPosition,
+                                                  aDeps ? &set : nsnull);
+
+  if (res && aDeps) {
+    for (PRInt32 i = 0; i < set.Count(); ++i) {
+      aDeps->AppendElement(set.GetNode(i), PR_FALSE);
+    }
+  }
 
   res.swap(*aResult); // exchanges ref
 
@@ -620,6 +657,8 @@ nsXFormsUtils::SetNodeValue(nsIDOMNode* aDataNode, const nsString& aNodeValue)
   }
 }
 
+///
+/// @todo Use this consistently, or delete? (XXX)
 /* static */ PRBool
 nsXFormsUtils::GetSingleNodeBindingValue(nsIDOMElement* aElement,
                                          nsString& aValue)
