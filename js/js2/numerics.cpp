@@ -358,7 +358,7 @@ void JS::BigInt::allocate(uint lgGrossSize)
 	    FREE_DTOA_LOCK(0);
     } else {
 	    FREE_DTOA_LOCK(0);
-        w = static_cast<uint32 *>(STD::malloc(max(uint32(grossSize*sizeof(uint32)), uint32(sizeof(uint32 *)))));
+        w = static_cast<uint32 *>(std::malloc(max(uint32(grossSize*sizeof(uint32)), uint32(sizeof(uint32 *)))));
         if (!w) {
 		    std::bad_alloc outOfMemory;
 		    throw outOfMemory;
@@ -1123,14 +1123,14 @@ double JS::strToDouble(const char *str, const char *&numEnd)
             goto ret;
         break;
       case 'I':
-        if (!STD::strncmp(s+1, "nfinity", 7)) {
+        if (!std::strncmp(s+1, "nfinity", 7)) {
         	rv = positiveInfinity;
         	s += 8;
         	goto ret;
         }
         break;
       case 'N':
-        if (!haveSign && !STD::strncmp(s+1, "aN", 2)) {
+        if (!haveSign && !std::strncmp(s+1, "aN", 2)) {
         	rv = nan;
         	s += 3;
         	goto ret;

@@ -405,10 +405,15 @@ namespace JSTypes {
         virtual bool isNative()    { return true; }
     };
         
-#if defined(XP_UNIX)
+#ifndef STLPORT
+# if defined(XP_UNIX)
     // bastring.cc defines a funky operator new that assumes a byte-allocator.
     typedef string_char_traits<char16> JSCharTraits;
     typedef gc_allocator<_Char> JSStringAllocator;
+# else
+    typedef std::char_traits<char16> JSCharTraits;
+    typedef gc_allocator<char16> JSStringAllocator;
+# endif
 #else
     typedef std::char_traits<char16> JSCharTraits;
     typedef gc_allocator<char16> JSStringAllocator;

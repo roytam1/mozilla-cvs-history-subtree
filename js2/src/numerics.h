@@ -22,20 +22,25 @@
 
 #include "utilities.h"
 #include <cmath>
-// Use platform-defined floating-point routines.  On platforms with faulty floating-point code
-// ifdef these out and replace by custom implementations.
-#ifndef _WIN32 // Microsoft VC6 bug: standard identifiers should be in std namespace
-using std::abs;
-using std::floor;
-using std::ceil;
-using std::fmod;
-using std::sqrt;
-using std::sin;
-using std::cos;
-using std::tan;
-using std::asin;
-using std::acos;
-using std::atan;
+
+/* Use platform-defined floating-point routines.
+ * On platforms with faulty floating-point code
+ * ifdef these out and replace by custom implementations. */
+
+#ifndef STLPORT
+# ifndef _WIN32
+    using std::abs;
+    using std::floor;
+    using std::ceil;
+    using std::fmod;
+    using std::sqrt;
+    using std::sin;
+    using std::cos;
+    using std::tan;
+    using std::asin;
+    using std::acos;
+    using std::atan;
+# endif
 #endif
 
 namespace JavaScript {

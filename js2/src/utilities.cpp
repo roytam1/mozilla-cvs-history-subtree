@@ -89,7 +89,7 @@ static void dprintf(const char *format, ...)
 void JS::Assert(const char *s, const char *file, int line)
 {
 #if defined(XP_UNIX) || defined(XP_OS2)
-    fprintf(std::stderr, "Assertion failure: %s, at %s:%d\n", s, file, line);
+    fprintf(stderr, "Assertion failure: %s, at %s:%d\n", s, file, line);
 #endif
 #ifdef XP_MAC
     dprintf("Assertion failure: %s, at %s:%d\n", s, file, line);
@@ -1565,7 +1565,7 @@ void JS::Zone::clear()
 	Header *h = headers;
 	while (h) {
 		Header *next = h->next;
-		STD::free(h);
+		std::free(h);
 		h = next;
 	}
 	headers = 0;
@@ -1576,7 +1576,7 @@ void JS::Zone::clear()
 // Throw bad_alloc if out of memory, without corrupting any of the Zone data structures.
 void *JS::Zone::newBlock(size_t size)
 {
-	Header *h = static_cast<Header *>(STD::malloc(sizeof(Header) + size));
+	Header *h = static_cast<Header *>(std::malloc(sizeof(Header) + size));
 	h->next = headers;
 	headers = h;
 	return h+1;
@@ -1865,7 +1865,7 @@ void JS::printChar(Formatter &f, char ch, int count)
 		if (c > printCharBufferSize)
 			c = printCharBufferSize;
 		count -= c;
-		STD::memset(str, ch, static_cast<size_t>(c));
+		std::memset(str, ch, static_cast<size_t>(c));
 		printString(f, str, str+c);
 	}
 }

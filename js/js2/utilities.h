@@ -29,35 +29,44 @@
 #include <cstdio>
 #include <cstdarg>
 
-#ifndef _WIN32	// Microsoft Visual C++ 6.0 bug: standard identifiers should be in std namespace
- using std::size_t;
- using std::ptrdiff_t;
- using std::va_list;
- using std::strlen;
- using std::strcpy;
- using std::FILE;
- using std::getc;
- using std::fgets;
- using std::fputc;
- using std::fputs;
- using std::sprintf;
- using std::snprintf;
- using std::vsnprintf;
- using std::fprintf;
- #define STD std
- #define STATIC_CONST(type, expr) static const type expr
-#else
- #define STD
- // Microsoft Visual C++ 6.0 bug: these identifiers should not begin with underscores
- #define snprintf _snprintf
- #define vsnprintf _vsnprintf
- // Microsoft Visual C++ 6.0 bug: constants not supported
- #define STATIC_CONST(type, expr) enum {expr}
-#endif
+#ifndef STLPORT
+# ifndef _WIN32
+    using std::size_t;
+    using std::ptrdiff_t;
+    using std::va_list;
+    using std::strlen;
+    using std::strcpy;
+    using std::FILE;
+    using std::getc;
+    using std::fgets;
+    using std::fputc;
+    using std::fputs;
+    using std::sprintf;
+    using std::snprintf;
+    using std::vsnprintf;
+    using std::fprintf;
+#   define STD std
+#   define STATIC_CONST(type, expr) static const type expr
+# else
+#   define STD
+#   define snprintf _snprintf
+#   define vsnprintf _vsnprintf
+// Microsoft Visual C++ 6.0 bug: constants not supported
+#   define STATIC_CONST(type, expr) enum {expr}
+# endif
+#else /* STLPORT */
+# ifndef _WIN32
+#   define STATIC_CONST(type, expr) static const type expr
+# else
+#   define STATIC_CONST(type, expr) enum {expr}
+# endif
+#endif /* STLPORT */
+
 using std::string;
 using std::auto_ptr;
 
-#ifdef __GNUC__ // why doesn't g++ support iterator?
+#ifndef STLPORT
+# ifdef __GNUC__ // why doesn't g++ support iterator?
 namespace std {
 	template<class Category, class T, class Distance = ptrdiff_t, class Pointer = T*, class Reference = T&>
 	struct iterator {
@@ -68,11 +77,10 @@ namespace std {
 		typedef Category iterator_category;
 	};
 };
-#endif
-
+# endif /* __GNUC__ */
+#endif /* STLPORT */
 
 namespace JavaScript {
-
 
 //
 // Assertions
@@ -1228,7 +1236,7 @@ namespace JavaScript {
 
   #ifndef XP_MAC_MPW
 	inline size_t printChars(FILE *file, const char *begin, const char *end)
-		{ASSERT(end >= begin); return STD::fwrite(begin, 1, static_cast<size_t>(end - begin), file);}
+		{ASSERT(end >= begin); return std::fwrite(begin, 1, static_cast<size_t>(end - begin), file);}
   #endif
 
 
