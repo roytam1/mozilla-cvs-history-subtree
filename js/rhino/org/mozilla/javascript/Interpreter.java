@@ -41,6 +41,8 @@ import java.io.*;
 import java.util.Vector;
 import java.util.Enumeration;
 
+import org.mozilla.javascript.debug.*;
+
 public class Interpreter extends LabelTable {
     
     public static final boolean printICode = false;
@@ -195,9 +197,19 @@ public class Interpreter extends LabelTable {
         short lineNumber = ((Number) datum).shortValue(); 
         if (lineNumber != itsLineNumber) {
             itsLineNumber = lineNumber;
+            if (itsData.itsLineNumberTable == null && 
+                Context.getCurrentContext().isGeneratingDebug())
+            {
+                itsData.itsLineNumberTable = new java.util.Hashtable();
+            }
+            if (itsData.itsLineNumberTable != null) {
+                itsData.itsLineNumberTable.put(new Integer(lineNumber), 
+                                           new Integer(iCodeTop));
+            }
             iCodeTop = addByte((byte) TokenStream.LINE, iCodeTop);
             iCodeTop = addByte((byte)(lineNumber >> 8), iCodeTop);
-            iCodeTop = addByte((byte)(lineNumber & 0xff), iCodeTop);                    
+            iCodeTop = addByte((byte)(lineNumber & 0xff), iCodeTop);
+            
         }
         
         return iCodeTop;
@@ -1361,6 +1373,9 @@ public class Interpreter extends LabelTable {
         Scriptable[] scopeStack = null;
         int tryStackTop = 0;
         
+        // XXX only do this if in some debug mode
+        cx.pushFrame(new InterpreterFrame(scope, theData));
+            
         if (theData.itsMaxTryDepth > 0) {
             catchStack = new int[theData.itsMaxTryDepth];
             finallyStack = new int[theData.itsMaxTryDepth];
@@ -1849,13 +1864,20 @@ public class Interpreter extends LabelTable {
                         stack[++stackTop] = theData.itsRegExpLiterals[i];
                         pc += 2;
                         break;
+                    case TokenStream.SOURCEFILE :    
+                        cx.interpreterSourceFile = theData.itsSourceFile;
+                        break;
                     case TokenStream.LINE :    
                         i = (iCode[pc + 1] << 8) | (iCode[pc + 2] & 0xFF);                    
                         cx.interpreterLine = i;
+                        if (!cx.inLineStepMode) {
+                            pc += 2;
+                            break;
+                        }
+                        // else fall through to breakpoint
+                    case TokenStream.BREAKPOINT :
+                        cx.getDebugger().handleBreakpointHit(cx);
                         pc += 2;
-                        break;
-                    case TokenStream.SOURCEFILE :    
-                        cx.interpreterSourceFile = theData.itsSourceFile;
                         break;
                     default :
                         dumpICode(theData);
@@ -1929,4 +1951,6 @@ public class Interpreter extends LabelTable {
     }
     
     private int version;
+    private boolean inLineStepMode;
+    private Debugger debugger;
 }

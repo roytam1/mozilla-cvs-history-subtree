@@ -35,7 +35,10 @@
 
 package org.mozilla.javascript;
 
-class InterpretedFunction extends NativeFunction {
+import java.util.*;
+import org.mozilla.javascript.debug.DebuggableScript;
+
+class InterpretedFunction extends NativeFunction implements DebuggableScript {
     
     InterpretedFunction(InterpreterData theData, Context cx)
     {
@@ -56,7 +59,7 @@ class InterpretedFunction extends NativeFunction {
         source = itsData.itsSource;
         nestedFunctions = itsData.itsNestedFunctions;
         if (cx != null)
-            version = (short)cx.getLanguageVersion();   
+            version = (short)cx.getLanguageVersion();
     }
     
     InterpretedFunction(InterpretedFunction theOther,
@@ -82,6 +85,22 @@ class InterpretedFunction extends NativeFunction {
         itsData.itsThisObj = thisObj;
         itsData.itsInArgs = args;
         return Interpreter.interpret(itsData);
+    }
+    
+    public String getSourceName() {
+        return itsData.itsSource;
+    }
+    
+    public Enumeration getLineNumbers() { 
+        return itsData.itsLineNumberTable.keys();
+    }
+    
+    public boolean placeBreakpoint(int line) { // XXX throw exn?
+        return itsData.placeBreakpoint(line);
+    }
+    
+    public boolean removeBreakpoint(int line) {
+        return itsData.removeBreakpoint(line);
     }
     
     InterpreterData itsData;

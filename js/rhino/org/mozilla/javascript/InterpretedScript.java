@@ -35,7 +35,11 @@
 
 package org.mozilla.javascript;
 
-public class InterpretedScript extends NativeScript {
+import org.mozilla.javascript.debug.*;
+
+import java.util.*;
+
+public class InterpretedScript extends NativeScript implements DebuggableScript {
 
     InterpretedScript(InterpreterData theData, Context cx)
     {
@@ -66,8 +70,23 @@ public class InterpretedScript extends NativeScript {
         itsData.itsInArgs = args;
         return Interpreter.interpret(itsData);    
     }
-
+    
+    public String getSourceName() {
+        return itsData.itsSource;
+    }
+    
+    public Enumeration getLineNumbers() {
+        return itsData.itsLineNumberTable.keys();
+    }
+    
+    public boolean placeBreakpoint(int line) { // XXX throw exn?
+        return itsData.placeBreakpoint(line);
+    }
+    
+    public boolean removeBreakpoint(int line) {
+        return itsData.removeBreakpoint(line);
+    }
+    
     InterpreterData itsData;
-   
 }
 
