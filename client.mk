@@ -57,7 +57,7 @@
 MOZ_CO_TAG = SVG_20010721_BRANCH
 MOZ_CO_FLAGS := $(MOZ_CO_FLAGS) -f
 
-NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
+NSPR_CO_TAG = NSPRPUB_CLIENT_TAG
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
@@ -240,7 +240,12 @@ endif
 ifdef NSPR_CO_TAG
   NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) -r $(NSPR_CO_TAG)
 endif
+# Cannot pull static tags by date
+ifeq ($(NSPR_CO_TAG),NSPRPUB_CLIENT_TAG)
+CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(NSPR_CO_MODULE)
+else
 CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
+endif
 
 ####################################
 # CVS defines for the C LDAP SDK
@@ -486,6 +491,32 @@ commitmerge:
 
 diffsvg:
 	cvs diff $(SVG_BRANCH_FILES)
+
+fast-update:
+#	@: Start the update. Split the output to the tty and a log file. \
+#	 : If it fails, touch an error file because "tee" hides the error.
+	@failed=.fast_update-failed.tmp; rm -f $$failed*; \
+	fast_update() { (config/cvsco-fast-update.pl $$@ || touch $$failed) 2>&1 | tee -a $(CVSCO_LOGFILE) && \
+	  if test -f $$failed; then false; else true; fi; }; \
+	fast_update $(CVSCO_NSPR) && \
+	fast_update $(CVSCO_PSM) && \
+	fast_update $(CVSCO_NSS) && \
+	fast_update $(CVSCO_LDAPCSDK) && \
+	fast_update $(CVSCO_ACCESSIBLE) && \
+	fast_update $(CVSCO_GFX2) && \
+	fast_update $(CVSCO_IMGLIB2) && \
+	fast_update $(CVSCO_SEAMONKEY) && \
+	fast_update $(CVSCO_NOSUBDIRS)
+	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
+#	@: Check the log for conflicts. ;
+	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
+	if test "$$conflicts" ; then \
+	  echo "$(MAKE): *** Conflicts during fast-update." ;\
+	  echo "$$conflicts" ;\
+	  echo "$(MAKE): Refer to $(CVSCO_LOGFILE) for full log." ;\
+	  false; \
+	else true; \
+	fi
 
 ####################################
 # Web configure
