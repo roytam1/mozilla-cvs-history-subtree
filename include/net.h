@@ -1495,8 +1495,8 @@ extern NET_StreamClass * NET_NewStream(char *,
 /* this should really be a FE function
  */ 
 extern void NET_RegisterConverters(char * personal_file, char * global_file);
-extern struct PLList *NET_GetRegConverterList(FO_Present_Types iFormatOut);
-extern void *NET_GETDataObject(struct PLList *list, char *pMimeType, void** obj);
+extern XP_List *NET_GetRegConverterList(FO_Present_Types iFormatOut);
+extern void *NET_GETDataObject(XP_List *list, char *pMimeType, void** obj);
 extern void NET_CleanupMailCapList(char* filename);
 
 /*  Register a routine to convert between format_in and format_out
