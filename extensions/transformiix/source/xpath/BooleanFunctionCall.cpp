@@ -32,7 +32,7 @@
  * @version $Revision$ $Date$
 **/
 BooleanFunctionCall::BooleanFunctionCall() : FunctionCall(XPathNames::FALSE_FN) {
-    this->type = FALSE;
+    this->type = TX_FALSE;
 } //-- BooleanFunctionCall
 
 /**
