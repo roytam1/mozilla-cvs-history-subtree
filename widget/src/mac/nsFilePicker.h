@@ -96,6 +96,7 @@ protected:
                                                 NavFilterModes filterMode ) ;
                                                 
   PRBool                 mAllFilesDisplayed;
+  PRBool                 mApplicationsDisplayed;
   nsString               mTitle;
   PRInt16                mMode;
   nsCOMArray<nsILocalFile> mFiles;
