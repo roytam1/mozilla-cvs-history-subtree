@@ -671,7 +671,13 @@ NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(imgIRequest *request, nsIPresContext
 
 NS_IMETHODIMP nsImageBoxFrame::FrameChanged(gfxIImageContainer *container, nsIPresContext *aPresContext, gfxIImageFrame *newframe, nsRect * dirtyRect)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  nsBoxLayoutState state(aPresContext);
+  this->Redraw(state);
+
+  return NS_OK;
 }
 #endif
 
