@@ -246,7 +246,7 @@ nsXBLWindowHandler :: IsEditor()
   if (presShell) {
     PRInt16 isEditor;
     presShell->GetSelectionFlags(&isEditor);
-    return isEditor & nsISelectionController::DISPLAY_ALL;
+    return isEditor == nsISelectionController::DISPLAY_ALL;
   }
 
   return PR_FALSE;
