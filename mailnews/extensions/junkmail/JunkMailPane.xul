@@ -86,7 +86,7 @@
   <!-- need to explicitly use a preftype of "string", and then convert 
        to float later, since these are not integers-->
   <radiogroup id="threshhold" align="center" preftype="string"
-	      prefstring="mail.%serverkey%.junkmail.threshhold"
+	      prefstring="mail.server.%serverkey%.junkmail.threshhold"
 	      prefdefval="255.0">
       <hbox>
           <radio value="255.0" label="&off.label;"/>
@@ -104,7 +104,7 @@
        off (255.0) -->
   <hbox>
       <checkbox id="useJunkFolder" label="&useJunkFolder.label;"
-		prefstring="mail.%serverkey%.junkmail.move"
+		prefstring="mail.server.%serverkey%.junkmail.move"
 		prefdefval="true"/>
   </hbox>
 
