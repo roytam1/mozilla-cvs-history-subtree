@@ -32,7 +32,9 @@
 /**
  * Creates a new DOMHelper
 **/
-DOMHelper::DOMHelper() {};
+DOMHelper::DOMHelper() {
+    orders.setOwnership(Map::eOwnsItems);
+};
 
 /**
  * Delets this DOMHelper
@@ -148,7 +150,7 @@ void DOMHelper::addParentReference(Node* child, Node* parent) {
     TxObjectWrapper* wrapper = (TxObjectWrapper*) parents.get(child);
     if (!wrapper) {
         wrapper = new TxObjectWrapper();
-        parents.put(wrapper, child);
+        parents.put(child, wrapper);
     } 
     wrapper->object = parent;
 
@@ -297,7 +299,7 @@ OrderInfo* DOMHelper::getDocumentOrder(Node* node) {
                 orderInfo->order[0] = 0;            
             }
         }
-        orders.put(orderInfo, node);
+        orders.put(node, orderInfo);
     }
 
     return orderInfo;
