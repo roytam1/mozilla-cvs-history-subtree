@@ -32,6 +32,7 @@ import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
 import java.awt.*;
+import java.awt.event.*;
 
 /**
  *
@@ -271,6 +272,34 @@ public void setVisible(boolean b) {
     }
     super.setVisible(b);
 }
+
+public void addMouseListener(MouseListener listener) {
+    try {
+        EventRegistration er = (EventRegistration)
+            webShell.queryInterface(BrowserControl.EVENT_REGISTRATION_NAME);
+        er.addMouseListener(listener);
+    }
+    catch(Exception ex) {
+        System.out.println("Can't addMouseListener(" + listener + ") " + 
+                           ex.getMessage());
+        
+    }
+}
+
+public void removeMouseListener(MouseListener listener) {
+    try {
+        EventRegistration er = (EventRegistration)
+            webShell.queryInterface(BrowserControl.EVENT_REGISTRATION_NAME);
+        er.removeMouseListener(listener);
+    }
+    catch(Exception ex) {
+        System.out.println("Can't removeMouseListener(" + listener + ") " + 
+                           ex.getMessage());
+        
+    }
+}
+
+        
 
 } // class BrowserControlCanvas
 
