@@ -45,11 +45,7 @@
 
 #include "nsIURI.h"
 #include "nsIInputStream.h"
-//#include "nsIConnection.h"
-
-// {6DA32F00-BD64-11d2-B00F-006097BFC036}
-static const nsIID NS_ICOOLURL_IID = 
-{ 0x6da32f00, 0xbd64, 0x11d2, { 0xb0, 0xf, 0x0, 0x60, 0x97, 0xbf, 0xc0, 0x36 } };
+#include "nsIProtocolInstance.h"
 
 class nsICoolURL : public nsIURI
 {
@@ -58,14 +54,15 @@ public:
     
     //Core action functions
     /* 
-        Note: The OpenStream function also opens a connection using 
+        Note: The GetStream function also opens a connection using 
         the available information in the URL. This is the same as 
         calling OpenInputStream on the connection returned from 
-        OpenConnection. Note that this stream doesn't contain any 
+        OpenProtocolInstance. Note that this stream doesn't contain any 
         header information either. 
     */
-    NS_IMETHOD          OpenStream(nsIInputStream* *o_InputStream) = 0;
+    NS_IMETHOD          GetStream(nsIInputStream* *o_InputStream) = 0;
 
+#if 0 //Will go away...
     /*
         The GetDocument function BLOCKS till the data is made available
         or an error condition is encountered. The return type is the overall
@@ -78,25 +75,27 @@ public:
         TODO - return status? 
     */
     NS_IMETHOD          GetDocument(const char* *o_Data) = 0;
+#endif
 
     /* 
-        The OpenConnection method sets up the connection as decided by the 
+        The OpenProtocolInstance method sets up the connection as decided by the 
         protocol implementation. This may then be used to get various 
         connection specific details like the input and the output streams 
         associated with the connection, or the header information by querying
         on the connection type which will be protocol specific.
-
-		TODO- Should this be the same as the protocol instance, since 
-		some protocols may decide to reuse a "connection" per se?
     */
-    //NS_IMETHOD          OpenConnection(nsIConnection* o_Connection) = 0;
+    NS_IMETHOD          OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance) = 0;
 
 #ifdef DEBUG
     NS_IMETHOD          DebugString(const char* *o_URLString) const=0;
 #endif //DEBUG
 
-    static const nsIID& IID() { return NS_ICOOLURL_IID; };
-
+    static const nsIID& IID() { 
+        // {6DA32F00-BD64-11d2-B00F-006097BFC036}
+        static const nsIID NS_ICOOLURL_IID = 
+        { 0x6da32f00, 0xbd64, 0x11d2, { 0xb0, 0xf, 0x0, 0x60, 0x97, 0xbf, 0xc0, 0x36 } };
+        return NS_ICOOLURL_IID; 
+    };
 };
 
 

@@ -44,10 +44,6 @@
     embedded within the path portion of the URI.
  */
 
-// {EF4B5380-C07A-11d2-A1BA-00609794CF59}
-static const nsIID NS_IURI_IID = 
-{ 0xef4b5380, 0xc07a, 0x11d2, { 0xa1, 0xba, 0x0, 0x60, 0x97, 0x94, 0xcf, 0x59 } };
-
 class nsIURI : public nsISupports
 {
 
@@ -112,7 +108,12 @@ public:
     */
     NS_IMETHOD          ToString(const char* *o_URIString) const = 0;
 
-    static const nsIID& IID() { return NS_IURI_IID; };
+    static const nsIID& IID() { 
+        // {EF4B5380-C07A-11d2-A1BA-00609794CF59}
+        static const nsIID NS_IURI_IID = 
+        { 0xef4b5380, 0xc07a, 0x11d2, { 0xa1, 0xba, 0x0, 0x60, 0x97, 0x94, 0xcf, 0x59 } };
+        return NS_IURI_IID; 
+    };
 
 };
 

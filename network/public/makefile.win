@@ -26,6 +26,7 @@ EXPORTS = nsIStreamObserver.h           \
           nsIStreamListener.h           \
           nsIURL.h                      \
 		  nsICoolURL.h                  \
+		  nsIProtocolInstance.h         \
           nsIURI.h                      \
           nsIPostToServer.h             \
           nsIHttpURL.h                  \
