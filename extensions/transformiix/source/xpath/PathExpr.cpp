@@ -70,7 +70,7 @@ PathExpr::~PathExpr()
  * Adds the Expr to this PathExpr
  * @param expr the Expr to add to this PathExpr
 **/
-void PathExpr::addExpr(txStep* expr, PathOperator pathOp)
+void PathExpr::addExpr(Expr* expr, PathOperator pathOp)
 {
     NS_ASSERTION(expressions.getLength() > 0 || pathOp == RELATIVE_OP,
                  "First step has to be relative in PathExpr");
@@ -187,15 +187,18 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
  * all nodes that match the Expr
  * -- this will be moving to a Utility class
 **/
-nsresult PathExpr::evalDescendants (txStep* aStep, Node* aNode, 
-                                    txIMatchContext* aContext,
-                                    NodeSet* resNodes)
+void PathExpr::evalDescendants (Expr* aStep, Node* aNode, 
+                                txIEvalContext* aContext,
+                                NodeSet* resNodes)
 {
-    nsresult res = NS_OK;
-    res = aStep->evalStep(aNode, aContext, resNodes);
-    if (NS_FAILED(res)) {
-        return res;
+    ExprResult *res = aStep->evaluate(aContext);
+    if (!res || (res->getResultType() != ExprResult::NODESET)) {
+        //XXX ErrorReport: report nonnodeset error
     }
+    else {
+        resNodes->add((NodeSet*)res);
+    }
+    delete res;
 
     MBool filterWS = aContext->isStripSpaceAllowed(aNode);
     
@@ -205,14 +208,9 @@ nsresult PathExpr::evalDescendants (txStep* aStep, Node* aNode,
               (child->getNodeType() == Node::TEXT_NODE ||
                child->getNodeType() == Node::CDATA_SECTION_NODE) &&
               XMLUtils::shouldStripTextnode(child->getNodeValue())))
-            res = evalDescendants(aStep, child, aContext, resNodes);
-        if (NS_FAILED(res)) {
-            return res;
-        }
+            evalDescendants(aStep, child, aContext, resNodes);
         child = child->getNextSibling();
     }
-
-    return NS_OK;
 } //-- evalDescendants
 
 /**

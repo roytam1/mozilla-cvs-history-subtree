@@ -55,23 +55,6 @@ ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
 } //-- evaluate
 
 /**
- * Returns the default priority of this Pattern based on the given Node,
- * context Node, and ContextState.
-**/
-double RootExpr::getDefaultPriority()
-{
-    return 0.5;
-} //-- getDefaultPriority
-
-/**
- * Determines whether this NodeExpr matches the given node within
- * the given context
-**/
-MBool RootExpr::matches(Node* node, txIMatchContext* aContext) {
-    return node && (node->getNodeType() == Node::DOCUMENT_NODE);
-}
-
-/**
  * Returns the String representation of this Expr.
  * @param dest the String to use when creating the String
  * representation. The String representation will be appended to

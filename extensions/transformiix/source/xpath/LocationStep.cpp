@@ -212,18 +212,6 @@ nsresult LocationStep::evalStep(Node* aNode, txIMatchContext* aContext,
     return NS_OK;
 } //-- evalStep
 
-/**
- * Returns the default priority of this Pattern based on the given Node,
- * context Node, and ContextState.
-**/
-double LocationStep::getDefaultPriority()
-{
-    if (isEmpty())
-        return mNodeTest->getDefaultPriority();
-    return 0.5;
-} //-- getDefaultPriority
-
-
 void LocationStep::fromDescendants(Node* node, txIMatchContext* cs,
                                    NodeSet* nodes)
 {
@@ -262,65 +250,6 @@ void LocationStep::fromDescendantsRev(Node* node, txIMatchContext* cs,
     }
 
 } //-- fromDescendantsRev
-
-/**
- * Determines whether this Expr matches the given node within
- * the given context
-**/
-MBool LocationStep::matches(Node* node, txIMatchContext* aContext)
-{
-    if (!mNodeTest || !node)
-        return MB_FALSE;
-
-    NS_ASSERTION(CHILD_AXIS == mAxisIdentifier ||
-                 ATTRIBUTE_AXIS == mAxisIdentifier,
-                 "LocationStep is invalid pattern");
-
-    if (!mNodeTest->matches(node, aContext))
-        return MB_FALSE;
-
-    MBool result = MB_TRUE;
-
-    NS_ASSERTION(!isEmpty(), "A LocationStep without predicates, bah");
-    if (isEmpty()) {
-        if (CHILD_AXIS == mAxisIdentifier && !node->getXPathParent())
-            return MB_FALSE;
-        return MB_TRUE;
-    }
-
-    // Create the context node set for evaluating the predicates
-    NodeSet nodes;
-    Node* parent = node->getXPathParent();
-    switch (mAxisIdentifier) {
-        case CHILD_AXIS:
-            {
-                Node* tmpNode = parent->getFirstChild();
-                while (tmpNode) {
-                    if (mNodeTest->matches(tmpNode, aContext))
-                        nodes.append(tmpNode);
-                    tmpNode = tmpNode->getNextSibling();
-                }
-                break;
-            }
-        case ATTRIBUTE_AXIS:
-            {
-                NamedNodeMap* atts = parent->getAttributes();
-                if (atts) {
-                    PRUint32 i;
-                    for (i = 0; i < atts->getLength(); i++) {
-                        Node* attr = atts->item(i);
-                        if (mNodeTest->matches(attr, aContext))
-                            nodes.append(attr);
-                    }
-                }
-            }
-            break;
-        default:
-            return MB_FALSE;
-    }
-    txForwardContext evalContext(aContext, node, &nodes);
-    return matchPredicates(&evalContext);
-} // matches
 
 /**
  * Creates a String representation of this Expr

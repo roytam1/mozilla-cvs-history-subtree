@@ -41,6 +41,51 @@
 
 #include "Expr.h"
 
+class txPattern : public TxObject
+{
+public:
+    virtual ~txPattern();
+
+    /*
+     * Determines whether this Pattern matches the given node.
+     */
+    virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
+
+    /*
+     * Returns the default priority of this Pattern.
+     *
+     * Simple Patterns return the values as specified in XPath 5.5.
+     * Returns -Inf for union patterns, as it shouldn't be called on them.
+     */
+    virtual double getDefaultPriority() = 0;
+
+    /*
+     * Returns the String representation of this Pattern.
+     * @param dest the String to use when creating the String
+     * representation. The String representation will be appended to
+     * any data in the destination String, to allow cascading calls to
+     * other #toString() methods for Patterns.
+     * @return the String representation of this Pattern.
+     */
+    virtual void toString(String& aDest) = 0;
+
+    /*
+     * Adds the simple Patterns to the List.
+     * For union patterns, add all sub patterns,
+     * all other (simple) patterns just add themselves
+     */
+    virtual nsresult getSimplePatterns(txList &aList);
+};
+
+#define TX_DECL_PATTERN \
+    MBool matches(Node* aNode, txIMatchContext* aContext); \
+    double getDefaultPriority(); \
+    void toString(String& aDest)
+#define TX_DECL_PATTERN2 \
+    TX_DECL_PATTERN; \
+    nsresult getSimplePatterns(txList &aList)
+
+
 class txUnionPattern : public txPattern
 {
 public:

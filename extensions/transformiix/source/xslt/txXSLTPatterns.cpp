@@ -70,7 +70,7 @@ txUnionPattern::~txUnionPattern()
 {
     ListIterator iter(&mLocPathPatterns);
     while (iter.hasNext()) {
-        delete (Pattern*)iter.next();
+        delete (txPattern*)iter.next();
     }
 }
 
@@ -132,10 +132,10 @@ void txUnionPattern::toString(String& aDest)
     #endif
     txListIterator iter(&mLocPathPatterns);
     if (iter.hasNext())
-        ((Pattern*)iter.next())->toString(aDest);
+        ((txPattern*)iter.next())->toString(aDest);
     while (iter.hasNext()) {
         aDest.append(" | ");
-        ((Pattern*)iter.next())->toString(aDest);
+        ((txPattern*)iter.next())->toString(aDest);
     }
     #ifdef DEBUG
     aDest.append("}");

@@ -719,7 +719,7 @@ txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
 **/
 Expr* ExprParser::createPathExpr(ExprLexer& lexer) {
 
-    txStep* expr = 0;
+    Expr* expr = 0;
     Expr* filter = 0;
     MBool isFilter = MB_FALSE;
 

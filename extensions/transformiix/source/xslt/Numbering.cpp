@@ -70,12 +70,12 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
             ownsPattern = MB_FALSE;
         }
         else {
-            LocationStep::LocationStepType axis = LocationStep::CHILD_AXIS;
+            MBool isAttr = MB_FALSE;
             Node::NodeType type = Node::ELEMENT_NODE;
             txNodeTypeTest::NodeType nodetype;
             switch(context->getNodeType()) {
                 case Node::ATTRIBUTE_NODE:
-                    axis = LocationStep::ATTRIBUTE_AXIS;
+                    isAttr = MB_TRUE;
                     type = Node::ATTRIBUTE_NODE;
                 case Node::ELEMENT_NODE:
                     {
@@ -86,7 +86,7 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
                         PRInt32 NSid = context->getNamespaceID();
                         txNameTest* nt = new txNameTest(prefix, lname, NSid,
                                                         type);
-                        countPattern = new LocationStep(nt, axis);
+                        countPattern = new txStepPattern(nt, isAttr);
                     }
                     break;
                 case Node::CDATA_SECTION_NODE :
@@ -106,7 +106,8 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
             }
             if (!countPattern) {
                 // not a nametest
-                countPattern  = new txNodeTypeTest(nodetype);
+                txNodeTypeTest* nt  = new txNodeTypeTest(nodetype);
+                countPattern = new txStepPattern(nt, MB_FALSE);
             }
             ownsPattern = MB_TRUE;
         }

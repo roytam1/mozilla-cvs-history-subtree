@@ -34,7 +34,7 @@
 #include "baseutils.h"
 #include "TxString.h"
 #include "ProcessorState.h"
-#include "Expr.h"
+#include "txXSLTPatterns.h"
 #include "primitives.h"
 #include "ExprResult.h"
 

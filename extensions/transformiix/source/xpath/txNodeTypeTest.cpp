@@ -31,7 +31,7 @@
  * Creates a new txNodeTypeTest of the given type
  */
 txNodeTypeTest::txNodeTypeTest(NodeType aNodeType)
-    :mNodeType(aNodeType), mNodeName(0), mStandalone(MB_FALSE)
+    :mNodeType(aNodeType), mNodeName(0)
 {
 }
 
@@ -74,45 +74,12 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
             }
             return MB_FALSE;
         case NODE_TYPE:
-            return (mStandalone && Node::DOCUMENT_NODE != type) &&
-                ((Node::TEXT_NODE !=type && Node::CDATA_SECTION_NODE !=type) ||
-                   !aContext->isStripSpaceAllowed(aNode));
+            return ((Node::TEXT_NODE !=type &&
+                     Node::CDATA_SECTION_NODE !=type) ||
+                    !aContext->isStripSpaceAllowed(aNode));
     }
     return MB_TRUE;
 }
-
-/*
- * Returns the NodeSet of nodes matching this name test with
- * the XPathParent being the given Node.
- */
-nsresult txNodeTypeTest::evalStep(Node* aNode, txIMatchContext* aContext,
-                              NodeSet* aResult)
-{
-    Node* child = aNode->getFirstChild();
-    while (child) {
-        if (matches(child, aContext)) {
-            aResult->add(child);
-        }
-        child = child->getNextSibling();
-    }
-    return NS_OK;
-}
-
-/*
- * Returns a NodeSet of nodes matching this step and having
- * the context node of aContext as XPathParent
- */
-ExprResult* txNodeTypeTest::evaluate(txIEvalContext* aContext)
-{
-    NodeSet* result = new NodeSet();
-    if (!result) {
-        // XXX error out of mem
-        return 0;
-    }
-    evalStep(aContext->getContextNode(), aContext, result);
-    return result;
-}
-          
 
 /*
  * Returns the default priority of this txNodeTest

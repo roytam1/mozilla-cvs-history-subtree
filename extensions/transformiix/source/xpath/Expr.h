@@ -57,10 +57,6 @@ class txIParseContext;
 class txIMatchContext;
 class txIEvalContext;
 
-typedef class Expr Pattern;
-typedef class Expr PatternExpr;
-
-
 /**
  * A Base Class for all XSL Expressions
 **/
@@ -99,66 +95,6 @@ public:
     ExprResult* evaluate(txIEvalContext* aContext); \
     void toString(String& aDest)
 
-class txPattern : public TxObject
-{
-public:
-    virtual ~txPattern();
-
-    /*
-     * Determines whether this Pattern matches the given node.
-     */
-    virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
-
-    /*
-     * Returns the default priority of this Pattern.
-     *
-     * Simple Patterns return the values as specified in XPath 5.5.
-     * Returns -Inf for union patterns, as it shouldn't be called on them.
-     */
-    virtual double getDefaultPriority() = 0;
-
-    /*
-     * Returns the String representation of this Pattern.
-     * @param dest the String to use when creating the String
-     * representation. The String representation will be appended to
-     * any data in the destination String, to allow cascading calls to
-     * other #toString() methods for Patterns.
-     * @return the String representation of this Pattern.
-     */
-    virtual void toString(String& aDest) = 0;
-
-    /*
-     * Adds the simple Patterns to the List.
-     * For union patterns, add all sub patterns,
-     * all other (simple) patterns just add themselves
-     */
-    virtual nsresult getSimplePatterns(txList &aList);
-};
-
-#define TX_DECL_PATTERN \
-    MBool matches(Node* aNode, txIMatchContext* aContext); \
-    double getDefaultPriority(); \
-    void toString(String& aDest)
-#define TX_DECL_PATTERN2 \
-    TX_DECL_PATTERN; \
-    nsresult getSimplePatterns(txList &aList)
-
-#define TX_DECL_EXPR_PATTERN \
-    ExprResult* evaluate(txIEvalContext* aContext); \
-    TX_DECL_PATTERN
-
-class txStep : virtual public Expr, public txPattern
-{
-public:
-    virtual ~txStep();
-    virtual nsresult evalStep(Node* aNode, txIMatchContext* aContext,
-                              NodeSet* aResult) = 0;
-    virtual void toString(String& aDest) = 0;
-};
-
-#define TX_DECL_STEP \
-    TX_DECL_EXPR_PATTERN; \
-    nsresult evalStep(Node* aNode, txIMatchContext* aContext, NodeSet* aResult)
 
 /**
  * This class represents a FunctionCall as defined by the XPath 1.0
@@ -250,22 +186,25 @@ private:
 /*
  * This class represents a NodeTest as defined by the XPath spec
  */
-class txNodeTest : public txStep
+class txNodeTest
 {
 public:
     virtual ~txNodeTest() {}
     /*
-     * Virtual methods from txStep
-     * txNodeTests use the txPattern::getSimplePatterns implementation,
-     * so don't overload it here
+     * Virtual methods
+     * pretty much a txPattern, but not supposed to be used 
+     * standalone. The NodeTest node() is different to the
+     * Pattern "node()" (document node isn't matched)
      */
     virtual MBool matches(Node* aNode, txIMatchContext* aContext) = 0;
     virtual double getDefaultPriority() = 0;
-    virtual ExprResult* evaluate(txIEvalContext* aContext) = 0;
-    virtual nsresult evalStep(Node* aNode, txIMatchContext* aContext,
-                              NodeSet* aResult) = 0;
     virtual void toString(String& aDest) = 0;
 };
+
+#define TX_DECL_NODE_TEST \
+    MBool matches(Node* aNode, txIMatchContext* aContext); \
+    double getDefaultPriority(); \
+    void toString(String& aDest)
 
 /*
  * This class represents a NameTest as defined by the XPath spec
@@ -282,7 +221,7 @@ public:
 
     ~txNameTest();
 
-    TX_DECL_STEP;
+    TX_DECL_NODE_TEST;
 
 private:
     String mPrefix;
@@ -312,26 +251,15 @@ public:
     ~txNodeTypeTest();
 
     /*
-     * Makes this step a standalone expression or pattern.
-     * If this is set, the step will assume an implicit
-     * child:: axis, therefor node() will not match a document node
-     */
-    void setStandalone()
-    {
-        mStandalone = MB_TRUE;
-    }
-
-    /*
      * Sets the name of the node to match. Only availible for pi nodes
      */
     void setNodeName(const String& aName);
 
-    TX_DECL_STEP;
+    TX_DECL_NODE_TEST;
 
 private:
     NodeType mNodeType;
     txAtom* mNodeName;
-    MBool mStandalone;
 };
 
 /**
@@ -381,7 +309,7 @@ private:
     List predicates;
 }; //-- PredicateList
 
-class LocationStep : public PredicateList, public txStep
+class LocationStep : public PredicateList, public Expr
 {
 public:
 
@@ -415,7 +343,10 @@ public:
     **/
     virtual ~LocationStep();
 
-    TX_DECL_STEP;
+    nsresult evalStep(Node* aNode, txIMatchContext* aContext,
+                      NodeSet* aResult);
+
+    TX_DECL_EXPR;
 
 private:
 
@@ -656,7 +587,7 @@ public:
      * Adds the Expr to this PathExpr
      * @param expr the Expr to add to this PathExpr
     **/
-    void addExpr(txStep* expr, PathOperator pathOp);
+    void addExpr(Expr* expr, PathOperator pathOp);
 
     void setFilterExpr(Expr* aExpr);
 
@@ -666,7 +597,7 @@ private:
     static const String RTF_INVALID_OP;
     static const String NODESET_EXPECTED;
     struct PathExprItem {
-        txStep* expr;
+        Expr* expr;
         PathOperator pathOp;
     };
 
@@ -678,8 +609,8 @@ private:
      * all nodes that match the Expr
      * -- this will be moving to a Utility class
      **/
-    nsresult evalDescendants(txStep* aStep, Node* aNode,
-                         txIMatchContext* aContext,
+    void evalDescendants(Expr* aStep, Node* aNode,
+                         txIEvalContext* aContext,
                          NodeSet* resNodes);
 
 }; //-- PathExpr
@@ -687,7 +618,7 @@ private:
 /**
  * This class represents a RootExpr, which only matches the Document node
 **/
-class RootExpr : public txStep
+class RootExpr : public Expr
 {
 public:
 
@@ -697,7 +628,7 @@ public:
      */
     RootExpr(MBool aSerialize);
 
-    TX_DECL_STEP;
+    TX_DECL_EXPR;
 
 private:
     // When a RootExpr is used in a PathExpr it shouldn't be serialized

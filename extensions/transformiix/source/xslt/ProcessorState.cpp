@@ -258,7 +258,7 @@ void ProcessorState::addLREStylesheet(Document* aStylesheet,
     }
 
     // Add the template to the list of templates
-    txPattern* root = new RootExpr(MB_TRUE);
+    txPattern* root = new txRootPattern();
     MatchableTemplate* templ = new MatchableTemplate(aStylesheet,
                                                      root,
                                                      Double::NaN);

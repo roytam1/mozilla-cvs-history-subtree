@@ -83,53 +83,6 @@ double txNameTest::getDefaultPriority()
 }
 
 /*
- * Returns the NodeSet of nodes matching this name test with
- * the XPathParent being the given Node.
- */
-nsresult txNameTest::evalStep(Node* aNode, txIMatchContext* aContext,
-                              NodeSet* aResult)
-{
-    Node::NodeType type = (Node::NodeType)aNode->getNodeType();
-    switch (mNodeType) {
-        case Node::ELEMENT_NODE:
-            if (Node::ELEMENT_NODE == type) {
-                Node* child = aNode->getFirstChild();
-                while (child) {
-                    if (matches(child, aContext)) {
-                        aResult->add(child);
-                    }
-                    child = child->getNextSibling();
-                }
-            }
-            else if (Node::DOCUMENT_NODE == type) {
-                Element* docElem = ((Document*)aNode)->getDocumentElement();
-                if (matches(docElem, aContext)) {
-                    aResult->add(docElem);
-                }
-            }
-            break;
-        default:
-            break;
-    }
-    return NS_OK;
-}
-
-/*
- * Returns a NodeSet of nodes matching this step and having
- * the context node of aContext as XPathParent
- */
-ExprResult* txNameTest::evaluate(txIEvalContext* aContext)
-{
-    NodeSet* result = new NodeSet();
-    if (!result) {
-        // XXX error out of mem
-        return 0;
-    }
-    evalStep(aContext->getContextNode(), aContext, result);
-    return result;
-}
-
-/*
  * Returns the String representation of this txNodeTest.
  * @param aDest the String to use when creating the string representation.
  *              The string representation will be appended to the string.
