@@ -5223,3 +5223,24 @@ char *fe_GetURLForReferral(History_entry *he)
 	else
 		return NULL;
 }
+
+/*
+ * FEU_StayingAlive
+ */
+void
+FEU_StayingAlive(void)
+{
+	XtInputMask pending;
+ 
+	/* Service timers first */
+	if ( (pending = XtAppPending(fe_XtAppContext)) ) {
+		if ( pending & XtIMTimer ) {
+			XtAppProcessEvent(fe_XtAppContext, XtIMTimer);
+		} else {
+			XtAppProcessEvent(fe_XtAppContext, pending);
+		}
+	}
+
+	/* Service network connections */
+	NET_ProcessNet(-1, NET_EVERYTIME_TYPE);
+}
