@@ -126,6 +126,9 @@
           <menuitem label="&command.moveBookmark.label;"
                     accesskey="&command.moveBookmark.accesskey;"
                     command="cmd_bm_movebookmark"/>
+          <menuitem label="&menuitem.personaltoolbarfolder.label;"
+                    command="cmd_bm_setpersonaltoolbarfolder"
+                    accesskey="&menuitem.personaltoolbarfolder.accesskey;"/>
           <menuseparator/>
           <menuitem label="&command.refreshLivemark.label;"
                     command="cmd_bm_refreshlivemark"/>
@@ -163,10 +166,6 @@
                     accesskey="&menuitem.view.descending.accesskey;"
                     type="radio"
                     resource="direction" name="sortDirectionSet"/>
-          <menuseparator/>
-          <menuitem label="&menuitem.personaltoolbarfolder.label;"
-                    command="cmd_bm_setpersonaltoolbarfolder"
-                    accesskey="&menuitem.personaltoolbarfolder.accesskey;"/>
         </menupopup>
       </menu>
     </menubar>
