@@ -61,23 +61,22 @@ typedef struct il_container_struct il_container;
 
 #include "il.h"
 
-/* For debugging counts of loading, looping and aborted images, needed for
-   group observer notification. */
-/* #define DEBUG_GROUP_OBSERVER */
-
-#ifdef DEBUG
-#define Debug 1
-#endif
 
 #ifdef XP_WIN
 #define _USD 1              /* scanlines upside-down */ 
 #endif
 
-extern PRLogModuleInfo *il_log_module;
+
+
+/* For debugging counts of loading, looping and aborted images, needed for
+   group observer notification. */
+/* #define DEBUG_GROUP_OBSERVER */
+
+extern int il_debug;
 
 #ifdef DEBUG
-//#define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
-#define ILTRACE(l,t){}
+extern PRLogModuleInfo *il_log_module;
+#define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
 #else
 #define ILTRACE(l,t) {}
 #endif
