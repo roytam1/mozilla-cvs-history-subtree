@@ -31,7 +31,10 @@ var pageTagPairs = {
   "chrome://messenger/content/am-copies.xul": "mail_copies",
   "chrome://messenger/content/am-addressing.xul": "mail_addressing_settings",
   "chrome://messenger/content/am-offline.xul": "mail",
-  "chrome://messenger/content/am-smtp.xul": "mail_smtp"
+  "chrome://messenger/content/am-smtp.xul": "mail_smtp",
+  "chrome://messenger/content/am-smime.xul": "mail_security_settings",
+  "chrome://messenger/content/am-serverwithnoidentities.xul": "mail_local_folder_settings",
+  "chrome://messenger/content/am-mdn.xul": "mail-account-receipts"
 } 
 
 function doHelpButton() 

@@ -409,3 +409,9 @@ function ViewPageSource(messages)
 	}
         return true;
 }
+
+
+function doHelpButton() 
+{
+    openHelp("offline_sync");
+}
