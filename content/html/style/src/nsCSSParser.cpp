@@ -2212,11 +2212,8 @@ void CSSParserImpl::ParsePseudoSelector(PRInt32&  aDataMask,
     // various -moz-* pseudo-elements) must have |parsingPseudoElement|
     // set.
     if (!parsingPseudoElement &&
-        !nsCSSPseudoElements::IsCSS2PseudoElement(pseudo)
-#ifdef MOZ_XUL
-        && !IsTreePseudoElement(pseudo)
-#endif
-        ) {
+        !nsCSSPseudoElements::IsCSS2PseudoElement(pseudo) &&
+        !IsTreePseudoElement(pseudo)) {
       REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("This pseudo-element must use the \"::\" form: "));
       UngetToken();
       aParsingStatus = SELECTOR_PARSING_STOPPED_ERROR;
