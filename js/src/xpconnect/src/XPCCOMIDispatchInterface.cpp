@@ -38,7 +38,7 @@
  * This file contains the implementation of the XPCCOMIDispatchInterface class
  */
 
-#include "XPCPrivate.h"
+#include "xpcprivate.h"
 
 /**
  * Is this function reflectable

@@ -40,7 +40,7 @@
 #error "XPCCOMPrivate.h should not be included directly, please use XPCPrivate.h"
 #endif
 
-#include "nsIInterfaceInfo.h"
+#include "xpcprivate.h"
 
 extern nsID NSID_IDISPATCH;
 
@@ -578,6 +578,14 @@ private:
 
     VARTYPE COMType(XPCCallContext& ccx) const { return XPCCOMConvert::JSTypeToCOMType(ccx, mProperty); }
     property_type PropertyType() const { return NS_STATIC_CAST(property_type,mPropertyType & ~SETTER_MODE); }
+};
+
+class XPCCOMThrower : public XPCThrower
+{
+public:
+#ifdef XPC_IDISPATCH_SUPPORT
+    static void ThrowError(JSContext* cx, HRESULT COMErrorCode);
+#endif
 };
 
 #include "XPCCOMInlines.h"

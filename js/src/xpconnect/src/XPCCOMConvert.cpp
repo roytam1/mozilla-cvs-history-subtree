@@ -33,7 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-#include "XPCPrivate.h"
+#include "xpcprivate.h"
 
 // TODO: We need to look into consolidating all these instances
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);

@@ -89,6 +89,7 @@ OBJS=					\
 	.\$(OBJDIR)\XPCCOMConvert.obj \
 	.\$(OBJDIR)\XPCCOMTypeInfo.obj	\
 	.\$(OBJDIR)\XPCIDArray.obj \
+	.\$(OBJDIR)\XPCCOMThrower.obj \
 !endif
 	$(NULL)
 

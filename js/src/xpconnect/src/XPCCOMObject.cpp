@@ -44,7 +44,6 @@ COMObjectConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     // Make sure we were called with one string parameter
     if(argc != 1 || (argc == 1 && !JSVAL_IS_STRING(argv[0])))
     {
-        // TODO: error reporting
         return JS_FALSE;
     }
 
@@ -163,7 +162,7 @@ JSBool XPCCOMObject::Invoke(XPCCallContext & ccx, CallMode mode)
         // If the security manager is complaining then this is not really an
         // internal error in xpconnect. So, no reason to botch the assertion.
         NS_ASSERTION(rv == NS_ERROR_XPC_SECURITY_MANAGER_VETO, 
-                     "hmm? CanCallNow failed in XPCWrappedNative::CallMethod. "
+                     "hmm? CanCallNow failed in XPCCOMObject::Invoke. "
                      "We are finding out about this late!");
         return Throw(rv, ccx);
     }
@@ -290,7 +289,7 @@ JSBool XPCCOMObject::Invoke(XPCCallContext & ccx, CallMode mode)
             }
         }
     }
-    HRESULT invokeResult;
+    HRESULT invokeResult = E_FAIL;
     {
         // avoid deadlock in case the native method blocks somehow
         AutoJSSuspendRequest req(ccx);  // scoped suspend of request
@@ -312,7 +311,7 @@ JSBool XPCCOMObject::Invoke(XPCCallContext & ccx, CallMode mode)
             {
                 dispFlags = DISPATCH_METHOD;
             }
-            invokeResult= pDisp->Invoke(member->GetDispID(), IID_NULL, LOCALE_SYSTEM_DEFAULT, dispFlags, &dispParams, &dispResult, &exception, 0);
+            invokeResult= pDisp->Invoke(member->GetDispID(), IID_NULL, LOCALE_SYSTEM_DEFAULT, dispFlags, &dispParams, &dispResult, 0, 0);
             if(SUCCEEDED(invokeResult))
             {
                 if(!setter && !getter)
@@ -363,15 +362,15 @@ JSBool XPCCOMObject::Invoke(XPCCallContext & ccx, CallMode mode)
             }
         }
     }
-    
+    // TODO: I think this needs to be moved up, to only occur if invoke is actually called.
     xpcc->SetLastResult(invokeResult);
 
     if(NS_FAILED(invokeResult))
     {
-        ThrowBadResult(invokeResult, ccx);
+        XPCCOMThrower::ThrowError(ccx, invokeResult);
     }
 
-    for(int index = 0; index < args; ++index)
+    for(PRUint32 index = 0; index < args; ++index)
         CleanupVariant(dispParams.rgvarg[index]);
     // Cleanup if we allocated the variant array
     if(dispParams.rgvarg != stackArgs)

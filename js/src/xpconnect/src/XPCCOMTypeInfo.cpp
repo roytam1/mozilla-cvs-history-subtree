@@ -39,7 +39,7 @@
  * associated helper classes and functions
  */
 
-#include "XPCPrivate.h"
+#include "xpcprivate.h"
 
 inline
 void FillOutElemDesc(VARTYPE vt, PRUint16 paramFlags, ELEMDESC & elemDesc)
