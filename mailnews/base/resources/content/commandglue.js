@@ -143,6 +143,9 @@ function GetFolderAttribute(source, attribute)
 function ChangeFolderByIndex(index)
 {
     dump('In ChangeFolderByIndex\n');
+    if (index == gCurrentFolderIndex)
+        return;
+
     var resource = GetFolderResource(index);
     if (!resource) 
         return null;
@@ -159,6 +162,8 @@ function ChangeFolderByIndex(index)
     var viewType = '';
 
     ChangeFolderByURI(resource.Value, viewType, viewFlags, sortType, sortOrder);
+
+    gCurrentFolderIndex = index;
 }
 
 function setTitleFromFolder(msgfolder, subject)
@@ -811,10 +816,8 @@ function GetSelectTrashUri(index)
     if (msgFolder)
     {
         var rootFolder = msgFolder.rootFolder;
-        var numFolder;
-        var out = new Object();
+        var out = { };
         var trashFolder = rootFolder.getFoldersWithFlag(MSG_FOLDER_FLAG_TRASH, 1, out);
-        numFolder = out.value;
         if (trashFolder)
             return trashFolder.URI;
     }

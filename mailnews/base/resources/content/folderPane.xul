@@ -100,7 +100,7 @@
 -->
 
   <outliner id="folderOutliner" class="mail-folders" flex="1">
-    <outlinercol id="folderNameCol" flex="1" primary="true"/>
+    <outlinercol id="folderNameCol" flex="1" primary="true" sort="ascending"/>
     <outlinerbody id="folderOutlinerBody" flex="1"
                   datasources="rdf:null"
                   onselect="top.FolderPaneSelectionChange();">

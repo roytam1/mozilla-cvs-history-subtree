@@ -112,9 +112,10 @@ function RenameFolder(name,uri)
 
 function MsgEmptyTrash() 
 {
-    var tree = GetFolderTree();
-    if (tree)
-    {
+    var folderOutliner = GetFolderOutliner();
+
+    var selectedFolderURI = GetSelectedFolderURI();
+
         var folderList = tree.selectedItems;
         if (folderList)
         {
@@ -122,7 +123,7 @@ function MsgEmptyTrash()
             folder = folderList[0];
             if (folder)
 			{
-                var trashUri = GetSelectTrashUri(folder);
+                var trashUri = GetSelectTrashUri(index);
                 if (trashUri)
                 {
                     var trashElement = document.getElementById(trashUri);
@@ -152,7 +153,6 @@ function MsgEmptyTrash()
                 }
 			}
         }
-    }
 }
 
 function MsgCompactFolder(isAll) 
@@ -277,14 +277,13 @@ function NotifyQuitApplication()
 
 function LastToClose()
 {
-	var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
-	var	windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
-	var enumerator = windowManagerInterface.getEnumerator( null );
+    var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
+    var enumerator = windowManagerInterface.getEnumerator(null);
     var count = 0;
-
-	while ( enumerator.hasMoreElements() && count < 2 )
-	{
-		var  windowToClose = enumerator.getNext();
+    while ( enumerator.hasMoreElements() && count < 2 )
+    {
+        var windowToClose = enumerator.getNext();
         count++;
     }
     if (count == 1)

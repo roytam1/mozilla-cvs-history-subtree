@@ -32,6 +32,7 @@ var gThreadAndMessagePaneSplitter = null;
 var gUnreadCount = null;
 var gTotalCount = null;
 
+var gCurrentFolderIndex = -1;
 var gCurrentLoadingFolderURI;
 var gCurrentFolderToReroot;
 var gCurrentLoadingFolderSortType = 0;
