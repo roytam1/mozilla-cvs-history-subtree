@@ -3723,13 +3723,19 @@ MOZ_ARG_ENABLE_BOOL(svg-renderer-gdiplus,
     MOZ_SVG_RENDERER_GDIPLUS=1,
     MOZ_SVG_RENDERER_GDIPLUS= )
 if test -n "$MOZ_SVG_RENDERER_GDIPLUS"; then
-  dnl  XXX This is the test we'd like to perform but it isn't working under Windows for some reason:
-  dnl  AC_CHECK_HEADER(Gdiplus.h,,
-  dnl                  AC_MSG_ERROR([Building the SVG GDI+ renderer requires an appropriate Microsoft SDK.]))
-  dnl  So do this instead:
+  dnl XXX This is the test we'd like to perform but it isn't working
+  dnl under Windows for some reason:
+  dnl   AC_CHECK_HEADER(Gdiplus.h,,
+  dnl                   AC_MSG_ERROR([Gdiplus.h not found!]))
+  dnl So do this instead:
   AC_MSG_CHECKING(for Gdiplus.h)
-  AC_TRY_COMPILE([#include<Gdiplus.h>],,AC_MSG_RESULT(yes),
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+  AC_TRY_COMPILE([#include <windows.h>
+                  #include <unknwn.h>
+                  #include <Gdiplus.h>],,AC_MSG_RESULT(yes),
                  AC_MSG_ERROR([Building the SVG GDI+ renderer requires an appropriate Microsoft SDK.]))
+  AC_LANG_RESTORE
   AC_DEFINE(MOZ_SVG_RENDERER_GDIPLUS)
 fi
 
