@@ -10,6 +10,7 @@
 mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
 mozilla/security/nss,
 mozilla/security/manager,
+mozilla/security/manager/ssl/macbuild, NSS_3_4_LANDING_BRANCH
 mozilla/accessible,
 DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
 mozilla/lib/mac/Instrumentation
