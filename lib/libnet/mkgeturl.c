@@ -2220,7 +2220,7 @@ NET_GetURL (URL_Struct *URL_s,
 			|| !URL_s->post_headers
 			 || !XP_STRNCMP("Content-type", URL_s->post_headers, 12))
 		  {
-		    if(h HG52422)
+		    if(h HG52423)
 		      {
 				/* if this is not a secure transaction */
 			    if(HG76373
