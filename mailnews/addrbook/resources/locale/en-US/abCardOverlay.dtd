@@ -24,8 +24,15 @@ Rights Reserved.
 		<!ENTITY NameField1.id			"FirstName"> 
 		<!-- LOCALIZATION NOTE (NameField2.id) : DONT_TRANSLATE -->
 		<!ENTITY NameField2.id			"LastName"> 
+		<!-- LOCALIZATION NOTE (PhoneticField1.id) : DONT_TRANSLATE -->
+		<!ENTITY PhoneticField1.id		"PhoneticFirstName"> 
+		<!-- LOCALIZATION NOTE (PhoneticField2.id) : DONT_TRANSLATE -->
+		<!ENTITY PhoneticField2.id		"PhoneticLastName"> 
+
 		<!ENTITY NameField1.label		"First:"> 
 		<!ENTITY NameField2.label		"Last:"> 
+		<!ENTITY PhoneticField1.label		"Phonetic:"> 
+		<!ENTITY PhoneticField2.label		"Phonetic:"> 
 		<!ENTITY DisplayName.label		"Display:"> 
 		<!ENTITY NickName.label			"Nickname:"> 
 	<!ENTITY Internet.box			"Internet"> 

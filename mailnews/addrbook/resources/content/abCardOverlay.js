@@ -386,6 +386,13 @@ function GetCardValues(cardproperty, doc)
     doc.getElementById('Custom3').value = cardproperty.custom3;
     doc.getElementById('Custom4').value = cardproperty.custom4;
     doc.getElementById('Notes').value = cardproperty.notes;
+
+    // get phonetic fields if exist
+    try {
+      doc.getElementById('PhoneticFirstName').value = cardproperty.phoneticFirstName;
+      doc.getElementById('PhoneticLastName').value = cardproperty.phoneticLastName;
+    }
+    catch (ex) {}
   }
 }
 
@@ -437,6 +444,13 @@ function SetCardValues(cardproperty, doc)
     cardproperty.custom3 = doc.getElementById('Custom3').value;
     cardproperty.custom4 = doc.getElementById('Custom4').value;
     cardproperty.notes = doc.getElementById('Notes').value;
+
+    // set phonetic fields if exist
+    try {
+      cardproperty.phoneticFirstName = doc.getElementById('PhoneticFirstName').value;
+      cardproperty.phoneticLastName = doc.getElementById('PhoneticLastName').value;
+    }
+    catch (ex) {}
   }
 }
 
