@@ -46,8 +46,10 @@ for comparison, a method that overrides <TT>java.lang.Object.equals()</TT>.&nbsp
 Using <TT>equals()</TT> instead of `==' should work the same on both LC1
 and LC2.</LI>
 
-<P><BR>It is not possible to replicate the identity behavior of the `=='
-operator that LC1 provides without the use of "weak" references, i.e. references
+<BR>&nbsp;
+<P>&nbsp;
+<P>It is not possible to replicate the identity behavior of the `==' operator
+that LC1 provides without the use of "weak" references, i.e. references
 that do not contribute to making a Java object reachable for purposes of
 garbage collection, but which nonetheless allow reference to an object
 as long as it is reachable by other means.&nbsp; The use of weak references
@@ -68,9 +70,11 @@ file, thus changing the method enumeration order.&nbsp; Hence, the Java
 method chosen when there is more than one compatible method may vary depending
 on the JVM.</LI>
 
-<P><BR>A future release of LiveConnect will provide a new algorithm for
-overloaded Java method resolution that is both independent of the JVM used
-and more likely than LC1 to invoke the method that the developer expects.
+<BR>&nbsp;
+<P>&nbsp;
+<P>A future release of LiveConnect will provide a new algorithm for overloaded
+Java method resolution that is both independent of the JVM used and more
+likely than LC1 to invoke the method that the developer expects.
 <LI>
 There are several minor changes in error handling to make LiveConnect more
 conformant to ECMAScript.&nbsp; These include, for example, making any
@@ -97,13 +101,14 @@ on <TT><FONT SIZE=+1>JavaArray</FONT></TT> objects.&nbsp; (In prior versions
 of LiveConnect, the methods of <I>java.lang.Object</I> were only inherited
 by non-array Java objects.)</LI>
 
-<P><BR>Note that this change has caused the string representation of JavaArray
+<BR>&nbsp;
+<P>&nbsp;
+<P>Note that this change has caused the string representation of JavaArray
 objects to change.&nbsp; Previously, the JavaArray toString() method always
 printed "<TT><FONT SIZE=+1>[object JavaArray]"</FONT></TT> for all <TT><FONT SIZE=+1>JavaArray</FONT></TT>'s.&nbsp;
 Now, the Java <TT><FONT SIZE=+1>java.lang.Object.toString()</FONT></TT>
 method is called to convert JavaArray objects to strings, just as with
-other, non-array Java objects that are accessible via LiveConnect. 
-<TT><FONT SIZE=+1>java.lang.Object.toString()</FONT></TT>is
+other, non-array Java objects that are accessible via LiveConnect. <TT><FONT SIZE=+1>java.lang.Object.toString()</FONT></TT>is
 defined in the <I>Java Language Specification</I> to return the value of
 the following expression:
 <P><TT><FONT SIZE=-1>getClass().getName() + '@' + Integer.toHexString(hashCode())</FONT></TT>
@@ -115,13 +120,17 @@ versions of LiveConnect, the only acceptable match for a <TT><FONT SIZE=+1>char<
 had to be a JavaScript value that was convertible to a number.)&nbsp; For
 example, the following is now possible:</LI>
 
-<P><BR><TT><FONT SIZE=-1>c = new java.lang.Character("F")</FONT></TT>
+<BR>&nbsp;
+<P>&nbsp;
+<P><TT><FONT SIZE=-1>c = new java.lang.Character("F")</FONT></TT>
 <BR>&nbsp;
 <LI>
 A JavaClass object is now an acceptable match for an argument to a Java
 method of type <I>java.lang.Class</I>.&nbsp; For example, you can now write:</LI>
 
-<P><BR><TT><FONT SIZE=-1>java.lang.reflect.Array.newInstance(java.lang.String,
+<BR>&nbsp;
+<P>&nbsp;
+<P><TT><FONT SIZE=-1>java.lang.reflect.Array.newInstance(java.lang.String,
 3)</FONT></TT>
 <P>instead of the more verbose:
 <P><TT><FONT SIZE=-1>jls = java.lang.Class.forName("java.lang.String")</FONT></TT>
@@ -135,13 +144,15 @@ Update your JVM's <TT><FONT SIZE=+1>CLASSPATH</FONT></TT> to point to the
 subdirectory.&nbsp; If you do not, LiveConnect will still operate but with
 the limitation that JS objects may not be passed as arguments of Java methods
 and it will not be possible to call from Java into JavaScript, i.e. the
-<I>netscape.javascript.JSObject</I> class will be inaccessible.&nbsp; Another
-downside of operating without these classes is that Java error messages
-will not include a Java stack trace, when one is available.&nbsp; If your
-<TT><FONT SIZE=+1>CLASSPATH</FONT></TT> is set improperly, you will see
-a message like, "<TT><FONT SIZE=+1>initialization error: Can't load class
-netscape/javascript/JSObject</FONT></TT>" when starting a LiveConnect debug
-build.
+<I>netscape.javascript.JSObject</I>
+class will be inaccessible.&nbsp; Another downside of operating without
+these classes is that Java error messages will not include a Java stack
+trace, when one is available.&nbsp; If your
+<TT><FONT SIZE=+1>CLASSPATH</FONT></TT>
+is set improperly, you will see a message like, "<TT><FONT SIZE=+1>initialization
+error: Can't load class
+netscape/javascript/JSObject</FONT></TT>" when
+starting a LiveConnect debug build.
 <P>By default, LiveConnect is not re-entrant.&nbsp; To enable multi-threaded
 execution, define the <TT><FONT SIZE=+1>JS_THREADSAFE</FONT></TT> cpp macro
 and flesh out the stubs and required headers in jslock.c/.h.&nbsp; See
@@ -218,7 +229,7 @@ it in "<TT><FONT SIZE=+1>{SystemFolder}Extensions:MRJ Libraries:MRJClasses</FONT
 <UL>
 <LI>
 Use vendor cc or <A HREF="ftp://prep.ai.mit.edu/pub/gnu">gcc</A> for compiling,&nbsp;
-and use 'gmake -f Makefile.ref' for building.&nbsp; <B><FONT COLOR="#FF6666">Warning:</FONT></B><FONT COLOR="#FF6666">
+and use 'gmake -f Makefile.ref' for building.&nbsp; <FONT COLOR="#FF6666"><B>Warning:</B>
 do not use 'Makefile' for building !&nbsp; Use only Makefile.ref.</FONT></LI>
 
 <LI>
@@ -272,15 +283,15 @@ is to use no more than 95 columns per line, but exceptions are made to
 format tables or table-like code.</LI>
 
 <LI>
-DLL entry points have their return type expanded within a PR_PUBLIC_API()&nbsp;
+DLL entry points have their return type expanded within a JS_EXPORT_API()&nbsp;
 macro call, to get the right Windows secret type qualifiers in the right
 places for both 16- and 32-bit builds.</LI>
 
 <LI>
 Callback functions that might be called from a DLL are similarly macroized
-with PR_STATIC_CALLBACK (if the function otherwise would be static to hide
-its name) or PR_CALLBACK (this macro takes no type argument; it should
-be used after the return type and before the function name).</LI>
+with JS_STATIC_DLL_CALLBACK (if the function otherwise would be static
+to hide its name) or JS_DLL_CALLBACK (this macro takes no type argument;
+it should be used after the return type and before the function name).</LI>
 </UL>
 
 <H2>
