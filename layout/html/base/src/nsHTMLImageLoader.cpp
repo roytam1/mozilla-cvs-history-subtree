@@ -118,7 +118,8 @@ nsHTMLImageLoader::StopLoadImage(nsIPresContext* aPresContext)
 void
 nsHTMLImageLoader::StopAllLoadImages(nsIPresContext* aPresContext)
 {
-  aPresContext->StopAllLoadImagesFor(mFrame, mFrame);
+  if(mFrame)
+    aPresContext->StopAllLoadImagesFor(mFrame, mFrame);
 }
 
 nsresult
