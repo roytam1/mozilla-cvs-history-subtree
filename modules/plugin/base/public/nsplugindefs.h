@@ -43,17 +43,18 @@
 #endif
 
 #ifdef XP_MAC
-	#include <Quickdraw.h>
-	#include <Events.h>
+#   include <Quickdraw.h>
+#   include <Events.h>
+#   include <MacWindows.h>
 #endif
 
 #ifdef XP_UNIX
-	#include <X11/Xlib.h>
-	#include <X11/Xutil.h>
+#   include <X11/Xlib.h>
+#   include <X11/Xutil.h>
 #endif
 
 #ifdef XP_PC
-	#include <windef.h>
+#   include <windef.h>
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,7 +121,7 @@ struct nsByteRange {
     struct nsByteRange* next;
 };
 
-struct nsRect {
+struct nsPluginRect {
     PRUint16            top;
     PRUint16            left;
     PRUint16            bottom;
@@ -209,18 +210,48 @@ enum nsPluginWindowType {
     nsPluginWindowType_Drawable
 };
 
+#ifdef XP_MAC
+
+struct nsPluginPort {
+    CGrafPtr    port;   /* Grafport */
+    PRInt32     portx;  /* position inside the topmost window */
+    PRInt32     porty;
+};
+typedef RgnHandle       nsPluginRegion;
+typedef WindowRef       nsPluginPlatformWindowRef;
+
+#elif defined(XP_PC)
+
+struct nsPluginPort;
+typedef HRGN            nsPluginRegion;
+typedef HWND            nsPluginPlatformWindowRef;
+
+#elif defined(XP_MAC)
+
+struct nsPluginPort;
+typedef Region          nsPluginRegion;
+typedef Drawable        nsPluginPlatformWindowRef;
+
+#else
+
+struct nsPluginPort;
+typedef void*           nsPluginRegion;
+typedef void*           nsPluginPlatformWindowRef;
+
+#endif
+
 struct nsPluginWindow {
-    void*       window;         /* Platform specific window handle */
+    nsPluginPort* window;       /* Platform specific window handle */
                                 /* OS/2: x - Position of bottom left corner  */
                                 /* OS/2: y - relative to visible netscape window */
-    PRUint32    x;              /* Position of top left corner relative */
-    PRUint32    y;              /*	to a netscape page.					*/
-    PRUint32    width;          /* Maximum window size */
-    PRUint32    height;
-    nsRect      clipRect;       /* Clipping rectangle in port coordinates */
+    PRUint32      x;            /* Position of top left corner relative */
+    PRUint32      y;            /*	to a netscape page.					*/
+    PRUint32      width;        /* Maximum window size */
+    PRUint32      height;
+    nsPluginRect  clipRect;     /* Clipping rectangle in port coordinates */
                                 /* Used by MAC only.			  */
 #ifdef XP_UNIX
-    void*       ws_info;        /* Platform-dependent additonal data */
+    void*         ws_info;      /* Platform-dependent additonal data */
 #endif /* XP_UNIX */
     nsPluginWindowType type;    /* Is this a window or a drawable? */
 };
@@ -235,7 +266,7 @@ struct nsPluginFullPrint {
 
 struct nsPluginEmbedPrint {
     nsPluginWindow    window;
-    void*       platformPrint;	/* Platform-specific printing info */
+    void*             platformPrint;	/* Platform-specific printing info */
 };
 
 struct nsPluginPrint {
@@ -250,8 +281,8 @@ struct nsPluginPrint {
 struct nsPluginEvent {
 
 #if defined(XP_MAC)
-    EventRecord* event;
-    void*       window;
+    EventRecord*                event;
+    nsPluginPlatformWindowRef   window;
 
 #elif defined(XP_PC)
     uint16      event;
@@ -270,35 +301,20 @@ struct nsPluginEvent {
 };
 
 #ifdef XP_MAC
-typedef RgnHandle nsRegion;
-#elif defined(XP_PC)
-typedef HRGN nsRegion;
-#elif defined(XP_UNIX)
-typedef Region nsRegion;
-#else
-typedef void *nsRegion;
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-// Mac-specific structures and definitions.
-
-#ifdef XP_MAC
-
-struct NPPort {
-    CGrafPtr    port;   /* Grafport */
-    PRInt32     portx;  /* position inside the topmost window */
-    PRInt32     porty;
-};
 
 /*
  *  Non-standard event types that can be passed to HandleEvent
  */
-#define getFocusEvent           (osEvt + 16)
-#define loseFocusEvent          (osEvt + 17)
-#define adjustCursorEvent       (osEvt + 18)
-#define menuCommandEvent		(osEvt + 19)
+enum nsEventType {
+    nsEventType_getFocusEvent        = (osEvt + 16),
+    nsEventType_loseFocusEvent       = (osEvt + 17),
+    nsEventType_adjustCursorEvent    = (osEvt + 18),
+    nsEventType_menuCommandEvent     = (osEvt + 19)
+};
 
 #endif /* XP_MAC */
+
+////////////////////////////////////////////////////////////////////////////////
 
 enum nsPluginReason {
     nsPluginReason_Base = 0,
@@ -315,6 +331,7 @@ enum nsPluginReason {
 // Classes that must be implemented by the plugin DLL:
 struct nsIPlugin;                       // plugin class (MIME-type handler)
 class nsILiveConnectPlugin;             // subclass of nsIPlugin
+class nsIEventHandler;                  // event handler interface
 class nsIPluginInstance;                // plugin instance
 class nsIPluginStream;                  // stream to receive data from the browser
 

@@ -341,6 +341,27 @@ public:
     // This allows the browser to clean up any plugin-specific state.
     NS_IMETHOD_(void)
     NotifyStatusChange(nsIPlugin* plugin, nsresult error);
+    
+    ////////////////////////////////////////////////////////////////////////////
+    // New top-level window handling calls for Mac:
+    
+    NS_IMETHOD
+    RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window);
+    
+    NS_IMETHOD
+    UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window);
+
+	// Menu ID allocation calls for Mac:
+    NS_IMETHOD_(PRInt16)
+	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu);
+
+	// On the mac (and most likely win16), network activity can
+    // only occur on the main thread. Therefore, we provide a hook
+    // here for the case that the main thread needs to tickle itself.
+    // In this case, we make sure that we give up the monitor so that
+    // the tickle code can notify it without freezing.
+    NS_IMETHOD_(PRBool)
+    Tickle(void);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
@@ -401,7 +422,7 @@ typedef struct JSContext JSContext;
 
 class nsPluginTagInfo;
 
-class nsPluginInstancePeer : public nsIPluginInstancePeer2,
+class nsPluginInstancePeer : public nsIPluginInstancePeer,
                              public nsILiveConnectPluginInstancePeer,
                              public nsIWindowlessPluginInstancePeer
 {
@@ -427,26 +448,6 @@ public:
     ShowStatus(const char* message);
 
     ////////////////////////////////////////////////////////////////////////////
-    // from nsIPluginInstancePeer2:
-
-    NS_IMETHOD_(void)
-    RegisterWindow(void* window);
-	
-    NS_IMETHOD_(void)
-    UnregisterWindow(void* window);	
-
-    NS_IMETHOD_(PRInt16)
-	AllocateMenuID(PRBool isSubmenu);
-
-	// On the mac (and most likely win16), network activity can
-    // only occur on the main thread. Therefore, we provide a hook
-    // here for the case that the main thread needs to tickle itself.
-    // In this case, we make sure that we give up the monitor so that
-    // the tickle code can notify it without freezing.
-    NS_IMETHOD_(PRBool)
-    Tickle(void);
-
-    ////////////////////////////////////////////////////////////////////////////
     // from nsIJRILiveConnectPluginInstancePeer:
 
     // (Corresponds to NPN_GetJavaPeer.)
@@ -458,11 +459,11 @@ public:
 
     // (Corresponds to NPN_InvalidateRect.)
     NS_IMETHOD_(void)
-    InvalidateRect(nsRect *invalidRect);
+    InvalidateRect(nsPluginRect *invalidRect);
 
     // (Corresponds to NPN_InvalidateRegion.)
     NS_IMETHOD_(void)
-    InvalidateRegion(nsRegion invalidRegion);
+    InvalidateRegion(nsPluginRegion invalidRegion);
 
     // (Corresponds to NPN_ForceRedraw.)
     NS_IMETHOD_(void)

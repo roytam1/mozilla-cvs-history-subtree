@@ -35,13 +35,13 @@
 #define nsIPluginInstance_h___
 
 #include "nsplugindefs.h"
-#include "nsISupports.h"
+#include "nsIEventHandler.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Interface
 
 // (Corresponds to NPP object.)
-class nsIPluginInstance : public nsISupports {
+class nsIPluginInstance : public nsIEventHandler {
 public:
 
     NS_IMETHOD
@@ -82,15 +82,6 @@ public:
     // (Corresponds to NPP_Print.)
     NS_IMETHOD_(void)
     Print(nsPluginPrint* platformPrint) = 0;
-
-    // (Corresponds to NPP_HandleEvent.)
-    // Note that for Unix and Mac the nsPluginEvent structure is different
-    // from the old NPEvent structure -- it's no longer the native event
-    // record, but is instead a struct. This was done for future extensibility,
-    // and so that the Mac could receive the window argument too. For Windows
-    // and OS2, it's always been a struct, so there's no change for them.
-    NS_IMETHOD_(PRInt16)
-    HandleEvent(nsPluginEvent* event) = 0;
 
     // (Corresponds to NPP_URLNotify.)
     NS_IMETHOD_(void)

@@ -200,14 +200,6 @@
 #include "nsIFileUtilities.h"
 
 /**
- * The nsIPluginInstancePeer2 interface provides additional plugin instance
- * peer features only available in Communicator 5.0.
- *
- * To obtain: QueryInterface on nsIPluginInstancePeer
- */
-#include "nsIPluginInstancePeer2.h"
-
-/**
  * The nsILiveConnectPluginInstancePeer allows plugins to be manipulated
  * by JavaScript, providing basic scriptability.
  *

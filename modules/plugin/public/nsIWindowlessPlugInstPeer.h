@@ -45,11 +45,11 @@ public:
 
     // (Corresponds to NPN_InvalidateRect.)
     NS_IMETHOD_(void)
-    InvalidateRect(nsRect *invalidRect) = 0;
+    InvalidateRect(nsPluginRect *invalidRect) = 0;
 
     // (Corresponds to NPN_InvalidateRegion.)
     NS_IMETHOD_(void)
-    InvalidateRegion(nsRegion invalidRegion) = 0;
+    InvalidateRegion(nsPluginRegion invalidRegion) = 0;
 
     // (Corresponds to NPN_ForceRedraw.)
     NS_IMETHOD_(void)

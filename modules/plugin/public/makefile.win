@@ -22,6 +22,7 @@ DEPTH	= ..\..\..
 MODULE	= plugin
 
 EXPORTS	=				      \
+	nsIEventHandler.h		      \
 	nsIFileUtilities.h		      \
 	nsIJRILiveConnectPlugin.h	      \
 	nsIJRILiveConnectPlugInstPeer.h       \

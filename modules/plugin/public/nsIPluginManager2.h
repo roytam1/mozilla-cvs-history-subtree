@@ -75,6 +75,27 @@ public:
      */
     NS_IMETHOD_(void)
     NotifyStatusChange(nsIPlugin* plugin, nsresult error) = 0;
+    
+    ////////////////////////////////////////////////////////////////////////////
+    // New top-level window handling calls for Mac:
+    
+    NS_IMETHOD
+    RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window) = 0;
+    
+    NS_IMETHOD
+    UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window) = 0;
+
+	// Menu ID allocation calls for Mac:
+    NS_IMETHOD_(PRInt16)
+	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu) = 0;
+
+	// On the mac (and most likely win16), network activity can
+    // only occur on the main thread. Therefore, we provide a hook
+    // here for the case that the main thread needs to tickle itself.
+    // In this case, we make sure that we give up the monitor so that
+    // the tickle code can notify it without freezing.
+    NS_IMETHOD_(PRBool)
+    Tickle(void) = 0;
 
 };
 

@@ -48,9 +48,9 @@ static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
 static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID); 
 static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID);
 static NS_DEFINE_IID(kIWindowlessPluginInstancePeerIID, NS_IWINDOWLESSPLUGININSTANCEPEER_IID);
+static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
 static NS_DEFINE_IID(kPluginInstancePeerCID, NS_PLUGININSTANCEPEER_CID);
 static NS_DEFINE_IID(kIPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
-static NS_DEFINE_IID(kIPluginInstancePeer2IID, NS_IPLUGININSTANCEPEER2_IID); 
 static NS_DEFINE_IID(kIPluginTagInfoIID, NS_IPLUGINTAGINFO_IID); 
 static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID); 
 static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
@@ -319,6 +319,65 @@ nsPluginManager::NotifyStatusChange(nsIPlugin* plugin, nsresult error)
     // XXX need to shut down all instances of this plugin
 }
 
+NS_METHOD
+nsPluginManager::RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
+{
+    nsIPluginInstance* plugInst;
+    if (handler->QueryInterface(kIPluginInstanceIID, (void**)&plugInst) == NS_OK) {
+        nsIPluginInstancePeer* peer = plugInst->GetPeer();
+        nsPluginInstancePeer* myPeer;
+        if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&myPeer) == NS_OK) {
+            NPP npp = myPeer->GetNPP();
+            npn_registerwindow(npp, window);
+            myPeer->Release();
+        }
+        peer->Release();
+        plugInst->Release();
+        return NS_OK;
+    }
+    else
+        return NS_ERROR_FAILURE;
+}
+
+NS_METHOD
+nsPluginManager::UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window)
+{
+    nsIPluginInstance* plugInst;
+    if (handler->QueryInterface(kIPluginInstanceIID, (void**)&plugInst) == NS_OK) {
+        nsIPluginInstancePeer* peer = plugInst->GetPeer();
+        nsPluginInstancePeer* myPeer;
+        if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&myPeer) == NS_OK) {
+            NPP npp = myPeer->GetNPP();
+            npn_unregisterwindow(npp, window);
+            myPeer->Release();
+        }
+        peer->Release();
+        plugInst->Release();
+        return NS_OK;
+    }
+    else
+        return NS_ERROR_FAILURE;
+}
+
+NS_METHOD_(PRInt16)
+nsPluginManager::AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu)
+{
+#ifdef XP_MAC
+    return npn_allocateMenuID(fNPP, isSubmenu);
+#else
+    return -1;
+#endif
+}
+
+NS_METHOD_(PRBool)
+nsPluginManager::Tickle(void)
+{
+#ifdef XP_MAC
+    // XXX add something for the Mac...
+#endif
+    return PR_TRUE;
+}
+    
 ////////////////////////////////////////////////////////////////////////////////
 // File Utilities Interface
 
@@ -430,12 +489,11 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
-    if (aIID.Equals(kIPluginInstancePeer2IID) ||
-        aIID.Equals(kIPluginInstancePeerIID) ||
+    if (aIID.Equals(kIPluginInstancePeerIID) ||
         aIID.Equals(kPluginInstancePeerCID) ||
         aIID.Equals(kISupportsIID)) {
         // *aInstancePtr = (void*) (nsISupports*) (nsIPluginInstancePeer*)this; 
-        *aInstancePtr = (nsIPluginInstancePeer2*) this;
+        *aInstancePtr = (nsIPluginInstancePeer*) this;
         AddRef();
         return NS_OK;
     }
@@ -487,13 +545,13 @@ nsPluginInstancePeer::ShowStatus(const char* message)
 }
 
 NS_METHOD_(void)
-nsPluginInstancePeer::InvalidateRect(nsRect *invalidRect)
+nsPluginInstancePeer::InvalidateRect(nsPluginRect *invalidRect)
 {
     npn_invalidaterect(fNPP, (NPRect*)invalidRect);
 }
 
 NS_METHOD_(void)
-nsPluginInstancePeer::InvalidateRegion(nsRegion invalidRegion)
+nsPluginInstancePeer::InvalidateRegion(nsPluginRegion invalidRegion)
 {
     npn_invalidateregion(fNPP, invalidRegion);
 }
@@ -504,37 +562,6 @@ nsPluginInstancePeer::ForceRedraw(void)
     npn_forceredraw(fNPP);
 }
 
-NS_METHOD_(void)
-nsPluginInstancePeer::RegisterWindow(void* window)
-{
-    npn_registerwindow(fNPP, window);
-}
-
-NS_METHOD_(void)
-nsPluginInstancePeer::UnregisterWindow(void* window)
-{
-    npn_unregisterwindow(fNPP, window);
-}
-
-NS_METHOD_(PRInt16)
-nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
-{
-#ifdef XP_MAC
-    return npn_allocateMenuID(fNPP, isSubmenu);
-#else
-    return -1;
-#endif
-}
-
-NS_METHOD_(PRBool)
-nsPluginInstancePeer::Tickle(void)
-{
-#ifdef XP_MAC
-    // XXX add something for the Mac...
-#endif
-    return PR_TRUE;
-}
-    
 NS_METHOD_(jref)
 nsPluginInstancePeer::GetJavaPeer(void)
 {
