@@ -126,15 +126,14 @@ DocumentFunctionCall::evaluate(txIEvalContext* aContext,
         
         return NS_OK;
     }
-    else {
-        // The first argument is not a NodeSet
-        nsAutoString uriStr;
-        exprResult1->stringValue(uriStr);
-        const nsAString* base = baseURISet ? &baseURI : &mBaseURI;
-        txXPathNode* loadNode = es->retrieveDocument(uriStr, *base);
-        if (loadNode) {
-            nodeSet->add(*loadNode);
-        }
+
+    // The first argument is not a NodeSet
+    nsAutoString uriStr;
+    exprResult1->stringValue(uriStr);
+    const nsAString* base = baseURISet ? &baseURI : &mBaseURI;
+    txXPathNode* loadNode = es->retrieveDocument(uriStr, *base);
+    if (loadNode) {
+        nodeSet->add(*loadNode);
     }
 
     *aResult = nodeSet;
