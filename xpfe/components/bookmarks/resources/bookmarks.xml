@@ -1903,7 +1903,7 @@
                    onpopupshowing="this.parentNode.createContextMenu(event);"/>
       <vbox flex="1">
         <tree anonid="bookmarks-tree" flex="1" class="plain" enableColumnDrag="true"
-                  datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+                  datasources="rdf:bookmarks rdf:remotebookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
                   onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.openItem(event, false, false);"
                   ondblclick="if (this.parentNode.parentNode.validOpenClickConditions(event)) this.parentNode.parentNode.openItem(event, false, false);"
                   ondraggesture="if (event.originalTarget.localName == 'treechildren') nsDragAndDrop.startDrag(event, this.parentNode.parentNode.DNDObserver);"
@@ -2001,7 +2001,7 @@
       <menupopup id="bmContext" 
                  onpopupshowing="this.parentNode.createContextMenu(event);"/>
       <tree anonid="bookmarks-tree" flex="1" hidecolumnpicker="true" class="plain"
-                datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+                datasources="rdf:bookmarks rdf:remotebookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
                 onkeypress="if (event.keyCode == 13) this.parentNode.openItem(event, false, true);"
                 ondraggesture="if (event.originalTarget.localName == 'treechildren') nsDragAndDrop.startDrag(event, this.parentNode.DNDObserver);"
                 onclick="if (this.parentNode.validOpenClickConditions(event)) this.parentNode.openItem(event, false, true);"
@@ -2087,7 +2087,7 @@
   <binding id="bookmarks-tree-folders" extends="chrome://communicator/content/bookmarks/bookmarks.xml#bookmarks-tree">
     <xbl:content xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:xbl="http://www.mozilla.org/xbl">
       <tree anonid="bookmarks-tree" flex="1" hidecolumnpicker="true"
-                datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+                datasources="rdf:bookmarks rdf:remotebookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
                 onselect="this.parentNode.treeBoxObject.view.selectionChanged();">
         <template>
           <rule iscontainer="true">
