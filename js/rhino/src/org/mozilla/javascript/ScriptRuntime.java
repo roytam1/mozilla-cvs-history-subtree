@@ -1285,7 +1285,7 @@ public class ScriptRuntime {
         }
 
         Scriptable thisObj;
-        if (thisArg instanceof Scriptable) {
+        if (thisArg == null || thisArg instanceof Scriptable) {
             thisObj = (Scriptable) thisArg;
         } else {
             thisObj = ScriptRuntime.toObject(scope, thisArg);
