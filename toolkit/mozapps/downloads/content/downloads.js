@@ -4,9 +4,10 @@
 const kObserverServiceProgID = "@mozilla.org/observer-service;1";
 const NC_NS = "http://home.netscape.com/NC-rdf#";
 
-var gDownloadManager;
-var gDownloadListener;
-var gDownloadsView;
+var gDownloadManager  = null;
+var gDownloadListener = null;
+var gDownloadsView    = null;
+var gUserInterfered   = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions 
@@ -61,55 +62,88 @@ function fireEventForElement(aElement, aEventType)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Start/Stop Observers
+function cleanUpOnComplete(aDownload) 
+{
+  // Wrap this in try...catch since this can be called while shutting down... 
+  // it doesn't really matter if it fails then since well.. we're shutting down
+  // and there's no UI to update!
+  try {
+    var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+    var rdfc = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
+
+    var db = gDownloadManager.datasource;
+    
+    rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
+
+    var id = aDownload.target.persistentDescriptor;
+    var dlRes = rdf.GetUnicodeResource(id);
+    rdfc.RemoveElement(dlRes, true);
+    
+    var elts = rdfc.GetElements();
+    var insertIndex = 1;
+    while (elts.hasMoreElements()) {
+      var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      // This is based on the ASSumption that the dlmgr only hashes active downloads. 
+      var dl = gDownloadManager.getDownload(currDL.Value);
+      if (!dl) 
+        break;
+      ++insertIndex;
+    }
+    
+    if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
+      rdfc.AppendElement(dlRes);
+    else
+      rdfc.InsertElementAt(dlRes, insertIndex, true);      
+
+    if (gDownloadPercentages[id]) {
+      gDownloadPercentages[id] = false;
+      --gDownloadPercentagesMeta.count;
+    }
+    
+    if (gDownloadPercentagesMeta.count == 0)
+      window.title = document.documentElement.getAttribute("statictitle");    
+  }
+  catch (e) {
+  }
+}
+
+function autoClose()
+{
+  var allDownloadsComplete = true;
+  for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
+    var currItem = gDownloadsView.childNodes[i];
+    if (gDownloadManager.getDownload(currItem.id))
+      allDownloadsComplete = false;
+  }
+  
+  if (allDownloadsComplete) {
+    // For the moment, just use the simple heuristic that if this window was
+    // opened by the download process, rather than by the user, it should auto-close
+    // if the pref is set that way. If the user opened it themselves, it should
+    // not close until they explicitly close it. 
+    // We may like to revisit this in a bit more detail later, perhaps we want
+    // to keep it up if the user messes with it in a significant way.
+    var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                        .getService(Components.interfaces.nsIPrefBranch);
+    var autoClose = pref.getBoolPref("browser.download.closeWhenDone")
+    if (autoClose && window.opener.location.href == window.location.href)
+      window.close();
+  }
+}
+
 var gDownloadObserver = {
   observe: function (aSubject, aTopic, aState) 
   {
     var dl = aSubject.QueryInterface(Components.interfaces.nsIDownload);
     switch (aTopic) {
-    case "dl-failed":
     case "dl-done":
+      cleanUpOnComplete(dl);
+      
+      autoClose();      
+      break;
+    case "dl-failed":
     case "dl-cancel":
-      // Wrap this in try...catch since this can be called while shutting down... 
-      // it doesn't really matter if it fails then since well.. we're shutting down
-      // and there's no UI to update!
-      try {
-        var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-        var rdfc = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
-
-        var db = gDownloadManager.datasource;
-        
-        rdfc.Init(db, rdf.GetResource("NC:DownloadsRoot"));
-
-        var id = dl.target.persistentDescriptor;
-        var dlRes = rdf.GetUnicodeResource(id);
-        rdfc.RemoveElement(dlRes, true);
-        
-        var elts = rdfc.GetElements();
-        var insertIndex = 1;
-        while (elts.hasMoreElements()) {
-          var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-          // This is based on the ASSumption that the dlmgr only hashes active downloads. 
-          var dl = gDownloadManager.getDownload(currDL.Value);
-          if (!dl) 
-            break;
-          ++insertIndex;
-        }
-        
-        if (insertIndex == rdfc.GetCount() || insertIndex < 1) 
-          rdfc.AppendElement(dlRes);
-        else
-          rdfc.InsertElementAt(dlRes, insertIndex, true);      
-
-        if (gDownloadPercentages[id]) {
-          gDownloadPercentages[id] = false;
-          --gDownloadPercentagesMeta.count;
-        }
-        
-        if (gDownloadPercentagesMeta.count == 0)
-          window.title = document.documentElement.getAttribute("statictitle");    
-      }
-      catch (e) {
-      }
+      cleanUpOnComplete(dl);
       break;
     case "dl-start":
       // Add this download to the percentage average tally
@@ -178,7 +212,7 @@ function onDownloadShow(aEvent)
     if (parent) {
       var pref = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
-      var browserURL = pref.GetCharPref("browser.chromeURL");                          
+      var browserURL = pref.getCharPref("browser.chromeURL");                          
       window.openDialog(browserURL, "_blank", "chrome,all,dialog=no", parent.path);
     }
 #else

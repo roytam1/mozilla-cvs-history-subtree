@@ -60,16 +60,25 @@
 #include "nsIProgressDialog.h"
 #include "nsIMIMEInfo.h"
 #include "nsITimer.h"
+#ifdef XP_WIN
+#include "nsIAlertsService.h"
+#endif
 
 enum DownloadState { NOTSTARTED = -1, DOWNLOADING, FINISHED, FAILED, CANCELED, PAUSED };
 
 class nsDownloadManager : public nsIDownloadManager,
                           public nsIObserver
+#ifdef XP_WIN
+                          , public nsIAlertListener
+#endif
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOWNLOADMANAGER
   NS_DECL_NSIOBSERVER
+#ifdef XP_WIN
+  NS_DECL_NSIALERTLISTENER
+#endif
 
   nsresult Init();
 
@@ -88,6 +97,8 @@ protected:
   nsresult GetInternalListener(nsIDownloadProgressListener** aListener);
   nsresult PauseResumeDownload(const PRUnichar* aPath, PRBool aPause);
   nsresult RemoveDownload(nsIRDFResource* aDownload);
+  nsresult OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent);
+
   PRBool   NeedsUIUpdate() { return mListener != nsnull; }
   PRInt32  GetRetentionBehavior();
 

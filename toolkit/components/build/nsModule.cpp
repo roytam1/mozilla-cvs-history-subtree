@@ -37,6 +37,9 @@
 
 #include "nsIGenericFactory.h"
 
+#ifdef XP_WIN
+#include "nsAlertsService.h"
+#endif
 #include "nsToolkitCompsCID.h"
 #include "nsAutoCompleteController.h"
 #include "nsAutoCompleteMdbResult.h"
@@ -50,6 +53,9 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
+#ifdef XP_WIN
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
+#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
@@ -73,6 +79,12 @@ static void PR_CALLBACK nsToolkitCompModuleDtor(nsIModule* self)
 
 static const nsModuleComponentInfo components[] =
 {
+#ifdef XP_WIN
+  { "Alerts Service",
+    NS_ALERTSSERVICE_CID, 
+    NS_ALERTSERVICE_CONTRACTID,
+    nsAlertsServiceConstructor },
+#endif
   { "AutoComplete Controller",
     NS_AUTOCOMPLETECONTROLLER_CID, 
     NS_AUTOCOMPLETECONTROLLER_CONTRACTID,

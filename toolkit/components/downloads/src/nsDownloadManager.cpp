@@ -72,6 +72,7 @@ static PRBool gQuitting = PR_FALSE;
 
 #define DOWNLOAD_MANAGER_FE_URL "chrome://mozapps/content/downloads/downloads.xul"
 #define DOWNLOAD_MANAGER_BUNDLE "chrome://mozapps/locale/downloads/downloads.properties"
+#define DOWNLOAD_MANAGER_ALERT_ICON "chrome://mozapps/skin/downloads/downloadIcon.png"
 #define INTERVAL 500
 
 static nsIRDFResource* gNC_DownloadsRoot = nsnull;
@@ -838,8 +839,6 @@ nsDownloadManager::GetDatasource(nsIRDFDataSource** aDatasource)
 NS_IMETHODIMP
 nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
 {
-  nsresult rv;
-
   // 1). Retrieve the download object for the supplied path. 
   nsStringKey key(aPath);
   if (!mCurrDownloads.Exists(&key))
@@ -856,10 +855,16 @@ nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
 
   // 3). Look for an existing Download Manager window, if we find one we just tell it that a new 
   // download has begun (we don't focus, that's annoying), otherwise we need to open the window. 
+  return OpenDownloadManager(PR_FALSE, download, aParent);
+}
+
+nsresult
+nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent)
+{
+  nsresult rv = NS_OK;
+
   nsCOMPtr<nsIWindowMediator> wm = do_GetService(NS_WINDOWMEDIATOR_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsISupports> dlSupports(do_QueryInterface(download));
 
   nsCOMPtr<nsIDOMWindowInternal> recentWindow;
   wm->GetMostRecentWindow(NS_LITERAL_STRING("Download:Manager").get(), getter_AddRefs(recentWindow));
@@ -867,7 +872,8 @@ nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
     nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1", &rv);
     if (NS_FAILED(rv)) return rv;
     
-    rv = obsService->NotifyObservers(dlSupports, "download-starting", nsnull);
+    if (aShouldFocus)
+      recentWindow->Focus();
   }
   else {
     // If we ever have the capability to display the UI of third party dl managers,
@@ -876,10 +882,10 @@ nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
     if (NS_FAILED(rv)) return rv;
 
     // pass the datasource to the window
-    nsCOMPtr<nsISupportsArray> params(do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID));
-    nsCOMPtr<nsISupports> dsSupports(do_QueryInterface(mDataSource));
-    params->AppendElement(dsSupports);
-    params->AppendElement(dlSupports);
+    nsCOMPtr<nsISupportsArray> params;
+    NS_NewISupportsArray(getter_AddRefs(params));
+    params->AppendElement(mDataSource);
+    params->AppendElement(aDownload);
     
     nsCOMPtr<nsIDOMWindow> newWindow;
     rv = ww->OpenWindow(aParent,
@@ -889,7 +895,6 @@ nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
                         params,
                         getter_AddRefs(newWindow));
   }
-
   return rv;
 }
 
@@ -1020,6 +1025,31 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
   }
   return NS_OK;
 }
+
+#ifdef XP_WIN 
+///////////////////////////////////////////////////////////////////////////////
+// nsIAlertListener
+NS_IMETHODIMP
+nsDownloadManager::OnAlertFinished(const PRUnichar* aAlertCookie)
+{
+  // Nothing to do here. 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDownloadManager::OnAlertClickCallback(const PRUnichar* aAlertCookie)
+{
+  nsresult rv;
+
+  // Attempt to locate a browser window to parent the download manager to
+  nsCOMPtr<nsIWindowMediator> wm = do_GetService(NS_WINDOWMEDIATOR_CONTRACTID, &rv);
+  nsCOMPtr<nsIDOMWindowInternal> browserWindow;
+  if (wm)
+    wm->GetMostRecentWindow(NS_LITERAL_STRING("navigator:browser").get(), getter_AddRefs(browserWindow));
+
+  return OpenDownloadManager(PR_TRUE, nsnull, browserWindow);
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDownload
@@ -1266,6 +1296,28 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
       if (NS_SUCCEEDED(rv)) {
         mDownloadManager->DownloadEnded(path.get(), nsnull);
       }
+
+#ifdef XP_WIN
+      if ((mDownloadManager->mCurrDownloads).Count() == 0) {
+        nsCOMPtr<nsIAlertsService> alerts(do_GetService("@mozilla.org/alerts-service;1"));
+        if (alerts) {
+          nsXPIDLString title, message;
+
+          mDownloadManager->mBundle->GetStringFromName(NS_LITERAL_STRING("downloadsCompleteTitle").get(), getter_Copies(title));
+          mDownloadManager->mBundle->GetStringFromName(NS_LITERAL_STRING("downloadsCompleteMsg").get(), getter_Copies(message));
+
+          PRBool removeWhenDone = mDownloadManager->GetRetentionBehavior() == 0;
+
+
+          // If downloads are automatically removed per the user's retention policy, 
+          // there's no reason to make the text clickable because if it is, they'll
+          // click open the download manager and the items they downloaded will have
+          // been removed. 
+          alerts->ShowAlertNotification(DOWNLOAD_MANAGER_ALERT_ICON, title, message, !removeWhenDone, 
+                                        NS_LITERAL_STRING("").get(), NS_STATIC_CAST(nsIAlertListener*, mDownloadManager));
+        }
+      }
+#endif
     }
 
     // break the cycle we created in AddDownload

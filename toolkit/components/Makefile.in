@@ -58,6 +58,11 @@ DIRS = 		\
 	viewsource \
 	build \
 	$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+DIRS += alerts
+endif
+
 endif
 
 

@@ -138,9 +138,6 @@
       <toolbarbutton id="cleanUpButton" 
                      label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" 
                      command="cmd_cleanUp"/>
-      <toolbarbutton type="checkbox" 
-                     label="&closeWhenDone.label;" tooltiptext="&closeWhenDone.tooltip;" 
-                     oncommand="toggleCloseWhenDone(this);"/>
     </hbox>
     
     <spacer flex="1"/>

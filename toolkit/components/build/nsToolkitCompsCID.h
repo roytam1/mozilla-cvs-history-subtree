@@ -35,6 +35,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#define NS_ALERTSERVICE_CONTRACTID \
+  "@mozilla.org/alerts-service;1"
+
+#define NS_AUTOCOMPLETECONTROLLER_CONTRACTID \
+  "@mozilla.org/autocomplete/controller;1"
+
 #define NS_AUTOCOMPLETECONTROLLER_CONTRACTID \
   "@mozilla.org/autocomplete/controller;1"
 
@@ -57,6 +63,10 @@
     "@mozilla.org/autocomplete/search;1?name=history"
 
 /////////////////////////////////////////////////////////////////////////////
+
+// {A0CCAAF8-09DA-44D8-B250-9AC3E93C8117}
+#define NS_ALERTSSERVICE_CID \
+{ 0xa0ccaaf8, 0x9da, 0x44d8, { 0xb2, 0x50, 0x9a, 0xc3, 0xe9, 0x3c, 0x81, 0x17 } }
 
 // {F6D5EBBD-34F4-487d-9D10-3D34123E3EB9}
 #define NS_AUTOCOMPLETECONTROLLER_CID \
