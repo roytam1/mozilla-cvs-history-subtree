@@ -55,11 +55,14 @@ if($inRedirIniURL eq "")
   # redirect url not supplied, set it to default value.
   $inRedirIniURL = $inXpiURL;
 }
-
 $DEPTH         = "$topsrcdir" if !defined($DEPTH);
 $cwdBuilder    = "$topsrcdir/xpinstall/wizard/windows/builder";
 $cwdDist       = GetCwd("dist",     $DEPTH, $cwdBuilder);
 $cwdDistWin    = GetCwd("distwin",  $DEPTH, $cwdBuilder);
+print "\n DEPTH : " . $DEPTH . "\n";
+print "\n cwdDistWin : " . $cwdDistWin . "\n";
+print "\n topsrcdir : " . $topsrcdir . "\n";
+print "\n cwd : " . cwd() . "\n";
 $cwdInstall    = GetCwd("install",  $DEPTH, $cwdBuilder);
 $cwdPackager   = GetCwd("packager", $topsrcdir, $cwdBuilder);
 $verPartial    = "5.0.0.";
@@ -179,15 +182,17 @@ sub ParseArgv
     }
   }
   PrintUsage() if (!defined($topsrcdir));
-  $tmpdir = get_system_cwd();
-  chdir("$topsrcdir") || die "$topsrcdir: Directory does not exist!\n";
-  $topsrcdir = get_system_cwd();
-  chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home\n";
-  if (defined($DEPTH)) {
-      chdir("$DEPTH") || die "$DEPTH: Directory does not exist!\n";
-      $DEPTH = get_system_cwd();
-      chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home again\n";
-  }
+#  $tmpdir = get_system_cwd();
+#  chdir("$topsrcdir") || die "$topsrcdir: Directory does not exist!\n";
+#  $topsrcdir = get_system_cwd();
+#  chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home\n";
+#  if (defined($DEPTH)) {
+#      chdir("$DEPTH") || die "$DEPTH: Directory does not exist!\n";
+#      $DEPTH = get_system_cwd();
+#      chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home again\n";
+#  }
+  $topsrcdir =~ s/\\/\//g;
+  $distPath =~ s/\\/\//g;
 }
 
 sub get_system_cwd {

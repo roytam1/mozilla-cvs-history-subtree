@@ -225,6 +225,8 @@ print "\nbuilding self-extracting stub installer ($seiFileNameSpecificStub)...\n
 copy("$inDistPath/$seiFileNameGeneric", "$inDistPath/$seiFileNameSpecificStub") ||
     die "\n Error: copy $inDistPath/$seiFileNameGeneric $inDistPath/$seiFileNameSpecificStub\n";
 
+print "\n cwd: " . cwd() . "\n";
+
 if (system("$inDistPath/nsztool.exe $inDistPath/$seiFileNameSpecificStub $inDistPath/setup/*.*"))
 {
   die "\n Error: inDistPath/nsztool.exe $inDistPath/$seiFileNameSpecificStub $inDistPath/setup/*.*\n";
@@ -490,6 +492,7 @@ sub MakeUninstall
     print "\n Error: copy $inDistPath/$seiFileNameGeneric $inDistPath/$seuFileNameSpecific\n";
     return(1);
   }
+print "\n cwd: " . cwd() . "\n";
   if(system("$inDistPath/nsztool.exe $inDistPath/$seuFileNameSpecific $inDistPath/uninstall/*.*"))
   {
     print "\n Error: $inDistPath/nsztool.exe $inDistPath/$seuFileNameSpecific $inDistPath/uninstall/*.*\n";
