@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "msgMapiMain.h"
-#include "nsIAppShellService.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
 
@@ -139,14 +138,6 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
 
     PR_Lock(m_Lock);
 
-    // make sure the app doesn't exit until all mapi sessions have been logged off....
-    if (!sessionCount)
-    {
-      nsCOMPtr<nsIAppShellService> appShell(do_GetService("@mozilla.org/appshell/appShellService;1"));
-      if (appShell)
-        appShell->SetQuitOnLastWindowClosing(PR_FALSE);
-    }
-
     // Check whether max sessions is exceeded
 
     if (sessionCount >= m_nMaxSessions)
@@ -234,15 +225,6 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
                 bResult = PR_TRUE;
             }
         }
-    }
-
-        // if we are back to 0 sessions again....
-    if (!sessionCount)
-    {
-      // ...then allow mozilla to exit after hte last window is closed...
-      nsCOMPtr<nsIAppShellService> appShell(do_GetService("@mozilla.org/appshell/appShellService;1"));
-      if (appShell)
-        appShell->SetQuitOnLastWindowClosing(PR_TRUE);
     }
 
     PR_Unlock(m_Lock);
