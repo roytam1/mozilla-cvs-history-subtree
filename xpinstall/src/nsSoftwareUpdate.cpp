@@ -512,7 +512,7 @@ NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsSoftwareUpdate,
                                          nsSoftwareUpdate::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsInstallTrigger)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsInstallVersion)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXPInstallManager);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsXPInstallManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSoftwareUpdateNameSet)
 
 //----------------------------------------------------------------------
