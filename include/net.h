@@ -1311,6 +1311,8 @@ extern int
 FE_StartAsyncDNSLookup(MWContext *context, char * host_port, void ** hoststruct_ptr_ptr, int sock);
 #endif
 
+extern void NET_DownloadAutoAdminCfgFile();
+
 #ifdef MOZ_LI
 
 /* LDAP METHOD IDs for URL_s->method */
