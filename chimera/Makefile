@@ -45,7 +45,11 @@ include $(DEPTH)/config/autoconf.mk
 ifdef MOZ_DEBUG
 BUILDSTYLE	= Development
 else
+ifdef CHIMERA_OPT_SYMBOLS
+BUILDSTYLE	= DeploymentSymbols
+else
 BUILDSTYLE	= Deployment
+endif
 endif
 
 ifdef BUILD_STATIC_LIBS
