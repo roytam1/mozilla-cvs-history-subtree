@@ -1964,9 +1964,6 @@ js_Interpret(JSContext *cx, jsval *result)
 		    ok = JS_FALSE;
 		    goto out;
 		}
-		/*obj2 = fun->object; don't do this since we want the 
-                    prototype of the original object, not the converted
-                    function thing - goes wrong for closure objects */
 	    }
 
             clasp = &js_ObjectClass;
