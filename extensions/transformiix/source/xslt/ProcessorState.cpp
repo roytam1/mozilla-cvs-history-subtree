@@ -410,7 +410,7 @@ Node* ProcessorState::findTemplate(Node* aNode,
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("MatchTemplate, Pattern %s, Mode %s, Stylesheet %s, " \
                 "Node %s\n",
-                (matchBuf = ((Element*)matchTemplate)->getAttribute("match").toCharArray()),
+                (matchBuf = ((Element*)matchTemplate)->getAttribute(String("match")).toCharArray()),
                 (modeBuf = aMode.toCharArray()),
                 (uriBuf = matchTemplate->getBaseURI().toCharArray()),
                 (nodeBuf = aNode->getNodeName().toCharArray())));

@@ -176,25 +176,9 @@ String::String(const char* aSource)
   mString.AssignWithConversion(aSource);
 }
 
-String& String::operator = (const char* aSource)
-{
-  mString.AssignWithConversion(aSource);
-  return *this;
-}
-
 void String::append(const char* aSource)
 {
   mString.AppendWithConversion(aSource);
-}
-
-PRInt32 String::indexOf(const char aData, const PRInt32 aOffset) const
-{
-  return mString.FindChar((const PRUnichar)aData, aOffset);
-}
-
-PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
-{
-  return mString.RFindChar((const PRUnichar)aData, aOffset);
 }
 
 MBool String::isEqual(const char* aData) const
