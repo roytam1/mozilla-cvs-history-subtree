@@ -97,6 +97,6 @@ interface nsISpamSettings: nsISupports {
   void ensureLogFile();
   void flushLogIfNecessary();
   void logJunkHit(in nsIMsgDBHdr aMsgHdr, in boolean aMoveMessage);
-
+  void logJunkString(in string aLogText);
   void clone(in nsISpamSettings aSpamSettings); 
 };
