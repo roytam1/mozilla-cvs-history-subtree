@@ -100,9 +100,19 @@ pull_netlib:
 
 # Here is where we pull everything on the layout integration branch
 # Don't need any netlib files on the branch anymore.
+# libpref should be on the tip, but we missed a few files landing XPCOM_BRANCH.
+# Need to finish landing XPCOM_BRANCH
 repull_ngl_integration:
 	@cd $(MOZ_SRC)
-	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/include $(MOZ_TOP)/cmd $(MOZ_TOP)/lib $(MOZ_TOP)/modules
+	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) \
+	$(MOZ_TOP)/include \
+	$(MOZ_TOP)/cmd/winfe \
+	$(MOZ_TOP)/lib/makefile.win \
+	$(MOZ_TOP)/lib/htmldlgs \
+	$(MOZ_TOP)/lib/plugin \
+	$(MOZ_TOP)/lib/xp \
+	$(MOZ_TOP)/modules/xml/glue/xmlglue.c
+	$(CVSCO) -r XPCOM_BRANCH $(MOZ_TOP)/modules/libpref
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
 
 # Careful to put this after repull_ngl_integration, want modules/libutil and 
@@ -111,12 +121,12 @@ pull_imglib:
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
 	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) pull_imglib $(NGLAYOUT_ENV_VARS)
 
-# Want certain files to be on the tip
-# libpref should be on the tip, missed a few files landing XPCOM_BRANCH.
+# Want certain include files to be on the tip
+# Perhaps we should explicitly pull the include files we want instead
+# off pulling all include files on MOZNGLAYOUT_BRANCH
 repull_tip:
 	@cd $(MOZ_SRC)
 	$(CVSCO) -A $(MOZ_TOP)/include/net.h
-	$(CVSCO) -r XPCOM_BRANCH $(MOZ_TOP)/modules/libpref
 !endif
 
 
