@@ -69,7 +69,6 @@ static SECCertDBHandle        certdbhandle;
 #include "ldap.h"
 #include "disptmpl.h"
 #include "ldaplog.h"
-#include "portable.h"
 #ifndef NO_LIBLCACHE
 #include "lcache.h"
 #endif /* !NO_LIBLCACHE */
@@ -162,7 +161,7 @@ file_read( char *path, struct berval *bv )
 	long		rlen;
 	int		eof;
 
-	if (( fp = NSLDAPI_FOPEN( path, "r" )) == NULL ) {
+	if (( fp = fopen( path, "r" )) == NULL ) {
 	    	perror( path );
 		return( -1 );
 	}

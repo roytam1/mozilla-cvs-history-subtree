@@ -245,10 +245,9 @@ PK11_ImportDERPrivateKeyInfoAndReturnKey(PK11SlotInfo *slot, SECItem *derPKI,
     SECStatus rv = SECFailure;
 
     temparena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    pki = PORT_ArenaZNew(temparena, SECKEYPrivateKeyInfo);
-    pki->arena = temparena;
+    pki = PORT_ZNew(SECKEYPrivateKeyInfo);
 
-    rv = SEC_ASN1DecodeItem(pki->arena, pki, SECKEY_PrivateKeyInfoTemplate,
+    rv = SEC_ASN1DecodeItem(temparena, pki, SECKEY_PrivateKeyInfoTemplate,
 		derPKI);
     if( rv != SECSuccess ) {
 	goto finish;
@@ -259,8 +258,10 @@ PK11_ImportDERPrivateKeyInfoAndReturnKey(PK11SlotInfo *slot, SECItem *derPKI,
 
 finish:
     if( pki != NULL ) {
-	/* this zeroes the key and frees the arena */
 	SECKEY_DestroyPrivateKeyInfo(pki, PR_TRUE /*freeit*/);
+    }
+    if( temparena != NULL ) {
+	PORT_FreeArena(temparena, PR_TRUE);
     }
     return rv;
 }

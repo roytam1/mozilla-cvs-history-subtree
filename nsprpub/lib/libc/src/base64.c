@@ -383,7 +383,7 @@ PL_Base64Decode
         srclen = PL_strlen(src);
     }
 
-    if( srclen && (0 == (srclen & 3)) )
+    if( 0 == (srclen & 3) )
     {
         if( (char)'=' == src[ srclen-1 ] )
         {

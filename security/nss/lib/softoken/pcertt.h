@@ -53,7 +53,6 @@
 typedef struct NSSLOWCERTCertDBHandleStr               NSSLOWCERTCertDBHandle;
 typedef struct NSSLOWCERTCertKeyStr                    NSSLOWCERTCertKey;
 
-typedef struct NSSLOWCERTTrustStr                      NSSLOWCERTTrust;
 typedef struct NSSLOWCERTCertTrustStr                  NSSLOWCERTCertTrust;
 typedef struct NSSLOWCERTCertificateStr                NSSLOWCERTCertificate;
 typedef struct NSSLOWCERTCertificateListStr            NSSLOWCERTCertificateList;
@@ -105,17 +104,6 @@ struct NSSLOWCERTCertTrustStr {
     unsigned int sslFlags;
     unsigned int emailFlags;
     unsigned int objectSigningFlags;
-};
-
-/*
-** PKCS11 Trust representation
-*/
-struct NSSLOWCERTTrustStr {
-    NSSLOWCERTCertDBHandle *dbhandle;
-    SECItem dbKey;			/* database key for this cert */
-    certDBEntryCert *dbEntry;		/* database entry struct */
-    NSSLOWCERTCertTrust *trust;
-    SECItem *derCert;			/* original DER for the cert */
 };
 
 /*

@@ -53,18 +53,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 extern int getopt (int argc, char *const *argv, const char *optstring);
-#include <io.h>	/* for _mktemp() */
-#define LDAPTOOL_MKTEMP( p )	_mktemp( p )
 #else
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define LDAPTOOL_MKTEMP( p )	mktemp( p )
-#endif
-
-#ifdef LINUX
-#include <getopt.h>	/* not always included from unistd.h */
 #endif
 
 #include <ctype.h>
@@ -111,7 +103,6 @@ extern "C" {
 
 #define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
 #define LDAPTOOL_DEFHOST	"localhost"
-#define LDAPTOOL_DEFSSLSTRENGTH	LDAPSSL_AUTH_CERT
 #define LDAPTOOL_DEFCERTDBPATH	"."
 #define LDAPTOOL_DEFKEYDBPATH	"."
 #define LDAPTOOL_DEFREFHOPLIMIT		5
@@ -179,7 +170,6 @@ int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
 int ldaptool_boolean_str2value ( const char *s, int strict );
 int ldaptool_parse_ctrl_arg ( char *ctrl_arg, char sep, char **ctrl_oid, 
 	    int *ctrl_criticality, char **ctrl_value, int *vlen);
-FILE *ldaptool_open_file ( const char *filename, const char * mode);
 
 
 #ifdef __cplusplus
