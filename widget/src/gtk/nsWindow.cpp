@@ -817,6 +817,125 @@ nsWindow::HandleXlibExposeEvent(XEvent *event)
 }
 
 void
+nsWindow::HandleXlibButtonEvent(XButtonEvent * aButtonEvent)
+{
+  nsMouseEvent event;
+  
+  PRUint32 eventType = 0;
+  
+  if (aButtonEvent->type == ButtonPress)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+        }
+    }
+  else if (aButtonEvent->type == ButtonRelease)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_UP;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+        }
+    }
+  
+  event.message = eventType;
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aButtonEvent->x);
+  event.point.y = nscoord(aButtonEvent->y);
+  
+  event.isShift = aButtonEvent->state & ShiftMask;
+  event.isControl = aButtonEvent->state & ControlMask;
+  event.isAlt = aButtonEvent->state & Mod1Mask;
+  event.time = aButtonEvent->time;
+  event.clickCount = 1;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+void
+nsWindow::HandleXlibMotionNotifyEvent(XMotionEvent * aMotionEvent)
+{
+  nsMouseEvent event;
+  
+  event.message = NS_MOUSE_MOVE;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aMotionEvent->x);
+  event.point.y = nscoord(aMotionEvent->y);
+  
+  event.widget = this;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+void
+nsWindow::HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent)
+{
+  nsMouseEvent event;
+  
+  if (aCrossingEvent->type == EnterNotify)
+    {
+      event.message = NS_MOUSE_ENTER;
+    }
+  else
+    {
+      event.message = NS_MOUSE_EXIT;
+    }
+  
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aCrossingEvent->x);
+  event.point.y = nscoord(aCrossingEvent->y);
+  event.time = aCrossingEvent->time;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+
+void
 nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 {
   XEvent    config_event;
