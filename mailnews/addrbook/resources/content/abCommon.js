@@ -674,9 +674,9 @@ function InitViewSortByMenu()
       sortDirection = gAbView.sortDirection;
     }
 
+    // this approach is necessary to support generic columns that get overlayed.
     var elements = document.getElementsByAttribute("name","sortas");
-    var i;
-    for (i=0; i< elements.length; i++) {
+    for (var i=0; i<elements.length; i++) {
         var cmd = elements[i].getAttribute("id");
         var columnForCmd = cmd.split("cmd_SortBy")[1];
         setSortByMenuItemCheckState(cmd, (sortColumn == columnForCmd));
