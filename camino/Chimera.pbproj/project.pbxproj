@@ -365,7 +365,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Navigator</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Navigator 0.4.0, © 2002 Mozilla</string>
+	<string>Navigator 0.5.0, © 2002 The Mozilla Organization</string>
 	<key>CFBundleIconFile</key>
 	<string>appicon.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -377,7 +377,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.4.0</string>
+	<string>0.5.0</string>
 	<key>CFBundleSignature</key>
 	<string>CHIM</string>
 	<key>CFBundleURLTypes</key>
@@ -395,7 +395,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>0.4.0</string>
+	<string>0.5.0</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSMainNibFile</key>
@@ -4613,8 +4613,8 @@
 		};
 		F580736A023A1514010001CA = {
 			isa = PBXFileReference;
-			name = SplashScreenWindow.m;
-			path = src/application/SplashScreenWindow.m;
+			name = SplashScreenWindow.mm;
+			path = src/application/SplashScreenWindow.mm;
 			refType = 4;
 		};
 		F580736B023A1514010001CA = {
@@ -5512,7 +5512,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Navigator</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Navigator 0.4.0, © 2002 Mozilla</string>
+	<string>Navigator 0.5.0, © 2002 The Mozilla Organization</string>
 	<key>CFBundleIconFile</key>
 	<string>appicon.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -5524,7 +5524,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.4.0</string>
+	<string>0.5.0</string>
 	<key>CFBundleSignature</key>
 	<string>CHIM</string>
 	<key>CFBundleURLTypes</key>
@@ -5542,7 +5542,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>0.4.0</string>
+	<string>0.5.0</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSMainNibFile</key>
