@@ -48,7 +48,7 @@ WIN_IDG_CFLAGS = /MDd /Od /Z7
 WIN_DEBUG_CFLAGS = /MD /Od /Z7 
 
 # MSVC compiler options for release (optimized) builds
-# /MD      - link with MSVCRT.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
+# /MD      - link with MSVCRT.LIB (Dynamically-linked, multi-threaded, C-runtime)
 # /O2      - Optimize for speed
 # /G5      - Optimize for Pentium
 WIN_OPT_CFLAGS = /MD /O2

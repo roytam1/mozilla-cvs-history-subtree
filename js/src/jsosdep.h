@@ -22,6 +22,10 @@
  * OS (and machine, and compiler XXX) dependent information.
  */
 
+#ifdef MOZILLA_CLIENT
+#include "platform.h"
+#endif
+
 #ifdef XP_PC
 
 #ifdef _WIN32
@@ -50,7 +54,7 @@ JS_END_EXTERN_C
 /*
  * Get OS specific header information.
  */
-#if defined(AIXV3)
+#if defined(AIXV3) || defined(AIX)
 #define JS_HAVE_LONG_LONG
 
 #elif defined(BSDI)
