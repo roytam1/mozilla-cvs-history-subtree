@@ -4540,6 +4540,7 @@ void lo_UpdateStateAfterLineBreak( MWContext *context,
 
 void lo_UpdateFEProgressBar( MWContext *context, lo_DocState *state )
 {
+#if !defined(SMOOTH_PROGRESS)
 	if (state->is_a_subdoc == SUBDOC_NOT)
 	{
 		int32 percent;
@@ -4565,6 +4566,7 @@ void lo_UpdateFEProgressBar( MWContext *context, lo_DocState *state )
 			state->top_state->layout_percent = (intn)percent;
 		}
 	}
+#endif /* !defined(SMOOTH_PROGRESS) */
 }
 
 void lo_UpdateFEDocSize( MWContext *context, lo_DocState *state )
