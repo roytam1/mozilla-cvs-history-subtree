@@ -1709,7 +1709,7 @@ void Context::initOperators()
 
         { Minus, Object_Type, Object_Type, objectMinus, Number_Type },
         { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
-        { Minus,  Integer_Type, Integer_Type, integerPlus,  Integer_Type },
+        { Minus,  Integer_Type, Integer_Type, integerMinus,  Integer_Type },
 
         { ShiftLeft, Integer_Type, Integer_Type, integerShiftLeft, Integer_Type },
         { ShiftLeft, Object_Type, Object_Type, objectShiftLeft, Number_Type },

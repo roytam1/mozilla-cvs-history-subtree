@@ -121,7 +121,7 @@ static JSValue String_split(Context *cx, const JSValue& thisValue, JSValue *argv
     JSValue limitV = (argc > 1) ? argv[1] : kUndefinedValue;
         
     if (limitV.isUndefined())
-        lim = toUInt32(two32minus1);
+        lim = (uint32)(two32minus1);
     else
         lim = (uint32)(limitV.toUInt32(cx).f64);
 
