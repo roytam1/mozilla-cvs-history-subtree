@@ -295,6 +295,7 @@ NSPR_4.0 {
 		PR_SetSocketOption;
 		PR_SetCounter;
 		PR_SetStdioRedirect;
+		PR_SetSysfdTableSize;
 		PR_SetThreadAffinityMask;
 		PR_SetThreadDumpProc;
 		PR_SetThreadGCAble;
@@ -364,6 +365,13 @@ NSPR_4.0 {
 		PRP_NewNakedCondVar;
 		PRP_TryLock;
 		libVersionPoint;
+	local: *;
+};
+
+NSPRprivate {
+	global:
+		GetExecutionEnvironment;
+		SetExecutionEnvironment;
 	local: *;
 };
 
