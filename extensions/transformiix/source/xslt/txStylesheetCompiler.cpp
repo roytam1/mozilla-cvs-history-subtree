@@ -231,16 +231,17 @@ txStylesheetCompiler::characters(const nsAString& aStr)
 nsresult
 txStylesheetCompiler::doneLoading()
 {
+    // XXX Check if there are any parent or child sheets still loading and only
+    // call doneCompiling if we're really done.
+    // Otherwise just return NS_OK
     return mState.mStylesheet->doneCompiling();
 }
-
-
 
 nsresult
 txStylesheetCompiler::flushCharacters()
 {
-    // bail if we don't have any characters, or if it is ignorable whitespace
-    // we might want to do the whitespace-stripping in the handler instead
+    // Bail if we don't have any characters. The handler will detect
+    // ignoreable whitespace
     if (mCharacters.IsEmpty()) {
         return NS_OK;
     }
