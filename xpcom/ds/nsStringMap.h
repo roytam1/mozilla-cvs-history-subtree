@@ -47,7 +47,7 @@ class nsStringMap
 public:
     nsStringMap();
     ~nsStringMap();
-    PRBool Put(const char *str, void *obj);
+    PRBool Put(const char *str, void *obj, PRBool copy=PR_FALSE);
     void*  Get(const char *str);
     void   Reset();
     void   Reset(nsStringMapEnumFunc destroyFunc, void *aClosure = 0);
@@ -68,12 +68,13 @@ public:
 	const char *cstr;
     public:
 	BitTester(const char *s) : slen(nsCRT::strlen(s)), cstr(s) {}
+	BitTester(const char *s, PRUint32 l) : slen(l), cstr(s) {}
 
 	// We dont know how long ostr is, but by including the terminating
 	// 0 character in the comparison we cover the case where str is a
 	// substring of ostr.
-	PRUint32 strcmp(const char *ostr) const {
-	    return nsCRT::memcmp(cstr, ostr, slen+1);
+	PRInt32 strcmp(const char *ostr) const {
+	    return nsCRT::memcmp((void*)cstr, ostr, slen+1);
 	}
 
 	PRUint32 strlen() const {return slen;}

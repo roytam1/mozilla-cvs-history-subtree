@@ -143,9 +143,18 @@ nsStringMap::Get(const char *str)
 }
 
 PRBool
-nsStringMap::Put(const char *str, void *obj)
+nsStringMap::Put(const char *str, void *obj, PRBool copy)
 {
-    BitTester key(str);
+    PRUint32 slen = nsCRT::strlen(str);
+
+    if(copy) {
+	PRUint32 asize = (1+slen+7) & ~7;
+        char *tstr = (char*) PL_ArenaAllocate(&mPool, asize);
+	nsCRT::memcpy(tstr, str, 1+slen);
+	str = tstr;
+    }
+
+    BitTester key(str, slen);
 
     Patricia *t = searchDown(key);
 
