@@ -54,7 +54,7 @@ NO_COMPONENT_LINK_MAP = 1
 endif
 
 REQUIRES = \
-  ipc \
+  ipcd \
   nspr \
   xpcom \
   $(NULL)
@@ -78,10 +78,6 @@ include $(topsrcdir)/config/config.mk
 LIBS = \
   $(EXTRA_DSO_LIBS) \
   $(NSPR_LIBS) \
-  $(NULL)
-
-SHARED_LIBRARY_LIBS = \
-  $(DIST)/lib/$(LIB_PREFIX)ipccom_s.$(LIB_SUFFIX) \
   $(NULL)
 
 EXTRA_DSO_LDOPTS = \

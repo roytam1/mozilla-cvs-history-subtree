@@ -38,7 +38,6 @@
 #ifndef _tmIPCModule_H_
 #define _tmIPCModule_H_
 
-#include "ipcMessage.h"
 #include "ipcModuleUtil.h"
 #include "tmUtils.h"
 

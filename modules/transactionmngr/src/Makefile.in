@@ -49,7 +49,7 @@ FORCE_STATIC_LIB = 1
 MODULE_NAME = transaction_manager
 
 REQUIRES = \
-  ipc \
+  ipcd \
   string \
   transaction_manager \
   xpcom \

@@ -45,7 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE = tm_test
 
 REQUIRES = \
-  ipc \
+  ipcd \
   nspr \
   string \
   transaction_manager \

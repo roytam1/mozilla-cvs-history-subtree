@@ -49,7 +49,7 @@ IS_COMPONENT = 1
 MODULE_NAME = transmngr
 
 REQUIRES = \
-  ipc \
+  ipcd \
   string \
   transaction_manager \
   xpcom \
