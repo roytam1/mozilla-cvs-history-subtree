@@ -803,7 +803,7 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       if (mLastPref.height == -1)
       {
          menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
-         aPresShell.FrameNeedsReflow(menuPopup, PR_TRUE);
+         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
 
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
@@ -823,7 +823,7 @@ nsMenuFrame::OpenMenuInternal(PRBool aActivateFlag)
       if (curRect.height != newHeight || mLastPref.height != newHeight)
       {
          menuPopup->AddStateBits(NS_FRAME_IS_DIRTY);
-         aPresShell.FrameNeedsReflow(menuPopup, PR_TRUE);
+         aPresShell.FrameNeedsReflow(menuPopup, nsIPresShell::eStyleChange);
          mPresContext->PresShell()->FlushPendingNotifications(Flush_OnlyReflow);
       }
 
@@ -1801,7 +1801,7 @@ nsMenuFrame::RemoveFrame(nsPresContext* aPresContext,
     // Go ahead and remove this frame.
     mPopupFrames.DestroyFrame(aPresContext, aOldFrame);
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
@@ -1829,7 +1829,7 @@ nsMenuFrame::InsertFrames(nsPresContext* aPresContext,
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);  
@@ -1859,7 +1859,7 @@ nsMenuFrame::AppendFrames(nsPresContext* aPresContext,
     SetDebug(state, aFrameList, mState & NS_STATE_CURRENTLY_IN_DEBUG);
 #endif
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     rv = NS_OK;
   } else {
     rv = nsBoxFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 

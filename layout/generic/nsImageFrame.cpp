@@ -569,7 +569,8 @@ nsImageFrame::OnStartContainer(imgIRequest *aRequest, imgIContainer *aImage)
     NS_ASSERTION(presShell, "No PresShell.");
     if (mParent && presShell) { 
       mState |= NS_FRAME_IS_DIRTY;
-      presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+      presShell->FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this),
+                                  nsIPresShell::eStyleChange);
     }
   }
 

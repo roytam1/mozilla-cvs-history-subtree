@@ -535,7 +535,7 @@ nsPopupSetFrame::OpenPopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
   }
 
   AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-  mPresContext->PresShell()->FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+  mPresContext->PresShell()->FrameNeedsReflow(this, nsIPresShell::eTreeChange);
 }
 
 void

@@ -201,7 +201,7 @@ nsInlineFrame::AppendFrames(nsPresContext* aPresContext,
 
     // Ask the parent frame to reflow me.
     AddStateBits(NS_FRAME_IS_DIRTY);
-    aPresShell.FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -228,7 +228,7 @@ nsInlineFrame::InsertFrames(nsPresContext* aPresContext,
 #endif
     // Ask the parent frame to reflow me.
     AddStateBits(NS_FRAME_IS_DIRTY);
-    aPresShell.FrameNeedsReflow(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return NS_OK;
 }
@@ -283,7 +283,7 @@ nsInlineFrame::RemoveFrame(nsPresContext* aPresContext,
     if (generateReflowCommand) {
       // Ask the parent frame to reflow me.
       AddStateBits(NS_FRAME_IS_DIRTY);
-      aPresShell.FrameNeedsReflow(this, PR_TRUE);
+      aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
     }
   }
 
@@ -311,7 +311,7 @@ nsInlineFrame::ReplaceFrame(nsPresContext* aPresContext,
   
   // Ask the parent frame to reflow me.
   AddStateBits(NS_FRAME_IS_DIRTY);
-  aPresShell.FrameNeedsReflow(this, PR_TRUE);
+  aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
 
   return retval ? NS_OK : NS_ERROR_FAILURE;
 }

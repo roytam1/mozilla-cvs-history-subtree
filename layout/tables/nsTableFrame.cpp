@@ -345,7 +345,7 @@ nsTableFrame::AppendDirtyReflowCommand(nsIPresShell* aPresShell,
 
   aFrame->AddStateBits(NS_FRAME_IS_DIRTY);  // mark the table frame as dirty
 
-  return aPresShell->FrameNeedsReflow(aFrame, PR_TRUE);
+  return aPresShell->FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 }
 
 // Make sure any views are positioned properly

@@ -1392,12 +1392,12 @@ nsGrid::RowChildIsDirty(nsBoxLayoutState& aState, PRInt32 aRowIndex, PRInt32 aCo
 
   if (mRowBox) {
     mRowBox->AddStateBits(NS_FRAME_IS_DIRTY);
-    aState.PresShell()->FrameNeedsReflow(mRowBox, PR_TRUE); // XXX Should be ancestors only!
+    aState.PresShell()->FrameNeedsReflow(mRowBox, nsIPresShell::eTreeChange);
   }
 
   if (mColumnBox) {
     mColumnBox->AddStateBits(NS_FRAME_IS_DIRTY);
-    aState.PresShell()->FrameNeedsReflow(mColumnBox, PR_TRUE); // XXX Should be ancestors only!
+    aState.PresShell()->FrameNeedsReflow(mColumnBox, nsIPresShell::eTreeChange);
   }
 
   // dirty just our row and column that we were given

@@ -9993,7 +9993,8 @@ nsCSSFrameConstructor::StyleChangeReflow(nsPresContext* aPresContext,
   if (IsFrameSpecial(aFrame))
     aFrame = GetIBContainingBlockFor(aFrame);
 
-  aPresContext->PresShell()->FrameNeedsReflow(aFrame, PR_TRUE);
+  aPresContext->PresShell()->
+    FrameNeedsReflow(aFrame, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }
@@ -10596,7 +10597,8 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
 
         // XXX Work around a bug in the block code where the float won't get
         // reflowed unless the line containing the placeholder frame is reflowed...
-        aPresShell->FrameNeedsReflow(placeholderFrame, PR_TRUE);
+        aPresShell->FrameNeedsReflow(placeholderFrame,
+                                     nsIPresShell::eStyleChange);
       }
     }
 

@@ -1157,7 +1157,7 @@ nsBoxFrame::RemoveFrame(nsPresContext* aPresContext,
 
   // mark us dirty and generate a reflow command
   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-  aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+  aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   return NS_OK;
 }
 
@@ -1184,7 +1184,7 @@ nsBoxFrame::InsertFrames(nsPresContext* aPresContext,
 #endif
 
    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-   aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+   aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
    return NS_OK;
 }
 
@@ -1211,7 +1211,7 @@ nsBoxFrame::AppendFrames(nsPresContext* aPresContext,
 #endif
 
    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-   aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
+   aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
    return NS_OK;
 }
 
@@ -1321,7 +1321,7 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     }
 
     mState |= NS_FRAME_IS_DIRTY;
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
     nsBoxLayoutState state(GetPresContext()->PresShell());
@@ -1330,7 +1330,7 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     GetParentBox(&parent);
     parent->RelayoutChildAtOrdinal(state, this);
     mState |= NS_FRAME_IS_DIRTY;
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   // If the accesskey changed, register for the new value
   // The old value has been unregistered in nsXULElement::SetAttr

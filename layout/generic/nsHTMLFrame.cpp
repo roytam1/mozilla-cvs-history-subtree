@@ -295,7 +295,7 @@ CanvasFrame::AppendFrames(nsPresContext* aPresContext,
 #endif
     mFrames.AppendFrame(nsnull, aFrameList);
 
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 
   return rv;
@@ -345,7 +345,7 @@ CanvasFrame::RemoveFrame(nsPresContext* aPresContext,
     // Remove the frame and destroy it
     mFrames.DestroyFrame(aPresContext, aOldFrame);
 
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   } else {
     rv = NS_ERROR_FAILURE;
   }

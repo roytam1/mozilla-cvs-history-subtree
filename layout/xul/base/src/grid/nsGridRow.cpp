@@ -92,7 +92,7 @@ nsGridRow::MarkDirty(nsBoxLayoutState& aState)
 
   if (mBox) {
     mBox->AddStateBits(NS_FRAME_IS_DIRTY);
-    aState.PresShell()->FrameNeedsReflow(mBox, PR_TRUE); // XXX ancestors only
+    aState.PresShell()->FrameNeedsReflow(mBox, nsIPresShell::eTreeChange);
   }
 }
 

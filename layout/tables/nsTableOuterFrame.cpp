@@ -237,7 +237,7 @@ nsTableOuterFrame::AppendFrames(nsPresContext* aPresContext,
 
       // Reflow the new caption frame. It's already marked dirty, so
       // just tell the pres shell.
-      aPresShell.FrameNeedsReflow(mCaptionFrame, PR_TRUE);
+      aPresShell.FrameNeedsReflow(mCaptionFrame, nsIPresShell::eStyleChange);
     }
   }
   else {
@@ -292,7 +292,7 @@ nsTableOuterFrame::RemoveFrame(nsPresContext* aPresContext,
 
   // Generate a reflow command so we get reflowed
   AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // is this right?
-  aPresShell.FrameNeedsReflow(this);
+  aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
 
   return NS_OK;
 }

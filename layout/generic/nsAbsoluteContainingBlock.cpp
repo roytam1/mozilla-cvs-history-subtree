@@ -88,7 +88,9 @@ nsAbsoluteContainingBlock::AppendFrames(nsIFrame*       aDelegatingFrame,
   mAbsoluteFrames.AppendFrames(nsnull, aFrameList);
 
   aDelegatingFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-  aPresShell.FrameNeedsReflow(aDelegatingFrame, PR_FALSE);
+  // no damage to intrinsic widths, since absolutely positioned frames can't
+  // change them
+  aPresShell.FrameNeedsReflow(aDelegatingFrame, nsIPresShell::eResize);
 
   return rv;
 }
@@ -110,7 +112,9 @@ nsAbsoluteContainingBlock::InsertFrames(nsIFrame*       aDelegatingFrame,
   mAbsoluteFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
 
   aDelegatingFrame->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-  aPresShell.FrameNeedsReflow(aDelegatingFrame, PR_FALSE);
+  // no damage to intrinsic widths, since absolutely positioned frames can't
+  // change them
+  aPresShell.FrameNeedsReflow(aDelegatingFrame, nsIPresShell::eResize);
 
   return rv;
 }

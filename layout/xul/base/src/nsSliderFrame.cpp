@@ -278,7 +278,8 @@ nsSliderFrame::AttributeChanged(nsIContent* aChild,
       aAttribute == nsXULAtoms::increment) {
 
       AddStateBits(NS_FRAME_IS_DIRTY);
-      GetPresContext()->PresShell()->FrameNeedsReflow(this, PR_TRUE);
+      GetPresContext()->PresShell()->
+        FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
 
   return rv;

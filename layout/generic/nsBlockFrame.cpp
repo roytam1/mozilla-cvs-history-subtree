@@ -2436,7 +2436,8 @@ nsBlockFrame::AttributeChanged(nsIContent*     aChild,
     // XXX Not sure if this is necessary anymore
     RenumberLists(presContext);
 
-    presContext->PresShell()->FrameNeedsReflow(this, PR_TRUE);
+    presContext->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (nsHTMLAtoms::value == aAttribute) {
     const nsStyleDisplay* styleDisplay = GetStyleDisplay();
@@ -2463,7 +2464,8 @@ nsBlockFrame::AttributeChanged(nsIContent*     aChild,
         // XXX Not sure if this is necessary anymore
         blockParent->RenumberLists(presContext);
 
-        presContext->PresShell()->FrameNeedsReflow(blockParent, PR_TRUE);
+        presContext->PresShell()->
+          FrameNeedsReflow(blockParent, nsIPresShell::eStyleChange);
       }
     }
   }
@@ -4356,7 +4358,7 @@ nsBlockFrame::AppendFrames(nsPresContext* aPresContext,
   nsresult rv = AddFrames(aPresContext, aFrameList, lastKid);
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return rv;
 }
@@ -4401,7 +4403,7 @@ nsBlockFrame::InsertFrames(nsPresContext* aPresContext,
 #endif // IBMBIDI
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return rv;
 }
@@ -4572,7 +4574,7 @@ nsBlockFrame::RemoveFrame(nsPresContext* aPresContext,
 
   if (NS_SUCCEEDED(rv)) {
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
-    aPresShell.FrameNeedsReflow(this, PR_TRUE);
+    aPresShell.FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
   return rv;
 }

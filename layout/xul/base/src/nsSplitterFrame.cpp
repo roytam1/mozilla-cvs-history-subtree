@@ -626,7 +626,7 @@ nsSplitterFrameInner::MouseDrag(nsPresContext* aPresContext, nsGUIEvent* aEvent)
       nsIPresShell *shell = aPresContext->PresShell();
 
       mOuter->mState |= NS_FRAME_IS_DIRTY;
-      shell->FrameNeedsReflow(mOuter, PR_TRUE);
+      shell->FrameNeedsReflow(mOuter, nsIPresShell::eStyleChange);
     */
     mDidDrag = PR_TRUE;
   }
@@ -1022,7 +1022,8 @@ nsSplitterFrameInner::AdjustChildren(nsPresContext* aPresContext)
   }
   else {
     AddStateBits(NS_FRAME_IS_DIRTY);
-    aPresContext->PresShell()->FrameNeedsReflow(this, PR_TRUE);
+    aPresContext->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange);
   }
 }
 
@@ -1104,7 +1105,7 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
 
   content->SetAttr(kNameSpaceID_None, attribute, prefValue, PR_TRUE);
   aChildBox->AddStateBits(NS_FRAME_IS_DIRTY);
-  aState.PresShell()->FrameNeedsReflow(aChildBox, PR_TRUE);
+  aState.PresShell()->FrameNeedsReflow(aChildBox, nsIPresShell::eStyleChange);
 }
 
 
