@@ -18,6 +18,7 @@
         <rdf:li> <rdf:Description ID="prefs" nc:name="Options (Preferences)" nc:link="prefs.xhtml"/> </rdf:li>
         <rdf:li> <rdf:Description ID="popup-blocker" nc:name="Controlling Popups" nc:link="popup.xhtml"/> </rdf:li>
         <rdf:li> <rdf:Description ID="cookies" nc:name="Managing Cookies" nc:link="cookies.xhtml"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="tabbed-browsing" nc:name="Tabbed Browsing" nc:link="tabbed_browsing.xhtml"/> </rdf:li>
         <rdf:li> <rdf:Description ID="firebird-keyboard-shortcuts" nc:name="Keyboard Shortcuts" nc:link="shortcuts.xhtml"/> </rdf:li>
         <rdf:li> <rdf:Description ID="firebird-mouse-shortcuts" nc:name="Mouse Shortcuts" nc:link="mouse_shortcuts.xhtml"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu" nc:name="Menu Reference" nc:link="menu_reference.xhtml"/> </rdf:li>
@@ -161,6 +162,16 @@
         <rdf:li><rdf:Description ID="cookies-manager-the-cookies-list" nc:name="The Cookie List" nc:link="cookies.xhtml#the_cookie_list"/> </rdf:li>
         <rdf:li><rdf:Description ID="cookies-manager-the-site-list" nc:name="The Site List" nc:link="cookies.xhtml#the_site_list"/> </rdf:li>
       </rdf:Seq>
+    </nc:subheadings>
+  </rdf:Description>
+
+  <rdf:Description about="#tabbed-browsing">
+    <nc:subheadings>
+      <rdf:Seq>
+        <rdf:li> <rdf:Description ID="tabbed-browsing-using" nc:name="Using Tabbed Browsing" nc:link="tabbed_browsing.xhtml#"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="tabbed-browsing-creating-loading-tabs" nc:name="Creating and Loading Tabs" nc:link="tabbed_browsing.xhtml#creating_loading_tabs"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="tabbed-browsing-customizing" nc:name="Customizing Tabbed Browsing" nc:link="tabbed_browsing.xhtml#customizing"/> </rdf:li>
+       </rdf:Seq>
     </nc:subheadings>
   </rdf:Description>
 
