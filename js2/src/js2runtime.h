@@ -49,6 +49,8 @@
 #include "formatter.h"
 #include "property.h"
 
+#include "tracer.h"
+
 namespace JavaScript {
 namespace JS2Runtime {
 
@@ -141,6 +143,11 @@ static const double two31 = 2147483648.0;
         } Tag;
         Tag tag;
         
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSValue", s, t); return t; }
+        void operator delete(void* t) { trace_release("JSValue", t); free(t); }
+#endif
+
         JSValue() : f64(0.0), tag(undefined_tag) {}
         explicit JSValue(float64 f64) : f64(f64), tag(f64_tag) {}
         explicit JSValue(JSObject *object) : object(object), tag(object_tag) {}
@@ -257,6 +264,11 @@ static const double two31 = 2147483648.0;
     public:
         Reference(JSType *type) : mType(type) { }
         JSType *mType;
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Reference", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Reference", t); free(t); }
+#endif
 
         // used by the invocation sequence to calculate
         // the stack depth and specify the 'this' flag
@@ -485,6 +497,11 @@ static const double two31 = 2147483648.0;
         
         virtual ~JSObject() { } // keeping gcc happy
         
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSObject", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSObject", t); free(t); }
+#endif
+
         // every object has a type
         JSType        *mType;
 
@@ -621,6 +638,11 @@ static const double two31 = 2147483648.0;
 
         virtual ~JSInstance() { } // keeping gcc happy
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSInstance", t); free(t); }
+#endif
+
         void initInstance(Context *cx, JSType *type);
 
         void getProperty(Context *cx, const String &name, AttributeList *attr);
@@ -679,6 +701,11 @@ static const double two31 = 2147483648.0;
         }
 
         virtual ~JSType() { } // keeping gcc happy
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSType", t); free(t); }
+#endif
 
         void setStaticInitializer(Context *cx, JSFunction *f);
         void setInstanceInitializer(Context *cx, JSFunction *f);
@@ -834,6 +861,11 @@ static const double two31 = 2147483648.0;
         JSArrayInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
         virtual ~JSArrayInstance() { } // keeping gcc happy
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSArrayInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSArrayInstance", t); free(t); }
+#endif
+
         // XXX maybe could have implemented length as a getter/setter pair?
         void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
         void getProperty(Context *cx, const String &name, AttributeList *attr);
@@ -851,6 +883,11 @@ static const double two31 = 2147483648.0;
         }
         virtual ~JSArrayType() { } // keeping gcc happy
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSArrayType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSArrayType", t); free(t); }
+#endif
+
         JSInstance *newInstance(Context *cx);
 
     };
@@ -859,6 +896,11 @@ static const double two31 = 2147483648.0;
     public:
         JSStringInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
         virtual ~JSStringInstance() { } // keeping gcc happy
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSStringInstance", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSStringInstance", t); free(t); }
+#endif
 
         void getProperty(Context *cx, const String &name, AttributeList *attr);
 
@@ -874,6 +916,11 @@ static const double two31 = 2147483648.0;
         {
         }
         virtual ~JSStringType() { } // keeping gcc happy
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSStringType", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSStringType", t); free(t); }
+#endif
 
         JSInstance *newInstance(Context *cx);
 
@@ -891,6 +938,11 @@ static const double two31 = 2147483648.0;
         {
         }
         virtual ~ParameterBarrel() { } // keeping gcc happy
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ParameterBarrel", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ParameterBarrel", t); free(t); }
+#endif
 
         Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
         {
@@ -950,6 +1002,11 @@ static const double two31 = 2147483648.0;
 
         virtual ~Activation() { } // keeping gcc happy
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Activation", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Activation", t); free(t); }
+#endif
+
         
         // saved values from a previous execution
         JSValue *mLocals;
@@ -981,6 +1038,11 @@ static const double two31 = 2147483648.0;
               m_cx(cx)
         {
         }
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ScopeChain", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ScopeChain", t); free(t); }
+#endif
 
         Context *m_cx;
 
@@ -1212,6 +1274,11 @@ static const double two31 = 2147483648.0;
 
         ~JSFunction() { }  // keeping gcc happy
         
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("JSFunction", s, t); return t; }
+        void operator delete(void* t)   { trace_release("JSFunction", t); free(t); }
+#endif
+
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
         void setResultType(JSType *r)           { mResultType = r; }
         void setExpectedArgs(uint32 e)          { mExpectedArgs = e; }
@@ -1344,6 +1411,11 @@ static const double two31 = 2147483648.0;
 
         Context(JSObject **global, World &world, Arena &a);
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("Context", s, t); return t; }
+        void operator delete(void* t)   { trace_release("Context", t); free(t); }
+#endif
+
         StringAtom& VirtualKeyWord; 
         StringAtom& ConstructorKeyWord; 
         StringAtom& OperatorKeyWord; 
@@ -1450,7 +1522,7 @@ static const double two31 = 2147483648.0;
         std::stack<HandlerData *> mTryStack;
         std::stack<uint8 *> mSubStack;
 
-        // the locals for the current function (an array, constructed on fudnction entry)
+        // the locals for the current function (an array, constructed on function entry)
         JSValue *mLocals;
 
         // the base of the incoming arguments for this function

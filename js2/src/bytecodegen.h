@@ -46,6 +46,8 @@
 #include "systemtypes.h"
 #include "strings.h"
 
+#include "tracer.h"
+
 namespace JavaScript {
 namespace JS2Runtime {
 
@@ -163,6 +165,11 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             
         ByteCodeModule(ByteCodeGen *bcg);
 
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ByteCodeModule", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ByteCodeModule", t); free(t); }
+#endif
+
         uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
         int32 getOffset(int index) const            { return *((int32 *)&mCodeBase[index]); }
         const String *getString(uint32 index) const { return &mStringPoolContents[index]; }
@@ -196,7 +203,6 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         Label() : mKind(InternalLabel), mHasLocation(false) { }
         Label(LabelStmtNode *lbl) : mKind(NamedLabel), mHasLocation(false), mLabelStmt(lbl) { }
         Label(LabelKind kind) : mKind(kind), mHasLocation(false) { }
-
 
         bool matches(const StringAtom *name)
         {
@@ -232,6 +238,11 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                 mStackTop(0),
                 mStackMax(0)
         { }
+
+#ifdef DEBUG
+        void* operator new(size_t s)    { void *t = malloc(s); trace_alloc("ByteCodeGen", s, t); return t; }
+        void operator delete(void* t)   { trace_release("ByteCodeGen", t); free(t); }
+#endif
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         bool genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);

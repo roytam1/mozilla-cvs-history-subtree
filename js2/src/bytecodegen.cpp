@@ -905,7 +905,10 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
                 setLabel(labelAtEnd);
 
-
+                delete objectReadRef;
+                delete objectWriteRef;
+                delete iteratorReadRef;
+                delete iteratorWriteRef;
             }
             else
                 NOT_REACHED("implement me");
@@ -1057,6 +1060,9 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             }
             mLabelStack.pop_back();
             setLabel(breakLabel);
+
+            delete switchTempReadRef;
+            delete switchTempWriteRef;
         }
         break;
     case StmtNode::If:
@@ -1610,6 +1616,8 @@ PreXcrement:
                 addByte(op);
             }
             writeRef->emitCodeSequence(this);
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1651,6 +1659,8 @@ PostXcrement:
             addByte(op);
             writeRef->emitCodeSequence(this);
             addOp(PopOp);     // because the SetXXX will propogate the new value
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1711,6 +1721,8 @@ BinaryOpEquals:
             addOp(DoOperatorOp);
             addByte(op);
             writeRef->emitCodeSequence(this);
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1744,6 +1756,8 @@ BinaryOpEquals:
             genExpr(b->op2);
             setLabel(labelAfterSecondExpr);    
             writeRef->emitCodeSequence(this);
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1776,6 +1790,8 @@ BinaryOpEquals:
             genExpr(b->op2);
             setLabel(labelAfterSecondExpr);    
             writeRef->emitCodeSequence(this);
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1802,6 +1818,8 @@ BinaryOpEquals:
             genExpr(b->op2);
             addOp(LogicalXorOp);
             writeRef->emitCodeSequence(this);
+            delete readRef;
+            delete writeRef;
             return Object_Type;
         }
 
@@ -1938,6 +1956,7 @@ BinaryOpEquals:
         {
             Reference *ref = genReference(p, Read);
             ref->emitCodeSequence(this);
+            delete ref;
             return Object_Type;
         }
     case ExprNode::call:

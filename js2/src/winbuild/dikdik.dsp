@@ -297,6 +297,10 @@ SOURCE=..\token.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\tracer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\utilities.cpp
 
 !IF  "$(CFG)" == "DikDik - Win32 Release"

@@ -38,6 +38,10 @@
 #include "js2runtime.h"
 #include "bytecodegen.h"
 
+#ifdef DEBUG
+#include "tracer.h"
+#endif
+
 #if defined(XP_MAC) && !defined(XP_MAC_MPW)
 #include <SIOUX.h>
 #include <MacTypes.h>
@@ -239,5 +243,8 @@ int main(int argc, char **argv)
     }
     if (doInteractive)
         result = readEvalPrint(&cx, stdin);
+
+    trace_dump(JavaScript::stdOut);
+
     return result;
 }
