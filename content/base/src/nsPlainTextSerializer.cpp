@@ -53,6 +53,7 @@
 #include "nsParserCIID.h"
 #include "nsContentUtils.h"
 #include "nsReadableUtils.h"
+#include "nsCRT.h"
 #include "nsUnicharUtils.h"
 
 static NS_DEFINE_CID(kLWBrkCID, NS_LWBRK_CID);

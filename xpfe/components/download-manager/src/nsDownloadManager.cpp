@@ -54,6 +54,7 @@
 #include "nsIWebBrowserPersist.h"
 #include "nsIWindowWatcher.h"
 #include "nsIStringBundle.h"
+#include "nsCRT.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.

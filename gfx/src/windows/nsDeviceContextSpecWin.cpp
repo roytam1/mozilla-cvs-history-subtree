@@ -60,6 +60,7 @@
 #include "nsSupportsArray.h"
 
 #include "nsString.h"
+#include "nsCRT.h"
 #include "nsIServiceManager.h"
 #include "nsReadableUtils.h"
 #include "nsGfxCIID.h"

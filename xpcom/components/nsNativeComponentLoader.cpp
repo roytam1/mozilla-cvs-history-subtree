@@ -960,8 +960,8 @@ nsNativeComponentLoader::RegisterDeferredComponents(PRInt32 aWhen,
                                                     PRBool *aRegistered)
 {
 #ifdef DEBUG 
-    fprintf(stderr, "nNCL: registering deferred (%d)\n",
-            mDeferredComponents.Count());
+    printf("nNCL: registering deferred (%d)\n",
+           mDeferredComponents.Count());
 #endif
     *aRegistered = PR_FALSE;
     if (!mDeferredComponents.Count())
@@ -980,10 +980,10 @@ nsNativeComponentLoader::RegisterDeferredComponents(PRInt32 aWhen,
     }
 #ifdef DEBUG
     if (*aRegistered)
-        fprintf(stderr, "nNCL: registered deferred, %d left\n",
+        printf("nNCL: registered deferred, %d left\n",
                 mDeferredComponents.Count());
     else
-        fprintf(stderr, "nNCL: didn't register any components, %d left\n",
+        printf("nNCL: didn't register any components, %d left\n",
                 mDeferredComponents.Count());
 #endif
     /* are there any fatal errors? */

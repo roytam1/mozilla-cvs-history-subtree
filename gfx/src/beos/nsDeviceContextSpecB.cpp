@@ -51,6 +51,7 @@
 
 #include "nsReadableUtils.h"
 #include "nsISupportsArray.h"
+#include "nsCRT.h"
 
 //#include "prmem.h"
 //#include "plstr.h"

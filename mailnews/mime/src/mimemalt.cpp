@@ -39,6 +39,7 @@
 #include "prmem.h"
 #include "plstr.h"
 #include "prlog.h"
+#include "nsCRT.h"
 #include "nsMimeTypes.h"
 #include "nsMimeStringResources.h"
 

@@ -36,6 +36,7 @@
 #include "nsXPathNSResolver.h"
 #include "nsXPathResult.h"
 #include "nsXPIDLString.h"
+#include "nsCRT.h"
 #include "txAtoms.h"
 #include "XSLTProcessor.h"
 

@@ -59,6 +59,7 @@
 
 #include "nsReadableUtils.h"
 #include "nsISupportsArray.h"
+#include "nsCRT.h"
 
 #include "nsPrintfCString.h"
 

@@ -50,6 +50,7 @@
 #include "nsChildIterator.h"
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMClassInfo.h"
+#include "nsCRT.h"
 #include "nsIEventStateManager.h"
 
 

@@ -46,6 +46,7 @@
 #include "nsIPref.h"
 
 #include "nsGfxUtils.h"
+#include "nsCRT.h"
 #include "plbase64.h"
 #include "prmem.h"
 

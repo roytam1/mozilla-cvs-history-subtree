@@ -37,6 +37,7 @@
 
 #include "prefapi.h"
 #include "jsapi.h"
+#include "nsCRT.h"
 
 #if defined(XP_MAC)
   #include <stat.h>

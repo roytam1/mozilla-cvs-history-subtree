@@ -45,6 +45,7 @@
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsSaveAsCharset.h"
+#include "nsCRT.h"
 
 //
 // guids

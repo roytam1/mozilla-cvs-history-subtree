@@ -46,6 +46,7 @@
 
 #include "plbase64.h"
 #include "prmem.h"
+#include "nsCRT.h"
 
 #define MAC_OS_PAGE_SETUP_PREFNAME  "print.macos.pagesetup"
 

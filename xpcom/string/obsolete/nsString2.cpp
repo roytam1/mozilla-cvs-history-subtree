@@ -44,13 +44,15 @@
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsDebug.h"
-#include "nsDeque.h"
+
+#ifndef nsCharTraits_h___
+#include "nsCharTraits.h"
+#endif
 
 #ifndef RICKG_TESTBED
 #include "prdtoa.h"
 #include "nsISizeOfHandler.h"
-#endif 
-
+#endif
 
 static const char* kPossibleNull = "Error: possible unintended null in string";
 static const char* kNullPointerError = "Error: unexpected null ptr";
@@ -372,12 +374,12 @@ void
 nsString::ReplaceSubstring(const PRUnichar* aTarget,const PRUnichar* aNewValue){
   if(aTarget && aNewValue) {
 
-    PRInt32 len=nsCRT::strlen(aTarget);
+    PRInt32 len=nsCharTraits<PRUnichar>::length(aTarget);
     if(0<len) {
       CBufDescriptor theDesc1(aTarget,PR_TRUE, len+1,len);
       nsAutoString theTarget(theDesc1);
 
-      len=nsCRT::strlen(aNewValue);
+      len=nsCharTraits<PRUnichar>::length(aNewValue);
       if(0<len) {
         CBufDescriptor theDesc2(aNewValue,PR_TRUE, len+1,len);
         nsAutoString theNewValue(theDesc2);
@@ -719,7 +721,7 @@ void nsString::AppendWithConversion(const char* aCString,PRInt32 aCount) {
 #endif
 
     }
-    else aCount=temp.mLength=strlen(aCString);
+    else aCount=temp.mLength=nsCharTraits<char>::length(aCString);
       
     if(0<aCount)
       nsStrPrivate::StrAppend(*this,temp,0,aCount);
@@ -811,7 +813,7 @@ void nsString::InsertWithConversion(const char* aCString,PRUint32 anOffset,PRInt
 #endif
 
     }
-    else aCount=temp.mLength=strlen(aCString);
+    else aCount=temp.mLength=nsCharTraits<char>::length(aCString);
 
     if(0<aCount){
       nsStrPrivate::StrInsert1into2(*this,anOffset,temp,0,aCount);
@@ -851,7 +853,7 @@ PRInt32 nsString::Find(const char* aCString,PRBool aIgnoreCase,PRInt32 anOffset,
   if(aCString) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eOneByte);
-    temp.mLength=strlen(aCString);
+    temp.mLength=nsCharTraits<char>::length(aCString);
     temp.mStr = NS_CONST_CAST(char*, aCString);
     result=nsStrPrivate::FindSubstr1in2(*this,temp,aIgnoreCase,anOffset,aCount);
   }
@@ -875,7 +877,7 @@ PRInt32 nsString::Find(const PRUnichar* aString,PRInt32 anOffset,PRInt32 aCount)
   if(aString) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eTwoByte);
-    temp.mLength = nsCRT::strlen(aString);
+    temp.mLength = nsCharTraits<PRUnichar>::length(aString);
     temp.mUStr = NS_CONST_CAST(PRUnichar*, aString);
     result=nsStrPrivate::FindSubstr2in2(*this,temp,anOffset,aCount);
   }
@@ -919,7 +921,7 @@ PRInt32 nsString::FindCharInSet(const char* aCStringSet,PRInt32 anOffset) const{
   if(aCStringSet) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eOneByte);
-    temp.mLength=strlen(aCStringSet);
+    temp.mLength=nsCharTraits<char>::length(aCStringSet);
     temp.mStr = NS_CONST_CAST(char*, aCStringSet);
     result=nsStrPrivate::FindCharInSet1(*this,temp,PR_FALSE,anOffset);
   }
@@ -942,7 +944,7 @@ PRInt32 nsString::FindCharInSet(const PRUnichar* aStringSet,PRInt32 anOffset) co
   if(aStringSet) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eTwoByte);
-    temp.mLength=nsCRT::strlen(aStringSet);
+    temp.mLength=nsCharTraits<PRUnichar>::length(aStringSet);
     temp.mUStr=NS_CONST_CAST(PRUnichar*, aStringSet);
     result=nsStrPrivate::FindCharInSet2(*this,temp,anOffset);
   }
@@ -975,7 +977,7 @@ PRInt32 nsString::RFind(const PRUnichar* aString, PRInt32 anOffset, PRInt32 aCou
   if (aString) {
     nsStr temp;
     nsStrPrivate::Initialize(temp, eTwoByte);
-    temp.mLength = nsCRT::strlen(aString);
+    temp.mLength = nsCharTraits<PRUnichar>::length(aString);
     temp.mUStr = NS_CONST_CAST(PRUnichar*, aString);
     result=nsStrPrivate::RFindSubstr2in2(*this,temp,anOffset,aCount);
   }
@@ -999,7 +1001,7 @@ PRInt32 nsString::RFind(const char* aString,PRBool aIgnoreCase,PRInt32 anOffset,
   if(aString) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eOneByte);
-    temp.mLength=strlen(aString);
+    temp.mLength=nsCharTraits<char>::length(aString);
     temp.mStr = NS_CONST_CAST(char*, aString);
     result=nsStrPrivate::RFindSubstr1in2(*this,temp,aIgnoreCase,anOffset,aCount);
   }
@@ -1037,7 +1039,7 @@ PRInt32 nsString::RFindCharInSet(const PRUnichar* aStringSet,PRInt32 anOffset) c
   if(aStringSet) {
     nsStr temp;
     nsStrPrivate::Initialize(temp,eTwoByte);
-    temp.mLength = nsCRT::strlen(aStringSet);
+    temp.mLength = nsCharTraits<PRUnichar>::length(aStringSet);
     temp.mUStr = NS_CONST_CAST(PRUnichar*, aStringSet);
     result=nsStrPrivate::RFindCharInSet2(*this,temp,anOffset);
   }
@@ -1064,7 +1066,7 @@ PRInt32 nsString::CompareWithConversion(const char *aCString,PRBool aIgnoreCase,
     nsStr temp;
     nsStrPrivate::Initialize(temp,eOneByte);
 
-    temp.mLength= (0<aCount) ? aCount : strlen(aCString);
+    temp.mLength= (0<aCount) ? aCount : nsCharTraits<char>::length(aCString);
 
     temp.mStr = NS_CONST_CAST(char*, aCString);
     return nsStrPrivate::StrCompare2To1(*this,temp,aCount,aIgnoreCase);
@@ -1111,7 +1113,7 @@ PRBool nsString::EqualsAtom(nsIAtom* aAtom) const{
     const PRUnichar* unicode;
     if (aAtom->GetUnicode(&unicode) != NS_OK || unicode == nsnull)
         return PR_FALSE;
-    cmp=Compare2To2(mUStr,unicode, nsCRT::strlen(mUStr));
+    cmp=Compare2To2(mUStr,unicode, nsCharTraits<PRUnichar>::length(mUStr));
     result=PRBool(0==cmp);
   }
 

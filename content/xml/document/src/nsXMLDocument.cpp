@@ -69,6 +69,7 @@
 #include "nsICSSLoader.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
+#include "nsCRT.h"
 #include "nsIHttpChannel.h"
 #include "nsIURI.h"
 #include "nsIServiceManager.h"
