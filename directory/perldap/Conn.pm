@@ -429,7 +429,7 @@ sub update
 
   foreach $key (keys (%$entry))
     {
-      next if (($key eq "dn") || ($key =~ /^_.+_/));
+      next if (($key eq "dn") || ($key =~ /^_.+_$/));
 
       if ($entry->{"_${key}_modified_"})
 	{
