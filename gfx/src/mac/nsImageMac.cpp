@@ -812,7 +812,6 @@ nsImageMac::GetPixMap ( PixMap** aPixMap )
   return NS_OK;
 }
 
-
 NS_IMETHODIMP nsImageMac::DrawTile(nsIRenderingContext &aContext,
                                    nsDrawingSurface aSurface,
                                    PRInt32 aSXOffset, PRInt32 aSYOffset,
@@ -848,10 +847,10 @@ NS_IMETHODIMP nsImageMac::DrawTile(nsIRenderingContext &aContext,
           aX1 = aTileRect.x + aTileRect.width;
 
   for (PRInt32 y = aY0; y < aY1; y += mHeight)
-    for (PRInt32 x = aX0; x < aX1; x += mHeight)
+    for (PRInt32 x = aX0; x < aX1; x += mWidth)
       Draw(aContext, aSurface,
            0, 0, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y),
            x, y, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y));
 
-  return PR_TRUE;
+  return NS_OK;
 }
