@@ -40,7 +40,7 @@
 interface nsIDOMWindow;
 interface nsIURI;
 
-[scriptable, uuid(9cee0902-403f-4c26-a25d-b01e73bcb7c8)]
+[scriptable, uuid(48987797-dd33-46d4-a860-8d420810669c)]
 
 /**
  * The C++ source has access to the browser script source through
@@ -69,10 +69,12 @@ interface nsIBrowserDOMWindow : nsISupports
    * Load a URI
    * @param aURI the URI to open. null is allowed; it means about:blank.
    * @param aWhere see possible values described above.
+   * @param aOpener window requesting the open (can be null).
    * @param aContext the context in which the URI is being opened. This
    *                 is used only when aWhere == OPEN_DEFAULTWINDOW.
    * @return the window into which the URI was opened.
   */
-  nsIDOMWindow openURI(in nsIURI aURI, in short aWhere, in short aContext);
+  nsIDOMWindow openURI(in nsIURI aURI, in nsIDOMWindow aOpener,
+                       in short aWhere, in short aContext);
 };
 
