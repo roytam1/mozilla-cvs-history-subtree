@@ -694,5 +694,9 @@ nsresult nsTreeWalker::IndexOf(nsIDOMNode* aParent,
  */
 void nsTreeWalker::SetChildIndex(PRInt32 aIndexPos, PRInt32 aChildIndex)
 {
+  // A negative aIndexPos will cause huge allocations of memory and eventually a crash
+  NS_WARN_IF_FALSE(aIndexPos >= 0, "Why is aIndexPos < 0?");
+  if (aIndexPos >= 0) {
     mPossibleIndexes.ReplaceElementAt(NS_INT32_TO_PTR(aChildIndex), aIndexPos);
+  }
 }
