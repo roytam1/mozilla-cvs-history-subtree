@@ -239,6 +239,7 @@ localDefPref("security.directory",              "");
 
 pref("autoupdate.enabled",              true);
 pref("autoupdate.confirm_install",				false);
+pref("autoupdate.regpack_interval", 120);
 pref("autoupdate.background_download_enabled",  true);
 pref("autoupdate.background_download_directory",  "");
 pref("autoupdate.background_download_byte_range",  3000);
