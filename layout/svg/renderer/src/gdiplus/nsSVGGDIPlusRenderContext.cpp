@@ -48,6 +48,7 @@ using namespace Gdiplus;
 #include "nsSVGGDIPlusRenderContext.h"
 #include "nsISVGGDIPlusRenderContext.h"
 #include "nsIRenderingContext.h"
+#include "nsIDeviceContext.h"
 #include "nsTransform2D.h"
 #include "nsIPresContext.h"
 #include "nsRect.h"
@@ -127,11 +128,34 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
   mGraphics = new Graphics(hdc);
   if (!mGraphics) return NS_ERROR_FAILURE;
 
+  // Work in pixel units instead of the default DisplayUnits.
+  mGraphics->SetPageUnit(UnitPixel);
+
+  // We'll scale our logical 'pixles' to device units according to the
+  // resolution of the device. For display devices, the canonical
+  // pixel scale will be 1, for printers it will be some other value:
+  nsCOMPtr<nsIDeviceContext>  devcontext;
+  mMozContext->GetDeviceContext(*getter_AddRefs(devcontext));
+  float scale;
+  devcontext->GetCanonicalPixelScale(scale);
+
+  mGraphics->SetPageScale(scale);
+
+  
+  // get the translation set on the rendering context. It will be in
+  // displayunits (i.e. pixels*scale), *not* pixels:
   nsTransform2D* xform;
   mMozContext->GetCurrentTransform(xform);
   float dx, dy;
   xform->GetTranslation(&dx, &dy);
 
+#if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
+  printf("nsSVGGDIPlusRenderContext(%p)::Init()[\n", this);
+  printf("pagescale=%f\n", scale);
+  printf("page unit=%d\n", mGraphics->GetPageUnit());
+  printf("]\n");
+#endif
+  
 #ifdef SVG_GDIPLUS_ENABLE_OFFSCREEN_BUFFER
   mGraphics->TranslateTransform(dx+dirtyRect.x, dy+dirtyRect.y);
 
@@ -145,7 +169,7 @@ nsSVGGDIPlusRenderContext::Init(nsIRenderingContext* ctx,
   if (!mOffscreenGraphics) return NS_ERROR_FAILURE;
   mOffscreenGraphics->TranslateTransform((float)-dirtyRect.x, (float)-dirtyRect.y);
 #else
-    mGraphics->TranslateTransform(dx, dy);
+  mGraphics->TranslateTransform(dx/scale, dy/scale, MatrixOrderPrepend);
 #endif
   
   return NS_OK;

@@ -62,7 +62,10 @@
 #include "nsISVGViewportRect.h"
 #include "nsISVGViewportAxis.h"
 #include "nsIDOMSVGNumber.h"
-
+#if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
+#include "nsIDeviceContext.h"
+#include "nsTransform2D.h"
+#endif
 ////////////////////////////////////////////////////////////////////////
 // VMRectInvalidator: helper class for invalidating rects on the viewmanager.
 // used in nsSVGOuterSVGFrame::InvalidateRegion
@@ -351,6 +354,17 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
                            nsReflowStatus&          aStatus)
 {
   nsresult rv;
+  
+#if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
+  {
+    printf("nsSVGOuterSVGFrame(%p)::Reflow()[\n",this);
+    float twipsPerScPx,twipsPerPx;
+    aPresContext->GetScaledPixelsToTwips(&twipsPerScPx);
+    aPresContext->GetPixelsToTwips(&twipsPerPx);
+    printf("tw/sc(px)=%f tw/px=%f\n", twipsPerScPx, twipsPerPx);
+    printf("]\n");
+  }
+#endif
   
   // check whether this reflow request is targeted at us or a child
   // frame (e.g. a foreignObject):
@@ -776,6 +790,53 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND) return NS_OK;
   if (aDirtyRect.width<=0 || aDirtyRect.height<=0) return NS_OK;
 
+#if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
+  {
+    nsCOMPtr<nsIDeviceContext>  dx;
+    aRenderingContext.GetDeviceContext(*getter_AddRefs(dx));
+    float zoom,tzoom,scale;
+    dx->GetZoom(zoom);
+    dx->GetTextZoom(tzoom);
+    dx->GetCanonicalPixelScale(scale);
+    printf("nsSVGOuterSVGFrame(%p)::Paint()[ z=%f tz=%f ps=%f\n",this,zoom,tzoom,scale);
+    printf("dirtyrect= %d, %d, %d, %d\n", aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
+    nsTransform2D* xform;
+    aRenderingContext.GetCurrentTransform(xform);
+    printf("translation=(%f,%f)\n", xform->GetXTranslation(), xform->GetYTranslation());
+    float sx=1.0f,sy=1.0f;
+    xform->TransformNoXLate(&sx,&sy);
+    printf("scale=(%f,%f)\n", sx, sy);
+    float twipsPerScPx,twipsPerPx;
+    aPresContext->GetScaledPixelsToTwips(&twipsPerScPx);
+    aPresContext->GetPixelsToTwips(&twipsPerPx);
+    printf("tw/sc(px)=%f tw/px=%f\n", twipsPerScPx, twipsPerPx);
+    int fontsc;
+    aPresContext->GetFontScaler(&fontsc);
+    printf("font scale=%d\n",fontsc);
+
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  {
+    HDC devicehandle;
+    // this ctx better be what we think it is...
+    aRenderingContext.RetrieveCurrentNativeGraphicData((PRUint32 *)(&devicehandle));
+  
+    printf("map mode: %d\n",::GetMapMode(devicehandle));
+    SIZE s;
+    POINT p;
+    ::GetWindowExtEx(devicehandle, &s);
+    printf("Window ext: %d %d\n", s.cx, s.cy);
+    ::GetWindowOrgEx(devicehandle, &p);
+    printf("Window org: %d %d\n", p.x, p.y);
+    ::GetViewportExtEx(devicehandle, &s);
+    printf("viewport ext: %d %d\n", s.cx, s.cy);
+    ::GetViewportOrgEx(devicehandle, &p);
+    printf("viewport org: %d %d\n", p.x, p.y);
+  }
+#endif
+    printf("]\n");
+  }
+#endif
+  
   // initialize Mozilla rendering context
   aRenderingContext.PushState();
   
@@ -814,7 +875,7 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   PRTime end = PR_Now();
   printf("SVG Paint Timing: %f ms\n", (end-start)/1000.0);
 #endif
-
+  
   aRenderingContext.PopState(clipState);
   
   return NS_OK;
@@ -854,9 +915,17 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
 //  if (!mView) return NS_ERROR_FAILURE;
 
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
+
+  // just ignore invalidates if painting is suppressed by the shell
+  PRBool suppressed = PR_FALSE;
+  mPresShell->IsPaintingSuppressed(&suppressed);
+  NS_ASSERTION(!suppressed, "invalidation during suppression (benign)");
+  if (suppressed) return NS_OK;
+  
   nsCOMPtr<nsIPresContext> presCtx;
   mPresShell->GetPresContext(getter_AddRefs(presCtx));
   NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
+  
   nsIView* view = nsnull;
   GetView(presCtx, &view);
   if (!view) {
@@ -975,7 +1044,13 @@ nsSVGOuterSVGFrame::UnsuspendRedraw()
     kid->GetNextSibling(&kid);
   }
 
-  vm->EndUpdateViewBatch(NS_VMREFRESH_IMMEDIATE);
+  NS_ENSURE_TRUE(mPresShell, NS_ERROR_FAILURE);
+
+  // don't do an immediate refresh if painting is suppressed by the shell
+  PRBool suppressed = PR_FALSE;
+  mPresShell->IsPaintingSuppressed(&suppressed);
+  vm->EndUpdateViewBatch(suppressed ?
+                         NS_VMREFRESH_NO_SYNC : NS_VMREFRESH_IMMEDIATE);
   return NS_OK;
 }
 
@@ -1008,6 +1083,7 @@ nsSVGOuterSVGFrame::CreateSVGRect(nsIDOMSVGRect **_retval)
   NS_ASSERTION(svgElement, "wrong content element");  
   if(svgElement)
     return svgElement->CreateSVGRect(_retval);
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------

@@ -259,14 +259,22 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     return &mRect;
   }
 
+  nsCOMPtr<nsIDeviceContext> devicecontext;
+  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+
+  bool isWinDC;
   HWND win;
   HDC devicehandle;
   {
-    nsCOMPtr<nsIDeviceContext> devicecontext;
-    presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-    // this better be what we think it is:
-    win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
-    devicehandle = ::GetDC(win);
+    isWinDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
+
+    if (isWinDC) {
+      win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
+      NS_ASSERTION(win, "no window and no handle in devicecontext!");
+      devicehandle = ::GetDC(win);
+    }
+    else
+      devicehandle = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
   }
 
   {
@@ -274,6 +282,15 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     // scope before we release the HDC.
     
     Graphics graphics(devicehandle);
+    
+    // XXX For some reason we seem to get the wrong dc when printing
+    // (a display dc instead of a printer dc). To get accurate
+    // measurements, we need to scale to what will be device units:
+    graphics.SetPageUnit(UnitPixel);
+    float scale;
+    devicecontext->GetCanonicalPixelScale(scale);
+    graphics.SetPageScale(scale);
+
     graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     //graphics.SetPixelOffsetMode(PixelOffsetModeHalf);
 
@@ -299,6 +316,7 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
 
     // we measure in the transformed coordinate system...
     GraphicsState state = graphics.Save();
+    
     Matrix m;
     GetGlobalTransform(&m);
     graphics.MultiplyTransform(&m);
@@ -313,7 +331,8 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     
   }
 
-  ::ReleaseDC(win, devicehandle);
+  if (isWinDC)
+    ::ReleaseDC(win, devicehandle);
 
   
   return &mRect;
@@ -352,23 +371,42 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     return;
   }
 
+  nsCOMPtr<nsIDeviceContext> devicecontext;
+  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+
+  bool isWinDC;
   HWND win;
   HDC devicehandle;
   {
-    nsCOMPtr<nsIDeviceContext> devicecontext;
-    presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-    // this better be what we think it is:
-    win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
-    devicehandle = ::GetDC(win);
+      isWinDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
+
+    if (isWinDC) {
+      win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
+      NS_ASSERTION(win, "no window and no handle in devicecontext!");
+      devicehandle = ::GetDC(win);
+    }
+    else
+      devicehandle = ((nsDeviceContextWin *)(devicecontext.get()))->mDC;
   }
+
+
   
+  float scale;
   nsFontHandle fonthandle;
   {
     nsFont font;
     mSource->GetFont(&font);
+
 #ifdef DEBUG
 //    printf("font.name=%s\n", NS_ConvertUCS2toUTF8(font.name).get());
 #endif
+
+    // XXX The size of the font is in device units. Since we are going
+    // to use the font in a logical pixel coordinate system with dev
+    // unit = pixel*scale, we need to devide the size by scale:
+    devicecontext->GetCanonicalPixelScale(scale);
+    font.size/=scale;
+
     nsCOMPtr<nsIFontMetrics> metrics;
     presContext->GetMetricsFor(font, getter_AddRefs(metrics));
     if (!metrics) {
@@ -387,6 +425,13 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     // scope before we release the HDC.
     
     Graphics graphics(devicehandle);
+
+    // XXX For some reason we seem to get the wrong dc when printing
+    // (a display dc instead of a printer dc). To get accurate
+    // measurements, we need to scale to what will be device units:
+    graphics.SetPageUnit(UnitPixel);
+    graphics.SetPageScale(scale);
+    
     graphics.SetSmoothingMode(SmoothingModeAntiAlias);
     //graphics.SetPixelOffsetMode(PixelOffsetModeHalf);
     graphics.SetTextRenderingHint(GetTextRenderingHint());
@@ -397,7 +442,8 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     mFontHeight = mFont->GetHeight(&graphics);
   }
   
-  ::ReleaseDC(win, devicehandle);
+  if (isWinDC)
+    ::ReleaseDC(win, devicehandle);
 }
 
 void
