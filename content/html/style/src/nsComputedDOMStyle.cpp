@@ -248,7 +248,7 @@ nsComputedDOMStyle::Init(nsIDOMElement *aElement,
     return NS_ERROR_FAILURE;
   }
 
-  if(DOMStringIsNull(aPseudoElt) || !aPseudoElt.IsEmpty()) {
+  if(!DOMStringIsNull(aPseudoElt) && !aPseudoElt.IsEmpty()) {
     mPseudo = dont_AddRef(NS_NewAtom(aPseudoElt));
     NS_ENSURE_TRUE(mPseudo, NS_ERROR_OUT_OF_MEMORY);
   }
