@@ -239,8 +239,12 @@ var gUpdateWizard = {
   
   onWizardClose: function (aEvent)
   {
-    if (gInstallingPage._installing)
+    if (gInstallingPage._installing) {
+      var os = Components.classes["@mozilla.org/observer-service;1"]
+                        .getService(Components.interfaces.nsIObserverService);
+      os.notifyObservers(null, "xpinstall-progress", "cancel");
       return false;
+    }    
     return true;
   }
 };

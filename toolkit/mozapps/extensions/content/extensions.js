@@ -483,7 +483,7 @@ function buildContextMenu(aEvent)
   menuitem_about.setAttribute("label", extensionsStrings.getFormattedString("aboutExtension", [name]));
   
   if (isExtensions) {
-    var canEnable = gExtensionsViewController.isCommandEnabled("cmd_enable");
+    var canEnable = gExtensionsViewController.isCommandEnabled("cmd_reallyEnable");
     var menuitemToShow, menuitemToHide;
     if (canEnable) {
       menuitemToShow = document.getElementById("menuitem_enable_clone");
@@ -621,8 +621,15 @@ var gExtensionsViewController = {
       return selectedItem && selectedItem.getAttribute("locked") != "true";
     case "cmd_update":
       return true;
+    case "cmd_reallyEnable":
+      return selectedItem && 
+             selectedItem.disabled && 
+             !gExtensionManager.inSafeMode;
     case "cmd_enable":
-      return selectedItem && selectedItem.disabled && !gExtensionManager.inSafeMode;
+      return selectedItem && 
+             selectedItem.disabled && 
+             !gExtensionManager.inSafeMode && 
+             selectedItem.getAttribute("compatible") != "false";
     case "cmd_disable":
       return selectedItem && selectedItem.getAttribute("locked") != "true" && !selectedItem.disabled;
     case "cmd_movetop":

@@ -40,6 +40,7 @@ const nsIUpdateService                = Components.interfaces.nsIUpdateService;
 const nsIUpdateItem                   = Components.interfaces.nsIUpdateItem;
 
 const PREF_EM_APP_ID                  = "app.id";
+const PREF_EM_APP_VERSION             = "app.version";
 const PREF_EM_APP_EXTENSIONS_VERSION  = "app.extensions.version";
 const PREF_EM_APP_BUILDID             = "app.build_id";
 const PREF_EM_LAST_APP_VERSION        = "extensions.lastAppVersion";
@@ -4117,6 +4118,55 @@ nsExtensionsDataSource.prototype = {
       rdfc.Init(this, gRDF.GetResource(ROOT_THEME));
       if (rdfc.IndexOf(aSource) != -1) 
         return this._emL("theme");
+    }
+    else if (aProperty.EqualsNode(this._emR("compatible"))) {
+      var type = getItemType(aSource.Value);
+      var id = stripPrefix(aSource.Value, type);
+      var targetAppInfo = this.getTargetApplicationInfo(id, this, type);
+      
+      getVersionChecker();
+      
+      var appVersion = gPref.getCharPref(PREF_EM_APP_EXTENSIONS_VERSION);
+      if (gVersionChecker.compare(targetAppInfo.maxVersion, appVersion) < 0 || 
+          gVersionChecker.compare(appVersion, targetAppInfo.minVersion) < 0) {
+        // OK, this item is incompatible. 
+        return this._emL("false");
+      }
+      return this._emL("true");
+    }
+    else if (aProperty.EqualsNode(this._emR("displayDescription"))) {
+      // We have a separate property for the description of the extension items
+      // which is displayed in the EM list - because we overload this value with
+      // alternative messages when the extension is disabled because of 
+      // incompatibility.
+      var disabled = this.getItemProperty(stripPrefix(aSource.Value, getItemType(aSource.Value)), 
+                                          "disabled");
+      if (disabled == "true") {
+        // See if this item was disabled because it was incompatible. 
+        // XXXben potential visual-glitch bug here with extensions whose install.rdf 
+        //        manifests state that they are incompatible but when phone home checking
+        //        reveals that they are compatible and they are installed the 
+        //        incompatible metadata is written anyway and will remain in the ds
+        //        until the next background update check corrects it - this means that
+        //        when a compatible extension is installed in this manner it is 
+        //        likely that when it is disabled it will show this special-case
+        //        error message.
+        var compatible = this.getItemProperty(stripPrefix(aSource.Value, getItemType(aSource.Value)), 
+                                              "compatible");
+        if (compatible != "true") {
+          var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                              .getService(Components.interfaces.nsIStringBundleService);
+          var extensionStrings = sbs.createBundle("chrome://mozapps/locale/extensions/extensions.properties");
+          var brandStrings = sbs.createBundle("chrome://global/locale/brand.properties");
+          var brandShortName = brandStrings.GetStringFromName("brandShortName");
+          var appVersion = gPref.getCharPref(PREF_EM_APP_VERSION);
+          var incompatibleMessage = extensionStrings.formatStringFromName("incompatibleExtension", 
+                                                                          [brandShortName, appVersion], 2);
+          return this._emL(incompatibleMessage);
+        }
+      }
+      // Use the "description" property. 
+      return this.GetTarget(aSource, this._emR("description"), aTruthValue);
     }
     else if (aProperty.EqualsNode(this._emR("name")) || 
              aProperty.EqualsNode(this._emR("description")) || 
