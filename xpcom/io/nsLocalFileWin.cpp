@@ -995,12 +995,13 @@ nsLocalFile::GetVersionInfoField(const nsACString &aField, nsAString& _retval)
                 UINT pageCount;
                 ::VerQueryValue(ver, TEXT("\\VarFileInfo\\Translation"), (void**)&translate, &pageCount);
 
-                if (pageCount > 0) 
-                {
+                for (PRInt32 i = 0; i < 2; ++i) 
+                { 
                     nsCAutoString field(aField);
                     TCHAR subBlock[MAX_PATH];
                     wsprintf(subBlock, TEXT("\\StringFileInfo\\%04x%04x\\%s"), 
-                            translate[0].wLanguage, translate[0].wCodePage, field.get());
+                             (i == 0 ? translate[0].wLanguage : ::GetUserDefaultLangID()),
+                             translate[0].wCodePage, field.get());
 
                     LPVOID value = NULL;
                     UINT size;
