@@ -1,4 +1,21 @@
-// -*- Mode: Java -*-
+/* -*- Mode: Java; tab-width: 4; insert-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "License"); you may not use this file except in
+ * compliance with the License.  You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.  See
+ * the License for the specific language governing rights and limitations
+ * under the License.
+ *
+ * The Original Code is Mozilla Communicator client code.
+ *
+ * The Initial Developer of the Original Code is Netscape Communications
+ * Corporation.  Portions created by Netscape are Copyright (C) 1998
+ * Netscape Communications Corporation.  All Rights Reserved.
+ */
 
 // the rdf service
 var RDF = Components.classes['component://netscape/rdf/rdf-service'].getService();
@@ -6,7 +23,7 @@ RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService);
 
 var NC = "http://home.netscape.com/NC-rdf#";
 
-var sidebar;
+var sidebar = new Object;
 
 function debug(msg)
 {
@@ -15,19 +32,17 @@ function debug(msg)
 
 function Init()
 {
-    sidebar          = new Object;
     sidebar.db       = window.arguments[0];
     sidebar.resource = window.arguments[1];
-
     debug("sidebar.db = " + sidebar.db + "\n");
     debug("sidebar.resource = " + sidebar.resource + "\n");
 
-    var selectList = document.getElementById('selectList');
+    // This will load the datasource, if it isn't already.
+    sidebar.datasource = RDF.GetDataSource(sidebar.db);
 
     // Add the necessary datasources to the select list
-    selectList.database.AddDataSource(RDF.GetDataSource("chrome://sidebar/content/local-panels.rdf"));
-    selectList.database.AddDataSource(RDF.GetDataSource("chrome://sidebar/content/remote-panels.rdf"));
-    selectList.database.AddDataSource(RDF.GetDataSource(sidebar.db));
+    var selectList = document.getElementById('selected-panels');
+    selectList.database.AddDataSource(sidebar.datasource);
 
     // Root the customize dialog at the correct place.
     selectList.setAttribute('ref', sidebar.resource);
@@ -35,15 +50,15 @@ function Init()
     enableButtons();
 }
 
-function addOption(registry, service, selectIt) {
-  
-  dump("Adding " +service.Value+"\n");
+function addOption(registry, service, selectIt)
+{
+  dump("Adding "+service.Value+"\n");
   var option_title     = getAttr(registry, service, 'title');
   var option_customize = getAttr(registry, service, 'customize');
   var option_content   = getAttr(registry, service, 'content');
 
-  var tree = document.getElementById('selectList'); 
-  var treeroot = document.getElementById('selectListRoot'); 
+  var tree = document.getElementById('selected-panels'); 
+  var treeroot = document.getElementById('selected-panels-root'); 
 
   // Check to see if the panel already exists...
   for (var ii = treeroot.firstChild; ii != null; ii = ii.nextSibling) {
@@ -99,38 +114,36 @@ function selectChange() {
 }
 
 function moveUp() {
-  var list = document.getElementById('selectList'); 
-  var index = list.selectedIndex;
-  if (index > 0) {
-    var optionBefore   = list.childNodes.item(index-1);	
-    var selectedOption = list.childNodes.item(index);
-    list.remove(index);
-    list.insertBefore(selectedOption, optionBefore);
-    list.selectedIndex = index - 1;
-    enableButtons();
-    enableSave();
+  var tree = document.getElementById('selected-panels'); 
+  if (tree.selectedItems.length == 1) {
+    var selected = tree.selectedItems[0];
+    if (selected.previousSibling) {
+      selected.parentNode.insertBefore(selected, selected.previousSibling);
+      tree.selectItem(selected);
+    }
   }
 }
    
 function moveDown() {
-  var list = document.getElementById('selectList');	
-  var index = list.selectedIndex;
-  if (index != -1 &&
-      index != list.options.length - 1) {
-    var selectedOption = list.childNodes.item(index);
-    var optionAfter    = list.childNodes.item(index+1);
-    list.remove(index+1);
-    list.insertBefore(optionAfter, selectedOption);
-    list.selectedIndex = index + 1;
-    enableButtons();
-    enableSave();
+  var tree = document.getElementById('selected-panels');	
+  if (tree.selectedItems.length == 1) {
+    var selected = tree.selectedItems[0];
+    if (selected.nextSibling) {
+      if (selected.nextSibling.nextSibling) {
+        selected.parentNode.insertBefore(selected, selected.nextSibling.nextSibling);
+      }
+      else {
+        selected.parentNode.appendChild(selected);
+      }
+      tree.selectItem(selected);
+    }
   }
 }
 
 function enableButtons() {
   var up        = document.getElementById('up');
   var down      = document.getElementById('down');
-  var list      = document.getElementById('selectList');
+  var list      = document.getElementById('selected-panels');
   var customize = document.getElementById('customize-button');
 
   var selected = list.selectedItems;
@@ -171,7 +184,7 @@ function enableButtons() {
 
 function CustomizePanel() 
 {
-  var list  = document.getElementById('selectList');	
+  var list  = document.getElementById('selected-panels');	
   var index = list.selectedIndex;
 
   if (index != -1) {
@@ -191,7 +204,7 @@ function CustomizePanel()
 
 function RemovePanel()
 {
-  var tree = document.getElementById('selectList');	
+  var tree = document.getElementById('selected-panels');	
 
   var nextNode = null;
   var numSelected = tree.selectedItems.length
@@ -217,89 +230,39 @@ var FileURL = "file:////u/slamm/tt/sidebar-browser.rdf";
 // var the "NC" namespace. Used to construct resources
 function Save()
 {
-  // Open the RDF file synchronously. This is tricky, because
-  // GetDataSource() will do it asynchronously. So, what we do is
-  // this. First try to manually construct the RDF/XML datasource
-  // and read it in. This might throw an exception if the datasource
-  // has already been read in once. In which case, we'll just get
-  // the existing datasource from the RDF service.
-  var datasource;
+  // Iterate through the 'selected-panels' tree to collect the panels
+  // that the user has chosen. We need to do this _before_ we remove
+  // the panels from the datasource, because the act of removing them
+  // from the datasource will change the tree!
+  var panels = new Array();
+  var root = document.getElementById('selected-panels-root');
+  for (var node = root.firstChild; node != null; node = node.nextSibling) {
+    panels[panels.length] = node.getAttribute('id');
+  }
 
-  try {
-    datasource = Components.classes["component://netscape/rdf/datasource?name=xml-datasource"].createInstance();
-    datasource = datasource.QueryInterface(Components.interfaces.nsIRDFXMLDataSource);
-    //datasource.Init(FileURL);
-    datasource.Init(sidebar.db);
-    datasource.Open(true);
-    //dump("datasource = " + datasource + ", opened for the first time.\n");
-  }
-  catch (ex) {
-      //datasource = RDF.GetDataSource(FileURL);
-    datasource = RDF.GetDataSource(sidebar.db);
-    //dump("datasource = " + datasource + ", using registered datasource.\n");
-  }
+  // Now remove all the current panels from the datasource.
 
   // Create a "container" wrapper around the "NC:BrowserSidebarRoot"
   // object. This makes it easier to manipulate the RDF:Seq correctly.
   var container = Components.classes["component://netscape/rdf/container"].createInstance();
   container = container.QueryInterface(Components.interfaces.nsIRDFContainer);
+  container.Init(sidebar.datasource, RDF.GetResource(sidebar.resource));
 
-  container.Init(datasource, RDF.GetResource(sidebar.resource));
-  //dump("initialized container " + container + " on " + sidebar.resource+"\n");
-
-  // Remove all the current panels
-  //
-  var enumerator = container.GetElements();
-
-  while (enumerator.HasMoreElements()) {
-    var service = enumerator.GetNext();
-    service = service.QueryInterface(Components.interfaces.nsIRDFResource);
-    container.RemoveElement(service, true);
+  for (var ii = container.GetCount(); ii >= 1; --ii) {
+    dump('removing panel ' + ii + '\n');
+    container.RemoveElementAt(ii, true);
   }
 
-  // Add the new panel list
-  //
-  var count = container.GetCount();
-  //dump("container has " + count + " elements\n");
-
-  var list = document.getElementById('selectList'); 
-  var list_length = list.childNodes.length;
-	
-  for (var ii=0; ii < list_length; ii++, count++) {
-    //dump(list.childNodes.item(ii).getAttribute('title') + '\n');
-
-    var title     = list.childNodes.item(ii).getAttribute('title');
-    var content   = list.childNodes.item(ii).getAttribute('content');
-    var customize = list.childNodes.item(ii).getAttribute('customize');
-
-    var element = RDF.GetResource(FileURL + "#" + count);
-    //dump(FileURL + "#" + count + "\n");
-	
-    container.AppendElement(element);
-    //dump("appended " + element + " to the container\n");
-
-    // Now make some sidebar-ish assertions about it...
-    datasource.Assert(element,
-                      RDF.GetResource(NC + "title"),
-                      RDF.GetLiteral(title + ' ' + count),
-                      true);
-    datasource.Assert(element,
-                      RDF.GetResource(NC + "content"),
-                      RDF.GetLiteral(content),
-                      true);
-    datasource.Assert(element,
-                      RDF.GetResource(NC + "customize"),
-                      RDF.GetLiteral(customize),
-                      true);
-
-    //dump("added assertions about " + element + "\n");
+  // Now iterate through the panels, and re-add them to the datasource
+  for (var ii = 0; ii < panels.length; ++ii) {
+    debug('adding ' + panels[ii] + '\n');
+    container.AppendElement(RDF.GetResource(panels[ii]));
   }
 
-  // Now serialize it back to disk
-  datasource.Flush();
-  //dump("wrote " + FileURL + " back to disk.\n");
+  // Write the modified panels out.
+  sidebar.datasource.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush();
 
-  //window.close();
+  window.close();
 }
 
 function otherPanelSelected()
