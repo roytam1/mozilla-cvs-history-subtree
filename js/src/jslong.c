@@ -45,12 +45,12 @@ static void norm_udivmod32(JSUint32 *qp, JSUint32 *rp, JSUint64 a, JSUint32 b)
     JSUint32 d1, d0, q1, q0;
     JSUint32 r1, r0, m;
 
-    d1 = _hi16(b);
-    d0 = _lo16(b);
+    d1 = jshi16(b);
+    d0 = jslo16(b);
     r1 = a.hi % d1;
     q1 = a.hi / d1;
     m = q1 * d0;
-    r1 = (r1 << 16) | _hi16(a.lo);
+    r1 = (r1 << 16) | jshi16(a.lo);
     if (r1 < m) {
         q1--, r1 += b;
         if (r1 >= b	/* i.e., we didn't get a carry when adding to r1 */
@@ -62,7 +62,7 @@ static void norm_udivmod32(JSUint32 *qp, JSUint32 *rp, JSUint64 a, JSUint32 b)
     r0 = r1 % d1;
     q0 = r1 / d1;
     m = q0 * d0;
-    r0 = (r0 << 16) | _lo16(a.lo);
+    r0 = (r0 << 16) | jslo16(a.lo);
     if (r0 < m) {
         q0--, r0 += b;
         if (r0 >= b
@@ -94,7 +94,7 @@ static JSUint32 CountLeadingZeros(JSUint32 a)
     return r;
 }
 
-JS_EXPORT_API(void) ll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b)
+JS_EXPORT_API(void) jsll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b)
 {
     JSUint32 n0, n1, n2;
     JSUint32 q0, q1;

@@ -227,28 +227,28 @@ JS_EXTERN_API(JSInt64) JSLL_Zero(void);
     (r).hi += _a.hi * _b.lo + _a.lo * _b.hi; \
 }
 
-#define _lo16(a)        ((a) & JS_BITMASK(16))
-#define _hi16(a)        ((a) >> 16)
+#define jslo16(a)        ((a) & JS_BITMASK(16))
+#define jshi16(a)        ((a) >> 16)
 
 #define JSLL_MUL32(r, a, b) { \
      JSUint32 _a1, _a0, _b1, _b0, _y0, _y1, _y2, _y3; \
-     _a1 = _hi16(a), _a0 = _lo16(a); \
-     _b1 = _hi16(b), _b0 = _lo16(b); \
+     _a1 = jshi16(a), _a0 = jslo16(a); \
+     _b1 = jshi16(b), _b0 = jslo16(b); \
      _y0 = _a0 * _b0; \
      _y1 = _a0 * _b1; \
      _y2 = _a1 * _b0; \
      _y3 = _a1 * _b1; \
-     _y1 += _hi16(_y0);                         /* can't carry */ \
+     _y1 += jshi16(_y0);                         /* can't carry */ \
      _y1 += _y2;                                /* might carry */ \
      if (_y1 < _y2)    \
         _y3 += (JSUint32)(JS_BIT(16));  /* propagate */ \
-     (r).lo = (_lo16(_y1) << 16) + _lo16(_y0); \
-     (r).hi = _y3 + _hi16(_y1); \
+     (r).lo = (jslo16(_y1) << 16) + jslo16(_y0); \
+     (r).hi = _y3 + jshi16(_y1); \
 }
 
-#define JSLL_UDIVMOD(qp, rp, a, b)    ll_udivmod(qp, rp, a, b)
+#define JSLL_UDIVMOD(qp, rp, a, b)    jsll_udivmod(qp, rp, a, b)
 
-JS_EXTERN_API(void) ll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b);
+JS_EXTERN_API(void) jsll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b);
 
 #define JSLL_DIV(r, a, b) { \
     JSInt64 _a, _b; \
