@@ -113,6 +113,10 @@
 #include <process.h>
 #endif
 
+#ifdef XP_OS2
+#include <process.h>
+#endif
+
 #ifdef XP_MACOSX
 #include "nsILocalFileMac.h"
 #endif
@@ -1270,7 +1274,7 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   // restart this process by exec'ing it into the current process
   // if supported by the platform.  otherwise, use nspr ;-)
 
-#if defined(XP_WIN)
+#if defined(XP_WIN) || defined(XP_OS2)
   if (_execv(exePath, gRestartArgv) == -1)
     return NS_ERROR_FAILURE;
 #elif defined(XP_MACOSX)
