@@ -191,12 +191,6 @@ class NS_COM nsFastLoadFileReader
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
-    // nsIInputStream methods
-    NS_DECL_NSIINPUTSTREAM
-
-    // nsIBinaryInputStream methods
-    NS_DECL_NSIBINARYINPUTSTREAM
-
     // nsIObjectInputStream methods
     NS_DECL_NSIOBJECTINPUTSTREAM
 
@@ -266,7 +260,8 @@ class NS_COM nsFastLoadFileReader
     nsresult ReadID(nsID *aID);
     nsresult ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo);
 
-    nsresult Open();
+    nsresult   Open();
+    NS_IMETHOD Close();
 
   protected:
     nsFastLoadHeader mHeader;
@@ -315,12 +310,6 @@ class NS_COM nsFastLoadFileWriter
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
-    // nsIOutputStream methods
-    NS_DECL_NSIOUTPUTSTREAM
-
-    // nsIBinaryOutputStream methods
-    NS_DECL_NSIBINARYOUTPUTSTREAM
-
     // nsIObjectOutputStream methods
     NS_DECL_NSIOBJECTOUTPUTSTREAM
 
@@ -334,7 +323,8 @@ class NS_COM nsFastLoadFileWriter
     nsresult WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo);
     nsresult WriteFooter();
 
-    nsresult Open();
+    nsresult   Open();
+    NS_IMETHOD Close(void);
 
     nsresult WriteObjectCommon(nsISupports* aObject,
                                const nsCID& aCID,

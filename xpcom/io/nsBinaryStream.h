@@ -28,13 +28,13 @@
 
 // Derive from nsIObjectOutputStream so this class can be used as a superclass
 // by nsObjectOutputStream.
-class nsBinaryOutputStream : public nsIObjectOutputStream
+class NS_COM nsBinaryOutputStream : public nsIObjectOutputStream
 {
 public:
     nsBinaryOutputStream(nsIOutputStream *aStream);
     virtual ~nsBinaryOutputStream() {};
 
-private:
+protected:
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
@@ -50,19 +50,18 @@ private:
     // Call Write(), ensuring that all proffered data is written
     nsresult WriteFully(const char *aBuf, PRUint32 aCount);
 
-protected:
     nsCOMPtr<nsIOutputStream> mOutputStream;
 };
 
 // Derive from nsIObjectInputStream so this class can be used as a superclass
 // by nsObjectInputStream.
-class nsBinaryInputStream : public nsIObjectInputStream
+class NS_COM nsBinaryInputStream : public nsIObjectInputStream
 {
 public:
     nsBinaryInputStream(nsIInputStream *aStream);
     virtual ~nsBinaryInputStream() {};
 
-private:
+protected:
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
@@ -75,7 +74,6 @@ private:
     // nsIObjectInputStream methods
     NS_DECL_NSIOBJECTINPUTSTREAM
 
-protected:
     nsCOMPtr<nsIInputStream> mInputStream;
 };
 
