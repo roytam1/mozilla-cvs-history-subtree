@@ -49,6 +49,16 @@ extern "C" {
 #include "constant.h"
 
 /* Prototypes */
+static int perldap_init();
+
+static void * perldap_malloc(size_t size);
+
+static void * perldap_calloc(size_t number, size_t size);
+
+static void * perldap_realloc(void *ptr, size_t size);
+
+static void perldap_free(void *ptr);
+
 static char ** avref2charptrptr(SV *avref);
 
 static struct berval ** avref2berptrptr(SV *avref);
@@ -73,14 +83,6 @@ static int LDAP_CALL internal_rebind_proc(LDAP *ld,char **dnp,char **pwp,
 
 static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pswd,
             int *auth, int freeit, void *arg);
-
-static void LDAP_CALL ldap_mods_free_perl(LDAPMod **mods, int freemods);
-
-static void LDAP_CALL ldap_value_free_perl( char **vals );
-
-static void LDAP_CALL ber_bvfree_perl( struct berval *bv );
-
-static void LDAP_CALL ber_bvecfree_perl( struct berval **bv );
 
 
 /* Global Definitions and Variables */
@@ -110,6 +112,67 @@ static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
 	      PUSHs(sv_2mortal(newSVpv(bvppvar[bvppindex]->bv_val,bvppvar[bvppindex]->bv_len))); \
 	   } \
 	   ldap_value_free_len(bvppvar); }
+
+
+/*
+ * Function Definition
+ */
+
+static
+int
+perldap_init()
+{
+   struct ldap_memalloc_fns memalloc_fns;
+
+   memalloc_fns.ldapmem_malloc = perldap_malloc;
+   memalloc_fns.ldapmem_calloc = perldap_calloc;
+   memalloc_fns.ldapmem_realloc = perldap_realloc;
+   memalloc_fns.ldapmem_free = perldap_free;
+
+   return(ldap_set_option(NULL,
+                          LDAP_OPT_MEMALLOC_FN_PTRS,
+                          &memalloc_fns));
+}
+
+
+static
+void *
+perldap_malloc(size_t size)
+{
+   void *new_ptr;
+
+   New(1, new_ptr, size, char);
+
+   return(new_ptr);
+}
+
+static
+void *
+perldap_calloc(size_t number, size_t size)
+{
+   void *new_ptr;
+
+   Newz(1, new_ptr, (number*size), char);
+
+   return(new_ptr);
+}
+
+static
+void *
+perldap_realloc(void *ptr, size_t size)
+{
+   Renew(ptr, size, char);
+
+   return(ptr);
+}
+
+static
+void
+perldap_free(void *ptr)
+{
+   Safefree(ptr);
+}
+
 
 /* Return a char ** when passed a reference to an AV */
 static
@@ -511,88 +574,15 @@ ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
 }
 
 
-/*
- *  Part of this is borrowed from the LDAP C-SDK, we need our own free method
- *  here, since we use Perl memory allocation macros. This used to cause
- *  serious problems on Windows/NT and ActiveState Perl for instance...
- */
-static
-void
-LDAP_CALL
-ldap_mods_free_perl(LDAPMod **mods, int freemods)
-{
-  int	i;
-
-  if (! mods || ! *mods)
-    return;
-
-  for (i = 0; mods[i] != NULL; i++)
-    {
-      if (mods[i]->mod_op & LDAP_MOD_BVALUES)
-	{
-	  if (mods[i]->mod_bvalues != NULL)
-	    {
-	      ber_bvecfree_perl(mods[i]->mod_bvalues);
-	    }
-	}
-      else if (mods[i]->mod_values != NULL)
-	{
-	  ldap_value_free_perl(mods[i]->mod_values);
-	}
-      if (mods[i]->mod_type != NULL)
-	{
-	  Safefree(mods[i]->mod_type);
-	}
-      Safefree((char *) mods[i]);
-    }
-
-  if (freemods)
-    Safefree((char *) mods);
-}
-
-static
-void
-LDAP_CALL
-ldap_value_free_perl( char **vals )
-{
-	int	i;
-
-	if ( vals == NULL )
-		return;
-	for ( i = 0; vals[i] != NULL; i++ )
-		Safefree( vals[i] );
-	Safefree( (char *) vals );
-}
-
-static
-void
-LDAP_CALL
-ber_bvfree_perl( struct berval *bv )
-{
-	if ( bv != NULL ) {
-		if ( bv->bv_val != NULL ) {
-			Safefree( bv->bv_val );
-		}
-		Safefree( (char *) bv );
-	}
-}
-
-static
-void
-LDAP_CALL
-ber_bvecfree_perl( struct berval **bv )
-{
-	int	i;
-
-	for ( i = 0; bv[i] != NULL; i++ ) {
-		ber_bvfree_perl( bv[i] );
-	}
-	Safefree( (char *) bv );
-}
-
-
 MODULE = Mozilla::LDAP::API		PACKAGE = Mozilla::LDAP::API
 PROTOTYPES: ENABLE
+
+BOOT:
+if ( perldap_init() != 0)
+{
+   fprintf(stderr, "Error loading Mozilla::LDAP::API: perldap_init failed\n");
+   exit(1);
+}
 
 double
 constant(name,arg)
@@ -623,7 +613,7 @@ ldap_add(ld,dn,attrs)
 	CLEANUP:
 	
 	if (attrs)
-	  ldap_mods_free_perl(attrs, 1);
+	  ldap_mods_free(attrs, 1);
 
 #ifdef LDAPV3
 
@@ -640,7 +630,7 @@ ldap_add_ext(ld,dn,attrs,serverctrls,clientctrls,msgidp)
 	msgidp
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free_perl(attrs, 1);
+	  ldap_mods_free(attrs, 1);
 
 int
 ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
@@ -651,7 +641,7 @@ ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
 	LDAPControl **	clientctrls
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free_perl(attrs, 1);
+	  ldap_mods_free(attrs, 1);
 
 #endif
 
@@ -662,7 +652,7 @@ ldap_add_s(ld,dn,attrs)
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free_perl(attrs, 1);
+	  ldap_mods_free(attrs, 1);
 
 void
 ldap_ber_free(ber,freebuf)
@@ -784,7 +774,7 @@ ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
 	char **		valwords
 	CLEANUP:
 	if (valwords)
-	  ldap_value_free_perl(valwords);
+	  ldap_value_free(valwords);
 
 #ifdef LDAPV3
 
@@ -1156,7 +1146,7 @@ ldap_memcache_init(ttl,size,baseDNs,cachep)
 	cachep
 	CLEANUP:
 	if (baseDNs)
-	  ldap_value_free_perl(baseDNs);
+	  ldap_value_free(baseDNs);
 
 int
 ldap_memcache_set(ld,cache)
@@ -1180,7 +1170,7 @@ ldap_modify(ld,dn,mods)
 	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free_perl(mods, 1);
+	  ldap_mods_free(mods, 1);
 
 #ifdef LDAPV3
 
@@ -1197,7 +1187,7 @@ ldap_modify_ext(ld,dn,mods,serverctrls,clientctrls,msgidp)
 	msgidp
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free_perl(mods, 1);
+	  ldap_mods_free(mods, 1);
 
 int
 ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
@@ -1208,7 +1198,7 @@ ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
 	LDAPControl **	clientctrls
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free_perl(mods, 1);
+	  ldap_mods_free(mods, 1);
 
 #endif
 
@@ -1219,7 +1209,7 @@ ldap_modify_s(ld,dn,mods)
 	LDAPMod **	mods = hash2mod($arg, 0, "$func_name");
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free_perl(mods, 1);
+	  ldap_mods_free(mods, 1);
 
 int
 ldap_modrdn(ld,dn,newrdn)
@@ -1287,7 +1277,7 @@ ldap_multisort_entries(ld,chain,attr)
 	chain
 	CLEANUP:
 	if (attr)
-	  ldap_value_free_perl(attr);
+	  ldap_value_free(attr);
 
 char *
 ldap_next_attribute(ld,entry,ber)
@@ -1499,7 +1489,7 @@ ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	int		attrsonly
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free_perl(attrs);
+	  ldap_value_free(attrs);
 
 #ifdef LDAPV3
 
@@ -1521,7 +1511,7 @@ ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,tim
 	msgidp
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free_perl(attrs);
+	  ldap_value_free(attrs);
 
 int
 ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,res)
@@ -1541,7 +1531,7 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free_perl(attrs);
+	  ldap_value_free(attrs);
 
 #endif
 
@@ -1559,7 +1549,7 @@ ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free_perl(attrs);
+	  ldap_value_free(attrs);
 
 int
 ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
@@ -1576,7 +1566,7 @@ ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free_perl(attrs);
+	  ldap_value_free(attrs);
 	
 int
 ldap_set_filter_additions(lfdp,prefix,suffix)
