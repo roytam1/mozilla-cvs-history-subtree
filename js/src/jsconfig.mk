@@ -61,21 +61,17 @@ endif
 SHIP_DIST  = $(MOZ_DEPTH)/dist/$(OBJDIR)
 SHIP_DIR   = $(SHIP_DIST)/SHIP
 
-SHIP_LIBS      = libjs.so
+SHIP_LIBS      = libjs.$(SO_SUFFIX) libjs.a
 ifdef JS_LIVECONNECT
-  SHIP_LIBS   += jsj.so
+  SHIP_LIBS   += libjsj.$(SO_SUFFIX) libjsj.a
 endif
 # ifdef JS_THREADSAFE
-#   ifeq ($(OS_ARCH), HP-UX)
-#     SHIP_LIBS += libnspr21.sl
-#   else
-#     SHIP_LIBS += libnspr21.so
-#   endif
+#   SHIP_LIBS += libnspr21.$(SO_SUFFIX)
 # endif
 ifeq ($(OS_ARCH), WINNT)
-  SHIP_LIBS    = js32.dll
+  SHIP_LIBS    = js32.dll js32.lib
   ifdef JS_LIVECONNECT
-    SHIP_LIBS += jsj.dll
+    SHIP_LIBS += jsj.dll jsj.lib
   endif
 #   ifdef JS_THREADSAFE
 #     SHIP_LIBS += libnspr21.dll
@@ -83,9 +79,9 @@ ifeq ($(OS_ARCH), WINNT)
 endif
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
-SHIP_INCS      = js*.h
+SHIP_INCS      = js*.h prmjtime.h resource.h *.msg *.tbl
 ifdef JS_LIVECONNECT
-  SHIP_INCS   += netscape*.h
+  SHIP_INCS   += netscape*.h nsC*.h nsI*.h
 endif
 SHIP_INCS     := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
 

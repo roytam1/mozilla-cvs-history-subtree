@@ -131,7 +131,26 @@ API_HFILES =		\
 	jsdbgapi.h	\
 	$(NULL)
 
-HFILES = $(JS_HFILES) $(API_HFILES)
+OTHER_HFILES =		\
+	jsaddr.h	\
+	jsbit.h		\
+	jscompat.h	\
+	jscpucfg.h	\
+	jsotypes.h	\
+	jsprhash.h	\
+	jsstddef.h	\
+	prmjtime.h	\
+	resource.h	\
+	jsopcode.tbl	\
+	js.msg		\
+	jsshell.msg	\
+	$(NULL)
+
+ifndef PREBUILT_CPUCFG
+OTHER_HFILES += $(OBJDIR)/jsautocfg.h
+endif
+
+HFILES = $(JS_HFILES) $(API_HFILES) $(OTHER_HFILES)
 
 JS_CFILES =		\
 	jsapi.c		\
@@ -188,7 +207,7 @@ SHARED_LIBRARY = $(OBJDIR)/js32.dll
 PROGRAM = $(OBJDIR)/js.exe
 else
 LIBRARY = $(OBJDIR)/libjs.a
-SHARED_LIBRARY = $(OBJDIR)/libjs.so
+SHARED_LIBRARY = $(OBJDIR)/libjs.$(SO_SUFFIX)
 PROGRAM = $(OBJDIR)/js
 endif
 

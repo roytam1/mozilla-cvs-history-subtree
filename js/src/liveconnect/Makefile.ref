@@ -39,9 +39,17 @@ LC_HFILES =		\
 	jsj_private.h   \
 	jsjava.h        \
 	netscape_javascript_JSObject.h \
+	nsCLiveconnectFactory.h        \
+	nsILiveconnect.h               \
+	nsISecureLiveconnect.h         \
+	nsISecurityContext.h           \
 	$(NULL)
 
-HFILES = $(LC_HFILES)
+OTHER_HFILES =		\
+	jsj.msg		\
+	$(NULL)
+
+HFILES = $(LC_HFILES) $(OTHER_HFILES)
 
 LC_CFILES =	\
 	jsj.c \
@@ -88,8 +96,8 @@ LIBRARY = $(OBJDIR)/jsj.lib
 SHARED_LIBRARY = $(OBJDIR)/jsj.dll
 PROGRAM = $(OBJDIR)/jsj.exe
 else
-LIBRARY = $(OBJDIR)/jsj.a
-SHARED_LIBRARY = $(OBJDIR)/jsj.so
+LIBRARY = $(OBJDIR)/libjsj.a
+SHARED_LIBRARY = $(OBJDIR)/libjsj.$(SO_SUFFIX)
 PROGRAM = $(OBJDIR)/jsj
 endif
 
