@@ -280,14 +280,20 @@ static NSArray* sToolbarDefaults = nil;
 
   [self autosaveWindowFrame];
   
-  // while the typical pattern in cocoa seems to be to autorelease the controller,
-  // that is really bad news for us. In the intervening time before the next event
-  // loop, gecko can do all sorts of nasty things such as show the window and try
-  // to process events. It also keeps things living just long enough for cocoa to
-  // think that it can still send events here. As a result, we're in this hellish
-  // limbo state, all of which is easily avoided by just destroying the window and
-  // all open net connections right this very moment, thankyouverymuch, good day.
-  [self release];
+  // Loop over all tabs, and tell them that the window is closed. This
+  // stops gecko from going any further on any of its open connections
+  // and breaks all the necessary cycles between Gecko and the BrowserWrapper.
+  int numTabs = [mTabBrowser numberOfTabViewItems];
+  for (int i = 0; i < numTabs; i++) {
+    NSTabViewItem* item = [mTabBrowser tabViewItemAtIndex: i];
+    [[item view] windowClosed];
+  }
+
+  // autorelease just in case we're here because of a window closing
+  // initiated from gecko, in which case this BWC would still be on the 
+  // stack and may need to stay alive until it unwinds. We've already
+  // shut down gecko above, so we can safely go away at a later time.
+  [self autorelease];
 }
 
 
@@ -297,12 +303,11 @@ static NSArray* sToolbarDefaults = nil;
   NSLog(@"Browser controller died.");
 #endif
 
-  // Loop over all tabs, and tell them that the window is closed.
-  int numTabs = [mTabBrowser numberOfTabViewItems];
-  for (int i = 0; i < numTabs; i++) {
-    NSTabViewItem* item = [mTabBrowser tabViewItemAtIndex: i];
-    [[item view] windowClosed];
-  }
+  // active Gecko connections have already been shut down in |windowWillClose|
+  // so we don't need to worry about that here. We only have to be careful
+  // not to access anything related to the document, as it's been destroyed. The
+  // superclass dealloc takes care of our child NSView's, which include the 
+  // BrowserWrappers and their child CHBrowserViews.
   
   //if (mSidebarBrowserView)
   //  [mSidebarBrowserView windowClosed];

@@ -146,13 +146,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     // this routine MUST be called otherwise we will leak.
     baseWin->Destroy();
     NS_RELEASE(_webBrowser);
+    NS_RELEASE(_listener);
   }
 }
 
 - (void)dealloc 
 {
-  NS_RELEASE(_listener);
-  
   // it is imperative that |destroyWebBrowser()| be called before we get here, otherwise
   // we will leak the webBrowser.
 	NS_ASSERTION(!_webBrowser, "BrowserView going away, destroyWebBrowser not called; leaking webBrowser!");
@@ -179,17 +178,20 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (void)addListener:(id <CHBrowserListener>)listener
 {
-  _listener->AddListener(listener);
+  if ( _listener )
+    _listener->AddListener(listener);
 }
 
 - (void)removeListener:(id <CHBrowserListener>)listener
 {
-  _listener->RemoveListener(listener);
+  if ( _listener )
+    _listener->RemoveListener(listener);
 }
 
 - (void)setContainer:(id <CHBrowserContainer>)container
 {
-  _listener->SetContainer(container);
+  if ( _listener )
+    _listener->SetContainer(container);
 }
 
 - (nsIDOMWindow*)getContentWindow

@@ -67,9 +67,7 @@ CHBrowserListener::~CHBrowserListener()
 {
   [mListeners release];
   mView = nsnull;
-  if (mContainer) {
-    [mContainer release];
-  }
+  [mContainer release];
 }
 
 NS_IMPL_ISUPPORTS9(CHBrowserListener,
@@ -604,9 +602,7 @@ void
 CHBrowserListener::SetContainer(id <CHBrowserContainer> aContainer)
 {
   [mContainer autorelease];
-
   mContainer = aContainer;
-
   [mContainer retain];
 }
 

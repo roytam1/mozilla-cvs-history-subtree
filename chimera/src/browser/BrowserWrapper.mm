@@ -68,8 +68,6 @@
 
 #include <QuickDraw.h>
 
-#define DOCUMENT_DONE_STRING @"Document: Done"
-
 static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
 const NSString* kOfflineNotificationName = @"offlineModeChanged";
@@ -123,6 +121,9 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
     
+    mDefaultStatusString = nil;
+    mLoadingStatusString = nil;
+
     [self registerNotificationListener];
   }
   return self;
@@ -140,9 +141,11 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mSiteIconURI release];
   [mDefaultStatusString release];
   [mLoadingStatusString release];
+
   [mToolTip release];
   [mTitle release];
-  
+
+
   [super dealloc];
 }
 
@@ -150,9 +153,9 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 -(void)windowClosed
 {
   // Break the cycle.
-  [mBrowserView destroyWebBrowser];
   [mBrowserView setContainer: nil];
   [mBrowserView removeListener: self];
+  [mBrowserView destroyWebBrowser];
 }
 
 - (IBAction)load:(id)sender
@@ -185,8 +188,10 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   if (!mIsBusy)
     [mWindowController hideProgressIndicator];
   
-  mDefaultStatusString = NULL;
-  mLoadingStatusString = DOCUMENT_DONE_STRING;
+  [mDefaultStatusString autorelease];
+  mDefaultStatusString = nil;
+  [mLoadingStatusString autorelease];
+  mLoadingStatusString = [NSLocalizedString(@"DocumentDone", @"") retain];
   [mStatus setStringValue:mLoadingStatusString];
   
   mIsPrimary = YES;
@@ -272,15 +277,16 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 - (void)onLoadingStarted 
 {
   if (mDefaultStatusString) {
-    [mDefaultStatusString release];
-    mDefaultStatusString = NULL;
+    [mDefaultStatusString autorelease];
+    mDefaultStatusString = nil;
   }
 
   [mWindowController showProgressIndicator];
   [[mWindowController progressIndicator] setIndeterminate:YES];
   [[mWindowController progressIndicator] startAnimation:self];
 
-  mLoadingStatusString = NSLocalizedString(@"TabLoading", @"");
+  [mLoadingStatusString autorelease];
+  mLoadingStatusString = [NSLocalizedString(@"TabLoading", @"") retain];
   [mStatus setStringValue:mLoadingStatusString];
 
   mIsBusy = YES;
@@ -323,7 +329,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [[mWindowController progressIndicator] stopAnimation:self];
   [mWindowController hideProgressIndicator];
 
-  mLoadingStatusString = DOCUMENT_DONE_STRING;
+  [mLoadingStatusString autorelease];
+  mLoadingStatusString = [NSLocalizedString(@"DocumentDone", @"") retain];
   if (mDefaultStatusString) {
     [mStatus setStringValue:mDefaultStatusString];
   }
@@ -428,9 +435,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   
   if (type == NSStatusTypeScriptDefault)
   {
-    if (mDefaultStatusString)
-      [mDefaultStatusString release];
-
+    [mDefaultStatusString autorelease];
     mDefaultStatusString = statusString;
     [mDefaultStatusString retain];
   }
