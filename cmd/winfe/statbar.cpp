@@ -274,6 +274,7 @@ BOOL CNetscapeStatusBar::Create( CWnd *pParent, BOOL bSecurityStatus /*=TRUE*/, 
         
 	return TRUE;
 }
+#endif //MOZ_OFFLINE
 
 #ifdef _WIN32
 //------------------------------------------------------------------------------
