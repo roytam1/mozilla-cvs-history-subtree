@@ -152,7 +152,7 @@ public Properties getPageInfo()
 public String getSource()
 {
     myFactory.throwExceptionIfNotInitialized();
-    String HTMLContent = null;
+    String HTMLContent = new String();
     String currURL = getCurrentURL();
     System.out.println("\nThe Current URL is -- " + currURL);
     try {
@@ -185,7 +185,7 @@ public byte [] getSourceBytes()
     myFactory.throwExceptionIfNotInitialized();
     
     
-    String HTMLContent = null;
+    String HTMLContent = new String();
     String currURL = getCurrentURL();
     System.out.println("\nThe Current URL is -- " + currURL);
     try {
