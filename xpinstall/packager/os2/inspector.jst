@@ -1,10 +1,10 @@
-var err = initInstall("DOM Inspector", "Inspector", "$Version$"); 
+var err = initInstall("DOM Inspector", "Inspector", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 var fProgram = getFolder("Program");
 logComment("fProgram: " + fProgram);
 
-err = addDirectory("", "$Version$", "bin", fProgram, "", true);
+err = addDirectory("", "@XPI_VERSION@", "bin", fProgram, "", true);
 logComment("addDirectory: " + err);
 
 addFile("Inspector Command Line Handler",

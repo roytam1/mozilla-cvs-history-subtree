@@ -15,7 +15,7 @@ var err;
 var fProgram;
 
 srDest = @XPI_SPACEREQUIRED@:bin;
-err    = initInstall("Mozilla Mail", "Mail", "$Version$"); 
+err    = initInstall("Mozilla Mail", "Mail", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
@@ -27,7 +27,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   upgradeCleanup();
   err = addDirectory("",
-                     "$Version$",
+                     "@XPI_VERSION@",
                      "bin",              // dir name in jar to extract 
                      fProgram,           // Where to put this file (Returned from GetFolder) 
                      "",                 // subdir name to create relative to fProgram

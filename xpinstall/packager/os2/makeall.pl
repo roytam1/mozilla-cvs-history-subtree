@@ -20,31 +20,57 @@
 # 
 # Contributor(s): 
 # Sean Su <ssu@netscape.com>
+# Benjamin Smedberg <bsmedberg@covad.net>
 # 
 
 #
 # This perl script builds the xpi, config.ini, and js files.
 #
 
-use File::Copy;
-use File::Basename;
 use Cwd;
+use File::Copy;
+use File::Path;
+use File::Basename;
+use Getopt::Long;
 
-# Make sure MOZ_SRC is set.
-if($ENV{MOZ_SRC} eq "")
-{
-  print "Error: MOZ_SRC not set!";
-  exit(1);
-}
+Getopt::Long::Configure ("bundling");
 
-# Make sure there are at least three arguments
-if($#ARGV < 2)
-{
-  PrintUsage();
-}
+$DEPTH = "../../.";
+$topsrcdir = GetTopSrcDir();
 
-$inDefaultVersion     = $ARGV[0];
-# $ARGV[0] has the form maj.min.release.bld where maj, min, release
+# ensure that Packager.pm is in @INC, since we might not be called from
+# mozilla/xpinstall/packager
+push(@INC, "$topsrcdir/build/package");
+require MozPackager;
+
+GetOptions('help|h|?'              => \&PrintUsage,
+           'objdir|o=s'            => \$topobjdir,
+           'stagepath|s=s'         => \$inStagePath,
+           'archive-uri|aurl|a=s'  => \$inXpiURL,
+           'verbose|v+'            => \$MozPackager::verbosity);
+
+$topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
+$inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
+$inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
+
+$topobjdir   = File::Spec->rel2abs($topobjdir);
+$inStagePath = File::Spec->rel2abs($inStagePath);
+
+chdir $topobjdir;
+
+$seiFileNameGeneric   = "stubinstall.exe";
+$seiFileNameGenericRes   = "stubinstall.res";
+$seiFileNameSpecific  = "mozilla-os2-installer.exe";
+$seiStubRootName = "mozilla-os2-stub-installer";
+$seiFileNameSpecificStub  = "$seiStubRootName.exe";
+
+$seuFileNameSpecific  = "MozillaUninstall.exe";
+$seuzFileNameSpecific = "mozillauninstall.zip";
+
+
+$gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
+
+# gDefaultProductVersion has the form maj.min.release.bld where maj, min, release
 #   and bld are numerics representing version information.
 # Other variables need to use parts of the version info also so we'll
 #   split out the dot separated values into the array @versionParts
@@ -54,383 +80,204 @@ $inDefaultVersion     = $ARGV[0];
 #   $versionParts[1] = min
 #   $versionParts[2] = release
 #   $versionParts[3] = bld
-@versionParts = split /\./, $inDefaultVersion;
+@versionParts = split /\./, $gDefaultProductVersion;
 
 # We allow non-numeric characters to be included as the last 
 #   characters in fields of $ARG[0] for display purposes (mostly to
 #   show that we have moved past a certain version by adding a '+'
-#   character).  Non-numerics must be stripped out of $inDefaultVersion,
+#   character).  Non-numerics must be stripped out of $gDefaultProductVersion,
 #   however, since this variable is used to identify the the product 
 #   for comparison with other installations, so the values in each field 
 #   must be numeric only:
-$inDefaultVersion =~ s/[^0-9.][^.]*//g;
-print "The raw version id is:  $inDefaultVersion\n";
+$gDefaultProductVersion =~ s/[^0-9.][^.]*//g;
 
-$inStagePath          = $ARGV[1];
-$inDistPath           = $ARGV[2];
-
-$inXpiURL = "";
-$inRedirIniURL = "";
-
-ParseArgv(@ARGV);
-if($inXpiURL eq "")
-{
-  # archive url not supplied, set it to default values
-  $inXpiURL      = "ftp://not.supplied.invalid";
-}
-if($inRedirIniURL eq "")
-{
-  # redirect url not supplied, set it to default value.
-  $inRedirIniURL = $inXpiURL;
-}
-
-$seiFileNameGeneric   = "stubinstall.exe";
-$seiFileNameGenericRes   = "stubinstall.res";
-$seiFileNameSpecific  = "mozilla-os2-installer.exe";
-$seiFileNameSpecificRes  = "mozilla-os2-installer.res";
-$seiFileNameSpecificRC  = "mozilla-os2-installer.rc";
-$seiStubRootName = "mozilla-os2-stub-installer";
-$seiFileNameSpecificStub  = "$seiStubRootName.exe";
-$seiFileNameSpecificStubRes  = "$seiStubRootName.res";
-$seiFileNameSpecificStubRC  = "$seiStubRootName.rc";
-$seuFileNameSpecific  = "MozillaUninstall.exe";
-$seuFileNameSpecificRes  = "MozillaUninstall.res";
-$seuFileNameSpecificRC  = "MozillaUninstall.rc";
-$seuzFileNameSpecific = "mozillauninstall.zip";
-
-# set environment vars for use by other .pl scripts called from this script.
+# set environment vars for use by the preprocessor
 if($versionParts[2] eq "0")
 {
-   $versionMain = "$versionParts[0]\.$versionParts[1]";
+  $versionMain = "$versionParts[0].$versionParts[1]";
 }
 else
 {
-   $versionMain = "$versionParts[0]\.$versionParts[1]\.$versionParts[2]";
+  $versionMain = "$versionParts[0].$versionParts[1].$versionParts[2]";
 }
-print "The display version is: $versionMain\n";
-$versionLanguage               = "en";
-$ENV{WIZ_nameCompany}          = "mozilla.org";
-$ENV{WIZ_nameProduct}          = "Mozilla";
-$ENV{WIZ_nameProductNoVersion} = "Mozilla";
-$ENV{WIZ_fileMainExe}          = "Mozilla.exe";
-$ENV{WIZ_fileMainIco}          = "Mozilla.ico";
-$ENV{WIZ_fileUninstall}        = $seuFileNameSpecific;
-$ENV{WIZ_fileUninstallZip}     = $seuzFileNameSpecific;
+
+$versionLanguage = "en";
+
+MozPackager::_verbosePrint(1, "
+Display version  : $versionMain
+Xpinstall version: $gDefaultProductVersion");
+
+$gDirPackager         = "$topsrcdir/xpinstall/packager";
+$gDirInstall          = "$gDirInstall";
+$gDirDistProduct      = "$gDirInstall-seamonkey";
+$gDirStageProduct     = "$inStagePath/seamonkey";
+
+$gStripCmd = "$gDirPackager/os2/strip.cmd";
+
+MozPackager::makeDirEmpty($gDirStageProduct);
+MozPackager::makeDirEmpty($gDirDistProduct);
+
+mkdir "$gDirDistProduct/xpi", 0775;
+mkdir "$gDirDistProduct/setup", 0775;
+mkdir "$gDirDistProduct/cd", 0775;
+mkdir "$gDirDistProduct/uninstall", 0775;
+
+$ENV{XPI_VERSION}              = $gDefaultProductVersion;
+$ENV{XPI_COMPANYNAME}          = "mozilla.org";
+$ENV{XPI_PRODUCTNAME}          = "Mozilla";
+# product name without the version string
+$ENV{XPI_PRODUCTNAMEINTERNAL}  = "Mozilla";
+$ENV{XPI_MAINEXEFILE}          = "Mozilla.exe";
+$ENV{XPI_MAINICOFILE}          = "Mozilla.ico";
+$ENV{XPI_XPINSTALLVERSION}     = "$gDefaultProductVersion";
+
 # The following variables are for displaying version info in the 
 # the installer.
-$ENV{WIZ_userAgent}            = "$versionMain ($versionLanguage)";
-$ENV{WIZ_userAgentShort}       = "$versionMain";
-$ENV{WIZ_xpinstallVersion}     = "$versionMain";
+$ENV{XPI_USERAGENT}            = "$versionMain ($versionLanguage)";
+$ENV{XPI_USERAGENTSHORT}       = "$versionMain";
 
-# Set the location of the local tmp stage directory
-$gLocalTmpStage = $inStagePath;
+# Stage our XPI packages.
+# Since we're not using a GRE yet, include the GRE files
+# in browser stage/XPI
+%gPackages = ('xpfe-browser-xpi gecko ^xpi-bootstrap' => 'browser',
+              'xpfe-lang-enUS-xpi'     => 'langenus',
+              'xpfe-locale-US-xpi'     => 'regus',
+              'xpfe-default-US-xpi'    => 'deflenus',
+              'xpfe-mailnews-xpi'      => 'mail',
+              'psm-xpi'                => 'psm',
+              'venkman-xpi'            => 'venkman',
+              'inspector-xpi'          => 'inspector',
+              'chatzilla-xpi'          => 'chatzilla',
+              'spellcheck-enUS-xpi'    => 'spellcheck',
+              'talkback-xpi'           => 'talkback',
+              'xpi-bootstrap'          => 'xpcom');
 
-# Check for existence of staging path
-if(!(-d "$inStagePath"))
-{
-  die "\n Invalid path: $inStagePath\n";
-}
+foreach $package (keys %gPackages) {
+  MozPackager::_verbosePrint(1, "Making $gPackages{$package}.xpi");
+  my $packageStageDir = "$gDirStageProduct/$gPackages{$package}";
+  my $packageDistPath = "$gDirDistProduct/xpi/$gPackages{$package}.xpi";
 
-# List of components for to create xpi files from
-@gComponentList = ("xpcom",
-                   "browser",
-                   "mail",
-                   "spellcheck",
-                   "psm",
-                   "chatzilla",
-                   "deflenus",
-                   "langenus",
-                   "regus",
-                   "venkman",
-                   "inspector");
+  my $parser = new MozParser;
+  MozParser::XPTMerge::add($parser);
+  MozParser::Touch::add($parser, $dummyFile);
+  MozParser::Preprocess::add($parser);
+  MozParser::Optional::add($parser);
+  MozParser::Exec::add($parser);
+  $parser->addMapping('dist/bin', 'bin');
+  $parser->addMapping('xpiroot/', '');
+  my @packages = map(MozPackages::getPackagesFor($_), split(' ', $package));
+  $parser->parse("$topobjdir/dist/packages", @packages);
 
-if(VerifyComponents()) # return value of 0 means no errors encountered
-{
-  exit(1);
-}
+  MozStage::stage($parser, $packageStageDir, $gStripCmd, 'so', '');
+  MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
+  MozPackager::calcDiskSpace($packageStageDir);
+  MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
+  MozParser::Exec::exec($parser, $packageStageDir); 
+  MozStage::makeZIP($packageStageDir, $packageDistPath);
 
-# Make sure inDistPath exists
-if(!(-d "$inDistPath"))
-{
-  mkdir ("$inDistPath",0775);
-}
-
-if(-d "$inDistPath/xpi")
-{
-  unlink <$inDistPath/xpi/*>;
-}
-else
-{
-  mkdir ("$inDistPath/xpi",0775);
-}
-
-if(-d "$inDistPath/uninstall")
-{
-  unlink <$inDistPath/uninstall/*>;
-}
-else
-{
-  mkdir ("$inDistPath/uninstall",0775);
+  # We can't remove the stage, because makecfgini needs it to
+  # compute space.
 }
 
-if(-d "$inDistPath/setup")
-{
-  unlink <$inDistPath/setup/*>;
-}
-else
-{
-  mkdir ("$inDistPath/setup",0775);
-}
+# Make the "truncated res" file, which is used by both the installer and the uninstaller
+MozPackager::doCopy(, "$gDirStageProduct/install-truncated.res");
+$size = -s "$gDirStageProduct/install-truncated.res";
+truncate("$gDirInstall/$seiFileNameGeneric", "$size-1");
 
-if(MakeXpiFile())
-{
-  exit(1);
-}
-if(MakeUninstall())
-{
-  exit(1);
-}
-if(MakeConfigFile())
-{
-  exit(1);
-}
+# Make uninstall.ini file
+MozPackager::system("perl -w makeuninstallini.pl $gDefaultProductVersion < $gDirPackager/os2/uninstall.it > $gDirDistProduct/uninstall/uninstall.ini"))
 
-# Copy the setup files to the dist setup directory.
-if(system("cp install.ini $inDistPath/setup"))
-{
-  die "\n Error: copy install.ini $inDistPath/setup\n";
-}
-if(system("cp config.ini $inDistPath/setup"))
-{
-  die "\n Error: copy config.ini $inDistPath/setup\n";
-}
-if(system("cp $inDistPath/setup.exe $inDistPath/setup"))
-{
-  die "\n Error: cp $inDistPath/setup.exe $inDistPath/setup\n";
-}
-if(system("cp $inDistPath/setuprsc.dll $inDistPath/setup"))
-{
-  die "\n Error: cp $inDistPath/setuprsc.dll $inDistPath/setup\n";
-}
+# Copy the uninstall executable
+MozPackager::doCopy("$gDirInstall/uninstall.exe", "$gDirDistProduct/uninstall");
 
-# copy license file for the installer
-if(system("cp $ENV{MOZ_SRC}/mozilla/LICENSE $inDistPath/setup/license.txt"))
-{
-  die "\n Error: copy $ENV{MOZ_SRC}/mozilla/LICENSE $inDistPath/setup/license.txt\n";
-}
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirStageProduct/$seuFileNameSpecific");
+addFileResources("$gDirStageProduct/$seuFileNameSpecific",
+                 "$gDirDistProduct/uninstall");
 
-# copy readme for the installer
-if(system("cp $ENV{MOZ_SRC}/mozilla/README.TXT $inDistPath/setup/readme.txt"))
-{
-  die "\n Error: copy $ENV{MOZ_SRC}/mozilla/README.TXT $inDistPath/setup/readme.txt\n";
-}
+MakeExeZip($gDirStageProduct, $seuFileNameSpecific, "$gDirDistProduct/xpi/$seuzFileNameSpecific");
+unlink "$gDirStageProduct/$seuFileNameSpecific";
 
-# copy the icons
-#if(system("cp $inDistPath/mozilla.ico $inDistPath/setup/mozilla.ico"))
-#{
-#  die "\n Error: copy $inDistPath/mozilla.ico $inDistPath/setup/mozilla.ico\n";
-#}
+# Make config.ini file
+MozPackager::system("perl makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/config.it > $gDirDistProduct/setup/config.ini");
+
+# Make install.ini file
+MozPackager::system("perl makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/install.it > $gDirDistProduct/setup/install.ini");
+
+MozPackager::doCopy("$gDirInstall/setup.exe", "$gDirDistProduct/setup");
+MozPackager::doCopy("$gDirInstall/setuprsc.exe", "$gDirDistProduct/setup");
+MozPackager::doCopy("$topsrcdir/LICENSE", "$gDirDistProduct/setup/license.txt");
+MozPackager::doCopy("$topsrcdir/README.TXT", "$gDirDistProduct/setup/readme.txt");
 
 # build the self-extracting .exe (installer) file.
 print "\nbuilding self-extracting stub installer ($seiFileNameSpecificStub)...\n";
-if(system("cp $inDistPath/$seiFileNameGeneric $inDistPath/$seiFileNameSpecificStub"))
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecificStub");
+
+addFileResources("$gDirDistProduct/$seiFileNameSpecificStub",
+                 "$gDirDistProduct/setup");
+
 {
-  die "\n Error: copy $inDistPath/$seiFileNameGeneric $inDistPath/$seiFileNameSpecificStub\n";
+  my $parser = new MozParser;
+  MozParser::Preprocess::add($parser);
+  $parser->addMapping('xpiroot/', '');
+  $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor('seamonkey-installer-stub-en-xpi'));
+  MozStage::stage($parser, "$gDirStageProduct/$seiStubRootName");
+  MozPackager::calcDiskSpace("$gDirStageProduct/$seiStubRootName");
+  MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", "$gDirStageProduct/$seiStubRootName");
+  MozStage::makeZIP("$gDirStageProduct/$seiStubRootName", "$gDirDistProduct/$seiStubRootName.xpi");
 }
 
-if(system("cp $inDistPath/$seiFileNameGenericRes $inDistPath/$seiFileNameSpecificStubRes"))
-{
-  die "\n Error: copy $inDistPath/$seiFileNameGenericRes $inDistPath/$seiFileNameSpecificStubRes\n";
+foreach $file (<$gDirDistProduct/setup/*.*>, <$gDirDistProduct/xpi/*.*>) {
+  MozPackager::doCopy($file, "$gDirDistProduct/cd");
 }
 
-@stubFiles = <$inDistPath/setup/*.*>;
+MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecific");
 
-$size = (-s "$inDistPath/$seiFileNameSpecificStubRes");
-truncate("$inDistPath/$seiFileNameSpecificStubRes", "$size-1");
-open(OUTPUTFILE, ">$inDistPath/$seiFileNameSpecificStubRC");
-print OUTPUTFILE "#include <os2.h>\n";
-print OUTPUTFILE "STRINGTABLE DISCARDABLE\n";
-print OUTPUTFILE "BEGIN\n";
-$currentResourceID = 10000+1;
-foreach $entry ( @stubFiles ) 
-{
-  $filename = basename($entry);
-  print OUTPUTFILE "$currentResourceID \"$filename\"\n";
-  $currentResourceID++;
-}
-print OUTPUTFILE "END\n";
-$currentResourceID = 10000+1;
-foreach $entry ( @stubFiles ) 
-{
-  print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
-  $currentResourceID++;
-}
-close(OUTPUTFILE);
-system("rc -r $inDistPath/$seiFileNameSpecificStubRC $inDistPath/temp.res");
-system("cat $inDistPath/$seiFileNameSpecificStubRes $inDistPath/temp.res > $inDistPath/new.res");
-unlink("$inDistPath/$seiFileNameSpecificStubRes");
-rename("$inDistPath/new.res", "$inDistPath/$seiFileNameSpecificStubRes");
-unlink("$inDistPath/temp.res");
-system("rc $inDistPath/$seiFileNameSpecificStubRes $inDistPath/$seiFileNameSpecificStub");
+addFileResources("$gDirDistProduct/$seiFileNameSpecific",
+                 "$gDirDistProduct/cd");
 
-# copy the lean installer to stub\ dir
-print "\n****************************\n";
-print "*                          *\n";
-print "*  creating Stub files...  *\n";
-print "*                          *\n";
-print "****************************\n";
-if(-d "$inDistPath/stub")
-{
-  unlink <$inDistPath/stub/*>;
-}
-else
-{
-  mkdir ("$inDistPath/stub",0775);
-}
-if(system("cp $inDistPath/$seiFileNameSpecificStub $inDistPath/stub"))
-{
-  die "\n Error: copy $inDistPath/$seiFileNameSpecificStub $inDistPath/stub\n";
-}
-
-# create the xpi for launching the stub installer
-print "\n**********************************\n";
-print "*                                  *\n";
-print "*  creating stub installer xpi...  *\n";
-print "*                                  *\n";
-print "************************************\n";
-if(-d "$inStagePath/$seiStubRootName")
-{
-  unlink <$inStagePath/$seiStubRootName/*>;
-}
-else
-{
-  mkdir ("$inStagePath/$seiStubRootName",0775);
-}
-if(system("cp $inDistPath/stub/$seiFileNameSpecificStub $gLocalTmpStage/$seiStubRootName"))
-{
-  die "\n Error: copy $inDistPath/stub/$seiFileNameSpecificStub $gLocalTmpStage/$seiStubRootName\n";
-}
-
-# Make .js files
-if(MakeJsFile($seiStubRootName))
-{
-  return(1);
-}
-
-# Make .xpi file
-if(system("perl makexpi.pl $seiStubRootName $gLocalTmpStage $inDistPath"))
-{
-  print "\n Error: perl makexpi.pl $seiStubRootName $gLocalTmpStage $inDistPath\n";
-  return(1);
-}
-
-if(system("mv $inDistPath/$seiStubRootName.xpi  $inDistPath/stub"))
-{
-  die "\n Error: mv $inDistPath/$seiStubRootName.xpi $inDistPath/stub\n";
-}
-
-# group files for CD
-print "\n************************************\n";
-print "*                                  *\n";
-print "*  creating Compact Disk files...  *\n";
-print "*                                  *\n";
-print "************************************\n";
-if(-d "$inDistPath/cd")
-{
-  unlink <$inDistPath/cd/*>;
-}
-else
-{
-  mkdir ("$inDistPath/cd",0775);
-}
-if(system("mv $inDistPath/$seiFileNameSpecificStub  $inDistPath/cd"))
-{
-  die "\n Error: mv $inDistPath/$seiFileNameSpecificStub $inDistPath/cd\n";
-}
-if(system("cp $inDistPath/xpi/* $inDistPath/cd"))
-{
-  die "\n Error: copy $inDistPath/xpi $inDistPath/cd\n";
-}
-
-# create the big self extracting .exe installer
-print "\n**************************************************************\n";
-print "*                                                            *\n";
-print "*  creating Self Extracting Executable Full Install file...  *\n";
-print "*                                                            *\n";
-print "**************************************************************\n";
-if(-d "$inDistPath/sea")
-{
-  unlink <$inDistPath/sea/*>;
-}
-else
-{
-  mkdir ("$inDistPath/sea",0775);
-}
-if(system("cp $inDistPath/$seiFileNameGeneric $inDistPath/$seiFileNameSpecific"))
-{
-  die "\n Error: copy $inDistPath/$seiFileNameGeneric $inDistPath/$seiFileNameSpecific\n";
-}
-
-if(system("cp $inDistPath/$seiFileNameGenericRes $inDistPath/$seiFileNameSpecificRes"))
-{
-  die "\n Error: copy $inDistPath/$seiFileNameGenericRes $inDistPath/$seiFileNameSpecificRes\n";
-}
-
-@stubFiles = <$inDistPath/setup/*.*>;
-@xpiFiles = <$inDistPath/xpi/*.*>;
-
-$size = (-s "$inDistPath/$seiFileNameSpecificRes");
-truncate("$inDistPath/$seiFileNameSpecificRes", "$size-1");
-open(OUTPUTFILE, ">$inDistPath/$seiFileNameSpecificRC");
-print OUTPUTFILE "#include <os2.h>\n";
-print OUTPUTFILE "STRINGTABLE DISCARDABLE\n";
-print OUTPUTFILE "BEGIN\n";
-$currentResourceID = 10000+1;
-foreach $entry ( @stubFiles ) 
-{
-  $filename = basename($entry);
-  print OUTPUTFILE "$currentResourceID \"$filename\"\n";
-  $currentResourceID++;
-}
-foreach $entry ( @xpiFiles ) 
-{
-  $filename = basename($entry);
-  print OUTPUTFILE "$currentResourceID \"$filename\"\n";
-  $currentResourceID++;
-}
-print OUTPUTFILE "END\n";
-$currentResourceID = 10000+1;
-foreach $entry ( @stubFiles ) 
-{
-  print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
-  $currentResourceID++;
-}
-foreach $entry ( @xpiFiles ) 
-{
-  print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
-  $currentResourceID++;
-}
-close(OUTPUTFILE);
-system("rc -r $inDistPath/$seiFileNameSpecificRC $inDistPath/temp.res");
-system("cat $inDistPath/$seiFileNameSpecificRes $inDistPath/temp.res > $inDistPath/new.res");
-unlink("$inDistPath/$seiFileNameSpecificRes");
-rename("$inDistPath/new.res", "$inDistPath/$seiFileNameSpecificRes");
-unlink("$inDistPath/temp.res");
-system("rc $inDistPath/$seiFileNameSpecificRes $inDistPath/$seiFileNameSpecific");
-
-if(system("mv $inDistPath/$seiFileNameSpecific $inDistPath/sea"))
-{
-  die "\n Error: mv $inDistPath/$seiFileNameSpecific $inDistPath/sea\n";
-}
-
-unlink <*.js>;
-unlink <*.ini>;
-unlink <*.template>;
-
-print " done!\n\n";
-
-# end of script
 exit(0);
+
+sub addFileResources {
+  my ($binary, $stubDir) = @_;
+
+  my @stubFiles = <$stubDir/*.*>;
+  die("When creating executable $binary: no files found in $stubDir")
+      if (! scalar(@stubFiles));
+
+  my $resStageDir = "$gDirStageProduct/makeres";
+
+  MozPackager::makeDirEmpty($resStageDir);
+  open my $oFile, ">$resStageDir/stubfiles.rc";
+  print $oFile "#include <os2.h>\n";
+  print $oFile "STRINGTABLE DISCARDABLE\n";
+  print $oFile "BEGIN\n";
+
+  $currentResourceID = 10000+1;
+  foreach $entry ( @stubFiles ) 
+  {
+    $filename = basename($entry);
+    print OUTPUTFILE "$currentResourceID \"$filename\"\n";
+    $currentResourceID++;
+  }
+  print OUTPUTFILE "END\n";
+  $currentResourceID = 10000+1;
+  foreach $entry ( @stubFiles ) 
+  {
+    print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
+    $currentResourceID++;
+  }
+  close(OUTPUTFILE);
+  system("rc -r $resStageDir/stubfiles.rc $resStageDir/stubfiles.res");
+
+  # we need to chomp off the final byte of stubinstall.res and join it with our stubfiles.res
+  MozPackager::doCopy("$gDirInstall/$seiFileNameGenericRes", $resStageDir);
+  my $resSize = -s "$resStageDir/$seiFileNameGenericRes";
+  truncate("$resStageDir/$seiFileNameGenericRes", $size - 1);
+
+  MozPackager::system("cat $resStageDir/$seiFileNameGenericRes $resStageDir/stubfiles.res > $resStageDir/complete.res");
+
+  system("rc $binary $resStageDir/complete.res");
+}
 
 sub MakeExeZip
 {
@@ -449,282 +296,23 @@ sub MakeExeZip
 
 sub PrintUsage
 {
-  die "usage: $0 <default version> <staging path> <dist install path> [options]
-
-       default version   : y2k compliant based date version.
-                           ie: 5.0.0.2000040413
-
-       staging path      : full path to where the components are staged at
-
-       dist install path : full path to where the dist install dir is at.
-                           ie: d:/builds/mozilla/dist/win32_o.obj/install
+  die "usage: $0 [options]
 
        options include:
-           -aurl <archive url>      : either ftp:// or http:// url to where the
-                                      archives (.xpi, .exe, .zip, etc...) reside
 
-           -rurl <redirect.ini url> : either ftp:// or http:// url to where the
-                                      redirec.ini resides.  If not supplied, it
-                                      will be assumed to be the same as archive
-                                      url.
+           -objDir <path>            : path to the objdir.  default is topsrcdir
+
+           -stagePath <staging path> : full path to where the mozilla components are staged at
+                                       Default stage path, if this is not set, is:
+                                         [mozilla]/stage
+
+           -distPath <dist path>     : full path to where the mozilla dist dir is at.
+                                       Default stage path, if this is not set, is:
+                                         [mozilla]/dist
+
+           -aurl <archive url>       : either ftp:// or http:// url to where the
+                                       archives (.xpi, .exe, .zip, etc...) reside
+
+           -v                        : verbose. Will increase message output. May be repeated.
        \n";
 }
-
-sub ParseArgv
-{
-  my(@myArgv) = @_;
-  my($counter);
-
-  # The first 3 arguments are required, so start on the 4th.
-  for($counter = 3; $counter <= $#myArgv; $counter++)
-  {
-    if($myArgv[$counter] =~ /^[-,\/]h$/i)
-    {
-      PrintUsage();
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]aurl$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inXpiURL = $myArgv[$counter];
-        $inRedirIniURL = $inXpiURL;
-      }
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]rurl$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inRedirIniURL = $myArgv[$counter];
-      }
-    }
-  }
-}
-
-sub MakeConfigFile
-{
-  # Make config.ini file
-  if(system("perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inXpiURL"))
-  {
-    print "\n Error: perl makecfgini.pl config.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inXpiURL\n";
-    return(1);
-  }
-
-  # Make install.ini file
-  if(system("perl makecfgini.pl install.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inRedirIniURL $inXpiURL"))
-  {
-    print "\n Error: perl makecfgini.pl install.it $inDefaultVersion $gLocalTmpStage $inDistPath/xpi $inRedirIniURL $inXpiURL\n";
-    return(1);
-  }
-  return(0);
-}
-
-sub MakeUninstall
-{
-  if(MakeUninstallIniFile())
-  {
-    return(1);
-  }
-
-  # Copy the uninstall files to the dist uninstall directory.
-  if(system("cp uninstall.ini $inDistPath/uninstall"))
-  {
-    print "\n Error: copy uninstall.ini $inDistPath/uninstall\n";
-    return(1);
-  }
-  if(system("cp $inDistPath/uninstall.exe $inDistPath/uninstall"))
-  {
-    print "\n Error: cp $inDistPath/uninstall.exe $inDistPath/uninstall\n";
-    return(1);
-  }
-
-  # build the self-extracting .exe (uninstaller) file.
-  print "\nbuilding self-extracting uninstaller ($seuFileNameSpecific)...\n";
-  if(system("cp $inDistPath/$seiFileNameGeneric $inDistPath/$seuFileNameSpecific"))
-  {
-    print "\n Error: copy $inDistPath/$seiFileNameGeneric $inDistPath/$seuFileNameSpecific\n";
-    return(1);
-  }
-
-  if(system("cp $inDistPath/$seiFileNameGenericRes $inDistPath/$seuFileNameSpecificRes"))
-  {
-    die "\n Error: copy $inDistPath/$seiFileNameGenericRes $inDistPath/$seuFileNameSpecificRes\n";
-  }
-
-  @stubFiles = <$inDistPath/uninstall/*.*>;
-
-  $size = (-s "$inDistPath/$seuFileNameSpecificRes");
-  truncate("$inDistPath/$seuFileNameSpecificRes", "$size-1");
-  open(OUTPUTFILE, ">$inDistPath/$seuFileNameSpecificRC");
-  print OUTPUTFILE "#include <os2.h>\n";
-  print OUTPUTFILE "STRINGTABLE DISCARDABLE\n";
-  print OUTPUTFILE "BEGIN\n";
-  $currentResourceID = 10000+1;
-  foreach $entry ( @stubFiles ) 
-  {
-    $filename = basename($entry);
-    print OUTPUTFILE "$currentResourceID \"$filename\"\n";
-    $currentResourceID++;
-  }
-  print OUTPUTFILE "END\n";
-  $currentResourceID = 10000+1;
-  foreach $entry ( @stubFiles ) 
-  {
-    print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
-    $currentResourceID++;
-  }
-  close(OUTPUTFILE);
-  system("rc -r $inDistPath/$seuFileNameSpecificRC $inDistPath/temp.res");
-  system("cat $inDistPath/$seuFileNameSpecificRes $inDistPath/temp.res > $inDistPath/new.res");
-  unlink("$inDistPath/$seuFileNameSpecificRes");
-  rename("$inDistPath/new.res", "$inDistPath/$seuFileNameSpecificRes");
-  unlink("$inDistPath/temp.res");
-  system("rc $inDistPath/$seuFileNameSpecificRes $inDistPath/$seuFileNameSpecific");
-
-  MakeExeZip($inDistPath, $seuFileNameSpecific, $seuzFileNameSpecific);
-  unlink <$inDistPath/$seuFileNameSpecific>;
-  return(0);
-}
-
-sub MakeUninstallIniFile
-{
-  # Make config.ini file
-  if(system("perl makeuninstallini.pl uninstall.it $inDefaultVersion"))
-  {
-    print "\n Error: perl makeuninstallini.pl uninstall.it $inDefaultVersion\n";
-    return(1);
-  }
-  return(0);
-}
-
-sub MakeJsFile
-{
-  my($mComponent) = @_;
-
-  # Make .js file
-  if(system("perl makejs.pl $mComponent.jst $inDefaultVersion $gLocalTmpStage/$mComponent"))
-  {
-    print "\n Error: perl makejs.pl $mComponent.jst $inDefaultVersion $gLocalTmpStage/$mComponent\n";
-    return(1);
-  }
-  return(0);
-}
-
-sub MakeXpiFile
-{
-  my($mComponent);
-
-  foreach $mComponent (@gComponentList)
-  {
-    # Make .js files
-    if(MakeJsFile($mComponent))
-    {
-      return(1);
-    }
-
-    # Make .xpi file
-    if(system("perl makexpi.pl $mComponent $gLocalTmpStage $inDistPath/xpi"))
-    {
-      print "\n Error: perl makexpi.pl $mComponent $gLocalTmpStage $inDistPath/xpi\n";
-      return(1);
-    }
-  }
-  return(0);
-}
-
-sub RemoveLocalTmpStage()
-{
-  # Remove tmpstage area
-  if(-d "$gLocalTmpStage")
-  {
-    system("perl rdir.pl $gLocalTmpStage");
-  }
-  return(0);
-}
-
-sub CreateTmpStage()
-{
-  my($mComponent);
-
-  # Remove previous tmpstage area if one was left around
-  if(-d "$gLocalTmpStage")
-  {
-    system("perl rdir.pl $gLocalTmpStage");
-  }
-
-  print "\n Creating the local TmpStage directory:\n";
-  print "   $gLocalTmpStage\n";
-
-  # Copy the component's staging dir locally so that the chrome packages, locales, and skins dirs can be
-  # removed prior to creating the .xpi file.
-  mkdir("$gLocalTmpStage", 775);
-
-  foreach $mComponent (@gComponentList)
-  {
-    print "\n Copying $mComponent:\n";
-    print " From: $inStagePath/$mComponent\n";
-    print "   To: $gLocalTmpStage/$mComponent\n\n";
-    mkdir("$gLocalTmpStage/$mComponent", 775);
-
-    # If it's not talkback then copy the component over to the local tmp stage.
-    # If it is, then skip the copy because there will be nothing at the source.
-    # Talkback is a dummy place holder .xpi right now.  Mozilla release team 
-    # replaces this place holder .xpi with a real talkback when delivering the
-    # build to mozilla.org.
-    if(!($mComponent =~ /talkback/i))
-    {
-      if(system("xcopy /s/e $inStagePath/$mComponent $gLocalTmpStage/$mComponent/"))
-      {
-        print "\n Error: xcopy /s/e $inStagePath/$mComponent $gLocalTmpStage/$mComponent/\n";
-        return(1);
-      }
-    }
-
-    if(-d "$gLocalTmpStage/$mComponent/bin/chrome")
-    {
-      # Make chrome archive files
-      if(&ZipChrome("win32", "noupdate", "$gLocalTmpStage/$mComponent/bin/chrome", "$gLocalTmpStage/$mComponent/bin/chrome"))
-      {
-        return(1);
-      }
-
-      # Remove the locales, packages, and skins dirs if they exist.
-      my @dirs = <$gLocalTmpStage/$mComponent/bin/chrome/*>;
-      foreach $d (@dirs) {
-          if(-d "$d")
-          {
-              system("perl rdir.pl $d");
-          }
-      }
-    }
-  }
-  return(0);
-}
-
-sub VerifyComponents()
-{
-  my($mComponent);
-  my($mError) = 0;
-
-  print "\n Verifying existence of required components...\n";
-  foreach $mComponent (@gComponentList)
-  {
-    if($mComponent =~ /talkback/i)
-    {
-      print " place holder: $inStagePath/$mComponent\n";
-      mkdir("$inStagePath/$mComponent", 775);
-    }
-    elsif(-d "$inStagePath/$mComponent")
-    {
-      print "           ok: $inStagePath/$mComponent\n";
-    }
-    else
-    {
-      print "        Error: $inStagePath/$mComponent does not exist!\n";
-      $mError = 1;
-    }
-  }
-  return($mError);
-}
-
