@@ -140,9 +140,16 @@ menuitem.bookmark-item {
 .bookmark-item[container="true"] {
   -moz-image-region: rect(0px, 32px, 16px, 16px) !important;
 }
+
 .bookmark-item[open="true"],
 .bookmark-item[container="true"][open="true"] {
   -moz-image-region: rect(16px, 32px, 32px, 16px) !important;
+}
+
+/* livemarks have the same layout as folder-item, but in the browser-only livemark-item.png */
+/* only the folder icon has any effect for now, item icon is unused */
+.bookmark-item[livemark="true"] { 
+  list-style-image: url("chrome://browser/skin/livemark-item.png") !important;
 }
 
 /* ::::: primary toolbar buttons ::::: */

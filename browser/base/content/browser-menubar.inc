@@ -440,6 +440,14 @@
       <toolbarseparator uri="rdf:*"
                         rdf:type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"/>
     </rule>
+    <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#Livemark">
+      <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
+                     rdf:type="http://home.netscape.com/NC-rdf#Folder"
+                     label="rdf:http://home.netscape.com/NC-rdf#Name"
+                     livemark="true">
+        <menupopup contextmenu="bookmarks-context-menu"/>
+      </toolbarbutton>
+    </rule>
     <rule parent="hbox" iscontainer="true">
       <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
                      rdf:type="http://home.netscape.com/NC-rdf#Folder"
@@ -459,6 +467,16 @@
     <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <menupopup> 
         <menuseparator uri="rdf:*" />
+      </menupopup>
+    </rule>
+    <rule rdf:type="http://home.netscape.com/NC-rdf#Livemark">
+      <menupopup>
+        <menu class="menu-iconic bookmark-item" uri="rdf:*"
+              label="rdf:http://home.netscape.com/NC-rdf#Name"
+              type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+              livemark="true">
+          <menupopup contextmenu="bookmarks-context-menu"/>
+        </menu>
       </menupopup>
     </rule>
     <rule iscontainer="true">
