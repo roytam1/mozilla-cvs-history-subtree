@@ -198,6 +198,7 @@ BEGIN_MESSAGE_MAP(CRDFOutliner, COutliner)
 	ON_WM_RBUTTONUP()
 	ON_WM_CREATE()
 	ON_WM_TIMER()
+	ON_WM_SIZE()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -232,6 +233,13 @@ int CRDFOutliner::OnCreate(LPCREATESTRUCT lpCreateStruct)
     int iRetVal = COutliner::OnCreate(lpCreateStruct);
 	DragAcceptFiles(FALSE);
     return iRetVal;
+}
+
+void CRDFOutliner::OnSize( UINT nType, int cx, int cy )
+{
+    SqueezeColumns( -1, 0, TRUE );
+    m_iPaintLines = ( cy / m_itemHeight ) + 1;
+    EnableScrollBars ( );
 }
 
 void CRDFOutliner::HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
@@ -3630,11 +3638,18 @@ void CRDFOutlinerParent::CreateColumns ( void )
 		// We have retrieved a new column.  Contruct a front end column object
 		CRDFColumn* newColumn = new CRDFColumn(columnName, columnWidth, token, tokenType);
 		index = (UINT)columnMap.AddCommand(newColumn);
-		m_pOutliner->AddColumn(columnName, index);
+		m_pOutliner->AddColumn(columnName, index, 50, 10000, ColumnVariable, 100);
 	}
 	HT_DeleteColumnCursor(columnCursor);
 	m_pOutliner->SetVisibleColumns(1); // For now... TODO: Get visible/invisible info!
 	m_pOutliner->SetImageColumn(0);
+
+	// Make it so
+	RECT rcClient;
+	GetClientRect(&rcClient);
+	OnSize(0, rcClient.right, rcClient.bottom);
+
+	GetParent()->Invalidate();
 }
 
 BOOL CRDFOutlinerParent::RenderData( int iColumn, CRect & rect, CDC &dc, LPCTSTR text )

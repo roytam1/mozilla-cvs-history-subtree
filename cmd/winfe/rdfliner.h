@@ -323,6 +323,9 @@ public:
 	afx_msg void OnPaint();
 		// Overridden to perform a drawing optimization (not performed by Outliner)
 
+	afx_msg void OnSize( UINT nType, int cx, int cy );
+		// Overridden to ensure column repainting and resizing.
+
 	afx_msg void OnLButtonDown ( UINT nFlags, CPoint point );
 	afx_msg void OnLButtonUp (UINT nFlags, CPoint point );
 	afx_msg void OnMouseMove( UINT nFlags, CPoint point );
