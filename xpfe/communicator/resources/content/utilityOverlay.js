@@ -248,9 +248,10 @@ function openTopWin( url )
         url = "about:blank";
     }
 
+    // I love trash.  I love it because it's trash.
     var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
     messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
-    messenger.OpenURL(url);
+    messenger.loadURL(window, url);
 }
 
 function goAboutDialog()

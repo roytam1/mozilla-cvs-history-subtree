@@ -72,6 +72,7 @@
 #include "nsIMarkupDocumentViewer.h"
 #include "nsIContentViewer.h" 
 #include "nsIWebShell.h" 
+#include "nsILinkHandler.h"
 
 // embedding
 #include "nsIWebBrowserPrint.h"
@@ -133,10 +134,6 @@
 
 // Find / Find Again 
 #include "nsIFindComponent.h"
-
-#include "nsIURILoader.h"
-#include "nsCURILoader.h"
-#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kIStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
@@ -650,25 +647,14 @@ nsMessenger::OpenURL(const char * url)
       //If it's not something we know about, then just load the url.
       else
       {
-        nsCOMPtr<nsIURILoader> loader;
-        loader = do_GetService(NS_URI_LOADER_CONTRACTID);
-        if (!loader)
-          return NS_ERROR_FAILURE;
-        
-        // create our uri object
-        nsCOMPtr<nsIURI> uri;
-        rv = NS_NewURI(getter_AddRefs(uri), url);
-        if (NS_FAILED(rv))
-          return NS_ERROR_FAILURE;
-    
-        // open a channel
-        nsCOMPtr<nsIChannel> channel;
-        rv = NS_NewChannel(getter_AddRefs(channel), uri);
-        if (NS_FAILED(rv))
-          return NS_ERROR_FAILURE;
-    
-        // load it
-        rv = loader->OpenURI(channel, PR_TRUE, nsnull);
+        nsAutoString urlStr; urlStr.AssignWithConversion(unescapedUrl);
+        nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
+        if(webNav)
+          webNav->LoadURI(urlStr.get(),                       // URI string
+          nsIWebNavigation::LOAD_FLAGS_NONE,  // Load flags
+          nsnull,                             // Refering URI
+          nsnull,                             // Post stream
+          nsnull);                            // Extra headers
       }
       PL_strfree(unescapedUrl);
     }
@@ -678,6 +664,33 @@ nsMessenger::OpenURL(const char * url)
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *url)
+{
+   nsresult rv;
+   nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aWin, &rv);
+   NS_ENSURE_SUCCESS(rv,rv);
+ 
+   nsCOMPtr <nsIDocShell> docShell;
+   rv = globalObj->GetDocShell(getter_AddRefs(docShell));
+   NS_ENSURE_SUCCESS(rv,rv);
+   if (!docShell)
+     return NS_ERROR_FAILURE;
+
+   nsAutoString urlSpec;
+   urlSpec.AssignWithConversion(url);
+   nsCOMPtr<nsILinkHandler> lh = do_QueryInterface(docShell, &rv);
+   NS_ENSURE_SUCCESS(rv,rv);
+
+   rv = lh->OnLinkClick(nsnull,
+     eLinkVerb_Replace,
+     urlSpec.get(),
+     nsnull,nsnull,nsnull);
+   NS_ENSURE_SUCCESS(rv,rv);
+
+   return rv;
 }
 
 nsresult
