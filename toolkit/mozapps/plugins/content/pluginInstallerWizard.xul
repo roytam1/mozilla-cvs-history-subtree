@@ -139,7 +139,10 @@
     <description id="pluginSummaryRestartNeeded" style="padding-top:10px;"
                  value="&pluginWizard.finalPage.restart.label;"/>
     <spacer flex="1" />
-    <description onclick="gPluginInstaller.loadURL('https://update.mozilla.org/plugins/')" style="color:rgb(0, 0, 255); cursor:pointer; text-decoration:underline;" value="&pluginWizard.finalPage.moreInfo.label;"/>
+    <description id="moreInfoLink" 
+      onclick="gPluginInstaller.loadURL('https://update.mozilla.org/plugins/')"
+      style="color:rgb(0, 0, 255); cursor:pointer; text-decoration:underline;"
+      value="&pluginWizard.finalPage.moreInfo.label;"/>
   </wizardpage>
 
 </wizard>

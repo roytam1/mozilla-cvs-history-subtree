@@ -73,6 +73,8 @@ function nsPluginInstallerWizard(){
 
   this.WSPluginCounter = 0;
   this.licenseAcceptCounter = 0;
+  
+  this.prefBranch = null;
 }
 
 nsPluginInstallerWizard.prototype.getPluginData = function (){
@@ -399,6 +401,7 @@ nsPluginInstallerWizard.prototype.addPluginResultRow = function (aImgSrc, aName,
 }
 
 nsPluginInstallerWizard.prototype.showPluginResults = function (){
+  var notInstalledList = "?action=missingplugins";
   var needsRestart = false;
   var myRows = document.getElementById("pluginResultList");
 
@@ -415,16 +418,17 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
       needsRestart = true;
 
     if (myPluginItem.toBeInstalled) {
-
       var statusMsg;
       var statusTooltip;
       if (myPluginItem.error){
         statusMsg = this.getString("pluginInstallationSummary.failed");
         statusTooltip = myPluginItem.error;
+        notInstalledList += "&mimetype=" + pluginInfoItem;
       } else if (!myPluginItem.licenseAccepted) {
         statusMsg = this.getString("pluginInstallationSummary.licenseNotAccepted");
       } else if (!myPluginItem.XPILocation) {
         statusMsg = this.getString("pluginInstallationSummary.notAvailable");
+        notInstalledList += "&mimetype=" + pluginInfoItem;
       } else {
         this.mSuccessfullPluginInstallation++;
         statusMsg = this.getString("pluginInstallationSummary.success");
@@ -460,6 +464,8 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
           null,
           this.mPluginRequestArray[pluginInfoItem].pluginsPage);
     }
+
+    notInstalledList += "&mimetype=" + pluginInfoItem;
   }
 
   // no plugins were found, so change the description of the final page.
@@ -469,6 +475,16 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
   }
 
   document.getElementById("pluginSummaryRestartNeeded").hidden = !needsRestart;
+
+  // set the get more info link to contain the mimetypes we couldn't install.
+  notInstalledList +=
+    "&appID=" + this.getPrefBranch().getCharPref("app.id") +
+    "&appVersion=" + this.getPrefBranch().getCharPref("app.build_id") +
+    "&clientOS=" + this.getOS() +
+    "&chromeLocale=" + this.getChromeLocale();
+
+  document.getElementById("moreInfoLink").setAttribute("onclick",
+    "gPluginInstaller.loadURL('https://update.mozilla.org/plugins/"+notInstalledList+"')");
   
   // clear the tab's plugin list
   this.mTab.missingPlugins = null;
@@ -502,7 +518,12 @@ nsPluginInstallerWizard.prototype.getChromeLocale = function (){
   return chromeReg.getSelectedLocale("global");
 }
 
-
+nsPluginInstallerWizard.prototype.getPrefBranch = function (){
+  if (!this.prefBranch)
+    this.prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
+                                .getService(Components.interfaces.nsIPrefBranch);
+  return this.prefBranch;
+}
 function nsPluginRequest(aPlugRequest){
   this.mimetype = encodeURI(aPlugRequest.mimetype);
   this.pluginsPage = aPlugRequest.pluginsPage;
