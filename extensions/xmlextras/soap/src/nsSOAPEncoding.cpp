@@ -163,7 +163,7 @@ nsSOAPEncoding::nsSOAPEncoding(): mEncoders(new nsSupportsHashtable),
   nsCAutoString encodingContractid;
   encodingContractid.Assign(NS_SOAPENCODING_CONTRACTID_PREFIX);
   encodingContractid.Append(NS_ConvertUCS2toUTF8(mStyleURI));
-  mDefaultEncoding = do_CreateInstance(encodingContractid);
+  mDefaultEncoding = do_CreateInstance(encodingContractid.get());
   mRegistry = new nsSOAPEncodingRegistry(this);
 }
 
@@ -179,7 +179,7 @@ nsSOAPEncoding::nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistr
     nsCAutoString encodingContractid;
     encodingContractid.Assign(NS_SOAPENCODING_CONTRACTID_PREFIX);
     encodingContractid.Append(NS_ConvertUCS2toUTF8(mStyleURI));
-    mDefaultEncoding = do_CreateInstance(encodingContractid);
+    mDefaultEncoding = do_CreateInstance(encodingContractid.get());
     mRegistry = aRegistry;
   }
 }

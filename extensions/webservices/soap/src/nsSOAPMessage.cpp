@@ -340,10 +340,13 @@ NS_IMETHODIMP nsSOAPMessage::Encode(const nsAString & aMethodName, const nsAStri
   }
   return NS_OK;
 }
+
+static NS_DEFINE_CID(kMemoryCID, NS_MEMORY_CID);
+
 /* void getHeaderBlocks (out PRUint32 aCount, [array, size_is (aCount), retval] out nsISOAPHeaderBlock aHeaderBlocks); */
 NS_IMETHODIMP nsSOAPMessage::GetHeaderBlocks(PRUint32 *aCount, nsISOAPHeaderBlock ***aHeaderBlocks)
 {
-  nsCOMPtr<nsIMemory> memory = do_GetService(NS_MEMORY_CONTRACTID);
+  nsCOMPtr<nsIMemory> memory = do_GetService(kMemoryCID);
   *aCount = 0;
   *aHeaderBlocks = nsnull;
   int count = 0;
@@ -377,7 +380,7 @@ NS_IMETHODIMP nsSOAPMessage::GetHeaderBlocks(PRUint32 *aCount, nsISOAPHeaderBloc
 /* void getParameters (in boolean aDocumentStyle, out PRUint32 aCount, [array, size_is (aCount), retval] out nsISOAPParameter aParameters); */
 NS_IMETHODIMP nsSOAPMessage::GetParameters(PRBool aDocumentStyle, PRUint32 *aCount, nsISOAPParameter ***aParameters)
 {
-  nsCOMPtr<nsIMemory> memory = do_GetService(NS_MEMORY_CONTRACTID);
+  nsCOMPtr<nsIMemory> memory = do_GetService(kMemoryCID);
   *aCount = 0;
   *aParameters = nsnull;
   int count = 0;

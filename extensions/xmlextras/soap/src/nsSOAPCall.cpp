@@ -62,6 +62,7 @@ NS_IMETHODIMP nsSOAPCall::SetTransportURI(const nsAReadableString & aTransportUR
 nsresult
 nsSOAPCall::GetTransport(nsISOAPTransport** aTransport)
 {
+  NS_ENSURE_ARG_POINTER(aTransport);
   nsresult rv;
   nsCOMPtr<nsIURI> uri;
   nsXPIDLCString protocol;

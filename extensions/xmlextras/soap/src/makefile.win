@@ -28,16 +28,13 @@ DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
 	nsSOAPCall.cpp				        \
-	nsDefaultSOAPEncoder.cpp			\
+	nsSOAPEncoding.cpp				\
 	nsSOAPFault.cpp	       				\
 	nsSOAPHeaderBlock.cpp				\
-	nsSOAPJSValue.cpp				\
 	nsSOAPMessage.cpp				\
 	nsSOAPParameter.cpp				\
 	nsSOAPResponse.cpp				\
-	nsSOAPStruct.cpp				\
 	nsSOAPUtils.cpp					\
-	nsSOAPEncodingRegistry.cpp				\
 	$(NULL)
 
 

@@ -89,4 +89,21 @@ public:
   static const nsString kXMLPrefix;
 };
 
+//  Used to support null strings.
+
+inline PRBool AStringIsNull(const nsAReadableString& aString)
+{
+  return aString.IsVoid() || aString.IsEmpty(); // Get rid of empty hack when string implementations support.
+}
+
+inline void SetAStringToNull(nsAWritableString& aString)
+{
+  aString.Truncate();
+  aString.SetIsVoid(PR_TRUE);
+}
+
+#define NS_SOAP_ENSURE_STRING(arg) \
+NS_ENSURE_FALSE(AStringIsNull(arg), NS_ERROR_INVALID_ARG)
+
+
 #endif
