@@ -31,6 +31,12 @@
 #include "nsINetDataCache.h"
 #include "nsINetDataCacheRecord.h"
 #include "nsMemCacheCID.h"
+// file cache include
+#include "nsNetDiskCache.h"
+#include "nsIPref.h"
+#include "prenv.h"
+#include "nsIFileStream.h"
+
 
 // Number of test entries to be placed in the cache
 #define NUM_CACHE_ENTRIES  250
@@ -47,6 +53,11 @@
 
 static NS_DEFINE_CID(kMemCacheCID, NS_MEM_CACHE_FACTORY_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+
+// file cache cid
+static NS_DEFINE_CID(kDiskCacheCID, NS_NETDISKCACHE_CID) ;
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 
 // Mapping from test case number to RecordID
 static PRInt32 recordID[NUM_CACHE_ENTRIES];
@@ -667,19 +678,71 @@ nsresult NS_AutoregisterComponents()
   return rv;
 }
 
+PRBool initPref ()
+{
+    nsresult rv;
+    NS_WITH_SERVICE(nsIPref, prefPtr, kPrefCID, &rv);
+    if (NS_FAILED(rv))
+        return false;
+               
+    nsCOMPtr<nsIFileSpec> fileSpec;
+    rv = NS_NewFileSpec (getter_AddRefs(fileSpec));
+    if (NS_FAILED(rv))
+        return false;
+                            
+    nsCString defaultPrefFile = PR_GetEnv ("MOZILLA_FIVE_HOME");
+    if (defaultPrefFile.Length())
+        defaultPrefFile += "/";
+    else
+        defaultPrefFile = "./";
+    defaultPrefFile += "default_prefs.js";
+                                                 
+    fileSpec->SetUnixStyleFilePath (defaultPrefFile.GetBuffer());
+                                                    
+    PRBool exists = false;
+    fileSpec->Exists(&exists);
+    if (exists)
+        prefPtr->ReadUserPrefsFrom(fileSpec);
+    else
+        return false;
+    return true;
+}
+
 int
 main(int argc, char* argv[])
 {
     nsresult rv;
+
+    if(argc <2) {
+      printf(" %s -f to test filecache\n", argv[0]) ;
+      printf(" %s -m to test memcache\n", argv[0]) ;
+      return -1 ;
+    }
+
     nsCOMPtr<nsINetDataCache> cache;
 
     rv = NS_AutoregisterComponents();
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't register XPCOM components");
 
-    rv = nsComponentManager::CreateInstance(kMemCacheCID, nsnull,
+    if (PL_strcasecmp(argv[1], "-m") == 0) {
+        rv = nsComponentManager::CreateInstance(kMemCacheCID, nsnull,
                                             NS_GET_IID(nsINetDataCache),
                                             getter_AddRefs(cache));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create memory cache factory");
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create memory cache factory");
+    } else if (PL_strcasecmp(argv[1], "-f") == 0) {
+        // initialize pref
+        initPref() ;
+
+        rv = nsComponentManager::CreateInstance(kDiskCacheCID, nsnull,
+                                            NS_GET_IID(nsINetDataCache),
+                                             getter_AddRefs(cache));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create disk cache factory") ;
+
+    } else {
+      printf("  %s -f to test filecache\n", argv[0]) ;
+      printf(" %s -m to test memcache\n", argv[0]) ;
+      return -1 ;
+    }
 
     InitQueue();
 
@@ -727,6 +790,7 @@ main(int argc, char* argv[])
 
     PRUint32 endOccupancy;
     rv = cache->GetStorageInUse(&endOccupancy);
+
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
 
     NS_ASSERTION(startOccupancy == endOccupancy, "Cache occupancy not correctly computed ?");
