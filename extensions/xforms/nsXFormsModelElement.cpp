@@ -55,6 +55,7 @@
 #include "nsIDOMEventReceiver.h"
 
 #include "nsISchemaLoader.h"
+#include "nsAutoPtr.h"
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -99,6 +100,12 @@ EVENT_HELPER_NC(BindingException, "binding-exception", PR_TRUE)
 EVENT_HELPER_NC(LinkException, "link-exception", PR_TRUE)
 EVENT_HELPER_NC(LinkError, "link-error", PR_TRUE)
 EVENT_HELPER_NC(ComputeException, "compute-exception", PR_TRUE)
+
+nsXFormsModelElement::nsXFormsModelElement()
+  : mSchemaCount(0),
+    mInstanceDataLoaded(PR_FALSE)
+{
+}
 
 NS_IMPL_ADDREF(nsXFormsModelElement)
 NS_IMPL_RELEASE(nsXFormsModelElement)
@@ -272,10 +279,13 @@ nsXFormsModelElement::DoneAddingChildren()
 
     // Parse the space-separated list.
     PRUint32 offset = 0;
+    nsRefPtr<nsIURI> baseURI = mContent->GetBaseURI();
+
     while (1) {
+      ++mSchemaCount;
       PRInt32 index = schemaList.FindChar(PRUnichar(' '), offset);
-      nsresult rv = loader->LoadAsync(Substring(schemaList, offset,
-                                                index - offset), this);
+      rv = loader->LoadAsync(Substring(schemaList, offset, index - offset),
+                             baseURI, this);
       if (NS_FAILED(rv)) {
         DispatchLinkExceptionEvent(this);  // this is a fatal error
         return NS_OK;
@@ -335,6 +345,8 @@ nsXFormsModelElement::DoneAddingChildren()
           rv = mInstanceDocument->AppendChild(newNode,
                                               getter_AddRefs(nodeReturn));
           NS_ENSURE_SUCCESS(rv, rv);
+
+          mInstanceDataLoaded = PR_TRUE;
         }
       } else {
         // We're using external instance data, so we need to load
@@ -357,17 +369,14 @@ nsXFormsModelElement::DoneAddingChildren()
           return NS_OK;
         }
       }
+
+      break;
     }
   }
 
-  // 3. if applicable, initialize P3P
-
-  // 4. construct instance data from initial instance data.  apply all
-  // <bind> elements in document order.
-
-  // 5. dispatch xforms-rebuild, xforms-recalculate, xforms-revalidate
-
-  // mark this model as initialized
+  if (IsComplete()) {
+    return FinishConstruction();
+  }
 
   return NS_OK;
 }
@@ -425,12 +434,18 @@ nsXFormsModelElement::Refresh()
 NS_IMETHODIMP
 nsXFormsModelElement::OnLoad(nsISchema* aSchema)
 {
+  mSchemas.AppendObject(aSchema);
+  if (IsComplete()) {
+    return FinishConstruction();
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::OnError(PRInt32 aStatus, const nsAString &aStatusMessage)
 {
+  DispatchLinkExceptionEvent(this);
   return NS_OK;
 }
 
@@ -445,6 +460,11 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsXFormsModelElement::Load(nsIDOMEvent* aEvent)
 {
+  mInstanceDataLoaded = PR_TRUE;
+  if (IsComplete()) {
+    return FinishConstruction();
+  }
+
   return NS_OK;
 }
 
@@ -463,16 +483,33 @@ nsXFormsModelElement::Unload(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsXFormsModelElement::Abort(nsIDOMEvent* aEvent)
 {
+  DispatchLinkExceptionEvent(this);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::Error(nsIDOMEvent* aEvent)
 {
+  DispatchLinkExceptionEvent(this);
   return NS_OK;
 }
 
 // internal methods
+
+nsresult
+nsXFormsModelElement::FinishConstruction()
+{
+  // 3. if applicable, initialize P3P
+
+  // 4. construct instance data from initial instance data.  apply all
+  // <bind> elements in document order.
+
+  // 5. dispatch xforms-rebuild, xforms-recalculate, xforms-revalidate
+
+  // mark this model as initialized
+
+  return NS_OK;
+}
 
 nsresult
 nsXFormsModelElement::DispatchEvent(const char *aEvent,

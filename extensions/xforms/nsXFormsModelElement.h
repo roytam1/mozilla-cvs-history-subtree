@@ -53,6 +53,8 @@ class nsXFormsModelElement : public nsIXTFGenericElement,
                              public nsIDOMLoadListener
 {
 public:
+  nsXFormsModelElement() NS_HIDDEN;
+
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXTFELEMENT
   NS_DECL_NSIXTFGENERICELEMENT
@@ -72,9 +74,17 @@ public:
                                      PRBool *aDefaultPrevented);
 private:
 
+  NS_HIDDEN_(nsresult) FinishConstruction();
+
+  PRBool IsComplete() const { return (mSchemas.Count() == mSchemaCount)
+                                && mInstanceDataLoaded; }
+
   nsCOMPtr<nsIContent> mContent;
   nsCOMArray<nsISchema> mSchemas;
   nsCOMPtr<nsIDOMDocument> mInstanceDocument;
+
+  PRInt32 mSchemaCount;
+  PRBool  mInstanceDataLoaded;
 };
 
 NS_HIDDEN_(nsresult) NS_NewXFormsModelElement(nsIXTFElement **aResult);
