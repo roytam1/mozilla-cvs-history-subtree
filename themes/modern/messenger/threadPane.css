@@ -41,9 +41,29 @@ outlinercol.flagColumnHeader {
   list-style-image: url("chrome://messenger/skin/flaggedmail.gif");
 }
 
-:-moz-outliner-cell-text(unread)
+outlinerbody:-moz-outliner-cell-text(unread)
 {
   font-weight: bold;
+}
+
+outlinerbody:-moz-outliner-cell-text(priority-highest)
+{
+  color:red;
+}
+
+outlinerbody:-moz-outliner-cell-text(priority-high)
+{
+  color: rgb(128, 0, 0);
+}
+
+outlinerbody:-moz-outliner-cell-text(priority-lowest)
+{
+  color: rgb(170, 170, 170);
+}
+
+outlinerbody:-moz-outliner-cell-text(priority-low)
+{
+  color: rgb(85, 85, 85);
 }
 
 /* end temporary outliner styles */
