@@ -40,9 +40,9 @@
 #include "Outliner.h"
 #include "Outlinable.h"
 #include "PrefsData.h"
-#ifdef MOZ_LDAP
- #include "dirprefs.h"
-#endif
+/* #ifdef MOZ_LDAP */ /* (rb) This file is required  */
+#include "dirprefs.h"
+/* #endif */
 #ifdef MOZ_MAIL_NEWS
 #include "PrefsDialogMServer.h"
 #include "PrefsMailFolderDlg.h"
