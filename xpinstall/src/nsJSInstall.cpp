@@ -1218,10 +1218,10 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->StartInstall(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->StartInstall(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
