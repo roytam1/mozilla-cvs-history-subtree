@@ -274,29 +274,29 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                 return GetNewOrUsed(ccx, Object, betterScope, Interface,
                                     resultWrapper);
         }
-    }
 
-    // Here we take the performance hit of checking the hashtable again in case
-    // the preCreate call caused the wrapper to get created through some
-    // interesting path (the DOM code tends to make this happen sometimes).
+        // Take the performance hit of checking the hashtable again in case
+        // the preCreate call caused the wrapper to get created through some
+        // interesting path (the DOM code tends to make this happen sometimes).
 
-    {   // scoped lock
-        XPCAutoLock lock(mapLock);
-        wrapper = map->Find(identity);
-        NS_IF_ADDREF(wrapper);
-    }
-
-    if(wrapper)
-    {
-        if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
-        {
-            NS_RELEASE(wrapper);
-            NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
-            return rv;
+        {   // scoped lock
+            XPCAutoLock lock(mapLock);
+            wrapper = map->Find(identity);
+            NS_IF_ADDREF(wrapper);
         }
-        DEBUG_CheckWrapperThreadSafety(wrapper);
-        *resultWrapper = wrapper;
-        return NS_OK;
+
+        if(wrapper)
+        {
+            if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
+            {
+                NS_RELEASE(wrapper);
+                NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+                return rv;
+            }
+            DEBUG_CheckWrapperThreadSafety(wrapper);
+            *resultWrapper = wrapper;
+            return NS_OK;
+        }
     }
 
     XPCWrappedNativeProto* proto = nsnull;
