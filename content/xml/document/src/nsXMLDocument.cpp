@@ -286,7 +286,7 @@ nsXMLDocument::GetInterface(const nsIID& aIID, void** aSink)
 
 // nsIHttpEventSink
 NS_IMETHODIMP
-nsXMLDocument::OnRedirect(nsIHttpChannel *httpChannel, nsIChannel *newChannel)
+nsXMLDocument::OnRedirect(nsIHttpChannel *aHttpChannel, nsIChannel *aNewChannel)
 {
   nsresult rv;
 
@@ -297,7 +297,8 @@ nsXMLDocument::OnRedirect(nsIHttpChannel *httpChannel, nsIChannel *newChannel)
     return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIURI> newLocation;
-  rv = newChannel->GetURI(getter_AddRefs(newLocation));
+  rv = aNewChannel->GetURI(getter_AddRefs(newLocation));
+
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
@@ -319,26 +320,26 @@ nsXMLDocument::OnRedirect(nsIHttpChannel *httpChannel, nsIChannel *newChannel)
 }
 
 NS_IMETHODIMP
-nsXMLDocument::OnAuthenticate(nsIHttpChannel *httpChannel,
-                              const char *host,
-                              PRInt32 port,
-                              PRBool isProxy,
-                              const char *realm,
-                              char **username,
-                              char **password)
+nsXMLDocument::OnAuthenticate(nsIHttpChannel *aHttpChannel,
+                              const char *aHost,
+                              PRInt32 aPort,
+                              PRBool aIsProxy,
+                              const char *aRealm,
+                              char **aUsername,
+                              char **aPassword)
 {
   NS_NOTREACHED("not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsXMLDocument::OnAuthenticationFailed(nsIHttpChannel *httpChannel,
-                                      const char *host,
-                                      PRInt32 port,
-                                      PRBool isProxy,
-                                      const char *realm,
-                                      const char *username,
-                                      const char *password)
+nsXMLDocument::OnAuthenticationFailed(nsIHttpChannel *aHttpChannel,
+                                      const char *aHost,
+                                      PRInt32 aPort,
+                                      PRBool aIsProxy,
+                                      const char *aRealm,
+                                      const char *aUsername,
+                                      const char *aPassword)
 {
   NS_NOTREACHED("not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;

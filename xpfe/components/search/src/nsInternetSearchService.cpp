@@ -1052,7 +1052,7 @@ InternetSearchDataSource::GetTarget(nsIRDFResource *source,
     if (NS_SUCCEEDED(rv) && stringService) {
 
       nsCOMPtr<nsIStringBundle> bundle;
-      rv = stringService->CreateBundle(SEARCH_PROPERTIES, nsnull, getter_AddRefs(bundle));
+      rv = stringService->CreateBundle(SEARCH_PROPERTIES, getter_AddRefs(bundle));
       if (NS_SUCCEEDED(rv) && bundle) {
 
         nsXPIDLString valUni;
