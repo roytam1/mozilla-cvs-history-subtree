@@ -131,6 +131,10 @@
 #include "nsCExternalHandlerService.h"
 #include "nsIMIMEService.h"
 
+#ifdef MOZ_MINOTAUR
+#include "nsILinkHandler.h"                                                                              
+#endif 
+
 // Find / Find Again 
 #include "nsIFindComponent.h"
 
@@ -661,6 +665,35 @@ nsMessenger::OpenURL(const char * url)
   }
   return NS_OK;
 }
+
+#ifdef MOZ_MINOTAUR                                                          
+NS_IMETHODIMP nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *aUrl)              
+{                                                                               
+   nsresult rv;      
+   nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aWin, &rv);    
+   NS_ENSURE_SUCCESS(rv,rv);                                                    
+   nsCOMPtr <nsIDocShell> docShell;                                             
+   NS_ENSURE_SUCCESS(rv,rv);
+   if (!docShell)                                                               
+     return NS_ERROR_FAILURE;                                                   
+
+   nsCOMPtr<nsILinkHandler> lh = do_QueryInterface(docShell, &rv);              
+   NS_ENSURE_SUCCESS(rv,rv); 
+   
+   // this works, because of the hack to nsWebShell.cpp                         
+   rv = lh->OnLinkClick(nsnull, eLinkVerb_Replace, NS_ConvertASCIItoUCS2(aUrl).get(),nsnull,nsnull,nsnull);                                                     
+   NS_ENSURE_SUCCESS(rv,rv);                                                    
+   return rv;                                                                   
+}                                                                               
+
+#else
+
+NS_IMETHODIMP nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *url)                                                                              
+{                                                                               
+  // if you are a browser, you should not be in here.                           
+  return NS_ERROR_UNEXPECTED;                                                   
+}                                                                               
+#endif 
 
 nsresult
 nsMessenger::SaveAttachment(nsIFileSpec * fileSpec,
