@@ -55,6 +55,11 @@ pref("app.build_id",
 pref("mail.biff.animate_dock_icon", false);
 #endif
 
+pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
+// Automatically download and install updates to themes and extensions.
+pref("update.extensions.autoUpdate", false);
+
 /////////////////////////////////////////////////////////////////
 // Overrides of the seamonkey suite mailnews.js prefs
 ///////////////////////////////////////////////////////////////// 
@@ -126,8 +131,10 @@ pref("network.hosts.pop_server",            "mail");
 pref("general.config.obscure_value", 0); // for MCD .cfg files
 
 pref("xpinstall.dialog.confirm", "chrome://communicator/content/xpinstall/institems.xul");
-pref("xpinstall.dialog.progress", "chrome://communicator/content/xpinstall/xpistatus.xul");
-pref("xpinstall.dialog.progress.type", "");
+pref("xpinstall.dialog.progress.skin", "chrome://mozapps/content/extensions/extensions.xul?type=themes");
+pref("xpinstall.dialog.progress.chrome", "chrome://mozapps/content/extensions/extensions.xul?type=extensions");
+pref("xpinstall.dialog.progress.type.skin", "Extension:Manager-themes"); 
+pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
 
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite all.js pref overrides
