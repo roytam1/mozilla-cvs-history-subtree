@@ -111,6 +111,15 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
         }
 
         member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
+	
+	/*
+         * See if the property looks like the explicit resolution of an
+         * overloaded method, e.g. "max(double,double)".
+         */
+	member_descriptor =
+	    jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_TRUE);
+	if (member_descriptor)
+	    goto done;
 
         /* Why do we have to do this ? */
         if (!strcmp(member_name, "prototype")) {
@@ -123,6 +132,8 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
                        class_descriptor->name, member_name);
         return JS_FALSE;
     }
+
+done:
     if (memberp)
         *memberp = member_descriptor;
     return JS_TRUE;
@@ -361,6 +372,17 @@ JavaClass_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     case JSENUMERATE_NEXT:
         member_descriptor = JSVAL_TO_PRIVATE(*statep);
         if (member_descriptor) {
+
+	    /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
+	       but not toValue(int), toValue(double), etc. */
+	    while (member_descriptor->methods && member_descriptor->methods->is_alias) {
+		member_descriptor = member_descriptor->next;
+		if (!member_descriptor) {
+		    *statep = JSVAL_NULL;
+		    return JS_TRUE;
+		}
+	    }
+
             *idp = member_descriptor->id;
             *statep = PRIVATE_TO_JSVAL(member_descriptor->next);
             return JS_TRUE;

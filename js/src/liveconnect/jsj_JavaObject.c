@@ -330,18 +330,27 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
         JS_IdToValue(cx, id, &idval);
         if (!JSVAL_IS_STRING(idval)) {
             JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                            JSJMSG_BAD_JOBJECT_EXPR);
+                                 JSJMSG_BAD_JOBJECT_EXPR);
             return JS_FALSE;
         }
-
         member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
 
+        /*
+         * See if the property looks like the explicit resolution of an
+         * overloaded method, e.g. "max(double,double)".
+         */
+	member_descriptor =
+	    jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_FALSE);
+	if (member_descriptor)
+	    goto done;
+
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                    JSJMSG_NO_INSTANCE_NAME,
-                    class_descriptor->name, member_name);
+                             JSJMSG_NO_INSTANCE_NAME,
+                             class_descriptor->name, member_name);
         return JS_FALSE;
     }
 
+done:
     /* Success.  Handle the multiple return values */
     if (java_wrapperp)
         *java_wrapperp = java_wrapper;
@@ -600,7 +609,18 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     case JSENUMERATE_NEXT:
         member_descriptor = JSVAL_TO_PRIVATE(*statep);
         if (member_descriptor) {
-            *idp = member_descriptor->id;
+
+	    /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
+	       but not toValue(int), toValue(double), etc. */
+	    while (member_descriptor->methods && member_descriptor->methods->is_alias) {
+		member_descriptor = member_descriptor->next;
+		if (!member_descriptor) {
+		    *statep = JSVAL_NULL;
+		    return JS_TRUE;
+		}
+	    }
+            
+	    *idp = member_descriptor->id;
             *statep = PRIVATE_TO_JSVAL(member_descriptor->next);
             return JS_TRUE;
         }

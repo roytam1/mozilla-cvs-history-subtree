@@ -54,7 +54,6 @@ typedef struct JavaMethodSpec JavaMethodSpec;
 typedef struct JavaClassDescriptor JavaClassDescriptor;
 typedef struct JavaClassDescriptor JavaSignature;
 typedef struct CapturedJSError CapturedJSError;
-typedef struct JavaMemberVal JavaMemberVal;
 
 /*
  * This enum uses a method similar to the JDK to specify
@@ -79,12 +78,12 @@ typedef enum {
     JAVA_SIGNATURE_ARRAY,              /* Any array class */
     JAVA_SIGNATURE_OBJECT,             /* non-array object, but not one of the
                                           more specific types below */
-    JAVA_SIGNATURE_JAVA_LANG_BOOLEAN,
-    JAVA_SIGNATURE_JAVA_LANG_CLASS,
-    JAVA_SIGNATURE_JAVA_LANG_DOUBLE,
-    JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT,
-    JAVA_SIGNATURE_JAVA_LANG_OBJECT,
-    JAVA_SIGNATURE_JAVA_LANG_STRING,
+    JAVA_SIGNATURE_JAVA_LANG_BOOLEAN,  /* java.lang.Boolean */
+    JAVA_SIGNATURE_JAVA_LANG_CLASS,    /* java.lang.Class */
+    JAVA_SIGNATURE_JAVA_LANG_DOUBLE,   /* java.lang.Double */
+    JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT,  /* nestcape.javascript.JSObject */
+    JAVA_SIGNATURE_JAVA_LANG_OBJECT,   /* java.lang.Object */
+    JAVA_SIGNATURE_JAVA_LANG_STRING,   /* java.lang.String */
 
     JAVA_SIGNATURE_LIMIT
 } JavaSignatureChar;
@@ -92,7 +91,7 @@ typedef enum {
 #define IS_REFERENCE_TYPE(sig) ((int)(sig) >= (int)JAVA_SIGNATURE_ARRAY)
 #define IS_OBJECT_TYPE(sig)    ((int)(sig) >= (int)JAVA_SIGNATURE_OBJECT)
 #define IS_PRIMITIVE_TYPE(sig)                                               \
-    (((int)(sig) >= (int)JAVA_SIGNATURE_BYTE) && !IS_REFERENCE_TYPE(sig))                                    \
+    (((int)(sig) >= (int)JAVA_SIGNATURE_BOOLEAN) && !IS_REFERENCE_TYPE(sig))                                    \
 
 /* The signature of a Java method consists of the signatures of all its
    arguments and its return type signature. */
@@ -117,6 +116,7 @@ struct JavaMethodSpec {
     JavaMethodSignature     signature;
     const char *            name;       /* UTF8; TODO - Should support Unicode method names */
     JavaMethodSpec *        next;       /* next method in chain of overloaded methods */
+    JSBool		    is_alias;	/* An aliased name for a Java method ? */
 };
 
 /*
@@ -137,7 +137,7 @@ struct JavaMemberDescriptor {
 
 /* This is the native portion of a reflected Java class */
 struct JavaClassDescriptor {
-    const char *            name;       /* Name of class, e.g. "java/lang/Byte" */
+    const char *            name;       /* Name of class, e.g. "java.lang.Byte" */
     JavaSignatureChar       type;       /* class category: primitive type, object, array */
     jclass                  java_class; /* Opaque JVM handle to corresponding java.lang.Class */
     int                     num_instance_members;
@@ -151,14 +151,6 @@ struct JavaClassDescriptor {
                                            e.g. abstract, private */
     int                     ref_count;  /* # of references to this struct */
     JavaSignature *         array_component_signature; /* Only non-NULL for array classes */
-};
-
-/* This is the native portion of a reflected Java method or field */
-struct JavaMemberVal {
-    jsval                   field_val;              /* Captured value of Java field */
-    jsval                   invoke_method_func_val; /* JSFunction wrapper around Java method invoker */
-    JavaMemberDescriptor *  descriptor;
-    JavaMemberVal *         next;
 };
 
 /* This is the native portion of a reflected Java object */
@@ -435,6 +427,12 @@ extern JSBool
 jsj_ReflectJavaMethods(JSContext *cx, JNIEnv *jEnv,
                        JavaClassDescriptor *class_descriptor,
                        JSBool reflect_only_static_methods);
+
+extern JavaMemberDescriptor *
+jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
+			  JavaClassDescriptor *class_descriptor, 
+			  jsid method_name_id,
+			  JSBool is_static);
 extern void
 jsj_DestroyMethodSpec(JSContext *cx, JNIEnv *jEnv, JavaMethodSpec *method_spec);
 

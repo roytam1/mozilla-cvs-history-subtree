@@ -63,7 +63,8 @@ typedef enum JSJType {
     JSJTYPE_STRING,              /* string */
     JSJTYPE_NULL,                /* null */
     JSJTYPE_JAVACLASS,           /* JavaClass */
-    JSJTYPE_JAVAOBJECT,          /* JavaObject or JavaArray */
+    JSJTYPE_JAVAOBJECT,          /* JavaObject */
+    JSJTYPE_JAVAARRAY,		 /* JavaArray */
     JSJTYPE_OBJECT,              /* Any other JS Object, including functions */
     JSJTYPE_LIMIT
 } JSJType;
@@ -115,58 +116,6 @@ convert_java_method_arg_signatures_to_string(JSContext *cx,
 }
 
 /*
- * Compute a JNI-style (string) signature for the given method, e.g. the method
- * "String MyFunc(int, byte)" is translated to "(IB)Ljava/lang/String;".
- *
- * If an error is encountered, NULL is returned and the error reporter is called.
- */
-const char *
-jsj_ConvertJavaMethodSignatureToString(JSContext *cx,
-                                       JavaMethodSignature *method_signature)
-{
-    JavaSignature **arg_signatures, *return_val_signature;
-    const char *arg_sigs_cstr;
-    const char *return_val_sig_cstr;
-    const char *sig_cstr;
-
-    arg_signatures = method_signature->arg_signatures;
-    return_val_signature = method_signature->return_val_signature;
-
-    /* Convert the method argument signatures to a C-string */
-    arg_sigs_cstr = NULL;
-    if (arg_signatures) {
-        arg_sigs_cstr =
-            convert_java_method_arg_signatures_to_string(cx, arg_signatures,
-                                                         method_signature->num_args);
-        if (!arg_sigs_cstr)
-            return NULL;
-    }
-
-    /* Convert the method return value signature to a C-string */
-    return_val_sig_cstr = jsj_ConvertJavaSignatureToString(cx, return_val_signature);
-    if (!return_val_sig_cstr) {
-        free((void*)arg_sigs_cstr);
-        return NULL;
-    }
-
-    /* Compose method arg signatures string and return val signature string */
-    if (arg_sigs_cstr) {
-        sig_cstr = JS_smprintf("(%s)%s", arg_sigs_cstr, return_val_sig_cstr);
-        free((void*)arg_sigs_cstr);
-    } else {
-        sig_cstr = JS_smprintf("()%s", return_val_sig_cstr);
-    }
-
-    free((void*)return_val_sig_cstr);
-
-    if (!sig_cstr) {
-        JS_ReportOutOfMemory(cx);
-        return NULL;
-    }
-    return sig_cstr;
-}
-
-/*
  * A helper function for jsj_ConvertJavaMethodSignatureToHRString():
  * Compute human-readable string signatures for an array of JavaSignatures
  * and concatenate the results into a single string.
@@ -176,10 +125,14 @@ jsj_ConvertJavaMethodSignatureToString(JSContext *cx,
 static const char *
 convert_java_method_arg_signatures_to_hr_string(JSContext *cx,
                                                 JavaSignature **arg_signatures,
-                                                int num_args)
+                                                int num_args,
+						JSBool whitespace)
 {
-    const char *first_arg_signature, *rest_arg_signatures, *sig;
+    const char *first_arg_signature, *rest_arg_signatures, *sig, *separator;
     JavaSignature **rest_args;
+
+    if (num_args == 0)
+        return strdup("");
 
     /* Convert the first method argument in the array to a string */
     first_arg_signature = jsj_ConvertJavaSignatureToHRString(cx, arg_signatures[0]);
@@ -193,7 +146,7 @@ convert_java_method_arg_signatures_to_hr_string(JSContext *cx,
     /* Convert the remaining method arguments to a string */
     rest_args = &arg_signatures[1];
     rest_arg_signatures =
-        convert_java_method_arg_signatures_to_hr_string(cx, rest_args, num_args - 1);
+        convert_java_method_arg_signatures_to_hr_string(cx, rest_args, num_args - 1, whitespace);
     if (!rest_arg_signatures) {
         free((void*)first_arg_signature);
         return NULL;
@@ -201,7 +154,8 @@ convert_java_method_arg_signatures_to_hr_string(JSContext *cx,
 
     /* Concatenate the signature string of this argument with the signature
        strings of all the remaining arguments. */
-    sig = JS_smprintf("%s, %s", first_arg_signature, rest_arg_signatures);
+    separator = whitespace ? " " : "";
+    sig = JS_smprintf("%s,%s%s", first_arg_signature, separator, rest_arg_signatures);
     free((void*)first_arg_signature);
     free((void*)rest_arg_signatures);
     if (!sig) {
@@ -233,14 +187,12 @@ jsj_ConvertJavaMethodSignatureToHRString(JSContext *cx,
     return_val_signature = method_signature->return_val_signature;
 
     /* Convert the method argument signatures to a C-string */
-    arg_sigs_cstr = NULL;
-    if (arg_signatures) {
-        arg_sigs_cstr =
+    arg_sigs_cstr =
             convert_java_method_arg_signatures_to_hr_string(cx, arg_signatures,
-                                                            method_signature->num_args);
-        if (!arg_sigs_cstr)
-            return NULL;
-    }
+                                                            method_signature->num_args,
+							    JS_TRUE);
+    if (!arg_sigs_cstr)
+        return NULL;
 
     /* Convert the method return value signature to a C-string */
     return_val_sig_cstr = jsj_ConvertJavaSignatureToHRString(cx, return_val_signature);
@@ -250,13 +202,8 @@ jsj_ConvertJavaMethodSignatureToHRString(JSContext *cx,
     }
 
     /* Compose method arg signatures string and return val signature string */
-    if (arg_sigs_cstr) {
-        sig_cstr = JS_smprintf("%s %s(%s)", return_val_sig_cstr, method_name, arg_sigs_cstr);
-        free((void*)arg_sigs_cstr);
-    } else {
-        sig_cstr = JS_smprintf("%s %s()", return_val_sig_cstr, method_name);
-    }
-
+    sig_cstr = JS_smprintf("%s %s(%s)", return_val_sig_cstr, method_name, arg_sigs_cstr);
+    free((void*)arg_sigs_cstr);
     free((void*)return_val_sig_cstr);
 
     if (!sig_cstr) {
@@ -388,6 +335,58 @@ error:
 
     jsj_PurgeJavaMethodSignature(cx, jEnv, method_signature);
     return NULL;
+}
+
+/*
+ * Compute a JNI-style (string) signature for the given method, e.g. the method
+ * "String MyFunc(int, byte)" is translated to "(IB)Ljava/lang/String;".
+ *
+ * If an error is encountered, NULL is returned and the error reporter is called.
+ */
+const char *
+jsj_ConvertJavaMethodSignatureToString(JSContext *cx,
+                                       JavaMethodSignature *method_signature)
+{
+    JavaSignature **arg_signatures, *return_val_signature;
+    const char *arg_sigs_cstr;
+    const char *return_val_sig_cstr;
+    const char *sig_cstr;
+
+    arg_signatures = method_signature->arg_signatures;
+    return_val_signature = method_signature->return_val_signature;
+
+    /* Convert the method argument signatures to a C-string */
+    arg_sigs_cstr = NULL;
+    if (arg_signatures) {
+        arg_sigs_cstr =
+            convert_java_method_arg_signatures_to_string(cx, arg_signatures,
+                                                         method_signature->num_args);
+        if (!arg_sigs_cstr)
+            return NULL;
+    }
+
+    /* Convert the method return value signature to a C-string */
+    return_val_sig_cstr = jsj_ConvertJavaSignatureToString(cx, return_val_signature);
+    if (!return_val_sig_cstr) {
+        free((void*)arg_sigs_cstr);
+        return NULL;
+    }
+
+    /* Compose method arg signatures string and return val signature string */
+    if (arg_sigs_cstr) {
+        sig_cstr = JS_smprintf("(%s)%s", arg_sigs_cstr, return_val_sig_cstr);
+        free((void*)arg_sigs_cstr);
+    } else {
+        sig_cstr = JS_smprintf("()%s", return_val_sig_cstr);
+    }
+
+    free((void*)return_val_sig_cstr);
+
+    if (!sig_cstr) {
+        JS_ReportOutOfMemory(cx);
+        return NULL;
+    }
+    return sig_cstr;
 }
 
 static JSBool
@@ -574,11 +573,146 @@ jsj_ReflectJavaMethods(JSContext *cx, JNIEnv *jEnv,
 void
 jsj_DestroyMethodSpec(JSContext *cx, JNIEnv *jEnv, JavaMethodSpec *method_spec)
 {
-    JS_FREE_IF(cx, (char*)method_spec->name);
-    jsj_PurgeJavaMethodSignature(cx, jEnv, &method_spec->signature);
+    if (!method_spec->is_alias) {
+	JS_FREE_IF(cx, (char*)method_spec->name);
+	jsj_PurgeJavaMethodSignature(cx, jEnv, &method_spec->signature);
+    }
     JS_free(cx, method_spec);
 }
 
+static JavaMethodSpec *
+copy_java_method_descriptor(JSContext *cx, JavaMethodSpec *method)
+{
+    JavaMethodSpec *copy;
+
+    copy = (JavaMethodSpec*)JS_malloc(cx, sizeof(JavaMethodSpec));
+    if (!copy)
+        return NULL;
+    memcpy(copy, method, sizeof(JavaMethodSpec));
+    copy->next = NULL;
+    copy->is_alias = JS_TRUE;
+    return copy;
+}
+
+/*
+ * See if a reference to a JavaObject/JavaClass's property looks like the
+ * explicit resolution of an overloaded method, e.g. 
+ * java.lang.String["max(double,double)"].  If so, add a new member
+ * (JavaMemberDescriptor) to the object that is an alias for the resolved
+ * method.
+ */
+JavaMemberDescriptor *
+jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
+			  JavaClassDescriptor *class_descriptor, 
+			  jsid method_name_id,
+			  JSBool is_static)
+{
+    JavaMethodSpec *method;
+    JavaMemberDescriptor *member_descriptor;
+    JavaMethodSignature *ms;
+    JSString *simple_name_jsstr;
+    JSFunction *fun;
+    int left_paren;
+    const char *sig_cstr, *method_name;
+    char *arg_start;
+    jsid id;
+    jsval method_name_jsval;
+      
+    /*
+     * Get the simple name of the explicit method, i.e. get "cos" from
+     * "cos(double)", and use it to create a new JS string.
+     */
+    JS_IdToValue(cx, method_name_id, &method_name_jsval);
+    method_name = JS_GetStringBytes(JSVAL_TO_STRING(method_name_jsval));
+    arg_start = strchr(method_name, '(');	/* Skip until '(' */
+    /* If no left-paren, then this is not a case of explicit method resolution */
+    if (!arg_start)
+	return NULL;
+    left_paren = arg_start - method_name;
+    simple_name_jsstr = JS_NewStringCopyN(cx, method_name, left_paren);
+    if (!simple_name_jsstr)
+	return NULL;
+
+    /* Find all the methods in the same class with the same simple name */
+    JS_ValueToId(cx, STRING_TO_JSVAL(simple_name_jsstr), &id);
+    if (is_static)
+	member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
+    else
+	member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
+    if (!member_descriptor)	/* No member with matching simple name ? */
+	return NULL;
+    
+    /*
+     * Do a UTF8 comparison of method signatures with all methods of the same name,
+     * so as to discover a method which exactly matches the specified argument types.
+     */
+    if (!strlen(arg_start + 1))
+	return NULL;
+    arg_start = JS_strdup(cx, arg_start + 1);
+    if (!arg_start)
+	return NULL;
+    arg_start[strlen(arg_start) - 1] = '\0';	/* Get rid of ')' */
+    for (method = member_descriptor->methods; method; method = method->next) {
+	ms = &method->signature;
+	sig_cstr = convert_java_method_arg_signatures_to_hr_string(cx, ms->arg_signatures,
+								   ms->num_args, JS_FALSE);
+	if (!sig_cstr)
+	    return NULL;
+
+	if (!strcmp(sig_cstr, arg_start))
+	    break;
+	JS_free(cx, (void*)sig_cstr);
+    }
+    JS_free(cx, arg_start);
+    if (!method)
+	return NULL;
+    JS_free(cx, (void*)sig_cstr);
+    
+    /* Don't bother doing anything if the method isn't overloaded */
+    if (!member_descriptor->methods->next)
+	return member_descriptor;
+
+    /*
+     * To speed up performance for future accesses, create a new member descriptor
+     * with a name equal to the explicit method name, i.e. "cos(double)".
+     */
+    member_descriptor = JS_malloc(cx, sizeof(JavaMemberDescriptor));
+    if (!member_descriptor)
+        return NULL;
+    memset(member_descriptor, 0, sizeof(JavaMemberDescriptor));
+
+    member_descriptor->id = method_name_id;
+    member_descriptor->name = JS_strdup(cx, JS_GetStringBytes(simple_name_jsstr));
+    if (!member_descriptor->name) {
+        JS_free(cx, member_descriptor);
+        return NULL;
+    }
+
+    member_descriptor->methods = copy_java_method_descriptor(cx, method);
+    if (!member_descriptor->methods) {
+	JS_free(cx, (void*)member_descriptor->name);
+        JS_free(cx, member_descriptor);
+        return NULL;
+    }
+
+    if (!is_static) {
+	fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
+			     JSFUN_BOUND_METHOD, NULL, method_name);
+	member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
+    }
+
+    /* THREADSAFETY */
+    /* Add the new aliased member to the list of all members for the class */
+    if (is_static) {
+	member_descriptor->next = class_descriptor->static_members;
+	class_descriptor->static_members = member_descriptor;
+    } else {
+	member_descriptor->next = class_descriptor->instance_members;
+	class_descriptor->instance_members = member_descriptor;
+    }
+
+    return member_descriptor;
+}
 
 /*
  * Return the JavaScript types that a JavaScript method was invoked with
@@ -771,9 +905,10 @@ compute_jsj_type(JSContext *cx, jsval v)
         if (JSVAL_IS_NULL(v))
             return JSJTYPE_NULL;
         js_obj = JSVAL_TO_OBJECT(v);
-        if (JS_InstanceOf(cx, js_obj, &JavaObject_class, 0) ||
-            JS_InstanceOf(cx, js_obj, &JavaArray_class, 0))
-            return JSJTYPE_JAVAOBJECT;
+        if (JS_InstanceOf(cx, js_obj, &JavaObject_class, 0))
+	    return JSJTYPE_JAVAOBJECT;
+        if (JS_InstanceOf(cx, js_obj, &JavaArray_class, 0))
+            return JSJTYPE_JAVAARRAY;
         if (JS_InstanceOf(cx, js_obj, &JavaClass_class, 0))
             return JSJTYPE_JAVACLASS;
         return JSJTYPE_OBJECT;
@@ -813,7 +948,8 @@ static int rank_table[JSJTYPE_LIMIT][JAVA_SIGNATURE_LIMIT] = {
     { 5,  3,  4,  4,  4,  4,  4,  4, 99, 99, 99, 99, 99, 99,  2,  1}, /* string */
     { 2,  2,  2,  2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  1,  1,  1}, /* null */
     {99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,  1, 99,  2,  3,  4}, /* JavaClass */
-    {99,  7,  8,  6,  5,  4,  3,  2,  0,  0,  0,  0,  0,  0,  0,  0}, /* JavaObject */
+    { 9,  7,  8,  6,  5,  4,  3,  2,  0,  0,  0,  0,  0,  0,  0,  1}, /* JavaObject */
+    { 2, 99, 99, 99, 99, 99, 99, 99,  0,  0, 99, 99, 99, 99,  0,  1}, /* JavaArray */
     {99,  9, 10,  8,  7,  6,  5,  4, 99, 99, 99, 99, 99,  1,  2,  3}, /* other JS object */
 };
 
@@ -927,7 +1063,8 @@ preferred_conversion(JSContext *cx, JNIEnv *jEnv, jsval js_val,
      * Special logic is required for matching the classes of wrapped
      * Java objects.
      */
-    if ((js_type == JSJTYPE_JAVAOBJECT) && IS_REFERENCE_TYPE(descriptor2->type)) {
+    if (((js_type == JSJTYPE_JAVAOBJECT) || (js_type == JSJTYPE_JAVAARRAY)) &&
+	IS_REFERENCE_TYPE(descriptor2->type)) {
         java_class1 = descriptor1->java_class;
         java_class2 = descriptor2->java_class;
         

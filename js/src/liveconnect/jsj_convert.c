@@ -420,9 +420,6 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
     switch (type) {
     case JAVA_SIGNATURE_BOOLEAN:
         if (!JSVAL_IS_BOOLEAN(v)) {
-            /* Suppress useless conversion from object to boolean type */
-            if (JSVAL_IS_OBJECT(v))
-                goto conversion_error;
             if (!JS_ConvertValue(cx, v, JSTYPE_BOOLEAN, &v))
                 goto conversion_error;
             (*cost)++;
