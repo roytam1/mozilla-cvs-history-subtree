@@ -134,11 +134,13 @@ typedef struct sockaddr_in6 _pr_sockaddr_in6_t;
 struct _pr_in6_addr {
 	union {
 		PRUint8  _S6_u8[16];
+		PRUint16 _S6_u16[8];
 		PRUint32 _S6_u32[4];
 		PRUint64 _S6_u64[2];
 	} _S6_un;
 };
 #define _pr_s6_addr		_S6_un._S6_u8
+#define _pr_s6_addr16	_S6_un._S6_u16
 #define _pr_s6_addr32	_S6_un._S6_u32
 #define _pr_s6_addr64 	_S6_un._S6_addr64
 

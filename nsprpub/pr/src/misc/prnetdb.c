@@ -112,24 +112,30 @@ const struct in6_addr _pr_in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 #else  /* _PR_INET6 */
 
-#define _PR_IN6_IS_ADDR_UNSPECIFIED(a)			\
+#define _PR_IN6_IS_ADDR_UNSPECIFIED(a)				\
 				(((a)->_pr_s6_addr32[0] == 0) &&	\
 				((a)->_pr_s6_addr32[1] == 0) &&		\
 				((a)->_pr_s6_addr32[2] == 0) &&		\
 				((a)->_pr_s6_addr32[3] == 0))
  
-/*
- * For non-ipv6 platforms, loopback address is never passed to the
- * system, so the byte-ordering is not an issue
- */
-#define _PR_IN6_IS_ADDR_LOOPBACK(a)				\
+#define _PR_IN6_IS_ADDR_LOOPBACK(a)					\
                (((a)->_pr_s6_addr32[0] == 0)	&&	\
                ((a)->_pr_s6_addr32[1] == 0)		&&	\
                ((a)->_pr_s6_addr32[2] == 0)		&&	\
-               ((a)->_pr_s6_addr32[3] == 0x1))
+               ((a)->_pr_s6_addr[12] == 0)		&&	\
+               ((a)->_pr_s6_addr[13] == 0)		&&	\
+               ((a)->_pr_s6_addr[14] == 0)		&&	\
+               ((a)->_pr_s6_addr[15] == 0x1U))
  
-const PRIPv6Addr _pr_in6addr_any = { 0, 0, 0, 0 };
-const PRIPv6Addr _pr_in6addr_loopback = { 0, 0, 0, 0x00000001U };
+const PRIPv6Addr _pr_in6addr_any =	{   0, 0, 0, 0,
+										0, 0, 0, 0,
+										0, 0, 0, 0,
+										0, 0, 0, 0 };
+
+const PRIPv6Addr _pr_in6addr_loopback = {   0, 0, 0, 0,
+											0, 0, 0, 0,
+											0, 0, 0, 0,
+											0, 0, 0, 0x1U };
 /*
  * The values at bytes 10 and 11 are compared using pointers to
  * 8-bit fields, and not 32-bit fields, to make the comparison work on
@@ -900,7 +906,6 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
     addr->raw.family = af;
-#if defined(_PR_INET6)
     if (af == PR_AF_INET6)
     {
         addr->ipv6.port = htons(port);
@@ -920,32 +925,6 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
         }
     }
     else
-#else
-    if (af == PR_AF_INET6)
-    {
-		PRUint32 ipv4_in_addr;		
-        addr->ipv6.port = htons(port);
-        switch (val)
-        {
-        case PR_IpAddrNull:
-            break;  /* don't overwrite the address */
-        case PR_IpAddrAny:
-            ipv4_in_addr = htonl(INADDR_ANY);
-			MakeIPv4MappedAddr((char *) &ipv4_in_addr,
-								(char *) addr->ipv6.ip._pr_s6_addr);
-            break;
-        case PR_IpAddrLoopback:
-            ipv4_in_addr = htonl(INADDR_LOOPBACK);
-			MakeIPv4MappedAddr((char *) &ipv4_in_addr,
-								(char *) addr->ipv6.ip._pr_s6_addr);
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            rv = PR_FAILURE;
-        }
-    }
-    else
-#endif
     {
         addr->inet.port = htons(port);
         switch (val)
@@ -1026,13 +1005,248 @@ PR_IMPLEMENT(PRStatus) PR_DestroyNetAddr(PRNetAddr *addr)
     return PR_SUCCESS;
 }  /* PR_DestroyNetAddr */
 
+#ifndef _PR_INET6
+#define XX 127
+static const unsigned char index_hex[256] = {
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+     0, 1, 2, 3,  4, 5, 6, 7,  8, 9,XX,XX, XX,XX,XX,XX,
+    XX,10,11,12, 13,14,15,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,10,11,12, 13,14,15,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+    XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
+};
+
+static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
+{
+    unsigned char *s = (unsigned char *)string;
+    int section = 0;
+    int double_colon = -1;
+    int val;
+    int len;
+    PRUint32 v4addr;
+
+    /* Handle initial (double) colon */
+    if (*s == ':') {
+        if (s[1] != ':') return 0;
+        s += 2;
+        addr->_pr_s6_addr16[0] = 0;
+        section = double_colon = 1;
+    }
+
+    while (*s) {
+        if (*s == ':') {
+            if (double_colon != -1) return 0; /* two double colons */
+            addr->_pr_s6_addr16[section++] = 0;
+            double_colon = section;
+            s++;
+            continue;
+        }
+        for (len = val = 0; len < 4 && index_hex[*s] != XX; len++) {
+            val = (val << 4) + index_hex[*s++];
+        }
+        if (*s == '.') break;
+        if (*s == ':') {
+            s++;
+            if (!*s) return 0; /* cannot end with single colon */
+        } else if (*s) {
+            return 0; /* bad character */
+        }
+        addr->_pr_s6_addr16[section++] = htons(val);
+        if (section == 8 && *s) return 0; /* too long */
+    }
+    
+    if (*s == '.') {
+        /* Have a trailing v4 format address */
+        if (double_colon != -1) {
+            /*
+             * Stretch the double colon, leaving the last 32 bits
+             * for the v4 address
+             */
+            int tosection;
+            int ncopy = section - double_colon;
+            if (section > 6) return 0; /* not enough room */
+            for (tosection = 5; ncopy--; tosection--) {
+                addr->_pr_s6_addr16[tosection] = 
+                    addr->_pr_s6_addr16[double_colon + ncopy];
+            }
+            while (tosection >= double_colon) {
+                addr->_pr_s6_addr16[tosection--] = 0;
+            }
+        } else if (section != 6) {
+            return 0; /* not in the right place */
+        }
+
+        /*
+         * The number before the '.' is decimal, but we parsed it
+         * as hex.  That means it is in BCD.  Check it for validity
+         * and convert it to binary.
+         */
+        if (val > 0x0255 || (val & 0xf0) > 0x90 || (val & 0xf) > 9) return 0;
+        val = (val >> 8) * 100 + ((val >> 4) & 0xf) * 10 + (val & 0xf);
+        v4addr = val << 24;
+
+        s++;
+        val = index_hex[*s++];
+        if (val < 0 || val > 9) return 0;
+        while (*s >= '0' && *s <= '9') {
+            val = val * 10 + *s++ - '0';
+            if (val > 255) return 0;
+        }
+        if (*s != '.') return 0; /* must have exactly 4 decimal numbers */
+        v4addr += val << 16;
+
+        s++;
+        val = index_hex[*s++];
+        if (val < 0 || val > 9) return 0;
+        while (*s >= '0' && *s <= '9') {
+            val = val * 10 + *s++ - '0';
+            if (val > 255) return 0;
+        }
+        if (*s != '.') return 0; /* must have exactly 4 decimal numbers */
+        v4addr += val << 8;
+
+        s++;
+        val = index_hex[*s++];
+        if (val < 0 || val > 9) return 0;
+        while (*s >= '0' && *s <= '9') {
+            val = val * 10 + *s++ - '0';
+            if (val > 255) return 0;
+        }
+        if (*s) return 0; /* must have exactly 4 decimal numbers */
+        v4addr += val;
+        addr->_pr_s6_addr32[3] = htonl(v4addr);
+        return 1;
+    }
+    
+    if (double_colon != -1) {
+        /* Stretch the double colon */
+        int tosection;
+        int ncopy = section - double_colon;
+        for (tosection = 7; ncopy--; tosection--) {
+            addr->_pr_s6_addr16[tosection] = 
+                addr->_pr_s6_addr16[double_colon + ncopy];
+        }
+        while (tosection >= double_colon) {
+            addr->_pr_s6_addr16[tosection--] = 0;
+        }
+    } else if (section != 8) {
+        return 0; /* too short */
+    }
+    return 1;
+}
+#undef XX
+            
+static const char *basis_hex = "0123456789abcdef";
+
+static int V6AddrToString(const PRIPv6Addr *addr, char *buf, PRUint32 size)
+{
+#define STUFF(c) do { \
+    if (!size--) return 0; \
+    *buf++ = (c); \
+} while (0)
+
+    int double_colon = -1;
+    int double_colon_length = 1;
+    int zero_length;
+    int section;
+    int val;
+
+    /* Scan to find the placement of the double colon */
+    for (section = 0; section < 8; section++) {
+        if (addr->_pr_s6_addr16[section] == 0) {
+            zero_length = 1;
+            section++;
+            while (section < 8 && addr->_pr_s6_addr16[section] == 0) {
+                zero_length++;
+                section++;
+            }
+            if (zero_length > double_colon_length) {
+                double_colon = section - zero_length;
+                double_colon_length = zero_length;
+            }
+        }
+    }
+
+    /* Now start converting to a string */
+    section = 0;
+
+    if (double_colon == 0) {
+        if (double_colon_length == 6 ||
+            (double_colon_length == 5 && addr->_pr_s6_addr16[5] == 0xffff)) {
+            /* ipv4 format address */
+            STUFF(':');
+            STUFF(':');
+            if (double_colon_length == 5) {
+                STUFF('f');
+                STUFF('f');
+                STUFF('f');
+                STUFF('f');
+                STUFF(':');
+            }
+            if (addr->_pr_s6_addr[12] > 99) STUFF(addr->_pr_s6_addr[12]/100 + '0');
+            if (addr->_pr_s6_addr[12] > 9) STUFF((addr->_pr_s6_addr[12]%100)/10 + '0');
+            STUFF(addr->_pr_s6_addr[12]%10 + '0');
+            STUFF('.');
+            if (addr->_pr_s6_addr[13] > 99) STUFF(addr->_pr_s6_addr[13]/100 + '0');
+            if (addr->_pr_s6_addr[13] > 9) STUFF((addr->_pr_s6_addr[13]%100)/10 + '0');
+            STUFF(addr->_pr_s6_addr[13]%10 + '0');
+            STUFF('.');
+            if (addr->_pr_s6_addr[14] > 99) STUFF(addr->_pr_s6_addr[14]/100 + '0');
+            if (addr->_pr_s6_addr[14] > 9) STUFF((addr->_pr_s6_addr[14]%100)/10 + '0');
+            STUFF(addr->_pr_s6_addr[14]%10 + '0');
+            STUFF('.');
+            if (addr->_pr_s6_addr[15] > 99) STUFF(addr->_pr_s6_addr[15]/100 + '0');
+            if (addr->_pr_s6_addr[15] > 9) STUFF((addr->_pr_s6_addr[15]%100)/10 + '0');
+            STUFF(addr->_pr_s6_addr[15]%10 + '0');
+            STUFF('\0');
+            return 1;
+        }
+    }
+
+    while (section < 8) {
+        if (section == double_colon) {
+            STUFF(':');
+            STUFF(':');
+            section += double_colon_length;
+            continue;
+        }
+        val = ntohs(addr->_pr_s6_addr16[section]);
+        if (val > 0xfff) {
+            STUFF(basis_hex[val >> 12]);
+        }
+        if (val > 0xff) {
+            STUFF(basis_hex[(val >> 8) & 0xf]);
+        }
+        if (val > 0xf) {
+            STUFF(basis_hex[(val >> 4) & 0xf]);
+        }
+        STUFF(basis_hex[val & 0xf]);
+        section++;
+        if (section < 8 && section != double_colon) STUFF(':');
+    }
+    STUFF('\0');
+    return 1;
+#undef STUFF    
+}
+
+#endif /* !_PR_INET6 */
+
 PR_IMPLEMENT(PRStatus) PR_StringToNetAddr(const char *string, PRNetAddr *addr)
 {
     PRStatus status = PR_SUCCESS;
-
-#if defined(_PR_INET6)
     PRIntn rv;
 
+#if defined(_PR_INET6)
     rv = inet_pton(AF_INET6, string, &addr->ipv6.ip);
     if (1 == rv)
     {
@@ -1054,6 +1268,13 @@ PR_IMPLEMENT(PRStatus) PR_StringToNetAddr(const char *string, PRNetAddr *addr)
         }
     }
 #else /* _PR_INET6 */
+    rv = StringToV6Addr(string, &addr->ipv6.ip);
+    if (1 == rv) {
+        addr->raw.family = PR_AF_INET6;
+        return PR_SUCCESS;
+    }
+    PR_ASSERT(0 == rv);
+
     addr->inet.family = AF_INET;
 #ifdef XP_OS2_VACPP
     addr->inet.ip = inet_addr((char *)string);
@@ -1076,31 +1297,19 @@ PR_IMPLEMENT(PRStatus) PR_StringToNetAddr(const char *string, PRNetAddr *addr)
 PR_IMPLEMENT(PRStatus) PR_NetAddrToString(
     const PRNetAddr *addr, char *string, PRUint32 size)
 {
-#if defined(_PR_INET6)
     if (PR_AF_INET6 == addr->raw.family)
     {
+#if defined(_PR_INET6)
         if (NULL == inet_ntop(AF_INET6, &addr->ipv6.ip, string, size))
+#else
+        if (!V6AddrToString(&addr->ipv6.ip, string, size))
+#endif
         {
             PR_SetError(PR_INVALID_ARGUMENT_ERROR, errno);
             return PR_FAILURE;
         }
     }
     else
-#else
-    if (PR_AF_INET6 == addr->raw.family)
-    {
-		unsigned char *byte = (unsigned char *) addr->ipv6.ip._pr_s6_addr;
-		int i, len;
-
-		len = 0;
-		for(i=0; i < 15;i++) {
-			PR_snprintf(string + len, size - len, "%u.", byte[i]);
-			len = strlen(string);
-		}
-		PR_snprintf(string + len, size - len, "%u", byte[i]);
-    }
-    else
-#endif  /* defined(_PR_INET6) */
     {
         PR_ASSERT(AF_INET == addr->raw.family);
         PR_ASSERT(size >= 16);
@@ -1122,6 +1331,29 @@ failed:
 
 }  /* PR_NetAddrToString */
 
+/*
+ * Convert an IPv4 addr to an (IPv4-mapped) IPv6 addr
+ */
+PR_IMPLEMENT(void) PR_ConvertIpv4AddrToIpv6(PRUint32 v4addr, PRIPv6Addr *v6addr)
+{
+
+    if (htonl(INADDR_LOOPBACK) == v4addr) {
+		*v6addr = _pr_in6addr_loopback;
+	} else if (htonl(INADDR_ANY) == v4addr) {
+		*v6addr = _pr_in6addr_any;
+	} else {
+		PRUint8 *dstp;
+#ifdef _PR_INET6
+		dstp = v6addr->s6_addr;
+#else
+		dstp = v6addr->_pr_s6_addr;
+#endif
+		memset(dstp, 0, 10);
+		memset(dstp + 10, 0xff, 2);
+		memcpy(dstp + 12,(char *) &v4addr, 4);
+	}
+}
+
 PR_IMPLEMENT(PRUint16) PR_ntohs(PRUint16 n) { return ntohs(n); }
 PR_IMPLEMENT(PRUint32) PR_ntohl(PRUint32 n) { return ntohl(n); }
 PR_IMPLEMENT(PRUint16) PR_htons(PRUint16 n) { return htons(n); }
@@ -1129,7 +1361,7 @@ PR_IMPLEMENT(PRUint32) PR_htonl(PRUint32 n) { return htonl(n); }
 PR_IMPLEMENT(PRUint64) PR_ntohll(PRUint64 n)
 {
     /*
-    ** There is currently no attempt to optomize out depending
+    ** There is currently no attempt to optimize out depending
     ** on the host' byte order. That would be easy enough to
     ** do.
     */
