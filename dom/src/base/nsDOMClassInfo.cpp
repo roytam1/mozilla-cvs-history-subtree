@@ -150,7 +150,7 @@
 #define ELEMENT_SCRIPTABLE_FLAGS                                              \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
-  WANT_CREATE |                                                               \
+  WANT_POSTCREATE |                                                           \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
 
@@ -758,6 +758,15 @@ nsDOMClassInfo::PreCreate(nsISupports *nativeObj, JSContext *cx,
 NS_IMETHODIMP
 nsDOMClassInfo::Create(nsIXPConnectWrappedNative *wrapper,
                        JSContext *cx, JSObject *obj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::PostCreate(nsIXPConnectWrappedNative *wrapper,
+                           JSContext *cx, JSObject *obj)
 {
   NS_ERROR("Don't call me!");
 
@@ -1724,8 +1733,8 @@ nsEventRecieverSH::OnFinalize(...)
 // Element helper
 
 NS_IMETHODIMP
-nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                    JSObject *obj)
+nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj)
 {
   nsCOMPtr<nsISupports> native;
 
@@ -2244,17 +2253,17 @@ nsHTMLPluginObjElementSH::GetPluginInstance(nsIXPConnectWrappedNative *wrapper,
   return objectFrame->GetPluginInstance(*_result);
 }
 
-// Note that this Create() method is not called only by XPConnect when
+// Note that this PostCreate() method is not called only by XPConnect when
 // it creates wrappers, nsObjectFrame also calls this method when a
 // plugin is loaded if the embed/object element is already wrapped to
 // get the scriptable plugin inserted into the embed/object's proto
 // chain.
 
 NS_IMETHODIMP
-nsHTMLPluginObjElementSH::Create(nsIXPConnectWrappedNative *wrapper,
-                                 JSContext *cx, JSObject *obj)
+nsHTMLPluginObjElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
+                                     JSContext *cx, JSObject *obj)
 {
-  nsresult rv = nsElementSH::Create(wrapper, cx, obj);
+  nsresult rv = nsElementSH::PostCreate(wrapper, cx, obj);
   NS_ENSURE_TRUE(rv, rv);
 
   nsCOMPtr<nsIPluginInstance> pi;

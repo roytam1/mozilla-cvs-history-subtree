@@ -134,6 +134,7 @@
 
 #if defined(DEBUG_jband) || defined(DEBUG_jst)
 #define XPC_DUMP_AT_SHUTDOWN
+#define XPC_TRACK_WRAPPER_STATS
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
 //#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
@@ -2008,6 +2009,7 @@ public:
 
     JSBool WantPreCreate()                GET_IT(WANT_PRECREATE)
     JSBool WantCreate()                   GET_IT(WANT_CREATE)
+    JSBool WantPostCreate()               GET_IT(WANT_POSTCREATE)
     JSBool WantAddProperty()              GET_IT(WANT_ADDPROPERTY)
     JSBool WantDelProperty()              GET_IT(WANT_DELPROPERTY)
     JSBool WantGetProperty()              GET_IT(WANT_GETPROPERTY)

@@ -1508,7 +1508,7 @@ nsObjectFrame::NotifyContentObjectWrapper()
   // Abuse the scriptable helper to trigger prototype setup for the
   // wrapper for mContent so that this plugin becomes part of the DOM
   // object.
-  return helper->Create(wrapper, cx, obj);
+  return helper->PostCreate(wrapper, cx, obj);
 }
 
 nsresult

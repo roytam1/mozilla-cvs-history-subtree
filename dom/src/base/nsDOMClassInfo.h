@@ -249,7 +249,7 @@ protected:
   }
 
 public:
-  NS_IMETHOD Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+  NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                     JSObject *obj);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
@@ -459,8 +459,8 @@ protected:
                              nsIPluginInstance **aResult);
 
 public:
-  NS_IMETHOD Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                    JSObject *obj);
+  NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj);
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, PRUint32 flags,
                         JSObject **objp, PRBool *_retval);

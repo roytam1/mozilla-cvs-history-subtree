@@ -49,6 +49,130 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper);
 PRThread* XPCWrappedNative::gMainThread = nsnull;
 #endif
 
+#ifdef XPC_TRACK_WRAPPER_STATS
+static int DEBUG_TotalWrappedNativeCount;
+static int DEBUG_TotalLiveWrappedNativeCount;
+static int DEBUG_TotalMaxWrappedNativeCount;
+static int DEBUG_WrappedNativeWithSharedProtoCount;
+static int DEBUG_LiveWrappedNativeWithSharedProtoCount;
+static int DEBUG_MaxWrappedNativeWithSharedProtoCount;
+static int DEBUG_WrappedNativeWithOneOffProtoCount;
+static int DEBUG_LiveWrappedNativeWithOneOffProtoCount;
+static int DEBUG_MaxWrappedNativeWithOneOffProtoCount;
+static int DEBUG_WrappedTotalCalls;
+static int DEBUG_WrappedMethodCalls;
+static int DEBUG_WrappedGetterCalls;
+static int DEBUG_WrappedSetterCalls;
+static PRBool  DEBUG_DumpedWrapperStats;
+#endif
+
+#ifdef DEBUG
+static void DEBUG_TrackNewWrapper(XPCWrappedNative* wrapper)
+{
+#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
+    if(wrapper->GetProto())
+        wrapper->GetProto()->GetRuntime()->DEBUG_AddWrappedNative(wrapper);
+#endif
+#ifdef XPC_TRACK_WRAPPER_STATS
+    DEBUG_TotalWrappedNativeCount++;
+    DEBUG_TotalLiveWrappedNativeCount++;
+    if(DEBUG_TotalMaxWrappedNativeCount < DEBUG_TotalLiveWrappedNativeCount)
+        DEBUG_TotalMaxWrappedNativeCount = DEBUG_TotalLiveWrappedNativeCount;
+
+    if(wrapper->HasSharedProto())
+    {
+        DEBUG_WrappedNativeWithSharedProtoCount++;
+        DEBUG_LiveWrappedNativeWithSharedProtoCount++;
+        if(DEBUG_MaxWrappedNativeWithSharedProtoCount < DEBUG_LiveWrappedNativeWithSharedProtoCount)
+            DEBUG_MaxWrappedNativeWithSharedProtoCount = DEBUG_LiveWrappedNativeWithSharedProtoCount;
+    }
+    else
+    {
+        DEBUG_WrappedNativeWithOneOffProtoCount++;
+        DEBUG_LiveWrappedNativeWithOneOffProtoCount++;
+        if(DEBUG_MaxWrappedNativeWithOneOffProtoCount < DEBUG_LiveWrappedNativeWithOneOffProtoCount)
+            DEBUG_MaxWrappedNativeWithOneOffProtoCount = DEBUG_LiveWrappedNativeWithOneOffProtoCount;
+    }
+#endif
+}
+
+static void DEBUG_TrackDeleteWrapper(XPCWrappedNative* wrapper)
+{
+#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
+    if(wrapper->GetProto())
+        wrapper->GetProto()->GetRuntime()->DEBUG_RemoveWrappedNative(wrapper);
+#endif
+#ifdef XPC_TRACK_WRAPPER_STATS
+    DEBUG_TotalLiveWrappedNativeCount--;
+    if(wrapper->HasSharedProto())
+        DEBUG_LiveWrappedNativeWithSharedProtoCount--;
+    else
+        DEBUG_LiveWrappedNativeWithOneOffProtoCount--;
+#endif
+}
+static void DEBUG_TrackWrapperCall(XPCWrappedNative* wrapper, 
+                                   XPCWrappedNative::CallMode mode)
+{
+#ifdef XPC_TRACK_WRAPPER_STATS
+    DEBUG_WrappedTotalCalls++;
+    switch(mode)
+    {
+        case XPCWrappedNative::CALL_METHOD:
+            DEBUG_WrappedMethodCalls++;
+            break;
+        case XPCWrappedNative::CALL_GETTER:
+            DEBUG_WrappedGetterCalls++;
+            break;
+        case XPCWrappedNative::CALL_SETTER:
+            DEBUG_WrappedSetterCalls++;
+            break;
+        default:
+            NS_ERROR("bad value");
+    }
+#endif
+}
+
+static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
+{
+#ifdef XPC_TRACK_WRAPPER_STATS
+    if(!DEBUG_DumpedWrapperStats)
+    {
+        DEBUG_DumpedWrapperStats = PR_TRUE;
+        printf("%d WrappedNatives were constructed. "
+               "(%d w/ shared protos, %d w/o)\n", 
+               DEBUG_TotalWrappedNativeCount,
+               DEBUG_WrappedNativeWithSharedProtoCount,
+               DEBUG_WrappedNativeWithOneOffProtoCount);
+        
+        printf("%d WrappedNatives max alive at one time. "
+               "(%d w/ shared protos, %d w/o)\n", 
+               DEBUG_TotalMaxWrappedNativeCount,
+               DEBUG_MaxWrappedNativeWithSharedProtoCount,
+               DEBUG_MaxWrappedNativeWithOneOffProtoCount);
+
+        printf("%d WrappedNatives alive now. " 
+               "(%d w/ shared protos, %d w/o)\n", 
+               DEBUG_TotalLiveWrappedNativeCount,
+               DEBUG_LiveWrappedNativeWithSharedProtoCount,
+               DEBUG_LiveWrappedNativeWithOneOffProtoCount);
+
+        printf("%d calls to WrappedNatives. "
+               "(%d methods, %d getters, %d setters)\n", 
+               DEBUG_WrappedTotalCalls,
+               DEBUG_WrappedMethodCalls,
+               DEBUG_WrappedGetterCalls,
+               DEBUG_WrappedSetterCalls,
+               DEBUG_WrappedMethodCalls);
+    }
+#endif
+}
+#else
+#define DEBUG_TrackNewWrapper(wrapper) ((void)0)
+#define DEBUG_TrackDeleteWrapper(wrapper) ((void)0)
+#define DEBUG_TrackWrapperCall(wrapper, mode) ((void)0)
+#define DEBUG_TrackShutdown(wrapper) ((void)0)
+#endif
+
 /***************************************************************************/
 
 // static
@@ -68,11 +192,12 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return NS_ERROR_FAILURE;
     }
 
+    XPCLock* mapLock = Scope->GetRuntime()->GetMapLock();
     XPCWrappedNative* wrapper;
 
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
     {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
+        XPCAutoLock lock(mapLock);
         wrapper = map->Find(identity);
         NS_IF_ADDREF(wrapper);
     }
@@ -88,7 +213,6 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         *resultWrapper = wrapper;
         return NS_OK;
     }
-
 
     // There is a chance that the object wants to have the self-same JSObject
     // reflection regardless of the scope into which we are reflecting it.
@@ -132,6 +256,28 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                 return GetNewOrUsed(ccx, Object, betterScope, Interface,
                                     resultWrapper);
         }
+    }
+
+    // Here we take the performance hit of checking the hashtable again in case
+    // The precreate call caused the wrapper to get created through some
+    // interesting path (the DOM code tends to make this happen sometimes).
+
+    {   // scoped lock
+        XPCAutoLock lock(mapLock);
+        wrapper = map->Find(identity);
+        NS_IF_ADDREF(wrapper);
+    }
+
+    if(wrapper)
+    {
+        if(!wrapper->FindTearOff(ccx, Interface))
+        {
+            NS_RELEASE(wrapper);
+            return NS_ERROR_NO_INTERFACE;
+        }
+        DEBUG_CheckWrapperThreadSafety(wrapper);
+        *resultWrapper = wrapper;
+        return NS_OK;
     }
 
     XPCWrappedNativeProto* proto;
@@ -193,7 +339,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNative* wrapperToKill = nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
+        XPCAutoLock lock(mapLock);
 
         // Deal with the case where the wrapper got created as a side effect
         // of one of our calls out of this code (or on another thread).
@@ -215,7 +361,20 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(wrapperToKill)
     {
         // Second reference will be released by the FlatJSObject's finializer.
+#ifdef DEBUG_jband
+        NS_ERROR("hey!");
+#endif
         wrapperToKill->Release();
+    }
+    else if(wrapper)
+    {
+        // Our newly created wrapper is the one that we just added to the table.
+        XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+        if(si && si->WantPostCreate())
+        {
+            si->GetScriptable()->
+                PostCreate(wrapper, ccx, wrapper->GetFlatJSObject());
+        }
     }
 
     if(!wrapper)
@@ -272,21 +431,19 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
 
-#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    mProto->GetRuntime()->DEBUG_AddWrappedNative(this);
-#endif
+    DEBUG_TrackNewWrapper(this);
+
 }
 
 XPCWrappedNative::~XPCWrappedNative()
 {
+    DEBUG_TrackDeleteWrapper(this);
+
     if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
         delete mScriptableInfo;
 
     if(mProto)
     {
-#ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    mProto->GetRuntime()->DEBUG_RemoveWrappedNative(this);
-#endif
         Native2WrappedNativeMap* map = mProto->GetScope()->GetWrappedNativeMap();
         {   // scoped lock
             XPCAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());
@@ -422,7 +579,6 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
     {
         return JS_FALSE;
     }
-
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
     if(!gMainThread)
@@ -585,6 +741,8 @@ XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
 void
 XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
+    DEBUG_TrackShutdownWrapper(this);
+
     if(!IsValid())
         return;
 
@@ -763,7 +921,7 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
     XPCWrappedNativeProto* proto = nsnull;
 
     // If we were passed a function object then we need to find the correct
-    // wrapper out of those that might be in the callee's proto chain.
+    // wrapper out of those that might be in the callee obj's proto chain.
 
     if(funobj)
     {
@@ -1044,9 +1202,9 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         return Throw(NS_ERROR_XPC_UNEXPECTED, ccx);
     }
 
+    DEBUG_TrackWrapperCall(ccx.GetWrapper(), mode);
 
     // From here on ALL exits are through 'goto done;'
-
 
 #define PARAM_BUFFER_COUNT     8
 

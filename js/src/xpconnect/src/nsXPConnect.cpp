@@ -542,7 +542,7 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
     XPCNativeInterface* iface =
         XPCNativeInterface::GetNewOrUsed(ccx, &aIID);
     if(!iface)
-        return UnexpectedFailure(NS_ERROR_FAILURE);
+        return NS_ERROR_FAILURE;
 
     XPCWrappedNative* wrapper;
 
