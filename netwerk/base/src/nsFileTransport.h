@@ -135,6 +135,6 @@ protected:
     PRPackedBool                        mEventPending;
 };
 
-#define NS_FILE_TRANSPORT_DEFAULT_BUFFER_SIZE    (8*1024)
+#define NS_FILE_TRANSPORT_DEFAULT_BUFFER_SIZE    (4*1024)
 
 #endif /* !defined(nsFileTransport_h__) */

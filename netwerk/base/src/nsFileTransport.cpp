@@ -502,7 +502,6 @@ nsFileTransport::Dispatch()
 void PR_CALLBACK
 nsFileTransport::HandlePLEvent(PLEvent *event)
 {
-    printf("handle PL event\n");
     nsFileTransport *self = (nsFileTransport *) PL_GetEventOwner(event);
     if (self)
         self->HandleEvent();
@@ -513,7 +512,6 @@ nsFileTransport::HandlePLEvent(PLEvent *event)
 void PR_CALLBACK
 nsFileTransport::DestroyPLEvent(PLEvent *event)
 {
-    printf("destroy PL event\n");
     delete event;
 }
 
