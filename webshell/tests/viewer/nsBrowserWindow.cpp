@@ -790,7 +790,7 @@ HandleTreeWindowEvent(nsGUIEvent *aEvent)
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsIContent.h"
 #include "nsIServiceManager.h"
 
@@ -798,20 +798,20 @@ static nsresult
 rdf_CreateBookmarkDocument(nsIDocument*& result)
 {
 static NS_DEFINE_CID(kRDFBookmarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFTreeDocumentCID,       NS_RDFTREEDOCUMENT_CID);
 static NS_DEFINE_IID(kIDocumentIID,             NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFDataBaseIID,          NS_IRDFDATABASE_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,        NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,          NS_IRDFDOCUMENT_IID);
-static NS_DEFINE_IID(kIRDFResourceManagerIID,   NS_IRDFRESOURCEMANAGER_IID);
+static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
 
   nsresult rv;
 
   nsIRDFDataSource* ds       = nsnull;
   nsIRDFDataBase* db         = nsnull;
   nsIRDFDocument* doc        = nsnull;
-  nsIRDFResourceManager* mgr = nsnull;
+  nsIRDFService* service     = nsnull;
   nsIRDFResource* root       = nsnull;
 
   result = nsnull; // reasonable default
@@ -837,12 +837,12 @@ static NS_DEFINE_IID(kIRDFResourceManagerIID,   NS_IRDFRESOURCEMANAGER_IID);
   if (NS_FAILED(rv = db->AddDataSource(ds)))
     goto done;
 
-  if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
-                                                  kIRDFResourceManagerIID,
-                                                  (nsISupports**) &mgr)))
+  if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
+                                                  kIRDFServiceIID,
+                                                  (nsISupports**) &service)))
     goto done;
 
-  if (NS_FAILED(rv = mgr->GetResource("rdf:bookmarks", &root)))
+  if (NS_FAILED(rv = service->GetResource("rdf:bookmarks", &root)))
     goto done;
 
   if (NS_FAILED(rv = doc->SetRootResource(root)))
@@ -855,9 +855,9 @@ static NS_DEFINE_IID(kIRDFResourceManagerIID,   NS_IRDFRESOURCEMANAGER_IID);
 
 done:
   NS_IF_RELEASE(root);
-  if (mgr) {
-    nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
-    mgr = nsnull;
+  if (service) {
+    nsServiceManager::ReleaseService(kRDFServiceCID, service);
+    service = nsnull;
   }
   NS_IF_RELEASE(doc);
   NS_IF_RELEASE(db);
