@@ -1,3 +1,8 @@
+1998-12-14  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (getRes): New method, to return the internal result message.
+	(getLD): Use defined() around test for existence.
+
 1998-12-11  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (new): Make sure binddn and bindpasswd are set to the
