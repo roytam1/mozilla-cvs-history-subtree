@@ -71,8 +71,13 @@ inline void IPC_GetClientWindowName(PRUint32 pid, char *buf)
 #define IPC_PORT                0
 #define IPC_SOCKET_TYPE         "ipc"
 #define IPC_DAEMON_APP_NAME     "mozipcd"
+#ifdef XP_OS2
+#define IPC_PATH_SEP_CHAR       '\\'
+#define IPC_MODULES_DIR         "ipc\\modules"
+#else
 #define IPC_PATH_SEP_CHAR       '/'
 #define IPC_MODULES_DIR         "ipc/modules"
+#endif
 
 void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen);
 

@@ -43,8 +43,13 @@
 #include "prenv.h"
 #include "plstr.h"
 
+#ifdef XP_OS2
+static const char kDefaultSocketPrefix[] = "\\socket\\mozilla-";
+static const char kDefaultSocketSuffix[] = "-ipc\\ipcd";
+#else
 static const char kDefaultSocketPrefix[] = "/tmp/.mozilla-";
 static const char kDefaultSocketSuffix[] = "-ipc/ipcd";
+#endif
 
 void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen)
 {
