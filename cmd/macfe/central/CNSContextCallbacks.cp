@@ -743,3 +743,24 @@ void CNSContextCallbacks::HandleClippingView(
 	Assert_(theNSContext != NULL);
 	theNSContext->HandleClippingView(appletD, x, y, width, height);
 }
+
+#ifdef SHACK
+void CNSContextCallbacks::FreeBuiltinElement(
+                                MWContext *context, 
+                                LO_BuiltinStruct *)
+{
+      CNSContext* theNSContext = ExtractNSContext(inContext);
+      Assert_(theNSContext != NULL);
+      Assert_(0);     // Not implemented
+}
+
+void CNSContextCallbacks::DisplayBuiltin(
+                      MWContext * context, 
+                      int iLocation ,
+                      LO_BuiltinStruct *builtin_struct)
+{
+      CNSContext* theNSContext = ExtractNSContext(inContext);
+      Assert_(theNSContext != NULL);
+      Assert_(0);     // Not implemented      
+}
+#endif
