@@ -94,7 +94,35 @@ nsNetlibStream::nsNetlibStream(void)
 }
 
 
-NS_IMPL_ISUPPORTS(nsNetlibStream,kIInputStreamIID);
+NS_IMPL_ADDREF(nsNetlibStream)
+NS_IMPL_RELEASE(nsNetlibStream)
+
+nsresult nsNetlibStream::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+    if (NULL == aInstancePtr) {
+        return NS_ERROR_NULL_POINTER;
+    }
+    static NS_DEFINE_IID(kISupportsIID,     NS_ISUPPORTS_IID);
+    static NS_DEFINE_IID(kIInputStreamIID,  NS_IINPUTSTREAM_IID);
+    static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
+    if (aIID.Equals(kIInputStreamIID)) {
+        *aInstancePtr = (void*) ((nsIInputStream*)this);
+        AddRef();
+        return NS_OK;
+    }
+    if (aIID.Equals(kIOutputStreamIID)) {
+        *aInstancePtr = (void*) ((nsIOutputStream*)this);
+        AddRef();
+        return NS_OK;
+    }
+    if (aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = ((nsISupports *)(nsIInputStream *)this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
 
 
 nsNetlibStream::~nsNetlibStream()
@@ -162,8 +190,21 @@ PRInt32 nsBufferedStream::GetAvailableSpace(PRInt32 *aErrorCode)
 }
 
 
+PRInt32 nsBufferedStream::GetLength()
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_WriteOffset;
+    UnlockStream();
+
+    return size;
+}
+
+
 PRInt32 nsBufferedStream::Write(PRInt32 *aErrorCode, 
                                 const char *aBuf, 
+                                PRInt32 aOffset,
                                 PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
@@ -204,6 +245,11 @@ PRInt32 nsBufferedStream::Write(PRInt32 *aErrorCode,
             } else {
                 m_Buffer = newBuffer;
             }
+        }
+
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
         }
 
         memcpy(&m_Buffer[m_WriteOffset], aBuf, aLen);
@@ -316,8 +362,21 @@ PRInt32 nsAsyncStream::GetAvailableSpace(PRInt32 *aErrorCode)
 }
 
 
+PRInt32 nsAsyncStream::GetLength()
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_DataLength;
+    UnlockStream();
+
+    return size;
+}
+
+
 PRInt32 nsAsyncStream::Write(PRInt32 *aErrorCode,
                              const char *aBuf, 
+                             PRInt32 aOffset,
                              PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
@@ -339,6 +398,11 @@ PRInt32 nsAsyncStream::Write(PRInt32 *aErrorCode,
     }
 
     if (!m_bIsClosed && aBuf) {
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
+        }
+
         /* Do not store more data than there is space for... */
         bytesFree = m_BufferLength - m_DataLength;
         if (aLen > bytesFree) {
@@ -483,8 +547,21 @@ PRInt32 nsBlockingStream::GetAvailableSpace(PRInt32 *aErrorCode)
 }
 
 
+PRInt32 nsBlockingStream::GetLength()
+{
+    PRInt32 size;
+
+    LockStream();
+    size = m_DataLength;
+    UnlockStream();
+
+    return size;
+}
+
+
 PRInt32 nsBlockingStream::Write(PRInt32 *aErrorCode,
                                 const char *aBuf, 
+                                PRInt32 aOffset,
                                 PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
@@ -506,6 +583,11 @@ PRInt32 nsBlockingStream::Write(PRInt32 *aErrorCode,
     }
 
     if (!m_bIsClosed && aBuf) {
+        /* Skip the appropriate number of bytes in the input buffer... */
+        if (aOffset) {
+            aBuf += aOffset;
+        }
+
         /* Do not store more data than there is space for... */
         bytesFree = m_BufferLength - m_DataLength;
         if (aLen > bytesFree) {
@@ -548,7 +630,6 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
 
     LockStream();
 
-/*    printf("--- Reading from stream\n"); */
     NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
 
     /* Check for initial error conditions... */
@@ -556,7 +637,6 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
         *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
         goto done;
     } else if (m_bIsClosed && (0 == m_DataLength)) {
-/*        printf("--- Stream EOF\n"); */
         *aErrorCode = NS_INPUTSTREAM_EOF;
         goto done;
     } else {
@@ -594,7 +674,6 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
 done:
     UnlockStream();
 
-/*    printf("--- read: %d bytes... Requested %d bytes... Error code: %d\n", bytesRead, aCount, *aErrorCode); */
     return bytesRead;
 }
 

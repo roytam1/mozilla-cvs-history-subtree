@@ -22,12 +22,12 @@
 #include "nspr.h"
 #include "nsIURL.h"
 #include "nsIInputStream.h"
+#include "nsIOutputStream.h"
 #include "nsIStreamListener.h"
 
 
 /* Forward declaration... */
 class nsNetlibStream;
-struct _URL_Struct;
 
 class nsConnectionInfo : public nsISupports 
 {
@@ -48,7 +48,8 @@ public:
 };
 
 
-class nsNetlibStream : public nsIInputStream
+class nsNetlibStream : public nsIInputStream,
+                       public nsIOutputStream
 {
 public:
     NS_DECL_ISUPPORTS
@@ -56,11 +57,8 @@ public:
     nsNetlibStream(void);
 
     virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode) = 0;
-    virtual PRInt32 Write(PRInt32 *aErrorCode, 
-                          const char *aBuf, 
-                          PRInt32 aLen) = 0;
 
-    /* From nsIInputStream... */
+    /* From nsIBaseStream interface */
     virtual void Close(void);
 
 protected:
@@ -78,12 +76,17 @@ private:
 };
 
 /*
- * Variable size, buffered input stream...
+ * Variable size, buffered stream...
  */
 class nsBufferedStream : public nsNetlibStream {
 
 public:
     nsBufferedStream(void);
+
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    
+    /* From nsIBaseStream interface */
+    virtual PRInt32 GetLength(void);
 
     /* nsIInputStream interface */
     virtual PRInt32 Read(PRInt32 *aErrorCode, 
@@ -91,10 +94,10 @@ public:
                          PRInt32 aOffset, 
                          PRInt32 aCount);
 
-    /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    /* nsIOutputStream interface */
     virtual PRInt32 Write(PRInt32 *aErrorCode,
                           const char *aBuf, 
+                          PRInt32 aOffset,
                           PRInt32 aLen);
 
 protected:
@@ -111,7 +114,7 @@ private:
 
 
 /*
- * Fixed size, buffered input stream...
+ * Fixed size stream...
  */
 
 class nsAsyncStream : public nsNetlibStream {
@@ -119,16 +122,21 @@ class nsAsyncStream : public nsNetlibStream {
 public:
     nsAsyncStream(PRInt32 buffer_size);
 
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+
+    /* From nsIBaseStream interface */
+    virtual PRInt32 GetLength(void);
+
     /* nsIInputStream interface */
     virtual PRInt32 Read(PRInt32 *aErrorCode, 
                          char *aBuf, 
                          PRInt32 aOffset, 
                          PRInt32 aCount);
 
-    /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    /* nsIOutputStream interface */
     virtual PRInt32 Write(PRInt32 *aErrorCode,
                           const char *aBuf, 
+                          PRInt32 aOffset,
                           PRInt32 aLen);
 
 protected:
@@ -145,12 +153,17 @@ private:
 
 
 /*
- * Variable size, buffered input stream...
+ * Fixed size, blocking stream...
  */
 class nsBlockingStream : public nsNetlibStream {
 
 public:
     nsBlockingStream(void);
+
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+
+    /* From nsIBaseStream interface */
+    virtual PRInt32 GetLength(void);
 
     /* nsIInputStream interface */
     virtual PRInt32 Read(PRInt32 *aErrorCode, 
@@ -158,10 +171,10 @@ public:
                          PRInt32 aOffset, 
                          PRInt32 aCount);
 
-    /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    /* nsIOutputStream interface */
     virtual PRInt32 Write(PRInt32 *aErrorCode,
                           const char *aBuf, 
+                          PRInt32 aOffset,
                           PRInt32 aLen);
 
 protected:
