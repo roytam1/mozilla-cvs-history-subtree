@@ -13,6 +13,10 @@ this project.
 	- Discovering bugs daily (great, thanks... ;-).
 
 
+* Kevin McCarthy <kmccarth@nortelnetworks.com>
+
+	- Bug fixes.
+
 * John Kristian <kristian@netscape.com>
 
 	- Rewrote the entire LDIF module, great stuff!
