@@ -1961,6 +1961,7 @@ void InitSiComponents(char *szFileIni)
   char  szBuf[MAX_BUF];
   char  szComponentItem[MAX_BUF];
   char  szDependency[MAX_BUF];
+  char  szDPSection[MAX_BUF];
   siC   *siCTemp;
   siCD  *siCDepTemp;
 
@@ -2037,6 +2038,12 @@ void InitSiComponents(char *szFileIni)
       lstrcat(szDependency, szIndex1);
       GetPrivateProfileString(szComponentItem, szDependency, "", szBuf, MAX_BUF, szFileIni);
     }
+
+    // locate previous path if necessary
+    lstrcpy(szDPSection, szComponentItem);
+    lstrcat(szDPSection, "-Destination Path");
+    if(LocatePreviousPath(szDPSection, siCTemp->szDestinationPath, MAX_PATH) == FALSE)
+      ZeroMemory(siCTemp->szDestinationPath, MAX_PATH);
 
     /* inserts the newly created component into the global component queue */
     SiCNodeInsert(&siComponents, siCTemp);
@@ -2612,6 +2619,7 @@ BOOL LocatePreviousPath(LPSTR szMainSectionName, LPSTR szPath, DWORD dwPathSize)
 BOOL LocatePathNscpReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
 {
   char  szKey[MAX_BUF];
+  char  szContainsFilename[MAX_BUF];
   char  szBuf[MAX_BUF];
   BOOL  bReturn;
 
@@ -2625,7 +2633,12 @@ BOOL LocatePathNscpReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
     VR_GetPath(szKey, MAX_BUF, szBuf);
     if(*szBuf != '\0')
     {
-      lstrcpy(szPath, szBuf);
+      GetPrivateProfileString(szSection, "Contains Filename", "", szContainsFilename, MAX_BUF, szFileIniConfig);
+      if(lstrcmpi(szContainsFilename, "TRUE") == 0)
+        ParsePath(szBuf, szPath, dwPathSize, PP_PATH_ONLY);
+      else
+        lstrcpy(szPath, szBuf);
+
       bReturn = TRUE;
     }
   }
