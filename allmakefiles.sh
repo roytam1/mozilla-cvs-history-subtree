@@ -821,6 +821,7 @@ embedding/xre/Makefile
 
 MAKEFILES_minotaur="
 mailnews/app/Makefile
+mailnews/app/profile/Makefile
 "
 
 if [ "$MACOSX" ]; then
