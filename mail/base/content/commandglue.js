@@ -650,6 +650,10 @@ function CreateBareDBView(originalView, msgFolder, viewType, viewFlags, sortType
           break;
       case nsMsgViewType.eShowAllThreads:
       default:
+          if (sortType == nsMsgViewSortType.byThread || sortType == nsMsgViewSortType.byId
+            || sortType == nsMsgViewSortType.byNone)
+            viewFlags &= ~nsMsgViewFlagsType.kGroupBySort;
+
           if (viewFlags & nsMsgViewFlagsType.kGroupBySort)
             dbviewContractId += "group";
           else
