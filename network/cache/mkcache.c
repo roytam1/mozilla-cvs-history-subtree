@@ -31,11 +31,13 @@
 #include "mkgeturl.h"
 #include "netutils.h"
 #include "netcache.h"
+#include "cacheutils.h"
 #include "glhist.h"
 #include "xp_hash.h"
 #include "xp_mcom.h"
 #include "client.h"
 #include "cstream.h"
+#include "netstream.h"
 #include "secnav.h"
 #include "mcom_db.h"
 #include "prclist.h"
@@ -3338,7 +3340,7 @@ END:
 
 #include "libmocha.h"
 
-NET_StreamClass *
+NET_VoidStreamClass *
 NET_CloneWysiwygCacheFile(MWContext *window_id, URL_Struct *URL_s,
 			  uint32 nbytes, const char * wysiwyg_url, 
 			  const char * base_href)
@@ -3346,7 +3348,7 @@ NET_CloneWysiwygCacheFile(MWContext *window_id, URL_Struct *URL_s,
 	char *filename;
 	PRCList *link;
 	CacheDataObject *data_object;
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 	XP_File fromfp;
 	int32 buflen, len;
 	char *buf;
@@ -3407,7 +3409,7 @@ found:
 		XP_FileClose(fromfp);
 		return 0;
 	  }
-	buflen = stream->is_write_ready(stream);
+	buflen = NET_StreamIsWriteReady(stream);
 	if (buflen > SANE_BUFLEN)
 		buflen = SANE_BUFLEN;
 	buf = (char *)PR_Malloc(buflen * sizeof(char));
@@ -3424,7 +3426,7 @@ found:
 		len = XP_FileRead(buf, len, fromfp);
 		if (len <= 0)
 			break;
-		if (stream->put_block(stream, buf, len) < 0)
+		if (NET_StreamPutBlock(stream, buf, len) < 0)
 			break;
 		nbytes -= len;
 	  }
@@ -3433,8 +3435,8 @@ found:
 	if (nbytes != 0)
 	  {
 		/* NB: Our caller must clear top_state->mocha_write_stream. */
-		stream->abort(stream, MK_UNABLE_TO_CONVERT);
-		PR_Free(stream);
+		NET_StreamAbort(stream, MK_UNABLE_TO_CONVERT);
+		NET_StreamFree(stream);
 		return 0;
 	  }
 	return stream;
