@@ -2705,17 +2705,19 @@ net_ProcessPop3 (ActiveEntry *ce)
 									: XP_GetString(XP_NO_ANSWER)),
 								   net_pop3_username, host);
 #if defined(SingleSignon)
-					StrAllocCopy(usernameAndHost, net_pop3_username);
+					StrAllocCopy
+					    (usernameAndHost, 
+					    net_pop3_username);
 					StrAllocCat(usernameAndHost, "@");
 					StrAllocCat(usernameAndHost, host);
-					FREEIF (host);
 
 					if (cd->password_failed) {
 					    SI_RemoveUser
-						(usernameAndHost, 
-						usernameAndHost, 
+						(host, 
+						net_pop3_username, 
 						TRUE);
 					}
+					FREEIF (host);
 
 					password = SI_PromptPassword
 					    (ce->window_id, prompt,
