@@ -7160,18 +7160,37 @@ nsresult nsImapMockChannel::OpenCacheEntry()
   m_url->GetSpec(getter_Copies(urlSpec));
   // for now, truncate of the query part so we don't duplicate urls in the cache...
   char * anchor = PL_strrchr(urlSpec, '?');
+  char * isimgSpec = PL_strstr(urlSpec, "image"); 
+  if ( !isimgSpec ) { 
   if (anchor)
-  {
-    // if we were trying to read a part, we failed - fall back and look for whole msg
-    if (mTryingToReadPart)
-    {
-      mTryingToReadPart = PR_FALSE;
-    *anchor = '\0';
-    }
-    else
-      mTryingToReadPart = PR_TRUE;
-  } 
-  return cacheSession->AsyncOpenCacheEntry(urlSpec, nsICache::ACCESS_READ_WRITE, this);
+       *anchor = '\0'; 
+     char * rurlSpec = PL_strchr(urlSpec, '?');
+     char * lurlSpec = new char[(PL_strlen(urlSpec) - PL_strlen(rurlSpec))+2];
+     PL_strncpyz(lurlSpec, urlSpec, (PL_strlen(urlSpec) - PL_strlen(rurlSpec))+1);
+     nsCAutoString lcurlSpec;
+     lcurlSpec.Assign((const char *)lurlSpec);
+     delete[] lurlSpec;
+     if (rurlSpec)
+       *rurlSpec = '\0';
+     nsCOMPtr<nsIImapUrl> imapUrl  (do_QueryInterface(m_url));
+
+     SetupPartExtractorListener(imapUrl, m_channelListener); 
+     return cacheSession->AsyncOpenCacheEntry(lcurlSpec, nsICache::ACCESS_READ_WRITE, this);
+   } else {
+      if (anchor)
+      {
+        // if we were trying to read a part, we failed - fall back and look for whole msg
+        if (mTryingToReadPart)
+        {
+          mTryingToReadPart = PR_FALSE;
+          *anchor = '\0';
+        }
+        else
+          mTryingToReadPart = PR_TRUE;
+      } 
+      isimgSpec = '\0';
+      return cacheSession->AsyncOpenCacheEntry(urlSpec, nsICache::ACCESS_READ_WRITE, this);
+   }
 }
 
 nsresult nsImapMockChannel::ReadFromMemCache(nsICacheEntryDescriptor *entry)
@@ -7487,6 +7506,22 @@ NS_IMETHODIMP nsImapMockChannel::GetStatus(nsresult *status)
 NS_IMETHODIMP nsImapMockChannel::Cancel(nsresult status)
 {
     m_cancelStatus = status;
+    // if we aren't reading from the cache and we get canceled...doom our cache entry...
+    if (m_url)
+    {
+      PRBool readingFromMemCache = PR_FALSE;
+      nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_url);
+      nsCOMPtr<nsIImapUrl> imapUrl = do_QueryInterface(m_url);
+      imapUrl->GetMsgLoadingFromCache(&readingFromMemCache);
+      if (!readingFromMemCache)
+      {
+        nsCOMPtr<nsICacheEntryDescriptor>  cacheEntry;
+        mailnewsUrl->GetMemCacheEntry(getter_AddRefs(cacheEntry));
+        if (cacheEntry)
+          cacheEntry->Doom();
+      }
+    }
+
     return NS_OK;
 }
 
