@@ -540,4 +540,21 @@
   [[mTabContentsView labelCell] setImageAlpha:(draggable ? 1.0 : 0.6)];  
 }
 
+#define NO_TOOLTIPS_ON_TABS 1
+
+#ifdef NO_TOOLTIPS_ON_TABS
+// bug 168719 covers crashes in AppKit after using a lot of tabs because
+// the tooltip code internal to NSTabView/NSTabViewItem gets confused and
+// tries to set a tooltip for a (probably) deallocated object. Since we can't
+// easily get into the guts, all we can do is disable tooltips to fix this
+// topcrash by stubbing out the NSTabViewItem's method that sets up the
+// toolip rects.
+//
+// It is my opinion that this is Apple's bug, but just try proving that to them.
+-(void)_resetToolTipIfNecessary
+{
+  // no-op
+}
+#endif
+
 @end
