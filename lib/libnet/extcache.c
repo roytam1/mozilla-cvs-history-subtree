@@ -186,7 +186,7 @@ total_size += old_obj->string ? XP_STRLEN(old_obj->string)+1 : 0
 	ADD_STRING_SIZE(charset);
 	ADD_STRING_SIZE(filename);
     total_size += sizeof(uint32); /* size of secinfo */
-	total_size += HG73653(old_obj->sec_info);
+	total_size += HG73653;
 	ADD_STRING_SIZE(page_services_url);
 
 #undef ADD_STRING_SIZE
@@ -319,7 +319,7 @@ total_size += old_obj->string ? XP_STRLEN(old_obj->string)+1 : 0
 #ifndef EXT_DB_ROUTINES
     HG42539
     if ( old_obj->sec_info ) {
-		len = HG65293(old_obj->sec_info);
+		len = HG65293;
 		COPY_INT32((void *)cur_ptr, &len);
 		cur_ptr = cur_ptr + sizeof(int32);
 
