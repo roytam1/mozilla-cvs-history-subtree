@@ -28,8 +28,8 @@ dnl ========================================================
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
-HOSTCFLAGS="${HOSTCFLAGS=}"
-HOSTLDFLAGS="${HOSTLDFLAGS=}"
+HOST_CFLAGS="${HOST_CFLAGS=}"
+HOST_LDFLAGS="${HOST_LDFLAGS=}"
 
 dnl ========================================================
 dnl =
@@ -89,29 +89,29 @@ if test "$target" != "$host"; then
     _SAVE_CFLAGS="$CFLAGS"
     _SAVE_LDFLAGS="$LDFLAGS"
 
-    AC_MSG_CHECKING([for host compiler])
-    if test -z "$HOSTCC"; then
-	AC_CHECK_PROGS(HOSTCC, gcc cc /usr/ucb/cc, "")
-	if test -z "$HOSTCC"; then
+    AC_MSG_CHECKING([for $host compiler])
+    if test -z "$HOST_CC"; then
+	AC_CHECK_PROGS(HOST_CC, gcc cc /usr/ucb/cc, "")
+	if test -z "$HOST_CC"; then
 	    AC_MSG_ERROR([no acceptable cc found in \$PATH])
 	fi
     fi
-    AC_MSG_RESULT([$HOSTCC])
-    if test -z "$HOSTCFLAGS"; then
-	HOSTCFLAGS="$CFLAGS"
+    AC_MSG_RESULT([$HOST_CC])
+    if test -z "$HOST_CFLAGS"; then
+	HOST_CFLAGS="$CFLAGS"
     fi
-    if test -z "$HOSTLDFLAGS"; then
-	HOSTLDFLAGS="$LDFLAGS"
+    if test -z "$HOST_LDFLAGS"; then
+	HOST_LDFLAGS="$LDFLAGS"
     fi
 
-    CC="$HOSTCC"
-    CFLAGS="$HOSTCFLAGS"
-    LDFLAGS="$HOSTLDFLAGS"
+    CC="$HOST_CC"
+    CFLAGS="$HOST_CFLAGS"
+    LDFLAGS="$HOST_LDFLAGS"
 
-    AC_MSG_CHECKING([whether the host compiler ($HOSTCC $HOSTCFLAGS $HOSTLDFLAGS) works])
+    AC_MSG_CHECKING([whether the $host compiler ($HOST_CC $HOST_CFLAGS $HOST_LDFLAGS) works])
     AC_TRY_COMPILE([], [return(0);], 
-	[ac_cv_prog_hostcc_works=1 AC_MSG_RESULT([yes])],
-	AC_MSG_ERROR([installation or configuration problem: host compiler $HOSTCC cannot create executables.]) )
+	[ac_cv_prog_host_cc_works=1 AC_MSG_RESULT([yes])],
+	AC_MSG_ERROR([installation or configuration problem: $host compiler $HOST_CC cannot create executables.]) )
     
     CC=$_SAVE_CC
     CFLAGS=$_SAVE_CFLAGS
@@ -149,11 +149,11 @@ else
     AC_PATH_PROGS(AS, as, $CC)
     AC_PATH_PROGS(AR, ar, :)
     AC_PATH_PROGS(DLLTOOL, dlltool, :)
-    if test -z "$HOSTCC"; then
-	HOSTCC="$CC"
+    if test -z "$HOST_CC"; then
+	HOST_CC="$CC"
     fi
-    if test -z "$HOSTCFLAGS"; then
-	HOSTCFLAGS="$CFLAGS"
+    if test -z "$HOST_CFLAGS"; then
+	HOST_CFLAGS="$CFLAGS"
     fi
 fi
 
@@ -177,7 +177,7 @@ dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
 *-linux*)
-    HOSTCFLAGS="$HOSTCFLAGS -DXP_UNIX"
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     ;;
 esac
 
@@ -330,8 +330,8 @@ AC_SUBST(CC)
 AC_SUBST(CXX)
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
-AC_SUBST(HOSTCC)
-AC_SUBST(HOSTCFLAGS)
+AC_SUBST(HOST_CC)
+AC_SUBST(HOST_CFLAGS)
 
 AC_SUBST(USE_PTHREADS)
 AC_SUBST(USE_BTHREADS)
@@ -360,7 +360,7 @@ AC_SUBST(PERL)
 dnl ========================================================
 dnl Generate output files.
 dnl ========================================================
-AC_OUTPUT(
+AC_OUTPUT([
 Makefile 
 config/Makefile
 config/autoconf.mk
@@ -401,8 +401,7 @@ pr/tests/Makefile
 pr/tests/dll/Makefile 
 pr/tests/w16gui/Makefile 
 tools/Makefile 
-)
+])
 
 dnl lib/prstreams/tests/testprstrm/Makefile 
 dnl lib/tests/windows/makefile 
-
