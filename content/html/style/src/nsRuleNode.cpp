@@ -3649,8 +3649,9 @@ SetSVGPaint(const nsCSSValue& aValue, const nsStyleSVGPaint& parentPaint,
   if (aValue.GetUnit() == eCSSUnit_Inherit) {
     aResult = parentPaint;
     aInherited = PR_TRUE;
-  }
-  else if (SetColor(aValue, parentPaint.mColor, aPresContext, aResult.mColor, aInherited)) {
+  } else if (aValue.GetUnit() == eCSSUnit_None) {
+    aResult.mType = eStyleSVGPaintType_None;
+  } else if (SetColor(aValue, parentPaint.mColor, aPresContext, aResult.mColor, aInherited)) {
     aResult.mType = eStyleSVGPaintType_Color;
   }
 }
