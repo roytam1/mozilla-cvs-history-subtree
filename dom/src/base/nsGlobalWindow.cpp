@@ -143,7 +143,7 @@ GlobalWindowImpl::GlobalWindowImpl() :
   mFrames(nsnull), mLocation(nsnull), mMenubar(nsnull), mToolbar(nsnull),
   mLocationbar(nsnull), mPersonalbar(nsnull), mStatusbar(nsnull),
   mScrollbars(nsnull), mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts),
-  mRunningTimeout(nsnull), mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
+  mRunningTimeout(nsnull), mFireingTimeout(nsnull), mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
   mFirstDocumentLoad(PR_TRUE), mIsScopeClear(PR_TRUE),
   mGlobalObjectOwner(nsnull), mDocShell(nsnull), mMutationBits(0),
   mChromeEventHandler(nsnull)
@@ -3332,6 +3332,8 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
     return PR_TRUE;
   }
 
+  mFireingTimeout = (void *)aTimeout;
+
   /* Make sure that the window or the script context don't go away as 
      a result of running timeouts */
   GlobalWindowImpl *temp = this;
@@ -3634,7 +3636,8 @@ GlobalWindowImpl::ClearTimeoutOrInterval(PRInt32 aTimerID)
       else {
         /* Delete the timeout from the pending timeout list */
         *top = timeout->next;
-        if (timeout->timer) {
+        if (timeout->timer && timeout != (nsTimeoutImpl*)mFireingTimeout) {
+          NS_ASSERTION(timeout->ref_count > 1, "Low ref_count on dropping timeout");
           timeout->timer->Cancel();
           DropTimeout(timeout);
         }
