@@ -521,6 +521,60 @@ init_source (j_decompress_ptr jd)
 {
 }
 
+
+
+static NS_METHOD DiscardData(nsIInputStream* in,
+                             void* closure,
+                             const char* fromRawSegment,
+                             PRUint32 toOffset,
+                             PRUint32 count,
+                             PRUint32 *writeCount)
+{
+  j_decompress_ptr jd = NS_STATIC_CAST(j_decompress_ptr, closure);
+  decoder_source_mgr *src = NS_REINTERPRET_CAST(decoder_source_mgr *, jd->src);
+
+  *writeCount = count;
+
+  return NS_OK;
+}
+
+void PR_CALLBACK
+skip_input_data (j_decompress_ptr jd, long num_bytes)
+{
+  decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
+
+  if (num_bytes > (long)src->pub.bytes_in_buffer) {
+    /*
+     * Can't skip it all right now until we get more data from
+     * network stream. Set things up so that fill_input_buffer
+     * will skip remaining amount.
+     */
+
+    PRUint32 _retval;
+    src->decoder->mInStream->ReadSegments(DiscardData, NS_STATIC_CAST(void*, jd), 
+                                          src->pub.bytes_in_buffer, &_retval);
+    src->decoder->mDataLen -= _retval;
+
+    src->decoder->mBytesToSkip = (size_t)num_bytes - src->pub.bytes_in_buffer;
+    src->pub.next_input_byte += src->pub.bytes_in_buffer;
+    src->pub.bytes_in_buffer = 0;
+
+  } else {
+    /* Simple case. Just advance buffer pointer */
+
+    PRUint32 _retval;
+    src->decoder->mInStream->ReadSegments(DiscardData, NS_STATIC_CAST(void*, jd), 
+                                          num_bytes, &_retval);
+    src->decoder->mDataLen -= _retval;
+
+    src->decoder->mBytesToSkip = 0;
+    src->pub.bytes_in_buffer -= (size_t)num_bytes;
+    src->pub.next_input_byte += num_bytes;
+  }
+}
+
+
+
 /*-----------------------------------------------------------------------------
  * This is the callback routine from the IJG JPEG library used to supply new
  * data to the decompressor when its input buffer is exhausted.  It juggles
@@ -575,58 +629,28 @@ fill_input_buffer (j_decompress_ptr jd)
   decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
 
   PRUint32 _retval;
-  src->decoder->mInStream->ReadSegments(ReadDataOut, NS_STATIC_CAST(void*, jd), 
-                                        src->decoder->mDataLen, &_retval);
-  src->decoder->mDataLen -= src->pub.bytes_in_buffer;
 
-  if (src->decoder->mDataLen != 0)
-    return PR_TRUE;
-  else
-    return PR_FALSE;
-}
-
-
-
-static NS_METHOD DiscardData(nsIInputStream* in,
-                             void* closure,
-                             const char* fromRawSegment,
-                             PRUint32 toOffset,
-                             PRUint32 count,
-                             PRUint32 *writeCount)
-{
-  j_decompress_ptr jd = NS_STATIC_CAST(j_decompress_ptr, closure);
-  decoder_source_mgr *src = NS_REINTERPRET_CAST(decoder_source_mgr *, jd->src);
-
-  *writeCount = count;
-
-  return NS_OK;
-}
-
-void PR_CALLBACK
-skip_input_data (j_decompress_ptr jd, long num_bytes)
-{
-  decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
-
-  if (num_bytes > (long)src->pub.bytes_in_buffer) {
-    /*
-     * Can't skip it all right now until we get more data from
-     * network stream. Set things up so that fill_input_buffer
-     * will skip remaining amount.
-     */
-    src->decoder->mBytesToSkip = (size_t)num_bytes - src->pub.bytes_in_buffer;
-    src->pub.next_input_byte += src->pub.bytes_in_buffer;
-    src->pub.bytes_in_buffer = 0;
-  } else {
-    /* Simple case. Just advance buffer pointer */
-    src->decoder->mBytesToSkip = 0;
-    src->pub.bytes_in_buffer -= (size_t)num_bytes;
-    src->pub.next_input_byte += num_bytes;
-
-    PRUint32 _retval;
-    src->decoder->mInStream->ReadSegments(DiscardData, NS_STATIC_CAST(void*, jd), 
-                                          num_bytes, &_retval);
-
+  if (src->decoder->mBytesToSkip != 0) {
+    if (src->decoder->mBytesToSkip > src->decoder->mDataLen){
+      src->decoder->mInStream->ReadSegments(DiscardData, NS_STATIC_CAST(void*, jd), 
+                                            src->decoder->mDataLen, &_retval);
+    } else {
+      src->decoder->mInStream->ReadSegments(DiscardData, NS_STATIC_CAST(void*, jd), 
+                                            src->decoder->mBytesToSkip, &_retval);
+    }
+    src->decoder->mBytesToSkip -= _retval;
+    src->decoder->mDataLen -= _retval;
   }
+
+  if (src->decoder->mDataLen != 0) {
+    src->decoder->mInStream->ReadSegments(ReadDataOut, NS_STATIC_CAST(void*, jd), 
+                                          src->decoder->mDataLen, &_retval);
+    src->decoder->mDataLen -= src->pub.bytes_in_buffer;
+    return PR_TRUE;
+  } else {
+    return PR_FALSE;
+  }
+
 }
 
 
