@@ -39,6 +39,21 @@
 #include "MacMemAllocator.h"
 #endif
 
+#include "intl_csi.h"
+
+static NS_DEFINE_IID(kIJRIEnvIID, NS_IJRIENV_IID); 
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+static NS_DEFINE_IID(kIPluginManager2IID, NS_IPLUGINMANAGER2_IID);
+static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID); 
+static NS_DEFINE_IID(kPluginInstancePeerCID, NS_PLUGININSTANCEPEER_CID); 
+static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID); 
+static NS_DEFINE_IID(kIPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
+static NS_DEFINE_IID(kIPluginTagInfoIID, NS_IPLUGINTAGINFO_IID); 
+static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID); 
+static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
+static NS_DEFINE_IID(kISeekablePluginStreamPeerIID, NS_ISEEKABLEPLUGINSTREAMPEER_IID);
+static NS_DEFINE_IID(kIPluginStreamPeerIID, NS_IPLUGINSTREAMPEER_IID);
 
 ////////////////////////////////////////////////////////////////////////////////
 // THINGS IMPLEMENTED BY THE BROWSER...
@@ -66,8 +81,6 @@ nsPluginManager::~nsPluginManager(void)
 }
 
 NS_IMPL_AGGREGATED(nsPluginManager);
-
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 #include "nsRepository.h"
 
@@ -113,8 +126,11 @@ nsPluginManager::MemFlush(PRUint32 size)
     return 0;
 }
 
-static NS_DEFINE_IID(kPluginManagerIID, NP_IPLUGINMANAGER_IID);
-//static NS_DEFINE_IID(kNPIJVMPluginManagerIID, NP_IJVMPLUGINMANAGER_IID);
+NS_METHOD_(const char*)
+nsPluginManager::UserAgent(void)
+{
+    return npn_useragent(NULL); // we don't really need an npp here
+}
 
 NS_METHOD
 nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
@@ -122,35 +138,34 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
-    static NS_DEFINE_IID(kJRIEnvIID, NP_IJRIENV_IID); 
-    if (aIID.Equals(kJRIEnvIID)) {
+    if (aIID.Equals(kIPluginManagerIID) || 
+        aIID.Equals(kIPluginManager2IID) ||
+        aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = (void*) this; 
+        AddRef(); 
+        return NS_OK; 
+    } 
+    if (aIID.Equals(kIJRIEnvIID)) {
         // XXX Need to implement ISupports for JRIEnv
         *aInstancePtr = (void*) ((nsISupports*)npn_getJavaEnv()); 
 //        AddRef();     // XXX should the plugin instance peer and the env be linked?
         return NS_OK; 
     } 
 #if 0   // later
-    static NS_DEFINE_IID(kJNIEnvIID, NP_IJNIENV_IID); 
-    if (aIID.Equals(kJNIEnvIID)) {
+    if (aIID.Equals(kIJNIEnvIID)) {
         // XXX Need to implement ISupports for JNIEnv
         *aInstancePtr = (void*) ((nsISupports*)npn_getJavaEnv());       // XXX need JNI version
 //        AddRef();     // XXX should the plugin instance peer and the env be linked?
         return NS_OK; 
     }
 #endif 
-    static NS_DEFINE_IID(kClassIID, kPluginManagerIID); 
-    if (aIID.Equals(kClassIID)) {
-        *aInstancePtr = (void*) this; 
-        AddRef(); 
-        return NS_OK; 
-    } 
     if (aIID.Equals(kISupportsIID)) {
         *aInstancePtr = (void*) ((nsISupports*)this); 
         AddRef(); 
         return NS_OK; 
     } 
     // Aggregates...
-    NPIJVMPluginManager* jvmMgr = GetJVMMgr(aIID);
+    nsIJVMManager* jvmMgr = GetJVMMgr(aIID);
     if (jvmMgr) {
         *aInstancePtr = (void*) ((nsISupports*)jvmMgr);
         return NS_OK; 
@@ -158,14 +173,14 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
     return NS_NOINTERFACE;
 }
 
-NPIJVMPluginManager*
+nsIJVMManager*
 nsPluginManager::GetJVMMgr(const nsIID& aIID)
 {
-    NPIJVMPluginManager* result = NULL;
+    nsIJVMManager* result = NULL;
 #ifdef OJI
     if (fJVMMgr == NULL) {
         // The plugin manager is the outer of the JVM manager
-        if (JVMMgr::Create(this, kISupportsIID, (void**)&fJVMMgr) != NS_OK)
+        if (nsJVMMgr::Create(this, kISupportsIID, (void**)&fJVMMgr) != NS_OK)
             return NULL;
     }
     if (fJVMMgr->QueryInterface(aIID, (void**)&result) != NS_OK)
@@ -174,11 +189,141 @@ nsPluginManager::GetJVMMgr(const nsIID& aIID)
     return result;
 }
 
+NS_METHOD_(nsPluginError)
+nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData,
+                        const char* altHost, const char* referrer,
+                        PRBool forceJSEnabled)
+{
+    nsPluginError rslt;
+    nsPluginInstancePeer* instPeer;
+    NPP npp = NULL;
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
+        npp = instPeer->GetNPP();
+    rslt = (nsPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
+                                            forceJSEnabled, notifyData != NULL, notifyData);
+    if (npp)
+        instPeer->Release();
+    return rslt;
+}
+
+NS_METHOD_(nsPluginError)
+nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
+                         const char* buf, PRBool file, void* notifyData,
+                         const char* altHost, const char* referrer,
+                         PRBool forceJSEnabled,
+                         PRUint32 postHeadersLength, const char* postHeaders)
+{
+    nsPluginError rslt;
+    nsPluginInstancePeer* instPeer;
+    NPP npp = NULL;
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
+        npp = instPeer->GetNPP();
+    rslt = (nsPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
+                                             bufLen, buf, file, notifyData != NULL, notifyData);
+    if (npp)
+        instPeer->Release();
+    return rslt;
+}
+
+NS_METHOD_(void)
+nsPluginManager::BeginWaitCursor(void)
+{
+    if (fWaiting == 0) {
+#ifdef XP_PC
+        fOldCursor = (void*)GetCursor();
+        HCURSOR newCursor = LoadCursor(NULL, IDC_WAIT);
+        if (newCursor)
+            SetCursor(newCursor);
+#endif
+#ifdef XP_MAC
+        startAsyncCursors();
+#endif
+    }
+    fWaiting++;
+}
+
+NS_METHOD_(void)
+nsPluginManager::EndWaitCursor(void)
+{
+    fWaiting--;
+    if (fWaiting == 0) {
+#ifdef XP_PC
+        if (fOldCursor)
+            SetCursor((HCURSOR)fOldCursor);
+#endif
+#ifdef XP_MAC
+        stopAsyncCursors();
+#endif
+        fOldCursor = NULL;
+    }
+}
+
+NS_METHOD_(PRBool)
+nsPluginManager::SupportsURLProtocol(const char* protocol)
+{
+    int type = NET_URL_Type(protocol);
+    return (PRBool)(type != 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// File Utilities Interface
+
+NS_METHOD_(const char*)
+nsFileUtilities::GetProgramPath(void)
+{
+    return fProgramPath;
+}
+
+NS_METHOD_(const char*)
+nsFileUtilities::GetTempDirPath(void)
+{
+    // XXX I don't need a static really, the browser holds the tempDir name
+    // as a static string -- it's just the XP_TempDirName that strdups it.
+    static const char* tempDirName = NULL;
+    if (tempDirName == NULL)
+        tempDirName = XP_TempDirName();
+    return tempDirName;
+}
+
+NS_METHOD
+nsFileUtilities::GetFileName(const char* fn, FileNameType type,
+                             char* resultBuf, PRUint32 bufLen)
+{
+    // XXX This should be rewritten so that we don't have to malloc the name.
+    XP_FileType filetype;
+
+    if (type == SIGNED_APPLET_DBNAME)
+        filetype = xpSignedAppletDB;
+    else if (type == TEMP_FILENAME)
+        filetype = xpTemporary;
+    else 
+        return NS_ERROR_ILLEGAL_VALUE;
+
+    char* tempName = WH_FileName(fn, filetype);
+    if (tempName == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+    XP_STRNCPY_SAFE(resultBuf, tempName, bufLen);
+    XP_FREE(tempName);
+    return NS_OK;
+}
+
+NS_METHOD
+nsFileUtilities::NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen)
+{
+    // XXX This should be rewritten so that we don't have to malloc the name.
+    char* tempName = WH_TempName(xpTemporary, prefix);
+    if (tempName == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+    XP_STRNCPY_SAFE(resultBuf, tempName, bufLen);
+    XP_FREE(tempName);
+    return NS_OK;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Peer Interface
 
 nsPluginInstancePeer::nsPluginInstancePeer(NPP npp)
-    : npp(npp), userInst(NULL), fJVMInstancePeer(NULL)
+    : npp(npp), userInst(NULL)
 {
     NS_INIT_AGGREGATED(NULL);
 }
@@ -189,42 +334,21 @@ nsPluginInstancePeer::~nsPluginInstancePeer(void)
 
 NS_IMPL_AGGREGATED(nsPluginInstancePeer);
 
-static NS_DEFINE_IID(kLiveConnectPluginInstancePeerIID, NP_ILIVECONNECTPLUGININSTANCEPEER_IID); 
-static NS_DEFINE_IID(kPluginInstancePeerIID, NP_IPLUGININSTANCEPEER_IID); 
-
 NS_METHOD
 nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
 {
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
-    if (aIID.Equals(kLiveConnectPluginInstancePeerIID) ||
-        aIID.Equals(kPluginInstancePeerIID) ||
+    if (aIID.Equals(kILiveConnectPluginInstancePeerIID) ||
+        aIID.Equals(kIPluginInstancePeerIID) ||
         aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) ((nsISupports*)this); 
+        *aInstancePtr = (void*)(nsISupports*)(nsIPluginInstancePeer*)this; 
         AddRef(); 
         return NS_OK; 
-    } 
-#ifdef OJI
-    // Aggregates...
-    if (fJVMInstancePeer == NULL) {
-        np_instance* instance = (np_instance*) npp->ndata;
-        NPEmbeddedApp* app = instance->app;
-        MWContext* cx = instance->cx;
-        np_data* ndata = (np_data*) app->np_data;
-        nsresult result =
-            JVMInstancePeer::Create((nsISupports*)this, kISupportsIID, (void**)&fJVMInstancePeer,
-                                    cx, (LO_CommonPluginStruct*)ndata->lo_struct);
-        if (result != NS_OK) return result;
     }
-#endif
-    return fJVMInstancePeer->QueryInterface(aIID, aInstancePtr);
-}
-
-NS_METHOD_(NPIPlugin*)
-nsPluginInstancePeer::GetClass(void)
-{
-    return NULL;        // XXX
+    // XXX delegate to nsPluginTagInfo
+    return NS_NOINTERFACE;
 }
 
 NS_METHOD_(nsMIMEType)
@@ -234,227 +358,23 @@ nsPluginInstancePeer::GetMIMEType(void)
     return instance->typeString;
 }
 
-NS_METHOD_(NPPluginType)
+NS_METHOD_(nsPluginType)
 nsPluginInstancePeer::GetMode(void)
 {
     np_instance* instance = (np_instance*)npp->ndata;
-    return (NPPluginType)instance->type;
+    return (nsPluginType)instance->type;
 }
 
-static char* empty_list[] = { "", NULL };
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::GetAttributes(PRUint16& n, 
-                                    const char*const*& names, 
-                                    const char*const*& values)
-{
-    np_instance* instance = (np_instance*)npp->ndata;
-
-#if 0
-    // defense
-    PR_ASSERT( 0 != names );
-    PR_ASSERT( 0 != values );
-    if( 0 == names || 0 == values )
-        return 0;
-#endif
-
-    if (instance->type == NP_EMBED) {
-        np_data* ndata = (np_data*)instance->app->np_data;
-
-#ifdef OJI
-        names = (const char*const*)ndata->lo_struct->attributes.names;
-        values = (const char*const*)ndata->lo_struct->attributes.values;
-        n = (PRUint16)ndata->lo_struct->attributes.n;
-#else
-        // XXX I think all the parameters and attributes just get
-        // munged together under MOZ_JAVA...
-        names = (const char*const*) ndata->lo_struct->attribute_list;
-        values = (const char*const*) ndata->lo_struct->value_list;
-        n = (PRUint16) ndata->lo_struct->attribute_cnt;
-#endif
-
-        return NPPluginError_NoError;
-    } else {
-        static char _name[] = "PALETTE";
-        static char* _names[1];
-
-        static char _value[] = "foreground";
-        static char* _values[1];
-
-        _names[0] = _name;
-        _values[0] = _value;
-
-        names = (const char*const*) _names;
-        values = (const char*const*) _values;
-        n = 1;
-
-        return NPPluginError_NoError;
-    }
-
-    // random, sun-spot induced error
-    PR_ASSERT( 0 );
-
-    n = 0;
-    // const char* const* empty_list = { { '\0' } };
-    names = values = (const char*const*)empty_list;
-
-    return NPPluginError_GenericError;
-}
-
-NS_METHOD_(const char*)
-nsPluginInstancePeer::GetAttribute(const char* name) 
-{
-    PRUint16 nAttrs, i;
-    const char*const* names;
-    const char*const* values;
-
-    if( NPCallFailed( GetAttributes( nAttrs, names, values )) )
-      return 0;
-
-    for( i = 0; i < nAttrs; i++ ) {
-        if( PL_strcasecmp( name, names[i] ) == 0 )
-            return values[i];
-    }
-
-    return 0;
-}
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::GetParameters(PRUint16& n, 
-                                    const char*const*& names, 
-                                    const char*const*& values)
-{
-    np_instance* instance = (np_instance*)npp->ndata;
-
-    if (instance->type == NP_EMBED) {
-        np_data* ndata = (np_data*)instance->app->np_data;
-
-#ifdef OJI
-        names = (const char*const*)ndata->lo_struct->parameters.names;
-        values = (const char*const*)ndata->lo_struct->parameters.values;
-        n = (PRUint16)ndata->lo_struct->parameters.n;
-#else
-        // XXX I think all the parameters and attributes just get
-        // munged together under MOZ_JAVA...
-        names = (const char*const*) ndata->lo_struct->attribute_list;
-        values = (const char*const*) ndata->lo_struct->value_list;
-        n = (PRUint16)ndata->lo_struct->attribute_cnt;
-#endif
-
-        return NPPluginError_NoError;
-    } else {
-        static char _name[] = "PALETTE";
-        static char* _names[1];
-
-        static char _value[] = "foreground";
-        static char* _values[1];
-
-        _names[0] = _name;
-        _values[0] = _value;
-
-        names = (const char*const*) _names;
-        values = (const char*const*) _values;
-        n = 1;
-
-        return NPPluginError_NoError;
-    }
-
-    // random, sun-spot induced error
-    PR_ASSERT( 0 );
-
-    n = 0;
-    // static const char* const* empty_list = { { '\0' } };
-    names = values = (const char*const*)empty_list;
-
-    return NPPluginError_GenericError;
-}
-
-NS_METHOD_(const char*)
-nsPluginInstancePeer::GetParameter(const char* name) 
-{
-    PRUint16 nParams, i;
-    const char*const* names;
-    const char*const* values;
-
-    if( NPCallFailed( GetParameters( nParams, names, values )) )
-      return 0;
-
-    for( i = 0; i < nParams; i++ ) {
-        if( PL_strcasecmp( name, names[i] ) == 0 )
-            return values[i];
-    }
-
-    return 0;
-}
-
-NS_METHOD_(NPTagType) 
-nsPluginInstancePeer::GetTagType(void)
-{
-#ifdef XXX
-    switch (fLayoutElement->lo_element.type) {
-      case LO_JAVA:
-        return NPTagType_Applet;
-      case LO_EMBED:
-        return NPTagType_Embed;
-      case LO_OBJECT:
-        return NPTagType_Object;
-
-      default:
-        return NPTagType_Unknown;
-    }
-#endif
-    return NPTagType_Unknown;
-}
-
-NS_METHOD_(const char *) 
-nsPluginInstancePeer::GetTagText(void)
-{
-    // XXX
-    return NULL;
-}
-
-NS_METHOD_(NPIPluginManager*)
-nsPluginInstancePeer::GetPluginManager(void)
-{
-    return thePluginManager;
-}
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::GetURL(const char* url, const char* target, void* notifyData,
-                             const char* altHost, const char* referrer,
-                             PRBool forceJSEnabled)
-{
-    return (NPPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
-                                            forceJSEnabled, notifyData != NULL, notifyData);
-}
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::PostURL(const char* url, const char* target, PRUint32 bufLen, 
-                              const char* buf, PRBool file, void* notifyData,
-                              const char* altHost, const char* referrer,
-                              PRBool forceJSEnabled,
-                              PRUint32 postHeadersLength, const char* postHeaders)
-{
-    return (NPPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
-                                             bufLen, buf, file, notifyData != NULL, notifyData);
-}
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::NewStream(nsMIMEType type, const char* target,
-                                NPIPluginManagerStream* *result)
+NS_METHOD_(nsPluginError)
+nsPluginInstancePeer::NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result)
 {
     NPStream* pstream;
-    NPPluginError err = (NPPluginError)
-#ifdef OJI        
-        npn_newstream(npp, const_cast<char*>(type),
-                      const_cast<char*>(target), &pstream);
-#else
-    npn_newstream(npp, (char*)type,(char*)target, &pstream);
-#endif
-    if (err != NPPluginError_NoError)
+    nsPluginError err = (nsPluginError)
+        npn_newstream(npp, (char*)type, (char*)target, &pstream);
+    if (err != nsPluginError_NoError)
         return err;
     *result = new nsPluginManagerStream(npp, pstream);
-    return NPPluginError_NoError;
+    return nsPluginError_NoError;
 }
 
 NS_METHOD_(void)
@@ -463,22 +383,16 @@ nsPluginInstancePeer::ShowStatus(const char* message)
     npn_status(npp, message);
 }
 
-NS_METHOD_(const char*)
-nsPluginInstancePeer::UserAgent(void)
+NS_METHOD_(nsPluginError)
+nsPluginInstancePeer::GetValue(nsPluginManagerVariable variable, void *value)
 {
-    return npn_useragent(npp);
+    return (nsPluginError)npn_getvalue(npp, (NPNVariable)variable, value);
 }
 
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::GetValue(NPPluginManagerVariable variable, void *value)
+NS_METHOD_(nsPluginError)
+nsPluginInstancePeer::SetValue(nsPluginVariable variable, void *value)
 {
-    return (NPPluginError)npn_getvalue(npp, (NPNVariable)variable, value);
-}
-
-NS_METHOD_(NPPluginError)
-nsPluginInstancePeer::SetValue(NPPluginVariable variable, void *value)
-{
-    return (NPPluginError)npn_setvalue(npp, (NPPVariable)variable, value);
+    return (nsPluginError)npn_setvalue(npp, (NPPVariable)variable, value);
 }
 
 NS_METHOD_(void)
@@ -521,10 +435,317 @@ nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
 #endif
 }
 
+NS_METHOD_(PRBool)
+nsPluginInstancePeer::Tickle(void)
+{
+#ifdef XP_MAC
+    // XXX add something for the Mac...
+#endif
+    return PR_TRUE;
+}
+    
 NS_METHOD_(jref)
 nsPluginInstancePeer::GetJavaPeer(void)
 {
     return npn_getJavaPeer(npp);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Plugin Tag Info Interface
+
+nsPluginTagInfo::nsPluginTagInfo(NPP npp)
+    : npp(npp), fUniqueID(0), fJVMPluginTagInfo(NULL)
+{
+    NS_INIT_AGGREGATED(NULL);
+}
+
+nsPluginTagInfo::~nsPluginTagInfo(void)
+{
+}
+
+NS_IMPL_AGGREGATED(nsPluginTagInfo);
+
+NS_METHOD
+nsPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
+{
+    if (NULL == aInstancePtr) {                                            
+        return NS_ERROR_NULL_POINTER;                                        
+    } 
+    if (aIID.Equals(kIPluginTagInfo2IID) ||
+        aIID.Equals(kIPluginTagInfoIID) ||
+        aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = (void*)(nsISupports*)this; 
+        AddRef(); 
+        return NS_OK; 
+    } 
+#ifdef OJI
+    // Aggregates...
+    if (fJVMPluginTagInfo == NULL) {
+        np_instance* instance = (np_instance*) npp->ndata;
+        MWContext* cx = instance->cx;
+        nsresult result =
+            nsJVMPluginTagInfo::Create((nsISupports*)this, kISupportsIID,
+                                       (void**)&fJVMPluginTagInfo, this);
+        if (result != NS_OK) return result;
+    }
+#endif
+    return fJVMPluginTagInfo->QueryInterface(aIID, aInstancePtr);
+}
+
+static char* empty_list[] = { "", NULL };
+
+NS_METHOD_(nsPluginError)
+nsPluginTagInfo::GetAttributes(PRUint16& n, 
+                               const char*const*& names, 
+                               const char*const*& values)
+{
+    np_instance* instance = (np_instance*)npp->ndata;
+
+#if 0
+    // defense
+    PR_ASSERT( 0 != names );
+    PR_ASSERT( 0 != values );
+    if( 0 == names || 0 == values )
+        return 0;
+#endif
+
+    if (instance->type == NP_EMBED) {
+        np_data* ndata = (np_data*)instance->app->np_data;
+
+#ifdef OJI
+        names = (const char*const*)ndata->lo_struct->attributes.names;
+        values = (const char*const*)ndata->lo_struct->attributes.values;
+        n = (PRUint16)ndata->lo_struct->attributes.n;
+#else
+        // XXX I think all the parameters and attributes just get
+        // munged together under MOZ_JAVA...
+        names = (const char*const*) ndata->lo_struct->attribute_list;
+        values = (const char*const*) ndata->lo_struct->value_list;
+        n = (PRUint16) ndata->lo_struct->attribute_cnt;
+#endif
+
+        return nsPluginError_NoError;
+    } else {
+        static char _name[] = "PALETTE";
+        static char* _names[1];
+
+        static char _value[] = "foreground";
+        static char* _values[1];
+
+        _names[0] = _name;
+        _values[0] = _value;
+
+        names = (const char*const*) _names;
+        values = (const char*const*) _values;
+        n = 1;
+
+        return nsPluginError_NoError;
+    }
+
+    // random, sun-spot induced error
+    PR_ASSERT( 0 );
+
+    n = 0;
+    // const char* const* empty_list = { { '\0' } };
+    names = values = (const char*const*)empty_list;
+
+    return nsPluginError_GenericError;
+}
+
+NS_METHOD_(const char*)
+nsPluginTagInfo::GetAttribute(const char* name) 
+{
+    PRUint16 nAttrs, i;
+    const char*const* names;
+    const char*const* values;
+
+    if( NPCallFailed( GetAttributes( nAttrs, names, values )) )
+        return 0;
+
+    for( i = 0; i < nAttrs; i++ ) {
+        if( PL_strcasecmp( name, names[i] ) == 0 )
+            return values[i];
+    }
+
+    return 0;
+}
+
+NS_METHOD_(nsPluginTagType) 
+nsPluginTagInfo::GetTagType(void)
+{
+#ifdef XXX
+    switch (GetLayoutElement()->lo_element.type) {
+      case LO_JAVA:
+        return nsPluginTagType_Applet;
+      case LO_EMBED:
+        return nsPluginTagType_Embed;
+      case LO_OBJECT:
+        return nsPluginTagType_Object;
+
+      default:
+        return nsPluginTagType_Unknown;
+    }
+#endif
+    return nsPluginTagType_Unknown;
+}
+
+NS_METHOD_(const char *) 
+nsPluginTagInfo::GetTagText(void)
+{
+    // XXX
+    return NULL;
+}
+
+NS_METHOD_(nsPluginError)
+nsPluginTagInfo::GetParameters(PRUint16& n, 
+                               const char*const*& names, 
+                               const char*const*& values)
+{
+    np_instance* instance = (np_instance*)npp->ndata;
+
+    if (instance->type == NP_EMBED) {
+        np_data* ndata = (np_data*)instance->app->np_data;
+
+#ifdef OJI
+        names = (const char*const*)ndata->lo_struct->parameters.names;
+        values = (const char*const*)ndata->lo_struct->parameters.values;
+        n = (PRUint16)ndata->lo_struct->parameters.n;
+#else
+        // XXX I think all the parameters and attributes just get
+        // munged together under MOZ_JAVA...
+        names = (const char*const*) ndata->lo_struct->attribute_list;
+        values = (const char*const*) ndata->lo_struct->value_list;
+        n = (PRUint16)ndata->lo_struct->attribute_cnt;
+#endif
+
+        return nsPluginError_NoError;
+    } else {
+        static char _name[] = "PALETTE";
+        static char* _names[1];
+
+        static char _value[] = "foreground";
+        static char* _values[1];
+
+        _names[0] = _name;
+        _values[0] = _value;
+
+        names = (const char*const*) _names;
+        values = (const char*const*) _values;
+        n = 1;
+
+        return nsPluginError_NoError;
+    }
+
+    // random, sun-spot induced error
+    PR_ASSERT( 0 );
+
+    n = 0;
+    // static const char* const* empty_list = { { '\0' } };
+    names = values = (const char*const*)empty_list;
+
+    return nsPluginError_GenericError;
+}
+
+NS_METHOD_(const char*)
+nsPluginTagInfo::GetParameter(const char* name) 
+{
+    PRUint16 nParams, i;
+    const char*const* names;
+    const char*const* values;
+
+    if( NPCallFailed( GetParameters( nParams, names, values )) )
+        return 0;
+
+    for( i = 0; i < nParams; i++ ) {
+        if( PL_strcasecmp( name, names[i] ) == 0 )
+            return values[i];
+    }
+
+    return 0;
+}
+
+NS_METHOD_(const char*)
+nsPluginTagInfo::GetDocumentBase(void)
+{
+    return (const char*)GetLayoutElement()->base_url;
+}
+
+NS_METHOD_(const char*)
+nsPluginTagInfo::GetDocumentEncoding(void)
+{
+    np_instance* instance = (np_instance*) npp->ndata;
+    MWContext* cx = instance->cx;
+    INTL_CharSetInfo info = LO_GetDocumentCharacterSetInfo(cx);
+    int16 doc_csid = INTL_GetCSIWinCSID(info);
+    return INTL_CharSetIDToJavaCharSetName(doc_csid);
+}
+
+NS_METHOD_(const char*)
+nsPluginTagInfo::GetAlignment(void)
+{
+    int alignment = GetLayoutElement()->alignment;
+
+    const char* cp;
+    switch (alignment) {
+      case LO_ALIGN_CENTER:      cp = "abscenter"; break;
+      case LO_ALIGN_LEFT:        cp = "left"; break;
+      case LO_ALIGN_RIGHT:       cp = "right"; break;
+      case LO_ALIGN_TOP:         cp = "texttop"; break;
+      case LO_ALIGN_BOTTOM:      cp = "absbottom"; break;
+      case LO_ALIGN_NCSA_CENTER: cp = "center"; break;
+      case LO_ALIGN_NCSA_BOTTOM: cp = "bottom"; break;
+      case LO_ALIGN_NCSA_TOP:    cp = "top"; break;
+      default:                   cp = "baseline"; break;
+    }
+    return cp;
+}
+
+NS_METHOD_(PRUint32)
+nsPluginTagInfo::GetWidth(void)
+{
+    LO_CommonPluginStruct* lo = GetLayoutElement();
+    return lo->width ? lo->width : 50;
+}
+    
+NS_METHOD_(PRUint32)
+nsPluginTagInfo::GetHeight(void)
+{
+    LO_CommonPluginStruct* lo = GetLayoutElement();
+    return lo->height ? lo->height : 50;
+}
+
+NS_METHOD_(PRUint32)
+nsPluginTagInfo::GetBorderVertSpace(void)
+{
+    return GetLayoutElement()->border_vert_space;
+}
+    
+NS_METHOD_(PRUint32)
+nsPluginTagInfo::GetBorderHorizSpace(void)
+{
+    return GetLayoutElement()->border_horiz_space;
+}
+
+NS_METHOD_(PRUint32)
+nsPluginTagInfo::GetUniqueID(void)
+{
+    if (fUniqueID == 0) {
+        np_instance* instance = (np_instance*) npp->ndata;
+        MWContext* cx = instance->cx;
+        History_entry* history_element = SHIST_GetCurrent(&cx->hist);
+        if (history_element) {
+            fUniqueID = history_element->unique_id;
+        } else {
+            /*
+            ** XXX What to do? This can happen for instance when printing a
+            ** mail message that contains an applet.
+            */
+            static int32 unique_number;
+            fUniqueID = --unique_number;
+        }
+        PR_ASSERT(fUniqueID != 0);
+    }
+    return fUniqueID;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -540,50 +761,26 @@ nsPluginManagerStream::nsPluginManagerStream(NPP npp, NPStream* pstr)
 
 nsPluginManagerStream::~nsPluginManagerStream(void)
 {
-    NPError err = npn_destroystream(npp, pstream, NPPluginReason_Done);
-    PR_ASSERT(err == NPPluginError_NoError);
+}
+
+NS_METHOD
+nsPluginManagerStream::Close(void)
+{
+    NPError err = npn_destroystream(npp, pstream, nsPluginReason_Done);
+    return (nsresult)err;
 }
 
 NS_METHOD_(PRInt32)
-nsPluginManagerStream::WriteReady(void)
+nsPluginManagerStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
+                             nsresult *errorResult)
 {
-    // XXX This call didn't exist before, but I think that it should have.
-    // Is this implementation right?
-    return NP_STREAM_MAXREADY;
+    PRInt32 rslt = npn_write(npp, pstream, aCount, (void*)(aBuf + aOffset));
+    if (rslt == -1) 
+        *errorResult = NS_ERROR_FAILURE;       // XXX what should this be?
+    return rslt;
 }
 
-NS_METHOD_(PRInt32)
-nsPluginManagerStream::Write(PRInt32 len, const char* buffer)
-{
-    return npn_write(npp, pstream, len, (void*)buffer);
-}
-
-NS_METHOD_(const char*)
-nsPluginManagerStream::GetURL(void)
-{
-    return pstream->url;
-}
-
-NS_METHOD_(PRUint32)
-nsPluginManagerStream::GetEnd(void)
-{
-    return pstream->end;
-}
-
-NS_METHOD_(PRUint32)
-nsPluginManagerStream::GetLastModified(void)
-{
-    return pstream->lastmodified;
-}
-
-NS_METHOD_(void*)
-nsPluginManagerStream::GetNotifyData(void)
-{
-    return pstream->notifyData;
-}
-
-NS_DEFINE_IID(kPluginManagerStreamIID, NP_IPLUGINMANAGERSTREAM_IID);
-NS_IMPL_QUERY_INTERFACE(nsPluginManagerStream, kPluginManagerStreamIID);
+NS_IMPL_QUERY_INTERFACE(nsPluginManagerStream, kIOutputStreamIID);
 NS_IMPL_ADDREF(nsPluginManagerStream);
 NS_IMPL_RELEASE(nsPluginManagerStream);
 
@@ -592,7 +789,7 @@ NS_IMPL_RELEASE(nsPluginManagerStream);
 
 nsPluginStreamPeer::nsPluginStreamPeer(URL_Struct *urls, np_stream *stream)
     : userStream(NULL), urls(urls), stream(stream), 
-      reason(NPPluginReason_NoReason)
+      reason(nsPluginReason_NoReason)
 {
     NS_INIT_REFCNT();
 }
@@ -601,7 +798,7 @@ nsPluginStreamPeer::~nsPluginStreamPeer(void)
 {
 #if 0
     NPError err = npn_destroystream(stream->instance->npp, stream->pstream, reason);
-    PR_ASSERT(err == NPPluginError_NoError);
+    PR_ASSERT(err == nsPluginError_NoError);
 #endif
 }
 
@@ -629,7 +826,7 @@ nsPluginStreamPeer::GetNotifyData(void)
     return stream->pstream->notifyData;
 }
 
-NS_METHOD_(NPPluginReason)
+NS_METHOD_(nsPluginReason)
 nsPluginStreamPeer::GetReason(void)
 {
     return reason;
@@ -713,15 +910,13 @@ nsPluginStreamPeer::GetHeaderField(PRUint32 index)
     return urls->all_headers.value[index];
 }
 
-NS_METHOD_(NPPluginError)
+NS_METHOD_(nsPluginError)
 nsPluginStreamPeer::RequestRead(nsByteRange* rangeList)
 {
-    return (NPPluginError)npn_requestread(stream->pstream,
+    return (nsPluginError)npn_requestread(stream->pstream,
                                           (NPByteRange*)rangeList);
 }
 
-NS_DEFINE_IID(kSeekablePluginStreamPeerIID, NP_ISEEKABLEPLUGINSTREAMPEER_IID);
-NS_DEFINE_IID(kPluginStreamPeerIID, NP_IPLUGINSTREAMPEER_IID);
 NS_IMPL_ADDREF(nsPluginStreamPeer);
 NS_IMPL_RELEASE(nsPluginStreamPeer);
 
@@ -731,10 +926,10 @@ nsPluginStreamPeer::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     if (NULL == aInstancePtr) {
         return NS_ERROR_NULL_POINTER; 
     } 
-    if ((stream->seekable && aIID.Equals(kSeekablePluginStreamPeerIID)) ||
-        aIID.Equals(kPluginStreamPeerIID) ||
+    if ((stream->seekable && aIID.Equals(kISeekablePluginStreamPeerIID)) ||
+        aIID.Equals(kIPluginStreamPeerIID) ||
         aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = (void*) ((nsISupports*)this); 
+        *aInstancePtr = (void*)(nsISupports*)(nsIPluginStreamPeer2*)this; 
         AddRef(); 
         return NS_OK; 
     } 

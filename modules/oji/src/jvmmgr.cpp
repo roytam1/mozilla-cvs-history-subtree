@@ -27,6 +27,8 @@
 #include "xp_str.h"
 #include "libmocha.h"
 #include "np.h"
+#include "plstr.h"
+#include "prio.h"
 
 #include "xpgetstr.h"
 extern "C" int XP_PROGRESS_STARTING_JAVA;
@@ -47,34 +49,34 @@ void stopAsyncCursors(void);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_IMPL_AGGREGATED(JVMMgr);
+NS_IMPL_AGGREGATED(nsJVMMgr);
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIJVMPluginManagerIID, NP_IJVMPLUGINMANAGER_IID);
-static NS_DEFINE_IID(kIJVMPluginIID, NP_IJVMPLUGIN_IID);
-static NS_DEFINE_IID(kISymantecDebugManagerIID, NP_ISYMANTECDEBUGMANAGER_IID);
+static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
+static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
+static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
 
 NS_METHOD
-JVMMgr::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
+nsJVMMgr::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
     if (outer && !aIID.Equals(kISupportsIID))
         return NS_NOINTERFACE;   // XXX right error?
-    JVMMgr* jvmMgr = new JVMMgr(outer);
-    nsresult result = jvmMgr->QueryInterface(aIID, aInstancePtr);
+    nsJVMMgr* jvmmgr = new nsJVMMgr(outer);
+    nsresult result = jvmmgr->QueryInterface(aIID, aInstancePtr);
     if (result != NS_OK) {
-        delete jvmMgr;
+        delete jvmmgr;
     }
     return result;
 }
 
-NPIJVMPlugin*
-JVMMgr::GetJVM(void)
+nsIJVMPlugin*
+nsJVMMgr::GetJVM(void)
 {
     if (fJVM) {
         fJVM->AddRef();
         return fJVM;
     }
-    NPIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
+    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
     if (plugin) {
         nsresult rslt = plugin->QueryInterface(kIJVMPluginIID, (void**)&fJVM);
         if (rslt == NS_OK) return fJVM;
@@ -82,13 +84,14 @@ JVMMgr::GetJVM(void)
     return NULL;   
 }
 
-JVMMgr::JVMMgr(nsISupports* outer)
-    : fJVM(NULL), fWaiting(0), fOldCursor(NULL), fProgramPath(NULL)
+nsJVMMgr::nsJVMMgr(nsISupports* outer)
+    : fJVM(NULL), fStatus(nsJVMStatus_Enabled),
+      fRegisteredJavaPrefChanged(PR_FALSE), fDebugManager(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
 
-JVMMgr::~JVMMgr()
+nsJVMMgr::~nsJVMMgr()
 {
     if (fJVM) {
         nsrefcnt c = fJVM->Release();   // Release for QueryInterface in GetJVM
@@ -97,9 +100,9 @@ JVMMgr::~JVMMgr()
 }
 
 NS_METHOD
-JVMMgr::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
+nsJVMMgr::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-    if (aIID.Equals(kIJVMPluginManagerIID)) {
+    if (aIID.Equals(kIJVMManagerIID)) {
         *aInstancePtr = this;
         AddRef();
         return NS_OK;
@@ -121,188 +124,27 @@ JVMMgr::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_METHOD_(void)
-JVMMgr::BeginWaitCursor(void)
+nsJVMMgr::NotifyJVMStatusChange(nsJVMError error)
 {
-    if (fWaiting == 0) {
-#ifdef XP_PC
-        fOldCursor = (void*)GetCursor();
-        HCURSOR newCursor = LoadCursor(NULL, IDC_WAIT);
-        if (newCursor)
-            SetCursor(newCursor);
-#endif
-#ifdef XP_MAC
-        startAsyncCursors();
-#endif
-    }
-    fWaiting++;
-}
+    if (error != nsJVMError_Ok) {
+        // Should have been running before this:
+        PR_ASSERT(fStatus == nsJVMStatus_Running);
 
-NS_METHOD_(void)
-JVMMgr::EndWaitCursor(void)
-{
-    fWaiting--;
-    if (fWaiting == 0) {
-#ifdef XP_PC
-        if (fOldCursor)
-            SetCursor((HCURSOR)fOldCursor);
-#endif
-#ifdef XP_MAC
-        stopAsyncCursors();
-#endif
-        fOldCursor = NULL;
+        // XXX report error?
+
+        // The JVM should have shut down itself in this case so there's no
+        // need to call ShutdownJVM here.
+        fStatus = nsJVMStatus_Failed;
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_METHOD_(const char*)
-JVMMgr::GetProgramPath(void)
-{
-    return fProgramPath;
-}
-
-NS_METHOD_(const char*)
-JVMMgr::GetTempDirPath(void)
-{
-    // XXX I don't need a static really, the browser holds the tempDir name
-    // as a static string -- it's just the XP_TempDirName that strdups it.
-    static const char* tempDirName = NULL;
-    if (tempDirName == NULL)
-        tempDirName = XP_TempDirName();
-    return tempDirName;
-}
-
-NS_METHOD
-JVMMgr::GetFileName(const char* fn, FileNameType type,
-                    char* resultBuf, PRUint32 bufLen)
-{
-    // XXX This should be rewritten so that we don't have to malloc the name.
-    XP_FileType filetype;
-
-    if (type == SIGNED_APPLET_DBNAME)
-        filetype = xpSignedAppletDB;
-    else if (type == TEMP_FILENAME)
-        filetype = xpTemporary;
-    else 
-        return NS_ERROR_ILLEGAL_VALUE;
-
-    char* tempName = WH_FileName(fn, filetype);
-    if (tempName == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-    XP_STRNCPY_SAFE(resultBuf, tempName, bufLen);
-    XP_FREE(tempName);
-    return NS_OK;
-}
-
-NS_METHOD
-JVMMgr::NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen)
-{
-    // XXX This should be rewritten so that we don't have to malloc the name.
-    char* tempName = WH_TempName(xpTemporary, prefix);
-    if (tempName == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-    XP_STRNCPY_SAFE(resultBuf, tempName, bufLen);
-    XP_FREE(tempName);
-    return NS_OK;
-}
-
+#if 0
 NS_METHOD_(PRBool)
-JVMMgr::HandOffJSLock(PRThread* oldOwner, PRThread* newOwner)
+nsJVMMgr::HandOffJSLock(PRThread* oldOwner, PRThread* newOwner)
 {
     return LM_HandOffJSLock(oldOwner, newOwner);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-// Should be in a header; must solve build-order problem first
-extern "C" void VR_Initialize(JRIEnv* env);
-extern "C" void SU_Initialize(JRIEnv * env);
-
-JVMStatus
-JVMMgr::StartupJVM(void)
-{
-    // Be sure to check the prefs first before asking java to startup.
-    if (GetJVMStatus() == JVMStatus_Disabled) {
-        return JVMStatus_Disabled;
-    }
-    JVMStatus status = fJVM->StartupJVM();
-    if (status == JVMStatus_Running) {
-        JVMEnv* env = fJVM->EnsureExecEnv();
-
-        /* initialize VersionRegistry native routines */
-        /* it is not an error that prevents java from starting if this stuff throws exceptions */
-#ifdef XP_MAC
-		if (env->ExceptionOccurred()) {
-#ifdef DEBUG
-            env->ExceptionDescribe();
-#endif	
-            env->ExceptionClear();
-            return ShutdownJVM();
-        }
-#else        
-
-        SU_Initialize(env);
-        if (JRI_ExceptionOccurred(env)) {
-#ifdef DEBUG
-            fJVM->PrintToConsole("LJ:  SU_Initialize failed.  Bugs to atotic.\n");
-            JRI_ExceptionDescribe(env);
-#endif	
-            JRI_ExceptionClear(env);
-            return ShutdownJVM();
-        }
-#endif /* !XP_MAC */
-    }
-    return status;
-}
-
-JVMStatus
-JVMMgr::ShutdownJVM(PRBool fullShutdown)
-{
-    if (fJVM)
-        return fJVM->ShutdownJVM();
-    return JVMStatus_Enabled;   // XXX what if there's no plugin available?
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-static int PR_CALLBACK
-JavaPrefChanged(const char *prefStr, void* data)
-{
-    JVMMgr* mgr = (JVMMgr*)data;
-    XP_Bool prefBool;
-    PREF_GetBoolPref(prefStr, &prefBool);
-    mgr->SetJVMEnabled((PRBool)prefBool);
-    return 0;
-} 
-
-void
-JVMMgr::EnsurePrefCallbackRegistered(void)
-{
-    if (fRegisteredJavaPrefChanged != PR_TRUE) {
-        fRegisteredJavaPrefChanged = PR_TRUE;
-        PREF_RegisterCallback("security.enable_java", JavaPrefChanged, this);
-        JavaPrefChanged("security.enable_java", this);
-    }
-}
-
-PRBool
-JVMMgr::GetJVMEnabled(void)
-{
-    EnsurePrefCallbackRegistered();
-    return fJVM->GetJVMEnabled();
-}
-
-void
-JVMMgr::SetJVMEnabled(PRBool enable)
-{
-    fJVM->SetJVMEnabled(enable);
-}
-
-JVMStatus
-JVMMgr::GetJVMStatus(void)
-{
-    EnsurePrefCallbackRegistered();
-    return fJVM->GetJVMStatus();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -350,14 +192,14 @@ ConvertToPlatformPathList(const char* cp)
 }
 
 NS_METHOD_(void)
-JVMMgr::ReportJVMError(JVMEnv* env, JVMError err)
+nsJVMMgr::ReportJVMError(void* env, nsJVMError err)
 {
     MWContext* cx = XP_FindSomeContext();
     char *s;
     switch (err) {
-      case JVMError_NoClasses: {
+      case nsJVMError_NoClasses: {
           const char* cp = fJVM->GetClassPath();
-          const char* jarName = fJVM->GetSystemJARPath();
+          const char* jarName = "<jar path>"; // XXX fJVM->GetSystemJARPath();
           cp = ConvertToPlatformPathList(cp);
           s = PR_smprintf(XP_GetString(XP_JAVA_NO_CLASSES),
                           jarName, jarName,
@@ -366,13 +208,13 @@ JVMMgr::ReportJVMError(JVMEnv* env, JVMError err)
           break;
       }
 
-      case JVMError_JavaError: {
-          const char* msg = GetJavaErrorString(env);
+      case nsJVMError_JavaError: {
+          const char* msg = GetJavaErrorString((JRIEnv*)env);
 #ifdef DEBUG
 # ifdef XP_MAC
-		  env->ExceptionDescribe();
+		  ((JRIEnv*)env)->ExceptionDescribe();
 # else
-          JRI_ExceptionDescribe(env);
+          JRI_ExceptionDescribe((JRIEnv*)env);
 # endif
 #endif
           s = PR_smprintf(XP_GetString(XP_JAVA_STARTUP_FAILED), 
@@ -380,7 +222,7 @@ JVMMgr::ReportJVMError(JVMEnv* env, JVMError err)
           if (msg) free((void*)msg);
           break;
       }
-      case JVMError_NoDebugger: {
+      case nsJVMError_NoDebugger: {
           s = PR_smprintf(XP_GetString(XP_JAVA_DEBUGGER_FAILED));
           break;
       }
@@ -399,7 +241,7 @@ JVMMgr::ReportJVMError(JVMEnv* env, JVMError err)
 #define sig_java_lang_Object_toString 	"()Ljava/lang/String;"
 
 const char*
-JVMMgr::GetJavaErrorString(JVMEnv* env)
+nsJVMMgr::GetJavaErrorString(JRIEnv* env)
 {
     /* XXX javah is a pain wrt mixing JRI and JDK native methods. 
        Since we need to call a method on Object, we'll do it the hard way 
@@ -462,29 +304,431 @@ JVMMgr::GetJavaErrorString(JVMEnv* env)
     return strdup(msg);
 #endif
 }
+#endif // 0
 
-NS_METHOD_(PRBool)
-JVMMgr::SupportsURLProtocol(const char* protocol)
+////////////////////////////////////////////////////////////////////////////////
+
+static NS_DEFINE_IID(kIJRIPluginIID, NS_IJRIPLUGIN_IID);        // XXX change later to JNI
+
+// Should be in a header; must solve build-order problem first
+extern "C" void SU_Initialize(JRIEnv * env);
+
+nsJVMStatus
+nsJVMMgr::StartupJVM(void)
 {
-    int type = NET_URL_Type(protocol);
-    return (PRBool)(type != 0);
+    // Be sure to check the prefs first before asking java to startup.
+    if (GetJVMStatus() == nsJVMStatus_Disabled) {
+        return nsJVMStatus_Disabled;
+    }
+
+    nsIJVMPlugin* jvm = GetJVM();
+    if (jvm == NULL) {
+        fStatus = nsJVMStatus_Failed;
+        return fStatus;
+    }
+    
+    JDK1_1InitArgs initargs;
+    jvm->GetDefaultJVMInitArgs(&initargs);
+
+    // XXX munge initargs
+
+    nsJVMError err = fJVM->StartupJVM(&initargs);
+    if (err == nsJVMError_Ok) {
+        nsIJRIPlugin* jriJVM;
+        if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
+            JRIEnv* env = jriJVM->GetJRIEnv();
+            if (env) {
+                SU_Initialize(env);
+                if (JRI_ExceptionOccurred(env)) {
+#ifdef DEBUG
+                    JVM_PrintToConsole("LJ:  SU_Initialize failed.  Bugs to atotic.\n");
+#endif	
+                    JRI_ExceptionDescribe(env);
+                    JRI_ExceptionClear(env);
+                }
+                jriJVM->ReleaseJRIEnv(env);
+            }
+            fStatus = nsJVMStatus_Running;
+            jriJVM->Release();
+        }
+        else {
+            // Non-JNI JVM -- bail.
+            jvm->Release();
+            return ShutdownJVM();
+        }
+    }
+    jvm->Release();
+    return fStatus;
+}
+
+nsJVMStatus
+nsJVMMgr::ShutdownJVM(PRBool fullShutdown)
+{
+    if (fJVM) {
+        // XXX we should just make nsPluginError and nsJVMStatus be nsresult
+        nsJVMError err = fJVM->ShutdownJVM(fullShutdown);
+        if (err == nsJVMError_Ok)
+            return nsJVMStatus_Enabled;
+        else {
+            // XXX report error?
+            return nsJVMStatus_Disabled;
+        }
+    }
+    return nsJVMStatus_Enabled;   // XXX what if there's no plugin available?
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-extern "C" PR_IMPLEMENT(JVMMgr*)
+static int PR_CALLBACK
+JavaPrefChanged(const char *prefStr, void* data)
+{
+    nsJVMMgr* mgr = (nsJVMMgr*)data;
+    XP_Bool prefBool;
+    PREF_GetBoolPref(prefStr, &prefBool);
+    mgr->SetJVMEnabled(prefBool);
+    return 0;
+} 
+
+void
+nsJVMMgr::SetJVMEnabled(PRBool enabled)
+{
+    if (enabled) {
+        if (fStatus != nsJVMStatus_Running) 
+            fStatus = nsJVMStatus_Enabled;
+        // don't start the JVM here, do it lazily
+    }
+    else {
+        if (fStatus == nsJVMStatus_Running) 
+            (void)ShutdownJVM();
+        else
+            fStatus = nsJVMStatus_Disabled;
+    }
+}
+
+void
+nsJVMMgr::EnsurePrefCallbackRegistered(void)
+{
+    if (fRegisteredJavaPrefChanged != PR_TRUE) {
+        fRegisteredJavaPrefChanged = PR_TRUE;
+        PREF_RegisterCallback("security.enable_java", JavaPrefChanged, this);
+        JavaPrefChanged("security.enable_java", this);
+    }
+}
+
+nsJVMStatus
+nsJVMMgr::GetJVMStatus(void)
+{
+    EnsurePrefCallbackRegistered();
+    return fStatus;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+nsPluginError
+nsJVMMgr::AddToClassPathRecursively(const char* dirPath)
+{
+    PRDir* dir;
+    PRDirEntry* ptr;
+    nsIJVMPlugin* jvm = GetJVM();
+    if (jvm == NULL) 
+        return nsPluginError_GenericError;      // XXX better error?
+
+    /* Add this path to the classpath: */
+    jvm->AddToClassPath(dirPath);
+
+    /* Also add any zip or jar files in this directory to the classpath: */
+    dir = PR_OpenDir(dirPath);
+    if (dir == NULL)
+        return nsPluginError_InvalidParam;
+    while ((ptr = PR_ReadDir(dir, PR_SKIP_NONE)) != NULL) {
+        if (PL_strcmp(PR_DirName(ptr), ".") && PL_strcmp(PR_DirName(ptr), "..")) {
+            char* path = PR_smprintf("%s%c%s", dirPath, PR_DIRECTORY_SEPARATOR, PR_DirName(ptr));
+            if (path == NULL)
+                return nsPluginError_OutOfMemoryError;
+            PRFileInfo info;
+            if (PR_GetFileInfo(path, &info) == PR_SUCCESS
+                && info.type == PR_FILE_FILE) {
+                int len = PL_strlen(path);
+                /* Is it a zip or jar file? */
+                if ((len > 4) && 
+                    ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
+                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {	
+                    jvm->AddToClassPath(path);
+                }
+            }
+            PR_smprintf_free(path);
+        }
+    }
+    PR_CloseDir(dir);
+    jvm->Release();
+    return nsPluginError_NoError;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// nsJVMPluginTagInfo
+////////////////////////////////////////////////////////////////////////////////
+
+nsJVMPluginTagInfo::nsJVMPluginTagInfo(nsISupports* outer, nsIPluginTagInfo2* info)
+    : fSimulatedCodebase(NULL), fPluginTagInfo(info)
+{
+    NS_INIT_AGGREGATED(outer);
+}
+
+nsJVMPluginTagInfo::~nsJVMPluginTagInfo(void)
+{
+    if (fSimulatedCodebase)
+        PL_strfree(fSimulatedCodebase);
+}
+
+NS_IMPL_AGGREGATED(nsJVMPluginTagInfo);
+
+static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
+
+NS_METHOD
+nsJVMPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+    if (aIID.Equals(kIJVMPluginTagInfoIID) ||
+        aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = this;
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
+NS_METHOD_(const char *) 
+nsJVMPluginTagInfo::GetCode(void)
+{
+    return fPluginTagInfo->GetAttribute("code");
+}
+
+NS_METHOD_(const char *) 
+nsJVMPluginTagInfo::GetCodeBase(void)
+{
+    // If we've already cached and computed the value, use it...
+    if (fSimulatedCodebase)
+        return fSimulatedCodebase;
+
+    // See if it's supplied as an attribute...
+    const char* codebase = fPluginTagInfo->GetAttribute("codebase");
+    if (codebase != NULL)
+        return codebase;
+
+    // Okay, we'll need to simulate it from the layout tag's base URL.
+    const char* docBase = fPluginTagInfo->GetDocumentBase();
+    PA_LOCK(codebase, const char*, docBase);
+
+    if ((fSimulatedCodebase = PL_strdup(codebase)) != NULL) {
+        char* lastSlash = PL_strrchr(codebase, '/');
+
+        // chop of the filename from the original document base URL to
+        // generate the codebase.
+        if (lastSlash != NULL)
+            *(lastSlash + 1) = '\0';
+    }
+    
+    PA_UNLOCK(docBase);
+    return fSimulatedCodebase;
+}
+
+NS_METHOD_(const char *) 
+nsJVMPluginTagInfo::GetArchive(void)
+{
+    return fPluginTagInfo->GetAttribute("archive");
+}
+
+NS_METHOD_(const char *) 
+nsJVMPluginTagInfo::GetName(void)
+{
+    const char* attrName;
+    switch (fPluginTagInfo->GetTagType()) {
+      case nsPluginTagType_Applet:
+        attrName = "name";
+        break;
+      default:
+        attrName = "id";
+        break;
+    }
+    return fPluginTagInfo->GetAttribute(attrName);
+}
+
+NS_METHOD_(PRBool) 
+nsJVMPluginTagInfo::GetMayScript(void)
+{
+    return (fPluginTagInfo->GetAttribute("mayscript") != NULL);
+}
+
+static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID);
+
+NS_METHOD
+nsJVMPluginTagInfo::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr,
+                           nsIPluginTagInfo2* info)
+{
+    if (outer && !aIID.Equals(kISupportsIID))
+        return NS_NOINTERFACE;   // XXX right error?
+
+    nsJVMPluginTagInfo* jvmInstPeer = new nsJVMPluginTagInfo(outer, info);
+    if (jvmInstPeer == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+    nsresult result = jvmInstPeer->QueryInterface(aIID, aInstancePtr);
+    if (result != NS_OK) goto error;
+
+    result = outer->QueryInterface(kIPluginTagInfo2IID,
+                                   (void**)&jvmInstPeer->fPluginTagInfo);
+    if (result != NS_OK) goto error;
+    outer->Release();   // no need to AddRef outer
+    return result;
+
+  error:
+    delete jvmInstPeer;
+    return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Convenience Routines
+
+PR_BEGIN_EXTERN_C
+
+PR_IMPLEMENT(nsJVMMgr*)
 JVM_GetJVMMgr(void)
 {
     extern nsISupports* thePluginManager;
     if (thePluginManager == NULL)
         return NULL;
-    JVMMgr* mgr;
+    nsJVMMgr* mgr;
     nsresult res =
-        thePluginManager->QueryInterface(kIJVMPluginManagerIID, (void**)&mgr);
+        thePluginManager->QueryInterface(kIJVMManagerIID, (void**)&mgr);
     if (res != NS_OK)
         return NULL;
     return mgr;
 }
+
+PR_IMPLEMENT(PRBool)
+JVM_IsJVMAvailable(void)
+{
+    PRBool result = PR_FALSE;
+    nsJVMMgr* mgr = JVM_GetJVMMgr();
+    if (mgr) {
+        nsJVMStatus status = mgr->GetJVMStatus();
+        result = status != nsJVMStatus_Failed
+              && status != nsJVMStatus_Disabled;
+        mgr->Release();
+    }
+    return result;
+}
+
+PR_IMPLEMENT(nsPluginError)
+JVM_AddToClassPathRecursively(const char* dirPath)
+{
+    nsPluginError err = nsPluginError_GenericError;
+    nsJVMMgr* mgr = JVM_GetJVMMgr();
+    if (mgr) {
+        err = mgr->AddToClassPathRecursively(dirPath);
+        mgr->Release();
+    }
+    return err;
+}
+
+static NS_DEFINE_IID(kIJVMConsoleIID, NS_IJVMCONSOLE_IID);
+
+// This will get the JVMConsole if one is available. You have to Release it 
+// when you're done with it.
+static nsIJVMConsole*
+GetConsole(void)
+{
+    nsIJVMConsole* console = NULL;
+    nsJVMMgr* mgr = JVM_GetJVMMgr();
+    if (mgr) {
+        nsJVMStatus status = mgr->GetJVMStatus();
+        if (status != nsJVMStatus_Failed && status != nsJVMStatus_Disabled) {
+            nsIJVMPlugin* jvm = mgr->GetJVM();
+            if (jvm) {
+                jvm->QueryInterface(kIJVMConsoleIID, (void**)&console);
+                jvm->Release();
+            }
+        }
+        mgr->Release();
+    }
+    return console;
+}
+
+PR_IMPLEMENT(void)
+JVM_ShowConsole(void)
+{
+    nsIJVMConsole* console = GetConsole();
+    if (console) {
+        console->ShowConsole();
+        console->Release();
+    }
+}
+
+PR_IMPLEMENT(void)
+JVM_HideConsole(void)
+{
+    nsIJVMConsole* console = GetConsole();
+    if (console) {
+        console->HideConsole();
+        console->Release();
+    }
+}
+
+PR_IMPLEMENT(PRBool)
+JVM_IsConsoleVisible(void)
+{
+    PRBool result = PR_FALSE;
+    nsIJVMConsole* console = GetConsole();
+    if (console) {
+        result = console->IsConsoleVisible();
+        console->Release();
+    }
+    return result;
+}
+
+PR_IMPLEMENT(void)
+JVM_ToggleConsole(void)
+{
+    nsIJVMConsole* console = GetConsole();
+    if (console) {
+        if (console->IsConsoleVisible())
+            console->HideConsole();
+        else
+            console->ShowConsole();
+        console->Release();
+    }
+}
+
+PR_IMPLEMENT(void)
+JVM_PrintToConsole(const char* msg)
+{
+    nsIJVMConsole* console = GetConsole();
+    if (console) {
+        console->Print(msg);
+        console->Release();
+    }
+}
+
+static NS_DEFINE_IID(kISymantecDebuggerIID, NS_ISYMANTECDEBUGGER_IID);
+
+PR_IMPLEMENT(void)
+JVM_StartDebugger(void)
+{
+    nsJVMMgr* jvmMgr = JVM_GetJVMMgr();
+    if (jvmMgr) {
+        nsIJVMPlugin* jvm = jvmMgr->GetJVM();
+        if (jvm) {
+            nsISymantecDebugger* debugger;
+            if (jvm->QueryInterface(kISymantecDebuggerIID, (void**)&debugger) == NS_OK) {
+                // XXX should we make sure the vm is started first?
+                debugger->StartDebugger(nsSymantecDebugPort_SharedMemory);
+                debugger->Release();
+            }
+            jvm->Release();
+        }
+        jvmMgr->Release();
+    }
+}
+
+PR_END_EXTERN_C
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -38,6 +38,10 @@ EXPORTS		= nsCom.h \
 		  nsISupportsArray.h \
 		  nsRepository.h \
 		  nsIEnumerator.h \
+                  nsIBaseStream.h \
+                  nsIInputStream.h \
+	          nsIOutputStream.h \
+		  nscore.h \
 		  $(NULL)
 
 LCFLAGS		= -D_IMPL_NS_COM -DUSE_NSREG

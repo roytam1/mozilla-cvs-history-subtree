@@ -63,6 +63,10 @@ EXPORTS = \
 	nsISupportsArray.h	\
 	nsRepository.h		\
 	nsIEnumerator.h		\
+	nsIBaseStream.h		\
+	nsIInputStream.h	\
+	nsIOutputStream.h	\
+	nscore.h        	\
 	$(NULL)			
 
 MODULE = xpcom 

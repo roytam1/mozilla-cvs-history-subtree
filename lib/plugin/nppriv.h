@@ -40,7 +40,7 @@ typedef struct _np_stream np_stream;
 typedef struct _np_data np_data;
 typedef struct _np_urlsnode np_urlsnode;
 typedef struct _np_reconnect np_reconnect;
-struct NPIPlugin;
+struct nsIPlugin;
 
 typedef enum {
 	NPDataNormal = 0,		/* URL_Struct.fe_data -> NPEmbeddedApp.np_data -> np_data */
@@ -71,7 +71,7 @@ struct _np_handle {
     char *name;
     char *filename;
     char *description;
-    struct NPIPlugin* userPlugin;
+    struct nsIPlugin* userPlugin;
 };
 
 struct _np_mimetype {

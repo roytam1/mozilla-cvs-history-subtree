@@ -125,7 +125,7 @@ extern NPError			NPL_RegisterAppletType(NPMIMEType type);
 #endif /* ANTHRAX */
 
 PR_EXTERN(void)         NPL_SetPluginWindow(void *data);
-PR_EXTERN(struct NPIPlugin*) NPL_LoadPluginByType(const char* typeAttribute);
+PR_EXTERN(struct nsIPlugin*) NPL_LoadPluginByType(const char* typeAttribute);
 
 XP_END_PROTOS
 

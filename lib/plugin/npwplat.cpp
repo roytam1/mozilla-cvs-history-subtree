@@ -37,7 +37,9 @@
 #include "plgindll.h"
 #include "np.h"
 #include "helper.h"
-#ifdef JAVA
+#if defined(OJI)
+#include "jvmmgr.h"
+#elif defined(JAVA)
 #include "java.h"
 #endif
 #include "edt.h"
@@ -449,21 +451,16 @@ void fe_RegisterPlugins(char* pszPluginDir)
     csPluginSpec = pszPluginDir; 
 
     // add directory to the java path no matter what
-#if defined(xOJI)       // XXX not yet -- ordering problem here between loading the vm and adding to the classpath
-    JVMMgr* jvmMgr = JVM_GetJVMMgr();
-    if (jvmMgr) {
-        NPIJVMPlugin* jvm = jvmMgr->GetJVM();
-        if (jvm) {
-            jvm->AddToClassPath(pszPluginDir);
-        }
-        jvmMgr->Release();
-    }
-#elif defined(JAVA)
+#ifdef OJI      // XXX This needs to go away, and be done each time the JVM starts up...
+    // add the plugin directory if successful
+    JVM_AddToClassPathRecursively(pszPluginDir);
+#endif
+#if defined(JAVA)
     LJ_AddToClassPath(pszPluginDir);
 #endif
 
     if (thePluginManager == NULL) {
-        static NS_DEFINE_IID(kIPluginManagerIID, NP_IPLUGINMANAGER_IID);
+        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
         nsresult rslt = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
         // XXX Out of memory already? This function should return an error code!
         PR_ASSERT(rslt == NS_OK);
@@ -670,20 +667,28 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
     // the cross platform code should take care of the 16/32 bit issues
     if(pNPMgtBlock->pLibrary == NULL)
         return NULL;
-    
-    NP_CREATEPLUGIN npCreatePlugin =
-#ifndef NSPR20
-        (NP_CREATEPLUGIN)PR_FindSymbol("NP_CreatePlugin", pNPMgtBlock->pLibrary);
-#else
-        (NP_CREATEPLUGIN)PR_FindSymbol(pNPMgtBlock->pLibrary, "NP_CreatePlugin");
-#endif
-    if (npCreatePlugin != NULL) {
+
+    nsFactoryProc nsGetFactory = (nsFactoryProc)
+        PR_FindSymbol(pNPMgtBlock->pLibrary, "NSGetFactory");
+    if (nsGetFactory != NULL) {
+        static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
+        nsIPlugin* plugin = NULL;
+        nsresult res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
         PR_ASSERT(thePluginManager != NULL);
-        NPIPlugin* plugin = NULL;
-        NPPluginError err = npCreatePlugin(thePluginManager, &plugin);
-        handle->userPlugin = plugin;
-        if (err == NPPluginError_NoError && plugin != NULL) {
+        if (res == NS_OK && plugin != NULL
+            && plugin->Initialize(thePluginManager) == nsPluginError_NoError) {
+
+            handle->userPlugin = plugin;
             pNPMgtBlock->pPluginFuncs = (NPPluginFuncs*)-1;   // something to say it's loaded, but != 0
+#ifdef LATER // XXX coming soon...
+            // add the plugin directory if successful
+            JVM_AddToClassPathRecursively(csPluginDir);
+#endif
+        }
+        else {
+            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            wfe_PopPath(pPathSave);  // restore the path
+            return NULL;
         }
     }
     else {
@@ -802,6 +807,11 @@ void FE_UnloadPlugin(void* pluginType, struct _np_handle* handle)
         if (handle->userPlugin) {
             nsrefcnt cnt = handle->userPlugin->Release();
             PR_ASSERT(cnt == 0);
+
+#if 0   // XXX later...
+            // remove the plugin directory if successful
+            JVM_RemoveFromClassPathRecursively(csPluginDir);
+#endif
         }
         else {
             // the NP_Shutdown entry point was misnamed as NP_PluginShutdown, early

@@ -42,7 +42,7 @@
 // to implement in order for the plugin to support JNI-based LiveConnect,
 // i.e. be scriptable by Java or JavaScript.
 
-class NPILiveConnectPlugin : public NPIPlugin {
+class nsILiveConnectPlugin : public nsIPlugin {
 public:
 
     // (New JNI-based entry point, roughly corresponds to NPP_GetJavaClass.)
@@ -51,7 +51,7 @@ public:
 
 };
 
-#define NP_ILIVECONNECTPLUGIN_IID                    \
+#define NS_ILIVECONNECTPLUGIN_IID                    \
 { /* cf134df0-a1bc-11d1-85b1-00805f0e4dfe */         \
     0xcf134df0,                                      \
     0xa1bc,                                          \
@@ -64,7 +64,7 @@ public:
 // Browsers that support JNI-based LiveConnect implement this subclass of
 // plugin instance peer. 
 
-class NPILiveConnectPluginInstancePeer : public NPIPluginInstancePeer {
+class nsILiveConnectPluginInstancePeer : public nsISupports {
 public:
 
     // (New JNI-based entry point, roughly corresponds to NPN_GetJavaPeer.)
@@ -73,7 +73,7 @@ public:
 
 };
 
-#define NP_ILIVECONNECTPLUGININSTANCEPEER_IID        \
+#define NS_ILIVECONNECTPLUGININSTANCEPEER_IID        \
 { /* 1e3502a0-a1bd-11d1-85b1-00805f0e4dfe */         \
     0x1e3502a0,                                      \
     0xa1bd,                                          \
@@ -81,9 +81,9 @@ public:
     {0x85, 0xb1, 0x00, 0x80, 0x5f, 0x0e, 0x4d, 0xfe} \
 }
 
-// QueryInterface for this IID on NPIPluginManager to get a JNIEnv
+// QueryInterface for this IID on nsIPluginManager to get a JNIEnv
 // XXX change this
-#define NP_IJNIENV_IID                               \
+#define NS_IJNIENV_IID                               \
 { /* 04610650-a1bd-11d1-85b1-00805f0e4dfe */         \
     0x04610650,                                      \
     0xa1bd,                                          \
@@ -110,7 +110,7 @@ public:
 // to implement in order for the plugin to support JRI-based LiveConnect,
 // i.e. be scriptable by Java or JavaScript.
 
-class NPIJRILiveConnectPlugin : public NPIPlugin {
+class nsIJRILiveConnectPlugin : public nsIPlugin {
 public:
 
     // (Corresponds to NPP_GetJavaClass.)
@@ -119,7 +119,7 @@ public:
 
 };
 
-#define NP_IJRILIVECONNECTPLUGIN_IID                 \
+#define NS_IJRILIVECONNECTPLUGIN_IID                 \
 { /* c94058e0-f772-11d1-815b-006008119d7a */         \
     0xc94058e0,                                      \
     0xf772,                                          \
@@ -132,7 +132,7 @@ public:
 // Browsers that support JRI-based LiveConnect implement this subclass of
 // plugin instance peer. 
 
-class NPIJRILiveConnectPluginInstancePeer : public NPIPluginInstancePeer {
+class nsIJRILiveConnectPluginInstancePeer : public nsISupports {
 public:
 
     // (Corresponds to NPN_GetJavaPeer.)
@@ -141,7 +141,7 @@ public:
 
 };
 
-#define NP_IJRILIVECONNECTPLUGININSTANCEPEER_IID     \
+#define NS_IJRILIVECONNECTPLUGININSTANCEPEER_IID     \
 { /* 25b63f40-f773-11d1-815b-006008119d7a */         \
     0x25b63f40,                                      \
     0xf773,                                          \
@@ -149,9 +149,9 @@ public:
     {0x81, 0x5b, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
 }
 
-// QueryInterface for this IID on NPIPluginManager to get a JRIEnv
+// QueryInterface for this IID on nsIPluginManager to get a JRIEnv
 // XXX change this
-#define NP_IJRIENV_IID                               \
+#define NS_IJRIENV_IID                               \
 { /* f9d4ea00-a1bc-11d1-85b1-00805f0e4dfe */         \
     0xf9d4ea00,                                      \
     0xa1bc,                                          \

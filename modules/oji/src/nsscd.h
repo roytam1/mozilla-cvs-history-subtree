@@ -28,14 +28,14 @@
 #ifndef nsscd_h___
 #define nsscd_h___
 
-#include "nsjvm.h"
+#include "nsIJVM.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Symantec Debug Manager Interface
 //
 // Implemented by the browser that supports the Symantec debugger.
 
-class NPISymantecDebugManager : public nsISupports {
+class nsISymantecDebugManager : public nsISupports {
 public:
 
     NS_IMETHOD_(PRBool)
@@ -43,7 +43,7 @@ public:
 
 };
 
-#define NP_ISYMANTECDEBUGMANAGER_IID                 \
+#define NS_ISYMANTECDEBUGMANAGER_IID                 \
 { /* 131362e0-d985-11d1-8155-006008119d7a */         \
     0x131362e0,                                      \
     0xd985,                                          \
@@ -56,21 +56,21 @@ public:
 //
 // Implemented by the JVM plugin that supports the Symantec debugger.
 
-enum NPSymantecDebugPort {
-    NPSymantecDebugPort_None           = 0,
-    NPSymantecDebugPort_SharedMemory   = -1
+enum nsSymantecDebugPort {
+    nsSymantecDebugPort_None           = 0,
+    nsSymantecDebugPort_SharedMemory   = -1
     // anything else is a port number
 };
 
-class NPISymantecDebugger : public nsISupports {
+class nsISymantecDebugger : public nsISupports {
 public:
 
-    NS_IMETHOD_(JVMError)
-    StartDebugger(NPSymantecDebugPort port) = 0;
+    NS_IMETHOD_(nsJVMError)
+    StartDebugger(nsSymantecDebugPort port) = 0;
 
 };
 
-#define NP_ISYMANTECDEBUGGER_IID                     \
+#define NS_ISYMANTECDEBUGGER_IID                     \
 { /* 954399f0-d980-11d1-8155-006008119d7a */         \
     0x954399f0,                                      \
     0xd980,                                          \

@@ -161,9 +161,9 @@ np_processURLNode(np_urlsnode* node, np_instance* instance, int status)
             TRACEMSG(("npglue.c: CallNPP_URLNotifyProc"));
             if (np_is50StylePlugin(instance->handle)) {
                 nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-                NPIPluginInstance* userInst = peerInst->GetUserInstance();
+                nsIPluginInstance* userInst = peerInst->GetUserInstance();
                 userInst->URLNotify(node->urls->address, node->urls->window_target,
-                                    (NPPluginReason)np_statusToReason(status),
+                                    (nsPluginReason)np_statusToReason(status),
                                     node->notifyData);
             }
             else if (ISFUNCPTR(instance->handle->f->urlnotify)) {
@@ -448,9 +448,13 @@ NPL_WriteReady(NET_StreamClass *stream)
     if (newstream->seek >= 0) {
         TRACEMSG(("npglue.c: CallNPP_WriteReadyProc"));
         if (newstream->handle->userPlugin) {
+#if 0   // XXX until we figure out if nsIOutputStream will work for us
             nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)newstream->pstream->pdata;
-            NPIPluginStream* userStream = peerStream->GetUserStream();
+            nsIPluginStream* userStream = peerStream->GetUserStream();
             ret = userStream->WriteReady();
+#else
+            ret = NP_MAXREADY;
+#endif
         }
         else if (ISFUNCPTR(newstream->handle->f->writeready)) {
             ret = CallNPP_WriteReadyProc(newstream->handle->f->writeready,
@@ -527,8 +531,10 @@ NPL_Write(NET_StreamClass *stream, const unsigned char *str, int32 len)
     */
     if (newstream->handle->userPlugin) {
         nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)newstream->pstream->pdata;
-        NPIPluginStream* userStream = peerStream->GetUserStream();
-        ret = userStream->Write(len, (const char*)str);
+        nsIPluginStream* userStream = peerStream->GetUserStream();
+        nsresult err;
+        ret = userStream->Write((const char*)str, 0, len, &err);
+        PR_ASSERT(err == NS_OK);        // XXX this should go somewhere
     }
     else if (ISFUNCPTR(newstream->handle->f->write)) {
         ret = CallNPP_WriteProc(newstream->handle->f->write, newstream->instance->npp, newstream->pstream, 
@@ -736,8 +742,8 @@ np_destroystream(np_stream *stream, NPError reason)
         TRACEMSG(("npglue.c: CallNPP_DestroyStreamProc"));
         if (stream->handle->userPlugin) {
             nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)stream->pstream->pdata;
-            NPIPluginStream* userStream = peerStream->GetUserStream();
-            peerStream->SetReason((NPPluginReason)reason);
+            nsIPluginStream* userStream = peerStream->GetUserStream();
+            peerStream->SetReason((nsPluginReason)reason);
             userStream->Release();      // must be released before peer
             peerStream->Release();
         }
@@ -801,7 +807,7 @@ np_streamAsFile(np_stream* stream)
     TRACEMSG(("npglue.c: CallNPP_StreamAsFileProc"));
     if (stream->handle->userPlugin) {
         nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)stream->pstream->pdata;
-        NPIPluginStream* userStream = peerStream->GetUserStream();
+        nsIPluginStream* userStream = peerStream->GetUserStream();
         userStream->AsFile(fname);
     }
     else if (ISFUNCPTR(stream->handle->f->asfile)) {
@@ -2190,7 +2196,8 @@ jglobal classPlugin = NULL;
 extern void
 ET_SetPluginWindow(MWContext *cx, void *instance);
 
-NS_DEFINE_IID(kLiveConnectPluginIID, NP_ILIVECONNECTPLUGIN_IID);
+NS_DEFINE_IID(kPluginInstanceIID, NS_IPLUGININSTANCE_IID);
+NS_DEFINE_IID(kLiveConnectPluginIID, NS_ILIVECONNECTPLUGIN_IID);
 
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_D0
@@ -2201,7 +2208,7 @@ java_lang_Class* NP_EXPORT
 npn_getJavaClass(np_handle* handle)
 {
     if (handle->userPlugin) {
-        NPIPlugin* userPluginClass = (NPIPlugin*)handle->userPlugin;
+        nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
         NPILiveConnectPlugin* lcPlugin;
         if (userPluginClass->QueryInterface(kLiveConnectPluginIID,
                                             (void**)&lcPlugin) != NS_NOINTERFACE) {
@@ -2298,8 +2305,8 @@ static XP_Bool
 np_IsLiveConnected(np_handle* handle)
 {
     if (handle->userPlugin) {
-        NPIPlugin* userPluginClass = (NPIPlugin*)handle->userPlugin;
-        NPILiveConnectPlugin* lcPlugin;
+        nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
+        nsILiveConnectPlugin* lcPlugin;
 
         if (userPluginClass->QueryInterface(kLiveConnectPluginIID,
                                             (void**)&lcPlugin) != NS_NOINTERFACE) {
@@ -2380,14 +2387,14 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
         TRACEMSG(("npglue.c: CallNPP_SetWindowProc"));
         if (instance->handle->userPlugin) {
             nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-            NPIPluginInstance* userInst = peerInst->GetUserInstance();
-            userInst->SetWindow((NPPluginWindow*)appWin);
+            nsIPluginInstance* userInst = peerInst->GetUserInstance();
+            userInst->SetWindow((nsPluginWindow*)appWin);
 
             // If this is the first time we're drawing this, then call
             // the plugin's Start() method.
             if (lo_struct && ! (lo_struct->objTag.ele_attrmask & LO_ELE_DRAWN)) {
-                NPPluginError err = userInst->Start();
-                if (err != NPPluginError_NoError) {
+                nsPluginError err = userInst->Start();
+                if (err != nsPluginError_NoError) {
                     np_delete_instance(instance);
                     return PR_FALSE;
                 }
@@ -2545,21 +2552,37 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
         /* invite the plugin */
         TRACEMSG(("npglue.c: CallNPP_NewProc"));
         if (handle->userPlugin) {
-            NPIPlugin* userPluginClass = (NPIPlugin*)handle->userPlugin;
+            nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
             nsPluginInstancePeer* peerInst = new nsPluginInstancePeer(npp);
             if (peerInst == NULL) {
                 err = NPERR_OUT_OF_MEMORY_ERROR;
             }
             else {
                 peerInst->AddRef();
-                NPIPluginInstance* userInst;
-                NPPluginError err2 = userPluginClass->NewInstance(peerInst, &userInst);
-                if (err2 == NPPluginError_NoError && userInst != NULL) {
+                nsIPluginInstance* userInst;
+#if 0
+                nsPluginError err2 = userPluginClass->NewInstance(peerInst, &userInst);
+                if (err2 == nsPluginError_NoError && userInst != NULL) {
                     npp->pdata = peerInst;
                     peerInst->SetUserInstance(userInst);
                     ndata->sdata = (NPSavedData*)userInst;
                     err = NPERR_NO_ERROR;
                 }
+#else
+                nsresult err2 = userPluginClass->CreateInstance(NULL, kPluginInstanceIID,
+                                                                (void**)&userInst);
+                if (err == NS_OK && userInst != NULL) {
+                    nsPluginError err3 = userInst->Initialize(peerInst);
+                    if (err3 == nsPluginError_NoError) {
+                        npp->pdata = peerInst;
+                        peerInst->SetUserInstance(userInst);
+                        ndata->sdata = (NPSavedData*)userInst;
+                        err = NPERR_NO_ERROR;
+                    }
+                    else
+                        err = NPERR_INVALID_INSTANCE_ERROR;
+                }
+#endif
                 else
                     err = NPERR_INVALID_INSTANCE_ERROR;
             }
@@ -2639,9 +2662,9 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
     // Finally, if it's a 5.0-style (C++) plugin, send it the Start message.
     // Do this before sending the mocha OnLoad message.
     if (handle->userPlugin && ndata->sdata) {
-        NPIPluginInstance* userInst = (NPIPluginInstance*)ndata->sdata;
-        NPPluginError err = userInst->Start();
-        if (err != NPPluginError_NoError) goto error;
+        nsIPluginInstance* userInst = (nsIPluginInstance*)ndata->sdata;
+        nsPluginError err = userInst->Start();
+        if (err != nsPluginError_NoError) goto error;
     }
     */
 
@@ -2745,16 +2768,16 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
     TRACEMSG(("npglue.c: CallNPP_NewStreamProc"));
     if (handle->userPlugin) {
         nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-        NPIPluginInstance* userInst = peerInst->GetUserInstance();
+        nsIPluginInstance* userInst = peerInst->GetUserInstance();
         nsPluginStreamPeer* peerStream = new nsPluginStreamPeer(urls, stream);
         if (peerStream == NULL) {
             /* XXX where's the error go? */
         }
         else {
             peerStream->AddRef();
-            NPIPluginStream* userStream;
-            NPPluginError err = userInst->NewStream(peerStream, &userStream);
-            if (err == NPPluginError_NoError && userStream != NULL) {
+            nsIPluginStream* userStream;
+            nsPluginError err = userInst->NewStream(peerStream, &userStream);
+            if (err == nsPluginError_NoError && userStream != NULL) {
                 peerStream->SetUserStream(userStream);
                 pstream->pdata = peerStream;
 
@@ -3530,7 +3553,7 @@ np_delete_instance(np_instance *instance)
             TRACEMSG(("npglue.c: CallNPP_DestroyProc"));
             if (np_is50StylePlugin(instance->handle)) {
                 nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-                NPIPluginInstance* userInst = peerInst->GetUserInstance();
+                nsIPluginInstance* userInst = peerInst->GetUserInstance();
 
                 userInst->SetWindow(NULL);
 
@@ -3816,14 +3839,14 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
                 TRACEMSG(("npglue.c: CallNPP_HandleEventProc"));
                 if (handle->userPlugin) {
                     nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                    NPIPluginInstance* userInst = peerInst->GetUserInstance();
+                    nsIPluginInstance* userInst = peerInst->GetUserInstance();
 
-                    // Note that the new NPPluginEvent struct is different from the
+                    // Note that the new nsPluginEvent struct is different from the
                     // old NPEvent (which is the argument passed in) so we have to
                     // translate. (Later we might fix the front end code to pass us 
                     // the new thing instead.)
                     NPEvent* oldEvent = (NPEvent*)event;
-                    NPPluginEvent newEvent;
+                    nsPluginEvent newEvent;
 #if defined(XP_MAC)
                     newEvent.event = oldEvent;
                     newEvent.window = window;
@@ -3929,8 +3952,8 @@ NPL_Print(NPEmbeddedApp *app, void *pdata)
 					TRACEMSG(("npglue.c: CallNPP_PrintProc(1)"));
                     if (handle->userPlugin) {
                         nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                        NPIPluginInstance* userInst = peerInst->GetUserInstance();
-                        userInst->Print((NPPluginPrint*)pdata);
+                        nsIPluginInstance* userInst = peerInst->GetUserInstance();
+                        userInst->Print((nsPluginPrint*)pdata);
 
                         
                     }
@@ -3947,8 +3970,8 @@ NPL_Print(NPEmbeddedApp *app, void *pdata)
 					TRACEMSG(("npglue.c: CallNPP_PrintProc(2)"));
                     if (handle->userPlugin) {
                         nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                        NPIPluginInstance* userInst = peerInst->GetUserInstance();
-                        userInst->Print((NPPluginPrint*)pdata);
+                        nsIPluginInstance* userInst = peerInst->GetUserInstance();
+                        userInst->Print((nsPluginPrint*)pdata);
                     }
                     else if (handle->f && ISFUNCPTR(handle->f->print)) {
                         CallNPP_PrintProc(handle->f->print, ndata->instance->npp, (NPPrint*)pdata);
@@ -4040,10 +4063,10 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
                    traversing ndata->sdata, but that scares me for
                    some reason. */
                 nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*) ndata->instance->npp->pdata;
-                NPIPluginInstance* userInst = peerInst->GetUserInstance();
+                nsIPluginInstance* userInst = peerInst->GetUserInstance();
 
-                NPPluginError err = userInst->Stop();
-                if (err == NPPluginError_NoError) {
+                nsPluginError err = userInst->Stop();
+                if (err == nsPluginError_NoError) {
                     /* XXX So I'm going out on a limb here and saying that
                        by keeping the plugin in a "cached" state, we
                        should pretty much not need to perturb much
@@ -4131,7 +4154,7 @@ static char*
 np_findTypeAttribute(LO_EmbedStruct* embed_struct)
 {
 	char* typeAttribute = NULL;
-	int i;
+	unsigned int i;
 
 	/* Look for the TYPE attribute */
 #ifdef OJI
@@ -4183,7 +4206,7 @@ np_FindHandleByType(const char* typeAttribute, np_handle* *resultingHandle,
 }
 
 // Used by OJI to load the Java VM plugin
-PR_IMPLEMENT(struct NPIPlugin*)
+PR_IMPLEMENT(struct nsIPlugin*)
 NPL_LoadPluginByType(const char* typeAttribute)
 {
     np_handle* handle = NULL;
