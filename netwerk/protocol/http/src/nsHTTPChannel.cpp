@@ -1128,8 +1128,14 @@ nsHTTPChannel::CheckCache()
     mCachedResponse->GetHeader(nsHTTPAtoms::Last_Modified,
                                getter_Copies(lastModified));
     if (!lastModified) {
-        doIfModifiedSince = PR_FALSE;
-        goto end;
+        LOG(("No Last-Lodified header sent, try using the Date header.\n"));
+        mCachedResponse->GetHeader(nsHTTPAtoms::Date,
+                                   getter_Copies(lastModified));
+        if (!lastModified) {
+            LOG(("BAD SERVER!!  No Date header sent... reloading the document.\n"));
+            doIfModifiedSince = PR_FALSE;
+            goto end;
+        }
     }
 
     // If the FORCE_VALIDATION flag is set, any cached data won't be used until
@@ -1205,11 +1211,6 @@ end:
         // Specify the need to validate this cache entry with the server.
         mCachedContentIsValid = PR_FALSE;
     }
-    else if (mCacheAccess & nsICache::ACCESS_WRITE)
-        // We have write access to the cache, but we don't need to go to the
-        // server to validate at this time, so just mark the cache entry as
-        // valid to allow others access to this cache entry.
-        mCacheEntry->MarkValid();
 
     LOG(("nsHTTPChannel::CheckCache [this=%x if-modified-since=%d"
         " cache-entry-is-valid=%d]\n",
@@ -1234,6 +1235,12 @@ nsHTTPChannel::ReadFromCache()
 
     LOG(("nsHTTPChannel::ReadFromCache [this=%x] "
          "Using cache copy for: %s\n", this, mRequest->Spec()));
+
+    if (mCacheAccess & nsICache::ACCESS_WRITE)
+        // We have write access to the cache, but we don't need to go to the
+        // server to validate at this time, so just mark the cache entry as
+        // valid in order to allow others access to this cache entry.
+        mCacheEntry->MarkValid();
 
     // Get a transport to the cached data...
     rv = mCacheEntry->GetTransport(getter_AddRefs(mCacheTransport));
