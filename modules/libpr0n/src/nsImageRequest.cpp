@@ -170,8 +170,8 @@ NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsISupports
   return NS_OK;
 }
 
-/* [noscript] void onDataAvailable (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect2 rect); */
-NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect)
+/* [noscript] void onDataAvailable (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect rect); */
+NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
 {
   if (mObserver)
     mObserver->OnDataAvailable(this, mContext, frame, rect);

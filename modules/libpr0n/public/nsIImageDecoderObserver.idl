@@ -56,7 +56,7 @@ interface nsIImageDecoderObserver : nsISupports
   /**
    * called when some part of the frame has new data in it
    */
-  [noscript] void onDataAvailable(in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect2 rect);
+  [noscript] void onDataAvailable(in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect rect);
 
   /**
    * called when a frame is finished decoding

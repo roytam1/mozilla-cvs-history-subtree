@@ -141,7 +141,6 @@ nsImageFrame::Destroy(nsIPresContext* aPresContext)
 #ifdef USE_IMG2
 #include "nsIImageContainer.h"
 #include "nsIImageLoader.h"
-#include "nsRect2.h"
 
 #endif
 
@@ -284,7 +283,7 @@ NS_IMETHODIMP nsImageFrame::OnStartFrame(nsIImageRequest *request, nsIPresContex
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect2 * rect)
+NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect * rect)
 {
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
@@ -294,7 +293,7 @@ NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresCon
 
   float p2t;
   aPresContext->GetPixelsToTwips(&p2t);
-  nsRect2 r(*rect);
+  nsRect r(*rect);
   r *= p2t; // convert to twips
 
   Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
@@ -911,20 +910,20 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 
 #ifdef USE_IMG2
         if (imgCon) {
-          nsPoint2 p(inner.x, inner.y);
+          nsPoint p(inner.x, inner.y);
 
 #define DONTPAINTEVERYTHING 1
 
 #ifdef DONTPAINTEVERYTHING
           inner.IntersectRect(inner, aDirtyRect);
-          nsRect2 r(inner.x, inner.y, inner.width, inner.height);
+          nsRect r(inner.x, inner.y, inner.width, inner.height);
 
           float t2p;
           aPresContext->GetTwipsToPixels(&t2p);
 
           r *= t2p;
 #else
-          nsRect2 r(0,0,0,0);
+          nsRect r(0,0,0,0);
           imgCon->GetWidth(&r.width);
           imgCon->GetHeight(&r.height);
 #endif
@@ -1491,7 +1490,7 @@ NS_IMETHODIMP nsImageListener::OnStartFrame(nsIImageRequest *request, nsISupport
   return mFrame->OnStartFrame(request, pc, frame);
 }
 
-NS_IMETHODIMP nsImageListener::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect)
+NS_IMETHODIMP nsImageListener::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnDataAvailable(request, pc, frame, rect);

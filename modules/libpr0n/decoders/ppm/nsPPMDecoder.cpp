@@ -33,7 +33,7 @@
 
 #include "nsIComponentManager.h"
 
-#include "nsRect2.h"
+#include "nsRect.h"
 
 NS_IMPL_ISUPPORTS2(nsPPMDecoder, nsIImageDecoder, nsIOutputStream)
 
@@ -245,7 +245,7 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
       PRUint8 *line = (PRUint8*)data + i*real_bpr;
       mFrame->SetImageData(line, real_bpr, (rownum++)*bpr);
 
-      nsRect2 r(0, rownum, width, 1);
+      nsRect r(0, rownum, width, 1);
       mObserver->OnDataAvailable(nsnull, nsnull, mFrame, &r);
 
 

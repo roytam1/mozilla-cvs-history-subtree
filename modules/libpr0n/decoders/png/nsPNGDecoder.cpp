@@ -34,7 +34,7 @@
 
 #include "nsIStreamObserver.h"
 
-#include "nsRect2.h"
+#include "nsRect.h"
 
 #include "nsMemory.h"
 
@@ -483,7 +483,7 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
       break;
     }
 
-    nsRect2 r(0, row_num, width, 1);
+    nsRect r(0, row_num, width, 1);
     decoder->mObserver->OnDataAvailable(nsnull, nsnull, decoder->mFrame, &r);
   }
 }

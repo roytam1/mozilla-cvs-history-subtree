@@ -113,7 +113,7 @@ public:
   NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsIPresContext *cx);
   NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
   NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect2 * rect);
+  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect * rect);
   NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
   NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
   NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
