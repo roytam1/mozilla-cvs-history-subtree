@@ -261,7 +261,7 @@ function ComposeMessage(type, format, folder, messageArray)
 		for (var i = 0; i < messageArray.length && i < 8; i ++)
 		{	
 			var messageUri = messageArray[i];
-            dump("XXX messageUri in ComposeMessage = " + messageUri + "\n");
+      //dump("XXX messageUri in ComposeMessage = " + messageUri + "\n");
 			//dump('i = '+ i);
 			//dump('\n');				
 			if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||

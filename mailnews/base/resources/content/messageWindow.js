@@ -274,8 +274,7 @@ function GetSelectedMessages()
 {
 	var messageArray = new Array(1);
 	var message = GetLoadedMessage();
-	if(message)
-	{
+	if(message) {
 		messageArray[0] = message;	
 	}
 	return messageArray;
@@ -297,17 +296,7 @@ function GetLoadedMsgFolder()
 
 function GetLoadedMessage()
 {
-	if(gCurrentMessageUri)
-	{
-		var messageResource = RDF.GetResource(gCurrentMessageUri);
-		if(messageResource)
-		{
-			var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-			return message;
-		}
-	}
-	return null;
-
+  return gCurrentMessageUri;
 }
 
 //Clear everything related to the current message. called after load start page.
