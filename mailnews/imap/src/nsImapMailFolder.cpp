@@ -101,6 +101,7 @@
 #include "nsIMimeHeaders.h"
 #include "nsIMsgMdnGenerator.h"
 #include <time.h>
+#include "nsIMsgFilterPlugin.h"
 
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -626,102 +627,127 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 NS_IMETHODIMP
 nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
 {
-  nsresult rv = NS_ERROR_NULL_POINTER;
-  PRBool selectFolder = PR_FALSE;
+    nsresult rv = NS_ERROR_NULL_POINTER;
+    PRBool selectFolder = PR_FALSE;
 
-  if (mFlags & MSG_FOLDER_FLAG_INBOX && !m_filterList)
-    rv = GetFilterList(msgWindow, getter_AddRefs(m_filterList));
+    if (mFlags & MSG_FOLDER_FLAG_INBOX && !m_filterList) {
+        rv = GetFilterList(msgWindow, getter_AddRefs(m_filterList));
+        // YYY rv ignored
 
-  if (m_filterList) {
-    nsCOMPtr<nsIMsgIncomingServer> server;
-    rv = GetServer(getter_AddRefs(server));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get server");
+        // Initialize filter plugins
+        // YYY should be moved somewhere else, should enumerate category
+        // rather than hard-coding contract-id
+        //
+        nsCOMPtr<nsIMsgFilterPlugin> filterPlugin = 
+            do_GetService(
+                "@mozilla.org/messenger/filter-plugin;1?name=junkmail",
+                &rv);
 
-    PRBool canFileMessagesOnServer = PR_TRUE;
-    if (server) {
-      rv = server->GetCanFileMessagesOnServer(&canFileMessagesOnServer);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to determine if we could file messages on this server");
+        if (NS_SUCCEEDED(rv)) {
+            rv = filterPlugin->Init();
+            if (NS_FAILED(rv)) {
+                // YYY use PR_LOG
+                NS_ERROR("Error initializing junkmail plugin");
+            }
+        } else {
+            NS_ERROR("Failed to get junkmail service");
+        }
+    }
+    if (m_filterList) { // YYY need to do this for spam-whacker too
+        nsCOMPtr<nsIMsgIncomingServer> server;
+        rv = GetServer(getter_AddRefs(server));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get server");
+
+        PRBool canFileMessagesOnServer = PR_TRUE;
+        if (server) {
+            rv = server->GetCanFileMessagesOnServer(
+                &canFileMessagesOnServer);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "failed to determine if we could file messages on this server");
+        }
+
+        // the mdn filter is for filing return receipts into the sent folder
+        // some servers (like AOL mail servers)
+        // can't file to the sent folder, so we don't add the filter for those servers
+        if (canFileMessagesOnServer) {
+            rv = server->ConfigureTemporaryReturnReceiptsFilter(
+                m_filterList);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "failed to add MDN filter");
+        }
     }
 
-    // the mdn filter is for filing return receipts into the sent folder
-    // some servers (like AOL mail servers)
-    // can't file to the sent folder, so we don't add the filter for those servers
-    if (canFileMessagesOnServer) {
-      rv = server->ConfigureTemporaryReturnReceiptsFilter(m_filterList);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to add MDN filter");
-    }
-  }
+    nsCOMPtr<nsIImapService> imapService(do_GetService(kCImapService, &rv)); 
 
-  nsCOMPtr<nsIImapService> imapService(do_GetService(kCImapService, &rv)); 
+    if (NS_FAILED(rv)) return rv;
 
-  if (NS_FAILED(rv)) return rv;
+    selectFolder = PR_TRUE;
 
-  selectFolder = PR_TRUE;
+    PRBool isServer;
+    rv = GetIsServer(&isServer);
+    if (NS_SUCCEEDED(rv) && isServer)
+        {
+            if (!m_haveDiscoveredAllFolders)
+                {
+                    PRBool hasSubFolders = PR_FALSE;
+                    GetHasSubFolders(&hasSubFolders);
+                    if (!hasSubFolders)
+                        {
+                            rv = CreateClientSubfolderInfo("Inbox", kOnlineHierarchySeparatorUnknown,0, PR_FALSE);
+                            if (NS_FAILED(rv)) 
+                                return rv;
+                        }
+                    m_haveDiscoveredAllFolders = PR_TRUE;
+                }
+            selectFolder = PR_FALSE;
+        }
+    rv = GetDatabase(msgWindow);
 
-  PRBool isServer;
-  rv = GetIsServer(&isServer);
-  if (NS_SUCCEEDED(rv) && isServer)
-  {
-      if (!m_haveDiscoveredAllFolders)
-      {
-          PRBool hasSubFolders = PR_FALSE;
-          GetHasSubFolders(&hasSubFolders);
-          if (!hasSubFolders)
-          {
-              rv = CreateClientSubfolderInfo("Inbox", kOnlineHierarchySeparatorUnknown,0, PR_FALSE);
-              if (NS_FAILED(rv)) 
-                  return rv;
-          }
-          m_haveDiscoveredAllFolders = PR_TRUE;
-      }
-      selectFolder = PR_FALSE;
-  }
-  rv = GetDatabase(msgWindow);
-
-  PRBool canOpenThisFolder = PR_TRUE;
-  GetCanIOpenThisFolder(&canOpenThisFolder);
+    PRBool canOpenThisFolder = PR_TRUE;
+    GetCanIOpenThisFolder(&canOpenThisFolder);
   
-  PRBool hasOfflineEvents = PR_FALSE;
-  GetFlag(MSG_FOLDER_FLAG_OFFLINEEVENTS, &hasOfflineEvents);
+    PRBool hasOfflineEvents = PR_FALSE;
+    GetFlag(MSG_FOLDER_FLAG_OFFLINEEVENTS, &hasOfflineEvents);
 
-  if (hasOfflineEvents && !WeAreOffline())
-  {
-    nsImapOfflineSync *goOnline = new nsImapOfflineSync(msgWindow, this, this);
-    if (goOnline)
-    {
-    	return goOnline->ProcessNextOperation();
-    }
-  }
-  if (!canOpenThisFolder) 
-    selectFolder = PR_FALSE;
-  // don't run select if we're already running a url/select...
-  if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
-  {
-    nsCOMPtr <nsIEventQueue> eventQ;
-    nsCOMPtr<nsIEventQueueService> pEventQService = 
-             do_GetService(kEventQueueServiceCID, &rv); 
-    if (NS_SUCCEEDED(rv) && pEventQService)
-      pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
-                        getter_AddRefs(eventQ));
-    rv = imapService->SelectFolder(eventQ, this, this, msgWindow, nsnull);
-    if (NS_SUCCEEDED(rv))
-      m_urlRunning = PR_TRUE;
-    else if ((rv == NS_MSG_ERROR_OFFLINE) || (rv == NS_BINDING_ABORTED))
-    {
-      rv = NS_OK;
-      NotifyFolderEvent(mFolderLoadedAtom);
-    }
-  }
-  else if (NS_SUCCEEDED(rv))  // tell the front end that the folder is loaded if we're not going to 
-  {                           // actually run a url.
-    if (!m_urlRunning)        // if we're already running a url, we'll let that one send the folder loaded
-      NotifyFolderEvent(mFolderLoadedAtom);
-    if (msgWindow) // don't do this w/o a msgWindow, since it asserts annoyingly
-      rv = AutoCompact(msgWindow);  
-    NS_ENSURE_SUCCESS(rv,rv);
-  }
+    if (hasOfflineEvents && !WeAreOffline())
+        {
+            nsImapOfflineSync *goOnline = new nsImapOfflineSync(msgWindow,
+                                                                this, this);
+            if (goOnline)
+                {
+                    return goOnline->ProcessNextOperation();
+                }
+        }
+    if (!canOpenThisFolder) 
+        selectFolder = PR_FALSE;
+    // don't run select if we're already running a url/select...
+    if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
+        {
+            nsCOMPtr <nsIEventQueue> eventQ;
+            nsCOMPtr<nsIEventQueueService> pEventQService = 
+                do_GetService(kEventQueueServiceCID, &rv); 
+            if (NS_SUCCEEDED(rv) && pEventQService)
+                pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+                                                    getter_AddRefs(eventQ));
+            rv = imapService->SelectFolder(eventQ, this, this, msgWindow,
+                                           nsnull);
+            if (NS_SUCCEEDED(rv))
+                m_urlRunning = PR_TRUE;
+            else if ((rv == NS_MSG_ERROR_OFFLINE) ||
+                     (rv == NS_BINDING_ABORTED))
+                {
+                    rv = NS_OK;
+                    NotifyFolderEvent(mFolderLoadedAtom);
+                }
+        }
+    else if (NS_SUCCEEDED(rv))  // tell the front end that the folder is loaded if we're not going to 
+        {                           // actually run a url.
+            if (!m_urlRunning)        // if we're already running a url, we'll let that one send the folder loaded
+                NotifyFolderEvent(mFolderLoadedAtom);
+            if (msgWindow) // don't do this w/o a msgWindow, since it asserts annoyingly
+                rv = AutoCompact(msgWindow);  
+            NS_ENSURE_SUCCESS(rv,rv);
+        }
 
-  return rv;
+    return rv;
 }
 
 
@@ -2432,8 +2458,6 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
     // stand-alone biff about the new high water mark
     if (m_performingBiff)
     {
-      PRInt32 numRecentMessages = 0;
-
       if (keysToFetch.GetSize() > 0)
       {
         // We must ensure that the server knows that we are performing biff.
@@ -2620,6 +2644,32 @@ NS_IMETHODIMP nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
             }
             if (!m_moveCoalescer)
               m_moveCoalescer = new nsImapMoveCoalescer(this, msgWindow);
+
+            // YYY should enumerate category rather than hard-coding
+            // contract-id?  Probably depends on disposition.
+            //
+            nsCOMPtr<nsIMsgFilterPlugin> filterPlugin = do_GetService(
+                "@mozilla.org/messenger/filter-plugin;1?name=spam-whacker",
+                &rv);
+
+            // Generate a bogus XPCOM array and call the filter. The
+            // array is generated by wrapping the strings in the
+            // headers.  Yuck.  This only works because it's an |in|
+            // param and it still violates the rules of |string|.
+            //
+            if (NS_SUCCEEDED(rv)) {
+                const char *bogusXpcomHdrsArray[500]; // YYY should be dynamic
+                PRUint32 i=0; 
+                const char *hPtr;
+                for (hPtr = headers; hPtr < headers + headersSize; 
+                     hPtr = strchr(hPtr, 0) + 1) {
+                    bogusXpcomHdrsArray[i++] = hPtr;
+                }
+
+                rv = filterPlugin->FilterMsgByHeaders(i, bogusXpcomHdrsArray,
+                                                      this, msgWindow);
+            }
+
             m_filterList->ApplyFiltersToHdr(nsMsgFilterType::InboxRule, newMsgHdr, this, mDatabase, 
                                             headers, headersSize, this, msgWindow);
           }

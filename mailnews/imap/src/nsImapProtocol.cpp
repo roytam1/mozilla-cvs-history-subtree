@@ -2653,6 +2653,7 @@ nsImapProtocol::FetchMessage(const char * messageIds,
         PRBool aolImapServer = ((server_capabilityFlags & kAOLImapCapability) != 0);
         PRBool downloadAllHeaders = PR_FALSE; // we don't currently ever need to do this.
 //        GetShouldDownloadAllHeaders(&downloadAllHeaders); // checks if we're filtering on "any header"
+        downloadAllHeaders = PR_TRUE;
         if (!downloadAllHeaders)  // if it's ok -- no filters on any header, etc.
         {
           char *headersToDL = nsnull;
