@@ -370,7 +370,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     ChildAt(aNode, 0, aNextNode);
     NS_ENSURE_TRUE(aNextNode, NS_ERROR_FAILURE);
 
-    aIndexArray.AppendElement((void *)1);
+    aIndexArray.AppendElement((void *)0);
 
     aDirection = 1;
   } else if (aDirection > 0) {
@@ -390,7 +390,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     if (count) {
       PRInt32 indx = (PRInt32)aIndexArray.ElementAt(count - 1);
 
-      ChildAt(parent, indx, aNextNode);
+      ChildAt(parent, indx + 1, aNextNode);
 
       if (aNextNode)
         aIndexArray.ReplaceElementAt((void *)(indx + 1), count - 1);
@@ -403,7 +403,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
         ChildAt(parent, indx + 1, aNextNode);
 
         if (aNextNode)
-          aIndexArray.AppendElement((void *)(indx + 2));
+          aIndexArray.AppendElement((void *)(indx + 1));
       }
     }
 
