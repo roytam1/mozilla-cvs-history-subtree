@@ -3186,6 +3186,10 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIPresShell*        aPresS
 
   ConstructFrame(aPresShell, aPresContext, state, aDocElement, aParentFrame, frameItems);
   aNewTableFrame = frameItems.childList;
+  if (!aNewTableFrame) {
+    NS_WARNING("cannot get table contentFrame");
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
@@ -3272,6 +3276,8 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
           
 */    
 
+  aNewFrame = nsnull;
+
   if (!mTempFrameTreeState)
     aPresShell->CaptureHistoryState(getter_AddRefs(mTempFrameTreeState));
 
@@ -3340,12 +3346,16 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
   nsIFrame* contentFrame = nsnull;
   PRBool isBlockFrame = PR_FALSE;
+  nsresult rv;
 
   if (docElemIsTable) {
       // if the document is a table then just populate it.
-      ConstructDocElementTableFrame(aPresShell, aPresContext, aDocElement, 
+      rv = ConstructDocElementTableFrame(aPresShell, aPresContext, aDocElement, 
                                     aParentFrame, contentFrame,
                                     aState.mFrameState);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
       contentFrame->GetStyleContext(getter_AddRefs(styleContext));
   } else {
         // otherwise build a box or a block
@@ -3353,12 +3363,18 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         PRInt32 nameSpaceID;
         if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
             nameSpaceID == nsXULAtoms::nameSpaceID) {
-          NS_NewBoxFrame(aPresShell, &contentFrame, PR_TRUE);
+          rv = NS_NewBoxFrame(aPresShell, &contentFrame, PR_TRUE);
+          if (NS_FAILED(rv)) {
+            return rv;
+          }
         }
         else
 #endif 
         {
-          NS_NewDocumentElementFrame(aPresShell, &contentFrame);
+          rv = NS_NewDocumentElementFrame(aPresShell, &contentFrame);
+          if (NS_FAILED(rv)) {
+            return rv;
+          }
           isBlockFrame = PR_TRUE;
 
           // Since we always create a block frame, we need to make sure that the 
