@@ -319,14 +319,13 @@ nsresult nsAbQueryLDAPMessageListener::OnLDAPMessageSearchEntry (nsILDAPMessage 
         if (n.EqualsWithConversion ("card:URI"))
         {
             // Meta property
-            //
-
             nsXPIDLString dn;
             rv = aMessage->GetDn (getter_Copies (dn));
             NS_ENSURE_SUCCESS(rv, rv);
 
             nsXPIDLCString uri;
-            rv = mDirectoryQuery->CreateCardURI (mUrl, NS_ConvertUCS2toUTF8(dn).get(), getter_Copies (uri));
+            NS_ASSERTION(0, "remove me?");
+            //rv = mDirectoryQuery->CreateCardURI (mUrl, NS_ConvertUCS2toUTF8(dn).get(), getter_Copies (uri));
             NS_ENSURE_SUCCESS(rv, rv);
             NS_ConvertUTF8toUCS2 v (uri.get ());
 

@@ -735,3 +735,9 @@ NS_IMETHODIMP nsAbCardProperty::EditCardToDatabase(const char *uri)
 {
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+NS_IMETHODIMP nsAbCardProperty::Equals(nsIAbCard *card, PRBool *result)
+{
+  *result = (card == this);
+  return NS_OK;
+}

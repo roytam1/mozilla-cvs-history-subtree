@@ -53,8 +53,8 @@ public:
 	nsAbMDBCardProperty(void);
 	virtual ~nsAbMDBCardProperty();
 
-	// nsIAbCard methods
-	NS_IMETHODIMP EditCardToDatabase(const char *uri);
+	NS_IMETHOD EditCardToDatabase(const char *uri);
+  NS_IMETHOD Equals(nsIAbCard *card, PRBool *result);
 
 protected:
 	nsresult GetCardDatabase(const char *uri);

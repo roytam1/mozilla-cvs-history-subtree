@@ -272,4 +272,27 @@ nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
 	return rv;
 }
 
+NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
+{
+  nsresult rv;
+
+  if (this == card) {
+    *result = PR_TRUE;
+    return NS_OK;
+  }
+
+  nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 dbTableID;
+  rv = mdbcard->GetDbTableID(&dbTableID);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 dbRowID;
+  rv = mdbcard->GetDbRowID(&dbRowID);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  *result = ((m_dbTableID == dbTableID) && (m_dbRowID == dbRowID));
+  return NS_OK;
+}
 
