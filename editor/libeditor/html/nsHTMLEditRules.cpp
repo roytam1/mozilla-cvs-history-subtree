@@ -4098,7 +4098,7 @@ nsHTMLEditRules::WillAlign(nsISelection *aSelection,
     if (nsHTMLEditUtils::SupportsAlignAttr(curNode))
     {
       nsCOMPtr<nsIDOMElement> curElem = do_QueryInterface(curNode);
-      res = AlignBlock(curElem, alignType, PR_FALSE);
+      res = AlignBlock(curElem, alignType, PR_TRUE);
       if (NS_FAILED(res)) return res;
       // clear out curDiv so that we don't put nodes after this one into it
       curDiv = 0;
