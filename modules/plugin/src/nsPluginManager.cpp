@@ -1031,26 +1031,32 @@ static NS_DEFINE_CID(kFileUtilitiesCID, NS_FILEUTILITIES_CID);
 extern "C" nsresult
 np_RegisterPluginMgr(void)
 {
+    nsresult err;
     nsPluginFactory* pluginFact = new nsPluginFactory();
     if (pluginFact == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
 #if 0
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 #endif
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     return NS_OK;
 }
