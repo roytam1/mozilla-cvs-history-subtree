@@ -691,6 +691,21 @@ FrameManager::InsertFrames(nsIPresContext* aPresContext,
                            nsIFrame*       aPrevFrame,
                            nsIFrame*       aFrameList)
 {
+#ifdef IBMBIDI
+  if (aPrevFrame) {
+    // Insert aFrameList after the last bidi continuation of aPrevFrame.
+    nsIFrame* nextBidi;
+    for (; ;) {
+      aPrevFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
+                                  (void**) &nextBidi);
+      if (!nextBidi) {
+        break;
+      }
+      aPrevFrame = nextBidi;
+    }
+  }
+#endif // IBMBIDI
+
   return aParentFrame->InsertFrames(aPresContext, aPresShell, aListName,
                                     aPrevFrame, aFrameList);
 }

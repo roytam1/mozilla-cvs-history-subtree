@@ -2419,11 +2419,13 @@ PRBool
 nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
                                        nscoord* aDeltaWidth)
 {
+#ifndef IBMBIDI
 // XXX what about NS_STYLE_DIRECTION_RTL?
   if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
     *aDeltaWidth = 0;
     return PR_TRUE;
   }
+#endif
 
   PerFrameData* pfd = psd->mFirstFrame;
   if (!pfd) {
@@ -2653,6 +2655,13 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
   }
   availWidth -= psd->mLeftEdge;
   nscoord remainingWidth = availWidth - aLineBounds.width;
+#ifdef IBMBIDI
+  if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
+    // This is to ensure proper indentation (e.g. of list items)
+    remainingWidth += aLineBounds.x;
+  }
+#endif // IBMBIDI
+
 #ifdef NOISY_HORIZONTAL_ALIGN
     nsFrame::ListTag(stdout, mBlockReflowState->frame);
     printf(": availWidth=%d lineWidth=%d delta=%d\n",
@@ -2660,14 +2669,6 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
 #endif
   if (remainingWidth > 0) {
     nscoord dx = 0;
-#ifdef IBMBIDI
-    PerFrameData* lastPfd = psd->mLastFrame;
-    PerFrameData* bulletPfd = nsnull;
-    if (lastPfd->GetFlag(PFD_ISBULLET) ) {
-      bulletPfd = lastPfd;
-      lastPfd = lastPfd->mPrev;
-    }
-#endif // IBMBIDI
     switch (mTextAlign) {
       case NS_STYLE_TEXT_ALIGN_DEFAULT:
         if (NS_STYLE_DIRECTION_LTR == psd->mDirection) {
@@ -2715,8 +2716,17 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         break;
     }
 #ifdef IBMBIDI
+    PerFrameData* lastPfd = psd->mLastFrame;
+    PerFrameData* bulletPfd = nsnull;
+
+    if (lastPfd->GetFlag(PFD_ISBULLET)
+        && (NS_STYLE_DIRECTION_RTL == psd->mDirection) ) {
+      bulletPfd = lastPfd;
+      lastPfd = lastPfd->mPrev;
+    }
+    PRUint32 maxX = lastPfd->mBounds.x + lastPfd->mBounds.width + dx;
     PRBool visualRTL = PR_FALSE;
-    
+
     if ( (NS_STYLE_DIRECTION_RTL == psd->mDirection)
         && (!psd->mChangedFrameDirection) ) {
       psd->mChangedFrameDirection = PR_TRUE;
@@ -2726,8 +2736,13 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         return PR_FALSE;
       }
       mPresContext->IsVisualMode(visualRTL);
+
+      if (bulletPfd) {
+        bulletPfd->mBounds.x += maxX;
+        bulletPfd->mFrame->SetRect(mPresContext, bulletPfd->mBounds);
+      }
     }
-    if ( (0 != dx) || visualRTL) {
+    if ( (0 != dx) || (visualRTL) ) {
 #else
     if (0 != dx) {
 #endif // IBMBIDI
@@ -2737,44 +2752,24 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         return PR_FALSE;
       }
 
-      PerFrameData* pfd = 
+      PerFrameData* pfd = psd->mFirstFrame;
 #ifdef IBMBIDI
-        (visualRTL) ? lastPfd :
-#endif // IBMBIDI
-        psd->mFirstFrame;
-#ifdef IBMBIDI
-      aLineBounds.width += dx;
-
-      if (bulletPfd) {
-        if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
-          dx -= bulletPfd->mBounds.width;
-        }
-      }
       while ( (nsnull != pfd) && (bulletPfd != pfd) ) {
 #else
       while (nsnull != pfd) {
 #endif // IBMBIDI
         pfd->mBounds.x += dx;
-        pfd->mFrame->SetRect(mPresContext, pfd->mBounds);
 #ifdef IBMBIDI
-        if (visualRTL)
-          pfd = pfd->mPrev;
-        else
+        if (visualRTL) {
+          maxX = pfd->mBounds.x = maxX - pfd->mBounds.width;
+        }
 #endif // IBMBIDI
+        pfd->mFrame->SetRect(mPresContext, pfd->mBounds);
         pfd = pfd->mNext;
       }
-#ifndef IBMBIDI
       aLineBounds.width += dx;
-#endif
     }
-
-#ifdef IBMBIDI
-    if (bulletPfd && (NS_STYLE_DIRECTION_RTL == psd->mDirection) ) {
-      bulletPfd->mBounds.x = aLineBounds.x + aLineBounds.width
-        - bulletPfd->mBounds.width;
-      bulletPfd->mFrame->SetRect(mPresContext, bulletPfd->mBounds);
-    }
-#else
+#ifndef IBMBIDI
     if ((NS_STYLE_DIRECTION_RTL == psd->mDirection) &&
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;

@@ -36,7 +36,7 @@ class nsBidiPresUtils {
 public:
   nsBidiPresUtils();
   ~nsBidiPresUtils();
-  PRBool IsSuccessful(void);
+  PRBool IsSuccessful(void) const;
   nsresult Resolve(nsIPresContext* aPresContext,
                    nsIFrame*       aBlockFrame,
                    nsIFrame*       aFirstChild);
@@ -61,24 +61,15 @@ private:
                    PRBool&         aBidiEnabled);
   void RepositionInlineFrames(nsIPresContext* aPresContext,
                               nsIFrame*       aFirstChild,
-                              PRInt32         aChildCount);
+                              PRInt32         aChildCount) const;
   void RepositionContainerFrame(nsIPresContext* aPresContext,
                                 nsIFrame*       aContainer,
                                 PRInt32&        aMinX,
-                                PRInt32&        aMaxX);
-  nsresult CreateBidiContinuation(nsIPresContext* aPresContext,
-                                  nsIContent*     aContent,
-                                  nsIFrame*       aFrame,
-                                  nsIFrame**      aNewFrame);
-  PRBool RemoveBidiContinuation(nsIPresContext* aPresContext,
-                                nsIFrame*       aFrame,
-                                nsIFrame*       aNextFrame);
-  void AdjustEmbeddingLevel(nsIFrame* aFrame,
-                            PRUint8&  aEmbeddingLevel);
+                                PRInt32&        aMaxX) const;
   void CalculateTextClass(PRInt32  aLimit,
                           PRInt32& aOffset,
                           PRUint8& aTextClass,
-                          PRUint8& aPrevTextClass);
+                          PRUint8& aPrevTextClass) const;
   nsAutoString    mBuffer;
   nsVoidArray     mLogicalFrames;
   nsVoidArray     mVisualFrames;

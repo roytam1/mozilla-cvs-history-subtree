@@ -1924,7 +1924,6 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
                                      level & 1,  isBidiSystem);
       }
     }
-	
     if (0 != textLength) { // textLength might change due to the bidi formattimg
 #endif // IBMBIDI
     if (!displaySelection || !isSelected ) //draw text normally
@@ -1978,8 +1977,8 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
 #ifdef IBMBIDI // Simon - display substrings RTL in RTL frame
         nscoord FrameWidth = 0;
         if (isRTL)
-            if (NS_SUCCEEDED(aRenderingContext.GetWidth(text, textLength, FrameWidth)))
-                currentX = dx + FrameWidth;
+          if (NS_SUCCEEDED(aRenderingContext.GetWidth(text, textLength, FrameWidth)))
+            currentX = dx + FrameWidth;
 #endif
         while (!iter.IsDone())
         {
@@ -2675,15 +2674,16 @@ nsTextFrame::PaintAsciiText(nsIPresContext* aPresContext,
     text = frag->Get1b() + mContentOffset;
     textLength = mContentLength;
 
-#ifdef IBMBIDI
-    nsIFrame* nextInFlow;
-    GetNextInFlow(&nextInFlow);
-    // Due to the Bidi processing, this whitespace may not be leading.
-    // Skip it only at the end of line or if it has no logical continuation
-    if (nextInFlow || textLength == frag->GetLength() )
-#endif // IBMBIDI
     // See if we should skip leading whitespace
     if (0 != (mState & TEXT_SKIP_LEADING_WS)) {
+#ifdef IBMBIDI
+      // Skip whitespaces only if this frame is not a bidi continuation or has prev-in-flow
+      nsIFrame *frame = this;
+      if (mContentOffset > 0) {
+        GetPrevInFlow(&frame);
+      }
+      if (frame)
+#endif // IBMBIDI
       while ((textLength > 0) && XP_IS_SPACE(*text)) {
         text++;
         textLength--;
@@ -3931,7 +3931,7 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
       PRInt32 start, end;
       nextBidi->GetOffsets(start, end);
 #ifdef DEBUG
-      NS_ASSERTION(start > mContentOffset, "illegal content offset and length");
+      NS_ASSERTION(start > mContentOffset, "illegal content offset");
 #endif
       mContentLength = PR_MAX(1, start - mContentOffset);
     }
@@ -3962,18 +3962,18 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
                           &wasTransformed, textRun.mNumSegments == 0);
 #ifdef IBMBIDI
     if (nextBidi) {
-      PRInt32 extraLength = (aTextData.mOffset + textRun.mTotalNumChars + contentLen)
-            - (startingOffset + mContentLength);
-      if (extraLength > 0) {
-        contentLen -= extraLength;
-        wordLen = PR_MAX(0, wordLen - extraLength);
+      mContentLength -= contentLen;
+
+      if (mContentLength < 0) {
+        contentLen += mContentLength;
+        wordLen = PR_MIN(wordLen, contentLen);
         done = PR_TRUE;
         if (!contentLen || !wordLen) {
           bp2 = nsnull;
           wasTransformed = PR_FALSE;
         }
       }
-      else if (0 == extraLength) {
+      else if (0 == mContentLength) {
         done = PR_TRUE;
       }
     }
@@ -4049,11 +4049,7 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
         // a transformation of the text
         mState |= TEXT_WAS_TRANSFORMED;
       }
-      else if (textRun.IsBuffering()
-#ifdef IBMBIDI
-          || (bidiEnabled && mContentLength > 0)
-#endif // IBMBIDI
-        ) {
+      else if (textRun.IsBuffering()) {
         // Add a whitespace segment
         textRun.AddSegment(wordLen, contentLen, PR_TRUE);
         continue;
@@ -4421,7 +4417,7 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   // Return our reflow status
   nsReflowStatus rs = (aTextData.mOffset == contentLength)
 #ifdef IBMBIDI
-      || ( (nextBidi) && (mContentLength == aTextData.mOffset - startingOffset) )
+      || ( (nextBidi) && (0 >= mContentLength) )
 #endif // IBMBIDI
 
     ? NS_FRAME_COMPLETE

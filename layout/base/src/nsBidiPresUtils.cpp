@@ -81,10 +81,124 @@ nsBidiPresUtils::~nsBidiPresUtils()
 }
 
 PRBool
-nsBidiPresUtils::IsSuccessful()
+nsBidiPresUtils::IsSuccessful() const
 { 
   return NS_SUCCEEDED(mSuccess); 
 }
+
+/* Some helper methods for Resolve() */
+
+static nsresult
+CreateBidiContinuation(nsIPresContext* aPresContext,
+                       nsIContent*     aContent,
+                       nsIFrame*       aFrame,
+                       nsIFrame**      aNewFrame)
+{
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+
+  *aNewFrame = nsnull;
+
+  NS_PRECONDITION(aFrame, "null ptr");
+
+  nsIFrame* parent;
+
+  nsCOMPtr<nsIPresShell>   presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell) );
+
+  NS_NewContinuingTextFrame(presShell, aNewFrame);
+  if (!(*aNewFrame) ) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  nsCOMPtr<nsIStyleContext> styleContext;
+  aFrame->GetStyleContext(getter_AddRefs(styleContext) );
+
+  aFrame->GetParent(&parent);
+
+  (*aNewFrame)->Init(aPresContext, aContent, parent, styleContext, nsnull);
+
+  // XXX: TODO: Instead, create and insert entire frame list
+  (*aNewFrame)->SetNextSibling(nsnull);
+
+  // The list name nsLayoutAtoms::nextBidi would indicate we don't want reflow
+  parent->InsertFrames(aPresContext, *presShell, nsLayoutAtoms::nextBidi,
+                       aFrame, *aNewFrame);
+
+  aFrame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, *aNewFrame);
+
+  return NS_OK;
+}
+
+static PRBool
+RemoveBidiContinuation(nsIPresContext* aPresContext,
+                       nsIFrame*       aFrame,
+                       nsIFrame*       aNextFrame)
+{
+  nsIFrame* frame;
+  PRBool    rv = PR_FALSE;
+
+  if (aFrame && aNextFrame) {
+    nsIFrame* prevInFlow;
+    nsIFrame* parent;
+
+    nsCOMPtr<nsIPresShell>   presShell;
+    aPresContext->GetShell(getter_AddRefs(presShell) );
+
+    nsCOMPtr<nsIFrameManager> frameManager;
+    presShell->GetFrameManager(getter_AddRefs(frameManager) );
+    if (frameManager) {
+      aFrame->GetParent(&parent);
+      for (frame = aNextFrame; frame; frame = aNextFrame) {
+        // find the first next bidi frame, which is not next in flow for its prev bidi
+        do {
+          nsIFrame* nextFrame = aNextFrame;
+          nextFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
+                                     (void**) &aNextFrame);
+          if (!aNextFrame) {
+            break;
+          }
+          aNextFrame->GetPrevInFlow(&prevInFlow);
+        } while (prevInFlow);
+
+      // The list name nsLayoutAtoms::nextBidi would indicate we don't want reflow
+        parent->RemoveFrame(aPresContext, *presShell, nsLayoutAtoms::nextBidi, frame);
+        rv = PR_TRUE;
+      } // for
+      frame = aFrame;
+      // Remove nextBidi property, associated with the current frame
+      // and with all of its prev in flow
+      do {
+        frameManager->RemoveFrameProperty(frame, nsLayoutAtoms::nextBidi);
+        frame->GetPrevInFlow(&frame);
+      } while (frame);
+
+    } // if (frameManager)
+  } // if (frame && aNextFrame)
+  return rv;
+}
+
+static void
+AdjustEmbeddingLevel(nsIFrame* aFrame,
+                     PRUint8&  aEmbeddingLevel)
+{
+  const nsStyleText* text;
+  aFrame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&) text);
+  
+  if (NS_STYLE_UNICODE_BIDI_OVERRIDE == text->mUnicodeBidi) {
+    const nsStyleDisplay* display;
+
+    aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+          
+    if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
+      // ensure embedding level is odd
+      aEmbeddingLevel = (aEmbeddingLevel - 1) | 0x01;
+    }
+    else { // if (NS_STYLE_DIRECTION_LTR == display->mDirection)
+      // ensure embedding level is even
+      aEmbeddingLevel &= ~0x01;
+    }
+  }
+}
+/*************************************/
 
 /**
  *  Make Bidi engine calculate embedding levels of the frames.
@@ -249,12 +363,12 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
             }
             removedContinuation = RemoveBidiContinuation(aPresContext, frame, nextBidi);
             if (removedContinuation) {
+              if (runLength <= 0) {
+                break;
+              }
               frame->GetNextSibling(&frame);
               if (frame) {
                 frame->FirstChild(aPresContext, nsnull, &frame);
-              }
-              if (runLength <= 0) {
-                break;
               }
             }
           }
@@ -457,13 +571,12 @@ nsBidiPresUtils::Reorder(nsIPresContext* aPresContext,
   nsCRT::zero(mLevels, sizeof(PRUint8) * mArraySize);
 
   nsIFrame* frame;
-  PRInt32 i;
-  void *level;
+  PRInt32   i;
+  void*     level;
 
   for (i = 0; i < count; i++) {
     frame = (nsIFrame*) (mLogicalFrames[i]);
-    frame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                           &level); // don't want to pass &mLevels[i] itself
+    frame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
     mLevels[i] = (PRUint8)level;
   }
   if (!mIndexMap) {
@@ -505,7 +618,7 @@ nsBidiPresUtils::Reorder(nsIPresContext* aPresContext,
 void
 nsBidiPresUtils::RepositionInlineFrames(nsIPresContext* aPresContext,
                                         nsIFrame*       aFirstChild,
-                                        PRInt32         aChildCount)
+                                        PRInt32         aChildCount) const
 {
   PRInt32 count = mVisualFrames.Count();
   if (count < 2) {
@@ -522,14 +635,14 @@ nsBidiPresUtils::RepositionInlineFrames(nsIPresContext* aPresContext,
   if (frame != aFirstChild) {
     aFirstChild->GetOrigin(origin);
     rect.x = origin.x;
-    frame->SetRect(aPresContext, (const nsRect &) rect);
+    frame->SetRect(aPresContext, rect);
   }
 
   for (i = 1; i < count; i++) {
     frame = (nsIFrame*) (mVisualFrames[i]);
     frame->GetRect(nextRect);
     nextRect.x = rect.x + rect.width;
-    frame->SetRect(aPresContext, (const nsRect &) nextRect);
+    frame->SetRect(aPresContext, nextRect);
     rect = nextRect;
   } // for
   // Now adjust inline container frames.
@@ -562,7 +675,7 @@ void
 nsBidiPresUtils::RepositionContainerFrame(nsIPresContext* aPresContext,
                                           nsIFrame* aContainer,
                                           PRInt32& aMinX,
-                                          PRInt32& aMaxX)
+                                          PRInt32& aMaxX) const
 {
   nsIFrame* frame;
   nsIFrame* firstChild;
@@ -595,7 +708,7 @@ nsBidiPresUtils::RepositionContainerFrame(nsIPresContext* aPresContext,
     aContainer->GetRect(rect);
     rect.x = minX;
     rect.width = maxX - minX;
-    aContainer->SetRect(aPresContext, (const nsRect &) rect);
+    aContainer->SetRect(aPresContext, rect);
   }
 
   // Now adjust all the kids (kid's coordinates are relative to the parent's)
@@ -675,124 +788,11 @@ nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
   return rv;
 }
 
-/* Some helper methods for Resolve() */
-
-nsresult
-nsBidiPresUtils::CreateBidiContinuation(nsIPresContext* aPresContext,
-                                        nsIContent*     aContent,
-                                        nsIFrame*       aFrame,
-                                        nsIFrame**      aNewFrame)
-{
-  NS_PRECONDITION(aNewFrame, "null OUT ptr");
-
-  *aNewFrame = nsnull;
-
-  NS_PRECONDITION(aFrame, "null ptr");
-
-  nsIFrame* parent;
-
-  nsCOMPtr<nsIPresShell>   presShell;
-  aPresContext->GetShell(getter_AddRefs(presShell) );
-
-  NS_NewContinuingTextFrame(presShell, aNewFrame);
-  if (!(*aNewFrame) ) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  nsCOMPtr<nsIStyleContext> styleContext;
-  aFrame->GetStyleContext(getter_AddRefs(styleContext) );
-
-  aFrame->GetParent(&parent);
-
-  (*aNewFrame)->Init(aPresContext, aContent, parent, styleContext, nsnull);
-
-  // XXX: TODO: Instead, create and insert entire frame list
-  (*aNewFrame)->SetNextSibling(nsnull);
-
-  // The list name nsLayoutAtoms::nextBidi should indicate we don't want reflow
-  parent->InsertFrames(aPresContext, *presShell, nsLayoutAtoms::nextBidi,
-                       aFrame, *aNewFrame);
-
-  aFrame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, *aNewFrame);
-
-  return NS_OK;
-}
-
-PRBool
-nsBidiPresUtils::RemoveBidiContinuation(nsIPresContext* aPresContext,
-                                        nsIFrame*       aFrame,
-                                        nsIFrame*       aNextFrame)
-{
-  nsIFrame* frame;
-  PRBool    rv = PR_FALSE;
-
-  if (aFrame && aNextFrame) {
-    nsIFrame* prevInFlow;
-    nsIFrame* parent;
-
-    nsCOMPtr<nsIPresShell>   presShell;
-    aPresContext->GetShell(getter_AddRefs(presShell) );
-
-    nsCOMPtr<nsIFrameManager> frameManager;
-    presShell->GetFrameManager(getter_AddRefs(frameManager) );
-    if (frameManager) {
-      aFrame->GetParent(&parent);
-      for (frame = aNextFrame; frame; frame = aNextFrame) {
-        // find the first next bidi frame, which is not next in flow for its prev bidi
-        do {
-          nsIFrame* nextFrame = aNextFrame;
-          nextFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
-                                     (void**) &aNextFrame);
-          if (!aNextFrame) {
-            break;
-          }
-          aNextFrame->GetPrevInFlow(&prevInFlow);
-        } while (prevInFlow);
-
-        // The list name nsLayoutAtoms::nextBidi should indicate we don't want reflow
-        parent->RemoveFrame(aPresContext, *presShell, nsLayoutAtoms::nextBidi, frame);
-        rv = PR_TRUE;
-      } // for
-      frame = aFrame;
-      // Remove nextBidi property, associated with the current frame
-      // and with all of its prev in flow
-      do {
-        frameManager->RemoveFrameProperty(frame, nsLayoutAtoms::nextBidi);
-        frame->GetPrevInFlow(&frame);
-      } while (frame);
-
-    } // if (frameManager)
-  } // if (frame && aNextFrame)
-  return rv;
-}
-
-void
-nsBidiPresUtils::AdjustEmbeddingLevel(nsIFrame* aFrame,
-                                      PRUint8&  aEmbeddingLevel)
-{
-  const nsStyleText* text;
-  aFrame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&) text);
-
-  if (NS_STYLE_UNICODE_BIDI_OVERRIDE == text->mUnicodeBidi) {
-    const nsStyleDisplay* display;
-
-    aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-
-    if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
-      // ensure embedding level is odd
-      aEmbeddingLevel = (aEmbeddingLevel - 1) | 0x01;
-    }
-    else { // if (NS_STYLE_DIRECTION_LTR == display->mDirection)
-      // ensure embedding level is even
-      aEmbeddingLevel &= ~0x01;
-    }
-  }
-}
-
 void
 nsBidiPresUtils::CalculateTextClass(PRInt32  aLimit,
                                     PRInt32& aOffset,
                                     PRUint8& aTextClass,
-                                    PRUint8& aPrevTextClass)
+                                    PRUint8& aPrevTextClass) const
 {
   for (; ;) {
     // IBMBIDI - Egypt - Start
