@@ -143,6 +143,7 @@ NS_IMETHODIMP nsSOAPMessage::SetActionURI(const nsAReadableString & aActionURI)
 /* readonly attribute AString methodName; */
 NS_IMETHODIMP nsSOAPMessage::GetMethodName(nsAString & aMethodName)
 {
+  NS_ENSURE_ARG_POINTER(&aMethodName);
   nsCOMPtr<nsIDOMElement> body;
   GetBody(getter_AddRefs(body));
   if (body) {
@@ -160,6 +161,7 @@ NS_IMETHODIMP nsSOAPMessage::GetMethodName(nsAString & aMethodName)
 /* readonly attribute AString targetObjectURI; */
 NS_IMETHODIMP nsSOAPMessage::GetTargetObjectURI(nsAString & aTargetObjectURI)
 {
+  NS_ENSURE_ARG_POINTER(&aTargetObjectURI);
   nsCOMPtr<nsIDOMElement> body;
   GetBody(getter_AddRefs(body));
   if (body) {
@@ -427,7 +429,6 @@ NS_IMETHODIMP nsSOAPMessage::GetEncoding(nsISOAPEncoding* * aEncoding)
 }
 NS_IMETHODIMP nsSOAPMessage::SetEncoding(nsISOAPEncoding* aEncoding)
 {
-  NS_ENSURE_ARG_POINTER(aEncoding);
   mEncoding = aEncoding;
   return NS_OK;
 }

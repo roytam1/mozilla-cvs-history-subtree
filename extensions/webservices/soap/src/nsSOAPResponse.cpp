@@ -53,6 +53,7 @@ NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
 /* readonly attribute nsISOAPFault fault; */
 NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 {
+  NS_ENSURE_ARG_POINTER(aFault);
   nsCOMPtr<nsIDOMElement> body;
 
   *aFault = nsnull;

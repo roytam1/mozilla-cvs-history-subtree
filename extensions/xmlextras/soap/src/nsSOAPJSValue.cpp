@@ -51,6 +51,7 @@ nsSOAPJSValue::~nsSOAPJSValue()
 /* attribute JSContextPtr ctx; */
 NS_IMETHODIMP nsSOAPJSValue::GetContext(JSContext * *aContext)
 {
+  NS_ENSURE_ARG_POINTER(aContext);
   *aContext = mContext;
   return NS_OK;
 }
@@ -69,6 +70,7 @@ NS_IMETHODIMP nsSOAPJSValue::SetContext(JSContext * aContext)
 /* attribute JSObjectPtr value; */
 NS_IMETHODIMP nsSOAPJSValue::GetObject(JSObject * *aObject)
 {
+  NS_ENSURE_ARG_POINTER(aObject);
   if (mObject) {
     *aObject = mObject;
     return NS_OK;

@@ -95,7 +95,6 @@ NS_IMETHODIMP nsSOAPParameter::GetEncoding(nsISOAPEncoding* * aEncoding)
 }
 NS_IMETHODIMP nsSOAPParameter::SetEncoding(nsISOAPEncoding* aEncoding)
 {
-  NS_ENSURE_ARG_POINTER(aEncoding);
   mEncoding = aEncoding;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -115,7 +114,6 @@ NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsISchemaType* * aSchemaType)
 }
 NS_IMETHODIMP nsSOAPParameter::SetSchemaType(nsISchemaType* aSchemaType)
 {
-  NS_ENSURE_ARG_POINTER(aSchemaType);
   mSchemaType = aSchemaType;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -135,7 +133,6 @@ NS_IMETHODIMP nsSOAPParameter::GetAttachments(nsISOAPAttachments* * aAttachments
 }
 NS_IMETHODIMP nsSOAPParameter::SetAttachments(nsISOAPAttachments* aAttachments)
 {
-  NS_ENSURE_ARG_POINTER(aAttachments);
   mAttachments = aAttachments;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -155,7 +152,6 @@ NS_IMETHODIMP nsSOAPParameter::GetElement(nsIDOMElement* * aElement)
 }
 NS_IMETHODIMP nsSOAPParameter::SetElement(nsIDOMElement* aElement)
 {
-  NS_ENSURE_ARG_POINTER(aElement);
   mElement = aElement;
   mNamespaceURI.SetLength(0);
   mName.SetLength(0);
@@ -182,7 +178,6 @@ NS_IMETHODIMP nsSOAPParameter::GetValue(nsIVariant* * aValue)
 }
 NS_IMETHODIMP nsSOAPParameter::SetValue(nsIVariant* aValue)
 {
-  NS_ENSURE_ARG_POINTER(aValue);
   mValue = aValue;
   mComputeValue = PR_FALSE;
   mElement = nsnull;

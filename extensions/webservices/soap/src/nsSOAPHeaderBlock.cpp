@@ -116,7 +116,6 @@ NS_IMETHODIMP nsSOAPHeaderBlock::GetEncoding(nsISOAPEncoding* * aEncoding)
 }
 NS_IMETHODIMP nsSOAPHeaderBlock::SetEncoding(nsISOAPEncoding* aEncoding)
 {
-  NS_ENSURE_ARG_POINTER(aEncoding);
   mEncoding = aEncoding;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -136,7 +135,6 @@ NS_IMETHODIMP nsSOAPHeaderBlock::GetSchemaType(nsISchemaType* * aSchemaType)
 }
 NS_IMETHODIMP nsSOAPHeaderBlock::SetSchemaType(nsISchemaType* aSchemaType)
 {
-  NS_ENSURE_ARG_POINTER(aSchemaType);
   mSchemaType = aSchemaType;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -156,7 +154,6 @@ NS_IMETHODIMP nsSOAPHeaderBlock::GetAttachments(nsISOAPAttachments* * aAttachmen
 }
 NS_IMETHODIMP nsSOAPHeaderBlock::SetAttachments(nsISOAPAttachments* aAttachments)
 {
-  NS_ENSURE_ARG_POINTER(aAttachments);
   mAttachments = aAttachments;
   if (mElement) {
     mComputeValue = PR_TRUE;
@@ -176,7 +173,6 @@ NS_IMETHODIMP nsSOAPHeaderBlock::GetElement(nsIDOMElement* * aElement)
 }
 NS_IMETHODIMP nsSOAPHeaderBlock::SetElement(nsIDOMElement* aElement)
 {
-  NS_ENSURE_ARG_POINTER(aElement);
   mElement = aElement;
   mNamespaceURI.SetLength(0);
   mName.SetLength(0);
@@ -204,7 +200,6 @@ NS_IMETHODIMP nsSOAPHeaderBlock::GetValue(nsIVariant* * aValue)
 }
 NS_IMETHODIMP nsSOAPHeaderBlock::SetValue(nsIVariant* aValue)
 {
-  NS_ENSURE_ARG_POINTER(aValue);
   mValue = aValue;
   mComputeValue = PR_FALSE;
   mElement = nsnull;

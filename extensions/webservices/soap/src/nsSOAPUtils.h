@@ -102,7 +102,7 @@ inline void SetAStringToNull(nsAWritableString& aString)
   aString.SetIsVoid(PR_TRUE);
 }
 
-#define NS_SOAP_ENSURE_STRING(arg) \
+#define NS_SOAP_ENSURE_ARG_STRING(arg) \
 NS_ENSURE_FALSE(AStringIsNull(arg), NS_ERROR_INVALID_ARG)
 
 
