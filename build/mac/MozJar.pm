@@ -276,9 +276,9 @@ sub WriteOutJarFiles($$)
 # 
 # Enter a chrome package into the installed-chrome.txt file
 #-------------------------------------------------------------------------------
-sub registerChromePackage($$$$)
+sub registerChromePackage($$$$$$)
 {
-    my($jar_file, $file_path, $chrome_dir, $jar_hash) = @_;
+    my($jar_file, $file_path, $chrome_dir, $jar_hash, $chrome_type, $pkg_name) = @_;
 
     my($manifest_subdir) = $jar_file;
     $manifest_subdir =~ s/:/\//g;
@@ -286,33 +286,38 @@ sub registerChromePackage($$$$)
     my($chrome_entry);
     
     if ($main::options{jars}) {
-        $chrome_entry = ",install,url,jar:resource:/Chrome/";
-        $manifest_subdir.= "!/";
+        $chrome_entry = "$chrome_type,install,url,jar:resource:/chrome/$manifest_subdir!/$chrome_type/$pkg_name";
     } else {
-        $chrome_entry = ",install,url,resource:/Chrome/";
         $manifest_subdir =~ s/\.jar$/\//;
+        $chrome_entry = "$chrome_type,install,url,resource:/chrome/$manifest_subdir/$chrome_type/$pkg_name";
     }
 
-    # print "Entering $chrome_entry$manifest_subdir in installed-chrome.txt\n";
+    # print "Entering $chrome_entry in installed-chrome.txt\n";
 
-    # for now, regiser for content, locale and skin
-    # we'll get the type from the path soon
-    my($type) = "content";
-    
     # ensure chrome_dir exists
     mkpath($chrome_dir);
     
     my($inst_chrome) = ${chrome_dir}.":installed-chrome.txt";
     
+	if (open(CHROMEFILE, "<$inst_chrome")) {
+	    while (<CHROMEFILE>) {
+	        chomp;
+	        if ($_ eq $chrome_entry) {
+	            # $chrome_entry already appears in installed-chrome.txt file
+	            # just update the mod date
+	            my $now = time;
+	            utime($now, $now, $inst_chrome) || die "couldn't touch $inst_chrome";
+	            print "+++ updating chrome $inst_chrome\n+++\t\t$chrome_entry\n";
+	    		close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
+	    		return 0;
+	        }
+	    }
+	    close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
+	}
     open(CHROMEFILE, ">>${inst_chrome}") || die "Failed to open $inst_chrome\n";
-     
-    print(CHROMEFILE "${type}${chrome_entry}${manifest_subdir}\n");
-    $type = "locale";
-    print(CHROMEFILE "${type}${chrome_entry}${manifest_subdir}\n");
-    $type = "skin";
-    print(CHROMEFILE "${type}${chrome_entry}${manifest_subdir}\n");
-
-    close(CHROMEFILE);
+    print(CHROMEFILE "${chrome_entry}\n");
+    close(CHROMEFILE) || die "Failed to close $inst_chrome\n";
+	print "+++ adding chrome $inst_chrome\n+++\t\t$chrome_entry\n";
 }
 
 #-------------------------------------------------------------------------------
@@ -370,7 +375,7 @@ sub CreateJarFromManifest($$$)
             next;
         }
         
-        if ($line =~/^([\w\d.\-\\\/]+)\:\s*$/)                                  # line start jar file entries
+        if ($line =~/^([\w\d.\-\_\\\/]+)\:\s*$/)                                  # line start jar file entries
         {
             $jar_id = $1;
             $jar_file = $jar_id;
@@ -380,7 +385,7 @@ sub CreateJarFromManifest($$$)
             setupJarFile($jar_id, $full_jar_path, $jars);
 
         }
-        elsif ($line =~ /^\s+([\w\d.\-\\\/]+)\s*(\([\w\d.\-\\\/]+\))?$\s*/)     # jar file entry
+        elsif ($line =~ /^\s+([\w\d.\-\_\\\/]+)\s*(\([\w\d.\-\_\\\/]+\))?$\s*/)     # jar file entry
         {
             my($file_dest) = $1;
             my($file_src) = $2;
@@ -395,9 +400,11 @@ sub CreateJarFromManifest($$$)
             
             if ($jar_file ne "")    # if jar is open, add to jar
             {
-                if ($file_dest eq "manifest.rdf")   # will change to contents.rdf
+                if ($file_dest =~ /([\w\d.\-\_]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
                 {
-                    registerChromePackage($jar_file, $file_dest, $dest_path, $jars);
+                    my $chrome_type = $1;
+                    my $pkg_name = $2;
+                    registerChromePackage($jar_file, $file_dest, $dest_path, $jars, $chrome_type, $pkg_name);
                 }
                 
                 addToJarFile($jar_id, $jar_man_dir, $file_src, $full_jar_path, $file_dest, $jars);
@@ -409,7 +416,7 @@ sub CreateJarFromManifest($$$)
         }
         elsif ($line =~ /^\s*$/ )                                               # blank line
         {
-            if ($jar_file ne "")    #if a jar file is open, close it
+           if ($jar_file ne "")    #if a jar file is open, close it
             {
                 closeJarFile($full_jar_path, $jars);
                 
@@ -418,7 +425,7 @@ sub CreateJarFromManifest($$$)
             }
         }
     }
-    
+
     close(FILE);
 
     if ($jar_file ne "")    #if a jar file is open, close it
