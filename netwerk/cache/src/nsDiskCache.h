@@ -68,23 +68,23 @@ public:
         mEvictionRank = rank;
     }
 
-    PRUint32   LocationSelector(void)
+    PRUint32   LocationSelector()
     {
         return (PRUint32)(mLocation & eLocationSelectorMask) >> 22;
     }
 
-    void       SetLocationSelector(PRUint32  selector)
+    void       SetLocationSelector(PRUint32 selector)
     {
         mLocation &= ~eLocationSelectorMask; // clear location selector bits
         mLocation |= (selector & eLocationSelectorMask) << 22;
     }
 
-    PRUint32   BlockCount(void)
+    PRUint32   BlockCount()
     {
         return (PRUint32)((mLocation & eExtraBlocksMask) >> 20) + 1;
     }
 
-    void       SetBlockCount(PRUint32  count)
+    void       SetBlockCount(PRUint32 count)
     {
         NS_ASSERTION( (count>=1) && (count<=4),"invalid block count");
         count = --count;
@@ -92,7 +92,7 @@ public:
         mLocation |= (count & eExtraBlocksMask) << 20;
     }
 
-    PRUint32   BlockNumber(void)
+    PRUint32   BlockNumber()
     {
         return (mLocation & eBlockNumberMask);
     }
@@ -103,7 +103,7 @@ public:
         mLocation |= blockNumber & eBlockNumberMask;
     }
 
-    PRUint16   FileGeneration(void)
+    PRUint16   FileGeneration()
     {
         return (mLocation & eFileGenerationMask);
     }
