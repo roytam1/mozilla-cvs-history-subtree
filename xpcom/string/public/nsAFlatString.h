@@ -31,7 +31,8 @@ class NS_COM nsAFlatString
     : public nsAString
   {
     public:
-      const PRUnichar* get() const              { return GetBufferHandle()->DataStart(); }
+        // don't really want this to be virtual, and won't after |obsolete_nsString| is really dead
+      virtual const PRUnichar* get() const      { return GetBufferHandle()->DataStart(); }
       PRUnichar  operator[]( PRUint32 i ) const { return get()[ i ]; }
       PRUnichar  CharAt( PRUint32 ) const;
 
@@ -46,7 +47,8 @@ class NS_COM nsAFlatCString
     : public nsACString
   {
     public:
-      const char* get() const                   { return GetBufferHandle()->DataStart(); }
+        // don't really want this to be virtual, and won't after |obsolete_nsCString| is really dead
+      virtual const char* get() const           { return GetBufferHandle()->DataStart(); }
       char  operator[]( PRUint32 i ) const      { return get()[ i ]; }
       char  CharAt( PRUint32 ) const;
 

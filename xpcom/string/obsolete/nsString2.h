@@ -77,9 +77,11 @@ class NS_COM nsString :
   public nsStr {
 
 protected:
-  virtual const void* Implementation() const { return "nsString"; }
   virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
   virtual PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 );
+
+public:
+  virtual const PRUnichar* get() const { return mUStr; }
 
 
 public:

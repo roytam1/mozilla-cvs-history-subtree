@@ -48,7 +48,7 @@
   /**
    *
    * @see nsReadableFragment
-   * @see basic_nsAReadableString
+   * @see nsAString
    */
 
 template <class CharT>

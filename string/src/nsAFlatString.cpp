@@ -31,6 +31,8 @@ nsAFlatString::GetReadableFragment( nsReadableFragment<PRUnichar>& aFragment, ns
         case kLastFragment:
         case kFragmentAt:
           const nsBufferHandle<PRUnichar>* buffer = GetBufferHandle();
+          NS_ASSERTION(buffer != 0, "buffer != 0");
+
           aFragment.mEnd = buffer->DataEnd();
           return (aFragment.mStart = buffer->DataStart()) + aOffset;
         
@@ -50,6 +52,8 @@ nsAFlatString::GetWritableFragment( nsWritableFragment<PRUnichar>& aFragment, ns
         case kLastFragment:
         case kFragmentAt:
           nsBufferHandle<PRUnichar>* buffer = NS_CONST_CAST(nsBufferHandle<PRUnichar>*, GetBufferHandle());
+          NS_ASSERTION(buffer != 0, "buffer != 0");
+
           aFragment.mEnd = buffer->DataEnd();
           return (aFragment.mStart = buffer->DataStart()) + aOffset;
         
@@ -69,6 +73,8 @@ nsAFlatCString::GetReadableFragment( nsReadableFragment<char>& aFragment, nsFrag
         case kLastFragment:
         case kFragmentAt:
           const nsBufferHandle<char>* buffer = GetBufferHandle();
+          NS_ASSERTION(buffer != 0, "buffer != 0");
+
           aFragment.mEnd = buffer->DataEnd();
           return (aFragment.mStart = buffer->DataStart()) + aOffset;
         
@@ -88,6 +94,8 @@ nsAFlatCString::GetWritableFragment( nsWritableFragment<char>& aFragment, nsFrag
         case kLastFragment:
         case kFragmentAt:
           nsBufferHandle<char>* buffer = NS_CONST_CAST(nsBufferHandle<char>*, GetBufferHandle());
+          NS_ASSERTION(buffer != 0, "buffer != 0");
+
           aFragment.mEnd = buffer->DataEnd();
           return (aFragment.mStart = buffer->DataStart()) + aOffset;
         
