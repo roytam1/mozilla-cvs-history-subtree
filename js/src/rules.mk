@@ -105,12 +105,12 @@ export:
 
 clean:
 	rm -rf $(OBJS)
-	cd fdlibm; gmake -f Makefile.ref clean
+	cd fdlibm; $(MAKE) -f Makefile.ref clean
 
 
 clobber:
 	rm -rf $(OBJS) $(TARGETS) $(DEPENDENCIES)
-	cd fdlibm; gmake -f Makefile.ref clobber
+	cd fdlibm; $(MAKE) -f Makefile.ref clobber
 
 depend:
 	gcc -MM $(CFLAGS) $(LIB_CFILES)
