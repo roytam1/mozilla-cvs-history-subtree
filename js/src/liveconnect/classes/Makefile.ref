@@ -14,4 +14,4 @@ include $(DEPTH)/rules.mk
 
 $(CLASSDIR)/$(OBJDIR)/js14lc30.jar:
 	cd $(CLASSDIR)/$(OBJDIR) ; \
-	  jar cvf js14lc30.jar netscape
+	  $(JDK)/bin/jar cvf js14lc30.jar netscape
