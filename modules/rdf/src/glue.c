@@ -38,6 +38,7 @@
 
 /* external routines */
 extern	MWContext	*FE_GetRDFContext(void);
+extern	char		*gDefaultNavcntr;
 
 
 /* globals */
@@ -71,13 +72,13 @@ rdf_complete(NET_StreamClass *stream)
 }
 
 
-extern char* gDefaultNavcntr ;
+
 void
 rdf_abort(NET_StreamClass *stream, int status)
 {
   RDFFile f = (RDFFile)stream->data_object;
   if (strcmp(f->url, gNavCntrUrl) == 0) {
-    parseNextRDFXMLBlob(f, gDefaultNavcntr, strlen(gDefaultNavcntr));
+    parseNextRDFXMLBlob(stream, gDefaultNavcntr, strlen(gDefaultNavcntr));
   }
     
   if (f) {
@@ -89,6 +90,8 @@ rdf_abort(NET_StreamClass *stream, int status)
     freeNamespaces(f) ;
   }
 }
+
+
 
 #ifdef MOZILLA_CLIENT
 
