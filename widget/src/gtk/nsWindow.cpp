@@ -445,7 +445,8 @@ NS_IMETHODIMP nsWindow::SetBackgroundColor(const nscolor &aColor)
   if (nsnull != mSuperWin) {
     GdkColor back_color;
 
-    NSCOLOR_TO_GDKCOLOR(aColor, back_color);
+    back_color.pixel = ::gdk_rgb_xpixel_from_rgb(NS_TO_GDK_RGB(aColor));
+
     gdk_window_set_background(mSuperWin->bin_window, &back_color); 
   }
 
@@ -620,6 +621,10 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 
   gtk_object_set_data (GTK_OBJECT (mSuperWin), "nsWindow", this);
   gdk_window_set_user_data (mSuperWin->bin_window, (gpointer)mSuperWin);
+
+  // set our background color to make people happy.
+
+  SetBackgroundColor(NS_RGB(192,192,192));
 
   // XXX fix this later...
   if (mIsToplevel)
