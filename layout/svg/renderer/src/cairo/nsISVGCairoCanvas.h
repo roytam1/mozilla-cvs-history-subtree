@@ -58,9 +58,9 @@
 class nsISVGCairoCanvas : public nsISVGRendererCanvas
 {
 public:
-    NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCAIROCANVAS_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGCAIROCANVAS_IID)
 
-    NS_IMETHOD_(cairo_t*) GetContext() = 0;
+  NS_IMETHOD_(cairo_t*) GetContext() = 0;
 };
 
 /** @} */

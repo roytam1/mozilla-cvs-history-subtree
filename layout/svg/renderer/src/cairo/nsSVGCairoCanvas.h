@@ -47,8 +47,8 @@ struct nsRect;
 
 nsresult
 NS_NewSVGCairoCanvas(nsISVGRendererCanvas **result,
-		     nsIRenderingContext *ctx,
-		     nsIPresContext *presContext,
-		     const nsRect & dirtyRect);
+                     nsIRenderingContext *ctx,
+                     nsIPresContext *presContext,
+                     const nsRect & dirtyRect);
 
 #endif // __NS_SVGCAIRO_CANVAS_H__

@@ -60,25 +60,25 @@
 class nsSVGCairoCanvas : public nsISVGCairoCanvas
 {
 public:
-    nsSVGCairoCanvas();
-    ~nsSVGCairoCanvas();
-    nsresult Init(nsIRenderingContext* ctx, nsIPresContext* presContext,
-		  const nsRect & dirtyRect);
+  nsSVGCairoCanvas();
+  ~nsSVGCairoCanvas();
+  nsresult Init(nsIRenderingContext* ctx, nsIPresContext* presContext,
+                const nsRect & dirtyRect);
     
-    // nsISupports interface:
-    NS_DECL_ISUPPORTS
+  // nsISupports interface:
+  NS_DECL_ISUPPORTS
     
-    // nsISVGRendererCanvas interface:
-    NS_DECL_NSISVGRENDERERCANVAS
+  // nsISVGRendererCanvas interface:
+  NS_DECL_NSISVGRENDERERCANVAS
 
-    // nsISVGCairoCanvas interface:
-    NS_IMETHOD_(cairo_t*) GetContext() { return mCR; }
+  // nsISVGCairoCanvas interface:
+  NS_IMETHOD_(cairo_t*) GetContext() { return mCR; }
     
 private:
-    nsCOMPtr<nsIRenderingContext> mMozContext;
-    nsCOMPtr<nsIPresContext> mPresContext;
-    cairo_t *mCR;
-    PRUint32 mWidth, mHeight;
+  nsCOMPtr<nsIRenderingContext> mMozContext;
+  nsCOMPtr<nsIPresContext> mPresContext;
+  cairo_t *mCR;
+  PRUint32 mWidth, mHeight;
 };
 
 
@@ -93,75 +93,75 @@ nsSVGCairoCanvas::nsSVGCairoCanvas()
 
 nsSVGCairoCanvas::~nsSVGCairoCanvas()
 {
-    mMozContext = nsnull;
-    mPresContext = nsnull;
+  mMozContext = nsnull;
+  mPresContext = nsnull;
 
-    cairo_destroy(mCR);
+  cairo_destroy(mCR);
 }
 
 nsresult
 nsSVGCairoCanvas::Init(nsIRenderingContext *ctx,
-		       nsIPresContext *presContext,
-		       const nsRect &dirtyRect)
+                       nsIPresContext *presContext,
+                       const nsRect &dirtyRect)
 {
-    mPresContext = presContext;
-    mMozContext = ctx;
-    NS_ASSERTION(mMozContext, "empty rendering context");
+  mPresContext = presContext;
+  mMozContext = ctx;
+  NS_ASSERTION(mMozContext, "empty rendering context");
 
-    nsDrawingSurfaceGTK *surface;
-    ctx->GetDrawingSurface((nsDrawingSurface*)&surface);
-    surface->GetSize(&mWidth, &mHeight);
-    GdkDrawable *drawable = surface->GetDrawable();
+  nsDrawingSurfaceGTK *surface;
+  ctx->GetDrawingSurface((nsDrawingSurface*)&surface);
+  surface->GetSize(&mWidth, &mHeight);
+  GdkDrawable *drawable = surface->GetDrawable();
 
-    mCR = cairo_create();
-    cairo_set_target_drawable(mCR,
-			      GDK_WINDOW_XDISPLAY(drawable),
-			      GDK_WINDOW_XWINDOW(drawable));
+  mCR = cairo_create();
+  cairo_set_target_drawable(mCR,
+                            GDK_WINDOW_XDISPLAY(drawable),
+                            GDK_WINDOW_XWINDOW(drawable));
 
-    // get the translation set on the rendering context. It will be in
-    // displayunits (i.e. pixels*scale), *not* pixels:
-    nsTransform2D* xform;
-    mMozContext->GetCurrentTransform(xform);
-    float dx, dy;
-    xform->GetTranslation(&dx, &dy);
-    cairo_translate(mCR, dx, dy);
+  // get the translation set on the rendering context. It will be in
+  // displayunits (i.e. pixels*scale), *not* pixels:
+  nsTransform2D* xform;
+  mMozContext->GetCurrentTransform(xform);
+  float dx, dy;
+  xform->GetTranslation(&dx, &dy);
+  cairo_translate(mCR, dx, dy);
 
-    return NS_OK;
+  return NS_OK;
 }
 
 nsresult
 NS_NewSVGCairoCanvas(nsISVGRendererCanvas **result,
-		     nsIRenderingContext *ctx,
-		     nsIPresContext *presContext,
-		     const nsRect & dirtyRect)
+                     nsIRenderingContext *ctx,
+                     nsIPresContext *presContext,
+                     const nsRect & dirtyRect)
 {
-    nsSVGCairoCanvas* pg = new nsSVGCairoCanvas();
-    if (!pg) return NS_ERROR_OUT_OF_MEMORY;
+  nsSVGCairoCanvas* pg = new nsSVGCairoCanvas();
+  if (!pg) return NS_ERROR_OUT_OF_MEMORY;
 
-    NS_ADDREF(pg);
+  NS_ADDREF(pg);
 
-    nsresult rv = pg->Init(ctx, presContext, dirtyRect);
+  nsresult rv = pg->Init(ctx, presContext, dirtyRect);
 
-    if (NS_FAILED(rv)) {
-	NS_RELEASE(pg);
-	return rv;
-    }
-  
-    *result = pg;
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(pg);
     return rv;
+  }
+  
+  *result = pg;
+  return rv;
 }
 
 //----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGCairoCanvas)
-    NS_IMPL_RELEASE(nsSVGCairoCanvas)
+NS_IMPL_RELEASE(nsSVGCairoCanvas)
 
-    NS_INTERFACE_MAP_BEGIN(nsSVGCairoCanvas)
-    NS_INTERFACE_MAP_ENTRY(nsISVGRendererCanvas)
-    NS_INTERFACE_MAP_ENTRY(nsISVGCairoCanvas)
-    NS_INTERFACE_MAP_ENTRY(nsISupports)
-    NS_INTERFACE_MAP_END
+NS_INTERFACE_MAP_BEGIN(nsSVGCairoCanvas)
+NS_INTERFACE_MAP_ENTRY(nsISVGRendererCanvas)
+NS_INTERFACE_MAP_ENTRY(nsISVGCairoCanvas)
+NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // nsISVGRendererCanvas methods:
@@ -169,49 +169,49 @@ NS_IMPL_ADDREF(nsSVGCairoCanvas)
 /** Implements [noscript] nsIRenderingContext lockRenderingContext(const in nsRectRef rect); */
 NS_IMETHODIMP
 nsSVGCairoCanvas::LockRenderingContext(const nsRect & rect,
-				       nsIRenderingContext **_retval)
+                                       nsIRenderingContext **_retval)
 {
-    // XXX do we need to flush?
-    Flush();
+  // XXX do we need to flush?
+  Flush();
   
-    *_retval = mMozContext;
-    NS_ADDREF(*_retval);
-    return NS_OK;
+  *_retval = mMozContext;
+  NS_ADDREF(*_retval);
+  return NS_OK;
 }
 
 /** Implements void unlockRenderingContext(); */
 NS_IMETHODIMP 
 nsSVGCairoCanvas::UnlockRenderingContext()
 {
-    return NS_OK;
+  return NS_OK;
 }
 
 /** Implements nsIPresContext getPresContext(); */
 NS_IMETHODIMP
 nsSVGCairoCanvas::GetPresContext(nsIPresContext **_retval)
 {
-    *_retval = mPresContext;
-    NS_IF_ADDREF(*_retval);
-    return NS_OK;
+  *_retval = mPresContext;
+  NS_IF_ADDREF(*_retval);
+  return NS_OK;
 }
 
 /** Implements void clear(in nscolor color); */
 NS_IMETHODIMP
 nsSVGCairoCanvas::Clear(nscolor color)
 {
-    cairo_set_rgb_color(mCR,
-			NS_GET_R(color)/255.0,
-			NS_GET_G(color)/255.0,
-			NS_GET_B(color)/255.0);
-    cairo_rectangle(mCR, 0, 0, mWidth, mHeight);
-    cairo_fill(mCR);
+  cairo_set_rgb_color(mCR,
+                      NS_GET_R(color)/255.0,
+                      NS_GET_G(color)/255.0,
+                      NS_GET_B(color)/255.0);
+  cairo_rectangle(mCR, 0, 0, mWidth, mHeight);
+  cairo_fill(mCR);
 
-    return NS_OK;
+  return NS_OK;
 }
 
 /** Implements void flush(); */
 NS_IMETHODIMP
 nsSVGCairoCanvas::Flush()
 {
-    return NS_OK;
+  return NS_OK;
 }

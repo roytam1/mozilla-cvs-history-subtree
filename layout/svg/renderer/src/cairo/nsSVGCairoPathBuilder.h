@@ -46,6 +46,6 @@ class nsISVGRendererPathBuilder;
 class nsISVGPathGeometrySource;
 
 nsresult NS_NewSVGCairoPathBuilder(nsISVGRendererPathBuilder **result,
-				   cairo_t* ctx);
+                                   cairo_t* ctx);
 
 #endif // __NS_SVGCAIRO_PATHBUILDER_H__

@@ -61,18 +61,18 @@ void NS_FreeSVGCairoGlyphMetricsGlobals();
 class nsSVGRendererCairo : public nsISVGRenderer
 {
 protected:
-    friend nsresult NS_NewSVGRendererCairo(nsISVGRenderer** aResult);
-    friend void NS_InitSVGRendererCairoGlobals();
-    friend void NS_FreeSVGRendererCairoGlobals();
+  friend nsresult NS_NewSVGRendererCairo(nsISVGRenderer** aResult);
+  friend void NS_InitSVGRendererCairoGlobals();
+  friend void NS_FreeSVGRendererCairoGlobals();
   
-    nsSVGRendererCairo();
+  nsSVGRendererCairo();
 
 public:
-    // nsISupports interface
-    NS_DECL_ISUPPORTS
+  // nsISupports interface
+  NS_DECL_ISUPPORTS
 
-    // nsISVGRenderer interface
-    NS_DECL_NSISVGRENDERER
+  // nsISVGRenderer interface
+  NS_DECL_NSISVGRENDERER
 private:
 
 };
@@ -89,17 +89,17 @@ nsSVGRendererCairo::nsSVGRendererCairo()
 nsresult
 NS_NewSVGRendererCairo(nsISVGRenderer** aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-	return NS_ERROR_NULL_POINTER;
+  NS_PRECONDITION(aResult != nsnull, "null ptr");
+  if (! aResult)
+    return NS_ERROR_NULL_POINTER;
 
-    nsSVGRendererCairo* result = new nsSVGRendererCairo();
-    if (! result)
-	return NS_ERROR_OUT_OF_MEMORY;
+  nsSVGRendererCairo* result = new nsSVGRendererCairo();
+  if (! result)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-    NS_ADDREF(result);
-    *aResult = result;
-    return NS_OK;
+  NS_ADDREF(result);
+  *aResult = result;
+  return NS_OK;
 }
 
 void NS_InitSVGRendererCairoGlobals()
@@ -121,49 +121,48 @@ NS_IMPL_ISUPPORTS1(nsSVGRendererCairo, nsISVGRenderer);
 /** Implements nsISVGRendererPathGeometry createPathGeometry(in nsISVGPathGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererCairo::CreatePathGeometry(nsISVGPathGeometrySource *src,
-				       nsISVGRendererPathGeometry **_retval)
+                                       nsISVGRendererPathGeometry **_retval)
 {
-    return NS_NewSVGCairoPathGeometry(_retval, src);
+  return NS_NewSVGCairoPathGeometry(_retval, src);
 }
 
 /** Implements nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphMetricsSource src); */
 NS_IMETHODIMP
 nsSVGRendererCairo::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
-				       nsISVGRendererGlyphMetrics **_retval)
+                                       nsISVGRendererGlyphMetrics **_retval)
 {
-    fprintf(stderr, "CreateGlyphMetric (unimplemented)\n");
+  fprintf(stderr, "CreateGlyphMetric (unimplemented)\n");
 //  return NS_NewSVGCairoGlyphMetrics(_retval, src);
-    return NS_OK;
+  return NS_OK;
 }
 
 /** Implements nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGGlyphGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererCairo::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
-					nsISVGRendererGlyphGeometry **_retval)
+                                        nsISVGRendererGlyphGeometry **_retval)
 {
-    fprintf(stderr, "CreateGlyphGeometry (unimplemented)\n");
+  fprintf(stderr, "CreateGlyphGeometry (unimplemented)\n");
 //  return NS_NewSVGCairoGlyphGeometry(_retval, src);
-    return NS_OK;
+  return NS_OK;
 }
 
 /** Implements [noscript] nsISVGRendererCanvas createCanvas(in nsIRenderingContext ctx,
     in nsIPresContext presContext, const in nsRectRef dirtyRect); */
 NS_IMETHODIMP
 nsSVGRendererCairo::CreateCanvas(nsIRenderingContext *ctx,
-				 nsIPresContext *presContext,
-				 const nsRect & dirtyRect,
-				 nsISVGRendererCanvas **_retval)
+                                 nsIPresContext *presContext,
+                                 const nsRect & dirtyRect,
+                                 nsISVGRendererCanvas **_retval)
 {
-    return NS_NewSVGCairoCanvas(_retval, ctx, presContext, dirtyRect);
-    return NS_OK;
+  return NS_NewSVGCairoCanvas(_retval, ctx, presContext, dirtyRect);
 }
 
 /** Implements nsISVGRendererRegion createRectRegion(in float x, in float y, in float width, in float height); */
 NS_IMETHODIMP
 nsSVGRendererCairo::CreateRectRegion(float x, float y, float width, float height,
-				     nsISVGRendererRegion **_retval)
+                                     nsISVGRendererRegion **_retval)
 {
-    fprintf(stderr, "CreateRectRegion (unimplemented)\n");
+  fprintf(stderr, "CreateRectRegion (unimplemented)\n");
 //  return NS_NewSVGCairoRectRegion(_retval, x, y, width, height);
-    return NS_OK;
+  return NS_OK;
 }
