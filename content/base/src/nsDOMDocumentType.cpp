@@ -78,9 +78,9 @@ nsDOMDocumentType::~nsDOMDocumentType()
 
 
 // XPConnect interface list for nsDOMDocumentType
-NS_CLASINFO_MAP_BEGIN(DocumentType)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentType)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(DocumentType)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentType)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsDOMDocumentType

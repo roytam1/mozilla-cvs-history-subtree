@@ -98,9 +98,9 @@ nsXMLNotation::~nsXMLNotation()
 
 
 // XPConnect interface list for nsXMLNotation
-NS_CLASINFO_MAP_BEGIN(Notation)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMNotation)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(Notation)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNotation)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXMLNotation

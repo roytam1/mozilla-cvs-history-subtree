@@ -622,9 +622,9 @@ CSSRuleListImpl::~CSSRuleListImpl()
 }
 
 // XPConnect interface list for CSSStyleRuleImpl
-NS_CLASINFO_MAP_BEGIN(CSSRuleList)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSRuleList)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(CSSRuleList)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMCSSRuleList)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for CSSRuleList
@@ -708,9 +708,9 @@ private:
 
 
 // XPConnect interface list for CSSStyleSheetStyleRuleImpl
-NS_CLASINFO_MAP_BEGIN(MediaList)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMMediaList)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(MediaList)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMMediaList)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for CSSStyleRuleImpl
@@ -910,9 +910,9 @@ CSSImportsCollectionImpl::~CSSImportsCollectionImpl()
 
 
 // XPConnect interface list for CSSImportsCollectionImpl
-NS_CLASINFO_MAP_BEGIN(StyleSheetList)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMStyleSheetList)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(StyleSheetList)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMStyleSheetList)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for CSSImportsCollectionImpl
@@ -1362,9 +1362,9 @@ CSSStyleSheetImpl::~CSSStyleSheetImpl()
 
 
 // XPConnect interface list for CSSStyleSheetImpl
-NS_CLASINFO_MAP_BEGIN(CSSStyleSheet)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSStyleSheet)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(CSSStyleSheet)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMCSSStyleSheet)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for CSSStyleSheetImpl

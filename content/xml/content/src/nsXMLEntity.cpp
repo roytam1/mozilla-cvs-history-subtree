@@ -103,9 +103,9 @@ nsXMLEntity::~nsXMLEntity()
 
 
 // XPConnect interface list for nsXMLEntity
-NS_CLASINFO_MAP_BEGIN(Entity)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMEntity)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(Entity)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMEntity)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXMLEntity

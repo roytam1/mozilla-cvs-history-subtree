@@ -100,9 +100,9 @@ nsRDFDOMNodeList::CreateWithArray(nsISupportsArray* aArray,
 
 
 // XPConnect interface list for nsRDFDOMNodeList
-NS_CLASINFO_MAP_BEGIN(XULNodeList)
-    NS_CLASINFO_MAP_ENTRY(nsIDOMNodeList)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(XULNodeList)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMNodeList)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsRDFDOMNodeList

@@ -3534,9 +3534,9 @@ nsTypedSelection::~nsTypedSelection()
 
 
 // XPConnect interface list for nsTypedSelection
-NS_CLASINFO_MAP_BEGIN(Selection)
-  NS_CLASINFO_MAP_ENTRY(nsISelection)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(Selection)
+  NS_CLASSINFO_MAP_ENTRY(nsISelection)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsRange

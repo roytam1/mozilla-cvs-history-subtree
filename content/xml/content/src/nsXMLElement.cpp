@@ -118,9 +118,9 @@ nsXMLElement::~nsXMLElement()
 
 
 // XPConnect interface list for nsXMLElement
-NS_CLASINFO_MAP_BEGIN(Element)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMElement)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(Element)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMElement)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXMLElement

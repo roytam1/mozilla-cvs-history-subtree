@@ -111,10 +111,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLDirectoryElement, nsGenericElement);
 
 
 // XPConnect interface list for nsHTMLDirectoryElement
-NS_CLASINFO_MAP_BEGIN(HTMLDirectoryElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLDirectoryElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLDirectoryElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLDirectoryElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLDirectoryElement

@@ -97,10 +97,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLIsIndexElement, nsGenericElement);
 
 
 // XPConnect interface list for nsHTMLIsIndexElement
-NS_CLASINFO_MAP_BEGIN(HTMLIsIndexElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLIsIndexElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLIsIndexElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLIsIndexElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLIsIndexElement

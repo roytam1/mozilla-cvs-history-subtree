@@ -102,10 +102,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLObjectElement, nsGenericElement)
 
 
 // XPConnect interface list for nsHTMLObjectElement
-NS_CLASINFO_MAP_BEGIN(HTMLObjectElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLObjectElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLObjectElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLObjectElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLObjectElement

@@ -192,21 +192,21 @@ protected:
  * nsIClassInfo helper macros
  */
 
-#define NS_CLASINFO_MAP_BEGIN(_class)                                         \
+#define NS_CLASSINFO_MAP_BEGIN(_class)                                        \
 static void Get##_class##IIDs(nsVoidArray& aArray)                            \
 {
 
-#define NS_CLASINFO_MAP_BEGIN_EXPORTED(_class)                                \
+#define NS_CLASSINFO_MAP_BEGIN_EXPORTED(_class)                               \
 void Get##_class##IIDs(nsVoidArray& aArray)                                   \
 {
 
-#define NS_CLASINFO_MAP_ENTRY(_interface)                                     \
+#define NS_CLASSINFO_MAP_ENTRY(_interface)                                    \
   aArray.AppendElement((void *)&NS_GET_IID(_interface));
 
-#define NS_CLASINFO_MAP_ENTRY_FUNCTION(_function)                             \
+#define NS_CLASSINFO_MAP_ENTRY_FUNCTION(_function)                            \
   _function(aArray);
 
-#define NS_CLASINFO_MAP_END                                                   \
+#define NS_CLASSINFO_MAP_END                                                  \
 }
 
 #define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \

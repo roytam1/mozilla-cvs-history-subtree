@@ -240,10 +240,10 @@ nsCommentNode::~nsCommentNode()
 
 
 // XPConnect interface list for nsCommentNode
-NS_CLASINFO_MAP_BEGIN(Comment)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMComment)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(Comment)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMComment)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsCommentNode

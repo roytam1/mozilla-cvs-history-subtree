@@ -118,10 +118,10 @@ NS_IMPL_RELEASE(nsHTMLIFrameElement);
 
 
 // XPConnect interface list for nsHTMLIFrameElement
-NS_CLASINFO_MAP_BEGIN(HTMLIFrameElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLIFrameElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLIFrameElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLIFrameElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLIFrameElement

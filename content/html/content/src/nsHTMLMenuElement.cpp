@@ -113,10 +113,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLMenuElement, nsGenericElement);
 
 
 // XPConnect interface list for nsHTMLMenuElement
-NS_CLASINFO_MAP_BEGIN(HTMLMenuElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLMenuElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLMenuElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLMenuElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLMenuElement

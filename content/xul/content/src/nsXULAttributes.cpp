@@ -246,9 +246,9 @@ nsXULAttribute::Create(nsIContent* aContent,
 // nsISupports interface
 
 // XPConnect interface list for nsXULAttribute
-NS_CLASINFO_MAP_BEGIN(XULAttr)
-    NS_CLASINFO_MAP_ENTRY(nsIDOMAttr)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(XULAttr)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMAttr)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXULAttribute
@@ -558,9 +558,9 @@ nsXULAttributes::Create(nsIContent* aContent, nsXULAttributes** aResult)
 // nsISupports interface
 
 // XPConnect interface list for nsXULAttributes
-NS_CLASINFO_MAP_BEGIN(XULNamedNodeMap)
-    NS_CLASINFO_MAP_ENTRY(nsIDOMNamedNodeMap)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(XULNamedNodeMap)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMNamedNodeMap)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXULAttributes

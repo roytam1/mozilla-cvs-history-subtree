@@ -96,10 +96,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLQuoteElement, nsGenericElement)
 
 
 // XPConnect interface list for nsHTMLQuoteElement
-NS_CLASINFO_MAP_BEGIN(HTMLQuoteElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLQuoteElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLQuoteElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLQuoteElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLQuoteElement

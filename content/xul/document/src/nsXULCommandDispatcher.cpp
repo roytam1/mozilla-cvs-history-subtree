@@ -78,9 +78,9 @@ nsXULCommandDispatcher::~nsXULCommandDispatcher()
 }
 
 // XPConnect interface list for nsXULCommandDispatcher
-NS_CLASINFO_MAP_BEGIN(XULCommandDispatcher)
-    NS_CLASINFO_MAP_ENTRY(nsIDOMXULCommandDispatcher)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(XULCommandDispatcher)
+    NS_CLASSINFO_MAP_ENTRY(nsIDOMXULCommandDispatcher)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsXULCommandDispatcher

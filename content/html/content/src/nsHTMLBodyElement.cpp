@@ -721,10 +721,10 @@ nsHTMLBodyElement::~nsHTMLBodyElement()
 
 
 // XPConnect interface list for nsHTMLBodyElement
-NS_CLASINFO_MAP_BEGIN(HTMLBodyElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLBodyElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLBodyElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLBodyElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLBodyElement

@@ -117,11 +117,11 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLStyleElement, nsGenericElement)
 
 
 // XPConnect interface list for nsHTMLStyleElement
-NS_CLASINFO_MAP_BEGIN(HTMLStyleElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLStyleElement)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMLinkStyle)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLStyleElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLStyleElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMLinkStyle)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLStyleElement

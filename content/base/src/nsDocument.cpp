@@ -211,9 +211,9 @@ nsDOMStyleSheetList::~nsDOMStyleSheetList()
 
 
 // XPConnect interface list for nsDOMStyleSheetList
-NS_CLASINFO_MAP_BEGIN(StyleSheetList) // This is duplicated in nsCSSStyleSheet.cpp
-  NS_CLASINFO_MAP_ENTRY(nsIDOMStyleSheetList)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(StyleSheetList) // This is duplicated in nsCSSStyleSheet.cpp
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMStyleSheetList)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsDOMStyleSheetList
@@ -381,9 +381,9 @@ nsDOMImplementation::~nsDOMImplementation()
 
 
 // XPConnect interface list for nsDOMImplementation
-NS_CLASINFO_MAP_BEGIN(DOMImplementation)
-  NS_CLASINFO_MAP_ENTRY(nsIDOMDOMImplementation)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(DOMImplementation)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMDOMImplementation)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsDOMImplementation

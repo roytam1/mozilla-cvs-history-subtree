@@ -121,9 +121,9 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLSpacerElement, nsGenericElement);
 
 
 // XPConnect interface list for nsHTMLSpacerElement
-NS_CLASINFO_MAP_BEGIN(HTMLSpacerElement)
-  NS_CLASINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
-NS_CLASINFO_MAP_END
+NS_CLASSINFO_MAP_BEGIN(HTMLSpacerElement)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
+NS_CLASSINFO_MAP_END
 
 
 // QueryInterface implementation for nsHTMLSpacerElement
