@@ -37,59 +37,41 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "plhash.h"
+#ifndef __JS_AUTO_CONTEXT_H__
+#define __JS_AUTO_CONTEXT_H__
+
 #include "jsapi.h"
-#include "nsIComponentLoader.h"
-#include "nsIComponentLoaderManager.h"
-#include "nsIJSRuntimeService.h"
-#include "nsIJSContextStack.h"
-#include "nsISupports.h"
-#include "nsIXPConnect.h"
-#include "nsIModule.h"
-#include "nsSupportsArray.h"
-#include "nsIFile.h"
-#ifndef XPCONNECT_STANDALONE
-#include "nsIPrincipal.h"
-#endif
-extern const char mozJSComponentLoaderContractID[];
-extern const char jsComponentTypeName[];
+#include "nscore.h"
 
-/* 6bd13476-1dd2-11b2-bbef-f0ccb5fa64b6 (thanks, mozbot) */
-
-#define MOZJSCOMPONENTLOADER_CID \
-  {0x6bd13476, 0x1dd2, 0x11b2, \
-    { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
-
-class mozJSComponentLoader : public nsIComponentLoader {
-
+class JSAutoContext
+{
 public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSICOMPONENTLOADER
+    JSAutoContext();
+    ~JSAutoContext();
 
-    mozJSComponentLoader();
-    virtual ~mozJSComponentLoader();
+    operator JSContext*() const {return mContext;}
+    JSContext* GetContext() const {return mContext;}
+    nsresult   GetError()   const {return mError;}
 
- protected:
-    nsresult ReallyInit();
-    nsresult AttemptRegistration(nsIFile *component, PRBool deferred);
-    nsresult UnregisterComponent(nsIFile *component);
-    nsresult RegisterComponentsInDir(PRInt32 when, nsIFile *dir);
-    JSObject *GlobalForLocation(const char *aLocation, nsIFile *component);
-    nsIModule *ModuleForLocation(const char *aLocation, nsIFile *component);
-    PRBool HasChanged(const char *registryLocation, nsIFile *component);
-    nsresult SetRegistryInfo(const char *registryLocation, nsIFile *component);
-    nsresult RemoveRegistryInfo(nsIFile *component, const char *registryLocation);
-
-    nsCOMPtr<nsIComponentManager> mCompMgr;
-    nsCOMPtr<nsIComponentLoaderManager> mLoaderManager;
-    nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
-#ifndef XPCONNECT_STANDALONE
-    nsCOMPtr<nsIPrincipal> mSystemPrincipal;
-#endif
-    JSRuntime *mRuntime;
-    PLHashTable *mModules;
-    PLHashTable *mGlobals;
-
-    PRBool mInitialized;
-    nsSupportsArray mDeferredComponents;
+private:
+    JSContext* mContext;
+    nsresult   mError;
+    JSBool     mPopNeeded;
+    intN       mContextThread; 
 };
+
+
+class JSAutoErrorReporterSetter
+{
+public:
+    JSAutoErrorReporterSetter(JSContext* cx, JSErrorReporter reporter)
+        {mContext = cx; mOldReporter = JS_SetErrorReporter(cx, reporter);}
+    ~JSAutoErrorReporterSetter()
+        {JS_SetErrorReporter(mContext, mOldReporter);} 
+    JSAutoErrorReporterSetter(); // not implemented
+private:
+    JSContext* mContext;
+    JSErrorReporter mOldReporter;
+};
+
+#endif // __JS_AUTO_CONTEXT_H__

@@ -41,8 +41,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= jsloader
-LIBRARY_NAME	= jsloader_s
+MODULE		= xpconnect
+LIBRARY_NAME	= xpcshared_s
 FORCE_STATIC_LIB = 1
 REQUIRES	= xpcom \
 		  string \
@@ -53,23 +53,10 @@ REQUIRES	= xpcom \
 		  necko \
 		  $(NULL)
 
-CPPSRCS		= mozJSComponentLoader.cpp mozJSSubScriptLoader.cpp
-
-LOCAL_INCLUDES = \
-		-I$(srcdir)/../shared \
-		$(NULL)
+CPPSRCS		= JSBackstagePass.cpp JSAutoContext.cpp
 
 include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -DJSFILE -DJS_THREADSAFE
 
 
-JS_CODELIB_RESOURCES = \
-	JSComponentUtils.js \
-	$(NULL)
-
-libs::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DIST)/bin/jscodelib
-
-install::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib

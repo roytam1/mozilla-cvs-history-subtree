@@ -73,6 +73,8 @@
 // For reporting errors with the console service
 #include "nsIScriptError.h"
 #include "nsIConsoleService.h"
+#include "JSBackstagePass.h"
+#include "JSAutoContext.h"
 
 const char mozJSComponentLoaderContractID[] = "@mozilla.org/moz/jsloader;1";
 const char jsComponentTypeName[] = "text/javascript";
@@ -84,7 +86,6 @@ const char JSxpcomKeyName[] = "software/mozilla/XPCOM/components";
 
 const char kJSRuntimeServiceContractID[] = "@mozilla.org/js/xpc/RuntimeService;1";
 const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect;1";
-const char kJSContextStackContractID[] =   "@mozilla.org/js/xpc/ContextStack;1";
 const char kConsoleServiceContractID[] =   "@mozilla.org/consoleservice;1";
 const char kScriptErrorContractID[] =      "@mozilla.org/scripterror;1";
 const char kObserverServiceContractID[] = "@mozilla.org/observer-service;1";
@@ -151,45 +152,11 @@ Reporter(JSContext *cx, const char *message, JSErrorReport *rep)
 #endif
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-Dump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    JSString *str;
-    if (!argc)
-        return JS_TRUE;
-    
-    str = JS_ValueToString(cx, argv[0]);
-    if (!str)
-        return JS_FALSE;
-
-    char *bytes = JS_GetStringBytes(str);
-    bytes = nsCRT::strdup(bytes);
-
-#ifdef XP_MAC
-    for (char *c = bytes; *c; c++)
-        if (*c == '\r')
-            *c = '\n';
-#endif
-    fputs(bytes, stdout);
-    nsMemory::Free(bytes);
-    return JS_TRUE;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-Debug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-#ifdef DEBUG
-    return Dump(cx, obj, argc, argv, rval);
-#else
-    return JS_TRUE;
-#endif
-}
-
 #ifndef XPCONNECT_STANDALONE
 
 static JSFunctionSpec gSandboxFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
+    {"dump", JSDump, 1 },
+    {"debug", JSDebug, 1 },
     {0}
 };
 
@@ -317,84 +284,17 @@ EvalInSandbox(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 #endif /* XPCONNECT_STANDALONE */
 
 static JSFunctionSpec gGlobalFun[] = {
-    {"dump", Dump, 1 },
-    {"debug", Debug, 1 },
+    {"dump", JSDump, 1 },
+    {"debug", JSDebug, 1 },
 #ifndef XPCONNECT_STANDALONE
     {"Sandbox", NewSandbox, 0 },
     {"evalInSandbox", EvalInSandbox, 3 },
 #endif
+#ifdef MOZ_JSCODELIB
+    {"importModule", JSImportModule, 1 },
+#endif
     {0}
 };
-
-#ifndef XPCONNECT_STANDALONE
-class BackstagePass : public nsIScriptObjectPrincipal, public nsIXPCScriptable
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIXPCSCRIPTABLE
-  
-  virtual nsIPrincipal* GetPrincipal() {
-    return mPrincipal;
-  }
-
-  BackstagePass(nsIPrincipal *prin) :
-    mPrincipal(prin)
-  {
-  }
-
-  virtual ~BackstagePass() { }
-
-private:
-  nsCOMPtr<nsIPrincipal> mPrincipal;
-};
-
-NS_IMPL_THREADSAFE_ISUPPORTS2(BackstagePass, nsIScriptObjectPrincipal, nsIXPCScriptable)
-
-#else
-
-class BackstagePass : public nsIXPCScriptable
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIXPCSCRIPTABLE
-
-  BackstagePass()
-  {
-  }
-
-  virtual ~BackstagePass() { }
-};
-
-NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable)
-
-#endif
-
-// The nsIXPCScriptable map declaration that will generate stubs for us...
-#define XPC_MAP_CLASSNAME           BackstagePass
-#define XPC_MAP_QUOTED_CLASSNAME   "BackstagePass"
-#define                             XPC_MAP_WANT_NEWRESOLVE
-#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY   | \
-                            nsIXPCScriptable::DONT_ENUM_STATIC_PROPS       | \
-                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE    | \
-                            nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES
-#include "xpc_map_end.h" /* This will #undef the above */
-
-/* PRBool newResolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in PRUint32 flags, out JSObjectPtr objp); */
-NS_IMETHODIMP
-BackstagePass::NewResolve(nsIXPConnectWrappedNative *wrapper,
-                          JSContext * cx, JSObject * obj,
-                          jsval id, PRUint32 flags, 
-                          JSObject * *objp, PRBool *_retval)
-{
-    JSBool resolved;
-
-    *_retval = JS_ResolveStandardClass(cx, obj, id, &resolved);
-    if (*_retval && resolved)
-        *objp = obj;
-    return NS_OK;
-}
 
 mozJSComponentLoader::mozJSComponentLoader()
     : mRuntime(nsnull),
@@ -916,7 +816,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
     if (!xpc)
         return nsnull;
 
-    JSCLAutoContext cx(mRuntime);
+    JSAutoContext cx;
     if(NS_FAILED(cx.GetError()))
         return nsnull;
 
@@ -942,7 +842,7 @@ mozJSComponentLoader::ModuleForLocation(const char *registryLocation,
         return nsnull;
     }
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSAutoErrorReporterSetter aers(cx, Reporter);
 
     jsval argv[2], retval;
     argv[0] = OBJECT_TO_JSVAL(cm_jsobj);
@@ -1008,23 +908,23 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     nsresult rv;
     JSPrincipals* jsPrincipals = nsnull;
 
-    JSCLAutoContext cx(mRuntime);
+    JSAutoContext cx;
     if (NS_FAILED(cx.GetError()))
         return nsnull;
 
 #ifndef XPCONNECT_STANDALONE
     nsCOMPtr<nsIScriptObjectPrincipal> backstagePass =
-      new BackstagePass(mSystemPrincipal);
+      new JSBackstagePass(mSystemPrincipal);
 
     rv = mSystemPrincipal->GetJSPrincipals(cx, &jsPrincipals);
     if (NS_FAILED(rv) || !jsPrincipals)
         return nsnull;
 
 #else
-    nsCOMPtr<nsISupports> backstagePass = new BackstagePass();
+    nsCOMPtr<nsISupports> backstagePass = new JSBackstagePass();
 #endif
 
-    JSCLAutoErrorReporterSetter aers(cx, Reporter);
+    JSAutoErrorReporterSetter aers(cx, Reporter);
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
     nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
@@ -1190,53 +1090,4 @@ mozJSComponentLoader::UnloadAll(PRInt32 aWhen)
 }
 
 //----------------------------------------------------------------------
-
-JSCLAutoContext::JSCLAutoContext(JSRuntime* rt)
-    : mContext(nsnull), mError(NS_OK), mPopNeeded(JS_FALSE), mContextThread(0)
-{
-    nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-        do_GetService(kJSContextStackContractID, &mError);
-    
-    if (NS_SUCCEEDED(mError)) {
-        mError = cxstack->GetSafeJSContext(&mContext);
-        if (NS_SUCCEEDED(mError) && mContext) {
-            mError = cxstack->Push(mContext);
-            if (NS_SUCCEEDED(mError)) {
-                mPopNeeded = JS_TRUE;   
-            } 
-        } 
-    }
-    
-    if (mContext) {
-        mContextThread = JS_GetContextThread(mContext);
-        if (mContextThread) {
-            JS_BeginRequest(mContext);
-        } 
-    } else {
-        if (NS_SUCCEEDED(mError)) {
-            mError = NS_ERROR_FAILURE;
-        }
-    }
-}
-
-JSCLAutoContext::~JSCLAutoContext()
-{
-    if (mContext && mContextThread) {
-        JS_ClearNewbornRoots(mContext);
-        JS_EndRequest(mContext);
-    }
-
-    if (mPopNeeded) {
-        nsCOMPtr<nsIThreadJSContextStack> cxstack = 
-            do_GetService(kJSContextStackContractID);
-        if (cxstack) {
-            JSContext* cx;
-            nsresult rv = cxstack->Pop(&cx);
-            NS_ASSERTION(NS_SUCCEEDED(rv) && cx == mContext, "push/pop mismatch");
-        }        
-    }        
-}        
-
-//----------------------------------------------------------------------
-
 /* XXX this should all be data-driven, via NS_IMPL_GETMODULE_WITH_CATEGORIES */

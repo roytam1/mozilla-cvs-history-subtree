@@ -22,6 +22,10 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributors:
+ *   Mike Shaver <shaver@zeroknowledge.com>
+ *   John Bandhauer <jband@netscape.com>
+ *   IBM Corp.
+ *   Robert Ginda <rginda@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -37,59 +41,71 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "plhash.h"
-#include "jsapi.h"
-#include "nsIComponentLoader.h"
-#include "nsIComponentLoaderManager.h"
-#include "nsIJSRuntimeService.h"
-#include "nsIJSContextStack.h"
-#include "nsISupports.h"
-#include "nsIXPConnect.h"
-#include "nsIModule.h"
-#include "nsSupportsArray.h"
-#include "nsIFile.h"
+#ifndef __JS_BACKSTAGE_PASS_H__
+#define __JS_BACKSTAGE_PASS_H__
+
+#include "nsIXPCScriptable.h"
+
 #ifndef XPCONNECT_STANDALONE
+
+#include "nsCOMPtr.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIPrincipal.h"
-#endif
-extern const char mozJSComponentLoaderContractID[];
-extern const char jsComponentTypeName[];
 
-/* 6bd13476-1dd2-11b2-bbef-f0ccb5fa64b6 (thanks, mozbot) */
+////////////////////////////////////////////////////////////////////////
+// JSBackstagePass
 
-#define MOZJSCOMPONENTLOADER_CID \
-  {0x6bd13476, 0x1dd2, 0x11b2, \
-    { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
-
-class mozJSComponentLoader : public nsIComponentLoader {
-
+class JSBackstagePass : public nsIScriptObjectPrincipal, public nsIXPCScriptable
+{
 public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSICOMPONENTLOADER
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXPCSCRIPTABLE
+  
+  virtual nsIPrincipal* GetPrincipal() {
+    return mPrincipal;
+  }
 
-    mozJSComponentLoader();
-    virtual ~mozJSComponentLoader();
+  JSBackstagePass(nsIPrincipal *prin) :
+    mPrincipal(prin)
+  {
+  }
 
- protected:
-    nsresult ReallyInit();
-    nsresult AttemptRegistration(nsIFile *component, PRBool deferred);
-    nsresult UnregisterComponent(nsIFile *component);
-    nsresult RegisterComponentsInDir(PRInt32 when, nsIFile *dir);
-    JSObject *GlobalForLocation(const char *aLocation, nsIFile *component);
-    nsIModule *ModuleForLocation(const char *aLocation, nsIFile *component);
-    PRBool HasChanged(const char *registryLocation, nsIFile *component);
-    nsresult SetRegistryInfo(const char *registryLocation, nsIFile *component);
-    nsresult RemoveRegistryInfo(nsIFile *component, const char *registryLocation);
+  virtual ~JSBackstagePass() { }
 
-    nsCOMPtr<nsIComponentManager> mCompMgr;
-    nsCOMPtr<nsIComponentLoaderManager> mLoaderManager;
-    nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
-#ifndef XPCONNECT_STANDALONE
-    nsCOMPtr<nsIPrincipal> mSystemPrincipal;
-#endif
-    JSRuntime *mRuntime;
-    PLHashTable *mModules;
-    PLHashTable *mGlobals;
-
-    PRBool mInitialized;
-    nsSupportsArray mDeferredComponents;
+private:
+  nsCOMPtr<nsIPrincipal> mPrincipal;
 };
+
+#else
+
+class JSBackstagePass : public nsIXPCScriptable
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXPCSCRIPTABLE
+
+  JSBackstagePass()
+  {
+  }
+
+  virtual ~JSBackstagePass() { }
+};
+
+#endif
+
+////////////////////////////////////////////////////////////////////////
+// Standard JS functions
+
+JSBool JS_DLL_CALLBACK
+JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
+
+JSBool JS_DLL_CALLBACK
+JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
+
+#ifdef MOZ_JSCODELIB
+JSBool JS_DLL_CALLBACK
+JSImportModule(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
+#endif // MOZ_JSCODELIB
+
+
+#endif // __JS_BACKSTAGE_PASS_H__

@@ -22,6 +22,10 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributors:
+ *   Mike Shaver <shaver@zeroknowledge.com>
+ *   John Bandhauer <jband@netscape.com>
+ *   IBM Corp.
+ *   Robert Ginda <rginda@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -37,59 +41,55 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "plhash.h"
-#include "jsapi.h"
-#include "nsIComponentLoader.h"
-#include "nsIComponentLoaderManager.h"
-#include "nsIJSRuntimeService.h"
+#include "JSAutoContext.h"
+#include "nsCOMPtr.h"
 #include "nsIJSContextStack.h"
-#include "nsISupports.h"
-#include "nsIXPConnect.h"
-#include "nsIModule.h"
-#include "nsSupportsArray.h"
-#include "nsIFile.h"
-#ifndef XPCONNECT_STANDALONE
-#include "nsIPrincipal.h"
-#endif
-extern const char mozJSComponentLoaderContractID[];
-extern const char jsComponentTypeName[];
+#include "nsIServiceManager.h"
 
-/* 6bd13476-1dd2-11b2-bbef-f0ccb5fa64b6 (thanks, mozbot) */
+const char kJSContextStackContractID[] = "@mozilla.org/js/xpc/ContextStack;1";
 
-#define MOZJSCOMPONENTLOADER_CID \
-  {0x6bd13476, 0x1dd2, 0x11b2, \
-    { 0xbb, 0xef, 0xf0, 0xcc, 0xb5, 0xfa, 0x64, 0xb6 }}
+JSAutoContext::JSAutoContext()
+    : mContext(nsnull), mError(NS_OK), mPopNeeded(JS_FALSE), mContextThread(0)
+{
+    nsCOMPtr<nsIThreadJSContextStack> cxstack = 
+        do_GetService(kJSContextStackContractID, &mError);
+    
+    if (NS_SUCCEEDED(mError)) {
+        mError = cxstack->GetSafeJSContext(&mContext);
+        if (NS_SUCCEEDED(mError) && mContext) {
+            mError = cxstack->Push(mContext);
+            if (NS_SUCCEEDED(mError)) {
+                mPopNeeded = JS_TRUE;   
+            } 
+        } 
+    }
+    
+    if (mContext) {
+        mContextThread = JS_GetContextThread(mContext);
+        if (mContextThread) {
+            JS_BeginRequest(mContext);
+        } 
+    } else {
+        if (NS_SUCCEEDED(mError)) {
+            mError = NS_ERROR_FAILURE;
+        }
+    }
+}
 
-class mozJSComponentLoader : public nsIComponentLoader {
+JSAutoContext::~JSAutoContext()
+{
+    if (mContext && mContextThread) {
+        JS_ClearNewbornRoots(mContext);
+        JS_EndRequest(mContext);
+    }
 
-public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSICOMPONENTLOADER
-
-    mozJSComponentLoader();
-    virtual ~mozJSComponentLoader();
-
- protected:
-    nsresult ReallyInit();
-    nsresult AttemptRegistration(nsIFile *component, PRBool deferred);
-    nsresult UnregisterComponent(nsIFile *component);
-    nsresult RegisterComponentsInDir(PRInt32 when, nsIFile *dir);
-    JSObject *GlobalForLocation(const char *aLocation, nsIFile *component);
-    nsIModule *ModuleForLocation(const char *aLocation, nsIFile *component);
-    PRBool HasChanged(const char *registryLocation, nsIFile *component);
-    nsresult SetRegistryInfo(const char *registryLocation, nsIFile *component);
-    nsresult RemoveRegistryInfo(nsIFile *component, const char *registryLocation);
-
-    nsCOMPtr<nsIComponentManager> mCompMgr;
-    nsCOMPtr<nsIComponentLoaderManager> mLoaderManager;
-    nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
-#ifndef XPCONNECT_STANDALONE
-    nsCOMPtr<nsIPrincipal> mSystemPrincipal;
-#endif
-    JSRuntime *mRuntime;
-    PLHashTable *mModules;
-    PLHashTable *mGlobals;
-
-    PRBool mInitialized;
-    nsSupportsArray mDeferredComponents;
-};
+    if (mPopNeeded) {
+        nsCOMPtr<nsIThreadJSContextStack> cxstack = 
+            do_GetService(kJSContextStackContractID);
+        if (cxstack) {
+            JSContext* cx;
+            nsresult rv = cxstack->Pop(&cx);
+            NS_ASSERTION(NS_SUCCEEDED(rv) && cx == mContext, "push/pop mismatch");
+        }        
+    }        
+}        

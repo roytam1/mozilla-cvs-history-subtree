@@ -71,7 +71,12 @@ XTF_BRANCH_MODIFIED_FILES = \
 	config/rules.mk \
 	content/Makefile.in \
 	content/base/src/nsNameSpaceManager.cpp \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpcmodule.cpp \
 	layout/Makefile.in \
 	layout/build/Makefile.in \
 	layout/build/nsLayoutModule.cpp \
@@ -111,6 +116,16 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/tests/smiley/Makefile.in \
 	content/xtf/tests/smiley/smiley.js \
 	content/xtf/tests/smiley/smiley.svg \
+	js/src/xpconnect/codelib/Makefile.in \
+	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
+	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
+	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/shared/Makefile.in \
+	js/src/xpconnect/shared/JSAutoContext.cpp \
+	js/src/xpconnect/shared/JSAutoContext.h \
+	js/src/xpconnect/shared/JSBackstagePass.cpp \
+	js/src/xpconnect/shared/JSBackstagePass.h \
+	js/src/xpconnect/loader/JSComponentUtils.js \
 	layout/xtf/Makefile.in \
 	layout/xtf/src/Makefile.in \
 	layout/xtf/src/nsXTFSVGDisplayFrame.cpp

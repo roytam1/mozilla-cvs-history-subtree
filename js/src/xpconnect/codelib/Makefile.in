@@ -41,35 +41,28 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= jsloader
-LIBRARY_NAME	= jsloader_s
+MODULE		= xpconnect
+XPIDL_MODULE    = jscodelib
+LIBRARY_NAME	= jscodelib_s
 FORCE_STATIC_LIB = 1
 REQUIRES	= xpcom \
 		  string \
-		  xpconnect \
 		  js \
 		  caps \
-		  dom \
 		  necko \
+		  dom \
 		  $(NULL)
 
-CPPSRCS		= mozJSComponentLoader.cpp mozJSSubScriptLoader.cpp
+CPPSRCS		= mozJSCodeLib.cpp 
 
 LOCAL_INCLUDES = \
 		-I$(srcdir)/../shared \
 		$(NULL)
+
+XPIDLSRCS	= mozIJSCodeLib.idl
 
 include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -DJSFILE -DJS_THREADSAFE
 
 
-JS_CODELIB_RESOURCES = \
-	JSComponentUtils.js \
-	$(NULL)
-
-libs::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DIST)/bin/jscodelib
-
-install::  $(JS_CODELIB_RESOURCES)
-	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/jscodelib

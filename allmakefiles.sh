@@ -237,6 +237,8 @@ js/src/xpconnect/shell/Makefile
 js/src/xpconnect/tools/Makefile
 js/src/xpconnect/tools/idl/Makefile
 js/src/xpconnect/tools/idl/Makefile
+js/src/xpconnect/codelib/Makefile
+js/src/xpconnect/shared/Makefile
 "
 
 MAKEFILES_jsdebugger="
