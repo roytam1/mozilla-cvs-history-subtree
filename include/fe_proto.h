@@ -1238,11 +1238,6 @@ extern int WFE_DoCompuserveAuthenticate(MWContext *context,
 
 extern char *WFE_BuildCompuserveAuthString(URL_Struct *URL_s);
 
-/* Way to attempt to keep the application messages flowing 
- * when need to block a return value.
- */
-extern void FEU_StayingAlive(void);
-
 /* convert logical pixels to device pixels */
 extern int32  FE_LPtoDPoint(MWContext * context, int32 logicalPoint);
 
@@ -1260,6 +1255,11 @@ extern void	FE_MochaImageGroupObserver(XP_Observable observable,
  * we get the first window up. This function is need if FIPS140 is turned on.
  */
 MWContext * FE_GetInitContext(void);
+
+/* Way to attempt to keep the application messages flowing 
+ * when need to block a return value.
+ */
+extern void FEU_StayingAlive(void);
 
 #ifdef XP_UNIX
 /* Get the dimensions of an icon in pixels for the PostScript front end. */
