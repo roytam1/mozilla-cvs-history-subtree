@@ -73,7 +73,6 @@
 
 #if USE_PROFILES
 #include "CProfileManager.h"
-#include "CAppProfileChangeObserver.h"
 #include "nsIProfileChangeStatus.h"
 #endif
 
