@@ -95,7 +95,8 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
         defaultButton:(NSString*)defaultLabel
         altButton:(NSString*)altLabel
         otherButton:(NSString*)otherLabel
-        extraView:(NSView*)extraView;
+        extraView:(NSView*)extraView
+        lastResponder:(NSView*)lastResponder;
         
 - (NSButton*)makeButtonWithTitle:(NSString*)title;
 
@@ -133,7 +134,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 - (void)alert:(NSWindow*)parent title:(NSString*)title text:(NSString*)text
 { 
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: nil otherButton: nil extraView: nil];
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: nil otherButton: nil extraView: nil lastResponder:nil];
   [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
 }
@@ -148,7 +149,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [checkBox setState:state];
   
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: nil otherButton: nil extraView: checkboxView];
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: nil otherButton: nil extraView: checkboxView lastResponder: checkBox];
   [panel setInitialFirstResponder: checkBox];
 
   [NSApp runModalForWindow: panel relativeToWindow:parent];
@@ -158,7 +159,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 - (BOOL)confirm:(NSWindow*)parent title:(NSString*)title text:(NSString*)text
 {
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: NSLocalizedString(@"CancelButtonText", @"") otherButton: nil extraView: nil];
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: NSLocalizedString(@"CancelButtonText", @"") otherButton: nil extraView: nil lastResponder: nil];
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
 
@@ -179,7 +180,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [checkBox setState:state];
   
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: checkboxView];
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: checkboxView lastResponder: checkBox];
   [panel setInitialFirstResponder: checkBox];
 
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
@@ -191,7 +192,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 - (int)confirmEx:(NSWindow*)parent title:(NSString*)title text:(NSString*)text button1:(NSString*)btn1 button2:(NSString*)btn2 button3:(NSString*)btn3
 {
-   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: btn1 altButton: btn2 otherButton: btn3 extraView: nil];
+   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: btn1 altButton: btn2 otherButton: btn3 extraView: nil lastResponder: nil];
    int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
    [panel close];
    return result;
@@ -207,7 +208,8 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 	[checkBox setState:state];
   
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: btn1 altButton: btn2 otherButton: btn3 extraView: checkboxView];
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: btn1 altButton: btn2 otherButton: btn3 extraView: checkboxView lastResponder: checkBox];
+  [panel setInitialFirstResponder: checkBox];
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   *checkValue = ([checkBox state] == NSOnState);  
   [panel close];
@@ -232,6 +234,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [field setFont: [NSFont systemFontOfSize: [NSFont smallSystemFontSize]]];
   [field setAutoresizingMask: NSViewWidthSizable | NSViewMinYMargin];
   [extraView addSubview: field];
+  [extraView setNextKeyView: field];
 
   //  set up check box view, and combine the checkbox and field into the entire extra view
   NSButton* checkBox = nil;  
@@ -242,10 +245,12 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
     [checkboxView setFrameOrigin: NSMakePoint(0, 0)];
     [extraView setFrameSize: NSMakeSize(width, kTextFieldHeight + kGeneralViewSpace + NSHeight([checkboxView frame]))];
     [extraView addSubview: checkboxView];
+    [field setNextKeyView: checkBox];
   }
     
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
+  NSView* lastResponder = (doCheck ? (NSView*)checkBox : (NSView*)field);
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView lastResponder:lastResponder];
   [panel setInitialFirstResponder: field];
 
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
@@ -274,6 +279,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [userView setFrameOrigin: NSMakePoint(0, kTextFieldHeight + kGeneralViewSpace)];
   [userField setStringValue: userNameText];
   [extraView addSubview: userView];
+  [extraView setNextKeyView: userField];
   
   //  set up password field
   NSSecureTextField* passField = nil;
@@ -282,6 +288,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [passView setFrameOrigin: NSMakePoint(0, 0)];
   [passField setStringValue: passwordText];
   [extraView addSubview: passView];
+  [userField setNextKeyView: passField];
 
   //  set up check box view, and combine the checkbox and field into the entire extra view
   NSButton* checkBox = nil;  
@@ -292,11 +299,13 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
     [checkboxView setFrameOrigin: NSMakePoint(0, 0)];
     [extraView setFrameSize: NSMakeSize(width,  2*kTextFieldHeight + 2*kGeneralViewSpace + NSHeight([checkboxView frame]))];
     [extraView addSubview: checkboxView];
+    [passField setNextKeyView: checkBox];
   }
     
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
-  [panel setInitialFirstResponder: userView];
+  NSView* lastResponder = (doCheck ? (NSView*)checkBox : (NSView*)passField);
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView lastResponder:lastResponder];
+  [panel setInitialFirstResponder: userField];
 
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
@@ -325,6 +334,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [passView setFrameOrigin: NSMakePoint(0, 0)];
   [passField setStringValue: passwordText];
   [extraView addSubview: passView];
+  [extraView setNextKeyView: passField];
 
   //  set up check box view, and combine the checkbox and field into the entire extra view
   NSButton* checkBox = nil;  
@@ -335,10 +345,12 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
     [checkboxView setFrameOrigin: NSMakePoint(0, 0)];
     [extraView setFrameSize: NSMakeSize(width, kTextFieldHeight + kGeneralViewSpace + NSHeight([checkboxView frame]))];
     [extraView addSubview: checkboxView];
+    [passField setNextKeyView: checkBox];
   }
     
   //  get panel and display it
-  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
+  NSView* lastResponder = (doCheck ? (NSView*)checkBox : (NSView*)passField);
+  NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView lastResponder:lastResponder];
   [panel setInitialFirstResponder: passField];
 
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
@@ -454,9 +466,8 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 - (NSPanel*)getAlertPanelWithTitle:(NSString*)title message:(NSString*)message
                 defaultButton:(NSString*)defaultLabel altButton:(NSString*)altLabel
-                otherButton:(NSString*)otherLabel extraView:(NSView*)extraView
+otherButton:(NSString*)otherLabel extraView:(NSView*)extraView lastResponder:(NSView*)lastResponder
 {
-  // XXX to do: we need to fix the tab order between dynamically added items
   NSRect rect = NSMakeRect(0, 0, kMinDialogWidth, kMaxDialogHeight);
   NSPanel* panel = [[[NSPanel alloc] initWithContentRect: rect styleMask: NSTitledWindowMask backing: NSBackingStoreBuffered defer: YES] autorelease];
   NSImageView* imageView = [[[NSImageView alloc] initWithFrame: NSMakeRect(kWindowBorder, kMaxDialogHeight - kWindowBorder - kIconSize, kIconSize, kIconSize)] autorelease];
@@ -478,6 +489,8 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [[panel contentView] addSubview: defButton];
   [panel setDefaultButtonCell: [defButton cell]];
   
+  NSView* firstKeyView = (extraView ? extraView : defButton);
+
   NSButton* altButton = nil;
   if (altLabel) {
     altButton = [self makeButtonWithTitle: altLabel];
@@ -485,6 +498,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
     [altButton setAutoresizingMask: NSViewMinXMargin | NSViewMaxYMargin];
     [altButton setKeyEquivalent: @"\e"];		// escape
     [[panel contentView] addSubview: altButton];
+    [defButton setNextKeyView: altButton];
   }
   
   NSButton* otherButton = nil;
@@ -493,6 +507,16 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
     [otherButton setAction: @selector(hitButton3:)];
     [otherButton setAutoresizingMask: NSViewMaxXMargin | NSViewMaxYMargin];
     [[panel contentView] addSubview: otherButton];
+    [otherButton setNextKeyView: firstKeyView];
+    if (altButton)
+      [altButton setNextKeyView: otherButton];
+    else
+      [defButton setNextKeyView: otherButton];
+  } else {
+    if (altButton)
+      [altButton setNextKeyView: firstKeyView];
+    else
+      [defButton setNextKeyView: firstKeyView];
   }
   
   //  position buttons
@@ -552,6 +576,16 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   NSRect extraRect = NSMakeRect(contentLeftEdge, NSMinY([messageView frame]) - kGeneralViewSpace - extraViewHeight, contentWidth, extraViewHeight);
   [extraView setFrame: extraRect];
   [[panel contentView] addSubview: extraView];
+
+  // If a lastResponder was passed in (the last item in the tab order inside
+  // extraView), hook it up to cycle to defButton.  If not, assume there is
+  // nothing focusable inside extraView and hook up defButton as the first
+  // responder.
+
+  if (lastResponder)
+    [lastResponder setNextKeyView: defButton];
+  else
+    [panel setInitialFirstResponder: defButton];
 
   return panel;
 }
@@ -693,6 +727,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   NSView* view = [[[QDCoordsView alloc] initWithFrame: NSMakeRect(0, 0, width, height)] autorelease];
   
   [view addSubview: textField];
+  [view setNextKeyView: textField];
   [textField setFrameOrigin: NSMakePoint(kCheckBoxWidth, kLabelCheckboxAdjustment)];
   
   NSButton* checkBox = [[[NSButton alloc] initWithFrame: NSMakeRect(0, 0, kCheckBoxWidth, kCheckBoxHeight)] autorelease];
@@ -700,6 +735,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [checkBox setButtonType: NSSwitchButton];
   [[checkBox cell] setControlSize: NSSmallControlSize];
   [view addSubview: checkBox];
+  [textField setNextKeyView: checkBox];
   
   // overlay the label with a transparent button that will push the checkbox
   // when clicked on
@@ -733,6 +769,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [[field cell] setControlSize: NSSmallControlSize];
   [field setFont: [NSFont systemFontOfSize: [NSFont smallSystemFontSize]]];
   [view addSubview: field];
+  [view setNextKeyView: field];
   *fieldPtr = field;
   
   return view;
@@ -759,6 +796,7 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [[field cell] setControlSize: NSSmallControlSize];
   [field setFont: [NSFont systemFontOfSize: [NSFont smallSystemFontSize]]];
   [view addSubview: field];
+  [view setNextKeyView: field];
   *fieldPtr = field;
   
   return view;
