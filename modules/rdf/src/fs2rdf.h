@@ -30,6 +30,8 @@
 #include <Appletalk.h>
 #include <Devices.h>
 #include <Files.h>
+#include <FinderRegistry.h>
+#include <Processes.h>
 #endif
 
 
@@ -57,6 +59,7 @@ XP_BEGIN_PROTOS
 
 #ifdef	XP_MAC
 OSErr		nativeMacPathname(char *fileURL, FSSpec *fss);
+OSErr		getPSNbyTypeSig(ProcessSerialNumber *thePSN, OSType pType, OSType pSignature);
 #endif
 
 void		GuessIEBookmarks(void);

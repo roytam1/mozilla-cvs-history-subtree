@@ -59,6 +59,7 @@ GuessIEBookmarks (void)
       }
       freeMem(pn);
     }
+    PR_CloseDir(ProfilesDir);
   }
 #endif
 }
@@ -199,27 +200,56 @@ PRBool
 fsAssert (RDFT rdf, RDF_Resource u, RDF_Resource s, void* v, 
 		   RDF_ValueType type, PRBool tv)
 {
-	PRBool		retVal = PR_FALSE;
+	PRBool			retVal = PR_FALSE;
 #ifdef	XP_MAC
-	FSSpec		fss;
-	OSErr		err;
+	AEAddressDesc		finderAddr = { typeNull, NULL };
+	AEDescList		selection = { typeNull, NULL };
+	AppleEvent		theEvent = { typeNull, NULL }, theReply = { typeNull, NULL };
+	FSSpec			fss;
+	OSErr			err;
+	ProcessSerialNumber	finderPSN = { 0, kNoProcess };
+	char			*errorMsg;
 #endif
 
-	if (startsWith("file://", resourceID(u)))
+	if ((startsWith("file://", resourceID(u))) && (s == gNavCenter->RDF_Command))
 	{
-		if (s == gNavCenter->RDF_Command)
-		{
 #ifdef	XP_MAC
-			if (((RDF_Resource)v) == gNavCenter->RDF_Command_Reveal)
+		if (((RDF_Resource)v) == gNavCenter->RDF_Command_Reveal)
+		{
+			/* reveal item in Finder */
+			retVal = PR_TRUE;
+			if ((err = nativeMacPathname(resourceID(u), &fss)) != noErr)	{}
+			else if ((err = getPSNbyTypeSig(&finderPSN, 'FNDR', 'MACS')) != noErr)	{}
+			else if ((err = AECreateDesc(typeProcessSerialNumber, &finderPSN,
+				sizeof(ProcessSerialNumber), &finderAddr)) != noErr)	{}
+			else if ((err = AECreateAppleEvent(kAEFinderEvents /* kAEFinderSuite */,
+				kAERevealSelection, &finderAddr, kAutoGenerateReturnID,
+				kAnyTransactionID, &theEvent)) != noErr)	{}
+			else if ((err = AECreateList (NULL, 0, false, &selection)) != noErr)	{}
+			else if ((err = AEPutPtr (&selection, 0, typeFSS, &fss, sizeof(FSSpec))) != noErr)	{}
+			else if ((err = AEPutParamDesc (&theEvent, keySelection, &selection)) != noErr)	{}
+			else err = AESend (&theEvent, &theReply, kAENoReply, kAENormalPriority,
+				kAEDefaultTimeout, NULL, NULL);
+
+			if (err == noErr)
 			{
-				retVal = PR_TRUE;
-				if (!(err = nativeMacPathname(resourceID(u), &fss)))
+				SetFrontProcess(&finderPSN);
+			}
+			else
+			{
+				if ((errorMsg = PR_smprintf("Error %d", (int)err)) != NULL)
 				{
-					/* XXX reveal item in Finder */
+					FE_Alert(NULL, errorMsg);
+					XP_FREE(errorMsg);
 				}
 			}
-#endif
+
+			if (finderAddr.dataHandle != NULL)	AEDisposeDesc(&finderAddr);
+			if (selection.dataHandle != NULL)	AEDisposeDesc (&selection);
+			if (theEvent.dataHandle != NULL)	AEDisposeDesc(&theEvent);
+			if (theReply.dataHandle != NULL)	AEDisposeDesc(&theReply);
 		}
+#endif
 	}
 	return(retVal);
 }
@@ -292,6 +322,33 @@ nativeMacPathname(char *fileURL, FSSpec *fss)
 			freeMem(pascalStr);
 		}
 		freeMem(macURL);
+	}
+	return(err);
+}
+
+
+
+OSErr
+getPSNbyTypeSig(ProcessSerialNumber *thePSN, OSType pType, OSType pSignature)
+{
+	OSErr			err;
+	ProcessInfoRec		pInfo;
+
+	thePSN->highLongOfPSN=0L;
+	thePSN->lowLongOfPSN=kNoProcess;
+	while (!(err=GetNextProcess(thePSN)))
+	{
+		if ((thePSN->highLongOfPSN==0L) && (thePSN->lowLongOfPSN==kNoProcess))
+		{
+			err=procNotFound;
+			break;
+		}
+		pInfo.processInfoLength=sizeof(ProcessInfoRec);
+		pInfo.processName=NULL;
+		pInfo.processLocation=NULL;
+		pInfo.processAppSpec=NULL;
+		if ((err=GetProcessInformation(thePSN,&pInfo)) != noErr)	break;
+		if ((pInfo.processType==pType) && (pInfo.processSignature==pSignature))	break;
 	}
 	return(err);
 }

@@ -3963,7 +3963,15 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 				break;
 
 				case	HT_CMD_FIND:
-				HT_Find((node != NULL) ? HT_GetNodeName(node): NULL);
+				title = NULL;
+				if (node != NULL)
+				{
+					if (!HT_IsSeparator(node))
+					{
+						title = HT_GetNodeName(node);
+					}
+				}
+				HT_Find(title);
 				break;
 
 				case	HT_CMD_REVEAL_FILEFOLDER:
