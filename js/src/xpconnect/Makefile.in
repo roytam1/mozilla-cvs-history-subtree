@@ -132,8 +132,9 @@ LIB_CPPSRCS +=	src/XPCDispObject.cpp	\
 endif
 
 EXTRA_DSO_LDOPTS += \
-		$(MOZ_COMPONENT_LIBS) \
+		$(LIBS_DIR) \
 		$(MOZ_JS_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
 LOCAL_INCLUDES = \
@@ -144,6 +145,7 @@ LOCAL_INCLUDES = \
 SIMPLE_PROGRAMS	= shell/xpcshell$(BIN_SUFFIX)
 
 PROG_LIBS	= \
+		$(LIBS_DIR) \
 		$(MOZ_JS_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
