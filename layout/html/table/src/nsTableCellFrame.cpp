@@ -504,7 +504,7 @@ void nsTableCellFrame::VerticallyAlignChild(nsIPresContext*          aPresContex
                                             nscoord                  aMaxAscent)
 {
   const nsStyleTextReset* textStyle =
-      (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_Text);
+      (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_TextReset);
   /* XXX: remove tableFrame when border-collapse inherits */
   nsTableFrame* tableFrame = nsnull;
   (void) nsTableFrame::GetTableFrame(this, tableFrame);
