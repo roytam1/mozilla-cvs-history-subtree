@@ -159,7 +159,6 @@ function bc_disconnect()
         this._inputStream.close();
     if ("_outputStream" in this && this._outputStream)
         this._outputStream.close();
-    this.isConnected = false;
     /*
     this._streamProvider.close();
     if (this._streamProvider.isBlocked)
@@ -193,8 +192,8 @@ function bc_readdata(timeout, count)
     }
     catch (ex)
     {
-        dd ("*** Caught " + ex + " while reading.");
-        this.disconnect();
+        dd ("*** Caught " + ex + " while reading.")
+        this.isConnected = false;
         throw (ex);
     }
     
@@ -250,8 +249,8 @@ function bc_senddatanow(str)
     }
     catch (ex)
     {
-        dd ("*** Caught " + ex + " while sending.");
-        this.disconnect();
+        dd ("*** Caught " + ex + " while sending.")
+        this.isConnected = false;
         throw (ex);
     }
     

@@ -18,10 +18,9 @@ function onChooseFile() {
     try {
     	var flClass = Components.classes["@mozilla.org/filepicker;1"];
         var fp = flClass.createInstance(nsIFilePicker);
-        fp.init(window, getMsg("file_browse_Script"),
-                nsIFilePicker.modeOpen);
+        fp.init(window, "Choose a JavaScript script", nsIFilePicker.modeOpen);
         
-        fp.appendFilter(getMsg("file_browse_Script_spec"), "*.js");
+        fp.appendFilter("JavaScript script (*.js)", "*.js");
         fp.appendFilters(nsIFilePicker.filterAll);
         
         if (fp.show() == nsIFilePicker.returnOK && fp.fileURL.spec 

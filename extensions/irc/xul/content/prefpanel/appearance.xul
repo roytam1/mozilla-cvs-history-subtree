@@ -33,7 +33,7 @@
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://chatzilla/content/prefpanel/appearance.css" type="text/css"?>
-<!DOCTYPE page SYSTEM "chrome://chatzilla/locale/pref-irc.dtd">
+<!DOCTYPE window SYSTEM "chrome://chatzilla/locale/pref-irc.dtd">
 
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
     onload="Init();"
@@ -137,7 +137,7 @@
         <menulist flex="1" id="czStyleCSS" crop="center" 
             prefvalue="" prefattribute="prefvalue" wsm_attributes="prefvalue"
             prefdefval="chrome://chatzilla/skin/output-default.css"
-            preftype="string" prefstring="extensions.irc.motif.current">
+            preftype="string" prefstring="extensions.irc.style.default">
           <menupopup>
             <menuitem label="&style.default.label;" 
                 oncommand="selectStyle(this.getAttribute('url'));" 

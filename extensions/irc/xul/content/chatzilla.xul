@@ -32,6 +32,7 @@
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 <?xul-overlay href="chrome://chatzilla/content/scripts.xul"?>
 <?xul-overlay href="chrome://chatzilla/content/menus.xul"?>
+<?xul-overlay href="chrome://chatzilla/content/popups.xul"?>
 
 <window id="chatzilla-window"
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -42,6 +43,7 @@
 
   <overlaytarget id="scripts-overlay-target"/>
   <overlaytarget id="menu-overlay-target"/>
+  <overlaytarget id="popup-overlay-target"/>
 
   <vbox id="outer-box" flex="1">
     <vbox id="upper-box" flex="1">
@@ -50,8 +52,7 @@
  
           <tree id="user-list" container="true" datasources="rdf:null" flex="1"
             containment="http://home.netscape.com/NC-irc#chanuser"
-            hidecolumnpicker="true"
-            context="context:userlist">
+            context="userlistPopup">
 
             <template>
               <rule>
@@ -61,7 +62,6 @@
                 </conditions>
                 
                 <bindings>
-                  <binding subject="?member" predicate="http://home.netscape.com/NC-irc#sortname" object="?sortname"/>
                   <binding subject="?member" predicate="http://home.netscape.com/NC-irc#op" object="?op"/>
                   <binding subject="?member" predicate="http://home.netscape.com/NC-irc#voice" object="?voice"/>
                   <binding subject="?member" predicate="http://home.netscape.com/NC-irc#nick" object="?nick"/>
@@ -69,11 +69,11 @@
                 
                 <action>
                   <treechildren>
-                    <treeitem uri="?member" flex="1"
-                      properties="op-?op voice-?voice">
+                    <treeitem uri="?member" flex="1" properties="op-?op voice-?voice">
                       <treerow>
-                          <treecell properties="op-?op voice-?voice"
-                           label="?nick"/>
+                          <treecell properties="state-?op"/>
+                          <treecell properties="state-?voice"/>
+                          <treecell label="?nick"/>
                       </treerow>
                     </treeitem>
                   </treechildren>
@@ -82,8 +82,20 @@
             </template>
     
             <treecols>
-              <treecol id="usercol" hideheader="true" flex="1"
-                properties="op-?op voice-?voice"/>
+              <treecol id="usercol-op" label="O"
+                persist="hidden sortDirection"
+                onclick="return onSortCol('usercol-op')"
+                resource="http://home.netscape.com/NC-irc#op" width="25"/>
+              <splitter class="tree-splitter"/>
+              <treecol id="usercol-voice" label="V"
+                persist="hidden sortDirection"
+                onclick="return onSortCol('usercol-voice')"
+                resource="http://home.netscape.com/NC-irc#voice" width="25"/>
+              <splitter class="tree-splitter"/>
+              <treecol id="usercol-nick" label="Nick" flex="1"
+                persist="sortDirection" ignoreincolumnpicker="true"
+                onclick="return onSortCol('usercol-nick')"
+                resource="http://home.netscape.com/NC-irc#nick"/>
             </treecols>
           </tree>
     
@@ -94,6 +106,44 @@
         </splitter>
   
         <vbox flex="1">
+          <toolbox id="header-bar-tbox" crop="right" persist="collapsed">
+            <toolbar class="chromeclass-toolbar" id="header-bar-tbar"
+              grippytooltiptext="&header.tooltip;" crop="right">
+              <hbox flex="1" class="header-box">
+                <vbox flex="1%">
+                  <label class="header-label" value="&url.label;"/>
+                  <label class="header-label" value="&topic.label;"/>
+                </vbox>
+                <vbox flex="99%">
+                  <hbox flex="1">
+                    <hbox flex="1">
+                      <label class="header-data" id="header-url"
+                        ondraggesture="nsDragAndDrop.startDrag(event, tabDNDObserver);"
+                        crop="right"/>
+                    </hbox>
+                    <hbox flex="1">
+                      <label class="header-label" value="&mode.label;"/>
+                      <label class="header-data" id="channel-mode"
+                        crop="right"/>
+                    </hbox>
+                    <hbox flex="1">
+                      <label class="header-label" value="&users.label;"/>
+                      <label class="header-data" id="channel-users"/>
+                    </hbox>
+                  </hbox>
+                  <hbox flex="1">
+                    <hbox flex="1">
+                      <label class="header-data" id="channel-topic" flex="1"
+                        crop="right" onclick="onTopicEditStart()">text</label>
+                      <textbox flex="1" id="channel-topicedit" collapsed="true"/>
+                    </hbox>
+                  </hbox>
+                </vbox>
+              </hbox>
+  
+            </toolbar>
+          </toolbox>
+  
           <deck id="output-deck" flex="1"/>
         </vbox>
   
@@ -121,25 +171,32 @@
       <text id="server-nick" value=""/>
       <hbox id="multiline-box" flex="1" collapsed="true">
         <textbox id="multiline-input" multiline="true" flex="1" height="100px"
-          class="multiline-input-widget"/>
+          class="multiline-input-widget" onfocus="onInputFocus();"/>
         <vbox>
           <toolbarbutton id="button-input" flex="1"
             oncommand="onMultilineSend(event);"
             tooltiptext="&multiline-send.tooltip;" />
           <toolbarbutton id="button-multiline-contract"
-            oncommand="dispatch('pref multiline false');" 
+            oncommand="multilineInputMode(false);" 
             tooltiptext="&multiline-contract.tooltip;" />
         </vbox>
       </hbox>
       <hbox id="singleline-box" flex="1" collapsed="true">
-        <textbox id="input" class="input-widget" flex="1" autostretch="true"/>
+        <textbox id="input" class="input-widget" flex="1" autostretch="true"
+          onfocus="onInputFocus();"/>
         <toolbarbutton id="button-multiline-expand" 
-          oncommand="dispatch('pref multiline true');" 
+          oncommand="multilineInputMode(true);"
           tooltiptext="&multiline-expand.tooltip;"/>
       </hbox>
     </hbox>
   </vbox> <!-- outer-box -->
   
-  <overlaytarget id="statusbar-overlay-target"/>
-
+  <statusbar id="status-bar" persist="collapsed">
+    <statusbarpanel id="component-bar"/>
+    <statusbarpanel id="status-text" label="&StatusText.label;" flex="1"
+      crop="right"/>
+    <statusbarpanel class="statusbarpanel-icononly" id="offline-status"
+      hidden="true" offline="true"/>
+  </statusbar>  
+  
 </window>

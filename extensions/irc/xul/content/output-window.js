@@ -38,7 +38,6 @@ var initialized = false;
 var view;
 var client;
 var mainWindow;
-var clickHandler;
 
 var dd;
 var getMsg;
@@ -62,7 +61,7 @@ var headers = {
     IRCChannel: {
         prefix: "ch-",
         fields: ["container", "url-anchor", "modestr", "usercount",
-                 "topicnodes", "topicinput"],
+                 "topicnodes"],
         update: updateChannel
     },
 
@@ -76,7 +75,7 @@ var headers = {
 
 var initOutputWindow = stock_initOutputWindow;
 
-function stock_initOutputWindow(newClient, newView, newClickHandler)
+function stock_initOutputWindow(newClient, newView)
 {
     function initHeader()
     {
@@ -91,9 +90,8 @@ function stock_initOutputWindow(newClient, newView, newClickHandler)
 
     client = newClient;
     view = newView;
-    clickHandler = newClickHandler;
     mainWindow = client.mainWindow;
-    
+
     client.messageManager.importBundle(client.defaultBundle, window);
 
     getMsg = mainWindow.getMsg;
@@ -125,60 +123,6 @@ function stock_initOutputWindow(newClient, newView, newClickHandler)
     setTimeout(initHeader, 500);
 
     initialized = true;
-}
-
-function onTopicNodesClick(e)
-{
-    if (!clickHandler(e))
-    {
-        if (e.which != 1)
-            return;
-
-        startTopicEdit();
-    }
-
-    e.stopPropagation();
-}
-
-function onTopicKeypress(e)
-{
-    switch (e.keyCode)
-    {
-        case 13: /* enter */
-            view.setTopic(header["topicinput"].value);
-            view.dispatch("focus-input");
-            break;
-            
-        case 27: /* esc */
-            view.dispatch("focus-input");
-            break;
-    }
-}
-
-function startTopicEdit()
-{
-    var me = view.getUser(view.parent.me.nick);
-    if (!me || (!view.mode.publicTopic && !me.isOp) ||
-        !header["topicinput"].hasAttribute("hidden"))
-    {
-        return;
-    }
-    
-    header["topicinput"].value = view.topic;
-
-    header["topicnodes"].setAttribute("hidden", "true")
-    header["topicinput"].removeAttribute("hidden");
-    header["topicinput"].focus();
-    header["topicinput"].selectionStart = 0;
-}
-
-function cancelTopicEdit()
-{
-    if (!header["topicnodes"].hasAttribute("hidden"))
-        return;
-    
-    header["topicinput"].setAttribute("hidden", "true")
-    header["topicnodes"].removeAttribute("hidden");
 }
 
 function cacheNodes(pfx, ary, nodes)

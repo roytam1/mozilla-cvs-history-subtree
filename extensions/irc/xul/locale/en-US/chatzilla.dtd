@@ -1,7 +1,3 @@
-<!ENTITY Menubar.tooltip    "Main Menu">
-<!ENTITY Toolbar.tooltip    "Main Toolbar">
-
-
 <!ENTITY menuBar.tooltip    "Menu Bar">
 <!ENTITY header.tooltip     "Headers">
 <!ENTITY op.value           "Op">
@@ -76,11 +72,11 @@
 <!ENTITY ClearViewCmd.label     "Clear View">
 <!ENTITY ClearViewCmd.aKey      "e">
 <!ENTITY DeleteViewCmd.label    "Close View">
-<!ENTITY DeleteViewCmd.aKey     "V">
+<!ENTITY DeleteViewCmd.aKey     "o">
 <!ENTITY StatusCmd.label        "Connection Status">
 <!ENTITY StatusCmd.aKey         "C">
 
-<!ENTITY CloseCmd.label "Close Window">
+<!ENTITY CloseCmd.label "Close">
 <!ENTITY CloseCmd.aKey  "C">
 
 <!ENTITY PopupQueryCmd.label         "Private Chat ``$nick''">
