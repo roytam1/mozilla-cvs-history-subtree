@@ -134,10 +134,6 @@ PR_BEGIN_EXTERN_C
 #define strncasecmp(s1, s2, len)  strnicmp((s1),(s2),(len))
 #endif /* XP_PC */
 
-#ifdef XP_MAC
-#include "macstdlibextras.h"  /* for strncasecmp() */
-#endif
-
 /*
  * The following 2 macros are necessary for Win16 since they operate
  * on huge memory (which is unsupported by the runtime library)...
