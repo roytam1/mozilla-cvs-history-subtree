@@ -804,7 +804,10 @@ function delayedOnLoadMessenger()
   toolbox.toolbarset = toolbarset;
 
   var updatePanel = document.getElementById("statusbar-updates");
-  updatePanel.init();
+  try {
+    updatePanel.init();
+  }
+  catch (ex) {}
 }
 
 function OnUnloadMessenger()

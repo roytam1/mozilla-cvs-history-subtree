@@ -61,9 +61,9 @@
 <!ENTITY softwareupdateinfo.label         "Periodically check for updates to:">
 <!ENTITY enableSmartUpdate.label          "&brandShortName;">
 <!ENTITY enableSmartUpdate.accesskey      "F">
-<!ENTITY enableExtensionUpdate.label      "My Extensions">
+<!ENTITY enableExtensionUpdate.label      "My Extensions and Themes">
 <!ENTITY enableExtensionUpdate.accesskey  "y">
-<!ENTITY enableAutoInstall.label          "Automatically download and install updates to Extensions.">
+<!ENTITY enableAutoInstall.label          "Automatically download and install updates to Extensions and Themes.">
 <!ENTITY enableAutoInstall.accesskey      "d">
 <!ENTITY checkNow.label                   "Check Now">
 <!ENTITY checkNow.accesskey               "N">
