@@ -82,6 +82,7 @@
 #include "nsMacNativeUnicodeConverter.h"
 #include "nsICharsetConverterManager.h"
 #include "nsStylClipboardUtils.h"
+#include "nsLinebreakConverter.h"
 
 
 // we need our own stuff for MacOS because of nsIDragSessionMac.
@@ -257,7 +258,7 @@ printf("**** created drag ref %ld\n", theDragRef);
   EventRecord theEvent;
   theEvent.what = mouseDown;
   theEvent.message = 0L;
-  theEvent.when = 0L;
+  theEvent.when = TickCount();
   theEvent.modifiers = 0L;
 
   // since we don't have the original mouseDown location, just assume the drag
@@ -809,11 +810,19 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
       else {
         nsPrimitiveHelpers::CreateDataFromPrimitive ( actualFlavor, data, outData, *outDataSize );
         
+        // Convert unix to mac linebreaks, since mac linebreaks are required for clipboard compatibility.
+        // I'm making the assumption here that the substitution will be entirely in-place, since both
+        // types of line breaks are 1-byte.
+        PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*, *outData);
+        nsLinebreakConverter::ConvertUnicharLineBreaksInSitu(&castedUnicode,
+                                                             nsLinebreakConverter::eLinebreakUnix,
+                                                             nsLinebreakConverter::eLinebreakMac,
+                                                             *outDataSize / sizeof(PRUnichar), nsnull);
+
         // if required, do the extra work to convert unicode to plain text and replace the output
         // values with the plain text.
         if ( needToDoConversionToPlainText ) {
           char* plainTextData = nsnull;
-          PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*, *outData);
           PRInt32 plainTextLen = 0;
           nsresult rv =
           nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText ( castedUnicode, *outDataSize / 2, &plainTextData, &plainTextLen );

@@ -82,7 +82,7 @@ nsDragHelperService::Enter ( DragReference inDragRef, nsIEventSink *inSink )
   // get our drag service for the duration of the drag.
   mDragService = do_GetService(kDragServiceContractID);
   NS_ASSERTION ( mDragService, "Couldn't get a drag service, we're in biiig trouble" );
-  if ( !mDragService )
+  if ( !mDragService || !inSink )
     return NS_ERROR_FAILURE;
 
   // tell the session about this drag
@@ -114,7 +114,7 @@ NS_IMETHODIMP
 nsDragHelperService::Tracking ( DragReference inDragRef, nsIEventSink *inSink, PRBool* outDropAllowed )
 {
   NS_ASSERTION ( mDragService, "Couldn't get a drag service, we're in biiig trouble" );
-  if ( !mDragService ) {
+  if ( !mDragService || !inSink ) {
     *outDropAllowed = PR_FALSE;
     return NS_ERROR_FAILURE;
   }
@@ -157,7 +157,7 @@ NS_IMETHODIMP
 nsDragHelperService::Leave ( DragReference inDragRef, nsIEventSink *inSink )
 {
   NS_ASSERTION ( mDragService, "Couldn't get a drag service, we're in biiig trouble" );
-  if ( !mDragService )
+  if ( !mDragService || !inSink )
     return NS_ERROR_FAILURE;
 
   // tell the drag service that we're done with it.
@@ -197,7 +197,7 @@ NS_IMETHODIMP
 nsDragHelperService::Drop ( DragReference inDragRef, nsIEventSink *inSink, PRBool* outAccepted )
 {
   NS_ASSERTION ( mDragService, "Couldn't get a drag service, we're in biiig trouble" );
-  if ( !mDragService ) {
+  if ( !mDragService || !inSink ) {
     *outAccepted = PR_FALSE;
     return NS_ERROR_FAILURE;
   }
