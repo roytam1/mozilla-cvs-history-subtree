@@ -148,7 +148,8 @@ public:
 
     PRBool IsAllowedOnDisk()
     {
-        return (StoragePolicy() == nsICache::STORE_ON_DISK) ||
+        return (StoragePolicy() == nsICache::STORE_ANYWHERE) ||
+            (StoragePolicy() == nsICache::STORE_ON_DISK) ||
             (StoragePolicy() == nsICache::STORE_ON_DISK_AS_FILE);
     }
 

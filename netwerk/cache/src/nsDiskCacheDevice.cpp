@@ -756,6 +756,8 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
 nsresult
 nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
 {
+    printf(">>>> binding entry to DISK cache device\n");
+
     nsresult rv;
 
     // Make sure this entry has its associated DiskCacheEntry data attached.
@@ -957,7 +959,7 @@ nsresult nsDiskCacheDevice::getFileForDiskCacheEntry(DiskCacheEntry * diskEntry,
 
 nsresult nsDiskCacheDevice::getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result)
 {
-    PRInt32 ioFlags;
+    PRInt32 ioFlags = 0;
     switch (mode) {
     case nsICache::ACCESS_READ:
         ioFlags = PR_RDONLY;
@@ -1025,20 +1027,20 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     return NS_OK;
 }
 
+class UpdateEntryVisitor : public nsCacheEntryHashTable::Visitor {
+    nsDiskCacheDevice* mDevice;
+public:
+    UpdateEntryVisitor(nsDiskCacheDevice * device) : mDevice(device) {}
+    
+    virtual PRBool VisitEntry(nsCacheEntry * entry)
+    {
+        mDevice->updateDiskCacheEntry(entry);
+        return PR_TRUE;
+    }
+};
 
 nsresult nsDiskCacheDevice::updateDiskCacheEntries()
 {
-    class UpdateEntryVisitor : public nsCacheEntryHashTable::Visitor {
-        nsDiskCacheDevice* mDevice;
-    public:
-        UpdateEntryVisitor(nsDiskCacheDevice * device) : mDevice(device) {}
-        
-        virtual PRBool VisitEntry(nsCacheEntry * entry)
-        {
-            mDevice->updateDiskCacheEntry(entry);
-            return PR_TRUE;
-        }
-    };
     UpdateEntryVisitor visitor(this);
     mBoundEntries.VisitEntries(&visitor);
     return NS_OK;
@@ -1220,26 +1222,27 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(DiskCacheEntry * diskEntry)
  * for this. For now, just use brute force.
  */
 
+struct FindCollisionVisitor : public nsCacheEntryHashTable::Visitor {
+    PLDHashNumber mEntryHash;
+    nsCacheEntry* mCollidedEntry;
+
+    FindCollisionVisitor(nsCacheEntry * entry) : mEntryHash(0), mCollidedEntry(nsnull)
+    {
+        mEntryHash = ::PL_DHashStringKey(NULL, entry->Key()->get());
+    }
+    
+    virtual PRBool VisitEntry(nsCacheEntry * entry)
+    {
+        if (mEntryHash == ::PL_DHashStringKey(NULL, entry->Key()->get())) {
+            mCollidedEntry = entry;
+            return PR_FALSE;
+        }
+        return PR_TRUE;
+    }
+};
+
 nsresult nsDiskCacheDevice::checkForCollision(nsCacheEntry * entry, nsCacheEntry ** collidingEntry)
 {
-    struct FindCollisionVisitor : public nsCacheEntryHashTable::Visitor {
-        PLDHashNumber mEntryHash;
-        nsCacheEntry* mCollidedEntry;
-
-        FindCollisionVisitor(nsCacheEntry * entry) : mEntryHash(0), mCollidedEntry(nsnull)
-        {
-            mEntryHash = ::PL_DHashStringKey(NULL, entry->Key()->get());
-        }
-        
-        virtual PRBool VisitEntry(nsCacheEntry * entry)
-        {
-            if (mEntryHash == ::PL_DHashStringKey(NULL, entry->Key()->get())) {
-                mCollidedEntry = entry;
-                return PR_FALSE;
-            }
-            return PR_TRUE;
-        }
-    };
 
     FindCollisionVisitor visitor(entry);
     mBoundEntries.VisitEntries(&visitor);
