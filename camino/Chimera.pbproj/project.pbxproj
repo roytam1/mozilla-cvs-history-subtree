@@ -5745,8 +5745,8 @@
 		};
 		F59A0E320307635401A967F3 = {
 			isa = PBXFileReference;
-			name = chimera.js;
-			path = resources/application/chimera.js;
+			name = "all-chimera.js";
+			path = "resources/application/all-chimera.js";
 			refType = 2;
 		};
 		F59A0E350307639801A967F3 = {
