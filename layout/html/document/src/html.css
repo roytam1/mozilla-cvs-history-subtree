@@ -483,7 +483,7 @@ noembed, noscript, param {
 /* magic */
 
 *|*:-moz-viewport, *|*:-moz-viewport-scroll, *|*:-moz-canvas {
-  display: block;
+  display: block !important;
   background-color: inherit;
 }
 
