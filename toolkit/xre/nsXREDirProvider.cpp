@@ -140,7 +140,7 @@ nsXREDirProvider::Initialize()
   char* lastSlash = strrchr(gBinaryPath, '/');
   if (!lastSlash) return NS_ERROR_FAILURE;
 
-  nsDependentCString appDir(gBinaryPath, lastSlash - gBinaryPath);
+  nsDependentCSubstring appDir(gBinaryPath, lastSlash);
   return NS_NewNativeLocalFile(appDir, PR_TRUE, getter_AddRefs(mAppDir));
 
 #elif defined(XP_OS2)
