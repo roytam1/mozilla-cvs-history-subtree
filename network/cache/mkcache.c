@@ -120,7 +120,11 @@ typedef struct _CacheDataObject {
     XP_File          fp;
     NET_StreamClass *next_stream;
 	URL_Struct      *URL_s;
+#ifdef NU_CACHE
+    void*           cache_object;
+#else
     net_CacheObject *cache_object;
+#endif
 } CacheDataObject;
 
 PRIVATE void net_RemoveAllDiskCacheObjects(void);
@@ -462,11 +466,30 @@ net_StoreDiskCacheSize(void)
 /* returns TRUE if the object gets stored
  * FALSE if not
  */
+#ifndef NU_CACHE
 PRIVATE XP_Bool
 net_CacheStore(net_CacheObject * obj,  
 			   URL_Struct      * URL_s, 
 			   XP_Bool		         accept_partial_files,
 			   store_type_enum 	 store_type)
+#if 0
+{
+    if (!obj || !URL_s || !URL_s->address)
+        return FALSE;
+
+    if (URL_s->server_date 
+		&& URL_s->server_date < obj->last_modified)
+    {
+		/* the last modified date is after the current date
+		 * as given by the server.  We shoudn't cache this
+		 * object
+		 */
+        obj->last_modified = 0;
+		URL_s->last_modified = 0;
+    }
+
+}
+#else
 {
 	DBT *data, *key;
 	int status;
@@ -825,7 +848,10 @@ net_CacheStore(net_CacheObject * obj,
 	return TRUE;
 
 }
+#endif /* 0 */
+#endif /* NU_CACHE */
 
+#ifndef NU_CACHE
 /* Public accesor function for Netcaster */
 PUBLIC PRBool
 NET_CacheStore(net_CacheObject * obj,  
@@ -834,6 +860,8 @@ NET_CacheStore(net_CacheObject * obj,
 {
 	return net_CacheStore(obj, URL_s, accept_partial_files, NEW_CACHE_STORE);
 }
+
+#endif /* NU_CACHE */
 
 /* Accessor functions for cache database used by cache browser */
 PUBLIC int
@@ -1347,7 +1375,6 @@ NET_GetDiskCacheSize()
 /******************************************************************
  * Cache Stream input routines
  */
-
 /* is the stream ready for writing?
  */
 PRIVATE unsigned int net_CacheWriteReady (NET_StreamClass *stream)
@@ -1362,6 +1389,34 @@ PRIVATE unsigned int net_CacheWriteReady (NET_StreamClass *stream)
 /*  stream write function
  */
 PRIVATE int net_CacheWrite (NET_StreamClass *stream, CONST char* buffer, int32 len)
+#ifdef NU_CACHE
+{
+    CacheDataObject* obj = stream->data_object;
+    if (obj && obj->cache_object)
+    {
+        if (!CacheObject_Write(obj->cache_object, buffer, len))
+        {
+            if (obj->URL_s)
+                obj->URL_s->dont_cache = TRUE;
+
+        }
+        /* Write for next stream */
+        if (obj->next_stream)
+        {
+            int status = 0;
+            PR_ASSERT(buffer && (len >= 0));
+            status = (*obj->next_stream->put_block)
+	            (obj->next_stream, buffer, len);
+
+            /* abort */
+            if(status < 0)
+	            return(status);
+        }
+        return(1);
+    }
+    return (-1); /* TODO verify correct thing todo ? */
+}
+#else
 {
 	CacheDataObject *obj=stream->data_object;	
 	TRACEMSG(("net_CacheWrite called with %ld buffer size", len));
@@ -1402,10 +1457,37 @@ PRIVATE int net_CacheWrite (NET_StreamClass *stream, CONST char* buffer, int32 l
 
     return(1);
 }
+#endif /* NU_CACHE */
 
 /*  complete the stream
 */
 PRIVATE void net_CacheComplete (NET_StreamClass *stream)
+#ifdef NU_CACHE
+{
+    CacheDataObject* obj = stream->data_object;
+    PR_ASSERT(obj && obj->cache_object);
+    
+    /* TODO - Something to trigger the save here */
+    PR_ASSERT(0);
+    /* Plugins can use this file */
+    /* If object is in memory GetFilename will return null so this is ok */
+    if (obj->URL_s && CacheObject_GetFilename(obj->cache_object))
+    {
+        StrAllocCopy(obj->URL_s->cache_file, CacheObject_GetFilename(obj->cache_object));
+    }
+
+    /* Complete the next stream */
+    if (obj->next_stream)
+    {
+        (*obj->next_stream->complete)(obj->next_stream);
+        PR_Free(obj->next_stream);
+    }
+    CacheObject_Destroy(obj->cache_object);
+    /* Do the things I don't as yet understand or have time to */
+    PR_REMOVE_LINK(&obj->links);
+    PR_Free(obj);
+}
+#else
 {
 	CacheDataObject *obj=stream->data_object;	
 	/* close the cache file 
@@ -1442,11 +1524,33 @@ PRIVATE void net_CacheComplete (NET_StreamClass *stream)
 
     return;
 }
+#endif /* NU_CACHE */
 
 /* Abort the stream 
  * 
  */
 PRIVATE void net_CacheAbort (NET_StreamClass *stream, int status)
+#ifdef NU_CACHE
+{
+    CacheDataObject* obj = stream->data_object;
+    PR_ASSERT(obj);
+    PR_ASSERT(obj->cache_object);
+    
+    /* abort the next stream */
+    if(obj->next_stream)
+    {
+        (*obj->next_stream->abort)(obj->next_stream, status);
+        PR_Free(obj->next_stream);
+    }
+
+    /* This will take care of open files and other cleanup activity
+       plus will also mark the object as partial. TODO - Gagan */
+    /* CacheObject_Abort(obj->cache_object); */
+    CacheObject_Destroy(obj->cache_object);
+    PR_REMOVE_LINK(&obj->links);
+    PR_Free(obj);
+}
+#else
 {
 
 	CacheDataObject *obj=stream->data_object;	
@@ -1520,7 +1624,7 @@ PRIVATE void net_CacheAbort (NET_StreamClass *stream, int status)
 
     return;
 }
-
+#endif /* NU_CACHE */
 
 #ifdef XP_UNIX
 extern char **fe_encoding_extensions; /* gag! */
@@ -1534,8 +1638,13 @@ NET_CacheConverter (FO_Present_Types format_out,
                     URL_Struct *URL_s,
                     MWContext  *window_id)
 {
+
     CacheDataObject * data_object=0;
+#ifdef NU_CACHE
+    void*  cache_object=0;
+#else
     net_CacheObject * cache_object=0;
+#endif
     NET_StreamClass * stream=0;
     char *filename=0, *new_filename=0;
 	char *org_content_type = 0;
@@ -1581,8 +1690,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 	URL_s->content_type = org_content_type;
 	org_content_type = 0;
 
-    /* do we want to cache this object?
-     */
+    /* do we want to cache this object? - TODO - Move this in -Gagan */
     if(URL_s->server_can_do_restart) URL_s->must_cache = TRUE;
 
 
@@ -1630,6 +1738,24 @@ NET_CacheConverter (FO_Present_Types format_out,
 		|| !PL_strncasecmp(URL_s->address, "mailbox://", 10))) /* is imap */
 		do_disk_cache = TRUE;
 
+#ifdef NU_CACHE    
+    cache_object = CacheObject_Create(URL_s->address);
+    if (!cache_object)
+        return 0;
+    
+    CacheObject_SetModule(cache_object, do_disk_cache ? DISK_MODULE_ID : MEM_MODULE_ID);
+    CacheObject_SetExpires(cache_object, URL_s->expires);
+    CacheObject_SetEtag(cache_object, URL_s->etag);
+    CacheObject_SetLastModified(cache_object, URL_s->last_modified);
+    CacheObject_SetContentLength(cache_object, URL_s->content_length);
+    CacheObject_SetContentType(cache_object, URL_s->content_type);
+    /*
+    CacheObject_SetCharset(cache_object, URL_s->charset);
+    CacheObject_SetContentEncoding(cache_object, URL_s->content_encoding);
+    CacheObject_SetPageServicesURL(cache_object, URL_s->page_services_url);
+    */ /* Not implemented as yet- TODO - Gagan */
+    
+#else
 	/* malloc and init all the necessary structs
 	 * do_disk_cache will be set false on error
 	 */
@@ -1637,13 +1763,13 @@ NET_CacheConverter (FO_Present_Types format_out,
       {
 
 		TRACEMSG(("Object has not been cached before"));
-			
+
         cache_object = PR_NEW(net_CacheObject);
         if (!cache_object)
           {
             return(NULL);
           }
-    
+
         /* assign and init the cache object */
         memset(cache_object, 0, sizeof(net_CacheObject));
     
@@ -1657,7 +1783,7 @@ NET_CacheConverter (FO_Present_Types format_out,
             StrAllocCopy(cache_object->post_data, URL_s->post_data);
             StrAllocCopy(cache_object->post_headers, URL_s->post_headers);
           }
-    
+
         /* add expiration stuff from URL structure
          */
 	    cache_object->expires        = URL_s->expires;
@@ -1920,7 +2046,7 @@ NET_CacheConverter (FO_Present_Types format_out,
     	TRACEMSG(("Returning stream from NET_CacheConverter\n"));
 
     	stream->name           = "Cache stream";
-    	stream->complete       = (MKStreamCompleteFunc) net_CacheComplete;
+        stream->complete       = (MKStreamCompleteFunc) net_CacheComplete;
     	stream->abort          = (MKStreamAbortFunc) net_CacheAbort;
     	stream->put_block      = (MKStreamWriteFunc) net_CacheWrite;
     	stream->is_write_ready = (MKStreamWriteReadyFunc) net_CacheWriteReady;
@@ -1960,7 +2086,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 		  }
 
 	  }
-
+#endif /* NU_CACHE */
 	return(NULL);
 
 }
@@ -2097,68 +2223,6 @@ MODULE_PRIVATE void NET_RefreshCacheFileExpiration(URL_Struct * URL_s)
 
 	return;
 
-#if 0
-	/* this is the really old version of RefreshURL */
-
-	/* this isn't really needed because we can do it all
-	 * in the Complete step by keeping a copy if the URL struct.
-	 */
-	int   status;
-	DBT   data;
-    DBT * key;
-	DBT * new_data=0;
-
-	if(!cache_database)
-		return;
-
-    key = net_GenCacheDBKey(URL_s->address,
-                            URL_s->post_data,
-                            URL_s->post_data_size);
-
-    status = (*cache_database->get)(cache_database, key, &data, 0);
-
-    if(status != 0)
-      {
-        TRACEMSG(("Key not found in database"));
-        net_FreeCacheDBTdata(key);
-        return;
-      }
-
-	new_data = net_CacheDBTDup(&data);
-
-	if(!new_data)
-	  {
-    	net_FreeCacheDBTdata(key);
-		return;
-	  }
-
-	net_SetTimeInCacheDBT(new_data, 
-						  EXPIRES_BYTE_POSITION, 
-						  URL_s->expires);
-	net_SetTimeInCacheDBT(new_data, 
-						  LAST_MODIFIED_BYTE_POSITION, 
-						  URL_s->last_modified);
-	net_SetTimeInCacheDBT(new_data, 
-						  LAST_ACCESSED_BYTE_POSITION, 
-						  time(NULL)); /* current time */
-
-    TRACEMSG(("Refreshing the cache expires date: %d  last_mod: %d\n",
-									URL_s->expires, URL_s->last_modified));
-
-	
-	status = (*cache_database->put)(cache_database, key, new_data, 0);
-
-#ifdef DEBUG
-	if(status != 0)
-		TRACEMSG(("Error updateing cache info in database"));
-#endif /* DEBUG */
-
-    net_FreeCacheDBTdata(key);
-
-    net_FreeCacheDBTdata(new_data);
-
-	return;
-#endif
 }
 #endif /* NU_CACHE */
 
@@ -2573,35 +2637,6 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 		      {
         	    URL_s->expires = 1;
 
-#if 0
-	/* this is ifdeffed because of the following bug:
-	 * If you update now, there is still the possibility
-	 * of putting this URL on the wait queue.  If that
-	 * happens, when the URL gets pulled off the wait queue
-	 * it will be called with NET_GetURL again and come
- 	 * here again.  Since we already updated it wont
-	 * get set expired again.  So instead I will update
-	 * the URL when I get a 304 in NET_RefreshCacheFileExpiration
-	 */
-				/* stick the address and post data in there
-				 * since this stuff is in the Key
-				 */
-				StrAllocCopy(found_cache_obj->address, URL_s->address);
-				if(URL_s->post_data_size)
-				  {
-					found_cache_obj->post_data_size = URL_s->post_data_size;
-					BlockAllocCopy(found_cache_obj->post_data,
-							   		URL_s->post_data, 
-							   		URL_s->post_data_size);
-				  }
-				
-				/* this will update the last accessed time
-				 */
-				net_CacheStore(found_cache_obj, 
-							   NULL, 
-							   FALSE, 
-							   REFRESH_CACHE_STORE);
-#endif
 		      }
 		    else
 		      {
@@ -3233,20 +3268,6 @@ net_NumberInDiskCache ? net_DiskCacheSize/net_NumberInDiskCache : 0);
 
 	/* define some macros to help us output HTML tables
 	 */
-#if 0
-
-#define TABLE_TOP(arg1)				\
-	sprintf(buffer, 				\
-"<TR><TD ALIGN=RIGHT><b>%s</TD>\n"	\
-"<TD>", arg1);						\
-PUT_PART(buffer);
-
-#define TABLE_BOTTOM				\
-	sprintf(buffer, 				\
-"</TD></TR>");						\
-PUT_PART(buffer);
-
-#else
 
 #define TABLE_TOP(arg1)					\
 	PL_strcpy(buffer, "<tt>");			\
@@ -3260,7 +3281,6 @@ PUT_PART(buffer);
 	PL_strcpy(buffer, "<BR>\n");		\
 	PUT_PART(buffer);
 
-#endif
 
     do
       {
@@ -3284,12 +3304,6 @@ PUT_PART(buffer);
 		  }
 		else
           {
-#if 0
-			/* begin a table for this entry */
-			PL_strcpy(buffer, "<TABLE>");
-			PUT_PART(buffer);
-#endif
-
 			/* put the URL out there */
 			/* the URL is 8 bytes into the key struct
          	 */
@@ -3399,14 +3413,8 @@ PUT_PART(buffer);
 			  }
 				
 
-#if 0
-			/* end the table for this entry */
-			PL_strcpy(buffer, "</TABLE><HR ALIGN=LEFT WIDTH=50%>");
-			PUT_PART(buffer);
-#else
 			PL_strcpy(buffer, "\n<P>\n");
 			PUT_PART(buffer);
-#endif
           }
 	
 	
@@ -3432,6 +3440,12 @@ NET_StreamClass *
 NET_CloneWysiwygCacheFile(MWContext *window_id, URL_Struct *URL_s,
 			  uint32 nbytes, const char * wysiwyg_url, 
 			  const char * base_href)
+#ifdef NU_CACHE
+{
+    PR_ASSERT(0);
+    return NULL;
+}
+#else
 {
 	char *filename;
 	PRCList *link;
@@ -3529,5 +3543,6 @@ found:
 	  }
 	return stream;
 }
+#endif
 
 #endif /* MOZILLA_CLIENT */

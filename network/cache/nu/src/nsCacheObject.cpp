@@ -148,6 +148,7 @@ nsCacheObject::nsCacheObject():
     m_Flags(INIT), 
     m_Url(new char[1]), 
     m_Etag(new char[1]),
+    m_ContentType(new char[1]),
     m_Module(-1),
     m_pInfo(0)
 {
@@ -158,14 +159,16 @@ nsCacheObject::nsCacheObject():
 
 nsCacheObject::~nsCacheObject() 
 {
-    delete[] m_Url;
+    delete[] m_ContentType;
     delete[] m_Etag;
+    delete[] m_Url;
 }
 
 nsCacheObject::nsCacheObject(const nsCacheObject& another):
     m_Flags(another.m_Flags),
     m_Url(new char[PL_strlen(another.m_Url)+1]), 
     m_Etag(new char[PL_strlen(another.m_Etag)+1]),
+    m_ContentType(new char[PL_strlen(another.m_ContentType)+1]),
     m_pInfo(0)
 {
     strcpy(m_Url, another.m_Url);
@@ -180,6 +183,7 @@ nsCacheObject::nsCacheObject(const nsCacheObject& another):
 
 nsCacheObject::nsCacheObject(const char* i_url):
     m_Flags(INIT), 
+    m_ContentType(new char[1]),
     m_Url(new char[strlen(i_url)+1]), 
     m_Etag(new char[1]),
     m_Module(-1),
@@ -189,6 +193,7 @@ nsCacheObject::nsCacheObject(const char* i_url):
     PR_ASSERT(i_url);
     strcpy(m_Url, i_url);
     *m_Etag = '\0';
+    *m_ContentType = '\0';
 }
 
 void nsCacheObject::Address(const char* i_url) 
@@ -198,6 +203,15 @@ void nsCacheObject::Address(const char* i_url)
         delete[] m_Url;
     m_Url = new char[strlen(i_url) + 1];
     strcpy(m_Url, i_url);
+}
+
+void nsCacheObject::ContentType(const char* i_Type) 
+{
+    PR_ASSERT(i_Type && *i_Type);
+    if (m_ContentType)
+        delete[] m_ContentType;
+    m_ContentType = new char[strlen(i_Type) + 1];
+    strcpy(m_ContentType, i_Type);
 }
 
 void nsCacheObject::Etag(const char* i_etag) 
@@ -332,6 +346,11 @@ void nsCacheObject::Init()
     m_Hits = 0;
 }
 
+PRUint32 nsCacheObject::Read(char* o_Buffer, PRUint32 len)
+{
+    return len;
+}
+
 /* Caller must free returned string */
 // TODO  change to use PR_stuff...
 const char* nsCacheObject::Trace() const
@@ -352,4 +371,9 @@ const char* nsCacheObject::Trace() const
     strcpy(total, linebuffer);
 
     return total;
+}
+
+PRUint32 nsCacheObject::Write(const char* i_Buffer, const PRUint32 len)
+{
+    return len;
 }

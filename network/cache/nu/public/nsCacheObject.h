@@ -56,6 +56,12 @@ public:
     void        Address(const char* i_url);
     const char* Address(void) const;
 
+    void        ContentLength(PRUint32 i_len);
+    PRUint32    ContentLength(void) const;
+    
+    void        ContentType(const char* i_Type);
+    const char* ContentType(void) const;
+
     void        Etag(const char* i_etag);
     const char* Etag(void) const;
 
@@ -88,12 +94,15 @@ public:
     const char* PostData(void) const;
     void        PostData(const char* i_data, PRUint32 i_Len);
 
+    PRUint32    Read(char* o_Buffer, PRUint32 len);
+
     PRUint32    Size(void) const;
-    void        Size(PRUint32 s);
+    void        Size(PRUint32 i_Size);
 
     const char*     
                 Trace() const;
 
+    PRUint32    Write(const char* i_Buffer, const PRUint32 len);
 //	virtual	void getReadStream();
 //	virtual void getWriteStream();
 
@@ -101,6 +110,8 @@ protected:
 
     void        Init();
 
+    PRUint32    m_ContentLength;
+    char*       m_ContentType;
     char*       m_Etag;
     PRIntervalTime
                 m_Expires;
@@ -110,9 +121,7 @@ protected:
                 m_LastAccessed, m_LastModified;
     PRUint32    m_Size;
     char*       m_Url;
-
     PRInt16     m_Module;
-
     void*       m_pInfo;
     PRUint32    m_info_size;
 
@@ -123,6 +132,21 @@ private:
 inline const char* nsCacheObject::Address(void) const
 {
 	return m_Url;
+};
+
+inline PRUint32 nsCacheObject::ContentLength(void) const
+{
+	return m_ContentLength;
+};
+
+inline void nsCacheObject::ContentLength(PRUint32 i_Size)
+{
+	m_ContentLength = i_Size;
+};
+
+inline const char* nsCacheObject::ContentType(void) const
+{
+	return m_ContentType;
 };
 
 inline const char* nsCacheObject::Etag(void) const 

@@ -97,6 +97,18 @@ CacheObject_GetAddress(const void* pThis)
     return pThis ? ((nsCacheObject*)pThis)->Address() : 0;
 }
 
+PRUint32
+CacheObject_GetContentLength(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->ContentLength() : 0;
+}
+
+const char*
+CacheObject_GetContentType(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->ContentType() : 0;
+}
+
 const char*
 CacheObject_GetEtag(const void* pThis)
 {
@@ -119,6 +131,12 @@ PRIntervalTime
 CacheObject_GetLastModified(const void* pThis)
 {
     return pThis ? ((nsCacheObject*)pThis)->LastModified() : 0;
+}
+
+PRInt16 
+CacheObject_GetModule(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->Module() : -1;
 }
 
 PRUint32
@@ -149,49 +167,56 @@ void
 CacheObject_SetAddress(void* pThis, const char* i_Address)
 {
     if (pThis)
-    {
         ((nsCacheObject*)pThis)->Address(i_Address);
-    }
+}
+
+void
+CacheObject_SetContentLength(void* pThis, PRUint32 i_ContentLen)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->ContentLength(i_ContentLen);
+}
+
+void
+CacheObject_SetContentType(void* pThis, const char* i_ContentType)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->ContentType(i_ContentType);
 }
 
 void
 CacheObject_SetEtag(void* pThis, const char* i_Etag)
 {
     if (pThis)
-    {
         ((nsCacheObject*)pThis)->Etag(i_Etag);
-    }
-    
 }
 
 void
 CacheObject_SetExpires(void *pThis, const PRIntervalTime i_Time)
 {
     if (pThis)
-    {
         ((nsCacheObject*)pThis)->Expires(i_Time);
-    }
-    
 }
 
 void
 CacheObject_SetLastModified(void* pThis, const PRIntervalTime i_Time)
 {
     if (pThis)
-    {
-        ((nsCacheObject*)pThis)->LastModified(i_Time);
-    }
-    
+        ((nsCacheObject*)pThis)->LastModified(i_Time);   
+}
+
+void
+CacheObject_SetModule(void* pThis, const PRInt16 i_Module)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->Module(i_Module);
 }
 
 void
 CacheObject_SetSize(void* pThis, const PRUint32 i_Size)
 {
     if (pThis)
-    {
         ((nsCacheObject*)pThis)->Size(i_Size);
-    }
-    
 }
 
 void
@@ -202,7 +227,6 @@ CacheObject_Destroy(void* pThis)
         ((nsCacheObject*)pThis)->~nsCacheObject();
         pThis = 0;
     }
-    
 }
 
 /* CachePref functions */

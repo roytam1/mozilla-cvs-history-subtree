@@ -30,6 +30,9 @@
 #include <prtypes.h>
 #include <prinrval.h>
 
+#define MEM_MODULE_ID 0
+#define DISK_MODULE_ID 1
+
 PR_BEGIN_EXTERN_C
  
     /* General mapped functions which resolve to a bunch of internal calls. */
@@ -51,21 +54,30 @@ PR_BEGIN_EXTERN_C
 
     /* Cache Object- check nsCacheObject.h for details on these functions */
     extern void*            CacheObject_Create(const char* i_url);
+    extern void             CacheObject_Destroy(void* pThis);
     extern const char*      CacheObject_GetAddress(const void* pThis);
+    extern PRUint32         CacheObject_GetContentLength(void* pThis);
+    extern const char*      CacheObject_GetContentType(void* pThis);
     extern const char*      CacheObject_GetEtag(const void* pThis);
     extern PRIntervalTime   CacheObject_GetExpires(const void* pThis);
+    extern const char*      CacheObject_GetFilename(const void* pThis);
     extern PRIntervalTime   CacheObject_GetLastAccessed(const void* pThis);
     extern PRIntervalTime   CacheObject_GetLastModified(const void* pThis);
+    extern PRInt16          CacheObject_GetModule(const void* pThis);
     extern PRUint32         CacheObject_GetSize(const void* pThis);
     extern PRUint32         CacheObject_Hits(const void* pThis);
     extern PRBool           CacheObject_IsExpired(const void* pThis);
     extern PRBool           CacheObject_IsPartial(const void* pThis);
     extern void             CacheObject_SetAddress(void* pThis, const char* i_Address);
+    extern void             CacheObject_SetContentLength(void* pThis, PRUint32 i_Len);
+    extern void             CacheObject_SetContentType(void* pThis, const char* i_Type);
     extern void             CacheObject_SetEtag(void* pThis, const char* i_Etag);
     extern void             CacheObject_SetExpires(void *pThis, const PRIntervalTime i_Time);
+    extern void             CacheObject_SetFilename(void *pThis, const char* i_Filename);
     extern void             CacheObject_SetLastModified(void* pThis, const PRIntervalTime i_Time);
+    extern void             CacheObject_SetModule(void* pThis, const PRInt16 i_Module);
     extern void             CacheObject_SetSize(void* pThis, const PRUint32 i_Size);
-    extern void             CacheObject_Destroy(void* pThis);
+    extern PRUint32         CacheObject_Write(void* pThis, const char* i_buffer, const PRUint32 i_lenth);
 
     /* Cache Prefs- check nsCachePref.h for details on these functions */
     extern PRUint32         CachePref_GetDiskCacheSize(void);
