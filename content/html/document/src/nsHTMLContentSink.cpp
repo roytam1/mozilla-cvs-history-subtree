@@ -174,33 +174,9 @@ static PRLogModuleInfo* gSinkLogModuleInfo;
 #define NS_SINK_FLAG_SCRIPT_ENABLED   0x8
 #define NS_SINK_FLAG_FRAMES_ENABLED   0x10
 #define NS_SINK_FLAG_CAN_INTERRUPT_PARSER 0x20 //Interrupt parsing when mMaxTokenProcessingTime is exceeded
+#define NS_SINK_FLAG_DYNAMIC_LOWER_VALUE 0x40 // Lower the value for mNotificationInterval and mMaxTokenProcessingTime
 
-// Timer used to determine how long the content sink
-// spends processing a tokens
-
-class nsDelayTimer
-{
-public:
-
-  void Start(void) { 
-     mStart = PR_IntervalToMicroseconds(PR_IntervalNow());
-  }
-
-  // Determine if the current time - start time is greater
-  // then aMaxDelayInMicroseconds
-  PRBool HasExceeded(PRUint32 aMaxDelayInMicroseconds) { 
-    PRUint32 stop = PR_IntervalToMicroseconds(PR_IntervalNow());
-    if ((stop - mStart) > aMaxDelayInMicroseconds) {
-      return PR_TRUE;
-    }
-    return PR_FALSE;
-  }
-  
-private:
-  PRUint32 mStart;
-};
-
-
+#define NS_DELAY_FOR_WINDOW_CREATION  500000  // 1/2 second fudge factor for window creation
 
 
 class SinkContext;
@@ -347,6 +323,16 @@ public:
                                nsIDOMHTMLFormElement* aForm,
                                nsIWebShell* aWebShell,
                                nsIHTMLContent** aResult);
+
+  inline PRInt32 GetNotificationInterval() { 
+    return ((mFlags & NS_SINK_FLAG_DYNAMIC_LOWER_VALUE) ? 1000 : mNotificationInterval); 
+  };
+
+  inline PRInt32 GetMaxTokenProcessingTime() { 
+    return ((mFlags & NS_SINK_FLAG_DYNAMIC_LOWER_VALUE) ? 3000 : mMaxTokenProcessingTime); 
+  };
+
+
 #ifdef NS_DEBUG
   void SinkTraceNode(PRUint32 aBit,
                      const char* aMsg,
@@ -407,8 +393,10 @@ public:
   PRUint32            mFlags;
 
   // Can interrupt parsing members
-  nsDelayTimer        mDelayTimer;
+  PRUint32            mDelayTimerStart;
   PRInt32             mMaxTokenProcessingTime;  // Interrupt parsing during token procesing after # of microseconds
+  PRInt32             mDynamicIntervalSwitchThreshold;   // Switch between intervals when time is exceeded
+  PRInt32             mBeginLoadTime;
 
   void StartLayout();
 
@@ -2315,6 +2303,7 @@ HTMLContentSink::HTMLContentSink() {
   mNeedToBlockParser = PR_FALSE;
   mParserBlocked = PR_FALSE;
   mDummyParserRequest = nsnull;
+  mBeginLoadTime = 0;
 }
 
 HTMLContentSink::~HTMLContentSink()
@@ -2518,11 +2507,14 @@ HTMLContentSink::Init(nsIDocument* aDoc,
 
   mMaxTokenProcessingTime = mNotificationInterval * 3;
   
-  PRBool enableInterruptParsing = PR_FALSE;
+  PRBool enableInterruptParsing = PR_TRUE;
+
+  mDynamicIntervalSwitchThreshold = 750000; // 3/4 second default for switching
   
   if (prefs) {
     prefs->GetBoolPref("content.interrupt.parsing", &enableInterruptParsing);
     prefs->GetIntPref("content.max.tokenizing.time", &mMaxTokenProcessingTime);
+    prefs->GetIntPref("content.switch.threshold", &mDynamicIntervalSwitchThreshold);
   }
 
   if (enableInterruptParsing) {
@@ -2619,6 +2611,7 @@ HTMLContentSink::WillBuildModel(void)
       // WillBuildModel.
       mFlags &= ~NS_SINK_FLAG_CAN_INTERRUPT_PARSER;
     }
+    mBeginLoadTime = PR_IntervalToMicroseconds(PR_IntervalNow());
   }
   // Notify document that the load is beginning
   mDocument->BeginLoad();
@@ -2722,7 +2715,7 @@ HTMLContentSink::Notify(nsITimer *timer)
   PRInt64 diff, interval;
   PRInt32 delay;
 
-  LL_I2L(interval, mNotificationInterval);
+  LL_I2L(interval, GetNotificationInterval());
   LL_SUB(diff, now, mLastNotificationTime);
 
   LL_SUB(diff, diff, interval);
@@ -2757,7 +2750,7 @@ HTMLContentSink::WillInterrupt()
       PRInt64 interval, diff;
       PRInt32 delay;
       
-      LL_I2L(interval, mNotificationInterval);
+      LL_I2L(interval, GetNotificationInterval());
       LL_SUB(diff, now, mLastNotificationTime);
       
       // If it's already time for us to have a notification
@@ -2777,7 +2770,7 @@ HTMLContentSink::WillInterrupt()
         }
         // Else set up a timer for the expected interval
         else {
-          delay = mNotificationInterval;
+          delay = GetNotificationInterval();
         }
         
         // Convert to milliseconds
@@ -3706,7 +3699,7 @@ HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
 NS_IMETHODIMP
 HTMLContentSink::WillProcessTokens(void) {
   if (mFlags & NS_SINK_FLAG_CAN_INTERRUPT_PARSER) {
-    mDelayTimer.Start();
+    mDelayTimerStart = PR_IntervalToMicroseconds(PR_IntervalNow());
   }
   return NS_OK;
 }
@@ -3723,8 +3716,69 @@ HTMLContentSink::WillProcessAToken(void) {
 
 NS_IMETHODIMP
 HTMLContentSink::DidProcessAToken(void) {
-  if ((mFlags & NS_SINK_FLAG_CAN_INTERRUPT_PARSER) && (mDelayTimer.HasExceeded(mMaxTokenProcessingTime))) {
-    return NS_ERROR_HTMLPARSER_INTERRUPTED;
+
+  if (mFlags & NS_SINK_FLAG_CAN_INTERRUPT_PARSER) {
+
+#ifdef NS_DEBUG
+PRInt32 oldMaxTokenProcessingTime = GetMaxTokenProcessingTime();
+#endif
+
+    PRUint32 currentTime = PR_IntervalToMicroseconds(PR_IntervalNow());
+   
+    // Get the last user event time and compare it with
+    // the current time to determine if the lower value
+    // for content notification and max token processing 
+    // should be used. But only consider using the lower
+    // value if the document has already been loading
+    // for 2 seconds. 2 seconds was chosen because it is
+    // greater than the default 3/4 of second that is used
+    // to determine when to switch between the modes and it
+    // gives the document a little time to create windows.
+    // This is important because on some systems (Windows, 
+    // for example) when a window is created and the mouse
+    // is over it, a mouse move event is sent, which will kick
+    // us into interactive mode otherwise. It also supresses
+    // reaction to pressing the ENTER key in the URL bar...
+
+    PRUint32 delayBeforeLoweringThreshold = NS_STATIC_CAST(PRUint32, ((2 * mDynamicIntervalSwitchThreshold) + NS_DELAY_FOR_WINDOW_CREATION));
+    if (((currentTime - mBeginLoadTime) > delayBeforeLoweringThreshold) && mDocument) {
+      nsCOMPtr<nsIPresShell> shell;
+      mDocument->GetShellAt(0, getter_AddRefs(shell));
+      if (shell) {
+        nsCOMPtr<nsIViewManager> vm;
+        shell->GetViewManager(getter_AddRefs(vm));
+        PRUint32 eventTime;
+        nsresult rv = vm->GetLastUserEventTime(eventTime);
+        if (NS_SUCCEEDED(rv)) {
+                   
+          if ((currentTime - eventTime) < NS_STATIC_CAST(PRUint32, mDynamicIntervalSwitchThreshold)) {
+            // lower the dynamic values to favor
+            // application responsiveness over page load
+            // time.
+            mFlags |= NS_SINK_FLAG_DYNAMIC_LOWER_VALUE;
+          }
+          else {
+            // raise the content notification and
+            // MaxTokenProcessing time to favor overall 
+            // page load speed over responsiveness
+            mFlags &= ~NS_SINK_FLAG_DYNAMIC_LOWER_VALUE;
+          }
+        }
+      }
+    }
+
+#ifdef NS_DEBUG
+PRInt32 newMaxTokenProcessingTime = GetMaxTokenProcessingTime();
+
+   if (newMaxTokenProcessingTime != oldMaxTokenProcessingTime) {
+//      printf("Changed dynamic interval : MaxTokenProcessingTime %d\n", GetMaxTokenProcessingTime());
+   }
+#endif
+
+   if ((currentTime - mDelayTimerStart) > NS_STATIC_CAST(PRUint32, GetMaxTokenProcessingTime())) {
+     return NS_ERROR_HTMLPARSER_INTERRUPTED;
+   }
+  
   }
   return NS_OK;
 }
@@ -4447,18 +4501,22 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
       // the preference.
       if(!mInsideNoXXXTag) {
 
-        // set any HTTP-EQUIV data into document's header data as well as url
-        nsAutoString header;
-        it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::httpEquiv, header);
-        if (header.Length() > 0) {
-          nsAutoString result;
-          it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::content, result);
-          if (result.Length() > 0) {
-            header.ToLowerCase();
-            nsCOMPtr<nsIAtom> fieldAtom(dont_AddRef(NS_NewAtom(header)));
-            rv=ProcessHeaderData(fieldAtom,result,it); 
-          }//if (result.Length() > 0) 
-        }//if (header.Length() > 0) 
+        // Bug 40072: Don't evaluate METAs after FRAMESET.
+        if (!mFrameset) {
+
+          // set any HTTP-EQUIV data into document's header data as well as url
+          nsAutoString header;
+          it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::httpEquiv, header);
+          if (header.Length() > 0) {
+            nsAutoString result;
+            it->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::content, result);
+            if (result.Length() > 0) {
+              header.ToLowerCase();
+              nsCOMPtr<nsIAtom> fieldAtom(dont_AddRef(NS_NewAtom(header)));
+              rv=ProcessHeaderData(fieldAtom,result,it); 
+            }//if (result.Length() > 0) 
+          }//if (header.Length() > 0) 
+        }//if (!mFrameset || !mDocument)
       }//if(!mInsideNoXXXTag)
     }//if (NS_OK == rv) 
   }//if (nsnull != parent)
@@ -4620,7 +4678,7 @@ HTMLContentSink::IsTimeToNotify()
   PRTime now = PR_Now();
   PRInt64 interval, diff;
   
-  LL_I2L(interval, mNotificationInterval);
+  LL_I2L(interval, GetNotificationInterval());
   LL_SUB(diff, now, mLastNotificationTime);
 
   if (LL_CMP(diff, >, interval)) {
