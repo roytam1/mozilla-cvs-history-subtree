@@ -195,8 +195,6 @@ NS_COM nsIAtom* NS_NewAtom( const nsAReadableString& aString )
       // otherwise, we'll make a new atom
     id = new (aString) AtomImpl();
     if ( id ) {
-//      NS_ADDREF(id);
-
       PL_HashTableRawAdd(gAtomHashTable, hep, hashCode, id->mString, id);
     }
   }
