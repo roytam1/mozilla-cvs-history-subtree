@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ * David Bienvenu <bienvenu@nventure.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -41,7 +42,7 @@
 #include "nsISupportsArray.idl"
 
 
-[scriptable, uuid(3E89CAE3-BD2D-11d2-8293-000000000000)]
+[scriptable, uuid(bf754219-e021-4a8f-ae0e-b7f6220ca8e7)]
 interface nsIMsgCompFields : nsISupports {
 
   attribute wstring from;
@@ -88,7 +89,7 @@ interface nsIMsgCompFields : nsISupports {
   attribute wstring otherRandomHeaders;
 
   attribute wstring body;
-
+  void setBodyFromCString(in string aBody);
   /**
    * temporaryFiles
    *

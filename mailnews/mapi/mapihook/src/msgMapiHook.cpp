@@ -681,14 +681,26 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     // set body
     if (aMessage->lpszNoteText)
     {
-        nsAutoString Body ;
-        if (platformCharSet.IsEmpty())
-            platformCharSet.Assign(nsMsgI18NFileSystemCharset());
-        rv = ConvertToUnicode(platformCharSet.get(), (char *) aMessage->lpszNoteText, Body);
-        if (NS_FAILED(rv)) return rv ;
-        if (Body.Last() != nsCRT::LF)
-          Body.Append(NS_LITERAL_STRING(CRLF));
-        rv = aCompFields->SetBody(Body.get()) ;
+      // Convert body to mail charset not to utf-8 (because we don't manipulate body text)
+      char *outCString = nsnull;
+      nsXPIDLCString fallbackCharset;
+      nsXPIDLCString charSet;
+      aCompFields->GetCharacterSet(getter_Copies(charSet));
+      PRBool isAsciiOnly;
+      nsString unicodeBody;
+      unicodeBody.AssignWithConversion(aMessage->lpszNoteText);
+      if (unicodeBody.Last() != nsCRT::LF)
+        unicodeBody.AppendWithConversion(CRLF);
+      rv = nsMsgI18NSaveAsCharset("text/plain", charSet.get(), 
+                                  unicodeBody.get(), &outCString, 
+                                  getter_Copies(fallbackCharset), &isAsciiOnly);
+      if (NS_SUCCEEDED(rv) && nsnull != outCString) 
+      {
+        if (fallbackCharset)
+          aCompFields->SetCharacterSet(fallbackCharset.get());
+        aCompFields->SetBodyIsAsciiOnly(isAsciiOnly);
+        aCompFields->SetBodyFromCString(outCString);
+      }
     }
 
 #ifdef RAJIV_DEBUG
