@@ -211,6 +211,13 @@ NS_IMETHODIMP nsMsgBiffManager::OnServerUnloaded(nsIMsgIncomingServer *server)
 	return rv;
 }
 
+NS_IMETHODIMP nsMsgBiffManager::OnServerChanged(nsIMsgIncomingServer *server)
+{
+  // nothing required.  If the hostname or username changed
+  // the next time biff fires, we'll ping the right server
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgBiffManager::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
 {
 	nsAutoString topicString(aTopic);
