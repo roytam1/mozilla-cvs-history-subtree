@@ -39,6 +39,7 @@ REQUIRES	= xpcom \
 
 CPP_OBJS=                               \
  .\$(OBJDIR)\nsBookmarksService.obj     \
+ .\$(OBJDIR)\nsRemoteBookmarks.obj      \
  $(NULL)
 
 LIBRARY_NAME=bookmarks_s
