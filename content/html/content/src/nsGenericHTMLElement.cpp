@@ -1421,7 +1421,7 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIPresContext* aPresContext,
         {
           // don't make the link grab the focus if there is no link handler
           nsILinkHandler *handler = aPresContext->GetLinkHandler();
-          if (handler && mDocument) {
+          if (handler && mDocument && ShouldFocus(this)) {
             // If the window is not active, do not allow the focus to bring the
             // window to the front.  We update the focus controller, but do
             // nothing else.
