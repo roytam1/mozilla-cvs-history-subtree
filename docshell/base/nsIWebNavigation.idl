@@ -23,7 +23,7 @@
 #include "nsISupports.idl"
 
 interface nsIDOMDocument;
-
+interface nsIInputStream;
 
 /**
  * The nsIWebNavigation interface defines an interface for navigating the web.
@@ -127,6 +127,18 @@ interface nsIWebNavigation : nsISupports
 	The current URI that is loaded.
 	*/
 	readonly attribute nsIURI currentURI;
+
+  /**
+   * This input stream contains the post data associated with a HTTP POST
+   * request...  
+   * It is also assumed that the stream supports the nsIRandomAccessStore
+   * interface.  This allows the stream to be "rewound" back to the beginning
+   * of the data in the case of a reload.
+   *
+   * If this attribute is nsnull, then it is assumed that the current document
+   * is not the result of a HTTP POST request.
+   */
+  readonly attribute nsIInputStream postData;
 	
 	/*
 	The session history object used to store the session history for the session.
