@@ -1986,3 +1986,66 @@ nsRenderingContextGTK::my_gdk_draw_text (GdkDrawable *drawable,
   else
     g_error("undefined font type\n");
 }
+
+
+#ifdef USE_IMG2
+
+#include "gfxIImageContainer.h"
+#include "nsPIImageContainerGtk.h"
+
+/* [noscript] void drawImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+{
+  nsPoint pt;
+  nsRect sr;
+
+	pt = *aDestPoint;
+  mTranMatrix->TransformCoord(&pt.x, &pt.y);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<nsPIImageContainerGtk> cx(do_QueryInterface(aImage));
+  if (!cx) return NS_ERROR_FAILURE;
+
+  return cx->DrawImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &pt);
+}
+
+/* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+  nsRect dr;
+  nsRect sr;
+
+	dr = *aDestRect;
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<nsPIImageContainerGtk> cg(do_QueryInterface(aImage));
+  if (!cg) return NS_ERROR_FAILURE;
+
+  return cg->DrawScaledImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &dr);
+}
+
+/* [noscript] void drawTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+#endif

@@ -23,6 +23,7 @@
 
  
 #include "nsRenderingContextMac.h"
+#include "nsImageMac.h"
 #include "nsDeviceContextMac.h"
 #include "nsFontMetricsMac.h"
 #include "nsIRegion.h"
@@ -1482,3 +1483,151 @@ nsRenderingContextMac::GetBoundingMetrics(const PRUnichar*   aString,
 }
 
 #endif /* MOZ_MATHML */
+
+
+#ifdef USE_IMG2
+
+#include "gfxIImageContainer.h"
+#include "nsIImageFrame.h"
+
+/* [noscript] void drawImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextMac::DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+{
+
+  // XXX there are some rounding problems in this code (or in the image frame)
+
+  nsresult rv;
+
+  nsCOMPtr<nsIImageFrame> img;
+  rv = aImage->GetCurrentFrame(getter_AddRefs(img));
+
+  if (NS_FAILED(rv))
+    return rv;
+
+
+  // XXX this is ugly.
+  nsPoint pt;
+  nsRect sr;
+
+  pt = *aDestPoint;
+  mTranMatrix->TransformCoord(&pt.x, &pt.y);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  PRUint32 len;
+  PRUint8 *bits;
+  rv = img->GetImageData(&bits, &len);
+  if (NS_FAILED(rv))
+    return rv;
+
+  PRUint32 bpr;
+  img->GetImageBytesPerRow(&bpr);
+
+  PRInt32 height;
+  img->GetHeight(&height);
+
+  PRInt32 width;
+  img->GetWidth(&width);
+
+//  void* oldThing = ::SelectObject(mDC, memBM);
+
+//	mBHead->biHeight = -mBHead->biHeight;
+
+  /*::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
+                  GFXCoordToIntFloor(sr.x), 0, width, height,
+                  bits + (GFXCoordToIntFloor(sr.y) * bpr), 
+                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
+  */
+  
+  
+  PixMap					imagePixmap;
+	Handle					imageBitsHandle = nsnull;
+  PixMap					maskPixmap;			// the alpha level pixel map
+	Handle					maskBitsHandle = nsnull;	// handle for the mask bits
+  nsImageMac::CreatePixMap(width, height, 24, nsnull, imagePixmap, imageBitsHandle);
+  // lock and set up bits handles
+  StHandleLocker  imageBitsLocker(imageBitsHandle);
+  StHandleLocker  maskBitsLocker(maskBitsHandle);    // ok with nil handle
+
+  imagePixmap.baseAddr = (char*) bits;
+  if (maskBitsHandle)
+    maskPixmap.baseAddr = *maskBitsHandle;
+    
+  imagePixmap.rowBytes = bpr | 0x8000;
+    
+	// make sure the current port is correct. where else does this need to be done?
+	StPortSetter setter(mPort);
+
+	// set the right colors for CopyBits
+	RGBColor foreColor;
+	Boolean changedForeColor = false;
+	::GetForeColor(&foreColor);
+	if ((foreColor.red != 0x0000) || (foreColor.green != 0x0000) || (foreColor.blue != 0x0000)) {
+		RGBColor rgbBlack = {0x0000,0x0000,0x0000};
+		::RGBForeColor(&rgbBlack);
+		changedForeColor = true;
+	}
+
+	RGBColor backColor;
+	Boolean changedBackColor = false;
+	::GetBackColor(&backColor);
+	if ((backColor.red != 0xFFFF) || (backColor.green != 0xFFFF) || (backColor.blue != 0xFFFF)) {
+		RGBColor rgbWhite = {0xFFFF,0xFFFF,0xFFFF};
+		::RGBBackColor(&rgbWhite);
+		changedBackColor = true;
+	}
+
+  Rect macSrcRect;  
+  Rect macDstRect;
+  ::SetRect(&macSrcRect, 0, 0, width, height);
+	::SetRect(&macDstRect, pt.x, pt.y, pt.x + width, pt.y + height);
+	
+  //PixMapHandle		destPixels = GetGWorldPixMap(mPort);
+		
+	// copy the bits now
+	::CopyBits(
+#if TARGET_CARBON
+          ::GetPortBitMapForCopyBits(srcPort),
+          ::GetPortBitMapForCopyBits(mPort),
+#else
+		  (BitMap*)&imagePixmap,
+		  &mPort->portBits,
+#endif
+		  &macSrcRect,
+		  &macDstRect,
+		  srcCopy,
+		  0L);
+
+	// restore colors and surface
+	if (changedForeColor)
+		::RGBForeColor(&foreColor);
+	if (changedBackColor)
+		::RGBBackColor(&backColor);
+
+  return NS_OK;
+}
+
+/* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+#endif

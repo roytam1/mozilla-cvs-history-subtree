@@ -2818,6 +2818,9 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawImage(nsIImage *aImage, const nsRect&
 
 	sr = aSRect;
 	mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+	sr.x = aSRect.x;
+	sr.y = aSRect.y;
+	mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
   dr = aDRect;
 	mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
@@ -3785,3 +3788,75 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 
 
 
+#ifdef USE_IMG2
+
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsIInterfaceRequestor.h"
+
+/* [noscript] void drawImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextWin::DrawImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+{
+  nsPoint pt;
+  nsRect sr;
+
+	pt = *aDestPoint;
+  mTranMatrix->TransformCoord(&pt.x, &pt.y);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  return img->Draw(*this, mSurface, sr.x, sr.y, sr.width, sr.height,
+                                    pt.x + sr.x, pt.y + sr.y, sr.width, sr.height);
+}
+
+/* [noscript] void drawScaledImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+  nsRect dr;
+  nsRect sr;
+
+	dr = *aDestRect;
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  return img->Draw(*this, mSurface, sr.x, sr.y, sr.width, sr.height, dr.x, dr.y, dr.width, dr.height);
+}
+
+/* [noscript] void drawTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+#endif

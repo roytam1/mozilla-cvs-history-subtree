@@ -115,7 +115,7 @@ nsTransform2D       *theTransform;
 
       // copy the initial image to our buffer, this takes twips and converts to pixels.. 
       // which is what the image is in
-      this->DrawImage(aImage,0,0,aWidth,aHeight);
+      NS_STATIC_CAST(nsIRenderingContext*, this)->DrawImage(aImage,0,0,aWidth,aHeight);
 
       // duplicate the image in the upperleft corner to fill up the nsDrawingSurface
       srcRect.SetRect(0,0,aWidth,aHeight);
@@ -143,7 +143,7 @@ nsTransform2D       *theTransform;
     // slow blitting, one tile at a time.... ( will create a mask and fall into code below -next task-)
     for(y=aY0;y<aY1;y+=aHeight){
       for(x=aX0;x<aX1;x+=aWidth){
-        this->DrawImage(aImage,x,y,aWidth,aHeight);
+        NS_STATIC_CAST(nsIRenderingContext*, this)->DrawImage(aImage,x,y,aWidth,aHeight);
       }
     }
   }
@@ -663,3 +663,29 @@ float         avx,avy,av1x,av1y;
 
   return result;
 }
+
+#ifdef USE_IMG2
+/* [noscript] void drawImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawScaledImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void drawScaledTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextImpl::DrawScaledTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+#endif
