@@ -32,9 +32,6 @@ OTHER_LIBS += ../../dist/$(OBJDIR)/lib/libnspr21.lib
 else
 OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
 endif
-else
-# Look in OBJDIR to find prcpucfg.h
-INCLUDES   += -I$(OBJDIR)
 endif
 
 ifdef JS_NO_THIN_LOCKS
@@ -206,6 +203,10 @@ $(OBJDIR)/jsautocfg.h: $(OBJDIR)/jscpucfg
 $(OBJDIR)/jscpucfg: $(OBJDIR)/jscpucfg.o
 	$(CC) -o $@ $(OBJDIR)/jscpucfg.o
 
+# Look in OBJDIR to find jsautocfg.h
+INCLUDES   += -I$(OBJDIR)
+
+# Add to TARGETS for clobber rule
 TARGETS += $(OBJDIR)/jsautocfg.h $(OBJDIR)/jscpucfg $(OBJDIR)/jscpucfg.o
 endif
 
