@@ -28,14 +28,9 @@
 #include "nsMemory.h"
 
 #ifndef XP_MAC
-#define FOO 1
 #endif
 
-#ifdef FOO
 #include "nsRect.h"
-#else
-#include "nsRect2.h"
-#endif
 
 //////////////////////////////////////////////////////////////////////
 // GIF Decoder Implementation
@@ -66,6 +61,7 @@ NS_IMETHODIMP nsGIFDecoder2::Init(nsIImageRequest *aRequest)
   mObserver = do_QueryInterface(aRequest);  // we're holding 2 strong refs to the request.
 
   aRequest->GetImage(getter_AddRefs(mImageContainer));
+  
 
   /* do gif init stuff */
   /* Always decode to 24 bit pixdepth */
@@ -349,11 +345,8 @@ int HaveDecodedRow(
   }
   
   if (aRowBufPtr) {
-#ifdef FOO
     nscoord width;
-#else
-    gfx_dimension width;
-#endif
+
     decoder->mImageFrame->GetWidth(&width);
     PRUint32 iwidth = width;
 
@@ -397,7 +390,7 @@ int HaveDecodedRow(
     case nsIGFXFormat::RGB_A1:
     case nsIGFXFormat::BGR_A1:
       {
-        memset(decoder->alphaLine, ~0, abpr);
+        memset(decoder->alphaLine, 0, abpr);
         PRUint32 iwidth = (PRUint32)width;
         for (PRUint32 x=0; x<iwidth; x++) {
 
@@ -410,9 +403,7 @@ int HaveDecodedRow(
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
 #endif
-
-
-          if (*rowBufIndex == decoder->mGIFStruct.tpixel) {
+          if (*rowBufIndex != decoder->mGIFStruct.tpixel) {
             decoder->alphaLine[x>>3] |= 1<<(7-x&0x7);
           }
 
@@ -427,11 +418,8 @@ int HaveDecodedRow(
 
     }
 
-#ifdef FOO
     nsRect r(0, aRowNumber, width, 1);
-#else
-    nsRect2 r(0, aRowNumber, width, 1);
-#endif
+
     decoder->mObserver->OnDataAvailable(nsnull, nsnull, decoder->mImageFrame, &r);
   }
 
