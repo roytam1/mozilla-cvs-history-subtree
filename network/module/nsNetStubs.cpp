@@ -265,7 +265,7 @@ PUBLIC void INTL_CCCReportMetaCharsetTag(MWContext *context, char *charset_tag)
  *---------------------------------------------------------------------------
  */
 
-//  Purpose:    See if we're supposed to handle a specific protocol differently.
+//  Purpose:    See if we are supposed to handle a specific protocol differently.
 //  Arguments:  pContext        The context.
 //              iFormatOut      The format out (possibly saving).
 //              pURL            The URL to load.
@@ -326,7 +326,7 @@ char *WH_FilePlatformName(const char *pName)
 
 
 //  Purpose:    Set a delayed load timer for a window for a particular URL.
-//  Arguments:  pContext    The context that we're in.  We are only interested on wether or not there appears to be a Frame/hence document.
+//  Arguments:  pContext    The context that we are in.  We are only interested on wether or not there appears to be a Frame/hence document.
 //              ulSeconds   The number of seconds that will pass before we attempt the reload.
 //  Returns:    void
 //  Comments:

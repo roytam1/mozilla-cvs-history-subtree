@@ -22,6 +22,7 @@
 
 #undef OPAQUE_MWCONTEXT
 #include "mkutils.h"
+#include "mkfe.h"
 #include "netutils.h"
 #include "xp.h"
 #include "mkparse.h"

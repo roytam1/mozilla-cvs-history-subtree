@@ -24,6 +24,7 @@ LIBRARY_NAME	= cnetinit
 
 CSRCS		= \
 	cnetinit.c	\
+	mkfe.c		\
 	$(NULL)
 endif
 

@@ -77,12 +77,23 @@ static PRHashTable *net_AboutTable = NULL;
 PRIVATE PRIntn net_AboutComparator(const void *v1, const void *v2)
 {
     char *idx = NULL;
-    if (idx = PL_strchr((char *) v2, '*')) {
+    if (idx = PL_strchr((char *) v2, '?')) {
         int len = (int)(idx - (char *) v2);
         return PL_strncasecmp((char *) v1, (char *) v2, len) == 0;
     } else {
         return PL_strcasecmp((char *) v1, (char *) v2) == 0;
     }
+}
+
+PRIVATE PLHashNumber net_HashAbout(const void *key)
+{
+    PLHashNumber h;
+    const PRUint8 *s;
+
+    h = 0;
+    for (s = (const PRUint8*)key; *s && *s != (PRUint8) '?'; s++)
+        h = (h >> 28) ^ (h << 4) ^ *s;
+    return h;
 }
 
 PRIVATE PRBool net_DoRegisteredAbout(const char *which, ActiveEntry *entry)
@@ -860,7 +871,7 @@ NET_InitAboutProtocol(void)
     NET_RegisterProtocolImplementation(&about_proto_impl, ABOUT_TYPE_URL);
 
     net_AboutTable = PL_NewHashTable(32, 
-                                     PL_HashString, 
+                                     net_HashAbout, 
                                      net_AboutComparator,
                                      PL_CompareValues,
                                      NULL, NULL);

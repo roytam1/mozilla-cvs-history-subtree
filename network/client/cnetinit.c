@@ -282,12 +282,12 @@ PRBool net_AboutGlobalHistory(const char *token,
 
 PRIVATE void net_InitAboutURLs()
 {
-    NET_RegisterAboutProtocol("image-cache*", net_AboutImageCache);
+    NET_RegisterAboutProtocol("image-cache?", net_AboutImageCache);
     NET_RegisterAboutProtocol("global", net_AboutGlobalHistory);
 #ifdef XP_UNIX
     NET_RegisterAboutProtocol("minibuffer", net_AboutMinibuffer);
 #endif
 #ifdef WEBFONTS
-    NET_RegisterAboutProtocol("fonts*", net_AboutFonts);
+    NET_RegisterAboutProtocol("fonts?", net_AboutFonts);
 #endif
 }
