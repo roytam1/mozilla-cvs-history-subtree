@@ -391,7 +391,7 @@ Rights Reserved.
 
 <!-- Toolbar items -->
 <!ENTITY getMsgButton.label "Get Msgs">
-<!ENTITY newMsgButton.label "Compose">
+<!ENTITY newMsgButton.label "Write">
 <!ENTITY replyButton.label "Reply">
 <!ENTITY replyAllButton.label "Reply All">
 <!ENTITY forwardButton.label "Forward">
@@ -402,6 +402,7 @@ Rights Reserved.
 <!ENTITY printButton.label "Print">
 <!ENTITY stopButton.label "Stop">
 <!ENTITY junkButton.label "Junk">
+<!ENTITY addressBookButton.label "Address Book">
 
 <!--Tooltips-->
 <!ENTITY menuBar.tooltip "Menu Bar">
@@ -421,6 +422,7 @@ Rights Reserved.
 <!ENTITY stopButton.tooltip "Stop the current transfer">
 <!ENTITY throbber.tooltip "Go to the &vendorShortName; home page">
 <!ENTITY junkButton.tooltip "Mark the selected messages as junk (or not junk)">
+<!ENTITY addressBookButton.tooltip "Go to the address book">
 
 <!-- Statusbar -->
 <!ENTITY  statusText.label "Done">

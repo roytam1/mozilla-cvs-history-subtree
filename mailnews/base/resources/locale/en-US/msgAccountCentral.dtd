@@ -24,7 +24,7 @@ Contributor(s):
 
 <!ENTITY emailSectionHdr.label        "Email"> 
 <!ENTITY readMsgsLink.label           "Read messages"> 
-<!ENTITY composeMsgLink.label         "Compose a new message"> 
+<!ENTITY composeMsgLink.label         "Write a new message"> 
 
 <!ENTITY newsSectionHdr.label         "Newsgroups"> 
 <!ENTITY subscribeNewsLink.label      "Subscribe to newsgroups"> 

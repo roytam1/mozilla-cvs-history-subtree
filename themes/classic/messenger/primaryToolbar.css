@@ -195,6 +195,22 @@
   -moz-image-region: rect(0px 92px 21px 69px) !important;
 }
 
+#button-address {
+  -moz-image-region: rect(231px 23px 252px 0px);
+}
+
+#button-address:hover {
+  -moz-image-region: rect(231px 46px 252px 23px);
+} 
+
+#button-address:hover:active {
+  -moz-image-region: rect(231px 69px 252px 46px);
+} 
+
+#button-address[disabled="true"] {
+  -moz-image-region: rect(231px 92px 252px 69px) !important;
+} 
+
 #button-stop {
   list-style-image: url("chrome://communicator/skin/icons/btn1.gif");
   -moz-image-region: rect(21px 22px 41px 0px);

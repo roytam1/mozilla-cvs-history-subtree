@@ -1567,6 +1567,13 @@ function ComposeLoad()
   window.tryToClose=ComposeCanClose;
   if (gLogComposePerformance)
     sMsgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about:blank", false);
+  
+  // initialize the customizeDone method on the customizeable toolbar
+  var toolbox = document.getElementById("compose-toolbox");
+  toolbox.customizeDone = MailToolboxCustomizeDone;
+
+  var toolbarset = document.getElementById('customToolbars');
+  toolbox.toolbarset = toolbarset;
 }
 
 function ComposeUnload()

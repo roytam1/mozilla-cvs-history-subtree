@@ -124,7 +124,7 @@ Rights Reserved.
    <command id="cmd_viewWatchedThreadsWithUnread" oncommand="goDoCommand('cmd_viewWatchedThreadsWithUnread')" disabled="true"/>
    <command id="cmd_viewIgnoredThreads" oncommand="goDoCommand('cmd_viewIgnoredThreads')" disabled="true"/>
    <command id="cmd_sortByThread" oncommand="goDoCommand('cmd_sortByThread')" disabled="true"/>
-   <command id="cmd_CustomizeToolbars" oncommand="CustomizeMailToolbar()"/>
+   <command id="cmd_CustomizeToolbars" oncommand="CustomizeMailToolbar('mail-toolbox')"/>
    <commandset id="viewZoomCommands"/>
 </commandset>
 
@@ -1066,7 +1066,7 @@ Rights Reserved.
                accesskey="&showMessageCmd.accesskey;"
                oncommand="MsgToggleMessagePane();"/>
               <menuseparator/>
-              <menuitem id="menu_customizeToolbar" oncommand="CustomizeMailToolbar();" label="&customizeToolbar.label;" accesskey="&customizeToolbar.accesskey;"/>
+              <menuitem id="menu_customizeToolbar" oncommand="CustomizeMailToolbar('mail-toolbox');" label="&customizeToolbar.label;" accesskey="&customizeToolbar.accesskey;"/>
             </menupopup>
           </menu>
           <menuseparator/>
@@ -1575,6 +1575,8 @@ Rights Reserved.
           <menuitem label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" command="cmd_printpreview"/>
         </menupopup>
       </toolbarbutton>
+
+      <toolbarbutton id="button-address" class="toolbarbutton-1" label="&addressBookButton.label;" oncommand="toAddressBook();" tooltiptext="&addressBookButton.tooltip;"/>
 
       <toolbaritem id="throbber-box" align="center" pack="center">
         <button id="navigator-throbber" oncommand="loadThrobberUrl('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
