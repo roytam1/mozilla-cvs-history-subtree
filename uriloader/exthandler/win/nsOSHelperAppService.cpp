@@ -413,12 +413,12 @@ static void RemoveParameters(nsAString& aPath)
     realPath = Substring(aPath, 1, aPath.Length() - 1);
     PRInt32 nextQuote = realPath.FindChar(PRUnichar('"'));
     if (nextQuote > 0)
-      realPath = Substring(realPath, 0, nextQuote);
+      realPath.Truncate(nextQuote);
   }
   else {
     PRInt32 firstSpace = aPath.FindChar(PRUnichar(' '));
     if (firstSpace > 0) 
-      realPath = Substring(aPath, 0, firstSpace);
+      realPath.Truncate(firstSpace);
   }
   aPath = realPath;
 }
@@ -463,8 +463,7 @@ nsOSHelperAppService::GetDefaultAppInfo(nsAString& aTypeName, nsAString& aDefaul
       // the Picture & Fax Viewer, which are invoked through rundll32.exe, and
       // so we need to extract the DLL path because that's where the version
       // info is held - not in rundll32.exe
-      nsAutoString prefix(Substring(handlerCommand, 0, 12));
-      if (prefix.EqualsIgnoreCase("rundll32.exe")) {
+      if (StringBeginsWith(handlerCommand, NS_LITERAL_STRING("rundll32.exe"))) {
         PRInt32 lastCommaPos = handlerCommand.RFindChar(',');
         if (lastCommaPos > 0)
           handlerFilePath = Substring(handlerCommand, 13, lastCommaPos - 13);
@@ -480,16 +479,27 @@ nsOSHelperAppService::GetDefaultAppInfo(nsAString& aTypeName, nsAString& aDefaul
 
       // Similarly replace embedded environment variables... (this must be done
       // AFTER |RemoveParameters| since it may introduce spaces into the path string)
-      SubstituteEnvironmentVariables(handlerFilePath);
+      TCHAR* destination = nsnull;
+      nsCAutoString handlerFilePathCStr; 
+      handlerFilePathCStr.AssignWithConversion(handlerFilePath);
+      DWORD required = ::ExpandEnvironmentStrings(handlerFilePathCStr.get(), destination, 0);
+      destination = new TCHAR[required];
+      if (!destination)
+        return NS_ERROR_OUT_OF_MEMORY;
+      ::ExpandEnvironmentStrings(handlerFilePathCStr.get(), destination, required);
+      handlerFilePath.AssignWithConversion(destination);
+      delete destination;
+      destination = nsnull;
 
-      nsCOMPtr<nsILocalFileWin> lfw(do_CreateInstance("@mozilla.org/file/local;1"));
+      nsCOMPtr<nsILocalFile> lf;
+      NS_NewLocalFile(handlerFilePath, PR_TRUE, getter_AddRefs(lf));
+      if (!lf)
+        return NS_ERROR_OUT_OF_MEMORY;
+      nsCOMPtr<nsILocalFileWin> lfw(do_QueryInterface(lf));
       if (lfw) {
-        nsresult rv = lfw->InitWithPath(handlerFilePath);
-        if (NS_SUCCEEDED(rv)) {
-          // The "FileDescription" field contains the actual name of the application.
-          lfw->GetVersionInfoField(NS_LITERAL_CSTRING("FileDescription"), 
-                                   aDefaultDescription);
-        }
+        // The "FileDescription" field contains the actual name of the application.
+        lfw->GetVersionInfoField(NS_LITERAL_CSTRING("FileDescription"), 
+                                  aDefaultDescription);
         nsCOMPtr<nsIFile> file(do_QueryInterface(lfw));
         *aDefaultApplication = file;
         NS_IF_ADDREF(*aDefaultApplication);
