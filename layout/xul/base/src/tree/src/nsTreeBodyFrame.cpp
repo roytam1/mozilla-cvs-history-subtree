@@ -723,6 +723,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintColumn(nsOutlinerColumn*    aColumn,
                                                const nsRect&        aDirtyRect,
                                                nsFramePaintLayer    aWhichLayer)
 {
+  if (aColRect.width == 0)
+    return NS_OK; // Don't paint hidden columns.
+
   // Now obtain the properties for our cell.
   // XXX Automatically fill in the following props: open, container, selected, focused, and the col ID.
   PrefillPropertyArray(-1, aColumn->GetID());
@@ -812,6 +815,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
                                              const nsRect&        aDirtyRect,
                                              nsFramePaintLayer    aWhichLayer)
 {
+  if (aCellRect.width == 0)
+    return NS_OK; // Don't paint cells in hidden columns.
+
   // Now obtain the properties for our cell.
   // XXX Automatically fill in the following props: open, container, selected, focused, and the col ID.
   PrefillPropertyArray(aRowIndex, NS_LITERAL_STRING(""));
