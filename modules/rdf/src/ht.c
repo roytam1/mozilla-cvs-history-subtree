@@ -1118,7 +1118,7 @@ HT_NewToolbarPane(HT_Notification notify)
 
 
 HT_Pane
-paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag)
+paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag, PRBool useColumns)
 {
 	HT_Pane			pane;
 	HT_View			view;
@@ -1155,7 +1155,7 @@ paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool a
 		pane->db =  db;
                 /*		pane->autoFlushFlag = autoFlushFlag; */
 
-		if ((view = HT_NewView(resource, pane, PR_FALSE, NULL, autoOpenFlag)) == NULL)
+		if ((view = HT_NewView(resource, pane,   useColumns, NULL, autoOpenFlag)) == NULL)
 		{
 			err = true;
 			break;
@@ -1183,7 +1183,7 @@ paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool a
 PR_PUBLIC_API(HT_Pane)
 HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush)
 {
-  return paneFromResource(newNavCenterDB(), r, n, autoFlush, false);
+  return paneFromResource(newNavCenterDB(), r, n, autoFlush, false, 0);
 }
 
 
@@ -1195,19 +1195,21 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush)
 	RDF			db;
 	RDF_Resource		r;
 	char			*dbstr[2];
+        char*                   dburl = getBaseURL(url);
 
 	XP_ASSERT(url != NULL);
 
-	dbstr[0] = url;
+	dbstr[0] = dburl;
 	dbstr[1] = NULL;
-	if ((db = RDF_GetDB(dbstr)) != NULL)
-	{
-		if ((r = RDF_GetResource(db, url, 1)) != NULL)
-		{
-			pane = paneFromResource(db, r, n, autoFlush, false);
-		}
+	if ((db = RDF_GetDB(dbstr)) != NULL) {
+          if ((r = RDF_GetResource(db, url, 1)) != NULL)
+            {
+              readRDFFile (dburl, r, 0, db->translators[0]);
+              pane = paneFromResource(db, r, n, autoFlush, 1, 1);
+            }
 	}
-	return (pane);
+          freeMem(dburl);        
+          return (pane);
 }
 
 
@@ -1220,7 +1222,7 @@ HT_NewQuickFilePane(HT_Notification notify)
 
 	if ((qf = RDFUtil_GetQuickFileFolder()) != NULL)
 	{
-		if ((pane = paneFromResource(newNavCenterDB(), qf, notify, true, true)) != NULL)
+		if ((pane = paneFromResource(newNavCenterDB(), qf, notify, true, true, 0)) != NULL)
 		{
 			pane->bookmarkmenu = true;
 			RDFUtil_SetQuickFileFolder(pane->selectedView->top->node);
@@ -1240,7 +1242,7 @@ HT_NewPersonalToolbarPane(HT_Notification notify)
 
 	if ((pt  = RDFUtil_GetPTFolder()) != NULL)
 	{
-		if ((pane = paneFromResource(newNavCenterDB(), pt, notify, true, true)) != NULL)
+		if ((pane = paneFromResource(newNavCenterDB(), pt, notify, true, true, 0)) != NULL)
 		{
 			pane->personaltoolbar = true;
 			RDFUtil_SetPTFolder(pane->selectedView->top->node);
@@ -1808,6 +1810,7 @@ HT_NewView (RDF_Resource topNode, HT_Pane pane, PRBool useColumns, void *feData,
 				column->tokenType = (uint32) RDF_GetSlotValue(pane->db, r,
 								gNavCenter->RDF_ColumnDataType,
 								RDF_INT_TYPE, false, true);
+				if (!column->tokenType) column->tokenType = HT_COLUMN_STRING;
 				column->width = (uint32) RDF_GetSlotValue(pane->db, r,
 								gNavCenter->RDF_ColumnWidth,
 								RDF_INT_TYPE, false, true);
@@ -4987,6 +4990,7 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 	HT_Value		values;
 	PRBool			foundData = false;
 	void			*data = NULL;
+	RDF_Resource tt = (RDF_Resource)token;
 
 	XP_ASSERT(node != NULL);
 
@@ -5018,7 +5022,7 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 						RDF_INT_TYPE, false, true);
 			foundData = true;
 		}
-		else if (tokenType == HT_COLUMN_STRING || tokenType == HT_COLUMN_DATE_STRING)
+		else if (tokenType == HT_COLUMN_STRING || tokenType == HT_COLUMN_DATE_STRING || tokenType == 0)
 		{
 			if (token == gWebData->RDF_URL)
 			{

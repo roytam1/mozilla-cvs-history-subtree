@@ -416,7 +416,7 @@ char* opTypeToString (RDF_EventType opType) {
 
 
 void traceNotify (char* event, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type) {
-#ifdef DEBUG_guha    
+#ifdef DEBUG_guha1    
       char* traceLine = getMem(1000);
       if (type == RDF_INT_TYPE) {
         sprintf(traceLine, "%s  %s(%s, %i)\n", 

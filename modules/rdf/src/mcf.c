@@ -42,6 +42,7 @@ RDFL		gAllDBs = 0;
 
 
 
+
 RDFT
 getTranslator (char* url)
 {
@@ -79,20 +80,28 @@ getTranslator (char* url)
     ans = MakeSCookDB(url);
   } else if (startsWith("rdf:CookieStore", url)) {
     ans = MakeCookieStore(url);
-    return MakeCookieStore(url);
   } else if (startsWith("rdf:find", url)) {
-    return MakeFindStore(url);
+    ans = MakeFindStore(url);
   } 
 #endif
-  if (ans) {
-    PL_HashTableAdd(dataSourceHash, url, ans);
-    return ans;
-  } else if (startsWith("http://", url)) {
-	  ans = MakeFileDB(url);
-	  return(ans);
-  } else
-    return NULL;
-  
+    else if (startsWith("http://", url)) {
+	  ans = MakeFileDB(url); 
+  } else {
+	  ans = NULL;
+  }
+#ifdef MOZILLA_CLIENT
+#ifdef DEBUG
+  {
+    char* traceLine = getMem(500);
+    sprintf(traceLine, "\nCreated %s \n", url);
+    FE_Trace(traceLine);
+    freeMem(traceLine);
+  }
+#endif
+#endif
+
+  if (ans) PL_HashTableAdd(dataSourceHash, ans->url, ans);
+  return ans;
 }
 
 
