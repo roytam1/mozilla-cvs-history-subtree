@@ -7,12 +7,12 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
+mozilla/nsprpub,          FORMREWRITE_20011008_BRANCH
+mozilla/security/nss,     FORMREWRITE_20011008_BRANCH
+mozilla/security/manager, FORMREWRITE_20011008_BRANCH
+mozilla/accessible,       FORMREWRITE_20011008_BRANCH
+DirectorySDKSourceC,      FORMREWRITE_20011008_BRANCH
 mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/gfx2,             FORMREWRITE_20011008_BRANCH
+mozilla/modules/libpr0n,  FORMREWRITE_20011008_BRANCH
+SeaMonkeyAll,             FORMREWRITE_20011008_BRANCH
