@@ -1342,6 +1342,19 @@ function SetUpToolbarButtons(uri)
     }
 }
 
+function UpdateStandAloneMessageCounts()
+{
+  dump("XXX UpdateStandAloneMessageCounts()\n");
+  // for now, do nothing on this
+  // but still provide this hook
+  if ("UpdateExtraStandAloneMessageCounts()" in top) {
+    UpdateExtraStandAloneMessageCounts();
+  }
+  else {
+    dump("XXX no UpdateExtraStandAloneMessageCounts\n");
+  }
+}
+
 var gMessageBrowser;
 
 function getMessageBrowser()

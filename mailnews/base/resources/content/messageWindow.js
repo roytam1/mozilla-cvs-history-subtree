@@ -68,16 +68,6 @@ var folderListener = {
  }
 }
 
-function UpdateStandAloneMessageCounts()
-{
-  dump("XXX UpdateStandAloneMessageCounts()\n");
-  // for now, do nothing on this
-  // but still provide this hook
-  if ("UpdateExtraStandAloneMessageCounts()" in top) {
-    UpdateExtraStandAloneMessageCounts();
-  }
-}
-
 function nsMsgDBViewCommandUpdater()
 {}
 
