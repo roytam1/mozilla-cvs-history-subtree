@@ -592,6 +592,17 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
 #else
     JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
     JSStackFrame *pFrameToEndLooking   = NULL;
@@ -624,6 +635,17 @@ lm_GetSubjectOriginURL(JSContext *cx)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
 #else
     JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
     JSStackFrame *pFrameToEndLooking   = NULL;
@@ -1554,6 +1576,11 @@ LM_CanAccessTargetStr(JSContext *cx, const char *target)
     return lm_CanAccessTarget(cx, jsTarget);
 }
 
+const char *
+LM_GetCodebaseFromTopOfJSStack(JSContext *cx)
+{
+   return lm_GetSubjectOriginURL(cx);
+}
 
 /*
  * If given principals can access the given target, return true. Otherwise
@@ -1573,6 +1600,17 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
 #else
     JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
     JSStackFrame *pFrameToEndLooking   = NULL;
