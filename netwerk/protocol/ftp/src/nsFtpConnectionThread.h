@@ -40,6 +40,7 @@
 #include "nsAutoLock.h"
 #include "nsIEventQueueService.h"
 #include "nsIPrompt.h"
+#include "nsITransport.h"
 
 #include "nsFtpControlConnection.h"
 
@@ -85,7 +86,7 @@ typedef enum _FTP_STATE {
 typedef enum _FTP_ACTION { GET, PUT, MKDIR, DEL} FTP_ACTION;
 
 class nsFtpState : public nsIStreamListener,
-                              public nsIRequest {
+                   public nsIRequest {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMLISTENER
@@ -140,7 +141,7 @@ private:
     nsresult    Process();
 
     virtual nsresult CreateTransport(const char * host, PRInt32 port,
-                                     nsIChannel** o_pTrans);
+                                     nsITransport** o_pTrans);
 
     void KillControlConnnection();
     nsresult StopProcessing();
@@ -160,7 +161,7 @@ private:
 
         // ****** channel/transport/stream vars 
     nsFtpControlConnection*         mControlConnection;// cacheable control connection (owns mCPipe)
-    nsCOMPtr<nsIChannel>            mDPipe;            // the data channel transport
+    nsCOMPtr<nsITransport>          mDPipe;            // the data transport
     nsCOMPtr<nsIRequest>            mDPipeRequest;
         // ****** consumer vars
     nsCOMPtr<nsIStreamListener>     mListener;        // the consumer of our read events

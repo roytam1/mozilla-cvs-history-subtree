@@ -35,7 +35,7 @@ class nsFtpStreamProvider : public nsIStreamProvider {
 public:
     NS_DECL_ISUPPORTS
 
-    nsFtpStreamProvider() {}
+    nsFtpStreamProvider() { NS_INIT_ISUPPORTS(); }
     virtual ~nsFtpStreamProvider() {}
 
     //
@@ -110,7 +110,7 @@ nsrefcnt nsFtpControlConnection::Release(void)
     return count;
 }
 
-nsFtpControlConnection::nsFtpControlConnection(nsIChannel* socketTransport)
+nsFtpControlConnection::nsFtpControlConnection(nsITransport* socketTransport)
 :  mCPipe(socketTransport)
 {
     NS_INIT_REFCNT();
@@ -156,13 +156,13 @@ nsFtpControlConnection::Connect()
 
     rv = mCPipe->AsyncWrite(provider, 
                             NS_STATIC_CAST(nsISupports*, this),
-                            0, -1, 
+                            0, 0, 0, 
                             getter_AddRefs(mWriteRequest));
     if (NS_FAILED(rv)) return rv;
 
     // get the ball rolling by reading on the control socket.
     rv = mCPipe->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, this), 
-                           nsnull, 0, -1, 
+                           nsnull, 0, 0, 0, 
                            getter_AddRefs(mReadRequest));
 
     if (NS_FAILED(rv)) return rv;
@@ -205,9 +205,9 @@ nsFtpControlConnection::Write(nsCString& command)
 }
 
 nsresult 
-nsFtpControlConnection::GetChannel(nsIChannel** controlChannel)
+nsFtpControlConnection::GetTransport(nsITransport** controlTransport)
 {
-    NS_IF_ADDREF(*controlChannel = mCPipe);
+    NS_IF_ADDREF(*controlTransport = mCPipe);
     return NS_OK;
 }
 

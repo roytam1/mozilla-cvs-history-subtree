@@ -25,6 +25,7 @@
 
 #include "nsIHTTPChannel.h"
 #include "nsIChannel.h"
+#include "nsITransport.h"
 #include "nsHTTPEnums.h"
 #include "nsIURI.h"
 #include "nsHTTPHandler.h"
@@ -43,7 +44,6 @@
 #include "nsIPrompt.h"
 #include "nsIHTTPEventSink.h"
 #include "nsIStreamAsFile.h"
-#include "nsIStreamContentInfo.h"
 
 class nsIFile;
 
@@ -68,8 +68,6 @@ DupString(char* *o_Dest, const char* i_Src);
     -Gagan Saksena 02/25/99
 */
 class nsHTTPChannel : public nsIHTTPChannel,
-                      public nsIRequest,
-                      public nsIStreamContentInfo,
                       public nsIInterfaceRequestor,
                       public nsIProgressEventSink,
                       public nsIProxy,
@@ -85,19 +83,18 @@ public:
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIHTTPCHANNEL
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSIPROGRESSEVENTSINK
     NS_DECL_NSIPROXY
-		NS_DECL_NSISTREAMASFILE
+	NS_DECL_NSISTREAMASFILE
 		
     // nsHTTPChannel methods:
     nsresult            Authenticate(const char *iChallenge,
                                      PRBool bProxyAuth = PR_FALSE);
     nsresult            Init();
-    nsresult            Open(PRBool bIgnoreCache=PR_FALSE);
+    nsresult            Begin(PRBool bIgnoreCache=PR_FALSE);
     nsresult            Redirect(const char *aURL,
                                  nsIChannel **aResult, PRInt32 aStatusCode);
 
@@ -197,7 +194,7 @@ protected:
    
     nsresult                            mStatus;
 
-    nsCOMPtr<nsIChannel>                mCacheTransport;
+    nsCOMPtr<nsITransport>              mCacheTransport;
 
     PRBool                              mPipeliningAllowed;
     nsHTTPPipelinedRequest*             mPipelinedRequest;
@@ -205,7 +202,7 @@ protected:
     // Stream as file
     nsCOMPtr<nsISupportsArray>						mStreamAsFileObserverArray;
     PRBool                              mApplyConversion;
-    PRBool                              mOpenInputStreamHasEventQueue;
+    PRBool                              mOpenHasEventQueue;
 };
 
 #include "nsIRunnable.h"

@@ -87,15 +87,14 @@ nsFileChannel::~nsFileChannel()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS8(nsFileChannel,
-                   nsIFileChannel,
-                   nsIChannel,
-                   nsIRequest,
-                   nsIStreamContentInfo,
-                   nsIStreamListener,
-                   nsIStreamObserver,
-                   nsIProgressEventSink,
-                   nsIInterfaceRequestor)
+NS_IMPL_THREADSAFE_ISUPPORTS7(nsFileChannel,
+                              nsIFileChannel,
+                              nsIChannel,
+                              nsIRequest,
+                              nsIStreamListener,
+                              nsIStreamObserver,
+                              nsIProgressEventSink,
+                              nsIInterfaceRequestor)
 
 NS_METHOD
 nsFileChannel::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
@@ -185,18 +184,6 @@ nsFileChannel::Resume()
     return NS_OK;
 }
 
-
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsFileChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsFileChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // From nsIChannel
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,38 +230,34 @@ nsFileChannel::EnsureTransport()
                               getter_AddRefs(mFileTransport));
     if (NS_FAILED(rv)) return rv;
 
-    if (mLoadAttributes != LOAD_NORMAL) {
-        rv = mFileTransport->SetLoadAttributes(mLoadAttributes);
-        if (NS_FAILED(rv)) return rv;
-    }
-    if (mCallbacks) {
-        rv = mFileTransport->SetNotificationCallbacks(this);
-        if (NS_FAILED(rv)) return rv;
-    }
+    if (mCallbacks && !(mLoadAttributes & LOAD_BACKGROUND))
+        (void)mFileTransport->SetProgressEventSink(this);
+
     return rv;
 }
 
 NS_IMETHODIMP
-nsFileChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
+nsFileChannel::Open(nsIInputStream **result)
 {
     nsresult rv;
 
-    if (mCurrentRequest)
+    if (mFileTransport)
         return NS_ERROR_IN_PROGRESS;
 
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->OpenInputStream(transferOffset, transferCount, result);
+    rv = mFileTransport->OpenInputStream(0, 0, 0, result);
   done:
     if (NS_FAILED(rv)) {
         // release the transport so that we don't think we're in progress
         mFileTransport = nsnull;
-        mCurrentRequest = nsnull;
     }
     return rv;
 }
 
+// XXX What does OpenOutputStream mean for a file "channel"
+#if 0
 NS_IMETHODIMP
 nsFileChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
 {
@@ -297,11 +280,10 @@ nsFileChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount,
     }
     return rv;
 }
+#endif
 
 NS_IMETHODIMP
-nsFileChannel::AsyncRead(nsIStreamListener *listener,
-                         nsISupports *ctxt,
-                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsFileChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
     nsresult rv;
 
@@ -311,7 +293,7 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
     mInitiator = PR_CurrentThread();
 #endif
 
-    if (mCurrentRequest)
+    if (mFileTransport)
         return NS_ERROR_IN_PROGRESS;
 
     NS_ASSERTION(listener, "null listener");
@@ -340,8 +322,8 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
     
-    rv = mFileTransport->AsyncRead(tempListener, ctxt, transferOffset, 
-                                   transferCount, getter_AddRefs(mCurrentRequest));
+    rv = mFileTransport->AsyncRead(tempListener, ctxt, 0, 0, 0,
+                                   getter_AddRefs(mCurrentRequest));
 
   done:
     if (NS_FAILED(rv)) {
@@ -354,6 +336,8 @@ nsFileChannel::AsyncRead(nsIStreamListener *listener,
     return rv;
 }
 
+// XXX What does AsyncWrite mean for a file "channel"
+#if 0
 NS_IMETHODIMP
 nsFileChannel::AsyncWrite(nsIStreamProvider *provider, 
                           nsISupports *ctxt, 
@@ -411,6 +395,7 @@ nsFileChannel::AsyncWrite(nsIStreamProvider *provider,
     }
     return rv;
 }
+#endif
 
 NS_IMETHODIMP
 nsFileChannel::GetLoadAttributes(PRUint32 *aLoadAttributes)
@@ -439,7 +424,7 @@ nsFileChannel::GetContentType(char * *aContentType)
             mContentType = "application/http-index-format";
         }
         else {
-            nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID, &rv));
+            nsCOMPtr<nsIMIMEService> MIMEService(do_GetService(NS_MIMESERVICE_CONTRACTID, &rv));
             if (NS_FAILED(rv)) return rv;
 
             rv = MIMEService->GetTypeFromFile(mFile, aContentType);
@@ -589,9 +574,9 @@ nsFileChannel::OnStopRequest(nsIRequest* request, nsISupports* context,
     }
 
     // Release the reference to the consumer stream listener...
-    mRealListener = null_nsCOMPtr();
-    mFileTransport = null_nsCOMPtr();
-    mCurrentRequest = null_nsCOMPtr();
+    mRealListener = 0;
+    mFileTransport = 0;
+    mCurrentRequest = 0;
     return rv;
 }
 

@@ -31,6 +31,7 @@
 #include "nsMimeTypes.h"
 #include "nsScriptSecurityManager.h"
 #include "nsIAggregatePrincipal.h"
+#include "nsIProgressEventSink.h"
 #include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
@@ -89,11 +90,10 @@ nsJARChannel::~nsJARChannel()
         PR_DestroyMonitor(mMonitor);
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS8(nsJARChannel,
+NS_IMPL_THREADSAFE_ISUPPORTS7(nsJARChannel,
                               nsIJARChannel,
                               nsIChannel,
                               nsIRequest,
-                              nsIStreamContentInfo,
                               nsIStreamObserver,
                               nsIStreamListener,
                               nsIStreamIO,
@@ -206,18 +206,6 @@ nsJARChannel::Resume()
 	return NS_OK;
 }
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsJARChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsJARChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChannel methods
 
@@ -264,12 +252,12 @@ nsJARChannel::OpenJARElement()
     rv = Open(nsnull, nsnull);
     if (NS_SUCCEEDED(rv))
         rv = GetInputStream(getter_AddRefs(mSynchronousInputStream));
-    mon.Notify();       // wake up OpenInputStream
+    mon.Notify();       // wake up nsIChannel::Open
 	return rv;
 }
 
 NS_IMETHODIMP
-nsJARChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream* *result)
+nsJARChannel::Open(nsIInputStream* *result)
 {
     nsAutoCMonitor mon(this);
     nsresult rv;
@@ -282,7 +270,7 @@ nsJARChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, n
     {
         *result = mSynchronousInputStream; // Result of GetInputStream called on transport thread
         NS_ADDREF(*result);
-        mSynchronousInputStream = null_nsCOMPtr();
+        mSynchronousInputStream = 0;
         return NS_OK;
     } 
     else 
@@ -290,15 +278,7 @@ nsJARChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, n
 }
 
 NS_IMETHODIMP
-nsJARChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream* *result)
-{
-	NS_NOTREACHED("nsJARChannel::OpenOutputStream");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsJARChannel::AsyncRead(nsIStreamListener* listener, nsISupports* ctxt,
-                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsJARChannel::AsyncOpen(nsIStreamListener* listener, nsISupports* ctxt)
 {
     nsresult rv;
     mUserContext = ctxt;
@@ -325,11 +305,7 @@ nsJARChannel::AsyncRead(nsIStreamListener* listener, nsISupports* ctxt,
     }
 
     mSynchronousRead = PR_FALSE;
-    rv = EnsureJARFileAvailable();
-
-    if (NS_SUCCEEDED(rv))
-        NS_ADDREF(*_retval=this);
-    return rv;
+    return EnsureJARFileAvailable();
 }
 
 nsresult
@@ -380,12 +356,15 @@ nsJARChannel::AsyncReadJARElement()
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIChannel> jarChannel;
-    rv = fts->CreateTransportFromStreamIO(this, 
-                                          getter_AddRefs(jarChannel));
+    nsCOMPtr<nsITransport> jarTransport;
+    rv = fts->CreateTransportFromStreamIO(this, getter_AddRefs(jarTransport));
     if (NS_FAILED(rv)) return rv;
-    rv = jarChannel->SetNotificationCallbacks(mCallbacks);
-    if (NS_FAILED(rv)) return rv;
+
+    if (mCallbacks) {
+        nsCOMPtr<nsIProgressEventSink> sink = do_GetInterface(mCallbacks);
+        if (sink)
+            jarTransport->SetProgressEventSink(sink);
+    }
     
 #ifdef PR_LOGGING
     nsXPIDLCString jarURLStr;
@@ -394,19 +373,8 @@ nsJARChannel::AsyncReadJARElement()
            ("nsJarProtocol: AsyncRead jar entry %s", (const char*)jarURLStr));
 #endif
 
-    rv = jarChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(mJarExtractionTransport));
+    rv = jarTransport->AsyncRead(this, nsnull, 0, 0, 0, getter_AddRefs(mJarExtractionTransport));
     return rv;
-}
-
-NS_IMETHODIMP
-nsJARChannel::AsyncWrite(nsIStreamProvider* provider, 
-						 nsISupports* ctxt,
-                         PRUint32 transferOffset, 
-                         PRUint32 transferCount, 
-                         nsIRequest **_retval)
-{
-	NS_NOTREACHED("nsJARChannel::AsyncWrite");
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -600,7 +568,7 @@ nsJARChannel::OnDownloadComplete(nsIDownloader* aDownloader, nsISupports* aClosu
        else
            rv = AsyncReadJARElement();
    }
-   mDownloader = null_nsCOMPtr();
+   mDownloader = 0;
    return rv;
 }
 

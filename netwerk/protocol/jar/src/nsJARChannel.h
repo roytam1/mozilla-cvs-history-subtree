@@ -38,7 +38,6 @@
 #include "prmon.h"
 #include "nsIDownloader.h"
 #include "nsIInputStream.h"
-#include "nsIStreamContentInfo.h"
 
 class nsIFileChannel;
 class nsJARChannel;
@@ -52,8 +51,6 @@ class nsJARChannel;
 }
 
 class nsJARChannel : public nsIJARChannel, 
-                     public nsIRequest,
-                     public nsIStreamContentInfo,
                      public nsIStreamListener,
                      public nsIStreamIO,
                      public nsIDownloadObserver
@@ -61,7 +58,6 @@ class nsJARChannel : public nsIJARChannel,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIJARCHANNEL
     NS_DECL_NSISTREAMOBSERVER

@@ -143,12 +143,15 @@ nsHTTPCacheListener::OnStartRequest(nsIRequest *aRequest,
             ("nsHTTPCacheListener::OnStartRequest [this=%x]\n", this)) ;
     mBodyBytesReceived = 0;
     
+// XXX Need a way to get the content-length from the cache transport
+#if 0
     // get and store the content length which will be used in ODA for computing
     // progress information. 
     nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(aRequest);
     if (!cr) return NS_ERROR_FAILURE;
 
     cr->GetContentLength(&mContentLength) ;
+#endif
     return mResponseDataListener->OnStartRequest(mChannel, aContext) ;
 }
 
@@ -362,33 +365,36 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest* request,
         if (mResponse) 
         {
             PRUint32 statusCode = 0;
-            mResponse->GetStatus(&statusCode) ;
+            mResponse->GetStatus(&statusCode);
 
             if (statusCode == 304) // no content
             {
-                rv = FinishedResponseHeaders() ;
+                rv = FinishedResponseHeaders();
                 if (NS_FAILED(rv)) 
                     return rv;
 
-                rv = mPipelinedRequest->AdvanceToNextRequest() ;
+                rv = mPipelinedRequest->AdvanceToNextRequest();
                 if (NS_FAILED(rv)) 
                 {
-                    mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
+                    mHandler->ReleasePipelinedRequest(mPipelinedRequest);
                     mPipelinedRequest = nsnull;
 
-                    nsCOMPtr<nsISupports> parent;
-                    rv = request->GetParent(getter_AddRefs(parent));
+                    nsCOMPtr<nsITransportRequest> req = do_QueryInterface(request, &rv);
                     if (NS_FAILED(rv)) return rv;
 
-                    nsCOMPtr<nsISocketTransport> trans = do_QueryInterface(parent, &rv);
+                    nsCOMPtr<nsITransport> trans;
+                    rv = req->GetTransport(getter_AddRefs(trans));
+                    if (NS_FAILED(rv)) return rv;
+
+                    nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(trans, &rv);
 
                     // XXX/ruslan: will be replaced with the new Cancel(code) 
                     if (NS_SUCCEEDED(rv)) 
-                        trans->SetBytesExpected(0) ;
+                        sTrans->SetBytesExpected(0);
                }
                else
                {
-                   OnStartRequest(nsnull, nsnull) ;
+                   OnStartRequest(nsnull, nsnull);
                }
             }
             else
@@ -398,7 +404,7 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest* request,
                 mFirstLineParsed = PR_FALSE;
                 mHeaderBuffer.Truncate() ;
 
-                mChannel->SetResponse(nsnull) ;
+                mChannel->SetResponse(nsnull);
                 NS_RELEASE(mResponse) ;
 
                 mResponse = nsnull;
@@ -416,22 +422,22 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest* request,
                 mFirstLineParsed = PR_FALSE;
                 mHeaderBuffer.Truncate() ;
 
-                mChannel->SetResponse(nsnull) ;
-                NS_RELEASE(mResponse) ;
+                mChannel->SetResponse(nsnull);
+                NS_RELEASE(mResponse);
 
                 mResponse = nsnull;
                 mBytesReceived = 0;
-                mPipelinedRequest->RestartRequest(REQUEST_RESTART_SSL) ;
+                mPipelinedRequest->RestartRequest(REQUEST_RESTART_SSL);
 
                 return NS_OK;
 
                 PR_LOG(gHTTPLog, PR_LOG_DEBUG, 
                         ("\tOnDataAvailable [this=%x].(200) SSL CONNECT\n", 
-                        this)) ;
+                        this));
             }
             else
             {
-                rv = FinishedResponseHeaders() ;
+                rv = FinishedResponseHeaders();
                 if (NS_FAILED(rv)) 
                     return rv;
             }
@@ -598,15 +604,18 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest* request,
                 mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
                 mPipelinedRequest = nsnull;
 
-                nsCOMPtr<nsISupports> parent;
-                rv1 = request->GetParent(getter_AddRefs(parent));
-                if (NS_FAILED(rv1)) return rv1;
+                nsCOMPtr<nsITransportRequest> req = do_QueryInterface(request, &rv);
+                if (NS_FAILED(rv)) return rv;
 
-                nsCOMPtr<nsISocketTransport> trans = do_QueryInterface(parent, &rv1) ;
+                nsCOMPtr<nsITransport> trans;
+                rv = req->GetTransport(getter_AddRefs(trans));
+                if (NS_FAILED(rv)) return rv;
+
+                nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(trans, &rv1) ;
 
                 // XXX/ruslan: will be replaced with the new Cancel(code) 
                 if (NS_SUCCEEDED(rv1)) 
-                    trans->SetBytesExpected(0) ;
+                    sTrans->SetBytesExpected(0);
 
             }
             else
@@ -796,38 +805,40 @@ nsHTTPServerListener::OnStopRequest(nsIRequest* request, nsISupports* i_pContext
                 cp = PL_strstr(keepAliveHeader, "max=") ;
 
                 if (cp) 
-                    keepAliveMaxCon = atoi(cp + 4) ;
+                    keepAliveMaxCon = atoi(cp + 4);
 
-                cp = PL_strstr(keepAliveHeader, "timeout=") ;
+                cp = PL_strstr(keepAliveHeader, "timeout=");
                 if (cp) 
-                    keepAliveTimeout =(PRUint32) atoi(cp + 8) ;
+                    keepAliveTimeout =(PRUint32) atoi(cp + 8);
             }
         }
 
         if (mPipelinedRequest) 
         {
-            while (NS_SUCCEEDED(mPipelinedRequest->AdvanceToNextRequest()) ) 
+            while (NS_SUCCEEDED(mPipelinedRequest->AdvanceToNextRequest())) 
             {
-                OnStartRequest(nsnull, nsnull) ;
+                OnStartRequest(nsnull, nsnull);
                 mChannel->ResponseCompleted(mResponseDataListener, i_Status, aStatusArg);
                 mChannel->mHTTPServerListener = 0;
             }
 
-            mHandler->ReleasePipelinedRequest(mPipelinedRequest) ;
+            mHandler->ReleasePipelinedRequest(mPipelinedRequest);
             mPipelinedRequest = nsnull;
         }
 
-        nsCOMPtr<nsIChannel> transport;
-        rv = request->GetParent(getter_AddRefs(transport));
-        if (NS_FAILED(rv)) return rv;
+        nsCOMPtr<nsITransportRequest> req = do_QueryInterface(request);
+        if (req) {
+            nsCOMPtr<nsITransport> transport;
+            req->GetTransport(getter_AddRefs(transport));
 
-        if (transport) 
-            mHandler->ReleaseTransport(transport, capabilities, PR_FALSE,
-                                       keepAliveTimeout, keepAliveMaxCon) ;
+            if (transport) 
+                mHandler->ReleaseTransport(transport, capabilities, PR_FALSE,
+                                           keepAliveTimeout, keepAliveMaxCon);
+        }
     }
 
-    NS_IF_RELEASE(mChannel) ;
-    NS_IF_RELEASE(mResponse) ;
+    NS_IF_RELEASE(mChannel);
+    NS_IF_RELEASE(mResponse);
 
     return NS_OK;
 }

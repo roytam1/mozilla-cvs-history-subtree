@@ -181,22 +181,11 @@ nsHTTPRequest::Resume()
 }
 
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsHTTPRequest::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsHTTPRequest::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
 nsresult nsHTTPRequest::Clone(const nsHTTPRequest* *o_Request) const
 {
     return NS_ERROR_FAILURE;
 }
+
                         
 nsresult nsHTTPRequest::SetMethod(nsIAtom * i_Method)
 {
@@ -211,6 +200,7 @@ nsIAtom * nsHTTPRequest::GetMethod(void) const
 
     return mMethod;
 }
+
                         
 nsresult nsHTTPRequest::SetPriority()
 {
@@ -265,12 +255,13 @@ nsresult nsHTTPRequest::GetConnection(nsHTTPChannel** o_Connection)
     return rv;
 }
 
-nsresult nsHTTPRequest::SetTransport(nsIChannel * aTransport)
+
+nsresult nsHTTPRequest::SetTransport(nsITransport * aTransport)
 {
     return NS_OK;
 }
 
-nsresult nsHTTPRequest::GetTransport(nsIChannel **aTransport)
+nsresult nsHTTPRequest::GetTransport(nsITransport **aTransport)
 {
     if (mPipelinedRequest)
         return mPipelinedRequest->GetTransport(aTransport);
@@ -279,6 +270,7 @@ nsresult nsHTTPRequest::GetTransport(nsIChannel **aTransport)
 
     return NS_OK;
 }
+
 
 nsresult nsHTTPRequest::GetHeaderEnumerator(nsISimpleEnumerator** aResult)
 {
@@ -425,7 +417,7 @@ nsHTTPRequest::formBuffer(nsCString * requestBuffer, PRUint32 capabilities)
     
     if (mDoingProxySSLConnect) 
     { 
-            nsCOMPtr<nsIChannel> trans;
+            nsCOMPtr<nsITransport> trans;
             PRUint32 reuse = 0;
             GetTransport(getter_AddRefs(trans));
             nsCOMPtr<nsISocketTransport> sockTrans = 
@@ -609,21 +601,17 @@ nsHTTPPipelinedRequest::~nsHTTPPipelinedRequest()
 }
 
 nsresult
-nsHTTPPipelinedRequest::SetTransport(nsIChannel * aTransport)
+nsHTTPPipelinedRequest::SetTransport(nsITransport * aTransport)
 {
     mTransport = aTransport;
     return NS_OK;
 }
 
 nsresult
-nsHTTPPipelinedRequest::GetTransport(nsIChannel **aTransport)
+nsHTTPPipelinedRequest::GetTransport(nsITransport **aTransport)
 {
-    if (aTransport == NULL)
-        return NS_ERROR_NULL_POINTER;
-
-    *aTransport = mTransport;
-    NS_IF_ADDREF(*aTransport);
-
+    NS_ENSURE_ARG_POINTER(aTransport);
+    NS_IF_ADDREF(*aTransport = mTransport);
     return NS_OK;
 }
 
@@ -691,9 +679,6 @@ nsHTTPPipelinedRequest::WriteRequest(nsIInputStream* iRequestStream)
     {
         req =(nsHTTPRequest *) mRequests->ElementAt(index);
         req->formBuffer(&mRequestBuffer, mCapabilities);
-        if (index == 0)
-            mTransport->SetNotificationCallbacks(req->mConnection);
-
         NS_RELEASE(req);
         mTotalWritten++;
     }
@@ -732,14 +717,24 @@ nsHTTPPipelinedRequest::WriteRequest(nsIInputStream* iRequestStream)
       nsLoadFlags loadAttributes = nsIChannel::LOAD_NORMAL;
       req->mConnection->GetLoadAttributes(&loadAttributes);
 
-      mTransport->SetLoadAttributes(loadAttributes);
+      if (loadAttributes & nsIChannel::LOAD_BACKGROUND)
+          mTransport->SetProgressEventSink(nsnull);
+      else {
+          //
+          // configure transport with the progress event sink from the first request.
+          //
+          nsCOMPtr<nsIProgressEventSink> sink =
+              do_GetInterface(NS_STATIC_CAST(nsIInterfaceRequestor*, req->mConnection));
+          if (sink)
+              mTransport->SetProgressEventSink(sink);
+      }
     }
 
     mOnStopDone = PR_FALSE;
     rv = NS_AsyncWriteFromStream(
             getter_AddRefs(mCurrentWriteRequest),
-            mTransport, stream, 0, mRequestBuffer.Length(), 
-            this, (nsISupports*)(nsIRequest*)req->mConnection);
+            mTransport, stream, 0, mRequestBuffer.Length(), 0, 
+            this, NS_STATIC_CAST(nsIRequest*, req->mConnection));
     NS_RELEASE(req);
 
     return rv;
@@ -791,8 +786,8 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* i_Contex
 
                 rv = NS_AsyncWriteFromStream(
                         getter_AddRefs(mCurrentWriteRequest),
-                        mTransport, mInputStream, 0, -1,
-                        this, (nsISupports*)(nsIRequest*)req->mConnection);
+                        mTransport, mInputStream, 0, 0, 0,
+                        this, NS_STATIC_CAST(nsIRequest*, req->mConnection));
 
                 /* the mInputStream is released below... */
             }
@@ -816,7 +811,8 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* i_Contex
                     if (pListener)
                     {
                         NS_ADDREF(pListener);
-                        rv = mTransport->AsyncRead(pListener, i_Context, 0, -1, getter_AddRefs(mCurrentReadRequest));
+                        rv = mTransport->AsyncRead(pListener, i_Context, 0, 0, 0,
+                                                   getter_AddRefs(mCurrentReadRequest));
                         mListener  = pListener;
                         NS_RELEASE(pListener);
                     }
@@ -899,8 +895,8 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* i_Contex
 
             if (mTransport)
             {
-                nsIChannel *p = mTransport;
-                mTransport = null_nsCOMPtr();
+                nsITransport *p = mTransport;
+                mTransport = 0;
                 mCurrentWriteRequest = 0;
                 mCurrentReadRequest = 0;
 
@@ -1215,8 +1211,12 @@ nsHTTPPipelinedRequest::AdvanceToNextRequest()
         // on some machines, but not on others.  Check for null to avoid
         // topcrash, although we really shouldn't need this.
         NS_ASSERTION(mTransport, "mTransport null in AdvanceToNextRequest");
-        if (mTransport)
-          mTransport->SetNotificationCallbacks(req->mConnection);
+        if (mTransport) {
+            nsCOMPtr<nsIProgressEventSink> sink =
+                do_GetInterface(NS_STATIC_CAST(nsIInterfaceRequestor*, req->mConnection));
+            if (sink)
+                mTransport->SetProgressEventSink(sink);
+        }
         NS_RELEASE(req);
     }
 

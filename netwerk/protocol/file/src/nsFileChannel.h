@@ -38,19 +38,16 @@
 #include "nsCOMPtr.h"
 #include "nsIFile.h"        /* Solaris/gcc needed this here. */
 #include "nsIProgressEventSink.h"
-#include "nsIStreamContentInfo.h"
+#include "nsITransport.h"
 
 class nsFileChannel : public nsIFileChannel,
-                      public nsIRequest, 
                       public nsIInterfaceRequestor,
                       public nsIStreamListener,
-                      public nsIProgressEventSink,
-                      public nsIStreamContentInfo
+                      public nsIProgressEventSink
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
-    NS_DECL_NSISTREAMCONTENTINFO
     NS_DECL_NSICHANNEL
     NS_DECL_NSIFILECHANNEL
     NS_DECL_NSIINTERFACEREQUESTOR
@@ -76,7 +73,7 @@ protected:
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
     PRInt32                             mIOFlags;
     PRInt32                             mPerm;
-    nsCOMPtr<nsIChannel>                mFileTransport;
+    nsCOMPtr<nsITransport>              mFileTransport;
     nsCString                           mContentType;
     PRUint32                            mLoadAttributes;
     nsCOMPtr<nsILoadGroup>              mLoadGroup;

@@ -28,6 +28,8 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsXPIDLString.h"
 #include "nsISocketTransportService.h"
+#include "nsITransport.h"
+#include "nsIProgressEventSink.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
@@ -172,10 +174,9 @@ nsDateTimeChannel::Open(nsIInputStream **_retval)
     if (NS_FAILED(rv)) return rv;
 
     if (mCallbacks) {
-        nsCOMPtr<nsIProgressEventSink> sink;
-        (void)mCallbacks->GetInterface(NS_GET_IID(nsIProgressEventSink),
-                                       getter_Addrefs(sink));
-        (void)transport->SetProgressEventSink(sink);
+        nsCOMPtr<nsIProgressEventSink> sink = do_GetInterface(mCallbacks);
+        if (sink)
+            transport->SetProgressEventSink(sink);
     }
 
     return transport->OpenInputStream(0, 0, 0, _retval);
@@ -194,10 +195,9 @@ nsDateTimeChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     if (NS_FAILED(rv)) return rv;
 
     if (mCallbacks) {
-        nsCOMPtr<nsIProgressEventSink> sink;
-        (void)mCallbacks->GetInterface(NS_GET_IID(nsIProgressEventSink),
-                                       getter_Addrefs(sink));
-        (void)transport->SetProgressEventSink(sink);
+        nsCOMPtr<nsIProgressEventSink> sink = do_GetInterface(mCallbacks);
+        if (sink)
+            transport->SetProgressEventSink(sink);
     }
 
     mListener = aListener;
@@ -301,6 +301,14 @@ NS_IMETHODIMP
 nsDateTimeChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
     mCallbacks = aNotificationCallbacks;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDateTimeChannel::GetSecurityInfo(nsISupports **sec)
+{
+    NS_ENSURE_ARG_POINTER(sec);
+    *sec = nsnull;
     return NS_OK;
 }
 

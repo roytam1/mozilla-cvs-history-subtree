@@ -428,6 +428,7 @@ nsDataChannel::SetOwner(nsISupports* aOwner)
 NS_IMETHODIMP
 nsDataChannel::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
 {
+    NS_ENSURE_ARG_POINTER(aNotificationCallbacks);
     *aNotificationCallbacks = mCallbacks.get();
     NS_IF_ADDREF(*aNotificationCallbacks);
     return NS_OK;
@@ -437,5 +438,13 @@ NS_IMETHODIMP
 nsDataChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
     mCallbacks = aNotificationCallbacks;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDataChannel::GetSecurityInfo(nsISupports **sec)
+{
+    NS_ENSURE_ARG_POINTER(sec);
+    *sec = nsnull;
     return NS_OK;
 }

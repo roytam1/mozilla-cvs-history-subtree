@@ -96,12 +96,10 @@ NS_IMPL_THREADSAFE_RELEASE(nsResChannel)
 NS_INTERFACE_MAP_BEGIN(nsResChannel)
     NS_INTERFACE_MAP_ENTRY(nsIResChannel)
     NS_INTERFACE_MAP_ENTRY(nsIFileChannel)
-    NS_INTERFACE_MAP_ENTRY(nsIRequest)
-    NS_INTERFACE_MAP_ENTRY(nsIStreamContentInfo)
     NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
-    NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
-    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIStreamObserver, nsIStreamListener)
+    NS_INTERFACE_MAP_ENTRY(nsIStreamObserver)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIResChannel)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIRequest, nsIResChannel)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIChannel, nsIResChannel)
 NS_INTERFACE_MAP_END_THREADSAFE
 
@@ -189,8 +187,8 @@ nsResChannel::GetName(PRUnichar* *result)
 NS_IMETHODIMP
 nsResChannel::IsPending(PRBool *result)
 {
-    if (mResolvedRequest)
-        return mResolvedRequest->IsPending(result);
+    if (mResolvedChannel)
+        return mResolvedChannel->IsPending(result);
     *result = PR_FALSE;
     return NS_OK;
 }
@@ -211,11 +209,11 @@ nsResChannel::Cancel(nsresult status)
                  "wrong thread calling this routine");
 #endif
     nsresult rv = NS_OK;
-    if (mResolvedRequest) {
-        rv = mResolvedRequest->Cancel(status);
+    if (mResolvedChannel) {
+        rv = mResolvedChannel->Cancel(status);
     }
     mStatus = status;
-    mResolvedRequest = nsnull;        // remove the resolution
+    mResolvedChannel = nsnull;        // remove the resolution
     return rv;
 }
 
@@ -226,8 +224,8 @@ nsResChannel::Suspend()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mResolvedRequest)
-        return mResolvedRequest->Suspend();
+    if (mResolvedChannel)
+        return mResolvedChannel->Suspend();
     return NS_OK;
 }
 
@@ -238,20 +236,9 @@ nsResChannel::Resume()
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    if (mResolvedRequest)
-        return mResolvedRequest->Resume();
+    if (mResolvedChannel)
+        return mResolvedChannel->Resume();
     return NS_OK;
-}
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsResChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIResChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsResChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -341,11 +328,11 @@ nsResChannel::EnsureNextResolvedChannel()
 }
 
 NS_IMETHODIMP
-nsResChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **result)
+nsResChannel::Open(nsIInputStream **result)
 {
     nsresult rv;
 
-    if (mResolvedRequest)
+    if (mResolvedChannel)
         return NS_ERROR_IN_PROGRESS;
 
     rv = mSubstitutions.Init();
@@ -356,18 +343,20 @@ nsResChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, n
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->OpenInputStream(transferOffset, transferCount, result);
+            rv = mResolvedChannel->Open(result);
     } while (NS_FAILED(rv));
 
     return rv;
 }
 
+// XXX What does OpenOutputStream mean for a res "channel"
+#if 0
 NS_IMETHODIMP
 nsResChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **result)
 {
     nsresult rv;
 
-    if (mResolvedRequest)
+    if (mResolvedChannel)
         return NS_ERROR_IN_PROGRESS;
 
     rv = mSubstitutions.Init();
@@ -383,10 +372,10 @@ nsResChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, 
 
     return rv;
 }
+#endif
 
 NS_IMETHODIMP
-nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
-                        PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsResChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
     nsresult rv;
 
@@ -398,7 +387,7 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
 
     switch (mState) {
       case QUIESCENT:
-        if (mResolvedRequest)
+        if (mResolvedChannel)
             return NS_ERROR_IN_PROGRESS;
 
         // first time through
@@ -423,20 +412,19 @@ nsResChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,
         if (NS_FAILED(rv)) break;
 
         if (mResolvedChannel)
-            rv = mResolvedChannel->AsyncRead(this, nsnull, transferOffset, transferCount, getter_AddRefs(mResolvedRequest));
+            rv = mResolvedChannel->AsyncOpen(this, nsnull);
         // Later, this AsyncRead will call back our OnStopRequest
         // method. The action resumes there...
     } while (NS_FAILED(rv));
 
-    if (NS_FAILED(rv)) {
+    if (NS_FAILED(rv))
         (void)EndRequest(rv, nsnull);
-    } else {
-        NS_ADDREF(*_retval = this);
-    }
 
     return rv;
 }
 
+// XXX What does AsyncWrite mean for a res "channel"
+#if 0
 NS_IMETHODIMP
 nsResChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
                          PRUint32 transferOffset, PRUint32 transferCount,
@@ -453,7 +441,7 @@ nsResChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
 
     switch (mState) {
       case QUIESCENT:
-        if (mResolvedRequest)
+        if (mResolvedChannel)
             return NS_ERROR_IN_PROGRESS;
 
         // first time through
@@ -480,7 +468,7 @@ nsResChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
         if (mResolvedChannel)
             rv = mResolvedChannel->AsyncWrite(this, nsnull, 
                                               transferOffset, transferCount, 
-                                              getter_AddRefs(mResolvedRequest));
+                                              getter_AddRefs(mResolvedChannel));
         // Later, this AsyncWrite will call back our OnStopRequest
         // method. The action resumes there...
     } while (NS_FAILED(rv));
@@ -493,6 +481,7 @@ nsResChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
 
     return rv;
 }
+#endif
 
 NS_IMETHODIMP
 nsResChannel::GetLoadAttributes(PRUint32 *aLoadAttributes)
@@ -511,12 +500,10 @@ nsResChannel::SetLoadAttributes(PRUint32 aLoadAttributes)
 NS_IMETHODIMP
 nsResChannel::GetContentType(char * *aContentType)
 {
-    if (mResolvedRequest) {
-        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
-        if (cr) return cr->GetContentType(aContentType);
-    }
+    if (mResolvedChannel)
+        return mResolvedChannel->GetContentType(aContentType);
     
-    // if we have not created a mResolvedRequest, use the mime service
+    // if we have not created a mResolvedChannel, use the mime service
     nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID));
     if (!MIMEService) return NS_ERROR_FAILURE;
     return MIMEService->GetTypeFromURI(mResourceURI, aContentType);
@@ -525,20 +512,18 @@ nsResChannel::GetContentType(char * *aContentType)
 NS_IMETHODIMP
 nsResChannel::SetContentType(const char *aContentType)
 {
-    if (mResolvedRequest) {
-        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
-        if (cr) return cr->SetContentType(aContentType);
-    }
+    if (mResolvedChannel)
+        return mResolvedChannel->SetContentType(aContentType);
+
     return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
 nsResChannel::GetContentLength(PRInt32 *aContentLength)
 {
-    if (mResolvedRequest) {
-        nsCOMPtr<nsIStreamContentInfo> cr = do_QueryInterface(mResolvedRequest);
-        if (cr) return cr->GetContentLength(aContentLength);
-    }
+    if (mResolvedChannel)
+        return mResolvedChannel->GetContentLength(aContentLength);
+
     return NS_ERROR_FAILURE;
 }
 
@@ -613,7 +598,7 @@ nsResChannel::OnStartRequest(nsIRequest* request, nsISupports* context)
                  "wrong thread calling this routine");
 #endif
     NS_ASSERTION(mUserObserver, "No observer...");
-    return mUserObserver->OnStartRequest(this, mUserContext);
+    return mUserObserver->OnStartRequest(NS_STATIC_CAST(nsIResChannel*, this), mUserContext);
 }
 
 NS_IMETHODIMP
@@ -632,9 +617,9 @@ nsResChannel::OnStopRequest(nsIRequest* request, nsISupports* context,
         // if we failed to process this channel, then try the next one:
         switch (mState) {
           case ASYNC_READ: 
-            return AsyncRead(GetUserListener(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
-          case ASYNC_WRITE:
-            return AsyncWrite(GetUserProvider(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
+            return AsyncOpen(GetUserListener(), mUserContext);
+          //case ASYNC_WRITE:
+          //  return AsyncWrite(GetUserProvider(), mUserContext, 0, -1, getter_AddRefs(dummyRequest));
           default:
             break;
         }
@@ -646,7 +631,8 @@ nsresult
 nsResChannel::EndRequest(nsresult aStatus, const PRUnichar* aStatusArg)
 {
     nsresult rv;
-    rv = mUserObserver->OnStopRequest(this, mUserContext, aStatus, aStatusArg);
+    rv = mUserObserver->OnStopRequest(NS_STATIC_CAST(nsIResChannel*, this),
+                                      mUserContext, aStatus, aStatusArg);
 #if 0 // we don't add the resource channel to the group (although maybe we should)
     if (mLoadGroup) {
         if (NS_SUCCEEDED(rv)) {
@@ -670,10 +656,13 @@ nsResChannel::OnDataAvailable(nsIRequest* request, nsISupports* context,
     NS_ASSERTION(mInitiator == PR_CurrentThread(),
                  "wrong thread calling this routine");
 #endif
-    return GetUserListener()->OnDataAvailable(this, mUserContext, aIStream,
+    return GetUserListener()->OnDataAvailable(NS_STATIC_CAST(nsIResChannel*, this),
+                                              mUserContext, aIStream,
                                               aSourceOffset, aLength);
 }
 
+// XXX We do not implement AsyncWrite
+#if 0
 NS_IMETHODIMP
 nsResChannel::OnDataWritable(nsIRequest* request, nsISupports* context,
                              nsIOutputStream* aOStream, PRUint32 aOffset, PRUint32 aLength)
@@ -684,6 +673,7 @@ nsResChannel::OnDataWritable(nsIRequest* request, nsISupports* context,
 #endif
     return GetUserProvider()->OnDataWritable(this, mUserContext, aOStream, aOffset, aLength);
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 

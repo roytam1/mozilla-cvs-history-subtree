@@ -99,7 +99,7 @@ public:
     */
     virtual nsresult RequestTransport(nsIURI *i_Uri, 
                                       nsHTTPChannel* i_Channel, 
-                                      nsIChannel** o_pTrans, PRUint32 flags = TRANSPORT_REUSE_ALIVE);
+                                      nsITransport** o_pTrans, PRUint32 flags = TRANSPORT_REUSE_ALIVE);
     
     /**
     *    Called to create a transport from RequestTransport to accually
@@ -109,16 +109,16 @@ public:
     virtual nsresult CreateTransport(const char* host, PRInt32 port, 
                                      const char* aPrintHost,
                                      PRBool usingProxy, 
-                                     nsIChannel** o_pTrans);
+                                     nsITransport** o_pTrans);
     
     virtual nsresult CreateTransportOfType(const char* socketType,
                                            const char* host, PRInt32 port, 
                                            const char* aPrintHost,
                                            PRBool usingProxy, 
-                                           nsIChannel** o_pTrans);
+                                           nsITransport** o_pTrans);
     
     /* Remove this transport from the list. */
-    virtual nsresult ReleaseTransport(nsIChannel* i_pTrans, PRUint32 capabilies = 0, PRBool aDontRestartChannels = PR_FALSE, PRUint32 aKeepAliveTimeout = 0, PRInt32 aKeepAliveMaxCon = -1);
+    virtual nsresult ReleaseTransport(nsITransport* i_pTrans, PRUint32 capabilies = 0, PRBool aDontRestartChannels = PR_FALSE, PRUint32 aKeepAliveTimeout = 0, PRInt32 aKeepAliveMaxCon = -1);
     virtual nsresult CancelPendingChannel(nsHTTPChannel* aChannel);
     PRTime GetSessionStartTime() { return mSessionStartTime; }
 
