@@ -26,7 +26,6 @@
 #include "nsSOAPUtils.h"
 #include "nsCRT.h"
 #include "jsapi.h"
-#include "nsISOAPEncoder.h"
 #include "nsISOAPParameter.h"
 #include "nsISOAPTransport.h"
 #include "nsIServiceManager.h"
