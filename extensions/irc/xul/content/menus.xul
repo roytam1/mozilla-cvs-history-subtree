@@ -75,6 +75,8 @@
       <command id="cmd_selectAll"/>
 
       <!-- View commands -->
+      <command id="cmd_toggle_startup_visit"
+        oncommand="onToggleStartupURL();"/>
 
       <!-- View:Show/Hide -->
       <command id="cmd_toggletabstrip"
@@ -119,7 +121,7 @@
       <key id="key_clearview" observes="cmd_clearview"
         modifiers="accel" key="R"/>
       <key id="key_deleteview" observes="cmd_deleteview"
-        modifiers="accel" key="D"/>
+        modifiers="accel" key="X"/>
       <key id="key_status" observes="cmd_status"
         modifiers="accel shift" key="S"/>
 
@@ -239,6 +241,9 @@
             <menuitem label="&HideCmd.label;" oncommand="onHideCurrentView();"/>
          -->
   
+            <menuitem id="menu-view-startup" label="&StartupVisitCmd.label;"
+              accesskey="&StartupVisitCmd.aKey;" type="checkbox"
+              observes="cmd_startup_visit"/>
             <menuitem label="&ClearViewCmd.label;"
               accesskey="&ClearViewCmd.aKey;"
               observes="cmd_clearview" key="key_clearview"/>

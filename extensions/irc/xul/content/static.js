@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre18";
+client.version = "0.8.5-pre19";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -226,10 +226,20 @@ function initStatic()
         /* if we had nowhere else to go, connect to any default urls */
         ary = client.INITIAL_URLS.split(";");
         for (var i in ary)
-            if ((ary[i] = stringTrim(ary[i])))
+        {
+            if ((ary[i] = stringTrim(ary[i])) && ary[i] != "irc://")
+            {
                 gotoIRCURL (ary[i]);
+            }
+        }
     }
-
+    
+    if (client.viewsArray.length > 1 && !isStartupURL("irc://"))
+    {
+        var tb = getTabForObject (client);
+        deleteTab(tb);
+    }
+        
     setInterval ("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
     
 }
@@ -653,6 +663,12 @@ function msgIsImportant (msg, sourceNick, myNick)
     return false;    
 }
 
+function isStartupURL(url)
+{
+    var ary = client.INITIAL_URLS.split(/\s*;\s*/);
+    return arrayContains(ary, url);
+}
+    
 function cycleView (amount)
 {
     var len = client.viewsArray.length;
@@ -720,30 +736,27 @@ function fillInTooltip(tipElement, id)
     
     var retVal = false;
     var tipNode = document.getElementById(id);
-    try {
-        while (tipNode.hasChildNodes())
-            tipNode.removeChild(tipNode.firstChild);
-        var titleText = "";
-        var XLinkTitleText = "";
-        while (!titleText && !XLinkTitleText && tipElement) {
-            if (tipElement.nodeType == Node.ELEMENT_NODE) {
-                titleText = tipElement.getAttribute("title");
-                XLinkTitleText = tipElement.getAttributeNS(XLinkNS, "title");
-            }
-            tipElement = tipElement.parentNode;
+    while (tipNode.hasChildNodes())
+        tipNode.removeChild(tipNode.firstChild);
+    var titleText = "";
+    var XLinkTitleText = "";
+    while (!titleText && !XLinkTitleText && tipElement) {
+        if (tipElement.nodeType == Node.ELEMENT_NODE) {
+            titleText = tipElement.getAttribute("title");
+            XLinkTitleText = tipElement.getAttributeNS(XLinkNS, "title");
         }
-        var texts = [titleText, XLinkTitleText];
-        for (var i = 0; i < texts.length; ++i) {
-            var t = texts[i];
-            if (t.search(/\S/) >= 0) {
-                var tipLineElem =
-                    tipNode.ownerDocument.createElementNS(XULNS, "text");
-                tipLineElem.setAttribute("value", t);
-                tipNode.appendChild(tipLineElem);
-                retVal = true;
-            }
+        tipElement = tipElement.parentNode;
+    }
+    var texts = [titleText, XLinkTitleText];
+    for (var i = 0; i < texts.length; ++i) {
+        var t = texts[i];
+        if (t && t.search(/\S/) >= 0) {
+            var tipLineElem =
+                tipNode.ownerDocument.createElementNS(XULNS, "text");
+            tipLineElem.setAttribute("value", t);
+            tipNode.appendChild(tipLineElem);
+            retVal = true;
         }
-    } catch (e) {
     }
     return retVal;
 }

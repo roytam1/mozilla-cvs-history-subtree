@@ -108,7 +108,9 @@ function readIRCPrefs (rootNode)
     client.DEFAULT_NETWORK =
         getCharPref (pref, rootNode + "defaultNet", "moznet");    
     client.INITIAL_URLS =
-        getCharPref (pref, rootNode + "initialURLs", "");
+        getCharPref (pref, rootNode + "initialURLs", "irc://");
+    if (!client.INITIAL_URLS)
+        client.INITIAL_URLS = "irc://";
     client.INITIAL_SCRIPTS =
         getCharPref (pref, rootNode + "initialScripts", "");
     client.NEW_TAB_THRESHOLD =

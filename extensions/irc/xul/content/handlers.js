@@ -279,6 +279,17 @@ function createPopupContext(event, target)
 
 function onOutputContextMenuCreate(e)
 {
+    function evalIfAttribute (node, attr)
+    {
+        var expr = node.getAttribute(attr);
+        if (!expr)
+            return true;
+        
+        expr = expr.replace (/\Wor\W/gi, " || ");
+        expr = expr.replace (/\Wand\W/gi, " && ");
+        return eval("(" + expr + ")");
+    }
+        
     var target = document.popupNode;
     var foundSomethingUseful = false;
     
@@ -329,33 +340,37 @@ function onOutputContextMenuCreate(e)
 
     var popup = document.getElementById ("outputContext");
     var menuitem = popup.firstChild;
-    while (menuitem)
+
+    do
     {
-        var showfor = menuitem.getAttribute("showfor");
-        
-        if (showfor)
+        if (evalIfAttribute(menuitem, "visibleif"))
         {
-            showfor = showfor.replace (/\Wis\W/gi, " == ");
-            showfor = showfor.replace (/\Wor\W/gi, " || ");
-            showfor = showfor.replace (/\Wand\W/gi, " && ");
-            if (eval("(" + showfor + ")"))
-            {
-                var format = menuitem.getAttribute("format");
-                if (format)
-                {
-                    format = format.replace (/\$nick/gi, targetProperNick);
-                    format = format.replace (/\$viewname/gi,
-                                             client.currentObject.name);
-                    menuitem.setAttribute ("label", format);
-                }
-                menuitem.setAttribute ("hidden", "false");
-            }
-            else
-                menuitem.setAttribute ("hidden", "true");
+            menuitem.setAttribute ("hidden", "false");
+        }
+        else
+        {
+            menuitem.setAttribute ("hidden", "true");
+            continue;
         }
         
-        menuitem = menuitem.nextSibling;
-    }
+        if (menuitem.hasAttribute("checkedif"))
+        {
+            if (evalIfAttribute(menuitem, "checkedif"))
+                menuitem.setAttribute ("checked", "true");
+            else
+                menuitem.setAttribute ("checked", "false");
+        }
+            
+        var format = menuitem.getAttribute("format");
+        if (format)
+        {
+            format = format.replace (/\$nick/gi, targetProperNick);
+            format = format.replace (/\$viewname/gi,
+                                     client.currentObject.name);
+            menuitem.setAttribute ("label", format);
+        }
+        
+    } while ((menuitem = menuitem.nextSibling));
 
     return true;
 }
@@ -650,11 +665,24 @@ function onToggleMsgCollapse()
     client.COLLAPSE_MSGS = !client.COLLAPSE_MSGS;
 }
 
-function onToggleConnectAtStartup()
+function onToggleStartupURL()
 {
-    var url = client.currentObject.getURL();
-    var ary = client.INITIAL_URLS.split(";");
+    var tb = getTabForObject (client.currentObject);
+    if (!tb)
+        return;
     
+    var vk = Number(tb.getAttribute("viewKey"));
+    
+    var ary = client.INITIAL_URLS ? 
+        client.INITIAL_URLS.split(/\s*;\s*/) : new Array();
+    var url = client.currentObject.getURL();
+    var index = arrayIndexOf(ary, url);
+    if (index != -1)
+        arrayRemoveAt(ary, index);
+    else
+        ary.push(url);
+    
+    client.INITIAL_URLS = ary.join ("; ");
 }
 
 function onViewMenuShowing ()
@@ -674,6 +702,8 @@ function onViewMenuShowing ()
     val = client.COLLAPSE_MSGS;
     document.getElementById ("menu-view-collapse").setAttribute ("checked", val);
     
+    val = isStartupURL(client.currentObject.getURL());
+    document.getElementById ("menu-view-startup").setAttribute ("checked", val);
     return true;
 }
     
@@ -2248,7 +2278,7 @@ function cli_iclient (e)
 {
     if (!client.messages)
         client.display (getMsg("cli_iclientMsg"), "INFO");
-
+    getTabForObject (client, true);
     setCurrentObject (client);
     return true;
 }

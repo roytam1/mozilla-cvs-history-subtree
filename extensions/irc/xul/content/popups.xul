@@ -114,22 +114,22 @@
         onpopuphiding="if (event.originalTarget == this) delete client._popupContext;">
         <menuitem format="&PopupQueryCmd.label;" accesskey="&PopupQueryCmd.aKey;"
           observes="cmd_popup_query"
-          showfor="targetUser"/>
+          visibleif="targetUser"/>
         <menuitem format="&PopupWhoisCmd.label;" accesskey="&PopupWhoisCmd.aKey;"
           observes="cmd_popup_whois"
-          showfor="targetUser"/>
+          visibleif="targetUser"/>
         <menuitem format="&PopupPingCmd.label;" accesskey="&PopupPingCmd.aKey;"
           observes="cmd_popup_ping"
-          showfor="targetUser"/>
+          visibleif="targetUser"/>
         <menuitem format="&PopupVersionCmd.label;"
           accesskey="&PopupVersionCmd.aKey;"
           observes="cmd_popup_version"
-          showfor="targetUser"/>
+          visibleif="targetUser"/>
   
      <!--
         <menu format="&PopupHighlightStyle.label;" 
           accesskey="&PopupHighlightStyle.aKey;"
-          showfor="targetUser">
+          visibleif="targetUser">
           <menupopup id="highlightMenu">
             <menuitem/>
           </menupopup>
@@ -137,35 +137,38 @@
       -->
   
         <menuseparator
-          showfor="targetUser"/>
+          visibleif="targetUser"/>
   
         <menuitem label="&PopupGiveOp.label;" accesskey="&PopupGiveOp.aKey;"
           observes="cmd_popup_giveop"
-          showfor="iAmOp is 'yes' and targetIsOp is 'no'"/>
+          visibleif="iAmOp == 'yes' and targetIsOp == 'no'"/>
         <menuitem label="&PopupTakeOp.label;" accesskey="&PopupTakeOp.aKey;"
           observes="cmd_popup_takeop"
-          showfor="iAmOp is 'yes' and targetIsOp is 'yes'"/>
+          visibleif="iAmOp == 'yes' and targetIsOp == 'yes'"/>
         <menuitem label="&PopupGiveVoice.label;"
           accesskey="&PopupGiveVoice.aKey;"
           observes="cmd_popup_givevoice"
-          showfor="iAmOp is 'yes' and targetIsVoice is 'no'"/>
+          visibleif="iAmOp == 'yes' and targetIsVoice == 'no'"/>
         <menuitem label="&PopupTakeVoice.label;"
           accesskey="&PopupTakeVoice.aKey;"
           observes="cmd_popup_takevoice"
-          showfor="iAmOp is 'yes' and targetIsVoice is 'yes'"/>
+          visibleif="iAmOp == 'yes' and targetIsVoice == 'yes'"/>
         <menuitem format="&PopupKick.label;" accesskey="&PopupKick.aKey;"
           observes="cmd_popup_kick"
-          showfor="iAmOp is 'yes' and targetUser != 'undefined'"/>
+          visibleif="iAmOp == 'yes' and targetUser != 'undefined'"/>
   
         <menuseparator
-          showfor="targetUser != 'undefined' and iAmOp is 'yes'"/>
+          visibleif="targetUser != 'undefined' and iAmOp == 'yes'"/>
   
+        <menuitem label="&StartupVisitCmd.label;" type="checkbox"
+          accesskey="&StartupVisitCmd.aKey;" observes="cmd_toggle_startup_visit"
+          checkedif="isStartupURL(client.currentObject.getURL())"/>
         <menuitem format="&LeaveViewCmd.label;" accesskey="&LeaveViewCmd.aKey;"
-          observes="cmd_leaveview"
-          showfor="client.currentObject.TYPE is 'IRCChannel'"/>
+          observes="cmd_leaveview" key="key_deleteview"
+          visibleif="client.currentObject.TYPE == 'IRCChannel'"/>
         <menuitem label="&DeleteViewCmd.label;" accesskey="&DeleteViewCmd.aKey;"
           observes="cmd_deleteview" key="key_deleteview"
-          showfor="client.currentObject.TYPE != 'IRCChannel'"/>
+          visibleif="client.currentObject.TYPE != 'IRCChannel'"/>
         <menuitem label="&ClearViewCmd.label;" accesskey="&ClearViewCmd.aKey;"
           observes="cmd_clearview" key="key_clearview"/>
         <menuseparator/>
