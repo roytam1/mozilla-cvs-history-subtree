@@ -1961,6 +1961,14 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
       }
 
       if (noRestart || (!upgraded && !needsRestart)) {
+
+        // clear out any environment variables which may have been set 
+        // during the relaunch process now that we know we won't be relaunching.
+        PR_SetEnv("XRE_PROFILE_PATH=");
+        PR_SetEnv("XRE_START_OFFLINE=");
+        PR_SetEnv("XRE_IMPORT_PROFILES=");
+        
+
         // Kick off the prebinding update now that we know we won't be
         // relaunching.
 #ifdef XP_MACOSX
