@@ -28,14 +28,17 @@
 
 package Mozilla::LDAP::Entry;
 
-use Mozilla::LDAP::Utils 1.4 qw(normalizeDN);
+use Mozilla::LDAP::Utils 2.0 qw(normalizeDN);
 use Tie::Hash;
 
 use strict;
 use vars qw($VERSION @ISA);
 
+use overload
+  '""'	=> \&entry2LDIF;
+
 @ISA = ('Tie::StdHash');
-$VERSION = "1.4";
+$VERSION = "2.0";
 
 
 #############################################################################
@@ -366,7 +369,7 @@ sub move
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValues($new, @{$self->{$old}}) || return 0;
+  $self->values($new, @{$self->{$old}}) || return 0;
   $self->remove($old);
 
   return 1;
@@ -386,7 +389,7 @@ sub copy
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValues($new, @{$self->{$old}}) || return 0;
+  $self->values($new, @{$self->{$old}}) || return 0;
 
   return 1;
 }
@@ -558,20 +561,29 @@ sub addDNValue
 
 
 #############################################################################
-# Set the entire value of an attribute, removing whatever was already set.
-# The arguments are the name of the attribute, and then one or more values,
-# passed as scalar or an array (not pointer).
+# Set or get the entire set of values for an attribute. If it's a "set", we
+# remove whatever was already set. The arguments are the name of the
+# attribute to operate on, and optionally a set of one or more values to set.
 #
-sub setValues
+sub values
 {
   my ($self, $attr) = (shift, lc shift);
   my (@vals) = @_;
 
   local $_;
 
-  return 0 unless (defined(@vals) && ($#vals >= $[));
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if ($attr eq "dn");
+
+  # Do we have a getValues() call? If so, quickly return the array!
+  if ($#vals < $[)
+    {
+      return unless defined($self->{$attr});
+      return @{$self->{$attr}};
+    }
+
+  # Nope, we have a setValues() call!
+  my (@vals) = @_;
 
   if (defined($self->{$attr}))
     {
@@ -588,7 +600,7 @@ sub setValues
   $self->{"_${attr}_modified_"} = 1;
 
   delete $self->{"_${attr}_deleted_"}
-    if defined($self->{"_${attr}_deleted_"});
+  if defined($self->{"_${attr}_deleted_"});
 
   if (! grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
@@ -598,23 +610,10 @@ sub setValues
 
   return 1;
 }
-*setValue = \*setValues;
-
-
-#############################################################################
-# Get the entire array of attribute values. This returns the array, not
-# the pointer to the array...
-#
-sub getValues
-{
-  my ($self, $attr) = (shift, lc shift);
-
-  return unless (defined($attr) && ($attr ne ""));
-  return unless defined($self->{$attr});
-
-  return @{$self->{$attr}};
-}
-*getValue = \*getValues;
+*setValue = \*values;
+*setValues = \*values;
+*getValue = \*values;
+*getValues = \*values;
 
 
 #############################################################################
@@ -780,7 +779,8 @@ sub getLDIFrecords # called from LDIF.pm (at least)
 
 
 #############################################################################
-# Print an entry, in LDIF format.
+# Convert an entry to LDIF format, and (potentially) print it to the
+# currently selected file handle.
 #
 use vars qw($_no_LDIF_module $_tested_LDIF_module);
 undef $_no_LDIF_module;
@@ -790,6 +790,12 @@ sub printLDIF
 {
   my ($self) = @_;
 
+  print $self->entry2LDIF(), "\n";
+}
+
+sub entry2LDIF
+{
+  my ($self) = @_;
 
   if (not defined($_tested_LDIF_module))
     {
@@ -801,18 +807,22 @@ sub printLDIF
   if ($_no_LDIF_module)
     {
       my ($record) = $self->getLDIFrecords();
-      my ($attr, $values);
+      my ($attr, $values, $ret);
 
       while (($attr, $values) = splice @$record, 0, 2)
 	{
-	  grep((print "$attr: $_\n"), @$values);
+	  grep(($ret .= "$attr: $_\n"), 
+	       ((ref($values) eq "ARRAY") ? @$values : $values));
 	}
-      print "\n";
+
+      return $ret;
     }
   else
     {
-      Mozilla::LDAP::LDIF::put_LDIF(select(), 78, $self);
+      return Mozilla::LDAP::LDIF::pack_LDIF(78, $self);
     }
+
+  return;
 }
 
 
@@ -987,9 +997,8 @@ indicates we should normalize the DN before returning it to the caller.
 =item B<getValues>
 
 Returns an entire array of values for the attribute specified.  Note that
-this returns an array, and not a pointer to an array.
-
-    @someArray = $entry->getValues("description");
+this returns an array, and not a pointer to an array. This method is
+deprecated, use B<values> instead.
 
 =item B<hasValue>
 
@@ -1133,15 +1142,8 @@ format of your DNs.
 Set the specified attribute to the new value (or values), overwriting
 whatever old values it had before. This is a little dangerous, since you
 can lose attribute values you didn't intend to remove. Therefore, it's
-usually recommended to use B<removeValue()> and B<setValues()>. If you know
-exactly what the new values should be like, you can use this method like
-
-    $entry->setValues("cn", "Leif Hedstrom", "The Swede");
-    $entry->setValues("mail", @mailAddresses);
-
-or if it's a single value attribute,
-
-    $entry->setValues("uidNumber", "12345");
+usually recommended to use B<removeValue()> and B<setValues()>. This
+method is deprecated, use B<values> instead.
 
 =item B<size>
 
@@ -1152,6 +1154,32 @@ Return the number of values for a particular attribute. For instance
 
 This will set C<$numVals> to two (2). The only argument is the name of the
 attribute, and the return value is the size of the value array.
+
+=item B<values>
+
+This is the get/set method for manipulating an entire set of values for a
+particular attribute. The first argument is the attribute you wish to set
+or get, and the optional second (and so forth) arguments is the list of
+attribute values to set.
+
+To get the values from the I<CN> attribute, just do
+
+    @vals = $entry->values("CN");
+
+
+To set some attributes entire set of values, you can do
+
+    $entry->values("cn", "Leif Hedstrom", "The Swede");
+    $entry->values("mail", @mailAddresses);
+
+or if it's a single value attribute,
+
+    $entry->values("uidNumber", "12345");
+
+
+The only important thing to remember is that the optional value arguments
+must be array elements (or an array), not a pointer to an array (or an
+anonymous array).
 
 =back
 
