@@ -101,7 +101,7 @@ GetHTMLCollectionProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     }
   }
   else if (JSVAL_IS_STRING(id)) {
-    nsIDOMNode* prop;
+    nsIDOMNode* prop = nsnull;
     nsAutoString name;
 
     JSString *jsstring = JS_ValueToString(cx, id);
