@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /* Windows NT IO module
@@ -111,28 +95,12 @@ PRInt32 IsFileLocal(HANDLE hFile);
 
 static PRInt32 _md_MakeNonblock(HANDLE);
 
-static PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr *addr, int *addrlen, PRIntervalTime);
-static PRInt32 _nt_nonblock_connect(PRFileDesc *fd, struct sockaddr *addr, int addrlen, PRIntervalTime);
-static PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, int flags, PRIntervalTime);
-static PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
-static PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime);
-static PRInt32 _nt_nonblock_sendto(PRFileDesc *, const char *, int, const struct sockaddr *, int, PRIntervalTime);
-static PRInt32 _nt_nonblock_recvfrom(PRFileDesc *, char *, int, struct sockaddr *, int *, PRIntervalTime);
-
-/*
- * We cannot associate a fd (a socket) with an I/O completion port
- * if the fd is nonblocking or inheritable.
- *
- * Nonblocking socket I/O won't work if the socket is associated with
- * an I/O completion port.
- *
- * An inheritable fd cannot be associated with an I/O completion port
- * because the completion notification of async I/O initiated by the
- * child process is still posted to the I/O completion port in the
- * parent process. 
- */
-#define _NT_USE_NB_IO(fd) \
-    ((fd)->secret->nonblocking || (fd)->secret->inheritable == _PR_TRI_TRUE)
+PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr_in *addr, int *len, PRIntervalTime);
+PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
+PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
+PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime);
+PRInt32 _nt_nonblock_sendto(PRFileDesc *, const char *, int, const struct sockaddr *, int, PRIntervalTime);
+PRInt32 _nt_nonblock_recvfrom(PRFileDesc *, char *, int, struct sockaddr *, int *, PRIntervalTime);
 
 /*
  * UDP support
@@ -270,13 +238,8 @@ _PR_MD_PAUSE_CPU(PRIntervalTime ticks)
 #if 0
         timeout = INFINITE;
 #else
-    /*
-     * temporary hack to poll the runq every 5 seconds because of bug in
+    /* temporary hack to poll the runq every 5 seconds because of bug in
      * native threads creating user threads and not poking the right cpu.
-     *
-     * A local thread that was interrupted is bound to its current
-     * cpu but there is no easy way for the interrupter to poke the
-     * right cpu.  This is a hack to poll the runq every 5 seconds.
      */
         timeout = 5000;
 #endif
@@ -1171,42 +1134,110 @@ _PR_MD_CONNECT(PRFileDesc *fd, const PRNetAddr *addr, PRUint32 addrlen,
                PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
-    PRInt32 rv, err;
-    u_long nbio;
-    PRInt32 rc;
+    PRThread *me = _PR_MD_CURRENT_THREAD();
+    PRInt32 rv;
+    PRThread *cThread;
+    struct connect_data_s cd;
 
     if (fd->secret->nonblocking) {
+        PRInt32 rv;
+        fd_set wd;
+        struct timeval tv, *tvp;
+
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
             fd->secret->md.io_model_committed = PR_TRUE;
         }
 
-        if ((rv = connect(osfd, (struct sockaddr *) addr, addrlen)) == -1) {
-            err = WSAGetLastError();
-            _PR_MD_MAP_CONNECT_ERROR(err);
+        while ((rv = connect(osfd, (struct sockaddr *) addr, addrlen)) == -1) {
+            rv = WSAGetLastError();
+            if ((!fd->secret->nonblocking) && ((rv == WSAEWOULDBLOCK) ||
+                (rv == WSAEALREADY) ||
+                (rv == WSAEINVAL) /* for winsock1.1, it reports EALREADY as EINVAL */)) {
+                if (timeout == PR_INTERVAL_NO_TIMEOUT)
+                    tvp = NULL;
+                else {
+                    tv.tv_sec = PR_IntervalToSeconds(timeout);
+                    tv.tv_usec = PR_IntervalToMicroseconds(
+                    timeout - PR_SecondsToInterval(tv.tv_sec));
+                    tvp = &tv;
+                }
+
+                FD_ZERO(&wd);
+                FD_SET((SOCKET)osfd, &wd);
+                rv = select(osfd + 1, NULL, &wd, NULL, tvp);
+                if (rv > 0) {
+                    /*
+                     * Call Sleep(0) to work around a Winsock timing bug.
+                     */
+                    Sleep(0);
+                } else if (rv == 0) {
+					PR_SetError(PR_IO_TIMEOUT_ERROR, 0);
+                    return(-1);
+                } else if (rv < 0) {
+                    rv = WSAGetLastError();
+            		_PR_MD_MAP_SELECT_ERROR(rv);
+                    return(-1);
+                }
+            } else if ((rv == WSAEISCONN)) {
+                /* Success! */
+                return 0;
+            } else {
+                _PR_MD_MAP_CONNECT_ERROR(rv);
+                return -1;
+            }
         }
         return rv;
     }
 
-    /*
-     * Temporarily make the socket non-blocking so that we can
-     * initiate a non-blocking connect and wait for its completion
-     * (with a timeout) in select.
+    /* If we are a native thread, just make the blocking IO call */
+    if (_PR_IS_NATIVE_THREAD(me)) {
+        rv = connect(osfd, (struct sockaddr *)addr, addrlen);
+		if (rv == -1) {
+        	rv = WSAGetLastError();
+            _PR_MD_MAP_CONNECT_ERROR(rv);
+			return -1;
+		} else
+			return rv;
+    }
+
+    /* NT doesn't provide a nice way to do asynchronous 
+     * connect.  The proxy team invented a huge chunk of code which has
+     * a single thread multiplexing multiple connect requests via 
+     * WSAAsyncSelect().  That is a better solution, but I'm not doing that
+     * now.  At this point, just create a real thread to do the work.
+     *
+     * Rumor has it that on nt3.51, all the WSA library does is create 
+     * a thread to call a blocking connect() anyway.  On 4.0 they've fixed
+     * that.  -mbelshe
      */
-    PR_ASSERT(!fd->secret->md.io_model_committed);
-    nbio = 1;
-    rv = ioctlsocket((SOCKET)osfd, FIONBIO, &nbio);
-    PR_ASSERT(0 == rv);
+    cd.osfd = osfd;
+    cd.addr = (struct sockaddr *)addr;
+    cd.addrlen = addrlen;
+    cd.timeout = timeout;
+    cThread = PR_CreateThread(PR_SYSTEM_THREAD,
+                              _PR_MD_connect_thread,
+                              (void *)&cd,
+                              PR_PRIORITY_NORMAL,
+                              PR_GLOBAL_THREAD,
+                              PR_JOINABLE_THREAD,
+                              0);
 
-    rc = _nt_nonblock_connect(fd, (struct sockaddr *) addr, addrlen, timeout);
+    if (cThread == NULL) {
+        return -1;
+    }
 
-    /* Set the socket back to blocking. */
-    nbio = 0;
-    rv = ioctlsocket((SOCKET)osfd, FIONBIO, &nbio);
-    PR_ASSERT(0 == rv);
+    PR_JoinThread(cThread);
 
-    return rc;
+    rv = cd.status;
+
+    if (rv == SOCKET_ERROR) {
+        _PR_MD_MAP_CONNECT_ERROR(cd.error);
+        return -1;
+    }
+
+    return 0;
 }
 
 PRInt32
@@ -1275,7 +1306,7 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
     PRUint32 llen, err;
     int rv;
 
-    if (_NT_USE_NB_IO(fd)) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -1286,7 +1317,7 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
          * inheritable (HANDLE_FLAG_INHERIT) attributes of
          * the listening socket.
          */
-        accept_sock = _nt_nonblock_accept(fd, (struct sockaddr *)raddr, rlen, timeout);
+        accept_sock = _nt_nonblock_accept(fd, (struct sockaddr_in *)raddr, rlen, timeout);
         if (!fd->secret->nonblocking) {
             u_long zero = 0;
 
@@ -1692,13 +1723,13 @@ _PR_MD_RECV(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
     int bytes;
     int rv, err;
 
-    if (_NT_USE_NB_IO(fd)) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
             fd->secret->md.io_model_committed = PR_TRUE;
         }
-        return _nt_nonblock_recv(fd, buf, amount, flags, timeout);
+        return _nt_nonblock_recv(fd, buf, amount, timeout);
     }
 
     if (me->io_suspended) {
@@ -1791,7 +1822,7 @@ _PR_MD_SEND(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
     int bytes;
     int rv, err;
 
-    if (_NT_USE_NB_IO(fd)) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -1889,10 +1920,10 @@ _PR_MD_SENDTO(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
         PR_ASSERT(0 != rv);
         fd->secret->md.io_model_committed = PR_TRUE;
     }
-    if (_NT_USE_NB_IO(fd))
-        return _nt_nonblock_sendto(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
-    else
+    if (!fd->secret->nonblocking && !fd->secret->inheritable)
         return pt_SendTo(osfd, buf, amount, flags, addr, addrlen, timeout);
+    else
+        return _nt_nonblock_sendto(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
 }
 
 PRInt32
@@ -1907,10 +1938,10 @@ _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
         PR_ASSERT(0 != rv);
         fd->secret->md.io_model_committed = PR_TRUE;
     }
-    if (_NT_USE_NB_IO(fd))
-        return _nt_nonblock_recvfrom(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
-    else
+    if (!fd->secret->nonblocking && !fd->secret->inheritable)
         return pt_RecvFrom(osfd, buf, amount, flags, addr, addrlen, timeout);
+    else
+        return _nt_nonblock_recvfrom(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
 }
 
 /* XXXMB - for now this is a sockets call only */
@@ -1922,7 +1953,7 @@ _PR_MD_WRITEV(PRFileDesc *fd, const PRIOVec *iov, PRInt32 iov_size, PRIntervalTi
     int sent = 0;
     int rv;
 
-    if (_NT_USE_NB_IO(fd)) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -2192,7 +2223,7 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
         me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
         PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() == NO_ERROR));
 
-        if (fd->secret->inheritable == _PR_TRI_TRUE) {
+        if (fd->secret->inheritable) {
             rv = ReadFile((HANDLE)f, 
                           (LPVOID)buf, 
                           len, 
@@ -2343,7 +2374,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
         me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
         PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() == NO_ERROR));
 
-        if (fd->secret->inheritable == _PR_TRI_TRUE) {
+        if (fd->secret->inheritable) {
             rv = WriteFile((HANDLE)f, 
                           (LPVOID)buf, 
                           len, 
@@ -2478,26 +2509,9 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 PROffset32
 _PR_MD_LSEEK(PRFileDesc *fd, PROffset32 offset, int whence)
 {
-    DWORD moveMethod;
     PROffset32 rv;
 
-    switch (whence) {
-        case PR_SEEK_SET:
-            moveMethod = FILE_BEGIN;
-            break;
-        case PR_SEEK_CUR:
-            moveMethod = FILE_CURRENT;
-            break;
-        case PR_SEEK_END:
-            moveMethod = FILE_END;
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            return -1;
-    }
-
-    rv = SetFilePointer((HANDLE)fd->secret->md.osfd, offset, NULL, moveMethod);
-
+    rv = SetFilePointer((HANDLE)fd->secret->md.osfd, offset, NULL, whence);
     /*
      * If the lpDistanceToMoveHigh argument (third argument) is
      * NULL, SetFilePointer returns 0xffffffff on failure.
@@ -2511,34 +2525,44 @@ _PR_MD_LSEEK(PRFileDesc *fd, PROffset32 offset, int whence)
 PROffset64
 _PR_MD_LSEEK64(PRFileDesc *fd, PROffset64 offset, int whence)
 {
-    DWORD moveMethod;
-    LARGE_INTEGER li;
-    DWORD err;
+    PRUint64 result;
+    PRUint32 position, uhi;
+    PRInt32 low = (PRInt32)offset, hi = (PRInt32)(offset >> 32);
 
-    switch (whence) {
-        case PR_SEEK_SET:
-            moveMethod = FILE_BEGIN;
-            break;
-        case PR_SEEK_CUR:
-            moveMethod = FILE_CURRENT;
-            break;
-        case PR_SEEK_END:
-            moveMethod = FILE_END;
-            break;
-        default:
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    position = SetFilePointer((HANDLE)fd->secret->md.osfd, low, &hi, whence);
+
+	/*
+	 * The lpDistanceToMoveHigh argument (third argument) is not
+	 * NULL. Therefore, a -1 (unsigned) result is ambiguious. If
+	 * the result just happens to be -1, also test to see if the
+	 * last error is non-zero. If it is, the operation failed.
+	 * Otherwise, the -1 is just the low half of the 64 bit position.
+	 */
+	if (0xffffffff == position)
+    {
+        PRInt32 oserr = GetLastError();
+        if (0 != oserr)
+        {
+		    _PR_MD_MAP_LSEEK_ERROR(oserr);
             return -1;
+        }
     }
 
-    li.QuadPart = offset;
-    li.LowPart = SetFilePointer((HANDLE)fd->secret->md.osfd,
-            li.LowPart, &li.HighPart, moveMethod);
-
-    if (0xffffffff == li.LowPart && (err = GetLastError()) != NO_ERROR) {
-        _PR_MD_MAP_LSEEK_ERROR(err);
-        li.QuadPart = -1;
-    }
-    return li.QuadPart;
+    /*
+    ** All this 'cause we keep extending the sign of rv into
+    ** the high bits of the result. We just know that the final
+    ** position of the file must be positive and probably nowhere
+    ** close to the maximum value of a PRUint64.
+    */
+    uhi = (PRUint32)hi;
+    PR_ASSERT((PRInt32)uhi >= 0);
+    result = uhi;
+    PR_ASSERT((PRInt64)result >= 0);
+    result = (result << 32);
+    PR_ASSERT((PRInt64)result >= 0);
+    result += position;
+    PR_ASSERT((PRInt64)result >= 0);
+    return (PROffset64)result;
 }
 
 /*
@@ -2651,34 +2675,6 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
     }
     return PR_SUCCESS;
 } 
-
-void
-_PR_MD_INIT_FD_INHERITABLE(PRFileDesc *fd, PRBool imported)
-{
-    if (imported) {
-        fd->secret->inheritable = _PR_TRI_UNKNOWN;
-    } else {
-        fd->secret->inheritable = _PR_TRI_FALSE;
-    }
-}
-
-void
-_PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
-{
-    DWORD flags;
-
-    PR_ASSERT(_PR_TRI_UNKNOWN == fd->secret->inheritable);
-    if (fd->secret->md.io_model_committed) {
-        return;
-    }
-    if (GetHandleInformation((HANDLE)fd->secret->md.osfd, &flags)) {
-        if (flags & HANDLE_FLAG_INHERIT) {
-            fd->secret->inheritable = _PR_TRI_TRUE;
-        } else {
-            fd->secret->inheritable = _PR_TRI_FALSE;
-        }
-    }
-}
 
 
 /* --- DIR IO ------------------------------------------------------------ */
@@ -3756,7 +3752,7 @@ PR_IMPLEMENT(PRStatus) PR_NT_CancelIo(PRFileDesc *fd)
 	return PR_SUCCESS;
 }
 
-static PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr *addr, int *addrlen, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr_in *addr, int *len, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
@@ -3766,7 +3762,7 @@ static PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr *addr, int *a
     FD_ZERO(&rd);
     FD_SET((SOCKET)osfd, &rd);
     if (timeout == PR_INTERVAL_NO_TIMEOUT) {
-        while ((rv = accept(osfd, addr, addrlen)) == -1) {
+        while ((rv = accept(osfd, (struct sockaddr *) addr, len)) == -1) {
             if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
                     && (!fd->secret->nonblocking)) {
                 if ((rv = _PR_NTFiberSafeSelect(osfd + 1, &rd, NULL, NULL,
@@ -3780,7 +3776,7 @@ static PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr *addr, int *a
             }
         }
     } else if (timeout == PR_INTERVAL_NO_WAIT) {
-        if ((rv = accept(osfd, addr, addrlen)) == -1) {
+        if ((rv = accept(osfd, (struct sockaddr *) addr, len)) == -1) {
             if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
                     && (!fd->secret->nonblocking)) {
                 PR_SetError(PR_IO_TIMEOUT_ERROR, 0);
@@ -3790,7 +3786,7 @@ static PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr *addr, int *a
         }
     } else {
 retry:
-        if ((rv = accept(osfd, addr, addrlen)) == -1) {
+        if ((rv = accept(osfd, (struct sockaddr *) addr, len)) == -1) {
             if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
                     && (!fd->secret->nonblocking)) {
                 tv.tv_sec = PR_IntervalToSeconds(timeout);
@@ -3815,74 +3811,14 @@ retry:
     return(rv);
 }
 
-static PRInt32 _nt_nonblock_connect(PRFileDesc *fd, struct sockaddr *addr, int addrlen, PRIntervalTime timeout)
-{
-    PRInt32 osfd = fd->secret->md.osfd;
-    PRInt32 rv;
-    int err;
-    fd_set wr, ex;
-    struct timeval tv, *tvp;
-    int len;
-
-    if ((rv = connect(osfd, addr, addrlen)) == -1) {
-        if ((err = WSAGetLastError()) == WSAEWOULDBLOCK) {
-            if ( timeout == PR_INTERVAL_NO_TIMEOUT ) {
-                tvp = NULL;
-            } else {
-                tv.tv_sec = PR_IntervalToSeconds(timeout);
-                tv.tv_usec = PR_IntervalToMicroseconds(
-                    timeout - PR_SecondsToInterval(tv.tv_sec));
-                tvp = &tv;
-            }
-            FD_ZERO(&wr);
-            FD_ZERO(&ex);
-            FD_SET((SOCKET)osfd, &wr);
-            FD_SET((SOCKET)osfd, &ex);
-            if ((rv = _PR_NTFiberSafeSelect(osfd + 1, NULL, &wr, &ex,
-                    tvp)) == -1) {
-                _PR_MD_MAP_SELECT_ERROR(WSAGetLastError());
-                return rv;
-            }
-            if (rv == 0) {
-                PR_SetError(PR_IO_TIMEOUT_ERROR, 0);
-                return -1;
-            }
-            /* Call Sleep(0) to work around a Winsock timeing bug. */
-            Sleep(0);
-            if (FD_ISSET((SOCKET)osfd, &ex)) {
-                len = sizeof(err);
-                if (getsockopt(osfd, SOL_SOCKET, SO_ERROR,
-                        (char *) &err, &len) == SOCKET_ERROR) {
-                    _PR_MD_MAP_GETSOCKOPT_ERROR(WSAGetLastError());
-                    return -1;
-                }
-                _PR_MD_MAP_CONNECT_ERROR(err);
-                return -1;
-            } 
-            PR_ASSERT(FD_ISSET((SOCKET)osfd, &wr));
-            rv = 0;
-        } else {
-            _PR_MD_MAP_CONNECT_ERROR(err);
-        }
-    }
-    return rv;
-}
-
-static PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, int flags, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
     struct timeval tv, *tvp;
     fd_set rd;
-    int osflags;
 
-    if (0 == flags) {
-        osflags = 0;
-    } else {
-        PR_ASSERT(PR_MSG_PEEK == flags);
-        osflags = MSG_PEEK;
-    }
-    while ((rv = recv(osfd,buf,len,osflags)) == -1) {
+    while ((rv = recv(osfd,buf,len,0)) == -1) {
         if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
                 && (!fd->secret->nonblocking)) {
             FD_ZERO(&rd);
@@ -3912,7 +3848,7 @@ static PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, int flags, 
     return(rv);
 }
 
-static PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
@@ -3977,7 +3913,7 @@ static PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalT
     return bytesSent;
 }
 
-static PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size, PRIntervalTime timeout)
 {
     int index;
     int sent = 0;
@@ -4006,7 +3942,7 @@ static PRInt32 _nt_nonblock_writev(PRFileDesc *fd, const PRIOVec *iov, int size,
     return sent;
 }
 
-static PRInt32 _nt_nonblock_sendto(
+PRInt32 _nt_nonblock_sendto(
     PRFileDesc *fd, const char *buf, int len,
     const struct sockaddr *addr, int addrlen, PRIntervalTime timeout)
 {
@@ -4073,7 +4009,7 @@ static PRInt32 _nt_nonblock_sendto(
     return bytesSent;
 }
 
-static PRInt32 _nt_nonblock_recvfrom(PRFileDesc *fd, char *buf, int len, struct sockaddr *addr, int *addrlen, PRIntervalTime timeout)
+PRInt32 _nt_nonblock_recvfrom(PRFileDesc *fd, char *buf, int len, struct sockaddr *addr, int *addrlen, PRIntervalTime timeout)
 {
     PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;

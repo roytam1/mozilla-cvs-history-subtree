@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /***********************************************************************
@@ -103,7 +87,7 @@ int main(int argc, char** argv)
         if (!debug_mode) failed_already=1;
     }
     getFcn = (GetFcnType) PR_FindSymbol(lib, "My_GetValue");
-    setFcn = (SetFcnType) PR_FindFunctionSymbol(lib, "My_SetValue");
+    setFcn = (SetFcnType) PR_FindSymbol(lib, "My_SetValue");
     (*setFcn)(888);
     value = (*getFcn)();
     if (value != 888) {
@@ -152,7 +136,7 @@ int main(int argc, char** argv)
         if (!debug_mode) failed_already=1;
         goto exit_now;
     }
-    getFcn = (GetFcnType) PR_FindFunctionSymbol(lib2, "My_GetValue");
+    getFcn = (GetFcnType) PR_FindSymbol(lib2, "My_GetValue");
     setFcn = (SetFcnType) PR_FindSymbol(lib2, "My_SetValue");
     (*setFcn)(666);
     value = (*getFcn)();
@@ -174,7 +158,7 @@ int main(int argc, char** argv)
         if (!debug_mode) failed_already=1;
         goto exit_now;
     }
-    getFcn = (GetFcnType) PR_FindFunctionSymbolAndLibrary("My_GetValue", &lib2);
+    getFcn = (GetFcnType) PR_FindSymbolAndLibrary("My_GetValue", &lib2);
     if (NULL != getFcn) {
         fprintf(stderr, "Test 4 failed: how can we find a symbol "
             "in an already unloaded library?\n");

@@ -40,7 +40,7 @@ static int simple_bind_nolock( LDAP *ld, const char *dn, const char *passwd,
 static int simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd );
 
 /*
- * ldap_simple_bind - bind to the ldap server (and X.500).  The dn and
+ * ldap_simple_bind - bind to the ldap server.  The dn and
  * password of the entry to which to bind are supplied.  The message id
  * of the request initiated is returned.
  *
@@ -137,7 +137,7 @@ simple_bind_nolock( LDAP *ld, const char *dn, const char *passwd,
 
 
 /*
- * ldap_simple_bind - bind to the ldap server (and X.500) using simple
+ * ldap_simple_bind - bind to the ldap server using simple
  * authentication.  The dn and password of the entry to which to bind are
  * supplied.  LDAP_SUCCESS is returned upon success, the ldap error code
  * otherwise.
@@ -206,12 +206,21 @@ simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd )
 	/*
 	 * if the default connection has been lost and is now marked dead,
 	 * dispose of the default connection so it will get re-established.
+	 *
+	 * if not, clear the bind DN and status to ensure that we don't
+	 * report the wrong bind DN to a different thread while waiting
+	 * for our bind result to return from the server.
 	 */
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
-	if ( NULL != ld->ld_defconn 
-		&& LDAP_CONNST_DEAD == ld->ld_defconn->lconn_status ) {
-	    nsldapi_free_connection( ld, ld->ld_defconn, 1, 0 );
-	    ld->ld_defconn = NULL;
+	if ( NULL != ld->ld_defconn ) {
+	    if ( LDAP_CONNST_DEAD == ld->ld_defconn->lconn_status ) {
+		nsldapi_free_connection( ld, ld->ld_defconn, NULL, NULL, 1, 0 );
+		ld->ld_defconn = NULL;
+	    } else if ( ld->ld_defconn->lconn_binddn != NULL ) {
+		NSLDAPI_FREE( ld->ld_defconn->lconn_binddn );
+		ld->ld_defconn->lconn_binddn = NULL;
+		ld->ld_defconn->lconn_bound = 0;
+	    }
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
@@ -223,6 +232,17 @@ simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd )
 		goto unlock_and_return;
 	}
 
+	/*
+	 * Note that at this point the bind request is on its way to the
+	 * server and at any time now we will either be bound as the new
+	 * DN (if the bind succeeded) or we will be bound as anonymous (if
+	 * the bind failed).
+	 */
+
+	/*
+	 * Wait for the bind result.  Code inside result.c:read1msg()
+	 * takes care of setting the connection's bind DN and status.
+	 */
 	if ( nsldapi_result_nolock( ld, msgid, 1, 0, (struct timeval *) 0,
 	    &result ) == -1 ) {
 		rc = LDAP_GET_LDERRNO( ld, NULL, NULL );

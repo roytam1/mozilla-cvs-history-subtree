@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -120,7 +104,7 @@ static void pt_PostNotifies(PRLock *lock, PRBool unlock)
                 while (notified->cv[index].times-- > 0)
                 {
                     rv = pthread_cond_signal(&cv->cv);
-                    PR_ASSERT(0 == rv);
+                    PR_ASSERT((0 == rv) || (EINVAL == rv));
                 }
             }
 #if defined(DEBUG)
@@ -256,8 +240,7 @@ static PRIntn pt_TimedWait(
 
     /* NSPR doesn't report timeouts */
 #ifdef _PR_DCETHREADS
-    if (rv == -1) return (errno == EAGAIN) ? 0 : errno;
-    else return rv;
+    return (rv == -1 && errno == EAGAIN) ? 0 : rv;
 #else
     return (rv == ETIMEDOUT) ? 0 : rv;
 #endif
@@ -385,12 +368,7 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
     PR_ASSERT(0 == cvar->lock->notified.length);
     thred->waiting = NULL;  /* and now we're not */
     if (_PT_THREAD_INTERRUPTED(thred)) goto aborted;
-    if (rv != 0)
-    {
-        _PR_MD_MAP_DEFAULT_ERROR(rv);
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
+    return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
 
 aborted:
     PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
@@ -1087,12 +1065,7 @@ PR_IMPLEMENT(PRStatus) PRP_NakedWait(
         rv = pthread_cond_wait(&cvar->cv, &ml->mutex);
     else
         rv = pt_TimedWait(&cvar->cv, &ml->mutex, timeout);
-    if (rv != 0)
-    {
-        _PR_MD_MAP_DEFAULT_ERROR(rv);
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
+    return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
 }  /* PRP_NakedWait */
 
 PR_IMPLEMENT(PRStatus) PRP_NakedNotify(PRCondVar *cvar)

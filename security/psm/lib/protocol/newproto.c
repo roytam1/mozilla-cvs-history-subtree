@@ -79,7 +79,6 @@ char* SSM_GetVersionString(void)
     return newString;
 }
 
-
 /*************************************************************
  *
  * CMT_Init
