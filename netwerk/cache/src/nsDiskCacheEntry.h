@@ -89,6 +89,8 @@ public:
         return mHashNumber;
     }
     
+    static PLDHashNumber Hash(const char* key);
+    
 private:
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
     nsCOMPtr<nsITransport>  mTransports[3];
