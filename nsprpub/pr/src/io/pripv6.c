@@ -27,39 +27,61 @@ static PRIOMethods ipv6_to_v4_tcpMethods;
 static PRIOMethods ipv6_to_v4_udpMethods;
 static PRDescIdentity _pr_ipv6_to_ipv4_id;
 extern PRBool IsValidNetAddr(const PRNetAddr *addr);
+extern PRIPv6Addr _pr_in6addr_any;
+extern PRIPv6Addr _pr_in6addr_loopback;
 
 /*
  * convert an IPv4-mapped IPv6 addr to an IPv4 addr
  */
-void ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
+static void _PR_ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
 											PRNetAddr *dst_v4addr)
 {
+const PRUint8 *srcp;
+
+	PR_ASSERT(PR_AF_INET6 == src_v6addr->ipv6.family);
+
+	if (PR_IsNetAddrType(src_v6addr, PR_IpAddrV4Mapped)) {
 #ifdef _PR_INET6
-const PRUint8 *srcp = src_v6addr->ipv6.ip.s6_addr;
+		srcp = src_v6addr->ipv6.ip.s6_addr;
 #else
-const PRUint8 *srcp = src_v6addr->ipv6.ip._pr_s6_addr;
+		srcp = src_v6addr->ipv6.ip._pr_s6_addr;
 #endif
+		memcpy((char *) &dst_v4addr->inet.ip, srcp + 12, 4);
+    } else if (PR_IsNetAddrType(src_v6addr, PR_IpAddrAny)) {
+        dst_v4addr->inet.ip = htonl(INADDR_ANY);
+    } else if (PR_IsNetAddrType(src_v6addr, PR_IpAddrLoopback)) {
+        dst_v4addr->inet.ip = htonl(INADDR_LOOPBACK);
+    }
 	dst_v4addr->inet.family = PR_AF_INET;
 	dst_v4addr->inet.port = src_v6addr->ipv6.port;
-	memcpy((char *) &dst_v4addr->inet.ip, srcp + 12, 4);
 }
 
 /*
  * convert an IPv4 addr to an IPv4-mapped IPv6 addr
  */
-void ConvertToIpv6NetAddr(const PRNetAddr *src_v4addr,
+static void _PR_ConvertToIpv6NetAddr(const PRNetAddr *src_v4addr,
                                             PRNetAddr *dst_v6addr)
 {
-#ifdef _PR_INET6
-PRUint8 *dstp = dst_v6addr->ipv6.ip.s6_addr;
-#else
-PRUint8 *dstp = dst_v6addr->ipv6.ip._pr_s6_addr;
-#endif
+PRUint8 *dstp;
+
+	PR_ASSERT(PR_AF_INET == src_v4addr->inet.family);
 	dst_v6addr->ipv6.family = PR_AF_INET6;
 	dst_v6addr->ipv6.port = src_v4addr->inet.port;
-	memset(dstp, 0, 10);
-	memset(dstp + 10, 0xff, 2);
-	memcpy(dstp + 12,(char *) &src_v4addr->inet.ip, 4);
+
+    if (htonl(INADDR_LOOPBACK) == src_v4addr->inet.ip) {
+		dst_v6addr->ipv6.ip = _pr_in6addr_loopback;
+	} else if (htonl(INADDR_ANY) == src_v4addr->inet.ip) {
+		dst_v6addr->ipv6.ip = _pr_in6addr_any;
+	} else {
+#ifdef _PR_INET6
+		dstp = dst_v6addr->ipv6.ip.s6_addr;
+#else
+		dstp = dst_v6addr->ipv6.ip._pr_s6_addr;
+#endif
+		memset(dstp, 0, 10);
+		memset(dstp + 10, 0xff, 2);
+		memcpy(dstp + 12,(char *) &src_v4addr->inet.ip, 4);
+	}
 }
 
 static PRStatus PR_CALLBACK Ipv6ToIpv4SocketBind(PRFileDesc *fd,
@@ -69,8 +91,13 @@ static PRStatus PR_CALLBACK Ipv6ToIpv4SocketBind(PRFileDesc *fd,
 	const PRNetAddr *tmp_addrp;
 	PRFileDesc *lo = fd->lower;
 
-	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped)) {
-		ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
+	if (PR_AF_INET6 != addr->raw.family) {
+        PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
+		return PR_FAILURE;
+	}
+	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped) ||
+    			PR_IsNetAddrType(addr, PR_IpAddrAny)) {
+		_PR_ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
 		tmp_addrp = &tmp_ipv4addr;
 	} else {
         PR_SetError(PR_NETWORK_UNREACHABLE_ERROR, 0);
@@ -85,8 +112,13 @@ static PRStatus PR_CALLBACK Ipv6ToIpv4SocketConnect(
 	PRNetAddr tmp_ipv4addr;
 	const PRNetAddr *tmp_addrp;
 
-	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped)) {
-		ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
+	if (PR_AF_INET6 != addr->raw.family) {
+        PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
+		return PR_FAILURE;
+	}
+	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped) ||
+			PR_IsNetAddrType(addr, PR_IpAddrLoopback)) {
+		_PR_ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
 		tmp_addrp = &tmp_ipv4addr;
 	} else {
         PR_SetError(PR_NETWORK_UNREACHABLE_ERROR, 0);
@@ -102,8 +134,13 @@ static PRInt32 PR_CALLBACK Ipv6ToIpv4SocketSendTo(
 	PRNetAddr tmp_ipv4addr;
 	const PRNetAddr *tmp_addrp;
 
-	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped)) {
-		ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
+	if (PR_AF_INET6 != addr->raw.family) {
+        PR_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR, 0);
+		return PR_FAILURE;
+	}
+	if (PR_IsNetAddrType(addr, PR_IpAddrV4Mapped) ||
+			PR_IsNetAddrType(addr, PR_IpAddrLoopback)) {
+		_PR_ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
 		tmp_addrp = &tmp_ipv4addr;
 	} else {
         PR_SetError(PR_NETWORK_UNREACHABLE_ERROR, 0);
@@ -138,7 +175,7 @@ static PRFileDesc* PR_CALLBACK Ipv6ToIpv4SocketAccept (
         PR_DELETE(newstack);
         return NULL;
     }
-	ConvertToIpv6NetAddr(&tmp_ipv4addr, addr);
+	_PR_ConvertToIpv6NetAddr(&tmp_ipv4addr, addr);
 
     rv = PR_PushIOLayer(newfd, PR_TOP_IO_LAYER, newstack);
     PR_ASSERT(PR_SUCCESS == rv);
@@ -173,7 +210,7 @@ static PRInt32 PR_CALLBACK Ipv6ToIpv4SocketAcceptRead(PRFileDesc *sd,
         return nbytes;
     }
 	tmp_ipv4addr = **ipv6_raddr;	/* copy */
-	ConvertToIpv6NetAddr(&tmp_ipv4addr, *ipv6_raddr);
+	_PR_ConvertToIpv6NetAddr(&tmp_ipv4addr, *ipv6_raddr);
 
     /* this PR_PushIOLayer call cannot fail */
     rv = PR_PushIOLayer(*nd, PR_TOP_IO_LAYER, newstack);
@@ -189,7 +226,7 @@ static PRStatus PR_CALLBACK Ipv6ToIpv4SocketGetName(PRFileDesc *fd,
 
 	result = (fd->lower->methods->getsockname)(fd->lower, &tmp_ipv4addr);
 	if (PR_SUCCESS == result) {
-		ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
+		_PR_ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
 		PR_ASSERT(IsValidNetAddr(ipv6addr) == PR_TRUE);
 	}
 	return result;
@@ -203,7 +240,7 @@ static PRStatus PR_CALLBACK Ipv6ToIpv4SocketGetPeerName(PRFileDesc *fd,
 
 	result = (fd->lower->methods->getsockname)(fd->lower, &tmp_ipv4addr);
 	if (PR_SUCCESS == result) {
-		ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
+		_PR_ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
 		PR_ASSERT(IsValidNetAddr(ipv6addr) == PR_TRUE);
 	}
 	return result;
@@ -219,7 +256,7 @@ static PRInt32 PR_CALLBACK Ipv6ToIpv4SocketRecvFrom(PRFileDesc *fd, void *buf,
     result = (fd->lower->methods->recvfrom)(
         fd->lower, buf, amount, flags, &tmp_ipv4addr, timeout);
 	if (-1 != result) {
-		ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
+		_PR_ConvertToIpv6NetAddr(&tmp_ipv4addr, ipv6addr);
 		PR_ASSERT(IsValidNetAddr(ipv6addr) == PR_TRUE);
 	}
 	return result;

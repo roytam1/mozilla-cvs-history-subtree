@@ -96,22 +96,21 @@ PRLock* _getproto_lock = NULL;
 #endif
 
 #if defined(_PR_INET6)
-const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
+const struct in6_addr _pr_in6addr_any = IN6ADDR_ANY_INIT;
+const struct in6_addr _pr_in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
+
 #define _PR_IN6_IS_ADDR_UNSPECIFIED	IN6_IS_ADDR_UNSPECIFIED
 #define _PR_IN6_IS_ADDR_LOOPBACK	IN6_IS_ADDR_LOOPBACK
 #define _PR_IN6_IS_ADDR_V4MAPPED	IN6_IS_ADDR_V4MAPPED
 #define _PR_IN6_IS_ADDR_V4COMPAT	IN6_IS_ADDR_V4COMPAT
 
+#if defined(SOLARIS)
+#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->_S6_un._S6_u32[3])
+#else
 #define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_addr32[3])
+#endif
 
 #else  /* _PR_INET6 */
-
-/*
- * The values at bytes 10 and 11 are compared using pointers to
- * 8-bit fields, and not 32-bit fields, to make the comparison work on
- * both big-endian and little-endian systems
- */
 
 #define _PR_IN6_IS_ADDR_UNSPECIFIED(a)			\
 				(((a)->_pr_s6_addr32[0] == 0) &&	\
@@ -119,15 +118,24 @@ const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 				((a)->_pr_s6_addr32[2] == 0) &&		\
 				((a)->_pr_s6_addr32[3] == 0))
  
+/*
+ * For non-ipv6 platforms, loopback address is never passed to the
+ * system, so the byte-ordering is not an issue
+ */
 #define _PR_IN6_IS_ADDR_LOOPBACK(a)				\
                (((a)->_pr_s6_addr32[0] == 0)	&&	\
                ((a)->_pr_s6_addr32[1] == 0)		&&	\
                ((a)->_pr_s6_addr32[2] == 0)		&&	\
-               ((a)->_pr_s6_addr[12] == 0)		&&	\
-               ((a)->_pr_s6_addr[13] == 0)		&&	\
-               ((a)->_pr_s6_addr[14] == 0)		&&	\
-               ((a)->_pr_s6_addr[15] == 0x01))
+               ((a)->_pr_s6_addr32[3] == 0x1))
  
+const PRIPv6Addr _pr_in6addr_any = { 0, 0, 0, 0 };
+const PRIPv6Addr _pr_in6addr_loopback = { 0, 0, 0, 0x00000001U };
+/*
+ * The values at bytes 10 and 11 are compared using pointers to
+ * 8-bit fields, and not 32-bit fields, to make the comparison work on
+ * both big-endian and little-endian systems
+ */
+
 #define _PR_IN6_IS_ADDR_V4MAPPED(a)			\
 		(((a)->_pr_s6_addr32[0] == 0) 	&&	\
 		((a)->_pr_s6_addr32[1] == 0)	&&	\
@@ -145,7 +153,9 @@ const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 #endif /* _PR_INET6 */
 
+#if !defined(_PR_INET6)
 extern PRStatus _pr_init_ipv6();
+#endif
 
 void _PR_InitNet(void)
 {
@@ -166,7 +176,9 @@ void _PR_InitNet(void)
 #if !defined(_PR_HAVE_GETPROTO_R)
 	_getproto_lock = PR_NewLock();
 #endif
+#if !defined(_PR_INET6)
 	_pr_init_ipv6();
+#endif
 }
 
 PR_IMPLEMENT(PRStatus) PR_GetHostName(char *name, PRUint32 namelen)
@@ -897,10 +909,10 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
         case PR_IpAddrNull:
             break;  /* don't overwrite the address */
         case PR_IpAddrAny:
-            addr->ipv6.ip = in6addr_any;
+            addr->ipv6.ip = _pr_in6addr_any;
             break;
         case PR_IpAddrLoopback:
-            addr->ipv6.ip = in6addr_loopback;
+            addr->ipv6.ip = _pr_in6addr_loopback;
             break;
         default:
             PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
@@ -953,9 +965,6 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
     }
     return rv;
 }  /* PR_SetNetAddr */
-
-extern void ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
-                                            PRNetAddr *dst_v4addr);
 
 PR_IMPLEMENT(PRBool)
 PR_IsNetAddrType(const PRNetAddr *addr, PRNetAddrValue val)
