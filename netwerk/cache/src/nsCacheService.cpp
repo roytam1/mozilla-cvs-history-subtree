@@ -49,8 +49,8 @@ static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
  * nsCachePrefObserver
  *****************************************************************************/
 
-const char *gCacheEnableMemoryCachePref = "browser.cache.enable";
-const char *gCacheEnableDiskCachePref   = "browser.cache.disk.enable";
+#define ENABLE_MEMORY_CACHE_PREF    "browser.cache.enable"
+#define ENABLE_DISK_CACHE_PREF      "browser.cache.disk.enable"
 
 class nsCachePrefObserver : public nsIObserver
 {
@@ -85,16 +85,16 @@ nsCachePrefObserver::Install()
     nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv = prefs->AddObserver(gCacheEnableMemoryCachePref, this);
+    rv = prefs->AddObserver(ENABLE_MEMORY_CACHE_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->AddObserver(gCacheEnableDiskCachePref, this);
+    rv = prefs->AddObserver(ENABLE_DISK_CACHE_PREF, this);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->GetBoolPref(gCacheEnableDiskCachePref, &mDiskCacheEnabled);
+    rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mDiskCacheEnabled);
     if (NS_FAILED(rv)) rv2 = rv;
 
-    rv = prefs->GetBoolPref(gCacheEnableMemoryCachePref, &mMemoryCacheEnabled);
+    rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mMemoryCacheEnabled);
     // if (NS_FAILED(rv)) rv2 = rv;
 
     if (NS_SUCCEEDED(rv)) rv = rv2;
@@ -110,8 +110,8 @@ nsCachePrefObserver::Remove()
     nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    rv  = prefs->RemoveObserver(gCacheEnableDiskCachePref, this);
-    rv2 = prefs->RemoveObserver(gCacheEnableMemoryCachePref, this);
+    rv  = prefs->RemoveObserver(ENABLE_DISK_CACHE_PREF, this);
+    rv2 = prefs->RemoveObserver(ENABLE_MEMORY_CACHE_PREF, this);
 
     if (NS_SUCCEEDED(rv)) rv = rv2;
     return rv;
@@ -130,13 +130,13 @@ nsCachePrefObserver::Observe(nsISupports *     subject,
         if (NS_FAILED(rv)) return rv;
 
         // which preference changed?
-        if (NS_LITERAL_STRING(gCacheEnableDiskCachePref).Equals(data)) {
+        if (NS_LITERAL_STRING(ENABLE_DISK_CACHE_PREF).Equals(data)) {
 
-            rv = prefs->GetBoolPref(gCacheEnableDiskCachePref, &mDiskCacheEnabled);
+            rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mDiskCacheEnabled);
 
-        } else if (NS_LITERAL_STRING(gCacheEnableMemoryCachePref).Equals(data)) {
+        } else if (NS_LITERAL_STRING(ENABLE_MEMORY_CACHE_PREF).Equals(data)) {
 
-            rv = prefs->GetBoolPref(gCacheEnableMemoryCachePref, &mMemoryCacheEnabled);
+            rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mMemoryCacheEnabled);
         }
 
         if (NS_FAILED(rv)) return rv;
@@ -212,8 +212,8 @@ nsCacheService::Init()
     { // scope nsCOMPtr<nsIPref>
         nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
         if (NS_SUCCEEDED(rv)) {
-            rv = prefs->GetBoolPref(gCacheEnableDiskCachePref, &mEnableDiskDevice);
-            rv = prefs->GetBoolPref(gCacheEnableMemoryCachePref, &mEnableMemoryDevice);
+            rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mEnableDiskDevice);
+            rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mEnableMemoryDevice);
             // ignore errors
         }
     }
