@@ -139,6 +139,7 @@ static NS_DEFINE_CID(kPresShellCID,              NS_PRESSHELL_CID);
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,  NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kLocalStoreCID,             NS_LOCALSTORE_CID);
+static NS_DEFINE_CID(kRDFContainerUtilsCID,      NS_RDFCONTAINERUTILS_CID);
 static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,       NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFXULBuilderCID,          NS_RDFXULBUILDER_CID);
@@ -2434,9 +2435,14 @@ XULDocumentImpl::CreateElement(const nsString& aTagName, nsIDOMElement** aReturn
     NS_ASSERTION(rv == NS_OK, "unable to mark as XUL element");
     if (NS_FAILED(rv)) return rv;
 
-    rv = rdf_MakeSeq(mDocumentDataSource, resource);
-    NS_ASSERTION(rv == NS_OK, "unable to mark as XUL element");
-    if (NS_FAILED(rv)) return rv;
+    {
+        NS_WITH_SERVICE(nsIRDFContainerUtils, rdfc, kRDFContainerUtilsCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = rdfc->MakeSeq(mDocumentDataSource, resource, nsnull);
+        NS_ASSERTION(rv == NS_OK, "unable to mark as XUL element");
+        if (NS_FAILED(rv)) return rv;
+    }
 
     // `this' will be its document
     rv = result->SetDocument(this, PR_FALSE);
