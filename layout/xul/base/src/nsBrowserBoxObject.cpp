@@ -109,10 +109,9 @@ NS_IMETHODIMP nsBrowserBoxObject::GetDocShell(nsIDocShell** aResult)
   nsCOMPtr<nsIScriptGlobalObject> sgo;
   sub_doc->GetScriptGlobalObject(getter_AddRefs(sgo));
 
-  nsCOMPtr<nsIDocShell> doc_shell(do_GetInterface(sgo));
-
-  *aResult = doc_shell;
-  NS_IF_ADDREF(*aResult);
+  if (sgo) {
+    sgo->GetDocShell(aResult);
+  }
 
   return NS_OK;
 }
