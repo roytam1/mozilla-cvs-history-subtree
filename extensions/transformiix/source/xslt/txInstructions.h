@@ -74,16 +74,6 @@ public:
     virtual nsresult execute(txExecutionState& aEs);
 
 
-class txApplyTemplates : public txInstruction
-{
-public:
-    txApplyTemplates(const txExpandedName& aMode);
-
-    TX_DECL_TXINSTRUCTION
-    
-    txExpandedName mMode;
-};
-
 class txApplyImportsEnd : public txInstruction
 {
 public:
@@ -94,6 +84,16 @@ class txApplyImportsStart : public txInstruction
 {
 public:
     TX_DECL_TXINSTRUCTION
+};
+
+class txApplyTemplates : public txInstruction
+{
+public:
+    txApplyTemplates(const txExpandedName& aMode);
+
+    TX_DECL_TXINSTRUCTION
+    
+    txExpandedName mMode;
 };
 
 class txAttribute : public txInstruction
