@@ -94,6 +94,7 @@ function OnLoadNewCard()
   }
 
   GetCardValues(editCard.card, document);
+  GetFooBar(editCard.card, document);
 
   // FIX ME - looks like we need to focus on both the text field and the tab widget
   // probably need to do the same in the addressing widget
@@ -109,6 +110,7 @@ function OnLoadNewCard()
 function EditCardOKButton()
 {
   SetCardValues(editCard.card, document);
+  SetFooBar(editCard.card, document);
 
   editCard.card.editCardToDatabase(editCard.abURI);
   
@@ -196,7 +198,7 @@ function InitEditCard()
       editCard.firstLastSeparator = gAddressBookBundle.getString("firstLastSeparator");
     }
     catch (ex) {
-      dump("failed to get pref\n");
+      dump("ex: failed to get pref" + ex + "\n");
     }
   }
 }
@@ -217,6 +219,7 @@ function NewCardOKButton()
     if ( editCard.card )
     {
       SetCardValues(editCard.card, document);
+      SetFooBar(editCard.card, document);
 
       var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
       var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
@@ -278,6 +281,30 @@ function GetCardValues(cardproperty, doc)
     doc.getElementById('Notes').value = cardproperty.notes;
   }
 }
+
+function SetFooBar(cardproperty, doc)
+{
+  if (cardproperty)
+  {
+    var mdbcard = cardproperty.QueryInterface(Components.interfaces.nsIAbMDBCard);
+    if (mdbcard)
+      mdbcard.setStringAttribute("_FooBar", doc.getElementById('_FooBar').value);
+  }
+}
+
+function GetFooBar(cardproperty, doc)
+{
+  if ( cardproperty )
+  {
+    var value = "";
+    var mdbcard = cardproperty.QueryInterface(Components.interfaces.nsIAbMDBCard);
+    if (mdbcard)
+      value = mdbcard.getStringAttribute("_FooBar");
+
+    doc.getElementById('_FooBar').value = value;
+  }
+}
+
 
 // Move the data from the dialog to the cardproperty to be stored in the database
 function SetCardValues(cardproperty, doc)
@@ -366,6 +393,7 @@ function GenerateDisplayName()
     var displayNameField = document.getElementById('DisplayName');
 
     var separator = "";
+    debugger;
     if ( lastNameField.value && firstNameField.value )
     {
       if ( editCard.displayLastNameFirst )
