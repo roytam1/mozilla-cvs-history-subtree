@@ -57,16 +57,18 @@
 
   <keyset>
     <key key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
+    <key key="&focusSearch1.key;" modifiers="accel" oncommand="gCookiesWindow.focusFilterBox();"/>
+    <key key="&focusSearch2.key;" modifiers="accel" oncommand="gCookiesWindow.focusFilterBox();"/>
   </keyset>
            
   <vbox flex="1" class="contentPane">
-    <label value="&cookiesonsystem.label;"/>
-    <separator class="thin"/>
     <hbox align="center">
-      <label>&filter.label;</label>
+      <label accesskey="&filter.accesskey;" control="filter">&filter.label;</label>
       <textbox id="filter" flex="1" oninput="gCookiesWindow.onFilterInput();"/>
       <button label="&clear.label;" accesskey="&clear.accesskey;" oncommand="gCookiesWindow.clearFilter();"/>
     </hbox>
+    <separator class="thin"/>
+    <label id="cookiesIntro" value="&cookiesonsystem.label;"/>
     <separator class="thin"/>
     <tree id="cookiesList" flex="1" style="height: 10em;"
           onkeypress="gCookiesWindow.onCookieKeyPress(event)"

@@ -15,8 +15,11 @@
 
 <!ENTITY     window.title                   "Cookies">
 <!ENTITY     windowClose.key                "w">
+<!ENTITY     focusSearch1.key               "f">
+<!ENTITY     focusSearch2.key               "k">
 
 <!ENTITY     filter.label                   "Search:">
+<!ENTITY     filter.accesskey               "S">
 <!ENTITY     clear.label                    "Clear">
 <!ENTITY     clear.accesskey                "C">
 

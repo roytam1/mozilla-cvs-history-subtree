@@ -58,6 +58,8 @@ var gCookiesWindow = {
     
     this._loadCookies();
     this._tree.view.selection.select(0);
+    
+    this._tree.focus();
   },
   
   uninit: function ()
@@ -74,7 +76,6 @@ var gCookiesWindow = {
     _rowCount : 0,
     get rowCount() 
     { 
-      dump("*** thisrc = " + this._rowCount + "\n");
       return this._rowCount; 
     },
     
@@ -295,9 +296,12 @@ var gCookiesWindow = {
   
   onCookieSelected: function () 
   {
-    var properties;
-    var item = this._view._getItemAtIndex(this._tree.view.selection.currentIndex);
-    
+    var properties, item;
+    if (!this._view._filtered) 
+      item = this._view._getItemAtIndex(this._tree.view.selection.currentIndex);
+    else
+      item = this._view._filterSet[this._tree.view.selection.currentIndex];
+      
     var ids = ["nameLabel", "name", "valueLabel", "value", "isDomain", "host", 
                "pathLabel", "path", "isSecureLabel", "isSecure", "expiresLabel", 
                "expires"];
@@ -373,7 +377,6 @@ var gCookiesWindow = {
   
   clearFilter: function ()
   {
-    dump("*** clearFilter\n");
     // Clear the Filter and the Tree Display
     document.getElementById("filter").value = "";
     this._view._filtered = false;
@@ -384,7 +387,16 @@ var gCookiesWindow = {
     // Restore the previous Row Count so |invalidate| works properly
     this._view._rowCount = this._lastRowCount;
     this._lastRowCount = -1;
-    this._tree.treeBoxObject.rowCountChanged(0, view.rowCount);    
+    this._tree.treeBoxObject.rowCountChanged(0, this._view.rowCount);
+    
+    this._view.selection.clearSelection();
+    for (var i = 0; i < this._lastSelectedRanges.length; ++i) {
+      var range = this._lastSelectedRanges[i];
+      this._view.selection.rangedSelect(range.min, range.max, true);
+    }
+    this._lastSelectedRanges = [];
+    
+    document.getElementById("cookiesIntro").value = this._bundle.getString("cookiesAll");
   },
   
   _filterCookies: function (aFilterValue)
@@ -423,18 +435,34 @@ var gCookiesWindow = {
         // Save Display Info for the Non-Filtered mode when we first
         // enter Filtered mode. 
         view._filtered = true;
-        this._lastRowCount = view.rowCount;
+        gCookiesWindow._lastRowCount = view.rowCount;
+        
+        gCookiesWindow._lastSelectedRanges = [];
+        var rangeCount = view.selection.getRangeCount();
+        for (var i = 0; i < rangeCount; ++i) {
+          var min = { }; var max = { };
+          view.selection.getRangeAt(i, min, max);
+          gCookiesWindow._lastSelectedRanges.push({ min: min.value, max: max.value });
+        }
       }      
       // Clear the display
+      var oldCount = view._rowCount;
       view._rowCount = 0;
-      gCookiesWindow._tree.treeBoxObject.rowCountChanged(0, -view.rowCount);
+      gCookiesWindow._tree.treeBoxObject.rowCountChanged(0, -oldCount);
       // Set up the filtered display
       view._rowCount = view._filterSet.length;
-      dump("*** vrc = " + view.rowCount + "\n");
       gCookiesWindow._tree.treeBoxObject.rowCountChanged(0, view.rowCount);
+      
+      view.selection.select(0);
+      document.getElementById("cookiesIntro").value = gCookiesWindow._bundle.getString("cookiesFiltered");
     }
     window.filterCookies = filterCookies;
     this._filterTimeout = setTimeout("filterCookies();", 500);
   },
+  
+  focusFilterBox: function ()
+  {
+    document.getElementById("filter").focus();
+  }
 };
 
