@@ -348,7 +348,21 @@ static const double two31 = 2147483648.0;
             : Reference(type), mIndex(index) { }
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
+        void emitInvokeSequence(ByteCodeGen *bcg);
         uint32 baseExpressionDepth() { return 1; }
+    };
+    class StaticGetterMethodReference : public StaticFunctionReference {
+    public:
+        StaticGetterMethodReference(uint32 index, JSType *type)
+            : StaticFunctionReference(index, type) { }
+        void emitCodeSequence(ByteCodeGen *bcg);
+    };
+    class StaticSetterMethodReference : public StaticFunctionReference {
+    public:
+        StaticSetterMethodReference(uint32 index, JSType *type)
+            : StaticFunctionReference(index, type) { }
+        void emitCodeSequence(ByteCodeGen *bcg);
+        bool emitPreAssignment(ByteCodeGen *bcg);
     };
     // a member function in a vtable
     class MethodReference : public Reference {
@@ -358,8 +372,9 @@ static const double two31 = 2147483648.0;
         uint32 mIndex;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool needsThis() { return true; }
-        uint32 baseExpressionDepth() { return 1; }
+        virtual bool needsThis() { return true; }
+        virtual void emitImplicitLoad(ByteCodeGen *bcg);
+        virtual uint32 baseExpressionDepth() { return 1; }
         void emitInvokeSequence(ByteCodeGen *bcg);
     };
     class GetterMethodReference : public MethodReference {
@@ -367,18 +382,12 @@ static const double two31 = 2147483648.0;
         GetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
             : MethodReference(index, baseClass, type) { }
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool needsThis() { return true; }
-        void emitImplicitLoad(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
     };
     class SetterMethodReference : public MethodReference {
     public:
         SetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
             : MethodReference(index, baseClass, type) { }
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool needsThis() { return true; }
-        void emitImplicitLoad(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
         bool emitPreAssignment(ByteCodeGen *bcg);
     };
 
@@ -599,6 +608,14 @@ static const double two31 = 2147483648.0;
         {
             defineVariable(name, attr, type, JSValue(f));    // XXX or error?
         }
+        virtual void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            defineGetterMethod(name, attr, type, f);    // XXX or error?
+        }
+        virtual void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            defineSetterMethod(name, attr, type, f);    // XXX or error?
+        }
         virtual void defineGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
         {
             PropertyIterator i;
@@ -809,6 +826,18 @@ static const double two31 = 2147483648.0;
             PropertyIterator i;
             return mStatics->hasProperty(name, attr, acc, &i);
         }
+        
+        void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            ASSERT(mStatics);
+            mStatics->defineGetterMethod(name, attr, type, f);
+        }
+        
+        void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            ASSERT(mStatics);
+            mStatics->defineSetterMethod(name, attr, type, f);
+        }
 
         //
 
@@ -923,10 +952,16 @@ static const double two31 = 2147483648.0;
                     else
                         return new SetterFunctionReference(prop.mData.fPair.setterF);
                 case IndexPair:
-                    if (acc == Read)
-                        return new GetterMethodReference(prop.mData.iPair.getterI, this, prop.mType);
+                    if (mStatics == NULL)   // i.e. this is a static method
+                        if (acc == Read)
+                            return new StaticGetterMethodReference(prop.mData.iPair.getterI, prop.mType);
+                        else
+                            return new StaticSetterMethodReference(prop.mData.iPair.setterI, prop.mType);
                     else
-                        return new SetterMethodReference(prop.mData.iPair.setterI, this, prop.mType);
+                        if (acc == Read)
+                            return new GetterMethodReference(prop.mData.iPair.getterI, this, prop.mType);
+                        else
+                            return new SetterMethodReference(prop.mData.iPair.setterI, this, prop.mType);
                 case Slot:
                     if (mStatics == NULL)   // i.e. this is a static method
                         return new StaticFieldReference(prop.mData.index, acc, mSuperType, prop.mType);
@@ -1231,6 +1266,18 @@ static const double two31 = 2147483648.0;
         {
             JSObject *top = mScopeStack.back();
             top->defineSetterMethod(name, attr, type, f);
+        }
+        void defineStaticGetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            JSObject *top = mScopeStack.back();
+            ASSERT(dynamic_cast<JSType *>(top));
+            top->defineStaticGetterMethod(name, attr, type, f);
+        }
+        void defineStaticSetterMethod(const String &name, IdentifierList *attr, JSType *type, JSFunction *f)
+        {
+            JSObject *top = mScopeStack.back();
+            ASSERT(dynamic_cast<JSType *>(top));
+            top->defineStaticSetterMethod(name, attr, type, f);
         }
         void defineUnaryOperator(Operator which, JSFunction *f)
         {

@@ -135,6 +135,11 @@ void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
+void MethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    bcg->addByte(LoadThisOp);
+}
+
 void MethodReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetMethodRefOp);
@@ -147,12 +152,6 @@ void MethodReference::emitInvokeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addByte(GetStaticMethodOp);
-    bcg->addLong(mIndex); 
-}
-
 void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetMethodOp);
@@ -160,11 +159,6 @@ void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addByte(InvokeOp);
     bcg->addLong(0);
     bcg->addByte(Explicit);
-}
-
-void GetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
-{
-    bcg->addByte(LoadThisOp);
 }
 
 void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -181,10 +175,44 @@ bool SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg)
     return true;
 }
 
-void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
+
+
+void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
-    bcg->addByte(LoadThisOp);
+    bcg->addByte(GetStaticMethodRefOp);
+    bcg->addLong(mIndex); 
 }
+
+void StaticFunctionReference::emitInvokeSequence(ByteCodeGen *bcg) 
+{
+    bcg->addByte(GetStaticMethodOp);
+    bcg->addLong(mIndex); 
+}
+
+void StaticGetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
+{
+    bcg->addByte(GetStaticMethodOp);
+    bcg->addLong(mIndex); 
+    bcg->addByte(InvokeOp);
+    bcg->addLong(0);
+    bcg->addByte(NoThis);
+}
+
+void StaticSetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
+{
+    bcg->addByte(InvokeOp);
+    bcg->addLong(1);
+    bcg->addByte(NoThis);
+}
+
+bool StaticSetterMethodReference::emitPreAssignment(ByteCodeGen *bcg) 
+{
+    bcg->addByte(GetStaticMethodOp);
+    bcg->addLong(mIndex);
+    return true;
+}
+
+
 
 void FunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
@@ -808,7 +836,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             //
             // Note that we're depending on this to discover when
             // a class constructor is being invoked (and hence needs
-            // a newObjectOp). 
+            // a newInstanceOp). 
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
                 JSValue v = mScopeChain->getCompileTimeValue(name, NULL);
@@ -1386,7 +1414,7 @@ BinaryOpEquals:
         {
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             JSType *type = genExpr(i->op);
-            addByte(NewObjectOp);
+            addByte(NewInstanceOp);
             addByte(GetConstructorOp);
 
             ExprPairList *p = i->pairs;
@@ -1413,7 +1441,7 @@ BinaryOpEquals:
             Reference *ref = genReference(i->op, Read);
 
             if (ref->isConstructor()) {
-                addByte(NewObjectOp);
+                addByte(NewInstanceOp);
                 addByte(PopOp);     // don't need type anymore
             }
             ref->emitInvokeSequence(this);
@@ -1460,6 +1488,23 @@ BinaryOpEquals:
             setLabel(labelAtBottom);
             return Object_Type;
         }
+    case ExprNode::objectLiteral:
+        {
+            addByte(NewObjectOp);
+            PairListExprNode *plen = static_cast<PairListExprNode *>(p);
+            ExprPairList *e = plen->pairs;
+            while (e) {
+                if (e->field && e->value && (e->field->getKind() == ExprNode::identifier)) {
+                    addByte(DupOp);
+                    genExpr(e->value);
+                    addByte(SetPropertyOp);
+                    addStringRef((static_cast<IdentifierExprNode *>(e->field))->name);
+                    addByte(PopOp);
+                }
+                e = e->next;
+            }
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1659,6 +1704,10 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         break;
     case NewObjectOp:
         f << "NewObject\n";
+        i++;
+        break;
+    case NewInstanceOp:
+        f << "NewInstance\n";
         i++;
         break;
     case TypeOfOp:

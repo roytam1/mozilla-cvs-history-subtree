@@ -84,4 +84,11 @@ if (bc.Q != 13) result = false;
 bc.Q = 1;
 if (BaseClass.gBC != 100) result = false;
 
+
+var cnX = 'X'
+var s = '';
+function f(n) { var ret = ''; for (var i = 0; i < n; i++) { ret += cnX; } return ret; }
+s = f(5);
+if (s != 'XXXXX') result = false;
+
 if (result) print("still sane") else print("gone off the deep end");

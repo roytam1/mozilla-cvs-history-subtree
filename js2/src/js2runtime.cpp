@@ -875,7 +875,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.push_back(JSValue(v.type->getDefaultConstructor()));
                 }
                 break;
-            case NewObjectOp:
+            case NewInstanceOp:
                 {
                     JSValue v = mStack.back();
                     mStack.pop_back();
@@ -883,6 +883,11 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     JSType *type = v.type;
                     mStack.push_back(JSValue(type->newInstance(this)));
                     mStack.push_back(v);    // keep type on top of stack
+                }
+                break;
+            case NewObjectOp:
+                {
+                    mStack.push_back(JSValue(Object_Type->newInstance(this)));
                 }
                 break;
             case GetLocalVarOp:
@@ -1090,10 +1095,16 @@ void ScopeChain::collectNames(StmtNode *p)
                     else {
                         switch (f->function.prefix) {
                         case FunctionName::Get:
-                            defineGetterMethod(name, f->attributes, NULL, fnc);
+                            if (isStatic)
+                                defineStaticGetterMethod(name, f->attributes, NULL, fnc);
+                            else
+                                defineGetterMethod(name, f->attributes, NULL, fnc);
                             break;
                         case FunctionName::Set:
-                            defineSetterMethod(name, f->attributes, NULL, fnc);
+                            if (isStatic)
+                                defineStaticSetterMethod(name, f->attributes, NULL, fnc);
+                            else
+                                defineSetterMethod(name, f->attributes, NULL, fnc);
                             break;
                         case FunctionName::normal:
                             if (isStatic)
@@ -1170,6 +1181,11 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
             if ((PROPERTY_KIND(i) == Method) 
                     || (PROPERTY_KIND(i) == Constructor))
                 PROPERTY_INDEX(i) += super_vTableCount;
+            else
+                if (PROPERTY_KIND(i) == IndexPair) {
+                    PROPERTY_GETTERI(i) += super_vTableCount;
+                    PROPERTY_SETTERI(i) += super_vTableCount;
+                }
         }
         mMethods.insert(mMethods.begin(), 
                             super->mMethods.begin(), 
@@ -1288,8 +1304,6 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     s = s->next;
                 }
             }
-            // too late !!! the methods have already been granted their
-            // vtable indices (same goes for fields)
             thisClass->completeClass(this, mScopeChain, superClass);
 
             mScopeChain->popScope();

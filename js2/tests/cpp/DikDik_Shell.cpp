@@ -67,6 +67,12 @@ static void initConsole(StringPtr consoleName,
 using namespace JavaScript::JS2Runtime;
 #endif
 
+
+JavaScript::World world;
+JavaScript::Arena a;
+JSObject globalObject;
+Context cx(&globalObject, world);
+
 namespace JavaScript {
 namespace Shell {
 
@@ -85,7 +91,6 @@ static bool promptLine(LineReader &inReader, string &s, const char *prompt)
     return inReader.readLine(s) != 0;
 }
 
-World world;
 
 /* "filename" of the console */
 const String ConsoleName = widenCString("<console>");
@@ -116,21 +121,12 @@ JSValue debug(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     return kUndefinedValue;
 }
 
-
-static void readEvalPrint(FILE *in, World &world)
+static void readEvalPrint(FILE *in)
 {
-            Arena a;
+
     String buffer;
     string line;
     LineReader inReader(in);
-
-    JSObject globalObject;
-    Context cx(&globalObject, world);
-
-    globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
-    globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
-    globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
-
     while (promptLine(inReader, line, buffer.empty() ? "dd> " : "> ")) {
         appendChars(buffer, line.data(), line.size());
         try {
@@ -197,18 +193,45 @@ static void readEvalPrint(FILE *in, World &world)
 } /* namespace JavaScript */
 
 
-#if defined(XP_MAC) && !defined(XP_MAC_MPW)
+bool processArgs(int argc, char **argv)
+{
+    bool doInteractive = true;
+    for (int i = 0; i < argc; i++)  {    
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) {
+            case 'f':
+                {
+                    cx.readEvalFile(JavaScript::widenCString(argv[++i]));
+                    doInteractive = false;
+                }
+                break;
+            }
+        }
+
+    }
+    return doInteractive;
+}
+
+
 int main(int argc, char **argv)
 {
+#if defined(XP_MAC) && !defined(XP_MAC_MPW)
     initConsole("\pJavaScript Shell", "Welcome to the js2 shell.\n", argc, argv);
-#else
-int main(int , char **)
-{
 #endif
 
     using namespace JavaScript;
     using namespace Shell;
 
-    readEvalPrint(stdin, world);
+
+    globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
+    globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
+    globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
+
+    bool doInteractive = true;
+    if (argc > 1) {
+        doInteractive = processArgs(argc - 1, argv + 1);
+    }
+    if (doInteractive)
+        readEvalPrint(stdin);
     return 0;
 }

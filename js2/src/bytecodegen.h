@@ -90,7 +90,8 @@ namespace ByteCode {
         ReturnVoidOp,           //                     <function> <args> -->
 
         GetConstructorOp,       //                     <type> --> <function> 
-        NewObjectOp,            //                     <type> --> <object> <type>
+        NewObjectOp,            //                     --> <object>
+        NewInstanceOp,          //                     <type> --> <object> <type>
         TypeOfOp,               //                     <object> --> <string>
 
         ToBooleanOp,            //                     <object> --> <boolean>
@@ -122,6 +123,7 @@ namespace ByteCode {
         GetMethodRefOp,         // <slot>              <base> --> <bound function> 
         // for static methods
         GetStaticMethodOp,      // <slot>              <base> --> <function>
+        GetStaticMethodRefOp,   // <slot>              <base> --> <bound function> 
 
         // for argumentz
         GetArgOp,               // <index>             --> <object>
