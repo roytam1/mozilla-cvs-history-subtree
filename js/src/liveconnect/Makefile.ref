@@ -85,20 +85,20 @@ endif
 
 ifdef JS_THREADSAFE
 ifdef USE_MSVC
-OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr21.lib
+OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr3.lib
 else
-OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
+OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr3
 endif
 endif
 
 ifdef USE_MSVC
 LIBRARY = $(OBJDIR)/jsj.lib
 SHARED_LIBRARY = $(OBJDIR)/jsj.dll
-PROGRAM = $(OBJDIR)/jsj.exe
+PROGRAM = $(OBJDIR)/lcshell.exe
 else
 LIBRARY = $(OBJDIR)/libjsj.a
 SHARED_LIBRARY = $(OBJDIR)/libjsj.$(SO_SUFFIX)
-PROGRAM = $(OBJDIR)/jsj
+PROGRAM = $(OBJDIR)/lcshell
 endif
 
 include $(DEPTH)/rules.mk

@@ -4,7 +4,7 @@ ifndef OBJDIR
   endif
 endif
 
-NSPR_VERSION     = v3.0
+NSPR_VERSION     = v3.1beta
 NSPR_LOCAL       = $(MOZ_DEPTH)/dist/$(OBJDIR)/nspr
 NSPR_DIST        = $(MOZ_DEPTH)/dist/$(OBJDIR)
 NSPR_OBJDIR      = $(OBJDIR)
@@ -14,24 +14,26 @@ endif
 ifeq ($(OS_ARCH), Linux)
   LINUX_REL     := $(shell uname -r)
   ifneq (,$(findstring 2.0,$(LINUX_REL)))
-    NSPR_OBJDIR := $(subst _All,2.0.35_x86_PTH,$(NSPR_OBJDIR))
+    NSPR_OBJDIR := $(subst _All,2.0_x86_glibc_PTH,$(NSPR_OBJDIR))
   else
-    NSPR_OBJDIR := $(subst _All,2.1.108_x86_PTH,$(NSPR_OBJDIR))
+    NSPR_OBJDIR := $(subst _All,2.2_x86_glibc_PTH,$(NSPR_OBJDIR))
   endif
 endif
 ifeq ($(OS_ARCH), AIX)
   NSPR_OBJDIR   := $(subst 4.1,4.2,$(NSPR_OBJDIR))
 endif
+ifeq ($(OS_CONFIG), IRIX6.2)
+  NSPR_OBJDIR   := $(subst 6.2,6.2_n32_PTH,$(NSPR_OBJDIR))
+endif
 ifeq ($(OS_CONFIG), IRIX6.5)
   NSPR_OBJDIR   := $(subst 6.5,6.5_n32_PTH,$(NSPR_OBJDIR))
 endif
 ifeq ($(OS_ARCH), WINNT)
-  NSPR_OBJDIR   := $(subst WINNT,WIN95,$(NSPR_OBJDIR))
   ifeq ($(OBJDIR), WIN32_D.OBJ)
-    NSPR_OBJDIR  = WIN954.0_DBG.OBJ
+    NSPR_OBJDIR  = WINNT4.0_DBG.OBJ
   endif
   ifeq ($(OBJDIR), WIN32_O.OBJ)
-    NSPR_OBJDIR  = WIN954.0_OPT.OBJ
+    NSPR_OBJDIR  = WINNT4.0_OPT.OBJ
   endif
 endif
 NSPR_SHARED      = /share/builds/components/nspr20/$(NSPR_VERSION)/$(NSPR_OBJDIR)
@@ -68,17 +70,11 @@ SHIP_LIBS      = libjs.$(SO_SUFFIX) libjs.a
 ifdef JS_LIVECONNECT
   SHIP_LIBS   += libjsj.$(SO_SUFFIX) libjsj.a
 endif
-# ifdef JS_THREADSAFE
-#   SHIP_LIBS += libnspr21.$(SO_SUFFIX)
-# endif
 ifeq ($(OS_ARCH), WINNT)
   SHIP_LIBS    = js32.dll js32.lib
   ifdef JS_LIVECONNECT
     SHIP_LIBS += jsj.dll jsj.lib
   endif
-#   ifdef JS_THREADSAFE
-#     SHIP_LIBS += libnspr21.dll
-#   endif
 endif
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
@@ -90,7 +86,7 @@ SHIP_INCS     := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
 
 SHIP_BINS      = js
 ifdef JS_LIVECONNECT
-  SHIP_BINS   += jsj
+  SHIP_BINS   += lcshell
 endif
 ifeq ($(OS_ARCH), WINNT)
   SHIP_BINS   := $(addsuffix .exe, $(SHIP_BINS))

@@ -21,12 +21,14 @@
 
 AS = as
 ifndef NS_USE_NATIVE
-CC = gcc
-CCC = g++
-CFLAGS +=  -Wall -Wno-format
+  CC = gcc
+  CCC = g++
+  CFLAGS +=  -Wall -Wno-format
 else
-CC = cc
-CCC = CC
+  CC = cc
+  CCC = CC
+  CFLAGS += -mt -Kpic
+#  LD = CC
 endif
 
 RANLIB = echo
@@ -58,8 +60,7 @@ endif
 endif
 endif
 endif
-
-MKSHLIB = $(LD) -G
-
 # Use the editline library to provide line-editing support.
 JS_EDITLINE = 1
+
+MKSHLIB = $(LD) -G
