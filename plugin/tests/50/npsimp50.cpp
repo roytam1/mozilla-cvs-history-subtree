@@ -106,13 +106,13 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from NPIPlugin:
 
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     NewInstance(NPIPluginInstancePeer* peer, NPIPluginInstance* *result);
 
 #ifdef XP_UNIX
 
     // (Corresponds to NPP_GetMIMEDescription.)
-    virtual char* NP_LOADDS
+    NS_IMETHOD_(char*)
     GetMIMEDescription(void);
 
 #endif /* XP_UNIX */
@@ -143,11 +143,11 @@ public:
 
     // The Release method on NPIPluginInstance corresponds to NPP_Destroy.
     
-    virtual NPIPluginInstancePeer* NP_LOADDS
+    NS_IMETHOD_(NPIPluginInstancePeer*)
     GetPeer(void);
 
     // See comment for NPIPlugin::NewInstance, above.
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     Start(void);
 
     // The old NPP_Destroy call has been factored into two plugin instance methods:
@@ -159,39 +159,39 @@ public:
     // Release -- called once, before the plugin instance peer is to be destroyed.
     // This method is used to destroy the plugin instance.
 
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     Stop(void);
 
     // (Corresponds to NPP_SetWindow.)
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     SetWindow(NPPluginWindow* window);
 
     // XXX Should this return a void* or nsISupports*, and the caller be
     // required to QueryInterface for a NPIPluginStream*? That way we can
     // allow other stream implementations later.
     // (Corresponds to NPP_NewStream.)
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     NewStream(NPIPluginStreamPeer* peer, NPIPluginStream* *result);
 
     // (Corresponds to NPP_Print.)
-    virtual void NP_LOADDS
+    NS_IMETHOD_(void)
     Print(NPPluginPrint* platformPrint);
 
     // (Corresponds to NPP_HandleEvent.)
-    virtual PRInt16 NP_LOADDS
+    NS_IMETHOD_(PRInt16)
     HandleEvent(NPPluginEvent* event);
 
     // (Corresponds to NPP_URLNotify.)
-    virtual void NP_LOADDS
+    NS_IMETHOD_(void)
     URLNotify(const char* url, const char* target,
               NPPluginReason reason, void* notifyData);
 
     // (Corresponds to NPP_GetValue.)
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     GetValue(NPPluginVariable variable, void *value);
 
     // (Corresponds to NPP_SetValue.)
-    virtual NPPluginError NP_LOADDS
+    NS_IMETHOD_(NPPluginError)
     SetValue(NPPluginManagerVariable variable, void *value);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -233,25 +233,25 @@ public:
     // from NPIStream:
 
     // (Corresponds to NPP_WriteReady.)
-    virtual PRInt32 NP_LOADDS
+    NS_IMETHOD_(PRInt32)
     WriteReady(void);
 
     // (Corresponds to NPP_Write and NPN_Write.)
-    virtual PRInt32 NP_LOADDS
+    NS_IMETHOD_(PRInt32)
     Write(PRInt32 len, void* buffer);
 
     ////////////////////////////////////////////////////////////////////////////
     // from NPIPluginStream:
 
     // (Corresponds to NPP_StreamAsFile.)
-    virtual void NP_LOADDS
+    NS_IMETHOD_(void)
     AsFile(const char* fname);
 
-    virtual NPIPluginStreamPeer* NP_LOADDS
+    NS_IMETHOD_(NPIPluginStreamPeer*)
     GetPeer(void);
 
     // (Corresponds to NPP_NewStream's stype return parameter.)
-    virtual NPStreamType NP_LOADDS
+    NS_IMETHOD_(NPStreamType)
     GetStreamType(void);
 
 protected:

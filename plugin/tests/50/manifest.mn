@@ -1,0 +1,9 @@
+DEPTH         = ../../..
+
+MODULE        = npsimp50
+
+CPPSRCS       = npsimp50.cpp    \
+                $(NULL)
+
+REQUIRES      = xpcom
+

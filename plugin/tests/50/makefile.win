@@ -1,0 +1,61 @@
+DEPTH=..\..\..
+
+MAKE_OBJ_TYPE=DLL
+
+#//------------------------------------------------------------------------
+#//
+#// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
+#//
+#//------------------------------------------------------------------------
+DLLNAME=$(MODULE).dll
+PDBFILE=$(MODULE).pdb
+MAPFILE=$(MODULE).map
+DEFFILE=$(MODULE).def
+RESFILE=$(MODULE).res
+
+#//------------------------------------------------------------------------
+#//
+#// Define any Public Targets here (ie. PROGRAM, LIBRARY, DLL, ...)
+#// (these must be defined before the common makefiles are included)
+#//
+#//------------------------------------------------------------------------
+
+DLL=.\$(OBJDIR)\$(DLLNAME)
+
+#//------------------------------------------------------------------------
+#//
+#// Additional libs
+#//
+#//------------------------------------------------------------------------
+LLIBS=  $(LLIBS) $(DIST)\lib\xpcom32.lib
+
+
+#//------------------------------------------------------------------------
+#//
+#// Include the common makefile rules
+#//
+#//------------------------------------------------------------------------
+include <$(DEPTH)\config\rules.mak>
+
+LINCS=  $(LINCS)                        \
+        -I$(XPDIST)\public\xpcom        \
+        -I$(XPDIST)\public\java         \
+!ifdef PLUGIN_MODULE
+        -I$(DEPTH)\plugin\src           \
+!else
+        -I$(DEPTH)\lib\plugin           \
+!endif
+        $(NULL)
+
+
+install:: $(DLL)
+
+
+#//------------------------------------------------------------------------
+#//
+#// A special shortcut target to copy it into the Win32 debug "plugins"
+#// directory.
+#//
+#//------------------------------------------------------------------------
+copy:
+        $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME) $(NSTOMOZ_DEPTH)\cmd\winfe\mkfiles32\x86dbg\plugins\nsjvm\

@@ -20,6 +20,7 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>
+#include "prtypes.h"
 #include "npapi.h"
 #include "npupp.h"
 
@@ -153,8 +154,8 @@ NPP_GetValue(void *future, NPPVariable variable, void *value)
  * NPP_Shutdown will be called, where you can release any memory or
  * resources allocated by NPP_Initialize. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
-NPError
-NP_Initialize(void)
+NPError OSCALL
+NP_Initialize(NPNetscapeFuncs* p)
 {
     fprintf(log, "NP_Initialize()\n");
     return NPERR_NO_ERROR;
@@ -170,15 +171,16 @@ NP_Initialize(void)
  * you're not using your java class any more. This allows java to unload
  * it, freeing up memory.
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
-void
+NPError OSCALL
 NP_Shutdown(void)
 {
     fprintf(log, "NP_Shutdown()\n");
     fclose(log);
+    return NPERR_NO_ERROR;
 }
 
 
-NPError
+NPError OSCALL
 NP_GetEntryPoints(NPPluginFuncs* p)
 {
     log = fopen("npsimp40.log", "w");

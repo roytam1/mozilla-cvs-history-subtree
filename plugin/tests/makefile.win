@@ -1,64 +1,30 @@
-PLUGINDIR=$(MOZ_SRC)\mozilla\cmd\winfe\mkfiles32\x86dbg\plugins
-
-DEFINES=        /DXP_PC
-
-INCLUDES=       -I$(MOZ_SRC)\mozilla\include                  \
-                -I$(MOZ_SRC)\mozilla\dist\public\xpcom        \
-                -I$(MOZ_SRC)\mozilla\dist\public\java         \
-                -I$(MOZ_SRC)\mozilla\plugin\src               \
-                -I$(MOZ_SRC)\mozilla\dist\win32_d.obj\include \
-                $(NULL)
-
-CPPFLAGS=       /W3 /GX $(DEFINES) $(INCLUDES) $(OPTIMIZER) 
-CFLAGS=         /W3 /GX $(DEFINES) $(INCLUDES) $(OPTIMIZER)
-
-LINK=           link
-LFLAGS=         /MACHINE:IX86
-LIBS=           kernel32.lib gdi32.lib user32.lib
-
-!if !defined(NODEBUG)
-OPTIMIZER=      /Z7 /Od /DDEBUG /D_DEBUG
-LFLAGS=         $(LFLAGS) /DEBUG /DEBUGTYPE:CV /PDB:NONE
-!endif
-
-########################################################################
+# -*- Mode: Makefile -*-
 #
-# Top-level build targets
+# The contents of this file are subject to the Netscape Public License
+# Version 1.0 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 #
-
-all:    npsimp50.dll npsimp40.dll
-
-clean:
-        del *.obj *.dll *.res *.lib *.exp *~
-
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
 #
-# Install the DLLs into the plugin directory
-#
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
 
-install: npsimp50.dll npsimp40.dll
-!if !exists($(PLUGINDIR))
-        mkdir $(PLUGINDIR)
-!endif
-        copy npsimp40.dll $(PLUGINDIR)
-        copy npsimp50.dll $(PLUGINDIR)
+#//------------------------------------------------------------------------
+#//
+#// Specify the depth of the current directory relative to the
+#// root of mozilla
+#//
+#//------------------------------------------------------------------------
+DEPTH=..\..
 
-########################################################################
-#
-# Link the DLLs
-#
+DIRS=40 50
 
-npsimp40.dll:   npsimp40.obj npsimp40.res npsimp40.def
-        $(LINK) /DLL $(LFLAGS) /DEF:npsimp40.def /OUT:$@ $(LIBS) npsimp40.obj npsimp40.res
+include <$(DEPTH)/config/rules.mak>
 
-npsimp50.dll: npsimp50.obj npsimp50.res npsimp50.def
-        $(LINK) /DLL $(LFLAGS) /DEF:npsimp50.def /OUT:$@ $(LIBS) npsimp50.obj npsimp50.res
 
-########################################################################
-#
-# Source dependencies
-#
-
-npsimp40.res:   npsimp40.rc
-npsimp40.obj:   npsimp40.c
-npsimp50.res:   npsimp50.rc
-npsimp50.obj:   npsimp50.cpp

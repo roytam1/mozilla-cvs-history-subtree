@@ -1,0 +1,9 @@
+DEPTH         = ../../..
+
+MODULE        = npsimp40
+
+CSRCS         = npsimp40.c      \
+                $(NULL)
+
+
+
