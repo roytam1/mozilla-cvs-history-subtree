@@ -332,8 +332,10 @@ nsPrintingPromptService::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest 
     if (aStateFlags & STATE_STOP) 
     {
         mWebProgressListener->OnStateChange(aWebProgress, aRequest, aStateFlags, aStatus);
-        mPrintProgress->CloseProgressDialog(PR_TRUE);
-        mPrintProgress = nsnull;
+        if (mPrintProgress) {
+          mPrintProgress->CloseProgressDialog(PR_TRUE);
+          mPrintProgress = nsnull;
+        }
     }
     return NS_OK;
 }
