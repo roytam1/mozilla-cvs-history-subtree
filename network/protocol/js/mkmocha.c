@@ -31,6 +31,7 @@
 #include <time.h>
 #include "net.h"
 #include "netstream.h"
+#include "cstream.h"
 #include "libmocha.h"
 #include "jsurl.h"
 #include "libevent.h"
