@@ -55,8 +55,13 @@ MyListener::OnDataAvailable(nsIRequest *req, nsISupports *ctxt,
     PRUint32 bytesRead=0;
 
     while (count) {
-        rv = stream->Read(buf, sizeof(buf), &bytesRead);
-        if (NS_FAILED(rv)) return rv;
+        PRUint32 amount = PR_MIN(count, sizeof(buf));
+
+        rv = stream->Read(buf, amount, &bytesRead);
+        if (NS_FAILED(rv)) {
+            printf(">>> stream->Read failed with rv=%x\n", rv);
+            return rv;
+        }
 
         fwrite(buf, 1, bytesRead, stdout);
 

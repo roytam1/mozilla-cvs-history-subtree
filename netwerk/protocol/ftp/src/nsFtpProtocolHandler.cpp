@@ -45,8 +45,7 @@
 #include "nsNetUtil.h"
 
 // For proxification of FTP URLs
-#include "nsIHTTPProtocolHandler.h"
-#include "nsIHTTPChannel.h"
+#include "nsIHttpProtocolHandler.h"
 #include "nsIErrorService.h" 
 
 #if defined(PR_LOGGING)
@@ -68,7 +67,7 @@ PRLogModuleInfo* gFTPLog = nsnull;
 static NS_DEFINE_IID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID,       NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
-static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
+static NS_DEFINE_CID(kHttpHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 static NS_DEFINE_CID(kErrorServiceCID, NS_ERRORSERVICE_CID);
 
 nsSupportsHashtable* nsFtpProtocolHandler::mRootConnectionList = nsnull;
@@ -177,13 +176,15 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
         if (NS_FAILED(rv)) return rv;
     }
     
+    // XXX replace with new proxy code
+#if 0
     useProxy = PR_FALSE;
     if (NS_SUCCEEDED(channel->GetUsingProxy(&useProxy)) && useProxy) {
         
         nsCOMPtr<nsIChannel> proxyChannel;
         // if an FTP proxy is enabled, push things off to HTTP.
         
-        nsCOMPtr<nsIHTTPProtocolHandler> httpHandler = do_GetService(kHTTPHandlerCID, &rv);
+        nsCOMPtr<nsIHttpProtocolHandler> httpHandler = do_GetService(kHttpHandlerCID, &rv);
         if (NS_FAILED(rv)) return rv;
         
         // rjc says: the dummy URI (for the HTTP layer) needs to be a syntactically valid URI
@@ -229,6 +230,7 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
         
         rv = channel->SetProxyChannel(proxyChannel);
     }
+#endif
     
     *result = channel;
     return rv;

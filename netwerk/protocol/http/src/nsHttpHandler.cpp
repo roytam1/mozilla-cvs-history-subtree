@@ -45,7 +45,7 @@ nsHttpHandler::nsHttpHandler()
     NS_INIT_ISUPPORTS();
 
 #if defined(PR_LOGGING)
-    gHttpLog = PR_NewLogModule("nsHttp2");
+    gHttpLog = PR_NewLogModule("nsHttp");
 #endif
 
     LOG(("Creating nsHttpHandler [this=%x].\n", this));
@@ -76,6 +76,30 @@ nsHttpHandler::~nsHttpHandler()
     }
 
     mGlobalInstance = nsnull;
+}
+
+NS_METHOD
+nsHttpHandler::Create(nsISupports *outer, REFNSIID iid, void **result)
+{
+    nsresult rv;
+    if (outer)
+        return NS_ERROR_NO_AGGREGATION;
+    nsHttpHandler *handler = get();
+    if (!handler) {
+        // create the one any only instance of nsHttpHandler
+        NS_NEWXPCOM(handler, nsHttpHandler);
+        if (!handler)
+            return NS_ERROR_OUT_OF_MEMORY;
+        rv = handler->Init();
+        if (NS_FAILED(rv)) {
+            NS_DELETEXPCOM(handler);
+            return rv;
+        }
+    }
+    NS_ADDREF(handler);
+    rv = handler->QueryInterface(iid, result);
+    NS_RELEASE(handler);
+    return rv;
 }
 
 nsresult
@@ -959,7 +983,7 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
     PRBool isHttp = PR_FALSE, isHttps = PR_FALSE;
 
     // Verify that we have been given a valid scheme
-    nsresult rv = aURI->SchemeIs("http2", &isHttp);
+    nsresult rv = aURI->SchemeIs("http", &isHttp);
     if (NS_FAILED(rv)) return rv;
     if (!isHttp) {
         rv = aURI->SchemeIs("https", &isHttps);

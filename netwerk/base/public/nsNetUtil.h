@@ -41,7 +41,6 @@
 #include "nsITransport.h"
 #include "nsMemory.h"
 #include "nsCOMPtr.h"
-#include "nsIHTTPProtocolHandler.h"
 #include "nsIDownloader.h"
 #include "nsIStreamLoader.h"
 #include "nsIStreamIO.h"
@@ -213,6 +212,7 @@ NS_MakeAbsoluteURI(nsAWritableString& result,
     return rv;
 }
 
+#if 0
 inline nsresult
 NS_NewPostDataStream(nsIInputStream **result,
                      PRBool isFile,
@@ -238,6 +238,7 @@ NS_NewPostDataStream(nsIInputStream **result,
     
     return http->NewPostDataStream(isFile, data, encodeFlags, result);
 }
+#endif
 
 inline nsresult
 NS_NewStreamIOChannel(nsIStreamIOChannel **result,

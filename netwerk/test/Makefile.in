@@ -38,15 +38,16 @@ CPPSRCS		= \
 		TestSocketTransport.cpp \
 		TestFileInput.cpp \
 		TestFileTransport.cpp \
-		TestProtocols.cpp \
 		urltest.cpp \
 		TestFileInput2.cpp \
 		TestRes.cpp \
 		TestCallbacks.cpp \
-        TestSyncHTTP.cpp \
 		TestDBMAccess.cpp \
         TestHttp.cpp \
 		$(NULL)
+
+# TestProtocols.cpp \
+# TestSyncHTTP.cpp \
 
 ifdef MOZ_NEW_CACHE
 CPPSRCS += \

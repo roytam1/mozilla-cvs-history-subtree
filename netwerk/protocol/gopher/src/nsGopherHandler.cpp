@@ -32,8 +32,8 @@
 #include "nsIServiceManager.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIProgressEventSink.h"
-#include "nsIHTTPProtocolHandler.h"
-#include "nsIHTTPChannel.h"
+//#include "nsIHTTPProtocolHandler.h"
+//#include "nsIHTTPChannel.h"
 #include "nsIErrorService.h"
 #include "nsNetUtil.h"
 #include "prlog.h"
@@ -44,7 +44,7 @@ PRLogModuleInfo* gGopherLog = nsnull;
 
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
-static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
+//static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -140,6 +140,7 @@ nsGopherHandler::NewChannel(nsIURI* url, nsIChannel* *result)
         if (NS_FAILED(rv)) return rv;
     }
 
+#if 0
     useProxy = PR_FALSE;
     if (NS_SUCCEEDED(channel->GetUsingProxy(&useProxy)) && useProxy) {
         nsCOMPtr<nsIChannel> proxyChannel;
@@ -194,6 +195,7 @@ nsGopherHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 
         rv = channel->SetProxyChannel(proxyChannel);
     }
+#endif
     
     *result = channel;
     return rv;
