@@ -1448,7 +1448,8 @@ nsScriptSecurityManager::CheckXPCCapability(JSContext *aJSContext, const char *a
 NS_IMETHODIMP
 nsScriptSecurityManager::CanCreateWrapper(JSContext *aJSContext, 
                                           const nsIID &aIID, 
-                                          nsISupports *aObj)
+                                          nsISupports *aObj,
+                                          void **aPolicy)
 {
     // XXX could un-special-case-this
     if (aIID.Equals(NS_GET_IID(nsIXPCException)))
@@ -1505,10 +1506,10 @@ nsScriptSecurityManager::CanGetService(JSContext *aJSContext,
 
 // Result of this function should not be freed.
 static const PRUnichar *
-JSIDToString(JSContext *aJSContext, const jsid id) {
-    jsval v;
-    JS_IdToValue(aJSContext, id, &v);
-    JSString *str = JS_ValueToString(aJSContext, v);
+JSValIDToString(JSContext *aJSContext, const jsval idval) {
+    JSString *str = JS_ValueToString(aJSContext, idval);
+    if(!str)
+        return nsnull;
     return NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(str));
 }
 
@@ -1518,7 +1519,8 @@ nsScriptSecurityManager::CanCallMethod(JSContext *aJSContext,
                                        nsISupports *aObj, 
                                        nsIInterfaceInfo *aInterfaceInfo, 
                                        PRUint16 aMethodIndex, 
-                                       const jsid aName)
+                                       jsval aName,
+                                       void **aPolicy)
 {
     nsresult rv;
     rv = CheckXPCPermissions(aJSContext, aObj);
@@ -1533,7 +1535,7 @@ nsScriptSecurityManager::CanCallMethod(JSContext *aJSContext,
     nsXPIDLCString capability;
     if (NS_SUCCEEDED(rv) && checkedComponent) {
         checkedComponent->CanCallMethod((const nsIID *)&aIID,
-                                             JSIDToString(aJSContext, aName),
+                                             JSValIDToString(aJSContext, aName),
                                              getter_Copies(capability));
     }
 
@@ -1546,7 +1548,8 @@ nsScriptSecurityManager::CanGetProperty(JSContext *aJSContext,
                                         nsISupports *aObj, 
                                         nsIInterfaceInfo *aInterfaceInfo, 
                                         PRUint16 aMethodIndex, 
-                                        const jsid aName)
+                                        jsval aName,
+                                        void **aPolicy)
 {
     nsresult rv;
     rv = CheckXPCPermissions(aJSContext, aObj);
@@ -1561,7 +1564,7 @@ nsScriptSecurityManager::CanGetProperty(JSContext *aJSContext,
     nsXPIDLCString capability;
     if (NS_SUCCEEDED(rv) && checkedComponent) {
         checkedComponent->CanGetProperty((const nsIID *)&aIID,
-                                         JSIDToString(aJSContext, aName),
+                                         JSValIDToString(aJSContext, aName),
                                          getter_Copies(capability));
     }
 
@@ -1574,7 +1577,8 @@ nsScriptSecurityManager::CanSetProperty(JSContext *aJSContext,
                                         nsISupports *aObj, 
                                         nsIInterfaceInfo *aInterfaceInfo, 
                                         PRUint16 aMethodIndex, 
-                                        const jsid aName)
+                                        jsval aName,
+                                        void **aPolicy)
 {
     nsresult rv;
     rv = CheckXPCPermissions(aJSContext, aObj);
@@ -1589,7 +1593,7 @@ nsScriptSecurityManager::CanSetProperty(JSContext *aJSContext,
     nsXPIDLCString capability;
     if (NS_SUCCEEDED(rv) && checkedComponent) {
         checkedComponent->CanSetProperty((const nsIID *)&aIID,
-                                         JSIDToString(aJSContext, aName),
+                                         JSValIDToString(aJSContext, aName),
                                          getter_Copies(capability));
     }
 
