@@ -67,15 +67,8 @@ rm -rf $RPM_BUILD_ROOT
 %dir /opt/sun/private/include
 %dir /opt/sun/private/include/nspr
 %dir /opt/sun/private/include/nspr/obsolete
-%dir /opt/sun/private/include/nspr/private
-/opt/sun/private/include/nspr/private/pprio.h
-/opt/sun/private/include/nspr/private/pprthred.h
-/opt/sun/private/include/nspr/private/prpriv.h
 /opt/sun/private/include/nspr/prcpucfg.h
-/opt/sun/private/include/nspr/obsolete/pralarm.h
-/opt/sun/private/include/nspr/obsolete/probslet.h
 /opt/sun/private/include/nspr/obsolete/protypes.h
-/opt/sun/private/include/nspr/obsolete/prsem.h
 /opt/sun/private/include/nspr/nspr.h
 /opt/sun/private/include/nspr/pratom.h
 /opt/sun/private/include/nspr/prbit.h
