@@ -1,0 +1,45 @@
+// Version and other manually edited resources for slapd
+//
+
+/////////////////////////////////////////////////////////////////////////////
+//
+#include "dirver.h"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION VERSION
+ PRODUCTVERSION PRODUCT
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x9L
+#else
+ FILEFLAGS 0x8L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Netscape Communications Corporation\0"
+            VALUE "FileDescription", "slapd.exe\0"
+            VALUE "FileVersion", VERSIONTEXT
+            VALUE "InternalName", "slapd.exe\0"
+            VALUE "LegalCopyright", "Copyright \251 1997\0"
+            VALUE "OriginalFilename", "slapd.exe\0"
+            VALUE "PrivateBuild", "Netscape Directory Server " PRODUCTTEXT
+            VALUE "ProductName", "Netscape Directory Server " PRODUCTTEXT
+            VALUE "ProductVersion", PRODUCTTEXT
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

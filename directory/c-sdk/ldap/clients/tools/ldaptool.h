@@ -1,0 +1,130 @@
+#ifndef _LDAPTOOL_H
+#define _LDAPTOOL_H
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+#ifdef AIX
+#include <strings.h>
+#endif
+
+
+#ifdef SCOOS
+#include <sys/types.h>
+#endif
+
+#ifdef _WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+extern int getopt (int argc, char *const *argv, const char *optstring);
+#else
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
+#include <ctype.h>
+
+#ifndef SCOOS
+#include <sys/types.h>
+#endif
+
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#if defined(NET_SSL)
+#include <ssl.h>
+#endif
+
+
+#include <portable.h>
+
+#include <ldap.h>
+#ifndef NO_LIBLCACHE
+#include <lcache.h>
+#endif
+
+#include <ldaplog.h>
+#include <ldif.h>
+
+#if defined(NET_SSL)
+#include <ldap_ssl.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/*
+ * shared macros, structures, etc.
+ */
+#define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
+#define LDAPTOOL_DEFHOST	"localhost"
+
+#define LDAPTOOL_SAFEREALLOC( ptr, size )  ( ptr == NULL ? malloc( size ) : \
+						realloc( ptr, size ))
+/* this defines the max number of control requests for the tools */
+#define CONTROL_REQUESTS 5
+
+/*
+ * globals (defined in common.c)
+ */
+extern char		*ldaptool_host;
+extern char		*ldaptool_host2;
+extern int		ldaptool_port;
+extern int		ldaptool_port2;
+extern int		ldaptool_verbose;
+extern int		ldaptool_not;
+extern char		*ldaptool_progname;
+extern FILE		*ldaptool_fp;
+extern char		*ldaptool_charset;
+extern char		*ldaptool_convdir;
+extern LDAPControl	*ldaptool_request_ctrls[];
+
+
+/*
+ * function prototypes
+ */
+void ldaptool_common_usage( int two_hosts );
+int ldaptool_process_args( int argc, char **argv, char *extra_opts,
+	int two_hosts, void (*extra_opt_callback)( int option, char *optarg ));
+LDAP *ldaptool_ldap_init( int second_host );
+void ldaptool_bind( LDAP *ld );
+void ldaptool_cleanup( LDAP *ld );
+int ldaptool_print_lderror( LDAP *ld, char *msg, int check4ssl );
+#define LDAPTOOL_CHECK4SSL_NEVER	0
+#define LDAPTOOL_CHECK4SSL_ALWAYS	1
+#define LDAPTOOL_CHECK4SSL_IF_APPROP	2	/* if appropriate */
+LDAPControl *ldaptool_create_manage_dsait_control( void );
+void ldaptool_print_referrals( char **refs );
+int ldaptool_print_extended_response( LDAP *ld, LDAPMessage *res, char *msg );
+LDAPControl *ldaptool_create_proxyauth_control( LDAP *ld );
+void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
+void ldaptool_reset_control_array( LDAPControl **array );
+char *ldaptool_get_tmp_dir( void );
+char *ldaptool_local2UTF8( const char * );
+int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
+        const struct berval *cred, LDAPControl **serverctrls,
+        LDAPControl **clientctrls, struct berval **servercredp, char *msg );
+int ldaptool_simple_bind_s( LDAP *ld, const char *dn, const char *passwd,
+	LDAPControl **serverctrls, LDAPControl **clientctrls, char *msg );
+int ldaptool_add_ext_s( LDAP *ld, const char *dn, LDAPMod **attrs,
+        LDAPControl **serverctrls, LDAPControl **clientctrls, char *msg );
+int ldaptool_modify_ext_s( LDAP *ld, const char *dn, LDAPMod **mods,
+        LDAPControl **serverctrls, LDAPControl **clientctrls, char *msg );
+int ldaptool_delete_ext_s( LDAP *ld, const char *dn, LDAPControl **serverctrls,
+        LDAPControl **clientctrls, char *msg );
+int ldaptool_rename_s(  LDAP *ld, const char *dn, const char *newrdn,
+        const char *newparent, int deleteoldrdn, LDAPControl **serverctrls,
+        LDAPControl **clientctrls, char *msg );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* LDAPTOOL_H */

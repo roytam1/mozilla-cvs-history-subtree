@@ -1,23 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Netscape
+ * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
- *
- * Contributor(s): 
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -77,11 +73,20 @@
 int	lber_debug;
 #endif
 
+/*
+ * function prototypes
+ */
+static void nslberi_install_compat_io_fns( Sockbuf *sb );
+static int nslberi_extread_compat( int s, void *buf, int len,
+		struct lextiof_socket_private *arg );
+static int nslberi_extwrite_compat( int s, const void *buf, int len,
+		struct lextiof_socket_private *arg );
+
 
 /*
  * internal global structure for memory allocation callback functions
  */
-struct lber_memalloc_fns nslberi_memalloc_fns;
+static struct lber_memalloc_fns nslberi_memalloc_fns;
 
 
 /*
@@ -123,10 +128,12 @@ ber_filbuf( Sockbuf *sb, long len )
 		rc = -1;
 #endif /* CLDAP */
 	} else {
-		if ( sb->sb_read_fn != NULL ) {
-			rc = sb->sb_read_fn( sb->sb_sd, sb->sb_ber.ber_buf,
+		if ( sb->sb_ext_io_fns.lbextiofn_read != NULL ) {
+			rc = sb->sb_ext_io_fns.lbextiofn_read(
+			    sb->sb_sd, sb->sb_ber.ber_buf,
 			    ((sb->sb_options & LBER_SOCKBUF_OPT_NO_READ_AHEAD)
-			    && (len < READBUFSIZ)) ? len : READBUFSIZ );
+			    && (len < READBUFSIZ)) ? len : READBUFSIZ,
+			    sb->sb_ext_io_fns.lbextiofn_socket_arg );
 		} else {
 			rc = read( sb->sb_sd, sb->sb_ber.ber_buf,
 			    ((sb->sb_options & LBER_SOCKBUF_OPT_NO_READ_AHEAD)
@@ -321,7 +328,7 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 #endif
 #if !defined(macintosh) && !defined(DOS)
 	if ( sb->sb_options & (LBER_SOCKBUF_OPT_TO_FILE | LBER_SOCKBUF_OPT_TO_FILE_ONLY) ) {
-		rc = write( sb->sb_fd, ber->ber_buf, towrite );
+		rc = write( sb->sb_copyfd, ber->ber_buf, towrite );
 		if ( sb->sb_options & LBER_SOCKBUF_OPT_TO_FILE_ONLY ) {
 			return( (int)rc );
 		}
@@ -347,9 +354,11 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 			    return( -1 );
 			}
 		} else {
-			if ( sb->sb_write_fn != NULL ) {
-				if ( (rc = sb->sb_write_fn( sb->sb_sd,
-				    ber->ber_rwptr, (size_t) towrite )) <= 0 ) {
+			if ( sb->sb_ext_io_fns.lbextiofn_write != NULL ) {
+				if ( (rc = sb->sb_ext_io_fns.lbextiofn_write(
+				    sb->sb_sd, ber->ber_rwptr, (size_t)towrite,
+				    sb->sb_ext_io_fns.lbextiofn_socket_arg ))
+				    <= 0 ) {
 					return( -1 );
 				}
 			} else {
@@ -811,6 +820,8 @@ int
 LDAP_CALL
 ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 {
+	struct lber_x_ext_io_fns	*extiofns;
+
 	if ( !NSLBERI_VALID_SOCKBUF_POINTER( sb )) {
 		return( -1 );
 	}
@@ -832,13 +843,28 @@ ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 		sb->sb_sd = *((LBER_SOCKET *) value);
 		break;
 	case LBER_SOCKBUF_OPT_COPYDESC:
-		sb->sb_fd = *((LBER_SOCKET *) value);
+		sb->sb_copyfd = *((LBER_SOCKET *) value);
 		break;
 	case LBER_SOCKBUF_OPT_READ_FN:
-		sb->sb_read_fn = (LDAP_IOF_READ_CALLBACK *) value;
+		sb->sb_io_fns.lbiof_read = (LDAP_IOF_READ_CALLBACK *) value;
+		nslberi_install_compat_io_fns( sb );
 		break;
 	case LBER_SOCKBUF_OPT_WRITE_FN:
-		sb->sb_write_fn = (LDAP_IOF_WRITE_CALLBACK *) value;
+		sb->sb_io_fns.lbiof_write = (LDAP_IOF_WRITE_CALLBACK *) value;
+		nslberi_install_compat_io_fns( sb );
+		break;
+	case LBER_SOCKBUF_OPT_EXT_IO_FNS:
+		extiofns = (struct lber_x_ext_io_fns *) value;
+		if ( extiofns == NULL ) {	/* remove */
+			(void)memset( (char *)&sb->sb_ext_io_fns, '\0',
+				sizeof(sb->sb_ext_io_fns ));
+		} else if ( extiofns->lbextiofn_size
+		    == LBER_X_EXTIO_FNS_SIZE ) {
+			/* struct copy */
+			sb->sb_ext_io_fns = *extiofns;
+		} else {
+			return( -1 );
+		}
 		break;
 	default:
 		return( -1 );
@@ -854,6 +880,8 @@ int
 LDAP_CALL
 ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 {
+	struct lber_x_ext_io_fns	*extiofns;
+
 	if ( !NSLBERI_VALID_SOCKBUF_POINTER( sb )) {
 		return( -1 );
 	}
@@ -871,13 +899,24 @@ ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 		*((LBER_SOCKET *) value) = sb->sb_sd;
 		break;
 	case LBER_SOCKBUF_OPT_COPYDESC:
-		*((LBER_SOCKET *) value) = sb->sb_fd;
+		*((LBER_SOCKET *) value) = sb->sb_copyfd;
 		break;
 	case LBER_SOCKBUF_OPT_READ_FN:
-		*((LDAP_IOF_READ_CALLBACK **) value) = sb->sb_read_fn;
+		*((LDAP_IOF_READ_CALLBACK **) value)
+		    = sb->sb_io_fns.lbiof_read;
 		break;
 	case LBER_SOCKBUF_OPT_WRITE_FN:
-		*((LDAP_IOF_WRITE_CALLBACK **) value) = sb->sb_write_fn;
+		*((LDAP_IOF_WRITE_CALLBACK **) value)
+		    = sb->sb_io_fns.lbiof_write;
+		break;
+	case LBER_SOCKBUF_OPT_EXT_IO_FNS:
+		extiofns = (struct lber_x_ext_io_fns *) value;
+		if ( extiofns == NULL || extiofns->lbextiofn_size
+		    != LBER_X_EXTIO_FNS_SIZE ) {
+			return( -1 );
+		}
+		/* struct copy */
+		*extiofns = sb->sb_ext_io_fns;
 		break;
 	default:
 		return( -1 );
@@ -1010,7 +1049,6 @@ ber_get_next_buffer( void *buffer, size_t buffer_size, unsigned long *len,
 	unsigned char	lc;
 	long		rc;
 	int		noctets, diff;
-	int offset = 0;
 	byte_buffer sb = {0};
 
 
@@ -1239,3 +1277,51 @@ nslberi_free( void *ptr )
 		nslberi_memalloc_fns.lbermem_free( ptr );
 	}
 }
+
+
+/*
+ ******************************************************************************
+ * functions to bridge the gap between new extended I/O functions that are
+ *    installed using ber_sockbuf_set_option( ..., LBER_SOCKBUF_OPT_EXT_IO_FNS,
+ *    ... ).
+ *
+ * the basic strategy is to use the new extended arg to hold a pointer to the
+ *    Sockbuf itself so we can find the old functions and call them.
+ * note that the integer socket s passed in is not used.  we use the sb_sd
+ *    from the Sockbuf itself because it is the correct type.
+ */
+static int
+nslberi_extread_compat( int s, void *buf, int len,
+	struct lextiof_socket_private *arg )
+{
+	Sockbuf	*sb = (Sockbuf *)arg;
+
+	return( sb->sb_io_fns.lbiof_read( sb->sb_sd, buf, len ));
+}
+
+
+static int
+nslberi_extwrite_compat( int s, const void *buf, int len,
+	struct lextiof_socket_private *arg )
+{
+	Sockbuf	*sb = (Sockbuf *)arg;
+
+	return( sb->sb_io_fns.lbiof_write( sb->sb_sd, buf, len ));
+}
+
+
+/*
+ * Install I/O compatiblity functions.  This can't fail.
+ */
+static void
+nslberi_install_compat_io_fns( Sockbuf *sb )
+{
+	sb->sb_ext_io_fns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
+	sb->sb_ext_io_fns.lbextiofn_read = nslberi_extread_compat;
+	sb->sb_ext_io_fns.lbextiofn_write = nslberi_extwrite_compat;
+	sb->sb_ext_io_fns.lbextiofn_socket_arg = (void *)sb;
+}
+/*
+ * end of compat I/O functions
+ ******************************************************************************
+ */

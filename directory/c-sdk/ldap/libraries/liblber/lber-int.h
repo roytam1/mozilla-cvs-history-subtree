@@ -1,23 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Netscape
+ * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
- *
- * Contributor(s): 
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -95,6 +91,10 @@ extern "C" {
 
 #include "lber.h"
 
+#ifdef macintosh
+#define NSLDAPI_LBER_SOCKET_IS_PTR
+#endif
+
 #define OLD_LBER_SEQUENCE	0x10L	/* w/o constructed bit - broken */
 #define OLD_LBER_SET		0x11L	/* w/o constructed bit - broken */
 
@@ -102,8 +102,6 @@ extern "C" {
 #define _IFP
 typedef int (LDAP_C LDAP_CALLBACK *IFP)();
 #endif
-
-extern struct lber_memalloc_fns nslberi_memalloc_fns;
 
 typedef struct seqorset {
 	unsigned long	sos_clen;
@@ -135,6 +133,21 @@ struct berelement {
 };
 #define NULLBER	((BerElement *)NULL)
 
+#ifdef LDAP_DEBUG
+void ber_dump( BerElement *ber, int inout );
+#endif
+
+
+
+/*
+ * structure for read/write I/O callback functions.
+ */
+struct nslberi_io_fns {
+    LDAP_IOF_READ_CALLBACK	*lbiof_read;
+    LDAP_IOF_WRITE_CALLBACK	*lbiof_write;
+};
+
+
 struct sockbuf {
 	LBER_SOCKET	sb_sd;
 	BerElement	sb_ber;
@@ -145,15 +158,25 @@ struct sockbuf {
 					   sockaddrs */
 
 	int		sb_options;	/* to support copying ber elements */
-	LBER_SOCKET	sb_fd;
+	LBER_SOCKET	sb_copyfd;	/* for LBER_SOCKBUF_OPT_TO_FILE* opts */
 	unsigned long	sb_max_incoming;
 
-	LDAP_IOF_READ_CALLBACK *sb_read_fn;
-	LDAP_IOF_WRITE_CALLBACK *sb_write_fn;
+	struct nslberi_io_fns
+			sb_io_fns;	/* classic I/O callback functions */
+
+	struct lber_x_ext_io_fns
+			sb_ext_io_fns;	/* extended I/O callback functions */
 };
 #define NULLSOCKBUF	((Sockbuf *)NULL)
-#define READBUFSIZ	8192
 
+
+#ifndef NSLBERI_LBER_INT_FRIEND
+/*
+ * Everything from this point on is excluded if NSLBERI_LBER_INT_FRIEND is
+ * defined.  The code under ../libraries/libldap defines this.
+ */
+
+#define READBUFSIZ	8192
 
 /*
  * macros used to check validity of data structures and parameters
@@ -192,7 +215,6 @@ struct sockbuf {
 
 /* function prototypes */
 #ifdef LDAP_DEBUG
-void ber_dump( BerElement *ber, int inout );
 void lber_bprint( char *data, int len );
 #endif
 void ber_err_print( char *data );
@@ -234,6 +256,8 @@ int nslberi_ber_realloc( BerElement *ber, unsigned long len );
 /* allow the library to access the debug variable */
 
 extern int lber_debug;
+
+#endif /* !NSLBERI_LBER_INT_FRIEND */
 
 
 #ifdef __cplusplus
