@@ -283,6 +283,7 @@ NS_IMPL_ISUPPORTS1(nsDiskCacheDeviceInfo, nsICacheDeviceInfo);
 /* readonly attribute string description; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetDescription(char ** aDescription)
 {
+    NS_ENSURE_ARG_POINTER(aDescription);
     char* result = nsCRT::strdup("disk cache device");
     if (!result) return NS_ERROR_OUT_OF_MEMORY;
     *aDescription = result;
@@ -292,6 +293,7 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetDescription(char ** aDescription)
 /* readonly attribute string usageReport; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** aUsageReport)
 {
+    NS_ENSURE_ARG_POINTER(aUsageReport);
     char* result = nsCRT::strdup("disk cache usage report");
     if (!result) return NS_ERROR_OUT_OF_MEMORY;
     *aUsageReport = result;
@@ -301,12 +303,15 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** aUsageReport)
 /* readonly attribute unsigned long entryCount; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetEntryCount(PRUint32 *aEntryCount)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(aEntryCount);
+    *aEntryCount = mDevice->getEntryCount();
+    return NS_OK;
 }
 
 /* readonly attribute unsigned long totalSize; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetTotalSize(PRUint32 *aTotalSize)
 {
+    NS_ENSURE_ARG_POINTER(aTotalSize);
     *aTotalSize = mDevice->getCacheSize();
     return NS_OK;
 }
@@ -314,6 +319,7 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetTotalSize(PRUint32 *aTotalSize)
 /* readonly attribute unsigned long maximumSize; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetMaximumSize(PRUint32 *aMaximumSize)
 {
+    NS_ENSURE_ARG_POINTER(aMaximumSize);
     *aMaximumSize = mDevice->getCacheCapacity();
     return NS_OK;
 }
@@ -868,6 +874,11 @@ PRUint32 nsDiskCacheDevice::getCacheCapacity()
 PRUint32 nsDiskCacheDevice::getCacheSize()
 {
     return mCacheMap->DataSize();
+}
+
+PRUint32 nsDiskCacheDevice::getEntryCount()
+{
+    return mCacheMap->EntryCount();
 }
 
 nsresult nsDiskCacheDevice::getFileForKey(const char* key, PRBool meta,
