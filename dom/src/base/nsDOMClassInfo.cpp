@@ -128,6 +128,7 @@
 // HTMLEmbed/ObjectElement helper includes
 #include "nsIPluginInstance.h"
 #include "nsIObjectFrame.h"
+#include "nsINPRuntimePlugin.h"
 #include "nsIScriptablePlugin.h"
 #include "nsIPluginHost.h"
 #include "nsPIPluginHost.h"
@@ -366,7 +367,9 @@ static const char kDOMStringBundleURL[] =
 
 #define EXTERNAL_OBJ_SCRIPTABLE_FLAGS                                         \
   (ELEMENT_SCRIPTABLE_FLAGS & ~nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY | \
-   nsIXPCScriptable::WANT_SETPROPERTY)
+   nsIXPCScriptable::WANT_GETPROPERTY |                                       \
+   nsIXPCScriptable::WANT_SETPROPERTY |                                       \
+   nsIXPCScriptable::WANT_CALL)
 
 #define DOCUMENT_SCRIPTABLE_FLAGS                                             \
   (NODE_SCRIPTABLE_FLAGS |                                                    \
@@ -6001,14 +6004,19 @@ nsHTMLDocumentSH::CallToGetPropMapper(JSContext *cx, JSObject *obj, uintN argc,
     return JS_FALSE;
   }
 
-  JSObject *self = JSVAL_TO_OBJECT(argv[-2]);
+  JSObject *self;
 
-  if (::JS_ObjectIsFunction(cx, self)) {
-    // If self (aka this) is a function object we're called through
-    // document.all.item(), or something similar. In such a case, the
-    // this object is the parent of argv[-2].
+  if (JS_GET_CLASS(cx, obj) == &sHTMLDocumentAllClass) {
+    // If obj is our document.all object, we're called through
+    // document.all.item(), or something similar. In such a case, self
+    // is passed as obj.
 
-    self = ::JS_GetParent(cx, self);
+    self = obj;
+  } else {
+    // In other cases (i.e. document.all("foo")), self is passed as
+    // argv[-2].
+
+    self = JSVAL_TO_OBJECT(argv[-2]);
   }
 
   return ::JS_GetUCProperty(cx, self, ::JS_GetStringChars(str),
@@ -6746,7 +6754,6 @@ nsHTMLExternalObjSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIPluginInstance> pi;
-
   rv = GetPluginInstance(wrapper, getter_AddRefs(pi));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -6861,32 +6868,117 @@ nsHTMLExternalObjSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
 
 
 NS_IMETHODIMP
-nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+nsHTMLExternalObjSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  JSContext *cx, JSObject *obj, jsval id,
                                  jsval *vp, PRBool *_retval)
 {
-  JSString *id_str = ::JS_ValueToString(cx, id);
-  if (!id_str) {
-    *_retval = JS_FALSE;
-    return NS_ERROR_FAILURE;
-  }
-
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
-  const jschar *id_chars = ::JS_GetStringChars(id_str);
-  size_t id_length = ::JS_GetStringLength(id_str);
+
+  const jschar *id_chars = nsnull;
+  size_t id_length = 0;
 
   JSBool found;
-  *_retval = ::JS_HasUCProperty(cx, pi_obj, id_chars, id_length, &found);
-  if (! *_retval) {
+
+  if (JSVAL_IS_STRING(id)) {
+    JSString *id_str = JSVAL_TO_STRING(id);
+
+    id_chars = ::JS_GetStringChars(id_str);
+    id_length = ::JS_GetStringLength(id_str);
+
+    *_retval = ::JS_HasUCProperty(cx, pi_obj, id_chars, id_length, &found);
+  } else {
+    *_retval = JS_HasElement(cx, pi_obj, JSVAL_TO_INT(id), &found);
+  }
+
+  if (!*_retval) {
     return NS_ERROR_UNEXPECTED;
   }
 
   if (found) {
-    *_retval = ::JS_SetUCProperty(cx, pi_obj, id_chars, id_length, vp);
+    if (JSVAL_IS_STRING(id)) {
+      *_retval = ::JS_GetUCProperty(cx, pi_obj, id_chars, id_length, vp);
+    } else {
+      *_retval = ::JS_GetElement(cx, pi_obj, JSVAL_TO_INT(id), vp);
+    }
+
+    return *_retval ? NS_OK : NS_ERROR_FAILURE;
+  }
+
+  return nsElementSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+NS_IMETHODIMP
+nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext *cx, JSObject *obj, jsval id,
+                                 jsval *vp, PRBool *_retval)
+{
+  JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
+
+  const jschar *id_chars = nsnull;
+  size_t id_length = 0;
+
+  JSBool found;
+
+  if (JSVAL_IS_STRING(id)) {
+    JSString *id_str = JSVAL_TO_STRING(id);
+
+    id_chars = ::JS_GetStringChars(id_str);
+    id_length = ::JS_GetStringLength(id_str);
+
+    *_retval = ::JS_HasUCProperty(cx, pi_obj, id_chars, id_length, &found);
+  } else {
+    *_retval = JS_HasElement(cx, pi_obj, JSVAL_TO_INT(id), &found);
+  }
+
+  if (!*_retval) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  if (found) {
+    if (JSVAL_IS_STRING(id)) {
+      *_retval = ::JS_SetUCProperty(cx, pi_obj, id_chars, id_length, vp);
+    } else {
+      *_retval = ::JS_SetElement(cx, pi_obj, JSVAL_TO_INT(id), vp);
+    }
+
     return *_retval ? NS_OK : NS_ERROR_FAILURE;
   }
 
   return nsElementSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+NS_IMETHODIMP
+nsHTMLExternalObjSH::Call(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, PRUint32 argc, jsval *argv, jsval *vp,
+                          PRBool *_retval)
+{
+  nsCOMPtr<nsIPluginInstance> pi;
+  nsresult rv = GetPluginInstance(wrapper, getter_AddRefs(pi));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!pi) {
+    // No plugin around for this object.
+
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  JSObject *pi_obj = nsnull;
+  JSObject *pi_proto = nsnull;
+
+  rv = GetPluginJSObject(cx, obj, pi, &pi_obj, &pi_proto);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!pi) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  // XPConnect passes us the XPConnect wrapper JSObject as obj, and
+  // not the 'this' parameter that the JS engine passes in. Pass in
+  // the real this parameter from JS (argv[-1]) here.
+  *_retval = ::JS_CallFunctionValue(cx, JSVAL_TO_OBJECT(argv[-1]),
+                                    OBJECT_TO_JSVAL(pi_obj), argc, argv, vp);
+
+  return NS_OK;
 }
 
 
@@ -6947,6 +7039,19 @@ nsHTMLPluginObjElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
 {
   *plugin_obj = nsnull;
   *plugin_proto = nsnull;
+
+  nsCOMPtr<nsINPRuntimePlugin> npruntime_plugin =
+    do_QueryInterface(plugin_inst);
+
+  if (npruntime_plugin) {
+    *plugin_obj = npruntime_plugin->GetJSObject(cx);
+
+    if (*plugin_obj) {
+      *plugin_proto = ::JS_GetPrototype(cx, *plugin_obj);
+
+      return NS_OK;
+    }
+  }
 
   // Check if the plugin object has the nsIScriptablePlugin interface,
   // describing how to expose it to JavaScript. Given this interface,
