@@ -774,9 +774,9 @@ static const double two31 = 2147483648.0;
                 mUnaryOperators[i] = NULL;
         }
 
-        JSType(Context *cx, JSType *super) 
+        JSType(Context *cx, JSType *xClass)     // used for constructing the static component type
             : JSInstance(cx, Type_Type),
-                    mSuperType(super), 
+                    mSuperType(xClass), 
                     mStatics(NULL), 
                     mVariableCount(0),
                     mInitialInstance(NULL),
@@ -957,6 +957,13 @@ static const double two31 = 2147483648.0;
         virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
         {
             PropertyIterator i;
+            /* look in the static instance first 
+            if (mStatics) {
+                Reference *result = mStatics->genReference(name, attr, acc, depth);
+                if (result)
+                    return result;
+            }*/
+
             if (hasProperty(name, attr, acc, &i)) {
                 Property &prop = PROPERTY(i);
                 switch (prop.mFlag) {
@@ -998,7 +1005,8 @@ static const double two31 = 2147483648.0;
                 }
             }
             // walk the supertype chain
-            if (mSuperType)
+            if (mStatics && mSuperType) // test mStatics because if it's NULL (i.e. in the static instance)
+                                        // then the superType is a pointer back to the class.
                 return mSuperType->genReference(name, attr, acc, depth);
             return NULL;
         }
@@ -1939,21 +1947,32 @@ static const double two31 = 2147483648.0;
         if (type->mVariableCount)
             mInstanceValues = new JSValue[type->mVariableCount];
 
-        // copy the instance variable names into the property map
-        // only don't do it when 'this' and 'type' are the same, that's
+        // Don't do this when 'this' and 'type' are the same, that's
         // the static instance being initialized to itself
         if (this != type) {
-            
-            // copy instance values from the Ur-instance object
-            for (int i = 0; i < type->mVariableCount; i++)
-                mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
-
+            // copy the instance variable names into the property map
             for (PropertyIterator pi = type->mProperties.begin(), 
                         end = type->mProperties.end();
                         (pi != end); pi++) {            
                 const PropertyMap::value_type e(PROPERTY_NAME(pi), ATTR_PROPERTY(pi));
                 mProperties.insert(e);
             }
+
+            // and then do the same for the super types
+            JSType *t = type->mSuperType;
+            while (t) {
+                for (PropertyIterator i = t->mProperties.begin(), 
+                            end = t->mProperties.end();
+                            (i != end); i++) {            
+                    const PropertyMap::value_type e(PROPERTY_NAME(i), ATTR_PROPERTY(i));
+                    mProperties.insert(e);            
+                }
+                t = t->mSuperType;
+            }
+
+            // copy instance values from the Ur-instance object
+            for (int i = 0; i < type->mVariableCount; i++)
+                mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
         }
         else {  // for the static instance...
             // hook up the prototype object
@@ -1961,17 +1980,6 @@ static const double two31 = 2147483648.0;
             type->hasProperty(widenCString("prototype"), NULL, Read, &i);
             ASSERT(PROPERTY_KIND(i) == Slot);
             mInstanceValues[PROPERTY_INDEX(i)] = JSValue(type->mSuperType->mPrototype);
-        }
-        // and then do the same for the super types
-        JSType *t = type->mSuperType;
-        while (t) {
-            for (PropertyIterator i = t->mProperties.begin(), 
-                        end = t->mProperties.end();
-                        (i != end); i++) {            
-                const PropertyMap::value_type e(PROPERTY_NAME(i), ATTR_PROPERTY(i));
-                mProperties.insert(e);            
-            }
-            t = t->mSuperType;
         }
         mType = type;
     }
@@ -1986,8 +1994,13 @@ static const double two31 = 2147483648.0;
     inline void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
     {
         mInitialInstance = new JSInstance(cx, NULL);
-        if (mVariableCount)
+        if (mVariableCount) {
             mInitialInstance->mInstanceValues = new JSValue[mVariableCount];
+            if (mSuperType) {
+                for (uint32 i = 0; i < mSuperType->mVariableCount; i++)
+                    mInitialInstance->mInstanceValues[i] = mSuperType->mInitialInstance->mInstanceValues[i];
+            }
+        }
         if (f) {
             JSValue thisValue(mInitialInstance);
             cx->interpret(f->mByteCode, &thisValue, NULL, 0);

@@ -1913,6 +1913,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case LoadConstantTrueOp:
     case LoadConstantFalseOp:
     case LoadConstantNullOp:
+    case LoadThisOp:
     case GetTypeOp:
     case CastOp:
     case ReturnOp:
