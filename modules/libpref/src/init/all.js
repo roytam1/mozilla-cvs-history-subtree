@@ -216,7 +216,7 @@ pref("network.hosts.pop_server",            "mail");
 
 // <ruslan>
 // pref("network.http.version", "1.1");	  // default
-// pref("network.http.version", "1.0");   // uncomment this out in case of problems
+pref("network.http.version", "1.0");   // uncomment this out in case of problems
 // pref("network.http.version", "0.9");   // it'll work too if you're crazy
 // keep-alive option is effectively obsolete. Nevertheless it'll work with
 // some older 1.0 servers:
