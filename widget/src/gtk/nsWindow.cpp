@@ -37,11 +37,11 @@
 #include "nsGtkEventHandler.h"
 #include "nsIAppShell.h"
 #include "nsClipboard.h"
+#include "nsIRollupListener.h"
 
 #include "nsGtkUtils.h" // for nsGtkUtils::gdk_window_flash()
 
 #include "stdio.h"
-
 
 //-------------------------------------------------------------------------
 //
@@ -64,7 +64,8 @@ nsWindow::nsWindow()
   mFont = nsnull;
   
   mMenuBar = nsnull;
-  mIsTooSmall = PR_FALSE;
+  mMozArea = 0;
+  mSuperWin = 0;
 }
 
 //-------------------------------------------------------------------------
@@ -79,7 +80,7 @@ nsWindow::~nsWindow()
   printf("nsWindow::~nsWindow:%p\n", this);
 #endif
   mIsDestroyingWindow = PR_TRUE;
-  if (nsnull != mShell) {
+  if ((nsnull != mShell) || (nsnull != mSuperWin)) {
     Destroy();
   }
   NS_IF_RELEASE(mMenuBar);
@@ -95,22 +96,11 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
   gint x;
   gint y;
 
-  if (mIsToplevel && mShell)
+  if (mSuperWin)
   {
-    if (mShell->window)
+    if (mSuperWin->shell_window)
     {
-      gdk_window_get_origin(mWidget->window, &x, &y);
-      aNewRect.x = x + aOldRect.x;
-      aNewRect.y = y + aOldRect.y;
-    }
-    else
-      return NS_ERROR_FAILURE;
-  }
-  else if (mWidget)
-  {
-    if (mWidget->window)
-    {
-      gdk_window_get_origin(mWidget->window, &x, &y);
+      gdk_window_get_origin(mSuperWin->shell_window, &x, &x);
       aNewRect.x = x + aOldRect.x;
       aNewRect.y = y + aOldRect.y;
     }
@@ -144,6 +134,10 @@ NS_IMETHODIMP nsWindow::Destroy()
     	if (GTK_IS_WIDGET(mShell))
      		gtk_widget_destroy(mShell);
     	mShell = nsnull;
+    }
+    if (mSuperWin) {
+      gdk_superwin_destroy(mSuperWin);
+      mSuperWin = 0;
     }
   }
 
@@ -214,25 +208,16 @@ gint nsWindow::ConvertBorderStyles(nsBorderStyle bs)
 // Create the native widget
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
+NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 {
-  mWidget = gtk_layout_new(PR_FALSE, PR_FALSE);
-  GTK_WIDGET_SET_FLAGS(mWidget, GTK_CAN_FOCUS);
-  gtk_widget_set_app_paintable(mWidget, PR_TRUE);
+  GdkSuperWin *superwin = 0;
 
-  gtk_widget_set_name(mWidget, "nsWindow");
-
-  AddToEventMask(mWidget,
-                 GDK_BUTTON_PRESS_MASK |
-                 GDK_BUTTON_RELEASE_MASK |
-                 GDK_ENTER_NOTIFY_MASK |
-                 GDK_LEAVE_NOTIFY_MASK |
-                 GDK_EXPOSURE_MASK |
-                 GDK_FOCUS_CHANGE_MASK |
-                 GDK_KEY_PRESS_MASK |
-                 GDK_KEY_RELEASE_MASK |
-                 GDK_POINTER_MOTION_MASK |
-                 GDK_POINTER_MOTION_HINT_MASK);
+  if (parentWidget) {
+    if (GDK_IS_SUPERWIN(parentWidget))
+      superwin = GDK_SUPERWIN(parentWidget);
+    else
+      g_print("warning: attempted to CreateNative() width a non-superwin parent\n");
+  }
 
   switch(mWindowType)
   {
@@ -244,8 +229,12 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
     gtk_widget_set_app_paintable(mShell, PR_TRUE);
     InstallRealizeSignal(mShell);
 
-    gtk_container_add(GTK_CONTAINER(mShell), mWidget);
-
+    // create the mozarea.  this will be the single child of the
+    // toplevel window
+    mMozArea = gtk_mozarea_new();
+    gtk_container_add(GTK_CONTAINER(mShell), mMozArea);
+    gtk_widget_realize(GTK_WIDGET(mMozArea));
+    mSuperWin = GTK_MOZAREA(mMozArea)->superwin;
     gtk_signal_connect(GTK_OBJECT(mShell),
                        "delete_event",
                        GTK_SIGNAL_FUNC(handle_delete_event),
@@ -256,7 +245,12 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
     mIsToplevel = PR_TRUE;
     mShell = gtk_window_new(GTK_WINDOW_POPUP);
     gtk_widget_set_app_paintable(mShell, PR_TRUE);
-    gtk_container_add(GTK_CONTAINER(mShell), mWidget);
+    // create the mozarea.  this will be the single child of the
+    // toplevel window
+    mMozArea = gtk_mozarea_new();
+    gtk_container_add(GTK_CONTAINER(mShell), mMozArea);
+    gtk_widget_realize(GTK_WIDGET(mMozArea));
+    mSuperWin = GTK_MOZAREA(mMozArea)->superwin;
     break;
 
   case eWindowType_toplevel:
@@ -265,7 +259,12 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
     gtk_widget_set_app_paintable(mShell, PR_TRUE);
     gtk_window_set_policy(GTK_WINDOW(mShell), PR_TRUE, PR_TRUE, PR_FALSE);
     InstallRealizeSignal(mShell);
-    gtk_container_add(GTK_CONTAINER(mShell), mWidget);
+    // create the mozarea.  this will be the single child of the
+    // toplevel window
+    mMozArea = gtk_mozarea_new();
+    gtk_container_add(GTK_CONTAINER(mShell), mMozArea);
+    gtk_widget_realize(GTK_WIDGET(mMozArea));
+    mSuperWin = GTK_MOZAREA(mMozArea)->superwin;
 
     gtk_signal_connect(GTK_OBJECT(mShell),
                        "delete_event",
@@ -278,15 +277,38 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
     break;
 
   case eWindowType_child:
+    if (superwin)
+      mSuperWin = gdk_superwin_new(superwin->bin_window,
+                                   mBounds.x, mBounds.y,
+                                   mBounds.width, mBounds.height);
+    else
+      g_print("warning: attempted to CreateNative() without a superwin parent\n");
     break;
 
   default:
     break;
   }
+  
+  gdk_window_set_events(mSuperWin->bin_window, 
+                        GDK_BUTTON_PRESS_MASK |
+                        GDK_BUTTON_RELEASE_MASK |
+                        GDK_ENTER_NOTIFY_MASK |
+                        GDK_LEAVE_NOTIFY_MASK |
+                        GDK_EXPOSURE_MASK |
+                        GDK_FOCUS_CHANGE_MASK |
+                        GDK_KEY_PRESS_MASK |
+                        GDK_KEY_RELEASE_MASK |
+                        GDK_POINTER_MOTION_MASK |
+                        GDK_POINTER_MOTION_HINT_MASK);
 
+  gtk_object_set_data (GTK_OBJECT (mSuperWin), "nsWindow", this);
+  gdk_window_set_user_data (mSuperWin->bin_window, (gpointer)mSuperWin);
+
+  /* XXX fix this later */
+#if 0  
   if (mIsToplevel)
   {
-    if (parentWidget)
+   if (parentWidget)
     {
       GtkWidget *tlw = gtk_widget_get_toplevel(parentWidget);
       if (GTK_IS_WINDOW(tlw))
@@ -295,6 +317,7 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
       }
     }
   }
+#endif
 
   return NS_OK;
 }
@@ -307,22 +330,8 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
 //-------------------------------------------------------------------------
 void nsWindow::InitCallbacks(char * aName)
 {
-  gtk_signal_connect(GTK_OBJECT(mWidget),
-                     "draw",
-                     GTK_SIGNAL_FUNC(nsWindow::DrawSignal),
-                     (gpointer) this);
-  gtk_signal_connect(GTK_OBJECT(mWidget),
-                     "expose_event",
-                     GTK_SIGNAL_FUNC(handle_expose_event),
-                     this);
-  gtk_signal_connect(GTK_OBJECT(mWidget),
-                     "key_press_event",
-                     GTK_SIGNAL_FUNC(handle_key_press_event),
-                     this);
-  gtk_signal_connect(GTK_OBJECT(mWidget),
-                     "key_release_event",
-                     GTK_SIGNAL_FUNC(handle_key_release_event),
-                     this);
+  gdk_superwin_set_event_funcs(mSuperWin, handle_xlib_shell_event,
+                               handle_xlib_bin_event, this, NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -332,16 +341,40 @@ void nsWindow::InitCallbacks(char * aName)
 //-------------------------------------------------------------------------
 void * nsWindow::GetNativeData(PRUint32 aDataType)
 {
-  if (aDataType == NS_NATIVE_WINDOW)
-  {
+  if (aDataType == NS_NATIVE_WINDOW) {
     // The GTK layout widget uses a clip window to do scrolling.
     // All the action happens on that window - called the 'bin_window'
-    if (mWidget)
-      return (void *) GTK_LAYOUT(mWidget)->bin_window;
+    if (mSuperWin)
+      return (void *) mSuperWin->bin_window;
   }
-
+  else if (aDataType == NS_NATIVE_WIDGET) {
+    return (void *)mSuperWin;
+  }
   return nsWidget::GetNativeData(aDataType);
 }
+
+NS_IMETHODIMP nsWindow::GetAbsoluteBounds(nsRect &aRect)
+{
+  gint x;
+  gint y;
+
+#ifdef DEBUG_pavlov
+  g_print("nsWidget::GetAbsoluteBounds\n");
+#endif
+  if (mSuperWin)
+  {
+    gdk_window_get_origin(mSuperWin->shell_window, &x, &y);
+    aRect.x = x;
+    aRect.y = y;
+#ifdef DEBUG_pavlov
+    g_print("  x = %i, y = %i\n", x, y);
+#endif
+  }
+  else
+    return NS_ERROR_FAILURE;
+  return NS_OK;
+}
+
 
 //-------------------------------------------------------------------------
 //
@@ -350,13 +383,8 @@ void * nsWindow::GetNativeData(PRUint32 aDataType)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
-  if (GTK_IS_LAYOUT(mWidget)) {
-    GtkAdjustment* horiz = gtk_layout_get_hadjustment(GTK_LAYOUT(mWidget));
-    GtkAdjustment* vert = gtk_layout_get_vadjustment(GTK_LAYOUT(mWidget));
-    horiz->value -= aDx;
-    vert->value -= aDy;
-    gtk_adjustment_value_changed(horiz);
-    gtk_adjustment_value_changed(vert);
+  if (mSuperWin) {
+    gdk_superwin_scroll(mSuperWin, aDx, aDy);
   }
   return NS_OK;
 }
@@ -381,6 +409,8 @@ nsresult nsWindow::SetIcon()
   static GdkBitmap *w_mask   = nsnull;
   GtkStyle         *w_style;
 
+  /* XXX need to fix this */
+#if 0
   w_style = gtk_widget_get_style (mShell);
 
   if (!w_pixmap) {
@@ -392,6 +422,8 @@ nsresult nsWindow::SetIcon()
   }
   
   return SetIcon(w_pixmap, w_mask);
+#endif
+  return NS_OK;
 }
 
 
@@ -457,8 +489,8 @@ PRBool nsWindow::OnExpose(nsPaintEvent &event)
       debug_DumpPaintEvent(stdout,
                            this,
                            &event,
-                           debug_GetName(mWidget),
-                           (PRInt32) debug_GetRenderXID(mWidget));
+                           debug_GetName(GTK_OBJECT(mWidget)),
+                           (PRInt32) debug_GetRenderXID(GTK_OBJECT(mWidget)));
     }
 #endif // NS_DEBUG
 
@@ -481,7 +513,7 @@ PRBool nsWindow::OnExpose(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
-      GdkWindow *    gw = GetRenderWindow(mWidget);
+      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
       
       if (gw)
       {
@@ -526,8 +558,8 @@ PRBool nsWindow::OnDraw(nsPaintEvent &event)
       debug_DumpPaintEvent(stdout,
                            this,
                            &event,
-                           debug_GetName(mWidget),
-                           (PRInt32) debug_GetRenderXID(mWidget));
+                           debug_GetName(GTK_OBJECT(mWidget)),
+                           (PRInt32) debug_GetRenderXID(GTK_OBJECT(mWidget)));
     }
 #endif // NS_DEBUG
 
@@ -571,7 +603,7 @@ PRBool nsWindow::OnDraw(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
-      GdkWindow *    gw = GetRenderWindow(mWidget);
+      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
       
       if (gw)
       {
@@ -631,21 +663,20 @@ PRBool nsWindow::OnScroll(nsScrollbarEvent &aEvent, PRUint32 cPos)
 
 NS_IMETHODIMP nsWindow::Show(PRBool bState)
 {
-  if (!mWidget)
+  if (!mSuperWin)
     return NS_OK; // Will be null durring printing
+
+  printf("called nsWindow::Show\n");
 
   mShown = bState;
 
-
-  // don't show if we are too small
-  if (mIsTooSmall && bState == PR_FALSE)
-    return NS_OK;
 
   // show
   if (bState)
   {
     // show mWidget
-    gtk_widget_show(mWidget);
+    gdk_window_show(mSuperWin->shell_window);
+    gdk_window_show(mSuperWin->bin_window);
 
     // are we a toplevel window?
     if (mIsToplevel && mShell)
@@ -656,7 +687,7 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
              this,
              bState, mWindowType);
 #endif
-
+      gtk_widget_show(mMozArea);
       gtk_widget_show(mShell);
     }
   }
@@ -669,15 +700,13 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
     if (mIsToplevel && mShell)
     {
       gtk_widget_hide(mShell);
+      gtk_widget_hide(mMozArea);
       gtk_widget_unmap(mShell);
     } 
 
-    gtk_widget_hide(mWidget);
-
-   
-    // For some strange reason, gtk_widget_hide() does not seem to
-    // unmap the window.
-    //    gtk_widget_unmap(mWidget);
+    gdk_window_hide(mSuperWin->shell_window);
+    // XXX owen commented this out.
+    //gdk_window_hide(mSuperWin->bin_window);
   }
 
   mShown = bState;
@@ -692,6 +721,8 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::CaptureMouse(PRBool aCapture)
 {
+  /* XXX fix grabbing later */
+#if 0
   GtkWidget *grabWidget;
 
   if (mIsToplevel && mShell)
@@ -717,6 +748,68 @@ NS_IMETHODIMP nsWindow::CaptureMouse(PRBool aCapture)
     gdk_pointer_ungrab(GDK_CURRENT_TIME);
     gtk_grab_remove(grabWidget);
   }
+#endif
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent)
+{
+#ifdef DEBUG_pavlov
+  printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
+#endif
+  GtkWidget *grabWidget;
+
+  grabWidget = mWidget;
+  // XXX we need a visible widget!!
+
+  if (aDoCapture)
+  {
+#ifdef DEBUG_pavlov
+    printf("grabbing widget\n");
+#endif
+    GdkCursor *cursor = gdk_cursor_new (GDK_ARROW);
+    if (!mSuperWin) {
+#ifdef DEBUG_blizzard
+      printf("no superWin for this widget");
+#endif
+    }
+    else
+    {
+      int ret = gdk_pointer_grab (GDK_SUPERWIN(mSuperWin)->bin_window, PR_TRUE,(GdkEventMask)
+                                  (GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
+                                   GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
+                                   GDK_POINTER_MOTION_MASK),
+                                  (GdkWindow*)NULL, cursor, GDK_CURRENT_TIME);
+#ifdef DEBUG_blizzard
+      printf("pointer grab returned %i\n", ret);
+#endif
+      gdk_cursor_destroy(cursor);
+    }
+  }
+  else
+  {
+#ifdef DEBUG_blizzard
+    printf("ungrabbing widget\n");
+#endif
+    gdk_pointer_ungrab(GDK_CURRENT_TIME);
+    //    gtk_grab_remove(grabWidget);
+  }
+
+  if (aDoCapture) {
+    //    gtk_grab_add(mWidget);
+    NS_IF_RELEASE(gRollupListener);
+    NS_IF_RELEASE(gRollupWidget);
+    gRollupConsumeRollupEvent = PR_TRUE;
+    gRollupListener = aListener;
+    NS_ADDREF(aListener);
+    gRollupWidget = this;
+    NS_ADDREF(this);
+  } else {
+    //    gtk_grab_remove(mWidget);
+    NS_IF_RELEASE(gRollupListener);
+    //gRollupListener = nsnull;
+    NS_IF_RELEASE(gRollupWidget);
+  }
 
   return NS_OK;
 }
@@ -730,6 +823,8 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
          this,
          aX, aY);
 #endif
+  printf("nsWindow::Move to %d %d\n",
+         aX, aY);
   // not implimented for toplevel windows
   if (mIsToplevel && mShell)
   {
@@ -749,21 +844,9 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
       gtk_widget_set_uposition(mShell, newrect.x, newrect.y);
     }
   }
-  else if (mWidget) 
+  else if (mSuperWin)
   {
-    GtkWidget *    layout = mWidget->parent;
-
-    GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
-    GtkAdjustment* va = gtk_layout_get_vadjustment(GTK_LAYOUT(layout));
-
-    // See nsWidget::Move() for comments on this correction thing
-    PRInt32        x_correction = (PRInt32) ha->value;
-    PRInt32        y_correction = (PRInt32) va->value;
-    
-    ::gtk_layout_move(GTK_LAYOUT(layout), 
-                      mWidget, 
-                      aX + x_correction, 
-                      aY + y_correction);
+    gdk_window_move(mSuperWin->shell_window, aX, aY);
   }
 
   return NS_OK;
@@ -772,7 +855,7 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
 
 NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
-  PRBool nNeedToShow = PR_FALSE;
+
 
 #if 0
   printf("nsWindow::Resize %s (%p) to %d %d\n",
@@ -784,52 +867,17 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   mBounds.width  = aWidth;
   mBounds.height = aHeight;
 
-  // code to keep the window from showing before it has been moved or resized
-
-  // if we are resized to 1x1 or less, we will hide the window.  Show(TRUE) will be ignored until a
-  // larger resize has happened
-  if (aWidth <= 1 || aHeight <= 1)
-  {
-    if (mIsToplevel && mShell)
-    {
-      aWidth = 1;
-      aHeight = 1;
-      mIsTooSmall = PR_TRUE;
-      if (GTK_WIDGET_VISIBLE(mShell))
-      {
-        gtk_widget_hide(mShell);
-        gtk_widget_unmap(mShell);
-      }
-    }
-    else
-    {
-      aWidth = 1;
-      aHeight = 1;
-      mIsTooSmall = PR_TRUE;
-      gtk_widget_hide(mWidget);
-      gtk_widget_unmap(mWidget);
-    }
-  }
-  else
-  {
-    if (mIsTooSmall)
-    {
-      // if we are not shown, we don't want to force a show here, so check and see if Show(TRUE) has been called
-      nNeedToShow = mShown;
-      mIsTooSmall = PR_FALSE;
-    }
-  }
-
-  if (mWidget) {
+  if (mSuperWin) {
     // toplevel window?  if so, we should resize it as well.
     if (mIsToplevel && mShell)
     {
       gtk_window_set_default_size(GTK_WINDOW(mShell), aWidth, aHeight);
     }
-
-    gtk_widget_set_usize(mWidget, aWidth, aHeight);
+    gdk_superwin_resize(mSuperWin, aWidth, aHeight);
   }
 
+  /* XXX chris, too. */
+#if 0
   // XXX pav
   // call the size allocation handler directly to avoid code duplication
   // note, this could be a problem as this will make layout think that it
@@ -851,7 +899,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
     else
       gtk_widget_show(mWidget);
   }
-
+#endif
   return NS_OK;
 }
 
@@ -983,7 +1031,359 @@ void nsWindow::StoreProperty(char *property, unsigned char *data)
                        (gint)strlen((char *)data)); /* size of data */
 }
 
+void
+nsWindow::HandleXlibExposeEvent(XEvent *event)
+{
+  nsPaintEvent pevent;
+  
+  pevent.message = NS_PAINT;
+  pevent.widget = this;
+  pevent.eventStructType = NS_PAINT_EVENT;
+  pevent.point.x = event->xexpose.x;
+  pevent.point.y = event->xexpose.y;
+  pevent.rect = new nsRect(event->xexpose.x, event->xexpose.y,
+                           event->xexpose.width, event->xexpose.height);
+  /* XXX fix this */
+  pevent.time = 0;
+  AddRef();
+  OnExpose(pevent);
+  Release();
+  delete pevent.rect;
+}
 
+void
+nsWindow::HandleXlibButtonEvent(XButtonEvent * aButtonEvent)
+{
+  nsMouseEvent event;
+  
+  PRUint32 eventType = 0;
+  
+  if (aButtonEvent->type == ButtonPress)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+        }
+    }
+  else if (aButtonEvent->type == ButtonRelease)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_UP;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+        }
+    }
+  
+  event.message = eventType;
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aButtonEvent->x);
+  event.point.y = nscoord(aButtonEvent->y);
+  
+  event.isShift = aButtonEvent->state & ShiftMask;
+  event.isControl = aButtonEvent->state & ControlMask;
+  event.isAlt = aButtonEvent->state & Mod1Mask;
+  event.time = aButtonEvent->time;
+  event.clickCount = 1;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+void
+nsWindow::HandleXlibMotionNotifyEvent(XMotionEvent * aMotionEvent)
+{
+  nsMouseEvent event;
+  
+  event.message = NS_MOUSE_MOVE;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aMotionEvent->x);
+  event.point.y = nscoord(aMotionEvent->y);
+  
+  event.widget = this;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+void
+nsWindow::HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent)
+{
+  nsMouseEvent event;
+  
+  if (aCrossingEvent->type == EnterNotify)
+    {
+      event.message = NS_MOUSE_ENTER;
+    }
+  else
+    {
+      event.message = NS_MOUSE_EXIT;
+    }
+  
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aCrossingEvent->x);
+  event.point.y = nscoord(aCrossingEvent->y);
+  event.time = aCrossingEvent->time;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+
+void
+nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
+{
+  XEvent    config_event;
+
+  while (XCheckTypedWindowEvent(event->xany.display, 
+                                event->xany.window, 
+                                ConfigureNotify,
+                                &config_event) == True) {
+    // make sure that we don't get other types of events.  
+    // StructureNotifyMask includes other kinds of events, too.
+    gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+    *event = config_event;
+    // make sure that if we remove a configure event from the queue
+    // that it gets pulled out of the superwin tranlate queue,
+    // too.
+#if 0
+    g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+            event->xconfigure.window,
+            event->xconfigure.x, 
+            event->xconfigure.y,
+            event->xconfigure.width, 
+            event->xconfigure.height);
+#endif
+  }
+
+  gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+
+  nsSizeEvent sevent;
+  sevent.message = NS_SIZE;
+  sevent.widget = this;
+  sevent.eventStructType = NS_SIZE_EVENT;
+  sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
+                                  event->xconfigure.width, event->xconfigure.height);
+  sevent.point.x = event->xconfigure.x;
+  sevent.point.y = event->xconfigure.y;
+  sevent.mWinWidth = event->xconfigure.width;
+  sevent.mWinHeight = event->xconfigure.height;
+  // XXX fix this
+  sevent.time = 0;
+  AddRef();
+  OnResize(sevent);
+  Release();
+  delete sevent.windowSize;
+}
+
+// Return the GtkMozArea that is the nearest parent of this widget
+GtkWidget *
+nsWindow::GetMozArea()
+{
+  GdkWindow *parent = mSuperWin->shell_window;
+  GtkWidget *widget;
+
+  if (mMozArea == nsnull)
+    while (parent)
+      {
+        gdk_window_get_user_data (parent, (void **)&widget);
+        if (widget != nsnull && GTK_IS_MOZAREA (widget))
+          {
+            mMozArea = widget;
+            break;
+          }
+        parent = gdk_window_get_parent (parent);
+        parent = gdk_window_get_parent (parent);
+      }
+  
+  return mMozArea;
+}
+
+
+/* virtual */ GdkWindow *
+nsWindow::GetRenderWindow(GtkObject * aGtkObject)
+{
+  GdkWindow * renderWindow = nsnull;
+
+  if (aGtkObject)
+  {
+    if (GDK_IS_SUPERWIN(aGtkObject))
+    {
+      renderWindow = GDK_SUPERWIN(aGtkObject)->bin_window;
+    }
+  }
+  return renderWindow;
+}
+
+NS_METHOD
+nsWindow::Invalidate(PRBool aIsSynchronous)
+{
+  nsPaintEvent pevent;
+  nsRect       bounds;
+
+  GetBounds(bounds);
+
+  pevent.message = NS_PAINT;
+  pevent.widget = this;
+  pevent.eventStructType = NS_PAINT_EVENT;
+  pevent.point.x = 0;
+  pevent.point.y = 0;
+  pevent.rect = &bounds;
+  /* XXX fix this */
+  pevent.time = 0;
+  AddRef();
+  OnExpose(pevent);
+  Release();
+  return NS_OK;
+}
+
+NS_METHOD
+nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
+{
+  nsPaintEvent pevent;
+  nsRect       bounds = aRect;
+
+  pevent.message = NS_PAINT;
+  pevent.widget = this;
+  pevent.eventStructType = NS_PAINT_EVENT;
+  pevent.point.x = 0;
+  pevent.point.y = 0;
+  pevent.rect = &bounds;
+  /* XXX fix this */
+  pevent.time = 0;
+  AddRef();
+  OnExpose(pevent);
+  Release();
+  return NS_OK;
+}
+
+//////////////////////////////////////////////////////////////////////
+/* virtual */ void
+nsWindow::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
+{
+  nsMouseEvent event;
+  PRUint32 eventType = 0;
+
+#ifdef DEBUG_pavlov
+  printf("button press\n");
+#endif
+
+  if (gRollupWidget && gRollupListener)
+  {
+
+    GdkSuperWin *rollupWidget = GDK_SUPERWIN(gRollupWidget->GetNativeData(NS_NATIVE_WIDGET));
+
+    gint x, y;
+    gint w, h;
+    gdk_window_get_origin(rollupWidget->shell_window, &x, &y);
+
+    gdk_window_get_size(rollupWidget->shell_window, &w, &h);
+
+
+    if (!(aGdkButtonEvent->x_root > x &&
+          aGdkButtonEvent->x_root < x + w &&
+          aGdkButtonEvent->y_root > y &&
+          aGdkButtonEvent->y_root < y + h))
+    {
+      gRollupListener->Rollup();
+      printf("rolling up\n");
+      return;
+    }
+  }
+
+  // Switch on single, double, triple click.
+  switch (aGdkButtonEvent->type) 
+  {
+    // Single click.
+  case GDK_BUTTON_PRESS:
+    // Double click.
+  case GDK_2BUTTON_PRESS:
+    // Triple click.
+  case GDK_3BUTTON_PRESS:
+
+    switch (aGdkButtonEvent->button)  // Which button?
+    {
+    case 1:
+      eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+      break;
+
+    case 2:
+      eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
+      break;
+
+    case 3:
+      eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
+      break;
+
+      // Single-click default.
+    default:
+      eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+      break;
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  InitMouseEvent(aGdkButtonEvent, event, eventType);
+
+  // Set the button motion target and remeber the widget and root coords
+  sButtonMotionTarget = this;
+
+  sButtonMotionRootX = (gint) aGdkButtonEvent->x_root;
+  sButtonMotionRootY = (gint) aGdkButtonEvent->y_root;
+
+  sButtonMotionWidgetX = (gint) aGdkButtonEvent->x;
+  sButtonMotionWidgetY = (gint) aGdkButtonEvent->y;
+  
+  AddRef();
+
+  DispatchMouseEvent(event);
+
+  Release();
+
+}
 
 ChildWindow::ChildWindow()
 {
