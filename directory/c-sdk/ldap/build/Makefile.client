@@ -28,9 +28,16 @@ CSRCS	= dirver.c
 include $(NSPR_TREE)/config/rules.mk
 include ../../build.mk
 
-TARGETS	= $(OBJDIR)/dirver$(BIN_SUFFIX)
+TARGETS	= $(OBJDIR)/dirver$(EXE_SUFFIX)
 
 GARBAGE	+= $(TARGETS)
+
+ifeq ($(OS_ARCH), WINNT)
+$(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))
+$(TARGETS): $(OBJS) 
+	@$(MAKE_OBJDIR)                                                           
+	$(LINK_EXE) 
+endif
 
 ifeq ($(OS_ARCH), OS2)
 $(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))

@@ -153,6 +153,7 @@ EXPORTS
 	_ber_get_next_buffer=BER_GET_NEXT_BUFFER		@148
 	_ber_err_print		@149
 	_ber_sockbuf_free=BER_SOCKBUF_FREE		@150
+	_ber_get_next_buffer_ext=BER_GET_NEXT_BUFFER_EXT		@151
 
 	_ldap_memfree=LDAP_MEMFREE		@200
 	_ldap_ber_free=LDAP_BER_FREE		@201
@@ -264,6 +265,14 @@ EXPORTS
 	_ldap_parse_virtuallist_control=LDAP_PARSE_VIRTUALLIST_CONTROL		@526
 	_ldap_create_proxyauth_control=LDAP_CREATE_PROXYAUTH_CONTROL		@527
 	_ldap_unbind_ext=LDAP_UNBIND_EXT		@528
+	_ldap_x_hostlist_first=LDAP_X_HOSTLIST_FIRST		@529
+	_ldap_x_hostlist_next=LDAP_X_HOSTLIST_NEXT		@530
+	_ldap_x_hostlist_statusfree=LDAP_X_HOSTLIST_STATUSFREE		@531
+	_ldap_x_malloc=LDAP_X_MALLOC		@532
+	_ldap_x_calloc=LDAP_X_CALLOC		@533
+	_ldap_x_realloc=LDAP_X_REALLOC		@534
+	_ldap_x_free=LDAP_X_FREE		@535
+	_ldap_create_proxiedauth_control=LDAP_CREATE_PROXIEDAUTH_CONTROL		@536
 	_ldap_memcache_init=LDAP_MEMCACHE_INIT		@1000
 	_ldap_memcache_set=LDAP_MEMCACHE_SET		@1001
 	_ldap_memcache_get=LDAP_MEMCACHE_GET		@1002

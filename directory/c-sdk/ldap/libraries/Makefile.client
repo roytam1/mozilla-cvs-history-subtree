@@ -24,7 +24,13 @@ DEPTH	    = ../../../..
 NSPR_TREE = ../..
 MOD_DEPTH = ../..
 
+include	../../config/arch.mk
+
 UNIXDIRLIST = liblber libldif libiutil libldap libprldap libssldap
+
+ifeq ($(OS_ARCH), WINNT)
+UNIXDIRLIST += libutil
+endif
 
 all export::	FORCE
 	@for i in $(UNIXDIRLIST); do \

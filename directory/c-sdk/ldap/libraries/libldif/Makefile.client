@@ -32,14 +32,23 @@ include		../../../build.mk
 
 SRCS		= line64.c
 
+ifeq ($(OS_ARCH), WINNT)
+REALOBJS        = $(SRCS:.c=.obj)
+else
 REALOBJS	= $(SRCS:.c=.o)
+endif
 
 LDIFOBJDEST	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(LDIFOBJDEST)/, $(REALOBJS))
 
 HDIR		= $(LDAP_SRC)/include
 
+ifeq ($(OS_ARCH), WINNT)
+LIBLDIF		= $(addprefix $(LDIFOBJDEST)/, $(LDIF_LIBNAME).$(LIB_SUFFIX))
+else
 LIBLDIF		= $(addprefix $(LDIFOBJDEST)/, lib$(LDIF_LIBNAME).$(LIB_SUFFIX))
+endif
+
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr

@@ -41,8 +41,6 @@ HEADERS		= \
 include $(NSPR_TREE)/config/rules.mk
 include ../../build.mk
 
-GARBAGE		+= sdkver.h dirver.h
-
 ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
 
@@ -57,14 +55,8 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 
 ###########################################################################
 
-all export::	sdkver.h dirver.h FORCE
+all export::	FORCE
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
-
-sdkver.h:	$(DIRVER_PROG)
-	@$< $(DIRSDK_VERSION) UseSystemDate $@
-
-dirver.h:	$(DIRVER_PROG)
-	@$< $(DIR_VERSION) UseSystemDate $@
 
 install::	export
 

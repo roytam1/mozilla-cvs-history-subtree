@@ -51,6 +51,18 @@ OBJDEST		= $(OBJDIR_NAME)
 BINDIR		= $(OBJDIR_NAME)/bin
 LIBDIR		= $(OBJDIR_NAME)/lib
 
+ifeq ($(OS_ARCH), WINNT)
+LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.obj)
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.obj) \
+			  $(addprefix $(OBJDEST)/, fileurl.obj) 
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.obj) \
+			  $(addprefix $(OBJDEST)/, fileurl.obj) 
+LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.obj)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.obj) \
+			  $(addprefix $(OBJDEST)/, convutf8.obj) \
+			  $(addprefix $(OBJDEST)/, argpin.obj) \
+			  $(addprefix $(OBJDEST)/, ntuserpin.obj)
+else
 LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.o)
 LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o) \
 			  $(addprefix $(OBJDEST)/, fileurl.o) 
@@ -61,14 +73,15 @@ LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
 			  $(addprefix $(OBJDEST)/, convutf8.o) \
 			  $(addprefix $(OBJDEST)/, argpin.o) \
 			  $(addprefix $(OBJDEST)/, ntuserpin.o)
+endif
 
 CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
 	$(LDAPSEARCH_OBJ) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ)
 
-LDAPDELETE = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapdelete))
-LDAPMODIFY = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapmodify))
-LDAPSEARCH = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapsearch))
-LDAPCMP    = $(addprefix $(BINDIR)/, $(addsuffix $(EXE_SUFFIX), ldapcmp))
+LDAPDELETE = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapdelete))
+LDAPMODIFY = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapmodify))
+LDAPSEARCH = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapsearch))
+LDAPCMP    = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapcmp))
 
 BINS=	 $(LDAPDELETE) $(LDAPMODIFY) $(LDAPSEARCH) $(LDAPCMP)
 
@@ -86,6 +99,23 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -ldbm -lthread -lposix4 -lsocket -lnls \
 	     -ldl -lresolv -lgen 
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
+            comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
+            rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LBER_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LDIF_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(UTIL_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SVRCORE_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSLDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).lib
 endif
 
 ifeq ($(OS_ARCH), OSF1)
@@ -138,7 +168,7 @@ LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
 
 ###########################################################################
 
-all::	$(OBJDEST) linklibnls libdir $(BINS)
+all::	$(BINS) $(OBJDEST) linklibnls libdir $(BINS)
 
 libdir: linklibnls
 ifneq ($(HAVE_SVRCORE), 1)
@@ -151,25 +181,47 @@ ifneq ($(HAVE_SVRCORE), 1)
 	  @echo "***************************************************"
 	  @echo ""
 else
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(LIBLOCATION)/$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+else
 	$(NSINSTALL) $(LIBLOCATION)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 ifeq ($(HAVE_CCONF), 1)
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+else
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
+else
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 else
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -184,6 +236,23 @@ ifeq ($(HAVE_LIBNLS), 1)
 	$(RM) -f $(LIBNLS_LIBDIR)
 	ln -s $(LIBNLS_INCLUDES_LOC) $(LIBNLS_INCLUDES)
 	ln -s $(LIBNLS_LIB_LOC) $(LIBNLS_LIBDIR)
+endif
+else
+ifeq ($(HAVE_LIBNLS), 1)
+	@echo
+	@echo
+	@echo "Libnls stuff still to be done for WINNT"
+	@echo
+	@echo
+# The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
+# $(NLS_VERSION_FILE)
+ifeq ($(DONTDO), 1000)
+	sh ../../build/compver.sh $(LIBNLS_DIR) $(NLS_LIBVERSION) \
+	$(OBJDIR_NAME) ../../../.. ldapsdk $(NLS_RELEASE) \
+	libnls$(NLS_LIBVERSION) \
+	"' include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION) '" \
+	../../../../$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
+endif
 endif
 endif
 

@@ -30,7 +30,7 @@ MOD_DEPTH       = ../../..
 include $(NSPR_TREE)/config/rules.mk
 include         ../../../build.mk
 
-SRCS		= iutil-lock.c
+SRCS		= getopt.c
 
 ifeq ($(OS_ARCH), WINNT)
 REALOBJS        = $(SRCS:.c=.obj)
@@ -38,17 +38,18 @@ else
 REALOBJS	= $(SRCS:.c=.o)
 endif
 
-IUTILOBJDEST	= $(OBJDIR_NAME)
-OBJS		= $(addprefix $(IUTILOBJDEST)/, $(REALOBJS))
+UTILOBJDEST	= $(OBJDIR_NAME)
+OBJS		= $(addprefix $(UTILOBJDEST)/, $(REALOBJS))
 
 HDIR		= $(LDAP_SRC)/include
 
 ifeq ($(OS_ARCH), WINNT)
-LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, $(IUTIL_LIBNAME).$(LIB_SUFFIX))
+LIBUTIL	= $(addprefix $(UTILOBJDEST)/, $(UTIL_LIBNAME).$(LIB_SUFFIX))
 else
-LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, \
-		  lib$(IUTIL_LIBNAME).$(LIB_SUFFIX))
+LIBUTIL	= $(addprefix $(UTILOBJDEST)/, \
+		  lib$(UTIL_LIBNAME).$(LIB_SUFFIX))
 endif
+
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -70,13 +71,13 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBIUTIL)
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBUTIL)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
-$(LIBIUTIL): $(OBJS) $(LIBDIR)
-	@echo ======= making $(LIBIUTIL)
+$(LIBUTIL): $(OBJS) $(LIBDIR)
+	@echo ======= making $(LIBUTIL)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
@@ -85,10 +86,10 @@ endif
 veryclean:: clean
 
 clean::
-	$(RM) $(OBJS) $(LIBIUTIL)
+	$(RM) $(OBJS) $(LIBUTIL)
 
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install::	$(LIBIUTIL)
-	$(INSTALL) -m 444 $(LIBIUTIL) $(INSTALLDIR)/lib
+install::	$(LIBUTIL)
+	$(INSTALL) -m 444 $(LIBUTIL) $(INSTALLDIR)/lib

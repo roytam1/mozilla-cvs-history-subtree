@@ -40,9 +40,13 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 ** XXXmcs: noted.
 */
 #if defined(XP_MAC) && defined(MOZILLA_CLIENT)
-#define VI_PRODUCTVERSION 3 /* fixme */
+#define VI_PRODUCTVERSION 3
 #else
+#ifndef _WINDOWS
 #include "sdkver.h"
+#else
+#define VI_PRODUCTVERSION 3
+#endif
 #endif
 
 #ifndef INADDR_LOOPBACK

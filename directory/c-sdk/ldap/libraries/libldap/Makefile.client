@@ -83,14 +83,29 @@ SRCS		= abandon.c \
 		  utf8.c \
 		  vlistctrl.c
 
+ifeq ($(OS_ARCH), WINNT)
+SRCS		+=dllmain.c
+SRCS		+=mozock.c
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+REALOBJS        = $(SRCS:.c=.obj)
+else
 REALOBJS	= $(SRCS:.c=.o)
+endif
 
 LDAPOBJDEST	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(LDAPOBJDEST)/, $(REALOBJS))
 
 HDIR		= $(LDAP_SRC)/include
 
+ifeq ($(OS_ARCH), WINNT)
+LIBLDAP		= $(addprefix $(LDAPOBJDEST)/, $(LDAP_LIBNAME).$(DLL_SUFFIX))
+DLLLDAP		= $(addprefix $(LDAPOBJDEST)/, $(LDAP_LIBNAME).$(LIB_SUFFIX))
+else
 LIBLDAP		= $(addprefix $(LDAPOBJDEST)/, lib$(LDAP_LIBNAME).$(DLL_SUFFIX))
+DLLLDAP		= $(addprefix $(LDAPOBJDEST)/, lib$(LDAP_LIBNAME).$(LIB_SUFFIX))
+endif
 INSTALLDIR	= $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -145,6 +160,14 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
+            comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
+            rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LDIF_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LBER_LIBNAME).lib
+endif
+
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
@@ -169,8 +192,12 @@ OBJDEST = $(OBJDIR_NAME)
 
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
-$(LDAPOBJDEST)/libldap.exp:: ../libldap.ex
+$(LDAP_EXPORT_DEFS):: ../libldap.ex
+ifeq ($(OS_ARCH), WINNT)
+	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
+else
 	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
+endif
 endif # USE_DLL_EXPORTS_FILE
 
 versiont.c:	Makefile.client Version.c
@@ -204,6 +231,10 @@ $(OBJDEST):
 install:: $(LIBLDAP)
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(LIBLDAP) $(INSTALLDIR)/lib
+endif
+ifeq ($(OS_ARCH), WINNT)
+	$(INSTALL) -m 555 $(LIBLDAP) $(INSTALLDIR)/lib
+	$(INSTALL) -m 555 $(DLLLDAP) $(INSTALLDIR)/lib
 endif
 	$(INSTALL) -m 555 $(ETCFILES) $(ETCDIR)
 

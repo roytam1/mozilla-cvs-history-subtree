@@ -34,15 +34,25 @@ SRCS		= clientinit.c \
 		  ldapsinit.c \
 		  errormap.c
 
+ifeq ($(OS_ARCH), WINNT)
+REALOBJS        = $(SRCS:.c=.obj)
+else
 REALOBJS	= $(SRCS:.c=.o)
+endif
 
 SSLOBJDEST	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(SSLOBJDEST)/, $(REALOBJS))
 
 HDIR		= $(LDAP_SRC)/include
 
+ifeq ($(OS_ARCH), WINNT)
+LIBSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(SSLDAP_LIBNAME).$(DLL_SUFFIX))
+DLLSSLDAP	= $(addprefix $(SSLOBJDEST)/, $(SSLDAP_LIBNAME).$(LIB_SUFFIX))
+else
 LIBSSLDAP	= $(addprefix $(SSLOBJDEST)/, \
 			lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX))
+endif
+
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -67,10 +77,9 @@ else
 GENEXPORTS=$(PERL) $(LDAP_SRC)/build/genexports.pl
 endif
 
-# XXXXX fixme
 # variable definitions for exported symbols
 ifeq ($(OS_ARCH), WINNT)
-        SSLDAP_EXPORT_DEFS=../msdos/winsock/ns??ldap32.def
+        SSLDAP_EXPORT_DEFS=../msdos/winsock/nsldapssl32.def
 else
         SSLDAP_EXPORT_DEFS= $(SSLOBJDEST)/libldap_ssl.exp
 endif
@@ -84,6 +93,19 @@ ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -L$(NSCP_DISTDIR)/lib
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
+            comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
+            rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PRLDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).lib
 endif
 
 ifeq ($(OS_ARCH), OSF1)
@@ -107,8 +129,12 @@ OBJDEST = $(OBJDIR_NAME)
 
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
-$(SSLOBJDEST)/libldap_ssl.exp:: ../libldap_ssl.ex
+$(SSL_EXPORT_DEFS):: ../libldap_ssl.ex
+ifeq ($(OS_ARCH), WINNT)
+	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
+else
 	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
+endif
 endif # USE_DLL_EXPORTS_FILE
 
 versiont.c:	Makefile.client Version.c
@@ -140,6 +166,10 @@ $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
 install:: $(LIBSSLDAP)
+ifeq ($(OS_ARCH), WINNT)
+	$(INSTALL) -m 555 $(LIBSSLDAP) $(INSTALLDIR)/lib
+	$(INSTALL) -m 555 $(DLLSSLDAP) $(INSTALLDIR)/lib
+endif
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(LIBSSLDAP) $(INSTALLDIR)/lib
 endif

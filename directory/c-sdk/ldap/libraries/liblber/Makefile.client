@@ -35,14 +35,22 @@ SRCS		= decode.c \
 		  io.c \
 		  bprint.c
 
+ifeq ($(OS_ARCH), WINNT)
+REALOBJS        = $(SRCS:.c=.obj)
+else
 REALOBJS	= $(SRCS:.c=.o)
+endif
 
 LBEROBJDEST	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(LBEROBJDEST)/, $(REALOBJS)) 
 
 HDIR		= $(LDAP_SRC)/include
 
+ifeq ($(OS_ARCH), WINNT)
+LIBLBER		= $(addprefix $(LBEROBJDEST)/, $(LBER_LIBNAME).$(LIB_SUFFIX))
+else
 LIBLBER		= $(addprefix $(LBEROBJDEST)/, lib$(LBER_LIBNAME).$(LIB_SUFFIX))
+endif
 INSTALLDIR	= $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  =

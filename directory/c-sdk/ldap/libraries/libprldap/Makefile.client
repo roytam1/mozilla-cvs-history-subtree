@@ -36,14 +36,25 @@ SRCS		= ldappr-dns.c \
 		  ldappr-public.c \
 		  ldappr-threads.c
 
+ifeq ($(OS_ARCH), WINNT)
+REALOBJS        = $(SRCS:.c=.obj)
+else
 REALOBJS	= $(SRCS:.c=.o)
+endif
 
 PROBJDEST 	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(PROBJDEST)/, $(REALOBJS)) 
 
 HDIR		= $(LDAP_SRC)/include
 
+ifeq ($(OS_ARCH), WINNT)
+LIBPRLDAP	= $(addprefix $(PROBJDEST)/, \
+			nsldappr32v$(PRLDAPVERS).$(DLL_SUFFIX))
+DLLPRLDAP	= $(addprefix $(PROBJDEST)/, \
+			nsldappr32v$(PRLDAPVERS).$(LIB_SUFFIX))
+else
 LIBPRLDAP	= $(addprefix $(PROBJDEST)/, lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX))
+endif
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -83,6 +94,16 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
+            comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
+            rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(LDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).lib
+endif
+
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
@@ -101,7 +122,11 @@ OBJDEST = $(OBJDIR_NAME)
 
 # recursive gmake rule to create exported symbols file
 $(PROBJDEST)/libprldap.exp:: libprldap.ex
+ifeq ($(OS_ARCH), WINNT)
+	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
+else
 	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
+endif
 
 versiont.c:	Makefile.client Version.c
 	@$(RM) $@
@@ -132,6 +157,10 @@ $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
 install:: $(LIBPRLDAP)	
+ifeq ($(OS_ARCH), WINNT)
+	$(INSTALL) -m 555 $(LIBPRLDAP) $(INSTALLDIR)/lib
+	$(INSTALL) -m 555 $(DLLPRLDAP) $(INSTALLDIR)/lib
+endif
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(LIBPRLDAP) $(INSTALLDIR)/lib
 endif

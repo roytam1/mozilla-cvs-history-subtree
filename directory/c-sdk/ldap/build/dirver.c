@@ -168,7 +168,6 @@ unsigned _GenBuildDate(char *szBuildDate)
 
 static void ShowHelp(char *szFilename)
 {
-    char szTemp[128];
     fprintf(stdout, "%s: Generates ascii format #define for FILEVERSION\n", szFilename);
     fprintf(stdout, "   resource identifier used by Windows executable binaries.\n");
     fprintf(stdout, "\n");

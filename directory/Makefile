@@ -30,6 +30,7 @@ NSS_VERSION	= 3.2
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
 
+include		$(CONFIGDIR)/arch.mk
 include		c-sdk/build.mk
 
 all:	FORCE
@@ -56,6 +57,7 @@ all:	FORCE
 	@echo "   HAVE_LIBNLS=1	for building/linking with LIBNLS"
 	@echo "   HAVE_CCONF=1		for building with components"
 	@echo "   HAVE_SVRCORE=1	for building with svrcore"
+	@echo "   DONT_REPULL=1		for not repulling components"
 	@echo
 	@echo "   For iPlanet builds, coreconf must be installed"
 	@echo "   in $(CORECONFDIR)"
@@ -101,6 +103,7 @@ pkgLdapSDK: FORCE
 buildAndPkgLdapSDK: buildLdapClientSDK pkgLdapSDK
 
 PullSDKComponents: FORCE
+ifneq ($(DONT_REPULL), 1) 
 ifeq ($(HAVE_CCONF), 1)
 	@if [  -d $(CORECONFDIR)/ ]; then \
 		echo "coreconf directory found"; \
@@ -108,7 +111,7 @@ ifeq ($(HAVE_CCONF), 1)
 		echo "No coreconf directory found"; \
 		exit 0; \
 	fi
-  ifeq ($(ARCH), WINNT)
+  ifeq ($(OS_ARCH), WINNT)
 	cd $(CORECONFDIR)/dbm; \
 	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/nspr20; \
@@ -127,6 +130,7 @@ ifeq ($(HAVE_CCONF), 1)
 	cd $(CORECONFDIR)/svrcore; \
 	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) import
   endif
+endif
 endif
 
 clean clobber:	FORCE

@@ -112,7 +112,7 @@ DLLFLAGS += -PROFILE -MAP
 endif
 endif
 
-DEFINES += -DWIN32
+DEFINES += -DWIN32 -D_WINDOWS
 
 #
 # On Win95, we use the TlsXXX() interface by default because that
