@@ -1004,7 +1004,8 @@ var BookmarksController = {
     case "cmd_bm_newlivemark":
     case "cmd_bm_newfolder":
     case "cmd_bm_newseparator":
-      return (aTarget && BookmarksUtils.isValidTargetContainer(aTarget.parent));
+      return ((type0 == "PersonalToolbarFolder") ||
+              (aTarget && BookmarksUtils.isValidTargetContainer(aTarget.parent)));
     case "cmd_bm_properties":
     case "cmd_bm_rename":
       if (length != 1 ||
@@ -1039,6 +1040,17 @@ var BookmarksController = {
 
   doCommand: function (aCommand, aSelection, aTarget, aDS)
   {
+    var resource0, type0, realTarget;
+    if (aSelection && aSelection.length == 1) {
+      resource0 = aSelection.item[0];
+      type0 = aSelection.type[0];
+    }
+
+    if (type0 == "PersonalToolbarFolder")
+      realTarget = { parent: resource0, index: -1 };
+    else
+      realTarget = aTarget;
+
     switch (aCommand) {
     case "cmd_undo":
     case "cmd_bm_undo":
@@ -1079,7 +1091,7 @@ var BookmarksController = {
       BookmarksCommand.copyBookmark(aSelection);
       break;
     case "cmd_paste":
-      BookmarksCommand.pasteBookmark(aTarget);
+      BookmarksCommand.pasteBookmark(realTarget);
       break;
     case "cmd_delete":
       BookmarksCommand.deleteBookmark(aSelection);
@@ -1088,16 +1100,16 @@ var BookmarksController = {
       BookmarksCommand.moveBookmark(aSelection);
       break;
     case "cmd_bm_newbookmark":
-      BookmarksCommand.createNewBookmark(aTarget);
+      BookmarksCommand.createNewBookmark(realTarget);
       break;
     case "cmd_bm_newlivemark":
-      BookmarksCommand.createNewLivemark(aTarget);
+      BookmarksCommand.createNewLivemark(realTarget);
       break;
     case "cmd_bm_newfolder":
-      BookmarksCommand.createNewFolder(aTarget);
+      BookmarksCommand.createNewFolder(realTarget);
       break;
     case "cmd_bm_newseparator":
-      BookmarksCommand.createNewSeparator(aTarget);
+      BookmarksCommand.createNewSeparator(realTarget);
       break;
     case "cmd_bm_import":
       BookmarksCommand.importBookmarks();
