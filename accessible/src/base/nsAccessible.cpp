@@ -36,6 +36,7 @@
 #include "nsHTMLFormControlAccessible.h"
 #include "nsILink.h"
 #include "nsHTMLLinkAccessible.h"
+#include "nsIDOMHTMLAreaElement.h"
 
 // IFrame Helpers
 #include "nsIDocShell.h"
@@ -93,15 +94,14 @@ private:
 //------ nsAccessibleBoundsFinder -----
 
 nsDOMNodeBoundsFinder::nsDOMNodeBoundsFinder(nsIPresContext* aPresContext, nsIDOMNode* aNode)
-:mWalker(aPresContext, aNode)
+:mWalker(aPresContext, aNode), mDOMNode(aNode)
 {
-  mDOMNode = aNode;  
 };
 
 void nsDOMNodeBoundsFinder::GetBounds(nsRect& aBounds)
 {
   // sum up all the child rectangles
-  nsCOMPtr<nsIDOMNode> node = mDOMNode;
+  nsCOMPtr<nsIDOMNode> node(mDOMNode);
  
   mWalker.SetNode(mDOMNode);
   mWalker.GetBounds(aBounds);
@@ -336,7 +336,7 @@ nsIFrame* nsDOMTreeWalker::GetPrimaryFrame()
   nsCOMPtr<nsIPresShell> shell;
   mPresContext->GetShell(getter_AddRefs(shell));
   nsIFrame* frame = nsnull;
-  nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
   shell->GetPrimaryFrameFor(content, &frame);
   return frame;
 }
@@ -513,8 +513,8 @@ PRBool nsDOMTreeWalker::GetChildBefore(nsIDOMNode* aParent, nsIDOMNode* aChild)
     return PR_FALSE;
   }
 
-  nsCOMPtr<nsIDOMNode> prev = mDOMNode;
-  nsCOMPtr<nsIAccessible> prevAccessible = mAccessible;
+  nsCOMPtr<nsIDOMNode> prev(mDOMNode);
+  nsCOMPtr<nsIAccessible> prevAccessible(mAccessible);
 
   while(mDOMNode) 
   {
@@ -537,7 +537,7 @@ PRBool nsDOMTreeWalker::GetPreviousSibling()
 {
   //printf("Get previous\n");
 
-  nsCOMPtr<nsIDOMNode> child = mDOMNode;
+  nsCOMPtr<nsIDOMNode> child(mDOMNode);
   GetParent();
   
   return GetChildBefore(mDOMNode, child);
@@ -555,8 +555,8 @@ PRInt32 nsDOMTreeWalker::GetCount()
 
   //printf("Get count\n");
 
-  nsCOMPtr<nsIDOMNode> node = mDOMNode;
-  nsCOMPtr<nsIAccessible> a = mAccessible;
+  nsCOMPtr<nsIDOMNode> node(mDOMNode);
+  nsCOMPtr<nsIAccessible> a(mAccessible);
 
   GetFirstChild();
 
@@ -577,24 +577,25 @@ PRBool nsDOMTreeWalker::GetAccessible()
 {
   mAccessible = nsnull;
 
-  nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
-
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
   if (!content)
     return PR_FALSE;
 
-  nsIFrame* frame = GetPrimaryFrame();
+  nsCOMPtr<nsIDOMHTMLAreaElement> areaContent(do_QueryInterface(mDOMNode));
+  if (areaContent)   // Area elements are implemented in nsHTMLImageAccessible as children of the image
+    return PR_FALSE; // Return, otherwise the image frame looks like an accessible object in the wrong place
 
+  nsIFrame* frame = GetPrimaryFrame();
   if (!frame)
     return PR_FALSE;
 
   mAccessible = do_QueryInterface(frame);
-
   if (!mAccessible)
     mAccessible = do_QueryInterface(mDOMNode);
 
   if (!mAccessible) {
     // is it a link?
-    nsCOMPtr<nsILink> link = do_QueryInterface(mDOMNode);
+    nsCOMPtr<nsILink> link(do_QueryInterface(mDOMNode));
     if (link) {
        printf("Found link!\n");
        nsCOMPtr<nsIPresShell> shell;
@@ -607,8 +608,8 @@ PRBool nsDOMTreeWalker::GetAccessible()
     return PR_TRUE;
   else
     return PR_FALSE;
-
 }
+
 
 /*
  * Class nsAccessible
@@ -722,8 +723,8 @@ nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
             if (!accessible)
               accessible = do_QueryInterface(content);
             if (accessible) {
-              nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(parentPresShell));
-              nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+              nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(parentPresShell)));
+              nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
               *aAccParent = CreateNewParentAccessible(accessible, node, wr);
               NS_ADDREF(*aAccParent);
               return NS_OK;

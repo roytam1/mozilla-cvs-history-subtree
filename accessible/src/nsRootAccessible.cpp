@@ -56,7 +56,7 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame):nsAccessible(nsnull,nsnull,aShell)
 {
   mListener = nsnull;
-  nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
   shell->GetDocument(getter_AddRefs(mDocument));
   mDOMNode = do_QueryInterface(mDocument);
 }
@@ -84,7 +84,7 @@ NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName)
 nsIFrame* nsRootAccessible::GetFrame()
 {
   //if (!mFrame) {
-    nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
     nsIFrame* root = nsnull;
     if (shell) 
       shell->GetRootFrame(&root);
@@ -151,7 +151,7 @@ NS_IMETHODIMP nsRootAccessible::AddAccessibleEventListener(nsIAccessibleEventLis
   if (!mListener)
   {
      // add an event listener to the document
-     nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
      nsCOMPtr<nsIDocument> document;
      shell->GetDocument(getter_AddRefs(document));
 
@@ -203,7 +203,7 @@ NS_IMETHODIMP nsRootAccessible::RemoveAccessibleEventListener(nsIAccessibleEvent
 {
   if (mListener)
   {
-     nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
      nsCOMPtr<nsIDocument> document;
      if (!shell)
        return NS_OK;
@@ -235,7 +235,7 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
     nsCOMPtr<nsIDOMEventTarget> t;
     aEvent->GetOriginalTarget(getter_AddRefs(t));
   
-    nsCOMPtr<nsIContent> content = do_QueryInterface(t);  
+    nsCOMPtr<nsIContent> content(do_QueryInterface(t));  
     if (!content)
       return NS_OK;
 
@@ -250,29 +250,29 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
 	}
 
     nsIFrame* frame = nsnull;
-    nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
     shell->GetPrimaryFrameFor(content, &frame);
     if (!frame)
       return NS_OK;
 
-    nsCOMPtr<nsIAccessible> a = do_QueryInterface(frame);
+    nsCOMPtr<nsIAccessible> a(do_QueryInterface(frame));
     if (!a)
       a = do_QueryInterface(content);
 
     if (!a) {
       // is it a link?
-      nsCOMPtr<nsILink> link = do_QueryInterface(content);
+      nsCOMPtr<nsILink> link(do_QueryInterface(content));
       if (link) {
         printf("focus link!\n");
-        nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+        nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
         if (node)
           a = new nsHTMLLinkAccessible(shell, node);
       }
     }
 
     if (a) {
-      nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content); 
-      nsCOMPtr<nsIAccessible> na = CreateNewAccessible(a, node, mPresShell);
+      nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content)); 
+      nsCOMPtr<nsIAccessible> na(CreateNewAccessible(a, node, mPresShell));
       if ( !na ) {
         return NS_OK;
 	  }
