@@ -147,7 +147,7 @@ nsXFormsStubElement::ChildRemoved(PRUint32 aIndex)
 
 NS_IMETHODIMP
 nsXFormsStubElement::WillSetAttribute(nsIAtom *aName,
-				      const nsAString &aNewValue)
+                                      const nsAString &aNewValue)
 {
   return NS_OK;
 }
