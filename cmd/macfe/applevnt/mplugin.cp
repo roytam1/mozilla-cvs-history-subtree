@@ -918,7 +918,7 @@ void FE_PluginProgress(MWContext* cx, const char* message)
 //
 void FE_ResetRefreshURLTimer(MWContext* )
 {
-Assert_(false);
+// Assert_(false);
 //	if (NETSCAPEVIEW(context))
 //		NETSCAPEVIEW(context)->ResetRefreshURLTimer();
 }
