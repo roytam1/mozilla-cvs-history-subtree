@@ -281,9 +281,9 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
                 return rv;
  
 #ifdef XP_MAC
-            localFile->AppendPath("Component Registry");           
+            localFile->Append("Component Registry");           
 #else
-            localFile->AppendPath("component.reg");           
+            localFile->Append("component.reg");           
 #endif /* XP_MAC */
     
             Set(prop, NS_STATIC_CAST(nsILocalFile*, localFile));
@@ -298,9 +298,9 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
                 return rv;
  
 #ifdef XP_MAC
-            localFile->AppendPath("Components");           
+            localFile->Append("Components");           
 #else
-            localFile->AppendPath("components");           
+            localFile->Append("components");           
 #endif /* XP_MAC */
     
             return localFile->QueryInterface(uuid, result);

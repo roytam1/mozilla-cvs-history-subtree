@@ -172,7 +172,7 @@ class nsDirEnumerator : public nsISimpleEnumerator
                 nsCOMPtr<nsIFile> file;
                 mParent->Clone(getter_AddRefs(file));
 
-                rv = file->AppendPath(entry->name);
+                rv = file->SetLeafName(entry->name);
                 if (NS_FAILED(rv)) 
                     return rv;
             
@@ -547,7 +547,7 @@ nsLocalFile::InitWithPath(const char *filePath)
     // just do a sanity check.  if it has any forward slashes, it is not a Native path
     // on windows.  Also, it must have a colon at after the first char.
 
-    if ( ( (filePath[0] != 0) && filePath[1] == ':') && ( strchr(filePath, '/') == 0) ) ||  // normal windows path
+    if ( ( (filePath[0] != 0) && (filePath[1] == ':') && (strchr(filePath, '/') == 0) ) ||  // normal windows path
          ( (filePath[0] == '\\') && (filePath[1] == '\\') ) )  // netwerk path
     {
         // This is a native path
@@ -646,40 +646,19 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
 }
     
 NS_IMETHODIMP  
-nsLocalFile::AppendPath(const char *node)
+nsLocalFile::Append(const char *node)
 {
-    if ( (node == nsnull) || (*node == '/') || strchr(node, '\\') )
+    if ( (node == nsnull)           || 
+         (*node == '/')             || 
+         (*node == '.')             ||
+         strchr(node, '\\')         ||
+         strchr(node, '/')          )
+    {
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
-
+    }
     MakeDirty();
-
-    // We only can append relative unix styles strings.
-
-    // Convert '\' to '/'
-	nsString path(node);
-
-    char* nodeCString = path.ToNewCString();    
-    char* temp = nodeCString;
-    for (; *temp; temp++)
-    {
-        if (*temp == '/')
-            *temp = '\\';
-    }
-
-    // kill any trailing seperator
-    if(nodeCString)
-    {
-        temp = nodeCString;
-        int len = strlen(temp) - 1;
-        if(temp[len] == '\\')
-            temp[len] = '\0';
-    }
-    
     mWorkingPath.Append("\\");
-    mWorkingPath.Append(nodeCString);
-    
-    Recycle(nodeCString);
-
+    mWorkingPath.Append(node);
     return NS_OK;
 }
 
@@ -707,6 +686,27 @@ nsLocalFile::GetLeafName(char * *aLeafName)
         leaf++;
 
     *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+    return NS_OK;
+}
+
+NS_IMETHODIMP  
+nsLocalFile::SetLeafName(const char * aLeafName)
+{
+    MakeDirty();
+    
+    const char* temp = mWorkingPath.GetBuffer();
+    if(temp == nsnull)
+        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+
+    const char* leaf = strrchr(temp, '\\');
+    
+    PRInt32 offset = mWorkingPath.RFindChar('\\');
+    if (offset)
+    {
+        mWorkingPath.Truncate(offset);
+    }
+    mWorkingPath.Append(aLeafName);
+
     return NS_OK;
 }
 
@@ -888,7 +888,7 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
             allocatedNewName = (char*) nsAllocator::Clone( newName, strlen(newName)+1 );
         }
         
-        rv = target->AppendPath(allocatedNewName);
+        rv = target->Append(allocatedNewName);
         if (NS_FAILED(rv)) 
             return rv;
 
@@ -957,12 +957,12 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
             char *aFileName;
             GetLeafName(&aFileName);
             
-            AppendPath(aFileName); 
+            Append(aFileName); 
             nsAllocator::Free(aFileName);
         }
         else
         {
-            AppendPath(newName);
+            SetLeafName(newName);
         }
         
         nsAllocator::Free(newParentPath);

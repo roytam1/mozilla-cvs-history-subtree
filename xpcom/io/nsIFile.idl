@@ -48,18 +48,14 @@ interface nsIFile : nsISupports
      *  appendPath
      *
      *  This function is used for constructing a descendant of the
-     *  current nsIFile.  Non-terminal nodes will be resolved. An 
-     *  error will be returned if a non-terminal is a file 
-     *  (NS_ERROR_FILE_INVALID_PATH).  
+     *  current nsIFile.  
      *
      *  @param relativePath    
-     *      A unix style string which is intented to be a relative 
-     *      path of the nsIFile.  Starting and trailing '/' will 
-     *      be ignored.  If this path is not a unix style path, an 
-     *      error will be returned (NS_ERROR_FILE_UNRECONGNIZED_PATH).
+     *      A string which is intented to be a child node of the 
+     *      nsIFile.  
      */
 
-    void appendPath([const] in string relativePath);
+    void append([const] in string node);
 
       /**
     * Normalize the pathName (e.g. removing .. and . components on Unix).
@@ -93,7 +89,7 @@ interface nsIFile : nsISupports
     /**
      *   Accessor to the leaf name of the file itself. 
      */
-    readonly attribute string leafName;
+    attribute string leafName;
     
     /**
      *  copyTo
