@@ -353,7 +353,7 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 {
   if (sortType == nsMsgViewSortType::byThread)
 	{
-//		SortInternal(nsMsgViewSortType::byId, sortOrder); // sort top level threads by id.
+		nsMsgDBView::Sort(nsMsgViewSortType::byId, sortOrder); // sort top level threads by id.
 		m_sortType = nsMsgViewSortType::byThread;
 //		m_db->SetSortInfo(m_sortType, sortOrder);
 	}

@@ -498,6 +498,9 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
   if (!sortOrderValue.IsEmpty() && sortOrderValue.Equals(NS_LITERAL_STRING("ascending")))
      sortOrder = nsMsgViewSortOrder::ascending;
 
+  if (aColID[0] != 't')
+    m_viewFlags &= ~nsMsgViewFlagsType::kThreadedDisplay;
+
   switch (aColID[0])
   {
   case 's':
@@ -529,6 +532,7 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     break;
   case 't': // thread column
     sortType = nsMsgViewSortType::byThread;
+    m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
     performSort = PR_TRUE;
     break;
   default:

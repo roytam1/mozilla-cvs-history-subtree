@@ -97,6 +97,8 @@ Rights Reserved.
 	<broadcaster id="cmd_forwardInline" oncommand="goDoCommand('cmd_forwardInline')"/>
 	<broadcaster id="cmd_forwardAttachment" oncommand="goDoCommand('cmd_forwardAttachment')"/>
 	<broadcaster id="cmd_editAsNew" oncommand="goDoCommand('cmd_editAsNew')"/>
+	<broadcaster id="cmd_killThread" oncommand="goDoCommand('cmd_killThread')"/>
+	<broadcaster id="cmd_watchThread" oncommand="goDoCommand('cmd_watchThread')"/>
 	<broadcaster id="button_reply"/>
 	<broadcaster id="button_replyall"/>
 	<broadcaster id="button_forward"/>
@@ -157,7 +159,9 @@ Rights Reserved.
 	<key id="key_reply" key="&replyMsgCmd.key;"   observes="cmd_reply" modifiers="accel"/>
 	<key id="key_replyall" key="&replyToAllMsgCmd.key;"   observes="cmd_replyall" modifiers="accel, shift"/>
 	<key id="key_forward" key="&forwardMsgCmd.key;"   observes="cmd_forward" modifiers="accel"/>
-    <key id="key_editAsNew" key="&editMsgAsNewCmd.key;"   observes="cmd_editAsNew" modifiers="accel"/>
+  <key id="key_editAsNew" key="&editMsgAsNewCmd.key;"   observes="cmd_editAsNew" modifiers="accel"/>
+  <key id="key_watchThread" key="&watchThreadMenu.key;"   observes="cmd_watchThread" modifiers="accel"/>
+  <key id="key_killThread" key="&killThreadMenu.key;"   observes="cmd_killThread" />
 	<key id="key_openMessage" key="&openMessageWindowCmd.key;"   observes="cmd_openMessage" modifiers="accel"/>
 	<key id="key_print" key="&printCmd.key;"   observes="cmd_print" modifiers="accel"/>
 	<key id="key_saveAsFile" key="&saveAsFileCmd.key;"   observes="cmd_saveAsFile" modifiers="accel"/>
@@ -1047,6 +1051,14 @@ Rights Reserved.
 				<menuitem type="checkbox" id="markFlaggedMenuItem" value="&markFlaggedCmd.label;" accesskey="&markFlaggedCmd.accesskey;" observes="cmd_markAsFlagged"/>
 			</menupopup>
 		</menu>
+    <menuitem value="&killThreadMenu.label;"
+        accesskey="&killThreadMenu.accesskey;"
+        key="key_killThread"
+        observes="cmd_killThread"/>
+    <menuitem value="&watchThreadMenu.label;"
+        accesskey="&watchThreadMenu.accesskey;"
+        key="key_watchThread"
+        observes="cmd_watchThread"/>
 	</menupopup>
 </menu>
 

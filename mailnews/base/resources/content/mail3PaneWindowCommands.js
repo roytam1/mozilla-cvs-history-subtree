@@ -248,7 +248,14 @@ var DefaultController =
         if (gDBView)
          gDBView.getCommandStatus(nsMsgViewCommandType.deleteNoTrash, enabled, checkStatus);
        return enabled.value;
-
+			case "cmd_killThread":
+        if (gDBView)
+          gDBView.navigateStatus(nsMsgNavigationType.toggleThreadKilled, enabled);
+        return enabled.value;
+			case "cmd_watchThread":
+        if (gDBView)
+          gDBView.getCommandStatus(nsMsgViewCommandType.toggleThreadWatched, enabled);
+        return enabled.value;
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -401,6 +408,13 @@ var DefaultController =
         SetNextMessageAfterDelete();
         gDBView.doCommand(nsMsgViewCommandType.deleteNoTrash);
 				break;
+      case "cmd_killThread":
+        /* kill thread kills the thread and then does a next unread */
+      	GoNextMessage(nsMsgNavigationType.toggleThreadKilled, true);
+        break;
+      case "cmd_watchThread":
+        gdbView.doCommand(nsMsgViewCommandType.toggleThreadWatched);
+        break;
 			case "cmd_editDraft":
 				var threadTree = GetThreadTree();
 				if (threadTree && threadTree.selectedItems)

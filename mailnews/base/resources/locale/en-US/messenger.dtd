@@ -329,6 +329,12 @@ Rights Reserved.
 <!ENTITY moveMsgMenu.accesskey "m">  
 <!ENTITY copyMsgMenu.label "Copy Message">  
 <!ENTITY copyMsgMenu.accesskey "c">  
+<!ENTITY killThreadMenu.label "Kill Thread">
+<!ENTITY killThreadMenu.accesskey "k">
+<!ENTITY killThreadMenu.key "k">
+<!ENTITY watchThreadMenu.label "Watch Thread">
+<!ENTITY watchThreadMenu.accesskey "w">
+<!ENTITY watchThreadMenu.key "w">
 <!ENTITY fileHereMenu.label "File Here">
 <!ENTITY fileHereMenu.accesskey "File Here">
 <!ENTITY addSenderToAddressBookCmd.label ".Add Sender to Address Book">  
