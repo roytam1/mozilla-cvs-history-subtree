@@ -1888,7 +1888,7 @@ Formatter& operator<<(Formatter& f, const JSValue& value)
 void JSType::printSlotsNStuff(Formatter& f) const
 {
     f << "var. count = " << mVariableCount << "\n";
-    f << "method count = " << toUInt32(mMethods.size()) << "\n";
+    f << "method count = " << (uint32)(mMethods.size()) << "\n";
     uint32 index = 0;
     for (MethodList::const_iterator i = mMethods.begin(), end = mMethods.end(); (i != end); i++) {
         f << "[#" << index++ << "]";

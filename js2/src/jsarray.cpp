@@ -335,33 +335,42 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
     JSValue result = cx->popValue();
     uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
-    int32 start, end;
+    uint32 start, end;
     if (argc < 1) 
         start = 0;
     else {
-        start = (int32)(argv[0].toInt32(cx).f64);
-        if (start < 0) {
-            start += length; 
-            if (start < 0)
+        int32 arg0 = (int32)(argv[0].toInt32(cx).f64);
+        if (arg0 < 0) {
+            arg0 += length; 
+            if (arg0 < 0)
                 start = 0;
+            else
+                start = toUInt32(arg0);
         }
         else {
-            if (toUInt32(start) >= length)    // cast ok since > 0
+            if (toUInt32(arg0) >= length)    // cast ok since > 0
                 start = length;
+            else
+                start = toUInt32(arg0);
         }
     }
+
     if (argc < 2) 
         end = length;
     else {
-        end = (int32)(argv[1].toInt32(cx).f64);
-        if (end < 0) {
-            end += length;
-            if (end < 0)
+        int32 arg1 = (int32)(argv[1].toInt32(cx).f64);
+        if (arg1 < 0) {
+            arg1 += length;
+            if (arg1 < 0)
                 end = 0;
+            else
+                end = toUInt32(arg1);
         }
         else {
-            if (toUInt32(end) >= length)
+            if (toUInt32(arg1) >= length)
                 end = length;
+            else
+                end = toUInt32(arg1);
         }
     }
     
