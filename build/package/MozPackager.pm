@@ -658,19 +658,22 @@ sub _parseFile {
 
         # files
         $line =~ s/^\s//;
-        my @files = split(/(?<!\\)\s+/, $line, 3);
+        my ($source, $dest, $extra) = split(/(?:(?<!\\)\s)+/, $line, 3);
 
-        next if (! $files[0]); #blank line
-        $files[2] && die("Parse error in $file, line $.: unrecognized text '$line'.");
+        next if (! $source); #blank line
+        $extra && die("Parse error in $file, line $.: unrecognized text '$line'.");
 
-        _checkFile($files[0], $file, $.);
+        $source =~ s/\\(\s)/$1/g;
+        $dest   =~ s/\\(\s)/$1/g if ($dest);
+ 
+        _checkFile($source, $file, $.);
         
         # if a dist location is not specified, default
-        if (scalar(@files) == 1) {
-            $files[1] = $files[0];
+        if (! $dest) {
+            $dest = $source;
         }
 
-        $self->_addFile($files[0], $files[1], $file);
+        $self->_addFile($source, $dest, $file);
     }
     close $fileh;
 }
