@@ -1,210 +1,96 @@
-// -*- moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:smiley.js')" -*-
+// -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2; moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:smiley.js')" -*-
 // smiley.js
 // sample implementation of simple svg-compatible tag in xtf
 
-var SVG_NS = "http://www.w3.org/2000/svg";
 
 debug("*** loading smiley.js \n");
-//----------------------------------------------------------------------
-// base element class
-// (nsIXTFElement implementation to fall through to)
 
-var genericElement = {
-  getScriptingInterfaces: function(count) {
-    var ifs = [Components.interfaces.nsIDOMElement];
-    count.value = ifs.length;
-    return ifs;
-  },
-  
-  willChangeDocument: function(newDoc) {},
-  documentChanged: function(newDoc) {},
-  
-  willChangeParent: function(newParent) {},
-  parentChanged: function(newParent) {},
-  
-  willInsertChild: function(child, index) {},
-  childInserted: function(child, index) {},
-  
-  willAppendChild: function(child) {},
-  childAppended: function(child) {},
-  
-  willRemoveChild: function(index) {},
-  childRemoved: function(index) {},
-  
-  willSetAttribute: function(name, newValue) {},
-  AttributeSet: function(name, newValue) {},
-  
-  willUnsetAttribute: function(name) {},
-  AttributeUnset: function(name) {}
-};    
-
+importModule("resource:/jscodelib/StdLib.js");
+importModule("resource:/jscodelib/JSComponentUtils.js");
+importModule("resource:/jscodelib/TemplateLib.js");
+importModule("resource:/jscodelib/xtf.js");
 
 //----------------------------------------------------------------------
-// smiley element
+// smileyElement
 
-var frag = {g:{ns:SVG_NS, attribs:{style:"fill:yellow"},
-              children:[
-              ]}};
+var smileyElement = makeTemplate("smileyElement");
+smileyElement.mergeTemplate(XTFSVGVisual);
 
-function xtfSmiley() {
-//   this.fragment =
-//     Components.classes["@mozilla.org/xtf/xml-contentfragment;1"]
-//               .createInstance(Components.interfaces.nsIXMLContentFragment);
-//   this.g = this.fragment.beginElement(SVG_NS, "g");
-//       this.fragment.attrib("style", "fill:yellow;");
-//     this.fragment.beginElement(SVG_NS, "circle");
-//       this.fragment.attrib("cx", "100");
-//       this.fragment.attrib("cy", "100");
-//       this.fragment.attrib("r", "120");
-//     this.fragment.endElement();
-//     this.fragment.beginElement(SVG_NS, "circle");
-//       this.fragment.attrib("cx", "50");
-//       this.fragment.attrib("cy", "50");
-//       this.fragment.attrib("r", "10");
-//       this.fragment.attrib("style", "fill:black;");
-//     this.fragment.endElement();
-//     this.fragment.beginElement(SVG_NS, "circle");
-//       this.fragment.attrib("cx", "150");
-//       this.fragment.attrib("cy", "50");
-//       this.fragment.attrib("r", "10");
-//       this.fragment.attrib("style", "fill:black;");
-//     this.fragment.endElement();
-//     this.mouth = this.fragment.beginElement(SVG_NS, "path");
-//       this.fragment.attrib("d", "M50,150 Q100,200 150,150");
-//       this.fragment.attrib("style", "fill:none;stroke:black;stroke-width:10;");
-//     this.fragment.endElement();
-//   this.fragment.endElement();
+smileyElement.appendInitializer("smileyElement_eventsListeners",
+  function() {
+    var instance = this;
+    this.mousedownListener = function() {instance._makeSad();};
+  });
 
-//   var instance = this;
-//   this.g.addEventListener("mousedown", function(){instance.makeSad()}, true);
-}
+smileyElement.addProtoObj("_buildVisualContent",
+  function(builder) {
+    builder.setElementNamespace(SVG_NS);
+    this._g = builder.beginElement("g");
+      builder.attrib("style", "fill:yellow;");
+      builder.attrib("stroke", "blue");
+      builder.attrib("stroke-width", "10px");
+      builder.beginElement("circle");
+        builder.attribs({cx:"100", cy:"100", r:"120"});
+      builder.endElement();
+      builder.beginElement("circle");
+        builder.attribs({cx:"50", cy:"50", r:"10", style: "fill:black;"});
+      builder.endElement();
+      builder.beginElement("circle");
+        builder.attribs({cx:"150", cy:"50", r:"10", style: "fill:black;"});
+      builder.endElement();
+      this._mouth = builder.beginElement("path");
+        builder.attrib("d", "M50,150 Q100,200 150,150");
+        builder.attrib("style", "fill:none;stroke:black;stroke-width:10;");
+      builder.endElement();
+    builder.endElement();
 
-xtfSmiley.prototype = {
-  __proto__: genericElement,
-  
-  // nsISupports implementation:
-  QueryInterface: function(iid) {
-    if (!iid.equals(Components.interfaces.nsIXTFSVGVisual) &&
-        !iid.equals(Components.interfaces.nsIXTFElement) &&
-        !iid.equals(Components.interfaces.nsISupports)) {
-      throw Components.results.NS_ERROR_NO_INTERFACE;
-    }
-    return this;
-  },
-  
-  // nsIXTFElement implementation:
-  onDestroyed: function() {
-    // clean up:
-//    delete this.fragment;
-//    delete this.g;
-    delete this.wrapper;
-  },
-  get elementType() {
-    return Components.interfaces.nsIXTFElement.ELEMENT_TYPE_SVG_VISUAL;
-  },
-  AttributeSet: function(name, newValue) {
-    // let our 'g' element inherit all attribs:
-    //this.g.setAttribute(name, newValue);
-  },
-  
-  // nsIXTFSVGVisual implementation:
-  onCreated: function(wrapper) {
-    this.wrapper = wrapper;
-  },
-  get visualContent() {
-    var doc = this.wrapper.elementNode.ownerDocument;
-    if (!this.visual) {
-      this.visual = doc.createElementNS(SVG_NS, "circle");
-      this.visual.setAttribute("style", "fill:red; stroke:blue; stroke-width:10px;"); 
-      this.visual.setAttribute("cx", "100");
-      this.visual.setAttribute("cy", "100");
-      this.visual.setAttribute("r", "100");
-    }
-    dump("****-> "+this.e+" doc="+this.e.ownerDocument+" parent="+this.e.parentNode+"\n");
-    return this.e;
-//    return this.fragment.content;
-  },
+    // set up event listener:
+    var instance = this;
+    this._g.addEventListener("mousedown", this.mousedownListener, true);
+   });
 
-  // implementation helpers:
-  makeSad: function(evt) {
+smileyElement.addProtoObj("_makeSad",
+  function() {
     // move controlpoint of quadratic bezier element:
-    var quad = this.mouth.pathSegList.getItem(1);
+    var quad = this._mouth.pathSegList.getItem(1);
     quad.y1 -= 10;
-  }
-};
+  });
 
-  
-//----------------------------------------------------------------------
-// xtfSmileyFactory
+smileyElement.addProtoObj("attributeSet",
+  function(name, value) {
+    // let our 'g' element inherit all attribs:
+    this._g.setAttribute(name, value);
+  });
 
-var XTF_SHAPE_FACTORY_CID = Components.ID("{7d2bff65-6d03-4d0e-ae9f-b3102c5e606e}");
-var XTF_SHAPE_FACTORY_PROGID = "@mozilla.org/xtf/element-factory;1?namespace=urn:mozilla:xtf:tests:smiley";
-
-function xtfSmileyFactory() { debug("xtfSmileyFactory CTOR \n"); }
-
-xtfSmileyFactory.prototype = {
-    // nsISupports implementation:
-    QueryInterface: function (iid) {
-      if (!iid.equals(Components.interfaces.nsIXTFElementFactory) &&
-          !iid.equals(Components.interfaces.nsISupports)) {
-        debug("unknown interface "+iid+" requested from xtfSmileyFactory\n");
-        throw Components.results.NS_ERROR_NO_INTERFACE;
-      }
-      return this;
-    },
-
-    // nsIXTFElementFactory implementation:
-    createElement: function (tagName) {
-      debug("xtfSmileyFactory::createElement("+tagName+")\n");
-      if (tagName=="smiley")
-        return new xtfSmiley();
-      else
-        throw Components.results.NS_ERROR_FAILURE;
-    }
-};
+smileyElement.addProtoObj("XTFSVGVisual$onDestroyed",
+                          smileyElement.getProtoObj("onDestroyed"));
+smileyElement.addProtoObj("onDestroyed",
+  function() {
+    this._dump("onDestroyed");
+    delete this._mouth;
+    this._g.removeEventListener("mousedown", this.mousedownListener, true);
+    delete this._g;
+    this.XTFSVGVisual$onDestroyed();
+  });
 
 //----------------------------------------------------------------------
-// xtfSmileyModule
-    
-var xtfSmileyModule = {
-    registerSelf: function (compMgr, fileSpec, location, type) {
-        debug("*** xtfSmileyModule::registerSelf\n");
-        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
-        compMgr.registerFactoryLocation(XTF_SHAPE_FACTORY_CID,
-                                        "XTFSmiley XTF element factory",
-                                        XTF_SHAPE_FACTORY_PROGID, 
-                                        fileSpec,
-                                        location,
-                                        type);
-    },
+// smileyFactory
 
-    getClassObject: function (compMgr, cid, iid) {
-        debug("xtfSmileyModule::getClassObject()\n");
-        if (!cid.equals(XTF_SHAPE_FACTORY_CID))
-            throw Components.results.NS_ERROR_NO_INTERFACE;
+var smileyFactory = makeTemplate("smileyFactory");
+smileyFactory.mergeTemplate(XTFElementFactory);
 
-        if (!iid.equals(Components.interfaces.nsIFactory))
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+smileyFactory.addElement("smiley", smileyElement);
 
-        return this.myFactory;
-    },
+var theSmileyFactory = smileyFactory.instantiate();
 
-    myFactory: {
-        createInstance: function (outer, iid) {
-            debug("xtfSmileyModule::createInstance: " + iid + "\n");
-            if (outer != null)
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
 
-            return (new xtfSmileyFactory()).QueryInterface(iid);
-        }
-    },
+//----------------------------------------------------------------------
+// Module definition
 
-    canUnload: function(compMgr) {
-        debug("*** xtfSmileyModule::canUnload\n");
-        return true;
-    }
-};
-
-function NSGetModule(compMgr, fileSpec) {
-    return xtfSmileyModule;
-}
+NSGetModule = ComponentUtils.generateNSGetModule(
+  [{ className  : "XTFSmiley XTF element factory",
+     cid        : Components.ID("{7d2bff65-6d03-4d0e-ae9f-b3102c5e606e}"),
+     contractID : "@mozilla.org/xtf/element-factory;1?namespace=urn:mozilla:xtf:tests:smiley",
+     factory    : ComponentUtils.generateFactory(function() { return createDynamicProxy(function(){return theSmileyFactory;}); })
+  }]);
+                                                  
