@@ -247,7 +247,12 @@ NS_IMETHODIMP nsWidget::Destroy(void)
     }
     // prevent the widget from causing additional events
     mEventCallback = nsnull;
+#ifdef USE_SUPERWIN
+    // destroying the mozbox will destroy the widget contained in it.
+    ::gtk_widget_destroy(mMozBox);
+#else
     ::gtk_widget_destroy(mWidget);
+#endif
     mWidget = nsnull;
     if (PR_FALSE == mOnDestroyCalled)
       OnDestroy();
@@ -314,11 +319,21 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
   if (!mWidget)
     return NS_OK; // Will be null durring printing
 
+#ifdef USE_SUPERWIN
+  if (bState) {
+    gtk_widget_show(mWidget);
+    gtk_widget_show(mMozBox);
+  }
+  else {
+    gtk_widget_hide(mMozBox);
+    gtk_widget_hide(mWidget);
+  }
+#else 
   if (bState)
     gtk_widget_show(mWidget);
   else
     gtk_widget_hide(mWidget);
-
+#endif /* USE_SUPERWIN */
   mShown = bState;
 
   return NS_OK;
@@ -427,7 +442,13 @@ NS_IMETHODIMP nsWidget::Move(PRInt32 aX, PRInt32 aY)
 {
   if (mWidget) 
   {
-#ifndef USE_GTK_FIXED
+#ifdef USE_GTK_FIXED
+    gtk_fixed_move(GTK_FIXED(mWidget->parent), mWidget, aX, aY);
+#else
+    // all hail the nested ifdef
+#ifdef USE_SUPERWIN
+    gtk_mozbox_set_position(GTK_MOZBOX(mMozBox), aX, aY);
+#else
     GtkWidget *    layout = mWidget->parent;
 
     GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
@@ -465,9 +486,8 @@ NS_IMETHODIMP nsWidget::Move(PRInt32 aX, PRInt32 aY)
                     mWidget, 
                     aX + x_correction, 
                     aY + y_correction);
-#else
-    gtk_fixed_move(GTK_FIXED(mWidget->parent), mWidget, aX, aY);
-#endif
+#endif /* USE_SUPERWIN */
+#endif /* USE_GTK_FIXED */
   }
 
   return NS_OK;
@@ -1021,6 +1041,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 
   Resize(aRect.width, aRect.height, PR_FALSE);
 
+#ifndef USE_SUPERWIN
   /* place the widget in its parent if it isn't a toplevel window*/
   if (mIsToplevel)
   {
@@ -1040,9 +1061,14 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 #endif
     }
   }
+#endif /* USE_SUPERWIN */
 
   gtk_widget_pop_colormap();
   gtk_widget_pop_visual();
+
+#ifdef USE_SUPERWIN
+  if (mWidget) {
+#endif /* USE_SUPERWIN */
 
   InstallButtonPressSignal(mWidget);
   InstallButtonReleaseSignal(mWidget);
@@ -1069,16 +1095,24 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   InstallFocusInSignal(mWidget);
   InstallFocusOutSignal(mWidget);
 
-
+#ifdef USE_SUPERWIN
+  }
+#endif /* USE_SUPERWIN */
 
   DispatchStandardEvent(NS_CREATE);
   InitCallbacks();
 
+#ifdef USE_SUPERWIN
+  if (mWidget) {
+#endif /* USE_SUPERWIN */
   // Add in destroy callback
   gtk_signal_connect(GTK_OBJECT(mWidget),
                      "destroy",
                      GTK_SIGNAL_FUNC(DestroySignal),
                      this);
+#ifdef USE_SUPERWIN
+  }
+#endif /* USE_SUPERWIN */
 
   return NS_OK;
 }

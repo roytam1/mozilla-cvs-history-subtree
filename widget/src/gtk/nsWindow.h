@@ -68,6 +68,13 @@ public:
   NS_IMETHOD           EndResizingChildren(void);
   NS_IMETHOD           Destroy(void);
 
+#ifdef USE_SUPERWIN
+  NS_IMETHOD           GetAbsoluteBounds(nsRect &aRect);
+  // XXX chris - do we need to override these?
+  // NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
+  // NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
+#endif /* USE_SUPERWIN */
+
   gint                 ConvertBorderStyles(nsBorderStyle bs);
 
   // Add an XATOM property to this window.
@@ -153,7 +160,7 @@ protected:
 
   GtkWidget *mShell;  /* used for toplevel windows */
   GdkSuperWin *mSuperWin;
-  GtkMozArea  *mMozArea;
+  GtkWidget   *mMozArea;
 
   nsIMenuBar *mMenuBar;
 private:
