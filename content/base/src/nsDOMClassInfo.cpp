@@ -117,6 +117,11 @@
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
 
+#define DOCUMENT_SCRIPTABLE_FLAGS                                             \
+  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
+  WANT_PRECREATE |                                                            \
+  WANT_GETPROPERTY                                                            \
+
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
   (nsDOMClassInfo::nsDOMClassInfoID aID);
@@ -476,7 +481,7 @@ public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
 
-  // Is this method needed?
+  // XXX: Is this method needed?
 #if 0
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
@@ -492,25 +497,68 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   nsCOMPtr<nsIDOMNode> node(do_QueryInterface(nativeObj));
   NS_WARN_IF_FALSE(node, "nativeObj not a node!");
 
-  nsCOMPtr<nsIDOMNode> parent;
+  nsCOMPtr<nsIDOMDocument> owner_doc;
 
-  nsresult rv = node->GetParentNode(getter_AddRefs(parent));
+  node->GetOwnerDocument(getter_AddRefs(owner_doc));
 
-  if (parent) {
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(owner_doc));
 
-    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-    rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), parent,
-                                NS_GET_IID(nsISupports),
-                                getter_AddRefs(holder));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = holder->GetJSObject(parentObj);
-    NS_ENSURE_SUCCESS(rv, rv);
-  } else {
-    *parentObj = globalObj;
+  if (!doc) {
+    doc = do_QueryInterface(nativeObj);
+    NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
   }
+
+  // Get the script global object from the document and get the
+  // JSContext from the global object.
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
+
+  doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+  if (sgo) {
+    nsCOMPtr<nsIScriptContext> sctx;
+
+    sgo->GetContext(getter_AddRefs(sctx));
+
+    if (sctx) {
+      // Use the context of the global object in stead of the one
+      // we're called from.
+
+      cx = (JSContext *)sctx->GetNativeContext();
+    }
+  }
+
+  nsCOMPtr<nsIDOMNode> parentNode;
+
+  nsresult rv = node->GetParentNode(getter_AddRefs(parentNode));
+
+  nsISupports *p = parentNode;
+
+  if (!parentNode) {
+    if (!sgo) {
+      // No global object reachable from this document, use the
+      // global object that was passed to this method.
+
+      *parentObj = globalObj;
+
+      return NS_OK;
+    }
+
+    p = sgo;
+  }
+
+  NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+  rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), p,
+                              NS_GET_IID(nsISupports), getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // We've wrapped the parent, return the parent wrapper as our parent
+  // object.
+  rv = holder->GetJSObject(parentObj);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
 }
@@ -1103,7 +1151,7 @@ nsDOMClassInfo::Init()
 
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
+                           DOCUMENT_SCRIPTABLE_FLAGS);
 
   // HTML element classes
   NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsElementSH::Create,
@@ -1253,7 +1301,7 @@ nsDOMClassInfo::Init()
 
   // XUL classes
   NS_DEFINE_CLASSINFO_DATA(XULDocument, nsDocumentSH::Create,
-                           ELEMENT_SCRIPTABLE_FLAGS);
+                           DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
