@@ -319,13 +319,14 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
 			return;
 
         case T_DISCONNECT:  // A disconnect is available
+            discon.udata.len = 0;
             err = OTRcvDisconnect(endpoint, &discon);
             PR_ASSERT(err == kOTNoError);
             secret->md.exceptReady     = PR_TRUE;
             secret->md.connectionOpen  = PR_FALSE;
 
 			// wake up waiting threads, if any
-			result = kECONNRESETErr;//(OTResult) discon.reason;
+			result = -3199 - discon.reason; // obtain the negative error code
 
             if ((thread = secret->md.read.thread) != NULL) {
 		        secret->md.read.thread    = NULL;
