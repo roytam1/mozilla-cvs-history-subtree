@@ -58,6 +58,8 @@
 #include "nsIMdbFactoryFactory.h"
 
 #include "nsIPref.h"
+#include "nsIProfileChangeStatus.h"
+#include "nsIObserverService.h"
 
 PRInt32 nsGlobalHistory::gRefCnt;
 nsIRDFService* nsGlobalHistory::gRDFService;
@@ -294,7 +296,7 @@ nsGlobalHistory::~nsGlobalHistory()
 //
 //   nsISupports methods
 
-NS_IMPL_ISUPPORTS3(nsGlobalHistory, nsIGlobalHistory, nsIRDFDataSource, nsIRDFRemoteDataSource)
+NS_IMPL_ISUPPORTS5(nsGlobalHistory, nsIGlobalHistory, nsIRDFDataSource, nsIRDFRemoteDataSource, nsIObserver, nsISupportsWeakReference)
 
 //----------------------------------------------------------------------
 //
@@ -1400,6 +1402,21 @@ nsGlobalHistory::Flush()
 }
 
 
+////////////////////////////////////////////////////////////////////////
+// nsIObserver
+
+NS_IMETHODIMP nsGlobalHistory::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
+{
+    nsresult rv = NS_OK;
+    
+    if (nsCRT::strcmp(aTopic, PROFILE_BEFORE_CHANGE_TOPIC) == 0)
+      rv = CloseDB();
+    else if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0)
+      rv = OpenDB();
+
+    return rv;
+}
+
 
 //----------------------------------------------------------------------
 //
@@ -1437,6 +1454,14 @@ nsGlobalHistory::Init()
   rv = gRDFService->RegisterDataSource(this, PR_FALSE);
   NS_ASSERTION(NS_SUCCEEDED(rv), "somebody already created & registered the history data source");
   if (NS_FAILED(rv)) return rv;
+  
+  // register to observe profile changes
+  NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+  NS_ASSERTION(observerService, "failed to get observer service");
+  if (observerService) {
+    observerService->AddObserver(this, PROFILE_BEFORE_CHANGE_TOPIC);
+    observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
+  }
 
   rv = OpenDB();
   if (NS_FAILED(rv)) return rv;

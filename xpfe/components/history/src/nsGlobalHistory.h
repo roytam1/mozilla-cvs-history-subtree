@@ -34,6 +34,8 @@
 #include "nsIRDFService.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
+#include "nsIObserver.h"
+#include "nsWeakReference.h"
 
 //----------------------------------------------------------------------
 //
@@ -81,7 +83,9 @@ protected:
 
 class nsGlobalHistory : public nsIGlobalHistory,
                         public nsIRDFDataSource,
-                        public nsIRDFRemoteDataSource
+                        public nsIRDFRemoteDataSource,
+                        public nsIObserver,
+                        public nsSupportsWeakReference
 {
 public:
   // nsISupports methods 
@@ -95,6 +99,9 @@ public:
 
   // nsIRDFRemoteDataSource
   NS_DECL_NSIRDFREMOTEDATASOURCE
+  
+  // nsIObserver
+  NS_DECL_NSIOBSERVER
 
   NS_METHOD Init();
 
