@@ -62,6 +62,7 @@ extern "C" {
    plugin code, it is never actually dereferenced outside of an
    `#ifdef OJI'. */
 struct nsIJVMManager;
+class nsHashtable;
 #endif /* OJI */
 
 extern int XP_PLUGIN_LOADING_PLUGIN;
@@ -200,13 +201,15 @@ void NP_EXPORT
 npn_status(NPP npp, const char *message);
 
 void NP_EXPORT
-npn_registerwindow(NPP npp, void* window);
+npn_registerwindow(struct nsIEventHandler* handler, void* window);
 
 void NP_EXPORT
-npn_unregisterwindow(NPP npp, void* window);
+npn_unregisterwindow(struct nsIEventHandler* handler, void* window);
 
+#if 0
 int16 NP_EXPORT
 npn_allocateMenuID(NPP npp, XP_Bool isSubmenu);
+#endif
 
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_D0
@@ -355,6 +358,15 @@ public:
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu);
 
+	NS_IMETHOD
+	ReleaseMenuID(nsIEventHandler* handler, PRInt16 menuID);
+
+	/**
+	 * Indicates whether this event handler has allocated the given menu ID.
+	 */
+    PRBool
+    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID);
+
 	// On the mac (and most likely win16), network activity can
     // only occur on the main thread. Therefore, we provide a hook
     // here for the case that the main thread needs to tickle itself.
@@ -370,7 +382,7 @@ public:
 
     static NS_METHOD
     Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
-
+    
 protected:
     nsPluginManager(nsISupports* outer);
     virtual ~nsPluginManager(void);
@@ -381,6 +393,8 @@ protected:
     nsISupports*        fJVMMgr;
     PRUint16            fWaiting;
     void*               fOldCursor;
+    
+    nsHashtable*		fAllocatedMenuIDs;
 };
 
 extern nsPluginManager* thePluginManager;

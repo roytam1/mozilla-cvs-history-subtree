@@ -2213,7 +2213,7 @@ npn_getJavaEnv(void)
 jclass NP_EXPORT
 npn_getJavaClass(np_handle* handle);
 
-void
+static void
 np_recover_mochaWindow(JNIEnv * env, np_instance * instance)
 {
 	 if (env && instance && instance->mochaWindow && instance->javaInstance){
@@ -2229,7 +2229,7 @@ jobject classPlugin = NULL;
 #define NPN_NO_JAVA_INSTANCE	((jobject)-1)
 
 #elif defined(JAVA)
-void
+static void
 np_recover_mochaWindow(JRIEnv * env, np_instance * instance)
 {
      netscape_plugin_Plugin* javaInstance = NULL;
@@ -4020,7 +4020,7 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
                     nsPluginEvent newEvent;
 #if defined(XP_MAC)
                     newEvent.event = oldEvent;
-                    newEvent.window = window;
+                    newEvent.window = (nsPluginPlatformWindowRef) window;
 #elif defined(XP_WIN)
                     newEvent.event = oldEvent->event;
                     newEvent.wParam = oldEvent->wParam;
@@ -4048,26 +4048,35 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
     return 0;
 }
 
-void npn_registerwindow(NPP npp, void* window)
+void npn_registerwindow(nsIEventHandler* handler, void* window)
 {
 #ifdef XP_MAC
-    if(npp) {
+#if 1
+	FE_RegisterWindow(handler, window);
+#else
+    if (npp) {
         np_instance* instance = (np_instance*) npp->ndata;
         FE_RegisterWindow(instance->app->fe_data, window);
     }
 #endif
+#endif
 }
 
-void npn_unregisterwindow(NPP npp, void* window)
+void npn_unregisterwindow(nsIEventHandler* handler, void* window)
 {
 #ifdef XP_MAC
+#if 1
+	FE_UnregisterWindow(handler, window);
+#else
     if(npp) {
         np_instance* instance = (np_instance*) npp->ndata;
         FE_UnregisterWindow(instance->app->fe_data, window);
     }
 #endif
+#endif
 }
 
+#if 0
 int16 npn_allocateMenuID(NPP npp, XP_Bool isSubmenu)
 {
 #ifdef XP_MAC
@@ -4078,6 +4087,7 @@ int16 npn_allocateMenuID(NPP npp, XP_Bool isSubmenu)
 #endif
     return 0;
 }
+#endif
 
 XP_Bool
 npn_IsWindowless(np_handle* handle)
