@@ -26,7 +26,7 @@
 /*
  * Constants
  */
-const DICTIONARY_PROGID = 'mozilla.dictionary.1';
+const DICTIONARY_CONTRACTID = '@mozilla.org/dictionary;1';
 const DICTIONARY_CID = Components.ID('{1dd0cb45-aea3-4a52-8b29-01429a542863}');
 const DICTIONARY_IID = Components.interfaces.nsIDictionary;
 
@@ -84,7 +84,7 @@ nsDictionary.prototype= {
 var nsDictionaryModule = {
     registerSelf: function(compMgr, fileSpec, location, type) {
         compMgr.registerComponentWithType(DICTIONARY_CID, 
-            "nsDictionary JS component", DICTIONARY_PROGID, fileSpec, location,
+            "nsDictionary JS component", DICTIONARY_CONTRACTID, fileSpec, location,
             true, true, type);
     },
 

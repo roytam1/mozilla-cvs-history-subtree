@@ -1753,7 +1753,7 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 	    nsresult res = NS_OK;
 	    nsAutoString topic; topic.Assign(NS_LITERAL_STRING("xslt-done"));
 
-	    nsCOMPtr<nsIObserverService> anObserverService = do_GetService(NS_OBSERVERSERVICE_PROGID, &res);
+	    nsCOMPtr<nsIObserverService> anObserverService = do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &res);
 	    if (NS_SUCCEEDED(res)) {
           nsIDOMNode* docElement = (resultDocument->getDocumentElement())->getNSObj();
 
