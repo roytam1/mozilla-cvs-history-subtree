@@ -22,11 +22,13 @@ DEPTH		= ../..
 MODULE		= xp
 LIBRARY_NAME	= xp
 
-CSRCS		= xp_alloc.c \
-		  xp_cntxt.c \
-		  xp_core.c \
+DEFINES		+= -B1M
+
+CSRCS		= \
+		  xp_stub.c \
 		  xp_error.c \
 		  xp_file.c \
+<<<<<<< Makefile
 		  xp_hash.c \
 		  xp_list.c \
 		  xp_ncent.c \
@@ -40,15 +42,12 @@ CSRCS		= xp_alloc.c \
 		  xp_wrap.c \
 		  xpassert.c \
 		  xplocale.c \
+=======
+		  allxpstr.c \
+>>>>>>> 3.1.10.2
 		  $(NULL)
 
 REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf
-
-CSRCS		+= allxpstr.c xp_intl.c
-
-ifeq ($(STAND_ALONE_JAVA),1)
-CSRCS		= xp_qsort.c
-endif
 
 include $(DEPTH)/config/rules.mk
 
