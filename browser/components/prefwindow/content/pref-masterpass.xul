@@ -33,7 +33,8 @@
 
 <dialog id="set_password" title="&setPassword.title;"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
-  style="width: 35em;"     
+  style="width: 35em;" 
+  ondialogaccept="setPassword();" 
   onload="onLoad();">
 
 <script type="application/x-javascript" src="chrome://browser/content/pref/pref-masterpass.js"/>

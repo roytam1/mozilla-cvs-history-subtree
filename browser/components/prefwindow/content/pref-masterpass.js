@@ -167,14 +167,8 @@ function setPassword()
   }
 
   // Terminate dialog
-  if (success) {
-    if (params) {
-      // Return value 1 means "successfully executed ok"
-      params.SetInt(1, 1);
-    }
-
+  if (success)
     window.close();
-  }
 }
 
 function setPasswordStrength()
