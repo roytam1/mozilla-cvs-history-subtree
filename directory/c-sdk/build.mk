@@ -31,34 +31,67 @@ endif
 # Ldap library
 LDAPVERS	= 50
 LDAPVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+LDAP_LIBNAME	= nsldap32v$(LDAPVERS)
+else
 LDAP_LIBNAME	= ldap$(LDAPVERS)
+endif
 DIR_VERSION     = $(LDAPVERS_SUFFIX)
 DIRSDK_VERSION  = $(LDAPVERS_SUFFIX)
 
 # PrLdap library
 PRLDAPVERS      = 50
 PRLDAPVERS_SUFFIX= 5.0
+ifeq ($(OS_ARCH), WINNT)
+PRLDAP_LIBNAME	= nsldappr32v$(PRLDAPVERS)
+else
 PRLDAP_LIBNAME	= prldap$(PRLDAPVERS)
+endif
 
 # lber library
 LBERVERS	= 50
 LBERVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+LBER_LIBNAME	= nslber32v$(LBERVERS)
+else
 LBER_LIBNAME	= lber$(LBERVERS)
+endif
 
 # ldif library
 LDIFVERS	= 50
 LDIFVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+LDIF_LIBNAME	= nsldif32v$(LDIFVERS)
+else
 LDIF_LIBNAME	= ldif$(LDIFVERS)
+endif
 
 # iutil library
 IUTILVERS	= 50
 IUTILVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+IUTIL_LIBNAME	= nsiutil32v$(IUTILVERS)
+else
 IUTIL_LIBNAME	= iutil$(IUTILVERS)
+endif
+
+# util library
+UTILVERS	= 50
+UTILVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+UTIL_LIBNAME	= nsutil32v$(UTILVERS)
+else
+UTIL_LIBNAME	= util$(UTILVERS)
+endif
 
 # ssl library
 SSLDAPVERS	= 50
 SSLDAPVERS_SUFFIX = 5.0
+ifeq ($(OS_ARCH), WINNT)
+SSLDAP_LIBNAME	= nsldapssl32v$(SSLDAPVERS)
+else
 SSLDAP_LIBNAME	= ssldap$(SSLDAPVERS)
+endif
 
 # nss library
 NSSVERS		= 3
@@ -110,6 +143,7 @@ NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 # NLS library
 #
 NLS_LIBVERSION	=31
+LIBNLS_RELDATE=v3.2
 NSCNV_LIBNAME	=libnscnv$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSJPN_LIBNAME	=libnsjpn$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
@@ -118,8 +152,10 @@ NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 # as used in clients/tools/Makefile.client
 LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+LIBNLS_DIR	    = ../../../../components/libnls$(NLS_LIBVERSION)
 LIBNLS_INCLUDES =../../../../../dist/public/libnls
 LIBNLS_LIBDIR	=../../../../../dist/$(OBJDIR_NAME)/libnls
+LIBNLS_RELEASE	= $(LIBNLS_DIR)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)
 
 RM              = rm -f
 SED             = sed
@@ -160,6 +196,19 @@ DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
 		  $(NSDOMESTIC) $(LDAPSSLIO)
 
 
+ifeq ($(OS_ARCH), WINNT)
+DIRVER_PROG=$(COMMON_OBJDIR)/dirver.exe
+else
+DIRVER_PROG=$(COMMON_OBJDIR)/dirver
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+EXE_SUFFIX=.exe
+RSC=rc
+OFFLAG=/Fo
+else
+OFFLAG=-o
+endif
 
 ifeq ($(OS_ARCH), Linux)
 DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
@@ -278,15 +327,13 @@ endif # Linux
 #
 
 ifeq ($(OS_ARCH), WINNT)
+SUBSYSTEM=CONSOLE
 LINK_EXE        = link -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
     /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) $(EXTRA_LIBS) $(OBJS)
-LINK_EXE_NOLIBSOBJS     = link -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) \
-    $(ML_DEBUG) $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
-    /SUBSYSTEM:$(SUBSYSTEM)
 LINK_LIB        = lib -OUT:"$@"  $(OBJS)
 LINK_DLL        = link /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
-        $(ML_DEBUG) /SUBSYSTEM:WINDOWS $(LLFLAGS) $(DLL_LDFLAGS) \
+        $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) /out:"$@" $(OBJS)
 else # WINNT
 #
