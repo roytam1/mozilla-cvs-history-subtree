@@ -104,12 +104,11 @@ public:
     void popString(nsAString& aStr);
     nsresult pushInt(PRInt32 aInt);
     PRInt32 popInt();
-    nsresult pushResultHandler(txXMLEventHandler* aHandler);
-    txXMLEventHandler* popResultHandler();
+    nsresult pushResultHandler(txAXMLEventHandler* aHandler);
+    txAXMLEventHandler* popResultHandler();
 
     // state-getting functions
     txIEvalContext* getEvalContext();
-    nsresult getRTFDocument(Document** aDocument);
     txExpandedNameMap* getParamMap();
     Node* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
     nsresult getKeyNodes(const txExpandedName& aKeyName, Document* aDocument,
@@ -134,13 +133,10 @@ public:
                                       txIEvalContext* aContext);
     void leaveRecursionCheckpoint();
 
-#ifdef TX_EXE
-    txIOutputXMLEventHandler* mOutputHandler;
-#else
-    nsCOMPtr<txIOutputXMLEventHandler> mOutputHandler;
-#endif
-    txXMLEventHandler* mResultHandler;
-    txIOutputHandlerFactory* mOutputHandlerFactory;
+    txAXMLEventHandler* mOutputHandler;
+    txAXMLEventHandler* mResultHandler;
+    txAOutputHandlerFactory* mOutputHandlerFactory;
+
     txExpandedNameMap* mTemplateParams;
 
     txStylesheet* mStylesheet;

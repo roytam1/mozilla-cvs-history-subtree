@@ -259,6 +259,8 @@ txStylesheet::getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
     
     aExpr = var->mExpr;
     aInstr = var->mFirstInstruction;
+
+    return NS_OK;
 }
 
 const txExpandedNameMap&

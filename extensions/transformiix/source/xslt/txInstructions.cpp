@@ -396,25 +396,43 @@ txCopyOf::execute(txExecutionState& aEs)
     ExprResult* exprRes = mSelect->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-    if (exprRes->getResultType() == ExprResult::NODESET) {
-        NodeSet* nodes = (NodeSet*)exprRes;
-        int i;
-        for (i = 0; i < nodes->size(); ++i) {
-            Node* node = nodes->get(i);
-            rv = copyNode(node, aEs);
+    switch (exprRes->getResultType()) {
+        case ExprResult::NODESET:
+        {
+            NodeSet* nodes = (NodeSet*)exprRes;
+            int i;
+            for (i = 0; i < nodes->size(); ++i) {
+                Node* node = nodes->get(i);
+                rv = copyNode(node, aEs);
+                if (NS_FAILED(rv)) {
+                    delete exprRes;
+                    return rv;
+                }
+            }
+            break;
+        }
+        case ExprResult::RESULT_TREE_FRAGMENT:
+        {
+            txResultTreeFragment* rtf = NS_STATIC_CAST(txResultTreeFragment*,
+                                                       exprRes);
+            rv = rtf->flushToHandler(aEs.mResultHandler);
             if (NS_FAILED(rv)) {
                 delete exprRes;
                 return rv;
             }
+            break;
+        }
+        default:
+        {
+            nsAutoString value;
+            exprRes->stringValue(value);
+            if (!value.IsEmpty()) {
+                aEs.mResultHandler->characters(value, PR_FALSE);
+            }
+            break;
         }
     }
-    else {
-        nsAutoString value;
-        exprRes->stringValue(value);
-        if (!value.IsEmpty()) {
-            aEs.mResultHandler->characters(value, PR_FALSE);
-        }
-    }
+    
     delete exprRes;
     
     return NS_OK;
@@ -695,14 +713,10 @@ txPushParams::execute(txExecutionState& aEs)
 nsresult
 txPushRTFHandler::execute(txExecutionState& aEs)
 {
-    Document* rtfdoc;
-    nsresult rv = aEs.getRTFDocument(&rtfdoc);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    txXMLEventHandler* handler = new txRtfHandler(rtfdoc);
+    txAXMLEventHandler* handler = new txRtfHandler;
     NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
     
-    rv = aEs.pushResultHandler(handler);
+    nsresult rv = aEs.pushResultHandler(handler);
     if (NS_FAILED(rv)) {
         delete handler;
         return rv;
@@ -719,7 +733,7 @@ txPushStringHandler::txPushStringHandler(PRBool aOnlyText)
 nsresult
 txPushStringHandler::execute(txExecutionState& aEs)
 {
-    txXMLEventHandler* handler = new txTextHandler(mOnlyText);
+    txAXMLEventHandler* handler = new txTextHandler(mOnlyText);
     NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
     
     nsresult rv = aEs.pushResultHandler(handler);
@@ -795,10 +809,10 @@ txSetParam::execute(txExecutionState& aEs)
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
     }
     else {
-        txRtfHandler* handler = (txRtfHandler*)aEs.popResultHandler();
-        exprRes = handler->mResultTreeFragment;
-        handler->mResultTreeFragment = nsnull;
-        delete handler;
+        txRtfHandler* rtfHandler = (txRtfHandler*)aEs.popResultHandler();
+        exprRes = rtfHandler->createRTF();
+        delete rtfHandler;
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_OUT_OF_MEMORY);
     }
     
     nsresult rv = aEs.mTemplateParams->add(mName, exprRes);
@@ -829,10 +843,10 @@ txSetVariable::execute(txExecutionState& aEs)
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
     }
     else {
-        txRtfHandler* handler = (txRtfHandler*)aEs.popResultHandler();
-        exprRes = handler->mResultTreeFragment;
-        handler->mResultTreeFragment = nsnull;
-        delete handler;
+        txRtfHandler* rtfHandler = (txRtfHandler*)aEs.popResultHandler();
+        exprRes = rtfHandler->createRTF();
+        delete rtfHandler;
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_OUT_OF_MEMORY);
     }
     
     nsresult rv = aEs.bindVariable(mName, exprRes, MB_TRUE);

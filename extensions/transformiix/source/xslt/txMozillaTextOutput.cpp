@@ -82,8 +82,6 @@ txMozillaTextOutput::~txMozillaTextOutput()
 {
 }
 
-NS_IMPL_ISUPPORTS1(txMozillaTextOutput, txIOutputXMLEventHandler);
-
 void txMozillaTextOutput::attribute(const nsAString& aName,
                                     const PRInt32 aNsID,
                                     const nsAString& aValue)

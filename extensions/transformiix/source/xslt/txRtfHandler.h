@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Jonas Sicking <jonas@sicking.cc>
  *   Peter Van der Beken <peterv@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -36,90 +37,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_RTF_HANDLER_H
-#define TRANSFRMX_RTF_HANDLER_H
+#ifndef txRtfHandler_h___
+#define txRtfHandler_h___
 
-#include "txXMLEventHandler.h"
-#include "NodeSet.h"
+#include "txBufferingHandler.h"
+#include "ExprResult.h"
 
-class Document;
-class Node;
-
-class txRtfHandler : public txXMLEventHandler
+class txResultTreeFragment : public ExprResult
 {
 public:
-    txRtfHandler(Document* aDocument);
-    virtual ~txRtfHandler();
+    txResultTreeFragment(txResultBuffer* aBuffer);
+    ~txResultTreeFragment();
 
-    /**
-     * Signals to receive the start of an attribute.
-     *
-     * @param aName the name of the attribute
-     * @param aNsID the namespace ID of the attribute
-     * @param aValue the value of the attribute
-     */
-    void attribute(const nsAString& aName,
-                   const PRInt32 aNsID,
-                   const nsAString& aValue);
+    virtual ExprResult* clone();
+    virtual short getResultType();
+    virtual void stringValue(nsAString& aResult);
+    virtual MBool booleanValue();
+    virtual double numberValue();
 
-    /**
-     * Signals to receive characters.
-     *
-     * @param aData the characters to receive
-     * @param aDOE disable output escaping for these characters
-     */
-    void characters(const nsAString& aData, PRBool aDOE);
-
-    /**
-     * Signals to receive data that should be treated as a comment.
-     *
-     * @param data the comment data to receive
-     */
-    void comment(const nsAString& aData);
-
-    /**
-     * Signals the end of a document. It is an error to call
-     * this method more than once.
-     */
-    void endDocument();
-
-    /**
-     * Signals to receive the end of an element.
-     *
-     * @param aName the name of the element
-     * @param aNsID the namespace ID of the element
-     */
-    void endElement(const nsAString& aName,
-                    const PRInt32 aNsID);
-
-    /**
-     * Signals to receive a processing instruction.
-     *
-     * @param aTarget the target of the processing instruction
-     * @param aData the data of the processing instruction
-     */
-    void processingInstruction(const nsAString& aTarget,
-                               const nsAString& aData);
-
-    /**
-     * Signals the start of a document.
-     */
-    void startDocument();
-
-    /**
-     * Signals to receive the start of an element.
-     *
-     * @param aName the name of the element
-     * @param aNsID the namespace ID of the element
-     */
-    void startElement(const nsAString& aName,
-                      const PRInt32 aNsID);
-
-    txResultTreeFragment* mResultTreeFragment;
+    nsresult flushToHandler(txAXMLEventHandler* aHandler);
 
 private:
-    Document* mDocument;
-    Node* mCurrentNode;
+    nsRefPtr<txResultBuffer> mBuffer;
 };
 
-#endif
+class txRtfHandler : public txBufferingHandler
+{
+public:
+    txRtfHandler();
+    virtual ~txRtfHandler();
+
+    txResultTreeFragment* createRTF();
+
+    void endDocument();
+    void startDocument();
+};
+
+#endif /* txRtfHandler_h___ */

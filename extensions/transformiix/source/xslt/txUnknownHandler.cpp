@@ -41,26 +41,13 @@
 #include "txStringUtils.h"
 #include "txStylesheet.h"
 
-#ifndef TX_EXE
-NS_IMPL_ISUPPORTS1(txUnknownHandler, txIOutputXMLEventHandler);
-#endif
-
-PRUint32 txUnknownHandler::kReasonableTransactions = 8;
-
 txUnknownHandler::txUnknownHandler(txExecutionState* aEs)
-    : mTotal(0), mMax(kReasonableTransactions), 
-      mEs(aEs)
+    : mEs(aEs)
 {
-    mArray = new txOutputTransaction*[kReasonableTransactions];
 }
 
 txUnknownHandler::~txUnknownHandler()
 {
-    PRUint32 counter;
-    for (counter = 0; counter < mTotal; ++counter) {
-        delete mArray[counter];
-    }
-    delete [] mArray;
 }
 
 void txUnknownHandler::attribute(const nsAString& aName,
@@ -72,42 +59,12 @@ void txUnknownHandler::attribute(const nsAString& aName,
     // XXX ErrorReport: Signal this?
 }
 
-void txUnknownHandler::characters(const nsAString& aData, PRBool aDOE)
-{
-    txOneStringTransaction* transaction =
-        new txOneStringTransaction(aDOE ? txOutputTransaction::eCharacterNoOETransaction :
-                                          txOutputTransaction::eCharacterTransaction,
-                                   aData);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!");
-        return;
-    }
-    addTransaction(transaction);
-}
-
-void txUnknownHandler::comment(const nsAString& aData)
-{
-    txOneStringTransaction* transaction =
-        new txOneStringTransaction(txOutputTransaction::eCommentTransaction,
-                                   aData);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!");
-        return;
-    }
-    addTransaction(transaction);
-}
-
 void txUnknownHandler::endDocument()
 {
     // This is an unusual case, no output method has been set and we
     // didn't create a document element. Switching to XML output mode
     // anyway.
 
-#ifndef TX_EXE
-    // Make sure that we don't get deleted while this function is executed and
-    // we set a new outputhandler
-    nsCOMPtr<txIOutputXMLEventHandler> kungFuDeathGrip(this);
-#endif
     nsresult rv = createHandlerAndFlush(eXMLOutput, nsString(),
                                         kNameSpaceID_None);
     if (NS_FAILED(rv))
@@ -115,58 +72,20 @@ void txUnknownHandler::endDocument()
 
     mEs->mResultHandler->endDocument();
 
-    // in module the outputhandler is refcounted
-#ifdef TX_EXE
     delete this;
-#endif
-}
-
-void txUnknownHandler::endElement(const nsAString& aName,
-                                  const PRInt32 aNsID)
-{
-    NS_ASSERTION(0, "This shouldn't be called");
-}
-
-void txUnknownHandler::processingInstruction(const nsAString& aTarget,
-                                             const nsAString& aData)
-{
-    txTwoStringTransaction* transaction =
-        new txTwoStringTransaction(txOutputTransaction::ePITransaction,
-                                   aTarget, aData);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!");
-        return;
-    }
-    addTransaction(transaction);
-}
-
-void txUnknownHandler::startDocument()
-{
-    txOutputTransaction* transaction =
-        new txOutputTransaction(txOutputTransaction::eStartDocumentTransaction);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!");
-        return;
-    }
-    addTransaction(transaction);
 }
 
 void txUnknownHandler::startElement(const nsAString& aName,
                                     const PRInt32 aNsID)
 {
-#ifndef TX_EXE
-    // Make sure that we don't get deleted while this function is executed and
-    // we set a new outputhandler
-    nsCOMPtr<txIOutputXMLEventHandler> kungFuDeathGrip(this);
-#endif
-
     nsresult rv = NS_OK;
     txOutputFormat* format = mEs->mStylesheet->getOutputFormat();
     if (format->mMethod != eMethodNotSet) {
         rv = createHandlerAndFlush(format->mMethod, aName, aNsID);
     }
     else if (aNsID == kNameSpaceID_None &&
-             aName.Equals(NS_LITERAL_STRING("html"), txCaseInsensitiveStringComparator())) {
+             aName.Equals(NS_LITERAL_STRING("html"),
+                          txCaseInsensitiveStringComparator())) {
         rv = createHandlerAndFlush(eHTMLOutput, aName, aNsID);
     }
     else {
@@ -177,94 +96,27 @@ void txUnknownHandler::startElement(const nsAString& aName,
 
     mEs->mResultHandler->startElement(aName, aNsID);
 
-    // in module the outputhandler is refcounted
-#ifdef TX_EXE
     delete this;
-#endif
 }
-
-#ifndef TX_EXE
-void txUnknownHandler::getOutputDocument(nsIDOMDocument** aDocument)
-{
-    *aDocument = nsnull;
-}
-#endif
 
 nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
                                                  const nsAString& aName,
                                                  const PRInt32 aNsID)
 {
-    nsresult rv = NS_OK;
+    NS_ENSURE_TRUE(mBuffer, NS_ERROR_NOT_INITIALIZED);
+
     txOutputFormat format;
     format.merge(*mEs->mStylesheet->getOutputFormat());
     format.mMethod = aMethod;
 
-    txIOutputXMLEventHandler* handler = 0;
-    rv = mEs->mOutputHandlerFactory->createHandlerWith(&format, aName, aNsID,
-                                                       &handler);
+    txAXMLEventHandler* handler = 0;
+    nsresult rv = mEs->mOutputHandlerFactory->createHandlerWith(&format, aName,
+                                                                aNsID,
+                                                                &handler);
     NS_ENSURE_SUCCESS(rv, rv);
 
     mEs->mOutputHandler = handler;
     mEs->mResultHandler = handler;
 
-    PRUint32 counter;
-    for (counter = 0; counter < mTotal; ++counter) {
-        switch (mArray[counter]->mType) {
-            case txOutputTransaction::eCharacterTransaction:
-            {
-                txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
-                handler->characters(transaction->mString, PR_FALSE);
-                delete transaction;
-                break;
-            }
-            case txOutputTransaction::eCharacterNoOETransaction:
-            {
-                txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
-                handler->characters(transaction->mString, PR_TRUE);
-                delete transaction;
-                break;
-            }
-            case txOutputTransaction::eCommentTransaction:
-            {
-                txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
-                handler->comment(transaction->mString);
-                delete transaction;
-                break;
-            }
-            case txOutputTransaction::ePITransaction:
-            {
-                txTwoStringTransaction* transaction = (txTwoStringTransaction*)mArray[counter];
-                handler->processingInstruction(transaction->mStringOne,
-                                                transaction->mStringTwo);
-                delete transaction;
-                break;
-            }
-            case txOutputTransaction::eStartDocumentTransaction:
-            {
-                handler->startDocument();
-                delete mArray[counter];
-                break;
-            }
-        }
-    }
-    mTotal = 0;
-
-    return NS_OK;
-}
-
-void txUnknownHandler::addTransaction(txOutputTransaction* aTransaction)
-{
-    if (mTotal == mMax) {
-        PRUint32 newMax = mMax * 2;
-        txOutputTransaction** newArray = new txOutputTransaction*[newMax];
-        if (!newArray) {
-            NS_ASSERTION(0, "Out of memory!");
-            return;
-        }
-        mMax = newMax;
-        memcpy(newArray, mArray, mTotal * sizeof(txOutputTransaction*));
-        delete [] mArray;
-        mArray = newArray;
-    }
-    mArray[mTotal++] = aTransaction;
+    return mBuffer->flushToHandler(handler);
 }

@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txTextOutput.h"
+#include "nsString.h"
 
 txTextOutput::txTextOutput(ostream* aOut)
     : mOut(aOut)

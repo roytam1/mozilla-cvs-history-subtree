@@ -146,7 +146,7 @@ txExecutionState::init(Node* aNode,
     mInitialEvalContext = mEvalContext;
 
     // Set up output and result-handler
-    txIOutputXMLEventHandler* handler = 0;
+    txAXMLEventHandler* handler = 0;
     rv = mOutputHandlerFactory->
         createHandlerWith(mStylesheet->getOutputFormat(), &handler);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -229,16 +229,12 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
         NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
     }
     else {
-        Document* rtfdoc;
-        rv = getRTFDocument(&rtfdoc);
-        NS_ENSURE_SUCCESS(rv, rv);
+        txRtfHandler* rtfHandler = new txRtfHandler;
+        NS_ENSURE_TRUE(rtfHandler, NS_ERROR_OUT_OF_MEMORY);
 
-        txRtfHandler* handler = new txRtfHandler(rtfdoc);
-        NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
-
-        rv = pushResultHandler(handler);
+        rv = pushResultHandler(rtfHandler);
         if (NS_FAILED(rv)) {
-            delete handler;
+            delete rtfHandler;
             return rv;
         }
 
@@ -254,9 +250,10 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
 
         mNextInstruction = prevInstr;
         popResultHandler();
-        aResult = handler->mResultTreeFragment;
-        handler->mResultTreeFragment = nsnull;
-        delete handler;
+        aResult = rtfHandler->createRTF();
+        NS_ENSURE_TRUE(aResult, NS_ERROR_OUT_OF_MEMORY);
+
+        delete rtfHandler;
     }
     popEvalContext();
 
@@ -341,7 +338,7 @@ txExecutionState::popInt()
 }
 
 nsresult
-txExecutionState::pushResultHandler(txXMLEventHandler* aHandler)
+txExecutionState::pushResultHandler(txAXMLEventHandler* aHandler)
 {
     nsresult rv = mResultHandlerStack.push(mResultHandler);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -351,11 +348,11 @@ txExecutionState::pushResultHandler(txXMLEventHandler* aHandler)
     return NS_OK;
 }
 
-txXMLEventHandler*
+txAXMLEventHandler*
 txExecutionState::popResultHandler()
 {
-    txXMLEventHandler* oldHandler = mResultHandler;
-    mResultHandler = (txXMLEventHandler*)mResultHandlerStack.pop();
+    txAXMLEventHandler* oldHandler = mResultHandler;
+    mResultHandler = (txAXMLEventHandler*)mResultHandlerStack.pop();
 
     return oldHandler;
 }
@@ -364,30 +361,6 @@ txIEvalContext*
 txExecutionState::getEvalContext()
 {
     return mEvalContext;
-}
-
-nsresult
-txExecutionState::getRTFDocument(Document** aDocument)
-{
-    *aDocument = nsnull;
-    if (!mRTFDocument) {
-#ifdef TX_EXE
-        mRTFDocument = new Document();
-        NS_ENSURE_TRUE(mRTFDocument, NS_ERROR_OUT_OF_MEMORY);
-#else
-        nsresult rv;
-        nsCOMPtr<nsIDOMDocument> domDoc = do_CreateInstance(kXMLDocumentCID,
-                                                            &rv);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        mRTFDocument = new Document(domDoc);
-        NS_ENSURE_TRUE(mRTFDocument, NS_ERROR_OUT_OF_MEMORY);
-#endif
-    }
-
-    *aDocument = mRTFDocument;
-
-    return NS_OK;
 }
 
 txExpandedNameMap*

@@ -40,6 +40,7 @@
 #define TRANSFRMX_MOZILLA_XML_OUTPUT_H
 
 #include "txXMLEventHandler.h"
+#include "nsAutoPtr.h"
 #include "nsIContent.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMHTMLTextAreaElement.h"
@@ -52,9 +53,37 @@
 #include "nsICSSLoaderObserver.h"
 #include "nsIDocumentTransformer.h"
 
-class txMozillaXMLOutput : public txIOutputXMLEventHandler,
-                           public nsIScriptLoaderObserver,
-                           public nsICSSLoaderObserver
+class txTransformNotifier : public nsIScriptLoaderObserver,
+                            public nsICSSLoaderObserver
+{
+public:
+    txTransformNotifier();
+    virtual ~txTransformNotifier();
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSISCRIPTLOADEROBSERVER
+    
+    // nsICSSLoaderObserver
+    NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify);
+
+    void Init(nsITransformObserver* aObserver);
+    void AddScriptElement(nsIDOMHTMLScriptElement* aElement);
+    void AddStyleSheet(nsIStyleSheet* aStyleSheet);
+    void OnTransformEnd();
+    void OnTransformStart();
+    void SetOutputDocument(nsIDOMDocument* aDocument);
+
+private:
+    void SignalTransformEnd();
+
+    nsCOMPtr<nsIDOMDocument> mDocument;
+    nsCOMPtr<nsITransformObserver> mObserver;
+    nsCOMArray<nsIDOMHTMLScriptElement> mScriptElements;
+    nsCOMArray<nsIStyleSheet> mStylesheets;
+    PRPackedBool mInTransform;
+};
+
+class txMozillaXMLOutput : public txAOutputXMLEventHandler
 {
 public:
     txMozillaXMLOutput(const nsAString& aRootName,
@@ -67,82 +96,8 @@ public:
                        nsIDOMDocumentFragment* aFragment);
     virtual ~txMozillaXMLOutput();
 
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSISCRIPTLOADEROBSERVER
-    
-    // nsICSSLoaderObserver
-    NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify);
-
-    /**
-     * Signals to receive the start of an attribute.
-     *
-     * @param aName the name of the attribute
-     * @param aNsID the namespace ID of the attribute
-     * @param aValue the value of the attribute
-     */
-    void attribute(const nsAString& aName,
-                   const PRInt32 aNsID,
-                   const nsAString& aValue);
-
-    /**
-     * Signals to receive characters.
-     *
-     * @param aData the characters to receive
-     * @param aDOE disable output escaping for these characters
-     */
-    void characters(const nsAString& aData, PRBool aDOE);
-
-    /**
-     * Signals to receive data that should be treated as a comment.
-     *
-     * @param data the comment data to receive
-     */
-    void comment(const nsAString& aData);
-
-    /**
-     * Signals the end of a document. It is an error to call
-     * this method more than once.
-     */
-    void endDocument();
-
-    /**
-     * Signals to receive the end of an element.
-     *
-     * @param aName the name of the element
-     * @param aNsID the namespace ID of the element
-     */
-    void endElement(const nsAString& aName,
-                    const PRInt32 aNsID);
-
-    /**
-     * Signals to receive a processing instruction.
-     *
-     * @param aTarget the target of the processing instruction
-     * @param aData the data of the processing instruction
-     */
-    void processingInstruction(const nsAString& aTarget,
-                               const nsAString& aData);
-
-    /**
-     * Signals the start of a document.
-     */
-    void startDocument();
-
-    /**
-     * Signals to receive the start of an element.
-     *
-     * @param aName the name of the element
-     * @param aNsID the namespace ID of the element
-     */
-    void startElement(const nsAString& aName,
-                      const PRInt32 aNsID);
-
-    /**
-     * Gets the Mozilla output document
-     *
-     * @param aDocument the Mozilla output document
-     */
-    void getOutputDocument(nsIDOMDocument** aDocument);
+    TX_DECL_TXAXMLEVENTHANDLER
+    TX_DECL_TXAOUTPUTXMLEVENTHANDLER
 
 private:
     void closePrevious(PRInt8 aAction);
@@ -153,22 +108,19 @@ private:
     nsresult createResultDocument(const nsAString& aName, PRInt32 aNsID,
                                   nsIDOMDocument* aSourceDocument,
                                   nsIDOMDocument* aResultDocument);
-    void SignalTransformEnd();
 
     nsCOMPtr<nsIDOMDocument> mDocument;
     nsCOMPtr<nsIDOMNode> mCurrentNode;
     nsCOMPtr<nsIDOMNode> mParentNode;
     nsCOMPtr<nsIContent> mRootContent;
-    nsCOMPtr<nsITransformObserver> mObserver;
 
     nsCOMPtr<nsIDOMNode> mNonAddedParent;
     nsCOMPtr<nsIDOMNode> mNonAddedNode;
 
+    nsRefPtr<txTransformNotifier> mNotifier;
+
     PRUint32 mBadChildLevel;
     nsCString mRefreshString;
-
-    nsCOMArray<nsIDOMHTMLScriptElement> mScriptElements;
-    nsCOMArray<nsIStyleSheet> mStylesheets;
 
     nsAutoString mText;
 
@@ -179,10 +131,9 @@ private:
     PRPackedBool mHaveTitleElement;
     PRPackedBool mHaveBaseElement;
 
-    PRPackedBool mInTransform;
-    PRPackedBool mCreatingNewDocument;
     PRPackedBool mDocumentIsHTML;
- 
+    PRPackedBool mCreatingNewDocument;
+
     enum txAction { eCloseElement = 1, eFlushText = 2 };
 };
 

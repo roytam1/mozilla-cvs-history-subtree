@@ -12,14 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
+ * Jonas Sicking.
+ * Portions created by the Initial Developer are Copyright (C) 2003
+ * Jonas Sicking. All Rights Reserved.
  *
  * Contributor(s):
+ *   Jonas Sicking <jonas@sicking.cc>
  *   Peter Van der Beken <peterv@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -36,25 +37,58 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TEXT_HANDLER_H
-#define TRANSFRMX_TEXT_HANDLER_H
+#ifndef txBufferingHandler_h__
+#define txBufferingHandler_h__
 
 #include "txXMLEventHandler.h"
 #include "nsString.h"
+#include "nsVoidArray.h"
+#include "nsAutoPtr.h"
 
-class txTextHandler : public txAXMLEventHandler
+class txOutputTransaction;
+class txCharacterTransaction;
+
+class txResultBuffer
 {
 public:
-    txTextHandler(MBool aOnlyText);
-    virtual ~txTextHandler();
+    ~txResultBuffer();
+
+    nsrefcnt AddRef()
+    {
+        return ++mRefCnt;
+    }
+    nsrefcnt Release()
+    {
+        if (--mRefCnt == 0) {
+            mRefCnt = 1; //stabilize
+            delete this;
+            return 0;
+        }
+        return mRefCnt;
+    }
+
+    nsresult addTransaction(txOutputTransaction* aTransaction);
+    nsresult flushToHandler(txAXMLEventHandler* aHandler);
+    txOutputTransaction* getLastTransaction();
+
+    nsString mStringValue;
+
+private:
+    nsVoidArray mTransactions;
+    nsAutoRefCnt mRefCnt;
+};
+
+class txBufferingHandler : public txAXMLEventHandler
+{
+public:
+    txBufferingHandler();
+    ~txBufferingHandler();
 
     TX_DECL_TXAXMLEVENTHANDLER
 
-    nsString mValue;
-
-private:
-    PRUint32 mLevel;
-    MBool mOnlyText;
+protected:
+    nsRefPtr<txResultBuffer> mBuffer;
+    PRPackedBool mCanAddAttribute;
 };
 
-#endif
+#endif /* txBufferingHandler_h__ */

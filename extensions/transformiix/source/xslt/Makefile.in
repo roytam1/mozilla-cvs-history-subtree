@@ -48,7 +48,9 @@ REQUIRES +=	  dom \
 		  $(NULL)
 endif
 
-CPPSRCS = txExecutionState.cpp \
+CPPSRCS = \
+        txBufferingHandler.cpp \
+        txExecutionState.cpp \
         txInstructions.cpp \
         txOutputFormat.cpp \
         txRtfHandler.cpp \
