@@ -147,6 +147,7 @@ jfieldID njJSException_filename;        /* netscape.javascript.JSException.filen
             (*jEnv)->GetMethodID(jEnv, class, #method, signature);           \
     }                                                                        \
     if (class##_##mvar == 0) {                                               \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
         report_java_initialization_error(jEnv,                               \
                "Can't get mid for " #qualified_class "." #method "()");      \
         return JS_FALSE;                                                     \
@@ -172,6 +173,7 @@ jfieldID njJSException_filename;        /* netscape.javascript.JSException.filen
         class##_##field = (*jEnv)->GetFieldID(jEnv, class, #field, signature);\
     }                                                                        \
     if (class##_##field == 0) {                                              \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
         report_java_initialization_error(jEnv,                               \
                 "Can't get fid for " #qualified_class "." #field);           \
         return JS_FALSE;                                                     \
@@ -194,6 +196,7 @@ jfieldID njJSException_filename;        /* netscape.javascript.JSException.filen
         class##_##field =                                                    \
             (*jEnv)->GetStatic##type##Field(jEnv, class, field_id);          \
         if (class##_##field == 0) {                                          \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
             report_java_initialization_error(jEnv,                           \
                 "Can't read static field " #qualified_class "." #field);     \
             return JS_FALSE;                                                 \
@@ -310,6 +313,7 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 static JSBool
 init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 {
+
     LOAD_CLASS(netscape/javascript/JSObject,    njJSObject);
     LOAD_CLASS(netscape/javascript/JSException, njJSException);
     LOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
@@ -318,13 +322,19 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     JSObject_RegisterNativeMethods(jEnv);
 #endif
 
+#ifndef OJI
     LOAD_CONSTRUCTOR(netscape.javascript.JSObject,
                                             JSObject,           "(I)V",                         njJSObject);
+#endif
     LOAD_CONSTRUCTOR(netscape.javascript.JSException,
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
                                                                                                 njJSException);
+
+
+#ifndef OJI
     LOAD_FIELDID(netscape.javascript.JSObject,  
                                             internal,           "I",                            njJSObject);
+#endif
     LOAD_FIELDID(netscape.javascript.JSException,  
                                             lineno,             "I",                            njJSException);
     LOAD_FIELDID(netscape.javascript.JSException,  

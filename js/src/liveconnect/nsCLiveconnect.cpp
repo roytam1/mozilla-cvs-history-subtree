@@ -475,7 +475,6 @@ nsCLiveconnect::GetWindow(JNIEnv *jEnv, void *pJavaObject,  void* principalsArra
     JavaToJSSavedState saved_state    = {NULL,NULL};
     jobject            java_obj         = NULL;
     JSJavaThreadState *jsj_env        = NULL;
-    jsval              js_val;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
     JSObjectHandle    *handle         = NULL;
@@ -540,6 +539,40 @@ nsCLiveconnect::FinalizeJSObject(JNIEnv *jEnv, jsobject obj)
         return NS_ERROR_NULL_POINTER;
     JS_RemoveRoot(cx, &handle->js_obj);
     JS_free(cx, handle);
+    return NS_OK;
+}
+
+
+NS_METHOD	
+nsCLiveconnect::ToString(JNIEnv *jEnv, jsobject obj, jstring *pjstring)
+{
+    JSContext         *cx             = NULL;
+    JSJavaThreadState *jsj_env        = NULL;
+    JSObjectHandle    *handle         = (JSObjectHandle*)obj;
+    JSObject          *js_obj         = handle->js_obj;
+    JavaToJSSavedState saved_state    = {NULL,NULL};
+    jstring            result         = NULL;
+    JSString          *jsstr          = NULL;
+
+    
+    if(jEnv == NULL)
+    {
+       return NS_ERROR_FAILURE;
+    }
+    jsj_env = jsj_enter_js(jEnv, NULL, &cx, NULL, &saved_state, NULL, 0, NULL );
+    if (!jsj_env)
+       return NS_ERROR_FAILURE;
+    
+    result = NULL;
+    jsstr = JS_ValueToString(cx, OBJECT_TO_JSVAL(js_obj));
+    if (jsstr)
+        result = jsj_ConvertJSStringToJavaString(cx, jEnv, jsstr);
+    if (!result)
+        result = jEnv->NewStringUTF("*JavaObject*");
+
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
+        return NULL;
+    *pjstring = result;     
     return NS_OK;
 }
 
