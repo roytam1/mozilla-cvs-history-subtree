@@ -122,6 +122,42 @@ LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars)
     return retval;
 }
 
+/*
+ * _PR_MD_W2A
+ *
+ * Non-mallocing fucntion to return a ANSI (multi byte, ansi code page)
+ *  string based on the wide char string passed in.
+ *
+ * NOTE:  inWideStringChars is number of wide characters in outWideString,
+ *          NOT the number of bytes....
+ */
+LPSTR _PR_MD_W2A(LPCWSTR inWideString, LPSTR outString, int inStringChars)
+{
+    LPSTR retval = outString;
+
+    if(NULL != outString)
+    {
+        int convertRes = 0;
+
+        convertRes = WideCharToMultiByte(
+            CP_ACP,
+            WC_COMPOSITECHECK,
+            inWideString,
+            -1,
+            outString,
+            inStringChars,
+            NULL,
+            NULL
+            );
+        if(0 == convertRes)
+        {
+            retval = NULL;
+        }
+    }
+
+    return retval;
+}
+
 #if defined(WINCE)
 
 /*

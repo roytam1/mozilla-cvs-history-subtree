@@ -469,8 +469,7 @@ char* GetFileFromDIR(_MDDir* d)
 {
     char* retval = NULL;
 
-    WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, d->d_entry.cFileName, -1, d->cFileNameA, sizeof(d->cFileNameA), NULL, NULL);
-    retval = d->cFileNameA;
+    retval = _PR_MD_W2A(d->d_entry.cFileName, d->cFileNameA, sizeof(d->cFileNameA));
 
     return retval;
 }

@@ -59,6 +59,17 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString);
  */
 LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars);
 
+/*
+ * _PR_MD_W2A
+ *
+ * Non-mallocing fucntion to return a ANSI (multi byte, ansi code page)
+ *  string based on the wide char string passed in.
+ *
+ * NOTE:  inWideStringChars is number of wide characters in outWideString,
+ *          NOT the number of bytes....
+ */
+LPSTR _PR_MD_W2A(LPCWSTR inWideString, LPSTR outString, int inStringChars);
+
 #if defined(WINCE)
 /*
  * WinCE Only

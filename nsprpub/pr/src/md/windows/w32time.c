@@ -57,26 +57,26 @@ static struct tm tmStorage;
  *
  *  As LIBC localtime
  */
-struct tm* Winlocaltime(const time_t* inTimeT)
+struct tm* Winlocaltime_r(const time_t* inTimeT, struct tm* outRetval)
 {
     struct tm* retval = NULL;
 
-    if(NULL != inTimeT)
+    if(NULL != inTimeT && NULL != outRetval)
     {
         SYSTEMTIME winLocalTime;
         
         _MD_time_t_2_LOCALSYSTEMTIME(winLocalTime, *inTimeT);
         
-        tmStorage.tm_sec = (int)winLocalTime.wSecond;
-        tmStorage.tm_min = (int)winLocalTime.wMinute;
-        tmStorage.tm_hour = (int)winLocalTime.wHour;
-        tmStorage.tm_mday = (int)winLocalTime.wDay;
-        tmStorage.tm_mon = (int)(winLocalTime.wMonth - 1);
-        tmStorage.tm_year = (int)(winLocalTime.wYear - 1900);
-        tmStorage.tm_wday = (int)winLocalTime.wDayOfWeek;
-        tmStorage.tm_isdst = -1;
+        outRetval->tm_sec = (int)winLocalTime.wSecond;
+        outRetval->tm_min = (int)winLocalTime.wMinute;
+        outRetval->tm_hour = (int)winLocalTime.wHour;
+        outRetval->tm_mday = (int)winLocalTime.wDay;
+        outRetval->tm_mon = (int)(winLocalTime.wMonth - 1);
+        outRetval->tm_year = (int)(winLocalTime.wYear - 1900);
+        outRetval->tm_wday = (int)winLocalTime.wDayOfWeek;
+        outRetval->tm_isdst = -1;
 
-        tmStorage.tm_yday = (int)winLocalTime.wDay + sDaysOfYear[tmStorage.tm_mon];
+        outRetval->tm_yday = (int)winLocalTime.wDay + sDaysOfYear[outRetval->tm_mon];
         if(0 == (winLocalTime.wYear & 3))
         {
             if(2 < winLocalTime.wMonth)
@@ -85,12 +85,12 @@ struct tm* Winlocaltime(const time_t* inTimeT)
                 {
                     if(0 == winLocalTime.wYear % 400)
                     {
-                        tmStorage.tm_yday++;
+                        outRetval->tm_yday++;
                     }
                 }
                 else
                 {
-                    tmStorage.tm_yday++;
+                    outRetval->tm_yday++;
                 }
             }
         }
@@ -100,13 +100,17 @@ struct tm* Winlocaltime(const time_t* inTimeT)
 
     return retval;
 }
+struct tm* Winlocaltime(const time_t* inTimeT)
+{
+    return Winlocaltime_r(inTimeT, &tmStorage);
+}
 
 /*
  *  Wingmtime
  *
  *  As LIBC gmtime
  */
-struct tm* Wingmtime(const time_t* inTimeT)
+struct tm* Wingmtime_r(const time_t* inTimeT, struct tm* outRetval)
 {
     struct tm* retval = NULL;
 
@@ -116,16 +120,16 @@ struct tm* Wingmtime(const time_t* inTimeT)
         
         _MD_time_t_2_SYSTEMTIME(winGMTime, *inTimeT);
         
-        tmStorage.tm_sec = (int)winGMTime.wSecond;
-        tmStorage.tm_min = (int)winGMTime.wMinute;
-        tmStorage.tm_hour = (int)winGMTime.wHour;
-        tmStorage.tm_mday = (int)winGMTime.wDay;
-        tmStorage.tm_mon = (int)(winGMTime.wMonth - 1);
-        tmStorage.tm_year = (int)(winGMTime.wYear - 1900);
-        tmStorage.tm_wday = (int)winGMTime.wDayOfWeek;
-        tmStorage.tm_isdst = -1;
+        outRetval->tm_sec = (int)winGMTime.wSecond;
+        outRetval->tm_min = (int)winGMTime.wMinute;
+        outRetval->tm_hour = (int)winGMTime.wHour;
+        outRetval->tm_mday = (int)winGMTime.wDay;
+        outRetval->tm_mon = (int)(winGMTime.wMonth - 1);
+        outRetval->tm_year = (int)(winGMTime.wYear - 1900);
+        outRetval->tm_wday = (int)winGMTime.wDayOfWeek;
+        outRetval->tm_isdst = -1;
 
-        tmStorage.tm_yday = (int)winGMTime.wDay + sDaysOfYear[tmStorage.tm_mon];
+        outRetval->tm_yday = (int)winGMTime.wDay + sDaysOfYear[outRetval->tm_mon];
         if(0 == (winGMTime.wYear & 3))
         {
             if(2 < winGMTime.wMonth)
@@ -134,12 +138,12 @@ struct tm* Wingmtime(const time_t* inTimeT)
                 {
                     if(0 == winGMTime.wYear % 400)
                     {
-                        tmStorage.tm_yday++;
+                        outRetval->tm_yday++;
                     }
                 }
                 else
                 {
-                    tmStorage.tm_yday++;
+                    outRetval->tm_yday++;
                 }
             }
         }
@@ -148,6 +152,10 @@ struct tm* Wingmtime(const time_t* inTimeT)
     }
 
     return retval;
+}
+struct tm* Wingmtime(const time_t* inTimeT)
+{
+    return Wingmtime_r(inTimeT, &tmStorage);
 }
 
 /*
@@ -185,31 +193,383 @@ time_t Winmktime(struct tm* inTM)
         /*
          * Now overwrite the struct passed in with what we believe it should be.
          */
-        gmTime = Wingmtime(&retval);
-        if(gmTime != inTM)
-        {
-            memcpy(inTM, gmTime, sizeof(struct tm));
-        }
+        gmTime = Wingmtime_r(&retval, inTM);
     }
 
     return retval;
+}
+
+static void helper_Winstrftime(LPCWSTR inWStr, char** outAStr, int* outAStrMax, PRBool* outHadError, PRBool* outEnoughSpace, char inTestEnd)
+{
+    char *w2aRes = NULL;
+
+    w2aRes = _PR_MD_W2A(inWStr, *outAStr, *outAStrMax);
+    if(NULL != w2aRes)
+    {
+        size_t written = strlen(*outAStr);
+
+        (*outAStr) += written;
+        (*outAStrMax) -= written;
+
+        if(0 == (*outAStrMax) && '\0' != inTestEnd)
+        {
+            /* next one will fail actually, not this one */
+            *outEnoughSpace = PR_FALSE;
+        }
+    }
+    else
+    {
+        *outHadError = PR_TRUE;
+    }
 }
 
 /*
  *  Winstrftime
  *
  *  As LIBCs strftime
+ *  Use GetTimeFormat and GetDateFormat to implement.
  */
 size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr)
 {
     size_t retval = 0;
 
-    /*
-    ** FIXME TODO
-    **
-    ** Use GetTimeFormat and GetDateFormat to implement this for real.
-    */
-    PR_ASSERT(0);
+    if(NULL != strDest && 0 != maxsize && NULL != format && NULL != timeptr)
+    {
+        const char* traverse = format;
+        char* outDst = strDest;
+        size_t outMax = maxsize - 1;
+        PRBool hadEnoughSpace = PR_TRUE;
+        struct tm convertTM;
+        time_t convertT;
+        SYSTEMTIME sysTime;
+        PRBool errorOut = PR_FALSE;
+
+        /*
+         * Convert the struct tm to SYSTEMTIME.
+         * The SYSTEMTIME will be used in the API calls.
+         */
+        memcpy(&convertTM, timeptr, sizeof(convertTM));
+        convertT = Winmktime(&convertTM);
+        _MD_time_t_2_SYSTEMTIME(sysTime, convertT);
+
+        /*
+         * Format may be empty string.
+         */
+        *outDst = '\0';
+
+        /*
+         * Loop over the format and do the right thing.
+         */
+        while('\0' != *traverse && PR_TRUE == hadEnoughSpace && PR_FALSE == errorOut)
+        {
+            switch(*traverse)
+            {
+            case '%':
+                {
+                    PRIntn offset = 0;
+                    PRBool poundOutput = PR_FALSE;
+                    WCHAR buf[128];
+
+                    traverse++;
+                    offset++;
+
+                    /*
+                     * Skip the '#' formatting option.
+                     */
+                    if('#' == *traverse)
+                    {
+                        traverse++;
+                        offset++;
+                        poundOutput = PR_TRUE;
+                    }
+
+                    switch(*traverse)
+                    {
+                    case 'a':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Abbreviated weekday name.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("ddd"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'A':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Full weekday name.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("dddd"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'b':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Abbreviated month name.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("MMM"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'B':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Full month name.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, _T("MMMM"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'c':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Date and time representation for locale.
+                             */
+                            traverse++;
+
+                            /*
+                             * First the date.
+                             */
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, (PR_TRUE == poundOutput) ? DATE_LONGDATE : DATE_SHORTDATE, &sysTime, NULL, buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+
+                            /*
+                             * Uhm, a guess just a space between date and time.
+                             */
+                            helper_Winstrftime(_T(" "), &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+
+
+                            /*
+                             * Last the time.
+                             */
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, NULL, buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'd':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Day of month as decimal.
+                             */
+                            traverse++;
+                            getRes = GetDateFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("d") : _T("dd"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'H':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Hour in 24 hour format.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("H") : _T("HH"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'I':
+                        {
+                            int getRes = 0;
+
+                            /*
+                             * Hour in 12 hour format.
+                             */
+                            traverse++;
+                            getRes = GetTimeFormatW(LOCALE_USER_DEFAULT, 0, &sysTime, (PR_TRUE == poundOutput) ? _T("h") : _T("hh"), buf, sizeof(buf) / sizeof(WCHAR));
+                            if(0 != getRes)
+                            {
+                                helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                            }
+                            else
+                            {
+                                errorOut = PR_TRUE;
+                            }
+                        }
+                        break;
+                    case 'j':
+                        PR_ASSERT(0);
+                        break;
+                    case 'm':
+                        PR_ASSERT(0);
+                        break;
+                    case 'M':
+                        PR_ASSERT(0);
+                        break;
+                    case 'p':
+                        PR_ASSERT(0);
+                        break;
+                    case 'S':
+                        PR_ASSERT(0);
+                        break;
+                    case 'U':
+                        PR_ASSERT(0);
+                        break;
+                    case 'w':
+                        PR_ASSERT(0);
+                        break;
+                    case 'W':
+                        PR_ASSERT(0);
+                        break;
+                    case 'x':
+                        PR_ASSERT(0);
+                        break;
+                    case 'X':
+                        PR_ASSERT(0);
+                        break;
+                    case 'y':
+                        PR_ASSERT(0);
+                        break;
+                    case 'Y':
+                        PR_ASSERT(0);
+                        break;
+                    case 'z':
+                        PR_ASSERT(0);
+                        break;
+                    case 'Z':
+                        PR_ASSERT(0);
+                        break;
+                    case '%':
+                        {
+                            /*
+                             * A signle percent.
+                             */
+                            traverse++;
+                            helper_Winstrftime(_T("%"), &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
+                        break;
+                    default:
+                        {
+                            /*
+                             * Unrecognized formatting option.
+                             * Back up and just output it.
+                             */
+                            traverse -= offset;
+
+                            outDst[0] = *traverse;
+                            outDst[1] = '\0';
+
+                            outMax--;
+                            outDst++;
+                            traverse++;
+
+                            /*
+                             * Check to see if we used it all up.
+                             */
+                            if(0 == outMax && '\0' != *traverse)
+                            {
+                                hadEnoughSpace = PR_FALSE;
+                            }
+                        }
+                        break;
+                    }
+                }
+                break;
+            default:
+                {
+                    /*
+                     * Add custom formatting to output.
+                     */
+                    outDst[0] = *traverse;
+                    outDst[1] = '\0';
+
+                    outMax--;
+                    outDst++;
+                    traverse++;
+
+                    /*
+                     * Check to see if we used it all up.
+                     */
+                    if(0 == outMax && '\0' != *traverse)
+                    {
+                        hadEnoughSpace = PR_FALSE;
+                    }
+                }
+                break;
+            }
+        }
+
+        if(PR_FALSE == errorOut && PR_TRUE == hadEnoughSpace)
+        {
+            /*
+             * Number of chars written is return value.
+             */
+            retval = maxsize - outMax;
+        }
+    }
 
     return retval;
 }
