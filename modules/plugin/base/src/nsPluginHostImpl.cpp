@@ -165,10 +165,6 @@
 #include "nsIClassicPluginFactory.h"
 #endif
 
-#if defined(XP_MAC) && TARGET_CARBON
-#include "nsIClassicPluginFactory.h"
-#endif
-
 // We need this hackery so that we can dynamically register doc
 // loaders for the 4.x plugins that we discover.
 #if defined(XP_PC)
@@ -4407,6 +4403,96 @@ nsPluginHostImpl::FindPluginEnabledForType(const char* aMimeType,
   return NS_ERROR_FAILURE;
 }
 
+#if defined(XP_MACOSX)
+
+/**
+ * The following code examines the format of a Mac OS X binary, and determines whether it
+ * is compatible with the current executable. One trick to make this portable might be
+ * to compare the headers of the main executable we are part of with the header of the
+ * binary in question, but for a quick and dirty solution, this just checks to see
+ * if the specified binary is itself a MACH-O binary with a 4 byte header of 0xFEEDFACE.
+ */
+
+#include <sys/stat.h>
+#include <sys/fcntl.h>
+#include <unistd.h>
+
+inline PRBool is_directory(const char* path)
+{
+    struct stat sb;
+    if (stat(path, &sb) == 0 && (sb.st_mode & S_IFDIR)) {
+        return PR_TRUE;
+    }
+    return PR_FALSE;
+}
+
+static int open_executable(const char* path)
+{
+    int fd = 0;
+    // if this is a directory, it must be a bundle, so get the true path using CFBundle...
+    if (is_directory(path)) {
+        CFBundleRef bundle = NULL;
+        CFStringRef pathRef = CFStringCreateWithCString(NULL, path, kCFStringEncodingUTF8);
+        if (pathRef) {
+            CFURLRef bundleURL = CFURLCreateWithFileSystemPath(NULL, pathRef, kCFURLPOSIXPathStyle, true);
+            CFRelease(pathRef);
+            if (bundleURL != NULL) {
+                bundle = CFBundleCreate(NULL, bundleURL);
+                CFRelease(bundleURL);
+                if (bundle) {
+                    CFURLRef executableURL = CFBundleCopyExecutableURL(bundle);
+                    if (executableURL) {
+                        pathRef = CFURLCopyFileSystemPath(executableURL, kCFURLPOSIXPathStyle);
+                        CFRelease(executableURL);
+                        if (pathRef) {
+                            CFIndex bufferSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(pathRef), kCFStringEncodingUTF8) + 1;
+                            char* executablePath = new char[bufferSize];
+                            if (executablePath && CFStringGetCString(pathRef, executablePath, bufferSize, kCFStringEncodingUTF8)) {
+                                fd = open(executablePath, O_RDONLY, 0);
+                                delete[] executablePath;
+                            }
+                            CFRelease(pathRef);
+                        }
+                    }
+                    CFRelease(bundle);
+                }
+            }
+        }
+    } else {
+        fd = open(path, O_RDONLY, 0);
+    }
+    return fd;
+}
+
+static PRBool IsCompatibleExecutable(const char* path)
+{
+    int fd = open_executable(path);
+    if (fd) {
+        // open the file, look at the header. if the first 8-bytes are "Joy!peff" then we have
+        // a CFM/PEFF library, which isn't compatible with MACH-O. If it is 0xfeedface, then it
+        // is MACH-O. Look in /etc/magic for other valid MACH-O header signatures. Should we
+        // just use the contents of /etc/magic like the "file" command does? man 1 file for more info.
+        char magic_cookie[8];
+        ssize_t n = read(fd, magic_cookie, sizeof(magic_cookie));
+        close(fd);
+        if (n == sizeof(magic_cookie)) {
+            const char mach_o_cookie[] = { 0xFE, 0xED, 0xFA, 0xCE };
+            if (memcmp(magic_cookie, mach_o_cookie, sizeof(mach_o_cookie)) == 0)
+                return PR_TRUE;
+            const char cfm_cookie[] = { 'J', 'o', 'y', '!', 'p', 'e', 'f', 'f' };
+            if (memcmp(magic_cookie, cfm_cookie, sizeof(cfm_cookie)) == 0)
+                return PR_FALSE;
+        }
+    }
+    return PR_FALSE;
+}
+
+#else
+
+inline PRBool IsCompatibleExecutable(const char* path) { return PR_TRUE; }
+
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugin** aPlugin)
 {
@@ -4485,8 +4571,7 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
       // need to get the plugin factory from this plugin.
       nsFactoryProc nsGetFactory = nsnull;
       nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
-      if(nsGetFactory != nsnull)
-      {
+      if(nsGetFactory != nsnull && IsCompatibleExecutable(pluginTag->mFullPath)) {
         rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ContractID
                           (nsIFactory**)&pluginTag->mEntryPoint);
         plugin = pluginTag->mEntryPoint;
