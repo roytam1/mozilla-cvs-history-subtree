@@ -358,10 +358,17 @@ function showIncompatibleError(aDS)
   var metadata = {};
   getItemMetadata(aDS, metadata);
   
-  // If the min target app version and the max target app version are the same, don't show
-  // a message like, "Foo is only compatible with Firefox versions 0.7 to 0.7", rather just
-  // show, "Foo is only compatible with Firefox 0.7"
-  if (metadata.minAppVersion == metadata.maxAppVersion) {
+  if (undefined === metadata.minAppVersion) {
+    // getItemMetadata does not fill target application version range properties unless a 
+    // matching supported target application is found.
+    params = [metadata.name, metadata.version, brandShortName];
+    message = extensionStrings.formatStringFromName("incompatibleMessageNoApp", 
+                                                    params, params.length);
+  }
+  else if (metadata.minAppVersion == metadata.maxAppVersion) {
+    // If the min target app version and the max target app version are the same, don't show
+    // a message like, "Foo is only compatible with Firefox versions 0.7 to 0.7", rather just
+    // show, "Foo is only compatible with Firefox 0.7"
     params = [metadata.name, metadata.version, brandShortName, metadata.name, 
               metadata.version, brandShortName, metadata.minAppVersion];
     message = extensionStrings.formatStringFromName("incompatibleMessageSingleAppVersion", 
