@@ -804,7 +804,7 @@ FindPositiveIntegerAfterString(const char *aLeadingString, nsCString &aCStr)
   PRInt32 numFront = aCStr.Find(aLeadingString);
   if (numFront == -1)
     return -1;
-  numFront += nsCRT::strlen(aLeadingString); 
+  numFront += strlen(aLeadingString); 
   
   PRInt32 numBack = aCStr.FindCharInSet(CRLF, numFront);
   if (numBack == -1)
