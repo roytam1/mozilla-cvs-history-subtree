@@ -3517,6 +3517,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 
                 // Realize the drawing palette
                 int i = ::RealizePalette(hDC);
+                ::UpdateColors(hDC);
 
 #ifdef DEBUG
                 //printf("number of colors that changed=%d\n",i);

@@ -427,7 +427,7 @@ nsresult nsRenderingContextWin :: SetupDC(HDC aOldDC, HDC aNewDC)
   mCurrTextColor = mCurrentColor;
   ::SetBkMode(aNewDC, TRANSPARENT);
   ::SetPolyFillMode(aNewDC, WINDING);
-  ::SetStretchBltMode(aNewDC, COLORONCOLOR);
+  ::SetStretchBltMode(aNewDC, HALFTONE);
   ::SetTextAlign(aNewDC, TA_BASELINE);
 
   if (nsnull != aOldDC)
@@ -471,6 +471,7 @@ nsresult nsRenderingContextWin :: SetupDC(HDC aOldDC, HDC aNewDC)
   {
     // Select the palette in the background
     ::SelectPalette(aNewDC, (HPALETTE)palInfo.palette, PR_TRUE);
+  
     ::RealizePalette(aNewDC);
   }
 
@@ -523,7 +524,6 @@ NS_IMETHODIMP nsRenderingContextWin :: LockDrawingSurface(PRInt32 aX, PRInt32 aY
     if(palInfo.isPaletteDevice && palInfo.palette){
       ::SelectPalette(mDC,(HPALETTE)palInfo.palette,PR_TRUE);
       ::RealizePalette(mDC);
-      ::UpdateColors(mDC);
     }
   }
 
@@ -2657,7 +2657,6 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsDrawingSurface aSrcSu
       if (palInfo.isPaletteDevice && palInfo.palette){
         ::SelectPalette(destdc, (HPALETTE)palInfo.palette, PR_TRUE);
         ::RealizePalette(destdc);
-        ::UpdateColors(destdc);
       }
 
       if (aCopyFlags & NS_COPYBITS_XFORM_SOURCE_VALUES)
