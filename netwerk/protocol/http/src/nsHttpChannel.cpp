@@ -1450,7 +1450,13 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
         nsCOMPtr<nsIIOService> ioService;
         rv = nsHttpHandler::get()->GetIOService(getter_AddRefs(ioService));
 
-        rv = ioService->NewURI(nsDependentCString(location), nsnull, mURI,
+        // the new uri should inherit the origin charset of the current uri
+        nsCAutoString originCharset;
+        rv = mURI->GetOriginCharset(originCharset);
+        if (NS_FAILED(rv))
+            originCharset.Truncate();
+
+        rv = ioService->NewURI(nsDependentCString(location), originCharset.get(), mURI,
                                getter_AddRefs(newURI));
         if (NS_FAILED(rv)) return rv;
 
@@ -2487,14 +2493,16 @@ nsHttpChannel::SetReferrer(nsIURI *referrer, PRUint32 referrerType)
     // Handle secure referrals.
     // Support referrals from a secure server only if this is a secure site
     // and the host names are the same.
-        PRBool isHTTPS = PR_FALSE;
-        referrer->SchemeIs("https", &isHTTPS);
-        if (isHTTPS) {
-            mURI->SchemeIs("https", &isHTTPS);
+    PRBool isHTTPS = PR_FALSE;
+    referrer->SchemeIs("https", &isHTTPS);
+    if (isHTTPS) {
+        mURI->SchemeIs("https", &isHTTPS);
+        if (!isHTTPS)
+            return NS_OK;
 
-        if ((!isHTTPS || nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0) &&
-                (!nsHttpHandler::get()->SendSecureXSiteReferrer()))
-                return NS_OK;
+        if ((!nsHttpHandler::get()->SendSecureXSiteReferrer()) &&
+            (nsCRT::strcasecmp(referrerHost.get(), host.get()) != 0))
+            return NS_OK;
     }
 
 
@@ -3166,7 +3174,9 @@ nsHttpChannel::GetCacheFile(nsIFile **cacheFile)
 NS_IMETHODIMP
 nsHttpChannel::IsFromCache(PRBool *value)
 {
-    *value = (mCacheReadRequest != nsnull);
+    // return false if reading a partial cache entry; the data isn't entirely
+    // from the cache!
+    *value = (mCacheReadRequest && !mCachedContentIsPartial);
     return NS_OK;
 }
 
