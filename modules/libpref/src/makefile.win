@@ -52,7 +52,11 @@ LINCS = -I$(PUBLIC)/js \
 	-I$(PUBLIC)/profile	\
         -I$(DEPTH)\include \
 
-LCFLAGS = -DMOZILLA_CLIENT
+LCFLAGS = -DMOZILLA_CLIENT \
+!if !defined(DISABLE_LDAP)
+	 -DMOZ_LDAP_XPCOM  \
+!endif
+	 $(NULL)
 
 !ifdef MOZ_SECURITY
 HASHLIBS=$(DIST)\lib\hash.lib $(DIST)\lib\secutil.lib 
@@ -76,6 +80,9 @@ OBJS =							\
 	.\$(OBJDIR)\nsPrefService.obj	\
 	.\$(OBJDIR)\nsPrefsFactory.obj	\
 	.\$(OBJDIR)\nsAutoConfig.obj	\
+!if !defined(DISABLE_LDAP)
+	.\$(OBJDIR)\nsPrefLDAP.obj \
+!endif
 	$(NULL)
 
 #//------------------------------------------------------------------------

@@ -404,11 +404,6 @@ void PREF_RegisterCallback( const char* domain,
 PrefResult PREF_UnregisterCallback( const char* domain,
 								PrefChangedFunc callback, void* instance_data );
 
-/*
-// Front ends implement to determine whether AutoAdmin library is installed.
-*/
-PRBool PREF_IsAutoAdminEnabled(void);
-
 #ifdef XP_UNIX
 struct fe_icon_data;
 typedef void* XmStringPtr;

@@ -22,7 +22,6 @@
 
 MODULE=pref 
 DEPTH=..\..\.. 
-EXPORTS=prefldap.h
 
 XPIDLSRCS = \
     .\nsIAutoConfig.idl \
@@ -32,6 +31,9 @@ XPIDLSRCS = \
     .\nsIPrefLocalizedString.idl	\
     .\nsIPrefService.idl \
     .\nsISecurityPref.idl \
+!if !defined(DISABLE_LDAP)
+    .\nsIPrefLDAP.idl \
+!endif
     $(NULL)
 
 include <$(DEPTH)\config\config.mak>

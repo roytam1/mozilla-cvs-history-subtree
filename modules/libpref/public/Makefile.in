@@ -38,7 +38,11 @@ XPIDLSRCS	= \
               nsISecurityPref.idl \
               $(NULL)
 
-EXPORTS		= prefldap.h
+ifdef MOZ_LDAP_XPCOM
+REQUIRES	+= mozldap 
+XPIDLSRCS	+= nsIPrefLDAP.idl
+endif
+
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
 include $(topsrcdir)/config/rules.mk

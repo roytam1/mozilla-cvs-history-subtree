@@ -41,8 +41,14 @@ CPPSRCS		= nsPref.cpp \
 			  nsPrefBranch.cpp	\
 			  nsPrefService.cpp	\
 			  nsPrefsFactory.cpp	\
-			  nsAutoConfig.cpp      \
+			  nsAutoConfig.cpp	\
 			 $(NULL)
+
+ifdef MOZ_LDAP_XPCOM
+REQUIRES         += mozldap 
+CPPSRCS          += nsPrefLDAP.cpp
+DEFINES          += -DMOZ_LDAP_XPCOM
+endif
 
 PREF_JS_EXPORTS	= \
 		$(srcdir)/initpref.js \

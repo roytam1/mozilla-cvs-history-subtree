@@ -34,6 +34,14 @@
 #include "nsIObserverService.h"
 #include "nsIEventQueueService.h"
 #include "nsLiteralString.h"
+#if defined(MOZ_LDAP_XPCOM)
+#include "nsIPrefLDAP.h"
+#include "nsILDAPURL.h"
+#endif
+
+// This controls the event loops in DownloadAutoCfg and pref_get_ldap_attributes
+// and makes them run only during the startup.
+static PRBool firstTime = PR_TRUE;
 
 // nsISupports Implementation
 
@@ -204,8 +212,8 @@ NS_IMETHODIMP nsAutoConfig::Observe(nsISupports *aSubject,
         // We are done with AutoConfig, removing it from the observer list
 
         // Commenting out the RemoveObserver code, it is causing 
-        // nsIObserverService to skip the next element.  bug 94349
-
+        // nsIObserverService to skip the next element. bug 94636 
+        
         /* nsCOMPtr<nsIObserverService> observerService =
            do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
            if (observerService) 
@@ -220,9 +228,7 @@ nsresult nsAutoConfig::downloadAutoConfig()
 {
     nsresult rv;
     nsCAutoString emailAddr;
-    nsXPIDLCString urlName;
     PRBool appendMail=PR_FALSE, offline=PR_FALSE;
-    static PRBool firstTime = PR_TRUE;
     
     if (mConfigURL.IsEmpty()) {
         NS_WARNING("AutoConfig called without global_config_url");
@@ -305,12 +311,7 @@ nsresult nsAutoConfig::downloadAutoConfig()
     // We are having the event queue processing only for the startup
     // It is not needed with the repeating timer.
     if (firstTime) {
-        service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-        if (NS_FAILED(rv)) 
-            return rv;
-        rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
-        if (NS_FAILED(rv)) 
-            return rv;
+
     }
     
     // create a new url 
@@ -340,9 +341,13 @@ nsresult nsAutoConfig::downloadAutoConfig()
     // Set a repeating timer if the pref is set.
     // This is to be done only once.
     if (firstTime) {
-
-        firstTime = PR_FALSE;
     
+        service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+        if (NS_FAILED(rv)) 
+            return rv;
+        rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
+        if (NS_FAILED(rv)) 
+            return rv;
         /* process events until we're finished. AutoConfig.jsc reading needs
            to be finished before the browser starts loading up
            We are waiting for the mLoaded which will be set through 
@@ -366,7 +371,7 @@ nsresult nsAutoConfig::downloadAutoConfig()
                 return rv;
             }
         }
-        
+
         // Removing the eventQueue from the list
         rv = service->PopThreadEventQueue(currentThreadQ);
         if (NS_FAILED(rv)) 
@@ -387,7 +392,9 @@ nsresult nsAutoConfig::downloadAutoConfig()
             if (NS_FAILED(rv)) 
                 return rv;
         }
-    
+
+        firstTime = PR_FALSE;
+
     } //first_time
     
     return NS_OK;
@@ -547,4 +554,138 @@ nsresult nsAutoConfig::getEmailAddr(nsAWritableCString & emailAddr)
     
     return NS_OK;
 }
+
+#if defined(MOZ_LDAP_XPCOM)
         
+// This is called from JavaScript code (autoconfig.jsc). 
+//The JS to C translation is done in prefapi.c
+//
+extern "C" PRBool pref_get_ldap_attributes(char* aHost, char* aBase, 
+                                           char* aFilter, char* aAttrs)
+{
+    nsresult rv;
+    nsCAutoString serverURL;
+    
+    // Creating a URL Spec from the arguments.
+    //
+    serverURL = NS_LITERAL_CSTRING("ldap://") + nsDependentCString(aHost) 
+        + NS_LITERAL_CSTRING("/") + nsDependentCString(aBase) + 
+        NS_LITERAL_CSTRING("?") + nsDependentCString(aAttrs) + 
+        NS_LITERAL_CSTRING("?sub?") + nsDependentCString(aFilter);
+    
+    // Create a PrefLDAP object which will run LDAP query
+    //
+    nsCOMPtr<nsIPrefLDAP> autoconfigLDAP;
+    autoconfigLDAP = do_CreateInstance("@mozilla.org/prefldap;1", &rv);
+    if (NS_FAILED(rv)) {
+        return PR_FALSE;
+    }
+  
+    // Create an LDAP url to pass to prefLDAP object
+    nsCOMPtr<nsILDAPURL> ldapURL;
+    ldapURL = do_CreateInstance("@mozilla.org/network/ldap-url;1", &rv);
+    if (NS_FAILED(rv)) {
+        return PR_FALSE;
+    }   
+    
+    // Set URL Spec
+    //
+    rv =ldapURL->SetSpec(serverURL);
+    if (NS_FAILED(rv)) {
+        return PR_FALSE;
+    }   
+    
+    // Pass URL Spec to PrefLDAP object
+    rv = autoconfigLDAP->SetServerURL(ldapURL);
+    if (NS_FAILED(rv)) {
+        return PR_FALSE;
+    }   
+    
+    nsCOMPtr<nsIEventQueue> currentThreadQ;
+    nsCOMPtr<nsIEventQueueService> service;
+
+    // We are running the event loop only during the startup, we don't need
+    // to block the thread when the timer kicks in.
+    //
+    if (firstTime) {
+        
+        // Get the eventQueue Service
+        //
+        service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+        if (NS_FAILED(rv)) {
+            return PR_FALSE;
+        }
+
+        // Get the eventQ for the Current Thread
+        //
+        rv = service->PushThreadEventQueue(getter_AddRefs(currentThreadQ));
+        if (NS_FAILED(rv)) {
+            return PR_FALSE;
+        }
+    }
+
+    // Start an LDAP query. 
+    // InitConnection will bind to the ldap server and post a OnLDAPMessage 
+    // event. This event will trigger a search and the whole operation will 
+    // be carried out by chain of events
+    //
+    rv = autoconfigLDAP->InitConnection();
+    if (NS_FAILED(rv)) {
+        return PR_FALSE;
+    }   
+    
+    // We want this LDAP query to be synchronous while the XPCOM LDAP is 
+    // async in nature. So this eventQueue handling will wait for the 
+    // LDAP operation to be finished. IsDone() return the state of the 
+    // LDAP opertion. It releases the control variable in any case 
+    // (success/failure)
+    
+    
+    // We are running the event loop only during the startup time. 
+    // Eventloop is not useful when timer kicks off the autoconfig code.
+    // and it inteferes with the main event loop.
+    //  
+    if (!firstTime) {
+        return PR_TRUE; 
+    }
+  
+  
+    // Run the event loop, 
+    // control variable is obtained through prefLDAP object
+    //
+    PRBool control;
+    PLEvent *event;
+    autoconfigLDAP->GetIsDone(&control);
+  
+    while (!control) {
+
+        // wait for an event posted to the main thread.
+        rv = currentThreadQ->WaitForEvent(&event);
+        if (NS_FAILED(rv)) {
+            NS_ERROR("pref_get_ldap_attributes: currentThreadQ->WaitForEvent failed");
+            service->PopThreadEventQueue(currentThreadQ);
+            return PR_FALSE;
+        }
+
+        // handle the event
+        rv = currentThreadQ->HandleEvent(event);
+        if (NS_FAILED(rv)) {     
+            NS_ERROR("pref_get_ldap_attributes: currentThreadQ->HandleEvent failed");
+            service->PopThreadEventQueue(currentThreadQ);
+            return PR_FALSE;
+
+        }
+      
+        // get the new value of the control variable
+        //
+        autoconfigLDAP->GetIsDone(&control);
+    }
+
+    rv = service->PopThreadEventQueue(currentThreadQ);
+    if (NS_FAILED(rv))
+        return PR_FALSE;
+    
+    return PR_TRUE;  // everything went smooth, return NULL as an error.
+
+}
+#endif

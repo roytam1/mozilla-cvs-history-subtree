@@ -106,9 +106,3 @@ PREF_SetPathPref(const char *pref_name, const char *path, PRBool set_default)
 	return result;
 }
 
-//----------------------------------------------------------------------------------------
-PR_IMPLEMENT(PRBool) PREF_IsAutoAdminEnabled()
-//----------------------------------------------------------------------------------------
-{
-	return PR_FALSE;
-}

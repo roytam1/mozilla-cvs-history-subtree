@@ -35,8 +35,9 @@
   #include "windows.h"
 #endif /* _WIN32 */
 
-#ifdef MOZ_ADMIN_LIB
-#include "prefldap.h"
+#ifdef MOZ_LDAP_XPCOM
+/* Interface to LDAP AutoAdmin function */
+extern char* pref_get_ldap_attributes(char* host, char* base, char* filter, char* attr);
 #endif
 
 #ifdef MOZ_SECURITY
@@ -194,10 +195,6 @@ PLHashAllocOps      pref_HashAllocOps = {
 
 static JSBool pref_HashJSPref(unsigned int argc, jsval *argv, PrefAction action);
 static PRBool pref_ValueChanged(PrefValue oldValue, PrefValue newValue, PrefType type);
-
-#include "prlink.h"
-extern PRLibrary *pref_LoadAutoAdminLib(void);
-PRLibrary *gAutoAdminLib = NULL;
 
 /* -- Privates */
 struct CallbackNode {
@@ -451,6 +448,7 @@ void PREF_SetCallbacksStatus( PRBool status )
 {
     gCallbacksEnabled = status;
 }
+
 
 /* This is more recent than the below 3 routines which should be obsoleted */
 JSBool
@@ -1778,80 +1776,29 @@ PrefResult pref_DoCallback(const char* changed_pref)
     return result;
 }
 
-/* !! Front ends need to implement */
-#ifndef XP_MAC /* see macpref.cp */
-PRBool
-PREF_IsAutoAdminEnabled()
-{
-    return PR_TRUE;
-}
-#endif /* XP_MAC */
 
 /* Called from JavaScript */
-typedef char* (*ldap_func)(char*, char*, char*, char*, char**); 
 
 JSBool PR_CALLBACK pref_NativeGetLDAPAttr
     (JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval)
 {
-#ifdef MOZ_ADMIN_LIB
-    ldap_func get_ldap_attributes = NULL;
-#if (defined (XP_MAC) && defined(powerc)) || defined (XP_WIN) || defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
-    if (!gAutoAdminLib)
-        gAutoAdminLib = pref_LoadAutoAdminLib();
-        
-    if (gAutoAdminLib)
-    {
-        get_ldap_attributes = (ldap_func)
-            PR_FindSymbol(
-             gAutoAdminLib,
-#ifndef XP_WIN16
-            "pref_get_ldap_attributes"
-#else
-            MAKEINTRESOURCE(1)
-#endif
-            );
-    }
-    if (get_ldap_attributes == NULL)
-    {
-        /* This indicates the AutoAdmin dll was not found. */
-        *rval = JSVAL_NULL;
-        return JS_TRUE;
-    }
-#else
-    get_ldap_attributes = pref_get_ldap_attributes;
-#endif /* MOZ_ADMIN_LIB */
-
+#ifdef MOZ_LDAP_XPCOM
     if (argc >= 4 && JSVAL_IS_STRING(argv[0])
         && JSVAL_IS_STRING(argv[1])
         && JSVAL_IS_STRING(argv[2])
         && JSVAL_IS_STRING(argv[3]))
     {
-        char *return_error = NULL;
-        char *value = get_ldap_attributes(
+        pref_get_ldap_attributes(
             JS_GetStringBytes(JSVAL_TO_STRING(argv[0])),
             JS_GetStringBytes(JSVAL_TO_STRING(argv[1])),
             JS_GetStringBytes(JSVAL_TO_STRING(argv[2])),
-            JS_GetStringBytes(JSVAL_TO_STRING(argv[3])),
-            &return_error );
-        
-        if (value)
-        {
-            JSString* str = JS_NewStringCopyZ(cx, value);
-            PR_Free(value);
-            if (str)
-            {
-                *rval = STRING_TO_JSVAL(str);
-                return JS_TRUE;
-            }
-        }
-        if (return_error)
-            pref_Alert(return_error);
+            JS_GetStringBytes(JSVAL_TO_STRING(argv[3]))
+            );
     }
-#endif
-    
-    *rval = JSVAL_NULL;
+#endif /* MOZ_LDAP_XPCOM */
     return JS_TRUE;
 }
+
 
 /* Dump debugging info in response to about:config.
  */
@@ -2018,69 +1965,6 @@ void pref_Alert(char* msg)
 }
 
 #endif
-
-#ifdef XP_WIN16
-#define ADMNLIBNAME "adm1640.dll"
-#elif defined XP_WIN || defined XP_OS2
-#define ADMNLIBNAME "adm3240.dll"
-#elif defined(XP_UNIX) || defined(XP_BEOS)
-#define ADMNLIBNAME "libAutoAdmin.so"
-extern void fe_GetProgramDirectory(char *path, int len);
-#else
-#define ADMNLIBNAME "AutoAdmin" /* internal fragment name */
-#endif
-
-/* Try to load AutoAdminLib */
-PRLibrary *
-pref_LoadAutoAdminLib()
-{
-    PRLibrary *lib = NULL;
-
-#ifdef XP_MAC
-    const char *oldpath = PR_GetLibraryPath();
-    PR_SetLibraryPath( "/usr/local/netscape/" );
-#endif
-
-#if defined(XP_UNIX) && !defined(B_ONE_M)
-    {
-        char aalib[MAXPATHLEN];
-
-        if (getenv("NS_ADMIN_LIB"))
-        {
-            lib = PR_LoadLibrary(getenv("NS_ADMIN_LIB"));
-        }
-        else
-        {
-            if (getenv("MOZILLA_FIVE_HOME"))
-            {
-                PL_strcpy(aalib, getenv("MOZILLA_FIVE_HOME"));
-                lib = PR_LoadLibrary(PL_strcat(aalib, ADMNLIBNAME));
-            }
-            if (lib == NULL)
-            {
-                fe_GetProgramDirectory(aalib, sizeof(aalib)-1);
-                lib = PR_LoadLibrary(PL_strcat(aalib, ADMNLIBNAME));
-            }
-            if (lib == NULL)
-            {
-                (void) PL_strcpy(aalib, "/usr/local/netscape/");
-                lib = PR_LoadLibrary(PL_strcat(aalib, ADMNLIBNAME));
-            }
-        }
-    }
-    /* Make sure it's really libAutoAdmin.so */
-    
-    if ( lib && PR_FindSymbol(lib, "_POLARIS_SplashPro") == NULL ) return NULL;
-#else
-    lib = PR_LoadLibrary( ADMNLIBNAME );
-#endif
-
-#ifdef XP_MAC
-    PR_SetLibraryPath(oldpath);
-#endif
-
-    return lib;
-}
 
 /*--------------------------------------------------------------------------------------*/
 static JSBool pref_HashJSPref(unsigned int argc, jsval *argv, PrefAction action)
