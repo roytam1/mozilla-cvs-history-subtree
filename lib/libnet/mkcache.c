@@ -31,8 +31,11 @@
 
 #include "extcache.h"
 #include "mkcache.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "plctype.h"
+#include "plhash.h"
 #include "glhist.h"
-#include "xp_hash.h"
 #include "xp_mcom.h"
 #include "client.h"
 #include "mkgeturl.h"
@@ -100,9 +103,9 @@ PRIVATE uint32     net_MaxMemoryCacheSize=0;
 #endif /* NO_MEMORY_CACHE */
 
 /* trace variable for cache testing */
-MODULE_PRIVATE XP_Bool NET_CacheTraceOn = FALSE;
+MODULE_PRIVATE PRBool NET_CacheTraceOn = FALSE;
 
-PRIVATE XP_Bool net_dont_disk_cache_ssl = FALSE;
+PRIVATE PRBool net_dont_disk_cache_ssl = FALSE;
 PRIVATE DB * cache_database = 0; 
 /* PRIVATE XXX Mac CodeWarrior bug */ PRCList active_cache_data_objects
 	= PR_INIT_STATIC_CLIST(&active_cache_data_objects);
@@ -123,7 +126,7 @@ PRIVATE void net_RemoveAllDiskCacheObjects(void);
  * of SSL documents
  */
 PUBLIC void
-NET_DontDiskCacheSSL(XP_Bool set)
+NET_DontDiskCacheSSL(PRBool set)
 {
 	net_dont_disk_cache_ssl = set;
 }
@@ -158,8 +161,8 @@ net_GetDiskCacheSize(void)
         net_DiskCacheSizeKey->data = 0;
         BlockAllocCopy(net_DiskCacheSizeKey->data, 
 		       		   DISK_CACHE_SIZE_KEY_NAME, 
-					   XP_STRLEN(DISK_CACHE_SIZE_KEY_NAME));
-        net_DiskCacheSizeKey->size = XP_STRLEN(DISK_CACHE_SIZE_KEY_NAME);
+					   PL_strlen(DISK_CACHE_SIZE_KEY_NAME));
+        net_DiskCacheSizeKey->size = PL_strlen(DISK_CACHE_SIZE_KEY_NAME);
       }
 
     if(0 == (*cache_database->get)(cache_database, 
@@ -190,8 +193,8 @@ net_GetDiskCacheSize(void)
         net_DiskCacheNumberKey->data = 0;
         BlockAllocCopy(net_DiskCacheNumberKey->data, 
 					   DISK_CACHE_NUMBER_KEY_NAME,
-					   XP_STRLEN(DISK_CACHE_NUMBER_KEY_NAME));
-        net_DiskCacheNumberKey->size = XP_STRLEN(DISK_CACHE_NUMBER_KEY_NAME);
+					   PL_strlen(DISK_CACHE_NUMBER_KEY_NAME));
+        net_DiskCacheNumberKey->size = PL_strlen(DISK_CACHE_NUMBER_KEY_NAME);
       }
 
     if(0 == (*cache_database->get)(cache_database,
@@ -245,7 +248,7 @@ net_OpenCacheFatDB(void)
 								0600,
 								DB_HASH,
 								&hash_info);
-		XP_FREE(filename);
+		PR_Free(filename);
 
         if(!have_tried_open && !cache_database)
           {
@@ -281,7 +284,7 @@ net_OpenCacheFatDB(void)
 
                         XP_FileClose(fp);
 
-                        if(XP_STRSTR(buffer, 
+                        if(PL_strstr(buffer, 
 								     "Cache-file-allocation-table-format"))
                           XP_FileRemove("", xpCacheFAT);
 
@@ -298,7 +301,7 @@ net_OpenCacheFatDB(void)
 										0600,
 										DB_HASH,
 										0);
-				XP_FREE(filename);
+				PR_Free(filename);
 			}
 			else 
 				cache_database = NULL;
@@ -349,20 +352,20 @@ cache_test_me()
 	int32 total_size;
 	DBT *db_obj;
 
-	XP_MEMSET(&test, 0, sizeof(net_CacheObject));
+	PL_memset(&test, 0, sizeof(net_CacheObject));
 	StrAllocCopy(test.address, "test1");
 	db_obj = net_CacheStructToDBData(&test);
 	rv = net_DBDataToCacheStruct(db_obj);
 	printf("test1: %s\n", rv->address);
 
-	XP_MEMSET(&test, 0, sizeof(net_CacheObject));
+	PL_memset(&test, 0, sizeof(net_CacheObject));
 	StrAllocCopy(test.address, "test2");
 	StrAllocCopy(test.charset, "test2");
 	db_obj = net_CacheStructToDBData(&test);
 	rv = net_DBDataToCacheStruct(db_obj);
 	printf("test2: %s	%s\n", rv->address, rv->charset);
 
-	XP_MEMSET(&test, 0, sizeof(net_CacheObject));
+	PL_memset(&test, 0, sizeof(net_CacheObject));
 	StrAllocCopy(test.address, "test3");
 	StrAllocCopy(test.charset, "test3");
 	test.content_length = 3 ;
@@ -396,8 +399,8 @@ net_StoreDiskCacheSize(void)
 		net_DiskCacheSizeKey->data = 0;
 		BlockAllocCopy(net_DiskCacheSizeKey->data, 
 					   DISK_CACHE_SIZE_KEY_NAME,
-					   XP_STRLEN((char *)DISK_CACHE_SIZE_KEY_NAME));
-		net_DiskCacheSizeKey->size = XP_STRLEN(DISK_CACHE_SIZE_KEY_NAME);
+					   PL_strlen((char *)DISK_CACHE_SIZE_KEY_NAME));
+		net_DiskCacheSizeKey->size = PL_strlen(DISK_CACHE_SIZE_KEY_NAME);
 	  }
 
 	if(!net_DiskCacheNumberKey)
@@ -409,8 +412,8 @@ net_StoreDiskCacheSize(void)
 		net_DiskCacheNumberKey->data = 0;
 		BlockAllocCopy(net_DiskCacheNumberKey->data, 
 					   DISK_CACHE_NUMBER_KEY_NAME,
-					   XP_STRLEN((char *)DISK_CACHE_NUMBER_KEY_NAME));
-		net_DiskCacheNumberKey->size = XP_STRLEN(DISK_CACHE_NUMBER_KEY_NAME);
+					   PL_strlen((char *)DISK_CACHE_NUMBER_KEY_NAME));
+		net_DiskCacheNumberKey->size = PL_strlen(DISK_CACHE_NUMBER_KEY_NAME);
 	  }
 
 	if(!net_DiskCacheNameKey)
@@ -426,8 +429,8 @@ net_StoreDiskCacheSize(void)
 		net_DiskCacheNameKey->data = 0;
 		BlockAllocCopy(net_DiskCacheNameKey->data, 
 					   EXT_CACHE_NAME_STRING,
-					   XP_STRLEN((char *)EXT_CACHE_NAME_STRING));
-		net_DiskCacheNameKey->size = XP_STRLEN(EXT_CACHE_NAME_STRING);
+					   PL_strlen((char *)EXT_CACHE_NAME_STRING));
+		net_DiskCacheNameKey->size = PL_strlen(EXT_CACHE_NAME_STRING);
 	  }
 
 	data.size = sizeof(uint32);
@@ -442,7 +445,7 @@ net_StoreDiskCacheSize(void)
 	
 	(*cache_database->put)(cache_database, net_DiskCacheNumberKey, &data, 0);
 
-	data.size = XP_STRLEN(DISK_CACHE_NAME)+1;
+	data.size = PL_strlen(DISK_CACHE_NAME)+1;
 	data.data = DISK_CACHE_NAME;
 	
 	(*cache_database->put)(cache_database, net_DiskCacheNameKey, &data, 0);
@@ -582,7 +585,7 @@ net_CacheStore(net_CacheObject * obj,
 		      }
 
 			/* must be set now */
-			XP_ASSERT(obj->content_length);
+			PR_ASSERT(obj->content_length);
 			
 	      }
 	    else		
@@ -611,7 +614,7 @@ net_CacheStore(net_CacheObject * obj,
 	  }
 	else
 	  {
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 	  }
 
 	/* update the last accessed time
@@ -619,7 +622,7 @@ net_CacheStore(net_CacheObject * obj,
 	obj->last_accessed = time(NULL);  /* current time */
 
 	/* these must be true or else the partial cache logic is screwed */
-	XP_ASSERT(obj->content_length == obj->real_content_length
+	PR_ASSERT(obj->content_length == obj->real_content_length
 	          || obj->incomplete_file);
 
 	/* create key */
@@ -893,12 +896,12 @@ NET_RemoveDiskCacheObjects(uint32 remove_num)
 	if(!cache_database)
 		return(net_DiskCacheSize);
 
-	old_array = (DatePlusDBT *)XP_ALLOC(sizeof(DatePlusDBT) * remove_num);
+	old_array = (DatePlusDBT *)PR_Malloc(sizeof(DatePlusDBT) * remove_num);
 	
 	if(!old_array)
 		return(net_DiskCacheSize);
 
-	XP_MEMSET(old_array, 0, sizeof(DatePlusDBT) * remove_num);
+	PL_memset(old_array, 0, sizeof(DatePlusDBT) * remove_num);
 
     /* We need to delete the oldest items in the database.
 	 * Sequentailly go throught the DB and remove
@@ -936,7 +939,7 @@ NET_RemoveDiskCacheObjects(uint32 remove_num)
 			/* this could be a corrupt entry */
 			if(!net_IsValidCacheDBT(&data))
 			  {
-			 	if((key.size < 4 || XP_STRNCMP((char*)key.data, 
+			 	if((key.size < 4 || PL_strncmp((char*)key.data, 
 												INTERNAL_NAME_PREFIX, 
 												4))
 					&& corrupt_entry_count < CORRUPT_ENTRY_ARRAY_SIZE)
@@ -958,7 +961,7 @@ NET_RemoveDiskCacheObjects(uint32 remove_num)
 			url_address = net_GetAddressFromCacheKey(&key);
 
 			if(!last_modified_date 
-			   || (url_address && strncasecomp(url_address, "http",4)))
+			   || (url_address && PL_strncasecmp(url_address, "http",4)))
 			  {
 				/* this is not a http URL or it has no last modified date.
 				 * Delete it preferentially
@@ -1087,7 +1090,7 @@ NET_RemoveDiskCacheObjects(uint32 remove_num)
 	  } 
 
 	/* don't need the stale array any more */
-	XP_FREE(old_array);
+	PR_Free(old_array);
 
 	/* sync the database
 	 */
@@ -1154,7 +1157,7 @@ net_ReduceDiskCacheTo(MWContext *window_id, uint32 size, int recurse_count)
 	if(window_id)
 	  {
 		char buffer[256];
-		XP_SPRINTF(buffer, XP_GetString( XP_CACHE_CLEANUP ), remove_num);
+		sprintf(buffer, XP_GetString( XP_CACHE_CLEANUP ), remove_num);
 		NET_Progress(window_id, buffer);
 	  }
 
@@ -1434,8 +1437,8 @@ PRIVATE void net_CacheAbort (NET_StreamClass *stream, int status)
 {
 
 	CacheDataObject *obj=stream->data_object;	
-	XP_ASSERT(obj);
-	XP_ASSERT(obj->cache_object);
+	PR_ASSERT(obj);
+	PR_ASSERT(obj->cache_object);
 
     /* abort the next stream
      */
@@ -1478,7 +1481,7 @@ PRIVATE void net_CacheAbort (NET_StreamClass *stream, int status)
 		  }
 		else if(status == MK_INTERRUPTED 
 				&& obj->URL_s->content_length
-				&& !strcasecomp(obj->URL_s->content_type, TEXT_HTML))
+				&& !PL_strcasecmp(obj->URL_s->content_type, TEXT_HTML))
 		  {
 			/* temporarly cache interrupted HTML pages for history navigation */
 			obj->URL_s->last_modified = 0;
@@ -1529,7 +1532,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 	NET_StreamClass * next_stream=0;
 
 	/* XXX brendan will #define this hack after 3.0 ships! */
-	XP_Bool dont_hold_URL_s = (converter_obj != NULL);
+	PRBool dont_hold_URL_s = (converter_obj != NULL);
     
     TRACEMSG(("Setting up cache stream. Have URL: %s\n", URL_s->address));
 
@@ -1575,11 +1578,11 @@ NET_CacheConverter (FO_Present_Types format_out,
     if(URL_s->must_cache	/* overrides all the rest of these tests */
 	   ||  (CLEAR_CACHE_BIT(format_out) == FO_INTERNAL_IMAGE 
 			|| format_out == FO_CACHE_ONLY
-			|| !strncasecomp(URL_s->content_type, "IMAGE", 5)
-			|| !strncasecomp(URL_s->content_type, "TEXT", 4)
-			|| !strncasecomp(URL_s->content_type, "MESSAGE", 7)
-			|| !strcasecomp(URL_s->content_type, APPLICATION_HTTP_INDEX)
-			|| !strcasecomp(URL_s->content_type, APPLICATION_JAVAARCHIVE)
+			|| !PL_strncasecmp(URL_s->content_type, "IMAGE", 5)
+			|| !PL_strncasecmp(URL_s->content_type, "TEXT", 4)
+			|| !PL_strncasecmp(URL_s->content_type, "MESSAGE", 7)
+			|| !PL_strcasecmp(URL_s->content_type, APPLICATION_HTTP_INDEX)
+			|| !PL_strcasecmp(URL_s->content_type, APPLICATION_JAVAARCHIVE)
 			|| ( (URL_s->content_length>0) && ((uint32) URL_s->content_length < (net_MaxDiskCacheSize/4)) )
 		   )
 	   )
@@ -1597,20 +1600,20 @@ NET_CacheConverter (FO_Present_Types format_out,
 
 	if(want_to_cache 
 	   && (!net_dont_disk_cache_ssl 
-			|| strncasecomp(URL_s->address, "https:", 6))
+			|| PL_strncasecmp(URL_s->address, "https:", 6))
 	   && !URL_s->dont_cache
 	   && (net_MaxDiskCacheSize > 0 || URL_s->must_cache)
 	   && net_OpenCacheFatDB() /* make sure database is open */
-  	   && strncasecomp(URL_s->address, "news:", 5)   /* not news: */
-	   && strncasecomp(URL_s->address, "snews:", 6)  /* not snews: */
-	   && strncasecomp(URL_s->address, "mailbox://", 10))  /* not IMAP */
+  	   && PL_strncasecmp(URL_s->address, "news:", 5)   /* not news: */
+	   && PL_strncasecmp(URL_s->address, "snews:", 6)  /* not snews: */
+	   && PL_strncasecmp(URL_s->address, "mailbox://", 10))  /* not IMAP */
 		do_disk_cache = TRUE;
 
 	/* Special case for StreamAsFile plugins:  */
 	if (URL_s->must_cache   /* this only set by plugin code ? */
-		&& ((XP_STRNCASECMP(URL_s->address, "news:", 5)==0)      /* is news */
-		||  (XP_STRNCASECMP(URL_s->address, "https:", 6)==0)     /* is secure */
-		|| !strncasecomp(URL_s->address, "mailbox://", 10))) /* is imap */
+		&& ((PL_strncasecmp(URL_s->address, "news:", 5)==0)      /* is news */
+		||  (PL_strncasecmp(URL_s->address, "https:", 6)==0)     /* is secure */
+		|| !PL_strncasecmp(URL_s->address, "mailbox://", 10))) /* is imap */
 		do_disk_cache = TRUE;
 
 	/* malloc and init all the necessary structs
@@ -1628,7 +1631,7 @@ NET_CacheConverter (FO_Present_Types format_out,
           }
     
         /* assign and init the cache object */
-        XP_MEMSET(cache_object, 0, sizeof(net_CacheObject));
+        PL_memset(cache_object, 0, sizeof(net_CacheObject));
     
         /* copy the contents of the URL structure
          */
@@ -1691,12 +1694,12 @@ NET_CacheConverter (FO_Present_Types format_out,
 				suffix = allocSuffix = NULL;
 
 				if (URL_s->content_name){
-					suffix = (URL_s->content_name ? XP_STRRCHR (URL_s->content_name, '.') : 0);
+					suffix = (URL_s->content_name ? PL_strrchr (URL_s->content_name, '.') : 0);
 				}
 				else if ((URL_s->address) && 
-						(!XP_STRNCASECMP(URL_s->address, "mailbox:", 8)
-						|| !XP_STRNCASECMP(URL_s->address, "news:", 5)
-						|| !XP_STRNCASECMP(URL_s->address, "snews:", 6))
+						(!PL_strncasecmp(URL_s->address, "mailbox:", 8)
+						|| !PL_strncasecmp(URL_s->address, "news:", 5)
+						|| !PL_strncasecmp(URL_s->address, "snews:", 6))
 						 && (URL_s->content_type) && (*(URL_s->content_type)))
 				{
 					/*
@@ -1715,10 +1718,10 @@ NET_CacheConverter (FO_Present_Types format_out,
 				
 				if (!suffix)
 				{
-				    tail = XP_STRRCHR (cache_object->address, '/');
-					suffix = (tail ? XP_STRRCHR (tail, '.') : 0);
+				    tail = PL_strrchr (cache_object->address, '/');
+					suffix = (tail ? PL_strrchr (tail, '.') : 0);
 				}
-				end = suffix + (suffix ? XP_STRLEN (suffix) : 0);
+				end = suffix + (suffix ? PL_strlen (suffix) : 0);
 				junk=0;				
 			
 #ifdef XP_UNIX
@@ -1728,7 +1731,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 					int i = 0;
 					while (fe_encoding_extensions [i])
 					  {
-						if (!XP_STRCMP (suffix, fe_encoding_extensions [i]))
+						if (!PL_strcmp (suffix, fe_encoding_extensions [i]))
 						  {
 							end = suffix;
 							suffix--;
@@ -1757,7 +1760,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 #if defined(XP_WIN) || defined(XP_OS2)               /* IBM - SAH */
 				/* Remove any suffix that the temp filename currently has
 				 */
-				XP_STRTOK(filename, ".");
+				PL_strtok(filename, ".");
 #endif
 
 				if (suffix && (end - suffix) < 20)
@@ -1785,7 +1788,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 					 */
 					if(1)
 					  {
-						char *new_suffix = XP_STRDUP(suffix);
+						char *new_suffix = PL_strdup(suffix);
 						if(new_suffix)
 						  {
 							char *cp = new_suffix;
@@ -1795,12 +1798,12 @@ NET_CacheConverter (FO_Present_Types format_out,
 							 */
 							for(i=0; *cp && i < 4; i++)
 							  {
-								*cp = XP_TO_UPPER(*cp);
+								*cp = PL_TO_UPPER(*cp);
 								cp++;
 							  }
 							*cp = '\0'; /* make sure it's terminated */
 							StrAllocCat(new_filename, new_suffix);
-							XP_FREE(new_suffix);
+							PR_Free(new_suffix);
 						  }
 					  }
 #else
@@ -1817,9 +1820,9 @@ NET_CacheConverter (FO_Present_Types format_out,
 					*junk = old_char;
 
 				if (allocSuffix)
-					XP_FREE(allocSuffix);
+					PR_Free(allocSuffix);
 			  }
-			XP_FREE(filename);
+			PR_Free(filename);
 		  }
 
 		if(new_filename)
@@ -1888,7 +1891,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 		  }
 
         /* init the object */
-        XP_MEMSET(data_object, 0, sizeof(CacheDataObject));
+        PL_memset(data_object, 0, sizeof(CacheDataObject));
     
 	    /* assign the cache object to the stream data object
 	     */
@@ -2313,13 +2316,13 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 			return(NET_FindURLInExtCache(URL_s, ctxt));
 	  }
 
-    byterange = strcasestr(URL_s->address, ";bytes=");
+    byterange = PL_strcasestr(URL_s->address, ";bytes=");
     
     /* this might be a cached imap url.  Ignore the mime
        part when going back for attachments, otherwise we'll
        reload the attachment from the server */
     if (!byterange)
-    	byterange = strcasestr(URL_s->address, "&part=");
+    	byterange = PL_strcasestr(URL_s->address, "&part=");
 
     if(byterange)
       {
@@ -2357,8 +2360,8 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 	  {
 		char *slash;
 
-		slash = XP_STRRCHR(URL_s->address, '/');
-		if(slash && !XP_STRCHR(slash, '.') && *(slash+1) != '\0')
+		slash = PL_strrchr(URL_s->address, '/');
+		if(slash && !PL_strchr(slash, '.') && *(slash+1) != '\0')
 		  {
 			/* no extension.  Add the slash and
 			 * look for it in the database
@@ -2374,7 +2377,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 			  {
 				/* adding the slash didn't work, get rid of it 
 			 	 */
-				URL_s->address[XP_STRLEN(URL_s->address)-1] = '\0';
+				URL_s->address[PL_strlen(URL_s->address)-1] = '\0';
 			  }
 		  }
 	  }
@@ -2495,7 +2498,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 #endif /* MOZ_OFFLINE */
          )							/* *X* check for is offline */
 	      {
-		    if(!strncasecomp(URL_s->address, "http", 4))
+		    if(!PL_strncasecmp(URL_s->address, "http", 4))
 		      {
         	    URL_s->expires = 1;
 
@@ -2585,7 +2588,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 	 * otherwise the content-length will mess up files that don't
 	 * return a content-length and are different
 	 */
-	if(!strncasecomp(URL_s->address, "http", 4) || !strncasecomp(URL_s->address, "ftp", 3))
+	if(!PL_strncasecmp(URL_s->address, "http", 4) || !PL_strncasecmp(URL_s->address, "ftp", 3))
 	  {
     	URL_s->content_length = found_cache_obj->content_length;
    		URL_s->real_content_length = found_cache_obj->real_content_length;
@@ -2593,7 +2596,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 	    if(URL_s->content_length != URL_s->real_content_length
 	       && !found_cache_obj->incomplete_file)
 	      {
-		    XP_ASSERT(0);  
+		    PR_ASSERT(0);  
 
 			URL_s->real_content_length = 0;
 			URL_s->content_length = 0;
@@ -2689,13 +2692,6 @@ NET_NumberOfFilesInDiskCache()
 	return(net_NumberInDiskCache);
 }
 
-static int
-net_cache_strcmp (const void *a, const void *b)
-{
-  return XP_STRCMP ((const char *) a, (const char *) b);
-}
-
-
 /* this function recurses through all directories in
  * the cache directory and stuffs all the files into
  * the hash table.  Any directory names below the
@@ -2705,7 +2701,7 @@ net_cache_strcmp (const void *a, const void *b)
  * returns 0 on success, -1 on failure
  */
 PRIVATE int
-net_cache_recursive_file_finder(XP_HashList *hash_table, 
+net_cache_recursive_file_finder(PLHashTable *hash_table, 
 								const char *prefix,
 								char *cur_dir, 
 								char *base_dir,
@@ -2723,7 +2719,7 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 	 * cur_dir.  The difference should be prepended
 	 * to the front of filenames
 	 */
-	base_len = XP_STRLEN(base_dir);
+	base_len = PL_strlen(base_dir);
 	StrAllocCopy(dir_prefix, cur_dir+base_len);
 
 	if(!dir_prefix)
@@ -2732,8 +2728,8 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 
 	if(*dir_prefix == '\0')
 		add_dir_prefix = FALSE;
-	else if(dir_prefix[XP_STRLEN(dir_prefix)-1] == '/')
-		dir_prefix[XP_STRLEN(dir_prefix)-1] = '\0';
+	else if(dir_prefix[PL_strlen(dir_prefix)-1] == '/')
+		dir_prefix[PL_strlen(dir_prefix)-1] = '\0';
 
     if(!(dir_ptr = XP_OpenDir (cur_dir, xpCache)))
 	{
@@ -2743,16 +2739,16 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 
 	/* add all the files on disk to a hash table
 	 */
-	prefix_len = XP_STRLEN(prefix);
+	prefix_len = PL_strlen(prefix);
     while((dir_entry = XP_ReadDir(dir_ptr)) != 0)
       {
 		/* only do comparison and delete if the prefix
 		 * is the same
 		 */
 		d_name = dir_entry->d_name;
-		d_len = XP_STRLEN(d_name);
+		d_len = PL_strlen(d_name);
 		status = 0;
-		if(XP_STRNCMP(d_name, prefix, prefix_len))
+		if(PL_strncmp(d_name, prefix, prefix_len))
 	 	  {
 #if 0
     		XP_StatStruct stat_entry;
@@ -2782,7 +2778,7 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 			  continue;
 #else /* !XP_UNIX */
 			/* This is redundant on Unix because of the above check. */
-			if(!XP_STRCMP(d_name, ".") || !XP_STRCMP(d_name, ".."))
+			if(!PL_strcmp(d_name, ".") || !PL_strcmp(d_name, ".."))
 			  {
 				/* ignore . and .. */
 				status = -1;
@@ -2791,14 +2787,14 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 
 			else if(add_dir_prefix)
 		  	  {
-				XP_SPRINTF(buffer, "%.250s/%.250s", dir_prefix, d_name);
+				sprintf(buffer, "%.250s/%.250s", dir_prefix, d_name);
 		  	  }
 
     		if(status != -1)
 		  	  {
 				char *new_dir=0;
 				StrAllocCopy(new_dir, cur_dir);
-				if(cur_dir[XP_STRLEN(cur_dir)-1] != '/')
+				if(cur_dir[PL_strlen(cur_dir)-1] != '/')
 					StrAllocCat(new_dir, "/");
 				StrAllocCat(new_dir, d_name);
 				net_cache_recursive_file_finder(hash_table, 
@@ -2813,12 +2809,12 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 
 		if(add_dir_prefix)
 		  {
-			XP_SPRINTF(buffer, "%.250s/%.250s", dir_prefix, d_name);
-			XP_HashListAddObject(hash_table, XP_STRDUP(buffer));
+			sprintf(buffer, "%.250s/%.250s", dir_prefix, d_name);
+			PL_HashTableAdd(hash_table, PL_strdup(buffer), "x");
 		  }
 		else
 		  {
-			XP_HashListAddObject(hash_table, XP_STRDUP(d_name));
+			PL_HashTableAdd(hash_table, PL_strdup(d_name), "x");
 		  }
 		
 	  }
@@ -2827,6 +2823,23 @@ net_cache_recursive_file_finder(XP_HashList *hash_table,
 
 	XP_CloseDir(dir_ptr);
 	return 0;
+}
+
+PRIVATE PRIntn
+net_hash_cleanup_enumerator(PLHashEntry *he, PRIntn i, void *arg)
+{
+  char *filename = (char *) he->key;
+
+#ifdef XP_OS2
+  XP_LazyFileRemove(filename, xpCache);
+#else
+  XP_FileRemove(filename, xpCache);
+#endif
+  TRACEMSG(("Unknown cache file %s found! -- deleteing...", 
+            filename));
+  FREE(filename);
+
+  return HT_ENUMERATE_REMOVE;
 }
 /* cleans up the cache directory by listing every
  * file and deleting the ones it doesn't know about
@@ -2838,7 +2851,7 @@ NET_CleanupCacheDirectory(char * dir_name, const char * prefix)
 #define REMOVE_LIST_SIZE 1000
 	DBT *remove_list[REMOVE_LIST_SIZE];
 	char *filename, *d_name;
-	XP_HashList *hash_table;
+	PLHashTable *hash_table;
 	DBT key, data;
 	int status;
 	char buffer[512];
@@ -2873,7 +2886,8 @@ NET_CleanupCacheDirectory(char * dir_name, const char * prefix)
 
 	TRACEMSG(("cleaning up cache directory of unknown cache files"));
 
-	hash_table = XP_HashListNew(1597, XP_StringHash, net_cache_strcmp);
+	hash_table = PL_NewHashTable(1597, PL_HashString, PL_CompareStrings,
+                                 PL_CompareStrings, NULL, NULL);
 
 	if(!hash_table)
 		return(-1);
@@ -2922,7 +2936,7 @@ NET_CleanupCacheDirectory(char * dir_name, const char * prefix)
 			  {
 				num_files++; /* keep a count of all the files in the database */
 
-				d_name = (char*) XP_HashListRemoveObject(hash_table, filename);
+				d_name = (char*) PL_HashTableRemove(hash_table, filename);
 				if(d_name)
 			  	  {
 					FREE(d_name);
@@ -2937,7 +2951,7 @@ NET_CleanupCacheDirectory(char * dir_name, const char * prefix)
 			 * entry
 			 */
 			if(!net_IsValidCacheDBT(&data)
-				&& (key.size < 4 || XP_STRNCMP((char*)key.data,
+				&& (key.size < 4 || PL_strncmp((char*)key.data,
                                                 INTERNAL_NAME_PREFIX,
                                                 4))
                 && number_in_remove_list < REMOVE_LIST_SIZE)
@@ -2955,31 +2969,9 @@ NET_CleanupCacheDirectory(char * dir_name, const char * prefix)
 	 * @@@@ Manipulate the hash table directly
 	 */
 	{
-		int list_count;
-		XP_List *list_ptr;
-		
-		for(list_count=0; list_count < hash_table->size; list_count++)
-      	  {
-        	list_ptr = hash_table->list[list_count];
-        	if(list_ptr)
-          	  {
-            	while((filename = 
-						    (char *) XP_ListRemoveTopObject(list_ptr)) != 0)
-              	  {
-#ifdef XP_OS2
-					XP_LazyFileRemove(filename, xpCache);
-#else
-					XP_FileRemove(filename, xpCache);
-#endif
-					TRACEMSG(("Unknown cache file %s found! -- deleteing...", 
-														filename));
-					FREE(filename);
-              	  }
-            	XP_ListDestroy(list_ptr);  /* free the list */
-          	  }
-      	  }
-
-		XP_HashListDestroy(hash_table);
+        PL_HashTableEnumerateEntries(hash_table, net_hash_cleanup_enumerator,
+                                     NULL);
+		PL_HashTableDestroy(hash_table);
 	}
 
 	/* remove the entries that are no longer needed or
@@ -3039,7 +3031,7 @@ NET_DestroyCacheDirectory(char * dir_name, char * prefix)
 MODULE_PRIVATE void 
 NET_DisplayCacheInfoAsHTML(ActiveEntry * cur_entry)
 {
-	char *buffer = (char*)XP_ALLOC(2048);
+	char *buffer = (char*)PR_Malloc(2048);
 	char *address;
 	char *escaped;
    	NET_StreamClass * stream;
@@ -3054,11 +3046,11 @@ NET_DisplayCacheInfoAsHTML(ActiveEntry * cur_entry)
 		return;
 	  }
 
-	if(strcasestr(cur_entry->URL_s->address, "?long"))
+	if(PL_strcasestr(cur_entry->URL_s->address, "?long"))
 		long_form = TRUE;
-	else if(strcasestr(cur_entry->URL_s->address, "?traceon"))
+	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceon"))
 		NET_CacheTraceOn = TRUE;
-	else if(strcasestr(cur_entry->URL_s->address, "?traceoff"))
+	else if(PL_strcasestr(cur_entry->URL_s->address, "?traceoff"))
 		NET_CacheTraceOn = FALSE;
 
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
@@ -3082,11 +3074,11 @@ NET_DisplayCacheInfoAsHTML(ActiveEntry * cur_entry)
 #define PUT_PART(part)													\
 cur_entry->status = (*stream->put_block)(stream,			\
 										part ? part : "Unknown",		\
-										part ? XP_STRLEN(part) : 7);	\
+										part ? PL_strlen(part) : 7);	\
 if(cur_entry->status < 0)												\
   goto END;
 
-	XP_SPRINTF(buffer, 
+	sprintf(buffer, 
 "<TITLE>Information about the Netscape disk cache</TITLE>\n"
 "<h2>Disk Cache statistics</h2>\n"
 "<TABLE>\n"
@@ -3117,7 +3109,7 @@ net_NumberInDiskCache ? net_DiskCacheSize/net_NumberInDiskCache : 0);
 
 	if(!cache_database)
 	  {
-		XP_STRCPY(buffer, "The cache database is currently closed");
+		PL_strcpy(buffer, "The cache database is currently closed");
 		PUT_PART(buffer);
 		goto END;
 	  }
@@ -3130,28 +3122,28 @@ net_NumberInDiskCache ? net_DiskCacheSize/net_NumberInDiskCache : 0);
 #if 0
 
 #define TABLE_TOP(arg1)				\
-	XP_SPRINTF(buffer, 				\
+	sprintf(buffer, 				\
 "<TR><TD ALIGN=RIGHT><b>%s</TD>\n"	\
 "<TD>", arg1);						\
 PUT_PART(buffer);
 
 #define TABLE_BOTTOM				\
-	XP_SPRINTF(buffer, 				\
+	sprintf(buffer, 				\
 "</TD></TR>");						\
 PUT_PART(buffer);
 
 #else
 
 #define TABLE_TOP(arg1)					\
-	XP_STRCPY(buffer, "<tt>");			\
-	for(i=XP_STRLEN(arg1); i < 16; i++)	\
-		XP_STRCAT(buffer, "&nbsp;");	\
-	XP_STRCAT(buffer, arg1);			\
-	XP_STRCAT(buffer, " </tt>");		\
+	PL_strcpy(buffer, "<tt>");			\
+	for(i=PL_strlen(arg1); i < 16; i++)	\
+		PL_strcat(buffer, "&nbsp;");	\
+	PL_strcat(buffer, arg1);			\
+	PL_strcat(buffer, " </tt>");		\
 	PUT_PART(buffer);
 
 #define TABLE_BOTTOM					\
-	XP_STRCPY(buffer, "<BR>\n");		\
+	PL_strcpy(buffer, "<BR>\n");		\
 	PUT_PART(buffer);
 
 #endif
@@ -3164,12 +3156,12 @@ PUT_PART(buffer);
         if(!cache_obj)
 		  {
 			if(!net_IsValidCacheDBT(&data)
-			 	&& (key.size < 4 || XP_STRNCMP((char*)key.data, 
+			 	&& (key.size < 4 || PL_strncmp((char*)key.data, 
 												INTERNAL_NAME_PREFIX, 
 												4)))
 			  {
 				
-				XP_STRCPY(buffer, "<H3>Corrupted or misversioned cache entry</H3>"
+				PL_strcpy(buffer, "<H3>Corrupted or misversioned cache entry</H3>"
 								  "This entry will be deleted automatically "
 								  "in the future."
 								  "<HR ALIGN=LEFT WIDTH=50%>");
@@ -3180,7 +3172,7 @@ PUT_PART(buffer);
           {
 #if 0
 			/* begin a table for this entry */
-			XP_STRCPY(buffer, "<TABLE>");
+			PL_strcpy(buffer, "<TABLE>");
 			PUT_PART(buffer);
 #endif
 
@@ -3190,27 +3182,27 @@ PUT_PART(buffer);
 			address = (char *)key.data+8;
 
 			TABLE_TOP("URL:");
-			XP_STRCPY(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
+			PL_strcpy(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
 			PUT_PART(buffer);
 			PUT_PART(address);
-			XP_STRCPY(buffer, ">");
+			PL_strcpy(buffer, ">");
 			PUT_PART(buffer);
 			escaped = NET_EscapeHTML(address);
 			PUT_PART(escaped);
 			FREE(escaped);
-			XP_STRCPY(buffer, "</A>");
+			PL_strcpy(buffer, "</A>");
 			PUT_PART(buffer);
 			TABLE_BOTTOM;
 
 			TABLE_TOP( XP_GetString(MK_CACHE_CONTENT_LENGTH) );
-			XP_SPRINTF(buffer, "%lu", cache_obj->content_length);
+			sprintf(buffer, "%lu", cache_obj->content_length);
 			PUT_PART(buffer);
 			TABLE_BOTTOM;
 
 			if(cache_obj->content_length != cache_obj->real_content_length)
 			  {
 				TABLE_TOP( XP_GetString(MK_CACHE_REAL_CONTENT_LENGTH) );
-				XP_SPRINTF(buffer, "%lu", cache_obj->real_content_length);
+				sprintf(buffer, "%lu", cache_obj->real_content_length);
 				PUT_PART(buffer);
 				TABLE_BOTTOM;
 			  }
@@ -3230,7 +3222,7 @@ PUT_PART(buffer);
 			  }
 			else
 			  {
-				XP_STRCPY(buffer, "No date sent");
+				PL_strcpy(buffer, "No date sent");
 				PUT_PART(buffer);
 			  }
 			TABLE_BOTTOM;
@@ -3242,7 +3234,7 @@ PUT_PART(buffer);
 			  }
 			else
 			  {
-				XP_STRCPY(buffer, "No expiration date sent");
+				PL_strcpy(buffer, "No expiration date sent");
 				PUT_PART(buffer);
 			  }
 			TABLE_BOTTOM;
@@ -3260,25 +3252,25 @@ PUT_PART(buffer);
 				  }
 				else
 				  {
-					XP_STRCPY(buffer, "iso-8859-1 (default)");
+					PL_strcpy(buffer, "iso-8859-1 (default)");
 					PUT_PART(buffer);
 				  }
 				TABLE_BOTTOM;
 
 				TABLE_TOP( XP_GetString(MK_CACHE_SECURE) );
-				XP_SPRINTF(buffer, "%s", cache_obj->security_on ? 
+				sprintf(buffer, "%s", cache_obj->security_on ? 
 													"TRUE" : "FALSE");
 				PUT_PART(buffer);
 				TABLE_BOTTOM;
 
 				TABLE_TOP( XP_GetString(MK_CACHE_USES_RELATIVE_PATH) );
-				XP_SPRINTF(buffer, "%s", cache_obj->is_relative_path ? 
+				sprintf(buffer, "%s", cache_obj->is_relative_path ? 
 													"TRUE" : "FALSE");
 				PUT_PART(buffer);
 				TABLE_BOTTOM;
 
 				TABLE_TOP( XP_GetString(MK_CACHE_FROM_NETSITE_SERVER) );
-				XP_SPRINTF(buffer, "%s", cache_obj->is_netsite ? 
+				sprintf(buffer, "%s", cache_obj->is_netsite ? 
 													"TRUE" : "FALSE");
 				PUT_PART(buffer);
 				TABLE_BOTTOM;
@@ -3290,7 +3282,7 @@ PUT_PART(buffer);
 			  	}
 				else
 			  	{
-					XP_STRCPY(buffer, "Not locked");
+					PL_strcpy(buffer, "Not locked");
 					PUT_PART(buffer);
 			  	}
 				TABLE_BOTTOM;
@@ -3299,10 +3291,10 @@ PUT_PART(buffer);
 
 #if 0
 			/* end the table for this entry */
-			XP_STRCPY(buffer, "</TABLE><HR ALIGN=LEFT WIDTH=50%>");
+			PL_strcpy(buffer, "</TABLE><HR ALIGN=LEFT WIDTH=50%>");
 			PUT_PART(buffer);
 #else
-			XP_STRCPY(buffer, "\n<P>\n");
+			PL_strcpy(buffer, "\n<P>\n");
 			PUT_PART(buffer);
 #endif
           }
@@ -3397,7 +3389,7 @@ found:
 	buflen = stream->is_write_ready(stream);
 	if (buflen > SANE_BUFLEN)
 		buflen = SANE_BUFLEN;
-	buf = (char *)XP_ALLOC(buflen * sizeof(char));
+	buf = (char *)PR_Malloc(buflen * sizeof(char));
 	if (!buf)
 	  {
 		XP_FileClose(fromfp);
@@ -3421,7 +3413,7 @@ found:
 	  {
 		/* NB: Our caller must clear top_state->mocha_write_stream. */
 		stream->abort(stream, MK_UNABLE_TO_CONVERT);
-		XP_DELETE(stream);
+		PR_DELETE(stream);
 		return 0;
 	  }
 	return stream;

@@ -27,17 +27,9 @@
 #define Bool char
 #define uint32 unsigned int
 #define int32  int
-#define XP_NEW(structure)  ((structure *) malloc(sizeof(structure)))
-#define XP_ALLOC   (void *) malloc
-#define XP_MEMCPY  memcpy
-#define XP_MEMSET  memset
 #define TRACEMSG(x) printf x
 #define FREEIF(x)  do { if(x) free(x); } while(0)
 #define FREE free
-#define XP_STRLEN  strlen
-#define XP_STRCHR  strchr
-#define XP_STRCMP  strcmp
-#define XP_ASSERT  assert
 #define MODULE_PRIVATE
 #define PRIVATE static
 #define TRUE  !0
@@ -50,13 +42,7 @@
 
 #ifndef EXT_DB_ROUTINES
 #include "mkutils.h"
-
-#ifndef NSPR20
-#include "prosdep.h"  /* for IS_LITTLE_ENDIAN / IS_BIG_ENDIAN */
-#else
 #include "prtypes.h"
-#endif
-
 #endif /* EXT_DB_ROUTINES */
 
 #if !defined(IS_LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
@@ -64,7 +50,7 @@ ERROR! Must have a byte order
 #endif
 
 #ifdef IS_LITTLE_ENDIAN
-#define COPY_INT32(_a,_b)  XP_MEMCPY(_a, _b, sizeof(int32));
+#define COPY_INT32(_a,_b)  PL_memcpy(_a, _b, sizeof(int32));
 #else
 #define COPY_INT32(_a,_b)  /* swap */                   \
     do {                                                \
