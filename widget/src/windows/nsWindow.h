@@ -254,10 +254,8 @@ protected:
 
   PRBool  mIsInMouseCapture;
 
-#if 1
 	BOOL		mHaveDBCSLeadByte;
 	unsigned char mDBCSLeadByte;
-#endif
 
     // Drag & Drop
     nsNativeDragTarget * mNativeDragTarget;
