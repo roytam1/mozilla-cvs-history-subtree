@@ -374,12 +374,46 @@
         </body>
       </method>
       
+      <method name="findChildShell">
+        <parameter name="aDocShell"/>
+        <parameter name="aSoughtURI"/>
+        <body>
+          <![CDATA[
+            if (aDocShell.QueryInterface(Components.interfaces.nsIWebNavigation)
+                         .currentURI.spec == aSoughtURI.spec)
+              return aDocShell;
+            var node = aDocShell.QueryInterface(
+                                   Components.interfaces.nsIDocShellTreeNode);
+            for (var i = 0; i < node.childCount; ++i) {
+              var docShell = node.getChildAt(i);
+              docShell = this.findChildShell(docShell, aSoughtURI);
+              if (docShell)
+                return docShell;
+            }
+            return null;
+          ]]>
+        </body>
+      </method>
+
       <method name="onLoad">
         <parameter name="aEvent"/>
         <body>
           <![CDATA[
-            this.removeEventListener("load", this.handleEvent, true);
             this.attachFormFill();
+            if (this.pageReport) {
+              var i = 0;
+              while (i < this.pageReport.length) {
+                if (this.findChildShell(this.docShell,
+                                        this.pageReport[i].requestingWindowURI))
+                  i++;
+                else
+                  this.pageReport.splice(i, 1);
+              }
+              if (this.pageReport.length == 0) {
+                this.pageReport = null;
+                this.updatePageReport();
+              }
+            }
          ]]>
         </body>
       </method>
@@ -532,6 +566,7 @@
           this.securityUI = null;
           this._fastFind = null;
 
+          this.removeEventListener("load", this.onLoad, true);
           this.removeEventListener("unload", this.onUnload, true);
           this.removeEventListener("DOMPopupBlocked", this.onPopupBlocked, true);
           ]]>
