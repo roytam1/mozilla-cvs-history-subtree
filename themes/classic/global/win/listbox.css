@@ -51,7 +51,7 @@ listbox:focus > listitem[selected="true"][current="true"] {
 }
 
 listitem[selected="true"] {
-  background-color: #FFCC00;
+  background-color: #FFE88C;
   color: #000000;
 }
 

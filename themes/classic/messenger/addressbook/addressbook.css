@@ -130,19 +130,13 @@ sidebarheader {
 /* CardView styles - used in the Card View Pane */
 
 #CardViewOuterBox {
-  border-left: 1px solid ThreeDShadow;
-  border-top: 1px solid ThreeDShadow;
-  border-right: 1px solid ThreeDHighlight;
+  border-left: 1px solid 6E65B1;
 }
 
 #CardViewBox {
   -moz-user-focus: ignore;
   overflow: auto;
   min-width: 150px;
-  border-left: 1px solid ThreeDDarkShadow;
-  border-top: 1px solid ThreeDDarkShadow;
-  border-bottom: 1px solid ThreeDLightShadow;
-  border-right: 1px solid ThreeDLightShadow;
   background-color: #FFFFFF;
 }
 
@@ -171,7 +165,7 @@ sidebarheader {
   padding: 1px;
   padding-left: 5px;
   margin: 0px 0px 1px 0px;
-  background-color: #CCCCFF;
+  background-color: #AFD7FF;
   color: black;
   font-weight: bold;
   min-width: 30px;

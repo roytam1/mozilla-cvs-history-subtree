@@ -32,11 +32,11 @@
 menupopup,
 popup {
   border: 2px solid;
-  -moz-border-top-colors: #000000 #86AEFE;
-  -moz-border-right-colors: #000000 #02669E;
-  -moz-border-bottom-colors: #000000 #02669E;
-  -moz-border-left-colors: #000000 #86AEFE;
-  background-color: #3398CC;
+  -moz-border-top-colors: #000000 #D9EBFF;
+  -moz-border-right-colors: #000000 #819FC1;
+  -moz-border-bottom-colors: #000000 #819FC1;
+  -moz-border-left-colors: #000000 #D9EBFF;
+  background-color: #A5CCF7;
   padding: 1px;
   min-width: 1px;
 }

@@ -101,6 +101,10 @@
 
 /* ::::: special toolbar colors ::::: */
 
+label, description {
+  color: #000000;
+}
+
 #content-frame {
   border-left: 1px solid #02669E;
   border-right: 1px solid #86AEFE;
@@ -122,6 +126,15 @@
   border-right: none;
   -moz-border-top-colors: #C9F4FF;
 }
+
+#MsgHeadersToolbar {
+  background: #F6F7CF;
+}
+
+#FormatToolbar {
+  background: #F6F7CF;
+}
+
 /* ::::: autocomplete icons ::::: */
 
 treechildren:-moz-tree-cell-text(default-match) {

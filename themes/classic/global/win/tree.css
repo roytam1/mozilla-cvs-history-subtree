@@ -49,7 +49,7 @@ treechildren:-moz-tree-row {
 }
 
 treechildren:-moz-tree-row(selected) {
-  background-color: #FFCC00;
+  background-color: #FFE88C;
 }
 
 treechildren:-moz-tree-row(selected, focus) {
@@ -57,7 +57,7 @@ treechildren:-moz-tree-row(selected, focus) {
 }
 
 treechildren:-moz-tree-row(current, focus) {
-  border: 1px dotted #EBA800;
+ 
 }
 
 /* ::::: tree cells ::::: */
@@ -86,7 +86,7 @@ treechildren:-moz-tree-line {
 }
 
 treechildren:-moz-tree-line(selected) {
-  border: 1px solid #FFCC00;
+  border: 1px solid #FFE88C;
 }
 
 treechildren:-moz-tree-line(selected, focus) {

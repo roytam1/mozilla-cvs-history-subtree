@@ -86,9 +86,8 @@ menulist:hover:active > .menulist-dropmarker {
 /* ..... focused state ..... */
 
 menulist:focus > .menulist-label-box {
-  border: 1px dotted #F5DB95;
-  background-color: Highlight;
-  color: HighlightText;  
+  border: 1px dotted #EBA800;
+  background-color: #FFCC00;
 }
 
 /* ..... disabled state ..... */
