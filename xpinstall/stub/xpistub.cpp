@@ -27,8 +27,8 @@
 #include "nsRepository.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
-
 #include "nsSpecialSystemDirectory.h" 
+#include "nsILocalFile.h"
 
 #include "nscore.h"
 #include "nspr.h"
@@ -101,11 +101,11 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     rv = NS_InitXPCOM(&gServiceMgr, file); 
 #elif defined(XP_PC) || defined(XP_UNIX)
     
-    nsCOMPtr<nsIFile> file;
+    nsCOMPtr<nsILocalFile> file;
     rv = NS_NewLocalFile(getter_AddRefs(file));
     if (NS_SUCCEEDED(rv) && file)
     {
-        file->InitWithPath(aProgramDir)
+        file->InitWithPath(aProgramDir);
     }
     rv = NS_InitXPCOM(&gServiceMgr, file); 
         
