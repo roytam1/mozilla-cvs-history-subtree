@@ -105,6 +105,10 @@ protected:
 #else
   nsCOMPtr<nsIImage> mBuffer;
 #endif
+
+#ifdef SVG_LIBART_PIXEL_FORMAT
+  int mArtPixelFormat;
+#endif
 };
 
 #endif // __NS_SVGRENDERINGCONTEXT_H__
