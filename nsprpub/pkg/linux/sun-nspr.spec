@@ -45,15 +45,16 @@ rm -rf $RPM_BUILD_ROOT
 %dir /usr
 %dir /usr/lib
 %dir /usr/lib/mps
-/usr/lib/mps/libnspr4.so
-/usr/lib/mps/libplc4.so
-/usr/lib/mps/libplds4.so
+%dir /usr/lib/mps/secv1
+/usr/lib/mps/secv1/libnspr4.so
+/usr/lib/mps/secv1/libplc4.so
+/usr/lib/mps/secv1/libplds4.so
 
 %files devel
 %defattr(-,root,root)
-/usr/lib/mps/libnspr4.a
-/usr/lib/mps/libplc4.a
-/usr/lib/mps/libplds4.a
+/usr/lib/mps/secv1/libnspr4.a
+/usr/lib/mps/secv1/libplc4.a
+/usr/lib/mps/secv1/libplds4.a
 %dir /usr
 %dir /usr/include
 %dir /usr/include/mps

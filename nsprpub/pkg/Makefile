@@ -39,7 +39,7 @@ include $(MOD_DEPTH)/config/config.mk
 
 publish:
 ifeq ($(OS_TARGET),Linux)
-ifeq ($(OS_RELEASE),2.4)
+ifeq ($(OS_RELEASE),2.4.9)
 	rm -rf $(OBJDIR)
 	cp -r linux $(OBJDIR)
 	$(MAKE) -C $(OBJDIR) publish
