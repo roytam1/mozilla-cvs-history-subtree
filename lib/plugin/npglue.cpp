@@ -2209,7 +2209,7 @@ npn_getJavaClass(np_handle* handle)
 {
     if (handle->userPlugin) {
         nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
-        NPILiveConnectPlugin* lcPlugin;
+        nsILiveConnectPlugin* lcPlugin;
         if (userPluginClass->QueryInterface(kLiveConnectPluginIID,
                                             (void**)&lcPlugin) != NS_NOINTERFACE) {
             java_lang_Class* clazz = (java_lang_Class*)lcPlugin->GetJavaClass();
