@@ -491,6 +491,7 @@ typedef uint8 HT_DropAction;
 #define UPLOAD_RDF       2
 #define COPY_MOVE_LINK   3
 #define UPLOAD_LFS       4
+#define	DROP_ABORTED	5
 
 PR_PUBLIC_API(HT_DropAction)   HT_CanDropHTROn(HT_Resource dropTarget, HT_Resource obj); 
 PR_PUBLIC_API(HT_DropAction)   HT_CanDropURLOn(HT_Resource dropTarget, char* url); 

@@ -100,6 +100,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_AutoOpen;
   RDF_Resource RDF_resultType;
   RDF_Resource RDF_methodType;
+  RDF_Resource RDF_prompt;
   RDF_Resource RDF_HTMLType;
   RDF_Resource RDF_URLShortcut;
   RDF_Resource RDF_Cookies;
