@@ -37,6 +37,9 @@
 
 CVS = cvs
 CWD := $(shell pwd)
+ifndef MOZ_CO_TAG
+MOZ_CO_TAG = MOZILLA_1_7_BRANCH
+endif
 
 ifeq "$(CWD)" "/"
 CWD := /.
