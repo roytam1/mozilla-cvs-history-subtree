@@ -190,7 +190,7 @@ EXTRA_LIBS = -ldld -lm -lpthread -lrt \
 	     -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(NSCP_DISTDIR)/lib $(SVRCORE_LINK) \
-	     $(LDAPTOOLS_NSS_LINK) \
+	     $(LDAPTOOLS_NSS_LINK) -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
