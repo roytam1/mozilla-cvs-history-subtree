@@ -42,7 +42,7 @@ outlinerbody {
 
 outlinerbody:-moz-outliner-row {
   border: 1px solid transparent;
-  height: 17px;
+  height: 18px;
 }
 
 outlinerbody:-moz-outliner-row(selected) {
