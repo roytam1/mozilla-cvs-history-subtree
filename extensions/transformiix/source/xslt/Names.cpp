@@ -147,7 +147,12 @@ const String NODE_FNAME              = "node";
 const String IDENTITY_OP             = ".";
 const String PARENT_OP               = "..";
 
-//-- XSL extension functions
+//-- XSLT extension functions
+const String CURRENT_FN              = "current";
+const String FORMAT_NUMBER_FN        = "format-number";
+const String GENERATE_ID_FN          = "generate-id";
+const String SYSTEM_PROPERTY_FN      = "system-property";
 
+//-- MISC
 const String WILD_CARD               = "*";
 
