@@ -40,7 +40,7 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
+MOZ_BRANCH=FONT_20011307_BRANCH
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
 #NSS_CO_TAG=SeaMonkey_M17_BRANCH
@@ -95,10 +95,10 @@ CVSCO_TAG = cvs -q co -P
 
 # Branch tags we use
 
-IMGLIB2_BRANCH =
-GFX2_BRANCH =
-PLUGIN_BRANCH =
-XPCOM_BRANCH =
+IMGLIB2_BRANCH = FONT_20011307_BRANCH
+GFX2_BRANCH = FONT_20011307_BRANCH
+PLUGIN_BRANCH = FONT_20011307_BRANCH
+XPCOM_BRANCH = FONT_20011307_BRANCH
 
 !if defined(MOZ_DATE)
 # CVS commands to pull the appropriate branch versions
