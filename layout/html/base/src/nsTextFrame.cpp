@@ -974,13 +974,21 @@ inline nscolor EnsureDifferentColors(nscolor colorA, nscolor colorB)
     return colorA;
 }
 
+// note:  IME_INVERT is the "old" way for doing IME; the desired way is to use
+// the selection color instead of inverting.  The #ifs for IME_INVERT will
+// hopefully disappear in the next week or two
 
 //DRAW SELECTION ITERATOR USED FOR TEXTFRAMES ONLY
 //helper class for drawing multiply selected text
 class DrawSelectionIterator
 {
   enum {DISABLED_COLOR = NS_RGB(176,176,176)};
-  enum {SELECTION_TYPES_WE_CARE_ABOUT=nsISelectionController::SELECTION_NONE+nsISelectionController::SELECTION_NORMAL};
+  enum {SELECTION_TYPES_WE_CARE_ABOUT = nsISelectionController::SELECTION_NONE +
+#if !IME_INVERT
+                 nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT +
+                 nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT +
+#endif
+                 nsISelectionController::SELECTION_NORMAL};
 public:
   DrawSelectionIterator(const SelectionDetails *aSelDetails, PRUnichar *aText,
                         PRUint32 aTextLength, nsTextFrame::TextStyle &aTextStyle,
@@ -1207,6 +1215,14 @@ DrawSelectionIterator::CurrentForeGroundColor()
     foreColor = mOldStyle.mSelectionTextColor;
    	colorSet = PR_TRUE;
   }
+#if !IME_INVERT
+  else if ((mTypes[mCurrentIdx] | nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT)
+       || (mTypes[mCurrentIdx] | nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT))
+  {
+    foreColor = mOldStyle.mSelectionTextColor;
+    colorSet = PR_TRUE;
+  }
+#endif
 
 	if (colorSet && (foreColor != NS_DONT_CHANGE_COLOR))
 			return foreColor;
@@ -1231,6 +1247,14 @@ DrawSelectionIterator::CurrentBackGroundColor(nscolor &aColor)
     aColor = (mSelectionStatus==nsISelectionController::SELECTION_ON)?mOldStyle.mSelectionBGColor:mDisabledColor;
     return PR_TRUE;
   }
+#if !IME_INVERT
+  else if ((mTypes[mCurrentIdx] | nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT)
+       || (mTypes[mCurrentIdx] | nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT))
+  {
+    aColor = (mSelectionStatus==nsISelectionController::SELECTION_ON)?mOldStyle.mSelectionBGColor:mDisabledColor;
+    return PR_TRUE;
+  }
+#endif
   return PR_FALSE;
 }
 
@@ -1895,6 +1919,8 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.FillRect(aX + startOffset, aY + baseline - offset, textWidth, size);
                                 }break;
           case nsISelectionController::SELECTION_IME_SELECTEDRAWTEXT:{
+// part of this case is handled elsewhere in this file now
+#if IME_INVERT 
 #ifdef USE_INVERT_FOR_SELECTION
               aRenderingContext.SetColor(NS_RGB(255,255,255));
               aRenderingContext.InvertRect(aX + startOffset, aY, textWidth, rect.height);
@@ -1902,6 +1928,7 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.SetColor(NS_RGB(255,255,128));
               aRenderingContext.DrawRect(aX + startOffset, aY, textWidth, rect.height);
 #endif        
+#endif
               aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_RAW_COLOR);
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
@@ -1912,6 +1939,8 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
                                 }break;
           case nsISelectionController::SELECTION_IME_SELECTEDCONVERTEDTEXT:{
+// part of this case is now handled elsewhere in this file; the underlining is here
+#if IME_INVERT 
 #ifdef USE_INVERT_FOR_SELECTION
               aRenderingContext.SetColor(NS_RGB(255,255,255));
               aRenderingContext.InvertRect(aX + startOffset, aY, textWidth, rect.height);
@@ -1919,6 +1948,7 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
               aRenderingContext.SetColor(NS_RGB(255,255,128));
               aRenderingContext.DrawRect(aX + startOffset, aY, textWidth, rect.height);
 #endif        
+#endif
 			  aTextStyle.mNormalFont->GetUnderline(offset, size);
               aRenderingContext.SetColor(IME_CONVERTED_COLOR);
               aRenderingContext.FillRect(aX + startOffset+size, aY + baseline - offset, textWidth-2*size, size);
