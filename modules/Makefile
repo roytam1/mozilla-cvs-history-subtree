@@ -20,9 +20,9 @@ DEPTH		= ..
 
 include $(DEPTH)/config/config.mk
 
-DIRS		= \
+DIRS = \
 	libhook \
-    libreg \
+	libreg \
 	libpref \
 	libutil \
 	libimg \
@@ -31,9 +31,10 @@ DIRS		= \
 	rdf \
 	xml \
 	schedulr \
-    zlib \
-    li \
-    progress \
+	zlib \
+	li \
+	progress \
+	plugin \
 	$(NULL)
 
 ifndef MOZ_SECURITY

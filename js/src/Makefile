@@ -103,8 +103,6 @@ endif
 
 include $(DEPTH)/config/rules.mk
 
-export:: install
-
 ifndef BUILD_OPT
 MOCHAFILE	= 1
 endif

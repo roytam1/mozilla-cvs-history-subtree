@@ -93,7 +93,8 @@ REQUIRES	=\
 		  plds \
 		  nspr20 \
 		  parse \
-		  plug \
+		  plugin \
+		  plugimpl \
 		  hook \
 		  pref \
 		  rdf \
@@ -111,6 +112,11 @@ REQUIRES	=\
 
 ifdef MOZ_FULLCIRCLE
 REQUIRES += fullsoft
+endif
+
+ifdef OJI
+REQUIRES +=	  oji \
+		  ojiimpl
 endif
 
 CSRCS		= \
@@ -216,6 +222,8 @@ DYNAMIC_SYMBOLS_F	= -rdynamic # default
 ifeq ($(OS_ARCH),SunOS) 
 ifdef NS_USE_NATIVE
 DYNAMIC_SYMBOLS_F	= -Bdynamic
+else
+DYNAMIC_SYMBOLS_F	= # nothing for gcc
 endif
 endif
 

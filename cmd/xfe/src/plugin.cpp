@@ -948,7 +948,7 @@ FE_LoadPlugin(void *pdesc, NPNetscapeFuncs *funcs, np_handle* handle)
 
 	    if ((err != NS_OK)
                 || (userPlugin == NULL)
-                || (userPlugin->Initialize(thePluginManager) != nsPluginError_NoError)) {
+                || (userPlugin->Initialize(thePluginManager) != NS_OK)) {
 		PR_UnloadLibrary(plugin->dlopen_obj);
 		plugin->dlopen_obj = NULL;
 		return NULL;
