@@ -38,6 +38,8 @@
 
 /*
   The remote bookmarks service.
+  
+  See RFC 2255 for additional LDAP info, including "bindname" extension usage.
  */
 
 
@@ -162,6 +164,11 @@ nsRemoteBookmarks::Init()
 
   if (gRefCnt++ == 0)
   {
+    // get the window watcher service, so we can get an auth prompter
+    //
+    mWindowWatcher = do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     rv = nsServiceManager::GetService(kRDFServiceCID,
       NS_GET_IID(nsIRDFService),
       (nsISupports**) &gRDF);
@@ -410,82 +417,29 @@ nsRemoteBookmarks::GetTargets(nsIRDFResource* aSource,
     if (isRemoteBookmarkURI(aSource) && (aProperty == kNC_Child) && (tv == PR_TRUE) &&
       NS_SUCCEEDED(rv = gRDFC->IsEmpty(mInner, aSource, &isEmptyFlag)) && (isEmptyFlag))
     {
-      // magic begins here
-      rv = gRDFC->MakeSeq(mInner, aSource, getter_AddRefs(mContainer));     // XXX XXX XXX hack re: mContainer
-      NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to make aSource a sequence");
-      if (NS_FAILED(rv))
-        return(rv);
+      PRBool importantFlag;
+      nsCAutoString bindname;
+      rv = GetLDAPExtension(aSource, "bindname=", bindname, &importantFlag);
 
-      nsCOMPtr<nsILDAPURL> ldapURL;
-      ldapURL = do_CreateInstance(NS_LDAPURL_CONTRACTID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
+    #ifdef  DEBUG
+      printf("\n    GetTargets() bindname = '%s' \n\n", bindname.get());
+    #endif
 
-      const char *srcURI = nsnull;
-      aSource->GetValueConst(&srcURI);
-      if (!srcURI)
-        return(NS_ERROR_NULL_POINTER);
-
-      // trim off standard prefix
-      nsCString cURI(&srcURI[REMOTE_BOOKMARK_PREFIX_LENGTH]);
-      rv = ldapURL->SetSpec(cURI);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCAutoString host;
-      rv = ldapURL->GetAsciiHost(host);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      PRInt32 port;
-      rv = ldapURL->GetPort(&port);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsXPIDLCString dn;
-      rv = ldapURL->GetDn(getter_Copies(dn));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      PRUint32 options;
-      rv = ldapURL->GetOptions(&options);
-      NS_ENSURE_SUCCESS(rv,rv);
-
-      nsCString ldapSearchUrlString;
-      char* _ldapSearchUrlString = PR_smprintf ("ldap%s://%s:%d/%s?%s?%s?%s",
-          (options & nsILDAPURL::OPT_SECURE) ? "s" : "",
-          host.get(), port, dn.get(),
-          "mozillaURL,mozillaName,objectclass" /* return attribs */,
-          "one"                                /* scope of search - one level */,
-          "(objectclass=*)"                    /* filter */);
-      if (!_ldapSearchUrlString)
-        return(NS_ERROR_OUT_OF_MEMORY);
-      ldapSearchUrlString = _ldapSearchUrlString;
-      PR_smprintf_free (_ldapSearchUrlString);
+      nsAutoString bindDN, password;
+      bindDN.AssignWithConversion(bindname.get());
+      if (bindDN.Length() > 0)
+      {
+        rv = doAuthentication(aSource, bindDN, password);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
 
       // Get the ldap connection
       nsCOMPtr<nsILDAPConnection> ldapConnection;
       ldapConnection = do_CreateInstance(NS_LDAPCONNECTION_CONTRACTID, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
-
-      // NOTE: set these session variables before calling
-      //       LDAPConnection->Init() as OnLDAPInit() [which
-      //       accesses them] could fire before it returns
-      mConnection = ldapConnection;
-      mLDAPURL = ldapURL;
-      // XXX XXX XXX - dangle/leak the above vars here, for now.
-      // We need them in other spots of code.
-
-      // Now lets initialize the LDAP connection properly. We'll kick
-      // off the bind operation in the callback function, |OnLDAPInit()|.
-
-      // XXX XXX XXX
-      nsAutoString bindDN(NS_LITERAL_STRING("uid=rjc,ou=People,dc=rjcdb,dc=com"));
-
-      rv = ldapConnection->Init(host.get(), port, options /* SSL? */,
-        bindDN.get(), this /* don't ADDREF this! */);
-      if (NS_FAILED(rv))
-      {
-        mConnection = nsnull;
-        mLDAPURL = nsnull;
-        return(rv);
-      }
+      rv = doLDAPQuery(ldapConnection, aSource, bindDN, password);
+      NS_ENSURE_SUCCESS(rv, rv);
       return(NS_RDF_NO_VALUE);
     }
     // fallback to querying mInner
@@ -1029,56 +983,8 @@ nsRemoteBookmarks::OnLDAPInit(nsresult aStatus)
   // Make sure that the Init() worked properly
   NS_ENSURE_SUCCESS(aStatus, aStatus);
 
-  nsresult rv;
-
-  // XXX hack until nsUTF8AutoString exists
-  #define nsUTF8AutoString nsCAutoString
-          nsUTF8AutoString spec;
-
-  // use the URL spec of the LDAP server as the "realm" for wallet
-  rv = mLDAPURL->GetSpec(spec);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // get the host name for the auth prompt
-  //
-  nsCAutoString host;
-  rv = mLDAPURL->GetAsciiHost(host);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // get the window watcher service, so we can get an auth prompter
-  //
-  nsCOMPtr<nsIWindowWatcher> windowWatcherSvc = 
-  do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // get active window
-  nsCOMPtr<nsIDOMWindow> activeDOMWindow;
-  rv = windowWatcherSvc->GetActiveWindow(getter_AddRefs(activeDOMWindow));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // get the auth prompter itself
-  //
-  nsCOMPtr<nsIAuthPrompt> authPrompter;
-  rv = windowWatcherSvc->GetNewAuthPrompter(activeDOMWindow,
-    getter_AddRefs(authPrompter));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // get authentication password, prompting the user if necessary
-  //
-  nsAutoString authPromptTitle(NS_LITERAL_STRING("Remote Bookmark Server Authentication"));
-  nsAutoString authPromptText(NS_LITERAL_STRING("Login:"));
-
-  PRBool status = PR_FALSE;
-  nsXPIDLString userDN, passwd;
-
-  rv = authPrompter->PromptUsernameAndPassword(authPromptTitle.get(), authPromptText.get(),
-    NS_ConvertUTF8toUCS2(spec).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
-    getter_Copies(userDN), getter_Copies(passwd), &status);
-  NS_ENSURE_SUCCESS(rv, rv);
-  if (status == PR_FALSE)
-    return(NS_ERROR_FAILURE);
-
   // Initiate the LDAP operation - XXX leak for now
+  nsresult rv;
   mSearchOperation = do_CreateInstance(NS_LDAPOPERATION_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1090,12 +996,12 @@ nsRemoteBookmarks::OnLDAPInit(nsresult aStatus)
     getter_AddRefs(proxyListener));
   NS_ENSURE_SUCCESS(rv, rv);
 
-//  XXX TO DO need to somehow get "mConnection" from somewhere
+  //  XXX TO DO need to somehow get "mConnection" from somewhere
   rv = mSearchOperation->Init(mConnection, proxyListener);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Bind
-  rv = mSearchOperation->SimpleBind(passwd);
+  // simple Bind (password may be empty string, initially)
+  rv = mSearchOperation->SimpleBind(mPassword.get());
   NS_ENSURE_SUCCESS(rv, rv);
 
   return(NS_OK);
@@ -1120,10 +1026,12 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
   {
     // bind in progress
     case nsILDAPMessage::RES_BIND:
+      {
       if (errorCode != nsILDAPErrors::SUCCESS)
       {
         if ( errorCode == nsILDAPErrors::INAPPROPRIATE_AUTH ||
-          errorCode == nsILDAPErrors::INVALID_CREDENTIALS )
+             errorCode == nsILDAPErrors::INVALID_CREDENTIALS ||
+             errorCode == nsILDAPErrors::INSUFFICIENT_ACCESS)
         {
           // make sure the wallet service has been created, and in doing so,
           // pass in a login-failed message to tell it to forget this passwd.
@@ -1145,64 +1053,72 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 
           // get the window watcher service, so we can get a prompter
           //
-          nsCOMPtr<nsIWindowWatcher> windowWatcherSvc = 
-          do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv);
-          NS_ENSURE_SUCCESS(rv, rv);
-          if (!windowWatcherSvc)
-            return(NS_ERROR_NULL_POINTER);
-
           nsCOMPtr<nsIPrompt> prompter;
-          rv = windowWatcherSvc->GetNewPrompter(0, getter_AddRefs(prompter));
+          rv = mWindowWatcher->GetNewPrompter(0, getter_AddRefs(prompter));
           NS_ENSURE_SUCCESS(rv, rv);
           if (!prompter)
             return(NS_ERROR_NULL_POINTER);
 
           nsAutoString errStr;
           rv = aMessage->GetErrorMessage(errStr);
+          errStr.Trim(" \t");
           if (errStr.Length() == 0)
           {
             errStr = NS_LITERAL_STRING("Error # ");
             errStr.AppendInt(errorCode);
           }
           prompter->Alert(NS_LITERAL_STRING("Error").get(), errStr.get());
-        } 
+
+          // rebind
+
+          nsCOMPtr<nsIRDFResource> containerRes;
+          rv = mContainer->GetResource(getter_AddRefs(containerRes));
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          nsAutoString bindDN, password;
+          nsresult rv = doAuthentication(containerRes, bindDN, password);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          rv = doLDAPQuery(mConnection, containerRes, bindDN, password);
+          return(rv);
+        }
+        return(NS_ERROR_FAILURE);
       }
-      else
-      {
-        nsXPIDLCString dn;
-        rv = mLDAPURL->GetDn(getter_Copies (dn));
-        NS_ENSURE_SUCCESS(rv, rv);
 
-        nsXPIDLCString filter;
-        rv = mLDAPURL->GetFilter(getter_Copies (filter));
-        NS_ENSURE_SUCCESS(rv, rv);
-        printf("    filter = %s \n", (char *)filter.get());
+      nsXPIDLCString dn;
+      rv = mLDAPURL->GetDn(getter_Copies (dn));
+      NS_ENSURE_SUCCESS(rv, rv);
 
-//        CharPtrArrayGuard attributes;
-//        rv = mLDAPURL->GetAttributes (attributes.GetSizeAddr (), attributes.GetArrayAddr ());
-//        NS_ENSURE_SUCCESS(rv, rv);
+      nsXPIDLCString filter;
+      rv = mLDAPURL->GetFilter(getter_Copies (filter));
+      NS_ENSURE_SUCCESS(rv, rv);
 
-        static const char *attrs[] = {
-        "mozillaURL", "mozillaName", "objectclass", nsnull
-        };
+      static const char *attrs[] = {
+      "mozillaURL", "mozillaName", "objectclass", nsnull
+      };
 
-        // when we called SetSpec(), our spec contained UTF8 data
-        // so when we call GetFilter(), it's not going to be ASCII.
-        // it will be UTF8, so we need to convert from UTF8 to UCS2
-        // see bug #124995
-        rv = mSearchOperation->SearchExt(NS_ConvertUTF8toUCS2(dn).get(),
-          nsILDAPURL::SCOPE_ONELEVEL, NS_ConvertUTF8toUCS2(filter).get(),
-          3,                            /* attributes.GetSize () */
-          (const char **)attrs,         /* attributes.GetArray () */
-          nsILDAPOperation::NO_LIMIT,   /* TimeOut*/
-          nsILDAPOperation::NO_LIMIT ); /* ResultLimit*/
-        NS_ENSURE_SUCCESS(rv, rv);
+      // when we called SetSpec(), our spec contained UTF8 data
+      // so when we call GetFilter(), it's not going to be ASCII.
+      // it will be UTF8, so we need to convert from UTF8 to UCS2
+      // see bug #124995
+      rv = mSearchOperation->SearchExt(NS_ConvertUTF8toUCS2(dn).get(),
+        nsILDAPURL::SCOPE_ONELEVEL, NS_ConvertUTF8toUCS2(filter).get(),
+        3,                            /* attributes.GetSize () */
+        (const char **)attrs,         /* attributes.GetArray () */
+        nsILDAPOperation::NO_LIMIT,   /* TimeOut*/
+        nsILDAPOperation::NO_LIMIT ); /* ResultLimit*/
+      NS_ENSURE_SUCCESS(rv, rv);
       }
       break;
 
     // found a result
     case nsILDAPMessage::RES_SEARCH_ENTRY:
       {
+
+#ifdef  DEBUG
+      printf("    nsILDAPMessage::RES_SEARCH_ENTRY done \n");
+#endif
+
       // calculate true URI to result
       nsCAutoString spec;
       rv = mLDAPURL->GetSpec(spec);
@@ -1246,7 +1162,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         return(NS_ERROR_OUT_OF_MEMORY);
 
 #ifdef  DEBUG
-      printf("    UTF8 DN - %s \n", _ldapSearchUrlString);
+      printf("    Search UTF8 DN - %s \n", _ldapSearchUrlString);
 #endif
 
       ldapSearchUrlString = _ldapSearchUrlString;
@@ -1323,7 +1239,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       // prevent duplicates                                                       
       PRInt32 aIndex;                                                             
       nsCOMPtr<nsIRDFResource> containerRes;
-      mContainer->GetResource(getter_AddRefs(containerRes));
+      (void)mContainer->GetResource(getter_AddRefs(containerRes));
       if (containerRes && NS_SUCCEEDED(gRDFC->IndexOf(mInner, containerRes,
         searchRes, &aIndex)) && (aIndex < 0))
       {
@@ -1336,7 +1252,49 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 
     // search finished
     case nsILDAPMessage::RES_SEARCH_RESULT:
+#ifdef  DEBUG
       printf("    nsILDAPMessage::RES_SEARCH_RESULT done \n");
+#endif
+
+      PRInt32 count = 0;
+      if (errorCode == nsILDAPErrors::INAPPROPRIATE_AUTH ||
+          errorCode == nsILDAPErrors::INVALID_CREDENTIALS ||
+          errorCode == nsILDAPErrors::INSUFFICIENT_ACCESS ||
+          ((errorCode == nsILDAPErrors::SUCCESS) &&
+           (NS_SUCCEEDED(rv = mContainer->GetCount(&count)) &&
+           (count == 0) && (mPassword.IsEmpty()))))
+      {
+        // rebind
+        nsCOMPtr<nsIRDFResource> containerRes;
+        rv = mContainer->GetResource(getter_AddRefs(containerRes));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        nsAutoString bindDN, password;
+        nsresult rv = doAuthentication(containerRes, bindDN, password);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = doLDAPQuery(mConnection, containerRes, bindDN, password);
+        return(rv);
+      }
+
+      if (errorCode != nsILDAPErrors::SUCCESS)
+      {
+        // display error
+        nsCOMPtr<nsIPrompt> prompter;
+        rv = mWindowWatcher->GetNewPrompter(0, getter_AddRefs(prompter));
+        if (prompter)
+        {
+          nsAutoString errStr;
+          rv = aMessage->GetErrorMessage(errStr);
+          errStr.Trim(" \t");
+          if (errStr.Length() == 0)
+          {
+            errStr = NS_LITERAL_STRING("Error # ");
+            errStr.AppendInt(errorCode);
+          }
+          prompter->Alert(NS_LITERAL_STRING("Error").get(), errStr.get());
+        }
+      }
 
       // XXX XXX XXX hack TO DO
       // undo leakage from above
@@ -1345,31 +1303,190 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       mLDAPURL = nsnull;
       mConnection = nsnull;
       mContainer = nsnull;
-
-      if (errorCode != nsILDAPErrors::SUCCESS &&
-          errorCode != nsILDAPErrors::SIZELIMIT_EXCEEDED)
-      {
-        // get the window watcher service, so we can get a prompter
-        //
-        nsCOMPtr<nsIWindowWatcher> windowWatcherSvc = 
-        do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv);
-        NS_ENSURE_SUCCESS(rv, rv);
-        if (!windowWatcherSvc)
-          return(NS_ERROR_NULL_POINTER);
-
-        nsCOMPtr<nsIPrompt> prompter;
-        rv = windowWatcherSvc->GetNewPrompter(0, getter_AddRefs(prompter));
-        NS_ENSURE_SUCCESS(rv, rv);
-        if (!prompter)
-          return(NS_ERROR_NULL_POINTER);
-
-        nsAutoString errStr;
-        rv = aMessage->GetErrorMessage(errStr);
-        prompter->Alert(NS_LITERAL_STRING("Error").get(), errStr.get());
-        return(NS_ERROR_UNEXPECTED);
-      }
       break;
   }
+  return(NS_OK);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::doLDAPQuery(nsILDAPConnection *ldapConnection,
+                               nsIRDFResource *aSource,
+                               nsString bindDN,
+                               nsString password)
+{
+  // XXX broken
+  mLDAPURL = nsnull;
+  mContainer = nsnull;
+  mPassword.Truncate();
+
+  nsCOMPtr<nsIRDFContainer> ldapContainer;
+  nsresult rv = gRDFC->MakeSeq(mInner, aSource, getter_AddRefs(ldapContainer));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to make aSource a sequence");
+  if (NS_FAILED(rv))
+    return(rv);
+
+  nsCOMPtr<nsILDAPURL> ldapURL;
+  ldapURL = do_CreateInstance(NS_LDAPURL_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  const char *srcURI = nsnull;
+  aSource->GetValueConst(&srcURI);
+  if (!srcURI)
+    return(NS_ERROR_NULL_POINTER);
+
+  // trim off standard prefix
+  nsCString cURI(&srcURI[REMOTE_BOOKMARK_PREFIX_LENGTH]);
+  
+  // XXX hack
+  PRInt32 offset = cURI.Find("?bindname=", PR_TRUE);
+  if (offset > 0)
+    cURI.Truncate(offset);
+  
+  rv = ldapURL->SetSpec(cURI);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCAutoString host;
+  rv = ldapURL->GetAsciiHost(host);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRInt32 port;
+  rv = ldapURL->GetPort(&port);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsXPIDLCString dn;
+  rv = ldapURL->GetDn(getter_Copies(dn));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRUint32 options;
+  rv = ldapURL->GetOptions(&options);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+
+  // NOTE: set these session variables before calling
+  //       LDAPConnection->Init() as OnLDAPInit() [which
+  //       accesses them] could fire before it returns
+  mConnection = ldapConnection;
+  mLDAPURL = ldapURL;
+  mContainer = ldapContainer;
+  mPassword = password;
+  // XXX XXX XXX - dangle/leak the above vars here, for now.
+  // We need them in other spots of code.
+
+
+  // Now lets initialize the LDAP connection properly. We'll kick
+  // off the bind operation in the callback function, |OnLDAPInit()|.
+  rv = ldapConnection->Init(host.get(), port, options /* SSL */,
+    bindDN.get(), this /* don't ADDREF "this" */);
+  if (NS_FAILED(rv))
+  {
+    mConnection = nsnull;
+    mLDAPURL = nsnull;
+    mContainer = nsnull;
+    mPassword.Truncate();
+  }
+  return(rv);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::doAuthentication(nsIRDFResource *aSource,
+                                    nsString &aBindDN,
+                                    nsString &aPassword)
+{
+  // XXX hack until nsUTF8AutoString exists
+  #define nsUTF8AutoString nsCAutoString
+          nsUTF8AutoString spec;
+
+  nsresult rv;
+  nsCOMPtr<nsILDAPURL> ldapURL;
+  ldapURL = do_CreateInstance(NS_LDAPURL_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  const char *srcURI = nsnull;
+  aSource->GetValueConst(&srcURI);
+  if (!srcURI)
+    return(NS_ERROR_NULL_POINTER);
+
+  // trim off standard prefix
+  nsCString cURI(&srcURI[REMOTE_BOOKMARK_PREFIX_LENGTH]);
+  
+  // XXX hack
+  PRInt32 offset = cURI.Find("?bindname=", PR_TRUE);
+  if (offset > 0)
+    cURI.Truncate(offset);
+  
+  rv = ldapURL->SetSpec(cURI);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // use the URL spec of the LDAP server as the "realm" for wallet
+  rv = ldapURL->GetSpec(spec);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // get the host name for the auth prompt
+  //
+  nsCAutoString host;
+  rv = ldapURL->GetAsciiHost(host);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // get active window
+  nsCOMPtr<nsIDOMWindow> activeDOMWindow;
+  rv = mWindowWatcher->GetActiveWindow(getter_AddRefs(activeDOMWindow));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // get the auth prompter itself
+  //
+  nsCOMPtr<nsIAuthPrompt> authPrompter;
+  rv = mWindowWatcher->GetNewAuthPrompter(activeDOMWindow,
+    getter_AddRefs(authPrompter));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRBool status = PR_FALSE;
+  nsXPIDLString userDN, userPassword;
+
+  PRBool important;
+  nsCAutoString value;
+  rv = GetLDAPExtension(aSource, "bindname=", value, &important);
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (value.Length() > 0)
+  {
+    aBindDN.AssignWithConversion(value.get());
+  }
+
+  // get authentication password, prompting the user if necessary
+  //
+  nsAutoString authPromptTitle(NS_LITERAL_STRING("Remote Bookmark Server Authentication"));
+  nsAutoString authPromptText;
+  authPromptText.AssignWithConversion(host.get());
+  authPromptText.Append(NS_LITERAL_STRING("\r\n"));
+  authPromptText.Append(aBindDN);
+
+  if (nsCRT::strlen(value.get()) > 0)
+  {
+    // should set userDN to value
+    nsAutoString temp;
+    temp.AssignWithConversion(value.get());
+    userDN = temp;
+
+    rv = authPrompter->PromptPassword(authPromptTitle.get(), authPromptText.get(),
+      NS_ConvertUTF8toUCS2(value).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+      getter_Copies(userPassword), &status);
+  }
+  else
+  {
+    rv = authPrompter->PromptUsernameAndPassword(authPromptTitle.get(), authPromptText.get(),
+      NS_ConvertUTF8toUCS2(spec).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+      getter_Copies(userDN), getter_Copies(userPassword), &status);
+  }
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (status == PR_FALSE)
+    return(NS_ERROR_FAILURE);
+
+  aBindDN = userDN;
+  aPassword = userPassword;
+
   return(NS_OK);
 }
 
@@ -1382,15 +1499,55 @@ nsRemoteBookmarks::GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAt
   PRUint32 count = 1;
   PRUnichar **values = nsnull;
   nsresult rv = aMessage->GetValues(aAttrib, &count, &values);
-  if (NS_FAILED(rv))
-    return(PR_FALSE);
-  if (count == 1)
+  if (NS_SUCCEEDED(rv)&& (count == 1) && (values))
   {
     aValue = values[0];
     foundFlag = PR_TRUE;
   }
-  // XXX hmm... examine freeing methodology below
-  nsCRT::free(values[0]);
-  nsCRT::free((PRUnichar *)values); 
+  if (values)
+  {
+    if (values[0])
+      nsCRT::free(values[0]);
+    nsCRT::free((PRUnichar *)values);
+  }
   return(foundFlag);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::GetLDAPExtension(nsIRDFResource *aNode, const char *name,
+                                    nsCString &value, PRBool *important)
+{
+  // See RFC 2255 for additional LDAP info, including "bindname" extension usage.
+
+  value.Truncate();
+  *important = PR_FALSE;
+
+  nsresult rv;
+  const char *uri = nsnull;
+  rv = aNode->GetValueConst(&uri);
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCString spec(uri);
+
+  // XXX this is just a quick hackjob for now, really need to fully parse
+  // the LDAP URL for extension name/value pairs
+  PRInt32 offset = spec.Find(name, PR_TRUE);
+  if (offset > 0)
+  {
+    offset += nsCRT::strlen(name);
+    PRInt32 comma = spec.FindChar(PRUnichar(','), offset);
+    if (comma == kNotFound)
+      comma = spec.Length();
+    spec.Mid(value, offset, comma-offset);
+  }
+  
+  // XXX shall we unescape this?  For now, let's at least do commas!
+  while ((offset = value.Find("%2C", PR_TRUE)) >= 0)
+  {
+    value.SetCharAt(PRUnichar(','), offset);
+    value.Cut(offset+1, 2);
+  }
+
+  return(NS_OK);
 }

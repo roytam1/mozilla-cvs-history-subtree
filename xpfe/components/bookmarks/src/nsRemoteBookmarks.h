@@ -58,6 +58,7 @@
 #include "nsILDAPConnection.h"
 #include "nsILDAPOperation.h"
 #include "nsILDAPMessageListener.h"
+#include "nsIWindowWatcher.h"
 
 
 
@@ -75,6 +76,8 @@ protected:
   nsCOMPtr<nsISupportsArray> mObservers;
   PRInt32                    mUpdateBatchNest;
 
+  nsCOMPtr<nsIWindowWatcher> mWindowWatcher;
+
   static nsIRDFResource      *kRDF_type;
   static nsIRDFResource      *kNC_Bookmark;
   static nsIRDFResource      *kNC_Folder;
@@ -88,9 +91,13 @@ protected:
   nsCOMPtr<nsILDAPOperation>  mSearchOperation;
   nsCOMPtr<nsILDAPURL>        mLDAPURL;
   nsCOMPtr<nsIRDFContainer>   mContainer;
+  nsString                    mPassword;
 
-  PRBool isRemoteBookmarkURI(nsIRDFResource *r);
-  PRBool GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
+  PRBool   isRemoteBookmarkURI(nsIRDFResource *r);
+  nsresult doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aSource, nsString bindDN, nsString password);
+  nsresult doAuthentication(nsIRDFResource *aNode, nsString &bindDN, nsString &password);
+  PRBool   GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
+  nsresult GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
 
 public:
   nsRemoteBookmarks();
