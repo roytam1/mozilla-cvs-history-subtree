@@ -608,7 +608,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   nsIFrame *childFrame;
 
   // See if the reflow command is targeted at us
-  PRBool amTarget = reflowIterator.IsTarget();
+  PRBool amTarget = PR_FALSE;
 
 #ifdef DEBUG
   if (gNoisyReflow) {
@@ -660,7 +660,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // XXX fix? 
     // Is it possible for mAbsoluteContainer to be in the reflow tree?  If
     // not, we can remove this, but I think it's possible....
-    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
+    // XXX It seems as if mAbsoluteContainers can't be in the reflow tree...
+    //aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -799,6 +800,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     break;
 
   case eReflowReason_Incremental:
+    amTarget = reflowIterator.IsTarget();
     if (amTarget) {
       nsReflowType type;
       aReflowState.reflowCommand->GetType(type);
@@ -836,9 +838,11 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       if (!firstTime)
       {
         // Now reflow...
-        rv = ReflowDirtyLines(state);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+        rv = ReflowDirty(state,aReflowState,aStatus);
         if (NS_FAILED(rv)) return rv;
+
+        // reset state for the next line
+        state.SetFlag(BRS_ISINLINEINCRREFLOW, PR_FALSE);
       }
 
       // set reflow state for child
@@ -881,32 +885,10 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
   if (NS_FAILED(rv)) return rv;
-
+  
   // Now reflow...
-  rv = ReflowDirtyLines(state);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+  rv = ReflowDirty(state,aReflowState,aStatus);
   if (NS_FAILED(rv)) return rv;
-
-  // XXX FIX?! do in each pass in incremental?
-
-  if (!state.GetFlag(BRS_ISINLINEINCRREFLOW)) {
-    // XXXwaterson are we sure we don't need to do this work if BRS_ISINLINEINCRREFLOW?
-    aStatus = state.mReflowStatus;
-    if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
-      if (NS_STYLE_OVERFLOW_HIDDEN == aReflowState.mStyleDisplay->mOverflow) {
-        aStatus = NS_FRAME_COMPLETE;
-      }
-      else {
-#ifdef DEBUG_kipp
-        ListTag(stdout); printf(": block is not complete\n");
-#endif
-      }
-    }
-
-    // XXX_perf get rid of this!  This is one of the things that makes
-    // incremental reflow O(N^2).
-    BuildFloaterList();
-  }
   
   // Compute our final size
   ComputeFinalSize(aReflowState, state, aMetrics);
@@ -964,10 +946,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   // If this is an incremental reflow and we changed size, then make sure our
   // border is repainted if necessary
   //
-  // XXXwaterson are we sure we can skip this if BRS_ISINLINEINCRREFLOW?
-  if (!state.GetFlag(BRS_ISINLINEINCRREFLOW) &&
-      (eReflowReason_Incremental == aReflowState.reason ||
-       eReflowReason_Dirty == aReflowState.reason)) {
+  // XXXwaterson are we sure we can skip this if !amTarget?
+  if (amTarget || eReflowReason_Dirty == aReflowState.reason) {
     if (isStyleChange) {
       // This is only true if it's a style change reflow targeted at this
       // frame (rather than an ancestor) (I think).  That seems to be
@@ -983,6 +963,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         Invalidate(aPresContext,damageRect);
       }
     } else {
+      // DIRTY reflow or non-StyleChange incremental
       nsMargin  border = aReflowState.mComputedBorderPadding -
                          aReflowState.mComputedPadding;
   
@@ -1050,9 +1031,9 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   // child frames that need to be reflowed, e.g., elements with a percentage
   // based width/height
   //
-  // XXXwaterson are we sure we can skip this if BRS_ISINLINEINCRREFLOW?
+  // XXXwaterson are we sure we can skip this if !amTarget?
   if (NS_SUCCEEDED(rv) && mAbsoluteContainer.HasAbsoluteFrames()
-      && !state.GetFlag(BRS_ISINLINEINCRREFLOW)) {
+      && amTarget) {
     nscoord containingBlockWidth;
     nscoord containingBlockHeight;
     nsRect  childBounds;
@@ -2176,6 +2157,44 @@ WrappedLinesAreDirty(nsLineList::iterator aLine,
 }
 
 static void PlaceFrameView(nsIPresContext* aPresContext, nsIFrame* aFrame);
+
+/**
+ * Reflow the dirty lines, and deal with results
+ */
+nsresult
+nsBlockFrame::ReflowDirty(nsBlockReflowState& aState,
+                          const nsHTMLReflowState& aReflowState,
+                          nsReflowStatus& aStatus)
+{
+  nsresult rv = NS_OK;
+
+  rv = ReflowDirtyLines(aState);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+  if (NS_FAILED(rv)) return rv;
+
+  if (!aState.GetFlag(BRS_ISINLINEINCRREFLOW)) {
+    // XXXwaterson are we sure we don't need to do this work if BRS_ISINLINEINCRREFLOW?
+    // XXXrjesup Do we have to do anything with aStatus now that we call this
+    // multiple times?
+    aStatus = aState.mReflowStatus;
+    if (NS_FRAME_IS_NOT_COMPLETE(aStatus)) {
+      if (NS_STYLE_OVERFLOW_HIDDEN == aReflowState.mStyleDisplay->mOverflow) {
+        aStatus = NS_FRAME_COMPLETE;
+      }
+      else {
+#ifdef DEBUG_kipp
+        ListTag(stdout); printf(": block is not complete\n");
+#endif
+      }
+    }
+    
+    // XXX_perf get rid of this!  This is one of the things that makes
+    // incremental reflow O(N^2).
+    BuildFloaterList();
+  }
+
+  return rv;
+}
 
 /**
  * Reflow the dirty lines
