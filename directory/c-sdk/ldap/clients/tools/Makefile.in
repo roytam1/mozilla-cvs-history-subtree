@@ -125,11 +125,17 @@ else
 LDTOOLS_LIBS += $(DYNAMICNSPR)
 endif
 
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+LDAPTOOLS_NSS_LINK=-l$(SSL_LIBNAME) -l$(NSS_LIBNAME) -l$(SOFTOKN_LIBNAME)
+else
+LDAPTOOLS_NSS_LINK=-l$(SSL_LIBNAME) -l$(NSS_LIBNAME)
+endif
+
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(DIST)/lib $(SVRCORE_LINK) \
-	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK) \
 	     -lthread -lposix4 -lsocket -lnls \
 	     -ldl -lresolv -lgen 
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
@@ -152,6 +158,9 @@ endif
 EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SSLDAP_LIBNAME).lib
 EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(PRLDAP_LIBNAME).lib
 EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SOFTOKN_LIBNAME).lib
+endif
 EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).lib
 endif
 
@@ -159,7 +168,7 @@ ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(DIST)/lib $(SVRCORE_LINK) \
-	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK) \
 	     -lcxx -lpthread -lrt -lmach -lexc 
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
 endif
@@ -168,7 +177,7 @@ ifeq ($(OS_ARCH), Linux)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(DIST)/lib $(SVRCORE_LINK) \
-	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK) \
 	     -l$(LBER_LIBNAME) \
 	     -ldl -lresolv -lpthread 
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
@@ -178,8 +187,8 @@ ifeq ($(OS_ARCH), HP-UX)
 EXTRA_LIBS = -ldld -lm -lpthread -lrt \
 	     -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib $(SVRCORE_LINK) \
-	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) -l$(LBER_LIBNAME)
+             -L$(DIST)/lib $(SVRCORE_LINK) -l$(LBER_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK)
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
 endif
 
@@ -187,7 +196,7 @@ ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(DIST)/lib $(SVRCORE_LINK) \
-	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK) \
 	     -ldl -brtl -lpthreads -lc_r -lm
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
 endif
@@ -247,12 +256,18 @@ ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 else
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 endif
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -265,12 +280,18 @@ ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(DIST)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 else
 	$(NSINSTALL) $(DIST)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/lib/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 endif
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(DIST)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)

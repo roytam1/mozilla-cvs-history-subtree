@@ -101,6 +101,9 @@ EXTRA_LIBS += $(dist_libdir)/$(PLC_BASENAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(PLDS_BASENAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(NSPR_BASENAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(NSS_LIBNAME).lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += $(dist_libdir)/$(SOFTOKN_LIBNAME).lib
+endif
 EXTRA_LIBS += $(dist_libdir)/$(SSL_LIBNAME).lib
 endif
 
@@ -113,6 +116,9 @@ endif
 ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME)
 EXTRA_LIBS += $(DYNAMICNSPR) -l$(NSS_LIBNAME)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += -l$(SOFTOKN_LIBNAME)
+endif
 EXTRA_LIBS += -l$(SSL_LIBNAME) -l $(PRLDAP_LIBNAME)
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
