@@ -10,6 +10,8 @@ browser.jar:
 *   content/browser/preferences/downloads.js
 *   content/browser/preferences/fonts.xul
 *   content/browser/preferences/fonts.js
+*   content/browser/preferences/fontscaling.xul
+*   content/browser/preferences/fontscaling.js
 *   content/browser/preferences/general.xul
 *   content/browser/preferences/general.js
 *   content/browser/preferences/languages.xul

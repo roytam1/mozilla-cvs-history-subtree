@@ -21,8 +21,8 @@
 # 
 # Contributor(s):
 #   Ben Goodger <ben@mozilla.org>
-#    Gervase Markham <gerv@gerv.net>
-#    Tuukka Tolvanen <tt@lament.cjb.net>
+#   Gervase Markham <gerv@gerv.net>
+#   Tuukka Tolvanen <tt@lament.cjb.net>
 # 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,7 +48,7 @@
             dlgbuttons="accept,cancel"
             style="width: 30em;">
 
-  <prefpane id="FontsDialogPane" onpaneload="gFontsDialog.init();">
+  <prefpane id="FontsDialogPane">
   
     <preferences id="fontPreferences">
       <preference id="font.language.group"  name="font.language.group"  type="wstring"/>
@@ -58,7 +58,8 @@
                   type="int"/>
       <preference id="browser.display.use_document_fonts"
                   name="browser.display.use_document_fonts"
-                  type="bool"/>
+                  type="int"/>
+      <preference id="intl.charset.default" name="intl.charset.default" type="wstring"/>
     </preferences>
     
     <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
@@ -208,55 +209,78 @@
           </row>
         </rows>
       </grid>
+      <separator class="thin"/>
       <hbox flex="1">
         <hbox align="center" pack="end">
           <label accesskey="&resolution.accesskey;" control="screenResolution">&resolution.label;</label>
           <menulist id="screenResolution" 
-                    oncommand="gFontsDialog.changeScreenResolution()"
-                    dpi="&resolution.dpival;">
+                    oncommand="gFontsDialog.changeScreenResolution(this)"
+                    preference="browser.display.screen_resolution"
+                    onpreferenceread="return gFontsDialog.readScreenResolution();">
             <menupopup>
-              <menuitem value="" 
-                        label="&resolution.dpival;"
-                        id="otherResolution"/>
-              <menuitem value="" 
-                        label="&resolution.dpival;" 
-                        id="defaultResolution"/>
+              <menuitem id="otherResolution" value="72"/>
+              <menuitem id="defaultResolution" value="96"/>
 #ifdef XP_UNIX
 #ifndef XP_MACOSX
-              <menuitem value="0"
-                        label="&resolution.system.label;" 
-                        id="systemResolution"/>
+              <menuitem id="systemResolution" value="0" label="&resolution.system.label;"/>
 #endif
 #endif
               <menuseparator id="resolutionSeparator"/>
               <menuitem id="userResolution" hidden="true"/>
-              <menuitem id="arbitraryResolution" value="other" label="&resolution.other;"/>
+              <menuitem id="chooseUserResolution" value="choose" label="&resolution.other;"/>
             </menupopup>
           </menulist>
         </hbox>
         <spacer flex="1"/>
         <hbox align="center" pack="end">
           <label accesskey="&minSize.accesskey;" control="minSize">&minSize.label;</label>
-            <menulist id="minSize">
-              <menupopup>
-                <menuitem value="0" label="&minSize.none;"/>
-                <menuitem value="9" label="9"/>
-                <menuitem value="10" label="10"/>
-                <menuitem value="11" label="11"/>
-                <menuitem value="12" label="12"/>
-                <menuitem value="13" label="13"/>
-                <menuitem value="14" label="14"/>
-                <menuitem value="15" label="15"/>
-                <menuitem value="16" label="16"/>
-                <menuitem value="17" label="17"/>
-                <menuitem value="18" label="18"/>
-                <menuitem value="20" label="20"/>
-                <menuitem value="22" label="22"/>
-                <menuitem value="24" label="24"/>
-              </menupopup>
-            </menulist>
-          </hbox>
+          <menulist id="minSize">
+            <menupopup>
+              <menuitem value="0" label="&minSize.none;"/>
+              <menuitem value="9" label="9"/>
+              <menuitem value="10" label="10"/>
+              <menuitem value="11" label="11"/>
+              <menuitem value="12" label="12"/>
+              <menuitem value="13" label="13"/>
+              <menuitem value="14" label="14"/>
+              <menuitem value="15" label="15"/>
+              <menuitem value="16" label="16"/>
+              <menuitem value="17" label="17"/>
+              <menuitem value="18" label="18"/>
+              <menuitem value="20" label="20"/>
+              <menuitem value="22" label="22"/>
+              <menuitem value="24" label="24"/>
+            </menupopup>
+          </menulist>
         </hbox>
+      </hbox>
+      <separator/>
+      <separator class="groove"/>
+      <hbox>
+        <checkbox id="useDocumentFonts" 
+                  label="&allowPagesToUse.label;" accesskey="&allowPagesToUse.accesskey;"
+                  preference="browser.display.use_document_fonts"
+                  onpreferenceread="return gFontsDialog.readUseDocumentFonts();"
+                  onpreferencewrite="return gFontsDialog.writeUseDocumentFonts();"/>
+      </hbox>
+    </groupbox>
+    
+    <groupbox>
+      <caption label="&languages.customize.Charset.grouplabel;"/>
+      <hbox align="center">
+        <label value="&languages.customize.DefaultCharset.label;"
+               accesskey="&languages.customize.DefaultCharset.accesskey;"
+               control="DefaultCharsetList"/>
+        <menulist id="DefaultCharsetList" ref="NC:DecodersRoot" datasources="rdf:charset-menu"
+                  preference="intl.charset.default" 
+                  onpreferenceread="return gFontsDialog.readDefaultCharset();">
+          <template>
+            <menupopup>
+              <menuitem label="rdf:http://home.netscape.com/NC-rdf#Name" value="..." uri="..."/>
+            </menupopup>
+          </template>
+        </menulist>
+      </hbox>
     </groupbox>
   </prefpane>
 </prefwindow>

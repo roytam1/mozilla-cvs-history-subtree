@@ -3,23 +3,22 @@
 <!ENTITY  language.label                          "Fonts for:">
 <!ENTITY  language.accesskey                      "t">
 
-<!ENTITY  typefaces.label                         "Typeface">
 <!ENTITY  sizes.label                             "Size:">
 
 <!ENTITY  proportional.label                      "Proportional:">
-<!ENTITY  proportional.accesskey                  "p">
+<!ENTITY  proportional.accesskey                  "P">
 
 <!ENTITY  serif.label                             "Serif:">
-<!ENTITY  serif.accesskey                         "s">
+<!ENTITY  serif.accesskey                         "S">
 <!ENTITY  sans-serif.label                        "Sans-serif:">
 <!ENTITY  sans-serif.accesskey                    "n">
 <!ENTITY  monospace.label                         "Monospace:">
-<!ENTITY  monospace.accesskey                     "m">
+<!ENTITY  monospace.accesskey                     "M">
 <!-- LOCALIZATION NOTE (fantasy.label): 'Fantasy' means 'Ornate' -->
 <!ENTITY  fantasy.label                           "Fantasy:">
-<!ENTITY  fantasy.accesskey                       "f">
+<!ENTITY  fantasy.accesskey                       "F">
 <!ENTITY  cursive.label                           "Cursive:">
-<!ENTITY  cursive.accesskey                       "c">
+<!ENTITY  cursive.accesskey                       "C">
 
 <!ENTITY  fontsize.units                          "pixels">
 
@@ -50,45 +49,14 @@
 <!ENTITY  useDefaultFontSerif.label               "Serif">
 <!ENTITY  useDefaultFontSansSerif.label           "Sans Serif">
 
-<!ENTITY  newLanguages.label                      "New languages can be configured using the Languages Panel.">
-
-<!-- leaving this stuff in for now -->
-
-<!ENTITY  header2                                 "When a web page chooses its own fonts">
-<!-- font scaling -->
 <!ENTITY  resolution.label                        "Display resolution:">
 <!ENTITY  resolution.accesskey                    "r">
-<!-- LOCALIZATION NOTE (resolution.dpi): dpi stands for "dots per inch" -->
-<!ENTITY  resolution.dpi                          "dpi">
-<!-- LOCALIZATION NOTE (resolution.dpi): $val will be replaced by a numeric dpi value. -->
-<!ENTITY  resolution.dpival                       "$val &resolution.dpi;">
 <!ENTITY  resolution.system.label                 "System setting">
 <!ENTITY  resolution.other                        "Other...">
 
-<!-- screen calibration dialog -->
-<!ENTITY  calibrateDialog.title                   "Calibrate Resolution">
-<!ENTITY  calibrate.instructions                  "The length of the line above is:">
-<!ENTITY  units.inches                            "inches">
-<!ENTITY  units.centimetres                       "centimeters">
+<!ENTITY  allowPagesToUse.label                   "Allow pages to choose fonts, in preference to my selections above">
+<!ENTITY  allowPagesToUse.accesskey               "h">
 
-<!ENTITY  color                           "Text and Background">
-<!ENTITY  textColor.label                 "Text:">
-<!ENTITY  textColor.accesskey             "t">
-<!ENTITY  backgroundColor.label           "Background:">
-<!ENTITY  backgroundColor.accesskey       "b">
-<!ENTITY  useSystemColors.label           "Use system colors">
-<!ENTITY  useSystemColors.accesskey       "s">
-
-<!ENTITY  underlineLinks.label            "Underline links">
-<!ENTITY  underlineLinks.accesskey        "u">
-<!ENTITY  links                           "Link Colors">
-<!ENTITY  linkColor.label                 "Unvisited Links:">
-<!ENTITY  linkColor.accesskey             "l">
-<!ENTITY  visitedLinkColor.label          "Visited Links:">
-<!ENTITY  visitedLinkColor.accesskey      "v">
-<!ENTITY  someProvColors                  "When a web page provides its own colors and background">
-<!ENTITY  useMyColors.label   "Colors">
-<!ENTITY  useMyColors.accesskey "C">
-<!ENTITY  useMyFonts.label                  "Fonts">
-<!ENTITY  useMyFonts.accesskey              "F">
-<!ENTITY  alwaysUseMy.label                 "Always use my: ">
+<!ENTITY languages.customize.Charset.grouplabel         "Character Encoding">
+<!ENTITY languages.customize.DefaultCharset.label       "Default Character Encoding:">
+<!ENTITY languages.customize.DefaultCharset.accesskey   "C">

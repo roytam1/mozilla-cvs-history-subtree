@@ -84,7 +84,6 @@
       <constructor>
         this.preferences.rootBranchInternal
             .addObserver(this.name, this.preferences, false);
-        dump("*** init! " + this.name + " = " + this.valueFromPreferences + "\n");
         this._setValue(this.valueFromPreferences, false);
       </constructor>
       <destructor>

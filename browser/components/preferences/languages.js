@@ -8,10 +8,6 @@ var gLanguagesDialog = {
   
   init: function ()
   {
-    var os = Components.classes["@mozilla.org/observer-service;1"]
-                       .getService(Components.interfaces.nsIObserverService);
-    os.notifyObservers(null, "charsetmenu-selected", "other");
-    
     if (!this._availableLanguagesList.length)
       this._loadAvailableLanguages();
   },
