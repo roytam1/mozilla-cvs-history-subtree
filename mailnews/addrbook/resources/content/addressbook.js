@@ -735,3 +735,14 @@ function AbIMSelected()
 
   LaunchUrl(url);
 }
+
+function loadThrobberUrl(urlPref)
+{
+    var url;
+    try {
+        url = gPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+        messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+        messenger.loadURL(window, url);  
+    } catch (ex) {}
+}

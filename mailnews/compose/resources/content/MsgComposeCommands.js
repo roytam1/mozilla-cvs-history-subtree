@@ -3037,3 +3037,15 @@ function SwitchElementFocus(event)
       SetMsgAddressingWidgetTreeElementFocus();
   }
 }
+
+// XXX hack, reuse the implementation in mailWindowOverlay.js by moving that method to an overlay that is included here too
+function loadThrobberUrl(urlPref)
+{
+    var url;
+    try {
+        url = sPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+        messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+        messenger.loadURL(window, url);  
+    } catch (ex) {}
+}

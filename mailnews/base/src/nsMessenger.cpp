@@ -134,6 +134,10 @@
 #include "nsCExternalHandlerService.h"
 #include "nsIMIMEService.h"
 
+#ifdef MOZ_MINOTAUR
+#include "nsILinkHandler.h"                                                                              
+#endif 
+
 static NS_DEFINE_CID(kIStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,	NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
@@ -681,6 +685,42 @@ nsMessenger::SaveAttachment(nsIFileSpec * fileSpec,
   }
 	return rv;
 }
+
+
+#ifdef MOZ_MINOTAUR                                                          
+NS_IMETHODIMP nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *aUrl)              
+{                                                                               
+   nsresult rv;      
+   nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aWin, &rv);    
+   NS_ENSURE_SUCCESS(rv,rv);                                                    
+   nsCOMPtr <nsIDocShell> docShell; 
+   rv = globalObj->GetDocShell(getter_AddRefs(docShell));  
+   NS_ENSURE_SUCCESS(rv,rv);
+   if (!docShell)                                                               
+     return NS_ERROR_FAILURE;                                                   
+
+   nsCOMPtr<nsILinkHandler> lh = do_QueryInterface(docShell, &rv);              
+   NS_ENSURE_SUCCESS(rv,rv); 
+   
+   // this works, because of the hack to nsWebShell.cpp     
+   nsCOMPtr<nsIURI> uri; 
+   rv = NS_NewURI(getter_AddRefs(uri), aUrl);
+   NS_ENSURE_SUCCESS(rv, rv);
+
+   rv = lh->OnLinkClick(nsnull, eLinkVerb_Replace, uri,nsnull,nsnull,nsnull);                                                     
+   NS_ENSURE_SUCCESS(rv,rv);                                                    
+   return rv;                                                                   
+}                                                                               
+
+#else
+
+NS_IMETHODIMP nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *url)                                                                              
+{                                                                               
+  // if you are a browser, you should not be in here.                           
+  return NS_ERROR_UNEXPECTED;                                                   
+}                                                                               
+#endif 
+
 
 NS_IMETHODIMP
 nsMessenger::OpenAttachment(const char * aContentType, const char * aUrl, const
