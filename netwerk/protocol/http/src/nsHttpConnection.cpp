@@ -10,7 +10,7 @@
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
 //-----------------------------------------------------------------------------
-// nsHttpConnection
+// nsHttpConnection <public>
 //-----------------------------------------------------------------------------
 
 nsHttpConnection::nsHttpConnection()
@@ -132,6 +132,18 @@ nsHttpConnection::OnTransactionComplete(nsHttpTransaction *trans, nsresult statu
     return NS_OK;
 }
 
+// not called from the socket thread
+nsresult
+nsHttpConnection::Resume()
+{
+    // XXX may require a lock to ensure thread safety
+
+    if (mReadRequest)
+        mReadRequest->Resume();
+
+    return NS_OK;
+}
+
 PRBool
 nsHttpConnection::CanReuse()
 {
@@ -150,6 +162,10 @@ nsHttpConnection::IsAlive()
     NS_ASSERTION(NS_SUCCEEDED(rv), "IsAlive test failed");
     return isAlive;
 }
+
+//-----------------------------------------------------------------------------
+// nsHttpConnection <private>
+//-----------------------------------------------------------------------------
 
 nsresult
 nsHttpConnection::ActivateConnection()
@@ -248,10 +264,12 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
 
     if (mState == WRITING) {
         mState = WAITING_FOR_READ;
+        mWriteRequest = 0;
     } 
     else {
         // Done reading, so signal transaction complete...
         mState = IDLE;
+        mReadRequest = 0;
 
         mTransaction->OnStopTransaction(status);
 

@@ -60,6 +60,9 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
     rv = requestHead->Flatten(mReqHeaderBuf);
     if (NS_FAILED(rv)) return rv;
 
+    LOG(("nsHttpTransaction::SetupRequest [this=%x\n%s]\n",
+        this, mReqHeaderBuf.get()));
+
     mReqUploadStream = requestStream;
     if (!mReqUploadStream)
         // Write out end-of-headers sequence if NOT uploading data:
@@ -85,12 +88,9 @@ nsHttpTransaction::SetConnection(nsHttpConnection *conn)
 nsHttpResponseHead *
 nsHttpTransaction::TakeResponseHead()
 {
-    /*
     nsHttpResponseHead *head = mResponseHead;
     mResponseHead = nsnull;
     return head;
-    */
-    return mResponseHead;
 }
 
 // called on the socket transport thread
@@ -128,13 +128,6 @@ nsHttpTransaction::OnDataAvailable(nsIInputStream *is, PRUint32 count)
     //
     // need to parse status line and headers
     //
-    
-    // allocate the response head object if necessary
-    if (!mResponseHead) {
-        mResponseHead = new nsHttpResponseHead();
-        if (!mResponseHead)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
     
     // allocate the read ahead buffer if necessary
     if (!mReadBuf) {
@@ -225,10 +218,16 @@ nsHttpTransaction::ParseLine(char *line)
 {
     nsresult rv;
 
-    NS_PRECONDITION(mResponseHead, "null response head");
     NS_PRECONDITION(!mHaveAllHeaders, "already have all headers");
 
     LOG(("nsHttpTransaction::ParseLine [%s]\n", line));
+    
+    // allocate the response head object if necessary
+    if (!mResponseHead) {
+        mResponseHead = new nsHttpResponseHead();
+        if (!mResponseHead)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     if (!mHaveStatusLine) {
         rv = mResponseHead->ParseStatusLine(line);
@@ -495,7 +494,10 @@ nsHttpTransaction::Suspend()
 NS_IMETHODIMP
 nsHttpTransaction::Resume()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    LOG(("nsHttpTransaction::Resume [this=%x]\n", this));
+    if (mConnection)
+        mConnection->Resume();
+    return NS_OK;
 }
 
 NS_IMETHODIMP

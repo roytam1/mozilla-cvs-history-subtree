@@ -43,6 +43,9 @@ public:
     // called by the transaction to inform the connection that it is done.
     nsresult OnTransactionComplete(nsHttpTransaction *, nsresult status);
 
+    // called by the transaction to resume a read-in-progress
+    nsresult Resume();
+
     PRBool   CanReuse(); // can this connection be reused?
     PRBool   IsAlive();
     PRUint32 ReuseCount() { return mReuseCount; }
