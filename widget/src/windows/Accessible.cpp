@@ -741,10 +741,9 @@ STDMETHODIMP DocAccessible::get_URL(/* [out] */ BSTR __RPC_FAR *aURL)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    PRUnichar *pszURL;
-    if (NS_SUCCEEDED(accDoc->GetURL(&pszURL))) {
+    nsXPIDLString pszURL;
+    if (NS_SUCCEEDED(accDoc->GetURL(getter_Copies(pszURL)))) {
       *aURL= ::SysAllocString(pszURL);
-      delete pszURL;
       return S_OK;
     }
   }
@@ -755,10 +754,9 @@ STDMETHODIMP DocAccessible::get_title( /* [out] */ BSTR __RPC_FAR *aTitle)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    PRUnichar *pszTitle;
-    if (NS_SUCCEEDED(accDoc->GetTitle(&pszTitle))) {
+    nsXPIDLString pszTitle;
+    if (NS_SUCCEEDED(accDoc->GetTitle(getter_Copies(pszTitle)))) {
       *aTitle= ::SysAllocString(pszTitle);
-      delete pszTitle;
       return S_OK;
     }
   }
@@ -769,10 +767,9 @@ STDMETHODIMP DocAccessible::get_mimeType(/* [out] */ BSTR __RPC_FAR *aMimeType)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    PRUnichar *pszMimeType;
-    if (NS_SUCCEEDED(accDoc->GetMimeType(&pszMimeType))) {
+    nsXPIDLString pszMimeType;
+    if (NS_SUCCEEDED(accDoc->GetMimeType(getter_Copies(pszMimeType)))) {
       *aMimeType= ::SysAllocString(pszMimeType);
-      delete pszMimeType;
       return S_OK;
     }
   }
@@ -783,10 +780,9 @@ STDMETHODIMP DocAccessible::get_docType(/* [out] */ BSTR __RPC_FAR *aDocType)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    PRUnichar *pszDocType;
-    if (NS_SUCCEEDED(accDoc->GetDocType(&pszDocType))) {
+    nsXPIDLString pszDocType;
+    if (NS_SUCCEEDED(accDoc->GetDocType(getter_Copies(pszDocType)))) {
       *aDocType= ::SysAllocString(pszDocType);
-      delete pszDocType;
       return S_OK;
     }
   }
@@ -799,11 +795,9 @@ STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
     *aNameSpaceURI = NULL;
-    PRUnichar *pszNameSpaceURI;
-    if (NS_SUCCEEDED(accDoc->GetNameSpaceURIForID(aNameSpaceID, &pszNameSpaceURI))) {
+    nsXPIDLString pszNameSpaceURI;
+    if (NS_SUCCEEDED(accDoc->GetNameSpaceURIForID(aNameSpaceID, getter_Copies(pszNameSpaceURI)))) 
       *aNameSpaceURI = ::SysAllocString(pszNameSpaceURI);
-      delete pszNameSpaceURI;
-    }
     return S_OK;
   }
 

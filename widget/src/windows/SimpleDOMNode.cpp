@@ -73,6 +73,7 @@ static gSimpleDOMNodes = 0;
 
 SimpleDOMNode::SimpleDOMNode(nsIAccessible* aNSAcc, nsIDOMNode *aNode, HWND aWnd): mWnd(aWnd), m_cRef(0)
 {
+  MOZ_COUNT_CTOR(SimpleDOMNode); // For catching leaks on tinderbox
   mDOMNode = aNode;
   if (!aNode && aNSAcc)
     aNSAcc->AccGetDOMNode(getter_AddRefs(mDOMNode));
@@ -87,6 +88,7 @@ SimpleDOMNode::SimpleDOMNode(nsIAccessible* aNSAcc, nsIDOMNode *aNode, HWND aWnd
 //-----------------------------------------------------
 SimpleDOMNode::~SimpleDOMNode()
 {
+  MOZ_COUNT_DTOR(SimpleDOMNode);  // For catching leaks on tinderbox
   m_cRef = 0;
 #ifdef DEBUG_LEAKS
   printf("SimpleDOMNodes=%d\n", --gSimpleDOMNodes);
@@ -153,17 +155,13 @@ STDMETHODIMP SimpleDOMNode::get_nodeInfo(
   if (*aNodeType !=  NODETYPE_TEXT) {
     nsAutoString nodeName;
     mDOMNode->GetNodeName(nodeName);
-    PRUnichar *pszNodeName  =  nodeName.ToNewUnicode();
-    *aNodeName =   ::SysAllocString(pszNodeName);
-    delete pszNodeName; 
+    *aNodeName =   ::SysAllocString(nodeName.GetUnicode());
   }
 
   nsAutoString nodeValue;
 
   mDOMNode->GetNodeValue(nodeValue);
-  PRUnichar *pszNodeValue = nodeValue.ToNewUnicode();
-  *aNodeValue = ::SysAllocString(pszNodeValue);
-  delete pszNodeValue;
+  *aNodeValue = ::SysAllocString(nodeValue.GetUnicode());
 
   PRInt32 nameSpaceID = 0;
   if (content)
@@ -208,17 +206,14 @@ STDMETHODIMP SimpleDOMNode::get_attributes(
   for (index = 0; index < numAttribs; index++) {
     aNameSpaceIDs[index] = 0; aAttribValues[index] = aAttribNames[index] = NULL;
     nsAutoString attributeValue;
-    PRUnichar *pszAttributeValue;
     const PRUnichar *pszAttributeName; 
 
     if (NS_SUCCEEDED(content->GetAttributeNameAt(index, nameSpaceID, *getter_AddRefs(nameAtom), *getter_AddRefs(prefixAtom)))) {
       aNameSpaceIDs[index] = NS_STATIC_CAST(short, nameSpaceID);
       nameAtom->GetUnicode(&pszAttributeName);
       aAttribNames[index] = ::SysAllocString(pszAttributeName);
-      if (NS_SUCCEEDED(content->GetAttribute(nameSpaceID, nameAtom, attributeValue))) {
-        pszAttributeValue = attributeValue.ToNewUnicode();
-        aAttribValues[index] = ::SysAllocString(pszAttributeValue);
-      }
+      if (NS_SUCCEEDED(content->GetAttribute(nameSpaceID, nameAtom, attributeValue))) 
+        aAttribValues[index] = ::SysAllocString(attributeValue.GetUnicode());
     }
   }
 
@@ -239,8 +234,9 @@ NS_IMETHODIMP SimpleDOMNode::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclarati
     content->GetDocument(*getter_AddRefs(doc));
 
   nsCOMPtr<nsIPresShell> shell;
-  if (doc) 
-    shell = doc->GetShellAt(0);
+  if (doc)
+    shell = dont_AddRef(doc->GetShellAt(0)); // Use line below when merging to trunk
+    //doc->GetShellAt(0, getter_AddRefs(shell)); 
 
   if (!shell || !doc)
     return NS_ERROR_FAILURE;   
@@ -285,12 +281,8 @@ STDMETHODIMP SimpleDOMNode::get_computedStyle(
     if (NS_SUCCEEDED(cssDecl->Item(index, property)) && property.CharAt(0) != '-')  // Ignore -moz-* properties
       cssDecl->GetPropertyValue(property, value);  // Get property value
     if (!value.IsEmpty()) {
-      PRUnichar *pszProperty = property.ToNewUnicode();
-      PRUnichar *pszValue = value.ToNewUnicode();
-      aStyleProperties[realIndex] =   ::SysAllocString(pszProperty);
-      aStyleValues[realIndex]     =   ::SysAllocString(pszValue);
-      delete pszProperty;
-      delete pszValue;
+      aStyleProperties[realIndex] =   ::SysAllocString(property.GetUnicode());
+      aStyleValues[realIndex]     =   ::SysAllocString(value.GetUnicode());
       ++realIndex;
     }
   }
@@ -316,10 +308,8 @@ STDMETHODIMP SimpleDOMNode::get_computedStyleForProperties(
   for (index = 0; index < aNumStyleProperties; index ++) {
     nsAutoString value;
     if (aStyleProperties[index])
-      cssDecl->GetPropertyValue(nsDependentString((PRUnichar*)aStyleProperties[index]), value);  // Get property value
-    PRUnichar *pszValue = value.ToNewUnicode();
-    aStyleValues[index] = ::SysAllocString(pszValue);
-    delete pszValue;
+      cssDecl->GetPropertyValue(nsDependentString(NS_STATIC_CAST(PRUnichar*,aStyleProperties[index])), value);  // Get property value
+    aStyleValues[index] = ::SysAllocString(value.GetUnicode());
   }
 
   return S_OK;
@@ -347,7 +337,8 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
     return NULL;
 
   nsCOMPtr<nsIPresShell> shell;
-  shell = doc->GetShellAt(0);
+  shell = dont_AddRef(doc->GetShellAt(0));  // use line below when merging to trunk
+  //doc->GetShellAt(0, getter_AddRefs(shell));
   if (!shell)
     return NULL;
 
