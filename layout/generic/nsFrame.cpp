@@ -4770,7 +4770,6 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
   if (reflowState) {
     nsPresContext* presContext = aState.PresContext();
     nsReflowStatus status = NS_FRAME_COMPLETE;
-    nsHTMLReflowMetrics desiredSize(PR_FALSE);
 
     PRBool useHTMLConstraints = UseHTMLReflowConstraints(this, aState);
 
@@ -4786,9 +4785,6 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
 
     // the rect we plan to size to.
     nsRect rect(oldRect);
-    
-    desiredSize.mFlags |= NS_REFLOW_CALC_MAX_WIDTH;
-    desiredSize.mComputeMEW = PR_TRUE;
 
     if (useHTMLConstraints) {
       nsSize constrained = aState.ScrolledBlockSizeConstraint();
@@ -4796,22 +4792,14 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
       rect.height = constrained.height;
     }
 
-    // Create a child reflow state, fix-up the reason and the
-    // incremental reflow path.
-    nsHTMLReflowState childReflowState(*reflowState);
-    childReflowState.reason = reason;
-    childReflowState.path   = path;
+    metrics->mBlockPrefSize.width = GetPrefWidth();
+    metrics->mBlockMinSize.width = GetMinWidth();
 
     // do the nasty.
-    rv = BoxReflow(aState,
-                   presContext, 
-                   desiredSize, 
-                   childReflowState, 
-                   status,
-                   rect.x,
-                   rect.y,
-                   rect.width,
-                   rect.height);
+    nsHTMLReflowState childReflowState(*reflowState);
+    nsHTMLReflowMetrics desiredSize;
+    rv = BoxReflow(aState, presContext, desiredSize, childReflowState, status,
+                   rect.x, rect.y, rect.width, rect.height);
 
     nsRect newRect = GetRect();
 
@@ -4832,8 +4820,6 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     }
  
     metrics->mBlockMinSize.height = 0;
-    metrics->mBlockPrefSize.width  = desiredSize.mMaximumWidth;
-    metrics->mBlockMinSize.width   = desiredSize.mMaxElementWidth; 
     // ok we need the max ascent of the items on the line. So to do this
     // ask the block for its line iterator. Get the max ascent.
     nsCOMPtr<nsILineIterator> lines = do_QueryInterface(NS_STATIC_CAST(nsIFrame*, this));
