@@ -44,7 +44,7 @@ struct CapturedJSError {
     char *              message;
     JSErrorReport       report;         /* Line # of error, etc. */
     jthrowable          java_exception; /* Java exception, error, or null */
-    CapturedJSError *   next;                   /* Next oldest captured JS error */
+    CapturedJSError *   next;           /* Next oldest captured JS error */
 };
 
 
@@ -61,6 +61,10 @@ struct CapturedJSError {
  * (of type jobject).  When the corresponding Java instance is finalized,
  * the entry is removed from the table, and a JavaScript GC root for the JS
  * object is removed.
+ * 
+ * This code is disabled because cycles in GC roots between the two systems
+ * cause every reflected JS object to become uncollectable.  This can only
+ * be solved by using weak links, a feature not available in JDK1.1.
  */
 static JSHashTable *js_obj_reflections = NULL;
 
@@ -218,8 +222,8 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
 
 /* This object provides is the "anchor" by which netscape.javscript.JSObject
    objects hold a reference to native JSObjects. */
-typedef struct JSObjectRoot {
-    JSObject *js_obj;
+typedef struct JSObjectHandle {
+    JSObject *js_obj;   /* A JS root is held on this object */
     JSContext *cx;      /* Creating context, needed for finalization */
 } JSObjectHandle;
 
@@ -241,8 +245,8 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     handle->js_obj = js_obj;
     handle->cx = cx;
 
-    /* No existing reflection found, so create a new Java object that wraps
-       the JavaScript object by storing its address in a private integer field. */
+    /* Create a new Java object that wraps the JavaScript object by storing its
+       address in a private integer field. */
     java_wrapper_obj =
         (*jEnv)->NewObject(jEnv, njJSObject, njJSObject_JSObject, (jint)handle);
     if (!java_wrapper_obj) {
@@ -315,8 +319,14 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
 {
     CapturedJSError *new_error;
     JSJavaThreadState *jsj_env;
-    jthrowable java_exception;
+    jthrowable java_exception, tmp_exception;
     JNIEnv *jEnv;
+
+    /* Warnings are not propagated as Java exceptions - they are simply
+       ignored.  Ditto for exceptions that are duplicated in the form
+       of error reports. */
+    if (report->flags & (JSREPORT_WARNING | JSREPORT_EXCEPTION))
+        return;
 
     /* Create an empty struct to hold the saved JS error state */
     new_error = malloc(sizeof(CapturedJSError));
@@ -357,8 +367,10 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
     if (java_exception) {
         (*jEnv)->ExceptionClear(jEnv);
+        tmp_exception = java_exception;     /* Make a copy */
         java_exception = (*jEnv)->NewGlobalRef(jEnv, java_exception);
         new_error->java_exception = java_exception;
+        (*jEnv)->DeleteLocalRef(jEnv, tmp_exception);
     }
 
     /* Push this error onto the list of pending JS errors */
@@ -395,20 +407,24 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     jstring message_jstr, linebuf_jstr, filename_jstr;
     jint index, lineno;
     JSErrorReport *report;
+    JSContext *cx;
     jsval pending_exception; 
     jobject java_obj;
     int dummy_cost;
-    JSBool dummy_bool;
+    JSBool is_local_refp;
     JSType primitive_type;
     jthrowable java_exception;
-    JSObject *js_obj;
+
+    message_jstr = linebuf_jstr = filename_jstr = java_exception = NULL;
 
     /* Get the Java JNI environment */
     jEnv = jsj_env->jEnv;
 
+    cx = jsj_env->cx;
+
     /* Get the pending JS exception if it exists */
-    if (JS_IsExceptionPending(jsj_env->cx)) {
-        if (!JS_GetPendingException(jsj_env->cx, &pending_exception))
+    if (JS_IsExceptionPending(cx)) {
+        if (!JS_GetPendingException(cx, &pending_exception))
             goto out_of_memory;
         
         /* Find out whether this jsval represents a native type. 
@@ -428,16 +444,18 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
 
         /* Convert jsval exception to a java object and then use it to
            create an instance of JSException. */ 
-        if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, 
+        if (!jsj_ConvertJSValueToJavaObject(cx, jEnv, 
                                             pending_exception, 
                                             jsj_get_jlObject_descriptor(jsj_env->cx, jEnv),
                                             &dummy_cost, &java_obj, 
-                                            &dummy_bool))
+                                            &is_local_refp))
             goto done;
         
         java_exception = (*jEnv)->NewObject(jEnv, njJSException, 
                                             njJSException_JSException_wrap,
                                             primitive_type, java_obj);
+        if (is_local_refp)
+            (*jEnv)->DeleteLocalRef(jEnv, java_obj);
         if (!java_exception) 
             goto out_of_memory;
         
@@ -519,19 +537,8 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     /* Throw the newly-created JSException */
     if ((*jEnv)->Throw(jEnv, java_exception) < 0) {
         JS_ASSERT(0);
-        jsj_LogError("Couldn't throw JSException\n");
-        goto done;
+        jsj_UnexpectedJavaError(cx, jEnv, "Couldn't throw JSException\n");
     }
-
-    /*
-     * Release local references to Java objects, since some JVMs seem reticent
-     * about collecting them otherwise.
-     */
-    (*jEnv)->DeleteLocalRef(jEnv, message_jstr);
-    (*jEnv)->DeleteLocalRef(jEnv, filename_jstr);
-    (*jEnv)->DeleteLocalRef(jEnv, linebuf_jstr);
-    (*jEnv)->DeleteLocalRef(jEnv, java_exception);
-
     goto done;
 
 out_of_memory:
@@ -541,6 +548,18 @@ out_of_memory:
 
 done:
     jsj_ClearPendingJSErrors(jsj_env);
+    /*
+     * Release local references to Java objects, since some JVMs seem reticent
+     * about collecting them otherwise.
+     */
+    if (message_jstr)
+        (*jEnv)->DeleteLocalRef(jEnv, message_jstr);
+    if (filename_jstr)
+        (*jEnv)->DeleteLocalRef(jEnv, filename_jstr);
+    if (linebuf_jstr)
+        (*jEnv)->DeleteLocalRef(jEnv, linebuf_jstr);
+    if (java_exception)
+        (*jEnv)->DeleteLocalRef(jEnv, java_exception);
 }
 
 /*
