@@ -8142,9 +8142,8 @@ nsCSSFrameConstructor::AddDummyFrameToSelect(nsIPresContext*  aPresContext,
   nsresult rv = aSelectElement->GetLength(&numOptions);
   if (NS_SUCCEEDED(rv) && 0 == numOptions) {
     nsISelectControlFrame* listFrame;
-    rv = aListFrame->QueryInterface(NS_GET_IID(nsISelectControlFrame),
-                                    (void**)&listFrame);
-    if (NS_SUCCEEDED(rv) && listFrame) {
+    CallQueryInterface(aListFrame, &listFrame);
+    if (listFrame) {
       nsIFrame* dummyFrame;
       listFrame->GetDummyFrame(&dummyFrame);
 
@@ -8195,10 +8194,9 @@ nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIPresContext* aPresContext,
     aPresShell->GetPrimaryFrameFor(aContainer, &frame);
     if (frame) {
       nsISelectControlFrame* listFrame;
-      rv = frame->QueryInterface(NS_GET_IID(nsISelectControlFrame),
-                                 (void**)&listFrame);
+      CallQueryInterface(frame, &listFrame);
 
-      if (NS_SUCCEEDED(rv) && listFrame) {
+      if (listFrame) {
         nsIFrame* dummyFrame;
         listFrame->GetDummyFrame(&dummyFrame);
 

@@ -1656,7 +1656,7 @@ nsListControlFrame::GetOption(nsIDOMHTMLCollection& aCollection, PRInt32 aIndex)
                  "Item was successful, but node from collection was null!");
     if (node) {
       nsIDOMHTMLOptionElement* option = nsnull;
-      node->QueryInterface(NS_GET_IID(nsIDOMHTMLOptionElement), (void**)&option);
+      CallQueryInterface(node, &option);
       NS_RELEASE(node);
       return option;
     }
@@ -1769,11 +1769,8 @@ nsListControlFrame::ResetList(nsIPresContext* aPresContext, nsVoidArray * aInxLi
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement(do_QueryInterface(mContent));
   NS_ASSERTION(selectElement, "No select element!");
   if (selectElement) {
-    nsresult rv = selectElement->GetSelectedIndex(&indexToSelect);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "No selected index found!");
-    if (NS_SUCCEEDED(rv)) {
-      ScrollToIndex(indexToSelect);
-    }
+    selectElement->GetSelectedIndex(&indexToSelect);
+    ScrollToIndex(indexToSelect);
   }
 
   mStartSelectionIndex = kNothingSelected;

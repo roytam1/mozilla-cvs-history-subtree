@@ -2574,8 +2574,8 @@ NS_IMETHODIMP
 nsComboboxControlFrame::OnContentReset()
 {
   if (mListControlFrame) {
-    nsCOMPtr<nsIFormControlFrame> formControl(
-        do_QueryInterface(mListControlFrame));
+    nsCOMPtr<nsIFormControlFrame> formControl =
+      do_QueryInterface(mListControlFrame);
     formControl->OnContentReset();
   }
   return NS_OK;

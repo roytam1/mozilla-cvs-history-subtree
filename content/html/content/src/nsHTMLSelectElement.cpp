@@ -80,19 +80,6 @@
 
 class nsHTMLSelectElement;
 
-// We must wrap VoidArray in a Supports so that it can be
-// stored in presentation state
-#define NS_IVOIDARRAYSUPPORTS_IID    \
-  { 0xa6cf90f6, 0x15b3, 0x11d2,    \
-  { 0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32 } }
-class nsVoidArraySupports : public nsVoidArray,
-                            public nsISupports
-{
-public:
-  nsVoidArraySupports();
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IVOIDARRAYSUPPORTS_IID)
-  NS_DECL_ISUPPORTS
-};
 
 // nsHTMLOptionCollection
 class nsHTMLOptionCollection: public nsIDOMNSHTMLOptionCollection,
@@ -108,16 +95,18 @@ public:
   // NS_DECL_NSIDOMNSHTMLOPTIONLIST here since GetLength() is defined
   // in mode than one interface
   NS_IMETHOD SetLength(PRUint32 aLength);
-  NS_IMETHOD GetSelectedIndex(PRInt32 *aSelectedIndex);
+  NS_IMETHOD GetSelectedIndex(PRInt32* aSelectedIndex);
   NS_IMETHOD SetSelectedIndex(PRInt32 aSelectedIndex);
-  NS_IMETHOD SetOption(PRInt32 aIndex, nsIDOMHTMLOptionElement *aOption);
+  NS_IMETHOD SetOption(PRInt32 aIndex, nsIDOMHTMLOptionElement* aOption);
 
   // nsIDOMHTMLCollection interface
   NS_DECL_NSIDOMHTMLCOLLECTION
 
   nsresult InsertElementAt(nsIDOMNode* aOption, PRInt32 aIndex);
   nsresult RemoveElementAt(PRInt32 aIndex);
+  nsresult GetOption(PRInt32 aIndex, nsIDOMHTMLOptionElement** aReturn);
   PRInt32 IndexOf(nsIContent* aOption);
+  nsresult ItemAsOption(PRInt32 aIndex, nsIDOMHTMLOptionElement **aReturn);
 
   void DropReference();
 
@@ -220,21 +209,21 @@ protected:
   // Helper Methods
   nsresult GetOptionIndex(nsIDOMHTMLOptionElement* aOption,
                           PRInt32 * anIndex);
-  nsresult IsOptionSelectedByIndex(PRInt32 index, PRBool * aIsSelected);
+  nsresult IsOptionSelectedByIndex(PRInt32 index, PRBool* aIsSelected);
+  nsresult FindSelectedIndex(PRInt32 aStartIndex);
   nsresult SelectSomething();
   nsresult CheckSelectSomething();
   nsresult OnOptionSelected(nsISelectControlFrame* aSelectFrame,
                             nsIPresContext* aPresContext,
                             PRInt32 aIndex,
                             PRBool aSelected);
-  nsresult InitializeOption(nsIDOMHTMLOptionElement * aOption,
-                              PRUint32* aNumOptions);
-  nsresult RestoreStateTo(nsVoidArraySupports* aNewSelected);
+  nsresult InitializeOption(nsIDOMHTMLOptionElement* aOption,
+                            PRUint32* aNumOptions);
+  nsresult RestoreStateTo(nsAString* aNewSelected);
 
 #ifdef DEBUG_john
   // Don't remove these, por favor.  They're very useful in debugging
   nsresult PrintOptions(nsIContent* aOptions, PRInt32 tabs);
-  nsresult CheckOptionParity();
 #endif
 
   // Adding options
@@ -259,14 +248,12 @@ protected:
                                     PRInt32 aStartIndex,
                                     PRInt32 aEndIndex,
                                     PRInt32* aListIndex);
-  nsresult ShiftSelectedList(PRInt32 aStartIndex, PRInt32 aShiftAmount);
 
   nsHTMLOptionCollection* mOptions;
-  PRBool        mIsDoneAddingContent;
-  PRUint32 mArtifactsAtTopLevel;
-  // mSelected is an array of the selected indexes
-  nsVoidArraySupports* mSelected;
-  nsCOMPtr<nsVoidArraySupports> mRestoreState;
+  PRBool    mIsDoneAddingContent;
+  PRUint32  mArtifactsAtTopLevel;
+  PRInt32   mSelectedIndex;
+  nsString* mRestoreState;
 };
 
 
@@ -312,8 +299,8 @@ nsHTMLSelectElement::nsHTMLSelectElement()
   mOptions = new nsHTMLOptionCollection(this);
   NS_IF_ADDREF(mOptions);
 
-  mSelected = new nsVoidArraySupports();
-  NS_ADDREF(mSelected);
+  mRestoreState = nsnull;
+  mSelectedIndex = -1;
 }
 
 nsHTMLSelectElement::~nsHTMLSelectElement()
@@ -324,7 +311,10 @@ nsHTMLSelectElement::~nsHTMLSelectElement()
     mOptions->DropReference();
     NS_RELEASE(mOptions);
   }
-  NS_IF_RELEASE(mSelected);
+  if (mRestoreState) {
+    delete mRestoreState;
+    mRestoreState = nsnull;
+  }
 }
 
 // ISupports
@@ -442,22 +432,24 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
 
   // Deal with the selected list
   if (insertIndex - aListIndex) {
-    // Shift the currently selected list over to make room for the new options
-    ShiftSelectedList(aListIndex, insertIndex - aListIndex);
-
-    // Tell the widget we added the options
+    // Notify the frame
     nsIFormControlFrame* fcFrame = nsnull;
+    nsISelectControlFrame* selectFrame = nsnull;
+    nsCOMPtr<nsIPresContext> presContext;
     GetPrimaryFrame(this, fcFrame, PR_FALSE);
     if (fcFrame) {
-      nsISelectControlFrame* selectFrame = nsnull;
       CallQueryInterface(fcFrame, &selectFrame);
       if (selectFrame) {
-        nsCOMPtr<nsIPresContext> presContext;
         GetPresContext(this, getter_AddRefs(presContext));
         for (int i=aListIndex;i<insertIndex;i++) {
           selectFrame->AddOption(presContext, i);
         }
       }
+    }
+
+    // Fix the currently selected index
+    if (aListIndex <= mSelectedIndex) {
+      mSelectedIndex += (insertIndex - aListIndex);
     }
 
     // Actually select the options if the added options warrant it
@@ -468,19 +460,24 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
       option = do_QueryInterface(optionNode);
       if (option) {
         PRBool selected;
-        nsresult rv = option->GetSelectedInternal(&selected);
-        if (NS_SUCCEEDED(rv) && selected) {
-          SetOptionsSelectedByIndex(i, i, PR_TRUE, PR_FALSE, PR_TRUE, nsnull);
+        option->GetSelectedInternal(&selected);
+        if (selected) {
+          // Clear all other options
+          PRBool isMultiple;
+          GetMultiple(&isMultiple);
+          if (!isMultiple) {
+            SetOptionsSelectedByIndex(i, i, PR_TRUE, PR_TRUE, PR_TRUE, nsnull);
+          }
+          // This is sort of a hack ... we need to notify that the option was
+          // set and change selectedIndex even though we didn't really change
+          // its value.
+          OnOptionSelected(selectFrame, presContext, i, PR_TRUE);
         }
       }
     }
 
     CheckSelectSomething();
   }
-
-#ifdef DEBUG_john
-  CheckOptionParity();
-#endif
 
   return NS_OK;
 }
@@ -519,64 +516,6 @@ nsHTMLSelectElement::PrintOptions(nsIContent* aOptions, PRInt32 tabs)
 
   return NS_OK;
 }
-
-nsresult
-nsHTMLSelectElement::CheckOptionParity()
-{
-  PRUint32 len;
-  GetLength(&len);
-  nsCOMPtr<nsIDOMNode> node;
-  nsCOMPtr<nsIDOMHTMLOptionElement> elem;
-  for (PRInt32 i=0;i<(PRInt32)len;i++) {
-    Item(i, getter_AddRefs(node));
-    elem = do_QueryInterface(node);
-    PRBool sel;
-    elem->GetSelected(&sel);
-    PRBool sel2;
-    IsOptionSelectedByIndex(i, &sel2);
-    if (sel != sel2) {
-      printf("OHNO! CACHE IS OUT OF SYNCH WITH OPTION VALUES!\n");
-      // Show the option values
-      printf("options[i].selected: ");
-      PRBool isFirst = PR_TRUE;
-      nsCOMPtr<nsIDOMNode> node2;
-      nsCOMPtr<nsIDOMHTMLOptionElement> elem2;
-      for (PRInt32 i2=0;i2<(PRInt32)len;i2++) {
-        Item(i2, getter_AddRefs(node2));
-        elem2 = do_QueryInterface(node2);
-        PRBool sel;
-        elem2->GetSelected(&sel);
-        if (sel) {
-          if (isFirst) {
-            isFirst = PR_FALSE;
-          } else {
-            printf(", ");
-          }
-          printf("%d", i2);
-        }
-      }
-      printf("\n");
-
-      // Show the selected list values
-      printf("selected list: ");
-      isFirst = PR_TRUE;
-      PRUint32 count = mSelected->Count();
-      for (PRInt32 i2=0;i2<(PRInt32)count;i2++) {
-        PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i2));
-        if (isFirst) {
-          isFirst = PR_FALSE;
-        } else {
-          printf(", ");
-        }
-        printf("%d", optIndex);
-      }
-      printf("\n");
-      break;
-    }
-  }
-
-  return NS_OK;
-}
 #endif
 
 nsresult
@@ -587,24 +526,6 @@ nsHTMLSelectElement::RemoveOptionsFromList(nsIContent* aOptions,
   PRInt32 numRemoved = 0;
   RemoveOptionsFromListRecurse(aOptions, aListIndex, &numRemoved, aLevel);
   if (numRemoved) {
-    // Deal with the selected list and update widget
-
-    // Clear the option values before shifting the list
-    // (We can't do SetOptionsSelectedByIndex because it would set the option
-    // value as well as check to make sure something is selected afterwards,
-    // neither of which we want.)
-    PRUint32 count = mSelected->Count();
-    for (PRInt32 i=0;i<(PRInt32)count;i++) {
-      PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-      if (optIndex >= aListIndex && optIndex < aListIndex+numRemoved) {
-        mSelected->RemoveElementAt(i);
-        count = mSelected->Count();
-        i--;
-      }
-    }
-    // Move all selected options over
-    ShiftSelectedList(aListIndex, -numRemoved);
-
     // Tell the widget we removed the options
     nsIFormControlFrame* fcFrame = nsnull;
     nsresult rv = GetPrimaryFrame(this, fcFrame, PR_FALSE);
@@ -620,14 +541,23 @@ nsHTMLSelectElement::RemoveOptionsFromList(nsIContent* aOptions,
       }
     }
 
+    // Fix the selected index
+    if (aListIndex <= mSelectedIndex) {
+      if (mSelectedIndex < (aListIndex+numRemoved)) {
+        // aListIndex <= mSelectedIndex < aListIndex+numRemoved
+        // Find a new selected index if it was one of the ones removed.
+        FindSelectedIndex(aListIndex);
+      } else {
+        // Shift the selected index if something in front of it was removed
+        // aListIndex+numRemoved <= mSelectedIndex
+        mSelectedIndex -= numRemoved;
+      }
+    }
+
     // Select something in case we removed the selected option on a
     // single select
     CheckSelectSomething();
   }
-
-#ifdef DEBUG_john
-  CheckOptionParity();
-#endif
 
   return NS_OK;
 }
@@ -875,22 +805,6 @@ nsHTMLSelectElement::GetFirstChildOptionIndex(nsIContent* aOptions,
   return NS_OK;
 }
 
-nsresult
-nsHTMLSelectElement::ShiftSelectedList(PRInt32 aStartIndex,
-                                       PRInt32 aShiftAmount)
-{
-  // Verify whether the index is already there
-  PRUint32 count = mSelected->Count();
-  for (PRUint32 i = 0; i < count; i++) {
-    PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-    if (optIndex >= aStartIndex) {
-      mSelected->ReplaceElementAt(NS_INT32_TO_PTR(optIndex + aShiftAmount), i);
-    }
-  }
-
-  return NS_OK;
-}
-
 
 NS_IMETHODIMP
 nsHTMLSelectElement::Add(nsIDOMHTMLElement* aElement,
@@ -1031,13 +945,7 @@ nsHTMLSelectElement::SetLength(PRUint32 aLength)
 NS_IMETHODIMP
 nsHTMLSelectElement::GetSelectedIndex(PRInt32* aValue)
 {
-  // Default value if we don't find the value
-
-  if (mSelected->Count() > 0) {
-    *aValue = NS_PTR_TO_INT32(mSelected->ElementAt(0));
-  } else {
-    *aValue = -1;
-  }
+  *aValue = mSelectedIndex;
 
   return NS_OK;
 }
@@ -1099,24 +1007,13 @@ nsresult
 nsHTMLSelectElement::IsOptionSelectedByIndex(PRInt32 index,
                                              PRBool * aIsSelected)
 {
-  PRUint32 count = mSelected->Count();
-
-  // loop through the array look for "index" object and then we
-  // compare it against the option's index to see if there is a
-  // match
-  for (PRUint32 i=0; i < count; i++) {
-    PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-    // compare them then bail if they match
-    if (optIndex == index) {
-      *aIsSelected = PR_TRUE;
-      return NS_OK;
-    }
+  nsCOMPtr<nsIDOMHTMLOptionElement> option;
+  mOptions->ItemAsOption(index, getter_AddRefs(option));
+  if (option) {
+    return option->GetSelected(aIsSelected);
+  } else {
+    return NS_OK;
   }
-
-  // We didn't find it
-  *aIsSelected = PR_FALSE;
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1131,8 +1028,14 @@ nsHTMLSelectElement::OnOptionSelected(nsISelectControlFrame* aSelectFrame,
                                       PRInt32 aIndex,
                                       PRBool aSelected)
 {
-  nsresult rv = NS_OK;
-  // printf("%d = '%c'\n", aIndex, (aSelected ? 'Y' : 'N'));
+  //printf("OnOptionSelected(%d = '%c')\n", aIndex, (aSelected ? 'Y' : 'N'));
+  // Set the selected index
+  if (aSelected && (aIndex < mSelectedIndex || mSelectedIndex < 0)) {
+    mSelectedIndex = aIndex;
+  } else if (!aSelected && aIndex == mSelectedIndex) {
+    FindSelectedIndex(aIndex+1);
+  }
+
   // Tell the option to get its bad self selected
   nsCOMPtr<nsIDOMNode> option;
   Item(aIndex, getter_AddRefs(option));
@@ -1142,11 +1045,29 @@ nsHTMLSelectElement::OnOptionSelected(nsISelectControlFrame* aSelectFrame,
   }
 
   // Let the frame know too
-  if (NS_SUCCEEDED(rv) && aSelectFrame) {
-    rv = aSelectFrame->OnOptionSelected(aPresContext, aIndex, aSelected);
+  if (aSelectFrame) {
+    aSelectFrame->OnOptionSelected(aPresContext, aIndex, aSelected);
   }
 
-  return rv;
+  return NS_OK;
+}
+
+nsresult
+nsHTMLSelectElement::FindSelectedIndex(PRInt32 aStartIndex)
+{
+  mSelectedIndex = -1;
+  PRUint32 len;
+  GetLength(&len);
+  for (PRInt32 i=aStartIndex; i<(PRInt32)len; i++) {
+    PRBool isSelected;
+    IsOptionSelectedByIndex(i, &isSelected);
+    if (isSelected) {
+      mSelectedIndex = i;
+      break;
+    }
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1192,7 +1113,7 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
                                                PRBool* aChangedSomething)
 {
 #if 0
-  printf("SetOption(%d-%d, %c, %c)\n", aStartIndex, aEndIndex,
+  printf("SetOption(%d-%d, %c, ClearAll=%c)\n", aStartIndex, aEndIndex,
                                        (aIsSelected ? 'Y' : 'N'),
                                        (aClearAll ? 'Y' : 'N'));
 #endif
@@ -1211,13 +1132,11 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
     }
   }
 
-  {
-    // Don't bother if there are no options
-    PRUint32 numItems = 0;
-    GetLength(&numItems);
-    if (numItems == 0) {
-      return NS_OK;
-    }
+  // Don't bother if there are no options
+  PRUint32 numItems = 0;
+  GetLength(&numItems);
+  if (numItems == 0) {
+    return NS_OK;
   }
 
   // First, find out whether multiple items can be selected
@@ -1225,17 +1144,6 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
   rv = GetMultiple(&isMultiple);
   if (NS_FAILED(rv)) {
     isMultiple = PR_FALSE;
-  }
-
-  // The nsISupportArray will hold a list of indexes
-  // of the items that are selected
-  // get the count of selected items
-  PRUint32 count = mSelected->Count();
-
-  // If there are no selected items and we are unselecting an option
-  // then we don't have to do anything.
-  if (count == 0 && !aIsSelected) {
-    return NS_OK;
   }
 
   // These variables tell us whether any options were selected
@@ -1259,12 +1167,6 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
       aEndIndex = aStartIndex;
     }
 
-    PRUint32 numOptions;
-    rv = GetLength(&numOptions);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-
     // This variable tells whether or not all of the options we attempted to
     // select are disabled.  If ClearAll is passed in as true, and we do not
     // select anything because the options are disabled, we will not clear the
@@ -1277,21 +1179,19 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
     // If index is -1, everything will be deselected (bug 28143)
     if (aStartIndex != -1) {
       // Verify that the indices are within bounds
-      if (aStartIndex >= (PRInt32)numOptions || aStartIndex < 0
-         || aEndIndex >= (PRInt32)numOptions || aEndIndex < 0) {
+      if (aStartIndex >= (PRInt32)numItems || aStartIndex < 0
+         || aEndIndex >= (PRInt32)numItems || aEndIndex < 0) {
         return NS_ERROR_FAILURE;
       }
 
       // Loop through the options and select them (if they are not disabled and
       // if they are not already selected).
-      for (PRInt32 indexToAdd = aStartIndex;
-          indexToAdd <= aEndIndex;
-          indexToAdd++) {
+      for (PRInt32 optIndex = aStartIndex; optIndex <= aEndIndex; optIndex++) {
 
         // Ignore disabled options.
         if (!aSetDisabled) {
           PRBool isDisabled;
-          IsOptionDisabled(indexToAdd, &isDisabled);
+          IsOptionDisabled(optIndex, &isDisabled);
 
           if (isDisabled) {
             continue;
@@ -1300,25 +1200,15 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
           }
         }
 
-        // If the index is already selected, ignore it.
-        PRBool foundIndex = PR_FALSE;
-        for (PRUint32 i = 0; i < count; i++) {
-          PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-          if (optIndex == indexToAdd) {
-            foundIndex = PR_TRUE;
-          }
-        }
-
-        // Actually add the index to the array
-        if (!foundIndex) {
-          PRBool okay = mSelected->InsertElementAt(NS_INT32_TO_PTR(indexToAdd),
-                                                   count);
-          if (okay) {
-            count = mSelected->Count();
-            OnOptionSelected(selectFrame, presContext, indexToAdd, PR_TRUE);
+        nsCOMPtr<nsIDOMHTMLOptionElement> option;
+        mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
+        if (option) {
+          // If the index is already selected, ignore it.
+          PRBool isSelected = PR_FALSE;
+          option->GetSelected(&isSelected);
+          if (!isSelected) {
+            OnOptionSelected(selectFrame, presContext, optIndex, PR_TRUE);
             optionsSelected = PR_TRUE;
-          } else {
-            rv = NS_ERROR_OUT_OF_MEMORY; // Most likely cause;
           }
         }
       }
@@ -1329,14 +1219,19 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
     if ((!isMultiple && optionsSelected)
        || (aClearAll && !allDisabled)
        || aStartIndex == -1) {
-      for (PRUint32 i = 0; i < count; i++) {
-        PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
+      for (PRInt32 optIndex = 0; optIndex < (PRInt32)numItems; optIndex++) {
         if (optIndex < aStartIndex || optIndex > aEndIndex) {
-          mSelected->RemoveElementAt(i);
-          count = mSelected->Count();
-          i--;
-          OnOptionSelected(selectFrame, presContext, optIndex, PR_FALSE);
-          optionsDeselected = PR_TRUE;
+          nsCOMPtr<nsIDOMHTMLOptionElement> option;
+          mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
+          if (option) {
+            // If the index is already selected, ignore it.
+            PRBool isSelected = PR_FALSE;
+            option->GetSelected(&isSelected);
+            if (isSelected) {
+              OnOptionSelected(selectFrame, presContext, optIndex, PR_FALSE);
+              optionsDeselected = PR_TRUE;
+            }
+          }
         }
       }
     }
@@ -1345,31 +1240,32 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
 
     // If we're deselecting, loop through all selected items and deselect
     // any that are in the specified range.
-    for (PRUint32 i = 0; i < count; i++) {
-      PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-      if (optIndex >= aStartIndex && optIndex <= aEndIndex) {
-        if (!aSetDisabled) {
-          PRBool isDisabled;
-          IsOptionDisabled(optIndex, &isDisabled);
-          if (isDisabled) {
-            continue;
-          }
+    for (PRInt32 optIndex = aStartIndex; optIndex <= aEndIndex; optIndex++) {
+      if (!aSetDisabled) {
+        PRBool isDisabled;
+        IsOptionDisabled(optIndex, &isDisabled);
+        if (isDisabled) {
+          continue;
         }
+      }
 
-        mSelected->RemoveElementAt(i);
-        count = mSelected->Count();
-        i--;
-        OnOptionSelected(selectFrame, presContext, optIndex, PR_FALSE);
-        optionsDeselected = PR_TRUE;
+      nsCOMPtr<nsIDOMHTMLOptionElement> option;
+      mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
+      if (option) {
+        // If the index is already selected, ignore it.
+        PRBool isSelected = PR_FALSE;
+        option->GetSelected(&isSelected);
+        if (isSelected) {
+          OnOptionSelected(selectFrame, presContext, optIndex, PR_FALSE);
+          optionsDeselected = PR_TRUE;
+        }
       }
     }
   }
 
-  // Make sure something is selected if this is a multiple select
-  PRInt32 size = 1;
-  GetSize(&size);
-  if (optionsDeselected && count == 0 && !isMultiple && size <= 1) {
-    SelectSomething();
+  // Make sure something is selected
+  if (optionsDeselected) {
+    CheckSelectSomething();
   }
 
   // Let the caller know whether anything was changed
@@ -1639,12 +1535,11 @@ nsresult
 nsHTMLSelectElement::CheckSelectSomething()
 {
   if (mIsDoneAddingContent) {
-    PRUint32 count = mSelected->Count();
     PRInt32 size = 1;
     GetSize(&size);
     PRBool isMultiple;
     GetMultiple(&isMultiple);
-    if (count == 0 && !isMultiple && size <= 1) {
+    if (mSelectedIndex < 0 && !isMultiple && size <= 1) {
       SelectSomething();
     }
   }
@@ -1724,6 +1619,7 @@ nsHTMLSelectElement::DoneAddingContent(PRBool aIsDone)
   // content, restore the rest of the options proper-like
   if (mIsDoneAddingContent && mRestoreState) {
     RestoreStateTo(mRestoreState);
+    delete mRestoreState;
     mRestoreState = nsnull;
   }
 
@@ -1882,14 +1778,34 @@ NS_IMETHODIMP
 nsHTMLSelectElement::SaveState(nsIPresContext* aPresContext,
                                nsIPresState** aState)
 {
-  nsresult rv = GetPrimaryPresState(this, aState);
-  if (*aState) {
-    rv =
-      (*aState)->SetStatePropertyAsSupports(NS_LITERAL_STRING("selecteditems"),
-                                            mSelected);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "selecteditems set failed!");
+  nsAutoString stateStr;
+
+  PRUint32 len;
+  GetLength(&len);
+
+  // We loop through the cached list of selected items because it's hella faster
+  // than looping through all options
+  for (PRUint32 optIndex = 0; optIndex < len; optIndex++) {
+    nsCOMPtr<nsIDOMHTMLOptionElement> option;
+    mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
+    if (option) {
+      PRBool isSelected;
+      option->GetSelected(&isSelected);
+      if (isSelected) {
+        if (!stateStr.IsEmpty()) {
+          stateStr.Append(PRUnichar(","));
+        }
+        stateStr.AppendInt(optIndex);
+      }
+    }
   }
 
+  nsresult rv = GetPrimaryPresState(this, aState);
+  if (*aState) {
+    rv = (*aState)->SetStateProperty(NS_LITERAL_STRING("selecteditems"),
+                                     stateStr);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "selecteditems set failed!");
+  }
   return rv;
 }
 
@@ -1906,42 +1822,55 @@ nsHTMLSelectElement::RestoreState(nsIPresContext* aPresContext,
   // called, this will do nothing.
 
   // Get the presentation state object to retrieve our stuff out of.
-  nsCOMPtr<nsISupports> supp;
-  nsresult rv =
-    aState->GetStatePropertyAsSupports(NS_LITERAL_STRING("selecteditems"),
-                                       getter_AddRefs(supp));
-  nsCOMPtr<nsVoidArraySupports> newArray = do_QueryInterface(supp);
-  // If it's the same array, don't restore.  We already have been restored.
-  if (newArray && newArray != mSelected) {
-    RestoreStateTo(newArray);
-  }
+  nsAutoString stateStr;
+  nsresult rv = aState->GetStateProperty(NS_LITERAL_STRING("selecteditems"),
+                                         stateStr);
+  if (NS_SUCCEEDED(rv)) {
+    RestoreStateTo(&stateStr);
 
-  nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
-  if (formControlFrame) {
-    formControlFrame->OnContentReset();
+    nsIFormControlFrame* formControlFrame = nsnull;
+    GetPrimaryFrame(this, formControlFrame);
+    if (formControlFrame) {
+      formControlFrame->OnContentReset();
+    }
   }
 
   return rv;
 }
 
 nsresult
-nsHTMLSelectElement::RestoreStateTo(nsVoidArraySupports* aNewSelected)
+nsHTMLSelectElement::RestoreStateTo(nsAString* aNewSelected)
 {
+  if (!mIsDoneAddingContent) {
+    mRestoreState = new nsString;
+    if (!mRestoreState) {
+      return NS_OK;
+    }
+    *mRestoreState = *aNewSelected;
+    return NS_OK;
+  }
+
+  PRUint32 len;
+  GetLength(&len);
+
   // First clear all
   SetOptionsSelectedByIndex(-1, -1, PR_TRUE, PR_TRUE, PR_TRUE, nsnull);
 
   // Next set the proper ones
-  PRUint32 numToSelect = aNewSelected->Count();
-  for (PRUint32 i=0;i<numToSelect;i++) {
-    PRInt32 selectedIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
-    SetOptionsSelectedByIndex(selectedIndex, selectedIndex, PR_TRUE,
-                              PR_FALSE, PR_TRUE, nsnull);
+  PRUint32 currentInd = 0;
+  while (currentInd < aNewSelected->Length()) {
+    PRInt32 nextInd = aNewSelected->FindChar(',', currentInd);
+    if (nextInd == -1) {
+      nextInd = aNewSelected->Length();
+    }
+    nsDependentSubstring s = Substring(*aNewSelected,
+                                       currentInd, (nextInd-currentInd));
+    PRInt32 i = atoi(NS_ConvertUCS2toUTF8(s).get());
+    SetOptionsSelectedByIndex(i, i, PR_TRUE, PR_FALSE, PR_TRUE, nsnull);
+    currentInd = (PRUint32)nextInd+1;
   }
 
-  if (!mIsDoneAddingContent) {
-    mRestoreState = aNewSelected;
-  }
+  //CheckSelectSomething();
 
   return NS_OK;
 }
@@ -2053,14 +1982,12 @@ nsHTMLSelectElement::GetNamesValues(PRInt32 aMaxNumValues,
 
   PRInt32 sentOptions = 0;
 
-  // Get options array
-  PRUint32 count = mSelected->Count();
-  NS_ENSURE_SUCCESS(rv, rv);
+  PRUint32 len;
+  GetLength(&len);
 
   // We loop through the cached list of selected items because it's hella faster
   // than looping through all options
-  for (PRUint32 i = 0; i < count; i++) {
-    PRInt32 optIndex = NS_PTR_TO_INT32(mSelected->ElementAt(i));
+  for (PRUint32 optIndex = 0; optIndex < len; optIndex++) {
     // Don't send disabled options
     PRBool disabled;
     rv = IsOptionDisabled(optIndex, &disabled);
@@ -2068,20 +1995,28 @@ nsHTMLSelectElement::GetNamesValues(PRInt32 aMaxNumValues,
       continue;
     }
 
-    // Send the actual value
-    nsCOMPtr<nsIDOMNode> optNode;
-    Item(optIndex, getter_AddRefs(optNode));
-    nsCOMPtr<nsIOptionElement> option(do_QueryInterface(optNode));
+    nsCOMPtr<nsIDOMHTMLOptionElement> option;
+    mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
+    if (option) {
+      PRBool isSelected;
+      rv = option->GetSelected(&isSelected);
+      if (NS_FAILED(rv) || !isSelected) {
+        continue;
+      }
 
-    nsAutoString value;
-    rv = option->GetValueOrText(value);
-    NS_ENSURE_SUCCESS(rv, rv);
+      nsCOMPtr<nsIOptionElement> optionElement = do_QueryInterface(option);
+      if (optionElement) {
+        nsAutoString value;
+        rv = optionElement->GetValueOrText(value);
+        NS_ENSURE_SUCCESS(rv, rv);
 
-    // If the value is not there
-    if (sentOptions < aMaxNumValues) {
-      aNames[sentOptions] = name;
-      aValues[sentOptions] = value;
-      sentOptions++;
+        // If the value is not there
+        if (sentOptions < aMaxNumValues) {
+          aNames[sentOptions] = name;
+          aValues[sentOptions] = value;
+          sentOptions++;
+        }
+      }
     }
   }
 
@@ -2214,15 +2149,34 @@ nsHTMLOptionCollection::SetSelectedIndex(PRInt32 aSelectedIndex)
 NS_IMETHODIMP
 nsHTMLOptionCollection::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 {
+  *aReturn = nsnull;
+
   PRUint32 length = 0;
   GetLength(&length);
 
   nsresult rv = NS_OK;
-  if (aIndex >= length) {
-    *aReturn = nsnull;
-  } else {
+  if (aIndex < length) {
     rv = mElements->QueryElementAt(aIndex,
                                    NS_GET_IID(nsIDOMNode),
+                                   (void**)aReturn);
+  }
+
+  return rv;
+}
+
+nsresult
+nsHTMLOptionCollection::ItemAsOption(PRInt32 aIndex,
+                                     nsIDOMHTMLOptionElement **aReturn)
+{
+  *aReturn = nsnull;
+
+  PRUint32 length = 0;
+  GetLength(&length);
+
+  nsresult rv = NS_OK;
+  if (aIndex < (PRInt32)length) {
+    rv = mElements->QueryElementAt(aIndex,
+                                   NS_GET_IID(nsIDOMHTMLOptionElement),
                                    (void**)aReturn);
   }
 
@@ -2284,17 +2238,3 @@ nsHTMLOptionCollection::IndexOf(nsIContent* aOption)
 
   return mElements->IndexOf(aOption);
 }
-
-//----------------------------------------------------------------------
-//
-// nsVoidArraySupports
-//
-
-nsVoidArraySupports::nsVoidArraySupports() : nsVoidArray()
-{
-  NS_INIT_ISUPPORTS();
-}
-
-NS_IMPL_ADDREF(nsVoidArraySupports)
-NS_IMPL_RELEASE(nsVoidArraySupports)
-NS_IMPL_QUERY_INTERFACE0(nsVoidArraySupports)
