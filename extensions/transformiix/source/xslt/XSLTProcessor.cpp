@@ -103,32 +103,7 @@ XSLTProcessor::~XSLTProcessor() {
 } //-- ~XSLTProcessor
 
 #ifdef MOZILLA
-// Provide a Create method that can be called by a factory constructor:
-NS_METHOD
-XSLTProcessor::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
-{
-    if (aOuter)
-        return NS_ERROR_NO_AGGREGATION;
-
-    XSLTProcessor* xslp = new XSLTProcessor();
-    if (xslp == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    // Note that Create doesn't initialize the instance -- that has to
-    // be done by the caller since the initialization args aren't passed
-    // in here.
-
-    // AddRef before calling QI -- this makes it easier to handle the QI
-    // failure case because we'll always just Release and return
-    NS_ADDREF(xslp);
-    nsresult rv = xslp->QueryInterface(aIID, aResult);
-
-    // This will free it if QI failed:
-    NS_RELEASE(xslp);
-    return rv;
-}
-
-NS_IMPL_ISUPPORTS(XSLTProcessor, NS_GET_IID(nsIDocumentTransformer));
+NS_IMPL_ISUPPORTS1(XSLTProcessor, nsIDocumentTransformer)
 #endif
 
 /**
