@@ -162,4 +162,15 @@ nsBaseFilePicker::AppendFilters(PRInt32 aFilterMask)
   return NS_OK;
 }
 
-
+/* attribute wstring defaultExtension; */
+NS_IMETHODIMP nsBaseFilePicker::GetDefaultExtension(PRUnichar * *aDefaultExtension)
+{
+  NS_ENSURE_ARG_POINTER(aDefaultExtension);
+  *aDefaultExtension = mDefaultExtension.ToNewUnicode();
+  return NS_OK;
+}
+NS_IMETHODIMP nsBaseFilePicker::SetDefaultExtension(const PRUnichar * aDefaultExtension)
+{
+  mDefaultExtension = aDefaultExtension;
+  return NS_OK;
+}

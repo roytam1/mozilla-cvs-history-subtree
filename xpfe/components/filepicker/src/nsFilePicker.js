@@ -99,6 +99,10 @@ nsFilePicker.prototype = {
   set defaultString(a) { this.mDefaultString = a; },
   get defaultString()  { return this.mDefaultString; },
 
+  /* attribute wstring defaultExtension; */
+  set defaultExtension(a) { this.mDefaultExtension = a; },
+  get defaultExtension()  { return this.mDefaultExtension; },
+
   /* methods */
   init: function(parent, title, mode) {
     this.mParentWindow = parent;

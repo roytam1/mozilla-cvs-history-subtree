@@ -161,6 +161,15 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     // XXX use OFN_NOCHANGEDIR  for M5
     ofn.Flags = OFN_SHAREAWARE | OFN_LONGNAMES | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
 
+    if (!mDefaultExtension.IsEmpty()) {
+        nsCAutoString ext; ext.AssignWithConversion(mDefaultExtension);
+        static CHAR szExt[4];
+        int len = min(sizeof(szExt) - 1, ext.Length());
+        memset(szExt, 0, sizeof(szExt));
+        memcpy(szExt, ext.get(), len);
+        ofn.lpstrDefExt = szExt;
+    }
+    else {
     // Get file extension from suggested filename
     //  to detect if we are saving an html file
     //XXX: nsIFile SHOULD HAVE A GetExtension() METHOD!
@@ -177,6 +186,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
         //    often appends ".html" even if you have an extension
         //    It obeys your extension if you put quotes around name
         ofn.lpstrDefExt = htmExt;
+        }
       }
     }
 

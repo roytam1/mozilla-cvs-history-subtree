@@ -77,6 +77,12 @@ interface nsIFilePicker : nsISupports
   attribute wstring defaultString;
 
  /**
+  * Specify a default file extension that the implementation may at its
+  * discretion automatically append to the filename.
+  */
+  attribute wstring defaultExtension;
+
+ /**
   * Set the directory that the file open/save dialog initially displays
   *
   * @param      displayDirectory  the name of the directory

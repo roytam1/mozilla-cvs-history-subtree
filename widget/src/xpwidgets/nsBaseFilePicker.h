@@ -39,6 +39,12 @@ public:
                   PRInt16 aMode);
 
   NS_IMETHOD AppendFilters(PRInt32 filterMask);
+  NS_IMETHOD GetDefaultExtension(PRUnichar * *aDefaultExtension);
+  NS_IMETHOD SetDefaultExtension(const PRUnichar * aDefaultExtension);
+
+protected:
+
+  nsString mDefaultExtension;
 
 protected:
 
