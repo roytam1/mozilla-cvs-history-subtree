@@ -52,7 +52,7 @@ class nsDiskCacheEntry;
  *    0100 1100 0000 0000 0000 0000 0000 0000 : reserved bits
  *    0000 0000 1111 1111 1111 1111 1111 1111 : block#  0-16777216 (2^24)
  *
- *    0000 0000 1111 1111 1111 1111 0000 0000 : eFileReservedMask
+ *    0000 0000 1111 1111 1111 1111 0000 0000 : eFileSizeMask (size of file in k: see note)
  *    0000 0000 0000 0000 0000 0000 1111 1111 : eFileGenerationMask
  *
  *  File Selector:
@@ -60,6 +60,10 @@ class nsDiskCacheEntry;
  *      1 = 256 byte block file
  *      2 = 1k block file
  *      3 = 4k block file
+ *
+ *  eFileSizeMask note:  Files larger than 64 Mb have zero size stored in the
+ *                       location.  The file itself must be examined to determine
+ *                       its actual size.
  *
  *****************************************************************************/
 
@@ -80,18 +84,28 @@ private:
         eExtraBlocksMask         = 0x03000000,
         eExtraBlocksOffset       = 24,
         
-        eReservedMask            = 0xCC000000,
+        eReservedMask            = 0x4C000000,
         
         eBlockNumberMask         = 0x00FFFFFF,
 
-        eFileReservedMask        = 0x00FFFF00,
-        eFileGenerationMask      = 0x000000FF
+        eFileSizeMask            = 0x00FFFF00,
+        eFileSizeOffset          = 8,
+        eFileGenerationMask      = 0x000000FF,
+        eFileReservedMask        = 0x4F000000
+        
     };
 
 public:
     nsDiskCacheRecord()
         :   mHashNumber(0), mEvictionRank(0), mDataLocation(0), mMetaLocation(0)
     {
+    }
+    
+    PRBool  ValidRecord()
+    {
+        if ((mDataLocation & eReservedMask) || (mMetaLocation & eReservedMask))
+            return PR_FALSE;
+        return PR_TRUE;
     }
     
     // HashNumber accessors
@@ -144,8 +158,16 @@ public:
     {
         return (mDataLocation & eBlockNumberMask);
     }
+    
+    PRUint32   DataFileSize() const  { return (mDataLocation & eFileSizeMask) >> eFileSizeOffset; }
+    void       SetDataFileSize(PRUint32  size)
+    {
+        NS_ASSERTION((mDataLocation & eFileReservedMask) == 0, "bad location");
+        mDataLocation &= ~eFileSizeMask;    // clear eFileSizeMask
+        mDataLocation |= (size << eFileSizeOffset) & eFileSizeMask;
+    }
 
-    PRUint16   DataGeneration() const
+    PRUint16   DataFileGeneration() const
     {
         return (mDataLocation & eFileGenerationMask);
     }
@@ -201,7 +223,14 @@ public:
         return (mMetaLocation & eBlockNumberMask);
     }
 
-    PRUint16   MetaGeneration() const
+    PRUint32   MetaFileSize() const  { return (mMetaLocation & eFileSizeMask) >> eFileSizeOffset; }
+    void       SetMetaFileSize(PRUint32  size)
+    {
+        mMetaLocation &= ~eFileSizeMask;    // clear eFileSizeMask
+        mMetaLocation |= (size << eFileSizeOffset) & eFileSizeMask;
+    }
+
+    PRUint16   MetaFileGeneration() const
     {
         return (mMetaLocation & eFileGenerationMask);
     }
@@ -214,16 +243,15 @@ public:
         mMetaLocation |= eLocationInitializedMask;
     }
 
-
     PRUint8   Generation() const
     {
         if ((mDataLocation & eLocationInitializedMask)  &&
             (DataFile() == 0))
-            return DataGeneration();
+            return DataFileGeneration();
             
         if ((mMetaLocation & eLocationInitializedMask)  &&
             (MetaFile() == 0))
-            return MetaGeneration();
+            return MetaFileGeneration();
         
         return 0;  // no generation
     }
@@ -285,6 +313,7 @@ struct nsDiskCacheBucket {
     PRUint32  CountRecords();
     PRUint32  EvictionRank();   // return largest rank in bucket
     PRInt32   VisitEachRecord( nsDiskCacheRecordVisitor *  visitor,
+                               PRUint32                    evictionRank,
                                PRUint32 *                  recordsDeleted);
 };
 
@@ -385,6 +414,7 @@ public:
     nsresult FindRecord( PRUint32  hashNumber, nsDiskCacheRecord *  mapRecord);
     nsresult DeleteRecord( nsDiskCacheRecord *  mapRecord);
     nsresult VisitRecords( nsDiskCacheRecordVisitor * visitor);
+    nsresult EvictRecords( nsDiskCacheRecordVisitor * visitor);
 
 /**
  *  Disk Entry operations
@@ -449,6 +479,7 @@ private:
     {
         return (hashNumber & (kBucketsPerTable - 1));
     }
+    
 
    
 

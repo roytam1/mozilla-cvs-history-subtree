@@ -110,6 +110,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS0(nsDiskCacheBinding);
 nsDiskCacheBinding::nsDiskCacheBinding(nsCacheEntry* entry, nsDiskCacheRecord * record)
     :   mCacheEntry(entry)
 {
+    NS_ASSERTION(record->ValidRecord(), "bad record");
     NS_INIT_ISUPPORTS();
     PR_INIT_CLIST(this);
     mRecord     = *record;

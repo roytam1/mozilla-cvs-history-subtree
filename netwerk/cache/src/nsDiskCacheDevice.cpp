@@ -261,24 +261,29 @@ static nsresult removeObservers(nsDiskCacheDevice* device)
 
 
 /******************************************************************************
- *  EvictForClientID
+ *  RecordEvictor
  *
  *  Helper class for nsDiskCacheDevice.
  *
  *****************************************************************************/
 #ifdef XP_MAC
 #pragma mark -
-#pragma mark EvictForClientID
+#pragma mark RecordEvictor
 #endif
 
-class EvictForClientID : public nsDiskCacheRecordVisitor
+class RecordEvictor : public nsDiskCacheRecordVisitor
 {
 public:
-    EvictForClientID( nsDiskCacheDevice *   device,
-                      nsDiskCacheMap *      cacheMap,
-                      nsDiskCacheBindery *  cacheBindery,
-                      const char *          clientID)
-        : mDevice(device), mCacheMap(cacheMap), mBindery(cacheBindery), mClientID(clientID)
+    RecordEvictor( nsDiskCacheDevice *   device,
+                   nsDiskCacheMap *      cacheMap,
+                   nsDiskCacheBindery *  cacheBindery,
+                   PRInt32               targetSize,
+                   const char *          clientID)
+        : mDevice(device)
+        , mCacheMap(cacheMap)
+        , mBindery(cacheBindery)
+        , mTargetSize(targetSize)
+        , mClientID(clientID)
     {}
     
     virtual PRInt32  VisitRecord(nsDiskCacheRecord *  mapRecord);
@@ -287,12 +292,13 @@ private:
         nsDiskCacheDevice *  mDevice;
         nsDiskCacheMap *     mCacheMap;
         nsDiskCacheBindery * mBindery;
+        PRInt32              mTargetSize;
         const char *         mClientID;
 };
 
 
 PRInt32
-EvictForClientID::VisitRecord(nsDiskCacheRecord *  mapRecord)
+RecordEvictor::VisitRecord(nsDiskCacheRecord *  mapRecord)
 {
     // read disk cache entry
     nsDiskCacheEntry *   diskEntry = nsnull;
@@ -310,6 +316,11 @@ EvictForClientID::VisitRecord(nsDiskCacheRecord *  mapRecord)
         if (NS_FAILED(rv))  goto exit;
          
         if (nsCRT::strcmp(mClientID, clientID) != 0) goto exit;
+    }
+    
+    if (mCacheMap->TotalSize() < mTargetSize) {
+        result = kStopVisitingRecords;
+        goto exit;
     }
     
     binding = mBindery->FindActiveBinding(mapRecord->HashNumber());
@@ -627,10 +638,7 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
     if (entry->IsDoomed()) {
         // delete data, entry, record from disk for entry
         rv = mCacheMap->DeleteStorage(&binding->mRecord);
-        if (NS_FAILED(rv))  goto exit;
-        
-        // XXX factor DecrementTotalSize into cache map, and we can get rid of exit: label
-        mCacheMap->DecrementTotalSize(entry->DataSize());
+
     } else {
         // save stuff to disk for entry
         rv = mCacheMap->WriteDiskCacheEntry(binding);
@@ -641,7 +649,6 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
         }
     }
 
-exit:
     mBindery.RemoveBinding(binding); // extract binding from collision detection stuff
     delete entry;   // which will release binding
     return rv;
@@ -680,10 +687,19 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * entry)
         if (oldHashNumber) {
             // gotta evict this one first
             nsDiskCacheBinding * oldBinding = mBindery.FindActiveBinding(oldHashNumber);
-            if (oldBinding && !oldBinding->mCacheEntry->IsDoomed()) {
+            if (oldBinding) {
+                // XXX if debug : compare keys for hashNumber collision
+
+                if (!oldBinding->mCacheEntry->IsDoomed()) {
                 // we've got a live one!
                     nsCacheService::GlobalInstance()->DoomEntry_Locked(oldBinding->mCacheEntry);
                     // storage will be delete when oldBinding->mCacheEntry is Deactivated
+                }
+            } else {
+                // delete storage
+                // XXX if debug : compare keys for hashNumber collision
+                rv = mCacheMap->DeleteStorage(&oldRecord);
+                if (NS_FAILED(rv))  return rv;  // XXX delete record we just added?
             }
         }
     }
@@ -692,6 +708,8 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * entry)
     nsDiskCacheBinding *  binding = mBindery.CreateBinding(entry, &record);
     NS_ASSERTION(binding, "nsDiskCacheDevice::BindEntry");
     if (!binding) return NS_ERROR_OUT_OF_MEMORY;
+    NS_ASSERTION(binding->mRecord.ValidRecord(), "bad cache map record");
+
 
 #if 0
     // XXX from old code: when would we bind an entry that already has data?
@@ -732,6 +750,8 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     nsDiskCacheBinding * binding = GetCacheEntryBinding(entry);
     NS_ASSERTION(binding, "GetTransportForEntry: binding == nsnull");
     if (!binding)  return NS_ERROR_UNEXPECTED;
+    
+    NS_ASSERTION(binding->mCacheEntry == entry, "binding & entry don't point to each other");
 
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
     nsCOMPtr<nsITransport>& transport = binding->getTransport(mode);
@@ -740,8 +760,16 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
         return NS_OK;
     }
 #endif
-    // check/set binding->mRecord for separate or block file, sync w/mCacheMap
-    binding->mRecord.SetDataFileGeneration(binding->mGeneration);
+
+    // check/set binding->mRecord for separate file, sync w/mCacheMap
+    if (binding->mRecord.DataLocationInitialized()) {
+        NS_ASSERTION(binding->mRecord.DataFile() == 0, "error: cache block file"); // make sure it's a separate file
+        NS_ASSERTION(binding->mRecord.DataFileGeneration() == binding->mGeneration, "error generations out of sync");
+    } else {
+        binding->mRecord.SetDataFileGeneration(binding->mGeneration);
+        binding->mRecord.SetDataFileSize(1);    // 1k minimum
+    }
+
     if (!binding->mDoomed) {
         // record stored in cache map, so update it
         rv = mCacheMap->UpdateRecord(&binding->mRecord);
@@ -752,8 +780,8 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     // modulo the number of files we're willing to keep cached.
     nsCOMPtr<nsIFile> file;
     rv = mCacheMap->GetFileForDiskCacheRecord(&binding->mRecord,
-                                                       nsDiskCache::kData,
-                                                       getter_AddRefs(file));
+                                              nsDiskCache::kData,
+                                              getter_AddRefs(file));
     if (NS_FAILED(rv))  return rv;
     
     PRInt32 ioFlags = 0;
@@ -784,7 +812,14 @@ nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
     if (!binding)  return NS_ERROR_UNEXPECTED;
     
     // check/set binding->mRecord for separate file, sync w/mCacheMap
-    binding->mRecord.SetDataFileGeneration(binding->mGeneration);
+    if (binding->mRecord.DataLocationInitialized()) {
+        NS_ASSERTION(binding->mRecord.DataFile() == 0, "error: cache block file"); // make sure it's a separate file
+        NS_ASSERTION(binding->mRecord.DataFileGeneration() == binding->mGeneration, "error generations out of sync");
+    } else {
+        binding->mRecord.SetDataFileGeneration(binding->mGeneration);
+        binding->mRecord.SetDataFileSize(1);    // 1k minimum
+    }
+        
      if (!binding->mDoomed) {
         // record stored in cache map, so update it
        rv = mCacheMap->UpdateRecord(&binding->mRecord);
@@ -808,7 +843,30 @@ nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
 nsresult
 nsDiskCacheDevice::OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize)
 {
-    mCacheMap->IncrementTotalSize(deltaSize);
+    nsDiskCacheBinding * binding = GetCacheEntryBinding(entry);
+    NS_ASSERTION(binding, "OnDataSizeChange: binding == nsnull");
+    if (!binding)  return NS_ERROR_UNEXPECTED;
+
+    NS_ASSERTION(binding->mRecord.ValidRecord(), "bad record");
+
+    PRUint32  sizeK = ((entry->DataSize() + 0x0400) >> 10); // round up to next 1k
+    
+    NS_ASSERTION(binding->mRecord.DataFileSize() == sizeK, "data size out of sync");
+    if (binding->mRecord.DataFileSize() != sizeK) {
+        printf("\n");
+        printf("### binding->mRecord.DataFileSize = %x\n", binding->mRecord.DataFileSize());
+        printf("### sizeK =                         %x\n", sizeK);
+        printf("\n");
+    }
+    
+    
+    mCacheMap->DecrementTotalSize(binding->mRecord.DataFileSize());
+    
+    // calc new size
+    sizeK = ((entry->DataSize() + deltaSize + 0x400) >> 10);
+    binding->mRecord.SetDataFileSize(sizeK);     // update binding->mRecord
+    mCacheMap->IncrementTotalSize(sizeK);
+
     EvictDiskCacheEntries();
     
     return NS_OK;
@@ -892,7 +950,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     PRInt32  newDataSize   = mCacheMap->TotalSize();
     PRInt32  newEntryCount = mCacheMap->EntryCount();
 
-    EvictForClientID  evictor(this, mCacheMap, &mBindery, clientID);
+    RecordEvictor  evictor(this, mCacheMap, &mBindery, 0, clientID);
     rv = mCacheMap->VisitRecords(&evictor);
     
     return rv;
@@ -973,8 +1031,14 @@ nsDiskCacheDevice::GetCacheTrashDirectory(nsIFile ** result)
 nsresult
 nsDiskCacheDevice::EvictDiskCacheEntries()
 {
-    // XXX mCacheMap->Evict(bytesToEvict, );
-    return NS_OK;
+    nsresult rv;
+    
+    if (mCacheMap->TotalSize() < mCacheCapacity)  return NS_OK;
+
+    RecordEvictor  evictor(this, mCacheMap, &mBindery, mCacheCapacity, nsnull);
+    rv = mCacheMap->EvictRecords(&evictor);
+    
+    return rv;
 }
 
 
