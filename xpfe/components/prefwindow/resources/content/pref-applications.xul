@@ -53,7 +53,7 @@
               onselect="selectApplication();">
           <treecols>
             <treecol sort="?value" sortActive="true" sortDirection="ascending"
-                     flex="1" hideheader="true"/>
+                     id="value" flex="1" hideheader="true"/>
           </treecols>
           <template>
             <rule>
