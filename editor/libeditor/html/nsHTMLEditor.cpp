@@ -376,7 +376,6 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
   }
 
   if (NS_FAILED(rulesRes)) return rulesRes;
-  
   return result;
 }
 
@@ -2049,65 +2048,6 @@ nsHTMLEditor::InsertElementAtSelection(nsIDOMElement* aElement, PRBool aDeleteSe
 }
 
 
-/* 
-  InsertNodeAtPoint: attempts to insert aNode into the document, at a point specified by 
-      {*ioParent,*ioOffset}.  Checks with strict dtd to see if containment is allowed.  If not
-      allowed, will attempt to find a parent in the parent heirarchy of *ioParent that will
-      accept aNode as a child.  If such a parent is found, will split the document tree from
-      {*ioParent,*ioOffset} up to parent, and then insert aNode.  ioParent & ioOffset are then
-      adjusted to point to the actual location that aNode was inserted at.  aNoEmptyNodes
-      specifies if the splitting process is allowed to reslt in empty nodes.
-              nsIDOMNode            *aNode           node to insert
-              nsCOMPtr<nsIDOMNode>  *ioParent        insertion parent
-              PRInt32               *ioOffset        insertion offset
-              PRBool                aNoEmptyNodes    splitting can result in empty nodes?
-*/
-nsresult
-nsHTMLEditor::InsertNodeAtPoint(nsIDOMNode *aNode, 
-                                nsCOMPtr<nsIDOMNode> *ioParent, 
-                                PRInt32 *ioOffset, 
-                                PRBool aNoEmptyNodes)
-{
-  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
-  NS_ENSURE_TRUE(ioParent, NS_ERROR_NULL_POINTER);
-  NS_ENSURE_TRUE(*ioParent, NS_ERROR_NULL_POINTER);
-  NS_ENSURE_TRUE(ioOffset, NS_ERROR_NULL_POINTER);
-  
-  nsresult res = NS_OK;
-  nsAutoString tagName;
-  aNode->GetNodeName(tagName);
-  ToLowerCase(tagName);
-  nsCOMPtr<nsIDOMNode> parent = *ioParent;
-  nsCOMPtr<nsIDOMNode> topChild = *ioParent;
-  nsCOMPtr<nsIDOMNode> tmp;
-  PRInt32 offsetOfInsert = *ioOffset;
-   
-  // Search up the parent chain to find a suitable container      
-  while (!CanContainTag(parent, tagName))
-  {
-    // If the current parent is a root (body or table element)
-    // then go no further - we can't insert
-    if (nsTextEditUtils::IsBody(parent) || nsHTMLEditUtils::IsTableElement(parent))
-      return NS_ERROR_FAILURE;
-    // Get the next parent
-    parent->GetParentNode(getter_AddRefs(tmp));
-    NS_ENSURE_TRUE(tmp, NS_ERROR_FAILURE);
-    topChild = parent;
-    parent = tmp;
-  }
-  if (parent != topChild)
-  {
-    // we need to split some levels above the original selection parent
-    res = SplitNodeDeep(topChild, *ioParent, *ioOffset, &offsetOfInsert, aNoEmptyNodes);
-    if (NS_FAILED(res))
-      return res;
-    *ioParent = parent;
-    *ioOffset = offsetOfInsert;
-  }
-  // Now we can insert the new node
-  res = InsertNode(aNode, parent, offsetOfInsert);
-  return res;
-}
 
 NS_IMETHODIMP
 nsHTMLEditor::SelectElement(nsIDOMElement* aElement)
