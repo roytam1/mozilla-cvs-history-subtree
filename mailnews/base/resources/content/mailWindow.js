@@ -247,6 +247,7 @@ nsMsgStatusFeedback.prototype =
   startTime  : 0,
   statusTextFld : null,
   statusBar     : null,
+  statusPanel   : null,
   throbber      : null,
   stopCmd       : null,
   startTimeoutID : null,
@@ -258,6 +259,7 @@ nsMsgStatusFeedback.prototype =
     {
       if (!this.statusTextFld ) this.statusTextFld = document.getElementById("statusText");
       if (!this.statusBar) this.statusBar = document.getElementById("statusbar-icon");
+      if (!this.statusPanel) this.statusPanel = document.getElementById("progress-panel");
       if(!this.throbber)   this.throbber = document.getElementById("navigator-throbber");
       if(!this.stopCmd)   this.stopCmd = document.getElementById("cmd_stop");
     },
@@ -295,6 +297,9 @@ nsMsgStatusFeedback.prototype =
 
       this.meteorsSpinning = true;
       this.startTimeoutID = null;
+
+      // Show progress meter
+      this.statusPanel.removeAttribute("hidden");
 
       // Turn progress meter on.
       this.statusBar.setAttribute("mode","undetermined");
@@ -342,6 +347,7 @@ nsMsgStatusFeedback.prototype =
       this.throbber.setAttribute("busy", false);
 
       // Turn progress meter off.
+      this.statusPanel.setAttribute("hidden", "true");
       this.statusBar.setAttribute("mode","normal");
       this.statusBar.value = 0;  // be sure to clear the progress bar
       this.statusBar.label = "";

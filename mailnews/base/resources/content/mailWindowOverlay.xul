@@ -1567,7 +1567,7 @@ Rights Reserved.
   <hbox insertbefore="unreadMessageCount" flex="1">
     <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusText" label="&statusText.label;" flex="1"/>
-    <statusbarpanel class="statusbarpanel-progress">
+    <statusbarpanel class="statusbarpanel-progress" id="progress-panel" hidden="true">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0" oncommand="dumpProgress()"/>
     </statusbarpanel>
   </hbox>
