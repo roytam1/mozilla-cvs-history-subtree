@@ -36,7 +36,7 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 ###########################################################################
 
 all export::	sdkver.h dirver.h FORCE
-	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(DIST)/include
+	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(DIST)/include/ldap
 
 sdkver.h:	$(DIRVER_PROG)
 	@$< $(DIRSDK_VERSION) UseSystemDate $@
