@@ -18,6 +18,7 @@
 
 // TODO: Implement Java callbacks
 
+#include "xp_core.h"
 #include "nsplugin.h"
 #include "ns4xPlugin.h"
 //#include "ns4xPluginInstance.h"

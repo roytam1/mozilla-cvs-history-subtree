@@ -19,9 +19,10 @@
 #ifndef nsPluginHostImpl_h__
 #define nsPluginHostImpl_h__
 
+#include "xp_core.h"
 #include "nsIPluginManager.h"
 #include "nsIPluginHost.h"
-#include "nscrt.h"
+#include "nsCRT.h"
 #include "prlink.h"
 
 class ns4xPlugin;
@@ -51,7 +52,7 @@ public:
 #define NS_PLUGIN_FLAG_ENABLED    0x0001    //is this plugin enabled?
 #define NS_PLUGIN_FLAG_OLDSCHOOL  0x0002    //is this a pre-xpcom plugin?
 
-class nsPluginHostImpl : public nsIPluginManager, nsIPluginHost
+class nsPluginHostImpl : public nsIPluginManager, public nsIPluginHost
 {
 public:
   nsPluginHostImpl();

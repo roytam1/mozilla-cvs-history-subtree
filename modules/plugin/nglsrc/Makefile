@@ -33,10 +33,12 @@ CPPSRCS =                              \
     ns4xPlugin.cpp  \
     $(NULL)
 
-REQUIRES = raptor xpcom
+REQUIRES = raptor plugin java xpcom
 
 LCFLAGS =-D_IMPL_NS_PLUGIN
 
 TARGETS = $(LIBRARY)
+
+INCLUDES += -I.
 
 include $(DEPTH)/config/rules.mk
