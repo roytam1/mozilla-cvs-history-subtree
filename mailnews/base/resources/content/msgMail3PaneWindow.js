@@ -183,6 +183,60 @@ var folderListener = {
     }
 }
 
+var folderObserver = {
+    canDropOn: function(index)
+    {
+        return CanDropOnFolderOutliner(index);
+    },
+
+    canDropBeforeAfter: function(index, before)
+    {
+        return CanDropBeforeAfterFolderOutliner(index, before);
+    },
+
+    onDrop: function(row, orientation)
+    {
+        DropOnFolderOutliner(row, orientation);
+    },
+
+    onToggleOpenState: function()
+    {
+    },
+
+    onCycleHeader: function(colID, elt)
+    {
+    },
+
+    onCycleCell: function(row, colID)
+    {
+    },
+
+    onSelectionChanged: function()
+    {
+    },
+
+    isEditable: function(row, colID)
+    {
+        return false;
+    },
+
+    onSetCellText: function(row, colID, value)
+    {
+    },
+
+    onPerformAction: function(action)
+    {
+    },
+
+    onPerformActionOnRow: function(action, row)
+    {
+    },
+
+    onPerformActionOnCell: function(action, row, colID)
+    {
+    }
+}
+
 function HandleDeleteOrMoveMsgFailed(folder)
 {
   if(IsCurrentLoadedFolder(folder)) {

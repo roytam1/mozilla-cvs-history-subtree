@@ -35,287 +35,282 @@ function debugDump(msg)
   // dump(msg+"\n");
 }
 
-var folderObserver = {
-    canDropOn: function(index) {
-        var dragSession = null;
-        var dragFolder = false;
-        var flavor = false;
+function CanDropOnFolderOutliner(index)
+{
+    var dragSession = null;
+    var dragFolder = false;
+    var flavor = false;
 
-        dragSession = dragService.getCurrentSession();
-        if (! dragSession)
-            return false;
+    dragSession = dragService.getCurrentSession();
+    if (! dragSession)
+        return false;
 
-        if (dragSession.isDataFlavorSupported("text/nsmessageOrfolder"))
-            flavor = true;
+    if (dragSession.isDataFlavorSupported("text/nsmessageOrfolder"))
+        flavor = true;
 
-        var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-        if (! trans)
-            return false;
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+    if (! trans)
+        return false;
  
-        var targetResource = GetFolderResource(index);
-        var targetUri = targetResource.Value;
-        var targetFolder = targetResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-        var targetServer = targetFolder.server;
-        var sourceServer;
+    var targetResource = GetFolderResource(index);
+    var targetUri = targetResource.Value;
+    var targetFolder = targetResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var targetServer = targetFolder.server;
+    var sourceServer;
 
-        trans.addDataFlavor("text/nsmessageOrfolder");
+    trans.addDataFlavor("text/nsmessageOrfolder");
    
-        for (var i = 0; i < dragSession.numDropItems; i++)
-        {
-            dragSession.getData (trans, i);
-            var dataObj = new Object();
-            var bestFlavor = new Object();
-            var len = new Object();
-            try
-            {
-                trans.getAnyTransferData ( bestFlavor, dataObj, len );
-            }
-            catch (ex)
-            {
-                continue;   //no data so continue;
-            }
-            if (dataObj)
-                dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-            if (! dataObj)
-                continue;
-
-            // pull the URL out of the data object
-            var sourceUri = dataObj.data.substring(0, len.value);
-            if (! sourceUri)
-                continue;
-
-            var sourceResource;
-            try
-            {
-                sourceResource = RDF.GetResource(sourceUri, true);
-                var folder = sourceResource.QueryInterface(Components.interfaces.nsIFolder);
-                if (folder)
-                    dragFolder = true;
-            }
-            catch(ex)
-            {
-                sourceResource = null;
-                var isServer = GetFolderAttribute(targetResource, "IsServer");
-                if (isServer == "true")
-                {
-                    debugDump("***isServer == true\n");
-                    return false;
-                }
-                var canFileMessages = GetFolderAttribute(targetResource, "CanFileMessages");
-                if (canFileMessages != "true")
-                {
-                    debugDump("***canFileMessages == false\n");
-                    return false;
-                }
-                var noSelect = GetFolderAttribute(targetResource, "NoSelect");
-                if (noSelect == "true")
-                {
-                    debugDump("***NoSelect == true\n");
-                    return false;
-                } 
-                var hdr = messenger.messageServiceFromURI(sourceUri).messageURIToMsgHdr(sourceUri);
-                if (hdr.folder == targetFolder)
-                    return false;
-                break;
-            }
-
-            // we should only get here if we are dragging and dropping folders
-            var sourceResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-            var sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-            sourceServer = sourceFolder.server;
-
-            if (targetUri == sourceUri)	
-                return false;
-
-            //don't allow drop on different imap servers.
-            if (sourceServer != targetServer && targetServer.type == "imap")
-                return false;
-
-            //don't allow immediate child to be dropped to it's parent
-            if (targetFolder.URI == sourceFolder.parent.URI)
-            {
-                debugDump(targetFolder.URI + "\n");
-                debugDump(sourceFolder.parent.URI + "\n");     
-                return false;
-            }
-
-            var isAncestor = sourceFolder.isAncestorOf(targetFolder);
-            // don't allow parent to be dropped on its ancestors
-            if (isAncestor)
-                return false;
-        }
-
-        if (dragFolder)
-        {
-            //first check these conditions then proceed further
-            debugDump("***isFolderFlavor == true \n");
-
-            if (ctrlKey)
-                return false;
-
-            var canCreateSubfolders = GetFolderAttribute(targetResource, "CanCreateSubfolders");
-            // if cannot create subfolders then a folder cannot be dropped here     
-            if (canCreateSubfolders == "false")
-            {
-                debugDump("***canCreateSubfolders == false \n");
-                return false;
-            }
-            var serverType = GetFolderAttribute(targetResource, "ServerType");
-
-            // if we've got a folder that can't be renamed
-            // allow us to drop it if we plan on dropping it on "Local Folders"
-            // (but not within the same server, to prevent renaming folders on "Local Folders" that
-            // should not be renamed)
-            var srcCanRename = GetFolderAttribute(sourceResource, "CanRename");
-            if (srcCanRename == "false") {
-                if (sourceServer == targetServer)
-                    return false;
-                if (serverType != "none")
-                    return false;
-            }
-        }
-
-        //message or folder
-        if (flavor)
-        {
-            dragSession.canDrop = true;
-            return true;
-        }
-	
-        return false;
-    },
-
-    canDropBeforeAfter: function(index, before)
+    for (var i = 0; i < dragSession.numDropItems; i++)
     {
-        return false;
-    },
+        dragSession.getData (trans, i);
+        var dataObj = new Object();
+        var bestFlavor = new Object();
+        var len = new Object();
+        try
+        {
+            trans.getAnyTransferData ( bestFlavor, dataObj, len );
+        }
+        catch (ex)
+        {
+            continue;   //no data so continue;
+        }
+        if (dataObj)
+            dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+        if (! dataObj)
+            continue;
 
-    onToggleOpenState: function()
-    {
-    },
+        // pull the URL out of the data object
+        var sourceUri = dataObj.data.substring(0, len.value);
+        if (! sourceUri)
+            continue;
 
-    onDrop: function(row, orientation)
-    {
-        if (orientation != Components.interfaces.nsIOutlinerView.inDropOn)
-            return;
-
-        var targetResource = GetFolderResource(row);
-
-        var targetUri = targetResource.Value;
-        debugDump("***targetUri = " + targetUri + "\n");
-
-        var dragSession = dragService.getCurrentSession();
-        if (! dragSession )
-            return;
-
-        var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-        trans.addDataFlavor("text/nsmessageOrfolder");
-
-        var list = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
-
-        var dropMessage = true;   	
-        var sourceUri;
         var sourceResource;
-        var sourceFolder;
-        var sourceServer;
-	
-        for (var i = 0; i < dragSession.numDropItems; i++)
+        try
         {
-            dragSession.getData (trans, i);
-            var dataObj = new Object();
-            var bestFlavor = new Object();
-            var len = new Object();
-            trans.getAnyTransferData(bestFlavor, dataObj, len);
-            if (dataObj)
-                dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-            if (! dataObj)
-                continue;
-
-            // pull the URL out of the data object
-            sourceUri = dataObj.data.substring(0, len.value);
-            if (! sourceUri)
-                continue;
-
-            debugDump("    Node #" + i + ": drop " + sourceUri + " to " + targetUri + "\n");
-
             sourceResource = RDF.GetResource(sourceUri, true);
-            // only do this for the first object, either they are all messages or they are all folders
-            if (i == 0) {
-                try {
-                    sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-                    if (sourceFolder) {
-                        // we are dropping a folder
-                        dropMessage = false;
-                    }
-                    else {
-                        dropMessage = true;
-                    }
+            var folder = sourceResource.QueryInterface(Components.interfaces.nsIFolder);
+            if (folder)
+                dragFolder = true;
+        }
+        catch(ex)
+        {
+            sourceResource = null;
+            var isServer = GetFolderAttribute(targetResource, "IsServer");
+            if (isServer == "true")
+            {
+                debugDump("***isServer == true\n");
+                return false;
+            }
+            var canFileMessages = GetFolderAttribute(targetResource, "CanFileMessages");
+            if (canFileMessages != "true")
+            {
+                debugDump("***canFileMessages == false\n");
+                return false;
+            }
+            var noSelect = GetFolderAttribute(targetResource, "NoSelect");
+            if (noSelect == "true")
+            {
+                debugDump("***NoSelect == true\n");
+                return false;
+            } 
+            var hdr = messenger.messageServiceFromURI(sourceUri).messageURIToMsgHdr(sourceUri);
+            if (hdr.folder == targetFolder)
+                return false;
+            break;
+        }
+
+        // we should only get here if we are dragging and dropping folders
+        var sourceResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
+        var sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+        sourceServer = sourceFolder.server;
+
+        if (targetUri == sourceUri)	
+            return false;
+
+        //don't allow drop on different imap servers.
+        if (sourceServer != targetServer && targetServer.type == "imap")
+            return false;
+
+        //don't allow immediate child to be dropped to it's parent
+        if (targetFolder.URI == sourceFolder.parent.URI)
+        {
+            debugDump(targetFolder.URI + "\n");
+            debugDump(sourceFolder.parent.URI + "\n");     
+            return false;
+        }
+
+        var isAncestor = sourceFolder.isAncestorOf(targetFolder);
+        // don't allow parent to be dropped on its ancestors
+        if (isAncestor)
+            return false;
+    }
+
+    if (dragFolder)
+    {
+        //first check these conditions then proceed further
+        debugDump("***isFolderFlavor == true \n");
+
+        if (ctrlKey)
+            return false;
+
+        var canCreateSubfolders = GetFolderAttribute(targetResource, "CanCreateSubfolders");
+        // if cannot create subfolders then a folder cannot be dropped here     
+        if (canCreateSubfolders == "false")
+        {
+            debugDump("***canCreateSubfolders == false \n");
+            return false;
+        }
+        var serverType = GetFolderAttribute(targetResource, "ServerType");
+
+        // if we've got a folder that can't be renamed
+        // allow us to drop it if we plan on dropping it on "Local Folders"
+        // (but not within the same server, to prevent renaming folders on "Local Folders" that
+        // should not be renamed)
+        var srcCanRename = GetFolderAttribute(sourceResource, "CanRename");
+        if (srcCanRename == "false") {
+            if (sourceServer == targetServer)
+                return false;
+            if (serverType != "none")
+                return false;
+        }
+    }
+
+    //message or folder
+    if (flavor)
+    {
+        dragSession.canDrop = true;
+        return true;
+    }
+	
+    return false;
+}
+
+function CanDropBeforeAfterFolderOutliner(index, before)
+{
+    return false;
+}
+
+function DropOnFolderOutliner(row, orientation)
+{
+    if (orientation != Components.interfaces.nsIOutlinerView.inDropOn)
+        return;
+
+    var targetResource = GetFolderResource(row);
+
+    var targetUri = targetResource.Value;
+    debugDump("***targetUri = " + targetUri + "\n");
+
+    var dragSession = dragService.getCurrentSession();
+    if (! dragSession )
+        return;
+
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+    trans.addDataFlavor("text/nsmessageOrfolder");
+
+    var list = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
+
+    var dropMessage = true;   	
+    var sourceUri;
+    var sourceResource;
+    var sourceFolder;
+    var sourceServer;
+	
+    for (var i = 0; i < dragSession.numDropItems; i++)
+    {
+        dragSession.getData (trans, i);
+        var dataObj = new Object();
+        var bestFlavor = new Object();
+        var len = new Object();
+        trans.getAnyTransferData(bestFlavor, dataObj, len);
+        if (dataObj)
+            dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+        if (! dataObj)
+            continue;
+
+        // pull the URL out of the data object
+        sourceUri = dataObj.data.substring(0, len.value);
+        if (! sourceUri)
+            continue;
+
+        debugDump("    Node #" + i + ": drop " + sourceUri + " to " + targetUri + "\n");
+
+        sourceResource = RDF.GetResource(sourceUri, true);
+        // only do this for the first object, either they are all messages or they are all folders
+        if (i == 0) {
+            try {
+                sourceFolder = sourceResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+                if (sourceFolder) {
+                    // we are dropping a folder
+                    dropMessage = false;
                 }
-                catch (ex) {
+                else {
                     dropMessage = true;
                 }
             }
-            else {
-                if (! dropMessage)
-                    dump("drag and drop of multiple folders isn't supported\n");
-            }
-
-            if (dropMessage) {
-               // from the message uri, get the appropriate messenger service
-               // and then from that service, get the msgDbHdr
-               list.AppendElement(messenger.messageServiceFromURI(sourceUri).messageURIToMsgHdr(sourceUri));
-            }
-            else {
-               // Prevent dropping of a node before, after, or on itself
-               if (sourceResource == targetResource)	
-                   continue;
-
-               list.AppendElement(sourceResource);
-            }
-        }
-
-        if (list.Count() < 1)
-           return false;
-
-        var isSourceNews = false;
-        isSourceNews = isNewsURI(sourceUri);
-    
-        var targetFolder = targetResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-        var targetServer = targetFolder.server;
-
-        if (dropMessage) {
-            // fix this, to get the folder from the sourceUri.  this won't work with multiple 3 panes
-            sourceFolder = GetThreadPaneFolder();
-            sourceServer = sourceFolder.server;
-
-            try {
-                if (isSourceNews) {
-                    // news to pop or imap is always a copy
-                    messenger.CopyMessages(sourceFolder, targetFolder, list, false);
-                }
-                else {
-                    // fix this, will not work for multiple 3 panes
-                    var sameServer = (sourceServer == targetServer);
-                    if (! ctrlKey && sameServer) {
-                        SetNextMessageAfterDelete();
-                    }
-                    messenger.CopyMessages(sourceFolder, targetFolder, list, (! ctrlKey && sameServer));
-                }
-            }
             catch (ex) {
-                dump("failed to copy messages: " + ex + "\n");
+                dropMessage = true;
             }
         }
         else {
-            sourceServer = sourceFolder.server;
-            try 
-            {
-                messenger.CopyFolders(GetFolderDatasource(), targetResource, list, (sourceServer == targetServer));
+            if (! dropMessage)
+                dump("drag and drop of multiple folders isn't supported\n");
+        }
+
+        if (dropMessage) {
+            // from the message uri, get the appropriate messenger service
+            // and then from that service, get the msgDbHdr
+            list.AppendElement(messenger.messageServiceFromURI(sourceUri).messageURIToMsgHdr(sourceUri));
+        }
+        else {
+            // Prevent dropping of a node before, after, or on itself
+            if (sourceResource == targetResource)	
+                continue;
+
+            list.AppendElement(sourceResource);
+        }
+    }
+
+    if (list.Count() < 1)
+       return false;
+
+    var isSourceNews = false;
+    isSourceNews = isNewsURI(sourceUri);
+    
+    var targetFolder = targetResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var targetServer = targetFolder.server;
+
+    if (dropMessage) {
+        // fix this, to get the folder from the sourceUri.  this won't work with multiple 3 panes
+        sourceFolder = GetThreadPaneFolder();
+        sourceServer = sourceFolder.server;
+
+        try {
+            if (isSourceNews) {
+                // news to pop or imap is always a copy
+                messenger.CopyMessages(sourceFolder, targetFolder, list, false);
             }
-            catch(ex)
-            {
-                dump ("Exception : CopyFolders " + ex + "\n");
+            else {
+                // fix this, will not work for multiple 3 panes
+                var sameServer = (sourceServer == targetServer);
+                if (! ctrlKey && sameServer) {
+                    SetNextMessageAfterDelete();
+                }
+                messenger.CopyMessages(sourceFolder, targetFolder, list, (! ctrlKey && sameServer));
             }
+        }
+        catch (ex) {
+            dump("failed to copy messages: " + ex + "\n");
+        }
+    }
+    else {
+        sourceServer = sourceFolder.server;
+        try 
+        {
+            messenger.CopyFolders(GetFolderDatasource(), targetResource, list, (sourceServer == targetServer));
+        }
+        catch(ex)
+        {
+            dump ("Exception : CopyFolders " + ex + "\n");
         }
     }
 }
