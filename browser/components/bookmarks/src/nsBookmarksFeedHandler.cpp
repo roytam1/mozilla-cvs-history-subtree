@@ -50,10 +50,13 @@
 #include "nsISupportsPrimitives.h"
 #include "rdf.h"
 #include "nsUnicharUtils.h"
+#include "nsInt64.h"
 
 #include "nsIURL.h"
 #include "nsIInputStream.h"
 #include "nsNetUtil.h"
+#include "nsICachingChannel.h"
+#include "nsICacheVisitor.h"
 
 #include "nsIDOMParser.h"
 #include "nsIDOMDocument.h"
@@ -257,12 +260,40 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
     }
 
     /* Set an expiration on the livemark, for reloading the data */
-    PRInt32 ttl = 3600;     // XXXvladimir FIXME: read ttl from rss
+    PRInt32 ttl;
     if (NS_FAILED(rv)) {
-        // if we failed, try again in 5 minutes, to avoid trying
-        // to load the livemark over and over.
-        ttl = 300;          
+        // if we failed, try again in 1 hour, to avoid trying
+        // to load a feed that doesn't parse over and over.
+        ttl = 3600;
+    } else {
+        if (mBMSVC->mBookmarksPrefs)
+            rv = mBMSVC->mBookmarksPrefs->GetIntPref("livemark_refresh_seconds", &ttl);
+        if (!mBMSVC->mBookmarksPrefs || NS_FAILED(rv))
+            ttl = 3600;         // 1 hr default
+        else if (ttl < 60)
+            ttl = 60;           // 1 min minimum
+
+        // ensure that the ttl is at least equal to the cache expiry time, since
+        // otherwise a reload won't have much effect
+        nsCOMPtr<nsICachingChannel> channel = do_QueryInterface(aRequest);
+        if (channel) {
+            nsCOMPtr<nsISupports> cacheToken;
+            channel->GetCacheToken(getter_AddRefs(cacheToken));
+            if (cacheToken) {
+                nsCOMPtr<nsICacheEntryInfo> entryInfo = do_QueryInterface(cacheToken);
+                if (entryInfo) {
+                    PRUint32 expiresTime;
+                    
+                    if (NS_SUCCEEDED(entryInfo->GetExpirationTime(&expiresTime))) {
+                        expiresTime -= PRInt32(nsInt64(PR_Now()) / nsInt64((PRUint32)PR_USEC_PER_SEC));
+                        if (ttl < expiresTime)
+                            ttl = expiresTime;
+                    }
+                }
+            }
+        }
     }
+
     rv = SetResourceTTL(ttl);
     if (NS_FAILED(rv)) {
         NS_WARNING ("SetResourceTTL failed on Livemark");
@@ -701,6 +732,36 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
 ///////////////////////////////////////////////////////////////////////////
 ////  Main entry point for nsBookmarksService to deal with Livemarks
 ////
+
+PRBool
+nsBookmarksService::LivemarkNeedsUpdate(nsIRDFResource* aSource)
+{
+    nsresult rv;
+    PRBool locked = PR_FALSE;
+
+    if (NS_SUCCEEDED(mInner->HasAssertion (aSource, kNC_LivemarkLock, kTrueLiteral, PR_TRUE, &locked)) &&
+        locked)
+    {
+        /* We're already loading the livemark */
+        return PR_FALSE;
+    }
+
+    // Check the TTL/expiration on this.  If there isn't one,
+    // then we assume it's never been loaded.
+    nsCOMPtr<nsIRDFNode> expirationNode;
+    rv = mInner->GetTarget(aSource, kNC_LivemarkExpiration, PR_TRUE, getter_AddRefs(expirationNode));
+    if (rv == NS_OK) {
+        nsCOMPtr<nsIRDFDate> expirationTime = do_QueryInterface (expirationNode);
+        PRTime exprTime, nowTime = PR_Now();
+        expirationTime->GetValue(&exprTime);
+
+        if (exprTime > nowTime) {
+            return PR_FALSE;
+        }
+    }
+
+    return PR_TRUE;
+}
 
 /*
  * Update the child elements of a livemark; take care of cache checking,

@@ -87,7 +87,6 @@
 #include "nsICharsetConverterManager.h"
 #include "nsICharsetAlias.h"
 #include "nsIPlatformCharset.h"
-#include "nsIPref.h"
 
 #include "plbase64.h"
 
@@ -1720,7 +1719,8 @@ nsBookmarksService::Init()
     {
         // get browser icon pref
         prefServ->GetBoolPref("browser.chrome.site_icons", &mBrowserIcons);
-        
+
+        prefServ->GetBranch("browser.bookmarks.", getter_AddRefs(mBookmarksPrefs));
     }
 
     if (mPersonalToolbarName.IsEmpty())
@@ -2066,6 +2066,27 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
     }
 #endif
 #endif
+
+    // go through all live bookmarks and check whether they need to be refreshed
+    nsCOMPtr<nsISimpleEnumerator> livemarkEnumerator;
+    rv = bmks->GetSources(kRDF_type, kNC_Livemark, PR_TRUE, getter_AddRefs(livemarkEnumerator));
+    if (NS_FAILED(rv))
+        return;
+
+    PRBool hasMore = PR_FALSE;
+    while (NS_SUCCEEDED(rv = livemarkEnumerator->HasMoreElements(&hasMore)) && hasMore) {
+        nsCOMPtr<nsISupports> supports;
+        rv = livemarkEnumerator->GetNext(getter_AddRefs(supports));
+        if (NS_FAILED(rv))
+            return;
+
+        nsCOMPtr<nsIRDFResource> livemark = do_QueryInterface(supports);
+        if (!livemark)
+            return;
+
+        if (bmks->LivemarkNeedsUpdate(livemark))
+            bmks->UpdateLivemarkChildren(livemark);
+    }
 }
 
 
@@ -4683,11 +4704,6 @@ nsBookmarksService::LoadBookmarks()
 
     PRBool foundIERoot = PR_FALSE;
 
-    nsCOMPtr<nsIPrefService> prefSvc(do_GetService(NS_PREF_CONTRACTID));
-    nsCOMPtr<nsIPrefBranch>  bookmarksPrefs;
-    if (prefSvc)
-        prefSvc->GetBranch("browser.bookmarks.", getter_AddRefs(bookmarksPrefs));
-
 #ifdef DEBUG_varga
     PRTime now;
 #if defined(XP_MAC)
@@ -4720,8 +4736,8 @@ nsBookmarksService::LoadBookmarks()
     useDynamicSystemBookmarks = PR_TRUE;
 #else
     useDynamicSystemBookmarks = PR_FALSE;
-    if (bookmarksPrefs)
-        bookmarksPrefs->GetBoolPref("import_system_favorites", &useDynamicSystemBookmarks);
+    if (mBookmarksPrefs)
+        mBookmarksPrefs->GetBoolPref("import_system_favorites", &useDynamicSystemBookmarks);
 #endif
 
 #ifdef XP_BEOS 
@@ -4804,9 +4820,9 @@ nsBookmarksService::LoadBookmarks()
     // not to perform this operation. 
 #if defined(XP_MAC) || defined(XP_MACOSX)
     PRBool addedStaticRoot = PR_FALSE;
-    if (bookmarksPrefs) 
-        bookmarksPrefs->GetBoolPref("added_static_root", 
-                                    &addedStaticRoot);
+    if (mBookmarksPrefs) 
+        mBookmarksPrefs->GetBoolPref("added_static_root", 
+                                     &addedStaticRoot);
 
     // Add the root that System bookmarks are imported into as real bookmarks. This is 
     // only done once. 
@@ -4855,7 +4871,8 @@ nsBookmarksService::LoadBookmarks()
             if (NS_FAILED(rv)) return rv;
         }
 
-        bookmarksPrefs->SetBoolPref("added_static_root", PR_TRUE);
+        if (mBookmarksPrefs)
+            mBookmarksPrefs->SetBoolPref("added_static_root", PR_TRUE);
     }
 #endif
 
