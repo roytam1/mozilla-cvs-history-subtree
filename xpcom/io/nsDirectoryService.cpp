@@ -167,7 +167,7 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
     // get info for the the current process to determine the directory
     // its located in
     OSErr err;
-	ProcessSerialNumber psn = {kNoProcess, kCurrentProcess};
+    ProcessSerialNumber psn = {kNoProcess, kCurrentProcess};
     ProcessInfoRec pInfo;
     FSSpec         tempSpec;
 
@@ -180,10 +180,9 @@ nsDirectoryService::GetCurrentProcessDirectory(nsILocalFile** aFile)
     err = GetProcessInformation(&psn, &pInfo);
     if (!err)
     {
-        FSSpec appFSSpec = *(pInfo.processAppSpec);
-        
-        // Truncate the nsame so the spec is just to the app directory
-        appFSSpec.name[0] = 0;
+        // create an FSSpec from the volume and dirid of the app.
+        FSSpec appFSSpec;
+        ::FSMakeFSSpec(pInfo.processAppSpec->vRefNum, pInfo.processAppSpec->parID, 0, &appFSSpec);
 
         nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface((nsIFile*)localFile);
         if (localFileMac) 
