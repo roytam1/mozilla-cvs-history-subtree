@@ -232,7 +232,7 @@ NS_IMETHODIMP nsFilePicker::ShowW(PRInt16 *aReturnVal)
       result = nsToolkit::mGetOpenFileName(&ofn);
     }
     else if (mMode == modeSave) {
-      ofn.Flags |= OFN_NOREADONLYRETURN;
+      ofn.Flags |= OFN_NOREADONLYRETURN | OFN_NODEREFERENCELINKS;
       result = nsToolkit::mGetSaveFileName(&ofn);
       if (!result) {
         // Error, find out what kind.
