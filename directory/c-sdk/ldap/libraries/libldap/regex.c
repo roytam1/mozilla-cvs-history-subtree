@@ -799,7 +799,7 @@ re_subs( char *src, char *dst)
 	return 1;
 }
 			
-#ifdef DEBUG
+#ifdef LDAP_REGEX_DEBUG
 
 /* No printf or exit in 16-bit Windows */
 #if defined( _WINDOWS ) && !defined( _WIN32 )
@@ -895,5 +895,6 @@ nfadump( REGEXCHAR *ap)
 			break;
 		}
 }
-#endif
+#endif /* LDAP_REGEX_DEBUG */
+
 #endif /* macintosh or DOS or _WINDOWS or NEED_BSDREGEX */
