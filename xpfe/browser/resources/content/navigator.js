@@ -1462,6 +1462,16 @@ function applyTheme(themeName)
 
  str.data = themeName.getAttribute("name");
  pref.setComplexValue("general.skins.selectedSkin", Components.interfaces.nsISupportsWString, str);
+
+ // shut down quicklaunch so the next launch will have the new skin
+ var appShell = Components.classes['@mozilla.org/appshell/appShellService;1'].getService();
+ appShell = appShell.QueryInterface(Components.interfaces.nsIAppShellService);
+ try {
+   appShell.nativeAppSupport.isServerMode = false;
+ }
+ catch(ex) {
+ } 
+
  if (promptService) {                                                          
    var dialogTitle = gNavigatorBundle.getString("switchskinstitle");           
    var brandName = gBrandBundle.getString("brandShortName");                   
