@@ -213,7 +213,6 @@ nsSmtpProtocol::nsSmtpProtocol(nsIURI * aURL) : m_responseText("", eOneByte)
 nsSmtpProtocol::~nsSmtpProtocol()
 {
 	// free our local state
-	PR_FREEIF(m_hostName);
 	PR_FREEIF(m_addressCopy);
 	PR_FREEIF(m_verifyAddress);
 	PR_FREEIF(m_dataBuf);
