@@ -152,6 +152,7 @@ pref("browser.windows.loadOnNewWindow", 1);
 pref("browser.link.open_external", 1);
 pref("browser.link.open_newwindow", 2);
 pref("browser.link.open_newwindow.ui", 3); // prefs UI version
+pref("browser.link.open_newwindow.restriction", 0); // values from GlobalWindow
 
 // view source
 pref("view_source.syntax_highlight", true);
