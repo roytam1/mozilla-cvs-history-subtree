@@ -383,7 +383,7 @@ nsUpdateObserver.prototype = {
                            this._pref.getBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE);
       }
       
-      if (updatesAvailable) {
+      if (updatesAvailable && this._sourceEvent == nsIUpdateService.SOURCE_EVENT_BACKGROUND) {
         var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
                             .getService(Components.interfaces.nsIStringBundleService);
         var bundle = sbs.createBundle("chrome://mozapps/locale/update/update.properties");
