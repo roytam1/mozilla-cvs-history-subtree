@@ -500,6 +500,7 @@ private:
                                    nsIFrame*        aContentParent,
                                    nsIFrame*&       aFrame);
 
+#ifdef HTML_FORMS
   nsresult ConstructRadioControlFrame(nsIPresShell*      aPresShell, 
                                       nsPresContext*    aPresContext,
                                       nsIFrame*&         aNewFrame,
@@ -539,6 +540,7 @@ private:
                                   nsFrameItems&            aFrameItems,
                                   const nsStyleDisplay*    aStyleDisplay,
                                   PRBool&                  aFrameHasBeenInitialized);
+#endif
 
   nsresult ConstructTextFrame(nsIPresShell*            aPresShell, 
                               nsPresContext*          aPresContext,
@@ -699,6 +701,7 @@ private:
                             nsIFrame*&       aFrame,
                             nsStyleContext*  aStyleContext);
 
+#ifdef HTML_FORMS
   nsresult AddDummyFrameToSelect(nsPresContext*          aPresContext,
                                  nsIPresShell*            aPresShell,
                                  nsFrameConstructorState& aState,
@@ -713,6 +716,7 @@ private:
                                       nsIContent*               aContainer,
                                       nsIContent*               aChild,
                                       nsIDOMHTMLSelectElement*  aSelectElement);
+#endif
 
   nsIFrame* GetFrameFor(nsIPresShell*   aPresShell,
                         nsPresContext* aPresContext,
@@ -785,6 +789,7 @@ private:
                      nsFrameItems&            aAnonymousFrames);
 
 
+#ifdef HTML_FORMS
   // InitializeSelectFrame puts scrollFrame in aFrameItems if aBuildCombobox is false
   nsresult
   InitializeSelectFrame(nsIPresShell*            aPresShell, 
@@ -797,6 +802,7 @@ private:
                         nsStyleContext*          aStyleContext,
                         PRBool                   aBuildCombobox,
                         nsFrameItems&            aFrameItems);
+#endif
 
   nsresult MaybeRecreateFramesForContent(nsPresContext*  aPresContext,
                                          nsIContent*      aContent);
