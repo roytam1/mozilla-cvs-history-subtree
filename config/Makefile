@@ -55,13 +55,24 @@ endif
 # On linux we need to generake a motif.mk file which has special flags
 # for different motif versions and/or broken libraries.
 #
-# Currently there is only 2 flags:
+# The following flags are currently handleded in the xfe:
 #
-# MOZILLA_XM_2_1_PRINT_SHELL_FLAGS: X Print Shell Extension available
-# starting with X11R6.3 and needed by motif 2.1.
 #
-# MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS: Needed because of currently
-# broken locale support in motif 2.1 when linked with gnu libc2.
+# MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS
+#	Needed because of currently broken locale support when mixing gnu
+#	libc2 with motif (any version).
+#
+#
+# MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS
+#	X Print Shell Extension available starting with X11R6.3 and needed
+#	by motif 2.1.
+#
+#
+# MOZ_XFE_USE_WINNING_FILE_SELECTION
+#   Hacks to the motif file selection code to "fix" it.  Where "fix" 
+#   means "make the motif fsb not suck as hell".  Motif source code
+#   is needed for this hack (it breaks with lesstif)
+#
 #
 # Please direct questions about motif and linux to ramiro@netscape.com.
 #
@@ -71,21 +82,31 @@ export:: motif.mk
 
 motif.mk:
 	@rm -f $@
+	@touch $@
 
-# Check for motif 2.1 which needs the X Print Shell extension (-lXp)
-#
-# Also check for /lib/libc.so.6 (GNU libc2).  If we are using GLIBC2 with
-# Motif 2.1, we need to check for /usr/lib/libBrokenLocale.so.  At this 
-# time locale support on motif 2.1 seems to break with GLIBC2.
+##
+## Test whether -lBrokenLocale is needed.  Locale support is broken
+## when using motif (any version) with gnu libc2.  
+##
+ifeq ($(shell $(DEPTH)/config/glibcversion.sh),2)
+	@echo "MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS = -lBrokenLocale" >> $@
+endif
+
+##
+## Test whether -lXp is needed.   The -lXp (Print Shell Extensions)
+## are needed only with motif 2.1.
+##
 ifeq ($(shell $(DEPTH)/config/xmversion.sh),2.1)
+	@echo "MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS = -lXp" >> $@
+endif
 
-	@echo "MOZILLA_XM_2_1_PRINT_SHELL_FLAGS = -lXp" > $@
-
-	@if test -f /lib/libc.so.6 -a -f /usr/lib/libBrokenLocale.so; then \
-	echo "MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS = -lBrokenLocale" >> $@; \
-	fi
-else
-	@echo "" > $@
+##
+## Test whether we are using "real" motif libraries.  If we are, then
+## we can turn on the file selection hack which only works with motif
+## (not lesstif)
+##
+ifeq ($(shell $(DEPTH)/config/xmversion.sh --is-lesstif),True)
+	@echo "MOZ_XFE_USE_WINNING_FILE_SELECTION = 1" >> $@
 endif
 
 endif

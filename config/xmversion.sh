@@ -18,7 +18,7 @@
 
 ##############################################################################
 ##
-## Name:		xmversion.sh - a fast way to get a motif lib's version
+## Name:		glibcversion.sh - a fast way to get a motif lib's version
 ##
 ## Description:	Print the major and minor version numbers for motif libs on
 ##				the system that executes the script.  Could be tweaked
@@ -32,75 +32,91 @@
 ##
 ##############################################################################
 
-# The string build into the motif libs
-MOTIF_VERSION_STRING="Motif Version"
 
-# Make motif 1.x the default
-MOTIF_DEFAULT_VERSION=1
+##
+## To be done: Handle startup flags:
+##
+##  --is-lesstif:		Prints True/False if using lesstif.
+##  --major-only:		Prints only the major version number.
+##  --minor-only:		Prints only the minor version number.
+##  --patch-only:		Prints only the patch level number.
+##  --include-dir:		Prints the location of the motif headers.
+##  --lib-dir:			Prints the location of the motif libs.
+##
+##  Plus other magic that will be needed as more hacks are added.
+##
 
-# Reasonable defaults for motif lib locations
-MOTIF_LIB_DIR=/usr/lib
-MOTIF_STATIC_LIB=libXm.a
-MOTIF_SHARED_LIB=libXm.so
+TEST_MOTIF_PROG=./test_motif
+TEST_MOTIF_SRC=test_motif.c
+TEST_MOTIF_DIR=
+TEST_MOTIF_FLAGS=
 
-os=`uname`
+rm -f $TEST_MOTIF_PROG
+rm -f $TEST_MOTIF_SRC
 
-case `uname`
-in
-	Linux)
-		case `uname -m`
-		in
-			ppc)
-				MOTIF_LIB_DIR=/usr/local/motif-1.2.4/lib
-				;;
+POSSIBLE_MOTIF_DIRS="\
+/usr/lesstif/include \
+/usr/local/include \
+/usr/X11R6/include \
+/usr/include/Xm \
+"
 
-			i386|i486|i586|i686)
-				MOTIF_LIB_DIR=/usr/X11R6/lib
-				;;
-		esac
-		;;
-
-	SunOS)
-		case `uname -r`
-		in
-			5.3|5.4|5.5.1|5.6)
-				MOTIF_LIB_DIR=/usr/dt/lib
-			;;
-		esac
-		;;
-
-	HP-UX)
-		MOTIF_LIB_DIR=/usr/lib/Motif1.2
-		MOTIF_SHARED_LIB=libXm.sl
-		;;
-
-	AIX)
-		MOTIF_LIB_DIR=/usr/lib
-		MOTIF_SHARED_LIB=libXm.a
-		;;
-
-esac
-
-# Look for the shared one first
-MOTIF_LIB=
-
-if [ -f $MOTIF_LIB_DIR/$MOTIF_SHARED_LIB ]
-then
-	MOTIF_LIB=$MOTIF_LIB_DIR/$MOTIF_SHARED_LIB
-else
-	if [ -f $MOTIF_LIB_DIR/$MOTIF_STATIC_LIB ]
+for d in $POSSIBLE_MOTIF_DIRS
+do
+	if [ -d $d/Xm ]
 	then
-		MOTIF_LIB=$MOTIF_LIB_DIR/$MOTIF_STATIC_LIB
-	else
-		echo $MOTIF_DEFAULT_VERSION
-		exit
+		TEST_MOTIF_DIR=$d
+		break;
 	fi
+	
+done
+
+if [ -z $TEST_MOTIF_DIR ]
+then
+	echo
+	echo "Could not find motif/lesstif headers."
+	echo
+
+	exit
 fi
 
-VERSION=`strings $MOTIF_LIB | grep "Motif Version" | awk '{ print $3;}'`
+TEST_MOTIF_FLAGS=-I$TEST_MOTIF_DIR
 
-MAJOR=`echo $VERSION | awk -F"." '{ print $1; }'`
-MINOR=`echo $VERSION | awk -F"." '{ print $2; }'`
+cat << EOF > test_motif.c
+#include <stdio.h>
+#include <Xm/Xm.h>
 
-echo $MAJOR.$MINOR
+int
+main(int argc,char ** argv)
+{
+	fprintf(stdout,"%d.%d\n",XmVERSION,XmREVISION);
+
+	return 0;
+}
+EOF
+
+if [ ! -f $TEST_MOTIF_SRC ]
+then
+	echo
+	echo "Could not create test program source $TEST_MOTIF_SRC."
+	echo
+
+	exit
+fi
+
+cc $TEST_MOTIF_FLAGS -o $TEST_MOTIF_PROG $TEST_MOTIF_SRC
+
+if [ ! -x $TEST_MOTIF_PROG ]
+then
+	echo
+	echo "Could not create test program $TEST_MOTIF_PROG."
+	echo
+
+	exit
+fi
+
+$TEST_MOTIF_PROG
+
+rm -f $TEST_MOTIF_PROG
+rm -f $TEST_MOTIF_SRC
 
