@@ -303,7 +303,7 @@ pull_layout:
 
 pull_seamonkey: pull_clientmak
 	cd $(MOZ_SRC)\.
-	$(CVSCO) SeaMonkeyAll
+	$(CVSCO) -r XBL_BRUTAL_SHARING_20010807_BRANCH SeaMonkeyAll
 
 pull_clientmak:
     cd $(MOZ_SRC)\.
