@@ -175,22 +175,30 @@ mime_dump_attachments ( nsMsgAttachmentData *attachData )
 
   while ( (tmp) && (tmp->real_name) )
   {
-	  printf("Real Name         : %s\n", tmp->real_name);
+    if ( tmp->real_name )
+        printf("Real Name         : %s\n", tmp->real_name);
 
     if ( tmp->url ) 
     {
       char *spec = nsnull;
 
       tmp->url->GetSpec(&spec);
+      if( spec )
   	  printf("URL               : %s\n", spec);
     }
 
-	  printf("Desired Type      : %s\n", tmp->desired_type);
-    printf("Real Type         : %s\n", tmp->real_type);
-	  printf("Real Encoding     : %s\n", tmp->real_encoding); 
-    printf("Description       : %s\n", tmp->description);
-    printf("Mac Type          : %s\n", tmp->x_mac_type);
-    printf("Mac Creator       : %s\n", tmp->x_mac_creator);
+    if( tmp->desired_type )
+	printf("Desired Type      : %s\n", tmp->desired_type);
+    if( tmp->real_type )
+        printf("Real Type         : %s\n", tmp->real_type);
+    if( tmp->real_encoding )
+	  printf("Real Encoding     : %s\n", tmp->real_encoding);
+    if( tmp->description )
+        printf("Description       : %s\n", tmp->description);
+    if( tmp->x_mac_type )
+        printf("Mac Type          : %s\n", tmp->x_mac_type);
+    if( tmp->x_mac_creator )
+        printf("Mac Creator       : %s\n", tmp->x_mac_creator);
     i++;
     tmp++;
   }
