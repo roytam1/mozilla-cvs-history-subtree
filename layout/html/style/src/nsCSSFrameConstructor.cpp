@@ -805,8 +805,7 @@ nsFrameConstructorState::nsFrameConstructorState(nsIPresContext*        aPresCon
 {
   mPresShell = aPresContext->PresShell();
   mPresShell->GetFrameManager(getter_AddRefs(mFrameManager));
-  nsCOMPtr<nsISupports> container;
-  aPresContext->GetContainer(getter_AddRefs(container));
+  nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
   nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
   if (docShell) 
     docShell->GetLayoutHistoryState(getter_AddRefs(mFrameState));
@@ -1039,7 +1038,8 @@ MoveChildrenTo(nsIPresContext*          aPresContext,
     // anonymous block frame, but oddly they aren't -- need to
     // investigate that...)
     if (aNewParentSC)
-      aPresContext->ReParentStyleContext(aFrameList, aNewParentSC);
+      aPresContext->GetFrameManager()->ReParentStyleContext(aFrameList,
+                                                            aNewParentSC);
 #endif
 
     aFrameList = aFrameList->GetNextSibling();
@@ -1615,7 +1615,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
 nsresult
 nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
                                         nsIPresContext  *aPresContext,
-                                        nsIContent      *aContent, 
+                                        nsIContent      *aContent,
                                         nsIFrame        *&aFrame,
                                         nsStyleContext  *aStyleContext)
 {
@@ -1641,7 +1641,14 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
       return ConstructRadioControlFrame(aPresShell, aPresContext, aFrame, aContent, aStyleContext);
 
     case NS_FORM_INPUT_FILE:
-      return NS_NewFileControlFrame(aPresShell, &aFrame);
+    {
+      nsresult rv = NS_NewFileControlFrame(aPresShell, &aFrame);
+      if (NS_SUCCEEDED(rv)) {
+        // The (block-like) file control frame should have a space manager
+        aFrame->AddStateBits(NS_BLOCK_SPACE_MGR);
+      }
+      return rv;
+    }
 
     case NS_FORM_INPUT_HIDDEN:
       return NS_OK;
@@ -2770,7 +2777,8 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsIPresShell*            aPresShel
   InitAndRestoreFrame(aPresContext, aState, aContent, parentFrame, aStyleContext, nsnull, aNewFrame);
   // if the parent frame was anonymous then reparent the style context
   if (aIsPseudoParent) {
-    aPresContext->ReParentStyleContext(aNewFrame, parentFrame->GetStyleContext());
+    aPresContext->GetFrameManager()->
+      ReParentStyleContext(aNewFrame, parentFrame->GetStyleContext());
   }
 
   // construct additional col frames if the col frame has a span > 1
@@ -3626,10 +3634,9 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 #endif
   {
     nsresult rv;
-    nsCOMPtr<nsISupports> container;
-    if (nsnull != aPresContext) {
-      aPresContext->GetContainer(getter_AddRefs(container));
-      if (nsnull != container) {
+    if (aPresContext) {
+      nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
+      if (container) {
         nsCOMPtr<nsIScrollable> scrollableContainer = do_QueryInterface(container, &rv);
         if (NS_SUCCEEDED(rv) && scrollableContainer) {
           PRInt32 scrolling = -1;
@@ -4449,8 +4456,10 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
                                           nsStyleContext*          aStyleContext,
                                           nsFrameItems&            aFrameItems)
 {
-  // Ignore the tag if it's not HTML content
-  if (!aContent->IsContentOfType(nsIContent::eHTML)) {
+  // Ignore the tag if it's not HTML content and if it doesn't extend (via XBL)
+  // a valid HTML namespace.
+  if (!aContent->IsContentOfType(nsIContent::eHTML) &&
+      aNameSpaceID != kNameSpaceID_XHTML) {
     return NS_OK;
   }
 
@@ -4594,8 +4603,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     
     PRBool allowSubframes = PR_TRUE;
     if (aPresContext) {
-      nsCOMPtr<nsISupports> container;
-      aPresContext->GetContainer(getter_AddRefs(container));
+      nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
       nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
       if (docShell) {
         docShell->GetAllowSubframes(&allowSubframes);
@@ -4613,8 +4621,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     isReplaced = PR_TRUE;
     PRBool allowSubframes = PR_TRUE;
     if (aPresContext) {
-      nsCOMPtr<nsISupports> container;
-      aPresContext->GetContainer(getter_AddRefs(container));
+      nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
       nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
       if (docShell) {
         docShell->GetAllowSubframes(&allowSubframes);
@@ -4641,8 +4648,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
 
     PRBool allowSubframes = PR_TRUE;
     if (aPresContext) {
-      nsCOMPtr<nsISupports> container;
-      aPresContext->GetContainer(getter_AddRefs(container));
+      nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
       nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
       if (docShell) {
         docShell->GetAllowSubframes(&allowSubframes);
@@ -5305,8 +5311,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         // XXX should turning off frames allow XUL iframes?
         PRBool allowSubframes = PR_TRUE;
         if (aPresContext) {
-          nsCOMPtr<nsISupports> container;
-          aPresContext->GetContainer(getter_AddRefs(container));
+          nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
           nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
           if (docShell) {
             docShell->GetAllowSubframes(&allowSubframes);
@@ -11512,7 +11517,8 @@ ReparentFrame(nsIPresContext* aPresContext,
               nsIFrame* aFrame)
 {
   aFrame->SetParent(aNewParentFrame);
-  aPresContext->ReParentStyleContext(aFrame, aParentStyleContext);
+  aPresContext->GetFrameManager()->ReParentStyleContext(aFrame,
+                                                        aParentStyleContext);
 }
 
 // Special routine to handle placing a list of frames into a block

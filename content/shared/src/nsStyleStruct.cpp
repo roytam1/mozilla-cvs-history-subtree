@@ -190,9 +190,9 @@ nsStyleFont::nsStyleFont(const nsStyleFont& aSrc)
 nsStyleFont::nsStyleFont(nsIPresContext* aPresContext)
   : mFlags(NS_STYLE_FONT_DEFAULT)
 {
-  const nsFont* defaultFont;
-  aPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID,
-                               &defaultFont);
+  const nsFont* defaultFont =
+    aPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID);
+
   mFont = *defaultFont;
   mSize = mFont.size = nsStyleFont::ZoomText(aPresContext, mFont.size);
 }
@@ -980,7 +980,7 @@ nsChangeHint nsStyleTableBorder::CalcDifference(const nsStyleTableBorder& aOther
 
 nsStyleColor::nsStyleColor(nsIPresContext* aPresContext)
 {
-  aPresContext->GetDefaultColor(&mColor);
+  mColor = aPresContext->DefaultColor();
 }
 
 nsStyleColor::nsStyleColor(const nsStyleColor& aSource)
@@ -1007,7 +1007,7 @@ nsStyleBackground::nsStyleBackground(nsIPresContext* aPresContext)
     mBackgroundOrigin(NS_STYLE_BG_ORIGIN_PADDING),
     mBackgroundRepeat(NS_STYLE_BG_REPEAT_XY)
 {
-  aPresContext->GetDefaultBackgroundColor(&mBackgroundColor);
+  mBackgroundColor = aPresContext->DefaultBackgroundColor();
 }
 
 nsStyleBackground::nsStyleBackground(const nsStyleBackground& aSource)
@@ -1137,7 +1137,7 @@ nsStyleVisibility::nsStyleVisibility(nsIPresContext* aPresContext)
   else
     mDirection = NS_STYLE_DIRECTION_LTR;
 
-  aPresContext->GetLanguage(getter_AddRefs(mLanguage));
+  mLanguage = aPresContext->GetLanguage();
   mVisible = NS_STYLE_VISIBILITY_VISIBLE;
 }
 
