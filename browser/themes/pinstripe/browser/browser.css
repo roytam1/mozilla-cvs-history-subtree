@@ -47,6 +47,10 @@
 	
 /* ::::: bookmark buttons ::::: */
 
+.bookmark-item[container] {
+  list-style-image: url("chrome://global/skin/tree/folder.png");
+}
+
 toolbarbutton.bookmark-item:hover
 {
   background:url("chrome://browser/skin/bookmark-hover-left.png") no-repeat left center;
@@ -122,7 +126,7 @@ toolbarbutton.bookmark-item {
 
 .bookmark-item > .toolbarbutton-icon {
   margin: 0px;
-  display: none;
+  display: none !important;
  
 }
 
