@@ -25,6 +25,13 @@
         ]]>
         </body>
       </method>
+      <constructor>
+      <![CDATA[
+        // This is a hack to circumvent the template builder, which eats every character
+        // after 'rdf:' and assumes it's part of the property name. 
+        this.setAttribute("image", this.getAttribute("image") + "?size=32");
+      ]]>
+      </constructor>
     </implementation>
   </binding>
   
@@ -33,7 +40,7 @@
       <xul:hbox flex="1">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox pack="start" flex="1">
@@ -50,10 +57,10 @@
   
   <binding id="download-downloading" extends="chrome://mozapps/content/downloads/download.xml#download-base">
     <content>
-      <xul:hbox flex="1">
+      <xul:hbox flex="1" class="downloadContentBox">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox flex="1">
@@ -72,6 +79,105 @@
         </xul:vbox>
       </xul:hbox>
     </content>
+    <implementation>
+    
+      <!-- ANIMATE: Type Icon -->    
+      <property name="_ati_kTimeout" onget="return 50;"/>
+      <property name="_ati_kUpperBounds" onget="return 90;"/>
+      <property name="_ati_kLowerBounds" onget="return 30;"/>
+      <property name="_ati_kIncrement" onget="return 5;"/>
+      <field name="_atiStep">0</field>
+      <field name="_atiIsIncrementing">true</field>
+      <field name="_atiInterval">-1</field>
+      
+      <method name="_atiTimerCallback">
+        <parameter name="aDownload"/>
+        <parameter name="aIcon"/>
+        <body>
+        <![CDATA[
+          if (aDownload.getAttribute("state") != "0") {
+            clearInterval(aDownload._atiInterval)
+            return;
+          }
+            
+          if (aDownload._atiIsIncrementing)
+            aDownload._atiStep += aDownload._ati_kIncrement;
+          else
+            aDownload._atiStep -= aDownload._ati_kIncrement;
+
+          if (aDownload._atiStep == aDownload._ati_kUpperBounds) 
+            aDownload._atiIsIncrementing = false;
+          else if (aDownload._atiStep  == aDownload._ati_kLowerBounds)
+            aDownload._atiIsIncrementing = true;
+
+          aIcon.setAttribute("style", "-moz-opacity: 0." + aDownload._atiStep );
+        ]]>
+        </body>
+      </method>
+      <method name="_animateIcon">
+        <body>
+        <![CDATA[
+          this._atiStep = this._ati_kLowerBounds;
+          this._atiIsIncrementing = true;
+
+          var icon = document.getAnonymousElementByAttribute(this, "class", "downloadTypeIcon");
+          this._atiInterval = setInterval(this._atiTimerCallback, this._ati_kTimeout, this, icon);
+        ]]>
+        </body>
+      </method>
+      
+      <!-- ANIMATE: Download -->
+      <property name="_adl_kTimeout" onget="return 50;"/>
+      <property name="_adl_kUpperBounds" onget="return 1.00;"/>
+      <property name="_adl_kLowerBounds" onget="return 0.00;"/>
+      <property name="_adl_kIncrement" onget="return 0.05;"/>
+      <field name="_adlStep">0</field>
+      
+      <method name="_adlTimerCallback">
+        <parameter name="aDownload"/>
+        <parameter name="aContent"/>
+        <body>
+        <![CDATA[
+          if (aDownload.getAttribute("state") != "0" || 
+              aDownload._adlStep > aDownload._adl_kUpperBounds) {
+            this.fireEvent('animated');
+            return;
+          }
+            
+          aDownload._adlStep += aDownload._adl_kIncrement;
+          aContent.setAttribute("style", "-moz-opacity: " + aDownload._adlStep + "!important;");
+          
+          setTimeout(aDownload._adlTimerCallback, aDownload._adl_kTimeout, aDownload, aContent);
+        ]]>
+        </body>
+      </method>
+      <method name="_animateDownload">
+        <body>
+        <![CDATA[
+          this._adlStep = this._adl_kLowerBounds;
+
+          var box = document.getAnonymousElementByAttribute(this, "class", "downloadContentBox");
+          setTimeout(this._adlTimerCallback, this._adl_kTimeout, this, box);
+        ]]>
+        </body>
+      </method>
+      
+      <method name="_shouldDownloadAnimate">
+        <body>
+        <![CDATA[
+          return this.getAttribute("animated") != "true";
+        ]]>
+        </body>
+      </method>
+      
+      <constructor>
+      <![CDATA[
+        // this._animateIcon();
+        if (this._shouldDownloadAnimate())
+          this._animateDownload();
+      ]]>
+      </constructor>
+    </implementation>
   </binding>
   
   <binding id="download-paused" extends="chrome://mozapps/content/downloads/download.xml#download-base">
@@ -79,7 +185,7 @@
       <xul:hbox flex="1">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox flex="1">
@@ -105,7 +211,7 @@
       <xul:hbox flex="1">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox pack="start" flex="1">
@@ -125,7 +231,7 @@
       <xul:hbox flex="1">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox pack="start" flex="1">
@@ -145,7 +251,7 @@
       <xul:hbox flex="1">
 #ifdef XP_WIN
         <xul:vbox pack="start">
-          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+          <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
         </xul:vbox>
 #endif
         <xul:vbox pack="start" flex="1">

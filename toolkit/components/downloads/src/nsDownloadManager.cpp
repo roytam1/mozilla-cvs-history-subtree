@@ -130,7 +130,7 @@ PRInt32 PR_CALLBACK nsDownloadManager::CancelAllDownloads(nsHashKey* aKey, void*
   
   DownloadState state;
   NS_STATIC_CAST(nsDownload*, aData)->GetDownloadState(&state);
-  if (state == NOTSTARTED || state == DOWNLOADING)  
+  if (state == NOTSTARTED || state == DOWNLOADING || state == PAUSED)  
     manager->CancelDownload(key->GetString());
   else
     NS_STATIC_CAST(nsDownloadManager*, aClosure)->DownloadEnded(key->GetString(), nsnull);

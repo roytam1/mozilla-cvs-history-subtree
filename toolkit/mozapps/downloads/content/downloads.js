@@ -12,6 +12,8 @@ function onDownloadCancel(aEvent)
 function onDownloadPause(aEvent)
 {
   gDownloadManager.pauseDownload(aEvent.target.id);
+  
+  aEvent.target.setAttribute("status", aEvent.target.getAttribute("status-internal"));
 }
 
 function onDownloadResume(aEvent)

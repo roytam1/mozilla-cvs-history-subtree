@@ -32,6 +32,15 @@ download[state="0"], download[state="-1"], download[state="4"] {
   background-image: none;
 }
 
+.downloadContentBox {
+  -moz-opacity: 0.0;
+}
+
+
+.downloadTypeIcon {
+  margin-right: 10px;
+}
+
 #downloadHistoryView > treechildren::-moz-tree-image(Name) {
   margin-right: 2px;
 }
