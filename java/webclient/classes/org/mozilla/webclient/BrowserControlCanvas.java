@@ -98,8 +98,11 @@ private Rectangle		windowRelativeBounds;
 //
 
 /**
- * Initialize the BrowserControlMozillaShim. For now,
- * this initializes the Mozilla registry.
+
+ * just initialize all the ivars.  the initialize() method must be called
+ * before an instance of this class can be used.  Instances are created
+ * in BrowserControlFactory.newBrowserControl().
+
  */
 protected BrowserControlCanvas () 
 {
