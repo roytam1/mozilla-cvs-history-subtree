@@ -75,9 +75,10 @@ struct nsIStreamListener : public nsISupports
      * 
      * @param pIStream  The input stream containing the data.  This stream can
      * be either a blocking or non-blocking stream.
+     * @param length    The amount of data that was just pushed into the stream.
      * @return The return value is currently ignored.
      */
-    NS_IMETHOD OnDataAvailable(nsIInputStream *pIStream)   = 0;
+    NS_IMETHOD OnDataAvailable(nsIInputStream *pIStream, PRInt32 length)   = 0;
 
     /**
      * Notify the client that the URL has finished loading.  This method is 

@@ -236,7 +236,7 @@ PC_RegisterDataInterpretFunc(char *module, PCDataInterpretFunc *func)
  * From ns/cmd/winfe/fegui.cpp
  *---------------------------------------------------------------------------
  */
-
+#ifdef XP_PC
 /*
 //
 // Open a file with the given name
@@ -248,6 +248,19 @@ PUBLIC XP_File
 XP_FileOpen(const char * name, XP_FileType type, const XP_FilePerm perm)
 {
     MOZ_FUNCTION_STUB;
+
+    if (type == xpURL) {
+        XP_File fp;
+        char* newName = WH_FileName(name, type);
+
+        if (!newName) return NULL;
+
+    	fp = fopen(newName, (char *) perm);
+        XP_FREE(newName);
+
+        return fp;
+    }
+
     return NULL;
 }
 
@@ -273,17 +286,70 @@ XP_FileRemove(const char * name, XP_FileType type)
 PUBLIC int 
 XP_Stat(const char * name, XP_StatStruct * info, XP_FileType type)
 {
+    int result = -1;
     MOZ_FUNCTION_STUB;
-    return -1;
+
+    if (type == xpURL) {
+        char *newName = WH_FileName(name, type);
+    	
+        if (!newName) return -1;
+        result = stat( newName, info );
+        XP_FREE(newName);
+    }
+    return result;
 }
 
 /*
 // The caller is responsible for XP_FREE()ing the return string
 */
 PUBLIC char *
-WH_FileName (const char *name, XP_FileType type)
+WH_FileName (const char *NetName, XP_FileType type)
 {
     MOZ_FUNCTION_STUB;
+
+    if (type == xpURL) {
+        /*
+         * This is the body of XP_NetToDosFileName(...) which is implemented 
+         * for Windows only in fegui.cpp
+         */
+        BOOL bChopSlash = FALSE;
+        char *p, *newName;
+
+        if(!NetName)
+            return NULL;
+        
+        //  If the name is only '/' or begins '//' keep the
+        //    whole name else strip the leading '/'
+
+        if(NetName[0] == '/')
+            bChopSlash = TRUE;
+
+        // save just / as a path
+        if(NetName[0] == '/' && NetName[1] == '\0')
+            bChopSlash = FALSE;
+
+        // spanky Win9X path name
+        if(NetName[0] == '/' && NetName[1] == '/')
+            bChopSlash = FALSE;
+
+        if(bChopSlash)
+            newName = XP_STRDUP(&(NetName[1]));
+        else
+            newName = XP_STRDUP(NetName);
+
+        if(!newName)
+            return NULL;
+
+        if( newName[1] == '|' )
+            newName[1] = ':';
+
+        for(p = newName; *p; p++){
+            if( *p == '/' )
+                *p = '\\';
+        }
+        return(newName);
+    }
+
     return NULL;
 }
 
@@ -324,7 +390,7 @@ XP_ReadDir(XP_Dir dir)
 }
 #endif
 
-
+#endif /* XP_PC */
 
 PUBLIC void *
 FE_AboutData (const char *which,

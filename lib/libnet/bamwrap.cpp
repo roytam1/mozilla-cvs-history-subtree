@@ -172,38 +172,6 @@ void free_stub_context(MWContext *window_id)
 /* End of MWContext Evil!!!                                                 */
 /****************************************************************************/
 
-#if 0 
-
-typedef struct NetlibEvent_OnDataAvailable {
-    PREvent              ce;
-    stream_connection_t *pStreamInfo;
-} NetlibEvent_OnDataAvailable;
-
-PR_STATIC_CALLBACK(void)
-bam_HandleEvent_OnDataAvailable(NetlibEvent_OnDataAvailable* e)
-{
-    pStreamInfo->pConsumer->OnDataAvailable(pStreamInfo->pNetStream);
-}
-
-PRIVATE void
-bam_OnDataAvailable(stream_connection_t *stream_info)
-{
-    NetlibEvent_OnDataAvailable* event;
-
-    event = PR_NEW(NetlibEvent_OnDataAvailable);
-    if (event == NULL) goto done;
-    PL_InitEvent(&event->ce, stream_info,
-                 (PLHandleEventProc)bam_HandleEvent_OnDataAvailable, 
-                 (PLDestroyEventProc)bam_DestroyEvent_GenericEvent);
-    event->pStreamInfo = stream_info;
-    PL_PostEvent(netlib_event_queue, &event->ce);
-    
-  done:
-}
-
-
-#endif /* 0 */
-
 
 /*
  * Define a NET_StreamClass which pushes its data into an nsIStream
@@ -271,7 +239,7 @@ int stub_put_block(NET_StreamClass *stream, const char *buffer, int32 length)
 
     /* XXX: check return value to abort connection if necessary */
     if (pConn->pConsumer) {
-        pConn->pConsumer->OnDataAvailable(pConn->pNetStream);
+        pConn->pConsumer->OnDataAvailable(pConn->pNetStream, bytesWritten);
     }
 
     PR_ASSERT(bytesWritten == length);

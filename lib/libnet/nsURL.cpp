@@ -23,6 +23,14 @@
 
 #include <stdio.h>/* XXX */
 #include "plstr.h"
+#include "prprf.h"  /* PR_snprintf(...) */
+#include "prmem.h"  /* PR_Malloc(...) / PR_Free(...) */
+
+#ifdef XP_PC
+#include <windows.h>
+#endif
+
+char *mangleResourceIntoFileURL(const char* aResourceFileName);
 
 class URLImpl : public nsIURL {
 public:
@@ -295,38 +303,43 @@ nsIInputStream* URLImpl::Open(PRInt32* aErrorCode)
 {
   nsresult rv;
   nsIInputStream* in = nsnull;
+  nsINetService *inet;
 
-  if (PL_strcmp(mProtocol, "file") == 0) {
-    rv = NS_OpenFile(&in, mFile);
-  } else if (PL_strcmp(mProtocol, "resource") == 0) {
-    rv = NS_OpenResource(&in, mFile);
-  } else {
-    nsINetService *inet;
+  // XXX: Rewrite the resource: URL into a file: URL
+  if (PL_strcmp(mProtocol, "resource") == 0) {
+    char* fileName;
 
-    rv = NS_NewINetService(&inet, nsnull);
-    if (NS_OK == rv) {
-      rv = inet->OpenBlockingStream(this, NULL, &in);
-    }
+    fileName = mangleResourceIntoFileURL(mFile);
+    Set(fileName);
+    PR_Free(fileName);
+  } 
+
+  rv = NS_NewINetService(&inet, nsnull);
+  if (NS_OK == rv) {
+    rv = inet->OpenBlockingStream(this, NULL, &in);
   }
+
   *aErrorCode = rv;
   return in;
 }
 
 nsresult URLImpl::Open(nsIStreamListener *aListener)
 {
+  nsINetService *inet;
   nsresult rv;
 
-  if (PL_strcmp(mProtocol, "file") == 0) {
-      rv = NS_FALSE; // XXX: Async file not supported yet...
-  } else if (PL_strcmp(mProtocol, "resource") == 0) {
-      rv = NS_FALSE; // XXX: Asunc resource: not supported yet...
-  } else {
-    nsINetService *inet;
+  // XXX: Rewrite the resource: URL into a file: URL
+  if (PL_strcmp(mProtocol, "resource") == 0) {
+    char *fileName;
 
-    rv = NS_NewINetService(&inet, nsnull);
-    if (NS_OK == rv) {
-      rv = inet->OpenStream(this, aListener);
-    }
+    fileName = mangleResourceIntoFileURL(mFile);
+    Set(fileName);
+    PR_Free(fileName);
+  } 
+
+  rv = NS_NewINetService(&inet, nsnull);
+  if (NS_OK == rv) {
+    rv = inet->OpenStream(this, aListener);
   }
   return rv;
 }
@@ -371,4 +384,55 @@ NS_NET nsresult NS_MakeAbsoluteURL(nsIURL* aURL,
     url.ToString(aResult);
   }
   return NS_OK;
+}
+
+char *mangleResourceIntoFileURL(const char* aResourceFileName) 
+{
+  // XXX For now, resources are not in jar files 
+  // Find base path name to the resource file
+  char* resourceBase;
+  char* cp;
+
+#ifdef XP_PC
+  // XXX For now, all resources are relative to the .exe file
+  resourceBase = (char *)PR_Malloc(2000);;
+  DWORD mfnLen = GetModuleFileName(NULL, resourceBase, 2000);
+  // Truncate the executable name from the rest of the path...
+  cp = strrchr(resourceBase, '\\');
+  if (nsnull != cp) {
+    *cp = '\0';
+  }
+  // Change the first ':' into a '|'
+  cp = strchr(resourceBase, ':');
+  if (nsnull != cp) {
+      *cp = '|';
+  }
+#endif
+#ifdef XP_UNIX
+  //  FIX ME: write me!;
+#endif
+
+  // Join base path to resource name
+  if (aResourceFileName[0] == '/') {
+    aResourceFileName++;
+  }
+  PRInt32 baseLen = strlen(resourceBase);
+  PRInt32 resLen = strlen(aResourceFileName);
+  PRInt32 totalLen = 8 + baseLen + 1 + resLen + 1;
+  char* fileName = (char *)PR_Malloc(totalLen);
+  PR_snprintf(fileName, totalLen, "file:///%s/%s", resourceBase, aResourceFileName);
+
+#ifdef XP_PC
+  // Change any backslashes into foreward slashes...
+  while ((cp = strchr(fileName, '\\')) != 0) {
+    *cp = '/';
+    cp++;
+  }
+#endif
+
+#ifdef XP_PC
+  PR_Free(resourceBase);
+#endif
+
+  return fileName;
 }
