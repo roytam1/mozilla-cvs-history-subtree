@@ -19,6 +19,10 @@
 #include "progress.h"
 #include "nsProgressManager.h"
 
+#ifdef XP_MAC
+#pragma export on
+#endif
+
 void
 PM_EnsureProgressManager(MWContext* context)
 {
@@ -66,3 +70,8 @@ PM_StopBinding(MWContext* context, const URL_Struct* url, PRInt32 status, const 
         context->progressManager->OnStopBinding(url, status, message);
     }
 }
+
+#ifdef XP_MAC
+#pragma export off
+#endif
+
