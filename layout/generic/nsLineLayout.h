@@ -62,7 +62,7 @@ public:
   nsLineLayout(nsPresContext* aPresContext,
                nsSpaceManager* aSpaceManager,
                const nsHTMLReflowState* aOuterReflowState,
-               PRBool aComputeMaxElementWidth);
+               PRBool aIntrinsicWidthPass);
   ~nsLineLayout();
 
   class ArenaDeque : public nsDeque
@@ -294,7 +294,7 @@ protected:
   nsBlockReflowState* mBlockRS;/* XXX hack! */
   nsCompatibility mCompatMode;
   nscoord mMinLineHeight;
-  PRPackedBool mComputeMaxElementWidth;
+  PRPackedBool mIntrinsicWidthPass;
   PRUint8 mTextAlign;
 
   PRUint8 mPlacedFloats;

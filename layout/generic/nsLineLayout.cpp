@@ -150,16 +150,18 @@ MOZ_DECL_CTOR_COUNTER(nsLineLayout)
 nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
                            nsSpaceManager* aSpaceManager,
                            const nsHTMLReflowState* aOuterReflowState,
-                           PRBool aComputeMaxElementWidth)
+                           PRBool aIntrinsicWidthPass)
   : mPresContext(aPresContext),
     mSpaceManager(aSpaceManager),
     mBlockReflowState(aOuterReflowState),
     mBlockRS(nsnull),/* XXX temporary */
     mMinLineHeight(0),
-    mComputeMaxElementWidth(aComputeMaxElementWidth),
+    mIntrinsicWidthPass(aIntrinsicWidthPass),
     mTextIndent(0),
     mWordFrames(0)
 {
+  NS_ASSERTION(!aSpaceManager == aIntrinsicWidthPass,
+    "space manager should be present iff not doing intrinsic widths");
   MOZ_COUNT_CTOR(nsLineLayout);
 
   // Stash away some style data that we need
@@ -971,19 +973,17 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // parents border/padding is <b>inside</b> the parent
   // frame. Therefore we have to subtract out the parents
   // border+padding before translating.
-  nsHTMLReflowMetrics metrics(mComputeMaxElementWidth);
+  nsHTMLReflowMetrics metrics;
 #ifdef DEBUG
   metrics.width = nscoord(0xdeadbeef);
   metrics.height = nscoord(0xdeadbeef);
   metrics.ascent = nscoord(0xdeadbeef);
   metrics.descent = nscoord(0xdeadbeef);
-  if (mComputeMaxElementWidth) {
-    metrics.mMaxElementWidth = nscoord(0xdeadbeef);
-  }
 #endif
   nscoord tx = x - psd->mReflowState->mComputedBorderPadding.left;
   nscoord ty = y - psd->mReflowState->mComputedBorderPadding.top;
-  mSpaceManager->Translate(tx, ty);
+  if (!mIntrinsicWidthPass)
+    mSpaceManager->Translate(tx, ty);
 
 #ifdef IBMBIDI
   PRInt32 start, end;
@@ -1064,7 +1064,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
     }
   }
 
-  mSpaceManager->Translate(-tx, -ty);
+  if (!mIntrinsicWidthPass)
+    mSpaceManager->Translate(-tx, -ty);
 
   NS_ASSERTION(metrics.width>=0, "bad width");
   NS_ASSERTION(metrics.height>=0,"bad height");
@@ -1080,24 +1081,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsFrame::ListTag(stdout, aFrame);
       printf(" metrics=%d,%d!\n", metrics.width, metrics.height);
     }
-    if (mComputeMaxElementWidth &&
-        (nscoord(0xdeadbeef) == metrics.mMaxElementWidth)) {
-      printf("nsLineLayout: ");
-      nsFrame::ListTag(stdout, aFrame);
-      printf(" didn't set max-element-width!\n");
-    }
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-    // Note: there are common reflow situations where this *correctly*
-    // occurs; so only enable this debug noise when you really need to
-    // analyze in detail.
-    if (mComputeMaxElementWidth &&
-        (metrics.mMaxElementWidth > metrics.width)) {
-      printf("nsLineLayout: ");
-      nsFrame::ListTag(stdout, aFrame);
-      printf(": WARNING: maxElementWidth=%d > metrics=%d\n",
-             metrics.mMaxElementWidth, metrics.width);
-    }
-#endif
     if ((metrics.width == nscoord(0xdeadbeef)) ||
         (metrics.height == nscoord(0xdeadbeef)) ||
         (metrics.ascent == nscoord(0xdeadbeef)) ||
@@ -1106,20 +1089,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsFrame::ListTag(stdout, aFrame);
       printf(" didn't set whad %d,%d,%d,%d!\n", metrics.width, metrics.height,
              metrics.ascent, metrics.descent);
-    }
-  }
-#endif
-#ifdef DEBUG
-  if (nsBlockFrame::gNoisyMaxElementWidth) {
-    nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-    if (!NS_INLINE_IS_BREAK_BEFORE(aReflowStatus)) {
-      if (mComputeMaxElementWidth) {
-        printf("  ");
-        nsFrame::ListTag(stdout, aFrame);
-        printf(": maxElementWidth=%d wh=%d,%d,\n",
-               metrics.mMaxElementWidth,
-               metrics.width, metrics.height);
-      }
     }
   }
 #endif
@@ -1133,9 +1102,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   pfd->mBounds.width = metrics.width;
   pfd->mBounds.height = metrics.height;
-  if (mComputeMaxElementWidth) {
-    pfd->mMaxElementWidth = metrics.mMaxElementWidth;
-  }
 
   // Size the frame, but |RelativePositionFrames| will size the view.
   aFrame->SetSize(nsSize(metrics.width, metrics.height));
@@ -1514,9 +1480,6 @@ nsLineLayout::AddBulletFrame(nsIFrame* aFrame,
     // Note: y value will be updated during vertical alignment
     pfd->mBounds = aFrame->GetRect();
     pfd->mCombinedArea = aMetrics.mOverflowArea;
-    if (mComputeMaxElementWidth) {
-      pfd->mMaxElementWidth = aMetrics.width;
-    }
   }
   return rv;
 }

@@ -600,7 +600,8 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
           break;
       }
 
-      nsLineLayout ll(GetPresContext(), &sm, &iro->rs, PR_TRUE);
+      nsLineLayout ll(GetPresContext(), nsnull /*space manager*/,
+                      &iro->rs, PR_TRUE);
       ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
       ll.BeginLineReflow(0, 0, NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
                          PR_FALSE, PR_FALSE);
