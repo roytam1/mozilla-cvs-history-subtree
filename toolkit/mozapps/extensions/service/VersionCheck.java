@@ -56,17 +56,27 @@ public class VersionCheck
    }
    */
 
-  protected UpdateItem getNewestExtension(UpdateItem aInstalledItem, 
-                                          String aTargetApp, 
-                                          String aTargetAppVersion)
+  public UpdateItemSet getExtensionUpdates(UpdateItem aInstalledItem, 
+                                           String aTargetApp, 
+                                           String aTargetAppVersion)
+  {
+    UpdateItemSet set = new UpdateItemSet();
+    set.currentItem = this.getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, false);
+    set.newestItem  = this.getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, true);
+    return set;    
+  }
+    
+  public UpdateItem getExtensionUpdates(UpdateItem aInstalledItem, 
+                                        String aTargetApp, 
+                                        String aTargetAppVersion,
+                                        boolean aNewest)
   {
     UpdateItem remoteItem = new UpdateItem();
 
-    String installedVersion = aInstalledItem.getVersion();
-    int extensionVersionParts = getPartCount(installedVersion);
+    int installedVersionParts = getPartCount(aInstalledItem.getVersion());
     int targetAppVersionParts = getPartCount(aTargetAppVersion);
 
-    int extensionVersion = parseVersion(installedVersion, extensionVersionParts);
+    int installedVersion = parseVersion(aInstalledItem.getVersion(), installedVersionParts);
     int targetAppVersion = parseVersion(aTargetAppVersion, targetAppVersionParts);
 
     Connection c;
@@ -78,14 +88,14 @@ public class VersionCheck
       sMain = c.createStatement();
   
       // We need to find all rows matching aInstalledItem.id, and filter like so:
-      // 1) version > extensionVersion
+      // 1) version > installedVersion
       // 2) targetapp == aTargetApp
       // 3) mintargetappversion <= targetAppVersion <= maxtargetappversion
       String sqlMain = "SELECT * FROM t_main WHERE GUID = '" + aInstalledItem.getId() + "'";
       boolean temp = sMain.execute(sqlMain);
       rsMain = sMain.getResultSet();
       
-      int newestExtensionVersion = extensionVersion;
+      int newestRemoteVersion = installedVersion;
       while (rsMain.next()) 
       {
         String sqlVersion = "SELECT * FROM t_version WHERE ID = '" + rsMain.getInt("ID") + "'";
@@ -107,13 +117,28 @@ public class VersionCheck
             int minTargetAppVersion = parseVersion(rsVersion.getString("MinAppVer"), targetAppVersionParts);
             int maxTargetAppVersion = parseVersion(rsVersion.getString("MaxAppVer"), targetAppVersionParts);
         
-            int version = parseVersion(rsVersion.getString("Version"), extensionVersionParts);
-            if (version > extensionVersion && 
-                version > newestExtensionVersion &&
-                minTargetAppVersion <= targetAppVersion && 
-                targetAppVersion < maxTargetAppVersion) 
+            int currentRemoteVersion = parseVersion(rsVersion.getString("Version"), installedVersionParts);
+
+            boolean suitable = false;
+            if (aNewest) 
             {
-              newestExtensionVersion = version;
+              // If we're looking for the _newest_ version only, check to see if it's really newer
+              suitable = currentRemoteVersion > installedVersion && 
+                         currentRemoteVersion > newestRemoteVersion &&
+                         minTargetAppVersion <= targetAppVersion && 
+                         targetAppVersion < maxTargetAppVersion;
+              newestRemoteVersion = currentRemoteVersion;
+            }
+            else 
+            {
+              // ... otherwise, if the version exactly matches...
+              suitable = currentRemoteVersion == installedVersion && 
+                         minTargetAppVersion <= targetAppVersion &&
+                         targetAppVersion < maxTargetAppVersion;
+            }
+            
+            if (suitable) 
+            {
               remoteItem.setRow(rsMain.getInt("ID"));
               remoteItem.setId(rsMain.getString("GUID"));
               remoteItem.setName(rsMain.getString("Name"));
