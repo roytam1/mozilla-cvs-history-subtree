@@ -241,25 +241,26 @@ js_IsAboutToBeFinalized(JSContext *cx, void *thing)
 
 typedef void (*GCFinalizeOp)(JSContext *cx, JSGCThing *thing);
 
+#ifndef DEBUG
+# define js_FinalizeDouble       NULL
+#endif
+
+#if !JS_HAS_XML_SUPPORT
+# define js_FinalizeXMLNamespace NULL
+# define js_FinalizeXMLQName     NULL
+# define js_FinalizeXML          NULL
+#endif
+
 static GCFinalizeOp gc_finalizers[GCX_NTYPES] = {
-    (GCFinalizeOp) js_FinalizeObject,
-    (GCFinalizeOp) js_FinalizeString,
-#ifdef DEBUG
-    (GCFinalizeOp) js_FinalizeDouble,
-#else
-    NULL,
-#endif
-    (GCFinalizeOp) js_FinalizeString,
-#if JS_HAS_XML_SUPPORT
-    (GCFinalizeOp) js_FinalizeXMLNamespace,
-    (GCFinalizeOp) js_FinalizeXMLQName,
-    (GCFinalizeOp) js_FinalizeXML,
-#else
-    NULL,
-    NULL,
-    NULL,
-#endif
-    NULL,
+    (GCFinalizeOp) js_FinalizeObject,           /* GCX_OBJECT */
+    (GCFinalizeOp) js_FinalizeString,           /* GCX_STRING */
+    (GCFinalizeOp) js_FinalizeDouble,           /* GCX_DOUBLE */
+    (GCFinalizeOp) js_FinalizeString,           /* GCX_MUTABLE_STRING */
+    NULL,                                       /* GCX_PRIVATE */
+    (GCFinalizeOp) js_FinalizeXMLNamespace,     /* GCX_NAMESPACE */
+    (GCFinalizeOp) js_FinalizeXMLQName,         /* GCX_QNAME */
+    (GCFinalizeOp) js_FinalizeXML,              /* GCX_XML */
+    NULL,                                       /* GCX_EXTERNAL_STRING */
     NULL,
     NULL,
     NULL,
@@ -277,10 +278,10 @@ static const char *gc_typenames[GCX_NTYPES] = {
     "newborn string",
     "newborn double",
     "newborn mutable string",
+    "newborn private",
     "newborn Namespace",
     "newborn QName",
     "newborn XML",
-    newborn_external_string,
     newborn_external_string,
     newborn_external_string,
     newborn_external_string,
@@ -353,11 +354,14 @@ js_DumpGCStats(JSRuntime *rt, FILE *fp)
 
 #define UL(x)       ((unsigned long)(x))
 #define ULSTAT(x)   UL(rt->gcStats.x)
-    fprintf(fp, "  bytes currently allocated: %lu\n", UL(rt->gcBytes));
+    fprintf(fp, "     public bytes allocated: %lu\n", UL(rt->gcBytes));
+    fprintf(fp, "    private bytes allocated: %lu\n", UL(rt->gcPrivateBytes));
     fprintf(fp, "             alloc attempts: %lu\n", ULSTAT(alloc));
     for (i = 0; i < GC_NUM_FREELISTS; i++) {
-        fprintf(fp, "       GC freelist %u length: %lu\n", i, ULSTAT(freelen));
-        fprintf(fp, " recycles via GC freelist %u: %lu\n", i, ULSTAT(recycle));
+        fprintf(fp, "       GC freelist %u length: %lu\n",
+                i, ULSTAT(freelen[i]));
+        fprintf(fp, " recycles via GC freelist %u: %lu\n",
+                i, ULSTAT(recycle[i]));
     }
     fprintf(fp, "allocation retries after GC: %lu\n", ULSTAT(retry));
     fprintf(fp, "        allocation failures: %lu\n", ULSTAT(fail));
@@ -548,6 +552,7 @@ js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
     JSGCThing *thing, **flp;
     uint8 *flagp;
     JSLocalRootStack *lrs;
+    uint32 *bytesptr;
 
 #ifdef TOO_MUCH_GC
     js_GC(cx, GC_KEEP_ATOMS);
@@ -658,9 +663,12 @@ retry:
         cx->newborn[flags & GCF_TYPEMASK] = thing;
     }
 
-    /* We can't fail now, so update flags and rt->gcBytes. */
+    /* We can't fail now, so update flags and rt->gc{,Private}Bytes. */
     *flagp = (uint8)flags;
-    rt->gcBytes += nbytes + nflags;
+    bytesptr = ((flags & GCF_TYPEMASK) == GCX_PRIVATE)
+               ? &rt->gcPrivateBytes
+               : &rt->gcBytes;
+    *bytesptr += nbytes + nflags;
 
     /*
      * Clear thing before unlocking in case a GC run is about to scan it,
@@ -1475,6 +1483,7 @@ js_GC(JSContext *cx, uintN gcflags)
     uint8 flags, *flagp, *split;
     JSGCThing *thing, *limit, **flp, **oflp;
     GCFinalizeOp finalizer;
+    uint32 *bytesptr;
     JSBool all_clear;
 #ifdef JS_THREADSAFE
     jsword currentThread;
@@ -1737,9 +1746,13 @@ restart:
 
     /*
      * Sweep phase.
+     *
      * Finalize as we sweep, outside of rt->gcLock, but with rt->gcRunning set
      * so that any attempt to allocate a GC-thing from a finalizer will fail,
      * rather than nest badly and leave the unmarked newborn to be swept.
+     *
+     * Finalize smaller objects before larger, to guarantee finalization of
+     * small GC-allocated obj->slots after obj.  See FreeSlots in jsobj.c.
      */
     js_SweepAtomState(&rt->atomState);
     js_SweepScopeProperties(rt);
@@ -1774,8 +1787,11 @@ restart:
                     /* Set flags to GCF_FINAL, signifying that thing is free. */
                     *flagp = GCF_FINAL;
 
-                    JS_ASSERT(rt->gcBytes >= sizeof(JSGCThing) + sizeof(uint8));
-                    rt->gcBytes -= sizeof(JSGCThing) + sizeof(uint8);
+                    bytesptr = (type == GCX_PRIVATE)
+                               ? &rt->gcPrivateBytes
+                               : &rt->gcBytes;
+                    JS_ASSERT(*bytesptr >= nbytes + nflags);
+                    *bytesptr -= nbytes + nflags;
                 }
                 flagp += nflags;
                 if (JS_UPTRDIFF(flagp, split) < nflags)
@@ -1843,7 +1859,8 @@ restart:
 #ifdef DEBUG_brendan
   { extern void DumpSrcNoteSizeHist();
     DumpSrcNoteSizeHist();
-    printf("GC HEAP SIZE %lu\n", (unsigned long)rt->gcBytes);
+    printf("GC HEAP SIZE %lu\n",
+           (unsigned long)(rt->gcBytes + rt->gcPrivateBytes));
   }
 #endif
 

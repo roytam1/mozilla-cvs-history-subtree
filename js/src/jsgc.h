@@ -54,10 +54,11 @@ JS_BEGIN_EXTERN_C
 #define GCX_DOUBLE              2               /* jsdouble */
 #define GCX_MUTABLE_STRING      3               /* JSString that's mutable --
                                                    single-threaded only! */
-#define GCX_NAMESPACE           4               /* JSXMLNamespace */
-#define GCX_QNAME               5               /* JSXMLQName */
-#define GCX_XML                 6               /* JSXML */
-#define GCX_EXTERNAL_STRING     7               /* JSString w/ external chars */
+#define GCX_PRIVATE             4               /* private (unscanned) data */
+#define GCX_NAMESPACE           5               /* JSXMLNamespace */
+#define GCX_QNAME               6               /* JSXMLQName */
+#define GCX_XML                 7               /* JSXML */
+#define GCX_EXTERNAL_STRING     8               /* JSString w/ external chars */
 
 #define GCX_NTYPES_LOG2         4               /* type index bits */
 #define GCX_NTYPES              JS_BIT(GCX_NTYPES_LOG2)

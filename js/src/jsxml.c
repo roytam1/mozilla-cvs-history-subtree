@@ -123,10 +123,8 @@ const char js_QName_str[]         = "QName";
 const char js_XML_str[]           = "XML";
 const char js_XMLList_str[]       = "XMLList";
 const char js_localName_str[]     = "localName";
-const char js_object_str[]        = "object";
 const char js_xml_parent_str[]    = "parent";
 const char js_prefix_str[]        = "prefix";
-const char js_private_str[]       = "private";
 const char js_toXMLString_str[]   = "toXMLString";
 const char js_uri_str[]           = "uri";
 
