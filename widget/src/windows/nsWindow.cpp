@@ -2963,19 +2963,28 @@ BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte 
     } 
     else 
     {
-      if (mLeadByte)  { // mLeadByte is used for keeping the lead-byte of CJK char 
-        charToConvert[0] = mLeadByte;
-        charToConvert[1] = LOBYTE(mbcsCharCode);
+      if (!isMultiByte)	{
+        if (mLeadByte)  {	// mLeadByte is used for keeping the lead-byte of CJK char
+          charToConvert[0] = mLeadByte;
+          charToConvert[1] = LOBYTE(mbcsCharCode);
+          mLeadByte = '\0';
+          length=2;
+        } 
+        else {
+          charToConvert[0] = LOBYTE(mbcsCharCode);
+          if (::IsDBCSLeadByteEx(gCurrentKeyboardCP, charToConvert[0])) {
+            mLeadByte = charToConvert[0];
+            return TRUE;
+          }
+          length=1;
+        }
+      } else  {
+        // SC double-byte punctuation mark in Windows-English is 0x0000aca3
+        uniChar = LOWORD(mbcsCharCode);
+        charToConvert[0] = LOBYTE(uniChar);
+        charToConvert[1] = HIBYTE(uniChar);
         mLeadByte = '\0';
         length=2;
-      } 
-      else {
-        charToConvert[0] = LOBYTE(mbcsCharCode);
-        if (::IsDBCSLeadByte(charToConvert[0])) {
-          mLeadByte = charToConvert[0];
-          return TRUE;
-        }
-        length=1;
       }
       ::MultiByteToWideChar(gCurrentKeyboardCP,MB_PRECOMPOSED,charToConvert,length,
 	    &uniChar, 1);
@@ -3612,7 +3621,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
 
             unsigned char    ch = (unsigned char)wParam;
-            UINT            char_result;
   
             // <ctrl><enter> and <ctrl>J and generate exactly the same char code
             // but we want to "eat" the event for <ctrl><enter> because
@@ -3627,15 +3635,10 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             //
             if ((wParam <= 0xff) && (ch==0x0d || ch==0x08)) {
 
-                result = OnChar(ch,ch==0x0d ? VK_RETURN : VK_BACK,true);
+                result = OnChar(wParam, ch==0x0d ? VK_RETURN : VK_BACK, false);
                 break;
             }
-  
-            {
-                char_result = ch;
-                result = OnChar(char_result,ch,false);
-            }
-  
+            result = OnChar(wParam, ch, (wParam > 0xff));
             break;
         }
         case WM_SYSKEYUP:
