@@ -1138,7 +1138,7 @@ void CFilterDialog::UpdateColumn1Attributes()
 		return;  //something bad happened here!!
 
 	//we are getting the list of Headers and updating controls in column 1 
-	MSG_GetAttributesForFilterScopes (WFE_MSGGetMaster(), scopeMailFolder, (void**)&pInbox, 1, HeaderItems, &numItems);
+	MSG_GetAttributesForFilterScopes (WFE_MSGGetMaster(), scopeAttrib, (void**)&m_pFolderInfoScope, 1, HeaderItems, &numItems);
 
 	for (i = 0; i < 5; i++) {
 
@@ -1153,12 +1153,6 @@ void CFilterDialog::UpdateColumn1Attributes()
 			combo->AddString(HeaderItems[j].name);
 			combo->SetItemData(j, HeaderItems[j].attrib);
 		}
-		if (j == numItems && bUsesCustomHeaders)
-		{   //place the edit text in the last position of the combo box
-			combo->AddString(HeaderItems[j].name);
-			combo->SetItemData(j, HeaderItems[j].attrib);
-		}
-
 		combo->SetCurSel(0);
 		UpdateOpList(i);
 	}
@@ -1954,31 +1948,26 @@ void CFilterDialog::OnAction()
 
 void CFilterDialog::OnAttrib1()
 {
-	EditHeaders(0);
 	UpdateOpList(0);
 }
 
 void CFilterDialog::OnAttrib2()
 {
-	EditHeaders(1);
 	UpdateOpList(1);
 }
 
 void CFilterDialog::OnAttrib3()
 {
-	EditHeaders(2);
 	UpdateOpList(2);
 }
 
 void CFilterDialog::OnAttrib4()
 {
-	EditHeaders(3); 
 	UpdateOpList(3);
 }
 
 void CFilterDialog::OnAttrib5()
 {
-	EditHeaders(4);
 	UpdateOpList(4);
 }
 
@@ -2139,8 +2128,6 @@ void CFilterDialog::OnOK()
 	MSG_SearchAttribute attrib;
 	MSG_SearchOperator op;
 	MSG_SearchValue value;
-	char szHeader[67];
-
 	char szHeader[67];
 
 	for (i = 0; i < GetNumTerms(); i++) {
