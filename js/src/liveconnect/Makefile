@@ -102,6 +102,6 @@ ifndef REGENERATE
 
 export:: jsj10.jar
 	$(INSTALL) -m 444 jsj10.jar $(JAVA_DESTPATH)
-	pushd $(JAVA_DESTPATH) ; unzip jsj10.jar ; popd
+	pushd $(JAVA_DESTPATH) ; unzip -o jsj10.jar ; popd
 
 endif
