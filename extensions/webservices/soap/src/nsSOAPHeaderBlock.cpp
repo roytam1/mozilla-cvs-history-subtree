@@ -24,7 +24,6 @@
 #include "nsReadableUtils.h"
 #include "nsSOAPHeaderBlock.h"
 #include "nsSOAPUtils.h"
-#include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
 #include "nsISOAPAttachments.h"
 
@@ -37,10 +36,9 @@ nsSOAPHeaderBlock::~nsSOAPHeaderBlock()
 {
 }
 
-NS_IMPL_ISUPPORTS4(nsSOAPHeaderBlock, 
+NS_IMPL_ISUPPORTS3(nsSOAPHeaderBlock, 
                    nsISOAPHeaderBlock, 
                    nsISecurityCheckedComponent,
-                   nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
 /* attribute AString namespaceURI; */

@@ -193,6 +193,17 @@ nsSOAPEncoding::~nsSOAPEncoding()
   delete mDecoders;
 }
 
+nsresult nsSOAPEncoding::SetSchemaCollection(nsISchemaCollection* aSchemaCollection)
+{
+  NS_ENSURE_ARG(aSchemaCollection);
+  return mRegistry->SetSchemaCollection(aSchemaCollection);
+}
+nsresult nsSOAPEncoding::GetSchemaCollection(nsISchemaCollection** aSchemaCollection)
+{
+  NS_ENSURE_ARG_POINTER(aSchemaCollection);
+  return mRegistry->GetSchemaCollection(aSchemaCollection);
+}
+
 /* readonly attribute AString styleURI; */
 NS_IMETHODIMP nsSOAPEncoding::GetStyleURI(nsAString & aStyleURI)
 {

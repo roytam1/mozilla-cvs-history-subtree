@@ -36,7 +36,12 @@ nsSOAPFault::~nsSOAPFault()
 
 NS_IMPL_ISUPPORTS2(nsSOAPFault, nsISOAPFault, nsISecurityCheckedComponent)
 
-/* readonly attribute nsIDOMElement element; */
+/* attribute nsIDOMElement element; */
+NS_IMETHODIMP nsSOAPFault::SetElement(nsIDOMElement *aElement)
+{
+  mFaultElement = aElement;
+  return NS_OK;
+}
 NS_IMETHODIMP nsSOAPFault::GetElement(nsIDOMElement * *aElement)
 {
   NS_ENSURE_ARG_POINTER(aElement);

@@ -107,6 +107,8 @@ protected:
   nsCOMPtr<nsISOAPResponseListener> mListener;
 };
 
+NS_IMPL_ISUPPORTS1(nsHTTPSOAPTransportCompletion, nsIDOMEventListener)
+
 nsHTTPSOAPTransportCompletion::nsHTTPSOAPTransportCompletion()
 {
   NS_INIT_ISUPPORTS();

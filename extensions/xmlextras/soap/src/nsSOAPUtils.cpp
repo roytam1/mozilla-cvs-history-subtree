@@ -25,33 +25,33 @@
 #include "nsIDOMNamedNodeMap.h"
 #include "nsCOMPtr.h"
 
-NS_NAMED_LITERAL_STRING(kSOAPEnvURI,"http://schemas.xmlsoap.org/soap/envelope/");
-NS_NAMED_LITERAL_STRING(kSOAPEncodingURI,"http://schemas.xmlsoap.org/soap/encoding/");
-NS_NAMED_LITERAL_STRING(kSOAPEnvPrefix,"SOAP-ENV");
-NS_NAMED_LITERAL_STRING(kSOAPEncodingPrefix,"SOAP-ENC");
-NS_NAMED_LITERAL_STRING(kXSIURI,"http://www.w3.org/1999/XMLSchema-instance");
-NS_NAMED_LITERAL_STRING(kXSDURI,"http://www.w3.org/1999/XMLSchema");
-NS_NAMED_LITERAL_STRING(kXSIPrefix,"xsi");
-NS_NAMED_LITERAL_STRING(kXSITypeAttribute,"type");
-NS_NAMED_LITERAL_STRING(kXSDPrefix,"xsd");
-NS_NAMED_LITERAL_STRING(kEncodingStyleAttribute,"encodingStyle");
-NS_NAMED_LITERAL_STRING(kActorAttribute,"actor");
-NS_NAMED_LITERAL_STRING(kEnvelopeTagName,"Envelope");
-NS_NAMED_LITERAL_STRING(kHeaderTagName,"Header");
-NS_NAMED_LITERAL_STRING(kBodyTagName,"Body");
-NS_NAMED_LITERAL_STRING(kFaultTagName,"Fault");
-NS_NAMED_LITERAL_STRING(kFaultCodeTagName,"faultcode");
-NS_NAMED_LITERAL_STRING(kFaultStringTagName,"faultstring");
-NS_NAMED_LITERAL_STRING(kFaultActorTagName,"faultactor");
-NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kSOAPEnvURI,"http://schemas.xmlsoap.org/soap/envelope/");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kSOAPEncodingURI,"http://schemas.xmlsoap.org/soap/encoding/");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kSOAPEnvPrefix,"SOAP-ENV");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kSOAPEncodingPrefix,"SOAP-ENC");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXSIURI,"http://www.w3.org/1999/XMLSchema-instance");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXSDURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXSIPrefix,"xsi");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXSITypeAttribute,"type");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXSDPrefix,"xsd");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kEncodingStyleAttribute,"encodingStyle");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kActorAttribute,"actor");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kEnvelopeTagName,"Envelope");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kHeaderTagName,"Header");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kBodyTagName,"Body");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kFaultTagName,"Fault");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kFaultCodeTagName,"faultcode");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kFaultStringTagName,"faultstring");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kFaultActorTagName,"faultactor");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kFaultDetailTagName,"detail");
 
-NS_NAMED_LITERAL_STRING(kEncodingSeparator,"#");
-NS_NAMED_LITERAL_STRING(kQualifiedSeparator,"#");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kEncodingSeparator,"#");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kQualifiedSeparator,":");
 
-NS_NAMED_LITERAL_STRING(kXMLNamespaceNamespaceURI, "htp://www.w3.org/2000/xmlns/");
-NS_NAMED_LITERAL_STRING(kXMLNamespaceURI, "htp://www.w3.org/XML/1998/namespace");
-NS_NAMED_LITERAL_STRING(kXMLPrefix, "xml:");
-NS_NAMED_LITERAL_STRING(kXMLNamespacePrefix, "xmlns:");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXMLNamespaceNamespaceURI, "htp://www.w3.org/2000/xmlns/");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXMLNamespaceURI, "htp://www.w3.org/XML/1998/namespace");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXMLPrefix, "xml:");
+NS_NAMED_LITERAL_STRING(nsSOAPUtils::kXMLNamespacePrefix, "xmlns:");
 
 void 
 nsSOAPUtils::GetSpecificChildElement(
@@ -280,8 +280,8 @@ MakeNamespacePrefix(nsIDOMElement* aScope,
   aPrefix.Truncate(0);
   if (aURI.IsEmpty())
     return NS_OK;
-  if (aURI.Equals(kXMLNamespaceURI)) {
-    aPrefix.Assign(kXMLPrefix);
+  if (aURI.Equals(nsSOAPUtils::kXMLNamespaceURI)) {
+    aPrefix.Assign(nsSOAPUtils::kXMLPrefix);
     return NS_OK;
   }
   nsCOMPtr<nsIDOMNode> current = aScope;
@@ -301,7 +301,7 @@ MakeNamespacePrefix(nsIDOMElement* aScope,
         if (!temp)
           break;
         temp->GetNamespaceURI(tstr);
-        if (!tstr.Equals(kXMLNamespaceNamespaceURI))
+        if (!tstr.Equals(nsSOAPUtils::kXMLNamespaceNamespaceURI))
           continue;
         temp->GetNodeValue(tstr);
         if (tstr.Equals(aURI)) {
@@ -314,7 +314,7 @@ MakeNamespacePrefix(nsIDOMElement* aScope,
           while (check != current) { // Make sure prefix is not overridden
 	    echeck = do_QueryInterface(check);
 	    if (echeck) {
-	      rc = echeck->HasAttributeNS(kXMLNamespaceNamespaceURI, prefix, &hasDecl);
+	      rc = echeck->HasAttributeNS(nsSOAPUtils::kXMLNamespaceNamespaceURI, prefix, &hasDecl);
               if (NS_FAILED(rc)) return rc;
 	      if (hasDecl)
 	        break;

@@ -24,7 +24,6 @@
 #include "nsReadableUtils.h"
 #include "nsSOAPParameter.h"
 #include "nsSOAPUtils.h"
-#include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
 #include "nsISOAPAttachments.h"
 
@@ -37,10 +36,9 @@ nsSOAPParameter::~nsSOAPParameter()
 {
 }
 
-NS_IMPL_ISUPPORTS4(nsSOAPParameter, 
+NS_IMPL_ISUPPORTS3(nsSOAPParameter, 
                    nsISOAPParameter, 
                    nsISecurityCheckedComponent,
-                   nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
 /* attribute AString namespaceURI; */

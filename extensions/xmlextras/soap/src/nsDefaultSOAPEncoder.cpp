@@ -31,7 +31,6 @@
 #include "nsISchema.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
-#include "nsIXPConnect.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIDOMParser.h"
 #include "nsSOAPUtils.h"

@@ -27,7 +27,6 @@
 #include "nsIVariant.h"
 #include "nsISOAPHeaderBlock.h"
 #include "nsISecurityCheckedComponent.h"
-#include "nsIXPCScriptable.h"
 #include "nsIJSNativeInitializer.h"
 #include "nsISOAPEncoding.h"
 #include "nsISchema.h"
@@ -37,7 +36,6 @@
 
 class nsSOAPHeaderBlock : public nsISOAPHeaderBlock,
                         public nsISecurityCheckedComponent,
-                        public nsIXPCScriptable,
                         public nsIJSNativeInitializer
 {
 public:
@@ -51,9 +49,6 @@ public:
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
-
-  // nsIXPCScriptable
-  NS_DECL_NSIXPCSCRIPTABLE
 
   // nsIJSNativeInitializer
   NS_IMETHOD Initialize(JSContext *cx, JSObject *obj, 

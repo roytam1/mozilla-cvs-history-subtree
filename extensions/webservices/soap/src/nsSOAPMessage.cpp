@@ -48,10 +48,9 @@ nsSOAPMessage::~nsSOAPMessage()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsSOAPMessage, 
+NS_IMPL_ISUPPORTS2(nsSOAPMessage, 
                    nsISOAPMessage, 
-                   nsISecurityCheckedComponent,
-                   nsIXPCScriptable)
+                   nsISecurityCheckedComponent)
 
 /* attribute nsIDOMDocument message; */
 NS_IMETHODIMP nsSOAPMessage::GetMessage(nsIDOMDocument * *aMessage)

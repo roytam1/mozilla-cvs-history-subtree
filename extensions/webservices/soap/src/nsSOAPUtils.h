@@ -62,31 +62,31 @@ public:
 
   static PRBool StartsWith(nsAReadableString& aSuper,
 		           nsAReadableString& aSub);
-  static const nsString kSOAPEnvURI;
-  static const nsString kSOAPEncodingURI;
-  static const nsString kSOAPEnvPrefix;
-  static const nsString kSOAPEncodingPrefix;
-  static const nsString kXSIURI;
-  static const nsString kXSDURI;
-  static const nsString kXSIPrefix;
-  static const nsString kXSITypeAttribute;
-  static const nsString kXSDPrefix;
-  static const nsString kEncodingStyleAttribute;
-  static const nsString kActorAttribute;
-  static const nsString kEnvelopeTagName;
-  static const nsString kHeaderTagName;
-  static const nsString kBodyTagName;
-  static const nsString kFaultTagName;
-  static const nsString kFaultCodeTagName;
-  static const nsString kFaultStringTagName;
-  static const nsString kFaultActorTagName;
-  static const nsString kFaultDetailTagName;
-  static const nsString kEncodingSeparator;
-  static const nsString kQualifiedSeparator;
-  static const nsString kXMLNamespaceNamespaceURI;
-  static const nsString kXMLNamespaceURI;
-  static const nsString kXMLNamespacePrefix;
-  static const nsString kXMLPrefix;
+  static nsDependentString kSOAPEnvURI;
+  static nsDependentString kSOAPEncodingURI;
+  static nsDependentString kSOAPEnvPrefix;
+  static nsDependentString kSOAPEncodingPrefix;
+  static nsDependentString kXSIURI;
+  static nsDependentString kXSDURI;
+  static nsDependentString kXSIPrefix;
+  static nsDependentString kXSITypeAttribute;
+  static nsDependentString kXSDPrefix;
+  static nsDependentString kEncodingStyleAttribute;
+  static nsDependentString kActorAttribute;
+  static nsDependentString kEnvelopeTagName;
+  static nsDependentString kHeaderTagName;
+  static nsDependentString kBodyTagName;
+  static nsDependentString kFaultTagName;
+  static nsDependentString kFaultCodeTagName;
+  static nsDependentString kFaultStringTagName;
+  static nsDependentString kFaultActorTagName;
+  static nsDependentString kFaultDetailTagName;
+  static nsDependentString kEncodingSeparator;
+  static nsDependentString kQualifiedSeparator;
+  static nsDependentString kXMLNamespaceNamespaceURI;
+  static nsDependentString kXMLNamespaceURI;
+  static nsDependentString kXMLNamespacePrefix;
+  static nsDependentString kXMLPrefix;
 };
 
 //  Used to support null strings.
