@@ -456,7 +456,7 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
       {
         cptr = decoder->colorLine;
         aptr = decoder->alphaLine;
-        memset(aptr, 0, abpr);
+        memset(aptr, ~0, abpr);
         for (PRUint32 x=0; x<iwidth; x++) {
           *cptr++ = *line++;
           *cptr++ = *line++;

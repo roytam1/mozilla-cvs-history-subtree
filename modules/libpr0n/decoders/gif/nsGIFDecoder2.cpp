@@ -397,12 +397,10 @@ int HaveDecodedRow(
     case nsIGFXFormat::RGB_A1:
     case nsIGFXFormat::BGR_A1:
       {
-        memset(decoder->alphaLine, 0, abpr);
+        memset(decoder->alphaLine, ~0, abpr);
         PRUint32 iwidth = (PRUint32)width;
         for (PRUint32 x=0; x<iwidth; x++) {
-          if (*rowBufIndex == decoder->mGIFStruct.tpixel) {
-            // set mask bit
-          }
+
 #ifdef XP_PC
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
@@ -412,6 +410,8 @@ int HaveDecodedRow(
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
 #endif
+
+
           if (*rowBufIndex == decoder->mGIFStruct.tpixel)
             decoder->alphaLine[x>>3] |= 1<<(7-x&0x7);
 
