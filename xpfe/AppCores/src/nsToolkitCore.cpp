@@ -137,7 +137,6 @@ NS_IMETHODIMP
 nsToolkitCore::ShowDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsresult           rv;
-  nsString           controllerCID;
   nsIAppShellService *appShell;
   nsIWebShellWindow  *window;
 
@@ -153,12 +152,9 @@ nsToolkitCore::ShowDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
   if (NS_FAILED(rv))
     return rv;
 
-  // hardwired temporary hack.  See nsAppRunner.cpp at main()
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
-  appShell->CreateDialogWindow(parent, urlObj, controllerCID, window,
+  appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
                                nsnull, nsnull, 615, 480);
   nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 
@@ -172,7 +168,6 @@ NS_IMETHODIMP
 nsToolkitCore::ShowWindow(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsresult           rv;
-  nsString           controllerCID;
   nsIAppShellService *appShell;
   nsIWebShellWindow  *window;
 
@@ -188,12 +183,9 @@ nsToolkitCore::ShowWindow(const nsString& aUrl, nsIDOMWindow* aParent) {
   if (NS_FAILED(rv))
     return rv;
 
-  // hardwired temporary hack.  See nsAppRunner.cpp at main()
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
-  appShell->CreateTopLevelWindow(parent, urlObj, controllerCID, window,
+  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, window,
                                nsnull, nsnull, 615, 480);
   nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 
@@ -287,7 +279,6 @@ nsToolkitCore::ShowWindowWithArgs(const nsString& aUrl,
                                   const nsString& aArgs) {
 
   nsresult           rv;
-  nsString           controllerCID;
   nsIAppShellService *appShell;
   nsIWebShellWindow  *window;
 
@@ -303,14 +294,11 @@ nsToolkitCore::ShowWindowWithArgs(const nsString& aUrl,
   if (NS_FAILED(rv))
     return rv;
 
-  // hardwired temporary hack.  See nsAppRunner.cpp at main()
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
   nsCOMPtr<nsArgCallbacks> cb;
   cb = nsDontQueryInterface<nsArgCallbacks>( new nsArgCallbacks( aArgs ) );
-  appShell->CreateTopLevelWindow(parent, urlObj, controllerCID, window,
+  appShell->CreateTopLevelWindow(parent, urlObj, PR_TRUE, window,
                                nsnull, cb, 615, 650);
   nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 
@@ -324,7 +312,6 @@ NS_IMETHODIMP
 nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
 
   nsresult           rv;
-  nsString           controllerCID;
   nsIAppShellService *appShell;
   nsIWebShellWindow  *window;
 
@@ -340,12 +327,9 @@ nsToolkitCore::ShowModalDialog(const nsString& aUrl, nsIDOMWindow* aParent) {
   if (NS_FAILED(rv))
     return rv;
 
-  // hardwired temporary hack.  See nsAppRunner.cpp at main()
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-
   nsCOMPtr<nsIWebShellWindow> parent;
   DOMWindowToWebShellWindow(aParent, &parent);
-  appShell->CreateDialogWindow(parent, urlObj, controllerCID, window,
+  appShell->CreateDialogWindow(parent, urlObj, PR_TRUE, window,
                                nsnull, nsnull, 615, 480);
   nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 

@@ -426,7 +426,7 @@ PL_ProcessPendingEvents(PLEventQueue* self)
     if (self == NULL)
     return;
 
-  if (PR_FALSE != self->processingEvents) return;
+    if (PR_FALSE != self->processingEvents) return;
 
     self->processingEvents = PR_TRUE;
     while (PR_TRUE) {

@@ -78,8 +78,8 @@ static void event_processor_callback(gpointer data,
                                      gint source,
                                      GdkInputCondition condition)
 {
-  PLEventQueue *event = (PLEventQueue*)data;
-  PR_ProcessPendingEvents(event);
+  nsIEventQueue *eventQueue = (nsIEventQueue*)data;
+  eventQueue->ProcessPendingEvents();
 }
 
 //-------------------------------------------------------------------------

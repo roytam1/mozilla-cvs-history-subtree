@@ -53,7 +53,7 @@ private:
 	PRBool					mInBackground;
 	nsToolkit*				mToolkit;
 	nsMacMessageSink*       mMessageSink;
-	PLEventQueue*			mEventQueue;
+	nsIEventQueue*			mEventQueue;
 
 	// CLASS METHODS
 		    	    

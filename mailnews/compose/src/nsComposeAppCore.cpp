@@ -661,8 +661,7 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
 {
 	//char *  urlstr=nsnull;
 	nsresult rv;
-	nsString controllerCID;
-
+	
 	mArgs = args;
 	nsIAppShellService* appShell;
     rv = nsServiceManager::GetService(kAppShellServiceCID,
@@ -682,10 +681,9 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
 	else
 		goto done;
 
-	controllerCID = "6B75BB61-BD41-11d2-9D31-00805F8ADDDF";
 	appShell->CreateTopLevelWindow(nsnull,      // parent
                                    url,
-                                   controllerCID,
+                                   PR_TRUE,
                                    mWebShellWindow,   // result widget
                                    nsnull,      // observer
                                    this,      // callbacks

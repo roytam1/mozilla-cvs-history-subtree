@@ -260,25 +260,7 @@ CWebShellContainer::FocusAvailable(nsIWebShell* aFocusedWebShell, PRBool& aFocus
 
 
 NS_IMETHODIMP
-CWebShellContainer::CanCreateNewWebShell(PRBool& aResult)
-{		
-	aResult = PR_FALSE;
-	nsresult rv = NS_OK;
-	return rv;
-}
-
-NS_IMETHODIMP
-CWebShellContainer::SetNewWebShellInfo(const nsString& aName, const nsString& anURL, 
-							nsIWebShell* aOpenerShell, PRUint32 aChromeMask,
-							nsIWebShell** aNewShell, nsIWebShell** anInnerShell)
-{
-	nsresult rv = NS_ERROR_FAILURE;
-	return rv;
-}
-
-
-NS_IMETHODIMP
-CWebShellContainer::ChildShellAdded(nsIWebShell** aChildShell, nsIContent* frameNode)
+CWebShellContainer::ContentShellAdded(nsIWebShell* aWebShell, nsIContent* frameNode)
 {
 	nsresult rv = NS_OK;
 	return rv;

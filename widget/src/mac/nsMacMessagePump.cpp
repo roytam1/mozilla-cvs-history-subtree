@@ -138,6 +138,7 @@ nsMacMessagePump::nsMacMessagePump(nsToolkit *aToolkit, nsMacMessageSink* aSink)
 nsMacMessagePump::~nsMacMessagePump()
 {
   //¥TODO? release the toolkits and sinks? not if we use COM_auto_ptr.
+	NS_IF_RELEASE(mEventQueue);
 }
 
 //=================================================================
@@ -334,8 +335,12 @@ void nsMacMessagePump::DispatchEvent(PRBool aRealEvent, EventRecord *anEvent)
 		Repeater::DoRepeaters(*anEvent);
 		
 		// always process one NSPR event per time through the loop.
-		if (PL_EventAvailable(mEventQueue))
-			PL_HandleEvent(PL_GetEvent(mEventQueue));
+		PRBool eventAvailable;
+		mEventQueue->EventAvailable(eventAvailable);
+		if (eventAvailable) {
+			PL_HandleEvent(mEventQueue->GetEvent(mEventQueue));
+			mEventQueue->EventAvailable(eventAvailable);
+		}
 	}
 }
 

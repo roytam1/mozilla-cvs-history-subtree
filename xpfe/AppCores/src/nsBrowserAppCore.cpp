@@ -329,8 +329,7 @@ nsBrowserAppCore::Stop()
 PRInt32
 newWind(char* urlName) {
   nsresult rv;
-  nsString controllerCID;
-
+  
   char *  urlstr=nsnull;
   char *   progname = nsnull;
   char *   width=nsnull, *height=nsnull;
@@ -365,13 +364,7 @@ newWind(char* urlName) {
     goto done;
   }
 
-  /*
-   * XXX: Currently, the CID for the "controller" is passed in as an argument 
-   *      to CreateTopLevelWindow(...).  Once XUL supports "controller" 
-   *      components this will be specified in the XUL description...
-   */
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-  appShell->CreateTopLevelWindow(nsnull, url, controllerCID, newWindow,
+  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, newWindow,
               nsnull, nsnull, 615, 480);
 
   NS_RELEASE(url);
@@ -1338,7 +1331,6 @@ nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader,
 
     if ( NS_SUCCEEDED(rv) ) {
         // Open "Save to disk" dialog.
-        nsString controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
         nsIWebShellWindow *newWindow;
 
         // Make url for dialog xul.
@@ -1351,7 +1343,7 @@ nsBrowserAppCore::HandleUnknownContentType(nsIDocumentLoader* loader,
 
             rv = appShell->CreateTopLevelWindow( nsnull,
                                                  url,
-                                                 controllerCID,
+                                                 PR_TRUE,
                                                  newWindow,
                                                  nsnull,
                                                  dialog,
@@ -1468,8 +1460,7 @@ NS_IMETHODIMP
 nsBrowserAppCore::NewWindow()
 {  
   nsresult rv;
-  nsString controllerCID;
- 
+  
   char * urlstr = nsnull;
 
   nsIAppShellService* appShell = nsnull;
@@ -1506,13 +1497,7 @@ nsBrowserAppCore::NewWindow()
     goto done;
   }
 
-  /*
-   * XXX: Currently, the CID for the "controller" is passed in as an argument 
-   *      to CreateTopLevelWindow(...).  Once XUL supports "controller" 
-   *      components this will be specified in the XUL description...
-   */
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-  appShell->CreateTopLevelWindow(nsnull, url, controllerCID, newWindow,
+  appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, newWindow,
               nsnull, nsnull, 615, 480);
   NS_RELEASE(url);
   
@@ -1790,7 +1775,6 @@ nsBrowserAppCore::DoDialog()
   /* (adapted from nsToolkitCore. No one's using this function, are they!?)
   */
   nsresult           rv;
-  nsString           controllerCID;
   nsIAppShellService *appShell;
   nsIWebShellWindow  *window;
 
@@ -1806,10 +1790,7 @@ nsBrowserAppCore::DoDialog()
   if (NS_FAILED(rv))
     return rv;
 
-  // hardwired temporary hack.  See nsAppRunner.cpp at main()
-  controllerCID = "43147b80-8a39-11d2-9938-0080c7cb1081";
-
-  appShell->CreateDialogWindow(mWebShellWin, urlObj, controllerCID, window,
+  appShell->CreateDialogWindow(mWebShellWin, urlObj, PR_TRUE, window,
                                nsnull, nsnull, 615, 480);
   nsServiceManager::ReleaseService(kAppShellServiceCID, appShell);
 //  window->Resize(300, 200, PR_TRUE); (until Resize gets moved into nsIWebShellWindow)
