@@ -200,7 +200,7 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
 }
 
 PRInt32
-_PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
+_PR_MD_WRITE(PRFileDesc *fd, const void *buf, PRInt32 len)
 {
     PRInt32 f = fd->secret->md.osfd;
     PRInt32 bytes;
@@ -222,7 +222,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
 } /* --- end _PR_MD_WRITE() --- */
 
 PRInt32
-_PR_MD_LSEEK(PRFileDesc *fd, PRInt32 offset, int whence)
+_PR_MD_LSEEK(PRFileDesc *fd, PRInt32 offset, PRSeekWhence whence)
 {
     DWORD moveMethod;
     PRInt32 rv;
@@ -255,7 +255,7 @@ _PR_MD_LSEEK(PRFileDesc *fd, PRInt32 offset, int whence)
 }
 
 PRInt64
-_PR_MD_LSEEK64(PRFileDesc *fd, PRInt64 offset, int whence)
+_PR_MD_LSEEK64(PRFileDesc *fd, PRInt64 offset, PRSeekWhence whence)
 {
     DWORD moveMethod;
     LARGE_INTEGER li;
@@ -818,7 +818,7 @@ _PR_MD_RENAME(const char *from, const char *to)
 }
 
 PRInt32
-_PR_MD_ACCESS(const char *name, PRIntn how)
+_PR_MD_ACCESS(const char *name, PRAccessHow how)
 {
 PRInt32 rv;
     switch (how) {
