@@ -3090,8 +3090,7 @@ nsXULElement::GetClasses(nsVoidArray& aArray) const
         rv = Attributes()->GetClasses(aArray);
     }
     else if (mPrototype) {
-        //XXXwaterson check prototype for class list
-        NS_NOTYETIMPLEMENTED("write this");
+        rv = nsClassList::GetClasses(mPrototype->mClassList, aArray);
     }
     return rv;
 }
@@ -3104,8 +3103,7 @@ nsXULElement::HasClass(nsIAtom* aClass) const
         rv = Attributes()->HasClass(aClass);
     }
     else if (mPrototype) {
-        //XXXwaterson check prototype for class list
-        NS_NOTYETIMPLEMENTED("write this");
+        rv = nsClassList::HasClass(mPrototype->mClassList, aClass) ? NS_OK : NS_COMFALSE;
     }
     return rv;
 }
@@ -3142,8 +3140,9 @@ nsXULElement::GetInlineStyleRules(nsISupportsArray* aRules)
         if (Attributes()) {
             result = Attributes()->GetInlineStyleRule(rule);
         }
-        else if (mPrototype) {
+        else if (mPrototype && mPrototype->mInlineStyleRule) {
             rule = mPrototype->mInlineStyleRule;
+            result = NS_OK;
         }
     }
     if (rule) {

@@ -41,6 +41,7 @@
 #include "nsCOMPtr.h"
 #include "nsForwardReference.h"
 #include "nsICSSLoader.h"
+#include "nsICSSParser.h"
 #include "nsICSSStyleSheet.h"
 #include "nsIContentSink.h"
 #include "nsIContentViewerContainer.h"
@@ -104,16 +105,8 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
 
 
 static NS_DEFINE_CID(kCSSLoaderCID,              NS_CSS_LOADER_CID);
-static NS_DEFINE_CID(kHTMLElementFactoryCID,    NS_HTML_ELEMENT_FACTORY_CID);
-static NS_DEFINE_CID(kXMLElementFactoryCID,     NS_XML_ELEMENT_FACTORY_CID);
-static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
-static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kTextNodeCID,              NS_TEXTNODE_CID);
-static NS_DEFINE_CID(kXULContentUtilsCID,       NS_XULCONTENTUTILS_CID);
-static NS_DEFINE_CID(kXULDocumentInfoCID,       NS_XULDOCUMENTINFO_CID);
-static NS_DEFINE_CID(kXULKeyListenerCID,        NS_XULKEYLISTENER_CID);
-static NS_DEFINE_CID(kXULTemplateBuilderCID,    NS_XULTEMPLATEBUILDER_CID);
+static NS_DEFINE_CID(kCSSParserCID,              NS_CSSPARSER_CID);
+static NS_DEFINE_CID(kNameSpaceManagerCID,       NS_NAMESPACEMANAGER_CID);
 
 //----------------------------------------------------------------------
 
@@ -155,8 +148,10 @@ protected:
     static nsrefcnt               gRefCnt;
     static nsINameSpaceManager*   gNameSpaceManager;
 
+    static nsIAtom* kClassAtom;
     static nsIAtom* kIdAtom;
     static nsIAtom* kScriptAtom;
+    static nsIAtom* kStyleAtom;
     static nsIAtom* kTemplateAtom;
 
     static PRInt32 kNameSpaceID_XUL;
@@ -247,13 +242,16 @@ protected:
     nsString               mPreferredStyle;
     PRInt32                mStyleSheetCount;
     nsCOMPtr<nsICSSLoader> mCSSLoader;            // [OWNER]
+    nsCOMPtr<nsICSSParser> mCSSParser;            // [OWNER]
 };
 
 nsrefcnt XULContentSinkImpl::gRefCnt;
 nsINameSpaceManager* XULContentSinkImpl::gNameSpaceManager;
 
+nsIAtom* XULContentSinkImpl::kClassAtom;
 nsIAtom* XULContentSinkImpl::kIdAtom;
 nsIAtom* XULContentSinkImpl::kScriptAtom;
+nsIAtom* XULContentSinkImpl::kStyleAtom;
 nsIAtom* XULContentSinkImpl::kTemplateAtom;
 
 PRInt32 XULContentSinkImpl::kNameSpaceID_XUL;
@@ -385,8 +383,10 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
         if (NS_FAILED(rv)) return;
 
+        kClassAtom          = NS_NewAtom("class");
         kIdAtom             = NS_NewAtom("id");
         kScriptAtom         = NS_NewAtom("script");
+        kStyleAtom          = NS_NewAtom("style");
         kTemplateAtom       = NS_NewAtom("template");
     }
 
@@ -461,8 +461,10 @@ XULContentSinkImpl::~XULContentSinkImpl()
     if (--gRefCnt == 0) {
         NS_IF_RELEASE(gNameSpaceManager);
 
+        NS_IF_RELEASE(kClassAtom);
         NS_IF_RELEASE(kIdAtom);
         NS_IF_RELEASE(kScriptAtom);
+        NS_IF_RELEASE(kStyleAtom);
         NS_IF_RELEASE(kTemplateAtom);
     }
 }
@@ -1217,6 +1219,42 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsXULPrototypeElem
                     NS_STATIC_CAST(const char*, nsCAutoString(attr->mValue))));
         }
 #endif
+    }
+
+    // Add any derived attributes to a XUL prototype element.
+    if (aElement->mNameSpaceID == kNameSpaceID_XUL) {
+        nsAutoString value;
+
+        // Compute the element's class list if the element has a 'class' attribute.
+        rv = aElement->GetAttribute(kNameSpaceID_None, kClassAtom, value);
+        if (NS_FAILED(rv)) return rv;
+
+        if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+            rv = nsClassList::ParseClasses(&aElement->mClassList, value);
+            if (NS_FAILED(rv)) return rv;
+        }
+
+        // Parse the element's 'style' attribute
+        rv = aElement->GetAttribute(kNameSpaceID_None, kStyleAtom, value);
+        if (NS_FAILED(rv)) return rv;
+
+        if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+            if (! mCSSParser) {
+                rv = nsComponentManager::CreateInstance(kCSSParserCID,
+                                                        nsnull,
+                                                        NS_GET_IID(nsICSSParser),
+                                                        getter_AddRefs(mCSSParser));
+
+                if (NS_FAILED(rv)) return rv;
+            }
+
+            rv = mCSSParser->ParseDeclarations(value,
+                                               mDocumentURL,
+                                               *getter_AddRefs(aElement->mInlineStyleRule));
+
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to parse style rule");
+            if (NS_FAILED(rv)) return rv;
+        }
     }
 
     return NS_OK;
