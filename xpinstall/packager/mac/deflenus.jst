@@ -1,4 +1,4 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
 var err;
 var fProgram;
@@ -8,7 +8,7 @@ var prettyName = "US English Defaults";
 var regName    = "defaults/mozilla/US";
 // --- END CHANGABLE STUFF ---
 
-err    = initInstall(prettyName, regName, "$Version$"); 
+err    = initInstall(prettyName, regName, "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
@@ -17,7 +17,7 @@ logComment("fProgram: " + fProgram);
 if (verifyDiskSpace(fProgram, srDest))
 {
     err = addDirectory("",
-                   "$Version$",
+                   "@XPI_VERSION@",
                    "viewer",
                    fProgram,
                    "",

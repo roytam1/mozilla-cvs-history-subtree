@@ -1,4 +1,4 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
 var err;
 var fProgram;
@@ -11,7 +11,7 @@ var regName    = "locales/mozilla/" + chromeNode;
 var chromeName = chromeNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
-err = initInstall(prettyName, regName, "$Version$"); 
+err = initInstall(prettyName, regName, "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");

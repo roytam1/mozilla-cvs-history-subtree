@@ -46,9 +46,9 @@ function upgradeCleanup()
   deleteThisFolder("Program",  "res/throbber");
 }
 
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Mozilla Navigator", "Browser", "$Version$"); 
+var err = initInstall("Mozilla Navigator", "Browser", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 var fProgram = getFolder("Program");
@@ -61,7 +61,7 @@ if (verifyDiskSpace(fProgram, srDest))
     // it will just get reinstalled.  This is for safety measure.
     upgradeCleanup();
     err = addDirectory("Program",
-                       "$Version$",
+                       "@XPI_VERSION@",
                        "viewer",           // jar source folder
                        fProgram,           // target folder 
                        "",                 // target subdir 
@@ -118,7 +118,7 @@ if (verifyDiskSpace(fProgram, srDest))
         if (! ('buildID' in Install))
         {
           logComment("Running Pre-Mozilla 0.9.1");
-          initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "$Version$");
+          initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "@XPI_VERSION@");
           fEssentialFiles = getFolder(fProgram, "Essential Files");
           cleanupUtility = getFolder(fEssentialFiles, "XPICleanup");
           err = File.execute(cleanupUtility);

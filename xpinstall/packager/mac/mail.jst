@@ -5,9 +5,9 @@ function upgradeCleanup()
   deleteThisFile("Components", "signed.shlb");
 }
 
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Mozilla Mail", "Mail", "$Version$"); 
+var err = initInstall("Mozilla Mail", "Mail", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 var fProgram = getFolder("Program");
@@ -20,7 +20,7 @@ if (verifyDiskSpace(fProgram, srDest))
     // it will just get reinstalled.  This is for safety measure.
     upgradeCleanup();
     err = addDirectory("Program",
-                   "$Version$",
+                   "@XPI_VERSION@",
                    "viewer",           // jar source folder 
                    fProgram,           // target folder
                    "",                 // target subdir 

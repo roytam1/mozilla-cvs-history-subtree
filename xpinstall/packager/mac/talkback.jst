@@ -1,6 +1,6 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Quality Feedback Agent", "Quality Feedback Agent", "$Version$");
+var err = initInstall("Quality Feedback Agent", "Quality Feedback Agent", "@XPI_VERSION@");
 logComment("initInstall: " + err);
 
 var communicatorFolder = getFolder("Program");
@@ -9,7 +9,7 @@ logComment("communicatorFolder: " + communicatorFolder);
 if (verifyDiskSpace(communicatorFolder, srDest))
 {
     err = addDirectory("Talkback",
-                   "$Version$",
+                   "@XPI_VERSION@",
                    "viewer",           // jar source folder
                    communicatorFolder, // target folder
                    "",                 // target subdir
