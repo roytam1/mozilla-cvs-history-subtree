@@ -37,6 +37,7 @@
 #include "nsIChannel.h"
 #include "nsCRT.h"
 #include "nsIServiceManager.h"
+#include "nsIStreamContentInfo.h"
 
 static NS_DEFINE_IID(kIURLIID, NS_IURL_IID);
 
@@ -212,22 +213,22 @@ ImageNetContextSyncImpl::GetURL(ilIURL*  aURL,
     if (NS_FAILED(rv)) 
         return -1;
 
+    rv = channel->OpenInputStream(0, -1, &stream);
+    nsCOMPtr<nsIStreamContentInfo> continfo = do_QueryInterface(stream);
     char* aContentType = NULL;
-    rv = channel->GetContentType(&aContentType); //nsCRT alloc's str
-    if (NS_FAILED(rv)) {
-        if(aContentType){
-            nsCRT::free(aContentType);
-        }
+    if (continfo)
+        rv = continfo->GetContentType(&aContentType); //nsCRT alloc's str
+
+    if (!aContentType) {
         aContentType = nsCRT::strdup("unknown");        
     }
-    if(nsCRT::strlen(aContentType) > 50){
+    else if(nsCRT::strlen(aContentType) > 50){
         //somethings wrong. mimetype string shouldn't be this big.
         //protect us from the user.
         nsCRT::free(aContentType);
         aContentType = nsCRT::strdup("unknown"); 
     } 
 
-    rv = channel->OpenInputStream(&stream);
     NS_RELEASE(channel);
     if (NS_SUCCEEDED(rv)) {
 
