@@ -55,7 +55,6 @@ NS_RegistryGetFactory(nsISupports* servMgr, nsIFactory** aFactory);
 #include "prerror.h"
 #include "prmem.h"
 
-#include "nsVector.h"
 #include "prcmon.h"
 #include "prthread.h" /* XXX: only used for the NSPR initialization hack (rick) */
 
