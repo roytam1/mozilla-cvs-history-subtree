@@ -2917,9 +2917,13 @@ GlobalWindowImpl::GetPrincipals(void** aPrincipals)
       nsIScriptSecurityManager* secMan = nsnull;
       mContext->GetSecurityManager(&secMan);
       if (secMan) {
-        nsAutoString codebase;
-        if (NS_SUCCEEDED(GetOrigin(&codebase))) {
-          secMan->NewJSPrincipals(nsnull, nsnull, &codebase, &mPrincipals);
+        char *codebase;
+        nsIURI *origin;
+        if (NS_SUCCEEDED(GetOrigin(&origin)) &&
+            NS_SUCCEEDED(origin->GetSpec(&codebase))) 
+        {
+          nsAutoString s(codebase);
+          secMan->NewJSPrincipals(nsnull, nsnull, &s, &mPrincipals);
         }
         NS_RELEASE(secMan);
       }
@@ -2954,27 +2958,14 @@ GlobalWindowImpl::SetPrincipals(void* aPrincipals)
 }
 
 NS_IMETHODIMP
-GlobalWindowImpl::GetOrigin(nsString* aOrigin)
+GlobalWindowImpl::GetOrigin(nsIURI** aOrigin)
 {
   nsIDocument* doc;
   if (mDocument && NS_OK == mDocument->QueryInterface(kIDocumentIID, (void**)&doc)) {
     nsIURI* docURL = doc->GetDocumentURL();
     if (docURL) {
-#ifdef NECKO
-      char* str;
-      docURL->GetSpec(&str);
-#else
-      PRUnichar* str;
-      docURL->ToString(&str);
-#endif
-      *aOrigin = str;
-#ifdef NECKO
-      nsCRT::free(str);
-#else
-      delete [] str;
-#endif
-      NS_RELEASE(docURL);
-    }
+      *aOrigin = docURL;
+    } // else return error code
     NS_RELEASE(doc);
   }
 

@@ -65,8 +65,8 @@ typedef struct nsJSPrincipalsData {
 } nsJSPrincipalsData;
 
 class nsJSSecurityManager : public nsIScriptSecurityManager,
-							public nsICapsSecurityCallbacks,
-							public nsIXPCSecurityManager {
+//                          public nsICapsSecurityCallbacks,
+                            public nsIXPCSecurityManager {
 public:
 	nsJSSecurityManager();
 	virtual ~nsJSSecurityManager();
@@ -74,7 +74,6 @@ public:
 	NS_DECL_ISUPPORTS
 		
 	//nsIScriptSecurityManager interface
-	NS_IMETHOD Init();
 	
 	NS_IMETHOD CheckScriptAccess(nsIScriptContext* aContext, 
 		void* aObj, 
@@ -84,13 +83,43 @@ public:
 	//XXX From lib/libmocha/lm.h
 	NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, nsString** aOrigin);
 	NS_IMETHOD GetObjectOriginURL(JSContext *aCx, JSObject *object, nsString** aOrigin);
-	NS_IMETHOD GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals);
-	NS_IMETHOD GetCompilationPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, 
-		JSPrincipals *aLayoutPrincipals, JSPrincipals** aPrincipals);
+	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aCodebase, JSPrincipals** aPrincipals);
+
+#if 0
+        //nsICapsSecurityCallbacks interface
+	NS_IMETHOD NewNSJSJavaFrameWrapper(void *aContext, struct nsFrameWrapper ** aWrapper);
+	NS_IMETHOD FreeNSJSJavaFrameWrapper(struct nsFrameWrapper *aWrapper);
+	NS_IMETHOD GetStartFrame(struct nsFrameWrapper *aWrapper);
+	NS_IMETHOD IsEndOfFrame(struct nsFrameWrapper *aWrapper, PRBool* aReturn);
+	NS_IMETHOD IsValidFrame(struct nsFrameWrapper *aWrapper, PRBool* aReturn);
+	NS_IMETHOD GetNextFrame(struct nsFrameWrapper *aWrapper, int *aDepth, void** aReturn);
+        NS_IMETHOD OJIGetPrincipalArray(struct nsFrameWrapper *aWrapper, void** aReturn);
+	NS_IMETHOD OJIGetAnnotation(struct nsFrameWrapper *aWrapper, void** aReturn);
+	NS_IMETHOD OJISetAnnotation(struct nsFrameWrapper *aWrapper, void *aPrivTable,  void** aReturn);
+#endif
+
+        //nsIXPCSecurityManager interface
+	NS_IMETHOD CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj);
+	NS_IMETHOD CanCreateInstance(JSContext * aJSContext, const nsCID & aCID);
+	NS_IMETHOD CanGetService(JSContext * aJSContext, const nsCID & aCID);
+	NS_IMETHOD CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
+								PRUint16 aMethodIndex, const jsid aName);
+	NS_IMETHOD CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
+								PRUint16 aMethodIndex, const jsid aName);
+	NS_IMETHOD CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
+								PRUint16 aMethodIndex, const jsid aName);
+
+        NS_IMETHOD GetContainerPrincipals(JSContext *aCx, JSObject *aContainer, JSPrincipals** aPrincipals);
+        NS_IMETHOD CheckPermissions(JSContext *aCx, JSObject *aObj, short target, PRBool* aReturn);
 	NS_IMETHOD CanAccessTarget(JSContext *aCx, PRInt16 target, PRBool* aReturn);
-	NS_IMETHOD CheckPermissions(JSContext *aCx, JSObject *aObj, short target, PRBool* aReturn);
+        NS_IMETHOD GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals);
+
+
+#if 0
+        NS_IMETHOD GetCompilationPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, 
+		JSPrincipals *aLayoutPrincipals, JSPrincipals** aPrincipals);
 	NS_IMETHOD CheckContainerAccess(JSContext *aCx, JSObject *aObj, PRInt16 aTarget, PRBool* aReturn);
-	NS_IMETHOD GetContainerPrincipals(JSContext *aCx, JSObject *aContainer, JSPrincipals** aPrincipals);
+	
 	NS_IMETHOD SetContainerPrincipals(JSContext *aCx, JSObject *aContainer, JSPrincipals* aPrincipals);
 	NS_IMETHOD CanCaptureEvent(JSContext *aCx, JSFunction *aFun, JSObject *aEventTarget, PRBool* aReturn);
 	NS_IMETHOD SetExternalCapture(JSContext *aCx, JSPrincipals* aPrincipals, PRBool aBool);
@@ -99,7 +128,9 @@ public:
 		nsString* newDomain, PRBool* aReturn);
 	NS_IMETHOD DestroyPrincipalsList(JSContext *aCx, nsJSPrincipalsList *list);
 	//XXX From include/libmocha.h
-	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aCodebase, JSPrincipals** aPrincipals);
+	NS_IMETHOD RegisterPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, JSPrincipals *aPrincipals, 
+		nsString* aName, nsString* aSrc, JSPrincipals** aRetPrincipals);
+
 #ifdef DO_JAVA_STUFF
 	NS_IMETHOD ExtractFromPrincipalsArchive(JSPrincipals *aPrincipals, char *aName, 
 								uint *aLength, char** aReturn);
@@ -110,35 +141,32 @@ public:
 #if 0
 	NS_IMETHOD CanAccessTargetStr(JSContext *aCx, const char *target, PRBool* aReturn);
 #endif
-	NS_IMETHOD RegisterPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, JSPrincipals *aPrincipals, 
-		nsString* aName, nsString* aSrc, JSPrincipals** aRetPrincipals);
-	//nsICapsSecurityCallbacks interface
-	NS_IMETHOD NewNSJSJavaFrameWrapper(void *aContext, struct nsFrameWrapper ** aWrapper);
-	NS_IMETHOD FreeNSJSJavaFrameWrapper(struct nsFrameWrapper *aWrapper);
-	NS_IMETHOD GetStartFrame(struct nsFrameWrapper *aWrapper);
-	NS_IMETHOD IsEndOfFrame(struct nsFrameWrapper *aWrapper, PRBool* aReturn);
-	NS_IMETHOD IsValidFrame(struct nsFrameWrapper *aWrapper, PRBool* aReturn);
-	NS_IMETHOD GetNextFrame(struct nsFrameWrapper *aWrapper, int *aDepth, void** aReturn);
-	NS_IMETHOD OJIGetPrincipalArray(struct nsFrameWrapper *aWrapper, void** aReturn);
-	NS_IMETHOD OJIGetAnnotation(struct nsFrameWrapper *aWrapper, void** aReturn);
-	NS_IMETHOD OJISetAnnotation(struct nsFrameWrapper *aWrapper, void *aPrivTable,  void** aReturn);
-	//nsIXPCSecurityManager interface
-	NS_IMETHOD CanCreateWrapper(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj);
-	NS_IMETHOD CanCreateInstance(JSContext * aJSContext, const nsCID & aCID);
-	NS_IMETHOD CanGetService(JSContext * aJSContext, const nsCID & aCID);
-	NS_IMETHOD CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
-								PRUint16 aMethodIndex, const jsid aName);
-	NS_IMETHOD CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
-								PRUint16 aMethodIndex, const jsid aName);
-	NS_IMETHOD CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
-								PRUint16 aMethodIndex, const jsid aName);
+#endif
 private:
+        NS_IMETHOD GetOriginFromSourceURL(nsString* sourceURL, nsString* *result);
+        PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
+        nsIPref* mPrefs;
+        char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);
+	PRBool SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2);
+	PRBool SameOriginsStr(JSContext *aCx, nsString* aOrigin1, nsString* aOrigin2);
+        char* AddSecPolicyPrefix(JSContext *cx, char *pref_str);
+        char* GetSitePolicy(const char *org);
+	char * ParseURL (const char *url, int parts_requested);
+        char * SACopy (char *destination, const char *source);
+	char * SACat (char *destination, const char *source);
+	nsString* GetCanonicalizedOrigin(JSContext *cx, nsString* aUrlString);
+        PRBool PrincipalsCanAccessTarget(JSContext *cx, short target);
+	nsJSFrameIterator* NewJSFrameIterator(void *aContext);
+	PRBool NextJSFrame(struct nsJSFrameIterator **aIterator);
+        PRBool NextJSJavaFrame(struct nsJSFrameIterator *aIterator);
+#if 0
 	void PrintToConsole(const char *data);
 	void PrintPrincipalsToConsole(JSContext *cx, JSPrincipals *principals);
 	
 	PRUint32 GetPrincipalsCount(JSContext *aCx, JSPrincipals *aPrincipals);
-	PRBool PrincipalsCanAccessTarget(JSContext *cx, short target);
+	
 	void InvalidateCertPrincipals(JSContext *cx, JSPrincipals *principals);
+        
 	
 	//Helper funcs for RegisterPrincipals
 #ifdef EARLY_ACCESS_STUFF
@@ -151,36 +179,24 @@ private:
 	PRBool IsExternalCaptureEnabled(JSContext *cx, JSPrincipals *principals);
 	PRBool CanExtendTrust(JSContext *cx, void *from, void *to);
 	char* GetJavaCodebaseFromOrigin(const char *origin);
-	
-	NS_IMETHOD GetOriginFromSourceURL(nsString* sourceURL, nsString* *result);
-	char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);
-	
-	PRBool SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2);
-	PRBool SameOriginsStr(JSContext *aCx, nsString* aOrigin1, nsString* aOrigin2);
-	nsString* GetCanonicalizedOrigin(JSContext *cx, nsString* aUrlString);
+
 	
 	// Glue code for JS stack crawling callbacks
-	nsJSFrameIterator* NewJSFrameIterator(void *aContext);
-	PRBool NextJSJavaFrame(struct nsJSFrameIterator *aIterator);
-	PRBool NextJSFrame(struct nsJSFrameIterator **aIterator);
 	
-	void InitCaps(void);
+
 	
 	//Helper funcs
-	char* AddSecPolicyPrefix(JSContext *cx, char *pref_str);
-	char* GetSitePolicy(const char *org);
-	PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
 	JSBool ContinueOnViolation(JSContext *cx, int pref_code);
 	JSBool CheckForPrivilegeContinue(JSContext *cx, char *prop_name, int priv_code, int pref_code);
 	
 	//XXX temporarily
-	char * ParseURL (const char *url, int parts_requested);
-	char * SACopy (char *destination, const char *source);
-	char * SACat (char *destination, const char *source);
+
 	
+        nsICapsManager * mCapsManager;
+#endif
 	//Local vars
-	nsIPref* mPrefs;
-	nsICapsManager * mCapsManager;
+	
+	
 };
 
 //XXX temporarily bit flags for determining what we want to parse from the URL

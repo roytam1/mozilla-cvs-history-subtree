@@ -207,7 +207,7 @@ public:
   // nsIScriptGlobalObjectData interface
   NS_IMETHOD       GetPrincipals(void** aPrincipals);
   NS_IMETHOD       SetPrincipals(void* aPrincipals);
-  NS_IMETHOD       GetOrigin(nsString* aOrigin);
+  NS_IMETHOD       GetOrigin(nsIURI** aOrigin);
 
   friend void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure);
 
