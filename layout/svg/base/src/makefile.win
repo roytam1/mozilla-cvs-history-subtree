@@ -32,6 +32,7 @@ REQUIRES    = xpcom \
 			  dom \
 			  pref \
 			  view \
+              libart \
 	      necko \
               $(NULL)
 
