@@ -377,7 +377,9 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     JSObject* tempGlobal = JS_NewObject(aJSContext, &xpcTempGlobalClass,
                                         nsnull, nsnull);
 
-    if(!tempGlobal)
+    if(!tempGlobal ||
+       !JS_SetParent(aJSContext, tempGlobal, nsnull) ||
+       !JS_SetPrototype(aJSContext, tempGlobal, nsnull))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if(NS_FAILED(InitClasses(aJSContext, tempGlobal)))
