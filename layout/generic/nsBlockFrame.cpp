@@ -274,6 +274,8 @@ NS_NewBlockFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRUint32 aFlags
 }
 
 nsBlockFrame::nsBlockFrame() 
+  : mMinWidth(NS_INTRINSIC_WIDTH_UNKNOWN)
+  , mPrefWidth(NS_INTRINSIC_WIDTH_UNKNOWN)
 {
 #ifdef DEBUG
   InitDebugFlags();
@@ -542,6 +544,27 @@ nsBlockFrame::IsContainingBlock() const
 
 //////////////////////////////////////////////////////////////////////
 // Reflow methods
+
+/* virtual */ void
+nsBlockFrame::MarkIntrinsicWidthsDirty()
+{
+  mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+  mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
+}
+
+/* virtual */ nscoord
+nsBlockFrame::GetMinWidth()
+{
+  if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+    return mMinWidth;
+}
+
+/* virtual */ nscoord
+nsBlockFrame::GetPrefWidth()
+{
+  if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
+    return mPrefWidth;
+}
 
 static void
 CalculateContainingBlock(const nsHTMLReflowState& aReflowState,

@@ -197,7 +197,10 @@ public:
   virtual PRBool IsEmpty();
   virtual PRBool IsSelfEmpty();
 
-  // nsIHTMLReflow
+  virtual void MarkIntrinsicWidthsDirty();
+  virtual nscoord GetMinWidth();
+  virtual nscoord GetPrefWidth();
+
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -583,6 +586,8 @@ protected:
 
   // Ascent of our first line to support 'vertical-align: baseline' in table-cells
   nscoord mAscent;
+
+  nscoord mMinWidth, mPrefWidth;
 
   nsLineList mLines;
 

@@ -123,6 +123,8 @@ typedef PRUint32 nsSplittableType;
 #define NS_FRAME_IS_NOT_SPLITTABLE(type)\
   (0 == ((type) & NS_FRAME_SPLITTABLE))
 
+#define NS_INTRINSIC_WIDTH_UNKNOWN nscoord_MIN
+
 //----------------------------------------------------------------------
 
 /**
