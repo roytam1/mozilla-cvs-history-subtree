@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Brian Ryner <bryner@brianryner.com>
+ *  Aaron Reed <aaronr@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,34 +36,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIGenericFactory.h"
-#include "nsXFormsElementFactory.h"
-#include "nsXFormsUtilitiesService.h"
-#include "nsXFormsAtoms.h"
-#include "nsXFormsModelElement.h"
-#include "nsXFormsUtils.h"
+#include "nsISupports.idl"
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsElementFactory)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsUtilitiesService)
+interface nsIDOMNode;
+interface nsIXFormsModelElement;
 
-static const nsModuleComponentInfo components[] = {
-  { "XForms element factory",
-    NS_XFORMSELEMENTFACTORY_CID,
-    NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX NS_NAMESPACE_XFORMS,
-    nsXFormsElementFactoryConstructor },
-  { "XForms Utility Service",
-    NS_XFORMSUTILITIESSERVICE_CID,
-    NS_XFORMS_UTILITIES_CONTRACTID,
-    nsXFormsUtilitiesServiceConstructor },
+
+/**
+ * Private interface implemented by the instance element.
+ */
+[uuid(4a744a59-8771-4065-959d-b8de3dad81da)]
+interface nsIXFormsUtilitiesService : nsISupports
+{
+  /**
+   * Function to get the corresponding model element from a xforms node or
+   * a xforms instance data node.
+   */
+  nsIDOMNode getModelFromNode(in nsIDOMNode node);
+
+  /**
+   * Function to see if the given node is associated with the given model.
+   */
+  PRBool isThisModelAssocWithThisNode(in nsIDOMNode aModel, in nsIDOMNode aNode);
+
+  /**
+   * Function to get the instance document root for the instance element with
+   * the given id.  The instance element must be associated with the given
+   * model.
+   */
+  nsIDOMNode getInstanceDocumentRoot(in DOMString aID, in nsIDOMNode aModelNode);
+
+  /**
+   * Function to ensure that aValue is of the shema type aType.  Will basically
+   * be a forwarder to the nsISchemaValidator function of the same name.
+   */
+  boolean validateString(in AString aValue, in AString aType, in AString aNamespace);
+
 };
 
-PR_STATIC_CALLBACK(nsresult)
-XFormsModuleCtor(nsIModule* aSelf)
-{
-  nsXFormsAtoms::InitAtoms();
-  nsXFormsUtils::Init();
-  nsXFormsModelElement::Startup();
-  return NS_OK;
-}
+%{ C++
+// bb0d9c8b-3096-4b66-92a0-6c1ddf80e65f
+#define NS_XFORMSUTILITIESSERVICE_CID \
+{ 0xbb0d9c8b, 0x3096, 0x4b66, { 0x92, 0xa0, 0x6c, 0x1d, 0xdf, 0x80, 0xe6, 0x5f }}
 
-NS_IMPL_NSGETMODULE_WITH_CTOR(xforms, components, XFormsModuleCtor)
+#define NS_XFORMS_UTILITIES_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
+%}

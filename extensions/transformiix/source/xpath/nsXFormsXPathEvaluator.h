@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@propagandism.org>
+ *   Aaron Reed <aaronr@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,33 +36,78 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsXPathNSResolver_h__
-#define nsXPathNSResolver_h__
+#ifndef nsXFormsXPathEvaluator_h__
+#define nsXFormsXPathEvaluator_h__
 
-#include "nsIDOMXPathNSResolver.h"
-#include "nsIDOMNode.h"
-#include "nsIDOM3Node.h"
-#include "nsCOMPtr.h"
+#include "nsIDOMXPathEvaluator.h"
+#include "txIXPathContext.h"
+#include "nsIXPathEvaluatorInternal.h"
+#include "nsIWeakReference.h"
+#include "nsAutoPtr.h"
+#include "txResultRecycler.h"
+
+#define NS_XFORMS_XPATH_EVALUATOR_CONTRACTID "@mozilla.org/dom/xforms-xpath-evaluator;1"
+/* a7e127c6-31ff-40b4-8780-15d6938b33d3 */
+
+#define TRANSFORMIIX_XFORMS_XPATH_EVALUATOR_CID   \
+{ 0xa7e127c6, 0x31ff, 0x40b4, { 0x87, 0x80, 0x15, 0xd6, 0x93, 0x8b, 0x33, 0xd3 } }
+
+class nsIDOMDocument;
 
 /**
  * A class for evaluating an XPath expression string
  */
-class nsXPathNSResolver : public nsIDOMXPathNSResolver
+class nsXFormsXPathEvaluator : public nsIDOMXPathEvaluator,
+                               public nsIXPathEvaluatorInternal
 {
 public:
-    nsXPathNSResolver(nsIDOMNode* aNode);
-    virtual ~nsXPathNSResolver();
+    nsXFormsXPathEvaluator();
+    virtual ~nsXFormsXPathEvaluator();
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIDOMXPathNSResolver interface
-    NS_DECL_NSIDOMXPATHNSRESOLVER
+    // nsIDOMXPathEvaluator interface
+    NS_DECL_NSIDOMXPATHEVALUATOR
 
-    nsIDOM3Node *GetResolverNode(){ return mNode; }
+    // nsIXPathEvaluatorInternal interface
+    NS_IMETHOD SetDocument(nsIDOMDocument* aDocument);
 
 private:
-    nsCOMPtr<nsIDOM3Node> mNode;
+    // txIParseContext implementation
+    class XFormsParseContextImpl : public txIParseContext
+    {
+    public:
+        XFormsParseContextImpl(nsIDOMXPathNSResolver* aResolver,
+                         PRBool aIsCaseSensitive)
+            : mResolver(aResolver), mLastError(NS_OK),
+              mIsCaseSensitive(aIsCaseSensitive)
+        {
+        }
+
+        ~XFormsParseContextImpl()
+        {
+        }
+
+        nsresult getError()
+        {
+            return mLastError;
+        }
+
+        nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID);
+        nsresult resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
+                                     FunctionCall*& aFunction);
+        PRBool caseInsensitiveNameTests();
+        void SetErrorOffset(PRUint32 aOffset);
+
+    private:
+        nsIDOMXPathNSResolver* mResolver;
+        nsresult mLastError;
+        PRBool mIsCaseSensitive;
+    };
+
+    nsWeakPtr mDocument;
+    nsRefPtr<txResultRecycler> mRecycler;
 };
 
 #endif

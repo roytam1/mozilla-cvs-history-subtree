@@ -243,10 +243,12 @@ nsXFormsSelectElement::WillSetAttribute(nsIAtom *aName,
     nsCOMPtr<nsIDOMNode> model;
     nsCOMPtr<nsIDOMElement> bind, context;
 
+    PRBool outerContext;
     nsXFormsUtils::GetNodeContext(mElement,
                                   nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                   getter_AddRefs(model),
                                   getter_AddRefs(bind),
+                                  &outerContext,
                                   getter_AddRefs(context));
 
     if (model) {
@@ -345,15 +347,14 @@ nsXFormsSelectElement::Refresh()
   }
 
   nsCOMPtr<nsIDOMNode> modelNode;
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsCOMPtr<nsIDOMXPathResult> result =
-    nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                       nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
-                                       NS_LITERAL_STRING("ref"),
-                                       EmptyString(),
-                                       nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
-                                       getter_AddRefs(modelNode),
-                                       getter_AddRefs(bindElement));
+  nsCOMPtr<nsIDOMXPathResult> result;
+  nsXFormsUtils::EvaluateNodeBinding(mElement,
+                                     nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                     NS_LITERAL_STRING("ref"),
+                                     EmptyString(),
+                                     nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                                     getter_AddRefs(modelNode),
+                                     getter_AddRefs(result));
 
   nsCOMPtr<nsIModelElementPrivate> model = do_QueryInterface(modelNode);
 
@@ -423,14 +424,14 @@ nsXFormsSelectElement::HandleEvent(nsIDOMEvent *aEvent)
     nsCOMPtr<nsIDOMNode> modelNode;
     nsCOMPtr<nsIDOMElement> bindElement;
 
-    nsCOMPtr<nsIDOMXPathResult> result =
-      nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                         nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
-                                         NS_LITERAL_STRING("ref"),
-                                         EmptyString(),
-                                         nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
-                                         getter_AddRefs(modelNode),
-                                         getter_AddRefs(bindElement));
+    nsCOMPtr<nsIDOMXPathResult> result;
+    nsXFormsUtils::EvaluateNodeBinding(mElement,
+                                       nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                       NS_LITERAL_STRING("ref"),
+                                       EmptyString(),
+                                       nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                                       getter_AddRefs(modelNode),
+                                       getter_AddRefs(result));
 
 
     nsCOMPtr<nsIDOMNode> resultNode;

@@ -15,12 +15,12 @@
  * The Original Code is TransforMiiX XSLT processor code.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * The MITRE Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1999
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@propagandism.org>
+ *   Aaron Reed <aaronr@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,33 +36,49 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsXPathNSResolver_h__
-#define nsXPathNSResolver_h__
+#ifndef TRANSFRMX_XFORMS_FUNCTIONS_H
+#define TRANSFRMX_XFORMS_FUNCTIONS_H
 
-#include "nsIDOMXPathNSResolver.h"
+#include "Expr.h"
 #include "nsIDOMNode.h"
-#include "nsIDOM3Node.h"
-#include "nsCOMPtr.h"
 
-/**
- * A class for evaluating an XPath expression string
+#define NS_NAMESPACE_XFORMS              "http://www.w3.org/2002/xforms"
+#define NS_NAMESPACE_SCHEMA              "http://www.w3.org/1999/XMLSchema"
+
+/*
+ * Represents the XPath XForms Function Calls
  */
-class nsXPathNSResolver : public nsIDOMXPathNSResolver
-{
+class XFormsFunctionCall : public FunctionCall {
+
 public:
-    nsXPathNSResolver(nsIDOMNode* aNode);
-    virtual ~nsXPathNSResolver();
 
-    // nsISupports interface
-    NS_DECL_ISUPPORTS
+    enum XFormsFunctions {
+        AVG,                  // avg()
+        BOOLEANFROMSTRING,    // boolean-from-string()
+        COUNTNONEMPTY,        // count-non-empty()
+        DAYSFROMDATE,         // days-from-date()
+        IF,                   // if()
+        INDEX,                // index()
+        INSTANCE,             // instance()
+        MAX,                  // max()
+        MIN,                  // min()
+        MONTHS,               // months()
+        NOW,                  // now()
+        PROPERTY,             // property()
+        SECONDS,              // seconds()
+        SECONDSFROMDATETIME   // seconds-from-dateTime()
+    };
 
-    // nsIDOMXPathNSResolver interface
-    NS_DECL_NSIDOMXPATHNSRESOLVER
+    /*
+     * Creates a Number function of the given type
+     */
+    XFormsFunctionCall(XFormsFunctions aType, nsIDOMNode *resolverNode=nsnull);
 
-    nsIDOM3Node *GetResolverNode(){ return mNode; }
+    TX_DECL_FUNCTION;
 
 private:
-    nsCOMPtr<nsIDOM3Node> mNode;
+    XFormsFunctions mType;
+    nsCOMPtr<nsIDOMNode> mResolverNode;
 };
 
 #endif

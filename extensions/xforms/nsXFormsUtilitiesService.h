@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is TransforMiiX XSLT processor code.
+ * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Peter Van der Beken <peterv@propagandism.org>
+ *  Aaron Reed <aaronr@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,33 +36,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsXPathNSResolver_h__
-#define nsXPathNSResolver_h__
+#include "nsIXFormsUtilitiesService.h"
 
-#include "nsIDOMXPathNSResolver.h"
-#include "nsIDOMNode.h"
-#include "nsIDOM3Node.h"
-#include "nsCOMPtr.h"
-
-/**
- * A class for evaluating an XPath expression string
- */
-class nsXPathNSResolver : public nsIDOMXPathNSResolver
+class nsXFormsUtilitiesService : public nsIXFormsUtilitiesService
 {
 public:
-    nsXPathNSResolver(nsIDOMNode* aNode);
-    virtual ~nsXPathNSResolver();
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXFORMSUTILITIESSERVICE
 
-    // nsISupports interface
-    NS_DECL_ISUPPORTS
-
-    // nsIDOMXPathNSResolver interface
-    NS_DECL_NSIDOMXPATHNSRESOLVER
-
-    nsIDOM3Node *GetResolverNode(){ return mNode; }
+  nsXFormsUtilitiesService(){};
 
 private:
-    nsCOMPtr<nsIDOM3Node> mNode;
-};
+  ~nsXFormsUtilitiesService(){};
 
-#endif
+};

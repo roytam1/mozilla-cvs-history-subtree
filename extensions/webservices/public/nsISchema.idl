@@ -62,12 +62,13 @@ interface nsISchemaFacet;
  * schemas (generally through an import), these will be included
  * in the corresponding collection. 
  */
-[scriptable, uuid(427c5511-941b-48c0-9abc-8ec9ea5d964b)]
+[scriptable, uuid(1cb85b6e-d6d2-4acb-a7ce-49818d4be590)]
 interface nsISchemaCollection : nsISupports {
   nsISchema getSchema(in AString targetNamespace);
   nsISchemaElement getElement(in AString name, in AString aNamespace);
   nsISchemaAttribute getAttribute(in AString name, in AString aNamespace);
   nsISchemaType getType(in AString name, in AString aNamespace);
+  nsISchemaBuiltinType getBaseType(in AString name, in AString aNamespace);
 };
 
 [scriptable, uuid(5caaa64e-e191-11d8-842a-000393b6661a)]

@@ -220,21 +220,19 @@ nsXFormsLabelElement::RefreshLabel()
   // at all.
 
   nsCOMPtr<nsIDOMNode> modelNode;
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsCOMPtr<nsIDOMXPathResult> result =
+  nsCOMPtr<nsIDOMXPathResult> result;
+  nsresult rv =
     nsXFormsUtils::EvaluateNodeBinding(mElement,
                                        nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                        NS_LITERAL_STRING("ref"),
                                        EmptyString(),
                                        nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
                                        getter_AddRefs(modelNode),
-                                       getter_AddRefs(bindElement));
-
-
+                                       getter_AddRefs(result));
   nsAutoString labelValue;
   PRBool foundValue = PR_FALSE;
 
-  if (result) {
+  if (NS_SUCCEEDED(rv) && result) {
     nsCOMPtr<nsIDOMNode> singleNode;
     result->GetSingleNodeValue(getter_AddRefs(singleNode));
 

@@ -702,8 +702,9 @@ nsXFormsModelElement::FinishConstruction()
     if (localName.EqualsLiteral("bind")) {
       child->GetNamespaceURI(namespaceURI);
       if (namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS)) {
-        if (!ProcessBind(xpath, firstInstanceRoot, nsnull,
+        if (!ProcessBind(xpath, firstInstanceRoot, 1, 1,
                          nsCOMPtr<nsIDOMElement>(do_QueryInterface(child)))) {
+          nsXFormsUtils::DispatchEvent(mElement, eEvent_BindingException);
           return NS_OK;
         }
       }
@@ -768,7 +769,8 @@ ReleaseExpr(void    *aElement,
 PRBool
 nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
                                   nsIDOMNode           *aContextNode,
-                                  nsIDOMXPathResult    *aOuterNodeset,
+                                  PRInt32              aContextPosition,
+                                  PRInt32              aContextSize,
                                   nsIDOMElement        *aBindElement)
 {
   // Get the model item properties specified by this <bind>.
@@ -803,23 +805,27 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
   nsAutoString expr;
   aBindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
   if (expr.IsEmpty()) {
-    result = aOuterNodeset;
-  } else {
-    rv = aEvaluator->Evaluate(expr, aContextNode, resolver,
-                              nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
-                              nsnull, getter_AddRefs(result));
-    if (NS_FAILED(rv)) {
-      nsXFormsUtils::DispatchEvent(mElement, eEvent_BindingException);
-      return PR_FALSE; // dispatch a binding exception
-    }
-    
+    expr = NS_LITERAL_STRING(".");
   }
+  ///
+  /// @todo use aContextSize and aContextPosition in evaluation (XXX)
+  rv = aEvaluator->Evaluate(expr, aContextNode, resolver,
+                            nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
+                            nsnull, getter_AddRefs(result));
+
+  if (NS_FAILED(rv)) {
+    nsXFormsUtils::DispatchEvent(mElement, eEvent_BindingException);
+    return PR_FALSE; // dispatch a binding exception
+  }
+
   NS_ENSURE_TRUE(result, PR_FALSE);
 
   PRUint32 snapLen;
   rv = result->GetSnapshotLength(&snapLen);
   NS_ENSURE_SUCCESS(rv, rv);
   
+
+  // Iterate over resultset
   nsXFormsMDGSet set;
   nsCOMPtr<nsIDOMNode> node;
   PRInt32 contextPosition = 1;
@@ -832,6 +838,8 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
       continue;
     }
     
+
+    // Apply MIPs
     nsXFormsXPathParser parser;
     nsXFormsXPathAnalyzer analyzer(aEvaluator, resolver);
     
@@ -892,7 +900,8 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
         if (!value.EqualsLiteral(NS_NAMESPACE_XFORMS))
           continue;
 
-        if (!ProcessBind(aEvaluator, childContext, result,
+        if (!ProcessBind(aEvaluator, node,
+                         snapItem + 1, snapLen,
                          nsCOMPtr<nsIDOMElement>(do_QueryInterface(child))))
           return PR_FALSE;
 

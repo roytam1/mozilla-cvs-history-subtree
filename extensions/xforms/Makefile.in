@@ -65,6 +65,7 @@ REQUIRES	= \
 		xpconnect \
 		js \
 		layout \
+		transformiix \
 		$(NULL)
 
 XPIDLSRCS	= \
@@ -115,6 +116,7 @@ CPPSRCS		= \
 		nsXFormsSetFocusElement.cpp \
 		nsXFormsSetValueElement.cpp \
 		nsXFormsLoadElement.cpp \
+		nsXFormsMessageElement.cpp \
 		nsXFormsLabelElement.cpp \
 		nsXFormsToggleElement.cpp \
 		nsXFormsCaseElement.cpp \
@@ -125,6 +127,7 @@ CPPSRCS		= \
 		nsXFormsValueElement.cpp \
 		nsXFormsChoicesElement.cpp \
 		nsXFormsItemSetElement.cpp \
+ 		nsXFormsUtilitiesService.cpp \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = $(MOZ_COMPONENT_LIBS)

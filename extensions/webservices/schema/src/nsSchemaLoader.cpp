@@ -279,6 +279,19 @@ nsBuiltinSchemaCollection::GetType(const nsAString & aName,
   return NS_ERROR_SCHEMA_UNKNOWN_TYPE;
 }
 
+NS_IMETHODIMP
+nsBuiltinSchemaCollection::GetBaseType(const nsAString& aName, 
+                                       const nsAString & aNamespace, 
+                                       nsISchemaBuiltinType **aResult)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsISchemaType> schemaType;
+  rv = GetBuiltinType(aName, aNamespace, getter_AddRefs(schemaType));
+
+  return schemaType ? CallQueryInterface(schemaType, aResult) : rv;
+}
+
 nsresult
 nsBuiltinSchemaCollection::GetBuiltinType(const nsAString& aName,
                                           const nsAString& aNamespace,
@@ -612,6 +625,92 @@ nsSchemaLoader::GetType(const nsAString & aName,
   }
 
   return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsSchemaLoader::GetBaseType(const nsAString & aName,
+                            const nsAString & aNamespace,
+                            nsISchemaBuiltinType **aResult)
+{
+  nsresult rv = NS_OK;
+
+  if (IsSchemaNamespace(aNamespace)) {
+    // if its a schema namespace, check if its a built in type
+    return mBuiltinCollection->GetBaseType(aName, aNamespace, aResult);
+  }
+
+  nsCOMPtr<nsISchemaType> schemaType;
+  rv = GetType(aName, aNamespace, getter_AddRefs(schemaType));
+  if (NS_FAILED(rv) || !schemaType)
+    return rv;
+
+  // figure out the base type
+  PRUint16 typevalue;
+  rv = schemaType->GetSchemaType(&typevalue);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (typevalue == nsISchemaType::SCHEMA_TYPE_SIMPLE) {
+    nsCOMPtr<nsISchemaSimpleType> simpleType = do_QueryInterface(schemaType);
+
+    if (simpleType) {
+      rv = GetBuiltinTypeFromSimpleType(simpleType, aResult);
+    }
+  } else {
+    nsCOMPtr<nsISchemaComplexType> complexType = do_QueryInterface(schemaType);
+
+    if (complexType) {
+      // check the deriviation type
+      PRUint16 derivation;
+      rv = complexType->GetDerivation(&derivation);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if ((derivation == nsISchemaComplexType::DERIVATION_RESTRICTION_SIMPLE) ||
+          (derivation == nsISchemaComplexType::DERIVATION_EXTENSION_SIMPLE)) {
+        nsCOMPtr<nsISchemaSimpleType> simpleType;
+        rv = complexType->GetSimpleBaseType(getter_AddRefs(simpleType));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = GetBuiltinTypeFromSimpleType(simpleType, aResult);
+      } else {
+        rv = NS_ERROR_NOT_IMPLEMENTED;
+      }
+    }
+  }
+
+  return rv;
+}
+
+nsresult 
+nsSchemaLoader::GetBuiltinTypeFromSimpleType(nsISchemaSimpleType* aSimpleType,
+  nsISchemaBuiltinType** aBuiltinType)
+{
+  nsresult rv;
+
+  PRUint16 simpleTypeValue;
+  rv = aSimpleType->GetSimpleType(&simpleTypeValue);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (simpleTypeValue == nsISchemaSimpleType::SIMPLE_TYPE_RESTRICTION) {
+    nsCOMPtr<nsISchemaRestrictionType> restrictionType =
+        do_QueryInterface(aSimpleType);
+    nsCOMPtr<nsISchemaSimpleType> simpleBaseType;
+
+    rv = restrictionType->GetBaseType(getter_AddRefs(simpleBaseType));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = CallQueryInterface(simpleBaseType, aBuiltinType);
+  } else if (simpleTypeValue == nsISchemaSimpleType::SIMPLE_TYPE_LIST) {
+    nsCOMPtr<nsISchemaListType> listType =
+        do_QueryInterface(aSimpleType);
+    nsCOMPtr<nsISchemaSimpleType> simpleBaseType;
+
+    rv = listType->GetListType(getter_AddRefs(simpleBaseType));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = CallQueryInterface(simpleBaseType, aBuiltinType);
+  }
+
+  return rv;
 }
 
 nsresult

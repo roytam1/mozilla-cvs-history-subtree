@@ -230,25 +230,25 @@ nsXFormsOutputElement::Refresh()
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIDOMNode> modelNode;
-  nsCOMPtr<nsIDOMElement> bindElement;
   nsCOMPtr<nsIDOMXPathResult> result;
   if (hasRef) {
-    result = nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                                nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
-                                                NS_LITERAL_STRING("ref"),
-                                                EmptyString(),
-                                                nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
-                                                getter_AddRefs(modelNode),
-                                                getter_AddRefs(bindElement));
+    rv = nsXFormsUtils::EvaluateNodeBinding(mElement,
+                                            nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                            NS_LITERAL_STRING("ref"),
+                                            EmptyString(),
+                                            nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                                            getter_AddRefs(modelNode),
+                                            getter_AddRefs(result));
   } else {
-    result = nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                                nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
-                                                NS_LITERAL_STRING("value"),
-                                                EmptyString(),
-                                                nsIDOMXPathResult::STRING_TYPE,
-                                                getter_AddRefs(modelNode),
-                                                getter_AddRefs(bindElement));
+    rv = nsXFormsUtils::EvaluateNodeBinding(mElement,
+                                            nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                            NS_LITERAL_STRING("value"),
+                                            EmptyString(),
+                                            nsIDOMXPathResult::STRING_TYPE,
+                                            getter_AddRefs(modelNode),
+                                            getter_AddRefs(result));
   }
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIModelElementPrivate> model = do_QueryInterface(modelNode);
 

@@ -48,6 +48,7 @@
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIServiceManager.h"
 #include "nsXPathEvaluator.h"
+#include "nsXFormsXPathEvaluator.h"
 #include "nsXPathException.h"
 #include "nsXPIDLString.h"
 #include "txAtoms.h"
@@ -86,6 +87,12 @@ NS_DOMCI_EXTENSION(Transformiix)
     NS_DOMCI_EXTENSION_ENTRY_END(XPathEvaluator, nsIDOMXPathEvaluator, PR_TRUE,
                                  &kXPathEvaluatorCID)
 
+    static NS_DEFINE_CID(kXFormsXPathEvaluatorCID, TRANSFORMIIX_XFORMS_XPATH_EVALUATOR_CID);
+    NS_DOMCI_EXTENSION_ENTRY_BEGIN(XFormsXPathEvaluator)
+        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDOMXPathEvaluator)
+    NS_DOMCI_EXTENSION_ENTRY_END(XFormsXPathEvaluator, nsIDOMXPathEvaluator, PR_TRUE,
+                                 &kXFormsXPathEvaluatorCID)
+
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XPathException)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDOMXPathException)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIException)
@@ -111,9 +118,11 @@ NS_DOMCI_EXTENSION_END
 // Factory Constructor
 NS_GENERIC_FACTORY_CONSTRUCTOR(txMozillaXSLTProcessor)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXPathEvaluator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsXPathEvaluator)
 
 NS_DECL_DOM_CLASSINFO(XSLTProcessor)
 NS_DECL_DOM_CLASSINFO(XPathEvaluator)
+NS_DECL_DOM_CLASSINFO(XFormsXPathEvaluator)
 NS_DECL_DOM_CLASSINFO(XPathException)
 NS_DECL_DOM_CLASSINFO(XPathExpression)
 NS_DECL_DOM_CLASSINFO(XPathNSResolver)
@@ -143,6 +152,12 @@ RegisterTransformiix(nsIComponentManager *aCompMgr,
 
     rv = catman->AddCategoryEntry(JAVASCRIPT_DOM_CLASS,
                                   "XPathEvaluator",
+                                  TRANSFORMIIX_DOMCI_EXTENSION_CONTRACTID,
+                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = catman->AddCategoryEntry(JAVASCRIPT_DOM_CLASS,
+                                  "XFormsXPathEvaluator",
                                   TRANSFORMIIX_DOMCI_EXTENSION_CONTRACTID,
                                   PR_TRUE, PR_TRUE, getter_Copies(previous));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -272,6 +287,7 @@ Shutdown(nsIModule* aSelf)
 
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XSLTProcessor));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathEvaluator));
+    NS_IF_RELEASE(NS_CLASSINFO_NAME(XFormsXPathEvaluator));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathException));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathExpression));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathNSResolver));
@@ -295,6 +311,10 @@ static const nsModuleComponentInfo gComponents[] = {
       TRANSFORMIIX_XPATH_EVALUATOR_CID,
       NS_XPATH_EVALUATOR_CONTRACTID,
       nsXPathEvaluatorConstructor },
+    { "XFormsXPathEvaluator",
+      TRANSFORMIIX_XFORMS_XPATH_EVALUATOR_CID,
+      NS_XFORMS_XPATH_EVALUATOR_CONTRACTID,
+      nsXFormsXPathEvaluatorConstructor },
     { "Transformiix DOMCI Extender",
       TRANSFORMIIX_DOMCI_EXTENSION_CID,
       TRANSFORMIIX_DOMCI_EXTENSION_CONTRACTID,

@@ -61,6 +61,15 @@ REQUIRES +=	  dom \
 		  $(NULL)
 endif
 
+# unfortunately this .idl file has to live somewhere and it is better for
+# XForms to require XPath rather than vice versa as XForms is just an extension.
+# When XPath is extensible, this can be removed.
+ifndef TX_EXE
+XPIDLSRCS	= \
+		nsIXFormsUtilitiesService.idl \
+		$(NULL)
+endif
+
 CPPSRCS = AdditiveExpr.cpp \
         AttributeValueTemplate.cpp \
         BooleanExpr.cpp \
@@ -98,7 +107,9 @@ CPPSRCS += nsXPathEvaluator.cpp \
            nsXPathNSResolver.cpp \
            nsXPathResult.cpp \
            nsXPath1Scheme.cpp \
-           txMozillaXPathTreeWalker.cpp
+           nsXFormsXPathEvaluator.cpp \
+           txMozillaXPathTreeWalker.cpp \
+           XFormsFunctionCall.cpp
 else
 CPPSRCS += txStandaloneXPathTreeWalker.cpp
 endif

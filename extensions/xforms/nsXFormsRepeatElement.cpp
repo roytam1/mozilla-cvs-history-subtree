@@ -311,15 +311,16 @@ nsXFormsRepeatElement::Refresh()
 
   // Get the nodeset we are bound to
   nsCOMPtr<nsIDOMNode> modelNode;
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsCOMPtr<nsIDOMXPathResult> result =
+  nsCOMPtr<nsIDOMXPathResult> result;
+  rv =
     nsXFormsUtils::EvaluateNodeBinding(mElement,
                                        nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                        NS_LITERAL_STRING("nodeset"),
                                        EmptyString(),
                                        nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
                                        getter_AddRefs(modelNode),
-                                       getter_AddRefs(bindElement));
+                                       getter_AddRefs(result));
+  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!result) {
     return NS_OK;

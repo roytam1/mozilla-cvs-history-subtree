@@ -103,7 +103,8 @@ private:
 
   NS_HIDDEN_(PRBool)   ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
                                    nsIDOMNode           *aContextNode,
-                                   nsIDOMXPathResult    *aOuterNodeset,
+                                   PRInt32              aContextPosition,
+                                   PRInt32              aContextSize,
                                    nsIDOMElement        *aBindElement);
 
   NS_HIDDEN_(void)     RemoveModelFromDocument();

@@ -268,15 +268,16 @@ nsXFormsGroupElement::Process()
 
   mModelID.Truncate();
   nsCOMPtr<nsIDOMNode> modelNode;
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsCOMPtr<nsIDOMXPathResult> result =
+  nsCOMPtr<nsIDOMXPathResult> result;
+  nsresult rv =
     nsXFormsUtils::EvaluateNodeBinding(mElement,
                                        nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                        NS_LITERAL_STRING("ref"),
                                        EmptyString(),
                                        nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
                                        getter_AddRefs(modelNode),
-                                       getter_AddRefs(bindElement));
+                                       getter_AddRefs(result));
+  NS_ENSURE_SUCCESS(rv, rv);
     
   nsCOMPtr<nsIModelElementPrivate> model = do_QueryInterface(modelNode);
   

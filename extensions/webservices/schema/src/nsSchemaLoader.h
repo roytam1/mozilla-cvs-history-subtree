@@ -220,6 +220,8 @@ protected:
                            PRUint32* aDimension);
   void ConstructArrayName(nsISchemaType* aType,
                           nsAString& aName);
+  nsresult GetBuiltinTypeFromSimpleType(nsISchemaSimpleType* aSimpleType,
+                                        nsISchemaBuiltinType** aBuiltinType);
 
 protected:
   nsSupportsHashtable mSchemas;

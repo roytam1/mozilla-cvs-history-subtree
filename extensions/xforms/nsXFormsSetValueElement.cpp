@@ -102,15 +102,16 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
   }
 
   nsCOMPtr<nsIDOMNode> model;
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsCOMPtr<nsIDOMXPathResult> result =
+  nsCOMPtr<nsIDOMXPathResult> result;
+  nsresult rv =
     nsXFormsUtils:: EvaluateNodeBinding(mElement,
                                         nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
                                         NS_LITERAL_STRING("ref"),
                                         EmptyString(),
                                         nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
                                         getter_AddRefs(model),
-                                        getter_AddRefs(bindElement));
+                                        getter_AddRefs(result));
+  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!result)
     return NS_OK;
