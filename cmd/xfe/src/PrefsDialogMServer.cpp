@@ -175,7 +175,7 @@ XFE_PrefsMServerDialog::XFE_PrefsMServerDialog(Widget parent,
                                                char *server_name,
                                                XP_Bool allow_pop,
                                                MWContext *context)
-	: XFE_XmLFolderDialog((XFE_View *) NULL,
+	: XFE_PropertySheetDialog((XFE_View *) NULL,
 						  parent, 
 						  "MailServerInfo",
 						  context,
@@ -202,7 +202,7 @@ XFE_PrefsMServerDialog::XFE_PrefsMServerDialog(Widget parent,
 }
 
 void XFE_PrefsMServerDialog::create() {
-	XFE_XmLFolderView* folder_view = (XFE_XmLFolderView *) m_view;
+	XFE_PropertySheetView* folder_view = (XFE_PropertySheetView *) m_view;
 
 
     // create tabs
@@ -217,9 +217,9 @@ void XFE_PrefsMServerDialog::create() {
     folder_view->addTab(m_general_tab);
 
     // add these tabs but don't show them
-    folder_view->addTab(m_imap_tab, FALSE);
-    folder_view->addTab(m_imap_advanced_tab, FALSE);
-    folder_view->addTab(m_pop_tab, FALSE);
+    folder_view->addTab(m_imap_tab);
+    folder_view->addTab(m_imap_advanced_tab);
+    folder_view->addTab(m_pop_tab);
     
     // start with general tab
     m_general_tab->show();
@@ -299,7 +299,7 @@ XFE_PrefsMServerGeneralTab::XFE_PrefsMServerGeneralTab(
 	XFE_View *view,
     Widget parent,
     XP_Bool allow_pop)
-	: XFE_XmLTabView(top, view, XFE_GENERAL_TAB),
+	: XFE_PropertyTabView(top, view, XFE_GENERAL_TAB),
       m_server_label(0),
       m_server_text(0),
       m_server_type_menu(0),
@@ -671,7 +671,7 @@ XFE_PrefsMServerGeneralTab::apply()
 XFE_PrefsMServerIMAPTab::XFE_PrefsMServerIMAPTab(
 	XFE_Component *top,
 	XFE_View *view)
-	: XFE_XmLTabView(top, view, XFE_IMAP_TAB),
+	: XFE_PropertyTabView(top, view, XFE_IMAP_TAB),
       m_delete_trash_toggle(0),
       m_delete_mark_toggle(0),
       m_delete_remove_toggle(0),
@@ -801,7 +801,7 @@ XFE_PrefsMServerIMAPTab::apply(char *server_name)
 XFE_PrefsMServerAdvancedTab::XFE_PrefsMServerAdvancedTab(
 	XFE_Component *top,
 	XFE_View *view)
-	: XFE_XmLTabView(top, view, XFE_ADVANCED_TAB),
+	: XFE_PropertyTabView(top, view, XFE_ADVANCED_TAB),
        m_path_prefs_label(0),
 	 m_personal_dir_label(0),
 	 m_personal_dir_text(0),
@@ -965,7 +965,7 @@ XFE_PrefsMServerAdvancedTab::apply(char *server_name)
 // Create the body of the POP Tab
 XFE_PrefsMServerPOPTab::XFE_PrefsMServerPOPTab(XFE_Component *top,
 											   XFE_View *view)
-	: XFE_XmLTabView(top, view, XFE_POP_TAB),
+	: XFE_PropertyTabView(top, view, XFE_POP_TAB),
       m_leave_messages(0)
 {
     create();
