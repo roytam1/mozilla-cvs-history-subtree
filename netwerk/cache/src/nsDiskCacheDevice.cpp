@@ -511,99 +511,84 @@ nsresult MetaDataFile::Read(nsIInputStream* input)
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-class nsCacheEntryInfo : public nsICacheEntryInfo {
+class nsDiskCacheEntryInfo : public nsICacheEntryInfo {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICACHEENTRYINFO
 
-    nsCacheEntryInfo()
-        :   mClientID(nsnull), mKey(nsnull)
+    nsDiskCacheEntryInfo()
     {
         NS_INIT_ISUPPORTS();
     }
 
-    virtual ~nsCacheEntryInfo()
-    {
-        delete[] mClientID;
-    }
+    virtual ~nsDiskCacheEntryInfo() {}
     
     nsresult Read(nsIInputStream * input)
     {
         nsresult rv = mMetaDataFile.Read(input);
         if (NS_FAILED(rv)) return rv;
-        delete[] mClientID;
-        mClientID = nsCRT::strdup(mMetaDataFile.mKey);
-        if (!mClientID) return NS_ERROR_OUT_OF_MEMORY;
-        char* colon = ::strchr(mClientID, ':');
-        if (!colon) return NS_ERROR_FAILURE;
-        *colon = '\0';
-        mKey = colon + 1;
-        return NS_OK;
+        return nsCacheService::ClientID(nsLiteralCString(mMetaDataFile.mKey), getter_Copies(mClientID));
     }
     
-    char* ClientID() { return mClientID; }
+    const char* ClientID() { return mClientID; }
     char* Key() { return mMetaDataFile.mKey; }
     
 private:
     MetaDataFile mMetaDataFile;
-    char* mClientID;
-    char* mKey;
+    nsXPIDLCString mClientID;
 };
-NS_IMPL_ISUPPORTS1(nsCacheEntryInfo, nsICacheEntryInfo);
+NS_IMPL_ISUPPORTS1(nsDiskCacheEntryInfo, nsICacheEntryInfo);
 
-NS_IMETHODIMP nsCacheEntryInfo::GetClientID(char * *aClientID)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
 {
-    char * result = nsCRT::strdup(mClientID);
-    if (!result) return NS_ERROR_OUT_OF_MEMORY;
-    *aClientID = result;
-    return NS_OK;
+    NS_ENSURE_ARG_POINTER(clientID);
+    *clientID = nsCRT::strdup(mClientID.get());
+    return (*clientID ? NS_OK : NS_ERROR_OUT_OF_MEMORY);
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetKey(char * *aKey)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
 {
-    char * result = nsCRT::strdup(mKey);
-    if (!result) return NS_ERROR_OUT_OF_MEMORY;
-    *aKey = result;
-    return NS_OK;
+    NS_ENSURE_ARG_POINTER(clientKey);
+    return nsCacheService::ClientKey(nsLiteralCString(mMetaDataFile.mKey), clientKey);
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetFetchCount(PRInt32 *aFetchCount)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetFetchCount(PRInt32 *aFetchCount)
 {
     return *aFetchCount = mMetaDataFile.mFetchCount;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetLastFetched(PRUint32 *aLastFetched)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastFetched(PRUint32 *aLastFetched)
 {
     *aLastFetched = mMetaDataFile.mLastFetched;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
 {
     *aLastModified = mMetaDataFile.mLastModified;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetLastValidated(PRUint32 *aLastValidated)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastValidated(PRUint32 *aLastValidated)
 {
     *aLastValidated = mMetaDataFile.mLastValidated;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
 {
     *aExpirationTime = mMetaDataFile.mExpirationTime;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::IsStreamBased(PRBool *aStreamBased)
+NS_IMETHODIMP nsDiskCacheEntryInfo::IsStreamBased(PRBool *aStreamBased)
 {
     *aStreamBased = PR_TRUE;
     return NS_OK;
 }
 
-NS_IMETHODIMP nsCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
 {
     *aDataSize = mMetaDataFile.mDataSize;
     return NS_OK;
@@ -989,7 +974,7 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     nsresult rv = mCacheDirectory->GetDirectoryEntries(getter_AddRefs(entries));
     if (NS_FAILED(rv)) return rv;
     
-    nsCacheEntryInfo* entryInfo = new nsCacheEntryInfo();
+    nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
     if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
     nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
     
@@ -1417,7 +1402,7 @@ nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
             rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
             if (NS_FAILED(rv)) continue;
 
-            nsCacheEntryInfo* entryInfo = new nsCacheEntryInfo();
+            nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
             if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
             nsCOMPtr<nsISupports> ref(entryInfo);
             rv = entryInfo->Read(input);
@@ -1490,7 +1475,7 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     for (PRUint32 i = 0; i < count; ++i) {
         nsCOMPtr<nsICacheEntryInfo> info = do_QueryElementAt(entries, i, &rv);
         if (NS_SUCCEEDED(rv)) {
-            nsCacheEntryInfo* entryInfo = (nsCacheEntryInfo*) info.get();
+            nsDiskCacheEntryInfo* entryInfo = (nsDiskCacheEntryInfo*) info.get();
             char* key = entryInfo->Key();
             
             // XXX if this entry is currently active, then leave it alone,

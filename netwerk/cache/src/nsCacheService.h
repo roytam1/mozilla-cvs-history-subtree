@@ -33,6 +33,7 @@
 #include "nsCacheDevice.h"
 #include "nsCacheEntry.h"
 #include "nsIObserver.h"
+#include "nsString.h"
 
 class nsCacheRequest;
 
@@ -104,6 +105,12 @@ public:
     nsresult         DoomEntry(nsCacheEntry * entry);
 
     nsresult         DoomEntry_Locked(nsCacheEntry * entry);
+
+    /**
+     * static utility methods
+     */
+    static nsresult  ClientID(const nsAReadableCString&  clientID, char **  result);
+    static nsresult  ClientKey(const nsAReadableCString& clientKey, char ** result);
 
 private:
 

@@ -71,7 +71,10 @@ nsCacheEntryDescriptor::Create(nsCacheEntry * entry, nsCacheAccessMode  accessGr
 NS_IMETHODIMP
 nsCacheEntryDescriptor::GetClientID(char ** result)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(result);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    return nsCacheService::ClientID(*(mCacheEntry->Key()), result);
 }
 
 
@@ -81,6 +84,9 @@ nsCacheEntryDescriptor::GetKey(char ** result)
     NS_ENSURE_ARG_POINTER(result);
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
 
+    return nsCacheService::ClientKey(*(mCacheEntry->Key()), result);
+
+#if 0
     nsCString * key;
     nsresult    rv = NS_OK;
 
@@ -102,6 +108,7 @@ nsCacheEntryDescriptor::GetKey(char ** result)
         rv = NS_ERROR_UNEXPECTED;
     }
     return rv;
+#endif
 }
 
 

@@ -22,6 +22,7 @@
  */
 
 #include "nsMemoryCacheDevice.h"
+#include "nsCacheService.h"
 #include "nsICacheService.h"
 #include "nsIComponentManager.h"
 #include "nsNetCID.h"
@@ -392,3 +393,119 @@ nsMemoryCacheDeviceInfo::GetMaximumSize(PRUint32 * result)
  * nsMemoryCacheEntryInfo - for implementing about:cache
  *****************************************************************************/
 
+class nsCacheEntryInfo : public nsICacheEntryInfo {
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSICACHEENTRYINFO
+
+    nsCacheEntryInfo(nsCacheEntry* entry)
+        :   mCacheEntry(entry)
+    {
+        NS_INIT_ISUPPORTS();
+    }
+
+    virtual ~nsCacheEntryInfo() {}
+    
+private:
+    nsCacheEntry * mCacheEntry;
+};
+
+
+NS_IMPL_ISUPPORTS1(nsCacheEntryInfo, nsICacheEntryInfo);
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetClientID(char ** clientID)
+{
+    NS_ENSURE_ARG_POINTER(clientID);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    return nsCacheService::ClientID(*mCacheEntry->Key(), clientID);
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetKey(char ** key)
+{
+    NS_ENSURE_ARG_POINTER(key);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    return nsCacheService::ClientKey(*mCacheEntry->Key(), key);
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetFetchCount(PRInt32 * fetchCount)
+{
+    NS_ENSURE_ARG_POINTER(fetchCount);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *fetchCount = mCacheEntry->FetchCount();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetLastFetched(PRUint32 * lastFetched)
+{
+    NS_ENSURE_ARG_POINTER(lastFetched);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *lastFetched = mCacheEntry->LastFetched();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetLastModified(PRUint32 * lastModified)
+{
+    NS_ENSURE_ARG_POINTER(lastModified);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *lastModified = mCacheEntry->LastModified();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetLastValidated(PRUint32 * lastValidated)
+{
+    NS_ENSURE_ARG_POINTER(lastValidated);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *lastValidated = mCacheEntry->LastValidated();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetExpirationTime(PRUint32 * expirationTime)
+{
+    NS_ENSURE_ARG_POINTER(expirationTime);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *expirationTime = mCacheEntry->ExpirationTime();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::GetDataSize(PRUint32 * dataSize)
+{
+    NS_ENSURE_ARG_POINTER(dataSize);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+
+    *dataSize = mCacheEntry->DataSize();
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsCacheEntryInfo::IsStreamBased(PRBool * result)
+{
+    NS_ENSURE_ARG_POINTER(result);
+    if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+    
+    *result = mCacheEntry->IsStreamData();
+    return NS_OK;
+}

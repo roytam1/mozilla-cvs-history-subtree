@@ -36,6 +36,7 @@
 #include "nsProxiedService.h"
 #include "nsICacheVisitor.h"
 #include "nsIObserverService.h"
+#include "nsReadableUtils.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
@@ -545,6 +546,56 @@ nsCacheService::DoomEntry_Locked(nsCacheEntry * entry)
     // All requests have been removed, but there may still be open descriptors
     if (entry->IsNotInUse()) {
         DeactivateEntry(entry); // tell device to get rid of it
+    }
+    return rv;
+}
+
+
+nsresult
+nsCacheService::ClientID(const nsAReadableCString&  key, char ** result)
+{
+    nsresult  rv = NS_OK;
+    *result = nsnull;
+
+    nsReadingIterator<char> colon;
+    key.BeginReading(colon);
+        
+    nsReadingIterator<char> start;
+    key.BeginReading(start);
+        
+    nsReadingIterator<char> end;
+    key.EndReading(end);
+        
+    if (FindCharInReadable(':', colon, end)) {
+        *result = ToNewCString( Substring(start, colon));
+        if (!*result) rv = NS_ERROR_OUT_OF_MEMORY;
+    } else {
+        NS_ASSERTION(PR_FALSE, "FindCharInRead failed to find ':'");
+        rv = NS_ERROR_UNEXPECTED;
+    }
+    return rv;
+}
+
+
+nsresult
+nsCacheService::ClientKey(const nsAReadableCString& key, char ** result)
+{
+    nsresult  rv = NS_OK;
+    *result = nsnull;
+
+    nsReadingIterator<char> start;
+    key.BeginReading(start);
+        
+    nsReadingIterator<char> end;
+    key.EndReading(end);
+        
+    if (FindCharInReadable(':', start, end)) {
+        ++start;  // advance past clientID ':' delimiter
+        *result = ToNewCString( Substring(start, end));
+        if (!*result) rv = NS_ERROR_OUT_OF_MEMORY;
+    } else {
+        NS_ASSERTION(PR_FALSE, "FindCharInRead failed to find ':'");
+        rv = NS_ERROR_UNEXPECTED;
     }
     return rv;
 }
