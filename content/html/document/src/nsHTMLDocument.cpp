@@ -120,7 +120,9 @@
 #include "nsContentUtils.h"
 #include "nsIDocumentCharsetInfo.h"
 #include "nsIDocumentEncoder.h" //for outputting selection
+#ifndef MOZ_MINOTAUR
 #include "nsIBookmarksService.h"
+#endif
 #include "nsICachingChannel.h"
 #include "nsICacheEntryDescriptor.h"
 #include "nsIXMLContent.h" //for createelementNS
@@ -611,6 +613,7 @@ nsHTMLDocument::TryBookmarkCharset(nsAFlatCString* aUrlSpec,
   if (kCharsetFromBookmarks <= aCharsetSource)
     return PR_TRUE;
 
+#ifndef MOZ_MINOTAUR
   nsCOMPtr<nsIRDFDataSource>  datasource;
   if (gRDF && NS_SUCCEEDED(rv = gRDF->GetDataSource("rdf:bookmarks", getter_AddRefs(datasource)))) {
     nsCOMPtr<nsIBookmarksService>   bookmarks = do_QueryInterface(datasource);
@@ -626,6 +629,7 @@ nsHTMLDocument::TryBookmarkCharset(nsAFlatCString* aUrlSpec,
       } 
     }
   }
+#endif
   return PR_FALSE;
 }
 
