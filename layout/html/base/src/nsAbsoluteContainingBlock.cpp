@@ -200,6 +200,8 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
   nsHTMLReflowState reflowState(aReflowState);
   if (eReflowReason_Incremental == reflowState.reason) {
     reflowState.reason = eReflowReason_Resize;
+    // we're changing to a resize reflow; nuke any tree nodes below this point.
+    aReflowState.SetCurrentReflowNode(nsnull);
   }
 
   nsIFrame* kidFrame;

@@ -173,12 +173,6 @@ public:
   nsresult SetChildListName(nsIAtom* aListName);
 
   /**
-   * Get the previous sibling frame associated with the reflow command.
-   * This is used for FrameInserted reflow commands.
-   */
-  nsresult GetPrevSiblingFrame(nsIFrame*& aSiblingFrame) const;
-
-  /**
    * Dump out the reflow-command to out
    */
   nsresult List(FILE* out) const;
@@ -217,8 +211,6 @@ protected:
 private:
   nsReflowType    mType;
   nsIFrame*       mTargetFrame;
-  nsIFrame*       mChildFrame;
-  nsIFrame*       mPrevSiblingFrame;
   nsIAtom*        mAttribute;
   nsIAtom*        mListName;
   nsAutoVoidArray mPath;

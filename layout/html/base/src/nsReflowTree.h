@@ -54,6 +54,7 @@
 #include "nscore.h"
 #include "pldhash.h"
 #include <stdio.h>
+#include "nsReflowType.h"
 
 class nsIFrame;
 class nsHTMLReflowCommand;
@@ -160,7 +161,7 @@ public:
         friend class nsReflowTree;
     };
         
-    Node *MergeCommand(nsHTMLReflowCommand *command);
+    Node *MergeCommand(nsHTMLReflowCommand *command, nsReflowType type);
 
     void Dump();
 

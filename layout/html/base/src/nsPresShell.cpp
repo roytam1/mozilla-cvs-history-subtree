@@ -6375,9 +6375,9 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       // Start with a tree with a single branch
       nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
                                   mReflowCommands.ElementAt(0);
-      nsVoidArray *curr_path = curr->GetPath();
-      void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
-      nsReflowTree::Node *n = tree.MergeCommand(curr);
+      nsReflowType curr_type;
+      curr->GetType(curr_type);
+      nsReflowTree::Node *n = tree.MergeCommand(curr, curr_type);
       int i;
 #if 0
       fprintf(stderr, "Initial path dump:\n");
@@ -6391,7 +6391,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
           NS_STATIC_CAST(nsHTMLReflowCommand *,
                          mReflowCommands.ElementAt(i));
 
-        n = tree.MergeCommand(command);
+        n = tree.MergeCommand(command, curr_type);
         if (!n)
           continue;         // can't be merged...try next?
         
@@ -6433,9 +6433,9 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
         // Start with a tree with a single branch
         nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
                                     mTimeoutReflowCommands.ElementAt(0);
-        nsVoidArray *curr_path = curr->GetPath();
-        void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
-        nsReflowTree::Node *n = tree.MergeCommand(curr);
+        nsReflowType curr_type;
+        curr->GetType(curr_type);
+        nsReflowTree::Node *n = tree.MergeCommand(curr, curr_type);
         int i;
 #if 0
         fprintf(stderr, "Initial path dump:\n");
@@ -6449,7 +6449,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
             NS_STATIC_CAST(nsHTMLReflowCommand *,
                            mTimeoutReflowCommands.ElementAt(i));
 
-          n = tree.MergeCommand(command);
+          n = tree.MergeCommand(command, curr_type);
           if (!n)
             continue;         // can't be merged...try next?
         

@@ -213,14 +213,25 @@ nsReflowTree::Node::ChildChunk::GetChild(nsIFrame *forFrame)
 }
 
 nsReflowTree::Node *
-nsReflowTree::MergeCommand(nsHTMLReflowCommand *command)
+nsReflowTree::MergeCommand(nsHTMLReflowCommand *command, nsReflowType type)
 {
     nsIFrame *frame;
     if (NS_FAILED(command->GetTarget(/* ref */ frame)) || !frame)
         return nsnull;
 
+    // Make sure that the types of reflows we're merging are identical
     if (mRoot) {
-        // XXX check that reflow types and other bits match
+        nsReflowType new_type;
+        command->GetType(new_type);
+        if (new_type != type)
+            return nsnull;
+
+        // make sure they have the same root as well
+        nsVoidArray *path = command->GetPath();
+        NS_ASSERTION(path,"No reflow command path?");
+        void *root = path->SafeElementAt(path->Count()-1);
+        if (root != mRoot->GetFrame())
+            return nsnull;
     }
     
     Node *n = AddToTree(frame);

@@ -109,8 +109,7 @@ nsHTMLReflowCommand::nsHTMLReflowCommand(nsIFrame*    aTargetFrame,
                                          nsReflowType aReflowType,
                                          nsIFrame*    aChildFrame,
                                          nsIAtom*     aAttribute)
-  : mType(aReflowType), mTargetFrame(aTargetFrame), mChildFrame(aChildFrame),
-    mPrevSiblingFrame(nsnull),
+  : mType(aReflowType), mTargetFrame(aTargetFrame),
     mAttribute(aAttribute),
     mListName(nsnull),
     mTree(nsnull),
@@ -295,13 +294,6 @@ nsHTMLReflowCommand::SetChildListName(nsIAtom* aListName)
 }
 
 nsresult
-nsHTMLReflowCommand::GetPrevSiblingFrame(nsIFrame*& aSiblingFrame) const
-{
-  aSiblingFrame = mPrevSiblingFrame;
-  return NS_OK;
-}
-
-nsresult
 nsHTMLReflowCommand::List(FILE* out) const
 {
 #ifdef DEBUG
@@ -317,14 +309,6 @@ nsHTMLReflowCommand::List(FILE* out) const
   if (mTargetFrame) {
     fprintf(out, " target=");
     nsFrame::ListTag(out, mTargetFrame);
-  }
-  if (mChildFrame) {
-    fprintf(out, " child=");
-    nsFrame::ListTag(out, mChildFrame);
-  }
-  if (mPrevSiblingFrame) {
-    fprintf(out, " prevSibling=");
-    nsFrame::ListTag(out, mPrevSiblingFrame);
   }
   if (mAttribute) {
     fprintf(out, " attr=");
