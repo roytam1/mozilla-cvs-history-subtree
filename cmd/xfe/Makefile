@@ -143,6 +143,7 @@ CSRCS		= \
 		  xfe.c \
 		  editor.c \
 		  editordialogs.c \
+		  addrbk.c \
 		  $(NULL)
 
 ifndef MOZ_MAIL_NEWS
@@ -152,7 +153,6 @@ endif
 
 ifdef MOZ_MAIL_NEWS
 CSRCS		+= \
-		  addrbk.c \
 		  mailattach.c \
 		  mailcompose.c \
 		  movemail.c \

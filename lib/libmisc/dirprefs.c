@@ -32,6 +32,20 @@
 	#define LDAPS_PORT 636
 #endif
 
+#ifndef MOZ_MAIL_NEWS
+
+int DIR_GetLdapServers(XP_List *wholeList, XP_List *subList)
+{
+  return -1;
+}
+
+const char **DIR_GetAttributeStrings (DIR_Server *server, DIR_AttributeId id)
+{
+  return 0 ;
+}
+
+#else
+
 #ifndef MOZADDRSTANDALONE
 
 extern int MK_OUT_OF_MEMORY;
@@ -2624,3 +2638,8 @@ char *DIR_BuildUrl (DIR_Server *server, const char *dn, XP_Bool forAddToAB)
 	return url;
 }
 #endif /* !MOZADDRSTANDALONE */
+
+#endif /* !MOZ_MAIL_NEWS */
+
+
+

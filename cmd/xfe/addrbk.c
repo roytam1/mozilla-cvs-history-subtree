@@ -39,6 +39,8 @@
 #include "xp_file.h"
 #include "addrbk.h"
 
+#ifdef MOZ_MAIL_NEWS
+
 /* list of DIR_Server 
 */
 static ABook*       AddrBook = NULL; 
@@ -127,3 +129,12 @@ void FE_InitAddrBook()
 void FE_CloseAddrBook() {
   AB_CloseAddressBook(&AddrBook);
 }
+
+#else
+extern XP_List* FE_GetDirServers()
+{
+  return 0 ;
+}
+
+#endif
+
