@@ -4881,7 +4881,9 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     ::JS_XDRDestroy(xdr);
     if (NS_FAILED(rv)) return rv;
 
-    PRUint32 version = PRUint32(::JS_StringToVersion(mLangVersion));
+    PRUint32 version = PRUint32(mLangVersion
+                                ? ::JS_StringToVersion(mLangVersion)
+                                : JSVERSION_DEFAULT);
     rv = aStream->Write32(version);
     if (NS_FAILED(rv)) return rv;
 
