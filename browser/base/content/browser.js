@@ -54,6 +54,10 @@ const kXULNS =
 const nsIWebNavigation = Components.interfaces.nsIWebNavigation;
 
 const MAX_HISTORY_MENU_ITEMS = 15;
+const FIND_NORMAL = 0;
+const FIND_TYPEAHEAD = 1;
+const FIND_LINKS = 2;
+
 var gRDF = null;
 var gGlobalHistory = null;
 var gURIFixup = null;
@@ -84,11 +88,13 @@ var gProgressCollapseTimer = null;
 var gPrefService = null;
 var appCore = null;
 var gBrowser = null;
-var gQuickFindMode = false;
+var gFindMode = FIND_NORMAL;
 var gQuickFindTimeout = null;
 var gQuickFindTimeoutLength = 0;
 var gHighlightTimeout = null;
-var gLinksMode = false;
+var gUseTypeAheadFind = false;
+var gTypeAheadFindBuffer = "";
+var gSidebarCommand = "";
 
 // Global variable that holds the nsContextMenu instance.
 var gContextMenu = null;
@@ -159,7 +165,7 @@ var searchRange;
 var startPt;
 var endPt;
 
-function BrowserHighlight(aHighlight)
+function toggleHighlight(aHighlight)
 {
   var word = document.getElementById("find-field").value;
   if (aHighlight)
@@ -271,26 +277,43 @@ function changeSelectionColor(aAttention)
   }                                      
 }
 
-function BrowserOpenFindBar(aSelect)
+function openFindBar()
 {
   var findToolbar = document.getElementById("FindToolbar");
-  findToolbar.hidden = false;
-  
-  var findField = document.getElementById("find-field");
-  if (gLinksMode)
-    findField.value = "";
-  else {
-    findField.focus();
-    if (aSelect)
-      findField.select();
+  if (findToolbar.hidden) {
+    findToolbar.hidden = false;
+    return true;
   }
+  return false;
 }
 
-function BrowserCloseFindBar()
+function focusFindBar()
 {
+  var findField = document.getElementById("find-field");
+  findField.focus();    
+}
+
+function selectFindBar()
+{
+  var findField = document.getElementById("find-field");
+  findField.select();    
+}
+
+function closeFindBar()
+{
+  var findField = document.getElementById("find-field");
+  var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                     .getService(Components.interfaces.nsIWindowWatcher);
+  if (window == ww.activeWindow && document.commandDispatcher.focusedElement &&
+      document.commandDispatcher.focusedElement.parentNode.parentNode == findField) {
+    _content.focus();
+  }
+
   var findToolbar = document.getElementById("FindToolbar");
   findToolbar.hidden = true;
-  _content.focus();
+  gTypeAheadFindBuffer = "";
+  changeSelectionColor(false);
+  gFindMode = FIND_NORMAL;
 }
 
 function shouldFastFind(evt)
@@ -312,113 +335,158 @@ function isPrintable(c)
   return (c >= 32 && c <= 126);
 }
 
-function BrowserFindBlur()
+function onFindBarBlur()
 {
   changeSelectionColor(false);
-  if (gQuickFindMode || gLinksMode) {
-    gQuickFindMode = false;
-    gLinksMode = false;
-    BrowserCloseFindBar();
-  }
 }
 
-function BrowserKeyPress(evt)
+function onBrowserKeyPress(evt)
 {  
   // Check focused elt
   if (!shouldFastFind(evt))
     return;
   
-  if (gLinksMode) {    
+  if (gFindMode != FIND_NORMAL) {    
     var findField = document.getElementById("find-field");
     if (evt.keyCode == 8) {
       if (findField.value) {
         findField.value = findField.value.substr(0, findField.value.length - 1);
         evt.preventDefault();
       }
+      find(findField.value);
     }
-    else if (evt.keyCode == 27) {
-      BrowserFindBlur();
-      return;
+    else if (evt.keyCode == 27) { // Escape
+      closeFindBar();
+    }
+    else if (evt.keyCode == 13 && gFindMode == FIND_TYPEAHEAD) { // Enter
+      if (evt.shiftKey)
+        findPrevious();
+      else
+        findNext();
     }
     else if (isPrintable(evt.charCode)) {
       findField.value += String.fromCharCode(evt.charCode);
+      find(findField.value);
     }
-    BrowserFind(findField.value);
     return;
   }
   
-  if (evt.charCode == 47) {
-    BrowserOpenFindBar(true);  
-    gQuickFindMode = true;
-    BrowserFindFixTimeout();
-  }
-  else if (evt.charCode == 39) {
-    gLinksMode = true;
-    BrowserOpenFindBar();
-    BrowserFindFixTimeout();
+  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & isPrintable(evt.charCode))) {
+    if (openFindBar()) {
+      setFindCloseTimeout();
+      gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;                   
+      var findField = document.getElementById("find-field");
+      if (gUseTypeAheadFind && evt.charCode != 39 && evt.charCode != 47) {
+        gTypeAheadFindBuffer += String.fromCharCode(evt.charCode);        
+        findField.value = gTypeAheadFindBuffer;
+        find(findField.value);
+      }
+      else {
+        findField.value = "";
+      }
+    }
+    else {
+      selectFindBar();      
+      focusFindBar();
+    }    
   }
 }
 
-function BrowserFindKeydown(evt)
+function onFindBarKeydown(evt)
 {
   var fastFind = getBrowser().fastFind;
   if (evt.keyCode == KeyEvent.DOM_VK_RETURN) {
     if (evt.shiftKey)
-      BrowserFindPrevious();
+      findPrevious();
     else
-      BrowserFindNext();
+      findNext();
   }
   else if (evt.keyCode == KeyEvent.DOM_VK_ESCAPE) {
-    BrowserCloseFindBar();
+    closeFindBar();
   }
 }
 
-function BrowserFind(val)
+function enableFindButtons(aEnable)
+{
+  var findNext = document.getElementById("find-next");
+  var findPrev = document.getElementById("find-previous");  
+  var highlight = document.getElementById("highlight");
+  findNext.disabled = findPrev.disabled = highlight.disabled = !aEnable;  
+}
+
+function find(val)
 {
   if (!val)
     val = document.getElementById("find-field").value;
     
-  var findNext = document.getElementById("find-next");
-  var findPrev = document.getElementById("find-previous");  
-  var highlight = document.getElementById("highlight");
-  findNext.disabled = findPrev.disabled = highlight.disabled = !val;  
-  
+  enableFindButtons(val);
+ 
   var highlightBtn = document.getElementById("highlight");
-  if (highlightBtn.checked) {
-    if (gHighlightTimeout)
-      clearTimeout(gHighlightTimeout);
-    gHighlightTimeout = setTimeout(function() { BrowserHighlight(false); BrowserHighlight(true); }, 500);    
-  }
-    
+  if (highlightBtn.checked)
+    setHighlightTimeout();
+        
   changeSelectionColor(true);
   var fastFind = getBrowser().fastFind;
-  fastFind.find(val, gLinksMode);
-  if (gQuickFindMode || gLinksMode)
-    BrowserFindFixTimeout();
+  fastFind.find(val, gFindMode == FIND_LINKS);
+  if (gFindMode != FIND_NORMAL)
+    setFindCloseTimeout();
 }
 
-function BrowserFindNext()
+function onFindCmd()
+{
+  openFindBar();
+  selectFindBar();
+  focusFindBar();
+}
+
+function onFindAgainCmd()
+{
+  if (openFindBar()) {
+    selectFindBar();
+    focusFindBar();
+  }
+  changeSelectionColor(true);
+  findNext();
+}
+
+function onFindPreviousCmd()
+{
+  if (openFindBar()) {
+    selectFindBar();
+    focusFindBar();
+  }
+  changeSelectionColor(true);
+  findPrevious();
+}
+
+function setHighlightTimeout()
+{
+  if (gHighlightTimeout)
+    clearTimeout(gHighlightTimeout);
+  gHighlightTimeout = setTimeout(function() { Highlight(false); Highlight(true); }, 500);  
+}
+
+function findNext()
 {
   var fastFind = getBrowser().fastFind;
   fastFind.findNext();
-  if (gQuickFindMode || gLinksMode)
-    BrowserFindFixTimeout();
+  if (gFindMode != FIND_NORMAL)
+    setFindCloseTimeout();
 }
 
-function BrowserFindPrevious()
+function findPrevious()
 {
   var fastFind = getBrowser().fastFind;
   fastFind.findPrevious();
-  if (gQuickFindMode)
-    BrowserFindFixTimeout();
+  if (gFindMode != FIND_NORMAL)
+    setFindCloseTimeout();
 }
 
-function BrowserFindFixTimeout()
+function setFindCloseTimeout()
 {
-  gCloseFindBar = false;
   if (gQuickFindTimeout)
     clearTimeout(gQuickFindTimeout);
-  gQuickFindTimeout = setTimeout(BrowserFindBlur, gQuickFindTimeoutLength);
+  gQuickFindTimeout = setTimeout(closeFindBar, gQuickFindTimeoutLength);
 }
 
 function UpdateBackForwardButtons()
@@ -605,7 +673,7 @@ function Startup()
   if (window.opener) {
     var openerFindBar = window.opener.document.getElementById("FindToolbar");
     if (!openerFindBar.hidden)
-      BrowserOpenFindBar(false);
+      openFindBar();
       
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
     // The opener can be the hidden window too, if we're coming from the state
@@ -629,7 +697,7 @@ function Startup()
     var box = document.getElementById("sidebar-box");
     if (box.hasAttribute("sidebarcommand")) { 
       var cmd = box.getAttribute("sidebarcommand");
-      if (cmd != "") {
+      if (cmd) {
         gMustLoadSidebar = true;
         box.hidden = false;
         sidebarSplitter = document.getElementById("sidebar-splitter");
@@ -824,6 +892,9 @@ function delayedStartup()
   pbi.addObserver(gHomeButton.prefDomain, gHomeButton, false);
   gHomeButton.updateTooltip();
   
+  pbi.addObserver(gTypeAheadFind.prefDomain, gTypeAheadFind, false);
+  gUseTypeAheadFind = gPrefService.getBoolPref("accessibility.typeaheadfind");
+  
   // Initialize Plugin Overrides
   const kOverridePref = "browser.download.pluginOverrideTypes";
   if (gPrefService.prefHasUserValue(kOverridePref)) {
@@ -851,7 +922,7 @@ function delayedStartup()
       catman.deleteCategoryEntry("Gecko-Content-Viewers", types[i], false);
     }
     
-    if (typesNotHandled != "") {
+    if (typesNotHandled) {
       typesNotHandled = typesNotHandled.substr(0, typesNotHandled.length - 1);
       gPrefService.setCharPref(kPluginOverrideTypesNotHandled, typesNotHandled);
     }
@@ -1519,7 +1590,7 @@ function normalizePostData(aStringData)
   var result = "";
   for (var i = 0; i < parts.length; ++i) {
     var part = unescape(parts[i]);
-    if (part != "")
+    if (part)
       result += part + "\r\n";
   }
   return result;
@@ -2025,6 +2096,7 @@ function toggleAffectedChrome(aHide)
   //   (*) navigation bar
   //   (*) bookmarks toolbar
   //   (*) sidebar
+  //   (*) find bar
 
   var navToolbox = document.getElementById("navigator-toolbox");
   navToolbox.hidden = aHide;
@@ -2033,17 +2105,24 @@ function toggleAffectedChrome(aHide)
     gChromeState = {};
     var sidebar = document.getElementById("sidebar-box");
     gChromeState.sidebarOpen = !sidebar.hidden;
+    gSidebarCommand = sidebar.getAttribute("sidebarcommand");
+      
+    var findBar = document.getElementById("FindToolbar");
+    gChromeState.findOpen = !findBar.hidden;
+    closeFindBar();
   }
-
-  if (gChromeState.sidebarOpen)
-    toggleSidebar(); //pch doesn't work.
+  else {
+    if (gChromeState.findOpen)
+      openFindBar();
+  }
+  
+  toggleSidebar(gSidebarCommand);
 }
 
 function onEnterPrintPreview()
 {
   toggleAffectedChrome(true);
 }
-
 
 function onExitPrintPreview()
 {
@@ -3135,14 +3214,12 @@ function toggleSidebar(aCommandID, forceOpen) {
   var sidebarTitle = document.getElementById("sidebar-title");
   var sidebarSplitter = document.getElementById("sidebar-splitter");
 
-  if (elt.getAttribute("checked") == "true") {
-    if (!forceOpen) {
-        elt.removeAttribute("checked");
-        sidebarBox.setAttribute("sidebarcommand", "");
-        sidebarTitle.setAttribute("value", "");
-        sidebarBox.hidden = true;
-        sidebarSplitter.hidden = true;
-    }
+  if (!forceOpen && elt.getAttribute("checked") == "true") {
+    elt.removeAttribute("checked");
+    sidebarBox.setAttribute("sidebarcommand", "");
+    sidebarTitle.setAttribute("value", "");
+    sidebarBox.hidden = true;
+    sidebarSplitter.hidden = true;    
     return;
   }
   
@@ -3189,6 +3266,17 @@ function openPreferences()
   openDialog("chrome://browser/content/pref/pref.xul","PrefWindow", 
              "chrome,titlebar,resizable,modal");
 }
+
+var gTypeAheadFind = {
+  prefDomain: "accessibility.typeaheadfind",
+  observe: function(aSubject, aTopic, aPrefName)
+  {
+    if (aTopic != "nsPref:changed" || aPrefName != this.prefDomain)
+      return;
+      
+    gUseTypeAheadFind = gPrefService.getBoolPref("accessibility.typeaheadfind");
+  }
+};
 
 var gHomeButton = {
   prefDomain: "browser.startup.homepage",
@@ -3937,7 +4025,7 @@ nsContextMenu.prototype = {
         var selection = this.searchSelected(16);
 
         var searchSelectText;
-        if (selection != "") {
+        if (selection) {
             searchSelectText = selection.toString();
             if (searchSelectText.length > 15)
                 searchSelectText = searchSelectText.substr(0,15) + "...";
@@ -3976,7 +4064,7 @@ nsContextMenu.prototype = {
         var data = objElem.getAttribute( "data" );
         // Presume any mime type of the form "image/..." is an image.
         // There must be a data= attribute with an URL, also.
-        if ( type.substring( 0, 6 ) == "image/" && data && data != "" ) {
+        if ( type.substring( 0, 6 ) == "image/" && data) {
             result = true;
         }
         return result;
@@ -4191,7 +4279,7 @@ function asyncOpenWebPanel(event)
        }
        linkNode = linkNode.parentNode;
      }
-     if (href && href != "") {
+     if (href) {
        href = makeURLAbsolute(target.baseURI,href);
        handleLinkClick(event, href, null);
        return true;

@@ -390,22 +390,7 @@
     <toolbar id="PersonalToolbar" class="chromeclass-directories" iconsize="small"
              customizable="true" defaultset="personal-bookmarks" mode="icons"
              toolbarname="&personalbarCmd.label;" accesskey="&personalbarCmd.accesskey;"
-             context="toolbar-context-menu"/>
-    
-    <toolbar id="FindToolbar" hidden="true" align="center">
-      <label value="&find.label;"/>
-      <textbox id="find-field" oninput="BrowserFind(this.value);" onkeydown="BrowserFindKeydown(event);"
-               onblur="BrowserFindBlur();"/>
-      <toolbarbutton id="find-next" label="&findNext.label;" tooltiptext="&findNext.tooltip;"
-                     command="cmd_findAgain" disabled="true"/>
-      <toolbarbutton id="find-previous" label="&findPrevious.label;" tooltiptext="&findPrevious.tooltip;"
-                     command="cmd_findPrevious" disabled="true"/>
-      <toolbarbutton id="highlight" label="&highlight.label;" tooltiptext="&highlight.tooltip;"
-                     oncommand="BrowserHighlight(!this.checked);" type="checkbox" disabled="true"/>
-      <spacer flex="1"/>
-      <toolbarbutton class="tabs-closebutton" tooltiptext="&findCloseButton.tooltip;" oncommand="BrowserCloseFindBar();"/>
-    </toolbar>
-    
+             context="toolbar-context-menu"/>   
   </toolbox>
   
   <hbox flex="1" id="browser">
@@ -424,13 +409,27 @@
       <tabbrowser id="content" disablehistory="true"
                   flex="1" contenttooltip="aHTMLTooltip"
                   contentcontextmenu="contentAreaContextMenu"
-                  onnewtab="BrowserOpenTab();" onkeypress="BrowserKeyPress(event);"
+                  onnewtab="BrowserOpenTab();" onkeypress="onBrowserKeyPress(event);"
                   autocompleteenabled="true"
                   autocompletepopup="PopupAutoComplete"
                   ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"
-                  onclick="return contentAreaClick(event, false);"/>
+                  onclick="return contentAreaClick(event, false);"
+                  onmousedown="if (gFindMode != FIND_NORMAL) closeFindBar();"/>
     </vbox>
   </hbox>
+  <toolbar id="FindToolbar" hidden="true" align="center" fullscreentoolbar="true">
+    <label value="&find.label;"/>
+    <textbox id="find-field" oninput="find(this.value);" onkeydown="onFindBarKeydown(event);"
+             onblur="onFindBarBlur();"/>
+    <toolbarbutton id="find-next" label="&findNext.label;" tooltiptext="&findNext.tooltip;"
+                   command="cmd_findAgain" disabled="true"/>
+    <toolbarbutton id="find-previous" label="&findPrevious.label;" tooltiptext="&findPrevious.tooltip;"
+                   command="cmd_findPrevious" disabled="true"/>
+    <toolbarbutton id="highlight" label="&highlight.label;" tooltiptext="&highlight.tooltip;"
+                   oncommand="toggleHighlight(!this.checked);" type="checkbox" disabled="true"/>
+    <spacer flex="1"/>
+    <toolbarbutton class="tabs-closebutton" tooltiptext="&findCloseButton.tooltip;" oncommand="closeFindBar();"/>
+  </toolbar>
   <statusbar class="chromeclass-status" id="status-bar"
              ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);">
     <statusbarpanel id="security-button" class="statusbarpanel-iconic" ondblclick="displaySecurityInfo();"/>

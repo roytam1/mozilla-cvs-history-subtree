@@ -39,7 +39,6 @@ var _elementIDs = ["moveSystemCaret", "hideTabBar",
                     "loadInBackground", "useAutoScrolling",
                     "useSmoothScrolling", "enableAutoImageResizing",
                     "useSSL2", "useSSL3", "useTLS1", "useTypeAheadFind",
-                    "linksOnlyTypeAheadFind",
 #ifdef PROVISIONAL_SECURITY_UI
                     "certSelection", "securityOCSPEnabled", "serviceURL", "signingCA",
 #endif
@@ -56,7 +55,6 @@ var certdb;
 var ocspResponders;
 #endif
 function Startup() {
-  updatePrefs();
 #ifdef PROVISIONAL_SECURITY_UI
   var ocspEntry;
   var i;
@@ -84,12 +82,6 @@ function Startup() {
   sca.parentNode.removeChild(sca);
   scb.appendChild(sca);
 #endif
-}
-
-function updatePrefs() {
-  var enabled = document.getElementById("useTypeAheadFind").checked;
-  var linksOnly = document.getElementById("linksOnlyTypeAheadFind");
-  linksOnly.disabled = !enabled;
 }
 
 #ifdef PROVISIONAL_SECURITY_UI

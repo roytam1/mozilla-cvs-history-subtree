@@ -247,9 +247,8 @@ pref("browser.urlbar.clickSelectsAll", false);
 #endif
 #endif
 
-pref("accessibility.typeaheadfind", true);
+pref("accessibility.typeaheadfind", false);
+pref("accessibility.typeaheadfind.timeout", 5000);
 pref("accessibility.typeaheadfind.linksonly", false);
 pref("accessibility.typeaheadfind.startlinksonly", false);
-pref("accessibility.typeaheadfind.timeout", 5000);
-
 

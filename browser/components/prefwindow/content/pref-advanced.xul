@@ -26,9 +26,7 @@
       <checkbox id="moveSystemCaret" label="&moveSystemCaret.label;"
                 prefstring="accessibility.browsewithcaret"/>
       <checkbox id="useTypeAheadFind" label="&useTypeAheadFind.label;"
-                prefstring="accessibility.typeaheadfind" oncommand="updatePrefs()"/>
-      <checkbox class="indent" id="linksOnlyTypeAheadFind" label="&linksOnlyTypeAheadFind.label;"
-                prefstring="accessibility.typeaheadfind.linksonly"/>
+                prefstring="accessibility.typeaheadfind"/>
     </expander>
     <expander id="browsing" label="&browsing.label;" open="true" persist="open" clearhidden="true">
       <checkbox id="hideTabBar" label="&hideTabBar.label;"

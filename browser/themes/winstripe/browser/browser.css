@@ -855,3 +855,8 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
   list-style-image: url("chrome://browser/skin/Security-broken.png");
 }
 
+#FindToolbar {
+  border-bottom: 1px solid ThreeDHighlight;
+  border-top: 1px solid ThreeDShadow;
+}
+

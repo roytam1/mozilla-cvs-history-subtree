@@ -934,8 +934,7 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
 
     ++mBadKeysSinceMatch;
 
-    // Error sound (don't fire when backspace is pressed, they're 
-    // trying to correct the mistake!)
+    // Error sound
     PlayNotFoundSound();
 
     // Remove bad character from buffer, so we can continue typing from

@@ -51,7 +51,6 @@
 
 <!ENTITY closeWindow.label "Close Window">
 
-
 <!ENTITY findOnCmd.label     "Find in This Page...">
 <!ENTITY findOnCmd.accesskey "F">
 <!ENTITY findOnCmd.commandkey "f">
@@ -191,7 +190,7 @@
 
 <!ENTITY openCmd.commandkey           "l">
 <!ENTITY urlbar.accesskey             "d">
-<!ENTITY searchFocus.commandkey       "k">
+<!ENTITY searchFocus.commandkey       "e">
 <!ENTITY searchFocusUnix.commandkey   "j">
 
 <!ENTITY openLinkCmd.label            "Open Link in New Window">
