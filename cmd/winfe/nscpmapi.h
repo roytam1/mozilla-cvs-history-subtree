@@ -32,6 +32,8 @@
 typedef unsigned char	UCHAR;
 #endif 
 
+#define           MAPI_CUSTOM_COMPOSE_MSG     "NSCP_CUSTOM_MAPI_MESSAGE"
+#define           MAPI_CUSTOM_RET_CODE        1966
 
 #define           MAX_NAME_LEN    256
 #define           MAX_PW_LEN      256
@@ -93,7 +95,7 @@ public:
 // Defines needed for requests being made with the WM_COPYDATA call...
 //
 typedef enum {
-    NSCP_MAPIStartRequestID = 0,
+    NSCP_MAPIStartRequestID = 100,
     NSCP_MAPILogon,
     NSCP_MAPILogoff,
     NSCP_MAPIFree,
