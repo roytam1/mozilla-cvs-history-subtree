@@ -131,7 +131,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mDefaultStatusString release];
   [mLoadingStatusString release];
   [mToolTip release];
-
+  [mTitle release];
+  
   [super dealloc];
 }
 
