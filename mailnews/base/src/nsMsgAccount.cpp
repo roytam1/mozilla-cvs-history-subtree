@@ -40,6 +40,7 @@
 #include "plstr.h"
 #include "prmem.h"
 
+#include "nsISupportsObsolete.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 
@@ -66,7 +67,7 @@ nsMsgAccount::nsMsgAccount():
   m_defaultIdentity(nsnull)
 {
 
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 }
 
 nsMsgAccount::~nsMsgAccount()

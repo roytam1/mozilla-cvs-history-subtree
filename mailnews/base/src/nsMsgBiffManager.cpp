@@ -55,7 +55,7 @@ void OnBiffTimer(nsITimer *timer, void *aBiffManager)
 
 nsMsgBiffManager::nsMsgBiffManager()
 {
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 
   mBiffArray = nsnull;
   mHaveShutdown = PR_FALSE;
@@ -311,7 +311,8 @@ nsresult nsMsgBiffManager::SetupNextBiff()
       mBiffTimer->Cancel();
     }
     mBiffTimer = do_CreateInstance("@mozilla.org/timer;1");
-    mBiffTimer->Init(OnBiffTimer, (void*)this, timeInMSUint32);
+    mBiffTimer->InitWithFuncCallback(OnBiffTimer, (void*)this, timeInMSUint32,
+                                     nsITimer::TYPE_ONE_SHOT);
     
   }
   return NS_OK;
