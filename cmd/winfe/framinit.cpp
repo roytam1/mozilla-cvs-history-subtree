@@ -539,7 +539,7 @@ void CMainFrame::OnLoadHomePage()
 	CString	strLastURL;
 	CString csTmp;
 	char *tmpBuf;
-	XP_Bool bOverride = FALSE;
+	PRBool bOverride = PR_FALSE;
 
 	PREF_GetBoolPref("browser.startup.homepage_override",&bOverride);
 
@@ -551,7 +551,7 @@ void CMainFrame::OnLoadHomePage()
 			lpszHomePage = csTmp;
 			XP_FREE(tmpBuf);
 		}
-		PREF_SetBoolPref("browser.startup.homepage_override",FALSE);
+		PREF_SetBoolPref("browser.startup.homepage_override",PR_FALSE);
 	}
 
     // If the user has specified a URL on the command line assume they want

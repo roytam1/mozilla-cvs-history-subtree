@@ -939,13 +939,18 @@ STDMETHODIMP_(ULONG) CPageSetupInfo::Release(void)
 
 void CPageSetupInfo::SetPrintingBkImage (BOOL flag)
 {
-	PREF_SetBoolPref("browser.print_background",flag);
+	PREF_SetBoolPref("browser.print_background",(PRBool)flag);
 	m_bPrintBkImage = flag;
 }
 BOOL CPageSetupInfo::IsPrintingBkImage (void) 
 {
-	if (PREF_GetBoolPref("browser.print_background",&m_bPrintBkImage) != PREF_OK)
+  PRBool prefBool;
+	if (PREF_GetBoolPref("browser.print_background",&prefBool) != PREF_OK) {
 		m_bPrintBkImage = FALSE;
+  }
+  else {
+    m_bPrintBkImage = prefBool;
+  }
 	return m_bPrintBkImage;
 }
 // function sets the margins in twips

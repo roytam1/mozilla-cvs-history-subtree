@@ -264,7 +264,7 @@ BOOL CNetscapeApp::InitInstance()
 
 	char *prefStr;  // temporary storage space for preferences
 	int32 prefInt;
-	XP_Bool prefBool;
+	PRBool prefBool;
 
 	// Determine whether this is a PE product ASAP!
 	m_hPEInst    = LoadLibrary("muc.dll");
@@ -1151,7 +1151,7 @@ BOOL CNetscapeApp::InitInstance()
 
     /////////////////////////////////////////////////////////////////////
     // Protocol Whining Preferences
-	prefBool=TRUE;
+	prefBool=PR_TRUE;
 	PREF_GetBoolPref("security.submit_email_forms",&prefBool);
 	NET_WarnOnMailtoPost((PRBool)prefBool);
 
@@ -1411,7 +1411,7 @@ BOOL CNetscapeApp::InitInstance()
 
 	//Please make sure this code stays before the startupMode stuff so that
 	//we can process the StartMode commands in AltMail mode
-	prefBool = FALSE;
+	prefBool = PR_FALSE;
 	PREF_GetBoolPref("mail.use_altmail",&prefBool);
     if(prefBool)
 	FEU_OpenMapiLibrary();
@@ -1419,7 +1419,7 @@ BOOL CNetscapeApp::InitInstance()
 	if(m_bAutomated == FALSE && m_bEmbedded == FALSE  && csPrintCommand.IsEmpty())
 	{
 		int iStartupMode=0;
-	    BOOL bStartMode = FALSE;
+	    PRBool bStartMode = PR_FALSE;
 
 		PREF_GetBoolPref("general.startup.browser", &bStartMode);
 		if (bStartMode)

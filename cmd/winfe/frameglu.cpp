@@ -63,7 +63,7 @@ CFrameGlue::CFrameGlue()	{
 
     // location bar
     // note I just changed this from 1.0 version to be more appropriate chouck 24-jan-95
-	XP_Bool bBar;
+	PRBool bBar;
 	PREF_GetBoolPref("browser.chrome.show_url_bar",&bBar);
     m_bLocationBar = bBar;
 

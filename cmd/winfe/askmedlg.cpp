@@ -34,9 +34,9 @@ void AskMeDlg(void)
 	    int32 nPromptAskMe = FALSE;
 	    PREF_GetIntPref("offline.startup_mode", &nPromptAskMe);
 		if (nPromptAskMe==0)            //online
-			PREF_SetBoolPref("network.online", TRUE);
+			PREF_SetBoolPref("network.online", PR_TRUE);
 		else if (nPromptAskMe==1)       //offline
-			PREF_SetBoolPref("network.online", FALSE);
+			PREF_SetBoolPref("network.online", PR_FALSE);
 	    else if (nPromptAskMe==2)   //ask me
 	    {
 		    CAskMeDlg rAskMeDlg(nPromptAskMe);
@@ -52,7 +52,7 @@ CAskMeDlg::CAskMeDlg(BOOL bDefault/*FALSE*/, int nOnOffLine/*0-the default*/,
 					 CWnd* pParent /*=NULL*/)
 	: CDialog(CAskMeDlg::IDD, pParent)
 {
-	XP_Bool bOnline = TRUE;
+	PRBool bOnline = PR_TRUE;
 	PREF_GetBoolPref("network.online", &bOnline);
 
 	//{{AFX_DATA_INIT(CAskMeDlg)
@@ -90,21 +90,21 @@ void CAskMeDlg::OnOK()
 	{
 		if (IsDlgButtonChecked(IDC_RADIO_ONLINE))
 		{
-			PREF_SetBoolPref("network.online", TRUE);
+			PREF_SetBoolPref("network.online", PR_TRUE);
 			PREF_SetIntPref("offline.startup_mode",0);
 		}
 		else  
 		{
-			PREF_SetBoolPref("network.online", FALSE);
+			PREF_SetBoolPref("network.online", PR_FALSE);
 			PREF_SetIntPref("offline.startup_mode",1);
 		}
 	}
 	else
 	{
 		if (IsDlgButtonChecked(IDC_RADIO_ONLINE))
-			PREF_SetBoolPref("network.online", TRUE);
+			PREF_SetBoolPref("network.online", PR_TRUE);
 		else  
-			PREF_SetBoolPref("network.online", FALSE);
+			PREF_SetBoolPref("network.online", PR_FALSE);
 	}
 
 }

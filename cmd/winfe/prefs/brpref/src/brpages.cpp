@@ -1511,9 +1511,9 @@ CApplicationsPrefs::DisplayFileDetails()
 	BOOL			 bIsPlugin = FALSE;
 //Begin CRN_MIME
 	BOOL			 bIsLocked = FALSE; 
-	XP_Bool			 bAddEnabled = TRUE;
-	XP_Bool			 bEditEnabled = TRUE;
-	XP_Bool			 bRemoveEnabled = TRUE;
+	PRBool			 bAddEnabled = PR_TRUE;
+	PRBool			 bEditEnabled = PR_TRUE;
+	PRBool			 bRemoveEnabled = PR_TRUE;
 
 	PREF_GetBoolPref("mime.table.allow_add", &bAddEnabled);
 	PREF_GetBoolPref("mime.table.allow_edit", &bEditEnabled);

@@ -30,6 +30,7 @@
 #include "libmocha.h"
 #include "java.h"
 #include "ngdwtrst.h"
+#include "pllist.h"
 
 extern "C" {
 #include "xpgetstr.h"
@@ -1438,12 +1439,14 @@ BOOL  FE_FileType(char * path,
 		ext++; // move pass the '.';
 
 		NET_cdataStruct *cdata;
-		XP_List * list_ptr;
+		PLList * list_ptr;
+    PLListEntry *entry;
 
 		list_ptr = cinfo_MasterListPointer();
-		while((cdata = (NET_cdataStruct *) XP_ListNextObject(list_ptr)) != NULL)
-		{
-			if(cdata->ci.type && !strcasecomp(mimeType, cdata->ci.type)){
+    entry = PL_ListFirstEntry(list_ptr); // already checks for NULL.
+    for (; entry; entry = PL_ListEntryNext(entry))	{            
+      cdata = (NET_cdataStruct *)PL_ListEntryValue(entry);
+			if(cdata && cdata->ci.type && !strcasecomp(mimeType, cdata->ci.type)){
 				for (int i = 0; i <  cdata->num_exts; i++) {
 					if (strcasecomp(ext, cdata->exts[i]) == 0)
 						return TRUE;

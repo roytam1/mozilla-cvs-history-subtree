@@ -537,7 +537,7 @@ BOOL CPublishDlg::OnInitDialog()
     CComboBox *pLocationComboBox;
     VERIFY(pLocationComboBox = (CComboBox*)GetDlgItem(IDC_PUBLISH_LOCATION_LIST));
 
-    XP_Bool bRem;
+    PRBool bRem;
     PREF_GetBoolPref("editor.publish_save_password",&bRem);
     m_bRememberPassword = bRem;
 
@@ -668,7 +668,7 @@ BOOL CPublishDlg::OnInitDialog()
     // Fill the list with image files contained in this document
     XP_FREEIF(m_pSelectedDefault);
 
-	XP_Bool bKeepImages;
+	PRBool bKeepImages;
 	PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
     m_pImageFiles = EDT_GetAllDocumentFilesSelected( m_pMWContext, &m_pSelectedDefault, bKeepImages );
     if( m_pImageFiles ){

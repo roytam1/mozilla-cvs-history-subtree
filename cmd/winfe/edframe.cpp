@@ -857,7 +857,7 @@ LONG CEditFrame::OnToolController(UINT,LONG)
 
 void CEditFrame::OnShowBookmarkWindow()
 {
-	XP_Bool prefBool;
+	PRBool prefBool;
 	PREF_GetBoolPref("editor.hints.bookmark",&prefBool);
 
     if ( prefBool ){
@@ -867,7 +867,7 @@ void CEditFrame::OnShowBookmarkWindow()
 
         dlg.DoModal();
         if ( dlg.m_bDontShowAgain ) {
-			PREF_SetBoolPref("editor.hints.bookmark",FALSE);
+			PREF_SetBoolPref("editor.hints.bookmark",PR_FALSE);
         }
     }
     CGenericFrame::OnShowBookmarkWindow();
@@ -1509,13 +1509,13 @@ void FE_SetNewDocumentProperties(MWContext * pMWContext)
     }
 
     // Copy background image if not in same directory as document
-	int bKeepImages;
+	PRBool bKeepImages;
 	PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 
     pPageData->bKeepImagesWithDoc = bKeepImages;
 
     // Get editor colors if using custom colors
-	XP_Bool prefBool;
+	PRBool prefBool;
 	PREF_GetBoolPref("editor.use_custom_colors",&prefBool);
     if( prefBool ) {
 		COLORREF clr;
@@ -1538,7 +1538,7 @@ void FE_SetNewDocumentProperties(MWContext * pMWContext)
     }
 	char * szBack = NULL;
 	PREF_CopyCharPref("editor.background_image",&szBack);
-	XP_Bool bBack;
+	PRBool bBack;
 	PREF_GetBoolPref("editor.use_background_image",&bBack);
     // Background image preference is independent from color preferences
     if( bBack && szBack ){
@@ -2094,7 +2094,7 @@ LRESULT CGenericFrame::OnSiteMgrMessage(WPARAM wParam, LPARAM lParam)
 void CGenericFrame::OnActivateSiteManager()
 {
 #ifdef XP_WIN32
-	XP_Bool prefBool;
+	PRBool prefBool;
 	PREF_GetBoolPref("editor.hints.sitemanager",&prefBool);
 
     if( bSiteMgrIsRegistered ) {
@@ -2104,7 +2104,7 @@ void CGenericFrame::OnActivateSiteManager()
 	        CEditHintDlg dlg(this, IDS_DRAG_SITEMAN_HINT);
 	        dlg.DoModal();
 	        if ( dlg.m_bDontShowAgain ) {
-		        PREF_SetBoolPref("editor.hints.sitemanager",FALSE);
+		        PREF_SetBoolPref("editor.hints.sitemanager",PR_FALSE);
 	        }
         }
         // This will invoke SiteManager if it is not already running

@@ -22,6 +22,7 @@
 #include "il_strm.h"
 #include "display.h"
 #include "prefapi.h" //CRN_MIME
+#include "pllist.h"
 
 //  List of all helpers in our helper app struct.
 //  Static must be declared here.
@@ -466,9 +467,10 @@ ProcessFileExtension(const char *pExtension, const char *ccpMimeType)
     // See if the extension is already in the netlib list. If it is AND it has a MIME
 	// type then call ShellHelper() which will set how_handle to HANDLE_SHELLEXECUTE
     // if there is a shell\open command for the extension
-    XP_List *pTypesList = cinfo_MasterListPointer();
+    PLListEntry *pTypesList = PL_ListFirstEntry(cinfo_MasterListPointer());
     NET_cdataStruct *pListEntry = NULL;
-    while ((pListEntry = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+    for (; pTypesList; pTypesList = PL_ListEntryNext(pTypesList)) {
+        pListEntry = (NET_cdataStruct *)PL_ListEntryValue(pTypesList);
         if(pListEntry->ci.type != NULL || pListEntry->ci.encoding != NULL)	{
             for(int iFind = 0; iFind < pListEntry->num_exts; iFind++)	{
                 if(stricmp(pExtension, pListEntry->exts[iFind]) == 0)	{
@@ -512,10 +514,12 @@ ProcessFileExtension(const char *pExtension, const char *ccpMimeType)
     }
     
     //  If mime type already exists in the list, must add extention to it.
-    pTypesList = cinfo_MasterListPointer();
+    pTypesList = PL_ListFirstEntry(cinfo_MasterListPointer());
     pListEntry = NULL;
     BOOL bExisted = FALSE;
-    while ((pListEntry = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+
+    for (; pTypesList; pTypesList = PL_ListEntryNext(pTypesList)) {
+        pListEntry = (NET_cdataStruct *)PL_ListEntryValue(pTypesList);
         if(pListEntry->ci.type != NULL)	{
             if(stricmp(pListEntry->ci.type, pMimeType) == 0)	{
                 bExisted = TRUE;
@@ -667,9 +671,10 @@ fe_UserDefinedFileTypes()
 			break;
      	
 		// See whether the MIME type is already in the netlib list
-		XP_List	   		*pTypesList = cinfo_MasterListPointer();
+		PLListEntry	   		*pTypesList = PL_ListFirstEntry(cinfo_MasterListPointer());
 		NET_cdataStruct *pcdata;
-		while ((pcdata = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+        for (; pTypesList; pTypesList = PL_ListEntryNext(pTypesList)) {
+            pcdata = (NET_cdataStruct *)PL_ListEntryValue(pTypesList);
 			if (pcdata->ci.type != NULL && (stricmp(pcdata->ci.type, (LPCSTR)csType) == 0))
 				break;
 		}
@@ -713,9 +718,10 @@ FileExtensionInNetlibList(const char *pExtension, const char *ccpMimeType)
 
     // See if the extension is already in the netlib list. If it is AND it has a MIME
 	// type then return the NET_cdataStruct pointer
-    XP_List *pTypesList = cinfo_MasterListPointer();
+    PLListEntry *pTypesList = PL_ListFirstEntry(cinfo_MasterListPointer());
     NET_cdataStruct *pListEntry = NULL;
-    while ((pListEntry = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+    for (; pTypesList; pTypesList = PL_ListEntryNext(pTypesList)) {
+        pListEntry = (NET_cdataStruct *)PL_ListEntryValue(pTypesList);
         if(pListEntry->ci.type != NULL)	{
             for(int iFind = 0; iFind < pListEntry->num_exts; iFind++)	{
                 if(stricmp(pExtension, pListEntry->exts[iFind]) == 0)	{
@@ -929,13 +935,14 @@ void fe_InitFileFormatTypes(void) {
 #endif
 
 	NET_cdataStruct *cd_item;
-    XP_List   * infolist = cinfo_MasterListPointer();;  // Get beginning of the list
+    PLListEntry   * infolist = PL_ListFirstEntry(cinfo_MasterListPointer());  // Get beginning of the list
 
 	// The last thing we do is use the Netscape specific information. This means looking
 	// at the Viewers and Suffixes sections
 	//
 	// Do this for every entry in the netlib list
-	while ((cd_item = (NET_cdataStruct *)XP_ListNextObject(infolist))) {  // iterate through the list  
+    for (; infolist; infolist = PL_ListEntryNext(infolist)) { // iterate through the list  
+        cd_item = (NET_cdataStruct *)PL_ListEntryValue(infolist);
 		if (cd_item->ci.type) {  // if it is a mime type
 			// Look in the Viewers section to see how the MIME type should be configured.
 			// This allows us to override anything we found in the registry, e.g. user wants to
@@ -952,10 +959,11 @@ void fe_InitFileFormatTypes(void) {
 void fe_CleanupFileFormatTypes(void) 
 {
 	NET_cdataStruct *cd_item;
-    XP_List   * infolist = cinfo_MasterListPointer();;  // Get beginning of the list
+    PLListEntry   *infolist = PL_ListFirstEntry(cinfo_MasterListPointer());  // Get beginning of the list
 	CHelperApp * app;
 		    
-	while ((cd_item = (NET_cdataStruct *)XP_ListNextObject(infolist))) {  // iterate through the list  
+    for (; infolist; infolist = PL_ListEntryNext(infolist)) {
+        cd_item = (NET_cdataStruct *)PL_ListEntryValue(infolist);
 		if (cd_item->ci.type) {  // if it is a mime type  
 			app = (CHelperApp *)cd_item->ci.fe_data;
 			
@@ -973,7 +981,7 @@ void fe_CleanupFileFormatTypes(void)
 CHelperApp * fe_AddNewFileFormatType(const char *mime_type,const char *subtype) 
 {
 	NET_cdataStruct * cd_item;
-    XP_List   		* infolist = cinfo_MasterListPointer();;  // Get beginning of the list
+    PLList   		* infolist = cinfo_MasterListPointer();;  // Get beginning of the list
 	CString 		  csMime;
 
 	if (!infolist) return NULL;
@@ -997,7 +1005,7 @@ CHelperApp * fe_AddNewFileFormatType(const char *mime_type,const char *subtype)
 	theApp.m_HelperListByType.SetAt(cd_item->ci.type, app);
 
     // tell the netlib about it
-	XP_ListAddObjectToEnd(infolist,cd_item); 
+	PL_ListAddLast(infolist,cd_item); 
 	return app;
 }
 
@@ -1242,11 +1250,12 @@ RegDeleteKeyNT(HKEY hStartKey, LPCSTR lpszKeyName)
 static int
 OccurencesOfFileClass(LPCSTR lpszFileClass)
 {
-    XP_List 		*pTypesList = cinfo_MasterListPointer();
+    PLListEntry		*pTypesList = PL_ListFirstEntry(cinfo_MasterListPointer());
     NET_cdataStruct *pcdata = NULL;
 	int				 nResult = 0;
 
-    while ((pcdata = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+    for (; pTypesList; pTypesList = PL_ListEntryNext(pTypesList)) {
+        pcdata = (NET_cdataStruct *)PL_ListEntryValue(pTypesList);
 		if (pcdata->ci.fe_data) {
 			CHelperApp *pHelperApp = (CHelperApp *)pcdata->ci.fe_data;
 
@@ -1490,8 +1499,9 @@ fe_ChangeFileType(NET_cdataStruct *pcdata, LPCSTR lpszMimeType, int nHowToHandle
             // Almost everything is stored in the registry now except for
             // the special types that Netscape can handle internally
             if (strcmp(pcdata->ci.type, IMAGE_GIF) == 0) {
-                if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE)
+                if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE) {
                     NET_RegisterContentTypeConverter(IMAGE_GIF, FO_PRESENT, NULL, IL_ViewStream);
+                }
                 else {
 					if (pHelperApp->how_handle == HANDLE_SHELLEXECUTE)
 						pHelperApp->how_handle = HANDLE_EXTERNAL;  // save in Netscape specific information
@@ -1500,8 +1510,9 @@ fe_ChangeFileType(NET_cdataStruct *pcdata, LPCSTR lpszMimeType, int nHowToHandle
 			}
 
 			if (strcmp(pcdata->ci.type, IMAGE_JPG) == 0) {
-				if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE)
+				if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE) {
 					NET_RegisterContentTypeConverter(IMAGE_JPG, FO_PRESENT, NULL, IL_ViewStream);
+        }
 				else {
 					if (pHelperApp->how_handle == HANDLE_SHELLEXECUTE)
 						pHelperApp->how_handle = HANDLE_EXTERNAL;  // save in Netscape specific information
@@ -1510,8 +1521,9 @@ fe_ChangeFileType(NET_cdataStruct *pcdata, LPCSTR lpszMimeType, int nHowToHandle
 			}
         
 			if (strcmp(pcdata->ci.type, IMAGE_XBM) == 0) {
-				if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE)
+				if (pHelperApp->how_handle == HANDLE_VIA_NETSCAPE) {
 					NET_RegisterContentTypeConverter(IMAGE_XBM, FO_PRESENT, NULL, IL_ViewStream);
+        }
 				else {
 					if (pHelperApp->how_handle == HANDLE_SHELLEXECUTE)
 						pHelperApp->how_handle = HANDLE_EXTERNAL;  // save in Netscape specific information

@@ -73,12 +73,18 @@ CAppearancePrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
 		// Startup mode
-		PREF_GetBoolPref("general.startup.browser", &m_bStartupBrowser);
-		PREF_GetBoolPref("general.startup.mail", &m_bStartupMail);
-		PREF_GetBoolPref("general.startup.news", &m_bStartupNews);
-		PREF_GetBoolPref("general.startup.editor", &m_bStartupEditor);
+    PRBool prefBool;
+		PREF_GetBoolPref("general.startup.browser", &prefBool);
+    m_bStartupBrowser = prefBool;
+		PREF_GetBoolPref("general.startup.mail", &prefBool);
+    m_bStartupMail = prefBool;
+		PREF_GetBoolPref("general.startup.news", &prefBool);
+    m_bStartupNews = prefBool;
+		PREF_GetBoolPref("general.startup.editor", &prefBool);
+    m_bStartupEditor = prefBool;
 #if !defined(WIN16)      
-		PREF_GetBoolPref("general.startup.netcaster", &m_bStartupNetcaster);
+		PREF_GetBoolPref("general.startup.netcaster", &prefBool);
+    m_bStartupNetcaster = prefBool;
 #endif      
 
 		if (!m_bStartupMail && !m_bStartupNews && !m_bStartupEditor && !m_bStartupNetcaster)
@@ -119,16 +125,16 @@ CAppearancePrefs::ApplyChanges()
 	if (!m_bStartupMail && !m_bStartupNews && !m_bStartupEditor && !m_bStartupNetcaster)
 		m_bStartupBrowser = TRUE;  // make sure something is set
 	
-	PREF_SetBoolPref("general.startup.browser", m_bStartupBrowser);
+	PREF_SetBoolPref("general.startup.browser", (PRBool)m_bStartupBrowser);
 #ifdef MOZ_MAIL_NEWS
-	PREF_SetBoolPref("general.startup.mail", m_bStartupMail);
-	PREF_SetBoolPref("general.startup.news", m_bStartupNews);
+	PREF_SetBoolPref("general.startup.mail", (PRBool)m_bStartupMail);
+	PREF_SetBoolPref("general.startup.news", (PRBool)m_bStartupNews);
 #endif /* MOZ_MAIL_NEWS */
 #ifdef EDITOR
-	PREF_SetBoolPref("general.startup.editor", m_bStartupEditor);
+	PREF_SetBoolPref("general.startup.editor", (PRBool)m_bStartupEditor);
 #endif /* EDITOR */
 #if !defined(WIN16)
-	PREF_SetBoolPref("general.startup.netcaster", m_bStartupNetcaster);
+	PREF_SetBoolPref("general.startup.netcaster", (PRBool)m_bStartupNetcaster);
 #endif   
 
 	PREF_SetIntPref("browser.chrome.button_style", (int32)m_nShowToolbarAs);
@@ -652,15 +658,17 @@ STDMETHODIMP
 CColorsPrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
-		PREF_GetBoolPref("browser.underline_anchors", &m_bUnderlineLinks);
+    PRBool prefBool;
+		PREF_GetBoolPref("browser.underline_anchors", &prefBool);
+    m_bUnderlineLinks = prefBool;
 		PREF_GetColorPrefDWord("browser.anchor_color", &m_rgbUnvisitedLinks);
 		PREF_GetColorPrefDWord("browser.visited_color", &m_rgbVisitedLinks);
-		PREF_GetBoolPref("browser.wfe.use_windows_colors", &m_bUseWindowsColors);
+		PREF_GetBoolPref("browser.wfe.use_windows_colors", &prefBool);
+    m_bUseWindowsColors = prefBool;
 		PREF_GetColorPrefDWord("browser.foreground_color", &m_rgbTextColor);
 		PREF_GetColorPrefDWord("browser.background_color", &m_rgbBackgroundColor);
 		
-		BOOL	bUseDocumentColors;
-
+		PRBool bUseDocumentColors;
 		PREF_GetBoolPref("browser.use_document_colors", &bUseDocumentColors);
 		m_bOverrideDocumentColors = !bUseDocumentColors;
 	}
@@ -698,13 +706,13 @@ CColorsPrefs::EnableColorButtons()
 BOOL
 CColorsPrefs::ApplyChanges()
 {
-	PREF_SetBoolPref("browser.underline_anchors", m_bUnderlineLinks);
+	PREF_SetBoolPref("browser.underline_anchors", (PRBool)m_bUnderlineLinks);
 	PREF_SetColorPrefDWord("browser.anchor_color", m_rgbUnvisitedLinks);
 	PREF_SetColorPrefDWord("browser.visited_color", m_rgbVisitedLinks);
-	PREF_SetBoolPref("browser.wfe.use_windows_colors", m_bUseWindowsColors);
+	PREF_SetBoolPref("browser.wfe.use_windows_colors", (PRBool)m_bUseWindowsColors);
 	PREF_SetColorPrefDWord("browser.foreground_color", m_rgbTextColor);
 	PREF_SetColorPrefDWord("browser.background_color", m_rgbBackgroundColor);
-	PREF_SetBoolPref("browser.use_document_colors", !m_bOverrideDocumentColors);
+	PREF_SetBoolPref("browser.use_document_colors", (PRBool)(!m_bOverrideDocumentColors));
 	return TRUE;
 }
 

@@ -82,19 +82,27 @@ STDMETHODIMP
 CAdvancedPrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
-		PREF_GetBoolPref("general.always_load_images", &m_bAutoLoadImages);
-		PREF_GetBoolPref("security.enable_java", &m_bEnableJava);
-		PREF_GetBoolPref("javascript.enabled", &m_bEnableJavaScript);
-		PREF_GetBoolPref("browser.enable_style_sheets", &m_bEnableStyleSheets);
-		PREF_GetBoolPref("autoupdate.enabled", &m_bEnableAutoInstall);
-		PREF_GetBoolPref("security.email_as_ftp_password", &m_bSendEmailAddressForFTPPassword);
+    PRBool prefBool;
+		PREF_GetBoolPref("general.always_load_images", &prefBool);
+    m_bAutoLoadImages = prefBool;
+		PREF_GetBoolPref("security.enable_java", &prefBool);
+    m_bEnableJava = prefBool;
+		PREF_GetBoolPref("javascript.enabled", &prefBool);
+    m_bEnableJavaScript = prefBool;
+		PREF_GetBoolPref("browser.enable_style_sheets", &prefBool);
+    m_bEnableStyleSheets = prefBool;
+		PREF_GetBoolPref("autoupdate.enabled", &prefBool);
+    m_bEnableAutoInstall = prefBool;
+		PREF_GetBoolPref("security.email_as_ftp_password", &prefBool);
+    m_bSendEmailAddressForFTPPassword = prefBool;
 
 		int32	n;
 
 		PREF_GetIntPref("network.cookie.cookieBehavior", &n);
 		m_nCookieAcceptance = (int)n;
 
-		PREF_GetBoolPref("network.cookie.warnAboutCookies", &m_bWarnAboutCookies);
+		PREF_GetBoolPref("network.cookie.warnAboutCookies", &prefBool);
+    m_bWarnAboutCookies = prefBool;
 	}
 
 	return CBrowserPropertyPage::Activate(hwndParent, lprc, bModal);
@@ -118,14 +126,14 @@ CAdvancedPrefs::DoTransfer(BOOL bSaveAndValidate)
 BOOL
 CAdvancedPrefs::ApplyChanges()
 {
-	PREF_SetBoolPref("general.always_load_images", m_bAutoLoadImages);
-	PREF_SetBoolPref("security.enable_java", m_bEnableJava);
-	PREF_SetBoolPref("javascript.enabled", m_bEnableJavaScript);
-	PREF_SetBoolPref("browser.enable_style_sheets", m_bEnableStyleSheets);
-	PREF_SetBoolPref("autoupdate.enabled", m_bEnableAutoInstall);
-	PREF_SetBoolPref("security.email_as_ftp_password", m_bSendEmailAddressForFTPPassword);
+	PREF_SetBoolPref("general.always_load_images", (PRBool)m_bAutoLoadImages);
+	PREF_SetBoolPref("security.enable_java", (PRBool)m_bEnableJava);
+	PREF_SetBoolPref("javascript.enabled", (PRBool)m_bEnableJavaScript);
+	PREF_SetBoolPref("browser.enable_style_sheets", (PRBool)m_bEnableStyleSheets);
+	PREF_SetBoolPref("autoupdate.enabled", (PRBool)m_bEnableAutoInstall);
+	PREF_SetBoolPref("security.email_as_ftp_password", (PRBool)m_bSendEmailAddressForFTPPassword);
 	PREF_SetIntPref("network.cookie.cookieBehavior", (int32)m_nCookieAcceptance);
-	PREF_SetBoolPref("network.cookie.warnAboutCookies", m_bWarnAboutCookies);
+	PREF_SetBoolPref("network.cookie.warnAboutCookies", (PRBool)m_bWarnAboutCookies);
 	return TRUE;
 }
 
@@ -629,12 +637,15 @@ CDiskSpacePrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
 		int32	n;
+    PRBool prefBool;
 
-		PREF_GetBoolPref("mail.limit_message_size", &m_bLimitSize);
+		PREF_GetBoolPref("mail.limit_message_size", &prefBool);
+    m_bLimitSize = prefBool;
 		PREF_GetIntPref("mail.max_size", &n);
 		m_nLimitSize = (int)n;
 
-		PREF_GetBoolPref("mail.prompt_purge_threshhold", &m_bPromptPurge);
+		PREF_GetBoolPref("mail.prompt_purge_threshhold", &prefBool);
+    m_bPromptPurge = prefBool;
 		PREF_GetIntPref("mail.purge_threshhold", &n);
 		m_nPurgeSize = (int)n;
 
@@ -653,8 +664,10 @@ CDiskSpacePrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 		PREF_GetIntPref("news.keep.count", &n);
 		m_nKeepCounts = (int)n;
 
-		PREF_GetBoolPref("news.keep.only_unread", &m_bKeepUnread);
-		PREF_GetBoolPref("news.remove_bodies.by_age", &m_bRemoveBody);
+		PREF_GetBoolPref("news.keep.only_unread", &prefBool);
+    m_bKeepUnread = prefBool;
+		PREF_GetBoolPref("news.remove_bodies.by_age", &prefBool);
+    m_bRemoveBody = prefBool;
 		PREF_GetIntPref("news.remove_bodies.days", &n);
 		m_nRemoveDays = (int)n;
 	}
@@ -723,10 +736,10 @@ CDiskSpacePrefs::DoTransfer(BOOL bSaveAndValidate)
 BOOL
 CDiskSpacePrefs::ApplyChanges()
 {
-	PREF_SetBoolPref("mail.limit_message_size", m_bLimitSize);
+	PREF_SetBoolPref("mail.limit_message_size", (PRBool)m_bLimitSize);
 	PREF_SetIntPref("mail.max_size", (int32)m_nLimitSize);
 
-	PREF_SetBoolPref("mail.prompt_purge_threshhold", m_bPromptPurge);
+	PREF_SetBoolPref("mail.prompt_purge_threshhold", (PRBool)m_bPromptPurge);
 	PREF_SetIntPref("mail.purge_threshhold", (int32)m_nPurgeSize);
 
 	// ui radio buttons do not correspond to the preference
@@ -742,8 +755,8 @@ CDiskSpacePrefs::ApplyChanges()
 	PREF_SetIntPref("news.keep.days", (int32)m_nKeepDays);
 	PREF_SetIntPref("news.keep.count", (int32)m_nKeepCounts);
 
-	PREF_SetBoolPref("news.keep.only_unread", m_bKeepUnread);
-	PREF_SetBoolPref("news.remove_bodies.by_age", m_bRemoveBody);
+	PREF_SetBoolPref("news.keep.only_unread", (PRBool)m_bKeepUnread);
+	PREF_SetBoolPref("news.remove_bodies.by_age", (PRBool)m_bRemoveBody);
 	PREF_SetIntPref("news.remove_bodies.days", (int32)m_nRemoveDays);
 
 	return TRUE;

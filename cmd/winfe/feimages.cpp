@@ -217,10 +217,10 @@ void WFE_DragDropImage(HGLOBAL h, MWContext *pMWContext)
                         XP_STRDUP(((char*)pDragData)+pDragData->iExtraHTML_Offset);
             // HARDTS: USEMAP data is now in pExtra, fix for bug 73283
             }
-			int bKeepImages;
+			PRBool bKeepImages;
 			PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 
-            EDT_InsertImage(pMWContext, pEdtData,bKeepImages);
+            EDT_InsertImage(pMWContext, pEdtData,(XP_Bool)bKeepImages);
             EDT_FreeImageData(pEdtData);
         }
         GlobalUnlock( h );
