@@ -81,7 +81,10 @@ LLIBS=\
 
 include <$(DEPTH)\config\rules.mak>
 
+export:: gbdate.h
+
 gbdate.h:: gbdate.pl
+        echo +++ make: Creating $@
 	$(PERL) gbdate.pl > gbdate.h
 
 
