@@ -291,7 +291,8 @@ CSRCS		= commands.c
 
 include $(DEPTH)/config/rules.mk
 
-INCLUDES	+= -I$(OBJDIR) -I.. -I../DtWidgets -I$(DEPTH)/modules/libreg/include
+INCLUDES	+= -I$(OBJDIR) -I.. -I../DtWidgets -I$(DEPTH)/modules/libreg/include \
+		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/security -I$(DEPTH)/dist/public/ldap
 
 #ifdef MOZ_MAIL_NEWS
 #CFLAGS		+= -DEDITOR
