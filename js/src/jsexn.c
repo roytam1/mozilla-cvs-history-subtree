@@ -474,6 +474,9 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
         if (!fun)
             return NULL; /* XXX also remove named property from obj... */
 
+        /* Make this constructor make objects of class Exception. */
+        fun->clasp = &exn_class;
+
         /* Make the prototype and constructor links. */
         if (!js_SetClassPrototype(cx, fun->object, protos[i],
                                   JSPROP_READONLY | JSPROP_PERMANENT))
