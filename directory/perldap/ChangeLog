@@ -1,3 +1,15 @@
+1999-09-07  Leif Hedstrom  <leif@perldap.org>
+
+	* API.xs (avref2charptrptr): Fixed potential core dump, if the
+	argument passed wasn't a proper array.
+	(avref2berptrptr): Ditto.
+
+1999-09-06  Leif Hedstrom  <leif@perldap.org>
+
+	* Conn.pm (search): Removed $res and $resv, set the internal data
+	element directly.
+	(searchURL): Ditto.
+
 1999-08-25  John Kristian <kristian@netscape.com>
 
 	* Entry.pm (printLDIF): Bug fix.
