@@ -52,7 +52,7 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+MOZ_CO_TAG = STATIC_BUILD_20010418_BRANCH
 NSPR_CO_TAG = STATIC_BUILD_20010418_BRANCH
 PSM_CO_TAG = STATIC_BUILD_20010418_BRANCH #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = STATIC_BUILD_20010418_BRANCH
