@@ -50,9 +50,12 @@
 #include "nsISelectionPrivate.h"
 #include "nsIContentIterator.h"
 #include "nsISupportsArray.h"
+#include "nsIParserService.h"
+#include "nsParserCIID.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kParserServiceCID, NS_PARSERSERVICE_CID);
 
 nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aInstancePtrResult);
 
@@ -868,6 +871,8 @@ protected:
   PRBool IsFirstNode(nsIDOMNode *aNode);
   PRBool IsLastNode(nsIDOMNode *aNode);
   PRBool IsEmptyTextContent(nsIDOMNode* aNode);
+
+  nsCOMPtr<nsIParserService> mParserService;
 };
 
 #ifdef XP_MAC
@@ -899,7 +904,9 @@ nsHTMLCopyEncoder::Init(nsIDocument* aDocument,
 
   mFlags = aFlags;
 
-  return NS_OK;
+  nsresult rv;
+  mParserService = do_GetService(kParserServiceCID, &rv);
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -1029,6 +1036,7 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
   nsCOMPtr<nsIDOMNode> node = aNode;
   nsCOMPtr<nsIDOMNode> parent = aNode;
   PRInt32 offset = aOffset;
+  PRBool  bResetPromotion = PR_FALSE;
   
   // defualt values
   *outNode = node;
@@ -1051,6 +1059,7 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
         text.CompressWhitespace();
         if (text.Length())
           return NS_OK;
+        bResetPromotion = PR_TRUE;
       }
       // else
       rv = GetNodeLocation(aNode, &parent, &offset);
@@ -1071,6 +1080,21 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
       if (offset == -1) return NS_OK; // we hit generated content; STOP
       while ((IsFirstNode(node)) && (!IsBody(parent)))
       {
+        nsAutoString tag;
+        nsCOMPtr<nsIAtom> atom;
+        nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
+        if (content)
+        {
+          PRBool isBlock = PR_FALSE;
+          content->GetTag(*getter_AddRefs(atom));
+          atom->ToString(tag);
+          mParserService->IsBlock(tag, isBlock);
+          if (isBlock)
+          {
+            bResetPromotion = PR_FALSE;
+          }
+        }   
+          
         node = parent;
         rv = GetNodeLocation(node, &parent, &offset);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1082,8 +1106,16 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
           break;
         }
       } 
-      *outNode = parent;
-      *outOffset = offset;
+      if (bResetPromotion)
+      {
+        *outNode = aNode;
+        *outOffset = aOffset;
+      }
+      else
+      {
+        *outNode = parent;
+        *outOffset = offset;
+      }
       return rv;
     }
   }
@@ -1107,6 +1139,7 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
         text.CompressWhitespace();
         if (text.Length())
           return NS_OK;
+        bResetPromotion = PR_TRUE;
       }
       rv = GetNodeLocation(aNode, &parent, &offset);
       NS_ENSURE_SUCCESS(rv, rv);
@@ -1127,6 +1160,21 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
       if (offset == -1) return NS_OK; // we hit generated content; STOP
       while ((IsLastNode(node)) && (!IsBody(parent)))
       {
+        nsAutoString tag;
+        nsCOMPtr<nsIAtom> atom;
+        nsCOMPtr<nsIContent> content = do_QueryInterface(parent);
+        if (content)
+        {
+          PRBool isBlock = PR_FALSE;
+          content->GetTag(*getter_AddRefs(atom));
+          atom->ToString(tag);
+          mParserService->IsBlock(tag, isBlock);
+          if (isBlock)
+          {
+            bResetPromotion = PR_FALSE;
+          }
+        }   
+          
         node = parent;
         rv = GetNodeLocation(node, &parent, &offset);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1138,9 +1186,17 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
           break;
         }
       } 
-      *outNode = parent;
-      offset++;  // add one since this in an endpoint - want to be AFTER node.
-      *outOffset = offset;
+      if (bResetPromotion)
+      {
+        *outNode = aNode;
+        *outOffset = aOffset;
+      }
+      else
+      {
+        *outNode = parent;
+        offset++;  // add one since this in an endpoint - want to be AFTER node.
+        *outOffset = offset;
+      }
       return rv;
     }
   }
