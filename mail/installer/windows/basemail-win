@@ -100,6 +100,7 @@ bin\components\mapihook.xpt
 bin\components\nsSetDefaultMail.js
 bin\components\nsUnsetDefaultMail.js
 bin\components\offlineStartup.js
+bin\components\nsMailDefaultHandler.js
 
 bin\components\mdn-service.js
 
@@ -216,6 +217,7 @@ bin\components\toolkitprofile.xpt
 
 ; toolkit
 bin\components\appstartup.xpt
+bin\components\commandlines.xpt
 
 ; rdf
 bin\components\rdf.xpt
