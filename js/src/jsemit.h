@@ -73,7 +73,7 @@ struct JSStmtInfo {
     ptrdiff_t       update;         /* loop update offset (top if none) */
     ptrdiff_t       breaks;         /* offset of last break in loop */
     ptrdiff_t       continues;      /* offset of last continue in loop */
-    JSAtom          *label;         /* label name if type is STMT_LABEL */
+    JSAtom          *label;         /* name of LABEL or CATCH var */
     JSStmtInfo      *down;          /* info for enclosing statement */
 };
 
