@@ -158,9 +158,15 @@ menuitem.bookmark-item {
   padding: 7px;
 }
 
-.toolbarbutton-1:hover:active  .toolbarbutton-icon, .toolbarbutton-menubutton-button:hover:active  .toolbarbutton-icon {
-  margin-left: 1px;
-  margin-right: 1px;
+.toolbarbutton-1[checked="true"], 
+.toolbarbutton-1[open="true"], 
+.toolbarbutton-menubutton-button[checked="true"], 
+.toolbarbutton-menubutton-button[open="true"] {
+  padding: 8px 6px 6px 8px !important;
+}
+
+.toolbarbutton-1[type="menu-button"] {
+  padding: 0px !important;
 }
 
 toolbarbutton:not([disabled="true"]):hover,
