@@ -25,6 +25,7 @@ REQUIRES	= xpcom \
 		  string \
 		  rdf \
 		  uriloader \
+      appshell \
 		  necko \
       progressDlg \
 		  intl \

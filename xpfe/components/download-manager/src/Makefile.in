@@ -36,6 +36,7 @@ REQUIRES  = xpcom \
             uriloader \
             necko \
             progressDlg \
+            appshell \
             intl \
             windowwatcher \
             webbrowserpersist \
