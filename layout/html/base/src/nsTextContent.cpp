@@ -895,9 +895,7 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
         pnts[3].x = textLen-ox;
         pnts[3].y = yy;
 
-        //aRenderingContext.DrawPolygon(pnts, 4);
-        aRenderingContext.FillPolygon(pnts, 4);
-		    //aRenderingContext.DrawLine(textLen, mRect.height-(mRect.height/3), textLen, mRect.height);
+        //aRenderingContext.FillPolygon(pnts, 4);
         NS_RELEASE(fm);
       }
       NS_IF_RELEASE(startContent);
