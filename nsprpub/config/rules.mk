@@ -155,6 +155,14 @@ ifeq ($(OS_TARGET), WIN16)
 	W16DEF = $(notdir $(basename $(SHARED_LIBRARY))).DEF
 endif
 
+ifdef RES
+OBJS += $(RES)
+endif
+
+ifdef RESOBJ
+#OBJS += $(RESOBJ)
+endif
+
 ifeq ($(OS_ARCH), WINNT)
 ifneq ($(OS_TARGET), WIN16)
 ifneq ($(OS_TARGET), OS2)
@@ -296,6 +304,9 @@ endif
 $(SHARED_LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifdef USE_AUTOCONF
+	$(MKSHLIB) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
+else
 ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	echo "#!" > $(OBJDIR)/lib$(LIBRARY_NAME)_syms
 	nm -B -C -g $(OBJS) \
@@ -340,6 +351,7 @@ else
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
 endif
 endif
+endif
 
 $(PURE_LIBRARY):
 	rm -f $@
@@ -347,6 +359,10 @@ ifneq ($(OS_ARCH), WINNT)
 	$(AR) $(OBJS)
 endif
 	$(RANLIB) $@
+
+
+$(RESOBJ): $(RESNAME)
+	$(RC) -F$(OBJ_SUFFIX) $< $@
 
 ifeq ($(OS_ARCH), WINNT)
 $(RES): $(RESNAME)
