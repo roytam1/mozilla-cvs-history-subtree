@@ -49,6 +49,7 @@ CSRCS			= \
 
 CPPSRCS			= \
                           nsURL.cpp \
+                          nsHttpUrl.cpp \
 			  bamwrap.cpp \
 			  moz_depend.cpp \
 			  net_serv.cpp \
@@ -63,6 +64,8 @@ EXPORTS			= \
 			  nsIStreamListener.h \
 			  nsINetService.h \
 			  nsIURL.h \
+			  nsIPostToServer.h \
+			  nsIHttpUrl.h \
 			  $(NULL)
 
 include $(DEPTH)/config/config.mk

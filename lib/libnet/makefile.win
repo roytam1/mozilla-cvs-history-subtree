@@ -25,6 +25,8 @@ MODULE  = netlib
 EXPORTS = nsIStreamListener.h           \
           nsINetService.h               \
           nsIURL.h                      \
+          nsIPostToServer.h             \
+          nsIHttpUrl.h                  \
           $(NULL)
 
 
@@ -58,7 +60,8 @@ OBJS=                                   \
         .\$(OBJDIR)\bamwrap.obj         \
         .\$(OBJDIR)\net_serv.obj        \
         .\$(OBJDIR)\net_strm.obj        \
-        .\$(OBJDIR)\nsurl.obj        \
+        .\$(OBJDIR)\nsurl.obj           \
+        .\$(OBJDIR)\nsHttpUrl.obj       \
         .\$(OBJDIR)\depend.obj          \
         .\$(OBJDIR)\moz_depend.obj      \
         .\$(OBJDIR)\mkgeturl.obj        \
