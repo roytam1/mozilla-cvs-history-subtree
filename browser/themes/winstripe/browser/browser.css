@@ -23,6 +23,7 @@
  *   Jason Kersey (kerz@netscape.com)
  *   Pierre Chanial (chanial@noos.fr)
  *   Dean Tessman (dean_tessman@hotmail.com)
+ *   Blake Ross (blake@cs.stanford.edu)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -901,6 +902,11 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
   color: #FFFFFF;
 }
 
+#FindToolbar[flash="true"]  > #find-field-container > #find-field
+{
+  background-color: yellow;
+}
+
 #find-status-icon[status="wrapped"]
 {
   list-style-image: url("chrome://browser/skin/wrap.png");
@@ -910,4 +916,5 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 {
   -moz-appearance: textfield;
 }
+
 

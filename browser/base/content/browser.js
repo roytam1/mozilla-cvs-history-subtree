@@ -96,6 +96,9 @@ var gTypeAheadFindBuffer = "";
 var gIsBack = true;
 var gBackProtectBuffer = 3;
 var gSidebarCommand = "";
+var gFlashFindBar = 0;
+var gFlashFindBarCount = 6;
+var gFlashFindBarTimeout = null;
 
 // Global variable that holds the nsContextMenu instance.
 var gContextMenu = null;
@@ -333,7 +336,7 @@ function shouldFastFind(evt)
   var elt = document.commandDispatcher.focusedElement;
   if (elt) {
     var ln = elt.localName.toLowerCase();
-    if (ln == "input" || ln == "textarea" || ln == "select" || ln == "button")
+    if (ln == "input" || ln == "textarea" || ln == "select" || ln == "button" || ln == "isindex")
       return false;
   }
   
@@ -477,26 +480,45 @@ function find(val)
     setFindCloseTimeout();
 }
 
+function flashFindBar()
+{
+  var findToolbar = document.getElementById("FindToolbar");
+  if (gFlashFindBarCount-- == 0) {
+    clearInterval(gFlashFindBarTimeout);
+    findToolbar.removeAttribute("flash");
+    gFlashFindBarCount = 6;
+    return true;
+  }
+ 
+  findToolbar.setAttribute("flash", (gFlashFindBarCount % 2 == 0) ? "false" : "true");
+}
+
 function onFindCmd()
 {
   openFindBar();
+  if (gFlashFindBar) {
+    gFlashFindBarTimeout = setInterval(flashFindBar, 500);
+    gPrefService.setIntPref("accessibility.typeaheadfind.flashBar", --gFlashFindBar);
+  }
   selectFindBar();
   focusFindBar();
 }
 
 function onFindAgainCmd()
 {
-  if (openFindBar())
-    focusFindBar();
- 
+  var findString = getBrowser().findString;
+  if (!findString)
+    return onFindCmd();
+
   changeSelectionColor(true);
   findNext();
 }
 
 function onFindPreviousCmd()
 {
-  if (openFindBar())
-    focusFindBar();
+  var findString = getBrowser().findString;
+  if (!findString)
+    return onFindCmd();
   
   changeSelectionColor(true);
   findPrevious();
@@ -531,9 +553,13 @@ function findPrevious()
 
 function updateStatus(res, findNext)
 {
+  var findBar = document.getElementById("FindToolbar");
+  if (findBar.hidden)
+    return;
+    
+  var field = document.getElementById("find-field");
   var statusIcon = document.getElementById("find-status-icon");
   var statusText = document.getElementById("find-status");
-  var field = document.getElementById("find-field");
   switch(res) {
     case Components.interfaces.nsITypeAheadFind.FIND_WRAPPED:
       statusIcon.setAttribute("status", "wrapped");      
@@ -951,9 +977,11 @@ function Startup()
 
   var sidebarSplitter;
   if (window.opener) {
-    var openerFindBar = window.opener.document.getElementById("FindToolbar");
-    if (openerFindBar && !openerFindBar.hidden)
-      openFindBar();
+    if (window.opener.gFindMode == FIND_NORMAL) {
+      var openerFindBar = window.opener.document.getElementById("FindToolbar");
+      if (openerFindBar && !openerFindBar.hidden)
+        openFindBar();
+    }
       
     var openerSidebarBox = window.opener.document.getElementById("sidebar-box");
     // The opener can be the hidden window too, if we're coming from the state
@@ -1217,6 +1245,7 @@ function delayedStartup()
   clearObsoletePrefs();
  
   gQuickFindTimeoutLength = gPrefService.getIntPref("accessibility.typeaheadfind.timeout");
+  gFlashFindBar = gPrefService.getIntPref("accessibility.typeaheadfind.flashBar");
 
 #ifdef HAVE_SHELL_SERVICE
   // Perform default browser checking (after window opens).
@@ -2447,7 +2476,8 @@ function toggleAffectedChrome(aHide)
       openFindBar();
   }
   
-  toggleSidebar(gSidebarCommand);
+  if (gChromeState.sidebarOpen)
+    toggleSidebar(gSidebarCommand);
 }
 
 function onEnterPrintPreview()
