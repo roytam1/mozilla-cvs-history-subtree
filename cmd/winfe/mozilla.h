@@ -280,10 +280,6 @@ public:
 public:
     int Run();
     BOOL NSPumpMessage();
-#ifdef MOZ_LOC_INDEP
-    /* location independence exit code */
-    BOOL LIStuffEnd();
-#endif /* MOZ_LOC_INDEP */
     BOOL IsIdleMessage(MSG *pMsg);
     BOOL OnIdle(LONG lIdleCount);
 #ifdef XP_WIN16

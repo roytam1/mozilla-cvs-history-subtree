@@ -1188,11 +1188,6 @@ Bool login_ProfileSelectedCompleteTheLogin(const char * szProfileName, const cha
 
 	PREF_Init((char *)(const char *)csTmp);
 
-	// read in the user's LI prefs file
-	char * prefName = WH_FileName(NULL, xpLIPrefs);
-	PREF_ReadLIJSFile(prefName);
-	XP_FREEIF (prefName);
-
 	// read in the users optional JS file
 	csTmp = theApp.m_UserDirectory;
 	csTmp += "\\user.js";

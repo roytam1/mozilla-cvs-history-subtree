@@ -23,10 +23,6 @@ void STARTUP_np(void);
 void SHUTDOWN_np(void);
 void STARTUP_cvffc(void);
 void SHUTDOWN_cvffc(void);
-#ifdef MOZ_LOC_INDEP
-void STARTUP_li(void);
-void SHUTDOWN_li(void);
-#endif/* MOZ_LOC_INDEP */
 
 #include "jri.h"
 
@@ -914,15 +910,8 @@ BOOL CNetscapeApp::InitInstance()
 	bTurnOffDiskCache = TRUE;
     }
 
-#ifdef JEM
-    // Initialize the network module
-    /* NET_InitNetLib handles socks initialization. */
-    NET_InitNetLib(nTCPBuff, sysInfo.m_iMaxSockets);
-#endif
-
-#ifdef MOZ_LOC_INDEP
-	STARTUP_li();
-#endif /* MOZ_LOC_INDEP */
+    // finish Initialize the network module
+    NET_FinishInitNetLib();
 
     SECNAV_RunInitialSecConfig();
 
@@ -1967,9 +1956,6 @@ int CNetscapeApp::ExitInstance()
 	// Shutdown RDF
 	RDF_Shutdown();
 
-#ifdef MOZ_LOC_INDEP
-	SHUTDOWN_li();
-#endif /* MOZ_LOC_INDEP */
 	SHUTDOWN_np();
 
     //  Unload any remaining images.
@@ -1995,9 +1981,6 @@ int CNetscapeApp::ExitInstance()
     fe_CleanupFileFormatTypes();
 
     PREF_SavePrefFile();
-	char * prefName = WH_FileName(NULL, xpLIPrefs);
-	PREF_SaveLIPrefFile(prefName);
-	XP_FREEIF (prefName);
     NR_ShutdownRegistry();
 
     //  Save certs and keys early, since if they are lost the user is screwed

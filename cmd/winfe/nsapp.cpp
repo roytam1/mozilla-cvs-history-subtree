@@ -65,9 +65,6 @@
 extern "C"      {
 #include "mkaccess.h"
 };
-#ifdef MOZ_LOC_INDEP
-#include "li_public.h"
-#endif /* MOZ_LOC_INDEP */
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -1618,89 +1615,6 @@ void CNetscapeApp::HideFrames()
 }
 #endif /* MOZ_OFFLINE */
 
-#ifdef MOZ_LOC_INDEP
-// LI_STUFF start
-// REMIND: This is all experimental stuff which will get cleaned up and moved when 
-// we are done
-void putFileClosure(void * closure, LIStatus result)
-{
-	LIActive = 0;
-}
-
-void putCookieFileClosure(void * closure, LIStatus result)
-{
-	// a cheesy place to put this. until I do clients
-	LIActive --;
-	
-}
-
-void getCookieFileClosure(void * closure, LIStatus result, XP_Bool fileExists)
-{
-	if (fileExists) {
-		/* remove and reset the cookies. */
-		NET_RemoveAllCookies();
-		NET_ReadCookies("");
-	}
-}
-
-BOOL CNetscapeApp::LIStuffEnd() {
-	static BOOL beenHere = FALSE;
-
-	/* if li is active then go through this to upload stuff, 
-		when the uploads are done, isliactive gets set to false.
-	*/
-	if (LIActive > 0) {
-		if (beenHere)
-			return FALSE;
-
-		//To save the prefs before the upload all: 
-		char * prefName = WH_FileName(NULL, xpLIPrefs);
-		PREF_SaveLIPrefFile(prefName);
-		XP_FREEIF (prefName);
-
-		LIMediator::uploadAll(putFileClosure, NULL);
-		beenHere = TRUE;
-
-
-		/* don't close the browser yet */ 
-		return FALSE;
-	}
-	/* ok to close browser */
-	return TRUE;
-}
-
-void LIStuff() {
-	char *	lifilename ;
-	BOOL prefBool;
-
-	PREF_GetBoolPref("li.enabled", &LIActive);
-
-	if (LIActive > 0) {
-		PREF_GetDefaultBoolPref("li.client.bookmarks", &prefBool);
-		if (prefBool) {
-			//BM_SetModified(theApp.m_pBmContext, FALSE); // REMIND - still needed?
-			//LIFile * file = new LIFile (theApp.m_pBookmarkFile,"bookmarks", "Bookmarks File");
-			//file->startGettingIfNecessary(getBookmarkFileClosure, file);
-		}
-		//else
-		//	BM_ReadBookmarksFromDisk(theApp.m_pBmContext, theApp.m_pBookmarkFile, NULL );
-		// RDF is going to have to be hooked up here.  (Dave H.)
-		// WORK STILL NEEDS TO BE DONE
-
-		PREF_GetDefaultBoolPref("li.client.cookies",  &prefBool);
-		if (prefBool) {
-			lifilename = WH_FileName("", xpHTTPCookie);
-			if (lifilename) {
-				LIFile * file2 = new LIFile (lifilename, "cookies", "Cookies File");
-				file2->startGettingIfNecessary(getCookieFileClosure, file2);
-				XP_FREE(lifilename);
-			}
-		}
-	}
-	//else
-	//	BM_ReadBookmarksFromDisk(theApp.m_pBmContext, theApp.m_pBookmarkFile, NULL );
-}
-#endif // MOZ_LOC_INDEP
 
 /////////////////////////////////////////////////////////////////////////////
 // CNetscapeApp commands
@@ -1715,10 +1629,6 @@ int CNetscapeApp::Run()
 {
 	BOOL bIdle = TRUE;
 	LONG lIdleCount = 0;
-
-#ifdef MOZ_LOC_INDEP
-	LIStuff();
-#endif // MOZ_LOC_INDEP
 
     for(;;) {
 	while(bIdle && !::PeekMessage(&m_msgCur, NULL, NULL, NULL, PM_NOREMOVE))    {

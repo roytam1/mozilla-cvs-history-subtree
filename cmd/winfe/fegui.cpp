@@ -1434,6 +1434,7 @@ xp_FileName(const char * name, XP_FileType type, char* *myName)
 		break;
 
 
+#ifdef MOZ_LOC_INDEP
 	case xpLIClientDB:
 		newName = (char *) XP_ALLOC(_MAX_PATH);
 		sprintf(newName, "%s\\locindep.dat", (const char *)theApp.m_UserDirectory);
@@ -1443,6 +1444,7 @@ xp_FileName(const char * name, XP_FileType type, char* *myName)
 		newName = (char *) XP_ALLOC(_MAX_PATH);
 		sprintf(newName, "%s\\liprefs.js", (const char *)theApp.m_UserDirectory);
 		break;
+#endif /* MOZ_LOC_INDEP */
 
 	default:
 		ASSERT(0);  /* all types should be covered */
