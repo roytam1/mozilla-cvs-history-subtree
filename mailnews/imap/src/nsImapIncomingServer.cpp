@@ -682,7 +682,7 @@ nsImapIncomingServer::CreateImapConnection(nsIEventQueue *aEventQueue,
 				rv = mailnewsUrl->GetMsgWindow(getter_AddRefs(aMsgWindow));
 
 			RequestOverrideInfo(aMsgWindow);
-			canRunButBusy = PR_TRUE;
+      canRunButBusy = PR_TRUE;
 		}
 	}
 	// if we got here and we have a connection, then we should return it!
@@ -852,7 +852,7 @@ nsImapIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
  
     rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
     if (NS_FAILED(rv)) return rv;
-    rv = imapService->DiscoverAllFolders(queue, rootMsgFolder, this, nsnull);
+    rv = imapService->DiscoverAllFolders(queue, rootMsgFolder, this, aMsgWindow, nsnull);
  	return rv; 	
 }
 
@@ -1996,10 +1996,16 @@ nsresult nsImapIncomingServer::RequestOverrideInfo(nsIMsgWindow *aMsgWindow)
         // if we still don't have a password then the user must have hit cancel so just
         // fall out...
         if (!((const char *) password) || nsCRT::strlen((const char *) password) == 0)
+        {
+          // be sure to clear the waiting for connection info flag because we aren't waiting
+          // anymore for a connection...
+          m_waitingForConnectionInfo = PR_FALSE;
           return NS_OK;
+      }
       }
 
       nsCOMPtr<nsIPrompt> dialogPrompter;
+      if (aMsgWindow)
       aMsgWindow->GetPromptDialog(getter_AddRefs(dialogPrompter));
   		rv = m_logonRedirector->Logon(userName, password, dialogPrompter, logonRedirectorRequester, nsMsgLogonRedirectionServiceIDs::Imap);
 		}
