@@ -293,6 +293,11 @@ function HandleDeleteOrMoveMsgFailed(folder)
 
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
+  // you might not have a db view.  this can happen if
+  // biff fires when the 3 pane is set to account central.
+  if (!gDBView)
+    return;
+
   gDBView.onDeleteCompleted(true);
   if (gNextMessageViewIndexAfterDelete != -2) 
   {
