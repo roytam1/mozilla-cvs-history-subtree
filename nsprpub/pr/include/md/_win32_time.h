@@ -151,6 +151,20 @@
         SystemTimeToFileTime(&inSystemTime, &result); \
         _MD_FILETIME_2_PRTime(outPRTime, result); \
     PR_END_MACRO
+#define _MD_SYSTEMTIME_2_time_t(outTimeT, inSystemTime) \
+    PR_BEGIN_MACRO \
+        FILETIME result; \
+        \
+        SystemTimeToFileTime(&inSystemTime, &result); \
+        _MD_FILETIME_2_time_t(outTimeT, result); \
+    PR_END_MACRO
+#define _MD_time_t_2_SYSTEMTIME(outSystemTime, inTimeT) \
+    PR_BEGIN_MACRO \
+        FILETIME conversion; \
+        \
+        _MD_time_t_2_FILETIME(conversion, inTimeT); \
+        FileTimeToSystemTime(&conversion, &outSystemTime); \
+    PR_END_MACRO
 #define _MD_time_t_2_LOCALSYSTEMTIME(outSystemTime, inTimeT) \
     PR_BEGIN_MACRO \
         FILETIME conversion; \

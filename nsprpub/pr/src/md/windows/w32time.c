@@ -44,9 +44,18 @@
 #include "primpl.h"
 
 /*
- * Winlocaltime
+ * Ugh, LIBC docs should have warned you.
+ * A signle static storage for the struct tm's returned by some funcs.
+ */
+static const int sDaysOfYear[12] = {
+    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+};
+static struct tm tmStorage;
+
+/*
+ *  Winlocaltime
  *
- * As LIBC localtime
+ *  As LIBC localtime
  */
 struct tm* Winlocaltime(const time_t* inTimeT)
 {
@@ -54,14 +63,7 @@ struct tm* Winlocaltime(const time_t* inTimeT)
 
     if(NULL != inTimeT)
     {
-        static struct tm tmStorage;
-        static const int daysOfYear[12] =
-        {
-            0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
-        };
         SYSTEMTIME winLocalTime;
-        TIME_ZONE_INFORMATION  winTZInfo;
-        DWORD winDST;
         
         _MD_time_t_2_LOCALSYSTEMTIME(winLocalTime, *inTimeT);
         
@@ -72,8 +74,9 @@ struct tm* Winlocaltime(const time_t* inTimeT)
         tmStorage.tm_mon = (int)(winLocalTime.wMonth - 1);
         tmStorage.tm_year = (int)(winLocalTime.wYear - 1900);
         tmStorage.tm_wday = (int)winLocalTime.wDayOfWeek;
-        
-        tmStorage.tm_yday = (int)winLocalTime.wDay + daysOfYear[tmStorage.tm_mon];
+        tmStorage.tm_isdst = -1;
+
+        tmStorage.tm_yday = (int)winLocalTime.wDay + sDaysOfYear[tmStorage.tm_mon];
         if(0 == (winLocalTime.wYear & 3))
         {
             if(2 < winLocalTime.wMonth)
@@ -92,19 +95,53 @@ struct tm* Winlocaltime(const time_t* inTimeT)
             }
         }
 
-        winDST = GetTimeZoneInformation(&winTZInfo);
+        retval = &tmStorage;
+    }
 
-        switch(winDST)
+    return retval;
+}
+
+/*
+ *  Wingmtime
+ *
+ *  As LIBC gmtime
+ */
+struct tm* Wingmtime(const time_t* inTimeT)
+{
+    struct tm* retval = NULL;
+
+    if(NULL != inTimeT)
+    {
+        SYSTEMTIME winGMTime;
+        
+        _MD_time_t_2_SYSTEMTIME(winGMTime, *inTimeT);
+        
+        tmStorage.tm_sec = (int)winGMTime.wSecond;
+        tmStorage.tm_min = (int)winGMTime.wMinute;
+        tmStorage.tm_hour = (int)winGMTime.wHour;
+        tmStorage.tm_mday = (int)winGMTime.wDay;
+        tmStorage.tm_mon = (int)(winGMTime.wMonth - 1);
+        tmStorage.tm_year = (int)(winGMTime.wYear - 1900);
+        tmStorage.tm_wday = (int)winGMTime.wDayOfWeek;
+        tmStorage.tm_isdst = -1;
+
+        tmStorage.tm_yday = (int)winGMTime.wDay + sDaysOfYear[tmStorage.tm_mon];
+        if(0 == (winGMTime.wYear & 3))
         {
-        case TIME_ZONE_ID_STANDARD:
-            tmStorage.tm_isdst = 0;
-            break;
-        case TIME_ZONE_ID_DAYLIGHT:
-            tmStorage.tm_isdst = 1;
-            break;
-        default:
-            tmStorage.tm_isdst = -1;
-            break;
+            if(2 < winGMTime.wMonth)
+            {
+                if(0 == winGMTime.wYear % 100)
+                {
+                    if(0 == winGMTime.wYear % 400)
+                    {
+                        tmStorage.tm_yday++;
+                    }
+                }
+                else
+                {
+                    tmStorage.tm_yday++;
+                }
+            }
         }
 
         retval = &tmStorage;
@@ -117,16 +154,43 @@ struct tm* Winlocaltime(const time_t* inTimeT)
  *  Winmktime
  *
  *  As LIBCs mktime
+ *  We likely have a deficiency with the handling of tm_isdst...
  */
 time_t Winmktime(struct tm* inTM)
 {
     time_t retval = (time_t)-1;
 
-    /*
-    ** FIXME TODO
-    **
-    ** More here
-    */
+    if(NULL != inTM)
+    {
+        SYSTEMTIME winTime;
+        struct tm* gmTime = NULL;
+
+        memset(&winTime, 0, sizeof(winTime));
+
+        /*
+         * Ignore tm_wday and tm_yday.
+         */
+        winTime.wSecond = inTM->tm_sec;
+        winTime.wMinute = inTM->tm_min;
+        winTime.wHour = inTM->tm_hour;
+        winTime.wDay = inTM->tm_mday;
+        winTime.wMonth = inTM->tm_mon + 1;
+        winTime.wYear = inTM->tm_year + 1900;
+
+        /*
+         * First get our time_t.
+         */
+        _MD_SYSTEMTIME_2_time_t(retval, winTime);
+
+        /*
+         * Now overwrite the struct passed in with what we believe it should be.
+         */
+        gmTime = Wingmtime(&retval);
+        if(gmTime != inTM)
+        {
+            memcpy(inTM, gmTime, sizeof(struct tm));
+        }
+    }
 
     return retval;
 }

@@ -551,6 +551,7 @@ struct tm {
     int tm_yday;
     int tm_isdst;
 };
+extern struct tm* Wingmtime(const time_t* inTimeT);
 extern struct tm* Winlocaltime(const time_t* inTimeT);
 extern time_t Winmktime(struct tm* inTM);
 extern size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr);
