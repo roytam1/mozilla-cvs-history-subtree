@@ -562,6 +562,10 @@ sub setValue
 
   $self->{$attr} = [ @vals ];
   $self->{"_${attr}_modified_"} = 1;
+
+  delete $self->{"_${attr}_deleted_"}
+    if defined($self->{"_${attr}_deleted_"});
+
   if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
