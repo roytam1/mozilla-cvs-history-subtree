@@ -463,24 +463,27 @@ var BookmarksCommand = {
     var data    = { };
     var length  = { };
     xferable.getAnyTransferData(flavour, data, length);
-    var items, name;
+    var items, name, url;
     data = data.value.QueryInterface(Components.interfaces.nsISupportsString).data;
     switch (flavour.value) {
     case "moz/bookmarkclipboarditem":
       items = data.split("\n");
       // since data are ended by \n, remove the last empty node
       items.pop(); 
-      for (var i=0; i<items.length; ++i)
-        items[i] = RDF.GetResource(items[i]);
+      for (var i=0; i<items.length; ++i) {
+        var resource = RDF.GetResource(items[i]);
+        name = BookmarksUtils.getProperty(resource, NC_NS+"Name");
+        url  = BookmarksUtils.getProperty(resource, NC_NS+"URL" );
+        items[i] = BookmarksUtils.createBookmark(name, url, null, null);
+      }
       break;
     case "text/x-moz-url":
       // there should be only one item in this case
       var ix = data.indexOf("\n");
       items = data.substring(0, ix != -1 ? ix : data.length);
       name  = data.substring(ix);
-      if (!BMSVC.IsBookmarked(items))
-        // XXX: we should infer the best charset
-        BookmarksUtils.createBookmark(null, items, null, name);
+      // XXX: we should infer the best charset
+      BookmarksUtils.createBookmark(null, items, null, name);
       items = [items];
       break;
     default: 
