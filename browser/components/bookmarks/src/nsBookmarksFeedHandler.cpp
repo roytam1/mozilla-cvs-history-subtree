@@ -772,7 +772,7 @@ nsBookmarksService::UpdateLivemarkChildren(nsIRDFResource* aSource)
 
     nsCOMPtr<nsIChannel> channel;
     rv = NS_NewChannel(getter_AddRefs(channel), uri, nsnull, nsnull, nsnull,
-                       nsIRequest::LOAD_BACKGROUND);
+                       nsIRequest::LOAD_BACKGROUND | nsIRequest::LOAD_BYPASS_CACHE);
     if (NS_FAILED(rv)) UNLOCK_AND_RETURN_RV;
 
     rv = channel->AsyncOpen(listener, nsnull);
