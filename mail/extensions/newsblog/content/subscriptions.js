@@ -39,16 +39,16 @@ function doAdd() {
 
     // if the user hit cancel, exit without doing anything
     if (!feedProperties.result)
+    {
+      debug("feedProperties.result empty\n");
       return;
-
+    }
+    
     if (!feedProperties.feedLocation)
+    {
+        debug("feedProperties.feedLocation empty\n");
         return;
-
-    const DEFAULT_FEED_TITLE = "feed title";
-    const DEFAULT_FEED_URL = "feed location";
-
-    if (!feedProperties.feedName)
-        feedProperties.feedName = DEFAULT_FEED_TITLE;
+    }
 
     var itemResource = rdf.GetResource(feedProperties.feedLocation);
     feed = new Feed(itemResource);
@@ -58,24 +58,23 @@ function doAdd() {
     var server = getIncomingServer();
     var folder;
     try {
-        //var folder = server.rootMsgFolder.FindSubFolder(feed.name);
-        folder = server.rootMsgFolder.getChildNamed(feed.name);
+        var folder = server.rootMsgFolder.getChildNamed(feed.name);
     }
     catch(e) {
         // If we're here, it's probably because the folder doesn't exist yet,
         // so create it.
-        debug("folder for new feed " + feedProperties.feedName + " doesn't exist; creating");
-				debug("creating " + feedProperties.feedName + "as child of " + server.rootMsgFolder + "\n");
+        debug("folder for new feed " + feed.name + " doesn't exist; creating");
+				debug("creating " + feed.name + "as child of " + server.rootMsgFolder + "\n");
         server.rootMsgFolder.createSubfolder(feed.name, getMessageWindow());
-				folder = server.rootMsgFolder.FindSubFolder(feed.name);
-				var msgdb = folder.getMsgDatabase(null);
-				var folderInfo = msgdb.dBFolderInfo;
-				folderInfo.setCharPtrProperty("feedUrl", feedProperties.feedLocation);
+        folder = server.rootMsgFolder.FindSubFolder(feed.name);
+        var msgdb = folder.getMsgDatabase(null);
+        var folderInfo = msgdb.dBFolderInfo;
+        folderInfo.SetCharPtrProperty("feedUrl", feedProperties.feedLocation);
     }
 
     // XXX This should be something like "subscribe to feed".
-		dump ("feed name = " + feedProperties.feedName + "\n");
-    addFeed(feedProperties.feedLocation, feedProperties.feedName, null, folder);
+		dump ("feed name = " + feed.name + "\n");
+    addFeed(feedProperties.feedLocation, feed.name, null, folder);
     // now download it for real, now that we have a folder.
     feed.download();
 }
@@ -157,7 +156,7 @@ function doEdit() {
             server.rootMsgFolder.createSubfolder(feedProperties.feedName, msgWindow);
             folder = rootMsgFolder.FindSubFolder(feedProperties.feedName);
             var msgdb = folder.getMsgDatabase(null);
-            msgdb.dBFolderInfo.setCharPtrProperty("feedUrl", feedProperties.feedLocation);
+            msgdb.dBFolderInfo.SetCharPtrProperty("feedUrl", feedProperties.feedLocation);
         }
         else if (new_folder) {
             // Do nothing, as everything is as it should be.
@@ -167,7 +166,7 @@ function doEdit() {
             server.rootMsgFolder.createSubfolder(feedProperties.feedName, msgWindow);
             folder = rootMsgFolder.FindSubFolder(feedProperties.feedName);
             var msgdb = folder.getMsgDatabase(null);
-            msgdb.dBFolderInfo.setCharPtrProperty("feedUrl", feedProperties.feedLocation);
+            msgdb.dBFolderInfo.SetCharPtrProperty("feedUrl", feedProperties.feedLocation);
         }
         updateTitle(item.id, feedProperties.feedName);
     }
@@ -220,7 +219,7 @@ function doRemove() {
                 // so don't remove it.
                 folder = server.rootMsgFolder.getChildNamed(feed.name);
                 if (folder) 
-									return;
+                  return;
             }
             catch (e) {}
             ds.Unassert(resource, DC_TITLE, title, true);

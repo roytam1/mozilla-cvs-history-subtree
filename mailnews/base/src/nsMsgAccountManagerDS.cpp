@@ -459,34 +459,25 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
     else {
       nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(source, &rv);
       if (NS_SUCCEEDED(rv) && folder) {
-      /* if this is a server, with no identities, then we show a special panel */
-      nsCOMPtr<nsIMsgIncomingServer> server;
-      rv = getServerForFolderNode(source, getter_AddRefs(server));
-      if (server) {
-          PRBool hasIdentities;
-          rv = serverHasIdentities(server, &hasIdentities);
-          if (NS_SUCCEEDED(rv) && !hasIdentities) {
-            str = NS_LITERAL_STRING("am-serverwithnoidentities.xul");
-          }
-          else {
-            str = NS_LITERAL_STRING("am-main.xul");
-          }
-        }
-        else {
+        /* if this is a server, with no identities, then we show a special panel */
+        nsCOMPtr<nsIMsgIncomingServer> server;
+        rv = getServerForFolderNode(source, getter_AddRefs(server));
+        if (server)
+          server->GetAccountManagerChrome(str);
+        else 
           str = NS_LITERAL_STRING("am-main.xul");
-        }
       }
       else {
         // allow for the accountmanager to be dynamically extended
         const char *sourceValue;
         rv = source->GetValueConst(&sourceValue);
         NS_ENSURE_SUCCESS(rv,rv);
-        
+
         // make sure the pointer math we're about to do is safe.
         NS_ENSURE_TRUE(sourceValue && (strlen(sourceValue) > strlen(NC_RDF_PAGETITLE_PREFIX)), NS_ERROR_UNEXPECTED);
-        
+
         // turn NC#PageTitlefoobar into foobar, so we can get the am-foobar.xul file
-        str = NS_LITERAL_STRING("am-");
+        str = NS_LITERAL_STRING("am-"); 
         str.AppendWithConversion((sourceValue + strlen(NC_RDF_PAGETITLE_PREFIX)));
         str += NS_LITERAL_STRING(".xul");
       }

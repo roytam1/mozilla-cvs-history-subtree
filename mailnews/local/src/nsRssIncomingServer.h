@@ -55,6 +55,8 @@ public:
     NS_IMETHOD GetLocalStoreType(char **);
     NS_IMETHOD GetOfflineSupportLevel(PRInt32 *aSupportLevel);
     NS_IMETHOD GetSupportsDiskSpace(PRBool *aSupportsDiskSpace);
+    NS_IMETHOD GetAccountManagerChrome(nsAString& aResult);
+    NS_IMETHOD PerformBiff(nsIMsgWindow *aMsgWindow);
 
     nsRssIncomingServer();
     virtual ~nsRssIncomingServer();
