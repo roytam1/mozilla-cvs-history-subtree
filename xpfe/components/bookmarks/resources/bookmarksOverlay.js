@@ -348,7 +348,7 @@ BookmarksUIElement.prototype = {
     case "newbookmark":
       var folder = this.getSelectedFolder();
       openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
-                 "centerscreen,chrome,modal=yes,dialog=yes,resizable=no", null, null, folder, null, "newBookmark");
+                 "centerscreen,chrome,modal=yes,dialog=yes,resizable=no", null, null, folder, null, "newBookmark", gBookmarksShell);
       break;
     case "newseparator":
       nfseln = this.getBestItem();

@@ -195,6 +195,12 @@ function onOK()
     }
     
     kBMS.AddBookmarkToFolder(url, rFolder, gFld_Name.value, gBookmarkCharset);
+    if (window.arguments[5]){
+      if (url.indexOf(":") < 0)
+        window.arguments[5].selectFolderItem(gCreateInFolder, "http://" + url, false);
+      else
+        window.arguments[5].selectFolderItem(gCreateInFolder, url, false);
+    }
   }
   close();
 }
