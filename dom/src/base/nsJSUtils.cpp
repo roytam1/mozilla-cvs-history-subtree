@@ -34,11 +34,13 @@
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIScriptEventListener.h"
+#include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIJSScriptObjectIID, NS_IJSSCRIPTOBJECT_IID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
+static NS_DEFINE_CID(kXPConnectCID, NS_XPCONNECT_CID);
 
 NS_EXPORT PRBool 
 nsJSUtils::nsCallJSScriptObjectGetProperty(nsISupports* aSupports,
@@ -150,9 +152,12 @@ nsJSUtils::nsConvertXPCObjectToJSVal(nsISupports* aSupports,
                                      JSContext* aContext,
                                      jsval* aReturn)
 {
+  nsresult rv;
+
   *aReturn = nsnull; // a sane value, just in case something blows up
-  nsIXPConnect* xpc = XPC_GetXPConnect();
-  if (xpc) {
+
+  NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &rv);
+  if (NS_SUCCEEDED(rv)) {
     nsIXPConnectWrappedNative* wrapper;
     nsresult rv = xpc->WrapNative(aContext, aSupports, aIID, &wrapper);
     if (NS_SUCCEEDED(rv)) {
@@ -163,7 +168,6 @@ nsJSUtils::nsConvertXPCObjectToJSVal(nsISupports* aSupports,
       }
       NS_RELEASE(wrapper);
     }
-    NS_RELEASE(xpc);
   }
 }
 

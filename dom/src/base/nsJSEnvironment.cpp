@@ -48,6 +48,7 @@ static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
 static NS_DEFINE_IID(kIScriptNameSetRegistryIID, NS_ISCRIPTNAMESETREGISTRY_IID);
 static NS_DEFINE_IID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
+static NS_DEFINE_CID(kXPConnectCID,              NS_XPCONNECT_CID);
 
 void PR_CALLBACK
 NS_ScriptErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
@@ -247,21 +248,20 @@ nsJSContext::InitClasses()
     res = NS_OK;
   }
 
-#ifdef MOZ_XPCONNECT
+  // Hook up XPConnect
   {
-    // Now set up the XPConnect "Components" object in the global object
-    nsIXPConnect* xpc = XPC_GetXPConnect();
-    NS_ASSERTION(xpc != nsnull, "couldn't get XPConnect");
-    if (xpc) {
+    NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &res);
+    //NS_ASSERTION(NS_SUCCEEDED(res), "unable to get xpconnect");
+    if (NS_SUCCEEDED(res)) {
       res = xpc->AddNewComponentsObject(mContext, JS_GetGlobalObject(mContext));
       NS_ASSERTION(NS_SUCCEEDED(res), "unable to add Components object");
       NS_RELEASE(xpc);
     }
     else {
-      res = NS_ERROR_FAILURE;
+      // silently fail for now
+      res = NS_OK;
     }
   }
-#endif
 
   mIsInitialized = PR_TRUE;
 
@@ -429,25 +429,28 @@ extern "C" NS_DOM nsresult NS_CreateContext(nsIScriptGlobalObject *aGlobal, nsIS
   if (! *aContext)
     return NS_ERROR_OUT_OF_MEMORY; // XXX
 
-#ifdef MOZ_XPCONNECT
   // Hook up XPConnect
-  nsIXPConnect* xpc = XPC_GetXPConnect();
-  NS_ASSERTION(xpc != nsnull, "couldn't get xpconnect");
-  if (xpc) {
-    nsIScriptObjectOwner* owner;
-    rv = aGlobal->QueryInterface(nsIScriptObjectOwner::GetIID(), (void**) &owner);
+  {
+    NS_WITH_SERVICE(nsIXPConnect, xpc, kXPConnectCID, &rv);
+    //NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get xpconnect");
     if (NS_SUCCEEDED(rv)) {
-      JSObject* global;
-      rv = owner->GetScriptObject(*aContext, (void**) &global);
+      nsIScriptObjectOwner* owner;
+      rv = aGlobal->QueryInterface(nsIScriptObjectOwner::GetIID(), (void**) &owner);
       if (NS_SUCCEEDED(rv)) {
-        rv = xpc->InitJSContext((JSContext*) (*aContext)->GetNativeContext(), global, JS_FALSE);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "xpconnect unable to init jscontext");
+        JSObject* global;
+        rv = owner->GetScriptObject(*aContext, (void**) &global);
+        if (NS_SUCCEEDED(rv)) {
+          rv = xpc->InitJSContext((JSContext*) (*aContext)->GetNativeContext(), global, JS_FALSE);
+          NS_ASSERTION(NS_SUCCEEDED(rv), "xpconnect unable to init jscontext");
+        }
+        NS_RELEASE(owner);
       }
-      NS_RELEASE(owner);
     }
-    NS_RELEASE(xpc);
+    else {
+      // silently fail for now
+      rv = NS_OK;
+    }
   }
-#endif
 
   // Bind the script context and the global object
   (*aContext)->InitContext(aGlobal);
