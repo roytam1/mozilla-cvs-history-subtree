@@ -63,8 +63,7 @@ private:
 
 // adjacency list and BFS hashtable data class.
 typedef struct _tableData {
-    nsHashKey *key;
-    nsCString *keyString;
+    nsCStringKey *key;
     void      *data;
 } SCTableData;
 
