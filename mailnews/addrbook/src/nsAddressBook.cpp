@@ -1293,7 +1293,7 @@ NS_IMETHODIMP nsAddressBook::ConvertNA2toLDIF(nsIFileSpec *srcFileSpec, nsIFileS
   nsresult rv = NS_OK;
   if (!srcFileSpec || !dstFileSpec) return NS_ERROR_NULL_POINTER;
   
-  nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
+  nsCOMPtr <nsIAbUpgrader> abUpgrader = do_CreateInstance(NS_AB4xUPGRADER_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   if (!abUpgrader) return NS_ERROR_FAILURE;
 
@@ -1308,6 +1308,7 @@ NS_IMETHODIMP nsAddressBook::ConvertNA2toLDIF(nsIFileSpec *srcFileSpec, nsIFileS
       printf("converting na2 to ldif...\n");
     } while (NS_SUCCEEDED(rv) && !done);
   }
+
   return rv;  
 }
 
