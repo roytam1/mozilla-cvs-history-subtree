@@ -235,7 +235,7 @@ nsSOAPUtils::GetNextSibling(nsIDOMNode* aSibling, nsIDOMNode **aNext)
   *aNext = current;
   NS_IF_ADDREF(*aNext);
 }
-nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aElement,
+nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aScope,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI)
 {
@@ -253,11 +253,11 @@ nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aElement,
   }
 
   nsresult rc;
-  nsCOMPtr<nsIDOMNode> current = aElement;
+  nsCOMPtr<nsIDOMNode> current = aScope;
   nsCOMPtr<nsIDOMNamedNodeMap> attrs;
   nsCOMPtr<nsIDOMNode> temp;
   nsAutoString value;
-  while (aElement != nsnull) {
+  while (current != nsnull) {
     rc = current->GetAttributes(getter_AddRefs(attrs));
     if (NS_FAILED(rc)) return rc;
     if (attrs) {
@@ -288,47 +288,74 @@ nsresult nsSOAPUtils::GetLocalName(const nsAReadableString & aQName,
     aQName.Mid(aLocalName, i, aQName.Length() - i);
   return NS_OK;
 }
-#if 0
+
 nsresult 
-GetNamespacePrefix(nsIDOMNode* aNode,
+GetNamespacePrefix(nsIDOMElement* aScope,
                    const nsAReadableString & aURI,
                    nsAWritableString & aPrefix)
 {
-  nsCOMPtr<nsIDOMNode> scope = aNode;
+//  This may change for level 3 serialization, so be sure to gut this
+//  and call the standardized level 3 method when it is available.
+  aPrefix.Truncate(0);
+  if (aURI.IsEmpty())
+    return NS_OK;
+  if (aURI.Equals(kXMLNamespaceURI)) {
+    aPrefix.Assign(kXMLPrefix);
+    return NS_OK;
+  }
+  nsCOMPtr<nsIDOMNode> current = aScope;
+  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
+  nsCOMPtr<nsIDOMNode> temp;
+  nsAutoString tstr;
+  nsresult rc;
   for (;;) {
-    nsCOMPtr<nsIDOMNamedNodeMap> attrs;
-    scope->GetAttributes(getter_AddRefs(attrs));
+    rc = current->GetAttributes(getter_AddRefs(attrs));
+    if (NS_FAILED(rc)) return rc;
     if (attrs) {
       PRUint32 i = 0;
       for (;;)
       {
-        nsCOMPtr<nsIDOMAttr> attr;
-        attrs->Item(i++, attr);
-        if (!attr)
+        attrs->Item(i++, getter_AddRefs(temp));
+        if (!temp)
           break;
-        nsAutoString temp;
-        attr->GetNamespaceURI(temp);
-        if (!tmp.Equals(kXMLNamespaceNamespaceURI))
+        temp->GetNamespaceURI(tstr);
+        if (!tstr.Equals(kXMLNamespaceNamespaceURI))
           continue;
-        attr->GetValue(temp);
-        if (!localName.Equals(aURI))
-          continue;
-        attr->GetLocalName(aPrefix);
-        return NS_OK;
+        temp->GetNodeValue(tstr);
+        if (tstr.Equals(aURI)) {
+          nsAutoString prefix;
+          rc = temp->GetLocalName(prefix);
+          if (NS_FAILED(rc)) return rc;
+          nsCOMPtr<nsIDOMNode> check = aScope;
+          PRBool hasDecl;
+	  nsCOMPtr<nsIDOMElement> echeck;
+          while (check != current) { // Make sure prefix is not overridden
+	    echeck = do_QueryInterface(check);
+	    if (echeck) {
+	      rc = echeck->HasAttributeNS(kXMLNamespaceNamespaceURI, prefix, &hasDecl);
+              if (NS_FAILED(rc)) return rc;
+	      if (hasDecl)
+	        break;
+              current->GetParentNode(getter_AddRefs(temp));
+	      current = temp;
+	    }
+          }
+          if (check == current) {
+	    aPrefix.Assign(prefix);
+	    return NS_OK;
+          }
+	}
       }
     }
-    nsCOMPtr<nsIDOMNode> next;
-    scope->GetParentNode(getter_AddRefs(next));
-    if (next)
-      scope = next;
+    current->GetParentNode(getter_AddRefs(temp));
+    if (temp)
+      current = temp;
     else
       break;
   }
   aPrefix = nsSOAPUtils::kEmpty;
   return NS_OK;
 }
-
-#endif
 
 PRBool nsSOAPUtils::StartsWith(nsAReadableString& aSuper,
 		           nsAReadableString& aSub)

@@ -46,11 +46,9 @@ public:
 
   static void GetNextSibling(nsIDOMNode* aSibling, 
                              nsIDOMNode **aNext);
-#if 0
   static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
-#endif
   static nsresult GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI);

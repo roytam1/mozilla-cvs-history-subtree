@@ -69,7 +69,9 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISuppor
 {
   if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
     return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aScope,aConfiguration, _retval);
-  
+  else if (aTypeID.Equals(nsSOAPUtils::kLiteralType))
+  {
+  }
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -78,6 +80,9 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupp
 {
   if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
     return UnmarshallCall(aMessage,aSource,aEncodingStyleURI,aSchemaID,aTypeID,aConfiguration, _retval);
+  else if (aTypeID.Equals(nsSOAPUtils::kLiteralType))
+  {
+  }
 
   return NS_ERROR_NOT_IMPLEMENTED;
 }
