@@ -3132,6 +3132,11 @@ PresShell::DoCopy()
                                             getter_AddRefs(trans));
     if ( trans ) 
     {
+      // set up the data converter
+      nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance(kCXIFConverterCID);
+      NS_ENSURE_TRUE(htmlConverter, NS_ERROR_FAILURE);
+      trans->SetConverter(htmlConverter);
+      
       // Add the html DataFlavor to the transferable
       trans->AddDataFlavor(kHTMLMime);
       // Add the htmlcontext DataFlavor to the transferable
