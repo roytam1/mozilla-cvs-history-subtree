@@ -99,7 +99,7 @@ nsFileView.prototype = {
 
   /* readonly attribute long rowCount; */
   set rowCount(c) { throw "readonly property"; },
-  get rowCount() { dump("return rowcount: " + this.mTotalRows + "\n"); return this.mTotalRows; },
+  get rowCount() { return this.mTotalRows; },
 
   /* attribute nsIOutlinerSelection selection; */
   set selection(s) { this.mSelection = s; },
@@ -178,7 +178,6 @@ nsFileView.prototype = {
     /* we cache the file size and last modified dates -
        this function must be very fast since it's called
        whenever the cell needs repainted */
-    dump("getCellText("+row+"): dirlist.length="+this.mDirList.length+", files.length="+this.mFilteredFiles.length+"\n");
     var file, isdir = false;
     if (row < this.mDirList.length) {
       isdir = true;
@@ -428,7 +427,6 @@ nsFileView.prototype = {
     this.mFilteredFiles = [];
 
     if (this.mOutliner) {
-      dump("rowCountChanged("+this.mDirList.length+", "+ -(this.mTotalRows - this.mDirList.length) + ")\n");
       var rowDiff = -(this.mTotalRows - this.mDirList.length);
       this.mTotalRows = this.mDirList.length;
       this.mOutliner.rowCountChanged(this.mDirList.length, rowDiff);
@@ -455,7 +453,6 @@ nsFileView.prototype = {
 
     // Tell the outliner how many rows we just added
     if (this.mOutliner) {
-      dump("rowCountChanged("+this.mDirList.length+", "+this.mFilteredFiles.length+")\n");
       this.mOutliner.rowCountChanged(this.mDirList.length, this.mFilteredFiles.length);
     }
   },
