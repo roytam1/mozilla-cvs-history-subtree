@@ -331,7 +331,10 @@ NS_IMETHODIMP nsMsgLocalMailFolder::ParseFolder(nsIMsgWindow *aMsgWindow, nsIUrl
     return NS_MSG_FOLDER_BUSY;
   }
   
-  rv = mailboxService->ParseMailbox(aMsgWindow, path, parser, listener, nsnull);
+  if (listener != this)
+    mReparseListener = listener;
+
+  rv = mailboxService->ParseMailbox(aMsgWindow, path, parser, this, nsnull);
   if (NS_SUCCEEDED(rv))
     m_parsingFolder = PR_TRUE;
   return rv;
@@ -574,7 +577,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWithReparse(nsIUrlListener *aRepa
       if(folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING ||
         folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
       {
-        if(NS_FAILED(rv = ParseFolder(aMsgWindow, (aReparseUrlListener) ? aReparseUrlListener : this)))
+        if(NS_FAILED(rv = ParseFolder(aMsgWindow, aReparseUrlListener)))
         {
           if (rv == NS_MSG_FOLDER_BUSY)
           {
