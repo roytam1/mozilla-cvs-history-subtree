@@ -1388,10 +1388,10 @@ nsEditorShell::DeleteSelection(PRInt32 action)
   switch(action)
   {
     case 1:
-      selectionAction = nsIEditor::eCollapseForwards;
+      selectionAction = nsIEditor::eDeleteNext;
       break;
     case 2:
-      selectionAction = nsIEditor::eCollapseBackwards;
+      selectionAction = nsIEditor::eDeletePrevious;
       break;
     default:
       selectionAction = nsIEditor::eDoNothing;

@@ -654,10 +654,10 @@ nsTextEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
     mEditor->GetTextSelectionOffsets(aSelection, start, end);
     if (end==start)
     { // collapsed selection
-      if (nsIEditor::eCollapseBackwards==aCollapsedAction && 0<start) { // del back
+      if (nsIEditor::eDeletePrevious==aCollapsedAction && 0<start) { // del back
         mPasswordText.Cut(start-1, 1);
       }
-      else if (nsIEditor::eCollapseForwards==aCollapsedAction) {      // del forward
+      else if (nsIEditor::eDeleteNext==aCollapsedAction) {      // del forward
         mPasswordText.Cut(start, 1);
       }
       // otherwise nothing to do for this collapsed selection

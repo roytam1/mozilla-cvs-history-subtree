@@ -139,7 +139,7 @@ nsTextEditorKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
 //        break;
 
       case nsIDOMUIEvent::VK_DELETE:
-        mEditor->DeleteSelection(nsIEditor::eCollapseForwards);
+        mEditor->DeleteSelection(nsIEditor::eDeleteNext);
         break;
 
 //      case nsIDOMUIEvent::VK_RETURN:
@@ -250,7 +250,7 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
 	if (NS_SUCCEEDED(uiEvent->GetKeyCode(&keyCode)))
 	{
     if (nsIDOMUIEvent::VK_BACK==keyCode) {
-			mEditor->DeleteSelection(nsIEditor::eCollapseBackwards);
+			mEditor->DeleteSelection(nsIEditor::eDeletePrevious);
 			return NS_ERROR_BASE; // consumed
 		}	
 		if (nsIDOMUIEvent::VK_RETURN==keyCode) {

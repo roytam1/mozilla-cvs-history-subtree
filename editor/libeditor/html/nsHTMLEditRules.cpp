@@ -318,7 +318,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESe
       if (NS_FAILED(res)) return res;
     
       // at beginning of text node and backspaced?
-      if (!offset && (aAction == nsIEditor::eCollapseBackwards))
+      if (!offset && (aAction == nsIEditor::eDeletePrevious))
       {
         nsCOMPtr<nsIDOMNode> priorNode;
         res = mEditor->GetPriorNode(node, PR_TRUE, getter_AddRefs(priorNode));
@@ -371,7 +371,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESe
     
       // at end of text node and deleted?
       if ((offset == (PRInt32)strLength)
-          && (aAction == nsIEditor::eCollapseForwards))
+          && (aAction == nsIEditor::eDeleteNext))
       {
         nsCOMPtr<nsIDOMNode> nextNode;
         res = mEditor->GetNextNode(node, PR_TRUE, getter_AddRefs(nextNode));

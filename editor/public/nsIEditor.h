@@ -49,10 +49,8 @@ public:
   /* An enum used to describe how to collpase a non-collapsed selection */
   typedef enum {
     eDoNothing,
-    eCollapseForwards,
-    eCollapseBackwards,
-    eCollapseToFocusNode,
-    eCollapseToAnchorNode
+    eDeleteNext,
+    eDeletePrevious
   } ESelectionCollapseDirection;
 
 

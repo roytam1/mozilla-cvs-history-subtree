@@ -100,7 +100,7 @@ nsresult TextEditorTest::InitDoc()
 {
   nsresult result = mEditor->SelectAll();
   TEST_RESULT(result);
-  result = mEditor->DeleteSelection(nsIEditor::eCollapseForwards);
+  result = mEditor->DeleteSelection(nsIEditor::eDeleteNext);
   TEST_RESULT(result);
   return result;
 }

@@ -4158,7 +4158,7 @@ nsEditor::CreateTxnForDeleteInsertionPoint(nsIDOMRange         *aRange,
 
   // build a transaction for deleting the appropriate data
   // XXX: this has to come from rule section
-  if ((eCollapseBackwards==aAction) && (PR_TRUE==isFirst))
+  if ((eDeletePrevious==aAction) && (PR_TRUE==isFirst))
   { // we're backspacing from the beginning of the node.  Delete the first thing to our left
     nsCOMPtr<nsIDOMNode> priorNode;
     result = GetPriorNode(node, PR_TRUE, getter_AddRefs(priorNode));
@@ -4195,7 +4195,7 @@ nsEditor::CreateTxnForDeleteInsertionPoint(nsIDOMRange         *aRange,
       }
     }
   }
-  else if ((nsIEditor::eCollapseForwards==aAction) && (PR_TRUE==isLast))
+  else if ((nsIEditor::eDeleteNext==aAction) && (PR_TRUE==isLast))
   { // we're deleting from the end of the node.  Delete the first thing to our right
     nsCOMPtr<nsIDOMNode> nextNode;
     result = GetNextNode(node, PR_TRUE, getter_AddRefs(nextNode));
@@ -4236,7 +4236,7 @@ nsEditor::CreateTxnForDeleteInsertionPoint(nsIDOMRange         *aRange,
   {
     if (nodeAsText)
     { // we have text, so delete a char at the proper offset
-      if (nsIEditor::eCollapseBackwards==aAction) {
+      if (nsIEditor::eDeletePrevious==aAction) {
         offset --;
       }
       DeleteTextTxn *txn;

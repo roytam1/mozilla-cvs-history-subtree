@@ -175,7 +175,7 @@ class nsTextRulesInfo : public nsRulesInfo
     outString(0),
     typeInState(),
     maxLength(-1),
-    collapsedAction(nsIEditor::eCollapseForwards) 
+    collapsedAction(nsIEditor::eDeleteNext) 
     {};
 
   virtual ~nsTextRulesInfo() {};
