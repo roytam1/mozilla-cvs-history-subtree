@@ -60,6 +60,13 @@ static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 
 #define IPC_BUFFER_SEGMENT_SIZE 4096
 
+// for use with nsISocketTransportService::PostEvent
+enum {
+    IPC_TRANSPORT_EVENT_CONNECT,
+    IPC_TRANSPORT_EVENT_DISCONNECT,
+    IPC_TRANSPORT_EVENT_SENDMSG
+};
+
 //-----------------------------------------------------------------------------
 // ipcTransport (XP_UNIX specific methods)
 //-----------------------------------------------------------------------------
@@ -71,19 +78,6 @@ ipcTransport::PlatformInit()
     if (NS_FAILED(rv)) return rv;
 
     ipcSocketProviderUnix::SetSocketPath(mSocketPath);
-    return NS_OK;
-}
-
-nsresult
-ipcTransport::Disconnect()
-{
-    mHaveConnection = PR_FALSE;
-    if (mTransport) {
-        mTransport->Close(NS_BINDING_ABORTED);
-        mTransport = nsnull;
-        mInputStream = nsnull;
-        mOutputStream = nsnull;
-    }
     return NS_OK;
 }
 
@@ -107,10 +101,20 @@ static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
     return NS_OK;
 }
 
+// runs on main thread or socket thread
 nsresult
 ipcTransport::SendMsg_Internal(ipcMessage *msg)
 {
     LOG(("ipcTransport::SendMsg_Internal [dataLen=%u]\n", msg->DataLen()));
+    
+    if (nsIThread::IsMainThread()) {
+        // proxy to socket thread
+        nsresult rv;
+        nsCOMPtr<nsISocketTransportService> sts(
+                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
+        if (NS_FAILED(rv)) return rv;
+        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_SENDMSG, 0, msg);
+    }
 
     NS_ENSURE_TRUE(mOutputStream, NS_ERROR_NOT_INITIALIZED);
 
@@ -126,16 +130,24 @@ ipcTransport::SendMsg_Internal(ipcMessage *msg)
     return NS_OK;
 }
 
+// runs on main thread or socket thread
 nsresult
 ipcTransport::Connect()
 {
-    nsresult rv;
-
     LOG(("ipcTransport::Connect\n"));
 
     if (++mConnectionAttemptCount > 20) {
         LOG(("  giving up after 20 unsuccessful connection attempts\n"));
         return NS_ERROR_ABORT;
+    }
+
+    nsresult rv;
+    if (nsIThread::IsMainThread()) {
+        // proxy to socket thread
+        nsCOMPtr<nsISocketTransportService> sts(
+                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
+        if (NS_FAILED(rv)) return rv;
+        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_CONNECT, 0, nsnull);
     }
 
     rv = CreateTransport();
@@ -162,6 +174,30 @@ ipcTransport::Connect()
     return asyncIn->AsyncWait(mReceiver, 0, nsnull);
 }
 
+// runs on main thread or socket thread
+nsresult
+ipcTransport::Disconnect()
+{
+    if (nsIThread::IsMainThread()) {
+        // proxy to socket thread
+        nsresult rv;
+        nsCOMPtr<nsISocketTransportService> sts(
+                do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
+        if (NS_FAILED(rv)) return rv;
+        return sts->PostEvent(this, IPC_TRANSPORT_EVENT_DISCONNECT, 0, nsnull);
+    }
+
+    mHaveConnection = PR_FALSE;
+    if (mTransport) {
+        mTransport->Close(NS_BINDING_ABORTED);
+        mTransport = nsnull;
+        mInputStream = nsnull;
+        mOutputStream = nsnull;
+    }
+    return NS_OK;
+}
+
+// runs on socket transport thread
 void
 ipcTransport::OnConnectionLost(nsresult reason)
 {
@@ -170,8 +206,8 @@ ipcTransport::OnConnectionLost(nsresult reason)
     PRBool hadConnection = mHaveConnection;
     Disconnect();
 
-    if (mObserver && hadConnection)
-        mObserver->OnConnectionLost();
+    if (hadConnection)
+        ProxyToMainThread(ConnectionLost_EventHandler);
 
     if (reason == NS_BINDING_ABORTED)
         return;
@@ -233,6 +269,27 @@ ipcTransport::GetSocketPath(nsACString &socketPath)
 }
 
 //----------------------------------------------------------------------------
+// ipcTransport::nsISocketEventHandler
+//----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+ipcTransport::OnSocketEvent(PRUint32 type, PRUint32 uparam, void *vparam)
+{
+    switch (type) {
+    case IPC_TRANSPORT_EVENT_CONNECT:
+        Connect();
+        break;
+    case IPC_TRANSPORT_EVENT_DISCONNECT:
+        Disconnect();
+        break;
+    case IPC_TRANSPORT_EVENT_SENDMSG:
+        SendMsg_Internal((ipcMessage *) vparam);
+        break;
+    }
+    return NS_OK;
+}
+
+//----------------------------------------------------------------------------
 // ipcReceiver
 //----------------------------------------------------------------------------
 
@@ -253,11 +310,17 @@ ipcReceiver::ReadSegment(nsIInputStream *stream,
         PRUint32 nread;
         PRBool complete;
 
-        self->mMsg.ReadFrom(ptr, count, &nread, &complete);
+        if (!self->mMsg) {
+            self->mMsg = new ipcMessage();
+            if (!self->mMsg)
+                return (self->mStatus = NS_ERROR_OUT_OF_MEMORY);
+        }
+
+        self->mMsg->ReadFrom(ptr, count, &nread, &complete);
 
         if (complete) {
-            self->mTransport->OnMessageAvailable(&self->mMsg);
-            self->mMsg.Reset();
+            self->mTransport->OnMessageAvailable(self->mMsg); // hand over ownership
+            self->mMsg = nsnull;
         }
 
         count -= nread;
@@ -274,34 +337,19 @@ ipcReceiver::OnInputStreamReady(nsIAsyncInputStream *stream)
     LOG(("ipcReceiver::OnInputStreamReady\n"));
 
     nsresult rv;
-    if (nsIThread::IsMainThread()) {
-        PRUint32 n;
+    PRUint32 n;
 
-        rv = stream->ReadSegments(ReadSegment, this, IPC_BUFFER_SEGMENT_SIZE, &n);
-        if (NS_FAILED(rv)) {
-            mTransport->OnConnectionLost(rv);
-            return NS_OK;
-        }
-
-        // continue waiting...
-        return stream->AsyncWait(this, 0, nsnull);
+    rv = stream->ReadSegments(ReadSegment, this, IPC_BUFFER_SEGMENT_SIZE, &n);
+    if (NS_SUCCEEDED(rv)) {
+        rv = mStatus;
+        if (NS_SUCCEEDED(rv) && n == 0)
+            rv = NS_BASE_STREAM_CLOSED;
+    }
+    if (NS_FAILED(rv)) {
+        mTransport->OnConnectionLost(rv);
+        return NS_OK;
     }
 
-    // else, we need to proxy this event over to the main thread.  NOTE: we
-    // could have passed an nsIEventQueue to AsyncWait to have this done for
-    // us, but then we'd get blocked if someone pushed a modal event queue.
-    // instead, we always want to post to the youngest event queue on the 
-    // main thread.
-
-    LOG(("  proxying to main thread...\n"));
-
-    nsCOMPtr<nsIEventQueue> eventQ;
-    rv = NS_GetMainEventQ(getter_AddRefs(eventQ));
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIInputStreamNotify> event;
-    rv = NS_NewInputStreamReadyEvent(getter_AddRefs(event), this, eventQ);
-    if (NS_FAILED(rv)) return rv;
-
-    return event->OnInputStreamReady(stream);
+    // continue reading...
+    return stream->AsyncWait(this, 0, nsnull);
 }

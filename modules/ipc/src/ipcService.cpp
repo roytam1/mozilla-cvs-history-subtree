@@ -46,6 +46,7 @@
 #include "nsICategoryManager.h"
 #include "nsCategoryManagerUtils.h"
 #include "nsNetError.h"
+#include "nsEventQueueUtils.h"
 
 #include "ipcConfig.h"
 #include "ipcLog.h"
@@ -146,7 +147,11 @@ ipcClientQuery::OnQueryComplete(nsresult status, const ipcmMessageClientInfo *ms
 ipcService::ipcService()
     : mTransport(nsnull)
     , mClientID(0)
+#if 0
+    , mDelayedMsgQ(nsnull)
     , mWaiting(PR_FALSE)
+    , mInWaitMessage(PR_FALSE)
+#endif
 {
     NS_INIT_ISUPPORTS();
 
@@ -193,6 +198,7 @@ ipcService::OnIPCMClientID(const ipcmMessageClientID *msg)
     }
 
     PRUint32 cID = msg->ClientID();
+    PRBool sync = msg->TestFlag(IPC_MSG_FLAG_SYNC_REPLY);
 
     //
     // (1) store client ID in query
@@ -204,7 +210,7 @@ ipcService::OnIPCMClientID(const ipcmMessageClientID *msg)
     mQueryQ.RemoveFirst();
     mQueryQ.Append(query);
 
-    mTransport->SendMsg(new ipcmMessageQueryClientInfo(cID));
+    mTransport->SendMsg(new ipcmMessageQueryClientInfo(cID), sync);
 }
 
 void
@@ -240,6 +246,45 @@ ipcService::OnIPCMError(const ipcmMessageError *msg)
 
     mQueryQ.DeleteFirst();
 }
+
+//-----------------------------------------------------------------------------
+
+ipcService::
+ProcessDelayedMsgQ_Event::ProcessDelayedMsgQ_Event(ipcService *serv,
+                                                   ipcMessageQ *msgQ)
+{
+    NS_ADDREF(mServ = serv);
+    mMsgQ = msgQ;
+}
+
+ipcService::
+ProcessDelayedMsgQ_Event::~ProcessDelayedMsgQ_Event()
+{
+    NS_RELEASE(mServ);
+}
+
+void * PR_CALLBACK
+ipcService::ProcessDelayedMsgQ_EventHandler(PLEvent *plevent)
+{
+    LOG(("ipcService::ProcessDelayedMsgQ_EventHandler\n"));
+
+    ProcessDelayedMsgQ_Event *ev = (ProcessDelayedMsgQ_Event *) plevent;
+
+    while (!ev->mMsgQ->IsEmpty()) {
+        ipcMessage *msg = ev->mMsgQ->First();
+        ev->mMsgQ->RemoveFirst();
+        ev->mServ->OnMessageAvailable(msg);
+        delete msg;
+    }
+    return nsnull;
+}
+
+void PR_CALLBACK
+ipcService::ProcessDelayedMsgQ_EventCleanup(PLEvent *plevent)
+{
+    delete (ProcessDelayedMsgQ_Event *) plevent;
+}
+
 //-----------------------------------------------------------------------------
 // interface impl
 //-----------------------------------------------------------------------------
@@ -283,6 +328,7 @@ ipcService::RemoveClientName(const char *name)
 NS_IMETHODIMP
 ipcService::QueryClientByName(const char *name,
                               ipcIClientQueryHandler *handler,
+                              PRBool sync,
                               PRUint32 *queryID)
 {
     if (!mTransport)
@@ -296,7 +342,7 @@ ipcService::QueryClientByName(const char *name,
 
     nsresult rv;
     
-    rv = mTransport->SendMsg(msg);
+    rv = mTransport->SendMsg(msg, sync);
     if (NS_FAILED(rv)) return rv;
 
     ipcClientQuery *query = new ipcClientQuery(0, handler);
@@ -309,6 +355,7 @@ ipcService::QueryClientByName(const char *name,
 NS_IMETHODIMP
 ipcService::QueryClientByID(PRUint32 clientID,
                             ipcIClientQueryHandler *handler,
+                            PRBool sync,
                             PRUint32 *queryID)
 {
     if (!mTransport)
@@ -322,7 +369,7 @@ ipcService::QueryClientByID(PRUint32 clientID,
 
     nsresult rv;
     
-    rv = mTransport->SendMsg(msg);
+    rv = mTransport->SendMsg(msg, sync);
     if (NS_FAILED(rv)) return rv;
 
     ipcClientQuery *query = new ipcClientQuery(clientID, handler);
@@ -346,11 +393,13 @@ ipcService::CancelQuery(PRUint32 queryID)
     return NS_OK;
 }
 
+#if 0
 NS_IMETHODIMP
 ipcService::WaitQuery(PRUint32 queryID)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+#endif
 
 NS_IMETHODIMP
 ipcService::SetClientObserver(ipcIClientObserver *observer)
@@ -396,7 +445,8 @@ NS_IMETHODIMP
 ipcService::SendMessage(PRUint32 clientID,
                         const nsID &target,
                         const PRUint8 *data,
-                        PRUint32 dataLen)
+                        PRUint32 dataLen,
+                        PRBool sync)
 {
     NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_INITIALIZED);
 
@@ -414,15 +464,26 @@ ipcService::SendMessage(PRUint32 clientID,
     if (!msg)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    return mTransport->SendMsg(msg);
+    return mTransport->SendMsg(msg, sync);
 }
 
+#if 0
 NS_IMETHODIMP
 ipcService::WaitMessage(const nsID &target)
 {
     LOG(("ipcService::WaitMessage\n"));
 
-    NS_ENSURE_TRUE(mWaiting == PR_FALSE, NS_ERROR_IN_PROGRESS);
+    // make sure we can proceed... (XXX maybe debug only?)
+    if (mWaiting) {
+        NS_ERROR("WaitMessage: already waiting");
+        return NS_ERROR_IN_PROGRESS;
+    }
+    nsIDKey key(target);
+    ipcIMessageObserver *observer = (ipcIMessageObserver *) mObserverDB.Get(&key);
+    if (!observer) {
+        NS_ERROR("WaitMessage: message observer not registered");
+        return NS_ERROR_UNEXPECTED;
+    }
 
     // push event queue
     //   create timer w/ specified timeout (XXX)
@@ -435,12 +496,13 @@ ipcService::WaitMessage(const nsID &target)
 
     nsCOMPtr<nsIEventQueue> eventQ;
 
-    LOG(("  WaitMessage[0]: pushing event queue...\n"));
+    LOG(("  WaitMessage: pushing event queue...\n"));
     rv = eqs->PushThreadEventQueue(getter_AddRefs(eventQ));
     if (NS_FAILED(rv)) return rv;
 
     mWaiting = PR_TRUE;
     mWaitingTarget = target;
+    mInWaitMessage = PR_TRUE;
 
     PLEvent *ev;
     while (mWaiting) {
@@ -448,29 +510,46 @@ ipcService::WaitMessage(const nsID &target)
         eventQ->HandleEvent(ev);
     }
 
+    eventQ->StopAcceptingEvents();
+
     // flush remaining events if any
     for (;;) {
         PRBool hasEvent;
         eventQ->EventAvailable(hasEvent);
         if (!hasEvent)
             break;
+        LOG(("  processing event...\n"));
         eventQ->GetEvent(&ev);
         eventQ->HandleEvent(ev);
     }
 
-    LOG(("  WaitMessage[1]: popping event queue...\n"));
+    LOG(("  WaitMessage: popping event queue...\n"));
     eqs->PopThreadEventQueue(eventQ);
+    mInWaitMessage = PR_FALSE;
 
-    LOG(("  WaitMessage[2]: dispatch delayed messages...\n"));
-    while (!mDelayedMsgQ.IsEmpty()) {
-        ipcMessage *msg = mDelayedMsgQ.First();
-        mDelayedMsgQ.RemoveFirst();
-        OnMessageAvailable(msg);
-        delete msg;
+    if (mDelayedMsgQ) {
+        // asynchronously dispatch delayed messages (avoids recursion)
+        rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ), eqs);
+        if (NS_FAILED(rv)) return rv;
+
+        ev = new ProcessDelayedMsgQ_Event(this, mDelayedMsgQ);
+        if (!ev)
+            return NS_ERROR_OUT_OF_MEMORY;
+        mDelayedMsgQ = nsnull; // event now owns this list
+
+        PL_InitEvent(ev, nsnull, ProcessDelayedMsgQ_EventHandler,
+                                 ProcessDelayedMsgQ_EventCleanup);
+
+        if (eventQ->PostEvent(ev) == PR_FAILURE) {
+            NS_ERROR("PostEvent failed");
+            delete ev;
+        }
     }
 
+    LOG(("  WaitMessage: done\n"));
     return NS_OK;
 }
+#endif
 
 //-----------------------------------------------------------------------------
 // nsIObserver impl
@@ -541,15 +620,21 @@ ipcService::OnMessageAvailable(const ipcMessage *msg)
 {
     LOG(("ipcService::OnMessageAvailable\n"));
 
-    if (mWaiting) {
-        if (msg->Target().Equals(mWaitingTarget))
+#if 0
+    if (mInWaitMessage) {
+        if (mWaiting && msg->Target().Equals(mWaitingTarget))
             mWaiting = PR_FALSE;
         else {
             // queue this message up for later delivery
-            mDelayedMsgQ.Append(msg->Clone());
+            if (!mDelayedMsgQ) {
+                mDelayedMsgQ = new ipcMessageQ();
+                if (!mDelayedMsgQ) return;
+            }
+            mDelayedMsgQ->Append(msg->Clone());
             return;
         }
     }
+#endif
 
     if (msg->Target().Equals(IPCM_TARGET)) {
         //

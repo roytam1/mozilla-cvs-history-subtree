@@ -60,6 +60,10 @@ CPPSRCS		= \
 			ipcLockService.cpp \
             $(NULL)
 
+LOCAL_INCLUDES = \
+        -I$(srcdir)/../../../common \
+        $(NULL)
+
 EXPORTS     = \
             $(NULL)
 

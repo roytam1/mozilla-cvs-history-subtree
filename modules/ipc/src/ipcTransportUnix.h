@@ -41,6 +41,7 @@
 #include "nsIAsyncInputStream.h"
 #include "nsIAsyncOutputStream.h"
 #include "nsISocketTransport.h"
+#include "nsISocketTransportService.h"
 #include "prio.h"
 
 #include "ipcMessageQ.h"
@@ -59,6 +60,8 @@ public:
 
     ipcReceiver(ipcTransport *transport)
         : mTransport(transport)
+        , mMsg(nsnull)
+        , mStatus(NS_OK)
         { }
     virtual ~ipcReceiver() { }
 
@@ -72,7 +75,8 @@ private:
     // the transport owns the receiver, so this back pointer does not need
     // to be an owning reference.
     ipcTransport *mTransport;
-    ipcMessage    mMsg;       // message in progress
+    ipcMessage   *mMsg;       // message in progress
+    nsresult      mStatus;
 };
 
 #endif // !ipcTransportUnix_h__

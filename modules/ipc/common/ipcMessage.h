@@ -53,9 +53,9 @@
 //   | data                               |
 //   +------------------------------------+
 //
-// header is 24 bytes.  flags are for future use and must be zero in this
-// version of the ipc message format.  target is a 16 byte UUID indicating
-// the intended receiver of this message.
+// header is 24 bytes.  flags are defined below.  default value of flags is
+// zero.  protocol implementations should ignore unrecognized flags.  target
+// is a 16 byte UUID indicating the intended receiver of this message.
 //
 
 struct ipcMessageHeader
@@ -69,6 +69,15 @@ struct ipcMessageHeader
 #define IPC_MSG_VERSION       (0x1)
 #define IPC_MSG_HEADER_SIZE   (sizeof(ipcMessageHeader))
 #define IPC_MSG_GUESSED_SIZE  (IPC_MSG_HEADER_SIZE + 64)
+
+//
+// the IPC message protocol supports synchronous messages.  these messages can
+// only be sent from a client to the daemon.  a daemon module cannot send a
+// synchronous message.  the client sets the SYNC_QUERY flag to indicate that
+// it is expecting a response with the SYNC_REPLY flag set.
+//
+#define IPC_MSG_FLAG_SYNC_QUERY (0x1)
+#define IPC_MSG_FLAG_SYNC_REPLY (0x2)
 
 //-----------------------------------------------------------------------------
 // ipcMessage
@@ -120,6 +129,13 @@ public:
     //   dataLen - number of bytes to write
     //
     PRStatus SetData(PRUint32 offset, const char *data, PRUint32 dataLen);
+
+    //
+    // access message flags
+    //
+    void SetFlag(PRUint16 flag)          { mMsgHdr->mFlags |= flag; }
+    void ClearFlag(PRUint16 flag)        { mMsgHdr->mFlags &= ~flag; }
+    PRBool TestFlag(PRUint16 flag) const { return mMsgHdr->mFlags & flag; }
 
     //
     // if true, the message is complete and the members of the message

@@ -3,6 +3,7 @@
 
 #include "ipcILockService.h"
 #include "ipcIService.h"
+#include "ipcList.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 
@@ -20,6 +21,8 @@ public:
     nsresult Init();
 
 private:
+    void NotifyComplete(const char *lockName, nsresult status);
+
     nsCOMPtr<ipcIService> mIPCService;
 
     // map from lockname to locknotify for pending notifications

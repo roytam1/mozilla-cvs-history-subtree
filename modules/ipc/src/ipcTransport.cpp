@@ -43,6 +43,8 @@
 #include "nsIProcess.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
+#include "nsEventQueueUtils.h"
+#include "nsAutoLock.h"
 #include "nsNetCID.h"
 #include "netCore.h"
 #include "prerror.h"
@@ -53,6 +55,9 @@
 #include "ipcMessageUtils.h"
 #include "ipcTransport.h"
 #include "ipcm.h"
+
+// sync call timeout
+#define IPC_SYNC_TIMEOUT PR_SecondsToInterval(5)
 
 //-----------------------------------------------------------------------------
 // ipcTransport
@@ -81,58 +86,198 @@ ipcTransport::Shutdown()
 }
 
 nsresult
-ipcTransport::SendMsg(ipcMessage *msg)
+ipcTransport::SendMsg(ipcMessage *msg, PRBool sync)
 {
     NS_ENSURE_ARG_POINTER(msg);
+    NS_ENSURE_TRUE(mObserver, NS_ERROR_NOT_INITIALIZED);
 
     LOG(("ipcTransport::SendMsg [dataLen=%u]\n", msg->DataLen()));
 
-    if (!mHaveConnection) {
-        LOG(("  delaying message until connected\n"));
-        mDelayedQ.Append(msg);
-        return NS_OK;
-    }
+    ipcMessage *syncReply = nsnull;
+    {
+        nsAutoMonitor mon(mMonitor);
+        nsresult rv;
 
-    return SendMsg_Internal(msg);
+        if (sync) {
+            msg->SetFlag(IPC_MSG_FLAG_SYNC_QUERY);
+            // flag before sending to avoid race with background thread.
+            mSyncWaiting = PR_TRUE;
+        }
+
+        if (mHaveConnection) {
+            rv = SendMsg_Internal(msg);
+            if (NS_FAILED(rv)) return rv;
+        }
+        else {
+            LOG(("  delaying message until connected\n"));
+            mDelayedQ.Append(msg);
+        }
+
+        if (sync) {
+            if (!mSyncReplyMsg)
+                mon.Wait(IPC_SYNC_TIMEOUT);
+
+            if (!mSyncReplyMsg)
+                return NS_ERROR_FAILURE;
+
+            syncReply = mSyncReplyMsg;
+            mSyncReplyMsg = nsnull;
+        }
+    }
+    if (syncReply) {
+        // NOTE: may re-enter SendMsg
+        mObserver->OnMessageAvailable(syncReply);
+        delete syncReply;
+    }
+    return NS_OK;
 }
 
 void
-ipcTransport::OnMessageAvailable(const ipcMessage *rawMsg)
+ipcTransport::ProcessIncomingMsgQ()
+{
+    LOG(("ipcTransport::ProcessIncomingMsgQ\n"));
+
+    // we can't hold mMonitor while calling into the observer, so we grab
+    // mIncomingMsgQ and NULL it out inside the monitor to prevent others
+    // from modifying it while we iterate over it.
+    ipcMessageQ *inQ;
+    {
+        nsAutoMonitor mon(mMonitor);
+        inQ = mIncomingMsgQ;
+        mIncomingMsgQ = nsnull;
+    }
+    if (inQ) {
+        while (!inQ->IsEmpty()) {
+            ipcMessage *msg = inQ->First();
+            if (mObserver)
+                mObserver->OnMessageAvailable(msg);
+            inQ->DeleteFirst();
+        }
+        delete inQ;
+    }
+}
+
+void *
+ipcTransport::ProcessIncomingMsgQ_EventHandler(PLEvent *ev)
+{
+    ipcTransport *self = (ipcTransport *) PL_GetEventOwner(ev);
+    self->ProcessIncomingMsgQ();
+    return nsnull;
+}
+
+void *
+ipcTransport::ConnectionEstablished_EventHandler(PLEvent *ev)
+{
+    ipcTransport *self = (ipcTransport *) PL_GetEventOwner(ev);
+    if (self->mObserver)
+        self->mObserver->OnConnectionEstablished(self->mClientID);
+    return nsnull;
+}
+
+void *
+ipcTransport::ConnectionLost_EventHandler(PLEvent *ev)
+{
+    ipcTransport *self = (ipcTransport *) PL_GetEventOwner(ev);
+    if (self->mObserver)
+        self->mObserver->OnConnectionLost();
+    return nsnull;
+}
+
+void
+ipcTransport::Generic_EventCleanup(PLEvent *ev)
+{
+    ipcTransport *self = (ipcTransport *) PL_GetEventOwner(ev);
+    NS_RELEASE(self);
+    delete ev;
+}
+
+// called on a background thread
+void
+ipcTransport::OnMessageAvailable(ipcMessage *rawMsg)
 {
     LOG(("ipcTransport::OnMessageAvailable [dataLen=%u]\n", rawMsg->DataLen()));
 
-    if (!mHaveConnection) {
-        if (rawMsg->Target().Equals(IPCM_TARGET)) {
-            if (IPCM_GetMsgType(rawMsg) == IPCM_MSG_TYPE_CLIENT_ID) {
-                LOG(("  connection established!\n"));
-                mHaveConnection = PR_TRUE;
+    //
+    // XXX FIX COMMENTS XXX
+    //
+    // 1- append to incoming message queue
+    //
+    // 2- post event to main thread to handle incoming message queue
+    //    or if sync waiting, unblock waiter so it can scan incoming
+    //    message queue.
+    //
 
-                // remember our client ID
-                ipcMessageCast<ipcmMessageClientID> msg(rawMsg);
-                if (mObserver)
-                    mObserver->OnConnectionEstablished(msg->ClientID());
+    PRBool dispatchEvent = PR_FALSE;
+    PRBool connectEvent = PR_FALSE;
+    {
+        nsAutoMonitor mon(mMonitor);
 
-                // move messages off the delayed message queue
-                while (!mDelayedQ.IsEmpty()) {
-                    ipcMessage *msg = mDelayedQ.First();
-                    mDelayedQ.RemoveFirst();
-                    SendMsg_Internal(msg);
+        if (!mHaveConnection) {
+            if (rawMsg->Target().Equals(IPCM_TARGET)) {
+                if (IPCM_GetMsgType(rawMsg) == IPCM_MSG_TYPE_CLIENT_ID) {
+                    LOG(("  connection established!\n"));
+                    mHaveConnection = PR_TRUE;
+
+                    // remember our client ID
+                    ipcMessageCast<ipcmMessageClientID> msg(rawMsg);
+                    mClientID = msg->ClientID();
+                    connectEvent = PR_TRUE;
+
+                    // move messages off the delayed message queue
+                    while (!mDelayedQ.IsEmpty()) {
+                        ipcMessage *msg = mDelayedQ.First();
+                        mDelayedQ.RemoveFirst();
+                        SendMsg_Internal(msg);
+                    }
+                    return;
                 }
-                return;
             }
+            LOG(("  received unexpected first message!\n"));
+            return;
         }
-        LOG(("  received unexpected first message!\n"));
+
+        if (mSyncWaiting && rawMsg->TestFlag(IPC_MSG_FLAG_SYNC_REPLY)) {
+            mSyncReplyMsg = rawMsg;
+            mSyncWaiting = PR_FALSE;
+            mon.Notify();
+        }
+        else {
+            if (!mIncomingMsgQ) {
+                mIncomingMsgQ = new ipcMessageQ();
+                if (!mIncomingMsgQ)
+                    return;
+                dispatchEvent = PR_TRUE;
+            }
+            mIncomingMsgQ->Append(rawMsg);
+        }
     }
-    else if (mObserver)
-        mObserver->OnMessageAvailable(rawMsg);
+
+    if (connectEvent)
+        ProxyToMainThread(ConnectionEstablished_EventHandler);
+    if (dispatchEvent)
+        ProxyToMainThread(ProcessIncomingMsgQ_EventHandler);
+}
+
+void
+ipcTransport::ProxyToMainThread(PLHandleEventProc proc)
+{
+    nsCOMPtr<nsIEventQueue> eq;
+    NS_GetMainEventQ(getter_AddRefs(eq));
+    if (eq) {
+        PLEvent *ev = new PLEvent();
+        PL_InitEvent(ev, this, proc, Generic_EventCleanup);
+        NS_ADDREF_THIS();
+        if (eq->PostEvent(ev) == PR_FAILURE) {
+            LOG(("PostEvent failed"));
+            NS_RELEASE_THIS();
+            delete ev;
+        }
+    }
 }
 
 nsresult
 ipcTransport::SpawnDaemon()
 {
-    if (mSpawnedDaemon)
-        return NS_OK;
-
     LOG(("ipcTransport::SpawnDaemon\n"));
 
     nsresult rv;
@@ -159,66 +304,33 @@ ipcTransport::SpawnDaemon()
 #endif
 }
 
+// called on a background thread
 nsresult
 ipcTransport::OnConnectFailure()
 {
-    if (mTimer)
-        return NS_OK;
+    LOG(("ipcTransport::OnConnectFailure\n"));
 
     nsresult rv;
-
-    //
-    // spawn daemon on connection failure
-    //
-    rv = SpawnDaemon();
-    if (NS_FAILED(rv)) {
-        LOG(("  failed to spawn daemon [rv=%x]\n", rv));
-        return rv;
-    }
-    mSpawnedDaemon = PR_TRUE;
-
-    //
-    // re-initialize connection after timeout
-    //
-    mTimer = do_CreateInstance(NS_TIMER_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) {
-        LOG(("  failed to create timer [rv=%x]\n", rv));
-        return rv;
+    if (!mSpawnedDaemon) {
+        //
+        // spawn daemon on connection failure
+        //
+        rv = SpawnDaemon();
+        if (NS_FAILED(rv)) {
+            LOG(("  failed to spawn daemon [rv=%x]\n", rv));
+            return rv;
+        }
+        mSpawnedDaemon = PR_TRUE;
     }
 
-    // use a simple exponential growth algorithm 2^(n-1)
-    PRUint32 ms = 500 * (1 << (mConnectionAttemptCount - 1));
-    if (ms > 10000)
-        ms = 10000;
+    Disconnect();
 
-    LOG(("  waiting %u milliseconds\n", ms));
+    PRUint32 ms = 50 * mConnectionAttemptCount;
+    LOG(("  sleeping for %u ms...\n", ms));
+    PR_Sleep(PR_MillisecondsToInterval(ms));
 
-    rv = mTimer->Init(this, ms, nsITimer::TYPE_ONE_SHOT);
-    if (NS_FAILED(rv)) {
-        LOG(("  failed to initialize timer [rv=%x]\n", rv));
-        return rv;
-    }
-
+    Connect();
     return NS_OK;
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS0(ipcTransport)
-
-NS_IMETHODIMP
-ipcTransport::Observe(nsISupports *subject, const char *topic, const PRUnichar *data)
-{
-    LOG(("ipcTransport::Observe [topic=%s]\n", topic));
-
-    if (strcmp(topic, "timer-callback") == 0) {
-        mTimer = nsnull;
-        if (!mHaveConnection) {
-            // 
-            // try reconnecting to the daemon
-            //
-            Disconnect();
-            Connect();
-        }
-    }
-
-    return NS_OK;
-}

@@ -75,11 +75,11 @@ static ipcIService *gIpcServ = nsnull;
 static ipcILockService *gIpcLockServ = nsnull;
 
 static void
-SendMsg(ipcIService *ipc, PRUint32 cID, const nsID &target, const char *data, PRUint32 dataLen)
+SendMsg(ipcIService *ipc, PRUint32 cID, const nsID &target, const char *data, PRUint32 dataLen, PRBool sync = PR_FALSE)
 {
     printf("*** sending message: [to-client=%u dataLen=%u]\n", cID, dataLen);
 
-    ipc->SendMessage(cID, target, (const PRUint8 *) data, dataLen);
+    ipc->SendMessage(cID, target, (const PRUint8 *) data, dataLen, sync);
 //    gMsgCount++;
 }
 
@@ -272,12 +272,11 @@ int main(int argc, char **argv)
                 "58 this is a really long message.\n"
                 "59 this is a really long message.\n"
                 "60 this is a really long message.\n";
-        SendMsg(ipcServ, 0, kTestTargetID, data, strlen(data)+1);
-        ipcServ->WaitMessage(kTestTargetID);
+        SendMsg(ipcServ, 0, kTestTargetID, data, strlen(data)+1, PR_TRUE);
 
         PRUint32 queryID;
         nsCOMPtr<ipcIClientQueryHandler> handler(new myIpcClientQueryHandler());
-        ipcServ->QueryClientByName("foopy", handler, &queryID);
+        ipcServ->QueryClientByName("foopy", handler, PR_FALSE, &queryID);
 
         //
         // test lock service
@@ -288,6 +287,9 @@ int main(int argc, char **argv)
 
         nsCOMPtr<ipcILockNotify> notify(new myIpcLockNotify());
         gIpcLockServ->AcquireLock("blah", notify, PR_TRUE);
+
+        rv = gIpcLockServ->AcquireLock("foo", nsnull, PR_TRUE);
+        printf("*** sync AcquireLock returned [rv=%x]\n", rv);
 
         PLEvent *ev;
         while (gKeepRunning) {

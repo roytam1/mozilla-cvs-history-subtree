@@ -41,6 +41,7 @@
 #include "nsIRequest.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
+#include "plevent.h"
 
 #include "ipcIService.h"
 #include "ipcTransport.h"
@@ -69,16 +70,27 @@ public:
 
     nsresult Init();
 
+    // ipcTransportObserver:
+    void OnConnectionEstablished(PRUint32 clientID);
+    void OnConnectionLost();
+    void OnMessageAvailable(const ipcMessage *);
+
+    //PRBool InWaitMessage() { return mInWaitMessage; }
+
 private:
     nsresult ErrorAccordingToIPCM(PRUint32 err);
     void     OnIPCMClientID(const ipcmMessageClientID *);
     void     OnIPCMClientInfo(const ipcmMessageClientInfo *);
     void     OnIPCMError(const ipcmMessageError *);
 
-    // ipcTransportObserver:
-    void OnConnectionEstablished(PRUint32 clientID);
-    void OnConnectionLost();
-    void OnMessageAvailable(const ipcMessage *);
+    struct ProcessDelayedMsgQ_Event : PLEvent {
+        ProcessDelayedMsgQ_Event(ipcService *, ipcMessageQ *); 
+       ~ProcessDelayedMsgQ_Event();
+        ipcService  *mServ;
+        ipcMessageQ *mMsgQ;
+    };
+    PR_STATIC_CALLBACK(void*) ProcessDelayedMsgQ_EventHandler(PLEvent *);
+    PR_STATIC_CALLBACK(void)  ProcessDelayedMsgQ_EventCleanup(PLEvent *);
 
     nsHashtable     mObserverDB;
     ipcTransport   *mTransport;
@@ -86,10 +98,13 @@ private:
 
     ipcClientQueryQ mQueryQ;
 
+#if 0
     // WaitMessage support
-    ipcMessageQ     mDelayedMsgQ;
-    PRBool          mWaiting;
+    ipcMessageQ    *mDelayedMsgQ;
     nsID            mWaitingTarget;
+    PRPackedBool    mWaiting;
+    PRPackedBool    mInWaitMessage;
+#endif
 };
 
 #endif // !ipcService_h__

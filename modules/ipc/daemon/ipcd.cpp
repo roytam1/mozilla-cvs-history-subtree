@@ -53,6 +53,13 @@ IPC_DispatchMsg(ipcClient *client, const ipcMessage *msg)
     PR_ASSERT(client);
     PR_ASSERT(msg);
 
+    // remember if client is expecting SYNC_REPLY.  we'll add that flag to the
+    // next message sent to the client.
+    if (msg->TestFlag(IPC_MSG_FLAG_SYNC_QUERY)) {
+        PR_ASSERT(client->GetExpectsSyncReply() == PR_FALSE);
+        client->SetExpectsSyncReply(PR_TRUE);
+    }
+
     if (msg->Target().Equals(IPCM_TARGET)) {
         IPCM_HandleMsg(client, msg);
         return PR_SUCCESS;
@@ -74,6 +81,12 @@ IPC_SendMsg(ipcClient *client, ipcMessage *msg)
             IPC_SendMsg(&ipcClients[i], msg->Clone());
         delete msg;
         return PR_SUCCESS;
+    }
+
+    // add SYNC_REPLY flag to message if client is expecting...
+    if (client->GetExpectsSyncReply()) {
+        msg->SetFlag(IPC_MSG_FLAG_SYNC_REPLY);
+        client->SetExpectsSyncReply(PR_FALSE);
     }
 
     if (client->HasTarget(msg->Target()))

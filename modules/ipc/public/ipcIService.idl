@@ -112,12 +112,15 @@ interface ipcIService : nsISupports
      * @param aName
      *        the name of the client being queried.
      * @param aHandler
-     *        the handler to be notified asynchronously of result.
+     *        the handler to be notified with result.
+     * @param aSync
+     *        block the calling thread until the query completes.
      *
      * @return integer value identifying this query.
      */
-    unsigned long queryClientByName(in string aName,
-                                    in ipcIClientQueryHandler aHandler);
+    unsigned long queryClientByName(in string                 aName,
+                                    in ipcIClientQueryHandler aHandler,
+                                    in boolean                aSync);
 
     /**
      * query info about a particular client given its client ID. the observer's
@@ -128,12 +131,15 @@ interface ipcIService : nsISupports
      * @param aClientID
      *        the ID of the client being queried.
      * @param aHandler
-     *        the handler to be notified asynchronously of result.
+     *        the handler to be notified with result.
+     * @param aSync
+     *        block the calling thread until the query completes.
      *
      * @return integer value identifying this query.
      */
-    unsigned long queryClientByID(in unsigned long aClientID,
-                                  in ipcIClientQueryHandler aHandler);
+    unsigned long queryClientByID(in unsigned long          aClientID,
+                                  in ipcIClientQueryHandler aHandler,
+                                  in boolean                aSync);
 
     /**
      * called to cancel a pending query.
@@ -142,15 +148,6 @@ interface ipcIService : nsISupports
      *        the return value from one of the "query" methods.
      */
     void cancelQuery(in unsigned long aQueryID);
-
-    /**
-     * called to wait for the query to complete.  returns after the client
-     * query handler has been called or on error.
-     *
-     * @param aQueryID
-     *        the return value from one of the "query" methods.
-     */
-    void waitQuery(in unsigned long aQueryID);
 
     /**
      * set client observer.  observer's onClientUp method is called whenever 
@@ -195,29 +192,16 @@ interface ipcIService : nsISupports
      *        the message data.
      * @param aDataLen
      *        the message length.
+     * @param aSync
+     *        block the calling thread until a response to this message is
+     *        received.
      */
     void sendMessage(in unsigned long aClientID,
                      in nsIDRef       aTarget,
                     [array, const, size_is(aDataLen)]
                      in octet         aData,
-                     in unsigned long aDataLen);
-
-    /**
-     * wait until a message for the specified target arrives.  when a message
-     * arrives, the associated message observer will be notified.  this method
-     * fails if there is not a registered message observer.
-     *
-     * @param aTarget
-     *        wait for the next message for the specified target.
-     *
-     * NOTE: this method can be used to synchronously wait for a response from
-     * the daemon.  however, there is no guarantee that the next event will be
-     * in response to the message previously sent.  depending on the protocol
-     * of this particular target, the next event might be unrelated to the
-     * message previously sent.  consumers should be aware of this fact, and
-     * design for it accordingly.
-     */
-    void waitMessage(in nsIDRef aTarget);
+                     in unsigned long aDataLen,
+                     in boolean       aSync);
 };
 
 /**

@@ -78,6 +78,9 @@ public:
     // returns primary client name (the one specified in the "client hello" message)
     const char *PrimaryName() const { return mNames.First() ? mNames.First()->Value() : NULL; }
 
+    void   SetExpectsSyncReply(PRBool val) { mExpectsSyncReply = val; }
+    PRBool GetExpectsSyncReply() const     { return mExpectsSyncReply; }
+
 #ifdef XP_WIN
     PRUint32 PID() const { return mPID; }
     void SetPID(PRUint32 pid) { mPID = pid; }
@@ -114,6 +117,7 @@ private:
     PRUint32      mID;
     ipcStringList mNames;
     ipcIDList     mTargets;
+    PRBool        mExpectsSyncReply;
 
 #ifdef XP_WIN
     // on windows, we store the PID of the client process to help us determine

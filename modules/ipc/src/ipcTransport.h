@@ -42,12 +42,16 @@
 #include "nsITimer.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
+#include "prmon.h"
 
 #include "ipcMessage.h"
 #include "ipcMessageQ.h"
 
 #ifdef XP_UNIX
 #include "ipcTransportUnix.h"
+typedef nsISocketEventHandler ipcTransportSuper;
+#else
+typedef nsISupports ipcTransportSuper;
 #endif
 
 //----------------------------------------------------------------------------
@@ -66,18 +70,22 @@ public:
 // ipcTransport
 //-----------------------------------------------------------------------------
 
-class ipcTransport : public nsIObserver
+class ipcTransport : public ipcTransportSuper
 {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSIOBSERVER
 
     ipcTransport()
-        : mObserver(nsnull)
+        : mMonitor(PR_NewMonitor())
+        , mObserver(nsnull)
+        , mIncomingMsgQ(nsnull)
+        , mSyncReplyMsg(nsnull)
+        , mSyncWaiting(nsnull)
         , mSentHello(PR_FALSE)
         , mHaveConnection(PR_FALSE)
         , mSpawnedDaemon(PR_FALSE)
         , mConnectionAttemptCount(0)
+        , mClientID(0)
 #ifdef XP_UNIX
         , mFD(nsnull)
 #endif
@@ -85,8 +93,8 @@ public:
 
     virtual ~ipcTransport()
     {
+        PR_DestroyMonitor(mMonitor);
 #ifdef XP_UNIX
-        // clear the receiver's back pointer to |this|.
         if (mReceiver)
             ((ipcReceiver *) mReceiver.get())->ClearTransport();
 #endif
@@ -96,7 +104,7 @@ public:
     nsresult Shutdown();
 
     // takes ownership of |msg|
-    nsresult SendMsg(ipcMessage *msg);
+    nsresult SendMsg(ipcMessage *msg, PRBool sync = PR_FALSE);
 
     PRBool   HaveConnection() const { return mHaveConnection; }
 
@@ -104,7 +112,7 @@ public:
     //
     // internal to implementation
     //
-    void OnMessageAvailable(const ipcMessage *);
+    void OnMessageAvailable(ipcMessage *); // takes ownership
 
 private:
     //
@@ -116,17 +124,28 @@ private:
     nsresult OnConnectFailure();
     nsresult SendMsg_Internal(ipcMessage *msg);
     nsresult SpawnDaemon();
+    void     ProxyToMainThread(PLHandleEventProc);
+    void     ProcessIncomingMsgQ();
+
+    PR_STATIC_CALLBACK(void *) ProcessIncomingMsgQ_EventHandler(PLEvent *);
+    PR_STATIC_CALLBACK(void *) ConnectionEstablished_EventHandler(PLEvent *);
+    PR_STATIC_CALLBACK(void *) ConnectionLost_EventHandler(PLEvent *);
+    PR_STATIC_CALLBACK(void)   Generic_EventCleanup(PLEvent *);
 
     //
     // data
     //
-    ipcMessageQ            mDelayedQ;
+    PRMonitor             *mMonitor;
     ipcTransportObserver  *mObserver; // weak reference
-    nsCOMPtr<nsITimer>     mTimer;
+    ipcMessageQ            mDelayedQ;
+    ipcMessageQ           *mIncomingMsgQ;
+    ipcMessage            *mSyncReplyMsg;
+    PRPackedBool           mSyncWaiting;
     PRPackedBool           mSentHello;
     PRPackedBool           mHaveConnection;
     PRPackedBool           mSpawnedDaemon;
-    PRUint8                mConnectionAttemptCount;
+    PRUint32               mConnectionAttemptCount;
+    PRUint32               mClientID;
 
 #ifdef XP_UNIX
     nsCOMPtr<nsIInputStreamNotify> mReceiver;
@@ -143,6 +162,8 @@ private:
     nsresult GetSocketPath(nsACString &);
 
 public:
+    NS_DECL_NSISOCKETEVENTHANDLER
+
     //
     // internal helper methods
     //
