@@ -44,7 +44,7 @@ ifdef PR_CLIENT_BUILD_UNIX
 endif
 endif
 
-distclean::
+distclean realclean clobber_all::
 	@echo "cd pr/tests; $(MAKE) $@"
 	@$(MAKE) -C pr/tests $@
 

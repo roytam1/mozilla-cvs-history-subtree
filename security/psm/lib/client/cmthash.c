@@ -31,7 +31,7 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -173,7 +173,7 @@ CMTStatus CMT_HASH_End(PCMT_CONTROL control, CMUint32 connectionID,
                        unsigned char * result, CMUint32 * resultlen, 
                        CMUint32 maxLen)
 {
-    CMTItem hash = { 0, NULL, 0 };
+    CMTItem hash = { 0 };
 
     /* Do some parameter checking */
     if (!control || !result || !resultlen) {

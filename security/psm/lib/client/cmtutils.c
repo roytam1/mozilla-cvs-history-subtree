@@ -31,7 +31,7 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -345,12 +345,12 @@ loser:
 CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
 {
     CMTMessageHeader header;
-    CMUint32 numread, rv;
+    CMUint32 read, rv;
 
     /* Get the obscured message header */
-    numread = CMT_ReadThisMany(control, control->sock, 
+    read = CMT_ReadThisMany(control, control->sock, 
                             (void *)&header, sizeof(CMTMessageHeader));
-    if (numread != sizeof(CMTMessageHeader)) {
+    if (read != sizeof(CMTMessageHeader)) {
         goto loser;
     }
 
@@ -361,9 +361,9 @@ CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
         goto loser;
     }
 
-    numread = CMT_ReadThisMany(control, control->sock, 
+    read = CMT_ReadThisMany(control, control->sock, 
                             (void *)(response->data), response->len); 
-    if (numread != response->len) {
+    if (read != response->len) {
         goto loser;
     }
 
@@ -402,7 +402,7 @@ CMUint32 CMT_WriteThisMany(PCMT_CONTROL control, CMTSocket sock,
 	CMUint32 total = 0;
   
 	while (total < thisMany) {
-		CMInt32 got;
+		CMUint32 got;
 		got = control->sockFuncs.send(sock, (void*)((char*)buffer+total), 
                                       thisMany-total);
 		if (got < 0) {

@@ -69,7 +69,6 @@ CSRCS =             \
 	initclk.c		\
 	inrval.c		\
 	instrumt.c      \
-	intrio.c        \
 	intrupt.c       \
 	io_timeout.c    \
 	ioconthr.c      \
@@ -96,7 +95,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -116,7 +114,6 @@ CSRCS =             \
 	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
-	primblok.c		\
 	priotest.c		\
 	provider.c		\
 	prpoll.c		\

@@ -1645,9 +1645,8 @@ PRInt32 _PR_EmulateAcceptRead(
     if (rv >= 0)
     {
         /* copy the new info out where caller can see it */
-        enum { AMASK = 7 };  /* mask for alignment of PRNetAddr */
-        PRPtrdiff aligned = (PRPtrdiff)buf + amount + AMASK;
-        *raddr = (PRNetAddr*)(aligned & ~AMASK);
+        PRPtrdiff aligned = (PRPtrdiff)buf + amount + sizeof(void*) - 1;
+        *raddr = (PRNetAddr*)(aligned & ~(sizeof(void*) - 1));
         memcpy(*raddr, &remote, PR_NETADDR_SIZE(&remote));
         *nd = accepted;
         return rv;

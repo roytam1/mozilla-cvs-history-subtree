@@ -1098,19 +1098,20 @@ pr/src/io/Makefile
 pr/src/linking/Makefile 
 pr/src/malloc/Makefile 
 pr/src/md/Makefile 
-pr/src/md/${PR_MD_ARCH_DIR}/Makefile
+pr/src/md/${PR_MD_ARCH_DIR}/Makefile 
 pr/src/memory/Makefile 
 pr/src/misc/Makefile 
 pr/src/threads/Makefile 
 pr/tests/Makefile 
 pr/tests/dll/Makefile 
 "
-dnl lib/tests/Makefile 
-dnl pr/tests/w16gui/Makefile 
-dnl tools/Makefile 
 
-if test -z "$USE_PTHREADS" && test -z "$USE_BTHREADS"; then 
-    MAKEFILES="$MAKEFILES pr/src/threads/combined/Makefile"
+dnl lib/tests/Makefile
+dnl pr/tests/w16gui/Makefile
+dnl tools/Makefile
+
+if test -z "$USE_PTHREADS" && test -z "$USE_BTHREADS"; then
+    MAKEFILES="$MAKEFILES pr/src/threads/combined/Makefile"e
 elif test -n "$USE_PTHREADS"; then
     MAKEFILES="$MAKEFILES pr/src/pthreads/Makefile"
 elif test -n "$USE_BTHREADS"; then
