@@ -474,8 +474,12 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
     if ([mPopupWin isVisible] == NO)
       [mPopupWin orderFront:nil];
 
-    [mTableView selectRow:aRow byExtendingSelection:NO];
-    [mTableView scrollRowToVisible: aRow];
+    if ( aRow == -1 )
+      [mTableView deselectAll:self];
+    else {
+      [mTableView selectRow:aRow byExtendingSelection:NO];
+      [mTableView scrollRowToVisible: aRow];
+    }
   }
 }
 
@@ -519,6 +523,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 
 - (void) onBlur:(NSNotification *)aNote
 {
+  [self selectRowAt:-1];
   [self closePopup];
 }
 
@@ -529,6 +534,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 
 - (void) onUndoOrRedo:(NSNotification *)aNote
 {
+  [mTableView deselectAll:self];
   [self clearResults];
 }
 
@@ -565,6 +571,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 {
   if (command == @selector(insertNewline:)) {
     [self enterResult:[mTableView selectedRow]];
+    [mTableView deselectAll:self];
   } else if (command == @selector(moveUp:)) {
     [self selectRowBy:-1];
     [self completeSelectedResult];
@@ -596,7 +603,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
     // if the user deletes characters, we need to know so that
     // we can prevent autocompletion later when search results come in
     if ([[textView string] length] > 1) {
-    	[mTableView deselectAll:self];
+    	[self selectRowAt:-1];
       mBackspaced = YES;
     }
   }
