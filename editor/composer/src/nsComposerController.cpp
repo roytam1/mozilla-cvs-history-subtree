@@ -25,8 +25,9 @@
 
 #include "nsIComponentManager.h"
 
-
-#include "nsEditingCommands.h"
+#include "nsAString.h"
+#include "nsIEditor.h"
+#include "nsComposerCommands.h"
 #include "nsComposerController.h"
 
 
