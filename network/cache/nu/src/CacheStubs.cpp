@@ -25,43 +25,43 @@
 #include "nsMemModule.h"
 #include "nsCacheTrace.h"
 
-#define CM nsCacheManager::GetInstance()
+#define CACHEMGR nsCacheManager::GetInstance()
 
 /* CacheManager functions */
 PRBool
 CacheManager_Contains(const char* i_url)
 {
-    return CM->Entries();
+    return CACHEMGR->Entries();
 }
 
 PRUint32 
 CacheManager_Entries()
 {
-    return CM->Entries();
+    return CACHEMGR->Entries();
 }
 
 void*
 CacheManager_GetObject(const char* i_url)
 {
-    return CM->GetObject(i_url);
+    return CACHEMGR->GetObj(i_url);
 }
 
 PRBool
 CacheManager_IsOffline(void)
 {
-    return CM->IsOffline();
+    return CACHEMGR->IsOffline();
 }
 
 void
 CacheManager_Offline(PRBool bSet)
 {
-    CM->Offline(bSet);
+    CACHEMGR->Offline(bSet);
 }
 
 PRUint32
 CacheManager_WorstCaseTime(void)
 {
-    return CM->WorstCaseTime();
+    return CACHEMGR->WorstCaseTime();
 }
 
 /* CacheObject functions */
@@ -181,7 +181,7 @@ CacheObject_Destroy(void* pThis)
 
 /* CachePref functions */
 PRUint32
-CachePref_DiskCacheSize(void)
+CachePref_GetDiskCacheSize(void)
 {
     return nsCachePref::DiskCacheSize();
 }
@@ -193,15 +193,27 @@ CachePref_GetDiskCacheSSL(void)
 }
 
 PRUint32
-CachePref_MemCacheSize(void)
+CachePref_GetMemCacheSize(void)
 {
     return nsCachePref::MemCacheSize();
+}
+
+void
+CachePref_SetDiskCacheSize(const PRUint32 i_Size)
+{
+    nsCachePref::DiskCacheSize(i_Size);
 }
 
 void
 CachePref_SetDiskCacheSSL(PRBool bSet)
 {
     nsCachePref::DiskCacheSSL(bSet);
+}
+
+void
+CachePref_SetMemCacheSize(const PRUint32 i_Size)
+{
+    nsCachePref::MemCacheSize(i_Size);
 }
 
 /* CacheTrace functions */
@@ -218,115 +230,119 @@ CacheTrace_IsEnabled(void)
 }
 
 /* DiskModule functions */
-#define DM nsCacheManager::GetInstance()->GetDiskModule()
+#define DISKMOD nsCacheManager::GetInstance()->GetDiskModule()
 
 PRBool
 DiskModule_AddObject(void* pObject)
 {
-    return DM->AddObject((nsCacheObject*)pObject);
+    return DISKMOD->AddObject((nsCacheObject*)pObject);
 }
 
 PRBool
 DiskModule_Contains(const char* i_url)
 {
-    return DM->Contains(i_url);
+    return DISKMOD->Contains(i_url);
 }
 
 PRUint32
 DiskModule_Entries(void)
 {
-    return DM->Entries();
+    return DISKMOD->Entries();
 }
 
 PRUint32
 DiskModule_GetSize(void)
 {
-    return DM->Size();
+    return DISKMOD->Size();
 }
 
 PRUint32
 DiskModule_GetSizeInUse(void)
 {
-    return DM->SizeInUse(); 
+    return DISKMOD->SizeInUse(); 
 }
 
 PRBool
 DiskModule_IsEnabled(void)
 {
-    return DM->IsEnabled();
+    return DISKMOD->IsEnabled();
 }
 
 PRBool
 DiskModule_Remove(const char* i_url)
 {
-    return DM->Remove(i_url);
+    return DISKMOD->Remove(i_url);
 }
 
 PRBool
 DiskModule_RemoveAll(void)
 {
-    return DM->RemoveAll();
+    return DISKMOD->RemoveAll();
 }
 
 void
 DiskModule_SetSize(PRUint32 i_Size)
 {
-    DM->Size(i_Size);
+    DISKMOD->Size(i_Size);
 }
 
 /* MemModule functions */
-#define MM nsCacheManager::GetInstance()->GetMemModule()
+#define MEMMOD nsCacheManager::GetInstance()->GetMemModule()
 
 PRBool
 MemModule_AddObject(void* pObject)
 {
-    return MM->AddObject((nsCacheObject*)pObject);
+    return MEMMOD->AddObject((nsCacheObject*)pObject);
 }
 
 PRBool
 MemModule_Contains(const char* i_url)
 {
-    return MM->Contains(i_url);
+    return MEMMOD->Contains(i_url);
 }
 
 PRUint32
 MemModule_Entries(void)
 {
-    return MM->Entries();
+    return MEMMOD->Entries();
 }
 
 PRUint32
 MemModule_GetSize(void)
 {
-    return MM->Size();
+    return MEMMOD->Size();
 }
 
 PRUint32
 MemModule_GetSizeInUse(void)
 {
-    return MM->SizeInUse() ;
+    return MEMMOD->SizeInUse() ;
 }
 
 PRBool
 MemModule_IsEnabled(void)
 {
-    return MM->IsEnabled();
+    return MEMMOD->IsEnabled();
 }
 
 PRBool
 MemModule_Remove(const char* i_url)
 {
-    return MM->Remove(i_url);
+    return MEMMOD->Remove(i_url);
 }
 
 PRBool
 MemModule_RemoveAll(void)
 {
-    return MM->RemoveAll();
+    return MEMMOD->RemoveAll();
 }
 
 void
 MemModule_SetSize(PRUint32 i_Size)
 {
-    MM->Size(i_Size);
+    MEMMOD->Size(i_Size);
 }
+
+#undef MEMMOD
+#undef DISKMOD
+#undef CACHEMGR

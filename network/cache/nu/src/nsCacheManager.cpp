@@ -110,7 +110,7 @@ nsCacheManager::Contains(const char* i_url) const
 }
 
 nsCacheObject* 
-nsCacheManager::GetObject(const char* i_url) const
+nsCacheManager::GetObj(const char* i_url) const
 {
     if (m_pFirstModule) 
     {

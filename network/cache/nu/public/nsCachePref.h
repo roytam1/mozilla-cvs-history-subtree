@@ -47,7 +47,10 @@ public:
     static void             DiskCacheSSL(PRBool bSet);
 
     static PRUint32         DiskCacheSize(void);
+    static void             DiskCacheSize(const PRUint32 i_Size);
+
     static PRUint32         MemCacheSize(void);
+    static void             MemCacheSize(const PRUint32 i_Size);
 
     static nsCachePref::Refresh
                             Frequency(void);

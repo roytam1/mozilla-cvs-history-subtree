@@ -62,10 +62,12 @@ PR_BEGIN_EXTERN_C
     extern void             CacheObject_Destroy(void* pThis);
 
     /* Cache Prefs- check nsCachePref.h for details on these functions */
-    extern PRUint32         CachePref_DiskCacheSize(void);
+    extern PRUint32         CachePref_GetDiskCacheSize(void);
     extern PRBool           CachePref_GetDiskCacheSSL(void);
-    extern PRUint32         CachePref_MemCacheSize(void);
+    extern PRUint32         CachePref_GetMemCacheSize(void);
+    extern void             CachePref_SetDiskCacheSize(const PRUint32 i_Size);
     extern void             CachePref_SetDiskCacheSSL(PRBool bSet);
+    extern void             CachePref_SetMemCacheSize(const PRUint32 i_Size);
     
     /* Cache Trace- Check nsCacheTrace.h for details on these functions */
     extern void             CacheTrace_Enable(PRBool bEnable);

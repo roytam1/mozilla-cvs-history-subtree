@@ -22,6 +22,7 @@
 static const PRUint32 MEM_CACHE_SIZE_DEFAULT = 1024*1024;
 static const PRUint32 DISK_CACHE_SIZE_DEFAULT = 5*MEM_CACHE_SIZE_DEFAULT;
 static const PRUint32 BKG_THREAD_SLEEP = 15*60; /*in seconds, 15 minutes */
+
 static nsCachePref ThePrefs;
 
 nsCachePref::nsCachePref(void):
@@ -54,6 +55,11 @@ PRUint32 nsCachePref::DiskCacheSize()
     return ThePrefs.m_DiskCacheSize;
 }
 
+void nsCachePref::DiskCacheSize(const PRUint32 i_Size)
+{
+    ThePrefs.m_DiskCacheSize = i_Size;
+}
+
 PRBool nsCachePref::DiskCacheSSL(void)
 {
     return ThePrefs.m_bDiskCacheSSL;
@@ -82,6 +88,11 @@ nsCachePref* nsCachePref::GetInstance()
 PRUint32 nsCachePref::MemCacheSize()
 {
     return ThePrefs.m_MemCacheSize;
+}
+
+void nsCachePref::MemCacheSize(const PRUint32 i_Size)
+{
+    ThePrefs.m_MemCacheSize = i_Size;
 }
 
 PRBool nsCachePref::RevalidateInBkg(void)

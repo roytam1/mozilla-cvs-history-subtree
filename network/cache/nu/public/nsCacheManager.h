@@ -65,7 +65,8 @@ public:
     static nsCacheManager* 
                     GetInstance();
     
-    nsCacheObject*  GetObject(const char* i_url) const;
+    nsCacheObject*  GetObj(const char* i_url) const;
+
     nsCacheModule*  GetModule(PRInt32 i_index) const;
 
     nsMemModule*    GetMemModule() const;
