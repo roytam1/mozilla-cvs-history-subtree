@@ -64,7 +64,6 @@ NS_CLASSINFO_MAP_BEGIN(PluginArray)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMJSPluginArray)
 NS_CLASSINFO_MAP_END
 
-
 // QueryInterface implementation for PluginArrayImpl
 NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMPluginArray)
@@ -73,10 +72,8 @@ NS_INTERFACE_MAP_BEGIN(PluginArrayImpl)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(PluginArray)
 NS_INTERFACE_MAP_END
 
-
 NS_IMPL_ADDREF(PluginArrayImpl)
 NS_IMPL_RELEASE(PluginArrayImpl)
-
 
 NS_IMETHODIMP
 PluginArrayImpl::GetLength(PRUint32* aLength)
@@ -168,6 +165,23 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
 {
   nsresult res = NS_OK;
 
+  nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(mDocShell);
+
+  if(aReloadDocuments && webNav) {
+    // we should take some measures to prevent recursive reload, 
+    // check the URL and don't do anything if we just saw it.
+    nsCOMPtr<nsIURI> uri;
+    webNav->GetCurrentURI(getter_AddRefs(uri));
+    if(uri) {
+      PRBool sameURI = PR_FALSE;
+      uri->Equals(mLastURI, &sameURI);
+      if(sameURI) {
+        mLastURI = nsnull;
+        return res;
+      }
+    }
+  }
+
   if (mPluginArray != nsnull) {
     for (PRUint32 i = 0; i < mPluginCount; i++) 
       NS_IF_RELEASE(mPluginArray[i]);
@@ -194,11 +208,9 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
   if (mNavigator)
     mNavigator->RefreshMIMEArray();
   
-  if (aReloadDocuments && mDocShell) {
-    nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
-
-    if (webNav)
-      webNav->Reload(nsIWebNavigation::LOAD_FLAGS_NONE);
+  if (aReloadDocuments && webNav) {
+    webNav->GetCurrentURI(getter_AddRefs(mLastURI));
+    webNav->Reload(nsIWebNavigation::LOAD_FLAGS_NONE);
   }
 
   return res;
