@@ -216,7 +216,7 @@ usage (void)
 #include <errno.h>
 #if 0
 #if defined(XP_UNIX)
-#if !defined(__FreeBSD__) && !defined(MACLINUX) && !defined(LINUX_GLIBC_2)
+#if !defined(__FreeBSD__) && !defined(LINUX_GLIBC_2)
 #include <sys/errno.h>
 extern char *sys_errlist[];
 extern int sys_nerr;
@@ -718,11 +718,7 @@ build_user_agent_string(char *versionLocale)
 #elif defined(_HPUX_SOURCE)
 	strcat (buf, "HP-UX");
 #elif defined(__linux)
-#if defined(MACLINUX)
-	strcat (buf, "MkLinux");
-#else
 	strcat (buf, "Linux");
-#endif
 #elif defined(_ATT4)
 	strcat (buf, "NCR/ATT");
 #elif defined(__USLC__)
