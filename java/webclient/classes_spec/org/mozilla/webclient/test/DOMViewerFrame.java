@@ -176,7 +176,7 @@ public void handleEvent(Event e)
     if (null != relatedNode) {
         mouseOverNode = relatedNode;
     }
-    if (mouseEvent.getShiftKey() && 1 == mouseEvent.getButton()) {
+    if (mouseEvent.getShiftKey() && 0 == mouseEvent.getButton()) {
         if (null != mouseOverNode) {
             selectNodeInTree(mouseOverNode);
         }
