@@ -63,4 +63,6 @@ all:
 
 clean clobber:
 	rm -rf build
+	rm -f resources/localized/English.lproj/Localized.rsrc
+	
 
