@@ -981,6 +981,10 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
   if (!frame->GetStyleVisibility()->IsVisible())
     return PR_FALSE;
 
+  // Detect if we are _inside_ a text control.
+  // bug 189039 - FAYT doesn't want to find inside text boxes
+  if (NS_FRAME_INDEPENDENT_SELECTION & frame->GetStateBits())
+    return PR_FALSE;
 
   // ---- We have a frame ----
   if (!aMustBeInViewPort)   
