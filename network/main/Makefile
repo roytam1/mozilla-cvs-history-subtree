@@ -51,7 +51,7 @@ CSRCS += \
 endif
 
 EXPORTS= mkstream.h mkparse.h mkfsort.h mksort.h mkgeturl.h \
-	mkselect.h mktcp.h netutils.h mkpadpac.h mkautocf.h mkhelp.h \
+	netstream.h mkselect.h mktcp.h netutils.h mkpadpac.h mkautocf.h mkhelp.h \
         mkutils.h mktrace.h
 
 
