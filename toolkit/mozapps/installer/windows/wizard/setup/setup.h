@@ -50,6 +50,9 @@ typedef int PRInt32;
 #include "resource.h"
 #include "zipfile.h"
 
+/* Turn off default to safe upgrade for 0.8... until we can guarantee that we won't be deleting other files. */
+#define DEFAULT_SAFE_UPGRADE FALSE
+
 #define DEFAULT_SETUP_WINDOW_NAME       "Setup"
 /* Class name for the invisible window to be created */
 #define CLASS_NAME_SETUP                "MozillaSetup"

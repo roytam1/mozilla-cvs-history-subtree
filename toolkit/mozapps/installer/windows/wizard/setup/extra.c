@@ -3804,7 +3804,7 @@ HRESULT InitSetupGeneral()
   sgProduct.bSharedInst          = FALSE;
   sgProduct.bInstallFiles        = TRUE;
   sgProduct.checkCleanupOnUpgrade = FALSE;
-  sgProduct.doCleanupOnUpgrade    = TRUE;
+  sgProduct.doCleanupOnUpgrade    = DEFAULT_SAFE_UPGRADE;
   sgProduct.greType              = GRE_TYPE_NOT_SET;
   sgProduct.dwCustomType         = ST_RADIO0;
   sgProduct.dwNumberOfComponents = 0;

@@ -41,9 +41,6 @@
 // commdlg.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <commdlg.h>
 
-// Turn off default to safe upgrade for 0.8... until we can guarantee that we won't be deleting other files. 
-#define DEFAULT_SAFE_UPGRADE FALSE
-
 static WNDPROC OldListBoxWndProc;
 static DWORD   gdwACFlag;
 static BOOL    gDidShowUpgradePanel;
