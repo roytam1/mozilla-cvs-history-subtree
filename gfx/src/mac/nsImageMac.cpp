@@ -801,10 +801,3 @@ nsImageMac::GetPixMap ( PixMapHandle* aPixMap )
 }
 
 
-NS_IMETHODIMP
-nsImageMac::GetPixMap ( PixMapHandle* aPixMap )
-{
-  **aPixMap = &mImagePixmap;
-  return NS_OK;
-}
-
