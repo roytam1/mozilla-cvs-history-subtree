@@ -94,6 +94,8 @@ public:
 	
 	/* unsigned long GetImportProgress (); */
 	NS_IMETHOD GetImportProgress(PRUint32 *_retval);
+
+    NS_IMETHOD TranslateFolderName(const nsAString & aFolderName, nsAString & _retval);
 	
 public:
 	static void	AddLinebreak( nsString *pStream);
@@ -559,6 +561,11 @@ NS_IMETHODIMP ImportEudoraMailImpl::GetImportProgress( PRUint32 *pDoneSoFar)
 }
 
 
+NS_IMETHODIMP ImportEudoraMailImpl::TranslateFolderName(const nsAString & aFolderName, nsAString & _retval)
+{
+    _retval = aFolderName; 
+    return NS_OK;
+}
 
 nsresult ImportEudoraAddressImpl::Create(nsIImportAddressBooks** aImport)
 {
@@ -763,4 +770,6 @@ NS_IMETHODIMP ImportEudoraAddressImpl::GetImportProgress(PRUint32 *_retval)
 
 	return( NS_OK);
 }
+
+
 
