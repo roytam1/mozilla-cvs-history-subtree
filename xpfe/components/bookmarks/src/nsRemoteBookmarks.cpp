@@ -96,9 +96,9 @@
 #define MOZ_SCHEMA_DESCRIPTION    "mozillaDesc"
 #define MOZ_SCHEMA_GROUPFLAG      "mozillaGroupFlag"
 #define MOZ_SCHEMA_LASTCHARSET    "mozillaLastCharset"
+#define MOZ_SCHEMA_ICONURL        "mozillaIconURL"
 
 // XXX ToDo schema items
-#define MOZ_SCHEMA_ICONURL        "mozillaIconURL"
 #define MOZ_SCHEMA_DATEADDED      "mozillaDateAdded"
 #define MOZ_SCHEMA_LASTMOD        "mozillaDateLastMod"
 #define MOZ_SCHEMA_LASTVISIT      "mozillaDateLastVisit"
@@ -134,6 +134,7 @@ nsIRDFResource *nsRemoteBookmarks::kNC_Name;
 nsIRDFResource *nsRemoteBookmarks::kNC_ShortcutURL;
 nsIRDFResource *nsRemoteBookmarks::kNC_Description;
 nsIRDFResource *nsRemoteBookmarks::kWEB_LastCharset;
+nsIRDFResource *nsRemoteBookmarks::kNC_Icon;
 nsIRDFLiteral  *nsRemoteBookmarks::kTrueLiteral;
 
 nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewBookmark;
@@ -181,6 +182,7 @@ nsRemoteBookmarks::~nsRemoteBookmarks()
     NS_IF_RELEASE(kNC_ShortcutURL);
     NS_IF_RELEASE(kNC_Description);
     NS_IF_RELEASE(kWEB_LastCharset);
+    NS_IF_RELEASE(kNC_Icon);
     NS_IF_RELEASE(kTrueLiteral);
 
     NS_IF_RELEASE(kNC_BookmarkCommand_NewBookmark);
@@ -264,6 +266,7 @@ nsRemoteBookmarks::Init()
     gRDF->GetResource(NC_NAMESPACE_URI "ShortcutURL",       &kNC_ShortcutURL);
     gRDF->GetResource(NC_NAMESPACE_URI "Description",       &kNC_Description);
     gRDF->GetResource(WEB_NAMESPACE_URI "LastCharset",      &kWEB_LastCharset);
+		gRDF->GetResource(NC_NAMESPACE_URI "Icon",              &kNC_Icon);
     gRDF->GetLiteral(NS_LITERAL_STRING("true").get(),       &kTrueLiteral);
 
 		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newbookmark",             &kNC_BookmarkCommand_NewBookmark);
@@ -870,6 +873,7 @@ nsRemoteBookmarks::ArcLabelsOut(nsIRDFResource* aSource,
       array->AppendElement(kNC_ShortcutURL);
       array->AppendElement(kNC_Description);
       array->AppendElement(kWEB_LastCharset);
+      array->AppendElement(kNC_Icon);
 
       nsISimpleEnumerator* result = new nsArrayEnumerator(array);
       if (! result)
@@ -1606,7 +1610,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 
       // check objectclass to determine what we are dealing with
       nsAutoString classStr, urlStr, nameStr, keywordStr, descStr;
-      nsAutoString groupFlagStr, lastCharset;
+      nsAutoString groupFlagStr, lastCharset, iconURLStr;
 
       GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_OBJ_CLASS, classStr);
       classStr.Trim(" \t");
@@ -1647,6 +1651,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       {
         // XXX other types, such as separators?
       }
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_ICONURL, iconURLStr);
 
       if (!nameStr.IsEmpty())
       {
@@ -1692,6 +1697,18 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         {
           // assert #LastCharset
           rv = mInner->Assert(searchRes, kWEB_LastCharset, charsetLiteral, PR_TRUE);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      }
+
+      if (!iconURLStr.IsEmpty())
+      {
+        nsCOMPtr<nsIRDFLiteral> iconURLLiteral;
+        rv = gRDF->GetLiteral(iconURLStr.get(), getter_AddRefs(iconURLLiteral));
+        if (NS_SUCCEEDED(rv))
+        {
+          // assert #Icon
+          rv = mInner->Assert(searchRes, kNC_Icon, iconURLLiteral, PR_TRUE);
           NS_ENSURE_SUCCESS(rv, rv);
         }
       }
