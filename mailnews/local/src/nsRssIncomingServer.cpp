@@ -129,3 +129,19 @@ NS_IMETHODIMP nsRssIncomingServer::GetLocalStoreType(char **type)
     *type = strdup("mailbox");
     return NS_OK;
 }
+
+NS_IMETHODIMP
+nsRssIncomingServer::GetOfflineSupportLevel(PRInt32 *aSupportLevel)
+{
+  NS_ENSURE_ARG_POINTER(aSupportLevel);
+  *aSupportLevel = OFFLINE_SUPPORT_LEVEL_NONE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRssIncomingServer::GetSupportsDiskSpace(PRBool *aSupportsDiskSpace)
+{
+  NS_ENSURE_ARG_POINTER(aSupportsDiskSpace);
+  *aSupportsDiskSpace = PR_FALSE;
+  return NS_OK;
+}

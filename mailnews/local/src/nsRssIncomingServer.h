@@ -53,6 +53,8 @@ public:
     NS_DECL_NSILOCALMAILINCOMINGSERVER
 
     NS_IMETHOD GetLocalStoreType(char **);
+    NS_IMETHOD GetOfflineSupportLevel(PRInt32 *aSupportLevel);
+    NS_IMETHOD GetSupportsDiskSpace(PRBool *aSupportsDiskSpace);
 
     nsRssIncomingServer();
     virtual ~nsRssIncomingServer();
