@@ -436,7 +436,7 @@ nsLocalFile::nsLocalFile()
     NS_INIT_REFCNT();
 
     MakeDirty();
-    
+    mLastResolveFlag = PR_FALSE;
     
     mWorkingPath.Assign("");
     mAppendedPath.Assign("");
@@ -480,8 +480,7 @@ void
 nsLocalFile::MakeDirty()
 {
     mStatDirty = PR_TRUE;
-    mHaveValidSpec = PR_FALSE;
-
+    
     mResolvedSpec.vRefNum = 0;
     mResolvedSpec.parID = 0;
     mResolvedSpec.name[0] = 0;
@@ -494,50 +493,62 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
 	OSErr	err = noErr;
 	char	*filePath;
 	
-    if (!mStatDirty)
+    if (!mStatDirty && resolveTerminal == mLastResolveFlag)
     {
         return NS_OK;
     }
     
+    mLastResolveFlag = resolveTerminal;
+    
     // See if we have been initialized with a spec
-    if (!mHaveValidSpec)
+    switch (mInitType)
     {
-	    switch (mInitType)
-	    {
-	    	case eInitWithPath:
-	    	{
-	    		filePath = (char *)nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
-	    		err = ResolvePathAndSpec(filePath, nsnull, PR_FALSE, &mResolvedSpec);
+    	case eInitWithPath:
+    	{
+    		filePath = (char *)nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    		err = ResolvePathAndSpec(filePath, nsnull, PR_FALSE, &mResolvedSpec);
+			nsAllocator::Free(filePath);
+    		break;
+    	}
+    	
+    	case eInitWithFSSpec:
+    	{
+    		if (strlen(mAppendedPath))
+    		{	// We've got an FSSpec and an appended path so pass 'em both to ResolvePathAndSpec
+	    		filePath = (char *)nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
+	    		err = ResolvePathAndSpec(filePath, &mSpec, PR_FALSE, &mResolvedSpec);
     			nsAllocator::Free(filePath);
-	    		break;
-	    	}
-	    	
-	    	case eInitWithFSSpec:
-	    	{
-	    		if (strlen(mAppendedPath))
-	    		{	// We've got an FSSpec and an appended path so pass 'em both to ResolvePathAndSpec
-		    		filePath = (char *)nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
-		    		err = ResolvePathAndSpec(filePath, &mSpec, PR_FALSE, &mResolvedSpec);
-	    			nsAllocator::Free(filePath);
-	    		}
-	    		else
-	    		{
-	    			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &mResolvedSpec);
-	    		}
-	    		break;
-	    	}
-	    		
-	    	default:
-	    		// !!!!! Danger Will Robinson !!!!!
-	    		// we really shouldn't get here
-	    		break;
-	    }
+    		}
+    		else
+    		{
+    			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &mResolvedSpec);
+    		}
+    		break;
+    	}
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
     }
+    
+    if (resolveTerminal && err == noErr)
+    {
+	    // Resolve the alias to the original file.
+		FSSpec	spec = mResolvedSpec;
+		Boolean	targetIsFolder;	  
+		Boolean	wasAliased;	  
+		err = ::ResolveAliasFile(&spec, TRUE, &targetIsFolder, &wasAliased);
+		if (err != noErr)
+			return MacErrorMapper(err);
+		else
+			mResolvedSpec = spec;
+	}	    
+	    
     
 	if (err == noErr)
 	{
 		mStatDirty = PR_TRUE;
-		mHaveValidSpec = PR_TRUE;
 	}
 	
 	return (MacErrorMapper(err));
@@ -628,7 +639,7 @@ nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 
     NS_ENSURE_ARG(_retval);
     
-    ResolveAndStat(PR_FALSE);
+    ResolveAndStat(PR_TRUE);
     
 	OSErr err = noErr;
 
@@ -711,38 +722,35 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
     if (type != NORMAL_FILE_TYPE && type != DIRECTORY_TYPE)
         return NS_ERROR_FILE_UNKNOWN_TYPE;
 
-    if (!mHaveValidSpec)
+    switch (mInitType)
     {
-	    switch (mInitType)
-	    {
-	    	case eInitWithPath:
-	    	{
-	    		filePath = (char *)nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
-	    		err = ResolvePathAndSpec(filePath, nsnull, PR_FALSE, &mResolvedSpec);
+    	case eInitWithPath:
+    	{
+    		filePath = (char *)nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    		err = ResolvePathAndSpec(filePath, nsnull, PR_FALSE, &mResolvedSpec);
+			nsAllocator::Free(filePath);
+    		break;
+    	}
+    	
+    	case eInitWithFSSpec:
+    	{
+    		if (strlen(mAppendedPath))
+    		{	// We've got an FSSpec and an appended path so pass 'em both to ResolvePathAndSpec
+	    		filePath = (char *)nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
+	    		err = ResolvePathAndSpec(filePath, &mSpec, PR_FALSE, &mResolvedSpec);
     			nsAllocator::Free(filePath);
-	    		break;
-	    	}
-	    	
-	    	case eInitWithFSSpec:
-	    	{
-	    		if (strlen(mAppendedPath))
-	    		{	// We've got an FSSpec and an appended path so pass 'em both to ResolvePathAndSpec
-		    		filePath = (char *)nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
-		    		err = ResolvePathAndSpec(filePath, &mSpec, PR_FALSE, &mResolvedSpec);
-	    			nsAllocator::Free(filePath);
-	    		}
-	    		else
-	    		{
-	    			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &mResolvedSpec);
-	    		}
-	    		break;
-	    	}
-	    		
-	    	default:
-	    		// !!!!! Danger Will Robinson !!!!!
-	    		// we really shouldn't get here
-	    		break;
-	    }
+    		}
+    		else
+    		{
+    			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &mResolvedSpec);
+    		}
+    		break;
+    	}
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
     }
 	
 	if (err != noErr && err != fnfErr)
@@ -1103,8 +1111,6 @@ nsLocalFile::GetFileSize(PRInt64 *aFileSize)
     aFileSize->lo = 0;
 
     ResolveAndStat(PR_TRUE);
-    if (!mHaveValidSpec)
-    	return NS_ERROR_FILE_NOT_FOUND;
     
     long dataSize, resSize;
     

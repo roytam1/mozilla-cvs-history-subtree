@@ -73,6 +73,7 @@ private:
 
     // this is the flag which indicates if I can used cached information about the file
     PRBool		mStatDirty;
+    PRBool      mLastResolveFlag;
 
     // If we're inited with a path then we store it here
     nsCString	mWorkingPath;
