@@ -73,7 +73,7 @@ NS_IMETHODIMP nsSound::OnStreamComplete(nsIStreamLoader *aLoader,
             if (uri) {
                 nsCAutoString uriSpec;
                 uri->GetSpec(uriSpec);
-                printf("Failed to load %s\n", uriSpec ? uriSpec : "");
+                printf("Failed to load %s\n", uriSpec.get());
             }
         }
       }
