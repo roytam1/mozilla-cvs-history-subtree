@@ -54,6 +54,8 @@ endif
 
 TARGET		= "Default Plugin"
 
+PACKAGE_FILE = npnul.pkg
+
 include $(topsrcdir)/config/rules.mk
 
 # decodes resource files from AppleSingle to Resource Manager format.

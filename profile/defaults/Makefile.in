@@ -28,6 +28,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= chrome
 
+PACKAGE_FILE = profiledef.pkg
+
 include $(topsrcdir)/config/rules.mk
 
 FILES := \

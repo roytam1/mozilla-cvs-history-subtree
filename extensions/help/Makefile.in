@@ -28,4 +28,6 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS = resources
 
+PACKAGE_FILE = help.pkg
+
 include $(topsrcdir)/config/rules.mk

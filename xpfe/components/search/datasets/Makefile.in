@@ -48,6 +48,8 @@ FILES		= \
 	$(NULL)
 endif
 
+PACKAGE_FILE = searchplugins.pkg
+
 include $(topsrcdir)/config/rules.mk
 
 libs:: $(FILES)

@@ -229,6 +229,13 @@ OS_LIBS	+= $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 v
 endif
 
 ifneq (,$(filter windows os2 gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
+
+PACKAGE_FILE = appicons.pkg
+PACKAGE_VARS += \
+	ICON_SUFFIX \
+	ICON_DIR \
+	$(NULL)
+
 ifneq (,$(filter windows os2,$(MOZ_WIDGET_TOOLKIT)))
 ICON_SUFFIX=.ico
 else
