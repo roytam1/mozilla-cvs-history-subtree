@@ -328,6 +328,9 @@ nsInstallLogReader.prototype = {
   
   read: function ()
   {
+    if (!this.uninstallLog.exists())
+      return;
+  
     var fis = Components.classes["@mozilla.org/network/file-input-stream;1"]
                         .createInstance(Components.interfaces.nsIFileInputStream);
     fis.init(this.uninstallLog, -1, -1, false);
@@ -392,7 +395,8 @@ nsInstalledExtensionReader.prototype = {
   
   read: function ()
   {
-    if (this._installedExtensionsProcessed.exists())
+    if (this._installedExtensionsProcessed.exists() ||
+        !this._installedExtensionsProcessed.exists())
       return;
     
     if (!this._installedExtensions.exists()) {
