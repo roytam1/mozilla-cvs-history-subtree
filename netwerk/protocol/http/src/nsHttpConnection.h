@@ -24,6 +24,7 @@
 #ifndef nsHttpConnection_h__
 #define nsHttpConnection_h__
 
+#include "nsHttp.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
 #include "nsISocketTransport.h"
@@ -113,6 +114,7 @@ private:
     PRUint32                        mReuseCount;
     PRUint32                        mMaxReuseCount; // value of keep-alive: max=
     PRUint32                        mIdleTimeout;   // value of keep-alive: timeout=
+    PRUint32                        mLastActiveTime;
 
     PRPackedBool                    mKeepAlive;
 };
@@ -133,6 +135,8 @@ public:
         , mProxyPort(proxyPort)
         , mUsingSSL(usingSSL)
     {
+        LOG(("Creating nsHttpConnectionInfo @%x\n", this));
+
         NS_INIT_ISUPPORTS();
 
         mHost = host;
@@ -140,7 +144,10 @@ public:
         mProxyType = proxyType;
     }
     
-    virtual ~nsHttpConnectionInfo() {}
+    virtual ~nsHttpConnectionInfo()
+    {
+        LOG(("Destroying nsHttpConnectionInfo @%x\n", this));
+    }
 
     // Compare this connection info to another...
     PRBool Equals(const nsHttpConnectionInfo *info)

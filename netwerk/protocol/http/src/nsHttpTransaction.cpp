@@ -48,6 +48,8 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener,
     , mHaveAllHeaders(0)
     , mFiredOnStart(0)
 {
+    LOG(("Creating nsHttpTransaction @%x\n", this));
+
     NS_INIT_ISUPPORTS();
 
     NS_PRECONDITION(listener, "null listener");
@@ -55,6 +57,8 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener,
 
 nsHttpTransaction::~nsHttpTransaction()
 {
+    LOG(("Destroying nsHttpTransaction @%x\n", this));
+
     if (mConnection) {
         nsHttpHandler::get()->ReclaimConnection(mConnection);
         NS_RELEASE(mConnection);
@@ -137,13 +141,18 @@ nsHttpTransaction::OnDataWritable(nsIOutputStream *os)
 nsresult
 nsHttpTransaction::OnDataReadable(nsIInputStream *is)
 {
+    nsresult rv;
+
     LOG(("nsHttpTransaction::OnDataReadable [this=%x]\n", this));
 
     mSource = is;
 
     // let our listener try to read up to NS_HTTP_BUFFER_SIZE from us.
-    return mListener->OnDataAvailable(this, nsnull, this,
-                                      mContentRead, NS_HTTP_BUFFER_SIZE);
+    rv = mListener->OnDataAvailable(this, nsnull, this,
+                                     mContentRead, NS_HTTP_BUFFER_SIZE);
+
+    mSource = 0;
+    return rv;
 }
 
 // called on the socket transport thread
@@ -441,6 +450,9 @@ nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
     LOG(("nsHttpTransaction::Read [this=%x bufSize=%u]\n", this, bufSize));
 
     NS_ENSURE_TRUE(mSource, NS_ERROR_NOT_INITIALIZED);
+
+    if (mTransactionDone)
+        return NS_BASE_STREAM_CLOSED;
 
     // read some data from our source and put it in the given buf
     rv = mSource->Read(buf, bufSize, bytesWritten);

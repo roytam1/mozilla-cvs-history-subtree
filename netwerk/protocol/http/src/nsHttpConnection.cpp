@@ -44,22 +44,30 @@ nsHttpConnection::nsHttpConnection()
     , mReuseCount(0)
     , mMaxReuseCount(0)
     , mIdleTimeout(0)
+    , mLastActiveTime(0)
     , mKeepAlive(0)
 {
+    LOG(("Creating nsHttpConnection @%x\n", this));
+
     NS_INIT_ISUPPORTS();
     PR_INIT_CLIST(this);
 }
 
 nsHttpConnection::~nsHttpConnection()
 {
+    LOG(("Destroying nsHttpConnection @%x\n", this));
+
     NS_IF_RELEASE(mConnectionInfo);
+    mConnectionInfo = 0;
+ 
     NS_IF_RELEASE(mTransaction);
+    mTransaction = 0;
 
     if (mSocketTransport)
         mSocketTransport->SetReuseConnection(PR_FALSE);
 
     // ensure that we're no longer part of any list
-    PR_REMOVE_LINK(this);
+    PR_REMOVE_AND_INIT_LINK(this);
 }
 
 nsresult
@@ -112,17 +120,21 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
     // be pesimistic
     mKeepAlive = PR_FALSE;
 
-    if (!trans || !trans->ResponseHead())
+    if (!trans || !trans->ResponseHead()) {
+        LOG(("trans->ResponseHead() = %x\n", trans));
         return NS_OK;
+    }
 
     // inspect the connection headers for keep-alive info provided the
     // transaction completed successfully.
     const char *val = trans->ResponseHead()->PeekHeader(nsHttp::Connection);
     if (val) {
-        if (PL_strcmp(val, "keep-alive") == 0) {
+        if (PL_strcasecmp(val, "keep-alive") == 0) {
             mKeepAlive = PR_TRUE;
 
             val = trans->ResponseHead()->PeekHeader(nsHttp::Keep_Alive);
+
+            LOG(("val = [%s]\n", val));
 
             const char *cp = PL_strstr(val, "max=");
             if (cp)
@@ -131,6 +143,9 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
             cp = PL_strstr(val, "timeout=");
             if (cp)
                 mIdleTimeout = (PRUint32) atoi(cp + 8);
+            
+            LOG(("Connection can be reused [this=%x max-reuse=%u "
+                 "keep-alive-timeout=%u\n", this, mMaxReuseCount, mIdleTimeout));
         }
     }
 
@@ -181,8 +196,8 @@ nsHttpConnection::Resume()
 PRBool
 nsHttpConnection::CanReuse()
 {
-    // XXX need to keep track of the last time this connection was used
-    return (mReuseCount < mMaxReuseCount) && IsAlive();
+    return (mReuseCount < mMaxReuseCount) && 
+           (NowInSeconds() - mLastActiveTime < mIdleTimeout) && IsAlive();
 }
 
 PRBool
@@ -363,6 +378,7 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
         return NS_BASE_STREAM_CLOSED;
 
     mState = READING;
+    mLastActiveTime = NowInSeconds();
 
     LOG(("nsHttpConnection::OnDataAvailable [this=%x state=%d]\n",
         this, mState));

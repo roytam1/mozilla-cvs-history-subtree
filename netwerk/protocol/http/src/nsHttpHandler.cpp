@@ -70,17 +70,18 @@ static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
 nsHttpHandler *nsHttpHandler::mGlobalInstance = 0;
 
 nsHttpHandler::nsHttpHandler()
-    : mKeepAliveTimeout(10)
-    , mMaxConnections(10)
+    : mHttpVersion(HTTP_VERSION_1_1)
     , mSendReferrer(0)
-    , mHttpVersion(HTTP_VERSION_1_1)
     , mCapabilities(ALLOW_KEEPALIVE)
     , mProxyCapabilities(ALLOW_KEEPALIVE)
     , mProxySSLConnectAllowed(PR_TRUE)
     , mConnectTimeout(30)
     , mRequestTimeout(30)
-    , mMaxAllowedKeepAlives(10)
-    , mMaxAllowedKeepAlivesPerServer(5)
+    , mIdleTimeout(10)
+    , mMaxConnections(16)
+    , mMaxConnectionsPerServer(4)
+    , mMaxIdleConnections(16)
+    , mMaxIdleConnectionsPerServer(2)
     , mNumActiveConnections(0)
     , mNumIdleConnections(0)
     , mUserAgentIsDirty(PR_TRUE)
@@ -96,6 +97,7 @@ nsHttpHandler::nsHttpHandler()
     NS_ASSERTION(!mGlobalInstance, "HTTP handler already created!");
     mGlobalInstance = this;
 
+    PR_INIT_CLIST(&mActiveConnections);
     PR_INIT_CLIST(&mIdleConnections);
     PR_INIT_CLIST(&mTransactionQ);
 }
@@ -260,7 +262,7 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     if (caps && ALLOW_KEEPALIVE) {
         char buf[32];
 
-        PR_snprintf(buf, sizeof(buf), "%d", mKeepAliveTimeout);
+        PR_snprintf(buf, sizeof(buf), "%d", mIdleTimeout);
 
         rv = request->SetHeader(nsHttp::Keep_Alive, buf);
         if (NS_FAILED(rv)) return rv;
@@ -293,7 +295,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
 
         if (conn->ConnectionInfo()->Equals(connectionInfo)) {
             // found a matching connection; remove from list
-            PR_REMOVE_LINK(conn);
+            PR_REMOVE_AND_INIT_LINK(conn);
 
             mNumIdleConnections--;
 
@@ -310,6 +312,10 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     }
 
     if (!conn) {
+        PRUint32 connectionsPerHost = CountActiveConnections(connectionInfo);
+        if (connectionsPerHost == PRUint32(mMaxConnectionsPerServer))
+            return EnqueueTransaction(transaction, connectionInfo);
+
         LOG(("creating new connection...\n"));
         NS_NEWXPCOM(conn, nsHttpConnection);
         if (!conn)
@@ -323,6 +329,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     rv = conn->SetTransaction(transaction);
     if (NS_FAILED(rv)) goto failed;
 
+    PR_APPEND_LINK(conn, &mActiveConnections);
     mNumActiveConnections++;
     return NS_OK;
 
@@ -339,13 +346,33 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
     LOG(("nsHttpHandler::ReclaimConnection [conn=%x keep-alive=%d]\n",
         conn, conn->CanReuse()));
 
-    if (conn->CanReuse()) {
-        PR_INSERT_AFTER(conn, &mIdleConnections);
-        mNumIdleConnections++;
-    }
-    else
-        NS_RELEASE(conn);
+    // remove connection from the active connection list
+    PR_REMOVE_AND_INIT_LINK(conn);
 
+    if (conn->CanReuse()) {
+        // verify that we aren't already maxed out on the number of
+        // keep-alives we can have for this server.
+        PRUint32 count = CountIdleConnections(conn->ConnectionInfo());
+        if (count == PRUint32(mMaxIdleConnectionsPerServer)) {
+            LOG(("not caching keep-alive connection: "
+                 "would exceed max allowed per server\n"));
+            NS_RELEASE(conn);
+        }
+        else {
+            LOG(("adding connection to idle list [conn=%x]\n", conn));
+            // hold onto this connection in the idle list.  we push it
+            // to the end of the list so as to ensure that we'll visit
+            // older connections first before getting to this one.
+            PR_APPEND_LINK(conn, &mIdleConnections);
+            mNumIdleConnections++;
+        }
+    }
+    else {
+        LOG(("closing connection: connection can't be reused\n"));
+        NS_RELEASE(conn);
+    }
+
+    // process the pending transaction queue...
     mNumActiveConnections--;
     if (!PR_CLIST_IS_EMPTY(&mTransactionQ))
         ProcessTransactionQ();
@@ -533,6 +560,68 @@ nsHttpHandler::EnqueueTransaction(nsHttpTransaction *trans,
 
     PR_APPEND_LINK(pt, &mTransactionQ);
     return NS_OK;
+}
+
+PRUint32
+nsHttpHandler::CountActiveConnections(nsHttpConnectionInfo *ci)
+{
+    PRUint32 count = 0;
+
+    nsHttpConnection *conn = 0;
+    PRCList *node = PR_LIST_HEAD(&mActiveConnections);
+    while (node != &mActiveConnections) {
+        conn = (nsHttpConnection *) node; 
+        node = PR_NEXT_LINK(node);
+
+        // only include a matching connection in the count if it
+        // can still be reused.
+        if (conn->ConnectionInfo()->Equals(ci)) {
+            if (conn->CanReuse())
+                count++;
+            else {
+                LOG(("dropping stale connection: [conn=%x]\n", conn));
+                PR_REMOVE_LINK(conn);
+                NS_RELEASE(conn);
+                conn = nsnull;
+            }
+        }
+    }
+
+    LOG(("nsHttpHandler::CountActiveConnections [host=%s:%d] found %u\n",
+        ci->Host(), ci->Port(), count));
+
+    return count;
+}
+
+PRUint32
+nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
+{
+    PRUint32 count = 0;
+
+    nsHttpConnection *conn = 0;
+    PRCList *node = PR_LIST_HEAD(&mIdleConnections);
+    while (node != &mIdleConnections) {
+        conn = (nsHttpConnection *) node; 
+        node = PR_NEXT_LINK(node);
+
+        // only include a matching connection in the count if it
+        // can still be reused.
+        if (conn->ConnectionInfo()->Equals(ci)) {
+            if (conn->CanReuse())
+                count++;
+            else {
+                LOG(("dropping stale connection: [conn=%x]\n", conn));
+                PR_REMOVE_LINK(conn);
+                NS_RELEASE(conn);
+                conn = nsnull;
+            }
+        }
+    }
+
+    LOG(("nsHttpHandler::CountIdleConnections [host=%s:%d] found %u\n",
+        ci->Host(), ci->Port(), count));
+
+    return count;
 }
 
 void
@@ -739,7 +828,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
     nsresult rv = NS_OK;
 
     if (bChangedAll || PL_strcmp(pref, "network.http.keep-alive.timeout") == 0)
-        mPrefs->GetIntPref("network.http.keep-alive.timeout", &mKeepAliveTimeout);
+        mPrefs->GetIntPref("network.http.keep-alive.timeout", &mIdleTimeout);
 
     if (bChangedAll || PL_strcmp(pref, "network.http.max-connections") == 0)
         mPrefs->GetIntPref("network.http.max-connections", &mMaxConnections);
@@ -830,10 +919,10 @@ nsHttpHandler::PrefsChanged(const char *pref)
         mPrefs->GetIntPref("network.http.request.timeout", &mRequestTimeout);
 
     if (bChangedAll || PL_strcmp(pref, "network.http.keep-alive.max-connections") == 0)
-        mPrefs->GetIntPref("network.http.keep-alive.max-connections", &mMaxAllowedKeepAlives);
+        mPrefs->GetIntPref("network.http.keep-alive.max-connections", &mMaxIdleConnections);
 
     if (bChangedAll || PL_strcmp(pref, "network.http.keep-alive.max-connections-per-server") == 0)
-        mPrefs->GetIntPref("network.http.keep-alive.max-connections-per-server", &mMaxAllowedKeepAlivesPerServer);
+        mPrefs->GetIntPref("network.http.keep-alive.max-connections-per-server", &mMaxIdleConnectionsPerServer);
 
     if (bChangedAll || PL_strcmp(pref, INTL_ACCEPT_LANGUAGES) == 0) {
         nsXPIDLString acceptLanguages;

@@ -806,8 +806,10 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // of them from the transaction.
     mResponseHead = mTransaction->TakeResponseHead();
 
-    // Notify nsIHttpNotify implementations
-    nsHttpHandler::get()->OnAsyncExamineResponse(this);
+    if (mResponseHead) {
+        // Notify nsIHttpNotify implementations
+        nsHttpHandler::get()->OnAsyncExamineResponse(this);
+    }
 
     return ProcessResponse();
 }

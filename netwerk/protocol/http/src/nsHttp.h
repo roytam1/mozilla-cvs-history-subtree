@@ -27,6 +27,7 @@
 #include "nsError.h"
 #include "plstr.h"
 #include "prlog.h"
+#include "prtime.h"
 
 #if defined(PR_LOGGING)
 //
@@ -95,5 +96,18 @@ DupString(const char *src, char **dst)
     *dst = PL_strdup(src);
     return *dst ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
+
+static inline PRUint32
+PRTimeToSeconds(PRTime t_usec)
+{
+    PRTime usec_per_sec;
+    PRUint32 t_sec;
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+    LL_DIV(t_usec, t_usec, usec_per_sec);
+    LL_L2I(t_sec, t_usec);
+    return t_sec;
+}
+
+#define NowInSeconds() PRTimeToSeconds(PR_Now())
 
 #endif

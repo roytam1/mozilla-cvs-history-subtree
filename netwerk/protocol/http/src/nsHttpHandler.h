@@ -140,6 +140,9 @@ private:
     void     ProcessTransactionQ();
     nsresult EnqueueTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
 
+    PRUint32 CountActiveConnections(nsHttpConnectionInfo *);
+    PRUint32 CountIdleConnections(nsHttpConnectionInfo *);
+
     //
     // Useragent/prefs helper methods
     //
@@ -166,26 +169,33 @@ private:
     nsCOMPtr<nsIProxyObjectManager>   mProxyMgr;
     nsCOMPtr<nsINetModuleMgr>         mNetModuleMgr;
 
+    //
     // prefs
-    PRInt32  mKeepAliveTimeout;
-    PRInt32  mMaxConnections;
-    PRInt32  mSendReferrer;
+    //
+
     PRUint32 mHttpVersion;
+    PRInt32  mSendReferrer;
     PRUint32 mCapabilities;
     PRUint32 mProxyCapabilities;
     PRBool   mProxySSLConnectAllowed;
+
     PRInt32  mConnectTimeout;
     PRInt32  mRequestTimeout;
-    PRInt32  mMaxAllowedKeepAlives;
-    PRInt32  mMaxAllowedKeepAlivesPerServer;
+    PRInt32  mIdleTimeout;
+
+    PRInt32  mMaxConnections;
+    PRInt32  mMaxConnectionsPerServer;
+    PRInt32  mMaxIdleConnections;
+    PRInt32  mMaxIdleConnectionsPerServer;
 
     nsCString mAcceptLanguages;
     nsCString mAcceptEncodings;
     nsCString mAcceptCharsets;
 
     // connection management
-    PRCList  mIdleConnections; // list of nsHttpConnection objects
-    PRCList  mTransactionQ;    // list of nsPendingTransaction objects
+    PRCList  mActiveConnections;    // list of nsHttpConnection objects
+    PRCList  mIdleConnections;      // list of nsHttpConnection objects
+    PRCList  mTransactionQ;         // list of nsPendingTransaction objects
     PRUint32 mNumActiveConnections;
     PRUint32 mNumIdleConnections;
 
