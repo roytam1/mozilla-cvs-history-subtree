@@ -2305,6 +2305,9 @@ void CGenericFrame::OnUpdatePrivacyReceipt(CCmdUI* pCmdUI)
 
 void CGenericFrame::OnDisplayPrivacyPolicy()
 {
+   
+#ifdef PRIVACY_POLICIES
+
     MWContext * context = GetMainContext()->GetContext();
     History_entry *he = SHIST_GetCurrent(&context->hist);
     char * policy_url = PRVCY_GetCurrentPrivacyPolicyURL(context);
@@ -2334,15 +2337,26 @@ void CGenericFrame::OnDisplayPrivacyPolicy()
     } else
 #endif
         CFE_CreateNewDocWindow(GetMainContext()->GetContext(), pUrl);
+#endif
 }
 
 void CGenericFrame::OnUpdatePrivacyPolicy(CCmdUI* pCmdUI)
 {
+
+#ifdef PRIVACY_POLICIES
+
     if (PRVCY_CurrentHasPrivacyPolicy(GetMainContext()->GetContext())) {
 	pCmdUI->Enable(TRUE);
     } else {
 	pCmdUI->Enable(FALSE);
     }
+
+#else
+
+    pCmdUI->Enable(FALSE);
+
+#endif
+
 }
 
 void CGenericFrame::OnDisplayPrivacyCookies()
