@@ -145,6 +145,7 @@ case "$target" in
     if test -z "$CPP"; then CPP=cl; fi
     if test -z "$LD"; then LD=link; fi
     if test -z "$AS"; then AS=ml; fi
+    if test -z "$MIDL"; then MIDL=midl; fi
     ;;
 esac
 
@@ -513,6 +514,8 @@ MOZ_COMPONENT_NSPR_LIBS='-L$(DIST)/bin $(NSPR_LIBS)'
 MOZ_COMPONENT_XPCOM_LIBS='$(XPCOM_LIBS)'
 MOZ_XPCOM_OBSOLETE_LIBS='-L$(DIST)/lib -lxpcom_compat'
 
+USE_DEPENDENT_LIBS=1
+
 _PLATFORM_DEFAULT_TOOLKIT=gtk
 MOZ_WIDGET_TOOLKIT_LDFLAGS='-lwidget_$(MOZ_WIDGET_TOOLKIT)'
 MOZ_GFX_TOOLKIT_LDFLAGS='-lgfx_$(MOZ_WIDGET_TOOLKIT) $(MOZ_XLIBRGB_LDFLAGS)'
@@ -823,6 +826,7 @@ case "$target" in
     _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wno-multichar"
     _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wno-multichar"
     _MOZ_USE_RTTI=1
+    USE_DEPENDENT_LIBS=
     ;;
 
 *-bsdi*)
@@ -1008,6 +1012,7 @@ case "$target" in
         XPCOM_LIBS='-L$(DIST)/lib -lxpcom'
         DLL_PREFIX=
         IMPORT_LIB_SUFFIX=dll.a
+        USE_DEPENDENT_LIBS=
     else
         CYGWIN_WRAPPER="sh ${srcdir}/build/cygwin-wrapper"
         if test "`echo ${srcdir} | grep -c ^/ 2>/dev/null`" = 0; then
@@ -1337,7 +1342,7 @@ alpha*-*-osf*)
     if test "$GNU_CC"; then
 	DSO_LDOPTS='-shared -Wl,-soname -Wl,$@'
     else
-	MOZ_DEBUG_FLAGS='-g3'
+	MOZ_DEBUG_FLAGS='-g'
 	ASFLAGS='-I$(topsrcdir)/xpcom/reflect/xptcall/public -g'
 	CFLAGS="$CFLAGS -ieee"
 	CXXFLAGS="$CXXFLAGS "'-noexceptions -ieee  -ptr $(DIST)/cxx_repository'
@@ -3859,7 +3864,7 @@ dnl = bug reports.
 dnl ========================================================
 MOZ_DEBUG=1
 
-if test ! "$MOZ_DEBUG_FLAGS"
+if test -z "$MOZ_DEBUG_FLAGS"
 then
     case "$target" in
     *-irix*)
@@ -3907,7 +3912,7 @@ dnl ========================================================
 dnl = Enable code optimization. OFF by default.
 dnl ========================================================
 MOZ_OPTIMIZE=
-if test ! "$MOZ_OPTIMIZE_FLAGS"; then
+if test -z "$MOZ_OPTIMIZE_FLAGS"; then
 	MOZ_OPTIMIZE_FLAGS="-O"
 fi
 
@@ -4613,7 +4618,11 @@ MOZ_ARG_DISABLE_BOOL(md,
    fi])
 if test "$_cpp_md_flag"; then
   COMPILER_DEPEND=1
-  _DEPEND_CFLAGS='$(filter-out %/.pp,-Wp,-MD,$(MDDEPDIR)/$(*F).pp)'
+  if test "$OS_ARCH" = "OpenVMS"; then
+    _DEPEND_CFLAGS='$(subst =, ,$(filter-out %/.pp,-MM=-MD=-MF=$(MDDEPDIR)/$(*F).pp))'
+  else
+    _DEPEND_CFLAGS='$(filter-out %/.pp,-Wp,-MD,$(MDDEPDIR)/$(*F).pp)'
+  fi
 else
   COMPILER_DEPEND=
   _USE_CPP_INCLUDE_FLAG=
@@ -4868,6 +4877,20 @@ fi
 AC_SUBST(MOZ_XUL)
 
 dnl ========================================================
+dnl disable profile sharing
+dnl ========================================================
+MOZ_PROFILESHARING=1
+MOZ_IPCD=
+MOZ_ARG_DISABLE_BOOL(profilesharing,
+[  --disable-profilesharing           Disable profile sharing],
+    MOZ_PROFILESHARING=,
+    MOZ_PROFILESHARING=1 )
+if test "$MOZ_PROFILESHARING"; then
+  MOZ_IPCD=1
+  AC_DEFINE(MOZ_PROFILESHARING)
+fi
+
+dnl ========================================================
 dnl necko configuration options
 dnl ========================================================
 
@@ -5048,6 +5071,9 @@ AC_SUBST(LDAP_CFLAGS)
 AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
 
+AC_SUBST(MOZ_PROFILESHARING)
+AC_SUBST(MOZ_IPCD)
+
 AC_SUBST(HAVE_XIE)
 AC_SUBST(MOZ_XIE_LIBS)
 AC_SUBST(MOZ_XPRINT_CFLAGS)
@@ -5080,6 +5106,7 @@ AC_SUBST(MOZ_COMPONENT_NSPR_LIBS)
 AC_SUBST(MOZ_COMPONENT_XPCOM_LIBS)
 AC_SUBST(MOZ_XPCOM_OBSOLETE_LIBS)
 AC_SUBST(XPCOM_LIBS)
+AC_SUBST(USE_DEPENDENT_LIBS)
 
 AC_SUBST(MOZ_BUILD_ROOT)
 AC_SUBST(MOZ_OS2_TOOLS)
@@ -5361,9 +5388,14 @@ EOF
   fi
 
 dnl Probably shouldn't call this manually but we always want the output of DEFS
+rm -f confdefs.h.save
+mv confdefs.h confdefs.h.save
+egrep -v "$_EGREP_PATTERN" confdefs.h.save > confdefs.h
 AC_OUTPUT_MAKE_DEFS()
 MOZ_DEFINES=$DEFS
 AC_SUBST(MOZ_DEFINES)
+rm -f confdefs.h
+mv confdefs.h.save confdefs.h
 
 dnl Load the list of Makefiles to generate.
 dnl   To add new Makefiles, edit allmakefiles.sh.

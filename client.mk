@@ -361,6 +361,7 @@ NSS_CO_TAG = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG = ldapcsdk_50_client_branch
 ACCESSIBLE_CO_TAG = 
 IMGLIB2_CO_TAG = 
+IPC_CO_TAG = IPC_BRANCH_20030304
 BUILD_MODULES = all
 
 #######################################################################
@@ -583,6 +584,19 @@ endif
 CVSCO_IMGLIB2 = $(CVS) $(CVS_FLAGS) co $(IMGLIB2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IMGLIB2_CO_MODULE)
 
 ####################################
+# CVS defines for ipc module
+#
+IPC_CO_MODULE = mozilla/ipc/ipcd
+IPC_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  IPC_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+ifdef IPC_CO_TAG
+  IPC_CO_FLAGS := $(IPC_CO_FLAGS) -r $(IPC_CO_TAG)
+endif
+CVSCO_IPC = $(CVS) $(CVS_FLAGS) co $(IPC_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IPC_CO_MODULE)
+
+####################################
 # CVS defines for Calendar 
 #
 CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar mozilla/other-licenses/libical
@@ -631,6 +645,9 @@ ifeq (,$(filter accessible, $(BUILD_MODULE_CVS)))
 endif
 ifeq (,$(filter modules/libpr0n, $(BUILD_MODULE_CVS)))
   CVSCO_IMGLIB2 :=
+endif
+ifeq (,$(filter ipc, $(BUILD_MODULE_CVS)))
+  CVSCO_IPC :=
 endif
 ifeq (,$(filter calendar other-licenses/libical, $(BUILD_MODULE_CVS)))
   CVSCO_CALENDAR :=
@@ -769,6 +786,7 @@ real_checkout:
         cvs_co $(CVSCO_LDAPCSDK) && \
         cvs_co $(CVSCO_ACCESSIBLE) && \
         cvs_co $(CVSCO_IMGLIB2) && \
+	cvs_co $(CVSCO_IPC) && \
 	cvs_co $(CVSCO_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	$(CHECKOUT_MOZTOOLKIT) && \

@@ -130,6 +130,7 @@
 #include "nsCSSLoader.h"
 #include "nsXULAtoms.h"
 #include "nsLayoutCID.h"
+#include "nsImageLoadingContent.h"
 
 // view stuff
 #include "nsViewsCID.h"
@@ -253,6 +254,7 @@ Initialize(nsIModule* aSelf)
 #endif
   nsCSSFrameConstructor::InitGlobals();
   nsTextTransformer::Initialize();
+  nsImageLoadingContent::Initialize();
 
   // Add our shutdown observer.
   nsCOMPtr<nsIObserverService> observerService =
@@ -322,6 +324,7 @@ Shutdown(nsIModule* aSelf)
 
   nsContentUtils::Shutdown();
   NS_NameSpaceManagerShutdown();
+  nsImageLoadingContent::Shutdown();
 }
 
 #ifdef NS_DEBUG
