@@ -77,6 +77,12 @@ public void DestroyEMWindow(int winNumber) {
   count--;
   if (count == 0) {
     System.out.println("closing application");
+    try {
+        BrowserControlFactory.appTerminate();
+    }
+    catch(Exception e) {
+        System.out.println("got Exception on exit: " + e.getMessage());
+     }
     System.exit(0);
   }
 }

@@ -167,6 +167,11 @@ public static void setAppData(String absolutePathToNativeBrowserBinDir) throws F
     }
 }
 
+public static void appTerminate() throws Exception
+{
+    BrowserControlImpl.appTerminate();
+}
+
 public static BrowserControl newBrowserControl() throws InstantiationException, IllegalAccessException, IllegalStateException
 {
     if (!appDataHasBeenSet) {
