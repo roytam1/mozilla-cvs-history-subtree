@@ -149,7 +149,7 @@ endif
 # PSM client libs
 #
 
-PSM_CO_MODULE        = mozilla/security/psm/lib
+PSM_CO_MODULE        = mozilla/security
 PSM_CO_FLAGS := -P
 CVSCO_PSM    = cvs $(CVS_FLAGS) co $(PSM_CO_FLAGS)
 PSM_CO_TAG   = SeaMonkey_M14_BRANCH
