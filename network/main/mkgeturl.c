@@ -4404,7 +4404,6 @@ PRIVATE void
 NET_InitTotallyRandomStuffPeopleAddedProtocols(void)
 {
 	HG00484
-	net_reg_random_protocol(net_SeclibURLLoad, INTERNAL_SECLIB_TYPE_URL);
 	net_reg_random_protocol(net_HTMLPanelLoad, HTML_PANEL_HANDLER_TYPE_URL);
 	net_reg_random_protocol(net_HTMLDialogLoad, HTML_DIALOG_HANDLER_TYPE_URL);
 	net_reg_random_protocol(net_WysiwygLoad, WYSIWYG_TYPE_URL);
