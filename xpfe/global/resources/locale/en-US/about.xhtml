@@ -68,14 +68,13 @@ h1 {
 
 <td id="mozver">
 <h1>
-<a id="mozlink" href="http://www.mozilla.org/releases/mozilla1.0/">Mozilla 1.0</a>
+<a id="mozlink" href="http://www.mozilla.org/releases/mozilla1.0/">Mozilla </a>
 </h1>
 <script type="application/x-javascript">
   // using try..catch to handle empty useragents and other cases where the regex fails to apply
   try {
     document.getElementById("mozver").appendChild(document.createTextNode(navigator.userAgent));
-    //Comment out this part of the script;  hard coding the page value
-    //document.getElementById("mozlink").firstChild.appendData(navigator.userAgent.match(/rv:([^;)]+)/)[1]);
+    document.getElementById("mozlink").firstChild.appendData(navigator.userAgent.match(/rv:([^;)]+)/)[1]);
   }
   catch (e) {}
 </script>

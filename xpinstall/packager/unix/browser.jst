@@ -51,6 +51,7 @@ if (verifyDiskSpace(communicatorFolder, srDest))
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/navigator-region/");
 
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"toolkit.jar"),"content/global/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/autoconfig/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/cookie/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/wallet/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"content-packs.jar"),"content/content-packs/");
@@ -72,6 +73,7 @@ if (verifyDiskSpace(communicatorFolder, srDest))
     registerChrome(SKIN | DELAYED_CHROME, getFolder(cf,"modern.jar"),"skin/modern/messenger/");
     registerChrome(SKIN | DELAYED_CHROME, getFolder(cf,"modern.jar"),"skin/modern/navigator/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"help.jar"),"content/help/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/xbl-marquee/");
 
     if (err==SUCCESS)
     {

@@ -57,8 +57,7 @@
           <xul:tooltip onpopupshowing="event.preventBubble(); if (document.tooltipNode.hasAttribute('label')) { this.setAttribute('label', document.tooltipNode.getAttribute('label')); return true; } return false;"/>
           <xul:menupopup onpopupshowing="this.parentNode.parentNode.parentNode.updatePopupMenu(this);">
             <xul:menuitem label="&newTab.label;" accesskey="&newTab.accesskey;"
-                          oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
-                                     tabbrowser.selectedTab = tabbrowser.addTab('about:blank');"/>
+                          oncommand="this.parentNode.parentNode.parentNode.parentNode.newTab();"/>
             <xul:menuseparator/>
             <xul:menuitem label="&reloadTab.label;" accesskey="&reloadTab.accesskey;"
                           oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
@@ -79,13 +78,18 @@
                                      tabbrowser.removeAllTabsBut(tabbrowser.mContextTab);"/>
           </xul:menupopup>
 
-          <xul:tabs class="tabbrowser-tabs" closebutton="true" disableclose="true" flex="1"
+          <xul:tabs class="tabbrowser-tabs" closebutton="true" flex="1"
+                    tooltiptextnew="&newTabButton.tooltip;"
                     onclick="if (event.button != 1 || event.target.localName != 'tab') return; 
                              this.parentNode.parentNode.parentNode.removeTab(event.target);"
                     ondragover="nsDragAndDrop.dragOver(event, this.parentNode.parentNode.parentNode);
                                 event.stopPropagation();"
                     ondragdrop="nsDragAndDrop.drop(event, this.parentNode.parentNode.parentNode);
                                 event.stopPropagation();"
+                    onnewtab="var node = this.parentNode;
+                              while (node.localName != 'tabbrowser')
+                                node = node.parentNode;
+                              node.newTab();"
                     onclosetab="var node = this.parentNode;
                                 while (node.localName != 'tabbrowser')
                                   node = node.parentNode;
@@ -214,10 +218,10 @@
                 }
                 else if (this.mTabBrowser.shouldLoadFavIcon(location))
                   this.mTabBrowser.loadFavIcon(location, "image", this.mTab); 
-				          
+
                 if (this.mTab.label == this.mTabBrowser.mStringBundle.getString("tabs.loading"))
-                  this.mTab.label = this.mTabBrowser.mStringBundle.getString("tabs.untitled")
-              
+                  this.mTabBrowser.setTabTitle(this.mTab);
+
                 if (this.mTabBrowser.mCurrentTab == this.mTab)
                   this.mTabBrowser.mIsBusy = false;
               }
@@ -349,7 +353,7 @@
             var newTitle = "";
             var docTitle;
             if (this.docShell.contentViewer)
-              docTitle = this.contentDocument.title;
+              docTitle = this.contentDocument.__proto__.__lookupGetter__('title').call(this.contentDocument);
             
             if (docTitle) {
               newTitle += this.ownerDocument.documentElement.getAttribute("titlepreface");
@@ -516,12 +520,35 @@
             var tabBrowser = this.parentNode.parentNode.parentNode;
             var tab = tabBrowser.mTabContainer.childNodes[i];
 
-            if (this.contentDocument.title)
-              tab.setAttribute("label", this.contentDocument.title);
+            tabBrowser.setTabTitle(tab);
 
             if (tab == tabBrowser.mCurrentTab)
-              this.parentNode.parentNode.parentNode.updateTitlebar();
+              tabBrowser.updateTitlebar();
           ]]> 
+        </body>
+      </method>
+
+      <method name="setTabTitle">
+        <parameter name="aTab"/>
+        <body>
+          <![CDATA[
+            var browser = this.getBrowserForTab(aTab);
+            var crop = "end";
+            var titleViaGetter = browser.contentDocument.__proto__.__lookupGetter__('title').call(browser.contentDocument);
+            var title;
+
+            if (titleViaGetter)
+              title = titleViaGetter
+            else if (browser.currentURI.spec && browser.currentURI.spec != "about:blank") {
+              title = browser.currentURI.spec;
+              crop  = "center";
+            }
+            else
+              title = this.mStringBundle.getString("tabs.untitled");
+
+            aTab.label = title;
+            aTab.setAttribute("crop", crop);
+          ]]>
         </body>
       </method>
 
@@ -560,8 +587,7 @@
             // Get the first tab all hooked up with a title listener.
             this.mCurrentBrowser.addEventListener("DOMTitleChanged", this.onTitleChanged, false);
 
-            if (this.mCurrentBrowser.contentDocument.title != "")
-              this.mCurrentTab.label = this.mCurrentBrowser.contentDocument.title;
+            this.setTabTitle(this.mCurrentTab);
 
             // Hook up our favicon.
             var uri = this.mCurrentBrowser.currentURI;
@@ -585,14 +611,19 @@
         </body>
       </method>
 
+      <method name="newTab">
+        <body>
+          <![CDATA[
+            this.selectedTab = this.addTab('about:blank');
+          ]]>
+        </body>
+      </method>
+
       <method name="addTab">
         <parameter name="aURI"/>
         <parameter name="aReferrerURI"/>
         <body>
           <![CDATA[
-            // Enable the close box
-            this.mTabContainer.removeAttribute("disableclose");
-
             var blank = (aURI == "about:blank");
 
             if (!this.mTabbedMode)
@@ -627,6 +658,8 @@
             
             if (this.mStrip.collapsed)
               this.setStripVisibilityTo(true);
+
+            this.mPrefs.setBoolPref("browser.tabs.forceHide", false);
             
             // wire up a progress listener for the new browser object.
             var position = this.mTabContainer.childNodes.length-1;
@@ -682,16 +715,17 @@
               aTab = this.mCurrentTab;
 
             var l = this.mTabContainer.childNodes.length;
-            if (l == 1)
-              return; // Don't allow the last tab to close.
+            if (l == 1) {
+              // hide the tab bar
+              this.mPrefs.setBoolPref("browser.tabs.forceHide", true);
+              this.setStripVisibilityTo(false);
+              return;
+            }
 
-            if (l == 2) {              
+            if (l == 2) {
               var autohide = this.mPrefs.getBoolPref("browser.tabs.autoHide");
               if (autohide)
                 this.setStripVisibilityTo(false);
-              else
-                // Disable the close box
-                this.mTabContainer.setAttribute("disableclose", "true");
             }
 
             var index = -1;
@@ -776,8 +810,9 @@
           <![CDATA[
             if (!this.mProgressListeners) {
               this.mProgressListeners = new Array();
-              var autohide = this.mPrefs.getBoolPref("browser.tabs.autoHide");
-              if (!autohide) {
+              const autoHide = this.mPrefs.getBoolPref("browser.tabs.autoHide");
+              const forceHide = this.mPrefs.getBoolPref("browser.tabs.forceHide");
+              if (!autoHide && !forceHide) {
                 this.setStripVisibilityTo(true);
                 
                 this.mTabbedMode = true;
@@ -1128,6 +1163,20 @@
 
     <handlers>
       <handler event="keypress" modifiers="control" keycode="vk_f4" action="this.removeCurrentTab();"/>
+      <handler event="DOMWindowClose">
+        <![CDATA[
+          const browsers = this.browsers;
+          if (browsers.length == 1)
+            return;
+          var i = 0;
+          for (; i < browsers.length; ++i) {
+            if (browsers[i].contentWindow == event.target)
+              break;
+          }
+          this.removeTab(this.mTabContainer.childNodes[i]);
+          event.preventDefault();
+        ]]>
+      </handler>
     </handlers>
   </binding>
 

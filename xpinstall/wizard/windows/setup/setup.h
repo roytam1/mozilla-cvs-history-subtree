@@ -196,7 +196,7 @@ typedef int PRInt32;
 #define SIC_IGNORE_DOWNLOAD_ERROR       0x00000100
 #define SIC_IGNORE_XPINSTALL_ERROR      0x00000200
 #define SIC_UNCOMPRESS                  0x00000400
-#define SIC_SUPERCEDE                   0x00000800
+#define SIC_SUPERSEDE                   0x00000800
 
 /* AC: Additional Components */
 #define AC_NONE                         0
@@ -448,7 +448,7 @@ struct sinfoComponent
   LPSTR           szParameter;
   LPSTR           szReferenceName;
   BOOL            bForceUpgrade;
-  BOOL            bSupercede;
+  BOOL            bSupersede;
   int             iNetRetries;
   int             iCRCRetries;
   int             iNetTimeOuts;
@@ -515,6 +515,8 @@ typedef struct dlgInstall
     char szReadme_[MAX_BUF];
     char szPause_[MAX_BUF];
     char szResume_[MAX_BUF];
+    char szChecked[MAX_BUF];
+    char szUnchecked[MAX_BUF];
 } installGui;
 
 /* structure message stream */
@@ -543,6 +545,8 @@ struct sSysInfo
   DWORD dwMemoryAvailablePhysical;
   DWORD dwScreenX;
   DWORD dwScreenY;
+  BOOL  bScreenReader;
+  BOOL  bRefreshIcons;
 };
 
 typedef struct diskSpaceNode dsN;

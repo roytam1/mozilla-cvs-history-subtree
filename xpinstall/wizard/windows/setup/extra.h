@@ -61,7 +61,7 @@ siCD              *CreateSiCDepNode(void);
 void              SiCDepNodeDelete(siCD *siCDepTemp);
 void              SiCDepNodeInsert(siCD **siCDepHead, siCD *siCDepTemp);
 HRESULT           SiCNodeGetAttributes(DWORD dwIndex, BOOL bIncludeInvisible, DWORD dwACFlag);
-void              SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIncludeInvisible, DWORD dwACFlag);
+void              SiCNodeSetAttributes(DWORD dwIndex, DWORD dwAttributes, BOOL bSet, BOOL bIncludeInvisible, DWORD dwACFlag, HWND hwndListBox);
 void              SiCNodeSetItemsSelected(DWORD dwSetupType);
 char              *SiCNodeGetReferenceName(DWORD dwIndex, BOOL bIncludeInvisible, DWORD dwACFlag);
 char              *SiCNodeGetDescriptionShort(DWORD dwIndex, BOOL bIncludeInvisible, DWORD dwACFlag);
@@ -76,9 +76,9 @@ void              InitSiComponents(char *szFileIni);
 HRESULT           ParseComponentAttributes(char *szBuf, DWORD dwAttributes, BOOL bOverride);
 void              InitSiteSelector(char *szFileIni);
 void              DeInitSiCDependencies(siCD *siCDDependencies);
-BOOL              ResolveDependencies(DWORD dwIndex);
-BOOL              ResolveComponentDependency(siCD *siCDInDependency);
-void              ResolveDependees(LPSTR szToggledDescriptionShort);
+BOOL              ResolveDependencies(DWORD dwIndex, HWND hwndListBox);
+BOOL              ResolveComponentDependency(siCD *siCDInDependency, HWND hwndListBox);
+void              ResolveDependees(LPSTR szToggledDescriptionShort, HWND hwndListBox);
 BOOL              ResolveComponentDependee(siCD *siCDInDependee);
 void              STSetVisibility(st *stSetupType);
 HRESULT           InitSXpcomFile(void);
@@ -191,7 +191,7 @@ int               CRCCheckArchivesStartup(char *szCorruptedArchiveList,
                                           DWORD dwCorruptedArchiveListSize,
                                           BOOL bIncludeTempPath);
 BOOL              ResolveForceUpgrade(siC *siCObject);
-BOOL              ResolveSupercede(siC *siCObject);
+BOOL              ResolveSupersede(siC *siCObject);
 void              RestoreInvisibleFlag(siC *siCNode);
 void              RestoreAdditionalFlag(siC *siCNode);
 void              SwapFTPAndHTTP(char *szInUrl, DWORD dwInUrlSize);
@@ -213,6 +213,7 @@ BOOL              DeleteWGetLog(void);
 DWORD             ParseOSType(char *szOSType);
 BOOL              ShowAdditionalOptionsDialog(void);
 DWORD             GetPreviousUnfinishedState(void);
+void              RefreshIcons();
 
 #endif /* _EXTRA_H_ */
 

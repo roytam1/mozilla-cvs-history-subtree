@@ -121,6 +121,7 @@ bin/components/libimgpng.so
 bin/components/libimgppm.so
 bin/components/libimgbmp.so
 bin/components/libimgmng.so
+bin/components/libimgxbm.so
 bin/components/libjsurl.so
 bin/components/liblwbrk.so
 bin/components/libmork.so
@@ -136,7 +137,7 @@ bin/components/libprofile.so
 bin/components/libgkcontent.so
 bin/components/content_base.xpt
 bin/components/content_html.xpt
-bin/components/content_xsl.xpt
+bin/components/content_xslt.xpt
 bin/components/libgklayout.so
 bin/components/libgkplugin.so
 bin/components/libhtmlpars.so
@@ -251,6 +252,12 @@ bin/components/libtransformiix.so
 bin/components/libfileview.so
 bin/components/filepicker.xpt
 bin/components/libuniversalchardet.so
+; LDAP components need to be in the browser for AutoConfig
+bin/libldap50.so
+bin/libprldap50.so
+bin/liblber50.so
+bin/components/libmozldap.so
+bin/components/mozldap.xpt
 
 bin/chrome/help.jar
 bin/chrome/toolkit.jar
@@ -275,7 +282,7 @@ bin/chrome/chromelist.txt
 ; all the pref files must be part of base
 ; to prevent migration bugs
 bin/defaults/pref/*
-bin/defaults/autoconfig/prefcalls.js
+bin/defaults/autoconfig/*
 ; this is only here if you have plugins -blizzard
 ; bin/plugins/*
 bin/plugins/libnullplugin.so
@@ -316,9 +323,6 @@ bin/res/builtin/platformHTMLBindings.xml
 
 
 [mail]
-bin/libldap50.so
-bin/liblber50.so
-bin/libprldap50.so
 bin/libmsgbaseutil.so
 bin/components/addrbook.xpt
 bin/components/libaddrbook.so
@@ -326,7 +330,6 @@ bin/components/liblocalmail.so
 bin/components/libmailnews.so
 bin/components/libmime.so
 bin/components/libmimeemitter.so
-bin/components/libmozldap.so
 bin/components/libmsgcompose.so
 bin/components/libmsgdb.so
 bin/components/libmsgimap.so
@@ -339,7 +342,6 @@ bin/components/libimpComm4xMail.so
 bin/components/libabsyncsvc.so
 bin/components/mailnews.xpt
 bin/components/mime.xpt
-bin/components/mozldap.xpt
 bin/components/msgbase.xpt
 bin/components/msgcompose.xpt
 bin/components/msgdb.xpt

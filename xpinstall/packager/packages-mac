@@ -219,12 +219,19 @@ viewer:Components:icondecoder.shlb
 viewer:Components:icondecoder.xpt
 viewer:Components:bmpdecoder.shlb
 viewer:Components:mngdecoder.shlb
+viewer:Components:xbmdecoder.shlb
 
 viewer:Components:Necko.shlb 
 viewer:Components:Necko2.shlb
 viewer:Components:necko.xpt 
 viewer:Components:Cache.shlb 
 viewer:Components:cache.xpt
+
+; LDAP components need to be in the browser for AutoConfig
+viewer:Components:mozldap.shlb
+viewer:Components:mozldap.xpt
+viewer:Components:ldapAutoComplete.xpt
+viewer:Essential Files:LDAPClient.shlb
 
 viewer:chrome:help.jar
 viewer:chrome:comm.jar
@@ -241,7 +248,7 @@ viewer:chrome:pipnss.jar
 ; all the pref files must be part of base
 ; to prevent migration bugs
 viewer:defaults:pref:*
-viewer:defaults:autoconfig:prefcalls.js
+viewer:defaults:autoconfig:*
 viewer:res:arrow.gif
 viewer:res:loading-image.gif
 viewer:res:broken-image.gif
@@ -335,10 +342,6 @@ viewer:Components:msgImportComm4xM.xpt
 viewer:Components:AbSyncSvc.shlb 
 viewer:Components:AbSyncSvc.xpt
 viewer:Components:nsLDAPPrefsService.js 
-viewer:Components:mozldap.shlb
-viewer:Components:mozldap.xpt
-viewer:Components:ldapAutoComplete.xpt
-viewer:Essential Files:LDAPClient.shlb
 viewer:Components:msgsmime.shlb
 viewer:Components:msgsmime.xpt
 viewer:Components:smime-service.js
