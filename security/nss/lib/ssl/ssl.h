@@ -84,18 +84,24 @@ SSL_IMPORT PRFileDesc *SSL_ImportFD(PRFileDesc *model, PRFileDesc *fd);
 ** 		require a certificate during secure connect
 */
 /* options */
-#define SSL_SECURITY			1
-#define SSL_SOCKS			2
-#define SSL_REQUEST_CERTIFICATE		3
+#define SSL_SECURITY			1 /* (on by default) */
+#define SSL_SOCKS			2 /* (off by default) */
+#define SSL_REQUEST_CERTIFICATE		3 /* (off by default) */
 #define SSL_HANDSHAKE_AS_CLIENT		5 /* force accept to hs as client */
+                               		  /* (off by default) */
 #define SSL_HANDSHAKE_AS_SERVER		6 /* force connect to hs as server */
+                               		  /* (off by default) */
 #define SSL_ENABLE_SSL2			7 /* enable ssl v2 (on by default) */
 #define SSL_ENABLE_SSL3		        8 /* enable ssl v3 (on by default) */
 #define SSL_NO_CACHE		        9 /* don't use the session cache */
-#define SSL_REQUIRE_CERTIFICATE        10
+                    		          /* (off by default) */
+#define SSL_REQUIRE_CERTIFICATE        10 /* (SSL_REQUIRE_FIRST_HANDSHAKE */
+                                          /* by default) */
 #define SSL_ENABLE_FDX                 11 /* permit simultaneous read/write */
+                                          /* (off by default) */
 #define SSL_V2_COMPATIBLE_HELLO        12 /* send v3 client hello in v2 fmt */
-#define SSL_ENABLE_TLS		       13 /* enable TLS (off by default) */
+                                          /* (on by default) */
+#define SSL_ENABLE_TLS		       13 /* enable TLS (on by default) */
 #define SSL_ROLLBACK_DETECTION         14 /* for compatibility, default: on */
 
 #ifdef SSL_DEPRECATED_FUNCTION 
@@ -137,6 +143,12 @@ SSL_IMPORT SECStatus SSL_CipherPolicyGet(PRInt32 cipher, PRInt32 *policy);
 #define SSL_NOT_ALLOWED		 0	      /* or invalid or unimplemented */
 #define SSL_ALLOWED		 1
 #define SSL_RESTRICTED		 2	      /* only with "Step-Up" certs. */
+
+/* Values for "on" with SSL_REQUIRE_CERTIFICATE. */
+#define SSL_REQUIRE_NEVER           ((PRBool)0)
+#define SSL_REQUIRE_ALWAYS          ((PRBool)1)
+#define SSL_REQUIRE_FIRST_HANDSHAKE ((PRBool)2)
+#define SSL_REQUIRE_NO_ERROR        ((PRBool)3)
 
 /*
 ** Reset the handshake state for fd. This will make the complete SSL

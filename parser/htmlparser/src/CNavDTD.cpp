@@ -1212,36 +1212,38 @@ nsresult CNavDTD::HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsC
 
   nsresult  result=NS_OK;
 
-  PRBool  theChildAgrees=PR_TRUE;
-  PRInt32 theIndex=mBodyContext->GetCount();
   PRBool  theChildIsContainer=nsHTMLElement::IsContainer(aChildTag);
-  PRBool  theParentContains=-1;
+
+  if (mParserCommand != eViewFragment) {
+    PRBool  theChildAgrees=PR_TRUE;
+    PRInt32 theIndex=mBodyContext->GetCount();
+    PRBool  theParentContains=-1;
   
-  do {
+    do {
  
-    eHTMLTags theParentTag=mBodyContext->TagAt(--theIndex);
-    theParentContains=CanContain(theParentTag,aChildTag);  //precompute containment, and pass it to CanOmit()...
+      eHTMLTags theParentTag=mBodyContext->TagAt(--theIndex);
+      theParentContains=CanContain(theParentTag,aChildTag);  //precompute containment, and pass it to CanOmit()...
 
-    if(CanOmit(theParentTag,aChildTag,theParentContains)) {
-      result=HandleOmittedTag(aToken,aChildTag,theParentTag,aNode);
-      return result;
-    }
+      if(CanOmit(theParentTag,aChildTag,theParentContains)) {
+        result=HandleOmittedTag(aToken,aChildTag,theParentTag,aNode);
+        return result;
+      }
 
-    eProcessRule theRule=eNormalOp; 
+      eProcessRule theRule=eNormalOp; 
 
-    if((!theParentContains) &&
-       (IsBlockElement(aChildTag,theParentTag) &&
-       IsInlineElement(theParentTag,theParentTag))) { //broaden this to fix <inline><block></block></inline>
+      if((!theParentContains) &&
+         (IsBlockElement(aChildTag,theParentTag) &&
+          IsInlineElement(theParentTag,theParentTag))) { //broaden this to fix <inline><block></block></inline>
 
-      if(eHTMLTag_li!=aChildTag) {  //remove test for table to fix 57554
-        nsCParserNode* theParentNode= NS_STATIC_CAST(nsCParserNode*, mBodyContext->PeekNode());
-        if(theParentNode->mToken->IsWellFormed()) {
-          theRule=eLetInlineContainBlock;
+        if(eHTMLTag_li!=aChildTag) {  //remove test for table to fix 57554
+          nsCParserNode* theParentNode= NS_STATIC_CAST(nsCParserNode*, mBodyContext->PeekNode());
+          if(theParentNode->mToken->IsWellFormed()) {
+            theRule=eLetInlineContainBlock;
+          }
         }
       }
-    }
 
-    switch(theRule){
+      switch(theRule){
 
       case eNormalOp:        
 
@@ -1262,25 +1264,25 @@ nsresult CNavDTD::HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsC
             
                 if((kNotFound<theChildIndex) && (theChildIndex<theIndex)) {
                  
-                /*-------------------------------------------------------------------------------------
-                   1  Here's a tricky case from bug 22596:  <h5><li><h5>
-                      How do we know that the 2nd <h5> should close the <LI> rather than nest inside the <LI>?
-                      (Afterall, the <h5> is a legal child of the <LI>).
+                  /*-------------------------------------------------------------------------------------
+                    1  Here's a tricky case from bug 22596:  <h5><li><h5>
+                    How do we know that the 2nd <h5> should close the <LI> rather than nest inside the <LI>?
+                    (Afterall, the <h5> is a legal child of the <LI>).
             
-                      The way you know is that there is no root between the two, so the <h5> binds more
-                      tightly to the 1st <h5> than to the <LI>.
-                   2.  Also, bug 6148 shows this case: <SPAN><DIV><SPAN>
-                      From this case we learned not to execute this logic if the parent is a block.
+                    The way you know is that there is no root between the two, so the <h5> binds more
+                    tightly to the 1st <h5> than to the <LI>.
+                    2.  Also, bug 6148 shows this case: <SPAN><DIV><SPAN>
+                    From this case we learned not to execute this logic if the parent is a block.
                   
-                   3. Fix for 26583
-                      Ex. <A href=foo.html><B>foo<A href-bar.html>bar</A></B></A>  <-- A legal HTML
-                      In the above example clicking on "foo" or "bar" should link to
-                      foo.html or bar.html respectively. That is, the inner <A> should be informed
-                      about the presence of an open <A> above <B>..so that the inner <A> can close out
-                      the outer <A>. The following code does it for us.
+                    3. Fix for 26583
+                    Ex. <A href=foo.html><B>foo<A href-bar.html>bar</A></B></A>  <-- A legal HTML
+                    In the above example clicking on "foo" or "bar" should link to
+                    foo.html or bar.html respectively. That is, the inner <A> should be informed
+                    about the presence of an open <A> above <B>..so that the inner <A> can close out
+                    the outer <A>. The following code does it for us.
                    
-                   4. Fix for 27865 [ similer to 22596 ]. Ex: <DL><DD><LI>one<DD><LI>two
-                 -------------------------------------------------------------------------------------*/
+                    4. Fix for 27865 [ similer to 22596 ]. Ex: <DL><DD><LI>one<DD><LI>two
+                    -------------------------------------------------------------------------------------*/
                    
                   theChildAgrees=CanBeContained(aChildTag,*mBodyContext);
                 } //if
@@ -1319,8 +1321,9 @@ nsresult CNavDTD::HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsC
       default:
         break;
 
-    }//switch
-  } while(!(theParentContains && theChildAgrees));
+      }//switch
+    } while(!(theParentContains && theChildAgrees));
+  }
 
   if(theChildIsContainer){
     result=OpenContainer(aNode,aChildTag,PR_TRUE);
@@ -2484,8 +2487,8 @@ CNavDTD::CollectSkippedContent(PRInt32 aTag, nsAString& aContent, PRInt32 &aLine
  *  @param   aChild -- tag enum of child container
  *  @return  PR_TRUE if parent can contain child
  */
-PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
-    
+PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const 
+{
   PRBool result=gHTMLElements[aParent].CanContain((eHTMLTags)aChild);
 
 #ifdef ALLOW_TR_AS_CHILD_OF_TABLE

@@ -4813,7 +4813,7 @@ nsDocShell::DoURILoad(nsIURI * aURI,
                        loadGroup,
                        NS_STATIC_CAST(nsIInterfaceRequestor *, this));
     if (NS_FAILED(rv))
-        return rv;
+         return rv;
 
     channel->SetOriginalURI(aURI);
 
