@@ -821,24 +821,32 @@ class SubShellMapEntry : public PLDHashEntryHdr {
 class IncrementalReflow
 {
 public:
-    void
-    AddCommand(nsIPresContext      *aPresContext,
-               nsHTMLReflowCommand *aCommand);
+  ~IncrementalReflow();
 
-    void
-    Dispatch(nsIPresContext      *aPresContext,
-             nsHTMLReflowMetrics &aDesiredSize,
-             const nsSize        &aMaxSize,
-             nsIRenderingContext &aRendContext);
+  void
+  AddCommand(nsIPresContext      *aPresContext,
+             nsHTMLReflowCommand *aCommand);
+
+  void
+  Dispatch(nsIPresContext      *aPresContext,
+           nsHTMLReflowMetrics &aDesiredSize,
+           const nsSize        &aMaxSize,
+           nsIRenderingContext &aRendContext);
 
 #ifdef DEBUG
-    void
-    Dump(nsIPresContext *aPresContext) const;
+  void
+  Dump(nsIPresContext *aPresContext) const;
 #endif
 
 protected:
-    nsAutoVoidArray mRoots;
+  nsAutoVoidArray mRoots;
 };
+
+IncrementalReflow::~IncrementalReflow()
+{
+  for (PRInt32 i = mRoots.Count(); i >= 0; --i)
+    delete NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
+}
 
 void
 IncrementalReflow::Dispatch(nsIPresContext      *aPresContext,
@@ -846,52 +854,52 @@ IncrementalReflow::Dispatch(nsIPresContext      *aPresContext,
                             const nsSize        &aMaxSize,
                             nsIRenderingContext &aRendContext)
 {
-    for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i) {
-        // Send an incremental reflow notification to the first frame in the
-        // path.
-        nsReflowPath *path = NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
-        nsIFrame *first = path->mFrame;
+  for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i) {
+    // Send an incremental reflow notification to the first frame in the
+    // path.
+    nsReflowPath *path = NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
+    nsIFrame *first = path->mFrame;
 
-        nsCOMPtr<nsIPresShell> shell;
-        aPresContext->GetShell(getter_AddRefs(shell));
+    nsCOMPtr<nsIPresShell> shell;
+    aPresContext->GetShell(getter_AddRefs(shell));
 
-        nsIFrame* root;
-        shell->GetRootFrame(&root);
+    nsIFrame* root;
+    shell->GetRootFrame(&root);
 
-        first->WillReflow(aPresContext);
-        nsContainerFrame::PositionFrameView(aPresContext, first);
+    first->WillReflow(aPresContext);
+    nsContainerFrame::PositionFrameView(aPresContext, first);
 
-        // If the first frame in the path is the root of the frame
-        // hierarchy, then use all the available space. If it's simply a
-        // `reflow root', then use the first frame's size as the available
-        // space.
-        nsSize size;
-        if (first == root)
-            size = aMaxSize;
-        else
-            first->GetSize(size);
+    // If the first frame in the path is the root of the frame
+    // hierarchy, then use all the available space. If it's simply a
+    // `reflow root', then use the first frame's size as the available
+    // space.
+    nsSize size;
+    if (first == root)
+      size = aMaxSize;
+    else
+      first->GetSize(size);
 
-        nsHTMLReflowState reflowState(aPresContext, first, path,
-                                      &aRendContext, size);
+    nsHTMLReflowState reflowState(aPresContext, first, path,
+                                  &aRendContext, size);
 
-        nsReflowStatus status;
-        first->Reflow(aPresContext, aDesiredSize, reflowState, status);
+    nsReflowStatus status;
+    first->Reflow(aPresContext, aDesiredSize, reflowState, status);
 
-        // If an incremental reflow is initiated at a frame other than the
-        // root frame, then its desired size had better not change!
-        NS_ASSERTION(first == root ||
-                     (aDesiredSize.width == size.width && aDesiredSize.height == size.height),
-                     "non-root frame's desired size changed during an incremental reflow");
+    // If an incremental reflow is initiated at a frame other than the
+    // root frame, then its desired size had better not change!
+    NS_ASSERTION(first == root ||
+                 (aDesiredSize.width == size.width && aDesiredSize.height == size.height),
+                 "non-root frame's desired size changed during an incremental reflow");
 
-        first->SizeTo(aPresContext, aDesiredSize.width, aDesiredSize.height);
+    first->SizeTo(aPresContext, aDesiredSize.width, aDesiredSize.height);
 
-        nsIView* view;
-        first->GetView(aPresContext, &view);
-        if (view)
-            nsContainerFrame::SyncFrameViewAfterReflow(aPresContext, first, view, nsnull);
+    nsIView* view;
+    first->GetView(aPresContext, &view);
+    if (view)
+      nsContainerFrame::SyncFrameViewAfterReflow(aPresContext, first, view, nsnull);
 
-        first->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
-    }
+    first->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
+  }
 }
 
 void
@@ -913,6 +921,7 @@ IncrementalReflow::AddCommand(nsIPresContext      *aPresContext,
   } while (!(state & NS_FRAME_REFLOW_ROOT) &&
            (frame->GetParent(&frame), frame != nsnull));
 
+  // Pop off the root, add it to the set if it's not there already.
   PRInt32 lastIndex = path.Count() - 1;
   nsIFrame *rootFrame = NS_STATIC_CAST(nsIFrame *, path[lastIndex]);
   path.RemoveElementAt(lastIndex);
@@ -934,14 +943,23 @@ IncrementalReflow::AddCommand(nsIPresContext      *aPresContext,
     mRoots.AppendElement(root);
   }
 
+  // Now walk the path from the root to the leaf, adding to the reflow
+  // tree as necessary.
   nsReflowPath *target = root;
   for (i = path.Count() - 1; i >= 0; --i) {
     nsIFrame *frame = NS_STATIC_CAST(nsIFrame *, path[i]);
     target = target->EnsureSubtreeFor(frame);
   }
 
+  // Place the reflow command in the leaf.
+  // XXXwaterson deal with the case where a reflow command is already
+  // here.
+  NS_ASSERTION(target->mReflowCommand == nsnull,
+               "stomping another reflow command.");
+
   target->mReflowCommand = aCommand;
 }
+
 
 #ifdef DEBUG
 void
