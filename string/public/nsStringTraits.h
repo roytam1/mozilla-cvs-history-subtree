@@ -44,8 +44,15 @@
 template <class CharT>
 struct nsStringTraits
   {
+    typedef nsAString             abstract_string_type;
+    typedef nsAPromiseString      abstract_promise_type;
+    typedef nsAFlatString         abstract_flat_type;
+    typedef const nsLocalString   literal_string_type;
   };
 
+#if 0
+  // for lame compilers, put these declarations into the general case
+  //  so we only need to specialize for |char|
 NS_SPECIALIZE_TEMPLATE
 struct nsStringTraits<PRUnichar>
   {
@@ -54,6 +61,7 @@ struct nsStringTraits<PRUnichar>
     typedef nsAFlatString         abstract_flat_type;
     typedef const nsLocalString   literal_string_type;
   };
+#endif
 
 NS_SPECIALIZE_TEMPLATE
 struct nsStringTraits<char>
