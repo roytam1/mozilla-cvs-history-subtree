@@ -479,6 +479,9 @@ function GetMessagesForInboxOnServer(server)
 
 function MsgGetMessage()
 {
+  var alertsService = Components.classes['@mozilla.org/alerts-service;1'].getService(Components.interfaces.nsIAlertsService);
+  alertsService.showAlertNotification("chrome://messenger/skin/icons/mast-mail.gif", "New Mail", "3 unread messages", false, "", null);
+
   // if offline, prompt for getting messages
   if(CheckOnline()) {
     GetFolderMessages();
@@ -916,15 +919,14 @@ function MsgOpenNewWindowForFolder(uri, key)
     var folder = GetLoadedMsgFolder();
     var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
     uriToOpen = folderResource.Value;
+    dump('found folder resource\n');
   }
 
   if (uriToOpen) {
-    var layoutType = gPrefs.getIntPref("mail.pane_config");
-
-    if(layoutType == 0)
-      window.openDialog("chrome://messenger/content/messenger.xul", "_blank", "all,chrome,dialog=no,status,toolbar", {uri: uriToOpen, key: keyToSelect});
-    else
-      window.openDialog("chrome://messenger/content/mail3PaneWindowVertLayout.xul", "_blank", "all,chrome,dialog=no,status,toolbar", {uri: uriToOpen, key: keyToSelect});
+   // get the messenger window open service and ask it to open a new window for us
+   var mailWindowService = Components.classes["@mozilla.org/messenger/windowservice;1"].getService(Components.interfaces.nsIMessengerWindowService);
+   if (mailWindowService)
+     mailWindowService.openMessengerWindowWithUri(uriToOpen, keyToSelect);
   }
 }
 
