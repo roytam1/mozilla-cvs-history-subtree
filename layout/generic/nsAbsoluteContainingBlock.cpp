@@ -195,44 +195,6 @@ nsAbsoluteContainingBlock::Reflow(nsIFrame*                aDelegatingFrame,
   return NS_OK;
 }
 
-PRBool
-nsAbsoluteContainingBlock::ReflowingAbsolutesOnly(nsIFrame* aDelegatingFrame,
-                                                  const nsHTMLReflowState& aReflowState)
-{
-  // See if the reflow command is targeted at us.
-  nsReflowPath *path = aReflowState.path;
-  nsHTMLReflowCommand *command = path->mReflowCommand;
-
-  if (command) {
-    // It's targeted at us. See if it's for the positioned child frames
-    nsCOMPtr<nsIAtom> listName;
-    command->GetChildListName(*getter_AddRefs(listName));
-
-    if (GetChildListName() != listName) {
-      // A reflow command is targeted directly at this block.
-      // The block will have to do a proper reflow.
-      return PR_FALSE;
-    }
-  }
-
-  nsReflowPath::iterator iter = path->FirstChild();
-  nsReflowPath::iterator end = path->EndChildren();
-
-  if (iter != end && mAbsoluteFrames.NotEmpty()) {
-    for ( ; iter != end; ++iter) {
-      // See if it's one of our absolutely positioned child frames
-      if (!mAbsoluteFrames.ContainsFrame(*iter)) {
-        // At least one of the frames along the reflow path wasn't
-        // absolutely positioned, so we'll need to deal with it in
-        // normal block reflow.
-        return PR_FALSE;
-      }
-    }
-  }
-
-  return PR_TRUE;
-}
-
 static PRBool IsFixedBorderSize(nsStyleUnit aUnit) {
   return aUnit == eStyleUnit_Coord || aUnit == eStyleUnit_Enumerated
     || aUnit == eStyleUnit_Null;
