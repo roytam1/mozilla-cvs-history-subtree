@@ -116,18 +116,20 @@ parseUseAttrSets(txStylesheetAttr* aAttributes,
                  txStylesheetCompilerState& aState)
 {
     txStylesheetAttr* attr = nsnull;
-    getStyleAttr(aAttributes, aAttrCount, aInXSLTNS ? kNameSpaceID_XSLT :
-                                                      kNameSpaceID_None,
-                 txXSLTAtoms::useAttributeSets, PR_FALSE, &attr);
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount,
+                               aInXSLTNS ? kNameSpaceID_XSLT
+                                         : kNameSpaceID_None,
+                               txXSLTAtoms::useAttributeSets, PR_FALSE,
+                               &attr);
     if (!attr) {
-        return NS_OK;
+        return rv;
     }
 
     txTokenizer tok(attr->mValue);
     while (tok.hasMoreTokens()) {
         txExpandedName name;
-        nsresult rv = name.init(tok.nextToken(),
-                                aState.mElementContext->mMappings, PR_FALSE);
+        rv = name.init(tok.nextToken(), aState.mElementContext->mMappings,
+                       PR_FALSE);
         NS_ENSURE_SUCCESS(rv, rv);
 
         txInstruction* instr = new txInsertAttrSet(name);
@@ -162,7 +164,7 @@ getQNameAttr(txStylesheetAttr* aAttributes,
         rv = NS_OK;
     }
 
-    return NS_OK;
+    return rv;
 }
 
 nsresult
@@ -267,11 +269,11 @@ getNumberAttr(txStylesheetAttr* aAttributes,
 
 nsresult
 getAtomAttr(txStylesheetAttr* aAttributes,
-              PRInt32 aAttrCount,
-              nsIAtom* aName,
-              PRBool aRequired,
-              txStylesheetCompilerState& aState,
-              nsIAtom** aAtom)
+            PRInt32 aAttrCount,
+            nsIAtom* aName,
+            PRBool aRequired,
+            txStylesheetCompilerState& aState,
+            nsIAtom** aAtom)
 {
     *aAtom = nsnull;
     txStylesheetAttr* attr = nsnull;
@@ -286,6 +288,37 @@ getAtomAttr(txStylesheetAttr* aAttributes,
 
     return NS_OK;
 }
+
+nsresult
+getYesNoAttr(txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             nsIAtom* aName,
+             PRBool aRequired,
+             txStylesheetCompilerState& aState,
+             txThreeState& aRes)
+{
+    aRes = eNotSet;
+    nsCOMPtr<nsIAtom> atom;
+    nsresult rv = getAtomAttr(aAttributes, aAttrCount, aName, aRequired,
+                              aState, getter_AddRefs(atom));
+    if (!atom) {
+        return rv;
+    }
+
+    if (atom == txXSLTAtoms::yes) {
+        aRes = eTrue;
+    }
+    else if (atom == txXSLTAtoms::no) {
+        aRes = eFalse;
+    }
+    else if (aRequired || !aState.fcp()) {
+        // XXX ErrorReport: unknown values
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+
+    return NS_OK;
+}
+
 
 /**
  * Ignore and error handlers
@@ -462,6 +495,121 @@ txFnEndOtherTop(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+
+// xsl:output
+nsresult
+txFnStartOutput(PRInt32 aNamespaceID,
+                nsIAtom* aLocalName,
+                nsIAtom* aPrefix,
+                txStylesheetAttr* aAttributes,
+                PRInt32 aAttrCount,
+                txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    txOutputItem* item = new txOutputItem;
+    NS_ENSURE_TRUE(item, NS_ERROR_OUT_OF_MEMORY);
+
+    txExpandedName methodExpName;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::method, PR_FALSE,
+                      aState, methodExpName);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!methodExpName.isNull()) {
+        if (methodExpName.mNamespaceID != kNameSpaceID_None) {
+            // The spec doesn't say what to do here so we'll just ignore the
+            // value. We could possibly warn.
+        }
+        else if (methodExpName.mLocalName == txXSLTAtoms::html) {
+            item->mFormat.mMethod = eHTMLOutput;
+        }
+        else if (methodExpName.mLocalName == txXSLTAtoms::text) {
+            item->mFormat.mMethod = eTextOutput;
+        }
+        else if (methodExpName.mLocalName == txXSLTAtoms::xml) {
+            item->mFormat.mMethod = eXMLOutput;
+        }
+        else {
+            return NS_ERROR_XSLT_PARSE_FAILURE;
+        }
+    }
+
+    txStylesheetAttr* attr = nsnull;
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::version, PR_FALSE, &attr);
+    if (attr) {
+        item->mFormat.mVersion = attr->mValue;
+    }
+
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::encoding, PR_FALSE, &attr);
+    if (attr) {
+        item->mFormat.mEncoding = attr->mValue;
+    }
+
+    rv = getYesNoAttr(aAttributes, aAttrCount,
+                      txXSLTAtoms::omitXmlDeclaration, PR_FALSE, aState,
+                      item->mFormat.mOmitXMLDeclaration);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getYesNoAttr(aAttributes, aAttrCount,
+                      txXSLTAtoms::standalone, PR_FALSE, aState,
+                      item->mFormat.mStandalone);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::doctypePublic, PR_FALSE, &attr);
+    if (attr) {
+        item->mFormat.mPublicId = attr->mValue;
+    }
+
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::doctypeSystem, PR_FALSE, &attr);
+    if (attr) {
+        item->mFormat.mSystemId = attr->mValue;
+    }
+
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::cdataSectionElements, PR_FALSE, &attr);
+    if (attr) {
+        txTokenizer tokens(attr->mValue);
+        while (tokens.hasMoreTokens()) {
+            txExpandedName* qname = new txExpandedName();
+            NS_ENSURE_TRUE(qname, NS_ERROR_OUT_OF_MEMORY);
+
+            rv = qname->init(tokens.nextToken(),
+                             aState.mElementContext->mMappings, PR_FALSE);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            rv = item->mFormat.mCDATASectionElements.add(qname);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+    }
+
+    rv = getYesNoAttr(aAttributes, aAttrCount,
+                      txXSLTAtoms::indent, PR_FALSE, aState,
+                      item->mFormat.mIndent);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                 txXSLTAtoms::mediaType, PR_FALSE, &attr);
+    if (attr) {
+        item->mFormat.mMediaType = attr->mValue;
+    }
+
+    rv = aState.addToplevelItem(item);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndOutput(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
 
 // xsl:template
 nsresult
@@ -1263,22 +1411,12 @@ txFnStartMessage(PRInt32 aNamespaceID,
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIAtom> terminateAtom;
-    rv = getAtomAttr(aAttributes, aAttrCount, txXSLTAtoms::terminate,
-                     PR_FALSE, aState, getter_AddRefs(terminateAtom));
+    txThreeState term;
+    rv = getYesNoAttr(aAttributes, aAttrCount, txXSLTAtoms::terminate,
+                      PR_FALSE, aState, term);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    PRBool terminate = PR_FALSE;
-    if (terminateAtom == txXSLTAtoms::yes) {
-        terminate = MB_TRUE;
-    }
-    else if (terminateAtom && terminateAtom != txXSLTAtoms::no &&
-             !aState.fcp()) {
-        // XXX ErrorReport: unknown value for terminate
-        return NS_ERROR_XSLT_PARSE_FAILURE;
-    }
-
-    instr = new txMessage(terminate);
+    instr = new txMessage(term == eTrue);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushObject(instr);
@@ -1517,19 +1655,13 @@ txFnStartText(PRInt32 aNamespaceID,
     NS_ASSERTION(!aState.mDOE, "nested d-o-e elements should not happen");
 
     nsresult rv = NS_OK;
-    nsCOMPtr<nsIAtom> doe;
-    rv = getAtomAttr(aAttributes, aAttrCount,
+    txThreeState doe;
+    rv = getYesNoAttr(aAttributes, aAttrCount,
                      txXSLTAtoms::disableOutputEscaping, PR_FALSE, aState,
-                     getter_AddRefs(doe));
+                     doe);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (doe == txXSLTAtoms::yes) {
-        aState.mDOE = MB_TRUE;
-    }
-    else if (doe && doe != txXSLTAtoms::no && !aState.fcp()) {
-        // XXX ErrorReport: unknown value for d-o-e
-        return NS_ERROR_XSLT_PARSE_FAILURE;
-    }
+    aState.mDOE = doe == eTrue;
 
     return aState.pushHandlerTable(gTxTextHandler);
 }
@@ -1565,27 +1697,18 @@ txFnStartValueOf(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    MBool doe = MB_FALSE;
-    nsCOMPtr<nsIAtom> doeAtom;
-    rv = getAtomAttr(aAttributes, aAttrCount,
+    txThreeState doe;
+    rv = getYesNoAttr(aAttributes, aAttrCount,
                      txXSLTAtoms::disableOutputEscaping, PR_FALSE, aState,
-                     getter_AddRefs(doeAtom));
+                     doe);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    if (doeAtom == txXSLTAtoms::yes) {
-        doe = MB_TRUE;
-    }
-    else if (doeAtom && doeAtom != txXSLTAtoms::no && !aState.fcp()) {
-        // XXX ErrorReport: unknown value for d-o-e
-        return NS_ERROR_XSLT_PARSE_FAILURE;
-    }
 
     Expr* select = nsnull;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_TRUE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txValueOf(select, doe);
+    txInstruction* instr = new txValueOf(select, doe == eTrue);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1851,6 +1974,7 @@ txHandlerTableData gTxRootTableData = {
 txHandlerTableData gTxTopTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
+    { kNameSpaceID_XSLT, "output", txFnStartOutput, txFnEndOutput },
     { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },
     { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
     { kNameSpaceID_XSLT, "variable", txFnStartTopVariable, txFnEndTopVariable },
