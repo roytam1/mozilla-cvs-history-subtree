@@ -50,11 +50,16 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartBitmapMac: an implementation based on gfxIImageFrame
-// that should work for Mac but doesn't support obtaining
-// RenderingContexts with Lock/UnlockRenderingContext
-
+/**
+ * A libart bitmap implementation based on gfxIImageFrame that should
+ * work for Mac but doesn't support obtaining RenderingContexts with
+ * Lock/UnlockRenderingContext
+ */
 class nsSVGLibartBitmapMac : public nsISVGLibartBitmap
 {
 public:
@@ -88,6 +93,8 @@ private:
   nsRect mRectTwips;
   nsRect mRect;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:

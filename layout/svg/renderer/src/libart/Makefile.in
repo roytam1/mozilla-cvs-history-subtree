@@ -55,6 +55,8 @@ REQUIRES = \
 	necko   \
 	libart_lgpl \
 	util \
+	uconv \
+	windowwatcher \
 	$(NULL)
 
 CPPSRCS = \
@@ -66,8 +68,8 @@ CPPSRCS = \
 	nsSVGRenderItem.cpp \
 	nsSVGFill.cpp \
 	nsSVGStroke.cpp \
-	nsSVGLibartGlyphGeometry.cpp \
-	nsSVGLibartGlyphMetrics.cpp \
+	nsSVGLibartGlyphGeometryDefault.cpp \
+	nsSVGLibartGlyphMetricsDefault.cpp \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -75,6 +77,7 @@ include $(topsrcdir)/config/config.mk
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1
 
+# **********************************************************************
 # choose a toolkit specific implementation of nsISVGLibartBitmap:
 
 # gtk2:
@@ -99,6 +102,26 @@ ifeq (,$(filter gtk2 mac cocoa,$(MOZ_GFX_TOOLKIT)))
 CPPSRCS += nsSVGLibartBitmapDefault.cpp
 endif
 
+# **********************************************************************
+# choose a text renderer besides the default one:
+
+ifdef MOZ_ENABLE_FREETYPE2
+CPPSRCS += \
+	nsSVGLibartFreetype.cpp \
+	nsSVGLibartGlyphGeometryFT.cpp \
+	nsSVGLibartGlyphMetricsFT.cpp \
+	$(NULL)
+
+LOCAL_INCLUDES += \
+	$(FT2_CFLAGS) \
+	-I$(topsrcdir)/gfx \
+	-I$(topsrcdir)/gfx/src/freetype \
+	$(NULL)
+
+DEFINES += -DMOZ_ENABLE_FREETYPE2
+endif
+
+# **********************************************************************
 
 include $(topsrcdir)/config/rules.mk
 

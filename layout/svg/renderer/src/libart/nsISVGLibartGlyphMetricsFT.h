@@ -15,12 +15,12 @@
  * The Original Code is the Mozilla SVG project.
  *
  * The Initial Developer of the Original Code is 
- * Crocodile Clips Ltd..
+ * .
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ *    Leon Sha <leon.sha@sun.com> 
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -36,14 +36,36 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_SVGLIBART_GLYPHGEOMETRY_H__
-#define __NS_SVGLIBART_GLYPHGEOMETRY_H__
+#ifndef __NS_ISVGLIBART_GLYPHMETRICS_FT_H__
+#define __NS_ISVGLIBART_GLYPHMETRICS_FT_H__
 
-class nsISVGRendererGlyphGeometry;
-class nsISVGGlyphGeometrySource;
+#include "nsISVGRendererGlyphMetrics.h"
+#include "nsFreeType.h"
 
-nsresult
-NS_NewSVGLibartGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                             nsISVGGlyphGeometrySource *src);
+// {b74698f5-b016-4423-a742-d2a14e5d8c45}
+#define NS_ISVGLIBARTGLYPHMETRICSFT_IID \
+{ 0xb74698f5, 0xb016, 0x4423, { 0xa7, 0x42, 0xd2, 0xa1, 0x4e, 0x5d, 0x8c, 0x45 } }
 
-#endif // __NS_SVGLIBART_GLYPHGEOMETRY_H__
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+//////////////////////////////////////////////////////////////////////
+/**
+ *  'Private' rendering engine interface
+ */
+class nsISVGLibartGlyphMetricsFT : public nsISVGRendererGlyphMetrics
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGLIBARTGLYPHMETRICSFT_IID)
+  NS_IMETHOD_(FT_Face) GetFTFace() = 0;
+  NS_IMETHOD_(float) GetPixelScale() = 0;
+  NS_IMETHOD_(float) GetTwipsToPixels() = 0;
+  NS_IMETHOD_(const FT_BBox*) GetBoundingBox() = 0;
+  NS_IMETHOD_(PRUint32) GetGlyphCount() = 0;
+  NS_IMETHOD_(FT_Glyph) GetGlyphAt(PRUint32 pos) = 0;
+};
+
+/** @} */
+
+#endif // __NS_ISVGLIBART_GLYPHMETRICS_FT_H__

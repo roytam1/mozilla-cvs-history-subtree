@@ -38,7 +38,6 @@
 
 
 #include "nsCOMPtr.h"
-#include "nsSVGLibartGlyphGeometry.h"
 #include "nsISVGRendererGlyphGeometry.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsISVGGlyphGeometrySource.h"
@@ -46,15 +45,19 @@
 #include "nsIPresContext.h"
 #include "nsMemory.h"
 
-  
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartGlyphGeometry class
-
+/**
+ *  Libart glyph geometry implementation 
+ */
 class nsSVGLibartGlyphGeometry : public nsISVGRendererGlyphGeometry
 {
 protected:
-  friend nsresult NS_NewSVGLibartGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                                               nsISVGGlyphGeometrySource *src);
+  friend nsresult NS_NewSVGLibartGlyphGeometryDefault(nsISVGRendererGlyphGeometry **result,
+                                                      nsISVGGlyphGeometrySource *src);
 
   nsSVGLibartGlyphGeometry();
   ~nsSVGLibartGlyphGeometry();
@@ -68,6 +71,8 @@ public:
   NS_DECL_NSISVGRENDERERGLYPHGEOMETRY
   
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -88,8 +93,8 @@ nsSVGLibartGlyphGeometry::Init(nsISVGGlyphGeometrySource* src)
 
 
 nsresult
-NS_NewSVGLibartGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                             nsISVGGlyphGeometrySource *src)
+NS_NewSVGLibartGlyphGeometryDefault(nsISVGRendererGlyphGeometry **result,
+                                    nsISVGGlyphGeometrySource *src)
 {
   *result = nsnull;
   
@@ -124,14 +129,14 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererGlyphGeometry methods:
 
-/* void render (in nsISVGRendererCanvas canvas); */
+/** Implements void render(in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
 nsSVGLibartGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 {
   return NS_OK;
 }
 
-/* nsISVGRendererRegion update (in unsigned long updatemask); */
+/** Implements nsISVGRendererRegion update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGLibartGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
@@ -139,7 +144,7 @@ nsSVGLibartGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_re
   return NS_OK;
 }
 
-/* nsISVGRendererRegion getCoveredRegion (); */
+/** Implements nsISVGRendererRegion getCoveredRegion(); */
 NS_IMETHODIMP
 nsSVGLibartGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
@@ -147,7 +152,7 @@ nsSVGLibartGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
   return NS_OK;
 }
 
-/* boolean containsPoint (in float x, in float y); */
+/** Implements boolean containsPoint(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGLibartGlyphGeometry::ContainsPoint(float x, float y, PRBool *_retval)
 {

@@ -180,6 +180,10 @@ NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #include "nsSVGTypeCIDs.h"
 #include "nsISVGRenderer.h"
 #include "nsSVGRect.h"
+#ifdef MOZ_SVG_RENDERER_LIBART
+void NS_InitSVGRendererLibartGlobals();
+void NS_FreeSVGRendererLibartGlobals();
+#endif
 #ifdef MOZ_SVG_RENDERER_GDIPLUS
 void NS_InitSVGRendererGDIPlusGlobals();
 void NS_FreeSVGRendererGDIPlusGlobals();
@@ -251,6 +255,9 @@ Initialize(nsIModule* aSelf)
 
 #ifdef MOZ_SVG
   nsSVGAtoms::AddRefAtoms();
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_InitSVGRendererLibartGlobals();
+#endif
 #ifdef MOZ_SVG_RENDERER_GDIPLUS
   NS_InitSVGRendererGDIPlusGlobals();
 #endif
@@ -320,6 +327,9 @@ Shutdown(nsIModule* aSelf)
 #endif
 
 #ifdef MOZ_SVG
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_FreeSVGRendererLibartGlobals();
+#endif
 #ifdef MOZ_SVG_RENDERER_GDIPLUS
   NS_FreeSVGRendererGDIPlusGlobals();
 #endif

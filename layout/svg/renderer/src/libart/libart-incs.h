@@ -59,6 +59,7 @@
 #include "art_vpath_dash.h"
 #include "art_pathcode.h"
 #include "art_render.h"
+#include "art_render_mask.h"
 #include "art_render_gradient.h"
 #include "art_render_svp.h"
 #include "art_rgb.h"

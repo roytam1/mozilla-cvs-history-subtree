@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is 
  * Crocodile Clips Ltd..
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,13 +36,38 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_SVGLIBART_GLYPHMETRICS_H__
-#define __NS_SVGLIBART_GLYPHMETRICS_H__
+#ifndef __NS_SVGLIBART_FREETYPE_H__
+#define __NS_SVGLIBART_FREETYPE_H__
 
-class nsISVGRendererGlyphMetrics;
-class nsISVGGlyphMetricsSource;
+#include "nsFreeType.h"
 
-nsresult NS_NewSVGLibartGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                                     nsISVGGlyphMetricsSource *src);
+namespace nsSVGLibartFreetype {
+  /**
+   * Initializes global ft2 and fontcatalog instances.
+   *
+   * @return PR_TRUE if the initialization succeeded, PR_FALSE otherwise.
+   */
+  PRBool Init();
+  
+  /**
+   * Releases global ft2 and fontcatalog instances.
+   */
+  void Shutdown();
 
-#endif // __NS_SVGLIBART_GLYPHMETRICS_H__
+  /**
+   * @return PR_TRUE if there are suitable fonts on the system, PR_FALSE otherwise
+   */
+  PRBool HasSuitableFonts();
+
+  /**
+   * Global freetype2 instance.
+   */
+  extern nsCOMPtr<nsIFreeType2> ft2;
+
+  /**
+   * Global fontcatalog instance.
+   */
+  extern nsCOMPtr<nsIFontCatalogService> fontCatalog;
+}
+
+#endif // __NS_SVGLIBART_FREETYPE_H__

@@ -53,9 +53,14 @@
 #include "nsMemory.h"
 #include "prdtoa.h"
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartPathGeometry class
-
+/**
+ * Libart path geometry implementation
+ */
 class nsSVGLibartPathGeometry : public nsISVGRendererPathGeometry
 {
 protected:
@@ -92,6 +97,8 @@ protected:
   nsSVGFill mFill;
   nsSVGStroke mStroke;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -249,7 +256,7 @@ nsSVGLibartPathGeometry::GetBezierFlatness()
 //----------------------------------------------------------------------
 // nsISVGRendererPathGeometry methods:
 
-/* void render (in nsISVGRendererCanvas canvas); */
+/** Implements void render(in nsISVGRendererCanvas canvas); */
 NS_IMETHODIMP
 nsSVGLibartPathGeometry::Render(nsISVGRendererCanvas *canvas)
 {
@@ -302,7 +309,7 @@ nsSVGLibartPathGeometry::Render(nsISVGRendererCanvas *canvas)
   return NS_OK;
 }
 
-/* nsISVGRendererRegion update (in unsigned long updatemask); */
+/** Implements nsISVGRendererRegion update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGLibartPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
@@ -356,7 +363,7 @@ nsSVGLibartPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_ret
   return NS_OK;
 }
 
-/* nsISVGRendererRegion getCoveredRegion (); */
+/** Implements nsISVGRendererRegion getCoveredRegion(); */
 NS_IMETHODIMP
 nsSVGLibartPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
@@ -397,7 +404,7 @@ nsSVGLibartPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
   return NS_OK;
 }
 
-/* boolean containsPoint (in float x, in float y); */
+/** Implements boolean containsPoint(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGLibartPathGeometry::ContainsPoint(float x, float y, PRBool *_retval)
 {

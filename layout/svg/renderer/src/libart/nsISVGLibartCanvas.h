@@ -48,15 +48,44 @@ typedef ArtPixMaxDepth ArtColor[3];
 #define NS_ISVGLIBARTCANVAS_IID \
 { 0x6f963b6f, 0x8d8e, 0x4c8d, { 0xb4, 0xa1, 0xfa, 0x87, 0xfb, 0x82, 0x59, 0x73 } }
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+//////////////////////////////////////////////////////////////////////
+/**
+ * 'Private' rendering engine interface
+ */
 class nsISVGLibartCanvas : public nsISVGRendererCanvas
 {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_ISVGLIBARTCANVAS_IID; return iid; }
 
+  /**
+   * Deprecated. Use NewRender(int x0, int y0, int x1, int y1).
+   */
   NS_IMETHOD_(ArtRender*) NewRender()=0;
+
+  /**
+   * Construct a new render object for the given rect.
+   *
+   * @return New render object or 0 if the requested rect doesn't
+   *         overlap the dirty rect or if there is an error.
+   */   
+  NS_IMETHOD_(ArtRender*) NewRender(int x0, int y0, int x1, int y1)=0;
+
+  /**
+   * Invoke the render object previously constructed with a call to
+   * NewRender().
+   */
   NS_IMETHOD_(void) InvokeRender(ArtRender* render)=0;
+
+  /**
+   * Convert an rgb value into a libart color value.
+   */
   NS_IMETHOD_(void) GetArtColor(nscolor rgb, ArtColor& artColor)=0;
 };
 
+/** @} */
 
 #endif //__NS_ISVGLIBART_CANVAS_H__

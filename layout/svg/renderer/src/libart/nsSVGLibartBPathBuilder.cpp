@@ -42,9 +42,14 @@
 #include <math.h>
 
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartBPathBuilder class
-
+/**
+ * Libart path builder implementation
+ */
 class nsSVGLibartBPathBuilder : public nsISVGRendererPathBuilder
 {
 protected:
@@ -70,6 +75,8 @@ private:
   PRUint32  mBPathSize;
   PRUint32  mBPathEnd; // one-past-the-end
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -107,7 +114,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererPathBuilder methods:
 
-/* void moveto (in float x, in float y); */
+/** Implements void moveto(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::Moveto(float x, float y)
 {
@@ -122,7 +129,7 @@ nsSVGLibartBPathBuilder::Moveto(float x, float y)
   return NS_OK;
 }
 
-/* void lineto (in float x, in float y); */
+/** Implements void lineto(in float x, in float y); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::Lineto(float x, float y)
 {
@@ -137,7 +144,7 @@ nsSVGLibartBPathBuilder::Lineto(float x, float y)
   return NS_OK;
 }
 
-/* void curveto (in float x, in float y, in float x1, in float y1, in float x2, in float y2); */
+/** Implements void curveto(in float x, in float y, in float x1, in float y1, in float x2, in float y2); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::Curveto(float x, float y, float x1, float y1, float x2, float y2)
 {
@@ -167,7 +174,7 @@ static inline double CalcVectorAngle(double ux, double uy, double vx, double vy)
 }
 
 
-/* void arcto (in float x, in float y, in float r1, in float r2, in float angle, in boolean largeArcFlag, in boolean sweepFlag); */
+/** Implements void arcto(in float x, in float y, in float r1, in float r2, in float angle, in boolean largeArcFlag, in boolean sweepFlag); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::Arcto(float x2, float y2, float rx, float ry, float angle, PRBool largeArcFlag, PRBool sweepFlag)
 {
@@ -280,7 +287,7 @@ nsSVGLibartBPathBuilder::Arcto(float x2, float y2, float rx, float ry, float ang
   return NS_OK;
 }
 
-/* void closePath (out float newX, out float newY); */
+/** Implements void closePath(out float newX, out float newY); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::ClosePath(float *newX, float *newY)
 {
@@ -302,7 +309,7 @@ nsSVGLibartBPathBuilder::ClosePath(float *newX, float *newY)
   return NS_OK;
 }
 
-/* void endPath (); */
+/** Implements void endPath(); */
 NS_IMETHODIMP
 nsSVGLibartBPathBuilder::EndPath()
 {

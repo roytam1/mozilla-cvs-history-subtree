@@ -44,6 +44,10 @@
 
 class nsISVGPathGeometrySource;
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 class nsSVGStroke : public nsSVGRenderItem
 {
 public:
@@ -52,5 +56,7 @@ public:
 protected:
   double getFlatness();
 };
+
+/** @} */
 
 #endif // __NS_SVGSTROKE_H__

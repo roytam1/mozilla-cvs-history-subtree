@@ -46,19 +46,25 @@ class nsIPresContext;
 struct nsRect;
 typedef PRUint32 nscolor;
 
-////////////////////////////////////////////////////////////////////////
-// nsISVGLibartBitmap
-// Abstraction of a libart-compatible bitmap hiding
-// platform-specific implementation details
-
 // {18E4F62F-60A4-42D1-BCE2-43445656096E}
 #define NS_ISVGLIBARTBITMAP_IID \
 { 0x18e4f62f, 0x60a4, 0x42d1, { 0xbc, 0xe2, 0x43, 0x44, 0x56, 0x56, 0x09, 0x6e } }
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+////////////////////////////////////////////////////////////////////////
+/**
+ * 'Private' rendering engine interface
+ *
+ * Abstraction of a libart-compatible bitmap
+ * hiding platform-specific implementation details.
+ */
 class nsISVGLibartBitmap : public nsISupports
 {
 public:
-  static const nsIID& GetIID() { static nsIID iid = NS_ISVGLIBARTBITMAP_IID; return iid; }
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGLIBARTBITMAP_IID)
 
   enum PixelFormat {
     PIXEL_FORMAT_24_RGB  = 1, // linux
@@ -68,18 +74,38 @@ public:
   
   NS_IMETHOD_(PRUint8 *) GetBits()=0;
   NS_IMETHOD_(PixelFormat) GetPixelFormat()=0;
+
+  /**
+   * Linestride in bytes.
+   */
   NS_IMETHOD_(int) GetLineStride()=0;
+
+  /**
+   * Width in pixels.
+   */
   NS_IMETHOD_(int) GetWidth()=0;
+
+  /**
+   * Height in pixels.
+   */
   NS_IMETHOD_(int) GetHeight()=0;
 
-  // Obtain a rendering context for part of the bitmap. In general
-  // this will be different to the RC passed at initialization time
+  /**
+   * Obtain a rendering context for part of the bitmap. In general
+   * this will be different to the RC passed at initialization time.
+   */
   NS_IMETHOD_(void) LockRenderingContext(const nsRect& rect, nsIRenderingContext**ctx)=0;
+  
   NS_IMETHOD_(void) UnlockRenderingContext()=0;
 
-  // flush changes to the rendering context passed at initialization time
+  /**
+   * Flush changes to the rendering context passed at initialization time.
+   */
   NS_IMETHOD_(void) Flush()=0;
 };
+
+/** @} */
+
 
 // The libart backend expects to find a statically linked class
 // implementing the above interface and instantiable with the

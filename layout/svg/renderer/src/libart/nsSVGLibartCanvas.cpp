@@ -48,9 +48,14 @@
 #include "nsRect.h"
 #include "libart-incs.h"
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartCanvas class
-
+/**
+ * Libart canvas implementation
+ */
 class nsSVGLibartCanvas : public nsISVGLibartCanvas
 {
 public:
@@ -67,6 +72,7 @@ public:
 
   // nsISVGLibartCanvas interface:
   NS_IMETHOD_(ArtRender*) NewRender();
+  NS_IMETHOD_(ArtRender*) NewRender(int x0, int y0, int x1, int y1);
   NS_IMETHOD_(void) InvokeRender(ArtRender* render);  
   NS_IMETHOD_(void) GetArtColor(nscolor rgb, ArtColor& artColor);
   
@@ -77,6 +83,8 @@ private:
   nsRect mDirtyRect;
 
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -148,7 +156,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererCanvas methods:
 
-/* [noscript] nsIRenderingContext lockRenderingContext ([const] in nsRectRef rect); */
+/** Implements [noscript] nsIRenderingContext lockRenderingContext(const in nsRectRef rect); */
 NS_IMETHODIMP
 nsSVGLibartCanvas::LockRenderingContext(const nsRect & rect,
                                         nsIRenderingContext **_retval)
@@ -159,7 +167,7 @@ nsSVGLibartCanvas::LockRenderingContext(const nsRect & rect,
   return NS_OK;
 }
 
-/* void unlockRenderingContext (); */
+/** Implements void unlockRenderingContext(); */
 NS_IMETHODIMP 
 nsSVGLibartCanvas::UnlockRenderingContext()
 {
@@ -167,7 +175,7 @@ nsSVGLibartCanvas::UnlockRenderingContext()
   return NS_OK;
 }
 
-/* nsIPresContext getPresContext (); */
+/** Implements nsIPresContext getPresContext(); */
 NS_IMETHODIMP
 nsSVGLibartCanvas::GetPresContext(nsIPresContext **_retval)
 {
@@ -176,7 +184,7 @@ nsSVGLibartCanvas::GetPresContext(nsIPresContext **_retval)
   return NS_OK;
 }
 
-/* void clear (in nscolor color); */
+/** void clear(in nscolor color); */
 NS_IMETHODIMP
 nsSVGLibartCanvas::Clear(nscolor color)
 {
@@ -225,7 +233,7 @@ nsSVGLibartCanvas::Clear(nscolor color)
   return NS_OK;
 }
 
-/* void flush (); */
+/** void flush(); */
 NS_IMETHODIMP
 nsSVGLibartCanvas::Flush()
 {
@@ -243,6 +251,34 @@ nsSVGLibartCanvas::NewRender()
                         mDirtyRect.y+mDirtyRect.height, // y1
                         mBitmap->GetBits(), // pixels
                         mBitmap->GetLineStride(), // rowstride
+                        3, // n_chan
+                        8, // depth
+                        mBitmap->GetPixelFormat()==nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR ? ART_ALPHA_SEPARATE : ART_ALPHA_NONE, // alpha_type
+                        NULL //alphagamma
+                        );
+}
+
+NS_IMETHODIMP_(ArtRender*)
+nsSVGLibartCanvas::NewRender(int x0, int y0, int x1, int y1)
+{
+  NS_ASSERTION(x0<x1 && y0<y1, "empty rect passed to NewRender()");
+  if (x0>=x1 || y0>=y1) return;
+
+  // only construct a render object if there is overlap with the dirty rect:
+  if (x1<mDirtyRect.x || x0>mDirtyRect.x+mDirtyRect.width ||
+      y1<mDirtyRect.y || y0>mDirtyRect.y+mDirtyRect.height)
+    return nsnull;
+
+  int rx0 = (x0>mDirtyRect.x ? x0 : mDirtyRect.x);
+  int rx1 = (x1<mDirtyRect.x+mDirtyRect.width ? x1 : mDirtyRect.x+mDirtyRect.width);
+  int ry0 = (y0>mDirtyRect.y ? y0 : mDirtyRect.y);
+  int ry1 = (y1<mDirtyRect.y+mDirtyRect.height ? y1 : mDirtyRect.y+mDirtyRect.height);
+
+  int offset = 3*(rx0-mDirtyRect.x) + mBitmap->GetLineStride()*(ry0-mDirtyRect.y);
+  
+  return art_render_new(rx0, ry0, rx1, ry1,
+                        mBitmap->GetBits()+offset, // pixels
+                        mBitmap->GetLineStride(),  // rowstride
                         3, // n_chan
                         8, // depth
                         mBitmap->GetPixelFormat()==nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR ? ART_ALPHA_SEPARATE : ART_ALPHA_NONE, // alpha_type

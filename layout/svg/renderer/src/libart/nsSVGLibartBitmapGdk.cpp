@@ -47,9 +47,14 @@
 #include "nsDrawingSurfaceGTK.h"
 #include "nsRenderingContextGTK.h"
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartBitmapGdk
-
+/**
+ *  A libart-bitmap implementation for gtk 2.0.
+ */
 class nsSVGLibartBitmapGdk : public nsISVGLibartBitmap
 {
 public:
@@ -79,6 +84,8 @@ private:
   nsRect mLockRect;
   nsDrawingSurface mTempSurface;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:

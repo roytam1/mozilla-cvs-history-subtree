@@ -42,6 +42,13 @@
 #include "nscore.h"
 #include "libart-incs.h"
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+/**
+ * Wraps a libart sorted vector path.
+ */
 class nsSVGRenderItem
 {
 public:
@@ -60,5 +67,7 @@ public:
 protected:
   ArtSVP* mSvp;
 };
+
+/** @} */
 
 #endif // __NS_SVGRENDERITEM_H__

@@ -44,10 +44,17 @@
 
 class nsISVGPathGeometrySource;
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+
 class nsSVGFill : public nsSVGRenderItem
 {
 public:
   void Build(ArtVpath* path, nsISVGPathGeometrySource* source);  
 };
+
+/** @} */
 
 #endif // __NS_SVGFILL_H__

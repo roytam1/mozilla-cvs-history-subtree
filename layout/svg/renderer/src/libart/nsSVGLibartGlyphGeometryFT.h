@@ -36,36 +36,14 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_ISVGLIBART_REGION_H__
-#define __NS_ISVGLIBART_REGION_H__
+#ifndef __NS_SVGLIBART_GLYPHGEOMETRYFT_H__
+#define __NS_SVGLIBART_GLYPHGEOMETRYFT_H__
 
-#include "libart-incs.h"
-#include "nsISVGRendererRegion.h"
+class nsISVGRendererGlyphGeometry;
+class nsISVGGlyphGeometrySource;
 
-// {FB7271C1-54ED-418D-8FFF-EF0F64DF015F}
-#define NS_ISVGLIBARTREGION_IID \
-{ 0xfb7271c1, 0x54ed, 0x418d, { 0x8f, 0xff, 0xef, 0x0f, 0x64, 0xdf, 0x01, 0x5f } }
+nsresult
+NS_NewSVGLibartGlyphGeometryFT(nsISVGRendererGlyphGeometry **result,
+                               nsISVGGlyphGeometrySource *src);
 
-/**
- * \addtogroup libart_renderer Libart Rendering Engine
- * @{
- */
-//////////////////////////////////////////////////////////////////////
-/**
- * 'Private' rendering engine interface
- */
-class nsISVGLibartRegion : public nsISVGRendererRegion
-{
-public:
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGLIBARTREGION_IID)
-
-  /**
-   * Get region as a libart microtile array.
-   */
-  NS_IMETHOD_(ArtUta*) GetUta()=0;
-};
-
-/** @} */
-
-
-#endif //__NS_ISVGLIBART_REGION_H__
+#endif // __NS_SVGLIBART_GLYPHGEOMETRYFT_H__

@@ -39,11 +39,46 @@
 #include "nsCOMPtr.h"
 #include "nsISVGRenderer.h"
 #include "nsSVGLibartPathGeometry.h"
-#include "nsSVGLibartGlyphGeometry.h"
-#include "nsSVGLibartGlyphMetrics.h"
 #include "nsSVGLibartCanvas.h"
 #include "nsSVGLibartRegion.h"
+#include "nsSVGLibartGlyphGeometryDefault.h"
+#include "nsSVGLibartGlyphMetricsDefault.h"
+#ifdef MOZ_ENABLE_FREETYPE2
+#include "nsIServiceManager.h"
+#include "nsSVGLibartFreetype.h"
+#include "nsSVGLibartGlyphGeometryFT.h"
+#include "nsSVGLibartGlyphMetricsFT.h"
+#include "nsIPromptService.h"
+#endif
 
+////////////////////////////////////////////////////////////////////////
+// module initialisation
+
+void NS_InitSVGRendererLibartGlobals()
+{
+  // Initialization of freetype (if compiled-in) is done lazily in
+  // NS_NewSVGRendererLibart(). The main reason is that we might want
+  // to show error messages using the prompt service, and that's
+  // probably not a good idea in *this* function, at a time when
+  // layout is still not fully initialized.
+}
+
+void NS_FreeSVGRendererLibartGlobals()
+{
+#ifdef MOZ_ENABLE_FREETYPE2  
+  NS_FreeSVGLibartGlyphMetricsFTGlobals();
+  nsSVGLibartFreetype::Shutdown();
+#endif
+}
+
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+////////////////////////////////////////////////////////////////////////
+/**
+ * Libart-based renderer implementation
+ */
 class nsSVGRendererLibart : public nsISVGRenderer
 {
 protected:
@@ -60,10 +95,22 @@ public:
   NS_DECL_NSISVGRENDERER
 
 private:
+  static PRBool sGlobalsInited;
+#ifdef MOZ_ENABLE_FREETYPE2
+  static PRBool sUseFreetype;
+#endif
 };
 
+/** @} */
+
 //----------------------------------------------------------------------
-// construction/destruction
+// implementation
+
+PRBool nsSVGRendererLibart::sGlobalsInited = PR_FALSE;
+
+#ifdef MOZ_ENABLE_FREETYPE2
+PRBool nsSVGRendererLibart::sUseFreetype = PR_FALSE;
+#endif
 
 nsSVGRendererLibart::nsSVGRendererLibart()
 {
@@ -86,6 +133,35 @@ NS_NewSVGRendererLibart(nsISVGRenderer** aResult)
 
   NS_ADDREF(result);
   *aResult = result;
+
+  if (!nsSVGRendererLibart::sGlobalsInited) {
+#ifdef MOZ_ENABLE_FREETYPE2
+    static NS_NAMED_LITERAL_CSTRING(prompt_service, "@mozilla.org/embedcomp/prompt-service;1");
+
+    if (!nsSVGLibartFreetype::Init()) {
+      nsCOMPtr<nsIPromptService> prompter(do_GetService(prompt_service.get()));
+      nsXPIDLString title(NS_LITERAL_STRING("Freetype error"));
+      nsXPIDLString msg(NS_LITERAL_STRING("The Libart/Freetype SVG rendering engine could not initialize the freetype library. "
+                                          "Please go to http://www.mozilla.org/projects/fonts/unix/enabling_truetype.html and "
+                                          "follow steps 2-7."));
+      prompter->Alert(nsnull, title, msg);
+    }
+    else if (!nsSVGLibartFreetype::HasSuitableFonts()) {
+      nsCOMPtr<nsIPromptService> prompter(do_GetService(prompt_service.get()));
+      nsXPIDLString title(NS_LITERAL_STRING("Font Configuration Error"));
+      nsXPIDLString msg(NS_LITERAL_STRING("The Libart/Freetype SVG rendering engine can't find any truetype fonts on your system. "
+                                          "Please go to http://www.mozilla.org/projects/fonts/unix/enabling_truetype.html and "
+                                          "follow steps 2-7."));
+      prompter->Alert(nsnull, title, msg);
+    }
+    else {
+      nsSVGRendererLibart::sUseFreetype = PR_TRUE;
+      NS_InitSVGLibartGlyphMetricsFTGlobals();
+    }
+#endif    
+    nsSVGRendererLibart::sGlobalsInited = PR_TRUE;
+  }
+  
   return NS_OK;
 }
 
@@ -97,7 +173,7 @@ NS_IMPL_ISUPPORTS1(nsSVGRendererLibart, nsISVGRenderer);
 //----------------------------------------------------------------------
 // nsISVGRenderer methods
 
-/* nsISVGRendererPathGeometry createPathGeometry (in nsISVGPathGeometrySource src); */
+/** Implements nsISVGRendererPathGeometry createPathGeometry(in nsISVGPathGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererLibart::CreatePathGeometry(nsISVGPathGeometrySource *src,
                                         nsISVGRendererPathGeometry **_retval)
@@ -105,24 +181,32 @@ nsSVGRendererLibart::CreatePathGeometry(nsISVGPathGeometrySource *src,
   return NS_NewSVGLibartPathGeometry(_retval, src);
 }
 
-/* nsISVGRendererGlyphMetrics createGlyphMetrics (in nsISVGGlyphMetricsSource src); */
+/** Implements nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphMetricsSource src); */
 NS_IMETHODIMP
 nsSVGRendererLibart::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
                                         nsISVGRendererGlyphMetrics **_retval)
 {
-  return NS_NewSVGLibartGlyphMetrics(_retval, src);
+#ifdef MOZ_ENABLE_FREETYPE2
+  if (sUseFreetype)
+    return NS_NewSVGLibartGlyphMetricsFT(_retval, src);
+#endif
+  return NS_NewSVGLibartGlyphMetricsDefault(_retval, src);
 }
 
-/* nsISVGRendererGlyphGeometry createGlyphGeometry (in nsISVGGlyphGeometrySource src); */
+/** Implements nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGGlyphGeometrySource src); */
 NS_IMETHODIMP
 nsSVGRendererLibart::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
                                          nsISVGRendererGlyphGeometry **_retval)
 {
-  return NS_NewSVGLibartGlyphGeometry(_retval, src);
+#ifdef MOZ_ENABLE_FREETYPE2
+  if (sUseFreetype)
+    return NS_NewSVGLibartGlyphGeometryFT(_retval, src);
+#endif
+  return NS_NewSVGLibartGlyphGeometryDefault(_retval, src);
 }
 
-/* [noscript] nsISVGRendererCanvas createCanvas (in nsIRenderingContext ctx,
-   in nsIPresContext presContext, [const] in nsRectRef dirtyRect); */
+/** Implements [noscript] nsISVGRendererCanvas createCanvas(in nsIRenderingContext ctx,
+   in nsIPresContext presContext, const in nsRectRef dirtyRect); */
 NS_IMETHODIMP
 nsSVGRendererLibart::CreateCanvas(nsIRenderingContext *ctx,
                                   nsIPresContext *presContext,
@@ -132,7 +216,7 @@ nsSVGRendererLibart::CreateCanvas(nsIRenderingContext *ctx,
   return NS_NewSVGLibartCanvas(_retval, ctx, presContext, dirtyRect);
 }
 
-/* nsISVGRendererRegion createRectRegion (in float x, in float y, in float width, in float height); */
+/** Implements nsISVGRendererRegion createRectRegion(in float x, in float y, in float width, in float height); */
 NS_IMETHODIMP
 nsSVGRendererLibart::CreateRectRegion(float x, float y, float width, float height,
                                       nsISVGRendererRegion **_retval)

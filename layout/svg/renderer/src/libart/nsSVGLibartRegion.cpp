@@ -42,9 +42,14 @@
 #include "nsISVGRectangleSink.h"
 #include <math.h>
 
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
 ////////////////////////////////////////////////////////////////////////
-// nsSVGLibartRegion class
-
+/**
+ * Libart region implementation
+ */
 class nsSVGLibartRegion : public nsISVGLibartRegion // : nsISVGRendererRegion
 {
 protected:
@@ -72,6 +77,8 @@ public:
 private:
   ArtUta* mUta;
 };
+
+/** @} */
 
 //----------------------------------------------------------------------
 // implementation:
@@ -157,7 +164,7 @@ nsSVGLibartRegion::GetUta()
 //----------------------------------------------------------------------
 // nsISVGRendererRegion methods:
 
-/* nsISVGRendererRegion combine (in nsISVGRendererRegion other); */
+/** Implements nsISVGRendererRegion combine(in nsISVGRendererRegion other); */
 NS_IMETHODIMP
 nsSVGLibartRegion::Combine(nsISVGRendererRegion *other,
                            nsISVGRendererRegion **_retval)
@@ -196,7 +203,7 @@ nsSVGLibartRegion::Combine(nsISVGRendererRegion *other,
   return NS_OK;
 }
 
-/* void getRectangleScans (in nsISVGRectangleSink sink); */
+/** Implements void getRectangleScans(in nsISVGRectangleSink sink); */
 NS_IMETHODIMP
 nsSVGLibartRegion::GetRectangleScans(nsISVGRectangleSink *sink)
 {

@@ -43,22 +43,26 @@
 #include "nsFont.h"
 #include "nsIFontMetrics.h"
 #include "nsIPresContext.h"
-#include "nsSVGLibartGlyphMetrics.h"
 #include "float.h"
 #include "nsIDOMSVGMatrix.h"
 #include "nsIDOMSVGRect.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
 
-
-////////////////////////////////////////////////////////////////////////
-// nsSVGLibartGlyphMetrics class
-
+/**
+ * \addtogroup libart_renderer Libart Rendering Engine
+ * @{
+ */
+//////////////////////////////////////////////////////////////////////
+/**
+ *  Default Libart glyph metrics implementation.
+ */
 class nsSVGLibartGlyphMetrics : public nsISVGRendererGlyphMetrics
 {
 protected:
-  friend nsresult NS_NewSVGLibartGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                                              nsISVGGlyphMetricsSource *src);
+  friend nsresult NS_NewSVGLibartGlyphMetricsDefault(nsISVGRendererGlyphMetrics **result,
+                                                     nsISVGGlyphMetricsSource *src);
+  
   nsSVGLibartGlyphMetrics(nsISVGGlyphMetricsSource *src);
   ~nsSVGLibartGlyphMetrics();
 public:
@@ -72,6 +76,8 @@ private:
 
 };
 
+/** @} */
+
 //----------------------------------------------------------------------
 // implementation:
 
@@ -84,8 +90,8 @@ nsSVGLibartGlyphMetrics::~nsSVGLibartGlyphMetrics()
 }
 
 nsresult
-NS_NewSVGLibartGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                             nsISVGGlyphMetricsSource *src)
+NS_NewSVGLibartGlyphMetricsDefault(nsISVGRendererGlyphMetrics **result,
+                                   nsISVGGlyphMetricsSource *src)
 {
   *result = new nsSVGLibartGlyphMetrics(src);
   if (!*result) return NS_ERROR_OUT_OF_MEMORY;
@@ -108,7 +114,7 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // nsISVGRendererGlyphMetrics methods:
 
-/* float getBaselineOffset (in unsigned short baselineIdentifier); */
+/** Implements float getBaselineOffset(in unsigned short baselineIdentifier); */
 NS_IMETHODIMP
 nsSVGLibartGlyphMetrics::GetBaselineOffset(PRUint16 baselineIdentifier, float *_retval)
 {
@@ -131,7 +137,7 @@ nsSVGLibartGlyphMetrics::GetBaselineOffset(PRUint16 baselineIdentifier, float *_
 }
 
 
-/* readonly attribute float advance; */
+/** Implements readonly attribute float #advance; */
 NS_IMETHODIMP
 nsSVGLibartGlyphMetrics::GetAdvance(float *aAdvance)
 {
@@ -139,7 +145,7 @@ nsSVGLibartGlyphMetrics::GetAdvance(float *aAdvance)
   return NS_OK;
 }
 
-/* readonly attribute nsIDOMSVGRect boundingBox; */
+/** Implements readonly attribute nsIDOMSVGRect #boundingBox; */
 NS_IMETHODIMP
 nsSVGLibartGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
 {
@@ -161,7 +167,7 @@ nsSVGLibartGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
   return NS_OK;
 }
 
-/* [noscript] nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
+/** Implements [noscript] nsIDOMSVGRect getExtentOfChar(in unsigned long charnum); */
 NS_IMETHODIMP
 nsSVGLibartGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 {
@@ -183,7 +189,7 @@ nsSVGLibartGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retv
   return NS_OK;
 }
 
-/* boolean update (in unsigned long updatemask); */
+/** Implements boolean update(in unsigned long updatemask); */
 NS_IMETHODIMP
 nsSVGLibartGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 {
