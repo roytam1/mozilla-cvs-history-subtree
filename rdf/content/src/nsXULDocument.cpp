@@ -58,7 +58,6 @@
 #include "nsIPresShell.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFContentModelBuilder.h"
-#include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"

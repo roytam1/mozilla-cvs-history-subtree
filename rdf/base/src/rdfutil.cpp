@@ -34,8 +34,8 @@
  */
 
 #include "nsCOMPtr.h"
-#include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
+#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"

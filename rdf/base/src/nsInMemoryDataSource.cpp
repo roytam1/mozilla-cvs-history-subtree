@@ -413,8 +413,6 @@ InMemoryArcsEnumeratorImpl::InMemoryArcsEnumeratorImpl(InMemoryDataSource* aData
     NS_IF_ADDREF(mSource);
     NS_IF_ADDREF(mTarget);
 
-    NS_AUTOLOCK(mDataSource->mLock);
-
     if (mSource) {
         // cast okay because it's a closed system
         mAssertion = mDataSource->GetForwardArcs(mSource);
@@ -437,7 +435,7 @@ InMemoryArcsEnumeratorImpl::~InMemoryArcsEnumeratorImpl(void)
     }
 }
 
-NS_IMPL_QUERY_INTERFACE(InMemoryArcsEnumeratorImpl, nsIRDFEnumerator::GetIID());
+NS_IMPL_ISUPPORTS(InMemoryArcsEnumeratorImpl, nsIRDFEnumerator::GetIID());
 
 NS_IMETHODIMP
 InMemoryArcsEnumeratorImpl::HasMoreElements(PRBool* aResult)

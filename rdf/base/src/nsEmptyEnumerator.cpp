@@ -26,7 +26,7 @@
  */
 
 #include "nscore.h"
-#include "nsIRDFCursor.h"
+#include "nsIRDFEnumerator.h"
 #include "rdf.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
