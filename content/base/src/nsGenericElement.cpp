@@ -1735,6 +1735,10 @@ nsGenericElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
       }
     }
 
+    if (mDocument && HasProperties()) {
+      mDocument->PropertyTable()->DeleteAllPropertiesFor(this);
+    }
+
     nsIContent::SetDocument(aDocument, aDeep, aCompileEventHandlers);
   }
 
@@ -3621,4 +3625,51 @@ nsGenericElement::GetContentsAsText(nsAString& aText)
       tc->AppendTextTo(aText);
     }
   }
+}
+
+void*
+nsGenericElement::GetProperty(nsIAtom  *aPropertyName, nsresult *aStatus) const
+{
+  nsIDocument *doc = GetDocument();
+  if (!doc)
+    return nsnull;
+
+  return doc->PropertyTable()->GetProperty(this, aPropertyName, aStatus);
+}
+
+nsresult
+nsGenericElement::SetProperty(nsIAtom            *aPropertyName,
+                              void               *aValue,
+                              NSPropertyDtorFunc  aDtor)
+{
+  nsIDocument *doc = GetDocument();
+  if (!doc)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv = doc->PropertyTable()->SetProperty(this, aPropertyName,
+                                                  aValue, aDtor, nsnull);
+  if (NS_SUCCEEDED(rv))
+    SetFlags(GENERIC_ELEMENT_HAS_PROPERTIES);
+
+  return rv;
+}
+
+nsresult
+nsGenericElement::DeleteProperty(nsIAtom *aPropertyName)
+{
+  nsIDocument *doc = GetDocument();
+  if (!doc)
+    return nsnull;
+
+  return doc->PropertyTable()->DeleteProperty(this, aPropertyName);
+}
+
+void*
+nsGenericElement::UnsetProperty(nsIAtom  *aPropertyName, nsresult *aStatus)
+{
+  nsIDocument *doc = GetDocument();
+  if (!doc)
+    return nsnull;
+
+  return doc->PropertyTable()->UnsetProperty(this, aPropertyName, aStatus);
 }

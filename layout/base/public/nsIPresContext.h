@@ -46,6 +46,7 @@
 #include "nsIPresShell.h"
 #include "nsRect.h"
 #include "nsIDeviceContext.h"
+#include "nsPropertyTable.h"
 #ifdef IBMBIDI
 class nsBidiPresUtils;
 #endif // IBMBIDI
@@ -500,6 +501,9 @@ public:
    */
   NS_IMETHOD SysColorChanged() = 0;
 
+  /* Accessor for table of frame properties */
+  nsPropertyTable* PropertyTable() { return &mPropertyTable; }
+
 #ifdef MOZ_REFLOW_PERF
   NS_IMETHOD CountReflows(const char * aName, PRUint32 aType, nsIFrame * aFrame) = 0;
   NS_IMETHOD PaintCount(const char * aName, nsIRenderingContext* aRendingContext, nsIFrame * aFrame, PRUint32 aColor) = 0;
@@ -523,6 +527,8 @@ protected:
 
   nsILinkHandler*       mLinkHandler;   // [WEAK]
   nsIAtom*              mLangGroup;     // [STRONG]
+
+  nsPropertyTable       mPropertyTable;
 
   nsLanguageSpecificTransformType mLanguageSpecificTransformType;
   PRInt32               mFontScaler;

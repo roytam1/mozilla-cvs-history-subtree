@@ -52,6 +52,7 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "mozFlushType.h"
+#include "nsPropertyTable.h"
 
 class nsIAtom;
 class nsIContent;
@@ -607,6 +608,8 @@ public:
                               PRBool aDocumentDefaultType,
                               nsIContent** aResult) = 0;
 
+  nsPropertyTable* PropertyTable() { return &mPropertyTable; }
+
 protected:
   nsString mDocumentTitle;
   nsCOMPtr<nsIURI> mDocumentURI;
@@ -632,6 +635,9 @@ protected:
 
   nsCOMPtr<nsIBindingManager> mBindingManager;
   nsNodeInfoManager* mNodeInfoManager; // [STRONG]
+
+  // Table of element properties for this document.
+  nsPropertyTable mPropertyTable;
 
   // True if BIDI is enabled.
   PRBool mBidiEnabled;
