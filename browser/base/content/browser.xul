@@ -139,6 +139,7 @@
 
     <toolbarpalette id="BrowserToolbarPalette">
       <toolbarbutton id="back-button" type="menu-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+                     chromedir="&locale.dir;"
                      label="&backCmd.label;"
                      oncommand="BrowserBack(event)"
                      onclick="checkForMiddleClick(this, event);"
@@ -152,6 +153,7 @@
       </toolbarbutton>
     
       <toolbarbutton id="forward-button" type="menu-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
+                     chromedir="&locale.dir;"
                      label="&forwardCmd.label;"
                      oncommand="BrowserForward(event)"
                      onclick="checkForMiddleClick(this, event);"
@@ -221,6 +223,7 @@
       
       <toolbaritem id="go-container" align="center" class="chromeclass-toolbar-additional">
         <toolbarbutton id="go-button"
+                       chromedir="&locale.dir;"
                        label="&goButton.label;"
                        oncommand="handleURLBarCommand(event);"
                        ondragover="nsDragAndDrop.dragOver(event, goButtonObserver);"
@@ -264,6 +267,7 @@
           <hbox class="bookmarks-toolbar-overflow-items" mousethrough="always">
             <hbox mousethrough="always" id="overflow-padder"/>
               <toolbarbutton id="bookmarks-chevron" type="menu" class="chevron"
+                             chromedir="&locale.dir;"
                              mousethrough="never" collapsed="true" 
                              datasources="rdf:bookmarks rdf:files rdf:localsearch"
                              template="bookmarks-template" flags="dont-test-empty"
@@ -438,7 +442,7 @@
       </menupopup>
     </statusbarpanel>
 #endif
-    <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic">
+    <statusbarpanel id="livemark-button" type="menu" class="statusbarpanel-menu-iconic" chromedir="&locale.dir;">
       <menupopup onpopupshowing="return livemarkFillPopup(this);"
                  oncommand="livemarkAddMark(window._content, event.target.getAttribute('data'));" />
     </statusbarpanel>

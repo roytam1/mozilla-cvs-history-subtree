@@ -457,7 +457,8 @@
       <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
                      rdf:type="http://home.netscape.com/NC-rdf#Folder"
                      label="rdf:http://home.netscape.com/NC-rdf#Name"
-                     livemark="true">
+                     livemark="true"
+                     chromedir="&locale.dir;">
         <menupopup contextmenu="bookmarks-context-menu"/>
       </toolbarbutton>
     </rule>
