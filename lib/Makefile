@@ -41,9 +41,7 @@ endif
 
 DIRS	+= libnet libparse plugin xlate
 
-ifneq ($(OS_ARCH),OS2)
 DIRS    += xp
-endif
 
 ifdef MOZ_MAIL_NEWS
 DIRS	+= libaddr libmime
