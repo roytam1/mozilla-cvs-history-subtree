@@ -348,15 +348,24 @@ char * nsMsgLineStreamBuffer::ReadNextLine(nsIInputStream * aInputStream, PRUint
 	// so aInputStream will be nsnull...
 	if (!endOfLine && aInputStream) // get some more data from the server
 	{
+        nsresult rv;
 		PRUint32 numBytesInStream = 0;
 		PRUint32 numBytesCopied = 0;
-    nsresult rv = aInputStream->Available(&numBytesInStream);
+        PRBool nonBlockingStream;
+        aInputStream->IsNonBlocking(&nonBlockingStream);
+        rv = aInputStream->Available(&numBytesInStream);
+
+
     if (NS_FAILED(rv))
     {
       if (prv)
         *prv = rv;
       return nsnull;
     }
+
+    if (!nonBlockingStream && numBytesInStream == 0) // if no data available,
+        numBytesInStream = m_dataBufferSize / 2; // ask for half the data buffer size.
+
 		// if the number of bytes we want to read from the stream, is greater than the number
 		// of bytes left in our buffer, then we need to shift the start pos and its contents
 		// down to the beginning of m_dataBuffer...
