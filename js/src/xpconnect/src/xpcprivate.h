@@ -500,7 +500,6 @@ public:
     inline nsISupports*                 GetIdentityObject() const ;
     inline XPCWrappedNative*            GetWrapper() const ;
     inline XPCWrappedNativeTearOff*     GetTearOff() const ;
-    inline XPCWrappedNativeTearOff*     GetTearOffForScriptable() const ;
 
     inline XPCNativeScriptableInfo*     GetScriptableInfo() const ;
     inline XPCNativeSet*                GetSet() const ;
@@ -582,11 +581,7 @@ private:
     JSObject*                       mCurrentJSObject;
     JSObject*                       mFlattenedJSObject;
     XPCWrappedNative*               mWrapper;
-
-    XPCWrappedNativeTearOff         mScratchTearOff;
-
     XPCWrappedNativeTearOff*        mTearOff;
-    XPCWrappedNativeTearOff*        mTearOffForScriptable;
 
     XPCNativeScriptableInfo*        mScriptableInfo;
 
@@ -1738,6 +1733,9 @@ public:
 
     JSBool                   IsShared() const {return nsnull != mClassInfo;}
 
+    void SetScriptableInfo(XPCNativeScriptableInfo* si)
+        {NS_ASSERTION(!mScriptableInfo, "leak here!"); mScriptableInfo = si;}
+
     void JSProtoObjectFinalized(JSContext *cx, JSObject *obj);
 
 private:
@@ -1775,7 +1773,8 @@ public:
     inline JSBool HasInterfaceNoQI(const nsIID& iid);
 
     inline XPCWrappedNativeTearOff*
-    FindTearOff(XPCNativeInterface* aInterface,
+    FindTearOff(XPCCallContext& ccx,
+                XPCNativeInterface* aInterface,
                 XPCWrappedNative* aWrappedNative);
 
 private:
@@ -1861,8 +1860,11 @@ public:
     JSBool HasInterfaceNoQI(const nsIID& iid)
         {return mFirstChunk.HasInterfaceNoQI(iid);}
 
-    XPCWrappedNativeTearOff* FindTearOff(XPCNativeInterface* aInterface)
-        {return mFirstChunk.FindTearOff(aInterface, this);}
+    XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx, 
+                                         XPCNativeInterface* aInterface)
+        {return mFirstChunk.FindTearOff(ccx, aInterface, this);}
+
+    JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
 
 private:
     XPCWrappedNative(nsISupports* aIdentity,

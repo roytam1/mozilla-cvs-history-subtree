@@ -59,21 +59,68 @@ static JSBool Throw(uintN errNum, JSContext* cx)
 static JSBool
 ToStringGuts(XPCCallContext& ccx)
 {
+#ifdef DEBUG
+#  define FMT_ADDR " @ 0x%p" 
+#  define PARAM_ADDR(w) , w
+#else
+#  define FMT_ADDR ""
+#  define PARAM_ADDR(w)
+#endif
+
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     JSContext* cx = ccx.GetJSContext();
-    NS_ASSERTION(wrapper, "bad call");
 
-    // XXX fix this.
-    // our proto might have a known classname.
-    // we might have a tearoff, then we'd know interface.
+    char* sz = nsnull;
 
-#ifdef DEBUG
-    char* sz = JS_smprintf("[xpconnect wrapped %s @ 0x%p]",
-                           "something", wrapper);
-#else
-    char* sz = JS_smprintf("[xpconnect wrapped %s]",
-                           "something");
-#endif
+    if(wrapper)
+    {
+        char* name = nsnull;
+
+        XPCNativeScriptableInfo* si = ccx.GetScriptableInfo();
+        if(si)
+            name = JS_smprintf("%s", si->GetJSClass()->name);
+
+        XPCWrappedNativeTearOff* to = ccx.GetTearOff();
+        if(to)
+        {
+            const char* fmt = name ? " (%s)" : "%s";
+            name = JS_sprintf_append(name, fmt, to->GetPrivateInterface()->GetName());
+        }    
+        else if(!name)
+        {
+            XPCNativeSet* set = wrapper->GetSet();
+            XPCNativeInterface** array = set->GetInterfaceArray();
+            PRUint16 count = set->Count();
+
+            if(count == 1)
+                name = JS_sprintf_append(name, "%s", array[0]->GetName());
+            else
+            {
+                for(PRUint16 i = 0; i < count; i++)
+                {
+                    const char* fmt = (i == 0) ? 
+                                        "(%s" : (i == count-1) ? 
+                                            ", %s)" : ", %s";
+                    name = JS_sprintf_append(name, fmt, array[i]->GetName());
+                }       
+            }
+        }
+
+        if(!name)
+        {
+            JS_ReportOutOfMemory(cx);
+            return JS_FALSE;
+        }
+
+        sz = JS_smprintf("[xpconnect wrapped %s" FMT_ADDR "]",
+                           name PARAM_ADDR(wrapper));
+
+        JS_smprintf_free(name);    
+    }
+    else
+    {
+        sz = JS_smprintf("[xpconnect wrapped native prototype]");
+    }
 
     if(!sz)
     {
@@ -91,6 +138,9 @@ ToStringGuts(XPCCallContext& ccx)
 
     ccx.SetRetVal(STRING_TO_JSVAL(str));
     return JS_TRUE;
+
+#undef FMT_ADDR
+#undef PARAM_ADDR
 }
 
 /***************************************************************************/
@@ -182,7 +232,9 @@ XPC_WN_NoHelper_NewEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     switch(enum_op)
     {
         case JSENUMERATE_INIT:
-            if(!wrapper->HasMutatedSet())
+            // XXX fix this!
+            if(1)
+            //if(!wrapper->HasMutatedSet())
             {
                 if(idp)
                     *idp = JSVAL_ZERO;
@@ -270,6 +322,9 @@ XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
                       jsval *statep, jsid *idp)
 {
     // XXX fix this...
+    
+    //XPC_WN_NoHelper_NewEnumerate
+    
     return js_ObjectOps.enumerate(cx, obj, enum_op, statep, idp);
 }
 
@@ -670,15 +725,144 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
 
 /***************************************************************************/
 
-static JSBool
-XPC_WN_Proto_ReflectMember(XPCCallContext& ccx, XPCWrappedNativeProto* self,
-                           XPCNativeMember* member,
-                           XPCNativeInterface* interface,
-                           JSContext *cx, JSObject *obj, jsid id)
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_Proto_ToString(JSContext *cx, JSObject *obj,
+                       uintN argc, jsval *argv, jsval *vp)
 {
+    XPCCallContext ccx(JS_CALLER, cx, obj);
+    ccx.SetArgsAndResultPtr(argc, argv, vp);
+    return ToStringGuts(ccx);
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_Proto_ToSource(JSContext *cx, JSObject *obj,
+                       uintN argc, jsval *argv, jsval *vp)
+{
+    static const char empty[] = "{}";
+    *vp = STRING_TO_JSVAL(JS_NewStringCopyN(cx, empty, sizeof(empty)-1));
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
+{
+    NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
+    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(!self)
+        return JS_FALSE;
+
+    if(self->GetScriptableInfo() &&
+       self->GetScriptableInfo()->DontEnumStaticProps())
+        return JS_TRUE;
+
+    XPCNativeSet* set = self->GetSet();
+    if(!set)
+        return JS_FALSE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
+        return JS_FALSE;
+
+    JSProperty* prop;
+    JSObject* obj2;
+
+    PRUint16 interface_count = set->Count();
+    XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
+    for(PRUint16 i = 0; i < interface_count; i++)
+    {
+        XPCNativeInterface* interface = interfaceArray[i];
+        PRUint16 member_count = interface->GetMemberCount();
+
+        for(PRUint16 k = 0; k < member_count; k++)
+        {
+            XPCNativeMember* member = interface->GetMemberAt(k);
+
+            // XXX I should support a lazier lookup here!!!
+
+            // The Lookup will force a Resolve and eager Define of the property
+
+            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+                return JS_FALSE;
+        }
+    }
+
+    XPCJSRuntime* rt = ccx.GetRuntime();
+
+    if(!OBJ_LOOKUP_PROPERTY(cx, obj, 
+            rt->GetStringID(XPCJSRuntime::IDX_TO_STRING),
+            &obj2, &prop) ||
+       !OBJ_LOOKUP_PROPERTY(cx, obj, 
+            rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE),
+            &obj2, &prop))
+        return JS_FALSE;
+
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
+{
+    NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
+
+    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(!self)
+        return JS_FALSE;
+
+    jsid id;
+    if(!JS_ValueToId(cx, idval, &id))
+        return JS_FALSE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
+        return JS_FALSE;
+
     uintN enumFlag = self->GetScriptableInfo() &&
                      self->GetScriptableInfo()->DontEnumStaticProps() ?
                         0 : JSPROP_ENUMERATE;
+
+    XPCNativeMember* member;
+    XPCNativeInterface* interface;
+
+    if(!self->GetSet()->FindMember(id, &member, &interface))
+    {
+        HANDLE_POSSIBLE_NAME_CASE_ERROR(cx, self->GetSet(), id);
+
+        // Reflect toString and toSource if they are not interface methods
+
+        JSNative call;
+        const char* name;
+
+        XPCJSRuntime* rt = ccx.GetRuntime();
+
+        if(id == rt->GetStringID(XPCJSRuntime::IDX_TO_STRING))
+        {
+            call = XPC_WN_Proto_ToString;
+            name = rt->GetStringName(XPCJSRuntime::IDX_TO_STRING);
+        }
+        else if(id == rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE))
+        {
+            call = XPC_WN_Proto_ToSource;
+            name = rt->GetStringName(XPCJSRuntime::IDX_TO_SOURCE);
+        }
+        else
+            call = nsnull;
+
+        if(call)
+        {
+            JSFunction* fun = JS_NewFunction(cx, call, 0, 0, obj, name);
+            if(!fun)
+            {
+                JS_ReportOutOfMemory(cx);
+                return JS_FALSE;
+            }
+            
+            return OBJ_DEFINE_PROPERTY(cx, obj, id, 
+                                       OBJECT_TO_JSVAL(JS_GetFunctionObject(fun)),
+                                       nsnull, nsnull,
+                                       enumFlag, nsnull);
+        }
+        return JS_TRUE;
+    }
 
     if(member->IsConstant())
     {
@@ -687,7 +871,6 @@ XPC_WN_Proto_ReflectMember(XPCCallContext& ccx, XPCWrappedNativeProto* self,
                OBJ_DEFINE_PROPERTY(cx, obj, id, val, nsnull, nsnull,
                                    enumFlag, nsnull);
     }
-
 
     jsval funval;
     if(!member->GetValue(ccx, interface, &funval))
@@ -730,73 +913,6 @@ XPC_WN_Proto_ReflectMember(XPCCallContext& ccx, XPCWrappedNativeProto* self,
     old = ccx.SetHackyResolveBugID(0);
     NS_ASSERTION(old == id, "bad nest");
     return retval;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
-{
-    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
-    if(!self)
-        return JS_FALSE;
-
-    XPCNativeSet* set = self->GetSet();
-    if(!set)
-        return JS_FALSE;
-
-    XPCCallContext ccx(JS_CALLER, cx);
-    if(!ccx.IsValid())
-        return JS_FALSE;
-
-    PRUint16 interface_count = set->Count();
-    XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
-    for(PRUint16 i = 0; i < interface_count; i++)
-    {
-        XPCNativeInterface* interface = interfaceArray[i];
-        PRUint16 member_count = interface->GetMemberCount();
-
-        for(PRUint16 k = 0; k < member_count; k++)
-        {
-            XPCNativeMember* member = interface->GetMemberAt(k);
-            JSProperty* prop;
-            JSObject* obj2;
-
-            // XXX I should support a lazier lookup here!!!
-
-            // The Lookup will force a Resolve and eager Define of the property
-
-            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
-                return JS_FALSE;
-        }
-    }
-    return JS_TRUE;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
-{
-    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
-    if(!self)
-        return JS_FALSE;
-
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
-    XPCNativeMember* member;
-    XPCNativeInterface* interface;
-
-    if(!self->GetSet()->FindMember(id, &member, &interface))
-    {
-        HANDLE_POSSIBLE_NAME_CASE_ERROR(cx, self->GetSet(), id);
-        return JS_TRUE;
-    }
-
-    XPCCallContext ccx(JS_CALLER, cx);
-    if(!ccx.IsValid())
-        return JS_FALSE;
-
-    // XXX this doesn't not really need to be factored out!
-    return XPC_WN_Proto_ReflectMember(ccx, self, member, interface, cx, obj, id);
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)

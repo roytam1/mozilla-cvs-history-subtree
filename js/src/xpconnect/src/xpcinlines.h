@@ -164,13 +164,6 @@ XPCCallContext::GetTearOff() const
     return mTearOff;
 }
 
-inline XPCWrappedNativeTearOff*
-XPCCallContext::GetTearOffForScriptable() const
-{
-    CHECK_STATE(HAVE_OBJECT);
-    return mTearOffForScriptable;
-}
-
 inline XPCNativeScriptableInfo*
 XPCCallContext::GetScriptableInfo() const
 {
@@ -464,7 +457,8 @@ XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(const nsIID& iid)
 }
 
 inline XPCWrappedNativeTearOff*
-XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface,
+XPCWrappedNativeTearOffChunk::FindTearOff(XPCCallContext& ccx,
+                                          XPCNativeInterface* aInterface,
                                           XPCWrappedNative* aWrappedNative)
 {
     // XXX locking !
@@ -494,6 +488,10 @@ XPCWrappedNativeTearOffChunk::FindTearOff(XPCNativeInterface* aInterface,
 
     identity->QueryInterface(*iid, (void**)&obj);
     if(!obj)
+        return nsnull;
+
+    if(!aWrappedNative->GetSet()->HasInterface(aInterface) &&
+       !aWrappedNative->ExtendSet(ccx, aInterface))
         return nsnull;
 
     if(!firstAvailable)

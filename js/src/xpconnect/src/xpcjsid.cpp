@@ -472,7 +472,7 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
         XPCNativeInterface* iface =
             XPCNativeInterface::GetNewOrUsed(ccx, mDetails.GetID());
 
-        if(iface && other_wrapper->FindTearOff(iface))
+        if(iface && other_wrapper->FindTearOff(ccx, iface))
             *bp = JS_TRUE;
     }
     return rv;

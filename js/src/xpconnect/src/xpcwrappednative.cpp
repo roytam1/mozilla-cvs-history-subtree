@@ -57,7 +57,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNative* wrapper = map->Find(identity);
     if(wrapper)
     {
-        if(!wrapper->FindTearOff(Interface))
+        if(!wrapper->FindTearOff(ccx, Interface))
             return nsnull;
         NS_ADDREF(wrapper);
         return wrapper;
@@ -96,7 +96,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     }
 
     // XXX allow for null Interface?
-    if(!wrapper->FindTearOff(Interface))
+    if(!wrapper->FindTearOff(ccx, Interface))
     {
         wrapper->Release();
         wrapper->Release();
@@ -127,7 +127,7 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
     XPCWrappedNative* wrapper = map->Find(identity);
     if(wrapper)
     {
-        if(!wrapper->FindTearOff(Interface))
+        if(!wrapper->FindTearOff(ccx, Interface))
             return nsnull;
         NS_ADDREF(wrapper);
         return wrapper;
@@ -209,6 +209,13 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
                 return JS_FALSE;
         }
     }
+
+    // If we have a one-off proto, then it should share our scriptable.
+    // This allows the prototypes JSClass callbacks to do the right things
+    // (like respecting the DONT_ENUM_STATIC_PROPS flag) w/o requiring 
+    // scriptable objects to have an nsIClassInfo.
+    if(!HasSharedProto())
+        mProto->SetScriptableInfo(mScriptableInfo);
 
     JSObject* parent = mProto->GetScope()->GetGlobalJSObject();
 
@@ -355,6 +362,23 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
     }
     return nsnull;
 }
+
+JSBool 
+XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
+{
+    // XXX add locking
+
+    if(!mSet->HasInterface(aInterface))
+    {
+        XPCNativeSet* newSet = 
+            XPCNativeSet::GetNewOrUsed(ccx, mSet, aInterface, mSet->Count());
+        if(!newSet)
+            return JS_FALSE;
+        mSet = newSet;
+    }
+    return JS_TRUE;        
+}
+
 
 /***************************************************************************/
 

@@ -121,22 +121,9 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     mFlattenedJSObject = mWrapper->GetFlatJSObject();
 
     if(mTearOff)
-    {
         mScriptableInfo = nsnull;
-        mTearOffForScriptable = nsnull;
-    }
     else
-    {
         mScriptableInfo = mWrapper->GetScriptableInfo();
-        if(mScriptableInfo)
-        {
-            mScratchTearOff.SetWrapper(mWrapper);
-            mScratchTearOff.SetJSObject(mCurrentJSObject);
-            mScratchTearOff.SetNative(mWrapper->GetIdentityObject());
-
-            mTearOffForScriptable = &mScratchTearOff;
-        }
-    }
 
     if(id)
         SetJSID(id);
@@ -241,10 +228,13 @@ XPCCallContext::CanCallNow()
         return JS_FALSE;
 
     if(!mTearOff)
-        mTearOff = mWrapper->FindTearOff(mInterface);
+        mTearOff = mWrapper->FindTearOff(*this, mInterface);
 
     if(mTearOff)
     {
+        // Refresh in case FindTearOff extended the set
+        mSet = mWrapper->GetSet();
+        
         mState = READY_TO_CALL;
         return JS_TRUE;
     }
