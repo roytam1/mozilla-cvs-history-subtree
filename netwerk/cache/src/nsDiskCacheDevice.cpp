@@ -553,7 +553,7 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
-    :   mCacheCapacity(0), mCacheSize(0), mCacheMap(nsnull)
+    :   mCacheCapacity(0), mCacheMap(nsnull)
 {
 }
 
@@ -569,7 +569,7 @@ nsDiskCacheDevice::~nsDiskCacheDevice()
 #endif
 
     // XXX write out persistent information about the cache.
-    writeCacheInfo();
+    writeDiskCacheMap();
 
     delete mCacheMap;
 
@@ -593,7 +593,10 @@ nsDiskCacheDevice::Init()
     
     // XXX read in persistent information about the cache. this can fail, if
     // no cache directory has ever existed before.
-    rv = readCacheInfo();
+    mCacheMap = new nsDiskCacheMap;
+    if (!mCacheMap) return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = readDiskCacheMap();
     if (NS_FAILED(rv)) {
         nsCOMPtr<nsISupportsArray> entries;
         scanDiskCacheEntries(getter_AddRefs(entries));
@@ -747,7 +750,7 @@ nsDiskCacheDevice::DoomEntry(nsCacheEntry * entry)
     mBoundEntries.RemoveEntry(diskEntry);
 
     // keep track of the cache total size.
-    mCacheSize -= entry->DataSize();
+    mCacheMap->DataSize() -= entry->DataSize();
 }
 
 
@@ -800,10 +803,10 @@ nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
 nsresult
 nsDiskCacheDevice::OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize)
 {
-    mCacheSize += deltaSize;
+    PRUint32 newCacheSize = (mCacheMap->DataSize() += deltaSize);
 
 #if 0    
-    if (mCacheSize > mCacheCapacity) {
+    if (newCacheSize > mCacheCapacity) {
         // XXX go toss out some disk cache entries.
         evictDiskCacheEntries();
     }
@@ -864,7 +867,7 @@ PRUint32 nsDiskCacheDevice::getCacheCapacity()
 
 PRUint32 nsDiskCacheDevice::getCacheSize()
 {
-    return mCacheSize;
+    return mCacheMap->DataSize();
 }
 
 nsresult nsDiskCacheDevice::getFileForKey(const char* key, PRBool meta,
@@ -1348,7 +1351,8 @@ nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
     NS_ADDREF(*result = entries);
 
     // we've successfully totaled the cache size.
-    mCacheSize = newCacheSize;
+    mCacheMap->DataSize() = newCacheSize;
+    entries->Count(&mCacheMap->EntryCount());
     
     return NS_OK;
 }
@@ -1359,7 +1363,7 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     nsresult rv = scanDiskCacheEntries(getter_AddRefs(entries));
     if (NS_FAILED(rv)) return rv;
 
-    if (mCacheSize < mCacheCapacity) return NS_OK;
+    if (mCacheMap->DataSize() < mCacheCapacity) return NS_OK;
     
     // these are sorted in oldest to newest order.
     PRUint32 count;
@@ -1392,8 +1396,7 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
             // update the cache size.
             PRUint32 dataSize;
             info->GetDataSize(&dataSize);
-            mCacheSize -= dataSize;
-            if (mCacheSize <= mCacheCapacity)
+            if ((mCacheMap->DataSize() -= dataSize) <= mCacheCapacity)
                 break;
         }
     }
@@ -1401,46 +1404,40 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::writeCacheInfo()
+nsresult nsDiskCacheDevice::readDiskCacheMap()
 {
-    nsCOMPtr<nsIFile> infoFile;
-    nsresult rv = mCacheDirectory->Clone(getter_AddRefs(infoFile));
+    nsCOMPtr<nsIFile> file;
+    nsresult rv = mCacheDirectory->Clone(getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
     
-    rv = infoFile->Append("CacheInfo");
+    rv = file->Append("_CACHE_MAP_");
     if (NS_FAILED(rv)) return rv;
-    
-    PRUint32 cacheSize = PR_htonl(mCacheSize);
 
-    nsCOMPtr<nsIOutputStream> output;
-    rv = openOutputStream(infoFile, getter_AddRefs(output));
+    nsCOMPtr<nsIInputStream> input;
+    rv = openInputStream(file, getter_AddRefs(input));
     if (NS_FAILED(rv)) return rv;
-    PRUint32 count = sizeof(cacheSize);
-    rv = output->Write((char*)&cacheSize, count, &count);
-    output->Close();
+
+    rv = mCacheMap->Read(input);
+    input->Close();
     
     return rv;
 }
 
-nsresult nsDiskCacheDevice::readCacheInfo()
+nsresult nsDiskCacheDevice::writeDiskCacheMap()
 {
-    nsCOMPtr<nsIFile> infoFile;
-    nsresult rv = mCacheDirectory->Clone(getter_AddRefs(infoFile));
+    nsCOMPtr<nsIFile> file;
+    nsresult rv = mCacheDirectory->Clone(getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
     
-    rv = infoFile->Append("CacheInfo");
+    rv = file->Append("_CACHE_MAP_");
     if (NS_FAILED(rv)) return rv;
-
-    PRUint32 cacheSize = 0;
     
-    nsCOMPtr<nsIInputStream> input;
-    rv = openInputStream(infoFile, getter_AddRefs(input));
+    nsCOMPtr<nsIOutputStream> output;
+    rv = openOutputStream(file, getter_AddRefs(output));
     if (NS_FAILED(rv)) return rv;
-    PRUint32 count = sizeof(cacheSize);
-    rv = input->Read((char*)&cacheSize, count, &count);
-    input->Close();
-    if (NS_FAILED(rv)) return rv;
-
-    mCacheSize = PR_ntohl(cacheSize);
-    return NS_OK;
+    
+    rv = mCacheMap->Write(output);
+    output->Close();
+    
+    return rv;
 }
