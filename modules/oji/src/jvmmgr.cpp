@@ -86,14 +86,18 @@ nsJVMMgr::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 nsIJVMPlugin*
 nsJVMMgr::GetJVMPlugin(void)
 {
-    if (fJVM) {
+    // lazily loads the JVM plugin.
+    if (fJVM == NULL) {
+	    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
+	    if (plugin != NULL) {
+	        nsresult rslt = plugin->QueryInterface(kIJVMPluginIID, &fJVM);
+	        if (rslt != NS_OK) fJVM = NULL;
+	    }
+	 }
+	 // always add an additional reference.
+    if (fJVM != NULL) {
         fJVM->AddRef();
         return fJVM;
-    }
-    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
-    if (plugin) {
-        nsresult rslt = plugin->QueryInterface(kIJVMPluginIID, (void**)&fJVM);
-        if (rslt == NS_OK) return fJVM;
     }
     return NULL;   
 }
