@@ -67,6 +67,8 @@
   NSString*                 mLoadingStatusString;
   ToolTip*                  mToolTip;
 
+  double                    mProgress;
+  
   BOOL mIsPrimary;
   BOOL mIsBusy;
   BOOL mOffline;

@@ -113,7 +113,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     mIsBusy = NO;
     mListenersAttached = NO;
     mSecureState = nsIWebProgressListener::STATE_IS_INSECURE;
-
+    mProgress = 0.0;
+    
     BOOL gotPref;
     BOOL pluginsEnabled = [[PreferenceManager sharedInstance] getBooleanPref:"chimera.enable_plugins" withSuccess:&gotPref];
     if (gotPref && !pluginsEnabled)
@@ -199,17 +200,28 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   if (mIsBusy)
   {
     [mWindowController startThrobber];    
+    [mWindowController showProgressIndicator];
+    
+    if (mProgress > 0.0)
+    {
+      [[mWindowController progressIndicator] setIndeterminate:NO];
+      [[mWindowController progressIndicator] setDoubleValue:mProgress];
+    }
+    else
+    {
+      [[mWindowController progressIndicator] setIndeterminate:YES];
+      [[mWindowController progressIndicator] startAnimation:self];
+    }
   }
   else
   {
+    [mWindowController stopThrobber];    
     [mWindowController hideProgressIndicator];
   
     [mDefaultStatusString autorelease];
     mDefaultStatusString = nil;
     [mLoadingStatusString autorelease];
     mLoadingStatusString = [NSLocalizedString(@"DocumentDone", @"") retain];
-
-    [mWindowController stopThrobber];    
   }
 
   [mStatus setStringValue:mLoadingStatusString];
@@ -310,6 +322,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   mLoadingStatusString = [NSLocalizedString(@"TabLoading", @"") retain];
   [mStatus setStringValue:mLoadingStatusString];
 
+  mProgress = 0.0;
   mIsBusy = YES;
   
   [mTabTitle autorelease];
@@ -362,6 +375,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     [mStatus setStringValue:mLoadingStatusString];
   }
 
+  mProgress = 1.0;
   mIsBusy = NO;
 
   // need to check succeeded here because for a charset-induced reload,
@@ -390,12 +404,16 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)onProgressChange:(int)currentBytes outOf:(int)maxBytes 
 {
-  if (maxBytes > 0) {
-    BOOL isIndeterminate = [[mWindowController progressIndicator] isIndeterminate];
-    if (isIndeterminate)
-      [[mWindowController progressIndicator] setIndeterminate:NO];
-    double val = ((double)currentBytes / (double)maxBytes) * 100.0;
-    [[mWindowController progressIndicator] setDoubleValue:val];
+  if (maxBytes > 0)
+  {
+    mProgress = ((double)currentBytes / (double)maxBytes) * 100.0;
+    if (mIsPrimary)
+    {
+      BOOL isIndeterminate = [[mWindowController progressIndicator] isIndeterminate];
+      if (isIndeterminate)
+        [[mWindowController progressIndicator] setIndeterminate:NO];
+      [[mWindowController progressIndicator] setDoubleValue:mProgress];
+    }
   }
 }
 
@@ -509,7 +527,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     mTitle = [NSString stringWithFormat:NSLocalizedString(@"OfflineTitleFormat", @""), mTitle];
   [mTitle retain];
   
-  if (mIsPrimary && mWindowController)
+  if (mIsPrimary)
     [[mWindowController window] setTitle:[mTitle stringByTruncatingTo:80 at:kTruncateAtEnd]];
   
   // Always set the tab.
