@@ -3612,6 +3612,7 @@ HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
       // Strip quotes
       PRUnichar ch = publicId.IsEmpty() ? '\0' : publicId.First();
 
+      PRBool hasQuote = PR_FALSE;
       if (ch == '"' || ch == '\'') {
         publicId.Cut(0, 1);
 
@@ -3624,6 +3625,8 @@ HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
            */
 
           end = publicId.FindChar('>');
+        } else {
+          hasQuote = PR_TRUE;
         }
 
         /*
@@ -3655,7 +3658,7 @@ HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
        * as the system id.
        */
       if (systemStart < 0) {
-        systemStart = pos + publicId.Length() + 1; // 1 is the end quote
+        systemStart = pos + publicId.Length() + (hasQuote ? 1 : 0); // 1 is the end quote
       }
     }
 
