@@ -37,6 +37,7 @@ no strict "vars";
 #################################################################################
 # Configurations, modify these as needed.
 #
+$BIND	= "uid=ldapadmin";
 $BASE	= "o=Netscape Communications Corp.,c=US";
 $PEOPLE	= "ou=people";
 $GROUPS	= "ou=groups";
@@ -59,7 +60,7 @@ if (!getopts('b:h:D:p:s:w:P:'))
    print "usage: $APPNAM $USAGE\n";
    exit;
 }
-%ld = Mozilla::LDAP::Utils::ldapArgs();
+%ld = Mozilla::LDAP::Utils::ldapArgs($BIND, $BASE);
 
 
 #################################################################################
