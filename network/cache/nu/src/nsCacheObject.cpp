@@ -15,13 +15,9 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#include <xp_core.h>
-#include <xp_str.h>
-#include <xpassert.h>
-
-#include <prmem.h>
-#include <prprf.h>
-#include <plstr.h>
+#include "prmem.h"
+#include "prprf.h"
+#include "plstr.h"
 
 #include "nsCacheObject.h"
 #include "nsCacheTrace.h"
