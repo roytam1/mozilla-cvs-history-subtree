@@ -59,6 +59,20 @@ ifdef NO_STATIC_LIB
 XP_LIBS		+= \
 		$(MOZ_JS_LIBS) \
 		$(NULL)
+else
+XP_LIBS		+= \
+		$(PNG_LIBS) \
+		$(MNG_LIBS) \
+		$(JPEG_LIBS) \
+		$(ZLIB_LIBS) \
+		$(MOZ_GDK_PIXBUF_LIBS) \
+		$(MOZ_XIE_LIBS) \
+		$(NULL)
+
+ifdef MOZ_ENABLE_GTK
+XP_LIBS		+= $(XLDFLAGS) -lXt
+endif
+
 endif
 
 XP_LIBS		+= \
