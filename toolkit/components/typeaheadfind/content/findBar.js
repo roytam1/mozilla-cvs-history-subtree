@@ -115,10 +115,12 @@ function uninitFindBar()
 function toggleHighlight(aHighlight)
 {
   var word = document.getElementById("find-field").value;
-  if (aHighlight)
+  if (aHighlight) {
     highlightDoc('yellow', word);
-  else
-    highlightDoc(null, null); 
+  } else {
+    highlightDoc(null, null);
+    gLastHighlightString = null;
+  }
 }
 
 function highlightDoc(color, word, win)
@@ -196,7 +198,6 @@ function highlightDoc(color, word, win)
 
       startPt.collapse(true);
     }
-    gLastHighlightString = null;
     return;
   }
 
