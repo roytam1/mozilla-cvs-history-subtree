@@ -35,8 +35,6 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 
-#include "imgIContainer.h"
-
 #include "nsIHTMLContent.h"
 
 #include "nsIViewManager.h"
@@ -132,18 +130,6 @@ NS_IMETHODIMP nsImageLoader::OnStartDecode(imgIRequest *aRequest, nsISupports *a
 
 NS_IMETHODIMP nsImageLoader::OnStartContainer(imgIRequest *aRequest, nsISupports *aContext, imgIContainer *aImage)
 {
-  if (aImage)
-  {
-    /* Get requested animation policy from the pres context:
-     *   normal = 0
-     *   one frame = 1
-     *   one loop = 2
-     */
-    PRUint16 animateMode = imgIContainer::kNormalAnimMode; //default value
-    nsresult rv = mPresContext->GetImageAnimationMode(&animateMode);
-    if (NS_SUCCEEDED(rv))
-      aImage->SetAnimationMode(animateMode);
-  }
   return NS_OK;
 }
 
