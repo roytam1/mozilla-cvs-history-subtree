@@ -36,6 +36,8 @@ EXPORTS = nsIStreamListener.h           \
           nsIProtocolHandler.h          \
           nsIProtocolInstance.h         \
           nsIHTTPHandler.h              \
+          nsIHTTPInstance.h             \
+          nsIProxy.h			\
           $(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
