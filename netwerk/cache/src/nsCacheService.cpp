@@ -369,21 +369,31 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 
 NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
 {
-    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
 
     nsAutoLock lock(mCacheServiceLock);
     
-    if (storagePolicy == nsICache::STORE_ON_DISK) {
+    // XXX what should we do about error handling?
+    
+    if (storagePolicy == nsICache::STORE_ANYWHERE || storagePolicy == nsICache::STORE_ON_DISK) {
         if (mEnableDiskDevice) {
             if (!mDiskDevice) {
                 rv = CreateDiskDevice();
                 if (NS_FAILED(rv)) return rv;
             }
             rv = mDiskDevice->EvictEntries(nsnull);
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
+    if (storagePolicy == nsICache::STORE_ANYWHERE || storagePolicy == nsICache::STORE_IN_MEMORY) {
+        if (mEnableMemoryDevice) {
+            rv = mMemoryDevice->EvictEntries(nsnull);
+            if (NS_FAILED(rv)) return rv;
         }
     }
     
-    return rv;
+    return NS_OK;
 }
 
 
