@@ -446,11 +446,6 @@ protected:
 
     static void GetElementFactory(PRInt32 aNameSpaceID, nsIElementFactory** aResult);
 
-    nsIContent*
-    FindContent(const nsIContent* aStartNode,
-                const nsIContent* aTest1,
-                const nsIContent* aTest2) const;
-
     nsresult
     Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aAttribute);
 

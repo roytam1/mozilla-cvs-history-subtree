@@ -3569,34 +3569,6 @@ nsXULDocument::GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult)
 // Implementation methods
 //
 
-nsIContent*
-nsXULDocument::FindContent(const nsIContent* aStartNode,
-                             const nsIContent* aTest1,
-                             const nsIContent* aTest2) const
-{
-    PRInt32 count;
-    aStartNode->ChildCount(count);
-
-    PRInt32 i;
-    for(i = 0; i < count; i++) {
-        nsIContent* child;
-        aStartNode->ChildAt(i, child);
-        nsIContent* content = FindContent(child,aTest1,aTest2);
-        if (content != nsnull) {
-            NS_IF_RELEASE(child);
-            return content;
-        }
-        if (child == aTest1 || child == aTest2) {
-            NS_IF_RELEASE(content);
-            return child;
-        }
-        NS_IF_RELEASE(child);
-        NS_IF_RELEASE(content);
-    }
-    return nsnull;
-}
-
-
 nsresult
 nsXULDocument::Init()
 {

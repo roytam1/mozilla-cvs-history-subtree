@@ -413,9 +413,6 @@ public:
   virtual nsresult SetDocumentURL(nsIURI* aURI);
 
 protected:
-  nsIContent* FindContent(const nsIContent* aStartNode,
-                          const nsIContent* aTest1, 
-                          const nsIContent* aTest2) const;
   NS_IMETHOD GetDTD(nsIDTD** aDTD) const;
 
 protected:

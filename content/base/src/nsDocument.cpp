@@ -3207,39 +3207,6 @@ nsDocument::RemoveReference(void *aKey, nsISupports **aOldReference)
   return NS_OK;
 }
 
-//
-// FindContent does a depth-first search from aStartNode
-// and returns the first of aTest1 or aTest2 which it finds.
-// I think.
-//
-nsIContent* nsDocument::FindContent(const nsIContent* aStartNode,
-                                    const nsIContent* aTest1, 
-                                    const nsIContent* aTest2) const
-{
-  PRInt32       count;
-  aStartNode->ChildCount(count);
-  PRInt32       index;
-
-  for(index = 0; index < count;index++)
-  {
-    nsIContent* child;
-    aStartNode->ChildAt(index, child);
-    nsIContent* content = FindContent(child,aTest1,aTest2);
-    if (content != nsnull) {
-      NS_IF_RELEASE(child);
-      return content;
-    }
-    if (child == aTest1 || child == aTest2) {
-      NS_IF_RELEASE(content);
-      return child;
-    }
-    NS_IF_RELEASE(child);
-    NS_IF_RELEASE(content);
-  }
-  return nsnull;
-}
-
-
 NS_IMETHODIMP    
 nsDocument::GetDTD(nsIDTD** aDTD) const
 {
