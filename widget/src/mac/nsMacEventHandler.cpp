@@ -658,22 +658,24 @@ void nsMacEventHandler::InitializeKeyEvent(nsKeyEvent& aKeyEvent, EventRecord& a
 	if (message == NS_KEY_PRESS 
 	&& !IsSpecialRaptorKey((aOSEvent.message & keyCodeMask) >> 8) )
 	{
-    if ( aKeyEvent.isControl )
-    {
-      if ((aKeyEvent.charCode >= 'A') && (aKeyEvent.charCode <='Z'))
-        aKeyEvent.charCode += 'A';
-      else if ((aKeyEvent.charCode >='a') && (aKeyEvent.charCode >= 'z'))
-    	  aKeyEvent.charCode += 'a';
-    	else if ((aKeyEvent.charCode >= '0') && (aKeyEvent.charCode <= '9'))
-    	  aKeyEvent.charCode += '0';
-    }
-    
+	  if ( aKeyEvent.isControl )
+	  {
+	    aKeyEvent.charCode = (aOSEvent.message & charCodeMask);
+	    if ( aKeyEvent.charCode <= 26 )
+	    {
+	      if ( aKeyEvent.isShift )
+	        aKeyEvent.charCode += 'A';
+	      else
+	        aKeyEvent.charCode += 'a';
+	    }
+	  }
+	  else
  	  if ( !aKeyEvent.isMeta)
     {
       aKeyEvent.isShift = aKeyEvent.isControl = aKeyEvent.isAlt = aKeyEvent.isMeta = 0;
     }
     
-   aKeyEvent.keyCode	= 0;
+    aKeyEvent.keyCode	= 0;
     aKeyEvent.charCode = ConvertKeyEventToUnicode(aOSEvent);
 	  NS_ASSERTION(0 != aKeyEvent.charCode, "nsMacEventHandler::InitializeKeyEvent: ConvertKeyEventToUnicode returned 0.");
 	}
