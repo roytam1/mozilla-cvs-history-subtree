@@ -1082,6 +1082,11 @@ nsWindowsShellService::Observe(nsISupports* aObject, const char* aTopic, const P
     return RegisterDDESupport();
   }
   else if (!nsCRT::strcmp("quit-application", aTopic)) {
+    PRBool isDefault;
+    IsDefaultBrowser(PR_FALSE, &isDefault);
+    if (!isDefault)
+      return NS_OK;
+
     nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
     os->RemoveObserver(this, "quit-application");
    
