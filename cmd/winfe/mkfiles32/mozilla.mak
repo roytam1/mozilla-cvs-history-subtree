@@ -1039,9 +1039,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\animbar2.cpp   
 	$(DEPTH)\cmd\winfe\apiapi.cpp 
 	$(DEPTH)\cmd\winfe\animecho.cpp
-#ifdef MOZ_OFFLINE
+!ifdef MOZ_OFFLINE
 	$(DEPTH)\cmd\winfe\askmedlg.cpp 
-#endif
+!endif
 	$(DEPTH)\cmd\winfe\authdll.cpp
 	$(DEPTH)\cmd\winfe\button.cpp 
 	$(DEPTH)\cmd\winfe\cfe.cpp
