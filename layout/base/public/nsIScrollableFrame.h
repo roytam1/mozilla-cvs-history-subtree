@@ -24,7 +24,7 @@
 #define nsIScrollFrame_h___
 
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIViewManager.h"
 
 class nsIFrame;
@@ -66,8 +66,8 @@ public:
   * Gets the size of the area that lies inside the scrollbars but clips the scrolled frame
   */
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         gfx_width *aWidth, 
-                         gfx_height *aHeight) const = 0;
+                         gfx_dimension *aWidth, 
+                         gfx_dimension *aHeight) const = 0;
   /**
    * Get information about whether the vertical and horizontal scrollbars
    * are currently visible

@@ -46,7 +46,7 @@
 #include "nsIJVMPluginTagInfo.h"
 #include "nsIWebShell.h"
 #include "nsINameSpaceManager.h"
-#include "nsIEventListener.h"
+#include "nsIGUIEventListener.h"
 #include "nsIStringStream.h" // for NS_NewCharInputStream
 #include "nsITimer.h"
 #include "nsITimerCallback.h"
@@ -68,7 +68,7 @@
 class nsPluginInstanceOwner : public nsIPluginInstanceOwner,
                               public nsIPluginTagInfo2,
                               public nsIJVMPluginTagInfo,
-                              public nsIEventListener,
+                              public nsIGUIEventListener,
                               public nsITimerCallback
 {
 public:
@@ -144,13 +144,15 @@ public:
 
   NS_IMETHOD GetMayScript(PRBool *result);
   
-  //nsIEventListener interface
-  nsEventStatus ProcessEvent(const nsGUIEvent & anEvent);
+  //nsIGUIEventListener interface
+  // XXX pav
+  //  nsEventStatus ProcessEvent(const nsGUIEvent & anEvent);
+  NS_IMETHOD ProcessEvent(const nsGUIEvent *anEvent);
   
   void Paint(const nsRect& aDirtyRect, PRUint32 ndc = nsnull);
 
   // nsITimerCallback interface
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
   
   void CancelTimer();
   
@@ -431,12 +433,12 @@ nsObjectFrame::CreateWidget(nsIPresContext* aPresContext,
 
 #if 0
     // set the content's widget, so it can get content modified by the widget
-    nsIWidget *widget;
-    result = GetWidget(view, &widget);
+    nsCOMPtr<nsIWindow> widget;
+    result = GetWidget(view, getter_AddRefs(widget));
     if (NS_OK == result) {
       nsInput* content = (nsInput *)mContent; // change this cast to QueryInterface 
       content->SetWidget(widget);
-      NS_IF_RELEASE(widget);
+      widget = nsnull;
     } else {
       NS_ASSERTION(0, "could not get widget");
     }
@@ -537,9 +539,7 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
       aMetrics.width = aMetrics.height;
     }
     else {
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      aMetrics.width = NSIntPixelsToTwips(width, p2t);
+      aMetrics.width = width;
     }
   }
   if (!haveHeight) {
@@ -547,9 +547,8 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
       aMetrics.height = aMetrics.width;
     }
     else {
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      aMetrics.height = NSIntPixelsToTwips(height, p2t);
+      // XXX pav -- scaled?
+      aMetrics.height = height;
     }
   }
   aMetrics.ascent = aMetrics.height;
@@ -862,20 +861,14 @@ nsObjectFrame::InstantiateWidget(nsIPresContext*          aPresContext,
   GetOffsetFromView(aPresContext, origin, &parentWithView);
   // Just make the frigging widget
 
-  float           t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  PRInt32 x = NSTwipsToIntPixels(origin.x, t2p);
-  PRInt32 y = NSTwipsToIntPixels(origin.y, t2p);
-  PRInt32 width = NSTwipsToIntPixels(aMetrics.width, t2p);
-  PRInt32 height = NSTwipsToIntPixels(aMetrics.height, t2p);
-  nsRect r = nsRect(x, y, width, height);
+  nsRect r = nsRect(origin.x, origin.y, aMetrics.width, aMetrics.height);
 
   mWindow = do_CreateInstance("mozilla.gfx.window.child.2", &rv);
   if (NS_FAILED(rv))
     return rv;
 
-  nsIWindow *parent;
-  parentWithView->GetOffsetFromWidget(nsnull, nsnull, parent);
+  nsCOMPtr<nsIWindow> parent;
+  parentWithView->GetOffsetFromWidget(nsnull, nsnull, getter_AddRefs(parent));
   nsCOMPtr<nsIChildWindow> cw(do_QueryInterface(mWindow));
   cw->Init(parent, r.x, r.y, r.width, r.height);
 
@@ -894,8 +887,6 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   nsIView *parentWithView;
   nsPoint origin;
   nsPluginWindow  *window;
-  float           t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
 
   SetFullURL(aURL);
 
@@ -912,15 +903,18 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   mInstanceOwner->GetWindow(window);
 
   GetOffsetFromView(aPresContext, origin, &parentWithView);
-  window->x = NSTwipsToIntPixels(origin.x, t2p);
-  window->y = NSTwipsToIntPixels(origin.y, t2p);
-  window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
-  window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
+
+  // XXX pav -- need to round from float to int
+
+  window->x = origin.x;
+  window->y = origin.y;
+  window->width = aMetrics.width;
+  window->height = aMetrics.height;
   
   window->clipRect.top = 0;
   window->clipRect.left = 0;
-  window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
-  window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+  window->clipRect.bottom = aMetrics.height;
+  window->clipRect.right = aMetrics.width;
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -958,8 +952,6 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
   nsIView *parentWithView;
   nsPoint origin;
   nsPluginWindow  *window;
-  float           t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
 
   // we need to recalculate this now that we have access to the nsPluginInstanceOwner
   // and its size info (as set in the tag)
@@ -975,15 +967,15 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
 
   GetOffsetFromView(aPresContext, origin, &parentWithView);
 
-  window->x = NSTwipsToIntPixels(origin.x, t2p);
-  window->y = NSTwipsToIntPixels(origin.y, t2p);
-  window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
-  window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
+  window->x = origin.x;
+  window->y = origin.y;
+  window->width = aMetrics.width;
+  window->height = aMetrics.height;
 
   window->clipRect.top = 0;
   window->clipRect.left = 0;
-  window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
-  window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+  window->clipRect.bottom = aMetrics.height;
+  window->clipRect.right = aMetrics.width;
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -1027,16 +1019,13 @@ nsObjectFrame::HandleImage(nsIPresContext*          aPresContext,
 
   if(hc != nsnull)
   {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-
     nsHTMLValue val;
     if(NS_CONTENT_ATTR_HAS_VALUE == hc->GetHTMLAttribute(nsHTMLAtoms::width, val))
     {
       if(eHTMLUnit_Pixel == val.GetUnit())
       {
         nscoord width = val.GetPixelValue();
-        kidReflowState.mComputedWidth = NSIntPixelsToTwips(width, p2t);
+        kidReflowState.mComputedWidth = width;
       }
     }
     if(NS_CONTENT_ATTR_HAS_VALUE == hc->GetHTMLAttribute(nsHTMLAtoms::height, val))
@@ -1044,7 +1033,7 @@ nsObjectFrame::HandleImage(nsIPresContext*          aPresContext,
       if(eHTMLUnit_Pixel == val.GetUnit())
       {
         nscoord height = val.GetPixelValue();
-        kidReflowState.mComputedHeight = NSIntPixelsToTwips(height, p2t);
+        kidReflowState.mComputedHeight = height;
       }
     }
   }
@@ -1164,8 +1153,6 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
         nsIView           *parentWithView;
         nsPoint           origin;
         nsIPluginInstance *inst;
-        float             t2p;
-        aPresContext->GetTwipsToPixels(&t2p);
         nscoord           offx, offy;
 
         GetOffsetFromView(aPresContext, origin, &parentWithView);
@@ -1177,8 +1164,8 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
         offx = offy = 0;
 #endif
 
-        window->x = NSTwipsToIntPixels(origin.x, t2p);
-        window->y = NSTwipsToIntPixels(origin.y, t2p);
+        window->x = origin.x;
+        window->y = origin.y;
         // window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
         // window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
 
@@ -1207,8 +1194,8 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
 
 		if (mWindow)
 		{
-			PRInt32 x = NSTwipsToIntPixels(origin.x, t2p);
-			PRInt32 y = NSTwipsToIntPixels(origin.y, t2p);
+			PRInt32 x = origin.x;
+			PRInt32 y = origin.y;
 			mWindow->Move(x, y);
 		}
       }
@@ -1317,7 +1304,7 @@ nsObjectFrame::HandleEvent(nsIPresContext* aPresContext,
 	case NS_MOUSE_ENTER:
 	case NS_MOUSE_LEFT_BUTTON_UP:
 	case NS_MOUSE_LEFT_BUTTON_DOWN:
-		*anEventStatus = mInstanceOwner->ProcessEvent(*anEvent);
+		*anEventStatus = mInstanceOwner->ProcessEvent(anEvent);
 		break;
 		
 	default:
@@ -1521,9 +1508,9 @@ nsresult nsPluginInstanceOwner::QueryInterface(const nsIID& aIID,
     return NS_OK;
   }
 
-  if (aIID.Equals(NS_GET_IID(nsIEventListener)))
+  if (aIID.Equals(NS_GET_IID(nsIGUIEventListener)))
   {
-    *aInstancePtrResult = (void *)((nsIEventListener *)this);
+    *aInstancePtrResult = (void *)((nsIGUIEventListener *)this);
     AddRef();
     return NS_OK;
   }
@@ -2113,10 +2100,6 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetWidth(PRUint32 *result)
         attr = (attr > 100) ? 100 : attr;
         attr = (attr < 0) ? 0 : attr;
 
-        float t2p;
-
-        mContext->GetTwipsToPixels(&t2p);
-
         nsRect rect;
         mContext->GetVisibleArea(rect);
 
@@ -2124,7 +2107,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetWidth(PRUint32 *result)
 
         if(mOwner == nsnull)
         {
-          *result = NSTwipsToIntPixels(attr*w/100, t2p);
+          *result = attr*w/100;
           return NS_OK;
         }
 
@@ -2135,7 +2118,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetWidth(PRUint32 *result)
 
         w -= 2*rect.x;
 
-        *result = NSTwipsToIntPixels(attr*w/100, t2p);
+        *result = attr*w/100;
       }
     }
     else
@@ -2172,10 +2155,6 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetHeight(PRUint32 *result)
         attr = (attr > 100) ? 100 : attr;
         attr = (attr < 0) ? 0 : attr;
 
-        float t2p;
-
-        mContext->GetTwipsToPixels(&t2p);
-
         nsRect rect;
         mContext->GetVisibleArea(rect);
 
@@ -2183,7 +2162,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetHeight(PRUint32 *result)
 
         if(mOwner == nsnull)
         {
-          *result = NSTwipsToIntPixels(attr*h/100, t2p);
+          *result = attr*h/100;
           return NS_OK;
         }
 
@@ -2195,7 +2174,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetHeight(PRUint32 *result)
           containingBlock->GetRect(rect);
           h -= 2*rect.y;
         }
-        *result = NSTwipsToIntPixels(attr*h/100, t2p);
+        *result = attr*h/100;
       }
     }
     else
@@ -2335,15 +2314,18 @@ static void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent)
 }
 #endif
 
-nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
+// XXX pav
+// nsEventStatus 
+NS_IMETHODIMP
+nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent* anEvent)
 {
 	nsEventStatus rv = nsEventStatus_eIgnore;
 #ifdef XP_MAC
 	if (mInstance != NULL) {
-		EventRecord* event = (EventRecord*)anEvent.nativeMsg;
+		EventRecord* event = (EventRecord*)anEvent->nativeMsg;
 		if (event == NULL || event->what == nullEvent) {
 			EventRecord macEvent;
-			GUItoMacEvent(anEvent, macEvent);
+			GUItoMacEvent(&anEvent, macEvent);
 			event = &macEvent;
 		}
     // XXX pav
@@ -2358,14 +2340,15 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 
 //~~~
 #ifdef XP_WIN
-		nsPluginEvent * pPluginEvent = (nsPluginEvent *)anEvent.nativeMsg;
+		nsPluginEvent * pPluginEvent = (nsPluginEvent *)anEvent->nativeMsg;
 		PRBool eventHandled = PR_FALSE;
 		mInstance->HandleEvent(pPluginEvent, &eventHandled);
 		if (eventHandled)
 			rv = nsEventStatus_eConsumeNoDefault;
 #endif
 
-  return rv;
+    //  return rv;
+    return NS_OK;
 }
 
 // Paints are handled differently, so we just simulate an update event.
@@ -2403,7 +2386,7 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 
 // Here's how we give idle time to plugins.
 
-NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
+NS_IMETHODIMP nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
 {
 #ifdef XP_MAC
 	if (mInstance != NULL) {
@@ -2425,8 +2408,10 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
   nsresult rv;
   mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
   if (NS_SUCCEEDED(rv))
-    mPluginTimer->Init(this, 1000 / 60);
+    mPluginTimer->Init(this, 1000 / 60, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_ONE_SHOT);
 #endif
+
+  return NS_OK;
 }
 
 void nsPluginInstanceOwner::CancelTimer()
@@ -2504,7 +2489,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
       {
         mOwner->GetView(mContext, &view);
         if (view)
-          view->GetWidget(*getter_AddRefs(mWindow));
+          view->GetWidget(getter_AddRefs(mWindow));
 
         if (PR_TRUE == windowless)
         {
@@ -2524,9 +2509,9 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
           DoMacFixUp(&mPluginWindow,mWidget);
 
           // start a periodic timer to provide null events to the plugin instance.
-          mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+          mPluginTimer = do_CreateInstance("@mozilla.org/gfx/timer;2", &rv);
           if (rv == NS_OK)
-	        rv = mPluginTimer->Init(this, 1000 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+	        rv = mPluginTimer->Init(this, 1000 / 60, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_REPEATING_SLACK);
 #endif
         }
       }
@@ -2573,7 +2558,7 @@ static void DoMacFixUp(nsPluginWindow *pluginWindow, nsIWidget* aWidget)
 
   // calculate the absolute position and clip for a widget 
   // and use other windows in calculating the clip
-static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY,
+static void GetWidgetPosAndClip(nsIWindow* aWidget,nscoord& aAbsX, nscoord& aAbsY,
                                 nsRect& aClipRect) 
 {
   aWidget->GetBounds(aClipRect); 

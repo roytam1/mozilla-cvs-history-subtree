@@ -80,15 +80,9 @@ nsPlaceholderFrame::Paint(nsIPresContext* aPresContext,
                           nsFramePaintLayer aWhichLayer)
 {
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    float p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
     aDrawable->SetForegroundColor(NS_RGB(0, 255, 255));
-    nscoord x = NSIntPixelsToTwips(-5, p2t);
-    aDrawable->FillRectangle(x, 0, NSIntPixelsToTwips(13, p2t),
-                             NSIntPixelsToTwips(3, p2t));
-    nscoord y = NSIntPixelsToTwips(-10, p2t);
-    aDrawable->FillRectangle(0, y, NSIntPixelsToTwips(3, p2t),
-                             NSIntPixelsToTwips(10, p2t));
+    aDrawable->FillRectangle(-5, 0, 13, 3);
+    aDrawable->FillRectangle(0, -10, 3, 10);
   }
   return NS_OK;
 }

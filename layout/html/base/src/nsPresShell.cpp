@@ -118,7 +118,6 @@
 #endif // INCLUDE_XUL
 
 // Drag & Drop, Clipboard
-#include "nsWidgetsCID.h"
 #include "nsIClipboard.h"
 #include "nsITransferable.h"
 #include "nsIFormatConverter.h"
@@ -181,11 +180,6 @@ static NS_DEFINE_CID(kCRangeCID, NS_RANGE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kViewCID, NS_VIEW_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
-
-// Drag & Drop, Clipboard Support
-static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
-static NS_DEFINE_CID(kCTransferableCID,        NS_TRANSFERABLE_CID);
-static NS_DEFINE_CID(kHTMLConverterCID,        NS_HTMLFORMATCONVERTER_CID);
 
 #undef NOISY
 
@@ -3620,21 +3614,18 @@ PresShell::DoCopy()
     return rv;
   
   // Get the Clipboard
-  NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);
+  nsCOMPtr<nsIClipboard> clipboard(do_GetService("@mozilla.org/gfx/clipboard;2", &rv));
   if (NS_FAILED(rv)) 
     return rv;
 
   if ( clipboard ) 
   {
     // Create a transferable for putting data on the Clipboard
-    nsCOMPtr<nsITransferable> trans;
-    rv = nsComponentManager::CreateInstance(kCTransferableCID, nsnull, 
-                                            NS_GET_IID(nsITransferable), 
-                                            getter_AddRefs(trans));
+    nsCOMPtr<nsITransferable> trans(do_CreateInstance("@mozilla.org/gfx/transferable;2", &rv));
     if ( trans ) 
     {
       // set up the data converter
-      nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance(kHTMLConverterCID);
+      nsCOMPtr<nsIFormatConverter> htmlConverter = do_CreateInstance("@mozilla.org/gfx/htmlconverter;2");
       NS_ENSURE_TRUE(htmlConverter, NS_ERROR_FAILURE);
       trans->SetConverter(htmlConverter);
       
@@ -5348,14 +5339,12 @@ PresShell::RemoveDummyLayoutRequest(void)
 
 #ifdef NS_DEBUG
 #include "nsViewsCID.h"
-#include "nsWidgetsCID.h"
 #include "nsIScrollableView.h"
 #include "nsIURL.h"
 #include "nsILinkHandler.h"
 
 static NS_DEFINE_CID(kViewManagerCID, NS_VIEW_MANAGER_CID);
 static NS_DEFINE_CID(kScrollingViewCID, NS_SCROLLING_VIEW_CID);
-static NS_DEFINE_CID(kWidgetCID, NS_CHILD_CID);
 
 static void
 LogVerifyMessage(nsIFrame* k1, nsIFrame* k2, const char* aMsg)
@@ -5450,7 +5439,7 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
 
     nsRect r1, r2;
     nsIView* v1, *v2;
-    nsIWindow* w1, *w2;
+    nsCOMPtr<nsIWindow> w1, *w2;
     for (;;) {
       if (((nsnull == k1) && (nsnull != k2)) ||
           ((nsnull != k1) && (nsnull == k2))) {
@@ -5485,8 +5474,8 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
             LogVerifyMessage(k1, k2, "(view rects)", r1, r2);
           }
 
-          v1->GetWidget(w1);
-          v2->GetWidget(w2);
+          v1->GetWidget(getter_AddRefs(w1));
+          v2->GetWidget(getter_AddRefs(w2));
           if (((nsnull == w1) && (nsnull != w2)) ||
               ((nsnull != w1) && (nsnull == w2))) {
             ok = PR_FALSE;

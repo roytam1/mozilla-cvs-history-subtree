@@ -156,7 +156,7 @@ static nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
   char *tptr;
   char *n_str;
   PRInt32 i, cnt;
-  PRInt32 *value_list;
+  nscoord *value_list;
 
   /*
    * Nothing in an empty list
@@ -164,7 +164,7 @@ static nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
   *value_cnt = 0;
   if ((str == NULL)||(*str == '\0'))
   {
-    return((PRInt32 *)NULL);
+    return((nscoord *)NULL);
   }
 
   /*
@@ -177,7 +177,7 @@ static nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
   }
   if (*n_str == '\0')
   {
-    return((PRInt32 *)NULL);
+    return((nscoord *)NULL);
   }
 
   /*
@@ -263,7 +263,7 @@ static nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
   value_list = new nscoord[cnt];
   if (value_list == NULL)
   {
-    return((PRInt32 *)NULL);
+    return((nscoord *)NULL);
   }
 
   /*
@@ -293,7 +293,7 @@ static nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
     }
     else
     {
-      value_list[i] = (nscoord)XP_ATOI(tptr);
+      value_list[i] = gfx_coord(XP_ATOI(tptr));
     }
     if (ptr != NULL)
     {
@@ -448,12 +448,10 @@ void RectArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 4) {
-      float p2t;
-      aCX->GetPixelsToTwips(&p2t);
-      nscoord x1 = NSIntPixelsToTwips(mCoords[0], p2t);
-      nscoord y1 = NSIntPixelsToTwips(mCoords[1], p2t);
-      nscoord x2 = NSIntPixelsToTwips(mCoords[2], p2t);
-      nscoord y2 = NSIntPixelsToTwips(mCoords[3], p2t);
+      nscoord x1 = mCoords[0];
+      nscoord y1 = mCoords[1];
+      nscoord x2 = mCoords[2];
+      nscoord y2 = mCoords[3];
       if ((x1 > x2)|| (y1 > y2)) {
         return;
       }
@@ -468,12 +466,10 @@ void RectArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 void RectArea::GetRect(nsIPresContext* aCX, nsRect& aRect)
 {
   if (mNumCoords >= 4) {
-    float p2t;
-    aCX->GetPixelsToTwips(&p2t);
-    nscoord x1 = NSIntPixelsToTwips(mCoords[0], p2t);
-    nscoord y1 = NSIntPixelsToTwips(mCoords[1], p2t);
-    nscoord x2 = NSIntPixelsToTwips(mCoords[2], p2t);
-    nscoord y2 = NSIntPixelsToTwips(mCoords[3], p2t);
+    nscoord x1 = mCoords[0];
+    nscoord y1 = mCoords[1];
+    nscoord x2 = mCoords[2];
+    nscoord y2 = mCoords[3];
     if ((x1 > x2)|| (y1 > y2)) {
       return;
     }
@@ -577,20 +573,18 @@ void PolyArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 6) {
-      float p2t;
-      aCX->GetPixelsToTwips(&p2t);
-      nscoord x0 = NSIntPixelsToTwips(mCoords[0], p2t);
-      nscoord y0 = NSIntPixelsToTwips(mCoords[1], p2t);
+      nscoord x0 = mCoords[0];
+      nscoord y0 = mCoords[1];
       nscoord x1, y1;
       for (PRInt32 i = 2; i < mNumCoords; i += 2) {
-        x1 = NSIntPixelsToTwips(mCoords[i], p2t);
-        y1 = NSIntPixelsToTwips(mCoords[i+1], p2t);
+        x1 = mCoords[i];
+        y1 = mCoords[i+1];
         aDrawable->DrawLine(x0, y0, x1, y1);
         x0 = x1;
         y0 = y1;
       }
-      x1 = NSIntPixelsToTwips(mCoords[0], p2t);
-      y1 = NSIntPixelsToTwips(mCoords[1], p2t);
+      x1 = mCoords[0];
+      y1 = mCoords[1];
       aDrawable->DrawLine(x0, y0, x1, y1);
     }
   }
@@ -599,14 +593,12 @@ void PolyArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 void PolyArea::GetRect(nsIPresContext* aCX, nsRect& aRect)
 {
   if (mNumCoords >= 6) {
-    float p2t;
-    aCX->GetPixelsToTwips(&p2t);
     nscoord x1, x2, y1, y2, xtmp, ytmp;
-    x1 = x2 = NSIntPixelsToTwips(mCoords[0], p2t);
-    y1 = y2 = NSIntPixelsToTwips(mCoords[1], p2t);
+    x1 = x2 = mCoords[0];
+    y1 = y2 = mCoords[1];
     for (PRInt32 i = 2; i < mNumCoords; i += 2) {
-      xtmp = NSIntPixelsToTwips(mCoords[i], p2t);
-      ytmp = NSIntPixelsToTwips(mCoords[i+1], p2t);
+      xtmp = mCoords[i];
+      ytmp = mCoords[i+1];
       x1 = x1 < xtmp ? x1 : xtmp;
       y1 = y1 < ytmp ? y1 : ytmp;
       x2 = x2 > xtmp ? x2 : xtmp;
@@ -670,11 +662,9 @@ void CircleArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 3) {
-      float p2t;
-      aCX->GetPixelsToTwips(&p2t);
-      nscoord x1 = NSIntPixelsToTwips(mCoords[0], p2t);
-      nscoord y1 = NSIntPixelsToTwips(mCoords[1], p2t);
-      nscoord radius = NSIntPixelsToTwips(mCoords[2], p2t);
+      nscoord x1 = mCoords[0];
+      nscoord y1 = mCoords[1];
+      nscoord radius = mCoords[2];
       if (radius < 0) {
         return;
       }
@@ -689,11 +679,9 @@ void CircleArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 void CircleArea::GetRect(nsIPresContext* aCX, nsRect& aRect)
 {
   if (mNumCoords >= 3) {
-    float p2t;
-    aCX->GetPixelsToTwips(&p2t);
-    nscoord x1 = NSIntPixelsToTwips(mCoords[0], p2t);
-    nscoord y1 = NSIntPixelsToTwips(mCoords[1], p2t);
-    nscoord radius = NSIntPixelsToTwips(mCoords[2], p2t);
+    nscoord x1 = mCoords[0];
+    nscoord y1 = mCoords[1];
+    nscoord radius = mCoords[2];
     if (radius < 0) {
       return;
     }
