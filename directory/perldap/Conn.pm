@@ -497,7 +497,10 @@ sub update
 
 
 #############################################################################
-# Set the rebind procedure. This is old and obsolete...
+# Set the rebind procedure. We also provide a neat default rebind procedure,
+# which takes three arguments (DN, password, and the auth method). This is an
+# extension to the LDAP SDK, which I think should be there. It was also
+# needed to get this to work on Win/NT...
 #
 sub setRebindProc
 {
@@ -507,6 +510,16 @@ sub setRebindProc
   die "No LDAP connection" unless defined($self->{"ld"});
 
   ldap_set_rebind_proc($self->{"ld"}, $proc);
+}
+
+sub setDefaultRebindProc
+{
+  my ($self, $dn, $pswd, $auth) = @_;
+
+  die "No LDAP connection"
+    unless defined($self->{ld});
+
+ Ldapc::ldap_set_default_rebind_proc($self->{"ld"}, $dn, $pswd, $auth);
 }
 
 
