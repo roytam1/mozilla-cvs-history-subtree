@@ -28,10 +28,6 @@
 #include "nsCOMPtr.h"
 #include "nsICmdLineHandler.h"
 
-#ifdef MSGCOMP_TRACE_PERFORMANCE
-#include "nsIOutputStream.h"
-#endif
-
 class nsMsgComposeService : public nsIMsgComposeService, public nsICmdLineHandler
 {
 public: 
@@ -46,13 +42,7 @@ public:
 
 #ifdef MSGCOMP_TRACE_PERFORMANCE
 private:
-  nsresult InitTrace();
-
-  PRBool                    mTraceInitialized;
-  PRBool                    mTraceToFile;
-  PRBool                    mTraceToConsole;
   PRIntervalTime            mStartTime;
   PRIntervalTime            mPreviousTime;
-  nsCOMPtr<nsIOutputStream> mTraceOutputStream;
 #endif
 };
