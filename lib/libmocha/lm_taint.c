@@ -449,7 +449,9 @@ lm_GetSubjectOriginURL(JSContext *cx)
  * them is so expensive.
  */
 typedef struct SharedZig {
+#ifdef JAVA
     ZIG *zig;
+#endif
     int32 refCount;
     JRIGlobalRef zigObjectRef;
 } SharedZig;
