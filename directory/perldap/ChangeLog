@@ -1,3 +1,13 @@
+1998-09-26  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (init): Cleaned out _perror() calls.
+	(delete): Added support for calling delete() with an Entry::
+	object as paramter.
+	(new): Cleaned out some dead code for $ref.
+
+	* Entry.pm (setValue): New method, to avoid having to use Perl
+	assignment statements to set an entire attribute value.
+
 1998-09-18  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (init): Changed call to ldapssl_client_init() to pass a

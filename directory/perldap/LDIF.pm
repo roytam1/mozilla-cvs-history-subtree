@@ -179,8 +179,8 @@ sub readEntries
   my $entry;
   my (@entries);
 
-  return if (($num ne "") && ($num <= 0));
-  $num = -1 unless $num;
+  return if (defined($num) && ($num ne "") && ($num <= 0));
+  $num = (-1) unless defined($num);
 
   do 
     {
