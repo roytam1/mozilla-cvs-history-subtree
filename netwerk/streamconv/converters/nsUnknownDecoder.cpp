@@ -50,7 +50,9 @@
 
 #include "nsIMIMEService.h"
 
+#ifndef MOZ_MINOTAUR
 #include "nsIViewSourceChannel.h"
+#endif
 
 #include "prcpucfg.h" // To get IS_LITTLE_ENDIAN / IS_BIG_ENDIAN
 
@@ -487,10 +489,13 @@ nsresult nsUnknownDecoder::FireListenerNotifications(nsIRequest* request,
 
   if (!mBuffer) return NS_ERROR_OUT_OF_MEMORY;
 
+#ifndef MOZ_MINOTAUR
   nsCOMPtr<nsIViewSourceChannel> viewSourceChannel = do_QueryInterface(request);
   if (viewSourceChannel) {
     rv = viewSourceChannel->SetOriginalContentType(mContentType);
-  } else {
+  } else 
+#endif
+  {
     nsCOMPtr<nsIChannel> channel = do_QueryInterface(request, &rv);
     if (NS_FAILED(rv)) return rv;
     
