@@ -401,6 +401,10 @@ MOZ_COMPONENT_XPCOM_LIBS += -lboehm
 XPCOM_LIBS += -lboehm
 endif
 
+ifdef MOZ_DEMANGLE_SYMBOLS
+XPCOM_LIBS += -liberty
+endif
+
 ifeq (xpconnect, $(findstring xpconnect, $(BUILD_MODULES)))
 DEFINES +=  -DXPCONNECT_STANDALONE
 endif
