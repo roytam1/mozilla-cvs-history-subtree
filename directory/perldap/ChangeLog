@@ -1,6 +1,62 @@
+1999-09-07  Leif Hedstrom  <leif@perldap.org>
+
+	* API.xs (avref2charptrptr): Merged in changes from v1.4.1, fixes
+	a potential core dump.
+	(avref2berptrptr): Ditto.
+
+1999-09-06  Leif Hedstrom  <leif@perldap.org>
+
+	* Conn.pm (search): Cleaned out warnings, from @_ and undefined
+	variables ($self->{ldres}).
+	(searchURL): Ditto.
+	(browse): Ditto.
+	(compare): Ditto.
+
+1999-09-06  Leif Hedstrom  <leif@perldap.org>
+
+	* Conn.pm (searchURL): We now return undef if we don't find
+	anything, instead of an empty string
+	(search): Ditto.
+	(search): Added code for handling the new options, including the
+	verbose argument (for debugging information).
+	(search): Fixed bug with empty list of attributes. This might be
+	considered a bug in API.xs::avref2charptrptr().
+	(browse): Support new options, bug fixes when calling with empty
+	list of attributes.
+	(compare): Support new options syntax, and verbose.
+
+1999-09-05  Leif Hedstrom  <leif@perldap.org>
+
+	* Entry.pm (values): Changed $#<xxx> syntax to use scalar.
+	(values): Cleaned up @vals, it's no longer needed.
+
+	* Conn.pm (_initialize): Renamed from init().
+	(new): Added support for the new "standard" way of handling
+	arguments (both the old syntax and the new "hash" array method are
+	supported).
+	(new): Added support for a verbose option. This is only supported
+	with the new argument syntax.
+	(update): Changed $#<xxx> to use scalar(@<xxx>) instead. This is
+	slightly faster...
+
+	* Entry.pm (new): Call _initialize() method of there are any extra
+	arguments passed.
+	(_initialize): New private method, to initialize the entry with
+	attribute-value pairs (used by ::new).
+
+	* Conn.pm (newEntry): Now we support initializing new Entry
+	objects with a list of attribute-value pairs.
+
+1999-08-27  Leif Hedstrom  <leif@perldap.org>
+
+	* Entry.pm (getLDIFString): Renamed from entry2LDIF.
+	We now overload the stringification ("") operator, to allow us to
+	print an entry directly.
+
 1999-08-26  Leif Hedstrom  <leif@netscape.com>
 
-	* Conn.pm (nextEntry): Cleaned up return codes when no entries found.
+	* Conn.pm (nextEntry): Cleaned up return codes when no entries
+	found, we now return undef.
 
 1999-08-25  Leif Hedstrom  <leif@netscape.com>
 
