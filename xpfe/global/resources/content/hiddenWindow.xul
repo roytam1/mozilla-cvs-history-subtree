@@ -43,7 +43,7 @@ Contributor(s): ______________________________________. -->
 %buildDTD;
 <!ENTITY % navigatorDTD SYSTEM "chrome://navigator/locale/navigator.dtd" >
 %navigatorDTD;
-<!ENTITY % navigatorDTD SYSTEM "chrome://navigator/locale/mainWindow.dtd" >
+<!ENTITY % mainWindowDTD SYSTEM "chrome://navigator/locale/mainWindow.dtd" >
 %mainWindowDTD;
 ]>
 
