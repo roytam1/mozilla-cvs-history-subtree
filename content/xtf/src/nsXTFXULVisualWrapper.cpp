@@ -195,30 +195,35 @@ NS_IMPL_RELEASE_INHERITED(nsXTFXULVisualWrapper,nsXTFXULVisualWrapperBase)
 NS_IMETHODIMP
 nsXTFXULVisualWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
-  if (AggregatesInterface(aIID)) {
+  nsresult rv;
+  
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  else if (aIID.Equals(NS_GET_IID(nsIAnonymousContentCreator))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIAnonymousContentCreator*, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  else if (aIID.Equals(NS_GET_IID(nsIXTFXULVisualWrapper))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIXTFXULVisualWrapper*, this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  else if (NS_SUCCEEDED(rv = nsXTFXULVisualWrapperBase::QueryInterface(aIID, aInstancePtr))) {
+    return rv;
+  }
+  else if (AggregatesInterface(aIID)) {
 #ifdef DEBUG
     printf("nsXTFXULVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
 #endif
     return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
                                         (nsISupports**)aInstancePtr);
   }
-  else if(aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if(aIID.Equals(NS_GET_IID(nsIAnonymousContentCreator))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIAnonymousContentCreator*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if(aIID.Equals(NS_GET_IID(nsIXTFXULVisualWrapper))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIXTFXULVisualWrapper*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else
-    return nsXTFXULVisualWrapperBase::QueryInterface(aIID, aInstancePtr);
+
+  return NS_ERROR_NO_INTERFACE;
 }
 
 //----------------------------------------------------------------------

@@ -182,14 +182,9 @@ NS_IMPL_RELEASE_INHERITED(nsXTFGenericElementWrapper,nsXTFGenericElementWrapperB
 NS_IMETHODIMP
 nsXTFGenericElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
-  if (AggregatesInterface(aIID)) {
-#ifdef DEBUG
-    printf("nsXTFGenericElementWrapper::QueryInterface(): creating aggregation tearoff\n");
-#endif
-    return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
-                                        (nsISupports**)aInstancePtr);
-  }
-  else if(aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+  nsresult rv;
+  
+  if(aIID.Equals(NS_GET_IID(nsIClassInfo))) {
     *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
     NS_ADDREF_THIS();
     return NS_OK;
@@ -199,8 +194,18 @@ nsXTFGenericElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     NS_ADDREF_THIS();
     return NS_OK;
   }
-  else
-    return nsXTFGenericElementWrapperBase::QueryInterface(aIID, aInstancePtr);
+  else if (NS_SUCCEEDED(rv = nsXTFGenericElementWrapperBase::QueryInterface(aIID, aInstancePtr))) {
+    return rv;
+  }
+  else if (AggregatesInterface(aIID)) {
+#ifdef DEBUG
+    printf("nsXTFGenericElementWrapper::QueryInterface(): creating aggregation tearoff\n");
+#endif
+    return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
+                                        (nsISupports**)aInstancePtr);
+  }
+
+  return NS_ERROR_NO_INTERFACE;
 }
 
 //----------------------------------------------------------------------
