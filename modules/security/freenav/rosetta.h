@@ -340,7 +340,7 @@
 #define HG92362
 #define HG26300
 #define HG27229 "rosetta.h"
-#define HG27230
+#define HG27230 FALSE,
 #define HG27326 "mkutils.h"
 #define HG32828
 #define HG26363 "msgnet.h"
@@ -365,13 +365,13 @@
 #define HG23833
 #define HG28330
 #define HG10299 "gui.h"
-#define HG10300
+#define HG10300 FALSE,
 #define HG82332
 #define HG32949
 #define HG38737
 #define HG29239
 #define HG28287
-#define HG22999
+#define HG22999 FALSE,
 #define HG93230
 #define HG29399
 #define HG20900
@@ -402,7 +402,7 @@
 #define HG29398
 #define HG83273
 #define HG09438 "mkpop3.h"
-#define HG09439
+#define HG09439 FALSE,
 #define HG23535 "mktcp.h"
 #define HG27655
 #define HG83763
