@@ -716,6 +716,12 @@ nsresult nsMsgDBFolder::CreateFileSpecForDB(const char *userLeafName, nsFileSpec
 {
   NS_ENSURE_ARG_POINTER(dbFileSpec);
   NS_ENSURE_ARG_POINTER(userLeafName);
+
+  // XXX : This function is only called by nsImapMailFolder which calls
+  // this function with UTF-7 (ASCII only) userLeafName so that we can
+  // use 'char' version of NS_MsgHasIfNcessary (bug 264071). 
+  // If this becomes not the case any more, we should use PRUnichar-version,
+  // instead.
   nsCAutoString proposedDBName(userLeafName);
   NS_MsgHashIfNecessary(proposedDBName);
 
@@ -3257,15 +3263,13 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
     rv = CreateDirectoryForFolder(dirSpec);
   
   // convert from PRUnichar* to char* due to not having Rename(PRUnichar*)
-  // function in nsIFileSpec
-  
-  nsXPIDLCString convertedNewName;
-  if (NS_FAILED(ConvertFromUnicode(nsMsgI18NFileSystemCharset(), nsAutoString(aNewName), getter_Copies(convertedNewName))))
+  // function in nsIFileSpec 
+  nsAutoString safeName(aNewName);
+  NS_MsgHashIfNecessary(safeName);
+
+  nsXPIDLCString newDiskName;
+  if (NS_FAILED(ConvertFromUnicode(nsMsgI18NFileSystemCharset(), safeName, getter_Copies(newDiskName))))
     return NS_ERROR_FAILURE;
-  
-  nsCAutoString newDiskName;
-  newDiskName.Assign(convertedNewName.get());
-  NS_MsgHashIfNecessary(newDiskName);
   
   nsXPIDLCString oldLeafName;
   oldPathSpec->GetLeafName(getter_Copies(oldLeafName));

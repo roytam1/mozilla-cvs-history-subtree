@@ -66,6 +66,7 @@
 #include "nsCategoryManagerUtils.h"
 #include "nsISpamSettings.h"
 #include "nsISignatureVerifier.h"
+#include "nsNativeCharsetUtils.h"
 
 static NS_DEFINE_CID(kImapUrlCID, NS_IMAPURL_CID);
 static NS_DEFINE_CID(kCMailboxUrl, NS_MAILBOXURL_CID);
@@ -330,22 +331,20 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
 nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& pathString)
 {
 	// A file name has to be in native charset, convert from UTF-8.
-	nsCAutoString oldPath;
+  nsCAutoString oldCPath;
   if (nsCRT::IsAscii(folderURI))
-    oldPath.Assign(folderURI);
+    oldCPath.Assign(folderURI);
   else
   {
-    char *nativeString = nsnull;
+    nsXPIDLCString nativeString;
     nsresult rv = ConvertFromUnicode(nsMsgI18NFileSystemCharset(), 
-                                     nsAutoString(NS_ConvertUTF8toUCS2(folderURI)), &nativeString);
-    if (NS_SUCCEEDED(rv) && nativeString && nativeString[0])
-      oldPath.Assign(nativeString);
-    else
-      oldPath.Assign(folderURI);
-    PR_FREEIF(nativeString);
+                                     NS_ConvertUTF8toUCS2(folderURI), getter_Copies(nativeString));
+    NS_ENSURE_SUCCESS(rv, rv);
+    oldCPath.Assign(nativeString.get());
   }
 
-	nsCAutoString pathPiece;
+	nsAutoString pathPiece, oldPath, path;
+  NS_CopyNativeToUnicode(oldCPath, oldPath);
 
 	PRInt32 startSlashPos = oldPath.FindChar('/');
 	PRInt32 endSlashPos = (startSlashPos >= 0) 
@@ -361,11 +360,11 @@ nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& p
 
         // add .sbd onto the previous path
         if (haveFirst) {
-          pathString += ".sbd/";
+          path.Append(NS_LITERAL_STRING(".sbd/"));
         }
         
         NS_MsgHashIfNecessary(pathPiece);
-        pathString += pathPiece;
+        path += pathPiece;
         haveFirst=PR_TRUE;
       }
 	  // look for the next slash
@@ -379,6 +378,8 @@ nsresult NS_MsgCreatePathStringFromFolderURI(const char *folderURI, nsCString& p
       if (startSlashPos >= endSlashPos)
 		  break;
     }
+
+    NS_CopyUnicodeToNative(path, pathString);
 
 	return NS_OK;
 }
