@@ -124,6 +124,9 @@ nsPrompt::Init()
 PRBool
 nsPrompt::DispatchCustomEvent(const char *aEventName)
 {
+  if (!mParent)
+    return PR_TRUE;
+
   nsCOMPtr<nsIDOMDocument> domdoc;
   mParent->GetDocument(getter_AddRefs(domdoc));
 
