@@ -31,6 +31,9 @@ MOZ_TOP=mozilla
 #//------------------------------------------------------------------------
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
+MOZ_BRANCH=SeaMonkey_M15_BRANCH
+NSPR_CO_TAG=SeaMonkey_M15_BRANCH
+
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
 HAVE_BRANCH=1
@@ -108,7 +111,7 @@ CVSCO_NSPR = cvs -q $(CVS_FLAGS) co $(NSPR_CO_FLAGS) -P
 !if "$(PSM_CO_TAG)" != ""
 PSM_CO_FLAGS=-r $(PSM_CO_TAG)
 !else
-PSM_CO_FLAGS=-r SeaMonkey_M14_BRANCH
+PSM_CO_FLAGS=-r SeaMonkey_M15_BRANCH
 !endif
 
 CVSCO_PSM = cvs -q $(CVS_FLAGS) co $(PSM_CO_FLAGS) -P
