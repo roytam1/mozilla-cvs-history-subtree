@@ -170,7 +170,7 @@ js_AllocGCThing(JSContext *cx, uintN flags)
 {
     JSRuntime *rt;
     JSGCThing *thing;
-    uint8 *flagp;
+    uint8 *flagp = NULL;
 #ifdef TOO_MUCH_GC
     JSBool tried_gc = JS_TRUE;
     js_GC(cx);
