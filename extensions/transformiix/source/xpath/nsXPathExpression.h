@@ -63,10 +63,10 @@ public:
 private:
     Expr* mExpression;
 
-    class evalContextImpl : public txIEvalContext
+    class EvalContextImpl : public txIEvalContext
     {
     public:
-        evalContextImpl(Node* aContextNode)
+        EvalContextImpl(Node* aContextNode)
             :mNode(aContextNode), mLastError(NS_OK)
         {
         }

@@ -111,7 +111,7 @@ nsXPathExpression::Evaluate(nsIDOMNode *aContextNode,
     Document document(ownerDOMDocument);
     Node* node = document.createWrapper(aContextNode);
 
-    evalContextImpl eContext(node);
+    EvalContextImpl eContext(node);
     ExprResult* exprResult = mExpression->evaluate(&eContext);
     NS_ENSURE_TRUE(exprResult, NS_ERROR_OUT_OF_MEMORY);
 
@@ -154,10 +154,10 @@ nsXPathExpression::Evaluate(nsIDOMNode *aContextNode,
 
 /*
  * Implementation of the txIEvalContext private to nsXPathExpression
- * evalContextImpl bases on only one context node and no variables
+ * EvalContextImpl bases on only one context node and no variables
  */
 
-nsresult nsXPathExpression::evalContextImpl::getVariable(PRInt32 aNamespace, 
+nsresult nsXPathExpression::EvalContextImpl::getVariable(PRInt32 aNamespace, 
                                                          txAtom* aLName,
                                                          ExprResult*& aResult)
 {
@@ -165,35 +165,29 @@ nsresult nsXPathExpression::evalContextImpl::getVariable(PRInt32 aNamespace,
     return NS_ERROR_INVALID_ARG;
 }
 
-MBool nsXPathExpression::evalContextImpl::isStripSpaceAllowed(Node* aNode)
+MBool nsXPathExpression::EvalContextImpl::isStripSpaceAllowed(Node* aNode)
 {
     return MB_FALSE;
 }
 
-void nsXPathExpression::evalContextImpl::receiveError(const String& aMsg,
+void nsXPathExpression::EvalContextImpl::receiveError(const String& aMsg,
                                                        nsresult aRes)
 {
     mLastError = aRes;
     // forward aMsg to console service?
 }
 
-Node* nsXPathExpression::evalContextImpl::getContextNode()
+Node* nsXPathExpression::EvalContextImpl::getContextNode()
 {
     return mNode;
 }
 
-PRUint32 nsXPathExpression::evalContextImpl::size()
+PRUint32 nsXPathExpression::EvalContextImpl::size()
 {
     return 1;
 }
 
-PRUint32 nsXPathExpression::evalContextImpl::position()
+PRUint32 nsXPathExpression::EvalContextImpl::position()
 {
     return 1;
-}
-
-NodeSet* nsXPathExpression::evalContextImpl::getContextNodeSet()
-{
-    NS_ASSERTION(0, "die");
-    return 0;
 }

@@ -55,6 +55,7 @@
 #include "TxLog.h"
 #include "txRtfHandler.h"
 #include "txNodeSetContext.h"
+#include "txSingleNodeContext.h"
 #ifndef TX_EXE
 #include "nsIObserverService.h"
 #include "nsIURL.h"
@@ -828,9 +829,7 @@ Document* XSLTProcessor::process(Document& xmlDocument,
         while (iter.hasNext())
             ps.addErrorObserver(*(ErrorObserver*)iter.next());
     
-        NodeSet nodeSet(&aXMLDocument);
-        txNodeSetContext evalContext(&nodeSet, &ps);
-        evalContext.next(); //step into the document
+        txSingleNodeContext evalContext(&aXMLDocument, &ps);
         ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements
@@ -888,9 +887,7 @@ void XSLTProcessor::process(Document& aXMLDocument,
         while (iter.hasNext())
             ps.addErrorObserver(*(ErrorObserver*)iter.next());
 
-        NodeSet nodeSet(&aXMLDocument);
-        txNodeSetContext evalContext(&nodeSet, &ps);
-        evalContext.next(); //step into the document
+        txSingleNodeContext evalContext(&aXMLDocument, &ps);
         ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements
@@ -2377,9 +2374,7 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         // XXX Need to add error observers
 
         // Set current txIEvalContext
-        NodeSet nodeSet(&sourceDocument);
-        txNodeSetContext evalContext(&nodeSet, &ps);
-        evalContext.next(); //step into the document
+        txSingleNodeContext evalContext(&sourceDocument, &ps);
         ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements

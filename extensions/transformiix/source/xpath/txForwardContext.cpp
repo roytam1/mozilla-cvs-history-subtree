@@ -55,32 +55,27 @@ PRUint32 txForwardContext::position()
     return (PRUint32)(pos+1);
 }
 
-NodeSet* txForwardContext::getContextNodeSet()
-{
-    return mContextSet;
-}
-
 nsresult txForwardContext::getVariable(PRInt32 aNamespace, txAtom* aLName,
                                  ExprResult*& aResult)
 {
-    nsresult res = NS_ERROR_NULL_POINTER;
-    if (mInner) {
-        res = mInner->getVariable(aNamespace, aLName, aResult);
-    }
-    return res;
+    NS_ASSERTION(mInner, "mInner is null!!!");
+    return mInner->getVariable(aNamespace, aLName, aResult);
 }
 
 MBool txForwardContext::isStripSpaceAllowed(Node* aNode)
 {
     NS_ASSERTION(mInner, "mInner is null!!!");
-    return mInner ? mInner->isStripSpaceAllowed(aNode) : MB_FALSE;
+    return mInner->isStripSpaceAllowed(aNode);
 }
 
 void txForwardContext::receiveError(const String& aMsg, nsresult aRes)
 {
-    if (mInner) {
-        String error("forwarded error: ");
-        error.append(aMsg);
-        mInner->receiveError(error, aRes);
-    }
+    NS_ASSERTION(mInner, "mInner is null!!!");
+    #ifdef DEBUG
+    String error("forwarded error: ");
+    error.append(aMsg);
+    mInner->receiveError(error, aRes);
+    #else
+    mInner->receiveError(aMsg, aRes);
+    #endif
 }

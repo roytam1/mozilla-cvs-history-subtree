@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Axel Hecht.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,45 +36,66 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "txNodeSetContext.h"
+#ifndef __TX_XPATH_SINGLENODE_CONTEXT
+#define __TX_XPATH_SINGLENODE_CONTEXT
 
-Node* txNodeSetContext::getContextNode()
-{
-    return mContextSet->get(mPosition-1);
-}
+#include "txIXPathContext.h"
 
-PRUint32 txNodeSetContext::size()
+class txSingleNodeContext : public txIEvalContext
 {
-    return (PRUint32)mContextSet->size();
-}
+public:
+    txSingleNodeContext(Node* aContextNode, txIMatchContext* aContext)
+        : mNode(aContextNode), mInner(aContext)
+    {
+        NS_ASSERTION(aContextNode, "context node must be given");
+        NS_ASSERTION(aContext, "txIMatchContext must be given");
+    }
+    ~txSingleNodeContext()
+    {}
 
-PRUint32 txNodeSetContext::position()
-{
-    NS_ASSERTION(mPosition, "Should have called next() at least once");
-    return mPosition;
-}
+    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
+                         ExprResult*& aResult)
+    {
+        NS_ASSERTION(mInner, "mInner is null!!!");
+        return mInner->getVariable(aNamespace, aLName, aResult);
+    }
 
-nsresult txNodeSetContext::getVariable(PRInt32 aNamespace, txAtom* aLName,
-                                 ExprResult*& aResult)
-{
-    NS_ASSERTION(mInner, "mInner is null!!!");
-    return mInner->getVariable(aNamespace, aLName, aResult);
-}
+    MBool isStripSpaceAllowed(Node* aNode)
+    {
+        NS_ASSERTION(mInner, "mInner is null!!!");
+        return mInner->isStripSpaceAllowed(aNode);
+    }
 
-MBool txNodeSetContext::isStripSpaceAllowed(Node* aNode)
-{
-    NS_ASSERTION(mInner, "mInner is null!!!");
-    return mInner->isStripSpaceAllowed(aNode);
-}
+    void receiveError(const String& aMsg, nsresult aRes)
+    {
+        NS_ASSERTION(mInner, "mInner is null!!!");
+        #ifdef DEBUG
+        String error("forwarded error: ");
+        error.append(aMsg);
+        mInner->receiveError(error, aRes);
+        #else
+        mInner->receiveError(aMsg, aRes);
+        #endif
+    }
 
-void txNodeSetContext::receiveError(const String& aMsg, nsresult aRes)
-{
-    NS_ASSERTION(mInner, "mInner is null!!!");
-    #ifdef DEBUG
-    String error("forwarded error: ");
-    error.append(aMsg);
-    mInner->receiveError(error, aRes);
-    #else
-    mInner->receiveError(aMsg, aRes);
-    #endif
-}
+    Node* getContextNode()
+    {
+        return mNode;
+    }
+
+    PRUint32 size()
+    {
+        return 1;
+    }
+
+    PRUint32 position()
+    {
+        return 1;
+    }
+
+private:
+    Node* mNode;
+    txIMatchContext* mInner;
+};
+
+#endif // __TX_XPATH_SINGLENODE_CONTEXT
