@@ -317,20 +317,20 @@ NS_IMETHODIMP nsStreamConverter::QueryInterface(REFNSIID aIID, void** aInstanceP
 NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutListener, nsIChannel *aChannel)
 {
 	nsresult rv = NS_OK;
-	if (!aURI || !aOutListener)
+	if (!aOutListener)
 		return NS_ERROR_NULL_POINTER;
 
 	mOutListener = aOutListener;
 
 	// mscott --> we need to look at the url and figure out what the correct output type is...
-	nsXPIDLCString urlSpec;
 	nsMimeOutputType newType;
 
-	rv = aURI->GetSpec(getter_Copies(urlSpec));
 	if (NS_FAILED(rv)) return rv;
 	
 	if (!mAlreadyKnowOutputType)
 	{
+		nsXPIDLCString urlSpec;
+		rv = aURI->GetSpec(getter_Copies(urlSpec));
 		DetermineOutputFormat(urlSpec, &newType);
 		mAlreadyKnowOutputType = PR_TRUE;
 	}
@@ -553,7 +553,7 @@ char *output = "\
 nsresult 
 nsStreamConverter::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
-#ifdef NS_DEBUG
+#ifdef DEBUG_rhp
     printf("nsStreamConverter::OnStartRequest()\n");
 #endif
 
@@ -569,7 +569,7 @@ nsStreamConverter::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 nsresult 
 nsStreamConverter::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 {
-#ifdef NS_DEBUG
+#ifdef DEBUG_rhp
     printf("nsStreamConverter::OnStopRequest()\n");
 #endif
 
