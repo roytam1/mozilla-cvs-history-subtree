@@ -19,25 +19,19 @@
 *
 * Contributor(s):
 *   william@dell.wisner.name (William Dell Wisner)
+*   joshmoz@gmail.com (Josh Aas)
 */
 
 #import <PreferencePaneBase.h>
 
-@interface OrgMozillaChimeraPreferenceNavigation : PreferencePaneBase
+@interface OrgMozillaChimeraPreferenceDownloads : PreferencePaneBase
 {
-	IBOutlet NSTextField *textFieldHomePage;
-  
-	IBOutlet NSButton *checkboxUseSystemHomePage;
-  IBOutlet NSButton *checkboxNewTabBlank;
-  IBOutlet NSButton *checkboxNewWindowBlank;
-  
-  IBOutlet NSTextField *textFieldHistoryDays;
+  IBOutlet NSPopUpButton* mDownloadFolder;
+  IBOutlet NSButton* mAutoCloseDLManager;
+  IBOutlet NSButton* mEnableHelperApps;
 }
 
-- (IBAction)checkboxUseSystemHomePageClicked:(id)sender;
-- (IBAction)checkboxStartPageClicked:(id)sender;
-- (IBAction)historyDaysModified:(id)sender;
-- (IBAction)clearGlobalHistory:(id)sender;
-- (IBAction)clearDiskCache:(id)aSender;
+- (IBAction)checkboxClicked:(id)sender;
+- (IBAction)chooseDownloadFolder:(id)sender;
 
 @end
