@@ -46,7 +46,7 @@ PRIVATE_EXPORTS = \
 	dev3hack.h \
 	$(NULL)
 
-MODULE = security
+MODULE = nss
 
 CSRCS = \
 	dev3hack.c \
@@ -65,6 +65,12 @@ CSRCS = \
 	pk11pbe.c \
 	$(NULL)
 
-REQUIRES = security dbm
+REQUIRES = dbm
 
 LIBRARY_NAME = pk11wrap
+
+# only add module debugging in opt builds if DEBUG_PKCS11 is set
+ifdef DEBUG_PKCS11
+  DEFINES += -DDEBUG_MODULE
+endif
+

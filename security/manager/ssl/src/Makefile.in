@@ -105,8 +105,8 @@ include $(topsrcdir)/config/rules.mk
 
 # Use local includes because they are inserted before INCLUDES
 # so that Mozilla's nss.h is used, not glibc's
-LOCAL_INCLUDES += -I$(DIST)/public/security \
-                  -I$(DIST)/private/security \
+LOCAL_INCLUDES += -I$(DIST)/public/nss \
+                  -I$(DIST)/private/nss \
                   $(NULL)
 
 EXTRA_DSO_LDOPTS += \

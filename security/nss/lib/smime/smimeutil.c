@@ -51,6 +51,7 @@
 
 SEC_ASN1_MKSUB(CERT_IssuerAndSNTemplate)
 SEC_ASN1_MKSUB(SEC_OctetStringTemplate)
+SEC_ASN1_CHOOSER_DECLARE(CERT_IssuerAndSNTemplate)
 
 /* various integer's ASN.1 encoding */
 static unsigned char asn1_int40[] = { SEC_ASN1_INTEGER, 0x01, 0x28 };
@@ -246,10 +247,13 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	switch (keylen_bits) {
 	case 40:
 	    c = SMIME_RC2_CBC_40;
+	    break;
 	case 64:
 	    c = SMIME_RC2_CBC_64;
+	    break;
 	case 128:
 	    c = SMIME_RC2_CBC_128;
+	    break;
 	default:
 	    rv = SECFailure;
 	    break;
@@ -257,10 +261,13 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
 	break;
     case SEC_OID_DES_CBC:
 	c = SMIME_DES_CBC_56;
+	break;
     case SEC_OID_DES_EDE3_CBC:
 	c = SMIME_DES_EDE3_168;
+	break;
     case SEC_OID_FORTEZZA_SKIPJACK:
 	c = SMIME_FORTEZZA;
+	break;
     default:
 	rv = SECFailure;
     }
@@ -553,7 +560,7 @@ NSS_SMIMEUtil_FindBulkAlgForRecipients(CERTCertificate **rcerts, SECOidTag *bulk
     mapi = smime_mapi_by_cipher(cipher);
 
     *bulkalgtag = smime_cipher_map[mapi].algtag;
-    *keysize = smime_keysize_by_cipher(smime_cipher_map[mapi].algtag);
+    *keysize = smime_keysize_by_cipher(smime_cipher_map[mapi].cipher);
 
     return SECSuccess;
 }
@@ -667,6 +674,40 @@ NSS_SMIMEUtil_CreateSMIMEEncKeyPrefs(PLArenaPool *poolp, SECItem *dest, CERTCert
 	goto loser;
 
     dummy = SEC_ASN1EncodeItem(poolp, dest, &ekp, smime_encryptionkeypref_template);
+
+loser:
+    if (tmppoolp) PORT_FreeArena(tmppoolp, PR_FALSE);
+
+    return (dummy == NULL) ? SECFailure : SECSuccess;
+}
+
+/*
+ * NSS_SMIMEUtil_CreateSMIMEEncKeyPrefs - create S/MIME encryption key preferences attr value using MS oid
+ *
+ * "poolp" - arena pool to create the attr value on
+ * "dest" - SECItem to put the data in
+ * "cert" - certificate that should be marked as preferred encryption key
+ *          cert is expected to have been verified for EmailRecipient usage.
+ */
+SECStatus
+NSS_SMIMEUtil_CreateMSSMIMEEncKeyPrefs(PLArenaPool *poolp, SECItem *dest, CERTCertificate *cert)
+{
+    SECItem *dummy = NULL;
+    PLArenaPool *tmppoolp = NULL;
+    CERTIssuerAndSN *isn;
+
+    if (cert == NULL)
+	goto loser;
+
+    tmppoolp = PORT_NewArena(1024);
+    if (tmppoolp == NULL)
+	goto loser;
+
+    isn = CERT_GetCertIssuerAndSN(tmppoolp, cert);
+    if (isn == NULL)
+	goto loser;
+
+    dummy = SEC_ASN1EncodeItem(poolp, dest, isn, SEC_ASN1_GET(CERT_IssuerAndSNTemplate));
 
 loser:
     if (tmppoolp) PORT_FreeArena(tmppoolp, PR_FALSE);

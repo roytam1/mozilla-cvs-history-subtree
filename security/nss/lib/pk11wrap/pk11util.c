@@ -105,6 +105,8 @@ SECMOD_Shutdown() {
     /* make all the slots and the lists go away */
     PK11_DestroySlotLists();
 
+    nss_DumpModuleLog();
+
 #ifdef DEBUG
     if (PR_GetEnv("NSS_STRICT_SHUTDOWN")) {
 	PORT_Assert(secmod_PrivateModuleCount == 0);
@@ -706,5 +708,5 @@ SECMOD_DestroyModuleList(SECMODModuleList *list) {
 PRBool
 SECMOD_CanDeleteInternalModule(void)
 {
-    return (PRBool) pendingModule == NULL;
+    return (PRBool) (pendingModule == NULL);
 }

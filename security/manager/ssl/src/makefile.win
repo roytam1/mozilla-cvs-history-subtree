@@ -80,8 +80,8 @@ CFLAGS = $(CFLAGS) -DNSS_USE_STATIC_LIBS
 !endif
 
 LINCS = $(LINCS)     \
-    -I$(XPDIST)/public/security \
-    -I$(XPDIST)/private/security \
+    -I$(XPDIST)/public/nss \
+    -I$(XPDIST)/private/nss \
     $(NULL)
 
 

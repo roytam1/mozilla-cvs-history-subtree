@@ -60,6 +60,7 @@ EXPORTS = \
 	$(NULL)
 
 CSRCS = \
+	quickder.c \
 	secdig.c \
 	derdec.c \
 	derenc.c \
@@ -84,7 +85,7 @@ CSRCS = \
 	utf8.c \
 	$(NULL)
 
-MODULE = security
+MODULE = nss
 
 # don't duplicate module name in REQUIRES
 REQUIRES = dbm

@@ -388,6 +388,8 @@ CERTCertList * PK11_FindCertsFromNickname(char *nickname, void *wincx);
 SECKEYPrivateKey * PK11_FindPrivateKeyFromNickname(char *nickname, void *wincx);
 SECStatus PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
                 CK_OBJECT_HANDLE key, char *nickname, PRBool includeTrust);
+SECStatus PK11_ImportDERCert(PK11SlotInfo *slot, SECItem *derCert,
+                CK_OBJECT_HANDLE key, char *nickname, PRBool includeTrust);
 PK11SlotInfo *PK11_ImportCertForKey(CERTCertificate *cert, char *nickname,
 								void *wincx);
 PK11SlotInfo *PK11_ImportDERCertForKey(SECItem *derCert, char *nickname,
@@ -442,7 +444,11 @@ SECStatus PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
 CERTCertList * PK11_ListCerts(PK11CertListType type, void *pwarg);
 CERTCertList * PK11_ListCertsInSlot(PK11SlotInfo *slot);
 SECStatus PK11_LookupCrls(CERTCrlHeadNode *nodes, int type, void *wincx);
-
+CERTSignedCrl* PK11_ImportCRL(PK11SlotInfo * slot, SECItem *derCRL, char *url,
+    int type, void *wincx, PRInt32 importOptions, PRArenaPool* arena, PRInt32 decodeOptions);
+/* import options */
+#define CRL_IMPORT_DEFAULT_OPTIONS 0x00000000
+#define CRL_IMPORT_BYPASS_CHECKS   0x00000001
 
 /**********************************************************************
  *                   Sign/Verify 
@@ -481,6 +487,21 @@ SECStatus PK11_DigestFinal(PK11Context *context, unsigned char *data,
 PRBool PK11_HashOK(SECOidTag hashAlg);
 SECStatus PK11_SaveContext(PK11Context *cx,unsigned char *save,
 						int *len, int saveLength);
+
+/* Save the context's state, with possible allocation.
+ * The caller may supply an already allocated buffer in preAllocBuf,
+ * with length pabLen.  If the buffer is large enough for the context's
+ * state, it will receive the state.
+ * If the buffer is not large enough (or NULL), then a new buffer will
+ * be allocated with PORT_Alloc.
+ * In either case, the state will be returned as a buffer, and the length
+ * of the state will be given in *stateLen.
+ */
+unsigned char *
+PK11_SaveContextAlloc(PK11Context *cx,
+                      unsigned char *preAllocBuf, unsigned int pabLen,
+                      unsigned int *stateLen);
+
 SECStatus PK11_RestoreContext(PK11Context *cx,unsigned char *save,int len);
 SECStatus PK11_GenerateFortezzaIV(PK11SymKey *symKey,unsigned char *iv,int len);
 SECStatus PK11_ReadSlotCerts(PK11SlotInfo *slot);
@@ -544,6 +565,11 @@ PRBool PK11_IsPermObject(PK11SlotInfo *slot, CK_OBJECT_HANDLE handle);
 char * PK11_GetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id) ;
 SECStatus PK11_SetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id, 
 						const char *nickname) ;
+
+
+/* private */
+SECStatus pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *),
+	void *cbArg, void *pwArg);
 
 SEC_END_PROTOS
 

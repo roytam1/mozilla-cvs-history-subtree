@@ -834,10 +834,10 @@ nssTrustDomain_FindCertificateByIssuerAndSerialNumber
     if (collection) {
 	(void)nssPKIObjectCollection_GetCertificates(collection, 
 	                                             &rvCert, 1, NULL);
-	nssPKIObjectCollection_Destroy(collection);
 	if (!rvCert) {
 	    goto loser;
 	}
+	nssPKIObjectCollection_Destroy(collection);
     }
     nssSlotArray_Destroy(slots);
     return rvCert;
@@ -1248,11 +1248,15 @@ nssTrustDomain_FindTrustForCertificate
 		if (!pkio) {
 		    pkio = nssPKIObject_Create(NULL, to, td, NULL);
 		    if (!pkio) {
+			nssToken_Destroy(token);
+			nssCryptokiObject_Destroy(to);
 			goto loser;
 		    }
 		} else {
 		    status = nssPKIObject_AddInstance(pkio, to);
 		    if (status != PR_SUCCESS) {
+			nssToken_Destroy(token);
+			nssCryptokiObject_Destroy(to);
 			goto loser;
 		    }
 		}
@@ -1261,7 +1265,7 @@ nssTrustDomain_FindTrustForCertificate
 	}
     }
     if (pkio) {
-	rvt = nssTrust_Create(pkio);
+	rvt = nssTrust_Create(pkio, &c->encoding);
 	if (!rvt) {
 	    goto loser;
 	}
@@ -1270,9 +1274,6 @@ nssTrustDomain_FindTrustForCertificate
     return rvt;
 loser:
     nssSlotArray_Destroy(slots);
-    if (to) {
-	nssCryptokiObject_Destroy(to);
-    }
     if (pkio) {
 	nssPKIObject_Destroy(pkio);
     }
