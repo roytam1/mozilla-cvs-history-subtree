@@ -294,53 +294,21 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
         }
         
         /* Set pending JS exception and clear the java exception. */
-        jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
         JS_SetPendingException(cx, js_exception);                        
         goto done;
     }
 
 do_report:
-
-    jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
-    js_error_msg = JS_vsmprintf(format, ap);
-
-    if (!js_error_msg) {
-        JS_ASSERT(0);       /* Out-of-memory */
-        return;
-    }
-
-#ifdef REPORT_JAVA_EXCEPTION_STACK_TRACE
-
-    java_stack_trace = get_java_stack_trace(cx, jEnv, java_exception);
-    if (java_stack_trace) {
-        error_msg = JS_smprintf("%s\n%s", js_error_msg, java_stack_trace);
-        free((char*)java_stack_trace);
-        if (!error_msg) {
-            JS_ASSERT(0);       /* Out-of-memory */
-            goto done;
-        }
-    } else
-
-#endif
-    {
-        java_error_msg = jsj_GetJavaErrorMessage(jEnv);
-        if (java_error_msg) {
-            error_msg = JS_smprintf("%s (%s)\n", js_error_msg, java_error_msg);
-            free((char*)java_error_msg);
-            free(js_error_msg);
-        } else {
-            error_msg = js_error_msg;
-        }
-    }
     
-    JS_ReportError(cx, error_msg);
+    JS_ASSERT(0);
+    jsj_LogError("Out of memory while attempting to throw JSException\n");
+    goto done;
     
-    /* Important: the Java exception must not be cleared until the reporter
-     *  has been called, because the capture_js_error_reports_for_java(),
-     *  called from JS_ReportError(), needs to read the exception from the JVM 
-     */
 done:
+
     (*jEnv)->ExceptionClear(jEnv);
+    if (class_descriptor)
+        jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
     if (java_obj)
         (*jEnv)->DeleteLocalRef(jEnv, java_obj);
     if (java_exception)
