@@ -375,7 +375,7 @@ nsDOMClassInfo::Init()
                            WANT_PRECREATE);
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Plugin, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Plugin, nsPluginSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(PluginArray, nsPluginArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
@@ -1807,7 +1807,13 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     nsCOMPtr<nsISupports> item;
 
-    nsresult rv = GetNamedItem(native, id, getter_AddRefs(item));
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                             ::JS_GetStringChars(jsstr)),
+                         ::JS_GetStringLength(jsstr));
+
+    nsresult rv = GetNamedItem(native, name, getter_AddRefs(item));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Do we wanto fall through to nsArraySH::GetProperty() here if
@@ -1842,20 +1848,15 @@ nsHTMLCollectionSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
 }
 
 nsresult
-nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative, jsval id,
+nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative,
+                                 nsAReadableString& aName,
                                  nsISupports **aResult)
 {
   nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
 
-  JSString *jsstr = JSVAL_TO_STRING(id);
-
-  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
-
   nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
-  nsresult rv =  collection->NamedItem(name, &node);
+  nsresult rv =  collection->NamedItem(aName, &node);
 
   *aResult = node;
 
@@ -1866,19 +1867,14 @@ nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative, jsval id,
 // FomrControlList helper
 
 nsresult
-nsFormControlListSH::GetNamedItem(nsISupports *aNative, jsval id,
+nsFormControlListSH::GetNamedItem(nsISupports *aNative,
+                                  nsAReadableString& aName,
                                   nsISupports **aResult)
 {
   nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
-  JSString *jsstr = JSVAL_TO_STRING(id);
-
-  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
-
-  return list->NamedItem(name, aResult);
+  return list->NamedItem(aName, aResult);
 }
 
 // Document helper for document.location and document.on*
@@ -2117,6 +2113,40 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
 }
 
 
+// Plugin helper
+
+nsresult
+nsPluginSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                      nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMPlugin> plugin(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(plugin, NS_ERROR_UNEXPECTED);
+
+  nsIDOMMimeType *mime_type = nsnull;
+  nsresult rv = plugin->Item(aIndex, &mime_type);
+
+  *aResult = mime_type;
+
+  return rv;
+}
+
+nsresult
+nsPluginSH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
+                         nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMPlugin> plugin(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(plugin, NS_ERROR_UNEXPECTED);
+
+  nsIDOMMimeType *mime_type = nsnull;
+
+  nsresult rv = plugin->NamedItem(aName, &mime_type);
+
+  *aResult = mime_type;
+
+  return rv;
+}
+
+
 // PluginArray helper
 
 nsresult
@@ -2135,21 +2165,15 @@ nsPluginArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
 }
 
 nsresult
-nsPluginArraySH::GetNamedItem(nsISupports *aNative, jsval id,
+nsPluginArraySH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                               nsISupports **aResult)
 {
   nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
-  JSString *jsstr = JSVAL_TO_STRING(id);
-
-  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
-
   nsIDOMPlugin *plugin = nsnull;
 
-  nsresult rv = array->NamedItem(name, &plugin);
+  nsresult rv = array->NamedItem(aName, &plugin);
 
   *aResult = plugin;
 
@@ -2157,7 +2181,7 @@ nsPluginArraySH::GetNamedItem(nsISupports *aNative, jsval id,
 }
 
 
-// PluginArray helper
+// MimeTypeArray helper
 
 nsresult
 nsMimeTypeArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
@@ -2175,21 +2199,15 @@ nsMimeTypeArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
 }
 
 nsresult
-nsMimeTypeArraySH::GetNamedItem(nsISupports *aNative, jsval id,
+nsMimeTypeArraySH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult)
 {
   nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
-  JSString *jsstr = JSVAL_TO_STRING(id);
-
-  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
-
   nsIDOMMimeType *mime_type = nsnull;
 
-  nsresult rv = array->NamedItem(name, &mime_type);
+  nsresult rv = array->NamedItem(aName, &mime_type);
 
   *aResult = mime_type;
 

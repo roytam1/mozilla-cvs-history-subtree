@@ -293,7 +293,7 @@ protected:
   {
   }
 
-  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult) = 0;
 
 public:
@@ -321,7 +321,7 @@ protected:
                              nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult);
 
 public:
@@ -347,7 +347,7 @@ protected:
 
   // Override nsNamedArraySH::GetNamedItem() since our NamedItem() can
   // return either a nsIDOMNode or a nsIHTMLCollection
-  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult);
 
 public:
@@ -460,6 +460,36 @@ public:
 };
 
 
+// Plugin helper
+
+class nsPluginSH : public nsNamedArraySH
+{
+protected:
+  nsPluginSH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  {
+  }
+
+  virtual ~nsPluginSH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
+
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
+                                nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsPluginSH(aID);
+  }
+};
+
+
 // PluginArray helper
 
 class nsPluginArraySH : public nsNamedArraySH
@@ -479,7 +509,7 @@ protected:
                              nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult);
 
 public:
@@ -509,7 +539,7 @@ protected:
                              nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                 nsISupports **aResult);
 
 public:
