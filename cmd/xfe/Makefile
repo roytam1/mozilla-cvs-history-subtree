@@ -353,7 +353,7 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libstubnj.a \
 		  $(NULL)
 
-endif  # MOZ_JAVA
+endif  # JAVA_OR_OJI
 
 BASIC_LIBS	+= $(DIST)/lib/libzlib.a
 
