@@ -3522,6 +3522,11 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
           
           EnsureDocument(presShell);
           
+          #ifndef XP_PC // Hack to not cause undue suppression when you have multiple geckos in one
+                        // top level window. This is being done for an embedding customer, and is only
+                        // safe and verfied on win32. MacOS Composer in particular will probably regress if this
+                        // code is not present. Thus the #ifndef XP_PC. See bugscape bug 11427
+          
           // Make sure we're not switching command dispatchers, if so, surpress the blurred one
           if(gLastFocusedDocument && mDocument) {
             nsCOMPtr<nsIFocusController> newFocusController;
@@ -3541,6 +3546,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             if(oldFocusController && oldFocusController != newFocusController)
               oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
           }
+          #endif
           
           nsCOMPtr<nsIEventStateManager> esm;
           oldPresContext->GetEventStateManager(getter_AddRefs(esm));
