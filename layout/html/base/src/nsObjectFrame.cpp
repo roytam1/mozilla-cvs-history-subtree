@@ -1716,36 +1716,50 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
 // Screen painting code
 
 #if defined (XP_MAC)
-    // delegate all painting to the plugin instance.
-    if ((NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) && (nsnull != mInstanceOwner)) {
-        mInstanceOwner->Paint(aDirtyRect);
-    }
+  // delegate all painting to the plugin instance.
+  if ((NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) && (nsnull != mInstanceOwner))
+    mInstanceOwner->Paint(aDirtyRect);
 #elif defined (XP_PC)
-    if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) 
-    {
-        nsIPluginInstance * inst;
-        if (NS_OK == GetPluginInstance(inst))
-        {
-            // Look if it's windowless
-            nsPluginWindow * window;
-            mInstanceOwner->GetWindow(window);
-            if (window->type == nsPluginWindowType_Drawable)
-            {
-                PRUint32 hdc;
-                aRenderingContext.RetrieveCurrentNativeGraphicData(&hdc);
-                if(NS_REINTERPRET_CAST(PRUint32, window->window) != hdc)
-                {
-                    window->window = NS_REINTERPRET_CAST(nsPluginPort*, hdc);
-                    inst->SetWindow(window);
-                }
-                mInstanceOwner->Paint(aDirtyRect, hdc);
-            }
-            NS_RELEASE(inst);
+  if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
+    nsIPluginInstance * inst;
+    if (NS_OK == GetPluginInstance(inst)) {
+      // Look if it's windowless
+      nsPluginWindow * window;
+      mInstanceOwner->GetWindow(window);
+      if (window->type == nsPluginWindowType_Drawable) {
+
+        // check if we need to call SetWindow with updated parameters
+        PRBool doupdatewindow = PR_FALSE;
+
+        // check if we need to update hdc
+        PRUint32 hdc;
+        aRenderingContext.RetrieveCurrentNativeGraphicData(&hdc);
+        if(NS_REINTERPRET_CAST(PRUint32, window->window) != hdc) {
+          window->window = NS_REINTERPRET_CAST(nsPluginPort*, hdc);
+          doupdatewindow = PR_TRUE;
         }
+
+        // check if we need to update window position
+        nsPoint origin;
+        GetWindowOriginInPixels(aPresContext, PR_TRUE, &origin);
+
+        if((window->x != origin.x) || (window->y != origin.y)) {
+          window->x = origin.x;
+          window->y = origin.y;
+          doupdatewindow = PR_TRUE;
+        }
+
+        if(doupdatewindow)
+          inst->SetWindow(window);
+
+        mInstanceOwner->Paint(aDirtyRect, hdc);
+      }
+      NS_RELEASE(inst);
     }
+  }
 #endif /* !XP_MAC */
-    DO_GLOBAL_REFLOW_COUNT_DSP("nsObjectFrame", &aRenderingContext);
-    return NS_OK;
+  DO_GLOBAL_REFLOW_COUNT_DSP("nsObjectFrame", &aRenderingContext);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
