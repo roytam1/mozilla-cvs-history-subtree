@@ -3711,31 +3711,31 @@ dnl ========================================================
 dnl SVG
 dnl ========================================================
 MOZ_ARG_ENABLE_BOOL(svg,
-[  --enable-svg            Enable SVG support ],
+[  --enable-svg            Enable SVG support],
     MOZ_SVG=1,
     MOZ_SVG= )
 if test -n "$MOZ_SVG"; then
   AC_DEFINE(MOZ_SVG)
 fi
-AC_SUBST(MOZ_SVG)
 
 MOZ_ARG_ENABLE_BOOL(svg-renderer-gdiplus,
-[  --enable-svg-renderer-gdiplus Enable SVG gdi+ renderer ],
+[  --enable-svg-renderer-gdiplus Enable SVG gdi+ renderer],
     MOZ_SVG_RENDERER_GDIPLUS=1,
     MOZ_SVG_RENDERER_GDIPLUS= )
 if test -n "$MOZ_SVG_RENDERER_GDIPLUS"; then
+  AC_CHECK_HEADER(Gdiplus.h,,
+                  AC_MSG_ERROR([Building the SVG GDI+ renderer requires an appropriate Microsoft SDK.]) )
+  
   AC_DEFINE(MOZ_SVG_RENDERER_GDIPLUS)
 fi
-AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
 
 MOZ_ARG_ENABLE_BOOL(svg-renderer-libart,
-[  --enable-svg-renderer-libart Enable SVG libart renderer ],
+[  --enable-svg-renderer-libart Enable SVG libart renderer],
     MOZ_SVG_RENDERER_LIBART=1,
     MOZ_SVG_RENDERER_LIBART= )
 if test -n "$MOZ_SVG_RENDERER_LIBART"; then
   AC_DEFINE(MOZ_SVG_RENDERER_LIBART)
 fi
-AC_SUBST(MOZ_SVG_RENDERER_LIBART)
 
 dnl To build transformiix standalone, set TX_EXE while configuring
 if test "$TX_EXE"; then
@@ -5030,6 +5030,9 @@ AC_SUBST(MOZ_GFX_TOOLKIT)
 AC_SUBST(MOZ_GFX_TOOLKIT_LDFLAGS)
 AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(MOZ_MATHML)
+AC_SUBST(MOZ_SVG)
+AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
+AC_SUBST(MOZ_SVG_RENDERER_LIBART)
 AC_SUBST(TX_EXE)
 AC_SUBST(MOZ_JS_LIBS)
 AC_SUBST(MOZ_PSM)
