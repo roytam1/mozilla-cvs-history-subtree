@@ -366,13 +366,17 @@ nsAbSync::DisplayErrorMessage(const PRUnichar * msg)
 
   if (mRootDocShell)
   {
+    nsCOMPtr<nsIDocShell> docShell = do_QueryReferent(mRootDocShell);
+    if (docShell)
+    {
     nsCOMPtr<nsIPrompt> dialog;
-    dialog = do_GetInterface(mRootDocShell, &rv);
+      dialog = do_GetInterface(docShell, &rv);
     if (dialog)
     {
       rv = dialog->Alert(nsnull, msg);
       rv = NS_OK;
     }
+  }
   }
   else
     rv = NS_ERROR_NULL_POINTER;
@@ -413,7 +417,7 @@ nsAbSync::SetDOMWindow(nsIDOMWindowInternal *aWindow)
     
     nsCOMPtr<nsIDocShellTreeNode> rootAsNode(do_QueryInterface(rootAsItem));
     nsCOMPtr<nsIDocShell> temp_docShell(do_QueryInterface(rootAsItem));
-    mRootDocShell = temp_docShell;
+    mRootDocShell = getter_AddRefs(NS_GetWeakReference(temp_docShell));
   }
 
   return rv;
@@ -658,9 +662,7 @@ NS_IMETHODIMP nsAbSync::CancelAbSync()
 NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 *aTransactionID)
 {
   nsresult      rv;
-  char          *protocolRequest = nsnull;
   char          *prefixStr = nsnull;
-  char          *clientIDStr = nsnull;
 
   // We'll need later...
   SetDOMWindow(aDOMWindow);
@@ -713,7 +715,10 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
   //
   rv = AnalyzeTheLocalAddressBook();
   if (NS_FAILED(rv))
-    goto EarlyExit;
+  {
+    InternalCleanup(rv);
+    return rv;
+  }
 
 #if DEBUG_OFFLINE_TEST // this is added for loop back test
   rv = ProcessServerResponse("a test response");
@@ -729,31 +734,35 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
     mPostEngine->AddPostListener((nsIAbSyncPostListener *)this);
   }
 
-  rv = mPostEngine->BuildMojoString(mRootDocShell, &clientIDStr);
-  if (NS_FAILED(rv) || (!clientIDStr))
-    goto EarlyExit;
+  nsXPIDLCString clientIDStr;
+  nsCOMPtr<nsIDocShell> docShell = do_QueryReferent(mRootDocShell);
+  if (docShell)
+    rv = mPostEngine->BuildMojoString(docShell, getter_Copies(clientIDStr));
+  if (NS_FAILED(rv) || clientIDStr.IsEmpty())
+  {
+    InternalCleanup(rv);
+    return rv;
+  }
 
   if (mPostString.IsEmpty())
-    prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr, ABSYNC_VERSION);
+    prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr.get(), ABSYNC_VERSION);
   else
-    prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s&", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr, ABSYNC_VERSION);
+    prefixStr = PR_smprintf("last=%u&protocol=%s&client=%s&ver=%s&", mLastChangeNum, ABSYNC_PROTOCOL, clientIDStr.get(), ABSYNC_VERSION);
 
   if (!prefixStr)
   {
     rv = NS_ERROR_OUT_OF_MEMORY;
     OnStopOperation(mTransactionID, NS_ERROR_OUT_OF_MEMORY, nsnull, nsnull);
-    goto EarlyExit;
+    InternalCleanup(rv);
+    return rv;
   }
 
   mPostString.Insert(NS_ConvertASCIItoUCS2(prefixStr), 0);
   nsCRT::free(prefixStr);
 
-  protocolRequest = ToNewCString(mPostString);
-  if (!protocolRequest)
-    goto EarlyExit;
-
   // Ok, FIRE!
-  rv = mPostEngine->SendAbRequest(nsnull, mAbSyncPort, protocolRequest, mTransactionID, mRootDocShell, mUserName);
+
+  rv = mPostEngine->SendAbRequest(nsnull, mAbSyncPort, NS_ConvertUCS2toUTF8(mPostString).get(), mTransactionID, docShell, mUserName);
   if (NS_SUCCEEDED(rv))
   {
     mCurrentState = nsIAbSyncState::nsIAbSyncRunning;
@@ -761,12 +770,7 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
   else
   {
     OnStopOperation(mTransactionID, rv, nsnull, nsnull);
-    goto EarlyExit;
   }
-
-EarlyExit:
-  PR_FREEIF(protocolRequest);
-  PR_FREEIF(clientIDStr);
 
   if (NS_FAILED(rv))
     InternalCleanup(rv);

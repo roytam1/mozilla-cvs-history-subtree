@@ -759,6 +759,7 @@ nsresult nsAbSync::LocateExistingListRecord(PRUint32 listID, syncListMappingReco
 {
   NS_ENSURE_ARG_POINTER(result);
 
+  *result = nsnull;
   for (PRUint32 i = 0; i < mListNewTableCount; i++)
   {
     if (mListNewSyncMapingTable[i].localID == (PRInt32)listID)
@@ -1479,10 +1480,12 @@ nsAbSync::DeleteMailingLists()
           if (NS_SUCCEEDED(LocateClientIDFromServerID(listID, &listLocalID)))
           { 
             // Reset server id so we don't save it to history table later.
-            rv = LocateExistingListRecord(listLocalID, &listRecord);
+            if (NS_SUCCEEDED(LocateExistingListRecord(listLocalID, &listRecord)))
+            {
             listRecord->serverID = 0;
             // Now delete cards associated with email members.
             DeleteAllEmailMemberCards(listRecord);
+            }
           }
         }
       }

@@ -52,6 +52,7 @@
 #include "nsIDocShell.h"
 #include "nsIFileSpec.h"
 #include "prlog.h"
+#include "nsWeakReference.h"
 
 //
 // Basic Sync Logic
@@ -362,7 +363,7 @@ private:
   nsStringArray   *mPhoneTypes;                           // Phone number types...
   nsStringArray   *mPhoneValues;                          // Phone number values...
 
-  nsIDocShell     *mRootDocShell;                         // For use in prompts
+  nsWeakPtr        mRootDocShell;                         // For use in prompts
 };
 
 #endif /* __nsIAbSync_h__ */
