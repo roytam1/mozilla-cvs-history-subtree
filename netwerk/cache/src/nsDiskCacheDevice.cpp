@@ -684,7 +684,7 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * entry)
     
     // create a new record for this entry
     record.SetHashNumber(nsDiskCache::Hash(entry->Key()->get()));
-    record.SetEvictionRank(ULONG_MAX - entry->ExpirationTime());
+    record.SetEvictionRank(ULONG_MAX - SecondsFromPRTime(PR_Now()));
 
     if (!entry->IsDoomed()) {
         // if entry isn't doomed, add it to the cache map

@@ -26,6 +26,8 @@
 #include "nsDiskCacheBinding.h"
 #include "nsDiskCacheEntry.h"
 
+#include "nsCache.h"
+
 #include "nsCRT.h"
 
 #include <string.h>
@@ -609,6 +611,8 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
     nsresult            rv        = NS_OK;
     nsDiskCacheEntry *  diskEntry =  CreateDiskCacheEntry(binding);
     if (!diskEntry)  return NS_ERROR_UNEXPECTED;
+    
+    binding->mRecord.SetEvictionRank(ULONG_MAX - SecondsFromPRTime(PR_Now()));
     
     PRUint32    size = diskEntry->Size();
     PRUint32    fileIndex;
