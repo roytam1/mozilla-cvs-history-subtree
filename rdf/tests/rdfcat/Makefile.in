@@ -58,7 +58,6 @@ else
 NETLIB_LIBS	= \
 		-lneckoutil_s \
 		-lxp \
-		-ljsurl \
 		-lmozdbm \
 		$(NULL)
 endif
