@@ -27,7 +27,7 @@ var sidebar = new Object;
 
 function debug(msg)
 {
-  dump(msg);
+  //dump(msg);
 }
 
 function Init()
