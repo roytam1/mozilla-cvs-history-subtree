@@ -578,13 +578,12 @@ nsSVGElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 NS_IMETHODIMP
 nsSVGElement::GetFirstChild(nsIDOMNode** aNode)
 {
-  nsIContent *child = (nsIContent *)mChildren.ElementAt(0);
-  if (nsnull != child) {
-    nsresult res = child->QueryInterface(NS_GET_IID(nsIDOMNode),
-                                         (void**)aNode);
-    NS_ASSERTION(NS_OK == res, "Must be a DOM Node"); // must be a DOM Node
-    return res;
+  if (mChildren.Count() > 0) {
+    nsIContent *child = (nsIContent *)mChildren.ElementAt(0);
+    if (child) // is this necessary?
+      return child->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aNode);
   }
+
   *aNode = nsnull;
   return NS_OK;
 }
@@ -592,16 +591,14 @@ nsSVGElement::GetFirstChild(nsIDOMNode** aNode)
 NS_IMETHODIMP
 nsSVGElement::GetLastChild(nsIDOMNode** aNode)
 {
-  nsIContent *child = (nsIContent *)mChildren.ElementAt(mChildren.Count()-1);
-  if (nsnull != child) {
-    nsresult res = child->QueryInterface(NS_GET_IID(nsIDOMNode),
-                                         (void**)aNode);
-    NS_ASSERTION(NS_OK == res, "Must be a DOM Node"); // must be a DOM Node
-    return res;
+  if (mChildren.Count() > 0) {
+    nsIContent *child = (nsIContent *)mChildren.ElementAt(mChildren.Count()-1);
+    if (child) // is this necessary?
+      return child->QueryInterface(NS_GET_IID(nsIDOMNode), (void**)aNode);
   }
+
   *aNode = nsnull;
   return NS_OK;
-
 }
 
 NS_IMETHODIMP
