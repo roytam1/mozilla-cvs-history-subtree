@@ -79,6 +79,7 @@ void nsMailboxProtocol::Initialize(nsIURI * aURL)
 			else
 			{
 				// we need to specify a byte range to read in so we read in JUST the message we want.
+				SetupMessageExtraction();
 				nsMsgKey aMsgKey;
 				PRUint32 aMsgSize = 0;
 				rv = m_runningUrl->GetMessageKey(&aMsgKey);
@@ -184,9 +185,7 @@ PRInt32 nsMailboxProtocol::DoneReadingMessage()
 		nsFileURL  fileURL(filePath);
 		char * message_path_url = PL_strdup(fileURL.GetAsString());
 
-#if 0 // mscott - no more dirty hack for post necko...need to hook up into a stream converter here
-		rv = m_displayConsumer->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
-#endif
+		rv = m_displayConsumer->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE);
 
 		PR_FREEIF(message_path_url);
 
@@ -259,14 +258,12 @@ nsresult nsMailboxProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 					// converting the message from RFC-822 to HTML before displaying it...
 					ClearFlag(MAILBOX_MSG_PARSE_FIRST_LINE);
 					m_tempMessageFile->openStreamForWriting();
-					SetupMessageExtraction();
 					m_nextState = MAILBOX_READ_MESSAGE;
 					break;
 
 				case nsIMailboxUrl::ActionCopyMessage:
 				case nsIMailboxUrl::ActionMoveMessage:
 					rv = m_runningUrl->GetMailboxCopyHandler(getter_AddRefs(m_mailboxCopyHandler));
-					SetupMessageExtraction();
 					m_nextState = MAILBOX_READ_MESSAGE;
 					break;
 
