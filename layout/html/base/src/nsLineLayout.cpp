@@ -1051,6 +1051,13 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       pfd->SetFlag(PFD_ISTEXTFRAME, PR_TRUE);
       // XXX An empty text frame at the end of the line seems not
       // to have zero width.
+      // XXX This situation happens when aTextData.mSkipWhitespace isn't set
+      // when calling nsTextFrame::MeasureText() in nsTextFrame::Reflow().
+      // Tracable for example with: <td><span>text</span>\n</td> 
+      // XXX The trailing empty text frame is well detected in
+      // nsTextFrame::MeasureText() and it is even recorded that the line ends
+      // in whitespace but the width of the empty text frame isn't reset there.
+      // XXX Something to do with inter-tag line-breaking?
       if (metrics.width) {
         pfd->SetFlag(PFD_ISNONEMPTYTEXTFRAME, PR_TRUE);
         nsCOMPtr<nsIContent> content;
@@ -2379,13 +2386,22 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
     if (pfd->mVerticalAlign == VALIGN_OTHER) {
       // Text frames do not contribute to the min/max Y values for the
       // line (instead their parent frame's font-size contributes).
-      //XXXrbs -- disable this restriction because it causes text frames
+      //XXXrbs -- relax this restriction because it causes text frames
       //          to jam together when 'font-size-adjust' is enabled
       //          and layout is using dynamic font heights (bug 20394)
-      //       -- Note: With this code enabled and with the fact that we are not
+      //       -- Note #1: With this code enabled and with the fact that we are not
       //          using Em[Ascent|Descent] as nsDimensions for text metrics in
       //          GFX mean that the discussion in bug 13072 cannot hold.
-      if (PR_TRUE) { // was: !pfd->GetFlag(PFD_ISTEXTFRAME)) {
+      //       -- Note #2: We still don't want empty-text frames to interfere.
+      //          For example in quirks mode, avoiding empty text frames prevents
+      //          "tall" lines around elements like <hr> since the rules of <hr>
+      //          in quirks.css have pseudo text contents with LF in them.
+#if 0
+      if (!pfd->GetFlag(PFD_ISTEXTFRAME)) {
+#else
+      if (!pfd->GetFlag(PFD_ISTEXTFRAME) ||
+          (pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME) && !logicalHeight)) {
+#endif
         nscoord yTop, yBottom;
         if (frameSpan) {
           // For spans that were are now placing, use their position
