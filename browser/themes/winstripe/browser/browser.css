@@ -872,11 +872,16 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 #find-status-icon
 {
 	list-style-image: none;
-  margin-left: 12px;
+  margin: 1px 0px 0px 12px;
   width: 16px;
   height: 16px;
 }
-  
+
+#find-status
+{
+  margin: 1px 0px 0px 5px;
+}
+
 #find-status-icon[status="notfound"]
 {
   list-style-image: url("chrome://browser/skin/notfound.png");
