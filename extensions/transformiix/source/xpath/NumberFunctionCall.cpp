@@ -141,20 +141,19 @@ ExprResult* NumberFunctionCall::evaluate(Node* context, ContextState* cs) {
             }
             else {
                 String resultStr;
-                String temp;
-                XMLDOMUtils::getNodeValue(context, &temp);
-                if ( cs->isStripSpaceAllowed(context) ) {
-                    XMLUtils::stripSpace(temp, resultStr);
+                XMLDOMUtils::getNodeValue(context, &resultStr);
+                if ( cs->isStripSpaceAllowed(context) &&
+                     XMLUtils::shouldStripTextnode(resultStr)) {
+                    result->setValue(Double::NaN);
                 }
                 else {
-                    resultStr.append(temp);
+                    Double dbl(resultStr);
+                    result->setValue(dbl.doubleValue());
                 }
-                Double dbl(resultStr);
-                result->setValue(dbl.doubleValue());
             }
         }
         else {
-            result = new NumberResult(0.0);
+            result->setValue(Double::NaN);
         }
         break;
     }

@@ -226,12 +226,10 @@ ExprResult* StringFunctionCall::evaluate(Node* context, ContextState* cs) {
                     evaluateToString((Expr*)iter->next(),context, cs, resultStr);
                 }
                 else {
-                    String temp;
-                    XMLDOMUtils::getNodeValue(context, &temp);
-                    if ( cs->isStripSpaceAllowed(context) ) {
-                        XMLUtils::stripSpace(temp, resultStr);
-                    }
-                    else resultStr.append(temp);
+                    XMLDOMUtils::getNodeValue(context, &resultStr);
+                    if ( cs->isStripSpaceAllowed(context) &&
+                         XMLUtils::shouldStripTextnode(resultStr))
+                        resultStr = "";
                 }
                 result = new StringResult(resultStr);
             }
