@@ -25,10 +25,12 @@
 #include "nsIMsgHdr.h"
 #include "nsIMsgThread.h"
 
+// chrome://messenger/content/dbviewtest.xul
 nsMsgThreadedDBView::nsMsgThreadedDBView()
 {
   /* member initializers and constructor code */
 	m_havePrevView = PR_FALSE;
+  m_viewType = nsMsgDBViewType::allThreads; // by default
 }
 
 nsMsgThreadedDBView::~nsMsgThreadedDBView()
@@ -226,6 +228,8 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 				printf("removing empty non-ignored non-watched thread\n");
 #endif
 			}
+      rv = m_threadEnumerator->GetNext(getter_AddRefs(supports));
+      threadHdr = do_QueryInterface(supports);
 		}
 	}
 
