@@ -394,7 +394,7 @@ BOOL nsModifyStyle(HWND hWnd, int nStyleOffset, DWORD dwRemove, DWORD dwAdd, UIN
 {
 	ASSERT(hWnd != NULL);
 	DWORD dwStyle = ::GetWindowLong(hWnd, nStyleOffset);
-	DWORD dwNewStyle;
+	DWORD dwNewStyle = dwStyle;
 	if (dwRemove != NULL)
 		dwNewStyle = dwStyle & ~dwRemove;
 	if (dwAdd != NULL)
