@@ -32,7 +32,7 @@
 #include "nsCRT.h"
 #include "nsJPGDecoder.h"
 #include "jpeg.h"
-#include "merrors.h"
+#include "ilErrors.h"
 #include "il.h"
 
 #include <ctype.h>      /* to declare isprint() */
