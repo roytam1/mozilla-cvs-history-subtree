@@ -1250,7 +1250,7 @@ nsldapi_iostatus_poll( LDAP *ld, struct timeval *timeout )
 	return( rc );
 }
 
-#if !defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
+#if defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
 /*
  * returns 1 if "fd" was added to pollfds.
  * returns 1 if some of the bits in "events" were added to pollfds.
