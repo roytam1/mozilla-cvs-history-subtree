@@ -2099,9 +2099,17 @@ RDFGenericBuilderImpl::IsOpen(nsIContent* aElement)
         return rv;
     }
 
-    // The insertion root is _always_ open.
-    if (tag == insertionAtom)
-        return PR_TRUE;
+	if (tag == insertionAtom) {
+		// Hack for the tree widget
+		nsCOMPtr<nsIContent> parent;
+		aElement->GetParent(*getter_AddRefs(parent));
+		nsCOMPtr<nsIAtom> parentTag;
+		parent->GetTag(*getter_AddRefs(parentTag));
+		nsString tagName;
+		parentTag->ToString(tagName);
+		if (tagName == "tree")
+			return PR_TRUE;
+	}
 
     // If it's not a widget folder item, then it's not open.
     if (tag != folderAtom)
@@ -2118,6 +2126,7 @@ RDFGenericBuilderImpl::IsOpen(nsIContent* aElement)
             return PR_TRUE;
     }
 
+	
     return PR_FALSE;
 }
 
