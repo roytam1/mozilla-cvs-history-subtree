@@ -53,8 +53,8 @@ public:
                                       PRUint32 aNewFlags, nsIDBChangeListener *aInstigator);
 
   NS_IMETHOD LoadMessageByViewIndex(nsMsgViewIndex aViewIndex);
-  NS_IMETHOD GetCellProperties(PRInt32 aRow, nsITreeColumn *aCol, nsISupportsArray *aProperties);
-  NS_IMETHOD GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAString& aValue);
+  NS_IMETHOD GetCellProperties(PRInt32 aRow, const PRUnichar *aColID, nsISupportsArray *aProperties);
+  NS_IMETHOD GetCellText(PRInt32 aRow, const PRUnichar *aColID, nsAString& aValue);
 
 protected:
   nsMsgGroupThread *AddHdrToThread(nsIMsgDBHdr *msgHdr);

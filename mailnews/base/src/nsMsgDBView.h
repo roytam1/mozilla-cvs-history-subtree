@@ -76,6 +76,7 @@ enum eFieldType {
 // reserve the top 8 bits in the msg flags for the view-only flags.
 #define MSG_VIEW_FLAGS 0xEE000000
 #define MSG_VIEW_FLAG_HASCHILDREN 0x40000000
+#define MSG_VIEW_FLAG_DUMMY 0x20000000
 #define MSG_VIEW_FLAG_ISTHREAD 0x8000000
 
 /* There currently only 5 labels defined */
@@ -141,6 +142,8 @@ protected:
   static nsIAtom* kJunkMsgAtom;
   static nsIAtom* kNotJunkMsgAtom;
 
+  static nsIAtom* kDummyMsgAtom;
+
   static PRUnichar* kReadString;
   static PRUnichar* kRepliedString;
   static PRUnichar* kForwardedString;
@@ -190,7 +193,7 @@ protected:
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
   virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
   PRBool GetShowingIgnored() {return (m_viewFlags & nsMsgViewFlagsType::kShowIgnored) != 0;}
-  virtual nsresult OnNewHeader(nsMsgKey newKey, nsMsgKey parentKey, PRBool ensureListed);
+  virtual nsresult OnNewHeader(nsIMsgDBHdr *aNewHdr, nsMsgKey parentKey, PRBool ensureListed);
   virtual nsMsgViewIndex GetInsertIndex(nsIMsgDBHdr *msgHdr);
   nsMsgViewIndex GetIndexForThread(nsIMsgDBHdr *hdr);
   virtual nsresult GetThreadContainingIndex(nsMsgViewIndex index, nsIMsgThread **thread);
@@ -207,20 +210,23 @@ protected:
   nsresult		GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount);
   nsMsgViewIndex GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr);
   nsresult GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result);
-  nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
+  virtual nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
 				  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
 				  PRInt32 *pThreadCount = nsnull,
 				  PRUint32 *pFlags = nsnull);
+  virtual nsresult GetThreadContainingMsgHdr(nsIMsgDBHdr *msgHdr, nsIMsgThread **pThread);
   nsMsgKey GetKeyOfFirstMsgInThread(nsMsgKey key);
   PRInt32 CountExpandedThread(nsMsgViewIndex index);
   nsresult ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta);
   nsresult ReverseSort();
   nsresult ReverseThreads();
   nsresult SaveSortInfo(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
+  nsresult PersistFolderInfo(nsIDBFolderInfo **dbFolderInfo);
 
   nsMsgKey		GetAt(nsMsgViewIndex index) ;
   nsMsgViewIndex	FindViewIndex(nsMsgKey  key) 
 					  {return (nsMsgViewIndex) (m_keys.FindIndex(key));}
+  nsMsgViewIndex        FindHdr(nsIMsgDBHdr *msgHdr);
   virtual nsMsgViewIndex	FindKey(nsMsgKey key, PRBool expand);
   virtual nsresult GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db);
   virtual nsresult GetFolders(nsISupportsArray **folders);
@@ -228,7 +234,7 @@ protected:
 
   nsresult ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
   nsresult ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed);
-  PRInt32  FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThreadViewIndex);
+  virtual PRInt32  FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThreadViewIndex);
   nsresult ListIdsInThreadOrder(nsIMsgThread *threadHdr, nsMsgKey parentKey, PRInt32 level, nsMsgViewIndex *viewIndex, PRUint32 *pNumListed);
   PRInt32  GetSize(void) {return(m_keys.GetSize());}
 

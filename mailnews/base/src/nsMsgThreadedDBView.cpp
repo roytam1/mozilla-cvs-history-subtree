@@ -67,17 +67,11 @@ NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeV
   // Preset msg hdr cache size for performance reason.
   PRInt32 totalMessages, unreadMessages;
   nsCOMPtr <nsIDBFolderInfo> dbFolderInfo;
-  rv = m_db->GetDBFolderInfo(getter_AddRefs(dbFolderInfo));
+  PersistFolderInfo(getter_AddRefs(dbFolderInfo));
   NS_ENSURE_SUCCESS(rv, rv);
   // save off sort type and order, view type and flags
-  dbFolderInfo->SetSortType(m_sortType);
-  dbFolderInfo->SetSortOrder(m_sortOrder);
-  dbFolderInfo->SetViewFlags(m_viewFlags);
   dbFolderInfo->GetNumUnreadMessages(&unreadMessages);
   dbFolderInfo->GetNumMessages(&totalMessages);
-  nsMsgViewTypeValue viewType;
-  GetViewType(&viewType);
-  dbFolderInfo->SetViewType(viewType);
   if (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)
   { 
     // Set unread msg size + extra entries to avoid reallocation on new mail.
@@ -281,7 +275,8 @@ NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgVi
     return NS_OK;
   }
 
-  PRBool sortThreads = m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay; // sort threads by sort order
+  // sort threads by sort order
+  PRBool sortThreads = m_viewFlags & (nsMsgViewFlagsType::kThreadedDisplay | nsMsgViewFlagsType::kGroupBySort);
   
   // if sort type is by thread, but we're not threaded, change sort type to byId
   if (sortType == nsMsgViewSortType::byThread && (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0)
@@ -299,6 +294,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgVi
     {
       m_sortType = sortType;
       m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
+      m_viewFlags &= nsMsgViewFlagsType::kGroupBySort;
       if ( m_havePrevView)
       {
         // restore saved id array and flags array
@@ -356,7 +352,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgVi
         m_prevLevels.InsertAt(0, &m_levels);
         // do this before we sort, so that we'll use the cheap method
         // of expanding.
-        m_viewFlags &= ~nsMsgViewFlagsType::kThreadedDisplay;
+        m_viewFlags &= ~(nsMsgViewFlagsType::kThreadedDisplay | nsMsgViewFlagsType::kGroupBySort);
         ExpandAll();
         //			m_idArray.RemoveAll();
         //			m_flags.RemoveAll();
@@ -545,6 +541,7 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
     nsMsgDBView::Sort(nsMsgViewSortType::byId, sortOrder); // sort top level threads by id.
     m_sortType = nsMsgViewSortType::byThread;
     m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
+    m_viewFlags &= ~nsMsgViewFlagsType::kGroupBySort;
     SetViewFlags(m_viewFlags); // persist the view flags.
     //		m_db->SetSortInfo(m_sortType, sortOrder);
   }
@@ -564,18 +561,19 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
   return NS_OK;
 }
 
-nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool ensureListed)
+nsresult nsMsgThreadedDBView::OnNewHeader(nsIMsgDBHdr *newHdr, nsMsgKey aParentKey, PRBool ensureListed)
 {
-  nsresult	rv;
+  nsresult rv = NS_OK;
+  nsMsgKey newKey;
+  newHdr->GetMessageKey(&newKey);
+
   // views can override this behaviour, which is to append to view.
   // This is the mail behaviour, but threaded views want
   // to insert in order...
-  nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  rv = m_db->GetMsgHdrForKey(newKey, getter_AddRefs(msgHdr));
-  if (NS_SUCCEEDED(rv) && msgHdr != nsnull)
+  if (newHdr)
   {
     PRUint32 msgFlags;
-    msgHdr->GetFlags(&msgFlags);
+    newHdr->GetFlags(&msgFlags);
     if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) && !ensureListed && (msgFlags & MSG_FLAG_READ))
       return NS_OK;
     // Currently, we only add the header in a threaded view if it's a thread.
@@ -584,7 +582,7 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
 
     // for search view we don't support threaded display so just add it to the view.   
     if (!(m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)) // || msgHdr->GetMessageKey() == m_messageDB->GetKeyOfFirstMsgInThread(msgHdr->GetMessageKey()))
-      rv = AddHdr(msgHdr);
+      rv = AddHdr(newHdr);
     else	// need to find the thread we added this to so we can change the hasnew flag
       // added message to existing thread, but not to view
     {	// Fix flags on thread header.
@@ -597,13 +595,13 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
         PRUint32	flags = m_flags[threadIndex];
         // if we have a collapsed thread which just got a new
         // top of thread, change the keys array.
-        PRInt32 level = FindLevelInThread(msgHdr, threadIndex);
+        PRInt32 level = FindLevelInThread(newHdr, threadIndex);
         if (((flags & MSG_FLAG_ELIDED) || threadCount == 1)
           && (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) || !(msgFlags & MSG_FLAG_READ)))
         {
           if (level == 0) {
             nsMsgKey msgKey;
-            msgHdr->GetMessageKey(&msgKey);
+            newHdr->GetMessageKey(&msgKey);
             m_keys.SetAt(threadIndex, msgKey);
           }
           // note change, to update the parent thread's unread and total counts
@@ -621,7 +619,7 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
         {								// insert child into thread
           // levels of other hdrs may have changed!
           PRUint32	newFlags = msgFlags;
-          nsMsgViewIndex insertIndex = GetInsertInfoForNewHdr(msgHdr, threadIndex, level);
+          nsMsgViewIndex insertIndex = GetInsertInfoForNewHdr(newHdr, threadIndex, level);
           // this header is the new king! try collapsing the existing thread,
           // removing it, installing this header as king, and expanding it.
           if (level == 0)	
@@ -650,10 +648,10 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
       else // adding msg to thread that's not in view.
       {
         nsCOMPtr <nsIMsgThread> threadHdr;
-        m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+        m_db->GetThreadContainingMsgHdr(newHdr, getter_AddRefs(threadHdr));
         if (threadHdr)
         {
-          AddMsgToThreadNotInView(threadHdr, msgHdr, ensureListed);
+          AddMsgToThreadNotInView(threadHdr, newHdr, ensureListed);
         }
       }
     }

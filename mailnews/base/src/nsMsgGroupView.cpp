@@ -37,7 +37,6 @@
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgSearchSession.h"
 #include "nsMsgGroupThread.h"
-#include "nsITreeColumns.h"
 
 #define MSGHDR_CACHE_LOOK_AHEAD_SIZE  25    // Allocate this more to avoid reallocation on new mail.
 #define MSGHDR_CACHE_MAX_SIZE         8192  // Max msghdr cache entries.
@@ -386,24 +385,22 @@ NS_IMETHODIMP nsMsgGroupView::OnHdrDeleted(nsIMsgDBHdr *aHdrDeleted, nsMsgKey aP
   return rv;
 }
 
-NS_IMETHODIMP nsMsgGroupView::GetCellProperties(PRInt32 aRow, nsITreeColumn *aCol, nsISupportsArray *aProperties)
+NS_IMETHODIMP nsMsgGroupView::GetCellProperties(PRInt32 aRow, const PRUnichar *aColID, nsISupportsArray *aProperties)
 {
   if (m_flags[aRow] & MSG_VIEW_FLAG_DUMMY)
     return aProperties->AppendElement(kDummyMsgAtom);
-  return nsMsgDBView::GetCellProperties(aRow, aCol, aProperties);
+  return nsMsgDBView::GetCellProperties(aRow, aColID, aProperties);
 }
 
-NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAString& aValue)
+NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, const PRUnichar *aColID, nsAString& aValue)
 {
-  const PRUnichar* colID;
-  aCol->GetIdConst(&colID);
-  if (m_flags[aRow] & MSG_VIEW_FLAG_DUMMY && colID[0] != 'u')
+  if (m_flags[aRow] & MSG_VIEW_FLAG_DUMMY && aColID[0] != 'u')
   {
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
     nsresult rv = GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
     nsHashKey *hashKey = AllocHashKeyForHdr(msgHdr);
     nsMsgGroupThread *groupThread = (nsMsgGroupThread *) m_groupsTable.Get(hashKey);
-    if (colID[0] == 'd')
+    if (aColID[0] == 'd')
     {
       aValue.SetCapacity(0);
       // ### need to localize these...
@@ -430,7 +427,7 @@ NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsA
         break;
       }
     }
-    else if (colID[0] == 't')
+    else if (aColID[0] == 't')
     {
       nsAutoString formattedCountString;
       PRUint32 numChildren = (groupThread) ? groupThread->NumRealChildren() : 0;
@@ -443,7 +440,7 @@ NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsA
   nsXPIDLString valueText;
   nsCOMPtr <nsIMsgThread> thread;
 
-  return nsMsgDBView::GetCellText(aRow, aCol, aValue);
+  return nsMsgDBView::GetCellText(aRow, aColID, aValue);
 }
 
 NS_IMETHODIMP nsMsgGroupView::LoadMessageByViewIndex(nsMsgViewIndex aViewIndex)

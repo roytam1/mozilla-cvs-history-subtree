@@ -658,7 +658,6 @@ protected:
   
   nsresult                Prefetch();
   
-  nsIMdbTableRowCursor*   mRowCursor;
   nsCOMPtr <nsIMsgDBHdr>  mResultHdr;
   nsMsgThread*	          mThread;
   nsMsgKey                mThreadParentKey;
@@ -673,7 +672,7 @@ protected:
 
 nsMsgThreadEnumerator::nsMsgThreadEnumerator(nsMsgThread *thread, nsMsgKey startKey,
                                              nsMsgThreadEnumeratorFilter filter, void* closure)
-                                             : mRowCursor(nsnull), mDone(PR_FALSE),
+                                             : mDone(PR_FALSE),
                                              mFilter(filter), mClosure(closure), mFoundChildren(PR_FALSE)
 {
   mThreadParentKey = startKey;
