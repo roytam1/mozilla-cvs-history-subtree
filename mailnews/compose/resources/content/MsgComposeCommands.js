@@ -2145,8 +2145,10 @@ function LoadIdentity(startup)
           }
       }
     }
-}
 
+    // Set our security options
+    setSecuritySettings();
+}
 
 function setupAutocomplete()
 {
@@ -2325,26 +2327,38 @@ function DisplaySaveFolderDlg(folderURI)
   return;
 }
 
-function EncryptMessage()
+function encryptMessage()
 {
     var msgCompFields = msgCompose.compFields;
     if (msgCompFields) {
-        if (msgCompFields.encrypted) {
-            msgCompFields.encrypted = false;
+        if (msgCompFields.alwaysEncryptMessage) {
+            msgCompFields.alwaysEncryptMessage = false;
         } else {
-            msgCompFields.encrypted = true;
+            msgCompFields.alwaysEncryptMessage = true;
         }
     }
 }
 
-function SignMessage()
+function signMessage()
 {
     var msgCompFields = msgCompose.compFields;
     if (msgCompFields) {
-        if (msgCompFields.signed) {
-            msgCompFields.signed = false;
+        if (msgCompFields.signMessage) {
+            msgCompFields.signMessage = false;
         } else {
-            msgCompFields.signed = true;
+            msgCompFields.signMessage = true;
         }
+    }
+}
+
+function setSecuritySettings()
+{
+    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", gCurrentIdentity.alwaysEncryptMessage);
+    if (gCurrentIdentity.encryptionCertName == null) {
+        document.getElementById("menu_securityEncryptAlways").setAttribute("disabled", "true");
+    }
+    document.getElementById("menu_securitySign").setAttribute("checked", gCurrentIdentity.signMessage);
+    if (gCurrentIdentity.signingCertName == null) {
+        document.getElementById("menu_securitySign").setAttribute("disabled", "true");
     }
 }

@@ -876,7 +876,6 @@ mime_crypto_write_block (void *closure, char *buf, PRInt32 size)
   return status;
 }
 
-
 #ifdef XP_MAC
 #include <ConditionalMacros.h>
 
@@ -885,7 +884,6 @@ mime_crypto_write_block (void *closure, char *buf, PRInt32 size)
 
 #endif
 
-
 /* Crypto preferences
  */
 

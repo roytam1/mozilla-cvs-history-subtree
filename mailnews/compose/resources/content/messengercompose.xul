@@ -30,6 +30,7 @@
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/securityOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
@@ -346,9 +347,9 @@
           <menuseparator/>
           <menu label="&securityMenu.label;">
             <menupopup>
-            <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="EncryptMessage()"/>
             <menuitem id="menu_securityEncryptIfPossible" type="checkbox" label="&menu_securityEncryptIfPossible.label;" disabled="true"/>
-            <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="SignMessage()"/>
+            <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="encryptMessage()"/>
+            <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="signMessage()"/>
             </menupopup>
           </menu>
 

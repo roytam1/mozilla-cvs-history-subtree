@@ -50,8 +50,8 @@ nsMsgCompFields::nsMsgCompFields()
   m_useMultipartAlternative = PR_FALSE;
   m_uuEncodeAttachments = PR_FALSE;
 	m_returnReceipt = PR_FALSE;
-  m_signed = PR_FALSE;
-  m_encrypted = PR_FALSE;
+  m_signMessage = PR_FALSE;
+  m_alwaysEncryptMessage = PR_FALSE;
 	m_receiptType = 0;
 
   nsCOMPtr<nsIPref> prefs (do_GetService(NS_PREF_CONTRACTID));
@@ -98,8 +98,8 @@ nsresult nsMsgCompFields::Copy(nsIMsgCompFields* pMsgCompFields)
 	m_returnReceipt = pFields->m_returnReceipt;
 	m_receiptType = pFields->m_receiptType;
 	m_internalCharSet = pFields->m_internalCharSet;
-  m_signed = pFields->m_signed;
-  m_encrypted = pFields->m_encrypted;
+  m_signMessage = pFields->m_signMessage;
+  m_alwaysEncryptMessage = pFields->m_alwaysEncryptMessage;
 
 	return NS_OK;
 }
@@ -467,27 +467,27 @@ NS_IMETHODIMP nsMsgCompFields::GetReturnReceipt(PRBool *_retval)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompFields::SetSigned(PRBool value)
+NS_IMETHODIMP nsMsgCompFields::SetSignMessage(PRBool value)
 {
-  m_signed = value;
+  m_signMessage = value;
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompFields::GetSigned(PRBool *_retval)
+NS_IMETHODIMP nsMsgCompFields::GetSignMessage(PRBool *_retval)
 {
-  *_retval = m_signed;
+  *_retval = m_signMessage;
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompFields::SetEncrypted(PRBool value)
+NS_IMETHODIMP nsMsgCompFields::SetAlwaysEncryptMessage(PRBool value)
 {
-  m_encrypted = value;
+  m_alwaysEncryptMessage = value;
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompFields::GetEncrypted(PRBool *_retval)
+NS_IMETHODIMP nsMsgCompFields::GetAlwaysEncryptMessage(PRBool *_retval)
 {
-  *_retval = m_encrypted;
+  *_retval = m_alwaysEncryptMessage;
 	return NS_OK;
 }
 

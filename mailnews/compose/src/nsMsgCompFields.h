@@ -141,8 +141,6 @@ public:
 	PRBool GetForcePlainText() {return m_forcePlainText;}
 	PRBool GetUseMultipartAlternative() {return m_useMultipartAlternative;}
 	PRBool GetUuEncodeAttachments() {return m_uuEncodeAttachments;}
-  PRBool GetSigned() {return m_signed;}
-  PRBool GetEncrypted() {return m_encrypted;}
 	nsresult SetBody(const char *value);
 	const char* GetBody();
 
@@ -153,6 +151,8 @@ public:
 
 	nsresult CleanUpTempFiles();
 
+  PRBool GetAlwaysEncryptMessage() {return m_alwaysEncryptMessage;}
+  PRBool GetSignMessage() {return m_signMessage;}
 protected:
 	char*       m_headers[MSG_MAX_HEADERS];
 	char*       m_body;
@@ -163,8 +163,8 @@ protected:
   PRBool      m_returnReceipt;
 	PRInt32     m_receiptType;        /* 0:None 1:DSN 2:MDN 3:BOTH */
 	nsString    m_internalCharSet;
-  PRBool      m_signed;
-  PRBool      m_encrypted;
+  PRBool      m_signMessage;
+  PRBool      m_alwaysEncryptMessage;
     
   /* WARNING:
       If you add any new member variable, you must update the function

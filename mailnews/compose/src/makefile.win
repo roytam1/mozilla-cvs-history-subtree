@@ -43,6 +43,7 @@ EXPORTS=    nsSmtpUrl.h \
 			      nsMsgComposeProgressParams.h \
 			      nsMsgComposeContentHandler.h \
 			      nsMsgCompose.h \
+		nsMsgComposeSecure.h \
 			      nsMsgCompFields.h \
 			      nsMsgQuote.h \
 			      nsMsgRecipientArray.h \
@@ -70,6 +71,7 @@ CPP_OBJS=   .\$(OBJDIR)\nsMsgCompFields.obj \
             .\$(OBJDIR)\nsMsgComposeProgressParams.obj \
             .\$(OBJDIR)\nsMsgComposeContentHandler.obj \
             .\$(OBJDIR)\nsMsgCompose.obj \
+            .\$(OBJDIR)\nsMsgComposeSecure.obj \
             .\$(OBJDIR)\nsMsgCreate.obj \
             .\$(OBJDIR)\nsMsgCopy.obj \
             .\$(OBJDIR)\nsMsgSendLater.obj \

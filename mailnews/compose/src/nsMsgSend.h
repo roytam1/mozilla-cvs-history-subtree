@@ -144,6 +144,7 @@
 #include "nsIMsgIdentity.h"
 #include "nsWeakReference.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsIMsgComposeSecure.h"
 
 //
 // Some necessary defines...
@@ -375,7 +376,7 @@ public:
   PRBool                  mLastErrorReported;           // Last error reported to the user.
   PRBool                  mAbortInProcess;              // Used by Abort to avoid reentrance.
 
-  void                    *m_crypto_closure;
+  nsCOMPtr<nsIMsgComposeSecure> m_crypto_closure;
 
 protected:
   nsCOMPtr<nsIMsgStringService> mComposeBundle;

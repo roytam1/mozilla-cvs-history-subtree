@@ -59,7 +59,7 @@ CPPSRCS		= \
 		nsSmtpServer.cpp \
 		nsSmtpDataSource.cpp \
 		nsSmtpDelegateFactory.cpp \
-                composec.cpp \
+                nsMsgComposeSecure.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -90,6 +90,7 @@ EXPORTS		= \
 		nsSmtpServer.h \
 		nsSmtpDataSource.h \
 		nsSmtpDelegateFactory.h \
+		nsMsgComposeSecure.h \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

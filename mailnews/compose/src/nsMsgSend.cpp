@@ -1056,9 +1056,9 @@ nsMsgComposeAndSend::GatherMimeAttachments()
   /* Close down encryption stream */
   if (m_crypto_closure)
 	{
-	  status = mime_finish_crypto_encapsulation (m_crypto_closure, PR_FALSE);
+	  status = m_crypto_closure->FinishCryptoEncapsulation(PR_FALSE);
 	  m_crypto_closure = 0;
-	  if (status < 0) goto FAIL;
+	  if (NS_FAILED(status)) goto FAIL;
 	}
   
   if (mOutputFile) 
@@ -1235,10 +1235,12 @@ nsMsgComposeAndSend::PreProcessPart(nsMsgAttachmentHandler  *ma,
 
 nsresult nsMsgComposeAndSend::BeginCryptoEncapsulation ()
 {
-  if (mCompFields->GetEncrypted() || mCompFields->GetSigned())
+  nsresult rv = NS_OK;
+  char*recipients = nsnull;
+  if (mCompFields->GetAlwaysEncryptMessage() || mCompFields->GetSignMessage())
 	{
 	  int status = 0;
-	  char *recipients = (char *)
+	  recipients = (char *)
       PR_MALLOC((mCompFields->GetTo()  ? nsCRT::strlen(mCompFields->GetTo())  : 0) +
 				 (mCompFields->GetCc()  ? nsCRT::strlen(mCompFields->GetCc())  : 0) +
 				 (mCompFields->GetBcc() ? nsCRT::strlen(mCompFields->GetBcc()) : 0) +
@@ -1258,17 +1260,22 @@ nsresult nsMsgComposeAndSend::BeginCryptoEncapsulation ()
 	  FROB(mCompFields->GetBcc())
 	  FROB(mCompFields->GetNewsgroups())
 # undef FROB
-	  status = mime_begin_crypto_encapsulation (mOutputFile,
-												&m_crypto_closure,
-												mCompFields->GetEncrypted(),
-												mCompFields->GetSigned(),
-												recipients,
+    m_crypto_closure = do_CreateInstance(NS_MSGCOMPOSESECURE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) {
+     goto loser;
+    }
+    rv = m_crypto_closure->BeginCryptoEncapsulation(mOutputFile,
+												mCompFields->GetAlwaysEncryptMessage(),
+												mCompFields->GetSignMessage(),
+												recipients, mUserIdentity,
 												(m_deliver_mode == nsMsgSaveAsDraft));
 
-	  PR_Free(recipients);
-	  if (status < 0) return status;
 	}
-  return 0;
+loser:
+  if (recipients) {
+    PR_Free(recipients);
+  }
+  return rv;
 }
 
 #if defined(XP_MAC) && defined(DEBUG)
@@ -1281,7 +1288,7 @@ mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size)
 	NS_ENSURE_ARG_POINTER(state);
 
   nsOutputFileStream * output;
-  void* crypto_closure;
+  nsIMsgComposeSecure* crypto_closure;
 
   state->GetOutputStream(&output);
   if (!output || CHECK_SIMULATED_ERROR(SIMULATED_SEND_ERROR_9))
@@ -1290,7 +1297,7 @@ mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size)
   state->GetCryptoclosure(&crypto_closure);
   if (crypto_closure)
   {
-	  return mime_crypto_write_block (crypto_closure, buf, size);
+	  return crypto_closure->MimeCryptoWriteBlock (buf, size);
 	}
 
   if (PRInt32(output->write(buf, size)) < size) 
@@ -2704,6 +2711,8 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields)
 	mCompFields->SetUseMultipartAlternative(fields->GetUseMultipartAlternative());
 	mCompFields->SetReturnReceipt(fields->GetReturnReceipt());
 	mCompFields->SetUuEncodeAttachments(fields->GetUuEncodeAttachments());
+  mCompFields->SetAlwaysEncryptMessage(fields->GetAlwaysEncryptMessage());
+  mCompFields->SetSignMessage(fields->GetSignMessage());
 
 	//
   // Check the fields for legitimacy...
@@ -4416,14 +4425,14 @@ NS_IMETHODIMP nsMsgComposeAndSend::SetStatus(nsresult aStatus)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgComposeAndSend::GetCryptoclosure(void ** aCryptoclosure)
+NS_IMETHODIMP nsMsgComposeAndSend::GetCryptoclosure(nsIMsgComposeSecure ** aCryptoclosure)
 {
   NS_ENSURE_ARG(aCryptoclosure);
   *aCryptoclosure = m_crypto_closure;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgComposeAndSend::SetCryptoclosure(void * aCryptoclosure)
+NS_IMETHODIMP nsMsgComposeAndSend::SetCryptoclosure(nsIMsgComposeSecure * aCryptoclosure)
 {
   m_crypto_closure = aCryptoclosure;
   return NS_OK;
