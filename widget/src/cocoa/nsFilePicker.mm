@@ -380,7 +380,7 @@ nsFilePicker::SetDialogTitle(const nsString& inTitle, id aPanel)
 NSString *
 nsFilePicker::PanelDefaultDirectory()
 {
-  NSString *directory = @"";
+  NSString *directory = nil;
   if (mDisplayDirectory) {
     nsAutoString pathStr;
     mDisplayDirectory->GetPath(pathStr);
