@@ -8,3 +8,4 @@ nsILink.h
 nsIOptionElement.h
 nsISelectElement.h
 nsIScriptElement.h
+nsITextControlElement.h
