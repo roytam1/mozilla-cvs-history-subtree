@@ -71,7 +71,7 @@
           </grid>
           <spring class="bigspacer"/>
           <grid>
-            <columns><column/><column/><column/></columns>
+            <columns><column/><column/><column flex="1"/></columns>
             <rows>
               <row valign="middle">
                 <text class="label" value="&tableWidth.label;"/>
@@ -174,7 +174,7 @@
           <!-- cell size titledbox -->
           <titledbox><label align="left" value="&size.label;"/>
             <grid>
-              <columns><column/><column/><column/></columns>
+              <columns><column/><column/><column flex="1"/></columns>
               <rows>
                 <row valign="middle" autostretch="never">
                   <checkbox id="CellHeightCheckbox" label="&tableHeight.label;"/>
@@ -195,7 +195,7 @@
           <!-- Alignment -->
           <titledbox><label value="&cellContentAlignment.label;"/>
             <grid>
-              <columns><column/><column/><column/></columns>
+              <columns><column/><column flex="1"/><column flex="1"/></columns>
               <rows>
                 <row valign="middle" autostretch="never">
                   <checkbox id="CellVAlignCheckbox" label="&cellVertical.label;"/>
