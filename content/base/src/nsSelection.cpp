@@ -2759,7 +2759,9 @@ nsSelection::TakeFocus(nsIContent *aNewFocus, PRUint32 aContentOffset,
     }
     else
     {
+      PRBool oldDesiredXSet = mDesiredXSet; //need to keep old desired X if it was set.
       mDomSelections[index]->Collapse(domNode, aContentOffset);
+      mDesiredXSet = oldDesiredXSet; //now reset desired X back.
       mBatching = batching;
       mChangesDuringBatching = changes;
     }
@@ -5886,6 +5888,7 @@ nsTypedSelection::Collapse(nsIDOMNode* aParentNode, PRInt32 aOffset)
 {
   if (!aParentNode)
     return NS_ERROR_INVALID_ARG;
+  mFrameSelection->InvalidateDesiredX();
   if (!IsValidSelectionPoint(mFrameSelection, aParentNode))
     return NS_ERROR_FAILURE;
   nsresult result;
