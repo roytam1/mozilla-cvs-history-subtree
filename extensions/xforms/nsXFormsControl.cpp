@@ -82,9 +82,9 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
     while ((modelContent = modelContent->GetParent())) {
       nsINodeInfo *nodeInfo = modelContent->GetNodeInfo();
       if (nodeInfo &&
-	  nodeInfo->NamespaceEquals(NS_LITERAL_STRING("http://www.w3.org/2002/xforms")) &&
-	  nodeInfo->NameAtom() == nsXFormsAtoms::model)
-	break;
+          nodeInfo->NamespaceEquals(NS_LITERAL_STRING("http://www.w3.org/2002/xforms")) &&
+          nodeInfo->NameAtom() == nsXFormsAtoms::model)
+        break;
     }
 
     modelWrapper = do_QueryInterface(modelContent);
@@ -97,11 +97,11 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
       // No model given, so use the first one in the document.
       nsCOMPtr<nsIDOMNodeList> nodes;
       domDoc->GetElementsByTagNameNS(NS_LITERAL_STRING("http://www.w3.org/2002/xforms"),
-				     NS_LITERAL_STRING("model"),
-				     getter_AddRefs(nodes));
+                                     NS_LITERAL_STRING("model"),
+                                     getter_AddRefs(nodes));
 
       if (!nodes)
-	return nsnull;
+        return nsnull;
 
       nodes->Item(0, getter_AddRefs(modelWrapper));
     } else {
