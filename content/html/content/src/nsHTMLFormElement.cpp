@@ -1323,9 +1323,10 @@ nsHTMLFormElement::FireEventOnControls(PRInt32 aEventType)
       do_QueryInterface(NS_STATIC_CAST(nsIFormControl *,
                                        mControls->mElements.ElementAt(i)));
     nsEventStatus status = nsEventStatus_eIgnore;
-    nsGUIEvent event(NS_FORM_FORMINPUT);
+    nsGUIEvent event(aEventType);
 
-    shell->HandleEventWithTarget(&event, nsnull, f, aEventType, &status); 
+    shell->HandleEventWithTarget(&event, nsnull, f, NS_EVENT_FLAG_INIT,
+                                 &status); 
   }
 }
 
