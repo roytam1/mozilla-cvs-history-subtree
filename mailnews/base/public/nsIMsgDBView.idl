@@ -194,6 +194,7 @@ interface nsMsgViewCommandType
   const nsMsgViewCommandTypeValue label4 = 25;
   const nsMsgViewCommandTypeValue label5 = 26;
   const nsMsgViewCommandTypeValue lastLabel = 26;
+  const nsMsgViewCommandTypeValue undeleteMsg = 29;
 
 };
 

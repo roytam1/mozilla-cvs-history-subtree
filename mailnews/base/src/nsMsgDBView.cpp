@@ -1859,6 +1859,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
   case nsMsgViewCommandType::flagMessages:
   case nsMsgViewCommandType::unflagMessages:
   case nsMsgViewCommandType::deleteMsg:
+  case nsMsgViewCommandType::undeleteMsg:
   case nsMsgViewCommandType::deleteNoTrash:
   case nsMsgViewCommandType::markThreadRead:
   case nsMsgViewCommandType::label0:
@@ -2077,6 +2078,8 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
       case nsMsgViewCommandType::label5:
         rv = SetLabelByIndex(indices[i], (command - nsMsgViewCommandType::label0));
         break;
+      case nsMsgViewCommandType::undeleteMsg:
+        break; // this is completely handled in the imap code below.
       default:
         NS_ASSERTION(PR_FALSE, "unhandled command");
         break;
@@ -2128,6 +2131,10 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
         flags |= ((command - nsMsgViewCommandType::label0) << 9);
         addFlags = (command != nsMsgViewCommandType::label0);
         commandIsLabelSet = PR_TRUE;
+        break;
+      case nsMsgViewCommandType::undeleteMsg:
+        flags = kImapMsgDeletedFlag;
+        addFlags = PR_FALSE;
         break;
       default:
         break;
