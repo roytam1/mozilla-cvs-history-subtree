@@ -56,10 +56,15 @@ sub stagesymbols {
 
 sub makefullsoft {
   my $builddir = shift;
+  if (is_windows()) {
+    # need to convert the path in case we're using activestate perl
+    $builddir = `cygpath -u $builddir`;
+  }
+  chomp($builddir);
   # should go in config
   my $moforoot = "cltbld\@cvs.mozilla.org:/mofo"; 
   TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co -d fullsoft talkback/fullsoft";
-  TinderUtils::run_shell_command "$builddir/build/auoconf/make-makefile $builddir/fullsoft";
+  TinderUtils::run_shell_command "$builddir/build/autoconf/make-makefile $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft fullcircle-push";
 }
