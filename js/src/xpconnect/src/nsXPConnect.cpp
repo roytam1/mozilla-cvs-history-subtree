@@ -291,20 +291,10 @@ nsXPConnect::GetContext(JSContext* cx, nsXPConnect* xpc /*= nsnull*/)
 JSBool
 nsXPConnect::IsISupportsDescendant(nsIInterfaceInfo* info)
 {
-    if(!info)
-        return JS_FALSE;
-
-    nsCOMPtr<nsIInterfaceInfo> oldest = info;
-    nsCOMPtr<nsIInterfaceInfo> parent;
-
-    while(NS_SUCCEEDED(oldest->GetParent(getter_AddRefs(parent))) && parent)
-        oldest = parent;
-
-    JSBool match;
-    
-    if(NS_FAILED(oldest->IsIID(&NS_GET_IID(nsISupports), &match)))
-        return JS_FALSE;
-    return match;
+    PRBool found = PR_FALSE;
+    if(info)
+        info->HasAncestor(&NS_GET_IID(nsISupports), &found);
+    return found;
 }
 
 JSBool 

@@ -380,19 +380,10 @@ nsXPCWrappedJS::FindInherited(REFNSIID aIID)
 
     for(nsXPCWrappedJS* cur = mRoot; cur; cur = cur->mNext)
     {
-        nsCOMPtr<nsIInterfaceInfo> iface = cur->GetClass()->GetInterfaceInfo();
-        nsCOMPtr<nsIInterfaceInfo> iface_parent;
-
-        // Skip the first iface - we know we don't care about nsISupports here.
-        while(NS_SUCCEEDED(iface->GetParent(getter_AddRefs(iface_parent))) && 
-              iface_parent)
-        {
-            iface = iface_parent;
-        
-            PRBool found;
-            if(NS_SUCCEEDED(iface->IsIID(&aIID, &found)) && found)
-                return cur;
-        }
+        PRBool found;
+        if(NS_SUCCEEDED(cur->GetClass()->GetInterfaceInfo()->
+                                HasAncestor(&aIID, &found)) && found)
+            return cur;
     }
 
     return nsnull;

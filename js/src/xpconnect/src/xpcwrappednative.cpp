@@ -681,7 +681,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     // If the scriptable helper forbids us from reflecting additional 
     // interfaces, then don't even try the QI, just fail.
     if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
-       !foundInSet)
+       !foundInSet && !GetSet()->HasInterfaceWithAncestor(aInterface))
     {
         return JS_FALSE;
     }

@@ -1669,6 +1669,8 @@ public:
     inline const char*  GetNameString() const;
     inline XPCNativeMember* FindMember(jsval name) const;
 
+    inline JSBool HasAncestor(const nsIID* iid) const;
+
     const char* GetMemberName(XPCCallContext& ccx,
                               const XPCNativeMember* member) const;
 
@@ -1784,6 +1786,7 @@ public:
                              JSBool* pIsLocal) const;
 
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
+    inline JSBool HasInterfaceWithAncestor(XPCNativeInterface* aInterface) const;
 
     inline XPCNativeInterface* FindInterfaceWithIID(const nsIID& iid) const;
 

@@ -326,6 +326,13 @@ inline XPCNativeMember* XPCNativeInterface::FindMember(jsval name) const
     return nsnull;
 }
 
+inline JSBool XPCNativeInterface::HasAncestor(const nsIID* iid) const
+{
+    PRBool found = PR_FALSE;
+    mInfo->HasAncestor(iid, &found);
+    return found;
+}
+
 /***************************************************************************/
 
 inline JSBool
@@ -438,6 +445,23 @@ XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
     for(int i = 0; i < count; i++)
         if(aInterface == mInterfaces[i])
             return JS_TRUE;
+    return JS_FALSE;
+}
+
+inline JSBool 
+XPCNativeSet::HasInterfaceWithAncestor(XPCNativeInterface* aInterface) const
+{
+    const nsIID* iid = aInterface->GetIID();
+    int count = (int) mInterfaceCount;
+    // We can safely skip the first interface which is *always* nsISupports.
+    for(int i = 1; i < count; i++)
+        if(mInterfaces[i]->HasAncestor(iid))
+            return JS_TRUE;
+
+    // This is rare, so check last.
+    if(iid == &NS_GET_IID(nsISupports))
+        return PR_TRUE;
+    
     return JS_FALSE;
 }
 
