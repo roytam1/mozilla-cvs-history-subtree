@@ -74,11 +74,11 @@ typedef struct il_container_struct il_container;
 
 #ifdef DEBUG
 extern int il_debug;
-extern PRLogModuleInfo *il_log_module;
 #define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
 #else
 #define ILTRACE(l,t) {}
 #endif
+extern PRLogModuleInfo *il_log_module;
 
 #define FREE_IF_NOT_NULL(x)    do {if (x) {PR_FREEIF(x); (x) = NULL;}} while (0)
 
