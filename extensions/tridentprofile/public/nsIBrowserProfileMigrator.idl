@@ -12,11 +12,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is The Browser Profile Migrator.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * The Initial Developer of the Original Code is Ben Goodger.
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,27 +34,28 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* Private header describing a class to migrate preferences from Trident
-   to Gecko. This is a virtual class. Actual implementations are
-   platform-specific. */
+#include "nsISupports.idl"
 
-#ifndef NS_TRIDENTPREFERENCES_H__
-#define NS_TRIDENTPREFERENCES_H__
+[scriptable, uuid(6c64bc4a-881f-4fd8-8f19-3b4125dcee50)]
+interface nsIBrowserProfileMigrator : nsISupports 
+{
+  /**
+   * profile items to migrate. use with migrate().
+   */
+  const unsigned long ALL         = 0x0000;
+  const unsigned long SETTINGS	  = 0x0001;
+  const unsigned long COOKIES     = 0x0002;
+  const unsigned long HISTORY     = 0x0004;
+  const unsigned long FORMDATA    = 0x0008;
+  const unsigned long PASSWORDS   = 0x0010;
+  const unsigned long BOOKMARKS   = 0x0020;
 
-#include "nscore.h"
+  /**
+   * Copy user profile information to the current active profile.
+   * @param aItems   list of data items to migrate. see above for values.
+   * @param aReplace replace or append current data where applicable. 
+   */
+  void migrate(in unsigned long aItems, in boolean aReplace);
+};  
 
-class nsTridentPreferences {
-public:
-
-  nsTridentPreferences();
-  virtual ~nsTridentPreferences();
-
-  // perform the migration
-  virtual nsresult MigrateTridentPreferences(PRUint32 aItems, PRBool aReplace) = 0;
-};
-
-// generic constructor access; a kind of factory
-nsTridentPreferences *MakeTridentPreferences();
-
-#endif
 

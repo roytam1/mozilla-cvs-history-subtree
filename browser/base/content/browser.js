@@ -1373,6 +1373,12 @@ function updateToolbarStates(toolbarMenuElt)
   }
 }
 
+function BrowserImport()
+{
+  // goats
+  window.openDialog("chrome://browser/content/migration/migration.xul", "migration", "modal,centerscreen,chrome,resizable=no");
+}
+
 function BrowserFullScreen()
 {
   window.fullScreen = !window.fullScreen;

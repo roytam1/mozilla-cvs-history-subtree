@@ -55,6 +55,8 @@
                 <menuitem label="&printSetupCmd.label;" accesskey="&printSetupCmd.accesskey;" oncommand="PrintUtils.showPageSetup();"/>
                 <menuitem label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" oncommand="PrintUtils.printPreview(onEnterPrintPreview, onExitPrintPreview);"/>
                 <menuitem label="&printCmd.label;" accesskey="&printCmd.accesskey;" key="printKb" command="cmd_print"/>
+                <menuseparator/>
+                <menuitem label="&import.label;" accesskey="&import.accesskey;" oncommand="BrowserImport();"/>
 #ifndef XP_MACOSX
                 <menuseparator/>
 #endif

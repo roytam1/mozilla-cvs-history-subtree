@@ -40,19 +40,31 @@
 
 #include "nsBrowserCompsCID.h"
 #include "nsBookmarksService.h"
+#include "nsProfileMigrator.h"
 
 /////////////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
 
 /////////////////////////////////////////////////////////////////////////////
 
 static const nsModuleComponentInfo components[] =
 {
-  { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_SERVICE_CONTRACTID,
-      nsBookmarksServiceConstructor },
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_DATASOURCE_CONTRACTID,
-      nsBookmarksServiceConstructor },
+  { "Bookmarks", 
+    NS_BOOKMARKS_SERVICE_CID, 
+    NS_BOOKMARKS_SERVICE_CONTRACTID,
+    nsBookmarksServiceConstructor },
+
+  { "Bookmarks", 
+    NS_BOOKMARKS_SERVICE_CID, 
+    NS_BOOKMARKS_DATASOURCE_CONTRACTID,
+    nsBookmarksServiceConstructor },
+
+  { "Profile Migrator", 
+    NS_PROFILEMIGRATOR_CID, 
+    NS_PROFILEMIGRATOR_CONTRACTID,
+    nsProfileMigratorConstructor }
 };
 
 NS_IMPL_NSGETMODULE(nsBrowserCompsModule, components)

@@ -11,14 +11,14 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is mozilla.org code.
+# The Original Code is The Browser Profile Migrator.
 #
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2002
+# The Initial Developer of the Original Code is Ben Goodger.
+# Portions created by the Initial Developer are Copyright (C) 2004
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   Ben Goodger <ben@bengoodger.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,41 +34,25 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH     = ../../..
-topsrcdir = @top_srcdir@
-srcdir    = @srcdir@
-VPATH     = @srcdir@
+DEPTH		= ../../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE         = tridentprofile
-LIBRARY_NAME   = tridentprofile
-ifeq ($(OS_ARCH),WIN98)
-SHORT_LIBNAME  = triprof
-endif
-EXPORT_LIBRARY = 1
-IS_COMPONENT   = 1
-MODULE_NAME    = nsTridentProfile
+MODULE		= migration
+LIBRARY_NAME	= migration_s
 
-REQUIRES = xpcom  \
-	necko \
-	string \
-	pref \
-	$(NULL)
+REQUIRES	= xpcom \
+		  string \
+		  $(NULL)
 
-ifdef MOZ_PHOENIX
-REQUIRES += browsercomps migration
-endif
+CPPSRCS		= nsProfileMigrator.cpp
 
-CPPSRCS = \
-	nsTridentProfileMigrator.cpp    \
-	nsModule.cpp    \
-	$(NULL)
-
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-CPPSRCS += nsTridentPreferencesWin.cpp
-endif
-
-EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+# we don't want the shared lib, but we want to force the creation of a
+# static lib.
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
+

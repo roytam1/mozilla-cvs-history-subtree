@@ -52,4 +52,10 @@ XPIDLSRCS    =            \
 	nsITridentProfileMigrator.idl \
 	$(NULL)
 
+# If we're not building Firebird, then we need to provide this interface as
+# we won't have the Firebird migration component. 
+ifndef MOZ_PHOENIX
+XPIDLSRCS += nsIBrowserProfileMigrator.idl
+endif
+
 include $(topsrcdir)/config/rules.mk

@@ -12,14 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is The Browser Profile Migrator.
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * The Initial Developer of the Original Code is Ben Goodger.
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Ben Goodger <ben@bengoodger.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,28 +34,25 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+ 
+#ifndef profilemigrator___h___
+#define profilemigrator___h___
 
-/* Private header describing a class to migrate preferences from Trident
-   to Gecko. This is a virtual class. Actual implementations are
-   platform-specific. */
+#include "nsIProfileMigrator.h"
+#include "nsIBrowserProfileMigrator.h"
 
-#ifndef NS_TRIDENTPREFERENCES_H__
-#define NS_TRIDENTPREFERENCES_H__
-
-#include "nscore.h"
-
-class nsTridentPreferences {
+class nsProfileMigrator : public nsIProfileMigrator
+{
 public:
+  NS_DECL_NSIPROFILEMIGRATOR
+  NS_DECL_ISUPPORTS
 
-  nsTridentPreferences();
-  virtual ~nsTridentPreferences();
+  nsProfileMigrator() { };
+  virtual ~nsProfileMigrator() { };
 
-  // perform the migration
-  virtual nsresult MigrateTridentPreferences(PRUint32 aItems, PRBool aReplace) = 0;
+protected:
+  nsresult GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult);
 };
-
-// generic constructor access; a kind of factory
-nsTridentPreferences *MakeTridentPreferences();
 
 #endif
 

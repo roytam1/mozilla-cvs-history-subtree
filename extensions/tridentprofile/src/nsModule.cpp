@@ -39,14 +39,21 @@
 #include "nsIGenericFactory.h"
 #include "nsTridentProfileMigrator.h"
 #include "nsTridentProfileMigratorCID.h"
+#include "nsBrowserCompsCID.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsTridentProfileMigrator, Init)
  
 static const nsModuleComponentInfo gComponents[] = {
 
-  { "Trident Profile Migrator",
+  { "Microsoft Internet Explorer (Windows) Profile Migrator",
     NS_TRIDENTPROFILEMIGRATOR_CID,
     NS_TRIDENTPROFILEMIGRATOR_CONTRACTID,
+    nsTridentProfileMigratorConstructor
+  },
+  
+  { "Microsoft Internet Explorer (Windows) Profile Migrator",
+    NS_TRIDENTPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie",
     nsTridentProfileMigratorConstructor
   }
 };

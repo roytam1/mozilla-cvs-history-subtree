@@ -45,6 +45,10 @@ interface nsITridentProfileMigrator : nsISupports {
    */
   const unsigned long PREFERENCES = 0x0001;
   const unsigned long COOKIES     = 0x0002;
+  const unsigned long HISTORY     = 0x0004;
+  const unsigned long FORMDATA    = 0x0008;
+  const unsigned long PASSWORDS   = 0x0010;
+  const unsigned long FAVORITES   = 0x0020;
 
   /**
    * Copy Trident user profile information to the current active profile.

@@ -56,8 +56,9 @@ nsTridentProfileMigrator::Init()
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS1(nsTridentProfileMigrator, 
-                   nsITridentProfileMigrator);
+NS_IMPL_ISUPPORTS2(nsTridentProfileMigrator, 
+                   nsITridentProfileMigrator,
+                   nsIBrowserProfileMigrator);
 
 //*****************************************************************************
 //*** nsTridentProfileMigrator::nsITridentProfileMigrator
@@ -68,7 +69,19 @@ nsTridentProfileMigrator::MigrateTridentProfile(PRUint32 aItems)
 {
   nsTridentPreferences *pref = MakeTridentPreferences();
   if (pref)
-    return pref->MigrateTridentPreferences(aItems);
+    return pref->MigrateTridentPreferences(aItems, PR_TRUE);
   return NS_ERROR_OUT_OF_MEMORY;
 }
 
+//*****************************************************************************
+//*** nsTridentProfileMigrator::nsIBrowserProfileMigrator
+//*****************************************************************************
+
+NS_IMETHODIMP
+nsTridentProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace)
+{
+  nsTridentPreferences *pref = MakeTridentPreferences();
+  if (pref)
+    return pref->MigrateTridentPreferences(aItems, aReplace);
+  return NS_ERROR_OUT_OF_MEMORY;
+}

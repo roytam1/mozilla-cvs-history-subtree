@@ -26,6 +26,7 @@ REQUIRES = \
 	nkcache \
 	txmgr \
 	bookmarks \
+	migration \
 	$(NULL)
 
 EXPORTS = nsBrowserCompsCID.h
@@ -39,10 +40,16 @@ endif
 
 LOCAL_INCLUDES = \
 	-I$(srcdir)/../bookmarks/src \
+	-I$(srcdir)/../migration/src \
 	$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+OS_LIBS += $(call EXPAND_LIBNAME,version)
+endif
 
 SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)bookmarks_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)migration_s.$(LIB_SUFFIX) \
 	$(NULL)
 
 EXTRA_DSO_LDOPTS += \

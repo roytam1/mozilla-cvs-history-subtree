@@ -58,10 +58,20 @@
 #include "nsIServiceManagerUtils.h"
 #include "nsISimpleEnumerator.h"
 #include "nsITridentProfileMigrator.h"
+#include "nsIBrowserProfileMigrator.h"
+#include "nsIObserverService.h"
+
+#define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
+#define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
+#define MIGRATION_STARTED           "Migration:Started"
+#define MIGRATION_ENDED             "Migration:Ended"
 
 const int sInitialCookieBufferSize = 1024; // but it can grow
 const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
+
+static nsIObserverService* sObserverService = nsnull;
+
 
 //***********************************************************************
 //*** windows registry to mozilla prefs data type translation functions
@@ -363,27 +373,74 @@ nsTridentPreferences::~nsTridentPreferences() {
 //*****************************************************************************
 
 nsTridentPreferencesWin::nsTridentPreferencesWin() {
+  CallGetService("@mozilla.org/observer-service;1", &sObserverService);
 }
 
 nsTridentPreferencesWin::~nsTridentPreferencesWin() {
+  NS_IF_RELEASE(sObserverService);
 }
+
+#define NOTIFY_OBSERVERS(message, item) \
+  if (sObserverService) \
+    sObserverService->NotifyObservers(nsnull, message, item)
+
+#define COPY_DATA(func, replace, item) \
+  NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, item); \
+  rv = func(replace); \
+  NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, item);
 
 // migration entry point
 nsresult
-nsTridentPreferencesWin::MigrateTridentPreferences(PRUint32 aItems) {
+nsTridentPreferencesWin::MigrateTridentPreferences(PRUint32 aItems, PRBool aReplace) {
 
   nsresult rv = NS_OK;
 
-  if (aItems & nsITridentProfileMigrator::PREFERENCES)
-    rv = CopyPreferences();
-  if (NS_SUCCEEDED(rv) && (aItems & nsITridentProfileMigrator::COOKIES))
-    rv = CopyCookies();
+  NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
+
+  if (aItems & nsIBrowserProfileMigrator::SETTINGS)
+    COPY_DATA(CopyPreferences, aReplace, NS_LITERAL_STRING("settings").get());
+  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::COOKIES))
+    COPY_DATA(CopyCookies, aReplace, NS_LITERAL_STRING("cookies").get());
+  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::HISTORY))
+    COPY_DATA(CopyHistory, aReplace, NS_LITERAL_STRING("history").get());
+  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::FORMDATA))
+    COPY_DATA(CopyFormData, aReplace, NS_LITERAL_STRING("formdata").get());
+  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::PASSWORDS))
+    COPY_DATA(CopyPasswords, aReplace, NS_LITERAL_STRING("passwords").get());
+  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::BOOKMARKS))
+    COPY_DATA(CopyFavorites, aReplace, NS_LITERAL_STRING("bookmarks").get());
+
+  NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
 
   return rv;
 }
 
 nsresult
-nsTridentPreferencesWin::CopyPreferences() {
+nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
+  printf("*** copyhistory\n");
+  return NS_OK;
+}
+
+nsresult
+nsTridentPreferencesWin::CopyFormData(PRBool aReplace) {
+  printf("*** copyformdata\n");
+  return NS_OK;
+}
+
+nsresult
+nsTridentPreferencesWin::CopyPasswords(PRBool aReplace) {
+  printf("*** copypasswords\n");
+  return NS_OK;
+}
+
+nsresult
+nsTridentPreferencesWin::CopyFavorites(PRBool aReplace) {
+  printf("*** copyfavorites\n");
+  return NS_OK;
+}
+
+nsresult
+nsTridentPreferencesWin::CopyPreferences(PRBool aReplace) {
 
   HKEY            regKey;
   PRBool          regKeyOpen = PR_FALSE;
@@ -432,13 +489,13 @@ nsTridentPreferencesWin::CopyPreferences() {
   if (regKeyOpen)
     ::RegCloseKey(regKey);
 
-  return CopyStyleSheet();
+  return CopyStyleSheet(aReplace);
 }
 
 /* Fetch and translate the current user's cookies.
    Return true if successful. */
 nsresult
-nsTridentPreferencesWin::CopyCookies() {
+nsTridentPreferencesWin::CopyCookies(PRBool aReplace) {
 
   // IE cookies are stored in files named <username>@domain[n].txt
   // (in <username>'s Cookies folder. isn't the naming redundant?)
@@ -691,7 +748,7 @@ nsTridentPreferencesWin::FileTimeToTimeT(const char *aLowDateIntString,
 /* Find the accessibility stylesheet if it exists and replace Mozilla's
    with it. Return true if we found and copied a stylesheet. */
 nsresult
-nsTridentPreferencesWin::CopyStyleSheet() {
+nsTridentPreferencesWin::CopyStyleSheet(PRBool aReplace) {
 
   nsresult rv = NS_OK; // return failure only if filecopy fails
   HKEY     regKey;

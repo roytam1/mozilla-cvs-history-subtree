@@ -54,13 +54,17 @@ public:
   nsTridentPreferencesWin();
   virtual ~nsTridentPreferencesWin();
 
-  virtual nsresult MigrateTridentPreferences(PRUint32 aItems);
+  virtual nsresult MigrateTridentPreferences(PRUint32 aItems, PRBool aReplace);
 
 private:
 
-  nsresult CopyPreferences();
-  nsresult CopyStyleSheet();
-  nsresult CopyCookies();
+  nsresult CopyPreferences(PRBool aReplace);
+  nsresult CopyStyleSheet(PRBool aReplace);
+  nsresult CopyCookies(PRBool aReplace);
+  nsresult CopyHistory(PRBool aReplace);
+  nsresult CopyFormData(PRBool aReplace);
+  nsresult CopyPasswords(PRBool aReplace);
+  nsresult CopyFavorites(PRBool aReplace);
 
   nsresult CopyCookiesFromBuffer(char *aBuffer, PRUint32 aBufferLength,
                                  nsICookieManager2 *aCookieManager);

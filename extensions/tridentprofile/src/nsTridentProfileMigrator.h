@@ -39,12 +39,15 @@
 #define NS_TRIDENTPROFILEMIGRATOR_H__
 
 #include "nsITridentProfileMigrator.h"
+#include "nsIBrowserProfileMigrator.h"
 
-class nsTridentProfileMigrator : public nsITridentProfileMigrator
+class nsTridentProfileMigrator : public nsITridentProfileMigrator,
+                                 public nsIBrowserProfileMigrator
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSITRIDENTPROFILEMIGRATOR
+  NS_DECL_NSIBROWSERPROFILEMIGRATOR
 
   nsTridentProfileMigrator( );
   virtual ~nsTridentProfileMigrator( );
