@@ -64,4 +64,5 @@ private:
   nsCOMPtr<nsIImageDecoderObserver> mObserver;
 
   PRBool mProcessing;
+  PRUint32 mStatus;
 };

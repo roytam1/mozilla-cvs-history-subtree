@@ -48,6 +48,7 @@ nsImageRequest::nsImageRequest()
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
   mProcessing = PR_TRUE;
+  mStatus = nsIImageRequest::STATUS_NONE;
 }
 
 nsImageRequest::~nsImageRequest()
@@ -81,6 +82,14 @@ NS_IMETHODIMP nsImageRequest::GetImage(nsIImageContainer * *aImage)
   NS_IF_ADDREF(*aImage);
   return NS_OK;
 }
+
+/* readonly attribute unsigned long imageStatus; */
+NS_IMETHODIMP nsImageRequest::GetImageStatus(PRUint32 *aStatus)
+{
+  *aStatus = mStatus;
+  return NS_OK;
+}
+
 
 
 
@@ -142,6 +151,8 @@ NS_IMETHODIMP nsImageRequest::OnStartDecode(nsIImageRequest *request)
 /* void onStartContainer (in nsIImageRequest request, in nsIImageContainer image); */
 NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsIImageContainer *image)
 {
+  mStatus |= nsIImageRequest::STATUS_SIZE_AVAILABLE;
+
   if (mObserver)
     mObserver->OnStartContainer(this, image);
 
@@ -187,6 +198,10 @@ NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsIImage
 /* void onStopDecode (in nsIImageRequest request, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsresult status, const PRUnichar *statusArg)
 {
+
+  if (NS_FAILED(status))
+    mStatus = nsIImageRequest::STATUS_ERROR;
+
   if (mObserver)
     mObserver->OnStopDecode(this, status, statusArg);
 
