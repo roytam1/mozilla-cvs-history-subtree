@@ -204,6 +204,8 @@ HICON DrawLocalFileIcon(HT_Resource r, int left, int top, HDC hdc);
 CRDFImage* DrawArbitraryURL(HT_Resource r, int left, int top, int imageWidth, 
 								   int imageHeight, HDC hDC, COLORREF bkColor,
 								   CCustomImageObject* pObject, BOOL largeIcon);
+CRDFImage* DrawRDFImage(CRDFImage* pImage, int left, int top, int imageWidth, int imageHeight, HDC hDC,
+						COLORREF bkColor);
 
 HICON FetchLocalFileIcon(HT_Resource r);
 CRDFImage* FetchCustomIcon(HT_Resource r, CCustomImageObject* pObject, BOOL largeIcon);

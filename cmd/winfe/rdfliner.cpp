@@ -586,6 +586,12 @@ CRDFImage* DrawArbitraryURL(HT_Resource r, int left, int top, int imageWidth, in
 					  CCustomImageObject* pObject, BOOL largeIcon)
 {
 	CRDFImage* pImage = FetchCustomIcon(r, pObject, largeIcon);
+	return DrawRDFImage(pImage, left, top, imageWidth, imageHeight, hDC, bkColor);
+}
+
+CRDFImage* DrawRDFImage(CRDFImage* pImage, int left, int top, int imageWidth, int imageHeight, HDC hDC,
+						COLORREF bkColor)
+{
 	if (pImage && pImage->FrameLoaded()) 
 	{
 		// Now we draw this bad boy.
