@@ -26,7 +26,7 @@ include $(DEPTH)/config/autoconf.mk
 LIBRARY_NAME	= wdgtos2
 EXPORT_LIBRARY = 1
 IS_COMPONENT    = 1
-COMPONENT_NAME	= nsWidgetOS2Module
+MODULE_NAME	= nsWidgetOS2Module
 
 EXTRA_DSO_LIBS	= gkgfx
 

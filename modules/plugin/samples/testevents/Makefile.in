@@ -30,7 +30,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= npevents
 LIBRARY_NAME	= npevents
 IS_COMPONENT	= 1
-COMPONENT_NAME	= EventsPlugin
+MODULE_NAME	= EventsPlugin
 REQUIRES	= xpcom plugin
 
 XPIDLSRCS	= nsIEventsPluginInstance.idl

@@ -30,7 +30,7 @@ MODULE		= chardetc
 LIBRARY_NAME	= chardetc
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsCharDetModuleClassic
+MODULE_NAME	= nsCharDetModuleClassic
 REQUIRES	= xpcom
 
 CPPSRCS		= \

@@ -30,7 +30,7 @@ MODULE		= xpcom
 XPIDL_MODULE	= xpcom_nativeapp
 LIBRARY_NAME	= nativeapp
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsCNativeAppModule
+MODULE_NAME	= nsCNativeAppModule
 
 CPPSRCS		= \
 		nsCNativeAppImpl.cpp \

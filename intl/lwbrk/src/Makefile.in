@@ -30,7 +30,7 @@ MODULE		= lwbrk
 LIBRARY_NAME	= lwbrk
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsLWBrkModule
+MODULE_NAME	= nsLWBrkModule
 
 REQUIRES	= xpcom string
 

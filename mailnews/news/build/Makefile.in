@@ -31,7 +31,7 @@ LIBRARY_NAME	= msgnews
 META_COMPONENT = mail
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsMsgNewsModule
+MODULE_NAME	= nsMsgNewsModule
 REQUIRES	= xpcom string mailnews msgbase msgbaseutil msgdb appshell timer mime necko rdf rdfutil pref uriloader nkcache
 
 CPPSRCS		= nsMsgNewsFactory.cpp

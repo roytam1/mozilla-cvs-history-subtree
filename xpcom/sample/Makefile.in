@@ -30,7 +30,7 @@ MODULE		= xpcom
 XPIDL_MODULE	= sample
 LIBRARY_NAME	= sample
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsSampleModule
+MODULE_NAME	= nsSampleModule
 REQUIRES	= string
 
 

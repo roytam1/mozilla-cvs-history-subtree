@@ -26,7 +26,7 @@ MODULE		= widget
 LIBRARY_NAME	= widget_mac
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsWidgetMacModule
+MODULE_NAME	= nsWidgetMacModule
 XPIDL_MODULE	= widget
 
 CPPSRCS         = nsAppShell.cpp \

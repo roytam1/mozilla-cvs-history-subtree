@@ -30,7 +30,7 @@ MODULE		= txtsvc
 LIBRARY_NAME	= txtsvc
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsTextServicesModule
+MODULE_NAME	= nsTextServicesModule
 REQUIRES	= xpcom string editor layout dom widget txmgr
 
 CPPSRCS		= \

@@ -31,7 +31,7 @@ LIBRARY_NAME	= calendar
 META_COMPONENT = mail
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsCalendarModule
+MODULE_NAME	= nsCalendarModule
 
 CPPSRCS		= \
 		mimexpcom.cpp \

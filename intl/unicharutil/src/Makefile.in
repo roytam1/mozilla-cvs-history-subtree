@@ -31,7 +31,7 @@ LIBRARY_NAME	= unicharutil
 EXPORT_LIBRARY = 1
 SHORT_LIBNAME	= ucharuti
 IS_COMPONENT	= 1
-COMPONENT_NAME	= UcharUtil
+MODULE_NAME	= UcharUtil
 REQUIRES	= xpcom string uconv necko
 
 CPPSRCS		= \

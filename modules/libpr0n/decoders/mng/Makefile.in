@@ -27,7 +27,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= imgmng
 LIBRARY_NAME	= imgmng
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsMNGDecoderModule
+MODULE_NAME	= nsMNGDecoderModule
 
 CPPSRCS		= nsMNGDecoder.cpp nsMNGFactory.cpp imgContainerMNG.cpp
 

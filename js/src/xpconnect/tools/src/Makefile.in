@@ -43,7 +43,7 @@ MODULE		= xpctools
 LIBRARY_NAME	= xpctools
 SHORT_LIBNAME	= xpctools
 REQUIRES	= xpcom xpconnect js string
-COMPONENT_NAME	= xpctools
+MODULE_NAME	= xpctools
 IS_COMPONENT	= 1
 
 CPPSRCS		= \

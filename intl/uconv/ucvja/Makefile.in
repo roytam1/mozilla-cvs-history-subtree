@@ -30,7 +30,7 @@ MODULE		= ucvja
 LIBRARY_NAME	= ucvja
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsUCvJAModule
+MODULE_NAME	= nsUCvJAModule
 REQUIRES	= xpcom string uconv
 
 CPPSRCS		= \

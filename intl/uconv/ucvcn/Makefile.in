@@ -30,7 +30,7 @@ MODULE		= ucvcn
 LIBRARY_NAME	= ucvcn
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsUCvCnModule
+MODULE_NAME	= nsUCvCnModule
 REQUIRES	= xpcom string uconv
 
 CPPSRCS		= \

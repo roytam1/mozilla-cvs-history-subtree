@@ -27,7 +27,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 IS_COMPONENT	= 1
-COMPONENT_NAME	= nsTestDynamicModule
+MODULE_NAME	= nsTestDynamicModule
 MODULE		= xpcom
 LIBRARY_NAME	= testdynamic
 SHORT_LIBNAME	= tdynamic
