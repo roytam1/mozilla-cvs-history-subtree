@@ -23,6 +23,7 @@
    -                 Chris Charabaruk <coldacid@meldstar.com>
    -                 ArentJan Banck <ajbanck@planet.nl>
    -                 Eric Belhaire <belhaire@ief.u-psud.fr>
+   -                 Matthew Willis <mattwillis@gmail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -86,7 +87,7 @@
 <!ENTITY newevent.alarm.label        "Waarschuwing" >
 <!ENTITY newevent.server.label       "Kalenderbestand" >
 <!ENTITY newevent.invite.label       "Uitnodigen" >
-<!ENTITY newevent.email.label        "Email waarschuwing aan" >
+<!ENTITY newevent.email.label        "Waarschuwing zenden aan" >
 <!ENTITY newevent.beforealarm.label  "voordat de gebeurtenis start" >
 <!ENTITY newevent.beforealarmends.label  "voordat de gebeurtenis eindigd" >
 <!ENTITY newevent.repeat.label       "Herhaal over" >
@@ -153,7 +154,7 @@
 <!ENTITY newtodo.duedate.warning    "Uw startdatum valt na uw vervaldatum.">
 <!ENTITY newtodo.repeatstart.warning "Startdatum vereist voor herhaling.">
 
-<!ENTITY calendar.confirm.deleteallevents  "Are you sure you want to delete all the selected events?" >
+<!ENTITY calendar.confirm.deleteallevents  "Weet u zeker dat u alle geselecteerde gebeurtenissen wilt verwijderen?" >
 <!ENTITY calendar.confirm.deleteevent "Weet u zeker dat u de volgende gebeurtenis wilt verwijderen: " >
 <!ENTITY calendar.confirm.deleteuntitledevent "Weet u zeker dat u de volgende naamloze gebeurtenis wilt verwijderen?" >
 
