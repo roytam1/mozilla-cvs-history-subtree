@@ -31,7 +31,6 @@ $perlpath = $Config{'perlpath'};
 $osname   = $Config{'osname'};
 
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
-$ldapsdk_ver = $ENV{"LDAPSDKVER"}; # 11 or 30
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # Y to include SSL
 
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
@@ -59,17 +58,10 @@ if (!$ldapsdk_ver)
 {
    print "Using LDAPv3 Developer Kit (default: yes)?  ";
    chomp ($ver = <STDIN>);
-   if ($ver =~ /^n/i)
+   if ($ver !~ /^n/i)
    {
-      $ldapsdk_ver = "11";
-   } else {
-      $ldapsdk_ver = "30";
+      $v3_def = "-DLDAPV3";
    }
-}
-
-if ($ldapsdk_ver eq "30")
-{
-   $v3_def = "-DLDAPV3";
 }
    
 if (!$ldapsdk_ssl)
@@ -78,66 +70,61 @@ if (!$ldapsdk_ssl)
    chomp ($ldapsdk_ssl = <STDIN>);
 }
 
-if ($ldapsdk_ssl =~ /^n/i)
+if ($ldapsdk_ssl !~ /^n/i)
 {
-   $ssl_def = "";
-} else {
    $ssl_def = "-DUSE_SSL";
 }
 
-if ($osname =~ /mswin/i)
-{
-   if ($ssl_def)
-   {
-      if ($ldapsdk_ver == "30")
-      {
-         $ldap_lib = "nsldapssl32v30";
-      } else {
-         $ldap_lib = "nsldap32v11";
-      }
-   } else {
-      $ldap_lib = "nsldap32v" . $ldapsdk_ver;
-   }
-} else {
-   if ($ssl_def)
-   {
-      if ($ldapsdk_ver == "30")
-      {
-         $ldap_lib = "ldapssl30";
-      } else {
-         $ldap_lib = "ldap30";
-      }
-   } else {
-      $ldap_lib = "ldap" . $ldapsdk_ver;
-   }
-}
-
 opendir(DIR,$lib_ldap);
-@files = grep{/$ldap_lib/} readdir(DIR);
+@files = grep{/ldap|lber/} readdir(DIR);
 closedir(DIR);
 
-$lber_lib = "";
-if ($#files < 0)
+if (!((@ldaplib = grep{/ldapssl/} @files) && $ssl_def))
 {
-   $ldap_lib = "ldap";
-   $lber_lib = "lber";
+   @ldaplib = grep{/ldap/} @files;
+   @lberlib = grep{/lber/} @files;
 }
+
+if ($#ldaplib < 0)
+{
+   die "No LDAP libraries found.";
+}
+
+if ($#ldaplib > 0)
+{
+   print "Located multiple libraries:\n";
+   foreach $alib (@ldaplib)
+   {
+      print " - $alib\n";
+   }
+}
+
+$lline_ldap = $ldaplib[0];
+$lline_ldap =~ s/^lib//;
+$lline_ldap =~ s/\.(so|a|lib)$//;
+$lline = "-L$lib_ldap -l$lline_ldap";
+
+if ($#lberlib >= 0 && $lline =~ /ldap$/)
+{
+   $lline_lber = $lberlib[0];
+   $lline_lber =~ s/^lib//;
+   $lline_lber =~ s/\.(so|a|lib)$//;
+   $lline .= " -l$lline_lber";
+}
+
+print "Libraries to link with (default: $lline):  ";
+chomp ($lib_line = <STDIN>);
+$lib_line = $lline unless $lib_line =~ /\S/;
 
 if ($osname =~ /mswin/i)
 {
-   $myextlib = "$lib_ldap\\$ldap_lib.lib";
+   $myextlib = "$lib_ldap\\$ldaplib[0]";
    if ($lber_lib)
    {
-      $myextlib .= " $lib_ldap\\$lber_lib.lib";
+      $myextlib .= " $lib_ldap\\$lberlib[0]";
    }
 } else {
    $myextlib = "";
-}
-
-$lib_line = "-L$lib_ldap -l$ldap_lib";
-if ($lber_lib)
-{
-   $lib_line .= " -l$lber_lib";
 }
 
 @extras = ();
