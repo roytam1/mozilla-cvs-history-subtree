@@ -25,7 +25,7 @@
 #include "nsHttp.h"
 
 //-----------------------------------------------------------------------------
-// nsHttpHeaderArray
+// nsHttpHeaderArray <public>
 //-----------------------------------------------------------------------------
 
 nsresult
@@ -119,6 +119,21 @@ nsHttpHeaderArray::Flatten(nsACString &buf)
     }
     return NS_OK;
 }
+
+const char *
+nsHttpHeaderArray::PeekHeaderAt(PRUint32 index, nsHttpAtom &header)
+{
+    nsEntry *entry = (nsEntry *) mHeaders[index]; 
+    if (!entry)
+        return nsnull;
+
+    header = entry->header;
+    return entry->value.get();
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpHeaderArray <private>
+//-----------------------------------------------------------------------------
 
 PRInt32
 nsHttpHeaderArray::LookupEntry(nsHttpAtom header, nsEntry **entry)

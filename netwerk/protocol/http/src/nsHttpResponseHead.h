@@ -67,6 +67,9 @@ public:
     nsresult ComputeFreshnessLifetime(PRUint32 *);
     nsresult ComputeCurrentAge(PRUint32 now, PRUint32 requestTime, PRUint32 *result);
 
+    // update headers...
+    nsresult UpdateHeaders(nsHttpHeaderArray &headers); 
+
 private:
     nsresult ParseVersion(const char *);
     nsresult ParseContentType(char *);

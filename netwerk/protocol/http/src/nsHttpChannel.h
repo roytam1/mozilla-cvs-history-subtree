@@ -81,7 +81,7 @@ private:
     nsresult Connect(PRBool firstTime = PR_TRUE);
     nsresult AsyncAbort(nsresult status);
     nsresult SetupTransaction();
-    nsresult BuildConnectionInfo(nsHttpConnectionInfo **);
+    nsresult ApplyContentConversions();
     nsresult ProcessResponse();
     nsresult ProcessNormal();
     nsresult ProcessNotModified();

@@ -45,6 +45,10 @@ public:
 
     nsresult Flatten(nsACString &);
 
+    PRUint32 Count() { return (PRUint32) mHeaders.Count(); }
+
+    const char *PeekHeaderAt(PRUint32 i, nsHttpAtom &header);
+
 private:
     struct nsEntry
     {

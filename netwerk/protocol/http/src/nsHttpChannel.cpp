@@ -271,6 +271,40 @@ nsHttpChannel::SetupTransaction()
 }
 
 nsresult
+nsHttpChannel::ApplyContentConversions()
+{
+    LOG(("nsHttpChannel::ApplyContentConversions [this=%x]\n", this));
+
+    if (!mApplyConversion) {
+        LOG(("not applying conversion per mApplyConversion\n"));
+        return NS_OK;
+    }
+
+    const char *val = mResponseHead->PeekHeader(nsHttp::Content_Encoding);
+    if (val) {
+        nsCOMPtr<nsIStreamConverterService> serv;
+        nsresult rv = nsHttpHandler::get()->
+                GetStreamConverterService(getter_AddRefs(serv));
+        // we won't fail to load the page just because we couldn't load the
+        // stream converter service.. carry on..
+        if (NS_SUCCEEDED(rv)) {
+            nsCOMPtr<nsIStreamListener> converter;
+            nsAutoString from = NS_ConvertASCIItoUCS2(val);
+            rv = serv->AsyncConvertData(from.get(),
+                                        NS_LITERAL_STRING("uncompressed").get(),
+                                        mListener,
+                                        mListenerContext,
+                                        getter_AddRefs(converter));
+            if (NS_SUCCEEDED(rv)) {
+                LOG(("converter installed from \'%s\' to \'uncompressed\'\n", val));
+                mListener = converter;
+            }
+        }
+    }
+    return NS_OK;
+}
+
+nsresult
 nsHttpChannel::ProcessResponse()
 {
     nsresult rv = NS_OK;
@@ -303,7 +337,6 @@ nsHttpChannel::ProcessResponse()
             rv = ProcessNormal();
         break;
     case 304:
-        CloseCacheEntry(NS_ERROR_ABORT);
         rv = ProcessNotModified();
         break;
     case 401:
@@ -329,34 +362,17 @@ nsHttpChannel::ProcessNormal()
 
     LOG(("nsHttpChannel::ProcessNormal [this=%x]\n", this));
 
-    // install stream converter(s) if required
-    if (mApplyConversion) {
-        const char *val = mResponseHead->PeekHeader(nsHttp::Content_Encoding);
-        if (val) {
-            nsCOMPtr<nsIStreamConverterService> serv;
-            rv = nsHttpHandler::get()->
-                    GetStreamConverterService(getter_AddRefs(serv));
-            // we won't fail to load the page just because we couldn't load the
-            // stream converter service.. carry on..
-            if (NS_SUCCEEDED(rv)) {
-                nsCOMPtr<nsIStreamListener> converter;
-                nsAutoString from = NS_ConvertASCIItoUCS2(val);
-                rv = serv->AsyncConvertData(from.get(),
-                                            NS_LITERAL_STRING("uncompressed").get(),
-                                            mListener,
-                                            mListenerContext,
-                                            getter_AddRefs(converter));
-                if (NS_SUCCEEDED(rv))
-                    mListener = converter;
-            }
-        }
-    }
+    // install stream converter if required
+    ApplyContentConversions();
 
     // install cache listener if we still have a cache entry open
     if (mCacheEntry) {
         rv = CacheReceivedResponse();
         if (NS_FAILED(rv)) return rv;
     }
+
+    // notify nsIHttpNotify implementations
+    nsHttpHandler::get()->OnExamineResponse(this);
 
     return mListener->OnStartRequest(this, mListenerContext);
 }
@@ -368,8 +384,45 @@ nsHttpChannel::ProcessNormal()
 nsresult
 nsHttpChannel::ProcessNotModified()
 {
-    NS_NOTREACHED("not implemented");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    LOG(("nsHttpChannel::ProcessNotModified [this=%x]\n", this)); 
+
+    NS_ENSURE_TRUE(mCachedResponseHead, NS_ERROR_NOT_INITIALIZED);
+    NS_ENSURE_TRUE(mCacheEntry, NS_ERROR_NOT_INITIALIZED);
+
+    // merge any new headers with the cached response headers
+    rv = mCachedResponseHead->UpdateHeaders(mResponseHead->Headers());
+    if (NS_FAILED(rv)) return rv;
+
+    // update the cached response headers
+    nsCAutoString headers;
+    rv = mCachedResponseHead->Flatten(headers);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = mCacheEntry->SetMetaDataElement("http-headers", headers.get());
+    if (NS_FAILED(rv)) return rv;
+
+    // make the cached response be the current response
+    delete mResponseHead;
+    mResponseHead = mCachedResponseHead;
+    mCachedResponseHead = 0;
+
+    rv = UpdateExpirationTime();
+    if (NS_FAILED(rv)) return rv;
+
+    // drop our reference to the current transaction... ie. let it finish
+    // in the background.
+    // XXX we shouldn't have to cancel the transaction
+    mTransaction->Cancel(NS_BINDING_ABORTED);
+    NS_RELEASE(mTransaction);
+    mTransaction = 0;
+
+    // notify nsIHttpNotify implementations as response headers may have changed
+    nsHttpHandler::get()->OnExamineResponse(this);
+
+    mCachedContentIsValid = PR_TRUE;
+    return ReadFromCache();
 }
 
 nsresult
@@ -705,6 +758,15 @@ nsHttpChannel::ReadFromCache()
     LOG(("nsHttpChannel::ReadFromCache [this=%x] "
          "Using cached copy of: %s\n", this, mSpec.get()));
 
+    if (mCachedResponseHead) {
+        NS_ASSERTION(!mResponseHead, "memory leak");
+        mResponseHead = mCachedResponseHead;
+        mCachedResponseHead = 0;
+    }
+
+    // install stream converter if required
+    ApplyContentConversions();
+
     if (mCacheAccess & nsICache::ACCESS_WRITE) {
         // We have write access to the cache, but we don't need to go to the
         // server to validate at this time, so just mark the cache entry as
@@ -732,6 +794,11 @@ nsHttpChannel::CloseCacheEntry(nsresult status)
         if (NS_FAILED(status)) {
             LOG(("dooming cache entry!!"));
             rv = mCacheEntry->Doom();
+        }
+
+        if (mCachedResponseHead) {
+            delete mCachedResponseHead;
+            mCachedResponseHead = 0;
         }
 
         mCacheReadRequest = 0;
@@ -840,6 +907,9 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     // so just carry on as though this were a normal response.
     if (!location)
         return NS_ERROR_FAILURE;
+
+    // notify nsIHttpNotify implementations before this channel goes away
+    nsHttpHandler::get()->OnExamineResponse(this);
 
     LOG(("redirecting to: %s\n", location));
 
@@ -1764,21 +1834,14 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 
     LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
 
-    // all of the response headers have been acquired, so we can take ownership
-    // of them from the transaction.
-    if (mTransaction)
+    if (mTransaction) {
+        // all of the response headers have been acquired, so we can take ownership
+        // of them from the transaction.
         mResponseHead = mTransaction->TakeResponseHead();
-    else {
-        NS_ASSERTION(!mResponseHead, "memory leak");
-        mResponseHead = mCachedResponseHead;
-        mCachedResponseHead = 0;
-    }
-
-    if (mResponseHead && mTransaction) {
-        // notify nsIHttpNotify implementations
-        nsHttpHandler::get()->OnExamineResponse(this);
-
-        return ProcessResponse();
+        // the response head may be null if the transaction was cancelled.  in
+        // which case we just need to call OnStartRequest/OnStopRequest.
+        if (mResponseHead)
+            return ProcessResponse();
     }
 
     // there won't be a response head if we've been cancelled
@@ -1829,8 +1892,10 @@ nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
 {
     // if the request is for something we no longer reference, then simply 
     // drop this event.
-    if ((request != mTransaction) && (request != mCacheReadRequest))
-        return NS_OK;
+    if ((request != mTransaction) && (request != mCacheReadRequest)) {
+        NS_WARNING("got stale request... why wasn't it cancelled?");
+        return NS_BASE_STREAM_CLOSED;
+    }
 
     LOG(("nsHttpChannel::OnDataAvailable [this=%x offset=%u count=%u]\n",
         this, offset, count));

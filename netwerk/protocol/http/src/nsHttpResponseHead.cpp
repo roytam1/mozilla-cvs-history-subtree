@@ -264,6 +264,59 @@ nsHttpResponseHead::ComputeFreshnessLifetime(PRUint32 *result)
     return NS_OK;
 }
 
+nsresult
+nsHttpResponseHead::UpdateHeaders(nsHttpHeaderArray &headers)
+{
+    LOG(("nsHttpResponseHead::UpdateHeaders [this=%x]\n", this));
+
+    PRUint32 i, count = headers.Count();
+    for (i=0; i<count; ++i) {
+        nsHttpAtom header;
+        const char *val = headers.PeekHeaderAt(i, header);
+
+        if (!val) {
+            NS_NOTREACHED("null header value");
+            continue;
+        }
+
+        // Ignore any hop-by-hop headers...
+        if (header == nsHttp::Connection          ||
+            header == nsHttp::Keep_Alive          ||
+            header == nsHttp::Proxy_Authenticate  ||
+            header == nsHttp::Proxy_Authorization || // not a response header!
+            header == nsHttp::TE                  ||
+            header == nsHttp::Trailer             ||
+            header == nsHttp::Transfer_Encoding   ||
+            header == nsHttp::Upgrade             ||
+        // Ignore any non-modifiable headers...
+            header == nsHttp::Content_Location    ||
+            header == nsHttp::Content_MD5         ||
+            header == nsHttp::ETag                ||
+            header == nsHttp::Last_Modified       ||
+        // Assume Cache-Control: "no-transform"
+            header == nsHttp::Content_Encoding    ||
+            header == nsHttp::Content_Range       ||
+            header == nsHttp::Content_Type        ||
+        // Ignore wacky headers too...
+            // this one is for MS servers that send "Content-Length: 0"
+            // on 304 responses
+            header == nsHttp::Content_Length) {
+            LOG(("ignoring response header [%s: %s]\n", header.get(), val));
+        }
+        else {
+            LOG(("new response header [%s: %s]\n", header.get(), val));
+
+            // delete the current header value (if any)
+            mHeaders.SetHeader(header, nsnull);
+
+            // copy the new header value...
+            mHeaders.SetHeader(header, val);
+        }
+    }
+
+    return NS_OK;
+}
+
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead <private>
 //-----------------------------------------------------------------------------
