@@ -175,11 +175,3 @@ NSSSMIME_VersionCheck;
 ;+    local:
 ;+        *;
 ;+};
-;+NSS_3.3 {     # NSS 3.3. release
-;+    global:
-SEC_PKCS7AddCertificate;
-SEC_PKCS7CreateCertsOnly;
-SEC_PKCS7Encode;
-;+    local:
-;+       *;
-;+};

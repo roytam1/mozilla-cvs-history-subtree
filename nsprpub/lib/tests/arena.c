@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -66,43 +50,6 @@ void DumpAll( void )
 }
 
 /*
-** Test Arena allocation.
-*/
-static void ArenaAllocate( void )
-{
-    PLArenaPool ap;
-    void    *ptr;
-	PRInt32	i;
-
-    PL_InitArenaPool( &ap, "AllocArena", 2048, sizeof(double));
-    PR_LOG( tLM, PR_LOG_DEBUG, ("AA, InitPool -- Pool: %p. first: %p, current: %p, size: %d", 
-        &ap, ap.first, ap.current, ap.arenasize  ));
-
-	for( i = 0; i < 150; i++ )
-	{
-		PL_ARENA_ALLOCATE( ptr, &ap, 512 );
-        PR_LOG( tLM, PR_LOG_DEBUG,("AA, after alloc -- Pool: %p. first: %p, current: %p, size: %d", 
-               &ap, ap.first, ap.current, ap.arenasize  ));
-		PR_LOG( tLM, PR_LOG_DEBUG,(
-		    "AA -- Pool: %p. alloc: %p ", &ap, ptr ));
-	}
-
-    PL_FreeArenaPool( &ap );
-
-	for( i = 0; i < 221; i++ )
-	{
-		PL_ARENA_ALLOCATE( ptr, &ap, 512 );
-        PR_LOG( tLM, PR_LOG_DEBUG,("AA, after alloc -- Pool: %p. first: %p, current: %p, size: %d", 
-               &ap, ap.first, ap.current, ap.arenasize  ));
-		PR_LOG( tLM, PR_LOG_DEBUG,(
-		    "AA -- Pool: %p. alloc: %p ", &ap, ptr ));
-	}
-
-    PL_FreeArenaPool( &ap );
-    
-    return;
-} /* end ArenaGrow() */
-/*
 ** Test Arena grow.
 */
 static void ArenaGrow( void )
@@ -133,71 +80,27 @@ static void ArenaGrow( void )
 static void MarkAndRelease( void )
 {
     PLArenaPool ap;
-    void    *ptr = NULL;
-    void    *mark0, *mark1;
-    PRIntn  i;
+    void    *ptr;
+    void    *mark;
 
     PL_InitArenaPool( &ap, "TheArena", 4096, sizeof(double));
-    mark0 = PL_ARENA_MARK( &ap );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("mark0. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p, m0: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr, mark0 ));
+    PL_ARENA_ALLOCATE( ptr, &ap, 512 );
 
-	for( i = 0; i < 201; i++ )
-	{
-		PL_ARENA_ALLOCATE( ptr, &ap, 512 );
-        PR_LOG( tLM, PR_LOG_DEBUG,
-            ("mr. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-                &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
-	}
+    mark = PL_ARENA_MARK( &ap );
 
-    mark1 = PL_ARENA_MARK( &ap );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("mark1. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p, m1: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr, mark1 ));
-
-
-	for( i = 0; i < 225; i++ )
-	{
-		PL_ARENA_ALLOCATE( ptr, &ap, 512 );
-        PR_LOG( tLM, PR_LOG_DEBUG,
-            ("mr. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-                &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
-	}
-
-    PL_ARENA_RELEASE( &ap, mark1 );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("Release-1: %p -- Pool: %p. first: %p, current: %p, size: %d", 
-               mark1, &ap, ap.first, ap.current, ap.arenasize  ));
-
-	for( i = 0; i < 20; i++ )
-	{
-		PL_ARENA_ALLOCATE( ptr, &ap, 512 );
-        PR_LOG( tLM, PR_LOG_DEBUG,
-            ("mr. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-                &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
-	}
-
-    PL_ARENA_RELEASE( &ap, mark1 );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("Release-1. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
-
-    PL_ARENA_RELEASE( &ap, mark0 );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("Release-0. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
-
-    PL_FreeArenaPool( &ap );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("Free. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
+    PL_ARENA_ALLOCATE( ptr, &ap, 512 );
     
-    PL_FinishArenaPool( &ap );
-    PR_LOG( tLM, PR_LOG_DEBUG,
-        ("Finish. ap: %p, ap.f: %p, ap.c: %p, ap.siz: %d, alloc: %p", 
-            &ap, ap.first.next, ap.current, ap.arenasize, ptr ));
+    PL_ARENA_RELEASE( &ap, mark );
+    PL_ARENA_ALLOCATE( ptr, &ap, 512 );
 
+    if ( ptr != mark )
+    {
+        failed_already = PR_TRUE;
+        PR_LOG( tLM, PR_LOG_ERROR, ("Mark and Release failed: expected %p, got %p\n", mark, ptr)); 
+    }
+    else
+        PR_LOG( tLM, PR_LOG_DEBUG, ("Mark and Release passed\n")); 
+    
     return;
 } /* end MarkAndRelease() */
 
@@ -383,10 +286,8 @@ PRIntn main(PRIntn argc, char *argv[])
     tLM = PR_NewLogModule("testcase");
 
 
-#if 0
-	ArenaAllocate();
+
 	ArenaGrow();
-#endif
 
     MarkAndRelease();
 
