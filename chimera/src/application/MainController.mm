@@ -701,9 +701,6 @@ const int kReuseWindowOnAE = 2;
 //
 -(IBAction)manageSidebar: (id)aSender
 {
-  const kBookmarkTag = 0;
-  const kHistoryTag = 1;
-  
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
   if (!browserWindow) {
     [self newWindow:self];
