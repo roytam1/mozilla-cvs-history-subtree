@@ -20,7 +20,6 @@
    Created: Jamie Zawinski <jwz@netscape.com>
  */
 
-
 #include "rosetta.h"
 #include "mozilla.h"
 #include "xfe.h"
@@ -77,7 +76,6 @@
 #include "icons.h"
 
 #include "prtypes.h"  /* for IS_LITTLE_ENDIAN / IS_BIG_ENDIAN */
-
 
 #include <xpgetstr.h> /* for XP_GetString() */
 extern int XFE_SECURITY_WITH;
@@ -2059,6 +2057,7 @@ FE_AboutData (const char *which,
   else
     {
 	  char *a = NULL;
+      char *b = NULL;
       char *type = TEXT_HTML;
       Boolean do_PR_snprintf = False;
       Boolean do_rot = True;
@@ -2073,7 +2072,7 @@ FE_AboutData (const char *which,
 	    }
 	  else
 	    {
-	      a = strdup (
+	      b = 
 #ifdef JAVA
 #ifndef MOZ_COMMUNICATOR_ABOUT
 #		          include "xp/about-java-lite.h"
@@ -2087,7 +2086,8 @@ FE_AboutData (const char *which,
 #		          include "xp/about.h"
 #endif
 #endif
-		         );
+		         ;
+	     a = strdup(b); 
 	    }
 	}
       else if (!strcmp (which, "splash"))
@@ -2101,7 +2101,7 @@ FE_AboutData (const char *which,
 	    }
 	  else
 	    {
-	      a = strdup (
+	      b = 
 #ifdef JAVA
 #ifndef MOZ_COMMUNICATOR_ABOUT
 #		          include "xp/splash-java-lite.h"
@@ -2115,15 +2115,17 @@ FE_AboutData (const char *which,
 #		          include "xp/splash.h"
 #endif
 #endif
-		         );
+	     ;
+	     a = strdup(b);
 	    }
 	}
       else if (!strcmp (which, "1994"))
 	{
 	  ever_loaded_map = TRUE;
-	  a = strdup (
+	  b =
 #		      include "xp/authors2.h"
-		     );
+	  ;
+	  a = strdup (b);
 	}
       else if (!strcmp (which,"license"))
 	{
@@ -2142,9 +2144,10 @@ FE_AboutData (const char *which,
 
       else if (!strcmp (which,"mozilla"))
 	{
-	  a = strdup (
+	  b = 
 #		      include "xp/mozilla.h"
-		      );
+	  ;
+	  a = strdup (b);
 	}
       else if (!strcmp (which,
 			"mailintro"))
@@ -2158,9 +2161,10 @@ FE_AboutData (const char *which,
      }
      else
      {
-		  a = strdup (
+		  b =
 #		      include "xp/mail.h"
-		      );
+		  ;
+		  a = strdup (b);
      }
 	}
 
@@ -2183,9 +2187,10 @@ FE_AboutData (const char *which,
 	    }
 	  else
 	    {
-	      a = strdup (
+	      b = 
 #		          include "xp/aboutplg.h"
-		         );
+		;
+	      a = strdup (b);
 	    }
 	}
 
