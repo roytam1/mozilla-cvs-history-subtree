@@ -83,7 +83,7 @@ foreach $search (@srch)
   print "Searched for `$search':\n\n";
   $conn->printError() if $conn->getErrorCode();
 
-  while($entry)
+  while ($entry)
     {
       $entry->printLDIF();
       $entry = $conn->nextEntry;

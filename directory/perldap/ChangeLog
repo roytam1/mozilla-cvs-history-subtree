@@ -1,3 +1,39 @@
+1999-01-04  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (setDN): Added third optional argument, to enfoce DN
+	normalization.
+	(getDN): Dito.
+	(hasDNValue): Dito.
+	(matchDNValue): Dito.
+
+	* Entry.pm (removeValue): Added support for DN normalization
+	(optional argument).
+	(addValue): Dito
+	(getDN): Dito.
+
+1998-12-31  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (DESTROY): Added this method, don't know if it actually
+	makes any sense at all... :(
+
+	* Conn.pm (add): Use _oc_order_ to find a list of attributes, to
+	avoide calling the TIEHASH methods.
+	(update): Dito.
+	(ALL): Clean out some "my" definitions.
+
+	* Entry.pm (unRemove): New function, to undo remove opertaions on
+	an attribute.
+	(DELETE): Bug-fix, don't undef the attribute, it would prevent us
+	from updating it properly in the Conn::update() method.
+	(remove): Dito.
+
+	* Conn.pm (nextEntry): Return $obj instead of blessing the %entry
+	(again).
+
+1998-12-25  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (POD): Changed examples from $conn -> $entry.
+
 1998-12-17  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (DESTROY): undef the Perl data after doing a
