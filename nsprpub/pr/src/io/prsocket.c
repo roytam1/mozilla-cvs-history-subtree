@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -183,10 +167,9 @@ PRFileDesc *fd;
 
 	if (!_pr_initialized) _PR_ImplicitInitialization();
 	fd = PR_AllocFileDesc(osfd, PR_GetTCPMethods());
-	if (fd != NULL) {
+	if (fd != NULL)
 		_PR_MD_MAKE_NONBLOCK(fd);
-		_PR_MD_INIT_FD_INHERITABLE(fd, PR_TRUE);
-	} else
+	else
 		_PR_MD_CLOSE_SOCKET(osfd);
 	return(fd);
 }
@@ -197,10 +180,9 @@ PRFileDesc *fd;
 
 	if (!_pr_initialized) _PR_ImplicitInitialization();
 	fd = PR_AllocFileDesc(osfd, PR_GetUDPMethods());
-	if (fd != NULL) {
+	if (fd != NULL)
 		_PR_MD_MAKE_NONBLOCK(fd);
-		_PR_MD_INIT_FD_INHERITABLE(fd, PR_TRUE);
-	} else
+	else
 		_PR_MD_CLOSE_SOCKET(osfd);
 	return(fd);
 }
@@ -220,7 +202,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_CreateSocketPollFd(PRInt32 osfd)
     else
     {
         fd->secret->md.osfd = osfd;
-        fd->secret->inheritable = _PR_TRI_FALSE;
+        fd->secret->inheritable = PR_FALSE;
     	fd->secret->state = _PR_FILEDESC_OPEN;
         fd->methods = PR_GetSocketPollFdMethods();
     }
@@ -271,23 +253,26 @@ static PRStatus PR_CALLBACK SocketConnect(
 		return PR_FAILURE;
 }
 
-static PRStatus PR_CALLBACK SocketConnectContinue(
-    PRFileDesc *fd, PRInt16 out_flags)
+PR_IMPLEMENT(PRStatus) PR_GetConnectStatus(const PRPollDesc *pd)
 {
     PRInt32 osfd;
+    PRFileDesc *bottom = pd->fd;
     int err;
 
-    if (out_flags & PR_POLL_NVAL) {
+    if (pd->out_flags & PR_POLL_NVAL) {
         PR_SetError(PR_BAD_DESCRIPTOR_ERROR, 0);
         return PR_FAILURE;
     }
-    if ((out_flags & (PR_POLL_WRITE | PR_POLL_EXCEPT | PR_POLL_ERR)) == 0) {
-        PR_ASSERT(out_flags == 0);
+    if ((pd->out_flags & (PR_POLL_WRITE | PR_POLL_EXCEPT | PR_POLL_ERR)) == 0) {
+        PR_ASSERT(pd->out_flags == 0);
         PR_SetError(PR_IN_PROGRESS_ERROR, 0);
         return PR_FAILURE;
     }
 
-    osfd = fd->secret->md.osfd;
+    while (bottom->lower != NULL) {
+        bottom = bottom->lower;
+    }
+    osfd = bottom->secret->md.osfd;
 
 #if defined(XP_UNIX)
 
@@ -308,7 +293,7 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
     Sleep(0);
 #endif /* WIN32 */
 
-    if (out_flags & PR_POLL_EXCEPT) {
+    if (pd->out_flags & PR_POLL_EXCEPT) {
         int len = sizeof(err);
         if (getsockopt(osfd, (int)SOL_SOCKET, SO_ERROR, (char *) &err, &len)
                 == SOCKET_ERROR) {
@@ -323,12 +308,12 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
         return PR_FAILURE;
     }
 
-    PR_ASSERT(out_flags & PR_POLL_WRITE);
+    PR_ASSERT(pd->out_flags & PR_POLL_WRITE);
     return PR_SUCCESS;
 
 #elif defined(XP_OS2)
 
-    if (out_flags & PR_POLL_EXCEPT) {
+    if (pd->out_flags & PR_POLL_EXCEPT) {
         int len = sizeof(err);
         if (getsockopt(osfd, SOL_SOCKET, SO_ERROR, (char *) &err, &len)
                 < 0) {
@@ -343,7 +328,7 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
         return PR_FAILURE;
     }
 
-    PR_ASSERT(out_flags & PR_POLL_WRITE);
+    PR_ASSERT(pd->out_flags & PR_POLL_WRITE);
     return PR_SUCCESS;
 
 #elif defined(XP_MAC)
@@ -356,7 +341,7 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
 
 #elif defined(XP_BEOS)
 
-    err = _MD_beos_get_nonblocking_connect_error(fd);
+    err = _MD_beos_get_nonblocking_connect_error(bottom);
     if( err != 0 ) {
 	_PR_MD_MAP_CONNECT_ERROR(err);
 	return PR_FAILURE;
@@ -368,18 +353,6 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return PR_FAILURE;
 #endif
-}
-
-PR_IMPLEMENT(PRStatus) PR_GetConnectStatus(const PRPollDesc *pd)
-{
-    /* Find the NSPR layer and invoke its connectcontinue method */
-    PRFileDesc *bottom = PR_GetIdentitiesLayer(pd->fd, PR_NSPR_IO_LAYER);
-
-    if (NULL == bottom) {
-        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-        return PR_FAILURE;
-    }
-    return bottom->methods->connectcontinue(bottom, pd->out_flags);
 }
 
 static PRFileDesc* PR_CALLBACK SocketAccept(PRFileDesc *fd, PRNetAddr *addr,
@@ -422,7 +395,7 @@ PRIntervalTime timeout)
 	fd2->secret->nonblocking = fd->secret->nonblocking;
 	fd2->secret->inheritable = fd->secret->inheritable;
 #ifdef WINNT
-	if (!fd2->secret->nonblocking && fd2->secret->inheritable != _PR_TRI_TRUE) {
+	if (!fd2->secret->nonblocking && !fd2->secret->inheritable) {
 		/*
 		 * The new socket has been associated with an I/O
 		 * completion port.  There is no going back.
@@ -570,10 +543,6 @@ PRIntervalTime timeout)
 	PRInt32 rv;
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 
-	if ((flags != 0) && (flags != PR_MSG_PEEK)) {
-		PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-		return -1;
-	}
 	if (_PR_PENDING_INTERRUPT(me)) {
 		me->flags &= ~_PR_INTERRUPT;
 		PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
@@ -584,61 +553,11 @@ PRIntervalTime timeout)
 		return -1;
 	}
 
-	PR_LOG(_pr_io_lm, PR_LOG_MAX, ("recv: fd=%p osfd=%d buf=%p amount=%d flags=%d",
-		    						fd, fd->secret->md.osfd, buf, amount, flags));
-
-#ifdef _PR_HAVE_PEEK_BUFFER
-	if (fd->secret->peekBytes != 0) {
-		rv = (amount < fd->secret->peekBytes) ?
-			amount : fd->secret->peekBytes;
-		memcpy(buf, fd->secret->peekBuffer, rv);
-		if (flags == 0) {
-			/* consume the bytes in the peek buffer */
-			fd->secret->peekBytes -= rv;
-			if (fd->secret->peekBytes != 0) {
-				memmove(fd->secret->peekBuffer,
-					fd->secret->peekBuffer + rv,
-					fd->secret->peekBytes);
-			}
-		}
-		return rv;
-	}
-
-	/* allocate peek buffer, if necessary */
-	if ((PR_MSG_PEEK == flags) && _PR_FD_NEED_EMULATE_MSG_PEEK(fd)) {
-		PR_ASSERT(0 == fd->secret->peekBytes);
-		/* impose a max size on the peek buffer */
-		if (amount > _PR_PEEK_BUFFER_MAX) {
-			amount = _PR_PEEK_BUFFER_MAX;
-		}
-		if (fd->secret->peekBufSize < amount) {
-			if (fd->secret->peekBuffer) {
-				PR_Free(fd->secret->peekBuffer);
-			}
-			fd->secret->peekBufSize = amount;
-			fd->secret->peekBuffer = PR_Malloc(amount);
-			if (NULL == fd->secret->peekBuffer) {
-				fd->secret->peekBufSize = 0;
-				PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-				return -1;
-			}
-		}
-	}
-#endif
-
+	PR_LOG(_pr_io_lm, PR_LOG_MAX, ("recv: fd=%p osfd=%d buf=%p amount=%d",
+		    						fd, fd->secret->md.osfd, buf, amount));
 	rv = _PR_MD_RECV(fd, buf, amount, flags, timeout);
 	PR_LOG(_pr_io_lm, PR_LOG_MAX, ("recv -> %d, error = %d, os error = %d",
 		rv, PR_GetError(), PR_GetOSError()));
-
-#ifdef _PR_HAVE_PEEK_BUFFER
-	if ((PR_MSG_PEEK == flags) && _PR_FD_NEED_EMULATE_MSG_PEEK(fd)) {
-		if (rv > 0) {
-			memcpy(fd->secret->peekBuffer, buf, rv);
-			fd->secret->peekBytes = rv;
-		}
-	}
-#endif
-
 	return rv;
 }
 
@@ -707,15 +626,6 @@ static PRStatus PR_CALLBACK SocketClose(PRFileDesc *fd)
 		fd->secret->state = _PR_FILEDESC_CLOSED;
 	}
 
-#ifdef _PR_HAVE_PEEK_BUFFER
-	if (fd->secret->peekBuffer) {
-		PR_ASSERT(fd->secret->peekBufSize > 0);
-		PR_DELETE(fd->secret->peekBuffer);
-		fd->secret->peekBufSize = 0;
-		fd->secret->peekBytes = 0;
-	}
-#endif
-
 	PR_FreeFileDesc(fd);
 	return PR_SUCCESS;
 }
@@ -723,11 +633,6 @@ static PRStatus PR_CALLBACK SocketClose(PRFileDesc *fd)
 static PRInt32 PR_CALLBACK SocketAvailable(PRFileDesc *fd)
 {
 	PRInt32 rv;
-#ifdef _PR_HAVE_PEEK_BUFFER
-	if (fd->secret->peekBytes != 0) {
-		return fd->secret->peekBytes;
-	}
-#endif
 	rv =  _PR_MD_SOCKETAVAILABLE(fd);
 	return rv;		
 }
@@ -735,12 +640,6 @@ static PRInt32 PR_CALLBACK SocketAvailable(PRFileDesc *fd)
 static PRInt64 PR_CALLBACK SocketAvailable64(PRFileDesc *fd)
 {
     PRInt64 rv;
-#ifdef _PR_HAVE_PEEK_BUFFER
-    if (fd->secret->peekBytes != 0) {
-        LL_I2L(rv, fd->secret->peekBytes);
-        return rv;
-    }
-#endif
     LL_I2L(rv, _PR_MD_SOCKETAVAILABLE(fd));
 	return rv;		
 }
@@ -882,7 +781,7 @@ PRIntervalTime timeout)
 	}
 	}
 #else
-	rv = PR_EmulateAcceptRead(sd, nd, raddr, buf, amount, timeout);
+	rv = _PR_EmulateAcceptRead(sd, nd, raddr, buf, amount, timeout);
 #endif
 	return rv;
 }
@@ -1029,7 +928,11 @@ static PRInt32 PR_CALLBACK SocketSendFile(
 		PR_FreeFileDesc(sd);
 	}
 #else
-	rv = PR_EmulateSendFile(sd, sfd, flags, timeout);
+#if defined(XP_UNIX)
+	rv = _PR_UnixSendFile(sd, sfd, flags, timeout);
+#else	/* XP_UNIX */
+	rv = _PR_EmulateSendFile(sd, sfd, flags, timeout);
+#endif	/* XP_UNIX */
 #endif	/* WINNT */
 
 	return rv;
@@ -1132,7 +1035,7 @@ static PRIOMethods tcpMethods = {
 	_PR_SocketGetSocketOption,
 	_PR_SocketSetSocketOption,
     SocketSendFile, 
-    SocketConnectContinue,
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -1171,7 +1074,7 @@ static PRIOMethods udpMethods = {
 	_PR_SocketGetSocketOption,
 	_PR_SocketSetSocketOption,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -1211,7 +1114,7 @@ static PRIOMethods socketpollfdMethods = {
     (PRGetsocketoptionFN)_PR_InvalidStatus,
     (PRSetsocketoptionFN)_PR_InvalidStatus,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -1272,16 +1175,22 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 		return NULL;
 	}
 
+#if defined(_PR_INET6)
+	if (PR_AF_INET6 == domain) {
 #if defined(_PR_INET6_PROBE)
+        if (_pr_ipv6_is_present == PR_FALSE) 
+            domain = AF_INET;
+        else
+#endif
+		domain = AF_INET6;
+    }
+#elif defined(_PR_INET6_PROBE)
 	if (PR_AF_INET6 == domain) {
 		if (_pr_ipv6_is_present == PR_FALSE) 
 			domain = AF_INET;
 		else
 			domain = AF_INET6;
 	}
-#elif defined(_PR_INET6)
-	if (PR_AF_INET6 == domain)
-		domain = AF_INET6;
 #else
 	if (PR_AF_INET6 == domain)
 		domain = AF_INET;
@@ -1299,8 +1208,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 	 */
 	if (fd != NULL) {
 		_PR_MD_MAKE_NONBLOCK(fd);
-		_PR_MD_INIT_FD_INHERITABLE(fd, PR_FALSE);
-#if defined(_PR_INET6_PROBE) || !defined(_PR_INET6)
+#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
 		/*
 		 * For platforms with no support for IPv6 
 		 * create layered socket for IPv4-mapped IPv6 addresses
@@ -1369,9 +1277,7 @@ PR_IMPLEMENT(PRStatus) PR_NewTCPSocketPair(PRFileDesc *f[])
 		return PR_FAILURE;
 	}
 	_PR_MD_MAKE_NONBLOCK(f[0]);
-	_PR_MD_INIT_FD_INHERITABLE(f[0], PR_FALSE);
 	_PR_MD_MAKE_NONBLOCK(f[1]);
-	_PR_MD_INIT_FD_INHERITABLE(f[1], PR_FALSE);
 	return PR_SUCCESS;
 #elif defined(WINNT)
     /*
@@ -1450,8 +1356,6 @@ PR_IMPLEMENT(PRStatus) PR_NewTCPSocketPair(PRFileDesc *f[])
         /* PR_AllocFileDesc() has invoked PR_SetError(). */
         return PR_FAILURE;
     }
-    _PR_MD_INIT_FD_INHERITABLE(f[0], PR_FALSE);
-    _PR_MD_INIT_FD_INHERITABLE(f[1], PR_FALSE);
     return PR_SUCCESS;
 
 failed:
@@ -1550,6 +1454,206 @@ PR_ChangeFileDescNativeHandle(PRFileDesc *fd, PRInt32 handle)
 {
 	if (fd)
 		fd->secret->md.osfd = handle;
+}
+
+/*
+ * _PR_EmulateSendFile
+ *
+ *	Send file sfd->fd across socket sd. The header and trailer buffers
+ *	specified in the 'sfd' argument are sent before and after the file,
+ *	respectively.
+ *
+ *	PR_TRANSMITFILE_CLOSE_SOCKET flag - close socket after sending file
+ *	
+ *	return number of bytes sent or -1 on error
+ *
+ */
+
+PRInt32 _PR_EmulateSendFile(PRFileDesc *sd, PRSendFileData *sfd, 
+PRTransmitFileFlags flags, PRIntervalTime timeout)
+{
+	PRInt32 rv, count = 0;
+	PRInt32 rlen;
+	const void *buffer;
+	PRInt32 buflen;
+	PRInt32 sendbytes, readbytes;
+	PRThread *me = _PR_MD_CURRENT_THREAD();
+	char *buf = NULL;
+
+#define _SENDFILE_BUFSIZE	(16 * 1024)
+
+	if (_PR_PENDING_INTERRUPT(me)) {
+		me->flags &= ~_PR_INTERRUPT;
+		PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
+		return -1;
+	}
+
+	buf = (char*)PR_MALLOC(_SENDFILE_BUFSIZE);
+	if (buf == NULL) {
+		PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+		return -1;
+	}
+
+	/*
+	 * send header, first
+	 */
+	buflen = sfd->hlen;
+	buffer = sfd->header;
+	while (buflen) {
+		rv =  PR_Send(sd, buffer, buflen, 0, timeout);
+		if (rv < 0) {
+			/* PR_Send() has invoked PR_SetError(). */
+			rv = -1;
+			goto done;
+		} else {
+			count += rv;
+			buffer = (const void*) ((const char*)buffer + rv);
+			buflen -= rv;
+		}
+	}
+	/*
+	 * send file, next
+	 */
+
+	if (PR_Seek(sfd->fd, sfd->file_offset, PR_SEEK_SET) < 0) {
+		rv = -1;
+		goto done;
+	}
+	sendbytes = sfd->file_nbytes;
+	if (sendbytes == 0) {
+		/* send entire file */
+		while ((rlen = PR_Read(sfd->fd, buf, _SENDFILE_BUFSIZE)) > 0) {
+			while (rlen) {
+				char *bufptr = buf;
+
+				rv =  PR_Send(sd, bufptr, rlen, 0, timeout);
+				if (rv < 0) {
+					/* PR_Send() has invoked PR_SetError(). */
+					rv = -1;
+					goto done;
+				} else {
+					count += rv;
+					bufptr = ((char*)bufptr + rv);
+					rlen -= rv;
+				}
+			}
+		}
+		if (rlen < 0) {
+			/* PR_Read() has invoked PR_SetError(). */
+			rv = -1;
+			goto done;
+		}
+	} else {
+		readbytes = sendbytes > _SENDFILE_BUFSIZE ? _SENDFILE_BUFSIZE :
+											sendbytes;
+		while (readbytes && ((rlen = PR_Read(sfd->fd, buf, readbytes)) > 0)) {
+			while (rlen) {
+				char *bufptr = buf;
+
+				rv =  PR_Send(sd, bufptr, rlen, 0, timeout);
+				if (rv < 0) {
+					/* PR_Send() has invoked PR_SetError(). */
+					rv = -1;
+					goto done;
+				} else {
+					count += rv;
+					sendbytes -= rv;
+					bufptr = ((char*)bufptr + rv);
+					rlen -= rv;
+				}
+			}
+			readbytes = sendbytes > _SENDFILE_BUFSIZE ?
+						_SENDFILE_BUFSIZE : sendbytes;
+		}
+		if (rlen < 0) {
+			/* PR_Read() has invoked PR_SetError(). */
+			rv = -1;
+			goto done;
+		} else if (sendbytes != 0) {
+			/*
+			 * there are fewer bytes in file to send than specified
+			 */
+        	PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+			rv = -1;
+			goto done;
+		}
+	}
+	/*
+	 * send trailer, last
+	 */
+	buflen = sfd->tlen;
+	buffer = sfd->trailer;
+	while (buflen) {
+		rv =  PR_Send(sd, buffer, buflen, 0, timeout);
+		if (rv < 0) {
+			/* PR_Send() has invoked PR_SetError(). */
+			rv = -1;
+			goto done;
+		} else {
+			count += rv;
+			buffer = (const void*) ((const char*)buffer + rv);
+			buflen -= rv;
+		}
+	}
+	rv = count;
+
+done:
+	if (buf)
+		PR_DELETE(buf);
+    if ((rv >= 0) && (flags & PR_TRANSMITFILE_CLOSE_SOCKET))
+        PR_Close(sd);
+	return rv;
+}
+
+/*
+ * _PR_EmulateAcceptRead
+ *
+ *	Accept an incoming connection on sd, set *nd to point to the
+ *	newly accepted socket, read 'amount' bytes from the accepted
+ *	socket.
+ *
+ *	buf is a buffer of length = (amount + 2 * sizeof(PRNetAddr))
+ *	*raddr points to the PRNetAddr of the accepted connection upon
+ *	return
+ *
+ *	return number of bytes read or -1 on error
+ *
+ */
+PRInt32 _PR_EmulateAcceptRead(
+    PRFileDesc *sd, PRFileDesc **nd, PRNetAddr **raddr,
+    void *buf, PRInt32 amount, PRIntervalTime timeout)
+{
+    PRInt32 rv = -1;
+    PRNetAddr remote;
+    PRFileDesc *accepted = NULL;
+
+    /* The socket must be in blocking mode. */
+    if (sd->secret->nonblocking)
+    {
+        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+        return rv;
+    }
+
+    /*
+    ** The timeout does not apply to the accept portion of the
+    ** operation - it waits indefinitely.
+    */
+    accepted = PR_Accept(sd, &remote, PR_INTERVAL_NO_TIMEOUT);
+    if (NULL == accepted) return rv;
+
+    rv = PR_Recv(accepted, buf, amount, 0, timeout);
+    if (rv >= 0)
+    {
+        /* copy the new info out where caller can see it */
+        PRPtrdiff aligned = (PRPtrdiff)buf + amount + sizeof(void*) - 1;
+        *raddr = (PRNetAddr*)(aligned & ~(sizeof(void*) - 1));
+        memcpy(*raddr, &remote, PR_NETADDR_SIZE(&remote));
+        *nd = accepted;
+        return rv;
+    }
+
+    PR_Close(accepted);
+    return rv;
 }
 
 /*

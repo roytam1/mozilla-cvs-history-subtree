@@ -36,7 +36,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 /*
- * ldap_modify - initiate an ldap (and X.500) modify operation.  Parameters:
+ * ldap_modify - initiate an ldap modify operation.  Parameters:
  *
  *	ld		LDAP descriptor
  *	dn		DN of the object to modify
