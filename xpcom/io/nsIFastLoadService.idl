@@ -78,18 +78,18 @@ interface nsIFastLoadService : nsISupports
      * NS_ERROR_NOT_AVAILABLE, callers should slow-load the documents, muxing
      * their data to the current output stream.
      */
-    void   startMuxedDocument(in nsISupports aURI,
-                              in string aURISpec,
-                              in PRInt32 aDirectionFlags);
-    void   selectMuxedDocument(in nsISupports aURI);
-    void   endMuxedDocument(in nsISupports aURI);
+    void        startMuxedDocument(in nsISupports aURI,
+                                   in string aURISpec,
+                                   in PRInt32 aDirectionFlags);
+    nsISupports selectMuxedDocument(in nsISupports aURI);
+    void        endMuxedDocument(in nsISupports aURI);
 
-    void   addDependency(in nsIFile aFile);
+    void        addDependency(in nsIFile aFile);
 
-    PRUint32 computeChecksum(in nsIFile aFile,
-                             in nsIFastLoadReadControl aControl);
-    void     cacheChecksum(in nsIFile aFile,
-                           in nsIObjectOutputStream aStream);
+    PRUint32    computeChecksum(in nsIFile aFile,
+                                in nsIFastLoadReadControl aControl);
+    void        cacheChecksum(in nsIFile aFile,
+                              in nsIObjectOutputStream aStream);
 
     [noscript] void getFastLoadReferent(inout nsISupports aPtr);
 

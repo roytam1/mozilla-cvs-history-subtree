@@ -141,7 +141,7 @@ typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mObjectMap index
 
 #define MFL_FILE_VERSION_0      0
 #define MFL_FILE_VERSION_1      1000
-#define MFL_FILE_VERSION        3       // fix to store dependency mtimes
+#define MFL_FILE_VERSION        4       // fix to store dependency mtimes
 
 /**
  * Compute Fletcher's 16-bit checksum over aLength bytes starting at aBuffer,
@@ -284,6 +284,8 @@ class nsFastLoadFileReader
     struct nsObjectMapEntry : public nsFastLoadSharpObjectInfo {
         nsCOMPtr<nsISupports>   mReadObject;
         PRUint32                mSkipOffset;
+        PRUint16                mSaveStrongRefCnt;      // saved for an Update
+        PRUint16                mSaveWeakRefCnt;        // after a Read
     };
 
     /**

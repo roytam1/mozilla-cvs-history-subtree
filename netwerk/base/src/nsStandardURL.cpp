@@ -54,6 +54,7 @@
 #include "prlog.h"
 
 static NS_DEFINE_CID(kThisImplCID, NS_THIS_STANDARDURL_IMPL_CID);
+static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
 
 nsIURLParser *nsStandardURL::gNoAuthParser = nsnull;
 nsIURLParser *nsStandardURL::gAuthParser = nsnull;
@@ -824,6 +825,7 @@ NS_INTERFACE_MAP_BEGIN(nsStandardURL)
     NS_INTERFACE_MAP_ENTRY(nsIFileURL)
     NS_INTERFACE_MAP_ENTRY(nsIStandardURL)
     NS_INTERFACE_MAP_ENTRY(nsISerializable)
+    NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
     // see nsStandardURL::Equals
     if (aIID.Equals(kThisImplCID))
         foundInterface = NS_STATIC_CAST(nsIURI *, this);
@@ -2405,5 +2407,64 @@ nsStandardURL::Write(nsIObjectOutputStream *stream)
     rv = NS_WriteOptionalStringZ(stream, mOriginCharset.get());
     if (NS_FAILED(rv)) return rv;
 
+    return NS_OK;
+}
+
+//----------------------------------------------------------------------------
+// nsStandardURL::nsIClassInfo
+//----------------------------------------------------------------------------
+
+NS_IMETHODIMP 
+nsStandardURL::GetInterfaces(PRUint32 *count, nsIID * **array)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
+{
+    *_retval = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetContractID(char * *aContractID)
+{
+    *aContractID = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetClassDescription(char * *aClassDescription)
+{
+    *aClassDescription = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetClassID(nsCID * *aClassID)
+{
+    *aClassID = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetImplementationLanguage(PRUint32 *aImplementationLanguage)
+{
+    *aImplementationLanguage = nsIProgrammingLanguage::CPLUSPLUS;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetFlags(PRUint32 *aFlags)
+{
+    *aFlags = nsIClassInfo::THREADSAFE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsStandardURL::GetClassIDNoAlloc(nsCID *aClassIDNoAlloc)
+{
+    *aClassIDNoAlloc = kStandardURLCID;
     return NS_OK;
 }

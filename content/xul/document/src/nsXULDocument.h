@@ -365,7 +365,6 @@ public:
     NS_IMETHOD SetTemplateBuilderFor(nsIContent* aContent, nsIXULTemplateBuilder* aBuilder);
     NS_IMETHOD GetTemplateBuilderFor(nsIContent* aContent, nsIXULTemplateBuilder** aResult);
     NS_IMETHOD OnPrototypeLoadDone();
-    NS_IMETHOD OnResumeContentSink();
     
     // nsIDOMEventCapturer interface
     NS_IMETHOD    CaptureEvent(const nsAString& aType);
@@ -426,16 +425,6 @@ public:
                          PRInt32 aNamespaceID,
                          nsRDFDOMNodeList* aElements);
 
-    static nsresult
-    GetFastLoadService(nsIFastLoadService** aResult)
-    {
-        NS_IF_ADDREF(*aResult = gFastLoadService);
-        return NS_OK;
-    }
-
-    static nsresult
-    AbortFastLoads();
-
 protected:
     // Implementation methods
     friend nsresult
@@ -471,27 +460,6 @@ protected:
     void SetIsPopup(PRBool isPopup) { mIsPopup = isPopup; };
 
     nsresult CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult);
-
-    nsresult StartFastLoad();
-    nsresult EndFastLoad();
-
-    static nsIFastLoadService*  gFastLoadService;
-    static nsIFile*             gFastLoadFile;
-    static PRBool               gFastLoadDone;
-    static nsXULDocument*       gFastLoadList;
-
-    void RemoveFromFastLoadList() {
-        nsXULDocument** docp = &gFastLoadList;
-        nsXULDocument* doc;
-        while ((doc = *docp) != nsnull) {
-            if (doc == this) {
-                *docp = doc->mNextFastLoad;
-                doc->mNextFastLoad = nsnull;
-                break;
-            }
-            docp = &doc->mNextFastLoad;
-        }
-    }
 
     nsresult PrepareToLoad(nsISupports* aContainer,
                            const char* aCommand,
@@ -594,7 +562,7 @@ protected:
     PRPackedBool               mIsPopup;
     PRPackedBool               mIsFastLoad;
     PRPackedBool               mApplyingPersistedAttrs;
-    nsXULDocument*             mNextFastLoad;
+    PRPackedBool               mIsWritingFastLoad;
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
 
     nsCOMPtr<nsIBindingManager> mBindingManager; // [OWNER] of all bindings

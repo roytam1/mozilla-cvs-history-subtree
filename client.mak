@@ -40,6 +40,7 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
+MOZ_BRANCH=FastLoadXUL_20020410_BRANCH
 #MOZ_BRANCH=SeaMonkey_M17_BRANCH
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
@@ -76,7 +77,7 @@ CVS_FLAGS=-q
 
 # honor any user-defined CVS flags
 !ifdef MOZ_CVS_FLAGS
-CVS_FLAGS=$(CVS_FLAGS) $(MOZ_CVS_FLAGS)
+CVS_FLAGS=$(CVS_FLAGS) $(MOZ_CVS_FLAGS) -z3
 !endif
 
 # let's be explicit about CVSROOT... some windows cvs clients

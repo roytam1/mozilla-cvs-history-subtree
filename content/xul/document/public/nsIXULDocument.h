@@ -160,11 +160,6 @@ public:
    * request than the one whose document is being notified here.
    */
   NS_IMETHOD OnPrototypeLoadDone() = 0;
-
-  /**
-   * Callback from the content sink upon resumption from the parser.
-   */
-  NS_IMETHOD OnResumeContentSink() = 0;
 };
 
 // factory functions
