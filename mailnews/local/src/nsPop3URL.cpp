@@ -43,7 +43,7 @@ nsresult NS_NewPopUrl(const nsIID &aIID, void ** aInstancePtrResult)
 		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
 }
 
-nsPop3URL::nsPop3URL()
+nsPop3URL::nsPop3URL(): nsMsgMailNewsUrl()
 {
 }
  
