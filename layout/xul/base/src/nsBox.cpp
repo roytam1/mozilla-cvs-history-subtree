@@ -299,7 +299,7 @@ nsBox::MarkDirty(nsBoxLayoutState& aState)
   if (parent)
      return parent->RelayoutDirtyChild(aState, this);
   else {
-    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+    return aState.PresShell()->FrameNeedsReflow(this);
   }
 }
 
@@ -335,7 +335,7 @@ nsBox::MarkStyleChange(nsBoxLayoutState& aState)
       nsHTMLReflowCommand::StyleChange, nsnull, nsnull, nsnull);
     return NS_OK;
     */
-    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+    return aState.PresShell()->FrameNeedsReflow(this);
   }
 
   return NS_OK;
@@ -408,7 +408,7 @@ nsBox::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
       GetParentBox(&parentBox);
       if (parentBox)
          return parentBox->RelayoutDirtyChild(aState, this);
-      return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+      return aState.PresShell()->FrameNeedsReflow(this);
     } else {
 #ifdef DEBUG_COELESCED
       Coelesced();

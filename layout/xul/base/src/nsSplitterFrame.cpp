@@ -632,7 +632,7 @@ nsSplitterFrameInner::MouseDrag(nsPresContext* aPresContext, nsGUIEvent* aEvent)
         shell->AppendReflowCommand(reflowCmd);
      
       mOuter->mState |= NS_FRAME_IS_DIRTY;
-      mOuter->mParent->ReflowDirtyChild(shell, mOuter);
+      shell->FrameNeedsReflow(mOuter);
     */
     mDidDrag = PR_TRUE;
   }

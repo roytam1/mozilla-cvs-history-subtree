@@ -1218,7 +1218,7 @@ public:
    *         ancestor chain)
    *         PR_FALSE if the frame was not already marked as dirty
    *         (which means it's the callers responsibility to call
-   *         this->GetParent()->ReflowDirtyChild or add to the set of
+   *         this->GetParent()->ChildIsDirty() or add to the set of
    *         reflow roots that need reflow)
    */
   virtual PRBool ChildIsDirty(nsIFrame* aChild) = 0;

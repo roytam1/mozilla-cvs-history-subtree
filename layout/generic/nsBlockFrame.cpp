@@ -4605,8 +4605,8 @@ nsBlockFrame::AppendFrames(nsPresContext* aPresContext,
 #endif
   nsresult rv = AddFrames(aPresContext, aFrameList, lastKid);
   if (NS_SUCCEEDED(rv)) {
-    // Ask the parent frame to reflow me.
-    ReflowDirtyChild(&aPresShell, nsnull);
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
+    aPresShell.FrameNeedsReflow(this);
   }
   return rv;
 }
@@ -4650,8 +4650,8 @@ nsBlockFrame::InsertFrames(nsPresContext* aPresContext,
   if (aListName != nsLayoutAtoms::nextBidi)
 #endif // IBMBIDI
   if (NS_SUCCEEDED(rv)) {
-    // Ask the parent frame to reflow me.
-    ReflowDirtyChild(&aPresShell, nsnull);
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
+    aPresShell.FrameNeedsReflow(this);
   }
   return rv;
 }
@@ -4812,7 +4812,7 @@ nsBlockFrame::RemoveFrame(nsPresContext* aPresContext,
   }
 #ifdef IBMBIDI
   else if (nsLayoutAtoms::nextBidi == aListName) {
-    // Skip the call to |ReflowDirtyChild| below by returning now.
+    // Skip the call to |FrameNeedsReflow| below by returning now.
     return DoRemoveFrame(aPresContext, aOldFrame);
   }
 #endif // IBMBIDI
@@ -4821,8 +4821,8 @@ nsBlockFrame::RemoveFrame(nsPresContext* aPresContext,
   }
 
   if (NS_SUCCEEDED(rv)) {
-    // Ask the parent frame to reflow me.
-    ReflowDirtyChild(&aPresShell, nsnull);  
+    AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN); // XXX sufficient?
+    aPresShell.FrameNeedsReflow(this);
   }
   return rv;
 }
