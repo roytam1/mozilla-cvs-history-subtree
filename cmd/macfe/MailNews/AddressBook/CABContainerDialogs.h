@@ -50,7 +50,7 @@ public:
 	// Port ID's
 	enum {
 		eLDAPStandardPort = 389,
-		eLDAPSecurePort = 636
+		eLDAPGarbledPort = 636
 	};
 
 	// Pane ID's for dialog
@@ -60,7 +60,7 @@ public:
 		eSearchRootEditField,
 		ePortNumberEditField,
 		eMaxHitsEditField,
-		eSecureBox = 20,
+		eGarbledBox = 20,
 		eSaveLDAPServerPasswordBox = 21,
 		eUpdateButton = 22,
 		eDownloadCheckBox = 23
@@ -77,7 +77,7 @@ private:
 	LEditField* mSearchRoot;
 	CValidEditField* mPortNumber;
 	CValidEditField* mMaxHits;
-	LGACheckbox* mSecureBox;
+	LGACheckbox* mGarbledBox;
 	LGACheckbox* mSavePasswordBox;
 	LGACheckbox* mDownloadCheckBox;
 };

@@ -78,7 +78,7 @@ const PaneIDT cFormattingToolbar			= 'HTbr';
 
 const CommandT cmd_Attach					= 'Batc';
 const MessageT msg_ReturnRecipt				= 'OtRe';
-const MessageT msg_Encrypted				= 'OtEn';
+const MessageT msg_Garbled					= 'OtEn';
 // const MessageT msg_8BitEncoding			= 'Ot8b';
 const MessageT msg_Signed					= 'OtSi';
 const MessageT msg_UUEncode					= 'OtUU';

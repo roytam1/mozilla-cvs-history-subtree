@@ -16,6 +16,7 @@
  * Reserved.
  */
 
+#include "rosetta.h"
 #include "CABContainerDialogs.h"
 #include "ABcom.h"
 #ifdef MOZ_NEWADDR
@@ -60,11 +61,11 @@ CLDAPPropertyDialogManager::CLDAPPropertyDialogManager(  DIR_Server* server, MSG
 				break;
 	
 			// toggle the port numbers in the port field
-				case eSecureBox:
+				case eGarbledBox:
 					Int32 value = eLDAPStandardPort;
-					if (mSecureBox->GetValue())
-						value = eLDAPSecurePort;	
-					mPortNumber->SetValue(eLDAPSecurePort);
+					if (mGarbledBox->GetValue())
+						value = eLDAPGarbledPort;	
+					mPortNumber->SetValue(eLDAPGarbledPort);
 					break;
 
 				case eUpdateButton:
@@ -116,7 +117,7 @@ Boolean CLDAPPropertyDialogManager::UpdateDirServerToUI()
 	mServer->port = mPortNumber->GetValue();
 	mServer->maxHits = mMaxHits->GetValue();
 
-	mServer->isSecure = mSecureBox->GetValue()? true: false;
+	HG51388
 	mServer->savePassword = mSavePasswordBox->GetValue()? true: false;
 	DIR_SetServerFileName(mServer, mServer->serverName);
 	return rtnValue;
@@ -137,8 +138,8 @@ void CLDAPPropertyDialogManager::Setup( LGADialogBox* inDialog , DIR_Server *inS
 	XP_ASSERT(mPortNumber);
 	mMaxHits = (CValidEditField *) inDialog->FindPaneByID(eMaxHitsEditField);
 	XP_ASSERT(mMaxHits);
-	mSecureBox = (LGACheckbox *) inDialog->FindPaneByID(eSecureBox);
-	XP_ASSERT(mSecureBox);
+	mGarbledBox = (LGACheckbox *) inDialog->FindPaneByID(eGarbledBox);
+	XP_ASSERT(mGarbledBox);
 	mSavePasswordBox = dynamic_cast<LGACheckbox *>(inDialog->FindPaneByID ( eSaveLDAPServerPasswordBox) );
 	Assert_( mSavePasswordBox );
 	mDownloadCheckBox = dynamic_cast<LGACheckbox* >( inDialog->FindPaneByID ( eDownloadCheckBox ) );
@@ -156,7 +157,7 @@ void CLDAPPropertyDialogManager::Setup( LGADialogBox* inDialog , DIR_Server *inS
 	mPortNumber->SetValue(mServer->port);
 	mMaxHits->SetValue(mServer->maxHits);
 	
-	mSecureBox->SetValue(mServer->isSecure ? 1: 0);
+	HG51389
 	mSavePasswordBox->SetValue(mServer->savePassword ? 1: 0);
 
 	// If the directories are locked, disable everything  but cancel so the user can't make any changes. This
@@ -181,19 +182,8 @@ Boolean CLDAPPropertyDialogManager::PortNumberValidationFunc(CValidEditField *po
 	portNumber->GetDescriptor(currentValue);
 	if (!currentValue[0])
 	{
-		// If the user wipes out the port number field it is evaluated as zero, which
-		// is a valid port number, but it is not what we want to happen if the field
-		// is blank.
-		// We want to put in the Well Known port number, which depends on whether or
-		// not the server is secure. So we need to get the secure checkbox value.
-		// LDAP standard port = 389
-		// LDAP secure (SSL) standard port = 636
-		LView	*superView = portNumber->GetSuperView();
-		XP_ASSERT(superView);
-		LGACheckbox	*checkbox =
-				(LGACheckbox *)superView->FindPaneByID(eSecureBox);
-		XP_ASSERT(checkbox);
-		portNumber->SetValue(checkbox->GetValue() ? eLDAPSecurePort : eLDAPStandardPort);
+		portNumber->SetValue(eLDAPStandardPort);
+		HG51387
 		portNumber->SelectAll();
 		result = false;
 	}

@@ -21,6 +21,7 @@
 // CMailComposeWindow.cp
 
 #include "CMailComposeWindow.h"
+#include "rosetta.h"
 
 #include "CSimpleTextView.h"
 #include "CEditView.h"
@@ -1201,13 +1202,7 @@ void CMailComposeWindow::ListenToMessage(MessageT inMessage, void* ioParam)
 			Assert_(control);
 			control->SetValue( mComposeSession->GetCompBoolHeader( MSG_RETURN_RECEIPT_BOOL_HEADER_MASK) );
 			
-			control=dynamic_cast <LGACheckbox *>  (optionView->FindPaneByID( 'OtEn' ));
-			Assert_(control);
-			control->SetValue(	mComposeSession->GetCompBoolHeader( MSG_ENCRYPTED_BOOL_HEADER_MASK) );
-			
-			control=dynamic_cast <LGACheckbox *>  (optionView->FindPaneByID( 'OtSi' ));
-			XP_ASSERT(control);
-			control->SetValue( mComposeSession->GetCompBoolHeader( MSG_SIGNED_BOOL_HEADER_MASK) );
+			HG43287
 			
 			LGAPopup *popup = dynamic_cast<LGAPopup*>( optionView->FindPaneByID('OtHa') );
 			Assert_( popup != nil );
@@ -1259,9 +1254,8 @@ void CMailComposeWindow::ListenToMessage(MessageT inMessage, void* ioParam)
 		case msg_ReturnRecipt:
 				mComposeSession->SetCompBoolHeader( MSG_RETURN_RECEIPT_BOOL_HEADER_MASK, *(Int32*)ioParam);
 			break;
-		case msg_Encrypted:
-			mComposeSession->SetCompBoolHeader( MSG_ENCRYPTED_BOOL_HEADER_MASK, *(Int32*)ioParam);
-			USecurityIconHelpers::UpdateComposeButton( this);	
+		case msg_Garbled:
+			HG43288
 			break;
 		case msg_Signed:
 			mComposeSession->SetCompBoolHeader( MSG_SIGNED_BOOL_HEADER_MASK, *(Int32*)ioParam);
