@@ -104,9 +104,13 @@ public:
   void      SetChars(PRUint32*);
 
 protected:
+  union {
+    PRUint16 mCCMap[CCMAP_MAX_LEN];
+    ALU_TYPE align_with_ALU; // here to cause alignment for 64 bit
+                             // solaris. Do not use.
+  } u;
   PRUint16 mUsedLen;   // in PRUint16
   PRUint16 mAllOnesPage;
-  PRUint16 mCCMap[CCMAP_MAX_LEN];
 
 };
 
