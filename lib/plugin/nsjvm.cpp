@@ -72,7 +72,6 @@ nsPluginManager::GetJVMStatus(void)
 ////////////////////////////////////////////////////////////////////////////////
 
 // Should be in a header; must solve build-order problem first
-extern void VR_Initialize(JRIEnv* env);
 extern void SU_Initialize(JRIEnv * env);
 
 JVMStatus
@@ -88,14 +87,7 @@ nsPluginManager::StartupJVM()
 
         /* initialize VersionRegistry native routines */
         /* it is not an error that prevents java from starting if this stuff throws exceptions */
-        VR_Initialize(env);
-        if (JRI_ExceptionOccurred(env)) {
-#if DEBUG
-            fJVM->PrintToConsole("LJ:  VR_Initialize failed.  Bugs to dveditz.\n");
-#endif	
-            goto error;
-        }
-	
+#ifdef MOZ_SMARTUPDATE        	
         SU_Initialize(env);
         if (JRI_ExceptionOccurred(env)) {
 #if DEBUG
@@ -103,6 +95,7 @@ nsPluginManager::StartupJVM()
 #endif	
             goto error;
         }
+#endif /* MOZ_SMARTUPDATE */
     }
     return status;
 
