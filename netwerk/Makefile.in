@@ -36,9 +36,12 @@ DIRS		= \
 		streamconv \
 		protocol \
 		build \
-		build2 \
 		resources \
 		$(NULL)
+
+ifndef MOZ_MINOTAUR
+DIRS += build2
+endif
 
 ifdef ENABLE_TESTS
 DIRS		+= test

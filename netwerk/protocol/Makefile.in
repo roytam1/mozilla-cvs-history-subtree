@@ -26,8 +26,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= about data file ftp http keyword jar res \
-                  datetime finger gopher viewsource
+DIRS		= about data file ftp http jar res viewsource
+
+ifndef MOZ_MINOTAUR
+DIRS += ftp keyword datetime finger gopher 
+endif
 
 include $(topsrcdir)/config/rules.mk
 

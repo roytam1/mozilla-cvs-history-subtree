@@ -61,7 +61,6 @@ SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)nkjar_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)nkres_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)nkabout_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkkwd_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 LOCAL_INCLUDES	= \
@@ -77,7 +76,6 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../protocol/jar/src \
 		-I$(srcdir)/../protocol/res/src \
 		-I$(srcdir)/../protocol/about/src \
-		-I$(srcdir)/../protocol/keyword/src \
 		$(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)

@@ -219,15 +219,21 @@ UnregisterBuiltInURLParsers(nsIComponentManager *aCompMgr,
 #include "nsAboutBloat.h"
 #include "nsAboutCache.h"
 #include "nsAboutRedirector.h"
+
+#ifndef MOZ_MINOTAUR
 #include "nsKeywordProtocolHandler.h"
+#endif
 
 #include "nsAboutCacheEntry.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutCacheEntry)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef MOZ_MINOTAUR
 #include "nsFTPDirListingConv.h"
 #include "nsGopherDirListingConv.h"
+#endif
+
 #include "nsMultiMixedConv.h"
 #include "nsHTTPChunkConv.h"
 #include "nsHTTPCompressConv.h"
@@ -239,8 +245,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAboutCacheEntry)
 #include "nsBinHexDecoder.h"
 #endif
 
+#ifndef MOZ_MINOTAUR
 nsresult NS_NewFTPDirListingConv(nsFTPDirListingConv** result);
 nsresult NS_NewGopherDirListingConv(nsGopherDirListingConv** result);
+#endif
+
 nsresult NS_NewMultiMixedConv (nsMultiMixedConv** result);
 nsresult MOZ_NewTXTToHTMLConv (mozTXTToHTMLConv** result);
 nsresult NS_NewHTTPChunkConv  (nsHTTPChunkConv ** result);
@@ -277,11 +286,13 @@ static PRUint32 g_StreamConverterCount = 15;
 #endif
 
 static const char *const g_StreamConverterArray[] = {
+#ifndef MOZ_MINOTAUR
         FTP_UNIX_TO_INDEX,
         FTP_NT_TO_INDEX,
         FTP_OS2_TO_INDEX,
         GOPHER_TO_INDEX,
         INDEX_TO_HTML,
+#endif
         MULTI_MIXED_X,
         MULTI_MIXED,
         MULTI_BYTERANGES,
@@ -315,6 +326,10 @@ RegisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
         do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
     nsXPIDLCString previous;
+
+#ifdef MOZ_MINOTAUR
+    g_StreamConverterCount = 11;
+#endif
 
     PRUint32 count = 0;
     while (count < g_StreamConverterCount) {
@@ -376,6 +391,7 @@ CreateNewStreamConvServiceFactory(nsISupports* aOuter, REFNSIID aIID, void **aRe
     return rv;              
 }
 
+#ifndef MOZ_MINOTAUR
 static NS_IMETHODIMP                 
 CreateNewFTPDirListingConv(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
 {
@@ -423,6 +439,7 @@ CreateNewGopherDirListingConv(nsISupports* aOuter, REFNSIID aIID, void **aResult
     NS_RELEASE(inst);             /* get rid of extra refcnt */
     return rv;
 }
+#endif 
 
 static NS_IMETHODIMP                 
 CreateNewMultiMixedConvFactory(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
@@ -758,6 +775,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
 #endif
 
     // from netwerk/streamconv/converters:
+#ifndef MOZ_MINOTAUR
     { "FTPDirListingConverter", 
       NS_FTPDIRLISTINGCONVERTER_CID, 
       NS_ISTREAMCONVERTER_KEY FTP_UNIX_TO_INDEX, 
@@ -793,6 +811,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_DIRINDEXPARSER_CONTRACTID,
       nsDirIndexParserConstructor
     },
+#endif
 
     { "MultiMixedConverter", 
       NS_MULTIMIXEDCONVERTER_CID,
@@ -873,12 +892,13 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
 	  MOZ_TXTTOHTMLCONV_CONTRACTID, 
 	  CreateNewTXTToHTMLConvFactory
     },
-
+#ifndef MOZ_MINOTAUR
     { "Directory Index",
       NS_DIRINDEX_CID,
       "@mozilla.org/dirIndex;1",
       nsDirIndexConstructor
     },
+#endif
 
 #if defined(OLD_CACHE)
     // from netwerk/cache:
@@ -886,12 +906,6 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     { "File Cache",   NS_NETDISKCACHE_CID,      NS_NETWORK_FILE_CACHE_CONTRACTID,   nsNetDiskCacheConstructor },
     { "Cache Manager",NS_CACHE_MANAGER_CID,     NS_NETWORK_CACHE_MANAGER_CONTRACTID,nsCacheManagerConstructor },
 #endif
-    // from netwerk/mime:
-    { "xml mime datasource", 
-      NS_XMLMIMEDATASOURCE_CID,
-      NS_XMLMIMEDATASOURCE_CONTRACTID,
-      nsXMLMIMEDataSource::Create
-    },
     { "xml mime INFO", 
       NS_MIMEINFO_CID,
       NS_MIMEINFO_CONTRACTID,
@@ -961,6 +975,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "blank", 
       nsAboutBlank::Create
     },
+#ifndef MOZ_MINOTAUR
     { "about:bloat", 
       NS_ABOUT_BLOAT_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "bloat", 
@@ -1002,7 +1017,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "keyword",
       nsKeywordProtocolHandler::Create
     },
-
+#endif
     {  NS_ISOCKSSOCKETPROVIDER_CLASSNAME,
        NS_SOCKSSOCKETPROVIDER_CID,
        NS_ISOCKSSOCKETPROVIDER_CONTRACTID,

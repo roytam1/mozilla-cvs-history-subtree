@@ -48,16 +48,11 @@ EXPORTS =                 \
 
 CPPSRCS		= \
 		nsMultiMixedConv.cpp \
-		nsFTPDirListingConv.cpp \
-		nsGopherDirListingConv.cpp \
 		mozTXTToHTMLConv.cpp \
 		nsUnknownDecoder.cpp \
 		nsHTTPChunkConv.cpp \
 		nsHTTPCompressConv.cpp \
 		nsTXTToHTMLConv.cpp \
-		nsDirIndex.cpp \
-		nsDirIndexParser.cpp \
-		nsIndexedToHTML.cpp \
 		nsBinHexDecoder.cpp \
 		$(NULL)
 
