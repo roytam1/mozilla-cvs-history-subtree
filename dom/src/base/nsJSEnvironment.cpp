@@ -441,7 +441,17 @@ nsJSContext::~nsJSContext()
   // Let xpconnect destroy the JSContext when it thinks the time is right.
   nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
   if (xpc) {
+#if 0
+    // This code is temporarily taken out until we find the real cause
+    // of bug 112195. Something in the profile migration code relies
+    // on GC being run at context destruction time when the profile
+    // migration dialog is closed down. If GC isn't run at that point,
+    // something stays around in memory and keeps the browser from
+    // starting up after the migration of a profile.
     PRBool do_gc = mGCOnDestruction && !sGCTimer && sReadyForGC;
+#else
+    PRBool do_gc = mGCOnDestruction && !sGCTimer;
+#endif
 
     xpc->ReleaseJSContext(mContext, !do_gc);
   } else {
