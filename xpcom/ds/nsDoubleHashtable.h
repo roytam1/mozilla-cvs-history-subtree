@@ -417,7 +417,7 @@ public:
   ~PLDHashStringEntry() { }
 
   const void* GetKey() const {
-    return (const nsAString*) &mKey;
+    return NS_STATIC_CAST(const nsAString*, &mKey);
   }
   static PLDHashNumber HashKey(const void* key) {
     return HashString(*NS_STATIC_CAST(const nsAString*, key));
@@ -440,7 +440,7 @@ public:
   ~PLDHashCStringEntry() { }
 
   const void* GetKey() const {
-    return (const nsACString*) &mKey;
+    return NS_STATIC_CAST(const nsACString*, &mKey);
   }
   static PLDHashNumber HashKey(const void* key) {
     return HashString(*NS_STATIC_CAST(const nsACString*, key));

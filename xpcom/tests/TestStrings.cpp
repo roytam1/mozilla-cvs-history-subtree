@@ -195,6 +195,21 @@ PRBool test_concat()
     return PR_FALSE;
   }
 
+PRBool test_concat_2()
+  {
+    nsCString fieldTextStr("xyz");
+    nsCString text("text");
+    const nsACString& aText = text;
+
+    nsCAutoString result = fieldTextStr + aText;
+
+    if (strcmp(result.get(), "xyztext") == 0)
+      return PR_TRUE;
+    
+    printf("[result=%s]\n", result.get());
+    return PR_FALSE;
+  }
+
 //----
 
 typedef PRBool (*TestFunc)();
@@ -221,6 +236,7 @@ tests[] =
     { "test_equals_ic", test_equals_ic },
     { "test_cbufdesc", test_cbufdesc },
     { "test_concat", test_concat },
+    { "test_concat_2", test_concat_2 },
     { nsnull, nsnull }
   };
 

@@ -108,8 +108,6 @@ typedef void             (* CStringCopyFunc)(nsACString &, const nsACString &, P
 typedef nsresult (* RegisterXPCOMExitRoutineFunc)(XPCOMExitRoutine exitRoutine, PRUint32 priority);
 typedef nsresult (* UnregisterXPCOMExitRoutineFunc)(XPCOMExitRoutine exitRoutine);
 
-#define NS_DECL_FROZEN_FUNC(_func) _func p ## _func
-
 typedef struct XPCOMFunctions{
     PRUint32 version;
     PRUint32 size;
