@@ -1200,7 +1200,7 @@ _PR_MD_ACCESS(const char *name, PRAccessHow how)
 #if !defined(WINCE)
     attribs = GetFileAttributes(name);
 #else
-    attribs = GetFileAttributesA(name);
+    attribs = _MD_GetFileAttributesA(name);
 #endif
     if((DWORD)-1 != attribs)
     {

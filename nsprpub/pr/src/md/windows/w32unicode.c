@@ -329,4 +329,29 @@ _MD_MoveFileA(
     return retval;
 }
 
+DWORD
+WINAPI
+_MD_GetFileAttributesA(
+    LPCSTR lpFileName
+    )
+{
+    DWORD retval = (DWORD)-1;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpFileName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = GetFileAttributesW(
+            wideStr
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
 #endif /* WINCE */

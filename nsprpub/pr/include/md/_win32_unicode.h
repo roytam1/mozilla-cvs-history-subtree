@@ -94,6 +94,12 @@ _MD_MoveFileA(
     LPCSTR lpNewFileName
     );
 
+DWORD
+WINAPI
+_MD_GetFileAttributesA(
+    LPCSTR lpFileName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */
