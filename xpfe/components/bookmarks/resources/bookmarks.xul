@@ -60,6 +60,10 @@
   <!-- XXX - This should SO become an XBL widget -->
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"></script>
   
+  <!-- Bookmarks Utils -->
+  <!-- XXX - We want to do some SERIOUS housecleaning in here -->
+  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"></script>
+
   <!-- Bookmarks Outliner -->
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOutliner.js"></script>
   <!-- Bookmarks Window -->
@@ -209,17 +213,17 @@
 
     <toolbar id="command-toolbar" tbautostretch="always" grippy="false">
       <button class="button-toolbar" id="newfolder" label="&command.newFolder.label;" 
-              command="cmd_newfolder"/>
+              command="cmd_bm_newfolder"/>
       <button class="button-toolbar" id="newseparator" label="&command.newSeparator.label;" 
-              command="cmd_newseparator"/>
+              command="cmd_bm_newseparator"/>
       <toolbarseparator/>
       <button class="button-toolbar" id="fileBookmark" label="&command.fileBookmark.label;"
               command="cmd_bm_fileBookmark"/>
       <toolbarseparator/>
       <button class="button-toolbar" id="properties" label="&command.properties.label;"
-              command="cmd_properties"/>
+              command="cmd_bm_properties"/>
       <button class="button-toolbar" id="rename" label="&command.rename.label;"
-              command="cmd_rename"/>
+              command="cmd_bm_rename"/>
       <button class="button-toolbar" id="delete" label="&command.delete.label;"
               command="cmd_bm_delete"/>
     </toolbar>

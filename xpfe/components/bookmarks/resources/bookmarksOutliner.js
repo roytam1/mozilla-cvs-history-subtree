@@ -1,8 +1,4 @@
 
-var NC_NS  = "http://home.netscape.com/NC-rdf#";
-var RDF_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-const NC_NS_CMD = NC_NS + "command?cmd=";
-
 const kRDFSvcContractID = "@mozilla.org/rdf/rdf-service;1";
 const kRDFSvcIID = Components.interfaces.nsIRDFService;
 const kRDFSvc = Components.classes[kRDFSvcContractID].getService(kRDFSvcIID);
@@ -89,6 +85,11 @@ nsBookmarksShell.prototype =
   {
     return this.bodyElement.database;
   },
+  
+  get bookmarksDB()
+  {
+    return kRDFSvc.GetDataSource("rdf:bookmarks");
+  },
 
   get firstSelectedIndex()
   {
@@ -96,6 +97,14 @@ nsBookmarksShell.prototype =
     var first = { };
     var firstRange = boxObject.selection.getRangeAt(0, first, { });
     return first.value;
+  },
+  
+  get lastSelectedIndex()
+  {
+    var boxObject = this.element.outlinerBoxObject;
+    var last = { };
+    var firstRange = boxObject.selection.getRangeAt(0, { }, last);
+    return last.value;
   },
   
   //////////////////////////////////////////////////////////////////////////////
@@ -414,7 +423,90 @@ nsBookmarksShell.prototype =
   {
     var bundle = document.getElementById("bookmarksBundle");
     return bundle.getString (aStringKey);
+  },
+
+  createFolder: function ()
+  {  
+    // XXX - we're just using a prompt here for now. We want to get outliner
+    //       inline edit up and running however. 
+  
+    const kPromptSvcContractID = "@mozilla.org/embedcomp/prompt-service;1";
+    const kPromptSvcIID = Components.interfaces.nsIPromptService;
+    const kPromptSvc = Components.classes[kPromptSvcContractID].getService(kPromptSvcIID);
+    
+    var defaultValue  = this.getLocaleString("ile_newfolder");
+    var dialogTitle   = this.getLocaleString("newfolder_dialog_title");
+    var dialogMsg     = this.getLocaleString("newfolder_dialog_msg");
+    var stringValue   = { value: defaultValue };
+    if (kPromptSvc.prompt(window, dialogTitle, dialogMsg, stringValue, null, { value: 0 })) {
+      // relativeIndex is the index of the resource that we will create the new
+      // folder adjacent to. 
+      var relativeIndex = this.lastSelectedIndex;
+      var parentIndex = -1;
+
+      var bo = this.element.outlinerBoxObject;
+      var view = bo.view;
+
+      if (view.isContainer(relativeIndex) && view.isContainerOpen(relativeIndex)) {
+        // the selected item is an open container, so we'll append to it rather
+        // than creating adjacent to it. 
+        
+        // To do this, first
+        // 1) Obtain the resource for the relative item
+        var folder = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
+        
+        // 2) Make a container with it
+        const kRDFCtrContractID = "@mozilla.org/rdf/container;1"
+        const kRDFCtrIID = Components.interfaces.nsIRDFContainer;
+        const kRDFCtr = Components.classes[kRDFCtrContractID].getService(kRDFCtrIID);
+        var container = kRDFCtr.Init(this.bookmarksDB, folder);
+
+        // 3) The relative item is the parent. 
+        parentIndex = relativeIndex;
+        
+        // 4) Get the last item in the container. Note that if there's aggregation,
+        //    we'll just use the first _idx we get back. Note also that this sucks,
+        //    and it'd be much nicer if nsIRDFContainer had a method that would
+        //    give back the element at an index. 
+        var ordinalURI = "http://www.w3.org/TR/WD-rdf-syntax#_%idx%";
+        ordinalURI = ordinalURI.replace(/%idx%/, container.GetCount());
+        var ordinal = kRDFSvc.GetResource(ordinalURI);
+        try {
+          var lastItem = this.bookmarksDB.GetTarget(folder, ordinal, true);
+          lastItem = lastItem.QueryInterface(Components.interfaces.nsIRDFResource);
+          relativeIndex = this.outlinerBuilder.getIndexOfResource(lastItem);
+        }
+        catch (e) {
+        }
+      }
+      else {
+        // If the selected item isn't a container or anything interesting like that,
+        // we'll use it as the relative index, and the parent container to create
+        // the new folder in will be its parent. 
+        parentIndex = view.getParentIndex(relativeIndex);
+      }
+      
+      var relative = this.outlinerBuilder.getResourceAtIndex(relativeIndex);
+      var parent = kRDFSvc.GetResource("NC:BookmarksRoot");
+      if (parentIndex >= 0)
+        parent = this.outlinerBuilder.getResourceAtIndex(parentIndex);
+
+      var args = [{ property: NC_NS + "parent",
+                    resource: parent.Value },
+                  { property: NC_NS + "Name",
+                    literal:  stringValue.value }];
+      
+      BookmarksUtils.doBookmarksCommand(relative.Value, NC_NS_CMD + "newfolder", args);
+      
+      // Select the newly created folder. 
+      bo.selection.select(relativeIndex + 1);
+
+      // Ensure that the element we just created is visible.
+      bo.ensureRowIsVisible(relativeIndex + 1);
+    }
+    return; 
   }
+
 }
 
 function CommandArrayEnumerator (aCommandArray)
@@ -497,17 +589,27 @@ nsBookmarksOutlinerController.prototype =
       var selection = boxObject.selection;
       return selection.count == 1 && view.isContainer(this.shell.firstSelectedIndex);
     case "cmd_bm_open":
+      var boxObject = this.shell.element.outlinerBoxObject;
+      var selection = boxObject.selection;
+      
+      var res = this.shell.outlinerBuilder.getResourceAtIndex(this.shell.firstSelectedIndex);      
+      var type = this.shell.resolveType(res);
+      return selection.count == 1 && type == NC_NS + "Bookmark";
     case "cmd_bm_properties":
       var boxObject = this.shell.element.outlinerBoxObject;
       var selection = boxObject.selection;
       
       var res = this.shell.outlinerBuilder.getResourceAtIndex(this.shell.firstSelectedIndex);      
       var type = this.shell.resolveType(res);
-      if (aCommand == "cm_bm_open")
-        return selection.count == 1 && type == NC_NS + "Bookmark";
-      else
-        return selection.count == 1 && type == NC_NS + "Folder";
+      return selection.count == 1 && (type == NC_NS + "Bookmark" || type == NC_NS + "Folder");
     case "cmd_bm_find":
+      return true;
+    case "cmd_bm_newbookmark":
+    case "cmd_bm_newfolder":
+    case "cmd_bm_newseparator":
+      // This is not really correct because it gives the false impression
+      // that it is possible to create an item as a child of some immutable folders
+      // like IE Favorites, but it will do for now. 
       return true;
     case "cmd_bm_cut":
     case "cmd_bm_copy":
@@ -515,9 +617,6 @@ nsBookmarksOutlinerController.prototype =
     case "cmd_bm_delete":
     case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
-    case "cmd_bm_newbookmark":
-    case "cmd_bm_newfolder":
-    case "cmd_bm_newseparator":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":
     case "cmd_bm_setpersonaltoolbarfolder":
@@ -558,15 +657,18 @@ nsBookmarksOutlinerController.prototype =
                  "FindBookmarksWindow",
                  "dialog=no,centerscreen,resizable=no,chrome,dependent");
       return;
+    case "cmd_bm_newbookmark":
+      return true;
+    case "cmd_bm_newfolder":
+      this.shell.createFolder();
+      return true;
+    case "cmd_bm_newseparator":
     case "cmd_bm_cut":
     case "cmd_bm_copy":
     case "cmd_bm_paste":
     case "cmd_bm_delete":
     case "cmd_bm_selectAll":
     case "cmd_bm_openfolderinnewwindow":
-    case "cmd_bm_newbookmark":
-    case "cmd_bm_newfolder":
-    case "cmd_bm_newseparator":
     case "cmd_bm_rename":
     case "cmd_bm_setnewbookmarkfolder":
     case "cmd_bm_setpersonaltoolbarfolder":
