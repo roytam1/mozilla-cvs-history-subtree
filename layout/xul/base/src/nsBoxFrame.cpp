@@ -698,6 +698,8 @@ nsBoxFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   nsBoxLayoutState state(GetPresContext());
   nsSize minSize(0,0);
+  // XXX should this really be doing the reverse of
+  // nsLayoutUtils::IntrinsicForContainer?
   GetMinSize(state, minSize);
   return minSize.width;
 }
@@ -707,6 +709,8 @@ nsBoxFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   nsBoxLayoutState state(GetPresContext());
   nsSize prefSize(0,0);
+  // XXX should this really be doing the reverse of
+  // nsLayoutUtils::IntrinsicForContainer?
   GetPrefSize(state, prefSize);
   return prefSize.width;
 }
