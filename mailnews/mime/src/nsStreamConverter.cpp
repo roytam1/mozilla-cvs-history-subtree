@@ -52,7 +52,8 @@ bridge_create_stream(nsIMimeEmitter      *newEmitter,
                      nsIURI              *uri,
                      nsMimeOutputType    format_out)
 {
-  if (format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if  ( (format_out == nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
+        (format_out == nsMimeOutput::nsMimeMessageEditorTemplate) )
     return mime_bridge_create_draft_stream(newEmitter, newPluginObj2, uri, format_out);
   else
     return mime_bridge_create_display_stream(newEmitter, newPluginObj2, uri, format_out);
@@ -337,6 +338,11 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
       mOutputFormat = PL_strdup("message/draft");
       break;
 
+  case nsMimeOutput::nsMimeMessageEditorTemplate:       // Loading templates into editor
+      PR_FREEIF(mOutputFormat);
+      mOutputFormat = PL_strdup("text/html");
+      break;
+
   default:   // case nsMimeUnknown (// Don't know the format, figure it out from the URL)
     {
       char *url;
@@ -349,10 +355,11 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
 
   // 
   // We will first find an appropriate emitter in the repository that supports 
-  // the requested output format...note, the one special exception is for nsMimeMessageDraftOrTemplate
-  // where we don't need any emitters
+  // the requested output format...note, the special exceptions are nsMimeMessageDraftOrTemplate
+  // or nsMimeMessageEditorTemplate where we don't need any emitters
   //
-  if (newType != nsMimeOutput::nsMimeMessageDraftOrTemplate)
+  if ( (newType != nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
+       (newType != nsMimeOutput::nsMimeMessageEditorTemplate) )
   {
     nsAutoString progID (eOneByte);
     progID = "component://netscape/messenger/mimeemitter;type=";
