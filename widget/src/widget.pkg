@@ -10,9 +10,11 @@ dist/bin/components/@DLLP@wdgtos2@DLLS@
 #endif
 #if MOZ_WIDGET_TOOLKIT==mac
 dist/bin/components/@DLLP@widget_mac@DLLS@
+dist/bin/libwidget.rsrc
 #endif
 #if MOZ_WIDGET_TOOLKIT==cocoa
 dist/bin/components/@DLLP@widget_cocoa@DLLS@
+dist/bin/libwidget.rsrc
 #endif
 #if MOZ_WIDGET_TOOLKIT==windows
 dist/bin/components/@DLLP@gkwidget@DLLS@
