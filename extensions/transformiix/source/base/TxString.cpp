@@ -211,6 +211,21 @@ PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
   return kNotFound;
 }
 
+PRInt32 String::lastIndexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
+{
+  if (aOffset < 0) {
+     return kNotFound;
+  }
+
+  PRUint32 searchIndex = mLength - aOffset;
+  while (--searchIndex >= 0) {
+    if (mBuffer[searchIndex] == aData) {
+      return searchIndex;
+    }
+  }
+  return kNotFound;
+}
+
 MBool String::isEqual(const String& aData) const
 {
   if (mLength != aData.mLength) {
@@ -365,11 +380,6 @@ void String::append(const char* aSource)
     mBuffer[mLength + counter] = (UNICODE_CHAR)aSource[counter];
   }
   mLength += length;
-}
-
-PRInt32 String::indexOf(const char aData, const PRInt32 aOffset) const
-{
-  return indexOf((UNICODE_CHAR)aData, aOffset);
 }
 
 PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const

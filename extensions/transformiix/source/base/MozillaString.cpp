@@ -92,6 +92,11 @@ PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
   return mString.Find(aData.mString, aOffset);
 }
 
+PRInt32 String::lastIndexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
+{
+  return mString.RFindChar(aData, aOffset);
+}
+
 MBool String::isEqual(const String& aData) const
 {
   if (this == &aData)
