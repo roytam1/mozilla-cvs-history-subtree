@@ -144,16 +144,16 @@ NSGetModule(nsIComponentManager *servMgr, \
     nsresult rv = NS_OK; \
  \
     if (!aResult) return NS_ERROR_NULL_POINTER; \
-    if (!gModule) { \
-      gModule = new _class; \
-      if (!gModule) return NS_ERROR_OUT_OF_MEMORY; \
+    if (!g##_class) { \
+      g##_class = new _class; \
+      if (!g##_class) return NS_ERROR_OUT_OF_MEMORY; \
     } \
  \
-    NS_ADDREF(gModule); \
-    if (gModule) \
-      rv = gModule->QueryInterface(NS_GET_IID(nsIModule), \
+    NS_ADDREF(g##_class); \
+    if (g##_class) \
+      rv = g##_class->QueryInterface(NS_GET_IID(nsIModule), \
                                    (void **)aResult); \
-    NS_RELEASE(gModule); \
+    NS_RELEASE(g##_class); \
     return rv; \
 }
 
@@ -225,6 +225,7 @@ NS_IMPL_ISUPPORTS1(nsModule, nsIModule)
 NS_IMPL_MODULE_GETCLASSOBJECT(nsModule, components)
 NS_IMPL_MODULE_REGISTERSELF(nsModule, components)
 NS_IMPL_MODULE_UNREGISTERSELF(nsModule, components)
+NS_IMPL_NSGETMODULE(nsModule)
 NS_IMPL_MODULE_CANUNLOAD(nsModule)
   
 #if 0
