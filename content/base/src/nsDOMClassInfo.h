@@ -39,7 +39,7 @@ class nsDOMClassInfo : public nsIXPCScriptable,
 public:
   enum nsDOMClassInfoID {
 
-    // Core
+    // Core classes
     eDocument_id,
     eDocumentType_id,
     eDOMImplementation_id,
@@ -56,12 +56,17 @@ public:
     eNodeList_id,
     eNamedNodeMap_id,
 
-    // Event
+    // Misc core related classes
+
+    eContentList_id,
+
+    // Event classes
     eEvent_id,
 
     // HTML classes
     eHTMLDocument_id,
     eHTMLOptionCollection_id,
+    eHTMLFormControlCollection_id,
 
     // HTML element classes
     eHTMLAnchorElement_id,
@@ -147,6 +152,7 @@ public:
     eXULNodeList_id,
     eXULNamedNodeMap_id,
     eXULAttr_id,
+    eXULPDGlobalObject_id,
 
     eDOMClassInfoIDCount // This one better be the last one in this list
   };

@@ -38,7 +38,7 @@ interface nsIDOMHTMLDocument : nsIDOMDocument
 
   [noscript] void           open();
   void                      close();
-  [noscript] void           write(in DOMString text);
-  [noscript] void           writeln(in DOMString text);
+  void                      write(in DOMString text);
+  void                      writeln(in DOMString text);
   nsIDOMNodeList            getElementsByName(in DOMString elementName);
 };

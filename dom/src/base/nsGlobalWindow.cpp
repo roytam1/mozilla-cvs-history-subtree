@@ -431,12 +431,15 @@ nsDOMScriptableHelper::GetProperty(nsIXPConnectWrappedNative *wrapper,
       NS_ENSURE_SUCCESS(rv, rv);
 
       if (child) {
+        nsCOMPtr<nsIDOMWindow> child_window(do_GetInterface(child));
+        NS_ENSURE_TRUE(child_window, NS_ERROR_UNEXPECTED);
+
         // We found a subframe of the right name.  The rest of this code
         // is to get its script object.
 
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-        rv = sXPConnect->WrapNative(cx, obj, child,
+        rv = sXPConnect->WrapNative(cx, obj, child_window,
                                     NS_GET_IID(nsIDOMWindow),
                                     getter_AddRefs(holder));
         NS_ENSURE_SUCCESS(rv, rv);

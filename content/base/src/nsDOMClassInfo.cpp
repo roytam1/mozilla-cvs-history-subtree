@@ -45,6 +45,7 @@
 
 // HTMLFormElement helper includes
 #include "nsIForm.h"
+#include "nsIDOMNSHTMLFormControlList.h"
 
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
@@ -859,6 +860,8 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, jsval id, jsval *vp,
                           PRBool *_retval)
 {
+  // XXX: We should probably do string to int conversions here
+
   if (JSVAL_IS_INT(id)) {
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
 
@@ -868,6 +871,7 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     wrapper->GetNative(getter_AddRefs(native));
 
     nsCOMPtr<nsIDOMNodeList> list(do_QueryInterface(native));
+    NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
     nsCOMPtr<nsIDOMNode> node;
 
@@ -896,6 +900,79 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   return NS_OK;
 }
 
+
+// NodeList scriptable helper
+
+class nsFormControlListSH : public nsNodeListSH
+{
+protected:
+  nsFormControlListSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  {
+  }
+
+  virtual ~nsFormControlListSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsFormControlListSH(aID);
+  }
+};
+
+NS_IMETHODIMP
+nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext *cx, JSObject *obj, jsval id,
+                                 jsval *vp, PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                             ::JS_GetStringChars(jsstr)),
+                         ::JS_GetStringLength(jsstr));
+
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
+    nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(native));
+    NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
+
+    nsCOMPtr<nsISupports> item;
+
+    nsresult rv = list->NamedItem(name, getter_AddRefs(item));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (item) {
+      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+      rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), item,
+                                  NS_GET_IID(nsISupports),
+                                  getter_AddRefs(holder));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      JSObject* item_obj = nsnull;
+
+      rv = holder->GetJSObject(&item_obj);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      *vp = OBJECT_TO_JSVAL(item_obj);
+    } else {
+      *vp = JSVAL_NULL;
+    }
+
+    return NS_OK;
+  }
+
+  return nsNodeListSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
 
 
 
@@ -1226,6 +1303,10 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
+  // Misc Core related classes
+  NS_DEFINE_CLASSINFO_DATA(ContentList, nsNodeListSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
+
   // Event
   NS_DEFINE_CLASSINFO_DATA(Event, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
@@ -1237,6 +1318,9 @@ nsDOMClassInfo::Init()
                            nsHTMLOptionCollectionSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY |
                            WANT_SETPROPERTY);
+  NS_DEFINE_CLASSINFO_DATA(HTMLFormControlCollection,
+                           nsFormControlListSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
 
   // HTML element classes
   NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsElementSH::Create,
@@ -1398,6 +1482,8 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULPDGlobalObject, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   NS_DEFINE_CLASSINFO_DATA_TAIL

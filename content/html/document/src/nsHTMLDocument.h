@@ -123,9 +123,9 @@ public:
 
   // nsIDOMHTMLDocument interface
   NS_DECL_NSIDOMHTMLDOCUMENT
+
+  // nsIDOMNSHTMLDocument interface
   NS_DECL_NSIDOMNSHTMLDOCUMENT
-  // the following is not part of nsIDOMHTMLDOCUMENT but allows the content sink to add forms
-  NS_IMETHOD AddForm(nsIDOMHTMLFormElement* aForm);
 
   virtual nsresult Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
 

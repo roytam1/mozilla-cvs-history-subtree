@@ -48,6 +48,8 @@
 #include "nsIScriptError.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMCID.h"
+#include "nsDOMClassInfo.h"
+
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -83,14 +85,9 @@ public:
 protected:
     virtual ~nsXULPDGlobalObject();
 
-    static void Finalize(JSContext *cx, JSObject *obj);
-
     nsCOMPtr<nsIScriptContext> mScriptContext;
-    JSObject *mScriptObject;    // XXX JS language rabies bigotry badness
 
     nsIScriptGlobalObjectOwner* mGlobalObjectOwner; // weak reference
-
-    static JSClass gSharedGlobalClass;
 };
 
 class nsXULPrototypeDocument : public nsIXULPrototypeDocument,
@@ -144,15 +141,6 @@ protected:
                                void** aResult);
 };
 
-JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
-    "nsXULPrototypeScript compilation scope",
-    JSCLASS_HAS_PRIVATE,
-    JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,
-    nsXULPDGlobalObject::Finalize
-};
-
-
 //----------------------------------------------------------------------
 //
 // ctors, dtors, n' stuff
@@ -196,6 +184,7 @@ NS_IMPL_RELEASE(nsXULPrototypeDocument)
 NS_INTERFACE_MAP_BEGIN(nsXULPrototypeDocument)
     NS_INTERFACE_MAP_ENTRY(nsIXULPrototypeDocument)
     NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObjectOwner)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXULPrototypeDocument)
 NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP
@@ -407,8 +396,7 @@ nsXULPrototypeDocument::ReportScriptError(nsIScriptError *errorObject)
 //
 
 nsXULPDGlobalObject::nsXULPDGlobalObject()
-    : mScriptObject(nsnull),
-      mGlobalObjectOwner(nsnull)
+    : mGlobalObjectOwner(nsnull)
 {
     NS_INIT_REFCNT();
 }
@@ -418,13 +406,25 @@ nsXULPDGlobalObject::~nsXULPDGlobalObject()
 {
 }
 
+
+// XPConnect interface list for nsXULPDGlobalObject
+NS_CLASSINFO_MAP_BEGIN(XULPDGlobalObject)
+    // no interfaces to expose here
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for nsXULPDGlobalObject
+NS_INTERFACE_MAP_BEGIN(nsXULPDGlobalObject)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptGlobalObject)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULPDGlobalObject)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULPDGlobalObject)
 NS_IMPL_RELEASE(nsXULPDGlobalObject)
 
-NS_INTERFACE_MAP_BEGIN(nsXULPDGlobalObject)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
-NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 //
@@ -442,6 +442,8 @@ nsXULPDGlobalObject::SetContext(nsIScriptContext *aContext)
 NS_IMETHODIMP
 nsXULPDGlobalObject::GetContext(nsIScriptContext **aContext)
 {
+    *aContext = nsnull;
+
     // This whole fragile mess is predicated on the fact that
     // GetContext() will be called before GetScriptObject() is.
     if (! mScriptContext) {
@@ -528,27 +530,15 @@ nsXULPDGlobalObject::GetGlobalJSObject()
     // The prototype document has its own special secret script object
     // that can be used to compile scripts and event handlers.
 
-    if (! mScriptObject) {
-        if (!mScriptContext)
-            return nsnull;
+    if (!mScriptContext)
+        return nsnull;
 
-        JSContext* cx =
-            NS_REINTERPRET_CAST(JSContext*,
-                                mScriptContext->GetNativeContext());
-        if (! cx)
-            return nsnull;
+    JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
+                                        mScriptContext->GetNativeContext());
+    if (!cx)
+        return nsnull;
 
-        mScriptObject = JS_NewObject(cx, &gSharedGlobalClass, nsnull, nsnull);
-        if (! mScriptObject)
-            return nsnull;
-
-        // Add an owning reference from JS back to us. This'll be
-        // released when the JSObject is finalized.
-        ::JS_SetPrivate(cx, mScriptObject, this);
-        NS_ADDREF(this);
-    }
-
-    return mScriptObject;
+    return ::JS_GetGlobalObject(cx);
 }
 
 //----------------------------------------------------------------------
@@ -566,23 +556,5 @@ nsXULPDGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)
     nsCOMPtr<nsIXULPrototypeDocument> protoDoc
       = do_QueryInterface(mGlobalObjectOwner);
     return protoDoc->GetDocumentPrincipal(aPrincipal);
-}
-
-void
-nsXULPDGlobalObject::Finalize(JSContext *cx, JSObject *obj)
-{
-    nsXULPDGlobalObject *nativeThis =
-        (nsXULPDGlobalObject*)::JS_GetPrivate(cx, obj);
-  
-    if (!nativeThis) {
-        NS_WARNING("No private data in nsXULPDGlobalObject's script object!");
-
-        return;
-    }
-
-    nativeThis->mScriptObject = nsnull;
-
-    // The addref was part of JSObject construction
-    NS_RELEASE(nativeThis);
 }
 

@@ -70,8 +70,6 @@ static NS_DEFINE_IID(kPrefServiceCID, NS_PREF_CID);
 static PRLogModuleInfo* gJSDiagnostics = nsnull;
 #endif
 
-const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect;1";
-
 nsScriptNameSpaceManager *gNameSpaceManager;
 
 
@@ -818,7 +816,7 @@ nsJSContext::CompileEventHandler(void *aTarget, nsIAtom *aName,
 {
   JSPrincipals *jsprin = nsnull;
 
-  nsCOMPtr<nsIScriptGlobalObject> global = getter_AddRefs(GetGlobalObject());
+  nsCOMPtr<nsIScriptGlobalObject> global = dont_AddRef(GetGlobalObject());
   if (global) {
     // XXXbe why the two-step QI? speed up via a new GetGlobalObjectData func?
     nsCOMPtr<nsIScriptObjectPrincipal> globalData = do_QueryInterface(global);
@@ -1041,35 +1039,26 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
 
   mIsInitialized = PR_FALSE;
 
-  nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID, &rv);
+  nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rv);
   if (NS_FAILED(rv))
     return rv;
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
   rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
                                             NS_GET_IID(nsISupports),
-
-
-
-
-
-
-                                            PR_TRUE,
-
-
-
-
-
-
-
-                                            getter_AddRefs(holder));
+                                            PR_TRUE, getter_AddRefs(holder));
   if (NS_FAILED(rv))
-    return nsnull;
+    return rv;
 
   JSObject *global = nsnull;
   rv = holder->GetJSObject(&global);
   if (NS_FAILED(rv))
-    return nsnull;
+    return rv;
+
+#if 0
+  // not needed. We asked xpconnect to do this for us.
+  // XXX when we get lazy resolve working here we can turn off the
+  // flag in the call to InitClassesWithNewWrappedGlobal above.
 
   if (!JS_InitStandardClasses(mContext, global) 
 
@@ -1080,7 +1069,7 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
       */
 
       ) {
-    return nsnull;
+    return NS_ERROR_FAILURE;
   }
 
   //#if 0
@@ -1097,6 +1086,7 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   //      rv = NS_ERROR_FAILURE;
   //  }
   //#endif
+#endif
 
   if (NS_SUCCEEDED(rv)) {
     rv = InitClasses(); // this will complete global object initialization
@@ -1599,9 +1589,12 @@ NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
   *aContext = scriptContext;
 
   // Bind the script context and the global object
-  scriptContext->InitContext(aGlobal);
-  aGlobal->SetContext(scriptContext);
+  nsresult rv = scriptContext->InitContext(aGlobal);
 
-  return NS_OK;
+  if (NS_SUCCEEDED(rv)) {
+    rv = aGlobal->SetContext(scriptContext);
+  }
+
+  return rv;
 }
 

@@ -2922,11 +2922,6 @@ HTMLContentSink::OpenForm(const nsIParserNode& aNode)
     }
   }
    
-  // add the form to the document
-  if (mCurrentForm) {
-    mHTMLDocument->AddForm(mCurrentForm);
-  }
-
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::OpenForm()\n"));
   MOZ_TIMER_STOP(mWatch);
   return result;

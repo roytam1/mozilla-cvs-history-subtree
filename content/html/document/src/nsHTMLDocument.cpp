@@ -3232,35 +3232,6 @@ nsHTMLDocument::GetBodyElement(nsIDOMHTMLBodyElement** aBody)
 
 // forms related stuff
 
-NS_IMETHODIMP 
-nsHTMLDocument::AddForm(nsIDOMHTMLFormElement *aForm)
-{
-#if 0
-  // Not necessary anymore since forms are real content now
-  NS_PRECONDITION(nsnull != aForm, "null ptr");
-  if (nsnull == aForm) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  nsIContent* iContent = nsnull;
-  nsresult result = aForm->QueryInterface(NS_GET_IID(nsIContent), (void**)&iContent);
-  if ((NS_OK == result) && iContent) {
-    nsIDOMHTMLCollection* forms = nsnull;
-    
-    // Initialize mForms if necessary...
-    if (nsnull == mForms) {
-      mForms = new nsContentList(this, nsHTMLAtoms::form, kNameSpaceID_Unknown);
-      NS_ADDREF(mForms);
-    }
-
-    mForms->Add(iContent);
-    NS_RELEASE(iContent);
-  }
-  return result;
-#endif
-  return NS_OK;
-}
-
 NS_IMETHODIMP    
 nsHTMLDocument::GetForms(nsIDOMHTMLCollection** aForms)
 {

@@ -47,16 +47,6 @@
 #include "nsContentList.h"
 
 
-
-
-
-
-
-
-
-#include "jsapi.h"
-
-
 static const int NS_FORM_CONTROL_LIST_HASHTABLE_SIZE = 64;
 
 class nsFormControlList;
@@ -742,13 +732,26 @@ nsFormControlList::Clear()
     mLookupTable->Reset();
 }
 
-NS_IMPL_ADDREF(nsFormControlList)
-NS_IMPL_RELEASE(nsFormControlList)
 
+// XPConnect interface list for nsFormControlList
+NS_CLASSINFO_MAP_BEGIN(HTMLFormControlCollection)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLFormControlList)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
+NS_CLASSINFO_MAP_END
+
+
+// XPConnect interface list for nsFormControlList
 NS_INTERFACE_MAP_BEGIN(nsFormControlList)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLFormControlList)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLCollection)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMHTMLCollection)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(HTMLFormControlCollection,
+                                                     HTMLCollection)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsFormControlList)
+NS_IMPL_RELEASE(nsFormControlList)
 
 
 // nsIDOMHTMLCollection interface
