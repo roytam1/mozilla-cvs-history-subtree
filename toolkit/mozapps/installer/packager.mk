@@ -96,7 +96,7 @@ _APPNAME	= $(MOZ_APP_DISPLAYNAME).app
 endif
 PKG_SUFFIX	= .dmg.gz
 _ABS_TOPSRCDIR	= $(shell cd $(topsrcdir) && pwd)
-MAKE_PACKAGE	= $(_ABS_TOPSRCDIR)/build/package/mac_osx/make-diskimage $(PKG_BASENAME).dmg $(MOZ_PKG_APPNAME) $(MOZ_APP_DISPLAYNAME) && gzip -9 $(PKG_BASENAME).dmg
+MAKE_PACKAGE	= $(_ABS_TOPSRCDIR)/build/package/mac_osx/make-diskimage $(PKG_BASENAME).dmg $(MOZ_PKG_APPNAME) $(MOZ_APP_DISPLAYNAME) && gzip -vf9 $(PKG_BASENAME).dmg
 endif
 
 # dummy macro if we don't have PSM built
