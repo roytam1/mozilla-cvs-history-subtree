@@ -47,10 +47,10 @@ typedef struct HASHContextStr HASHContext;
  * NOTE the order must match the definition of SECHashObjects[]!
  */
 typedef enum {
-    HASH_AlgNULL = 0,
-    HASH_AlgMD2 = 1,
-    HASH_AlgMD5 = 2,
-    HASH_AlgSHA1 = 3,
+    HASH_AlgNULL,
+    HASH_AlgMD2,
+    HASH_AlgMD5,
+    HASH_AlgSHA1,
     HASH_AlgTOTAL
 } HASH_HashType;
 
@@ -75,19 +75,13 @@ struct SECHashObjectStr {
 };
 
 struct HASHContextStr {
-    const struct SECHashObjectStr *hashobj;
+    struct SECHashObjectStr *hashobj;
     void *hash_context;
 };
 
-/* This symbol is NOT exported from the NSS DLL.  Code that needs a 
- * pointer to one of the SECHashObjects should call HASH_GetHashObject()
- * instead. See "sechash.h".
- */
-extern const SECHashObject SECHashObjects[];
+extern SECHashObject SECHashObjects[];
 
-/* Only those functions below the PKCS #11 line should use SECRawHashObjects.
- * This symbol is not exported from the NSS DLL.
- */
-extern const SECHashObject SECRawHashObjects[];
+/*only those functions below the PKCS #11 line should use SECRawHashObjects*/
+extern SECHashObject SECRawHashObjects[];
 
 #endif /* _HASHT_H_ */

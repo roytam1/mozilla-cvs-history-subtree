@@ -36,6 +36,7 @@
 #ifndef _PK11FUNC_H_
 #define _PK11FUNC_H_
 #include "plarena.h"
+#include "mcom_db.h"
 #include "seccomon.h"
 #include "secoidt.h"
 #include "secdert.h"
@@ -116,7 +117,6 @@ SECStatus PK11_ResetToken(PK11SlotInfo *slot, char *sso_pwd);
  * Manage the built-In Slot Lists
  ************************************************************/
 SECStatus PK11_InitSlotLists(void);
-void PK11_DestroySlotLists(void);
 PK11SlotList *PK11_GetSlotList(CK_MECHANISM_TYPE type);
 void PK11_LoadSlotList(PK11SlotInfo *slot, PK11PreSlotInfo *psi, int count);
 void PK11_ClearSlotList(PK11SlotInfo *slot);
@@ -388,8 +388,6 @@ SECStatus PK11_TraverseCertsForNicknameInSlot(SECItem *nickname,
 	void *arg);
 SECStatus PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
        SECStatus(* callback)(CERTCertificate*, void *), void *arg);
-CERTCertList *
-PK11_ListCerts(PK11CertListType type, void *pwarg);
 
 
 /**********************************************************************

@@ -1564,7 +1564,7 @@ SEC_PKCS5GetPBEAlgorithm(SECOidTag algTag, int keyLen)
  * containing the salt and password must be non-null.
  */
 PBEBitGenContext *
-__PBE_CreateContext(SECOidTag hashAlgorithm, PBEBitGenID bitGenPurpose,
+PBE_CreateContext(SECOidTag hashAlgorithm, PBEBitGenID bitGenPurpose,
 		  SECItem *pwitem, SECItem *salt, unsigned int bitsNeeded,
 		  unsigned int iterations)
 {
@@ -1690,17 +1690,8 @@ loser:
     return NULL;
 }
 
-PBEBitGenContext *
-PBE_CreateContext(SECOidTag hashAlgorithm, PBEBitGenID bitGenPurpose,
-		  SECItem *pwitem, SECItem *salt, unsigned int bitsNeeded,
-		  unsigned int iterations)
-{
-    return __PBE_CreateContext(hashAlgorithm, bitGenPurpose, pwitem,
-                               salt, bitsNeeded, iterations);
-}
-
 SECItem *
-__PBE_GenerateBits(PBEBitGenContext *pbeCtxt)
+PBE_GenerateBits(PBEBitGenContext *pbeCtxt)
 {
     unsigned int i;
     SECItem *A, *D, *I, *B, *S, *P;
@@ -1801,24 +1792,11 @@ loser:
     return NULL;
 } 
 
-SECItem *
-PBE_GenerateBits(PBEBitGenContext *pbeCtxt)
-{
-    return __PBE_GenerateBits(pbeCtxt);
-}
-
 void
-__PBE_DestroyContext(PBEBitGenContext *pbeCtxt)
-{
+PBE_DestroyContext(PBEBitGenContext *pbeCtxt) {
     if(pbeCtxt) {
 	PORT_FreeArena(pbeCtxt->arena, PR_TRUE);
     }
-}
-
-void
-PBE_DestroyContext(PBEBitGenContext *pbeCtxt)
-{
-    __PBE_DestroyContext(pbeCtxt);
 }
 
 SECStatus

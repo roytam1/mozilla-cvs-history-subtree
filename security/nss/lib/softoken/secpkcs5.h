@@ -44,7 +44,7 @@ typedef SECItem * (* SEC_PKCS5GetPBEPassword)(void *arg);
 
 /* used for V2 PKCS 12 Draft Spec */ 
 typedef enum {
-    pbeBitGenIDNull = 0,
+    pbeBitGenIDNull,
     pbeBitGenCipherKey = 0x01,
     pbeBitGenCipherIV = 0x02,
     pbeBitGenIntegrityKey = 0x03
@@ -60,7 +60,7 @@ typedef struct _PBEBitGenContext {
 
     /* hash algorithm information */
     pbeBitGenParameters pbeParams;
-    const SECHashObject *hashObject;
+    SECHashObject *hashObject;
     void *hash;
 
     /* buffers used in generation of bits */

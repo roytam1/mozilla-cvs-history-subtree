@@ -42,6 +42,7 @@
 #include "secmod.h"
 #include "secmodi.h"
 #include "cert.h"
+#include "cdbhdl.h"
 #include "key.h"
 #include "swforti.h"
 #include "secutil.h"
@@ -631,7 +632,7 @@ main(int argc, char **argv)
 	unsigned char cname[CERT_SIZE];
 	CERTCertificate *myCACert = NULL;
 	CERTCertificate *cert;
-	CERTCertDBHandle *certhandle;
+	CERTCertDBHandle certhandle;
 	SECStatus rv;
 	SECMODModule *module;
 	unsigned char serial[16];
@@ -754,18 +755,20 @@ main(int argc, char **argv)
 	/*
 	 * initialize enough security to deal with certificates.
 	 */
-	NSS_NoDB_Init(NULL);
-	certhandle = CERT_GetDefaultCertDB();
-	if (certhandle == NULL) {
+	rv = CERT_OpenVolatileCertDB(&certhandle);
+	if (rv != SECSuccess) {
 	    Terminate("Couldn't build temparary Cert Database", 
 						1, -1, caCert.card);
 	    exit(1);
 	}
+	CERT_SetDefaultCertDB(&certhandle);
 
+	RNG_RNGInit();
 	CI_GenerateRandom(random);
 	RNG_RandomUpdate(random,sizeof(random));
 	CI_GenerateRandom(random);
 	RNG_RandomUpdate(random,sizeof(random));
+	PK11_InitSlotLists();
 
 	module = SECMOD_NewInternal();
 	if (module == NULL) {
@@ -802,7 +805,7 @@ main(int argc, char **argv)
 	    }
 	    derCert.data = origCert;
 	    derCert.len = Cert_length(origCert, sizeof(origCert));
-	    cert = CERT_NewTempCertificate(certhandle,&derCert, NULL, 
+	    cert = CERT_NewTempCertificate(&certhandle,&derCert, NULL, 
 							PR_FALSE, PR_TRUE);
 	    caCert.valid[i].cert = cert;
 	    if (cert == NULL) continue;

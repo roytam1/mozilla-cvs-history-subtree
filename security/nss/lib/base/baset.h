@@ -112,7 +112,7 @@ typedef struct nssArenaMarkStr nssArenaMark;
 #ifdef DEBUG
 struct nssPointerTrackerStr {
   PRCallOnceType once;
-  PZLock *lock;
+  PRLock *lock;
   PLHashTable *table;
 };
 typedef struct nssPointerTrackerStr nssPointerTracker;

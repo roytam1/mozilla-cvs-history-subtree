@@ -35,7 +35,7 @@
  */
 #include "seccomon.h"
 #include "secmod.h"
-#include "nssilock.h"
+#include "prlock.h"
 #include "secmodi.h"
 #include "pk11func.h"
 
@@ -172,29 +172,6 @@ void SECMOD_init(char *dbname) {
 
     moduleLock = SECMOD_NewListLock();
 }
-
-
-void SECMOD_Shutdown() {
-    /* destroy the lock */
-    if (moduleLock) {
-	SECMOD_DestroyListLock(moduleLock);
-	moduleLock = NULL;
-    }
-    /* free the internal module */
-    if (internalModule) {
-	SECMOD_DestroyModule(internalModule);
-	internalModule = NULL;
-    }
-    /* destroy the list */
-    if (modules) {
-	SECMOD_DestroyModuleList(modules);
-	modules = NULL;
-    }
-
-    /* make all the slots and the lists go away */
-    PK11_DestroySlotLists();
-}
-
 
 /*
  * retrieve the internal module

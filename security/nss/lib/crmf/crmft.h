@@ -42,37 +42,37 @@
 
 /* Use these enumerated values for adding fields to the certificate request */
 typedef enum {
-    crmfVersion = 0,
-    crmfSerialNumber = 1,
-    crmfSigningAlg = 2,
-    crmfIssuer = 3,
-    crmfValidity = 4,
-    crmfSubject = 5,
-    crmfPublicKey = 6,
-    crmfIssuerUID = 7,
-    crmfSubjectUID = 8,
-    crmfExtension = 9
+    crmfVersion,
+    crmfSerialNumber,
+    crmfSigningAlg,
+    crmfIssuer,
+    crmfValidity,
+    crmfSubject,
+    crmfPublicKey,
+    crmfIssuerUID,
+    crmfSubjectUID,
+    crmfExtension
 } CRMFCertTemplateField;
 
 /*
  * An enumeration for the different types of controls.
  */
 typedef enum {
-    crmfNoControl = 0,
-    crmfRegTokenControl = 1,
-    crmfAuthenticatorControl = 2,
-    crmfPKIPublicationInfoControl = 3,
-    crmfPKIArchiveOptionsControl = 4,
-    crmfOldCertIDControl = 5,
-    crmfProtocolEncrKeyControl = 6
+    crmfNoControl,
+    crmfRegTokenControl,
+    crmfAuthenticatorControl,
+    crmfPKIPublicationInfoControl,
+    crmfPKIArchiveOptionsControl,
+    crmfOldCertIDControl,
+    crmfProtocolEncrKeyControl
 } CRMFControlType;
 
 /*
  * The possible values that are passed into CRMF_CreatePKIPublicationInfo
  */
-typedef enum {
-    crmfDontPublish = 0,
-    crmfPleasePublish = 1
+typedef enum{
+    crmfDontPublish,
+    crmfPleasePublish
 } CRMFPublicationAction;
 
 /*
@@ -80,31 +80,31 @@ typedef enum {
  * the SinglePubInfo ASN1 type.
  */
 typedef enum {
-    crmfDontCare = 0,
-    crmfX500 = 1,
-    crmfWeb = 2,
-    crmfLdap = 3
+    crmfDontCare,
+    crmfX500,
+    crmfWeb,
+    crmfLdap
 } CRMFPublicationMethod;
 
 /*
  * An enumeration for the different options for PKIArchiveOptions type.
  */
 typedef enum {
-    crmfNoArchiveOptions = 0,
-    crmfEncryptedPrivateKey = 1,
-    crmfKeyGenParameters = 2,
-    crmfArchiveRemGenPrivKey = 3
+    crmfNoArchiveOptions,
+    crmfEncryptedPrivateKey,
+    crmfKeyGenParameters,
+    crmfArchiveRemGenPrivKey
 } CRMFPKIArchiveOptionsType;
 
 /*
  * An enumeration for the different options for ProofOfPossession
  */
 typedef enum {
-    crmfNoPOPChoice = 0,
-    crmfRAVerified = 1,
-    crmfSignature = 2,
-    crmfKeyEncipherment = 3,
-    crmfKeyAgreement = 4
+    crmfNoPOPChoice,
+    crmfRAVerified,
+    crmfSignature,
+    crmfKeyEncipherment,
+    crmfKeyAgreement
 } CRMFPOPChoice;
 
 /*
@@ -112,36 +112,36 @@ typedef enum {
  * CRMFPOPOSigningKeyInput structure.
  */
 typedef enum {
-    crmfSender = 0,
-    crmfPublicKeyMAC = 1
+    crmfSender,
+    crmfPublicKeyMAC
 } CRMFPOPOSkiInputAuthChoice;
 
 /*
  * An enumeration for the SubsequentMessage Options.
  */
 typedef enum {
-    crmfNoSubseqMess = 0,
-    crmfEncrCert = 1,
-    crmfChallengeResp = 2
+    crmfNoSubseqMess,
+    crmfEncrCert,
+    crmfChallengeResp
 } CRMFSubseqMessOptions;
 
 /*
  * An enumeration for the choice used by POPOPrivKey.
  */
 typedef enum {
-    crmfNoMessage = 0,
-    crmfThisMessage = 1,
-    crmfSubsequentMessage = 2,
-    crmfDHMAC = 3
+    crmfNoMessage,
+    crmfThisMessage,
+    crmfSubsequentMessage,
+    crmfDHMAC
 } CRMFPOPOPrivKeyChoice;
 
 /*
  * An enumeration for the choices for the EncryptedKey type.
  */
 typedef enum {
-    crmfNoEncryptedKeyChoice = 0,
-    crmfEncryptedValueChoice = 1,
-    crmfEnvelopedDataChoice = 2
+    crmfNoEncryptedKeyChoice,
+    crmfEncryptedValueChoice,
+    crmfEnvelopedDataChoice
 } CRMFEncryptedKeyChoice;
 
 /*

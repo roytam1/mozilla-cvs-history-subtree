@@ -35,7 +35,6 @@
  * $Id$
  */
 
-#include "nssrenam.h"
 #include "cert.h"
 #include "ssl.h"
 #include "cryptohi.h"	/* for DSAU_ stuff */
@@ -94,7 +93,6 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
    /*      cipher_suite                         policy      enabled is_present*/
  { SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA, SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
- { SSL_RSA_WITH_RC4_128_SHA,               SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_WITH_RC4_128_MD5,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,     SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_3DES_EDE_CBC_SHA,          SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
@@ -146,7 +144,21 @@ PRBool ssl3_global_policy_some_restricted = PR_FALSE;
 ** SSL_ConfigSecureServer(), and is used in ssl3_SendCertificateRequest().
 */
 CERTDistNames *ssl3_server_ca_list = NULL;
-static SSL3Statistics ssl3stats;
+
+/* statistics from ssl3_SendClientHello (sch) */
+long ssl3_sch_sid_cache_hits;
+long ssl3_sch_sid_cache_misses;
+long ssl3_sch_sid_cache_not_ok;
+
+/* statistics from ssl3_HandleServerHello (hsh) */
+long ssl3_hsh_sid_cache_hits;
+long ssl3_hsh_sid_cache_misses;
+long ssl3_hsh_sid_cache_not_ok;
+
+/* statistics from ssl3_HandleClientHello (hch) */
+long ssl3_hch_sid_cache_hits;
+long ssl3_hch_sid_cache_misses;
+long ssl3_hch_sid_cache_not_ok;
 
 /* indexed by SSL3BulkCipher */
 static const ssl3BulkCipherDef bulk_cipher_defs[] = {
@@ -325,12 +337,6 @@ ssl3_DecodeContentType(int msgType)
 }
 
 #endif
-
-SSL3Statistics * 
-SSL_GetStatistics(void)
-{
-    return &ssl3stats;
-}
 
 /* return pointer to ssl3CipherSuiteDef for suite, or NULL */
 /* XXX This does a linear search.  A binary search would be better. */
@@ -1327,7 +1333,6 @@ spec_locked_loser:
 
 	    if (!(flags & ssl_SEND_FLAG_FORCE_INTO_BUFFER)) {
 
-		ss->handshakeBegun = 1;
 		count = ssl_SendSavedWriteData(ss, &ss->pendingBuf,
 		                               &ssl_DefSend);
 		if (count < 0 && PR_GetError() != PR_WOULD_BLOCK_ERROR) {
@@ -1336,7 +1341,6 @@ spec_locked_loser:
 		}
 	    }
 	} else if (write->len > 0) {
-	    ss->handshakeBegun = 1;
 	    count = ssl_DefSend(ss, write->buf, write->len,
 				flags & ~ssl_SEND_FLAG_MASK);
 	    if (count < 0) {
@@ -1457,12 +1461,12 @@ ssl3_HandleNoCertificate(sslSocket *ss)
     /* If the server has required client-auth blindly but doesn't
      * actually look at the certificate it won't know that no
      * certificate was presented so we shutdown the socket to ensure
-     * an error.  We only do this if we haven't already completed the
-     * first handshake because if we're redoing the handshake we 
-     * know the server is paying attention to the certificate.
+     * an error.  We only do this if we aren't connected because
+     * if we're redoing the handshake we know the server is paying
+     * attention to the certificate.
      */
     if ((ss->requireCertificate == 1) ||
-	(!ss->firstHsDone && (ss->requireCertificate > 1))) {
+	(!ss->connected && (ss->requireCertificate > 1))) {
 	PRFileDesc * lower;
 
 	ss->sec->uncache(ss->sec->ci.sid);
@@ -2506,7 +2510,7 @@ ssl3_SendClientHello(sslSocket *ss)
 	}
 
 	if (!sidOK) {
-	    ++ssl3stats.sch_sid_cache_not_ok;
+	    ++ssl3_sch_sid_cache_not_ok;
 	    (*ss->sec->uncache)(sid);
 	    ssl_FreeSID(sid);
 	    sid = NULL;
@@ -2514,7 +2518,7 @@ ssl3_SendClientHello(sslSocket *ss)
     }
 
     if (sid) {
-	++ssl3stats.sch_sid_cache_hits;
+	++ssl3_sch_sid_cache_hits;
 
 	rv = ssl3_NegotiateVersion(ss, sid->version);
 	if (rv != SECSuccess)
@@ -2524,7 +2528,7 @@ ssl3_SendClientHello(sslSocket *ss)
 		      sid->u.ssl3.sessionIDLength));
 	ss->ssl3->policy = sid->u.ssl3.policy;
     } else {
-	++ssl3stats.sch_sid_cache_misses;
+	++ssl3_sch_sid_cache_misses;
 
 	rv = ssl3_NegotiateVersion(ss, SSL_LIBRARY_VERSION_3_1_TLS);
 	if (rv != SECSuccess)
@@ -2812,7 +2816,7 @@ getWrappingKey( sslSocket *       ss,
     SECItem                  wrappedKey;
     SSLWrappedSymWrappingKey wswk;
 
-    static PZLock *          symWrapKeysLock;
+    static PRLock *          symWrapKeysLock;
     static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
 
     svrPrivKey  = ss->serverKey[exchKeyType];
@@ -2830,9 +2834,9 @@ getWrappingKey( sslSocket *       ss,
 
     /* atomically initialize the lock */
     if (!symWrapKeysLock)
-	nss_InitLock(&symWrapKeysLock, nssILockOther);
+	nss_InitLock(&symWrapKeysLock);
 
-    PZ_Lock(symWrapKeysLock);
+    PR_Lock(symWrapKeysLock);
 
     unwrappedWrappingKey = *pSymWrapKey;
     if (unwrappedWrappingKey != NULL) {
@@ -2975,7 +2979,7 @@ done:
     	SECKEY_DestroyPublicKey(svrPubKey);
 	svrPubKey = NULL;
     }
-    PZ_Unlock(symWrapKeysLock);
+    PR_Unlock(symWrapKeysLock);
     return unwrappedWrappingKey;
 }
 
@@ -3669,13 +3673,13 @@ ssl3_HandleServerHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     ** know SSL 3.x.
     */
     if (MSB(version) != MSB(SSL_LIBRARY_VERSION_3_0)) {
-    	desc = (version > SSL_LIBRARY_VERSION_3_0) ? protocol_version : handshake_failure;
+    	desc = handshake_failure;
 	goto alert_loser;
     }
 
     rv = ssl3_NegotiateVersion(ss, version);
     if (rv != SECSuccess) {
-    	desc = (version > SSL_LIBRARY_VERSION_3_0) ? protocol_version : handshake_failure;
+    	desc    = handshake_failure;
 	errCode = SSL_ERROR_NO_CYPHER_OVERLAP;
 	goto alert_loser;
     }
@@ -3809,7 +3813,7 @@ ssl3_HandleServerHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	}
 
 	/* Got a Match */
-	++ssl3stats.hsh_sid_cache_hits;
+	++ssl3_hsh_sid_cache_hits;
 	ss->ssl3->hs.ws         = wait_change_cipher;
 	ss->ssl3->hs.isResuming = PR_TRUE;
 
@@ -3857,9 +3861,9 @@ ssl3_HandleServerHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     } while (0);
 
     if (sid_match)
-	++ssl3stats.hsh_sid_cache_not_ok;
+	++ssl3_hsh_sid_cache_not_ok;
     else
-	++ssl3stats.hsh_sid_cache_misses;
+	++ssl3_hsh_sid_cache_misses;
 
     /* throw the old one away */
     sid->u.ssl3.resumable = PR_FALSE;
@@ -3898,8 +3902,8 @@ loser:
 static SECStatus
 ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 {
-    PRArenaPool *    arena     = NULL;
-    SECKEYPublicKey *peerKey   = NULL;
+    PRArenaPool *    arena;
+    SECKEYPublicKey *peerKey;
     PRBool           isTLS;
     SECStatus        rv;
     int              errCode   = SSL_ERROR_RX_MALFORMED_SERVER_KEY_EXCH;
@@ -3981,9 +3985,8 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	    goto no_memory;
 	}
 
-    	peerKey = PORT_ArenaZNew(arena, SECKEYPublicKey);
+    	ss->sec->peerKey = peerKey = PORT_ArenaZNew(arena, SECKEYPublicKey);
     	if (peerKey == NULL) {
-            PORT_FreeArena(arena, PR_FALSE);
 	    goto no_memory;
 	}
 
@@ -3991,16 +3994,26 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	peerKey->keyType            = rsaKey;
 	peerKey->pkcs11Slot         = NULL;
 	peerKey->pkcs11ID           = CK_INVALID_KEY;
-	if (SECITEM_CopyItem(arena, &peerKey->u.rsa.modulus,        &modulus) ||
-	    SECITEM_CopyItem(arena, &peerKey->u.rsa.publicExponent, &exponent))
-	{
-            PORT_FreeArena(arena, PR_FALSE);
+    	peerKey->u.rsa.modulus.data =
+	    (unsigned char*)PORT_ArenaAlloc(arena, modulus.len);
+	if (peerKey->u.rsa.modulus.data == NULL)
 	    goto no_memory;
-        }
-    	ss->sec->peerKey = peerKey;
-	SECITEM_FreeItem(&modulus,   PR_FALSE);
-	SECITEM_FreeItem(&exponent,  PR_FALSE);
-	SECITEM_FreeItem(&signature, PR_FALSE);
+
+    	PORT_Memcpy(peerKey->u.rsa.modulus.data, modulus.data, modulus.len);
+    	peerKey->u.rsa.modulus.len = modulus.len;
+
+    	peerKey->u.rsa.publicExponent.data =
+	    (unsigned char*)PORT_ArenaAlloc(arena, exponent.len);
+        if (peerKey->u.rsa.publicExponent.data == NULL)
+	    goto no_memory;
+
+    	PORT_Memcpy(peerKey->u.rsa.publicExponent.data,
+		    exponent.data, exponent.len);
+    	peerKey->u.rsa.publicExponent.len = exponent.len;
+
+    	PORT_Free(modulus.data);
+    	PORT_Free(exponent.data);
+	PORT_Free(signature.data);
     	ss->ssl3->hs.ws = wait_cert_request;
     	return SECSuccess;
 
@@ -4553,7 +4566,11 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     ss->clientHelloVersion = version = (SSL3ProtocolVersion)tmp;
     rv = ssl3_NegotiateVersion(ss, version);
     if (rv != SECSuccess) {
-    	desc = (version > SSL_LIBRARY_VERSION_3_0) ? protocol_version : handshake_failure;
+	/* We can't do the usual isTLS test here, because the negotiated
+	** version is definitely not 3.1.  So the question is, are we 
+	** willing/able to do TLS here on our side? 
+	*/
+    	desc = ss->enableTLS ? protocol_version : handshake_failure;
 	errCode = SSL_ERROR_NO_CYPHER_OVERLAP;
 	goto alert_loser;
     }
@@ -4609,9 +4626,9 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	 */
 	if ((sid->peerCert == NULL) && ss->requestCertificate &&
 	    ((ss->requireCertificate == 1) ||
-	     ((ss->requireCertificate == 2) && !ss->firstHsDone))) {
+	     ((ss->requireCertificate == 2) && !ss->connected))) {
 
-	    ++ssl3stats.hch_sid_cache_not_ok;
+	    ++ssl3_hch_sid_cache_not_ok;
 	    ss->sec->uncache(sid);
 	    ssl_FreeSID(sid);
 	    sid = NULL;
@@ -4756,7 +4773,7 @@ compression_found:
 	 *
 	 * XXX make sure compression still matches
 	 */
-	++ssl3stats.hch_sid_cache_hits;
+	++ssl3_hch_sid_cache_hits;
 	ssl3->hs.isResuming = PR_TRUE;
 
 	ssl_GetXmitBufLock(ss); haveXmitBufLock = PR_TRUE;
@@ -4872,12 +4889,12 @@ compression_found:
     }
 
     if (sid) { 	/* we had a sid, but it's no longer valid, free it */
-	++ssl3stats.hch_sid_cache_not_ok;
+	++ssl3_hch_sid_cache_not_ok;
 	ss->sec->uncache(sid);
 	ssl_FreeSID(sid);
 	sid = NULL;
     }
-    ++ssl3stats.hch_sid_cache_misses;
+    ++ssl3_hch_sid_cache_misses;
 
     sid = ssl3_NewSessionID(ss, PR_TRUE);
     if (sid == NULL) {
@@ -4975,10 +4992,12 @@ ssl3_HandleV2ClientHello(sslSocket *ss, unsigned char *buffer, int length)
 
     rv = ssl3_NegotiateVersion(ss, version);
     if (rv != SECSuccess) {
-	/* send back which ever alert client will understand. */
-    	desc = (version > SSL_LIBRARY_VERSION_3_0) ? protocol_version : handshake_failure;
+    	desc = ss->enableTLS ? protocol_version : handshake_failure;
 	errCode = SSL_ERROR_NO_CYPHER_OVERLAP;
-	goto alert_loser;
+	/* It's not appropriate to send back SSL3/TLS alert records in 
+	** response to an SSL2 client hello, unless the version is 
+	** succesfully negotiated to 3.0 or greater, so just goto loser. */
+	goto loser;	/* alert_loser */
     }
 
     /* if we get a non-zero SID, just ignore it. */
@@ -5044,7 +5063,7 @@ suite_found:
     ss->sec->send            = ssl3_SendApplicationData;
 
     /* we don't even search for a cache hit here.  It's just a miss. */
-    ++ssl3stats.hch_sid_cache_misses;
+    ++ssl3_hch_sid_cache_misses;
     sid = ssl3_NewSessionID(ss, PR_TRUE);
     if (sid == NULL) {
     	errCode = PORT_GetError();
@@ -6453,22 +6472,19 @@ ssl3_HandleFinished(sslSocket *ss, SSL3Opaque *b, PRUint32 length,
 
     if ((isServer && !ssl3->hs.isResuming) ||
 	(!isServer && ssl3->hs.isResuming)) {
-	PRInt32 flags = 0;
 
 	rv = ssl3_SendChangeCipherSpecs(ss);
 	if (rv != SECSuccess) {
 	    goto xmit_loser;	/* err is set. */
 	}
-	/* If this thread is in SSL_SecureSend (trying to write some data) 
-	** or if it is going to step up, 
-	** then set the ssl_SEND_FLAG_FORCE_INTO_BUFFER flag, so that the 
-	** last two handshake messages (change cipher spec and finished) 
-	** will be sent in the same send/write call as the application data.
+	/* XXX Right here, if we knew, somehow, that this thread was in
+	** SSL_SecureSend (trying to write some data) and we weren't going
+	** to step up, then we could set the ssl_SEND_FLAG_FORCE_INTO_BUFFER
+	** flag, so that the last two handshake messages
+	** (e.g. change cipher spec and finished) would get
+	** sent out in the same send/write call as the application data.
 	*/
-	if (doStepUp || ss->writerThread == PR_GetCurrentThread()) {
-	    flags = ssl_SEND_FLAG_FORCE_INTO_BUFFER;
-	}
-	rv = ssl3_SendFinished(ss, flags);
+	rv = ssl3_SendFinished(ss, 0);
 	if (rv != SECSuccess) {
 	    goto xmit_loser;	/* err is set. */
 	}
@@ -6487,9 +6503,9 @@ xmit_loser:
 
     ssl_ReleaseXmitBufLock(ss);	/*************************************/
 
-    /* The first handshake is now completed. */
+    /* we're connected now. */
     ss->handshake           = NULL;
-    ss->firstHsDone         = PR_TRUE;
+    ss->connected           = PR_TRUE;
     ss->gather->writeOffset = 0;
     ss->gather->readOffset  = 0;
 
@@ -7438,8 +7454,7 @@ ssl3_ConstructV2CipherSpecsHack(sslSocket *ss, unsigned char *cs, int *size)
 }
 
 /*
-** If ssl3 socket has completed the first handshake, and is in idle state, 
-** then start a new handshake.
+** If ssl3 socket is connected and in idle state, then start a new handshake.
 ** If flushCache is true, the SID cache will be flushed first, forcing a
 ** "Full" handshake (not a session restart handshake), to be done.
 **
@@ -7454,7 +7469,7 @@ ssl3_RedoHandshake(sslSocket *ss, PRBool flushCache)
 
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss) );
 
-    if (!ss->firstHsDone ||
+    if (!ss->connected ||
         ((ss->version >= SSL_LIBRARY_VERSION_3_0) &&
 	 ss->ssl3 && (ss->ssl3->hs.ws != idle_handshake))) {
 	PORT_SetError(SSL_ERROR_HANDSHAKE_NOT_COMPLETED);

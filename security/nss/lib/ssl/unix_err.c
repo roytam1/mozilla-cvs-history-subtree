@@ -48,10 +48,6 @@
 #include "prerror.h"
 #endif
 
-#if defined (__bsdi__)
-#undef _PR_POLL_AVAILABLE
-#endif
-
 #if defined(_PR_POLL_AVAILABLE)
 #include <poll.h>
 #endif

@@ -70,9 +70,9 @@ typedef int (*SECU_PPFunc)(FILE *out, SECItem *item, char *msg, int level);
 
 typedef struct {
     enum {
-	PW_NONE = 0,
-	PW_FROMFILE = 1,
-	PW_PLAINTEXT = 2
+	PW_NONE,
+	PW_FROMFILE,
+	PW_PLAINTEXT
     } source;
     char *data;
 } secuPWData;
@@ -215,9 +215,6 @@ extern void SECU_PrintAlgorithmID(FILE *out, SECAlgorithmID *a, char *m,
 /* Print SECItem as hex */
 extern void SECU_PrintAsHex(FILE *out, SECItem *i, char *m, int level);
 
-/* dump a buffer in hex and ASCII */
-extern void SECU_PrintBuf(FILE *out, const char *msg, const void *vp, int len);
-
 /*
  * Format and print the UTC Time "t".  If the tag message "m" is not NULL,
  * do indent formatting based on "level" and add a newline afterward;
@@ -300,8 +297,6 @@ extern void SEC_Init(void);
 
 extern char *SECU_SECModDBName(void);
 
-extern void SECU_PrintPRandOSError(char *progName);
-
 /*
  *
  *  Utilities for parsing security tools command lines 
@@ -343,8 +338,6 @@ char *SECU_ErrorString(int16 err);
 
 /* Return informative error string. Does not call XP_GetString */
 char *SECU_ErrorStringRaw(int16 err);
-
-void printflags(char *trusts, unsigned int flags);
 
 #ifndef XP_UNIX
 extern int ffs(unsigned int i);

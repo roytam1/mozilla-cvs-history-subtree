@@ -46,7 +46,6 @@ PRIVATE_EXPORTS = \
 MODULE = security
 
 CSRCS = \
-	certread.c \
 	p7common.c \
 	p7create.c \
 	p7decode.c \

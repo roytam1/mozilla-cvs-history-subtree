@@ -616,8 +616,7 @@ crmf_decode_params(SECItem *inParams)
     SECStatus  rv;
     
     params = PORT_ZNew(SECItem);
-    rv = SEC_ASN1DecodeItem(NULL, params, 
-                            SEC_ASN1_GET(SEC_OctetStringTemplate),
+    rv = SEC_ASN1DecodeItem(NULL, params, SEC_OctetStringTemplate,
 			    inParams);
     if (rv != SECSuccess) {
         SECITEM_FreeItem(params, PR_TRUE);
@@ -815,7 +814,7 @@ crmf_create_encrypted_value_wrapped_privkey(SECKEYPrivateKey   *inPrivKey,
     }
 
     dummy = SEC_ASN1EncodeItem(NULL, &encodedParam, iv, 
-                               SEC_ASN1_GET(SEC_OctetStringTemplate));
+			       SEC_OctetStringTemplate);
     if (dummy != &encodedParam) {
         SECITEM_FreeItem(dummy, PR_TRUE);
 	goto loser;

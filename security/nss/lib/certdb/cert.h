@@ -155,11 +155,11 @@ extern char *CERT_FormatName (CERTName *name);
 */
 extern char *CERT_Hexify (SECItem *i, int do_colon);
 
-/******************************************************************************
+/**************************************************************************************
  *
  * Certificate handling operations
  *
- *****************************************************************************/
+ **************************************************************************************/
 
 /*
 ** Create a new validity object given two unix time values.
@@ -183,19 +183,6 @@ extern void CERT_DestroyValidity(CERTValidity *v);
 */
 extern SECStatus CERT_CopyValidity
    (PRArenaPool *arena, CERTValidity *dest, CERTValidity *src);
-
-/*
-** The cert lib considers a cert or CRL valid if the "notBefore" time is
-** in the not-too-distant future, e.g. within the next 24 hours. This 
-** prevents freshly issued certificates from being considered invalid
-** because the local system's time zone is incorrectly set.  
-** The amount of "pending slop time" is adjustable by the application.
-** Units of SlopTime are seconds.  Default is 86400  (24 hours).
-** Negative SlopTime values are not allowed.
-*/
-PRInt32 CERT_GetSlopTime(void);
-
-SECStatus CERT_SetSlopTime(PRInt32 slop);
 
 /*
 ** Create a new certificate object. The result must be wrapped with an
@@ -277,11 +264,11 @@ extern CERTCertList *CERT_GetCertChainFromCert(CERTCertificate *cert,
 					       int64 time, 
 					       SECCertUsage usage);
 
-/******************************************************************************
+/************************************************************************************
  *
  * X.500 Name handling operations
  *
- *****************************************************************************/
+ ************************************************************************************/
 
 /*
 ** Create an AVA (attribute-value-assertion)
@@ -1073,9 +1060,6 @@ CERT_RemoveCertListNode(CERTCertListNode *node);
 SECStatus
 CERT_AddCertToListTail(CERTCertList *certs, CERTCertificate *cert);
 
-SECStatus
-CERT_AddCertToListHead(CERTCertList *certs, CERTCertificate *cert);
-
 typedef PRBool (* CERTSortCallback)(CERTCertificate *certa,
 				    CERTCertificate *certb,
 				    void *arg);
@@ -1400,10 +1384,6 @@ extern SECItem *
 CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
 			   SECOidTag digestAlg, SECItem *fill);
 
-/*
- * fill in nsCertType field of the cert based on the cert extension
- */
-extern SECStatus CERT_GetCertType(CERTCertificate *cert);
 
 SEC_END_PROTOS
 

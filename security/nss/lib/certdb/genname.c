@@ -166,17 +166,17 @@ const SEC_ASN1Template CERT_GeneralNamesTemplate[] = {
 void
 CERT_DestroyGeneralNameList(CERTGeneralNameList *list)
 {
-    PZLock *lock;
+    PRLock *lock;
 
     if (list != NULL) {
 	lock = list->lock;
-	PZ_Lock(lock);
+	PR_Lock(lock);
 	if (--list->refCount <= 0 && list->arena != NULL) {
 	    PORT_FreeArena(list->arena, PR_FALSE);
-	    PZ_Unlock(lock);
-	    PZ_DestroyLock(lock);
+	    PR_Unlock(lock);
+	    PR_DestroyLock(lock);
 	} else {
-	    PZ_Unlock(lock);
+	    PR_Unlock(lock);
 	}
     }
     return;
@@ -199,7 +199,7 @@ CERT_CreateGeneralNameList(CERTGeneralName *name) {
 	list->name->l.next = list->name->l.prev = &list->name->l;
 	CERT_CopyGeneralName(arena, list->name, name);
     }
-    list->lock = PZ_NewLock(nssILockList);
+    list->lock = PR_NewLock();
     list->arena = arena;
     list->refCount = 1;
 done:
@@ -736,9 +736,9 @@ CERTGeneralNameList *
 CERT_DupGeneralNameList(CERTGeneralNameList *list)
 {
     if (list != NULL) {
-	PZ_Lock(list->lock);
+	PR_Lock(list->lock);
 	list->refCount++;
-	PZ_Unlock(list->lock);
+	PR_Unlock(list->lock);
     }
     return list;
 }
@@ -1492,11 +1492,11 @@ CERT_CompareGeneralNameLists(CERTGeneralNameList *a, CERTGeneralNameList *b)
 	return SECSuccess;
     }
     if (a != NULL && b != NULL) {
-	PZ_Lock(a->lock);
-	PZ_Lock(b->lock);
+	PR_Lock(a->lock);
+	PR_Lock(b->lock);
 	rv = CERT_CompareGeneralName(a->name, b->name);
-	PZ_Unlock(a->lock);
-	PZ_Unlock(b->lock);
+	PR_Unlock(a->lock);
+	PR_Unlock(b->lock);
     } else {
 	rv = SECFailure;
     }
@@ -1514,7 +1514,7 @@ CERT_GetGeneralNameFromListByType(CERTGeneralNameList *list,
     OtherName *tmpOther = NULL;
     void *data;
 
-    PZ_Lock(list->lock);
+    PR_Lock(list->lock);
     data = CERT_GetGeneralNameByType(list->name, type, PR_FALSE);
     if (data != NULL) {
 	switch (type) {
@@ -1533,7 +1533,7 @@ CERT_GetGeneralNameFromListByType(CERTGeneralNameList *list,
 	    } else { 
 		item = SECITEM_DupItem((SECItem *) data);
 	    }
-	    PZ_Unlock(list->lock);
+	    PR_Unlock(list->lock);
 	    return item;
 	  case certOtherName:
 	    other = (OtherName *) data;
@@ -1547,11 +1547,11 @@ CERT_GetGeneralNameFromListByType(CERTGeneralNameList *list,
 		SECITEM_CopyItem(arena, &tmpOther->oid, &other->oid);
 		SECITEM_CopyItem(arena, &tmpOther->name, &other->name);
 	    }
-	    PZ_Unlock(list->lock);
+	    PR_Unlock(list->lock);
 	    return tmpOther;
 	  case certDirectoryName:
 	    if (arena == NULL) {
-		PZ_Unlock(list->lock);
+		PR_Unlock(list->lock);
 		return NULL;
 	    } else {
 		name = (CERTName *) PORT_ArenaZAlloc(list->arena, 
@@ -1559,12 +1559,12 @@ CERT_GetGeneralNameFromListByType(CERTGeneralNameList *list,
 		if (name != NULL) {
 		    CERT_CopyName(arena, name, (CERTName *) data);
 		}
-		PZ_Unlock(list->lock);
+		PR_Unlock(list->lock);
 		return name;
 	    }
 	}
     }
-    PZ_Unlock(list->lock);
+    PR_Unlock(list->lock);
     return NULL;
 }
 
@@ -1576,7 +1576,7 @@ CERT_AddGeneralNameToList(CERTGeneralNameList *list,
     CERTGeneralName *name;
 
     if (list != NULL && data != NULL) {
-	PZ_Lock(list->lock);
+	PR_Lock(list->lock);
 	name = (CERTGeneralName *) 
 	    PORT_ArenaZAlloc(list->arena, sizeof(CERTGeneralName));
 	name->type = type;
@@ -1604,7 +1604,7 @@ CERT_AddGeneralNameToList(CERTGeneralNameList *list,
 	name->l.prev = name->l.next = &name->l;
 	list->name = cert_CombineNamesLists(list->name, name);
 	list->len++;
-	PZ_Unlock(list->lock);
+	PR_Unlock(list->lock);
     }
     return;
 }

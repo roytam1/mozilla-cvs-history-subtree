@@ -65,10 +65,10 @@ extern "C" {
 #    define USE_DBG_WIN
 #  endif
 # else
-#if !defined(XP_OS2)
 /* #  include <sys/varargs.h> */
 #  include <sys/socket.h>
 #  include <netinet/in.h>
+#if !defined(XP_OS2)
 #  include <unistd.h>
 #endif
 # endif /* defined( _WINDOWS ) */
@@ -84,7 +84,6 @@ extern "C" {
 #endif /* _WINDOWS */
 
 #ifdef XP_OS2
-#include <os2sock.h>
 #include <io.h>
 #endif /* XP_OS2 */
 
@@ -146,7 +145,7 @@ struct sockbuf {
 
 	int		sb_options;	/* to support copying ber elements */
 	LBER_SOCKET	sb_fd;
-	long		sb_max_incoming;
+	unsigned long	sb_max_incoming;
 
 	LDAP_IOF_READ_CALLBACK *sb_read_fn;
 	LDAP_IOF_WRITE_CALLBACK *sb_write_fn;

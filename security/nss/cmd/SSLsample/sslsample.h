@@ -98,8 +98,9 @@ SECStatus myGetClientAuthData(void *arg, PRFileDesc *socket,
 
 /* Disable all v2/v3 SSL ciphers. */
 
-void disableAllSSLCiphers(void);
+void disableSSL2Ciphers(void);
 
+void disableSSL3Ciphers(void);
 
 /* Error and information utilities. */
 

@@ -44,8 +44,7 @@
 #include "nsNSSHelper.h"
 #include "prlog.h"
 
-#include "nsIWindowWatcher.h"
-#include "nsIPrompt.h"
+#include "nsINetSupportDialogService.h"
 #include "nsProxiedService.h"
 
 #include "nss.h"
@@ -567,6 +566,8 @@ nsNSSComponent::RegisterProfileChangeObserver()
   return rv;
 }
 
+static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
+
 NS_IMPL_ISUPPORTS1(PipUIContext, nsIInterfaceRequestor)
 
 PipUIContext::PipUIContext()
@@ -584,22 +585,12 @@ NS_IMETHODIMP PipUIContext::GetInterface(const nsIID & uuid, void * *result)
   nsresult rv;
 
   if (uuid.Equals(NS_GET_IID(nsIPrompt))) {
-    nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
-    if (!proxyman) return NS_ERROR_FAILURE;
+    NS_WITH_PROXIED_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID,
+                          NS_UI_THREAD_EVENTQ, &rv);
+    if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIPrompt> prompter;
-    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
-    if (wwatch) {
-      wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
-      if (prompter) {
-        nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
-        if (!proxyPrompt) return NS_ERROR_FAILURE;
-        *result = proxyPrompt;
-        NS_ADDREF((nsIPrompt*)*result);
-      }
-    }
+    *result = dialog;
+    NS_ADDREF(dialog);
   } else {
     rv = NS_ERROR_NO_INTERFACE;
   }
@@ -696,22 +687,12 @@ NS_IMETHODIMP CertDownloaderContext::GetInterface(const nsIID & uuid, void * *re
   nsresult rv;
 
   if (uuid.Equals(NS_GET_IID(nsIPrompt))) {
-    nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
-    if (!proxyman) return NS_ERROR_FAILURE;
+    NS_WITH_PROXIED_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID,
+                          NS_UI_THREAD_EVENTQ, &rv);
+    if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIPrompt> prompter;
-    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
-    if (wwatch) {
-      wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
-      if (prompter) {
-        nsCOMPtr<nsIPrompt> proxyPrompt;
-        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
-                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
-        if (!proxyPrompt) return NS_ERROR_FAILURE;
-        *result = proxyPrompt;
-        NS_ADDREF((nsIPrompt*)*result);
-      }
-    }
+    *result = dialog;
+    NS_ADDREF(dialog);
   } else {
     rv = NS_ERROR_NO_INTERFACE;
   }
@@ -727,7 +708,7 @@ public:
   virtual ~CertDownloader();
   
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIREQUESTOBSERVER
+  NS_DECL_NSISTREAMOBSERVER
   NS_DECL_NSISTREAMLISTENER
 
 protected:
@@ -810,7 +791,8 @@ CertDownloader::OnDataAvailable(nsIRequest* request,
 NS_IMETHODIMP
 CertDownloader::OnStopRequest(nsIRequest* request,
                               nsISupports* context,
-                              nsresult aStatus)
+                              nsresult aStatus,
+                              const PRUnichar* aMsg)
 {
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("CertDownloader::OnStopRequest\n"));
   /* this will init NSS if it hasn't happened already */

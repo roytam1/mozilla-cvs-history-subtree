@@ -65,8 +65,8 @@ CSRCS = \
 	sslsecur.c \
 	sslsnce.c \
 	sslsock.c \
+	sslsocks.c \
 	ssltrace.c \
-	sslver.c \
 	authcert.c \
 	cmpcert.c \
 	nsskea.c \
@@ -75,4 +75,3 @@ CSRCS = \
 REQUIRES = security dbm
 
 LIBRARY_NAME = ssl
-LIBRARY_VERSION = 3

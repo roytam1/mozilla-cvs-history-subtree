@@ -43,21 +43,19 @@
 
 #ifdef XP_UNIX
 #include <termios.h>
-#include <unistd.h>
 #endif
 
 #ifdef _WINDOWS
 #include <conio.h>
-#include <io.h>
 #define QUIET_FGETS quiet_fgets
-static char * quiet_fgets (char *buf, int length, FILE *input);
+static int quiet_fgets (char *buf, int length, FILE *input);
 #else
 #define QUIET_FGETS fgets
 #endif
 
 static void echoOff(int fd)
 {
-#if defined(XP_UNIX) && !defined(VMS)
+#ifdef XP_UNIX
     if (isatty(fd)) {
 	struct termios tio;
 	tcgetattr(fd, &tio);
@@ -69,7 +67,7 @@ static void echoOff(int fd)
 
 static void echoOn(int fd)
 {
-#if defined(XP_UNIX) && !defined(VMS)
+#ifdef XP_UNIX
     if (isatty(fd)) {
 	struct termios tio;
 	tcgetattr(fd, &tio);
@@ -84,11 +82,7 @@ char *SEC_GetPassword(FILE *input, FILE *output, char *prompt,
 {
     char phrase[200];
     int infd = fileno(input);
-#ifdef _WINDOWS
-    int isTTY = (input == stdin);
-#else
     int isTTY = isatty(infd);
-#endif
     for (;;) {
 	/* Prompt for password */
 	if (isTTY) {
@@ -153,7 +147,7 @@ PRBool SEC_BlindCheckPassword(char *cp)
 /* Get a password from the input terminal, without echoing */
 
 #ifdef _WINDOWS
-static char * quiet_fgets (char *buf, int length, FILE *input)
+static int quiet_fgets (char *buf, int length, FILE *input)
   {
   int c;
   char *end = buf;
@@ -182,6 +176,6 @@ static char * quiet_fgets (char *buf, int length, FILE *input)
       break;
     }
 
-  return buf;
+  return 0;
   }
 #endif

@@ -35,7 +35,6 @@
  * $Id$
  */
 
-#include "nssrenam.h"
 #include "cert.h"
 #include "secitem.h"
 #include "sechash.h"
@@ -467,7 +466,7 @@ ssl2_CreateMAC(sslSecurityInfo *sec, SECItem *readKey, SECItem *writeKey,
       case SSL_CK_RC4_128_WITH_MD5:
       case SSL_CK_DES_64_CBC_WITH_MD5:
       case SSL_CK_DES_192_EDE3_CBC_WITH_MD5:
-	sec->hash = HASH_GetHashObject(HASH_AlgMD5);
+	sec->hash = &SECHashObjects[HASH_AlgMD5];
 	SECITEM_CopyItem(0, &sec->sendSecret, writeKey);
 	SECITEM_CopyItem(0, &sec->rcvSecret, readKey);
 	break;
@@ -546,7 +545,6 @@ ssl2_SendErrorMessage(sslSocket *ss, int error)
 
     SSL_TRC(3, ("%d: SSL[%d]: sending error %d", SSL_GETPID(), ss->fd, error));
 
-    ss->handshakeBegun = 1;
     rv = (*sec->send)(ss, msg, sizeof(msg), 0);
     if (rv >= 0) {
 	rv = SECSuccess;
@@ -3103,7 +3101,6 @@ invalid:
 
     /* Send it to the server */
     DUMP_MSG(29, (ss, msg, sendLen));
-    ss->handshakeBegun = 1;
     rv = (*sec->send)(ss, msg, sendLen, 0);
 
     ssl_ReleaseXmitBufLock(ss);    /***************************************/
@@ -3597,7 +3594,6 @@ ssl2_HandleClientHelloMessage(sslSocket *ss)
 
     DUMP_MSG(29, (ss, msg, sendLen));
 
-    ss->handshakeBegun = 1;
     sent = (*sec->send)(ss, msg, sendLen, 0);
     if (sent < 0) {
 	goto loser;

@@ -66,22 +66,16 @@
  */
 
 /* The next three strings must be exactly 32 characters long */
-static char *manufacturerID      = "mozilla.org                     ";
-static char manufacturerID_space[33];
-static char *libraryDescription  = "NSS Internal Crypto Services    ";
-static char libraryDescription_space[33];
-static char *tokDescription      = "NSS Generic Crypto Services     ";
-static char tokDescription_space[33];
-static char *privTokDescription  = "NSS Certificate DB              ";
-static char privTokDescription_space[33];
+static char *manufacturerID      = "Netscape Communications Corp    ";
+static char *libraryDescription  = "Communicator Internal Crypto Svc";
+static char *tokDescription      = "Communicator Generic Crypto Svcs";
+static char *privTokDescription  = "Communicator Certificate DB     ";
 /* The next two strings must be exactly 64 characters long, with the
    first 32 characters meaningful  */
 static char *slotDescription     = 
-	"NSS Internal Cryptographic Services Version 3.2                 ";
-static char slotDescription_space[65];
+	"Communicator Internal Cryptographic Services Version 4.0        ";
 static char *privSlotDescription = 
-	"NSS User Private Key and Certificate Services                   ";
-static char privSlotDescription_space[65];
+	"Communicator User Private Key and Certificate Services          ";
 static int minimumPinLen = 0;
 
 #define __PASTE(x,y)    x##y
@@ -239,46 +233,25 @@ struct mechanismList {
 #define CKF_DUZ_IT_ALL		CKF_EN_DE_WR_UN | CKF_SN_VR_RE
 
 static struct mechanismList mechanisms[] = {
-
-     /*
-      * PKCS #11 Mechanism List.
-      *
-      * The first argument is the PKCS #11 Mechanism we support.
-      * The second argument is Mechanism info structure. It includes:
-      *    The minimum key size,
-      *       in bits for RSA, DSA, DH, KEA, RC2 and RC4 * algs.
-      *       in bytes for RC5, AES, and CAST*
-      *       ignored for DES*, IDEA and FORTEZZA based
-      *    The maximum key size,
-      *       in bits for RSA, DSA, DH, KEA, RC2 and RC4 * algs.
-      *       in bytes for RC5, AES, and CAST*
-      *       ignored for DES*, IDEA and FORTEZZA based
-      *     Flags
-      *	      What operations are supported by this mechanism.
-      *  The third argument is a bool which tells if this mechanism is 
-      *    supported in the database token.
-      *
-      */
-
      /* ------------------------- RSA Operations ---------------------------*/
-     {CKM_RSA_PKCS_KEY_PAIR_GEN,{128,0xffffffff,CKF_GENERATE_KEY_PAIR},PR_TRUE},
-     {CKM_RSA_PKCS,		{128,0xffffffff, CKF_DUZ_IT_ALL},PR_TRUE},
+     {CKM_RSA_PKCS_KEY_PAIR_GEN,{128, 2048, CKF_GENERATE_KEY_PAIR}, PR_TRUE},
+     {CKM_RSA_PKCS,		{ 16,  256, CKF_DUZ_IT_ALL},	PR_TRUE},
 #ifdef PK11_RSA9796_SUPPORTED
-     {CKM_RSA_9796,		{128,0xffffffff, CKF_DUZ_IT_ALL},PR_TRUE}, 
+     {CKM_RSA_9796,		{ 16,  256, CKF_DUZ_IT_ALL},	PR_TRUE}, 
 #endif
-     {CKM_RSA_X_509,		{128,0xffffffff, CKF_DUZ_IT_ALL},PR_TRUE}, 
+     {CKM_RSA_X_509,		{ 16,  256, CKF_DUZ_IT_ALL},	PR_TRUE}, 
      /* -------------- RSA Multipart Signing Operations -------------------- */
-     {CKM_MD2_RSA_PKCS,		{128,0xffffffff, CKF_SN_VR},	PR_TRUE},
-     {CKM_MD5_RSA_PKCS,		{128,0xffffffff, CKF_SN_VR},	PR_TRUE},
-     {CKM_SHA1_RSA_PKCS,	{128,0xffffffff, CKF_SN_VR}, 	PR_TRUE},
+     {CKM_MD2_RSA_PKCS,		{16, 256, CKF_SN_VR}, 		PR_TRUE},
+     {CKM_MD5_RSA_PKCS,		{16, 256, CKF_SN_VR}, 		PR_TRUE},
+     {CKM_SHA1_RSA_PKCS,	{16, 256, CKF_SN_VR}, 		PR_TRUE},
      /* ------------------------- DSA Operations --------------------------- */
-     {CKM_DSA_KEY_PAIR_GEN,	{512, 1024, CKF_GENERATE_KEY_PAIR}, PR_TRUE},
-     {CKM_DSA,			{512, 1024, CKF_SN_VR},		PR_TRUE},
-     {CKM_DSA_SHA1,		{512, 1024, CKF_SN_VR},		PR_TRUE},
+     {CKM_DSA_KEY_PAIR_GEN,	{64, 128, CKF_GENERATE_KEY_PAIR}, PR_TRUE},
+     {CKM_DSA,			{64, 128, CKF_SN_VR}, 		PR_TRUE},
+     {CKM_DSA_SHA1,		{64, 128, CKF_SN_VR}, 		PR_TRUE},
      /* -------------------- Diffie Hellman Operations --------------------- */
      /* no diffie hellman yet */
-     {CKM_DH_PKCS_KEY_PAIR_GEN,	{128, 1024, CKF_GENERATE_KEY_PAIR}, PR_TRUE}, 
-     {CKM_DH_PKCS_DERIVE,	{128, 1024, CKF_DERIVE}, 	PR_TRUE}, 
+     {CKM_DH_PKCS_KEY_PAIR_GEN,	{16, 128, CKF_GENERATE_KEY_PAIR}, PR_TRUE}, 
+     {CKM_DH_PKCS_DERIVE,	{16, 128, CKF_DERIVE}, 		PR_TRUE}, 
      /* ------------------------- RC2 Operations --------------------------- */
      {CKM_RC2_KEY_GEN,		{1, 128, CKF_GENERATE},		PR_FALSE},
      {CKM_RC2_ECB,		{1, 128, CKF_EN_DE_WR_UN},	PR_FALSE},
@@ -310,13 +283,6 @@ static struct mechanismList mechanisms[] = {
      {CKM_CDMF_MAC,		{8,  8, CKF_SN_VR},		PR_FALSE},
      {CKM_CDMF_MAC_GENERAL,	{8,  8, CKF_SN_VR},		PR_FALSE},
      {CKM_CDMF_CBC_PAD,		{8,  8, CKF_EN_DE_WR_UN},	PR_FALSE},
-     /* ------------------------- AES Operations --------------------------- */
-     {CKM_AES_KEY_GEN,		{16, 32, CKF_GENERATE},		PR_FALSE},
-     {CKM_AES_ECB,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
-     {CKM_AES_CBC,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
-     {CKM_AES_MAC,		{16, 32, CKF_SN_VR},		PR_FALSE},
-     {CKM_AES_MAC_GENERAL,	{16, 32, CKF_SN_VR},		PR_FALSE},
-     {CKM_AES_CBC_PAD,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
      /* ------------------------- Hashing Operations ----------------------- */
      {CKM_MD2,			{0,   0, CKF_DIGEST},		PR_FALSE},
      {CKM_MD2_HMAC,		{1, 128, CKF_SN_VR},		PR_FALSE},
@@ -352,12 +318,12 @@ static struct mechanismList mechanisms[] = {
 #endif
 #if NSS_SOFTOKEN_DOES_RC5
      /* ------------------------- RC5 Operations --------------------------- */
-     {CKM_RC5_KEY_GEN,		{1, 32, CKF_GENERATE}, 	PR_FALSE},
-     {CKM_RC5_ECB,		{1, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
-     {CKM_RC5_CBC,		{1, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
-     {CKM_RC5_MAC,		{1, 32, CKF_SN_VR},  		PR_FALSE},
-     {CKM_RC5_MAC_GENERAL,	{1, 32, CKF_SN_VR},  		PR_FALSE},
-     {CKM_RC5_CBC_PAD,		{1, 32, CKF_EN_DE_WR_UN}, 	PR_FALSE},
+     {CKM_RC5_KEY_GEN,		{1, 255, CKF_GENERATE}, 	PR_FALSE},
+     {CKM_RC5_ECB,		{1, 255, CKF_EN_DE_WR_UN},	PR_FALSE},
+     {CKM_RC5_CBC,		{1, 255, CKF_EN_DE_WR_UN},	PR_FALSE},
+     {CKM_RC5_MAC,		{1, 255, CKF_SN_VR},  		PR_FALSE},
+     {CKM_RC5_MAC_GENERAL,	{1, 255, CKF_SN_VR},  		PR_FALSE},
+     {CKM_RC5_CBC_PAD,		{1, 255, CKF_EN_DE_WR_UN}, 	PR_FALSE},
 #endif
 #ifdef PK11_IDEA_SUPPORTED
      /* ------------------------- IDEA Operations -------------------------- */
@@ -369,12 +335,12 @@ static struct mechanismList mechanisms[] = {
      {CKM_IDEA_CBC_PAD,		{16, 16, CKF_EN_DE_WR_UN}, 	PR_FALSE}, 
 #endif
      /* --------------------- Secret Key Operations ------------------------ */
-     {CKM_GENERIC_SECRET_KEY_GEN,	{1, 32, CKF_GENERATE}, PR_FALSE}, 
-     {CKM_CONCATENATE_BASE_AND_KEY,	{1, 32, CKF_GENERATE}, PR_FALSE}, 
-     {CKM_CONCATENATE_BASE_AND_DATA,	{1, 32, CKF_GENERATE}, PR_FALSE}, 
-     {CKM_CONCATENATE_DATA_AND_BASE,	{1, 32, CKF_GENERATE}, PR_FALSE}, 
-     {CKM_XOR_BASE_AND_DATA,		{1, 32, CKF_GENERATE}, PR_FALSE}, 
-     {CKM_EXTRACT_KEY_FROM_KEY,		{1, 32, CKF_DERIVE},   PR_FALSE}, 
+     {CKM_GENERIC_SECRET_KEY_GEN,	{1, 256, CKF_GENERATE}, PR_FALSE}, 
+     {CKM_CONCATENATE_BASE_AND_KEY,	{1, 256, CKF_GENERATE}, PR_FALSE}, 
+     {CKM_CONCATENATE_BASE_AND_DATA,	{1, 256, CKF_GENERATE}, PR_FALSE}, 
+     {CKM_CONCATENATE_DATA_AND_BASE,	{1, 256, CKF_GENERATE}, PR_FALSE}, 
+     {CKM_XOR_BASE_AND_DATA,		{1, 256, CKF_GENERATE}, PR_FALSE}, 
+     {CKM_EXTRACT_KEY_FROM_KEY,		{1, 256, CKF_DERIVE},   PR_FALSE}, 
      /* ---------------------- SSL Key Derivations ------------------------- */
      {CKM_SSL3_PRE_MASTER_KEY_GEN,	{48, 48, CKF_GENERATE}, PR_FALSE}, 
      {CKM_SSL3_MASTER_KEY_DERIVE,	{48, 48, CKF_DERIVE},   PR_FALSE}, 
@@ -387,40 +353,27 @@ static struct mechanismList mechanisms[] = {
      {CKM_TLS_MASTER_KEY_DERIVE,	{48, 48, CKF_DERIVE},   PR_FALSE}, 
      {CKM_TLS_KEY_AND_MAC_DERIVE,	{48, 48, CKF_DERIVE},   PR_FALSE}, 
      /* ---------------------- PBE Key Derivations  ------------------------ */
-     {CKM_PBE_MD2_DES_CBC,		{8, 8, CKF_DERIVE},   PR_TRUE},
-     {CKM_PBE_MD5_DES_CBC,		{8, 8, CKF_DERIVE},   PR_TRUE},
+     {CKM_PBE_MD2_DES_CBC,		{64, 64, CKF_DERIVE},   PR_TRUE},
+     {CKM_PBE_MD5_DES_CBC,		{64, 64, CKF_DERIVE},   PR_TRUE},
      /* ------------------ NETSCAPE PBE Key Derivations  ------------------- */
-     {CKM_NETSCAPE_PBE_SHA1_DES_CBC,	     { 8, 8, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC,  {24,24, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_FAULTY_3DES_CBC, {24,24, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC,  {40,40, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC, {40,40, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_40_BIT_RC4,	     {40,40, CKF_GENERATE}, PR_TRUE},
-     {CKM_NETSCAPE_PBE_SHA1_128_BIT_RC4,     {128,128, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_DES3_EDE_CBC,	     {24,24, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_DES2_EDE_CBC,	     {24,24, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_RC2_40_CBC,		     {40,40, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_RC2_128_CBC,		     {128,128, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_RC4_40,		     {40,40, CKF_GENERATE}, PR_TRUE},
-     {CKM_PBE_SHA1_RC4_128,		     {128,128, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_DES_CBC,	     { 64,  64, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC,  {192, 192, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_FAULTY_3DES_CBC, {192, 192, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC,  { 40,  40, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC, {128, 128, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_40_BIT_RC4,	     { 40,  40, CKF_GENERATE}, PR_TRUE},
+     {CKM_NETSCAPE_PBE_SHA1_128_BIT_RC4,     {128, 128, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_DES3_EDE_CBC,	     {192, 192, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_DES2_EDE_CBC,	     {192, 192, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_RC2_40_CBC,		     { 40,  40, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_RC2_128_CBC,		     {128, 128, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_RC4_40,		     { 40,  40, CKF_GENERATE}, PR_TRUE},
+     {CKM_PBE_SHA1_RC4_128,		     {128, 128, CKF_GENERATE}, PR_TRUE},
 };
 static CK_ULONG mechanismCount = sizeof(mechanisms)/sizeof(mechanisms[0]);
 /* load up our token database */
 static CK_RV pk11_importKeyDB(PK11Slot *slot);
 
-
-static char *
-pk11_setStringName(char *inString, char *buffer, int buffer_length) {
-    int full_length, string_length;
-
-    full_length = buffer_length -1;
-    string_length = PORT_Strlen(inString);
-    if (string_length > full_length) string_length = full_length;
-    PORT_Memset(buffer,' ',full_length);
-    buffer[full_length] = 0;
-    PORT_Memcpy(buffer,inString,full_length);
-    return buffer;
-}
 /*
  * Configuration utils
  */
@@ -431,29 +384,23 @@ PK11_ConfigurePKCS11(char *man, char *libdes, char *tokdes, char *ptokdes,
 {
 
     /* make sure the internationalization was done correctly... */
-    if (man) {
-	manufacturerID = pk11_setStringName(man,manufacturerID_space,
-						sizeof(manufacturerID_space));
+    if (man && (PORT_Strlen(man) == 33)) {
+	manufacturerID = man;
     }
-    if (libdes) {
-	libraryDescription = pk11_setStringName(libdes,
-		libraryDescription_space, sizeof(libraryDescription_space));
+    if (libdes && (PORT_Strlen(libdes) == 33)) {
+	libraryDescription = libdes;
     }
-    if (tokdes) {
-	tokDescription = pk11_setStringName(tokdes,tokDescription_space,
-						 sizeof(tokDescription_space));
+    if (tokdes && (PORT_Strlen(tokdes) == 33)) {
+	tokDescription = tokdes;
     }
-    if (ptokdes) {
-	privTokDescription = pk11_setStringName(ptokdes,
-		privTokDescription_space, sizeof(privTokDescription_space));
+    if (ptokdes && (PORT_Strlen(ptokdes) == 33)) {
+	privTokDescription = ptokdes;
     }
-    if (slotdes) {
-	slotDescription = pk11_setStringName(slotdes,slotDescription_space, 
-					sizeof(slotDescription_space));
+    if (slotdes && (PORT_Strlen(slotdes) == 65)) {
+	slotDescription = slotdes;
     }
-    if (pslotdes) {
-	privSlotDescription = pk11_setStringName(pslotdes,
-		privSlotDescription_space, sizeof(privSlotDescription_space));
+    if (pslotdes && (PORT_Strlen(pslotdes) == 65)) {
+	privSlotDescription = pslotdes;
     }
 
     if (minimumPinLen <= PK11_MAX_PIN) {
@@ -1247,9 +1194,9 @@ pk11_handleObject(PK11Object *object, PK11Session *session)
 	
     /* PKCS #11 object ID's are unique for all objects on a
      * token */
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     object->handle = slot->tokenIDCount++;
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
 
     /* get the object class */
     attribute = pk11_FindAttribute(object,CKA_CLASS);
@@ -1501,10 +1448,10 @@ pk11_importPrivateKey(PK11Slot *slot,SECKEYLowPrivateKey *lowPriv,
 	 pk11_FreeObject(privateKey);
 	 return NULL;
     }
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     privateKey->handle = slot->tokenIDCount++;
     privateKey->handle |= (PK11_TOKEN_MAGIC | PK11_TOKEN_TYPE_PRIV);
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
     privateKey->objclass = privClass;
     privateKey->slot = slot;
     privateKey->inDB = PR_TRUE;
@@ -1738,10 +1685,10 @@ pk11_importPublicKey(PK11Slot *slot,
 					     sizeof(CK_KEY_TYPE)) != CKR_OK) {
 	goto failed;
     }
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     publicKey->handle = slot->tokenIDCount++;
     publicKey->handle |= (PK11_TOKEN_MAGIC | PK11_TOKEN_TYPE_PUB);
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
     publicKey->objclass = pubClass;
     publicKey->slot = slot;
     publicKey->inDB = PR_FALSE; /* not really in the Database */
@@ -1886,10 +1833,10 @@ pk11_importCertificate(PK11Slot *slot, CERTCertificate *cert,
     certObject->infoFree = (PK11Free) CERT_DestroyCertificate;
     
     /* now just verify the required date fields */
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     certObject->handle = slot->tokenIDCount++;
     certObject->handle |= (PK11_TOKEN_MAGIC | PK11_TOKEN_TYPE_CERT);
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
     certObject->objclass = certClass;
     certObject->slot = slot;
     certObject->inDB = PR_TRUE;
@@ -2303,10 +2250,10 @@ importSecretKey(PK11Slot *slot, SECKEYLowPrivateKey *priv)
     validateSecretKey(object, key_type, (PRBool)(slot->slotID == FIPS_SLOT_ID));
 
     /* now just verify the required date fields */
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     object->handle = slot->tokenIDCount++;
     object->handle |= (PK11_TOKEN_MAGIC | PK11_TOKEN_TYPE_PRIV);
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
 
     object->objclass = secretClass;
     object->slot = slot;
@@ -2341,9 +2288,9 @@ PK11_SlotInit(CK_SLOT_ID slotID, PRBool needLogin)
     int i;
     PK11Slot *slot = pk11_SlotFromID(slotID);
 #ifdef PKCS11_USE_THREADS
-    slot->sessionLock = PZ_NewLock(nssILockSession);
+    slot->sessionLock = PR_NewLock();
     if (slot->sessionLock == NULL) return CKR_HOST_MEMORY;
-    slot->objectLock = PZ_NewLock(nssILockObject);
+    slot->objectLock = PR_NewLock();
     if (slot->objectLock == NULL) return CKR_HOST_MEMORY;
 #else
     slot->sessionLock = NULL;
@@ -2425,8 +2372,8 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
     pInfo->cryptokiVersion.major = 2;
     pInfo->cryptokiVersion.minor = 1;
     PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
-    pInfo->libraryVersion.major = 3;
-    pInfo->libraryVersion.minor = 2;
+    pInfo->libraryVersion.major = 4;
+    pInfo->libraryVersion.minor = 0;
     PORT_Memcpy(pInfo->libraryDescription,libraryDescription,32);
     pInfo->flags = 0;
     return CKR_OK;
@@ -2454,8 +2401,8 @@ CK_RV NSC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo)
 	PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
 	PORT_Memcpy(pInfo->slotDescription,slotDescription,64);
 	pInfo->flags = CKF_TOKEN_PRESENT;
-        pInfo->hardwareVersion.major = 3;
-        pInfo->hardwareVersion.minor = 2;
+        pInfo->hardwareVersion.major = 4;
+        pInfo->hardwareVersion.minor = 1;
 	return CKR_OK;
     case PRIVATE_KEY_SLOT_ID:
 	PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
@@ -2648,7 +2595,7 @@ CK_RV NSC_InitToken(CK_SLOT_ID slotID,CK_CHAR_PTR pPin,
 
     /* first, delete all our loaded key and cert objects from our 
      * internal list. */
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     for (i=0; i < TOKEN_OBJECT_HASH_SIZE; i++) {
 	do {
 	    object = slot->tokObjects[i];
@@ -2665,7 +2612,7 @@ CK_RV NSC_InitToken(CK_SLOT_ID slotID,CK_CHAR_PTR pPin,
 	    if (object) pk11_FreeObject(object);
 	} while (object != NULL);
     }
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
 
     /* then clear out the key database */
     handle = SECKEY_GetDefaultKeyDB();
@@ -2857,7 +2804,7 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
 						 flags | CKF_SERIAL_SESSION);
     if (session == NULL) return CKR_HOST_MEMORY;
 
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
     sessionID = slot->sessionIDCount++;
     if (slotID == PRIVATE_KEY_SLOT_ID) {
 	sessionID |= PK11_PRIVATE_KEY_FLAG;
@@ -2875,7 +2822,7 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
     if (session->info.flags & CKF_RW_SESSION) {
 	slot->rwSessionCount++;
     }
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
 
     *phSession = sessionID;
     return CKR_OK;
@@ -2894,7 +2841,7 @@ CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
     slot = pk11_SlotFromSession(session);
 
     /* lock */
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
     if (pk11queue_is_queued(session,hSession,slot->head,SESSION_HASH_SIZE)) {
 	pk11queue_delete(session,hSession,slot->head,SESSION_HASH_SIZE);
 	session->refCount--; /* can't go to zero while we hold the reference */
@@ -2908,7 +2855,7 @@ CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
 	slot->isLoggedIn = PR_FALSE;
 	slot->password = NULL;
     }
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
 
     pk11_FreeSession(session);
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
@@ -2928,11 +2875,11 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
     if (slot == NULL) return CKR_SLOT_ID_INVALID;
 
     /* first log out the card */
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
     pw = slot->password;
     slot->isLoggedIn = PR_FALSE;
     slot->password = NULL;
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
 
     /* now close all the current sessions */
@@ -2942,7 +2889,7 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
      * will guarrenteed be close, and no session will be partially closed */
     for (i=0; i < SESSION_HASH_SIZE; i++) {
 	do {
-	    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+	    PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
 	    session = slot->head[i];
 	    /* hand deque */
 	    /* this duplicates function of NSC_close session functions, but 
@@ -2957,7 +2904,7 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
 		    slot->rwSessionCount--;
 		}
 	    }
-	    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+	    PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
 	    if (session) pk11_FreeSession(session);
 	} while (session != NULL);
     }
@@ -3029,12 +2976,12 @@ CK_RV NSC_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
 	    /* should this be a fixed password? */
 	    if (ulPinLen == 0) {
 		SECItem *pw;
-    		PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    		PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
 		pw = slot->password;
 		slot->password = NULL;
 		slot->isLoggedIn = PR_TRUE;
 		slot->ssoLoggedIn = (PRBool)(userType == CKU_SO);
-		PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+		PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
 		pk11_update_all_states(slot);
 		SECITEM_ZfreeItem(pw,PR_TRUE);
 		return CKR_OK;
@@ -3054,11 +3001,11 @@ CK_RV NSC_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
 
     if (SECKEY_CheckKeyDBPassword(handle,pin) == SECSuccess) {
 	SECItem *tmp;
-	PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+	PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
 	tmp = slot->password;
 	slot->isLoggedIn = PR_TRUE;
 	slot->password = pin;
-	PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+	PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
         if (tmp) SECITEM_ZfreeItem(tmp, PR_TRUE);
 
 	/* update all sessions */
@@ -3084,12 +3031,12 @@ CK_RV NSC_Logout(CK_SESSION_HANDLE hSession)
 
     if (!slot->isLoggedIn) return CKR_USER_NOT_LOGGED_IN;
 
-    PK11_USE_THREADS(PZ_Lock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Lock(slot->sessionLock);)
     pw = slot->password;
     slot->isLoggedIn = PR_FALSE;
     slot->ssoLoggedIn = PR_FALSE;
     slot->password = NULL;
-    PK11_USE_THREADS(PZ_Unlock(slot->sessionLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->sessionLock);)
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
 
     pk11_update_all_states(slot);
@@ -3640,9 +3587,9 @@ pk11_createFixedDES3Key(PK11Slot *slot)
 
     pk11_handleSecretKeyObject(keyObject, keyType, PR_TRUE);
 
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Lock(slot->objectLock);)
     keyObject->handle = slot->tokenIDCount++;
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PR_Unlock(slot->objectLock);)
     keyObject->slot = slot;
     keyObject->objclass = CKO_SECRET_KEY;
     pk11_AddSlotObject(slot, keyObject);

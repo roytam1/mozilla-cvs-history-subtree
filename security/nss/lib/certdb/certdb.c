@@ -37,7 +37,7 @@
  * $Id$
  */
 
-#include "nssilock.h"
+#include "prlock.h"
 #include "prmon.h"
 #include "prtime.h"
 #include "cert.h"
@@ -207,7 +207,7 @@ const SEC_ASN1Template CERT_CertKeyTemplate[] = {
     { 0 }
 };
 
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_CertificateTemplate)
+
 
 SECStatus
 CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer, SECItem *sn,
@@ -720,7 +720,7 @@ cert_GetKeyID(CERTCertificate *cert)
  * take a DER certificate and decode it into a certificate structure
  */
 CERTCertificate *
-__CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
+CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 			 char *nickname)
 {
     CERTCertificate *cert;
@@ -842,13 +842,6 @@ loser:
     return(0);
 }
 
-CERTCertificate *
-CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
-			 char *nickname)
-{
-    return(__CERT_DecodeDERCertificate(derSignedCert, copyDER, nickname));
-}
-
 /*
 ** Amount of time that a certifiate is allowed good before it is actually
 ** good. This is used for pending certificates, ones that are about to be
@@ -856,22 +849,6 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 ** of the machine checking the certificate.
 */
 #define PENDING_SLOP (24L*60L*60L)
-static PRInt32 pendingSlop = PENDING_SLOP;
-
-PRInt32
-CERT_GetSlopTime(void)
-{
-    return pendingSlop;
-}
-
-SECStatus
-CERT_SetSlopTime(PRInt32 slop)
-{
-    if (slop < 0)
-	return SECFailure;
-    pendingSlop = slop;
-    return SECSuccess;
-}
 
 SECStatus
 CERT_GetCertTimes(CERTCertificate *c, int64 *notBefore, int64 *notAfter)
@@ -899,7 +876,7 @@ CERT_GetCertTimes(CERTCertificate *c, int64 *notBefore, int64 *notAfter)
 SECCertTimeValidity
 CERT_CheckCertValidTimes(CERTCertificate *c, int64 t, PRBool allowOverride)
 {
-    int64 notBefore, notAfter, llPendingSlop;
+    int64 notBefore, notAfter, pendingSlop;
     SECStatus rv;
 
     /* if cert is already marked OK, then don't bother to check */
@@ -913,8 +890,8 @@ CERT_CheckCertValidTimes(CERTCertificate *c, int64 t, PRBool allowOverride)
 	return(secCertTimeExpired); /*XXX is this the right thing to do here?*/
     }
     
-    LL_I2L(llPendingSlop, pendingSlop);
-    LL_SUB(notBefore, notBefore, llPendingSlop);
+    LL_I2L(pendingSlop, PENDING_SLOP);
+    LL_SUB(notBefore, notBefore, pendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
 	PORT_SetError(SEC_ERROR_EXPIRED_CERTIFICATE);
 	return(secCertTimeNotValidYet);
@@ -956,7 +933,7 @@ SEC_GetCrlTimes(CERTCrl *date, int64 *notBefore, int64 *notAfter)
  */
 SECCertTimeValidity
 SEC_CheckCrlTimes(CERTCrl *crl, int64 t) {
-    int64 notBefore, notAfter, llPendingSlop;
+    int64 notBefore, notAfter, pendingSlop;
     SECStatus rv;
 
     rv = SEC_GetCrlTimes(crl, &notBefore, &notAfter);
@@ -965,8 +942,8 @@ SEC_CheckCrlTimes(CERTCrl *crl, int64 t) {
 	return(secCertTimeExpired); 
     }
 
-    LL_I2L(llPendingSlop, pendingSlop);
-    LL_SUB(notBefore, notBefore, llPendingSlop);
+    LL_I2L(pendingSlop, PENDING_SLOP);
+    LL_SUB(notBefore, notBefore, pendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
 	return(secCertTimeNotValidYet);
     }
@@ -1182,19 +1159,10 @@ CERT_GetDefaultCertDB(void)
 SECStatus
 CERT_OpenVolatileCertDB(CERTCertDBHandle *handle)
 {
-#define DBM_DEFAULT 0
-    static const HASHINFO hashInfo = {
-        DBM_DEFAULT,    /* bucket size */
-        DBM_DEFAULT,    /* fill factor */
-        DBM_DEFAULT,    /* number of elements */
-        256 * 1024, 	/* bytes to cache */
-        DBM_DEFAULT,    /* hash function */
-        DBM_DEFAULT     /* byte order */
-    };
     /*
      * Open the memory resident perm cert database.
      */
-    handle->permCertDB = dbopen(0, O_RDWR | O_CREAT, 0600, DB_HASH, &hashInfo);
+    handle->permCertDB = dbopen( 0, O_RDWR | O_CREAT, 0600, DB_HASH, 0 );
     if ( !handle->permCertDB ) {
 	goto loser;
     }
@@ -1202,12 +1170,12 @@ CERT_OpenVolatileCertDB(CERTCertDBHandle *handle)
     /*
      * Open the memory resident decoded cert database.
      */
-    handle->tempCertDB = dbopen(0, O_RDWR | O_CREAT, 0600, DB_HASH, &hashInfo);
+    handle->tempCertDB = dbopen( 0, O_RDWR | O_CREAT, 0600, DB_HASH, 0 );
     if ( !handle->tempCertDB ) {
 	goto loser;
     }
 
-    handle->dbMon = PZ_NewMonitor(nssILockCertDB);
+    handle->dbMon = PR_NewMonitor();
     PORT_Assert(handle->dbMon != NULL);
 
     handle->spkDigestInfo = NULL;
@@ -2039,31 +2007,6 @@ loser:
     return(SECFailure);
 }
 
-SECStatus
-CERT_AddCertToListHead(CERTCertList *certs, CERTCertificate *cert)
-{
-    CERTCertListNode *node;
-    CERTCertListNode *head;
-    
-    head = CERT_LIST_HEAD(certs);
-
-    if (head == NULL) return CERT_AddCertToListTail(certs,cert);
-
-    node = (CERTCertListNode *)PORT_ArenaZAlloc(certs->arena,
-						sizeof(CERTCertListNode));
-    if ( node == NULL ) {
-	goto loser;
-    }
-    
-    PR_INSERT_BEFORE(&node->links, &head->links);
-    /* certs->count++; */
-    node->cert = cert;
-    return(SECSuccess);
-    
-loser:
-    return(SECFailure);
-}
-
 /*
  * Sort callback function to determine if cert a is newer than cert b.
  * Not valid certs are considered older than valid certs.
@@ -2269,7 +2212,7 @@ loser:
 void
 CERT_LockDB(CERTCertDBHandle *handle)
 {
-    PZ_EnterMonitor(handle->dbMon);
+    PR_EnterMonitor(handle->dbMon);
     return;
 }
 
@@ -2281,14 +2224,14 @@ CERT_UnlockDB(CERTCertDBHandle *handle)
 {
     PRStatus prstat;
     
-    prstat = PZ_ExitMonitor(handle->dbMon);
+    prstat = PR_ExitMonitor(handle->dbMon);
     
     PORT_Assert(prstat == PR_SUCCESS);
     
     return;
 }
 
-static PZLock *certRefCountLock = NULL;
+static PRLock *certRefCountLock = NULL;
 
 /*
  * Acquire the cert reference count lock
@@ -2300,11 +2243,11 @@ void
 CERT_LockCertRefCount(CERTCertificate *cert)
 {
     if ( certRefCountLock == NULL ) {
-	nss_InitLock(&certRefCountLock, nssILockRefLock);
+	nss_InitLock(&certRefCountLock);
 	PORT_Assert(certRefCountLock != NULL);
     }
     
-    PZ_Lock(certRefCountLock);
+    PR_Lock(certRefCountLock);
     return;
 }
 
@@ -2318,14 +2261,14 @@ CERT_UnlockCertRefCount(CERTCertificate *cert)
 
     PORT_Assert(certRefCountLock != NULL);
     
-    prstat = PZ_Unlock(certRefCountLock);
+    prstat = PR_Unlock(certRefCountLock);
     
     PORT_Assert(prstat == PR_SUCCESS);
 
     return;
 }
 
-static PZLock *certTrustLock = NULL;
+static PRLock *certTrustLock = NULL;
 
 /*
  * Acquire the cert trust lock
@@ -2337,11 +2280,11 @@ void
 CERT_LockCertTrust(CERTCertificate *cert)
 {
     if ( certTrustLock == NULL ) {
-	nss_InitLock(&certTrustLock, nssILockCertDB);
+	nss_InitLock(&certTrustLock);
 	PORT_Assert(certTrustLock != NULL);
     }
     
-    PZ_Lock(certTrustLock);
+    PR_Lock(certTrustLock);
     return;
 }
 
@@ -2355,7 +2298,7 @@ CERT_UnlockCertTrust(CERTCertificate *cert)
 
     PORT_Assert(certTrustLock != NULL);
     
-    prstat = PZ_Unlock(certTrustLock);
+    prstat = PR_Unlock(certTrustLock);
     
     PORT_Assert(prstat == PR_SUCCESS);
 

@@ -40,7 +40,7 @@
 
 struct HMACContextStr {
     void *hash;
-    const SECHashObject *hashobj;
+    SECHashObject *hashobj;
     unsigned char ipad[HMAC_PAD_SIZE];
     unsigned char opad[HMAC_PAD_SIZE];
 };

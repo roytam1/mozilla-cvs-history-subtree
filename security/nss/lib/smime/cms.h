@@ -41,8 +41,10 @@
 #define _CMS_H_
 
 #include "seccomon.h"
+#include "mcom_db.h"	/* needed by certt.h */
 
 #include "secoidt.h"
+#include "secder.h"	/* needed by certt.h; XXX go away when possible */
 #include "certt.h"
 #include "keyt.h"
 #include "hasht.h"
@@ -398,7 +400,7 @@ NSS_CMSAlgArray_GetIndexByAlgID(SECAlgorithmID **algorithmArray, SECAlgorithmID 
 extern int
 NSS_CMSAlgArray_GetIndexByAlgTag(SECAlgorithmID **algorithmArray, SECOidTag algtag);
 
-extern const SECHashObject *
+extern SECHashObject *
 NSS_CMSUtil_GetHashObjByAlgID(SECAlgorithmID *algid);
 
 /*

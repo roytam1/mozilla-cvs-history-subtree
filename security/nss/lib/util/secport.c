@@ -49,7 +49,6 @@
 #include "prmon.h"
 #include "nsslocks.h"
 #include "secport.h"
-#include "prvrsion.h"
 
 #ifdef DEBUG
 #define THREADMARK
@@ -73,21 +72,15 @@ typedef struct threadmark_mark_str {
   void *mark;
 } threadmark_mark;
 
-#endif /* THREADMARK */
-
-/* The value of this magic must change each time PORTArenaPool changes. */
-#define ARENAPOOL_MAGIC 0xB8AC9BDF 
-
-typedef struct PORTArenaPool_str {
+typedef struct threadmark_arena_str {
   PLArenaPool arena;
-  PRUint32    magic;
-  PRLock *    lock;
-#ifdef THREADMARK
+  PRUint32 magic;
   PRThread *marking_thread;
   threadmark_mark *first_mark;
-#endif
-} PORTArenaPool;
+} threadmark_arena;
 
+#define THREADMARK_MAGIC 0xB8AC9BDD /* In honor of nelsonb */
+#endif /* THREADMARK */
 
 /* count of allocation failures. */
 unsigned long port_allocFailures;
@@ -189,24 +182,50 @@ PORT_GetError(void)
 
 /********************* Arena code follows *****************************/
 
+PRMonitor * arenaMonitor;
+
+static void
+getArenaLock(void)
+{
+    if (!arenaMonitor) {
+	nss_InitMonitor(&arenaMonitor);
+    }
+    if (arenaMonitor) 
+	PR_EnterMonitor(arenaMonitor);
+}
+
+static void
+releaseArenaLock(void)
+{
+    if (arenaMonitor) 
+	PR_ExitMonitor(arenaMonitor);
+}
+
 PLArenaPool *
 PORT_NewArena(unsigned long chunksize)
 {
-    PORTArenaPool *pool;
+    PLArenaPool *arena;
     
-    pool = PORT_ZNew(PORTArenaPool);
-    if (!pool) {
-	return NULL;
+    getArenaLock();
+#ifdef THREADMARK
+    {
+      threadmark_arena *tarena = (threadmark_arena *)
+        PORT_ZAlloc(sizeof(threadmark_arena));
+      if( (threadmark_arena *)NULL != tarena ) {
+       arena = &tarena->arena;
+       tarena->magic = THREADMARK_MAGIC;
+      } else {
+        arena = (PLArenaPool *)NULL;
+      }
     }
-    pool->magic = ARENAPOOL_MAGIC;
-    pool->lock = PZ_NewLock(nssILockArena);
-    if (!pool->lock) {
-	++port_allocFailures;
-	PORT_Free(pool);
-	return NULL;
+#else /* THREADMARK */
+    arena = (PLArenaPool*)PORT_ZAlloc(sizeof(PLArenaPool));
+#endif /* THREADMARK */
+    if ( arena != NULL ) {
+	PL_InitArenaPool(arena, "security", chunksize, sizeof(double));
     }
-    PL_InitArenaPool(&pool->arena, "security", chunksize, sizeof(double));
-    return(&pool->arena);
+    releaseArenaLock();
+    return(arena);
 }
 
 void *
@@ -214,29 +233,33 @@ PORT_ArenaAlloc(PLArenaPool *arena, size_t size)
 {
     void *p;
 
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
-
-    /* Is it one of ours?  Assume so and check the magic */
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	PZ_Lock(pool->lock);
+    getArenaLock();
 #ifdef THREADMARK
+    {
+      /* Is it one of ours?  Assume so and check the magic */
+      threadmark_arena *tarena = (threadmark_arena *)arena;
+      if( THREADMARK_MAGIC == tarena->magic ) {
         /* Most likely one of ours.  Is there a thread id? */
-	if (pool->marking_thread  &&
-	    pool->marking_thread != PR_GetCurrentThread() ) {
-	    /* Another thread holds a mark in this arena */
-	    PZ_Unlock(pool->lock);
-	    PORT_SetError(SEC_ERROR_NO_MEMORY);
-	    PORT_Assert(0);
-	    return NULL;
-	} /* tid != null */
+        if( (PRThread *)NULL != tarena->marking_thread ) {
+          /* Yes.  Has this arena been marked by this thread? */
+          if( tarena->marking_thread == PR_GetCurrentThread() ) {
+            /* Yup.  Everything's okay. */
+            ;
+          } else {
+            /* Nope.  BZZT!  error */
+            releaseArenaLock();
+            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            PORT_Assert(0);
+            return (void *)NULL;
+          }
+        } /* tid != null */
+      } /* tarena */
+    } /* scope */
 #endif /* THREADMARK */
-	PL_ARENA_ALLOCATE(p, arena, size);
-	PZ_Unlock(pool->lock);
-    } else {
-	PL_ARENA_ALLOCATE(p, arena, size);
-    }
 
-    if (!p) {
+    PL_ARENA_ALLOCATE(p, arena, size);
+    releaseArenaLock();
+    if (p == NULL) {
 	++port_allocFailures;
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
@@ -247,9 +270,38 @@ PORT_ArenaAlloc(PLArenaPool *arena, size_t size)
 void *
 PORT_ArenaZAlloc(PLArenaPool *arena, size_t size)
 {
-    void *p = PORT_ArenaAlloc(arena, size);
+    void *p;
 
-    if (p) {
+    getArenaLock();
+#ifdef THREADMARK
+    {
+      /* Is it one of ours?  Assume so and check the magic */
+      threadmark_arena *tarena = (threadmark_arena *)arena;
+      if( THREADMARK_MAGIC == tarena->magic ) {
+        /* Most likely one of ours.  Is there a thread id? */
+        if( (PRThread *)NULL != tarena->marking_thread ) {
+          /* Yes.  Has this arena been marked by this thread? */
+          if( tarena->marking_thread == PR_GetCurrentThread() ) {
+            /* Yup.  Everything's okay. */
+            ;
+          } else {
+            /* No, it was a different thread  BZZT!  error */
+            releaseArenaLock();
+            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            PORT_Assert(0);
+            return (void *)NULL;
+          }
+        } /* tid != null */
+      } /* tarena */
+    } /* scope */
+#endif /* THREADMARK */
+
+    PL_ARENA_ALLOCATE(p, arena, size);
+    releaseArenaLock();
+    if (p == NULL) {
+	++port_allocFailures;
+	PORT_SetError(SEC_ERROR_NO_MEMORY);
+    } else {
 	PORT_Memset(p, 0, size);
     }
 
@@ -260,51 +312,21 @@ PORT_ArenaZAlloc(PLArenaPool *arena, size_t size)
 void
 PORT_FreeArena(PLArenaPool *arena, PRBool zero)
 {
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
-    PRLock *       lock = (PRLock *)0;
-    size_t         len  = sizeof *arena;
-    extern const PRVersionDescription * libVersionPoint(void);
-    static const PRVersionDescription * pvd;
-    static PRBool  doFreeArenaPool;
-
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	len  = sizeof *pool;
-	lock = pool->lock;
-	PZ_Lock(lock);
-    }
-    if (!pvd) {
-	/* no need for thread protection here */
-	pvd = libVersionPoint();
-	if ((pvd->vMajor > 4) || 
-	    (pvd->vMajor == 4 && pvd->vMinor > 1) ||
-	    (pvd->vMajor == 4 && pvd->vMinor == 1 && pvd->vPatch >= 1)) {
-	    doFreeArenaPool = PR_TRUE;
-	}
-    }
-    if (doFreeArenaPool)
-	PL_FreeArenaPool(arena);
+    getArenaLock();
     PL_FinishArenaPool(arena);
-    PORT_ZFree(arena, len);
-    if (lock) {
-	PZ_Unlock(lock);
-	PZ_DestroyLock(lock);
-    }
+    PORT_Free(arena);
+    releaseArenaLock();
 }
 
 void *
 PORT_ArenaGrow(PLArenaPool *arena, void *ptr, size_t oldsize, size_t newsize)
 {
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
     PORT_Assert(newsize >= oldsize);
     
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	PZ_Lock(pool->lock);
-	/* Do we do a THREADMARK check here? */
-	PL_ARENA_GROW(ptr, arena, oldsize, ( newsize - oldsize ) );
-	PZ_Unlock(pool->lock);
-    } else {
-	PL_ARENA_GROW(ptr, arena, oldsize, ( newsize - oldsize ) );
-    }
+    getArenaLock();
+    /* Do we do a THREADMARK check here? */
+    PL_ARENA_GROW(ptr, arena, oldsize, ( newsize - oldsize ) );
+    releaseArenaLock();
     
     return(ptr);
 }
@@ -314,140 +336,144 @@ PORT_ArenaMark(PLArenaPool *arena)
 {
     void * result;
 
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	PZ_Lock(pool->lock);
+    getArenaLock();
 #ifdef THREADMARK
-	{
-	  threadmark_mark *tm, **pw;
-	  PRThread * currentThread = PR_GetCurrentThread();
+    {
+      threadmark_mark *tm, **pw;
 
-	    if (! pool->marking_thread ) {
-		/* First mark */
-		pool->marking_thread = currentThread;
-	    } else if (currentThread != pool->marking_thread ) {
-		PZ_Unlock(pool->lock);
-		PORT_SetError(SEC_ERROR_NO_MEMORY);
-		PORT_Assert(0);
-		return NULL;
-	    }
+      threadmark_arena *tarena = (threadmark_arena *)arena;
+      if( THREADMARK_MAGIC == tarena->magic ) {
+        /* one of ours */
+        if( (PRThread *)NULL == tarena->marking_thread ) {
+          /* First mark */
+          tarena->marking_thread = PR_GetCurrentThread();
+        } else {
+          if( PR_GetCurrentThread() != tarena->marking_thread ) {
+            releaseArenaLock();
+            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            PORT_Assert(0);
+            return (void *)NULL;
+          }
+        }
 
-	    result = PL_ARENA_MARK(arena);
-	    PL_ARENA_ALLOCATE(tm, arena, sizeof(threadmark_mark));
-	    if (!tm) {
-		PZ_Unlock(pool->lock);
-		PORT_SetError(SEC_ERROR_NO_MEMORY);
-		return NULL;
-	    }
+        result = PL_ARENA_MARK(arena);
+        PL_ARENA_ALLOCATE(tm, arena, sizeof(threadmark_mark));
+        if( (threadmark_mark *)NULL == tm ) {
+          releaseArenaLock();
+          PORT_SetError(SEC_ERROR_NO_MEMORY);
+          return (void *)NULL;
+        }
 
-	    tm->mark = result;
-	    tm->next = (threadmark_mark *)NULL;
+        tm->mark = result;
+        tm->next = (threadmark_mark *)NULL;
 
-	    pw = &pool->first_mark;
-	    while( *pw ) {
-		 pw = &(*pw)->next;
-	    }
+        pw = &tarena->first_mark;
+        while( (threadmark_mark *)NULL != *pw ) {
+             pw = &(*pw)->next;
+        }
 
-	    *pw = tm;
-	}
-#else /* THREADMARK */
-	result = PL_ARENA_MARK(arena);
-#endif /* THREADMARK */
-	PZ_Unlock(pool->lock);
-    } else {
-	/* a "pure" NSPR arena */
-	result = PL_ARENA_MARK(arena);
+        *pw = tm;
+      } else {
+        /* a "pure" NSPR arena */
+        result = PL_ARENA_MARK(arena);
+      }
     }
+#else /* THREADMARK */
+    result = PL_ARENA_MARK(arena);
+#endif /* THREADMARK */
+    releaseArenaLock();
     return result;
 }
 
 void
 PORT_ArenaRelease(PLArenaPool *arena, void *mark)
 {
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	PZ_Lock(pool->lock);
+    getArenaLock();
 #ifdef THREADMARK
-	{
-	    threadmark_mark **pw, *tm;
+    {
+      threadmark_arena *tarena = (threadmark_arena *)arena;
+      if( THREADMARK_MAGIC == tarena->magic ) {
+        threadmark_mark **pw, *tm;
 
-	    if (PR_GetCurrentThread() != pool->marking_thread ) {
-		PZ_Unlock(pool->lock);
-		PORT_SetError(SEC_ERROR_NO_MEMORY);
-		PORT_Assert(0);
-		return /* no error indication available */ ;
-	    }
+        if( PR_GetCurrentThread() != tarena->marking_thread ) {
+          releaseArenaLock();
+          PORT_SetError(SEC_ERROR_NO_MEMORY);
+          PORT_Assert(0);
+          return /* no error indication available */ ;
+        }
 
-	    pw = &pool->first_mark;
-	    while( *pw && (mark != (*pw)->mark) ) {
-		pw = &(*pw)->next;
-	    }
+        pw = &tarena->first_mark;
+        while( ((threadmark_mark *)NULL != *pw) && (mark != (*pw)->mark) ) {
+          pw = &(*pw)->next;
+        }
 
-	    if (! *pw ) {
-		/* bad mark */
-		PZ_Unlock(pool->lock);
-		PORT_SetError(SEC_ERROR_NO_MEMORY);
-		PORT_Assert(0);
-		return /* no error indication available */ ;
-	    }
+        if( (threadmark_mark *)NULL == *pw ) {
+          /* bad mark */
+          releaseArenaLock();
+          PORT_SetError(SEC_ERROR_NO_MEMORY);
+          PORT_Assert(0);
+          return /* no error indication available */ ;
+        }
 
-	    tm = *pw;
-	    *pw = (threadmark_mark *)NULL;
+        tm = *pw;
+        *pw = (threadmark_mark *)NULL;
 
-	    PL_ARENA_RELEASE(arena, mark);
+        PL_ARENA_RELEASE(arena, mark);
 
-	    if (! pool->first_mark ) {
-		pool->marking_thread = (PRThread *)NULL;
-	    }
-	}
-#else /* THREADMARK */
-	PL_ARENA_RELEASE(arena, mark);
-#endif /* THREADMARK */
-	PZ_Unlock(pool->lock);
-    } else {
-	PL_ARENA_RELEASE(arena, mark);
+        if( (threadmark_mark *)NULL == tarena->first_mark ) {
+          tarena->marking_thread = (PRThread *)NULL;
+        }
+      } else {
+        PL_ARENA_RELEASE(arena, mark);
+      }
     }
+#else /* THREADMARK */
+    PL_ARENA_RELEASE(arena, mark);
+#endif /* THREADMARK */
+    releaseArenaLock();
 }
 
 void
 PORT_ArenaUnmark(PLArenaPool *arena, void *mark)
 {
 #ifdef THREADMARK
-    PORTArenaPool *pool = (PORTArenaPool *)arena;
-    if (ARENAPOOL_MAGIC == pool->magic ) {
-	threadmark_mark **pw, *tm;
+    getArenaLock();
+    {
+      threadmark_arena *tarena = (threadmark_arena *)arena;
+      if( THREADMARK_MAGIC == tarena->magic ) {
+        threadmark_mark **pw, *tm;
 
-	PZ_Lock(pool->lock);
+        if( PR_GetCurrentThread() != tarena->marking_thread ) {
+          releaseArenaLock();
+          PORT_SetError(SEC_ERROR_NO_MEMORY);
+          PORT_Assert(0);
+          return /* no error indication available */ ;
+        }
 
-	if (PR_GetCurrentThread() != pool->marking_thread ) {
-	    PZ_Unlock(pool->lock);
-	    PORT_SetError(SEC_ERROR_NO_MEMORY);
-	    PORT_Assert(0);
-	    return /* no error indication available */ ;
-	}
+        pw = &tarena->first_mark;
+        while( ((threadmark_mark *)NULL != *pw) && (mark != (*pw)->mark) ) {
+          pw = &(*pw)->next;
+        }
 
-	pw = &pool->first_mark;
-	while( ((threadmark_mark *)NULL != *pw) && (mark != (*pw)->mark) ) {
-	    pw = &(*pw)->next;
-	}
+        if( (threadmark_mark *)NULL == *pw ) {
+          /* bad mark */
+          releaseArenaLock();
+          PORT_SetError(SEC_ERROR_NO_MEMORY);
+          PORT_Assert(0);
+          return /* no error indication available */ ;
+        }
 
-	if ((threadmark_mark *)NULL == *pw ) {
-	    /* bad mark */
-	    PZ_Unlock(pool->lock);
-	    PORT_SetError(SEC_ERROR_NO_MEMORY);
-	    PORT_Assert(0);
-	    return /* no error indication available */ ;
-	}
+        tm = *pw;
+        *pw = (threadmark_mark *)NULL;
 
-	tm = *pw;
-	*pw = (threadmark_mark *)NULL;
-
-	if (! pool->first_mark ) {
-	    pool->marking_thread = (PRThread *)NULL;
-	}
-
-	PZ_Unlock(pool->lock);
+        if( (threadmark_mark *)NULL == tarena->first_mark ) {
+          tarena->marking_thread = (PRThread *)NULL;
+        }
+      } else {
+        PL_ARENA_RELEASE(arena, mark);
+      }
     }
+    releaseArenaLock();
 #endif /* THREADMARK */
 }
 
@@ -456,7 +482,9 @@ PORT_ArenaStrdup(PLArenaPool *arena, char *str) {
     int len = PORT_Strlen(str)+1;
     char *newstr;
 
+    getArenaLock();
     newstr = (char*)PORT_ArenaAlloc(arena,len);
+    releaseArenaLock();
     if (newstr) {
         PORT_Memcpy(newstr,str,len);
     }
@@ -541,21 +569,20 @@ PORT_UCS2_ASCIIConversion(PRBool toUnicode, unsigned char *inBuf,
 int
 NSS_PutEnv(const char * envVarName, const char * envValue)
 {
-#if  defined(XP_MAC)
-    return SECFailure;
-#else
     SECStatus result = SECSuccess;
-    char *    encoded;
-    int       putEnvFailed;
 #ifdef _WIN32
     PRBool      setOK;
 
     setOK = SetEnvironmentVariable(envVarName, envValue);
     if (!setOK) {
         SET_ERROR_CODE
-        return SECFailure;
+        result = SECFailure;
     }
-#endif
+#elif  defined(XP_MAC)
+	result = SECFailure;
+#else
+    char *          encoded;
+    int             putEnvFailed;
 
     encoded = (char *)PORT_ZAlloc(strlen(envVarName) + 2 + strlen(envValue));
     strcpy(encoded, envVarName);
@@ -568,7 +595,7 @@ NSS_PutEnv(const char * envVarName, const char * envValue)
         result = SECFailure;
         PORT_Free(encoded);
     }
-    return result;
 #endif
+    return result;
 }
 
