@@ -62,7 +62,7 @@ enum ePathTypes{
 };
 
 static void GetPath(nsPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPathType,PRInt32 &aC1Index,float aFrac=0);
-static void TileImage(nsIDrawable* drawable,nsIDrawable *aDest,nsRect &aSrcRect,PRInt16 aWidth,PRInt16 aHeight);
+//static void TileImage(nsIDrawable* drawable,nsIDrawable *aDest,nsRect &aSrcRect,PRInt16 aWidth,PRInt16 aHeight);
 static PRBool GetBGColorForHTMLElement(nsIPresContext *aPresContext,const nsStyleColor *&aBGColor);
 static nsresult GetFrameForBackgroundUpdate(nsIPresContext *aPresContext,nsIFrame *aFrame, nsIFrame **aBGFrame);
 
@@ -905,15 +905,15 @@ PRBool  skippedSide = PR_FALSE;
           if (drem(temp1,2) == 0) {
             adjust = (dashRect.width - drem(temp, dashRect.width))/2;     // even, adjust back
             // draw in the left and right
-            aContext.FillRect(borderOutside.x,dashRect.y,dashRect.width-adjust,dashRect.height);
-            aContext.FillRect((borderOutside.XMost()-(dashRect.width-adjust)),dashRect.y,dashRect.width-adjust,dashRect.height);
+            aDrawable->FillRectangle(borderOutside.x,dashRect.y,dashRect.width-adjust,dashRect.height);
+            aDrawable->FillRectangle((borderOutside.XMost()-(dashRect.width-adjust)),dashRect.y,dashRect.width-adjust,dashRect.height);
             currRect.x += (dashRect.width-adjust);
             temp = temp-= (dashRect.width-adjust);
           } else {
             adjust = (drem(temp,dashRect.width))/2;
             // draw in the left and right
-            aContext.FillRect(borderOutside.x,dashRect.y,dashRect.width+adjust,dashRect.height);
-            aContext.FillRect((borderOutside.XMost()-(dashRect.width+adjust)),dashRect.y,dashRect.width+adjust,dashRect.height);
+            aDrawable->FillRectangle(borderOutside.x,dashRect.y,dashRect.width+adjust,dashRect.height);
+            aDrawable->FillRectangle((borderOutside.XMost()-(dashRect.width+adjust)),dashRect.y,dashRect.width+adjust,dashRect.height);
             currRect.x += (dashRect.width+adjust);
             temp = temp-= (dashRect.width+adjust);
           }
@@ -1154,9 +1154,9 @@ PRIntn  whichSide=0;
           if (PR_TRUE==aBorderEdges->mOutsideEdge && 0==i)
           {
             firstRectWidth = borderInside.x - borderOutside.x;
-            aContext.FillRect(borderOutside.x, borderOutside.y,
-                              firstRectWidth,
-                              borderInside.y - borderOutside.y);
+            aDrawable->FillRectangle(borderOutside.x, borderOutside.y,
+                                     firstRectWidth,
+                                     borderInside.y - borderOutside.y);
           }
 
           dashRect.height = borderInside.y - borderOutside.y;
@@ -1326,9 +1326,9 @@ PRIntn  whichSide=0;
           if (PR_TRUE==aBorderEdges->mOutsideEdge  &&  0==i)
           {
             firstRectWidth = borderInside.x - borderOutside.x;
-            aContext.FillRect(borderOutside.x, borderInside.YMost(),
-                              firstRectWidth,
-                              borderOutside.YMost() - borderInside.YMost());
+            aDrawable->FillRectangle(borderOutside.x, borderInside.YMost(),
+                                     firstRectWidth,
+                                     borderOutside.YMost() - borderInside.YMost());
           }
 
           dashRect.height = borderOutside.YMost() - borderInside.YMost();
@@ -2360,9 +2360,9 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
     nsRect tileRect(x0,y0,(x1-x0),(y1-y0));
     nsRect drawRect;
     if (drawRect.IntersectRect(tileRect, dirtyRect)) {
-      PRInt32 xOffset = drawRect.x - x0,
-              yOffset = drawRect.y - y0;
-      aDrawable->DrawTile(image,xOffset,yOffset,drawRect);
+      gfx_coord xOffset = drawRect.x - x0,
+                yOffset = drawRect.y - y0;
+      aDrawable->DrawTile(image,xOffset,yOffset,&drawRect);
     }
 #else
     // XXX pav
@@ -2483,6 +2483,7 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
  *  @param aHeight -- height of the tile
  *  @param aWidth -- width of the tile
  */
+#if 0
 static void
 TileImage(nsIDrawable* aDrawable,nsIDrawable* aDest,nsRect &aSrcRect,PRInt16 aWidth,PRInt16 aHeight)
 {
@@ -2505,7 +2506,7 @@ PRInt32 flag = NS_COPYBITS_TO_BACK_BUFFER | NS_COPYBITS_XFORM_DEST_VALUES;
     TileImage(aRC,aDS,aSrcRect,aWidth,aHeight);
   } 
 }
-
+#endif
 /** ---------------------------------------------------
  *  See documentation in nsCSSRendering.h
  *	@update 3/26/99 dwc
@@ -2620,8 +2621,6 @@ nsCSSRendering::PaintRoundedBorder(nsIPresContext* aPresContext,
   PRInt16       np;
   nsMargin      border;
   nscoord       twipsPerPixel=1,qtwips;
-  float         p2t;
-
 
   if (!aIsOutline) {
     aBorderStyle.CalcBorderFor(aForFrame, border);
@@ -2820,7 +2819,7 @@ nsCSSRendering::RenderSide(nsPoint aPoints[],nsIDrawable* aDrawable,
         polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
-          const nsPoint *pts = polyPath;
+          const nsPoint *pts = polypath;
           aDrawable->FillPolygon(&pts,curIndex);
         }
 
@@ -2867,7 +2866,7 @@ nsCSSRendering::RenderSide(nsPoint aPoints[],nsIDrawable* aDrawable,
         polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
-          const nsPoint *pts = polyPath;
+          const nsPoint *pts = polypath;
           aDrawable->FillPolygon(&pts,curIndex);
         }
 
@@ -2890,7 +2889,7 @@ nsCSSRendering::RenderSide(nsPoint aPoints[],nsIDrawable* aDrawable,
         polypath[curIndex].y = aPoints[0].y;
         curIndex++;
         {
-          const nsPoint *pts = polyPath;
+          const nsPoint *pts = polypath;
           aDrawable->FillPolygon(&pts,curIndex);
         }
         }
