@@ -92,6 +92,14 @@ interface nsISOAPParameter : nsISupports {
   attribute DOMString type;
 
   /**
+   * The schema type associated with a parameter.  In addition
+   *   to a language data type, there may be a schema type associated
+   *   with a parameter.  If this is not specified, the serializer
+   *   or application must make its own choice as appropriate.
+   */
+  attribute DOMString schemaType;
+
+  /**
    * <p>The getter is for native and script callers (despite the
    * [noscript] qualification). For native callers, the interface
    * implemented by the returned value depends on the

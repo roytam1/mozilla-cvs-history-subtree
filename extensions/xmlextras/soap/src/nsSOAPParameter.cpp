@@ -83,6 +83,19 @@ NS_IMETHODIMP nsSOAPParameter::SetType(const nsAReadableString & aType)
   return NS_OK;
 }
 
+/* attribute DOMString schemaType; */
+NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsAWritableString & aSchemaType)
+{
+  NS_ENSURE_ARG_POINTER(&aSchemaType);
+  aSchemaType.Assign(mSchemaType);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetSchemaType(const nsAReadableString & aSchemaType)
+{
+  mType.Assign(aSchemaType);
+  return NS_OK;
+}
+
 /* [noscript] readonly attribute nsISupports value; */
 NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
 {

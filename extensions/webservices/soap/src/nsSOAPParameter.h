@@ -59,6 +59,7 @@ protected:
   nsString mEncodingStyleURI;
   nsString mName;
   nsString mType;
+  nsString mSchemaType;
   nsCOMPtr<nsISupports> mValue;
 };
 
