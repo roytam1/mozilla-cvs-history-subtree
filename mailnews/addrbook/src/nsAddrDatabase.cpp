@@ -1540,6 +1540,15 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool
 	{
 		AddAttributeColumnsToRow(newCard, cardRow);
 		AddRecordKeyColumnToRow(cardRow);
+
+    // XXX add comment explaining why we need this (for dnd)
+    PRUint32 key = 0;
+	  err = GetIntColumn(cardRow, m_RecordKeyColumnToken, &key, 0);
+    if (NS_SUCCEEDED(err)) {
+      nsCOMPtr<nsIAbMDBCard> dbnewCard(do_QueryInterface(newCard, &err));
+      if (NS_SUCCEEDED(err) && dbnewCard)
+        dbnewCard->SetKey(key);
+    }
 		mdb_err merror = m_mdbPabTable->AddRow(GetEnv(), cardRow);
 		if (merror != NS_OK) return NS_ERROR_FAILURE;
 		cardRow->CutStrongRef(GetEnv());

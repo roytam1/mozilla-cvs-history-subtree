@@ -288,21 +288,20 @@ NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
   rv = mdbcard->GetDbRowID(&dbRowID);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  if (dbRowID != m_dbRowID) {
-    *result = PR_FALSE;
-    return NS_OK;
-  }
-
   PRUint32 dbTableID;
   rv = mdbcard->GetDbTableID(&dbTableID);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  if (dbTableID != m_dbTableID) {
-    *result = PR_FALSE;
-    return NS_OK;
-  }
+  PRUint32 key;
+  rv = mdbcard->GetKey(&key);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  *result = PR_TRUE;
+  //XXX is key enough?
+  //printf("%d %d %d vs %d %d %d\n", dbRowID, dbTableID, key, m_dbRowID, m_dbTableID, m_key);
+  if (dbRowID == m_dbRowID && dbTableID == m_dbTableID && key == m_key)
+    *result = PR_TRUE;
+  else
+    *result = PR_FALSE;
   return NS_OK;
 }
 
