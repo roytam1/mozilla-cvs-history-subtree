@@ -47,19 +47,23 @@
 #include "jsapi.h"
 #include "nsReadableUtils.h"
 
+#if defined(WINCE)
+#include <commdlg.h>
+#endif
+
 HINSTANCE JSConsole::sAppInstance = 0;
 HACCEL JSConsole::sAccelTable = 0;
-CHAR JSConsole::sDefaultCaption[] = "JavaScript Console";
+TCHAR JSConsole::sDefaultCaption[] = _T("JavaScript Console");
 BOOL JSConsole::mRegistered = FALSE;
 
 
 // display an error string along with the error returned from
 // the GetLastError functions
 #define MESSAGE_LENGTH 256
-void DisplayError(LPSTR lpMessage)
+void DisplayError(LPTSTR lpMessage)
 {
-    CHAR lpMsgBuf[MESSAGE_LENGTH * 2];
-    CHAR lpLastError[MESSAGE_LENGTH];
+    TCHAR lpMsgBuf[MESSAGE_LENGTH * 2];
+    TCHAR lpLastError[MESSAGE_LENGTH];
 
     ::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
                     NULL,
@@ -69,12 +73,12 @@ void DisplayError(LPSTR lpMessage)
                     MESSAGE_LENGTH,
                     NULL);
     
-    strcpy(lpMsgBuf, lpMessage);
-    strcat(lpMsgBuf, "\nThe WWS (Worthless Windows System) reports:\n");
-    strcat(lpMsgBuf, lpLastError);
+    _tcscpy(lpMsgBuf, lpMessage);
+    _tcscat(lpMsgBuf, _T("\nThe WWS (Worthless Windows System) reports:\n"));
+    _tcscat(lpMsgBuf, lpLastError);
 
     // Display the string.
-    ::MessageBox(NULL, lpMsgBuf, "JSConsole Error", MB_OK | MB_ICONSTOP);
+    ::MessageBox(NULL, lpMsgBuf, _T("JSConsole Error"), MB_OK | MB_ICONSTOP);
 }
 
 #if defined(_DEBUG)
@@ -100,7 +104,7 @@ BOOL JSConsole::RegisterWidget()
     wc.hCursor = NULL;
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW);
     wc.lpszMenuName = MAKEINTRESOURCE(JSCONSOLE_MENU);
-    wc.lpszClassName = "JavaScript Console";
+    wc.lpszClassName = _T("JavaScript Console");
 
     return (BOOL)::RegisterClass(&wc);
 }
@@ -114,12 +118,24 @@ JSConsole* JSConsole::CreateConsole()
         JSConsole::mRegistered = RegisterWidget();
     }
 
-    HWND hWnd = ::CreateWindowEx(WS_EX_ACCEPTFILES | 
-                                            WS_EX_CLIENTEDGE | 
-                                            WS_EX_CONTROLPARENT,
-                                "JavaScript Console",
+    HWND hWnd = ::CreateWindowEx(0
+#if defined(WS_EX_ACCEPTFILES)
+                                | WS_EX_ACCEPTFILES
+#endif
+#if defined(WS_EX_CLIENTEDGE)
+                                | WS_EX_CLIENTEDGE
+#endif
+#if defined(WS_EX_CONTROLPARENT
+                                | WS_EX_CONTROLPARENT
+#endif
+                                ,
+                                _T("JavaScript Console"),
                                 JSConsole::sDefaultCaption,
-                                WS_OVERLAPPEDWINDOW,
+                                0
+#if defined(WS_OVERLAPPEDWINDOW)
+                                | WS_OVERLAPPEDWINDOW
+#endif
+                                ,
                                 CW_USEDEFAULT,
                                 CW_USEDEFAULT,
                                 450,
@@ -148,19 +164,34 @@ LRESULT CALLBACK JSConsole::WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
     
     // just ignore the message unless is WM_NCCREATE
     if (!console) {
-        if (uMsg == WM_NCCREATE) {
-            HWND hWndEdit = ::CreateWindow("EDIT",
+        if (uMsg ==
+#if defined(WM_NCCREATE)
+            WM_NCCREATE
+#else
+            WM_CREATE
+#endif
+            ) {
+            DWORD dwStyle = 0
+#if defined(WS_CHILDWINDOW)
+                | WS_CHILDWINDOW
+#endif
+                | WS_VISIBLE
+                | ES_MULTILINE
+                | ES_AUTOHSCROLL
+                | ES_AUTOVSCROLL
+                | WS_HSCROLL
+                | WS_VSCROLL;
+
+            HWND hWndEdit = ::CreateWindow(_T("EDIT"),
                                             NULL,
-                                            WS_CHILDWINDOW | WS_VISIBLE | ES_MULTILINE |
-                                                        ES_AUTOHSCROLL | ES_AUTOVSCROLL |
-                                                        WS_HSCROLL | WS_VSCROLL,
+                                            dwStyle,
                                             0, 0, 0, 0,
                                             hWnd,
                                             NULL,
                                             JSConsole::sAppInstance,
                                             NULL);
             if (!hWndEdit) {
-                ::DisplayError("Cannot Create Edit Window");
+                ::DisplayError(_T("Cannot Create Edit Window"));
                 return FALSE;
             }
             ::SendMessage(hWndEdit, EM_SETLIMITTEXT, (WPARAM)0, (LPARAM)0);
@@ -276,11 +307,12 @@ LRESULT CALLBACK JSConsole::WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
             break;
 
+#if defined(WM_DROPFILES)
         case WM_DROPFILES:
         {
             HDROP hDropInfo = (HDROP)wParam;
             if (::DragQueryFile(hDropInfo, (UINT)-1L, NULL, 0) != 1) {
-                ::MessageBox(hWnd, "Just One File Please...", "JSConsole Error", MB_OK | MB_ICONINFORMATION);
+                ::MessageBox(hWnd, _T("Just One File Please..."), _T("JSConsole Error"), MB_OK | MB_ICONINFORMATION);
             }
             else {
                 CHAR fileName[MAX_PATH];
@@ -290,6 +322,7 @@ LRESULT CALLBACK JSConsole::WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             }
             break;
         }
+#endif
 
         case WM_SETFOCUS:
             return console->OnSetFocus((HWND)wParam);
@@ -362,9 +395,9 @@ BOOL JSConsole::LoadFile()
                         ::SendMessage(mEditWindow, WM_SETTEXT, (WPARAM)0, (LPARAM)buffer);
 
                         // update the caption
-                        CHAR caption[80];
+                        TCHAR caption[80];
                         ::wsprintf(caption, 
-                                    "%s - %s", 
+                                    _T("%s - %s"), 
                                     mFileInfo.mCurrentFileName + mFileInfo.mFileOffset,
                                     sDefaultCaption);
                         ::SendMessage(mMainWindow, WM_SETTEXT, (WPARAM)0, (LPARAM)caption);
@@ -372,7 +405,7 @@ BOOL JSConsole::LoadFile()
                         result = TRUE;
                     }
                     else {
-                        ::DisplayError("Error Reading the File");
+                        ::DisplayError(_T("Error Reading the File"));
                     }
 
                     // free the allocated buffer
@@ -380,15 +413,15 @@ BOOL JSConsole::LoadFile()
                 }
                 else {
                     ::MessageBox(mMainWindow, 
-                                "Cannot Allocate Enough Memory to Copy the File in Memory", 
-                                "JSConsole Error", 
+                                _T("Cannot Allocate Enough Memory to Copy the File in Memory"), 
+                                _T("JSConsole Error"), 
                                 MB_OK | MB_ICONSTOP);
                 }
             }
             else {
                 ::MessageBox(mMainWindow, 
-                            "File too big. Max is 64k", 
-                            "JSConsole Error", 
+                            _T("File too big. Max is 64k"), 
+                            _T("JSConsole Error"), 
                             MB_OK | MB_ICONSTOP);
             }
 
@@ -397,8 +430,8 @@ BOOL JSConsole::LoadFile()
         }
 #ifdef _DEBUG
         else {
-            CHAR message[MAX_PATH + 20];
-            wsprintf(message, "Cannot Open File: %s", mFileInfo.mCurrentFileName); 
+            TCHAR message[MAX_PATH + 20];
+            wsprintf(message, _T("Cannot Open File: %s"), mFileInfo.mCurrentFileName); 
             ::DisplayError(message);
         }
 #endif
@@ -443,9 +476,9 @@ BOOL JSConsole::SaveFile()
                                 NULL)) {
                     NS_ASSERTION(byteRead == size, "WriteFile inconsistency");
                     // update the caption
-                    CHAR caption[80];
+                    TCHAR caption[80];
                     ::wsprintf(caption, 
-                                "%s - %s", 
+                                _T("%s - %s"), 
                                 mFileInfo.mCurrentFileName + mFileInfo.mFileOffset,
                                 sDefaultCaption);
                     ::SendMessage(mMainWindow, WM_SETTEXT, (WPARAM)0, (LPARAM)caption);
@@ -453,7 +486,7 @@ BOOL JSConsole::SaveFile()
                     result = TRUE;
                 }
                 else {
-                    ::DisplayError("Error Writing the File");
+                    ::DisplayError(_T("Error Writing the File"));
                 }
 
                 // free the allocated buffer
@@ -461,8 +494,8 @@ BOOL JSConsole::SaveFile()
             }
             else {
                 ::MessageBox(mMainWindow, 
-                            "Cannot Allocate Enough Memory to Copy the Edit Text in Memory", 
-                            "JSConsole Error", 
+                            _T("Cannot Allocate Enough Memory to Copy the Edit Text in Memory"), 
+                            _T("JSConsole Error"), 
                             MB_OK | MB_ICONSTOP);
             }
 
@@ -471,8 +504,8 @@ BOOL JSConsole::SaveFile()
         }
 #ifdef _DEBUG
         else {
-            CHAR message[MAX_PATH + 20];
-            wsprintf(message, "Cannot Open File: %s", mFileInfo.mCurrentFileName); 
+            TCHAR message[MAX_PATH + 20];
+            wsprintf(message, _T("Cannot Open File: %s"), mFileInfo.mCurrentFileName); 
             ::DisplayError(message);
         }
 #endif
@@ -493,13 +526,13 @@ BOOL JSConsole::OpenFileDialog(UINT aWhichDialog)
 
         // *.js is the standard File Name on the Save/Open Dialog
         if (mFileInfo.mCurrentFileName[0] == '\0') 
-            ::strcpy(mFileInfo.mCurrentFileName, "*.js");
+            _tcscpy(mFileInfo.mCurrentFileName, _T("*.js"));
 
         // fill the OPENFILENAME sruct
         ofn.lStructSize = sizeof(OPENFILENAME);
         ofn.hwndOwner = mMainWindow;
         ofn.hInstance = JSConsole::sAppInstance;
-        ofn.lpstrFilter = "JavaScript Files (*.js)\0*.js\0Text Files (*.txt)\0*.txt\0All Files\0*.*\0\0";
+        ofn.lpstrFilter = _T("JavaScript Files (*.js)\0*.js\0Text Files (*.txt)\0*.txt\0All Files\0*.*\0\0");
         ofn.lpstrCustomFilter = NULL; 
         ofn.nMaxCustFilter = 0;
         ofn.nFilterIndex = 1; // the first one in lpstrFilter
@@ -512,7 +545,7 @@ BOOL JSConsole::OpenFileDialog(UINT aWhichDialog)
         ofn.Flags = OFN_CREATEPROMPT | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
         ofn.nFileOffset = 0; 
         ofn.nFileExtension = 0;
-        ofn.lpstrDefExt = "js"; // default extension is .js
+        ofn.lpstrDefExt = _T("js"); // default extension is .js
         ofn.lCustData = NULL; 
         ofn.lpfnHook = NULL;
         ofn.lpTemplateName = NULL;
@@ -541,15 +574,15 @@ BOOL JSConsole::OpenFileDialog(UINT aWhichDialog)
 //
 // set the mFileInfo structure with the proper value given a generic path
 //
-void JSConsole::SetFileName(LPSTR aFileName)
+void JSConsole::SetFileName(LPTSTR aFileName)
 {
-    strcpy(mFileInfo.mCurrentFileName, aFileName);
-    for (int i = strlen(aFileName); i >= 0; i--) {
-        if (mFileInfo.mCurrentFileName[i] == '.') {
+    _tcscpy(mFileInfo.mCurrentFileName, aFileName);
+    for (int i = _tcslen(aFileName); i >= 0; i--) {
+        if (mFileInfo.mCurrentFileName[i] == _T('.')) {
             mFileInfo.mFileExtension = i;
         }
 
-        if (mFileInfo.mCurrentFileName[i] == '\\') {
+        if (mFileInfo.mCurrentFileName[i] == _T('\\')) {
             mFileInfo.mFileOffset = i + 1;
             break;
         }
@@ -693,7 +726,7 @@ void JSConsole::OnCommandEvaluateSelection()
 //
 void JSConsole::OnCommandInspector()
 {
-    ::MessageBox(mMainWindow, "Inspector not yet available", "JSConsole Error", MB_OK | MB_ICONINFORMATION);
+    ::MessageBox(mMainWindow, _T("Inspector not yet available"), _T("JSConsole Error"), MB_OK | MB_ICONINFORMATION);
 }
 
 //
@@ -711,12 +744,18 @@ void JSConsole::InitEditMenu(HMENU aMenu)
     CHAR someText[2] = {'\0', '\0'}; // some buffer
 
     // set flags to "disable"
-    UINT undoFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT cutFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT copyFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT pasteFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT deleteFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT selectAllFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
+    UINT defaultFlags = 0
+        | MF_BYPOSITION
+#if defined(MF_DISABLED)
+        | MF_DISABLED
+#endif
+        | MF_GRAYED;
+    UINT undoFlags = defaultFlags;
+    UINT cutFlags = defaultFlags;
+    UINT copyFlags = defaultFlags;
+    UINT pasteFlags = defaultFlags;
+    UINT deleteFlags = defaultFlags;
+    UINT selectAllFlags = defaultFlags;
 
     // check if the edit area has any text
     SendMessage(mEditWindow, WM_GETTEXT, (WPARAM)2, (LPARAM)someText);
@@ -749,32 +788,32 @@ void JSConsole::InitEditMenu(HMENU aMenu)
                             ID_EDITUNDO - ID_EDITMENU - 1, 
                             undoFlags),
             -1L,
-            "Disable/Enable \"Undo\" Failed");
+            _T("Disable/Enable \"Undo\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_EDITCUT - ID_EDITMENU - 1, 
                             cutFlags),
             -1L,
-            "Disable/Enable \"Cut\" Failed");
+            _T("Disable/Enable \"Cut\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_EDITCOPY - ID_EDITMENU - 1, 
                             copyFlags),
             -1L,
-            "Disable/Enable \"Copy\" Failed");
+            _T("Disable/Enable \"Copy\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_EDITPASTE - ID_EDITMENU - 1, 
                             pasteFlags),
             -1L,
-            "Disable/Enable \"Paste\" Failed");
+            _T("Disable/Enable \"Paste\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_EDITDELETE - ID_EDITMENU - 1, 
                             deleteFlags),
             -1L,
-            "Disable/Enable \"Delete\" Failed");
+            _T("Disable/Enable \"Delete\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_EDITSELECTALL - ID_EDITMENU - 1, 
                             selectAllFlags),
             -1L,
-            "Disable/Enable \"Select All\" Failed");
+            _T("Disable/Enable \"Select All\" Failed"));
 }
 
 //
@@ -785,8 +824,14 @@ void JSConsole::InitCommandMenu(HMENU aMenu)
     CHAR someText[2] = {'\0', '\0'}; // some buffer
 
     // set flags to "disable"
-    UINT evaluateAllFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
-    UINT evaluateSelectionFlags = MF_BYPOSITION | MF_DISABLED | MF_GRAYED;
+    UINT defaultFlags = 0
+        | MF_BYPOSITION
+#if defined(MF_DISABLED)
+        | MF_DISABLED
+#endif
+        | MF_GRAYED;
+    UINT evaluateAllFlags = defaultFlags;
+    UINT evaluateSelectionFlags = defaultFlags;
 
     // check if the edit area has any text
     SendMessage(mEditWindow, WM_GETTEXT, (WPARAM)2, (LPARAM)someText);
@@ -807,12 +852,12 @@ void JSConsole::InitCommandMenu(HMENU aMenu)
                             ID_COMMANDSEVALALL - ID_COMMANDSMENU - 1, 
                             evaluateAllFlags),
             -1L,
-            "Disable/Enable \"Evaluate All\" Failed");
+            _T("Disable/Enable \"Evaluate All\" Failed"));
     VERIFY(EnableMenuItem(aMenu, 
                             ID_COMMANDSEVALSEL - ID_COMMANDSMENU - 1, 
                             evaluateSelectionFlags),
             -1L,
-            "Disable/Enable \"Evaluate Selection\" Failed");
+            _T("Disable/Enable \"Evaluate Selection\" Failed"));
 }
 
 //
@@ -943,8 +988,8 @@ void JSConsole::EvaluateText(UINT aStartSel, UINT aEndSel)
             }
             else {
                 ::MessageBox(mMainWindow, 
-                                "Error evaluating the Script", 
-                                "JSConsole Error", 
+                                _T("Error evaluating the Script"), 
+                                _T("JSConsole Error"), 
                                 MB_OK | MB_ICONERROR);
             }
 
@@ -952,15 +997,15 @@ void JSConsole::EvaluateText(UINT aStartSel, UINT aEndSel)
         }
         else {
             ::MessageBox(mMainWindow, 
-                        "Not Enough Memory to Allocate a Buffer to Evaluate the Script",
-                        "JSConsole Error",
+                        _T("Not Enough Memory to Allocate a Buffer to Evaluate the Script"),
+                        _T("JSConsole Error"),
                         MB_OK | MB_ICONSTOP);
         }
     }
     else {
         ::MessageBox(mMainWindow, 
-                    "Java Script Context not initialized",
-                    "JSConsole Error",
+                    _T("Java Script Context not initialized"),
+                    _T("JSConsole Error"),
                     MB_OK | MB_ICONSTOP);
     }
 }

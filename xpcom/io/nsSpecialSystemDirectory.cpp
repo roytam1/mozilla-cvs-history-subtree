@@ -216,13 +216,8 @@ static char* MakeUpperCase(char* aPath)
   return aPath;
 }
 #else /* WINCE */
-//----------------------------------------------------------------------------------------
-static LPTSTR MakeUpperCase(LPTSTR aPath)
-//----------------------------------------------------------------------------------------
-{
-    // Can't really fathom...
-    return aPath;
-}
+// Can't really fathom...
+#define MakeUpperCase(path)  (path)
 #endif /* WINCE */
 
 //----------------------------------------------------------------------------------------
@@ -757,9 +752,8 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 #if defined (XP_WIN)
         case Win_SystemDirectory:
         {    
-#if !defined(WINCE)
             char path[_MAX_PATH];
-            PRInt32 len = GetSystemDirectory( path, _MAX_PATH );
+            PRInt32 len = GetSystemDirectoryA( path, _MAX_PATH );
         
             // Need enough space to add the trailing backslash
             if (len > _MAX_PATH-2)
@@ -768,9 +762,6 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
-#else /* WINCE */
-            *this = _T("\\WINDOWS\\");
-#endif /* WINCE */
             break;
         }
 
@@ -786,9 +777,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len]   = '\\';
             path[len+1] = '\0';
 
-#if !defined(WINCE)
             *this = MakeUpperCase(path);
-#endif /* WINCE */
             break;
         }
 

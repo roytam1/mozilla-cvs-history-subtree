@@ -49,7 +49,9 @@
 #include "nsControllerCommandManager.h"
 #include "nsCommandParams.h"
 #include "nsCommandGroup.h"
+#if !defined(WINCE)
 #include "nsPrintingPromptService.h"
+#endif /* WINCE */
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDialogParamBlock)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPromptService, Init)
@@ -63,7 +65,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsControllerCommandManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCommandManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCommandParams, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsControllerCommandGroup)
+#if !defined(WINCE)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintingPromptService, Init)
+#endif /* WINCE */
  
 static const nsModuleComponentInfo gComponents[] = {
 
@@ -79,7 +83,9 @@ static const nsModuleComponentInfo gComponents[] = {
   { "Command Manager", NS_COMMAND_MANAGER_CID, NS_COMMAND_MANAGER_CONTRACTID, nsCommandManagerConstructor },
   { "Command Params", NS_COMMAND_PARAMS_CID, NS_COMMAND_PARAMS_CONTRACTID, nsCommandParamsConstructor },
   { "Command Group", NS_CONTROLLER_COMMAND_GROUP_CID, NS_CONTROLLER_COMMAND_GROUP_CONTRACTID, nsControllerCommandGroupConstructor },
+#if !defined(WINCE)
   { "Printing Prompt Service", NS_PRINTINGPROMPTSERVICE_CID, NS_PRINTINGPROMPTSERVICE_CONTRACTID, nsPrintingPromptServiceConstructor }
+#endif /* WINCE */
 };
 
 NS_IMPL_NSGETMODULE(embedcomponents, gComponents)

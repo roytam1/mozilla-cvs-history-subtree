@@ -36,6 +36,7 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+
 #include "nsIDOMHTMLAppletElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
@@ -49,7 +50,7 @@
 
 // XXX this is to get around conflicts with windows.h defines
 // introduced through jni.h
-#ifdef XP_PC
+#if defined(XP_PC) && !defined(WINCE)
 #undef GetClassName
 #undef GetObject
 #endif

@@ -75,10 +75,12 @@
 #include "nsReadableUtils.h"
 
 
+#if !defined(WINCE)
 #if defined(WIN32) || defined(XP_OS2_VACPP)
 #include <strstrea.h>
 #else
 #include <strstream.h>
+#endif
 #endif
 
 #include <ctype.h> // tolower

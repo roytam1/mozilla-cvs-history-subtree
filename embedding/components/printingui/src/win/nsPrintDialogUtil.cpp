@@ -138,6 +138,7 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_LETTER,    8.5,   11.0,  PR_TRUE},
   {DMPAPER_LEGAL,     8.5,   14.0,  PR_TRUE},
   {DMPAPER_A4,        210.0, 297.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_TABLOID,   11.0,  17.0,  PR_TRUE},
   {DMPAPER_LEDGER,    17.0,  11.0,  PR_TRUE},
   {DMPAPER_STATEMENT, 5.5,   8.5,   PR_TRUE},
@@ -149,8 +150,10 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_ESHEET,    34.0,  44.0,  PR_TRUE},  
   {DMPAPER_LETTERSMALL, 8.5, 11.0,  PR_TRUE},  
   {DMPAPER_A4SMALL,   210.0, 297.0, PR_FALSE}, 
+#endif
   {DMPAPER_B4,        250.0, 354.0, PR_FALSE}, 
   {DMPAPER_B5,        182.0, 257.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_FOLIO,     8.5,   13.0,  PR_TRUE},
   {DMPAPER_QUARTO,    215.0, 275.0, PR_FALSE},
   {DMPAPER_10X14,     10.0,  14.0,  PR_TRUE},
@@ -176,8 +179,9 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_FANFOLD_US,   14.875, 11.0, PR_TRUE},  
   {DMPAPER_FANFOLD_STD_GERMAN, 8.5, 12.0, PR_TRUE},  
   {DMPAPER_FANFOLD_LGL_GERMAN, 8.5, 13.0, PR_TRUE},  
+#endif
 };
-const PRInt32 kNumPaperSizes = 41;
+const PRInt32 kNumPaperSizes = sizeof(kPaperSizes) / sizeof(NativePaperSizes);
 
 //----------------------------------------------------------------------------------
 static PRBool 
@@ -412,11 +416,15 @@ GetACPString(const nsAString& aStr)
 // Set a multi-byte string in the control
 static void SetTextOnWnd(HWND aControl, const nsString& aStr)
 {
+#if !defined(UNICODE)
   char* pStr = GetACPString(aStr);
   if (pStr) {
     ::SetWindowText(aControl, pStr);
     delete [] pStr;
   }
+#else
+  ::SetWindowText(aControl, aStr.get());
+#endif
 }
 
 //--------------------------------------------------------
@@ -527,7 +535,11 @@ static HWND CreateControl(LPCTSTR          aType,
                           const nsAString& aStr, 
                           const nsRect&    aRect)
 {
+#if !defined(UNICODE)
   char* pStr = GetACPString(aStr);
+#else
+  TCHAR* pStr = aStr.get();
+#endif
   if (pStr == NULL) return NULL;
 
   HWND hWnd = ::CreateWindow (aType, pStr,
@@ -535,9 +547,12 @@ static HWND CreateControl(LPCTSTR          aType,
                               aRect.x, aRect.y, aRect.width, aRect.height,
                               (HWND)aHdlg, (HMENU)aId,
                               aHInst, NULL);
-  if (hWnd == NULL) return NULL;
 
+#if !defined(UNICODE)
   delete [] pStr;
+#endif
+
+  if (hWnd == NULL) return NULL;
 
   // get the native font for the dialog and 
   // set it into the new control
@@ -558,7 +573,7 @@ static HWND CreateRadioBtn(HINSTANCE        aHInst,
 {
   nsString cStr;
   cStr.AssignWithConversion(aStr);
-  return CreateControl("BUTTON", BS_RADIOBUTTON, aHInst, aHdlg, aId, cStr, aRect);
+  return CreateControl(_T("BUTTON"), BS_RADIOBUTTON, aHInst, aHdlg, aId, cStr, aRect);
 }
 
 //--------------------------------------------------------
@@ -569,7 +584,7 @@ static HWND CreateGroupBox(HINSTANCE        aHInst,
                            const nsAString& aStr, 
                            const nsRect&    aRect)
 {
-  return CreateControl("BUTTON", BS_GROUPBOX, aHInst, aHdlg, aId, aStr, aRect);
+  return CreateControl(_T("BUTTON"), BS_GROUPBOX, aHInst, aHdlg, aId, aStr, aRect);
 }
 
 //--------------------------------------------------------

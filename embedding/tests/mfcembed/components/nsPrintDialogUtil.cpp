@@ -138,6 +138,7 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_LETTER,    8.5,   11.0,  PR_TRUE},
   {DMPAPER_LEGAL,     8.5,   14.0,  PR_TRUE},
   {DMPAPER_A4,        210.0, 297.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_TABLOID,   11.0,  17.0,  PR_TRUE},
   {DMPAPER_LEDGER,    17.0,  11.0,  PR_TRUE},
   {DMPAPER_STATEMENT, 5.5,   8.5,   PR_TRUE},
@@ -149,8 +150,10 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_ESHEET,    34.0,  44.0,  PR_TRUE},  
   {DMPAPER_LETTERSMALL, 8.5, 11.0,  PR_TRUE},  
   {DMPAPER_A4SMALL,   210.0, 297.0, PR_FALSE}, 
+#endif
   {DMPAPER_B4,        250.0, 354.0, PR_FALSE}, 
   {DMPAPER_B5,        182.0, 257.0, PR_FALSE},
+#if !defined(WINCE)
   {DMPAPER_FOLIO,     8.5,   13.0,  PR_TRUE},
   {DMPAPER_QUARTO,    215.0, 275.0, PR_FALSE},
   {DMPAPER_10X14,     10.0,  14.0,  PR_TRUE},
@@ -176,8 +179,9 @@ const NativePaperSizes kPaperSizes[] = {
   {DMPAPER_FANFOLD_US,   14.875, 11.0, PR_TRUE},  
   {DMPAPER_FANFOLD_STD_GERMAN, 8.5, 12.0, PR_TRUE},  
   {DMPAPER_FANFOLD_LGL_GERMAN, 8.5, 13.0, PR_TRUE},  
+#endif
 };
-const PRInt32 kNumPaperSizes = 41;
+const PRInt32 kNumPaperSizes = sizeof(kPaperSizes) / sizeof(NativePaperSizes);
 
 //----------------------------------------------------------------------------------
 static PRBool 

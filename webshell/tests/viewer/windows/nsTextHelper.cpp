@@ -64,11 +64,22 @@ NS_METHOD  nsTextHelper::GetText(nsString& aTextBuffer, PRUint32 aBufferSize, PR
 
   int length = GetWindowTextLength(mWnd);
   int bufLength = length + 1;
+#if !defined(UNICODE)
   NS_ALLOC_CHAR_BUF(buf, 512, bufLength);
   int charsCopied = GetWindowText(mWnd, buf, bufLength);
   aTextBuffer.SetLength(0);
   aTextBuffer.AppendWithConversion(buf);
   NS_FREE_CHAR_BUF(buf);
+#else
+  aTextBuffer.SetLength(0);
+  int charsCopied = 0;
+  LPTSTR buf = (LPTSTR)malloc(bufLength * sizeof(TCHAR));
+  if (NULL != buf) {
+      charsCopied = GetWindowText(mWnd, buf, bufLength);
+      aTextBuffer.Append(buf);
+      free(buf);
+  }
+#endif
   aActualSize = charsCopied;
   return NS_OK;
 }
@@ -77,7 +88,14 @@ NS_METHOD  nsTextHelper::SetText(const nsString &aText, PRUint32& aActualSize)
 { 
   mText = aText;
 
-  SetWindowText(mWnd, NS_LossyConvertUCS2toASCII(aText).get());
+  SetWindowText(mWnd,
+#if !defined(UNICODE)
+      NS_LossyConvertUCS2toASCII(aText).get()
+#else
+      aText.get()
+#endif
+      );
+
   aActualSize = aText.Length();
   return NS_OK;
 }
@@ -99,7 +117,7 @@ NS_METHOD  nsTextHelper::InsertText(const nsString &aText, PRUint32 aStartPos, P
 }
 NS_METHOD  nsTextHelper::RemoveText()
 {
-  SetWindowText(mWnd, "");
+  SetWindowText(mWnd, _T(""));
   return NS_OK;
 }
 NS_METHOD  nsTextHelper::SetPassword(PRBool aIsPassword)
@@ -183,7 +201,7 @@ nsTextHelper::~nsTextHelper()
 //-------------------------------------------------------------------------
 LPCTSTR nsTextHelper::WindowClass()
 {
-    return("EDIT");
+    return(_T("EDIT"));
 }
 
 //-------------------------------------------------------------------------

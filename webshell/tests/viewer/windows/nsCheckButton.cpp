@@ -156,10 +156,14 @@ NS_METHOD nsCheckButton::GetState(PRBool& aState)
 //-------------------------------------------------------------------------
 NS_METHOD nsCheckButton::SetLabel(const nsString& aText)
 {
+#if !defined(UNICODE)
   char label[256];
   aText.ToCString(label, 256);
   label[255] = '\0';
   VERIFY(::SetWindowText(mWnd, label));
+#else
+  VERIFY(::SetWindowText(mWnd, aText.get()));
+#endif
   return NS_OK;
 }
 
@@ -172,11 +176,21 @@ NS_METHOD nsCheckButton::SetLabel(const nsString& aText)
 NS_METHOD nsCheckButton::GetLabel(nsString& aBuffer)
 {
   int actualSize = ::GetWindowTextLength(mWnd)+1;
+#if !defined(UNICODE)
   NS_ALLOC_CHAR_BUF(label, 256, actualSize);
   ::GetWindowText(mWnd, label, actualSize);
   aBuffer.SetLength(0);
   aBuffer.AppendWithConversion(label);
   NS_FREE_CHAR_BUF(label);
+#else
+  aBuffer.SetLength(0);
+  LPTSTR buf = (LPTSTR)malloc(actualSize * sizeof(TCHAR));
+  if (NULL != buf) {
+      ::GetWindowText(mWnd, buf, actualSize);
+      aBuffer.Append(buf);
+      free(buf);
+  }
+#endif
   return NS_OK;
 }
 
@@ -207,7 +221,7 @@ PRBool nsCheckButton::OnResize(nsRect &aWindowRect)
 //-------------------------------------------------------------------------
 LPCTSTR nsCheckButton::WindowClass()
 {
-    return "BUTTON";
+    return _T("BUTTON");
 }
 
 

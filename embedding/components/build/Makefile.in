@@ -61,7 +61,15 @@ CPPSRCS		= nsModule.cpp
 
 SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)windowwatcher_s.$(LIB_SUFFIX) \
+	$(NULL)
+
+ifneq ($(OS_TARGET),WINCE)
+SHARED_LIBRARY_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)printingui_s.$(LIB_SUFFIX) \
+	$(NULL)
+endif # WINCE
+
+SHARED_LIBRARY_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)appstartupnotifier_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)jsconsole_s.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)find_s.$(LIB_SUFFIX) \
@@ -87,8 +95,10 @@ LOCAL_INCLUDES += -I$(srcdir)/../printingui/src/unixshared
 endif
 
 ifeq ($(MOZ_GFX_TOOLKIT),windows)
+ifneq ($(OS_TARGET),WINCE)
 LOCAL_INCLUDES += -I$(srcdir)/../printingui/src/win 
 OS_LIBS += winspool.lib comdlg32.lib
+endif # WINCE
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))

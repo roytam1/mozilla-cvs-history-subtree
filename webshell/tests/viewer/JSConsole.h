@@ -57,11 +57,11 @@ private:
 
     // keep info from the OPENFILENAME struct
     struct FileInfo {
-        CHAR mCurrentFileName[MAX_PATH];
+        TCHAR mCurrentFileName[MAX_PATH];
         WORD mFileOffset;
         WORD mFileExtension;
 
-        void Init() {mCurrentFileName[0] = '\0'; mFileOffset = 0; mFileExtension = 0;}
+        void Init() {mCurrentFileName[0] = _T('\0'); mFileOffset = 0; mFileExtension = 0;}
     } mFileInfo;
 
     // one context per window
@@ -70,7 +70,7 @@ private:
 public:
     static HINSTANCE sAppInstance;
     static HACCEL sAccelTable;
-    static CHAR sDefaultCaption[];
+    static TCHAR sDefaultCaption[];
 
     static BOOL RegisterWidget();
     static JSConsole* CreateConsole();
@@ -87,8 +87,8 @@ public:
     BOOL SaveFile();
 
     BOOL OpenFileDialog(UINT aOpenOrSave);
-    inline BOOL CanSave() { return mFileInfo.mCurrentFileName[0] != '\0'; }
-    void SetFileName(LPSTR aFileName);
+    inline BOOL CanSave() { return mFileInfo.mCurrentFileName[0] != _T('\0'); }
+    void SetFileName(LPTSTR aFileName);
 
     HWND GetMainWindow() { return mMainWindow; }
     void SetNotification(DESTROY_NOTIFICATION aNotification) { mDestroyNotification = aNotification; }

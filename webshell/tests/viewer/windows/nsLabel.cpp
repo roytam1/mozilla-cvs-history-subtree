@@ -136,7 +136,11 @@ NS_METHOD nsLabel::SetAlignment(nsLabelAlignment aAlignment)
 //-------------------------------------------------------------------------
 NS_METHOD nsLabel::SetLabel(const nsString& aText)
 {
+#if !defined(UNICODE)
   VERIFY(::SetWindowText(mWnd, NS_LossyConvertUCS2toASCII(aText).get()));
+#else
+  VERIFY(::SetWindowText(mWnd, aText.get()));
+#endif
   return NS_OK;
 }
 
@@ -148,11 +152,21 @@ NS_METHOD nsLabel::SetLabel(const nsString& aText)
 NS_METHOD nsLabel::GetLabel(nsString& aBuffer)
 {
   int actualSize = ::GetWindowTextLength(mWnd)+1;
+#if !defined(UNICODE)
   NS_ALLOC_CHAR_BUF(label, 256, actualSize);
   ::GetWindowText(mWnd, label, actualSize);
   aBuffer.SetLength(0);
   aBuffer.AppendWithConversion(label);
   NS_FREE_CHAR_BUF(label);
+#else
+  aBuffer.SetLength(0);
+  LPTSTR buf = (LPTSTR)malloc(sizeof(TCHAR) * actualSize);
+  if (NULL != buf) {
+      ::GetWindowText(mWnd, buf, actualSize);
+      aBuffer.Append(buf);
+      free(buf);
+  }
+#endif
   return NS_OK;
 }
 
@@ -184,7 +198,7 @@ PRBool nsLabel::OnResize(nsRect &aWindowRect)
 //-------------------------------------------------------------------------
 LPCTSTR nsLabel::WindowClass()
 {
-  return "STATIC";
+  return _T("STATIC");
 }
 
 //-------------------------------------------------------------------------

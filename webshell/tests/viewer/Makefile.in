@@ -51,6 +51,7 @@ REQUIRES	= xpcom \
 		  unicharutil \
 		  editor \
 		  windowwatcher \
+		  embedcomponents \
 		  xpconnect \
 		  js \
 		  $(NULL)
@@ -185,9 +186,13 @@ endif
 GARBAGE			+= $(PROGRAM)_gtk $(PROGRAM)_qt $(PROGRAM)_xlib
 
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 OS_LIBS		+= shell32.lib ole32.lib oleaut32.lib oleacc.lib \
 	imm32.lib uuid.lib comdlg32.lib
 LDFLAGS		+= -SUBSYSTEM:CONSOLE
+else
+OS_LIBS += wince_console.lib ole32.lib urlmon.lib uuid.lib commdlg.lib ceshell.lib
+endif
 ifdef MOZ_NO_DEBUG_RTL
 CXXFLAGS	+= -DMOZ_NO_DEBUG_RTL
 endif

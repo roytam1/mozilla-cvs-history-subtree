@@ -131,7 +131,11 @@ NS_METHOD nsButton::SetLabel(const nsString& aText)
   if (NULL == mWnd) {
     return NS_ERROR_FAILURE;
   }
+#if !defined(UNICODE)
   VERIFY(::SetWindowText(mWnd, NS_LossyConvertUCS2toASCII(aText).get()));
+#else
+  VERIFY(::SetWindowText(mWnd, aText.get()));
+#endif
   return NS_OK;
 }
 
@@ -182,7 +186,7 @@ PRBool nsButton::OnResize(nsRect &aWindowRect)
 //-------------------------------------------------------------------------
 LPCTSTR nsButton::WindowClass()
 {
-  return "BUTTON";
+  return _T("BUTTON");
 }
 
 //-------------------------------------------------------------------------

@@ -227,7 +227,11 @@ NS_IMETHODIMP nsDrawingSurfaceWin :: Lock(PRInt32 aX, PRInt32 aY,
         ::GetObject(mLockedBitmap, sizeof(BITMAP), &mBitmap);
 
         mLockOffset = aY;
+#if defined(WINCE) && !defined(min)
+        mLockHeight = (PRInt32)aHeight <= (mBitmap.bmHeight - aY) ? (PRInt32)aHeight : (mBitmap.bmHeight - aY);
+#else
         mLockHeight = min((PRInt32)aHeight, (mBitmap.bmHeight - aY));
+#endif
 
         mBitmapInfo = CreateBitmapInfo(mBitmap.bmWidth, mBitmap.bmHeight, mBitmap.bmBitsPixel, (void **)&mDIBits);
 

@@ -116,7 +116,7 @@ nsNativeBrowserWindow::InitNativeWindow()
 nsresult
 nsNativeBrowserWindow::CreateMenuBar(PRInt32 aWidth)
 {
-  HMENU menu = ::LoadMenu(gInstance, "Viewer");
+  HMENU menu = ::LoadMenu(gInstance, _T("Viewer"));
   HWND hwnd = (HWND)mWindow->GetNativeData(NS_NATIVE_WIDGET);
   ::SetMenu(hwnd, menu);
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
 }
 
 int PASCAL
-WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdParam, 
+WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPTSTR cmdParam, 
         int nCmdShow)
 {
   gInstance = instance;

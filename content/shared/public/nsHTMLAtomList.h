@@ -256,6 +256,9 @@ HTML_ATOM(selectedindex, "selectedindex")
 HTML_ATOM(setcookie, "set-cookie")
 HTML_ATOM(shape, "shape")
 HTML_ATOM(size, "size")
+#if defined(WINCE) && defined(small)
+#undef small /* RPCNDR.H defines small as char, ugh */
+#endif /* WINCE */
 HTML_ATOM(small, "small")
 HTML_ATOM(spacer, "spacer")
 HTML_ATOM(span, "span")
