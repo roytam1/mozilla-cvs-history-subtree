@@ -21,8 +21,13 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
+//#define LOADER_THREADSAFE 1
+
 #include "nsIImageLoader.h"
-#include "nsCOMPtr.h"
+
+#ifdef LOADER_THREADSAFE
+#include "prlock.h"
+#endif
 
 #define NS_IMAGELOADER_CID \
 { /* 9f6a0d2e-1dd1-11b2-a5b8-951f13c846f7 */         \
@@ -42,4 +47,7 @@ public:
   virtual ~nsImageLoader();
 
 private:
+#ifdef LOADER_THREADSAFE
+  PRLock *mLock;
+#endif
 };

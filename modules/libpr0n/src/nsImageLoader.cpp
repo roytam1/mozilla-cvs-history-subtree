@@ -40,33 +40,50 @@
 
 #include "nsXPIDLString.h"
 
-#include "nspr.h"
+#include "nsCOMPtr.h"
+
+#ifdef LOADER_THREADSAFE
+#include "nsAutoLock.h"
+#endif
 
 static NS_DEFINE_CID(kImageRequestCID, NS_IMAGEREQUEST_CID);
 static NS_DEFINE_CID(kImageRequestProxyCID, NS_IMAGEREQUESTPROXY_CID);
 
+#ifdef LOADER_THREADSAFE
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsImageLoader, nsIImageLoader)
+#else
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
+#endif
 
 nsImageLoader::nsImageLoader()
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
+#ifdef LOADER_THREADSAFE
+  mLock = PR_NewLock();
+#endif
 }
 
 nsImageLoader::~nsImageLoader()
 {
   /* destructor code */
+#ifdef LOADER_THREADSAFE
+  PR_DestroyLock(mLock);
+#endif
 }
 
 /* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
 NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIImageRequest **_retval)
 {
-  PR_ASSERT(aURI);
+  NS_ASSERTION(aURI, "nsImageLoader::LoadImage -- NULL URI pointer");
 
   nsImageRequest *imgRequest = nsnull;
 
   ImageCache::Get(aURI, &imgRequest); // addrefs
   if (!imgRequest) {
+#ifdef LOADER_THREADSAFE
+    nsAutoLock lock(mLock); // lock when we are adding things to the cache
+#endif
     nsCOMPtr<nsIIOService> ioserv(do_GetService("@mozilla.org/network/io-service;1"));
     if (!ioserv) return NS_ERROR_FAILURE;
 
@@ -103,7 +120,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 /* nsIImageRequest loadImageWithChannel(in nsIChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx, out nsIStreamListener); */
 NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIStreamListener **listener, nsIImageRequest **_retval)
 {
-  PR_ASSERT(channel);
+  NS_ASSERTION(channel, "nsImageLoader::LoadImageWithChannel -- NULL channel pointer");
 
   nsImageRequest *imgRequest = nsnull;
 
@@ -121,6 +138,10 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
 
     *listener = nsnull; // give them back a null nsIStreamListener
   } else {
+#ifdef LOADER_THREADSAFE
+    nsAutoLock lock(mLock); // lock when we are adding things to the cache
+#endif
+
     nsCOMPtr<nsIImageRequest> req(do_CreateInstance(kImageRequestCID));
 
     imgRequest = NS_REINTERPRET_CAST(nsImageRequest*, req.get());
