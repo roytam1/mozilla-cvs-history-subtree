@@ -549,7 +549,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
                   CONDUIT_LOG1(gFD, "Creating new Palm AB failed. retval=%d.\n", retval);
             }
             else
-              CONDUIT_LOG1(gFD, "  Loading moz AB records failed so can't create new Palm AB. retval=%d.\n", retval);
+              CONDUIT_LOG1(gFD, "  Loading moz AB records failed so can't create new Palm AB. retval=%x.\n", retval);
 
 
             // the MozAB is now synchronized
@@ -959,7 +959,7 @@ long CMozABConduitSync::CopyPCtoHH()
               CONDUIT_LOG1(gFD, "Creating new Palm AB failed. retval=%d.\n", retval);
         }
         else
-          CONDUIT_LOG1(gFD, "  Loading moz AB records failed so can't create new Palm AB. retval=%d.\n", retval);
+          CONDUIT_LOG1(gFD, "  Loading moz AB records failed so can't create new Palm AB. retval=%x.\n", retval);
 
 
         // delete the recordList now that palm is updated

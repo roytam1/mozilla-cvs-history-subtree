@@ -821,10 +821,11 @@ void nsAbIPCCard::CopyValue(PRBool isUnicode, nsString & attribValue, LPTSTR * r
         else { 
             nsCAutoString cStr; 
             cStr = NS_LossyConvertUCS2toASCII(attribValue);
-            length = cStr.Length()+1;
+            length = cStr.Length()+3;
             char * str = (char *) CoTaskMemAlloc(length);
-            strncpy(str, cStr.get(), length-1);
+            strncpy(str, cStr.get(), length);
             str[length-1] = '\0';
+            str[length-2] = '\0';
             *result = (LPTSTR) str;
         } 
     }
@@ -912,8 +913,8 @@ void nsAbIPCCard::JoinAddress(PRBool isUnicode, LPTSTR *ptrAddress, nsString &ad
   if(!strLength)
     return;
 
-  // Allocate space for 'strLength' plus one for null and one for "\x0A".
-  strLength += 2;
+  // Allocate space for 'strLength' plus two for nulls and one for "\x0A" and one for luck.
+  strLength += 4;
   if(isUnicode)
   { 
     PRUnichar * uniStr = (PRUnichar *) CoTaskMemAlloc(sizeof(PRUnichar) * (strLength));

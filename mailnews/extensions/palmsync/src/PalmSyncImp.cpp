@@ -347,18 +347,18 @@ STDMETHODIMP CPalmSyncImp::nsGetAllABCards(BOOL aIsUnicode, long aCategoryIndex,
 {
     // if sync is already going on wait for AckSyncDone to be called
     if(m_PalmHotSync)
-        return E_FAIL;
+        return E_PENDING;
 
     m_PalmHotSync = (nsAbPalmHotSync *) new nsAbPalmHotSync(aIsUnicode, aABName, (char*)aABName, aCategoryIndex, -1);
     if(!m_PalmHotSync)
-        return E_FAIL;
+        return E_OUTOFMEMORY;
 
     nsresult rv = ((nsAbPalmHotSync *)m_PalmHotSync)->Initialize();
     if (NS_SUCCEEDED(rv))
         rv = ((nsAbPalmHotSync *)m_PalmHotSync)->GetAllCards(aMozRecCount, aMozRecList);
 
     if (NS_FAILED(rv))
-        return E_FAIL;
+        return rv;
 
     return S_OK;
 }
@@ -445,11 +445,13 @@ void CPalmSyncImp::CopyCString(LPTSTR *destStr, nsCString srcStr)
   if (!destStr)
     return;
 
-  PRInt32 length = sizeof(char) * (srcStr.Length()+1);
+  PRInt32 length = sizeof(char) * (srcStr.Length()+3);
   *destStr = (LPTSTR) CoTaskMemAlloc(length);
   char *sp = (char *)*destStr;
-  strncpy(sp, srcStr.get(), length-1);
+  strncpy(sp, srcStr.get(), length); // doesn't this null fill the dest buffer?
   sp[length-1] = '\0';
+  sp[length-2] = '\0';
+  sp[length-3] = '\0';
 }
 
 
