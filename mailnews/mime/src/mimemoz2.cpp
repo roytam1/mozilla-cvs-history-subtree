@@ -1068,19 +1068,9 @@ mime_bridge_create_display_stream(
   if (!uri)
     return nsnull;
 
-#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
-  if (format_out == FO_MAIL_MESSAGE_TO || format_out == FO_CACHE_AND_MAIL_MESSAGE_TO)
-  {
-    /* Bad news -- this would cause an endless loop. */
-    PR_ASSERT(0);
-    return NULL;
-  }
-#endif
-
   msd = PR_NEWZAP(struct mime_stream_data);
   if (!msd) 
     return NULL;
-
 
   /* RICHIE_URL
   msd->url = PR_NEWZAP( URL_Struct );
@@ -1164,28 +1154,30 @@ mime_bridge_create_display_stream(
   }
 #endif
    
-  /* Set the defaults, based on the context, and the output-type.
-  */
-#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT ||
-      format_out == FO_PRINT ||
-      format_out == FO_CACHE_AND_PRINT ||
-      format_out == FO_SAVE_AS_POSTSCRIPT ||
-      format_out == FO_CACHE_AND_SAVE_AS_POSTSCRIPT)
-    msd->options->fancy_headers_p = PR_TRUE;
-  
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT)
-    msd->options->output_vcard_buttons_p = PR_TRUE;
-  
-  if (format_out == FO_NGLAYOUT ||
-      format_out == FO_CACHE_AND_NGLAYOUT) 
+  //
+  // Set the defaults, based on the context, and the output-type.
+  //
+  switch (format_out) 
   {
-    msd->options->fancy_links_p = PR_TRUE;
+		case nsMimeOutput::nsMimeMessageSplitDisplay:   // the wrapper HTML output to produce the split header/body display
+		case nsMimeOutput::nsMimeMessageHeaderDisplay:  // the split header/body display
+		case nsMimeOutput::nsMimeMessageBodyDisplay:    // the split header/body display
+  		msd->options->fancy_headers_p = PR_TRUE;
+      msd->options->output_vcard_buttons_p = PR_TRUE;
+      msd->options->fancy_links_p = PR_TRUE;
+      break;
+
+		case nsMimeOutput::nsMimeMessageQuoting:        // all HTML quoted output
+      msd->options->fancy_headers_p = PR_TRUE;
+      msd->options->fancy_links_p = PR_TRUE;
+      break;
+
+    case nsMimeOutput::nsMimeMessageRaw:              // the raw RFC822 data (view source) and attachments
+		case nsMimeOutput::nsMimeMessageDraftOrTemplate:  // Loading drafts & templates
+		case nsMimeOutput::nsMimeMessageEditorTemplate:   // Loading templates into editor
+      break;
   }
-#endif
-  
+
   msd->options->headers = MimeHeadersAll;
   
   // Get the libmime prefs...
@@ -1235,38 +1227,6 @@ mime_bridge_create_display_stream(
     )
     msd->options->headers = MimeHeadersMicroPlus;
 
-#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
-  if (format_out == FO_QUOTE_MESSAGE ||
-    format_out == FO_CACHE_AND_QUOTE_MESSAGE
-    || format_out == FO_QUOTE_HTML_MESSAGE
-    )
-  {
-    msd->options->headers = MimeHeadersCitation;
-    msd->options->fancy_headers_p = PR_FALSE;
-    if (format_out == FO_QUOTE_HTML_MESSAGE) {
-      msd->options->nice_html_only_p = PR_TRUE;
-    }
-  }
-  
-  else if (msd->options->headers == MimeHeadersSome &&
-    (format_out == FO_PRINT ||
-    format_out == FO_CACHE_AND_PRINT ||
-    format_out == FO_SAVE_AS_POSTSCRIPT ||
-    format_out == FO_CACHE_AND_SAVE_AS_POSTSCRIPT ||
-    format_out == FO_SAVE_AS_TEXT ||
-    format_out == FO_CACHE_AND_SAVE_AS_TEXT))
-    msd->options->headers = MimeHeadersSomeNoRef;
-  
-    /* If we're attaching a message (for forwarding) then we must eradicate all
-    traces of xlateion from it, since forwarding someone else a message
-    that wasn't xlated for them doesn't work.  We have to dexlate it
-    before sending it.
-  */
-  if ((format_out == FO_MAIL_TO || format_out == FO_CACHE_AND_MAIL_TO) &&
-    msd->options->write_html_p == PR_FALSE)
-    msd->options->dexlate_p = PR_TRUE;
-#endif
-  
   // RICHIE_URL msd->options->url                   = msd->url->address;
   msd->options->url = msd->url_name;
   msd->options->write_html_p          = PR_TRUE;
@@ -1283,13 +1243,16 @@ mime_bridge_create_display_stream(
     msd->options->output_fn           = mime_output_fn;
   
   msd->options->set_html_state_fn     = mime_set_html_state_fn;
-#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
-  if (format_out == FO_QUOTE_HTML_MESSAGE) {
+
+  //
+  // For quoting, don't mess with citatation...
+  if (format_out == nsMimeOutput::nsMimeMessageQuoting)
+  {
     msd->options->charset_conversion_fn = mime_insert_html_convert_charset;
     msd->options->dont_touch_citations_p = PR_TRUE;
-  } else 
-#endif
-    msd->options->charset_conversion_fn = mime_convert_charset;
+  }
+
+  msd->options->charset_conversion_fn = mime_convert_charset;
   msd->options->rfc1522_conversion_fn = mime_convert_rfc1522;
   msd->options->reformat_date_fn      = mime_reformat_date;
   msd->options->file_type_fn          = mime_file_type;
@@ -1330,22 +1293,11 @@ mime_bridge_create_display_stream(
     ****/
   }
 
-  /* ### mwelch We want FO_EDT_SAVE_IMAGE to behave like *_SAVE_AS here
-  because we're spooling untranslated raw data. */
-#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
-  if (format_out == FO_SAVE_AS ||
-    format_out == FO_CACHE_AND_SAVE_AS ||
-    format_out == FO_MAIL_TO ||
-    format_out == FO_CACHE_AND_MAIL_TO ||
-#ifdef FO_EDT_SAVE_IMAGE
-    format_out == FO_EDT_SAVE_IMAGE ||
-#endif
-    msd->options->part_to_load)
+  // If this is a part, then we should emit the HTML to render the data
+  // (i.e. embedded images)
+  if (msd->options->part_to_load)
     msd->options->write_html_p = PR_FALSE;
-#endif
-  
-  //  PR_ASSERT(!msd->stream);
-  
+
   obj = mime_new ((MimeObjectClass *)&mimeMessageClass,
     (MimeHeaders *) NULL,
     MESSAGE_RFC822);
