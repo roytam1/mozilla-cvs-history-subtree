@@ -220,8 +220,8 @@ NS_IMETHODIMP CBrowserContainer::PromptUsernameAndPassword(const PRUnichar *dial
         goto PUAP_CLEANUP;
     }
     // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
-    ::util_PostEvent(mInitContext, 
-                                             (PLEvent *) *actionEvent);
+    ::util_PostSynchronousEvent(mInitContext, 
+                                (PLEvent *) *actionEvent);
     rv = NS_OK;
  PUAP_CLEANUP:
 
@@ -333,7 +333,7 @@ CBrowserContainer::UniversalDialog(const PRUnichar *inTitleMessage,
         goto UD_CLEANUP;
     }
     // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
-    ::util_PostEvent(mInitContext, (PLEvent *) *actionEvent);
+    ::util_PostSynchronousEvent(mInitContext, (PLEvent *) *actionEvent);
 
     rv = NS_OK;
  UD_CLEANUP:

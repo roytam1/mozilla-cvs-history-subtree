@@ -133,7 +133,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
         ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: can't create wsLoadFromStreamEvent");
         goto NLFS_CLEANUP;
     }
-    ::util_PostEvent(initContext, (PLEvent *) *actionEvent);
+    ::util_PostSynchronousEvent(initContext, (PLEvent *) *actionEvent);
 
  NLFS_CLEANUP:
     ::util_ReleaseStringChars(env, uri, (const jchar *) uriStringUniChars);
@@ -221,7 +221,7 @@ Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeSetPrompt
 
     wsSetPromptEvent		* actionEvent = new wsSetPromptEvent(initContext->browserContainer, userPrompt);
     PLEvent			* event       = (PLEvent*) *actionEvent;
-    ::util_PostEvent(initContext, event);
+    ::util_PostSynchronousEvent(initContext, event);
 
 }
 
