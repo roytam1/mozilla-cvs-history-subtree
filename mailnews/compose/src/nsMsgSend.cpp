@@ -77,7 +77,7 @@
 #include "nsILoadGroup.h"
 #include "nsMsgSendReport.h"
 #include "nsMsgSimulateError.h"
-#include "composec.h" /* For S/MIME crypto interface */
+//#include "composec.h" /* For S/MIME crypto interface */
 
 
 // use these macros to define a class IID for our component. Our object currently 
