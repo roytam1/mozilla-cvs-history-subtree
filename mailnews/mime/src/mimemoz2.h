@@ -105,7 +105,6 @@ struct mime_stream_data {           /* This struct is the state we pass around
   PRInt16             lastcsid;     /* csid corresponding to above. */
   PRInt16             outcsid;      /* csid passed to EDT_PasteQuoteINTL */
   nsIMimeEmitter      *output_emitter;  /* Output emitter engine for libmime */
-  nsIPref             *prefs;       /* Connnection to prefs service manager */
 };
 
 ////////////////////////////////////////////////////////////////
@@ -114,22 +113,10 @@ struct mime_stream_data {           /* This struct is the state we pass around
 
 // Create bridge stream for libmime
 extern "C"
-void         *mime_bridge_create_stream(
-                                        nsIMimeEmitter      *newEmitter,
-                                        nsStreamConverter   *newPluginObj2,
-                                        nsIURI              *uri,
-                                        nsMimeOutputType    format_out);
-
-// Destroy bridge stream for libmime
-void          mime_bridge_destroy_stream(void *newStream);
-void          mime_bridge_set_output_type(void *bridgeStream, nsMimeOutputType aType);
-nsresult      mime_bridge_new_new_uri(void *bridgeStream, nsIURI *aURI);
-
-// These are hooks into the libmime parsing functions...
-extern "C" int            mime_display_stream_write (nsMIMESession *stream, const char* buf, PRInt32 size);
-//extern "C" void           mime_display_stream_complete (nsMIMESession *stream, PRBool  aProcessLeftoverData);
-extern "C" void           mime_display_stream_complete (nsMIMESession *stream);
-extern "C" void           mime_display_stream_abort (nsMIMESession *stream, int status);
+void         *mime_bridge_create_display_stream(nsIMimeEmitter      *newEmitter,
+                                                nsStreamConverter   *newPluginObj2,
+                                                nsIURI              *uri,
+                                                nsMimeOutputType    format_out);
 
 // To get the mime emitter...
 extern "C" nsIMimeEmitter   *GetMimeEmitter(MimeDisplayOptions *opt);
