@@ -30,7 +30,6 @@
 #include "SubNewView.h"
 #include "ViewGlue.h"
 
-#include "proto.h"
 #include "xfe.h"
 #include "msgcom.h"
 #include "xp_mem.h"
@@ -53,7 +52,7 @@ XFE_SubscribeView::XFE_SubscribeView(XFE_Component *toplevel_component,
 	int max_button_width;
 
 	// Clone the context
-	m_cloneContext = XP_NewContext(MWContext);
+	m_cloneContext = XP_NewContext();
 	if (!m_cloneContext)
 		return;
 	
