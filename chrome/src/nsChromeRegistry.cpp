@@ -3166,6 +3166,29 @@ NS_IMETHODIMP nsChromeRegistry::AllowScriptsForSkin(nsIURI* aChromeURI, PRBool *
   return NS_OK;
 }
 
+static nsresult
+GetFileAndLastModifiedTime(nsIProperties *aDirSvc,
+                           const char *aDirKey,
+                           const nsCSubstring &aLeafName,
+                           nsILocalFile **aFile,
+                           PRTime *aLastModified)
+{
+  *aLastModified = LL_ZERO;
+
+  nsresult rv;
+  nsCOMPtr<nsILocalFile> file;
+  rv = aDirSvc->Get(aDirKey, NS_GET_IID(nsILocalFile), getter_AddRefs(file));
+  if (NS_FAILED(rv))
+    return rv;
+  rv = file->AppendNative(aLeafName);
+  if (NS_SUCCEEDED(rv)) {
+    // if the file does not exist, this returns zero
+    file->GetLastModifiedTime(aLastModified);
+    file.swap(*aFile);
+  }
+  return rv;
+}
+
 NS_IMETHODIMP
 nsChromeRegistry::CheckForNewChrome()
 {
@@ -3177,49 +3200,47 @@ nsChromeRegistry::CheckForNewChrome()
 
   nsCOMPtr<nsIProperties> dirSvc =
            do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
-
-  if (NS_SUCCEEDED(rv)) {
-    (void)CheckForNewChrome(dirSvc, NS_APP_CHROME_DIR, NS_APP_CHROME_DIR);
-    (void)CheckForNewChrome(dirSvc, "AppletChrom", NS_APP_USER_CHROME_DIR);
-  }
-
-  return NS_OK;
-}
-
-nsresult
-nsChromeRegistry::CheckForNewChrome(nsIProperties *aDirSvc,
-                                    const char *aListDir,
-                                    const char *aCacheDir)
-{
-  nsresult rv;
-
-  // get file pointer and last-modified date for installed-chrome.txt
-  nsCOMPtr<nsILocalFile> listFile;
-  rv = aDirSvc->Get(aListDir, NS_GET_IID(nsILocalFile), getter_AddRefs(listFile));
   if (NS_FAILED(rv))
     return rv;
-  rv = listFile->AppendNative(kInstalledChromeFileName);
-  if (NS_FAILED(rv))
-    return rv;
-  nsInt64 listDate;
-  (void)listFile->GetLastModifiedTime(&listDate.mValue);
 
-  // get file pointer and last-modified date for chrome.rdf
-  nsCOMPtr<nsILocalFile> cacheFile;
-  rv = aDirSvc->Get(aCacheDir, NS_GET_IID(nsILocalFile), getter_AddRefs(cacheFile));
-  if (NS_FAILED(rv))
-    return rv;
-  rv = cacheFile->AppendNative(kChromeFileName);
-  if (NS_FAILED(rv))
-    return rv;
-  nsInt64 cacheDate;
-  (void)cacheFile->GetLastModifiedTime(&cacheDate.mValue);
+  nsCOMPtr<nsILocalFile> cacheFile, listFile;
+  nsInt64 cacheDate, listDate;
 
-  // XXXldb For the case where the file is nonexistent, we're depending
-  // on the fact that the nsInt64 constructor initializes to 0 and
-  // |GetLastModifiedTime| doesn't touch the out parameter.
+  // check the application directory first.
+  GetFileAndLastModifiedTime(dirSvc, NS_APP_CHROME_DIR, kChromeFileName,
+                             getter_AddRefs(cacheFile), &cacheDate.mValue);
+  GetFileAndLastModifiedTime(dirSvc, NS_APP_CHROME_DIR, kInstalledChromeFileName,
+                             getter_AddRefs(listFile), &listDate.mValue);
   if (listDate > cacheDate)
-    rv = ProcessNewChromeFile(listFile);
+    ProcessNewChromeFile(listFile);
+
+  // check the extra chrome directories
+  nsCOMPtr<nsISimpleEnumerator> chromeDL;
+  rv = dirSvc->Get(NS_APP_CHROME_DIR_LIST, NS_GET_IID(nsISimpleEnumerator),
+                   getter_AddRefs(chromeDL));
+  if (NS_SUCCEEDED(rv)) {
+    // we assume that any other list files will only reference chrome that
+    // should be installed in the profile directory.  we might want to add
+    // some actual checks to this effect.
+    GetFileAndLastModifiedTime(dirSvc, NS_APP_USER_CHROME_DIR, kChromeFileName,
+                               getter_AddRefs(cacheFile), &cacheDate.mValue);
+    PRBool hasMore;
+    while (NS_SUCCEEDED(chromeDL->HasMoreElements(&hasMore)) && hasMore) {
+      nsCOMPtr<nsISupports> element;
+      chromeDL->GetNext(getter_AddRefs(element));
+      if (!element)
+        continue;
+      nsCOMPtr<nsILocalFile> listFile = do_QueryInterface(element);
+      if (!listFile)
+        continue;
+      rv = listFile->AppendNative(kInstalledChromeFileName);
+      if (NS_FAILED(rv))
+        continue;
+      listFile->GetLastModifiedTime(&listDate.mValue);
+      if (listDate > cacheDate)
+        ProcessNewChromeFile(listFile);
+    }
+  }
 
   return rv;
 }

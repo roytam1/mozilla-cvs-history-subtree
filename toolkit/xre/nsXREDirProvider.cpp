@@ -265,9 +265,14 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
     // We must create the profile directory here if it does not exist.
     rv |= EnsureDirectoryExists(file);
   }
+  // XXX this needs to go away, but we keep it around until we have
+  // a better way of expressing resource:// URLs that point into the
+  // applet directory.  maybe we modify resource:/// to be that.
   else if (mAppletDir && !strcmp(aProperty, "AppletD")) {
     rv = mAppletDir->Clone(getter_AddRefs(file));
   }
+  // XXX this needs to go away until we teach widget code to find
+  // icons using NS_APP_CHROME_DIR_LIST.
   else if (mAppletDir && !strcmp(aProperty, "AppletChrom")) {
     rv = mAppletDir->Clone(getter_AddRefs(file));
     rv |= file->AppendNative(NS_LITERAL_CSTRING("chrome"));
@@ -446,6 +451,20 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
       mProfileDir->Clone(getter_AddRefs(profileFile));
       profileFile->AppendNative(NS_LITERAL_CSTRING("defaults.ini"));
       LoadDirsIntoArray(profileFile, directories);
+    }
+
+    rv = NS_NewArrayEnumerator(aResult, directories);
+  }
+  else if (!strcmp(aProperty, NS_APP_CHROME_DIR_LIST)) {
+    nsCOMArray<nsIFile> directories;
+
+    if (mAppletDir) {
+      nsCOMPtr<nsIFile> file;
+      mAppletDir->Clone(getter_AddRefs(file));
+      file->AppendNative(NS_LITERAL_CSTRING("chrome"));
+      PRBool exists;
+      if (NS_SUCCEEDED(file->Exists(&exists)) && exists)
+        directories.AppendObject(file);
     }
 
     rv = NS_NewArrayEnumerator(aResult, directories);

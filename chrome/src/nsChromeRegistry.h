@@ -220,7 +220,6 @@ private:
                              PRBool aUseProfile, PRBool aAllowScripts, PRBool aRemove);
   nsresult UninstallProvider(const nsACString& aProviderType, const nsACString& aProviderName, PRBool aUseProfile);
 
-  NS_HIDDEN_(nsresult) CheckForNewChrome(nsIProperties *aDirSvc, const char *aListDir, const char *aCacheDir);
   NS_HIDDEN_(nsresult) ProcessNewChromeFile(nsILocalFile *aListFile);
   NS_HIDDEN_(nsresult) ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength);
 
