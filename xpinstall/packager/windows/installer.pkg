@@ -1,0 +1,3 @@
+[seamonkey-installer-stub-en-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/mozilla-win32-stub-installer.jst
+dist/install-seamonkey/mozilla-win32-stub-installer.exe xpiroot/mozilla-win32-stub-installer.exe
