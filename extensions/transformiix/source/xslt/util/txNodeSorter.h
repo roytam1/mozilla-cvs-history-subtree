@@ -84,7 +84,7 @@ private:
         Expr* mExpr;
         txXPathResultComparator* mComparator;
     };
-    
+
     static int compareNodes(const void* aIndexA, const void* aIndexB,
                             void* aSortData);
     static PRBool calcSortValue(TxObject*& aSortValue, SortKey* aKey,
