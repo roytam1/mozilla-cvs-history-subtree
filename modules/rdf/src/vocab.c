@@ -206,6 +206,14 @@ createNavCenterVocab () {
   /* Toolbar Appearance Styles */
   gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* "Toolbar Bitmap Position" */ );
   gNavCenter->toolbarButtonsFixedSize = newResource("toolbarButtonsFixedSize", 0 /* "Toolbar Bitmap Position" */ );
+  gNavCenter->RDF_smallDisabledIcon = newResource("smallDisabledIcon", 0);
+  gNavCenter->RDF_largeDisabledIcon  = newResource("largeDisabledIcon", 0);
+  gNavCenter->RDF_smallRolloverIcon = newResource("smallRolloverIcon", 0);
+  gNavCenter->RDF_largeRolloverIcon  = newResource("largeRolloverIcon", 0);
+  gNavCenter->RDF_smallPressedIcon = newResource("smallPressedIcon", 0);
+  gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0);
+  gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0);
+  gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0);
 
 #endif /* MOZILLA_CLIENT */
 }

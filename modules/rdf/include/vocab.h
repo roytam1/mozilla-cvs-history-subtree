@@ -70,8 +70,14 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_ColumnWidth;
   RDF_Resource RDF_ColumnIconURL;
   RDF_Resource RDF_ColumnDataType;
-  RDF_Resource RDF_smallIcon;
-  RDF_Resource RDF_largeIcon;
+  RDF_Resource RDF_smallIcon;				/* Small normal icon. */
+  RDF_Resource RDF_smallRolloverIcon;		/* The small icon to display on rollover. */
+  RDF_Resource RDF_smallPressedIcon;		/* The small icon to display on a press. */
+  RDF_Resource RDF_smallDisabledIcon;		/* The icon to display when disabled. */
+  RDF_Resource RDF_largeIcon;				/* Large normal icon. */
+  RDF_Resource RDF_largeRolloverIcon;		/* Large rollover icon. */
+  RDF_Resource RDF_largePressedIcon;		/* Large pressed icon. */
+  RDF_Resource RDF_largeDisabledIcon;		/* Large disabled icon. */
   RDF_Resource RDF_Guide;
   RDF_Resource RDF_HTMLURL;
   RDF_Resource RDF_HTMLHeight;
@@ -138,7 +144,9 @@ typedef struct _RDF_NCVocabStruct {
   /* Toolbar Appearance Styles */
   RDF_Resource toolbarBitmapPosition; /* Bitmap's position ("side"/"top") */
   RDF_Resource toolbarButtonsFixedSize; /* Whether or not the buttons must be the same size ("yes"/"no") */
-
+  RDF_Resource buttonTooltipText;	/* The tooltip text for a button. */
+  RDF_Resource buttonStatusbarText;	/* The status bar text for a button. */
+  
 } RDF_NCVocabStruct;
 
 typedef RDF_NCVocabStruct* RDF_NCVocab;
