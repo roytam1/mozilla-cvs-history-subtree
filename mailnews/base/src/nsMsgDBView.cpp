@@ -94,6 +94,7 @@ nsMsgDBView::nsMsgDBView()
   m_currentlyDisplayedMsgKey = nsMsgKey_None;
   mNumSelectedRows = 0;
   mSupressMsgDisplay = PR_FALSE;
+  mOfflineMsgSelected = PR_FALSE;
   mIsSpecialFolder = PR_FALSE;
   mIsNews = PR_FALSE;
   mDeleteModel = nsMsgImapDeleteModels::MoveToTrash;
@@ -586,8 +587,13 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
   // if the currentSelection changed then we have a message to display
   PRUint32 numSelected = 0;
-  GetNumSelected(&numSelected);
 
+  GetNumSelected(&numSelected);
+  nsUInt32Array selection;
+  GetSelectedIndices(&selection);
+  nsMsgViewIndex *indices = selection.GetData();
+
+  PRBool offlineMsgSelected = (indices) ? OfflineMsgSelected(indices, numSelected) : PR_FALSE;
   // if only one item is selected then we want to display a message
   if (numSelected == 1)
   {
@@ -608,6 +614,8 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
           UpdateDisplayMessage(msgkey);
       }
     }
+    else
+      numSelected = 0; // selection seems bogus, so set to 0.
   }
 
   // determine if we need to push command update notifications out to the UI or not.
@@ -617,9 +625,10 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
   // (2) it went from 1 to 0
   // (3) it went from 1 to many
   // (4) it went from many to 1 or 0
+  // (5) a different msg was selected - perhaps it was offline or not...
 
-  if (numSelected == mNumSelectedRows || 
-      (numSelected > 1 && mNumSelectedRows > 1) )
+  if ((numSelected == mNumSelectedRows || 
+      (numSelected > 1 && mNumSelectedRows > 1)) && mOfflineMsgSelected == offlineMsgSelected)
   {
 
   }
@@ -628,6 +637,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     mCommandUpdater->UpdateCommandStatus();
   }
   
+  mOfflineMsgSelected = offlineMsgSelected;
   mNumSelectedRows = numSelected;
   return NS_OK;
 }
@@ -1378,6 +1388,12 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
   case nsMsgViewCommandType::downloadSelectedForOffline:
     *selectable_p = (numindices > 0);
     break;
+  case nsMsgViewCommandType::cmdRequiringMsgBody:
+    {
+    nsMsgViewIndex *indices = selection.GetData();
+    *selectable_p = (numindices > 0) && (!WeAreOffline() || OfflineMsgSelected(indices, numindices));
+    }
+    break;
   case nsMsgViewCommandType::downloadFlaggedForOffline:
   case nsMsgViewCommandType::markAllRead:
     *selectable_p = PR_TRUE;
@@ -1581,6 +1597,7 @@ nsresult nsMsgDBView::DownloadForOffline(nsIMsgWindow *window, nsMsgViewIndex *i
     {
       PRUint32 flags;
       msgHdr->GetFlags(&flags);
+      if ((flags & MSG_FLAG_OFFLINE))
       if (! (flags & MSG_FLAG_OFFLINE))
         messageArray->AppendElement(msgHdr);
     }
@@ -4356,6 +4373,17 @@ nsMsgDBView::OnStopCopy(nsresult aStatus)
 }
 // end nsIMsgCopyServiceListener methods
 
+PRBool nsMsgDBView::OfflineMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndices)
+{
+  nsresult rv = NS_OK;
+  for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++)
+  {
+    PRUint32 flags = m_flags.GetAt(indices[index]);
+    if ((flags & MSG_FLAG_OFFLINE))
+      return PR_TRUE;
+  }
+  return PR_FALSE;
+}
 
 nsresult
 nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
