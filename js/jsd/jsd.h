@@ -146,13 +146,16 @@ typedef struct JSDContext
     JSCList                 sources;
     JSCList                 removedSources;
     uintN                   sourceAlterCount;
-
+    JSHashTable*            atoms;
+    JSCList                 objectsList;
+    JSHashTable*            objectsTable;
 #ifdef JSD_THREADSAFE
     void*                   scriptsLock;
     void*                   sourceTextLock;
+    void*                   objectsLock;
+    void*                   atomsLock;
     void*                   threadStatesLock;
 #endif /* JSD_THREADSAFE */
-
 #ifdef JSD_HAS_DANGEROUS_THREAD
     void*                   dangerousThread;
 #endif /* JSD_HAS_DANGEROUS_THREAD */
@@ -253,6 +256,23 @@ typedef struct JSDProperty
     uintN       flags;
 } JSDProperty;
 
+typedef struct JSDAtom
+{
+    char* str;      /* must be first element in stuct for compare */
+    intN  refcount;
+} JSDAtom;
+
+typedef struct JSDObject
+{
+    JSCList     links;      /* we are part of a JSCList */
+    JSObject*   obj;
+    JSDAtom*    newURL;
+    uintN       newLineno;
+    JSDAtom*    ctorURL;
+    uintN       ctorLineno;
+    JSDAtom*    ctorName;
+} JSDObject;
+
 /***************************************************************************/
 /* Code validation support */
 
@@ -265,6 +285,7 @@ extern void JSD_ASSERT_VALID_STACK_FRAME(JSDStackFrameInfo* jsdframe);
 extern void JSD_ASSERT_VALID_EXEC_HOOK(JSDExecHook* jsdhook);
 extern void JSD_ASSERT_VALID_VALUE(JSDValue* jsdval);
 extern void JSD_ASSERT_VALID_PROPERTY(JSDProperty* jsdprop);
+extern void JSD_ASSERT_VALID_OBJECT(JSDObject* jsdobj);
 #else
 #define JSD_ASSERT_VALID_CONTEXT(x)     ((void)0)
 #define JSD_ASSERT_VALID_SCRIPT(x)      ((void)0)
@@ -274,6 +295,7 @@ extern void JSD_ASSERT_VALID_PROPERTY(JSDProperty* jsdprop);
 #define JSD_ASSERT_VALID_EXEC_HOOK(x)   ((void)0)
 #define JSD_ASSERT_VALID_VALUE(x)       ((void)0)
 #define JSD_ASSERT_VALID_PROPERTY(x)    ((void)0)
+#define JSD_ASSERT_VALID_OBJECT(x)      ((void)0)
 #endif
 
 /***************************************************************************/
@@ -603,8 +625,10 @@ extern void* _jsd_global_lock;
 
 /* locks for the subsystems of a given context */
 #define JSD_INIT_LOCKS(jsdc)                                    \
-    ( (NULL != (jsdc->scriptsLock = jsd_CreateLock())) &&       \
-      (NULL != (jsdc->sourceTextLock = jsd_CreateLock())) &&    \
+    ( (NULL != (jsdc->scriptsLock      = jsd_CreateLock())) &&  \
+      (NULL != (jsdc->sourceTextLock   = jsd_CreateLock())) &&  \
+      (NULL != (jsdc->atomsLock        = jsd_CreateLock())) &&  \
+      (NULL != (jsdc->objectsLock      = jsd_CreateLock())) &&  \
       (NULL != (jsdc->threadStatesLock = jsd_CreateLock())) )
 
 #define JSD_LOCK_SCRIPTS(jsdc)        jsd_Lock(jsdc->scriptsLock)
@@ -612,6 +636,12 @@ extern void* _jsd_global_lock;
 
 #define JSD_LOCK_SOURCE_TEXT(jsdc)    jsd_Lock(jsdc->sourceTextLock)
 #define JSD_UNLOCK_SOURCE_TEXT(jsdc)  jsd_Unlock(jsdc->sourceTextLock)
+
+#define JSD_LOCK_ATOMS(jsdc)          jsd_Lock(jsdc->atomsLock)
+#define JSD_UNLOCK_ATOMS(jsdc)        jsd_Unlock(jsdc->atomsLock)
+
+#define JSD_LOCK_OBJECTS(jsdc)        jsd_Lock(jsdc->objectsLock)
+#define JSD_UNLOCK_OBJECTS(jsdc)      jsd_Unlock(jsdc->objectsLock)
 
 #define JSD_LOCK_THREADSTATES(jsdc)   jsd_Lock(jsdc->threadStatesLock)
 #define JSD_UNLOCK_THREADSTATES(jsdc) jsd_Unlock(jsdc->threadStatesLock)
@@ -629,6 +659,12 @@ extern void* _jsd_global_lock;
 #define JSD_LOCK_SOURCE_TEXT(jsdc)    ((void)0)
 #define JSD_UNLOCK_SOURCE_TEXT(jsdc)  ((void)0)
 
+#define JSD_LOCK_ATOMS(jsdc)          ((void)0)
+#define JSD_UNLOCK_ATOMS(jsdc)        ((void)0)
+
+#define JSD_LOCK_OBJECTS(jsdc)        ((void)0)
+#define JSD_UNLOCK_OBJECTS(jsdc)      ((void)0)
+
 #define JSD_LOCK_THREADSTATES(jsdc)   ((void)0)
 #define JSD_UNLOCK_THREADSTATES(jsdc) ((void)0)
 
@@ -642,16 +678,24 @@ extern void* _jsd_global_lock;
 #if defined(JSD_THREADSAFE) && defined(DEBUG)
 #define JSD_SCRIPTS_LOCKED(jsdc)        (jsd_IsLocked(jsdc->scriptsLock))
 #define JSD_SOURCE_TEXT_LOCKED(jsdc)    (jsd_IsLocked(jsdc->sourceTextLock))
+#define JSD_ATOMS_LOCKED(jsdc)          (jsd_IsLocked(jsdc->atomsLock))
+#define JSD_OBJECTS_LOCKED(jsdc)        (jsd_IsLocked(jsdc->objectsLock))
 #define JSD_THREADSTATES_LOCKED(jsdc)   (jsd_IsLocked(jsdc->threadStatesLock))
 #define JSD_SCRIPTS_UNLOCKED(jsdc)      (!jsd_IsLocked(jsdc->scriptsLock))
 #define JSD_SOURCE_TEXT_UNLOCKED(jsdc)  (!jsd_IsLocked(jsdc->sourceTextLock))
+#define JSD_ATOMS_UNLOCKED(jsdc)        (!jsd_IsLocked(jsdc->atomsLock))
+#define JSD_OBJECTS_UNLOCKED(jsdc)      (!jsd_IsLocked(jsdc->objectsLock))
 #define JSD_THREADSTATES_UNLOCKED(jsdc) (!jsd_IsLocked(jsdc->threadStatesLock))
 #else
 #define JSD_SCRIPTS_LOCKED(jsdc)        1
 #define JSD_SOURCE_TEXT_LOCKED(jsdc)    1
+#define JSD_ATOMS_LOCKED(jsdc)          1
+#define JSD_OBJECTS_LOCKED(jsdc)        1
 #define JSD_THREADSTATES_LOCKED(jsdc)   1
 #define JSD_SCRIPTS_UNLOCKED(jsdc)      1
 #define JSD_SOURCE_TEXT_UNLOCKED(jsdc)  1
+#define JSD_ATOMS_UNLOCKED(jsdc)        1
+#define JSD_OBJECTS_UNLOCKED(jsdc)      1
 #define JSD_THREADSTATES_UNLOCKED(jsdc) 1
 #endif /* defined(JSD_THREADSAFE) && defined(DEBUG) */
 
@@ -793,10 +837,80 @@ extern uintN
 jsd_GetPropertyVarArgSlot(JSDContext* jsdc, JSDProperty* jsdprop);
 
 /**************************************************/
+/* Stepping Functions */
 
 extern void * JS_DLL_CALLBACK
 jsd_InterpreterHook(JSContext *cx, JSStackFrame *fp, JSBool before,
                     JSBool *ok, void *closure);
+
+/**************************************************/
+/* Object Functions */
+
+extern JSBool
+jsd_InitObjectManager(JSDContext* jsdc);
+
+extern void
+jsd_DestroyObjectManager(JSDContext* jsdc);
+
+extern void JS_DLL_CALLBACK
+jsd_ObjectHook(JSContext *cx, JSObject *obj, JSBool isNew, void *closure);
+
+extern void
+jsd_Constructing(JSDContext* jsdc, JSContext *cx, JSObject *obj,
+                 JSStackFrame *fp);
+
+extern JSDObject*
+jsd_IterateObjects(JSDContext* jsdc, JSDObject** iterp);
+
+extern JSObject*
+jsd_GetWrappedObject(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern const char*
+jsd_GetObjectNewURL(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern uintN
+jsd_GetObjectNewLineNumber(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern const char*
+jsd_GetObjectConstructorURL(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern uintN
+jsd_GetObjectConstructorLineNumber(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern const char*
+jsd_GetObjectConstructorName(JSDContext* jsdc, JSDObject* jsdobj);
+
+extern JSDObject*
+jsd_GetJSDObjectForJSObject(JSDContext* jsdc, JSObject* jsobj);
+
+extern JSDObject*
+jsd_GetObjectForValue(JSDContext* jsdc, JSDValue* jsdval);
+
+/*
+* returns new refcounted JSDValue
+*/
+extern JSDValue*
+jsd_GetValueForObject(JSDContext* jsdc, JSDObject* jsdobj);
+
+/**************************************************/
+/* Atom Functions */
+
+extern JSBool
+jsd_CreateAtomTable(JSDContext* jsdc);
+
+extern void
+jsd_DestroyAtomTable(JSDContext* jsdc);
+
+extern JSDAtom*
+jsd_AddAtom(JSDContext* jsdc, const char* str);
+
+extern JSDAtom*
+jsd_CloneAtom(JSDContext* jsdc, JSDAtom* atom);
+
+extern void
+jsd_DropAtom(JSDContext* jsdc, JSDAtom* atom);
+
+#define JSD_ATOM_TO_STRING(a) ((const char*)((a)->str))
 
 /***************************************************************************/
 /* Livewire specific API */

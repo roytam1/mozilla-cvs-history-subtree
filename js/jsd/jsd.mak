@@ -41,8 +41,10 @@ all: $(OBJ) $(OBJ)\$(PROJ).dll
 
 $(OBJ)\$(PROJ).dll:         \
         $(OBJ)\jsdebug.obj  \
+        $(OBJ)\jsd_atom.obj \
         $(OBJ)\jsd_high.obj \
         $(OBJ)\jsd_hook.obj \
+        $(OBJ)\jsd_obj.obj  \
         $(OBJ)\jsd_scpt.obj \
         $(OBJ)\jsd_stak.obj \
         $(OBJ)\jsd_step.obj \

@@ -59,7 +59,7 @@ void JSD_ASSERT_VALID_PROPERTY(JSDProperty* jsdprop)
     JS_ASSERT(jsdprop->val->nref > 0);
     if(jsdprop->alias)
         JS_ASSERT(jsdprop->alias->nref > 0);
-}    
+}
 #endif
 
 
@@ -241,7 +241,7 @@ jsd_NewValue(JSDContext* jsdc, jsval val)
     {
         if(!JS_AddRoot(jsdc->dumbContext, &jsdval->val))
         {
-            free(jsdval);        
+            free(jsdval);
             return NULL;
         }
     }
@@ -271,7 +271,7 @@ jsd_GetValueWrappedJSVal(JSDContext* jsdc, JSDValue* jsdval)
     return jsdval->val;
 }
 
-static JSDProperty* _newProperty(JSDContext* jsdc, JSPropertyDesc* pd, 
+static JSDProperty* _newProperty(JSDContext* jsdc, JSPropertyDesc* pd,
                                  uintN additionalFlags)
 {
     JSDProperty* jsdprop;
@@ -290,7 +290,7 @@ static JSDProperty* _newProperty(JSDContext* jsdc, JSPropertyDesc* pd,
     if(!(jsdprop->val = jsd_NewValue(jsdc, pd->value)))
         goto new_prop_fail;
 
-    if((jsdprop->flags & JSDPD_ALIAS) && 
+    if((jsdprop->flags & JSDPD_ALIAS) &&
        !(jsdprop->alias = jsd_NewValue(jsdc, pd->alias)))
         goto new_prop_fail;
 
@@ -298,7 +298,7 @@ static JSDProperty* _newProperty(JSDContext* jsdc, JSPropertyDesc* pd,
 new_prop_fail:
     jsd_DropProperty(jsdc, jsdprop);
     return NULL;
-}    
+}
 
 static void _freeProps(JSDContext* jsdc, JSDValue* jsdval)
 {
@@ -312,7 +312,7 @@ static void _freeProps(JSDContext* jsdc, JSDValue* jsdval)
     }
     JS_ASSERT(JS_CLIST_IS_EMPTY(&jsdval->props));
     CLEAR_BIT_FLAG(jsdval->flags, GOT_PROPS);
-}    
+}
 
 static JSBool _buildProps(JSDContext* jsdc, JSDValue* jsdval)
 {
@@ -343,7 +343,7 @@ static JSBool _buildProps(JSDContext* jsdc, JSDValue* jsdval)
     JS_PutPropertyDescArray(cx, &pda);
     SET_BIT_FLAG(jsdval->flags, GOT_PROPS);
     return !JS_CLIST_IS_EMPTY(&jsdval->props);
-}    
+}
 
 #undef  DROP_CLEAR_VALUE
 #define DROP_CLEAR_VALUE(jsdc, x) if(x){jsd_DropValue(jsdc,x); x = NULL;}
@@ -389,7 +389,7 @@ jsd_GetCountOfProperties(JSDContext* jsdc, JSDValue* jsdval)
         count++;
     }
     return count;
-}        
+}
 
 JSDProperty*
 jsd_IterateProperties(JSDContext* jsdc, JSDValue* jsdval, JSDProperty **iterp)
@@ -447,7 +447,7 @@ jsd_GetValueProperty(JSDContext* jsdc, JSDValue* jsdval, JSString* name)
     nameLen   = JS_GetStringLength(name);
 
     /* It's OK if this fails - we just don't get attribs */
-    JS_GetUCPropertyAttributes(cx, obj, nameChars, nameLen, &attrs, &found); 
+    JS_GetUCPropertyAttributes(cx, obj, nameChars, nameLen, &attrs, &found);
 
     if(!JS_GetUCProperty(cx, obj, nameChars, nameLen, &val))
         return NULL;
@@ -465,7 +465,7 @@ jsd_GetValueProperty(JSDContext* jsdc, JSDValue* jsdval, JSString* name)
         | (attrs & JSPROP_PERMANENT) ? JSPD_PERMANENT : 0;
 
     return _newProperty(jsdc, &pd, JSDPD_HINTED);
-}        
+}
 
 
 JSDValue*
@@ -549,8 +549,8 @@ jsd_GetValueClassName(JSDContext* jsdc, JSDValue* jsdval)
         if(OBJ_GET_CLASS(cx, obj))
             jsdval->className = OBJ_GET_CLASS(cx, obj)->name;
     }
-    return jsdval->className;        
-}        
+    return jsdval->className;
+}
 
 /***************************************************************************/
 /***************************************************************************/

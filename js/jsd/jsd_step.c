@@ -22,9 +22,9 @@
 
 #include "jsd.h"
 
-/*                    
-* #define JSD_TRACE 1 
-*/                    
+/*
+* #define JSD_TRACE 1
+*/
 
 #ifdef JSD_TRACE
 
@@ -41,10 +41,10 @@ _indentSpaces(int i)
     }
     if(i > MAX_INDENT) return p;
     return p + MAX_INDENT-i;
-}        
+}
 
-static void 
-_interpreterTrace(JSDContext* jsdc, JSContext *cx, JSStackFrame *fp, 
+static void
+_interpreterTrace(JSDContext* jsdc, JSContext *cx, JSStackFrame *fp,
                   JSBool before, JSBool *ok)
 {
     JSDScript* jsdscript = NULL;
@@ -67,13 +67,15 @@ _interpreterTrace(JSDContext* jsdc, JSContext *cx, JSStackFrame *fp,
 
     if(before)
     {
-        buf = JS_smprintf("%sentering %s\n", 
+        buf = JS_smprintf("%sentering %s %s this: %0x\n",
                 _indentSpaces(indent++),
-                funName);
+                funName,
+                JS_IsContructorFrame(cx, fp) ? "constructing":"",
+                (int)JS_GetFrameThis(cx, fp));
     }
     else
     {
-        buf = JS_smprintf("%sleaving %s\n", 
+        buf = JS_smprintf("%sleaving %s\n",
                 _indentSpaces(--indent),
                 funName);
     }
@@ -98,16 +100,19 @@ jsd_InterpreterHook(JSContext *cx, JSStackFrame *fp, JSBool before,
 
     jsd_JSContextUsed(jsdc, cx);
 
+    if(before && JS_IsContructorFrame(cx, fp))
+        jsd_Constructing(jsdc, cx, JS_GetFrameThis(cx, fp), fp);
+
 #ifdef JSD_TRACE
     _interpreterTrace(jsdc, cx, fp, before, ok);
     return closure;
 #else
     return NULL;
 #endif
-/*                                        
+/*
 *   use this before calling any hook...
-*     if( JSD_IS_DANGEROUS_THREAD(jsdc) ) 
-*         return NULL;                    
-*/                                        
-        
+*     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
+*         return NULL;
+*/
+
 }

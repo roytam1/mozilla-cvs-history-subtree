@@ -51,7 +51,7 @@ void JSD_ASSERT_VALID_CONTEXT(JSDContext* jsdc)
 }
 #endif
 
-static JSHashNumber
+JS_STATIC_DLL_CALLBACK(JSHashNumber)
 _hash_root(const void *key)
 {
     return ((JSHashNumber) key) >> 2; /* help lame MSVC1.5 on Win16 */
@@ -116,6 +116,12 @@ _newJSDContext(JSRuntime*         jsrt,
     if( ! jsdc->jscontexts )
         goto label_newJSDContext_failure;
 
+    if( ! jsd_CreateAtomTable(jsdc) )
+        goto label_newJSDContext_failure;
+
+    if( ! jsd_InitObjectManager(jsdc) )
+        goto label_newJSDContext_failure;
+
     jsdc->dumbContext = JS_NewContext(jsdc->jsrt, 256);
     if( ! jsdc->dumbContext )
         goto label_newJSDContext_failure;
@@ -136,6 +142,10 @@ _newJSDContext(JSRuntime*         jsrt,
     return jsdc;
 
 label_newJSDContext_failure:
+    jsd_DestroyObjectManager(jsdc);
+    jsd_DestroyAtomTable(jsdc);
+    if( jsdc->jscontexts )
+        JS_HashTableDestroy(jsdc->jscontexts);
     if( jsdc )
         free(jsdc);
     return NULL;
@@ -160,10 +170,14 @@ _destroyJSDContext(JSDContext* jsdc)
     JS_REMOVE_LINK(&jsdc->links);
     JSD_UNLOCK();
 
+    jsd_DestroyObjectManager(jsdc);
+    jsd_DestroyAtomTable(jsdc);
+
     if( jsdc->jscontexts )
     {
         JS_HashTableEnumerateEntries(jsdc->jscontexts, _hash_entry_zapper, NULL);
         JS_HashTableDestroy(jsdc->jscontexts);
+        jsdc->jscontexts = NULL;
     }
 
     jsdc->inited = JS_FALSE;
@@ -198,6 +212,7 @@ jsd_DebuggerOnForUser(JSRuntime*         jsrt,
     JS_SetDebuggerHandler(jsdc->jsrt, jsd_DebuggerHandler, jsdc);
     JS_SetExecuteHook(jsdc->jsrt, jsd_InterpreterHook, jsdc);
     JS_SetCallHook(jsdc->jsrt, jsd_InterpreterHook, jsdc);
+    JS_SetObjectHook(jsdc->jsrt, jsd_ObjectHook, jsdc);
 #ifdef LIVEWIRE
     LWDBG_SetNewScriptHookProc(jsd_NewScriptHookProc, jsdc);
 #endif
@@ -229,6 +244,7 @@ jsd_DebuggerOff(JSDContext* jsdc)
     JS_SetDebuggerHandler(jsdc->jsrt, NULL, NULL);
     JS_SetExecuteHook(jsdc->jsrt, NULL, NULL);
     JS_SetCallHook(jsdc->jsrt, NULL, NULL);
+    JS_SetObjectHook(jsdc->jsrt, NULL, NULL);
 #ifdef LIVEWIRE
     LWDBG_SetNewScriptHookProc(NULL,NULL);
 #endif

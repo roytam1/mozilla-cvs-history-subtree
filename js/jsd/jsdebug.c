@@ -897,6 +897,103 @@ JSD_GetPropertyVarArgSlot(JSDContext* jsdc, JSDProperty* jsdprop)
     return jsd_GetPropertyVarArgSlot(jsdc, jsdprop);
 }
 
+/**************************************************/
+/* Object Functions */
+
+JSD_PUBLIC_API(void)
+JSD_LockObjectSubsystem(JSDContext* jsdc)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_LOCK_OBJECTS(jsdc);
+}
+
+JSD_PUBLIC_API(void)
+JSD_UnlockObjectSubsystem(JSDContext* jsdc)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_UNLOCK_OBJECTS(jsdc);
+}
+
+JSD_PUBLIC_API(JSDObject*)
+JSD_IterateObjects(JSDContext* jsdc, JSDObject** iterp)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    return jsd_IterateObjects(jsdc, iterp);
+}
+
+JSD_PUBLIC_API(JSObject*)
+JSD_GetWrappedObject(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetWrappedObject(jsdc, jsdobj);
+
+}
+
+JSD_PUBLIC_API(const char*)
+JSD_GetObjectNewURL(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetObjectNewURL(jsdc, jsdobj);
+}
+
+JSD_PUBLIC_API(uintN)
+JSD_GetObjectNewLineNumber(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetObjectNewLineNumber(jsdc, jsdobj);
+}
+
+JSD_PUBLIC_API(const char*)
+JSD_GetObjectConstructorURL(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetObjectConstructorURL(jsdc, jsdobj);
+}
+
+JSD_PUBLIC_API(uintN)
+JSD_GetObjectConstructorLineNumber(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetObjectConstructorLineNumber(jsdc, jsdobj);
+}
+
+JSD_PUBLIC_API(const char*)
+JSD_GetObjectConstructorName(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetObjectConstructorName(jsdc, jsdobj);
+}
+
+JSD_PUBLIC_API(JSDObject*)
+JSD_GetJSDObjectForJSObject(JSDContext* jsdc, JSObject* jsobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JS_ASSERT(jsobj);
+    return jsd_GetJSDObjectForJSObject(jsdc, jsobj);
+}
+
+JSD_PUBLIC_API(JSDObject*)
+JSD_GetObjectForValue(JSDContext* jsdc, JSDValue* jsdval)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_VALUE(jsdval);
+    return jsd_GetObjectForValue(jsdc, jsdval);
+}
+
+JSD_PUBLIC_API(JSDValue*)
+JSD_GetValueForObject(JSDContext* jsdc, JSDObject* jsdobj)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_OBJECT(jsdobj);
+    return jsd_GetValueForObject(jsdc, jsdobj);
+}
+
 /***************************************************************************/
 /* Livewire specific API */
 #ifdef LIVEWIRE

@@ -71,6 +71,7 @@ typedef struct JSDThreadState    JSDThreadState;
 typedef struct JSDStackFrameInfo JSDStackFrameInfo;
 typedef struct JSDValue          JSDValue;
 typedef struct JSDProperty       JSDProperty;
+typedef struct JSDObject         JSDObject;
 
 /***************************************************************************/
 /* High Level calls */
@@ -187,6 +188,7 @@ JSD_UnlockScriptSubsystem(JSDContext* jsdc);
 /*
 * Iterate through all the active scripts for this JSDContext.
 * NOTE: must initialize iterp to NULL to start iteration.
+* NOTE: must lock and unlock the subsystem
 * example:
 *
 *  JSDScript jsdscript;
@@ -354,7 +356,8 @@ JSD_UnlockSourceTextSubsystem(JSDContext* jsdc);
 
 /*
 * Iterate the source test items. Use the same pattern of calls shown in
-* the example for JSD_IterateScripts.
+* the example for JSD_IterateScripts - NOTE that the SourceTextSubsystem.
+* must be locked before and unlocked after iterating.
 */
 extern JSD_PUBLIC_API(JSDSourceText*)
 JSD_IterateSources(JSDContext* jsdc, JSDSourceText **iterp);
@@ -1052,6 +1055,116 @@ JSD_GetPropertyFlags(JSDContext* jsdc, JSDProperty* jsdprop);
 */
 extern JSD_PUBLIC_API(uintN)
 JSD_GetPropertyVarArgSlot(JSDContext* jsdc, JSDProperty* jsdprop);
+
+/***************************************************************************/
+/* Object Functions  --- All NEW for 1.1 --- */
+
+/*
+* JSDObjects exist to allow a means of iterating through all JSObjects in the
+* engine. They are created and destroyed as the wrapped JSObjects are created
+* and destroyed in the engine. JSDObjects additionally track the location in
+* the JavaScript source where their wrapped JSObjects were created and the name
+* and location of the (non-native) constructor used.
+*
+* NOTE: JSDObjects are NOT reference counted. The have only weak links to
+* jsObjects - thus they do not inhibit garbage collection of JSObjects. If
+* you need a JSDObject to safely persist then wrap it in a JSDValue (using
+* jsd_GetValueForObject).
+*/
+
+/*
+* Lock the entire Object subsystem -- see JSD_UnlockObjectSubsystem
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(void)
+JSD_LockObjectSubsystem(JSDContext* jsdc);
+
+/*
+* Unlock the entire Object subsystem -- see JSD_LockObjectSubsystem
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(void)
+JSD_UnlockObjectSubsystem(JSDContext* jsdc);
+
+/*
+* Iterate through the known objects
+* Use form similar to that shown for JSD_IterateScripts.
+* NOTE: the ObjectSubsystem must be locked before and unlocked after iterating.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSDObject*)
+JSD_IterateObjects(JSDContext* jsdc, JSDObject** iterp);
+
+/*
+* Get the JSObject represented by this JSDObject
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSObject*)
+JSD_GetWrappedObject(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get the URL of the line of source that caused this object to be created.
+* May be NULL.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(const char*)
+JSD_GetObjectNewURL(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get the line number of the line of source that caused this object to be
+* created. May be 0 indicating that the line number is unknown.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(uintN)
+JSD_GetObjectNewLineNumber(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get the URL of the line of source of the constructor for this object.
+* May be NULL.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(const char*)
+JSD_GetObjectConstructorURL(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get the line number of the line of source of the constuctor for this object.
+* created. May be 0 indicating that the line number is unknown.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(uintN)
+JSD_GetObjectConstructorLineNumber(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get the name of the constructor for this object.
+* May be NULL.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(const char*)
+JSD_GetObjectConstructorName(JSDContext* jsdc, JSDObject* jsdobj);
+
+/*
+* Get JSDObject representing this JSObject.
+* May return NULL.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSDObject*)
+JSD_GetJSDObjectForJSObject(JSDContext* jsdc, JSObject* jsobj);
+
+/*
+* Get JSDObject representing this JSDValue.
+* May return NULL.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSDObject*)
+JSD_GetObjectForValue(JSDContext* jsdc, JSDValue* jsdval);
+
+/*
+* Create a JSDValue to wrap (and root) this JSDObject.
+* NOTE: must eventually release by calling JSD_DropValue (if not NULL)
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSDValue*)
+JSD_GetValueForObject(JSDContext* jsdc, JSDObject* jsdobj);
 
 /***************************************************************************/
 /* Livewire specific API */
