@@ -262,8 +262,8 @@ class FrameManager;
 struct CantRenderReplacedElementEvent : public PLEvent {
   CantRenderReplacedElementEvent(FrameManager* aFrameManager, nsIFrame* aFrame, nsIPresShell* aPresShell);
   ~CantRenderReplacedElementEvent();
-  AddLoadGroupRequest(nsIPresShell* aPresShell);
-  RemoveLoadGroupRequest();
+  void AddLoadGroupRequest(nsIPresShell* aPresShell);
+  void RemoveLoadGroupRequest();
 
   nsIFrame*  mFrame;                     // the frame that can't be rendered
   CantRenderReplacedElementEvent* mNext; // next event in the list
