@@ -264,9 +264,8 @@ nsSelectMoveScrollCommand::DoSelectCommand(const char *aCommandName, nsIDOMWindo
 
   nsresult rv;
   // We allow the caret to be moved with arrow keys on any window for which
-  // the caret is enabled. In particular, this includes caret-browsing mode,
-  // but we refer to this mode again in the test condition for readability.
-  if (caretOn || (esm && esm->GetBrowseWithCaret()))
+  // the caret is enabled. In particular, this includes caret-browsing mode
+  if (caretOn)
     rv = DoCommandBrowseWithCaretOn(aCommandName, selCont, esm);
   else
     rv = DoCommandBrowseWithCaretOff(aCommandName, selCont);
