@@ -488,7 +488,7 @@ function onInputCompleteLine(e)
     else /* plain text */
     {
         /* color codes */
-        if (client.COLORCODES)
+        if (client.prefs["outgoing.colorCodes"])
         {
             e.line = e.line.replace(/%U/g, "\x1f");
             e.line = e.line.replace(/%B/g, "\x02");
@@ -977,9 +977,9 @@ function my_433 (e)
 CIRCNetwork.prototype.onStartConnect =
 function my_sconnect (e)
 {
-    this.display (getMsg(MSG_CONNECTING, [this.name, e.host, e.port,
-                                         e.connectAttempt,
-                                         this.MAX_CONNECT_ATTEMPTS]), "INFO");
+    this.display (getMsg(MSG_CONNECTION_ATTEMPT,
+                         [this.name, e.host, e.port, e.connectAttempt,
+                          this.MAX_CONNECT_ATTEMPTS]), "INFO");
 }
     
 CIRCNetwork.prototype.onError =
@@ -1430,13 +1430,13 @@ function my_cprivmsg (e)
 {
     if ("messages" in this)
     {
-        playSounds(client.QUERY_BEEP);
+        playSounds(client.prefs["queryBeep"]);
     }
     else
     {        
-        playSounds(client.MSG_BEEP);
-        if (client.NEW_TAB_LIMIT == 0 ||
-            client.viewsArray.length < client.NEW_TAB_LIMIT)
+        playSounds(client.prefs["msgBeep"]);
+        var limit = client.prefs["newTabLimit"];
+        if (limit == 0 || client.viewsArray.length < limit)
         {
             var tab = openQueryTab (e.server, e.user.nick);
             if (client.FOCUS_NEW_TAB)

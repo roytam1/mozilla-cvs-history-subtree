@@ -22,7 +22,6 @@ chatzilla.jar:
 	content/chatzilla/output-window.js           (xul/content/output-window.js) 
 	content/chatzilla/commands.js                (xul/content/commands.js)     
 	content/chatzilla/handlers.js                (xul/content/handlers.js) 
-	content/chatzilla/readprefs.js               (xul/content/readprefs.js) 
 	content/chatzilla/prefs.js                   (xul/content/prefs.js) 
 	content/chatzilla/messages.js                (xul/content/messages.js) 
 	content/chatzilla/menus.js                   (xul/content/menus.js) 

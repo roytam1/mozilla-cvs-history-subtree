@@ -137,7 +137,7 @@
             oncommand="onMultilineSend(event);"
             tooltiptext="&multiline-send.tooltip;" />
           <toolbarbutton id="button-multiline-contract"
-            oncommand="multilineInputMode(false);" 
+            oncommand="dispatch('pref multiline false');" 
             tooltiptext="&multiline-contract.tooltip;" />
         </vbox>
       </hbox>
@@ -145,7 +145,7 @@
         <textbox id="input" class="input-widget" flex="1" autostretch="true"
           onfocus="onInputFocus();"/>
         <toolbarbutton id="button-multiline-expand" 
-          oncommand="multilineInputMode(true);"
+          oncommand="dispatch('pref multiline true');" 
           tooltiptext="&multiline-expand.tooltip;"/>
       </hbox>
     </hbox>

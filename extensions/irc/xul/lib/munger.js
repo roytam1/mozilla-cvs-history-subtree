@@ -28,7 +28,6 @@ function initMunger()
         /((\w[\w-]+):[^<>\[\]()\'\"\s\u201d]+|www(\.[^.<>\[\]()\'\"\s\u201d]+){2,})/;    
 
     var munger = client.munger = new CMunger();
-    munger.enabled = true;
     munger.addRule ("quote", /(``|'')/, insertQuote);
     munger.addRule ("bold", /(?:\s|^)(\*[^*()]*\*)(?:[\s.,]|$)/, 
                     "chatzilla-bold");
@@ -64,6 +63,8 @@ function initMunger()
     munger.addRule ("word-hyphenator",
                     new RegExp ("(\\S{" + client.MAX_WORD_DISPLAY + ",})"),
                     insertHyphenatedWord);
+
+    client.enableColors = client.prefs["munger.colorCodes"];
 }
 
 function CMungerEntry (name, regex, className, enable, tagName)
@@ -90,6 +91,7 @@ function CMunger ()
 {
     this.entries = new Object();
     this.tagName = "html:span";
+    this.enabled = true;
 }
 
 CMunger.prototype.enabled = true;

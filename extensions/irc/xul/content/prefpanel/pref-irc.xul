@@ -99,16 +99,16 @@
         prefstring="extensions.irc.notify.aggressive"/>
     <checkbox id="czDisplayCollapse" label="&global.collapse.label;" 
         accesskey="&global.collapse.accesskey;" prefdefval="false"
-        prefstring="extensions.irc.views.collapseMsgs"/>
+        prefstring="extensions.irc.collapseMsgs"/>
     <checkbox id="czDisplayCopyMsgs" label="&global.copyMsgs.label;" 
         accesskey="&global.copyMsgs.accesskey;" prefdefval="true" 
-        prefstring="extensions.irc.views.copyMessages"/>
+        prefstring="extensions.irc.copyMessages"/>
     <checkbox id="czReconnect" label="&global.reconnect.label;" 
         accesskey="&global.reconnect.accesskey;" prefdefval="true" 
         prefstring="extensions.irc.reconnect"/>
     <checkbox id="czColorCodes" label="&global.colorcodes.label;" 
         accesskey="&global.colorcodes.accesskey;" prefdefval="false" 
-        prefstring="extensions.irc.colorCodes"/>
+        prefstring="extensions.irc.outgoing.colorCodes"/>
     <separator/>
     <hbox align="center">
       <label value="&global.nickCompleteStr.label;" control="czNickCompleteStr" 

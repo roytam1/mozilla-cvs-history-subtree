@@ -71,7 +71,6 @@ client.MAX_NICK_DISPLAY = 14;
 /* longest word to show in display before abbreviating */
 client.MAX_WORD_DISPLAY = 20;
 client.PRINT_DIRECTION = 1; /*1 => new messages at bottom, -1 => at top */
-client.ADDRESSED_NICK_SEP = ":";
 
 client.MAX_MSG_PER_ROW = 3; /* default number of messages to collapse into a
                              * single row, max. */
@@ -133,8 +132,8 @@ function init()
     initRDF();
     initMessages();
     initCommands();
-    initMunger();
     initPrefs();
+    initMunger();
     initNetworks();
     initMenus();
     initStatic();
@@ -173,7 +172,7 @@ function initStatic()
     client.sound =
         Components.classes["@mozilla.org/sound;1"].createInstance(nsISound);
 
-    multilineInputMode(client.MULTILINE);
+    multilineInputMode(client.prefs["multiline"]);
     
     var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
     if (ary)
@@ -365,9 +364,6 @@ function processStartupURLs()
 
 function destroy()
 {
-    if (client.SAVE_SETTINGS)
-        writePrefs();
-    
     destroyPrefs();
 }
 
@@ -501,7 +497,7 @@ function insertBugzillaLink (matchText, containerTag)
     
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                            "html:a");
-    anchor.setAttribute ("href", client.BUG_URL.replace("%s", number));
+    anchor.setAttribute ("href", client.prefs["bugURL"].replace("%s", number));
     anchor.setAttribute ("class", "chatzilla-link");
     anchor.setAttribute ("target", "_content");
     insertHyphenatedWord (matchText, anchor);
@@ -532,9 +528,6 @@ function insertQuote (matchText, containerTag)
 
 function insertEar (matchText, containerTag)
 {
-    if (client.smileyText)
-        containerTag.appendChild (document.createTextNode (matchText));
-
     var img = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                         "html:img");
     img.setAttribute ("src", client.IMAGEDIR + "face-ear.gif");
@@ -1341,8 +1334,6 @@ function parseIRCURL (url)
     if (url.search(/^(irc:\/?\/?)$/i) != -1)
         return rv;
 
-    rv.host = client.DEFAULT_NETWORK;
-    
     /* split url into <host>/<everything-else> pieces */
     var ary = url.match (/^irc:\/\/([^\/\s]+)?(\/.*)?\s*$/i);
     if (!ary)
@@ -1754,7 +1745,6 @@ function multilineInputMode (state)
         client.input = singleInput;
     }
 
-    client.MULTILINE = state; 
     client.input.focus();
 }
 
@@ -1969,7 +1959,7 @@ function notifyAttention (source)
         updateTitle();
     }
 
-    if (client.FLASH_WINDOW)
+    if (client.prefs["notify.aggressive"])
         window.getAttention();
     
 }
@@ -2728,9 +2718,9 @@ function __display(message, msgtype, sourceObj, destObj)
                     if (isImportant)
                     {
                         this.defaultCompletion = nick +
-                            client.ADDRESSED_NICK_SEP + " ";
+                            client.prefs["nickCompleteStr"] + " ";
                         if (this.TYPE != "IRCNetwork")
-                            playSounds(client.STALK_BEEP);
+                            playSounds(client.prefs["stalkBeep"]);
                     }                        
                 }
                 if (msgtype == "ACTION")
@@ -2885,7 +2875,7 @@ function __display(message, msgtype, sourceObj, destObj)
     if (isImportant || getAttention)
     {
         setTabState(this, "attention");
-        if (client.FLASH_WINDOW)
+        if (client.prefs["notify.aggressive"])
             window.getAttention();
     }
     else
@@ -3199,7 +3189,7 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
         {
             matches[0] = users[matches[0]].properNick;
             if (wordStart == 0)
-                matches[0] += client.ADDRESSED_NICK_SEP;
+                matches[0] += client.prefs["nickCompleteStr"];
         }
         else if (channels && matches[0] in channels)
         {

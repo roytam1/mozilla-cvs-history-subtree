@@ -72,9 +72,12 @@ function initPrefs()
     var prefs =
         [
          ["aliases",            []],
+         ["bugURL",          "http://bugzilla.mozilla.org/show_bug.cgi?id=%s"],
          ["channelHeader",      true],
          ["channelLog",         false],
+         ["channelMaxLines",    500],
          ["charset",            "utf-8"],
+         ["clientMaxLines",     200],
          ["collapseMsgs",       false],
          ["copyMessages",       true],
          ["debugMode",          ""],
@@ -93,31 +96,46 @@ function initPrefs()
          ["motif.light",      "chrome://chatzilla/skin/output-light.css"],
          ["motif.default",    "chrome://chatzilla/skin/output-default.css"],
          ["motif.current",    "chrome://chatzilla/skin/output-default.css"],
+         ["msgBeep",          "beep beep"],
+         ["multiline",        false],
+         ["munger.colorCodes", true],
          ["networkHeader",    true],
          ["networkLog",       false],
+         ["networkMaxLines",  200],
+         ["newTabLimit",      15],
+         ["notify.aggressive", true],
+         ["nickCompleteStr",  ":"],
          ["nickname",         DEFAULT_NICK],
+         ["outgoing.colorCodes",  false],
          ["outputWindowURL",  "chrome://chatzilla/content/output-window.html"],
+         ["queryBeep",        "beep"],
+         ["raiseNewTab",      false],
          ["reconnect",        true],
+         ["stalkBeep",        "beep"],
          ["stalkWholeWords",  true],
          ["stalkWords",       []],
          ["username",         "chatzilla"],
          ["usermode",         "+ix"],
          ["userHeader",       true],
          ["userLog",          false],
+         ["userMaxLines",     200]
         ];
 
     client.prefManager.addPrefs(prefs);
     client.prefManager.onPrefChanged = onPrefChanged;
 
+    CIRCNetwork.prototype.stayingPower  = client.prefs["reconnect"];
     CIRCNetwork.prototype.INITIAL_NICK  = client.prefs["nickname"];
     CIRCNetwork.prototype.INITIAL_NAME  = client.prefs["username"];
     CIRCNetwork.prototype.INITIAL_DESC  = client.prefs["desc"];
     CIRCNetwork.prototype.INITIAL_UMODE = client.prefs["usermode"];
-    CIRCNetwork.prototype.stayingPower  = client.prefs["reconnect"];
-    client.charset = client.prefs["charset"];
-    initAliases();
+    CIRCNetwork.prototype.MAX_MESSAGES  = client.prefs["networkMaxLines"];
+    CIRCChannel.prototype.MAX_MESSAGES  = client.prefs["channelMaxLines"];
+    CIRCChanUser.prototype.MAX_MESSAGES = client.prefs["userMaxLines"];
+    client.MAX_MESSAGES                 = client.prefs["clientMaxLines"];
+    client.charset                      = client.prefs["charset"];
 
-    initReadPrefs();
+    initAliases();
 }
 
 function pref_mungeName(name)
@@ -269,9 +287,16 @@ function onPrefChanged(prefName, newValue, oldValue)
 {
     switch (prefName)
     {
+        case "channelMaxLines":
+            CIRCChannel.prototype.MAX_MESSAGES = newValue;
+            break;
+            
         case "charset":
             client.charset = newValue;
             break;
+
+        case "clientMaxLines":
+            client.MAX_MESSAGES = newValue;
 
         case "nickname":
             CIRCNetwork.prototype.INITIAL_NICK = newValue;
@@ -285,6 +310,10 @@ function onPrefChanged(prefName, newValue, oldValue)
             CIRCNetwork.prototype.INITIAL_UMODE = newValue;
             break;
 
+        case "userMaxLines":
+            CIRCChanUser.prototype.MAX_MESSAGES = newValue;
+            break;
+            
         case "debugMode":
             if (newValue.indexOf("e") != -1)
                 client.debugHook.enabled = true;
@@ -315,6 +344,18 @@ function onPrefChanged(prefName, newValue, oldValue)
             dispatch("sync-motifs");
             break;
 
+        case "multiline":
+            multilineInputMode(newValue);
+            break;
+
+        case "munger.colorCodes":
+            client.enableColors = newValue;
+            break;
+
+        case "networkMaxLines":
+            CIRCNetwork.prototype.MAX_MESSAGES = newValue;
+            break;
+            
         case "outputWindowURL":
             dispatch("sync-windows");
             break;

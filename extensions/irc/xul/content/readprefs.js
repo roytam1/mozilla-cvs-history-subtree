@@ -21,6 +21,12 @@
  *  Robert Ginda, rginda@ndcico.com, original author
  */
 
+/* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ * THIS FILE IS NO LONGER USED.  IT'S ONLY IN THE TREE FOR LATER REFERENCE.
+ * SEE prefs.js IN THIS SAME DIRECTORY INSTEAD.
+ * XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ */
+
 /*
  * currently recognized prefs:
  * + extensions.irc.
@@ -102,37 +108,37 @@ function initReadPrefs()
         //"username": ["CIRCNetwork.prototype.INITIAL_NAME",       "chatzilla"],
         //"desc":     ["CIRCNetwork.prototype.INITIAL_DESC","New Now Know How"],
         //"reconnect": ["CIRCNetwork.prototype.stayingPower",               true],
-        "multiline":         ["client.MULTILINE",                        false],
-        "colorCodes":        ["client.COLORCODES",                       false],
-        "defaultNet":        ["client.DEFAULT_NETWORK",               "moznet"],
-        //"charset":           ["client.CHARSET",                           ""],
-        //"initialURLs":       ["client.INITIAL_URLS",                  "irc://"],
-        //"initialScripts":    ["client.INITIAL_SCRIPTS",                     ""],
-        "newTabLimit":       ["client.NEW_TAB_LIMIT",                       15],
-        "raiseNewTab":       ["client.RAISE_NEW_TAB",                    false],
-        "nickCompleteStr":   ["client.ADDRESSED_NICK_SEP",                ", "],
+        //"multiline":       ["client.MULTILINE",                        false],
+        //"colorCodes":      ["client.COLORCODES",                       false],
+        //REMOVED: "defaultNet": ["client.DEFAULT_NETWORK",            "moznet"],
+        //"charset":         ["client.CHARSET",                           ""],
+        //"initialURLs":     ["client.INITIAL_URLS",                  "irc://"],
+        //"initialScripts":  ["client.INITIAL_SCRIPTS",                     ""],
+        //"newTabLimit":     ["client.NEW_TAB_LIMIT",                       15],
+        //REMOVED: "raiseNewTab": ["client.RAISE_NEW_TAB",               false],
+        //"nickCompleteStr": ["client.ADDRESSED_NICK_SEP",                ", "],
         //"stalkWords":      ["client.stalkingVictims",                     []],
         //"stalkWholeWords": ["client.STALK_WHOLE_WORDS",                 true],
-        "deleteOnPart":      ["client.DELETE_ON_PART",                    true],
-        "stalkBeep":         ["client.STALK_BEEP",                      "beep"],
-        "msgBeep":           ["client.MSG_BEEP",                   "beep beep"],
-        "queryBeep":         ["client.QUERY_BEEP",                      "beep"],
-        "munger":            ["client.munger.enabled",                    true],
-        "munger.colorCodes": ["client.enableColors",                      true],
-        "munger.smileyText": ["client.smileyText",                       false],
-        "bugURL":            ["client.BUG_URL",
-                              "http://bugzilla.mozilla.org/show_bug.cgi?id=%s"],
-        "notify.aggressive": ["client.FLASH_WINDOW",                      true],
-        "settings.autoSave": ["client.SAVE_SETTINGS",                     true],
-        "debug.tracer"     : ["client.debugHook.enabled",                false],
-        //        "style.default":     ["client.DEFAULT_STYLE",
+        //"deleteOnPart":    ["client.DELETE_ON_PART",                    true],
+        //"stalkBeep":       ["client.STALK_BEEP",                      "beep"],
+        //"msgBeep":         ["client.MSG_BEEP",                   "beep beep"],
+        //"queryBeep":       ["client.QUERY_BEEP",                      "beep"],
+        //REMOVED: "munger": ["client.munger.enabled",                    true],
+        //"munger.colorCodes": ["client.enableColors",                    true],
+        //REMOVED: "munger.smileyText": ["client.smileyText",             false],
+        //"bugURL":            ["client.BUG_URL",
+        //                    "http://bugzilla.mozilla.org/show_bug.cgi?id=%s"],
+        //"notify.aggressive": ["client.FLASH_WINDOW",                    true],
+        //REMOVED: "settings.autoSave": ["client.SAVE_SETTINGS",          true],
+        //REMOVED: "debug.tracer"     : ["client.debugHook.enabled",      false],
+        //"style.default":     ["client.DEFAULT_STYLE",
         //                      "chrome://chatzilla/skin/output-default.css"],
-        "views.collapseMsgs":      ["client.COLLAPSE_MSGS",              false],
-        "views.copyMessages":      ["client.COPY_MESSAGES",               true],
-        "views.client.maxlines":   ["client.MAX_MESSAGES",                 200],
-        "views.network.maxlines":  ["CIRCNetwork.prototype.MAX_MESSAGES",  100],
-        "views.channel.maxlines":  ["CIRCChannel.prototype.MAX_MESSAGES",  300],
-        "views.chanuser.maxlines": ["CIRCChanUser.prototype.MAX_MESSAGES", 200]
+        //CHANGED: "views.collapseMsgs":      ["client.COLLAPSE_MSGS",              false],
+        //CHANGED: "views.copyMessages":      ["client.COPY_MESSAGES",               true],
+        //CHANGED:"views.client.maxlines":   ["client.MAX_MESSAGES",                 200],
+        //CHANGED:"views.network.maxlines":  ["CIRCNetwork.prototype.MAX_MESSAGES",  100],
+        //CHANGED:"views.channel.maxlines":  ["CIRCChannel.prototype.MAX_MESSAGES",  300],
+        //CHANGED:"views.chanuser.maxlines": ["CIRCChanUser.prototype.MAX_MESSAGES", 200]
     };
 
     const PREF_CTRID = "@mozilla.org/preferences-service;1";
