@@ -42,14 +42,13 @@
 
 #include "baseutils.h"
 #include "List.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 
 class Element;
 class Expr;
 class Node;
 class NodeSet;
 class txExecutionState;
-class String;
 class TxObject;
 class txXPathResultComparator;
 class txIEvalContext;
@@ -90,8 +89,8 @@ private:
                      txExecutionState* aEs);
 
     MBool getAttrAsAVT(Element* aSortElement,
-                       txAtom* aAttrName,
-                       String& aResult);
+                       nsIAtom* aAttrName,
+                       nsAString& aResult);
 
     txList mSortKeys;
     int mNKeys;

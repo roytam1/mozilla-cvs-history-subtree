@@ -40,7 +40,6 @@
 #define TRANSFRMX_UNKNOWN_HANDLER_H
 
 #include "txXMLEventHandler.h"
-#include "TxString.h"
 #include "txOutputFormat.h"
 
 class txExecutionState;
@@ -69,27 +68,27 @@ class txOneStringTransaction : public txOutputTransaction
 {
 public:
     txOneStringTransaction(txTransactionType aType,
-                           String aString)
+                           const nsAString& aString)
         : txOutputTransaction(aType),
           mString(aString)
     {
     };
-    String mString;
+    nsString mString;
 };
 
 class txTwoStringTransaction : public txOutputTransaction
 {
 public:
     txTwoStringTransaction(txTransactionType aType,
-                           String aStringOne,
-                           String aStringTwo)
+                           const nsAString& aStringOne,
+                           const nsAString& aStringTwo)
         : txOutputTransaction(aType),
           mStringOne(aStringOne),
           mStringTwo(aStringTwo)
     {
     };
-    String mStringOne;
-    String mStringTwo;
+    nsString mStringOne;
+    nsString mStringTwo;
 };
 
 class txUnknownHandler : public txIOutputXMLEventHandler
@@ -109,9 +108,9 @@ public:
      * @param aNsID the namespace ID of the attribute
      * @param aValue the value of the attribute
      */
-    void attribute(const String& aName,
+    void attribute(const nsAString& aName,
                    const PRInt32 aNsID,
-                   const String& aValue);
+                   const nsAString& aValue);
 
     /*
      * Signals to receive characters.
@@ -119,14 +118,14 @@ public:
      * @param aData the characters to receive
      * @param aDOE disable output escaping for these characters
      */
-    void characters(const String& aData, PRBool aDOE);
+    void characters(const nsAString& aData, PRBool aDOE);
 
     /*
      * Signals to receive data that should be treated as a comment.
      *
      * @param data the comment data to receive
      */
-    void comment(const String& aData);
+    void comment(const nsAString& aData);
 
     /*
      * Signals the end of a document. It is an error to call
@@ -140,7 +139,7 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    void endElement(const String& aName,
+    void endElement(const nsAString& aName,
                     const PRInt32 aNsID);
 
     /*
@@ -149,8 +148,8 @@ public:
      * @param aTarget the target of the processing instruction
      * @param aData the data of the processing instruction
      */
-    void processingInstruction(const String& aTarget, 
-                               const String& aData);
+    void processingInstruction(const nsAString& aTarget, 
+                               const nsAString& aData);
 
     /*
      * Signals the start of a document.
@@ -163,7 +162,7 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    void startElement(const String& aName,
+    void startElement(const nsAString& aName,
                       const PRInt32 aNsID);
 
 #ifndef TX_EXE
@@ -177,7 +176,7 @@ public:
 
 private:
     nsresult createHandlerAndFlush(txOutputMethod aMethod,
-                                   const String& aName,
+                                   const nsAString& aName,
                                    const PRInt32 aNsID);
     void addTransaction(txOutputTransaction* aTransaction);
 

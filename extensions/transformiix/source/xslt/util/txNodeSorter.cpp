@@ -38,20 +38,19 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txNodeSorter.h"
-#include <string.h>
-#include "Names.h"
 #include "txExecutionState.h"
 #include "txXPathResultComparator.h"
 #include "txAtoms.h"
 #include "txForwardContext.h"
 #include "ExprResult.h"
 #include "Expr.h"
+#include "txStringUtils.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
  */
 
-#define DEFAULT_LANG "en"
+#define DEFAULT_LANG NS_LITERAL_STRING("en")
 
 txNodeSorter::txNodeSorter() : mNKeys(0)
 {
@@ -84,14 +83,14 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
         ExprResult* exprRes = aOrderExpr->evaluate(aContext);
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-        String attrValue;
+        nsAutoString attrValue;
         exprRes->stringValue(attrValue);
         delete exprRes;
         
-        if (attrValue.isEqual(DESCENDING_VALUE)) {
+        if (TX_StringEqualsAtom(attrValue, txXSLTAtoms::descending)) {
             ascending = MB_FALSE;
         }
-        else if (!attrValue.isEqual(ASCENDING_VALUE)) {
+        else if (!TX_StringEqualsAtom(attrValue, txXSLTAtoms::ascending)) {
             delete key;
             // XXX ErrorReport: unknown value for order attribute
             return NS_ERROR_XSLT_BAD_VALUE;
@@ -100,7 +99,7 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
 
 
     // Create comparator depending on datatype
-    String dataType;
+    nsAutoString dataType;
     if (aDataTypeExpr) {
         ExprResult* exprRes = aOrderExpr->evaluate(aContext);
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
@@ -109,11 +108,11 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
         delete exprRes;
     }
 
-    if (!aDataTypeExpr || dataType.isEqual(TEXT_VALUE)) {
+    if (!aDataTypeExpr || TX_StringEqualsAtom(dataType, txXSLTAtoms::text)) {
         // Text comparator
         
         // Language
-        String lang;
+        nsAutoString lang;
         if (aLangExpr) {
             ExprResult* exprRes = aLangExpr->evaluate(aContext);
             NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
@@ -122,7 +121,7 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
             delete exprRes;
         }
         else {
-            lang.append(DEFAULT_LANG);
+            lang.Append(DEFAULT_LANG);
         }
 
         // Case-order 
@@ -133,14 +132,15 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
             ExprResult* exprRes = aCaseOrderExpr->evaluate(aContext);
             NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-            String attrValue;
+            nsAutoString attrValue;
             exprRes->stringValue(attrValue);
             delete exprRes;
 
-            if (attrValue.isEqual(LOWER_FIRST_VALUE)) {
+            if (TX_StringEqualsAtom(attrValue, txXSLTAtoms::lowerFirst)) {
                 upperFirst = MB_FALSE;
             }
-            else if (!attrValue.isEqual(UPPER_FIRST_VALUE)) {
+            else if (!TX_StringEqualsAtom(attrValue,
+                                          txXSLTAtoms::upperFirst)) {
                 delete key;
                 // XXX ErrorReport: unknown value for case-order attribute
                 return NS_ERROR_XSLT_BAD_VALUE;
@@ -152,7 +152,7 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
                                                         lang);
         NS_ENSURE_TRUE(key->mComparator, NS_ERROR_OUT_OF_MEMORY);
     }
-    else if (dataType.isEqual(NUMBER_VALUE)) {
+    else if (TX_StringEqualsAtom(dataType, txXSLTAtoms::number)) {
         // Number comparator
         key->mComparator = new txResultNumberComparator(ascending);
         NS_ENSURE_TRUE(key->mComparator, NS_ERROR_OUT_OF_MEMORY);

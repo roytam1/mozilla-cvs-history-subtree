@@ -53,12 +53,12 @@ public:
     /**
      * Creates a new document() function call
     **/
-    DocumentFunctionCall(const String& aBaseURI);
+    DocumentFunctionCall(const nsAString& aBaseURI);
 
     TX_DECL_FUNCTION;
 
 private:
-    String mBaseURI;
+    nsString mBaseURI;
 };
 
 /*
@@ -94,7 +94,7 @@ public:
     TX_DECL_FUNCTION;
 
 private:
-    static const UNICODE_CHAR FORMAT_QUOTE;
+    static const PRUnichar FORMAT_QUOTE;
 
     enum FormatParseState {
         Prefix,
@@ -124,16 +124,16 @@ public:
     txDecimalFormat();
     MBool isEqual(txDecimalFormat* other);
     
-    UNICODE_CHAR    mDecimalSeparator;
-    UNICODE_CHAR    mGroupingSeparator;
-    String          mInfinity;
-    UNICODE_CHAR    mMinusSign;
-    String          mNaN;
-    UNICODE_CHAR    mPercent;
-    UNICODE_CHAR    mPerMille;
-    UNICODE_CHAR    mZeroDigit;
-    UNICODE_CHAR    mDigit;
-    UNICODE_CHAR    mPatternSeparator;
+    PRUnichar       mDecimalSeparator;
+    PRUnichar       mGroupingSeparator;
+    nsString        mInfinity;
+    PRUnichar       mMinusSign;
+    nsString        mNaN;
+    PRUnichar       mPercent;
+    PRUnichar       mPerMille;
+    PRUnichar       mZeroDigit;
+    PRUnichar       mDigit;
+    PRUnichar       mPatternSeparator;
 };
 
 /**

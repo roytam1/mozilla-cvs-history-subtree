@@ -37,8 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txUnknownHandler.h"
-#include <string.h>
 #include "txExecutionState.h"
+#include "txStringUtils.h"
 #include "txStylesheet.h"
 
 #ifndef TX_EXE
@@ -63,16 +63,16 @@ txUnknownHandler::~txUnknownHandler()
     delete [] mArray;
 }
 
-void txUnknownHandler::attribute(const String& aName,
+void txUnknownHandler::attribute(const nsAString& aName,
                                  const PRInt32 aNsID,
-                                 const String& aValue)
+                                 const nsAString& aValue)
 {
     // If this is called then the stylesheet is trying to add an attribute
     // without adding an element first. So we'll just ignore it.
     // XXX ErrorReport: Signal this?
 }
 
-void txUnknownHandler::characters(const String& aData, PRBool aDOE)
+void txUnknownHandler::characters(const nsAString& aData, PRBool aDOE)
 {
     txOneStringTransaction* transaction =
         new txOneStringTransaction(aDOE ? txOutputTransaction::eCharacterNoOETransaction :
@@ -108,7 +108,7 @@ void txUnknownHandler::endDocument()
     // we set a new outputhandler
     nsCOMPtr<txIOutputXMLEventHandler> kungFuDeathGrip(this);
 #endif
-    nsresult rv = createHandlerAndFlush(eXMLOutput, String(),
+    nsresult rv = createHandlerAndFlush(eXMLOutput, nsString(),
                                         kNameSpaceID_None);
     if (NS_FAILED(rv))
         return;
@@ -121,14 +121,14 @@ void txUnknownHandler::endDocument()
 #endif
 }
 
-void txUnknownHandler::endElement(const String& aName,
+void txUnknownHandler::endElement(const nsAString& aName,
                                   const PRInt32 aNsID)
 {
     NS_ASSERTION(0, "This shouldn't be called");
 }
 
-void txUnknownHandler::processingInstruction(const String& aTarget,
-                                             const String& aData)
+void txUnknownHandler::processingInstruction(const nsAString& aTarget,
+                                             const nsAString& aData)
 {
     txTwoStringTransaction* transaction =
         new txTwoStringTransaction(txOutputTransaction::ePITransaction,
@@ -151,7 +151,7 @@ void txUnknownHandler::startDocument()
     addTransaction(transaction);
 }
 
-void txUnknownHandler::startElement(const String& aName,
+void txUnknownHandler::startElement(const nsAString& aName,
                                     const PRInt32 aNsID)
 {
 #ifndef TX_EXE
@@ -166,7 +166,7 @@ void txUnknownHandler::startElement(const String& aName,
         rv = createHandlerAndFlush(format->mMethod, aName, aNsID);
     }
     else if (aNsID == kNameSpaceID_None &&
-             aName.isEqualIgnoreCase(String("html"))) {
+             aName.Equals(NS_LITERAL_STRING("html"), txCaseInsensitiveStringComparator())) {
         rv = createHandlerAndFlush(eHTMLOutput, aName, aNsID);
     }
     else {
@@ -191,7 +191,7 @@ void txUnknownHandler::getOutputDocument(nsIDOMDocument** aDocument)
 #endif
 
 nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
-                                                 const String& aName,
+                                                 const nsAString& aName,
                                                  const PRInt32 aNsID)
 {
     nsresult rv = NS_OK;
