@@ -54,6 +54,24 @@ static JSBool Throw(uintN errNum, JSContext* cx)
         return Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);                    \
     PR_END_MACRO
 
+
+// We rely on the engine only giving us jsval ids that are actually the
+// self-same jsvals that are in the atom table. So, we assert by converting
+// the jsval to an id and then back to a jsval and comparing pointers.
+// If the engine ever breaks this promise then we will scream.
+#ifdef DEBUG
+#define CHECK_IDVAL(cx, idval)                                               \
+    PR_BEGIN_MACRO                                                           \
+    jsid d_id;                                                               \
+    jsval d_val;                                                             \
+    NS_ASSERTION(JS_ValueToId(cx, idval, &d_id), "JS_ValueToId failed!");    \
+    NS_ASSERTION(JS_IdToValue(cx, d_id, &d_val), "JS_IdToValue failed!");    \
+    NS_ASSERTION(d_val == idval, "id differs from id in atom table!");       \
+    PR_END_MACRO
+#else
+#define CHECK_IDVAL(cx, idval) ((void)0)
+#endif
+
 /***************************************************************************/
 
 static JSBool
@@ -344,6 +362,8 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
+    CHECK_IDVAL(cx, idval);
+
     XPCCallContext ccx(JS_CALLER, cx, obj, idval);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
@@ -361,6 +381,7 @@ XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_CannotModifyPropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
+    CHECK_IDVAL(cx, idval);
     return Throw(NS_ERROR_XPC_CANT_MODIFY_PROP_ON_WN, cx);
 }
 
@@ -491,6 +512,8 @@ XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
+    CHECK_IDVAL(cx, idval);
+
     XPCCallContext ccx(JS_CALLER, cx, obj, idval);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
@@ -612,6 +635,7 @@ JSBool xpc_InitWrappedNativeJSOps()
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_MaybeResolvingPropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
+    CHECK_IDVAL(cx, idval);
     XPCCallContext ccx(JS_CALLER, cx, obj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
@@ -678,6 +702,7 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Helper_CheckAccess(JSContext *cx, JSObject *obj, jsval idval,
                           JSAccessMode mode, jsval *vp)
 {
+    CHECK_IDVAL(cx, idval);
     PRE_HELPER_STUB
     CheckAccess(wrapper, cx, obj, idval, mode, vp, &retval);
     POST_HELPER_STUB
@@ -788,6 +813,8 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
                          JSObject **objp)
 {
+    CHECK_IDVAL(cx, idval);
+    
     XPCCallContext ccx(JS_CALLER, cx, obj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
@@ -1041,6 +1068,8 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
+    CHECK_IDVAL(cx, idval);
+    
     NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
 
     XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
@@ -1142,6 +1171,8 @@ XPC_WN_TearOff_Enumerate(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
+    CHECK_IDVAL(cx, idval);
+
     XPCCallContext ccx(JS_CALLER, cx, obj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
