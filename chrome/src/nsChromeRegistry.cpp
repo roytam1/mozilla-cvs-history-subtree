@@ -303,9 +303,9 @@ nsChromeRegistry::Init()
   nsCOMPtr<nsICmdLineService> cmdLineArgs
     (do_GetService("@mozilla.org/appshell/commandLineService;1"));
 
-  if (cmdLineArgs &&
-      NS_SUCCEEDED(cmdLineArgs->GetCmdLineValue(UILOCALE_CMD_LINE_ARG,
-                                                getter_Copies(uiLocale)))) {
+  if (cmdLineArgs)
+    cmdLineArgs->GetCmdLineValue(UILOCALE_CMD_LINE_ARG, getter_Copies(uiLocale));
+  if (uiLocale) {
     useLocalePref = PR_FALSE;
     mSelectedLocale = uiLocale;
   }
