@@ -30,6 +30,7 @@ MODULE		= npsimple
 LIBRARY_NAME	= npsimple
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
+COMPONENT_NAME	= SimplePlugin
 REQUIRES	= xpcom string plugin widget
 
 XPIDLSRCS	= nsISimplePluginInstance.idl

@@ -183,11 +183,8 @@ DEFINES = -DENABLE_EDITOR_API_LOG $(DEFINES)
 !endif
 
 MODULE=editor 
-
-MAKE_OBJ_TYPE = DLL
-DLLNAME = editor
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-
+LIBRARY_NAME=editor
+COMPONENT_NAME=nsEditorModule
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -198,17 +195,12 @@ LCFLAGS = \
 LLIBS=				\
  $(DIST)\lib\xpcom.lib	\
  $(DIST)\lib\js3250.lib	\
+!if 0
  $(DIST)\lib\gkparser.lib		\
  $(DIST)\lib\raptorwidget_s.lib		\
  $(DIST)\lib\timer_s.lib \
+!endif
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-
-clobber::
-	rm -f $(DIST)\bin\components\$(DLLNAME).dll
-	rm -f $(DIST)\lib\$(DLLNAME).lib

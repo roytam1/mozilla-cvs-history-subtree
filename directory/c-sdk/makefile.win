@@ -30,10 +30,10 @@ export libs install: depend
     cd $(MOZ_SRC)\mozilla\directory\c-sdk\ldap\libraries\msdos\winsock
     $(NMAKE) -f nsldap.mak DEPEND=1
     $(NMAKE) -f nsldap.mak
-    $(NMAKE) -f nsldap.mak static 
-    $(NMAKE) -f nsldap.mak dynamic
+#    $(NMAKE) -f nsldap.mak static 
+#    $(NMAKE) -f nsldap.mak dynamic
     $(NMAKE) -f nsldap.mak EXPORT=1
-
+    $(NMAKE) -f nsldap.mak STATIC=1 static
 #
 # remove all source files from the tree and print a report of what was missed
 #

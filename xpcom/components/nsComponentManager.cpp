@@ -110,6 +110,7 @@ const char classNameValueName[]="ClassName";
 const char inprocServerValueName[]="InprocServer";
 const char componentTypeValueName[]="ComponentType";
 const char nativeComponentType[]="application/x-mozilla-native";
+const char staticComponentType[]="application/x-mozilla-static";
 
 const static char XPCOM_ABSCOMPONENT_PREFIX[] = "abs:";
 const static char XPCOM_RELCOMPONENT_PREFIX[] = "rel:";
@@ -246,7 +247,8 @@ nsFactoryEntry::~nsFactoryEntry(void)
 nsComponentManagerImpl::nsComponentManagerImpl()
     : mFactories(NULL), mContractIDs(NULL), mLoaders(0), mMon(NULL), 
       mRegistry(NULL), mPrePopulationDone(PR_FALSE),
-      mNativeComponentLoader(0), mShuttingDown(NS_SHUTDOWN_NEVERHAPPENED)
+      mNativeComponentLoader(0), mStaticComponentLoader(0),
+      mShuttingDown(NS_SHUTDOWN_NEVERHAPPENED)
 {
     NS_INIT_REFCNT();
 }
@@ -312,13 +314,27 @@ nsresult nsComponentManagerImpl::Init(void)
             return NS_ERROR_OUT_OF_MEMORY;
         NS_ADDREF(mNativeComponentLoader);
     }
+
+    if (mStaticComponentLoader == nsnull) {
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
+        extern nsresult NS_NewStaticComponentLoader(nsIComponentLoader **);
+        NS_NewStaticComponentLoader(&mStaticComponentLoader);
+        if (!mStaticComponentLoader)
+            return NS_ERROR_OUT_OF_MEMORY;
+        NS_ADDREF(mStaticComponentLoader);
+#endif
+    }
     
     if (mLoaders == nsnull) {
-    mLoaders = new nsSupportsHashtable(16, /* Thread safe */ PR_TRUE);
-    if (mLoaders == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    nsCStringKey loaderKey(nativeComponentType);
-    mLoaders->Put(&loaderKey, mNativeComponentLoader);
+        mLoaders = new nsSupportsHashtable(16, /* Thread safe */ PR_TRUE);
+        if (mLoaders == nsnull)
+            return NS_ERROR_OUT_OF_MEMORY;
+        nsCStringKey loaderKey(nativeComponentType);
+        mLoaders->Put(&loaderKey, mNativeComponentLoader);
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
+        nsCStringKey staticKey(staticComponentType);
+        mLoaders->Put(&staticKey, mStaticComponentLoader);
+#endif
     }
 
 #ifdef USE_REGISTRY
@@ -375,6 +391,9 @@ nsresult nsComponentManagerImpl::Shutdown(void)
 
     // we have an extra reference on this one, which is probably a good thing
     NS_IF_RELEASE(mNativeComponentLoader);
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
+    NS_IF_RELEASE(mStaticComponentLoader);
+#endif
     
     // Destroy the Lock
     if (mMon)
@@ -482,6 +501,15 @@ nsComponentManagerImpl::PlatformInit(void)
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
                ("no native component loader available for init"));
     }
+
+    if (mStaticComponentLoader) {
+        /* now that we have the registry, Init the native loader */
+        rv = mStaticComponentLoader->Init(this, mRegistry);
+    } else {
+        PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
+               ("no native component loader available for init"));
+    }
+
     return rv;
 }
 
@@ -1297,6 +1325,11 @@ nsComponentManagerImpl::RegistryLocationForSpec(nsIFile *aSpec,
     if (!mComponentsDir) 
         return NS_ERROR_NOT_INITIALIZED;
 
+    if (!aSpec) {
+        *aRegistryName = nsCRT::strdup("");
+        return NS_OK;
+    }
+
     PRBool containedIn;
     mComponentsDir->Contains(aSpec, PR_TRUE, &containedIn);
 
@@ -1837,10 +1870,7 @@ CanUnload_enumerate(nsHashKey *key, void *aData, void *aClosure)
     (struct CanUnload_closure *)aClosure;
 
     if (loader == closure->native) {
-#ifdef DEBUG
-    fprintf(stderr, "CanUnload_enumerate: skipping native\n");
-#endif
-    return PR_TRUE;
+        return PR_TRUE;
     }
 
     closure->status = loader->UnloadAll(closure->when);
@@ -1921,7 +1951,7 @@ AutoRegister_enumerate(nsHashKey *key, void *aData, void *aClosure)
     (struct AutoReg_closure *)aClosure;
 
     if (loader == closure->native)
-    return PR_TRUE;
+        return PR_TRUE;
 
     PR_ASSERT(NS_SUCCEEDED(closure->status));
 
@@ -2015,6 +2045,11 @@ nsComponentManagerImpl::AutoRegisterImpl(PRInt32 when, nsIFile *inDirSpec)
     /* do the native loader first, so we can find other loaders */
     rv = mNativeComponentLoader->AutoRegisterComponents((PRInt32)when, dir);
     if (NS_FAILED(rv)) return rv;
+
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
+    rv = mStaticComponentLoader->AutoRegisterComponents((PRInt32)when, dir);
+    if (NS_FAILED(rv)) return rv;
+#endif
 
     /* do InterfaceInfoManager after native loader so it can use components. */
     rv = iim->AutoRegisterInterfaces();

@@ -29,6 +29,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= absyncsvc
 XPIDL_MODULE	= absync
 LIBRARY_NAME	= absync_s
+META_COMPONENT = mail
 REQUIRES	= xpcom string necko mime cookie docshell locale uriloader pref layout widget msgbase msgbaseutil dom rdf addrbook intl locale mork mimetype gfx2 windowwatcher js
 
 CPPSRCS		= \
@@ -48,8 +49,7 @@ EXPORTS		= \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 

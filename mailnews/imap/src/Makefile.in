@@ -28,6 +28,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= msgimap
 LIBRARY_NAME	= msgimap_s
+META_COMPONENT = mail
 REQUIRES	= xpcom string mailnews rdf msgbase msgbaseutil rdfutil necko msgdb uconv mime pref js intl nkcache timer locale txmgr dom docshell msglocal widget layout uriloader xuldoc msgnews mimetype gfx2 windowwatcher
 
 EXPORTS		= \
@@ -72,8 +73,7 @@ CPPSRCS		= \
 include $(topsrcdir)/config/config.mk
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 

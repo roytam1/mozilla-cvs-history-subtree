@@ -28,6 +28,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= msgbase
 LIBRARY_NAME	= msgbase_s
+META_COMPONENT = mail
 REQUIRES	= xpcom string necko dom js appshell appcomps uconv intl htmlparser widget docshell rdf editor layout mailnews locale msgbaseutil webshell txmgr msgcompose msgdb uriloader pref msglocal msgimap timer mork msgnews addrbook prefmigr chrome xuldoc caps mime mimetype gfx2 mozcomps windowwatcher
 
 CPPSRCS		= \
@@ -92,8 +93,7 @@ EXPORTS		= \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 

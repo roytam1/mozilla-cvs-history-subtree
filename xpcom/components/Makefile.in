@@ -42,6 +42,12 @@ CPPSRCS		= \
 		xcDll.cpp \
 		$(NULL)
 
+# XXX not really right.
+ifdef MOZ_STATIC_COMPONENT_LIBS
+CPPSRCS         += nsStaticComponentLoader.cpp
+DEFINES		+= -DENABLE_STATIC_COMPONENT_LOADER=1
+endif
+
 EXPORTS		= \
 		nsComponentManagerUtils.h \
 		nsIGenericFactory.h \
@@ -49,6 +55,7 @@ EXPORTS		= \
 		nsIServiceManager.h \
 		nsRepository.h \
 		nsXPComFactory.h \
+		nsStaticComponent.h \
 		$(NULL)
 
 XPIDLSRCS	= \
@@ -67,8 +74,7 @@ EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 LOCAL_INCLUDES	= -I$(srcdir)/../base -I$(srcdir)/../thread
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 

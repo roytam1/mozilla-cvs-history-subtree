@@ -1,0 +1,77 @@
+#!nmake
+#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#
+# The Original Code is mozilla.org code.
+#
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s): 
+#
+
+DEPTH=..\..
+
+MAKE_OBJ_TYPE   = DLL
+DLLNAME         = mail.dll
+DLL             = .\$(OBJDIR)\$(DLLNAME)
+
+include <$(DEPTH)/config/config.mak>
+
+MAIL_LINK_COMP_NAMES=$(DIST)/mail-link-comp-names
+MAIL_LINK_COMPS=$(DIST)\mail-link-comps
+MAIL_LINK_LIBS=$(DIST)\mail-link-libs
+MAIL_SEDCMDS=nsMetaModule_mail.cpp.sed
+LIBFILE=$(OBJDIR)\mail-libs.txt
+GARBAGE=$(GARBAGE) $(MAIL_SEDCMDS) $(MAIL_LIBFILE) nsMetaModule_mail.cpp
+
+CPP_OBJS=.\$(OBJDIR)\nsMetaModule_mail.obj
+
+LLIBS=          $(DIST)\lib\xpcom.lib           \
+                $(DIST)\lib\rdfutil_s.lib       \
+                $(DIST)\lib\gkgfx.lib        \
+                $(LIBNSPR)                      \
+                $(NULL)
+
+include <$(DEPTH)/config/rules.mak>
+
+$(MAIL_SEDCMDS): $(MAIL_LINK_COMP_NAMES)
+        echo +++make: Creating $@
+        rm -f $@
+        echo s/@COMPONENT_NS_GET_MODULE@/\>> $@
+        sed -e "s/\(.*\)/REGISTER_MODULE_USING(\1_NSGetModule);\\\/" $(MAIL_LINK_COMP_NAMES) >> $@
+        echo />> $@
+        echo s/@COMPONENT_LIST@/\>> $@
+        sed -e "s/\(.*\)/{ \1_NSGM_comps, \1_NSGM_comp_count },\\\/" $(MAIL_LINK_COMP_NAMES) >> $@
+        echo />> $@
+        echo s/@DECLARE_COMPONENT_LIST@/\>> $@
+        sed -e "s/\(.*\)/extern \"C\" nsresult \1_NSGetModule(nsIComponentManager*, nsIFile*, nsIModule**); extern nsModuleComponentInfo* \1_NSGM_comps; extern PRUint32 \1_NSGM_comp_count;\\\/" $(MAIL_LINK_COMP_NAMES) >> $@
+        echo />> $@
+
+nsMetaModule_mail.cpp: nsMetaModule_mail.cpp.in $(MAIL_SEDCMDS)
+        echo +++make: Creating $@
+        rm -f $@
+        sed -f $(MAIL_SEDCMDS) nsMetaModule_mail.cpp.in > $@
+
+$(LIBFILE): $(MAIL_LINK_COMPS) $(MAIL_LINK_LIBS)
+        echo +++ make: Creating list of link libraries: $@
+        rm -f $@
+        sed -e "s/\(.*\)/$(DIST:\=\\\)\\\lib\\\\\1.lib/" $(MAIL_LINK_COMPS)  > $@
+        sed -e "s/\(.*\)/$(DIST:\=\\\)\\\lib\\\\\1.lib/" $(MAIL_LINK_LIBS)  >> $@
+
+install:: $(DLL)
+        $(MAKE_INSTALL) $(DLL) $(DIST)/bin/components
+
+clobber::
+        rm -f $(DIST)/bin/components/$(DLLNAME)
+

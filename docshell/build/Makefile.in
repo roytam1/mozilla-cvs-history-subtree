@@ -25,6 +25,7 @@ VPATH		= @srcdir@
 
 MODULE		= docshell
 IS_COMPONENT = 1
+COMPONENT_NAME	= docshell_provider
 
 include $(DEPTH)/config/autoconf.mk
 
