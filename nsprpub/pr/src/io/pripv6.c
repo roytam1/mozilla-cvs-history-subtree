@@ -70,9 +70,7 @@ PRUint8 *dstp;
 	dst_v6addr->ipv6.family = PR_AF_INET6;
 	dst_v6addr->ipv6.port = src_v4addr->inet.port;
 
-    if (htonl(INADDR_LOOPBACK) == src_v4addr->inet.ip) {
-		dst_v6addr->ipv6.ip = _pr_in6addr_loopback;
-	} else if (htonl(INADDR_ANY) == src_v4addr->inet.ip) {
+ 	if (htonl(INADDR_ANY) == src_v4addr->inet.ip) {
 		dst_v6addr->ipv6.ip = _pr_in6addr_any;
 	} else {
 #ifdef _PR_INET6

@@ -1410,9 +1410,7 @@ failed:
 PR_IMPLEMENT(void) PR_ConvertIpv4AddrToIpv6(PRUint32 v4addr, PRIPv6Addr *v6addr)
 {
 
-    if (htonl(INADDR_LOOPBACK) == v4addr) {
-		*v6addr = _pr_in6addr_loopback;
-	} else if (htonl(INADDR_ANY) == v4addr) {
+	if (htonl(INADDR_ANY) == v4addr) {
 		*v6addr = _pr_in6addr_any;
 	} else {
 		PRUint8 *dstp;
