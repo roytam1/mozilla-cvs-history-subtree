@@ -18,6 +18,8 @@
 # JSRef GNUmake makefile.
 #
 
+DEPTH		= .
+
 # Set os+release dependent make variables
 OS_ARCH         := $(subst /,_,$(shell uname -s))
 
@@ -50,7 +52,7 @@ DEFINES         =
 
 #NS_USE_NATIVE = 1
 
-include config/$(OS_CONFIG).mk
+include $(DEPTH)/config/$(OS_CONFIG).mk
 
 ifdef BUILD_OPT
 OPTIMIZER  += -O

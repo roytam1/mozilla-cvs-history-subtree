@@ -61,6 +61,8 @@
 # is double scalb(double, double)
 #
 
+DEPTH		= ..
+
 ifdef BUILD_OPT
 OPTIMIZER  = -O
 DEFINES    := -UDEBUG -DNDEBUG -UDEBUG_$(shell whoami)
@@ -98,7 +100,7 @@ endif
 OBJDIR          = $(OS_CONFIG)$(OBJDIR_TAG).OBJ
 VPATH           = $(OBJDIR)
 
-include ../config/$(OS_CONFIG).mk
+include $(DEPTH)/config/$(OS_CONFIG).mk
 
 define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
