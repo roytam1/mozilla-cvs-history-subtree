@@ -26,16 +26,16 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsDebug.h"
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
 #include <Processes.h>
 #include "nsIInternetConfigService.h"
-#ifdef MACOSX
-#include <unistd.h>
-#include "prenv.h"
-#endif
+//#ifdef MACOSX
+//#include <unistd.h>
+//#include "prenv.h"
+//#endif
 #elif defined(XP_WIN)
 #include <windows.h>
 #include <shlobj.h>
@@ -247,7 +247,7 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
     return;
 
 
-#elif defined(XP_MAC) || defined(MACOSX)
+#elif defined(XP_MAC)
     // get info for the the current process to determine the directory
     // its located in
     OSErr err;
@@ -289,7 +289,7 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
                 return;
             }
         }
-#if defined(DEBUG) && defined(MACOSX)
+#if defined(DEBUG)
 		else
 		{
 		    // In the absence of a good way to get the executable directory let
@@ -317,7 +317,7 @@ static void GetCurrentProcessDirectory(nsFileSpec& aFileSpec)
         		}
     		}
         }
-#endif /* DEBUG && MACOSX */
+#endif /* DEBUG */
 #if 0
     }
 #endif
@@ -446,7 +446,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             printf( "Got OS_DriveDirectory: %s\n", buffer);
 #endif
         }
-#elif defined(XP_MAC) || defined(MACOSX)
+#elif defined(XP_MAC)
         {
             *this = kVolumeRootFolderType;
         }
@@ -477,7 +477,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
              // use exe's directory if not set
              else GetCurrentProcessDirectory(*this);
           }
-#elif defined(XP_MAC) || defined(MACOSX)
+#elif defined(XP_MAC)
             *this = kTemporaryFolderType;
         
 #elif defined(XP_UNIX) || defined(XP_BEOS)
@@ -529,7 +529,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 
                 if (needToAppend) {
                     // XXX We need to unify these names across all platforms
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
                     *this += "Component Registry";
 #else
                     *this += "component.reg";
@@ -567,7 +567,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 
                 if (needToAppend) {
                     // XXX We need to unify these names across all platforms
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
                     *this += "Components";
 #else
                     *this += "components";
@@ -594,7 +594,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             }
             break;
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
         case Mac_SystemDirectory:
             *this = kSystemFolderType;
             break;
@@ -847,7 +847,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         }
 #endif  // XP_WIN
 
-#if defined(XP_UNIX) && !defined(MACOSX)
+#if defined(XP_UNIX)
         case Unix_LocalDirectory:
             *this = "/usr/local/netscape/";
             break;
@@ -1017,7 +1017,7 @@ nsSpecialSystemDirectory::Set(SystemDirectories dirToSet, nsFileSpec *dirSpec)
     return;
 }
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 //----------------------------------------------------------------------------------------
 nsSpecialSystemDirectory::nsSpecialSystemDirectory(OSType folderType)
 //----------------------------------------------------------------------------------------
