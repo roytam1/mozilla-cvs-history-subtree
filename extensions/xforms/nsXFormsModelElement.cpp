@@ -750,7 +750,9 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
     return PR_TRUE;  // successful, but nothing to do
 
   nsCOMPtr<nsIDOMXPathResult> result;
-  rv = aEvaluator->Evaluate(expr, mInstanceDocument, resolver,
+  nsCOMPtr<nsIDOMElement> docElement;
+  mInstanceDocument->GetDocumentElement(getter_AddRefs(docElement));
+  rv = aEvaluator->Evaluate(expr, docElement, resolver,
                             nsIDOMXPathResult::ORDERED_NODE_ITERATOR_TYPE,
                             nsnull, getter_AddRefs(result));
   if (NS_FAILED(rv))
