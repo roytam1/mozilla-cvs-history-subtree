@@ -253,7 +253,7 @@
     </toolbar>
 
     <toolbar id="bookmarks-search" grippytooltiptext="&bookmarksSearch.tooltip;">
-      <label value="&find.label;" accesskey="&find.accesskey;" control="search-box"/>
+      <label value="&search.label;" accesskey="&search.accesskey;" control="search-box"/>
       <textbox id="search-box" flex="1"
                type="timed" timeout="500"
                callback="document.getElementById('bookmarks-view').searchBookmarks(document.getElementById('search-box').value)"/>
