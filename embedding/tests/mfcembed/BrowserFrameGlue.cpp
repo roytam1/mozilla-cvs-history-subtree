@@ -310,6 +310,16 @@ void CBrowserFrame::BrowserFrameGlueObj::DestroyBrowserFrame()
 {
 	METHOD_PROLOGUE(CBrowserFrame, BrowserFrameGlueObj)
 
+	// Smack da browser!!
+	// 
+	// Because the webBrowser is asking to be destroyed, kill it now!!
+	// The containing window will be closed later when the WM_CLOSE
+	// is processed...
+	//
+	// see: http://bugzilla.mozilla.org/show_bug.cgi?id=117283
+	//
+	pThis->m_wndBrowserView.DestroyBrowser();
+
 	pThis->PostMessage(WM_CLOSE);
 }
 
