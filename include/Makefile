@@ -18,3 +18,5 @@
 # 
 
 DEPTH	= ..
+
+include $(DEPTH)/config/rules.mk
