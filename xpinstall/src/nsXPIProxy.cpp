@@ -24,6 +24,7 @@
 
 #include "nsXPIProxy.h"
 #include "nsCOMPtr.h"
+#include "nsString.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMNavigator.h"
 #include "nsIDOMPluginArray.h"
