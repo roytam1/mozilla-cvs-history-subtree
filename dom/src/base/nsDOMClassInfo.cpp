@@ -3479,17 +3479,13 @@ DOMJSClass_Construct(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 JS_STATIC_DLL_CALLBACK(JSBool)
 DOMJSClass_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
 {
-  JSObject *dom_obj;
-  if (!::JS_ValueToObject(cx, v, &dom_obj)) {
-    NS_ERROR("DOMJSClass_HasInstance called on non-object");
-    nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_DOM_NOT_SUPPORTED_ERR);
-
-    return JS_FALSE;
-  }
-
-  if (!dom_obj) {
+  // No need to look these up in the hash.
+  if (JSVAL_IS_PRIMITIVE(v)) {
     return JS_TRUE;
   }
+
+  JSObject *dom_obj = JSVAL_TO_OBJECT(v);
+  NS_ASSERTION(dom_obj, "DOMJSClass_HasInstance couldn't get object");
 
   JSClass *dom_class = JS_GET_CLASS(cx, dom_obj);
   if (!dom_class) {
@@ -3512,10 +3508,8 @@ DOMJSClass_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
   gNameSpaceManager->LookupName(NS_ConvertASCIItoUCS2(dom_class->name),
                                 &name_struct);
   if (!name_struct) {
-    NS_ERROR("Name isn't in hash.");
-    nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
-
-    return JS_FALSE;
+    // Name isn't in hash, not a DOM object.
+    return JS_TRUE;
   }
 
   NS_ASSERTION(name_struct->mType == nsGlobalNameStruct::eTypeClassConstructor ||
@@ -4537,7 +4531,6 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   }
 
   jsval v;
-
   nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
                            NS_GET_IID(nsISupports), &v);
 
@@ -5034,8 +5027,7 @@ nsContentListSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
   nsCOMPtr<nsIContentList> contentList(do_QueryInterface(nativeObj));
   NS_ASSERTION(contentList, "Why does something not implementing nsIContentList use nsContentListSH??");
 
-  nsCOMPtr<nsISupports> native_parent;
-  contentList->GetParentObject(getter_AddRefs(native_parent));
+  nsISupports *native_parent = contentList->GetParentObject();
 
   if (!native_parent) {
     *parentObj = globalObj;
