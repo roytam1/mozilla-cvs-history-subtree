@@ -41,6 +41,8 @@
 // 98-08-10 joe -- temporary item to turn on ENDER (html textareas) before it fully lands
 #define ENDER 1
 
+// 98-10-05 ebb -- define to turn on COLORSYNC
+#define COLORSYNC  1
 
 // ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
 //	¥	You typically will not need to change things below here
