@@ -579,13 +579,14 @@ PRInt32 txNodeSet::findPosition(const txXPathNode& aNode, PRInt32 aFirst,
 void txNodeSet::copyElements(txNodeSet* aNodes, const txNodeSet& aOtherNodes,
                              PRInt32 aStart, PRInt32 aEnd, PRInt32 aIndex)
 {
+    PRInt32 increment = aNodes->mDirection == aOtherNodes.mDirection ? 1 : -1;
     while (aStart != aEnd) {
         txXPathNode* temp = new(&aNodes->mElements[aIndex]) txXPathNode(aOtherNodes.mElements[aStart]);
         if (!temp) {
             break;
         }
 
-        aStart += aOtherNodes.mDirection;
+        aStart += increment;
         ++aIndex;
     }
 }
@@ -604,9 +605,8 @@ void txNodeSet::transferElements(txNodeSet* aNodes,
         while (aStart != aEnd) {
             memcpy(&aNodes->mElements[aIndex], &aOtherNodes.mElements[aStart],
                    sizeof(txXPathNode));
-            aStart += aOtherNodes.mDirection;
+            --aStart;
             ++aIndex;
         }
     }
 }
-  
