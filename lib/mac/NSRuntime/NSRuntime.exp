@@ -60,3 +60,4 @@ __throw_bad_alloc__3stdFv		# std::__throw_bad_alloc()
 #longjmp
 #__terminate
 #__initialize
+__register_atexit
