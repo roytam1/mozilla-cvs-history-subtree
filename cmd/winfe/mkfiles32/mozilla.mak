@@ -506,6 +506,9 @@ LINK_LIBS= \
     $(DIST)\lib\unicvt32.lib \
 !ifdef MOZ_SMARTUPDATE
     $(DIST)\lib\softup32.lib \
+!ifndef MOZ_NGLAYOUT
+    $(DIST)\lib\raptorbase.lib \
+!endif
 !endif
 !ifdef JAVA_OR_NSJVM
 !ifdef MOZ_SECURITY
@@ -1525,7 +1528,7 @@ $(DEPTH)\cmd\winfe\mkfiles32\makedep.exe: $(DEPTH)\cmd\winfe\mkfiles32\makedep.c
 !ELSE
 
 ALL : $(OUTDIR)\mozilla.dep "$(OUTDIR)" prebuild $(OUTDIR)\resdll.dll $(OUTDIR)\appicon.res $(OUTDIR)\mozilla.exe $(OUTDIR)\mozilla.tlb install rebase \
-!if defined(MOZ_SECURITY)
+!if defined(MOZ_SECURITY) && !defined(NO_PATCHER)
 # Allow building without patcher. You get intl security, but faster build time
 "$(OUTDIR)\netsc_us.exe" "$(OUTDIR)\netsc_fr.exe"
 !else
@@ -1875,6 +1878,11 @@ install:    \
 	    $(OUTDIR)\glowcode.dll    \
 !ENDIF
 !endif
+!if defined(MOZ_SMARTUPDATE) && !defined(MOZ_NGLAYOUT)
+!IF EXIST($(DIST)\bin\raptorbase.dll)
+        $(OUTDIR)\raptorbase.dll    \
+!ENDIF
+!endif
 !ifdef MOZ_FULLCIRCLE
 !IF EXIST($(DIST)\bin\fullsoft.dll)
             $(OUTDIR)\fullsoft.dll    \
@@ -2149,6 +2157,11 @@ $(JAVABIN_DIR)\npj32$(VERSION_NUMBER).dll:   $(DIST)\bin\npj32$(VERSION_NUMBER).
     @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
     @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
     @IF EXIST $(DIST)\bin\npj32$(VERSION_NUMBER).dll copy $(DIST)\bin\npj32$(VERSION_NUMBER).dll $(JAVABIN_DIR)\npj32$(VERSION_NUMBER).dll
+
+!if defined(MOZ_SMARTUPDATE) && !defined(MOZ_NGLAYOUT)
+$(OUTDIR)\raptorbase.dll:   $(DIST)\bin\raptorbase.dll
+    @IF EXIST $(DIST)\bin\raptorbase.dll copy $(DIST)\bin\raptorbase.dll $(OUTDIR)\raptorbase.dll
+!endif
 
 !if defined(NSJVM)
 $(JAVABIN_DIR)\jrt32$(VERSION_NUMBER).dll:   $(DIST)\bin\jrt32$(VERSION_NUMBER).dll
