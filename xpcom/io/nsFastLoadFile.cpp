@@ -33,9 +33,20 @@
 #include "nsBinaryStream.h"
 #include "nsFastLoadFile.h"
 
+#ifdef DEBUG_brendan
+# define METERING
+# define DEBUG_MUX
+#endif
+
+#ifdef METERING
+# define METER(x)       x
+#else
+# define METER(x)       /* nothing */
+#endif
+
 #ifdef DEBUG_MUX
-#include <stdio.h>
-#include <stdarg.h>
+# include <stdio.h>
+# include <stdarg.h>
 
 static void trace_mux(char mode, const char *format, ...)
 {
@@ -54,9 +65,9 @@ static void trace_mux(char mode, const char *format, ...)
     va_end(ap);
 }
 
-#define TRACE_MUX(args) trace_mux args
+# define TRACE_MUX(args) trace_mux args
 #else
-#define TRACE_MUX(args) /* nothing */
+# define TRACE_MUX(args) /* nothing */
 #endif
 
 /*
@@ -277,8 +288,9 @@ nsFastLoadFileReader::SelectMuxedDocument(nsISupports* aURI)
         return NS_ERROR_UNEXPECTED;
 
     // It turns out we get a fair amount of redundant select calls, thanks to
-    // what seem like unnecessary parser calls to nsIContentSink::WillResume.
-    // (XXXbe figure out why!)
+    // non-blocking hunks of data from the parser that are devoid of scripts.
+    // As more data gets FastLoaded, the number of these useless selects will
+    // decline.
     docMapEntry = uriMapEntry->mDocMapEntry;
     if (docMapEntry == mCurrentDocumentMapEntry) {
         TRACE_MUX(('r', "select prev %s same as current!\n",
@@ -342,6 +354,8 @@ nsFastLoadFileReader::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead)
         // i/o with LIFO scheduling.  XXXbe investigate LIFO issues
         do {
             // Check for unexpected end of multiplexed stream.
+            NS_ASSERTION(entry->mNextSegmentOffset != 0,
+                         "document demuxed from FastLoad file more than once?");
             if (entry->mNextSegmentOffset == 0)
                 return NS_ERROR_UNEXPECTED;
 
@@ -409,6 +423,7 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
         if (NS_FAILED(rv)) return rv;
 
         entry->mObject = nsnull;
+        entry->mSkipOffset = 0;
     }
 
     if (!PL_DHashTableInit(&aFooter->mDocumentMap, &docmap_DHashTableOps,
@@ -662,12 +677,11 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
         NS_ASSERTION((oid & MFL_WEAK_REF_TAG) ==
                      (aIsStrongRef ? 0 : MFL_WEAK_REF_TAG),
                      "strong vs. weak ref deserialization mismatch!");
+        nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
 
         // Check whether we've already deserialized the object for this OID.
         object = entry->mObject;
-
         if (!object) {
-            nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
             PRUint32 saveOffset;
             nsDocumentMapReadEntry* saveDocMapEntry = nsnull;
 
@@ -696,6 +710,11 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
             if (NS_FAILED(rv)) return rv;
 
             if (entry->mCIDOffset != saveOffset) {
+                // Save the "skip offset" in case we need to skip this object
+                // definition when reading forward, later on.
+                rv = seekable->Tell(&entry->mSkipOffset);
+                if (NS_FAILED(rv)) return rv;
+
                 // Restore stream offset and mCurrentDocumentMapEntry in case
                 // we're still reading forward through a part of the multiplex
                 // to get object definitions eagerly.
@@ -706,6 +725,17 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 
             // Save object until all refs have been deserialized.
             entry->mObject = object;
+        } else {
+            // What if we are at a definition that's already been read?  This
+            // case arises when a sharp object's def is serialized before its
+            // refs, while a non-defining ref is deserialized before the def.
+            // We must skip over the object definition.
+            if (oid & MFL_OBJECT_DEF_TAG) {
+                NS_ASSERTION(entry->mSkipOffset != 0, "impossible! see above");
+                rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                                    entry->mSkipOffset);
+                if (NS_FAILED(rv)) return rv;
+            }
         }
 
         if (aIsStrongRef) {
