@@ -925,6 +925,8 @@ net_start_first_connect(const char   *host,
 	 * later
 	 */
 	tcp_con_data->begin_time = time(NULL);
+    TIMING_MSG(("netlib: net_start_first_connect: creating TCP "
+                "connection to host=\"%s\"", host));
 
 #define CONNECT_TIMEOUT  0
 
@@ -1075,6 +1077,7 @@ NET_BeginConnect (CONST char   *url,
 		return MK_OFFLINE;	
 #endif /* MOZ_OFFLINE */
 	TRACEMSG(("NET_BeginConnect called for url: %s", url));
+    TIMING_MSG(("netlib: NET_BeginConnect: url=\"%s\"", url));
 
 	/* One time startup flag. If this is the first time in BeginConnect,
 	 * make sure the socks is setup if it needs to be.
@@ -1319,6 +1322,7 @@ NET_FinishConnect (CONST char   *url,
 	char *host=NULL;
 
 	TRACEMSG(("NET_FinishConnect called for url: %s", url));
+    TIMING_MSG(("netlib: NET_FinishConnect: url=\"%s\"", url));
 
 	if(!*tcp_con_data)  /* safty valve */
 	  {
@@ -1345,9 +1349,6 @@ NET_FinishConnect (CONST char   *url,
              */
             host = url;
           }
-
-        TIMING_MSG(("netlib: NET_FinishConnect: DNS lookup complete: url=\"%s\"",
-                    url));
 
 		status = net_FindAddress(host, 
 					&((*tcp_con_data)->net_addr),
@@ -1385,6 +1386,9 @@ NET_FinishConnect (CONST char   *url,
             FREE_AND_CLEAR(host_string);
             return MK_UNABLE_TO_LOCATE_HOST;
           }
+
+        TIMING_MSG(("netlib: NET_FinishConnect: DNS lookup complete: url=\"%s\"",
+                    url));
 
         status = net_start_first_connect(host, *sock, window_id, 
 										 *tcp_con_data, error_msg);
