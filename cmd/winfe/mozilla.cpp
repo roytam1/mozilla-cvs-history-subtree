@@ -106,6 +106,8 @@ static char BASED_CODE THIS_FILE[] = __FILE__;
 	#define _mkdir mkdir
 #endif
 
+extern "C" void WFE_StartCalendar();
+
 extern "C"      {
 NET_StreamClass *memory_stream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
 NET_StreamClass *external_viewer_disk_stream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
@@ -759,8 +761,6 @@ BOOL CNetscapeApp::InitInstance()
     theApp.m_bUseVirtualFont = TRUE;
 #endif
 
-	m_pIntlFont = new CIntlFont;
-
 	int32   csid ;
 	if( PREF_GetIntPref("intl.character_set",&csid) != PREF_NOERROR)
 		csid = 2;
@@ -787,6 +787,9 @@ BOOL CNetscapeApp::InitInstance()
 	if (!login_QueryForCurrentProfile())
 		return FALSE;
 
+	// Read in font and setup encoding table stuff (must be done after prefs are read)
+	m_pIntlFont = new CIntlFont;
+
     // SECNAV_INIT requires AppCodeName and the first substring in AppVersion 
     SECNAV_Init();
 
@@ -808,8 +811,10 @@ BOOL CNetscapeApp::InitInstance()
     if(!bAlreadyRunning)
 	{
 #endif
+#ifdef MOZ_OFFLINE
 		extern void AskMeDlg(void);
-		AskMeDlg();		
+		AskMeDlg();	
+#endif /* MOZ_OFFLINE */
 #ifdef XP_WIN32
     }
 #endif
@@ -1226,6 +1231,10 @@ BOOL CNetscapeApp::InitInstance()
 		PREF_SetCharPref("browser.bookmark_location",msg);
 	}
 
+#ifdef MOZ_OFFLINE
+	m_bSynchronizingExit = FALSE;
+	m_bSynchronizing = FALSE;
+#endif/* MOZ_OFFLINE */
 
 	// Get LDAP servers filename
 #ifdef MOZ_LDAP
@@ -1237,7 +1246,6 @@ BOOL CNetscapeApp::InitInstance()
 	PREF_CopyCharPref("browser.ldapfile_location",&ldapFile);
 
 	// Initialize the directories and PAB
-//      msg = m_UserDirectory;
     msg = "abook.nab";
 	PREF_SetDefaultCharPref("browser.addressbook_location",msg);
 
@@ -1320,7 +1328,7 @@ BOOL CNetscapeApp::InitInstance()
 	}
 	else
 	{
-		DIR_GetServerPreferences (&m_directories, msg);
+		m_directories = DIR_GetDirServers();
 		char * ldapPref = PR_smprintf("ldap_%d.end_of_directories", kCurrentListVersion);
 		if (ldapPref)
 			PREF_RegisterCallback(ldapPref, DirServerListChanged, NULL);
@@ -1418,7 +1426,7 @@ BOOL CNetscapeApp::InitInstance()
 
 	if(m_bAutomated == FALSE && m_bEmbedded == FALSE  && csPrintCommand.IsEmpty())
 	{
-		int iStartupMode=0;
+		int32 iStartupMode=0;
 	    BOOL bStartMode = FALSE;
 
 		PREF_GetBoolPref("general.startup.browser", &bStartMode);
@@ -1428,6 +1436,10 @@ BOOL CNetscapeApp::InitInstance()
 		PREF_GetBoolPref("general.startup.mail", &bStartMode);
 		if (bStartMode)
 			iStartupMode |= STARTUP_MAIL;
+
+		PREF_GetBoolPref("general.startup.calendar", &bStartMode);
+		if (bStartMode)
+			iStartupMode |= STARTUP_CALENDAR;
 
 		PREF_GetBoolPref("general.startup.news", &bStartMode);
 		if (bStartMode)
@@ -1538,12 +1550,18 @@ BOOL CNetscapeApp::InitInstance()
                     m_CmdLineLoadURL = NULL;
                     break;
                 }
+
+				case STARTUP_CALENDAR:
+					WFE_StartCalendar();
+					break;
+
 #ifdef MOZ_MAIL_NEWS
 				case STARTUP_INBOX:
 					WFE_MSGOpenInbox();     //opens the inbox folder with the split pain view.
 					break;
 
         case STARTUP_CLIENT_MAPI:  // rhp - for MAPI Startup
+        case STARTUP_CLIENT_ABAPI: // rhp - for Address Book API
           {
             CGenericDoc *pDoc = (CGenericDoc *)theApp.m_ViewTmplate->OpenDocumentFile(NULL, FALSE);
             if (pDoc)
@@ -1555,9 +1573,17 @@ BOOL CNetscapeApp::InitInstance()
                 if (pFrameWnd)
                 {
                   extern void StoreMAPIFrameWnd(CFrameWnd *pFrameWnd);
+                  extern void StoreNABFrameWnd(CFrameWnd *pFrameWnd);
 
                   pFrameWnd->ShowWindow(SW_SHOWMINIMIZED);
-                  StoreMAPIFrameWnd(pFrameWnd);
+                  if (iStartupMode == STARTUP_CLIENT_MAPI)
+                  {
+                    StoreMAPIFrameWnd(pFrameWnd);
+                  }
+                  else
+                  {
+                    StoreNABFrameWnd(pFrameWnd);
+                  }
                 }
               } 
             }
@@ -1759,10 +1785,19 @@ BOOL CNetscapeApp::InitInstance()
 		}
 
 		//fall through here and launch browser if necessary
+#ifdef MOZ_MAIL_NEWS
+	if ((iStartupMode & STARTUP_BROWSER || iStartupMode & STARTUP_EDITOR || // if startup browser or editor
+	    !(iStartupMode & (STARTUP_BROWSER|STARTUP_CALENDAR|STARTUP_MAIL|STARTUP_ADDRESS
+			|STARTUP_INBOX|STARTUP_COMPOSE|STARTUP_FOLDER|STARTUP_FOLDERS|STARTUP_NETCASTER
+      |STARTUP_CLIENT_MAPI|STARTUP_CLIENT_ABAPI)) ||    // or invalid data
+	    m_bKioskMode ))  {                                                  // or kiosk mode - start browser
+#else
 	if ((iStartupMode & STARTUP_BROWSER || iStartupMode & STARTUP_EDITOR || // if startup browser or editor
 	    !(iStartupMode & (STARTUP_BROWSER|STARTUP_NEWS|STARTUP_MAIL|STARTUP_ADDRESS
-			|STARTUP_INBOX|STARTUP_COMPOSE|STARTUP_FOLDER|STARTUP_FOLDERS|STARTUP_NETCASTER)) ||    // or invalid data
+			|STARTUP_INBOX|STARTUP_COMPOSE|STARTUP_FOLDER|STARTUP_FOLDERS|STARTUP_NETCASTER|STARTUP_CALENDAR)) ||    // or invalid data
 	    m_bKioskMode ))  {                                                  // or kiosk mode - start browser
+#endif /* MOZ_MAIL_NEWS */
+
 #ifdef EDITOR
 	    if ( (bIsGold && (iStartupMode & STARTUP_EDITOR)) && !(iStartupMode & STARTUP_BROWSER))
 			{   //start the editor
@@ -1981,7 +2016,7 @@ int CNetscapeApp::ExitInstance()
 
 #ifdef MOZ_MAIL_NEWS
     if (m_pABook)
-	AB_CloseAddressBook(&m_pABook);
+		AB_CloseAddressBook(&m_pABook);
     WFE_MSGShutdown();
 #endif /* MOZ_MAIL_NEWS */
 

@@ -57,6 +57,10 @@
 #include "navfram.h"
 #include "secnav.h"
 
+#ifdef MOZ_OFFLINE
+#include "offlndlg.h"
+#endif /* MOZ_OFFLINE */
+
 #include "pw_public.h"
 extern "C"      {
 #include "mkaccess.h"
@@ -168,6 +172,7 @@ CNetscapeApp::CNetscapeApp()
     m_bCreateNews		= FALSE;
 #endif /* MOZ_MAIL_NEWS */
     m_bCreateNetcaster	= FALSE;
+	m_bCreateCalendar	= FALSE;
 #ifdef MOZ_MAIL_NEWS
 	m_bCreateInbox		= FALSE;//causes the inbox to be started
 	m_bCreateFolders	= FALSE;//causes the folders frame window to be started
@@ -207,6 +212,11 @@ CNetscapeApp::CNetscapeApp()
     m_bInitMapi 	     = TRUE;
     m_bExitStatus 	     = FALSE;
     InitTime();
+
+#ifdef MOZ_MAIL_NEWS
+	m_bCreateInboxMAPI = FALSE; // rhp - for MAPI
+	m_bCreateNABWin = FALSE;    // rhp - for Address Book API
+#endif /* MOZ_MAIL_NEWS */
 
 #ifdef XP_WIN16
 	m_nMsgLast = WM_NULL;
@@ -398,6 +408,9 @@ void CNetscapeApp::parseCommandLine(char * commandLine)
     if(IsRuntimeSwitch("-news",TRUE))
         m_bCreateNews = TRUE;
 #endif /* MOZ_MAIL_NEWS */
+
+    if(IsRuntimeSwitch("-calendar",TRUE))
+        m_bCreateCalendar = TRUE;
 
 	if(IsRuntimeSwitch("-new_profile",TRUE))
         m_bCreateNewProfile = TRUE;
@@ -1423,19 +1436,54 @@ void CNetscapeApp::OnAppSuperExit()
 void CNetscapeApp::OnAppExit()
 {
 
-    // if more than one top level window prompt to make sure they
-    //	 want to exit
-    if(m_pFrameList && m_pFrameList->m_pNext) {
-	int iExit = ::MessageBox(NULL,
-				 szLoadString(IDS_CLOSEWINDOWS_EXIT),
-				 szLoadString(IDS_EXIT_CONFIRMATION),
-				 MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2);
+#ifdef MOZ_OFFLINE
+	// Check prompt synchronization preference.  If set bring up
+	// prompt otherwise, bring up regular dialog.
 
-        // false alarm, user didn't really want to exit
-	if(IDNO == iExit)
-	    return;
+	XP_Bool promptSynch = TRUE;
+	PREF_GetBoolPref("offline.prompt_synch_on_exit", &promptSynch);
+	
+	int iExit = IDOK;
 
-    }
+	if(promptSynch)
+	{
+		CAskSynchronizeExitDlg synchPromptDlg;
+
+		iExit = synchPromptDlg.DoModal();
+		// false alarm, user didn't really want to exit
+		if(iExit == IDCANCEL)
+		{
+			return;
+		}
+		else if(iExit == IDYES)
+		{
+			if(CanCloseAllFrames())
+			{
+				m_bSynchronizingExit = TRUE;
+				WFE_Synchronize(NULL, TRUE);
+			}
+			return;
+		}
+	}
+	else
+	{
+#endif /* MOZ_OFFLINE */
+		// if more than one top level window prompt to make sure they
+		//	 want to exit
+		if(m_pFrameList && m_pFrameList->m_pNext){
+			iExit = ::MessageBox(NULL,
+					 szLoadString(IDS_CLOSEWINDOWS_EXIT),
+					 szLoadString(IDS_EXIT_CONFIRMATION),
+					 MB_ICONQUESTION | MB_YESNO | MB_DEFBUTTON2);
+
+			// false alarm, user didn't really want to exit
+			if(IDNO == iExit)
+				return;
+
+		}
+#ifdef MOZ_OFFLINE
+	}
+#endif /* MOZ_OFFLINE */
 
     CommonAppExit();
 }
@@ -1443,7 +1491,60 @@ void CNetscapeApp::OnAppExit()
 
 void CNetscapeApp::CommonAppExit()
 {
-	// Make sure each frame window really does want to close
+	CGenericFrame *pFrame;
+
+#ifdef MOZ_OFFLINE
+	//if we are synchronizing on exit then we've already checked this.
+	if(!m_bSynchronizingExit)
+	{
+#endif /* MOZ_OFFLINE */
+		// Make sure each frame window really does want to close
+		for (pFrame = m_pFrameList; NULL != pFrame; pFrame = pFrame->m_pNext) {
+			CDocument*	pDocument = pFrame->GetActiveDocument();
+
+		if (pDocument && !pDocument->CanCloseFrame(pFrame)) {
+							// Document doesn't want to close so don't close any of the frames
+
+			// Clear the flags previously set
+			//	so we prompt to save edit changes next time we try to close
+			CGenericFrame *pCurrentFrame = pFrame;
+			for (pFrame = m_pFrameList; pCurrentFrame != pFrame; pFrame = pFrame->m_pNext) {
+			 pFrame->m_bSkipSaveEditChanges = FALSE;
+			}
+
+				// We aren't going to close -- get out!
+			return;
+			}
+		// Set flag to prevent prompting for saving edit changes
+		//  in CEditFrame::OnClose() since this was done in CanCloseFrame()
+		pFrame->m_bSkipSaveEditChanges = TRUE;
+		}
+#ifdef MOZ_OFFLINE
+	}
+#endif /* MOZ_OFFLINE */
+
+	//  Set wether or not the app is exiting.
+    m_bExit = TRUE;
+
+#ifdef MOZ_MAIL_NEWS
+    WFE_MSGSearchClose();
+#endif /* MOZ_MAIL_NEWS */
+
+    //	Go through each frame, closing it....
+    CGenericFrame *pNext = NULL;
+    for(pFrame = m_pFrameList; NULL != pFrame; pFrame = pNext) {
+
+	//  Extract the frame from the list.
+	pNext = pFrame->m_pNext;
+
+	pFrame->PostMessage(WM_CLOSE);
+    }
+  
+}
+
+#ifdef MOZ_OFFLINE
+BOOL CNetscapeApp::CanCloseAllFrames()
+{
     for (CGenericFrame *pFrame = m_pFrameList; NULL != pFrame; pFrame = pFrame->m_pNext) {
 		CDocument*	pDocument = pFrame->GetActiveDocument();
 
@@ -1458,32 +1559,64 @@ void CNetscapeApp::CommonAppExit()
 	    }
 
             // We aren't going to close -- get out!
-	    return;
+	    return FALSE;
 		}
 	// Set flag to prevent prompting for saving edit changes
 	//  in CEditFrame::OnClose() since this was done in CanCloseFrame()
 	pFrame->m_bSkipSaveEditChanges = TRUE;
 	}
 
-	//  Set wether or not the app is exiting.
-    m_bExit = TRUE;
+	if(theApp.m_pBookmarks != NULL && ::IsWindow(theApp.m_pBookmarks->m_hWnd))
+	{
+		if(WS_DISABLED & ::GetWindowLong(theApp.m_pBookmarks->m_hWnd, GWL_STYLE))
+		{
+			return FALSE;
+		}
+	}
 
-#ifdef MOZ_MAIL_NEWS
-    WFE_MSGSearchClose();
-    WFE_MSGLDAPSearchClose();
-#endif /* MOZ_MAIL_NEWS */
+	return TRUE;
 
-    //	Go through each frame, closing it....
+}
+
+void CNetscapeApp::HideFrames()
+{
+
+    //	Go through each frame and hide it
+	CGenericFrame *pFrame;
     CGenericFrame *pNext = NULL;
     for(pFrame = m_pFrameList; NULL != pFrame; pFrame = pNext) {
 
-	//  Extract the frame from the list.
-	pNext = pFrame->m_pNext;
+		//  Extract the frame from the list.
+		pNext = pFrame->m_pNext;
 
-	pFrame->PostMessage(WM_CLOSE);
+		//Hide all of it's children
+		CWnd *pDesktop = CWnd::GetDesktopWindow();
+		if(pDesktop)
+		{
+			CWnd* pChild = pDesktop->GetWindow(GW_CHILD);
+			while(pChild != NULL)
+			{
+				if(pChild->GetParent() == pFrame)
+				{
+					pChild->ShowWindow(SW_HIDE);
+				}
+				pChild = pChild->GetNextWindow();
+
+			}
+		}
+
+		pFrame->ShowWindow(SW_HIDE);
     }
-  
+
+	if(theApp.m_pBookmarks != NULL && ::IsWindow(theApp.m_pBookmarks->m_hWnd))
+	{
+		theApp.m_pBookmarks->ShowWindow(SW_HIDE);
+	}
+
+	//if there's a search frame then close it
+	WFE_MSGSearchClose();
 }
+#endif /* MOZ_OFFLINE */
 
 #ifdef MOZ_LOC_INDEP
 // LI_STUFF start
