@@ -1300,8 +1300,13 @@ nsBrowserInstance::Close()
     mIsClosed = PR_TRUE;
 
   // Undo other stuff we did in SetContentWindow.
-  if ( GetContentAreaDocShell() ) {
-      GetContentAreaDocShell()->SetDocLoaderObserver( 0 );
+  // Remove listeners we may have registered
+  nsIDocShell* docShell = GetContentAreaDocShell();
+  if (docShell)
+  {
+    docShell->SetDocLoaderObserver( 0 );
+    nsCOMPtr<nsIWebProgress> webProgress(do_GetInterface(docShell));
+    webProgress->RemoveProgressListener(NS_STATIC_CAST(nsIWebProgressListener*, this));
   }
 
   // Release search context.
