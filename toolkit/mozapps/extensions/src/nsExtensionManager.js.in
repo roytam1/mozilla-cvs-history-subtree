@@ -47,6 +47,7 @@ const PREF_UPDATE_COUNT               = "update.extensions.count";
 const PREF_UPDATE_EXT_WSDL_URI        = "update.extensions.wsdl";
 const PREF_EM_WASINSAFEMODE           = "extensions.wasInSafeMode";
 const PREF_EM_DISABLEDOBSOLETE        = "extensions.disabledObsolete";
+const PREF_EM_LAST_SELECTED_SKIN      = "extensions.lastSelectedSkin";
 const PREF_GENERAL_SKINS_SELECTEDSKIN = "general.skins.selectedSkin";
 
 const DIR_EXTENSIONS                  = "extensions";
@@ -1290,6 +1291,20 @@ nsExtensionManager.prototype = {
         var win = this._showProgressWindow();
         this._ensureDS();
         
+        // Retrieve the skin that was selected prior to entering safe mode
+        // and select it. 
+        var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefBranch);
+        var lastSelectedSkin = KEY_DEFAULT_THEME;
+        try {
+          lastSelectedSkin = pref.getCharPref(PREF_EM_LAST_SELECTED_SKIN);
+          pref.clearUserPref(PREF_EM_LAST_SELECTED_SKIN);
+        } 
+        catch (e) { }
+        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                           .getService(Components.interfaces.nsIXULChromeRegistry);
+        cr.selectSkin(lastSelectedSkin, true);
+        
         // Walk the list of extensions and re-activate overlays for packages 
         // that aren't disabled.
         var items = this._ds.getItemsWithFlagUnset("disabled", nsIUpdateItem.TYPE_EXTENSION);
@@ -1317,6 +1332,19 @@ nsExtensionManager.prototype = {
     
       // Enter safe mode
       this._ensureDS();
+
+      // Save the current theme (assumed to be the theme that styles the global
+      // package) and re-select the default theme ("classic/1.0")
+      var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                           .getService(Components.interfaces.nsIPrefBranch);
+      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                         .getService(Components.interfaces.nsIXULChromeRegistry);
+      if (!pref.prefHasUserValue(PREF_EM_LAST_SELECTED_SKIN)) {
+        pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN,  
+                         cr.getSelectedSkin("global"));
+        cr.selectSkin(KEY_DEFAULT_THEME, true);
+      }
+
       var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
       for (var i = 0; i < items.length; ++i)
         this._finalizeEnableDisable(items[i].id, true);

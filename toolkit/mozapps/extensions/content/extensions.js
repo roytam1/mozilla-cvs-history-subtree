@@ -17,6 +17,7 @@ var gObserverIndex    = -1;
 const PREF_APP_ID                           = "app.id";
 const PREF_EXTENSIONS_GETMORETHEMESURL      = "extensions.getMoreThemesURL";
 const PREF_EXTENSIONS_GETMOREEXTENSIONSURL  = "extensions.getMoreExtensionsURL";
+const PREF_EM_LAST_SELECTED_SKIN            = "extensions.lastSelectedSkin";
 const PREF_GENERAL_SKINS_SELECTEDSKIN       = "general.skins.selectedSkin";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -612,8 +613,12 @@ var gExtensionsViewController = {
         return;
         
       pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, gCurrentTheme);
+      
+      // Set this pref so the user can reset the theme in safe mode
+      pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN, gCurrentTheme);
       cr.selectSkin(gCurrentTheme, true);
       cr.refreshSkins();
+
 
       // disable the useThemeButton
       gExtensionsViewController.onCommandUpdate();
