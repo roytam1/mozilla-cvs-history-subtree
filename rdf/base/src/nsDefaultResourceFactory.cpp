@@ -73,8 +73,6 @@ DefaultResourceImpl::~DefaultResourceImpl(void)
 {
     nsresult rv;
 
-    PL_strfree(mURI);
-
     nsIRDFService* mgr;
     rv = nsServiceManager::GetService(kRDFServiceCID,
                                       kIRDFServiceIID,
@@ -85,6 +83,10 @@ DefaultResourceImpl::~DefaultResourceImpl(void)
         mgr->UnCacheResource(this);
         nsServiceManager::ReleaseService(kRDFServiceCID, mgr);
     }
+
+    // N.B. that we need to free the URI *after* we un-cache the resource,
+    // due to the way that the resource manager is implemented.
+    PL_strfree(mURI);
 }
 
 
