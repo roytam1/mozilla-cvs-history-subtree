@@ -419,23 +419,42 @@ PRBool nsUnknownDecoder::SniffForHTML(nsIRequest* aRequest)
     return PR_TRUE;
   }
 
-  nsCaseInsensitiveCStringComparator comparator;
-
-#define MATCHES_TAG(_tagstr) \
-  Substring(str, pos, sizeof(_tagstr) - 1).Equals(_tagstr, comparator)
-  
+  const char* strPtr = str.get() + pos;
+  // We use sizeof(_tagstr) below because that's the length of _tagstr
+  // with the one char " " or ">" appended.
+#define MATCHES_TAG(_tagstr)                                              \
+  (PL_strncasecmp(strPtr, _tagstr " ", sizeof(_tagstr)) == 0 ||  \
+   PL_strncasecmp(strPtr, _tagstr ">", sizeof(_tagstr)) == 0)
+    
   if (MATCHES_TAG("html")     ||
       MATCHES_TAG("frameset") ||
       MATCHES_TAG("body")     ||
       MATCHES_TAG("head")     ||
       MATCHES_TAG("script")   ||
-      MATCHES_TAG("a href")   ||
+      MATCHES_TAG("iframe")   ||
+      MATCHES_TAG("a")        ||
       MATCHES_TAG("img")      ||
       MATCHES_TAG("table")    ||
       MATCHES_TAG("title")    ||
+      MATCHES_TAG("link")     ||
+      MATCHES_TAG("base")     ||
+      MATCHES_TAG("style")    ||
       MATCHES_TAG("div")      ||
+      MATCHES_TAG("p")        ||
+      MATCHES_TAG("font")     ||
       MATCHES_TAG("applet")   ||
-      MATCHES_TAG("meta")) {
+      MATCHES_TAG("meta")     ||
+      MATCHES_TAG("center")   ||
+      MATCHES_TAG("form")     ||
+      MATCHES_TAG("isindex")  ||
+      MATCHES_TAG("h1")       ||
+      MATCHES_TAG("h2")       ||
+      MATCHES_TAG("h3")       ||
+      MATCHES_TAG("h4")       ||
+      MATCHES_TAG("h5")       ||
+      MATCHES_TAG("h6")       ||
+      MATCHES_TAG("b")        ||
+      MATCHES_TAG("pre")) {
   
     mContentType = TEXT_HTML;
     return PR_TRUE;
