@@ -286,10 +286,6 @@ nsSimplePageSequenceFrame::Reflow(nsIPresContext*          aPresContext,
   // now get out margins
   if (mPageData->mPrintSettings) {
     mPageData->mPrintSettings->GetMarginInTwips(mMargin);
-    PRInt16 printType;
-    mPageData->mPrintSettings->GetPrintRange(&printType);
-    mPrintRangeType = printType;
-    mIsPrintingSelection = nsIPrintSettings::kRangeSelection == printType;
   }
 
   // *** Special Override ***
@@ -657,6 +653,10 @@ nsSimplePageSequenceFrame::StartPrint(nsIPresContext*  aPresContext,
     mPageData->mPrintSettings = aPrintSettings;
   }
 
+  PRInt16 printType;
+  aPrintSettings->GetPrintRange(&printType);
+  mPrintRangeType = printType;
+  mIsPrintingSelection = nsIPrintSettings::kRangeSelection == printType;
   aPrintSettings->GetMarginInTwips(mMargin);
 
   aPrintSettings->GetStartPageRange(&mFromPageNum);

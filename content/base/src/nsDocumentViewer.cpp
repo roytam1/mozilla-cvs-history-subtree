@@ -361,7 +361,6 @@ public:
   PRPackedBool     mPrintAsIs;
   PRPackedBool     mSkippedPageEject;
   PRPackedBool     mSharedPresShell;
-  PRPackedBool     mIsHidden;         // Indicates PO is hidden, not reflowed, not shown
 
   nsRect           mClipRect;
 
@@ -589,7 +588,6 @@ private:
                             PRUint32          aErrorCode,
                             PRBool            aIsPrinting);
   void CleanupDocTitleArray(PRUnichar**& aArray, PRInt32& aCount);
-  void CheckForHiddenFrameSetFrames();
 
   // get the currently infocus frame for the document viewer
   nsIDOMWindowInternal * FindFocusedDOMWindowInternal();
@@ -619,9 +617,7 @@ private:
   PRBool   PrintDocContent(PrintObject* aPO, nsresult& aStatus);
   nsresult DoPrint(PrintObject * aPO, PRBool aDoSyncPrinting, PRBool& aDonePrinting);
   void SetPrintAsIs(PrintObject* aPO, PRBool aAsIs = PR_TRUE);
-
-  enum ePrintFlags {eSetPrintFlag = 1U, eSetHiddenFlag = 2U };
-  void SetPrintPO(PrintObject* aPO, PRBool aPrint, PRBool aIsHidden = PR_FALSE, PRUint32 aFlags = eSetPrintFlag);
+  void SetPrintPO(PrintObject* aPO, PRBool aPrint);
 
 #ifdef NS_PRINT_PREVIEW
   nsresult ShowDocList(PrintObject* aPO, PRBool aShow);
@@ -979,7 +975,7 @@ PrintObject::PrintObject() :
   mSeqFrame(nsnull), mPageFrame(nsnull), mPageNum(-1), 
   mRect(0,0,0,0), mReflowRect(0,0,0,0),
   mParent(nsnull), mHasBeenPrinted(PR_FALSE), mDontPrint(PR_TRUE),
-  mPrintAsIs(PR_FALSE), mSkippedPageEject(PR_FALSE), mSharedPresShell(PR_FALSE), mIsHidden(PR_FALSE),
+  mPrintAsIs(PR_FALSE), mSkippedPageEject(PR_FALSE), mSharedPresShell(PR_FALSE),
   mClipRect(-1,-1, -1, -1),
   mImgAnimationMode(imgIContainer::kNormalAnimMode),
   mDocTitle(nsnull), mDocURL(nsnull), mShrinkRatio(1.0), mXMost(0)
@@ -1013,7 +1009,7 @@ void PrintObject::DestroyPresentation()
 {
   mWindow      = nsnull;
   mPresContext = nsnull;
-  if (mPresShell) mPresShell->Destroy();
+  mPresShell->Destroy();
   mPresShell   = nsnull;
   mViewManager = nsnull;
   mStyleSet    = nsnull;
@@ -2950,20 +2946,13 @@ DocumentViewerImpl::SetPrintAsIs(PrintObject* aPO, PRBool aAsIs)
 // Recursively sets all the PO items to be printed
 // from the given item down into the tree
 void
-DocumentViewerImpl::SetPrintPO(PrintObject* aPO, PRBool aPrint, PRBool aIsHidden, PRUint32 aFlags)
+DocumentViewerImpl::SetPrintPO(PrintObject* aPO, PRBool aPrint)
 {
   NS_ASSERTION(aPO, "Pointer is null!");
 
-  // Set whether to print flag
-  // If it is hidden dont' allow ANY changes to the mDontPrint
-  // because mDontPrint has already been turned off
-  if ((aFlags & eSetPrintFlag) && !aPO->mIsHidden) aPO->mDontPrint = !aPrint;
-
-  // Set hidden flag
-  if (aFlags & eSetHiddenFlag) aPO->mIsHidden = aIsHidden;
-
+  aPO->mDontPrint = !aPrint;
   for (PRInt32 i=0;i<aPO->mKids.Count();i++) {
-    SetPrintPO((PrintObject*)aPO->mKids[i], aPrint, aIsHidden, aFlags);
+    SetPrintPO((PrintObject*)aPO->mKids[i], aPrint);
   } 
 }
 
@@ -3273,10 +3262,6 @@ nsresult
 DocumentViewerImpl::ReflowDocList(PrintObject* aPO, PRBool aSetPixelScale, PRBool aDoCalcShrink)
 {
   NS_ASSERTION(aPO, "Pointer is null!");
-  if (!aPO) return NS_ERROR_FAILURE;
-
-  // Don't reflow hidden POs
-  if (aPO->mIsHidden) return NS_OK;
 
   // Here is where we set the shrinkage value into the DC 
   // and this is what actually makes it shrink
@@ -3315,10 +3300,6 @@ nsresult
 DocumentViewerImpl::ReflowPrintObject(PrintObject * aPO, PRBool aDoCalcShrink)
 {
   NS_ASSERTION(aPO, "Pointer is null!");
-  if (!aPO) return NS_ERROR_FAILURE;
-
-  // If it is hidden don't bother reflow it or any of it's children
-  if (aPO->mIsHidden) return NS_OK;
 
   // Now locate the nsIDocument for the WebShell
   nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(aPO->mWebShell));
@@ -5179,8 +5160,7 @@ DocumentViewerImpl::ShowDocList(PrintObject* aPO, PRBool aShow)
     PRBool donePrinting;
     DoPrint(aPO, PR_FALSE, donePrinting);
 
-    // mWindow will be null for POs that are hidden, so they don't get shown
-    if (aPO->mWindow) {
+    if (aPO->mWindow != nsnull) {
       aPO->mWindow->Show(aShow);
     }
   }
@@ -5850,36 +5830,6 @@ DocumentViewerImpl::CheckDocumentForPPCaching()
 }
 
 /** ---------------------------------------------------
- *  Check to see if the FrameSet Frame is Hidden
- *  if it is then don't let it be reflowed, printed, or shown
- */
-void DocumentViewerImpl::CheckForHiddenFrameSetFrames()
-{
-  for (PRInt32 i=0;i<mPrt->mPrintDocList->Count();i++) {
-    PrintObject* po = (PrintObject*)mPrt->mPrintDocList->ElementAt(i);
-    NS_ASSERTION(po, "PrintObject can't be null!");
-    nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(po->mWebShell));
-    if (docShell) {
-      nsCOMPtr<nsIPresShell> presShell;
-      docShell->GetPresShell(getter_AddRefs(presShell));
-      if (presShell) {
-        nsIFrame* frame;
-        presShell->GetRootFrame(&frame);
-        if (frame) {
-          nsRect rect;
-          frame->GetRect(rect);
-          if (rect.height == 0) {
-            // set this PO and its children to not print and be hidden
-            SetPrintPO(po, PR_FALSE, PR_TRUE, eSetPrintFlag | eSetHiddenFlag);
-          }
-        }
-      }
-    }
-  }
-}
-
-
-/** ---------------------------------------------------
  *  See documentation above in the nsIContentViewerfile class definition
  *	@update 11/01/01 rods
  *
@@ -6006,7 +5956,6 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings)
   // is a child of this webshell
   mPrt->mIsIFrameSelected = IsThereAnIFrameSelected(webContainer, mPrt->mCurrentFocusWin, mPrt->mIsParentAFrameSet);
 
-  CheckForHiddenFrameSetFrames();
 
   DUMP_DOC_LIST("\nAfter Mapping------------------------------------------");
 
@@ -6373,8 +6322,6 @@ DocumentViewerImpl::Print(nsIPrintSettings*       aPrintSettings,
   // Also, check to see if the currently focus webshell 
   // is a child of this webshell
   mPrt->mIsIFrameSelected = IsThereAnIFrameSelected(webContainer, mPrt->mCurrentFocusWin, mPrt->mIsParentAFrameSet);
-
-  CheckForHiddenFrameSetFrames();
 
   DUMP_DOC_LIST("\nAfter Mapping------------------------------------------");
 
