@@ -760,6 +760,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
     return (browserController && [[browserController getTabBrowser] numberOfTabViewItems] > 1);
   }
 
+  if ( action == @selector(addBookmark:) )
+    return ![[[[browserController getBrowserWrapper] getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
+    
   if ( action == @selector(doStop:) )
     return (browserController && [[browserController getBrowserWrapper] isBusy]);
 

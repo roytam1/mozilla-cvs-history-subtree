@@ -581,7 +581,9 @@ KeychainFormSubmitObserver::CheckConfirmYN(nsIDOMWindowInternal* window)
   if(![mKeychain isEnabled] || ![mKeychain isAutoFillEnabled])
     return;
 
-  nsIDOMWindow* domWin = [mBrowserView getContentWindow];
+  nsCOMPtr<nsIDOMWindow> domWin = getter_AddRefs([mBrowserView getContentWindow]);
+  if (!domWin)
+    return;
   nsCOMPtr<nsIDOMDocument> domDoc;
   domWin->GetDocument(getter_AddRefs(domDoc));
   nsCOMPtr<nsIDocument> doc ( do_QueryInterface(domDoc) );

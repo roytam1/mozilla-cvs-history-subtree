@@ -62,6 +62,8 @@
 #include "nsIPrefService.h"
 #include "CHBrowserService.h"
 #include "nsIWebProgressListener.h"
+#include "nsIFocusController.h"
+#include "nsIDOMWindowInternal.h"
 
 #include <QuickDraw.h>
 
@@ -286,7 +288,27 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 - (void)onLoadingCompleted:(BOOL)succeeded
 {
   if (mActivateOnLoad) {
-    [mBrowserView setActive:YES];
+    // if we're the front/key window, focus the content area. If we're not,
+    // tell the focus controller that the content area should be focused when
+    // we do finally become the key window
+    if ( [NSApp keyWindow] == [mBrowserView window] )
+      [mBrowserView setActive:YES];
+    else {
+      nsCOMPtr<nsIDOMWindow> domWindow;
+      nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([mBrowserView getWebBrowser]);
+      if ( webBrowser ) {
+        webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+        if ( domWindow ) {
+          nsCOMPtr<nsPIDOMWindow> piWindow ( do_QueryInterface(domWindow) );
+          nsCOMPtr<nsIFocusController> controller;
+          piWindow->GetRootFocusController(getter_AddRefs(controller));
+          if ( controller ) {
+            nsCOMPtr<nsIDOMWindowInternal> windowInt ( do_QueryInterface(domWindow) );
+            controller->SetFocusedWindow(windowInt);
+          }
+        }
+      }
+    }
     mActivateOnLoad = NO;
   }
   
@@ -325,7 +347,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
   if (mWindowController) {
     [mWindowController updateToolbarItems];
-    [mWindowController stopThrobber];
+    [mWindowController stopThrobber];    
   }
 }
 

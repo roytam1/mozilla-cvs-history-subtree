@@ -85,6 +85,8 @@ static NSString *PrintToolbarItemIdentifier	= @"Print Toolbar Item";
 static NSString *ThrobberToolbarItemIdentifier = @"Throbber Toolbar Item";
 static NSString *SearchToolbarItemIdentifier = @"Search Toolbar Item";
 static NSString *ViewSourceToolbarItemIdentifier = @"View Source Toolbar Item";
+static NSString *BookmarkToolbarItemIdentifier = @"Bookmark Toolbar Item";
+
 
 static NSString *NavigatorWindowFrameSaveName = @"NavigatorWindow";
 
@@ -153,6 +155,7 @@ static NSArray* sToolbarDefaults = nil;
     [NSApp endModalSession: mModalSession];
     mModalSession = nil;
 }
+
 
 - (BOOL)isResponderGeckoView:(NSResponder*) responder
 {
@@ -236,6 +239,8 @@ static NSArray* sToolbarDefaults = nil;
         mThrobberHandler = nil;
         mURLFieldEditor = nil;
         mProgressSuperview = nil;
+        mBookmarkToolbarItem = nil;
+        mSidebarToolbarItem = nil;
     }
     return self;
 }
@@ -274,6 +279,7 @@ static NSArray* sToolbarDefaults = nil;
   // all open net connections right this very moment, thankyouverymuch, good day.
   [self release];
 }
+
 
 - (void)dealloc
 {
@@ -397,7 +403,7 @@ static NSArray* sToolbarDefaults = nil;
     }
     
     if (mustResizeChrome)
-      [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];
+      [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];      
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize
@@ -500,6 +506,8 @@ static NSArray* sToolbarDefaults = nil;
   NSToolbarItem* item = [[notification userInfo] objectForKey:@"item"];
   if ( [[item itemIdentifier] isEqual:SidebarToolbarItemIdentifier] )
     mSidebarToolbarItem = item;
+  else if ( [[item itemIdentifier] isEqual:BookmarkToolbarItemIdentifier] )
+    mBookmarkToolbarItem = item;
 }
 
 //
@@ -516,6 +524,8 @@ static NSArray* sToolbarDefaults = nil;
     mSidebarToolbarItem = nil;
   else if ( [[item itemIdentifier] isEqual:ThrobberToolbarItemIdentifier] )
     [self stopThrobber];
+  else if ( [[item itemIdentifier] isEqual:BookmarkToolbarItemIdentifier] )
+    mBookmarkToolbarItem = nil;
 }
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
@@ -531,6 +541,7 @@ static NSArray* sToolbarDefaults = nil;
                                         SearchToolbarItemIdentifier,
                                         PrintToolbarItemIdentifier,
                                         ViewSourceToolbarItemIdentifier,
+                                        BookmarkToolbarItemIdentifier,
                                         NSToolbarCustomizeToolbarItemIdentifier,
                                         NSToolbarFlexibleSpaceItemIdentifier,
                                         NSToolbarSpaceItemIdentifier,
@@ -665,6 +676,13 @@ static NSArray* sToolbarDefaults = nil;
         [toolbarItem setImage:[NSImage imageNamed:@"showsource"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(viewSource:)];
+    } else if ( [itemIdent isEqual:BookmarkToolbarItemIdentifier] ) {
+        [toolbarItem setLabel:NSLocalizedString(@"Bookmark",@"Bookmark")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Bookmark Page",@"Bookmark Page")];
+        [toolbarItem setToolTip:NSLocalizedString(@"BookmarkToolTip",@"Add this page to your bookmarks")];
+        [toolbarItem setImage:[NSImage imageNamed:@"add_to_bookmark.tif"]];
+        [toolbarItem setTarget:self];
+        [toolbarItem setAction:@selector(bookmarkPage:)];
     } else {
         toolbarItem = nil;
     }
@@ -686,6 +704,8 @@ static NSArray* sToolbarDefaults = nil;
     return [mBrowserView isBusy] == NO;
   else if (action == @selector(stop:))
     return [mBrowserView isBusy];
+  else if (action == @selector(bookmarkPage:))
+    return ![[[[self getBrowserWrapper] getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
   else
     return YES;
 }

@@ -129,6 +129,7 @@ typedef enum
   IBOutlet NSMenuItem*          mForwardItem;
   
   NSToolbarItem*                mSidebarToolbarItem;
+  NSToolbarItem*                mBookmarkToolbarItem;
 
   BOOL mInitialized;
   NSString* mPendingURL;

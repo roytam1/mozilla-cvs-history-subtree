@@ -43,4 +43,5 @@
 }
 
 -(BOOL) makeFirstResponder:(NSResponder*) responder;
+
 @end

@@ -140,13 +140,22 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)destroyWebBrowser
 {
   nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
-  baseWin->Destroy();
+  if ( baseWin ) {
+    // clean up here rather than in the dtor so that if anyone tries to get our
+    // web browser, it won't get a garbage object that's past its prime. As a result,
+    // this routine MUST be called otherwise we will leak.
+    baseWin->Destroy();
+    NS_RELEASE(_webBrowser);
+  }
 }
 
 - (void)dealloc 
 {
   NS_RELEASE(_listener);
-  NS_IF_RELEASE(_webBrowser);
+  
+  // it is imperative that |destroyWebBrowser()| be called before we get here, otherwise
+  // we will leak the webBrowser.
+	NS_ASSERTION(!_webBrowser, "BrowserView going away, destroyWebBrowser not called; leaking webBrowser!");
   
   CHBrowserService::BrowserClosed();
   
@@ -185,9 +194,10 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (nsIDOMWindow*)getContentWindow
 {
-  nsIDOMWindow* window;
+  nsIDOMWindow* window = nsnull;
 
-  _webBrowser->GetContentDOMWindow(&window);
+  if ( _webBrowser )
+    _webBrowser->GetContentDOMWindow(&window);
 
   return window;
 }
@@ -228,6 +238,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)reload:(unsigned int)flags
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return;
 
   PRUint32 navFlags = nsIWebNavigation::LOAD_FLAGS_NONE;
   if (flags & NSLoadFlagsBypassCacheAndProxy) {
@@ -244,6 +256,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (BOOL)canGoBack
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return NO;
 
   PRBool can;
   nav->GetCanGoBack(&can);
@@ -254,6 +268,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (BOOL)canGoForward
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return NO;
 
   PRBool can;
   nav->GetCanGoForward(&can);
@@ -264,6 +280,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)goBack
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return;
 
   nsresult rv = nav->GoBack();
   if (NS_FAILED(rv)) {
@@ -274,6 +292,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)goForward
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return;
 
   nsresult rv = nav->GoForward();
   if (NS_FAILED(rv)) {
@@ -284,6 +304,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)gotoIndex:(int)index
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return;
 
   nsresult rv = nav->GotoIndex(index);
   if (NS_FAILED(rv)) {
@@ -294,6 +316,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)stop:(unsigned int)flags
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return;
 
   nsresult rv = nav->Stop(flags);
   if (NS_FAILED(rv)) {
@@ -306,6 +330,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   nsCOMPtr<nsIURI> uri;
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
+  if ( !nav )
+    return nsnull;
 
   nav->GetCurrentURI(getter_AddRefs(uri));
   if (!uri) {
@@ -334,6 +360,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (void)setWebBrowser:(nsIWebBrowser*)browser
 {
+  NS_IF_ADDREF(browser);				// prevents destroying |browser| if |browser| == |_webBrowser|
+  NS_IF_RELEASE(_webBrowser);
   _webBrowser = browser;
 
   if (_webBrowser) {
@@ -383,15 +411,17 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     nsCOMPtr<nsIInputStream> postData;
     if (aDocument) {
       nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(_webBrowser));
-      nsCOMPtr<nsISHistory> sessionHistory;
-      webNav->GetSessionHistory(getter_AddRefs(sessionHistory));
-      nsCOMPtr<nsIHistoryEntry> entry;
-      PRInt32 sindex;
-      sessionHistory->GetIndex(&sindex);
-      sessionHistory->GetEntryAtIndex(sindex, PR_FALSE, getter_AddRefs(entry));
-      nsCOMPtr<nsISHEntry> shEntry(do_QueryInterface(entry));
-      if (shEntry)
-          shEntry->GetPostData(getter_AddRefs(postData));
+      if (webNav) {
+        nsCOMPtr<nsISHistory> sessionHistory;
+        webNav->GetSessionHistory(getter_AddRefs(sessionHistory));
+        nsCOMPtr<nsIHistoryEntry> entry;
+        PRInt32 sindex;
+        sessionHistory->GetIndex(&sindex);
+        sessionHistory->GetEntryAtIndex(sindex, PR_FALSE, getter_AddRefs(entry));
+        nsCOMPtr<nsISHEntry> shEntry(do_QueryInterface(entry));
+        if (shEntry)
+            shEntry->GetPostData(getter_AddRefs(postData));
+      }
     }
 
     // when saving, we first fire off a save with a nsHeaderSniffer as a progress
@@ -410,17 +440,21 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 -(void)printDocument
 {
-    nsCOMPtr<nsIDOMWindow> domWindow;
-    _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    nsCOMPtr<nsIInterfaceRequestor> ir(do_QueryInterface(domWindow));
-    nsCOMPtr<nsIWebBrowserPrint> print;
-    ir->GetInterface(NS_GET_IID(nsIWebBrowserPrint), getter_AddRefs(print));
-    print->Print(nsnull, nsnull);
+  if (!_webBrowser)
+    return;
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+  nsCOMPtr<nsIInterfaceRequestor> ir(do_QueryInterface(domWindow));
+  nsCOMPtr<nsIWebBrowserPrint> print;
+  ir->GetInterface(NS_GET_IID(nsIWebBrowserPrint), getter_AddRefs(print));
+  print->Print(nsnull, nsnull);
 }
 
 - (BOOL)findInPageWithPattern:(NSString*)inText caseSensitive:(BOOL)inCaseSensitive
     wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
 {
+    if (!_webBrowser)
+      return NO;
     PRBool found =  PR_FALSE;
     
     nsCOMPtr<nsIWebBrowserFocus> wbf(do_QueryInterface(_webBrowser));
@@ -470,6 +504,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 -(NSString*)getFocusedURLString
 {
+  if (!_webBrowser)
+    return @"";
   nsCOMPtr<nsIWebBrowserFocus> wbf(do_QueryInterface(_webBrowser));
   nsCOMPtr<nsIDOMWindow> domWindow;
   wbf->GetFocusedWindow(getter_AddRefs(domWindow));
@@ -496,6 +532,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 - (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
 {
+    if (!_webBrowser)
+      return;
     nsCOMPtr<nsIWebBrowserFocus> wbf(do_QueryInterface(_webBrowser));
     nsCOMPtr<nsIDOMWindow> domWindow;
     wbf->GetFocusedWindow(getter_AddRefs(domWindow));
@@ -589,42 +627,48 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 -(IBAction)cut:(id)aSender
 {
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->CutSelection();
+  if ( clipboard )
+    clipboard->CutSelection();
 }
 
 -(BOOL)canCut
 {
   PRBool canCut = PR_FALSE;
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->CanCutSelection(&canCut);
+  if ( clipboard )
+    clipboard->CanCutSelection(&canCut);
   return canCut;
 }
 
 -(IBAction)copy:(id)aSender
 {
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->CopySelection();
+  if ( clipboard )
+    clipboard->CopySelection();
 }
 
 -(BOOL)canCopy
 {
   PRBool canCut = PR_FALSE;
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->CanCopySelection(&canCut);
+  if ( clipboard )
+    clipboard->CanCopySelection(&canCut);
   return canCut;
 }
 
 -(IBAction)paste:(id)aSender
 {
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->Paste();
+  if ( clipboard )
+    clipboard->Paste();
 }
 
 -(BOOL)canPaste
 {
   PRBool canCut = PR_FALSE;
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->CanPaste(&canCut);
+  if ( clipboard )
+    clipboard->CanPaste(&canCut);
   return canCut;
 }
 
@@ -641,7 +685,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 -(IBAction)selectAll:(id)aSender
 {
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
-  clipboard->SelectAll();
+  if ( clipboard )
+    clipboard->SelectAll();
 }
 
 -(IBAction)undo:(id)aSender
@@ -667,6 +712,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 -(NSString*)getCurrentURLSpec
 {
   NSString* empty = @"";
+  if (!_webBrowser)
+    return empty;
   nsCOMPtr<nsIDOMWindow> domWindow;
   _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
   if (!domWindow)
@@ -694,10 +741,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)setActive: (BOOL)aIsActive
 {
   nsCOMPtr<nsIWebBrowserFocus> wbf(do_QueryInterface(_webBrowser));
-  if (aIsActive)
-    wbf->Activate();
-  else
-    wbf->Deactivate();
+  if (wbf) {
+    if (aIsActive)
+      wbf->Activate();
+    else
+      wbf->Deactivate();
+  }
 }
 
 -(NSMenu*)getContextMenu
