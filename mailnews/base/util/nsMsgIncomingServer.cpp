@@ -1734,12 +1734,11 @@ nsMsgIncomingServer::ConfigureTemporaryReturnReceiptsFilter(nsIMsgFilterList *fi
           rv = term->GetValue(getter_AddRefs(value));
           if (NS_SUCCEEDED(rv))
           {
-            // XXX todo
-            // determine if ::OtherHeader is the best way to do this.
-            // see nsMsgSearchOfflineMail::MatchTerms()
-            value->SetAttrib(nsMsgSearchAttrib::OtherHeader);
+            // we need to use OtherHeader + 1 so nsMsgFilter::GetTerm will
+            // return our custom header.
+            value->SetAttrib(nsMsgSearchAttrib::OtherHeader + 1);
             value->SetStr(NS_LITERAL_STRING("multipart/report").get());
-            term->SetAttrib(nsMsgSearchAttrib::OtherHeader);  
+            term->SetAttrib(nsMsgSearchAttrib::OtherHeader + 1);  
             term->SetOp(nsMsgSearchOp::Contains);
             term->SetBooleanAnd(PR_TRUE);
             term->SetArbitraryHeader("Content-Type");
@@ -1756,9 +1755,9 @@ nsMsgIncomingServer::ConfigureTemporaryReturnReceiptsFilter(nsIMsgFilterList *fi
             // XXX todo
             // determine if ::OtherHeader is the best way to do this.
             // see nsMsgSearchOfflineMail::MatchTerms()
-            value->SetAttrib(nsMsgSearchAttrib::OtherHeader);
+            value->SetAttrib(nsMsgSearchAttrib::OtherHeader + 1);
             value->SetStr(NS_LITERAL_STRING("disposition-notification").get());
-            term->SetAttrib(nsMsgSearchAttrib::OtherHeader);
+            term->SetAttrib(nsMsgSearchAttrib::OtherHeader + 1);
             term->SetOp(nsMsgSearchOp::Contains);
             term->SetBooleanAnd(PR_TRUE);
             term->SetArbitraryHeader("Content-Type");
