@@ -1201,7 +1201,7 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void 
 
   if ([servicesArray count] == 0)
   {
-    id newItem = [mServersSubmenu addItemWithTitle:NSLocalizedString(@"NoServicesFound", @"") action:nil keyEquivalent:@""];
+    NSMenuItem* newItem = [mServersSubmenu addItemWithTitle:NSLocalizedString(@"NoServicesFound", @"") action:nil keyEquivalent:@""];
     [newItem setTag:-1];
     [newItem setTarget:self];
   }
