@@ -33,12 +33,21 @@ class NamespaceResolver {
 public:
 
     /**
-     * Returns the namespace URI for the given name
+     * Returns the namespace URI for the given name, this method should only be
+     * called for returning a namespace declared within in the result document.
     **/ 
     virtual void getResultNameSpaceURI(const String& name, String& nameSpaceURI) = 0;
 
     /**
-     * Returns the namespace URI for the given namespace prefix
+     * Returns the namespace URI for the given name, this method should only be
+     * called for determining a namespace declared within the context (ie. the stylesheet)
+    **/ 
+    virtual void getNameSpaceURI(const String& name, String& nameSpaceURI) = 0;
+
+    /**
+     * Returns the namespace URI for the given namespace prefix, this method should
+     * only be called for determining a namespace declared within the context
+     * (ie. the stylesheet)
     **/
     virtual void getNameSpaceURIFromPrefix(const String& prefix, String& nameSpaceURI) = 0;
 

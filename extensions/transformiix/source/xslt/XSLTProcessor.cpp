@@ -51,7 +51,7 @@
 //-----------------------------------/
 
 /**
- * XSLTProcessor is a class for Processing XSL styelsheets
+ * XSLTProcessor is a class for Processing XSL stylesheets
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
@@ -74,7 +74,7 @@ XSLTProcessor::XSLTProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20010121]");
+    appVersion.append("1.0 [beta v20010123]");
 
 
     //-- create XSL element types

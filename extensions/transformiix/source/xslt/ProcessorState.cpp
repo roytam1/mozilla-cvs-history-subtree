@@ -790,12 +790,10 @@ FunctionCall* ProcessorState::resolveFunctionCall(const String& name) {
        return new SystemPropertyFunctionCall();
    }
    else if (ELEMENT_AVAILABLE_FN.isEqual(name)) {
-       err = "function not yet implemented: ";
-       err.append(name);
+       return new ElementAvailableFunctionCall();
    }
    else if (FUNCTION_AVAILABLE_FN.isEqual(name)) {
-       err = "function not yet implemented: ";
-       err.append(name);
+       return new FunctionAvailableFunctionCall();
    }
    else {
        err = "invalid function call: ";
