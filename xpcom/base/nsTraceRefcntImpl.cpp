@@ -64,7 +64,7 @@
 #include <dlfcn.h>
 #endif
 
-#ifdef XP_MAC
+#ifdef XP_MACOSX
 /*
  * This libdl stuff is breaking our build on Mac OSX, so I'm getting
  * rid of it.
