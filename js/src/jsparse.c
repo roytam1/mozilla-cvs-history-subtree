@@ -1477,7 +1477,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     JSObject *obj, *pobj;
     JSFunction *fun;
     JSClass *clasp;
-    JSPropertyOp getter, setter;
+    JSPropertyOp getter, setter, currentGetter, currentSetter;
     JSAtom *atom;
     JSProperty *prop;
     JSScopeProperty *sprop;
@@ -1519,6 +1519,8 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     }
 
     do {
+        currentGetter = getter;
+        currentSetter = setter;
 	MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NO_VARIABLE_NAME);
 	atom = ts->token.t_atom;
 
@@ -1537,7 +1539,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    OBJ_IS_NATIVE(pobj) &&
 	    (sprop = (JSScopeProperty *)prop) != NULL) {
 	    if (sprop->getter == js_GetArgument) {
-		getter = sprop->getter;
+		currentGetter = sprop->getter;
 #ifdef CHECK_ARGUMENT_HIDING
 		js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
 					    JSMSG_VAR_HIDES_ARG,
@@ -1569,16 +1571,16 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 			     * don't use the special getters and setters
 			     * since we can't allocate a slot in the frame.
 			     */
-			    getter = sprop->getter;
-			    setter = sprop->setter;
+			    currentGetter = sprop->getter;
+			    currentSetter = sprop->setter;
 			}
 		    }
 		} else {
 		    /* Global var: (re-)set id a la js_DefineProperty. */
 		    sprop->id = ATOM_KEY(atom);
 		}
-		sprop->getter = getter;
-		sprop->setter = setter;
+		sprop->getter = currentGetter;
+		sprop->setter = currentSetter;
 		sprop->attrs |= JSPROP_ENUMERATE | JSPROP_PERMANENT;
 		sprop->attrs &= ~JSPROP_READONLY;
 	    }
@@ -1594,18 +1596,18 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		OBJ_DROP_PROPERTY(cx, pobj, prop);
 		prop = NULL;
 	    }
-	    if (getter == js_GetCallVariable) {
+	    if (currentGetter == js_GetCallVariable) {
 		/* Can't increase fun->nvars in an active frame! */
-		getter = clasp->getProperty;
-		setter = clasp->setProperty;
+		currentGetter = clasp->getProperty;
+		currentSetter = clasp->setProperty;
 	    }
 	    ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, JSVAL_VOID,
-				     getter, setter,
+				     currentGetter, currentSetter,
 				     JSPROP_ENUMERATE | JSPROP_PERMANENT,
 				     &prop);
 	    if (ok && prop) {
 		pobj = obj;
-		if (getter == js_GetLocalVariable) {
+		if (currentGetter == js_GetLocalVariable) {
 		    /*
 		     * Allocate more room for variables in the
 		     * function's frame. We can do this only
@@ -1638,14 +1640,14 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    /* Depending on the value of the getter, change the
 	     * opcodes to the forms for arguments and variables.
 	     */
-	    if (getter == js_GetArgument) {
+	    if (currentGetter == js_GetArgument) {
 		JS_ASSERT(sprop && JSVAL_IS_INT(sprop->id));
 		pn2->pn_op = (pn2->pn_op == JSOP_NAME)
 			     ? JSOP_GETARG
 			     : JSOP_SETARG;
 		pn2->pn_slot = JSVAL_TO_INT(sprop->id);
-	    } else if (getter == js_GetLocalVariable ||
-		       getter == js_GetCallVariable)
+	    } else if (currentGetter == js_GetLocalVariable ||
+		       currentGetter == js_GetCallVariable)
 	    {
 		JS_ASSERT(sprop && JSVAL_IS_INT(sprop->id));
 		pn2->pn_op = (pn2->pn_op == JSOP_NAME)
