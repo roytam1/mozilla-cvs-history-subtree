@@ -31,6 +31,7 @@ sub tree_specific_overides {
 	$TreeSpecific::build_target = 'build_all_depend';
 	$TreeSpecific::checkout_target = 'checkout';
 	$TreeSpecific::clobber_target = 'distclean';
+	$TreeSpecific::extrafiles = '';
 	
 }
 
