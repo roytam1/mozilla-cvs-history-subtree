@@ -635,6 +635,7 @@ function performNavigation(type)
     // load the message key
     // we need to reset the global URI too.
     gDBView.loadMessageByMsgKey(resultId.value);
+    gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
     return;
   }
    
