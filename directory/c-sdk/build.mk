@@ -101,7 +101,9 @@ PURE32_LIBNAME	= freebl_pure32_$(NSSVERS)
 
 ifneq ($(USE_64), 1)
 ifeq ($(OS_ARCH), SunOS)
+ifneq ($(OS_TEST),i86pc)
 COPYFREEBL      = 1
+endif
 endif
 ifeq ($(OS_ARCH), HP-UX)
 COPYFREEBL      = 1
