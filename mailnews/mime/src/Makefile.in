@@ -86,6 +86,7 @@ CPPSRCS = \
 		nsMimeTransition.cpp \
 		nsMsgHeaderParser.cpp \
 		nsStreamConverter.cpp \
+		mimedrft.cpp	\
 		$(NULL)
 
 CSRCS = \
