@@ -451,7 +451,7 @@ function onFindAgainCmd()
 function onFindPreviousCmd()
 {
   if (openFindBar())
-    selectFindBar();
+    focusFindBar();
   
   changeSelectionColor(true);
   findPrevious();
