@@ -58,7 +58,7 @@ DIRS = $(DIRS) xpconnect
 #//------------------------------------------------------------------------
 
 !ifdef MOZ_STATIC_COMPONENT_LIBS
-LIBRARY_NAME		= js$(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY_NAME	= js$(MOZ_BITS)$(VERSION_NUMBER)
 LIBRARY_1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE		= $(LIBRARY_NAME).pdb
 MAPFILE		= $(LIBRARY_NAME).map
@@ -212,7 +212,6 @@ $(FDLIBM_LIBRARY):
 !ifdef MOZ_STATIC_COMPONENT_LIBS
 export:: INSTALL_FILES $(LIB)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin
 !else
 export:: INSTALL_FILES $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
