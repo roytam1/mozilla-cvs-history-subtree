@@ -54,8 +54,8 @@ interface nsISVGRendererCanvas;
  * The SVG rendering backend uses this interface to communicate to the
  * rendering engine-native path objects.
  *
- * A glyph object is instantiated by the rendering backend for a given
- * nsISVGPathGeometrySource object with a call to
+ * A path geometry object is instantiated by the rendering backend for
+ * a given nsISVGPathGeometrySource object with a call to
  * nsISVGRenderer::createPathGeometry(). The path geometry object is
  * assumed to store a reference to its associated source object and
  * provide rendering, hit-testing and metrics for the path described
@@ -84,7 +84,7 @@ interface nsISVGRendererPathGeometry : nsISupports
   
   /**
    * Get a region object describing the area covered with paint by
-   * this glyph geometry.
+   * this path geometry.
    *
    * @return Covered region.
    */
@@ -98,7 +98,7 @@ interface nsISVGRendererPathGeometry : nsISupports
    *
    * @param x X-coordinate of test point.  @param y Y-coordinate of
    * test point.
-   * @return PR_TRUE if the glyph geometry contains the point,
+   * @return PR_TRUE if the path geometry contains the point,
    * PR_FALSE otherwise.
    */
   boolean containsPoint(in float x, in float y);
