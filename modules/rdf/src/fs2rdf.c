@@ -337,14 +337,12 @@ void *
 fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PRBool inversep,  PRBool tv)
 {
 	PRBool			ans = PR_FALSE;
-	PRDir			*d;
 	PRFileInfo		fn;
 	PRStatus		err;
 	PRTime			oneMillion, dateVal;
-	RDF_Resource		r;
 	char			buffer[128], *pathname, *url;
 	void			*retVal = NULL;
-	int			len,n;
+	int			len, n;
 	int32			creationTime, modifyTime;
 	struct tm		*time;
 
@@ -510,7 +508,6 @@ fsNextValue (RDFT rdf, RDF_Cursor c)
 	RDF_Resource		vol;
 	char			*base, *encoded = NULL, *url, *url2;
 	void			*retVal = NULL;
-	int			len;
 
 	XP_ASSERT(c != NULL);
 	if (c == NULL)				return(NULL);
