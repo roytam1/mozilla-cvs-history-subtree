@@ -116,7 +116,7 @@ Node* DOMHelper::getParentNode(Node* node) {
     if (node->getNodeType() != Node::ATTRIBUTE_NODE)
         return node->getParentNode();
 
-#ifndef TX_EXE
+#ifdef MOZ_XSL
     // XXX temporary fix for 70979
     nsCOMPtr<nsIDOMAttr> attr(do_QueryInterface(node->getNSObj()));
     nsCOMPtr<nsIDOMElement> tmpParent;

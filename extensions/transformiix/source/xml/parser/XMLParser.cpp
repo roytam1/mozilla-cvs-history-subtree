@@ -38,7 +38,7 @@
  */
 
 #include "XMLParser.h"
-#ifndef TX_EXE
+#ifdef MOZ_XSL
 #include "nsSyncLoader.h"
 #include "URIUtils.h"
 #include "nsIIOService.h"
@@ -69,7 +69,7 @@
 **/
 XMLParser::XMLParser()
 {
-#ifdef TX_EXE
+#ifndef MOZ_XSL
   errorState = MB_FALSE;
 #endif
 } //-- XMLParser
@@ -87,7 +87,7 @@ Document* XMLParser::getDocumentFromURI
     String documentURL;
     URIUtils::resolveHref(href, baseUri, documentURL);
 
-#ifndef TX_EXE
+#ifdef MOZ_XSL
     nsresult rv = NS_OK;
     nsCOMPtr<nsIURI> documentURI;
     nsCOMPtr<nsIIOService> pService(do_GetService(NS_IOSERVICE_CONTRACTID,
@@ -123,7 +123,7 @@ Document* XMLParser::getDocumentFromURI
 
 }
 
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 /**
  *  Parses the given input stream and returns a DOM Document.
  *  A NULL pointer will be returned if errors occurred

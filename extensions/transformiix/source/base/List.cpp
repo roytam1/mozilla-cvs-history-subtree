@@ -27,7 +27,7 @@
  */
 
 #include "List.h"
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 #include <iostream.h>
 #endif
 

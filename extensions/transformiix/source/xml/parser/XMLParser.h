@@ -33,7 +33,7 @@
 #ifndef XML_UNICODE
 #define XML_UNICODE
 #endif
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 #include "xmlparse.h"
 #include "URIUtils.h"
 #endif
@@ -53,7 +53,7 @@ typedef struct  {
 **/
 class XMLParser
 {
-#ifdef TX_EXE
+#ifndef MOZ_XSL
   /*-----------------6/18/99 12:43PM------------------
    * Sax related methods for XML parsers
    * --------------------------------------------------*/
@@ -71,7 +71,7 @@ class XMLParser
    ~XMLParser();
 
     Document* getDocumentFromURI(const String& href, const String& baseUri, String& errMsg);
-#ifdef TX_EXE
+#ifndef MOZ_XSL
     Document* parse(istream& inputStream, const String& uri);
     const String& getErrorString();
 
@@ -84,7 +84,7 @@ class XMLParser
 #endif
 };
 
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 /*-----------------6/18/99 12:43PM------------------
  * Sax related methods for XML parsers
  * --------------------------------------------------*/

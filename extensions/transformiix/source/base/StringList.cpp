@@ -32,7 +32,7 @@
  * @version $Revision$ $Date$
 **/
 
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 #include <iostream.h>
 #endif
 #include "StringList.h"

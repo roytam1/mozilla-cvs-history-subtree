@@ -22,7 +22,7 @@
 #ifndef __TX_DOM_WRAPPER__
 #define __TX_DOM_WRAPPER__
 
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 #include "standalone/dom.h"
 #else
 #include "mozImpl/mozilladom.h"

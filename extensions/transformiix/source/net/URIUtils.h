@@ -39,7 +39,7 @@
 
 #include "TxString.h"
 #include "baseutils.h"
-#ifdef TX_EXE
+#ifndef MOZ_XSL
 #include <fstream.h>
 #endif
 

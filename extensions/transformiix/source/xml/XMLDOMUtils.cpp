@@ -63,7 +63,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
             Document* newDoc = new Document();
             if (!newDoc)
                 break;
-#ifndef TX_EXE
+#ifdef MOZ_XSL
             owner->addWrapper(newDoc);
 #endif
             NodeList* nl = doc->getChildNodes();
@@ -86,7 +86,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
         case Node::ELEMENT_NODE :
         {
             Element* element = (Element*)node;
-#ifndef TX_EXE
+#ifdef MOZ_XSL
             String name, nameSpaceURI;
             name = element->getNodeName();
             resolver->getResultNameSpaceURI(name, nameSpaceURI);
@@ -100,7 +100,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
             if ( attList ) {
                 for ( i = 0; i < attList->getLength(); i++ ) {
                     Attr* attr = (Attr*) attList->item(i);
-#ifndef TX_EXE
+#ifdef MOZ_XSL
                     resolver->getResultNameSpaceURI(attr->getName(), nameSpaceURI);
                     newElement->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
 #else
