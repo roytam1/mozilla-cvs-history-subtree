@@ -526,6 +526,10 @@ nsresult nsHTTPResponseListener::ParseHTTPHeader(nsIBuffer* aBuffer,
         return NS_OK;
       }
 
+      // This line is either LF or CRLF so the header is complete...
+      if (m_HeaderBuffer.Length() <= 2) {
+        break;
+      }
       // Not LWS - The header is complete...
       if ((*buf != ' ') && (*buf != '\t')) {
         break;
