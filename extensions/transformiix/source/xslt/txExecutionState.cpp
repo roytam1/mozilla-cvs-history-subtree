@@ -53,51 +53,39 @@
 
 const PRInt32 txExecutionState::kMaxRecursionDepth = 20000;
 
-DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
-
 nsresult txLoadedDocumentsHash::init(txXPathNode* aSourceDocument)
 {
     nsresult rv = Init(8);
     NS_ENSURE_SUCCESS(rv, rv);
 
     mSourceDocument = aSourceDocument;
-    Add(mSourceDocument);
+    
+    nsAutoString baseURI;
+    txXPathNodeUtils::getBaseURI(*mSourceDocument, baseURI);
+
+    txLoadedDocumentEntry* entry = PutEntry(baseURI);
+    if (!entry) {
+        return NS_ERROR_FAILURE;
+    }
+
+    entry->mDocument = mSourceDocument;
 
     return NS_OK;
 }
 
 txLoadedDocumentsHash::~txLoadedDocumentsHash()
 {
-    if (!mHashTable.ops) {
+    if (!IsInitialized()) {
         return;
     }
 
     nsAutoString baseURI;
     txXPathNodeUtils::getBaseURI(*mSourceDocument, baseURI);
+
     txLoadedDocumentEntry* entry = GetEntry(baseURI);
     if (entry) {
-        entry->mDocument = nsnull;
+        entry->mDocument.forget();
     }
-}
-
-void txLoadedDocumentsHash::Add(txXPathNode* aDocument)
-{
-    nsAutoString baseURI;
-    txXPathNodeUtils::getBaseURI(*aDocument, baseURI);
-    txLoadedDocumentEntry* entry = AddEntry(baseURI);
-    if (entry) {
-        entry->mDocument = aDocument;
-    }
-}
-
-txXPathNode* txLoadedDocumentsHash::Get(const nsAString& aURI)
-{
-    txLoadedDocumentEntry* entry = GetEntry(aURI);
-    if (entry) {
-        return entry->mDocument;
-    }
-
-    return nsnull;
 }
 
 txExecutionState::txExecutionState(txStylesheet* aStylesheet)
@@ -467,7 +455,7 @@ txExecutionState::getEvalContext()
     return mEvalContext;
 }
 
-txXPathNode*
+const txXPathNode*
 txExecutionState::retrieveDocument(const nsAString& uri,
                                    const nsAString& baseUri)
 {
@@ -498,9 +486,12 @@ txExecutionState::retrieveDocument(const nsAString& uri,
             NS_LossyConvertUCS2toASCII(frag).get()));
 
     // try to get already loaded document
-    txXPathNode* xmlDoc = mLoadedDocuments.Get(docUrl);
+    txLoadedDocumentEntry *entry = mLoadedDocuments.PutEntry(docUrl);
+    if (!entry) {
+        return nsnull;
+    }
 
-    if (!xmlDoc) {
+    if (!entry->mDocument) {
         // open URI
         nsAutoString errMsg, refUri;
         // XXX we should get the referrer from the actual node
@@ -509,23 +500,22 @@ txExecutionState::retrieveDocument(const nsAString& uri,
         nsresult rv;
         rv = txParseDocumentFromURI(docUrl, refUri,
                                     *mLoadedDocuments.mSourceDocument, errMsg,
-                                    &xmlDoc);
+                                    getter_Transfers(entry->mDocument));
 
-        if (NS_FAILED(rv) || !xmlDoc) {
+        if (NS_FAILED(rv) || !entry->mDocument) {
+            mLoadedDocuments.RawRemoveEntry(entry);
             receiveError(NS_LITERAL_STRING("Couldn't load document '") +
                          docUrl + NS_LITERAL_STRING("': ") + errMsg, rv);
-            return NULL;
+            return nsnull;
         }
-        // add to list of documents
-        mLoadedDocuments.Add(xmlDoc);
     }
 
     // return element with supplied id if supplied
     if (!frag.IsEmpty()) {
-        return txXPathNodeUtils::getElementById(*xmlDoc, frag);
+        return txXPathNodeUtils::getElementById(*entry->mDocument, frag);
     }
 
-    return xmlDoc;
+    return entry->mDocument;
 }
 
 nsresult
