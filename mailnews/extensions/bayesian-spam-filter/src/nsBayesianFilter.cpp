@@ -992,7 +992,7 @@ void nsBayesianFilter::classifyMessage(Tokenizer& tokenizer, const char* message
         first = 0;
 
     double H = 1.0, S = 1.0;
-    PRUint32 Hexp = 0, Sexp = 0;
+    PRInt32 Hexp = 0, Sexp = 0;
     goodclues=0;
     int e;
 
