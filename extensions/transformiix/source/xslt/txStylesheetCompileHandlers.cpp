@@ -87,10 +87,12 @@ getStyleAttr(txStylesheetAttr* aAttributes,
 nsresult
 parseUseAttrSets(txStylesheetAttr* aAttributes,
                  PRInt32 aAttrCount,
+                 PRBool aInXSLTNS,
                  txStylesheetCompilerState& aState)
 {
     txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount,
-                                          kNameSpaceID_XSLT,
+                                          aInXSLTNS ? kNameSpaceID_XSLT :
+                                                      kNameSpaceID_None,
                                           txXSLTAtoms::useAttributeSets);
     if (attr) {
         txTokenizer tok(attr->mValue);
@@ -393,7 +395,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = parseUseAttrSets(aAttributes, aAttrCount, aState);
+    rv = parseUseAttrSets(aAttributes, aAttrCount, PR_TRUE, aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txStylesheetAttr* attr = 0;
@@ -587,7 +589,7 @@ txFnStartElement(PRInt32 aNamespaceID,
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = parseUseAttrSets(aAttributes, aAttrCount, aState);
+    rv = parseUseAttrSets(aAttributes, aAttrCount, PR_FALSE, aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
