@@ -48,43 +48,6 @@
 //-----------------------------------------------------------------------------
 NS_GENERIC_FACTORY_CONSTRUCTOR(tmTransactionService)
 
-#if 0
-NS_METHOD
-tmTransactionServiceRegisterProc(nsIComponentManager *aCompMgr,
-                       nsIFile *aPath,
-                       const char *registryLocation,
-                       const char *componentType,
-                       const nsModuleComponentInfo *info)
-{
-    //
-    // add ipcService to the XPCOM startup category
-    //
-    nsCOMPtr<nsICategoryManager> catman(do_GetService(NS_CATEGORYMANAGER_CONTRACTID));
-    if (catman) {
-        nsXPIDLCString prevEntry;
-        catman->AddCategoryEntry(NS_XPCOM_STARTUP_OBSERVER_ID, "tmTransactionService",
-                                 TRANSACTION_SERVICE_CONTRACTID, PR_TRUE, PR_TRUE,
-                                 getter_Copies(prevEntry));
-    }
-    return NS_OK;
-}
-
-NS_METHOD
-tmTransactionServiceUnregisterProc(nsIComponentManager *aCompMgr,
-                         nsIFile *aPath,
-                         const char *registryLocation,
-                         const nsModuleComponentInfo *info)
-{
-    nsCOMPtr<nsICategoryManager> catman(do_GetService(NS_CATEGORYMANAGER_CONTRACTID));
-    if (catman)
-        catman->DeleteCategoryEntry(NS_XPCOM_STARTUP_OBSERVER_ID, 
-                                    TRANSACTION_SERVICE_CONTRACTID, PR_TRUE);
-    // XXX shouldn't the contractID here be "tmTransactionService"
-    //  see nsICategoryManager.idl#76
-    return NS_OK;
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Define a table of CIDs implemented by this module along with other
 // information like the function to create an instance, contractid, and

@@ -87,8 +87,6 @@ void
 tmIPCModule::HandleMsg(ipcClientHandle client, const nsID &target, 
                        const void *data, PRUint32 dataLen) {
 
-  printf("tmIPCModule::HandleMsg()\n");
-
   // make sure the trans mngr is there
   if (!tm && (InitInternal() < 0))
     return;

@@ -179,7 +179,6 @@ protected:
   ////////////////////////////////////////////////////////////////////////////
   // Protected Member Variables
 
-  PRBool mLocked;                     // storage for lock state
   nsCString mNamespace;               // limit domains to the namespace
   PLHashTable *mObservers;            // maps qName -> tmITransactionObserver
 

@@ -53,7 +53,6 @@ struct tm_waiting_msg {
 };
 
 tm_waiting_msg::~tm_waiting_msg() {
-  printf("destroying a tm_waiting_msg struct\n");
   if (domainName)
     PL_strfree(domainName);
 }
@@ -67,7 +66,6 @@ struct tm_queue_mapping {
 };
 
 tm_queue_mapping::~tm_queue_mapping() {
-  printf("destroying a tm_queue_mapping struct\n");
   if (domainName)
     PL_strfree(domainName);
   if (joinedQueueName)
@@ -88,8 +86,7 @@ tmTransactionService::~tmTransactionService() {
   tm_waiting_msg *msg = nsnull;
   for ( ; index < size; index ++) {
     msg = (tm_waiting_msg*) mWaitingMessages[index];
-    if (msg)
-      delete msg;
+    delete msg;
   }
 
   size = mQueueMaps.Size();
@@ -125,7 +122,6 @@ tmTransactionService::Init(const nsACString & aNamespace) {
   lockService = do_GetService("@mozilla.org/ipc/lock-service;1");
   if (!lockService)
     return NS_ERROR_FAILURE;
-  mLocked = PR_FALSE;
 
   // create some internal storage
   mObservers = PL_NewHashTable(20, 
@@ -182,15 +178,13 @@ tmTransactionService::Attach(const nsACString & aDomainName,
   }
   mQueueMaps.Append(qm);
 
-  // acquire a lock if neccessary
-  if (aLockingCall) {
-    if (NS_SUCCEEDED(lockService->AcquireLock(joinedQueueName, 
-                                              nsnull, 
-                                              PR_TRUE)))
-      mLocked = PR_TRUE;
-  }
-
+  nsresult rv = NS_ERROR_FAILURE;
   tmTransaction trans;
+
+  // acquire a lock if neccessary
+  if (aLockingCall)
+    lockService->AcquireLock(joinedQueueName, nsnull, PR_TRUE);
+
   if (NS_SUCCEEDED(trans.Init(0,                             // no IPC client
                               TM_NO_ID,                      // qID gets returned to us
                               TM_ATTACH,                     // action
@@ -199,9 +193,14 @@ tmTransactionService::Attach(const nsACString & aDomainName,
                               PL_strlen(joinedQueueName)+1))) { // message length
     // send the attach msg
     SendMessage(&trans, PR_TRUE);  // synchronous
-    return NS_OK;
+    rv = NS_OK;
   }
-  return NS_ERROR_FAILURE;
+
+  // drop the lock if neccessary
+  if (aLockingCall)
+    lockService->ReleaseLock(joinedQueueName);
+
+  return rv;
 }
 
 // actual removal of the observer takes place when we get the detach reply
@@ -216,16 +215,18 @@ tmTransactionService::Detach(const nsACString & aDomainName) {
 NS_IMETHODIMP
 tmTransactionService::Flush(const nsACString & aDomainName,
                             PRBool aLockingCall) {
-  // XXX acquire a lock if neccessary
-  if (aLockingCall) {
-    if (NS_SUCCEEDED(lockService->AcquireLock(GetJoinedQueueName(aDomainName), 
-                                              nsnull, 
-                                              PR_TRUE)))
-      mLocked = PR_TRUE;
-  }
+  // acquire a lock if neccessary
+  if (aLockingCall)
+    lockService->AcquireLock(GetJoinedQueueName(aDomainName), nsnull, PR_TRUE);
 
   // synchronous flush
-  return SendDetachOrFlush(GetQueueID(aDomainName), TM_FLUSH, PR_TRUE);
+  nsresult rv = SendDetachOrFlush(GetQueueID(aDomainName), TM_FLUSH, PR_TRUE);
+
+  // drop the lock if neccessary
+  if (aLockingCall)
+    lockService->ReleaseLock(GetJoinedQueueName(aDomainName));
+
+  return rv;
 
 }
 
@@ -242,7 +243,6 @@ tmTransactionService::PostTransaction(const nsACString & aDomainName,
                               aData,                   // message data
                               aDataLen))) {             // message length
     if (trans.GetQueueID() == TM_NO_ID) {
-      printf("saving trans to send later\n");
       // stack it and pack it
       tm_waiting_msg *msg = new tm_waiting_msg(); 
       if (!msg)
@@ -257,7 +257,6 @@ tmTransactionService::PostTransaction(const nsACString & aDomainName,
     }
     else {
       // send it
-      printf("sending transaction now\n");
       SendMessage(&trans, PR_FALSE);
     }
     return NS_OK;
@@ -355,11 +354,6 @@ tmTransactionService::OnAttachReply(tmTransaction *aTrans) {
                                                  (char*)aTrans->GetMessage());
   if (observer)
     observer->OnAttachReply(aTrans->GetQueueID(), aTrans->GetStatus());
-
-  // if we have the lock, drop it
-  if (mLocked)
-    if (NS_SUCCEEDED(lockService->ReleaseLock(GetJoinedQueueName(aTrans->GetQueueID()))))
-      mLocked = PR_FALSE;
 }
 
 void
@@ -397,11 +391,6 @@ tmTransactionService::OnFlushReply(tmTransaction *aTrans) {
                               GetJoinedQueueName(aTrans->GetQueueID()));
   if (observer)
     observer->OnFlushReply(aTrans->GetQueueID(), aTrans->GetStatus());
-
-  // if we have the lock, drop it
-  if (mLocked)
-    if (NS_SUCCEEDED(lockService->ReleaseLock(GetJoinedQueueName(aTrans->GetQueueID()))))
-      mLocked = PR_FALSE;
 }
 
 void
