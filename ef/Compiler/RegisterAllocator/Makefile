@@ -1,64 +1,40 @@
-#!gmake
-#
-# The contents of this file are subject to the Netscape Public License
-# Version 1.0 (the "NPL"); you may not use this file except in
-# compliance with the NPL.  You may obtain a copy of the NPL at
-# http://www.mozilla.org/NPL/
-#
-# Software distributed under the NPL is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
-# for the specific language governing rights and limitations under the
-# NPL.
-#
-# The Initial Developer of this code under the NPL is Netscape
-# Communications Corporation.  Portions created by Netscape are
-# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
-# Reserved.
+#! gmake
 
-#######################################################################
-# (1) Directory specific info                                         #
-#######################################################################
+DEPTH			= ../..
 
-DEPTH = ../..
-
-
-CPPSRCS = 	VirtualRegister.cpp					\
-		RegisterAllocator.cpp					\
-		Coloring.cpp						\
-		Spilling.cpp						\
-		Timer.cpp						\
-		$(NULL)
-
-LOCAL_EXPORTS = Coloring.h						\
-		Liveness.h						\
-		RegisterAllocator.h					\
-		RegisterAssigner.h					\
-		SSATools.h						\
-		Spilling.h						\
-		Timer.h							\
-		VirtualRegister.h				\
-		$(NULL)
-
-MODULE_NAME = EF
-
-#######################################################################
-# (2) Include "component" configuration information.                  #
-#######################################################################
+MODULE_NAME		= RegisterAllocator
 
 include $(DEPTH)/config/config.mk
 
-#######################################################################
-# (3) Include "local" platform-dependent assignments (OPTIONAL).      #
-#######################################################################
+INCLUDES		+=										\
+	-I$(DEPTH)/Utilities/General						\
+	-I$(DEPTH)/Utilities/zlib							\
+	-I$(DEPTH)/Runtime/ClassReader						\
+	-I$(DEPTH)/Runtime/NativeMethods					\
+	-I$(DEPTH)/Runtime/System							\
+	-I$(DEPTH)/Runtime/ClassInfo						\
+	-I$(DEPTH)/Runtime/FileReader						\
+	-I$(DEPTH)/Compiler/PrimitiveGraph					\
+	-I$(DEPTH)/Compiler/FrontEnd						\
+	-I$(DEPTH)/Compiler/Optimizer						\
+	-I$(DEPTH)/Compiler/CodeGenerator					\
+	-I$(DEPTH)/Compiler/CodeGenerator/md				\
+	-I$(DEPTH)/Compiler/CodeGenerator/md/$(CPU_ARCH)	\
+	-I$(DEPTH)/Compiler/RegisterAllocator				\
+	-I$(DEPTH)/Driver/StandAloneJava					\
+	-I$(DEPTH)/Debugger									\
+	$(NULL)
 
+CXXSRCS 		=										\
+	RegisterAllocator.cpp								\
+	RegisterAllocatorTools.cpp							\
+	DominatorGraph.cpp									\
+	VirtualRegister.cpp									\
+	BitSet.cpp											\
+	SparseSet.cpp										\
+	$(NULL)
 
-
-#######################################################################
-# (4) Execute "component" rules. (OPTIONAL)                           #
-#######################################################################
 
 include $(DEPTH)/config/rules.mk
 
-#######################################################################
-# (7) Execute "local" rules. (OPTIONAL).                              #
-#######################################################################
+libs:: $(MODULE)

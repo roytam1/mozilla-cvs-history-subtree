@@ -16,25 +16,10 @@
  * Reserved.
  */
 
+#ifndef _REGISTER_CLASS_H_
+#define _REGISTER_CLASS_H_
+
 #include "Fundamentals.h"
-#include "VirtualRegister.h"
-#include "Instruction.h"
+#include "RegisterTypes.h"
 
-//------------------------------------------------------------------------------
-// VirtualRegister -
-
-#ifdef MANUAL_TEMPLATES
-template class IndexedPool<VirtualRegister>;
-#endif
-
-// Set the defining instruction.
-//
-void VirtualRegister::setDefiningInstruction(Instruction& instruction)
-{
-	if (definingInstruction != NULL) {
-		if ((instruction.getFlags() & ifCopy) && (definingInstruction->getFlags() & ifPhiNode))
-			return;
-	}
-	definingInstruction = &instruction;
-}
-
+#endif // _REGISTER_CLASS_H_

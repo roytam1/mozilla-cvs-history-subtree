@@ -16,6 +16,8 @@
  * Reserved.
  */
 
+#ifndef NEW_LAURENTM_CODE
+
 #include "Coloring.h"
 #include "VirtualRegister.h"
 #include "FastBitSet.h"
@@ -278,3 +280,4 @@ select(FastBitMatrix& interferenceMatrix, PRUint32* stackBase, PRUint32* stackPt
   vRegManager.nUsedStackSlots = lastUsedSSR + 1;
   return success;
 }
+#endif // NEW_LAURENTM_CODE

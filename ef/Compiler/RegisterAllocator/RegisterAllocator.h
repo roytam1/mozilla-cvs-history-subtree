@@ -19,77 +19,70 @@
 #ifndef _REGISTER_ALLOCATOR_H_
 #define _REGISTER_ALLOCATOR_H_
 
-#include "RegisterAssigner.h"
-#include "Coloring.h"
-#include "FastBitMatrix.h"
-#include "Spilling.h"
-#include "LogModule.h"
-
+class Pool;
 class ControlGraph;
 class InstructionEmitter;
-class VirtualRegisterManager;
-class FastBitMatrix;
-class Pool;
+struct SpillCost;
+struct SplitCost;
 
-extern void printGraph(Uint32 nNodes, ControlNode** dfsList);
+#include "Liveness.h"
+#include "VirtualRegister.h"
+#include "RegisterPressure.h" // This should included by Backend.cpp
+#include "InterferenceGraph.h"
+#include "LiveRangeGraph.h"
 
-
-/*
- *--------------------------RegisterAllocator.h----------------------------
- *
- * class RegisterAllocator --
- *
- *-----------------------------------------------------------------------
- */
+//template <class RegisterPressure>
 class RegisterAllocator
 {
+public:
+
+	Pool&									pool;			//
+	ControlGraph&							controlGraph;	//
+	VirtualRegisterManager&					vrManager;		//
+	InstructionEmitter&						emitter;		//
+
+	RegisterName*							name2range;		//
+	RegisterName*							color;			//
+	SpillCost*								spillCost;		//
+	SparseSet*								willSpill;		//
+	SplitCost*								splitCost;		//
+	NameLinkedList**						splitAround;	//
+	InterferenceGraph<LowRegisterPressure>	iGraph;			//
+	LiveRangeGraph<LowRegisterPressure>		lGraph;			//
+	LivenessInfo<LowRegisterPressure>		liveness;		//
+	Uint32									nameCount;		//
+	Uint32									rangeCount;		//
+	bool									splitFound;		//
 
 private:
 
-  Pool&                   regAllocPool;         // Register Allocation Pool.
-  /*
-   * ControlGraph data.
-   */
-  ControlNode**           dfsList;              // List of the nodes in Depth First Search order.
-  ControlNode**           lndList;              // List of the nodes in Loop Nesting Depth order.
-  PRUint32                nNodes;               // Number of nodes in this graph.
-
-  VirtualRegisterManager& vRegManager;          // Virtual Register Manager for this graph.
-  MdEmitter&     		  instructionEmitter;   // Instruction emitter for this platform.
-  Coloring                registerAssigner;     // Register assigner (right now only graph coloring is supported)
-  Spilling                spilling;             // Register spilling
-  FastBitMatrix           interferenceMatrix;   // Register interference matrix.
-
-  /*
-   * Register Allocation core private methods.
-   */
-  void checkRegisterClassConflicts();
-  void checkPhiNodesAnnotation();
-  void buildInterferenceGraph();
-  bool canCoalesceRegisters(VirtualRegister& inVR, VirtualRegister& outVR, PRUint32& from, PRUint32& to);
-  void coalesceRegisters(PRUint32 from, PRUint32 to);
-  void coalesce();
-  void calculateSpillCosts();
-  void spillPhiNodes();
-  bool removePhiNodes();
-  void updateLocalVariableTable();
-
-#ifdef DEBUG_LOG
-  void printRegisterDebug(LogModuleObject &f, bool verbose = false);
-#endif
+	//
+	//
+	void doGraphColoring();
 
 public:
-  /*
-   * Constructor.
-   */
-  RegisterAllocator(Pool& pool, ControlNode** dfs, ControlNode **lnd, PRUint32 n, VirtualRegisterManager& vrMan, MdEmitter& emitter) : 
-	regAllocPool(pool), dfsList(dfs), lndList(lnd), nNodes(n), vRegManager(vrMan), instructionEmitter(emitter),
-	registerAssigner(pool, vRegManager), spilling(vrMan, emitter), interferenceMatrix(pool) {}
 
-  /*
-   * Public call for register allocation.
-   */
-  void allocateRegisters();
+	//
+	//
+	inline RegisterAllocator(Pool& pool, ControlGraph& controlGraph, VirtualRegisterManager& vrManager, InstructionEmitter& emitter);
+
+	//
+	//
+	bool canInterfere(RegisterName /*name1*/, RegisterName /*name2*/) const {return true;}
+
+	//
+	//
+	void initLiveRanges();
+
+	//
+	//
+	static void allocateRegisters(Pool& pool, ControlGraph& controlGraph, VirtualRegisterManager& vrManager, InstructionEmitter& emitter);
 };
 
-#endif /* _REGISTER_ALLOCATOR_H_ */
+//
+//
+inline RegisterAllocator::RegisterAllocator(Pool& pool, ControlGraph& controlGraph, VirtualRegisterManager& vrManager, InstructionEmitter& emitter)
+	: pool(pool), controlGraph(controlGraph), vrManager(vrManager), emitter(emitter), iGraph(*this), lGraph(*this), nameCount(vrManager.getSize()) {}
+
+#endif // _REGISTER_ALLOCATOR_H_
+

@@ -16,6 +16,7 @@
  * Reserved.
  */
 
+#ifndef NEW_LAURENTM_CODE
 #define INCLUDE_EMITTER
 #include "CpuInfo.h"
 #include "Fundamentals.h"
@@ -266,3 +267,4 @@ insertSpillCode(ControlNode** dfsList, Uint32 nNodes)
 
 	}
 }
+#endif

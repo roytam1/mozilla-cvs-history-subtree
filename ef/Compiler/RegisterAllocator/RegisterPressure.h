@@ -16,25 +16,22 @@
  * Reserved.
  */
 
-#include "Fundamentals.h"
-#include "VirtualRegister.h"
-#include "Instruction.h"
+#ifndef _REGISTER_PRESSURE_H_
+#define _REGISTER_PRESSURE_H_
 
-//------------------------------------------------------------------------------
-// VirtualRegister -
+#include "BitSet.h"
+#include "HashSet.h"
 
-#ifdef MANUAL_TEMPLATES
-template class IndexedPool<VirtualRegister>;
-#endif
-
-// Set the defining instruction.
-//
-void VirtualRegister::setDefiningInstruction(Instruction& instruction)
+struct LowRegisterPressure
 {
-	if (definingInstruction != NULL) {
-		if ((instruction.getFlags() & ifCopy) && (definingInstruction->getFlags() & ifPhiNode))
-			return;
-	}
-	definingInstruction = &instruction;
-}
+	typedef BitSet Set;
+	static const bool setIsOrdered = true;
+};
 
+struct HighRegisterPressure
+{
+	typedef HashSet Set;
+	static const bool setIsOrdered = false;
+};
+
+#endif // _REGISTER_PRESSURE_H_

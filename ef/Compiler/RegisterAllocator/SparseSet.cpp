@@ -17,24 +17,21 @@
  */
 
 #include "Fundamentals.h"
-#include "VirtualRegister.h"
-#include "Instruction.h"
+#include "SparseSet.h"
+#include "BitSet.h"
+#include "Pool.h"
 
-//------------------------------------------------------------------------------
-// VirtualRegister -
-
-#ifdef MANUAL_TEMPLATES
-template class IndexedPool<VirtualRegister>;
-#endif
-
-// Set the defining instruction.
+#ifdef DEBUG_LOG
+// Print the set.
 //
-void VirtualRegister::setDefiningInstruction(Instruction& instruction)
+void SparseSet::printPretty(LogModuleObject log)
 {
-	if (definingInstruction != NULL) {
-		if ((instruction.getFlags() & ifCopy) && (definingInstruction->getFlags() & ifPhiNode))
-			return;
-	}
-	definingInstruction = &instruction;
-}
+	Pool pool;
+	BitSet set(pool, universeSize);
 
+	for (Uint32 i = 0; i < count; i++)
+	   set.set(node[i].element);
+
+	set.printPretty(log);
+}
+#endif // DEBUG_LOG

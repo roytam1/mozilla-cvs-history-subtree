@@ -17,24 +17,4 @@
  */
 
 #include "Fundamentals.h"
-#include "VirtualRegister.h"
-#include "Instruction.h"
-
-//------------------------------------------------------------------------------
-// VirtualRegister -
-
-#ifdef MANUAL_TEMPLATES
-template class IndexedPool<VirtualRegister>;
-#endif
-
-// Set the defining instruction.
-//
-void VirtualRegister::setDefiningInstruction(Instruction& instruction)
-{
-	if (definingInstruction != NULL) {
-		if ((instruction.getFlags() & ifCopy) && (definingInstruction->getFlags() & ifPhiNode))
-			return;
-	}
-	definingInstruction = &instruction;
-}
-
+#include "HashSet.h"
