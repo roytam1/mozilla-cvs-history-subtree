@@ -473,7 +473,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 									  &cd->connection->sock, 
-									  HG38738, 
+									  HG38738 
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -487,7 +487,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 							          &cd->connection->sock, 
-									  HG02873,  
+									  HG02873  
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -2776,7 +2776,7 @@ net_setup_http_stream(ActiveEntry * ce)
 			CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_UNABLE_TO_CONVERT);
         	return STATUS(CE_STATUS);
       	  }
-HG94794
+
 		NET_SetReadSelect(CE_WINDOW_ID, cd->connection->sock);
 
 		if(ce->URL_s->files_to_post)

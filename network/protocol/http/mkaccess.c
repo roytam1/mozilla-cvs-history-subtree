@@ -1650,7 +1650,7 @@ net_IntSetCookieString(MWContext * context,
 	char *cur_host = NET_ParseURL(cur_url, GET_HOST_PART);
 	char *semi_colon, *ptr, *equal;
 	const char *script_name;
-	PRBool HG83744 set_secure=FALSE, is_domain=FALSE, ask=FALSE, accept=FALSE;
+	PRBool HG83744 is_domain=FALSE, ask=FALSE, accept=FALSE;
 	MWContextType type;
 
 	if(!context) {
