@@ -359,6 +359,7 @@ NS_IMETHODIMP nsDeviceContextWin :: GetScrollBarDimensions(float &aWidth, float 
 nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLogFont,
                                                  nsFont* aFont, PRBool aIsWide) const
 {
+#if !defined(UNICODE)
   PRUnichar name[LF_FACESIZE];
   name[0] = 0;
   if (aIsWide)
@@ -368,6 +369,9 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
       strlen(ptrLogFont->lfFaceName) + 1, name, sizeof(name)/sizeof(name[0]));
   }
   aFont->name = name;
+#else
+  aFont->name = ptrLogFont->lfFaceName;
+#endif
 
   // Do Style
   aFont->style = NS_FONT_STYLE_NORMAL;
@@ -406,7 +410,11 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
   // 6.25 when going to a 600dpi printer.
   // round, but take into account whether it is negative
   LONG logHeight = LONG((float(ptrLogFont->lfHeight) * mPixelScale) + (ptrLogFont->lfHeight < 0 ? -0.5 : 0.5)); // round up
+#if !defined(WINCE)
   int pointSize = -MulDiv(logHeight, 72, ::GetDeviceCaps(*aHDC, LOGPIXELSY));
+#else
+  int pointSize = (int) - (((INT64)logHeight * 72i64) / (INT64)::GetDeviceCaps(*aHDC, LOGPIXELSY));
+#endif
 
   aFont->size = NSIntPointsToTwips(pointSize);
   return NS_OK;
