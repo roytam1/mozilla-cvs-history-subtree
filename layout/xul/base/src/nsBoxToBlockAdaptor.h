@@ -90,7 +90,7 @@ private:
                    PRBool aMoveFrame = PR_TRUE);
 
   void HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                                          const nsHTMLReflowState aReflowState, 
+                                          const nsHTMLReflowState &aReflowState, 
                                           nsReflowReason& aReason,
                                           PRBool aPopOffIncremental,
                                           PRBool& aRedrawNow,

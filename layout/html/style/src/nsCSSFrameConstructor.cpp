@@ -10724,7 +10724,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 #endif
       frameManager->AttributeAffectsStyle(aAttribute, aContent, affects);
       if (affects) {
-#ifdef DEBUG_shaver
+#ifdef DEBUG_shaver_off
         fputc('+', stderr);
 #endif
         // there is an effect, so compute it
@@ -10750,7 +10750,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
           }
         }
       } else {
-#ifdef DEBUG_shaver
+#ifdef DEBUG_shaver_off
         fputc('-', stderr);
 #endif
         // let this frame update itself, but don't walk the whole frame tree

@@ -267,7 +267,6 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   else if (mNextRCFrame == aFrame) {
     reason = eReflowReason_Incremental;
     // Make sure we only incrementally reflow once
-    mNextRCFrame = nsnull;
   }
   else if (mOuterReflowState.reason == eReflowReason_StyleChange) {
     reason = eReflowReason_StyleChange;
@@ -287,9 +286,9 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
         nsReflowType type;
         rc->GetType(type);
         if (type == eReflowType_StyleChanged) {
-          nsIFrame* target;
-          rc->GetTarget(target);
-          if (target == mOuterReflowState.frame) {
+          // See if the reflow command is targeted at us
+          nsIFrame *aframe;
+          if (rc->IsATarget(mOuterReflowState.frame)) {
             reason = eReflowReason_StyleChange;
           }
         }

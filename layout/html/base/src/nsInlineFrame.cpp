@@ -419,17 +419,7 @@ nsInlineFrame::Reflow(nsIPresContext*          aPresContext,
   InlineReflowState irs;
   irs.mPrevFrame = nsnull;
   irs.mNextInFlow = (nsInlineFrame*) mNextInFlow;
-  irs.mNextRCFrame = nsnull;
   irs.mSetParentPointer = lazilySetParentPointer;
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // Peel off the next frame in the path if this is an incremental
-    // reflow aimed at one of the children.
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this != target) {
-      aReflowState.reflowCommand->GetNext(irs.mNextRCFrame);
-    }
-  }
 
   nsresult rv;
   if (mFrames.IsEmpty()) {
@@ -489,6 +479,11 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
   nsresult rv = NS_OK;
   aStatus = NS_FRAME_COMPLETE;
 
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
+
   nsLineLayout* lineLayout = aReflowState.mLineLayout;
   nscoord leftEdge = 0;
   if (nsnull == mPrevInFlow) {
@@ -528,6 +523,9 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
         nextInFlow->GetNextInFlow(&nextInFlow);
       }
     }
+    // Set the iterator's current node to match the child we're playing with
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(frame));
+
     rv = ReflowInlineFrame(aPresContext, aReflowState, irs, frame, aStatus);
     if (NS_FAILED(rv)) {
       done = PR_TRUE;
@@ -558,6 +556,9 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
         }
         break;
       }
+      // Set the iterator's current node to match the child we're playing with
+      aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(frame));
+
       rv = ReflowInlineFrame(aPresContext, aReflowState, irs, frame, aStatus);
       if (NS_FAILED(rv)) {
         done = PR_TRUE;
@@ -713,8 +714,22 @@ nsInlineFrame::ReflowInlineFrame(nsIPresContext* aPresContext,
   nsLineLayout* lineLayout = aReflowState.mLineLayout;
   PRBool reflowingFirstLetter = lineLayout->GetFirstLetterStyleOK();
   PRBool pushedFrame;
-  nsresult rv = lineLayout->ReflowFrame(aFrame, &irs.mNextRCFrame, aStatus,
+  // aNextRCFrame is so that if the next frame is this
+  // child frame, we don't reflow it a second time.  This also
+  // switches the type to Incremental, so figure out if we're on a
+  // path to a target or not.
+  nsIFrame *onPathFrame;
+  onPathFrame = aReflowState.GetCurrentReflowNode() ? aFrame : nsnull;
+  nsresult rv = lineLayout->ReflowFrame(aFrame, &onPathFrame, aStatus,
                                         nsnull, pushedFrame);
+
+  if (aReflowState.GetCurrentReflowNode())
+  {
+    // XXX now make sure we don't go into here again?  Not sure....
+    // should we remove the current node and all children of it?
+  }
+
+
   /* This next block is for bug 28811
      Test the child frame for %-awareness, 
      and mark this frame with a bit if it is %-aware.
@@ -997,16 +1012,6 @@ nsFirstLineFrame::Reflow(nsIPresContext* aPresContext,
   InlineReflowState irs;
   irs.mPrevFrame = nsnull;
   irs.mNextInFlow = (nsInlineFrame*) mNextInFlow;
-  irs.mNextRCFrame = nsnull;
-  if (eReflowReason_Incremental == aReflowState.reason) {
-    // Peel off the next frame in the path if this is an incremental
-    // reflow aimed at one of the children.
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this != target) {
-      aReflowState.reflowCommand->GetNext(irs.mNextRCFrame);
-    }
-  }
 
   nsresult rv;
   PRBool wasEmpty = mFrames.IsEmpty();

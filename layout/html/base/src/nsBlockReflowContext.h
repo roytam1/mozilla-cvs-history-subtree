@@ -137,6 +137,7 @@ protected:
   nsIFrame* mFrame;
   nsRect mSpace;
 
+  // XXX FIX!! this should probably be removed
   // For an incremental reflow that has not yet reached the target
   // frame, this field contains the next frame along the reflow's
   // path.

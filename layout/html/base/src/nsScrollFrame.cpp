@@ -666,15 +666,21 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
   nsIFrame* kidFrame = mFrames.FirstChild();
   nsIFrame* targetFrame;
   nsIFrame* nextFrame;
+  nsresult rv = NS_OK;
 
   nsRect oldKidBounds;
   kidFrame->GetRect(oldKidBounds);
 
   // Special handling for incremental reflow
   if (eReflowReason_Incremental == aReflowState.reason) {
-    // See whether we're the target of the reflow command
-    aReflowState.reflowCommand->GetTarget(targetFrame);
-    if (this == targetFrame) {
+    // this lets me iterate through the reflow children; initialized
+    // from state within the reflowCommand
+    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    REFLOW_ASSERTFRAME(this);
+
+    // See if the reflow command is targeted at us
+    PRBool amTarget = reflowIterator.IsTarget();
+    if (amTarget) {
       nsReflowType  type;
 
       // The only type of reflow command we expect to get is a style
@@ -684,16 +690,28 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
 
       // Make a copy of the reflow state (with a different reflow reason) and
       // then recurse
+
+      // Assume that this will handle all children, cut off treewalk here
+      // not needed, we build a new reflow state with no command
+      //aReflowState.SetCurrentReflowNode(nsnull);
+      
       nsHTMLReflowState reflowState(aReflowState);
       reflowState.reason = eReflowReason_StyleChange;
       reflowState.reflowCommand = nsnull;
-      return Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+      rv = Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+      if (rv != NS_OK)
+        return rv;
     }
 
     // Get the next frame in the reflow chain, and verify that it's our
-    // child frame
-    aReflowState.reflowCommand->GetNext(nextFrame);
-    NS_ASSERTION(nextFrame == kidFrame, "unexpected reflow command next-frame");
+    // child frame (we have only one)
+    nsIFrame *childFrame;
+    aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+    if (amTarget && !childFrame) {
+      return rv;  // traditionally this returned if it was a target
+    }
+    // we aren't the target, or we are but we also have a targetted child
+    NS_ASSERTION(childFrame == kidFrame, "Reflow ScrollFrame - wrong child");
   }
 
   // Calculate the amount of space needed for borders

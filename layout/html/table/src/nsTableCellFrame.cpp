@@ -848,28 +848,47 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
     availSize.height -= topInset+bottomInset;
 
   PRBool  isStyleChanged = PR_FALSE;
+  nsIFrame* firstKid = mFrames.FirstChild();
+
   if (eReflowReason_Incremental == aReflowState.reason) {
+    // this lets me iterate through the reflow children; initialized
+    // from state within the reflowCommand
+    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    REFLOW_ASSERTFRAME(this);
+    // See if the reflow command is targeted at us
+    PRBool amTarget = reflowIterator.IsTarget();
+
     // We *must* do this otherwise incremental reflow that's
     // passing through will not work right.
-    nsIFrame* next;
-    aReflowState.reflowCommand->GetNext(next);
 
     // if it is a StyleChanged reflow targeted at this cell frame,
     // handle that here
     // first determine if this frame is the target or not
-    nsIFrame *target=nsnull;
-    rv = aReflowState.reflowCommand->GetTarget(target);
-    if ((PR_TRUE==NS_SUCCEEDED(rv)) && target) {
-      if (this == target) {
-        nsReflowType type;
-        aReflowState.reflowCommand->GetType(type);
-        if (eReflowType_StyleChanged == type) {
-          isStyleChanged = PR_TRUE;
-        }
-        else {
-          NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
-        }
+    // XXX FIX!!! what if we're a target AND our child is a target?  This
+    // will only do the "I'm a target" reflow!
+    if (amTarget) {
+      nsReflowType type;
+      aReflowState.reflowCommand->GetType(type);
+      if (eReflowType_StyleChanged == type) {
+        isStyleChanged = PR_TRUE;
+        // Assume that this will handle all children, cut off treewalk here
+        aReflowState.SetCurrentReflowNode(nsnull);
       }
+      else {
+        NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
+      }
+#ifdef DEBUG
+      nsIFrame *childFrame = nsnull;
+      reflowIterator.NextChild(&childFrame);
+      NS_ASSERTION(childFrame == nsnull,"TableCellFrame is target and has targeted children");
+#endif
+    }
+    else {
+      // Get the next frame in the reflow chain, and verify that it's our
+      // child frame (we have only one)
+      nsIFrame *childFrame;
+      aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+      NS_ASSERTION(childFrame == firstKid, "Reflow HTMLButton - wrong child");
     }
     // if any of these conditions are not true, we just pass the reflow command down
   }
@@ -882,7 +901,6 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
   nsHTMLReflowMetrics kidSize(pMaxElementSize, aDesiredSize.mFlags);
   kidSize.width=kidSize.height=kidSize.ascent=kidSize.descent=0;
   SetPriorAvailWidth(aReflowState.availableWidth);
-  nsIFrame* firstKid = mFrames.FirstChild();
 
   PRBool isPaginated;
   aPresContext->IsPaginated(&isPaginated);

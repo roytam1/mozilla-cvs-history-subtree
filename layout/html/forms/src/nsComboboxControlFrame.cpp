@@ -1004,10 +1004,12 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   // it to a resize reflow.
   nsReflowReason reason = aReflowState.reason;
   if (reason == eReflowReason_Incremental) {
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (target == this)
+    if (aReflowState.reflowCommand->IsATarget(this))
+    {
       reason = eReflowReason_Resize;
+      // we assume a resize reflow will handle all targets within the frame
+      aReflowState.SetCurrentReflowNode(nsnull);
+    }
   }
 
   // now that we know what the overall display width & height will be
@@ -1334,10 +1336,14 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
   // Only reflow the display and button 
   // if they are the target of the incremental reflow, unless they change size. 
   if (eReflowReason_Incremental == aReflowState.reason) {
-    nsIFrame* targetFrame;
-    firstPassState.reflowCommand->GetTarget(targetFrame);
-    // Check to see if we are the target of the Incremental Reflow
-    if (targetFrame == this) {
+    // this lets me iterate through the reflow children; initialized
+    // from state within the reflowCommand
+    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    REFLOW_ASSERTFRAME(this);
+    // See if the reflow command is targeted at us
+    PRBool amTarget = reflowIterator.IsTarget();
+
+    if (amTarget) {
       // We need to check here to see if we can get away with just reflowing
       // the combobox and not the dropdown
       REFLOW_DEBUG_MSG("-----------------Target is Combobox------------\n");
@@ -1371,18 +1377,23 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
       firstPassState.reflowCommand = nsnull;
       forceReflow = PR_TRUE;
 
-    } else {
+    }
+    else if (aReflowState.reflowCommand)
+    {
       // Now, see if our target is the dropdown
       // If so, maybe an items was added or some style changed etc.
       //               OR
       // We get an Incremental reflow on the dropdown when it is being 
       // shown or hidden.
-      if (targetFrame == mDropdownFrame) {
+      if (aReflowState.reflowCommand->IsATarget(mDropdownFrame)) {
         REFLOW_DEBUG_MSG("---------Target is Dropdown (Clearing Unc DD Size)---\n");
         // Nope, we were unlucky so now we do a full reflow
         mCachedUncDropdownSize.width  = kSizeNotSet;
         mCachedUncDropdownSize.height = kSizeNotSet;       
         REFLOW_DEBUG_MSG("---- Doing Full Reflow\n");
+
+        aReflowState.SetCurrentReflowNode(nsnull);
+
         // This is an incremental reflow targeted at the dropdown list
         // and it didn't have anything to do with being show or hidden.
         // 
@@ -1398,8 +1409,10 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
         // know that it needs to be resized or restyled
         //mListControlFrame->SetOverrideReflowOptimization(PR_TRUE);
 
-      } else if (targetFrame == mDisplayFrame || targetFrame == mButtonFrame) {
-        REFLOW_DEBUG_MSG2("-----------------Target is %s------------\n", (targetFrame == mDisplayFrame?"DisplayItem Frame":"DropDown Btn Frame"));
+      } else if (aReflowState.reflowCommand->IsATarget(mDisplayFrame) ||
+                 aReflowState.reflowCommand->IsATarget(mButtonFrame)) {
+        REFLOW_DEBUG_MSG2("-----------------Target is %s------------\n", 
+           (aReflowState.reflowCommand->IsATarget(mDisplayFrame)?"DisplayItem Frame":"DropDown Btn Frame"));
         // The incremental reflow is targeted at either the block or the button
         REFLOW_DEBUG_MSG("---- Doing AreaFrame Reflow and then bailing out\n");
         // Do simple reflow and bail out
@@ -1423,8 +1436,6 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
           plainLstFrame->FirstChild(aPresContext, nsnull, &frame);
           nsIScrollableFrame * scrollFrame;
           if (NS_SUCCEEDED(frame->QueryInterface(NS_GET_IID(nsIScrollableFrame), (void**)&scrollFrame))) {
-            nsIFrame * incrementalChild;
-            aReflowState.reflowCommand->GetNext(incrementalChild);
             nsRect rect;
             plainLstFrame->GetRect(rect);
             plainLstFrame->Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
@@ -1445,6 +1456,8 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
             return NS_OK;
           }
         }
+
+        aReflowState.SetCurrentReflowNode(nsnull);
 
         // Here the target of the reflow was a child of the dropdown list
         // so we must do a full reflow

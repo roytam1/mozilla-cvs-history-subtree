@@ -96,6 +96,7 @@ CPPSRCS		= \
 		nsPageContentFrame.cpp \
 		nsPlaceholderFrame.cpp \
 		nsPresShell.cpp \
+		nsReflowTree.cpp \
 		nsScrollFrame.cpp \
 		nsScrollPortFrame.cpp \
 		nsSelectsAreaFrame.cpp \
@@ -116,6 +117,7 @@ EXPORTS		= \
 		nsIHTMLContent.h \
 		nsILineIterator.h \
 		nsHTMLParts.h \
+		nsReflowTree.h \
 		$(NULL)
 
 ifdef IBMBIDI

@@ -5,7 +5,8 @@
 
 case $1 in
  baseline|verify)
-    MODE=$1
+    mode=$1
+	echo "mode = $mode"
     ;;
 
  clean)
@@ -70,21 +71,21 @@ cp /dev/null $TESTS_FILE
 
 for FILE in `ls file_list.txt file_list[0-9].txt 2> /dev/null`; do
     egrep -v "^#" < $FILE \
-        | sed -e "s@file:///s\(:\||\)@file://$MOZ_TEST_BASE@" \
+        | sed -e "s@file:///s[:|]@file://$MOZ_TEST_BASE@" \
         >> $TESTS_FILE
 done
 
 if [ -s $TESTS_FILE ]; then
-    run_tests -m $MODE -f $TESTS_FILE
+    run_tests -m $mode -f $TESTS_FILE
 fi
 
 if [ -f file_list_printing.txt ]; then
     egrep -v "^#" < file_list_printing.txt \
-        | sed -e "s@file:///s\(:\||\)@file://$MOZ_TEST_BASE@" \
+        | sed -e "s@file:///s[:|]@file://$MOZ_TEST_BASE@" \
         > $TESTS_FILE
 
     if [ -s $TESTS_FILE ]; then
-        run_tests -p -m $MODE -f $TESTS_FILE
+        run_tests -p -m $mode -f $TESTS_FILE
     fi
 fi
 

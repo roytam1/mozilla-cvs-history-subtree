@@ -599,6 +599,17 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsBlockFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
+
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
+
+  nsIFrame *childFrame;
+
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
 #ifdef DEBUG
   if (gNoisyReflow) {
     nsCAutoString reflow;
@@ -611,9 +622,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       aReflowState.reflowCommand->GetType(type);
       reflow += kReflowCommandType[type];
 
-      nsIFrame* target;
-      aReflowState.reflowCommand->GetTarget(target);
-      reflow += nsPrintfCString("@%p", target);
+      reflow += nsPrintfCString("%s", amTarget ? " target" : "");
 
       reflow += ")";
     }
@@ -647,6 +656,11 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     CalculateContainingBlock(aReflowState, mRect.width, mRect.height,
                              containingBlockWidth, containingBlockHeight);
     
+    // Set the iterator's current node to match the child we're playing with
+    // XXX fix? 
+    // Is it possible for mAbsoluteContainer to be in the reflow tree?  If
+    // not, we can remove this, but I think it's possible....
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -685,8 +699,10 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       } else {
         mState &= ~NS_FRAME_OUTSIDE_CHILDREN;
       }
+      // XXX fix? do we need to check children?
       return NS_OK;
     }
+    // else mAbsoluteContainer::IncrementalReflow() didn't handle this
   }
 
   if (IsFrameTreeTooDeep(aReflowState, aMetrics)) {
@@ -731,6 +747,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   nsBlockReflowState state(aReflowState, aPresContext, this, aMetrics,
                            NS_BLOCK_MARGIN_ROOT & mState);
+  state.mReflowIterator = &reflowIterator;
 
   if (eReflowReason_Resize != aReflowState.reason) {
 #ifdef IBMBIDI
@@ -764,8 +781,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   nsresult rv = NS_OK;
   PRBool isStyleChange = PR_FALSE;
+  PRBool firstTime = PR_TRUE;
 
-  nsIFrame* target;
   switch (aReflowState.reason) {
   case eReflowReason_Initial:
 #ifdef NOISY_REFLOW_REASON
@@ -781,9 +798,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // Do nothing; the dirty lines will already have been marked.
     break;
 
-  case eReflowReason_Incremental:  
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this == target) {
+  case eReflowReason_Incremental:
+    if (amTarget) {
       nsReflowType type;
       aReflowState.reflowCommand->GetType(type);
 #ifdef NOISY_REFLOW_REASON
@@ -803,10 +819,31 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         rv = PrepareResizeReflow(state);
         break;
       }
+
+      NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
+      if (NS_FAILED(rv)) return rv;
+
+      firstTime = PR_FALSE;
+      // we'll reflow dirty lines eventually
     }
-    else {
-      // Get next frame in reflow command chain
-      aReflowState.reflowCommand->GetNext(state.mNextRCFrame);
+    // any dirty lines are marked but not reflowed yet
+
+    // now handle any targets that are children of this node
+    while (reflowIterator.NextChild(&childFrame))
+    {
+      // Reflow either the target or the previous child.  The
+      // last pass through the loop will be Reflowed after the switch(){}.
+      if (!firstTime)
+      {
+        // Now reflow...
+        rv = ReflowDirtyLines(state);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+        if (NS_FAILED(rv)) return rv;
+      }
+
+      // set reflow state for child
+      aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+      state.mNextRCFrame = childFrame;
 #ifdef NOISY_REFLOW_REASON
       ListTag(stdout);
       printf(": reflow=incremental");
@@ -818,6 +855,10 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 #endif
 
       rv = PrepareChildIncrementalReflow(state);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
+      if (NS_FAILED(rv)) return rv;
+
+      firstTime = PR_FALSE;
     }
     break;
 
@@ -836,6 +877,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     rv = PrepareResizeReflow(state);
     break;
   }
+  // all cases of the above leave one line marked but not reflowed yet
 
   NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
   if (NS_FAILED(rv)) return rv;
@@ -844,6 +886,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   rv = ReflowDirtyLines(state);
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
+
+  // XXX FIX?! do in each pass in incremental?
 
   if (!state.GetFlag(BRS_ISINLINEINCRREFLOW)) {
     // XXXwaterson are we sure we don't need to do this work if BRS_ISINLINEINCRREFLOW?
@@ -1655,13 +1699,23 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
   if (lineCount > 0) {
     // Fix any frames deeper in the reflow path.
 
-    // Get the reflow path, which is stored as a stack (i.e., the next
-    // frame in the reflow is at the _end_ of the array).
-    nsVoidArray *path = aState.mReflowState.reflowCommand->GetPath();
+    // Get the reflow path, which is stored as a tree.  Our current node
+    // is in the reflowcommand.
+    nsReflowTree::Node::Iterator reflowNode(aState.mReflowState.GetCurrentReflowNode());
+    // XXX? should we start with the children of this node, or the node itself?
+    // Let's try starting with the child...
 
-    for (PRInt32 i = path->Count() - 1; i >= 0; --i) {
-      nsIFrame *frame = NS_STATIC_CAST(nsIFrame *, path->ElementAt(i));
+    nsIFrame *frame;
+    if (reflowNode.CurrentNode())
+    {
+      reflowNode.CurrentNode()->SetFrame(aState.mNextRCFrame);
+      reflowNode = reflowNode.NextChild(&frame);
+//    frame = reflowNode.CurrentNode()->GetFrame();
+    }
 
+    while (reflowNode.CurrentNode())
+    {
+      // 'frame' is set already
       // Stop if we encounter a non-inline frame in the reflow path.
       const nsStyleDisplay *display;
       ::GetStyleData(frame, &display);
@@ -1676,7 +1730,12 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
         frame->GetPrevInFlow(&prevInFlow);
       } while (--count >= 0 && prevInFlow && (frame = prevInFlow));
 
-      path->ReplaceElementAt(frame, i);
+      reflowNode.CurrentNode()->SetFrame(frame);
+      nsReflowTree::Node::Iterator reflowIterator(reflowNode.CurrentNode());
+      // FIX!!! this doesn't walk more than one branch of the tree!
+      // THIS WILL NOT WORK for release!  We'll need to walk the tree, which
+      // requires recursion or a stack or extra state in the nodes.
+      reflowNode = reflowIterator.NextChild(&frame);
     }
   }
 }
@@ -2111,6 +2170,57 @@ WrappedLinesAreDirty(nsLineList::iterator aLine,
 
   return PR_FALSE;
 }
+
+#if 0
+// merge into nsBlockReflowState.cpp
+PRBool NodeEnclosesTextControls (nsReflowTree::Node *node)
+{
+  nsReflowTree::Node::Iterator reflowIterator(node);
+  PRBool amTarget = reflowIterator.IsTarget();
+  nsIFrame *childFrame;
+
+  // if we're a target, then we're not enclosed in a text control, so
+  // one of the reflows would have been unconstrained.
+  if (amTarget)
+    return PR_FALSE;
+
+  while (reflowIterator.NextChild(&childFrame))
+  {
+    nsCOMPtr<nsIAtom> frameType;
+    childFrame->GetFrameType(getter_AddRefs(frameType));
+    if (frameType)
+    {
+      if (nsLayoutAtoms::textInputFrame != frameType.get())
+      {
+        if (!NodeEnclosesTextControls(reflowIterator.CurrentChild()))
+          return PR_FALSE;
+      }
+      // else it's a text control, keep searching.
+    }
+  }
+  // all of the branches ended in a text control
+  return PR_TRUE; // damage is constrained to the text control innards
+}
+
+PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aState) const
+{
+  // see if the reflow will go through a text control.  if so, we can optimize 
+  // because we know the text control won't change size.
+  if (aState.mReflowState.reflowCommand)
+  {
+    nsReflowTree::Node::Iterator reflowIterator(aState.mReflowState.GetCurrentReflowNode());
+    // We need to determine if there are any text controls between this
+    // node and _all_ of the targets below us (not including the targets
+    // themselves).  We need to walk the tree, skipping over text controls
+    // and their children, and stopping if we hit a parent of a target.
+    nsReflowTree::Node *node = reflowIterator.CurrentNode();
+    if (node) {
+      return NodeEnclosesTextControls(node);
+    }      
+  }
+  return PR_FALSE;  // default case, damage is not constrained (or unknown)
+}
+#endif
 
 static void PlaceFrameView(nsIPresContext* aPresContext, nsIFrame* aFrame);
 
@@ -3206,6 +3316,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   if (frame == aState.mNextRCFrame) {
     // NULL out mNextRCFrame so if we reflow it again we don't think it's still
     // an incremental reflow
+    // XXX Fix?  Does this interact with reflowtree?  probably not...
     aState.mNextRCFrame = nsnull;
   }
   if (NS_FAILED(rv)) {
@@ -3571,6 +3682,9 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   // need to repeatedly call GetChildCount here, because the child
   // count can change during the loop!
   for (i = 0; i < aLine->GetChildCount(); i++) { 
+    // Set the command's current reflow node correctly for this child frame
+    aState.mReflowState.SetCurrentReflowNode(aState.mReflowIterator->SelectChild(frame));
+    
     rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                            &lineReflowStatus);
     if (NS_FAILED(rv)) {
@@ -3695,6 +3809,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
   if (aFrame == aState.mNextRCFrame) {
     // NULL out mNextRCFrame so if we reflow it again we don't think it's still
     // an incremental reflow
+    // XXX fix?  does this interact with reflowtree?  Probably ok.
     aState.mNextRCFrame = nsnull;
   }
   if (NS_FAILED(rv)) {

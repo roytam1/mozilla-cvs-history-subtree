@@ -121,6 +121,7 @@
 #endif
 
 #include "nsIReflowCallback.h"
+#include "nsReflowTree.h"
 
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMWindowInternal.h"
@@ -1644,6 +1645,7 @@ PresShell::Init(nsIDocument* aDocument,
       }
     }
 #endif
+  mBatchReflows = PR_FALSE;  
 
   return NS_OK;
 }
@@ -2974,7 +2976,6 @@ PresShell::NotifyDestroyingFrame(nsIFrame* aFrame)
     CancelReflowCommandInternal(aFrame, nsnull, mReflowCommands);
     CancelReflowCommandInternal(aFrame, nsnull, mTimeoutReflowCommands);
 
-
     // Notify the frame manager
     if (mFrameManager) {
       mFrameManager->NotifyDestroyingFrame(aFrame);
@@ -3531,6 +3532,7 @@ PresShell::AlreadyInQueue(nsHTMLReflowCommand* aReflowCommand,
       nsHTMLReflowCommand* rc = (nsHTMLReflowCommand*) aQueue.ElementAt(i);
       if (rc) {
         nsIFrame* targetOfQueuedRC;
+        // XXX we could probably do this more efficiently now with the target hash
         if (NS_SUCCEEDED(rc->GetTarget(targetOfQueuedRC))) {
           nsReflowType RCType;
           nsReflowType queuedRCType;
@@ -3606,8 +3608,8 @@ PresShell::AppendReflowCommandInternal(nsHTMLReflowCommand* aReflowCommand,
   nsresult rv = NS_OK;
   // don't check for duplicates on the timeout queue - it is responsiblity of frames
   // who call SendInterruptNotificationTo to make sure there are no duplicates
-  if ((&aQueue == &mTimeoutReflowCommands) ||
-      ((&aQueue == &mReflowCommands) && !AlreadyInQueue(aReflowCommand, aQueue))) {
+  if (&aQueue == &mTimeoutReflowCommands ||
+      !AlreadyInQueue(aReflowCommand, aQueue)) {
     rv = (aQueue.AppendElement(aReflowCommand) ? NS_OK : NS_ERROR_OUT_OF_MEMORY);
     ReflowCommandAdded(aReflowCommand);
     NotifyAncestorFramesOfReflowCommand(this, aReflowCommand, PR_TRUE);
@@ -3636,7 +3638,6 @@ PresShell::AppendReflowCommand(nsHTMLReflowCommand* aReflowCommand)
 {
   return AppendReflowCommandInternal(aReflowCommand, mReflowCommands);
 }
-
 
 //
 // IsDragInProgress
@@ -4955,7 +4956,7 @@ PresShell::HandlePostedReflowCallbacks()
       node = node->next;
       mFirstCallbackEventRequest = node;
       FreeFrame(sizeof(nsCallbackEventRequest), toFree);
-	  if (callback)
+      if (callback)
         callback->ReflowFinished(this, &shouldFlush);
       NS_IF_RELEASE(callback);
    }
@@ -5078,6 +5079,10 @@ PresShell::EndReflowBatching(PRBool aFlushPendingReflows)
 {  
   nsresult rv = NS_OK;
   mBatchReflows = PR_FALSE;
+#ifdef DEBUG
+  fprintf(stderr,"Releasing %d reflows batched\n",
+          mReflowCommands.Count() + mTimeoutReflowCommands.Count());
+#endif
   if (aFlushPendingReflows) {
     rv = FlushPendingNotifications(PR_FALSE);
   }
@@ -6297,9 +6302,36 @@ PresShell::ProcessReflowCommand(nsVoidArray&         aQueue,
   }
 }
 
+#ifdef DEBUG
+void DumpPath(nsVoidArray *path, int j)
+{
+  if (j < path->Count())
+  {
+    DumpPath(path,j+1);
+
+    // unwinding...
+    nsIFrame *frame = (nsIFrame *) path->ElementAt(j);
+    fprintf(stderr, "%*s|-- %p", (path->Count()-(j+1))*2, "", (void *) frame);
+    nsCOMPtr<nsIAtom> typeAtom;
+    frame->GetFrameType(getter_AddRefs(typeAtom));
+    if (typeAtom) {
+      const PRUnichar *unibuf;
+      typeAtom->GetUnicode(&unibuf);
+      fprintf(stderr, " [%s]\n", NS_LossyConvertUCS2toASCII(unibuf).get());
+    } else {
+      putc('\n', stderr);
+    }
+  }
+}
+#endif
+
 nsresult
 PresShell::ProcessReflowCommands(PRBool aInterruptible)
 {
+  // if we're executing SetTimeout() code and we haven't timed out yet
+  if (mBatchReflows)
+    return NS_OK;
+
   MOZ_TIMER_DEBUGLOG(("Start: Reflow: PresShell::ProcessReflowCommands(), this=%p\n", this));
   MOZ_TIMER_START(mReflowWatch);  
 
@@ -6331,9 +6363,55 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     }
 #endif
     
+#define MERGE_REFLOWS 1
     mIsReflowing = PR_TRUE;
     PRInt64 maxTime;
+    PRBool firstTime = PR_TRUE;
+    // XXX FIX!  factor duplicate code from handling of the two queues!
     while (0 != mReflowCommands.Count()) {
+      // Construct tree against which we will merge.
+      nsReflowTree tree;
+
+      // Start with a tree with a single branch
+      nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
+                                  mReflowCommands.ElementAt(0);
+      nsVoidArray *curr_path = curr->GetPath();
+      void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
+      nsReflowTree::Node *n = tree.MergeCommand(curr);
+      int i;
+#if 0
+      fprintf(stderr, "Initial path dump:\n");
+      DumpPath(curr_path,0);
+#endif
+
+#if MERGE_REFLOWS
+      // now see how many reflows we can merge with the tree.
+      for (i = 1; i < mReflowCommands.Count(); i++) {
+        nsHTMLReflowCommand *command = 
+          NS_STATIC_CAST(nsHTMLReflowCommand *,
+                         mReflowCommands.ElementAt(i));
+
+        n = tree.MergeCommand(command);
+        if (!n)
+          continue;         // can't be merged...try next?
+        
+#if 0
+        fprintf(stderr, "Path dump (merged):\n");
+        DumpPath(command->GetPath(),0);
+#endif
+        // remove merged command from the list
+        mReflowCommands.RemoveElementAt(i);
+        ReflowCommandRemoved(command);
+        delete command;
+        i--;  // account for the element removal and ensuing shift
+      }
+#endif
+
+      curr->SetReflowTree(&tree);
+      curr->SetCurrentReflowNode(tree.Root());
+      tree.Dump();
+
+      // removes the command when done
       ProcessReflowCommand(mReflowCommands, aInterruptible, desiredSize, maxSize, *rcx);
       if (aInterruptible) {
         LL_I2L(maxTime, gMaxRCProcessingTime);
@@ -6349,6 +6427,49 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       // process the timeout reflow commands completely
       // printf("timeout reflows=%d \n", mTimeoutReflowCommands.Count());
       while (0 != mTimeoutReflowCommands.Count()) {
+        // Construct tree against which we will merge.
+        nsReflowTree tree;
+
+        // Start with a tree with a single branch
+        nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
+                                    mTimeoutReflowCommands.ElementAt(0);
+        nsVoidArray *curr_path = curr->GetPath();
+        void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
+        nsReflowTree::Node *n = tree.MergeCommand(curr);
+        int i;
+#if 0
+        fprintf(stderr, "Initial path dump:\n");
+        DumpPath(curr_path,0);
+#endif
+
+#if MERGE_REFLOWS
+        // now see how many reflows we can merge with the tree.
+        for (i = 1; i < mTimeoutReflowCommands.Count(); i++) {
+          nsHTMLReflowCommand *command = 
+            NS_STATIC_CAST(nsHTMLReflowCommand *,
+                           mTimeoutReflowCommands.ElementAt(i));
+
+          n = tree.MergeCommand(command);
+          if (!n)
+            continue;         // can't be merged...try next?
+        
+#if 0
+          fprintf(stderr, "Path dump (merged):\n");
+          DumpPath(command->GetPath(),0);
+#endif
+          // remove merged command from the list
+          mTimeoutReflowCommands.RemoveElementAt(i);
+          ReflowCommandRemoved(command);
+          delete command;
+          i--;  // account for the element removal and ensuing shift
+        }
+#endif
+
+        curr->SetReflowTree(&tree);
+        curr->SetCurrentReflowNode(tree.Root());
+        tree.Dump();
+
+        // removes the command when done
         ProcessReflowCommand(mTimeoutReflowCommands, PR_TRUE, desiredSize, maxSize, *rcx);
       }
       if (mReflowCommands.Count() > 0) { // Reflow Commands are still queued up.

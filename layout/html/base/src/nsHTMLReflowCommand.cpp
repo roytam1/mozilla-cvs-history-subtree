@@ -113,6 +113,8 @@ nsHTMLReflowCommand::nsHTMLReflowCommand(nsIFrame*    aTargetFrame,
     mPrevSiblingFrame(nsnull),
     mAttribute(aAttribute),
     mListName(nsnull),
+    mTree(nsnull),
+    mReflowNode(nsnull),
     mFlags(0)
 {
   MOZ_COUNT_CTOR(nsHTMLReflowCommand);
@@ -151,18 +153,11 @@ nsIFrame* nsHTMLReflowCommand::GetContainingBlock(nsIFrame* aFloater) const
   return containingBlock;
 }
 
-void nsHTMLReflowCommand::BuildPath()
+nsresult nsHTMLReflowCommand::BuildPath()
 {
-#ifdef DEBUG_jesup
-  if (mPath.Count() == 0)
-    gReflowsZero++;
-  else if (mPath.Count() <= 8)
-    gReflowsAuto++;
-  else
-    gReflowsLarger++;
-#endif
 
-  mPath.Clear();
+  if (mPath.Count() != 0)
+    return NS_OK; // already built
 
   // Floating frames are handled differently. The path goes from the target
   // frame to the containing block, and then up the hierarchy
@@ -180,6 +175,16 @@ void nsHTMLReflowCommand::BuildPath()
       mPath.AppendElement((void*)f);
     }
   }
+#ifdef DEBUG_jesup
+  if (mPath.Count() == 0)
+    gReflowsZero++;
+  else if (mPath.Count() <= 8)
+    gReflowsAuto++;
+  else
+    gReflowsLarger++;
+#endif
+
+  return NS_OK;
 }
 
 nsresult
@@ -196,7 +201,8 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 
 #ifdef NS_DEBUG
   nsCOMPtr<nsIPresShell> shell;
-  aPresContext->GetShell(getter_AddRefs(shell));
+  if (aPresContext)
+    aPresContext->GetShell(getter_AddRefs(shell));
   if (shell) {
     nsIFrame* rootFrame;
     shell->GetRootFrame(&rootFrame);
@@ -205,7 +211,7 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 #endif
 
   if (nsnull != root) {    
-    mPath.RemoveElementAt(mPath.Count() - 1);
+
 
     nsHTMLReflowState reflowState(aPresContext, root, *this,
                                   &aRendContext, aMaxSize);
@@ -223,22 +229,8 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
     }
     root->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
   }
+  mPath.Clear();
 
-  return NS_OK;
-}
-
-nsresult
-nsHTMLReflowCommand::GetNext(nsIFrame*& aNextFrame, PRBool aRemove)
-{
-  PRInt32 count = mPath.Count();
-
-  aNextFrame = nsnull;
-  if (count > 0) {
-    aNextFrame = (nsIFrame*)mPath[count - 1];
-    if (aRemove) {
-      mPath.RemoveElementAt(count - 1);
-    }
-  }
   return NS_OK;
 }
 
@@ -253,7 +245,21 @@ nsresult
 nsHTMLReflowCommand::SetTarget(nsIFrame* aTargetFrame)
 {
   mTargetFrame = aTargetFrame;
+  mTree->AddTargettedFrame(aTargetFrame); // XXX right?
+  // XXX this seems dangerous: mTargetList.ReplaceElementAt(aTargetFrame,0);?
   return NS_OK;
+}
+
+nsresult
+nsHTMLReflowCommand::AddTarget(nsIFrame* aTargetFrame)
+{
+  return mTree->AddTargettedFrame(aTargetFrame);
+}
+
+PRBool
+nsHTMLReflowCommand::IsATarget(const nsIFrame* aFrame) const
+{
+  return mTree->FrameIsTarget(aFrame);
 }
 
 nsresult
@@ -269,13 +275,6 @@ nsHTMLReflowCommand::GetAttribute(nsIAtom *& aAttribute) const
   aAttribute = mAttribute;
   if (nsnull!=aAttribute)
     NS_ADDREF(aAttribute);
-  return NS_OK;
-}
-
-nsresult
-nsHTMLReflowCommand::GetChildFrame(nsIFrame*& aChildFrame) const
-{
-  aChildFrame = mChildFrame;
   return NS_OK;
 }
 

@@ -2640,3 +2640,21 @@ void nsHTMLReflowState::AdjustComputedWidth(void)
     if(mComputedWidth<0) mComputedWidth = 0;
   }
 }
+
+// 
+nsReflowTree::Node *
+nsHTMLReflowState::GetCurrentReflowNode(void) const
+{
+  if (reflowCommand)
+    return reflowCommand->GetCurrentReflowNode();
+  return nsnull;
+}
+// 
+void 
+nsHTMLReflowState::SetCurrentReflowNode(nsReflowTree::Node *aReflowNode) const
+{
+  if (reflowCommand)
+    reflowCommand->SetCurrentReflowNode(aReflowNode);
+}
+
+

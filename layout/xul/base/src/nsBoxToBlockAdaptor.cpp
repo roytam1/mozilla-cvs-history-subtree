@@ -702,7 +702,9 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   PRBool needsReflow = PR_FALSE;
   PRBool redrawNow = PR_FALSE;
   nsReflowReason reason;
-  
+
+  // this handles reflow tree issues, and if a child (mFrame) is the
+  // target, sets the current tree node before returning.
   HandleIncrementalReflow(aState, 
                           aReflowState, 
                           reason,
@@ -932,9 +934,10 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   return NS_OK;
 }
 
+// XXX FIX!!! shouldn't that be &aReflowState????
 void
 nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                                          const nsHTMLReflowState aReflowState,
+                                          const nsHTMLReflowState &aReflowState,
                                           nsReflowReason& aReason,
                                           PRBool aPopOffIncremental,
                                           PRBool& aRedrawNow,
@@ -963,23 +966,33 @@ nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState,
       // if incremental see if the next child in the chain is the child. If so then
       // we will just let it go down. If not then convert it to a dirty. It will get converted back when 
       // needed in the case just below this one.
-      nsIFrame* incrementalChild = nsnull;
-      aReflowState.reflowCommand->GetNext(incrementalChild, PR_FALSE);
-      
-      // if the increment child is our child then
-      // pop it off and continue sending it down
-      if (incrementalChild == mFrame ) {
-          aNeedsReflow = PR_TRUE;
 
-          if (aPopOffIncremental)
-             aReflowState.reflowCommand->GetNext(incrementalChild);
+      // this lets me iterate through the reflow children; initialized
+      // from state within the reflowCommand
+      nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+      if (reflowIterator.CurrentNode() &&
+          reflowIterator.CurrentNode()->GetFrame() == mFrame) {
 
-          // if we hit the target then we have used up the chain.
-          // next time a layout 
-          break;
+        aNeedsReflow = PR_TRUE;
+
+#if 0
+        // set reflow state for child
+        if (aPopOffIncremental)
+        {
+          // XXX FIX!  if we have multiple targetted children, we'd need to
+          // make sure they get reflowed, and that will depend on the code
+          // that called us, or require a rewrite.
+          nsIFrame *childFrame;
+          reflowIterator.NextChild(&childFrame);
+          aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+        }
+#endif
+        // if we hit the target then we have used up the chain.
+        // next time a layout 
+        break;
       } 
 
-      // fall into dirty if the incremental child was use. It should be treated as a 
+      // fall into dirty if we're the target (or the child isn't our mFrame)
    }
 
    // if its dirty then see if the child we want to reflow is dirty. If it is then

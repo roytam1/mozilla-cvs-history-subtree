@@ -1079,24 +1079,18 @@ nsMathMLContainerFrame::ReflowTokenFor(nsIFrame*                aFrame,
   NS_PRECONDITION(aFrame, "null arg");
   nsresult rv = NS_OK;
 
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+
   // See if this is an incremental reflow
   if (aReflowState.reason == eReflowReason_Incremental) {
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
+
 #ifdef MATHML_NOISY_INCREMENTAL_REFLOW
 printf("nsMathMLContainerFrame::ReflowTokenFor:IncrementalReflow received by: ");
 nsFrame::ListTag(stdout, aFrame);
-printf("for target: ");
-nsFrame::ListTag(stdout, targetFrame);
 printf("\n");
 #endif
-    if (aFrame == targetFrame) {
-    }
-    else {
-      // Remove the next frame from the reflow path
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-    }
   }
 
   // initializations needed for empty markup like <mtag></mtag>
@@ -1114,6 +1108,8 @@ printf("\n");
   while (childFrame) {
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
                                        childFrame, availSize);
+
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(childFrame));
     rv = NS_STATIC_CAST(nsMathMLContainerFrame*,
                         aFrame)->ReflowChild(childFrame,
                                              aPresContext, childDesiredSize,
@@ -1235,27 +1231,22 @@ nsMathMLContainerFrame::Reflow(nsIPresContext*          aPresContext,
   aDesiredSize.ascent = aDesiredSize.descent = 0;
   aDesiredSize.mBoundingMetrics.Clear();
 
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+
   // See if this is an incremental reflow
   if (aReflowState.reason == eReflowReason_Incremental) {
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
 #ifdef MATHML_NOISY_INCREMENTAL_REFLOW
 printf("nsMathMLContainerFrame::Reflow:IncrementalReflow received by: ");
 nsFrame::ListTag(stdout, this);
-printf("for target: ");
-nsFrame::ListTag(stdout, targetFrame);
 printf("\n");
 #endif
-    if (this == targetFrame) {
+//if (this == targetFrame) {
       // XXX We are the target of the incremental reflow.
       // Rather than reflowing everything, see if we can speedup things
       // by just doing the minimal work needed to update ourselves
-    }
-    else {
-      // Remove the next frame from the reflow path
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-    }
+//    }
   }
 
   /////////////
@@ -1270,6 +1261,7 @@ printf("\n");
   while (childFrame) {
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
                                        childFrame, availSize);
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(childFrame));
     rv = ReflowChild(childFrame, aPresContext, childDesiredSize,
                      childReflowState, childStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(childStatus), "bad status");

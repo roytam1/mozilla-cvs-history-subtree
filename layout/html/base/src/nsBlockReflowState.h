@@ -208,6 +208,11 @@ public:
   // null this slot out.
   nsIFrame* mNextRCFrame;
 
+  // Stores the reflow iterator for the block we're reflowing.
+  // This allows us to access it from a number of different spots
+  // without passing it around.
+  nsReflowTree::Node::Iterator *mReflowIterator;
+
   // The previous child frames collapsed bottom margin value.
   nsCollapsingMargin mPrevBottomMargin;
 

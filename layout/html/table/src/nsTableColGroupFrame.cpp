@@ -490,20 +490,26 @@ NS_METHOD nsTableColGroupFrame::IncrementalReflow(nsIPresContext*          aPres
 {
   nsresult  rv = NS_OK;
 
-  // determine if this frame is the target or not
-  nsIFrame *target=nsnull;
-  rv = aReflowState.reflowCommand->GetTarget(target);
-  if ((PR_TRUE==NS_SUCCEEDED(rv)) && (nsnull!=target))
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
+  if (amTarget)
   {
-    if (this==target)
-      rv = IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
-    else
-    {
-      // Get the next frame in the reflow chain
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-      rv = IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, nextFrame);
-    }
+    // Assume that this will handle all children, cut off treewalk here
+    aReflowState.SetCurrentReflowNode(nsnull);
+    rv = IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
+  }
+  else
+  {
+    // Get the next frame in the reflow chain, and verify that it's our
+    // child frame (we have only one)
+    nsIFrame *childFrame;
+    aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+    if (childFrame)
+      rv = IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, childFrame);
   }
   return rv;
 }
@@ -517,11 +523,6 @@ NS_METHOD nsTableColGroupFrame::IR_TargetIsMe(nsIPresContext*          aPresCont
   aStatus = NS_FRAME_COMPLETE;
   nsReflowType type;
   aReflowState.reflowCommand->GetType(type);
-  nsIFrame *objectFrame;
-  aReflowState.reflowCommand->GetChildFrame(objectFrame); 
-  const nsStyleDisplay *childDisplay=nsnull;
-  if (nsnull!=objectFrame)
-    objectFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)childDisplay));
   switch (type)
   {
   case eReflowType_StyleChanged :

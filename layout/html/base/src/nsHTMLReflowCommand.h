@@ -37,6 +37,7 @@
 #ifndef nsHTMLReflowCommand_h___
 #define nsHTMLReflowCommand_h___
 #include "nsReflowType.h"
+#include "nsReflowTree.h"
 #include "nsVoidArray.h"
 
 class  nsIAtom;
@@ -100,13 +101,6 @@ public:
                     nsIRenderingContext& aRendContext);
 
   /**
-   * Get the next frame in the command processing path. If requested removes the
-   * the frame from the path. You must remove the frame from the path before
-   * dispatching the reflow command to the next frame in the chain.
-   */
-  nsresult GetNext(nsIFrame*& aNextFrame, PRBool aRemove = PR_TRUE);
-
-  /**
    * Get the target of the reflow command.
    */
   nsresult GetTarget(nsIFrame*& aTargetFrame) const;
@@ -115,6 +109,33 @@ public:
    * Change the target of the reflow command.
    */
   nsresult SetTarget(nsIFrame* aTargetFrame);
+
+  /**
+   * Add a target of the reflow command to a list used by IsATarget
+   */
+  nsresult AddTarget(nsIFrame* aTargetFrame);
+
+  /**
+   * Get the tree of the reflow command.
+   */
+  nsresult GetReflowTree(nsReflowTree** aTree) const
+  {
+    *aTree = mTree; return NS_OK;
+  }
+
+  /**
+   * Change the tree of the reflow command.
+   */
+  nsresult SetReflowTree(nsReflowTree* aTree)
+  {
+    NS_ASSERTION(!mTree,"ReflowTree already set");
+    mTree = aTree; return NS_OK;
+  }
+
+  /**
+   * Return if this is a target of this (possibly merged) reflow command
+   */
+  PRBool IsATarget(const nsIFrame* aFrame) const;
 
   /**
    * Get the type of reflow command.
@@ -132,12 +153,7 @@ public:
    * the array is the target frame, the last element in the array is
    * the current frame.
    */
-  nsVoidArray *GetPath() { return &mPath; }
-
-  /**
-   * Get the child frame associated with the reflow command.
-   */
-  nsresult GetChildFrame(nsIFrame*& aChildFrame) const;
+  nsVoidArray *GetPath() { BuildPath(); return &mPath; }
 
   /**
    * Returns the name of the child list to which the child frame belongs.
@@ -173,8 +189,29 @@ public:
   nsresult GetFlags(PRInt32* aFlags);
   nsresult SetFlags(PRInt32 aFlags);
 
+  /*
+   * 
+   */
+  nsresult SetCurrentReflowNode(nsReflowTree::Node *node)
+  {
+    mReflowNode = node;
+    return NS_OK;
+  }
+
+  /*
+   * 
+   */
+  nsReflowTree::Node *GetCurrentReflowNode()
+  {
+    return mReflowNode;
+  }
+
 protected:
-  void      BuildPath();
+  /*
+   * build the path for this reflow
+   */
+  nsresult BuildPath();
+
   nsIFrame* GetContainingBlock(nsIFrame* aFloater) const;
 
 private:
@@ -185,6 +222,8 @@ private:
   nsIAtom*        mAttribute;
   nsIAtom*        mListName;
   nsAutoVoidArray mPath;
+  nsReflowTree*   mTree;
+  nsReflowTree::Node* mReflowNode;
   PRInt32         mFlags;
 };
 

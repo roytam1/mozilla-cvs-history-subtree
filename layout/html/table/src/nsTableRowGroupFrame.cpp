@@ -418,11 +418,9 @@ nsTableRowGroupFrame::ReflowChildren(nsIPresContext*        aPresContext,
       // it's target is the current frame, then make sure we send
       // StyleChange reflow reasons down to the children so that they
       // don't over-optimize their reflow.
-      nsIFrame* target = nsnull;
       nsReflowReason reason = aReflowState.reason;
       if (eReflowReason_Incremental == aReflowState.reason) {
-        aReflowState.reflowState.reflowCommand->GetTarget(target);
-        if (this == target) {
+        if (aReflowState.reflowState.reflowCommand->IsATarget(NS_REINTERPRET_CAST(nsIFrame*,this))) {
           nsReflowType type;
           aReflowState.reflowState.reflowCommand->GetType(type);
           if (eReflowType_StyleChanged == type) {
@@ -1230,19 +1228,28 @@ nsTableRowGroupFrame::IncrementalReflow(nsIPresContext*        aPresContext,
 {
   nsresult  rv = NS_OK;
 
-  // determine if this frame is the target or not
-  nsIFrame* target = nsnull;
-  rv = aReflowState.reflowState.reflowCommand->GetTarget(target);
-  if (NS_SUCCEEDED(rv) && target) {
-    if (this == target)
-      rv = IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
-    else {
-      // Get the next frame in the reflow chain
-      nsIFrame* nextFrame;
-      aReflowState.reflowState.reflowCommand->GetNext(nextFrame);
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.reflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
 
-      rv = IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, nextFrame);
-    }
+  if (amTarget) {
+    aReflowState.reflowState.SetCurrentReflowNode(nsnull);
+    rv = IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
+  }
+
+  // Get the next frame in the reflow chain, and verify that it's our
+  // child frame (we have only one)
+  nsIFrame *childFrame;
+  // now handle any targets that are children of this node
+  while (reflowIterator.NextChild(&childFrame))
+  {
+    // set reflow state for child
+    aReflowState.reflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+    NS_ASSERTION(childFrame, "next frame in reflow command is null"); 
+    rv = IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, childFrame);
   }
   return rv;
 }

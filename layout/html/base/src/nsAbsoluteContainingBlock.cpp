@@ -289,15 +289,25 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
   aWasHandled = PR_FALSE;
   aChildBounds.SetRect(0, 0, 0, 0);
 
-  // See if the reflow command is targeted at us
-  nsIFrame* targetFrame;
-  aReflowState.reflowCommand->GetTarget(targetFrame);
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
+  nsIFrame *childFrame;
 
-  if (aReflowState.frame == targetFrame) {
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
+  if (amTarget) {
     nsIAtom*  listName;
     PRBool    isAbsoluteChild;
 
+    // make sure no children use the tree while doing DIRTY reflows
+    aReflowState.SetCurrentReflowNode(nsnull);
+
     // It's targeted at us. See if it's for the positioned child frames
+    // XXXrjesup - double-check that this is ok, or if we need to avoid merging
+    // XXXrjesup - reflows with different childlistnames (probably)
     aReflowState.reflowCommand->GetChildListName(listName);
     isAbsoluteChild = nsLayoutAtoms::absoluteList == listName;
     NS_IF_RELEASE(listName);
@@ -338,29 +348,29 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
       // Calculate the total child bounds
       CalculateChildBounds(aPresContext, aChildBounds);
     }
-
-  } else if (mAbsoluteFrames.NotEmpty()) {
-    // Peek at the next frame in the reflow path
-    nsIFrame* nextFrame;
-    aReflowState.reflowCommand->GetNext(nextFrame, PR_FALSE);
-
+    // We reflowed all our DIRTY children, but other children that are in
+    // the tree still may need reflow.
+  }
+  // now handle any targets that are children of this node
+  while (reflowIterator.NextChild(&childFrame))
+  {
     // See if it's one of our absolutely positioned child frames
-    NS_ASSERTION(nsnull != nextFrame, "next frame in reflow command is null"); 
-    if (mAbsoluteFrames.ContainsFrame(nextFrame)) {
-      // Remove the next frame from the reflow path
-      aReflowState.reflowCommand->GetNext(nextFrame, PR_TRUE);
-
+    if (mAbsoluteFrames.ContainsFrame(childFrame)) {
+      // set reflow state for child
+      aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+      
       nsReflowStatus  kidStatus;
       ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
-                          aContainingBlockWidth, aContainingBlockHeight, nextFrame,
-                          aReflowState.reason, kidStatus);
+                          aContainingBlockWidth, aContainingBlockHeight,
+                          childFrame, aReflowState.reason, kidStatus);
       // We don't need to invalidate anything because the frame should
       // invalidate any area within its frame that needs repainting, and
       // because it has a view if it changes size the view manager will
       // damage the dirty area
       aWasHandled = PR_TRUE;
-
+      
       // Calculate the total child bounds
+      // XXXrjesup - Check to see if this is impacted by being done for multiple children. 
       CalculateChildBounds(aPresContext, aChildBounds);
     }
   }
