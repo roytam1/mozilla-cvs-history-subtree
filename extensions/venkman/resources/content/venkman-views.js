@@ -788,12 +788,15 @@ function scv_init ()
         label: MSG_MNU_SCRIPTS_INSTANCE,
         items:
         [
+         ["debug-transient", {type: "checkbox", checkedif: transientIf}],
+         ["-"],
          ["debug-instance-on"],
          ["debug-instance-off"],
-         ["debug-transient", {type: "checkbox", checkedif: transientIf}],
+         ["debug-instance"],
          ["-"],
          ["profile-instance-on"],
          ["profile-instance-off"],
+         ["profile-instance"],
         ]
     };
 
