@@ -2,10 +2,22 @@ var dbview;
 var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 
-function createView()
+var RDF = Components.classes['@mozilla.org/rdf/rdf-service;1'].getService();
+RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService);
+
+function openView()
 {
+    var textField = document.getElementById('uriField');
+    var uri = textField.value;
+    dump("uri = " + uri + "\n");
     dbview = Components.classes["@mozilla.org/messenger/msgdbview;1?type=threaded"].createInstance(Components.interfaces.nsIMsgDBView);
-    dump("dbview = " + dbview + "\n");
+
+    var resource = RDF.GetResource(uri);
+    var folder = resource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    
+    dump(folder + "\n");
+    var count;
+    dbview.open(folder, nsMsgViewSortType.bySubject, count);
 }
 
 function sortDateAscending()
@@ -40,12 +52,12 @@ function sortPriorityDescending()
 
 function sortSenderAscending()
 {
-    dbview.sort(nsMsgViewSortType.bySender,nsMsgViewSortOrder.ascending);
+    dbview.sort(nsMsgViewSortType.byAuthor,nsMsgViewSortOrder.ascending);
 }
 
 function sortSenderDescending()
 {
-    dbview.sort(nsMsgViewSortType.bySender,nsMsgViewSortOrder.descending);
+    dbview.sort(nsMsgViewSortType.byAuthor,nsMsgViewSortOrder.descending);
 }
 
 function sortSubjectAscending()

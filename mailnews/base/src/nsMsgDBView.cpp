@@ -113,46 +113,6 @@ nsresult nsMsgDBView::ReverseSort()
     return NS_OK;
 }
 
-#include "nsIDBFolderInfo.h"
-#include "nsIMsgDatabase.h"
-#include "nsIRDFService.h"
-#include "nsIMsgFolder.h"
-#include "nsMsgRDFUtils.h"
-
-NS_IMETHODIMP nsMsgDBView::PopulateView()
-{
-  nsresult rv;
-  nsCOMPtr<nsIRDFService> rdf = do_GetService(NS_RDF_CONTRACTID "/rdf-service;1",&rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr<nsIRDFResource> resource;
-  rv = rdf->GetResource("mailbox://nobody@Local%20Folders/Trash", getter_AddRefs(resource));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr<nsIMsgFolder> folder;
-  folder = do_QueryInterface(resource, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr<nsIDBFolderInfo> folderInfo;
-  rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr<nsIMsgDBHdr> msgHdr;
-  nsMsgKeyArray   keys;
-  PRUint32 flags;
-  m_db->ListAllKeys(keys);
-  PRUint32 size = keys.GetSize();
-  for (PRUint32 i=0;i<size;i++) {
-    m_keys.InsertAt(i,keys[i]);
-    rv = m_db->GetMsgHdrForKey(keys[i], getter_AddRefs(msgHdr));
-    NS_ENSURE_SUCCESS(rv,rv);
-    rv = msgHdr->GetFlags(&flags);
-    NS_ENSURE_SUCCESS(rv,rv);
-    m_flags.InsertAt(i,flags);
-  }
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsMsgDBView::DumpView()
 {
     PRUint32 i;

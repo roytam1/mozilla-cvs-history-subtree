@@ -9,10 +9,12 @@
 <script language="JavaScript" src="chrome://messenger/content/dbviewtest.js"/>
 
 <box orient="vertical">
-  <button class="dialog" value="create view" onclick="createView()"/>
-  <button class="dialog" value="populate view" onclick="populateView()"/>
+  <box orient="horizontal">
+    <textfield id="uriField"/>
+  </box>
+  <box orient="vertical">
+  <button class="dialog" value="open view" onclick="openView()"/>
   <button class="dialog" value="dump view" onclick="dumpView()"/>
-
   <button class="dialog" value="sort date ascending" onclick="sortDateAscending()"/>
   <button class="dialog" value="sort date decending" onclick="sortDateDescending()"/>
   <button class="dialog" value="sort thread ascending" onclick="sortThreadedAscending()"/>
@@ -25,6 +27,7 @@
   <button class="dialog" value="sort subject descending" onclick="sortSubjectDescending()"/>
   <button class="dialog" value="sort size ascending" onclick="sortSizeAscending()"/>
   <button class="dialog" value="sort size descending" onclick="sortSizeDescending()"/>
+  </box>
 </box>
 
 </window>

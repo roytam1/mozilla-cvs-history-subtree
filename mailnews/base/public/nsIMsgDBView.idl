@@ -146,8 +146,7 @@ interface nsIMsgDBView : nsISupports
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
 
     /**
-     * temporary, so I can test from my js
+     * temporary, so we can inspect from js
      */
-    void populateView();
     void dumpView();
 };
