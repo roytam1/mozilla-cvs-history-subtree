@@ -126,7 +126,10 @@ public class THTTPD extends Object {
 			    while (null != (curLine = responseReader.readLine())) {
 				responseString.append(curLine);
 			    }
-			    curLine = "Content-type: text/plain\r\nContent-Length: " + responseString.length() + "\r\n\r\n";
+			    curLine = "Content-type: " + 
+				getContentTypeForFile(responseFile) + 
+				"\r\nContent-Length: " + 
+				responseString.length() + "\r\n\r\n";
 			    responseWriter.write(curLine, 0, 
 						 curLine.length());
 			    responseWriter.write(responseString.toString(),
@@ -172,6 +175,21 @@ public class THTTPD extends Object {
 	    File result = new File(root, requestURI);
 	    if (!result.exists() || result.isDirectory()) {
 		result = null;
+	    }
+	    return result;
+	}
+
+	protected String getContentTypeForFile(File file) {
+	    String 
+		fileName = file.getName(),
+		result = "text/plain";
+		
+	    int lastDot = fileName.lastIndexOf(".");
+	    if (-1 != lastDot) {
+		result = fileName.substring(lastDot+1);
+		if (result.equalsIgnoreCase("html")) {
+		    result = "text/html";
+		}
 	    }
 	    return result;
 	}
