@@ -405,7 +405,7 @@ function doSearch()
   try {
     if( pref ) {
       var prefvalue = pref.GetBoolPref( "browser.search.use_double_clicks" );
-      mClickCount = prefvalue ? 2 : 1;
+      var mClickCount = prefvalue ? 2 : 1;
     } 
     else
       mClickCount = 1;
@@ -575,8 +575,7 @@ function FOO_doSearch()
 
 function openURL(event, treeitem, root)
 {
-  /* mClickCount variable now made global and retrieved at start of doSearch() */
-  /* try {
+  try {
     if( pref ) {
       var prefvalue = pref.GetBoolPref( "browser.search.use_double_clicks" );
       mClickCount = prefvalue ? 2 : 1;
@@ -586,7 +585,7 @@ function openURL(event, treeitem, root)
   }
   catch(e) {
     mClickCount = 1;
-  } */
+  } 
   
 	if ((event.button != 1) || (event.clickCount != mClickCount))
 		return(false);
