@@ -204,7 +204,7 @@ EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
 else
 ifeq ($(OS_ARCH), SunOS)
 OS_VERS         := $(shell uname -r)
-ifneq ($(OS_VERS),5.6)
+ifeq ($(OS_VERS),5.6)
 EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
 	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
