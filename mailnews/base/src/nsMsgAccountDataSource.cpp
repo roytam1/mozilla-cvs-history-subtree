@@ -28,6 +28,7 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFResource.h"
 
+#include "nsXPIDLString.h"
 #include "plstr.h"
 #include "nsMsgBaseCID.h"
 
@@ -46,6 +47,7 @@ public:
   NS_DECL_ISUPPORTS
   
   // RDF datasource methods
+  NS_IMETHOD GetURI(char* *aURI);
 
   /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *source,
@@ -146,6 +148,17 @@ nsMsgAccountDataSource::QueryInterface(const nsIID& iid, void **result)
 {
 
   return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsMsgAccountDataSource::GetURI(char* *aURI)
+{
+    *aURI = nsXPIDLCString::Copy("rdf:msgaccounts");
+    if (! *aURI)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
 }
 
 
