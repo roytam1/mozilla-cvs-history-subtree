@@ -133,7 +133,6 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
     JSContext* cx = ccx.GetJSContext();
 
     // Hold the lock until return...
-    // XXX why does this matter - we are in gc!
     nsAutoLock lock(rt->GetMapLock());  
 
     // Since the JSGC_END call happens outside of a lock,
@@ -176,7 +175,7 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
 
 // static 
 void 
-XPCWrappedNativeScope::FinshedGC(JSContext* cx)
+XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
 {
     XPCJSRuntime* rt = nsXPConnect::GetRuntime();
     if(!rt)

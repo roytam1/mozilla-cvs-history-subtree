@@ -188,7 +188,6 @@ public:
 
     JSBool IsShuttingDown() const {return mShutingDown;}
 
-
 protected:
     nsXPConnect();
 
@@ -608,6 +607,9 @@ public:
     FinishedMarkPhaseOfGC(XPCCallContext& ccx);
 
     static void
+    FinishedFinalizationPhaseOfGC(JSContext* cx);
+
+    static void
     MarkAllInterfaceSets();
 
 #ifdef DEBUG
@@ -617,9 +619,6 @@ public:
 
     static void
     SweepAllWrappedNativeTearOffs();
-
-    static void
-    FinshedGC(JSContext* cx);
 
     static void
     DebugDumpAllScopes(PRInt16 depth);

@@ -336,7 +336,8 @@ XPCPerThreadData::XPCPerThreadData()
         mJSContextStack(new XPCJSContextStack()),
         mNextThread(nsnull),
         mCallContext(nsnull),
-        mResolveName(0)
+        mResolveName(0),
+        mResolvingWrapper(nsnull)
 {
     if(gLock)
     {

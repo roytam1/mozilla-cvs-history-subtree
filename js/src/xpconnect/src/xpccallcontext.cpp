@@ -284,10 +284,7 @@ XPCCallContext::~XPCCallContext()
 
         if(mCallerLanguage == NATIVE_CALLER && JS_GetContextThread(mJSContext))
             JS_EndRequest(mJSContext);
-    }
 
-    if(mThreadData)
-    {
 #ifdef DEBUG
         XPCCallContext* old = mThreadData->SetCallContext(mPrevCallContext);
         NS_ASSERTION(old == this, "bad pop from per thread data");
