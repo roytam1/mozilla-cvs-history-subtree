@@ -1,0 +1,76 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsIDOMNode;
+interface nsISOAPMessage;
+
+/**
+ * This interface supplies unmarshalling of a specific
+ * part of a message XML DOM into appropriate objects
+ * for the script or application.
+ */
+
+[scriptable, uuid(4c2e02ae-1dd2-11b2-b1cd-c79dea3d46db)]
+interface nsISOAPUnmarshaller : nsISupports {
+
+/**
+ * Unmarshall the source node into the specified
+ * object in the output.
+ *
+ * @param name The name of the source object, if any, or null
+ *
+ * @param encodingStyleURI The encoding style of the source object
+ *
+ * @param type The string identifying the type of the source object
+ *
+ * @param source The node to be unmarshalled
+ *
+ * @param message The message receiving the marshalled content
+ *
+ * @param configuration Configuration object which may specify more
+ *   details used by the unmarshaller.
+ *
+ * @return The unmarshalled object, which is null if operation failed.
+ *   In case of failure, a more complete status is recorded in the message.
+ */
+    nsISupports unmarshall(in DOMString name, 
+        in DOMString encodingStyleURI, in DOMString type, 
+        in nsIDOMNode source, in nsISOAPMessage message, 
+        in nsISupports configuration);
+};
+
+%{ C++
+#define NS_SOAPDEFAULTUNMARSHALLER_CID                            \
+{ /* e5fec014-1dd1-11b2-b9a6-f6403792debb */        \
+  0xe5fec014, 0x1dd1, 0x11b2,                       \
+ {0xb9, 0xa6, 0xf6, 0x40, 0x37, 0x92, 0xde, 0xbb} }
+#define NS_SOAPDEFAULTUNMARSHALLER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/defaultunmarshaller;1"
+#define NS_SOAPJSUNMARSHALLER_CID                            \
+{ /* 6937b0b6-1dd2-11b2-a4e3-e333c09b3429 */        \
+  0x6937b0b6, 0x1dd2, 0x11b2,                       \
+ {0xa4, 0xe3, 0xe3, 0x33, 0xc0, 0x9b, 0x34, 0x29} }
+#define NS_SOAPJSUNMARSHALLER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/jsunmarshaller;1"
+%}

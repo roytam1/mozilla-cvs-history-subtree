@@ -1,0 +1,72 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsISOAPMessage;
+
+/**
+ * This interface permits marshalling of SOAP parameters.
+ */
+
+[scriptable, uuid(fc33ffd6-1dd1-11b2-8750-fa62430a38b4)]
+interface nsISOAPMarshaller : nsISupports {
+
+/**
+ * Marshall the source object into the specified
+ * parent in the output.
+ *
+ * @param name The name of the source object, if any, or null
+ *
+ * @param encodingStyleURI The encoding style of the source object
+ *
+ * @param type The string identifying the type of the source object
+ *
+ * @param source The object to be marshalled
+ *
+ * @param message The message receiving the marshalled content
+ *
+ * @param configuration Configuration object which may specify more
+ *   details used by the marshaller.
+ *
+ * @return The marshalled object, which may be null if the operation
+ *   attached objects elsewhere in the message.
+ */
+nsISupports marshall(in DOMString name, in DOMString encodingStyleURI,  
+    in DOMString type, in nsISupports source, in nsISOAPMessage message, 
+    in nsISupports configuration);
+};
+
+%{ C++
+#define NS_SOAPDEFAULTMARSHALLER_CID                            \
+{ /* 4ccfa232-1dd2-11b2-b19b-e7bf52b0b5ad */        \
+  0x4ccfa232, 0x1dd2, 0x11b2,                       \
+ {0xb1, 0x9b, 0xe7, 0xbf, 0x52, 0xb0, 0xb5, 0xad} }
+#define NS_SOAPDEFAULTMARSHALLER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/defaultmarshaller;1"
+#define NS_SOAPJSMARSHALLER_CID                            \
+{ /* d69dd7fe-1dd1-11b2-ad04-866c82b4780b */        \
+  0xd69dd7fe, 0x1dd1, 0x11b2,                       \
+ {0xad, 0x04, 0x86, 0x6c, 0x82, 0xb4, 0x78, 0x0b} }
+#define NS_SOAPJSMARSHALLER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/jsmarshaller;1"
+%}

@@ -1,0 +1,196 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsISupportsArray;
+interface nsIDOMDocument;
+interface nsIDOMElement;
+interface nsISOAPParameter;
+interface nsISOAPTypeRegistry;
+
+/**
+ * This interface controls all SOAP messages. It permits easy
+ * construction of a message, typically through marshalling of
+ * parameters and certain properties settable on this interface
+ * or through deserialization of a transport stream.  It
+ * permits easy processing of a message typically through
+ * unmarshalling of parameters and certain properties available
+ * on this interface.  It also encapsulates protocol information
+ * interpreted by the transport.
+ */
+
+[scriptable, uuid(3970815e-1dd2-11b2-a475-db4dac6826f1)]
+interface nsISOAPMessage : nsISupports {
+  /**
+   * The document which captures the message, if any.  A simple 
+   * sending application passes parameters to the method
+   * marshallSOAPParameters, which calls parameter marshallers 
+   * to construct this document along with all contained elements.  
+   *
+   * But an application may create and set the message directly
+   * instead of invoking marshallSOAPParameters to use marshallers
+   * or access and manipulate the message after it has been 
+   * constructed by marshallSOAPParameters.  If the message has 
+   * not been set, invoking a call will fail.  A message reciever 
+   * may also use this accessor to get the document to avoid using 
+   * unmarshallers.
+   */
+  attribute nsIDOMDocument message;
+
+  /**
+   * A convenience attribute to obtain the DOM element representing the
+   * SOAP envelope from the document.  DOM methods may be used to 
+   * access, add, or modify attributes of the envelope.
+   *
+   * If the message attribute is null or is not a document containing
+   * a root soap envelope element, then this will be null.
+   */
+  readonly attribute nsIDOMElement envelope;
+
+  /**
+   * A convenience attribute to obtain the DOM element representing the
+   * SOAP header from the envelope.  DOM methods may be used to 
+   * access, add, or modify attributes or elements of the header.
+   *
+   * If the envelope attribute is null or does not contain a SOAP header
+   * element type, then this will be null.
+   */
+  readonly attribute nsIDOMElement header;
+
+  /**
+   * A convenience attribute to obtain the DOM element representing the
+   * SOAP body from the envelope.  DOM methods may be used to 
+   * access, add, or modify attributes or elements of the body.
+   *
+   * If the envelope attribute is null or does not contain a SOAP body
+   * element type, then this will be null.
+   */
+  readonly attribute nsIDOMElement body;
+
+  /**
+   * The encodingStyle to be used for the envelope. This URI is used
+   * by the marshaller to set the initial encoding style of the
+   * envelope.  This should be set by applications desiring alternate
+   * encodings.  It will also be used as a key to select specific 
+   * marshallers for the encoding.
+   *
+   * If this has not been set by a calling application, it will be the 
+   * default SOAP encoding style for RPC style calls.
+   */
+  attribute DOMString encodingStyleURI;
+
+  /**
+   * The name of the method being invoked. The methodName is used 
+   * during marshalling as the tagname of the single child of body
+   * of RPC-style messages.  This should be set by RPC-style
+   * applications.  Unmarshalling also tests whether this attribute
+   * is null to determine whether to unmarshall RPC-style or
+   * message style.  Before unmarshalling, RPC-style applications
+   * should make certain that this has some non-null string
+   * value, which will be replaced if the unmarshalling is
+   * successful.
+   *
+   * For example, if the <code>targetObjectURI</code> is 
+   * "urn:some-namespace" and the <code>methodName</code> is 
+   * GetLastTradePrice, the single body entry will be the
+   * following element:
+   * <code>
+   *   <m:GetLastTradePrice xmlns:m="urn:some-namespace">
+   *   ...
+   * </code>
+   *
+   * If this has not been set by a calling application (or by a
+   * recipient calling unmarshallParameters), it will be null.
+   * If this is null, marshalling or unmarshalling parameters 
+   * will produce
+   * a non-RPC-style message.
+   */
+  attribute DOMString methodName;   
+
+  /**
+   * The target object on which the method is being invoked. This URI
+   * is used during marshalling as the namespace to qualify the tagname 
+   * of the single child of body of RPC-style messages.  This should
+   * be set by RPC-style applications.  When the methodName attribute 
+   * is not null unmarshalling parameters causes this to be set to the 
+   * namespaceURI of the single child of body of the message.
+   *
+   * For example, if the <code>targetObjectURI</code> is 
+   * "urn:some-namespace" and the <code>methodName</code> is 
+   * GetLastTradePrice, the single child of body will be the
+   * following element:
+   * <code>
+   *   <m:GetLastTradePrice xmlns:m="urn:some-namespace">
+   *   ...
+   * </code>
+   *
+   * If this has not been set by a calling application
+   * or by unmarshalling where the methodName is not null,
+   * will be null.  If this is null and method is not null, 
+   * marshalling parameters fails.
+   */
+  attribute DOMString targetObjectURI;
+
+  /**
+   * Marshalls the specified parameters into this message, if
+   * this message type supports it.
+   *
+   * @param SOAPParameters An array containing the parameters to
+   * be attached to the message by marshallers.
+   */
+  void marshallParameters(in nsISupportsArray SOAPParameters);
+
+  /**
+   * Unmarshalls the parameters from this message, if
+   * this message type supports it.
+   *
+   * @return An array containing the parameters that were
+   * returned in the message and unmarshalled.
+   */
+  nsISupportsArray unmarshallParameters();
+
+  /**
+   * The status returned by an operation such as marshalling,
+   * unmarshalling, or invocation.
+   */
+  readonly attribute unsigned long status;
+  
+  /**
+   * A container of parameters passed to the protocol.  This may,
+   *  for example, contain the special SOAP header for HTTP or
+   *  additional mime attachments.  A given protocol ignores any
+   *  headers with names or types it does not understand.
+   *  Initially this attribute is null in any message.  This
+   *  will be replaced by an empty container as marshalling begins
+   *  so that it is correctly produced by the marshalling process.
+   *  When a transport places a message into the message object,
+   *  it provides this container of protocol parameters.
+   */
+  attribute nsISupportsArray protocol;
+
+  /**
+   * A local registry of type information.  This is optional but
+   *   may be used to override the default type registry.
+   */
+  attribute nsISOAPTypeRegistry types;
+};
