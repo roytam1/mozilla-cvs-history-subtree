@@ -34,8 +34,14 @@
 /*
  * EMX-specific tweaks:
  *    o Use stricmp instead of strcmpi.
+ *    o Use errno rather than sock_errno()
+ *    o Use close rather than soclose
+ *    o Ignore sock_init calls.
  */
 #define strcmpi stricmp 
+#define sock_errno() errno
+#define soclose close
+#define sock_init()
 #endif
 
 /*

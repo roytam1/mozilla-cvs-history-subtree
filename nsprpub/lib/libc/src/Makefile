@@ -53,7 +53,11 @@ RELEASE_LIBS = $(TARGETS)
 
 ifeq ($(OS_ARCH),WINNT)
 ifeq (,$(filter-out WIN16 OS2,$(OS_TARGET)))
+ifdef XP_OS2_EMX
+EXTRA_LIBS = -L$(DIST)/lib -lnspr$(MOD_VERSION)
+else
 EXTRA_LIBS = $(DIST)/lib/nspr$(MOD_VERSION).lib
+endif
 else
 DLLBASE=/BASE:0x30000000
 RES=$(OBJDIR)/plc.res

@@ -60,10 +60,15 @@ ifeq ($(OS_TARGET), WIN16)
   LIBGC= $(DIST)/lib/msgc$(GC_VERSION).lib
 else
 ifeq ($(OS_TARGET),OS2)
-  LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
+ifdef XP_OS2_VACPP
   LIBPR = $(DIST)/lib/nspr$(NSPR_VERSION).lib
   LIBPLC = $(DIST)/lib/plc$(NSPR_VERSION).lib
   LIBGC= $(DIST)/lib/msgc$(GC_VERSION).lib
+else
+  LIBPR = -lnspr$(NSPR_VERSION)
+  LIBPLC = -lplc$(NSPR_VERSION)
+  LIBGC= -lmsgc$(GC_VERSION)
+endif
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
   LIBPR = $(DIST)/lib/libnspr$(NSPR_VERSION).$(LIB_SUFFIX)
@@ -270,7 +275,7 @@ ifeq ($(OS_TARGET),WIN16)
 	wlink @w16link.
 else
 ifeq ($(OS_TARGET),OS2)
-	$(LINK) $(LDOPTS) $< $(LIBGC) $(LIBPLC) $(LIBPR) so32dll.lib tcp32dll.lib -MAP:$(@:.exe=.map) -out:$@
+	$(LINK) $(EXEFLAGS) $< $(LIBGC) $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
 else
 	link $(LDOPTS) $< $(LIBGC) $(LIBPLC) $(LIBPR) wsock32.lib -out:$@
 endif

@@ -26,6 +26,7 @@ PR_EXTERN(void) _PR_MD_DESTROY_SEM(_MDSemaphore *md);
 /* --- globals ------------------------------------------------ */
 _NSPR_TLS*        pThreadLocalStorage = 0;
 _PRInterruptTable             _pr_interruptTable[] = { { 0 } };
+APIRET (* APIENTRY QueryThreadContext)(TID, ULONG, PCONTEXTRECORD);
 
 PR_IMPLEMENT(void)
 _PR_MD_ENSURE_TLS(void)

@@ -41,14 +41,14 @@ SHELL = GBASH.EXE
 CC			= icc -q -DXP_OS2 -N10
 CCC			= icc -q -DXP_OS2 -DOS2=4 -N10
 LINK			= flipper ilink
-AR			= flipper ilibo //noignorecase //nologo $@
-RANLIB = echo
-BSDECHO = echo
+AR			= ilibo /noignorecase /nologo $@
+RANLIB = @echo RANLIB
+BSDECHO = @echo BSDECHO
 NSINSTALL = nsinstall
 INSTALL	= $(NSINSTALL)
 MAKE_OBJDIR = if test ! -d $(OBJDIR); then mkdir $(OBJDIR); fi
-IMPLIB = flipper implib -nologo -noignorecase
-FILTER = flipper cppfilt -q
+IMPLIB = implib -nologo -noignorecase
+FILTER = cppfilt -b -p -q
 RC = rc.exe
 
 GARBAGE =
@@ -65,11 +65,13 @@ ifdef BUILD_OPT
 OPTIMIZER	= -O+ -Oi 
 DEFINES = -UDEBUG -U_DEBUG -DNDEBUG
 DLLFLAGS	= -DLL -OUT:$@ -MAP:$(@:.dll=.map)
+EXEFLAGS    = -PMTYPE:VIO -OUT:$@ -MAP:$(@:.exe=.map) -nologo -NOE
 OBJDIR_TAG = _OPT
 else
 OPTIMIZER	= -Ti+
 DEFINES = -DDEBUG -D_DEBUG -UNDEBUG
 DLLFLAGS	= -DEBUG -DLL -OUT:$@ -MAP:$(@:.dll=.map)
+EXEFLAGS    = -DEBUG -PMTYPE:VIO -OUT:$@ -MAP:$(@:.exe=.map) -nologo -NOE
 OBJDIR_TAG = _DBG
 LDFLAGS = -DEBUG 
 endif
@@ -102,17 +104,26 @@ CCC		= gcc
 LINK	= gcc
 AR      = ar -q $@
 RC 		= rc.exe
+FILTER  = emxexp
+IMPLIB  = emximp -o
+
+LIB_SUFFIX = a
 
 DEFINES += -DXP_OS2_EMX
 
 ifdef BUILD_OPT
 OPTIMIZER	= -O3
+DLLFLAGS	= 
+EXEFLAGS    =
 else
 OPTIMIZER	= -g
+DLLFLAGS	= -g
+EXEFLAGS	= -g -L$(DIST)/lib
 endif
 
 OS_CFLAGS     = -I. -Wall -Zmt $(DEFINES)
 OS_EXE_CFLAGS = -I. -Wall -Zmt $(DEFINES)
+OS_DLLFLAGS = -Zmt -Zdll -Zcrtdll -o $@
 
 AR_EXTRA_ARGS =
 
