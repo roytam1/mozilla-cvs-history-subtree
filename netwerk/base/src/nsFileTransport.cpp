@@ -519,11 +519,29 @@ nsFileTransport::OpenOutputStream(PRUint32 startPosition, nsIOutputStream **resu
     if (mState != CLOSED)
         return NS_ERROR_IN_PROGRESS;
 
-    NS_ASSERTION(startPosition == 0, "implement startPosition");
+//    NS_ASSERTION(startPosition == 0, "implement startPosition");
+    
     nsCOMPtr<nsISupports> str;
-    rv = NS_NewTypicalOutputFileStream(getter_AddRefs(str), mSpec);
+    rv = NS_NewTypicalIOFileStream(getter_AddRefs(str), mSpec);
     if (NS_FAILED(rv)) return rv;
     rv = str->QueryInterface(NS_GET_IID(nsIOutputStream), (void**)result);
+
+    mOffset = startPosition;
+    if (mOffset > 0) {
+// if we need to set a starting offset, QI for the nsIRandomAccessStore and set it
+        nsCOMPtr<nsIRandomAccessStore> ras = do_QueryInterface(*result, &mStatus);
+        if (NS_FAILED(mStatus)) {
+//            mState = END_WRITE;
+            return NS_ERROR_IN_PROGRESS;
+        }
+// for now, assume the offset is always relative to the start of the file (position 0)
+// so use PR_SEEK_SET
+        mStatus = ras->Seek(PR_SEEK_SET, mOffset);
+        if (NS_FAILED(mStatus)) {
+//            mState = END_WRITE;
+            return NS_ERROR_IN_PROGRESS;
+        }
+    }
 
     PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
            ("nsFileTransport: OpenOutputStream [this=%x %s]",
@@ -1045,6 +1063,12 @@ nsFileTransport::OnEmpty(nsIPipe* pipe)
 ////////////////////////////////////////////////////////////////////////////////
 // other nsIChannel methods:
 ////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP
+nsFileTransport::GetOriginalURI(nsIURI * *aURI)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 NS_IMETHODIMP
 nsFileTransport::GetURI(nsIURI * *aURI)
