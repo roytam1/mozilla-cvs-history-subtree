@@ -43,6 +43,7 @@
 #include "nsCOMPtr.h"
 #include "nsIURI.h"
 #include "nsXPIDLString.h"
+#include "nsString2.h"
 #include "plstr.h"
 #include "nsIScriptSecurityManager.h"
 
@@ -76,8 +77,8 @@ NS_IMETHODIMP
 nsAboutRedirector::NewChannel(nsIURI *aURI, nsIChannel **result)
 {
     NS_ENSURE_ARG(aURI);
-    nsXPIDLCString path;
-    (void)aURI->GetPath(getter_Copies(path));
+    nsCAutoString path;
+    (void)aURI->GetPath(path);
     nsresult rv;
     nsCOMPtr<nsIIOService> ioService(do_GetService(kIOServiceCID, &rv));
     if (NS_FAILED(rv))
@@ -85,10 +86,10 @@ nsAboutRedirector::NewChannel(nsIURI *aURI, nsIChannel **result)
 
     for (int i = 0; i< kRedirTotal; i++) 
     {
-        if (!PL_strcasecmp(path, kRedirMap[i].id))
+        if (!PL_strcasecmp(path.get(), kRedirMap[i].id))
         {
             nsCOMPtr<nsIChannel> tempChannel;
-             rv = ioService->NewChannel(kRedirMap[i].url, nsnull, getter_AddRefs(tempChannel));
+             rv = ioService->NewChannel(nsDependentCString(kRedirMap[i].url), nsnull, nsnull, getter_AddRefs(tempChannel));
              // Keep the page from getting unnecessary privileges unless it needs them
              if (NS_SUCCEEDED(rv) && result && kRedirMap[i].dropChromePrivs)
              {
