@@ -361,13 +361,18 @@ NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateCell(PRInt32 aRow, const PRUnichar 
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+PRInt32 nsOutlinerBodyFrame::GetLastVisibleRowIndex()
+{
+  return mTopRowIndex+mPageCount+1;
+}
+
 NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateRange(PRInt32 aStart, PRInt32 aEnd)
 {
   if (aStart == aEnd)
     return InvalidateRow(aStart);
 
   
-  if (aEnd < mTopRowIndex || aStart > mTopRowIndex + mPageCount + 1)
+  if (aEnd < mTopRowIndex || aStart > GetLastVisibleRowIndex())
     return NS_OK;
 
   if (aStart < mTopRowIndex)
@@ -380,6 +385,21 @@ NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateRange(PRInt32 aStart, PRInt32 aEnd)
   nsLeafBoxFrame::Invalidate(mPresContext, rangeRect, PR_FALSE);
 
   return NS_OK;
+}
+
+void
+nsOutlinerBodyFrame::UpdateScrollbar()
+{
+  // Update the scrollbar.
+  nsCOMPtr<nsIContent> scrollbarContent;
+  mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
+  float t2p;
+  mPresContext->GetTwipsToPixels(&t2p);
+  nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
+
+  nsAutoString curPos;
+  curPos.AppendInt(mTopRowIndex*rowHeightAsPixels);
+  scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
 }
 
 NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateScrollbar()
@@ -403,7 +423,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::InvalidateScrollbar()
   mPresContext->GetTwipsToPixels(&t2p);
   nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
 
-  PRInt32 size = rowHeightAsPixels*(rowCount-mPageCount+1);
+  PRInt32 size = rowHeightAsPixels*(rowCount-mPageCount);
   maxposStr.AppendInt(size);
   scrollbar->SetAttribute(kNameSpaceID_None, nsXULAtoms::maxpos, maxposStr, PR_TRUE);
 
@@ -473,18 +493,49 @@ NS_IMETHODIMP nsOutlinerBodyFrame::GetCellAt(PRInt32 aX, PRInt32 aY, PRInt32* aR
   return NS_OK;
 }
 
-NS_IMETHODIMP nsOutlinerBodyFrame::RowsAppended(PRInt32 count)
+NS_IMETHODIMP nsOutlinerBodyFrame::RowCountChanged(PRInt32 aIndex, PRInt32 aCount)
 {
-  return NS_OK;
-}
+  if (aCount == 0)
+    return NS_OK; // Nothing to do.
 
-NS_IMETHODIMP nsOutlinerBodyFrame::RowsInserted(PRInt32 index, PRInt32 count)
-{
-  return NS_OK;
-}
+  // Adjust our selection.
+  nsCOMPtr<nsIOutlinerSelection> sel;
+  mView->GetSelection(getter_AddRefs(sel));
+  sel->AdjustSelection(aIndex, aCount);
 
-NS_IMETHODIMP nsOutlinerBodyFrame::RowsRemoved(PRInt32 index, PRInt32 count)
-{
+  if (aIndex >= mTopRowIndex && aIndex <= GetLastVisibleRowIndex())
+    InvalidateRange(aIndex, GetLastVisibleRowIndex());
+
+  if (mTopRowIndex == 0) {    
+    // Just update the scrollbar and return.
+    InvalidateScrollbar();
+    return NS_OK;
+  }
+
+  // Adjust our top row index.
+  if (aCount > 0) {
+    if (mTopRowIndex <= aIndex) {
+      // Rows came in above us.  Augment the top row index.
+      mTopRowIndex += aCount;
+      UpdateScrollbar();
+    }
+  }
+  else if (aCount < 0) {
+    if (mTopRowIndex > aIndex+aCount-1) {
+      // No need to invalidate. The remove happened
+      // completely offscreen.
+      mTopRowIndex -= aCount;
+      UpdateScrollbar();
+    }
+    else if (mTopRowIndex > aIndex) {
+      // This is a full-blown invalidate.
+      mTopRowIndex = aIndex+aCount-1;
+      UpdateScrollbar();
+      Invalidate();
+    }
+  }
+
+  InvalidateScrollbar();
   return NS_OK;
 }
 
@@ -1041,19 +1092,9 @@ nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
   else if (mOutlinerWidget)
     mOutlinerWidget->Scroll(0, -delta*rowHeightAsPixels, nsnull);
  
-  if (aUpdateScrollbar) {
-    // Update the scrollbar.
-    nsCOMPtr<nsIContent> scrollbarContent;
-    mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
-    float t2p;
-    mPresContext->GetTwipsToPixels(&t2p);
-    nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
-
-    nsAutoString curPos;
-    curPos.AppendInt(mTopRowIndex*rowHeightAsPixels);
-    scrollbarContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
-  }
-
+  if (aUpdateScrollbar)
+    UpdateScrollbar();
+    
   return NS_OK;
 }
 

@@ -226,27 +226,11 @@ NS_IMETHODIMP nsOutlinerBoxObject::GetCellAt(PRInt32 x, PRInt32 y, PRInt32 *row,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsOutlinerBoxObject::RowsAppended(PRInt32 count)
+NS_IMETHODIMP nsOutlinerBoxObject::RowCountChanged(PRInt32 aIndex, PRInt32 aDelta)
 {
   nsIOutlinerBoxObject* body = GetOutlinerBody();
   if (body)
-    return body->RowsAppended(count);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsOutlinerBoxObject::RowsInserted(PRInt32 index, PRInt32 count)
-{
-  nsIOutlinerBoxObject* body = GetOutlinerBody();
-  if (body)
-    return body->RowsInserted(index, count);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsOutlinerBoxObject::RowsRemoved(PRInt32 index, PRInt32 count)
-{
-  nsIOutlinerBoxObject* body = GetOutlinerBody();
-  if (body)
-    return body->RowsRemoved(index, count);
+    return body->RowCountChanged(aIndex, aDelta);
   return NS_OK;
 }
 

@@ -515,6 +515,12 @@ NS_IMETHODIMP nsOutlinerSelection::SetCurrentIndex(PRInt32 aIndex)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsOutlinerSelection::AdjustSelection(PRInt32 aIndex, PRInt32 aCount)
+{
+  return NS_OK;
+}
+
 nsresult
 nsOutlinerSelection::FireOnSelectHandler()
 {
