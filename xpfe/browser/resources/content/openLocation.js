@@ -102,8 +102,7 @@ function open() {
 	    return false;
 	}
 
-   // Delay closing slightly to avoid timing bug on Linux.
-   window.setTimeout( "window.close()", 10 );
+   window.close();
    return false;
 }
 
