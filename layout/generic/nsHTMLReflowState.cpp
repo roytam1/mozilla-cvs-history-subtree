@@ -117,10 +117,12 @@ static PRBool CheckNextInFlowParenthood(nsIFrame* aFrame, nsIFrame* aParent)
 // Initialize a reflow state for a child frames reflow. Some state
 // is copied from the parent reflow state; the remaining state is
 // computed.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
+nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
                                      const nsHTMLReflowState& aParentReflowState,
                                      nsIFrame*                aFrame,
                                      const nsSize&            aAvailableSpace,
+                                     nscoord                  aContainingBlockWidth,
+                                     nscoord                  aContainingBlockHeight,
                                      PRBool                   aInit)
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
@@ -145,61 +147,12 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
   mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
 
   if (aInit) {
-    Init(aPresContext);
+    Init(aPresContext, aContainingBlockWidth, aContainingBlockHeight);
   }
 
 #ifdef IBMBIDI
   mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
                                   PR_TRUE : IsBidiFormControl(aPresContext);
-  mRightEdge = aParentReflowState.mRightEdge;
-#endif // IBMBIDI
-}
-
-// Version that species the containing block width and height
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
-                                     const nsHTMLReflowState& aParentReflowState,
-                                     nsIFrame*                aFrame,
-                                     const nsSize&            aAvailableSpace,
-                                     nscoord                  aContainingBlockWidth,
-                                     nscoord                  aContainingBlockHeight,
-                                     nsReflowReason           aReason)
-  : mReflowDepth(aParentReflowState.mReflowDepth + 1),
-    mFlags(aParentReflowState.mFlags)
-{
-  parentReflowState = &aParentReflowState;
-  frame = aFrame;
-  reason = aReason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
-
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-
-  rendContext = aParentReflowState.rendContext;
-  mSpaceManager = aParentReflowState.mSpaceManager;
-  mLineLayout = aParentReflowState.mLineLayout;
-  mFlags.mIsTopOfPage = aParentReflowState.mFlags.mIsTopOfPage;
-  mFlags.mNextInFlowUntouched = aParentReflowState.mFlags.mNextInFlowUntouched &&
-    CheckNextInFlowParenthood(aFrame, aParentReflowState.frame);
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = (aParentReflowState.mPercentHeightObserver && 
-                            aParentReflowState.mPercentHeightObserver->NeedsToObserve(*this)) 
-                           ? aParentReflowState.mPercentHeightObserver : nsnull;
-  mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
-
-  Init(aPresContext, aContainingBlockWidth, aContainingBlockHeight);
-
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
-                                   PR_TRUE : IsBidiFormControl(aPresContext);
   mRightEdge = aParentReflowState.mRightEdge;
 #endif // IBMBIDI
 }
