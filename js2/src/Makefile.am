@@ -9,6 +9,7 @@ libjs2_a_SOURCES = \
 	collector.cpp \
 	exception.cpp \
 	formatter.cpp \
+	fdlibm_ns.cpp \
 	hash.cpp \
 	js2runtime.cpp \
 	js2execution.cpp \

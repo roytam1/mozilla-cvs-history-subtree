@@ -75,6 +75,8 @@ namespace JavaScript
         virtual void printString16(const String &s);
         virtual void printVFormat8(const char *format, va_list args);
       public:
+        
+	virtual ~Formatter() { }   // keeping gcc happy
 
         Formatter &operator<<(char ch) {printChar8(ch); return *this;}
         Formatter &operator<<(char16 ch) {printChar16(ch); return *this;}
@@ -226,7 +228,7 @@ namespace JavaScript
         PrettyPrinter(const PrettyPrinter&);    // No copy constructor
         void operator=(const PrettyPrinter&);   // No assignment operator
       public:
-        ~PrettyPrinter();
+        virtual ~PrettyPrinter();
 
       private:
         void outputBreak(bool sameLine, uint32 nSpaces);

@@ -1,7 +1,7 @@
 
 // this file intentionally left blank
 
-#include "Formatter.h"
+#include "formatter.h"
 
 namespace JavaScript {
 namespace Shell {
