@@ -104,7 +104,7 @@
 #include "nsEscape.h"
 #include "nsIMIMEService.h"
 #include "nsContentUtils.h"
-#include "imgILoader.h"
+#include "imgIRequest.h"
 
 // private clipboard data flavors for html copy, used by editor when pasting
 #define kHTMLContext   "text/_moz_htmlcontext"
@@ -140,7 +140,8 @@ private:
   static void FindParentLinkNode(nsIDOMNode* inNode, nsIDOMNode** outParent);
   static void GetAnchorURL(nsIDOMNode* inNode, nsAString& outURL);
   static void GetNodeString(nsIDOMNode* inNode, nsAString & outNodeString);
-  static nsresult GetImageFromDOMNode(nsIDOMNode* inNode, nsIImage** outImage);
+  static void GetImageFromDOMNode(nsIDOMNode* inNode, nsIImage** outImage,
+                                  imgIRequest** outRequest);
   static void CreateLinkText(const nsAString& inURL, const nsAString & inText,
                               nsAString& outLinkText);
   static void FindFirstAnchor(nsIDOMNode* inNode, nsIDOMNode** outAnchor);
@@ -158,6 +159,7 @@ private:
 
   nsString mUrlString;
   nsString mImageSourceString;
+  nsString mImageDestFileName;
   nsString mTitleString;
   nsString mHtmlString;        // will be filled automatically if you fill urlstring
   nsString mContextString;
@@ -690,60 +692,28 @@ nsContentAreaDragDrop::HandleEvent(nsIDOMEvent *event)
 // used on platforms where it's possible to drag items (e.g. images)
 // into the file system
 nsresult
-nsContentAreaDragDrop::SaveURIToFileInDirectory(nsAString& inSourceURIString, nsILocalFile* inDestDirectory, nsILocalFile** outFile)
+nsContentAreaDragDrop::SaveURIToFile(nsAString& inSourceURIString,
+                                     nsIFile* inDestFile)
 {
-  *outFile = nsnull;
-
-  nsresult rv;
-
-  // clone it because it belongs to the drag data, so we shouldn't mess with it
-  nsCOMPtr<nsIFile> clonedFile;
-  rv = inDestDirectory->Clone(getter_AddRefs(clonedFile));
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsILocalFile> destFile = do_QueryInterface(clonedFile);
-  if (!destFile) return NS_ERROR_NO_INTERFACE;
-  
   nsCOMPtr<nsIURI> sourceURI;
-  rv = NS_NewURI(getter_AddRefs(sourceURI), inSourceURIString);
+  nsresult rv = NS_NewURI(getter_AddRefs(sourceURI), inSourceURIString);
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIURL> sourceURL = do_QueryInterface(sourceURI);
   if (!sourceURL) return NS_ERROR_NO_INTERFACE;
 
-  nsCAutoString fileName; // escaped, UTF-8
-  sourceURL->GetFileName(fileName);
+  rv = inDestFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (fileName.IsEmpty())
-    return NS_ERROR_FAILURE;    // this is an error; the URL must point to a file
-
-  NS_UnescapeURL(fileName);
-  NS_ConvertUTF8toUCS2 wideFileName(fileName);
-  
-  // make the name safe for the filesystem
-  wideFileName.ReplaceChar(PRUnichar('/'), PRUnichar('_'));
-  wideFileName.ReplaceChar(PRUnichar('\\'), PRUnichar('_'));
-  wideFileName.ReplaceChar(PRUnichar(':'), PRUnichar('_'));
-  
-  rv = destFile->Append(wideFileName);
-  if (NS_FAILED(rv)) return rv;
-    
-  rv = destFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
-  if (NS_FAILED(rv)) return rv;
-  
   // we rely on the fact that the WPB is refcounted by the channel etc,
   // so we don't keep a ref to it. It will die when finished.
-  nsCOMPtr<nsIWebBrowserPersist> persist = do_CreateInstance("@mozilla.org/embedding/browser/nsWebBrowserPersist;1", &rv);
-  if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIWebBrowserPersist> persist =
+    do_CreateInstance("@mozilla.org/embedding/browser/nsWebBrowserPersist;1",
+                      &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsISupports> fileAsSupports = do_QueryInterface(destFile);
-  rv = persist->SaveURI(sourceURI, nsnull, nsnull, nsnull, nsnull, fileAsSupports);
-  if (NS_FAILED(rv)) return rv;
-
-  *outFile = destFile;
-  NS_ADDREF(*outFile);
-  
-  return NS_OK;
+  return persist->SaveURI(sourceURI, nsnull, nsnull, nsnull, nsnull,
+                          inDestFile);
 }
 
 // This is our nsIFlavorDataProvider callback. There are several assumptions here that
@@ -771,33 +741,54 @@ nsContentAreaDragDrop::GetFlavorData(nsITransferable *aTransferable,
   {
     // get the URI from the kFilePromiseURLMime flavor
     NS_ENSURE_ARG(aTransferable);
-    nsCOMPtr<nsISupports> urlPrimitive;
+    nsCOMPtr<nsISupports> tmp;
     PRUint32 dataSize = 0;
-    aTransferable->GetTransferData(kFilePromiseURLMime, getter_AddRefs(urlPrimitive), &dataSize);
-    nsCOMPtr<nsISupportsString> srcUrlPrimitive = do_QueryInterface(urlPrimitive);
-    if (!srcUrlPrimitive) return NS_ERROR_FAILURE;
-    
+    aTransferable->GetTransferData(kFilePromiseURLMime,
+                                   getter_AddRefs(tmp), &dataSize);
+    nsCOMPtr<nsISupportsString> supportsString =
+      do_QueryInterface(tmp);
+    if (!supportsString)
+      return NS_ERROR_FAILURE;
+
     nsAutoString sourceURLString;
-    srcUrlPrimitive->GetData(sourceURLString);
+    supportsString->GetData(sourceURLString);
     if (sourceURLString.IsEmpty())
+      return NS_ERROR_FAILURE;
+
+    aTransferable->GetTransferData(kFilePromiseDestFilename,
+                                   getter_AddRefs(tmp), &dataSize);
+    supportsString = do_QueryInterface(tmp);
+    if (!supportsString)
+      return NS_ERROR_FAILURE;
+
+    nsAutoString targetFilename;
+    supportsString->GetData(targetFilename);
+    if (targetFilename.IsEmpty())
       return NS_ERROR_FAILURE;
 
     // get the target directory from the kFilePromiseDirectoryMime flavor
     nsCOMPtr<nsISupports> dirPrimitive;
     dataSize = 0;
-    aTransferable->GetTransferData(kFilePromiseDirectoryMime, getter_AddRefs(dirPrimitive), &dataSize);
+    aTransferable->GetTransferData(kFilePromiseDirectoryMime,
+                                   getter_AddRefs(dirPrimitive), &dataSize);
     nsCOMPtr<nsILocalFile> destDirectory = do_QueryInterface(dirPrimitive);
-    if (!destDirectory) return NS_ERROR_FAILURE;
-    
+    if (!destDirectory)
+      return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIFile> file;
+    rv = destDirectory->Clone(getter_AddRefs(file));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    file->Append(targetFilename);
+
     // now save the file
-    nsCOMPtr<nsILocalFile> destFile;
-    rv = SaveURIToFileInDirectory(sourceURLString, destDirectory, getter_AddRefs(destFile));
-    
+    rv = SaveURIToFile(sourceURLString, file);
+
     // send back an nsILocalFile
     if (NS_SUCCEEDED(rv))
     {
-      CallQueryInterface(destFile, aData);
-      *aDataLen = sizeof(nsILocalFile*);
+      CallQueryInterface(file, aData);
+      *aDataLen = sizeof(nsIFile*);
     }
   }
   
@@ -1208,14 +1199,75 @@ nsTransferableFactory::Produce(nsITransferable** outTrans)
         if (mTitleString.IsEmpty())
           mTitleString = mUrlString;
 
-        // pass out the image source string
-        mImageSourceString = mUrlString;
+        nsCOMPtr<imgIRequest> imgRequest;
 
-        // also grab the image data
-        GetImageFromDOMNode(draggedNode, getter_AddRefs(mImage));
+        // grab the image data, and its request.
+        nsCOMPtr<nsIImage> img;
+        GetImageFromDOMNode(image, getter_AddRefs(img),
+                            getter_AddRefs(imgRequest));
 
-        if (parentLink)
-        {
+        nsCOMPtr<nsIMIMEService> mimeService =
+          do_GetService("@mozilla.org/mime;1");
+
+        // Fix the file extension in the URL if necessary
+        if (imgRequest && mimeService) {
+          nsCOMPtr<nsIURI> imgUri;
+          imgRequest->GetURI(getter_AddRefs(imgUri));
+
+          nsCOMPtr<nsIURL> imgUrl(do_QueryInterface(imgUri));
+
+          if (imgUrl) {
+            nsCAutoString extension;
+            imgUrl->GetFileExtension(extension);
+
+            nsXPIDLCString mimeType;
+            imgRequest->GetMimeType(getter_Copies(mimeType));
+
+            nsCOMPtr<nsIMIMEInfo> mimeInfo;
+            mimeService->GetFromTypeAndExtension(mimeType.get(), "",
+                                                 getter_AddRefs(mimeInfo));
+
+            if (mimeInfo) {
+              nsCAutoString spec;
+              imgUrl->GetSpec(spec);
+
+              // pass out the image source string
+              CopyUTF8toUTF16(spec, mImageSourceString);
+
+              PRBool validExtension;
+              if (NS_FAILED(mimeInfo->ExtensionExists(extension.get(),
+                                                      &validExtension)) ||
+                  !validExtension) {
+                // Fix the file extension in the URL
+                nsresult rv = imgUrl->Clone(getter_AddRefs(imgUri));
+                NS_ENSURE_SUCCESS(rv, rv);
+
+                imgUrl = do_QueryInterface(imgUri);
+
+                nsXPIDLCString primaryExtension;
+                mimeInfo->GetPrimaryExtension(getter_Copies(primaryExtension));
+
+                imgUrl->SetFileExtension(primaryExtension);
+              }
+
+              nsCAutoString fileName;
+              imgUrl->GetFileName(fileName);
+
+              NS_UnescapeURL(fileName);
+
+              // make the filename safe for the filesystem
+              fileName.ReplaceChar(FILE_PATH_SEPARATOR FILE_ILLEGAL_CHARACTERS,
+                                   '-');
+
+              CopyUTF8toUTF16(fileName, mImageDestFileName);
+
+              // and the image object
+              mImage = img;
+            }
+          }
+        }
+
+        if (parentLink) {
           // If we are dragging around an image in an anchor, then we
           // are dragging the entire anchor
           linkNode = parentLink;
@@ -1362,7 +1414,7 @@ nsTransferableFactory::ConvertStringsToTransferable(nsITransferable** outTrans)
     if ( !ptrPrimitive )
       return NS_ERROR_FAILURE;
     ptrPrimitive->SetData(mImage);
-    trans->SetTransferData(kNativeImageMime, ptrPrimitive, sizeof(nsIImage*));
+    trans->SetTransferData(kNativeImageMime, ptrPrimitive, sizeof(nsISupportsInterfacePointer*));
     // assume the image comes from a file, and add a file promise. We register ourselves
     // as a nsIFlavorDataProvider, and will use the GetFlavorData callback to save the
     // image to disk.
@@ -1373,6 +1425,12 @@ nsTransferableFactory::ConvertStringsToTransferable(nsITransferable** outTrans)
       return NS_ERROR_FAILURE;
     imageUrlPrimitive->SetData(mImageSourceString);
     trans->SetTransferData(kFilePromiseURLMime, imageUrlPrimitive, mImageSourceString.Length() * sizeof(PRUnichar));
+
+    nsCOMPtr<nsISupportsString> imageFileNamePrimitive(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID));
+    if (!imageFileNamePrimitive)
+      return NS_ERROR_FAILURE;
+    imageFileNamePrimitive->SetData(mImageDestFileName);
+    trans->SetTransferData(kFilePromiseDestFilename, imageFileNamePrimitive, mImageDestFileName.Length() * sizeof(PRUnichar));
 
     // if not an anchor, add the image url
     if (!mIsAnchor)
@@ -1548,71 +1606,53 @@ nsTransferableFactory::SerializeNodeOrSelection(serializationMode inMode, PRUint
 //
 // GetImageFromDOMNode
 //
-// Given a dom node that's an image, finds the nsIImage associated with it.
+// Given a dom node that's an image, finds the nsIImage and
+// imgIRequest associated with it.
 //
-nsresult
-nsTransferableFactory::GetImageFromDOMNode(nsIDOMNode* inNode, nsIImage**outImage)
+void
+nsTransferableFactory::GetImageFromDOMNode(nsIDOMNode* inNode,
+                                           nsIImage**outImage,
+                                           imgIRequest**outRequest)
 {
-  NS_ENSURE_ARG_POINTER(outImage);
   *outImage = nsnull;
+  *outRequest = nsnull;
 
   nsCOMPtr<nsIImageLoadingContent> content(do_QueryInterface(inNode));
   if (!content) {
-    return NS_ERROR_NOT_AVAILABLE;
+    return;
   }
 
   nsCOMPtr<imgIRequest> imgRequest;
   content->GetRequest(nsIImageLoadingContent::CURRENT_REQUEST,
                       getter_AddRefs(imgRequest));
   if (!imgRequest) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-
-  nsCOMPtr<nsIMIMEService> mimeService =
-    do_GetService("@mozilla.org/mime;1");
-
-  imgILoader *imgLoader = nsContentUtils::GetImgLoader();
-
-  if (mimeService) {
-    nsXPIDLCString mimeType;
-    nsCOMPtr<nsIURI> uri;
-
-    imgRequest->GetURI(getter_AddRefs(uri));
-    mimeService->GetTypeFromURI(uri, getter_Copies(mimeType));
-
-    PRBool supportedType;
-    if (NS_FAILED(imgLoader->SupportImageWithMimeType(mimeType.get(),
-                                                      &supportedType)) ||
-        !supportedType) {
-      // The extension of the image we're about to drag doesn't match
-      // an extension that we recognize as an image. Disallow dragging
-      // this image as an image to prevent dropping images with
-      // extensions that the OS won't recognize as images.
-
-      return NS_ERROR_NOT_AVAILABLE;
-    }
+    return;
   }
 
   nsCOMPtr<imgIContainer> imgContainer;
   imgRequest->GetImage(getter_AddRefs(imgContainer));
 
   if (!imgContainer) {
-    return NS_ERROR_NOT_AVAILABLE;
+    return;
   }
-    
+
   nsCOMPtr<gfxIImageFrame> imgFrame;
   imgContainer->GetFrameAt(0, getter_AddRefs(imgFrame));
 
   if (!imgFrame) {
-    return NS_ERROR_NOT_AVAILABLE;
+    return;
   }
-  
+
   nsCOMPtr<nsIInterfaceRequestor> ir = do_QueryInterface(imgFrame);
 
   if (!ir) {
-    return NS_ERROR_NOT_AVAILABLE;
+    return;
   }
-  
-  return CallGetInterface(ir.get(), outImage);
+
+  imgRequest.swap(*outRequest);
+
+  CallGetInterface(ir.get(), outImage);
+
+  return;
 }
 
