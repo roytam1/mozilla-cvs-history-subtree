@@ -1306,16 +1306,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 	if (m_newsAction == nsINntpUrl::ActionSearch) { 
 		nsUnescape(group);
 	}
-
-    /* 
-     "group" now holds the part after the host name:
-	 "message@id?search" or "/group/xxx?search" or "/message?id@xx?search"
-
-	 If there is an @, this is a message ID; else it is a group.
-	 Either way, there may be search data at the end.
-    */
-
-	if (PL_strchr(group, '@') || PL_strstr(group,"%40")) {
+	else if (PL_strchr(group, '@') || PL_strstr(group,"%40")) {
       message_id = nsUnescape(group);
 	  group = 0;
 	}
