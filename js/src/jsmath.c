@@ -376,7 +376,20 @@ math_tan(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return js_NewNumberValue(cx, z, rval);
 }
 
+#if JS_HAS_TOSOURCE
+static JSBool
+math_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+	      jsval *rval)
+{
+    *rval = ATOM_KEY(cx->runtime->atomState.MathAtom);
+    return JS_TRUE;
+}
+#endif
+
 static JSFunctionSpec math_static_methods[] = {
+#ifdef JS_HAS_TOSOURCE
+    {js_toSource_str,   math_toSource,  0},
+#endif
     {"abs",		math_abs,		1},
     {"acos",		math_acos,		1},
     {"asin",		math_asin,		1},
@@ -397,23 +410,6 @@ static JSFunctionSpec math_static_methods[] = {
     {"tan",		math_tan,		1},
     {0}
 };
-
-#if JS_HAS_TOSOURCE
-static JSBool
-math_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-	      jsval *rval)
-{
-    *rval = ATOM_KEY(cx->runtime->atomState.MathAtom);
-    return JS_TRUE;
-}
-
-static JSFunctionSpec math_methods[] = {
-    {js_toSource_str,   math_toSource,  0},
-    {0}
-};
-#else
-#define math_methods    NULL
-#endif
 
 JSObject *
 js_InitMathClass(JSContext *cx, JSObject *obj)
