@@ -135,6 +135,7 @@ then
   fi
 fi
 MOZ_BUILD_ROOT=`pwd`
+MOZ_SRCDIR=${srcdir}
 
 dnl Default to MSVC for win32
 dnl ==============================================================
@@ -1140,8 +1141,9 @@ case "$target" in
     no_x=yes
     AC_DEFINE(NO_X11)
 
-    dnl Remove cygwinism from MOZ_BUILD_ROOT
+    dnl Remove cygwinism from MOZ_BUILD_ROOT and MOZ_SRCDIR
     MOZ_BUILD_ROOT=`cygpath -w $MOZ_BUILD_ROOT | sed -e 's|\\\\|/|g'`
+    MOZ_SRCDIR=`cygpath -w $MOZ_SRCDIR | sed -e 's|\\\\|/|g'`
 
     if test -z "$MOZ_TOOLS"; then
         AC_MSG_ERROR([MOZ_TOOLS is not set])
@@ -5077,7 +5079,6 @@ AC_SUBST(MOZ_XPCOM_OBSOLETE_LIBS)
 AC_SUBST(XPCOM_LIBS)
 AC_SUBST(USE_DEPENDENT_LIBS)
 
-MOZ_SRCDIR=${srcdir}
 AC_SUBST(MOZ_SRCDIR)
 AC_SUBST(MOZ_BUILD_ROOT)
 AC_SUBST(MOZ_OS2_TOOLS)
