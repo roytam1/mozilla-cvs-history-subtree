@@ -1756,9 +1756,9 @@ nsRuleNode::ComputeTableData(nsStyleTable* aStartTable, const nsCSSTable& aTable
     table->mCols = aTableData.mCols.GetIntValue();
 
   // span: pixels (not a real CSS prop)
-  nsStyleCoord  coord;
-  if (SetCoord(aTableData.mSpan, coord, coord, SETCOORD_LE, aContext, mPresContext, inherited))
-    table->mSpan = coord.GetCoordValue();
+  if (eCSSUnit_Enumerated == aTableData.mSpan.GetUnit() ||
+      eCSSUnit_Integer == aTableData.mSpan.GetUnit())
+    table->mSpan = aTableData.mSpan.GetIntValue();
     
   if (inherited)
     // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the

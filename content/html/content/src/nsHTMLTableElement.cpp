@@ -1529,6 +1529,7 @@ nsHTMLTableElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                              PRInt32& aHint) const
 {
   if ((aAttribute == nsHTMLAtoms::layout) ||
+      (aAttribute == nsHTMLAtoms::cellpadding) ||
       (aAttribute == nsHTMLAtoms::cellspacing) ||
       (aAttribute == nsHTMLAtoms::cols) ||
       (aAttribute == nsHTMLAtoms::rules) ||
