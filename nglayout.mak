@@ -52,7 +52,11 @@ W32LOBJS = $(OBJS: .= +-.)
 !if defined(MOZ_DATE)
 CVSCO = cvs -q co -P -D "$(MOZ_DATE)"
 !else
+!if defined(MOZ_BRANCH)
+CVSCO = cvs -q co -P -r $(MOZ_BRANCH)
+!else
 CVSCO = cvs -q co -P
+!endif
 !endif
 
 CVSCO_TAG = cvs -q co -P
