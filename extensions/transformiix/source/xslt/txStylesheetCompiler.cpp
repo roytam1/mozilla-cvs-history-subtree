@@ -60,6 +60,23 @@ txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
 {
 }
 
+nsrefcnt
+txStylesheetCompiler::AddRef()
+{
+    return ++mRefCnt;
+}
+
+nsrefcnt
+txStylesheetCompiler::Release()
+{
+    if (--mRefCnt == 0) {
+        mRefCnt = 1; //stabilize
+        delete this;
+        return 0;
+    }
+    return mRefCnt;
+}
+
 nsresult
 txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                                    nsIAtom* aPrefix,
@@ -327,6 +344,7 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
       mHandlerTable(nsnull),
       mElementContext(nsnull),
       mSorter(nsnull),
+      mChooseGotoList(nsnull),
       mNextInstrPtr(nsnull),
       mToplevelIterator(nsnull)
 {

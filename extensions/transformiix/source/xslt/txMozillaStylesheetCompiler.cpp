@@ -87,7 +87,7 @@ public:
 
 private:
     nsCOMPtr<nsITransformMediator> mTransformMediator;
-    txStylesheetCompiler* mCompiler;
+    nsRefPtr<txStylesheetCompiler> mCompiler;
     txMozillaXSLTProcessor* mProcessor;
     nsCOMArray<nsINameSpace> mNameSpaceStack;
 };
@@ -290,14 +290,14 @@ txStylesheetSink::DidBuildModel(PRInt32 aQualityLevel)
     nsresult rv = mCompiler->doneLoading();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = mProcessor->addStylesheet(mCompiler->getStylesheet());
+    rv = mProcessor->setStylesheet(mCompiler->getStylesheet());
     NS_ENSURE_SUCCESS(rv, rv);
 
     return mTransformMediator->StyleSheetLoadFinished(NS_OK);
 }
 
 
-static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
+static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
 {
     PRUint16 nodetype;
     aNode->GetNodeType(&nodetype);
@@ -330,7 +330,7 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
                 }
             }
 
-            aCompiler.startElement(namespaceID, localname, prefix, atts,
+            aCompiler->startElement(namespaceID, localname, prefix, atts,
                                     attsCount);
             destroyAttributesArray(atts, attsCount);
 
@@ -345,7 +345,7 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
                 }
             }
 
-            aCompiler.endElement();
+            aCompiler->endElement();
             break;
         }
         case nsIDOMNode::CDATA_SECTION_NODE:
@@ -353,7 +353,7 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
         {
             nsAutoString chars;
             aNode->GetNodeValue(chars);
-            aCompiler.characters(chars);
+            aCompiler->characters(chars);
             break;
         }
         case nsIDOMNode::DOCUMENT_NODE:
@@ -390,10 +390,10 @@ txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
     uri->GetSpec(baseURI);
 
     NS_ConvertUTF8toUCS2 base(baseURI);
-    txStylesheetCompiler compiler(base);
+    nsRefPtr<txStylesheetCompiler> compiler = new txStylesheetCompiler(base);
 
     handleNode(document, compiler);
-    compiler.doneLoading();
+    compiler->doneLoading();
 
-    return compiler.getStylesheet();
+    return compiler->getStylesheet();
 }

@@ -54,6 +54,7 @@
 #include "txXSLTProcessor.h"
 #include "nsVoidArray.h"
 #include "txStylesheet.h"
+#include "nsAutoPtr.h"
 
 class nsITransformMediator;
 class nsIURI;
@@ -144,10 +145,10 @@ public:
     NS_IMETHOD TransformDocument(nsIDOMNode *aSourceDOM,
                                  nsITransformObserver *aObserver);
 
-    nsresult addStylesheet(txStylesheet* aStylesheet);
+    nsresult setStylesheet(txStylesheet* aStylesheet);
 
 private:
-    nsVoidArray mStylesheets;
+    nsRefPtr<txStylesheet> mStylesheet;
     txExpandedNameMap mVariables;
 };
 

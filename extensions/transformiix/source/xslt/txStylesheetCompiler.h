@@ -48,10 +48,10 @@
 #include "txIXPathContext.h"
 #include "txNamespaceMap.h"
 #include "nsAutoPtr.h"
+#include "txStylesheet.h"
 
 class txHandlerTable;
 class txElementContext;
-class txStylesheet;
 class txInstructionContainer;
 class txInstruction;
 class txToplevelItem;
@@ -106,7 +106,7 @@ public:
 
 
     nsVoidArray mInScopeVariables;
-    txStylesheet* mStylesheet;
+    nsRefPtr<txStylesheet> mStylesheet;
     txHandlerTable* mHandlerTable;
     txElementContext* mElementContext;
     txPushNewContext* mSorter;
@@ -135,6 +135,9 @@ public:
     txStylesheetCompiler(const nsAString& aBaseURI);
     txStylesheetCompiler(const nsAString& aBaseURI,
                          txStylesheetCompiler* aParent);
+    nsrefcnt AddRef();
+    nsrefcnt Release();
+
     nsresult startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                           nsIAtom* aPrefix, txStylesheetAttr* aAttributes,
                           PRInt32 aAttrCount);
@@ -150,6 +153,7 @@ private:
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
 
+    nsAutoRefCnt mRefCnt;
     txStylesheetCompilerState mState;
     nsString mCharacters;
 };

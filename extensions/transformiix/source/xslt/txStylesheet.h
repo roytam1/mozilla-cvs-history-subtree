@@ -62,7 +62,21 @@ public:
     txStylesheet();
     ~txStylesheet();
     nsresult init();
-    
+
+    nsrefcnt AddRef()
+    {
+        return ++mRefCnt;
+    }
+    nsrefcnt Release()
+    {
+        if (--mRefCnt == 0) {
+            mRefCnt = 1; //stabilize
+            delete this;
+            return 0;
+        }
+        return mRefCnt;
+    }
+
     txInstruction* findTemplate(Node* aNode,
                                 const txExpandedName& aMode,
                                 txIMatchContext* aContext,
@@ -134,6 +148,8 @@ private:
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
     nsresult addGlobalVariable(txVariableItem* aVariable);
 
+    // Refcount
+    nsAutoRefCnt mRefCnt;
 
     // List of ImportFrames
     txList mImportFrames;

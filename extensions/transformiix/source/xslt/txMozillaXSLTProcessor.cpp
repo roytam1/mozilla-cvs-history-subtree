@@ -246,16 +246,8 @@ txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(PR_TRUE)
 {
 }
 
-PR_STATIC_CALLBACK(PRBool)
-deleteStylesheet(void* aElement, void *aData)
-{
-    delete NS_STATIC_CAST(txStylesheet*, aElement);
-    return PR_TRUE;
-}
-
 txMozillaXSLTProcessor::~txMozillaXSLTProcessor()
 {
-    mStylesheets.EnumerateForwards(deleteStylesheet, nsnull);
 }
 
 NS_IMETHODIMP
@@ -272,7 +264,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                           nsITransformObserver* aObserver)
 {
     NS_ENSURE_ARG(aSourceDOM);
-    NS_ENSURE_TRUE(mStylesheets.Count() > 0, NS_ERROR_UNEXPECTED);
+    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
     NS_ASSERTION(aObserver, "no observer");
 
     // Create wrapper for the source document.
@@ -286,10 +278,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     Node* sourceNode = sourceDocument.createWrapper(aSourceDOM);
     NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
 
-    txStylesheet* style = NS_STATIC_CAST(txStylesheet*,
-                                         mStylesheets.ElementAt(0));
-
-    txExecutionState es(style);
+    txExecutionState es(mStylesheet);
 
     // XXX Need to add error observers
 
@@ -326,7 +315,7 @@ txMozillaXSLTProcessor::ImportStylesheet(nsIDOMNode *aStyle)
         return NS_ERROR_FAILURE;
     }
 
-    mStylesheets.AppendElement(style);
+    mStylesheet = style;
     return NS_OK;
 }
 
@@ -336,7 +325,7 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
 {
     NS_ENSURE_ARG(aSource);
     NS_ENSURE_ARG_POINTER(aResult);
-    NS_ENSURE_TRUE(mStylesheets.Count() > 0, NS_ERROR_NOT_INITIALIZED);
+    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_NOT_INITIALIZED);
 
     if (!URIUtils::CanCallerAccess(aSource)) {
         return NS_ERROR_DOM_SECURITY_ERR;
@@ -353,10 +342,7 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     Node* sourceNode = sourceDocument.createWrapper(aSource);
     NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
 
-    txStylesheet* style = NS_STATIC_CAST(txStylesheet*,
-                                         mStylesheets.ElementAt(0));
-
-    txExecutionState es(style);
+    txExecutionState es(mStylesheet);
 
     // XXX Need to add error observers
 
@@ -385,7 +371,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     NS_ENSURE_ARG(aSource);
     NS_ENSURE_ARG(aOutput);
     NS_ENSURE_ARG_POINTER(aResult);
-    NS_ENSURE_TRUE(mStylesheets.Count() > 0, NS_ERROR_NOT_INITIALIZED);
+    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_NOT_INITIALIZED);
 
     if (!URIUtils::CanCallerAccess(aSource) ||
         !URIUtils::CanCallerAccess(aOutput)) {
@@ -403,10 +389,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     Node* sourceNode = sourceDocument.createWrapper(aSource);
     NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
 
-    txStylesheet* style = NS_STATIC_CAST(txStylesheet*,
-                                         mStylesheets.ElementAt(0));
-
-    txExecutionState es(style);
+    txExecutionState es(mStylesheet);
 
     // XXX Need to add error observers
 
@@ -537,8 +520,7 @@ txMozillaXSLTProcessor::ClearParameters()
 NS_IMETHODIMP
 txMozillaXSLTProcessor::Reset()
 {
-    mStylesheets.EnumerateForwards(deleteStylesheet, nsnull);
-    mStylesheets.Clear();
+    mStylesheet = nsnull;
     mVariables.clear();
 
     return NS_OK;
@@ -592,9 +574,11 @@ txMozillaXSLTProcessor::LoadStyleSheet(nsITransformMediator* aMediator,
 }
 
 nsresult
-txMozillaXSLTProcessor::addStylesheet(txStylesheet* aStylesheet)
+txMozillaXSLTProcessor::setStylesheet(txStylesheet* aStylesheet)
 {
-    return mStylesheets.AppendElement(aStylesheet);
+    mStylesheet = aStylesheet;
+    
+    return NS_OK;
 }
 
 /* static*/
