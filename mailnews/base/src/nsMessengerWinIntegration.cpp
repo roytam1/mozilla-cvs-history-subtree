@@ -292,7 +292,7 @@ NOTIFYICONDATAW nsMessengerWinIntegration::mWideBiffIconData = { sizeof(NOTIFYIC
 
 #ifdef MOZ_THUNDERBIRD
 #ifdef MOZ_STATIC_BUILD
-#define MAIL_DLL_NAME "thunderbird.exe"
+#define MAIL_DLL_NAME NULL
 #else
 #define MAIL_DLL_NAME "mail.dll"
 #endif
@@ -721,13 +721,13 @@ NS_IMETHODIMP
 nsMessengerWinIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom *property, PRUint32 oldFlag, PRUint32 newFlag)
 {
   nsresult rv = NS_OK;
-
-  if (!mBiffIconInitialized)
-    InitializeBiffStatusIcon(); 
     
   // if we got new mail show a icon in the system tray
 	if (mBiffStateAtom == property && mFoldersWithNewMail)
 	{
+    if (!mBiffIconInitialized)
+      InitializeBiffStatusIcon(); 
+
     nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
     NS_ENSURE_TRUE(folder, NS_OK);
 
