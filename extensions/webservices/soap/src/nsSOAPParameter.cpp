@@ -216,19 +216,19 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
     JSString* namestr = JS_ValueToString(cx, argv[0]);
     if (namestr) {
       SetName(nsString(NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(namestr))));
-      if (argc > 1) {
-        nsCOMPtr<nsISupports> value;
-        nsAutoString type;
-        nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx,
-                                          argc - 1,
-                                          argv + 1,
-                                          PR_FALSE,
-                                          getter_AddRefs(value),
-                                          type);
-        mType = type;
-        mValue = value;
-        return rc;
-      }
+    }
+    if (argc > 1) {
+      nsCOMPtr<nsISupports> value;
+      nsAutoString type;
+      nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx,
+                                        argc - 1,
+                                        argv + 1,
+                                        PR_FALSE,
+                                        getter_AddRefs(value),
+                                        type);
+      mType = type;
+      mValue = value;
+      return rc;
     }
   }
   return NS_OK;

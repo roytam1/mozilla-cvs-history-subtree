@@ -194,7 +194,7 @@ interface nsISOAPMessage : nsISupports {
    *  When a transport places a message into the message object,
    *  it provides this container of protocol parameters.
    */
-  attribute nsISupportsArray protocolParameters;
+  [noscript] attribute nsISupportsArray protocolParameters;
 
   /**
    * A local registry of type information.  This is optional but

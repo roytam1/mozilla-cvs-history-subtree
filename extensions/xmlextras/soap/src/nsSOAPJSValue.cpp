@@ -100,7 +100,7 @@ public:
     virtual ~nsSOAPJSStructEnumerator();
 
 protected:
-  nsCOMPtr<nsSOAPJSValue> mValue;
+  nsCOMPtr<nsISOAPJSValue> mValue;
   nsISOAPStruct* mStruct; // Convenience non-referenced pointer to same value
   JSIdArray *mMembers;
   PRInt32 mCurrent;
@@ -110,7 +110,7 @@ nsSOAPJSStructEnumerator::nsSOAPJSStructEnumerator(JSContext* ctx, JSObject* obj
   : mMembers(JS_Enumerate(ctx, obj)), mCurrent(0)
 {
   NS_INIT_REFCNT();
-  nsSOAPJSValue* value = new nsSOAPJSValue();
+  nsSOAPJSValue *value = new nsSOAPJSValue();
   mValue = value;
   mStruct = value;
   value->SetContext(ctx);
@@ -204,7 +204,7 @@ NS_IMETHODIMP nsSOAPJSValue::SetMember(nsISOAPParameter *member)
   nsAutoString type;
   member->GetName(type);
   jsval val;
-  nsresult rv = nsSOAPJSValue::ConvertValueToJSVal(mContext, this, type, &val);
+  nsresult rv = nsSOAPJSValue::ConvertValueToJSVal(mContext, NS_STATIC_CAST(nsISOAPJSValue*,this), type, &val);
   if (NS_FAILED(rv)) return rv;
   return JS_SetProperty(mContext, mObject, NS_ConvertUCS2toUTF8(name).get(), &val);
 }
@@ -522,7 +522,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
 //      }
 //      else 
       {
-        nsCOMPtr<nsSOAPJSValue> value = new nsSOAPJSValue();
+        nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID);
         if (NS_FAILED(rc)) return rc;
 
 // Look for a constructor name on the current object or a prototype

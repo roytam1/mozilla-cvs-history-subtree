@@ -29,7 +29,7 @@
 #include "nsISOAPJSValue.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPJSValue : public nsISOAPStruct
+class nsSOAPJSValue : public nsISOAPStruct,public nsISOAPJSValue
 {
 public:
   NS_DECL_ISUPPORTS

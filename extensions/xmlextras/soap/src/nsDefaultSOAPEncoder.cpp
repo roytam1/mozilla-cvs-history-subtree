@@ -155,11 +155,12 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
     if (NS_FAILED(rv)) return rv;
     rv = types->Marshall(aMessage, next, encodingStyleURI, type, schemaType, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
-    if (result == nsnull) return NS_ERROR_FAILURE;
-    element = do_QueryInterface(result);
-    if (element == nsnull) return NS_ERROR_FAILURE;
-    rv = body->AppendChild(element, getter_AddRefs(ignored));
-    if (NS_FAILED(rv)) return rv;
+    if (result != nsnull) {
+      element = do_QueryInterface(result);
+      if (element == nsnull) return NS_ERROR_FAILURE;
+      rv = body->AppendChild(element, getter_AddRefs(ignored));
+      if (NS_FAILED(rv)) return rv;
+    }
   }
 
   *_retval = document;

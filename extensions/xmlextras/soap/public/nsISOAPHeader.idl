@@ -1,0 +1,53 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsISupportsArray;
+
+/**
+ * This encapsulates a header, which is not part of the standard
+ * message, but belongs in some header.
+ */
+
+[scriptable, uuid(bb885296-1dd1-11b2-a088-87298921fab9)]
+interface nsISOAPHeader : nsISupports {
+  /**
+   * The actor URI of the processor that is supposed to process
+   * this header.
+   */
+  attribute AString actorURI;
+  
+  /**
+   * A container of parameters passed in the header.
+   */
+  attribute nsISupportsArray parameters;
+};
+
+%{ C++
+#define NS_SOAPHEADER_CID                             \
+{ /* 38f30528-1dd2-11b2-821f-9d72e699568f */        \
+  0x38f30528, 0x1dd2, 0x11b2,                       \
+ {0x82, 0x1f, 0x9d, 0x72, 0xe6, 0x99, 0x56, 0x8f} }
+#define NS_SOAPHEADER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/header;1"
+%}
