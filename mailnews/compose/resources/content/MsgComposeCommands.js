@@ -1457,6 +1457,11 @@ function WizCallback(state)
 
 function ComposeLoad()
 {
+  setTimeout(DelayedComposeLoad, 0);
+}
+
+function DelayedComposeLoad()
+{
   // First get the preferences service
   try {
     var prefService = Components.classes["@mozilla.org/preferences-service;1"]
