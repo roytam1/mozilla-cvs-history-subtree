@@ -242,7 +242,7 @@ interface nsIFile : nsISupports
     boolean equals(in nsIFile inFile);
     
     /**
-     * Will determine the file is a descendant of the parameter inFile.
+     * Will determine the inFile is a descendant
      * If |recur| is true, it will descend subdirectories looking for 
      */
     boolean isContainedIn(in nsIFile inFile, in boolean recur);
