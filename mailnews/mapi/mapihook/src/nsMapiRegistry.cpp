@@ -153,8 +153,12 @@ NS_IMETHODIMP nsMapiRegistry::RegisterMailAndNewsClient()
  */
 NS_IMETHODIMP
 nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
+    if (!m_ShowDialog || !m_registryUtils.getShowDialog() ||
+        m_registryUtils.IsDefaultMailClient()) {
+      return NS_OK;
+    }
+
     nsresult rv;
-    if (!m_ShowDialog || !m_registryUtils.getShowDialog()) return NS_OK;
     nsCOMPtr<nsIPromptService> promptService(do_GetService(
                   "@mozilla.org/embedcomp/prompt-service;1", &rv));
     if (NS_SUCCEEDED(rv) && promptService)

@@ -113,6 +113,13 @@ pref("network.image.imageBehavior", 2);
 // thunderbird shows size in KB instead of lines by default
 pref("news.show_size_in_lines", false);
 
+#ifdef MOZ_WIDGET_GTK2
+// whether to check if we're the default mail client on startup (GNOME)
+pref("mail.checkDefaultMail", true);
+// whether to check if we're the default news client on startup (GNOME)
+pref("mail.checkDefaultNews", false);
+#endif
+
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite mailnews.js pref overrides
 ///////////////////////////////////////////////////////////////// 

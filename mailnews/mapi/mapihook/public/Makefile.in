@@ -46,7 +46,6 @@ MODULE		= msgMapi
 XPIDL_MODULE	= mapihook
 
 XPIDLSRCS	= \
-		nsIMapiRegistry.idl \
 		nsIMapiSupport.idl \
 		$(NULL)
 
