@@ -33,6 +33,9 @@ ifndef VENDOR_VERSION
 VENDOR_VERSION = $(DEFAULT_VENDOR_VERSION)
 endif
 
+ifeq ($(OS_ARCH), WINNT)
+	COMPONENT_PULL_METHOD=FTP
+endif
 
 ifdef HAVE_CCONF
 # component tags for internal build only

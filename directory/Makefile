@@ -33,10 +33,6 @@ MOD_DEPTH	= c-sdk
 include		$(CONFIGDIR)/config.mk
 include		c-sdk/build.mk
 
-ifeq ($(OS_ARCH), WINNT)
-	COMPONENT_PULL_METHOD=FTP
-endif
-
 ifeq ($(COMPONENT_PULL_METHOD), FTP)
 	COMP_PULL_ARG="USE_FTP=YES"
 endif
