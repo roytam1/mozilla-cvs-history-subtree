@@ -160,7 +160,7 @@ void String::ensureCapacity(const PRUint32 aCapacity)
   mBuffer = tempBuffer;
 }
 
-PRUint32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
   PRUint32 searchIndex = aOffset;
 
@@ -172,7 +172,7 @@ PRUint32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
   return NOT_FOUND;
 }
 
-PRUint32 String::indexOf(const String& aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
 {
   PRUint32 searchIndex = aOffset;
   PRUint32 searchLimit = mLength - aData.mLength;
@@ -185,7 +185,7 @@ PRUint32 String::indexOf(const String& aData, const PRUint32 aOffset) const
   return NOT_FOUND;
 }
 
-PRUint32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
     if (aOffset >= mLength)
        return NOT_FOUND;
