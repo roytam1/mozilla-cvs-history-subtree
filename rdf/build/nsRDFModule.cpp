@@ -38,7 +38,7 @@
 #include "nsIComponentManager.h"
 #include "rdf.h"
 #include "nsIServiceManager.h"
-#include "nsIElementFactory.h"
+#include "nsILocalStore.h"
 
 //----------------------------------------------------------------------
 
@@ -145,6 +145,10 @@ static nsModuleComponentInfo components[] =
       NS_RDF_CONTRACTID "/rdf-service;1",
       CreateNewRDFService 
     },
+
+    // XXX move this to XPFE at some point.
+    { "Local Store", NS_LOCALSTORE_CID,
+      NS_LOCALSTORE_CONTRACTID, NS_NewLocalStore },
 };
 
 NS_IMPL_NSGETMODULE("nsRDFModule", components);
