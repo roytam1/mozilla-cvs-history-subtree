@@ -187,7 +187,7 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   NS_RELEASE(listener);
   
 
-  nsCOMPtr<nsIImageLoader> il(do_CreateInstance("@mozilla.org/image/loader;1", &rv));
+  nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
   if (NS_FAILED(rv))
     return rv;
 #endif
