@@ -30,7 +30,6 @@ MODULE		= widget
 LIBRARY_NAME	= widget_windows
 
 REQUIRES	= xpcom \
-			xpcom_obsolete \
 			string \
 			dom \
 			accessibility \
