@@ -113,11 +113,11 @@
 
 <keyset id="tasksKeys">
   <!-- File Menu -->
-  #ifdef XP_MACOSX
-    <key id="key_newMessage" key="&newMessageCmd.key;" modifiers="accel,shift" oncommand="AbNewMessage()"/>
-  #else
-    <key id="key_newMessage" key="&newMessageCmd.key;" modifiers="accel" oncommand="AbNewMessage()"/>
-  #endif
+#ifdef XP_MACOSX
+  <key id="key_newMessage" key="&newMessageCmd.key;" modifiers="accel,shift" oncommand="AbNewMessage()"/>
+#else
+  <key id="key_newMessage" key="&newMessageCmd.key;" modifiers="accel" oncommand="AbNewMessage()"/>
+#endif
   <key id="key_printCard" key="&printCardViewCmd.key;" oncommand="AbPrintCard()" modifiers="accel"/>
   <key id="key_close" key="&closeCmd.key;" modifiers="accel" oncommand="AbClose()"/>
   <key id="key_quit" key="&quitApplicationCmd.key;" modifiers="accel" oncommand="goQuitApplication()"/>
@@ -141,7 +141,6 @@
 
   <key id="key_mail"  key="&messengerCmd.commandkey;" oncommand="toMessengerWindow();" modifiers="accel"/>
 #ifdef XP_MACOSX
-
   <!-- Mac Window keys -->
   <key id="key_minimizeWindow" command="minimizeWindow" key="&minimizeWindow.key;" modifiers="accel"/>
 #endif
