@@ -1,7 +1,7 @@
 [xpfe-browser browser]
 !touch dist/bin/.autoreg
 dist/bin/components/nsCloseAllWindows.js
-dist/bin/chrome/chromelist.txt
+dist/bin/chrome/installed-chrome.txt
 
 # xxxbsmedberg why do we ship the platform jars on all platforms?
 [xpfe-lang-enUS]
@@ -20,6 +20,7 @@ dist/bin/LICENSE dist/bin/license.txt
 dist/bin/mozilla@BINS@
 #else
 dist/bin/mozilla-bin@BINS@
+dist/bin/mozilla
 #endif
 dist/bin/chrome/comm.jar
 dist/bin/chrome/toolkit.jar
