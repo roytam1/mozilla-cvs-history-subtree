@@ -2522,7 +2522,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 
 - (void) doCommandBySelector:(SEL)aSelector;
 {
-  [self performSelector:aSelector withObject:nil afterDelay:0];
+  [super doCommandBySelector:aSelector];
 }
 
 - (void) setMarkedText:(id)aString selectedRange:(NSRange)selRange;
