@@ -51,10 +51,6 @@ txUnknownHandler::txUnknownHandler(txExecutionState* aEs)
     : mTotal(0), mMax(kReasonableTransactions), 
       mEs(aEs)
 {
-#ifndef TX_EXE
-    NS_INIT_ISUPPORTS();
-#endif
-
     mArray = new txOutputTransaction*[kReasonableTransactions];
 }
 

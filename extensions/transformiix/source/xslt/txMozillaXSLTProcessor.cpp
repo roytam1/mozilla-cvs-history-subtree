@@ -237,7 +237,6 @@ NS_INTERFACE_MAP_END
 
 txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(PR_TRUE)
 {
-    NS_INIT_ISUPPORTS();
 }
 
 txMozillaXSLTProcessor::~txMozillaXSLTProcessor()
