@@ -68,18 +68,20 @@ libs install::	FORCE
 	fi
 
 clean clobber::	FORCE
-	@if [ -d $(NSPR_TREE)/ ]; then \
-		cd $(NSPR_TREE); \
-		$(MAKE) clean; \
-	else \
-		echo "No NSPR $(NSPR_VERSION) directory found"; \
-		exit 0; \
-	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) clean; \
 	else \
 		echo "No LDAP directory -- skipping"; \
+		exit 0; \
+	fi
+
+veryclean:: FORCE
+	@if [ -d $(NSPR_TREE)/ ]; then \
+		cd $(NSPR_TREE); \
+		$(MAKE) clean; \
+	else \
+		echo "No NSPR $(NSPR_VERSION) directory found"; \
 		exit 0; \
 	fi
 	rm -rf ../dist 

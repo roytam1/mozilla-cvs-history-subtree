@@ -1,11 +1,12 @@
 DEPTH		= ../../../../..
 NS_DEPTH	= ../../../..
-LDAPSRC		= ../..
 MOD_DEPTH       = ../../../../../nsprpub
-NSPR_TREE	= ../../../../../nsprpub
+NSPR_TREE       = ../../../../../nsprpub
+LDAP_SRC        = ../..
+NSCP_DISTDIR    = ../../../../../dist
 
-RM		= rm -f
-SED		= sed
+include         $(NSPR_TREE)/config/rules.mk
+include         ../../../build.mk
 
 SRCS		= abandon.c \
 		  add.c \
@@ -62,40 +63,18 @@ SRCS		= abandon.c \
 
 REALOBJS	= $(SRCS:.c=.o)
 
-#OBJS		= $(REALOBJS) versiont.o
-OBJS		= $(REALOBJS)
+LDAPOBJDEST	= $(OBJDIR_NAME)
+OBJS		= $(addprefix $(LDAPOBJDEST)/, $(REALOBJS))
 
-HDIR		= $(LDAPSRC)/include
+HDIR		= $(LDAP_SRC)/include
 
-CFLAGS		= $(INCLUDES) $(DEFINES)
-
-LIBRARY_NAME	= ldap41
-
-#
-# DEFS are included in CFLAGS
-#
-DEFS		= $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(KERBEROS) $(AFSKERBEROS) \
-		  $(UOFM) $(UOFA) $(NO_USERINTERFACE) $(CLDAP) $(NO_CACHE) \
-		  $(LDAP_REFERRALS) $(LDAP_DNS) $(STR_TRANSLATION) \
-		  $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
-		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC) \
-		  $(LDAP_SSLIO_HOOKS)
-
-include $(NSPR_TREE)/config/rules.mk
+LIBLDAP		= $(addprefix $(LDAPOBJDEST)/, lib$(LDAP_LIBNAME).$(DLL_SUFFIX))
+INSTALLDIR	= $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
-INCLUDES	+= -I$(HDIR) $(KRBINCLUDEFLAG)
-DEFINES		+= $(DEFS) -DFILTERFILE=./ldapfilter.conf \
-		   -DTEMPLATEFILE=./ldaptemplates.conf \
-		   -DNDEBUG -UMOZILLA_CLIENT
-
-# So we actually get the definition of hostent_data....
-ifeq ($(OS_ARCH),AIX)
-DEFINES               += -D_THREAD_SAFE
-endif
-
-GARBAGE		+= $(ETCDIR)/ldapfriendly $(ETCDIR)/ldapfilter.conf \
-		   $(ETCDIR)/ldaptemplates.conf $(ETCDIR)/ldapsearchprefs.conf
+INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
+		   -I../../../../../dist/include
+DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
 PLATFORMLIBS	=
@@ -108,8 +87,6 @@ ETCFILES	= ldapfilter.conf \
 		  ldaptemplates.conf \
 		  $(NULL)
 
-#ETCDIR		= $(DIST)/etc
-INSTALLDIR	= $(DEPTH)/dist/$(OBJDIR_NAME)
 ETCDIR		= $(INSTALLDIR)/etc
 
 #
@@ -120,32 +97,50 @@ ETCDIR		= $(INSTALLDIR)/etc
 RUNTIMEETCDIR	= $(ETCDIR)
 
 #
-# To build slapd (the stand-alone ldap daemon), uncomment the MAKESLAPD
-# line and select the SLAPD_BACKENDS you want to use. If you enable the
-# LDBM backend, also select one of the LDBM backends.
+# shared library symbol export definitions
 #
-MAKESLAPD	= yes
-SLAPD_BACKENDS	= -DLDAP_LDBM -DLDAP_SHELL -DLDAP_PASSWD
-LDBMBACKEND	= -DLDBM_USE_NDBM
-
-#
-# uncomment this line to enable debugging code (a good idea)
-#
-ifndef BUILD_OPT
-LDAP_DEBUG	= -DLDAP_DEBUG
+ifeq ($(OS_ARCH), WINNT)
+GENEXPORTS=cmd /c  $(PERL) $(LDAP_SRC)/build/genexports.pl
+else
+GENEXPORTS=$(PERL) $(LDAP_SRC)/build/genexports.pl
 endif
 
-#
-# uncomment this line to enable support for LDAP referrals in libldap
-#
-LDAP_REFERRALS		= -DLDAP_REFERRALS
 
-#
-# uncomment this line to enable support for SSL I/O in libldap
-#
-LDAP_SSLIO_HOOKS	= -DLDAP_SSLIO_HOOKS
+# variable definitions for exported symbols
+ifeq ($(OS_ARCH), WINNT)
+        LDAP_EXPORT_DEFS=../msdos/winsock/nsldap32.def
+else
+        LDAP_EXPORT_DEFS= $(LDAPOBJDEST)/libldap.exp
+endif
+
+LDAP_EXPORT_FLAGS=$(addprefix $(DLLEXPORTS_PREFIX), $(LDAP_EXPORT_DEFS))
+
+GENEXPARGS=$(BUILD_DEBUG) $(LDAPVERS_SUFFIX) $(LDAPVERS)
+
+ifeq ($(OS_ARCH), AIX)
+    EXTRA_LIBS += $(LIBNSPR)
+else
+ifneq ($(OS_ARCH), OSF1)
+ifeq ($(OS_ARCH), WINNT)
+    EXTRA_LIBS = $(LIBNSPR)
+else
+    EXTRA_LIBS = $(DYNAMICNSPR)
+endif
+endif
+endif
+
+ifeq ($(OS_ARCH), SunOS)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
+OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
+
+# recursive gmake rule to create exported symbols file
+$(LDAPOBJDEST)/libldap.exp:: ../libldap.ex
+	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
 
 versiont.c:	Makefile.client Version.c
 	@$(RM) $@
@@ -155,10 +150,29 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-install::	$(LIBRARY) $(SHARED_LIBRARY)
-	$(INSTALL) -m 444 $(LIBRARY) $(INSTALLDIR)/lib
-ifdef MKSHLIB
-	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(INSTALLDIR)/lib
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLDAP)
+
+$(LIBDIR):
+	$(MKDIR) $(LIBDIR)
+
+$(LIBLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
+	@echo ======= making $(LIBLDAP)
+ifdef SO_FILES_TO_REMOVE
+	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-	$(INSTALL) $(INSTALLFLAGS) -m 644 $(ETCFILES) $(ETCDIR)
-	
+	$(LINK_DLL) $(DSO_LDOPTS) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+
+veryclean:: clean
+
+clean::
+	$(RM) $(OBJS) $(LIBLDAP)
+
+$(OBJDEST):
+	$(MKDIR) $(OBJDEST)
+
+install:: $(LIBLDAP)
+ifdef MKSHLIB
+	$(INSTALL) -m 555 $(LIBLDAP) $(INSTALLDIR)/lib
+endif
+	$(INSTALL) -m 555 $(ETCFILES) $(ETCDIR)
+
