@@ -544,6 +544,7 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
 {
     MWContext *cx = XP_FindSomeContext();   /* XXXMLM */
     JSContext *pJSCX = (JSContext *)PR_GetThreadPrivate(tlsIndex3_g);
+    LM_LockJS(cx, errp);
     if (pJSCX == NULL)
     {
        pJSCX = LM_GetCrippledContext();
@@ -577,8 +578,8 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
         pSecInfoTop->prev       = pSecInfoNew;
       }
     }
-
-    return LM_LockJS(cx, errp);
+    return PR_TRUE;
+    //return LM_LockJS(cx, errp);
 }
 
 static void PR_CALLBACK
