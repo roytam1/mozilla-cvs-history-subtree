@@ -96,8 +96,8 @@ public:
   NS_IMETHOD Enable(PRBool aState);
   NS_IMETHOD SetFocus(void);
 
-  PRBool OnResize(nsSizeEvent event);
-  virtual PRBool OnResize(nsRect &aRect);
+  virtual PRBool OnResize(nsSizeEvent event);
+  //  virtual PRBool OnResize(nsRect &aRect);
   virtual PRBool OnMove(PRInt32 aX, PRInt32 aY);
 
   nsIFontMetrics *GetFont(void);
