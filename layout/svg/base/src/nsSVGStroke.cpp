@@ -35,10 +35,25 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
 {
   if (mSvp)
     art_free(mSvp);
-      
+
+  ArtPathStrokeCapType captype;
+  switch(style.linecap) {
+    case NS_STYLE_STROKE_LINECAP_BUTT:
+      captype = ART_PATH_STROKE_CAP_BUTT;
+      break;
+    case NS_STYLE_STROKE_LINECAP_ROUND:
+      captype = ART_PATH_STROKE_CAP_ROUND;
+      break;
+    case NS_STYLE_STROKE_LINECAP_SQUARE:
+      captype = ART_PATH_STROKE_CAP_SQUARE;
+      break;
+    default:
+      NS_ERROR("not reached");
+  }
+  
   mSvp = art_svp_vpath_stroke (path,
                                ART_PATH_STROKE_JOIN_MITER,
-                               ART_PATH_STROKE_CAP_BUTT,
+                               captype,
                                style.width,
                                4, // miter limit
                                getFlatness());

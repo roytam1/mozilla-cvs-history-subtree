@@ -1020,12 +1020,12 @@ struct nsStyleSVG : public nsStyleStruct {
   PRInt32 CalcDifference(const nsStyleSVG& aOther) const;
 
   // all [inherit]ed
-  nsStyleSVGPaint  mStroke;
-  float            mStrokeWidth; // in pixels
-  float            mStrokeOpacity;
-  
   nsStyleSVGPaint  mFill;
   float            mFillOpacity;
+  nsStyleSVGPaint  mStroke;
+  PRUint8          mStrokeLinecap; // see nsStyleConsts.h
+  float            mStrokeOpacity;
+  float            mStrokeWidth; // in pixels
 };
 #endif
 

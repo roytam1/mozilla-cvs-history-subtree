@@ -28,10 +28,12 @@
 
 #include "nsSVGRenderItem.h"
 #include "libart-incs.h"
+#include "nsStyleConsts.h"
 
 struct nsSVGStrokeStyle 
 {
-  float width;
+  PRInt8 linecap; // see nsStyleConsts.h
+  float  width;
 };
 
 class nsSVGStroke : public nsSVGRenderItem

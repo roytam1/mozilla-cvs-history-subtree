@@ -87,7 +87,9 @@ SVG_BRANCH_FILES = \
 	content/shared/public/MANIFEST \
 	content/shared/public/Makefile.in \
 	content/shared/public/makefile.win \
+	content/shared/public/nsCSSKeywordList.h \
 	content/shared/public/nsCSSPropList.h \
+	content/shared/public/nsCSSProps.h \
 	content/shared/public/nsSVGAtomList.h \
 	content/shared/public/nsSVGAtoms.h \
 	content/shared/public/nsStyleStruct.h \
@@ -107,6 +109,7 @@ SVG_BRANCH_FILES = \
 	htmlparser/public/nsIParser.h \
 	htmlparser/src/nsExpatTokenizer.cpp \
 	htmlparser/src/nsViewSourceHTML.cpp \
+	layout/base/public/nsStyleConsts.h \
 	layout/build/Makefile.in \
 	layout/build/makefile.win \
 	layout/html/style/src/Makefile.in \

@@ -721,6 +721,16 @@ const PRInt32 nsCSSProps::kBoxPackKTable[] = {
 };
 #endif
 
+#ifdef MOZ_SVG
+// keyword tables for SVG properties
+const PRInt32 nsCSSProps::kStrokeLinecapKTable[] = {
+  eCSSKeyword_butt, NS_STYLE_STROKE_LINECAP_BUTT,
+  eCSSKeyword_round, NS_STYLE_STROKE_LINECAP_ROUND,
+  eCSSKeyword_square, NS_STYLE_STROKE_LINECAP_SQUARE,
+  -1, -1
+};
+#endif
+
 PRInt32 
 nsCSSProps::SearchKeywordTableInt(PRInt32 aValue, const PRInt32 aTable[])
 {
@@ -825,6 +835,9 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
   case eCSSProperty_fill:
   case eCSSProperty_fill_opacity:
     break;
+
+  case eCSSProperty_stroke_linecap:
+    return SearchKeywordTable(aValue, kStrokeLinecapKTable);
 #endif
     
   case eCSSProperty_box_sizing:

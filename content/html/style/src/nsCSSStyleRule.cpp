@@ -1724,21 +1724,24 @@ MapSVGForDeclaration(nsICSSDeclaration* aDecl, nsCSSSVG& aSVG)
   if (!ourSVG)
     return NS_OK; // We don't have any rules for SVG.
 
-  // stroke:
-  if (aSVG.mStroke.GetUnit() == eCSSUnit_Null && ourSVG->mStroke.GetUnit() != eCSSUnit_Null)
-    aSVG.mStroke = ourSVG->mStroke;
-  // stroke_width:
-  if (aSVG.mStrokeWidth.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeWidth.GetUnit() != eCSSUnit_Null)
-    aSVG.mStrokeWidth = ourSVG->mStrokeWidth;
-  // stroke_opacity:
-  if (aSVG.mStrokeOpacity.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeOpacity.GetUnit() != eCSSUnit_Null)
-    aSVG.mStrokeOpacity = ourSVG->mStrokeOpacity;
   // fill:
   if (aSVG.mFill.GetUnit() == eCSSUnit_Null && ourSVG->mFill.GetUnit() != eCSSUnit_Null)
     aSVG.mFill = ourSVG->mFill;
   // fill-opacity:
   if (aSVG.mFillOpacity.GetUnit() == eCSSUnit_Null && ourSVG->mFillOpacity.GetUnit() != eCSSUnit_Null)
     aSVG.mFillOpacity = ourSVG->mFillOpacity;
+  // stroke:
+  if (aSVG.mStroke.GetUnit() == eCSSUnit_Null && ourSVG->mStroke.GetUnit() != eCSSUnit_Null)
+    aSVG.mStroke = ourSVG->mStroke;
+  // stroke-linecap: enum, inherit
+  if (aSVG.mStrokeLinecap.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeLinecap.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeLinecap = ourSVG->mStrokeLinecap;
+  // stroke-opacity:
+  if (aSVG.mStrokeOpacity.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeOpacity.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeOpacity = ourSVG->mStrokeOpacity;
+  // stroke-width:
+  if (aSVG.mStrokeWidth.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeWidth.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeWidth = ourSVG->mStrokeWidth;
   
   return NS_OK;
 }

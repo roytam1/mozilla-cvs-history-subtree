@@ -661,14 +661,14 @@ nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
 //
 nsStyleSVG::nsStyleSVG() 
 { 
-    mStroke.mType  = eStyleSVGPaintType_None;
-    mStroke.mColor = NS_RGB(0,0,0);
-    mStrokeWidth   = 1.0f;
-    mStrokeOpacity = 1.0f;
-
     mFill.mType    = eStyleSVGPaintType_None;
     mFill.mColor   = NS_RGB(0,0,0);
     mFillOpacity   = 1.0f;
+    mStroke.mType  = eStyleSVGPaintType_None;
+    mStroke.mColor = NS_RGB(0,0,0);
+    mStrokeLinecap = NS_STYLE_STROKE_LINECAP_BUTT;
+    mStrokeOpacity = 1.0f;
+    mStrokeWidth   = 1.0f;
 }
 
 nsStyleSVG::~nsStyleSVG() 
@@ -678,18 +678,19 @@ nsStyleSVG::~nsStyleSVG()
 nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
 {
   //nsCRT::memcpy((nsStyleSVG*)this, &aSource, sizeof(nsStyleSVG));
-  mStroke.mType = aSource.mStroke.mType;
-  if (mStroke.mType == eStyleSVGPaintType_Color)
-    mStroke.mColor = aSource.mStroke.mColor;
 
-  mStrokeWidth = aSource.mStrokeWidth;
-  mStrokeOpacity = aSource.mStrokeOpacity;
-  
   mFill.mType = aSource.mFill.mType;
   if (mFill.mType == eStyleSVGPaintType_Color)
     mFill.mColor = aSource.mFill.mColor;
 
   mFillOpacity = aSource.mFillOpacity;
+
+  mStroke.mType = aSource.mStroke.mType;
+  if (mStroke.mType == eStyleSVGPaintType_Color)
+    mStroke.mColor = aSource.mStroke.mColor;
+  mStrokeLinecap = aSource.mStrokeLinecap;
+  mStrokeOpacity = aSource.mStrokeOpacity;
+  mStrokeWidth = aSource.mStrokeWidth;
 }
 
 PRInt32 
@@ -697,6 +698,7 @@ nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
 {
   if ( mStroke.mType  != aOther.mStroke.mType  ||
        mStrokeWidth   != aOther.mStrokeWidth   ||
+       mStrokeLinecap != aOther.mStrokeLinecap ||
        mStrokeOpacity != aOther.mStrokeOpacity ||
        mFill.mType    != aOther.mFill.mType    ||
        mFillOpacity   != aOther.mFillOpacity )

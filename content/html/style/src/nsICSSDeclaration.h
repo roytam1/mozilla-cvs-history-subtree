@@ -427,11 +427,12 @@ struct nsCSSSVG : public nsCSSStruct {
   const nsID& GetID(void);
   void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
 
-  nsCSSValue mStroke;
-  nsCSSValue mStrokeWidth;
-  nsCSSValue mStrokeOpacity;
   nsCSSValue mFill;
   nsCSSValue mFillOpacity;
+  nsCSSValue mStroke;
+  nsCSSValue mStrokeLinecap;
+  nsCSSValue mStrokeOpacity;
+  nsCSSValue mStrokeWidth;
 };
 #endif
 

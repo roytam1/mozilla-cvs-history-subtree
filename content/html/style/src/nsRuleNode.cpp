@@ -3719,8 +3719,22 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
   if (!svg)
     svg = parentSVG = new (mPresContext) nsStyleSVG();
 
+  // fill: 
+  SetSVGPaint(SVGData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
+  // fill_opacity:
+  SetSVGOpacity(SVGData.mFillOpacity, parentSVG->mFillOpacity, svg->mFillOpacity, inherited);
   // stroke: 
   SetSVGPaint(SVGData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
+  // stroke-linecap: enum, inherit
+  if (eCSSUnit_Enumerated == SVGData.mStrokeLinecap.GetUnit()) {
+    svg->mStrokeLinecap = SVGData.mStrokeLinecap.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == SVGData.mStrokeLinecap.GetUnit()) {
+    inherited = PR_TRUE;
+    svg->mStrokeLinecap = parentSVG->mStrokeLinecap;
+  }
+  // stroke_opacity:
+  SetSVGOpacity(SVGData.mStrokeOpacity, parentSVG->mStrokeOpacity, svg->mStrokeOpacity, inherited);  
   // stroke_width:
   nsStyleCoord coord;
   if (SetCoord(SVGData.mStrokeWidth, coord, coord,
@@ -3742,13 +3756,6 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
     svg->mStrokeWidth = parentSVG->mStrokeWidth;
     inherited = PR_TRUE;
   }
-  // stroke_opacity:
-  SetSVGOpacity(SVGData.mStrokeOpacity, parentSVG->mStrokeOpacity, svg->mStrokeOpacity, inherited);
-  // fill: 
-  SetSVGPaint(SVGData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
-  // fill_opacity:
-  SetSVGOpacity(SVGData.mFillOpacity, parentSVG->mFillOpacity, svg->mFillOpacity, inherited);
-  
 
   if (inherited)
     // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
@@ -4681,24 +4688,6 @@ nsRuleNode::CheckSVGProperties(const nsCSSSVG& aSVGData)
   PRUint32 totalCount=0;
   PRUint32 inheritCount=0;
 
-  if (eCSSUnit_Null != aSVGData.mStroke.GetUnit()) {
-    totalCount++;
-    if (eCSSUnit_Inherit == aSVGData.mStroke.GetUnit())
-      inheritCount++;
-  }
-
-  if (eCSSUnit_Null != aSVGData.mStrokeWidth.GetUnit()) {
-    totalCount++;
-    if (eCSSUnit_Inherit == aSVGData.mStrokeWidth.GetUnit())
-      inheritCount++;
-  }
-
-  if (eCSSUnit_Null != aSVGData.mStrokeOpacity.GetUnit()) {
-    totalCount++;
-    if (eCSSUnit_Inherit == aSVGData.mStrokeOpacity.GetUnit())
-      inheritCount++;
-  }
-  
   if (eCSSUnit_Null != aSVGData.mFill.GetUnit()) {
     totalCount++;
     if (eCSSUnit_Inherit == aSVGData.mFill.GetUnit())
@@ -4711,6 +4700,30 @@ nsRuleNode::CheckSVGProperties(const nsCSSSVG& aSVGData)
       inheritCount++;
   }
 
+  if (eCSSUnit_Null != aSVGData.mStroke.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStroke.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aSVGData.mStrokeLinecap.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStrokeLinecap.GetUnit())
+      inheritCount++;
+  }
+  
+  if (eCSSUnit_Null != aSVGData.mStrokeOpacity.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStrokeOpacity.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aSVGData.mStrokeWidth.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStrokeWidth.GetUnit())
+      inheritCount++;
+  }
+  
   if (inheritCount == numSVGProps)
     return eRuleFullInherited;
   else if (totalCount == numSVGProps) 

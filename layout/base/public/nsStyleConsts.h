@@ -597,4 +597,12 @@
 #define NS_STYLE_PAGE_BREAK_LEFT                3
 #define NS_STYLE_PAGE_BREAK_RIGHT               4
 
+#ifdef MOZ_SVG
+// stroke-linecap
+#define NS_STYLE_STROKE_LINECAP_BUTT            0
+#define NS_STYLE_STROKE_LINECAP_ROUND           1
+#define NS_STYLE_STROKE_LINECAP_SQUARE          2
+
+#endif // MOZ_SVG
+
 #endif /* nsStyleConsts_h___ */

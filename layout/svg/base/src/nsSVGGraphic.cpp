@@ -150,6 +150,7 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
       svgStyle->mStrokeWidth > 0 &&
       mExpansion > 0) {
     nsSVGStrokeStyle strokeStyle;
+    strokeStyle.linecap = svgStyle->mStrokeLinecap;
     strokeStyle.width = svgStyle->mStrokeWidth * mExpansion;
     mStroke.SetColor(svgStyle->mStroke.mColor);
     mStroke.SetOpacity(svgStyle->mStrokeOpacity);

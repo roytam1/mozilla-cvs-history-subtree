@@ -226,10 +226,11 @@ CSS_PROP(width, width, REFLOW)
 CSS_PROP(word-spacing, word_spacing, REFLOW)
 CSS_PROP(z-index, z_index, REFLOW)
 #ifdef MOZ_SVG
-CSS_PROP(stroke, stroke, VISUAL) 
-CSS_PROP(stroke-width, stroke_width, VISUAL)
-CSS_PROP(stroke-opacity, stroke_opacity, VISUAL)
 CSS_PROP(fill, fill, VISUAL)
 CSS_PROP(fill-opacity, fill_opacity, VISUAL)
+CSS_PROP(stroke, stroke, VISUAL) 
+CSS_PROP(stroke-opacity, stroke_opacity, VISUAL)
+CSS_PROP(stroke-width, stroke_width, VISUAL)
+CSS_PROP(stroke-linecap, stroke_linecap, VISUAL)
 #endif
   
