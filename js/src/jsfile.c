@@ -28,7 +28,7 @@
 #   define FILESEPARATOR         ':'
 #   define FILESEPARATOR2        '\0'
 #   define CURRENT_DIR          "HARD DISK:Desktop Folder"
-#elif defined(XP_PC) || defined(OS2)
+#elif defined(XP_PC) || defined(XP_OS2)
 #   include <direct.h>
 #   include <io.h>
 #   include <sys/types.h>
@@ -92,6 +92,7 @@
 #define MAX_PATH_LENGTH         1024
 #define MSG_SIZE                256
 #define NUMBER_SIZE             32
+#define MAX_LINE_LENGTH         256
 #define URL_PREFIX              "file://"
 
 #define STDINPUT_NAME           "Standard input stream"
@@ -762,7 +763,7 @@ js_FileHasOption(JSContext *cx, const char *oldoptions, const char *name)
     for (;;) {
         comma = strchr(current, ',');
         if (comma) *comma = '\0';
-        equal = strchr(current, ' = ');
+        equal = strchr(current, '=');
         if (equal) *equal = '\0';
         if (strcmp(current, name) == 0) {
             if (!equal || strcmp(equal + 1, "yes") == 0)
@@ -812,13 +813,14 @@ js_FileOpen(JSContext *cx, JSObject *obj, JSFile *file, char *mode){
 
     type =  JS_InternString(cx, asciistring);
     mask =  JS_NewStringCopyZ(cx, mode);
-    v[0] = STRING_TO_JSVAL(type);
-    v[1] = STRING_TO_JSVAL(mask);
+    v[0] = STRING_TO_JSVAL(mask);
+    v[1] = STRING_TO_JSVAL(type);
 
     if (!file_open(cx, obj, 2, v, &rval)) {
 		/* TODO: do we need error reporting here? */
         return JS_FALSE;
     }
+    return JS_TRUE;
 }
 
 /* Buffered version of PR_Read. Used by js_FileRead */
@@ -854,28 +856,28 @@ js_FileRead(JSContext *cx, JSFile * file, jschar*buf, int32 len, int32 mode)
     unsigned char utfbuf[3];
 
     if (file->charBufferUsed) {
-      buf[0] = file->charBuffer;
-      buf++;
-      len--;
-      file->charBufferUsed = JS_FALSE;
+        buf[0] = file->charBuffer;
+        buf++;
+        len--;
+        file->charBufferUsed = JS_FALSE;
     }
 
     switch (mode) {
     case ASCII:
-      aux = (unsigned char*)JS_malloc(cx, len);
-      if (!aux) {
+        aux = (unsigned char*)JS_malloc(cx, len);
+        if (!aux) {
         return 0;
-      }
-      count = js_BufferedRead(file, aux, len);
-      if (count==-1) {
+        }
+        count = js_BufferedRead(file, aux, len);
+        if (count==-1) {
         JS_free(cx, aux);
         return 0;
-      }
-      for (i = 0;i<len;i++) {
+        }
+        for (i = 0;i<len;i++) {
         buf[i] = (jschar)aux[i];
-      }
-      JS_free(cx, aux);
-      break;
+        }
+        JS_free(cx, aux);
+        break;
     case UTF8:
         remainder = 0;
         for (count = 0;count<len;count++) {
@@ -907,13 +909,13 @@ js_FileRead(JSContext *cx, JSFile * file, jschar*buf, int32 len, int32 mode)
             utfbuf[1] = utfbuf[2];
             remainder--;
         }
-      break;
+        break;
     case UCS2:
-      count = js_BufferedRead(file, (char*)buf, len*2)>>1;
-      if (count==-1) {
-          return 0;
-      }
-      break;
+        count = js_BufferedRead(file, (char*)buf, len*2)>>1;
+        if (count==-1) {
+            return 0;
+        }
+        break;
     }
 
     if(count==-1){
@@ -1586,12 +1588,8 @@ file_flush(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
-    if (!file->isOpen) {
-        JS_ReportWarning(cx, "Cannot flush closed file %s", file->path);
-        goto out;
-    }
-
     JSFILE_CHECK_NATIVE("flush");
+    JSFILE_CHECK_OPEN("flush");
 
     /* SECURITY */
     if (PR_Sync(file->handle)==PR_SUCCESS){
@@ -1797,9 +1795,9 @@ file_readln(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     if (!file->linebuffer) {
-        buf = JS_malloc(cx, 128*(sizeof data));
+        buf = JS_malloc(cx, MAX_LINE_LENGTH*(sizeof data));
         if (!buf) goto out;
-        file->linebuffer = JS_NewUCString(cx, buf, 128);
+        file->linebuffer = JS_NewUCString(cx, buf, MAX_LINE_LENGTH);
     }
     room = JS_GetStringLength(file->linebuffer);
     offset = 0;
@@ -1827,14 +1825,14 @@ file_readln(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             goto loop;
         default:
             if (--room < 0) {
-                buf = JS_malloc(cx, (offset+ 128)*sizeof data);
+                buf = JS_malloc(cx, (offset+MAX_LINE_LENGTH)*sizeof data);
                 if (!buf) return JS_FALSE;
-                room = 127;
+                room = MAX_LINE_LENGTH-1;
                 memcpy(buf, JS_GetStringChars(file->linebuffer),
                     JS_GetStringLength(file->linebuffer));
                 /* what follows may not be the cleanest way. */
                 file->linebuffer->chars = buf;
-                file->linebuffer->length =  offset+128;
+                file->linebuffer->length =  offset+MAX_LINE_LENGTH;
             }
             file->linebuffer->chars[offset++] = data;
             break;
@@ -1860,9 +1858,8 @@ file_readAll(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSFile      *file;
     JSObject    *array;
-    jsint       len, size;
+    jsint       len;
     jsval       line;
-    JSBool      ok = JS_TRUE;
 
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
@@ -1876,10 +1873,7 @@ file_readAll(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         js_FileOpen(cx, obj, file, "read");
     }
 
-    if(size = js_size(cx, file)==-1) goto out;
-
-    while (ok && (size>(JSUint32)PR_Seek(file->handle, 0, PR_SEEK_CUR))) {
-        if(!file_readln(cx, obj, 0, NULL, &line)) goto out;
+    while(file_readln(cx, obj, 0, NULL, &line)){
         JS_SetElement(cx, array, len, &line);
         len++;
     }
@@ -2754,6 +2748,6 @@ js_InitFileClass(JSContext *cx, JSObject* obj, JSBool initStandardStreams)
     vp = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, separator));
     JS_DefinePropertyWithTinyId(cx, ctor, SEPARATOR_PROPERTY, 0, vp,
                 JS_PropertyStub, JS_PropertyStub, JSPROP_ENUMERATE | JSPROP_READONLY );
-
+    return file;
 }
 #endif /* JS_HAS_FILE_OBJECT */
