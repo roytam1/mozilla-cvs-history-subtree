@@ -24,7 +24,7 @@
 
 @echo off
 rem Set those variables
-set WFDIR=f:\nike\wf
+set WFDIR=%MOZ_SRC%\java\pluggable-jvm\wf
 rem set WFJDKHOME=c:\jdk1.3
 rem end of customizable part
 
