@@ -58,6 +58,9 @@ interface nsIMsgCompFields : nsISupports {
   attribute boolean useMultipartAlternative;
   attribute boolean uuEncodeAttachments;
 
+  attribute boolean signed;
+  attribute boolean encrypted;
+
   attribute wstring otherRandomHeaders;
 
 	attribute wstring body;
