@@ -190,6 +190,30 @@ ifeq ($(OS_ARCH), Linux)
 LDFLAGS += -ldl
 endif
 
+FDLIBM_LIBRARY	= fdlibm/$(OBJDIR)/libfdm.a
+JSMATH_PRELINK	= $(OBJDIR)/jsmathtemp.o
+
+# special rule for jsmath.o since we want to incrementally link
+# against fdlibm to pull in only what is needed
+$(OBJDIR)/jsmath.o: $(FDLIBM_LIBRARY) $(JSMATH_PRELINK)
+	@$(MAKE_OBJDIR)
+ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+	$(LD) -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
+else
+	$(LD) -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
+endif
+
+$(JSMATH_PRELINK): jsmath.c
+	@$(MAKE_OBJDIR)
+ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+	$(CC) -Fo$@ -c $(CFLAGS) $<
+else
+	$(CC) -o $@ -c $(CFLAGS) $<
+endif
+
+$(FDLIBM_LIBRARY):
+	cd fdlibm; $(MAKE)
+
 # this requires clobbering and recompiling with XCFLAGS=-DJSFILE
 js:
 	$(MAKE) clobber
