@@ -1514,8 +1514,8 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	
 	mozilla_event_queue = PR_CreateEventQueue("Mozilla Event Queue", mozilla_thread);
 
-	LM_InitMocha();		// mocha, mocha, mocha
 	NPL_Init();			// plugins
+	LM_InitMocha();		// mocha, mocha, mocha
 
 	// The tools menus must be created after the plugins are read in.
 	
