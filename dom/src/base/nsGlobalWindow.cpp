@@ -4682,9 +4682,93 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
       rv = SecurityCheckURL(url.get());
   }
 
+  if (NS_FAILED(rv))
+    return rv;
+
   nsCOMPtr<nsIDOMWindow> domReturn;
 
-  if (NS_SUCCEEDED(rv)) {
+  // determine whether we must divert the open window to a new tab.
+
+  PRBool divertOpen = PR_FALSE;
+  PRInt32 containerPref = nsIBrowserDOMWindow::OPEN_NEWWINDOW;
+
+  if (!aExtraArgument) { // divert only if no extra argument
+    nsCOMPtr<nsIDOMChromeWindow> thisChrome =
+      do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
+    if (!thisChrome) {   // only if we're not chrome
+
+      PRInt32 restrictionPref = 2;
+      gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
+      gPrefBranch->GetIntPref("browser.link.open_newwindow.restriction",
+                              &restrictionPref);
+      /* The restriction pref is a power-user's fine-tuning pref. values:
+         0: no restrictions - divert everything
+         1: don't divert window.open at all
+         2: don't divert window.open with features */
+
+      if (containerPref == nsIBrowserDOMWindow::OPEN_NEWTAB ||
+          containerPref == nsIBrowserDOMWindow::OPEN_CURRENTWINDOW) {
+
+        divertOpen = restrictionPref != 1;
+        if (divertOpen && !aOptions.IsEmpty() && restrictionPref == 2)
+          divertOpen = PR_FALSE;
+      }
+    }
+  }
+
+  if (divertOpen) {
+    if (containerPref == nsIBrowserDOMWindow::OPEN_NEWTAB ||
+        !aUrl.IsEmpty()) {
+#ifdef DEBUG
+    printf("divert window.open to new tab\n");
+#endif
+      nsCOMPtr<nsIURI> tabURI;
+      if (!aUrl.IsEmpty()) {
+        PRBool whoCares;
+        BuildURIfromBase(url.get(), getter_AddRefs(tabURI), &whoCares, 0);
+      }
+
+      // get nsIBrowserDOMWindow interface
+
+      nsCOMPtr<nsIBrowserDOMWindow> bwin;
+
+      nsCOMPtr<nsIDocShellTreeItem> docItem(do_QueryInterface(mDocShell));
+      if (docItem) {
+        nsCOMPtr<nsIDocShellTreeItem> rootItem;
+        docItem->GetRootTreeItem(getter_AddRefs(rootItem));
+        nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
+        if (rootWin) {
+          nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(rootWin));
+          if (utils)
+            utils->GetBrowserDOMWindow(getter_AddRefs(bwin));
+        }
+      }
+
+      // open new tab
+
+      if (bwin) {
+        // open the tab with the URL
+        // discard features (meaningless in this case)
+        bwin->OpenURI(tabURI,
+              containerPref, nsIBrowserDOMWindow::OPEN_NEW,
+              getter_AddRefs(domReturn));
+      }
+    } else {
+#ifdef DEBUG
+      printf("divert window.open to current window\n");
+#endif
+      GetTop(getter_AddRefs(domReturn));
+    }
+
+    nsAutoString nameString(aName);
+    if (domReturn && !nameString.EqualsIgnoreCase("_blank"))
+      domReturn->SetName(aName);
+  }
+
+  // lacking specific instructions, or just as an error fallback,
+  // open a new window.
+
+  if (!domReturn) {
     nsCOMPtr<nsIWindowWatcher> wwatch =
       do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
 
@@ -4714,24 +4798,26 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
                                   aExtraArgument, getter_AddRefs(domReturn));
         }
       }
+    }
+  }
 
-      if (domReturn) {
-        CallQueryInterface(domReturn, aReturn);
+  // success!
 
-        // Save the prinicpal of the calling script
-        // We need it to decide whether to clear the scope in SetNewDocument
-        NS_ASSERTION(sSecMan, "No Security Manager Found!");
-        if (sSecMan) {
-          nsCOMPtr<nsIPrincipal> principal;
-          sSecMan->GetSubjectPrincipal(getter_AddRefs(principal));
-          if (principal) {
-            nsCOMPtr<nsIURI> subjectURI;
-            principal->GetURI(getter_AddRefs(subjectURI));
-            if (subjectURI) {
-              nsCOMPtr<nsPIDOMWindow> domReturnPrivate(do_QueryInterface(domReturn));
-              domReturnPrivate->SetOpenerScriptURL(subjectURI);
-            }
-          }
+  if (domReturn) {
+    CallQueryInterface(domReturn, aReturn);
+
+    // Save the principal of the calling script
+    // We need it to decide whether to clear the scope in SetNewDocument
+    NS_ASSERTION(sSecMan, "No Security Manager Found!");
+    if (sSecMan) {
+      nsCOMPtr<nsIPrincipal> principal;
+      sSecMan->GetSubjectPrincipal(getter_AddRefs(principal));
+      if (principal) {
+        nsCOMPtr<nsIURI> subjectURI;
+        principal->GetURI(getter_AddRefs(subjectURI));
+        if (subjectURI) {
+          nsCOMPtr<nsPIDOMWindow> domReturnPrivate(do_QueryInterface(domReturn));
+          domReturnPrivate->SetOpenerScriptURL(subjectURI);
         }
       }
     }
@@ -5562,15 +5648,22 @@ GlobalWindowImpl::GetScrollInfo(nsIScrollableView **aScrollableView,
 }
 
 nsresult
-GlobalWindowImpl::SecurityCheckURL(const char *aURL)
+GlobalWindowImpl::BuildURIfromBase(const char *aURL,
+                                   nsIURI **aBuiltURI,
+                                   PRBool *aFreeSecurityPass,
+                                   JSContext **aCXused)
 {
-  nsresult   rv;
   JSContext *cx = nsnull;
+
+  *aBuiltURI = nsnull;
+  *aFreeSecurityPass = PR_FALSE;
+  if (aCXused)
+    *aCXused = nsnull;
 
   // get JSContext
   NS_ASSERTION(mContext, "opening window missing its context");
   NS_ASSERTION(mDocument, "opening window missing its document");
-  if (!mContext || !mDocument || !sSecMan)
+  if (!mContext || !mDocument)
     return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIDOMChromeWindow> chrome_win =
@@ -5589,42 +5682,54 @@ GlobalWindowImpl::SecurityCheckURL(const char *aURL)
     nsCOMPtr<nsIThreadJSContextStack> stack(do_GetService(sJSStackContractID));
     if (stack)
       stack->Peek(&cx);
-    if (!cx) {
-      // if there's no JS on the call stack, then we should pass the
-      // security check.
-      return NS_OK;
-    }
   }
 
   /* resolve the URI, which could be relative to the calling window
      (note the algorithm to get the base URI should match the one
      used to actually kick off the load in nsWindowWatcher.cpp). */
+  nsCAutoString charset(NS_LITERAL_CSTRING("UTF-8")); // default to utf-8
   nsIURI* baseURI = nsnull;
   nsCOMPtr<nsIURI> uriToLoad;
+  nsCOMPtr<nsIDOMWindow> sourceWindow;
 
-  nsIScriptContext *scriptcx = nsJSUtils::GetDynamicScriptContext(cx);
+  if (cx) {
+    nsIScriptContext *scriptcx = nsJSUtils::GetDynamicScriptContext(cx);
+    if (scriptcx)
+      sourceWindow = do_QueryInterface(scriptcx->GetGlobalObject());
+  }
 
-  if (scriptcx) {
-    nsCOMPtr<nsIDOMWindow> caller =
-      do_QueryInterface(scriptcx->GetGlobalObject());
+  if (!sourceWindow) {
+    sourceWindow = do_QueryInterface(NS_ISUPPORTS_CAST(nsIDOMWindow *, this));
+    *aFreeSecurityPass = PR_TRUE;
+  }
 
-    if (caller) {
-      nsCOMPtr<nsIDOMDocument> callerDOMdoc;
-      caller->GetDocument(getter_AddRefs(callerDOMdoc));
-      nsCOMPtr<nsIDocument> callerDoc(do_QueryInterface(callerDOMdoc));
-      if (callerDoc)
-        baseURI = callerDoc->GetBaseURI();
+  if (sourceWindow) {
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    sourceWindow->GetDocument(getter_AddRefs(domDoc));
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
+    if (doc) {
+      baseURI = doc->GetBaseURI();
+      charset = doc->GetDocumentCharacterSet();
     }
   }
 
-  rv = NS_NewURI(getter_AddRefs(uriToLoad), nsDependentCString(aURL), nsnull,
-                 baseURI);
-  if (NS_FAILED(rv))
-    return rv;
+  if (aCXused)
+    *aCXused = cx;
+  return NS_NewURI(aBuiltURI, nsDependentCString(aURL), charset.get(), baseURI);
+}
 
-  if (NS_FAILED(sSecMan->CheckLoadURIFromScript(cx, uriToLoad))) {
+nsresult
+GlobalWindowImpl::SecurityCheckURL(const char *aURL)
+{
+  JSContext       *cx;
+  PRBool           freePass;
+  nsCOMPtr<nsIURI> uri;
+
+  if (NS_FAILED(BuildURIfromBase(aURL, getter_AddRefs(uri), &freePass, &cx)))
     return NS_ERROR_FAILURE;
-  }
+
+  if (!freePass && NS_FAILED(sSecMan->CheckLoadURIFromScript(cx, uri)))
+    return NS_ERROR_FAILURE;
 
   return NS_OK;
 }
