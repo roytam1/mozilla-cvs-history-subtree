@@ -39,6 +39,7 @@
 #include "txToplevelItems.h"
 #include "txStylesheet.h"
 #include "txInstructions.h"
+#include "txXSLTPatterns.h"
 
 txInstructionContainer::~txInstructionContainer()
 {
@@ -59,6 +60,13 @@ txStripSpaceItem::~txStripSpaceItem()
     }
 }
 
+txTemplateItem::txTemplateItem(txPattern* aMatch, const txExpandedName& aName,
+                               const txExpandedName& aMode, double aPrio)
+    : mMatch(aMatch), mName(aName), mMode(aMode), mPrio(aPrio)
+{
+}
+
 txTemplateItem::~txTemplateItem()
 {
+    delete mMatch;
 }

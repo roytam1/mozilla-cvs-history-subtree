@@ -271,16 +271,15 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
     // Add the simple patterns to the list of matchable templates, according
     // to default priority
     txList simpleMatches;
-    txPattern* pattern = aTemplate->mMatch;
     aTemplate->mMatch->getSimplePatterns(simpleMatches);
     txListIterator simples(&simpleMatches);
     while (simples.hasNext()) {
         txPattern* simple = (txPattern*)simples.next();
-        if (simple != pattern && pattern) {
+        if (simple != aTemplate->mMatch && aTemplate->mMatch) {
             // txUnionPattern, it doesn't own the txLocPathPatterns no more,
             // so delete it. (only once, of course)
-            delete pattern;
-            pattern = 0;
+            delete aTemplate->mMatch;
+            aTemplate->mMatch = 0;
         }
         double priority = aTemplate->mPrio;
         if (Double::isNaN(priority)) {
@@ -304,6 +303,7 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
             templates->add(nt);
         }
     }
+    aTemplate->mMatch = 0;
 
     return NS_OK;
 }
