@@ -1,0 +1,13 @@
+#top  {
+background-color: grey
+}
+
+#pref-appearance {
+	  border : 0}
+
+#preftree  {
+  border : yes;
+  border-style : ridge;
+  width :25%;
+  height : 326;
+}
