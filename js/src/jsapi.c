@@ -1076,7 +1076,17 @@ JS_MaybeGC(JSContext *cx)
     rt = cx->runtime;
     bytes = rt->gcBytes;
     lastBytes = rt->gcLastBytes;
-    if (bytes > 8192 && bytes > lastBytes + lastBytes / 2)
+    if ((bytes > 8192 && bytes > lastBytes + lastBytes / 2)
+/*
+    This is the other side of the fix in jsgc.c, allocGCThing where we stopped
+    doing a gc when the allocation fails. It turned out that the server branch-
+    callback wasn't providing for enough gc to prevent certain string concatenations
+    from exhausting the heap - with large strings the number of JSObjects remains
+    small but the amount of malloc'd space can be huge. We re-instate a test of the
+    malloc'd space here to help trigger a gc. (The server changed the frequency of
+    issuing calls to MaybeGC as well).
+*/
+            || (rt->gcMallocBytes > rt->gcMaxBytes))
 	JS_GC(cx);
 }
 
