@@ -66,6 +66,7 @@
 #include "nsLayoutAtoms.h"
 #include "nsIDocument.h"
 #include "nsIHTMLDocument.h"
+#include "nsContentUtils.h"
 #include "nsStyleConsts.h"
 #include "nsImageMap.h"
 #include "nsILinkHandler.h"
@@ -428,24 +429,16 @@ nsImageBoxFrame::UpdateImage()
     mImageRequest = nsnull;
   }
 
-  nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
-  if (NS_FAILED(rv)) return PR_FALSE;
-
-  nsCOMPtr<nsILoadGroup> loadGroup = GetLoadGroup();
-
   // Get the document URI for the referrer...
-  nsIURI *documentURI = nsnull;
   nsCOMPtr<nsIDocument> doc;
   if (mContent) {
     doc = mContent->GetDocument();
-    if (doc) {
-      documentURI = doc->GetDocumentURI();
-    }
   }
 
-  // XXX: initialDocumentURI is NULL!
-  il->LoadImage(mURI, nsnull, documentURI, loadGroup, mListener, doc,
-                mLoadFlags, nsnull, nsnull, getter_AddRefs(mImageRequest));
+  if (nsContentUtils::CanLoadImage(mURI, mContent, doc)) {
+    nsContentUtils::LoadImage(mURI, doc, mListener, mLoadFlags,
+                              getter_AddRefs(mImageRequest));
+  }
 
   return PR_TRUE;
 }
@@ -658,22 +651,6 @@ nsImageBoxFrame::GetFrameName(nsAString& aResult) const
   return MakeFrameName(NS_LITERAL_STRING("ImageBox"), aResult);
 }
 #endif
-
-
-already_AddRefed<nsILoadGroup>
-nsImageBoxFrame::GetLoadGroup()
-{
-  nsIPresShell *shell = GetPresContext()->GetPresShell();
-  if (!shell)
-    return nsnull;
-
-  nsCOMPtr<nsIDocument> doc;
-  shell->GetDocument(getter_AddRefs(doc));
-  if (!doc)
-    return nsnull;
-
-  return doc->GetDocumentLoadGroup(); // already_AddRefed
-}
 
 
 NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request,

@@ -147,12 +147,6 @@ protected:
    */
   void GetImageSource();
 
-  /**
-   * Get the load group for the current document, that should be used for
-   * network requests.
-   */
-  already_AddRefed<nsILoadGroup> GetLoadGroup();
-
   virtual void GetImageSize();
 
 private:

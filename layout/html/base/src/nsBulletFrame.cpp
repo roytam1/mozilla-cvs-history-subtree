@@ -153,7 +153,7 @@ nsBulletFrame::Init(nsIPresContext*  aPresContext,
       NS_RELEASE(listener);
     }
 
-    if (imgURI && NS_SUCCEEDED(nsContentUtils::CanLoadImage(imgURI, doc, doc))) {
+    if (imgURI && nsContentUtils::CanLoadImage(imgURI, doc, doc)) {
       // XXX: initialDocumentURI is NULL !
       il->LoadImage(imgURI, nsnull, documentURI, loadGroup, mListener, aPresContext, nsIRequest::LOAD_NORMAL, nsnull, nsnull, getter_AddRefs(mImageRequest));
     }
@@ -1639,11 +1639,12 @@ nsBulletFrame::Reflow(nsIPresContext* aPresContext,
           }
         }
 
-
-        // XXX: initialDocumentURI is NULL !
-        il->LoadImage(newURI, nsnull, documentURI, loadGroup, mListener, doc,
-                      nsIRequest::LOAD_NORMAL, nsnull, nsnull,
-                      getter_AddRefs(mImageRequest));
+        if (nsContentUtils::CanLoadImage(newURI, doc, doc)) {
+          // XXX: initialDocumentURI is NULL !
+          il->LoadImage(newURI, nsnull, documentURI, loadGroup, mListener, doc,
+                        nsIRequest::LOAD_NORMAL, nsnull, nsnull,
+                        getter_AddRefs(mImageRequest));
+        }
       }
     }
   }
