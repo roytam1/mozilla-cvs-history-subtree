@@ -26,6 +26,9 @@
 #ifndef nsStringFragment_h___
 #define nsStringFragment_h___
 
+#ifndef nsStringDefines_h___
+#include "nsStringDefines.h"
+#endif
 
 
   /**
@@ -61,6 +64,34 @@ struct nsReadableFragment
         : mStart(0), mEnd(0), mFragmentIdentifier(0)
       {
         // nothing else to do here
+      }
+
+    const void*
+    GetID() const
+      {
+        return mFragmentIdentifier;
+      }
+
+    unsigned long
+    GetIDAsInt() const
+      {
+        typedef char* char_ptr;
+        typedef unsigned long ulong;
+        return ulong(char_ptr(mFragmentIdentifier)-char_ptr(0));
+      }
+
+    void
+    SetID( const void* id )
+      {
+        mFragmentIdentifier = id;
+      }
+
+    void
+    SetID( unsigned long id )
+      {
+        typedef char* char_ptr;
+        typedef void* void_ptr;
+        mFragmentIdentifier = void_ptr(char_ptr(0)+id);
       }
   };
 
