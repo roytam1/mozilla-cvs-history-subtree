@@ -1142,17 +1142,6 @@ nsHTMLFrameInnerFrame::Init(nsIPresContext*  aPresContext,
   if (NS_FAILED(rv))
     return rv;
 
-  // determine if we are a printcontext
-  PRBool shouldCreateDoc = PR_TRUE;
-  nsCOMPtr<nsIPrintContext> thePrinterContext =
-    do_QueryInterface(aPresContext);
-
-  if (thePrinterContext) {
-    // we are printing
-
-    shouldCreateDoc = PR_FALSE;
-  }
-
   // for print preview we want to create the view and widget but
   // we do not want to load the document, it is alerady loaded.
   nsCOMPtr<nsIPrintPreviewContext> thePrintPreviewContext =
@@ -1165,9 +1154,6 @@ nsHTMLFrameInnerFrame::Init(nsIPresContext*  aPresContext,
     if (NS_FAILED(rv)) {
       return rv;
     }
-
-    // we are in PrintPreview
-    shouldCreateDoc = PR_FALSE;
   }
 
   ShowDocShell(aPresContext);
