@@ -1,4 +1,4 @@
-DEPTH           = ../../../../..
+
 NS_DEPTH        = ../../../..
 MOD_DEPTH       = ../../../../../nsprpub
 NSPR_TREE       = ../../../../../nsprpub
@@ -107,6 +107,8 @@ $(OBJDEST):
 clean::
 	$(RM) $(CLIENT_OBJS)
 	$(RM) $(BINS)
+
+install:: all
 
 #
 # Simple, local dependencies

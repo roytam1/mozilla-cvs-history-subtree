@@ -90,18 +90,21 @@ LIBNSPR_DEP = $(LIBNSPR)
 RM              = rm -f
 SED             = sed
 
-#
-# uncomment this line to enable support for LDAP referrals in libldap
-#
+# uncomment to enable support for LDAP referrals
 LDAP_REFERRALS  = -DLDAP_REFERRALS
 
 
 DEFNETSSL	= -DNET_SSL 
 NOLIBLCACHE	= -DNO_LIBLCACHE
+NSDOMESTIC	= -DNS_DOMESTIC
+LDAP_DEBUG	= -DLDAP_DEBUG
+LDAPSSLIO	= -DLDAP_SSLIO_HOOKS
 
 # uncomment if have access to libnls
 #HAVELIBNLS     = -DHAVE_LIBNLS
-#BUILDCLU	= 1
+
+# uncomment to build command line utilities
+BUILDCLU	= 1
 
 #
 # DEFS are included in CFLAGS
@@ -109,7 +112,9 @@ NOLIBLCACHE	= -DNO_LIBLCACHE
 DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
                   $(CLDAP) $(DEFNETSSL) $(NOLIBLCACHE) \
                   $(LDAP_REFERRALS) $(LDAP_DNS) $(STR_TRANSLATION) \
-                  $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET)
+                  $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
+		  $(NSDOMESTIC) $(LDAPSSLIO)
+
 ifneq ($(OS_ARCH), WINNT)
 ifdef BUILD_OPT
 EXTRACFLAGS=-O
