@@ -23,12 +23,13 @@
 
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
-VPATH		= @srcdir@
 srcdir		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/idl
 
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= jsdebug
+XPIDL_MODULE	= jsdservice
 LIBRARY_NAME	= jsd
 # Do not set EXPORT_LIBRARY as we do not want jsd in the static libs list
 #EXPORT_LIBRARY	= 1
@@ -77,9 +78,9 @@ CSRCS		= \
 ifdef JSD_STANDALONE
 DIRS	+= jsdb
 else
-DIRS	+= idl
-CPPSRCS	 = jsd_xpc.cpp
-IS_COMPONENT = 1
+IS_COMPONENT	= 1
+CPPSRCS		= jsd_xpc.cpp
+XPIDLSRCS	= jsdIDebuggerService.idl
 endif
 
 include $(topsrcdir)/config/rules.mk
