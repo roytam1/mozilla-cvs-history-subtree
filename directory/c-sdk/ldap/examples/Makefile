@@ -29,87 +29,77 @@
 # If you are not building on Solaris, you will need to comment out the
 # Solaris section and uncomment the appropriate section for your platform.
 #
-# Also note that the LDAP API library has different names for the SSL-enabled
-# and non-SSL versions of the Directory SDK for C:  
-# 
-# o In the SSL-enabled version, the library is named 
-#   libldapssl41.so on Solaris, IRIX, and AIX, and 
-#   libldapssl41.sl on HP-UX.  
-# 
-# o In the non-SSL version, the library is named
-#   libldap41.so on Solaris, IRIX, and AIX, and
-#   libldap41.sl on HP-UX.
-#
-# Remove the comment character in front of the definition of
-# LDAPLIB that matches the name of the LDAP API library for the
-# version you've downloaded.
+# Chances are you will need to do a little bit of work in order to get the
+# examples to compile.  If you are not compiling on Solaris, use the
+# Solaris builds as a model for the libraries you need etc.  Chances are 
+# they are the most up-to-date
 #
 
 # For Solaris (32 bit)
 EXTRACFLAGS=
 EXTRALDFLAGS=-lsocket -lnsl 
 EXTRANSPRLDFLAGS=-mt
-LDAPLIB=ldapssl50 
-#LDAPLIB=ldap50
-LDAPPRLIB=ldappr50
-NSPRLIB=nspr3
+SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+LDAPLIB=ldap50
+LDAPPRLIB=prldap50
+NSPRLIB=nspr4
 CC=cc
 
 # For Solaris (64 bit)
-EXTRACFLAGS=
-EXTRALDFLAGS=-lsocket -lnsl 
-EXTRANSPRLDFLAGS=-mt
-LDAPLIB=ldapssl50 
+#EXTRACFLAGS=
+#EXTRALDFLAGS=-lsocket -lnsl 
+#EXTRANSPRLDFLAGS=-mt
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-LDAPPRLIB=ldappr50
-NSPRLIB=nspr3
-CC=cc -xarch=v9
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
+#CC=cc -xarch=v9
 
 # For HP/UX (32 bit)
 #EXTRACFLAGS=-Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa
 #EXTRALDFLAGS=-Wl,+s+b
-#LDAPLIB=ldapssl50
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=cc
 
 # For HP/UX (64 bit)
 #EXTRACFLAGS=-DHPUX11 -DIS_64 +e +DA2.0W +DChpux +DS2.0 
 #EXTRACFLAGS+=-D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
 #EXTRALDFLAGS=-lpthread +DA2.0W +DS2.0
-#LDAPLIB=ldapssl50
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=/opt/ansic/bin/cc
 
 
 # For IRIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=
-#LDAPLIB=ldapssl50
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=cc
 
 # For AIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-brtl
-#LDAPLIB=ldapssl50
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=cc
 
 # For Digital UNIX 4.0
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-taso -rpath ../lib
-#LDAPLIB=ldapssl50
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=cc
 
 # For Linux 2.2
@@ -117,8 +107,8 @@ CC=cc -xarch=v9
 #EXTRALDFLAGS=-lpthread
 #LDAPLIB=ldapssl50
 #LDAPLIB=ldap50
-#LDAPPRLIB=ldappr50
-#NSPRLIB=nspr3
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
 #CC=gcc
 
 ###############################################################################
@@ -131,6 +121,7 @@ NSPRLIBDIR=../lib
 
 LIBS=-L$(LIBDIR) -l$(LDAPLIB) $(EXTRALDFLAGS)
 NSPRLIBS=$(EXTRANSPRLDFLAGS) -L$(NSPRLIBDIR) -l$(NSPRLIB) -l$(LDAPPRLIB)
+SLIBS=-L$(LIBDIR) -l$(SLDAPLIB) $(NSPRLIBS) $(EXTRALDFLAGS)
 OPTFLAGS=-g
 CFLAGS=$(OPTFLAGS) -I$(INCDIR) -I$(NSPRINCDIR) $(EXTRACFLAGS)
 NSPRCFLAGS=-I$(NSPRINCDIR)
@@ -170,12 +161,12 @@ psearch:	psearch.o
 psearch.o:	examples.h
 
 ssearch:	ssearch.o
-		$(CC) -o ssearch ssearch.o $(LIBS)
+		$(CC) -o ssearch ssearch.o $(SLIBS)
 
 ssearch.o:	examples.h
 
 ssnoauth:	ssnoauth.o
-		$(CC) -o ssnoauth ssnoauth.o $(LIBS)
+		$(CC) -o ssnoauth ssnoauth.o $(SLIBS)
 
 ssnoauth.o:	examples.h
 

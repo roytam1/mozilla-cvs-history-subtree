@@ -30,7 +30,7 @@
 #include "examples.h"
 #include "ldap_ssl.h"
 
-#define MY_CERTDB		"/usr/netscape4/alias/client-cert.db"
+#define MY_CERTDB_PATH		"/u/mhein/.netscape/"
 
 int
 main( int argc, char **argv )
@@ -43,7 +43,7 @@ main( int argc, char **argv )
 	int		i;
 
 	/* Initialize the client */
-	if ( ldapssl_client_init( MY_CERTDB, NULL ) < 0 ) {
+	if ( ldapssl_client_init( MY_CERTDB_PATH, NULL ) < 0 ) {
 		perror( "ldapssl_client_init" );
 		return( 1 );
 	}
