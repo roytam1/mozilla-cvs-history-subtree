@@ -570,7 +570,8 @@ StreamDataSourceImpl::AddCSSStyleSheetURL(nsIURL* aCSSStyleSheetURL)
     if (! p)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    for (PRInt32 i = mNumCSSStyleSheetURLs - 1; i >= 0; --i)
+    PRInt32 i;
+    for (i = mNumCSSStyleSheetURLs - 1; i >= 0; --i)
         p[i] = mCSSStyleSheetURLs[i];
 
     NS_ADDREF(aCSSStyleSheetURL);
@@ -606,7 +607,8 @@ StreamDataSourceImpl::AddNamedDataSourceURI(const char* aNamedDataSourceURI)
     if (! p)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    for (PRInt32 i = mNumNamedDataSourceURIs - 1; i >= 0; --i)
+    PRInt32 i;
+    for (i = mNumNamedDataSourceURIs - 1; i >= 0; --i)
         p[i] = mNamedDataSourceURIs[i];
 
     PRInt32 len = PL_strlen(aNamedDataSourceURI);
