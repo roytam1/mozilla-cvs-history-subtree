@@ -260,6 +260,10 @@ function ChangeLinkLocation()
 function ValidateData()
 {
   href = TrimString(gDialog.hrefInput.value);
+  // if no protocol specified, assume http://
+  if (href.indexOf("://") == -1)
+    href = "http://" + href;
+
   if (href)
   {
     // Set the HREF directly on the editor document's anchor node
