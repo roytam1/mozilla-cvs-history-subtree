@@ -314,6 +314,7 @@ protected:
   nsRefPtr<BarPropImpl>         mPersonalbar;
   nsRefPtr<BarPropImpl>         mStatusbar;
   nsRefPtr<BarPropImpl>         mScrollbars;
+  nsCOMPtr<nsIWeakReference>    mWindowAccess;
   nsTimeoutImpl*                mTimeouts;
   nsTimeoutImpl**               mTimeoutInsertionPoint;
   nsTimeoutImpl*                mRunningTimeout;

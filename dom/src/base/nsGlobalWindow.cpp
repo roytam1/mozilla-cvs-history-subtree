@@ -92,6 +92,7 @@
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMPopupBlockedEvent.h"
 #include "nsIDOMPkcs11.h"
+#include "nsIDOMWindowAccess.h"
 #include "nsDOMString.h"
 #include "nsIEmbeddingSiteWindow2.h"
 #include "nsIEventQueueService.h"
@@ -201,6 +202,49 @@ enum {
   allowExtant,      // allowed: an already open window
   allowWhitelisted  // allowed: it's whitelisted or popup blocking is disabled
 };
+
+//*****************************************************************************
+// GlobalWindowImpl::nsIDOMWindowAccess
+//*****************************************************************************
+
+class nsDOMWindowAccess : public nsIDOMWindowAccess,
+                          public nsSupportsWeakReference
+{
+public:
+  nsDOMWindowAccess(GlobalWindowImpl *aWindow) {
+    mWindow = aWindow;
+  };
+  ~nsDOMWindowAccess() {};
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDOMWINDOWACCESS
+
+protected:
+  nsRefPtr<GlobalWindowImpl> mWindow;
+};
+
+NS_INTERFACE_MAP_BEGIN(nsDOMWindowAccess)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMWindowAccess)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWindowAccess)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsDOMWindowAccess)
+NS_IMPL_RELEASE(nsDOMWindowAccess)
+
+NS_IMETHODIMP
+nsDOMWindowAccess::SetImageAnimationMode(PRUint16 aMode) {
+
+  if (mWindow) {
+    nsIDocShell *docShell = mWindow->GetDocShell();
+    if (docShell) {
+      nsCOMPtr<nsIPresContext> presContext;
+      docShell->GetPresContext(getter_AddRefs(presContext));
+      if (presContext)
+        presContext->SetImageAnimationMode(aMode);
+    }
+  }
+  return NS_OK;
+}
 
 //*****************************************************************************
 //***    GlobalWindowImpl: Object Management
@@ -4666,13 +4710,19 @@ GlobalWindowImpl::GetInterface(const nsIID & aIID, void **aSink)
   if (aIID.Equals(NS_GET_IID(nsIDocCharset))) {
     if (mDocShell) {
       nsCOMPtr<nsIDocCharset> docCharset(do_QueryInterface(mDocShell));
-      *aSink = docCharset;
+      if (docCharset) {
+        *aSink = docCharset;
+        NS_ADDREF(((nsISupports *) *aSink));
+      }
     }
   }
   else if (aIID.Equals(NS_GET_IID(nsIWebNavigation))) {
     if (mDocShell) {
       nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
-      *aSink = webNav;
+      if (webNav) {
+        *aSink = webNav;
+        NS_ADDREF(((nsISupports *) *aSink));
+      }
     }
   }
   else if (aIID.Equals(NS_GET_IID(nsIWebBrowserPrint))) {
@@ -4681,7 +4731,10 @@ GlobalWindowImpl::GetInterface(const nsIID & aIID, void **aSink)
       mDocShell->GetContentViewer(getter_AddRefs(viewer));
       if (viewer) {
         nsCOMPtr<nsIWebBrowserPrint> webBrowserPrint(do_QueryInterface(viewer));
-        *aSink = webBrowserPrint;
+        if (webBrowserPrint) {
+          *aSink = webBrowserPrint;
+          NS_ADDREF(((nsISupports *) *aSink));
+        }
       }
     }
   }
@@ -4691,6 +4744,23 @@ GlobalWindowImpl::GetInterface(const nsIID & aIID, void **aSink)
       nsIScriptEventManager* mgr = doc->GetScriptEventManager();
       if (mgr) {
         *aSink = mgr;
+        NS_ADDREF(((nsISupports *) *aSink));
+      }
+    }
+  }
+  else if (aIID.Equals(NS_GET_IID(nsIDOMWindowAccess))) {
+    nsCOMPtr<nsISupports> access(do_QueryReferent(mWindowAccess));
+    if (access) {
+      *aSink = access;
+      NS_ADDREF(((nsISupports *) *aSink));
+    } else {
+      nsDOMWindowAccess *accObj = new nsDOMWindowAccess(this);
+      nsCOMPtr<nsISupports> accIfc =
+                              NS_ISUPPORTS_CAST(nsIDOMWindowAccess *, accObj);
+      if (accIfc) {
+        mWindowAccess = do_GetWeakReference(accIfc);
+        *aSink = accIfc;
+        NS_ADDREF(((nsISupports *) *aSink));
       }
     }
   }
@@ -4698,7 +4768,6 @@ GlobalWindowImpl::GetInterface(const nsIID & aIID, void **aSink)
     return QueryInterface(aIID, aSink);
   }
 
-  NS_IF_ADDREF(((nsISupports *) * aSink));
   return NS_OK;
 }
 
