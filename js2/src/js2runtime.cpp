@@ -142,16 +142,21 @@ JSType *ScopeChain::findType(const StringAtom& typeName)
     if (v.isType())
         return v.type;
     else
+        // XXX if it's not a type, should be an error
+        // (forward refs?)
         return Object_Type;
 }
 
-JSType *ScopeChain::extractType(ExprNode *t)
+JSType *ScopeChain::extractType(ExprNode *t)    // XXX is expexting a compile time constant, error 
+                                                // if there isn't defined.
 {
     JSType *type = Object_Type;
     if (t && (t->getKind() == ExprNode::identifier)) {
         IdentifierExprNode* typeExpr = static_cast<IdentifierExprNode*>(t);
         type = findType(typeExpr->name);
     }
+   // else
+     //   NOT_REACHED("implement me - more complex types");
     return type;
 }
 
@@ -296,7 +301,7 @@ JSValue Context::readEvalFile(const String& fileName)
             buildRuntime(parsedStatements);
             JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
             if (bcm) {
-                result = interpret(bcm, kNullValue, NULL, 0);
+                result = interpret(bcm, NULL, kNullValue, NULL, 0);
                 delete bcm;
             }
         
@@ -308,7 +313,7 @@ JSValue Context::readEvalFile(const String& fileName)
     return result;
 }
 
-
+// XXX more comments
 void Context::buildRuntime(StmtNode *p)
 {
     mScopeChain->addScope(getGlobalObject());
@@ -359,61 +364,57 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
 
     if (target->isNative()) {
         JSValue result = target->getNativeCode()(this, kNullValue, getBase(stackSize() - 2), 2);
-        popValue();      // XXX
-        popValue();
+        resizeStack(stackSize() - 2);
         pushValue(result);
         return false;
     }
     else {
-        // have to lie about the argCount since the Return sequence expects to 
-        // consume the arguments AND the target pointer from the stack.
-        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, mScopeChain,
-                                                mArgumentBase, mThis, mPC, mCurModule, 1));
+        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - 2, mScopeChain,
+                                                mArgumentBase, mThis, mPC, mCurModule));
         mCurModule = target->getByteCode();
-        mArgumentBase = stackSize() - 2;
+        mArgumentBase = getBase(stackSize() - 2);
         mScopeChain = target->getScopeChain();
         return true;
     }
 }
 
-JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, const JSValue& thisValue, JSValue *argv, uint32 argc)
-{
-    uint8 *pc = bcm->mCodeBase;
-    uint8 *endPC = bcm->mCodeBase + bcm->mLength;
-
-    JSValue *oldLocals = mLocals;
-    JSValue *oldStack = mStack;
-    uint32 oldStackTop = mStackTop;
-    uint32 oldStackMax = mStackMax;
-    JS2Runtime::ByteCodeModule *oldCurModule = mCurModule;
-    uint32 oldArgumentBase = mArgumentBase;
-
-
-    mScopeChain->addScope(getGlobalObject());
-
-    mCurModule = bcm;
-    mLocals = new JSValue[bcm->mLocalsCount];
-    mStack = new JSValue[bcm->mStackDepth];
-    mStackMax = bcm->mStackDepth;
-    mStackTop = 0;
-    mArgumentBase = stackSize();
-
-    for (uint32 i = 0; i < argc; i++)
-        pushValue(argv[i]);
+JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{ 
+    mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, mScopeChain,
+                                            mArgumentBase, mThis, NULL, mCurModule));   // use NULL pc value to force interpret loop to exit
     mThis = thisValue;
+    if (scopeChain)
+        mScopeChain = scopeChain;
+    else {
+        mScopeChain = new ScopeChain(this, mWorld);
+        mScopeChain->addScope(getGlobalObject());
+    }
+    if (mThis.isObject())
+        mScopeChain->addScope(mThis.object);
+    mCurModule = bcm;
+    uint8 *pc = mCurModule->mCodeBase;
+    uint8 *endPC = mCurModule->mCodeBase + mCurModule->mLength;
+    mArgumentBase = argv;
+    mLocals = new JSValue[mCurModule->mLocalsCount];
+    mStack = new JSValue[mCurModule->mStackDepth];
+    mStackMax = mCurModule->mStackDepth;
+    mStackTop = 0;
 
     JSValue result = interpret(pc, endPC);
-    
-    mScopeChain->popScope();
 
-    
-    mLocals = oldLocals;
-    mStack = oldStack;
-    mStackTop = oldStackTop;
-    mStackMax = oldStackMax;
-    mCurModule = oldCurModule;
-    mArgumentBase = oldArgumentBase;
-    
+    Activation *prev = mActivationStack.top();
+    mActivationStack.pop();
+
+    mCurModule = prev->mModule;
+    mStack = prev->mStack;
+    mStackTop = prev->mStackTop;
+    if (mCurModule)
+        mStackMax = mCurModule->mStackDepth;
+    mLocals = prev->mLocals;
+    mArgumentBase = prev->mArgumentBase;
+    mThis = prev->mThis;
+    mScopeChain = prev->mScopeChain;
+
     return result;
 }
 
@@ -588,15 +589,17 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             pushValue(kUndefinedValue);
                             cleanUp++;
                         }
-                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop,
+                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - (cleanUp + 1),
                                                                     mScopeChain,
                                                                     mArgumentBase, oldThis,
-                                                                    pc, mCurModule, cleanUp));
+                                                                    pc, mCurModule));
                         mScopeChain = target->getScopeChain();
+                        if (mThis.isObject())
+                            mScopeChain->addScope(mThis.object);
                         mCurModule = target->getByteCode();
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                        mArgumentBase = argBase;
+                        mArgumentBase = getBase(argBase);
                         mLocals = new JSValue[mCurModule->mLocalsCount];
                         mStack = new JSValue[mCurModule->mStackDepth];
                         mStackMax = mCurModule->mStackDepth;
@@ -613,7 +616,12 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case ReturnVoidOp:
                 {
+                    if (mActivationStack.empty())
+                        return result;
                     Activation *prev = mActivationStack.top();
+                    if (prev->mPC == NULL)     // NULL is used to indicate that we want the loop to exit
+                        return result;         // (even though there is more activation stack to go
+                                               // - used to implement Xetters from XProperty ops.)
                     mActivationStack.pop();
 
                     mCurModule = prev->mModule;
@@ -625,15 +633,19 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mLocals = prev->mLocals;
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
-                    mScopeChain = prev->mScopeChain;
-                    resizeStack(stackSize() - (prev->mArgCount + 1));
+                    mScopeChain = prev->mScopeChain;                                        
                 }
                 break;
             case ReturnOp:
                 {
                     JSValue result = popValue();
 
+                    if (mActivationStack.empty())
+                        return result;
                     Activation *prev = mActivationStack.top();
+                    if (prev->mPC == NULL)
+                        return result;
+
                     mActivationStack.pop();
 
                     mCurModule = prev->mModule;
@@ -646,7 +658,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
                     mScopeChain = prev->mScopeChain;
-                    resizeStack(stackSize() - (prev->mArgCount + 1));
                     pushValue(result);
                 }
                 break;
@@ -783,9 +794,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (mScopeChain->getNameValue(name, CURRENT_ATTR, this)) {
-                        // need to invoke
-                    }
+                    mScopeChain->getNameValue(name, CURRENT_ATTR, this);
                 }
                 break;
             case GetTypeOfNameOp:
@@ -794,9 +803,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
                     if (mScopeChain->hasNameValue(name, CURRENT_ATTR)) {
-                        if (mScopeChain->getNameValue(name, CURRENT_ATTR, this)) {
-                            // need to invoke
-                        }
+                        mScopeChain->getNameValue(name, CURRENT_ATTR, this);
                     }
                     else
                         pushValue(kUndefinedValue);
@@ -807,9 +814,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (mScopeChain->setNameValue(name, CURRENT_ATTR, this)) {
-                        // need to invoke
-                    }
+                    mScopeChain->setNameValue(name, CURRENT_ATTR, this);
                 }
                 break;
             case GetElementOp:
@@ -822,9 +827,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     else
                         obj = base.object;
                     const String *name = index.toString(this).string;
-                    if (obj->getProperty(this, *name, CURRENT_ATTR) ) {
-                        // need to invoke
-                    }
+                    obj->getProperty(this, *name, CURRENT_ATTR);
                 }
                 break;
             case SetElementOp:
@@ -838,11 +841,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     else
                         obj = base.object;
                     const String *name = index.toString(this).string;
-                    if (obj->setProperty(this, *name, CURRENT_ATTR, v) ) {
-                        // need to invoke
-                    }
-                    else
-                        pushValue(v);
+                    obj->setProperty(this, *name, CURRENT_ATTR, v);
+                    pushValue(v);
                 }
                 break;
             case GetPropertyOp:
@@ -856,9 +856,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (obj->getProperty(this, name, CURRENT_ATTR) ) {
-                        // need to invoke
-                    }
+                    obj->getProperty(this, name, CURRENT_ATTR);
                     // if the result is a function of some kind, bind
                     // the base object to it
                     JSValue result = topValue();
@@ -886,9 +884,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 //                    AttributeList *attr = mCurModule->getIdentifierAttr(index);
 //                    attr->next = CURRENT_ATTR;
 
-                    if (obj->getProperty(this, name, CURRENT_ATTR) ) {
-                        // need to invoke
-                    }
+                    obj->getProperty(this, name, CURRENT_ATTR);
                 }
                 break;
             case SetPropertyOp:
@@ -903,13 +899,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (obj->setProperty(this, name, CURRENT_ATTR, v) ) {
-                        // need to invoke
-                    }
-                    else
-                        pushValue(v);// ok to have this here, because the semantics for
-                                            // the routine to be invoked require it to leave
-                                            // the set value on the top of the stack
+                    obj->setProperty(this, name, CURRENT_ATTR, v);
+                    pushValue(v);
                 }
                 break;
             case DoUnaryOp:
@@ -924,14 +915,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             // lie about argCount to the activation since it
                             // would normally expect to clean the function pointer
                             // off the stack as well.
-                            mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                            mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - 1, 
                                                                     mScopeChain,
                                                                     mArgumentBase, mThis,
-                                                                    pc, mCurModule, 0));
+                                                                    pc, mCurModule));
                             mCurModule = target->getByteCode();
                             pc = mCurModule->mCodeBase;
                             endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                            mArgumentBase = argBase;
+                            mArgumentBase = getBase(argBase);
                             mLocals = new JSValue[mCurModule->mLocalsCount];
                             mStack = new JSValue[mCurModule->mStackDepth];
                             mStackMax = mCurModule->mStackDepth;
@@ -956,8 +947,10 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                 // need to invoke
                                 pc = mCurModule->mCodeBase;
                                 endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                                delete mLocals;
                                 mLocals = new JSValue[mCurModule->mLocalsCount];
+                                mStack = new JSValue[mCurModule->mStackDepth];
+                                mStackMax = mCurModule->mStackDepth;
+                                mStackTop = 0;
                             }
                         }
                         break;
@@ -969,8 +962,10 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                 // need to invoke
                                 pc = mCurModule->mCodeBase;
                                 endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                                delete mLocals;
                                 mLocals = new JSValue[mCurModule->mLocalsCount];
+                                mStack = new JSValue[mCurModule->mStackDepth];
+                                mStackMax = mCurModule->mStackDepth;
+                                mStackTop = 0;
                             }
                         }
                         break;
@@ -1058,14 +1053,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             pushValue(kUndefinedValue);
                             cleanUp++;
                         }
-                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop,
+                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - (cleanUp + 1),
                                                                     mScopeChain,
                                                                     mArgumentBase, oldThis,
-                                                                    pc, mCurModule, cleanUp));
+                                                                    pc, mCurModule));
                         mCurModule = target->getByteCode();
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                        mArgumentBase = argBase;
+                        mArgumentBase = getBase(argBase);
                         mLocals = new JSValue[mCurModule->mLocalsCount];
                         mStack = new JSValue[mCurModule->mStackDepth];
                         mStackMax = mCurModule->mStackDepth;
@@ -1138,16 +1133,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    Activation *prev = mActivationStack.top();
-                    pushValue(prev->mStack[mArgumentBase + index]);
+                    pushValue(mArgumentBase[index]);
                 }
                 break;
             case SetArgOp:
                 {
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
-                    Activation *prev = mActivationStack.top();
-                    prev->mStack[mArgumentBase + index] = topValue();
+                    mArgumentBase[index] = topValue();
                 }
                 break;
             case GetMethodOp:
@@ -1369,6 +1362,7 @@ void ScopeChain::collectNames(StmtNode *p)
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
             const StringAtom& name = classStmt->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
+            // XXX detect incompatible settings
             if (hasAttribute(classStmt->attributes, m_cx->FixedKeyWord))
                 thisClass->mIsDynamic = false;
             if (hasAttribute(classStmt->attributes, m_cx->DynamicKeyWord))
@@ -2652,11 +2646,19 @@ void Context::initBuiltins()
 }
 
 Context::Context(JSObject **global, World &world, Arena &a) 
-    : mGlobal(global), 
-      mWorld(world),
+    : mWorld(world),
       mScopeChain(NULL),
       mArena(a),
       mDebugFlag(false),
+      mCurModule(NULL),
+      mPC(NULL),
+      mThis(kNullValue),
+      mStack(NULL),
+      mStackTop(0),
+      mStackMax(0),
+      mLocals(NULL),
+      mArgumentBase(NULL),
+      mGlobal(global), 
 
       VirtualKeyWord(world.identifiers["virtual"]),
       ConstructorKeyWord(world.identifiers["constructor"]),

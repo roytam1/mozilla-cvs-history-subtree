@@ -252,40 +252,37 @@ static const double two31 = 2147483648.0;
         OperatorCount
     } Operator;
     
-    
-
-   
-
-    
+        
     class Reference {
     public:
         Reference(JSType *type) : mType(type) { }
         JSType *mType;
 
-        virtual bool needsThis() { return false; }
+        // used by the invocation sequence to calculate
+        // the stack depth and specify the 'this' flag
+        virtual bool needsThis()                            { return false; }
 
-        virtual bool isConstructor()    { return false; }   // XXX cheaper than RTTI ? (or is that on anyway)
+        // issued as soon as the reference is generated to
+        // establish any required base object.
+        virtual void emitImplicitLoad(ByteCodeGen *)        { } 
 
-        virtual void emitImplicitLoad(ByteCodeGen *) { } 
-
+        // acquires the invokable object
         virtual void emitInvokeSequence(ByteCodeGen *bcg)   { emitCodeSequence(bcg); }
 
-        virtual bool emitPreAssignment(ByteCodeGen *)    { return false; }
+        // issued before the rvalue is evaluated.
+        // returns true if it pushes anything on the stack
+        virtual bool emitPreAssignment(ByteCodeGen *)       { return false; }
 
         virtual void emitCodeSequence(ByteCodeGen *) 
                 { throw Exception(Exception::internalError, "gen code for base ref"); }
 
-        virtual bool getValue(Context *)
-                { throw Exception(Exception::internalError, "get value(cx) for base ref"); }
-        
-        virtual bool setValue(Context *)
-                { throw Exception(Exception::internalError, "set value(cx) for base ref"); }
+        // returns the amount of stack used by the reference
+        virtual int32 baseExpressionDepth()                 { return 0; }
 
-        virtual int32 baseExpressionDepth()
-                { return 0; }
-
+        // generate code sequence for typeof operator
         virtual void emitTypeOf(ByteCodeGen *bcg);
 
+        // generate code sequence for delete operator
         virtual void emitDelete(ByteCodeGen *bcg);
     };
 
@@ -296,8 +293,6 @@ static const double two31 = 2147483648.0;
         AccessorReference(JSFunction *f);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool getValue(Context *cx);
-        bool setValue(Context *cx);
     };
     // a simple local variable reference - it's a slot
     // in the current activation
@@ -308,8 +303,6 @@ static const double two31 = 2147483648.0;
         Access mAccess;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool getValue(Context *cx);
-        bool setValue(Context *cx);
     };
     // a local variable 'n' activations up the
     // execution stack
@@ -407,7 +400,6 @@ static const double two31 = 2147483648.0;
             : Reference(baseClass), mIndex(index) { }
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
-        bool isConstructor()    { return true; }
         bool needsThis() { return false; }          // i.e. there is no 'this' specified by the
                                                     // the call sequence (it's a static function)
         int32 baseExpressionDepth() { return 1; }
@@ -462,10 +454,6 @@ static const double two31 = 2147483648.0;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitTypeOf(ByteCodeGen *bcg);
-        bool getValue(Context *)
-                { throw Exception(Exception::internalError, "get value for name ref"); }
-        bool setValue(Context *)
-                { throw Exception(Exception::internalError, "set value for name ref"); }
         void emitDelete(ByteCodeGen *bcg);
     };
 
@@ -594,9 +582,9 @@ static const double two31 = 2147483648.0;
             return *prop->mData.vp;
         }
 
-        virtual bool getProperty(Context *cx, const String &name, AttributeList *attr);
+        virtual void getProperty(Context *cx, const String &name, AttributeList *attr);
 
-        virtual bool setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
+        virtual void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
 
 
 
@@ -746,8 +734,8 @@ static const double two31 = 2147483648.0;
 
         void initInstance(Context *cx, JSType *type);
 
-        bool getProperty(Context *cx, const String &name, AttributeList *attr);
-        bool setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
+        void getProperty(Context *cx, const String &name, AttributeList *attr);
+        void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
 
         JSValue getField(uint32 index)
         {
@@ -1084,8 +1072,8 @@ static const double two31 = 2147483648.0;
         JSArrayInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
 
         // XXX maybe could have implemented length as a getter/setter pair?
-        bool setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
-        bool getProperty(Context *cx, const String &name, AttributeList *attr);
+        void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
+        void getProperty(Context *cx, const String &name, AttributeList *attr);
 
 
         uint32 mLength;
@@ -1107,7 +1095,7 @@ static const double two31 = 2147483648.0;
     public:
         JSStringInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
 
-        bool getProperty(Context *cx, const String &name, AttributeList *attr);
+        void getProperty(Context *cx, const String &name, AttributeList *attr);
 
 
         uint32 mLength;
@@ -1175,16 +1163,14 @@ static const double two31 = 2147483648.0;
                         mStack(NULL),
                         mStackTop(0),
                         mPC(0), 
-                        mModule(NULL), 
-                        mArgCount(0) { }
+                        mModule(NULL)  { }
 
         Activation(Context *cx, JSValue *locals, 
                         JSValue *stack, uint32 stackTop,
                         ScopeChain *scopeChain,
-                        uint32 argBase, JSValue curThis,
+                        JSValue *argBase, JSValue curThis,
                         uint8 *pc, 
-                        ByteCodeModule *module, 
-                        uint32 argCount)
+                        ByteCodeModule *module )
                     : JSType(cx, NULL), 
                         mLocals(locals), 
                         mStack(stack), 
@@ -1193,21 +1179,19 @@ static const double two31 = 2147483648.0;
                         mArgumentBase(argBase), 
                         mThis(curThis), 
                         mPC(pc), 
-                        mModule(module), 
-                        mArgCount(argCount) { }
+                        mModule(module)  { }
 
 
         
         // saved values from a previous execution
         JSValue *mLocals;
         JSValue *mStack;
-        uint32 mStackTop;
+        uint32 mStackTop;           
         ScopeChain *mScopeChain;
-        uint32 mArgumentBase;
+        JSValue *mArgumentBase;
         JSValue mThis;
         uint8 *mPC;
         ByteCodeModule *mModule;
-        uint32 mArgCount;
 
 
         bool hasLocalVars()             { return true; }
@@ -1369,7 +1353,7 @@ static const double two31 = 2147483648.0;
             return false;
         }
 
-        bool getNameValue(const String& name, AttributeList *attr, Context *cx);
+        void getNameValue(const String& name, AttributeList *attr, Context *cx);
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
@@ -1402,7 +1386,7 @@ static const double two31 = 2147483648.0;
 
 
 
-        bool setNameValue(const String& name, AttributeList *attr, Context *cx);
+        void setNameValue(const String& name, AttributeList *attr, Context *cx);
 
         // return the number of local vars used by all the 
         // Activations on the top of the chain
@@ -1617,9 +1601,17 @@ static const double two31 = 2147483648.0;
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
 
-        void switchToFunction(JSFunction *)
+        void switchToFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc)
         {
-            ASSERT(false);  // somebody should write some code here one day
+            if (target->isNative()) {
+                JSValue result = target->getNativeCode()(this, thisValue, argv, argc);
+                resizeStack(stackSize() - argc);
+                pushValue(result);
+            }
+            else {
+                JSValue result = interpret(target->getByteCode(), target->getScopeChain(), thisValue, argv, argc);
+                pushValue(result);
+            }
         }
 
         JSObject *getGlobalObject()         { ASSERT(mGlobal); return *mGlobal; }
@@ -1706,8 +1698,7 @@ static const double two31 = 2147483648.0;
         JSValue *mLocals;
 
         // the base of the incoming arguments for this function
-        // (it's an index into the execution stack)
-        uint32 mArgumentBase;
+        JSValue *mArgumentBase;
 
         typedef std::vector<OperatorDefinition *> OperatorList;
             
@@ -1721,7 +1712,7 @@ static const double two31 = 2147483648.0;
         void buildRuntimeForStmt(StmtNode *p);
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
 
-        JSValue interpret(ByteCodeModule *bcm, const JSValue& thisValue, JSValue *argv, uint32 argc);
+        JSValue interpret(ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 argc);
         JSValue interpret(uint8 *pc, uint8 *endPC);
         
         
@@ -1779,36 +1770,8 @@ static const double two31 = 2147483648.0;
         : Reference(f->getResultType()), mFunction(f) 
     {
     }
-
-    inline bool AccessorReference::getValue(Context *cx) 
-    { 
-        NOT_REACHED("need this?");
-        cx->switchToFunction(mFunction);
-        return true; 
-    }
-    
-    inline bool AccessorReference::setValue(Context *cx) 
-    { 
-        NOT_REACHED("need this?");
-        cx->switchToFunction(mFunction);
-        return true; 
-    }
-    
-    inline bool LocalVarReference::getValue(Context *cx)
-    {
-        NOT_REACHED("need this?");
-        cx->pushValue(cx->mLocals[mIndex]);
-        return false;
-    }
-
-    inline bool LocalVarReference::setValue(Context *cx)
-    {
-        NOT_REACHED("need this?");
-        cx->mLocals[mIndex] = cx->topValue();
-        return false;
-    }
   
-    inline bool JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
+    inline void JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Read, &i)) {
@@ -1816,25 +1779,24 @@ static const double two31 = 2147483648.0;
             switch (prop->mFlag) {
             case ValuePointer:
                 cx->pushValue(*prop->mData.vp);
-                return false;
+                break;
             case FunctionPair:
-                cx->switchToFunction(prop->mData.fPair.getterF);
-                return true;
+                cx->switchToFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0);
+                break;
             case Constructor:
             case Method:
                 cx->pushValue(JSValue(mType->mMethods[prop->mData.index]));
-                return false;
+                break;
             default:
                 ASSERT(false);  // XXX more to implement
-                return false;
+                break;
             }
         }
         else
-            NOT_REACHED("mismatch between hasProp and getProp");        
-        return false;
+            cx->pushValue(kUndefinedValue);        
     }
 
-    inline bool JSInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+    inline void JSInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Read, &i)) {
@@ -1842,31 +1804,34 @@ static const double two31 = 2147483648.0;
             switch (prop->mFlag) {
             case Slot:
                 cx->pushValue(mInstanceValues[prop->mData.index]);
-                return false;
+                break;
             case ValuePointer:
                 cx->pushValue(*prop->mData.vp);
-                return false;
+                break;
             case FunctionPair:
-                cx->switchToFunction(prop->mData.fPair.getterF);
-                return true;
+                cx->switchToFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0);
+                break;
             case Constructor:
             case Method:
                 cx->pushValue(JSValue(mType->mMethods[prop->mData.index]));
-                return false;
+                break;
+            case IndexPair:
+                cx->switchToFunction(mType->mMethods[prop->mData.iPair.getterI], JSValue(this), NULL, 0);
+                break;
             default:
                 ASSERT(false);  // XXX more to implement
-                return false;
+                break;
             }
         }
         else {
             if (mType->mStatics && mType->mStatics->hasProperty(name, attr, Read, &i))
-                return mType->mStatics->getProperty(cx, name, attr);
+                mType->mStatics->getProperty(cx, name, attr);
             else
-                return JSObject::getProperty(cx, name, attr);
+                JSObject::getProperty(cx, name, attr);
         }
     }
 
-    inline bool JSObject::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+    inline void JSObject::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Write, &i)) {
@@ -1874,23 +1839,24 @@ static const double two31 = 2147483648.0;
             switch (prop->mFlag) {
             case ValuePointer:
                 *prop->mData.vp = v;
-                return false;
+                break;
             case FunctionPair:
-                cx->pushValue(v);
-                cx->switchToFunction(prop->mData.fPair.setterF);
-                return true;
+                {
+                    JSValue argv = v;
+                    cx->switchToFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
+                }
+                break;
             default:
                 ASSERT(false);  // XXX more to implement ?
-                return false;
+                break;
             }
         }
         else {
             defineVariable(name, attr, Object_Type, v);
-            return false;
         }
     }
 
-    inline bool JSInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+    inline void JSInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
     {
         PropertyIterator i;
         if (hasProperty(name, attr, Write, &i)) {
@@ -1898,41 +1864,47 @@ static const double two31 = 2147483648.0;
             switch (prop->mFlag) {
             case Slot:
                 mInstanceValues[prop->mData.index] = v;
-                return false;
+                break;
             case ValuePointer:
                 *prop->mData.vp = v;
-                return false;
-            case FunctionPair:
-                cx->pushValue(v);
-                cx->switchToFunction(prop->mData.fPair.setterF);
-                return true;
+                break;
+            case FunctionPair: 
+                {
+                    JSValue argv = v;
+                    cx->switchToFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
+                }
+                break;
+            case IndexPair: 
+                {
+                    JSValue argv = v;
+                    cx->switchToFunction(mType->mMethods[prop->mData.iPair.setterI], JSValue(this), &argv, 1);
+                }
+                break;
             default:
                 ASSERT(false);  // XXX more to implement ?
-                return false;
+                break;
             }
         }
         else {
             if (mType->mStatics && mType->mStatics->hasProperty(name, attr, Write, &i)) {
-                return mType->mStatics->setProperty(cx, name, attr, v);
+                mType->mStatics->setProperty(cx, name, attr, v);
             }
             else {
                 defineVariable(name, attr, Object_Type, v);
-                return false;
             }
         }
     }
 
-    inline bool JSArrayInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+    inline void JSArrayInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         if (name.compare(widenCString("length")) == 0) {
             cx->pushValue(JSValue((float64)mLength));
-            return true;
         }
         else
-            return JSInstance::getProperty(cx, name, attr);
+            JSInstance::getProperty(cx, name, attr);
     }
 
-    inline bool JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
+    inline void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
     {
         if (name.compare(widenCString("length")) == 0) {
             uint32 newLength = (uint32)(v.toUInt32(cx).f64);
@@ -1960,17 +1932,15 @@ static const double two31 = 2147483648.0;
                     mLength = (uint32)v_int.f64 + 1;
             }
         }
-        return false;
     }
 
-    inline bool JSStringInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
+    inline void JSStringInstance::getProperty(Context *cx, const String &name, AttributeList *attr)
     {
         if (name.compare(widenCString("length")) == 0) {
             cx->pushValue(JSValue((float64)mLength));
-            return true;
         }
         else
-            return JSInstance::getProperty(cx, name, attr);
+            JSInstance::getProperty(cx, name, attr);
     }
 
 
@@ -2061,7 +2031,7 @@ static const double two31 = 2147483648.0;
         }
         if (f) {
             JSValue thisValue(mInitialInstance);
-            cx->interpret(f->getByteCode(), thisValue, NULL, 0);
+            cx->interpret(f->getByteCode(), f->getScopeChain(), thisValue, NULL, 0);
         }
     }
 
@@ -2071,7 +2041,7 @@ static const double two31 = 2147483648.0;
         mStatics->initInstance(cx, mStatics);       // build the static instance object
         if (f) {
             JSValue thisValue(mStatics);
-            cx->interpret(f->getByteCode(), thisValue, NULL, 0);
+            cx->interpret(f->getByteCode(), f->getScopeChain(), thisValue, NULL, 0);
         }
     }
 
@@ -2089,42 +2059,40 @@ static const double two31 = 2147483648.0;
         return result;
     }
 
-    inline bool ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *cx)
+    inline void ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *cx)
     {
         PropertyIterator i;
         JSObject *top = *mScopeStack.rbegin();
         Reference *ref = NULL;
+        JSValue v = cx->topValue();
         if (top->hasProperty(name, attr, Write, &i)) {
-            ref = top->genReference(name, attr, Write, 0);
-            bool result = ref->setValue(cx);
-            delete ref;
-            return result;
+            if (PROPERTY_KIND(i) == ValuePointer) {
+                *PROPERTY_VALUEPOINTER(i) = v;
+            }
+            else
+                ASSERT(false);      // what else needs to be implemented ?
         }
         else {
-            JSValue v = cx->topValue();
             top->defineVariable(name, attr, Object_Type, v);
-            return false;
         }
     }
 
-    inline bool ScopeChain::getNameValue(const String& name, AttributeList *attr, Context *cx)
+    inline void ScopeChain::getNameValue(const String& name, AttributeList *attr, Context *cx)
     {
         uint32 depth = 0;
         for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
         {
             PropertyIterator i;
             if ((*s)->hasProperty(name, attr, Read, &i)) {
-                
                 if (PROPERTY_KIND(i) == ValuePointer) {
                     cx->pushValue(*PROPERTY_VALUEPOINTER(i));
-                    return false;
                 }
                 else
                     ASSERT(false);      // what else needs to be implemented ?
+                return;
             }
         }
         throw Exception(Exception::referenceError, "Not defined");
-        return false;
     }
 
     inline bool JSInstance::isDynamic() { return mType->isDynamic(); }

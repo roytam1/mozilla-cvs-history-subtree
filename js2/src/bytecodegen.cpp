@@ -2113,6 +2113,18 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
     return f;
 }
 
+
+void ByteCodeGen::addOp(uint8 op)        
+{ 
+    addByte(op);
+    ASSERT(gByteCodeData[op].stackImpact != -128);
+    mStackTop += gByteCodeData[op].stackImpact;
+    if (mStackTop > mStackMax)
+        mStackMax = mStackTop; 
+    ASSERT(mStackTop >= 0);
+}
+
+
 }
 }
 

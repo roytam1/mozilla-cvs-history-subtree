@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /D "_LIB" /D "NDEBUG" /D "WIN32" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /W1 /GX /O2 /Ob2 /D "_LIB" /D "NDEBUG" /D "WIN32" /D "_MBCS" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -86,74 +86,236 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\bytecodegen.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\exception.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\fdlibm_ns.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\formatter.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\hash.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\js2runtime.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\jsarray.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\jsmath.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\jsstring.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\lexer.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\mem.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\numerics.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\parser.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\reader.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\strings.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\token.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\utilities.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=..\world.cpp
+
+!IF  "$(CFG)" == "DikDik - Win32 Release"
+
+# ADD CPP /GR
+
+!ELSEIF  "$(CFG)" == "DikDik - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # End Group
 # Begin Group "Header Files"

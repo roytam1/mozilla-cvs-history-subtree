@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /D "_CONSOLE" /D "NDEBUG" /D "WIN32" /D "_MBCS" /YX /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /I "../../src" /D "_CONSOLE" /D "NDEBUG" /D "WIN32" /D "_MBCS" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -89,6 +89,9 @@ LINK32=link.exe
 SOURCE=..\DikDik_Shell.cpp
 
 !IF  "$(CFG)" == "DikDik_shell - Win32 Release"
+
+# ADD CPP /GR /I "../../../src"
+# SUBTRACT CPP /I "../../src"
 
 !ELSEIF  "$(CFG)" == "DikDik_shell - Win32 Debug"
 

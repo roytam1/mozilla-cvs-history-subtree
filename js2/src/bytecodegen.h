@@ -254,15 +254,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             return (mBuffer->size() > 0);
         }
        
-        void addOp(uint8 op)        
-        { 
-            addByte(op);
-            ASSERT(gByteCodeData[op].stackImpact != -128);
-            mStackTop += gByteCodeData[op].stackImpact;
-            if (mStackTop > mStackMax)
-                mStackMax = mStackTop; 
-            ASSERT(mStackTop >= 0);
-        }
+        void addOp(uint8 op);       // XXX move more outline
 
         void addOpStretchStack(uint8 op, int32 n)        
         {
