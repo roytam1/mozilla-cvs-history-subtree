@@ -15,7 +15,7 @@
 - (void)awakeFromNib 
 {
   NSRect bounds = [self bounds];
-  browserView = [[NSBrowserView alloc] initWithFrame:bounds];
+  browserView = [[CHBrowserView alloc] initWithFrame:bounds];
   [self addSubview:browserView];
   [browserView setContainer:self];
   [browserView addListener:self];
@@ -152,7 +152,7 @@
   [window setFrame:frame display:YES];
 }
 
-- (NSBrowserView*)createBrowserWindow:(unsigned int)mask
+- (CHBrowserView*)createBrowserWindow:(unsigned int)mask
 {
   // XXX not implemented 
   return NULL;

@@ -1,13 +1,13 @@
 #import <Cocoa/Cocoa.h>
-#import "NSBrowserView.h"
+#import "CHBrowserView.h"
 
-@interface MyBrowserView : NSView <NSBrowserListener, NSBrowserContainer>
+@interface MyBrowserView : NSView <CHBrowserListener, CHBrowserContainer>
 {
     IBOutlet id urlbar;
     IBOutlet id status;
     IBOutlet id progress;
     IBOutlet id progressSuper;
-    NSBrowserView* browserView;
+    CHBrowserView* browserView;
     NSString* defaultStatus;
     NSString* loadingStatus;
 }
@@ -26,6 +26,6 @@
 - (NSString *)title;
 - (void)setTitle:(NSString *)title;
 - (void)sizeBrowserTo:(NSSize)dimensions;
-- (NSBrowserView*)createBrowserWindow:(unsigned int)mask;
+- (CHBrowserView*)createBrowserWindow:(unsigned int)mask;
 
 @end

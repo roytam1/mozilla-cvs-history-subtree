@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 34;
+	objectVersion = 38;
 	objects = {
 		080E96DCFE201CFB7F000001 = {
 			fileRef = 29B97318FDCFA39411CA2CEA;
@@ -226,7 +226,7 @@
 			);
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = ../../../embedding/browser/cocoa/src/build;
-				HEADER_SEARCH_PATHS = ../../../embedding/browser/cocoa/src/build/NSBrowserView.framework/Headers;
+				HEADER_SEARCH_PATHS = ../../../embedding/browser/cocoa/src/build/CHBrowserView.framework/Headers;
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = ../../../dist/bin;
 				OTHER_CFLAGS = "";
@@ -244,8 +244,8 @@
 			productName = CocoaEmbed;
 			productReference = 17587328FF379C6511CA2CBB;
 			productSettingsXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist SYSTEM \"file://localhost/System/Library/DTDs/PropertyList.dtd\">
-<plist version=\"0.9\">
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
@@ -275,16 +275,18 @@
 			files = (
 			);
 			isa = PBXHeadersBuildPhase;
-			name = Headers;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		29B97328FDCFA39411CA2CEA = {
 			buildActionMask = 2147483647;
 			files = (
 				080E96DCFE201CFB7F000001,
 				089C165EFE840E0CC02AAC07,
+				F5685946033F8D5C01026D5D,
+				F5685947033F8D5C01026D5D,
 			);
 			isa = PBXResourcesBuildPhase;
-			name = "Bundle Resources";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		29B9732BFDCFA39411CA2CEA = {
 			buildActionMask = 2147483647;
@@ -293,7 +295,7 @@
 				F6BA6D4F01B2F8A601A962F7,
 			);
 			isa = PBXSourcesBuildPhase;
-			name = Sources;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		29B9732CFDCFA39411CA2CEA = {
 			fileRef = 29B97316FDCFA39411CA2CEA;
@@ -314,7 +316,7 @@
 				F6C4515E01B5A8A701A962F7,
 			);
 			isa = PBXFrameworksBuildPhase;
-			name = "Frameworks & Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 //290
 //291
@@ -332,6 +334,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "-DDEBUG -DMOZ_DEBUG -DTRACING";
 			};
 			isa = PBXBuildStyle;
 			name = Development;
@@ -350,6 +353,28 @@
 //4A2
 //4A3
 //4A4
+//F50
+//F51
+//F52
+//F53
+//F54
+		F5685946033F8D5C01026D5D = {
+			fileRef = F6BD64D301B3172601A962F7;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5685947033F8D5C01026D5D = {
+			fileRef = F6BD64D501B3172601A962F7;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+//F50
+//F51
+//F52
+//F53
+//F54
 //F60
 //F61
 //F62
@@ -398,7 +423,6 @@
 				F6BD638101B30EA301A962F7,
 				F6BD638201B30EA301A962F7,
 				F6BD638701B30F5301A962F7,
-				F6BD638801B30F5301A962F7,
 				F6BD645501B3167601A962F7,
 				F6BD64FB01B3184301A962F7,
 				F6BD638901B30F5301A962F7,
@@ -418,11 +442,10 @@
 				F6BD638C01B30F5301A962F7,
 				F6BD638D01B30F5301A962F7,
 				F6BD638E01B30F5301A962F7,
-				F6BD638F01B30F5301A962F7,
 				F6BD637D01B30E2901A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD637C01B30E2901A962F7 = {
 			isa = PBXFileReference;
@@ -464,12 +487,6 @@
 			isa = PBXFileReference;
 			name = libgkgfx.dylib;
 			path = ../../../gfx/src/libgkgfx.dylib;
-			refType = 2;
-		};
-		F6BD638801B30F5301A962F7 = {
-			isa = PBXFileReference;
-			name = libtimer_mac.dylib;
-			path = ../../../widget/timer/src/mac/libtimer_mac.dylib;
 			refType = 2;
 		};
 		F6BD638901B30F5301A962F7 = {
@@ -608,12 +625,6 @@
 			settings = {
 			};
 		};
-		F6BD638F01B30F5301A962F7 = {
-			fileRef = F6BD638801B30F5301A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F6BD639001B30F5301A962F7 = {
 			buildActionMask = 2147483647;
 			dstPath = components;
@@ -704,7 +715,6 @@
 				F6BD64A801B3167601A962F7,
 				F6BD64A901B3167601A962F7,
 				F6BD64AA01B3167601A962F7,
-				F6BD64AB01B3167601A962F7,
 				F6BD64AC01B3167601A962F7,
 				F6BD64AD01B3167601A962F7,
 				F6BD64AE01B3167601A962F7,
@@ -719,7 +729,7 @@
 				F655020401B4812301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD639301B3131201A962F7 = {
 			isa = PBXFileReference;
@@ -1834,12 +1844,6 @@
 			settings = {
 			};
 		};
-		F6BD64AB01B3167601A962F7 = {
-			fileRef = F6BD642401B3156701A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F6BD64AC01B3167601A962F7 = {
 			fileRef = F6BD642501B3156701A962F7;
 			isa = PBXBuildFile;
@@ -1924,7 +1928,7 @@
 				F6BD650901B3184301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD64B801B316DA01A962F7 = {
 			isa = PBXFileReference;
@@ -1994,95 +1998,25 @@
 		};
 		F6BD64C801B3172601A962F7 = {
 			children = (
-				F6BD64C901B3172601A962F7,
-				F6BD64CA01B3172601A962F7,
-				F6BD64CB01B3172601A962F7,
-				F6BD64CC01B3172601A962F7,
-				F6BD64CD01B3172601A962F7,
-				F6BD64CE01B3172601A962F7,
-				F6BD64CF01B3172601A962F7,
-				F6BD64D001B3172601A962F7,
-				F6BD64D101B3172601A962F7,
-				F6BD64D201B3172601A962F7,
 				F6BD64D301B3172601A962F7,
-				F6BD64D401B3172601A962F7,
 				F6BD64D501B3172601A962F7,
-				F6BD64D601B3172601A962F7,
 			);
 			isa = PBXGroup;
 			name = builtin;
 			path = ../../../dist/bin/res/builtin;
 			refType = 2;
 		};
-		F6BD64C901B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-disabled-left.gif";
-			refType = 4;
-		};
-		F6BD64CA01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-disabled-middle.gif";
-			refType = 4;
-		};
-		F6BD64CB01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-disabled-right.gif";
-			refType = 4;
-		};
-		F6BD64CC01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-normal-left.gif";
-			refType = 4;
-		};
-		F6BD64CD01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-normal-middle.gif";
-			refType = 4;
-		};
-		F6BD64CE01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-normal-right.gif";
-			refType = 4;
-		};
-		F6BD64CF01B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-pressed-left.gif";
-			refType = 4;
-		};
-		F6BD64D001B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-pressed-middle.gif";
-			refType = 4;
-		};
-		F6BD64D101B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "button-pressed-right.gif";
-			refType = 4;
-		};
-		F6BD64D201B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = buttons.css;
-			refType = 4;
-		};
 		F6BD64D301B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = htmlBindings.xml;
-			refType = 4;
-		};
-		F6BD64D401B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = platformButtonBindings.xml;
-			refType = 4;
+			name = htmlBindings.xml;
+			path = ../../../content/xbl/builtin/htmlBindings.xml;
+			refType = 2;
 		};
 		F6BD64D501B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = platformHTMLBindings.xml;
-			refType = 4;
-		};
-		F6BD64D601B3172601A962F7 = {
-			isa = PBXFileReference;
-			path = "xbl-forms.css";
-			refType = 4;
+			name = platformHTMLBindings.xml;
+			path = ../../../content/xbl/builtin/mac/platformHTMLBindings.xml;
+			refType = 2;
 		};
 		F6BD64D701B3172601A962F7 = {
 			children = (
@@ -2099,28 +2033,33 @@
 		};
 		F6BD64D801B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = html40Latin1.properties;
-			refType = 4;
+			name = html40Latin1.properties;
+			path = ../../../intl/unicharutil/tables/html40Latin1.properties;
+			refType = 2;
 		};
 		F6BD64D901B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = html40Special.properties;
-			refType = 4;
+			name = html40Special.properties;
+			path = ../../../intl/unicharutil/tables/html40Special.properties;
+			refType = 2;
 		};
 		F6BD64DA01B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = html40Symbols.properties;
-			refType = 4;
+			name = html40Symbols.properties;
+			path = ../../../intl/unicharutil/tables/html40Symbols.properties;
+			refType = 2;
 		};
 		F6BD64DB01B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = htmlEntityVersions.properties;
-			refType = 4;
+			name = htmlEntityVersions.properties;
+			path = ../../../intl/unicharutil/tables/htmlEntityVersions.properties;
+			refType = 2;
 		};
 		F6BD64DC01B3172601A962F7 = {
 			isa = PBXFileReference;
-			path = transliterate.properties;
-			refType = 4;
+			name = transliterate.properties;
+			path = ../../../intl/unicharutil/tables/transliterate.properties;
+			refType = 2;
 		};
 		F6BD64DD01B3172601A962F7 = {
 			isa = PBXFileReference;
@@ -2237,107 +2176,9 @@
 			dstPath = res/builtin;
 			dstSubfolderSpec = 6;
 			files = (
-				F6BD650B01B3184301A962F7,
-				F6BD650C01B3184301A962F7,
-				F6BD650D01B3184301A962F7,
-				F6BD650E01B3184301A962F7,
-				F6BD650F01B3184301A962F7,
-				F6BD651001B3184301A962F7,
-				F6BD651101B3184301A962F7,
-				F6BD651201B3184301A962F7,
-				F6BD651301B3184301A962F7,
-				F6BD651401B3184301A962F7,
-				F6BD651501B3184301A962F7,
-				F6BD651601B3184301A962F7,
-				F6BD651701B3184301A962F7,
-				F6BD651801B3184301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
-		};
-		F6BD650B01B3184301A962F7 = {
-			fileRef = F6BD64C901B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD650C01B3184301A962F7 = {
-			fileRef = F6BD64CA01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD650D01B3184301A962F7 = {
-			fileRef = F6BD64CB01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD650E01B3184301A962F7 = {
-			fileRef = F6BD64CC01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD650F01B3184301A962F7 = {
-			fileRef = F6BD64CD01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651001B3184301A962F7 = {
-			fileRef = F6BD64CE01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651101B3184301A962F7 = {
-			fileRef = F6BD64CF01B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651201B3184301A962F7 = {
-			fileRef = F6BD64D001B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651301B3184301A962F7 = {
-			fileRef = F6BD64D101B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651401B3184301A962F7 = {
-			fileRef = F6BD64D201B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651501B3184301A962F7 = {
-			fileRef = F6BD64D301B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651601B3184301A962F7 = {
-			fileRef = F6BD64D401B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651701B3184301A962F7 = {
-			fileRef = F6BD64D501B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F6BD651801B3184301A962F7 = {
-			fileRef = F6BD64D601B3172601A962F7;
-			isa = PBXBuildFile;
-			settings = {
-			};
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD651901B3184301A962F7 = {
 			buildActionMask = 2147483647;
@@ -2351,7 +2192,7 @@
 				F6BD651E01B3184301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD651A01B3184301A962F7 = {
 			fileRef = F6BD64D801B3172601A962F7;
@@ -2393,7 +2234,7 @@
 				F6BD652201B3184301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD652001B3184301A962F7 = {
 			fileRef = F6BD64FC01B3184301A962F7;
@@ -2422,7 +2263,7 @@
 				F6901D4001B70DB301A962F7,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F6BD652401B3184301A962F7 = {
 			fileRef = F6BD650001B3184301A962F7;
@@ -2456,8 +2297,8 @@
 		};
 		F6C4515D01B5A8A601A962F7 = {
 			isa = PBXFrameworkReference;
-			name = NSBrowserView.framework;
-			path = ../../browser/cocoa/src/build/NSBrowserView.framework;
+			name = CHBrowserView.framework;
+			path = ../../browser/cocoa/src/build/CHBrowserView.framework;
 			refType = 2;
 		};
 		F6C4515E01B5A8A701A962F7 = {
