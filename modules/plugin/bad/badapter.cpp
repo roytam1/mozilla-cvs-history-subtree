@@ -360,21 +360,23 @@ nsresult fromNPError[] = {
 char* NPP_GetMIMEDescription(void)
 {
     int freeFac = 0;
-    fprintf(stderr, "MIME description\n");
+    //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
-	freeFac = 1;
-	NSGetFactory(kPluginIID, (nsIFactory** )(&thePlugin));
+        freeFac = 1;
+        NSGetFactory(kPluginIID, (nsIFactory** )(&thePlugin));
     }
-    fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
-    char * ret =  (char *) thePlugin->GetMIMEDescription();
-    fprintf(stderr, "Get response %s\n", ret);
+    //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
+    const char * ret;
+    nsresult err = thePlugin->GetMIMEDescription(&ret);
+    if (err) return NULL;
+    //fprintf(stderr, "Get response %s\n", ret);
     if (freeFac) {
-	fprintf(stderr, "Freeing plugin...");
-	thePlugin->Release();
-	thePlugin = NULL;
+        //fprintf(stderr, "Freeing plugin...");
+        thePlugin->Release();
+        thePlugin = NULL;
     }
-    fprintf(stderr, "Done\n");
-    return ret;
+    //fprintf(stderr, "Done\n");
+    return (char*)ret;
 }
 
 
@@ -399,22 +401,23 @@ NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 NPError
 NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     int freeFac = 0;
-    fprintf(stderr, "MIME description\n");
+    //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
-	freeFac = 1;
-	if (NSGetFactory(kPluginIID, (nsIFactory** )(&thePlugin)) != NS_OK)
-	    return NPERR_GENERIC_ERROR;
+        freeFac = 1;
+        if (NSGetFactory(kPluginIID, (nsIFactory** )(&thePlugin)) != NS_OK)
+            return NPERR_GENERIC_ERROR;
     }
-    fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
-    NPError ret = (NPError) thePlugin->GetValue((nsPluginVariable)variable, value);
-    fprintf(stderr, "Get response %08x\n", ret);
+    //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
+    nsresult err = thePlugin->GetValue((nsPluginVariable)variable, value);
+    if (err) return NPERR_GENERIC_ERROR;
+    //fprintf(stderr, "Get response %08x\n", ret);
     if (freeFac) {
-	fprintf(stderr, "Freeing plugin...");
-	thePlugin->Release();
-	thePlugin = NULL;
+        //fprintf(stderr, "Freeing plugin...");
+        thePlugin->Release();
+        thePlugin = NULL;
     }
-    fprintf(stderr, "Done\n");
-    return ret;
+    //fprintf(stderr, "Done\n");
+    return NPERR_NO_ERROR;
 }
 #endif
 
@@ -435,19 +438,19 @@ NPP_Initialize(void)
     // This could happen if GetJavaClass() is called before
     // NPP Initialize.  
     if (thePluginManager == NULL) {
-	// Create the plugin manager and plugin classes.
-	thePluginManager = new CPluginManager();	
-	if ( thePluginManager == NULL ) 
-	    return NPERR_OUT_OF_MEMORY_ERROR;  
-	thePluginManager->AddRef();
+        // Create the plugin manager and plugin classes.
+        thePluginManager = new CPluginManager();	
+        if ( thePluginManager == NULL ) 
+            return NPERR_OUT_OF_MEMORY_ERROR;  
+        thePluginManager->AddRef();
     }
     nsresult error = NS_OK;  
     // On UNIX the plugin might have been created when calling NPP_GetMIMEType.
     if (thePlugin == NULL)
-	// create nsIPlugin factory
-	error = (NPError)NSGetFactory(kPluginIID, (nsIFactory**) &thePlugin);
+        // create nsIPlugin factory
+        error = (NPError)NSGetFactory(kPluginIID, (nsIFactory**) &thePlugin);
     if (error == NS_OK)
-	thePlugin->Initialize(thePluginManager);
+        thePlugin->Initialize(thePluginManager);
 
     return (NPError) error;	
 }
@@ -468,7 +471,7 @@ jref
 NPP_GetJavaClass(void)
 {
     // Only call initialize the plugin if it hasn't been `d.
-  /*  if (thePluginManager == NULL) {
+    /*  if (thePluginManager == NULL) {
         // Create the plugin manager and plugin objects.
         NPError result = CPluginManager::Create();	
         if (result) return NULL;
@@ -476,8 +479,8 @@ NPP_GetJavaClass(void)
         thePluginManager->AddRef();
         NP_CreatePlugin(thePluginManager, (nsIPlugin** )(&thePlugin));
         assert( thePlugin != NULL );
-    }
-*/
+        }
+        */
 //	return thePlugin->GetJavaClass();
 	return NULL;
 }
@@ -531,13 +534,13 @@ NPP_New(NPMIMEType pluginType,
 //    TRACE("NPP_New\n");
     
     if (instance == NULL)
-	return NPERR_INVALID_INSTANCE_ERROR;
+        return NPERR_INVALID_INSTANCE_ERROR;
 
     // Create a new plugin instance and start it.
     nsIPluginInstance* pluginInstance = NULL;
     thePlugin->CreateInstance(NULL, kPluginInstanceIID, (void**)&pluginInstance);
     if (pluginInstance == NULL) {
-	return NPERR_OUT_OF_MEMORY_ERROR;
+        return NPERR_OUT_OF_MEMORY_ERROR;
     } 
     
     // Create a new plugin instance peer,
@@ -545,9 +548,9 @@ NPP_New(NPMIMEType pluginType,
     // XXX - had to save the plugin parameter in the peer class.
     // XXX - Ask Warren about np_instance.
     CPluginInstancePeer* peer = 
-	new CPluginInstancePeer(instance, (nsMIMEType)pluginType, 
-				(nsPluginMode)mode, (PRUint16)argc, 
-				(const char** )argn, (const char** )argv);
+        new CPluginInstancePeer(instance, (nsMIMEType)pluginType, 
+                                (nsPluginMode)mode, (PRUint16)argc, 
+                                (const char** )argn, (const char** )argv);
     assert( peer != NULL );
     if (!peer) return NPERR_OUT_OF_MEMORY_ERROR;
     peer->AddRef();
@@ -574,7 +577,7 @@ NPP_Destroy(NPP instance, NPSavedData** save)
 //    TRACE("NPP_Destroy\n");
     
     if (instance == NULL)
-	return NPERR_INVALID_INSTANCE_ERROR;
+        return NPERR_INVALID_INSTANCE_ERROR;
     
     nsIPluginInstance* pluginInstance = (nsIPluginInstance* )instance->pdata;
     pluginInstance->Stop();
@@ -596,12 +599,12 @@ NPP_SetWindow(NPP instance, NPWindow* window)
 //    TRACE("NPP_SetWindow\n");
     
     if (instance == NULL)
-	return NPERR_INVALID_INSTANCE_ERROR;
+        return NPERR_INVALID_INSTANCE_ERROR;
 
     nsIPluginInstance* pluginInstance = (nsIPluginInstance* )instance->pdata;
     
     if( pluginInstance == 0 )
-	return NPERR_INVALID_PLUGIN_ERROR;
+        return NPERR_INVALID_PLUGIN_ERROR;
 
     return (NPError)pluginInstance->SetWindow((nsPluginWindow* ) window );
 }
@@ -628,23 +631,24 @@ NPP_NewStream(NPP instance,
 //    TRACE("NPP_NewStream\n");
 
     if (instance == NULL)
-	return NPERR_INVALID_INSTANCE_ERROR;
+        return NPERR_INVALID_INSTANCE_ERROR;
 				
     // Create a new plugin stream peer and plugin stream.
     CPluginStreamPeer* speer = new CPluginStreamPeer((nsMIMEType)type, stream,
-						     (PRBool)seekable, stype); 
+                                                     (PRBool)seekable, stype); 
     if (speer == NULL) return NPERR_OUT_OF_MEMORY_ERROR;
     speer->AddRef();
     nsIPluginStream* pluginStream = NULL; 
     nsIPluginInstance* pluginInstance = (nsIPluginInstance*) instance->pdata;
-    NPError result = (NPError)pluginInstance->NewStream(speer, &pluginStream);
+    nsresult err = pluginInstance->NewStream(speer, &pluginStream);
+    if (err) return NPERR_OUT_OF_MEMORY_ERROR;
     speer->Release();
     
     if (pluginStream == NULL)
-	return NPERR_OUT_OF_MEMORY_ERROR;
+        return NPERR_OUT_OF_MEMORY_ERROR;
 		
     stream->pdata = (void*) pluginStream;
-    nsresult err = pluginStream->GetStreamType((nsPluginStreamType*)stype);
+    err = pluginStream->GetStreamType((nsPluginStreamType*)stype);
     assert(err == NS_OK);
 	
     return NPERR_NO_ERROR;
@@ -662,11 +666,11 @@ NPP_WriteReady(NPP instance, NPStream *stream)
 //    TRACE("NPP_WriteReady\n");
 
     if (instance == NULL)
-	return -1;
+        return -1;
 
     nsIPluginStream* theStream = (nsIPluginStream*) stream->pdata;	
     if( theStream == 0 )
-	return -1;
+        return -1;
 	
     return 8192;
 }
@@ -683,11 +687,11 @@ NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
 //    TRACE("NPP_Write\n");
 
     if (instance == NULL)
-	return -1;
+        return -1;
 	
     nsIPluginStream* theStream = (nsIPluginStream*) stream->pdata;
     if( theStream == 0 )
-	return -1;
+        return -1;
 		
     return theStream->Write((const char* )buffer, offset, len);
 }
@@ -706,11 +710,11 @@ NPP_DestroyStream(NPP instance, NPStream *stream, NPReason reason)
 //    TRACE("NPP_DestroyStream\n");
 
     if (instance == NULL)
-	return NPERR_INVALID_INSTANCE_ERROR;
+        return NPERR_INVALID_INSTANCE_ERROR;
 		
     nsIPluginStream* theStream = (nsIPluginStream*) stream->pdata;
     if( theStream == 0 )
-	return NPERR_GENERIC_ERROR;
+        return NPERR_GENERIC_ERROR;
 	
     theStream->Release();
     stream->pdata = NULL;
@@ -891,8 +895,8 @@ CPluginManager::ReloadPlugins(PRBool reloadPages)
 NS_METHOD
 CPluginManager::FetchURL(nsISupports* peer, nsURLInfo* urlInfo)
 {
-   // assert( npp != NULL );
-   // assert( url != NULL );
+    // assert( npp != NULL );
+    // assert( url != NULL );
  	assert( peer != NULL);
 
 	CPluginInstancePeer* instancePeer = (CPluginInstancePeer*)(nsIPluginInstancePeer*) peer;
@@ -981,21 +985,21 @@ NS_IMPL_RELEASE(CPluginManager);
 NS_METHOD
 CPluginManager::QueryInterface(const nsIID& iid, void** ptr) 
 {                                                                        
-  if (NULL == ptr) {                                            
-    return NS_ERROR_NULL_POINTER;                                        
-  }                                                                      
+    if (NULL == ptr) {                                            
+        return NS_ERROR_NULL_POINTER;                                        
+    }                                                                      
   
-  if (iid.Equals(kPluginManagerIID)) {
-      *ptr = (void*) this;                                        
-      AddRef();                                                            
-      return NS_OK;                                                        
-  }                                                                      
-  if (iid.Equals(kISupportsIID)) {                                      
-      *ptr = (void*) ((nsISupports*)this);                        
-      AddRef();                                                            
-      return NS_OK;                                                        
-  }                                                                      
-  return NS_NOINTERFACE;                                                 
+    if (iid.Equals(kPluginManagerIID)) {
+        *ptr = (void*) this;                                        
+        AddRef();                                                            
+        return NS_OK;                                                        
+    }                                                                      
+    if (iid.Equals(kISupportsIID)) {                                      
+        *ptr = (void*) ((nsISupports*)this);                        
+        AddRef();                                                            
+        return NS_OK;                                                        
+    }                                                                      
+    return NS_NOINTERFACE;                                                 
 }
 
 
@@ -1089,10 +1093,10 @@ CPluginInstancePeer::GetAttribute(const char* name, const char* *result)
 #ifdef XP_UNIX
 		if (strcasecmp(name, attribute_list[i]) == 0)
 #else
-		if (stricmp(name, attribute_list[i]) == 0) 
+        if (stricmp(name, attribute_list[i]) == 0) 
 #endif
         {
-			*result = values_list[i];
+            *result = values_list[i];
             return NS_OK;
         }
 	}
@@ -1167,21 +1171,21 @@ NS_IMPL_RELEASE(CPluginInstancePeer);
 NS_METHOD
 CPluginInstancePeer::QueryInterface(const nsIID& iid, void** ptr) 
 {                                                                        
-  if (NULL == ptr) {                                            
-    return NS_ERROR_NULL_POINTER;                                        
-  }                                                                      
+    if (NULL == ptr) {                                            
+        return NS_ERROR_NULL_POINTER;                                        
+    }                                                                      
   
-  if (iid.Equals(kPluginInstancePeerIID)) {
-      *ptr = (void*) this;                                        
-      AddRef();                                                            
-      return NS_OK;                                                        
-  }                                                                      
-  if (iid.Equals(kPluginTagInfoIID) || iid.Equals(kISupportsIID)) {                                      
-      *ptr = (void*) ((nsIPluginTagInfo*)this);                        
-      AddRef();                                                            
-      return NS_OK;                                                        
-  }                                                                      
-  return NS_NOINTERFACE;                                                 
+    if (iid.Equals(kPluginInstancePeerIID)) {
+        *ptr = (void*) this;                                        
+        AddRef();                                                            
+        return NS_OK;                                                        
+    }                                                                      
+    if (iid.Equals(kPluginTagInfoIID) || iid.Equals(kISupportsIID)) {                                      
+        *ptr = (void*) ((nsIPluginTagInfo*)this);                        
+        AddRef();                                                            
+        return NS_OK;                                                        
+    }                                                                      
+    return NS_NOINTERFACE;                                                 
 }
 
 //////////////////////////////////////////////////////////////////////////////
