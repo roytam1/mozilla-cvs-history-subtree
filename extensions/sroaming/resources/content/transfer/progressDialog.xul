@@ -61,6 +61,7 @@
     <vbox flex="1">
       <listbox id="FileList" rows="1"/>
     </vbox>
+    <button id="errors" label="&troubleshooting.label;" accesskey="&troubleshooting.accessKey;" oncommand="showErrors();" hidden="true"/>
     <hbox align="center" id="failureBox" hidden="true">
       <image class="progressitem" progress="done"/>
       <label value="&succeeded.label;"/>

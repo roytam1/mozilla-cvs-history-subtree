@@ -411,6 +411,11 @@ function SetGlobalStatusMessage(message)
 
 function SetFileStatusMessage(filei, message)
 {
+  if (gTransfer.files[filei].status == "failed")
+  {
+    document.getElementById("errors").hidden = false;
+    window.sizeToContent();
+  }
   return;//XXX
   // Status message is a child of <description> element
   //  so text can wrap to multiple lines if necessary
@@ -431,4 +436,16 @@ function SetFileStatusMessage(filei, message)
   }
   */
   window.sizeToContent();
+}
+
+//XXX hack
+function showErrors()
+{
+  var text = "";
+  for (var i = 0, l = gTransfer.files.length; i < l; i++)
+  {
+    var file = gTransfer.files[i];
+    text += ErrorMessageForFile(file) + "\n";
+  }
+  alert(text);
 }
