@@ -988,8 +988,8 @@ alpha*-*-osf*)
     TK_CFLAGS="-I/Developer/Headers/FlatCarbon -F/System/Library/Frameworks"
     CFLAGS="$CFLAGS -fpascal-strings -traditional-cpp -fno-common $TK_CFLAGS"
     CXXFLAGS="$CXXFLAGS -fpascal-strings -traditional-cpp -fno-common $TK_CFLAGS"
-    MKSHLIB='$(CXX) $(CXXFLAGS) -arch ppc $(DSO_LDOPTS) -o $@'
-    MKCSHLIB='$(CC) $(CFLAGS) $(DSO_LDOPTS) -o $@'
+    MKSHLIB='$(CXX) $(CXXFLAGS) -arch ppc $(DSO_LDOPTS) -install_name @executable_path/$@ -o $@'
+    MKCSHLIB='$(CC) $(CFLAGS) $(DSO_LDOPTS) -install_name @executable_path/$@ -o $@'
     MKSHLIB_FORCE_ALL=''
     MKSHLIB_UNFORCE_ALL=''
     dnl it pains me to do this, but a lot of makefiles reference Rhapsody already
