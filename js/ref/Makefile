@@ -91,7 +91,7 @@ INCLUDES   = -I$(OBJDIR)
 #
 CFLAGS          = $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
                   -DJSFILE $(XCFLAGS)
-LDFLAGS		= -lm $(XLDFLAGS)
+LDFLAGS		= -lm $(XLDFLAGS) -L$(OBJDIR) -lfdm
 
 #
 # Ask perl what flags it was built with, so we can build js with similar flags
@@ -249,6 +249,13 @@ clobber:
 
 depend:
 	gcc -MM $(CFLAGS) $(JS_CFILES)
+
+$(OBJDIR)/libfdm.a: fdlibm/libfdm.a
+	@$(MAKE_OBJDIR)
+	cp fdlibm/libfdm.a $(OBJDIR)/libfdm.a
+
+fdlibm/libfdm.a:
+	cd fdlibm; gmake
 
 $(OBJDIR)/%: %.c
 	@$(MAKE_OBJDIR)
