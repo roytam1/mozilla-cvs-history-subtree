@@ -1790,7 +1790,14 @@ js_ReportIsNotFunction(JSContext *cx, jsval *vp, JSBool constructing)
     fp = cx->fp;
     if (fp)
 	sp = fp->sp, fp->sp = vp;
-    str = js_DecompileValueGenerator(cx, *vp, NULL);
+    str = js_DecompileValueGenerator(cx, *vp,
+/*
+*    we provide the typename as the fallback to handle the case
+*    when valueOf is not a function, which prevents ValueToString
+*    from being called as the default case inside 
+*    js_DecompileValueGenerator (and so recursing back to here).
+*/
+           JS_NewStringCopyZ(cx, JS_GetTypeName(cx, JS_TypeOfValue(cx, *vp))));
     if (fp)
 	fp->sp = sp;
     if (str) {
