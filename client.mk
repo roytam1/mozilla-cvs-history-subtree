@@ -78,6 +78,8 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/html/style/src/nsCSSDeclaration.h             \
 	content/html/style/src/nsCSSParser.cpp                \
 	content/html/style/src/nsCSSStyleRule.cpp             \
+	content/html/style/src/nsCSSStruct.cpp                \
+	content/html/style/src/nsCSSStruct.h                  \
 	content/shared/public/nsCSSKeywordList.h              \
 	content/shared/public/nsCSSPropList.h                 \
 	content/shared/public/nsCSSProps.h                    \
