@@ -795,6 +795,11 @@ PR_IMPLEMENT(PRStatus) PR_GetIPNodeByName(
 
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETHOSTBYNAME2)
     PR_Lock(_pr_query_ifs_lock);
+    /*
+     * Keep querying the presence of IPv4 and IPv6 interfaces until
+     * at least one is up.  This allows us to detect the local
+     * machine going from offline to online.
+     */
     if (!_pr_have_inet_if && !_pr_have_inet6_if) {
 	_pr_QueryNetIfs();
 #ifdef DEBUG_QUERY_IFS
