@@ -566,7 +566,25 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
             // rename or copy the existing temp file with the real file name
             
             nsAutoString leafName ;
-            pFile->GetLeafName (leafName);
+            // convert to Unicode using Platform charset
+            // leafName already contains a unicode leafName from lpszPathName. If we were given
+            // a value for lpszFileName, use it. Otherwise stick with leafName
+            if (aFiles[i].lpszFileName)
+            {
+              nsAutoString wholeFileName;
+                if (aIsUnicode)
+                    wholeFileName.Assign(aFiles[i].lpszFileName);
+                else
+                    ConvertToUnicode(nsMsgI18NFileSystemCharset(), (char *) aFiles[i].lpszFileName, wholeFileName);
+                // need to find the last '\' and find the leafname from that.
+                PRInt32 lastSlash = wholeFileName.RFindChar(PRUnichar('\\'));
+                if (lastSlash != kNotFound)
+                  wholeFileName.Right(leafName, wholeFileName.Length() - lastSlash - 1);
+                else
+                  leafName.Assign(wholeFileName);
+            }
+            else 
+              pFile->GetLeafName (leafName);
 
              nsCOMPtr <nsIFile> pTempFile;
              rv = pTempDir->Clone(getter_AddRefs(pTempFile));
