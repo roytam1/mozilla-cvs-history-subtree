@@ -301,7 +301,7 @@ LM_DropSavedWindow(MWContext *context, void *window);
  *   associated with the given context
  */
 extern JSBool
-LM_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
+LM_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
 		            URL_Struct *url_struct, JSBool free_stream_on_close);
 
 /*
