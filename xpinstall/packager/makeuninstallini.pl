@@ -78,9 +78,9 @@ while($line = <STDIN>)
   $line =~ s/\$ProductNameInternal\$/$nameProductInternal/gi;
   $line =~ s/\$MainExeFile\$/$fileMainExe/gi if ($fileMainExe);
   $line =~ s/\$UninstallFile\$/$fileUninstall/gi;
-  $line =~ s/\$GreBuildID\$/$greBuildID/gi;
-  $line =~ s/\$GreFileVersion\$/$greFileVersion/gi;
-  $line =~ s/\$GreUniqueID\$/$greUniqueID/gi;
+  $line =~ s/\$GreBuildID\$/$greBuildID/gi if ($greBuildID);
+  $line =~ s/\$GreFileVersion\$/$greFileVersion/gi if ($greFileVersion);
+  $line =~ s/\$GreUniqueID\$/$greUniqueID/gi if ($greUniqueID);
   print STDOUT $line;
 }
 
