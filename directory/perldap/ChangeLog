@@ -1,3 +1,18 @@
+1999-08-06  Leif Hedstrom  <leif@netscape.com>
+
+	* Merged v1.2.3 with v1.3 branch.
+
+1999-07-25  Kevin McCarthy  <kmccarth@perldap.org>
+
+        * API.xs: Fixed memory allocation problems in parsing and
+        generating the LDAPMods structure.
+
+1999-06-22  Leif Hedstrom  <leif@netscape.com>
+
+        * Conn.pm (add): Fixed bug 3342, thanks to Kevin McCarthy for
+        debugging this, and providing a patch. This fixes the problem with
+        adding new entries that has binary data.
+
 1999-03-23  Leif Hedstrom  <leif@netscape.com>
 
 	* Changed versioning numbers for all .pm files.

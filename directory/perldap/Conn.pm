@@ -30,13 +30,13 @@
 package Mozilla::LDAP::Conn;
 
 use Mozilla::LDAP::Utils 1.0300 ();
-use Mozilla::LDAP::API 1.0300 qw(/.+/);
+use Mozilla::LDAP::API 1.0303 qw(/.+/);
 use Mozilla::LDAP::Entry 1.0300 ();
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.0302";
+$VERSION = "1.0303";
 
 
 #############################################################################
@@ -50,7 +50,7 @@ sub new
 
   if (ref $_[$[] eq "HASH")
     {
-      my $hash;
+      my ($hash);
 
       $hash = $_[$[];
       $self->{"host"} = $hash->{"host"} if defined($hash->{"host"});
@@ -89,7 +89,7 @@ sub new
 #
 sub DESTROY
 {
-  my $self = shift;
+  my ($self) = shift;
 
   return unless defined($self->{"ld"});
 
@@ -110,7 +110,7 @@ sub DESTROY
 #
 sub init
 {
-  my $self = shift;
+  my ($self) = shift;
   my ($ret, $ld);
 
   if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
@@ -141,7 +141,7 @@ sub init
 sub newEntry
 {
   my (%entry);
-  my $obj;
+  my ($obj);
 
   tie %entry, 'Mozilla::LDAP::Entry';
   $obj = bless \%entry, 'Mozilla::LDAP::Entry';
@@ -167,7 +167,7 @@ sub isURL
 #
 sub getLD
 {
-  my $self = shift;
+  my ($self) = shift;
 
   return $self->{"ld"} if defined($self->{"ld"});
 }
@@ -179,7 +179,7 @@ sub getLD
 #
 sub getRes
 {
-  my $self = shift;
+  my ($self) = shift;
 
   return $self->{"ldres"} if defined($self->{"ldres"});
 }
@@ -193,7 +193,7 @@ sub getRes
 sub getErrorCode
 {
   my ($self, $match, $msg) = @_;
-  my $ret;
+  my ($ret);
 
   return ldap_get_lderrno($self->{"ld"}, $match, $msg);
 }
@@ -205,8 +205,8 @@ sub getErrorCode
 #
 sub getErrorString 
 {
-  my $self = shift;
-  my $err;
+  my ($self) = shift;
+  my ($err);
   
   $err = ldap_get_lderrno($self->{"ld"}, undef, undef);
 
@@ -234,7 +234,7 @@ sub search
 {
   my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
   my ($resv, $entry);
-  my $res = \$resv;
+  my ($res) = \$resv;
 
   $scope = Mozilla::LDAP::Utils::str2Scope($scope);
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
@@ -277,7 +277,7 @@ sub searchURL
 {
   my ($self, $url, $attrsonly) = @_;
   my ($resv, $entry);
-  my $res = \$resv;
+  my ($res) = \$resv;
 
   if (defined($self->{"ldres"}))
     {
@@ -304,10 +304,10 @@ sub searchURL
 #
 sub nextEntry
 {
-  my $self = shift;
+  my ($self) = shift;
   my (%entry, @ocorder, @vals);
   my ($attr, $lcattr, $obj, $ldentry, $berv, $dn, $count);
-  my $ber = \$berv;
+  my ($ber) = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
   $obj = tie %entry, 'Mozilla::LDAP::Entry';
@@ -432,7 +432,7 @@ sub add
       foreach $key (@{$entry->{"_oc_order_"}})
 	{
 	  next if (($key eq "dn") || ($key =~ /^_.+_$/));
-	  $ent{$key} = $entry->{$key};
+	  $ent{$key} = { "ab" => $entry->{$key} };
 	  $gotcha++;
 	  $entry->attrClean($key);
 	}
@@ -442,7 +442,7 @@ sub add
       foreach $key (keys(%{$entry}))
 	{
 	  next if (($key eq "dn") || ($key =~ /^_.+_$/));
-	  $ent{$key} = $entry->{$key};
+	  $ent{$key} = { "ab" => $entry->{$key} };
 	  $gotcha++;
 	}
     }
