@@ -66,12 +66,13 @@ public:
     PRUint32                getCacheCapacity();
     PRUint32                getCacheSize();
 
-private:
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForDiskCacheEntry(DiskCacheEntry * diskEntry, PRBool meta, nsIFile ** result);
     static nsresult getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result);
 
     nsresult visitEntries(nsICacheVisitor * visitory);
+    
+    nsresult updateDiskCacheEntries();
     nsresult updateDiskCacheEntry(nsCacheEntry * entry);
     nsresult readDiskCacheEntry(nsCString * key, nsCacheEntry ** entry);
 
@@ -82,6 +83,9 @@ private:
 
     nsresult scanDiskCacheEntries(nsISupportsArray ** result);
     nsresult evictDiskCacheEntries();
+    
+    nsresult writeCacheInfo();
+    nsresult readCacheInfo();
 
 private:
     nsCOMPtr<nsIObserver>   mPrefsObserver;
