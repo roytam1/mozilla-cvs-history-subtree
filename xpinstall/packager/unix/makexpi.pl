@@ -39,32 +39,6 @@
 #
 
 use Cwd;
-use File::Find;
-
-@libraryList = undef;
-
-##
-# RecursiveStrip
-#
-# Strips all strippable files by recursing into all directories and calling
-# the strip utility on all files.
-#
-# @param   targetDir  the directory to traverse recursively
-#
-sub RecursiveStrip
-{
-    my($targetDir) = $_[0];
-    my(@dirEntries) = ();
-    my($entry) = "";
-    my($saveCwd) = cwd();
-
-    undef @libraryList;
-    find({ wanted => \&find_libraries, no_chdir => 1 }, $targetDir);
-    @dirEntries = <$targetDir/*>;
-
-    # strip all strippable files
-    system("strip @libraryList") if (defined(@libraryList));
-}
 
 sub MakeJsFile
 {
@@ -75,11 +49,6 @@ sub MakeJsFile
   {
     exit(1);
   }
-}
-
-sub find_libraries
-{
-    push @libraryList, $File::Find::name;
 }
 
 # Make sure there are at least three arguments
@@ -133,10 +102,6 @@ $saveCwdir = cwd();
 # change directory to where the files are, else zip will store
 # unwanted path information.
 chdir("$inStagePath/$inComponentName");
-
-# strip libs
-print "stripping libs in $inStagePath/$inComponentName...\n";
-RecursiveStrip(cwd());
 
 system("zip -r -y $inDestPath/$inComponentName.xpi *");
 chdir("$saveCwdir");
