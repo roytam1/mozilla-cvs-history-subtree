@@ -80,7 +80,7 @@ installer:
 	$(INSTALL) $(addprefix $(topsrcdir)/toolkit/locales/$(AB_CD)/installer/unix/,$(LOCALIZED_FILES)) $(addprefix $(srcdir)/,$(INSTALLER_FILES)) instgen
 	$(EXIT_ON_ERROR) \
 	for i in $(PP_LOCALIZED_FILES); do \
-	  $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/defines.inc $(srcdir)/$$i > instgen/$$i; \
+	  $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/installer/installer.inc $(srcdir)/$$i > instgen/$$i; \
 	done
 	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/browser/locales/$(AB_CD)/defines.inc $(srcdir)/ab-CD.jst > instgen/$(AB_CD).jst
 	$(PERL) $(topsrcdir)/toolkit/mozapps/installer/build_static.pl -config $(CONFIG_DIR) -objdir $(ABS_depth) -srcdir $(ABS_topsrcdir)
