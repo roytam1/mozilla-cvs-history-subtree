@@ -20,7 +20,7 @@
 MOD_DEPTH	= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@:@srcdir@/md/unix
+VPATH		= @srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
