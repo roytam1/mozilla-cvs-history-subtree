@@ -368,7 +368,7 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
 
     nsCOMPtr <nsIMsgIdentity> pMsgId ;
     rv = accountManager->GetIdentity (MsgIdKey, getter_AddRefs(pMsgId)) ;
-    if (NS_FAILED(rv) || (!pMsgId) ) return rv ;
+    if (NS_FAILED(rv) ) return rv ;
 
     // create a send listener to get back the send status
     nsCOMPtr <nsIMsgSendListener> sendListener ;
@@ -800,26 +800,6 @@ nsresult nsMapiHook::ShowComposerWindow (unsigned long aSession, nsIMsgCompField
 {
     nsresult rv = NS_OK ;
 
-    /** create nsIMsgComposeParams obj and other fields to populate it **/    
-
-    // smtp password and Logged in used IdKey from MapiConfig (session obj)
-    nsMAPIConfiguration * pMapiConfig = nsMAPIConfiguration::GetMAPIConfiguration() ;
-    if (!pMapiConfig) return NS_ERROR_FAILURE ;  // get the singelton obj
-    PRUnichar * password = pMapiConfig->GetPassWord(aSession) ;
-    // password
-    nsCAutoString smtpPassword ;
-    smtpPassword.AssignWithConversion (password) ;
-    // Id key
-    char * MsgIdKey = pMapiConfig->GetIdKey(aSession) ;
-
-    // get the MsgIdentity for the above key using AccountManager
-    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService (NS_MSGACCOUNTMANAGER_CONTRACTID) ;
-    if (NS_FAILED(rv) || (!accountManager) ) return rv ;
-
-    nsCOMPtr <nsIMsgIdentity> pMsgId ;
-    rv = accountManager->GetIdentity (MsgIdKey, getter_AddRefs(pMsgId)) ;
-    if (NS_FAILED(rv) || (!pMsgId) ) return rv ;
-
     // create a send listener to get back the send status
     nsCOMPtr <nsIMsgSendListener> sendListener ;
     rv = nsMAPISendListener::CreateMAPISendListener(getter_AddRefs(sendListener)) ; 
@@ -832,10 +812,8 @@ nsresult nsMapiHook::ShowComposerWindow (unsigned long aSession, nsIMsgCompField
     // populate the compose params
     pMsgComposeParams->SetType(nsIMsgCompType::New);
     pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
-    pMsgComposeParams->SetIdentity(pMsgId);
     pMsgComposeParams->SetComposeFields(aCompFields); 
     pMsgComposeParams->SetSendListener(sendListener) ;
-    pMsgComposeParams->SetSmtpPassword(smtpPassword);
 
     /** get the nsIMsgComposeService object to open the compose window **/
     nsCOMPtr <nsIMsgComposeService> compService = do_GetService (NS_MSGCOMPOSESERVICE_CONTRACTID) ;

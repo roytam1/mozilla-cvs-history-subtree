@@ -144,8 +144,11 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
         return -1;
     }
 
-    nsStringKey usernameKey(aUserName);
-    n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
+    if (aUserName != nsnull && aUserName[0] != '\0')
+    {
+        nsStringKey usernameKey(aUserName);
+        n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
+    }
 
     // try to share a session; if not create a session
 
@@ -179,7 +182,11 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
 
             nsPRUintKey sessionKey(session_generator);
             m_SessionMap->Put(&sessionKey, pTemp);
-            m_ProfileMap->Put(&usernameKey, (void*)session_generator);
+            if (aUserName != nsnull && aUserName[0] != '\0')
+            {
+                nsStringKey usernameKey(aUserName);
+                m_ProfileMap->Put(&usernameKey, (void*)session_generator);
+            }
 
             *aSession = session_generator;
             sessionCount++;
@@ -206,8 +213,11 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
         {
             if (pTemp->DecrementSession() == 0)
             {
-                nsStringKey stringKey(pTemp->m_pProfileName.get());
-                m_ProfileMap->Remove(&stringKey);
+                if (pTemp->m_pProfileName.get() != nsnull)
+                {
+                   nsStringKey stringKey(pTemp->m_pProfileName.get());
+                   m_ProfileMap->Remove(&stringKey);
+                }
                 m_SessionMap->Remove(&sessionKey);
                 sessionCount--;
                 bResult = PR_TRUE;
