@@ -668,11 +668,12 @@ void CEditMIMEWindow::BuildPluginMenu()
 	}
 }
 
-struct BNDLIds
-{	// Utility structure for bundle parsing
-	Int16 localID;
-	Int16 resID;
-};
+//struct BNDLIds
+//{	// Utility structure for bundle parsing
+//	Int16 localID;
+//	Int16 resID;
+//};
+
 // ---------------------------------------------------------------------------
 // CEditMIMEWindow::BuildFileTypeMenu:
 // Build the file-type menu from the list file types in the application info.
