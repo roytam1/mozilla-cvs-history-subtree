@@ -36,8 +36,7 @@ function openURL(aURL)
 
   var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
                               .getService(Components.interfaces.nsIExternalProtocolService);
-  if (protocolSvc.isExposedProtocol(uri.scheme))
-    protocolSvc.loadUrl(uri);
+  protocolSvc.loadUrl(uri);
 # If we're a browser, open a new browser window instead.    
 #else
   openDialog("chrome://browser/content/browser.xul", "_blank", "chrome,all,dialog=no", aURL, null, null);
