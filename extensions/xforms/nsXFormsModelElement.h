@@ -48,6 +48,7 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMDocument.h"
+#include "nsXFormsMDG.h"
 #include "nsXFormsElement.h"
 
 #include "nsISchemaLoader.h"
@@ -112,6 +113,8 @@ private:
 
   PRInt32 mSchemaCount;
   PRBool  mInstanceDataLoaded;
+  
+  nsXFormsMDG mMDG;
 };
 
 NS_HIDDEN_(nsresult) NS_NewXFormsModelElement(nsIXTFElement **aResult);

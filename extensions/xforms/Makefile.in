@@ -57,6 +57,7 @@ REQUIRES	= \
 		widget \
 		necko \
 		websrvcs \
+		xmlextras \
 		docshell \
 		$(NULL)
 
@@ -70,6 +71,14 @@ CPPSRCS		= \
 		nsXFormsStubElement.cpp \
 		nsXFormsAtoms.cpp \
 		nsXFormsModule.cpp \
+		nsXFormsMDG.cpp \
+		nsXFormsMDGEngine.cpp \
+		nsXFormsMDGSet.cpp \
+		nsXFormsXPathAnalyzer.cpp \
+		nsXFormsXPathNode.cpp \
+		nsXFormsXPathParser.cpp \
+		nsXFormsXPathScanner.cpp \
+		nsXFormsXPathXMLUtil.cpp \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = $(MOZ_COMPONENT_LIBS)

@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Brian Ryner <bryner@brianryner.com>
+ *  Allan Beaufour <abeaufour@novell.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -63,9 +64,16 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIContent.h"
 #include "nsXFormsControl.h"
+#include "nsXFormsTypes.h"
+#include "nsXFormsXPathParser.h"
+#include "nsXFormsXPathAnalyzer.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
+
+#ifdef DEBUG_beaufour
+#include "nsIDOMSerializer.h"
+#endif
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -111,18 +119,6 @@ static const EventData sModelEvents[] = {
   { "xforms-link-exception",       PR_FALSE, PR_TRUE },
   { "xforms-link-error",           PR_FALSE, PR_TRUE },
   { "xforms-compute-exception",    PR_FALSE, PR_TRUE }
-};
-
-enum ModelItemPropName
-{
-  eModel_type,
-  eModel_readonly,
-  eModel_required,
-  eModel_relevant,
-  eModel_calculate,
-  eModel_constraint,
-  eModel_p3ptype,
-  eModel__count
 };
 
 static nsIAtom* sModelPropsList[eModel__count];
@@ -501,6 +497,9 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 
   NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
 
+  nsresult rv = mMDG.Init();
+  NS_ENSURE_SUCCESS(rv, rv);
+
   return NS_OK;
 }
 
@@ -529,24 +528,65 @@ nsXFormsModelElement::GetInstanceDocument(const nsAString& aInstanceID,
 NS_IMETHODIMP
 nsXFormsModelElement::Rebuild()
 {
-  return NS_OK;
+#ifdef DEBUG
+  printf("nsXFormsModelElement::Rebuild()\n");
+#endif
+
+  // TODO: Clear graph and re-attach elements
+
+  // 1 . Clear graph
+  // mMDG.Clear();
+
+  // 2. Re-attach all elements
+
+  // 3. Rebuild graph
+  return mMDG.Rebuild();
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::Recalculate()
 {
-  return NS_OK;
+#ifdef DEBUG
+  printf("nsXFormsModelElement::Recalculate()\n");
+#endif
+  
+  nsXFormsMDGSet changedNodes;
+  // TODO: Handle changed nodes. That is, dispatch events, etc.
+  
+  return mMDG.Recalculate(changedNodes);
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::Revalidate()
 {
+#ifdef DEBUG
+  printf("nsXFormsModelElement::Revalidate()\n");
+#endif
+
+#ifdef DEBUG_beaufour
+  // Dump instance document to stdout
+  nsresult rv;
+  nsCOMPtr<nsIDOMSerializer> serializer(do_CreateInstance(NS_XMLSERIALIZER_CONTRACTID, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // TODO: Should use SerializeToStream and write directly to stdout...
+  nsAutoString instanceString;
+  rv = serializer->SerializeToString(mInstanceDocument, instanceString);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  printf("Instance data:\n%s\n", NS_ConvertUCS2toUTF8(instanceString).get());
+#endif
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::Refresh()
 {
+#ifdef DEBUG
+  printf("nsXFormsModelElement::Refresh()\n");
+#endif
+
   return NS_OK;
 }
 
@@ -596,13 +636,15 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
       NS_STATIC_CAST(nsXFormsControl*, mFormControls[i])->Refresh();
     }
   } else if (type.EqualsLiteral("xforms-revalidate")) {
-    // revalidate
+    Revalidate();
   } else if (type.EqualsLiteral("xforms-recalculate")) {
-    // recalculate
+    Recalculate();
   } else if (type.EqualsLiteral("xforms-rebuild")) {
-    // rebuild
+    Rebuild();
   } else if (type.EqualsLiteral("xforms-reset")) {
-    // reset
+#ifdef DEBUG
+    printf("nsXFormsModelElement::Reset()\n");
+#endif    
   }
 
   return NS_OK;
@@ -751,13 +793,14 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
 
   // Get the model item properties specified by this <bind>.
   nsCOMPtr<nsIDOMXPathExpression> props[eModel__count];
-  nsAutoString exprString;
+  nsAutoString exprStrings[eModel__count];
   PRInt32 propCount = 0;
   nsresult rv = NS_OK;
 
   for (int i = 0; i < eModel__count; ++i) {
-    if (aBindElement->GetAttr(kNameSpaceID_None, sModelPropsList[i], exprString) != NS_CONTENT_ATTR_NOT_THERE) {
-      rv = aEvaluator->CreateExpression(exprString, resolver,
+    if (aBindElement->GetAttr(kNameSpaceID_None, sModelPropsList[i], exprStrings[i]) != NS_CONTENT_ATTR_NOT_THERE) {
+
+      rv = aEvaluator->CreateExpression(exprStrings[i], resolver,
                                         getter_AddRefs(props[i]));
       if (NS_FAILED(rv))
         return PR_FALSE;
@@ -773,26 +816,59 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
   nsCOMPtr<nsIDOMElement> docElement;
   mInstanceDocument->GetDocumentElement(getter_AddRefs(docElement));
   rv = aEvaluator->Evaluate(expr, docElement, resolver,
-                            nsIDOMXPathResult::ORDERED_NODE_ITERATOR_TYPE,
+                            nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
                             nsnull, getter_AddRefs(result));
   if (NS_FAILED(rv))
     return PR_FALSE;
 
+  PRUint32 snapLen;
+  rv = result->GetSnapshotLength(&snapLen);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  nsXFormsMDGSet set;
   nsCOMPtr<nsIDOMNode> node;
-  while (NS_SUCCEEDED(result->IterateNext(getter_AddRefs(node))) && node) {
+  PRInt32 contextPosition = 1;
+  for (PRUint32 snapItem = 0; snapItem < snapLen; ++snapItem) {
+    rv = result->SnapshotItem(snapItem, getter_AddRefs(node));
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    if (!node) {
+      NS_WARNING("nsXFormsModelElement::ProcessBind(): Empty node in result set.");
+      continue;
+    }
+    
+    nsXFormsXPathParser parser;
+    nsXFormsXPathAnalyzer analyzer(aEvaluator, resolver);
+    
     // We must check whether the properties already exist on the node.
     for (int j = 0; j < eModel__count; ++j) {
       if (props[j]) {
-        nsCOMPtr<nsIContent> content = do_QueryInterface(node);
-        nsIDOMXPathExpression *expr = props[j];
+        nsCOMPtr<nsIContent> content = do_QueryInterface(node, &rv);
 
+        if (NS_FAILED(rv)) {
+          NS_WARNING("nsXFormsModelElement::ProcessBind(): Node is not IContent!\n");
+          continue;
+        }
+
+        nsIDOMXPathExpression *expr = props[j];
         NS_ADDREF(expr);
 
+        // Set property
         rv = content->SetProperty(sModelPropsList[j], expr, ReleaseExpr);
-
         if (rv == NS_PROPTABLE_PROP_OVERWRITTEN) {
           return PR_FALSE;
         }
+        
+        // Get node dependencies
+        nsAutoPtr<nsXFormsXPathNode> xNode(parser.Parse(exprStrings[j]));
+        set.Clear();
+        rv = analyzer.Analyze(node, xNode, expr, &exprStrings[j], &set);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        // Insert into MDG
+        rv = mMDG.AddMIP((ModelItemPropName) j, expr, &set, parser.UsesDynamicFunc(),
+                         node, contextPosition++, snapLen);
+        NS_ENSURE_SUCCESS(rv, rv);
       }
     }
   }
