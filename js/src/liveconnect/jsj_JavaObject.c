@@ -92,7 +92,10 @@ jsj_WrapJavaObject(JSContext *cx,
     JavaObjectWrapper *java_wrapper;
     JavaClassDescriptor *class_descriptor;
     JSJHashEntry *he, **hep;
+
+#ifdef JSJ_THREADSAFE
     int mutation_count;
+#endif
 
     js_wrapper_obj = NULL;
 
@@ -163,8 +166,10 @@ jsj_WrapJavaObject(JSContext *cx,
         he = *hep;
         if (he) {
             js_wrapper_obj = (JSObject *)he->value;
-            if (js_wrapper_obj)
+            if (js_wrapper_obj) {
+		PR_ExitMonitor(java_obj_reflections_monitor);
                 return js_wrapper_obj;
+	    }
         }
     }
 
