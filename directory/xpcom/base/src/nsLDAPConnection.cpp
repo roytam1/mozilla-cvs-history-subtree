@@ -189,19 +189,6 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         return NS_ERROR_FAILURE;
     }
 
-    mConnectionHandle = ldap_init(aHost,
-                                  mPort == -1 ? LDAP_PORT : mPort);
-    // Check that we got a proper connection, and if so, setup the
-    // threading functions for this connection.
-    //
-    if ( !mConnectionHandle ) {
-        rv = NS_ERROR_FAILURE;  // LDAP C SDK API gives no useful error
-    } else {
-#ifdef DEBUG_dmose
-        const int lDebug = 0;
-        ldap_set_option(mConnectionHandle, LDAP_OPT_DEBUG_LEVEL, &lDebug);
-#endif
-    }
     // Do the pre-resolve of the hostname, using the DNS service. This
     // will also initialize the LDAP connection properly, once we have
     // the IPs resolved for the hostname. This includes creating the
@@ -219,7 +206,7 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         return NS_ERROR_FAILURE;
     }
     mDNSHost = aHost;
-#if 0
+
     // if the caller has passed in a space-delimited set of hosts, as the 
     // ldap c-sdk allows, strip off the trailing hosts for now.
     // Soon, we'd like to make multiple hosts work, but now make
@@ -248,40 +235,6 @@ nsLDAPConnection::Init(const char *aHost, PRInt32 aPort, PRBool aSSL,
         }
         mDNSHost.Truncate();
     }
-#endif
-    mRunnable = new nsLDAPConnectionLoop();
-    NS_ADDREF(mRunnable);
-    rv = mRunnable->Init();
-    if (NS_FAILED(rv)) 
-    {
-        rv = NS_ERROR_OUT_OF_MEMORY;
-    }
-    else 
-    {
-        // Here we keep a weak reference in the runnable object to the
-        // nsLDAPConnection ("this"). This avoids the problem where a
-        // connection can't get destructed because of the new thread
-        // keeping a strong reference to it. It also helps us know when
-        // we need to exit the new thread: when we can't convert the weak
-        // reference to a strong ref, we know that the nsLDAPConnection
-        // object is gone, and we need to stop the thread running.
-        //
-        nsCOMPtr<nsILDAPConnection> conn =
-            NS_STATIC_CAST(nsILDAPConnection *, this);
-
-        mRunnable->mWeakConn = do_GetWeakReference(conn);
-
-        // kick off a thread for result listening and marshalling
-        // XXXdmose - should this be JOINABLE?
-        //
-        rv = NS_NewThread(getter_AddRefs(mThread), mRunnable, 0,
-                      PR_UNJOINABLE_THREAD);
-        if (NS_FAILED(rv)) {
-            rv = NS_ERROR_NOT_AVAILABLE;
-        }
-    }
-    mInitListener->OnLDAPInit(this, rv);
-    mInitListener = 0;
 
     return rv;
 }
