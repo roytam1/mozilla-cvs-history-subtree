@@ -17,6 +17,9 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
+ * Original Author:
+ *   Darin Fisher <darin@netscape.com>
+ *
  * Contributor(s):
  */
 
@@ -35,11 +38,11 @@
 //----------------------------------------------------------------------------
 // Design Overview
 //
-// A stream listener proxy maintains a pipe.  When the channel makes data
-// available, the proxy copies as much of that data as possible into the pipe.
-// If data was written to the pipe, then the proxy posts an asynchronous event
+// A stream listener proxy maintains a pipe.  When the data is available,
+// the proxy copies as much of that data as possible into the pipe.  If
+// data was written to the pipe, then the proxy posts an asynchronous event
 // corresponding to the amount of data written.  If no data could be written,
-// because the pipe was full, then WOULD_BLOCK is returned to the channel,
+// because the pipe was full, then WOULD_BLOCK is returned to the caller,
 // indicating that the request should be suspended.
 //
 // Once suspended in this manner, the request is only resumed when the pipe is
@@ -59,6 +62,7 @@
 nsStreamListenerProxy::nsStreamListenerProxy()
     : mLock(nsnull)
     , mPendingCount(0)
+    , mPipeEmptied(PR_FALSE)
     , mListenerStatus(NS_OK)
 { }
 
@@ -137,7 +141,8 @@ nsOnDataAvailableEvent::HandleEvent()
     // We should only forward this event to the listener if the request is
     // still in a "good" state.  Because these events are being processed
     // asynchronously, there is a very real chance that the listener might
-    // have cancelled the request after _this_ event was triggered.
+    // have cancelled the request (with an error condition) after _this_
+    // event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
         //
@@ -163,10 +168,10 @@ nsOnDataAvailableEvent::HandleEvent()
             rv, mRequest.get()));
 
         //
-        // XXX Need to suspend the underlying request... must consider
-        //     other pending events (such as OnStopRequest). These
-        //     should not be forwarded to the listener if the request
-        //     is suspended. Also, handling the Resume could be tricky.
+        // XXX Need to suspend the request... must consider other
+        //     pending events (such as OnStopRequest). These should
+        //     not be forwarded to the listener if the request is
+        //     suspended. Also, handling the Resume could be tricky.
         //
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
             NS_NOTREACHED("listener returned NS_BASE_STREAM_WOULD_BLOCK"
@@ -258,18 +263,15 @@ nsStreamListenerProxy::OnDataAvailable(nsIRequest *aRequest,
         }
     }
     
-    //
-    // Enter the RequestToResume lock
-    //
-    {
-        nsAutoLock lock(mLock);
-
+    while (1) {
+        mPipeEmptied = PR_FALSE;
         // 
         // Try to copy data into the pipe.
         //
-        // If the pipe is full, then suspend the request.  It will be resumed
-        // when the pipe is emptied.  Being inside the RequestToResume lock
-        // ensures that the resume will follow the suspend.
+        // If the pipe is full, then we return NS_BASE_STREAM_WOULD_BLOCK
+        // in order to cause the request to be suspended.  If, however, we
+        // detect that the pipe was emptied during this time, we retry copying
+        // data into the pipe.
         //
         rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
@@ -278,15 +280,23 @@ nsStreamListenerProxy::OnDataAvailable(nsIRequest *aRequest,
 
         if (NS_FAILED(rv)) {
             if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-                LOG(("nsStreamListenerProxy: Setting request to resume [req=%x]\n", aRequest));
+                nsAutoLock lock(mLock);
+                if (mPipeEmptied) {
+                    LOG(("nsStreamListenerProxy: Pipe emptied; looping back [req=%x]\n", aRequest));
+                    continue;
+                }
+                LOG(("nsStreamListenerProxy: Pipe full; setting request to resume [req=%x]\n", aRequest));
                 mRequestToResume = aRequest;
             }
             return rv;
         }
-        else if (bytesWritten == 0) {
+        if (bytesWritten == 0) {
             LOG(("nsStreamListenerProxy: Copied zero bytes; not posting an event [req=%x]\n", aRequest));
             return NS_OK;
         }
+
+        // Copied something into the pipe...
+        break;
     }
 
     //
@@ -376,8 +386,11 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     nsCOMPtr<nsIRequest> req;
     {
         nsAutoLock lock(mLock);
-        req = mRequestToResume;
-        mRequestToResume = 0;
+        if (mRequestToResume) {
+            req = mRequestToResume;
+            mRequestToResume = 0;
+        }
+        mPipeEmptied = PR_TRUE; // Flag this call
     }
     if (req) {
         LOG(("nsStreamListenerProxy: Resuming request\n"));

@@ -45,6 +45,7 @@ protected:
     nsCOMPtr<nsIRequest>      mRequestToResume;
     PRLock                   *mLock;
     PRUint32                  mPendingCount;
+    PRBool                    mPipeEmptied;
     nsresult                  mListenerStatus;
 };
 
