@@ -58,28 +58,29 @@ BEGIN {
     }
 }
 
-sub _to_LDIF_records
-    # Normalize a parameter list, to either an list of references to
-    # arrays (and return 0) or a single record (and return 1).
-    # Replace references to objects with the result of calling their
-    # getLDIFrecords() method.
+use vars qw($_uselessUseOf);
+$_uselessUseOf = "Useless use of ".__PACKAGE__."::%s in scalar or void context";
+
+sub _to_LDIF_records # \@_ $funcname $wantarray
+    # Return the parameter, if the array is a single record;
+    # otherwise return a list of references to records, which
+    # are either copied from the given array or the result of
+    # the getLDIFrecords() method of objects in the given array.
 {
-    my ($argv) = @_;
-    use integer;
-    my $i;
-    for ($i = $[; $i <= $#$argv; ++$i) {
-	my $type = ref $$argv[$i];
+    my ($argv, $funcname, $wantarray) = @_;
+    return ($argv) if not ref $argv->[$[];
+    my @records;
+    foreach my $arg (@$argv) {
+	my $type = ref $arg;
 	if ($type) {
-	    if ($type ne "ARRAY") {
-		my @records = ($$argv[$i])->getLDIFrecords();
-		splice @$argv, $i, 1, @records;
-		$i += @records - 1;
-	    }
-	} elsif ($i == 0) {
-	    return 1; # single record
+	    push @records, (($type eq "ARRAY") ? $arg :
+			    $arg->getLDIFrecords());
 	}
     }
-    return 0; # zero or more references to records
+    if (defined ($funcname) and @records > 1 and not $wantarray and $^W) {
+	_carpf ($_uselessUseOf, $funcname);
+    }
+    return @records;
 }
 
 sub _continue_lines
@@ -161,9 +162,8 @@ sub pack_LDIF
     }
     $max_line = undef unless (defined ($max_line) and $max_line > 1);
     my $str = "";
-    foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
+    foreach my $record (_to_LDIF_records \@_) {
 	my @record = @$record;
-	undef $record; # to avoid creating garbage (workaround Perl).
 	$str .= "\n" if length $str; # blank line between records
 	while (@record) {
 	    my ($attr, $val) = splice @record, 0, 2;
@@ -228,10 +228,9 @@ sub put_LDIF
     my $fh = shift;
     my $options = shift;
     $fh = select() unless defined $fh;
-    foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
+    foreach my $record (_to_LDIF_records \@_) {
 	no strict qw(refs); # $fh might be a string
 	print $fh (pack_LDIF ($options, $record), "\n");
-	undef $record; # to avoid creating garbage (workaround Perl).
     }
 }
 
@@ -375,7 +374,7 @@ sub references
 {
     my @refs;
     use integer;
-    foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
+    foreach my $record (_to_LDIF_records \@_) {
 	my $i = undef;
 	while (defined ($i = next_attribute ($record, $i))) {
 	    my $vref = \${$record}[$[+$i+1];
@@ -390,7 +389,6 @@ sub references
 		push @refs, $vref;
 	    }
 	}
-	undef $record; # to avoid creating garbage (workaround Perl).
     }
     return @refs;
 }
@@ -402,18 +400,12 @@ sub _carpf
     Carp::carp $msg;
 }
 
-use vars qw($_uselessUseOf);
-$_uselessUseOf = "Useless use of ".__PACKAGE__."::%s in scalar or void context";
-
 sub enlist_values
 {
     use integer;
-    my $single = _to_LDIF_records \@_;
-    if ($^W and not $single and @_ > 1 and not wantarray) {
-	_carpf ($_uselessUseOf, "enlist_values");
-    }
+    my @records = _to_LDIF_records (\@_, "enlist_values", wantarray);
     my @results;
-    foreach my $record ($single ? \@_ : @_) {
+    foreach my $record (@records) {
 	my ($i, @result, %first, $isEntry);
 	for ($i = $[+1; $i <= $#$record; $i += 2) {
 	    my ($attr, $value) = (${$record}[$i-1], ${$record}[$i]);
@@ -452,9 +444,9 @@ sub enlist_values
 	    my $v = $$$r; $$r = \$v; # return a reference to a copy of the scalar
 	}
 	push @results, \@result;
-	undef $record; # to avoid creating garbage (workaround Perl).
     }
-    return $single ? @{$results[$[]} : @results;
+    return ((@records == 1) and ($records[$[] eq \@_))
+	 ? @{$results[$[]} : @results;
 }
 
 sub condense
@@ -471,12 +463,9 @@ sub condense
 sub delist_values
 {
     use integer;
-    my $single = _to_LDIF_records \@_;
-    if ($^W and not $single and @_ > 1 and not wantarray) {
-	_carpf ($_uselessUseOf, "delist_values");
-    }
+    my @records = _to_LDIF_records (\@_, "delist_values", wantarray);
     my @results;
-    foreach my $record ($single ? \@_ : @_) {
+    foreach my $record (@records) {
 	my ($i, @result);
 	for ($i = $[+1; $i <= $#$record; $i += 2) {
 	    my ($attr, $value) = (${$record}[$i-1], ${$record}[$i]);
@@ -491,9 +480,9 @@ sub delist_values
 	    my $v = $$$r; $$r = \$v; # return a reference to a copy of the scalar
 	}
 	push @results, \@result;
-	undef $record; # to avoid creating garbage (workaround Perl).
     }
-    return $single ? @{$results[$[]} : @results;
+    return ((@records == 1) and ($records[$[] eq \@_))
+	 ? @{$results[$[]} : @results;
 }
 
 sub _k
@@ -527,15 +516,11 @@ sub sort_attributes
     # immediately precedes them.
 {
     use integer;
-    my $single = _to_LDIF_records \@_;
-    if ($^W and not $single and @_ > 1 and not wantarray) {
-	_carpf ($_uselessUseOf, "sort_attributes");
-    }
+    my @records = _to_LDIF_records (\@_, "sort_attributes", wantarray);
     my (@results, @result, @preamble);
-    foreach my $record ($single ? \@_ : @_) {
+    foreach my $record (@records) {
 	@result = @{(delist_values ($record))[$[]};
 	@preamble = ();
-	undef $record; # to avoid creating garbage (workaround Perl).
 	if (@result > 1 and not defined $result[$[+1]) { # initial comments
 	    push @preamble, @{_shiftAttr \@result};
 	}
@@ -564,25 +549,23 @@ sub sort_attributes
 	unshift @result, @preamble;
 	push @results, \@result;
     }
-    return $single ? @{$results[$[]} : @results;
+    return ((@records == 1) and ($records[$[] eq \@_))
+	 ? @{$results[$[]} : @results;
 }
 *sort_entry = \&sort_attributes; # for compatibility with prior versions.
 
 sub get_DN
 {
     use integer;
-    my $single = _to_LDIF_records \@_;
-    if ($^W and not $single and @_ > 1 and not wantarray) {
-	_carpf ($_uselessUseOf, "get_DN");
-    }
+    my @records = _to_LDIF_records (\@_, "get_DN", wantarray);
     my @DNs;
-    foreach my $record ($single ? \@_ : @_) {
+    foreach my $record (@records) {
 	my $i = next_attribute ($record);
 	push @DNs, (((defined $i) and ("dn" eq lc $record->[$[+$i])) ?
 		$record->[$[+$i+1] : undef);
-	undef $record; # to avoid creating garbage (workaround Perl).
     }
-    return $single ? $DNs[$[] : @DNs;
+    return ((@records == 1) and ($records[$[] eq \@_))
+	 ? $DNs[$[] : @DNs;
 }
 *LDIF_get_DN = \&get_DN;
 
