@@ -31,6 +31,7 @@
 #include "nsHTMLImageLoader.h"
 
 #ifdef USE_IMG2
+#include "nsTransform2D.h"
 #include "nsIImageRequest2.h"
 #include "nsIImageDecoderObserver.h"
 #endif
@@ -186,6 +187,9 @@ protected:
 
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
+
+  nsTransform2D mTransform;
+
 
   PRPackedBool mGotInitialReflow;
 #endif

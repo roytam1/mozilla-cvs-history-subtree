@@ -268,6 +268,9 @@ NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsIPresCo
   if (mIntrinsicSize != newsize) {
     mIntrinsicSize = newsize;
 
+    if (mComputedSize.width != 0 && mComputedSize.height != 0)
+      mTransform.SetToScale((float(mIntrinsicSize.width) / float(mComputedSize.width)), (float(mIntrinsicSize.height) / float(mComputedSize.height)));
+
     if (mParent) {
       if (mGotInitialReflow) { // don't reflow if we havn't gotten the inital reflow yet
         mState |= NS_FRAME_IS_DIRTY;
@@ -311,7 +314,9 @@ NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresCon
   nsRect r(*rect);
   r *= p2t; // convert to twips
 
-  Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
+  mTransform.TransformCoord(&r.x, &r.y, &r.width, &r.height);
+
+  Invalidate(aPresContext, r, PR_FALSE);
 
 
 #if 0
@@ -492,32 +497,44 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
   PRBool haveComputedSize = PR_FALSE;
   PRBool needIntrinsicImageSize = PR_FALSE;
 
-  nscoord newWidth, newHeight;
+  nscoord newWidth=0, newHeight=0;
   if (fixedContentWidth) {
+    newWidth = MINMAX(widthConstraint, minWidth, maxWidth);
     if (fixedContentHeight) {
-      newWidth = MINMAX(widthConstraint, minWidth, maxWidth);
       newHeight = MINMAX(heightConstraint, minHeight, maxHeight);
       haveComputedSize = PR_TRUE;
     } else {
       // We have a width, and an auto height. Compute height from
       // width once we have the intrinsic image size.
+      if (mIntrinsicSize.height != 0) {
+        newHeight = mIntrinsicSize.height;
+        haveComputedSize = PR_TRUE;
+      } else {
+        newHeight = NSIntPixelsToTwips(1, p2t); // XXX?
+        needIntrinsicImageSize = PR_TRUE;
+      }
     }
   } else if (fixedContentHeight) {
     // We have a height, and an auto width. Compute width from height
     // once we have the intrinsic image size.
+    newHeight = MINMAX(heightConstraint, minHeight, maxHeight);
     if (mIntrinsicSize.width != 0) {
-      newHeight = mIntrinsicSize.width;
+      newWidth = mIntrinsicSize.width;
+      haveComputedSize = PR_TRUE;
     } else {
-      newHeight = NSIntPixelsToTwips(1, p2t);
+      newWidth = NSIntPixelsToTwips(1, p2t);
+      needIntrinsicImageSize = PR_TRUE;
     }
   } else {
     // auto size the image
     if (mIntrinsicSize.width == 0 && mIntrinsicSize.height == 0) {
       newWidth = NSIntPixelsToTwips(1, p2t);
       newHeight = NSIntPixelsToTwips(1, p2t);
+      needIntrinsicImageSize = PR_TRUE;
     } else {
       newWidth = mIntrinsicSize.width;
       newHeight = mIntrinsicSize.height;
+      haveComputedSize = PR_TRUE;
     }
 
   }
@@ -525,6 +542,10 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
   mComputedSize.width = newWidth;
   mComputedSize.height = newHeight;
 
+  if (mComputedSize == mIntrinsicSize)
+    mTransform.SetToIdentity();
+  else
+    mTransform.SetToScale((float(mIntrinsicSize.width) / float(mComputedSize.width)), (float(mIntrinsicSize.height) / float(mComputedSize.height)));
 
 #if 0
   PRUint32 status;
@@ -946,13 +967,20 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 #ifdef USE_IMG2
         if (imgCon) {
           nsPoint p(inner.x, inner.y);
-
-          inner.IntersectRect(inner, aDirtyRect);
-          nsRect r(inner.x, inner.y, inner.width, inner.height);
-          r.x -= mBorderPadding.left;
-          r.y -= mBorderPadding.top;
-
-          aRenderingContext.DrawImage(imgCon, &r, &p);
+          if (mIntrinsicSize == mComputedSize) {
+            inner.IntersectRect(inner, aDirtyRect);
+            nsRect r(inner.x, inner.y, inner.width, inner.height);
+            r.x -= mBorderPadding.left;
+            r.y -= mBorderPadding.top;
+            aRenderingContext.DrawImage(imgCon, &r, &p);
+          } else {
+            nsRect r(inner.x, inner.y, inner.width, inner.height);
+            // XXX i don't think we need this since we arn't intersecting
+//            r.x -= mBorderPadding.left;
+//            r.y -= mBorderPadding.top;
+            nsRect d(inner.x, inner.y, mComputedSize.width, mComputedSize.height);
+            aRenderingContext.DrawScaledImage(imgCon, &r, &d);
+          }
         }
 #else
         if (image && imgSrcLinesLoaded > 0) {
