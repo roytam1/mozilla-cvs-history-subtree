@@ -23,9 +23,9 @@
 #include "dummy_nc.h"
 #include "il_strm.h"
 #include "if.h"
-/* ebb - begin */
+#if defined (COLORSYNC)
 #include "netcache.h"
-/* ebb - end */
+#endif /* (COLORSYNC) */
 
 PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
@@ -78,11 +78,11 @@ public:
     virtual int GetURL (ilIURL * aUrl, NET_ReloadMethod aLoadMethod,
 			ilINetReader *aReader);
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	virtual PRBool FindURLInCache (ilIURL *aUrl);
 
     MWContext *GetMWContext() { return mContext; };
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 private:
     MWContext *mContext;                             
@@ -117,9 +117,9 @@ public:
 
     URL_Struct *GetURLStruct() { return mURLS; }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	void		SetContentType(char* type);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 private:
     ilINetReader *mReader;
     URL_Struct *mURLS;
@@ -320,7 +320,15 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
     }
 
     /* Fetch the image. */
-	image_req = IL_GetImage(image_url, NULL, cx->img_cx, obs_list, trans_pixel, 0, 0, 0, (ilINetContext *)net_cx);
+	image_req = IL_GetImage(image_url,
+#if defined (COLORSYNC)
+							NULL,		/* icc_profile_url */
+#endif /* (COLORSYNC) */
+							cx->img_cx,
+							obs_list,
+							trans_pixel,
+							0, 0, 0,
+							(ilINetContext *)net_cx);
 	if (!image_req) {
 		ret_val = PR_FALSE;
 	}
@@ -364,7 +372,7 @@ NetContextImpl::Interrupt()
     }
 }
 
-/* ebb - begin */
+#if defined (COLORSYNC)
 PRBool
 NetContextImpl::FindURLInCache(ilIURL *aURL)
 {
@@ -375,7 +383,7 @@ NetContextImpl::FindURLInCache(ilIURL *aURL)
         return PR_FALSE;
     }
 }
-/* ebb - end */
+#endif /* (COLORSYNC) */
 
 
 PRBool
@@ -567,7 +575,7 @@ URLImpl::SetOwnerId(int ownerId)
     }
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 void
 URLImpl::SetContentType(char* type)
 {
@@ -579,7 +587,7 @@ URLImpl::SetContentType(char* type)
 	PR_FREEIF(mURLS->content_type);
 	StrAllocCopy(mURLS->content_type, type);
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 
 

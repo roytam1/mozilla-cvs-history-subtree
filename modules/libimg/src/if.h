@@ -53,10 +53,10 @@ typedef struct _IL_ImageReq IL_ImageReq;
 typedef struct il_context_list il_context_list;
 typedef struct il_container_list il_container_list;
 typedef struct il_container_struct il_container;
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 typedef struct _IL_ProfileReq IL_ProfileReq;
 typedef struct ip_container_struct ip_container;
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
 #include "il_icons.h"           /* Image icons. */
 #include "libimg.h"             /* Public API to Image Library. */
@@ -178,7 +178,7 @@ enum icstate {
     IC_ABORT_PENDING= 0x24  /* Image download abort in progress */
 };
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 enum pc_state			/* Carried by ip_container */
 {
     ICCP_VIRGIN       = 0x00,	/* Newly-created container */
@@ -192,7 +192,7 @@ enum pc_state			/* Carried by ip_container */
     ICCP_MISSING      = 0x23,	/* No such file on server */
     ICCP_ABORT_PENDING= 0x24	/* Profile download abort in progress */
 };
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 /* Still receiving data from the netlib ? */
 #define IMAGE_CONTAINER_ACTIVE(ic)  ((ic)->state <= IC_MULTI)
@@ -285,13 +285,13 @@ struct il_container_struct {
     int comment_length;
 
     int colormap_serial_num;    /* serial number of last installed colormap */
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	uint16 icc_profile_flags;	/* Matching on/off, profile exists, etc. */ 
 	IL_ProfileReq *icc_profile_req;	/* Request for profile load */
     void *icc_profile_ref;		/* Opened profile. */
     char *icc_profile_url;		/* The url of an associated icc profile */
     void *icc_matching_session;	/* A Color World, in ColorSync parlance. */
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     int dont_use_custom_palette;
     int rendered_with_custom_palette;
     IL_DitherMode dither_mode;  /* ilDither or ilClosestColor */
@@ -408,7 +408,7 @@ struct _IL_ImageReq {
     struct _IL_ImageReq *next;  /* Next entry in a list of image requests. */
 };
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 /* There is one ip_container per icc profile */
 struct ip_container_struct {
     ip_container *next;         /* Cache bidirectional linked list */
@@ -467,7 +467,7 @@ struct _IL_ProfileReq {
     struct _IL_ProfileReq *next;	/* Next entry in a list of image requests. */
 };
 
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
 extern int il_debug;
 extern uint8 il_identity_index_map[];
@@ -478,8 +478,13 @@ extern void il_image_abort(il_container *ic);
 extern void il_image_complete(il_container *ic);
 extern PRBool il_image_stopped(il_container *ic);
 
+#if defined (COLORSYNC)
 extern ilINetReader *IL_NewNetReader(il_container *ic, ip_container *ip);
 extern void *IL_GetNetReaderContainer(ilINetReader *reader);
+#else
+extern ilINetReader *IL_NewNetReader(il_container *ic);
+extern il_container *IL_GetNetReaderContainer(ilINetReader *reader);
+#endif /* (COLORSYNC) */
 
 #ifndef M12N_NEW_DEPENDENCIES   /* XXXM12N */
 extern unsigned int IL_StreamWriteReady(il_container *ic);
@@ -577,9 +582,9 @@ extern il_container
 *il_get_container(IL_GroupContext *image_context,
                   NET_ReloadMethod reload_cache_policy,
                   const char *image_url,
-/*	ebb - begin */
+#if defined (COLORSYNC)
 				  const char *icc_profile_url,
-/*	ebb - end */
+#endif /* (COLORSYNC) */
                   IL_IRGB *background_color,
                   IL_DitherMode dither_mode,
                   int req_depth,

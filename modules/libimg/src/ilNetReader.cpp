@@ -17,9 +17,9 @@
  */
 
 #include "if.h"
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "icc_profile.h"
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 #include "ilINetReader.h"
 
 static NS_DEFINE_IID(kINetReaderIID, IL_INETREADER_IID);
@@ -27,7 +27,12 @@ static NS_DEFINE_IID(kINetReaderIID, IL_INETREADER_IID);
 class NetReaderImpl : public ilINetReader {
 public:
 
+#if defined (COLORSYNC)
   NetReaderImpl(il_container *aContainer, ip_container *iccContainer);
+#else
+  NetReaderImpl(il_container *aContainer);
+#endif /* (COLORSYNC) */
+
   ~NetReaderImpl();
 
   NS_DECL_ISUPPORTS
@@ -47,24 +52,27 @@ public:
   virtual PRBool StreamCreated(ilIURL *urls, int type);
   
   virtual PRBool IsMulti();
-/*	ebb - begin */
-  void	 *GetContainer();
-/*
-	Lots of changes in this file.
-	Not annotated with "ebb"  
-*/
-/*	ebb - end */
+
+  NetReaderContainerType GetContainer();
 
 private:
   il_container *mContainer;
+#if defined (COLORSYNC)
   ip_container *mICCContainer;
+#endif /* (COLORSYNC) */
 };
 
+#if defined (COLORSYNC)
 NetReaderImpl::NetReaderImpl(il_container *aContainer, ip_container *iccContainer)
+#else
+NetReaderImpl::NetReaderImpl(il_container *aContainer)
+#endif /* (COLORSYNC) */
 {
     NS_INIT_REFCNT();
     mContainer		= aContainer;
+#if defined (COLORSYNC)
     mICCContainer	= iccContainer;
+#endif /* (COLORSYNC) */
 }
 
 NetReaderImpl::~NetReaderImpl()
@@ -79,6 +87,7 @@ NetReaderImpl::WriteReady()
     if (mContainer != NULL) {
         return IL_StreamWriteReady(mContainer);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
 	/*
 		Profile stream doesn't have custom function.
@@ -90,7 +99,7 @@ NetReaderImpl::WriteReady()
 		#define	kProfileChunkSize	8192
 		return kProfileChunkSize;
     }
-    
+#endif /* (COLORSYNC) */
 	return 0;
 }
   
@@ -100,9 +109,11 @@ NetReaderImpl::FirstWrite(const unsigned char *str, int32 len)
     if (mContainer != NULL) {
         return IL_StreamFirstWrite(mContainer, str, len);
     }
+#if defined (COLORSYNC)
 	else if (mICCContainer != NULL) {
 		return IL_ProfileStreamFirstWrite(mICCContainer, str, len);
 	}
+#endif /* (COLORSYNC) */
 	
 	return 0;
 }
@@ -113,9 +124,11 @@ NetReaderImpl::Write(const unsigned char *str, int32 len)
     if (mContainer != NULL) {
         return IL_StreamWrite(mContainer, str, len);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
         return IL_ProfileStreamWrite(mICCContainer, str, len);
     }
+#endif /* (COLORSYNC) */
 
 	return 0;
 }
@@ -126,9 +139,11 @@ NetReaderImpl::StreamAbort(int status)
     if (mContainer != NULL) {
         IL_StreamAbort(mContainer, status);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
         IL_ProfileStreamAbort(mICCContainer, status);
     }
+#endif /* (COLORSYNC) */
 }
 
 void 
@@ -137,9 +152,11 @@ NetReaderImpl::StreamComplete(PRBool is_multipart)
     if (mContainer != NULL) {
         IL_StreamComplete(mContainer, is_multipart);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
         IL_ProfileStreamComplete(mICCContainer);
     }
+#endif /* (COLORSYNC) */
 }
 
 void 
@@ -148,9 +165,11 @@ NetReaderImpl::NetRequestDone(ilIURL *urls, int status)
     if (mContainer != NULL) {
         IL_NetRequestDone(mContainer, urls, status);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
         IL_NetProfileRequestDone(mICCContainer, urls, status);
     }
+#endif /* (COLORSYNC) */
 }
   
 PRBool 
@@ -159,9 +178,11 @@ NetReaderImpl::StreamCreated(ilIURL *urls, int type)
     if (mContainer != NULL) {
         return IL_StreamCreated(mContainer, urls, type);
     }
+#if defined (COLORSYNC)
     else if (mICCContainer != NULL) {
         return IL_ProfileStreamCreated(mICCContainer, urls, type);
     }
+#endif /* (COLORSYNC) */
 
 	return PR_FALSE;
 }
@@ -177,23 +198,32 @@ NetReaderImpl::IsMulti()
     }
 }
 
-void*
+NetReaderContainerType
 NetReaderImpl::GetContainer()
 {
-	void*	container = NULL;
+	NetReaderContainerType	container = NULL;
 	
 	if (mContainer != NULL)
-		container = (void*) mContainer;
+		container = (NetReaderContainerType) mContainer;
+#if defined (COLORSYNC)
 	else if (mICCContainer != NULL)
-		container = (void*) mICCContainer;
-
+		container = (NetReaderContainerType) mICCContainer;
+#endif /* (COLORSYNC) */
 	return container;
 }
 
 ilINetReader *
+#if defined (COLORSYNC)
 IL_NewNetReader(il_container *ic, ip_container *ip)
+#else
+IL_NewNetReader(il_container *ic)
+#endif /* (COLORSYNC) */
 {
+#if defined (COLORSYNC)
     ilINetReader *reader = new NetReaderImpl(ic,ip);
+#else
+    ilINetReader *reader = new NetReaderImpl(ic);
+#endif /* (COLORSYNC) */
 
     if (reader != NULL) {
         NS_ADDREF(reader);
@@ -202,7 +232,7 @@ IL_NewNetReader(il_container *ic, ip_container *ip)
     return reader;
 }
 
-void *
+NetReaderContainerType
 IL_GetNetReaderContainer(ilINetReader *reader)
 {
     if (reader != NULL) {

@@ -46,10 +46,10 @@ public:
 
   virtual void SetOwnerId(int)=0;
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
   virtual URL_Struct *GetURLStruct()=0;
   virtual void SetContentType(char* type)=0;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 };
 
 #endif

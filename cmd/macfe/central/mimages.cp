@@ -28,10 +28,10 @@
 #include "miconutils.h"
 #include "il_util.h"
 #include "il_icons.h"
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "xp_file_mac.h"
 #include "icc_profile_types.h"
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 #include "CBrowserContext.h"
 #include "CBrowserWindow.h" // for CBrowserWindow::ClipOutPopdown()
 #include "CIconContext.h"
@@ -121,14 +121,14 @@ static void UnlockPixmapBuffer ( IL_Pixmap * pixmap );
 static CIconHandle GetIconHandle ( jint iconID );
 static IL_GroupContext * CreateImageGroupContext ( MWContext * context );
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 // These are really for the future, when we determine how to associate
 // displays with contexts.  For now, the System profile is used for each
 // *color* color space in the global array.
 // static	GDHandle	GetPreferredDisplayDevice ( MWContext * context );
 // static	void*		GetICCProfileRefForContext ( MWContext * context );
 static	void*		GetProfileByDisplayID ( int32	id );
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 /*
  * Globals
@@ -517,7 +517,7 @@ _IMGCB_GetIconDimensions(struct IMGCB* /*self*/, jint /*op*/, void* a, int* widt
 	}
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*	******************************************************************************
 	OpenICCProfileFromMem
 	
@@ -894,7 +894,7 @@ _IMGCB_IsColorSyncAvailable(	struct IMGCB*	/*self*/,
 #error This ONLY WORKS FOR PPC!
 #endif
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #pragma mark --- PUBLIC FUNCTIONS ---
 

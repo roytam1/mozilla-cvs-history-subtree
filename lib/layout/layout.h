@@ -112,9 +112,9 @@ extern char* lo_alignStrings[];
 #define	AREA_SHAPE_CIRCLE	3
 #define	AREA_SHAPE_POLY		4
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*
-	Expanded these to 16 bits.
+	Expanded to 16 bits for ColorSync.
 */
 #define	BODY_ATTR_BACKGROUND	0x0001
 #define	BODY_ATTR_BGCOLOR		0x0002
@@ -125,7 +125,16 @@ extern char* lo_alignStrings[];
 #define	BODY_ATTR_MARGINS		0x0040
 #define	BODY_ATTR_JAVA			0x0080
 #define	BODY_ATTR_ICCPROFILE	0x0100
-/*	ebb - end */
+#else
+#define	BODY_ATTR_BACKGROUND	0x01
+#define	BODY_ATTR_BGCOLOR		0x02
+#define	BODY_ATTR_TEXT			0x04
+#define	BODY_ATTR_LINK			0x08
+#define	BODY_ATTR_VLINK			0x10
+#define	BODY_ATTR_ALINK			0x20
+#define	BODY_ATTR_MARGINS		0x40
+#define	BODY_ATTR_JAVA			0x80
+#endif /* (COLORSYNC) */
 
 #define DEF_TAB_WIDTH		8
 
@@ -746,15 +755,17 @@ struct lo_TopState_struct {
     PRPackedBool scrolling_doc;	/* Is this a special scrolling doc (hack) */
     PRPackedBool have_title;	/* set by first <TITLE> */
     PRPackedBool in_form;	/* true if in <FORM>...</FORM> */
-/*	ebb - begin */
+#if defined (COLORSYNC)
     uint16 body_attr;		/* What attributes were set by BODY */
-/*	ebb - end */
+#else
+	uint8  body_attr;		/* What attributes were set by BODY */
+#endif /* (COLORSYNC) */
     char *unknown_head_tag;	/* ignore content in this case if non-NULL */
     char *base_target;		/* Base target of urls in this document */
     char *base_url;		/* Base url of this document */
-/*	ebb - begin */
+#if defined (COLORSYNC)
     PA_Block icc_profile_url;	/* url of icc profile for this document */
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     char *inline_stream_blocked_base_url; /* Base url for prefetched images */
     char *main_stream_blocked_base_url; /* Base url for prefetched images */
     char *url;			/* Real url of this document */

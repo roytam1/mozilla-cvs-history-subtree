@@ -1,3 +1,4 @@
+#if defined (COLORSYNC)
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
@@ -9,17 +10,9 @@
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
  * for the specific language governing rights and limitations under the
  * NPL.
- *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
  */
 
-/* -*- Mode: C; tab-width: 4 -*-
- *   icc_profile_types.h ---	External constants for icc profiles
- *
- */
+/* This file contains external references for ICC Profiles. */
 #ifndef _icc_profile_types_h
 #define _icc_profile_types_h
 
@@ -35,9 +28,8 @@
 #define		kICCProfileRef_DefaultProfile	0xFFFFFFFE
 #define		kICCProfileRef_SystemProfile	0xFFFFFFFF
 #define		kICCProfileRef_NoProfile		0x0
-#define		kICCProfileRef_AVID_1			0x00000001
-//			... AVIDs up to...
-#define		kICCProfileRefConstants			0x00000010
-
+#define		kICCProfileRef_AVID				0x00000001
+#define		kICCProfileRefConstants			0x00000001
 
 #endif	/*	_icc_profile_types_h */
+#endif /* (COLORSYNC) */

@@ -32,9 +32,9 @@
 
 #include "il_strm.h"
 
-/* ebb - begin */
+#if defined (COLORSYNC)
 #include "icc_profile.h"
-/* ebb - begin */
+#endif	/* (COLORSYNC) */
 
 PR_BEGIN_EXTERN_C
 extern int XP_MSG_IMAGE_PIXELS;
@@ -175,11 +175,11 @@ il_image_complete_notify(il_container *ic)
         XP_NotifyObservers(image_req->obs_list, IL_IMAGE_COMPLETE,
                            &message_data);
     }
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session) {
 		il_icc_matching_complete(ic);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 }
 
 /* Notify observers that a frame of an image animation has finished
@@ -707,16 +707,16 @@ IL_StreamWriteReady(il_container *ic)
     if (!request_size)
         return 0;
         
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
-		If there's a profile loading, we don't want dsata yet.
+		If there's a profile loading, we don't want data yet.
 		That's because our data will get color-matched during decode,
 		and if we haven't gotten the profile by then it won't
 		get color-matched.
     */
 	if (il_waiting_for_icc_profile(ic))
         return 0;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
         
 	/*
      * It could be that layout aborted image loading by calling IL_FreeImage
@@ -1351,7 +1351,11 @@ il_image_complete(il_container *ic)
 
                     /* Suppress thermo & progress bar */
 					netRequest->SetBackgroundLoad(PR_TRUE);
-					reader = IL_NewNetReader(ic /* ebb - begin */ ,NULL /* ebb - end */);
+#if defined (COLORSYNC)
+					reader = IL_NewNetReader(ic, NULL);
+#else
+					reader = IL_NewNetReader(ic);
+#endif	/* (COLORSYNC) */
                     (void) ic->net_cx->GetURL(ic->url, NET_DONT_RELOAD, 
 											  reader);
                     /* Release reader, GetURL will keep a ref to it. */
@@ -1660,9 +1664,9 @@ il_internal_image(const char *image_url)
 
 IL_IMPLEMENT(IL_ImageReq *)
 IL_GetImage(const char* image_url,
-/* ebb - begin */
+#if defined (COLORSYNC)
 			const char* icc_profile_url,
-/* ebb - end */
+#endif /* (COLORSYNC) */
             IL_GroupContext *img_cx,
             XP_ObserverList obs_list,
             NI_IRGB *background_color,
@@ -1746,9 +1750,16 @@ IL_GetImage(const char* image_url,
 #endif /* STANDALONE_IMAGE_LIB */
 	}
 
-    ic = il_get_container(img_cx, cache_reload_policy, image_url, icc_profile_url, /*	ebb - added icc_profile_url param */
+#if defined (COLORSYNC)
+    ic = il_get_container(img_cx, cache_reload_policy, image_url, icc_profile_url,
                           background_color, img_cx->dither_mode, req_depth,
                           req_width, req_height);
+#else
+    ic = il_get_container(img_cx, cache_reload_policy, image_url,
+                          background_color, img_cx->dither_mode, req_depth,
+                          req_width, req_height);
+#endif /* (COLORSYNC) */
+
     if (!ic)
     {
         ILTRACE(0,("il: MEM il_container"));
@@ -1785,17 +1796,17 @@ IL_GetImage(const char* image_url,
         return image_req;
     }
     
-/* ebb - begin */
+#if defined (COLORSYNC)
     /*
     	If the image has an associated profile, load that first.
-    	BUT first check to see if this is a cached image that
-    	already has issued a request.  If so, don't request again.
+    	Also check to see if this is a cached image that already
+    	has issued a request.  If so, don't request again.
     */
 	if (ic->icc_profile_url != NULL && ic->icc_profile_req == NULL)
 	{
 		ic->icc_profile_req = IL_GetICCProfile(icc_profile_url, img_cx, net_cx, ic);
 	}
-/* ebb - end */
+#endif /* (COLORSYNC) */
 
     /* If the image is already in memory ... */
 	if (ic->state != IC_VIRGIN) {
@@ -1915,7 +1926,12 @@ IL_GetImage(const char* image_url,
     ic->is_url_loading = PR_TRUE;
 
     /* save away the container */
-	reader = IL_NewNetReader(ic /* ebb - begin */ ,NULL /* ebb - end */);
+#if defined (COLORSYNC)
+	reader = IL_NewNetReader(ic, NULL);
+#else
+	reader = IL_NewNetReader(ic);
+#endif	/* (COLORSYNC) */
+
 	if (!reader) {
         NS_RELEASE(image_req->net_cx);
         PR_FREEIF(image_req);
@@ -1988,11 +2004,11 @@ IL_InterruptContext(IL_GroupContext *img_cx)
                 image_req->stopped = TRUE;
             }
         }
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
     	/* Also stop all requests for ICC Profiles associated with this context */
     	if (ic->icc_profile_req)
     		il_stop_icc_profile_request(ic->icc_profile_req);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     }
 }
 
@@ -2003,7 +2019,7 @@ IL_InterruptRequest(IL_ImageReq *image_req)
   if (image_req != NULL) {
 	image_req->stopped = TRUE;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
     /*
      * If the image container associated with this request
      * is ONLY referenced by this request, then stop any profile request
@@ -2015,7 +2031,7 @@ IL_InterruptRequest(IL_ImageReq *image_req)
     	if (image_req->ic->icc_profile_req)
     		il_stop_icc_profile_request(image_req->ic->icc_profile_req);
     }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
   }
 }
 

@@ -161,8 +161,11 @@ il_reconnect(il_container *ic)
 	if (unconnected_stream)
 	{
         /* Will be freed in il_stream_reconnect_complete or il_reconnect_abort */
-	    ilINetReader *reader = IL_NewNetReader(ic /* ebb - begin */ ,NULL /* ebb - end */);
-
+#if defined (COLORSYNC)
+	    ilINetReader *reader = IL_NewNetReader(ic, NULL);
+#else
+	    ilINetReader *reader = IL_NewNetReader(ic);
+#endif /* (COLORSYNC) */
 		if (reader != NULL) {
     		unconnected_stream->complete       = il_stream_reconnect_complete;
 		    unconnected_stream->abort          = il_reconnect_abort;
@@ -377,9 +380,7 @@ IL_PreferredStream(URL_Struct *urls)
 		/* xxx this MUST be an image stream */
 	    iurl = (ilIURL *)urls->fe_data;
 		reader = iurl->GetReader();
-/*	ebb - begin had to add void* typecast */
 		ic = (il_container*) IL_GetNetReaderContainer(reader);
-/*	ebb - end */
 		NS_RELEASE(reader);
 
 		PR_ASSERT(ic);

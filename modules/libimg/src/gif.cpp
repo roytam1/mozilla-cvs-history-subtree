@@ -61,9 +61,9 @@ mailing address.
 #include "if.h"
 #include "il.h"
 #include "prmem.h"
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "icc_profile.h"
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #include "merrors.h"
 #ifdef STANDALONE_IMAGE_LIB
@@ -116,11 +116,13 @@ typedef enum {
     gif_consume_netscape_extension,
     gif_consume_comment,
     gif_delay,
+#if defined (COLORSYNC)
     gif_wait_for_buffer_full,
-/*	ebb - begin (including comma above) */
     gif_icc_profile_extension_block,
     gif_gather_icc_profile_extension
-/*	ebb - end */
+#else
+    gif_wait_for_buffer_full
+#endif /* (COLORSYNC) */
 } gstate;
 
 /* "Disposal" method indicates how the image should be handled in the
@@ -1118,12 +1120,11 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             if (!strncmp((char*)q, "NETSCAPE2.0", 11) ||
                 !strncmp((char*)q, "ANIMEXTS1.0", 11))
                 GETN(1, gif_netscape_extension_block);
-            else
-/*	ebb - begin */
+#if defined (COLORSYNC)
             /* Check for icc profile extension, may have subblocks */
-            if (!strncmp((char*)q, "ICCRGBG1012", 11) )
+            else if (!strncmp((char*)q, "ICCRGBG1012", 11) )
                  GETN(1, gif_icc_profile_extension_block);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
             else
                 GETN(1, gif_consume_block);
             break;
@@ -1172,7 +1173,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             break;
         }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
         /*
         	ICC Profile-specific GIF extension: embedded profile.
         	We have the length of the sub-block in 'q'.
@@ -1209,7 +1210,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 			GETN(1, gif_icc_profile_extension_block);
             break;
         }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
         case gif_wait_for_buffer_full:
             gs->gathered = gs->requested_buffer_fullness;

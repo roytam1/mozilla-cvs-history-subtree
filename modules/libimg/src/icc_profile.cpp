@@ -22,6 +22,7 @@
  *						used for color management tasks.
  *
  */
+#if defined (COLORSYNC)
 
 #include "if.h"
 #include "icc_profile.h"
@@ -135,12 +136,18 @@ void			IL_Init_ColorSync			(	void )
     else
     {
 #ifdef STANDALONE_IMAGE_LIB
+        /* Call the front end to determine whether ColorSync is available. */
 		isColorSyncInstalled = img_cb->IsColorSyncAvailable(NULL);
+        /* Release the JMC callback interface. */
+        NS_RELEASE(img_cb);
 #else
+        /* Call the front end to determine whether ColorSync is available. */
     	isColorSyncInstalled = IMGCBIF_IsColorSyncAvailable((IMGCBIF*) img_cb, NULL);
+        /* Release the JMC callback interface. */
+        IMGCBIF_release(img_cb, NULL); /* XXXM12N Need to use exceptions. */
 #endif /* STANDALONE_IMAGE_LIB */
     }
-    
+
     /*
     	Get the prefs value - store it in a global.
     */
@@ -2053,4 +2060,5 @@ PRBool	IL_ProfileStreamCreated	(	ip_container	*ip,
 #pragma profile off
 #endif
 
+#endif	/* (COLORSYNC) */
 

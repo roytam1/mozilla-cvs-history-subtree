@@ -26,9 +26,9 @@
 
 #include "if.h"
 #include "il_strm.h"			/* For OPAQUE_CONTEXT. */
-/*	ebb - begin */
-#include "icc_profile.h"		/* For il_remove_icc_profile_request */
-/*	ebb - end */
+#if defined (COLORSYNC)
+#include "icc_profile.h"		/* For icc_profile & ColorSync support */
+#endif /* (COLORSYNC) */
 
 #ifdef STANDALONE_IMAGE_LIB
 #include "ilISystemServices.h"
@@ -422,9 +422,9 @@ il_container *
 il_get_container(IL_GroupContext *img_cx,    
                  NET_ReloadMethod cache_reload_policy,
                  const char *image_url,
-/*	ebb - begin */
+#if defined (COLORSYNC)
 				 const char *icc_profile_url,
-/*	ebb - end */
+#endif /* (COLORSYNC) */
                  IL_IRGB *background_color,
                  IL_DitherMode dither_mode,
                  int req_depth,
@@ -439,10 +439,10 @@ il_get_container(IL_GroupContext *img_cx,
 	void *exc = NULL;
 #endif
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
      /* Read the matching state from prefs */
 	int32 color_matching_pref = il_color_matching_on(kReadPref);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     urlhash = hash = il_hash(image_url);
 
@@ -487,7 +487,7 @@ il_get_container(IL_GroupContext *img_cx,
             ic = NULL;
  
         }      
-/*	ebb - begin */
+#if defined (COLORSYNC)
         if (ic)
         {
 	        /*
@@ -508,16 +508,12 @@ il_get_container(IL_GroupContext *img_cx,
 			
 			/*
 	        	The other cases which we should force a reload are:
-	        	¥	if the image container had an embedded profile,
-	        		OR if the image has a profile url
-	        		
-	        		IF it went into cache un-matched
-	        			AND the current color matching pref is ON
-		        	
-		        	ELSE it went into the cache matched
-		        		AND matching is now OFF.
+        		IF it went into cache matched
+        			AND the current color matching pref is OFF
+	        	ELSE it went into the cache unmatched
+	        		AND matching is now ON.
 	        */
-			if (ic && CONTAINER_HAS_PROFILE(ic))
+			if (ic)
 			{
 				if (CONTAINER_WAS_MATCHED(ic))
 				{
@@ -531,7 +527,7 @@ il_get_container(IL_GroupContext *img_cx,
 				}
 			}
 		}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     }
 
     /* Reorder the cache list so it remains in LRU order*/
@@ -597,7 +593,7 @@ il_get_container(IL_GroupContext *img_cx,
         ic->urlhash = urlhash;
         ic->url_address = PL_strdup(image_url);
         
-/*	ebb - begin */
+#if defined (COLORSYNC)
         /* Init the matching state of the container based on prefs */
         switch (color_matching_pref)
         {
@@ -611,7 +607,7 @@ il_get_container(IL_GroupContext *img_cx,
         		ic->icc_profile_flags = kProfileDefault;
         		break;
         }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 		ic->is_url_loading = PR_FALSE;
         ic->dest_width  = req_width;
@@ -649,7 +645,7 @@ il_get_container(IL_GroupContext *img_cx,
 #endif /* STANDALONE_IMAGE_LIB */
     }
     
-/*	ebb - begin */
+#if defined (COLORSYNC)
     /*
     	If the container already has a profile url, it must
     	have come from the cache.  We have ensured that it
@@ -664,7 +660,7 @@ il_get_container(IL_GroupContext *img_cx,
     			ic->icc_profile_url = PL_strdup(icc_profile_url);
 		}
 	}        	
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     
 	il_addtocache(ic);
     ic->is_in_use = TRUE;
@@ -727,11 +723,11 @@ il_delete_container(il_container *ic)
         IL_ReleaseColorSpace(ic->src_header->color_space);
         PR_FREEIF(ic->src_header);
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 		/* get rid of any icc profile references */
 		if (ic->icc_profile_req)
 			il_remove_icc_profile_request(ic->icc_profile_req);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 		/* delete the image */
         if (!(ic->image || ic->mask))
@@ -751,9 +747,9 @@ il_delete_container(il_container *ic)
 
         FREE_IF_NOT_NULL(ic->comment);
         FREE_IF_NOT_NULL(ic->url_address);
-/*	ebb - begin */
+#if defined (COLORSYNC)
         FREE_IF_NOT_NULL(ic->icc_profile_url);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
         FREE_IF_NOT_NULL(ic->fetch_url);
 		
         PR_FREEIF(ic);
@@ -1421,9 +1417,9 @@ IL_Init()
     il_ss = ss;
 #endif /* STANDALONE_IMAGE_LIB */
 
-/*	ebb - begin */	
+#if defined (COLORSYNC)	
 	IL_Init_ColorSync();	
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     /* XXXM12N - finish me. */
     return TRUE;

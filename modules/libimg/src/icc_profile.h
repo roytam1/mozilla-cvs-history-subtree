@@ -20,6 +20,8 @@
  *   icc_profile.h ---	Routines to handle icc profiles
  *
  */
+#if defined (COLORSYNC)
+
 #ifndef _icc_profile_h
 #define _icc_profile_h
 
@@ -150,3 +152,5 @@ PRBool			IL_ProfileStreamCreated		(	ip_container		*ic,
 												int					type );
 
 #endif	/*	_icc_profile_h */
+
+#endif	/* (COLORSYNC) */

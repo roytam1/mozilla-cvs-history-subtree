@@ -33,9 +33,9 @@
 #include "merrors.h"
 
 #include "il.h"
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 #include "icc_profile.h"
-/*	ebb - begin	*/
+#endif /* (COLORSYNC) */
 
 #include <ctype.h>		/* to declare isprint() */
 #ifndef XP_MAC
@@ -137,7 +137,7 @@ typedef struct {
 	size_t backtrack_num_unread_bytes; /* Length of active backtrack data	*/
 } il_source_mgr;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 /*
 	Added functions (provided by Todd Newman <tdn@eccentric.esd.sgi.com>
 	via Tom Lane) in here which support direct reading and writing of
@@ -182,7 +182,7 @@ marker_is_icc			JPP((jpeg_saved_marker_ptr	marker));
 #define ICC_OVERHEAD_LEN  14		/* size of non-profile data in APP2 */
 #define MAX_BYTES_IN_MARKER  65533	/* maximum data len of a JPEG marker */
 #define MAX_DATA_BYTES_IN_MARKER  (MAX_BYTES_IN_MARKER - ICC_OVERHEAD_LEN)
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
 /* Override the standard error method in the IJG JPEG decoder code. */
 void PR_CALLBACK
@@ -593,7 +593,7 @@ int il_jpeg_init(il_container *ic)
     /* Insert custom COM comment marker processor. */
     jpeg_set_marker_processor(jd, JPEG_COM, il_jpeg_COM_handler);
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
 		Tell the jpeg lib to save any APP2 marker data for us.
 		(If ColorSync is installed)
@@ -602,7 +602,7 @@ int il_jpeg_init(il_container *ic)
 	{
 		setup_read_icc_profile(jd);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     /* Initialize the container's source image header. */
     src_color_space->type = NI_TrueColor;
@@ -785,10 +785,10 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
     NI_PixmapHeader *src_header = ic->src_header;
     NI_ColorMap *cmap = &src_header->color_space->cmap;
 #endif /* M12N */
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	JOCTET 		*icc_data_ptr;
 	unsigned int icc_data_len;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     /* If this assert fires, chances are the netlib 
        continued to send data after the image stream was closed. */
@@ -830,7 +830,7 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
 					return status;
 				}
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 				/*
 					If this container can be matched, check for
 					an icc profile.  If we got one, tell the image
@@ -840,7 +840,7 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
 				if (il_color_matching_available())
 					if (read_icc_profile(jd,&icc_data_ptr,&icc_data_len))
 						il_icc_profile_data_notify(ic,icc_data_ptr,icc_data_len,kICCProfileData);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 			
                 il_setup_color_space_converter(ic); /* XXXM12N Should check
                                                        return code. */
@@ -1057,7 +1057,7 @@ il_jpeg_complete(il_container *ic)
     il_frame_complete_notify(ic);
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*
  * This routine writes the given ICC profile data into a JPEG file.
  * It *must* be called AFTER calling jpeg_start_compress() and BEFORE
@@ -1264,7 +1264,7 @@ read_icc_profile (	j_decompress_ptr	cinfo,
 
   return TRUE;
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #ifdef PROFILE
 #	 pragma profile off

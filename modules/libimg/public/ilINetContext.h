@@ -45,11 +45,11 @@ public:
   virtual ilIURL* CreateURL(const char *aUrl, 
 			    NET_ReloadMethod aReloadMethod)=0;
 
-/* ebb - begin */
+#if defined (COLORSYNC)
   virtual PRBool FindURLInCache(ilIURL *aUrl)=0;
   
   virtual MWContext *GetMWContext()=0;
-/* ebb - end */
+#endif /* (COLORSYNC) */
   
   virtual PRBool IsLocalFileURL(char *aAddress)=0;
 

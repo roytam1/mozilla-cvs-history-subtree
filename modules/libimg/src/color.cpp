@@ -38,7 +38,7 @@
 #endif /* __sun */
 #endif /* NSPR20 */
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "icc_profile.h"
 #include "icc_profile_types.h"
 
@@ -47,7 +47,7 @@ il_match_image_colors	(	il_container	*ic,
                   			const uint8		*sp,
                   			int				num );
 
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #ifdef PROFILE
 #pragma profile on
@@ -92,7 +92,7 @@ ConvertRGBToCI(il_container *ic,
 	    index_map = il_identity_index_map;
 	}
 	
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -101,7 +101,7 @@ ConvertRGBToCI(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -150,7 +150,7 @@ DitherConvertRGBToCI(il_container *ic,
 	    index_map = il_identity_index_map;
 	}
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -159,7 +159,7 @@ DitherConvertRGBToCI(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     il_quantize_fs_dither(ic, mask, sp, x_offset, (uint8 XP_HUGE *) vout, num);
     if (mask) {
@@ -382,7 +382,7 @@ ConvertRGBToGrey8(il_container *ic,
     const uint8 *end = sp + num*3;
     uint32 grey;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -391,7 +391,7 @@ ConvertRGBToGrey8(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -449,7 +449,7 @@ ConvertRGBToRGB8(il_container *ic,
     uint8 *gm = (uint8*)private_data->g8torgbn;
     uint8 *bm = (uint8*)private_data->b8torgbn;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -458,7 +458,7 @@ ConvertRGBToRGB8(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -507,7 +507,7 @@ ConvertRGBToRGB16(il_container *ic,
     uint16 *gm = (uint16*)private_data->g8torgbn;
     uint16 *bm = (uint16*)private_data->b8torgbn;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -516,7 +516,7 @@ ConvertRGBToRGB16(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -560,7 +560,7 @@ ConvertRGBToRGB24(il_container *ic,
     const uint8 *end = sp + num*3;
 	/* XXX this is a hack because it ignores the shifts */
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -569,7 +569,7 @@ ConvertRGBToRGB24(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -611,7 +611,7 @@ ConvertRGBToRGB32(il_container *ic,
     uint32 *gm = (uint32*)private_data->g8torgbn;
     uint32 *bm = (uint32*)private_data->b8torgbn;
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	if (ic->icc_matching_session)
 	{
 		/*
@@ -620,7 +620,7 @@ ConvertRGBToRGB32(il_container *ic,
 		*/
 		il_match_image_colors(ic,sp,num);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     if (!mask)
     {
@@ -870,9 +870,9 @@ il_setup_color_space_converter(il_container *ic)
     il_converter converter = NULL;
     NI_ColorSpace *img_color_space = ic->image->header.color_space;
     NI_ColorSpace *src_color_space = ic->src_header->color_space;
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	PRBool	icc_color_matching = FALSE;
-/*	ebb - begin */
+#endif /* (COLORSYNC) */
 
     /* Make sure that the num_colors field of the source image's colormap
        represents the number of unique colors.  In the case of GIFs, for
@@ -894,7 +894,7 @@ il_setup_color_space_converter(il_container *ic)
 #endif
 #endif /* M12N */
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
 		If the image container has a profile ref, propagate it to the
 		source color space, which serves as a convenient carrier.
@@ -925,7 +925,7 @@ il_setup_color_space_converter(il_container *ic)
 	{
 		icc_color_matching = TRUE;
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     conversion_type = (src_color_space->type << 3) | img_color_space->type;
     switch (conversion_type) {
@@ -942,10 +942,10 @@ il_setup_color_space_converter(il_container *ic)
         /* These conversions are accomplished by first converting to RGB,
            followed by closest color matching or dithering. */
     case IL_GreyToPseudo:
-/*	ebb - begin */
+#if defined (COLORSYNC)
 		/* Turn off color matching (if it was on), not worth it in this case */
 		icc_color_matching = FALSE;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
     case IL_PseudoToPseudo:
 
 #ifdef STANDALONE_IMAGE_LIB
@@ -1025,19 +1025,20 @@ il_setup_color_space_converter(il_container *ic)
         
         /* These conversions are accomplished by first converting to RGB24,
            followed by conversion to the actual image pixmap depth. */
-/*	ebb - begin */
     case IL_PseudoToGrey:
     case IL_GreyToGrey:
+#if defined (COLORSYNC)
 		/* Turn off color matching (if it was on), not worth it in these cases */
 		icc_color_matching = FALSE;
-    	break;
+#endif /* (COLORSYNC) */
+		break;
     case IL_TrueToGrey:
-    	/* Move this case below the others so it can be color-matched. */
         switch (img_color_space->pixmap_depth) {
         case 1:
+#if defined (COLORSYNC)
 			/* Turn off color matching, not worth it in these cases */
 			icc_color_matching = FALSE;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
             dither_mode = IL_Dither;
             converter = ConvertRGBToBW;
             break;
@@ -1063,15 +1064,15 @@ il_setup_color_space_converter(il_container *ic)
         il_set_color_palette(ic->cx, ic);
 #endif /* M12N */
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	if (icc_color_matching)
 		il_setup_color_matching_session(ic);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     return PR_TRUE;
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*	------------------------------------------------------------------------------
 	il_match_image_colors
 	
@@ -1102,7 +1103,7 @@ il_match_image_colors	(	il_container	*ic,
     								sp, num );
 #endif /* STANDALONE_IMAGE_LIB */
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #ifdef PROFILE
 #pragma profile off

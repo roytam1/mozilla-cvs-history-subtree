@@ -60,10 +60,10 @@ typedef struct lo_ImageObsClosure {
     XP_ObserverList obs_list;
 } lo_ImageObsClosure;
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 static PRBool
 lo_MakeURLFromParam(PA_Block buff, lo_DocState *state, PA_Block *url_buff);
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 extern LO_TextStruct *lo_AltTextElement(MWContext *context);
 
@@ -148,9 +148,9 @@ lo_new_image_element(MWContext *context, lo_DocState *state,
 
     image->is_icon = FALSE;
 	image->image_status = IL_START_URL;
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	image->icc_profile_url = NULL;
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
     return image; 
 }
@@ -701,9 +701,9 @@ lo_BodyBackground(MWContext *context, lo_DocState *state, PA_Tag *tag,
 {
     LO_Color rgb;
 	PA_Block buff=NULL;
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	PA_Block url_buff=NULL;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 	char *color_str = NULL;
 	char *image_url = NULL;
     CL_Layer *layer;
@@ -796,7 +796,7 @@ lo_BodyBackground(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	}
     }
     
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
 	 * Don't do this if we had an ICCPROFILE from a previous BODY tag.
 	 */
@@ -816,12 +816,12 @@ lo_BodyBackground(MWContext *context, lo_DocState *state, PA_Tag *tag,
 			PA_FREE(buff);
 		}
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     lo_BodyForeground(context, state, tag);
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /*
 	lo_MakeURLFromParam
 	
@@ -892,7 +892,7 @@ lo_MakeURLFromParam(PA_Block buff, lo_DocState *state, PA_Block *url_buff)
 	*url_buff = new_buff;
 	return (new_buff != NULL);
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 static void lo_edt_AvoidImageBlock(LO_ImageStruct *image);
 
@@ -926,10 +926,10 @@ lo_BlockedImageLayout(MWContext *context, lo_DocState *state, PA_Tag *tag,
 {
 	LO_ImageStruct *image;
 	PA_Block buff;
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	PA_Block url_buff;
 	char *url_str;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 	char *str;
 	int32 val;
 	/* int32 doc_width; */
@@ -1399,7 +1399,7 @@ lo_BlockedImageLayout(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	image->border_horiz_space = FEUNITS_X(image->border_horiz_space,
 						context);
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	/*
 	 * Get the optional icc profile parameter.
 	 * First check the top state's body attributes
@@ -1460,7 +1460,7 @@ lo_BlockedImageLayout(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	}
 	image->icc_profile_url = url_buff;
 
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
 	lo_FillInImageGeometry( state, image );
 
@@ -1670,10 +1670,10 @@ lo_FormatImage(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	LO_ImageStruct *image;
     LO_TextAttr *tptr = NULL;
 	PA_Block buff;
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	PA_Block url_buff;
 	char *url_str;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 	char *str;
 	int32 val;
 	/* int32 doc_width; */
@@ -2207,7 +2207,7 @@ lo_FormatImage(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	image->border_horiz_space = FEUNITS_X(image->border_horiz_space,
 						context);
 
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 	/*
 	 * Get the optional icc profile parameter.
 	 * First check the top state's body attributes
@@ -2267,7 +2267,7 @@ lo_FormatImage(MWContext *context, lo_DocState *state, PA_Tag *tag)
 		}
 	}
 	image->icc_profile_url = url_buff;
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 
 	lo_FillInImageGeometry( state, image );
 
@@ -3335,9 +3335,9 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
     IL_NetContext *net_cx = NULL;
     IL_IRGB *trans_pixel;
     char *image_url, *lowres_image_url, *url_to_fetch;
-/*	ebb - begin */
+#if defined (COLORSYNC)
     char *icc_profile_url = NULL;
-/*	ebb - begin */
+#endif /* (COLORSYNC) */
 	IL_ImageReq *dummy_ireq;
 
     /* Safety checks. */
@@ -3446,7 +3446,7 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
         }
     }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
 		If we got an icc profile url, load that, but ony
 		if this is not a lowsrc image load.  We don't
@@ -3457,16 +3457,16 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
 	{
     	PA_LOCK(icc_profile_url, char *, lo_image->icc_profile_url);
 	}
-/*	ebb - end */			
+#endif /* (COLORSYNC) */			
 
     /* Fetch the image.  We ignore the return value and only set the lo_image's
        image handle in the observer.  Any context-specific scaling of images,
        e.g. for printing, should be handled by the Front End, so we divide the
        image dimensions by the context scaling factors. */
 		dummy_ireq = IL_GetImage(	url_to_fetch,
-/*	ebb - begin */
+#if defined (COLORSYNC)
 									icc_profile_url,
-/*	ebb - end */			
+#endif /* (COLORSYNC) */			
 									img_cx,
 									obs_list,
 									trans_pixel,
@@ -3492,7 +3492,7 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
         PA_UNLOCK(lo_image->lowres_image_url);
     PA_UNLOCK(lo_image->image_url);
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	/*
 		Unlock the icc_profile_url PA_Block if it was locked above.
 	*/
@@ -3500,7 +3500,7 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
 	{
 		PA_UNLOCK(lo_image->icc_profile_url);
 	}
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 }
 
 /* 

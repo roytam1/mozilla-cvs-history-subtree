@@ -30,6 +30,11 @@
 
 class ilIURL;
 
+#if defined (COLORSYNC)
+#define	NetReaderContainerType	void*
+#else
+#define	NetReaderContainerType	il_container*
+#endif /* (COLORSYNC) */
 
 class ilINetReader : public nsISupports {
 public:
@@ -49,9 +54,8 @@ public:
   virtual PRBool StreamCreated(ilIURL *urls, int type)=0;
   
   virtual PRBool IsMulti()=0;
-/*	ebb - begin */
-  virtual void*	GetContainer()=0;
-/*	ebb - end */
+
+  virtual NetReaderContainerType GetContainer()=0;
 };
 
 #endif

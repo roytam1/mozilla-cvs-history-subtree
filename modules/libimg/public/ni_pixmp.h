@@ -134,10 +134,10 @@ typedef struct _NI_ColorSpace {
          to the corresponding RGB components. */
     NI_ColorMap cmap;
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
     /* Associated icc profile for this colorspace. May be an ID as well. */
     void *icc_profile_ref;
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
     /* Image Library private data for this colorspace. */
     void *private_data;

@@ -158,9 +158,9 @@
 
 #include "InternetConfig.h"
 #include "il_strm.h"            /* Image Library stream converters. */
-/*	ebb - begin */
+#if defined (COLORSYNC)
 #include "libimg.h"            	/* Image Library Init */
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 #ifdef MOCHA
 //#include "libmocha.h"
@@ -3700,9 +3700,9 @@ void main( void )
 	ConfirmWeWillRun();
 	RNG_RNGInit();		// This needs to be called before the main loop
 	
-/*	ebb - begin */
+#if defined (COLORSYNC)
 	IL_Init();			// Initialize the Image Library.
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 	ProcessSerialNumber psn;
 	if (NetscapeIsRunning(psn))

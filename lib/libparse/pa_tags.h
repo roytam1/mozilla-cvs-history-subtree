@@ -270,9 +270,9 @@
 #define PARAM_NOSHADE		"noshade"
 #define PARAM_WIDTH		"width"
 #define PARAM_HEIGHT		"height"
-/*	ebb - begin	*/
+#if defined (COLORSYNC)
 #define PARAM_ICCPROFILE	"iccprofile"
-/*	ebb - end	*/
+#endif /* (COLORSYNC) */
 #define PARAM_TYPE		"type"
 #define PARAM_START		"start"
 #define PARAM_VALUE		"value"
