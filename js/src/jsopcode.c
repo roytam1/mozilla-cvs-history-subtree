@@ -479,7 +479,7 @@ struct JSPrinter {
  * opposed to JS_DONT_PRETTY_PRINT back in the dark ages, we can assume that a
  * uintN is at least 32 bits.
  */
-#define JS_GROUP_CONTEXT    0x10000
+#define JS_IN_GROUP_CONTEXT 0x10000
 
 JSPrinter *
 js_NewPrinter(JSContext *cx, const char *name, uintN indent, JSBool pretty)
@@ -493,9 +493,9 @@ js_NewPrinter(JSContext *cx, const char *name, uintN indent, JSBool pretty)
         return NULL;
     INIT_SPRINTER(cx, &jp->sprinter, &jp->pool, 0);
     JS_InitArenaPool(&jp->pool, name, 256, 1);
-    jp->indent = indent & ~JS_GROUP_CONTEXT;
-    jp->grouped = (indent & JS_GROUP_CONTEXT) != 0;
+    jp->indent = indent & ~JS_IN_GROUP_CONTEXT;
     jp->pretty = pretty;
+    jp->grouped = (indent & JS_IN_GROUP_CONTEXT) != 0;
     jp->script = NULL;
     jp->scope = NULL;
     fp = cx->fp;
@@ -1924,11 +1924,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     if (!js_fun_toString(cx, ATOM_TO_OBJECT(atom),
                                          (pc + len < endpc &&
                                           pc[len] == JSOP_GROUP)
-                                         ? JS_GROUP_CONTEXT |
+                                         ? JS_IN_GROUP_CONTEXT |
                                            JS_DONT_PRETTY_PRINT
                                          : JS_DONT_PRETTY_PRINT,
                                          0, NULL, &val)) {
-                         return JS_FALSE;
+                        return JS_FALSE;
                     }
                     str = JSVAL_TO_STRING(val);
                 }
