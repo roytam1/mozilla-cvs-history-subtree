@@ -1402,6 +1402,7 @@ NS_IMETHODIMP nsMsgFolder::UserNeedsToAuthenticateForFolder(PRBool displayOnly, 
 NS_IMETHODIMP nsMsgFolder::GetUsername(char **userName)
 {
   NS_ENSURE_ARG_POINTER(userName);
+  NS_ASSERTION(m_server, "No server when getting username");
   if (!m_server) return NS_ERROR_UNEXPECTED;
   
   m_server->GetUsername(userName);
@@ -1412,6 +1413,7 @@ NS_IMETHODIMP nsMsgFolder::GetUsername(char **userName)
 NS_IMETHODIMP nsMsgFolder::GetHostname(char **hostName)
 {
   NS_ENSURE_ARG_POINTER(hostName);
+  NS_ASSERTION(m_server, "No server when getting hostname");
   if (!m_server) return NS_ERROR_UNEXPECTED;
   
   m_server->GetHostName(hostName);
