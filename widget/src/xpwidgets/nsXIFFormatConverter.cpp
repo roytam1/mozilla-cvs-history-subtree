@@ -342,7 +342,8 @@ nsHTMLFormatConverter::ConvertFromHTMLToUnicode(const nsAutoString & aFromStr, n
 
   parser->SetContentSink(sink);
 
-  parser->Parse(aFromStr, 0, NS_LITERAL_STRING("text/html"), PR_FALSE, PR_TRUE);
+  nsAutoString contentType; contentType = NS_LITERAL_STRING("text/html");
+  parser->Parse(aFromStr, 0, contentType, PR_FALSE, PR_TRUE);
   
   return NS_OK;
 } // ConvertFromHTMLToUnicode

@@ -246,7 +246,7 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
     else if (mClassID.Equals(kCTransferable))
         inst = (nsISupports*)new nsTransferable();
     else if (mClassID.Equals(kCXIFFormatConverter))
-        inst = (nsISupports*)new nsXIFFormatConverter();
+       inst = (nsISupports*)new nsHTMLFormatConverter();
     else if (mClassID.Equals(kCClipboard))
         inst = (nsISupports*)new nsClipboard();
     else if (mClassID.Equals(kCDragService))
