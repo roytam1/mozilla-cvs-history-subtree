@@ -309,7 +309,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController saveDocument: mFilterView filterList: mFilterList];
+    [browserController saveDocument:NO filterView:mFilterView filterList: mFilterList];
 }
 
 -(IBAction) printPage:(id)aSender
@@ -689,7 +689,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController viewSource: aSender];
+    [browserController viewPageSource: aSender];		// top-level page, not focussed frame
 }
 
 -(BOOL)isMainWindowABrowserWindow

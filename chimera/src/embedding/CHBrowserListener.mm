@@ -398,7 +398,7 @@ CHBrowserListener::SetFocus()
   {
     BOOL suppressed = NO;
     if ([window respondsToSelector:@selector(suppressMakeKeyFront)])
-      suppressed = [window suppressMakeKeyFront];
+      suppressed = (BOOL)[window suppressMakeKeyFront];
   
     if (!suppressed)
       [window makeKeyAndOrderFront:window];

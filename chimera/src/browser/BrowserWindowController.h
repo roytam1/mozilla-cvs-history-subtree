@@ -207,9 +207,10 @@ typedef enum
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize;
 
-- (IBAction)viewSource:(id)aSender;
+- (IBAction)viewSource:(id)aSender;			// focussed frame or page
+- (IBAction)viewPageSource:(id)aSender;	// top-level page
 
-- (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList;
+- (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList;
 - (void)saveURL: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
             url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;
 - (IBAction)printDocument:(id)aSender;
@@ -286,6 +287,7 @@ typedef enum
 - (void)openLinkInNewWindowOrTab: (BOOL)aUseWindow;
 
 - (IBAction)savePageAs:(id)aSender;
+- (IBAction)saveFrameAs:(id)aSender;
 - (IBAction)saveLinkAs:(id)aSender;
 - (IBAction)saveImageAs:(id)aSender;
 

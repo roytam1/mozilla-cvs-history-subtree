@@ -347,6 +347,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     browserSetup->SetProperty(property, value);
 }
 
+// how does this differ from getCurrentURLSpec?
 - (NSString*)getCurrentURI
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
@@ -542,43 +543,48 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   return [NSString stringWith_nsAString: urlStr];
 }
 
-- (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
+- (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
 {
-    if (!_webBrowser)
-      return;
+  if (!_webBrowser)
+    return;
+  
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  if (focusedFrame)
+  {
     nsCOMPtr<nsIWebBrowserFocus> wbf(do_QueryInterface(_webBrowser));
-    nsCOMPtr<nsIDOMWindow> domWindow;
     wbf->GetFocusedWindow(getter_AddRefs(domWindow));
-    if (!domWindow)
-        _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-    if (!domWindow)
-        return;
-    
-    nsCOMPtr<nsIDOMDocument> domDocument;
-    domWindow->GetDocument(getter_AddRefs(domDocument));
-    if (!domDocument)
-        return;
-    nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(domDocument));
-    if (!nsDoc)
-        return;
-    nsCOMPtr<nsIDOMLocation> location;
-    nsDoc->GetLocation(getter_AddRefs(location));
-    if (!location)
-        return;
-    nsAutoString urlStr;
-    location->GetHref(urlStr);
+  }
+  else
+    _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
 
-    nsCOMPtr<nsIURI> url;
-    nsresult rv = NS_NewURI(getter_AddRefs(url), NS_ConvertUCS2toUTF8(urlStr).get());
-    if (NS_FAILED(rv))
-        return;
-    
-    [self saveInternal: url.get()
-          withDocument: domDocument
-          suggestedFilename: @""
-          bypassCache: NO
-          filterView: aFilterView
-          filterList: aFilterList];
+  if (!domWindow)
+      return;
+  
+  nsCOMPtr<nsIDOMDocument> domDocument;
+  domWindow->GetDocument(getter_AddRefs(domDocument));
+  if (!domDocument)
+      return;
+  nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(domDocument));
+  if (!nsDoc)
+      return;
+  nsCOMPtr<nsIDOMLocation> location;
+  nsDoc->GetLocation(getter_AddRefs(location));
+  if (!location)
+      return;
+  nsAutoString urlStr;
+  location->GetHref(urlStr);
+
+  nsCOMPtr<nsIURI> url;
+  nsresult rv = NS_NewURI(getter_AddRefs(url), NS_ConvertUCS2toUTF8(urlStr).get());
+  if (NS_FAILED(rv))
+      return;
+  
+  [self saveInternal: url.get()
+        withDocument: domDocument
+        suggestedFilename: @""
+        bypassCache: NO
+        filterView: aFilterView
+        filterList: aFilterList];
 }
 
 -(void)doCommand:(const char*)commandName
@@ -720,6 +726,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   return [self isCommandEnabled: "cmd_redo"];
 }
 
+// how does this differ from getCurrentURI?
 -(NSString*)getCurrentURLSpec
 {
   NSString* empty = @"";

@@ -143,6 +143,7 @@ static NSArray* sToolbarDefaults = nil;
 - (void)setupToolbar;
 - (void)setupSidebarTabs;
 - (NSString*)getContextMenuNodeDocumentURL;
+- (void)loadSourceOfURL:(NSString*)urlStr;
 @end
 
 @implementation BrowserWindowController
@@ -849,9 +850,9 @@ static NSArray* sToolbarDefaults = nil;
   }
 }
 
-- (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
+- (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
 {
-  [[mBrowserView getBrowserView] saveDocument: aFilterView filterList: aFilterList];
+  [[mBrowserView getBrowserView] saveDocument:focusedFrame filterView:aFilterView filterList:aFilterList];
 }
 
 - (void)saveURL: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
@@ -861,9 +862,8 @@ static NSArray* sToolbarDefaults = nil;
                                      url: aURLSpec suggestedFilename: aFilename];
 }
 
-- (IBAction)viewSource:(id)aSender
+- (void)loadSourceOfURL:(NSString*)urlStr
 {
-  NSString* urlStr = [[mBrowserView getBrowserView] getFocusedURLString];
   NSString* viewSource = [@"view-source:" stringByAppendingString: urlStr];
 
   PRBool loadInBackground;
@@ -874,6 +874,18 @@ static NSArray* sToolbarDefaults = nil;
     [self openNewWindowWithURL: viewSource referrer:nil loadInBackground: loadInBackground];
   else
     [self openNewTabWithURL: viewSource referrer:nil loadInBackground: loadInBackground];
+}
+
+- (IBAction)viewSource:(id)aSender
+{
+  NSString* urlStr = [[mBrowserView getBrowserView] getFocusedURLString];
+  [self loadSourceOfURL:urlStr];
+}
+
+- (IBAction)viewPageSource:(id)aSender
+{
+  NSString* urlStr = [[mBrowserView getBrowserView] getCurrentURLSpec];
+  [self loadSourceOfURL:urlStr];
 }
 
 - (IBAction)printDocument:(id)aSender
@@ -1617,23 +1629,26 @@ static NSArray* sToolbarDefaults = nil;
 {
   BOOL showFrameItems = NO;
   
-  NSMenu* result = nil;
-  if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_LINK) != 0) {
-    if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
-      result = mImageLinkMenu;
-    }
+  NSMenu* menuPrototype = nil;
+  if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_LINK) != 0)
+  {
+    if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0)
+      menuPrototype = mImageLinkMenu;
     else
-      result = mLinkMenu;
+      menuPrototype = mLinkMenu;
   }
   else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_INPUT) != 0 ||
-           (mContextMenuFlags & nsIContextMenuListener::CONTEXT_TEXT) != 0) {
-    result = mInputMenu;
+           (mContextMenuFlags & nsIContextMenuListener::CONTEXT_TEXT) != 0)
+  {
+    menuPrototype = mInputMenu;
   }
-  else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
-    result = mImageMenu;
+  else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0)
+  {
+    menuPrototype = mImageMenu;
   }
-  else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_DOCUMENT) != 0) {
-    result = mPageMenu;
+  else if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_DOCUMENT) != 0)
+  {
+    menuPrototype = mPageMenu;
     [mBackItem setEnabled: [[mBrowserView getBrowserView] canGoBack]];
     [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
   }
@@ -1652,13 +1667,21 @@ static NSArray* sToolbarDefaults = nil;
     showFrameItems = (contentDoc != ownerDoc);
   }
 
-  if (!showFrameItems)
-  {
-    const int kFrameRelatedItemsTag = 100;
+  // we have to clone the menu and return that, so that we don't change
+  // our only copy of the menu
+  NSMenu* result = [[menuPrototype copy] autorelease];
 
-    // we have to clone the menu and return that, so that we don't change
-    // our only copy of the menu
-    result = [[result copy] autorelease];
+  const int kFrameRelatedItemsTag 			= 100;
+  const int kFrameInapplicableItemsTag 	= 101;
+  
+  if (showFrameItems)
+  {
+    NSMenuItem* frameItem;
+    while ((frameItem = [result itemWithTag:kFrameInapplicableItemsTag]) != nil)
+      [result removeItem:frameItem];
+  }
+  else
+  {
     NSMenuItem* frameItem;
     while ((frameItem = [result itemWithTag:kFrameRelatedItemsTag]) != nil)
       [result removeItem:frameItem];
@@ -1708,7 +1731,12 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)savePageAs:(id)aSender
 {
-  [self saveDocument: nil filterList: nil];
+  [self saveDocument:NO filterView:nil filterList: nil];
+}
+
+- (IBAction)saveFrameAs:(id)aSender
+{
+  [self saveDocument:YES filterView:nil filterList: nil];
 }
 
 - (IBAction)saveLinkAs:(id)aSender

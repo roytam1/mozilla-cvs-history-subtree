@@ -216,10 +216,6 @@ nsresult RemoteURILoadManager::RequestURILoad(const nsAString& inURI, id<RemoteL
     return rv;
   }
 
-#ifdef DEBUG_smfr
-  NSLog(@"RequestURILoad called for %@", [NSString stringWith_nsAString: inURI]);
-#endif
-
   // put the stream loader into the hash table
   nsCOMPtr<nsISupports> streamLoaderAsSupports = do_QueryInterface(streamLoader);
   mStreamLoaderHash.Put(&uriKey, streamLoaderAsSupports);
@@ -282,12 +278,7 @@ nsresult RemoteURILoadManager::CancelAllRequests()
 
     nsresult rv = mLoadManager->RequestURILoad(uriString, inListener, userData, target, (PRBool)inNetworkOK);
     if (NS_FAILED(rv))
-    {
-#if DEBUG
-      NSLog(@"RequestURILoad failed for @%", inURI);
-#endif
       return NO;
-    }
   }
   
   return YES;

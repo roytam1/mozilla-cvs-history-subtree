@@ -73,7 +73,7 @@ static const int kEscapeKeyCode = 53;
   return mSuppressMakeKeyFront;
 }
 
-- (BOOL)setSuppressMakeKeyFront:(BOOL)inSuppress
+- (void)setSuppressMakeKeyFront:(BOOL)inSuppress
 {
 	mSuppressMakeKeyFront = inSuppress;
 }

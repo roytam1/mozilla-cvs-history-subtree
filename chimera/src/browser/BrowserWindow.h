@@ -50,6 +50,6 @@
 - (BOOL)makeFirstResponder:(NSResponder*) responder;
 
 - (BOOL)suppressMakeKeyFront;
-- (BOOL)setSuppressMakeKeyFront:(BOOL)inSuppress;
+- (void)setSuppressMakeKeyFront:(BOOL)inSuppress;
 
 @end
