@@ -56,7 +56,7 @@ void CPromptDialog::DoDataExchange(CDataExchange* pDX)
     CDialog::DoDataExchange(pDX);
     //{{AFX_DATA_MAP(CPromptDialog)
     DDX_Text(pDX, IDC_PROMPT_ANSWER, m_csPromptAnswer);
-    DDX_Check(pDX, IDC_CHECK_SAVE_PROMPT, m_bCheckBoxValue);
+    DDX_Check(pDX, IDC_CHECK_SAVE_PASSWORD, m_bCheckBoxValue);
     //}}AFX_DATA_MAP
 }
 
@@ -74,7 +74,7 @@ int CPromptDialog::OnInitDialog()
 	if(pWnd)
 		pWnd->SetWindowText(m_csPromptText);
 
-    CButton *pChk = (CButton *)GetDlgItem(IDC_CHECK_SAVE_PROMPT);
+    CButton *pChk = (CButton *)GetDlgItem(IDC_CHECK_SAVE_PASSWORD);
 	if(pChk)
 	{
 	    if (m_bHasCheckBox)
