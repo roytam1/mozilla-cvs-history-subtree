@@ -815,11 +815,11 @@ sub getLDIFString
 	       ((ref($values) eq "ARRAY") ? @$values : $values));
 	}
 
-      return $ret;
+      return "$ret\n";
     }
   else
     {
-      return Mozilla::LDAP::LDIF::pack_LDIF(78, $self);
+      return Mozilla::LDAP::LDIF::pack_LDIF(78, $self) . "\n";
     }
 
   return;
