@@ -127,7 +127,7 @@ void URIUtils::getDocumentBase(String& href, String& dest) {
     NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
     if (NS_SUCCEEDED(result)) {
         // XXX This is ugly, there must be an easier (cleaner way).
-        char *uriStr = (((MozillaString)href).getConstNSString()).ToNewCString();
+        char *uriStr = (((String)href).getConstNSString()).ToNewCString();
         result = pService->NewURI(uriStr, nsnull, getter_AddRefs(pURL));
         nsCRT::free(uriStr);
         if (NS_SUCCEEDED(result)) {
@@ -183,14 +183,14 @@ void URIUtils::resolveHref(String& href, String& documentBase, String& dest) {
     NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &result);
     if (NS_SUCCEEDED(result)) {
         // XXX This is ugly, there must be an easier (cleaner way).
-        char *baseStr = (((MozillaString)documentBase).getConstNSString()).ToNewCString();
+        char *baseStr = (((String)documentBase).getConstNSString()).ToNewCString();
         result = pService->NewURI(baseStr, nsnull, getter_AddRefs(pURL));
         nsCRT::free(baseStr);
         if (NS_SUCCEEDED(result)) {
             nsXPIDLCString newURL;
 
             // XXX This is ugly, there must be an easier (cleaner way).
-            char *hrefStr = (((MozillaString)documentBase).getConstNSString()).ToNewCString();
+            char *hrefStr = (((String)documentBase).getConstNSString()).ToNewCString();
             result = pURL->Resolve(hrefStr, getter_Copies(newURL));
             nsCRT::free(hrefStr);
             if (NS_SUCCEEDED(result)) {

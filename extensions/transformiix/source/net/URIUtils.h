@@ -43,7 +43,6 @@
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"
-#include "MozillaString.h"
 #include "nsXPIDLString.h"
 #include "nsCOMPtr.h"
 
