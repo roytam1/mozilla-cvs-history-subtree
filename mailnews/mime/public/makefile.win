@@ -24,6 +24,7 @@ XPIDLSRCS = \
 	.\nsIMimeEmitter.idl				\
 	.\nsIMimeURLUtils.idl				\
 	.\nsIMsgHeaderParser.idl			\
+	.\nsIMimeStreamConverter.idl		\
         $(NULL)
 
 EXPORTS =							\
