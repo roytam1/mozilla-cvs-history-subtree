@@ -924,6 +924,11 @@ statictag_svg:
 diff_svg:
 	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES)
 
+branchdiff_svg:
+	cvs -z3 diff -u -rSVG_20020806_BASE $(SVG_BRANCH_MODIFIED_FILES); \
+	cvs -z3 diff -u -r1.1 -N $(SVG_BRANCH_NEW_FILES); \
+	cvs -z3 diff -u -rSVG_20020806_BRANCH -N $(SVG_BRANCH_OBSOLETE_FILES)
+
 status_svg:
 	cvs -z3 status $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES) | grep -A7 "File:.*Status: [^U]"
 
