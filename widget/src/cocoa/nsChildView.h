@@ -87,6 +87,8 @@ class nsChildView;
   BOOL mIsPluginView;
   BOOL mLastKeyEventWasSentToCocoa;
 
+  NSEvent* mCurEvent;   // only valid during a keyDown
+  
   // needed for NSTextInput implementation
   NSRange mMarkedRange;
   NSRange mSelectedRange;
@@ -272,19 +274,20 @@ public:
   NSView*               mParentView;
   nsIWidget*            mParentWidget;
   
+  nsIFontMetrics*       mFontMetrics;
+  nsIRenderingContext*  mTempRenderingContext;
+
   PRPackedBool          mDestroyCalled;
   PRPackedBool          mDestructorCalled;
   PRPackedBool          mVisible;
   PRPackedBool          mInWindow;    // true if the widget is in a visible tab
 
-  nsIFontMetrics*       mFontMetrics;
-  
-  nsIRenderingContext*  mTempRenderingContext;
   PRPackedBool          mDrawing;
   PRPackedBool          mTempRenderingContextMadeHere;
     
   PRPackedBool          mAcceptFocusOnClick;
   PRPackedBool          mLiveResizeInProgress;
+  PRPackedBool          mPluginDrawing;
   
   nsPluginPort*         mPluginPort;
   RgnHandle             mVisRgn;

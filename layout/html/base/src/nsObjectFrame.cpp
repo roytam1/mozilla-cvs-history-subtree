@@ -324,7 +324,7 @@ public:
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
   nsPluginPort* FixUpPluginWindow(PRInt32 inPaintState);
-  void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent);
+  void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord* origEvent, EventRecord& aMacEvent);
   void Composite();
 #endif
 
@@ -3087,10 +3087,11 @@ static void InitializeEventRecord(EventRecord* event)
 inline void InitializeEventRecord(EventRecord* event) { ::OSEventAvail(0, event); }
 #endif
 
-void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent)
+void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord* origEvent, EventRecord& aMacEvent)
 {
     InitializeEventRecord(&aMacEvent);
-    switch (anEvent.message) {
+    switch (anEvent.message)
+    {
     case NS_FOCUS_EVENT_START:   // this is the same as NS_FOCUS_CONTENT
         aMacEvent.what = nsPluginEventType_GetFocusEvent;
         if (mOwner && mOwner->mPresContext) {
@@ -3100,6 +3101,7 @@ void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord
                 content->SetFocus(mOwner->mPresContext);
         }
         break;
+
     case NS_BLUR_CONTENT:
         aMacEvent.what = nsPluginEventType_LoseFocusEvent;
         if (mOwner && mOwner->mPresContext) {
@@ -3109,12 +3111,12 @@ void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord
                 content->RemoveFocus(mOwner->mPresContext);
         }
         break;
+
     case NS_MOUSE_MOVE:
     case NS_MOUSE_ENTER:
+        if (origEvent)
+          aMacEvent = *origEvent;
         aMacEvent.what = nsPluginEventType_AdjustCursorEvent;
-        break;
-    default:
-        aMacEvent.what = nullEvent;
         break;
     }
 }
@@ -3163,24 +3165,30 @@ nsresult nsPluginInstanceOwner::ScrollPositionDidChange(nsIScrollableView* aScro
           scrollEvent.what = nsPluginEventType_ScrollingEndsEvent;
   
           nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintEnable);
-          if (pluginPort) {
-              nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-      
-              PRBool eventHandled = PR_FALSE;
-              mInstance->HandleEvent(&pluginEvent, &eventHandled);
+          if (pluginPort)
+          {
+            nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+    
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
 #if defined(XP_MACOSX)
-              // FIXME - Only invalidate the newly revealed amount.
-              mWidget->Invalidate(PR_TRUE);
-              //Composite();
+            // we have to call SetWindow here to get RealPlayer to correctly update
+            // its position
+            mInstance->SetWindow(&mPluginWindow);
 #else
-              if (!eventHandled) {
-                  nsRect bogus(0,0,0,0);
-                  Paint(bogus, 0);     // send an update event to the plugin
-              }
-#endif
+            if (!eventHandled) {
+                nsRect bogus(0,0,0,0);
+                Paint(bogus, 0);     // send an update event to the plugin
             }
+#endif
+          }
           pluginWidget->EndDrawPlugin();
         }
+
+#if defined(XP_MACOSX)
+      // FIXME - Only invalidate the newly revealed amount.
+      mWidget->Invalidate(PR_TRUE);
+#endif
     }
 
 #endif
@@ -3340,7 +3348,19 @@ nsresult nsPluginInstanceOwner::KeyUp(nsIDOMEvent* aKeyEvent)
 nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
 {
 #if defined(XP_MAC) || defined(XP_MACOSX) // send KeyPress events only on Mac
-  return DispatchKeyToPlugin(aKeyEvent);
+  // Nasty hack to avoid recursive event dispatching with Java. Java can
+  // dispatch key events to a TSM handler, which comes back and calls 
+  // [ChildView insertText:] on the cocoa widget, which sends a key
+  // event back down.
+  static PRBool sInKeyDispatch = PR_FALSE;
+  
+  if (sInKeyDispatch)
+    return NS_ERROR_FAILURE; // means consume event
+
+  sInKeyDispatch = PR_TRUE;
+  nsresult rv =  DispatchKeyToPlugin(aKeyEvent);
+  sInKeyDispatch = PR_FALSE;
+  return rv;
 #else
   if (mInstance) {
     // If this event is going to the plugin, we want to kill it.
@@ -3536,7 +3556,6 @@ nsPluginInstanceOwner::HandleEvent(nsIDOMEvent* aEvent)
 
 nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 {
-  // printf("nsGUIEvent.message: %d\n", anEvent.message);
   nsEventStatus rv = nsEventStatus_eIgnore;
   if (!mInstance)   // if mInstance is null, we shouldn't be here
     return rv;
@@ -3555,7 +3574,7 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
             (anEvent.message == NS_MOUSE_MOVE)             ||
             (anEvent.message == NS_MOUSE_ENTER))
         {
-            GUItoMacEvent(anEvent, macEvent);
+            GUItoMacEvent(anEvent, event, macEvent);
             event = &macEvent;
         }
 
@@ -3678,20 +3697,19 @@ nsPluginInstanceOwner::Destroy()
   else NS_ASSERTION(PR_FALSE, "plugin had no content");
 
   // Unregister scroll position listener
-  if (mContext) {
-    nsCOMPtr<nsIPresShell> presShell;
-    mContext->GetShell(getter_AddRefs(presShell));
-    if (presShell) {
-      nsCOMPtr<nsIViewManager> vm;
-      presShell->GetViewManager(getter_AddRefs(vm));
-      if (vm) {
-        nsIScrollableView* scrollingView = nsnull;
-        vm->GetRootScrollableView(&scrollingView);
-        if (scrollingView) {
-          scrollingView->RemoveScrollPositionListener((nsIScrollPositionListener *)this);
-        }
-      }
-    }
+  nsIFrame* parentWithView;
+  mOwner->GetParentWithView(mContext, &parentWithView);
+  
+  nsIView* curView = nsnull;
+  if (parentWithView)
+    parentWithView->GetView(mContext, &curView);
+  while (curView)
+  {
+    nsIScrollableView* scrollingView;
+    if (NS_SUCCEEDED(CallQueryInterface(curView, &scrollingView)))
+      scrollingView->RemoveScrollPositionListener((nsIScrollPositionListener *)this);
+    
+    curView->GetParent(curView);
   }
 
   mOwner = nsnull; // break relationship between frame and plugin instance owner
@@ -3726,7 +3744,12 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
   if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
   {
     nsPluginPort* pluginPort = FixUpPluginWindow(ePluginPaintEnable);
-    if (pluginPort) {
+    if (pluginPort) 
+    {
+      // we have to call SetWindow here to get RealPlayer to correctly update
+      // its position
+      mInstance->SetWindow(&mPluginWindow);
+
       EventRecord updateEvent;
       InitializeEventRecord(&updateEvent);
       updateEvent.what = updateEvt;
@@ -3741,9 +3764,8 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
       mInstance->HandleEvent(&pluginEvent, &eventHandled);
     
       ::SetPort(oldPort);
-
-      pluginWidget->EndDrawPlugin();
     }
+    pluginWidget->EndDrawPlugin();
   }
 #endif
 
@@ -3924,22 +3946,22 @@ NS_IMETHODIMP nsPluginInstanceOwner::Init(nsIPresContext* aPresContext, nsObject
   }
   
   // Register scroll position listener
-  if (mContext) {
-    nsCOMPtr<nsIPresShell> presShell;
-    mContext->GetShell(getter_AddRefs(presShell));
-    if (presShell) {
-      nsCOMPtr<nsIViewManager> vm;
-      presShell->GetViewManager(getter_AddRefs(vm));
-      if (vm) {
-        nsIScrollableView* scrollingView = nsnull;
-        vm->GetRootScrollableView(&scrollingView);
-        if (scrollingView) {
-          scrollingView->AddScrollPositionListener((nsIScrollPositionListener *)this);
-        }
-      }
-    }
+  // We need to register a scroll pos listener on every scrollable
+  // view up to the top
+  nsIFrame* parentWithView;
+  mOwner->GetParentWithView(mContext, &parentWithView);
+  nsIView* curView = nsnull;
+  if (parentWithView)
+    parentWithView->GetView(mContext, &curView);
+  while (curView)
+  {
+    nsIScrollableView* scrollingView;
+    if (NS_SUCCEEDED(CallQueryInterface(curView, &scrollingView)))
+      scrollingView->AddScrollPositionListener((nsIScrollPositionListener *)this);
+    
+    curView->GetParent(curView);
   }
-
+  
   return NS_OK; 
 }
 

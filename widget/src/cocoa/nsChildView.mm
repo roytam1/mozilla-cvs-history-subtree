@@ -247,29 +247,27 @@ static void fillTextRangeInTextEvent(nsTextEvent *aTextEvent, NSAttributedString
 //
 //-------------------------------------------------------------------------
 nsChildView::nsChildView() : nsBaseWidget() , nsDeleteObserved(this)
+, mView(nsnull)
+, mParentView(nsnull)
+, mParentWidget(nsnull)
+, mFontMetrics(nsnull)
+, mTempRenderingContext(nsnull)
+, mDestroyCalled(PR_FALSE)
+, mDestructorCalled(PR_FALSE)
+, mVisible(PR_FALSE)
+, mInWindow(PR_FALSE)
+, mDrawing(PR_FALSE)
+, mTempRenderingContextMadeHere(PR_FALSE)
+, mAcceptFocusOnClick(PR_TRUE)
+, mLiveResizeInProgress(PR_FALSE)
+, mPluginDrawing(PR_FALSE)
+, mPluginPort(nsnull)
+, mVisRgn(nsnull)
 {
   WIDGET_SET_CLASSNAME("nsChildView");
 
-  mView = nil;
-  
-  mParentView = nil;
-  mParentWidget = nil;
-  
-  mDestroyCalled = PR_FALSE;
-  mDestructorCalled = PR_FALSE;
-  mVisible = PR_FALSE;
-  mDrawing = PR_FALSE;
-  mInWindow = PR_FALSE;
-  mFontMetrics = nsnull;
-  mTempRenderingContext = nsnull;
-
   SetBackgroundColor(NS_RGB(255, 255, 255));
   SetForegroundColor(NS_RGB(0, 0, 0));
-
-  mPluginPort = nsnull;
-  mVisRgn = nsnull;
-
-  AcceptFocusOnClick(PR_TRUE);
 }
 
 
@@ -1224,8 +1222,13 @@ NS_IMETHODIMP nsChildView::GetPluginClipRect(nsRect& outClipRect, nsPoint& outOr
 NS_IMETHODIMP nsChildView::StartDrawPlugin()
 {
   NS_ASSERTION(mPluginPort, "StartDrawPlugin must only be called on a plugin widget");
-  if (!mPluginPort) return NS_ERROR_FAILURE;
+  if (!mPluginPort)
+    return NS_ERROR_FAILURE;
   
+  // prevent reentrant drawing
+  if (mPluginDrawing)
+    return NS_ERROR_FAILURE;
+
   NSWindow* window = [mView getNativeWindow];
   if (!window) return NS_ERROR_FAILURE;
 
@@ -1241,7 +1244,10 @@ NS_IMETHODIMP nsChildView::StartDrawPlugin()
     RgnHandle pluginRegion = ::NewRgn();
     if (pluginRegion)
     {
-      nsRect  clipRect;
+      StPortSetter setter(mPluginPort->port);
+      ::SetOrigin(0, 0);
+
+      nsRect  clipRect;   // this is in native window coordinates
       nsPoint origin;
       GetPluginClipRect(clipRect, origin);
       
@@ -1250,11 +1256,15 @@ NS_IMETHODIMP nsChildView::StartDrawPlugin()
       
       ::RectRgn(pluginRegion, &pluginRect);
       ::SetPortVisibleRegion(mPluginPort->port, pluginRegion);
-      //::SetPortClipRegion(mPluginPort->port, pluginRegion);
-  
+      ::SetPortClipRegion(mPluginPort->port, pluginRegion);
+      
+      // now set up the origin for the plugin
+      ::SetOrigin(origin.x, origin.y);
+
       ::DisposeRgn(pluginRegion);
     }
 
+    mPluginDrawing = PR_TRUE;
     return NS_OK;
   }
   
@@ -1270,6 +1280,7 @@ NS_IMETHODIMP nsChildView::EndDrawPlugin()
 {
   NS_ASSERTION(mPluginPort, "EndDrawPlugin must only be called on a plugin widget");
   //[mView unlockFocus];
+  mPluginDrawing = PR_FALSE;
   return NS_OK;
 }
 
@@ -2233,20 +2244,8 @@ nsChildView::Idle()
 
 -(NSMenu*)menuForEvent:(NSEvent*)theEvent
 {
-  nsMouseEvent geckoEvent;
-
-  int button = [theEvent buttonNumber];
-  if (button == 1) {
-    // The right mouse went down.  Fire off a right mouse down and
-    // then send the context menu event.
-    geckoEvent.eventStructType = NS_MOUSE_EVENT;
-    geckoEvent.nativeMsg = nsnull;
-    [self convert: theEvent message: NS_MOUSE_RIGHT_BUTTON_DOWN toGeckoEvent:&geckoEvent];
-    geckoEvent.clickCount = 1;
-    mGeckoChild->DispatchMouseEvent(geckoEvent);
-  }
-
   // Fire the context menu event into Gecko.
+  nsMouseEvent geckoEvent;
   geckoEvent.eventStructType = NS_MOUSE_EVENT;
   geckoEvent.nativeMsg = nsnull;
   [self convert:theEvent message:NS_CONTEXTMENU toGeckoEvent:&geckoEvent];
@@ -2274,15 +2273,12 @@ nsChildView::Idle()
 {
   [super init];
   
-//  mMouseEnterExitTag = [self addTrackingRect:[self frame] owner:self userData:nsnull assumeInside:NO];  
-//printf("__ctor created tag %ld (%d)\n", mMouseEnterExitTag, self);
-
   mGeckoChild = inChild;
   mEventSink = inSink;
-//  mMouseEnterExitTag = nsnull;
   mIsPluginView = NO;
   mLastKeyEventWasSentToCocoa = NO;
-
+  mCurEvent = NULL;
+  
   // initialization for NSTextInput
   mMarkedRange.location = NSNotFound;
   mMarkedRange.length = 0;
@@ -2309,12 +2305,7 @@ nsChildView::Idle()
 
 - (void) dealloc
 {
-  // make sure we remove our tracking rect or this view will keep getting 
-  // notifications long after it's gone.
-//  if ( mMouseEnterExitTag )
-//printf("(((((dtor removing tag %ld, (%d)))))\n", mMouseEnterExitTag, self);
-    //[self removeTrackingRect:mMouseEnterExitTag];
-
+  //NSLog(@"view dealloc setting port to %x", _savePort);
   [super dealloc];
 }
 
@@ -2328,13 +2319,6 @@ nsChildView::Idle()
 - (void)setFrame:(NSRect)frameRect
 {  
   [super setFrame:frameRect];
-
-  // re-establish our tracking rect
-  //if ( mMouseEnterExitTag )
-//printf("(((((setFrame removing tag %ld, (%d)))))\n", mMouseEnterExitTag, self);
-//    [self removeTrackingRect:mMouseEnterExitTag];
-//  mMouseEnterExitTag = [self addTrackingRect:frameRect owner:self userData:nsnull assumeInside:NO];  
-//printf("__setFrame created tag %ld\n", mMouseEnterExitTag);
 }
 
 
@@ -2530,14 +2514,23 @@ nsChildView::Idle()
 
 - (void)mouseDragged:(NSEvent*)theEvent
 {
-    nsMouseEvent geckoEvent;
-    geckoEvent.eventStructType = NS_MOUSE_EVENT;
-    geckoEvent.nativeMsg = nsnull;
-    [self convert:theEvent message:NS_MOUSE_MOVE toGeckoEvent:&geckoEvent];
-    
-    // send event into Gecko by going directly to the
-    // the widget.
-    mGeckoChild->DispatchMouseEvent(geckoEvent);    
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  geckoEvent.nativeMsg = nsnull;
+  [self convert:theEvent message:NS_MOUSE_MOVE toGeckoEvent:&geckoEvent];
+
+  EventRecord macEvent;
+  macEvent.what = nullEvent;
+  macEvent.message = 0;
+  macEvent.when = ::TickCount();
+  // macEvent.where.h = screenLoc.x, macEvent.where.v = screenLoc.y; XXX fix this, they are flipped!
+  GetGlobalMouse(&macEvent.where);
+  macEvent.modifiers = btnState | GetCurrentKeyModifiers();
+  geckoEvent.nativeMsg = &macEvent;
+  
+  // send event into Gecko by going directly to the
+  // the widget.
+  mGeckoChild->DispatchMouseEvent(geckoEvent);    
 }
 
 - (void)mouseEntered:(NSEvent*)theEvent
@@ -2550,8 +2543,58 @@ nsChildView::Idle()
   // printf("got mouse EXIT view\n");
 }
 
+- (void)rightMouseDown:(NSEvent *)theEvent
+{
+  // The right mouse went down.  Fire off a right mouse down and
+  // then send the context menu event.
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  geckoEvent.nativeMsg = nsnull;
+
+  [self convert: theEvent message: NS_MOUSE_RIGHT_BUTTON_DOWN toGeckoEvent:&geckoEvent];
+
+  // plugins need a native event here
+  EventRecord macEvent;
+  macEvent.what = mouseDown;
+  macEvent.message = 0;
+  macEvent.when = ::TickCount();
+  GetGlobalMouse(&macEvent.where);
+  macEvent.modifiers = controlKey;  // fake a context menu click
+  geckoEvent.nativeMsg = &macEvent;
+
+  geckoEvent.clickCount = [theEvent clickCount];
+  PRBool handled = mGeckoChild->DispatchMouseEvent(geckoEvent);
+  if (!handled)
+    [super rightMouseDown:theEvent];    // let the superview do context menu stuff
+}
+
+- (void)rightMouseUp:(NSEvent *)theEvent
+{
+  nsMouseEvent geckoEvent;
+  geckoEvent.eventStructType = NS_MOUSE_EVENT;
+  geckoEvent.nativeMsg = nsnull;
+
+  [self convert: theEvent message: NS_MOUSE_RIGHT_BUTTON_UP toGeckoEvent:&geckoEvent];
+
+  // plugins need a native event here
+  EventRecord macEvent;
+  macEvent.what = mouseUp;
+  macEvent.message = 0;
+  macEvent.when = ::TickCount();
+  GetGlobalMouse(&macEvent.where);
+  macEvent.modifiers = controlKey;  // fake a context menu click
+  geckoEvent.nativeMsg = &macEvent;
+
+  geckoEvent.clickCount = [theEvent clickCount];
+  PRBool handled = mGeckoChild->DispatchMouseEvent(geckoEvent);
+  if (!handled)
+    [super rightMouseUp:theEvent];
+}
+
 - (void)otherMouseDown:(NSEvent *)theEvent
 {
+  NSLog(@"otherMouseDown");
+
   nsMouseEvent geckoEvent;
   geckoEvent.eventStructType = NS_MOUSE_EVENT;
   geckoEvent.nativeMsg = nsnull;
@@ -2655,37 +2698,67 @@ const PRInt32 kNumLines = 4;
   return NS_STATIC_CAST(nsIWidget*, mGeckoChild);
 }
 
-static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEvent)
+static PRBool ConvertUnicodeToCharCode(PRUnichar inUniChar, unsigned char* outChar)
 {
-//  printf("converting cocoa event to mac event (lossy!)\n");
-    // XXX Revisit this fast and dirty conversion!
-    macEvent.what = ([cocoaEvent type] == NSKeyDown ? keyDown : keyUp);
+  UnicodeToTextInfo converterInfo;
+  TextEncoding      systemEncoding;
+  Str255            convertedString;
+  OSStatus          err;
+  
+  *outChar = 0;
+  
+  err = ::UpgradeScriptInfoToTextEncoding(smSystemScript, kTextLanguageDontCare, kTextRegionDontCare, NULL, &systemEncoding);
+  if (err != noErr)
+    return PR_FALSE;
+  
+  err = ::CreateUnicodeToTextInfoByEncoding(systemEncoding, &converterInfo);
+  if (err != noErr)
+    return PR_FALSE;
+  
+  err = ::ConvertFromUnicodeToPString(converterInfo, sizeof(PRUnichar), &inUniChar, convertedString);
+  if (err != noErr)
+    return PR_FALSE;
+
+  *outChar = convertedString[1];
+  ::DisposeUnicodeToTextInfo(&converterInfo);
+  return PR_TRUE;
+}
+
+static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEvent)
+{
+    if ([cocoaEvent type] == NSKeyDown)
+      macEvent.what = [cocoaEvent isARepeat] ? autoKey : keyDown;
+    else
+      macEvent.what = keyUp;
+
     UInt32 charCode = [[cocoaEvent characters] characterAtIndex: 0];
-    if (charCode >= 0x0080) {
+    if (charCode >= 0x0080)
+    {
         switch (charCode) {
         case NSUpArrowFunctionKey:
-            charCode = 0x0000001E;
+            charCode = kUpArrowCharCode;
             break;
         case NSDownArrowFunctionKey:
-            charCode = 0x0000001F;
+            charCode = kDownArrowCharCode;
             break;
         case NSLeftArrowFunctionKey:
-            charCode = 0x0000001C;
+            charCode = kLeftArrowCharCode;
             break;
         case NSRightArrowFunctionKey:
-            charCode = 0x0000001D;
+            charCode = kRightArrowCharCode;
             break;
         default:
-#if DEBUG
-            printf("### FIX ME - Convert NSString to C string with current encoding... ###\n");
-#endif
+            unsigned char convertedCharCode;
+            if (ConvertUnicodeToCharCode(charCode, &convertedCharCode))
+              charCode = convertedCharCode;
+            //NSLog(@"charcode is %d, converted to %c, char is %@", charCode, convertedCharCode, [cocoaEvent characters]);
             break;
         }
     }
     macEvent.message = (charCode & 0x00FF) | ([cocoaEvent keyCode] << 8);
     macEvent.when = ::TickCount();
     GetGlobalMouse(&macEvent.where);
-    macEvent.modifiers = GetCurrentKeyModifiers();
+    macEvent.modifiers = ::GetCurrentKeyModifiers();
 }
 
 - (nsRect)sendCompositionEvent:(PRInt32) aEventType;
@@ -2742,6 +2815,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 
 #define MAX_BUFFER_SIZE 32
 // NSTextInput implementation
+
 - (void)insertText:(id)insertString;
 {
 #if DEBUG_IME
@@ -2766,13 +2840,22 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     geckoEvent.eventStructType = NS_KEY_EVENT;
     geckoEvent.message = NS_KEY_PRESS;
     geckoEvent.widget = mGeckoChild;
-    geckoEvent.nativeMsg = nsnull;
     geckoEvent.point.x = geckoEvent.point.y = 0;
     geckoEvent.time = PR_IntervalNow();
     geckoEvent.keyCode = 0;
     geckoEvent.charCode = bufPtr[0]; // gecko expects OS-translated unicode
     geckoEvent.isChar = PR_TRUE;
     geckoEvent.isShift = geckoEvent.isControl = geckoEvent.isAlt = geckoEvent.isMeta = PR_FALSE;
+    geckoEvent.nativeMsg = nsnull;
+
+    // plugins need a native autokey event here, but only if this is a repeat event
+    EventRecord macEvent;
+    if (mCurEvent && [mCurEvent isARepeat])
+    {
+      ConvertCocoaKeyEventToMacEvent(mCurEvent, macEvent);
+      geckoEvent.nativeMsg = &macEvent;
+    }
+
     mGeckoChild->DispatchWindowEvent(geckoEvent);
   }
   else
@@ -3000,11 +3083,14 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   PRBool isChar = PR_FALSE;
   BOOL isARepeat = [theEvent isARepeat];
 
+  mCurEvent = theEvent;
+  
   // if we have a dead-key event, we won't get a character
   // since we have no character, there isn't any point to generating
   // a gecko event until they have dead key events
   BOOL nonDeadKeyPress = [[theEvent characters] length] > 0;
-  if (!isARepeat && nonDeadKeyPress) {
+  if (!isARepeat && nonDeadKeyPress)
+  {
     // Fire a key down.
     nsKeyEvent geckoEvent;
     geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -3015,7 +3101,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 
     // As an optimisation, only do this when there is a plugin present.
     EventRecord macEvent;
-    convertCocoaEventToMacEvent(theEvent, macEvent);
+    ConvertCocoaKeyEventToMacEvent(theEvent, macEvent);
     geckoEvent.nativeMsg = &macEvent;
     isKeyDownEventHandled = mGeckoChild->DispatchWindowEvent(geckoEvent);
   }
@@ -3026,12 +3112,14 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   NSResponder* resp = [[self window] firstResponder];
   if (resp != (NSResponder*)self) {
 #if DEBUG
-    printf("No soup for you!\n");
+    printf("We are no longer the responder. Bailing.\n");
 #endif
+    mCurEvent = NULL;
     return;
   }
   
-  if (!mInComposition && nonDeadKeyPress) {
+  if (!mInComposition && nonDeadKeyPress)
+  {
     // Fire a key press.
     nsKeyEvent geckoEvent;
     geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -3040,16 +3128,30 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
             isChar: &isChar
             toGeckoEvent: &geckoEvent];
     geckoEvent.isChar = isChar;
-    if (isChar) {
-        mLastKeyEventWasSentToCocoa = YES;  // force all events to go through inserttext
+    if (isChar)
+    {
+      // we'll send the NS_KEY_PRESS event to gecko in [insertText:]
+      mLastKeyEventWasSentToCocoa = YES;  // force all events to go through inserttext
     }
-    else {
-        // do we need to end composition if we got here by arrow key press or other?
-        isKeyEventHandled = mGeckoChild->DispatchWindowEvent(geckoEvent);
+    else
+    {
+      // if this is a repeat non-char event (e.g. arrows), then set up
+      // a mac event
+      if (isARepeat)
+      {
+        // plugins need a native event (this should be an autoKey event)
+        EventRecord macEvent;
+        ConvertCocoaKeyEventToMacEvent(theEvent, macEvent);
+        geckoEvent.nativeMsg = &macEvent;
+      }
+      
+      // do we need to end composition if we got here by arrow key press or other?
+      isKeyEventHandled = mGeckoChild->DispatchWindowEvent(geckoEvent);
     }
   }
 
-  if (!nonDeadKeyPress || mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled)) {
+  if (!nonDeadKeyPress || mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled))
+  {
     // XXX hack: we need to have a flag so we call interpretKeyEvents even tho 
     // we've inserted the character(s); if we don't, the system/Cocoa key event 
     // handling code doesn't know that the letters were "composed" or entered
@@ -3059,6 +3161,8 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     mLastKeyEventWasSentToCocoa = !mLastKeyEventWasSentToCocoa;
     [super interpretKeyEvents:[NSArray arrayWithObject:theEvent]];
   }
+
+  mCurEvent = NULL;
 }
 
 - (void)keyUp:(NSEvent*)theEvent;
@@ -3077,7 +3181,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 
   // As an optimisation, only do this when there is a plugin present.
   EventRecord macEvent;
-  convertCocoaEventToMacEvent(theEvent, macEvent);
+  ConvertCocoaKeyEventToMacEvent(theEvent, macEvent);
   geckoEvent.nativeMsg = &macEvent;
 
   mGeckoChild->DispatchWindowEvent(geckoEvent);
