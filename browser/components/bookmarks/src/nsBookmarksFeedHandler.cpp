@@ -62,9 +62,6 @@
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMNodeList.h"
 
-#include "nsICharsetConverterManager.h"
-#include "nsIUnicodeDecoder.h"
-
 /* These are defined in nsBookmarksService.cpp */
 extern nsIRDFResource       *kRDF_type;
 extern nsIRDFResource       *kRDF_nextVal;
@@ -90,7 +87,6 @@ extern nsIRDFContainerUtils *gRDFC;
 
 static NS_DEFINE_CID(kRDFContainerCID,            NS_RDFCONTAINER_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,   NS_RDFINMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 nsresult nsBMSVCClearSeqContainer (nsIRDFDataSource* aDataSource, nsIRDFResource* aResource);
 nsresult nsBMSVCUnmakeSeq (nsIRDFDataSource* aDataSource, nsIRDFResource* aResource);
@@ -152,8 +148,6 @@ protected:
     nsCOMPtr<nsIOutputStream> mCacheStream;
     PRBool mAborted;
     nsCString mBody;
-    PRBool mCheckedEncoding;
-    nsCString mBodyEncoding;
     nsCOMPtr<nsIRDFContainer> mLivemarkContainer;
 };
 
@@ -166,8 +160,6 @@ nsFeedLoadListener::OnStartRequest(nsIRequest *aResult, nsISupports *ctxt)
         return NS_ERROR_UNEXPECTED;
 
     mBody.Truncate();
-    mBodyEncoding.Truncate();
-    mCheckedEncoding = PR_FALSE;
     return NS_OK;
 }
 
@@ -181,52 +173,9 @@ nsFeedLoadListener::StreamReaderCallback(nsIInputStream *aInputStream,
 {
     nsFeedLoadListener *rll = (nsFeedLoadListener *) aClosure;
 
-    // mBody is here in a charset that we assume is utf8, unless
-    // we hear otherwise via an encoding="..." tag on the xml
-    // text element.
     rll->mBody.Append(aRawSegment, aCount);
-
-    if (!rll->mCheckedEncoding) {
-        // see if we have an "<?xml..>" node, and if so, if it has an encoding
-        // element.
-        PRInt32 xmlStart, xmlEnd, encodingStart, encodingEnd;
-
-        xmlStart = rll->mBody.Find("<?xml");
-        if (xmlStart != kNotFound) {
-            xmlEnd = rll->mBody.Find("?>", PR_FALSE, xmlStart);
-            if (xmlEnd != kNotFound) {
-                // we have a <?xml and a ?>, so check for an "encoding="
-                encodingStart = rll->mBody.Find("encoding=", PR_FALSE, xmlStart, xmlEnd - xmlStart);
-                if (encodingStart != kNotFound) {
-                    encodingStart += strlen("encoding=");
-                    char quotechar = rll->mBody[encodingStart];
-                    if (quotechar != '"' && quotechar != '\'') {
-                        quotechar = ' ';
-                    } else {
-                        encodingStart++;
-                    }
-
-                    encodingEnd = encodingStart;
-                    while (encodingEnd < xmlEnd) {
-                        if (rll->mBody[encodingEnd] == quotechar)
-                            break;
-                        encodingEnd++;
-                    }
-
-                    if (encodingEnd - encodingStart > 0) {
-                        // we have an encoding
-                        rll->mBodyEncoding = Substring(rll->mBody, encodingStart, encodingEnd - encodingStart);
-                    }
-                }
-
-                // we saw the entire <?xml ?> header, so we don't need to check
-                // this again.
-                rll->mCheckedEncoding = PR_TRUE;
-            }
-        }
-    }
-
     *aWriteCount = aCount;
+
     return NS_OK;
 }
 
@@ -292,59 +241,6 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
      * try parsing as RDF first, then as Atom and the "simple" RSS
      * (the userland 0.91/0.92/2.0 formats)
      */
-
-    // if no encoding, we assume UTF8 and leave as-is
-    if (!mBodyEncoding.IsEmpty() &&
-        !mBodyEncoding.Equals("utf-8") &&
-        !mBodyEncoding.Equals("UTF-8"))
-    {
-        do {
-            nsCOMPtr<nsICharsetConverterManager> charsetConv = do_GetService(kCharsetConverterManagerCID, &rv);
-            if (NS_FAILED(rv)) break;
-
-            nsCOMPtr<nsIUnicodeDecoder> mUnicodeDecoder;
-            rv = charsetConv->GetUnicodeDecoder(mBodyEncoding.get(),
-                                                getter_AddRefs(mUnicodeDecoder));
-            if (NS_FAILED(rv)) break;
-
-            const char *srcStr = mBody.get();
-            PRInt32 srcLen = (PRInt32) mBody.Length();
-
-            // convert charset, using mUnicodeDecoder
-            PRInt32 maxLength = 0;
-            rv = mUnicodeDecoder->GetMaxLength (srcStr, srcLen, &maxLength);
-            if (NS_FAILED(rv)) break;
-
-            PRUnichar *ustr = (PRUnichar *) nsMemory::Alloc((maxLength + 1) * sizeof(PRUnichar));
-            if (!ustr) {
-                rv = NS_ERROR_OUT_OF_MEMORY;
-                break;
-            }
-
-            nsString utf16Body;
-
-            do {
-                PRInt32 resLength = maxLength;
-                rv = mUnicodeDecoder->Convert (srcStr, &srcLen, ustr, &resLength);
-                if (NS_FAILED(rv)) {
-                    break;
-                }
-
-                utf16Body.Append(ustr, resLength);
-
-                if (rv == NS_OK_UDEC_MOREINPUT) {
-                    // erm, we have no more input to give...
-                    break;
-                }
-            } while (rv != NS_OK);
-
-            nsMemory::Free(ustr);
-
-            mBody = NS_ConvertUTF16toUTF8(utf16Body);
-        } while (0);
-
-        // if it failed, leave the string as-is, and give it a shot
-    }
 
     /* Try parsing as RDF */
     rv = TryParseAsRDF ();
