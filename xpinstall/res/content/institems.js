@@ -61,7 +61,7 @@ function onLoad()
 
   gParam = window.arguments[0].QueryInterface(Components.interfaces.nsIDialogParamBlock);
 
-  gParam.SetInt(0, 1 ); /* Set the default return to Cancel */
+  gParam.SetInt(0, 1); // Set the default return to Cancel
 
   numberOfDialogTreeElements = gParam.GetInt(1);
 
@@ -73,23 +73,29 @@ function onLoad()
 
     addTreeItem(row++, moduleName, URL, certName);
   }
+
+  // Move default+focus from |accept| to |cancel| button.
+  var aButton = document.documentElement.getButton("accept");
+  aButton.setAttribute("default", false);
+  aButton = document.documentElement.getButton("cancel");
+  aButton.focus();
+  aButton.setAttribute("default", true);
 }
 
-function onOk()
+function onAccept()
 {
-   // set the okay button in the param block
-   if (gParam)
-     gParam.SetInt(0, 0 );
+  // set the accept button in the param block
+  if (gParam)
+    gParam.SetInt(0, 0);
 
   return true;
 }
 
 function onCancel()
 {
-    // set the cancel button in the param block
-    if (gParam)
-      gParam.SetInt(0, 1 );
+  // set the cancel button in the param block
+  if (gParam)
+    gParam.SetInt(0, 1);
 
   return true;
 }
-
