@@ -48,6 +48,9 @@ namespace JavaScript {
 //
 // Language Selectors
 //
+    namespace JS2Runtime {
+        class JSFunction;
+    }
 
     class Language {
         enum {
@@ -758,6 +761,7 @@ namespace JavaScript {
     
     struct FunctionStmtNode: AttributeStmtNode {
         FunctionDefinition function;    // Function definition
+        JS2Runtime::JSFunction *mFunction;
 
         FunctionStmtNode(uint32 pos, Kind kind, IdentifierList *attributes) :
                 AttributeStmtNode(pos, kind, attributes) {}

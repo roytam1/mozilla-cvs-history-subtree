@@ -84,6 +84,10 @@ namespace JavaScript
             printFormat(*this, "%u", i);
             return *this;
         }
+        Formatter &operator<<(int32 i) {
+            printFormat(*this, "%d", i);
+            return *this;
+        }
         Formatter &operator<<(uint8 i) {
             printFormat(*this, "%u", i);
             return *this;

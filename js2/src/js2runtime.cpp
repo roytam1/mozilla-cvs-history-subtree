@@ -438,6 +438,70 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
     while (pc != endPC) {
         try {
             switch ((ByteCodeOp)(*pc++)) {
+            case DupOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.push_back(v);
+                }
+                break;
+            case DupInsertOp:   // XXX something more efficient than pop/push?
+                {
+                    JSValue v1 = mStack.back();
+                    mStack.pop_back();
+                    JSValue v2 = mStack.back();
+                    mStack.pop_back();
+                    mStack.push_back(v1);
+                    mStack.push_back(v2);
+                    mStack.push_back(v1);
+                }
+                break;
+            case SwapOp:   // XXX something more efficient than pop/push?
+                {
+                    JSValue v1 = mStack.back();
+                    mStack.pop_back();
+                    JSValue v2 = mStack.back();
+                    mStack.pop_back();
+                    mStack.push_back(v1);
+                    mStack.push_back(v2);
+                }
+                break;
+            case LogicalNotOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    mStack.push_back(JSValue(!v.toBoolean(this).boolean));
+                }
+                break;
+            case JumpOp:
+                {
+                    uint32 offset = *((uint32 *)pc);
+                    pc += offset;
+                }
+                break;
+            case JumpFalseOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    if (!v.toBoolean(this).boolean) {
+                        uint32 offset = *((uint32 *)pc);
+                        pc += offset;
+                    }
+                    else
+                        pc += sizeof(uint32);
+                }
+                break;
+            case JumpTrueOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    if (v.toBoolean(this).boolean) {
+                        uint32 offset = *((uint32 *)pc);
+                        pc += offset;
+                    }
+                    else
+                        pc += sizeof(uint32);
+                }
+                break;
             case InvokeOp:
                 {
                     uint32 argCount = *((uint32 *)pc); 
@@ -585,6 +649,91 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     const String &name = *mCurModule->getString(index);
                     if (obj->setProperty(this, name, v) ) {
                         // need to invoke
+                    }
+                }
+                break;
+            case DoUnaryOp:
+                {
+                    Operator op = (Operator)(*pc++);
+                    JSValue v = mStack.back();
+                    JSFunction *target;
+                    if (v.isObject() && (target = v.object->getType()->getUnaryOperator(op)) )
+                    {                    
+                        uint32 argBase = mStack.size() - 1;
+                        if (target->mByteCode) {
+                            // lie about argCount to the activation since it
+                            // would normally expect to clean the function pointer
+                            // off the stack as well.
+                            mActivationStack.push(new Activation(mLocals, mArgumentBase, 
+                                                                        pc, mCurModule, 0));
+                            mCurModule = target->mByteCode;
+                            pc = mCurModule->mCodeBase;
+                            endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                            mArgumentBase = argBase;
+                            delete mLocals;
+                            mLocals = new JSValue[mCurModule->mLocalsCount];
+                        }
+                        else {
+                            JSValue result = (target->mCode)(this, &mStack[argBase], 0);
+                            mStack.erase(&mStack[argBase], mStack.end());
+                            mStack.push_back(result);
+                        }
+                        break;
+                    }                    
+
+                    switch (op) {
+                    default:
+                        NOT_REACHED("bad unary op");
+                    case Increment: // defined in terms of '+'
+                        {
+                            mStack.push_back(JSValue(1.0));
+                            mPC = pc;
+                            if (executeOperator(Plus, v.getType(), Number_Type)) {
+                                // need to invoke
+                                pc = mCurModule->mCodeBase;
+                                endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                                delete mLocals;
+                                mLocals = new JSValue[mCurModule->mLocalsCount];
+                            }
+                        }
+                        break;
+                    case Decrement: // defined in terms of '-'
+                        {
+                            mStack.push_back(JSValue(1.0));
+                            mPC = pc;
+                            if (executeOperator(Minus, v.getType(), Number_Type)) {
+                                // need to invoke
+                                pc = mCurModule->mCodeBase;
+                                endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                                delete mLocals;
+                                mLocals = new JSValue[mCurModule->mLocalsCount];
+                            }
+                        }
+                        break;
+                    case Negate:
+                        {
+                            mStack.pop_back();
+                            JSValue n = v.toNumber(this);
+                            if (n.isNaN())
+                                mStack.push_back(n);
+                            else
+                                mStack.push_back(JSValue(-n.f64));
+                        }
+                        break;
+                    case Posate:
+                        {
+                            mStack.pop_back();
+                            JSValue n = v.toNumber(this);
+                            mStack.push_back(n);
+                        }
+                        break;
+                    case Complement:
+                        {
+                            mStack.pop_back();
+                            JSValue n = v.toInt32(this);
+                            mStack.push_back(JSValue((float64)(~(int32)(n.f64))));
+                        }
+                        break;
                     }
                 }
                 break;
@@ -933,6 +1082,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             bool isOperator = hasAttribute(f->attributes, mScopeChain.OperatorKeyWord);
             JSType *resultType = mScopeChain.extractType(f->function.resultType);
             JSFunction *fnc = new JSFunction(resultType);
+            f->mFunction = fnc;
  
             if (isOperator) {
                 ASSERT(f->function.name->getKind() == ExprNode::string);
@@ -941,7 +1091,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 // if it's a unary operator, it just gets added 
                 // as a method with a special name. Binary operators
                 // get added to the Context's operator table.
-                defineOperator(op, getParameterType(f->function, 0), 
+                if (getParameterCount(f->function) == 1)
+                    mScopeChain.defineUnaryOperator(op, fnc);
+                else
+                    defineOperator(op, getParameterType(f->function, 0), 
                                    getParameterType(f->function, 1), fnc);
             }
             else {
@@ -1089,7 +1242,7 @@ JSValue objectMinus(Context *cx, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue(r1.toNumber(cx).f64 + r2.toNumber(cx).f64);
+    return JSValue(r1.toNumber(cx).f64 - r2.toNumber(cx).f64);
 }
 
 JSValue objectMultiply(Context *cx, JSValue *argv, uint32 argc)
@@ -1157,6 +1310,46 @@ JSValue objectBitOr(Context *cx, JSValue *argv, uint32 argc)
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) | (int32)(r2.toInt32(cx).f64) ));
 }
 
+JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
+{
+    JSValue r1p = r1.toPrimitive(cx, JSValue::NumberHint);
+    JSValue r2p = r2.toPrimitive(cx, JSValue::NumberHint);
+
+    if (r1p.isString() && r2p.isString())
+        return JSValue(bool(r1p.string->compare(*r2p.string) < 0));
+    else {
+        JSValue r1n = r1p.toNumber(cx);
+        JSValue r2n = r2p.toNumber(cx);
+        if (r1n.isNaN() || r2n.isNaN())
+            return kUndefinedValue;
+        else
+            return JSValue(r1n.f64 < r2n.f64);
+    }
+
+}
+
+JSValue objectLess(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    JSValue result = objectCompare(cx, r1, r2);
+    if (result.isUndefined())
+        return kFalseValue;
+    else
+        return result;
+}
+
+JSValue objectLessEqual(Context *cx, JSValue *argv, uint32 argc)
+{
+    JSValue &r1 = argv[0];
+    JSValue &r2 = argv[1];
+    JSValue result = objectCompare(cx, r1, r2);
+    if (result.isTrue() || result.isUndefined())
+        return kFalseValue;
+    else
+        return kTrueValue;
+}
+
 struct OpTableEntry {
     Operator which;
     JSType *op1;
@@ -1180,6 +1373,9 @@ struct OpTableEntry {
     { Multiply, Object_Type, Object_Type, objectMultiply, Number_Type },
     { Divide, Object_Type, Object_Type, objectDivide, Number_Type },
     { Remainder, Object_Type, Object_Type, objectRemainder, Number_Type },
+
+    { Less, Object_Type, Object_Type, objectMultiply, Boolean_Type },
+    { LessEqual, Object_Type, Object_Type, objectMultiply, Boolean_Type },
 
 };
 
@@ -1209,67 +1405,7 @@ JSValue Number_ToString(Context *cx, JSValue *argv, uint32 argc)
 {
     return argv[0].toString(cx);
 }
-
-bool JSValue::isNaN() const
-{
-    ASSERT(isNumber());
-    switch (tag) {
-    case f64_tag:
-        return JSDOUBLE_IS_NaN(f64);
-    default:
-        NOT_REACHED("Broken compiler?");
-        return true;
-    }
-}
               
-bool JSValue::isNegativeInfinity() const
-{
-    ASSERT(isNumber());
-    switch (tag) {
-    case f64_tag:
-        return (f64 < 0) && JSDOUBLE_IS_INFINITE(f64);
-    default:
-        NOT_REACHED("Broken compiler?");
-        return true;
-    }
-}
-              
-bool JSValue::isPositiveInfinity() const
-{
-    ASSERT(isNumber());
-    switch (tag) {
-    case f64_tag:
-        return (f64 > 0) && JSDOUBLE_IS_INFINITE(f64);
-    default:
-        NOT_REACHED("Broken compiler?");
-        return true;
-    }
-}
-              
-bool JSValue::isNegativeZero() const
-{
-    ASSERT(isNumber());
-    switch (tag) {
-    case f64_tag:
-        return JSDOUBLE_IS_NEGZERO(f64);
-    default:
-        NOT_REACHED("Broken compiler?");
-        return true;
-    }
-}
-              
-bool JSValue::isPositiveZero() const
-{
-    ASSERT(isNumber());
-    switch (tag) {
-    case f64_tag:
-        return (f64 == 0.0) && !JSDOUBLE_IS_NEGZERO(f64);
-    default:
-        NOT_REACHED("Broken compiler?");
-        return true;
-    }
-}
-
 JSValue JSValue::valueToObject(Context *cx, JSValue& value)
 {
     switch (value.tag) {
@@ -1376,7 +1512,8 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
         }
         if (target) {
             if (target->mByteCode) {
-                // here we need to get the interpreter to
+                // here we need to get the interpreter to do the job
+                ASSERT(false);
             }
             else
                 return (target->mCode)(cx, &value, 1);
@@ -1564,6 +1701,46 @@ JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
     d = fmod(d, two32);
     d = (d >= 0) ? d : d + two32;
     return JSValue((float64)d);
+}
+
+JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
+{
+    JSObject *obj = NULL;
+    switch (value.tag) {
+    case f64_tag:
+        return JSValue(!(value.f64 == 0.0) || JSDOUBLE_IS_NaN(value.f64));
+    case string_tag: 
+        return JSValue(value.string->length() != 0);
+    case boolean_tag:
+        return value;
+    case object_tag:
+        obj = value.object;
+        break;
+    case function_tag:
+        obj = value.function;
+        break;
+    case undefined_tag:
+        return kFalseValue;
+    default:
+        NOT_REACHED("Bad tag");
+        return kUndefinedValue;
+    }
+    ASSERT(obj);
+    JSFunction *target = NULL;
+    if (obj->hasProperty(widenCString("toBoolean"), Read)) {
+        JSValue v = obj->getProperty(widenCString("toBoolean"));
+        if (v.isFunction())
+            target = v.function;
+    }
+    if (target) {
+        if (target->mByteCode) {
+            // here we need to get the interpreter to do the job
+            ASSERT(false);
+        }
+        else
+            return (target->mCode)(cx, &value, 1);
+    }
+    throw new Exception(Exception::runtimeError, "toBoolean");    // XXX
 }
 
 

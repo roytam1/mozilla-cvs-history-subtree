@@ -70,7 +70,8 @@ namespace ByteCode {
 
         GetTypeOp,              //                     <object> --> <type of object>
 
-        DoOperatorOp,           // <operation>         <op1> <op2> --> <result>
+        DoUnaryOp,              // <operation>         <object> --> <result>
+        DoOperatorOp,           // <operation>         <object> <object> --> <result>
 
         PushNullOp,             //                     --> <Object(null)>
         PushIntOp,              // <int>               --> <Object(int)>
@@ -85,10 +86,14 @@ namespace ByteCode {
         NewObjectOp,            //                     <type> --> <object>
 
 
-        JcondOp,                // <target>            <object> -->
+        JumpFalseOp,            // <target>            <object> -->
+        JumpTrueOp,             // <target>            <object> -->
         JumpOp,                 // <target>            
 
-
+        LogicalNotOp,           //                     <object> --> <object>
+        SwapOp,                 //                     <object1> <object2> --> <object2> <object1>
+        DupOp,                  //                     <object> --> <object> <object>
+        DupInsertOp,            //                     <object1> <object2> --> <object2> <object1> <object2>
     
         // for instance members
         GetFieldOp,             // <slot>              <base> --> <object>
@@ -136,6 +141,7 @@ namespace ByteCode {
         ByteCodeModule(ByteCodeGen *bcg);
 
         uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
+        int32 getOffset(int index) const            { return *((int32 *)&mCodeBase[index]); }
         const String *getString(int index) const    { return &mStringPoolContents[index]; }
         float64 getNumber(int index) const          { return mNumberPoolContents[index]; }
 
@@ -153,6 +159,19 @@ namespace ByteCode {
 
     #define BufferIncrement (32)
 
+    class Label {
+    public:
+        Label() : mHasLocation(false) { }
+
+        void addFixup(ByteCodeGen *bcg, uint32 branchLocation);        
+        void setLocation(ByteCodeGen *bcg, uint32 location);
+
+        std::vector<uint32> mFixupList;
+
+        bool mHasLocation;
+        uint32 mLocation;
+    };
+
     class ByteCodeGen {
     public:
 
@@ -167,35 +186,44 @@ namespace ByteCode {
                                     JSType *topClass);
         JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
+        void genReferencePair(ExprNode *p, Reference *&readRef, Reference *&writeRef);
 
         typedef std::vector<uint8> CodeBuffer;
-
-//        std::stack<CodeBuffer *> grumpy;
 
         // this is the current code buffer
         CodeBuffer *mBuffer;
         ScopeChain *mScopeChain;
 
         Context *m_cx;
-/*
-        void pushOnGrumpy()
-        {
-            grumpy.push(mBuffer);
-            mBuffer = new CodeBuffer;
-        }
+        
+        std::vector<Label> mLabelList;
+        
 
-        void popOffGrumpy()
-        {
-            mBuffer = grumpy.top();
-            grumpy.pop();
-        }
-*/
-
-        void addByte(uint8 v)      { mBuffer->push_back(v); }
-        void addPointer(void *v)   { addLong((uint32)v); }
+        void addByte(uint8 v)       { mBuffer->push_back(v); }
+        void addPointer(void *v)    { addLong((uint32)v); }
         void addLong(uint32 v)     
             { mBuffer->insert(mBuffer->end(), (uint8 *)&v, (uint8 *)(&v) + sizeof(uint32)); }
+        void addOffset(int32 v)     
+            { mBuffer->insert(mBuffer->end(), (uint8 *)&v, (uint8 *)(&v) + sizeof(int32)); }
+        void setOffset(uint32 index, int32 v)
+            {   *((int32 *)(mBuffer->begin() + index)) = v; }   // XXX
 
+        void addFixup(uint32 label) 
+        { 
+            mLabelList[label].addFixup(this, mBuffer->size()); 
+        }
+
+        uint32 getLabel()
+        {
+            uint32 result = mLabelList.size();
+            mLabelList.push_back(Label());
+            return result;
+        }
+
+        void setLabel(uint32 label)
+        {
+            mLabelList[label].setLocation(this, mBuffer->size()); 
+        }
 
         std::vector<String> mStringPoolContents;
         typedef std::map<String, uint32, std::less<String> > StringPool;
@@ -234,7 +262,27 @@ namespace ByteCode {
 
     };
 
+    inline void Label::setLocation(ByteCodeGen *bcg, uint32 location)
+    {
+        mHasLocation = true;
+        mLocation = location;
+        for (std::vector<uint32>::iterator i = mFixupList.begin(), end = mFixupList.end(); 
+                        (i != end); i++)
+        {
+            uint32 branchLocation = *i;
+            bcg->setOffset(branchLocation, mLocation - branchLocation); 
+        }
+    }
 
+    inline void Label::addFixup(ByteCodeGen *bcg, uint32 branchLocation) 
+    { 
+        if (mHasLocation)
+            bcg->addOffset(mLocation - branchLocation);
+        else {
+            mFixupList.push_back(branchLocation); 
+            bcg->addLong(0);
+        }
+    }
 }
 }
 

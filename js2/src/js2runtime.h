@@ -146,11 +146,14 @@ namespace JS2Runtime {
 
         bool isUndefined() const                        { return (tag == undefined_tag); }
         bool isNull() const                             { return (tag == null_tag); }
-        bool isNaN() const;
-        bool isNegativeInfinity() const;
-        bool isPositiveInfinity() const;
-        bool isNegativeZero() const;
-        bool isPositiveZero() const;
+        bool isNaN() const                              { ASSERT(isNumber()); return JSDOUBLE_IS_NaN(f64); }
+        bool isNegativeInfinity() const                 { ASSERT(isNumber()); return (f64 < 0) && JSDOUBLE_IS_INFINITE(f64); }
+        bool isPositiveInfinity() const                 { ASSERT(isNumber()); return (f64 > 0) && JSDOUBLE_IS_INFINITE(f64); }
+        bool isNegativeZero() const                     { ASSERT(isNumber()); return JSDOUBLE_IS_NEGZERO(f64); }
+        bool isPositiveZero() const                     { ASSERT(isNumber()); return (f64 == 0.0) && !JSDOUBLE_IS_NEGZERO(f64); }
+
+        bool isTrue() const                             { ASSERT(isBool()); return boolean; }
+        bool isFalse() const                            { ASSERT(isBool()); return !boolean; }
 
         JSType *getType();
 
@@ -160,6 +163,7 @@ namespace JS2Runtime {
         JSValue toInt32(Context *cx)              { return valueToInt32(cx, *this); }
         JSValue toObject(Context *cx)             { return ((isObject() || isType() || isFunction()) ?
                                                                 *this : valueToObject(cx, *this)); }
+        JSValue toBoolean(Context *cx)            { return (isBool() ? *this : valueToBoolean(cx, *this)); }
 
         /* These are for use in 'toPrimitive' calls */
         enum Hint {
@@ -172,6 +176,7 @@ namespace JS2Runtime {
         static JSValue valueToObject(Context *cx, JSValue& value);
         static JSValue valueToUInt32(Context *cx, JSValue& value);
         static JSValue valueToInt32(Context *cx, JSValue& value);
+        static JSValue valueToBoolean(Context *cx, JSValue& value);
         
         int operator==(const JSValue& value) const;
 
@@ -256,6 +261,10 @@ namespace JS2Runtime {
 
         virtual bool setValue(Context *cx)
                 { throw Exception(Exception::internalError, "set value(cx) for base ref"); }
+
+        virtual bool hasBaseExpression()
+                { return false; }
+
     };
 
     // a getter/setter function from an activation
@@ -298,6 +307,7 @@ namespace JS2Runtime {
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
+        bool hasBaseExpression() { return true; }
     };
     // a static field
     class StaticFieldReference : public Reference {
@@ -309,6 +319,7 @@ namespace JS2Runtime {
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
+        bool hasBaseExpression() { return true; }
     };
     // a static function
     class StaticFunctionReference : public Reference {
@@ -317,6 +328,7 @@ namespace JS2Runtime {
             : Reference(type), mIndex(index) { }
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
+        bool hasBaseExpression() { return true; }
     };
     // a member function in a vtable
     class MethodReference : public Reference {
@@ -328,6 +340,7 @@ namespace JS2Runtime {
         void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
         virtual JSValue getValue();
+        bool hasBaseExpression() { return true; }
     };
     class GetterMethodReference : public MethodReference {
     public:
@@ -335,6 +348,7 @@ namespace JS2Runtime {
             : MethodReference(index, baseClass, type) { }
         void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
+        bool hasBaseExpression() { return true; }
     };
     class SetterMethodReference : public MethodReference {
     public:
@@ -343,6 +357,7 @@ namespace JS2Runtime {
         void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
+        bool hasBaseExpression() { return true; }
     };
 
     // a function
@@ -361,6 +376,7 @@ namespace JS2Runtime {
         void emitCodeSequence(ByteCodeGen *bcg);
         bool isConstructor()    { return true; }
         virtual bool needsThis() { return true; }
+        bool hasBaseExpression() { return true; }
     };
     // a getter function
     class GetterFunctionReference : public Reference {
@@ -401,6 +417,7 @@ namespace JS2Runtime {
         Access mAccess;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
+        bool hasBaseExpression() { return true; }
     };
     // a parameter slot (they can't have getter/setter, right?)
     class ParameterReference : public Reference {
@@ -827,6 +844,16 @@ namespace JS2Runtime {
             }
         }
 
+        void defineUnaryOperator(Operator which, JSFunction *f)
+        {
+            mUnaryOperators[which] = f;
+        }
+
+        JSFunction *getUnaryOperator(Operator which)
+        {
+            return mUnaryOperators[which];
+        }
+
         void setDefaultConstructor(JSFunction *f)
         {
             PropertyIterator it = defineStaticMethod(mClassName, Object_Type);
@@ -963,6 +990,7 @@ namespace JS2Runtime {
         MethodList      mMethods;
         String          mClassName;
 
+        JSFunction      *mUnaryOperators[OperatorCount];    // XXX too wasteful
 
         void printSlotsNStuff(Formatter& f) const;
 
@@ -1177,6 +1205,12 @@ namespace JS2Runtime {
         {
             JSObject *top = mScopeStack.back();
             return top->defineSetterMethod(name, type);
+        }
+        void defineUnaryOperator(Operator which, JSFunction *f)
+        {
+            JSObject *top = mScopeStack.back();
+            ASSERT(dynamic_cast<JSType *>(top));
+            ((JSType *)top)->defineUnaryOperator(which, f);
         }
 
         // see if the current scope contains a name already
