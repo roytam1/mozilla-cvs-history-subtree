@@ -72,7 +72,7 @@ public: // create from serialization only
 // Implementation
 public:
 	virtual ~CNSNavFrame();
-	CContentView* GetContentView()	{return m_nsContent;}
+	CRDFContentView* GetContentView()	{return m_nsContent;}
 	// Add new view to this frame.
 	//void AddViewContext(const char* pUrl, const char* pTitle, CView* pView, CPaneCX* htmlPane = NULL);
 
@@ -129,7 +129,7 @@ protected:  // control bar embedded members
 	int m_nXOffset, m_nYOffset;
 
 	CSelector* m_pSelector;		// the selector pane.
-	CContentView *m_nsContent;	// the content pane.
+	CRDFContentView *m_nsContent;	// the content pane.
 	CNavMenuBar* m_pNavMenu;	// the embedded menu bar.
 
 // Generated message map functions

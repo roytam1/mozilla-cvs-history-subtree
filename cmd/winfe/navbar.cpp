@@ -53,7 +53,7 @@ LRESULT CNavMenuButton::OnDragMenuOpen(WPARAM wParam, LPARAM lParam)
 		return 1;
 
 	// Get the tree view and set focus to it.
-	CRDFContentView* pView = pSelectorButton->GetTreeView();
+	CRDFContentView* pView = pSelectorButton->GetContentView();
 	if (pView)
 		pView->SetFocus();
 	
@@ -354,7 +354,7 @@ void CNavMenuBar::OnLButtonDown (UINT nFlags, CPoint point )
 		// Set the focus.
 		if (m_pSelectorButton)
 		{
-			CRDFContentView* pView = m_pSelectorButton->GetTreeView();
+			CRDFContentView* pView = m_pSelectorButton->GetContentView();
 			if (pView)
 				pView->SetFocus();
 		}
@@ -414,9 +414,9 @@ void CNavMenuBar::UpdateView(CSelectorButton* pButton, HT_View view)
 		m_pMenuButton->UpdateButtonText(rect);
 	}
 */
-	if (pButton && pButton->GetTreeView())
+	if (pButton && pButton->GetContentView())
 	{
-		((CRDFOutliner*)(pButton->GetTreeView()->GetOutlinerParent()->GetOutliner()))->SetDockedMenuBar(this);
+		((CRDFOutliner*)(pButton->GetContentView()->GetOutlinerParent()->GetOutliner()))->SetDockedMenuBar(this);
 	}
 
 	titleText = "No View Selected.";

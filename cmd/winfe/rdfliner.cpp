@@ -24,6 +24,7 @@
 #include "rdf.h"
 #include "htrdf.h"
 #include "rdfliner.h"
+#include "pain.h"
 #include "shcut.h"
 #include "shcutdlg.h"
 #include "prefapi.h"
@@ -202,7 +203,7 @@ BEGIN_MESSAGE_MAP(CRDFOutliner, COutliner)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-CRDFOutliner::CRDFOutliner (HT_Pane thePane, HT_View theView, CRDFOutlinerParent* theParent)
+CRDFOutliner::CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane, HT_View theView)
 :COutliner(FALSE), m_pAncestor(NULL), m_Pane(thePane), m_View(theView), m_Parent(theParent), m_EditField(NULL),
 m_nSortType(HT_NO_SORT), m_nSortColumn(HT_NO_SORT), m_hEditTimer(0), m_hDragRectTimer(0),
 m_bNeedToClear(FALSE), m_nSelectedColumn(0), m_bDoubleClick(FALSE), m_Node(NULL), 
@@ -3400,7 +3401,7 @@ END_MESSAGE_MAP()
 
 CRDFOutlinerParent::CRDFOutlinerParent(HT_Pane thePane, HT_View theView)
 {
-	CRDFOutliner* theOutliner = new CRDFOutliner(thePane, theView, this);
+	CRDFOutliner* theOutliner = new CRDFOutliner(this, thePane, theView);
 	m_pOutliner = theOutliner;
 }
 
@@ -3802,37 +3803,25 @@ void CRDFEditWnd::OnKillFocus( CWnd* pNewWnd )
 
 // =========================================================================
 // RDF Content View
-IMPLEMENT_DYNAMIC(CRDFContentView, CContentView)
-BEGIN_MESSAGE_MAP(CRDFContentView, CContentView)
+IMPLEMENT_DYNAMIC(CRDFContentView, CView)
+BEGIN_MESSAGE_MAP(CRDFContentView, CView)
 	//{{AFX_MSG_MAP(CMainFrame)
 		// NOTE - the ClassWizard will add and remove mapping macros here.
 		//    DO NOT EDIT what you see in these blocks of generated code !
-	ON_MESSAGE(WM_NAVCENTER_QUERYPOSITION, OnNavCenterQueryPosition)
 	ON_WM_CREATE()
     ON_WM_SIZE()
     ON_WM_SETFOCUS()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-LRESULT CRDFContentView::OnNavCenterQueryPosition(WPARAM wParam, LPARAM lParam)
-{
-    NAVCENTPOS *pPos = (NAVCENTPOS *)lParam;
-    
-    //  We like being in the middle.
-    pPos->m_iYDisposition = 0;
-    
-    //  We like being this many units in size.
-    pPos->m_iYVector = 200;
-    
-    //  Handled.
-    return(NULL);
-}
+CRDFContentView::CRDFContentView(CRDFOutlinerParent* pParent)
+{ m_pOutlinerParent = pParent; m_pHTMLView = NULL; }
 
 BOOL CRDFContentView::PreCreateWindow(CREATESTRUCT& cs)
 {
 	cs.style |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
-	return CContentView::PreCreateWindow(cs);
+	return CView::PreCreateWindow(cs);
 }
 
 void CRDFContentView::OnDraw ( CDC * pDC )
@@ -3841,11 +3830,16 @@ void CRDFContentView::OnDraw ( CDC * pDC )
 
 int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 {
-    int iRetVal = CContentView::OnCreate ( lpCreateStruct );
+    int iRetVal = CView::OnCreate ( lpCreateStruct );
 	LPCTSTR lpszClass = AfxRegisterWndClass( CS_VREDRAW, ::LoadCursor(NULL, IDC_ARROW));
+
+	m_pOutlinerParent = new CRDFOutlinerParent();
     m_pOutlinerParent->Create( lpszClass, _T("NSOutlinerParent"), 
 							   WS_VISIBLE|WS_CHILD|WS_CLIPCHILDREN,
 							   CRect(0,0,100,100), this, 101 );
+
+	m_pHTMLView = wfe_CreateNavCenterHTMLPain(m_hWnd);
+
     return iRetVal;
 }
 
@@ -3861,6 +3855,12 @@ void CRDFContentView::OnSize ( UINT nType, int cx, int cy )
 void CRDFContentView::OnSetFocus ( CWnd * pOldWnd )
 {
    m_pOutlinerParent->SetFocus ( );
+}
+
+void CRDFContentView::SwitchHTViews(HT_View newView)
+{
+	m_pOutlinerParent->SetHTView(newView);
+	CreateColumns();
 }
 
 // Functionality for the RDF Tree Embedded in HTML (Added 3/10/98 by Dave Hyatt).

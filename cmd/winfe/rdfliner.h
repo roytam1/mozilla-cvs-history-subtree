@@ -11,9 +11,9 @@
  * NPL.
  *
  * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Commuyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Resnications Corporation.  Portions created by Netscape are
+ * Coperved.
  */
 
 // RDF Tree View for Aurora.  Created by Dave Hyatt.
@@ -128,7 +128,7 @@ private:
 	CRDFImage* m_pBackgroundImage;	// The image for the background.
 
 public:
-    CRDFOutliner (HT_Pane thePane, HT_View theView, CRDFOutlinerParent* theParent);
+    CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane = NULL, HT_View theView = NULL);
 	~CRDFOutliner ( );
 
 	// Inspectors
@@ -139,6 +139,8 @@ public:
 	int GetSortColumn() { return m_nSortColumn; }
 	int GetSortType() { return m_nSortType; }
 	
+	void SetHTView(HT_View v) { m_Pane = HT_GetPane(v); m_View = v; }
+
 	// Setters
 	void SetSortType(int sortType) { m_nSortType = sortType; }
 	void SetSortColumn(int sortColumn) { m_nSortColumn = sortColumn; }
@@ -372,7 +374,7 @@ private:
 	CString m_BackgroundImageURL;
 
 public:
-	CRDFOutlinerParent(HT_Pane thePane, HT_View theView);
+	CRDFOutlinerParent(HT_Pane thePane = NULL, HT_View theView = NULL);
 
 	BOOL PreCreateWindow(CREATESTRUCT& cs);
 	COutliner* GetOutliner();
@@ -384,6 +386,8 @@ public:
 
 	void LoadComplete(HT_Resource r) { Invalidate(); }
 
+	void SetHTView(HT_View newView) { ((CRDFOutliner*)GetOutliner())->SetHTView(newView); Invalidate(); GetOutliner()->Invalidate(); }
+
 protected:
     afx_msg void OnDestroy();
 	afx_msg void OnPaint();
@@ -391,30 +395,32 @@ protected:
 };
 
 
-class CRDFContentView : public CContentView
+class CRDFContentView : public CView
 {
 public:
-    COutlinerParent * m_pOutlinerParent;
+    CRDFOutlinerParent * m_pOutlinerParent;
+	CPaneCX* m_pHTMLView;
 
 // Construction
 public:
-	CRDFContentView(CRDFOutlinerParent* outlinerStuff)
-	{ m_pOutlinerParent = outlinerStuff; };
-
+	CRDFContentView(CRDFOutlinerParent* pParent);
+	
 	~CRDFContentView() 
 	{
 		delete m_pOutlinerParent;
+		delete m_pHTMLView;
 	}
 
 	COutlinerParent* GetOutlinerParent() { return m_pOutlinerParent; }
 
-// This functionality has been folded in from COutlinerView. I no longer derive from this class
-// but instead come off of CContentView.
+// This functionality has been folded in from COutlinerView. 
 
     void CreateColumns ( )
     {
         m_pOutlinerParent->CreateColumns ( );
     }
+
+	void SwitchHTViews(HT_View htView);
 
 	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height);
 		// This function can be called to create an embedded RDF tree view inside another window.
@@ -459,9 +465,5 @@ protected:
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
     DECLARE_MESSAGE_MAP()
 };
-
-
-// Functions that will be used by the Personal Toolbar and Quickfile.  Allow the
-// display of arbitrary icons (or local file system icons)
 
 #endif

@@ -229,6 +229,8 @@ public:
     virtual CSize GetMaximalButtonSize(void);
     virtual CSize GetMinimalButtonSize(void);
 
+	CDropMenu* GetDropMenu() { return m_pDropMenu; }
+
     BOOL AtMinimalSize(void);
     BOOL AtMaximalSize(void);
 

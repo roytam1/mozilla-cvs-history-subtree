@@ -20,7 +20,7 @@
 //
 
 #include "stdafx.h"
-
+#include "rdfliner.h"
 #include "navfram.h"
 #include "feimage.h"
 #include "cxicon.h"
@@ -199,8 +199,8 @@ void CNSNavFrame::DeleteNavCenter()
 
 BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 {
-	m_pSelector = new CSelector();
-	m_nsContent = new CContentView();
+	m_nsContent = new CRDFContentView(NULL);
+	m_pSelector = new CSelector(m_nsContent);
 	m_pNavMenu = new CNavMenuBar();
 
 	CRect  rect1;
@@ -214,7 +214,7 @@ BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 	m_pNavMenu->Create(NULL, "", WS_CHILD | WS_VISIBLE, rect1, this, NC_IDW_NAVMENU, pContext);
 
 	m_nsContent->Create( NULL, "", WS_CHILD | WS_VISIBLE, rect1, 
-		this, NC_IDW_MISCVIEW, pContext );
+		this, NC_IDW_OUTLINER, pContext );
 
 	return TRUE;
 }
@@ -494,11 +494,13 @@ void CNSNavFrame::ForceFloat(BOOL show)
 	if (m_pSelector->GetCurrentButton() == NULL)
 		m_pSelector->SelectNthView(0);
 
+/*
 	if (show)
 	{
 		m_nsContent->ShowWindow(SW_SHOW);
 		m_nsContent->CalcChildSizes();
 	}
+*/
 }
 
 void CNSNavFrame::ComputeDockingSizes()
@@ -652,13 +654,13 @@ void CNSNavFrame::EndDrag(CPoint pt)             // drop
             pFrame = (CNSGenFrame *)pBaseWnd;
         }
         DockFrame(pFrame, dwOverDockStyle);
-		m_nsContent->CalcChildSizes();
+	//	m_nsContent->CalcChildSizes();
 	}
 	else 
 	{
 		// Float this frame.
 		MoveWindow( m_rectDrag);
-		m_nsContent->CalcChildSizes();
+	//	m_nsContent->CalcChildSizes();
 	}
 
 	ShowWindow(SW_SHOW);
