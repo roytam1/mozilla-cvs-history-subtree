@@ -19,7 +19,9 @@
  *
  * Contributor(s): 
  */
+
 //#define FTP_DONT_CACHE_CONTROL_CONNECTION
+//#define FTP_NO_HTTP_INDEX_FORMAT
 
 #include "nsFtpConnectionThread.h"
 #include "nsFtpControlConnection.h"
@@ -1109,7 +1111,7 @@ nsFtpState::R_cwd() {
         // update
         mURL->SetPath(mCwd);
 
-#ifdef NO_RDF_CONTENT_TREE
+#ifdef FTP_NO_HTTP_INDEX_FORMAT
         nsresult rv = mChannel->SetContentType("text/html");
 #else
         nsresult rv = mChannel->SetContentType("application/http-index-format");
@@ -1231,7 +1233,7 @@ nsFtpState::S_list() {
     }
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
 
-#ifdef NO_RDF_CONTENT_TREE
+#ifdef FTP_NO_HTTP_INDEX_FORMAT
     return mDPipe->AsyncRead(mListener, nsnull);
 #else
     return mDPipe->AsyncRead(converterListener, mListenerContext);
