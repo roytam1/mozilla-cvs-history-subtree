@@ -77,19 +77,12 @@ nsAbMDBDirectory::nsAbMDBDirectory(void):
 
 nsAbMDBDirectory::~nsAbMDBDirectory(void)
 {
-	if (mURI && PL_strcmp(mURI, kMDBDirectoryRoot))
-	{
-		nsresult rv = NS_OK;
+	nsresult rv = NS_OK;
 
-		nsCOMPtr<nsIAddrDatabase> database;
-		nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
-		if (NS_SUCCEEDED(rv) && addressBook)
-		{
-			rv = addressBook->GetAbDatabaseFromURI(mURI, getter_AddRefs(database));
-			if (NS_SUCCEEDED(rv) && database)
-				database->RemoveListener(this);
-		}
-	}
+  if (mDatabase) {
+    mDatabase->RemoveListener(this);
+  }
+    
 	if (mSubDirectories)
 	{
 		PRUint32 count;
