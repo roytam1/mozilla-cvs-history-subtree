@@ -7,6 +7,7 @@ mozilla/rdf/base/src/nsRDFService.cpp
 mozilla/rdf/base/src/rdfutil.cpp
 mozilla/rdf/build/nsRDFFactory.cpp
 mozilla/rdf/content/src/nsRDFContentSink.cpp
+mozilla/rdf/content/src/nsRDFContentUtils.cpp
 mozilla/rdf/content/src/nsRDFDocument.cpp
 mozilla/rdf/content/src/nsRDFDocumentContentSink.cpp
 mozilla/rdf/content/src/nsRDFGenericElement.cpp
