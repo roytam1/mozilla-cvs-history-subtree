@@ -27,6 +27,7 @@
 {
   // IBOutlet NSButton *buttonSystemPreferences;
 	IBOutlet NSTextField *textFieldHomePage;
+	IBOutlet NSTextField *textFieldSearchPage;
   
 	IBOutlet NSButton *checkboxUseSystemHomePage;
   IBOutlet NSButton *checkboxNewTabBlank;
@@ -49,6 +50,9 @@
 
 - (NSString*)getSystemHomePage;
 - (NSString*)getCurrentHomePage;
+
+- (NSString*)getSystemSearchPage;
+- (NSString*)getCurrentSearchPage;
 
 -(IBAction) clearDiskCache:(id)aSender;
 

@@ -33,6 +33,13 @@
 
 const int kDefaultExpireDays = 9;
 
+@interface OrgMozillaChimeraPreferenceNavigation(Private)
+
+- (NSString*)getInternetConfigString:(Str255)icPref;
+
+@end
+
+
 @implementation OrgMozillaChimeraPreferenceNavigation
 
 
@@ -64,10 +71,14 @@ const int kDefaultExpireDays = 9;
 
   BOOL useSystemHomePage = [self getBooleanPref:"chimera.use_system_home_page" withSuccess:&gotPref] && gotPref;  
   if (useSystemHomePage)
+  {
     [textFieldHomePage setEnabled:NO];
+    [textFieldSearchPage setEnabled:NO];
+  }
 
   [checkboxUseSystemHomePage setState:useSystemHomePage];
-  [textFieldHomePage setStringValue: [self getCurrentHomePage]];
+  [textFieldHomePage   setStringValue: [self getCurrentHomePage]];
+  [textFieldSearchPage setStringValue: [self getCurrentSearchPage]];
 }
 
 - (void) didUnselect
@@ -77,7 +88,10 @@ const int kDefaultExpireDays = 9;
   
   // only save the home page pref if it's not the system one
   if (![checkboxUseSystemHomePage state])
-    [self setPref: "browser.startup.homepage" toString: [textFieldHomePage stringValue]];
+  {
+    [self setPref: "browser.startup.homepage" toString: [textFieldHomePage   stringValue]];
+    [self setPref: "chimera.search_page"      toString: [textFieldSearchPage stringValue]];
+  }
   
   // ensure that the prefs exist
   [self setPref:"browser.startup.page"   toInt: [checkboxNewWindowBlank state] ? 1 : 0];
@@ -117,11 +131,17 @@ const int kDefaultExpireDays = 9;
 
   // save the mozilla pref
   if (useSystemHomePage)
-    [self setPref: "browser.startup.homepage" toString: [textFieldHomePage stringValue]];
+  {
+    [self setPref: "browser.startup.homepage" toString: [textFieldHomePage   stringValue]];
+    [self setPref: "chimera.search_page"      toString: [textFieldSearchPage stringValue]];
+  }
   
   [self setPref:"chimera.use_system_home_page" toBoolean: useSystemHomePage];
-  [textFieldHomePage setStringValue: [self getCurrentHomePage]];
-  [textFieldHomePage setEnabled:!useSystemHomePage];
+  [textFieldHomePage   setStringValue: [self getCurrentHomePage]];
+  [textFieldSearchPage setStringValue: [self getCurrentSearchPage]];
+
+  [textFieldHomePage   setEnabled:!useSystemHomePage];
+  [textFieldSearchPage setEnabled:!useSystemHomePage];
 }
 
 - (IBAction)checkboxStartPageClicked:(id)sender
@@ -177,10 +197,9 @@ const int kDefaultExpireDays = 9;
     hist->RemoveAllPages();
 }
 
-- (NSString*) getSystemHomePage
+- (NSString*)getInternetConfigString:(Str255)icPref
 {
-  NSMutableString* homePageString = [[[NSMutableString alloc] init] autorelease];
-  
+  NSString*     resultString = @"";
   ICInstance		icInstance = NULL;
   OSStatus 			error;
   
@@ -189,21 +208,26 @@ const int kDefaultExpireDays = 9;
   error = ICStart(&icInstance, 'CHIM');
   if (error != noErr) {
     NSLog(@"Error from ICStart");
-    return @"";
+    return resultString;
   }
   
   ICAttr	dummyAttr;
   Str255	homePagePStr;
   long		prefSize = sizeof(homePagePStr);
-  error = ICGetPref(icInstance, kICWWWHomePage, &dummyAttr, homePagePStr, &prefSize);
+  error = ICGetPref(icInstance, icPref, &dummyAttr, homePagePStr, &prefSize);
   if (error == noErr)
-    [homePageString setString: [NSString stringWithCString: (const char*)&homePagePStr[1] length:homePagePStr[0]]];
+    resultString = [NSString stringWithCString: (const char*)&homePagePStr[1] length:homePagePStr[0]];
   else
-    NSLog(@"Error getting home page from Internet Config");
+    NSLog(@"Error getting pref from Internet Config");
   
   ICStop(icInstance);
   
-  return homePageString;
+  return resultString;
+}
+
+- (NSString*) getSystemHomePage
+{
+  return [self getInternetConfigString:kICWWWHomePage];
 }
 
 - (NSString*) getCurrentHomePage
@@ -214,6 +238,21 @@ const int kDefaultExpireDays = 9;
     return [self getSystemHomePage];
     
   return [self getStringPref: "browser.startup.homepage" withSuccess:&gotPref];
+}
+
+- (NSString*)getSystemSearchPage
+{
+  return [self getInternetConfigString:kICWebSearchPagePrefs];
+}
+
+- (NSString*)getCurrentSearchPage
+{
+  BOOL gotPref;
+  
+  if ([self getBooleanPref:"chimera.use_system_home_page" withSuccess:&gotPref] && gotPref)
+    return [self getSystemSearchPage];
+    
+  return [self getStringPref: "chimera.search_page" withSuccess:&gotPref];
 }
 
 
