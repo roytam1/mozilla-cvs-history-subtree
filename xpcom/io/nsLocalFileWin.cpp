@@ -175,7 +175,15 @@ class nsDirEnumerator : public nsISimpleEnumerator
                 rv = file->Append(entry->name);
                 if (NS_FAILED(rv)) 
                     return rv;
-            
+                
+                // make sure the thing exists.  If it does, try the next one.
+                PRBool exists;
+                rv = file->Exists(&exists);
+                if (NS_FAILED(rv) || !exists) 
+                {
+                    return HasMoreElements(result); 
+                }
+                
                 mNext = do_QueryInterface(file);
             }
             *result = mNext != nsnull;
@@ -217,24 +225,20 @@ NS_IMPL_ISUPPORTS(nsDirEnumerator, NS_GET_IID(nsISimpleEnumerator));
 nsLocalFile::nsLocalFile()
 {
     NS_INIT_REFCNT();
-    CoInitialize(NULL);  // FIX: we should probably move somewhere higher up during startup
-
-    HRESULT hres; 
-    
-    
-    // Get a pointer to the IShellLink interface. 
-    hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&mShellLink); 
-    if (SUCCEEDED(hres)) 
-    { 
-        // Get a pointer to the IPersistFile interface. 
-        hres = mShellLink->QueryInterface(IID_IPersistFile, (void**)&mPersistFile); 
-    }
+        
+    mPersistFile = nsnull;
+    mShellLink   = nsnull;
 
     MakeDirty();
 }
 
 nsLocalFile::~nsLocalFile()
 {
+    PRBool uninitCOM = PR_FALSE;
+    if (mPersistFile || mShellLink)
+    {
+        uninitCOM = PR_TRUE;
+    }
     // Release the pointer to the IPersistFile interface. 
     if (mPersistFile)
         mPersistFile->Release(); 
@@ -243,7 +247,8 @@ nsLocalFile::~nsLocalFile()
     if(mShellLink)
         mShellLink->Release();
 
-    CoUninitialize();
+    if (uninitCOM)
+        CoUninitialize();
 }
 
 /* nsISupports interface implementation. */
@@ -287,11 +292,27 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
 {
     nsresult rv = NS_OK;
     
-    
-    // Make sure that we were able to get the PersistFile interface during the 
-    // construction of this object.
     if (mPersistFile == nsnull || mShellLink == nsnull)
-        return NS_ERROR_FILE_INVALID_PATH;
+    {
+        CoInitialize(NULL);  // FIX: we should probably move somewhere higher up during startup
+
+        HRESULT hres; 
+
+        // FIX.  This should be in a service.
+        // Get a pointer to the IShellLink interface. 
+        hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&mShellLink); 
+        if (SUCCEEDED(hres)) 
+        { 
+            // Get a pointer to the IPersistFile interface. 
+            hres = mShellLink->QueryInterface(IID_IPersistFile, (void**)&mPersistFile); 
+        }
+        
+        if (mPersistFile == nsnull || mShellLink == nsnull)
+        {
+            return NS_ERROR_FILE_INVALID_PATH;
+        }
+    }
+        
     
     // Get the native path for |this|
     char* filePath = (char*) nsAllocator::Clone( workingPath, strlen(workingPath)+1 );
@@ -311,7 +332,7 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
             
     if (slash == nsnull)
     {
-        if (filePath[1] == ':' && filePath[2] == '\0')
+        if (filePath[0] != nsnull && filePath[1] == ':' && filePath[2] == '\0')
         {
             // we have a drive letter and a colon (eg 'c:'
             // this is resolve already
@@ -471,29 +492,46 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
         return NS_OK;
     }
     
-    char *resolvePath;
-    nsresult rv = ResolvePath(mWorkingPath.GetBuffer(), resolveTerminal, &resolvePath);
-    if (NS_FAILED(rv))
-        return rv;
-    mResolvedPath.SetString(resolvePath);
-    nsAllocator::Free(resolvePath);
-    
-
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *workingFilePath = mWorkingPath.GetBuffer();
     BOOL result;
     
+
+    // First we will see if the workingPath exists.  If it does, then we
+    // can simply use that as the resolved path.  This simplification can
+    // be done on windows cause its symlinks (shortcuts) use the .lnk
+    // file extension.
+
     // We are going to be checking the last error.
     // Lets make sure that we clear it first.
 
     SetLastError(0);
         
-    result = GetFileAttributesEx( filePath, GetFileExInfoStandard, &mFileAttrData);
-    if ( 0 ==  result )
+    result = GetFileAttributesEx( workingFilePath, GetFileExInfoStandard, &mFileAttrData);
+    
+    if ( 0 !=  result )
     {
+        mResolvedPath.SetString(workingFilePath);
+    }
+    else
+    {
+        // okay, something is wrong with the working path.  We will try to resolve it.
+
+        char *resolvePath;
+        nsresult rv = ResolvePath(workingFilePath, resolveTerminal, &resolvePath);
+        if (NS_FAILED(rv))
+           return rv;
+        mResolvedPath.SetString(resolvePath);
+        nsAllocator::Free(resolvePath);
+    
+        // if we are not resolving the terminal node, we have to "fake" windows
+        // out and append the ".lnk" file extension before getting any information
+        // about the shortcut.  If resoveTerminal was TRUE, than it the shortcut was
+        // resolved by the call to ResolvePath above.
+
         if (resolveTerminal == false)
         {
             char linkStr[MAX_PATH];
-            strcpy(linkStr, filePath);
+            strcpy(linkStr, mResolvedPath.GetBuffer());
             strcat(linkStr, ".lnk");
             result = GetFileAttributesEx( linkStr, GetFileExInfoStandard, &mFileAttrData);
 
@@ -513,27 +551,20 @@ NS_IMETHODIMP
 nsLocalFile::Clone(nsIFile **file)
 {
     nsresult rv;
-    NS_ENSURE_ARG(file);
-    *file = nsnull;
-
-    nsCOMPtr<nsILocalFile> localFile = new nsLocalFile();
-    if (localFile == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    
-    char* aFilePath;
+    char * aFilePath;
     GetPath(&aFilePath);
 
-    rv = localFile->InitWithPath(aFilePath);
-    
+    nsCOMPtr<nsILocalFile> localFile;
+
+    rv = NS_NewLocalFile(aFilePath, getter_AddRefs(localFile));
     nsAllocator::Free(aFilePath);
     
-    if (NS_FAILED(rv)) 
-        return rv;
-    
-    *file = localFile;
-    NS_ADDREF(*file);
-    
-    return NS_OK;
+    if (NS_SUCCEEDED(rv) && localFile)
+    {
+        return localFile->QueryInterface(NS_GET_IID(nsIFile), (void**)file);
+    }
+            
+    return rv;
 }
 
 NS_IMETHODIMP  
@@ -1399,18 +1430,16 @@ nsLocalFile::GetParent(nsIFile * *aParent)
 
     parentPath.Truncate(offset);
 
-    const char* filePath = parentPath.GetBuffer();
-
-    nsLocalFile* file = new nsLocalFile();
-    if (file == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
+    nsCOMPtr<nsILocalFile> localFile;
+    nsresult rv =  NS_NewLocalFile(parentPath.GetBuffer(), getter_AddRefs(localFile));
     
-    file->AddRef();
-    file->InitWithPath(filePath);
-    *aParent = file;
-
-    return NS_OK;
+    if(NS_SUCCEEDED(rv) && localFile)
+    {
+        return localFile->QueryInterface(NS_GET_IID(nsIFile), (void**)aParent);
+    }
+    return rv;
 }
+
 NS_IMETHODIMP  
 nsLocalFile::Exists(PRBool *_retval)
 {
@@ -1720,3 +1749,8 @@ NS_NewLocalFile(const char* path, nsILocalFile* *result)
     *result = file;
     return NS_OK;
 }
+
+
+
+
+
