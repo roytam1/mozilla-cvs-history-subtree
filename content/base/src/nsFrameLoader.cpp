@@ -145,8 +145,10 @@ nsFrameLoader::~nsFrameLoader()
 
 // QueryInterface implementation for nsFrameLoader
 NS_INTERFACE_MAP_BEGIN(nsFrameLoader)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsIFrameLoader)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIFrameLoader)
 NS_INTERFACE_MAP_END
 
 
