@@ -1518,14 +1518,14 @@ ifndef NO_DIST_INSTALL
 	@$(EXIT_ON_ERROR) \
 	if test -f $(JAR_MANIFEST); then \
 	  if test ! -d $(DIST)/bin/chrome; then mkdir $(DIST)/bin/chrome; fi; \
-	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) \
+	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(XULPPFLAGS) $(DEFINES) $(ACDEFINES) \
 	    $(JAR_MANIFEST) | \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-jars.pl \
 	    $(if $(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)),-x) \
 	    $(if $(CROSS_COMPILE),-o $(OS_ARCH)) $(_NO_FLOCK) $(_JAR_AUTO_REG) \
 	    -f $(MOZ_CHROME_FILE_FORMAT) -d $(DIST)/bin/chrome \
 	    -s $(srcdir) -t $(topsrcdir) -z $(ZIP) -p $(MOZILLA_DIR)/config/preprocessor.pl -- \
-	    "$(DEFINES) $(ACDEFINES)"; \
+	    "$(XULPPFLAGS) $(DEFINES) $(ACDEFINES)"; \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-chromelist.pl \
 	    $(DIST)/bin/chrome $(JAR_MANIFEST) $(_NO_FLOCK); \
 	fi
@@ -1536,14 +1536,14 @@ ifndef NO_INSTALL
 	@$(EXIT_ON_ERROR) \
 	if test -f $(JAR_MANIFEST); then \
 	  if test ! -d $(DESTDIR)$(mozappdir)/chrome; then mkdir $(DESTDIR)$(mozappdir)/chrome; fi; \
-	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) \
+	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(XULPPFLAGS) $(DEFINES) $(ACDEFINES) \
 	    $(JAR_MANIFEST) | \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-jars.pl \
 	    $(if $(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)),-x) \
 	    $(if $(CROSS_COMPILE),-o $(OS_ARCH)) $(_NO_FLOCK) $(_JAR_AUTO_REG) \
 	    -f $(MOZ_CHROME_FILE_FORMAT) -d $(DESTDIR)$(mozappdir)/chrome \
 	    -s $(srcdir) -t $(topsrcdir) -z $(ZIP) -p $(MOZILLA_DIR)/config/preprocessor.pl -- \
-	    "$(DEFINES) $(ACDEFINES)"; \
+	    "$(XULPPFLAGS) $(DEFINES) $(ACDEFINES)"; \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-chromelist.pl \
 	    $(DESTDIR)$(mozappdir)/chrome $(JAR_MANIFEST) $(_NO_FLOCK); \
 	fi
