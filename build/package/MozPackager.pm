@@ -442,40 +442,46 @@ sub _commandFunc {
 
 # preprocesses into the destination path
 # !preprocess destpath options-and-files
+# preprocessing takes place as a separate step so that
+# required disk size can be computed from the completed stage
 package MozParser::Preprocess;
 
 # stageDir may be "" to indicate testing only
 sub add {
-    my ($parser, $preprocessor, $stageDir) = @_;
+    my ($parser) = @_;
 
     $parser->addCommand("preprocess", \&_commandFunc);
-    $parser->{'preprocessor'} = ($ENV{'PERL'} ? $ENV{'PERL'} : "perl") .' '. $preprocessor;
-    $parser->{'stageDir'} = $stageDir;
+    $parser->{'ppfiles'} = { };
+}
+
+sub preprocessTo {
+    my ($parser, $preprocessor, $stageDir) = @_;
+    $preprocessor = ($ENV{'PERL'} ? $ENV{'PERL'} : "perl"). ' '. $preprocessor;
+
+    MozPackager::_verbosePrint(1, "Preprocessing package files to $stageDir");
+
+    foreach my $ppfile (keys %{$parser->{'ppfiles'}}) {
+        MozPackager::_verbosePrint(2, "Preprocessing $ppfile");
+        my $output = MozPackager::joinfile($stageDir, $ppfile);
+        my $commandLine = $preprocessor. ' '.
+            $parser->{'ppfiles'}->{$ppfile}.
+            ' > '. $output;
+
+        MozStage::Utils::ensureDirs($output);
+
+        system $commandLine;
+        die("Error during preprocessing, command $commandLine returned, code ". ($? >>8)) if ($? >>8);
+    }
 }
 
 sub _commandFunc {
     my ($parser, $args, $file, $filename) = @_;
 
-    print "args = $args\n";
-
     my @args = split ' ', $args;
     scalar(@args) >= 2 || die("At $filename, line $.: Insufficient number of arguments to !preprocess '$args'");
 
-    my $mappedResult = MozPackager::joinfile($parser->{'stageDir'},
-                                             $parser->findMapping($args[0], $filename));
-    $mappedResult =~ s|\\|\\\\|g;
-    
-    my $escapedArgs = join(' ', @args[1 .. scalar(@args)-1]);
-    $escapedArgs =~ s|\\|\\\\|g;
-
-    if ($parser->{'stageDir'}) {
-        MozStage::Utils::ensureDirs($mappedResult);
-        my $command = "$parser->{'preprocessor'} $escapedArgs > $mappedResult";
-        MozPackager::_verbosePrint(2, "Running $command");
-
-        system $command;
-        die("At $filename, line $.: error during preprocessing, args $escapedArgs, code ". ($? >>8)) if ($? >>8);
-    }
+    $parser->{'ppfiles'}->{$parser->findMapping($args[0], $filename)} =
+        join(' ', @args[1 .. scalar(@args)-1]);
 }
 
 package MozParser::Optional;
@@ -572,7 +578,62 @@ sub symCopy {
     }
 }    
 
+sub calcDiskSpace {
+    my ($stageDir) = @_;
+
+    MozPackager::_verbosePrint(1, "Calculating disk space for XPI package.");
+    $ENV{'XPI_SPACEREQUIRED'} = int(_realDiskSpace($stageDir) / 1024) + 1;
+    
+    opendir(my $dirHandle, $stageDir) ||
+        die("Could not open directory $stageDir for listing.");
+
+    while (my $dir = readdir($dirHandle)) {
+        if (! ($dir =~ /^\./)) {
+            MozPackager::_verbosePrint(1, "Calculating disk space for subdir $dir");
+            my $realDir = File::Spec->catdir($stageDir, $dir);
+            if (-d $realDir) {
+                $ENV{"XPI_SPACEREQUIRED_\U$dir"} = int(_realDiskSpace($realDir) / 1024) + 1;
+            }
+        }
+    }
+    closedir($dirHandle);
+}
+
+sub _realDiskSpace {
+    my ($path) = @_;
+
+    my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
+
+    my $spaceRequired = 0;
+
+    if (-e $dsProg) {
+        # We're on win32, use ds32.exe
+        my $command = "$dsProg /D /L0 /A /S /C 32768 $path";
+        $spaceRequired = `$command` ||
+            die("Program failed: '$command' returned code ". ($? <<8));
+    } else {
+        opendir(my $dirHandle, $path) ||
+            die("Could not open directory $path for listing.");
+
+        while (my $dir = readdir($dirHandle)) {
+            if (! ($dir =~ /^\./)) {
+                my $realDir = File::Spec->catdir($path, $dir);
+                if (-d $realDir) {
+                    $spaceRequired += _realDiskSpace($realDir);
+                } else {
+                    $spaceRequired += (-s File::Spec->catfile($path, $dir));
+                }
+            }
+        }
+        closedir($dirHandle);
+    }
+
+    return $spaceRequired;
+}
+
 package MozStage;
+
+use Cwd;
 
 sub stage {
     my ($fileHash, $destDir) = @_;
@@ -582,6 +643,24 @@ sub stage {
         my $to   = MozPackager::joinfile($destDir, $dest);
         MozStage::Utils::symCopy($from, $to);
     }
+}
+
+sub makeXPI {
+    my ($stageDir, $xpiFile) = @_;
+
+    MozPackager::_verbosePrint(1, "Making XPI file.");
+    MozStage::Utils::ensureDirs($xpiFile);
+
+    unlink $xpiFile if -e $xpiFile;
+
+    my $savedCwd = cwd();
+    $xpiFile = File::Spec->rel2abs($xpiFile);
+
+    chdir $stageDir;
+    my $command = "zip -r -D -9 $xpiFile *";
+    system $command ||
+        die("Program '$command' failed with code ". ($? <<8));
+    chdir $savedCwd;
 }
 
 return 1;

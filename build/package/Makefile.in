@@ -47,7 +47,8 @@ include $(DEPTH)/config/autoconf.mk
 include $(topsrcdir)/config/rules.mk
 
 # override these variables in special situations
-STAGE_DIR = $(DEPTH)/stage$(if $*,/$*)
+STAGE_DIR        = $(DEPTH)/stage$(if $*,/$*)
+XPI_FILE         = $(DIST)/xpi/$*.xpi
 PACKAGE_LIST = $(srcdir)/packages.list
 PACKAGE_FLAGS = 
 HANDLERS = xptmerge touch optional preprocess
@@ -63,13 +64,18 @@ dump-packages:
 stage-%:
 	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl $(PACKAGE_FLAGS) $*
 
+makexpi-%:
+	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c, $(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl --make-xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $*
+
 ifndef PACKAGES
-stage-packages:
+stage-packages makexpi-packages:
 	@echo "Please set PACKAGES on the makefile command line or environment."
 
 else #PACKAGES
 stage-packages:
 	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl $(PACKAGE_FLAGS) $(PACKAGES)
 
+makexpi-packages:
+	$(PERL) -I $(srcdir) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) -p $(topsrcdir)/config/preprocessor.pl --make-xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $(PACKAGES)
 endif
 

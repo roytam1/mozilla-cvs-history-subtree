@@ -14,6 +14,8 @@ my @handlers;
 my $stageDir = "";
 my %mappings;
 my $preprocessor = "";
+my $xpiResult = "";
+my $calcDiskSpace = 0;
 
 # xxxbsmedberg: need usage()
 
@@ -30,7 +32,9 @@ GetOptions("objdir|o=s"           => \$objdir,
            "stage-directory|s=s"  => \$stageDir,
            "mapping|m=s"          => \%mappings,
            "force-copy|f"         => \$MozStage::forceCopy,
-           "preprocessor|p=s"     => \$preprocessor);
+           "preprocessor|p=s"     => \$preprocessor,
+           "make-xpi=s"           => \$xpiResult,
+           "compute-disk-space|d" => \$calcDiskSpace);
 
 @handlers = split(/,/,join(',',@handlers));
 
@@ -45,6 +49,9 @@ if ($stageDir) {
     $stageDir = File::Spec->rel2abs($stageDir);
 } else {
     $stageDir = "stage";
+}
+if ($xpiResult) {
+    $xpiResult = File::Spec->rel2abs($xpiResult);
 }
 
 chdir($objdir) if $objdir;
@@ -67,6 +74,7 @@ foreach my $package (@ARGV) {
 
 my $parser = new MozParser;
 my $xptMerge = 0;
+my $preprocess = 0;
 
 HANDLER: foreach my $handler (@handlers) {
     if ($handler eq "xptmerge") {
@@ -86,7 +94,8 @@ HANDLER: foreach my $handler (@handlers) {
     }
     if ($handler eq "preprocess") {
         die("--preprocessor not specified on command line.") if (!$preprocessor);
-        MozParser::Preprocess::add($parser, $preprocessor, $stageDir);
+        MozParser::Preprocess::add($parser);
+        $preprocess = 1;
         next HANDLER;
     }
     if ($handler eq "optional") {
@@ -107,4 +116,16 @@ MozStage::stage($files, $stageDir);
 if ($xptMerge) {
     $xptMergeFile = File::Spec->catfile($stageDir, split('/', $parser->findMapping($xptMergeFile)));
     MozParser::XPTMerge::mergeTo($parser, $xptMergeFile);
+}
+
+if ($calcDiskSpace) {
+    MozStage::Utils::calcDiskSpace($stageDir)
+}
+
+if ($preprocess) {
+    MozParser::Preprocess::preprocessTo($parser, $preprocessor, $stageDir);
+}
+
+if ($xpiResult) {
+    MozStage::makeXPI($stageDir, $xpiResult);
 }
