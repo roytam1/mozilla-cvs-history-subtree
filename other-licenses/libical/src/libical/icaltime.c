@@ -796,6 +796,13 @@ int icaltime_is_valid_time(struct icaltimetype t){
 
 }
 
+/**	@brief Returns true if time is a DATE
+ */
+int icaltime_is_date(const struct icaltimetype t) {
+
+	return t.is_date;
+}
+
 int icaltime_is_null_time(struct icaltimetype t)
 {
     if (t.second +t.minute+t.hour+t.day+t.month+t.year == 0){
