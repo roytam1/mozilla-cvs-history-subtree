@@ -163,19 +163,15 @@ NS_IMPL_ISUPPORTS(ConsoleOutputStreamImpl, nsCOMTypeInfo<nsIOutputStream>::GetII
 
 // Utility to create a nsIURI object...
 nsresult 
-nsMsgNewURL(nsIURI** aInstancePtrResult, const nsString& aSpec)
+nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
 {  
+  nsresult rv = NS_OK;
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
   
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsCOMTypeInfo<nsINetService>::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
-
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pNetService)
+	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult)
   return rv;
 }
 
@@ -225,7 +221,7 @@ main(int argc, char** argv)
     return rv;
 
   // Create an nsIURI object needed for the URL operation IO...
-  if (NS_FAILED(nsMsgNewURL(&aURL, nsString(argv[1]))))
+  if (NS_FAILED(nsMsgNewURL(&aURL, argv[1])))
   {
     printf("Unable to create URL\n");
     return NS_ERROR_FAILURE;
