@@ -40,6 +40,7 @@
 #define nsXFormsModelElement_h_
 
 #include "nsIXTFGenericElement.h"
+#include "nsIXTFPrivate.h"
 #include "nsIXFormsModelElement.h"
 #include "nsISchema.h"
 #include "nsCOMArray.h"
@@ -57,6 +58,7 @@ class nsXFormsControl;
 
 class nsXFormsModelElement : public nsXFormsElement,
                              public nsIXTFGenericElement,
+                             public nsIXTFPrivate,
                              public nsIXFormsModelElement,
                              public nsISchemaLoadListener,
                              public nsIDOMLoadListener
@@ -67,6 +69,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXTFELEMENT
   NS_DECL_NSIXTFGENERICELEMENT
+  NS_DECL_NSIXTFPRIVATE
   NS_DECL_NSIXFORMSMODELELEMENT
   NS_DECL_NSISCHEMALOADLISTENER
   NS_DECL_NSIDOMEVENTLISTENER

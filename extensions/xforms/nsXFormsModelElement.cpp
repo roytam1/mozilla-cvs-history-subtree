@@ -144,6 +144,7 @@ NS_IMPL_RELEASE(nsXFormsModelElement)
 NS_INTERFACE_MAP_BEGIN(nsXFormsModelElement)
   NS_INTERFACE_MAP_ENTRY(nsIXTFElement)
   NS_INTERFACE_MAP_ENTRY(nsIXTFGenericElement)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFPrivate)
   NS_INTERFACE_MAP_ENTRY(nsIXFormsModelElement)
   NS_INTERFACE_MAP_ENTRY(nsISchemaLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
@@ -502,6 +503,14 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
   return NS_OK;
 }
 
+// nsIXTFPrivate
+NS_IMETHODIMP
+nsXFormsModelElement::GetInner(nsISupports **aInner)
+{
+  NS_ENSURE_ARG_POINTER(aInner);
+  NS_ADDREF(*aInner = NS_STATIC_CAST(nsIXFormsModelElement*, this));
+  return NS_OK;
+}
 
 // nsIXFormsModelElement
 

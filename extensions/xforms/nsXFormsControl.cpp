@@ -111,9 +111,14 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
     }
   }
 
-  nsCOMPtr<nsIXFormsModelElement> modelElt = do_QueryInterface(modelWrapper);
+  nsCOMPtr<nsIXTFPrivate> modelPrivate = do_QueryInterface(modelWrapper);
+  nsCOMPtr<nsISupports> modelElement;
+  if (modelPrivate)
+    modelPrivate->GetInner(getter_AddRefs(modelElement));
+
+  nsISupports *modelRaw = NS_STATIC_CAST(nsISupports*, modelElement.get());
   return NS_STATIC_CAST(nsXFormsModelElement*,
-			NS_STATIC_CAST(nsIXFormsModelElement*, modelElt));
+                        NS_STATIC_CAST(nsIXFormsModelElement*, modelRaw));
 }
 
 already_AddRefed<nsIDOMNode>
