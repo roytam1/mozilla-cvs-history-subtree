@@ -49,6 +49,7 @@ static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID);
 static NS_DEFINE_IID(kPluginInstancePeerCID, NS_PLUGININSTANCEPEER_CID); 
 static NS_DEFINE_IID(kILiveConnectPluginInstancePeerIID, NS_ILIVECONNECTPLUGININSTANCEPEER_IID); 
 static NS_DEFINE_IID(kIPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID); 
+static NS_DEFINE_IID(kIPluginInstancePeer2IID, NS_IPLUGININSTANCEPEER2_IID); 
 static NS_DEFINE_IID(kIPluginTagInfoIID, NS_IPLUGINTAGINFO_IID); 
 static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID); 
 static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
@@ -374,6 +375,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         return NS_ERROR_NULL_POINTER;                                        
     }                                                                      
     if (aIID.Equals(kILiveConnectPluginInstancePeerIID) ||
+        aIID.Equals(kIPluginInstancePeer2IID) ||
         aIID.Equals(kIPluginInstancePeerIID) ||
         aIID.Equals(kISupportsIID)) {
         *aInstancePtr = (void*)(nsISupports*)(nsIPluginInstancePeer*)this; 
