@@ -585,7 +585,7 @@ sub sort_attributes
 	}
     } continue {
 	unshift @result, @preamble;
-	push @results, \@result;
+	push @results, [@result];
     }
     return ((@records == 1) and ($records[$[] eq \@_))
 	 ? @{$results[$[]} : @results;
