@@ -200,7 +200,7 @@ int icaltime_utc_offset(struct icaltimetype ictt, const char* tzid)
     local_zone =  icaltimezone_get_builtin_timezone(tzid);
     utc_zone = icaltimezone_get_utc_timezone ();
 
-    icaltimezone_get_utc_offset(local_zone, &ictt, ictt.is_daylight);
+    icaltimezone_get_utc_offset(local_zone, &ictt, &ictt.is_daylight);
 
 
 #ifndef NO_WARN_DEPRECATED

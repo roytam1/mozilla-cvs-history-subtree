@@ -273,7 +273,7 @@ char*
 icalcomponent_as_ical_string (icalcomponent* component)
 {
    char* buf, *out_buf;
-   char* tmp_buf;
+   const char* tmp_buf;
    size_t buf_size = 1024;
    char* buf_ptr = 0;
     pvl_elem itr;

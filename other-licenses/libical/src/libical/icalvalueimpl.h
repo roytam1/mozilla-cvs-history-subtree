@@ -43,7 +43,7 @@ struct icalvalue_impl {
     char id[5];
     int size;
     icalproperty* parent;
-    const char* x_value;
+    char* x_value;
 
     union data {
 	struct icalattachtype v_attach;		

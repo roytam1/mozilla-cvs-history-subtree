@@ -145,7 +145,7 @@ icalproperty* icalclassify_find_attendee(icalcomponent *c,
 	p != 0;
 	p  = icalcomponent_get_next_property(inner,ICAL_ATTENDEE_PROPERTY))
     {
-	const char* this_attendee
+	char* this_attendee
 	    = icalclassify_lowercase(icalproperty_get_attendee(p));
 	char* this_upn = strchr(this_attendee,':');
 
