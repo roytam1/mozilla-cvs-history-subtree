@@ -31,6 +31,15 @@
 [scriptable, uuid(6c248606-4eae-46fa-9df0-ba58502368eb)]
 interface nsIObjectInputStream : nsIBinaryInputStream
 {
+    /**
+     * Read an object from this stream to satisfy a strong or weak reference
+     * to one of its interfaces.  If the interface was not along the primary
+     * inheritance chain ending in the "root" or XPCOM-identity nsISupports,
+     * readObject will QueryInterface from the deserialized object root to the
+     * correct interface, which was specified when the object was serialized.
+     *
+     * @See nsIObjectOutputStream
+     */
     nsISupports readObject(in PRBool aIsStrongRef);
 
     [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);

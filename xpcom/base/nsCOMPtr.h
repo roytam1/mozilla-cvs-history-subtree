@@ -165,7 +165,9 @@ class nsDerivedSafe : public T
 
       See |nsCOMPtr::operator->|, |nsCOMPtr::operator*|, et al.
 
-      This type should be a nested class inside |nsCOMPtr<T>|.
+      This type should be a nested class inside |nsCOMPtr<T>|, except that it is
+      used by the nsFastLoadPtr sub-class of nsCOMPtr, and except that nested
+      template classes run into portability problems on some Mozilla platforms.
     */
   {
     private:
@@ -501,9 +503,9 @@ class nsCOMPtr
             }
         }
 
-      #define NSCAP_ASSERT_NO_QUERY_NEEDED();    Assert_NoQueryNeeded();
+  #define NSCAP_ASSERT_NO_QUERY_NEEDED() Assert_NoQueryNeeded();
 #else
-      #define NSCAP_ASSERT_NO_QUERY_NEEDED();
+  #define NSCAP_ASSERT_NO_QUERY_NEEDED()
 #endif
 
 

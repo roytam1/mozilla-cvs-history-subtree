@@ -695,7 +695,7 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
 
     case nsXULPrototypeNode::eType_Script: {
         nsXULPrototypeScript* script =
-            NS_REINTERPRET_CAST(nsXULPrototypeScript*, node);
+            NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
         if (! script->mSrcURI) {
@@ -731,7 +731,7 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         // root element. This transfers ownership of the prototype
         // element tree to the prototype document.
         nsXULPrototypeElement* element =
-            NS_REINTERPRET_CAST(nsXULPrototypeElement*, node);
+            NS_STATIC_CAST(nsXULPrototypeElement*, node);
 
         rv = mPrototype->SetRootElement(element);
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set document root");

@@ -4884,8 +4884,7 @@ nsXULDocument::ResumeWalk()
                 }
             }
             break;
-
-            }
+        }
         }
 
         // Once we get here, the context stack will have been
@@ -5058,28 +5057,21 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
                                 const char* string)
 {
     // print a load error on bad status
-    if (NS_FAILED(aStatus))
-    {
-      if (aLoader)
-      {
-          nsCOMPtr<nsIRequest> request;
-        nsCOMPtr<nsIChannel> channel;
+    if (NS_FAILED(aStatus) && aLoader) {
+        nsCOMPtr<nsIRequest> request;
         aLoader->GetRequest(getter_AddRefs(request));
-        if (request)
-            channel = do_QueryInterface(request);
-        if (channel)
-        {
-          nsCOMPtr<nsIURI> uri;
-          channel->GetURI(getter_AddRefs(uri));
-          if (uri)
-          {
-            char* uriSpec;
-            uri->GetSpec(&uriSpec);
-            printf("Failed to load %s\n", uriSpec ? uriSpec : "");
-            nsCRT::free(uriSpec);
-          }
+        nsCOMPtr<nsIChannel> channel;
+        channel = do_QueryInterface(request);
+        if (channel) {
+            nsCOMPtr<nsIURI> uri;
+            channel->GetURI(getter_AddRefs(uri));
+            if (uri) {
+                nsXPIDLCString uriSpec;
+                uri->GetSpec(getter_Copies(uriSpec));
+                printf("Failed to load %s\n",
+                       uriSpec.get() ? (const char*) uriSpec : "");
+            }
         }
-      }
     }
     
     // This is the completion routine that will be called when a

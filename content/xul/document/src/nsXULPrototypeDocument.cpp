@@ -32,6 +32,8 @@
 */
 
 #include "nsCOMPtr.h"
+#include "nsIObjectInputStream.h"
+#include "nsIObjectOutputStream.h"
 #include "nsIPrincipal.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
@@ -104,6 +106,9 @@ public:
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
+
+    // nsISerializable interface
+    NS_DECL_NSISERIALIZABLE
 
     // nsIXULPrototypeDocument interface
     NS_IMETHOD GetURI(nsIURI** aResult);
@@ -219,13 +224,10 @@ nsXULPrototypeDocument::~nsXULPrototypeDocument()
     delete mRoot;
 }
 
-NS_IMPL_ADDREF(nsXULPrototypeDocument)
-NS_IMPL_RELEASE(nsXULPrototypeDocument)
-
-NS_INTERFACE_MAP_BEGIN(nsXULPrototypeDocument)
-    NS_INTERFACE_MAP_ENTRY(nsIXULPrototypeDocument)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObjectOwner)
-NS_INTERFACE_MAP_END
+NS_IMPL_ISUPPORTS3(nsXULPrototypeDocument,
+                   nsIXULPrototypeDocument,
+                   nsISerializable,
+                   nsIScriptGlobalObjectOwner)
 
 NS_IMETHODIMP
 NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -250,6 +252,46 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
     NS_RELEASE(result);
 
     return rv;
+}
+
+
+//----------------------------------------------------------------------
+//
+// nsISerializable methods
+//
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
+{
+    nsresult rv;
+
+#if 0
+    rv = aStream->WriteSingleRefObject(mURI);
+    if (NS_FAILED(rv)) return rv;
+#endif
+
+    nsCOMPtr<nsIScriptContext> scriptContext;
+    rv = mGlobalObject->GetContext(getter_AddRefs(scriptContext));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = mRoot->Serialize(aStream, scriptContext);
+    if (NS_FAILED(rv)) return rv;
+
+#if 0
+    nsCOMPtr<nsISupportsArray> mStyleSheetReferences;
+    nsCOMPtr<nsISupportsArray> mOverlayReferences;
+    nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
+
+    nsCOMPtr<nsIScriptGlobalObject> mGlobalObject;
+#endif
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
