@@ -22,6 +22,6 @@
 DEPTH=..
 include <$(DEPTH)/config/config.mak>
 
-DIRS = base psm
+DIRS = psm
 
 include <$(DEPTH)\config\rules.mak>
