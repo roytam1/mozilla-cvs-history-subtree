@@ -8381,48 +8381,48 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
 
   // if the container is a table and a caption was appended, it needs to be put in
   // the outer table frame's additional child list. 
-  nsFrameItems captionItems; 
+  nsFrameItems captionItems;
 
+  PRBool hasCaption = PR_FALSE;
+  if (nsLayoutAtoms::tableFrame == frameType) {
+    nsIFrame* outerTable;
+    parentFrame->GetParent(&outerTable);
+    if (outerTable) {
+      nsIFrame *firstChild;
+      outerTable->FirstChild(aPresContext,
+                             nsLayoutAtoms::captionList,
+                             &firstChild);
+      if (firstChild) {
+        hasCaption = PR_TRUE;
+      }
+    }
+  }
   PRInt32 i;
   aContainer->ChildCount(count);
   for (i = aNewIndexInContainer; i < count; i++) {
     nsCOMPtr<nsIContent> childContent;
     aContainer->ChildAt(i, *getter_AddRefs(childContent));
       
-    // construct a child of a table frame by putting it on a temporary list and then
-    // moving it into the appropriate list. This is more efficient than checking the display
-    // type of childContent. During the construction of a caption frame, the outer 
-    // table frame will be used as its parent.
+    // lookup the table child frame type as it is much more difficult to remove a frame
+    // and all it descendants (abs. pos. for instance) than to prevent the frame creation.
     if (nsLayoutAtoms::tableFrame == frameType.get()) {
+      if (hasCaption) {
+        // Resolve the style context and get its display
+        nsRefPtr<nsStyleContext> childStyleContext;
+        childStyleContext = ResolveStyleContext(aPresContext, parentFrame,
+                                                childContent);
+        if (childStyleContext->GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_TABLE_CAPTION)
+          continue; //don't create a table caption frame and its descendants
+      }
       nsFrameItems tempItems;
       ConstructFrame(shell, aPresContext, state, childContent, parentFrame, tempItems);
       if (tempItems.childList) {
         nsCOMPtr<nsIAtom> childFrameType;
         tempItems.childList->GetFrameType(getter_AddRefs(childFrameType));
         if (nsLayoutAtoms::tableCaptionFrame == childFrameType.get()) {
-          PRBool abortCaption = PR_FALSE;
-          // check if a caption already exists in captionItems, and if so, abort the caption
-          if (captionItems.childList) {
-            abortCaption = PR_TRUE;
-          }
-          else {
-            // check for a caption already appended to the outer table
-            nsIFrame* outerTable;
-            parentFrame->GetParent(&outerTable);
-            if (outerTable) { 
-              nsIFrame* existingCaption = nsnull;
-              outerTable->FirstChild(aPresContext, nsLayoutAtoms::captionList, &existingCaption); 
-              if (existingCaption) {
-                abortCaption = PR_TRUE;
-              }
-            }
-          }
-          if (abortCaption) {
-            tempItems.childList->Destroy(aPresContext);
-          }
-          else {
-            captionItems.AddChild(tempItems.childList);
-          }
+          NS_ASSERTION(!captionItems.childList, "don't append twice a caption");
+          hasCaption = PR_TRUE; // remember that we have a caption now
+          captionItems.AddChild(tempItems.childList);        
         }
         else {
           frameItems.AddChild(tempItems.childList);
