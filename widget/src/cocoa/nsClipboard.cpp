@@ -156,7 +156,7 @@ nsClipboard :: SetNativeClipboardData ( PRInt32 aWhichClipboard )
         nsLinebreakConverter::ConvertUnicharLineBreaksInSitu(&castedUnicode,
                                                              nsLinebreakConverter::eLinebreakUnix,
                                                              nsLinebreakConverter::eLinebreakMac,
-                                                             dataSize, nsnull);
+                                                             dataSize / sizeof(PRUnichar), nsnull);
           
         errCode = PutOnClipboard ( macOSFlavor, data, dataSize );
         if ( NS_SUCCEEDED(errCode) ) {
