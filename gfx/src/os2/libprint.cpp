@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "libprint.h"
-#include "libprres.h"
+#include "resID.h"
 
 
 static HMODULE hmodRes;
