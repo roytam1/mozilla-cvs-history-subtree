@@ -144,11 +144,11 @@ extern int XFE_RESOURCES_NOT_INSTALLED_CORRECTLY;
 extern int XFE_USAGE_MSG1;
 extern int XFE_USAGE_MSG2;
 extern int XFE_USAGE_MSG3;
-<<<<<<< mozilla.c
+/* <<<<<<< mozilla.c rb, start conflict */
 #if defined(MOZ_MAIL_NEWS) || defined(EDITOR) || defined(MOZ_TASKBAR)
-=======
+/* =======
 #if defined(MOZ_MAIL_NEWS) && defined(EDITOR) && defined(MOZ_TASKBAR)
->>>>>>> 3.4.14.6
+>>>>>>> 3.4.14.6 end conflict */
 extern int XFE_USAGE_MSG4;
 #endif
 extern int XFE_USAGE_MSG5;
@@ -2822,12 +2822,6 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_REGISTERING_CONVERTERS));
 #endif
-<<<<<<< mozilla.c
-
-#ifdef MOZ_SMARTUPDATE
-  SU_Startup();
-#endif
-=======
 
 
 #ifdef JAVA
@@ -2837,7 +2831,6 @@ main
 #endif /* MOZ_SMARTUPDATE */
 #endif /* MOZ_MAIL_NEWS */
 
->>>>>>> 3.4.14.6
   NR_StartupRegistry();
   fe_RegisterConverters ();  /* this must be before InstallPreferences(),
 				and after fe_InitializeGlobalResources(). */
