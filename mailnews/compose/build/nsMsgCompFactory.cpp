@@ -49,21 +49,6 @@
 #include "nsMsgCreate.h"    // For drafts...I know, awful file name...
 #include "nsSmtpServer.h"
 
-
-
-
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-static NS_DEFINE_CID(kCMsgComposeCID, NS_MSGCOMPOSE_CID);
-static NS_DEFINE_CID(kCMsgCompFieldsCID, NS_MSGCOMPFIELDS_CID);
-static NS_DEFINE_CID(kCMsgSendCID, NS_MSGSEND_CID);
-static NS_DEFINE_CID(kCMsgSendLaterCID, NS_MSGSENDLATER_CID);
-static NS_DEFINE_CID(kCSmtpServiceCID, NS_SMTPSERVICE_CID);
-static NS_DEFINE_CID(kSmtpServerCID, NS_SMTPSERVER_CID);
-static NS_DEFINE_CID(kCMsgComposeServiceCID, NS_MSGCOMPOSESERVICE_CID);
-static NS_DEFINE_CID(kCMsgQuoteCID, NS_MSGQUOTE_CID);
-static NS_DEFINE_CID(kCSmtpUrlCID, NS_SMTPURL_CID);
-static NS_DEFINE_CID(kMsgDraftCID, NS_MSGDRAFT_CID);
-
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpService);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpServer);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCompose);
@@ -90,151 +75,19 @@ struct components_t {
 
 static components_t components[] =
 {
-  { NS_MSGCOMPOSE_CID,        &nsMsgComposeConstructor,    },
-  { NS_MSGCOMPOSESERVICE_CID, &nsMsgComposeServiceConstructor, },
-  { NS_MSGCOMPFIELDS_CID,     &nsMsgCompFieldsConstructor, },
-  { NS_MSGDRAFT_CID,          &nsMsgDraftConstructor, },
-  { NS_MSGSEND_CID,           &nsMsgComposeAndSendConstructor, },
-  { NS_MSGSENDLATER_CID,      &nsMsgSendLaterConstructor, },
-  { NS_SMTPSERVICE_CID,       &nsSmtpServiceConstructor,  },
-  { NS_SMTPSERVER_CID,        &nsSmtpServerConstructor,    },
-  { NS_SMTPURL_CID,           &nsSmtpUrlConstructor, },
-  { NS_MSGQUOTE_CID,          &nsMsgQuoteConstructor, },
+  { NS_MSGCOMPOSE_CID,        &nsMsgComposeConstructor,  NS_MSGCOMPOSE_PROGID,  },
+  { NS_MSGCOMPOSESERVICE_CID, &nsMsgComposeServiceConstructor, NS_MSGCOMPOSESERVICE_PROGID, },
+  { NS_MSGCOMPFIELDS_CID,     &nsMsgCompFieldsConstructor, NS_MSGCOMPFIELDS_PROGID, },
+  { NS_MSGDRAFT_CID,          &nsMsgDraftConstructor, NS_MSGDRAFT_PROGID, },
+  { NS_MSGSEND_CID,           &nsMsgComposeAndSendConstructor, NS_MSGSEND_PROGID, },
+  { NS_MSGSENDLATER_CID,      &nsMsgSendLaterConstructor, NS_MSGSENDLATER_PROGID, },
+  { NS_SMTPSERVICE_CID,       &nsSmtpServiceConstructor, NS_SMTPSERVICE_PROGID,  },
+  { NS_SMTPSERVICE_CID,       &nsSmtpServiceConstructor, NS_MAILTOHANDLER_PROGID, },
+  { NS_SMTPSERVER_CID,        &nsSmtpServerConstructor, NS_SMTPSERVER_PROGID,    },
+  { NS_SMTPURL_CID,           &nsSmtpUrlConstructor, NS_SMTPURL_PROGID, },
+  { NS_MSGQUOTE_CID,          &nsMsgQuoteConstructor, NS_MSGQUOTE_PROGID, },
 };
 
-NS_DECL_MODULE(nsModule)
-NS_IMPL_MODULE_CORE(nsModule)
-NS_IMPL_ISUPPORTS1(nsModule, nsIModule)
-NS_IMPL_MODULE_GETCLASSOBJECT(nsModule, components)
-NS_IMPL_MODULE_REGISTERSELF(nsModule, components)
-NS_IMPL_MODULE_UNREGISTERSELF(nsModule, components)
-NS_IMPL_NSGETMODULE(nsModule)
-NS_IMPL_MODULE_CANUNLOAD(nsModule)
   
-#if 0
-	nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &rv));
-	if (NS_FAILED(rv)) return rv;
-
-	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID, &rv);
-	if (NS_FAILED(rv)) return rv;
-
-	// register the message compose factory
-	rv = compMgr->RegisterComponent(kCSmtpServiceCID,
-										"SMTP Service", nsnull,
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
+NS_IMPL_MODULE(components)
   
-	rv = compMgr->RegisterComponent(kSmtpServerCID,
-                                  "SMTP Server",
-                                  NS_SMTPSERVER_PROGID,
-                                  path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-	
-	rv = compMgr->RegisterComponent(kCSmtpUrlCID,
-										"Smtp url",
-										nsnull,
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->RegisterComponent(kCMsgComposeServiceCID,
-                                  "Message Compose Service",
-                                  NS_MSGCOMPOSESERVICE_PROGID,
-                                  path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->RegisterComponent(kCMsgComposeCID,
-										"Message Compose",
-										"component://netscape/messengercompose/compose",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->RegisterComponent(kCMsgCompFieldsCID,
-										"Message Compose Fields",
-										"component://netscape/messengercompose/composefields",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->RegisterComponent(kCMsgSendCID,
-										"Message Compose Send",
-										"component://netscape/messengercompose/send",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-    rv = compMgr->RegisterComponent(kCMsgSendLaterCID,
-										"Message Compose Send Later",
-										"component://netscape/messengercompose/sendlater",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-    rv = compMgr->RegisterComponent(kCSmtpServiceCID,
-										"Message Compose SMTP Service",
-										"component://netscape/messengercompose/smtp",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->RegisterComponent(kCSmtpServiceCID,  
-                                    "SMTP Protocol Handler",
-                                    NS_NETWORK_PROTOCOL_PROGID_PREFIX "mailto",
-                                    path, PR_TRUE, PR_TRUE);
-
-	if (NS_FAILED(rv)) finalResult = rv;
-
-  
-    rv = compMgr->RegisterComponent(kCMsgQuoteCID,
-										"Message Quoting",
-										"component://netscape/messengercompose/quoting",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-  // For Drafts...
-  rv = compMgr->RegisterComponent(kMsgDraftCID,
-										"Message Drafts",
-										"component://netscape/messengercompose/drafts",
-										path, PR_TRUE, PR_TRUE);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-  return finalResult;
-}
-
-extern "C" NS_EXPORT nsresult
-NSUnregisterSelf(nsISupports* aServMgr, const char* path)
-{
-	nsresult finalResult = NS_OK;
-	nsresult rv = NS_OK;
-
-	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID, &rv);
-	if (NS_FAILED(rv)) return rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgComposeServiceCID, path);
-	if (NS_FAILED(rv))finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgComposeCID, path);
-	if (NS_FAILED(rv))finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgCompFieldsCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgSendCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgSendLaterCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCSmtpServiceCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kSmtpServerCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCSmtpUrlCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	rv = compMgr->UnregisterComponent(kCMsgQuoteCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-  rv = compMgr->UnregisterComponent(kMsgDraftCID, path);
-	if (NS_FAILED(rv)) finalResult = rv;
-
-	return finalResult;
-}
-#endif
