@@ -954,7 +954,11 @@ IL_NetRequestDone(il_container *ic, ilIURL *url, int status)
 	PR_ASSERT(ic);
 
 	/* Record the fact that NetLib is done loading. */
-	ic->is_url_loading = PR_FALSE;
+    if (ic->url == url) {
+	    ic->is_url_loading = PR_FALSE;
+    }
+    /* The (ic->url == url) check is for a weird timer issue, see the comment at the
+       end of this function. */    
 
     /*
      * It could be that layout aborted image loading by calling IL_DestroyImage
@@ -1019,9 +1023,16 @@ IL_NetRequestDone(il_container *ic, ilIURL *url, int status)
 	    }
     }
 
-    PR_ASSERT(ic->url == url);
-	NS_RELEASE(url);
-    ic->url = NULL;
+    if (ic->url == url) {
+        NS_RELEASE(url);
+        ic->url = NULL;
+    }
+    /* else there is actually another load going on from a looping gif. 
+     * Weird timer issue.  If ic->url does not equal url, then il_image_complete was
+     * already called for "url" and a new load started.  ic->url is the url for 
+     * the new load and will be released in its IL_NetRequestDone.  "url" was already
+     * released by special code in il_image_complete.
+     */
 }
 
 
@@ -1295,6 +1306,11 @@ il_image_complete(il_container *ic)
                     
                     ic->bytes_consumed = 0;
                     ic->state = IC_START;
+
+                    /* This is to deal with a weird timer bug, see the comment at the
+                       end of IL_NetRequestDone. */
+                    NS_IF_RELEASE(ic->url);
+
                     ic->url = netRequest;
                     /* Record the fact that we are calling NetLib to load a URL. */
                     ic->is_url_loading = PR_TRUE;
