@@ -640,8 +640,11 @@ NS_IMETHODIMP nsChildView::Show(PRBool bState)
 nsIWidget*
 nsChildView::GetParent(void)
 {
-  NS_IF_ADDREF(mParentWidget);
-  return mParentWidget;
+  if (mPluginPort) {
+    NS_IF_ADDREF(mParentWidget);
+    return mParentWidget;
+  }
+  return nsnull;
 }
     
 NS_IMETHODIMP nsChildView::ModalEventFilter(PRBool aRealEvent, void *aEvent,
