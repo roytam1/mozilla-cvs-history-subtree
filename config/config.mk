@@ -470,6 +470,7 @@ XPCOM_LIBS += -lboehm
 endif
 
 ifdef MOZ_DEMANGLE_SYMBOLS
+MOZ_COMPONENT_XPCOM_LIBS += -liberty
 XPCOM_LIBS += -liberty
 endif
 
