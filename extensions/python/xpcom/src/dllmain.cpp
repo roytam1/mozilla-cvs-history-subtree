@@ -187,10 +187,6 @@ void PyXPCOM_DLLRelease(void)
 	PR_AtomicDecrement(&g_cLockCount);
 }
 
-static void pyxpcom_construct() __attribute__((constructor));
-static void pyxpcom_destruct() __attribute__((destructor));
-
-
 void pyxpcom_construct(void)
 {
 	PRStatus status;
@@ -211,6 +207,16 @@ void pyxpcom_destruct(void)
 	// should I pass a dtor to PR_NewThreadPrivateIndex??
 	// TlsFree(tlsIndex);
 }
+
+// Yet another attempt at cross-platform library initialization and finalization.
+struct DllInitializer {
+	DllInitializer() {
+		pyxpcom_construct();
+	}
+	~DllInitializer() {
+		pyxpcom_destruct();
+	}
+} dll_initializer;
 
 #ifdef XP_WIN
 
