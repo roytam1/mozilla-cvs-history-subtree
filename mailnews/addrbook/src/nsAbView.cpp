@@ -1083,3 +1083,4 @@ nsresult nsAbView::GetSelectedCards(nsISupportsArray **selectedCards)
   }
   return NS_OK;
 }
+
