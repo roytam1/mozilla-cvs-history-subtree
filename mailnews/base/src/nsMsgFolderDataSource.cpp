@@ -1168,8 +1168,28 @@ nsMsgFolderDataSource::createFolderSpecialNode(nsIMsgFolder *folder,
   else if(flags & MSG_FOLDER_FLAG_TEMPLATES)
     specialFolderString = NS_LITERAL_STRING("Templates").get();
   else {
-    // XXX why do this at all? or just ""
-    specialFolderString = NS_LITERAL_STRING("none").get();
+    nsCOMPtr<nsIMsgIncomingServer> server;
+    rv = folder->GetServer(getter_AddRefs(server));
+    if (NS_FAILED(rv) || !server) return NS_ERROR_FAILURE;
+
+    nsXPIDLCString serverType;
+    rv = server->GetType(getter_Copies(serverType));
+    if (NS_FAILED(rv)) return rv;
+
+    if (!serverType.Equals("imap")) {
+      nsXPIDLString name;
+      folder->GetName(getter_Copies(name));
+
+      if (name.Equals(NS_LITERAL_STRING("Sent Mail")))
+        specialFolderString = NS_LITERAL_STRING("Sent").get();
+
+      if (name.Equals(NS_LITERAL_STRING("Drafts")))
+        specialFolderString = NS_LITERAL_STRING("Drafts").get();
+    }
+    else {
+      // XXX why do this at all? or just ""
+      specialFolderString = NS_LITERAL_STRING("none").get();
+    }
   }
   
   createNode(specialFolderString, target, getRDFService());
