@@ -101,7 +101,7 @@ nsSecureBrowserUIImpl::~nsSecureBrowserUIImpl()
 }
 
 NS_IMPL_ISUPPORTS5(nsSecureBrowserUIImpl,
-                   nsSecureBrowserUI,
+                   nsISecureBrowserUI,
                    nsIWebProgressListener,
                    nsIFormSubmitObserver,
                    nsIObserver,
@@ -109,7 +109,7 @@ NS_IMPL_ISUPPORTS5(nsSecureBrowserUIImpl,
 
 
 NS_IMETHODIMP
-nsSecureBrowserUIImpl::Init(nsIDOMWindowInternal *window,
+nsSecureBrowserUIImpl::Init(nsIDOMWindow *window,
                             nsIDOMElement *button)
 {
   nsresult rv = NS_OK;
@@ -614,16 +614,16 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIINTERFACEREQUESTOR
 
-  nsUIContext(nsIDOMWindowInternal *window);
+  nsUIContext(nsIDOMWindow *window);
   virtual ~nsUIContext();
 
 private:
-  nsCOMPtr<nsIDOMWindowInternal> mWindow;
+  nsCOMPtr<nsIDOMWindow> mWindow;
 };
 
 NS_IMPL_ISUPPORTS1(nsUIContext, nsIInterfaceRequestor)
 
-nsUIContext::nsUIContext(nsIDOMWindowInternal *aWindow)
+nsUIContext::nsUIContext(nsIDOMWindow *aWindow)
 : mWindow(aWindow)
 {
   NS_INIT_ISUPPORTS();
@@ -641,7 +641,8 @@ NS_IMETHODIMP nsUIContext::GetInterface(const nsIID & uuid, void * *result)
   if (uuid.Equals(NS_GET_IID(nsIPrompt))) {
     nsIPrompt *prompt;
 
-    rv = mWindow->GetPrompter(&prompt);
+    nsCOMPtr<nsIDOMWindowInternal> winInt(do_QueryInterface(mWindow));
+    rv = winInt->GetPrompter(&prompt);
     *result = prompt;
   } else {
     rv = NS_ERROR_NO_INTERFACE;
