@@ -454,9 +454,7 @@ nsHttpHandler::OnExamineResponse(nsIHttpChannel *chan)
 {
     nsresult rv;
 
-    LOG(("nsHttpHandler::OnAsyncExamineResponse [chan=%x]\n", chan));
-
-    // XXX would need to be made thread safe
+    LOG(("nsHttpHandler::OnExamineResponse [chan=%x]\n", chan));
 
     if (!mNetModuleMgr) {
         mNetModuleMgr = do_GetService(kNetModuleMgrCID, &rv);
@@ -479,8 +477,6 @@ nsHttpHandler::OnExamineResponse(nsIHttpChannel *chan)
         entry = do_QueryInterface(sup, &rv);
         if (NS_FAILED(rv)) return rv;
 
-        // XXX this may need to be synchronous to ensure that cookies
-        // get set before redirecting.
         rv = entry->GetSyncProxy(getter_AddRefs(netNotify));
         if (NS_FAILED(rv)) return rv;
 
@@ -488,7 +484,7 @@ nsHttpHandler::OnExamineResponse(nsIHttpChannel *chan)
         if (NS_FAILED(rv)) return rv;
 
         // fire off the notification, ignore the return code.
-        httpNotify->OnAsyncExamineResponse(chan);
+        httpNotify->OnExamineResponse(chan);
     }
     
     return NS_OK;

@@ -186,7 +186,7 @@ nsCookieHTTPNotify::OnModifyRequest(nsIHttpChannel *aHttpChannel)
 }
 
 NS_IMETHODIMP
-nsCookieHTTPNotify::OnAsyncExamineResponse(nsIHttpChannel *aHttpChannel)
+nsCookieHTTPNotify::OnExamineResponse(nsIHttpChannel *aHttpChannel)
 {
     nsresult rv;
     // Preconditions

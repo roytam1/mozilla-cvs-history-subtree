@@ -275,7 +275,7 @@ nsEntryList::SetEntry(const char *dir,
         NS_NOTREACHED("directory without realm");
     }
     else {
-        // proxy case
+        // no realm... XXX can this ever happen?
         if (mList.Count() > 0) {
             entry = (nsEntry *) mList[0];
             if (entry->Realm() || entry->Directory())
