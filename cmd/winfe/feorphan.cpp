@@ -37,6 +37,12 @@
 
 // This is the NSPR priority of the main GUI thread (ie. mozilla)
 
+#ifdef XP_WIN32
+#define MOZILLA_THREAD_PRIORITY PR_PRIORITY_NORMAL
+#else
+#define MOZILLA_THREAD_PRIORITY PR_PRIORITY_LOW
+#endif
+
 #if defined(OJI) || defined(JAVA)
 
 #ifndef XP_PC
