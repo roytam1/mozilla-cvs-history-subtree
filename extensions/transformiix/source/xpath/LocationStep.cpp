@@ -24,11 +24,10 @@
  * $Id$
  */
 
-/**
- * LocationStep
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
-**/
+/*
+  Implementation of an XPath LocationStep
+  @version $Revision$ $Date$
+*/
 
 #include "Expr.h"
 
@@ -84,6 +83,8 @@ void LocationStep::setAxisIdentifier(short axisIdentifier) {
  * @param nodeExpr the NodeExpr to use when matching nodes
 **/
 void LocationStep::setNodeExpr(NodeExpr* nodeExpr) {
+    // delete current NodeExpr
+    if (this->nodeExpr) delete this->nodeExpr;
     this->nodeExpr = nodeExpr;
 } //-- setNodeExpr
 
