@@ -196,19 +196,20 @@ function setPrinterDefaultsForSelectedPrinter()
 {
   /* FixMe: We should save the old printer's values here... */
 
-  gPrintSettings.printerName  = dialog.printerList.value;
+  if ( gPrintSettings.printerName != dialog.printerList.value ) {
+    gPrintSettings.printerName = dialog.printerList.value;
+  
+    // First get any defaults from the printer 
+    printService.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
+
+    var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
+                gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
+                gPrintSetInterface.kInitSavePaperName |
+                gPrintSetInterface.kInitSavePrintCommand;
  
-  // First get any defaults from the printer 
-  printService.initPrintSettingsFromPrinter(gPrintSettings.printerName, gPrintSettings);
-
-  var flags = gPrintSetInterface.kInitSavePaperSizeType | gPrintSetInterface.kInitSavePaperSizeUnit |
-              gPrintSetInterface.kInitSavePaperWidth | gPrintSetInterface.kInitSavePaperHeight |
-              gPrintSetInterface.kInitSavePaperName |
-              gPrintSetInterface.kInitSavePrintCommand;
-
-  // now augment them with any values from last time
-  printService.initPrintSettingsFromPrefs(gPrintSettings, true, flags);
-
+    // now augment them with any values from last time
+    printService.initPrintSettingsFromPrefs(gPrintSettings, true, flags);    
+  }
 }
 
 //---------------------------------------------------
