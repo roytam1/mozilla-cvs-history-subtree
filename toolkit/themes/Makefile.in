@@ -52,7 +52,11 @@ include $(DEPTH)/config/autoconf.mk
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 DIRS	= pinstripe
 else
+ifdef MOZ_PHOENIX
 DIRS	= winstripe
+else
+DIRS    = qute
+endif
 ifneq (,$(filter gtk2,$(MOZ_WIDGET_TOOLKIT)))
 DIRS    += gnomestripe
 endif
