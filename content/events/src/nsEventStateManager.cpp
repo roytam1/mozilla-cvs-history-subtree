@@ -2878,6 +2878,16 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
       printf("focusing next focusable content: %p\n", nextFocus.get());
 #endif
       presShell->GetPrimaryFrameFor(nextFocus, &mCurrentTarget);
+
+      //This may be new frame that hasn't been through the ESM so we
+      //must set its NS_FRAME_EXTERNAL_REFERENCE bit.
+      if (mCurrentTarget) {
+        nsFrameState state;
+        mCurrentTarget->GetFrameState(&state);
+        state |= NS_FRAME_EXTERNAL_REFERENCE;
+        mCurrentTarget->SetFrameState(state);
+      }
+
       ChangeFocus(nextFocus, eEventFocusedByKey);
       
       NS_IF_RELEASE(mCurrentFocus);
@@ -3342,6 +3352,15 @@ nsEventStateManager::GetEventTarget(nsIFrame **aFrame)
       nsresult rv = mPresContext->GetShell(getter_AddRefs(shell));
       if (NS_SUCCEEDED(rv) && shell){
         shell->GetPrimaryFrameFor(mCurrentTargetContent, &mCurrentTarget);
+
+        //This may be new frame that hasn't been through the ESM so we
+        //must set its NS_FRAME_EXTERNAL_REFERENCE bit.
+        if (mCurrentTarget) {
+          nsFrameState state;
+          mCurrentTarget->GetFrameState(&state);
+          state |= NS_FRAME_EXTERNAL_REFERENCE;
+          mCurrentTarget->SetFrameState(state);
+        }
       }
     }
   }
@@ -3351,6 +3370,16 @@ nsEventStateManager::GetEventTarget(nsIFrame **aFrame)
     mPresContext->GetShell(getter_AddRefs(presShell));
     if (presShell) {
       presShell->GetEventTargetFrame(&mCurrentTarget);
+
+      //This may be new frame that hasn't been through the ESM so we
+      //must set its NS_FRAME_EXTERNAL_REFERENCE bit.
+      if (mCurrentTarget) {
+        nsFrameState state;
+        mCurrentTarget->GetFrameState(&state);
+        state |= NS_FRAME_EXTERNAL_REFERENCE;
+        mCurrentTarget->SetFrameState(state);
+      }
+
     }
   }
 
@@ -3380,6 +3409,15 @@ nsEventStateManager::GetEventTargetContent(nsEvent* aEvent, nsIContent** aConten
     mPresContext->GetShell(getter_AddRefs(presShell));
     if (presShell) {
       presShell->GetEventTargetFrame(&mCurrentTarget);
+
+      //This may be new frame that hasn't been through the ESM so we
+      //must set its NS_FRAME_EXTERNAL_REFERENCE bit.
+      if (mCurrentTarget) {
+        nsFrameState state;
+        mCurrentTarget->GetFrameState(&state);
+        state |= NS_FRAME_EXTERNAL_REFERENCE;
+        mCurrentTarget->SetFrameState(state);
+      }
     }
   }
 
