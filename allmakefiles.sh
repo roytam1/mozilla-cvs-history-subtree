@@ -1376,6 +1376,9 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/webservices/wsdl/Makefile
             extensions/webservices/wsdl/src/Makefile
             " ;;
+        xforms ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/xforms/Makefile
+            " ;;
         xmlextras ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xmlextras/Makefile
             extensions/xmlextras/base/Makefile
