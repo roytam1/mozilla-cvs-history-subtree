@@ -949,24 +949,30 @@ NS_IMETHODIMP nsDefaultEncoder::Decode(nsISOAPEncoding* aEncoding,
   nsCOMPtr<nsISOAPDecoder> decoder;
   nsCOMPtr<nsISchemaType> type = aSchemaType;
   if (!type) {	//  Where no type has been specified, look one up from schema attribute, if it exists
-    nsAutoString explicittype;
-    nsresult rc = aSource->GetAttributeNS(kSchemaDatatypesNamespaceURI, kSchemaTypeAttribute, explicittype);
-    if (NS_FAILED(rc)) return rc;
     nsCOMPtr<nsISchemaCollection> collection;
-    rc = aEncoding->GetSchemaCollection(getter_AddRefs(collection));
+    nsresult rc = aEncoding->GetSchemaCollection(getter_AddRefs(collection));
     if (NS_FAILED(rc)) return rc;
-    nsCOMPtr<nsISchemaElement> element;
+    nsAutoString explicittype;
+    rc = aSource->GetAttributeNS(kSchemaDatatypesNamespaceURI, kSchemaTypeAttribute, explicittype);
+    if (NS_FAILED(rc)) return rc;
     nsAutoString ns;
     nsAutoString name;
-    rc = nsSOAPUtils::GetNamespaceURI(aSource, explicittype, ns);
-    if (NS_FAILED(rc)) return rc;
-    rc = nsSOAPUtils::GetLocalName(explicittype, name);
-    if (NS_FAILED(rc)) return rc;
-    rc = collection->GetElement(ns, name, getter_AddRefs(element));
-    if (NS_FAILED(rc)) return rc;
-    if (element) {
-      rc = element->GetType(getter_AddRefs(type));
+    if (!explicittype.IsEmpty()) {
+      rc = nsSOAPUtils::GetNamespaceURI(aSource, explicittype, ns);
       if (NS_FAILED(rc)) return rc;
+      rc = nsSOAPUtils::GetLocalName(explicittype, name);
+      if (NS_FAILED(rc)) return rc;
+      rc = collection->GetType(ns, name, getter_AddRefs(type));
+      if (NS_FAILED(rc)) return rc;
+    }
+    if (!type) {
+      nsCOMPtr<nsISchemaElement> element;
+      rc = collection->GetElement(ns, name, getter_AddRefs(element));
+      if (NS_FAILED(rc)) return rc;
+      if (element) {
+        rc = element->GetType(getter_AddRefs(type));
+        if (NS_FAILED(rc)) return rc;
+      }
     }
   }
   if (type) {
