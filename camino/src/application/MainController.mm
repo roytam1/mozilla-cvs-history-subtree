@@ -222,7 +222,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController newTab:eNewTabAboutBlank];
+    [browserController newTab:eNewTabHomepage];		// we'll look at the pref to decide whether to load the home page
 }
 
 -(IBAction)closeTab:(id)aSender
