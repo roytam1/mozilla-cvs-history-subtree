@@ -71,13 +71,19 @@ makeOptionMenu(MWContext *context, Widget parent);
 Boolean
 XFE_ComposeFolderView::isPrioritySelected(MSG_PRIORITY priority)
 {
+#ifdef MOZ_OPTION_FOLDER
         return m_optionFolderViewAlias->isPrioritySelected(priority);
+#else /* MOZ_OPTION_FOLDER */
+        return FALSE;
+#endif /* MOZ_OPTION_FOLDER */
 }
 
 void
 XFE_ComposeFolderView::selectPriority(MSG_PRIORITY priority)
 {
+#ifdef MOZ_OPTION_FOLDER
   m_optionFolderViewAlias->selectPriority(priority);
+#endif /* MOZ_OPTION_FOLDER */
 }
 
 
@@ -230,8 +236,10 @@ XFE_ComposeFolderView::folderActivate(int tabPosition)
     }
     else if ( tabPosition == 2 ) // ASSUMPTION: Tab #2 is 'Options'
     {
+#ifdef MOZ_OPTION_FOLDER
 	if (m_optionFolderViewAlias)
 	    m_optionFolderViewAlias->updateAllOptions();
+#endif /* MOZ_OPTION_FOLDER */
     }
 }
 
@@ -294,9 +302,11 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
 
    str = XmStringCreateSimple(XP_GetString(XFE_MNC_ADDRESS));
    Widget m_addressTab = XmLFolderAddTabFromClass(m_tabGroupW, str);
+//#ifdef MOZ_MAIL_NEWS
    XtVaSetValues(m_addressTab, XmNbuttonLayout, XmBUTTON_PIXMAP_ONLY,
 		XmNpixmap,  MNC_AddressSmall_group.pixmap_icon.pixmap,
 	 NULL);
+//#endif /* MOZ_MAIL_NEWS */
    XmStringFree(str);
 
    m_addressFormW = XtVaCreateManagedWidget("form_addr",
@@ -309,8 +319,10 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
    str = XmStringCreateSimple(XP_GetString(XFE_MNC_ATTACHMENT));
    //m_attachFormW = XmLFolderAddTabForm(m_tabGroupW, str);
    Widget m_attachTab = XmLFolderAddTabFromClass(m_tabGroupW, str);
+//#ifdef MOZ_MAIL_NEWS
    XtVaSetValues(m_attachTab, XmNbuttonLayout, XmBUTTON_PIXMAP_ONLY,
 		XmNpixmap,  MNC_AttachSmall_group.pixmap_icon.pixmap, NULL);
+//#endif /* MOZ_MAIL_NEWS */
    XmStringFree(str);
    m_attachFormW = XtVaCreateManagedWidget("form_attach",
                                  xmFormWidgetClass, m_tabGroupW,
@@ -320,6 +332,7 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
    XtVaSetValues(m_attachTab, XmNtabManagedWidget, m_attachFormW, NULL);
 
 
+#ifdef MOZ_OPTION_FOLDER
    str = XmStringCreateSimple(XP_GetString(XFE_MNC_OPTION));
    //m_optionFormW = XmLFolderAddTabForm(m_tabGroupW, str);
    Widget m_optionTab = XmLFolderAddTabFromClass(m_tabGroupW, str);
@@ -332,6 +345,7 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
                         NULL);
 
    XtVaSetValues(m_optionTab, XmNtabManagedWidget, m_optionFormW, NULL);
+#endif /* MOZ_OPTION_FOLDER */
 
    { // Addressing Folder
      XFE_AddressFolderView *addressFolderView = 
@@ -368,6 +382,7 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
      attachFolderView->show();
    }
 
+#ifdef MOZ_OPTION_FOLDER
    { // Option Folder
      XFE_OptionFolderView *optionFolderView = 
          new XFE_OptionFolderView( getToplevel(), (XFE_View*)this, getPane(), getContext());
@@ -386,6 +401,7 @@ XFE_ComposeFolderView::createWidgets(Widget parent_widget, XP_Bool /*usePlainTex
 			XmNrightAttachment, XmATTACH_FORM, NULL);
      optionFolderView->show();
    }
+#endif /* MOZ_OPTION_FOLDER */
 
    } // End of Address Frame
   XDEBUG( printf("leave XFE_ComposeFolderView::createWidgets()\n");)
@@ -469,6 +485,7 @@ XFE_ComposeFolderView::setupIcons()
 
   XtVaGetValues(base,  XmNbackground, &bg_pixel, 0);
 
+//#ifdef MOZ_MAIL_NEWS
   IconGroup_createAllIcons(&MNC_AddressSmall_group,
                             getToplevel()->getBaseWidget(),
                             BlackPixelOfScreen(XtScreen(base)), // hack. :(
@@ -483,4 +500,5 @@ XFE_ComposeFolderView::setupIcons()
                             getToplevel()->getBaseWidget(),
                             BlackPixelOfScreen(XtScreen(base)), // hack. :(
                             bg_pixel);
+//#endif /* MOZ_MAIL_NEWS */
 }

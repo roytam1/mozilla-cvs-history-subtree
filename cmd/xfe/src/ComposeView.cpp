@@ -295,7 +295,7 @@ XFE_ComposeView::XFE_ComposeView(XFE_Component *toplevel_component,
     pane = MSG_CreateCompositionPane(m_contextData, 
 				     //context_to_copy required by xp
 				     context_to_copy, 
-				     fe_mailNewsPrefs, fields,  XFE_MNView::m_master );
+				     fe_mailNewsPrefs, fields, XFE_MNView::m_master);
     setPane(pane);
     CONTEXT_DATA(m_contextData)->comppane = (MSG_Pane*)pane;
 
@@ -743,7 +743,12 @@ XFE_ComposeView::isCommandEnabled(CommandType command, void *calldata,
   MSG_Pane *pane = getPane();
 
     if (pane && MSG_DeliveryInProgress(pane) && command != xfeCmdStopLoading)
+    {
+#ifdef DEBUG_akkana
+        printf("delivery in progress!\n");
+#endif
         return False;
+    }
 
 	Widget destW= XmGetDestination(XtDisplay(getBaseWidget()));
 	Widget focusW= XmGetFocusWidget(getBaseWidget());
@@ -996,9 +1001,11 @@ XFE_ComposeView::isCommandEnabled(CommandType command, void *calldata,
 		{
 			return True;
 		}
+#ifdef MOZ_MAIL_NEWS
 	//    All other commands we pass to FolderView.
 	else if (m_folderViewAlias->isCommandEnabled(command, calldata, info))
 		return True;
+#endif /* MOZ_MAIL_NEWS */
 	else 
 		return XFE_MNView::isCommandEnabled(command, calldata, info);
 }
@@ -1219,6 +1226,7 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
       /* ###tw  Should still probably do the commandstatus stuff. */
       MSG_Command(getPane(), msg_cmd, NULL, 0);
     }
+#ifdef MOZ_MAIL_NEWS
   else if (command == xfeCmdSendMessageLater)
     {
       XDEBUG(	printf ("XFE_ComposeView::sendMessageLater()\n");)
@@ -1289,6 +1297,7 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
 		  MSG_QuoteMessage (getPane(), &XFE_ComposeView::doQuoteMessage, this);
 	  }
   }
+#endif /* MOZ_MAIL_NEWS */
   else if ( command == xfeCmdUndo )
   {
 	  if (!m_plaintextP) {
@@ -1485,11 +1494,13 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
   {
 	  toggleAddressArea();
   }
+#ifdef MOZ_MAIL_NEWS
   else if (command == xfeCmdViewSecurity ) 
   {
            updateHeaderInfo();
            fe_sec_logo_cb(NULL, getContext(), NULL);
   }
+#endif /* MOZ_MAIL_NEWS */
   else if (command == xfeCmdDeleteItem) {
 	  if ( m_focusW ) {
 		  if ( m_focusW != m_addrTypeW ) {
@@ -1705,6 +1716,7 @@ fe_compose_setAttachment(MWContext *context, void* data)
 
 // ------------ NEW CODE ----------------------
 
+#ifdef MOZ_MAIL_NEWS
 int
 XFE_ComposeView::quoteMessage(const char *textData)
 {
@@ -1732,6 +1744,7 @@ XFE_ComposeView::doQuoteMessage(void *closure, const char *textData)
  // Requires to return negative value on error
  return obj->quoteMessage(textData);
 }
+#endif /* MOZ_MAIL_NEWS */
 
 void
 XFE_ComposeView::displayDefaultTextBody()
@@ -1795,16 +1808,22 @@ XFE_ComposeView::initialize()
 
 		MSG_SetHTMLMarkup(pane, !m_plaintextP);
 
+#ifdef MOZ_MAIL_NEWS
 		if ( m_pInitialText && XP_STRLEN(m_pInitialText) ) {
 			m_dontQuoteP = True;
 		}
 		else {
 			m_dontQuoteP = False;
 		}
+#else /* MOZ_MAIL_NEWS */
+        m_dontQuoteP = True;
+#endif /* MOZ_MAIL_NEWS */
 
+#ifdef MOZ_MAIL_NEWS
 		if ( !m_dontQuoteP && MSG_ShouldAutoQuote (pane) ) {
 			MSG_QuoteMessage (pane, &XFE_ComposeView::doQuoteMessage, this);
 		}
+#endif /* MOZ_MAIL_NEWS */
 
 		cPos = XmTextGetLastPosition(textW);
 
@@ -2080,6 +2099,7 @@ XFE_ComposeView::initEditorContents()
 
 			EDT_BeginOfDocument(m_contextData, False);
 
+#ifdef MOZ_MAIL_NEWS
 			if ( !m_dontQuoteP && MSG_ShouldAutoQuote (pane) ) {
 #ifdef DEBUG_rhess
 				fprintf(stderr, "initEditorContents::[ quote ]\n");
@@ -2087,7 +2107,9 @@ XFE_ComposeView::initEditorContents()
 				MSG_QuoteMessage (pane, 
 								  &XFE_ComposeView::doQuoteMessage, this);
 			}
-			else {
+			else
+#endif /* MOZ_MAIL_NEWS */
+            {
 #ifdef DEBUG_rhess
 				fprintf(stderr, "initEditorContents::[ default ]\n");
 #endif

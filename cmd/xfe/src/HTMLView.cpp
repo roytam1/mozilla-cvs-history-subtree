@@ -520,7 +520,7 @@ XFE_HTMLView::doCommand(CommandType cmd, void *callData, XFE_CommandInfo* info)
       getToplevel()->notifyInterested(XFE_View::chromeNeedsUpdating);
       return;
     }
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   else if (IS_CMD(xfeCmdSendPage))
     {
       fe_mailto_cb (CONTEXT_WIDGET (m_contextData), 
@@ -571,7 +571,7 @@ XFE_HTMLView::doCommand(CommandType cmd, void *callData, XFE_CommandInfo* info)
       getToplevel()->notifyInterested(XFE_View::chromeNeedsUpdating);
       return;
     }
-#endif  // MOZ_MAIL_NEWS
+#endif  // MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
   else if (IS_CMD(xfeCmdCut))
     {
 		MWContext *context = fe_GetFocusGridOfContext(m_contextData);
@@ -864,7 +864,7 @@ XFE_HTMLView::doCommand(CommandType cmd, void *callData, XFE_CommandInfo* info)
 	return;
 
       if (
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
           MSG_RequiresComposeWindow(m_urlUnderMouse->address) ||
 #endif  // MOZ_MAIL_NEWS
           ! XP_STRNCMP ("telnet:", m_urlUnderMouse->address, 7) ||
@@ -937,7 +937,7 @@ XFE_HTMLView::doCommand(CommandType cmd, void *callData, XFE_CommandInfo* info)
 		     XP_GetString(XFE_EDITOR_ALERT_ABOUT_DOCUMENT));
 	    return;
 	}
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
       if (MSG_RequiresComposeWindow(m_urlUnderMouse->address))
 	getURL (m_urlUnderMouse, FALSE);
       else

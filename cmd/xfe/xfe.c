@@ -2727,7 +2727,7 @@ FE_UsersOrganization (void)
   return cached_org;
 }
 
-#ifdef MOZ_MAIL_NEWS
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
 const char *
 FE_UsersSignature (void)
 {
@@ -2798,7 +2798,7 @@ FE_UsersSignature (void)
 
   return signature;
 }
-#endif  /* MOZ_MAIL_NEWS */
+#endif  /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 
 int32

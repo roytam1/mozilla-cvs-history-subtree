@@ -43,21 +43,25 @@ XFE_AttachmentMenu::XFE_AttachmentMenu(Widget w, XFE_Frame *frame)
 
   XP_ASSERT(m_submenu);
 
+  m_attachmentData = NULL;
+
+#ifdef MOZ_MAIL_NEWS
   frame->registerInterest(XFE_MsgView::messageHasChanged,
 			  this,
 			  (XFE_FunctionNotification)attachmentsHaveChanged_cb);
 
-  m_attachmentData = NULL;
-
   // make sure we initially install an update callback
   attachmentsHaveChanged(NULL, NULL, NULL);
+#endif /* MOZ_MAIL_NEWS */
 }
 
 XFE_AttachmentMenu::~XFE_AttachmentMenu()
 {
+#ifdef MOZ_MAIL_NEWS
   m_parentFrame->unregisterInterest(XFE_MsgView::messageHasChanged,
 				    this,
 				    (XFE_FunctionNotification)attachmentsHaveChanged_cb);
+#endif /* MOZ_MAIL_NEWS */
 }
 
 void

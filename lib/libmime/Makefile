@@ -49,12 +49,12 @@ CSRCS		= mimecont.c \
 		  mimetric.c \
 		  mimeunty.c \
 		  mimevcrd.c \
-		  mimecryp.c \
 		  $(NULL)
 
 ifndef NO_SECURITY
 CSRCS		+= mimempkc.c \
 		   mimepkcs.c \
+		   mimecryp.c \
 		  $(NULL)
 endif
 

@@ -35,7 +35,13 @@
 #include "Dashboard.h"
 #include "Xfe/Xfe.h"
 #include "edt.h"
+#ifdef MOZ_MAIL_NEWS
 #include "../../../lib/libmsg/msgcflds.h"
+#else /* MOZ_MAIL_NEWS */
+#ifdef MOZ_MAIL_COMPOSE
+#include <msgcflds.h>
+#endif /* MOZ_MAIL_COMPOSE */
+#endif /* MOZ_MAIL_NEWS */
 #include "msgcom.h"
 #include <xpgetstr.h>     /* for XP_GetString() */
 
@@ -46,7 +52,7 @@ extern "C" int FE_GetMessageBody (MSG_Pane* comppane,
 
 extern int XFE_MNC_CLOSE_WARNING;
 
-#ifdef DEBUG_dora
+#ifdef DEBUG_akkana
 #define XDEBUG(x) x
 #else
 #define XDEBUG(x)
@@ -145,7 +151,9 @@ MenuSpec XFE_ComposeFrame::menu_bar_spec[] = {
 ToolbarSpec XFE_ComposeFrame::toolbar_spec[] = {
   { xfeCmdSendMessageNow,	PUSHBUTTON, &MNC_Send_group },
   { xfeCmdQuote,		PUSHBUTTON, &MNC_Quote_group },
+#ifdef MOZ_MAIL_NEWS
   { xfeCmdAddresseePicker,		PUSHBUTTON, &MNC_Address_group },
+#endif /* MOZ_MAIL_NEWS */
   {
 	  xfeCmdAttach,
 	  CASCADEBUTTON, 
@@ -155,13 +163,17 @@ ToolbarSpec XFE_ComposeFrame::toolbar_spec[] = {
 	  XFE_TOOLBAR_DELAY_SHORT								// Popup delay
   },
   { xfeCmdSpellCheck,		PUSHBUTTON, &MNC_SpellCheck_group },
+#ifdef MOZ_MAIL_NEWS
   { xfeCmdSaveDraft,		PUSHBUTTON, &MNC_Save_group },
+#endif /* MOZ_MAIL_NEWS */
   TOOLBAR_SEPARATOR,
+#ifdef MOZ_MAIL_NEWS
   { xfeCmdViewSecurity,		PUSHBUTTON, 
 			&TB_Unsecure_group,
 			&TB_Secure_group,
 			&MNTB_SignUnsecure_group,
 			&MNTB_SignSecure_group},
+#endif /* MOZ_MAIL_NEWS */
   { xfeCmdStopLoading,		PUSHBUTTON, &TB_Stop_group },
   { NULL }
 };
@@ -389,6 +401,7 @@ XFE_ComposeFrame::isCommandEnabled(CommandType cmd, void *cd, XFE_CommandInfo* i
 void
 XFE_ComposeFrame::doCommand(CommandType cmd, void *cd, XFE_CommandInfo* info)
 {
+#ifdef MOZ_MAIL_NEWS
     if (cmd == xfeCmdSearchAddress)
     {
         fe_showLdapSearch(XfeAncestorFindApplicationShell(getBaseWidget()), this,
@@ -397,7 +410,9 @@ XFE_ComposeFrame::doCommand(CommandType cmd, void *cd, XFE_CommandInfo* info)
 	// NOTE... [ we need to intercept these commands in order to be
 	//         [ able to do the "right thing" in the ComposeView
 	//
-	else {
+	else
+#endif /* MOZ_MAIL_NEWS */
+        {
 		if ( cmd == xfeCmdPaste ||
 			 cmd == xfeCmdCut   ||
 			 cmd == xfeCmdCopy  ||
@@ -514,6 +529,7 @@ fe_showCompose(Widget toplevel, Chrome *chromespec, MWContext *old_context,
 	return ((XFE_ComposeFrame*)theFrame)->getPane();
 }
 
+#ifdef MOZ_MAIL_NEWS
 int
 XFE_ComposeFrame::getSecurityStatus()
 {
@@ -555,6 +571,7 @@ XFE_ComposeFrame::getSecurityStatus()
     }
    return status;
 }
+#endif /* MOZ_MAIL_NEWS */
 
 XP_Bool
 XFE_ComposeFrame::isOkToClose()

@@ -71,7 +71,7 @@ PUBLIC void INTL_CCCReportMetaCharsetTag(MWContext *context, char *charset_tag)
 	INTL_CSIReportMetaCharsetTag(c, charset_tag, context->type);
 }
 
-#ifdef MOZ_MAIL_NEWS
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
 
 #if 0
 /* 
@@ -130,7 +130,7 @@ mail_report_autodetect(void *closure, CCCDataObject obj, uint16 doc_csid)
 	INTL_SetCSIWinCSID(c, INTL_GetCCCToCSID(obj));
 }
 
-#endif  /* MOZ_MAIL_NEWS */
+#endif  /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 #ifndef XP_WIN
 #ifndef XP_MAC
@@ -186,7 +186,7 @@ FE_DefaultDocCharSetID(iDocumentContext context)
 #endif /*XP_MAC*/
 #endif 
 
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_COMPOSE) || defined(MOZ_MAIL_NEWS)
 
 /* 
  INTL_ConvMailToWinCharCode
@@ -237,10 +237,7 @@ unsigned char *INTL_ConvMailToWinCharCode(iDocumentContext context,
 		return NULL ;
 	return pDest ;
 }
-#endif /* MOZ_MAIL_NEWS */
 
-
-#if defined(MOZ_MAIL_COMPOSE) || defined(MOZ_MAIL_NEWS)
 /*
 	This is the ugly hack for Korean News and Mail
 	Our libmsg code assume mail and news use the same code.

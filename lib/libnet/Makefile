@@ -111,6 +111,13 @@ CPPSRCS			+= imaphier.cpp \
 			  $(NULL)
 endif
 
+ifdef MOZ_MAIL_COMPOSE
+CSRCS			+= \
+			  mksmtp.c \
+			  mkpop3.c \
+			  $(NULL)
+endif
+
 ifndef NO_UNIX_ASYNC_DNS
 CSRCS			+= unix-dns.c
 endif

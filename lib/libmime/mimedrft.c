@@ -471,8 +471,13 @@ mime_parse_stream_complete (NET_StreamClass *stream)
   {
 	  fields = MSG_CreateCompositionFields( from, repl, to, cc, bcc, fcc, grps, foll,
 										    org, subj, refs, 0, priority, 0, news_host,
+#ifdef MOZ_MAIL_NEWS
 										    MSG_GetMailEncryptionPreference(), 
-											MSG_GetMailSigningPreference());
+											MSG_GetMailSigningPreference()
+#else /* MOZ_MAIL_NEWS */
+                                            FALSE, FALSE
+#endif /* MOZ_MAIL_NEWS */
+										   );
 	  if (fields)
 		cpane = FE_CreateCompositionPane(mdd->context, fields, NULL, MSG_DEFAULT);
   }

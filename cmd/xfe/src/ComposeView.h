@@ -95,7 +95,9 @@ public:
 		MSG_FontCode **font_changes);
   void    doneWithMessageBody(char *pBody);
   void    setComposeWrapState(XP_Bool wrap_p);
+#ifdef MOZ_MAIL_NEWS
   static int doQuoteMessage(void *closure, const char *data);
+#endif /* MOZ_MAIL_NEWS */
   XP_Bool isDelayedSent();
   XP_Bool isHTML();
   static const char *newSubject;
@@ -154,7 +156,9 @@ private:
         XP_Bool m_delayEditorP;
         XP_Bool m_dontQuoteP;
 
+#ifdef MOZ_MAIL_NEWS
   int quoteMessage(const char *data);
+#endif /* MOZ_MAIL_NEWS */
   void displayDefaultTextBody();
 
   XFE_CALLBACK_DECL(tabToEditor)

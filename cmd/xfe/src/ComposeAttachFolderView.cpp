@@ -51,13 +51,17 @@
 
 // from lib/libmsg
 extern "C" XP_Bool MSG_RequiresMailMsgWindow(const char*);
+#ifdef MOZ_MAIL_NEWS
 extern "C" XP_Bool MSG_RequiresNewsMsgWindow(const char*);
+#endif /* MOZ_MAIL_NEWS */
 
 // Use API from XmP.h - moderately naughty, but implicitly supported for
 // widget-writers and happy hackers everywhere.
 extern "C" void _XmSetDestination(Display*,Widget);
 
+#ifdef MOZ_MAIL_NEWS
 static int IsWebJumper(const char*);
+#endif /* MOZ_MAIL_NEWS */
 
 //
 // XFE_ComposeAttachFolderView
@@ -428,8 +432,10 @@ int XFE_ComposeAttachFolderView::addAttachments(const char **items,int numItems,
         m.desired_type=desiredType;
         if (attach_binary)
             m.real_type= "application/octet-stream";
+#ifdef MOZ_MAIL_NEWS
         else if (IsWebJumper(m.url))
             m.real_type= "text/webjumper";
+#endif /* MOZ_MAIL_NEWS */
         else
             m.real_type=NULL;
         _attachments[_numAttachments]=m;
@@ -522,7 +528,9 @@ int XFE_ComposeAttachFolderView::validateAttachment(Widget widget,const char *ur
 
         // accept anything we know how to display as a document
         if (MSG_RequiresMailMsgWindow(url) ||
+#ifdef MOZ_MAIL_NEWS
             MSG_RequiresNewsMsgWindow(url) ||
+#endif /* MOZ_MAIL_NEWS */
             MSG_RequiresBrowserWindow(url))
             return TRUE;
         else {
@@ -851,7 +859,6 @@ static int IsWebJumper(const char *url)
     return retval;
 }
     
-
 //
 // XFE_ComposeAttachDrop
 //
@@ -1018,6 +1025,7 @@ void XFE_ComposeAttachFolderView::processHistoryDrop(fe_dnd_Source *source)
 
 void XFE_ComposeAttachFolderView::processMessageDrop(fe_dnd_Source *source)
 {
+#ifdef MOZ_MAIL_NEWS
     XFE_ThreadView *threadView=(XFE_ThreadView*)source->closure;
     XFE_Outliner *outliner=threadView->getOutliner();
     const int *selectedList;
@@ -1045,6 +1053,7 @@ void XFE_ComposeAttachFolderView::processMessageDrop(fe_dnd_Source *source)
             XP_FREE(items[i]);
         delete items;
     }
+#endif /* MOZ_MAIL_NEWS */
 }
 
 

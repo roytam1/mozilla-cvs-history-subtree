@@ -51,10 +51,12 @@ extern MSG_HEADER_SET MSG_HeaderValue( int pos );
 extern "C"
 {
 
+#ifdef MOZ_MAIL_NEWS
 #include "addrbk.h"
 
 XP_List* FE_GetDirServers();
 ABook*   fe_GetABook(MWContext *context);
+#endif /* MOZ_MAIL_NEWS */
 
 static void KeyIn(
 	Widget w,
@@ -1465,6 +1467,7 @@ static void TableTraverse(
 
 extern "C" char * xfe_ExpandForNameCompletion(char * pString)
 {
+#ifdef MOZ_MAIL_NEWS
     ABID entryID;
     ABID field;
     ABook *pAddrBook = fe_GetABook(0);
@@ -1516,6 +1519,7 @@ extern "C" char * xfe_ExpandForNameCompletion(char * pString)
 		
 	}
     }
+#endif /* MOZ_MAIL_NEWS */
 
         return NULL;
 }

@@ -2364,7 +2364,7 @@ NET_AddLOSubmitDataToURLStruct(LO_FormSubmitData * sub_data,
 	/* If we're posting to mailto, then generate the full complement
 	   of mail headers; and allow the url to specify additional headers
 	   as well. */
-#ifdef MOZ_MAIL_NEWS    
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 	if (!strncasecomp(url_struct->address, "mailto:", 7))
 	  {
 #ifdef MOZILLA_CLIENT
@@ -2391,7 +2391,7 @@ NET_AddLOSubmitDataToURLStruct(LO_FormSubmitData * sub_data,
 		XP_ASSERT(0);
 #endif /* MOZILLA_CLIENT */
 	  }
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 	if(encoding && !strcasecomp(encoding, "text/plain"))
 	  {
@@ -3304,7 +3304,7 @@ NET_InitWAISProtocol(void)
     NET_RegisterProtocolImplementation(&wais_proto_impl, WAIS_TYPE_URL);
 }
 
-#ifdef MOZ_MAIL_NEWS    
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 PUBLIC char *
 NET_Base64Encode (char *src, int32 srclen)
 {
@@ -3368,4 +3368,4 @@ NET_Base64Decode (char *src,
   return bs.buffer;
 }
 
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */

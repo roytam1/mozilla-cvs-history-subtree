@@ -29,7 +29,9 @@
 #include "mimetric.h"   /* for MIME_RichtextConverter */
 #include "mimethtm.h"
 #include "mimemsig.h"
+#ifndef NO_SECURITY
 #include "mimecryp.h"
+#endif /* NO_SECURITY */
 #ifndef MOZILLA_30
 # include "xpgetstr.h"
 # include "mimevcrd.h"  /* for MIME_VCardConverter */
@@ -1122,11 +1124,13 @@ MIME_MessageConverter (int format_out, void *closure,
       )
     {
 #ifndef MOZILLA_30
+#ifdef MOZ_MAIL_NEWS
       MSG_Pane* pane = MSG_FindPane(context, MSG_MESSAGEPANE);
       msd->options->rot13_p = FALSE;
       if (pane) {
         msd->options->rot13_p = MSG_ShouldRot13Message(pane);
       }
+#endif /* MOZ_MAIL_NEWS */
 #else  /* MOZILLA_30 */
 
       XP_Bool all_headers_p = FALSE;
@@ -1708,9 +1712,12 @@ mime_get_main_object(MimeObject* obj)
   obj = cobj->children[0];
   for (;;) {
     if (!mime_subclass_p(obj->class,
-                         (MimeObjectClass*) &mimeMultipartSignedClass) &&
-        !mime_subclass_p(obj->class,
-                         (MimeObjectClass*) &mimeFilterClass)) {
+                         (MimeObjectClass*) &mimeMultipartSignedClass)
+#ifndef NO_SECURITY
+        && !mime_subclass_p(obj->class,
+                         (MimeObjectClass*) &mimeFilterClass)
+#endif /* NO_SECURITY */
+      ) {
       return obj;
     }
   /* Our main thing is a signed or encrypted object.
@@ -2083,6 +2090,7 @@ MIME_DisplayAttachmentPane(MWContext* context)
         MSG_Pane* pane = context->mime_data->last_pane;
         if (!pane)
             pane = MSG_FindPane(context, MSG_MESSAGEPANE);
+#ifdef MOZ_MAIL_NEWS
         if (pane) {
             MSG_MessagePaneCallbacks* callbacks;
             void* closure;
@@ -2091,6 +2099,9 @@ MIME_DisplayAttachmentPane(MWContext* context)
                 (*callbacks->UserWantsToSeeAttachments)(pane, closure);
             }
         }
+#else /* MOZ_MAIL_NEWS */
+        assert(0);		/* Do we need to handle this? */
+#endif /* MOZ_MAIL_NEWS */
     }
     return 0;
 }

@@ -25,16 +25,20 @@
 #include "ViewGlue.h"
 #include "Frame.h"
 
-#ifdef MOZ_MAIL_NEWS
 #include "MNView.h"
+
+#ifdef MOZ_MAIL_NEWS
 #include "MNListView.h"
 #include "MailDownloadFrame.h"
 #include "NewsPromptDialog.h"
-#include "ComposeFrame.h"
 #include "ABListSearchView.h"
 #include "ThreadView.h"
 #include "dirprefs.h"
 #endif
+
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#include "ComposeFrame.h"
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 #include "Outlinable.h"
 #include "Outliner.h"
@@ -56,32 +60,35 @@
 #endif
 #include "xpgetstr.h"
 
-#ifdef MOZ_MAIL_NEWS
-
 extern int XFE_MAIL_PRIORITY_NONE;
 extern int XFE_MAIL_PRIORITY_LOWEST;
 extern int XFE_MAIL_PRIORITY_LOW;
 extern int XFE_MAIL_PRIORITY_NORMAL;
 extern int XFE_MAIL_PRIORITY_HIGH;
 extern int XFE_MAIL_PRIORITY_HIGHEST;
+
+MSG_Master *XFE_MNView::m_master = NULL;
+
+extern int XFE_PROBLEMS_EXECUTING;
+extern int XFE_TERMINATED_ABNORMALLY;
+extern int XFE_APP_EXITED_WITH_STATUS;
+extern int XFE_COULDNT_FORK_FOR_DELIVERY;
+
+#ifdef MOZ_MAIL_NEWS
+
+MSG_Prefs *XFE_MNView::m_prefs = NULL;
+
 extern int XFE_MAIL_SPOOL_UNKNOWN;
 extern int XFE_UNABLE_TO_OPEN;
 extern int XFE_NO_KEEP_ON_SERVER_WITH_MOVEMAIL;
 
 extern int XFE_COULDNT_FORK_FOR_MOVEMAIL;
-extern int XFE_PROBLEMS_EXECUTING;
-extern int XFE_TERMINATED_ABNORMALLY;
-extern int XFE_APP_EXITED_WITH_STATUS;
-extern int XFE_COULDNT_FORK_FOR_DELIVERY;
 
 extern int XFE_GET_NEXT_N_MSGS;
 
 extern int XFE_MARKBYDATE_CAPTION;
 extern int XFE_MARKBYDATE;
 extern int XFE_DATE_MUST_BE_MM_DD_YY;
-
-MSG_Master *XFE_MNView::m_master = NULL;
-MSG_Prefs *XFE_MNView::m_prefs = NULL;
 
 MSG_BIFF_STATE XFE_MNView::m_biffstate = MSG_BIFF_Unknown;
 
@@ -138,13 +145,15 @@ const char * XFE_MNView::bannerNeedsUpdating = "XFE_MNView::bannerNeedsUpdating"
 const char * XFE_MNView::foldersHaveChanged = "XFE_MNView::foldersHaveChanged";
 const char * XFE_MNView::newsgroupsHaveChanged = "XFE_MNView::newsgroupsHaveChanged";
 const char * XFE_MNView::folderChromeNeedsUpdating = "XFE_MNView::folderChromeNeedsUpdating";
-const char * XFE_MNView::MNChromeNeedsUpdating = "XFE_MNView::MNChromeNeedsUpdating";
 const char * XFE_MNView::msgWasDeleted = "XFE_MNView::msgWasDeleted";
 const char * XFE_MNView::folderDeleted = "XFE_MNView::folderDeleted";
 
 XP_Bool XFE_MNView::m_messageDownloadInProgress = False;
 int  XFE_MNView::m_numFolderBeingLoaded = 0; // Indicate how many folder are loaded
 
+#endif /* MOZ_MAIL_NEWS */
+
+const char * XFE_MNView::MNChromeNeedsUpdating = "XFE_MNView::MNChromeNeedsUpdating";
 
 XFE_MNView::XFE_MNView(XFE_Component *toplevel_component,
 		       XFE_View *parent_view, 
@@ -154,25 +163,29 @@ XFE_MNView::XFE_MNView(XFE_Component *toplevel_component,
 {
   m_pane = p;
 
-  // a safe default;
-  m_displayingNewsgroup = FALSE;
-
   // initialize the mail master
   getMaster();
+
+#ifdef MOZ_MAIL_NEWS
+  // a safe default;
+  m_displayingNewsgroup = FALSE;
 
 
   XFE_MozillaApp::theApp()->registerInterest(
 		XFE_MozillaApp::biffStateChanged,
 		this,
 		(XFE_FunctionNotification) updateBiffState_cb);
+#endif /* MOZ_MAIL_NEWS */
 }
 
 XFE_MNView::~XFE_MNView()
 {
+#ifdef MOZ_MAIL_NEWS
   XFE_MozillaApp::theApp()->unregisterInterest(
 		XFE_MozillaApp::biffStateChanged,
 		this,
 		(XFE_FunctionNotification)updateBiffState_cb);
+#endif /* MOZ_MAIL_NEWS */
 }
 
 void
@@ -245,18 +258,22 @@ XFE_MNView::commandToMsgCmd(CommandType cmd)
 #define BEGIN_MN_MSG_MAP() if (0)
 #define MN_MSGMAP(the_cmd, the_msg_cmd) else if (cmd == (the_cmd)) msg_cmd = (the_msg_cmd)
   BEGIN_MN_MSG_MAP();
-  MN_MSGMAP(xfeCmdAddAllToAddressBook, MSG_AddAll);
-  MN_MSGMAP(xfeCmdAddNewsgroup, MSG_AddNewsGroup);
-  MN_MSGMAP(xfeCmdAddSenderToAddressBook, MSG_AddSender);
-  MN_MSGMAP(xfeCmdCancelMessages, MSG_CancelMessage);
-  MN_MSGMAP(xfeCmdClearNewGroups, MSG_ClearNew); // subscribe ui only
-  MN_MSGMAP(xfeCmdCollapseAll, MSG_CollapseAll); // subscribe ui only
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
   MN_MSGMAP(xfeCmdComposeArticle, MSG_PostNew);
   MN_MSGMAP(xfeCmdComposeArticleHTML, MSG_PostNew);
   MN_MSGMAP(xfeCmdComposeArticlePlain, MSG_PostNew);
   MN_MSGMAP(xfeCmdComposeMessage, MSG_MailNew);
   MN_MSGMAP(xfeCmdComposeMessageHTML, MSG_MailNew);
   MN_MSGMAP(xfeCmdComposeMessagePlain, MSG_MailNew);
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
+
+#ifdef MOZ_MAIL_NEWS
+  MN_MSGMAP(xfeCmdAddAllToAddressBook, MSG_AddAll);
+  MN_MSGMAP(xfeCmdAddNewsgroup, MSG_AddNewsGroup);
+  MN_MSGMAP(xfeCmdAddSenderToAddressBook, MSG_AddSender);
+  MN_MSGMAP(xfeCmdCancelMessages, MSG_CancelMessage);
+  MN_MSGMAP(xfeCmdClearNewGroups, MSG_ClearNew); // subscribe ui only
+  MN_MSGMAP(xfeCmdCollapseAll, MSG_CollapseAll); // subscribe ui only
   MN_MSGMAP(xfeCmdCompressAllFolders, MSG_CompressAllFolders);
   MN_MSGMAP(xfeCmdCompressFolders, MSG_CompressFolder);
   MN_MSGMAP(xfeCmdDeleteFolder, MSG_DeleteFolder);
@@ -331,6 +348,7 @@ XFE_MNView::commandToMsgCmd(CommandType cmd)
   MN_MSGMAP(xfeCmdWrapLongLines, MSG_WrapLongLines);
   MN_MSGMAP(xfeCmdEditConfiguration, MSG_ManageMailAccount);
   MN_MSGMAP(xfeCmdModerateDiscussion, MSG_ModerateNewsgroup);
+#endif /* MOZ_MAIL_NEWS */
 #undef BEGIN_MN_MSG_MAP
 #undef MN_MSG_MAP
 
@@ -385,6 +403,7 @@ char *
 XFE_MNView::commandToString(CommandType cmd, void * calldata, XFE_CommandInfo* info)
 {
 #define IS_CMD(command) cmd == (command)  
+#ifdef MOZ_MAIL_NEWS
 	if (IS_CMD(xfeCmdNewFolder)) 
 		{
 			if (m_displayingNewsgroup)
@@ -428,10 +447,13 @@ XFE_MNView::commandToString(CommandType cmd, void * calldata, XFE_CommandInfo* i
 		  return buf;
 	  }
 	else
+#endif /* MOZ_MAIL_NEWS */
 		return XFE_View::commandToString(cmd, calldata, info);
 		
 #undef IS_CMD
 }
+
+#ifdef MOZ_MAIL_NEWS
 
 void
 XFE_MNView::markReadByDate()
@@ -624,25 +646,21 @@ XFE_MNView::getNewMail()
     }
 }
 
-void 
-XFE_MNView::paneChanged(XP_Bool /*asynchronous*/,
-                        MSG_PANE_CHANGED_NOTIFY_CODE notify_code,
-                        int32 /*value*/)
-{
-  notifyInterested(XFE_MNView::bannerNeedsUpdating, (void*)notify_code);
-}
+#endif /* MOZ_MAIL_NEWS */
 
 MSG_Master *
 XFE_MNView::getMaster()
 {
   if (m_master == NULL)
     {
-      //      XFE_MNView::m_prefs = MSG_CreatePrefs();
+      // XFE_MNView::m_prefs = MSG_CreatePrefs();
       m_master = MSG_InitializeMail(fe_mailNewsPrefs);
     }
 
   return m_master;
 }
+
+#ifdef MOZ_MAIL_NEWS
 
 void
 XFE_MNView::destroyMasterAndShutdown()
@@ -661,6 +679,18 @@ XP_Bool
 XFE_MNView::isDisplayingNews()
 {
   return m_displayingNewsgroup;
+}
+
+#endif /* MOZ_MAIL_NEWS */
+
+void 
+XFE_MNView::paneChanged(XP_Bool /*asynchronous*/,
+                        MSG_PANE_CHANGED_NOTIFY_CODE notify_code,
+                        int32 /*value*/)
+{
+#ifdef MOZ_MAIL_NEWS
+  notifyInterested(XFE_MNView::bannerNeedsUpdating, (void*)notify_code);
+#endif /* MOZ_MAIL_NEWS */
 }
 
 Boolean
@@ -712,6 +742,7 @@ XFE_MNView::doCommand(CommandType cmd, void *calldata, XFE_CommandInfo* info)
             CONTEXT_DATA(m_contextData)->stealth_cmd = (fe_globalPrefs.send_html_msg == True) ;
             MSG_Command(m_pane, commandToMsgCmd(cmd), NULL, 0);
    }
+#ifdef MOZ_MAIL_NEWS
    else if (cmd == xfeCmdCleanUpDisk)
    {
        if (MSG_CleanupNeeded(getMaster()))
@@ -724,6 +755,7 @@ XFE_MNView::doCommand(CommandType cmd, void *calldata, XFE_CommandInfo* info)
            progressFrame->cleanUpNews();
        }
    }
+#endif /* MOZ_MAIL_NEWS */
    else 
    {
 	XFE_View::doCommand(cmd, calldata, info);
@@ -731,6 +763,8 @@ XFE_MNView::doCommand(CommandType cmd, void *calldata, XFE_CommandInfo* info)
 
 
 }
+
+#ifdef MOZ_MAIL_NEWS */
 
 MSG_BIFF_STATE
 XFE_MNView::getBiffState()
@@ -769,11 +803,6 @@ FE_PaneChanged(MSG_Pane *pane, XP_Bool asynchronous,
 //  MSG_HandlePaneChangedNotifications(pane, asynchronous, code, value);
 }
 
-#endif  // MOZ_MAIL_NEWS
-
-
-#ifdef MOZ_MAIL_NEWS
-
 extern "C" void
 FE_UpdateBiff(MSG_BIFF_STATE state)
 {
@@ -790,6 +819,10 @@ FE_UpdateToolbar (MWContext *context)
   if (f)
     f->notifyInterested(XFE_View::chromeNeedsUpdating, NULL);
 }
+
+#endif  // MOZ_MAIL_NEWS
+
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
 
 extern "C" void
 FE_UpdateCompToolbar(MSG_Pane* comppane)
@@ -838,6 +871,11 @@ FE_DestroyMailCompositionContext(MWContext* context)
 
   cf->destroyWhenAllConnectionsComplete();
 }
+
+#endif  // MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+
+
+#ifdef MOZ_MAIL_NEWS
 
 extern "C" MWContext*
 FE_GetAddressBookContext(MSG_Pane* pane, XP_Bool /*viewnow*/)
@@ -954,11 +992,15 @@ FE_ListChangeFinished(MSG_Pane* pane, XP_Bool asynchronous,
   outliner->listChangeFinished(asynchronous, notify, where, num, MSG_GetNumLines(pane));
 }
 
+#endif /* MOZ_MAIL_NEWS */
+
 MSG_Master *
 fe_getMNMaster()
 {
   return XFE_MNView::getMaster();
 }
+
+#ifdef MOZ_MAIL_NEWS
 
 static void
 fe_incdone(void* closure, XP_Bool result)
@@ -1136,6 +1178,31 @@ fe_run_movemail (MWContext *context, const char *from, const char *to)
     }
 }
 
+extern "C" XP_Bool 
+FE_NewsDownloadPrompt(MWContext *context,
+					  int32 numMessagesToDownload,
+					  XP_Bool *downloadAll)
+{
+	XFE_Frame *f = ViewGlue_getFrame(XP_GetNonGridContext(context));
+	XP_Bool ret_val;
+	XFE_NewsPromptDialog *dialog;
+	if (!f)
+		return False;
+
+	dialog = new XFE_NewsPromptDialog(f->getBaseWidget(), numMessagesToDownload);
+
+	ret_val = dialog->post();
+
+	*downloadAll = dialog->getDownloadAll();
+
+	delete dialog;
+
+	return ret_val;
+}
+
+#endif  // MOZ_MAIL_NEWS
+
+
 /* If we're set up to deliver mail/news by running a program rather
    than by talking to SMTP/NNTP, this does it.
 
@@ -1158,6 +1225,9 @@ msg_DeliverMessageExternally(MWContext *context, const char *msg_file)
 {
   struct sigaction newact, oldact;
   static char *cmd = 0;
+#ifdef DEBUG_akkana
+  printf("msg_DeliverMessageExternally()\n");
+#endif
   if (!cmd)
     {
       /* The first time we're invoked, look up the command in the
@@ -1169,9 +1239,13 @@ msg_DeliverMessageExternally(MWContext *context, const char *msg_file)
 	cmd = XP_STRDUP(cmd);
     }
 
-  if (!cmd || !*cmd)
+  if (!cmd || !*cmd) {
+#ifdef DEBUG_akkana
+    printf("Proceeding with normal delivery\n");
+#endif
     /* No external command -- proceed with "normal" delivery. */
     return 0;
+    }
   else
     {
       pid_t forked;
@@ -1274,31 +1348,7 @@ msg_DeliverMessageExternally(MWContext *context, const char *msg_file)
     }
 }
 
-extern "C" XP_Bool 
-FE_NewsDownloadPrompt(MWContext *context,
-					  int32 numMessagesToDownload,
-					  XP_Bool *downloadAll)
-{
-	XFE_Frame *f = ViewGlue_getFrame(XP_GetNonGridContext(context));
-	XP_Bool ret_val;
-	XFE_NewsPromptDialog *dialog;
-	if (!f)
-		return False;
-
-	dialog = new XFE_NewsPromptDialog(f->getBaseWidget(), numMessagesToDownload);
-
-	ret_val = dialog->post();
-
-	*downloadAll = dialog->getDownloadAll();
-
-	delete dialog;
-
-	return ret_val;
-}
-
 extern "C" MSG_Master*
 FE_GetMaster() {
 	return fe_getMNMaster();
 }
-
-#endif  // MOZ_MAIL_NEWS

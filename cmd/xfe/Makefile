@@ -259,6 +259,13 @@ BASIC_LIBS	+= \
 		  $(NULL)
 endif
 
+ifdef MOZ_MAIL_COMPOSE
+BASIC_LIBS	+= \
+		  $(DIST)/lib/libmailto.a \
+		  $(DIST)/lib/libmime.a \
+		  $(NULL)
+endif
+
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libmisc.a \
 		  $(NULL)

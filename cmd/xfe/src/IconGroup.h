@@ -135,7 +135,6 @@ ICONGROUP(MNTB_ReplyAll)
 ICONGROUP(MNTB_Forward)
 ICONGROUP(MNTB_File)
 ICONGROUP(MNTB_Trash)
-ICONGROUP(MNTB_Next)
 ICONGROUP(MNTB_Prev)
 ICONGROUP(MNTB_MarkRead)
 
@@ -145,20 +144,6 @@ ICONGROUP(MNTB_NewFolder)
 /* Toolbar Security */
 ICONGROUP(MNTB_SignUnsecure)
 ICONGROUP(MNTB_SignSecure)
-
-/* Compose Window. */
-ICONGROUP(MNC_Send)
-/* MNTB_File */
-ICONGROUP(MNC_Quote)
-ICONGROUP(MNC_Address)
-ICONGROUP_VERBOSE(MNC_Attach, &MNC_Attach, NULL, NULL, NULL)
-ICONGROUP(MNC_SpellCheck)
-ICONGROUP(MNC_Save)
-ICONGROUP(MNC_Directory)
-/* Tab Icons */
-ICONGROUP_VERBOSE(MNC_AddressSmall, &MNC_AddressSmall, NULL, NULL,NULL)
-ICONGROUP_VERBOSE(MNC_AttachSmall,  &MNC_AttachSmall, NULL, NULL,NULL)
-ICONGROUP_VERBOSE(MNC_Options, &MNC_Options, NULL,NULL,NULL)
 
 ICONGROUP(MN_CollectSmall)
 ICONGROUP(MN_Collect)
@@ -174,6 +159,26 @@ ICONGROUP(MNAB_Properties)
 ICONGROUP(MNAB_Call)
 /* MNTB_Trash */
 #endif /* !MOZ_MAIL_NEWS || !WANT_GROUPS */
+
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE) || !defined(WANT_GROUPS)
+/* Compose Window. */
+ICONGROUP(MNC_Send)
+/* MNTB_File */
+ICONGROUP(MNC_Quote)
+ICONGROUP(MNC_Address)
+ICONGROUP_VERBOSE(MNC_Attach, &MNC_Attach, NULL, NULL, NULL)
+ICONGROUP(MNC_SpellCheck)
+ICONGROUP(MNC_Save)
+ICONGROUP(MNC_Directory)
+/* Tab Icons */
+ICONGROUP_VERBOSE(MNC_AddressSmall, &MNC_AddressSmall, NULL, NULL,NULL)
+ICONGROUP_VERBOSE(MNC_AttachSmall,  &MNC_AttachSmall, NULL, NULL,NULL)
+ICONGROUP_VERBOSE(MNC_Options, &MNC_Options, NULL,NULL,NULL)
+
+/* Moved from MOZ_MAIL_NEWS because compose window needs it */
+ICONGROUP(MNTB_Next)
+#endif /* !MOZ_MAIL_NEWS || !WANT_GROUPS */
+
 
 #if defined(EDITOR) || !defined(WANT_GROUPS)
 /* Editor */

@@ -27,6 +27,10 @@ LIBRARY_NAME	= xfe2
 
 REQUIRES	= nspr layer js jtools applet security img util parse layout hook pref java libfont ldap lay style xfeicons rdf xpcom plug
 
+ifdef MOZ_MAIL_COMPOSE
+REQUIRES	+= mailto
+endif
+
 CPPSRCS		= \
 		  plugin.cpp \
 		  BackForwardMenu.cpp \
@@ -228,6 +232,45 @@ CPPSRCS		+= \
 		  $(NULL)
 endif
 
+ifdef MOZ_MAIL_COMPOSE
+CPPSRCS		+= \
+		  AddressOutliner.cpp \
+		  AddressFolderView.cpp \
+		  AttachPanel.cpp \
+		  AttachmentMenu.cpp \
+		  ComposeAttachDialog.cpp \
+		  ComposeAttachFolderView.cpp \
+		  ComposeFolderView.cpp \
+		  ComposeFrame.cpp \
+		  ComposeView.cpp \
+		  TextEditorView.cpp \
+		  MNView.cpp \
+		  MNListView.cpp \
+		  $(NULL)
+endif
+
+ifdef MOZ_MAIL_COMPOSE_RADICAL
+CPPSRCS		+= \
+		  msgglue.cpp \
+		  msgcflds.cpp \
+		  msgpane.cpp \
+		  msgcpane.cpp \
+		  msgmast.cpp \
+		  msgprefs.cpp \
+		  msgsend.cpp \
+		  msgsendp.cpp \
+		  msgurlq.cpp \
+		  ptrarray.cpp \
+		  msgzap.cpp \
+		  $(NULL)
+
+NOCPPSRC += 	  msgurlq.cpp \
+		  ptrarray.cpp \
+		  $(NULL)
+
+# Also need msgsend.cpp and OptionFolderView.cpp 
+endif
+
 ifdef MOZ_TASKBAR
 CPPSRCS		+= \
 		  TaskBar.cpp \
@@ -267,6 +310,9 @@ CSRCS		= commands.c
 include $(DEPTH)/config/rules.mk
 
 INCLUDES	+= -I$(OBJDIR) -I.. -I../Microline3.0 -I../XfeWidgets -I../DtWidgets -I$(DEPTH)/modules/libreg/include
+ifdef MOZ_MAIL_COMPOSE
+INCLUDES	+= -I$(DEPTH)/dist/public/htmldlgs
+endif
 
 #ifndef MOZ_LITE
 #CFLAGS		+= -DEDITOR
@@ -285,6 +331,10 @@ endif
 
 ifdef USE_MOTIF_DND
 DEFINES		+= -DUSE_MOTIF_DND
+endif
+
+ifdef MOZ_MAIL_COMPOSE
+DEFINES		+= -DMOZ_MAIL_COMPOSE
 endif
 
 

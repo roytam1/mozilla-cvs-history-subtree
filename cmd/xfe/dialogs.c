@@ -4384,6 +4384,10 @@ fe_attach_dropfunc(Widget dropw, void* closure, fe_dnd_Event type,
 
 #endif  /* 0 */
 
+#endif  /* MOZ_MAIL_NEWS */
+
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+
 int
 FE_GetMessageBody (MSG_Pane* comppane,
 		   char **body,
@@ -4403,7 +4407,6 @@ FE_DoneWithMessageBody(MSG_Pane* comppane, char* body, uint32 body_size)
   fe_doneWithMessageBody(context, body, body_size);
 }
 
-
 void
 fe_mail_text_modify_cb (Widget text, XtPointer client_data,
 			XtPointer call_data)
@@ -4414,7 +4417,7 @@ fe_mail_text_modify_cb (Widget text, XtPointer client_data,
   /*  MSG_MessageBodyEdited(CONTEXT_DATA(context)->comppane); */
 }
 
-#endif  /* MOZ_MAIL_NEWS */
+#endif  /* MOZ_MAIL_NEWS  || MOZ_MAIL_COMPOSE */
 
 #define cite_abort 0
 #define cite_protect_me_from_myself 1

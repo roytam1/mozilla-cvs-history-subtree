@@ -100,8 +100,10 @@ public:
   virtual void Flippyfunc(const OutlineFlippyFuncData *data);
   Boolean removeDataAt(int line);
 
+#ifdef MOZ_MAIL_NEWS
   // For address book button
   XFE_CALLBACK_DECL(openAddrBk)
+#endif /* MOZ_MAIL_NEWS */
 
   void setHeader(int line, MSG_HEADER_SET header);
   int getHeader(int line);
@@ -151,12 +153,15 @@ public:
   void addrMsgCB(ABAddrMsgCBProcStruc* clientData);
   void purgeAll();
 
+#ifdef MOZ_MAIL_NEWS
   // internal drop callback for addressbook and address search window drops
   static void AddressDropCb(Widget,void*,fe_dnd_Event,fe_dnd_Source*,XEvent*);
   void addressDropCb(fe_dnd_Source*);
   void processAddressBookDrop(XFE_Outliner*,DIR_Server *abDir,ABook *abBook,
                               AddressPane*);
   void processLDAPDrop(fe_dnd_Source*);
+#endif /* MOZ_MAIL_NEWS */
+
 private:
 
   XP_Bool m_clearAddressee;

@@ -203,7 +203,7 @@ NET_SetMailRelayHost(char * host)
  * gets user domian name out from FE_UsersMailAddress()
  */
 PRIVATE const char *
-net_smtp_get_user_domain_name()
+net_smtp_get_user_domain_name(void)
 {
 	const char *mail_addr, *at_sign = NULL;
 	mail_addr = FE_UsersMailAddress();
@@ -535,17 +535,17 @@ net_smtp_auth_login_response(ActiveEntry *cur_entry)
 
   switch (CD_RESPONSE_CODE/100) {
   case 2:
+#ifdef MOZ_MAIL_NEWS
 	  {
 		  char *pop_password = (char *)NET_GetPopPassword();
 		  CD_NEXT_STATE = SMTP_SEND_HELO_RESPONSE;
 		  if (pop_password == NULL)
 			NET_SetPopPassword2(net_smtp_password);
-#ifdef MOZ_MAIL_NEWS
 		  if ( IMAP_GetPassword() == NULL )
 			  IMAP_SetPassword(net_smtp_password);
-#endif /* MOZ_MAIL_NEWS */
 		  XP_FREEIF(pop_password);
 	  }
+#endif /* MOZ_MAIL_NEWS */
 	break;
   case 3:
 	CD_NEXT_STATE = SMTP_SEND_AUTH_LOGIN_PASSWORD;
@@ -591,7 +591,7 @@ net_smtp_auth_login_username(ActiveEntry *cur_entry)
   if (!pop_username || !*pop_username)
 	return (MK_POP3_USERNAME_UNDEFINED);
 
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
   base64Str = NET_Base64Encode(pop_username,
 							   XP_STRLEN(pop_username));
   if (base64Str) {
@@ -606,7 +606,7 @@ net_smtp_auth_login_username(ActiveEntry *cur_entry)
 	
 	return (CE_STATUS);
   }
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
   return -1;
 }
@@ -649,9 +649,9 @@ net_smtp_auth_login_password(ActiveEntry *cur_entry)
   if (net_smtp_password) {
 	char *base64Str = NULL;
 	
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 	base64Str = NET_Base64Encode(net_smtp_password, XP_STRLEN(net_smtp_password));
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 
 	if (base64Str) {
 	  PR_snprintf(buffer, sizeof(buffer), "%.256s" CRLF, base64Str);
@@ -1564,6 +1564,69 @@ NET_InitMailtoProtocol(void)
         mailto_proto_impl.cleanup = net_CleanupMailto;
 
         NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_TYPE_URL);
+}
+
+/* isOnline funcs moved from mknews.c because it's needed for mail compose,
+ * which doesn't include mknews.c
+ */
+static XP_Bool isOnline = TRUE;
+static XP_Bool prefInitialized = FALSE;
+
+/* fix Mac warning of missing prototype */
+MODULE_PRIVATE int PR_CALLBACK 
+NET_OnlinePrefChangedFunc(const char *pref, void *data);
+
+MODULE_PRIVATE int PR_CALLBACK NET_OnlinePrefChangedFunc(const char *pref, void *data) 
+{
+	int status;
+	int32 port=0;
+	char * socksHost = NULL;
+	char text[MAXHOSTNAMELEN + 8];
+
+	if (!XP_STRCASECMP(pref,"network.online")) 
+		status = PREF_GetBoolPref("network.online", &isOnline);
+
+	if ( isOnline ) {
+		CACHE_CloseAllOpenSARCache();
+
+		/* If the user wants to use a socks server set it up. */
+		if ( (NET_GetProxyStyle() == PROXY_STYLE_MANUAL) ) {
+			PREF_CopyCharPref("network.hosts.socks_server",&socksHost);
+			PREF_GetIntPref("network.hosts.socks_serverport",&port);
+			if (socksHost && *socksHost && port) {
+				PR_snprintf(text, sizeof(text), "%s:%d", socksHost, port);  
+				NET_SetSocksHost(text);
+			}
+			else {
+				NET_SetSocksHost(socksHost); /* NULL is ok */
+			}
+		}
+	}
+	else {
+		CACHE_OpenAllSARCache();
+	}
+
+	return status;
+}
+
+MODULE_PRIVATE XP_Bool
+NET_IsOffline()
+{
+	extern XP_Bool isOnline;
+	/*  Cache this value, and register a pref callback to
+		find out when it changes. 
+	*/
+	if (!prefInitialized)
+	{
+		/*int status =*/ PREF_GetBoolPref("network.online", &isOnline);
+		PREF_RegisterCallback("network.online",NET_OnlinePrefChangedFunc, NULL);
+#ifdef MOZ_MAIL_NEWS
+		/* because this routine gets called so often, we can register this callback here too. */
+		PREF_RegisterCallback("news.max_articles", NET_NewsMaxArticlesChangedFunc, NULL);
+#endif /* MOZ_MAIL_NEWS */
+		prefInitialized = TRUE;
+	}
+	return !isOnline;
 }
 
 #endif /* defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE) */

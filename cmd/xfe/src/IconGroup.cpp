@@ -117,6 +117,17 @@ static _name_and_group_t _iconGroups[] =
 	{ "Reload",			&TB_Reload_group },
 	{ "Stop",			&TB_Stop_group },
 	{ "MixSecurity",	&TB_MixSecurity_group },
+#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+	// Compose
+	{ "Send",			&MNC_Send_group },
+	{ "Quote",			&MNC_Quote_group },
+	{ "Address",		&MNC_Address_group },
+	{ "Attach",			&MNC_Attach_group },
+	{ "SpellCheck",		&MNC_SpellCheck_group },
+	{ "Save",			&MNC_Save_group },
+	{ "Directory",		&MNC_Directory_group },
+	{ "Next",			&MNTB_Next_group },
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 #ifdef MOZ_MAIL_NEWS
 	// Mail/News
 	{ "GetMsg",			&MNTB_GetMsg_group },
@@ -127,26 +138,16 @@ static _name_and_group_t _iconGroups[] =
 	{ "Forward",		&MNTB_Forward_group },
 	{ "File",			&MNTB_File_group },
 	{ "Trash",			&MNTB_Trash_group },
-	{ "Next",			&MNTB_Next_group },
 	{ "Prev",			&MNTB_Prev_group },
 	{ "NewFolder",		&MNTB_NewFolder_group },
 	{ "MarkRead",		&MNTB_MarkRead_group },
-
-	// Compose
-	{ "Send",			&MNC_Send_group },
-	{ "Quote",			&MNC_Quote_group },
-	{ "Address",		&MNC_Address_group },
-	{ "Attach",			&MNC_Attach_group },
-	{ "SpellCheck",		&MNC_SpellCheck_group },
-	{ "Save",			&MNC_Save_group },
-	{ "Directory",		&MNC_Directory_group },
 
 	// Address Book
 	{ "NewPerson",		&MNAB_NewPerson_group },
 	{ "NewList",		&MNAB_NewList_group },
 	{ "Properties",		&MNAB_Properties_group },
 	{ "Call",			&MNAB_Call_group },
-#endif
+#endif /* MOZ_MAIL_NEWS */
 #ifdef EDITOR
 	// Editor
 	{ "New",			&ed_new_group },

@@ -37,6 +37,10 @@ include $(DEPTH)/config/config.mk
 
 ifdef MOZ_MAIL_NEWS
 CSRCS		+= mime.c dirprefs.c
+else
+ifdef MOZ_MAIL_COMPOSE
+CSRCS		+= mime.c
+endif
 endif
 
 include $(DEPTH)/config/rules.mk

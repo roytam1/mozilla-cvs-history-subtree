@@ -101,6 +101,8 @@ PRIVATE XP_Bool net_uidl_command_unimplemented = FALSE;
 PRIVATE XP_Bool net_xtnd_xlst_command_unimplemented = FALSE;
 PRIVATE XP_Bool net_top_command_unimplemented = FALSE;
 
+#ifdef MOZ_MAIL_NEWS
+
 /* definitions of extended POP3 capabilities
  */
 typedef enum {
@@ -285,6 +287,9 @@ NET_LeavePopMailOnServer(Bool do_it)
 	/* XP_ASSERT(0);*/				/* This routine is obsolete. */
 }
 
+#endif /* MOZ_MAIL_NEWS */
+
+
 /* Well, someone finally found a legitimate reason to put an @ in the
  * mail server user name. They're trying to use the user name as a UID
  * in the LDAP directory, and the UIDs happen to have the format
@@ -371,6 +376,8 @@ NET_SetPopPassword2(const char *password)
 {
 	net_set_pop3_password(password);
 }
+
+#ifdef MOZ_MAIL_NEWS
 
 /* sets the size limit for pop3 messages
  *
@@ -3045,5 +3052,7 @@ NET_InitPop3Protocol(void)
 
     NET_RegisterProtocolImplementation(&pop3_proto_impl, POP3_TYPE_URL);
 }
+
+#endif /* MOZ_MAIL_NEWS */
 
 #endif /* MOZILLA_CLIENT */

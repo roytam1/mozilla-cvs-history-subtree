@@ -941,6 +941,7 @@ Pixmap XFE_AttachPanelItem::iconPixmap()
         return _imagePixmap;
     }
     
+#ifdef MOZ_MAIL_NEWS
     if (strncmp(_dataType,"message",7)==0) {
         if (_messagePixmap==XmUNSPECIFIED_PIXMAP) {
             fe_icon icon={ 0 };
@@ -952,6 +953,7 @@ Pixmap XFE_AttachPanelItem::iconPixmap()
         }        
         return _messagePixmap;
     }
+#endif /* MOZ_MAIL_NEWS */
     
     if (strncmp(_dataType,"video",5)==0) {
         if (_moviePixmap==XmUNSPECIFIED_PIXMAP) {
@@ -965,6 +967,7 @@ Pixmap XFE_AttachPanelItem::iconPixmap()
         return _moviePixmap;
     }
     
+#ifdef MOZ_MAIL_NEWS
     if (strcmp(_dataType,"text/x-vcard")==0) {
         if (_vcardPixmap==XmUNSPECIFIED_PIXMAP) {
             fe_icon icon={ 0 };
@@ -976,6 +979,7 @@ Pixmap XFE_AttachPanelItem::iconPixmap()
         }
         return _vcardPixmap;
     }
+#endif /* MOZ_MAIL_NEWS */
 
     if (strncmp(_dataType,"text",4)==0) {
         if (_textPixmap==XmUNSPECIFIED_PIXMAP) {

@@ -57,8 +57,10 @@ public:
 
   void destroyWhenAllConnectionsComplete();
 
+#ifdef MOZ_MAIL_NEWS
   // For security icon state...
   virtual int getSecurityStatus();
+#endif /* MOZ_MAIL_NEWS */
   virtual XP_Bool isOkToClose();
 
 protected:

@@ -35,6 +35,10 @@ ifdef MOZ_MAIL_NEWS
 DIRS	+= libmsg
 endif
 
+ifdef MOZ_MAIL_COMPOSE
+DIRS	+= mailto libmime
+endif
+
 ifdef MOZ_NEO
 DIRS	+= libneo
 endif

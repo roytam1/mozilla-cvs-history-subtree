@@ -83,7 +83,7 @@ NET_PrintRawToDisk(int format_out,
                    URL_Struct *url_struct, 
 				   MWContext *context);
 
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS)|| defined(MOZ_MAIL_COMPOSE)
 typedef struct MIME_DataObject {
   MimeDecoderData *decoder;		/* State used by the decoder */  
   NET_StreamClass *next_stream;	/* Where the output goes */
@@ -175,7 +175,7 @@ NET_MimeEncodingConverter_1 (int          format_out,
 							 XP_Bool partial_p,
 							 NET_StreamClass *next_stream)
 {
-#ifdef MOZ_MAIL_NEWS
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
    MIME_DataObject* obj;
    MimeDecoderData *(*fn) (int (*) (const char*, int32, void*), void*) = 0;
 
@@ -258,7 +258,7 @@ NET_MimeEncodingConverter_1 (int          format_out,
 #else
    XP_ASSERT(0);
    return(NULL);
-#endif /* MOZ_MAIL_NEWS */
+#endif /* MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE */
 }
 
 

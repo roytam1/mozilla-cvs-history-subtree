@@ -69,11 +69,13 @@ static MSG_HEADER_SET standard_header_set[] = {
 extern "C" char *fe_StringTrim (char *string);
 extern "C" char * xfe_ExpandName(char * pString, int* iconType, short* security);
 
+#ifdef MOZ_MAIL_NEWS
 extern "C"
 {
 XP_List* FE_GetDirServers();
 ABook*   fe_GetABook(MWContext *context);
 };
+#endif /* MOZ_MAIL_NEWS */
 
 
 const char *XFE_AddressFolderView::tabPrev = "XFE_AddressFolderView::tabPrev";
@@ -334,25 +336,27 @@ void XFE_AddressFolderView::addrMsgCB(ABAddrMsgCBProcStruc* clientData)
 				  False);
 }/* XFE_AddressFolderView::addrMsgCB */
 
+#ifdef MOZ_MAIL_NEWS
 XFE_CALLBACK_DEFN(XFE_AddressFolderView, openAddrBk)(XFE_NotificationCenter */*obj*/,
                                           void */*clientData*/,
                                           void */*callData*/)
 {
-
       fe_showAddrMSGDlg(getToplevel()->getBaseWidget(), 
 						XFE_AddressFolderView::addrMsgCallback, this, 
 						m_contextData);
       return;
 }
+#endif /* MOZ_MAIL_NEWS */
 
 void
 XFE_AddressFolderView::doCommand(CommandType command, void *, XFE_CommandInfo*)
 {
+#ifdef MOZ_MAIL_NEWS
 	if (command == xfeCmdAddresseePicker)
 		fe_showAddrMSGDlg(getToplevel()->getBaseWidget(), 
 						  XFE_AddressFolderView::addrMsgCallback, this, 
 						  m_contextData);
-
+#endif /* MOZ_MAIL_NEWS */
 }
 
 // Outlinable Interface starts here 
@@ -955,7 +959,7 @@ XFE_AddressFolderView::setupIcons()
                      MN_Newsgroup.mono_bits, MN_Newsgroup.color_bits, 
 		     MN_Newsgroup.mask_bits, FALSE);
 
-
+#ifdef MOZ_MAIL_NEWS
 	// Security
         fe_NewMakeIcon(getToplevel()->getBaseWidget(),
                        BlackPixelOfScreen(XtScreen(base)), // umm. fix me
@@ -968,6 +972,7 @@ XFE_AddressFolderView::setupIcons()
                        MN_CertIndicator.color_bits, 
                        MN_CertIndicator.mask_bits, 
                        FALSE);
+#endif /* MOZ_MAIL_NEWS */
   }
 }
 
@@ -1044,9 +1049,10 @@ XFE_AddressFolderView::createWidgets(Widget parent_widget)
 		0);
 	((XFE_AddressOutliner*)m_outliner)->show();
 
+#ifdef MOZ_MAIL_NEWS
         // create drop site for internal drop
         fe_dnd_CreateDrop(m_outliner->getBaseWidget(),AddressDropCb,this);
-
+#endif /* MOZ_MAIL_NEWS */
 }
 
 void
@@ -1189,19 +1195,19 @@ void XFE_AddressFolderView::updateHeaderInfo ( void )
 
         if ((count != -1)&&(list!=NULL))
         {
-            for (i=0; i<count; i++)
-            {
-                XP_ASSERT(list[i].header_value);
-                MSG_SetCompHeader(pComposePane,list[i].header_type,list[i].header_value);
-                XP_FREE(list[i].header_value);
-            }
-	    XP_FREE(list);
+          for (i=0; i<count; i++)
+          {
+            XP_ASSERT(list[i].header_value);
+            MSG_SetCompHeader(pComposePane,list[i].header_type,list[i].header_value);
+            XP_FREE(list[i].header_value);
+          }
+          XP_FREE(list);
         }
         for (i=0; i<count; i++)
         {
-		XP_FREE(entry[i].header_value);
-	}
-	XP_FREE(entry);
+          XP_FREE(entry[i].header_value);
+        }
+        XP_FREE(entry);
     }
 
 }
@@ -1219,6 +1225,7 @@ XFE_AddressFolderView::changedItem(char *pString, int*  iconType,
 
 extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security)
 {
+#ifdef MOZ_MAIL_NEWS
         ABID entryID;
         ABID field;
         char * fullname;
@@ -1257,6 +1264,7 @@ extern "C" char * xfe_ExpandName(char * pString, int* iconID, short* security)
                         pAddrBook, entryID, &fullname);
           if (fullname) return fullname;  
        }
+#endif /* MOZ_MAIL_NEWS */
        return NULL; 
 }
 
@@ -1396,6 +1404,8 @@ XFE_AddressFolderView::getCurrentString(int line, char **textstr)
 XFE_AddressFolderView::~XFE_AddressFolderView()
 {
 }
+
+#ifdef MOZ_MAIL_NEWS
 
 // Address field drop site handler
 void
@@ -1563,3 +1573,4 @@ XFE_AddressFolderView::processLDAPDrop(fe_dnd_Source* source)
     m_clearAddressee = True;
 }
 
+#endif /* MOZ_MAIL_NEWS */

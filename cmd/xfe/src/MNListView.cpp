@@ -102,6 +102,7 @@ XFE_MNListView::isCommandEnabled(CommandType cmd, void *calldata, XFE_CommandInf
   
   if (msg_cmd != (MSG_CommandType)~0)
     {
+#ifdef MOZ_MAIL_NEWS
 		if (IS_CMD(xfeCmdGetNewMessages)) {
 			int num_inboxes = MSG_GetFoldersWithFlag(XFE_MNView::getMaster(),
 													 MSG_FOLDER_FLAG_INBOX,
@@ -118,8 +119,13 @@ XFE_MNListView::isCommandEnabled(CommandType cmd, void *calldata, XFE_CommandInf
 								  (MSG_ViewIndex*)&count,
 								  0, &selectable, NULL, NULL, NULL);
 		}/* else */
-		else if (count == 0 || 
-				 (m_pane && MSG_GetNumLines(m_pane) == 0))
+		else
+#endif /* MOZ_MAIL_NEWS */
+          if (count == 0
+#ifdef MOZ_MAIL_NEWS
+              || (m_pane && MSG_GetNumLines(m_pane) == 0)
+#endif /* MOZ_MAIL_NEWS */
+            )
 			{
 				MSG_CommandStatus(m_pane, msg_cmd, 
 								  /* just need some integer pointer here...*/
@@ -135,6 +141,7 @@ XFE_MNListView::isCommandEnabled(CommandType cmd, void *calldata, XFE_CommandInf
 		return selectable;
       
     }
+#ifdef MOZ_MAIL_NEWS
   else if (IS_CMD(xfeCmdEditMailFilterRules)
 	   ||IS_CMD(xfeCmdSearch))
     {
@@ -178,6 +185,7 @@ XFE_MNListView::isCommandEnabled(CommandType cmd, void *calldata, XFE_CommandInf
     {
       return True; // not sure I feel comfortable with such extremes
     }
+#endif /* MOZ_MAIL_NEWS */
   else
     {
       return XFE_View::isCommandEnabled(cmd, calldata, info);
@@ -194,6 +202,7 @@ XFE_MNListView::doCommand(CommandType cmd, void *calldata,
     {
       m_outliner->selectAllItems();
     }
+#ifdef MOZ_MAIL_NEWS
   else if (IS_CMD(xfeCmdEditMailFilterRules))
     {
       fe_mailfilter_cb(getToplevel()->getBaseWidget(), 
@@ -201,6 +210,7 @@ XFE_MNListView::doCommand(CommandType cmd, void *calldata,
 		       (XtPointer) NULL);
 
     }
+#endif /* MOZ_MAIL_NEWS */
   else
     {
       XFE_MNView::doCommand(cmd, calldata, info);
@@ -225,6 +235,7 @@ XFE_MNListView::commandToString(CommandType cmd, void *calldata, XFE_CommandInfo
 	
 	if (msg_cmd != (MSG_CommandType)~0)
 		{
+#ifdef MOZ_MAIL_NEWS
 			if (IS_CMD(xfeCmdGetNewMessages)) {
 				int num_inboxes = MSG_GetFoldersWithFlag(XFE_MNView::getMaster(),
 														 MSG_FOLDER_FLAG_INBOX,
@@ -237,7 +248,9 @@ XFE_MNListView::commandToString(CommandType cmd, void *calldata, XFE_CommandInfo
 					return NULL;
 				}/* if */
 			}/* else */
-			else if (MSG_CommandStatus(m_pane, msg_cmd, 
+			else
+#endif /* MOZ_MAIL_NEWS */
+              if (MSG_CommandStatus(m_pane, msg_cmd, 
 									   (MSG_ViewIndex*)selected, 
 									   count, NULL, NULL, 
 									   (const char **)&display_string, NULL) < 0)
@@ -253,6 +266,7 @@ XFE_MNListView::commandToString(CommandType cmd, void *calldata, XFE_CommandInfo
 						}
 				}
 		}
+#ifdef MOZ_MAIL_NEWS
 	else if (msg_nav != (MSG_MotionType)~0)
 		{
 			if (count < 1
@@ -261,6 +275,7 @@ XFE_MNListView::commandToString(CommandType cmd, void *calldata, XFE_CommandInfo
 									  NULL, (const char **)&display_string) < 0)
 				return NULL;
 		}
+#endif /* MOZ_MAIL_NEWS */
 
 
 	if (display_string)
