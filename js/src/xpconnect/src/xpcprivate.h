@@ -98,8 +98,7 @@
 #include "nsISecurityCheckedComponent.h"
 #endif
 
-// XXX TEMPORARY
-#define XPC_OLD_DOM_SUPPORT
+// #define XPC_OLD_DOM_SUPPORT
 
 #ifdef XPC_OLD_DOM_SUPPORT
 #include "nsIScriptObjectOwner.h"   // for DOM hack in xpcconvert.cpp
@@ -133,7 +132,6 @@
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN 1
 //#define DEBUG_stats_jband 1
 #endif
-
 
 /***************************************************************************/
 // conditional forward declarations....
