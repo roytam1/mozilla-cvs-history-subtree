@@ -37,8 +37,6 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsMsgCompFields, nsIMsgCompFields)
 
 nsMsgCompFields::nsMsgCompFields()
 {
-  nsresult rv;
-
 	PRInt16 i;
 	for (i = 0; i < MSG_MAX_HEADERS; i ++)
 		m_headers[i] = nsnull;
