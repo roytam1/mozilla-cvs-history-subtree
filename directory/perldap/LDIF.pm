@@ -229,11 +229,14 @@ Mozilla::LDAP::LDIF - Read, write and modify LDIF files.
 
 =head1 ABSTRACT
 
-This package is used to read and write LDIF information from files (actually, file handles).
+This package is used to read and write LDIF information from files
+(actually, file handles). It can also be used to generate LDIF modify
+files from changes made to an entry.
 
 =head1 DESCRIPTION
 
-LDIF rules...
+The LDIF format is a simple, yet useful, text representation of an LDAP
+database.
 
 =head1 EXAMPLES
 
