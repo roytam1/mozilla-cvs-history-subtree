@@ -56,17 +56,13 @@
 #include "addrprop.h"
 #endif
 #endif /* MOZ_MAIL_NEWS */
-<<<<<<< prefs.cpp
 #ifdef MOZ_SMARTUPDATE
 #include "VerReg.h"
 #include "softupdt.h"
 #endif /* MOZ_SMARTUPDATE */
-=======
 #ifdef MOZ_OFFLINE
 #include "offpkdlg.h"
 #endif // MOZ_OFFLINE
-
->>>>>>> 3.1.18.3
 
 extern "C" {
 #include "xpgetstr.h"
@@ -934,21 +930,12 @@ CMailNewsPreferences::CMailNewsPreferences(MWContext *pContext)
 	m_hBoldFont = NULL;
 	m_pLdapServers = NULL;
 	m_hNewsHost = NULL;
-<<<<<<< prefs.cpp
-
 	char location[256];
 	int nLen = 255;
-=======
 	m_pContext = pContext;
->>>>>>> 3.1.18.3
-
-<<<<<<< prefs.cpp
 	m_pLdapServers = XP_ListNew();
 	PREF_GetDefaultCharPref("browser.addressbook_location", location, &nLen);
 	DIR_GetServerPreferences (&m_pLdapServers, location);
-=======
-	m_pLdapServers = theApp.m_directories;
->>>>>>> 3.1.18.3
 }
 
 CMailNewsPreferences::~CMailNewsPreferences()
@@ -1851,7 +1838,6 @@ CLIPreference::Release()
 }
 #endif /* MOZ_LOC_INDEP */
 
-<<<<<<< prefs.cpp
 #ifdef MOZ_SMARTUPDATE
 /////////////////////////////////////////////////////////////////////////////
 // CSmartUpdatePreference
@@ -2027,8 +2013,6 @@ CAdvancedPrefs::Release()
 }
 
 
-=======
->>>>>>> 3.1.18.3
 static void
 ReloadAllWindows()
 {
@@ -2202,7 +2186,6 @@ CreateOfflineCategory(LPSPECIFYPROPERTYPAGEOBJECTS *pCategory)
 }
 #endif /* MOZ_OFFLINE */
 
-<<<<<<< prefs.cpp
 static BOOL
 CreateAdvancedCategory(MWContext *pContext, LPSPECIFYPROPERTYPAGEOBJECTS *pCategory)
 {
@@ -2227,8 +2210,6 @@ CreateAdvancedCategory(MWContext *pContext, LPSPECIFYPROPERTYPAGEOBJECTS *pCateg
 }
 
 
-=======
->>>>>>> 3.1.18.3
 #ifdef MOZ_LOC_INDEP
 static BOOL
 CreateLICategory(LPSPECIFYPROPERTYPAGEOBJECTS *pCategory)
@@ -2334,15 +2315,11 @@ wfe_DisplayPreferences(CGenericFrame *pFrame)
 
 #ifdef EDITOR		
 		// Editor category
-<<<<<<< prefs.cpp
 		if (SUCCEEDED(FEU_CoCreateInstance(CLSID_EditorPrefs,
 			                           NULL,
 									   CLSCTX_INPROC_SERVER,
 									   IID_ISpecifyPropertyPageObjects,
 									   (LPVOID *)&categories[nCategories]))) {
-=======
-		if (CreateComposerCategory(&categories[nCategories])) {
->>>>>>> 3.1.18.3
 			nCategories++;
 		}
 #endif EDITOR
@@ -2356,13 +2333,8 @@ wfe_DisplayPreferences(CGenericFrame *pFrame)
 		// Advanced category
         if (CreateAdvancedCategory(pContext, &categories[nCategories])) {
 			nCategories++;
-<<<<<<< prefs.cpp
-        }
-
-=======
 		}
              
->>>>>>> 3.1.18.3
         // Make sure we have at least one category
 		if (nCategories == 0) {
             pFrame->MessageBox(szLoadString(IDS_CANT_LOAD_PREFS), NULL, MB_OK | MB_ICONEXCLAMATION);
