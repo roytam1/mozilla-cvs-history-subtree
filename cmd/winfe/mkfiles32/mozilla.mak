@@ -306,11 +306,6 @@ CFLAGS_WINDOWS_C=		$(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\win16\private
 !endif
 
 OUTDIR=$(MOZ_OUT)\$(PROD)$(VERSTR)
-!ifdef MOZ_OJI
-JVM_PLUGIN_DIR=$(OUTDIR)\plugins\nsjvm
-!else
-JVM_PLUGIN_DIR=$(OUTDIR)
-!endif
 GENDIR=.\_gen
 
 # I changed $(DIST_PREFIX)954.0" to "WIN954.0" so that lite and medium builds will work.
@@ -667,7 +662,7 @@ RCFILEFLAGS=$(RCFLAGS_GENERAL)\
 
 !IFDEF DEPEND
 
-all: "$(OUTDIR)" "$(JVM_PLUGIN_DIR)" $(DEPTH)\cmd\winfe\mkfiles32\makedep.exe $(OUTDIR)\mozilla.dep
+all: "$(OUTDIR)" $(DEPTH)\cmd\winfe\mkfiles32\makedep.exe $(OUTDIR)\mozilla.dep
 
 $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
     @rem <<$(PROD)$(VERSTR).dep
@@ -1433,9 +1428,6 @@ PURIFY : "$(OUTDIR)" "$(OUTDIR)\PurifyCache" "$(OUTDIR)\mozilla.exe" pure
 $(OUTDIR) :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-$(JVM_PLUGIN_DIR) :
-    if not exist "$(JVM_PLUGIN_DIR)/$(NULL)" mkdir "$(JVM_PLUGIN_DIR)"
-
 $(GENDIR) :
     if not exist "$(GENDIR)/$(NULL)" mkdir "$(GENDIR)"
 
@@ -1662,7 +1654,7 @@ install:    \
 	    $(OUTDIR)\libplc21.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\libmsgc21.dll)
-	    $(JVM_PLUGIN_DIR)\libmsgc21.dll    \
+	    $(JAVABIN_DIR)\libmsgc21.dll    \
 !ENDIF
 !endif
 !IF EXIST($(DIST)\bin\js32$(VERSION_NUMBER).dll)
@@ -1778,7 +1770,7 @@ install:    \
 	    $(OUTDIR)\plc21.dll    \
 !ENDIF
 !IF EXIST($(DIST)\lib\msgc21.dll)
-	    $(JVM_PLUGIN_DIR)\msgc21.dll    \
+	    $(JAVABIN_DIR)\msgc21.dll    \
 !ENDIF
 !endif
 !IF EXIST($(DIST)\bin\js16$(VERSION_NUMBER).dll)
@@ -1925,8 +1917,9 @@ $(OUTDIR)\libplds21.dll:   $(DIST)\bin\libplds21.dll
     @IF EXIST $(DIST)\bin\libplds21.dll copy $(DIST)\bin\libplds21.dll $(OUTDIR)\libplds21.dll
 $(OUTDIR)\libplc21.dll:   $(DIST)\bin\libplc21.dll
     @IF EXIST $(DIST)\bin\libplc21.dll copy $(DIST)\bin\libplc21.dll $(OUTDIR)\libplc21.dll
-$(JVM_PLUGIN_DIR)\libmsgc21.dll:   $(DIST)\bin\libmsgc21.dll
-    @IF EXIST $(DIST)\bin\libmsgc21.dll copy $(DIST)\bin\libmsgc21.dll $(JVM_PLUGIN_DIR)\libmsgc21.dll
+$(JAVABIN_DIR)\libmsgc21.dll:   $(DIST)\bin\libmsgc21.dll
+    @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
+    @IF EXIST $(DIST)\bin\libmsgc21.dll copy $(DIST)\bin\libmsgc21.dll $(JAVABIN_DIR)\libmsgc21.dll
 !endif
 
 $(OUTDIR)\js32$(VERSION_NUMBER).dll:   $(DIST)\bin\js32$(VERSION_NUMBER).dll
