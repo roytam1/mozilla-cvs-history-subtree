@@ -82,8 +82,8 @@ Rights Reserved.
 <!ENTITY stopSearchingCmd.label                         ".Stop Searching"> 
 
 <!-- Toolbar items -->  
-<!ENTITY newcardButton.label                            "New Card">  
-<!ENTITY newlistButton.label                            "New List">  
+<!ENTITY newcardButton.label                            "New Contact">  
+<!ENTITY newlistButton.label                            "New Group">  
 <!ENTITY editButton.label                               "Properties">  
 <!ENTITY newmsgButton.label                             "Write">  
 <!ENTITY deleteButton.label                             "Delete">  
