@@ -23,13 +23,16 @@
  */
 
 #include "nscore.h"
+#include "nsIOutputStream.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
+#include "nsIRDFXMLSource.h"
 #include "nsIServiceManager.h"
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
+#include "nsString.h"
 #include "rdfutil.h"
 #include "plhash.h"
 #include "plstr.h"
@@ -42,6 +45,7 @@ static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,          NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFNodeIID,             NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kIRDFResourceIID,         NS_IRDFRESOURCE_IID);
+static NS_DEFINE_IID(kIRDFXMLSourceIID,        NS_IRDFXMLSOURCE_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 
 enum Direction {
@@ -80,11 +84,30 @@ rdf_CompareNodes(const void* v1, const void* v2)
     return (PRIntn) result;
 }
 
+static nsresult
+rdf_BlockingWrite(nsIOutputStream* stream, const char* buf, PRUint32 size)
+{
+    PRUint32 written = 0;
+    PRUint32 remaining = size;
+    while (remaining > 0) {
+        nsresult rv;
+        PRUint32 cb;
+
+        if (NS_FAILED(rv = stream->Write(buf, written, remaining, &cb)))
+            return rv;
+
+        written += cb;
+        remaining -= cb;
+    }
+    return NS_OK;
+}
+
 ////////////////////////////////////////////////////////////////////////
 // InMemoryDataSource
 
 
-class InMemoryDataSource : public nsIRDFDataSource
+class InMemoryDataSource : public nsIRDFDataSource,
+                           public nsIRDFXMLSource
 {
 protected:
     char*        mURL;
@@ -154,9 +177,10 @@ public:
 
     NS_IMETHOD Flush();
 
-    // Implemenatation methods
+    // nsIRDFXMLSource methods
+    NS_IMETHOD Serialize(nsIOutputStream* aStream);
 
-    // XXX how about more descriptive names for these...
+    // Implemenatation methods
     Assertion* GetForwardArcs(nsIRDFResource* u);
     Assertion* GetReverseArcs(nsIRDFNode* v);
     void       SetForwardArcs(nsIRDFResource* u, Assertion* as);
@@ -621,7 +645,31 @@ InMemoryArcsCursor::GetTruthValue(PRBool* aTruthValue)
 ////////////////////////////////////////////////////////////////////////
 // InMemoryDataSource
 
-NS_IMPL_ISUPPORTS(InMemoryDataSource, kIRDFDataSourceIID);
+NS_IMPL_ADDREF(InMemoryDataSource);
+NS_IMPL_RELEASE(InMemoryDataSource);
+
+NS_IMETHODIMP
+InMemoryDataSource::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+
+    if (iid.Equals(kISupportsIID) ||
+        iid.Equals(kIRDFDataSourceIID)) {
+        *result = NS_STATIC_CAST(nsIRDFDataSource*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else if (iid.Equals(kIRDFXMLSourceIID)) {
+        *result = NS_STATIC_CAST(nsIRDFXMLSource*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else {
+        *result = nsnull;
+        return NS_NOINTERFACE;
+    }
+}
 
 InMemoryDataSource::InMemoryDataSource(void)
     : mURL(nsnull),
@@ -1052,7 +1100,113 @@ InMemoryDataSource::Flush()
     return NS_OK;
 }
 
+static void
+rdf_MakeQName(nsIRDFResource* resource, char* buf, PRInt32 size)
+{
+    const char* uri;
+    resource->GetValue(&uri);
 
+    char* tag;
+
+    tag = PL_strrchr(uri, '#');
+    if (tag)
+        goto done;
+
+    tag = PL_strrchr(uri, '/');
+    if (tag)
+        goto done;
+
+    tag = NS_CONST_CAST(char*, uri);
+
+done:
+    PL_strncpyz(buf, tag, size);
+}
+
+static PRIntn
+rdf_SerializeEnumerator(PLHashEntry* he, PRIntn index, void* closure)
+{
+    nsIOutputStream* stream = NS_STATIC_CAST(nsIOutputStream*, closure);
+
+    nsIRDFResource* node = 
+        NS_CONST_CAST(nsIRDFResource*, NS_STATIC_CAST(const nsIRDFResource*, he->key));
+
+    const char* s;
+    node->GetValue(&s);
+
+    static const char* kRDFDescription1 = "  <RDF:Description about=\"";
+    static const char* kRDFDescription2 = "\">\n";
+    
+    rdf_BlockingWrite(stream, kRDFDescription1, PL_strlen(kRDFDescription1));
+    rdf_BlockingWrite(stream, s, PL_strlen(s));
+    rdf_BlockingWrite(stream, kRDFDescription2, PL_strlen(kRDFDescription2));
+
+    for (Assertion* as = (Assertion*) he->value; as != nsnull; as = as->mNext) {
+        char qname[64];
+        rdf_MakeQName(as->mProperty, qname, sizeof qname);
+
+        rdf_BlockingWrite(stream, "    <", 5);
+        rdf_BlockingWrite(stream, qname, PL_strlen(qname));
+        rdf_BlockingWrite(stream, ">", 1);
+
+        nsIRDFResource* resource;
+        nsIRDFLiteral* literal;
+
+        if (NS_SUCCEEDED(as->mTarget->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
+            const char* uri;
+            resource->GetValue(&uri);
+            rdf_BlockingWrite(stream, uri, PL_strlen(uri));
+            NS_RELEASE(resource);
+        }
+        else if (NS_SUCCEEDED(as->mTarget->QueryInterface(kIRDFLiteralIID, (void**) &literal))) {
+            const PRUnichar* value;
+            literal->GetValue(&value);
+            nsAutoString s(value);
+
+            char buf[256];
+            char* p = buf;
+
+            if (s.Length() >= sizeof(buf))
+                p = new char[s.Length() + 1];
+
+            rdf_BlockingWrite(stream, s.ToCString(p, s.Length() + 1), s.Length());
+
+            if (p != buf)
+                delete[](p);
+
+            NS_RELEASE(literal);
+        }
+        else {
+            PR_ASSERT(0);
+        }
+
+        rdf_BlockingWrite(stream, "    </", 6);
+        rdf_BlockingWrite(stream, qname, PL_strlen(qname));
+        rdf_BlockingWrite(stream, ">\n", 2);
+    }
+
+    static const char* kRDFDescription3 = "  </RDF:Description>\n";
+    rdf_BlockingWrite(stream, kRDFDescription3, PL_strlen(kRDFDescription3));
+
+    return HT_ENUMERATE_NEXT;
+}
+
+NS_IMETHODIMP
+InMemoryDataSource::Serialize(nsIOutputStream* aStream)
+{
+    static const char* kOpenRDF  = "<RDF:RDF xmlns:RDF=\"http://www.w3.org/TR/WD-rdf-syntax#\">\n";
+    static const char* kCloseRDF = "</RDF:RDF>\n";
+
+    nsresult rv;
+    if (NS_FAILED(rv = rdf_BlockingWrite(aStream, kOpenRDF, PL_strlen(kOpenRDF))))
+        return rv;
+
+    PL_HashTableEnumerateEntries(mForwardArcs, rdf_SerializeEnumerator, aStream);
+
+    if (NS_FAILED(rv = rdf_BlockingWrite(aStream, kCloseRDF, PL_strlen(kCloseRDF))))
+        return rv;
+
+    return NS_OK;
+}
 
 
 ////////////////////////////////////////////////////////////////////////

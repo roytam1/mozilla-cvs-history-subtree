@@ -25,9 +25,10 @@
 #include "nsIDTD.h"
 #include "nsINameSpaceManager.h"
 #include "nsIParser.h"
-#include "nsIRDFDataSource.h"
 #include "nsIRDFContentSink.h"
 #include "nsIRDFCursor.h"
+#include "nsIRDFDataSource.h"
+#include "nsIRDFXMLSource.h"
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #include "nsLayoutCID.h" // for NS_NAMESPACEMANAGER_CID.
@@ -40,16 +41,21 @@ static NS_DEFINE_IID(kIDTDIID,               NS_IDTD_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,  NS_INAMESPACEMANAGER_IID);
 static NS_DEFINE_IID(kIParserIID,            NS_IPARSER_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,     NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIRDFContentSinkIID,    NS_IRDFCONTENTSINK_IID);
+static NS_DEFINE_IID(kIRDFXMLSourceIID,      NS_IRDFXMLSOURCE_IID);
 static NS_DEFINE_IID(kIStreamListenerIID,    NS_ISTREAMLISTENER_IID);
+static NS_DEFINE_IID(kISupportsIID,          NS_ISUPPORTS_IID);
 
-static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kParserCID,                NS_PARSER_IID); // XXX
+static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFSimpleContentSinkCID,  NS_RDFSIMPLECONTENTSINK_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
-class StreamDataSourceImpl : public nsIRDFDataSource
+class StreamDataSourceImpl : public nsIRDFDataSource,
+                             public nsIRDFXMLSource
 {
 protected:
     nsIURL* mURL;
@@ -133,6 +139,9 @@ public:
     }
 
     NS_IMETHOD Flush(void);
+
+    // nsIRDFXMLSource interface
+    NS_IMETHOD Serialize(nsIOutputStream* aStream);
 };
 
 
@@ -151,7 +160,31 @@ StreamDataSourceImpl::~StreamDataSourceImpl(void)
 }
 
 
-NS_IMPL_ISUPPORTS(StreamDataSourceImpl, kIRDFDataSourceIID);
+NS_IMPL_ADDREF(StreamDataSourceImpl);
+NS_IMPL_RELEASE(StreamDataSourceImpl);
+
+NS_IMETHODIMP
+StreamDataSourceImpl::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+
+    if (iid.Equals(kISupportsIID) ||
+        iid.Equals(kIRDFDataSourceIID)) {
+        *result = NS_STATIC_CAST(nsIRDFDataSource*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else if (iid.Equals(kIRDFXMLSourceIID)) {
+        *result = NS_STATIC_CAST(nsIRDFXMLSource*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else {
+        *result = nsnull;
+        return NS_NOINTERFACE;
+    }
+}
 
 NS_IMETHODIMP
 StreamDataSourceImpl::Init(const char* uri)
@@ -182,7 +215,13 @@ StreamDataSourceImpl::Init(const char* uri)
                                                     (void**) &ns)))
         goto done;
 
-    if (NS_FAILED(rv = NS_NewRDFSimpleContentSink(&sink, mURL, ns)))
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFSimpleContentSinkCID,
+                                                    nsnull,
+                                                    kIRDFContentSinkIID,
+                                                    (void**) &sink)))
+        goto done;
+
+    if (NS_FAILED(sink->Init(mURL, ns)))
         goto done;
 
     if (NS_FAILED(rv = sink->SetDataSource(this)))
@@ -228,6 +267,18 @@ StreamDataSourceImpl::Flush(void)
     // XXX walk through all the resources, writing <RDF:Description>
     // elements with properties for each.
     return NS_OK;
+}
+
+NS_IMETHODIMP
+StreamDataSourceImpl::Serialize(nsIOutputStream* stream)
+{
+    nsresult rv;
+    nsIRDFXMLSource* source;
+    if (NS_SUCCEEDED(rv = mInner->QueryInterface(kIRDFXMLSourceIID, (void**) &source))) {
+        rv = source->Serialize(stream);
+        NS_RELEASE(source);
+    }
+    return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////

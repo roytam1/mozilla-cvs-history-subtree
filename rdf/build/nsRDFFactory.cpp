@@ -18,6 +18,7 @@
 
 #include "nsISupports.h"
 #include "nsIFactory.h"
+#include "nsIRDFContentSink.h"
 #include "nsIRDFService.h"
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
@@ -32,6 +33,7 @@ static NS_DEFINE_CID(kRDFHTMLDocumentCID,       NS_RDFHTMLDOCUMENT_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
+static NS_DEFINE_CID(kRDFSimpleContentSinkCID,  NS_RDFSIMPLECONTENTSINK_CID);
 static NS_DEFINE_CID(kRDFStreamDataSourceCID,   NS_RDFSTREAMDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFTreeDocumentCID,       NS_RDFTREEDOCUMENT_CID);
 
@@ -139,6 +141,10 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
     }
     else if (mClassID.Equals(kRDFTreeDocumentCID)) {
         if (NS_FAILED(rv = NS_NewRDFTreeDocument((nsIRDFDocument**) &inst)))
+            return rv;
+    }
+    else if (mClassID.Equals(kRDFSimpleContentSinkCID)) {
+        if (NS_FAILED(rv = NS_NewRDFSimpleContentSink((nsIRDFContentSink**) &inst)))
             return rv;
     }
     else {
