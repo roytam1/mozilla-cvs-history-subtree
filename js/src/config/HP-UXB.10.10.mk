@@ -21,9 +21,10 @@
 
 CC = gcc
 CCC = g++
-CFLAGS +=  -Wall -Wno-format
+CFLAGS +=  -Wall -Wno-format -fPIC
 
 RANLIB = echo
+MKSHLIB = $(LD) -b
 
 #.c.o:
 #	$(CC) -c -MD $*.d $(CFLAGS) $<
