@@ -1078,6 +1078,7 @@ void
 sendNotifications2 (RDFT r, RDF_EventType opType, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv)
 {
   RDFL rl = r->rdf;
+  traceNotify(opTypeToString(opType), u, s, v, type);
   while (rl) {
     sendNotifications(rl->rdf, opType, u, s, v, type, tv, r->url);
     rl = rl->next;

@@ -575,6 +575,14 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     } else {
       db->pdata = (RDFFile) newFile;
   }
+#ifdef DEBUG_guha
+    {
+      char* traceLine = getMem(500);
+      sprintf(traceLine, "Accessing %s", url);
+      FE_Trace(traceLine);
+      freeMem(traceLine);
+    }
+#endif
     newFile->assert = remoteAssert3;
     if (top) {
       if (resourceType(top) == RDF_RT) {

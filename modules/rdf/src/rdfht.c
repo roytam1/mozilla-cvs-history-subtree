@@ -123,7 +123,7 @@ RDF_Init(RDF_InitParams params)
     copyString(navCenterURL);
   }
   *(gNavCenterDataSources + 1) = copyString(navCenterURL);
-  gNCDB = newNavCenterDB();
+  gNCDB = newNavCenterDB(); 
   freeMem(navCenterURL);
 
   HT_Startup();

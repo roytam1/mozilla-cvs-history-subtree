@@ -402,6 +402,38 @@ resourceID(RDF_Resource r)
   return r->url;
  }
 
+char* opTypeToString (RDF_EventType opType) {
+  switch (opType) {
+    case RDF_ASSERT_NOTIFY :
+      return "Assert";
+	case RDF_INSERT_NOTIFY :
+      return "Insert";
+	case RDF_DELETE_NOTIFY :
+      return "Unassert";
+  }
+  return "Unknown Op";
+}
+
+
+void traceNotify (char* event, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type) {
+#ifdef DEBUG_guha    
+      char* traceLine = getMem(1000);
+      if (type == RDF_INT_TYPE) {
+        sprintf(traceLine, "%s  %s(%s, %i)\n", 
+              event, resourceID(s), resourceID(u), (int) v);
+      } else if (type == RDF_STRING_TYPE){
+        sprintf(traceLine, "%s %s(%s, \"%s\")\n", 
+                event,  resourceID(s), resourceID(u), (char*) v);
+      } else if (type == RDF_RESOURCE_TYPE) {
+        sprintf(traceLine, "%s %s(%s, %s)\n", 
+                event,  resourceID(s), resourceID(u), resourceID((RDF_Resource)v));
+      } else {
+        sprintf(traceLine, "%s <gubbish>\n", event);
+      }
+      FE_Trace(traceLine);
+      freeMem(traceLine);    
+#endif
+}
 
 
 char *
