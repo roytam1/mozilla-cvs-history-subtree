@@ -464,9 +464,12 @@ Expr* ExprParser::createFunctionCall(ExprLexer& lexer,
             return 0;
         }
         rv = aContext->resolveFunctionCall(lName, namespaceID, fnCall);
-        // XXX report error
         TX_IF_RELEASE_ATOM(prefix);
         TX_IF_RELEASE_ATOM(lName);
+        if (NS_FAILED(rv) && rv != NS_ERROR_NOT_IMPLEMENTED) {
+            // XXX report error unknown function call
+            return 0;
+        }
     }
     
     //-- handle parametes
@@ -963,6 +966,8 @@ nsresult ExprParser::resolveQName(const String& aQName,
         aQName.subString(idx + 1, lName);
         aLocalName = TX_GET_ATOM(lName);
         if (!aLocalName) {
+            TX_RELEASE_ATOM(aPrefix);
+            aPrefix = 0;
             return NS_ERROR_OUT_OF_MEMORY;
         }
         return aContext->resolveNamespacePrefix(aPrefix, aNamespace);

@@ -36,7 +36,7 @@
  * Creates a new AdditiveExpr using the given operator
 **/
 AdditiveExpr::AdditiveExpr(Expr* aLeftExpr, Expr* aRightExpr, short op) 
-    :mOp(op), mLeftExpr(aLeftExpr), mRightExpr(aRightExpr)
+    : mOp(op), mLeftExpr(aLeftExpr), mRightExpr(aRightExpr)
 {
 } // AdditiveExpr
 

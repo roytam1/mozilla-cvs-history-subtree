@@ -635,7 +635,7 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
         ExprParser::createAttributeValueTemplate(aAttValue, &pContext);
 
     if (!avt) {
-        // shortcut, this is just a regular string
+        // fallback, just copy the attribute
         aResult.append(aAttValue);
         return;
     }
@@ -967,7 +967,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
    aFunction = 0;
 
    if (aID != kNameSpaceID_None) {
-       return NS_OK;
+       return NS_ERROR_XPATH_PARSE_FAILED;
    }
    if (CHECK_FN(document)) {
        aFunction = new DocumentFunctionCall(this, aElem);
@@ -1005,7 +1005,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
 
-   return NS_OK;
+   return NS_ERROR_XPATH_PARSE_FAILED;
 } //-- resolveFunctionCall
 
   //-------------------/
