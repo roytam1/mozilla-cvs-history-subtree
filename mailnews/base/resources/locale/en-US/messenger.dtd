@@ -275,3 +275,7 @@ Rights Reserved.
 
 <!-- Statusbar -->
 <!ENTITY  statusText.label "Document: Done">
+
+<!-- Destination for click on throbber button -->
+<!ENTITY throbber.url "http://www.mozilla.org/mailnews"> 
+

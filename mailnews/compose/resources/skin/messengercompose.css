@@ -27,12 +27,6 @@ tree[class="attachment"] treeitem > treerow > treecell > titledbutton {
 	list-style-image: url("chrome://addressbook/skin/myaddrbk.gif");
 }
 
-titledbutton#Throbber
-{
-	list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
-}
-
-
 /* addressing widget */
 
 tree[class="addressingWidget"] treeitem > treerow  > treecell > titledbutton {

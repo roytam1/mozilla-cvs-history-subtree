@@ -487,7 +487,7 @@ menuitem[disabled="true"] {
 }
 
 menupopup, popup {
-  background-color: #CCCCCC;
+  background-color: white;
   border: 1px white outset;
 }
 

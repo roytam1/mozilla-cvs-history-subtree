@@ -484,7 +484,7 @@ Rights Reserved.
           </box>
 
 		  <box id="toolbar_throbber_box" align="vertical">
-			  <titledbutton id="Throbber">
+			  <titledbutton id="Throbber" onclick="window.open('&throbber.url;');">
 				  <observes element="Messenger:Throbber" attribute="busy"/>
 			  </titledbutton>
 		  </box>
