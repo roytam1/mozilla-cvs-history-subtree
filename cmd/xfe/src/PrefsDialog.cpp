@@ -31,6 +31,7 @@
 #include "xpassert.h"
 #include "xfe.h"
 #include "PrefsDialog.h"
+#include "PrefsPageMessages.h"
 #include "prefapi.h"
 
 #include <Xm/Label.h>
