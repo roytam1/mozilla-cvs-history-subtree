@@ -949,7 +949,8 @@ nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages, nsIMsgWindow *aMsgWi
   nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(0));
   nsCOMPtr<nsIMsgDBHdr> msgHdr(do_QueryInterface(msgSupports));
 
-  // turn "news_message://sspitzer@news.mozilla.org/netscape.test#5428"
+  // for cancel, we need to
+  // turn "newsmessage://sspitzer@news.mozilla.org/netscape.test#5428"
   // into "news://sspitzer@news.mozilla.org/23423@netscape.com"
 
   nsCOMPtr <nsIMsgIncomingServer> server;
