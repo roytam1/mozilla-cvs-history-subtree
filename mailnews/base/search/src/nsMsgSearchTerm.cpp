@@ -1705,8 +1705,8 @@ int nsMsgResultElement::Compare (const void *e1, const void *e2)
 			// Special case for subjects, so "Re:foo" sorts under 'f' not 'r'
 			const char *s1 = v1->u.string;
 			const char *s2 = v2->u.string;
-			msg_StripRE (&s1, NULL);
-			msg_StripRE (&s2, NULL);
+			NS_MsgStripRE (&s1, NULL);
+			NS_MsgStripRE (&s2, NULL);
 			ret = PL_strcasecomp (s1, s2);
 		}
 		else

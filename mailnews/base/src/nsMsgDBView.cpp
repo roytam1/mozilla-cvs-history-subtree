@@ -29,6 +29,7 @@
 #include "nsIMsgDatabase.h"
 #include "nsIMsgFolder.h"
 #include "MailNewsTypes2.h"
+#include "nsMsgUtils.h"
 
 /* Implementation file */
 
@@ -121,7 +122,7 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
 {
     PRUint32 i;
     PRUint32 num = GetSize();
-    printf("#:  (key,flag)\n");
+    printf("#:  (key,flag,level)\n");
     for (i = 0; i < num; i++) {
         printf("%d:  (%d,%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i),m_levels.GetAt(i));
     }
@@ -316,7 +317,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         pField = intlString;
         //"Re:" might be encoded inside subject field using MIMEII encoding,
         //It should be stripped before sorting
-        printf("msg_StripRE(&pField, 0);\n");
+        NS_MsgStripRE(&pField, 0);
         actualFieldLen = (pField) ? nsCRT::strlen(pField) + 1 : 1;
         paddedFieldLen = actualFieldLen;
         PRUint32 mod4 = actualFieldLen % 4;

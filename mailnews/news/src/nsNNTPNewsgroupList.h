@@ -84,7 +84,6 @@ private:
   virtual void	OnAnnouncerGoingAway (ChangeAnnouncer *instigator);
 #endif
   nsresult			ParseLine(char *line, PRUint32 *message_number);
-  PRBool			msg_StripRE(const char **stringP, PRUint32 *lengthP);
   nsresult			GetDatabase(const char *uri, nsIMsgDatabase **db);
   void				SetProgressBarPercent(PRInt32 percent);
   void				SetProgressStatus(const PRUnichar *message);

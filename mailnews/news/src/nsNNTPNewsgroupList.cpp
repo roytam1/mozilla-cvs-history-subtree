@@ -65,7 +65,7 @@
 #include "prprf.h"
 
 #include "nsCRT.h"
-#include "xp_str.h"
+#include "nsMsgUtils.h"
 
 #include "nsMsgDatabase.h"
 
@@ -578,73 +578,6 @@ nsNNTPNewsgroupList::InitXOVER(PRInt32 first_msg, PRInt32 last_msg)
 
 #define NEWS_ART_DISPLAY_FREQ   20
 
-/* Given a string and a length, removes any "Re:" strings from the front.
-   It also deals with that "Re[2]:" thing that some mailers do.
-
-   Returns PR_TRUE if it made a change, PR_FALSE otherwise.
-
-   The string is not altered: the pointer to its head is merely advanced,
-   and the length correspondingly decreased.
- */
-PRBool 
-nsNNTPNewsgroupList::msg_StripRE(const char **stringP, PRUint32 *lengthP)
-{
-  const char *s, *s_end;
-  const char *last;
-  PRUint32 L;
-  PRBool result = PR_FALSE;
-
-  if (!stringP) return PR_FALSE;
-  s = *stringP;
-  L = lengthP ? *lengthP : PL_strlen(s);
-  
-  s_end = s + L;
-  last = s;
-
- AGAIN:
-
-  while (s < s_end && XP_IS_SPACE(*s))
-	s++;
-
-  if (s < (s_end-2) &&
-	  (s[0] == 'r' || s[0] == 'R') &&
-	  (s[1] == 'e' || s[1] == 'E'))
-	{
-	  if (s[2] == ':')
-		{
-		  s = s+3;			/* Skip over "Re:" */
-		  result = PR_TRUE;	/* Yes, we stripped it. */
-		  goto AGAIN;		/* Skip whitespace and try again. */
-		}
-	  else if (s[2] == '[' || s[2] == '(')
-		{
-		  const char *s2 = s+3;		/* Skip over "Re[" */
-
-		  /* Skip forward over digits after the "[". */
-		  while (s2 < (s_end-2) && XP_IS_DIGIT(*s2))
-			s2++;
-
-		  /* Now ensure that the following thing is "]:"
-			 Only if it is do we alter `s'.
-		   */
-		  if ((s2[0] == ']' || s2[0] == ')') && s2[1] == ':')
-			{
-			  s = s2+2;			/* Skip over "]:" */
-			  result = PR_TRUE;	/* Yes, we stripped it. */
-			  goto AGAIN;		/* Skip whitespace and try again. */
-			}
-		}
-	}
-
-  /* Decrease length by difference between current ptr and original ptr.
-	 Then store the current ptr back into the caller. */
-  if (lengthP) *lengthP -= (s - (*stringP));
-  *stringP = s;
-
-  return result;
-}
-
-
 nsresult
 nsNNTPNewsgroupList::ParseLine(char *line, PRUint32 * message_number) 
 {
@@ -687,7 +620,7 @@ nsNNTPNewsgroupList::ParseLine(char *line, PRUint32 * message_number)
 		rv = newMsgHdr->GetFlags(&flags);
    		if (NS_FAILED(rv)) return rv;
 		/* strip "Re: " */
-		if (msg_StripRE(&subject, &subjectLen))
+		if (NS_MsgStripRE(&subject, &subjectLen))
 		{
 			// todo:
 			// use OrFlags()?
