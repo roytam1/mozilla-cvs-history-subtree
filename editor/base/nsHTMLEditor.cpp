@@ -2807,11 +2807,8 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
               insertedContextParent = parent;
               lastInsertNode = parent;
             }
-            else 
-            {
-              curNode = parent;
-            }      
           }
+          curNode = parent;
         }
       }
       if (bDidInsert)
