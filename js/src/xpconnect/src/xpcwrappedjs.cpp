@@ -178,11 +178,12 @@ nsXPCWrappedJS::GetJSObject(JSObject** aJSObj)
 }
 
 // static
-nsXPCWrappedJS*
+nsresult
 nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
                              JSObject* aJSObj,
                              REFNSIID aIID,
-                             nsISupports* aOuter)
+                             nsISupports* aOuter,
+                             nsXPCWrappedJS** wrapperResult)
 {
     JSObject2WrappedJSMap* map;
     JSObject* rootJSObj;
@@ -195,12 +196,12 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
     if(!map)
     {
         NS_ASSERTION(map,"bad map");
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
-    clazz = nsXPCWrappedJSClass::GetNewOrUsed(ccx, aIID);
+    nsXPCWrappedJSClass::GetNewOrUsed(ccx, aIID, &clazz);
     if(!clazz)
-        return nsnull;
+        return NS_ERROR_FAILURE;
     // from here on we need to return through 'return_wrapper'
 
     // always find the root JSObject
@@ -240,9 +241,9 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
         else
         {
             // just a root wrapper
-            nsXPCWrappedJSClass* rootClazz;
-            rootClazz = nsXPCWrappedJSClass::GetNewOrUsed(
-                                                ccx, NS_GET_IID(nsISupports));
+            nsXPCWrappedJSClass* rootClazz = nsnull;
+            nsXPCWrappedJSClass::GetNewOrUsed(ccx, NS_GET_IID(nsISupports),
+                                              &rootClazz);
             if(!rootClazz)
                 goto return_wrapper;
 
@@ -275,7 +276,12 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
 return_wrapper:
     if(clazz)
         NS_RELEASE(clazz);
-    return wrapper;
+
+    if(!wrapper)
+        return NS_ERROR_FAILURE;
+    
+    *wrapperResult = wrapper;
+    return NS_OK;
 }
 
 nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,

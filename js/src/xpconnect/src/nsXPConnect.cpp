@@ -136,7 +136,7 @@ nsXPConnect::~nsXPConnect()
 }
 
 // static
-nsXPConnect*
+nsXPConnect* 
 nsXPConnect::GetXPConnect()
 {
     if(!gSelf)
@@ -144,17 +144,15 @@ nsXPConnect::GetXPConnect()
         if(gOnceAliveNowDead)
             return nsnull;
         gSelf = new nsXPConnect();
-        if (!gSelf ||
-            !gSelf->mInterfaceInfoManager ||
-            !gSelf->mContextStack)
+        if(!gSelf)
+            return nsnull;
+        
+        if(!gSelf->mInterfaceInfoManager ||
+           !gSelf->mContextStack)
         {
             // ctor failed to create an acceptable instance
-            if(gSelf)
-            {
-                delete gSelf;
-                gSelf = nsnull;
-            }
-            return nsnull;
+            delete gSelf;
+            gSelf = nsnull;
         }
         else
         {
@@ -163,7 +161,6 @@ nsXPConnect::GetXPConnect()
             NS_ADDREF(gSelf);
         }
     }
-    NS_ADDREF(gSelf);
     return gSelf;
 }
 
@@ -176,6 +173,16 @@ nsXPConnect::GetXPConnect()
 extern "C" JS_FRIEND_DATA(FILE *) js_DumpGCHeap;
 #endif
 
+// static 
+nsXPConnect* 
+nsXPConnect::GetSingleton()
+{
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
+    NS_IF_ADDREF(xpc);
+    return xpc;
+}
+
+// static 
 void
 nsXPConnect::ReleaseXPConnectSingleton()
 {
@@ -197,7 +204,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
         {
             FILE* oldFileHandle = js_DumpGCHeap;
             js_DumpGCHeap = stdout;
-            js_ForceGC(cxx);
+            js_ForceGC(ccx);
             js_DumpGCHeap = oldFileHandle;
         }
 #endif
@@ -219,50 +226,43 @@ nsXPConnect::ReleaseXPConnectSingleton()
 }
 
 // static
-nsIInterfaceInfoManager*
-nsXPConnect::GetInterfaceInfoManager(nsXPConnect* xpc /*= nsnull*/)
+nsresult 
+nsXPConnect::GetInterfaceInfoManager(nsIInterfaceInfoManager** iim,
+                                     nsXPConnect* xpc /*= nsnull*/)
 {
-    nsIInterfaceInfoManager* iim;
-    nsXPConnect* xpcl = xpc;
-
-    if(!xpcl && !(xpcl = GetXPConnect()))
-        return nsnull;
-    if(nsnull != (iim = xpcl->mInterfaceInfoManager))
-        NS_ADDREF(iim);
-    if(!xpc)
-        NS_RELEASE(xpcl);
-    return iim;
+    nsIInterfaceInfoManager* temp;
+    
+    if(!xpc && !(xpc = GetXPConnect()))
+        return NS_ERROR_FAILURE;
+    
+    *iim = temp = xpc->mInterfaceInfoManager;
+    NS_IF_ADDREF(temp);
+    return NS_OK;
 }
 
 // static
-nsIThreadJSContextStack*
-nsXPConnect::GetContextStack(nsXPConnect* xpc /*= nsnull*/)
+nsresult 
+nsXPConnect::GetContextStack(nsIThreadJSContextStack** stack,
+                             nsXPConnect* xpc /*= nsnull*/)
 {
-    nsIThreadJSContextStack* cs;
-    nsXPConnect* xpcl = xpc;
-
-    if(!xpcl && !(xpcl = GetXPConnect()))
-        return nsnull;
-    if(nsnull != (cs = xpcl->mContextStack))
-        NS_ADDREF(cs);
-    if(!xpc)
-        NS_RELEASE(xpcl);
-    return cs;
+    nsIThreadJSContextStack* temp;
+    
+    if(!xpc && !(xpc = GetXPConnect()))
+        return NS_ERROR_FAILURE;
+    
+    *stack = temp = xpc->mContextStack;
+    NS_IF_ADDREF(temp);
+    return NS_OK;
 }
 
 // static
 XPCJSRuntime*
 nsXPConnect::GetRuntime(nsXPConnect* xpc /*= nsnull*/)
 {
-    XPCJSRuntime* rt;
-    nsXPConnect* xpcl = xpc;
-
-    if(!xpcl && !(xpcl = GetXPConnect()))
+    if(!xpc && !(xpc = GetXPConnect()))
         return nsnull;
-    rt = xpcl->EnsureRuntime() ? xpcl->mRuntime : nsnull;
-    if(!xpc)
-        NS_RELEASE(xpcl);
-    return rt;
+
+    return xpc->EnsureRuntime() ? xpc->mRuntime : nsnull;
 }
 
 // static
@@ -271,20 +271,16 @@ nsXPConnect::GetContext(JSContext* cx, nsXPConnect* xpc /*= nsnull*/)
 {
     NS_PRECONDITION(cx,"bad param");
 
-    XPCContext* xpcc;
-    nsXPConnect* xpcl = xpc;
-
-    if(!xpcl && !(xpcl = GetXPConnect()))
+    XPCJSRuntime* rt = GetRuntime(xpc);
+    if(!rt)
         return nsnull;
 
-    if(xpcl->EnsureRuntime() && 
-       xpcl->mRuntime->GetJSRuntime() == JS_GetRuntime(cx))
-        xpcc = xpcl->mRuntime->GetXPCContext(cx);
-    else
-        xpcc = nsnull;
-    if(!xpc)
-        NS_RELEASE(xpcl);
-    return xpcc;
+    if(rt->GetJSRuntime() != JS_GetRuntime(cx))
+    {
+        NS_WARNING("XPConnect was passed aJSContext from a foreign JSRuntime!");
+        return nsnull;    
+    }
+    return rt->GetXPCContext(cx);
 }
 
 // static
@@ -548,12 +544,13 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
     if(!iface)
         return NS_ERROR_FAILURE;
 
-    XPCWrappedNative* wrapper = 
-        XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, scope, iface);
-    if(!wrapper)
-        return NS_ERROR_FAILURE;
+    XPCWrappedNative* wrapper;
 
-    *_retval = wrapper;
+    nsresult rv = XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, scope, iface, 
+                                                &wrapper);
+    if(!NS_FAILED(rv) || !wrapper)
+        return NS_ERROR_FAILURE;
+    *_retval = NS_STATIC_CAST(nsIXPConnectWrappedNative*, wrapper);
     return NS_OK;
 }
 
@@ -631,14 +628,12 @@ nsXPConnect::CreateStackFrameLocation(PRBool isJSFrame, const char *aFilename, c
 {
     NS_ENSURE_ARG_POINTER(_retval);
 
-    nsIJSStackFrameLocation* location = 
-            XPCJSStack::CreateStackFrameLocation(isJSFrame,
-                                                 aFilename,
-                                                 aFunctionName,
-                                                 aLineNumber,
-                                                 aCaller);
-    *_retval = location;    
-    return location ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+    return XPCJSStack::CreateStackFrameLocation(isJSFrame,
+                                                aFilename,
+                                                aFunctionName,
+                                                aLineNumber,
+                                                aCaller,
+                                                _retval);
 }        
 
 /* readonly attribute nsIJSStackFrameLocation CurrentJSStack; */
@@ -652,8 +647,8 @@ nsXPConnect::GetCurrentJSStack(nsIJSStackFrameLocation * *aCurrentJSStack)
     // is there a current context available?
     if(mContextStack && NS_SUCCEEDED(mContextStack->Peek(&cx)) && cx)
     {
-        nsCOMPtr<nsIJSStackFrameLocation> 
-            stack(dont_AddRef(XPCJSStack::CreateStack(cx)));
+        nsCOMPtr<nsIJSStackFrameLocation> stack;
+        XPCJSStack::CreateStack(cx, getter_AddRefs(stack));
         if(stack)
         {
             // peel off native frames...
@@ -704,8 +699,7 @@ nsXPConnect::GetPendingException(nsIXPCException * *aPendingException)
         return UnexpectedFailure(NS_ERROR_FAILURE);
     }
 
-    *aPendingException = data->GetException();
-    return NS_OK;
+    return data->GetException(aPendingException);
 }        
 
 NS_IMETHODIMP

@@ -247,7 +247,7 @@ nsXPCException::Initialize(const char *aMessage, nsresult aResult, const char *a
     else
     {
         nsresult rv;
-        nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+        nsXPConnect* xpc = nsXPConnect::GetXPConnect();
         if(!xpc)
             return NS_ERROR_FAILURE;
         rv = xpc->GetCurrentJSStack(&mLocation);
@@ -314,11 +314,12 @@ nsXPCException::ToString(char **_retval)
 
 
 // static
-nsXPCException*
+nsresult
 nsXPCException::NewException(const char *aMessage,
                              nsresult aResult,
                              nsIJSStackFrameLocation *aLocation,
-                             nsISupports *aData)
+                             nsISupports *aData,
+                             nsIXPCException** exception)
 {
     nsresult rv;
     nsXPCException* e = new nsXPCException();
@@ -338,14 +339,13 @@ nsXPCException::NewException(const char *aMessage,
             if(!xpc)
             {
                 NS_RELEASE(e);
-                return nsnull;
+                return NS_ERROR_FAILURE;
             }
             rv = xpc->GetCurrentJSStack(&location);
-            NS_RELEASE(xpc);
             if(NS_FAILED(rv))
             {
                 NS_RELEASE(e);
-                return nsnull;
+                return NS_ERROR_FAILURE;
             }
             // it is legal for there to be no active JS stack, if C++ code
             // is operating on a JS-implemented interface pointer without
@@ -374,7 +374,12 @@ nsXPCException::NewException(const char *aMessage,
         if(NS_FAILED(rv))
             NS_RELEASE(e);
     }
-    return e;
+
+    if(!e)
+        return NS_ERROR_FAILURE;
+    
+    *exception = NS_STATIC_CAST(nsIXPCException*, e);
+    return NS_OK;
 }
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT

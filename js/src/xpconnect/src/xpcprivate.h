@@ -288,12 +288,18 @@ public:
 
     // non-interface implementation
 public:
-    // these all return an AddRef'd object (or nsnull on failure)
+    // These get non-addref'd pointers
     static nsXPConnect* GetXPConnect();
-    static nsIInterfaceInfoManager* GetInterfaceInfoManager(nsXPConnect* xpc = nsnull);
-    static nsIThreadJSContextStack* GetContextStack(nsXPConnect* xpc = nsnull);
     static XPCJSRuntime* GetRuntime(nsXPConnect* xpc = nsnull);
     static XPCContext*  GetContext(JSContext* cx, nsXPConnect* xpc = nsnull);
+
+    // Gets addref'd pointer
+    static nsresult GetInterfaceInfoManager(nsIInterfaceInfoManager** iim,
+                                            nsXPConnect* xpc = nsnull);
+    
+    // Gets addref'd pointer
+    static nsresult GetContextStack(nsIThreadJSContextStack** stack,
+                                    nsXPConnect* xpc = nsnull);
 
     static JSBool IsISupportsDescendant(nsIInterfaceInfo* info);
 
@@ -301,6 +307,11 @@ public:
         {return mDefaultSecurityManager;}
     PRUint16 GetDefaultSecurityManagerFlags() const
         {return mDefaultSecurityManagerFlags;}
+
+    // This returns and AddRef'd pointer. It does not do this with an out param
+    // only because this form  is required by generic module macro:
+    // NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR 
+    static nsXPConnect* GetSingleton();
 
     // called by module code on dll shutdown
     static void ReleaseXPConnectSingleton();
@@ -481,10 +492,11 @@ public:
     JSBool CallerTypeIsNative() const {return LANG_NATIVE == mCallingLangType;}
     JSBool CallerTypeIsKnown() const {return LANG_UNKNOWN != mCallingLangType;}
 
-    nsIXPCException* GetException()
+    nsresult GetException(nsIXPCException** e)
         {
             NS_IF_ADDREF(mException);
-            return mException;
+            *e = mException;
+            return NS_OK;
         }
     void SetException(nsIXPCException* e)
         {
@@ -829,8 +841,11 @@ class nsXPCWrappedJSClass : public nsIXPCWrappedJSClass
     NS_IMETHOD DebugDump(PRInt16 depth);
 public:
 
-    static nsXPCWrappedJSClass* GetNewOrUsed(XPCCallContext& ccx,
-                                             REFNSIID aIID);
+    static nsresult
+    GetNewOrUsed(XPCCallContext& ccx,
+                 REFNSIID aIID,
+                 nsXPCWrappedJSClass** clazz);
+    
     REFNSIID GetIID() const {return mIID;}
     XPCJSRuntime* GetRuntime() const {return mRuntime;}
     nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
@@ -845,8 +860,8 @@ public:
     JSObject* GetRootJSObject(XPCCallContext& ccx, JSObject* aJSObj);
 
     NS_IMETHOD CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
-                        const nsXPTMethodInfo* info,
-                        nsXPTCMiniVariant* params);
+                          const nsXPTMethodInfo* info,
+                          nsXPTCMiniVariant* params);
 
     virtual ~nsXPCWrappedJSClass();
 private:
@@ -924,10 +939,13 @@ public:
     * XPCConvert::JSObject2NativeInterface which will handles cases where the
     * JS object is already a wrapped native or a DOM object.
     */
-    static nsXPCWrappedJS* GetNewOrUsed(XPCCallContext& ccx,
-                                        JSObject* aJSObj,
-                                        REFNSIID aIID,
-                                        nsISupports* aOuter);
+
+    static nsresult
+    GetNewOrUsed(XPCCallContext& ccx,
+                 JSObject* aJSObj,
+                 REFNSIID aIID,
+                 nsISupports* aOuter,
+                 nsXPCWrappedJS** wrapper); 
 
     JSObject* GetJSObject() const {return mJSObj;}
     nsXPCWrappedJSClass*  GetClass() const {return mClass;}
@@ -953,7 +971,7 @@ public:
     nsISupports* GetAggregatedNativeObject() const {return mRoot->mOuter;}
 
     virtual ~nsXPCWrappedJS();
-private:
+protected:
     nsXPCWrappedJS();   // not implemented
     nsXPCWrappedJS(XPCCallContext& ccx,
                    JSObject* aJSObj,
@@ -1047,20 +1065,24 @@ public:
                                           JSBool useAllocator,
                                           uintN* pErr);
 
-    static nsIXPCException* JSValToXPCException(XPCCallContext& ccx,
-                                                jsval s,
-                                                const char* ifaceName,
-                                                const char* methodName);
+    static nsresult JSValToXPCException(XPCCallContext& ccx,
+                                        jsval s,
+                                        const char* ifaceName,
+                                        const char* methodName,
+                                        nsIXPCException** exception);
 
-    static nsIXPCException* JSErrorToXPCException(XPCCallContext& ccx,
-                                                  const char* message,
-                                                  const char* ifaceName,
-                                                  const char* methodName,
-                                                  const JSErrorReport* report);
+    static nsresult JSErrorToXPCException(XPCCallContext& ccx,
+                                          const char* message,
+                                          const char* ifaceName,
+                                          const char* methodName,
+                                          const JSErrorReport* report,
+                                          nsIXPCException** exception);
 
-    static nsIXPCException* ConstructException(nsresult rv, const char* message,
-                               const char* ifaceName, const char* methodName,
-                               nsISupports* data);
+    static nsresult ConstructException(nsresult rv, const char* message,
+                                       const char* ifaceName, 
+                                       const char* methodName,
+                                       nsISupports* data,
+                                       nsIXPCException** exception);
 
 private:
     XPCConvert(); // not implemented
@@ -1151,14 +1173,16 @@ XPC_JSArgumentFormatter(JSContext *cx, const char *format,
 class XPCJSStack
 {
 public:
-    static nsIJSStackFrameLocation* CreateStack(JSContext* cx);
+    static nsresult
+    CreateStack(JSContext* cx, nsIJSStackFrameLocation** stack);
 
-    static nsIJSStackFrameLocation* CreateStackFrameLocation(
-                                        JSBool isJSFrame,
-                                        const char* aFilename,
-                                        const char* aFunctionName,
-                                        PRInt32 aLineNumber,
-                                        nsIJSStackFrameLocation* aCaller);
+    static nsresult
+    CreateStackFrameLocation(JSBool isJSFrame,
+                             const char* aFilename,
+                             const char* aFunctionName,
+                             PRInt32 aLineNumber,
+                             nsIJSStackFrameLocation* aCaller,
+                             nsIJSStackFrameLocation** stack);
 private:
     XPCJSStack();   // not implemented
 };
@@ -1180,14 +1204,16 @@ public:
     NS_DECL_NSISECURITYCHECKEDCOMPONENT
 #endif
 
-    static nsXPCException* NewException(const char *aMessage,
-                                        nsresult aResult,
-                                        nsIJSStackFrameLocation *aLocation,
-                                        nsISupports *aData);
+    static nsresult NewException(const char *aMessage,
+                                 nsresult aResult,
+                                 nsIJSStackFrameLocation *aLocation,
+                                 nsISupports *aData,
+                                 nsIXPCException** exception);
 
     static JSBool NameAndFormatForNSResult(nsresult rv,
                                            const char** name,
                                            const char** format);
+
     static void* IterateNSResults(nsresult* rv,
                                   const char** name,
                                   const char** format,
@@ -1361,8 +1387,19 @@ public:
 
     ~XPCPerThreadData();
 
-    nsIXPCException* GetException();
-    void             SetException(nsIXPCException* aException);
+    nsresult GetException(nsIXPCException** aException)
+    {
+        NS_IF_ADDREF(mException);
+        *aException = mException;
+        return NS_OK;
+    }
+    
+    void SetException(nsIXPCException* aException)
+    {
+        NS_IF_ADDREF(aException);
+        NS_IF_RELEASE(mException);
+        mException = aException;
+    }
 
     XPCJSContextStack* GetJSContextStack() {return mJSContextStack;}
 
@@ -1416,7 +1453,11 @@ public:
     NS_DECL_NSIJSCONTEXTSTACK
     NS_DECL_NSITHREADJSCONTEXTSTACK
 
+    // This returns and AddRef'd pointer. It does not do this with an out param
+    // only because this form  is required by generic module macro:
+    // NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR 
     static nsXPCThreadJSContextStackImpl* GetSingleton();
+    
     static void FreeSingleton();
 
     nsXPCThreadJSContextStackImpl();
@@ -1439,7 +1480,11 @@ class nsJSRuntimeServiceImpl : public nsIJSRuntimeService
     NS_DECL_ISUPPORTS
     NS_DECL_NSIJSRUNTIMESERVICE
 
+    // This returns and AddRef'd pointer. It does not do this with an out param
+    // only because this form  is required by generic module macro:
+    // NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR 
     static nsJSRuntimeServiceImpl* GetSingleton();
+
     static void FreeSingleton();
 
     nsJSRuntimeServiceImpl();
@@ -2148,18 +2193,19 @@ public:
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDNATIVE
 
-    static XPCWrappedNative*
+    static nsresult
     GetNewOrUsed(XPCCallContext& ccx,
                  nsISupports* Object,
                  XPCWrappedNativeScope* Scope,
                  XPCNativeInterface* Interface,
-                 nsresult* pErr);
+                 XPCWrappedNative** wrapper);
 
-    static XPCWrappedNative*
+    static nsresult
     GetUsedOnly(XPCCallContext& ccx,
                 nsISupports* Object,
                 XPCWrappedNativeScope* Scope,
-                XPCNativeInterface* Interface);
+                XPCNativeInterface* Interface,
+                XPCWrappedNative** wrapper);
 
     static XPCWrappedNative*
     GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj,

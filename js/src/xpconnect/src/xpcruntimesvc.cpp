@@ -66,13 +66,14 @@ static nsJSRuntimeServiceImpl* gJSRuntimeService = nsnull;
 nsJSRuntimeServiceImpl*
 nsJSRuntimeServiceImpl::GetSingleton()
 {
-    if (!gJSRuntimeService) {
-	gJSRuntimeService = new nsJSRuntimeServiceImpl();
-        if (gJSRuntimeService) {
-	    NS_ADDREF(gJSRuntimeService);
-        }
+    if(!gJSRuntimeService) 
+    {
+        gJSRuntimeService = new nsJSRuntimeServiceImpl();
+        // hold an extra reference to lock it down    
+        NS_IF_ADDREF(gJSRuntimeService);
     }
     NS_IF_ADDREF(gJSRuntimeService);
+    
     return gJSRuntimeService;
 }
 
@@ -89,7 +90,7 @@ NS_IMETHODIMP
 nsJSRuntimeServiceImpl::GetRuntime(JSRuntime **runtime)
 {
     if (!runtime)
-	return NS_ERROR_NULL_POINTER;
+        return NS_ERROR_NULL_POINTER;
 
     if (!mRuntime) {
         mRuntime = JS_NewRuntime(gGCSize);

@@ -60,14 +60,16 @@ public:
     /* string toString (); */
     NS_IMETHOD ToString(char **_retval);
 
-    static XPCJSStackFrame* CreateStack(JSContext* cx, JSStackFrame* fp);
+    static nsresult CreateStack(JSContext* cx, JSStackFrame* fp,
+                                XPCJSStackFrame** stack);
 
-    static XPCJSStackFrame* CreateStackFrameLocation(
+    static nsresult CreateStackFrameLocation(
                                         JSBool isJSFrame,
                                         const char* aFilename,
                                         const char* aFunctionName,
                                         PRInt32 aLineNumber,
-                                        nsIJSStackFrameLocation* aCaller);
+                                        nsIJSStackFrameLocation* aCaller,
+                                        XPCJSStackFrame** stack);
 
     XPCJSStackFrame();
     virtual ~XPCJSStackFrame();
@@ -84,29 +86,32 @@ private:
 /**********************************************/
 
 // static
-nsIJSStackFrameLocation*
-XPCJSStack::CreateStack(JSContext* cx)
+
+nsresult
+XPCJSStack::CreateStack(JSContext* cx, nsIJSStackFrameLocation** stack)
 {
     if(!cx || !cx->fp)
-        return nsnull;
+        return NS_ERROR_FAILURE;
 
-    return XPCJSStackFrame::CreateStack(cx, cx->fp);
+    return XPCJSStackFrame::CreateStack(cx, cx->fp, (XPCJSStackFrame**) stack);
 }
 
 // static
-nsIJSStackFrameLocation*
+nsresult
 XPCJSStack::CreateStackFrameLocation(JSBool isJSFrame,
                                      const char* aFilename,
                                      const char* aFunctionName,
                                      PRInt32 aLineNumber,
-                                     nsIJSStackFrameLocation* aCaller)
+                                     nsIJSStackFrameLocation* aCaller,
+                                     nsIJSStackFrameLocation** stack)
 {
     return XPCJSStackFrame::CreateStackFrameLocation(
                                         isJSFrame,
                                         aFilename,
                                         aFunctionName,
                                         aLineNumber,
-                                        aCaller);
+                                        aCaller,
+                                        (XPCJSStackFrame**) stack);
 }
 
 
@@ -134,8 +139,9 @@ XPCJSStackFrame::~XPCJSStackFrame()
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(XPCJSStackFrame, nsIJSStackFrameLocation)
 
-XPCJSStackFrame*
-XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp)
+nsresult
+XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp, 
+                             XPCJSStackFrame** stack)
 {
     XPCJSStackFrame* self = new XPCJSStackFrame();
     JSBool failed = JS_FALSE;
@@ -145,7 +151,8 @@ XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp)
 
         if(fp->down)
         {
-            if(!(self->mCaller = CreateStack(cx, fp->down)))
+            if(NS_FAILED(CreateStack(cx, fp->down, 
+                         (XPCJSStackFrame**) &self->mCaller)))
                 failed = JS_TRUE;
         }
 
@@ -191,16 +198,18 @@ XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp)
             NS_RELEASE(self);
     }
 
-    return self;
+    *stack = self;
+    return self ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 // static
-XPCJSStackFrame*
+nsresult
 XPCJSStackFrame::CreateStackFrameLocation(JSBool isJSFrame,
                                           const char* aFilename,
                                           const char* aFunctionName,
                                           PRInt32 aLineNumber,
-                                          nsIJSStackFrameLocation* aCaller)
+                                          nsIJSStackFrameLocation* aCaller,
+                                          XPCJSStackFrame** stack)
 {
     JSBool failed = JS_FALSE;
     XPCJSStackFrame* self = new XPCJSStackFrame();
@@ -243,7 +252,9 @@ XPCJSStackFrame::CreateStackFrameLocation(JSBool isJSFrame,
     {
         NS_RELEASE(self);   // sets self to nsnull
     }
-    return self;
+
+    *stack = self;
+    return self ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 /* readonly attribute boolean isJSFrame; */

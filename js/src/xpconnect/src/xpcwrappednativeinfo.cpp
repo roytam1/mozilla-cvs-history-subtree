@@ -281,8 +281,8 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
     if(iface)
         return iface;
 
-    nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-        dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+    nsCOMPtr<nsIInterfaceInfoManager> iimgr;
+    nsXPConnect::GetInterfaceInfoManager(getter_AddRefs(iimgr));
     if(!iimgr)
         return nsnull;
 
@@ -364,8 +364,8 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
 XPCNativeInterface* 
 XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
 {
-    nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-        dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+    nsCOMPtr<nsIInterfaceInfoManager> iimgr;
+    nsXPConnect::GetInterfaceInfoManager(getter_AddRefs(iimgr));
     if(!iimgr)
         return nsnull;
 

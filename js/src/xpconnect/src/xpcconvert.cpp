@@ -204,7 +204,7 @@ GetDynamicScriptContext(JSContext *aContext,
   // private set then that private *must* be a pointer to an nsISupports.
   nsISupports *supports = (nsIScriptContext*) JS_GetContextPrivate(aContext);
   if (!supports)
-      return nsnull;
+      return NS_ERROR_FAILURE;
   return supports->QueryInterface(NS_GET_IID(nsIScriptContext),
                                   (void**)aScriptContext);
 }
@@ -885,11 +885,14 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
             if(!iface)
                 return JS_FALSE;
 
-            XPCWrappedNative* wrapper =
-                XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope, iface, pErr);
-            if(wrapper)
+            XPCWrappedNative* wrapper;
+            nsresult rv = XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope, 
+                                                         iface, &wrapper);
+            if(pErr)
+                *pErr = rv;
+            if(NS_SUCCEEDED(rv) && wrapper)
             {
-                *dest = wrapper;
+                *dest = NS_STATIC_CAST(nsIXPConnectJSObjectHolder*, wrapper);
                 return JS_TRUE;
             }
         }
@@ -952,11 +955,13 @@ XPCConvert::JSObject2NativeInterface(XPCCallContext& ccx,
 
     // else...
 
-    nsXPCWrappedJS* wrappedJS =
-        nsXPCWrappedJS::GetNewOrUsed(ccx, src, *iid, aOuter);
-    if(wrappedJS)
+    nsXPCWrappedJS* wrapper;
+    nsresult rv = nsXPCWrappedJS::GetNewOrUsed(ccx, src, *iid, aOuter, &wrapper);
+    if(pErr)
+        *pErr = rv;
+    if(NS_SUCCEEDED(rv) && wrapper)
     {
-        *dest = NS_STATIC_CAST(nsXPTCStubBase*, wrappedJS);
+        *dest = NS_STATIC_CAST(nsXPTCStubBase*, wrapper);
         return JS_TRUE;
     }
 
@@ -968,12 +973,12 @@ XPCConvert::JSObject2NativeInterface(XPCCallContext& ccx,
 /***************************************************************************/
 
 // static
-nsIXPCException*
+nsresult
 XPCConvert::ConstructException(nsresult rv, const char* message,
                                const char* ifaceName, const char* methodName,
-                               nsISupports* data)
+                               nsISupports* data,
+                               nsIXPCException** exception)
 {
-    nsIXPCException* e;
     static const char format[] = "%s [%s::%s]";
     const char * msg = message;
     char* sz = nsnull;
@@ -987,21 +992,22 @@ XPCConvert::ConstructException(nsresult rv, const char* message,
     else
         sz = (char*) msg; // I promise to play nice after casting away const
 
-    e = nsXPCException::NewException(sz, rv, nsnull, data);
+    nsresult res = nsXPCException::NewException(sz, rv, nsnull, data, exception);
 
     if(sz && sz != msg)
         JS_smprintf_free(sz);
-    return e;
+    return res;
 }
 
 /********************************/
 
 // static
-nsIXPCException*
+nsresult 
 XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                                 jsval s,
                                 const char* ifaceName,
-                                const char* methodName)
+                                const char* methodName,
+                                nsIXPCException** exception)
 {
     JSContext* cx = ccx.GetJSContext();
 
@@ -1013,29 +1019,30 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
         if(!obj)
         {
             NS_ASSERTION(0, "when is an object not an object?");
-            return nsnull;
+            return NS_ERROR_FAILURE;
         }
 
         // is this really a native xpcom object with a wrapper?
         XPCWrappedNative* wrapper;
         if(nsnull != (wrapper =
            XPCWrappedNative::GetWrappedNativeOfJSObject(cx,obj)))
-        if(0)
         {
-            nsIXPCException* iface;
-            // nsISupports* supports = wrapper->GetNative();
-            nsISupports* supports = nsnull;
-            if(NS_SUCCEEDED(supports->QueryInterface(
-                                NS_GET_IID(nsIXPCException), (void**)&iface)))
+            nsISupports* supports = wrapper->GetIdentityObject();
+            nsCOMPtr<nsIXPCException> iface = do_QueryInterface(supports);
+            if(iface)
             {
                 // just pass through the exception (with extra ref and all)
-                return iface;
+                nsIXPCException* temp = iface;
+                NS_ADDREF(temp);
+                *exception = temp;
+                return NS_OK;
             }
             else
             {
                 // it is a wrapped native, but not an exception!
                 return ConstructException(NS_ERROR_XPC_JS_THREW_NATIVE_OBJECT,
-                                          nsnull, ifaceName, methodName, supports);
+                                          nsnull, ifaceName, methodName, supports,
+                                          exception);
             }
         }
         else
@@ -1052,7 +1059,7 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                 if(nsnull != (str = JS_ValueToString(cx, s)))
                     message = JS_GetStringBytes(str);
                 return JSErrorToXPCException(ccx, message, ifaceName,
-                                             methodName, report);
+                                             methodName, report, exception);
             }
 
 
@@ -1069,10 +1076,15 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                 XPCContext* xpcc;
                 if(nsnull != (xpcc = nsXPConnect::GetContext(cx)))
                 {
-                    return NS_REINTERPRET_CAST(nsIXPCException*,
+                    nsXPCWrappedJS* wrapper;
+                    nsresult rv = 
                         nsXPCWrappedJS::GetNewOrUsed(ccx, obj,
                                                 NS_GET_IID(nsIXPCException),
-                                                nsnull));
+                                                nsnull, &wrapper);
+                    if(NS_FAILED(rv))
+                        return rv;
+                    *exception = NS_REINTERPRET_CAST(nsIXPCException*, wrapper);
+                    return NS_OK;
                 }
             }
 
@@ -1086,18 +1098,20 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
 
             JSString* str = JS_ValueToString(cx, s);
             if(!str)
-                return nsnull;
+                return NS_ERROR_FAILURE;
 
             return ConstructException(NS_ERROR_XPC_JS_THREW_JS_OBJECT,
                                       JS_GetStringBytes(str),
-                                      ifaceName, methodName, nsnull);
+                                      ifaceName, methodName, nsnull,
+                                      exception);
         }
     }
 
     if(JSVAL_IS_VOID(s) || JSVAL_IS_NULL(s))
     {
         return ConstructException(NS_ERROR_XPC_JS_THREW_NULL,
-                                  nsnull, ifaceName, methodName, nsnull);
+                                  nsnull, ifaceName, methodName, nsnull,
+                                  exception);
     }
 
     if(JSVAL_IS_NUMBER(s))
@@ -1132,7 +1146,8 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
         }
 
         if(isResult)
-            return ConstructException(rv, nsnull, ifaceName, methodName, nsnull);
+            return ConstructException(rv, nsnull, ifaceName, methodName, nsnull,
+                                      exception);
         else
         {
             nsISupportsDouble* data;
@@ -1143,14 +1158,14 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                                 nsnull,
                                 NS_GET_IID(nsISupportsDouble),
                                 (void**)&data)))
-                return nsnull;
+                return NS_ERROR_FAILURE;
             data->SetData(number);
-            nsIXPCException* e =
-                        ConstructException(NS_ERROR_XPC_JS_THREW_NUMBER,
-                                           nsnull,
-                                           ifaceName, methodName, data);
+            nsresult rv = ConstructException(NS_ERROR_XPC_JS_THREW_NUMBER,
+                                             nsnull,
+                                             ifaceName, methodName, data,
+                                             exception);
             NS_RELEASE(data);
-            return e;
+            return rv;
         }
     }
 
@@ -1160,22 +1175,24 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
     if(str)
         return ConstructException(NS_ERROR_XPC_JS_THREW_STRING,
                                   JS_GetStringBytes(str),
-                                  ifaceName, methodName, nsnull);
-    return nsnull;
+                                  ifaceName, methodName, nsnull,
+                                  exception);
+    return NS_ERROR_FAILURE;
 }
 
 /********************************/
 
 // static
-nsIXPCException*
+nsresult
 XPCConvert::JSErrorToXPCException(XPCCallContext& ccx,
                                   const char* message,
                                   const char* ifaceName,
                                   const char* methodName,
-                                  const JSErrorReport* report)
+                                  const JSErrorReport* report,
+                                  nsIXPCException** exception)
 {
     JSContext* cx = ccx.GetJSContext();
-    nsIXPCException* result;
+    nsresult rv = NS_ERROR_FAILURE;
     nsScriptError* data;
     if(report)
     {
@@ -1221,8 +1238,9 @@ XPCConvert::JSErrorToXPCException(XPCCallContext& ccx,
         if(NS_FAILED(data->ToString(&formattedMsg)))
             formattedMsg = nsnull;
 
-        result = ConstructException(NS_ERROR_XPC_JAVASCRIPT_ERROR_WITH_DETAILS,
-                                  formattedMsg, ifaceName, methodName, data);
+        rv = ConstructException(NS_ERROR_XPC_JAVASCRIPT_ERROR_WITH_DETAILS,
+                                formattedMsg, ifaceName, methodName, data,
+                                exception);
 
         if(formattedMsg)
             nsMemory::Free(formattedMsg);
@@ -1230,10 +1248,11 @@ XPCConvert::JSErrorToXPCException(XPCCallContext& ccx,
     }
     else
     {
-        result = ConstructException(NS_ERROR_XPC_JAVASCRIPT_ERROR,
-                                    nsnull, ifaceName, methodName, nsnull);
+        rv = ConstructException(NS_ERROR_XPC_JAVASCRIPT_ERROR,
+                                nsnull, ifaceName, methodName, nsnull,
+                                exception);
     }
-    return result;
+    return rv;
 }
 
 

@@ -722,7 +722,7 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
                          mNativeSetMap, mNativeSetMap ? \
                                     mNativeSetMap->Count() : 0));
 
-        XPC_LOG_ALWAYS(("mThisTranslatorMap @ %x with %d sets(s)", \
+        XPC_LOG_ALWAYS(("mThisTranslatorMap @ %x with %d translator(s)", \
                          mThisTranslatorMap, mThisTranslatorMap ? \
                                     mThisTranslatorMap->Count() : 0));
 

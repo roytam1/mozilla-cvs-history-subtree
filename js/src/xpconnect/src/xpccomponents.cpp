@@ -57,8 +57,7 @@ JSValIsInterfaceOfType(JSContext *cx, jsval v, REFNSIID iid)
     nsCOMPtr<nsISupports> sup;
     nsISupports* iface;
     if(!JSVAL_IS_PRIMITIVE(v) &&
-       nsnull != (xpc = dont_AddRef(
-           NS_STATIC_CAST(nsIXPConnect*,nsXPConnect::GetXPConnect()))) &&
+       nsnull != (xpc = nsXPConnect::GetXPConnect()) &&
        NS_SUCCEEDED(xpc->GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(v),
                             getter_AddRefs(wn))) && wn &&
        NS_SUCCEEDED(wn->GetNative(getter_AddRefs(sup))) && sup &&
@@ -997,10 +996,8 @@ nsXPCComponents_Exception::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
             ;   // -- do nothing --
     }
 
-    nsCOMPtr<nsIXPCException> e =
-        dont_AddRef(
-            NS_STATIC_CAST(nsIXPCException*,
-                nsXPCException::NewException(eMsg, eResult, eStack, eData)));
+    nsCOMPtr<nsIXPCException> e;
+    nsXPCException::NewException(eMsg, eResult, eStack, eData, getter_AddRefs(e));
     if(!e)
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, _retval);
 
@@ -1531,7 +1528,7 @@ NS_IMETHODIMP
 nsXPCComponents::GetStack(nsIJSStackFrameLocation * *aStack)
 {
     nsresult rv;
-    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
     if(!xpc)
         return NS_ERROR_FAILURE;
     rv = xpc->GetCurrentJSStack(aStack);
@@ -1680,8 +1677,9 @@ nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx,
     if(!iface)
         return JS_FALSE;
 
-    nsCOMPtr<XPCWrappedNative> wrapper(dont_AddRef(
-        XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface, nsnull)));
+    nsCOMPtr<XPCWrappedNative> wrapper;
+    XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface, 
+                                   getter_AddRefs(wrapper));
     if(!wrapper)
         return JS_FALSE;
 

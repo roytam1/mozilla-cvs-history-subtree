@@ -86,7 +86,7 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
     *  call. So we'll just throw that exception into our JS.
     */
 
-    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
     if(xpc)
     {
         nsCOMPtr<nsIXPCException> e;
@@ -180,13 +180,11 @@ XPCThrower::BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz)
     if(rv == NS_ERROR_XPC_SECURITY_MANAGER_VETO && JS_IsExceptionPending(cx))
         return;
 
-    nsIXPCException* e = nsXPCException::NewException(sz, rv, nsnull, nsnull);
+    nsCOMPtr<nsIXPCException> e;
+    nsXPCException::NewException(sz, rv, nsnull, nsnull, getter_AddRefs(e));
 
     if(e)
-    {
         success = ThrowExceptionObject(cx, e);
-        NS_RELEASE(e);
-    }
     if(!success)
         JS_ReportOutOfMemory(cx);
 }
@@ -198,7 +196,7 @@ XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
     JSBool success = JS_FALSE;
     if(e)
     {
-        nsCOMPtr<nsXPConnect> xpc = dont_AddRef(nsXPConnect::GetXPConnect());
+        nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
         if(xpc)
         {
             // XXX funky

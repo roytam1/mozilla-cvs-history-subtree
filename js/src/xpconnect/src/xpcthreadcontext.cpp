@@ -61,7 +61,7 @@ XPCJSContextStack::~XPCJSContextStack()
 void 
 XPCJSContextStack::SyncJSContexts()
 {
-    nsCOMPtr<nsXPConnect> xpc = dont_AddRef(nsXPConnect::GetXPConnect());
+    nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
     if(xpc)
         xpc->SyncJSContexts();
 }
@@ -212,13 +212,11 @@ nsXPCThreadJSContextStackImpl::GetSingleton()
     if(!gXPCThreadJSContextStack)
     {
         gXPCThreadJSContextStack = new nsXPCThreadJSContextStackImpl();
-        if(gXPCThreadJSContextStack)
-        {
-            // hold an extra reference to lock it down    
-            NS_ADDREF(gXPCThreadJSContextStack);
-        }
+        // hold an extra reference to lock it down    
+        NS_IF_ADDREF(gXPCThreadJSContextStack);
     }
     NS_IF_ADDREF(gXPCThreadJSContextStack);
+    
     return gXPCThreadJSContextStack;
 }
 
@@ -395,21 +393,6 @@ XPCPerThreadData::~XPCPerThreadData()
         PR_DestroyLock(gLock);
         gLock = nsnull;
     }
-}
-
-nsIXPCException*
-XPCPerThreadData::GetException()
-{
-    NS_IF_ADDREF(mException);
-    return mException;
-}
-
-void
-XPCPerThreadData::SetException(nsIXPCException* aException)
-{
-    NS_IF_ADDREF(aException);
-    NS_IF_RELEASE(mException);
-    mException = aException;
 }
 
 PR_STATIC_CALLBACK(void)

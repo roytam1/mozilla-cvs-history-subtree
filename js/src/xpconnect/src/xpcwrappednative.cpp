@@ -51,26 +51,21 @@ PRThread* XPCWrappedNative::gMainThread = nsnull;
 
 /***************************************************************************/
 
-// braindead local helper
-#define SET_ERROR_CODE(_y) if(pErr) *pErr = _y
-
 // static
-XPCWrappedNative*
+nsresult
 XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                nsISupports* Object,
                                XPCWrappedNativeScope* Scope,
                                XPCNativeInterface* Interface,
-                               nsresult* pErr)
+                               XPCWrappedNative** resultWrapper)
 {
     // XXX should support null Interface IFF the object has an nsIClassInfo?
-
-    SET_ERROR_CODE(NS_ERROR_FAILURE);
 
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
     {
         NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     XPCWrappedNative* wrapper;
@@ -87,12 +82,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!wrapper->FindTearOff(ccx, Interface))
         {
             NS_RELEASE(wrapper);
-            SET_ERROR_CODE(NS_ERROR_NO_INTERFACE);
-            return nsnull;
+            return NS_ERROR_NO_INTERFACE;
         }
-        SET_ERROR_CODE(NS_OK);
         DEBUG_CheckWrapperThreadSafety(wrapper);
-        return wrapper;
+        *resultWrapper = wrapper;
+        return NS_OK;
     }
 
 
@@ -118,25 +112,25 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(NS_FAILED(GatherScriptableInfo(identity,
                                       isClassInfo ? nsnull : info.get(),
                                       &siProto, &siWrapper)))
-        return nsnull;
+        return NS_ERROR_FAILURE;
 
     JSObject* parent = Scope->GetGlobalJSObject();
     
     if(siWrapper.WantPreCreate())
     {
         JSObject* plannedParent = parent;
-        if(NS_FAILED(siWrapper.GetScriptable()->
-            PreCreate(identity, ccx, parent, &parent)))
-        {
-            return nsnull;
-        }
+        nsresult rv = siWrapper.GetScriptable()->PreCreate(identity, ccx, 
+                                                           parent, &parent);
+        if(NS_FAILED(rv))
+            return rv;
         
         if(parent != plannedParent)
         {
             XPCWrappedNativeScope* betterScope = 
                 XPCWrappedNativeScope::FindInJSObjectScope(ccx, parent);
             if(betterScope != Scope)
-                return GetNewOrUsed(ccx, Object, betterScope, Interface, pErr);
+                return GetNewOrUsed(ccx, Object, betterScope, Interface, 
+                                    resultWrapper);
         }
     }
 
@@ -152,13 +146,13 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
             XPCNativeSet::GetNewOrUsed(ccx, nsnull, Interface, 0);
 
         if(!set)
-            return nsnull;
+            return NS_ERROR_FAILURE;
 
         proto = XPCWrappedNativeProto::BuildOneOff(ccx, Scope, set);
     }
 
     if(!proto)
-        return nsnull;
+        return NS_ERROR_FAILURE;
 
     nsIXPCSecurityManager* sm;
        sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
@@ -168,15 +162,14 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                  identity, proto->GetSecurityInfoAddr())))
     {
         // the security manager vetoed. It should have set an exception.
-        SET_ERROR_CODE(NS_ERROR_XPC_SECURITY_MANAGER_VETO);
-        return nsnull;
+        return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
     }
 
     wrapper = new XPCWrappedNative(identity, proto);
     if(!wrapper)
     {
         proto->Release();
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     if(!wrapper->Init(ccx, parent, siWrapper))
@@ -185,7 +178,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!wrapper->GetFlatJSObject())
             wrapper->Release();
         wrapper->Release();
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     // XXX allow for null Interface?
@@ -193,7 +186,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     {
         // Second reference will be released by the FlatJSObject's finializer.
         wrapper->Release();
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
 
     // Redundant wrapper must be killed outside of the map lock.
@@ -225,26 +218,27 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         wrapperToKill->Release();
     }
 
-    if(wrapper)
-        SET_ERROR_CODE(NS_OK);
+    if(!wrapper)
+        return NS_ERROR_FAILURE;
 
     DEBUG_CheckClassInfoClaims(wrapper);
-
-    return wrapper;
+    *resultWrapper = wrapper;
+    return wrapper ? NS_OK : NS_ERROR_FAILURE;
 }
 
 // static 
-XPCWrappedNative*
+nsresult
 XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
                               nsISupports* Object,
                               XPCWrappedNativeScope* Scope,
-                              XPCNativeInterface* Interface)
+                              XPCNativeInterface* Interface,
+                              XPCWrappedNative** resultWrapper)
 {
     // XXX should support null Interface IFF the object has an nsIClassInfo?
     
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
-        return nsnull;
+        return NS_ERROR_FAILURE;
 
     XPCWrappedNative* wrapper;
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
@@ -253,17 +247,18 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
         XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         wrapper = map->Find(identity);
         if(!wrapper)
-            return nsnull;
+            return NS_ERROR_FAILURE;
         NS_ADDREF(wrapper);
     }
 
     if(!wrapper->FindTearOff(ccx, Interface))
     {
         NS_RELEASE(wrapper);
-        return nsnull;
+        return NS_ERROR_FAILURE;
     }
     
-    return wrapper;
+    *resultWrapper = wrapper;
+    return NS_OK;
 }
 
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
@@ -1557,6 +1552,7 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
         
         XPC_LOG_ALWAYS(("mFlatJSObject of %x", mFlatJSObject));
         XPC_LOG_ALWAYS(("mScriptableInfo @ %x", mScriptableInfo));
+        
         if(depth && mScriptableInfo)
         {
             XPC_LOG_INDENT();
@@ -1690,9 +1686,11 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
             const char* badName = JS_GetStringBytes(oldJSStr);
             char* locationStr = nsnull;
 
+            nsIXPCException* exp = nsnull;
+            nsXPCException::NewException("", NS_OK, nsnull, nsnull, &exp);
+
             nsCOMPtr<nsIXPCException> e =
-                dont_AddRef(NS_STATIC_CAST(nsIXPCException*,
-                    nsXPCException::NewException("", NS_OK, nsnull, nsnull)));
+                dont_AddRef(NS_STATIC_CAST(nsIXPCException*, exp));
 
             nsCOMPtr<nsIJSStackFrameLocation> loc = nsnull;
             if(e)

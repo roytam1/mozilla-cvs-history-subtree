@@ -142,6 +142,7 @@ interface nsIEcho : nsISupports {
     readonly attribute short throwInGetter;
 
     attribute string aString;
+    attribute PRInt32 SomeValue;
 
     const short one = 1;
     const short five = 5;

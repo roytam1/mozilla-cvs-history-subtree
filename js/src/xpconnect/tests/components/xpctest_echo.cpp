@@ -60,6 +60,7 @@ public:
 private:
     nsIEcho* mReceiver;
     char*    mString;
+    PRInt32  mSomeValue;
 };
 
 /***************************************************************************/
@@ -71,7 +72,7 @@ NS_IMPL_ISUPPORTS1(xpctestEcho, nsIEcho);
 #endif // IMPLEMENT_TIMER_STUFF
 
 xpctestEcho::xpctestEcho()
-    : mReceiver(nsnull), mString(nsnull)
+    : mReceiver(nsnull), mString(nsnull), mSomeValue(0)
 {
     NS_INIT_REFCNT();
     NS_ADDREF_THIS();
@@ -516,6 +517,22 @@ xpctestEcho::CallFunctionWithThis(nsITestXPCFunctionCallback *callback, nsISuppo
 {
     return callback->CallWithThis(self, s);
 }
+
+/* attribute PRInt32 SomeValue; */
+NS_IMETHODIMP 
+xpctestEcho::GetSomeValue(PRInt32 *aSomeValue)
+{
+    *aSomeValue = mSomeValue;
+    return NS_OK;
+}
+
+NS_IMETHODIMP xpctestEcho::SetSomeValue(PRInt32 aSomeValue)
+
+{
+    mSomeValue = aSomeValue;
+    return NS_OK;
+}
+
 
 /***************************************************/
 

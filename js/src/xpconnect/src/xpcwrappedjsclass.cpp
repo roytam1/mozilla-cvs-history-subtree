@@ -79,8 +79,9 @@ static inline JSBool IsReportableErrorCode(nsresult code)
 }
 
 // static
-nsXPCWrappedJSClass*
-nsXPCWrappedJSClass::GetNewOrUsed(XPCCallContext& ccx, REFNSIID aIID)
+nsresult
+nsXPCWrappedJSClass::GetNewOrUsed(XPCCallContext& ccx, REFNSIID aIID,
+                                  nsXPCWrappedJSClass** resultClazz)
 {
     nsXPCWrappedJSClass* clazz = nsnull;
     XPCJSRuntime* rt = ccx.GetRuntime();
@@ -94,8 +95,8 @@ nsXPCWrappedJSClass::GetNewOrUsed(XPCCallContext& ccx, REFNSIID aIID)
 
     if(!clazz)
     {
-        nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-            dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+        nsCOMPtr<nsIInterfaceInfoManager> iimgr;
+        nsXPConnect::GetInterfaceInfoManager(getter_AddRefs(iimgr));
         if(iimgr)
         {
             nsCOMPtr<nsIInterfaceInfo> info;
@@ -110,7 +111,8 @@ nsXPCWrappedJSClass::GetNewOrUsed(XPCCallContext& ccx, REFNSIID aIID)
             }
         }
     }
-    return clazz;
+    *resultClazz = clazz;
+    return NS_OK;
 }
 
 nsXPCWrappedJSClass::nsXPCWrappedJSClass(XPCCallContext& ccx, REFNSIID aIID,
@@ -360,8 +362,6 @@ JS_STATIC_DLL_CALLBACK(void)
 xpcWrappedJSErrorReporter(JSContext *cx, const char *message,
                           JSErrorReport *report)
 {
-    nsIXPCException* e;
-
     if(report)
     {
         // If it is an exception report, then we can just deal with the 
@@ -416,8 +416,10 @@ xpcWrappedJSErrorReporter(JSContext *cx, const char *message,
     XPCCallContext ccx(NATIVE_CALLER, cx);
     if(!ccx.IsValid())
         return;
-    
-    e = XPCConvert::JSErrorToXPCException(ccx, message, nsnull, nsnull, report);
+
+    nsCOMPtr<nsIXPCException> e;
+    XPCConvert::JSErrorToXPCException(ccx, message, nsnull, nsnull, report,
+                                      getter_AddRefs(e));
     if(e)
         ccx.GetXPCContext()->SetException(e);
 }
@@ -570,7 +572,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     JSObject* obj;
     const char* name = info->GetName();
     jsval fval;
-    nsIXPCException* xpc_exception;
+    nsCOMPtr<nsIXPCException> xpc_exception;
     jsval js_exception;
     void* mark;
     JSBool foundDependentParam;
@@ -980,9 +982,10 @@ pre_call_clean_up:
             if(nsXPCException::NameAndFormatForNSResult(code, nsnull, &msg) && msg)
                 sz = JS_smprintf(format, msg, name);
 
-            nsCOMPtr<nsIXPCException> e =
-               dont_AddRef(XPCConvert::ConstructException(code, sz,
-                                            GetInterfaceName(), name, nsnull));
+            nsCOMPtr<nsIXPCException> e;
+
+            XPCConvert::ConstructException(code, sz, GetInterfaceName(), name, 
+                                           nsnull, getter_AddRefs(e));
             xpcc->SetException(e);
             if(sz)
                 JS_smprintf_free(sz);
@@ -990,7 +993,8 @@ pre_call_clean_up:
     }
 
     /* this one would be set by our error reporter */
-    xpc_exception = xpcc->GetException();
+    
+    xpcc->GetException(getter_AddRefs(xpc_exception));
     if(xpc_exception)
         xpcc->SetException(nsnull);
 
@@ -1002,8 +1006,8 @@ pre_call_clean_up:
     if(JS_GetPendingException(cx, &js_exception))
     {
         if(!xpc_exception)
-            xpc_exception = XPCConvert::JSValToXPCException(ccx, js_exception,
-                                                    GetInterfaceName(), name);
+            XPCConvert::JSValToXPCException(ccx, js_exception, GetInterfaceName(), 
+                                            name, getter_AddRefs(xpc_exception));
 
         /* cleanup and set failed even if we can't build an exception */
         if(!xpc_exception)
@@ -1119,7 +1123,6 @@ pre_call_clean_up:
                 retval = e_result;
             }
         }
-        NS_RELEASE(xpc_exception);
         success = JS_FALSE;
     }
     else

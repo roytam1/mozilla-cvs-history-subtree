@@ -46,7 +46,7 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
                                jsval *argv     /* = nsnull  */,
                                jsval *rval     /* = nsnull  */)
     :   mState(INIT_FAILED),
-        mXPC(dont_AddRef(nsXPConnect::GetXPConnect())),
+        mXPC(nsXPConnect::GetXPConnect()),
         mThreadData(nsnull),
         mXPCContext(nsnull),
         mJSContext(cx),

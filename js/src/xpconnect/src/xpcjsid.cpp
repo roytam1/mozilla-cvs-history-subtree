@@ -285,8 +285,9 @@ nsJSIID::ResolveName()
 {
     if(!mDetails.NameIsSet())
     {
-        nsIInterfaceInfoManager* iim;
-        if(nsnull != (iim = nsXPConnect::GetInterfaceInfoManager()))
+        nsCOMPtr<nsIInterfaceInfoManager> iim;
+        nsXPConnect::GetInterfaceInfoManager(getter_AddRefs(iim));
+        if(iim)
         {
             char* name;
             if(NS_SUCCEEDED(iim->GetNameForIID(mDetails.GetID(), &name)) && name)
@@ -294,7 +295,6 @@ nsJSIID::ResolveName()
                 mDetails.SetName(name);
                 nsMemory::Free(name);
             }
-            NS_RELEASE(iim);
         }
         if(!mDetails.NameIsSet())
             mDetails.SetNameToNoString();
@@ -324,8 +324,9 @@ nsJSIID::NewID(const char* str)
         }
         else
         {
-            nsIInterfaceInfoManager* iim;
-            if(nsnull != (iim = nsXPConnect::GetInterfaceInfoManager()))
+            nsCOMPtr<nsIInterfaceInfoManager> iim;
+            nsXPConnect::GetInterfaceInfoManager(getter_AddRefs(iim));
+            if(iim)
             {
                 nsCOMPtr<nsIInterfaceInfo> iinfo;
                 PRBool canScript;
@@ -338,7 +339,6 @@ nsJSIID::NewID(const char* str)
                     success = idObj->mDetails.InitWithName(*pid, str);
                     nsMemory::Free(pid);
                 }
-                NS_RELEASE(iim);
             }
         }
         if(!success)
@@ -549,7 +549,7 @@ nsJSCID::CreateInstance(nsISupports **_retval)
     if(!mDetails.IsValid())
         return NS_ERROR_XPC_BAD_CID;
 
-    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
@@ -635,7 +635,7 @@ nsJSCID::GetService(nsISupports **_retval)
     if(!mDetails.IsValid())
         return NS_ERROR_XPC_BAD_CID;
 
-    nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
+    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
@@ -788,8 +788,7 @@ xpc_NewIDObject(JSContext *cx, JSObject* jsobj, const nsID& aID)
         nsCRT::free(idString);
         if(iid)
         {
-            nsCOMPtr<nsXPConnect> xpc =
-                dont_AddRef(nsXPConnect::GetXPConnect());
+            nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
             if(xpc)
             {
                 nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
