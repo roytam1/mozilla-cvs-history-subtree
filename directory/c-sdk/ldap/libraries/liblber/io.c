@@ -697,6 +697,12 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	  if ((tag = get_tag(sb, ber)) == LBER_DEFAULT ) {
 	    return( LBER_DEFAULT );
 	  }
+
+	  if((sb->sb_options & LBER_SOCKBUF_OPT_VALID_TAG) &&
+	     (tag != sb->sb_valid_tag)) {
+	    return( LBER_DEFAULT);
+          }
+
 	  ber->ber_tag_contents[0] = (char)tag; /* we only handle 1 byte tags */
 	  
 	  /* read the length */
@@ -911,6 +917,14 @@ ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 	}
 
 	switch ( option ) {
+	case LBER_SOCKBUF_OPT_VALID_TAG:
+		sb->sb_valid_tag= *((unsigned long *) value);
+		if ( value != NULL ) {
+			sb->sb_options |= option;
+		} else {
+			sb->sb_options &= ~option;
+		}
+		break;
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
 		sb->sb_max_incoming = *((unsigned long *) value);
 		/* FALL */
@@ -983,6 +997,9 @@ ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 	}
 
 	switch ( option ) {
+	case LBER_SOCKBUF_OPT_VALID_TAG:
+		*((unsigned long *) value) = sb->sb_valid_tag;
+		break;
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
 		*((unsigned long *) value) = sb->sb_max_incoming;
 		break;
@@ -1203,6 +1220,12 @@ ber_get_next_buffer_ext( void *buffer, size_t buffer_size, unsigned long *len,
 				goto premature_exit;
 			}
 			ber->ber_tag = tag;
+		}
+
+		if((sock->sb_options & LBER_SOCKBUF_OPT_VALID_TAG) &&
+		  (tag != sock->sb_valid_tag)) {
+			*Bytes_Scanned=0;
+			return( LBER_DEFAULT);
 		}
 
 		/*
