@@ -5579,13 +5579,19 @@ nsBlockFrame::DoRemoveFrame(nsIPresContext* aPresContext,
     }
 
     // Advance to next flow block if the frame has more continuations
-    if (nsnull != aDeletedFrame) {
+    if (flow && aDeletedFrame) {
       flow = (nsBlockFrame*) flow->mNextInFlow;
       NS_ASSERTION(nsnull != flow, "whoops, continuation without a parent");
-      prevLine = nsnull;
-      line = flow->mLines;
-      linep = &flow->mLines;
-      prevSibling = nsnull;
+      // add defensive pointer check for bug 56894
+      if(flow) {
+        prevLine = nsnull;
+        line = flow->mLines;
+        linep = &flow->mLines;
+        prevSibling = nsnull;
+      }
+      else {
+        break;  // can't do anything useful without a flow
+      }
     }
   }
 
