@@ -133,8 +133,8 @@ xpi-%: %
 clean-l10n:
 	@$(RM) $(DIST)/bin/defaults/pref/firefox-l10n.js
 	@$(RM) -r $(DIST)/bin/searchplugins
-	@find $(DIST)/bin/chrome -name "??-??.jar" -o -name "???-??.jar" -o -name "??-??" -o -name "???-??" | xargs $(RM) -r dummy
-	@$(PERL) -pi -e '$$_ = "" if m~^locale,install,url,jar:resource:/chrome/[a-z]{2,3}-[A-Z]{2}\.jar~' $(DIST)/bin/chrome/installed-chrome.txt
+	@find $(DIST)/bin/chrome -name "??-??.jar" -o -name "???-??.jar" -o -name "??-???.jar" -o -name "??-??" -o -name "???-??" -o -name "??-???" | xargs $(RM) -r dummy
+	@$(PERL) -pi -e '$$_ = "" if m~^locale,install,url,jar:resource:/chrome/[a-z]{2,3}-[A-Z]{2,3}\.jar~' $(DIST)/bin/chrome/installed-chrome.txt
 
 installers-%: % clean-l10n
 	@$(MAKE) -C ../app export                          # remake firefox.js
