@@ -32,6 +32,7 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  *
+<<<<<<< nsNSSCertificate.cpp
  * $Id$
  */
 
@@ -536,14 +537,19 @@ NS_IMETHODIMP nsX509CertValidity::GetNotAfter(PRTime *aNotAfter)
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsNSSCertificate, nsIX509Cert)
 
-nsNSSCertificate::nsNSSCertificate(char *certDER, int derLen)
+nsNSSCertificate::nsNSSCertificate(char *certDER, int derLen) : 
+                                           mPermDelete(PR_FALSE),
+                                           mCertType(nsIX509Cert::UNKNOWN_CERT)
+              
 {
   NS_INIT_ISUPPORTS();
 
   mCert = CERT_DecodeCertFromPackage(certDER, derLen);
 }
 
-nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert)
+nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert) : 
+                                           mPermDelete(PR_FALSE),
+                                           mCertType(nsIX509Cert::UNKNOWN_CERT)
 {
   NS_INIT_ISUPPORTS();
 
@@ -553,8 +559,41 @@ nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert)
 
 nsNSSCertificate::~nsNSSCertificate()
 {
-  if (mCert)
-    CERT_DestroyCertificate(mCert);
+  if (mPermDelete) {
+    if (mCertType == nsNSSCertificate::USER_CERT) {
+      nsCOMPtr<nsIInterfaceRequestor> cxt = new PipUIContext();
+      PK11_DeleteTokenCertAndKey(mCert, cxt);
+    } else if (!mCert->slot) {
+      // If the cert isn't a user cert and it is on an external token, 
+      // then we'll just leave it as untrusted, but won't delete it 
+      // from the cert db.
+      SEC_DeletePermCertificate(mCert);
+    }
+  } else {
+    if (mCert)
+      CERT_DestroyCertificate(mCert);
+  }
+}
+
+nsresult
+nsNSSCertificate::SetCertType(PRUint32 aCertType)
+{
+  mCertType = aCertType;
+  return NS_OK;
+}
+
+nsresult
+nsNSSCertificate::GetCertType(PRUint32 *aCertType)
+{
+  *aCertType = mCertType;
+  return NS_OK;
+}
+
+nsresult
+nsNSSCertificate::MarkForPermDeletion()
+{
+  mPermDelete = PR_TRUE;
+  return NS_OK;
 }
 
 /* readonly attribute string dbKey; */
@@ -1036,7 +1075,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifySSLClient").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1045,7 +1084,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifySSLServer").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1054,7 +1093,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifySSLStepUp").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1063,7 +1102,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyEmailSigner").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1072,7 +1111,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyEmailRecip").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1081,7 +1120,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyObjSign").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #if 0
@@ -1091,7 +1130,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyProtectObjSign").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
   if (CERT_VerifyCertNow(defaultcertdb, mCert, PR_TRUE, 
@@ -1100,7 +1139,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyUserImport").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #endif
@@ -1110,7 +1149,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifySSLCA").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #if 0
@@ -1120,7 +1159,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyCAVerifier").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #endif
@@ -1130,7 +1169,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyStatusResponder").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #if 0
@@ -1140,7 +1179,7 @@ nsNSSCertificate::GetUsageArray(char     *suffix,
     nsAutoString verifyDesc;
     nsAutoString typestr(NS_LITERAL_STRING("VerifyAnyCA").get());
     typestr.AppendWithConversion(suffix);
-    rv = nssComponent->GetPIPNSSBundleString(typestr.GetUnicode(), verifyDesc);
+    rv = nssComponent->GetPIPNSSBundleString(typestr.get(), verifyDesc);
     tmpUsages[tmpCount++] = verifyDesc.ToNewUnicode();
   }
 #endif
@@ -2609,26 +2648,25 @@ nsNSSCertificateDB::DeleteCertificate(nsIX509Cert *aCert)
   nsNSSCertificate *nssCert = NS_STATIC_CAST(nsNSSCertificate*, aCert);
   CERTCertificate *cert = nssCert->GetCert();
   if (!cert) return NS_ERROR_FAILURE;
-  SECStatus srv;
-#if 0
-  // for later, to use tokens ...
-  if (getCertType(cert) == nsNSSCertificate::USER_CERT) {
-    srv = PK11_DeleteTokenCertAndKey(cert, NULL);
-  } else {
-    srv = SEC_DeletePermCertificate(cert);
-  }
-#endif
-  if (cert->slot) {
+  SECStatus srv = SECSuccess;
+
+  PRUint32 certType = getCertType(cert);
+  nssCert->SetCertType(certType);
+  nssCert->MarkForPermDeletion();
+
+  if (cert->slot && certType != nsIX509Cert::USER_CERT) {
     // To delete a cert of a slot (builtin, most likely), mark it as
-    // completely untrusted.
+    // completely untrusted.  This way we keep a copy cached in the
+    // local database, and next time we try to load it off of the 
+    // external token/slot, we'll know not to trust it.  We don't 
+    // want to do that with user certs, because a user may  re-store
+    // the cert onto the card again at which point we *will* want to 
+    // trust that cert if it chains up properly.
     nsNSSCertTrust trust(0, 0, 0);
     srv = CERT_ChangeCertTrust(CERT_GetDefaultCertDB(), 
                                cert, trust.GetTrust());
-  } else {
-    srv = SEC_DeletePermCertificate(cert);
   }
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("cert deleted: %d", srv));
-  CERT_DestroyCertificate(cert);
   return (srv) ? NS_ERROR_FAILURE : NS_OK;
 }
 
