@@ -57,6 +57,12 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 
+#define PLAY_INTERNAL_SOUND
+
+#ifdef PLAY_INTERNAL_SOUND
+#include "nsIFileURL.h"
+#endif
+
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kMsgMailSessionCID,    NS_MSGMAILSESSION_CID);
 
@@ -102,7 +108,6 @@ nsresult nsStatusBarBiffManager::Shutdown()
 	return NS_OK;
 }
 
-
 nsresult nsStatusBarBiffManager::PerformStatusBarBiff(PRUint32 newBiffFlag)
 {
     // See nsMsgStatusFeedback
@@ -119,7 +124,15 @@ nsresult nsStatusBarBiffManager::PerformStatusBarBiff(PRUint32 newBiffFlag)
         if (NS_SUCCEEDED(rv) && playSoundOnBiff) {
           nsCOMPtr<nsISound> sound = do_CreateInstance("@mozilla.org/sound;1");
           if (sound) {
+#ifdef PLAY_INTERNAL_SOUND
+            nsCOMPtr<nsIFileURL> soundURL = do_CreateInstance("@mozilla.org/network/standard-url;1");
+            nsCAutoString soundSpec;
+            soundSpec = "chrome://messenger/content/newmail.wav";
+            soundURL->SetSpec(soundSpec);
+            rv = sound->Play(soundURL);
+#else
             rv = sound->PlaySystemSound("_moz_mailbeep");
+#endif
           } 
         }
       }
