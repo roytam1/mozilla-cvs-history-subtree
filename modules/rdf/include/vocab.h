@@ -103,6 +103,10 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_URLShortcut;
   RDF_Resource RDF_Cookies;
   RDF_Resource RDF_Toolbar;
+  RDF_Resource RDF_JSec;
+  RDF_Resource RDF_JSecPrincipal;
+  RDF_Resource RDF_JSecTarget;
+  RDF_Resource RDF_JSecAccess;
 
   /* Commands */
   
