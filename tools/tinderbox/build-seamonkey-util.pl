@@ -741,6 +741,14 @@ sub run_all_tests {
 								 $binary, 0, 45);
     }
 
+	# Mozilla java test
+    if ($Settings::JavaTest and $test_result eq 'success') {
+	  print_log "binary = $binary\n";
+        $test_result = AliveTest("MozillaJavaTest", $build_dir,
+								 $binary, "http://java.sun.com", 45);
+    }
+	
+
     # Viewer alive test
     if ($Settings::ViewerTest and $test_result eq 'success') {
         $test_result = AliveTest("ViewerAliveTest", $build_dir,
