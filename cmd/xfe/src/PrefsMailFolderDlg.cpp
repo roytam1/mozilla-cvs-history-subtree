@@ -1,24 +1,6 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "License"); you may not use this file except in
- * compliance with the License.  You may obtain a copy of the License at
- * http://www.mozilla.org/NPL/
- *
- * Software distributed under the License is distributed on an "AS IS"
- * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.  See
- * the License for the specific language governing rights and limitations
- * under the License.
- *
- * The Original Code is Mozilla Communicator client code.
- *
- * The Initial Developer of the Original Code is Netscape Communications
- * Corporation.  Portions created by Netscape are Copyright (C) 1998
- * Netscape Communications Corporation.  All Rights Reserved.
- */
-
 /* -*- Mode: C++; tab-width: 4 -*-
    PrefsMailFolderDlg.cpp -- Generic dialog for choosing a mail folder
+   Copyright © 1998 Netscape Communications Corporation, all rights reserved.
    Created: Alec Flett <alecf@netscape.com>, 05-Mar-98
  */
 
@@ -38,8 +20,6 @@
 extern int XFE_CHOOSE_FOLDER_INSTRUCT;
 extern int XFE_FOLDER_ON_FORMAT;
 extern int MK_MSG_SENT_L10N_NAME;
-
-extern "C" MSG_Master *fe_getMNMaster();
 
 XFE_PrefsMailFolderDialog::XFE_PrefsMailFolderDialog(Widget parent,
                                                      MSG_Master *master,
@@ -144,20 +124,14 @@ void XFE_PrefsMailFolderDialog::initPage()
         XmCreateToggleButtonGadget(form, "specificFolder", av, ac);
     
     m_serverDropdown =
-        new XFE_FolderDropdown(this,form); // only show servers
-    m_serverDropdown->setPopupServer(FALSE);
-    m_serverDropdown->setFilterFunc(filterServersOnly);
-    m_serverDropdown->resyncDropdown();
-
+        new XFE_FolderDropdown(this,form, // only show servers 
+                               TRUE, FALSE, FALSE, FALSE);
     Widget server_dropdown =
         kids[i++] = m_serverDropdown->getBaseWidget();
                               
     m_folderDropdown =
-        new XFE_FolderDropdown(this,form); // only select folders
-    m_folderDropdown->setPopupServer(FALSE);
-    m_folderDropdown->setFilterFunc(filterFoldersOnly);
-    m_folderDropdown->resyncDropdown();
-                               
+        new XFE_FolderDropdown(this,form, // only select folders 
+                               FALSE, FALSE, FALSE); 
     Widget folder_dropdown =
         kids[i++] = m_folderDropdown->getBaseWidget();
     
@@ -344,6 +318,7 @@ void XFE_PrefsMailFolderDialog::cb_serverClick(Widget,
     theDialog->serverToggle(cbs);
 }
 
+    hide();
 void XFE_PrefsMailFolderDialog::folderToggle(XmToggleButtonCallbackStruct *cbs)
 {
     XP_ASSERT(cbs);
@@ -371,35 +346,4 @@ MSG_FolderInfo *XFE_PrefsMailFolderDialog::prompt()
 
     hide();
     return m_retVal;
-}
-
-// just show servers, and that's all we can select too
-uint32
-XFE_PrefsMailFolderDialog::filterServersOnly(MSG_FolderInfo *folder)
-{
-    uint32 flags = MSG_GetFolderFlags(folder);
-    // right now just show IMAP servers. How do we find Local Mail tree?
-    if ((flags & MSG_FOLDER_FLAG_MAIL) &&
-        (flags & MSG_FOLDER_FLAG_DIRECTORY))
-        return (XFE_FolderDropdown::filterShow |
-                XFE_FolderDropdown::filterSelectable);
-    return 0;
-}
-
-uint32
-XFE_PrefsMailFolderDialog::filterFoldersOnly(MSG_FolderInfo *folder)
-{
-    uint32 flags = MSG_GetFolderFlags(folder);
-    // we only allow mail-related things
-    if (flags & MSG_FOLDER_FLAG_MAIL)
-        // you can see IMAP servers/local mail, just not select it
-        if (flags & MSG_FOLDER_FLAG_DIRECTORY)
-            return (XFE_FolderDropdown::filterShow |
-                    XFE_FolderDropdown::filterRecurse);
-        // you can select mail folders
-        else
-            return (XFE_FolderDropdown::filterShow |
-                    XFE_FolderDropdown::filterRecurse |
-                    XFE_FolderDropdown::filterSelectable);
-    return 0;
 }
