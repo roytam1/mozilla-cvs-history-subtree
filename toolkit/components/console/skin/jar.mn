@@ -1,5 +1,0 @@
-classic.jar:
-+	skin/classic/global/console/console.css              (console.css)
-	skin/classic/global/console/console-error-caret.gif  (console-error-caret.gif)
-	skin/classic/global/console/console-error-dash.gif   (console-error-dash.gif)
-	skin/classic/global/console/Console-toolbar.png      (Console-toolbar.png)
