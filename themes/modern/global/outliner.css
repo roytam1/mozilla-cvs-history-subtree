@@ -70,6 +70,16 @@ outlinercol
   color: #000000;
 }
 
+outlinerbody:-moz-outliner-line
+{
+  border: 1px dotted grey;
+}
+
+outlinerbody:-moz-outliner-line(selected)
+{
+  border: 1px dotted black;
+}
+
 .outlinercol-box,
 .outlinercol-image-box {
   border-left: 1px solid #C2D0D0;
