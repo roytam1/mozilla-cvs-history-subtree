@@ -38,6 +38,7 @@
 #include "prmon.h"
 
 class nsIFileChannel;
+class nsJARChannel;
 
 #define NS_JARCHANNEL_CID							 \
 { /* 0xc7e410d5-0x85f2-11d3-9f63-006008a6efe9 */     \
@@ -48,6 +49,9 @@ class nsIFileChannel;
 }
 
 #define JAR_DIRECTORY "jarCache"
+
+typedef nsresult
+(*OnJARFileAvailableFun)(nsJARChannel* channel, void* closure);
 
 class nsJARChannel : public nsIJARChannel, 
                      public nsIStreamListener,
@@ -79,8 +83,12 @@ public:
                   PRUint32 bufferSegmentSize,
                   PRUint32 bufferMaxSize);
 
-    nsresult ExtractJARElement(nsIFileChannel* jarFileChannel);
+    nsresult EnsureJARFileAvailable(OnJARFileAvailableFun fun,
+                                    void* closure);
+    nsresult AsyncReadJARElement();
     nsresult GetCacheFile(nsIFile* *cacheFile);
+
+    void SetJARBaseFile(nsIFileChannel* channel) { mJARBaseFile = channel; }
 
     friend class nsJARDownloadObserver;
 

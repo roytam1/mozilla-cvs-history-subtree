@@ -104,13 +104,16 @@ public:
                                    getter_AddRefs(jarCacheFile));
             if (NS_FAILED(rv)) return rv;
 
-            rv = mJARChannel->ExtractJARElement(jarCacheFile);
+            mJARChannel->SetJARBaseFile(jarCacheFile);
+            rv = mOnJARFileAvailable(mJARChannel, mClosure);
         }
         mJARChannel->mJarCacheTransport = nsnull;
         return rv;
     }
 
-    nsJARDownloadObserver(nsIFile* jarCacheFile, nsJARChannel* jarChannel) {
+    nsJARDownloadObserver(nsIFile* jarCacheFile, nsJARChannel* jarChannel,
+                          OnJARFileAvailableFun onJARFileAvailable, 
+                          void* closure) {
         NS_INIT_REFCNT();
         mJarCacheFile = jarCacheFile;
         mJARChannel = jarChannel;
@@ -122,8 +125,10 @@ public:
     }
 
 protected:
-    nsCOMPtr<nsIFile>   mJarCacheFile;
-    nsJARChannel*       mJARChannel;
+    nsCOMPtr<nsIFile>           mJarCacheFile;
+    nsJARChannel*               mJARChannel;
+    OnJARFileAvailableFun       mOnJARFileAvailable;
+    void*                       mClosure;
 };
 
 NS_IMPL_ISUPPORTS1(nsJARDownloadObserver, nsIStreamObserver)
@@ -133,6 +138,9 @@ NS_IMPL_ISUPPORTS1(nsJARDownloadObserver, nsIStreamObserver)
 nsJARChannel::nsJARChannel()
     : mCommand(nsnull),
       mContentType(nsnull),
+      mContentLength(-1),
+      mStartPosition(0),
+      mReadCount(-1),
       mJAREntry(nsnull),
       mMonitor(nsnull)
 {
@@ -308,11 +316,31 @@ nsJARChannel::GetURI(nsIURI* *aURI)
     return NS_OK;
 }
 
+static nsresult
+OpenJARElement(nsJARChannel* channel, void* closure)
+{
+    nsresult rv;
+    nsIInputStream* *result = (nsIInputStream**)closure;
+    nsAutoCMonitor mon(channel);
+    rv = channel->Open(nsnull, nsnull);
+    if (NS_FAILED(rv)) return rv;
+    rv = channel->GetInputStream(result);
+    mon.Notify();       // wake up OpenInputStream
+	return rv;
+}
+
 NS_IMETHODIMP
 nsJARChannel::OpenInputStream(PRUint32 startPosition, PRInt32 readCount, 
 							  nsIInputStream* *result)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
+    nsAutoCMonitor mon(this);
+    nsresult rv;
+    *result = nsnull;
+    rv = EnsureJARFileAvailable(OpenJARElement, result);
+    if (NS_FAILED(rv)) return rv;
+    if (*result == nsnull)
+        mon.Wait();
+    return rv;
 }
 
 NS_IMETHODIMP
@@ -327,19 +355,39 @@ nsJARChannel::AsyncOpen(nsIStreamObserver* observer, nsISupports* ctxt)
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+static nsresult
+ReadJARElement(nsJARChannel* channel, void* closure)
+{
+    nsresult rv;
+    rv = channel->AsyncReadJARElement();
+    return rv;
+}
+
 NS_IMETHODIMP
 nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount, 
 						nsISupports* ctxt, 
 						nsIStreamListener* listener)
+{
+    mStartPosition = startPosition;
+    mReadCount = readCount;
+    mUserContext = ctxt;
+    mUserListener = listener;
+
+    return EnsureJARFileAvailable(ReadJARElement, nsnull);
+}
+
+nsresult
+nsJARChannel::EnsureJARFileAvailable(OnJARFileAvailableFun onJARFileAvailable, 
+                                     void* closure)
 {
     nsresult rv;
 
 #ifdef PR_LOGGING
     nsXPIDLCString jarURLStr;
     mURI->GetSpec(getter_Copies(jarURLStr));
-#endif
     PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
            ("nsJarProtocol: AsyncRead %s", (const char*)jarURLStr));
+#endif
 
     rv = mURI->GetJARFile(getter_AddRefs(mJARBaseURI));
     if (NS_FAILED(rv)) return rv;
@@ -352,19 +400,13 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
                     mJARBaseURI, mLoadGroup, mCallbacks, mLoadAttributes);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIFileChannel> jarBaseFile = do_QueryInterface(jarBaseChannel, &rv);
-
-    // XXX need to set a state variable here to say we're reading
-    mStartPosition = startPosition;
-    mReadCount = readCount;
-    mUserContext = ctxt;
-    mUserListener = listener;
+    mJARBaseFile = do_QueryInterface(jarBaseChannel, &rv);
 
     if (NS_SUCCEEDED(rv)) {
         // then we've already got a local jar file -- no need to download it
         PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
                ("nsJarProtocol: extracting local jar file %s", (const char*)jarURLStr));
-        rv = ExtractJARElement(jarBaseFile);
+        rv = onJARFileAvailable(this, closure);
     }
     else {
         // otherwise, we need to download the jar file
@@ -380,28 +422,27 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
         if (NS_SUCCEEDED(rv) && filePresent)
         {
 	        // then we've already got the file in the local cache -- no need to download it
-            nsCOMPtr<nsIFileChannel> fileChannel;
             rv = nsComponentManager::CreateInstance(kFileChannelCID,
                                                     nsnull,
                                                     NS_GET_IID(nsIFileChannel),
-                                                    getter_AddRefs(fileChannel));
+                                                    getter_AddRefs(mJARBaseFile));
             if (NS_FAILED(rv)) return rv;
 
-            rv = fileChannel->Init(jarCacheFile, 
-                                   PR_RDONLY,
-                                   nsnull,       // contentType
-                                   -1,           // contentLength
-                                   nsnull,       // loadGroup
-                                   nsnull,       // notificationCallbacks
-                                   nsIChannel::LOAD_NORMAL,
-                                   nsnull,       // originalURI
-                                   mBufferSegmentSize,
-                                   mBufferMaxSize);
+            rv = mJARBaseFile->Init(jarCacheFile, 
+                                    PR_RDONLY,
+                                    nsnull,       // contentType
+                                    -1,           // contentLength
+                                    nsnull,       // loadGroup
+                                    nsnull,       // notificationCallbacks
+                                    nsIChannel::LOAD_NORMAL,
+                                    nsnull,       // originalURI
+                                    mBufferSegmentSize,
+                                    mBufferMaxSize);
             if (NS_FAILED(rv)) return rv;
 
             PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
                    ("nsJarProtocol: jar file already in cache %s", (const char*)jarURLStr));
-		    rv = ExtractJARElement(fileChannel);
+            rv = onJARFileAvailable(this, closure);
 			return rv;
 		}
 
@@ -421,7 +462,8 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
         rv = mJarCacheTransport->SetNotificationCallbacks(mCallbacks);
         if (NS_FAILED(rv)) return rv;
 
-        nsCOMPtr<nsIStreamObserver> downloadObserver = new nsJARDownloadObserver(jarCacheFile, this);
+        nsCOMPtr<nsIStreamObserver> downloadObserver = 
+            new nsJARDownloadObserver(jarCacheFile, this, onJARFileAvailable, closure);
         if (downloadObserver == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
 
@@ -473,13 +515,13 @@ nsJARChannel::GetCacheFile(nsIFile* *cacheFile)
 }
 
 nsresult
-nsJARChannel::ExtractJARElement(nsIFileChannel* jarBaseFile)
+nsJARChannel::AsyncReadJARElement()
 {
     nsresult rv;
 
     nsAutoMonitor monitor(mMonitor);
 
-    mJARBaseFile = jarBaseFile;
+    NS_ASSERTION(mJARBaseFile, "mJARBaseFile is null");
 
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
@@ -693,6 +735,8 @@ NS_IMETHODIMP
 nsJARChannel::Open(char* *contentType, PRInt32 *contentLength) 
 {
 	nsresult rv;
+    NS_ASSERTION(mJARBaseFile, "mJARBaseFile is null");
+
 	rv = nsComponentManager::CreateInstance(kZipReaderCID,
                                             nsnull,
                                             NS_GET_IID(nsIZipReader),
@@ -716,10 +760,16 @@ nsJARChannel::Open(char* *contentType, PRInt32 *contentLength)
 	rv = mJAR->GetEntry(mJAREntry, getter_AddRefs(entry));
     if (NS_FAILED(rv)) return rv;
 
-    rv = entry->GetRealSize((PRUint32*)contentLength);
-    if (NS_FAILED(rv)) return rv;
+    if (contentLength) {
+        rv = entry->GetRealSize((PRUint32*)contentLength);
+        if (NS_FAILED(rv)) return rv;
+    }
 
-    return GetContentType(contentType);
+    if (contentType) {
+        rv = GetContentType(contentType);
+        if (NS_FAILED(rv)) return rv;
+    }
+    return rv;
 }
 
 
