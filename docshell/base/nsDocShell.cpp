@@ -4463,6 +4463,7 @@ nsDocShell::InternalLoad(nsIURI * aURI,
                          nsIRequest** aRequest)
 {
     nsresult rv = NS_OK;
+    PRBool isWyciwyg = PR_FALSE;
 
     // Initialize aDocShell/aRequest
     if (aDocShell) {
@@ -4471,6 +4472,12 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     if (aRequest) {
         *aRequest = nsnull;
     }
+
+    // wyciwyg urls can only be loaded through history. Any normal load of
+    // wyciwyg through docshell is  illegal. Disallow such loads.
+    rv = aURI->SchemeIs("wyciwyg", &isWyciwyg);   
+    if ((isWyciwyg && NS_SUCCEEDED(rv) && (aLoadType & LOAD_CMD_NORMAL)) || NS_FAILED(rv)) 
+        return NS_ERROR_FAILURE;
 
     //
     // First, notify any nsIContentPolicy listeners about the document load.
