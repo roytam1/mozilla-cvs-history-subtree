@@ -58,13 +58,6 @@
 #endif /* DOS */
 #endif /* MACOS */
 
-#undef NET_SSL
-
-#if defined(NET_SSL)
-#include <sec.h>
-static SECCertDBHandle        certdbhandle;
-#endif
-
 #include "ldap.h"
 #include "disptmpl.h"
 #include "ldaplog.h"
@@ -1257,31 +1250,6 @@ main(
 					    NULL );
 				}
 			}
-#ifdef NET_SSL
-			getline( line, sizeof(line), stdin,
-				"Use Secure Sockets Layer - SSL (0=no, 1=yes)?" );
-			optval = ( atoi( line ) != 0 );
-			if ( optval ) {
-				getline( line, sizeof(line), stdin,
-				    "security DB path?" ); 
-				if ( ldapssl_client_init( (*line == '\0') ?
-				    NULL : line, &certdbhandle ) < 0 ) {
-					perror( "ldapssl_client_init" );
-					optval = 0;     /* SSL not avail. */
-				} else if ( ldapssl_install_routines( ld )
-				    < 0 ) {
-					ldap_perror( ld,
-					    "ldapssl_install_routines" );
-					optval = 0;     /* SSL not avail. */
-				}
-			}
-
-#ifdef LDAP_SSLIO_HOOKS
-			ldap_set_option( ld, LDAP_OPT_SSL,
-			    optval ? LDAP_OPT_ON : LDAP_OPT_OFF );
-#endif
-#endif
-
 			getline( line, sizeof(line), stdin, "Reconnect?" );
 			ldap_set_option( ld, LDAP_OPT_RECONNECT,
 			    ( atoi( line ) == 0 ) ? LDAP_OPT_OFF :
@@ -1438,8 +1406,13 @@ handle_result( LDAP *ld, LDAPMessage *lm, int onlyone )
 		print_ldap_result( ld, lm, "bind" );
 		break;
 	case LDAP_RES_EXTENDED:
-		printf( "ExtendedOp result\n" );
-		print_ldap_result( ld, lm, "extendedop" );
+		if ( ldap_msgid( lm ) == LDAP_RES_UNSOLICITED ) {
+			printf( "Unsolicited result\n" );
+			print_ldap_result( ld, lm, "unsolicited" );
+		} else {
+			printf( "ExtendedOp result\n" );
+			print_ldap_result( ld, lm, "extendedop" );
+		}
 		break;
 
 	default:
@@ -1502,11 +1475,18 @@ print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s )
 	    ldap_parse_extended_result( ld, lm, &oid, &data, 0 ) ==
 	    LDAP_SUCCESS ) {
 		if ( oid != NULL ) {
-			printf( "\tExtendedOp OID: %s\n", oid );
+			if ( strcmp ( oid, LDAP_NOTICE_OF_DISCONNECTION )
+			    == 0 ) {
+				printf(
+				    "\t%s Notice of Disconnection (OID: %s)\n",
+				    s, oid );
+			} else {
+				printf( "\t%s OID: %s\n", s, oid );
+			}
 			ldap_memfree( oid );
 		}
 		if ( data != NULL ) {
-			fputs( "\tExtendedOp data:\n", stderr );
+			printf( "\t%s data:\n", s );
 			bprint( data->bv_val, data->bv_len );
 			ber_bvfree( data );
 		}
