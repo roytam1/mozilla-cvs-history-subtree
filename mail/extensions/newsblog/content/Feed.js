@@ -513,6 +513,21 @@ Feed.prototype.removeInvalidItems = function() {
 // otherwise it triggers a download done notification to the UI
 Feed.prototype.storeNextItem = function()
 {
+  if (!this.itemsToStore.length)
+  {
+    // create a folder for the feed if one does not exist already...
+    var folder;
+
+    try {
+        folder = this.server.rootMsgFolder.getChildNamed(this.name);
+     } catch(e) {}
+
+    if (!folder) 
+      this.server.rootMsgFolder.createSubfolder(this.name, null /* supposed to be a msg window */);
+
+    return this.cleanupParsingState(this);
+  }
+
   var item = this.itemsToStore[this.itemsToStoreIndex]; 
 
   item.store();
@@ -533,27 +548,29 @@ Feed.prototype.storeNextItem = function()
     this.storeItemsTimer.initWithCallback(this, 50, Components.interfaces.nsITimer.TYPE_ONE_SHOT);
   }
   else
-  {    
-    // now that we are done parsing the feed, remove the feed from our feed cache
-    gFzFeedCache[item.feed.url] = "";
+    this.cleanupParsingState(item.feed);   
+}
 
-    item.feed.removeInvalidItems();
+Feed.prototype.cleanupParsingState = function(feed) {
+    // now that we are done parsing the feed, remove the feed from our feed cache
+  gFzFeedCache[feed.url] = "";
+
+  feed.removeInvalidItems();
 
     // let's be sure to flush any feed item changes back to disk
-    var ds = getItemsDS(item.feed.server);
+  var ds = getItemsDS(feed.server);
     ds.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource).Flush(); // flush any changes
 
-    if (item.feed.downloadCallback)
-      item.feed.downloadCallback.downloaded(item.feed, kNewsBlogSuccess);
+  if (feed.downloadCallback)
+    feed.downloadCallback.downloaded(feed, kNewsBlogSuccess);
 
-    item.feed.request = null; // force the xml http request to go away. This helps reduce some
+  feed.request = null; // force the xml http request to go away. This helps reduce some
                               // nasty assertions on shut down of all things.
 
     this.itemsToStore = "";
     this.itemsToStoreIndex = 0;
     this.storeItemsTimer = null;
   }   
-}
 
 Feed.prototype.notify = function(aTimer) {
   this.storeNextItem();
