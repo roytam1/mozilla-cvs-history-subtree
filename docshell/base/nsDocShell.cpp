@@ -1055,11 +1055,12 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
             nsCOMPtr<nsIDocShellTreeItem> sameTypeRoot;
             GetSameTypeRootTreeItem(getter_AddRefs(sameTypeRoot));
 
-            if (sameTypeRoot != tmp) {
-                // The load was initiated in another toplevel window.
-                // Assume we'll need to make a new window until we
-                // find that the target, or one of its ancestors, are
-                // from the same origin as the loading docshell.
+            if (sameTypeRoot != tmp && treeItem != tmp) {
+                // The load was targeted at a frame and initiated in
+                // another toplevel window. Assume we'll need to make
+                // a new window until we find that the target, or one
+                // of its ancestors, are from the same origin as the
+                // loading docshell.
                 mustMakeNewWindow = PR_TRUE;
 
                 tmp = treeItem;
