@@ -2697,27 +2697,21 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   nsCOMPtr<nsIDOMHTMLOptionElement> new_option;
 
   if (!JSVAL_IS_NULL(*vp)) {
-    JSObject* option_obj = JSVAL_TO_OBJECT(*vp); 
-    JSClass* jsclass = ::JS_GetClass(cx, option_obj);
+    nsCOMPtr<nsIXPConnectWrappedNative> new_wrapper;
+    nsresult rv;
 
-    if (jsclass && !((~jsclass->flags) & (JSCLASS_HAS_PRIVATE |
-                                          JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
-      nsISupports *s = (nsISupports *)::JS_GetPrivate(cx, option_obj);
+    rv = sXPConnect->GetWrappedNativeOfJSObject(cx, JSVAL_TO_OBJECT(*vp),
+                                                getter_AddRefs(new_wrapper));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-      nsCOMPtr<nsIXPConnectWrappedNative> wrapper(do_QueryInterface(s));
-      NS_ENSURE_TRUE(wrapper, NS_ERROR_UNEXPECTED);
+    nsCOMPtr<nsISupports> native;
+    new_wrapper->GetNative(getter_AddRefs(native));
 
-      nsCOMPtr<nsISupports> native;
-      wrapper->GetNative(getter_AddRefs(native));
+    new_option = do_QueryInterface(native);
 
-      new_option = do_QueryInterface(native);
+    if (!new_option) {
+      // Someone is trying to set an option to a non-option object.
 
-      if (!new_option) {
-        // Someone is trying to set an option to a non-option object.
-
-        return NS_ERROR_UNEXPECTED;
-      }
-    } else {
       return NS_ERROR_UNEXPECTED;
     }
   }
