@@ -477,7 +477,14 @@ RDFDocumentImpl::RDFDocumentImpl(void)
 
 RDFDocumentImpl::~RDFDocumentImpl()
 {
-    NS_IF_RELEASE(mDocumentDataSource);
+    if (mDocumentDataSource) {
+        nsIRDFXMLDocument* doc;
+        if (NS_SUCCEEDED(mDocumentDataSource->QueryInterface(kIRDFXMLDocumentIID, (void**) &doc))) {
+            doc->RemoveDocumentObserver(this);
+            NS_RELEASE(doc);
+        }
+        NS_RELEASE(mDocumentDataSource);
+    }
     NS_IF_RELEASE(mLocalDataSource);
 
     if (mResources)
@@ -663,15 +670,17 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         // What I guess I'm saying is, maybe it doesn't make that much
         // sense to register stream data sources when they're
         // created...I dunno...
-        nsIStreamListener* lsnr = new DummyListener(this);
-        if (! lsnr)
-            return NS_ERROR_OUT_OF_MEMORY;
+        if (aDocListener) {
+            nsIStreamListener* lsnr = new DummyListener(this);
+            if (! lsnr)
+                return NS_ERROR_OUT_OF_MEMORY;
 
-        NS_ADDREF(lsnr);
-        *aDocListener = lsnr;
+            NS_ADDREF(lsnr);
+            *aDocListener = lsnr;
 
-        if (NS_FAILED(rv = NS_OpenURL(aURL, lsnr)))
-            return rv;
+            if (NS_FAILED(rv = NS_OpenURL(aURL, lsnr)))
+                return rv;
+        }
     }
     else if (NS_SUCCEEDED(rv = nsRepository::CreateInstance(kRDFStreamDataSourceCID,
                                                             nsnull,
@@ -690,13 +699,15 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         nsIRDFXMLDocument* doc;
         if (NS_SUCCEEDED(rv = mDocumentDataSource->QueryInterface(kIRDFXMLDocumentIID, (void**) &doc))) {
             doc->AddDocumentObserver(this);
+            NS_RELEASE(doc);
         }
 
         if (NS_FAILED(rv = mDocumentDataSource->Init(uri)))
             return rv;
 
-        // XXX this may cause problems down the road
-        *aDocListener = nsnull;
+        if (aDocListener) {
+            *aDocListener = nsnull;
+        }
     }
     else {
         // an error occurred
