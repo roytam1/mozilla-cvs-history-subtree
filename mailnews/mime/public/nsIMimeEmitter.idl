@@ -19,14 +19,8 @@
 #include "nsrootidl.idl"
 #include "nsIFileSpec.idl"
 #include "nsIOutputStream.idl"
-
-interface nsIURI;
-interface nsIStreamListener;
-
-%{C++
-#include "nsIRUL.h"
-#include "nsIStreamListener.h"
-%}
+#include "nsIURI.idl"
+#include "nsIStreamListener.idl"
 
 [scriptable, uuid(39E329E2-357F-11d3-8EFD-00A024A7D144)] 
 interface HeaderDisplayTypes 
