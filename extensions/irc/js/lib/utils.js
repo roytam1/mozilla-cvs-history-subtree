@@ -517,13 +517,13 @@ function formatDateOffset (offset, format)
     {
         var ary = new Array();
         if (days > 0)
-            ary.push (getMsg("days", days));
+            ary.push (getMsg(MSG_DAYS, days));
         if (hours > 0)
-            ary.push (getMsg("hours", hours));
+            ary.push (getMsg(MSG_HOURS, hours));
         if (minutes > 0)
-            ary.push (getMsg("minutes", minutes));
+            ary.push (getMsg(MSG_MINUTES, minutes));
         if (seconds > 0 || offset == 0)
-            ary.push (getMsg("seconds", seconds));
+            ary.push (getMsg(MSG_SECONDS, seconds));
 
         format = ary.join(", ");
     }

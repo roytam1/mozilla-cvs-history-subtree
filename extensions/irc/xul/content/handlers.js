@@ -68,7 +68,7 @@ function onClose()
         return true;
     
     client.userClose = true;
-    display(getMsg("cli_closing"));
+    display(MSG_CLOSING);
 
     if (!("getConnectionCount" in client) ||
         client.getConnectionCount() == 0)
@@ -361,15 +361,14 @@ function onTabCompleteRequest (e)
             if (matches.length > 0)
             {
                 /* then list possible completions, */
-                display(getMsg("tabCompleteList",
+                display(getMsg(MSG_FMT_MATCHLIST,
                                [matches.length, word,
-                                matches.join(MSG_COMMASP)]),
-                        "INFO");
+                                matches.join(MSG_COMMASP)]));
             }
             else
             {
                 /* or display an error if there are none. */
-                display(getMsg("tabCompleteError", [word]), "ERROR");
+                display(getMsg(MSG_ERR_NO_MATCH, word), MT_ERROR);
             }
         }
         else if (matches.length >= 1)
@@ -649,7 +648,7 @@ function my_showtonet (e)
 CIRCNetwork.prototype.onUnknownCTCPReply = 
 function my_ctcprunk (e)
 {
-    this.display (getMsg("my_ctcprunk",
+    this.display (getMsg(MSG_FMT_CTCPREPLY,
                          [e.CTCPCode, e.CTCPData, e.user.properNick]),
                          "CTCP_REPLY", e.user, e.server.me);
 }
@@ -751,7 +750,7 @@ function my_list_init ()
             if (end - start > CHUNK_SIZE)
                 end = start + CHUNK_SIZE;
             for (var i = start; i < end; ++i)
-                network.displayHere (getMsg("my_322", list[i]), "322");
+                network.displayHere (getMsg(MSG_FMT_CHANLIST, list[i]), "322");
             list.displayed = end;
         }
         if (list.done && (list.displayed == list.length))
@@ -761,8 +760,8 @@ function my_list_init ()
                 var length = list.event323.params.length;
                 network.displayHere (list.event323.params[length - 1], "323");
             }
-            network.displayHere (getMsg("my_323", [list.displayed, list.count]),
-                                 "INFO");
+            network.displayHere(getMsg(MSG_LIST_END,
+                                       [list.displayed, list.count]));
             delete network.list;
         }
         else
@@ -777,7 +776,7 @@ function my_list_init ()
         this.list.regexp = null;
     }
     if (client.currentObject != this)
-        display (getMsg("my_321", this.name), "INFO");
+        display (getMsg(MSG_LIST_REROUTED, this.name));
     this.list.lastLength = 0;
     this.list.done = false;
     this.list.count = 0;
@@ -849,7 +848,7 @@ function my_315 (e)
         matches = this.whoMatches;
     else
         matches = 0;
-    e.user.display (getMsg("my_315", [e.params[2], matches]), e.code);
+    e.user.display (getMsg(MSG_WHO_END, [e.params[2], matches]), e.code);
     e.user.updateHeader();
     delete this.whoMatches;
 }
@@ -875,14 +874,15 @@ function my_352 (e)
     
     var status = e.params[7];
     if (e.params[7] == "G")
-        status = getMsg("my_352.g");
+        status = MSG_GONE;
     else if (e.params[7] == "H")
-        status = getMsg("my_352.h");
+        status = MSG_HERE;
         
-    e.user.display (getMsg("my_352", [e.params[6], e.params[3], e.params[4],
-                                      desc, status,
-                                      toUnicode(e.params[2], this), 
-                                      e.params[5], hops]), e.code, e.user);
+    e.user.display (getMsg(MSG_WHO_MATCH,
+                           [e.params[6], e.params[3], e.params[4],
+                            desc, status,
+                            toUnicode(e.params[2], this), 
+                            e.params[5], hops]), e.code, e.user);
     updateTitle (e.user);
     if ("whoMatches" in this)
         ++this.whoMatches;
@@ -907,29 +907,29 @@ function my_whoisreply (e)
     switch (Number(e.code))
     {
         case 311:
-            text = getMsg("my_whoisreplyMsg",
+            text = getMsg(MSG_WHOIS_NAME,
                           [nick, e.params[3], e.params[4],
                            toUnicode(e.params[6], this)]);
             break;
             
         case 319:
             var ary = stringTrim(e.params[3]).split(" ");
-            text = getMsg("my_whoisreplyMsg2",[nick, arraySpeak(ary)]);
+            text = getMsg(MSG_WHOIS_CHANNELS, [nick, arraySpeak(ary)]);
             break;
             
         case 312:
-            text = getMsg("my_whoisreplyMsg3",
+            text = getMsg(MSG_WHOIS_SERVER,
                           [nick, e.params[3], e.params[4]]);
             break;
             
         case 317:
-            text = getMsg("my_whoisreplyMsg4",
+            text = getMsg(MSG_WHOIS_IDLE
                           [nick, formatDateOffset(Number(e.params[3])),
                           new Date(Number(e.params[4]) * 1000)]);
             break;
             
         case 318:
-            text = getMsg("my_whoisreplyMsg5", nick);
+            text = getMsg(MSG_WHOIS_END, nick);
             if (user)
                 user.updateHeader();
             break;
@@ -945,15 +945,16 @@ function my_whoisreply (e)
 CIRCNetwork.prototype.on341 = /* invite reply */
 function my_341 (e)
 {
-    this.display (getMsg("my_341", [e.params[2], toUnicode(e.params[3], this)]),
+    this.display (getMsg(MSG_YOU_INVITE, [e.params[2],
+                                          toUnicode(e.params[3], this)]),
                   "341");
 }
 
 CIRCNetwork.prototype.onInvite = /* invite message */
 function my_invite (e)
 {
-    this.display (getMsg("my_Invite", [e.user.properNick, e.user.name,
-                                       e.user.host, e.params[2]]), "INVITE");
+    this.display (getMsg(MSG_INVITE_YOU, [e.user.properNick, e.user.name,
+                                          e.user.host, e.params[2]]), "INVITE");
 }
 
 CIRCNetwork.prototype.on433 = /* nickname in use */
@@ -963,20 +964,20 @@ function my_433 (e)
     {
         var newnick = this.INITIAL_NICK + "_";
         this.INITIAL_NICK = newnick;
-        e.server.parent.display (getMsg("my_433Retry", [e.params[2], newnick]),
+        e.server.parent.display (getMsg(MSG_RETRY_NICK, [e.params[2], newnick]),
                                  "433");
         this.primServ.sendData("NICK " + newnick + "\n");
     }
     else
     {
-        this.display (getMsg("my_433Msg", e.params[2]), "433");
+        this.display (getMsg(MSG_NICK_IN_USE, e.params[2]), "433");
     }
 }
 
 CIRCNetwork.prototype.onStartConnect =
 function my_sconnect (e)
 {
-    this.display (getMsg("my_sconnect", [this.name, e.host, e.port,
+    this.display (getMsg(MSG_CONNECTING, [this.name, e.host, e.port,
                                          e.connectAttempt,
                                          this.MAX_CONNECT_ATTEMPTS]), "INFO");
 }
@@ -991,11 +992,11 @@ function my_neterror (e)
         switch (e.errorCode)
         {
             case JSIRC_ERR_NO_SOCKET:
-                msg = getMsg ("my_neterrorNoSocket");
+                msg = MSG_ERR_NO_SOCKET;
                 break;
                 
             case JSIRC_ERR_EXHAUSTED:
-                msg = getMsg ("my_neterrorExhausted");
+                msg = MSG_ERR_EXHAUSTED;
                 break;
         }
     }
@@ -1017,27 +1018,27 @@ function my_netdisconnect (e)
         switch (e.disconnectStatus)
         {
             case 0:
-                msg = getMsg("my_netdisconnectConnectionClosed", [this.name,
+                msg = getMsg(MSG_CONNECTION_CLOSED, [this.name,
                              e.server.hostname, e.server.port]);
                 break;
 
             case NS_ERROR_CONNECTION_REFUSED:
-                msg = getMsg("my_netdisconnectConnectionRefused", [this.name,
+                msg = getMsg(MSG_CONNECTION_REFUSED, [this.name,
                              e.server.hostname, e.server.port]);
                 break;
 
             case NS_ERROR_NET_TIMEOUT:
-                msg = getMsg("my_netdisconnectConnectionTimeout", [this.name,
+                msg = getMsg(MSG_CONNECTION_TIMEOUT, [this.name,
                              e.server.hostname, e.server.port]);
                 break;
 
             case NS_ERROR_UNKNOWN_HOST:
-                msg = getMsg("my_netdisconnectUnknownHost",
+                msg = getMsg(MSG_UNKNOWN_HOST,
                              e.server.hostname);
                 break;
             
             default:
-                msg = getMsg("my_netdisconnectConnectionClosedStatus",
+                msg = getMsg(MSG_CLOSE_STATUS,
                              [this.name, e.server.hostname, e.server.port]);
                 reconnect = true;
                 break;
@@ -1045,8 +1046,8 @@ function my_netdisconnect (e)
     }
     else
     {
-        msg = getMsg("my_neterrorConnectionClosed", [this.name,
-                     e.server.hostname, e.server.port]);
+        msg = getMsg(MSG_CONNECTION_CLOSED,
+                     [this.name, e.server.hostname, e.server.port]);
     }
     
     for (var v in client.viewsArray)
@@ -1081,7 +1082,7 @@ function my_replyping (e)
 {
     var delay = formatDateOffset ((new Date() - new Date(Number(e.CTCPData))) /
                                   1000);
-    display (getMsg("my_replyping", [e.user.properNick, delay]), "INFO",
+    display (getMsg(MSG_PING_REPLY, [e.user.properNick, delay]), "INFO",
              e.user, "ME!");
 }
 
@@ -1159,7 +1160,7 @@ function my_cprivmsg (e)
             else
                 v = "null";
             
-            var rsp = getMsg("my_cprivmsgMsg", e.user.nick);
+            var rsp = getMsg(MSG_PREFIX_RESPONSE, e.user.nick);
             
             if (v.indexOf ("\n") != -1)
                 rsp += "\n";
@@ -1208,20 +1209,20 @@ function my_topic (e)
 {
 
     if (e.code == "TOPIC")
-        this.display (getMsg("my_topicMsg", [this.topicBy, this.topic]),
+        this.display (getMsg(MSG_TOPIC_CHANGED, [this.topicBy, this.topic]),
                       "TOPIC");
     
     if (e.code == "332")
     {
         if (this.topic)
         {
-            this.display (getMsg("my_topicMsg2",
+            this.display (getMsg(MSG_TOPIC,
                                  [this.unicodeName, this.topic]),
                           "TOPIC");
         }
         else
         {
-            this.display (getMsg("my_topicMsg3", this.unicodeName), "TOPIC");
+            this.display (getMsg(MSG_NO_TOPIC, this.unicodeName), "TOPIC");
         }
     }
     
@@ -1233,8 +1234,8 @@ function my_topic (e)
 CIRCChannel.prototype.on333 = /* Topic setter information */
 function my_topicinfo (e)
 {
-    this.display (getMsg("my_topicinfoMsg", [this.unicodeName, this.topicBy, 
-                                             this.topicDate]), "TOPIC");
+    this.display (getMsg(MSG_TOPIC_DATE, [this.unicodeName, this.topicBy, 
+                                          this.topicDate]), "TOPIC");
 }
 
 CIRCChannel.prototype.on353 = /* names reply */
@@ -1274,14 +1275,14 @@ function my_cjoin (e)
 
     if (userIsMe (e.user))
     {
-        this.display (getMsg("my_cjoinMsg", e.channel.unicodeName), "JOIN",
+        this.display (getMsg(MSG_YOU_JOINED, e.channel.unicodeName), "JOIN",
                       e.server.me, this);
     }
     else
     {
-        this.display(getMsg("my_cjoinmsg2", [e.user.properNick, e.user.name,
-                                             e.user.host,
-                                             e.channel.unicodeName]),
+        this.display(getMsg(MSG_SOMEONE_JOINED,
+                            [e.user.properNick, e.user.name, e.user.host,
+                             e.channel.unicodeName]),
                      "JOIN", e.user, this);
     }
 
@@ -1297,7 +1298,7 @@ function my_cpart (e)
 
     if (userIsMe (e.user))
     {
-        this.display (getMsg("my_cpartMsg", e.channel.unicodeName), "PART",
+        this.display (getMsg(MSG_YOU_LEFT, e.channel.unicodeName), "PART",
                       e.user, this);
         if (client.currentObject == this)    
             /* hide the tree while we remove (possibly tons) of nodes */
@@ -1316,9 +1317,11 @@ function my_cpart (e)
             this.dispatch("delete");
     }
     else
-        this.display (getMsg("my_cpartMsg2",
-                             [e.user.properNick, e.channel.unicodeName]), 
+    {
+        this.display (getMsg(MSG_SOMEONE_LEFT
+                             [e.user.properNick, e.channel.unicodeName]),
                       "PART", e.user, this);
+    }
 
     e.channel.updateHeader();
 }
@@ -1328,7 +1331,7 @@ function my_ckick (e)
 {
     if (userIsMe (e.lamer))
     {
-        this.display (getMsg("my_ckickMsg",
+        this.display (getMsg(MSG_YOUR_GONE,
                              [e.channel.unicodeName, e.user.properNick,
                               e.reason]),
                       "KICK", e.user, this);
@@ -1347,7 +1350,7 @@ function my_ckick (e)
             enforcerNick = e.user.nick;
         }
         
-        this.display (getMsg("my_ckickMsg2",
+        this.display (getMsg(MSG_SOMEONE_GONE,
                              [e.lamer.properNick, e.channel.unicodeName, 
                               enforcerProper, e.reason]), "KICK", e.user, this);
     }
@@ -1363,10 +1366,8 @@ function my_cmode (e)
     if ("user" in e)
     {
         var msg = toUnicode(e.params.slice(1).join(" "), this);
-        this.display (getMsg("my_cmodeMsg",
-                             //[e.params.slice(1).join(" "),
-                             [msg,
-                              e.user.properNick]), "MODE", e.user, this);
+        this.display (getMsg(MSG_MODE_CHANGED, [msg, e.user.properNick]),
+                      "MODE", e.user, this);
     }
 
     for (var u in e.usersAffected)
@@ -1399,13 +1400,19 @@ function my_cnick (e)
 CIRCChannel.prototype.onQuit =
 function my_cquit (e)
 {
-    if (userIsMe(e.user)) /* I dont think this can happen */
-        this.display (getMsg("my_cquitMsg", [e.server.parent.name, e.reason]),
+    if (userIsMe(e.user))
+    {
+        /* I dont think this can happen */
+        this.display (getMsg(MSG_YOU_QUIT, [e.server.parent.name, e.reason]),
                       "QUIT", e.user, this);
+    }
     else
-        this.display (getMsg("my_cquitMsg2", [e.user.properNick,
-                                              e.server.parent.name, e.reason]),
+    {
+        this.display (getMsg(MSG_SOMEONE_QUIT,
+                             [e.user.properNick, e.server.parent.name,
+                              e.reason]),
                       "QUIT", e.user, this);
+    }
 
     this._removeUserFromGraph(e.user);
 
@@ -1475,7 +1482,7 @@ function my_uaction (e)
 CIRCUser.prototype.onUnknownCTCP =
 function my_unkctcp (e)
 {
-    this.parent.parent.display (getMsg("my_unkctcpMsg",
+    this.parent.parent.display (getMsg(MSG_UNKNOWN_CTCP,
                                        [e.CTCPCode, e.CTCPData,
                                        e.user.properNick]),
                                 "BAD-CTCP", this, e.server.me);

@@ -70,7 +70,7 @@ function CMungerEntry (name, regex, className, enable, tagName)
 {
     this.name = name;
     if (name[0] != ".")
-        this.description = getMsg("rule_" + name);
+        this.description = getMsg("munger." + name, null, null);
     this.enabled = (typeof enable == "undefined" ? true : enable);
     this.enabledDefault = this.enabled;
     this.tagName = (tagName) ? tagName : "html:span";

@@ -175,7 +175,7 @@ function mm_getmsg (msgName, params, deflt)
                                     deflt));
         }
         
-        return (this.getMsgFrom(this.bundleList[0], msgName, params, deflt));
+        return this.getMsgFrom(this.bundleList[0], msgName, params, deflt);
     }
     catch (ex)
     {
