@@ -40,9 +40,9 @@ CPPSRCS		= \
 		nsFastLoadFile.cpp \
 		nsFastLoadService.cpp \
 		nsFileSpec.cpp \
+		nsFileSpecImpl.cpp \
 		nsFileSpecStreaming.cpp \
 		nsFileStream.cpp \
-		nsFileSpecImpl.cpp \
 		nsIFileStream.cpp \
 		nsIStringStream.cpp \
 		nsInputStreamTee.cpp \
@@ -72,11 +72,11 @@ EXPORTS		= \
 		nsFileSpec.h \
 		nsFileSpecStreaming.h \
 		nsFileStream.h \
-		nsLinebreakConverter.h \
-		nsLocalFile.h \
 		nsIFileStream.h \
 		nsIStringStream.h \
 		nsIUnicharInputStream.h \
+		nsLinebreakConverter.h \
+		nsLocalFile.h \
 		nsScriptableInputStream.h \
 		nsSpecialSystemDirectory.h \
 		nsStorageStream.h \
@@ -104,12 +104,12 @@ XPIDLSRCS	= \
 		nsIObjectOutputStream.idl \
 		nsIOutputStream.idl \
 		nsIPipe.idl \
-		nsISerializable.idl \
 		nsIScriptableInputStream.idl \
-                nsISeekableStream.idl \
-                nsIStreamBufferAccess.idl \
+		nsISeekableStream.idl \
+		nsISerializable.idl \
 		nsIStorageStream.idl \
-                $(NULL)
+		nsIStreamBufferAccess.idl \
+		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 

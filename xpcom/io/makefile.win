@@ -27,8 +27,8 @@ MODULE = xpcom
 
 EXPORTS =                               \
         nsAppDirectoryServiceDefs.h     \
-        nsDirectoryServiceDefs.h        \
         nsDirectoryService.h            \
+        nsDirectoryServiceDefs.h        \
         nsEscape.h                      \
         nsFastLoadPtr.h                 \
         nsFastLoadService.h             \
@@ -59,6 +59,8 @@ XPIDLSRCS =                             \
         .\nsIInputStream.idl            \
         .\nsIInputStreamTee.idl         \
         .\nsILocalFile.idl              \
+        .\nsIObjectInputStream.idl      \
+        .\nsIObjectOutputStream.idl     \
         .\nsIOutputStream.idl           \
         .\nsIPipe.idl                   \
         .\nsIScriptableInputStream.idl  \
@@ -86,18 +88,18 @@ LCFLAGS = -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
 CPP_OBJS =                                        \
         .\$(OBJDIR)\nsAppFileLocationProvider.obj \
         .\$(OBJDIR)\nsBinaryStream.obj            \
-        .\$(OBJDIR)\nsByteArrayInputStream.obj	  \
+        .\$(OBJDIR)\nsByteArrayInputStream.obj    \
         .\$(OBJDIR)\nsDirectoryService.obj        \
         .\$(OBJDIR)\nsEscape.obj                  \
-	.\$(OBJDIR)\nsFastLoadFile.obj            \
-	.\$(OBJDIR)\nsFastLoadService.obj         \
-        .\$(OBJDIR)\nsFileSpecImpl.obj            \
+        .\$(OBJDIR)\nsFastLoadFile.obj            \
+        .\$(OBJDIR)\nsFastLoadService.obj         \
         .\$(OBJDIR)\nsFileSpec.obj                \
+        .\$(OBJDIR)\nsFileSpecImpl.obj            \
         .\$(OBJDIR)\nsFileSpecStreaming.obj       \
         .\$(OBJDIR)\nsFileStream.obj              \
         .\$(OBJDIR)\nsIFileStream.obj             \
-        .\$(OBJDIR)\nsInputStreamTee.obj          \
         .\$(OBJDIR)\nsIStringStream.obj           \
+        .\$(OBJDIR)\nsInputStreamTee.obj          \
         .\$(OBJDIR)\nsLinebreakConverter.obj      \
         .\$(OBJDIR)\nsLocalFileCommon.obj         \
         .\$(OBJDIR)\nsLocalFileWin.obj            \
