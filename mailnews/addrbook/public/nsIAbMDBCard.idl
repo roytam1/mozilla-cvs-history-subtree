@@ -49,16 +49,10 @@ interface nsIAddrDatabase;
 
 [scriptable, uuid(5F414A80-1DD2-11B2-AAD0-AA4A15D5A1E8)]
 interface nsIAbMDBCard : nsISupports {
-	// Possible DB specific methods
-	
-	// In current impl these methods set and get
-	// on the same member variable
-	// Used the absync code
-	readonly attribute unsigned long key;
-	void setRecordKey(in unsigned long key);
+	// used by the absync code
+	attribute unsigned long key;
 
 	// DB specific methods
-	
     attribute unsigned long dbTableID;
     attribute unsigned long dbRowID;
 

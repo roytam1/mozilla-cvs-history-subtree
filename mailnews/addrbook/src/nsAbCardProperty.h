@@ -106,7 +106,6 @@ protected:
 	nsString m_Custom4;
 	nsString m_Note;
 	PRUint32 m_LastModDate;
-	PRUint32 m_Key;
 	PRUint32 m_PreferMailFormat;
 
 	PRPackedBool m_IsMailList;

@@ -99,7 +99,7 @@ interface nsIAbCard : nsISupports {
 	 */
 	attribute string mailListURI;
 
-    // remove this crap, just have getCardUnicharValue
+    // XXX remove this crap, just have getCardUnicharValue
 	wstring getCardValue(in string name);
 	wstring getCardUnicharValue(in string name);
 
@@ -115,4 +115,6 @@ interface nsIAbCard : nsISupports {
 	//
 	// XXX FIX ME, this should not be a the card, it should be on the addressbook.
 	void  editCardToDatabase(in string uri);
+
+	boolean equals(in nsIAbCard card);
 };

@@ -55,11 +55,12 @@ public:
 
 	// nsIAbCard methods
 	NS_IMETHODIMP EditCardToDatabase(const char *uri);
+  NS_IMETHODIMP Equals(nsIAbCard *card, PRBool *result);
 
 protected:
 	nsresult GetCardDatabase(const char *uri);
 
-	PRUint32 m_Key;
+	PRUint32 m_key;
 	PRUint32 m_dbTableID;
 	PRUint32 m_dbRowID;
 

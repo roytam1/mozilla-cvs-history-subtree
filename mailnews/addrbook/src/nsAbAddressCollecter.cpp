@@ -188,7 +188,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 					{
             // there has to be a better way to do this, perhaps with
 						//remove card from ab, and
-						m_historyAB->DeleteCard( existingCard, PR_TRUE );
+						m_historyAB->DeleteCard( existingCard, PR_TRUE /* notify */);
 						SetNamesForCard(existingCard, curName);
 						//append it to the bottom.
             rv = AddCardToCollectedAddressBook(existingCard);

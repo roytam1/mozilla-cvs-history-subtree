@@ -785,3 +785,8 @@ NS_IMETHODIMP nsAbCardProperty::GetGeneratedName(PRInt32 generateFormat, PRUnich
   return NS_OK;
 }
 
+NS_IMETHODIMP nsAbCardProperty::Equals(nsIAbCard *card, PRBool *result)
+{
+  *result = (this == card);
+  return NS_OK;
+}

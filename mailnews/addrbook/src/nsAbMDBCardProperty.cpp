@@ -55,7 +55,7 @@
 
 nsAbMDBCardProperty::nsAbMDBCardProperty(void)
 {
-	m_Key = 0;
+	m_key = 0;
 	m_dbTableID = 0;
 	m_dbRowID = 0;
 }
@@ -96,15 +96,13 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetDbRowID(PRUint32 aDbRowID)
 
 NS_IMETHODIMP nsAbMDBCardProperty::GetKey(PRUint32 *aKey)
 {
-	*aKey = m_Key;
+	*aKey = m_key;
 	return NS_OK;
 }
 
-// nsIAbMDBCard methods
-
-NS_IMETHODIMP nsAbMDBCardProperty::SetRecordKey(PRUint32 key)
+NS_IMETHODIMP nsAbMDBCardProperty::SetKey(PRUint32 key)
 {
-	m_Key = key;
+	m_key = key;
 	return NS_OK;
 }
 
@@ -240,6 +238,30 @@ NS_IMETHODIMP nsAbMDBCardProperty::EditCardToDatabase(const char *uri)
 	}
 	else
 		return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
+{
+  nsresult rv;
+
+  if (this == card) {
+    *result = PR_TRUE;
+    return NS_OK;
+  }
+
+  nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 dbTableID;
+  rv = mdbcard->GetDbTableID(&dbTableID);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 dbRowID;
+  rv = mdbcard->GetDbRowID(&dbRowID);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  *result = ((m_dbTableID == dbTableID) && (m_dbRowID == dbRowID));
+  return NS_OK;
 }
 
 // protected class methods

@@ -2775,7 +2775,7 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
 	{
 		nsCOMPtr<nsIAbMDBCard> dbnewCard(do_QueryInterface(newCard, &err));
 		if (NS_SUCCEEDED(err) && dbnewCard)
-			dbnewCard->SetRecordKey(key);
+			dbnewCard->SetKey(key);
 	}
 
 	return err;
@@ -2811,7 +2811,7 @@ nsresult nsAddrDatabase::GetListCardFromDB(nsIAbCard *listCard, nsIMdbRow* listR
 	{
 		nsCOMPtr<nsIAbMDBCard> dblistCard(do_QueryInterface(listCard, &err));
 		if (NS_SUCCEEDED(err) && dblistCard)
-			dblistCard->SetRecordKey(key);
+			dblistCard->SetKey(key);
 	}
 	return err;
 }
