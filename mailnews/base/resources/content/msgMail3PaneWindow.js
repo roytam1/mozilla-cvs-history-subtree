@@ -68,8 +68,8 @@ var folderListener = {
   // fix me!!!
 
   /*
-		var currentLoadedFolder = GetThreadTreeFolder();
-		var currentURI = currentLoadedFolder.getAttribute('ref');
+		var currentLoadedFolder = GetThreadPaneFolder();
+		var currentURI = currentLoadedFolder.URI;
 
 		//if we don't have a folder loaded, don't bother.
 		if(currentURI)
@@ -258,8 +258,8 @@ function IsCurrentLoadedFolder(folder)
 		if(folderResource)
 		{
 			var folderURI = folderResource.Value;
-			var currentLoadedFolder = GetThreadTreeFolder();
-			var currentURI = currentLoadedFolder.getAttribute('ref');
+			var currentLoadedFolder = GetThreadPaneFolder();
+			var currentURI = currentLoadedFolder.URI;
 			return(currentURI == folderURI);
 		}
 	}
