@@ -40,20 +40,8 @@
 class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
   {
     public:
-      typedef CharT                                              char_type;
-
-      typedef nsTObsoleteAString_CharT                           obsolete_string_type;
-
-      typedef obsolete_string_type::buffer_handle_type           buffer_handle_type;
-      typedef obsolete_string_type::shared_buffer_handle_type    shared_buffer_handle_type;
-      typedef obsolete_string_type::const_fragment_type          const_fragment_type;
-      typedef obsolete_string_type::fragment_type                fragment_type;
-      typedef obsolete_string_type::size_type                    size_type;
-      typedef obsolete_string_type::index_type                   index_type;
-
-      typedef nsTObsoleteAStringThunk_CharT                      self_type; 
-      typedef nsTSubstring_CharT                                 substring_type;
-      typedef nsTAString_CharT                                   abstract_string_type;
+      typedef nsTObsoleteAStringThunk_CharT    self_type; 
+      typedef nsTSubstring_CharT               substring_type;
 
     public:
 
@@ -135,10 +123,9 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
           concrete_self()->Cut(cutStart, cutLength);
         }
 
-      virtual void do_AssignFromReadable(const obsolete_string_type &s)
+      virtual void do_AssignFromReadable(const abstract_string_type &s)
         {
-          // forward to: nsTString::Assign( const nsTAString& );
-          concrete_self()->Assign(NS_REINTERPRET_CAST(const abstract_string_type&, s));
+          concrete_self()->Assign(s);
         }
 
       virtual void do_AssignFromElementPtr(const char_type *data)
@@ -156,10 +143,9 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
           concrete_self()->Assign(c);
         }
 
-      virtual void do_AppendFromReadable(const obsolete_string_type &s)
+      virtual void do_AppendFromReadable(const abstract_string_type &s)
         {
-          // forward to: nsTString::Append( const nsTAString& );
-          concrete_self()->Append(NS_REINTERPRET_CAST(const abstract_string_type&, s));
+          concrete_self()->Append(s);
         }
 
       virtual void do_AppendFromElementPtr(const char_type *data)
@@ -177,10 +163,9 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
           concrete_self()->Append(c);
         }
 
-      virtual void do_InsertFromReadable(const obsolete_string_type &s, index_type pos)
+      virtual void do_InsertFromReadable(const abstract_string_type &s, index_type pos)
         {
-          // forward to: nsTString::Insert( const nsTAString&, index_type );
-          concrete_self()->Insert(NS_REINTERPRET_CAST(const abstract_string_type&, s), pos);
+          concrete_self()->Insert(s, pos);
         }
 
       virtual void do_InsertFromElementPtr(const char_type *data, index_type pos)
@@ -198,9 +183,9 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
           concrete_self()->Insert(c, pos);
         }
 
-      virtual void do_ReplaceFromReadable(index_type cutStart, size_type cutLength, const obsolete_string_type &s)
+      virtual void do_ReplaceFromReadable(index_type cutStart, size_type cutLength, const abstract_string_type &s)
         {
-          concrete_self()->Replace(cutStart, cutLength, NS_REINTERPRET_CAST(const abstract_string_type&, s));
+          concrete_self()->Replace(cutStart, cutLength, s);
         }
 
       virtual const char_type *GetReadableFragment(const_fragment_type& frag, nsFragmentRequest which, PRUint32 offset) const

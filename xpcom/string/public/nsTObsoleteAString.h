@@ -111,8 +111,7 @@ class nsTObsoleteAString_CharT
       typedef nsReadableFragment                   const_fragment_type;
       typedef nsWritableFragment                   fragment_type;
 
-      typedef nsTObsoleteAString_CharT             self_type;
-      typedef nsTObsoleteAString_CharT             obsolete_string_type;
+      typedef nsTAString_CharT                     abstract_string_type;
 
       typedef PRUint32                             size_type;
       typedef PRUint32                             index_type;
@@ -141,22 +140,22 @@ class nsTObsoleteAString_CharT
 
       virtual void Cut( index_type cutStart, size_type cutLength ) = 0;
 
-      virtual void do_AssignFromReadable( const self_type& ) = 0;
+      virtual void do_AssignFromReadable( const abstract_string_type& ) = 0;
       virtual void do_AssignFromElementPtr( const char_type* ) = 0;
       virtual void do_AssignFromElementPtrLength( const char_type*, size_type ) = 0;
       virtual void do_AssignFromElement( char_type ) = 0;
 
-      virtual void do_AppendFromReadable( const self_type& ) = 0;
+      virtual void do_AppendFromReadable( const abstract_string_type& ) = 0;
       virtual void do_AppendFromElementPtr( const char_type* ) = 0;
       virtual void do_AppendFromElementPtrLength( const char_type*, size_type ) = 0;
       virtual void do_AppendFromElement( char_type ) = 0;
 
-      virtual void do_InsertFromReadable( const self_type&, index_type ) = 0;
+      virtual void do_InsertFromReadable( const abstract_string_type&, index_type ) = 0;
       virtual void do_InsertFromElementPtr( const char_type*, index_type ) = 0;
       virtual void do_InsertFromElementPtrLength( const char_type*, index_type, size_type ) = 0;
       virtual void do_InsertFromElement( char_type, index_type ) = 0;
 
-      virtual void do_ReplaceFromReadable( index_type, size_type, const self_type& ) = 0;
+      virtual void do_ReplaceFromReadable( index_type, size_type, const abstract_string_type& ) = 0;
 
       virtual const char_type* GetReadableFragment( const_fragment_type&, nsFragmentRequest, PRUint32 = 0 ) const = 0;
       virtual       char_type* GetWritableFragment(       fragment_type&, nsFragmentRequest, PRUint32 = 0 ) = 0;
