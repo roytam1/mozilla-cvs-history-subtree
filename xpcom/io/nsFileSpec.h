@@ -622,13 +622,13 @@ class NS_BASE nsPersistentFileDescriptor
     public:
                                 nsPersistentFileDescriptor() {}
                                     // For use prior to reading in from a stream
-                                nsPersistentFileDescriptor(const nsPersistentFileDescriptor& inPath);
+                                nsPersistentFileDescriptor(const nsPersistentFileDescriptor& inEncodedData);
         virtual                 ~nsPersistentFileDescriptor();
-        void					operator = (const nsPersistentFileDescriptor& inPath);
+        void					operator = (const nsPersistentFileDescriptor& inEncodedData);
         
         // Conversions
-        NS_EXPLICIT             nsPersistentFileDescriptor(const nsFileSpec& inPath);
-        void					operator = (const nsFileSpec& inPath);
+        NS_EXPLICIT             nsPersistentFileDescriptor(const nsFileSpec& inSpec);
+        void					operator = (const nsFileSpec& inSpec);
         
 		// The following four functions are declared here (as friends). Their implementations
 		// are in mozilla/base/src/nsFileSpecStreaming.cpp.
