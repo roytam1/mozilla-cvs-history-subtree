@@ -36,7 +36,8 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "rmentry";
-$USAGE	= "$APPNAM [-nvI] -b base -h host -D bind -w pswd -P cert filter ...";
+$USAGE	= "$APPNAM [-nvI] -b base -h host -p port -D bind -w pswd" .
+          "-P cert filter ...";
 
 @ATTRIBUTES = ("uid");
 
@@ -44,7 +45,7 @@ $USAGE	= "$APPNAM [-nvI] -b base -h host -D bind -w pswd -P cert filter ...";
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('nvIb:h:D:w:P:'))
+if (!getopts('nvIb:h:p:D:w:P:'))
 {
   print "usage: $APPNAM $USAGE\n";
   exit;
