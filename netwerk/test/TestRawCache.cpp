@@ -39,6 +39,12 @@
 // MAX_CONTENT_LENGTH bytes
 #define MAX_CONTENT_LENGTH 20000
 
+// Length of random-data cache entry key
+#define CACHE_KEY_LENGTH 15
+
+// Length of random-data cache entry meta-data
+#define CACHE_METADATA_LENGTH 100
+
 static NS_DEFINE_CID(kMemCacheCID, NS_MEM_CACHE_FACTORY_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
@@ -56,11 +62,22 @@ mapRecordIdToTestNum(PRInt32 aRecordID)
     return -1;
 }
 
-// Supply a reproducible stream of random data.
-class RandomStream {
+// A supply of stream data to either store or compare with
+class nsITestDataStream {
+public:
+    virtual ~nsITestDataStream() {};
+    virtual PRUint32 Next() = 0;
+    virtual void Read(char* aBuf, PRUint32 aCount) = 0;
+
+    virtual PRBool Match(char* aBuf, PRUint32 aCount) = 0;
+    virtual void Skip(PRUint32 aCount) = 0;
+};
+
+// A reproducible stream of random data.
+class RandomStream : public nsITestDataStream {
 public:
     RandomStream(PRUint32 aSeed) {
-        mStartSeed = mSeed = aSeed;
+        mStartSeed = mState = aSeed;
     }
     
     PRUint32 GetStartSeed() {
@@ -68,8 +85,8 @@ public:
     }
     
     PRUint32 Next() {
-        mSeed = 1103515245 * mSeed + 12345;
-        return mSeed;
+        mState = 1103515245 * mState + 12345;
+        return mState;
     }
 
     void Read(char* aBuf, PRUint32 aCount) {
@@ -89,9 +106,61 @@ public:
         return PR_TRUE;
     }
 
+    void
+    Skip(PRUint32 aCount) {
+        while (aCount--)
+            Next();
+    }
+
 protected:
     
-    PRUint32 mSeed;
+    PRUint32 mState;
+    PRUint32 mStartSeed;
+};
+
+// A stream of data that increments on each byte that is read, modulo 256
+class CounterStream : public nsITestDataStream {
+public:
+    CounterStream(PRUint32 aSeed) {
+        mStartSeed = mState = aSeed;
+    }
+    
+    PRUint32 GetStartSeed() {
+        return mStartSeed;
+    }
+    
+    PRUint32 Next() {
+        mState += 1;
+        mState &= 0xff;
+        return mState;
+    }
+
+    void Read(char* aBuf, PRUint32 aCount) {
+        PRUint32 i;
+        for (i = 0; i < aCount; i++) {
+            *aBuf++ = Next();
+        }
+    }
+
+    PRBool
+    Match(char* aBuf, PRUint32 aCount) {
+        PRUint32 i;
+        for (i = 0; i < aCount; i++) {
+            if (*aBuf++ != (char)Next())
+                return PR_FALSE;
+        }
+        return PR_TRUE;
+    }
+
+    void
+    Skip(PRUint32 aCount) {
+        mState += aCount;
+        mState &= 0xff;
+    }
+
+protected:
+    
+    PRUint32 mState;
     PRUint32 mStartSeed;
 };
 
@@ -111,14 +180,14 @@ public:
     }
 
     virtual ~nsReader() {
-        delete mRandomStream;
+        delete mTestDataStream;
         gNumReaders--;
     }
 
     nsresult 
-    Init(nsIChannel *aChannel, RandomStream *aRandomStream, PRUint32 aExpectedStreamLength) {
+    Init(nsIChannel *aChannel, nsITestDataStream* aRandomStream, PRUint32 aExpectedStreamLength) {
         mChannel = aChannel;
-        mRandomStream = aRandomStream;
+        mTestDataStream = aRandomStream;
         mExpectedStreamLength = aExpectedStreamLength;
         mRefCnt = 1;
         return NS_OK;
@@ -143,7 +212,7 @@ public:
             if (amt == 0) break;
             aLength -= amt;
             mBytesRead += amt;
-            match = mRandomStream->Match(buf, amt);
+            match = mTestDataStream->Match(buf, amt);
             NS_ASSERTION(match, "Stored data was corrupted on read");
         }
         return NS_OK;
@@ -176,7 +245,7 @@ public:
 protected:
     PRIntervalTime       mStartTime;
     PRUint32             mBytesRead;
-    RandomStream*        mRandomStream;
+    nsITestDataStream*   mTestDataStream;
     PRUint32             mExpectedStreamLength;
     nsCOMPtr<nsIChannel> mChannel;
 };
@@ -201,6 +270,7 @@ InitQueue() {
     return NS_OK;
 }
 
+// Process events until all streams are OnStopRequest'ed
 nsresult
 WaitForEvents() {
     while (gNumReaders) {
@@ -209,8 +279,9 @@ WaitForEvents() {
     return NS_OK;
 }
 
+// Read data for a single cache record and compare against testDataStream
 nsresult
-TestReadStream(nsINetDataCacheRecord *record, RandomStream *randomStream,
+TestReadStream(nsINetDataCacheRecord *record, nsITestDataStream *testDataStream,
                PRUint32 expectedStreamLength)
 {
     nsCOMPtr<nsIChannel> channel;
@@ -227,7 +298,7 @@ TestReadStream(nsINetDataCacheRecord *record, RandomStream *randomStream,
     
     nsReader *reader = new nsReader;
     reader->AddRef();
-    rv = reader->Init(channel, randomStream, expectedStreamLength);
+    rv = reader->Init(channel, testDataStream, expectedStreamLength);
     NS_ASSERTION(NS_SUCCEEDED(rv), " ");
     
     rv = channel->AsyncRead(0, -1, 0, reader);
@@ -237,6 +308,8 @@ TestReadStream(nsINetDataCacheRecord *record, RandomStream *randomStream,
     return NS_OK;
 }
 
+// Check that records can be retrieved using their record-ID, in addition
+// to using the opaque key.
 nsresult
 TestRecordID(nsINetDataCache *cache)
 {
@@ -244,7 +317,7 @@ TestRecordID(nsINetDataCache *cache)
     nsCOMPtr<nsINetDataCacheRecord> record;
     RandomStream *randomStream;
     PRUint32 metaDataLength;
-    char cacheKey[15];
+    char cacheKey[CACHE_KEY_LENGTH];
     char *metaData;
     PRUint32 testNum;
     PRBool match;
@@ -268,6 +341,8 @@ TestRecordID(nsINetDataCache *cache)
     return NS_OK;
 }
 
+// Check that all cache entries in the database are enumerated and that
+// no duplicates appear.
 nsresult
 TestEnumeration(nsINetDataCache *cache)
 {
@@ -277,7 +352,7 @@ TestEnumeration(nsINetDataCache *cache)
     nsCOMPtr<nsISimpleEnumerator> iterator;
     RandomStream *randomStream;
     PRUint32 metaDataLength;
-    char cacheKey[15];
+    char cacheKey[CACHE_KEY_LENGTH];
     char *metaData;
     PRUint32 testNum;
     PRBool match;
@@ -333,6 +408,8 @@ TestEnumeration(nsINetDataCache *cache)
     return NS_OK;
 }
 
+// Read the test data that was written in FillCache(), checking for
+// corruption, truncation.
 nsresult
 TestRead(nsINetDataCache *cache)
 {
@@ -341,7 +418,7 @@ TestRead(nsINetDataCache *cache)
     nsCOMPtr<nsINetDataCacheRecord> record;
     RandomStream *randomStream;
     PRUint32 metaDataLength;
-    char cacheKey[15];
+    char cacheKey[CACHE_KEY_LENGTH];
     char *metaData, *storedCacheKey;
     PRUint32 testNum, storedCacheKeyLength;
     PRBool match;
@@ -382,6 +459,7 @@ TestRead(nsINetDataCache *cache)
 
     // Compute rate in MB/s
     double rate = gTotalBytesRead / PR_IntervalToMilliseconds(gTotalDuration);
+    rate *= NUM_CACHE_ENTRIES;
     rate *= 1000;
     rate /= (1024 * 1024);
     printf("Read %d bytes at a rate of %5.1f MB per second \n",
@@ -390,6 +468,101 @@ TestRead(nsINetDataCache *cache)
     return NS_OK;
 }
 
+// Repeatedly call SetStoredContentLength() on a cache entry and make
+// read the stream's data to ensure that it's not corrupted by the effect
+nsresult
+TestTruncation(nsINetDataCache *cache)
+{
+    nsresult rv;
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    RandomStream *randomStream;
+    char cacheKey[CACHE_KEY_LENGTH];
+
+    randomStream = new RandomStream(0);
+    randomStream->Read(cacheKey, sizeof cacheKey);
+
+    rv = cache->GetCachedNetData(cacheKey, sizeof cacheKey, getter_AddRefs(record));
+    NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+
+    randomStream->Skip(CACHE_METADATA_LENGTH);
+    PRUint32 initialStreamLength = randomStream->Next() & 0xffff;
+    delete randomStream;
+
+    PRUint32 i;
+    PRUint32 delta = initialStreamLength / 64;
+    for (i = initialStreamLength; i >= delta; i -= delta) {
+        PRUint32 expectedStreamLength = i;
+
+        // Do the truncation
+        record->SetStoredContentLength(expectedStreamLength);
+        randomStream = new RandomStream(0);
+        randomStream->Skip(CACHE_KEY_LENGTH + CACHE_METADATA_LENGTH + 1);
+
+        TestReadStream(record, randomStream, expectedStreamLength);
+        WaitForEvents();
+    }
+
+    return NS_OK;
+}
+
+// Write known data to random offsets in a single cache entry and test
+// resulting stream for correctness.
+nsresult
+TestOffsetWrites(nsINetDataCache *cache)
+{
+    nsresult rv;
+    nsCOMPtr<nsINetDataCacheRecord> record;
+    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIOutputStream> outStream;
+    char buf[512];
+    char cacheKey[CACHE_KEY_LENGTH];
+    RandomStream *randomStream;
+
+    randomStream = new RandomStream(0);
+    randomStream->Read(cacheKey, sizeof cacheKey);
+
+    rv = cache->GetCachedNetData(cacheKey, sizeof cacheKey, getter_AddRefs(record));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't access record via opaque cache key");
+
+    rv = record->NewChannel(0, getter_AddRefs(channel));
+    NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+
+    // Write buffer-fulls of data at random offsets into the cache entry.
+    // Data written is (offset % 0xff)
+    PRUint32 startingOffset;
+    PRUint32 streamLength = 0;
+    CounterStream *counterStream;
+    int i;
+    for (i = 0; i < 100; i++) {
+        startingOffset = streamLength ? streamLength - (randomStream->Next() % sizeof buf): 0;
+        rv = channel->OpenOutputStream(startingOffset, getter_AddRefs(outStream));
+        NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+        
+        counterStream = new CounterStream(startingOffset);
+        counterStream->Read(buf, sizeof buf);
+
+        PRUint32 numWritten;
+        rv = outStream->Write(buf, sizeof buf, &numWritten);
+        NS_ASSERTION(NS_SUCCEEDED(rv), " ");
+        NS_ASSERTION(numWritten == sizeof buf, "Write() bug?");
+        streamLength = startingOffset + sizeof buf;
+
+        rv = outStream->Close();
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't close channel");
+        delete counterStream;
+    }
+    
+    delete randomStream;
+
+    counterStream = new CounterStream(0);
+    TestReadStream(record, counterStream, streamLength);
+    WaitForEvents();
+
+    return NS_OK;
+}
+
+// Create entries in the network data cache, using random data for the
+// key, the meta-data and the stored content data.
 nsresult
 FillCache(nsINetDataCache *cache)
 {
@@ -400,8 +573,8 @@ FillCache(nsINetDataCache *cache)
     nsCOMPtr<nsIOutputStream> outStream;
     char buf[1000];
     PRUint32 metaDataLength;
-    char cacheKey[15];
-    char metaData[100];
+    char cacheKey[CACHE_KEY_LENGTH];
+    char metaData[CACHE_METADATA_LENGTH];
     PRUint32 testNum;
     char *data;
     RandomStream *randomStream;
@@ -420,24 +593,23 @@ FillCache(nsINetDataCache *cache)
         rv = cache->GetCachedNetData(cacheKey, sizeof cacheKey, getter_AddRefs(record));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't access record via opaque cache key");
 
+        // Test nsINetDataCacheRecord::GetRecordID()
         rv = record->GetRecordID(&recordID[testNum]);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get Record ID");
 
-        PRUint32 numEntries;
-
-        numEntries = (PRUint32)-1;
+        // Test nsINetDataCache::GetNumEntries()
+        PRUint32 numEntries = (PRUint32)-1;
         rv = cache->GetNumEntries(&numEntries);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get number of cache entries");
         NS_ASSERTION(numEntries == testNum + 1, "GetNumEntries failure");
 
-        // MetaData should be initially empty
+        // Record meta-data should be initially empty
         rv = record->GetMetaData(&metaDataLength, &data);
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         if ((metaDataLength != 0) || (data != 0))
             return NS_ERROR_FAILURE;
 
-        // For lack of a better source of random data, store the
-        //  last buffer-full of data as the record meta-data
+        // Store random data as meta-data
         randomStream->Read(metaData, sizeof metaData);
         record->SetMetaData(sizeof metaData, metaData);
 
@@ -447,6 +619,10 @@ FillCache(nsINetDataCache *cache)
         rv = channel->OpenOutputStream(0, getter_AddRefs(outStream));
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         
+        PRUint32 beforeOccupancy;
+        rv = cache->GetStorageInUse(&beforeOccupancy);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
+
         int streamLength = randomStream->Next() & 0xffff;
         int remaining = streamLength;
         while (remaining) {
@@ -461,6 +637,14 @@ FillCache(nsINetDataCache *cache)
             remaining -= amount;
         }
         outStream->Close();
+
+        PRUint32 afterOccupancy;
+        rv = cache->GetStorageInUse(&afterOccupancy);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
+        PRUint32 streamLengthInKB = streamLength >> 10;
+        NS_ASSERTION((afterOccupancy - beforeOccupancy) >= streamLengthInKB,
+                     "nsINetDataCache::GetStorageInUse() is busted");
+        
 
         // *Now* there should be an entry in the cache
         rv = cache->Contains(cacheKey, sizeof cacheKey, &inCache);
@@ -507,6 +691,10 @@ main(int argc, char* argv[])
     rv = cache->RemoveAll();
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't clear cache");
 
+    PRUint32 startOccupancy;
+    rv = cache->GetStorageInUse(&startOccupancy);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
+
     PRUint32 numEntries = (PRUint32)-1;
     rv = cache->GetNumEntries(&numEntries);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get number of cache entries");
@@ -522,7 +710,25 @@ main(int argc, char* argv[])
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't index records using record ID");
 
     rv = TestEnumeration(cache);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't successfully enumerate records");
+
+    rv = TestTruncation(cache);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't successfully truncate records");
+
+    rv = TestOffsetWrites(cache);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't successfully write to records using non-zero offsets");
+
+    rv = cache->RemoveAll();
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't clear cache");
+    rv = cache->GetNumEntries(&numEntries);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get number of cache entries");
+    NS_ASSERTION(numEntries == 0, "Couldn't clear cache");
+
+    PRUint32 endOccupancy;
+    rv = cache->GetStorageInUse(&endOccupancy);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't get cache occupancy");
+
+    NS_ASSERTION(startOccupancy == endOccupancy, "Cache occupancy not correctly computed ?");
 
     return 0;
 }
