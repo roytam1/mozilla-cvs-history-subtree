@@ -210,11 +210,10 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
     PRBool isAdaptor = PR_FALSE;
     nsIBox* ibox = GetBoxForFrame(currFrame, isAdaptor);
 
-    if (reflowIterator.IsTarget()) {
-      // get the box for the given currFrame. If adaptor is true then
-      // it is some wrapped HTML frame.
-      if (ibox) {
-
+    if (ibox) {
+      if (reflowIterator.IsTarget()) {
+        // get the box for the given currFrame. If adaptor is true then
+        // it is some wrapped HTML frame.
         nsFrameState boxState;
         nsIFrame* frame;
         aBox->GetFrame(&frame);
@@ -254,37 +253,36 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
         } else {
           ibox->MarkDirty(*this);      
         }
-        
         // don't return here - we should handle possible child targets
-      } else {
-        NS_ERROR("This should not happen! We should always get a box");
       }
-    }
-    else {
-      // we're not the target...
+      else {
+        // we're not the target...
 
-      // was the child html?
-      if (isAdaptor) {
-        // the target is deep inside html we will have to honor this one.
-        // mark us as dirty so we don't post
-        // a dirty reflow
-        state = 0; // XXX why?
-        nsIFrame* frame;
-        aBox->GetFrame(&frame);
-        frame->GetFrameState(&state);
-        state |= NS_FRAME_HAS_DIRTY_CHILDREN;
-        frame->SetFrameState(state);
-        
-        currFrame->GetFrameState(&state);
-        state &= ~NS_FRAME_IS_DIRTY;
-        currFrame->SetFrameState(state);
-
-        // mark the adaptor dirty
-        ibox->MarkDirty(*this);      
-        
-        // we are done and we did not coelesce
-        return;
+        // was the child html?
+        if (isAdaptor) {
+          // the target is deep inside html we will have to honor this one.
+          // mark us as dirty so we don't post
+          // a dirty reflow
+          state = 0; // XXX why?
+          nsIFrame* frame;
+          aBox->GetFrame(&frame);
+          frame->GetFrameState(&state);
+          state |= NS_FRAME_HAS_DIRTY_CHILDREN;
+          frame->SetFrameState(state);
+          
+          currFrame->GetFrameState(&state);
+          state &= ~NS_FRAME_IS_DIRTY;
+          currFrame->SetFrameState(state);
+          
+          // mark the adaptor dirty
+          ibox->MarkDirty(*this);      
+          
+          // we are done and we did not coelesce
+          return;
+        }
       }
+    } else {
+      NS_ERROR("This should not happen! We should always get a box");
     }
   }
 
