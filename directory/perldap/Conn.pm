@@ -381,8 +381,8 @@ sub nextEntry
 #
 sub close
 {
-  my $self = shift;
-  my $ret = 1;
+  my ($self) = shift;
+  my ($ret) = 1;
 
   $ret = ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
   undef $self->{"ld"};
@@ -397,8 +397,8 @@ sub close
 sub delete
 {
   my ($self, $id) = @_;
-  my $ret = 1;
-  my $dn = $id;
+  my ($ret) = 1;
+  my ($dn) = $id;
 
   if (ref($id) eq 'Mozilla::LDAP::Entry')
     {
@@ -472,7 +472,7 @@ sub modifyRDN
 {
   my ($self, $rdn, $dn, $del) = ($_[$[], $_[$[ + 1], $_[$[ + 2], $_[$[ + 3]);
   my (@vals);
-  my $ret = 1;
+  my ($ret) = 1;
 
   $del = 1 unless (defined($del) && ($del ne ""));
   $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
@@ -502,7 +502,7 @@ sub update
   my ($self, $entry) = @_;
   my (@vals, @arr, %mod, %new);
   my ($key, $val);
-  my $ret = 1;
+  my ($ret) = 1;
   local $_;
 
   foreach $key (@{$entry->{"_oc_order_"}})
@@ -555,7 +555,7 @@ sub update
   # This is here for debug purposes only...
   if ($main::LDAP_DEBUG)
     {
-      my $op;
+      my ($op);
 
       foreach $key (@arr)
 	{
@@ -612,7 +612,7 @@ sub setDefaultRebindProc
 sub simpleAuth
 {
   my ($self, $dn, $pswd) = @_;
-  my $ret;
+  my ($ret);
 
   $ret = ldap_simple_bind_s($self->{"ld"}, $dn, $pswd);
 

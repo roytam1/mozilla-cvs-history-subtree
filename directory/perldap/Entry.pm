@@ -35,7 +35,7 @@ use strict;
 use vars qw($VERSION @ISA);
 
 @ISA = ('Tie::StdHash');
-$VERSION = "1.0302";
+$VERSION = "1.0303";
 
 
 #############################################################################
@@ -43,7 +43,7 @@ $VERSION = "1.0302";
 #
 sub new
 {
-  my $class = shift;
+  my ($class) = shift;
   my (%entry, $obj);
 
   tie %entry, $class;
@@ -73,7 +73,7 @@ sub TIEHASH
 #
 sub DESTROY
 {
-  my $self = shift;
+  my ($self) = shift;
 
   undef %{$self};
   undef $self;
@@ -173,8 +173,8 @@ sub EXISTS
 sub FIRSTKEY
 {
   my ($self, $idx) = ($_[$[], 0);
-  my @attrs = @{$self->{"_oc_order_"}};
-  my $key;
+  my (@attrs) = @{$self->{"_oc_order_"}};
+  my ($key);
 
   while ($idx < $self->{"_oc_numattr_"})
     {
@@ -194,10 +194,10 @@ sub FIRSTKEY
 #
 sub NEXTKEY
 {
-  my $self = $_[$[];
-  my $idx = $self->{"_oc_keyidx_"};
-  my @attrs = @{$self->{"_oc_order_"}};
-  my $key;
+  my ($self) = $_[$[];
+  my ($idx) = $self->{"_oc_keyidx_"};
+  my (@attrs) = @{$self->{"_oc_order_"}};
+  my ($key);
 
   while ($idx < $self->{"_oc_numattr_"})
     {
@@ -367,7 +367,7 @@ sub removeValue
 {
   my ($self, $attr, $val, $norm) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2],
 				    $_[$[ + 3]);
-  my $i = 0;
+  my ($i) = 0;
   local $_;
 
   return 0 unless (defined($val) && ($val ne ""));
@@ -422,7 +422,7 @@ sub removeDNValue
 #
 sub addValue
 {
-  my $self = shift;
+  my ($self) = shift;
   my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
 				     $_[$[ + 3]);
   local $_;
@@ -432,7 +432,7 @@ sub addValue
 
   if (defined($self->{$attr}) && (!defined($force) || !$force))
     {
-      my $nval = $val;
+      my ($nval) = $val;
 
       $nval = normalizeDN($val) if (defined($norm) && $norm);
       foreach (@{$self->{$attr}})
@@ -482,7 +482,7 @@ sub addValue
 #
 sub addDNValue
 {
-  my $self = shift;
+  my ($self) = shift;
   my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
 				     $_[$[ + 2]);
 
@@ -499,7 +499,8 @@ sub addDNValue
 sub setValue
 {
   my ($self, $attr) = (shift, lc shift);
-  my @vals = @_;
+  my (@vals) = @_;
+
   local $_;
 
   return 0 unless (defined(@vals) && ($#vals >= $[));
@@ -670,7 +671,7 @@ sub exists
 sub getLDIFrecords # called from LDIF.pm (at least)
 {
   my ($self) = @_;
-  my @record = (dn => $self->getDN());
+  my (@record) = (dn => $self->getDN());
   my ($attr, $values);
 
   while (($attr, $values) = each %$self)
@@ -710,7 +711,7 @@ sub printLDIF
 
   if ($_no_LDIF_module)
     {
-      my $record = $self->getLDIFrecords();
+      my ($record) = $self->getLDIFrecords();
       my ($attr, $values);
 
       while (($attr, $values) = splice @$record, 0, 2)
