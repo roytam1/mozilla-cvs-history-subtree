@@ -100,12 +100,12 @@ struct nsRegSubtreeEnumerator : public nsIEnumerator {
     NS_DECL_ISUPPORTS
 
     // This class implements the nsIEnumerator interface functions.
-    nsresult First();
-    nsresult Last();
-    nsresult Next();
-    nsresult Prev();
-    nsresult CurrentItem(nsISupports **aItem);
-    nsresult IsDone();
+    NS_IMETHOD First();
+    NS_IMETHOD Last();
+    NS_IMETHOD Next();
+    NS_IMETHOD Prev();
+    NS_IMETHOD CurrentItem(nsISupports **aItem);
+    NS_IMETHOD IsDone();
 
     // ctor/dtor
     nsRegSubtreeEnumerator( HREG hReg, RKEY rKey, PRBool all );
@@ -130,7 +130,7 @@ protected:
 ------------------------------------------------------------------------------*/
 struct nsRegValueEnumerator : public nsRegSubtreeEnumerator {
     // Override CurrentItem to allocate nsRegistryValue objects.
-    nsresult CurrentItem( nsISupports **result );
+    NS_IMETHOD CurrentItem( nsISupports **result );
 
     // Override advance() to use proper NR_RegEnumEntries.
     NS_IMETHOD advance();
