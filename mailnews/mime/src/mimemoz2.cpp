@@ -592,6 +592,8 @@ mime_image_begin(const char *image_url, const char *content_type,
      In that case, return the mid, but leave it empty (returning 0
      here is interpreted as out-of-memory.)
    */
+/* rhp --> i commented these out...(mscott) */
+#if 0
   if (msd->format_out != FO_NGLAYOUT &&
       msd->format_out != FO_CACHE_AND_NGLAYOUT &&
       msd->format_out != FO_PRINT &&
@@ -599,6 +601,7 @@ mime_image_begin(const char *image_url, const char *content_type,
       msd->format_out != FO_SAVE_AS_POSTSCRIPT &&
       msd->format_out != FO_CACHE_AND_SAVE_AS_POSTSCRIPT)
     return mid;
+#endif
 
   if ( (msd->context) && (!msd->context->img_cx) )
       /* If there is no image context, e.g. if this is a Text context or a
@@ -1120,13 +1123,15 @@ mime_bridge_create_stream(
   if (!uri)
     return nsnull;
 
+#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
   if (format_out == FO_MAIL_MESSAGE_TO || format_out == FO_CACHE_AND_MAIL_MESSAGE_TO)
   {
     /* Bad news -- this would cause an endless loop. */
     PR_ASSERT(0);
     return NULL;
   }
-  
+#endif
+
   msd = PR_NEWZAP(struct mime_stream_data);
   if (!msd) 
     return NULL;
@@ -1215,6 +1220,7 @@ mime_bridge_create_stream(
    
   /* Set the defaults, based on the context, and the output-type.
   */
+#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
   if (format_out == FO_NGLAYOUT ||
       format_out == FO_CACHE_AND_NGLAYOUT ||
       format_out == FO_PRINT ||
@@ -1232,6 +1238,7 @@ mime_bridge_create_stream(
   {
     msd->options->fancy_links_p = PR_TRUE;
   }
+#endif
   
   msd->options->headers = MimeHeadersAll;
   
@@ -1280,7 +1287,8 @@ mime_bridge_create_stream(
     PL_strncmp(msd->url_name, "snews:", 6) != 0))
     )
     msd->options->headers = MimeHeadersMicroPlus;
-  
+
+#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
   if (format_out == FO_QUOTE_MESSAGE ||
     format_out == FO_CACHE_AND_QUOTE_MESSAGE
     || format_out == FO_QUOTE_HTML_MESSAGE
@@ -1310,6 +1318,7 @@ mime_bridge_create_stream(
   if ((format_out == FO_MAIL_TO || format_out == FO_CACHE_AND_MAIL_TO) &&
     msd->options->write_html_p == PR_FALSE)
     msd->options->dexlate_p = PR_TRUE;
+#endif
   
   // RICHIE_URL msd->options->url                   = msd->url->address;
   msd->options->url = msd->url_name;
@@ -1327,10 +1336,12 @@ mime_bridge_create_stream(
     msd->options->output_fn           = mime_output_fn;
   
   msd->options->set_html_state_fn     = mime_set_html_state_fn;
+#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
   if (format_out == FO_QUOTE_HTML_MESSAGE) {
     msd->options->charset_conversion_fn = mime_insert_html_convert_charset;
     msd->options->dont_touch_citations_p = PR_TRUE;
   } else 
+#endif
     msd->options->charset_conversion_fn = mime_convert_charset;
   msd->options->rfc1522_conversion_fn = mime_convert_rfc1522;
   msd->options->reformat_date_fn      = mime_reformat_date;
@@ -1373,6 +1384,7 @@ mime_bridge_create_stream(
 
   /* ### mwelch We want FO_EDT_SAVE_IMAGE to behave like *_SAVE_AS here
   because we're spooling untranslated raw data. */
+#if 0   /*** SHERRY -- I took this reference to old present types out  ***/
   if (format_out == FO_SAVE_AS ||
     format_out == FO_CACHE_AND_SAVE_AS ||
     format_out == FO_MAIL_TO ||
@@ -1382,6 +1394,7 @@ mime_bridge_create_stream(
 #endif
     msd->options->part_to_load)
     msd->options->write_html_p = PR_FALSE;
+#endif
   
   //  PR_ASSERT(!msd->stream);
   
