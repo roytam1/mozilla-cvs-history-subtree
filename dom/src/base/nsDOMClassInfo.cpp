@@ -1676,12 +1676,6 @@ nsNodeSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   if (doc) {
-#ifdef DEBUG_jst
-    JSString *jsstr = JSVAL_TO_STRING(id);
-
-    jschar *s = ::JS_GetStringChars(jsstr);
-#endif
-
     doc->AddReference(content, wrapper);
   }
 
@@ -2228,14 +2222,14 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  JSContext *cx, JSObject *obj, jsval id,
                                  jsval *vp, PRBool *_retval)
 {
+  nsCOMPtr<nsISupports> native;
+
+  wrapper->GetNative(getter_AddRefs(native));
+  NS_ABORT_IF_FALSE(native, "No native!");
+
+  nsCOMPtr<nsIForm> form(do_QueryInterface(native));
+
   if (JSVAL_IS_STRING(id)) {
-    nsCOMPtr<nsISupports> native;
-
-    wrapper->GetNative(getter_AddRefs(native));
-    NS_ABORT_IF_FALSE(native, "No native!");
-
-    nsCOMPtr<nsIForm> form(do_QueryInterface(native));
-
     JSString *jsstr = JSVAL_TO_STRING(id);
 
     nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
@@ -2264,6 +2258,19 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
       // Wrap result, result can be either an element or a list of
       // elements
       return WrapNative(cx, ::JS_GetGlobalObject(cx), result,
+                        NS_GET_IID(nsISupports), vp);
+    }
+  }
+
+  int32 n = -1;
+
+  if ((JSVAL_IS_NUMBER(id) || JSVAL_IS_STRING(id)) &&
+      ::JS_ValueToInt32(cx, id, &n) && n >= 0) {
+    nsCOMPtr<nsIFormControl> control;
+    form->GetElementAt(n, getter_AddRefs(control));
+
+    if (control) {
+      return WrapNative(cx, ::JS_GetGlobalObject(cx), control,
                         NS_GET_IID(nsISupports), vp);
     }
   }
