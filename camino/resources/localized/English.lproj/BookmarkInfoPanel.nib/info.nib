@@ -5,40 +5,40 @@
 	<key>IBDocumentLocation</key>
 	<string>9 7 466 409 0 0 1280 1002 </string>
 	<key>IBFramework Version</key>
-	<string>364.0</string>
+	<string>283.0</string>
 	<key>IBGroupedObjects</key>
 	<dict>
-		<key>29</key>
+		<key>13</key>
 		<array>
-			<string>436</string>
-			<string>445</string>
+			<string>224</string>
+			<string>225</string>
 		</array>
-		<key>30</key>
+		<key>14</key>
 		<array>
-			<string>437</string>
-			<string>435</string>
-			<string>453</string>
+			<string>291</string>
+			<string>292</string>
 		</array>
-		<key>31</key>
+		<key>16</key>
 		<array>
-			<string>441</string>
-			<string>448</string>
-			<string>447</string>
+			<string>296</string>
+			<string>301</string>
+			<string>302</string>
 		</array>
-		<key>32</key>
+		<key>17</key>
 		<array>
-			<string>459</string>
-			<string>439</string>
-			<string>452</string>
+			<string>295</string>
+			<string>298</string>
+			<string>299</string>
 		</array>
-		<key>33</key>
+		<key>18</key>
 		<array>
-			<string>438</string>
-			<string>450</string>
+			<string>280</string>
+			<string>281</string>
+			<string>282</string>
 		</array>
 	</dict>
 	<key>IBLastGroupID</key>
-	<string>34</string>
+	<string>19</string>
 	<key>IBLockedObjects</key>
 	<array>
 		<integer>130</integer>
@@ -46,9 +46,8 @@
 	<key>IBOpenObjects</key>
 	<array>
 		<integer>130</integer>
-		<integer>304</integer>
 	</array>
 	<key>IBSystem Version</key>
-	<string>7H63</string>
+	<string>6L60</string>
 </dict>
 </plist>

@@ -70,9 +70,6 @@ sub makefullsoft {
   TinderUtils::run_shell_command "cd $builddir/fullsoft; $builddir/build/autoconf/make-makefile";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft fullcircle-push";
-  if (is_mac()) {
-    TinderUtils::run_shell_command "make -C $builddir/$Settings::mac_bundle_path";
-  }
 }
 
 sub processtalkback {
@@ -151,9 +148,7 @@ sub packit {
     if (is_windows()) {
       TinderUtils::run_shell_command "cp $package_location/../*.zip $stagedir/";
     } elsif (is_mac()) {
-      system("mkdir -p $package_location");
-      system("mkdir -p $stagedir");
-      TinderUtils::run_shell_command "cp $package_location/../*.dmg.gz $stagedir/";
+      TinderUtils::run_shell_command "cp $package_location/../dist/*.dmg.gz $stagedir/";
     } else {
       TinderUtils::run_shell_command "cp $package_location/../dist/*.tar.gz $stagedir/";
     }
@@ -285,7 +280,7 @@ sub main {
   # need to modify the settings from tinder-config.pl
   my $package_creation_path = $objdir . $Settings::package_creation_path;
   my $package_location;
-  if (is_windows() || is_mac()) {
+  if (is_windows()) {
     $package_location = $objdir . "/dist/install";
   } else {
     $package_location = $objdir . "/installer";

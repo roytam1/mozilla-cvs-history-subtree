@@ -481,7 +481,7 @@ static unsigned gFirstUserCollection = 0;
   NSString * menuTitle;
   
   // open in new window
-  if (isFolder)
+  if (isFolder || (outlineView && ([outlineView numberOfSelectedRows] > 1)))
     menuTitle = NSLocalizedString(@"Open Tabs in New Window", @"");
   else
     menuTitle = NSLocalizedString(@"Open in New Window", @"");
@@ -490,7 +490,7 @@ static unsigned gFirstUserCollection = 0;
   [contextMenu addItem:menuItem];
   
   // open in new tab
-  if (isFolder)
+  if (isFolder || ([outlineView numberOfSelectedRows] > 1))
     menuTitle = NSLocalizedString(@"Open in New Tabs", @"");
   else
     menuTitle = NSLocalizedString(@"Open in New Tab", @"");
@@ -530,11 +530,7 @@ static unsigned gFirstUserCollection = 0;
   }
   
   id parent = [item parent];
-  // if we're not in a smart collection (other than history)
-  if (!outlineView ||
-      ![target isKindOfClass:[BookmarkViewController class]] ||
-      ![[target activeCollection] isSmartFolder] ||
-      ([target activeCollection] == [self historyFolder])) {
+  if ([parent isKindOfClass:[BookmarkFolder class]] && ![parent isSmartFolder]) {
     // space
     [contextMenu addItem:[NSMenuItem separatorItem]];
     // delete

@@ -18,9 +18,7 @@ class nsICookie;
   
   IBOutlet NSButton* mStorePasswords;
   IBOutlet NSButton* mAutoFillPasswords;
-
-  BOOL mSortedAscending;                           // sort direction for tables in sheets
-
+  
   // permission sheet
   IBOutlet id mPermissionsPanel;
   IBOutlet NSTableView* mPermissionsTable;
@@ -55,7 +53,6 @@ class nsICookie;
 -(IBAction) editPermissionsDone:(id)aSender;
 -(IBAction) removeCookiePermissions:(id)aSender;
 -(IBAction) removeAllCookiePermissions:(id)aSender;
--(int) getRowForPermissionWithHost:(NSString *)aHost;
 
 -(void) mapCookiePrefToGUI:(int)pref;
 
@@ -68,7 +65,7 @@ class nsICookie;
 - (void) tableView:(NSTableView *)aTableView didClickTableColumn:(NSTableColumn *)aTableColumn;
 
 // sorting support methods
--(void) sortCookiesByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
--(void) sortPermissionsByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
+-(void) sortCookiesByColumn:(NSTableColumn *)aTableColumn;
+-(void) sortPermissionsByColumn:(NSTableColumn *)aTableColumn;
 
 @end

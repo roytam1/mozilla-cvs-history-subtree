@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/* 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 #ifdef DEBUG
 static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
@@ -54,8 +51,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #include "cert.h"
 #include "pki3hack.h"
 #endif
-
-#include "nssrwlk.h"
 
 #define NSSTRUSTDOMAIN_DEFAULT_CACHE_SIZE 32
 
@@ -95,11 +90,6 @@ NSSTrustDomain_Create (
     if (!rvTD) {
 	goto loser;
     }
-    /* protect the token list and the token iterator */
-    rvTD->tokensLock = NSSRWLock_New(100, "tokens");
-    if (!rvTD->tokensLock) {
-	goto loser;
-    }
     nssTrustDomain_InitializeCache(rvTD, NSSTRUSTDOMAIN_DEFAULT_CACHE_SIZE);
     rvTD->arena = arena;
     rvTD->refCount = 1;
@@ -108,9 +98,6 @@ NSSTrustDomain_Create (
 #endif
     return rvTD;
 loser:
-    if (rvTD && rvTD->tokensLock) {
-	NSSRWLock_Destroy(rvTD->tokensLock);
-    }
     nssArena_Destroy(arena);
     return (NSSTrustDomain *)NULL;
 }
@@ -137,7 +124,6 @@ NSSTrustDomain_Destroy (
 	    nssList_Clear(td->tokenList, token_destructor);
 	    nssList_Destroy(td->tokenList);
 	}
-	NSSRWLock_Destroy(td->tokensLock);
 	status = nssTrustDomain_DestroyCache(td);
 	if (status == PR_FAILURE) {
 	    return status;
@@ -159,21 +145,17 @@ nssTrustDomain_GetActiveSlots (
     NSSSlot **slots = NULL;
     NSSToken **tp, **tokens;
     *updateLevel = 1;
-    NSSRWLock_LockRead(td->tokensLock);
     count = nssList_Count(td->tokenList);
     tokens = nss_ZNEWARRAY(NULL, NSSToken *, count + 1);
     if (!tokens) {
-	NSSRWLock_UnlockRead(td->tokensLock);
 	return NULL;
     }
     slots = nss_ZNEWARRAY(NULL, NSSSlot *, count + 1);
     if (!slots) {
-	NSSRWLock_UnlockRead(td->tokensLock);
 	nss_ZFreeIf(tokens);
 	return NULL;
     }
     nssList_GetArray(td->tokenList, (void **)tokens, count);
-    NSSRWLock_UnlockRead(td->tokensLock);
     count = 0;
     for (tp = tokens; *tp; tp++) {
 	slots[count++] = nssToken_GetSlot(*tp);
@@ -290,7 +272,6 @@ NSSTrustDomain_FindTokenByName (
     PRStatus nssrv;
     NSSUTF8 *myName;
     NSSToken *tok = NULL;
-    NSSRWLock_LockRead(td->tokensLock);
     for (tok  = (NSSToken *)nssListIterator_Start(td->tokens);
          tok != (NSSToken *)NULL;
          tok  = (NSSToken *)nssListIterator_Next(td->tokens))
@@ -301,7 +282,6 @@ NSSTrustDomain_FindTokenByName (
 	}
     }
     nssListIterator_Finish(td->tokens);
-    NSSRWLock_UnlockRead(td->tokensLock);
     return tok;
 }
 

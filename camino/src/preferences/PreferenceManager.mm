@@ -653,12 +653,8 @@ static void SCProxiesChangedCallback(SCDynamicStoreRef store, CFArrayRef changed
   if (NS_FAILED(rv) || mode == 1) {
     // see which home page to use
     PRBool boolPref;
-    if (NS_SUCCEEDED(mPrefs->GetBoolPref("chimera.use_system_home_page", &boolPref)) && boolPref) {
-      NSString* homePage = [self getICStringPref:kICWWWHomePage];
-      if (!homePage)
-        homePage = @"about:blank";
-      return homePage;
-    }
+    if (NS_SUCCEEDED(mPrefs->GetBoolPref("chimera.use_system_home_page", &boolPref)) && boolPref)
+      return [self getICStringPref:kICWWWHomePage];
 
     nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefs);
     if (!prefBranch) return @"about:blank";

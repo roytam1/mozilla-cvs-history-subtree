@@ -43,7 +43,7 @@ class nsIURIFixup;
 class nsIBrowserHistory;
 class nsIDOMEvent;
 class nsIDOMNode;
-class nsIWebNavigation;
+
 
 //
 // ThrobberHandler
@@ -253,7 +253,7 @@ typedef enum
 - (IBAction)manageBookmarks: (id)aSender;
 - (IBAction)manageHistory: (id)aSender;
 - (IBAction)toggleSidebar:(id)aSender;
-- (BOOL)bookmarksAreVisible:(BOOL)inRequireSelection allowMultipleSelection:(BOOL)allowMultipleSelection;
+- (BOOL)bookmarksAreVisible:(BOOL)inRequireSelection;
 
 - (void)createNewTab:(ENewTabContents)contents;
 
@@ -358,9 +358,5 @@ typedef enum
 - (void)ensureBrowserVisible:(id)sender;
 - (NSString*)savedTitle;
 - (void)setSavedTitle:(NSString *)aTitle;
-
-// return a weak reference to the current web navigation object. Callers should
-// not hold onto this for longer than the current call unless they addref it.
-- (nsIWebNavigation*) currentWebNavigation;
 
 @end

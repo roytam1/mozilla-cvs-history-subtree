@@ -472,9 +472,6 @@ const double kJaguarAppKitVersion = 663;
     // create progress wheel. keep a strong ref as view goes in and out of view hierarchy. We
     // cannot use |NSProgressIndicatorSpinningStyle| on 10.1, so don't bother even creating it
     // and let all the calls to it be no-ops elsewhere in this class (prevents clutter, imho).
-#if 0
-// the progress spinner causes content to shear when scrolling because of
-// redraw problems on jaguar and panther. Removing until we can fix it. (bug 203349)
     if (NSAppKitVersionNumber >= kJaguarAppKitVersion) {
       mProgressWheel = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(0, 0, 16, 16)];
       [mProgressWheel setStyle:NSProgressIndicatorSpinningStyle];
@@ -484,7 +481,6 @@ const double kJaguarAppKitVersion = 663;
     }
     else
       mProgressWheel = nil;
-#endif
 
     // create close button. keep a strong ref as view goes in and out of view hierarchy
     mCloseButton = [[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 16, 16)];
@@ -609,7 +605,6 @@ const double kJaguarAppKitVersion = 663;
 
 - (void)startLoadAnimation
 {
-#if USE_PROGRESS_SPINNER
   // supress the tab icon while the spinner is over it
   [[mTabContentsView labelCell] setImageVisible: NO];
   [mTabContentsView setNeedsDisplay:YES];
@@ -617,7 +612,6 @@ const double kJaguarAppKitVersion = 663;
   // add spinner to tab view and start animation
   [mTabContentsView addSubview:mProgressWheel];
   [mProgressWheel startAnimation:self];
-#endif
 }
 
 - (void)stopLoadAnimation
@@ -626,11 +620,9 @@ const double kJaguarAppKitVersion = 663;
   [[mTabContentsView labelCell] setImageVisible: YES];
   [mTabContentsView setNeedsDisplay:YES];
   
-#if USE_PROGRESS_SPINNER
   // stop animation and remove spinner from tab view
   [mProgressWheel stopAnimation:self];
   [mProgressWheel removeFromSuperview];
-#endif
 }
 
 #pragma mark -

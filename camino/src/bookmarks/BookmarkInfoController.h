@@ -46,10 +46,6 @@
 
 @interface BookmarkInfoController : NSWindowController<BookmarksClient>
 {
-  IBOutlet NSBox* mDummyView;
-  IBOutlet NSBox* mBookmarkView;
-  IBOutlet NSBox* mFolderView;
-  
   IBOutlet NSTabView* mTabView;
   IBOutlet NSTextField* mBookmarkNameField;
   IBOutlet NSTextField* mBookmarkLocationField;
@@ -57,6 +53,7 @@
   IBOutlet NSTextField* mBookmarkDescField;
   IBOutlet NSTextField* mFolderNameField;
   IBOutlet NSTextField* mFolderKeywordField;
+  IBOutlet NSTextField* mFolderKeywordLabel;
   IBOutlet NSTextField* mFolderDescField;
   IBOutlet NSTextField* mLastVisitField;
   IBOutlet NSTextField* mStatusField;

@@ -269,7 +269,7 @@ enum {
 -(void)refreshDownloadInfo
 {
   NSView* curView = [self view];
-  NSString* filename = [mDestPath lastPathComponent];
+  NSString* filename = [mSourceURL lastPathComponent];
   id iconLabel = [curView viewWithTag:kLabelTagIcon];
   
   id filenameLabel = [curView viewWithTag:kLabelTagFilename];

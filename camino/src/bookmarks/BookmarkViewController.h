@@ -103,7 +103,6 @@
 -(void) restoreFolderExpandedStates;
 -(BOOL) isExpanded:(id)anItem;
 -(BOOL) haveSelectedRow;
--(int)numberOfSelectedRows;
 -(void) setItem:(BookmarkFolder *)anItem isExpanded:(BOOL)aBool;
 -(void) setActiveCollection:(BookmarkFolder *)aFolder;
 -(BookmarkFolder *)activeCollection;

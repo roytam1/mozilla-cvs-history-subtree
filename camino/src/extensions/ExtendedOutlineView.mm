@@ -187,6 +187,7 @@
   id item;
   int rowIndex;
   NSPoint point;
+  
   point = [self convertPoint:[theEvent locationInWindow] fromView:nil];
   rowIndex = [self rowAtPoint:point];
   
@@ -198,11 +199,12 @@
     item = [self itemAtRow:rowIndex];
     if (item) {
       id delegate = [self delegate];
-      // Make sure the item is the only selected one
-      if (![delegate respondsToSelector:@selector(outlineView:shouldSelectItem:)]
-          || [delegate outlineView:self shouldSelectItem:item]) {
-        [self deselectAll:self]; // we don't want anything but what was right-clicked selected
-        [self selectRow:rowIndex byExtendingSelection:NO];
+      
+      // If the item was not selected, select it now
+      if (![self isRowSelected:rowIndex]) {
+        if (![delegate respondsToSelector:@selector(outlineView:shouldSelectItem:)]
+            || [delegate outlineView:self shouldSelectItem:item])
+          [self selectRow:rowIndex byExtendingSelection:NO];
       }
       
       if ([delegate respondsToSelector:@selector(outlineView:contextMenuForItem:)])

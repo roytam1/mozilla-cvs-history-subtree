@@ -24,7 +24,6 @@
 *    Max Horn <max@quendi.de>
 *    David Haas <haasd@cae.wisc.edu>
 *    Simon Woodside <sbwoodside@yahoo.com>
-*    Josh Aas <josha@mac.com>
 *
 *
 * Alternatively, the contents of this file may be used under the terms of
@@ -419,7 +418,7 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
   // container (bookmark menu, toolbar bookmarks, etc), clear the item panel's selection entirely,
   // which will fall back to checking the selected container panel's selection. If 
   // the manager is visible, don't muck with the selection.
-  if (![mBrowserWindowController bookmarksAreVisible:NO allowMultipleSelection:NO]) {
+  if (![mBrowserWindowController bookmarksAreVisible:NO]) {
     [self displayBookmarkInOutlineView:parentFolder];
     long parentRow = [mItemPane rowForItem:parentFolder];   // will be -1 if top-level container
     if (parentRow >= 0)
@@ -678,8 +677,7 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
   // update buttons
   [mAddBookmarkButton setEnabled:inCanEdit];
   [mAddFolderButton setEnabled:inCanEdit];
-  // if editable and something is selected, then enable get info button, otherwise disable it
-  [mInfoButton setEnabled:(inCanEdit && ([mItemPane numberOfSelectedRows] == 1))];
+  [mInfoButton setEnabled:inCanEdit];
 }
 
 -(void) setActiveCollection:(BookmarkFolder *)aFolder
@@ -801,7 +799,7 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
 - (void) selectContainer:(int)inRowIndex
 {
   [mContainerPane selectRow:inRowIndex byExtendingSelection:NO];
-  if (inRowIndex == kHistoryContainerIndex) {
+  if ( inRowIndex == kHistoryContainerIndex ) {
     [mItemPane setDataSource:mHistorySource];
     [mItemPane setDelegate:mHistorySource];
     [mHistorySource loadLazily];
@@ -821,14 +819,11 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
       [self setCanEditSelectedContainerContents:NO];
     else
       [self setCanEditSelectedContainerContents:YES];
-    // if its a smart folder, but not the history folder
-    if ([[self activeCollection] isSmartFolder] && (inRowIndex != kHistoryContainerIndex)) {
-      [mItemPane setDeleteAction:nil];
-    }
-    else {
-      [mItemPane setDeleteAction:@selector(deleteBookmarks:)];
-    }
-    [mAddSeparatorButton setEnabled:(kBookmarkMenuContainerIndex == inRowIndex)];
+    [mItemPane setDeleteAction: @selector(deleteBookmarks:)];
+    if ( kBookmarkMenuContainerIndex == inRowIndex )
+      [mAddSeparatorButton setEnabled:YES];
+    else
+      [mAddSeparatorButton setEnabled:NO];
   }
   [mItemPane reloadData];
 }
@@ -1007,14 +1002,14 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
 -(NSMenu *)tableView:(NSTableView *)aTableView contextMenuForRow:(int)rowIndex
 {
   if (aTableView == mContainerPane) {
-    NSMenu *contextMenu = [[[aTableView menu] copy] autorelease];
-    if ([aTableView numberOfSelectedRows] > 0) {
-      [contextMenu addItem:[NSMenuItem separatorItem]];
-      NSMenuItem *useAsDockItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Use as Dock Menu", @"Use as Dock Menu") action:@selector(setAsDockMenuFolder:) keyEquivalent:[NSString string]];
-      [useAsDockItem setTarget:self];
-      [contextMenu addItem:useAsDockItem];
-      [useAsDockItem release];
+    NSMenu* contextMenu = nil;
+    if (rowIndex >= 0) {
+      contextMenu = [aTableView menu];
+      int numItems = [contextMenu numberOfItems];
+      while (numItems > 2)
+        [contextMenu removeItemAtIndex:(--numItems)];
       if (rowIndex >= (int)[[BookmarkManager sharedBookmarkManager] firstUserCollection]) {
+        [contextMenu addItem:[NSMenuItem separatorItem]];
         NSMenuItem *deleteItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Delete",@"Delete") action:@selector(deleteCollection:) keyEquivalent:[NSString string]];
         [deleteItem setTarget:self];
         [contextMenu addItem:deleteItem];
@@ -1183,10 +1178,6 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
     [mItemPane reloadItem: item reloadChildren: aReloadChildren];
 }
 
-- (int)numberOfSelectedRows {
-  return [mItemPane numberOfSelectedRows];
-}
-
 - (BOOL)haveSelectedRow
 {
   return ([mItemPane selectedRow] != -1);
@@ -1195,15 +1186,18 @@ static unsigned int TableViewSolidVerticalGridLineMask = 1;
 -(void)outlineViewSelectionDidChange: (NSNotification*) aNotification
 {
   BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController];
-  if ([mItemPane numberOfSelectedRows] == 1) {
-    [mInfoButton setEnabled:YES];
-    if ([[bic window] isVisible]) {
-      [bic setBookmark:[mItemPane itemAtRow:[mItemPane selectedRow]]];
-    }
-  }
-  else {
+  int index = [mItemPane selectedRow];
+  if (index == -1)
+  {
     [mInfoButton setEnabled:NO];
     [bic close];
+  }
+  else
+  {
+    id item = [mItemPane itemAtRow: index];
+    [mInfoButton setEnabled:YES];
+    if ([[bic window] isVisible])
+      [bic setBookmark:item];
   }
 }
 

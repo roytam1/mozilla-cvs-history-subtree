@@ -21,7 +21,6 @@
 *
 * Contributor(s):
 *    David Haas <haasd@cae.wisc.edu>
-*    Josh Aas <josha@mac.com>
 * 
 *
 * Alternatively, the contents of this file may be used under the terms of
@@ -47,11 +46,9 @@
 @class KindaSmartFolderManager;
 @class RunLoopMessenger;
 
-enum {
-  kBookmarkMenuContainerIndex = 0,
-  kToolbarContainerIndex = 1,
-  kHistoryContainerIndex = 2,
-};
+#define kBookmarkMenuContainerIndex 0
+#define kToolbarContainerIndex 1
+#define kHistoryContainerIndex 2
 
 // check 1 bookmark every 2 minutes, but only if we haven't been there in a day
 #define kTimeBeforeRecheckingBookmark 86400.0

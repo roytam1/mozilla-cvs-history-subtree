@@ -119,6 +119,7 @@
 			children = (
 				82AC0D5E065A5F5100776B02,
 				82AC0D5D065A5F2300776B02,
+				F56DEF11020802A501FF5ADC,
 				F5F181C50208006F0124611D,
 				F5F181C60208006F0124611D,
 				F5F181C80208006F0124611D,
@@ -365,7 +366,7 @@
 				F564872E023B954E010001CA,
 				F50EA33D02BAAAB701000103,
 				3FAA54C70587778700BBF630,
-				3F8C00930681262400658CBC,
+				F568C3D3023A4F71010001CA,
 				089C165CFE840E0CC02AAC07,
 				F52CE65C02BFA8B701026D5D,
 				F51B70B4026EC8A601A80166,
@@ -983,7 +984,7 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util";
 				OTHER_CFLAGS = "-fshort-wchar";
-				OTHER_LDFLAGS = "-lmozz -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
+				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				PREBINDING = NO;
 				PRODUCT_NAME = Camino;
 				SECTORDER_FLAGS = "";
@@ -1593,7 +1594,7 @@
 				3F44AC3705BDFB9E00CB4B08,
 				3F44AC3805BDFB9E00CB4B08,
 				3F44AC3905BDFB9E00CB4B08,
-				3F8C00940681262400658CBC,
+				3F44AC3A05BDFB9E00CB4B08,
 				3F44AC3B05BDFB9E00CB4B08,
 				3F44AC3C05BDFB9E00CB4B08,
 				3F44AC3D05BDFB9E00CB4B08,
@@ -1781,6 +1782,12 @@
 		};
 		3F44AC3905BDFB9E00CB4B08 = {
 			fileRef = F507A85303116EA401026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F44AC3A05BDFB9E00CB4B08 = {
+			fileRef = F568C3D3023A4F71010001CA;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -2679,6 +2686,7 @@
 				82AC0D66065A602200776B02,
 				3F44ACD005BDFB9F00CB4B08,
 				3F44ACD105BDFB9F00CB4B08,
+				3F44ACD205BDFB9F00CB4B08,
 				3F44ACD305BDFB9F00CB4B08,
 				3F44ACD405BDFB9F00CB4B08,
 				3F44ACD505BDFB9F00CB4B08,
@@ -2778,6 +2786,12 @@
 		};
 		3F44ACD105BDFB9F00CB4B08 = {
 			fileRef = 0FA8EF9C0423B21100A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F44ACD205BDFB9F00CB4B08 = {
+			fileRef = F56DEF11020802A501FF5ADC;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -3687,7 +3701,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 6;
 			files = (
-				3FE5BA0D068A1A6F0001CECD,
 				3F44AD6105BDFB9F00CB4B08,
 				3F44AD6205BDFB9F00CB4B08,
 				3F44AD6305BDFB9F00CB4B08,
@@ -4552,7 +4565,6 @@
 			files = (
 				3F44ADDF05BDFBA000CB4B08,
 				3F44ADE005BDFBA000CB4B08,
-				3F8C005106800D8D00658CBC,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4740,7 +4752,6 @@
 			files = (
 				3F44ADF605BDFBA000CB4B08,
 				3F44ADF705BDFBA000CB4B08,
-				3F8C005706800E1300658CBC,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5522,7 +5533,7 @@
 				3F44AE7005BDFBA000CB4B08,
 				3F44AE7105BDFBA000CB4B08,
 				3F44AE7205BDFBA000CB4B08,
-				3F8C00950681262400658CBC,
+				3F44AE7305BDFBA000CB4B08,
 				3F44AE7405BDFBA000CB4B08,
 				3F44AE7505BDFBA000CB4B08,
 				3F44AE7605BDFBA000CB4B08,
@@ -5710,6 +5721,12 @@
 		};
 		3F44AE7205BDFBA000CB4B08 = {
 			fileRef = F507A85303116EA401026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F44AE7305BDFBA000CB4B08 = {
+			fileRef = F568C3D3023A4F71010001CA;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -6610,6 +6627,7 @@
 			files = (
 				828FBD97065A986900B3D52A,
 				828FBD98065A986900B3D52A,
+				3F44AF0A05BDFBA000CB4B08,
 				3F44AF0B05BDFBA000CB4B08,
 				3F44AF0C05BDFBA000CB4B08,
 				3F44AF0D05BDFBA000CB4B08,
@@ -6673,6 +6691,12 @@
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3F44AF0A05BDFBA000CB4B08 = {
+			fileRef = F56DEF11020802A501FF5ADC;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 		3F44AF0B05BDFBA000CB4B08 = {
 			fileRef = F5F181C50208006F0124611D;
@@ -7621,7 +7645,6 @@
 				3F44AFC305BDFBA000CB4B08,
 				3FECC8E705D1FE800068E7ED,
 				82C39664065B156600A82035,
-				3FE5BA0C068A1A140001CECD,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8295,77 +8318,6 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
-		3F8C004F06800D8D00658CBC = {
-			children = (
-				3F8C005006800D8D00658CBC,
-			);
-			isa = PBXVariantGroup;
-			name = Localizable.strings;
-			path = src/preferences;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3F8C005006800D8D00658CBC = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = text.plist.strings;
-			name = English;
-			path = PreferencePanes/Security/English.lproj/Localizable.strings;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3F8C005106800D8D00658CBC = {
-			fileRef = 3F8C004F06800D8D00658CBC;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3F8C005506800E1300658CBC = {
-			children = (
-				3F8C005606800E1300658CBC,
-			);
-			isa = PBXVariantGroup;
-			name = Localizable.strings;
-			path = src/preferences;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3F8C005606800E1300658CBC = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			lastKnownFileType = text.plist.strings;
-			name = English;
-			path = PreferencePanes/WebFeatures/English.lproj/Localizable.strings;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3F8C005706800E1300658CBC = {
-			fileRef = 3F8C005506800E1300658CBC;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3F8C00930681262400658CBC = {
-			children = (
-				F568C3D3023A4F71010001CA,
-			);
-			isa = PBXVariantGroup;
-			name = Credits.rtf;
-			refType = 4;
-			sourceTree = "<group>";
-		};
-		3F8C00940681262400658CBC = {
-			fileRef = 3F8C00930681262400658CBC;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3F8C00950681262400658CBC = {
-			fileRef = 3F8C00930681262400658CBC;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		3FAA54C70587778700BBF630 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -8856,34 +8808,6 @@
 			settings = {
 			};
 		};
-		3FE5B9FC068A090F0001CECD = {
-			isa = PBXFileReference;
-			lastKnownFileType = "compiled.mach-o.dylib";
-			name = libmozz.dylib;
-			path = ../modules/zlib/src/libmozz.dylib;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3FE5BA0B068A1A140001CECD = {
-			isa = PBXFileReference;
-			lastKnownFileType = archive.ar;
-			name = libmozz.a;
-			path = ../modules/zlib/src/libmozz.a;
-			refType = 2;
-			sourceTree = SOURCE_ROOT;
-		};
-		3FE5BA0C068A1A140001CECD = {
-			fileRef = 3FE5BA0B068A1A140001CECD;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		3FE5BA0D068A1A6F0001CECD = {
-			fileRef = 3FE5B9FC068A090F0001CECD;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		3FECC78F05D1F68E0068E7ED = {
 			children = (
 				3F44AD8705BDFB9F00CB4B08,
@@ -9036,7 +8960,7 @@
 		};
 		82AC0D60065A5FD600776B02 = {
 			isa = PBXFileReference;
-			lastKnownFileType = "compiled.mach-o.bundle";
+			lastKnownFileType = file;
 			name = libtransformiix.dylib;
 			path = ../dist/lib/components/libtransformiix.dylib;
 			refType = 2;
@@ -9903,7 +9827,6 @@
 				F51704E9034A30DF01026D5D,
 				F51704EA034A30DF01026D5D,
 				F51704EE034A30F101026D5D,
-				3F8C004F06800D8D00658CBC,
 			);
 			isa = PBXGroup;
 			name = Security;
@@ -9961,7 +9884,6 @@
 				F5170516034A398F01026D5D,
 				F5170517034A398F01026D5D,
 				F517051B034A399E01026D5D,
-				3F8C005506800E1300658CBC,
 			);
 			isa = PBXGroup;
 			name = "Web Features";
@@ -11282,8 +11204,16 @@
 		F568C3D3023A4F71010001CA = {
 			isa = PBXFileReference;
 			lastKnownFileType = text.rtf;
-			name = English;
-			path = resources/application/English.lproj/Credits.rtf;
+			name = Credits.rtf;
+			path = resources/application/Credits.rtf;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		F56DEF11020802A501FF5ADC = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = urlbarhistory.xpt;
+			path = ../xpfe/components/urlbarhistory/public/_xpidlgen/urlbarhistory.xpt;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
@@ -11298,7 +11228,6 @@
 		};
 		F56F242202AC6F7101A967F3 = {
 			children = (
-				3FE5BA0B068A1A140001CECD,
 				82C39663065B156600A82035,
 				0FA8EFCA0423EAAD00A80166,
 				F56F242602AC706801A967F3,
@@ -12686,7 +12615,6 @@
 				F6BD638101B30EA301A962F7,
 				F6BD638201B30EA301A962F7,
 				F6BD638701B30F5301A962F7,
-				3FE5B9FC068A090F0001CECD,
 				F5F14E9602A5A43A01A967F3,
 				F5461CBB03AAC25C01A96660,
 				F5247C2F0228B5E7013DD99A,
