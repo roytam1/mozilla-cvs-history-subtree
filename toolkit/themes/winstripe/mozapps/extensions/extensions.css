@@ -77,6 +77,11 @@
   text-decoration: underline !important;
   cursor: pointer;
   text-align: right;
+  -moz-user-focus: normal;
+}
+
+#getMore:focus {
+  -moz-outline: 1px dotted invert ! important;
 }
 
 /* Extension Buttons (Iconic buttons in each extension item) */

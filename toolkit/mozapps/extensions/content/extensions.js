@@ -508,7 +508,8 @@ function buildContextMenu(aEvent)
 
   var extensionsStrings = document.getElementById("extensionsStrings");
   var menuitem_about = document.getElementById("menuitem_about_clone");
-  var name = document.popupNode.getAttribute("name");
+  var selectedItem = gExtensionsView.selected;
+  var name = selectedItem ? selectedItem.getAttribute("name") : "";
   menuitem_about.setAttribute("label", extensionsStrings.getFormattedString("aboutExtension", [name]));
   
   if (isExtensions) {
@@ -660,7 +661,7 @@ var gExtensionsViewController = {
              selectedItem.getAttribute("toBeUninstalled") != "true" &&
              selectedItem.getAttribute("optionsURL") != "";
     case "cmd_about":
-      return !selectedItem || (selectedItem.disabled ? selectedItem.getAttribute("aboutURL") == "" : true);
+      return selectedItem && (selectedItem.disabled ? selectedItem.getAttribute("aboutURL") == "" : true);
     case "cmd_homepage":
       return selectedItem && selectedItem.getAttribute("homepageURL") != "";
     case "cmd_uninstall":
@@ -696,12 +697,12 @@ var gExtensionsViewController = {
              selectedItem.getAttribute("toBeUninstalled") != "true" &&
              selectedItem.getAttribute("locked") != "true";
     case "cmd_movetop":
-      return (gExtensionsView.children[0] != selectedItem);
+      return selectedItem && (gExtensionsView.children[0] != selectedItem);
     case "cmd_moveup":
-      return (gExtensionsView.children[0] != selectedItem);
+      return selectedItem && (gExtensionsView.children[0] != selectedItem);
     case "cmd_movedn":
       var children = gExtensionsView.children;
-      return (children[children.length-1] != selectedItem);
+      return selectedItem && (children[children.length-1] != selectedItem);
 #ifdef MOZ_THUNDERBIRD
     case "cmd_install":
       return true;   
