@@ -476,7 +476,7 @@ NS_NewElement(nsIContent** aResult, PRInt32 aElementType,
     return NS_NewXMLEventsElement(aResult, aNodeInfo);
   }
 #ifdef MOZ_XTF
-  {
+  if (aElementType != kNameSpaceID_XBL) {
     nsCOMPtr<nsIXTFService> xtfService = do_GetService(kXTFServiceCID); // XXX we should cache this somehow
     NS_ASSERTION(xtfService, "could not get XTF service!");
     if (NS_SUCCEEDED(xtfService->CreateElement(aResult, aNodeInfo)))
