@@ -24,15 +24,19 @@
 #ifndef nsPromiseSubstring_h___
 #define nsPromiseSubstring_h___
 
-#ifndef nsStringTraits_h___
-#include "nsStringTraits.h"
+#ifndef nsAString_h___
+#include "nsAString.h"
 #endif
 
 #ifndef nsAPromiseString_h___
 #include "nsAPromiseString.h"
 #endif
 
-//-------1---------2---------3---------4---------5---------6---------7---------8
+#ifndef nsStringTraits_h___
+#include "nsStringTraits.h"
+#endif
+
+
 
   //
   // nsPromiseSubstring
