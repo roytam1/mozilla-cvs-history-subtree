@@ -1122,9 +1122,11 @@ sub get_profile_dir {
         if ($Settings::ProductName eq 'Thunderbird') {
             $profile_dir = "$ENV{HOME}/Library/$Settings::ProductName/Profiles";
             ($profile_dir) = <$profile_dir/*.$Settings::MozProfileName>;
-        } else {
+        } elsif ($Settings::ProductName eq 'Firefox') {
             $profile_dir = "$ENV{HOME}/Library/Application Support/$Settings::ProductName/Profiles";
             ($profile_dir) = <"$profile_dir/*.$Settings::MozProfileName">;
+        } else { # Mozilla's Profiles/profilename/salt
+            $profile_dir = "$ENV{HOME}/Library/$Settings::ProductName/Profiles/$Settings::MozProfileName/";
         }
     } else {
         # *nix
