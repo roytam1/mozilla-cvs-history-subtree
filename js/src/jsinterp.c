@@ -751,6 +751,7 @@ js_Execute(JSContext *cx, JSObject *chain, JSScript *script, JSFunction *fun,
     void *hookData;
 
     hook = cx->runtime->executeHook;
+    hookData = NULL;
     oldfp = cx->fp;
     frame.callobj = frame.argsobj = NULL;
     frame.script = script;
@@ -841,9 +842,9 @@ ImportProperty(JSContext *cx, JSObject *obj, jsid id)
 	ida = JS_Enumerate(cx, obj);
 	if (!ida)
 	    return JS_FALSE;
+	ok = JS_TRUE;
 	if (ida->length == 0)
 	    goto out;
-	ok = JS_TRUE;
     } else {
 	ida = NULL;
 	if (!OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
@@ -1027,6 +1028,10 @@ js_Interpret(JSContext *cx, jsval *result)
     }                                                                         \
 }
 
+    pc = script->code;
+    endpc = pc + script->length;
+    len = -1;
+
     /*
      * Allocate operand and pc stack slots for the script's worst-case depth.
      */
@@ -1034,13 +1039,11 @@ js_Interpret(JSContext *cx, jsval *result)
     newsp = js_AllocStack(cx, (uintN)(2 * depth), &mark);
     if (!newsp) {
 	ok = JS_FALSE;
+	sp = NULL;
 	goto out;
     }
     newsp += depth;
     fp->sp = sp = newsp;
-
-    pc = script->code;
-    endpc = pc + script->length;
 
     while (pc < endpc) {
 	fp->pc = pc;

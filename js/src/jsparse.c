@@ -2499,7 +2499,7 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 JSBool
 js_FoldConstants(JSContext *cx, JSParseNode *pn)
 {
-    JSParseNode *pn1, *pn2, *pn3;
+    JSParseNode *pn1=NULL, *pn2=NULL, *pn3=NULL;
 
     switch (pn->pn_arity) {
       case PN_FUNC:
