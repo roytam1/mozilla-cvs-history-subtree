@@ -1639,11 +1639,12 @@ nsBulletFrame::Reflow(nsIPresContext* aPresContext,
           }
         }
 
-
-        // XXX: initialDocumentURI is NULL !
-        il->LoadImage(newURI, nsnull, documentURI, loadGroup, mListener, doc,
-                      nsIRequest::LOAD_NORMAL, nsnull, nsnull,
-                      getter_AddRefs(mImageRequest));
+        if (NS_SUCCEEDED(nsContentUtils::CanLoadImage(newURI, doc, doc))) {
+          // XXX: initialDocumentURI is NULL !
+          il->LoadImage(newURI, nsnull, documentURI, loadGroup, mListener, doc,
+                        nsIRequest::LOAD_NORMAL, nsnull, nsnull,
+                        getter_AddRefs(mImageRequest));
+        }
       }
     }
   }

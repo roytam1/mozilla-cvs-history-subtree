@@ -1688,7 +1688,37 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
   NS_PRECONDITION(aURI, "Must have a URI");
   NS_PRECONDITION(aLoadingDocument, "Must have a document");
 
-  // XXXbz Do security manager check here!
+  nsresult rv;
+ 
+  PRUint32 appType = nsIDocShell::APP_TYPE_UNKNOWN;
+
+  {
+    nsCOMPtr<nsISupports> container = aLoadingDocument->GetContainer();
+    nsCOMPtr<nsIDocShellTreeItem> docShellTreeItem =
+      do_QueryInterface(container);
+
+    if (docShellTreeItem) {
+      nsCOMPtr<nsIDocShellTreeItem> root;
+      docShellTreeItem->GetRootTreeItem(getter_AddRefs(root));
+
+      nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(root));
+
+      if (!docShell || NS_FAILED(docShell->GetAppType(&appType))) {
+        appType = nsIDocShell::APP_TYPE_UNKNOWN;
+      }
+    }
+  }
+
+  if (appType != nsIDocShell::APP_TYPE_EDITOR) {
+    // Editor apps get special treatment here, editors can load images
+    // from anywhere.
+    rv = sSecurityManager->
+      CheckLoadURI(aLoadingDocument->GetDocumentURI(), aURI,
+                   nsIScriptSecurityManager::ALLOW_CHROME);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+  }
 
   // Check with content policy
   nsIScriptGlobalObject* globalScript = aLoadingDocument->GetScriptGlobalObject();
@@ -1698,13 +1728,12 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
     // prevent image loading themselves.
     return NS_OK;
   }
-  
+
   nsCOMPtr<nsIDOMWindow> domWin(do_QueryInterface(globalScript));
 
   PRBool shouldLoad = PR_TRUE;
-  nsresult rv = NS_CheckContentLoadPolicy(nsIContentPolicy::IMAGE, aURI,
-                                          aContext,
-                                          domWin, &shouldLoad);
+  rv = NS_CheckContentLoadPolicy(nsIContentPolicy::IMAGE, aURI,
+                                 aContext, domWin, &shouldLoad);
   if (NS_SUCCEEDED(rv) && !shouldLoad) {
     return NS_ERROR_IMAGE_BLOCKED;
   }

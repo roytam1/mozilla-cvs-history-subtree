@@ -276,6 +276,12 @@ nsImgManager::TestPermission(nsIURI *aCurrentURI,
     if (!aFirstURI)
       return NS_OK;
 
+    PRBool noNeedToCheck = PR_FALSE;
+    rv = aFirstURI->SchemeIs("chrome", &noNeedToCheck);
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (noNeedToCheck)
+      return NS_OK;
+
     // compare tails of names checking to see if they have a common domain
     // we do this by comparing the tails of both names where each tail 
     // includes at least one dot

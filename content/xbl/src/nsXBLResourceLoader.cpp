@@ -57,6 +57,7 @@
 #include "nsFrameManager.h"
 #include "nsStyleContext.h"
 #include "nsXBLPrototypeBinding.h"
+#include "nsContentUtils.h"
 
 NS_IMPL_ISUPPORTS1(nsXBLResourceLoader, nsICSSLoaderObserver)
 
@@ -92,7 +93,6 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
   *aResult = PR_TRUE;
 
   // Declare our loaders.
-  nsCOMPtr<imgILoader> il;
   nsCOMPtr<nsICSSLoader> cssLoader;
 
   nsCOMPtr<nsIDocument> doc;
@@ -106,23 +106,22 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
     if (curr->mSrc.IsEmpty())
       continue;
 
-    if (NS_FAILED(NS_NewURI(getter_AddRefs(url), curr->mSrc, nsnull, docURL)))
+    if (NS_FAILED(NS_NewURI(getter_AddRefs(url), curr->mSrc,
+                            doc->GetDocumentCharacterSet().get(), docURL)))
       continue;
 
     if (curr->mType == nsXBLAtoms::image) {
-      // Obtain our src attribute.  
-      // Construct a URI out of our src attribute.
-      // We need to ensure the image loader is constructed.
-      if (!il) {
-        il = do_GetService("@mozilla.org/image/loader;1");
-        if (!il) continue;
+      if (NS_FAILED(nsContentUtils::CanLoadImage(url, doc, doc))) {
+        // We're not permitted to load this image, move on...
+        continue;
       }
 
       // Now kick off the image load...
       // Passing NULL for pretty much everything -- cause we don't care!
       // XXX: initialDocumentURI is NULL! 
       nsCOMPtr<imgIRequest> req;
-      il->LoadImage(url, nsnull, nsnull, nsnull, nsnull, nsnull, nsIRequest::LOAD_BACKGROUND, nsnull, nsnull, getter_AddRefs(req));
+      nsContentUtils::LoadImage(url, doc, nsnull, nsIRequest::LOAD_BACKGROUND,
+                                getter_AddRefs(req));
     }
     else if (curr->mType == nsXBLAtoms::stylesheet) {
       if (!cssLoader) {

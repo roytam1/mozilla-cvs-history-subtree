@@ -95,6 +95,7 @@
 #include "imgIContainerObserver.h"
 #include "imgILoader.h"
 #include "nsStyleSet.h"
+#include "nsContentUtils.h"
 
 #ifdef IBMBIDI
 #include "nsBidiPresUtils.h"
@@ -1944,12 +1945,14 @@ nsTreeBodyFrame::GetImage(PRInt32 aRowIndex, const PRUnichar* aColID, PRBool aUs
     if (NS_FAILED(rv))
       return rv;
 
-    mImageGuard = PR_TRUE;
-    // XXX: initialDocumentURI is NULL!
-    rv = il->LoadImage(srcURI, nsnull, doc->GetDocumentURI(), nsnull,
-                       imgDecoderObserver, doc, nsIRequest::LOAD_NORMAL,
-                       nsnull, nsnull, getter_AddRefs(imageRequest));
-    mImageGuard = PR_FALSE;
+    if (NS_SUCCEEDED(nsContentUtils::CanLoadImage(srcURI, doc, doc))) {
+      mImageGuard = PR_TRUE;
+      // XXX: initialDocumentURI is NULL!
+      rv = il->LoadImage(srcURI, nsnull, doc->GetDocumentURI(), nsnull,
+                         imgDecoderObserver, doc, nsIRequest::LOAD_NORMAL,
+                         nsnull, nsnull, getter_AddRefs(imageRequest));
+      mImageGuard = PR_FALSE;
+    }
 
     if (!imageRequest)
       return NS_ERROR_FAILURE;
