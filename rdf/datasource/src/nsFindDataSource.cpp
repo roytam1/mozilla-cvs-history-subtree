@@ -722,8 +722,6 @@ FindDataSource::ArcLabelsOut(nsIRDFResource *source,
 {
 	nsresult		rv;
 
-	*labels = nsnull;
-
 	if (isFindURI(source))
 	{
 		nsCOMPtr<nsISupportsArray> array;
@@ -741,8 +739,9 @@ FindDataSource::ArcLabelsOut(nsIRDFResource *source,
         *labels = result;
         return NS_OK;
 	}
-	return NS_RDF_NO_VALUE;
-
+    else {
+        return NS_NewEmptyEnumerator(labels);
+    }
 }
 
 
