@@ -40,7 +40,7 @@
 #endif
 
 nsDll::nsDll(const char *codeDllName, int type)
-  : m_dllName(NULL), m_dllSpec(NULL),
+  : m_dllName(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
@@ -63,13 +63,14 @@ nsDll::nsDll(const char *codeDllName, int type)
 }
 
 nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation)
-  : m_dllName(NULL), m_dllSpec(dllSpec),
+  : m_dllName(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL), m_markForUnload(PR_FALSE)
 
 {
 	m_modDate = LL_Zero();
 	m_size = LL_Zero();
+    m_dllSpec = dllSpec;
 
     m_registryLocation = nsCRT::strdup(registryLocation);
     Init(dllSpec);
@@ -81,13 +82,14 @@ nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation)
 }
 
 nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation, PRInt64* modDate, PRInt64* fileSize)
-  : m_dllName(NULL), m_dllSpec(dllSpec),
+  : m_dllName(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL), m_markForUnload(PR_FALSE)
 
 {
     m_modDate = LL_Zero();
     m_size = LL_Zero();
+    m_dllSpec = dllSpec;
 
     m_registryLocation = nsCRT::strdup(registryLocation);
     Init(dllSpec);
@@ -105,7 +107,7 @@ nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation, PRInt64* modDate, P
 }
 
 nsDll::nsDll(const char *libPersistentDescriptor)
-  : m_dllName(NULL), m_dllSpec(NULL),
+  : m_dllName(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
@@ -123,7 +125,7 @@ nsDll::nsDll(const char *libPersistentDescriptor)
 }
 
 nsDll::nsDll(const char *libPersistentDescriptor, PRInt64* modDate, PRInt64* fileSize)
-  : m_dllName(NULL), m_dllSpec(NULL),
+  : m_dllName(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
@@ -152,7 +154,6 @@ nsDll::Init(nsIFile *dllSpec)
 {
     // Addref the m_dllSpec
     m_dllSpec = dllSpec;
-    NS_ADDREF(m_dllSpec);
 
     // Make sure we are dealing with a file
     PRBool isFile = PR_FALSE;
@@ -187,14 +188,13 @@ nsDll::Init(const char *libPersistentDescriptor)
 	}
 
     // Create a FileSpec from the persistentDescriptor
-    nsILocalFile *dllSpec = nsnull;
+    nsCOMPtr<nsILocalFile> dllSpec;
     
     nsCID clsid;
     nsComponentManager::ProgIDToClassID(NS_LOCAL_FILE_PROGID, &clsid);
-    rv = nsComponentManager::CreateInstance(clsid, 
-                                            nsnull, 
-                                            nsCOMTypeInfo<nsILocalFile>::GetIID(), 
-                                            (void**)&dllSpec);
+    rv = nsComponentManager::CreateInstance(clsid, nsnull, 
+                                            NS_GET_IID(nsILocalFile),
+                                            (void**)getter_AddRefs(dllSpec));
     if (NS_FAILED(rv))
     {
         m_status = DLL_INVALID_PARAM;
@@ -208,7 +208,6 @@ nsDll::Init(const char *libPersistentDescriptor)
         return;
     }
 
-    NS_RELEASE(dllSpec);
 }
 
 
@@ -223,8 +222,6 @@ nsDll::~nsDll(void)
     // Hence turn it back on after all the above have been removed.
     Unload();
 #endif
-    if (m_dllSpec)
-        NS_RELEASE(m_dllSpec);
     if (m_dllName)
         nsCRT::free(m_dllName);
     if (m_persistentDescriptor)
@@ -279,7 +276,6 @@ nsDll::HasChanged()
         return PR_FALSE;
 
     // If mod date has changed, then dll has changed
-    PRBool modDateChanged = PR_FALSE;
     PRInt64 currentDate;
 
     nsresult rv = m_dllSpec->GetLastModificationDate(&currentDate);
@@ -388,8 +384,8 @@ nsresult nsDll::GetDllSpec(nsIFile **fsobj)
     NS_ASSERTION(m_dllSpec, "m_dllSpec NULL");
     NS_ASSERTION(fsobj, "xcDll::GetModule : Null argument" );
 
-    NS_ADDREF(m_dllSpec);
     *fsobj = m_dllSpec;
+    NS_ADDREF(*fsobj);
     return NS_OK;
 }
 
@@ -414,7 +410,7 @@ nsresult nsDll::GetModule(nsISupports *servMgr, nsIModule **cobj)
 
     // We need a nsIFile for location. If we dont
     // have one, create one.
-    if (m_dllSpec == NULL && m_dllName)
+    if (!m_dllSpec && m_dllName)
     {
         // Create m_dllSpec from m_dllName
     }

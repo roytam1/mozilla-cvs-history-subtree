@@ -80,7 +80,8 @@ nsNativeComponentLoader::GetFactory(const nsIID & aCID,
 
     /* Should this all live in xcDll? */
     nsDll *dll;
-    rv = CreateDll(nsnull, aLocation, 0, 0, &dll);
+    PRInt64 mod = LL_Zero(), size = LL_Zero();
+    rv = CreateDll(nsnull, aLocation, &mod, &size, &dll);
     if (NS_FAILED(rv))
         return rv;
 
@@ -259,14 +260,14 @@ nsNativeComponentLoader::RegisterComponentsInDir(PRInt32 when,
     if (NS_FAILED(rv)) return rv;
     
     // whip through the directory to register every file
-    nsIFile *dirEntry = NULL;
+    nsCOMPtr<nsIFile> dirEntry;
     PRBool more = PR_FALSE;
 
     rv = dirIterator->HasMoreElements(&more);
     if (NS_FAILED(rv)) return rv;
     while (more == PR_TRUE)
     {
-        rv = dirIterator->GetNext((nsISupports**)&dirEntry);
+        rv = dirIterator->GetNext((nsISupports**)getter_AddRefs(dirEntry));
         if (NS_SUCCEEDED(rv))
         {
             rv = dirEntry->IsDirectory(&isDir);
@@ -284,7 +285,6 @@ nsNativeComponentLoader::RegisterComponentsInDir(PRInt32 when,
                     rv = AutoRegisterComponent(when, dirEntry, &registered);
                 }
             }
-            NS_RELEASE(dirEntry);
         }
         rv = dirIterator->HasMoreElements(&more);
         if (NS_FAILED(rv)) return rv;
@@ -727,7 +727,8 @@ DebugStr("\pnsLocalFile doesn't have a GetCatInfo call - yet");
 
     // Get the registry representation of the dll, if any
     nsDll *dll;
-    rv = CreateDll(component, persistentDescriptor, 0, 0, &dll);
+    PRInt64 mod = LL_Zero(), size = LL_Zero();
+    rv = CreateDll(component, persistentDescriptor, &mod, &size, &dll);
     if (NS_FAILED(rv))
         return rv;
 

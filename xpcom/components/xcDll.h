@@ -35,7 +35,7 @@
 #include "prlink.h"
 #include "nsISupports.h"
 #include "nsIFile.h"
-
+#include "nsCOMPtr.h"
 
 class nsIModule;
 class nsIServiceManager;
@@ -54,7 +54,7 @@ class nsDll
 private:
     char *m_dllName;			// Stores the dllName to load.
 
-    nsIFile *m_dllSpec;	    // Filespec representing the component
+    nsCOMPtr<nsIFile> m_dllSpec;	    // Filespec representing the component
 	PRInt64 m_modDate;		// last modified time at creation of this object
 	PRInt64 m_size;		// size of the dynamic library at creation of this object
 
