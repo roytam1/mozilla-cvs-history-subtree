@@ -189,6 +189,7 @@
                  type="autocomplete"
                  autocompletesearch="history" 
                  autocompletepopup="PopupAutoComplete"
+                 completeselectedindex="true"
                  tabscrolling="true"
                  showcommentcolumn="true"
                  enablehistory="true"
