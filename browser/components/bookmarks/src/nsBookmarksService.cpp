@@ -5462,7 +5462,7 @@ nsBookmarksService::OnAssert(nsIRDFDataSource* aDataSource,
 
     PRInt32 count = mObservers.Count();
     if (count == 0)
-        return PR_OK;
+        return NS_OK;
 
     // Make a copy of the array first, because some
     // observers remove themselves from the list while
@@ -5491,7 +5491,7 @@ nsBookmarksService::OnUnassert(nsIRDFDataSource* aDataSource,
 
     PRInt32 count = mObservers.Count();
     if (count == 0)
-        return PR_OK;
+        return NS_OK;
 
     // Make a copy of the array first, because some
     // observers remove themselves from the list while
@@ -5521,7 +5521,7 @@ nsBookmarksService::OnChange(nsIRDFDataSource* aDataSource,
 
     PRInt32 count = mObservers.Count();
     if (count == 0)
-        return PR_OK;
+        return NS_OK;
 
     // Make a copy of the array first, because some
     // observers remove themselves from the list while
@@ -5551,7 +5551,7 @@ nsBookmarksService::OnMove(nsIRDFDataSource* aDataSource,
 
     PRInt32 count = mObservers.Count();
     if (count == 0)
-        return PR_OK;
+        return NS_OK;
 
     // Make a copy of the array first, because some
     // observers remove themselves from the list while
