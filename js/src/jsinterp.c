@@ -2763,7 +2763,7 @@ js_Interpret(JSContext *cx, jsval *result)
 out:
 
 #if JS_HAS_EXCEPTIONS
-    if (cx->throwing) {
+    if (!ok && cx->throwing) {
         /*
          * Check if an exception has been raised.  If so, there may be
          * a try block within this frame that can catch the exception.
