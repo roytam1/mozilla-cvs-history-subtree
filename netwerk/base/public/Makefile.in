@@ -41,6 +41,7 @@ SDK_XPIDLSRCS   = \
 		nsIURL.idl \
 		nsIFileURL.idl \
 		nsIUploadChannel.idl \
+		nsIUnicharStreamListener.idl \
 		$(NULL)
 
 XPIDLSRCS	= \
@@ -78,7 +79,6 @@ XPIDLSRCS	= \
 		nsIStreamLoader.idl \
 		nsISyncStreamListener.idl \
 		nsIUnicharStreamLoader.idl \
-		nsIUnicharStreamListener.idl \
 		nsIStandardURL.idl \
 		nsIURLParser.idl \
 		nsIURIChecker.idl \

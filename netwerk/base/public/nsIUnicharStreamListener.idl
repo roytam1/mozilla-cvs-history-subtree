@@ -41,9 +41,7 @@
  * nsIUnicharStreamListener is very similar to nsIStreamListener with
  * the difference being that this interface gives notifications about
  * data being available after the raw data has been converted to
- * UTF-16. The primary use for this interface is in the parser when it
- * notifies parser data listeners about additional data being
- * available.
+ * UTF-16.
  *
  * nsIUnicharStreamListener
  *
