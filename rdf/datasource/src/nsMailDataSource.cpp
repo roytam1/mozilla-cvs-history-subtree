@@ -233,13 +233,6 @@ public:
         return NS_OK;
     }
 
-
-    NS_IMETHOD GetSources(nsIRDFResource* property,
-                          nsIRDFNode* target, PRBool tv,
-                          nsIRDFAssertionCursor** sources /* out */) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
     PRBool peq (nsIRDFResource* r1, nsIRDFResource* r2) {
         PRBool result;
         if ((NS_OK == r1->EqualsResource(r2, &result)) && result) {
@@ -308,12 +301,14 @@ public:
         }
         return rv;
     }
+
+    NS_IMETHOD GetSources(nsIRDFResource* property,
+                          nsIRDFNode* target, PRBool tv,
+                          nsIRDFAssertionCursor** sources /* out */) ;
                
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
-                          PRBool tv,   nsIRDFAssertionCursor** targets /* out */) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
+                          PRBool tv,   nsIRDFAssertionCursor** targets /* out */) ;
 
     NS_IMETHOD Assert(nsIRDFResource* source, nsIRDFResource* property, 
                       nsIRDFNode* target,  PRBool tv) {
@@ -812,6 +807,42 @@ public:
 };
 
 
+NS_IMETHODIMP
+MailDataSource::GetSources(nsIRDFResource* property,
+                           nsIRDFNode* target, PRBool tv,
+                           nsIRDFAssertionCursor** sources /* out */) {
+    *sources = new SingletonMailCursor(target, property, 1);
+    return NS_OK;
+}
+
+               
+NS_IMETHODIMP 
+MailDataSource::GetTargets(nsIRDFResource* source,
+                           nsIRDFResource* property,
+                           PRBool tv,   nsIRDFAssertionCursor** targets /* out */) {
+    nsIRDFMailAccount* ac;
+    nsIRDFMailFolder*  fl;
+    nsVoidArray*       array = 0;
+    nsresult rv = NS_ERROR_RDF_CURSOR_EMPTY;
+    if (NS_OK == source->QueryInterface(kIRDFMailFolderIID, (void**)&fl)) {
+        if (peq(mResourceChild, property)) {
+            rv = fl->GetMessageList(&array);
+        } 
+        NS_IF_RELEASE(fl);
+    } else  if (NS_OK == source->QueryInterface(kIRDFMailAccountIID, (void**)&ac)) {
+        if (peq(mResourceChild, property)) {
+            rv = ac->GetFolderList(&array);
+        } 
+        NS_IF_RELEASE(ac);
+    }
+    if (array) {
+        *targets = new ArrayMailCursor(source, property, array);
+        NS_ADDREF(*targets);
+        return NS_OK;
+    }
+    *targets = new SingletonMailCursor(source, property, 0);
+    return NS_OK;
+}
 
 
 

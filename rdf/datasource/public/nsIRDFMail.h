@@ -76,7 +76,7 @@ public:
 
     NS_IMETHOD GetName(nsIRDFLiteral**  result) const = 0;
 
-    NS_IMETHOD GetMessageList (nsVoidArray* result) = 0;
+    NS_IMETHOD GetMessageList (nsVoidArray** result) = 0;
 
     NS_IMETHOD AddMessage (nsIRDFMailMessage* msg) = 0;
 
