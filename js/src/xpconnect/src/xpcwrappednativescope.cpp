@@ -127,13 +127,13 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
 // static 
 void 
-XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx)
+XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
 {
-    XPCJSRuntime* rt = nsXPConnect::GetRuntime();
-    if(!rt)
-        return;
+    XPCJSRuntime* rt = ccx.GetRuntime();
+    JSContext* cx = ccx.GetJSContext();
 
     // Hold the lock until return...
+    // XXX why does this matter - we are in gc!
     nsAutoLock lock(rt->GetMapLock());  
 
     // Since the JSGC_END call happens outside of a lock,
@@ -187,6 +187,38 @@ XPCWrappedNativeScope::FinshedGC(JSContext* cx)
     KillDyingScopes();
 }        
 
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->MarkSets();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::MarkAllInterfaceSets()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(WrappedNativeSetMarker, nsnull);
+}
+
+
+#ifdef DEBUG
+JS_STATIC_DLL_CALLBACK(intN)
+ASSERT_WrappedNativeSetNotMarked(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->ASSERT_SetsNotMarked();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(ASSERT_WrappedNativeSetNotMarked, nsnull);
+}
+#endif
 
 // static 
 void 

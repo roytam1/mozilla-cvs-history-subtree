@@ -392,6 +392,26 @@ inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
     return JS_FALSE;
 }
 
+inline void XPCNativeSet::Mark()
+{
+    if(IsMarked())
+        return;
+    int count = (int) mInterfaceCount;
+    for(int i = 0; i < count; i++)
+        mInterfaces[i]->Mark();
+    MarkSelfOnly();
+}
+
+#ifdef DEBUG
+inline void XPCNativeSet::ASSERT_NotMarked()
+{
+    NS_ASSERTION(!IsMarked(), "bad");
+    int count = (int) mInterfaceCount;
+    for(int i = 0; i < count; i++)
+        NS_ASSERTION(!mInterfaces[i]->IsMarked(), "bad");
+}
+#endif
+
 /***************************************************************************/
 
 inline JSBool 

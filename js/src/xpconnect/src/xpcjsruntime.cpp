@@ -90,22 +90,70 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
 {
-    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings((JSContext*) arg);
+    XPCCallContext* ccx = (XPCCallContext*) arg;
+    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(*ccx);
     return HT_ENUMERATE_NEXT;
+}
+
+JS_STATIC_DLL_CALLBACK(intN)
+NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
+{
+    XPCNativeInterface* iface = (XPCNativeInterface*) he->value;
+    XPCCallContext* ccx = (XPCCallContext*) arg;
+    if(iface->IsMarked())
+    {
+        iface->Unmark();
+        return HT_ENUMERATE_NEXT;
+    }
+
+    XPCNativeInterface::DestroyInstance(*ccx, iface);
+    return HT_ENUMERATE_REMOVE;
+}
+
+JS_STATIC_DLL_CALLBACK(intN)
+NativeUnMarkedSetRemover(JSHashEntry *he, intN i, void *arg)
+{
+    XPCNativeSet* set = (XPCNativeSet*) he->value;
+    if(set->IsMarked())
+        return HT_ENUMERATE_NEXT;
+    return HT_ENUMERATE_REMOVE;
+}
+
+JS_STATIC_DLL_CALLBACK(intN)
+NativeSetSweeper(JSHashEntry *he, intN i, void *arg)
+{
+    XPCNativeSet* set = (XPCNativeSet*) he->value;
+    if(set->IsMarked())
+    {
+        set->Unmark();
+        return HT_ENUMERATE_NEXT;
+    }
+
+    XPCNativeSet::DestroyInstance(set);
+    return HT_ENUMERATE_REMOVE;
 }
 
 // static
 JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 {
-    if(status == JSGC_MARK_END || status == JSGC_END)
+    XPCJSRuntime* self = nsXPConnect::GetRuntime();
+    if(self)
     {
-        XPCJSRuntime* self = nsXPConnect::GetRuntime();
-        if(self)
-        {
-            nsVoidArray* array = &self->mWrappedJSToReleaseArray;
+        nsVoidArray* array = &self->mWrappedJSToReleaseArray;
 
-            if(status == JSGC_MARK_END)
+        switch(status)
+        {
+            case JSGC_BEGIN:
             {
+                // do nothing (yet)...
+                break;    
+            }
+            case JSGC_MARK_END:
+            {
+                XPCCallContext ccx(JS_CALLER, cx);
+                if(!ccx.IsValid())
+                    break;
+
                 {
                 nsAutoLock lock(self->mMapLock); // lock the wrapper map
                 JSDyingJSObjectData data = {cx, array};
@@ -121,11 +169,38 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 }
 
                 // Do cleanup in NativeInterfaces
-                self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, cx);
+                self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, &ccx);
 
-                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(cx);
+                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(ccx);
+                
+                break;
+            }        
+            case JSGC_FINALIZE_END:
+            {
+                // We use this occasion to mark and sweep WNInterafaces
+                // and WNInterafaceSets...
+
+                XPCCallContext ccx(JS_CALLER, cx);
+                if(!ccx.IsValid())
+                    break;
+
+                XPCWrappedNativeScope::MarkAllInterfaceSets();
+                
+                self->mClassInfo2NativeSetMap->Enumerate(
+                    NativeUnMarkedSetRemover, nsnull);
+
+                self->mNativeSetMap->Enumerate(
+                    NativeSetSweeper, nsnull);
+
+                self->mIID2NativeInterfaceMap->Enumerate(
+                    NativeInterfaceSweeper, &ccx);
+
+#ifdef DEBUG
+                XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked();
+#endif
+                break;
             }
-            else // status == JSGC_END
+            case JSGC_END:
             {
                 // Release all the members whose JSObjects are now known
                 // to be dead.
@@ -140,7 +215,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 array->Clear();
 
                 XPCWrappedNativeScope::FinshedGC(cx);
+                
+                break;
             }
+            default:
+                break;
         }
     }
 

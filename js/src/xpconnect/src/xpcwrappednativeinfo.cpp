@@ -182,6 +182,8 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         return JS_FALSE;
     }
 
+    mFlags |= RESOLVED;
+    
     return JS_TRUE;
 }
 
@@ -189,7 +191,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 void
 XPCNativeMember::Cleanup(XPCCallContext& ccx)
 {
-    if(!JSVAL_IS_PRIMITIVE(mVal))
+    if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
         CleanupCallableInfo(ccx, JSVAL_TO_OBJECT(mVal));
 }
 

@@ -599,7 +599,15 @@ public:
     SystemIsBeingShutDown(XPCCallContext& ccx);
 
     static void
-    FinishedMarkPhaseOfGC(JSContext* cx);
+    FinishedMarkPhaseOfGC(XPCCallContext& ccx);
+
+    static void
+    MarkAllInterfaceSets();
+
+#ifdef DEBUG
+    static void
+    ASSERT_NoInterfaceSetsAreMarked();
+#endif
 
     static void
     FinshedGC(JSContext* cx);
@@ -1506,10 +1514,10 @@ public:
 
     void Cleanup(XPCCallContext& ccx);
 
-    void DealWithDyingGCThings(JSContext* cx)
+    void DealWithDyingGCThings(XPCCallContext& ccx)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
-           JS_IsAboutToBeFinalized(cx, JSVAL_TO_GCTHING(mVal)))
-           {mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
+           JS_IsAboutToBeFinalized(ccx.GetJSContext(), JSVAL_TO_GCTHING(mVal)))
+           {Cleanup(ccx); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
 
 private:
     JSBool IsResolved() const {return mFlags & RESOLVED;}
@@ -1557,21 +1565,26 @@ public:
     const char* GetMemberName(XPCCallContext& ccx,
                               const XPCNativeMember* member) const;
 
-    PRUint16 GetMemberCount() const {return mMemberCount;}
+    PRUint16 GetMemberCount() const 
+        {NS_ASSERTION(!IsMarked(), "bad"); return mMemberCount;}
     XPCNativeMember* GetMemberAt(PRUint16 i)
         {NS_ASSERTION(i < mMemberCount, "bad index"); return &mMembers[i];}
 
-    void DealWithDyingGCThings(JSContext* cx)
+    void DealWithDyingGCThings(XPCCallContext& ccx)
         {for(PRUint16 i = 0; i < mMemberCount; i++) 
-            mMembers[i].DealWithDyingGCThings(cx);}
+            mMembers[i].DealWithDyingGCThings(ccx);}
 
     void DebugDump(PRInt16 depth);
+
+    void Mark()       {mMemberCount |= 0x8000;}
+    void Unmark()     {mMemberCount &= ~0x8000;}
+    JSBool IsMarked() const {return (JSBool)(mMemberCount & 0x8000);}
+
+    static void DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst);
 
 private:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,
                                            nsIInterfaceInfo* aInfo);
-
-    static void DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst);
 
     XPCNativeInterface();   // not implemented
     XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName);
@@ -1632,21 +1645,34 @@ public:
     inline XPCNativeInterface* FindNamedInterface(jsval name) const;
 
     PRUint16 GetMemberCount() const {return mMemberCount;}
-    PRUint16 GetInterfaceCount() const {return mInterfaceCount;}
+    PRUint16 GetInterfaceCount() const 
+        {NS_ASSERTION(!IsMarked(), "bad"); return mInterfaceCount;}
     XPCNativeInterface** GetInterfaceArray() {return mInterfaces;}
 
     XPCNativeInterface* GetInterfaceAt(PRUint16 i)
         {NS_ASSERTION(i < mInterfaceCount, "bad index"); return mInterfaces[i];}
 
+
+    inline void Mark();
+private:
+    void MarkSelfOnly() {mInterfaceCount |= 0x8000;}
+public:
+    void Unmark()     {mInterfaceCount &= ~0x8000;}
+    JSBool IsMarked() const {return (JSBool)(mInterfaceCount & 0x8000);}
+
+#ifdef DEBUG
+    inline void ASSERT_NotMarked();
+#endif
+
     void DebugDump(PRInt16 depth);
+
+    static void DestroyInstance(XPCNativeSet* inst);
 
 private:
     static XPCNativeSet* NewInstance(XPCNativeInterface** array, PRUint16 count);
     static XPCNativeSet* NewInstanceMutate(XPCNativeSet*       otherSet,
                                            XPCNativeInterface* newInterface,
                                            PRUint16            position);
-    static void DestroyInstance(XPCNativeSet* inst);
-
     XPCNativeSet() {}
     ~XPCNativeSet() {}
     void* operator new(size_t, void* p) {return p;}
@@ -1908,6 +1934,15 @@ public:
                                                 XPCNativeInterface* aInterface,
                                                 JSBool needJSObject = JS_FALSE);
 
+    void MarkSets() const 
+        {mSet->Mark(); 
+         if(HasMutatedSet()) GetProto()->GetSet()->Mark();}
+
+#ifdef DEBUG
+    void ASSERT_SetsNotMarked() const
+        {mSet->ASSERT_NotMarked(); 
+         if(HasMutatedSet()) GetProto()->GetSet()->ASSERT_NotMarked();}
+#endif
 
 private:
     XPCWrappedNative(nsISupports* aIdentity,
