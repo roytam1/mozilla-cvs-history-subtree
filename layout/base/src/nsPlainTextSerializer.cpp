@@ -18,6 +18,8 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ *     Daniel Bratell <bratell@lysator.liu.se>
+ *     Ben Bucksch <mozilla@bucksch.org>
  */
 
 #include "nsPlainTextSerializer.h"
@@ -1107,7 +1109,7 @@ nsPlainTextSerializer::AddToLine(const PRUnichar * aLineFragment,
       if (goodSpace < 0) {
         // If we don't found a good place to break, accept long line and
         // try to find another place to break
-        goodSpace=mWrapColumn-prefixwidth+1;
+        goodSpace=(prefixwidth>mWrapColumn+1)?1:mWrapColumn-prefixwidth+1;
         result = NS_OK;
         if (nsnull != mLineBreaker) {
           result = mLineBreaker->Next(mCurrentLine.GetUnicode(), 
@@ -1116,7 +1118,7 @@ nsPlainTextSerializer::AddToLine(const PRUnichar * aLineFragment,
         }
         // fallback if the line breaker is unavailable or failed
         if (nsnull == mLineBreaker || NS_FAILED(result)) {
-          goodSpace=mWrapColumn-prefixwidth;
+          goodSpace=(prefixwidth>mWrapColumn)?1:mWrapColumn-prefixwidth;
           while (goodSpace < linelength &&
                  !nsCRT::IsAsciiSpace(mCurrentLine.CharAt(goodSpace))) {
             goodSpace++;
