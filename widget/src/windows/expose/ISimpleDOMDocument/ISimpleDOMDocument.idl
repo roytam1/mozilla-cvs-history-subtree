@@ -1,0 +1,62 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Author: Aaron Leventhal (aaronl@netscape.com)
+ */
+
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("// ISimpleDOMDocument.h")
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("")
+cpp_quote("// ISimpleDOMDocument provides methods")
+cpp_quote("// get_URL(), get_title(), get_docType(), get_mimeType(), _nameSpaceURI()")
+cpp_quote("")
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("")
+
+import "objidl.idl";
+import "oaidl.idl";
+        
+        
+const long DISPID_DOC_URL         = -5904;
+const long DISPID_DOC_TITLE       = -5905;
+const long DISPID_DOC_MIMETYPE    = -5906;
+const long DISPID_DOC_DOCTYPE     = -5907;
+const long DISPID_DOC_NAMESPACE   = -5908;
+
+[object, uuid(0D68D6D0-D93D-4d08-A30D-F00DD1F45B24)]
+interface ISimpleDOMDocument : IUnknown
+{
+  [hidden, propget, id(DISPID_DOC_URL)] HRESULT URL(
+    [out] BSTR * url
+  );
+  [hidden, propget, id(DISPID_DOC_TITLE)] HRESULT title(
+    [out] BSTR * title
+  );
+  [hidden, propget, id(DISPID_DOC_MIMETYPE)] HRESULT mimeType(
+    [out] BSTR * mimeType
+  );
+  [hidden, propget, id(DISPID_DOC_DOCTYPE)] HRESULT docType(
+    [out] BSTR * docType
+  );
+  [hidden, propget, id(DISPID_DOC_NAMESPACE)] HRESULT nameSpaceURIForID(
+    [in]  short nameSpaceID,
+    [out] BSTR * nameSpaceURI
+  );
+}

@@ -1,0 +1,109 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Author: Aaron Leventhal (aaronl@netscape.com)
+ */
+
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("// ISimpleDOMNode.h")
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("")
+cpp_quote("// ISimpleDOMNode:")
+cpp_quote("// use get_nodeInfo(), get_attributes(), get_computedStyle() to get DOM info from the element")
+cpp_quote("")
+cpp_quote("  /* W3C media Types:")
+cpp_quote("   * all:        Suitable for all devices. ")
+cpp_quote("   * aural:      Intended for speech synthesizers. See the section on aural style sheets for details. ")
+cpp_quote("   * braille:    Intended for braille tactile feedback devices. ")
+cpp_quote("   * embossed:   Intended for paged braille printers. ")
+cpp_quote("   * handheld:   Intended for handheld devices - typically small screen, monochrome, limited bandwidth. ")
+cpp_quote("   * print:      Intended for paged, opaque material and for documents viewed on screen in print preview mode. Please consult the section on paged media for information about formatting issues that are specific to paged media. ")
+cpp_quote("   * projection: Intended for projected presentations, for example projectors or print to transparencies. Please consult the section on paged media for information about formatting issues that are specific to paged media. ")
+cpp_quote("   * screen:     Intended primarily for color computer screens. ")
+cpp_quote("   * tty:        intended for media using a fixed-pitch character grid, such as teletypes, terminals, or portable devices with limited display capabilities. Authors should not use pixel units with the tty media type. ")
+cpp_quote("   * tv:         Intended for television-type devices - low resolution, color, limited-scrollability screens, sound")
+cpp_quote("   * See latest W3C CSS specs for complete list of media types")
+cpp_quote("   */")
+cpp_quote("")
+cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("")
+
+import "objidl.idl";
+import "oaidl.idl";
+        
+const long DISPID_NODE_NODEINFO   = -5900;
+const long DISPID_NODE_ATTRIBUTES = -5901;
+const long DISPID_NODE_STYLEPROPS = -5902;
+const long DISPID_NODE_STYLEPROPSMEDIA = -5903;
+
+[object, uuid(96917748-8922-4fd9-8a73-d72e8aad671a)]
+interface ISimpleDOMNode : IUnknown
+{
+  const unsigned short NODETYPE_ELEMENT = 1;
+  const unsigned short NODETYPE_ATTRIBUTE = 2;
+  const unsigned short NODETYPE_TEXT = 3;
+  const unsigned short NODETYPE_CDATA_SECTION = 4;
+  const unsigned short NODETYPE_ENTITY_REFERENCE = 5;
+  const unsigned short NODETYPE_ENTITY = 6;
+  const unsigned short NODETYPE_PROCESSING_INSTRUCTION = 7;
+  const unsigned short NODETYPE_COMMENT = 8;
+  const unsigned short NODETYPE_DOCUMENT = 9;
+  const unsigned short NODETYPE_DOCUMENT_TYPE = 10;
+  const unsigned short NODETYPE_DOCUMENT_FRAGMENT = 11;
+  const unsigned short NODETYPE_NOTATION = 12;
+
+  [hidden, propget, id(DISPID_NODE_NODEINFO)] HRESULT nodeInfo(
+    [out] BSTR *nodeName,   // for performance returns NULL for text nodes (true nodeName would be "#text")
+    [out] short *nameSpaceID,
+    [out] unsigned short *nodeType,
+    [out] BSTR *nodeValue,
+    [out] unsigned int *numChildren
+  );
+
+  [hidden, propget, id(DISPID_NODE_ATTRIBUTES)] HRESULT attributes(  
+    [in] unsigned short maxAttribs,
+    [out] unsigned short *numAttribs, 
+    [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribNames, 
+    [out, size_is(maxAttribs), length_is(*numAttribs)] short *nameSpaceID,  
+    [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribValues
+  );
+
+  [hidden, propget, id(DISPID_NODE_STYLEPROPS)] HRESULT computedStyle(  
+    [in] unsigned short maxStyleProperties,
+    [out] unsigned short *numStyleProperties, 
+    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleProperties, 
+    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues
+  );
+
+  [hidden, propget, id(DISPID_NODE_STYLEPROPSMEDIA)] HRESULT computedStyleForMedia(
+    [in] BSTR *mediaType,  // W3C media type such as aural, braille, embossed, handheld, print, projection, screen, tty
+    [in] unsigned short maxStyleProperties,
+    [out] unsigned short *numStyleProperties, 
+    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleProperties, 
+    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues
+  );
+
+  [propget] HRESULT parentNode([out] ISimpleDOMNode **node);
+  [propget] HRESULT firstChild([out] ISimpleDOMNode **node);
+  [propget] HRESULT lastChild([out] ISimpleDOMNode **node);
+  [propget] HRESULT previousSibling([out] ISimpleDOMNode **node);
+  [propget] HRESULT nextSibling([out] ISimpleDOMNode **node);
+}
+        
+
