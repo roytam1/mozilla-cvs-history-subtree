@@ -685,7 +685,7 @@ open_unicode_decoder(void) {
 }
 
 // GTK's text widget already does XIM, so we don't want to do this again
-gint handle_key_press_event_for_text(GtkWidget *w, GdkEventKey* event,
+gint handle_key_press_event_for_text(GtkObject *w, GdkEventKey* event,
                                      gpointer p)
 {
   nsKeyEvent kevent;
@@ -723,7 +723,7 @@ gint handle_key_press_event_for_text(GtkWidget *w, GdkEventKey* event,
 }
 
 // GTK's text widget already does XIM, so we don't want to do this again
-gint handle_key_release_event_for_text(GtkWidget *w, GdkEventKey* event,
+gint handle_key_release_event_for_text(GtkObject *w, GdkEventKey* event,
                                        gpointer p)
 {
   nsKeyEvent kevent;
@@ -748,7 +748,7 @@ gint handle_key_release_event_for_text(GtkWidget *w, GdkEventKey* event,
 
 
 //==============================================================
-gint handle_key_press_event(GtkWidget *w, GdkEventKey* event, gpointer p)
+gint handle_key_press_event(GtkObject *w, GdkEventKey* event, gpointer p)
 {
   nsKeyEvent kevent;
   nsWindow* win = (nsWindow*)p;
@@ -806,7 +806,7 @@ gint handle_key_press_event(GtkWidget *w, GdkEventKey* event, gpointer p)
 }
 
 //==============================================================
-gint handle_key_release_event(GtkWidget *w, GdkEventKey* event, gpointer p)
+gint handle_key_release_event(GtkObject *w, GdkEventKey* event, gpointer p)
 {
   // Don't pass shift, control and alt as key release events
   if (event->keyval == GDK_Shift_L

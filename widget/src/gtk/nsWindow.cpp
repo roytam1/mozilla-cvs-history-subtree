@@ -1141,8 +1141,13 @@ PRBool nsWindow::OnExpose(nsPaintEvent &event)
       debug_DumpPaintEvent(stdout,
                            this,
                            &event,
+#ifdef USE_SUPERWIN
+                           debug_GetName(GTK_OBJECT(mSuperWin)),
+                           (PRInt32) debug_GetRenderXID(GTK_OBJECT(mSuperWin)));
+#else
                            debug_GetName(mWidget),
                            (PRInt32) debug_GetRenderXID(mWidget));
+#endif
     }
 #endif // NS_DEBUG
 
@@ -1165,8 +1170,11 @@ PRBool nsWindow::OnExpose(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
-      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
-      
+#ifdef USE_SUPERWIN
+      GdkWindow *gw = GetRenderWindow(GTK_OBJECT(mSuperWin));
+#else
+      GdkWindow *gw = GetRenderWindow(GTK_OBJECT(mWidget));
+#endif
       if (gw)
       {
         GdkRectangle   ar;
@@ -1213,8 +1221,13 @@ PRBool nsWindow::OnDraw(nsPaintEvent &event)
       debug_DumpPaintEvent(stdout,
                            this,
                            &event,
+#ifdef USE_SUPERWIN
+                           debug_GetName(GTK_OBJECT(mSuperWin)),
+                           (PRInt32) debug_GetRenderXID(GTK_OBJECT(mSuperWin)));
+#else
                            debug_GetName(mWidget),
                            (PRInt32) debug_GetRenderXID(mWidget));
+#endif
     }
 #endif // NS_DEBUG
 
@@ -1258,8 +1271,11 @@ PRBool nsWindow::OnDraw(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
+#ifdef USE_SUPERWIN
+      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mSuperWin));
+#else
       GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
-      
+#endif 
       if (gw)
       {
         GdkRectangle   ar;

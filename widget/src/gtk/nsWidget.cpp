@@ -1316,7 +1316,7 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *aEvent,
   NS_ADDREF(aEvent->widget);
 
 #ifdef NS_DEBUG
-  GtkWidget * gw = (GtkWidget *) aEvent->widget->GetNativeData(NS_NATIVE_WIDGET);
+  GtkObject *gw = GTK_OBJECT(aEvent->widget->GetNativeData(NS_NATIVE_WIDGET));
 
   if (CAPS_LOCK_IS_ON)
   {
@@ -2507,17 +2507,20 @@ nsWidget::GetRenderWindow(GtkObject * aGtkWidget)
 {
   GdkWindow * renderWindow = nsnull;
 
+#ifdef USE_SUPERWIN
+  if (GDK_IS_SUPERWIN(aGtkWidget)) {
+    renderWindow = GDK_SUPERWIN(aGtkWidget)->bin_window;
+  }
+#else
   if (aGtkWidget && GTK_IS_WIDGET(aGtkWidget))
   {
-    if (GTK_IS_LAYOUT(aGtkWidget))
-    {
+    if (GTK_IS_LAYOUT(aGtkWidget)) {
       renderWindow = GTK_LAYOUT(aGtkWidget)->bin_window;
-    }
-    else
-    {
+    } else {
       renderWindow = GTK_WIDGET(aGtkWidget)->window;
     }
   }
+#endif
 
   return renderWindow;
 }
