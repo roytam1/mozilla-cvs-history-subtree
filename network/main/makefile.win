@@ -106,6 +106,7 @@ EXPORTS= mkstream.h \
 	 mkselect.h \
 	 mktcp.h \
 	 netutils.h \
+	 netstream.h \
 	 mkpadpac.h \
 	 mkautocf.h \
 	 mkutils.h \
