@@ -3797,6 +3797,9 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
 NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
 {
+
+  // XXX there are some rounding problems in this code (or in the image frame)
+
   nsresult rv;
 
   nsCOMPtr<nsIImageFrame> img;
@@ -3811,7 +3814,7 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   nsRect2 sr;
 
 	pt = *aDestPoint;
-	mTranMatrix->Transform(&pt.x, &pt.y);
+  mTranMatrix->Transform(&pt.x, &pt.y);
 
   sr = *aSrcRect;
 //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
@@ -3823,18 +3826,28 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   if (NS_FAILED(rv))
     return rv;
 
-  nsSize2 size;
-  img->GetWidth(&size.width);
-  img->GetHeight(&size.height);
-
   PRUint32 bpr;
   img->GetBytesPerRow(&bpr);
 
   LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
 
+  gfx_dimension frHeight;
+  img->GetHeight(&frHeight);
+
+  PRInt32 height;
+  if (GFXCoordToIntCeil(sr.height) + GFXCoordToIntFloor(sr.y) > GFXCoordToIntFloor(frHeight)) {
+    height = GFXCoordToIntFloor(sr.height);
+  } else {
+    height = GFXCoordToIntCeil(sr.height);
+  }
+
+  gfx_dimension frWidth;
+  img->GetWidth(&frWidth);
+  PRInt32 width = frWidth; // XXX round up, down, ???
+
   mBHead->biSize = sizeof(BITMAPINFOHEADER);
-	mBHead->biWidth = GFXCoordToIntCeil(size.width);
-	mBHead->biHeight = -GFXCoordToIntCeil(size.height - sr.y);
+	mBHead->biWidth = GFXCoordToIntCeil(width);
+	mBHead->biHeight = -height;
 	mBHead->biPlanes = 1;
 	mBHead->biBitCount = 24; // XXX
 	mBHead->biCompression = BI_RGB;
@@ -3844,26 +3857,31 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 	mBHead->biClrUsed = 0;
 	mBHead->biClrImportant = 0;
 
-
-  HBITMAP memBM = ::CreateDIBitmap(mDC,mBHead,CBM_INIT,bits + PRInt32(sr.y * bpr),(LPBITMAPINFO)mBHead,
+#if 0
+  HBITMAP memBM = ::CreateDIBitmap(mDC,mBHead,CBM_INIT, bits + PRInt32(GFXCoordToIntFloor(sr.y) * bpr), (LPBITMAPINFO)mBHead,
 				                           DIB_RGB_COLORS);
-
+#endif
 //  void* oldThing = ::SelectObject(mDC, memBM);
 
 //	mBHead->biHeight = -mBHead->biHeight;
 
+  PRInt32 x = GFXCoordToIntFloor(sr.x);
+  PRInt32 y = GFXCoordToIntFloor(sr.y);
 
-  ::StretchDIBits(mDC, pt.x, pt.y, sr.width, sr.height,
-    sr.x, 0, sr.width, sr.height, bits, (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
+  ::StretchDIBits(mDC, pt.x + x, pt.y + y, width, height,
+                  sr.x, 0, width, height,
+                  bits + PRInt32(y * bpr), 
+                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, SRCAND);
 
 
 //  ::SelectObject(mDC, oldThing);
-
+#if 0
   DeleteObject(memBM);
+#endif
 
   delete[] mBHead;
 
-    return NS_OK;
+  return NS_OK;
 }
 
 /* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
