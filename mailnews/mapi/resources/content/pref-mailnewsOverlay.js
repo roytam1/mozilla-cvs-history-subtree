@@ -20,7 +20,9 @@
  * Srilatha Moturi <srilatha@netscape.com>
  */
 
-parent.hPrefWindow.registerOKCallbackFunc( onOK );
+function mailnewsOverlayStartup() {
+    parent.hPrefWindow.registerOKCallbackFunc( onOK );
+}
 
 function mailnewsOverlayInit() {
     try {

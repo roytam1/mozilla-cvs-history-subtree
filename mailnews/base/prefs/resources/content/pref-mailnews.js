@@ -12,6 +12,19 @@ function Init()
     eval(initFunc);
 }
 
+function Startup()
+{
+  var startupFunc;
+  try {
+    startupFunc = document.getElementById("mailnewsEnableMapi").getAttribute('startFunc');
+  }
+  catch (ex) {
+    startupFunc = null;
+  }
+  if (startupFunc)
+    eval(startupFunc);
+}
+
 function setColorWell(menu) 
 {
 	// Find the colorWell and colorPicker in the hierarchy.
