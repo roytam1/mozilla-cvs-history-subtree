@@ -358,9 +358,9 @@ sub DumpChromeToTemp($$$$)
 #// Pick up an embedding manifest specified by $jar_file. We first need to do some extra processing on
 #// it to get the correct locale. 
 #//--------------------------------------------------------------------------------------------------
-sub ProcessEmbedJarManifest ( $$$$$$ )
+sub ProcessEmbedJarManifest ( $$$$$$$ )
 {
-  my($top_path, $inc_path, $temp_chrome_dir, $jar_file, $locale, $jars) = @_;
+  my($top_path, $inc_path, $temp_chrome_dir, $jar_file, $locale, $platform, $jars) = @_;
   
   # copy over our manifest so that it's also at the root
   # of our chrome tree then run it through the jar machine. We need to
@@ -370,7 +370,7 @@ sub ProcessEmbedJarManifest ( $$$$$$ )
   local(*TMPMANIFEST);
   open(TMPMANIFEST, ">$temp_manifest") || die "couldn't create embed jar manifest";
   GenerateManifest::GenerateManifest($top_path, "$inc_path$jar_file", $temp_chrome_dir,
-                                      $locale, *TMPMANIFEST, ":", 1);
+                                      $locale, $platform, *TMPMANIFEST, ":", 1);
   close(TMPMANIFEST);
 
   CreateJarFromManifest($temp_manifest, "$temp_chrome_dir:", $jars);
@@ -432,7 +432,7 @@ sub PackageEmbeddingChrome($$)
   local(*MANIFEST);
   open(MANIFEST, ">$temp_manifest") || die "couldn't create embed jar manifest";
   GenerateManifest::GenerateManifest($top_path, $inc_path . "embed-jar.mn", $temp_chrome_dir,
-                                      "en-US", *MANIFEST, ":", 1);
+                                      "en-US", "en-mac", *MANIFEST, ":", 1);
   close(MANIFEST);
   
   # make embed.jar from the above manifest, adding in any other manifests if the
@@ -440,10 +440,10 @@ sub PackageEmbeddingChrome($$)
   my(%jars);
   CreateJarFromManifest($temp_manifest, "$temp_chrome_dir:", \%jars);
   if ($main::options{embedding_xulprefs}) {
-    ProcessEmbedJarManifest($top_path, $inc_path, $temp_chrome_dir, "xulprefs.mn", "en-US", \%jars);
+    ProcessEmbedJarManifest($top_path, $inc_path, $temp_chrome_dir, "xulprefs.mn", "en-US", "en-mac", \%jars);
   }
   if ($main::options{embedding_xulsecurity}) {
-    ProcessEmbedJarManifest($top_path, $inc_path, $temp_chrome_dir, "xulsecurity.mn", "en-US", \%jars);
+    ProcessEmbedJarManifest($top_path, $inc_path, $temp_chrome_dir, "xulsecurity.mn", "en-US", "en-mac", \%jars);
   }  
   WriteOutJarFiles("$temp_chrome_dir:", \%jars);
 
