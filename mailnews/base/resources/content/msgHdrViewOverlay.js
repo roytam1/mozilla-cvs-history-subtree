@@ -281,7 +281,7 @@ function OutputEmailAddresses(parentBox, defaultParentDiv, emailAddresses, inclu
 	}
   if (msgHeaderParser)
   {
-    var enumerator = msgHeaderParser.ParseHeadersWithEnumerator("UTF-8", emailAddresses);
+    var enumerator = msgHeaderParser.ParseHeadersWithEnumerator(emailAddresses);
     enumerator = enumerator.QueryInterface(Components.interfaces.nsISimpleEnumerator);
     var numAddressesParsed = 0;
     if (enumerator)
@@ -293,14 +293,15 @@ function OutputEmailAddresses(parentBox, defaultParentDiv, emailAddresses, inclu
       {
         var headerResult = enumerator.GetNext();
         headerResult = enumerator.QueryInterface(Components.interfaces.nsIMsgHeaderParserResult);
-        
         // get the email and name fields
-        var outValue = {};
-        name = headerResult.getAddressAndName(outValue);
-        emailAddress = outValue.value;
+        var addrValue = {};
+        var nameValue = {};
+        fullAddress = headerResult.getAddressAndName(addrValue, nameValue);
+        emailAddress = addrValue.value;
+        name = nameValue.value;
 
         // turn the strings back into a full address
-        var fullAddress = msgHeaderParser.MakeFullAddress("UTF-8", name, emailAddress);
+        // var fullAddress = msgHeaderParser.MakeFullAddress(name, emailAddress);
 
         // if we want to include short/long toggle views and we have a long view, always add it.
         // if we aren't including a short/long view OR if we are and we haven't parsed enough
