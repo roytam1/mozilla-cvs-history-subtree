@@ -292,7 +292,8 @@ endif
 ifdef IPC_CO_TAG
   IPC_CO_FLAGS := $(IPC_CO_FLAGS) -r $(IPC_CO_TAG)
 endif
-CVSCO_IPC = $(CVS) $(CVS_FLAGS) co $(IPC_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IPC_CO_MODULE)
+# We're using a static here which cannot be pulled by date
+CVSCO_IPC = $(CVS) $(CVS_FLAGS) co $(IPC_CO_FLAGS) $(IPC_CO_MODULE)
 
 ####################################
 # CVS defines for Calendar 
