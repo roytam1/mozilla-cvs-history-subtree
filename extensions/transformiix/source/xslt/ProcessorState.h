@@ -52,7 +52,8 @@
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
-class ProcessorState : public ContextState
+class ProcessorState : public ContextState,
+                       public NamespaceResolver
 {
 
 public:
@@ -149,11 +150,6 @@ public:
     Element* getNamedTemplate(String& name);
 
     /**
-     * Returns the namespace URI for the given name
-    **/ 
-    void getNameSpaceURI(String& name, String& nameSpaceURI);
-
-    /**
      * Returns the NodeStack which keeps track of where we are in the
      * result tree
      * @return the NodeStack which keeps track of where we are in the
@@ -175,29 +171,29 @@ public:
     Expr*        getExpr(const String& pattern);
     PatternExpr* getPatternExpr(const String& pattern);
 
-     /**
-      * Returns a pointer to the result document
-     **/
-     Document* getResultDocument();
+    /**
+     * Returns a pointer to the result document
+    **/
+    Document* getResultDocument();
 
-     /**
-      * Returns a pointer to a list of available templates
-     **/
-     NodeSet* getTemplates();
+    /**
+     * Returns a pointer to a list of available templates
+    **/
+    NodeSet* getTemplates();
 
     String& getXSLNamespace();
 
-     /**
-      * Finds a template for the given Node. Only templates without
-      * a mode attribute will be searched.
-     **/
-     Element* findTemplate(Node* node, Node* context);
+    /**
+     * Finds a template for the given Node. Only templates without
+     * a mode attribute will be searched.
+    **/
+    Element* findTemplate(Node* node, Node* context);
 
-     /**
-      * Finds a template for the given Node. Only templates with
-      * a mode attribute equal to the given mode will be searched.
-     **/
-     Element* findTemplate(Node* node, Node* context, String* mode);
+    /**
+     * Finds a template for the given Node. Only templates with
+     * a mode attribute equal to the given mode will be searched.
+    **/
+    Element* findTemplate(Node* node, Node* context, String* mode);
 
     /**
      * Determines if the given XSL node allows Whitespace stripping
@@ -231,9 +227,9 @@ public:
     void stripSpace(String& names);
 
 
-     //-------------------------------------/
-     //- Virtual Methods from ContextState -/
-     //-------------------------------------/
+    //-------------------------------------/
+    //- Virtual Methods from ContextState -/
+    //-------------------------------------/
 
     /**
      * Returns the parent of the given Node. This method is needed 
@@ -243,19 +239,19 @@ public:
     **/
     virtual Node* getParentNode(Node* node);
 
-     /**
-      * Returns the value of a given variable binding within the current scope
-      * @param the name to which the desired variable value has been bound
-      * @return the ExprResult which has been bound to the variable with
-      *  the given name
-     **/
-     virtual ExprResult* getVariable(String& name);
+    /**
+     * Returns the value of a given variable binding within the current scope
+     * @param the name to which the desired variable value has been bound
+     * @return the ExprResult which has been bound to the variable with
+     *  the given name
+    **/
+    virtual ExprResult* getVariable(String& name);
 
     /**
      * Returns the Stack of context NodeSets
      * @return the Stack of context NodeSets
     **/
-     virtual Stack* getNodeSetStack();
+    virtual Stack* getNodeSetStack();
 
     /**
      * Determines if the given XML node allows Whitespace stripping
@@ -287,6 +283,15 @@ public:
      * <B>Note:</B> I will be moving this functionality elsewhere soon
     **/
     virtual void sortByDocumentOrder(NodeSet* nodes);
+
+    //------------------------------------------/
+    //- Virtual Methods from NamespaceResolver -/
+    //------------------------------------------/
+
+    /**
+     * Returns the namespace URI for the given name
+    **/ 
+    void getNameSpaceURI(String& name, String& nameSpaceURI);
 
 private:
 
@@ -378,10 +383,6 @@ private:
      * Initializes the ProcessorState
     **/
     void initialize();
-
-public:
-
-    void initialize(Element* element);
 
 }; //-- ProcessorState
 
