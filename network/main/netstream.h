@@ -32,6 +32,11 @@ void NET_StreamComplete(NET_VoidStreamClass *stream);
 
 void NET_StreamAbort(NET_VoidStreamClass *stream, int32 status);
 
+char * NET_StreamName(NET_VoidStreamClass *stream);
+
+int NET_SetStreamData(NET_VoidStreamClass *stream, void *data);
+void * NET_GetStreamData(NET_VoidStreamClass *stream);
+
 void NET_StreamFree(NET_VoidStreamClass *stream);
 
 #endif  /* NETSTREAM.h */
