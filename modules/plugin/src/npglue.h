@@ -371,6 +371,7 @@ protected:
     nsIJVMManager* GetJVMMgr(const nsIID& aIID);
 
     nsISupports*        fJVMMgr;
+    nsISupports*        fMalloc;
     PRUint16            fWaiting;
     void*               fOldCursor;
     

@@ -4474,7 +4474,8 @@ NPL_GetText(nsIPluginInstance* pluginInst)
     const char *text = NULL;
     nsIJVMPluginInstance *jvmInst = NULL;
     if (pluginInst->QueryInterface(kJVMPluginInstanceIID, (void**)&jvmInst) == NS_OK) {
-        jvmInst->GetText(&text);
+        nsresult err = jvmInst->GetText(&text);
+        PR_ASSERT(err == NS_OK);
         jvmInst->Release();
     }
     return text;
@@ -4486,7 +4487,8 @@ NPL_GetJavaObject(nsIPluginInstance* pluginInst)
     jobject javaobject = NULL;
     nsIJVMPluginInstance *jvmInst = NULL;
     if (pluginInst->QueryInterface(kJVMPluginInstanceIID, (void**)&jvmInst) == NS_OK) {
-        jvmInst->GetJavaObject(&javaobject);
+        nsresult err = jvmInst->GetJavaObject(&javaobject);
+        PR_ASSERT(err == NS_OK);
         jvmInst->Release();
     }
     return javaobject;

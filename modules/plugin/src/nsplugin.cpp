@@ -44,6 +44,7 @@
 #endif
 
 #include "nsHashtable.h"
+#include "nsMalloc.h"
 
 #include "intl_csi.h"
 
@@ -98,7 +99,7 @@ nsresult fromNPError[] = {
 nsPluginManager* thePluginManager = NULL;
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fJVMMgr(NULL), fAllocatedMenuIDs(NULL)
+    : fJVMMgr(NULL), fMalloc(NULL), fAllocatedMenuIDs(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
@@ -107,6 +108,8 @@ nsPluginManager::~nsPluginManager(void)
 {
     fJVMMgr->Release();
     fJVMMgr = NULL;
+    fMalloc->Release();
+    fMalloc = NULL;
 
 #ifdef XP_MAC
     if (fAllocatedMenuIDs != NULL) {
@@ -211,7 +214,11 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         *aInstancePtr = (void*) ((nsISupports*)jvmMgr);
         return NS_OK; 
     }
-    return NS_NOINTERFACE;
+    if (fMalloc == NULL) {
+        if (nsMalloc::Create(this, kISupportsIID, (void**)fMalloc) != NS_OK)
+            return NS_NOINTERFACE;
+    }
+    return fMalloc->QueryInterface(aIID, aInstancePtr);
 }
 
 nsIJVMManager*
