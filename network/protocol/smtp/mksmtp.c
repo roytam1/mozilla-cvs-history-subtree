@@ -565,8 +565,15 @@ net_smtp_auth_login_response(ActiveEntry *cur_entry)
 		 * username. It did *NOT* alloc a new string
 		 */
 		XP_FREEIF(net_smtp_password);
-        if (FE_PromptUsernameAndPassword(cur_entry->window_id,
-                        NULL, &pop_username, &net_smtp_password)) {
+#if defined(SingleSignon)
+		/* prefill prompt with previous username/passwords if any */
+		if (SI_PromptUsernameAndPassword
+			(cur_entry->window_id, " ",
+			&pop_username, &net_smtp_password, "smpt")) {
+#else
+		if (FE_PromptUsernameAndPassword(cur_entry->window_id,
+			NULL, &pop_username, &net_smtp_password)) {
+#endif
             CD_NEXT_STATE = SMTP_SEND_AUTH_LOGIN_USERNAME;
 			/* FE_PromptUsernameAndPassword() always alloc a new string
 			 * for pop_username. The caller has to free it.
@@ -646,7 +653,12 @@ net_smtp_auth_login_password(ActiveEntry *cur_entry)
 	PR_snprintf(buffer, sizeof (buffer), 
 				fmt, NET_GetPopUsername(), host);
 	XP_FREEIF(net_smtp_password);
+#if defined(SingleSignon)
+	net_smtp_password = SI_PromptPassword(cur_entry->window_id, buffer,
+                                              "smtp??", FALSE);
+#else
 	net_smtp_password = FE_PromptPassword(cur_entry->window_id, buffer);
+#endif
 	if (!net_smtp_password)
 	  return MK_POP3_PASSWORD_UNDEFINED;
   }
