@@ -25,8 +25,6 @@
 interface nsIObjectInputStream;
 interface nsIObjectOutputStream;
 
-[nsid] native nsCID(nsCID);
-
 [scriptable, uuid(91cca981-c26d-44a8-bebe-d9ed4891503a)]
 interface nsISerializable : nsISupports
 {
