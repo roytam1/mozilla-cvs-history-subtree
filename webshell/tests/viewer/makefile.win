@@ -30,7 +30,7 @@ REQUIRES	= xpcom \
 		  webBrowser_core \
 		  docshell \
 		  editor \
-		  composer \		  
+		  composer \
 		  util \
 		  uriloader \
 		  locale \

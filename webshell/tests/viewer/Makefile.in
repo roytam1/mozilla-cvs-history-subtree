@@ -40,7 +40,7 @@ REQUIRES	= xpcom \
 		  webbrwsr \
 		  docshell \
 		  editor \
-		  composer \		  
+		  composer \
 		  util \
 		  uriloader \
 		  locale \
