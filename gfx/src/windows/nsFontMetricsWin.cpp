@@ -1536,6 +1536,7 @@ nsGlyphAgent::GetGlyphMetrics(HDC           aDC,
                               PRUint8       aChar,
                               GLYPHMETRICS* aGlyphMetrics)
 {
+  memset(aGlyphMetrics, 0, sizeof(GLYPHMETRICS)); // UMR: bug 46438
   return GetGlyphOutlineA(aDC, aChar, GGO_METRICS, aGlyphMetrics, 0, nsnull, &mMat);
 }
 
@@ -1548,6 +1549,7 @@ nsGlyphAgent::GetGlyphMetrics(HDC           aDC,
                               PRUint16      aGlyphIndex,
                               GLYPHMETRICS* aGlyphMetrics)
 {
+  memset(aGlyphMetrics, 0, sizeof(GLYPHMETRICS)); // UMR: bug 46438
   if (eGlyphAgent_UNKNOWN == mState) { // first time we have been in this function
     // see if this platform implements GetGlyphOutlineW()
     DWORD len = GetGlyphOutlineW(aDC, aChar, GGO_METRICS, aGlyphMetrics, 0, nsnull, &mMat);
@@ -1747,12 +1749,15 @@ nsFontMetricsWin::LoadFont(HDC aDC, nsString* aName)
     else if (NS_FONT_TYPE_NON_UNICODE == fontType) {
       nsIUnicodeEncoder* converter = GetConverter(logFont.lfFaceName);
       if (converter) {
+#if 0
+// RBS trying to reset hfont with this piece of code causes GDI to be confused
         if (DEFAULT_CHARSET != charset) {
           ::SelectObject(aDC, (HGDIOBJ) oldFont);
           ::DeleteObject(hfont);
           logFont.lfCharSet = charset;
           hfont = ::CreateFontIndirect(&logFont);
         }
+#endif
         font = new nsFontWinNonUnicode(&logFont, hfont, map, converter);
       }
     }
@@ -1964,7 +1969,6 @@ nsFontMetricsWin::FindSubstituteFont(HDC aDC, PRUnichar c)
   // The first unicode font (no converter) that has the
   // replacement char is taken and placed as the substitute font.
 
-  // Try the local/loaded fonts first
   int i;
   for (i = 0; i < mLoadedFontsCount; i++) {
     nsFontWin* font = mLoadedFonts[i];
@@ -1972,7 +1976,10 @@ nsFontMetricsWin::FindSubstituteFont(HDC aDC, PRUnichar c)
     HFONT oldFont = (HFONT) ::SelectObject(aDC, font->mFont);
     nsGetNameError res = GetNAME(aDC, &name);
     ::SelectObject(aDC, oldFont);
-    if (res == eGetName_OK) {
+    if (res != eGetName_OK) {
+    	continue;
+    }
+    else {
       nsFontInfo* info = (nsFontInfo*)PL_HashTableLookup(nsFontMetricsWin::gFontMaps, &name);
       if (!info || info->mType != NS_FONT_TYPE_UNICODE) {
         continue;
@@ -1983,46 +1990,11 @@ nsFontMetricsWin::FindSubstituteFont(HDC aDC, PRUnichar c)
     	// XXX if the mode is to display unicode points "&#xNNNN;", should we check
     	// that the substitute font also has glyphs for '&', '#', 'x', ';' and digits?
     	// (Because this is a unicode font, those glyphs should in principle be there.)
+      name.AssignWithConversion(font->mName);
       font = LoadSubstituteFont(aDC, &name);
       if (font) {
         ADD_GLYPH(font->mMap, c);
         return font;
-      }
-    }
-  }
-
-  // Try the global fonts
-  for (i = 0; i < gGlobalFontsCount; i++) {
-    if (!gGlobalFonts[i].skip) {
-      HFONT font = ::CreateFontIndirect(&gGlobalFonts[i].logFont);
-      if (!font) {
-        continue;
-      }
-      HFONT oldFont = (HFONT) ::SelectObject(aDC, font);
-      int fontType = NS_FONT_TYPE_UNKNOWN;
-      gGlobalFonts[i].map = GetCMAP(aDC, gGlobalFonts[i].logFont.lfFaceName,
-        &fontType, nsnull);
-      ::SelectObject(aDC, oldFont);
-      ::DeleteObject(font);
-      if (!gGlobalFonts[i].map) {
-        gGlobalFonts[i].skip = 1;
-        continue;
-      }
-      if (fontType != NS_FONT_TYPE_UNICODE) {
-        continue;
-      }
-      if (SameAsPreviousMap(i)) {
-        continue;
-      }
-      if (FONT_HAS_GLYPH(gGlobalFonts[i].map, NS_REPLACEMENT_CHAR)) {
-      	// XXX if the mode is to display unicode points "&#xNNNN;", should we check
-      	// that the substitute font also has glyphs for '&', '#', 'x', ';' and digits?
-      	// (Because this is a unicode font, those glyphs should in principle be there.)
-        nsFontWin* font = LoadSubstituteFont(aDC, gGlobalFonts[i].name);
-        if (font) {
-          ADD_GLYPH(font->mMap, c);
-          return font;
-        }
       }
     }
   }
@@ -2806,7 +2778,6 @@ HDC   dc1 = NULL;
 
     // Begin -- section of code to get the real x-height with GetGlyphOutline()
     GLYPHMETRICS gm;
-    memset((void*)&gm, 0, sizeof(gm));
     DWORD len = gGlyphAgent.GetGlyphMetrics(dc, PRUnichar('x'), 0, &gm);
     if (GDI_ERROR != len && gm.gmptGlyphOrigin.y > 0)
     {
