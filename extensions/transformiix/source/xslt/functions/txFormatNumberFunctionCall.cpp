@@ -262,7 +262,6 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
 
     // Did we manage to parse the entire formatstring and was it valid
     if ((c != format->mPatternSeparator && pos < formatLen) ||
-        minIntegerSize == 0 ||
         inQuote ||
         groupSize == 0) {
         String err(INVALID_PARAM_VALUE);
@@ -287,9 +286,15 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
 
     int bufsize;
     if (value > 1)
-        bufsize = (int)log10(value) + maxFractionSize + 5;
+        bufsize = (int)log10(value) + 1;
     else
-        bufsize = 1 + maxFractionSize + 5;
+        bufsize = 1;
+
+    if (bufsize < minIntegerSize)
+        bufsize = minIntegerSize;
+
+    bufsize += maxFractionSize + 3; // decimal separator + ending null +
+                                    // rounding safety
 
     char* buf = new char[bufsize];
     if (!buf) {
@@ -316,10 +321,10 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
     // Integer digits
     int i;
     for (i = 0; i < intDigits; ++i) {
-        res.append((UNICODE_CHAR)(buf[i] - '0' + format->mZeroDigit));
-
-        if ((intDigits-i)%groupSize == 0 && intDigits-i != 0)
+        if ((intDigits-i)%groupSize == 0 && i != 0)
             res.append(format->mGroupingSeparator);
+
+        res.append((UNICODE_CHAR)(buf[i] - '0' + format->mZeroDigit));
     }
 
     // Fractions
@@ -330,7 +335,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
         i++;  // skip decimal separator
     
     for (; buf[i]; i++) {
-        if (i-intDigits-1 > minFractionSize && buf[i] == '0') {
+        if (i-intDigits-1 >= minFractionSize && buf[i] == '0') {
             extraZeros++;
         }
         else {
@@ -345,6 +350,12 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
 
             res.append((UNICODE_CHAR)(buf[i] - '0' + format->mZeroDigit));
         }
+    }
+
+    if (!intDigits && printDeci) {
+        // If we havn't added any characters we add a '0'
+        // This can only happen for formats like '##.##'
+        res.append(format->mZeroDigit);
     }
     
     delete [] buf;
@@ -373,7 +384,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
     intDigits = bufIntDigits > minIntegerSize ? bufIntDigits : minIntegerSize;
 
     if (groupSize < 0)
-        groupSize = intDigits * 2; //to simplify grouping
+        groupSize = intDigits + 10; //to simplify grouping
 
     // XXX We shouldn't use SetLength.
     res.getNSString().SetLength(res.length() +
@@ -391,16 +402,18 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
     // Fractions
     for (; i >= bufIntDigits; --i) {
         int digit;
-        if (i >= buflen) {
+        if (i >= buflen || i < 0) {
             digit = 0;
-        }
-        else if (carry) {
-            digit = (buf[i] - '0' + 1) % 10;
-            carry = digit == 0;
         }
         else {
             digit = buf[i] - '0';
         }
+        
+        if (carry) {
+            digit = (digit + 1) % 10;
+            carry = digit == 0;
+        }
+
         if (hasFraction || digit != 0 || i < bufIntDigits+minFractionSize) {
             hasFraction = MB_TRUE;
             res.replace(resPos--,
@@ -430,7 +443,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
         }
         
         if (carry) {
-            digit = digit % 10;
+            digit = (digit + 1) % 10;
             carry = digit == 0;
         }
 
@@ -446,6 +459,12 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
             res.insert(resPos + 1, format->mGroupingSeparator);
         }
         res.insert(resPos + 1, (UNICODE_CHAR)(1 + format->mZeroDigit));
+    }
+    
+    if (!hasFraction && !intDigits && !carry) {
+        // If we havn't added any characters we add a '0'
+        // This can only happen for formats like '##.##'
+        res.append(format->mZeroDigit);
     }
 
     delete [] buf;
