@@ -217,7 +217,7 @@ sub reportRelease {
                         "$Settings::OS $Settings::ProductName Build available at: \n" .
                         "$url \n";
     open(TMPMAIL, ">tmpmail.txt");
-    prunt TMPMAIL "$donemessage \n";
+    print TMPMAIL "$donemessage \n";
     close(TMPMAIL);
 
     TinderUtils::print_log ("$donemessage \n");
