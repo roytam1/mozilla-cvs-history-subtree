@@ -112,7 +112,7 @@ sub unpack_LDIF
     local $_;
     foreach $_ (split $/, $str) {
     	last if ($_ eq ""); # blank line
-	if ((substr $_, 0, 1) eq "#") { # comment
+	if ($_ =~ /^#/) { # comment
 	    ($attr, $value) = ($_, undef);
 	} else {
 	    ($attr, $value) = split /:/, $_, 2;
@@ -370,7 +370,8 @@ sub enlist_values
 	for ($i = $[+1; $i <= $#$record; $i += 2) {
 	    my ($attr, $value) = (${$record}[$i-1], ${$record}[$i]);
 	    if (not defined $value) {
-		%first = (); # Don't enlist values separated by a "-" line.
+		%first = () # Don't enlist values separated by a "-" line.
+			 unless ($value =~ /^#/); # but comments don't matter.
 		push @result, ($attr, $value);
 	    } else {
 		my $firstValue = $first{lc $attr};
@@ -460,7 +461,10 @@ sub sort_attributes
     foreach my $record ($single ? \@_ : @_) {
 	@result = @{(delist_values ($record))[$[]};
 	@preamble = ();
-	if ("dn" eq lc $result[$[]) {
+	while (($result[$[] =~ /^#/) and (not defined $result[$[+1])) {
+	    push @preamble, (splice @result, 0, 2);
+	}
+	if (@result and ("dn" eq lc $result[$[])) {
 	    push @preamble, (splice @result, 0, 2); # dn => "cn=etc..."
 	    if ("changetype" eq lc $result[$[]) { # this is a change, not an entry.
 		if ("add" eq lc $result[$[+1]) {
