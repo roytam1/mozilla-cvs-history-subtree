@@ -31,6 +31,12 @@ import org.mozilla.webclient.CurrentPage;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
+import java.util.Properties;
+import java.io.*;
+import java.net.*;
+
+import org.mozilla.webclient.UnimplementedException; 
+
 public class CurrentPageImpl extends ImplObjectNative implements CurrentPage
 {
 //
@@ -112,17 +118,33 @@ public String getCurrentURL()
             
 //    org.w3c.dom.Document getDOM();
 
-// webclient.PageInfo getPageInfo();
+public Properties getPageInfo()
+{
+  Properties result = null;
+
+  /* synchronized(myBrowserControl) {
+        result = nativeGetPageInfo(nativeWebShell);
+    }
+    return result;
+    */
+  
+  throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getPageInfo has not yet been implemented.\n");
+}  
+  
+
             
 public String getSource()
 {
     String result = null;
     myFactory.throwExceptionIfNotInitialized();
 
-    synchronized(myBrowserControl) {
+    /*    synchronized(myBrowserControl) {
         result = nativeGetSource();
     }
-    return result;
+    */
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getSource has not yet been implemented.\n");
+
+    //    return result;
 }
  
 public byte [] getSourceBytes(boolean viewMode)
@@ -130,10 +152,43 @@ public byte [] getSourceBytes(boolean viewMode)
     byte [] result = null;
     myFactory.throwExceptionIfNotInitialized();
     
-    synchronized(myBrowserControl) {
+    /*    synchronized(myBrowserControl) {
         result = nativeGetSourceBytes(nativeWebShell, viewMode);
     }
+    */
+
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getSourceBytes has not yet been implemented.\n Will be available after Webclient M3 Release\n");
+    
+    // PENDING (Ashu) - This should work - but it does not get anything from URl
+    // and hangs up from time to time. Have to Debug. In M15, other native solution
+    // will also be available using DocShell::viewMode
+
+    /*
+    String HTMLContent = null;
+    String URL = getCurrentURL();
+    System.out.println("\nThe Current URL is -- " + URL);
+    try {
+      Socket s = new Socket("sunweb.central",80);
+      BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+      boolean more = true;
+      while (more)
+	{
+	  String line = in.readLine();
+	  if (line == null) more = false;
+	  else
+	    {
+	      HTMLContent = HTMLContent + line;
+	      System.out.println(line);
+	    }
+	}
+    }
+      catch (Throwable e)
+	{
+	  System.out.println("Error occurred while establishing connection -- \n ERROR - " + e);
+	}
+    
     return result;
+    */
 }
             
 public void resetFind()

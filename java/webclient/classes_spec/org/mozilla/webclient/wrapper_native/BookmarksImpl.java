@@ -36,6 +36,8 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.DefaultTreeModel;
 
+import org.mozilla.webclient.UnimplementedException; 
+
 public class BookmarksImpl extends ImplObjectNative implements Bookmarks
 {
 //
@@ -160,7 +162,8 @@ public void removeBookmark(BookmarkEntry bookmark)
 {
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
-
+    
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getPageInfo has not yet been implemented.\n");
 }
 
 public BookmarkEntry newBookmarkEntry(String url)
