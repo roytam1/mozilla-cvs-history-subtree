@@ -36,6 +36,7 @@ use overload
 @ISA = ('Tie::StdHash');
 $VERSION = "2.0";
 
+
 sub new
 {
 
@@ -65,16 +66,41 @@ my @attributeArray = $initialReturn->getValues("attributetypes");
 }
 
 package Mozilla::LDAP::Schema::Attribute;
+use Text::ParseWords;
+
+my %fields =  (
+	       oid		=>	undef,
+	       name		=>	undef,
+	       description	=>	undef,
+	       syntax		=>	undef,
+	       );
+
+sub _initialize
+{
+  my ($self, $attrString) = @_;
+  #take off the first and last parentheses
+  #substr ($attrString,0,1)="";
+  chop ($attrString);
+  my @tempArray = quotewords(" ", 0, $attrString);
+
+  $self->{"oid"} = $tempArray[1];
+  $self->{"name"} = $tempArray[3];
+  $self->{"description"} = $tempArray[5];
+  $self->{"syntax"} = $tempArray[7];
+  
+}
+
 
 sub new 
 {
   
-  $tmp = shift;
-
+  my $tmp = shift;
+  my $self = {%fields};
+  bless $self;
+  $self->_initialize(@_);
   #take off the first and last parentheses
-  chop ($tmp);
-
-  return self;
+  
+  return $self;
 }  
 
 package Mozilla::LDAP::Schema::ObjectClass;
