@@ -1687,10 +1687,28 @@ nsSocketTransport::GetPeerAddr(PRNetAddr *addr)
 NS_IMETHODIMP
 nsSocketTransport::GetSelfAddr(PRNetAddr *addr)
 {
-    if (mFDconnected && PR_GetSockName(mFD, addr) == PR_SUCCESS)
-	      return NS_OK;
-    else // trying to get the address before we have reached the connected state?
-	    return NS_ERROR_NOT_AVAILABLE;
+    // we must not call any PR methods on our file descriptor
+    // while holding mLock since those methods might re-enter
+    // socket transport code.
+
+    PRFileDesc *fd;
+    {
+        nsAutoLock lock(mLock);
+        fd = GetFD_Locked();
+    }
+
+    if (!fd)
+        return NS_ERROR_NOT_CONNECTED;
+
+    nsresult rv =
+        (PR_GetSockName(fd, addr) == PR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
+
+    {
+        nsAutoLock lock(mLock);
+        ReleaseFD_Locked(fd);
+   }
+
+    return rv;
 }
 
 NS_IMETHODIMP
