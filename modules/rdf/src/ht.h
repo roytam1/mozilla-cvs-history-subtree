@@ -60,6 +60,18 @@
 #include "htrdf.h"
 #include "vocab.h"
 
+#ifndef	XP_ASSERT
+#define	XP_ASSERT(x)
+#endif
+
+#ifndef	XP_FREE
+#define	XP_FREE(x)	PR_Free((x))
+#endif
+
+#ifndef	XP_STRCASECMP
+#define	XP_STRCASECMP(x,y)	strcmp((x),(y))
+#endif
+
 #define	MWContext	void
 #endif
 

@@ -1725,8 +1725,12 @@ HTRDF_GetDB(HT_Pane pane)
 	int32		n = 0;
 	char		*dburl, *ndburl;
 
+#ifndef	HT_RAPTOR
 	PREF_SetDefaultCharPref("browser.NavCenter", "http://rdf.netscape.com/rdf/navcntr.rdf");
 	PREF_CopyCharPref("browser.NavCenter", &navCenterURL);
+#else
+	navCenterURL = copyString("http://rdf.netscape.com/rdf/navcntr.rdf");
+#endif
 	if (!strchr(navCenterURL, ':'))
 	{
 		navCenterURL = makeDBURL(navCenterURL);
@@ -3114,7 +3118,9 @@ fillContainer (HT_Resource node)
 			pr = rn;
 		}
 #if defined(XP_WIN) || defined(XP_MAC)
+#ifndef	HT_RAPTOR
 		if (advertURL) XP_GetURLForView(node->view, advertURL);
+#endif
 #endif
 		RDF_DisposeCursor(c);
 	}
@@ -8862,7 +8868,9 @@ HT_SetSelectedView (HT_Pane pane, HT_View view)
 				advertURL = advertURLOfContainer(pane->db, view->top->node);
 				if (advertURL != NULL)
 				{
+#ifndef	HT_RAPTOR
 					XP_GetURLForView(view, advertURL);
+#endif
 					freeMem(advertURL);
 				}
 #endif
