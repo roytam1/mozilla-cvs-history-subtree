@@ -77,8 +77,6 @@ NS_IMPL_ISUPPORTS1(nsProfileMigrator, nsIProfileMigrator)
 NS_IMETHODIMP
 nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
 {
-  return NS_OK;
-#if 0
   nsresult rv;
 
   nsCAutoString key;
@@ -121,7 +119,6 @@ nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
                         MIGRATION_WIZARD_FE_FEATURES,
                         params,
                         getter_AddRefs(migrateWizard));
-#endif
 }
 
 #ifdef XP_WIN
