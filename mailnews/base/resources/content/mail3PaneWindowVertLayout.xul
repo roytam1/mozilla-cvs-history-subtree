@@ -71,23 +71,21 @@ Rights Reserved.
 
 <commands id="commands">
 
-	<commandset id="CommandUpdate_Mail"
-				commandupdater="true"
-				events="focus,folderTree-select,threadTree-select"
-				oncommandupdate="CommandUpdate_Mail()"/>
-	<commandset id="ThreadTreeUpdate_Mail"
-				commandupdater="true"
-				events="threadTree-select"
-				oncommandupdate="ThreadTreeUpdate_Mail()"/>
+  <commandset id="mailFileMenuItems"/>
+  <commandset id="mailViewMenuItems"/>
+  <commandset id="mailEditMenuItems"/>
+  <commandset id="mailSearchMenuItems"/>
+  <commandset id="mailGoMenuItems"/>
+  <commandset id="mailMessageMenuItems"/>
+  <commandset id="mailToolbarItems"/>
+
+  <commandset id="globalEditMenuItems"/>
+	<commandset id="selectEditMenuItems"/>
+	<commandset id="clipboardEditMenuItems"/>
 	<commandset id="FocusRingUpdate_Mail"
 				commandupdater="true"
 				events="focus"
-				oncommandupdate="FocusRingUpdate_Mail()"/>				
-	<commandset id="globalEditMenuItems"/>
-	<commandset id="selectEditMenuItems"/>
-	<commandset id="undoEditMenuItems"/>
-	<commandset id="clipboardEditMenuItems"/>
-
+				oncommandupdate="FocusRingUpdate_Mail()"/>
 </commands>
 
 <broadcasterset id="broadcasterset"/>
@@ -136,7 +134,7 @@ Rights Reserved.
 			<box align ="horizontal" persist="height" flex="1">
 				<tree id="folderTree" flex="1" style="width:0px;" context="folderPaneContext" persist="collapsed width" />
 				<splitter id="gray_vertical_splitter" collapse="before"  persist="state"/>
-				<tree id="threadTree" flex="2" persist="width" style="width:0px" context="threadPaneContext" class="window-focusborder" focusring="false"/>
+        <outliner id="threadOutliner" flex="2" persist="width" style="width:0px" context="threadPaneContext" class="window-focusborder" focusring="false"/>
 			</box>
 			<!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
 			<splitter id="threadpane-splitter" collapse="after" persist="state"
