@@ -441,9 +441,11 @@ nsresult setDefaultMailClient()
     nsCAutoString appName(brandName());
     if (!appName.IsEmpty()) {
         keyName.Append(appName.get());
+        // hardcoding this for 0.9.4 branch
+        // need to change it before merging into the trunk
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                         (char *)keyName.get(), 
-                        "", (char *)appName.get());
+                        "", "Netscape 6.2 Mail"); 
     }
     else
         rv = NS_ERROR_FAILURE;
@@ -472,6 +474,26 @@ nsresult setDefaultMailClient()
                     rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                                         "Software\\Clients\\Mail", 
                                         "", (char *)appName.get());
+                }
+                if (NS_SUCCEEDED(rv)) {
+                    nsCAutoString mailAppPath(thisApplication());
+                    mailAppPath += " -mail";
+                    nsCAutoString appKeyName ("Software\\Clients\\Mail\\");
+                    appKeyName.Append(appName.get());
+                    appKeyName.Append("\\shell\\open\\command");
+                    rv = SetRegistryKey(HKEY_LOCAL_MACHINE,
+                                        (char *)appKeyName.get(),
+                                        "", (char *)mailAppPath.get());
+                }
+                if (NS_SUCCEEDED(rv)) {
+                    nsCAutoString iconPath(thisApplication());
+                    iconPath += ",0";
+                    nsCAutoString iconKeyName ("Software\\Clients\\Mail\\");
+                    iconKeyName.Append(appName.get());
+                    iconKeyName.Append("\\DefaultIcon");
+                    rv = SetRegistryKey(HKEY_LOCAL_MACHINE,
+                                        (char *)iconKeyName.get(),
+                                        "", (char *)iconPath.get());
                 }
             }            
         }
