@@ -25,13 +25,13 @@
 #include "nsLeafFrame.h"
 #include "nsString.h"
 #include "nsIPresContext.h"
-#include "nsHTMLImageLoader.h"
 
 #define USE_IMG2
 
+#include "nsHTMLImageLoader.h"
 
 #ifdef USE_IMG2
-#include "nsIImageRequest.h"
+#include "nsIImageRequest2.h"
 #include "nsIImageDecoderObserver.h"
 #endif
 
@@ -54,7 +54,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGEDECODEROBSERVER
 
-  SetFrame(nsImageFrame *frame) { mFrame = frame; }
+  void SetFrame(nsImageFrame *frame) { mFrame = frame; }
 
 private:
   nsImageFrame *mFrame;
@@ -171,9 +171,9 @@ protected:
 
   void GetBaseURI(nsIURI **uri);
 
-
   nsHTMLImageLoader   mImageLoader;
   nsHTMLImageLoader * mLowSrcImageLoader;
+
 #ifdef USE_IMG2
   nsCOMPtr<nsIImageRequest> mImageRequest;
   nsCOMPtr<nsIImageRequest> mLowImageRequest;

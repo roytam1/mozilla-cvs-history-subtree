@@ -134,7 +134,6 @@ nsImageFrame::Destroy(nsIPresContext* aPresContext)
 
 #ifdef USE_IMG2
 #include "nsIImageContainer.h"
-#include "nsIImageRequest.h"
 #include "nsIImageLoader.h"
 #include "nsRect2.h"
 
@@ -1486,3 +1485,4 @@ NS_IMETHODIMP nsImageListener::OnStopDecode(nsIImageRequest *request, nsISupport
 }
 
 #endif
+
