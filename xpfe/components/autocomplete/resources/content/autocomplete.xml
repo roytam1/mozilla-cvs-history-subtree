@@ -170,7 +170,7 @@
            enter or the textbox loses focus -->
       <property name="forceComplete"
                 onset="this.setAttribute('forceComplete', val); return val;"
-                onget="return this.getAttribute('forceComplete') == 'true';"/>
+                onget="return this.getAttribute('forceComplete') == 'true';"/>      
 
       <!-- option to show the popup containing the results -->
       <property name="showPopup"
@@ -520,6 +520,7 @@
           this.mFailureCount = 0;
           this.mFailureItems = 0;
           this.mDefaultMatchFilled = false; // clear out our prefill state.
+          this.removeAttribute("noMatchesFound");
 
           // tell each session to start searching...
           for (var name in this.mSessions)
@@ -655,6 +656,9 @@
             this.setAttribute("nomatch", 1);
           else
             this.removeAttribute("nomatch");
+
+          if (!this.mDefaultMatchFilled)
+            this.setAttribute("noMatchesFound", true);
           
           // if we have processed all of our searches, and none of them gave us a default index,
           // then we should try to auto fill the input field with the first match. 
@@ -723,6 +727,7 @@
           }
           
           this.mNeedToComplete = false;
+          this.removeAttribute("noMatchesFound");
           this.clearTimer();
 
           if (aFireTextCommand)
@@ -823,6 +828,7 @@
           var str = this.value;
           this.currentSearchString = str;
           this.resultsPopup.selectedIndex = null;
+          this.removeAttribute("noMatchesFound");
           
           // We want to autocomplete only if the user is editing at the end of the text
           if (this.mInputElt.selectionEnd >= str.length)

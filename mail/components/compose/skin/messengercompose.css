@@ -386,6 +386,10 @@ treechildren::-moz-tree-image(remote-err) {
   color: #555566;
 }
 
+.textbox-addressingWidget[noMatchesFound="true"] {
+  color: red;
+}
+
 #addressingWidget {
   -moz-user-focus: none;
   width: 0;
