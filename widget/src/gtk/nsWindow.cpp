@@ -76,6 +76,7 @@ nsWindow::nsWindow()
   mMenuBar = nsnull;
   mIsTooSmall = PR_FALSE;
   mIsUpdating = PR_FALSE;
+  mBlockFocusEvents = PR_FALSE;
 }
 
 //-------------------------------------------------------------------------
@@ -357,7 +358,7 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
                                             PRBool aDoCapture,
                                             PRBool aConsumeRollupEvent)
 {
-#ifdef DEBUG_blizzard
+#ifdef DEBUG_pavlov
   printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
 #endif
   GtkWidget *grabWidget;
@@ -367,12 +368,12 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
 
   if (aDoCapture)
   {
-#ifdef DEBUG_blizzard
+#ifdef DEBUG_pavlov
     printf("grabbing widget\n");
 #endif
     GdkCursor *cursor = gdk_cursor_new (GDK_ARROW);
     if (!mSuperWin) {
-#ifdef DEBUG_blizzard
+#ifdef DEBUG_pavlov
       printf("no superWin for this widget");
 #endif
     }
@@ -383,7 +384,7 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
                                    GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
                                    GDK_POINTER_MOTION_MASK),
                                   (GdkWindow*)NULL, cursor, GDK_CURRENT_TIME);
-#ifdef DEBUG_blizzard
+#ifdef DEBUG_pavlov
       printf("pointer grab returned %i\n", ret);
 #endif
       gdk_cursor_destroy(cursor);
@@ -545,9 +546,264 @@ nsWindow::SetFocus(void)
       gtk_widget_grab_focus(top_mozarea);
   }
 
+
+  // check to see if we need to send a focus out event for the old window
+  if (focusWindow)
+  {
+    nsGUIEvent event;
+    
+    event.message = NS_LOSTFOCUS;
+    event.widget  = focusWindow;
+    
+    event.eventStructType = NS_GUI_EVENT;
+    
+    //  event.time = aGdkFocusEvent->time;;
+    //  event.time = PR_Now();
+    event.time = 0;
+    event.point.x = 0;
+    event.point.y = 0;
+    
+    focusWindow->AddRef();
+    
+    focusWindow->DispatchFocus(event);
+    
+    focusWindow->Release();
+    
+    if(mIMEEnable == PR_FALSE)
+    {
+#ifdef NOISY_XIM
+      printf("  IME is not usable on this window\n");
+#endif
+    }
+    if (mIC)
+    {
+      GdkWindow *gdkWindow = (GdkWindow*) focusWindow->GetNativeData(NS_NATIVE_WINDOW);
+      if (gdkWindow)
+      {
+        gdk_im_end();
+      }
+      else
+      {
+#ifdef NOISY_XIM
+        printf("gdkWindow is not usable\n");
+#endif
+      }
+    }
+    else
+    {
+#ifdef NOISY_XIM
+      printf("mIC isn't created yet\n");
+#endif
+    }
+  }
+
   focusWindow = this;
+
+  // don't recurse
+  if (mBlockFocusEvents)
+  {
+    return NS_OK;
+  }
   
+  mBlockFocusEvents = PR_TRUE;
+  
+  nsGUIEvent event;
+  
+  event.message = NS_GOTFOCUS;
+  event.widget  = this;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+  
+  DispatchFocus(event);
+  
+  Release();
+
+  mBlockFocusEvents = PR_FALSE;
+
+  if(mIMEEnable == PR_FALSE)
+  {
+#ifdef NOISY_XIM
+    printf("  IME is not usable on this window\n");
+#endif
+    return NS_OK;
+  }
+
+  if (!mIC)
+    GetXIC();
+
+  if (mIC)
+  {
+    GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
+    if (gdkWindow)
+    {
+      gdk_im_begin ((GdkIC*)mIC, gdkWindow);
+    }
+    else
+    {
+#ifdef NOISY_XIM
+      printf("gdkWindow is not usable\n");
+#endif
+    }
+  }
+  else
+  {
+#ifdef NOISY_XIM
+    printf("mIC can't created yet\n");
+#endif
+  }
+
   return NS_OK;
+}
+
+//////////////////////////////////////////////////////////////////////
+/* virtual */ void
+nsWindow::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
+{
+  
+  if (mIsDestroying)
+    return;
+
+  GTK_WIDGET_SET_FLAGS(mMozArea, GTK_HAS_FOCUS);
+
+  nsGUIEvent event;
+  
+  event.message = NS_GOTFOCUS;
+  event.widget  = this;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+//  event.time = aGdkFocusEvent->time;;
+//  event.time = PR_Now();
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+  
+  DispatchFocus(event);
+  
+  Release();
+
+
+  if(mIMEEnable == PR_FALSE)
+  {
+#ifdef NOISY_XIM
+    printf("  IME is not usable on this window\n");
+#endif
+    return;
+  }
+
+  if (!mIC)
+    GetXIC();
+
+  if (mIC)
+  {
+    GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
+    if (gdkWindow)
+    {
+      gdk_im_begin ((GdkIC*)mIC, gdkWindow);
+    }
+    else
+    {
+#ifdef NOISY_XIM
+      printf("gdkWindow is not usable\n");
+#endif
+    }
+  }
+  else
+  {
+#ifdef NOISY_XIM
+    printf("mIC can't created yet\n");
+#endif
+  }
+
+
+}
+//////////////////////////////////////////////////////////////////////
+/* virtual */ void
+nsWindow::OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent)
+{
+
+  if (mIsDestroying)
+    return;
+
+  GTK_WIDGET_UNSET_FLAGS(mMozArea, GTK_HAS_FOCUS);
+
+  nsGUIEvent event;
+  
+  event.message = NS_LOSTFOCUS;
+  event.widget  = this;
+
+  event.eventStructType = NS_GUI_EVENT;
+
+//  event.time = aGdkFocusEvent->time;;
+//  event.time = PR_Now();
+  event.time = 0;
+  event.point.x = 0;
+  event.point.y = 0;
+
+  AddRef();
+  
+  DispatchFocus(event);
+  
+  Release();
+
+
+
+  if(mIMEEnable == PR_FALSE)
+  {
+#ifdef NOISY_XIM
+    printf("  IME is not usable on this window\n");
+#endif
+    return;
+  }
+  if (mIC)
+  {
+    GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
+    if (gdkWindow)
+    {
+      gdk_im_end();
+    }
+    else
+    {
+#ifdef NOISY_XIM
+      printf("gdkWindow is not usable\n");
+#endif
+    }
+  }
+  else
+  {
+#ifdef NOISY_XIM
+    printf("mIC isn't created yet\n");
+#endif
+  }
+}
+
+//////////////////////////////////////////////////////////////////
+void 
+nsWindow::InstallFocusInSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+				(gchar *)"focus_in_event",
+				GTK_SIGNAL_FUNC(nsWindow::FocusInSignal));
+}
+//////////////////////////////////////////////////////////////////
+void 
+nsWindow::InstallFocusOutSignal(GtkWidget * aWidget)
+{
+  NS_ASSERTION( nsnull != aWidget, "widget is null");
+
+  InstallSignal(aWidget,
+				(gchar *)"focus_out_event",
+				GTK_SIGNAL_FUNC(nsWindow::FocusOutSignal));
 }
 
 #endif /* USE_SUPERWIN */
@@ -722,6 +978,14 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
   // set our background color to make people happy.
 
   SetBackgroundColor(NS_RGB(192,192,192));
+
+  // track focus changes if we have a mozarea
+  if (mMozArea) {
+    g_print("setting focus events to area\n");
+    GTK_WIDGET_SET_FLAGS(mMozArea, GTK_CAN_FOCUS);
+    InstallFocusInSignal(mMozArea);
+    InstallFocusOutSignal(mMozArea);
+  }
 
   // XXX fix this later...
   if (mIsToplevel)

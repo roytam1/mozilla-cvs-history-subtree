@@ -215,8 +215,10 @@ protected:
 
   void InstallButtonReleaseSignal(GtkWidget * aWidget);
 
+  virtual
   void InstallFocusInSignal(GtkWidget * aWidget);
 
+  virtual
   void InstallFocusOutSignal(GtkWidget * aWidget);
 
   void InstallRealizeSignal(GtkWidget * aWidget);
@@ -270,7 +272,7 @@ public:
 
 
 
-private:
+protected:
 
   //////////////////////////////////////////////////////////////////
   //

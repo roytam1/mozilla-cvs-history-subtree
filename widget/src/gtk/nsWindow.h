@@ -88,6 +88,10 @@ public:
                                nsIRegion *aClipRegion);
   static gboolean      UpdateIdle (gpointer data);
   NS_IMETHOD           Update(void);
+  virtual void         OnFocusInSignal(GdkEventFocus * aGdkFocusEvent);
+  virtual void         OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent);
+  virtual void         InstallFocusInSignal(GtkWidget * aWidget);
+  virtual void         InstallFocusOutSignal(GtkWidget * aWidget);
 #endif /* USE_SUPERWIN */
 
   gint                 ConvertBorderStyles(nsBorderStyle bs);
@@ -186,6 +190,9 @@ private:
   PRBool       mIsUpdating;
   // this is the current GdkSuperWin with the focus
   static nsWindow  *focusWindow;
+  // when this is PR_TRUE we will block focus
+  // events to prevent recursion
+  PRBool       mBlockFocusEvents;
 };
 
 //
