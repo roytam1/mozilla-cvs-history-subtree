@@ -281,7 +281,7 @@ public:
   virtual PRBool IsEmpty();
   virtual PRBool IsSelfEmpty();
 
-  virtual void IntrinsicWidthsDirty();
+  virtual void MarkIntrinsicWidthsDirty();
   virtual nscoord GetMinWidth();
   virtual nscoord GetPrefWidth();
 

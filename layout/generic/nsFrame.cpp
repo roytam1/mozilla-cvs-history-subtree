@@ -2058,7 +2058,7 @@ nsFrame::GetFrameForPoint(const nsPoint& aPoint,
 // Resize and incremental reflow
 
 virtual void
-nsFrame::IntrinsicWidthsDirty()
+nsFrame::MarkIntrinsicWidthsDirty()
 {
 }
 

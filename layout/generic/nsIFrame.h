@@ -873,7 +873,7 @@ public:
    * directly; nsLayoutUtils::MarkIntrinsicWidthsDirty should be used
    * instead.
    */
-  virtual void IntrinsicWidthsDirty() = 0;
+  virtual void MarkIntrinsicWidthsDirty() = 0;
 
   /**
    * Get the intrinsic minimum width of the frame.
@@ -883,7 +883,7 @@ public:
    * values of those properties on this frame's descendants.
    *
    * Note that many frames will cache the result of this function call
-   * unless IntrinsicWidthsDirty is called.
+   * unless MarkIntrinsicWidthsDirty is called.
    */
   virtual nscoord GetMinWidth() = 0;
 
@@ -895,7 +895,7 @@ public:
    * values of those properties on this frame's descendants.
    *
    * Note that many frames will cache the result of this function call
-   * unless IntrinsicWidthsDirty is called.
+   * unless MarkIntrinsicWidthsDirty is called.
    */
   virtual nscoord GetPrefWidth() = 0;
 
