@@ -309,7 +309,8 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
   if (!window)
     return NS_ERROR_FAILURE;
 
-  if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
+  if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION)
+  {
     NSPoint origin;
     origin.x = (float)x;
     origin.y = (float)y;
@@ -324,13 +325,24 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
     [window setFrameTopLeftPoint:origin];
   }
 
-  if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {
+  if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)
+  {
     NSRect frame = [window frame];
+    
+    float newWidth  = (float)cx;
+    float newHeight = (float)cy;
+    
+    // should we allow resizes larger than the screen, or smaller
+    // than some min size here?
+    
+    // keep the top of the window in the same place
+    frame.origin.y += (frame.size.height - (float)cy);
     frame.size.width = (float)cx;
     frame.size.height = (float)cy;
     [window setFrame:frame display:YES];
   }
-  else if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER) {
+  else if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER)
+  {
     NSSize size;
     size.width = (float)cx;
     size.height = (float)cy;
