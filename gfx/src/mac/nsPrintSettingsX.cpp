@@ -93,7 +93,7 @@ nsPrintSettingsX::~nsPrintSettingsX()
  */
 nsresult nsPrintSettingsX::CloneObj(nsIPrintSettings **_retval)
 {
-  nsPrintSettingsX *clone = new nsPrintSettingsX(this);
+  nsPrintSettingsX *clone = new nsPrintSettingsX(*this);
   if (!clone)
     return NS_ERROR_OUT_OF_MEMORY;
   return clone->QueryInterface(NS_GET_IID(nsIPrintSettings), (void**)_retval); // ref counts  

@@ -43,8 +43,6 @@ public:
   nsresult Init();
 
 protected:
-  nsPrintSettingsX(const nsPrintSettingsX& src);
-
   virtual nsresult CloneObj(nsIPrintSettings **_retval);
 
 protected:
