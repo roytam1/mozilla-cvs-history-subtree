@@ -408,10 +408,20 @@ private:
     
     class GlobalVariableValue : public TxObject {
     public:
+        GlobalVariableValue(ExprResult* aValue = 0)
+            : mValue(aValue), mFlags(none)
+        {
+        }
         virtual ~GlobalVariableValue();
       
         ExprResult* mValue;
-        MBool mEvaluating;
+        char mFlags;
+        enum _flags 
+        {
+            none = 0,
+            owned = 1,
+            evaluating = 2
+        };
     };
 
     /**

@@ -673,21 +673,19 @@ nsresult ProcessorState::addGlobalVariable(const txExpandedName& aVarName,
                                            ExprResult* aDefaultValue)
 {
     // If we know the value we don't need the variable, only the value
-    if (aDefaultValue) {
+    if (!aDefaultValue) {
         return aImportFrame->mVariables.add(aVarName, aVarElem);
     }
-
     GlobalVariableValue* var =
         (GlobalVariableValue*)mGlobalVariableValues.get(aVarName);
     if (var) {
+        // we set this parameter twice, we should set it to the same
+        // value;
         return var->mValue == aDefaultValue ? NS_OK : NS_ERROR_UNEXPECTED;
     }
-
-    var = new GlobalVariableValue;
+    var = new GlobalVariableValue(aDefaultValue);
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
-    var->mEvaluating = MB_FALSE;
-    var->mValue = aDefaultValue;
     return mGlobalVariableValues.add(aVarName, var);
 }
 
@@ -995,7 +993,7 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     GlobalVariableValue* globVar;
     globVar = (GlobalVariableValue*)mGlobalVariableValues.get(varName);
     if (globVar) {
-        if (globVar->mEvaluating) {
+        if (globVar->mFlags & GlobalVariableValue::evaluating) {
             String err("Cyclic variable-value detected");
             receiveError(err, NS_ERROR_FAILURE);
             return NS_ERROR_FAILURE;
@@ -1020,7 +1018,6 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     globVar = new GlobalVariableValue();
     if (!globVar)
         return NS_ERROR_OUT_OF_MEMORY;
-    globVar->mEvaluating = MB_TRUE;
     rv = mGlobalVariableValues.add(varName, globVar);
     if (NS_FAILED(rv)) {
         delete globVar;
@@ -1032,11 +1029,14 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     mLocalVariables = 0;
     txSingleNodeContext evalContext(mSourceDocument, this);
     txIEvalContext* priorEC = setEvalContext(&evalContext);
+    // Compute the variable value
+    globVar->mFlags = GlobalVariableValue::evaluating;
     globVar->mValue = txXSLTProcessor::processVariable(varElem, this);
     setEvalContext(priorEC);
     mLocalVariables = oldVars;
 
-    globVar->mEvaluating = MB_FALSE;
+    // evaluation is over, the gvv now owns the ExprResult
+    globVar->mFlags = GlobalVariableValue::owned;
     aResult = globVar->mValue;
     return NS_OK;
 }
@@ -1362,5 +1362,6 @@ void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
 
 ProcessorState::GlobalVariableValue::~GlobalVariableValue()
 {
-    delete mValue;
+    if (mFlags & owned)
+        delete mValue;
 }
