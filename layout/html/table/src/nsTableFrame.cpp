@@ -4249,6 +4249,13 @@ void nsTableFrame::DistributeSpaceToRows(nsIPresContext& aPresContext,
       y += excessForRow+rowRect.height;
       aExcessForRowGroup += excessForRow;
     }
+    else
+    {
+      nsRect rowRect;
+      rowFrame->GetRect(rowRect);
+      y += rowRect.height;
+    }
+
     rowFrame = iter.Next();
   }
   nsRect rowGroupRect;
@@ -4259,6 +4266,27 @@ void nsTableFrame::DistributeSpaceToRows(nsIPresContext& aPresContext,
   aRowGroupYPos += aExcessForRowGroup + rowGroupRect.height;
 
   DistributeSpaceToCells(aPresContext, aReflowState, aRowGroupFrame);
+}
+
+NS_IMETHODIMP nsTableFrame::GetTableSpecifiedHeight(nscoord& aResult, const nsHTMLReflowState& aReflowState)
+{
+  const nsStylePosition* tablePosition;
+  GetStyleData(eStyleStruct_Position, (const nsStyleStruct *&)tablePosition);
+  
+  const nsStyleTable* tableStyle;
+  GetStyleData(eStyleStruct_Table, (const nsStyleStruct *&)tableStyle);
+  nscoord tableSpecifiedHeight=-1;
+  if (eStyleUnit_Coord == tablePosition->mHeight.GetUnit())
+    tableSpecifiedHeight = tablePosition->mHeight.GetCoordValue();
+  else if (eStyleUnit_Percent == tablePosition->mHeight.GetUnit())
+  {
+    float percent = tablePosition->mHeight.GetPercentValue();
+    nscoord parentHeight = GetEffectiveContainerHeight(aReflowState);
+    if (NS_UNCONSTRAINEDSIZE!=parentHeight && 0!=parentHeight)
+      tableSpecifiedHeight = NSToCoordRound((float)parentHeight * percent);
+  }
+  aResult = tableSpecifiedHeight;
+  return NS_OK;
 }
 
 nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
