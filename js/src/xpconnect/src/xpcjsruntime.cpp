@@ -487,7 +487,7 @@ XPCJSRuntime::~XPCJSRuntime()
     JS_DHashTableEnumerate(DEBUG_WrappedNativeHashtable,
                            DEBUG_WrapperChecker, &LiveWrapperCount);
     if(LiveWrapperCount)
-        printf("deleting XPCJSRuntime with %d live nsXPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
+        printf("deleting XPCJSRuntime with %d live XPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
     JS_DHashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
 
