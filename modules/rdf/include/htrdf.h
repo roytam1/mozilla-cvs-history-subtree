@@ -144,7 +144,7 @@ typedef HT_NotificationStruct* HT_Notification;
 /*                    View/Pane Creation / Destruction / Management           */
 /*-----------------------------------------------------------------------*/
 
-PR_PUBLIC_API(HT_Pane) HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush);
+PR_PUBLIC_API(HT_Pane) HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush, PRBool autoOpen, PRBool useColumns);
 
 PR_PUBLIC_API(HT_Pane) HT_PaneFromURL(char* url, HT_Notification n, PRBool autoFlush, int32 param_count,
                                       char** param_names, char** param_values);
