@@ -460,8 +460,8 @@ nsStorageTransport::nsReadRequest::Process()
     mWaitingForWrite = PR_FALSE;
 
     if (!mOnStartFired) {
-        // no need to proxy this callback
-        (void) mListener->OnStartRequest(this, mListenerContext);
+        // must proxy since called from AsyncRead - bug 136216
+        (void) mListenerProxy->OnStartRequest(this, mListenerContext);
         mOnStartFired = PR_TRUE;
     }
 
@@ -498,12 +498,7 @@ nsStorageTransport::nsReadRequest::Process()
         mTransport->ReadRequestCompleted(this);
         
         // no need to proxy this callback
-        (void) mListener->OnStopRequest(this, mListenerContext, mStatus);
-
-        //OnStopRequest completed and listeners no longer needed. 
-        mListener=nsnull;
-        mListenerContext=nsnull;
-        mListenerProxy=nsnull;
+        (void) mListenerProxy->OnStopRequest(this, mListenerContext, mStatus);
     }
     else
         mWaitingForWrite = PR_TRUE;
@@ -599,8 +594,8 @@ NS_IMETHODIMP
 nsStorageTransport::nsReadRequest::OnStartRequest(nsIRequest *aRequest,
                                                   nsISupports *aContext)
 {
-    NS_NOTREACHED("nsStorageTransport::nsReadRequest::OnStartRequest");
-    return NS_ERROR_FAILURE;
+    NS_ASSERTION(mListener, "no listener");
+    return mListener->OnStartRequest(aRequest, aContext);
 }
 
 NS_IMETHODIMP
@@ -608,8 +603,13 @@ nsStorageTransport::nsReadRequest::OnStopRequest(nsIRequest *aRequest,
                                                  nsISupports *aContext,
                                                  nsresult aStatus)
 {
-    NS_NOTREACHED("nsStorageTransport::nsReadRequest::OnStopRequest");
-    return NS_ERROR_FAILURE;
+    NS_ASSERTION(mListener, "no listener");
+    (void) mListener->OnStopRequest(aRequest, aContext, aStatus);
+    // OnStopRequest completed, so listeners are no longer needed. 
+    mListener = 0;
+    mListenerContext = 0;
+    mListenerProxy = 0;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
