@@ -725,6 +725,9 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     return rv;
   }
 
+  // Store the security info for future use with wyciwyg channels.
+  aChannel->GetSecurityInfo(getter_AddRefs(mSecurityInfo));
+
   // Stash away a pointer to our channel (we need this for cookies)
   mChannel = aChannel;
 
@@ -2015,6 +2018,17 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURI)
     return NS_OK;
   }
 
+  nsCOMPtr<nsIDocument> callingDoc =
+    do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
+
+  // Grab a reference to the calling documents security info (if any)
+  // as it may be lost in the call to Reset().
+  nsCOMPtr<nsISupports> securityInfo;
+
+  if (callingDoc) {
+    securityInfo = callingDoc->GetSecurityInfo();
+  }
+
   nsCOMPtr<nsIDocShell> docshell = do_QueryReferent(mDocumentContainer);
   nsresult rv = NS_OK;
 
@@ -2119,6 +2133,10 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURI)
     mChildren.AppendObject(root);
     mRootContent = root;
   }
+
+  // Store the security info of the caller now that we're done
+  // resetting the document.
+  mSecurityInfo = securityInfo;
 
   mParser = do_CreateInstance(kCParserCID, &rv);
 
@@ -3499,11 +3517,14 @@ nsHTMLDocument::CreateAndAddWyciwygChannel(void)
   nsCOMPtr<nsIChannel> channel;
   // Create a wyciwyg Channel
   rv = NS_NewChannel(getter_AddRefs(channel), wcwgURI);
-  if (NS_SUCCEEDED(rv) && channel) {
-    mWyciwygChannel = do_QueryInterface(channel);
-    // Inherit load flags from the original document's channel
-    channel->SetLoadFlags(mLoadFlags);
-  }
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mWyciwygChannel = do_QueryInterface(channel);
+
+  mWyciwygChannel->SetSecurityInfo(mSecurityInfo);
+
+  // Inherit load flags from the original document's channel
+  channel->SetLoadFlags(mLoadFlags);
 
   nsCOMPtr<nsILoadGroup> loadGroup = GetDocumentLoadGroup();
 

@@ -57,4 +57,9 @@ interface nsIWyciwygChannel : nsIChannel
      * Close the cache entry; subsequent writes have undefined behavior.
      */
     void closeCacheEntry(in nsresult reason);
+
+    /**
+     * Set the wyciwyg channels security info
+     */
+    void setSecurityInfo(in nsISupports aSecurityInfo);
 };
