@@ -3029,7 +3029,14 @@ nsBrowserStatusHandler.prototype =
               location = locationURI.spec;
             } catch (exception) {}
         
-          setTimeout(function(loc, aloc) { gURLBar.value = loc; SetPageProxyState("valid", aloc);}, 0, location, aLocation);
+          setTimeout(function(loc, aloc) { 
+                       gURLBar.value = loc; 
+                       if (gURLBar.value != loc) { 
+                         gURLBar.value = ""; // hack for bug 249322
+                         gURLBar.value = loc;
+                       }
+                       SetPageProxyState("valid", aloc);
+                     }, 0, location, aLocation);
         
           // Setting the urlBar value in some cases causes userTypedValue to
           // become set because of oninput, so reset it to its old value.
