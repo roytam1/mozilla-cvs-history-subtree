@@ -871,7 +871,7 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
 		  aRenderingContext.DrawString(compressedStr, compressedStrLen, dx, dy, mRect.width);
 
       // If cursor is in this frame the draw it
-      if (startPnt->GetOffset() > mContentOffset &&
+      if (startPnt->GetOffset() >= mContentOffset &&
           startPnt->GetOffset() < mContentOffset+mContentLength) { // Draw Cursor Only
         nsIFontMetrics * fm = aRenderingContext.GetFontMetrics();
 		    nsString textStr;
@@ -1045,7 +1045,7 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
 
     } else if (mContent == startContent) {
 
-      if (startPnt->GetOffset() > mContentOffset && 
+      if (startPnt->GetOffset() >= mContentOffset && 
           startPnt->GetOffset() < mContentOffset+mContentLength) {
         // Render the text Normal
         const nsStyleColor* color = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
