@@ -22,6 +22,11 @@
 DEPTH=..\..\..
 
 
-DIRS=vcard resources
+DIRS=	vcard \
+	resources \
+!if !defined(BUILD_PSM2)
+	smimestub \
+!endif
+	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

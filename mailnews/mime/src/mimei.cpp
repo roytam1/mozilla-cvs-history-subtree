@@ -26,10 +26,6 @@
  * 04/20/2000       IBM Corp.      OS/2 VisualAge build.
  */
 
-#ifdef MOZ_SECURITY
-#include HG01966
-#endif
-
 #include "nsCOMPtr.h"
 #include "mimeobj.h"	/*  MimeObject (abstract)							*/
 #include "mimecont.h"	/*   |--- MimeContainer (abstract)					*/
@@ -42,9 +38,13 @@
 #include "mimemapl.h"	/*   |     |     |--- MimeMultipartAppleDouble		*/
 #include "mimesun.h"	/*   |     |     |--- MimeSunAttachment				*/
 #include "mimemsig.h"	/*   |     |     |--- MimeMultipartSigned (abstract)*/
+#ifdef ENABLE_SMIME
 #include "mimemcms.h" /*   |     |           |---MimeMultipartSignedCMS */
+#endif
 #include "mimecryp.h"	/*   |     |--- MimeEncrypted (abstract)			*/
+#ifdef ENABLE_SMIME
 #include "mimecms.h"	/*   |     |     |--- MimeEncryptedPKCS7			*/
+#endif
 
 #include "mimemsg.h"	/*   |     |--- MimeMessage							*/
 #include "mimeunty.h"	/*   |     |--- MimeUntypedText						*/
@@ -385,7 +385,7 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
         clazz = (MimeObjectClass *)&mimeMultipartParallelClass;
       else if (!nsCRT::strcasecmp(content_type+10,	"mixed"))
         clazz = (MimeObjectClass *)&mimeMultipartMixedClass;
-      
+#ifdef ENABLE_SMIME      
       else if (!nsCRT::strcasecmp(content_type+10,	"signed"))
       {
       /* Check that the "protocol" and "micalg" parameters are ones we
@@ -416,6 +416,7 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
         PR_FREEIF(micalg);
         PR_FREEIF(ct);
       } 
+#endif
       
       if (!clazz && !exact_match_p)
         /* Treat all unknown multipart subtypes as "multipart/mixed" */
@@ -450,12 +451,10 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
       !nsCRT::strcasecmp(content_type,			IMAGE_XBM3))
       clazz = (MimeObjectClass *)&mimeInlineImageClass;
     
-#ifdef MOZ_SECURITY
-    HG01555
-#endif
+#ifdef ENABLE_SMIME
     else if (!nsCRT::strcasecmp(content_type, APPLICATION_XPKCS7_MIME))
 	        clazz = (MimeObjectClass *)&mimeEncryptedCMSClass;
-
+#endif
     /* A few types which occur in the real world and which we would otherwise
     treat as non-text types (which would be bad) without this special-case...
     */
@@ -790,6 +789,7 @@ mime_imap_part_address(MimeObject *obj)
 	return imap_part;
 }
 
+#ifdef ENABLE_SMIME
 /* Asks whether the given object is one of the cryptographically signed
    or encrypted objects that we know about.  (MimeMessageClass uses this
    to decide if the headers need to be presented differently.)
@@ -825,7 +825,6 @@ mime_crypto_object_p(MimeHeaders *hdrs, PRBool clearsigned_counts)
   else
 	return PR_FALSE;
 }
-
 
 /* Whether the given object has written out the HTML version of its headers
    in such a way that it will have a "crypto stamp" next to the headers.  If
@@ -925,14 +924,121 @@ mime_set_crypto_stamp(MimeObject *obj, PRBool signed_p, PRBool encrypted_p)
 		  /* decrypt_p and write_html_p are incompatible. */
 		  PR_ASSERT(!obj->options->write_html_p);
 		  obj->options->state->decrypted_p = PR_TRUE;
-		}
+    }
 
-	  return;  /* continue up the tree?  I think that's not a good idea. */
-	}
+    return;  /* continue up the tree?  I think that's not a good idea. */
+  }
 
   if (obj->parent)
-	mime_set_crypto_stamp(obj->parent, signed_p, encrypted_p);
+    mime_set_crypto_stamp(obj->parent, signed_p, encrypted_p);
 }
+
+/* Given a part ID, looks through the MimeObject tree for a sub-part whose ID
+   number matches; if one is found, and if it represents a PKCS7-encrypted
+   object, returns information about the security status of that object.
+
+   `part' is not a URL -- it's of the form "1.3.5" and is interpreted relative
+   to the `obj' argument.
+
+   Returned values:
+
+     void **pkcs7_content_info_return
+          this is the SEC_PKCS7ContentInfo* of the object.
+
+     int32 *decode_error_return
+          this is the error code, if any, that the security library returned
+	      while trying to parse the PKCS7 data (if this is negative, then it
+		  probably means the message was corrupt in some way.)
+
+     int32 *verify_error_return
+          this is the error code, if any, that the security library returned
+  	      while trying to decrypt or verify or otherwise validate the data
+		  (if this is negative, it might mean the message was corrupt, or might
+		  mean the signature didn't match, or the cert was expired, or...)
+  */
+void
+mime_find_security_info_of_part(const char *part, MimeObject *obj,
+								nsICMSMessage **pkcs7_encrypted_content_info_return,
+								nsICMSMessage **pkcs7_signed_content_info_return,
+								char **sender_email_addr_return,
+								PRInt32 *decode_error_return,
+								PRInt32 *verify_error_return)
+{
+  obj = mime_address_to_part(part, obj);
+
+  *pkcs7_encrypted_content_info_return = 0;
+  *pkcs7_signed_content_info_return = 0;
+  *decode_error_return = 0;
+  *verify_error_return = 0;
+  if (sender_email_addr_return)
+	*sender_email_addr_return = 0;
+
+  if (!obj)
+	return;
+
+  /* If someone asks for the security info of a message/rfc822 object,
+	 instead give them the security info of its child (the body of the
+	 message.)
+   */
+  if (mime_typep (obj, (MimeObjectClass *) &mimeMessageClass))
+	{
+	  MimeContainer *cont = (MimeContainer *) obj;
+	  if (cont->nchildren >= 1)
+		{
+		  PR_ASSERT(cont->nchildren == 1);
+		  obj = cont->children[0];
+		}
+	}
+
+
+  while (obj &&
+		 (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass) ||
+		  mime_typep(obj, (MimeObjectClass *) &mimeMultipartSignedCMSClass)))
+	{
+	  nsICMSMessage *ci = 0;
+	  PRInt32 decode_error = 0, verify_error = 0;
+      PRBool ci_is_encrypted = PR_FALSE;
+	  char *sender = 0;
+
+	  if (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass)) {
+		(((MimeEncryptedCMSClass *) (obj->clazz))
+		 ->get_content_info) (obj, &ci, &sender, &decode_error, &verify_error, &ci_is_encrypted);
+      } else if (mime_typep(obj,
+						  (MimeObjectClass *) &mimeMultipartSignedCMSClass)) {
+		(((MimeMultipartSignedCMSClass *) (obj->clazz))
+		 ->get_content_info) (obj, &ci, &sender, &decode_error, &verify_error, &ci_is_encrypted);
+      }
+
+      if (ci) {
+        if (ci_is_encrypted) {
+            *pkcs7_encrypted_content_info_return = ci;
+        } else {
+            *pkcs7_signed_content_info_return = ci;
+        }
+      }
+
+      if (sender_email_addr_return)
+		*sender_email_addr_return = sender;
+	  else
+		PR_FREEIF(sender);
+
+	  if (*decode_error_return >= 0)
+		*decode_error_return = decode_error;
+
+	  if (*verify_error_return >= 0)
+		*verify_error_return = verify_error;
+
+
+	  PR_ASSERT(mime_typep(obj, (MimeObjectClass *) &mimeContainerClass) &&
+				((MimeContainer *) obj)->nchildren <= 1);
+
+	  obj = ((((MimeContainer *) obj)->nchildren > 0)
+			 ? ((MimeContainer *) obj)->children[0]
+			 : 0);
+	}
+}
+
+#endif // ENABLE_SMIME
 
 /* Puts a part-number into a URL.  If append_p is true, then the part number
    is appended to any existing part-number already in that URL; otherwise,
@@ -1201,111 +1307,6 @@ mime_find_suggested_name_of_part(const char *part, MimeObject *obj)
 	}
 
   return result;
-}
-
-/* Given a part ID, looks through the MimeObject tree for a sub-part whose ID
-   number matches; if one is found, and if it represents a PKCS7-encrypted
-   object, returns information about the security status of that object.
-
-   `part' is not a URL -- it's of the form "1.3.5" and is interpreted relative
-   to the `obj' argument.
-
-   Returned values:
-
-     void **pkcs7_content_info_return
-          this is the SEC_PKCS7ContentInfo* of the object.
-
-     int32 *decode_error_return
-          this is the error code, if any, that the security library returned
-	      while trying to parse the PKCS7 data (if this is negative, then it
-		  probably means the message was corrupt in some way.)
-
-     int32 *verify_error_return
-          this is the error code, if any, that the security library returned
-  	      while trying to decrypt or verify or otherwise validate the data
-		  (if this is negative, it might mean the message was corrupt, or might
-		  mean the signature didn't match, or the cert was expired, or...)
-  */
-void
-mime_find_security_info_of_part(const char *part, MimeObject *obj,
-								nsICMSMessage **pkcs7_encrypted_content_info_return,
-								nsICMSMessage **pkcs7_signed_content_info_return,
-								char **sender_email_addr_return,
-								PRInt32 *decode_error_return,
-								PRInt32 *verify_error_return)
-{
-  obj = mime_address_to_part(part, obj);
-
-  *pkcs7_encrypted_content_info_return = 0;
-  *pkcs7_signed_content_info_return = 0;
-  *decode_error_return = 0;
-  *verify_error_return = 0;
-  if (sender_email_addr_return)
-	*sender_email_addr_return = 0;
-
-  if (!obj)
-	return;
-
-  /* If someone asks for the security info of a message/rfc822 object,
-	 instead give them the security info of its child (the body of the
-	 message.)
-   */
-  if (mime_typep (obj, (MimeObjectClass *) &mimeMessageClass))
-	{
-	  MimeContainer *cont = (MimeContainer *) obj;
-	  if (cont->nchildren >= 1)
-		{
-		  PR_ASSERT(cont->nchildren == 1);
-		  obj = cont->children[0];
-		}
-	}
-
-
-  while (obj &&
-		 (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass) ||
-		  mime_typep(obj, (MimeObjectClass *) &mimeMultipartSignedCMSClass)))
-	{
-	  nsICMSMessage *ci = 0;
-	  PRInt32 decode_error = 0, verify_error = 0;
-      PRBool ci_is_encrypted = PR_FALSE;
-	  char *sender = 0;
-
-	  if (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass)) {
-		(((MimeEncryptedCMSClass *) (obj->clazz))
-		 ->get_content_info) (obj, &ci, &sender, &decode_error, &verify_error, &ci_is_encrypted);
-      } else if (mime_typep(obj,
-						  (MimeObjectClass *) &mimeMultipartSignedCMSClass)) {
-		(((MimeMultipartSignedCMSClass *) (obj->clazz))
-		 ->get_content_info) (obj, &ci, &sender, &decode_error, &verify_error, &ci_is_encrypted);
-      }
-
-      if (ci) {
-        if (ci_is_encrypted) {
-            *pkcs7_encrypted_content_info_return = ci;
-        } else {
-            *pkcs7_signed_content_info_return = ci;
-        }
-      }
-
-      if (sender_email_addr_return)
-		*sender_email_addr_return = sender;
-	  else
-		PR_FREEIF(sender);
-
-	  if (*decode_error_return >= 0)
-		*decode_error_return = decode_error;
-
-	  if (*verify_error_return >= 0)
-		*verify_error_return = verify_error;
-
-
-	  PR_ASSERT(mime_typep(obj, (MimeObjectClass *) &mimeContainerClass) &&
-				((MimeContainer *) obj)->nchildren <= 1);
-
-	  obj = ((((MimeContainer *) obj)->nchildren > 0)
-			 ? ((MimeContainer *) obj)->children[0]
-			 : 0);
-	}
 }
 
 /* Parse the various "?" options off the URL and into the options struct.

@@ -81,6 +81,10 @@ LIBRARY_NAME=mime_s
 
 DEFINES= -DEBUG_rhp
 
+!if defined(BUILD_PSM2)
+DEFINES = -DENABLE_SMIME $(DEFINES)
+!endif
+
 LCFLAGS =		   \
         $(LCFLAGS) \
         $(DEFINES) \
@@ -131,8 +135,10 @@ OBJS=											\
 # XP-COM BRIDGES
 		.\$(OBJDIR)\comi18n.obj				\
 		.\$(OBJDIR)\mimecryp.obj		\
+!if defined(BUILD_PSM2)
 		.\$(OBJDIR)\mimecms.obj			\
 		.\$(OBJDIR)\mimemcms.obj		\
+!endif
 		$(NULL)
 
 
