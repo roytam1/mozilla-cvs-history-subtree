@@ -1516,7 +1516,7 @@ nsBulletFrame::GetBaseURI(nsIURI **aURI)
   else {
     nsCOMPtr<nsIDocument> doc;
     rv = mContent->GetDocument(*getter_AddRefs(doc));
-    if (NS_SUCCEEDED(rv)) {
+    if (NS_SUCCEEDED(rv) && doc) {
       doc->GetBaseURL(*getter_AddRefs(baseURI));
     }
   }
