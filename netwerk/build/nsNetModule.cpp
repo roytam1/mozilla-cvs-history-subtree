@@ -46,6 +46,60 @@
 #include "nsProtocolProxyService.h"
 
 ///////////////////////////////////////////////////////////////////////////////
+
+#include "nsStreamConverterService.h"
+
+///////////////////////////////////////////////////////////////////////////////
+
+#include "nsINetDataCache.h"
+#include "nsINetDataCacheManager.h"
+#include "nsMemCacheCID.h"
+#include "nsMemCache.h"
+#include "nsNetDiskCache.h"
+#include "nsNetDiskCacheCID.h"
+#include "nsCacheManager.h"
+
+// Factory method to create a new nsMemCache instance.  Used
+// by nsNetDataCacheModule
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMemCache, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNetDiskCache, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCacheManager, Init)
+
+///////////////////////////////////////////////////////////////////////////////
+
+#include "nsMIMEService.h"
+#include "nsXMLMIMEDataSource.h"
+#include "nsMIMEInfoImpl.h"
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMIMEInfoImpl);
+
+///////////////////////////////////////////////////////////////////////////////
+
+#include "nsIHTTPProtocolHandler.h"
+#include "nsHTTPHandler.h"
+#include "nsHTTPSHandler.h"
+
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHTTPHandler, Init);
+//NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTTPSHandler);
+
+#define NS_HTTPS_HANDLER_FACTORY_CID { 0xd2771480, 0xcac4, 0x11d3, { 0x8c, 0xaf, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74 } }
+
+///////////////////////////////////////////////////////////////////////////////
+
+#include "nsFileChannel.h"
+#include "nsFileProtocolHandler.h"
+#include "nsDataHandler.h"
+#include "nsJARProtocolHandler.h"
+#include "nsResProtocolHandler.h"
+
+#include "nsAboutProtocolHandler.h"
+#include "nsAboutBlank.h"
+#include "nsAboutBloat.h"
+#include "nsAboutCredits.h"
+#include "mzAboutMozilla.h"
+#include "nsKeywordProtocolHandler.h"
+
+///////////////////////////////////////////////////////////////////////////////
 // Module implementation for the net library
 
 static nsModuleComponentInfo gNetModuleInfo[] = {
@@ -93,12 +147,6 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_STREAMIOCHANNEL_CID,
       NS_STREAMIOCHANNEL_PROGID,
       nsStreamIOChannel::Create },
-#if 0
-    { NS_LOCALFILECHANNEL_CLASSNAME,
-      NS_LOCALFILECHANNEL_CID,
-      NS_LOCALFILECHANNEL_PROGID,
-      nsLocalFileChannel::Create }, 
-#endif
     { "Unichar Stream Loader", 
       NS_STREAMLOADER_CID,
       "component://netscape/network/stream-loader",
@@ -150,7 +198,111 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
     { "Protocol Proxy Service",
       NS_PROTOCOLPROXYSERVICE_CID,
       "component::/netscape/network/protocol-proxy-service",
-      nsProtocolProxyService::Create }
+      nsProtocolProxyService::Create },
+
+    // from netwerk/streamconv:
+    { "Stream Converter Service", 
+      NS_STREAMCONVERTERSERVICE_CID,
+      "component:||netscape|streamConverters", 
+      nsStreamConverterService::Create },
+
+    // from netwerk/cache:
+    { "Memory Cache", NS_MEM_CACHE_FACTORY_CID, NS_NETWORK_MEMORY_CACHE_PROGID, nsMemCacheConstructor },
+    { "File Cache",   NS_NETDISKCACHE_CID,      NS_NETWORK_FILE_CACHE_PROGID,   nsNetDiskCacheConstructor },
+    { "Cache Manager",NS_CACHE_MANAGER_CID,     NS_NETWORK_CACHE_MANAGER_PROGID,nsCacheManagerConstructor },
+
+    // from netwerk/mime:
+    { "The MIME mapping service", 
+      NS_MIMESERVICE_CID,
+      "component:||netscape|mime",
+      nsMIMEService::Create
+    },
+    { "xml mime datasource", 
+      NS_XMLMIMEDATASOURCE_CID,
+      NS_XMLMIMEDATASOURCE_PROGID,
+      nsXMLMIMEDataSource::Create
+    },
+    { "xml mime INFO", 
+      NS_MIMEINFO_CID,
+      NS_MIMEINFO_PROGID,
+      nsMIMEInfoImplConstructor
+    },
+
+    // from netwerk/protocol/file:
+    { "File Protocol Handler", 
+      NS_FILEPROTOCOLHANDLER_CID,  
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "file", 
+      nsFileProtocolHandler::Create
+    },
+    { NS_LOCALFILECHANNEL_CLASSNAME,
+      NS_LOCALFILECHANNEL_CID,  
+      NS_LOCALFILECHANNEL_PROGID, 
+      nsFileChannel::Create
+    },
+    
+    // from netwerk/protocol/http:
+    { "HTTP Handler",
+      NS_IHTTPHANDLER_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "http",
+      nsHTTPHandlerConstructor },
+    { "HTTPS Handler",
+      NS_HTTPS_HANDLER_FACTORY_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "https",
+      nsHTTPSHandler::Create },
+
+    // from netwerk/protocol/data:
+    { "Data Protocol Handler", 
+      NS_DATAHANDLER_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "data", 
+      nsDataHandler::Create},
+
+    // from netwerk/protocol/jar:
+    { "JAR Protocol Handler", 
+       NS_JARPROTOCOLHANDLER_CID,
+       NS_NETWORK_PROTOCOL_PROGID_PREFIX "jar", 
+       nsJARProtocolHandler::Create
+    },
+
+    // from netwerk/protocol/res:
+    { "The Resource Protocol Handler", 
+      NS_RESPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "resource",
+      nsResProtocolHandler::Create
+    },
+
+    // from netwerk/protocol/about:
+    { "About Protocol Handler", 
+      NS_ABOUTPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "about", 
+      nsAboutProtocolHandler::Create
+    },
+    { "about:blank", 
+      NS_ABOUT_BLANK_MODULE_CID,
+      NS_ABOUT_MODULE_PROGID_PREFIX "blank", 
+      nsAboutBlank::Create
+    },
+    { "about:bloat", 
+      NS_ABOUT_BLOAT_MODULE_CID,
+      NS_ABOUT_MODULE_PROGID_PREFIX "bloat", 
+      nsAboutBloat::Create
+    },
+    { "about:credits",
+      NS_ABOUT_CREDITS_MODULE_CID,
+      NS_ABOUT_MODULE_PROGID_PREFIX "credits",
+      nsAboutCredits::Create
+    },
+    { "about:mozilla",
+      MZ_ABOUT_MOZILLA_MODULE_CID,
+      NS_ABOUT_MODULE_PROGID_PREFIX "mozilla",
+      mzAboutMozilla::Create
+    },
+
+    // from netwerk/protocol/keyword:
+    { "The Keyword Protocol Handler", 
+      NS_KEYWORDPROTOCOLHANDLER_CID,
+      NS_NETWORK_PROTOCOL_PROGID_PREFIX "keyword",
+      nsKeywordProtocolHandler::Create
+    }
 };
 
-NS_IMPL_NSGETMODULE("net", gNetModuleInfo)
+NS_IMPL_NSGETMODULE("necko core and primary protocols", gNetModuleInfo)

@@ -19,23 +19,14 @@
 
 DEPTH = ..\..\..
 
-MODULE = streamconv
+MODULE = necko
 
-IS_COMPONENT=1
-MAKE_OBJ_TYPE=DLL
-DLLNAME=stremcnv
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-
-LLIBS= $(LLIBS) \
-        $(DIST)\lib\xpcom.lib \
-        $(LIBNSPR) \
-        $(NULL)
+LIBRARY_NAME=nkconv_s
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 
-CPP_OBJS =                                         \
-        .\$(OBJDIR)\nsStreamConverterService.obj          \
-        .\$(OBJDIR)\nsStreamConvServiceFactory.obj           \
+CPP_OBJS =                                       \
+        .\$(OBJDIR)\nsStreamConverterService.obj \
         $(NULL)
 
 LOCAL_INCLUDES=-I.
@@ -48,8 +39,9 @@ INCS = $(INCS)                  \
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-    $(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
+install:: $(LIBRARY)
+    $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 
 clobber::
         rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+
