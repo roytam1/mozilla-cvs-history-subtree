@@ -58,6 +58,9 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #include <poll.h>
 #endif
 
+#if !defined(FOPEN_MAX)
+#define FOPEN_MAX 20
+#endif
 
 #ifdef _WINDOWS
 #define NSLDAPI_INVALID_OS_SOCKET( s )	((s) == INVALID_SOCKET)
@@ -298,7 +301,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #else
 		if (errno != EINPROGRESS) {
 #endif /* _WINDOWS */
-#ifdef LDAP_DEBUG
+#if defined(LDAP_DEBUG) && !defined(WINCE)
 			if ( ldap_debug & LDAP_DEBUG_TRACE ) {
 				perror("connect");
 			}
@@ -369,7 +372,11 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #ifdef _WINDOWS
 	if ((n = select(sockfd +1, &rset, &wset, &eset,
 		(msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) ? &tval : NULL)) == 0) {
+#if !defined(WINCE)
 		errno = WSAETIMEDOUT;
+#else
+        wince_set_errno(WSAETIMEDOUT);
+#endif
 		return (-1);
 	}
 	/* if wset is set, the connect worked */
@@ -388,7 +395,9 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 
 	/* failure on select call */
 	if (n == SOCKET_ERROR) {
+#if !defined(WINCE)
 		perror("select error: SOCKET_ERROR returned");
+#endif
 		return (-1);		
 	}
 #else
@@ -420,7 +429,11 @@ done:
 #endif /* _WINDOWS */
 
 	if (error) {
+#if !defined(WINCE)
 		errno = error;
+#else
+        wince_set_errno(error);
+#endif
 		return (-1);
 	}
 
@@ -702,7 +715,7 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 					}
 				}
 
-#ifdef LDAP_DEBUG
+#if defined(LDAP_DEBUG) && !defined(WINCE)
 				if ( ldap_debug & LDAP_DEBUG_TRACE ) {
 					perror( (char *)inet_ntoa( sin.sin_addr ));
 				}

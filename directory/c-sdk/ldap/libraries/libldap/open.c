@@ -163,7 +163,11 @@ get_errno( void )
 static void
 set_errno( int Errno )
 {
+#if !defined(WINCE)
 	errno = Errno;
+#else
+    wince_set_errno(Errno);
+#endif
 }
 
 #ifdef USE_WINDOWS_TLS
@@ -511,7 +515,11 @@ ldap_init( const char *defhost, int defport )
 		    "ldap_init: port %d is invalid (port numbers must range from 1 to %d)\n",
 		    defport, LDAP_PORT_MAX, 0 );
 #if !defined( macintosh ) && !defined( DOS ) && !defined( BEOS )
+#if !defined(WINCE)
 	    errno = EINVAL;
+#else
+        wince_set_errno(EINVAL);
+#endif
 #endif
 	    return( NULL );
 	}

@@ -35,6 +35,10 @@ static char copyright[] = "@(#) Copyright (c) 1993 Regents of the University of 
 
 #include "ldap-int.h"
 
+#if !defined(BUFSIZ)
+#define BUFSIZ 1024
+#endif
+
 char *
 LDAP_CALL
 ldap_friendly_name( char *filename, char *name, FriendlyMap *map )

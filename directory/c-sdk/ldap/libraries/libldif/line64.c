@@ -31,6 +31,9 @@
 #endif
 #ifdef _WIN32
 #include <windows.h>
+#if !defined(BUFSIZ)
+#define BUFSIZ 1024
+#endif
 #elif !defined( macintosh )
 #include <sys/socket.h>
 #endif

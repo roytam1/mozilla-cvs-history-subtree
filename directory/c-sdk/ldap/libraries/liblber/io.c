@@ -365,7 +365,7 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 			lber_bprint( ber->ber_rwptr, towrite );
 	}
 #endif
-#if !defined(macintosh) && !defined(DOS)
+#if !defined(macintosh) && !defined(DOS) && !defined(WINCE)
 	if ( sb->sb_options & (LBER_SOCKBUF_OPT_TO_FILE | LBER_SOCKBUF_OPT_TO_FILE_ONLY) ) {
 		rc = write( sb->sb_copyfd, ber->ber_buf, towrite );
 		if ( sb->sb_options & LBER_SOCKBUF_OPT_TO_FILE_ONLY ) {
@@ -388,7 +388,11 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 			/* fake error if write was not atomic */
 			if (rc < towrite) {
 #if !defined( macintosh ) && !defined( DOS )
+#if !defined(WINCE)
 			    errno = EMSGSIZE;  /* For Win32, see portable.h */
+#else
+                wince_set_errno(EMSGSIZE);
+#endif
 #endif
 			    return( -1 );
 			}

@@ -484,6 +484,7 @@ struct ldap {
 
 /* get/set errno */
 #ifndef macintosh
+#if !defined(WINCE)
 #define LDAP_SET_ERRNO( ld, e ) \
 	if ( (ld)->ld_set_errno_fn != NULL ) { \
 		(ld)->ld_set_errno_fn( e ); \
@@ -493,6 +494,17 @@ struct ldap {
 #define LDAP_GET_ERRNO( ld ) \
 	(((ld)->ld_get_errno_fn != NULL) ? \
 		(ld)->ld_get_errno_fn() : errno)
+#else
+#define LDAP_SET_ERRNO( ld, e ) \
+	if ( (ld)->ld_set_errno_fn != NULL ) { \
+		(ld)->ld_set_errno_fn( e ); \
+	} else { \
+		wince_set_errno(e); \
+	}
+#define LDAP_GET_ERRNO( ld ) \
+	(((ld)->ld_get_errno_fn != NULL) ? \
+		(ld)->ld_get_errno_fn() : errno)
+#endif
 #else /* macintosh */
 #define LDAP_SET_ERRNO( ld, e ) \
 	if ( (ld)->ld_set_errno_fn != NULL ) { \
