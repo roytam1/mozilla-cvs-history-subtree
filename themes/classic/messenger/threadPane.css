@@ -141,19 +141,19 @@ treechildren:-moz-tree-image(flaggedCol, flagged) {
 
 treechildren:-moz-tree-image(typeCol) {
   margin-right: 2px;
-  list-style-image: url("chrome://messenger/skin/icons/message-mail.gif");
+  list-style-image: url("chrome://messenger/skin/icons/mail-check.gif");
 }
 
 treechildren:-moz-tree-image(typeCol, new) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-new.gif");
+  list-style-image: url("chrome://messenger/skin/icons/mail-uncheck.gif");
 }
 
 treechildren:-moz-tree-image(typeCol, attach) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-attach.gif");
+  list-style-image: url("chrome://messenger/skin/icons/mail-attach.gif");
 }
 
 treechildren:-moz-tree-image(typeCol, hasimage) {
-  list-style-image: url("chrome://messenger/skin/icons/message-mail-hasimage.gif");
+  list-style-image: url("chrome://messenger/skin/icons/mail-disk.gif");
 }
 
 treechildren:-moz-tree-image(typeCol, imapdeleted) {
