@@ -29,7 +29,8 @@ publish:
 	echo "%define buildroot `pwd`/$(NAME)-root" >>$(NAME).spec
 	echo "%define _topdir `pwd`" >>$(NAME).spec
 	cat ../linux/$(NAME).spec >>$(NAME).spec
-	rpm -ba $(NAME).spec
+	(export LD_LIBRARY_PATH=$(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/lib;
+	rpm -ba $(NAME).spec)
 
 clean:
 	rm -rf SOURCES SRPMS RPMS BUILD
