@@ -23,8 +23,6 @@
 
 #include "nsImageContainer.h"
 
-#include "nsUnitConverters.h"
-
 NS_IMPL_ISUPPORTS1(nsImageContainer, nsIImageContainer)
 
 nsImageContainer::nsImageContainer()
@@ -43,8 +41,8 @@ nsImageContainer::~nsImageContainer()
 
 
 
-/* void init (in gfx_dimension aWidth, in gfx_dimension aHeight); */
-NS_IMETHODIMP nsImageContainer::Init(gfx_dimension aWidth, gfx_dimension aHeight)
+/* void init (in nscoord aWidth, in nscoord aHeight); */
+NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight)
 {
   if (aWidth <= 0 || aHeight <= 0) {
     printf("error - negative image size\n");
@@ -56,15 +54,15 @@ NS_IMETHODIMP nsImageContainer::Init(gfx_dimension aWidth, gfx_dimension aHeight
   return NS_OK;
 }
 
-/* readonly attribute gfx_dimension width; */
-NS_IMETHODIMP nsImageContainer::GetWidth(gfx_dimension *aWidth)
+/* readonly attribute nscoord width; */
+NS_IMETHODIMP nsImageContainer::GetWidth(nscoord *aWidth)
 {
   *aWidth = mSize.width;
   return NS_OK;
 }
 
-/* readonly attribute gfx_dimension height; */
-NS_IMETHODIMP nsImageContainer::GetHeight(gfx_dimension *aHeight)
+/* readonly attribute nscoord height; */
+NS_IMETHODIMP nsImageContainer::GetHeight(nscoord *aHeight)
 {
   *aHeight = mSize.height;
   return NS_OK;

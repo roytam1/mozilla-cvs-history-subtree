@@ -25,6 +25,12 @@
 #include "gfxtypes.idl"
 #include "nsIGFXFormat.idl"
 
+[ptr] native nsRect(nsRect);
+
+%{C++
+#include "nsRect.h"
+%}
+
 /**
  * nsIImage interface
  *
@@ -47,37 +53,37 @@ interface nsIImageFrame : nsISupports
    *
    * @note The data of a new image is unspecified (Whats the word i'm looking for here?).
    */
-  void init(in gfx_coord aX,
-            in gfx_coord aY,
-            in gfx_dimension aWidth,
-            in gfx_dimension aHeight,
+  void init(in nscoord aX,
+            in nscoord aY,
+            in nscoord aWidth,
+            in nscoord aHeight,
             in gfx_format aFormat);
 
 
   /**
    * The x-offset of the image.
    */
-  readonly attribute gfx_coord x;
+  readonly attribute nscoord x;
 
   /**
    * The y-offset of the image.
    */
-  readonly attribute gfx_coord y;
+  readonly attribute nscoord y;
 
   /**
    * The width of the image.
    */
-  readonly attribute gfx_dimension width;
+  readonly attribute nscoord width;
 
   /**
    * The height of the image.
    */
-  readonly attribute gfx_dimension height;
+  readonly attribute nscoord height;
 
   /**
    * The rectangle this frame ocupies.
    */
-  [noscript] readonly attribute nsRect2 rect;
+  [noscript] readonly attribute nsRect rect;
 
 
   /**

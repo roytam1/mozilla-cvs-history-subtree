@@ -79,14 +79,6 @@ typedef long                gfx_format;
  */
 typedef float               gfx_gamma;
 
-/*! @verbatim */
-[ptr] native nsRect2(nsRect2);
-[ptr] native nsSize2(nsSize2);
-[ptr] native nsPoint2(nsPoint2);
 
-%{C++
- struct nsPoint2;
- struct nsSize2;
- struct nsRect2;
-%}
-/*! @endverbatim */
+
+typedef PRInt32             nscoord;

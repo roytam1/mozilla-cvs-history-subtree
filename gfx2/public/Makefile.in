@@ -39,11 +39,6 @@ XPIDLSRCS	= \
 
 EXPORTS		= \
 		gfxcompat.h \
-		nsMargin2.h \
-		nsPoint2.h \
-		nsRect2.h \
-		nsSize2.h \
-		nsUnitConverters.h \
 		$(NULL)
 
 

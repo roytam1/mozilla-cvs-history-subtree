@@ -30,7 +30,6 @@ DLL		    = $(OBJDIR)\$(LIBRARY_NAME).dll
 MAKE_OBJ_TYPE = DLL
 
 OBJS	= \
-		.\$(OBJDIR)\nsRect.obj \
 		.\$(OBJDIR)\nsImageContainer.obj \
 		.\$(OBJDIR)\nsImageFrame.obj \
 		.\$(OBJDIR)\nsGfxFactory.obj \
