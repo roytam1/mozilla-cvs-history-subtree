@@ -277,7 +277,7 @@ MBool txNodeSorter::getAttrAsAVT(Element* aSortElement,
     if (!aSortElement->getAttr(aAttrName, kNameSpaceID_None, attValue))
         return MB_FALSE;
 
-    mPs->processAttrValueTemplate(attValue, aContext, aResult);
+    mPs->processAttrValueTemplate(attValue, aSortElement, aResult);
     return MB_TRUE;
 }
 

@@ -257,7 +257,7 @@ public:
     void preserveSpace(String& names);
 
     void processAttrValueTemplate(const String& aAttValue,
-                                  Node* aContext,
+                                  Element* aContext,
                                   String& aResult);
 
     /**

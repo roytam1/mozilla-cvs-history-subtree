@@ -1212,7 +1212,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(nameAttr, aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
                 // Check name validity (must be valid QName and not xmlns)
                 if (!XMLUtils::isValidQName(name)) {
@@ -1239,7 +1239,8 @@ void XSLTProcessor::processAction(Node* aNode,
                 if (actionElement->getAttr(txXSLTAtoms::_namespace, kNameSpaceID_None,
                                            resultNs)) {
                     String nsURI;
-                    aPs->processAttrValueTemplate(resultNs, aNode, nsURI);
+                    aPs->processAttrValueTemplate(resultNs, actionElement,
+                                                  nsURI);
                     resultNsID = resultDoc->namespaceURIToID(nsURI);
                 }
                 else {
@@ -1373,7 +1374,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(nameAttr, aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
                 // Check name validity (must be valid QName and not xmlns)
                 if (!XMLUtils::isValidQName(name)) {
@@ -1392,7 +1393,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 PRInt32 resultNsID;
                 if (actionElement->getAttr(txXSLTAtoms::_namespace, kNameSpaceID_None, resultNs)) {
                     String nsURI;
-                    aPs->processAttrValueTemplate(resultNs, aNode, nsURI);
+                    aPs->processAttrValueTemplate(resultNs, actionElement, nsURI);
                     if (nsURI.isEmpty())
                         resultNsID = kNameSpaceID_None;
                     else
@@ -1554,7 +1555,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(nameAttr, aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
                 // Check name validity (must be valid NCName and a PITarget)
                 // XXX Need to check for NCName and PITarget
@@ -1670,7 +1671,7 @@ void XSLTProcessor::processAction(Node* aNode,
                             continue;
                         // Process Attribute Value Templates
                         String value;
-                        aPs->processAttrValueTemplate(attr->getValue(), aNode, value);
+                        aPs->processAttrValueTemplate(attr->getValue(), actionElement, value);
                         NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
                         mResultHandler->attribute(attr->getName(), attr->getNamespaceID(), value);
                     }

@@ -584,29 +584,11 @@ MBool ProcessorState::isXSLStripSpaceAllowed(Node* node) {
 }
 
 void ProcessorState::processAttrValueTemplate(const String& aAttValue,
-                                              Node* aContext,
+                                              Element* aContext,
                                               String& aResult)
 {
     aResult.clear();
-    Element* xpathParse = 0;
-    switch (aContext->getNodeType()) {
-        case Node::ELEMENT_NODE:
-            xpathParse = (Element*)aContext;
-            break;
-        case Node::ATTRIBUTE_NODE:
-        case Node::TEXT_NODE:
-        case Node::CDATA_SECTION_NODE:
-        case Node::COMMENT_NODE:
-            xpathParse = (Element*)(aContext->getXPathParent());
-            break;
-        case Node::DOCUMENT_NODE:
-            xpathParse = ((Document*)aContext)->getDocumentElement();
-            break;
-        default:
-            NS_ASSERTION(0, "unexpected Nodetype for aContext");
-            return;
-    }
-    txPSParseContext pContext(this, xpathParse);
+    txPSParseContext pContext(this, aContext);
     AttributeValueTemplate* avt =
         exprParser.createAttributeValueTemplate(aAttValue, &pContext);
 
