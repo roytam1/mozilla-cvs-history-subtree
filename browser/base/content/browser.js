@@ -1102,14 +1102,6 @@ function Startup()
     document.documentElement.setAttribute("width", defaultWidth);
     document.documentElement.setAttribute("height", defaultHeight);
   }
-  
-  // BiDi UI
-  if (isBidiEnabled()) {
-    document.getElementById("documentDirection-separator").hidden = false;
-    document.getElementById("documentDirection-swap").hidden = false;
-    document.getElementById("textfieldDirection-separator").hidden = false;
-    document.getElementById("textfieldDirection-swap").hidden = false;
-  }
 
   setTimeout(delayedStartup, 0);
 }
@@ -1188,9 +1180,7 @@ function delayedStartup()
   os.addObserver(gMissingPluginInstaller, "missing-plugin", false);
 
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
-                              .getService(Components.interfaces.nsIPrefService);
-  gPrefService = gPrefService.getBranch(null);
-
+                           .getService(Components.interfaces.nsIPrefBranch);
   BrowserOffline.init();
   
   if (gIsLoadingBlank)
@@ -1353,8 +1343,19 @@ function delayedStartup()
   }
 #endif
 
-  var updatePanel = document.getElementById("statusbar-updates");
-  updatePanel.init();
+  var updatePanel = document.getElementById("updates");
+  try {
+    updatePanel.init();
+  }
+  catch (e) { }
+
+  // BiDi UI
+  if (isBidiEnabled()) {
+    document.getElementById("documentDirection-separator").hidden = false;
+    document.getElementById("documentDirection-swap").hidden = false;
+    document.getElementById("textfieldDirection-separator").hidden = false;
+    document.getElementById("textfieldDirection-swap").hidden = false;
+  }
 }
 
 function Shutdown()

@@ -22,6 +22,7 @@
 <!-- Context Menu Options: Extension -->
 <!ENTITY cmd.options.label                "Options">
 <!ENTITY cmd.options.accesskey            "O">
+<!ENTITY cmd.options.tooltip              "Set Options for the selected Extension">
 <!ENTITY cmd.optionsUnix.label            "Preferences">
 <!ENTITY cmd.optionsUnix.accesskey        "r">
 <!ENTITY cmd.homepage.label               "Visit Home Page">

@@ -13,7 +13,7 @@ toolbar[printpreview="true"] {
   -moz-user-focus: none;
 }
 
-#statusbar-updates {
+toolbarbutton[type="updates"] {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateStatusbarNotification");
 }
 

@@ -736,18 +736,22 @@ statusbarpanel#statusbar-display {
   list-style-image: none;
   min-width: 20px;
   -moz-box-direction: reverse;
+  display: none;
 }
 
 #security-button[level="high"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
+  display: -moz-box;
 }
 
 #security-button[level="low"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
+  display: -moz-box;
 }
 
 #security-button[level="broken"] {
   list-style-image: url("chrome://browser/skin/Security-broken.png");
+  display: -moz-box;
 }
 
 /* XXXsw prevent margins of a value-less label from shifting the image */
@@ -758,28 +762,34 @@ statusbarpanel#statusbar-display {
 #page-report-button {
   list-style-image: none;
   width: 20px;
+  display: none;
 }
 
 #page-report-button[blocked] {
   list-style-image: url("chrome://browser/skin/Info.png");
+  display: -moz-box;
 }
 
 #page-theme-button {
   list-style-image: none;
   width: 20px;
+  display: none;
 }
 
 #page-theme-button[themes] {
   list-style-image: url("chrome://browser/skin/page-themes.png");
+  display: -moz-box;
 }
 
 #livemark-button {
   list-style-image: none;
   width: 32px;
+  display: none;
 }
 
 #livemark-button[livemarks] {
   list-style-image: url("chrome://browser/skin/page-livemarks.png");
+  display: -moz-box;
 }
 
 /* ::::: throbber ::::: */

@@ -8,4 +8,4 @@
 <!ENTITY  version               "@APP_VERSION@">
 <!ENTITY  vendorShortName       "Mozilla">
 
-<!ENTITY  releaseURL            "http://www.mozilla.org/products/firefox/releases/0.9.html">
+<!ENTITY  releaseURL            "http://www.mozilla.org/products/firefox/releases/0.10.html">

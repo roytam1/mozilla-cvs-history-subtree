@@ -17,6 +17,8 @@ var gObserverIndex    = -1;
 const PREF_APP_ID                           = "app.id";
 const PREF_EXTENSIONS_GETMORETHEMESURL      = "extensions.getMoreThemesURL";
 const PREF_EXTENSIONS_GETMOREEXTENSIONSURL  = "extensions.getMoreExtensionsURL";
+const PREF_EXTENSIONS_DSS_ENABLED           = "extensions.dss.enabled";
+const PREF_EXTENSIONS_DSS_SWITCHPENDING     = "extensions.dss.switchPending";
 const PREF_EM_LAST_SELECTED_SKIN            = "extensions.lastSelectedSkin";
 const PREF_GENERAL_SKINS_SELECTEDSKIN       = "general.skins.selectedSkin";
 
@@ -49,6 +51,19 @@ function flushDataSource()
   var rds = gExtensionManager.datasource.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
   if (rds)
     rds.Flush();
+}
+
+function setRestartMessage(aItem)
+{
+  var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                      .getService(Components.interfaces.nsIStringBundleService);
+  var extensionStrings = sbs.createBundle("chrome://mozapps/locale/extensions/extensions.properties");
+  var brandStrings = sbs.createBundle("chrome://global/locale/brand.properties");
+  var brandShortName = brandStrings.GetStringFromName("brandShortName");
+  var themeName = aItem.getAttribute("name");
+  var restartMessage = extensionStrings.formatStringFromName("dssSwitchAfterRestart", 
+                                                             [brandShortName], 1);
+  aItem.setAttribute("creator", restartMessage);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -99,6 +114,23 @@ function Startup()
     
     var useThemeButton = document.getElementById("useThemeButton");
     useThemeButton.hidden = false;
+
+    var optionsButton = document.getElementById("optionsButton");
+    optionsButton.hidden = true;
+    
+    var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                         .getService(Components.interfaces.nsIPrefBranch);
+    if (!pref.getBoolPref(PREF_EXTENSIONS_DSS_ENABLED) && 
+        pref.getBoolPref(PREF_EXTENSIONS_DSS_SWITCHPENDING)) {
+      var lastSelectedSkin = pref.getCharPref(PREF_EM_LAST_SELECTED_SKIN);
+      for (var i = 0; i < gExtensionsView.childNodes.length; ++i) {
+        var item = gExtensionsView.childNodes[i];
+        if (item.getAttribute("internalName") == lastSelectedSkin) {
+          setRestartMessage(item);
+          break;
+        }
+      }
+    }
   }
   
   // Restore the last-selected extension
@@ -239,7 +271,7 @@ XPInstallDownloadManager.prototype = {
       // gExtensionManager.addDownload(displayName, url, iconURL, type);
       var item = Components.classes["@mozilla.org/updates/item;1"]
                            .createInstance(Components.interfaces.nsIUpdateItem);
-      item.init(url, " ", "", "", displayName, -1, url, iconURL, "", "", type);
+      item.init(url, " ", "", "", displayName, -1, url, iconURL, "", type);
       items.push(item);
 
       // Advance the enumerator
@@ -644,13 +676,22 @@ var gExtensionsViewController = {
         return;
         
       pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, gCurrentTheme);
-      
       // Set this pref so the user can reset the theme in safe mode
       pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN, gCurrentTheme);
-      cr.selectSkin(gCurrentTheme, true);
-      cr.refreshSkins();
-
-
+      if (pref.getBoolPref(PREF_EXTENSIONS_DSS_ENABLED)) {
+        cr.selectSkin(gCurrentTheme, true);
+        cr.refreshSkins();
+      }
+      else {
+        // Theme change will happen on next startup, this flag tells
+        // the Theme Manager that it needs to show "This theme will
+        // be selected after a restart" text in the selected theme
+        // item.
+        pref.setBoolPref(PREF_EXTENSIONS_DSS_SWITCHPENDING, true);
+        // Update the view
+        setRestartMessage(aSelectedItem);
+      }
+      
       // disable the useThemeButton
       gExtensionsViewController.onCommandUpdate();
     },

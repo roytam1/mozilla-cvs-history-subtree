@@ -262,11 +262,15 @@
                 label="&cmd.update.label;" accesskey="&cmd.update.accesskey;" tooltiptext="&cmd.update.tooltip;"
                 command="cmd_update"/>
         <separator class="commandBarSeparator"/>              
+        <button id="optionsButton"
+                label="&cmd.options.label;" accesskey="&cmd.options.accesskey;" tooltiptext="&cmd.options.tooltip;"
+                command="cmd_options"/>
         <button id="useThemeButton" hidden="true"
                 label="&cmd.useTheme.label;" accesskey="&cmd.useTheme.accesskey;" tooltiptext="&cmd.useTheme.tooltip;"
                 command="cmd_useTheme"/>
       </hbox>
       <spacer flex="1"/>
+      <!-- XXXben - this is not accessible -->
       <label id="getMore" onclick="openURL(gGetMoreURL);"
              valuethemes="&getMoreThemes.label;"
              valueextensions="&getMoreExtensions.label;"

@@ -48,6 +48,8 @@
 #include "nsIObserverService.h"
 #include "nsIProfileChangeStatus.h"
 
+#include "nsIComponentRegistrar.h"
+
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsXULAppAPI.h"
@@ -90,7 +92,7 @@ nsXREDirProvider* gDirServiceProvider = nsnull;
 
 nsXREDirProvider::nsXREDirProvider() :
   mProfileNotified(PR_FALSE),
-  mRegisterExtraComponents(PR_TRUE)
+  mRegisterExtraComponents(PR_FALSE)
 {
   gDirServiceProvider = this;
 }
@@ -345,14 +347,10 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   return NS_OK;
 }
 
-void 
-nsXREDirProvider::RegisterExtraComponents()
-{
-  mRegisterExtraComponents = PR_TRUE;
-}
-
 static void
-LoadDirsIntoArray(nsIFile* aComponentsList, nsCOMArray<nsIFile>& aDirectories)
+ReadDirectoryList(nsIFile* aComponentsList, 
+                  nsCOMArray<nsIFile>& aDirectories,
+                  PRBool aRegister)
 {
   nsINIParser parser;
   nsCOMPtr<nsILocalFile> lf(do_QueryInterface(aComponentsList));
@@ -375,8 +373,35 @@ LoadDirsIntoArray(nsIFile* aComponentsList, nsCOMArray<nsIFile>& aDirectories)
         dir->SetRelativeDescriptor(lfParent, nsDependentCString(parserBuf));
         nsCOMPtr<nsIFile> dirAsFile(do_QueryInterface(dir));
         aDirectories.AppendObject(dirAsFile);
+        if (aRegister) {
+          nsCOMPtr<nsIComponentRegistrar> cr;
+          NS_GetComponentRegistrar(getter_AddRefs(cr));
+          
+          // I don't think we care about the result? Keep going...
+          cr->AutoRegister(dirAsFile);
+        }
       }
     }
+  }
+}
+
+void 
+nsXREDirProvider::RegisterExtraComponents()
+{
+  mRegisterExtraComponents = PR_TRUE;
+
+  nsCOMArray<nsIFile> directories;
+
+  nsCOMPtr<nsIFile> appFile;
+  mAppDir->Clone(getter_AddRefs(appFile));
+  appFile->AppendNative(nsDependentCString("components.ini"));
+  ReadDirectoryList(appFile, directories, PR_TRUE);
+
+  nsCOMPtr<nsIFile> profileFile;
+  if (mProfileDir) {
+    mProfileDir->Clone(getter_AddRefs(profileFile));
+    profileFile->AppendNative(nsDependentCString("components.ini"));
+    ReadDirectoryList(profileFile, directories, PR_TRUE);
   }
 }
 
@@ -393,13 +418,13 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
       nsCOMPtr<nsIFile> appFile;
       mAppDir->Clone(getter_AddRefs(appFile));
       appFile->AppendNative(nsDependentCString("components.ini"));
-      LoadDirsIntoArray(appFile, directories);
+      ReadDirectoryList(appFile, directories, PR_FALSE);
 
       nsCOMPtr<nsIFile> profileFile;
       if (mProfileDir) {
         mProfileDir->Clone(getter_AddRefs(profileFile));
         profileFile->AppendNative(nsDependentCString("components.ini"));
-        LoadDirsIntoArray(profileFile, directories);
+        ReadDirectoryList(profileFile, directories, PR_FALSE);
       }
 
       rv = NS_NewArrayEnumerator(aResult, directories);
@@ -411,13 +436,13 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
     nsCOMPtr<nsIFile> appFile;
     mAppDir->Clone(getter_AddRefs(appFile));
     appFile->AppendNative(nsDependentCString("defaults.ini"));
-    LoadDirsIntoArray(appFile, directories);
+    ReadDirectoryList(appFile, directories, PR_FALSE);
 
     nsCOMPtr<nsIFile> profileFile;
     if (mProfileDir) {
       mProfileDir->Clone(getter_AddRefs(profileFile));
       profileFile->AppendNative(nsDependentCString("defaults.ini"));
-      LoadDirsIntoArray(profileFile, directories);
+      ReadDirectoryList(profileFile, directories, PR_FALSE);
     }
 
     rv = NS_NewArrayEnumerator(aResult, directories);

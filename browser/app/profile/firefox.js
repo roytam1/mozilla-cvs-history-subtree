@@ -56,42 +56,57 @@ pref("app.id", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}");
 pref("app.version", 
 #expand __APP_VERSION__
 );
-pref("app.extensions.version", "0.9");
+pref("app.extensions.version", "0.10");
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
 
-pref("update.app.enabled", true);               // Whether or not app updates are enabled
-pref("update.app.url", "chrome://mozapps/locale/update/update.properties");
-pref("update.app.updatesAvailable", false);
-pref("update.app.updateVersion", "");
-pref("update.app.updateDescription", "");
-pref("update.app.updateURL", "");
-pref("update.extensions.enabled", true);
-pref("update.extensions.wsdl", "chrome://mozapps/locale/extensions/extensions.properties");
-pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
-pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
+// App-specific update preferences
+pref("app.update.enabled", true);               // Whether or not app updates are enabled
+pref("app.update.autoUpdateEnabled", true);     // Whether or not background app updates 
+                                                // are enabled
+pref("app.update.url", "chrome://mozapps/locale/update/update.properties");
+pref("app.update.updatesAvailable", false);
+pref("app.update.interval", 86400000);          // Check for updates to Firefox every day
+pref("app.update.lastUpdateDate", 0);           // UTC offset when last App update was 
+                                                // performed. 
+pref("app.update.performed", false);            // Whether or not an update has been 
+                                                // performed this session. 
 
-pref("update.extensions.autoUpdate", false);    // Automatically download and install 
+// Symmetric (can be overridden by individual extensions) update preferences.
+// e.g.
+//  extensions.{GUID}.update.enabled
+//  extensions.{GUID}.update.url
+//  extensions.{GUID}.update.interval
+//  .. etc ..
+//
+pref("extensions.update.enabled", true);
+pref("extensions.update.autoUpdateEnabled", true);
+pref("extensions.update.url", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.update.autoUpdate", false);    // Automatically download and install 
                                                 // updates to themes and extensions. 
                                                 // Does nothing at present. 
-pref("update.extensions.interval", 604800000);  // Check for updates to Extensions and 
+pref("extensions.update.interval", 604800000);  // Check for updates to Extensions and 
                                                 // Themes every week
-pref("update.extensions.lastUpdateDate", 0);    // UTC offset when last Extension/Theme 
+pref("extensions.update.lastUpdateDate", 0);    // UTC offset when last Extension/Theme 
                                                 // update was performed. 
-pref("update.extensions.severity.threshold", 5);// The number of pending Extension/Theme
+// Non-symmetric (not shared by extensions) extension-specific [update] preferences
+pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
+pref("extensions.update.severity.threshold", 5);// The number of pending Extension/Theme
                                                 // updates you can have before the update
                                                 // notifier goes from low->medium severity.
-pref("update.app.interval", 86400000);          // Check for updates to Firefox every day
-pref("update.app.lastUpdateDate", 0);           // UTC offset when last App update was 
-                                                // performed. 
+pref("extensions.update.count", 0);             // The number of extension/theme/etc 
+                                                // updates available
+pref("extensions.dss.enabled", false);          // Dynamic Skin Switching                                               
+pref("extensions.dss.switchPending", false);    // Non-dynamic switch pending after next
+                                                // restart.
+
+// General Update preferences
 pref("update.interval", 3600000);               // Check each of the above intervals 
                                                 // every 60 mins
 pref("update.showSlidingNotification", true);   // Windows-only slide-up taskbar 
                                                 // notification.
-pref("update.app.performed", false);            // Whether or not an update has been 
-                                                // performed this session. 
-
 // These prefs relate to the number and severity of updates available. This is a 
 // cache that the browser notification mechanism uses to determine if it should show
 // status bar UI if updates are detected and the app is shut down before installing
@@ -100,8 +115,6 @@ pref("update.app.performed", false);            // Whether or not an update has 
 // 1 = medium (numerous extension/theme updates), 
 // 2 = high   (new version of Firefox/Security patch)
 pref("update.severity", 0); 
-// The number of extension/theme/etc updates available
-pref("update.extensions.count", 0);
 
 pref("xpinstall.whitelist.add", "update.mozilla.org");
 
@@ -111,9 +124,7 @@ pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UT
 pref("general.useragent.locale", "chrome://global/locale/intl.properties");
 pref("general.useragent.contentlocale", "chrome://browser-region/locale/region.properties");
 pref("general.useragent.vendor", "Firefox");
-pref("general.useragent.vendorSub",
-#expand __APP_VERSION__
-);
+pref("general.useragent.vendorSub", "1.0 PR (NOT FINAL)");
 
 pref("general.smoothScroll", false);
 #ifdef XP_UNIX
