@@ -1,5 +1,5 @@
 google
-Amazon.com
-Dictionary.com
+amazondotcom
+dictionary
 eBay
-Yahoo
+yahoo
