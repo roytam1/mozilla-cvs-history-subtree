@@ -1623,22 +1623,25 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
           * Call from Java into JS. Just call the Java routine for checking
           * privileges.
           */
-          if (principalArray) {
-              /*
-               * Must check that the principals that signed the Java applet are
-               * a subset of the principals that signed this script.
-               */
-              void *javaPrincipals = JVM_GetJavaPrincipalsFromStackAsNSVector(pFrameToStartLooking);
+          if (pFrameToEndLooking != NULL)
+          {
+            if (principalArray) {
+                /*
+                 * Must check that the principals that signed the Java applet are
+                 * a subset of the principals that signed this script.
+                 */
+                void *javaPrincipals = JVM_GetJavaPrincipalsFromStackAsNSVector(pFrameToStartLooking);
 
-              if (!canExtendTrust(cx, javaPrincipals, principalArray)) {
-                  return JS_FALSE;
-              }
+                if (!canExtendTrust(cx, javaPrincipals, principalArray)) {
+                    return JS_FALSE;
+                }
+            }
+           /*
+            * XXX sudu: TODO: Setup the parameters representing a target.
+            */
+            return JVM_NSISecurityContextImplies(pFrameToStartLooking, targetStrings[target], NULL);
           }
-         /*
-          * XXX sudu: TODO: Setup the parameters representing a target.
-          */
-          return JVM_NSISecurityContextImplies(pFrameToStartLooking, targetStrings[target], NULL);
-#endif /* JAVA */
+#endif /* OJI */
         /* No annotation in stack */
         return JS_FALSE;
     }
