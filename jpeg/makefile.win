@@ -62,7 +62,7 @@ DEFFILE=$(DLLNAME).def
 #//  -Zi -GM needed to compile mmx functions in assembly.
 LCFLAGS = -Zi -GM
 !ifdef MOZ_JAVA
-LINCS = -I$(PUBLIC)/java -I$(DEPTH)/sun-java/include
+LINCS = -I$(PUBLIC)/java
 !else
 LINCS = -I$(PUBLIC)/java -I$(DEPTH)/sun-java/stubs/include
 !endif
@@ -143,11 +143,12 @@ MAPFILE= $(DLLNAME).map
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
 
-export:: $(DLL)
+export:: 
+libs:: $(DLL)
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 
-install:: export
+install:: export libs
 
 clobber::
 	$(RM) $(JPEG_OBJS)
