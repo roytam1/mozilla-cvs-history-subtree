@@ -1711,28 +1711,53 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       showLDAPError(aMessage);
       return(NS_ERROR_FAILURE);
     }
-    // success, update the internal graph
-    if (mNameLiteral)
-    {
-      rv = mInner->Assert(mNode, kNC_Name, mNameLiteral, PR_TRUE);
-      mNameLiteral = nsnull;
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
+
+    nsCOMPtr<nsIRDFResource> aNode;
+#ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
     if (mURLLiteral)
     {
-      rv = mInner->Assert(mNode, kNC_URL, mURLLiteral, PR_TRUE);
+      const PRUnichar *uri = nsnull;
+      rv = mURLLiteral->GetValueConst(&uri);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      rv = gRDF->GetUnicodeResource(uri, getter_AddRefs(aNode));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // with RDF aggregation non-functional, we can't just assert #URL;
+      // so we have to be tricky and hang the true LDAP URL off of #LDAPURL
+      rv = mInner->Assert(aNode, kNC_LDAPURL, mNode, PR_TRUE);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else
+    {
+      aNode = mNode;
+    }
+#else
+    aNode = mNode;
+    if (mURLLiteral)
+    {
+      rv = mInner->Assert(aNode, kNC_URL, mURLLiteral, PR_TRUE);
       mURLLiteral = nsnull;
       NS_ENSURE_SUCCESS(rv, rv);
     }
+#endif
 
-    if (mProperty)
+    // success, update the internal graph
+    if (mNameLiteral)
     {
-      nsCOMPtr<nsIRDFContainer> ldapContainer;
-      rv = gRDFC->MakeSeq(mInner, mNode, getter_AddRefs(ldapContainer));
+      rv = mInner->Assert(aNode, kNC_Name, mNameLiteral, PR_TRUE);
+      mNameLiteral = nsnull;
       NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    rv = mContainer->AppendElement(mNode);
+    if (mProperty == kNC_Folder)
+    {
+      nsCOMPtr<nsIRDFContainer> ldapContainer;
+      rv = gRDFC->MakeSeq(mInner, aNode, getter_AddRefs(ldapContainer));
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = mContainer->AppendElement(aNode);
     NS_ENSURE_SUCCESS(rv, rv);
     }
     break;
