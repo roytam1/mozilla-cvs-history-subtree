@@ -1777,6 +1777,11 @@ function MsgAddAllToAddressBook() {}
 function SpaceHit(event)
 {
   var contentWindow = window.top._content;
+  var rssiframe = contentWindow.document.getElementById('_mailrssiframe');
+
+  // if we are displaying an RSS article, we really want to scroll the nested iframe
+  if (rssiframe)
+    contentWindow = rssiframe.contentWindow;
 
   if (event && event.shiftKey) {
     // if at the start of the message, go to the previous one
