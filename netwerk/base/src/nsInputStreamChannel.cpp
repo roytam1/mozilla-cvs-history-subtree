@@ -468,14 +468,12 @@ nsStreamIOChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotification
   return NS_OK;
 }
 
-#if 0
 NS_IMETHODIMP 
 nsStreamIOChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
     *aSecurityInfo = nsnull;
     return NS_OK;
 }
-#endif
 
 NS_IMETHODIMP
 nsStreamIOChannel::GetContentType(char * *aContentType)
