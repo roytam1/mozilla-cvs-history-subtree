@@ -246,7 +246,7 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
 
 static PRBool CommonPrefix(const PRUnichar *aString, const PRUnichar *aSubstr, PRInt32 aSubstrLen)
 {
-  if (aSubstrLen == 0 || nsCRT::strlen(aString) < aSubstrLen)
+  if (!aSubstrLen || (nsCRT::strlen(aString) < (PRUint32) aSubstrLen))
     return PR_FALSE;
 
   return (Compare(Substring(aString, aString+aSubstrLen),

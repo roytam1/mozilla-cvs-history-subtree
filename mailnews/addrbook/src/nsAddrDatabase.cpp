@@ -95,7 +95,6 @@ struct mdbOid gAddressBookTableOID;
 struct mdbOid gAnonymousTableOID;
 
 static const char *kMailListAddressFormat = "Address%d";
-static const char *kMailListListFormat = "List%d";
 
 static NS_DEFINE_CID(kCMorkFactory, NS_MORK_CID);
 

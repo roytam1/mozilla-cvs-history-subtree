@@ -523,15 +523,13 @@ nsresult nsAbDirectoryDataSource::createDirectoryNode(nsIAbDirectory* directory,
 nsresult nsAbDirectoryDataSource::createDirectoryNameNode(nsIAbDirectory *directory,
                                                      nsIRDFNode **target)
 {
-	PRUnichar *name = nsnull;
-	PRBool bIsMailList = PR_FALSE;
 	nsresult rv = NS_OK;
-
-		rv = directory->GetDirName(&name);
+       
+        nsXPIDLString name;
+	rv = directory->GetDirName(getter_Copies(name));
 	NS_ENSURE_SUCCESS(rv, rv);
-	nsString nameString(name);
-	createNode(nameString, target);
-	nsCRT::free(name);
+	rv = createNode(name.get(), target);
+	NS_ENSURE_SUCCESS(rv, rv);
 	return NS_OK;
 }
 
@@ -544,7 +542,8 @@ nsresult nsAbDirectoryDataSource::createDirectoryUriNode(nsIAbDirectory *directo
   nsresult rv = source->GetValue(getter_Copies(uri));
   NS_ENSURE_SUCCESS(rv, rv);
   nsAutoString nameString; nameString.AssignWithConversion(uri);
-  createNode(nameString, target);
+  rv = createNode(nameString.get(), target);
+  NS_ENSURE_SUCCESS(rv, rv);
   return NS_OK;
 }
 
@@ -609,10 +608,10 @@ nsAbDirectoryDataSource::createDirectoryIsMailListNode(nsIAbDirectory* directory
 
 nsresult nsAbDirectoryDataSource::CreateLiterals(nsIRDFService *rdf)
 {
-	nsAutoString str; str.AssignWithConversion("true");
-	createNode(str, getter_AddRefs(kTrueLiteral));
-	str.AssignWithConversion("false");
-	createNode(str, getter_AddRefs(kFalseLiteral));
+	nsresult rv = createNode(NS_LITERAL_STRING("true").get(), getter_AddRefs(kTrueLiteral));
+        NS_ENSURE_SUCCESS(rv,rv);
+	rv = createNode(NS_LITERAL_STRING("false").get(), getter_AddRefs(kFalseLiteral));
+        NS_ENSURE_SUCCESS(rv,rv);
 	return NS_OK;
 }
 
