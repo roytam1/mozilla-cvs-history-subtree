@@ -250,11 +250,11 @@ clobber:
 depend:
 	gcc -MM $(CFLAGS) $(JS_CFILES)
 
-$(OBJDIR)/libfdm.a: fdlibm/libfdm.a
+$(OBJDIR)/libfdm.a: fdlibm/$(OBJDIR)/libfdm.a
 	@$(MAKE_OBJDIR)
-	cp fdlibm/libfdm.a $(OBJDIR)/libfdm.a
+	cp fdlibm/$(OBJDIR)/libfdm.a $(OBJDIR)/libfdm.a
 
-fdlibm/libfdm.a:
+fdlibm/$(OBJDIR)/libfdm.a:
 	cd fdlibm; gmake
 
 $(OBJDIR)/%: %.c
