@@ -5,7 +5,6 @@ To do:
     - width
   - listing progressmeter doesn't work
 - error handling
-  - (local profile) files missing, also adjust listing.xml
   - copy protocol
     - no remote files yet
 
