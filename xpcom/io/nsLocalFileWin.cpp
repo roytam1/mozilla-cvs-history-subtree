@@ -172,7 +172,7 @@ class nsDirEnumerator : public nsISimpleEnumerator
                 nsCOMPtr<nsIFile> file;
                 mParent->Clone(getter_AddRefs(file));
 
-                rv = file->SetLeafName(entry->name);
+                rv = file->Append(entry->name);
                 if (NS_FAILED(rv)) 
                     return rv;
             
