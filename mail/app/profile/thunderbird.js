@@ -40,6 +40,10 @@ pref("general.useragent.vendorSub",
 #expand __APP_VERSION__
 );
 
+#ifdef XP_MACOSX
+pref("mail.biff.animate_dock_icon", false);
+#endif
+
 /////////////////////////////////////////////////////////////////
 // Overrides of the seamonkey suite mailnews.js prefs
 ///////////////////////////////////////////////////////////////// 

@@ -35,3 +35,7 @@
 <!ENTITY setDefaultMailClient.accesskey         "u">
 <!ENTITY setDefaultNewsClient.label             "Use &brandShortName; as the default news application">
 <!ENTITY setDefaultNewsClient.accesskey         "n">
+
+<!-- General -->
+<!ENTITY bounceSystemDockIcon.label "Animate the dock icon">
+<!ENTITY bounceSystemDockIcon.accesskey "B">
