@@ -63,7 +63,9 @@ public final class JSObject {
     /**
      * it is illegal to construct a JSObject manually
      */
-    private                          JSObject(int jsobj_addr) {internal = jsobj_addr;}
+    private JSObject(int jsobj_addr) {
+        internal = jsobj_addr;
+    }
 
     /**
      * Retrieves a named member of a JavaScript object. 
