@@ -42,6 +42,7 @@
 
 // tags
 SVG_ATOM(circle, "circle")
+SVG_ATOM(defs, "defs")
 SVG_ATOM(ellipse, "ellipse")
 SVG_ATOM(foreignObject, "foreignObject")
 SVG_ATOM(g, "g")

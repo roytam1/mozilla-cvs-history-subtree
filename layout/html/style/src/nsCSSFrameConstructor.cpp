@@ -6924,6 +6924,8 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     rv = NS_NewSVGPolylineFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::circle)
     rv = NS_NewSVGCircleFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::defs)
+    rv = NS_NewSVGGenericContainerFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::ellipse)
     rv = NS_NewSVGEllipseFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::line)
