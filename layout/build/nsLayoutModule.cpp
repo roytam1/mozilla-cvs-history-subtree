@@ -966,13 +966,13 @@ static const nsModuleComponentInfo gComponents[] = {
 
   { "XML document",
     NS_XMLDOCUMENT_CID,
-    nsnull,
+    "@mozilla.org/xml/xml-document;1",
     CreateXMLDocument },
 
 #ifdef MOZ_SVG
   { "SVG document",
     NS_SVGDOCUMENT_CID,
-    nsnull,
+    "@mozilla.org/svg/svg-document;1",
     CreateSVGDocument },
 #endif
 
