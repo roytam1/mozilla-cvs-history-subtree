@@ -146,6 +146,17 @@ nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgDBView::IsEditable(PRInt32 index, const PRUnichar *colID, PRBool * aReturnValue)
+{
+  * aReturnValue = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetCellText(PRInt32 row, const PRUnichar *colID, const PRUnichar * value)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
 {
   *aRowCount = GetSize();
@@ -154,10 +165,18 @@ NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
 
 NS_IMETHODIMP nsMsgDBView::GetSelection(nsIOutlinerSelection * *aSelection)
 {
+  *aSelection = mOutlinerSelection;
+  NS_IF_ADDREF(*aSelection);
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
+{
+  mOutlinerSelection = aSelection;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
   return NS_OK;
 }
@@ -166,6 +185,12 @@ NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *pro
 {
   return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgDBView::GetColumnProperties(const PRUnichar *colID, nsIDOMElement * aElement, nsISupportsArray *properties)
+{
+  return NS_OK;
+}
+
 
 NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID, nsISupportsArray *properties)
 {
@@ -188,6 +213,11 @@ NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 {
   PRUint32 flags = m_flags[index];
   *_retval = (flags & MSG_FLAG_ELIDED) == 0;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::IsContainerEmpty(PRInt32 index, PRBool *_retval)
+{
   return NS_OK;
 }
 
@@ -264,7 +294,7 @@ NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement * aElement)
+NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement * aElement)
 {
   // if the header is a sortable column then we want to call Sort
   // otherwise, we'll do something else =)
@@ -272,18 +302,16 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement * aElement)
   nsMsgViewSortTypeValue sortType = nsMsgViewSortType::bySubject;
   nsMsgViewSortOrderValue sortOrder = nsMsgViewSortOrder::descending;
   PRBool performSort = PR_FALSE;
-  nsAutoString colID;
-  aElement->GetAttribute(NS_LITERAL_STRING("id"), colID);
 
   nsAutoString sortOrderValue;
   aElement->GetAttribute(NS_LITERAL_STRING("sortDirection"), sortOrderValue);
   if (!sortOrderValue.IsEmpty() && sortOrderValue.Equals(NS_LITERAL_STRING("ascending")))
      sortOrder = nsMsgViewSortOrder::ascending;
 
-  switch (colID[0])
+  switch (aColID[0])
   {
   case 's':
-    if (colID[1] == 'u') // sort the subject
+    if (aColID[1] == 'u') // sort the subject
     {
       sortType = nsMsgViewSortType::bySubject;
       performSort = PR_TRUE;

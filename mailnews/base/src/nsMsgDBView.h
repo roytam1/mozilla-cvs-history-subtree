@@ -32,6 +32,7 @@
 #include "nsIDBChangeListener.h"
 #include "nsIOutlinerView.h"
 #include "nsIOutlinerBoxObject.h"
+#include "nsIOutlinerSelection.h"
 #include "nsVoidArray.h"
 #include "nsIMsgFolder.h"
 #include "nsIDateTimeFormat.h"
@@ -65,6 +66,7 @@ public:
 protected:
 
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
+  nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
