@@ -254,11 +254,12 @@ NS_NewRDFElement(nsIRDFContent** result)
     if (! result)
         return NS_ERROR_NULL_POINTER;
 
-    nsIRDFContent* element = new nsRDFElement();
-    if (! element)
+    *result = static_cast<nsIRDFContent*>(new nsRDFElement());
+    if (! *result)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    return element->QueryInterface(kIRDFContentIID, (void**) result);
+    NS_ADDREF(*result);
+    return NS_OK;
 }
 
 nsRDFElement::nsRDFElement(void)
