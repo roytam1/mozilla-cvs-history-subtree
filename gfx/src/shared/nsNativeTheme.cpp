@@ -242,11 +242,16 @@ nsNativeTheme::IsWidgetStyled(nsIPresContext* aPresContext, nsIFrame* aFrame,
         lookAndFeel->GetColor(nsILookAndFeel::eColor_threedface,
                               defaultBorderColor);
         if (!(defaultBGTransparent = sTextfieldBGTransparent)) {
+#ifndef MOZ_WIDGET_COCOA
           if (IsDisabled(aFrame))
             defaultBGColor = defaultBorderColor;
           else
             lookAndFeel->GetColor(nsILookAndFeel::eColor__moz_field,
                                   defaultBGColor);
+#else
+          lookAndFeel->GetColor(nsILookAndFeel::eColor__moz_field,
+                                defaultBGColor);
+#endif
         }
         break;
 
