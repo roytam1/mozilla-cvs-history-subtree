@@ -45,22 +45,52 @@
 
 
   /**
-   * no relation to nsAString ;-)
+   * NOTE: nsScannerString (and the other classes defined in this file) are
+   * not related to nsAString or any of the other xpcom/string classes.
+   *
+   * nsScannerString is based on the nsSlidingString implementation that used
+   * to live in xpcom/string.  Now that nsAString is limited to representing
+   * only single fragment strings, nsSlidingString can no longer be used.
+   *
+   * An advantage to this design is that it does not employ any virtual 
+   * functions.
+   *
+   * This file uses SCC-style indenting in deference to the nsSlidingString
+   * code from which this code is derived ;-)
    */
 
 class nsScannerIterator;
 class nsScannerSubstring;
 class nsScannerString;
 
+
   /**
-   * XXX
+   * nsScannerBufferList
+   *
+   * This class maintains a list of heap-allocated Buffer objects.  The buffers
+   * are maintained in a circular linked list.  Each buffer has a usage count
+   * that is decremented by the owning nsScannerSubstring.
+   *
+   * The buffer list itself is reference counted.  This allows the buffer list
+   * to be shared by multiple nsScannerSubstring objects.  The reference
+   * counting is not threadsafe, which is not at all a requirement.
+   *
+   * When a nsScannerSubstring releases its reference to a buffer list, it
+   * decrements the usage count of the first buffer in the buffer list that it
+   * was referencing.  It informs the buffer list that it can discard buffers
+   * starting at that prefix.  The buffer list will do so if the usage count of
+   * that buffer is 0 and if it is the first buffer in the list.  It will
+   * continue to prune buffers starting from the front of the buffer list until
+   * it finds a buffer that has a usage count that is non-zero.
    */
 class nsScannerBufferList
   {
     public:
 
         /**
-         * XXX
+         * Buffer objects are directly followed by a data segment.  The start
+         * of the data segment is determined by increment the |this| pointer
+         * by 1 unit.
          */
       class Buffer : public PRCList
         {
@@ -95,7 +125,9 @@ class nsScannerBufferList
         };
 
         /**
-         * XXX
+         * Position objects serve as lightweight pointers into a buffer list.
+         * The mPosition member must be contained with mBuffer->DataStart()
+         * and mBuffer->DataEnd().
          */
       class Position
         {
@@ -112,7 +144,7 @@ class nsScannerBufferList
             Position( const nsScannerIterator& aIter );
 
             inline
-            Position& operator=(const nsScannerIterator& aIter);
+            Position& operator=( const nsScannerIterator& aIter );
 
             static size_t Distance( const Position& p1, const Position& p2 );
 
@@ -156,6 +188,9 @@ class nsScannerBufferList
   };
 
 
+  /**
+   * nsScannerFragment represents a "slice" of a Buffer object.
+   */
 struct nsScannerFragment
   {
     typedef nsScannerBufferList::Buffer Buffer;
@@ -167,9 +202,12 @@ struct nsScannerFragment
 
 
   /**
-   * nsScannerSubstring
+   * nsScannerSubstring is the base class for nsScannerString.  It provides
+   * access to iterators and methods to bind the substring to another
+   * substring or nsAString instance.
+   *
+   * This class owns the buffer list.
    */
-
 class nsScannerSubstring
   {
     public:
@@ -241,19 +279,19 @@ class nsScannerSubstring
 
 
   /**
-   * nsScannerString
+   * nsScannerString provides methods to grow and modify a buffer list.
    */
-
 class nsScannerString : public nsScannerSubstring
   {
     public:
 
       nsScannerString( Buffer* );
 
-        // you are giving ownership to the string, it takes and keeps your buffer, deleting it (with |nsMemory::Free|) when done
+        // you are giving ownership to the string, it takes and keeps your
+        // buffer, deleting it when done.
+        // Use AllocBuffer or AllocBufferFromString to create a Buffer object
+        // for use with this function.
       void AppendBuffer( Buffer* );
-
-//    void Append( ... ); do you want some |Append|s that copy the supplied data?
 
       void DiscardPrefix( const nsScannerIterator& );
         // any other way you want to do this?
@@ -264,9 +302,9 @@ class nsScannerString : public nsScannerSubstring
 
 
   /**
-   * nsScannerIterator
+   * nsScannerIterator works just like nsReadingIterator<CharT> except that
+   * it knows how to iterate over a list of scanner buffers.
    */
-
 class nsScannerIterator
   {
     public:
@@ -423,6 +461,10 @@ struct nsCharSourceTraits<nsScannerIterator>
   };
 
 
+  /**
+   * inline methods follow
+   */
+
 inline
 void
 nsScannerIterator::normalize_forward()
@@ -472,6 +514,9 @@ nsScannerBufferList::Position::operator=(const nsScannerIterator& aIter)
 
   /**
    * scanner string utils
+   *
+   * These methods mimic the API provided by nsReadableUtils in xpcom/string.
+   * Here we provide only the methods that the htmlparser module needs.
    */
 
 inline
