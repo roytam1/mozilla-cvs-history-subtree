@@ -3172,7 +3172,6 @@ nsDocShell::Destroy()
 
     mDocLoader = nsnull;
     mParentWidget = nsnull;
-    mPrefs = nsnull;
     mCurrentURI = nsnull;
 
     if (mScriptGlobal) {
