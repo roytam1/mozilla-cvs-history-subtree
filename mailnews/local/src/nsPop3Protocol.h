@@ -191,6 +191,7 @@ typedef struct Pop3UidlHost {
 } Pop3UidlHost;
 
 typedef struct Pop3MsgInfo {
+    PRInt32 msgnum;
     PRInt32 size;
     char* uidl;
 } Pop3MsgInfo;
@@ -350,6 +351,7 @@ private:
   void BackupAuthFlags();
   void RestoreAuthFlags();
   PRInt32 m_origAuthFlags;
+  PRInt32 m_listpos;
 
   //////////////////////////////////////////////////////////////////////////////////////////
       // Begin Pop3 protocol state handlers
