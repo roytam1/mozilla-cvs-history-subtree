@@ -466,6 +466,17 @@ if(verifyDiskSpace(fProgram, srDest))
     logComment("Create Folder: " + fProgram + "chrome\\overlayinfo\\navigator\\content");
     logComment("Installing: "    + fProgram + "chrome\\overlayinfo\\navigator\\content\\overlays.rdf");
 
+    // log comments for uninstalling the registry keys created by the browser for setting
+    // itself up in WinXP's Start menu
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$ []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$ []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\DefaultIcon []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\DefaultIcon []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\shell []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\shell\\open []");
+    logComment("Create Registry Key: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\shell\\open\\command []");
+    logComment("Store Registry Value: HKEY_LOCAL_MACHINE\\Software\\Clients\\StartMenuInternet\\$MainExeFile$\\shell\\open\\command []");
+
     err = getLastError();
     if (err == SUCCESS)
     {
