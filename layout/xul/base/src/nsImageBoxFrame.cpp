@@ -139,7 +139,11 @@ nsImageBoxFrame::AttributeChanged(nsIPresContext* aPresContext,
   return NS_OK;
 }
 
+#ifdef USE_IMG2
 nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mIntrinsicSize(0,0)
+#else
+nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell)
+#endif
 {
   mSizeFrozen = PR_FALSE;
 	mHasImage = PR_FALSE;
