@@ -57,23 +57,6 @@
 #include "nsRegionPool.h"
 #include "nsGfxUtils.h"
 
-//
-// Return true if we are on Mac OS X, caching the result after the first call
-// Yes, this needs to go somehwere better.
-//
-static PRBool OnMacOSX()
-{
-  static PRBool gInitVer = PR_FALSE;
-  static PRBool gOnMacOSX = PR_FALSE;
-  if(! gInitVer) {
-    long version;
-    OSErr err = ::Gestalt(gestaltSystemVersion, &version);
-    gOnMacOSX = (err == noErr && version >= 0x00001000);
-    gInitVer = PR_TRUE;
-  }
-  return gOnMacOSX;
-}
-
 
 static void 
 ConvertGeckoToNativeRect(const nsRect& aSrc, Rect& aDst) 
@@ -469,7 +452,7 @@ nsNativeThemeMac::DrawEditText ( const Rect& inBoxRect, PRBool inIsDisabled )
   ::BackPat(GetQDGlobalsWhite(&whitePat));
   ::EraseRect(&inBoxRect);
   
-  ThemeDrawState drawState = inIsDisabled ? kThemeStateActive : kThemeStateDisabled;
+  ThemeDrawState drawState = inIsDisabled ? kThemeStateDisabled : kThemeStateActive;
   ::DrawThemeEditTextFrame(&inBoxRect, drawState);
 #endif
 }
@@ -484,7 +467,7 @@ nsNativeThemeMac::DrawListBox ( const Rect& inBoxRect, PRBool inIsDisabled )
   ::BackPat(GetQDGlobalsWhite(&whitePat));
   ::EraseRect(&inBoxRect);
   
-  ThemeDrawState drawState = inIsDisabled ? kThemeStateActive : kThemeStateDisabled;
+  ThemeDrawState drawState = inIsDisabled ? kThemeStateDisabled : kThemeStateActive;
   ::DrawThemeListBoxFrame(&inBoxRect, drawState);
 #endif
 }
@@ -513,7 +496,7 @@ nsNativeThemeMac::DrawProgress ( const Rect& inBoxRect, PRBool inIsDisabled, PRB
 void
 nsNativeThemeMac::DrawTabPanel ( const Rect& inBoxRect, PRBool inIsDisabled )
 {
-  ThemeDrawState drawState = inIsDisabled ? kThemeStateActive : kThemeStateDisabled;
+  ThemeDrawState drawState = inIsDisabled ? kThemeStateDisabled : kThemeStateActive;
   ::DrawThemeTabPane(&inBoxRect, drawState);
 }
 
@@ -521,7 +504,7 @@ nsNativeThemeMac::DrawTabPanel ( const Rect& inBoxRect, PRBool inIsDisabled )
 void
 nsNativeThemeMac::DrawSeparator ( const Rect& inBoxRect, PRBool inIsDisabled )
 {
-  ThemeDrawState drawState = inIsDisabled ? kThemeStateActive : kThemeStateDisabled;
+  ThemeDrawState drawState = inIsDisabled ? kThemeStateDisabled : kThemeStateActive;
   ::DrawThemeSeparator(&inBoxRect, drawState);
 }
 
@@ -854,7 +837,7 @@ nsNativeThemeMac::GetWidgetBorder(nsIDeviceContext* aContext,
   switch ( aWidgetType ) {
   
     case NS_THEME_BUTTON:
-      if ( OnMacOSX() )
+      if ( nsRenderingContextMac::OnMacOSX() )
         aResult->SizeTo(kAquaPushButtonEndcaps, kAquaPushButtonTopBottom, 
                             kAquaPushButtonEndcaps, kAquaPushButtonTopBottom);
       else
@@ -866,7 +849,7 @@ nsNativeThemeMac::GetWidgetBorder(nsIDeviceContext* aContext,
       break;
 
     case NS_THEME_DROPDOWN:
-      if ( OnMacOSX() )
+      if ( nsRenderingContextMac::OnMacOSX() )
         aResult->SizeTo(kAquaDropdownLeftEndcap, kAquaPushButtonTopBottom, 
                           kAquaDropwdonRightEndcap, kAquaPushButtonTopBottom);
       else
@@ -1134,7 +1117,7 @@ nsNativeThemeMac::ThemeSupportsWidget(nsIPresContext* aPresContext,
     case NS_THEME_SCROLLBAR_TRACK_VERTICAL:
     case NS_THEME_SCROLLBAR_TRACK_HORIZONTAL:
       // for now, only use on osx since i haven't yet verified on os9
-      if ( OnMacOSX() )
+      if ( nsRenderingContextMac::OnMacOSX() )
         retVal = PR_TRUE;
       break;
   

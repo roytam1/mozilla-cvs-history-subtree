@@ -636,6 +636,14 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext, nsIReg
   aUpdateFlags &= ~NS_VMREFRESH_DOUBLE_BUFFER;
 #endif
 
+  // check if the rendering context wants double-buffering or not
+  if (aContext) {
+    PRBool contextWantsBackBuffer = PR_TRUE;
+    aContext->UseBackbuffer(&contextWantsBackBuffer);
+    if (!contextWantsBackBuffer)
+      aUpdateFlags &= ~NS_VMREFRESH_DOUBLE_BUFFER;
+  }
+  
   if (PR_FALSE == mAllowDoubleBuffering) {
     // Turn off double-buffering of the display
     aUpdateFlags &= ~NS_VMREFRESH_DOUBLE_BUFFER;
