@@ -58,12 +58,20 @@ namespace JavaScript {
 
     namespace Pragma {
         enum Flags {                    // Bitmap of pragma flags
-            none = 0,
-            js2 = 1<<0,                 // JS 2.0 when set; JS 1.5 when clear
-            strict = 1<<1               // Strict mode; can only be set when js2 is set
+            // Only one of js1, js12, es4, or js2 will be set
+            js1 = 1<<0,                 // JS 1.x and ECMAScript 1, 2, or 3
+            js12 = 1<<1,                // JS 1.2
+            es4 = 1<<2,                 // ECMAScript 4
+            js2 = 1<<3,                 // ECMAScript 4 with JS 2.0 extensions
+
+            js1or12 = js1|js12,
+            es4orjs2 = es4|js2,
+            languageMask = js1|js12|es4|js2,
+
+            strict = 1<<4               // Strict mode; can only be set when js2 or es4 is set
         };
         
-        inline bool test(Flags flags, Flags bit) {return (flags & bit) != 0;}
+        inline Flags setLanguage(Flags flags, Flags language) {return static_cast<Flags>(flags & ~languageMask | language);}
         inline bool lineBreaksSignificant(Flags flags) {return (flags & strict) == 0;}
     }
 
@@ -129,15 +137,14 @@ namespace JavaScript {
         // Keep synchronized with kindNames
         enum Kind {                     // Actual class         Operands
             none,
-            identifier,                 // IdentifierExprNode   <name>
 
-            // Begin of isPostfix()
+            // Beginning of isPostfix()
+            identifier,                 // IdentifierExprNode   <name>
+            Null,                       // ExprNode             null
+            boolean,                    // BooleanExprNode      <value>
             number,                     // NumberExprNode       <value>
             string,                     // StringExprNode       <str>
             regExp,                     // RegExpExprNode       /<re>/<flags>
-            Null,                       // ExprNode             null
-            True,                       // ExprNode             true
-            False,                      // ExprNode             false
             This,                       // ExprNode             this
 
             parentheses,                // UnaryExprNode        (<op>)
@@ -205,8 +212,6 @@ namespace JavaScript {
             Is,                         // BinaryExprNode       <op1> is <op2>
 
             assignment,                 // BinaryExprNode       <op1> = <op2>
-
-            // Begin of isAssigningKind()
             addEquals,                  // BinaryExprNode       <op1> += <op2>
             subtractEquals,             // BinaryExprNode       <op1> -= <op2>
             multiplyEquals,             // BinaryExprNode       <op1> *= <op2>
@@ -221,7 +226,6 @@ namespace JavaScript {
             logicalAndEquals,           // BinaryExprNode       <op1> &&= <op2>
             logicalXorEquals,           // BinaryExprNode       <op1> ^^= <op2>
             logicalOrEquals,            // BinaryExprNode       <op1> ||= <op2>
-            // End of isAssigningKind()
 
             conditional,                // TernaryExprNode      <op1> ? <op2> : <op3>
             comma,                      // BinaryExprNode       <op1> , <op2>  (Comma expressions only)
@@ -239,7 +243,6 @@ namespace JavaScript {
         Kind getKind() const {return kind;}
         bool hasKind(Kind k) const {return kind == k;}
 
-        static bool isAssigningKind(Kind kind) {return kind >= assignment && kind <= logicalOrEquals;}
         static const char *kindName(Kind kind) {ASSERT(uint(kind) < kindsEnd); return kindNames[kind];}
         bool isPostfix() const {return kind >= identifier && kind <= dotParen;}
 
@@ -295,6 +298,14 @@ namespace JavaScript {
 
         QualifyExprNode(size_t pos, ExprNode *qualifier, const StringAtom &name):
                 IdentifierExprNode(pos, qualify, name), qualifier(qualifier) {ASSERT(qualifier);}
+
+        void print(PrettyPrinter &f) const;
+    };
+
+    struct BooleanExprNode: ExprNode {
+        bool value;                     // The boolean's value
+
+        BooleanExprNode(size_t pos, bool value): ExprNode(pos, boolean), value(value) {}
 
         void print(PrettyPrinter &f) const;
     };
@@ -436,18 +447,17 @@ namespace JavaScript {
             Return,         // ExprStmtNode         return ;   or   return <expr> ;
             Throw,          // ExprStmtNode         throw <expr> ;
             Try,            // TryStmtNode          try <stmt> <catches> <finally>
-            Import,         // ImportStmtNode       import <bindings> ;
-            UseImport,      // ImportStmtNode       use import <bindings> ;
-            Use,            // UseStmtNode          use namespace <exprs> ;
             Export,         // ExportStmtNode       <attributes> export <bindings> ;
             Const,          // VariableStmtNode     <attributes> const <bindings> ;
             Var,            // VariableStmtNode     <attributes> var <bindings> ;
             Function,       // FunctionStmtNode     <attributes> function <function>
             Class,          // ClassStmtNode        <attributes> class <name> extends <superclass> <body>
             Namespace,      // NamespaceStmtNode    <attributes> namespace <name>
-            Language,       // LanguageStmtNode     language <language> ;
-            Include,        // IncludeStmtNode      include "name" ;
+            Use,            // UseStmtNode          use namespace <exprs> ;
+            Import,         // ImportStmtNode       import <bindings> ;
             Package,        // PackageStmtNode      package <packageName> <body>
+            Pragma,         // PragmaStmtNode       pragma <flags> ;
+            Include,        // IncludeStmtNode      include "name" ;
             Debugger        // DebuggerStmtNode     debugger ;
         };
 
@@ -466,17 +476,6 @@ namespace JavaScript {
         static void printSemi(PrettyPrinter &f, bool noSemi);
         void printSubstatement(PrettyPrinter &f, bool noSemi, const char *continuation = 0) const;
         virtual void print(PrettyPrinter &f, bool noSemi) const;
-    };
-
-
-    struct ExprList: ArenaObject {
-        ExprList *next;                 // Next expression in linked list
-        ExprNode *expr;                 // Expression; non-nil only
-
-        explicit ExprList(ExprNode *expr): next(0), expr(expr) {ASSERT(expr);}
-
-        void printCommaList(PrettyPrinter &f) const;
-        static void printOptionalCommaList(PrettyPrinter &f, const char *name, const ExprList *list);
     };
 
 
@@ -602,64 +601,30 @@ namespace JavaScript {
         void print(PrettyPrinter &f, bool noSemi) const;
     };
 
-    struct IdentifierList: ArenaObject {
-        IdentifierList *next;           // Next identifier in linked list
-        const StringAtom &name;         // The identifier
-
-        explicit IdentifierList(const StringAtom &name): next(0), name(name) {}
-    };
-
-    struct PackageName: ArenaObject {   // Either idList or str may be null, but not both
-        IdentifierList *idList;         // The package name as an identifier list
-        String *str;                    // The package name as a string
-
-        explicit PackageName(IdentifierList *idList): idList(idList), str(0) {ASSERT(idList);}
-        explicit PackageName(String &str): idList(0), str(&str) {}
-    };
-
-    struct ImportBinding: ParseNode {
-        ImportBinding *next;            // Next binding in a linked list of import bindings
-        const StringAtom *name;         // The package variable's name; nil if omitted
-        PackageName &packageName;       // The package's name
-
-        ImportBinding(size_t pos, const StringAtom *name, PackageName &packageName):
-                ParseNode(pos), next(0), name(name), packageName(packageName) {}
-    };
-
-    struct ImportStmtNode: StmtNode {
-        ImportBinding *bindings;        // Linked list of import bindings
-
-        ImportStmtNode(size_t pos, Kind kind, ImportBinding *bindings):
-                StmtNode(pos, kind), bindings(bindings) {}
-    };
-
-    struct UseStmtNode: StmtNode {
-        ExprList *exprs;                // Linked list of namespace expressions
-
-        UseStmtNode(size_t pos, Kind kind, ExprList *exprs): StmtNode(pos, kind), exprs(exprs) {}
-    };
-
     struct ExportBinding: ParseNode {
         ExportBinding *next;            // Next binding in a linked list of export bindings
-        FunctionName name;              // The exported variable's name
-        FunctionName *initializer;      // The original variable's name or nil if not provided
+        FunctionName name;              // The exported variable's name; name.name is non-nil only
+        FunctionName initializer;       // The original variable's name; same as name if omitted
 
-        ExportBinding(size_t pos, FunctionName *initializer):
-                ParseNode(pos), next(0), initializer(initializer) {}
+        ExportBinding(size_t pos): ParseNode(pos), next(0) {}
+
+        void print(PrettyPrinter &f) const;
     };
 
     struct ExportStmtNode: AttributeStmtNode {
-        ExportBinding *bindings;        // Linked list of export bindings
+        ExportBinding *bindings;        // Linked list of export bindings; non-nil only
 
-        ExportStmtNode(size_t pos, Kind kind, ExprNode *attributes, ExportBinding *bindings):
-                AttributeStmtNode(pos, kind, attributes), bindings(bindings) {}
+        ExportStmtNode(size_t pos, ExprNode *attributes, ExportBinding *bindings):
+                AttributeStmtNode(pos, Export, attributes), bindings(bindings) {ASSERT(bindings);}
+
+        void print(PrettyPrinter &f, bool noSemi) const;
     };
 
     struct VariableStmtNode: AttributeStmtNode {
-        VariableBinding *bindings;      // Linked list of variable bindings
+        VariableBinding *bindings;      // Linked list of variable bindings; non-nil only
 
         VariableStmtNode(size_t pos, Kind kind, ExprNode *attributes, VariableBinding *bindings):
-                AttributeStmtNode(pos, kind, attributes), bindings(bindings) {}
+                AttributeStmtNode(pos, kind, attributes), bindings(bindings) {ASSERT(bindings);}
 
         void print(PrettyPrinter &f, bool noSemi) const;
     };
@@ -694,26 +659,77 @@ namespace JavaScript {
         void print(PrettyPrinter &f, bool noSemi) const;
     };
 
+    struct IdentifierList: ArenaObject {
+        IdentifierList *next;           // Next identifier in linked list
+        const StringAtom &name;         // The identifier
+
+        explicit IdentifierList(const StringAtom &name): next(0), name(name) {}
+
+        void printList(PrettyPrinter &f, char separator) const;
+    };
+
+    struct ExprList: ArenaObject {
+        ExprList *next;                 // Next expression in linked list
+        ExprNode *expr;                 // Expression; non-nil only
+
+        explicit ExprList(ExprNode *expr): next(0), expr(expr) {ASSERT(expr);}
+
+        void printList(PrettyPrinter &f) const;
+    };
+
+    struct UseStmtNode: AttributeStmtNode {
+        ExprList *namespaces;           // Linked list of namespace expressions; may be nil in an import statement
+        IdentifierList *includeExclude; // Linked list of include/exclude identifiers
+        bool exclude;                   // If true, includeExclude lists excluded identifiers; if false, included identifiers
+
+        UseStmtNode(size_t pos, Kind kind, ExprNode *attributes, ExprList *namespaces):
+                AttributeStmtNode(pos, kind, attributes), namespaces(namespaces) {}
+
+      protected:
+        void printNamespaces(PrettyPrinter &f) const;
+        void printIncludeExclude(PrettyPrinter &f) const;
+      public:
+        void print(PrettyPrinter &f, bool noSemi) const;
+    };
+
+    struct ImportStmtNode: UseStmtNode {
+        const StringAtom *varName;      // The package variable's name; nil if omitted
+        // Either packageIdList or packageString may be nil, but not both
+        IdentifierList *packageIdList;  // The package name as a list of identifiers
+        String *packageString;          // The package name as a string
+
+        ImportStmtNode(size_t pos, ExprNode *attributes, const StringAtom *varName, IdentifierList *packageIdList,
+                       String *packageString, ExprList *namespaces):
+                UseStmtNode(pos, Import, attributes, namespaces), varName(varName), packageIdList(packageIdList),
+                packageString(packageString) {}
+
+        void print(PrettyPrinter &f, bool noSemi) const;
+    };
+
+    struct PackageStmtNode: StmtNode {
+        IdentifierList *packageIdList;  // The package name as a list of identifiers; may be nil
+        BlockStmtNode *body;            // The package's body; non-nil only
+
+        PackageStmtNode(size_t pos, IdentifierList *packageIdList, BlockStmtNode *body):
+                StmtNode(pos, Package), packageIdList(packageIdList), body(body) {ASSERT(body);}
+
+        void print(PrettyPrinter &f, bool noSemi) const;
+    };
+
+    struct PragmaStmtNode: StmtNode {
+        Pragma::Flags flags;            // The new set of flags to use until the next PragmaStmtNode or the end of this scope
+
+        PragmaStmtNode(size_t pos, Pragma::Flags flags): StmtNode(pos, Pragma), flags(flags) {}
+
+        void print(PrettyPrinter &f, bool noSemi) const;
+    };
+
     struct IncludeStmtNode: StmtNode {
         String &name;                   // The file name
 
         IncludeStmtNode(size_t pos, String &name): StmtNode(pos, Include), name(name) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
-    };
-
-    struct LanguageStmtNode: StmtNode {
-        Pragma::Flags flags;            // The new set of flags to use until the next PragmaStmtNode or the end of this scope
-
-        LanguageStmtNode(size_t pos, Kind kind, Pragma::Flags flags): StmtNode(pos, kind), flags(flags) {}
-    };
-
-    struct PackageStmtNode: StmtNode {
-        PackageName &packageName;       // The package's name
-        BlockStmtNode *body;            // The package's body; non-nil only
-
-        PackageStmtNode(size_t pos, Kind kind, PackageName &packageName, BlockStmtNode *body):
-                StmtNode(pos, kind), packageName(packageName), body(body) {ASSERT(body);}
     };
 
 
@@ -776,7 +792,9 @@ namespace JavaScript {
         struct StackedSubexpression;
 
         ExprNode *makeIdentifierExpression(const Token &t) const;
+        const StringAtom &ensureIdentifier(const Token &t);
         const StringAtom &parseIdentifier();
+        IdentifierList *parseIdentifierList(Token::Kind separator);
         ExprNode *parseIdentifierQualifiers(ExprNode *e, bool &foundQualifiers, bool preferRegExp);
         ExprNode *parseParenthesesAndIdentifierQualifiers(const Token &tParen, bool noComma, bool &foundQualifiers, bool preferRegExp);
         ExprNode *parseQualifiedIdentifier(const Token &t, bool preferRegExp);
@@ -802,23 +820,33 @@ namespace JavaScript {
         ExprNode *parseAttributes(size_t pos, ExprNode *attribute);
         static bool expressionIsAttribute(const ExprNode *e);
         ExprNode *parseParenthesizedListExpression();
+        ExprList *parseParenthesizedExpressionList(bool optional);
         ExprNode *parseTypeExpression(bool noIn=false);
         ExprNode *parseTypeBinding(Token::Kind kind, bool noIn);
-        ExprList *parseTypeListBinding(Token::Kind kind);
         VariableBinding *parseVariableBinding(size_t pos, bool noIn, bool untyped, bool constant);
         VariableBinding *parseParameter();
         void parseFunctionName(FunctionName &fn);
         void parseFunctionSignature(FunctionDefinition &fd);
-        StmtNode *parseBlockContents(bool inSwitch, bool noCloseBrace);
+        ExportBinding *parseExportBinding();
+        StmtNode *parseBlockContents(bool inSwitch);
         BlockStmtNode *parseBody(bool *semicolonWanted);
-        StmtNode *parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool untyped, bool &semicolonWanted);
-        StmtNode *parseFor(size_t pos, bool &semicolonWanted);
-        StmtNode *parseTry(size_t pos);
-
-      public:
+        void parseIncludeExclude(UseStmtNode &s);
+        ImportStmtNode *parseImport(size_t pos, ExprNode *attributes);
+        UseStmtNode *parseUseDirective(size_t pos, ExprNode *attributes);
+        void parseClosingSemicolon();
+        bool parseBooleanPragma(const ExprList *arguments, bool &value, bool ignoreErrors);
+        bool parseNumericPragma(const ExprList *arguments, float64 &value, bool ignoreErrors);
+        StmtNode *parseUse(size_t pos, ExprNode *attributes, bool &semicolonWanted);
+        StmtNode *parseAnnotatableDirective(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool untyped, bool &semicolonWanted);
+        ForStmtNode *parseFor(size_t pos, bool &semicolonWanted);
+        TryStmtNode *parseTry(size_t pos);
+        PackageStmtNode *parsePackage(size_t pos);
         StmtNode *parseDirective(bool substatement, bool inSwitch, bool &semicolonWanted);
         StmtNode *parseSubstatement(bool &semicolonWanted);
-        StmtNode *parseProgram() {return parseBlockContents(false, true);}
+
+      public:
+        StmtNode *parseFullDirective(bool inSwitch);
+        StmtNode *parseProgram();
     };
 }
 #endif /* parser_h___ */

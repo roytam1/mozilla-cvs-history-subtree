@@ -1264,7 +1264,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Use:
         {
             UseStmtNode *u = static_cast<UseStmtNode *>(p);
-            ExprList *eList = u->exprs;
+            ExprList *eList = u->namespaces;
             while (eList) {
                 ExprNode *e = eList->expr;
                 if (e->getKind() == ExprNode::identifier) {
@@ -1453,11 +1453,8 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
     Operator op;
 
     switch (p->getKind()) {
-    case ExprNode::True:
-        addOp(LoadConstantTrueOp);
-        return Boolean_Type;
-    case ExprNode::False:
-        addOp(LoadConstantFalseOp);
+    case ExprNode::boolean:
+        addOp(static_cast<BooleanExprNode *>(p)->value ? LoadConstantTrueOp : LoadConstantFalseOp);
         return Boolean_Type;
     case ExprNode::Null:
         addOp(LoadConstantNullOp);

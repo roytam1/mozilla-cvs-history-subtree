@@ -165,11 +165,14 @@ const char *const JS::Token::kindNames[kindsEnd] = {
     "with",                         // With
 
 // Non-reserved words
+    "ecmascript",                   // Ecmascript
     "eval",                         // Eval
     "exclude",                      // Exclude
     "get",                          // Get
     "include",                      // Include
-    "set"                           // Set
+    "javascript",                   // Javascript
+    "set",                          // Set
+    "strict"                        // Strict
 };
 
 
@@ -272,7 +275,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // Goto
     0,                    // If
     0,                    // Implements
-    0,                    // Import
+    followAttr,           // Import
     0,                    // In
     0,                    // Instanceof
     followAttr,           // Interface
@@ -297,7 +300,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     isAttr,               // True
     0,                    // Try
     0,                    // Typeof
-    0,                    // Use
+    followAttr,           // Use
     followAttr,           // Var
     0,                    // Void
     isNEAttr,             // Volatile
@@ -305,11 +308,14 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // With
 
     // Non-reserved words
+    isAttr|nonreserved,   // Ecmascript
     isAttr|nonreserved,   // Eval
     isAttr|nonreserved,   // Exclude
     isAttr|nonreserved,   // Get
     isAttr|nonreserved,   // Include
+    isAttr|nonreserved,   // Javascript
     isAttr|nonreserved,   // Set
+    isAttr|nonreserved,   // Strict
 
     isAttr|nonreserved    // identifier
 };
@@ -319,8 +325,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
 void JS::Token::initKeywords(World &world)
 {
     const char *const*keywordName = kindNames + keywordsBegin;
-    for (Kind kind = keywordsBegin; kind != keywordsEnd;
-         kind = Kind(kind+1))
+    for (Kind kind = keywordsBegin; kind != keywordsEnd; kind = Kind(kind+1))
         world.identifiers[widenCString(*keywordName++)].tokenKind = kind;
 }
 

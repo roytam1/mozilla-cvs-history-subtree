@@ -180,18 +180,21 @@ namespace JavaScript
             With,                       // with
 
             // Non-reserved words
+            Ecmascript,                 // ecmascript
             Eval,                       // eval
             Exclude,                    // exclude
             Get,                        // get
             Include,                    // include
+            Javascript,                 // javascript
             Set,                        // set
+            Strict,                     // strict
 
             identifier,                 // Non-keyword identifier (may be same as a keyword if it contains an escape code)
-            kindsEnd,                   // End of token kinds
+            kindsEnd,                     // End of token kinds
 
-            keywordsBegin = Abstract,   // Beginning of range of special identifier tokens
-            keywordsEnd = identifier,   // End of range of special identifier tokens
-            nonreservedBegin = Eval,    // Beginning of range of non-reserved words
+            keywordsBegin = Abstract,     // Beginning of range of special identifier tokens
+            keywordsEnd = identifier,     // End of range of special identifier tokens
+            nonreservedBegin = Ecmascript,// Beginning of range of non-reserved words
             nonreservedEnd = identifier,  // End of range of non-reserved words
             kindsWithCharsBegin = number, // Beginning of range of tokens for which the chars field (below) is valid
             kindsWithCharsEnd = regExp+1  // End of range of tokens for which the chars field (below) is valid
@@ -199,18 +202,24 @@ namespace JavaScript
 
 // Keep synchronized with isNonreserved below
 #define CASE_TOKEN_NONRESERVED     \
-             Token::Eval:          \
+             Token::Ecmascript:    \
+        case Token::Eval:          \
         case Token::Exclude:       \
         case Token::Get:           \
         case Token::Include:       \
+        case Token::Javascript:    \
         case Token::Set:           \
+        case Token::Strict:        \
         case Token::identifier
 
 #define CASE_TOKEN_NONRESERVED_NONINCLUDE \
-             Token::Eval:          \
+             Token::Ecmascript:    \
+        case Token::Eval:          \
         case Token::Exclude:       \
         case Token::Get:           \
+        case Token::Javascript:    \
         case Token::Set:           \
+        case Token::Strict:        \
         case Token::identifier
 
 // Keep synchronized with isNonExpressionAttribute below
