@@ -30,6 +30,8 @@
 #include "nsHTTPResponse.h"
 #include "nsIHttpEventSink.h"
 #include "nsCRT.h"
+#include "nsIStreamConverterService.h"
+#include "nsIStreamConverter.h"
 
 #include "nsHTTPAtoms.h"
 #include "nsIHttpNotify.h"
@@ -54,12 +56,8 @@ extern PRLogModuleInfo* gHTTPLog;
 //
 static const int kMAX_HEADER_SIZE = 60000;
 
+static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 
-///////////////////////////////////////////////////////////////////////////////
-//
-// nsHTTPResponseListener Implementation (abstract base class)
-//
-///////////////////////////////////////////////////////////////////////////////
 nsHTTPResponseListener::nsHTTPResponseListener(nsHTTPChannel *aChannel)
                        : mChannel(aChannel)
 {
@@ -82,8 +80,6 @@ nsHTTPResponseListener::nsHTTPResponseListener(nsHTTPChannel *aChannel)
          ("Creating nsHTTPResponseListener [this=%x] for URI: %s.\n", 
            this, (const char *)urlCString));
 #endif
-
-
 }
 
 nsHTTPResponseListener::~nsHTTPResponseListener()
@@ -225,6 +221,8 @@ nsHTTPServerListener::nsHTTPServerListener(nsHTTPChannel* aChannel)
 
     PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
            ("Creating nsHTTPServerListener [this=%x].\n", this));
+
+	mChunkConverterPushed = PR_FALSE;
 }
 
 nsHTTPServerListener::~nsHTTPServerListener()
@@ -308,6 +306,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
         //
         rv = FinishedResponseHeaders();
         if (NS_FAILED(rv)) return rv;
+
     }
 
     // At this point we've digested headers from the server and we're
@@ -337,6 +336,21 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 
         if (NS_SUCCEEDED(rv)) {
             if (i_Length) {
+
+				if (!mChunkConverterPushed && mResponse -> isChunkedResponse ())
+				{
+					NS_WITH_SERVICE (nsIStreamConverterService, StreamConvService, kStreamConverterServiceCID, &rv);
+					if (NS_FAILED(rv)) return rv;
+
+					nsString2 fromStr ( "chunked" );
+					nsString2 toStr   ("unchunked");
+				    nsCOMPtr<nsIStreamListener> converterListener;
+					rv = StreamConvService -> AsyncConvertData (fromStr.GetUnicode(), toStr.GetUnicode(), mResponseDataListener, nsnull, getter_AddRefs (converterListener));
+					if (NS_FAILED(rv)) return rv;
+					mResponseDataListener = converterListener;
+					mChunkConverterPushed = PR_TRUE;
+				}
+
                 PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
                        ("\tOnDataAvailable [this=%x]. Calling consumer "
                         "OnDataAvailable.\tlength:%d\n", this, i_Length));

@@ -40,6 +40,7 @@
 #include "nsIIOService.h"
 #include "nsAuthEngine.h"
 #include "nsIServiceManager.h"
+#include "plstr.h"
 
 #if defined(PR_LOGGING)
 extern PRLogModuleInfo* gHTTPLog;
@@ -137,6 +138,18 @@ nsHTTPRequest::nsHTTPRequest(nsIURI* i_URL, HTTPMethod i_Method):
         if (acceptLanguages && *acceptLanguages)
             SetHeader(nsHTTPAtoms::Accept_Language, acceptLanguages);
     }
+
+	// XXX/ruslan: should we just hold the version as a string always?
+    nsXPIDLCString httpVersion;
+    rv = httpHandler -> GetHttpVersion (getter_Copies (httpVersion));
+    if (NS_SUCCEEDED (rv) && httpVersion)
+    {
+		if (!PL_strcmp (httpVersion, "1.1"))
+			mVersion = HTTP_ONE_ONE;
+		else
+		if (!PL_strcmp (httpVersion, "0.9"))
+			mVersion = HTTP_ZERO_NINE;
+	}
 }
     
 
@@ -299,7 +312,18 @@ nsresult nsHTTPRequest::WriteRequest(PRBool aIsProxied)
     if (-1 != refLocation)
         mRequestBuffer.Truncate(refLocation);
 
-    mRequestBuffer.Append(" HTTP/1.0"CRLF);
+	char * httpVersion = " HTTP/1.0" CRLF;
+
+	switch (mVersion)
+	{
+		case HTTP_ZERO_NINE:
+			httpVersion = " HTTP/0.9"CRLF;
+			break;
+		case HTTP_ONE_ONE:
+			httpVersion = " HTTP/1.1"CRLF;
+	}
+
+    mRequestBuffer.Append (httpVersion);
 
     //
     // Write the request headers, if any...
