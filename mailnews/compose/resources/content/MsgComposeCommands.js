@@ -179,7 +179,7 @@ var gComposeRecyclingListener = {
  
     //Clear the subject
     document.getElementById("msgSubject").value = "";
-
+    SetComposeWindowTitle(13);
 
     SetContentAndBodyAsUnmodified();
     disableEditableFields();
