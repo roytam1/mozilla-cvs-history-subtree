@@ -69,7 +69,6 @@ EXTRA_DSO_LDOPTS = \
 	-L$(DIST)/bin \
 	-l$(MOZ_LIB_JS_PREFIX)js \
 	-lxpcom \
-	-lxptcmd \
 	-lreg \
 	$(NSPR_LIBS) \
 	$(NULL)
