@@ -83,7 +83,6 @@ OBJS=											\
 		.\$(OBJDIR)\mimemsg.obj				\
 		.\$(OBJDIR)\mimemsig.obj			\
 		.\$(OBJDIR)\mimemult.obj			\
-		.\$(OBJDIR)\mimeobj.obj				\
 		.\$(OBJDIR)\mimepbuf.obj			\
 		.\$(OBJDIR)\mimesun.obj				\
 		.\$(OBJDIR)\mimetenr.obj			\
