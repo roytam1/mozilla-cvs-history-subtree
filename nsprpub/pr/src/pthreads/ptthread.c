@@ -353,9 +353,16 @@ static PRThread* _PR_CreateThread(
     PR_ASSERT(0 == rv);
 #endif /* !defined(_PR_DCETHREADS) */
 
+#if defined(HPUX) && defined(_USE_BIG_FDS)
+    /*
+     * _USE_BIG_FDS increases the size of fd_set from 256 bytes to
+     * about 7500 bytes.  PR_Poll allocates three fd_sets on the
+     * stack, so it is safer to also increase the default thread
+     * stack size.
+     */
+    if (0 == stackSize) stackSize = (128 * 1024);  /* default == 128K */
+#else
     if (0 == stackSize) stackSize = (64 * 1024);  /* default == 64K */
-#ifdef _MD_MINIMUM_STACK_SIZE
-    if (stackSize < _MD_MINIMUM_STACK_SIZE) stackSize = _MD_MINIMUM_STACK_SIZE;
 #endif
     /*
      * Linux doesn't have pthread_attr_setstacksize.

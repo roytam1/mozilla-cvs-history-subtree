@@ -54,6 +54,8 @@
 #define PAIRWISE_DIGEST_LENGTH			SHA1_LENGTH /* 160-bits */
 #define PAIRWISE_MESSAGE_LENGTH			20          /* 160-bits */
 
+static const SECItem pk11_null_params = { 0 };
+
 /* forward static declarations. */
 static PK11SymKey *pk11_DeriveWithTemplate(PK11SymKey *baseKey, 
 	CK_MECHANISM_TYPE derive, SECItem *param, CK_MECHANISM_TYPE target, 
@@ -171,18 +173,13 @@ pk11_getKeyFromList(PK11SlotInfo *slot) {
     PK11_USE_THREADS(PZ_Unlock(slot->freeListLock);)
     if (symKey) {
 	symKey->next = NULL;
-	if (!symKey->sessionOwner)
+	if ((symKey->series != slot->series) || (!symKey->sessionOwner))
     	    symKey->session = pk11_GetNewSession(slot,&symKey->sessionOwner);
 	return symKey;
     }
 
     symKey = (PK11SymKey *)PORT_ZAlloc(sizeof(PK11SymKey));
     if (symKey == NULL) {
-	return NULL;
-    }
-    symKey->refLock = PZ_NewLock(nssILockRefLock);
-    if (symKey->refLock == NULL) {
-	PORT_Free(symKey);
 	return NULL;
     }
     symKey->session = pk11_GetNewSession(slot,&symKey->sessionOwner);
@@ -199,7 +196,6 @@ PK11_CleanKeyList(PK11SlotInfo *slot)
     	symKey = slot->freeSymKeysHead;
 	slot->freeSymKeysHead = symKey->next;
 	pk11_CloseSession(slot, symKey->session,symKey->sessionOwner);
-	PK11_USE_THREADS(PZ_DestroyLock(symKey->refLock);)
 	PORT_Free(symKey);
     };
     return;
@@ -243,17 +239,15 @@ PK11_CreateSymKey(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, void *wincx)
 void
 PK11_FreeSymKey(PK11SymKey *symKey)
 {
-    PRBool destroy = PR_FALSE;
     PK11SlotInfo *slot;
     PRBool freeit = PR_TRUE;
 
-    PK11_USE_THREADS(PZ_Lock(symKey->refLock);)
-     if (symKey->refCount-- == 1) {
-	destroy= PR_TRUE;
-    }
-    PK11_USE_THREADS(PZ_Unlock(symKey->refLock);)
-    if (destroy) {
+    if (PR_AtomicDecrement(&symKey->refCount) == 0) {
+#if 0
 	if ((symKey->owner) && symKey->objectID != CK_INVALID_KEY) {
+#else
+	if ((symKey->owner) && symKey->objectID != CK_INVALID_HANDLE) {
+#endif
 	    pk11_EnterKeyMonitor(symKey);
 	    (void) PK11_GETTAB(symKey->slot)->
 		C_DestroyObject(symKey->session, symKey->objectID);
@@ -276,7 +270,6 @@ PK11_FreeSymKey(PK11SymKey *symKey)
         if (freeit) {
 	    pk11_CloseSession(symKey->slot, symKey->session,
 							symKey->sessionOwner);
-	    PK11_USE_THREADS(PZ_DestroyLock(symKey->refLock);)
 	    PORT_Free(symKey);
 	}
 	PK11_FreeSlot(slot);
@@ -286,9 +279,7 @@ PK11_FreeSymKey(PK11SymKey *symKey)
 PK11SymKey *
 PK11_ReferenceSymKey(PK11SymKey *symKey)
 {
-    PK11_USE_THREADS(PZ_Lock(symKey->refLock);)
-    symKey->refCount++;
-    PK11_USE_THREADS(PZ_Unlock(symKey->refLock);)
+    PR_AtomicIncrement(&symKey->refCount);
     return symKey;
 }
 
@@ -1207,7 +1198,7 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
     int keySize, SECItem *keyid, PRBool isToken, void *wincx)
 {
     PK11SymKey *symKey;
-    CK_ATTRIBUTE genTemplate[4];
+    CK_ATTRIBUTE genTemplate[5];
     CK_ATTRIBUTE *attrs = genTemplate;
     int count = sizeof(genTemplate)/sizeof(genTemplate[0]);
     CK_SESSION_HANDLE session;
@@ -1216,6 +1207,7 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
     PRBool weird = PR_FALSE;   /* hack for fortezza */
     CK_BBOOL ckfalse = CK_FALSE;
     CK_BBOOL cktrue = CK_TRUE;
+    CK_ULONG ck_key_size;       /* only used for variable-length keys */
 
     if ((keySize == -1) && (type == CKM_SKIPJACK_CBC64)) {
 	weird = PR_TRUE;
@@ -1227,9 +1219,9 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
 	? CKA_ENCRYPT : CKA_DECRYPT, &cktrue, sizeof(CK_BBOOL)); attrs++;
     
     if (keySize != 0) {
-        CK_ULONG key_size = keySize; /* Convert to PK11 type */
+        ck_key_size = keySize; /* Convert to PK11 type */
 
-        PK11_SETATTRS(attrs, CKA_VALUE_LEN, &key_size, sizeof(key_size)); 
+        PK11_SETATTRS(attrs, CKA_VALUE_LEN, &ck_key_size, sizeof(ck_key_size)); 
 							attrs++;
     }
 
@@ -1241,6 +1233,8 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
     if (isToken) {
         PK11_SETATTRS(attrs, CKA_TOKEN, &cktrue, sizeof(cktrue));  attrs++;
     }
+
+    PK11_SETATTRS(attrs, CKA_SIGN, &cktrue, sizeof(cktrue));  attrs++;
 
     count = attrs - genTemplate;
     PR_ASSERT(count <= sizeof(genTemplate)/sizeof(CK_ATTRIBUTE));
@@ -3168,7 +3162,8 @@ PK11_DestroyContext(PK11Context *context, PRBool freeit)
     /* initialize the critical fields of the context */
     if (context->savedData != NULL ) PORT_Free(context->savedData);
     if (context->key) PK11_FreeSymKey(context->key);
-    if (context->param) SECITEM_FreeItem(context->param, PR_TRUE);
+    if (context->param && context->param != &pk11_null_params)
+	SECITEM_FreeItem(context->param, PR_TRUE);
     if (context->sessionLock) PZ_DestroyLock(context->sessionLock);
     PK11_FreeSlot(context->slot);
     if (freeit) PORT_Free(context);
@@ -3177,46 +3172,46 @@ PK11_DestroyContext(PK11Context *context, PRBool freeit)
 /*
  * save the current context. Allocate Space if necessary.
  */
-static void *
-pk11_saveContextHelper(PK11Context *context, void *space, 
-	unsigned long *savedLength, PRBool staticBuffer, PRBool recurse)
+static unsigned char *
+pk11_saveContextHelper(PK11Context *context, unsigned char *buffer, 
+                       unsigned long *savedLength)
 {
-    CK_ULONG length;
     CK_RV crv;
 
-    if (staticBuffer) PORT_Assert(space != NULL);
-
-    if (space == NULL) {
-	crv =PK11_GETTAB(context->slot)->C_GetOperationState(context->session,
-				NULL,&length);
-	if (crv != CKR_OK) {
-	    PORT_SetError( PK11_MapError(crv) );
-	    return NULL;
-	}
-	space = PORT_Alloc(length);
-	if (space == NULL) return NULL;
-	*savedLength = length;
-    }
+    /* If buffer is NULL, this will get the length */
     crv = PK11_GETTAB(context->slot)->C_GetOperationState(context->session,
-					(CK_BYTE_PTR)space,savedLength);
-    if (!staticBuffer && !recurse && (crv == CKR_BUFFER_TOO_SMALL)) {
-	if (!staticBuffer) PORT_Free(space);
-	return pk11_saveContextHelper(context, NULL, 
-					savedLength, PR_FALSE, PR_TRUE);
+                                                          (CK_BYTE_PTR)buffer,
+                                                          savedLength);
+    if (!buffer || (crv == CKR_BUFFER_TOO_SMALL)) {
+	/* the given buffer wasn't big enough (or was NULL), but we 
+	 * have the length, so try again with a new buffer and the 
+	 * correct length
+	 */
+	unsigned long bufLen = *savedLength;
+	buffer = PORT_Alloc(bufLen);
+	if (buffer == NULL) {
+	    return (unsigned char *)NULL;
+	}
+	crv = PK11_GETTAB(context->slot)->C_GetOperationState(
+	                                                  context->session,
+                                                          (CK_BYTE_PTR)buffer,
+                                                          savedLength);
+	if (crv != CKR_OK) {
+	    PORT_ZFree(buffer, bufLen);
+	}
     }
     if (crv != CKR_OK) {
-	if (!staticBuffer) PORT_Free(space);
 	PORT_SetError( PK11_MapError(crv) );
-	return NULL;
+	return (unsigned char *)NULL;
     }
-    return space;
+    return buffer;
 }
 
 void *
 pk11_saveContext(PK11Context *context, void *space, unsigned long *savedLength)
 {
-	return pk11_saveContextHelper(context, space, 
-					savedLength, PR_FALSE, PR_FALSE);
+    return pk11_saveContextHelper(context, 
+                                  (unsigned char *)space, savedLength);
 }
 
 /*
@@ -3356,7 +3351,15 @@ static PK11Context *pk11_CreateNewContextInSlot(CK_MECHANISM_TYPE type,
     /* save the parameters so that some digesting stuff can do multiple
      * begins on a single context */
     context->type = type;
-    context->param = SECITEM_DupItem(param);
+    if (param) {
+	if (param->len > 0) {
+	    context->param = SECITEM_DupItem(param);
+	} else {
+	    context->param = (SECItem *)&pk11_null_params;
+	}
+    } else {
+	context->param = NULL;
+    }
     context->init = PR_FALSE;
     context->sessionLock = PZ_NewLock(nssILockPK11cxt);
     if ((context->param == NULL) || (context->sessionLock == NULL)) {
@@ -3554,8 +3557,7 @@ PK11_SaveContext(PK11Context *cx,unsigned char *save,int *len, int saveLength)
 
     if (cx->ownSession) {
         PK11_EnterContextMonitor(cx);
-	data = (unsigned char*)pk11_saveContextHelper(cx,save,&length,
-							PR_FALSE,PR_FALSE);
+	data = pk11_saveContextHelper(cx, save, &length);
         PK11_ExitContextMonitor(cx);
 	if (data) *len = length;
     } else if (saveLength >= cx->savedLength) {
@@ -3565,7 +3567,14 @@ PK11_SaveContext(PK11Context *cx,unsigned char *save,int *len, int saveLength)
 	}
 	*len = cx->savedLength;
     }
-    return (data != NULL) ? SECSuccess : SECFailure;
+    if (data != NULL) {
+	if (cx->ownSession) {
+	    PORT_ZFree(data, length);
+	}
+	return SECSuccess;
+    } else {
+	return SECFailure;
+    }
 }
 
 /*
@@ -3866,6 +3875,11 @@ PK11_DigestKey(PK11Context *context, PK11SymKey *key)
     SECStatus rv = SECSuccess;
     PK11SymKey *newKey = NULL;
 
+    if (!context || !key) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return SECFailure;
+    }
+
     /* if we ran out of session, we need to restore our previously stored
      * state.
      */
@@ -3942,31 +3956,34 @@ pk11_Finalize(PK11Context *context)
 {
     CK_ULONG count = 0;
     CK_RV crv;
+    unsigned char stackBuf[256];
+    unsigned char *buffer = NULL;
 
     if (!context->ownSession) {
 	return SECSuccess;
     }
 
+finalize:
     switch (context->operation) {
     case CKA_ENCRYPT:
 	crv=PK11_GETTAB(context->slot)->C_EncryptFinal(context->session,
-				NULL,&count);
+	                                               buffer, &count);
 	break;
     case CKA_DECRYPT:
 	crv = PK11_GETTAB(context->slot)->C_DecryptFinal(context->session,
-				NULL,&count);
+	                                                 buffer, &count);
 	break;
     case CKA_SIGN:
 	crv=PK11_GETTAB(context->slot)->C_SignFinal(context->session,
-				NULL,&count);
+	                                            buffer, &count);
 	break;
     case CKA_VERIFY:
 	crv=PK11_GETTAB(context->slot)->C_VerifyFinal(context->session,
-				NULL,count);
+	                                              buffer, count);
 	break;
     case CKA_DIGEST:
 	crv=PK11_GETTAB(context->slot)->C_DigestFinal(context->session,
-				NULL,&count);
+	                                              buffer, &count);
 	break;
     default:
 	crv = CKR_OPERATION_NOT_INITIALIZED;
@@ -3974,8 +3991,22 @@ pk11_Finalize(PK11Context *context)
     }
 
     if (crv != CKR_OK) {
+	if (crv == CKR_OPERATION_NOT_INITIALIZED) {
+	    /* if there's no operation, it is finalized */
+	    return SECSuccess;
+	}
         PORT_SetError( PK11_MapError(crv) );
         return SECFailure;
+    }
+
+    /* try to finalize the session with a buffer */
+    if (buffer == NULL && count > 0) { 
+	if (count < sizeof stackBuf) {
+	    buffer = stackBuf;
+	    goto finalize;
+	} else {
+	    return SECFailure;
+	}
     }
     return SECSuccess;
 }
@@ -4052,6 +4083,49 @@ PK11_DigestFinal(PK11Context *context,unsigned char *data,
  *
  ****************************************************************************/
 
+static void
+pk11_destroy_ck_pbe_params(CK_PBE_PARAMS *pbe_params)
+{
+    if (pbe_params) {
+	if (pbe_params->pPassword)
+	    PORT_ZFree(pbe_params->pPassword, PR_FALSE);
+	if (pbe_params->pSalt)
+	    PORT_ZFree(pbe_params->pSalt, PR_FALSE);
+	PORT_ZFree(pbe_params, PR_TRUE);
+    }
+}
+
+SECItem * 
+PK11_CreatePBEParams(SECItem *salt, SECItem *pwd, unsigned int iterations)
+{
+    CK_PBE_PARAMS *pbe_params = NULL;
+    SECItem *paramRV = NULL;
+    pbe_params = (CK_PBE_PARAMS *)PORT_ZAlloc(sizeof(CK_PBE_PARAMS));
+    pbe_params->pPassword = (CK_CHAR_PTR)PORT_ZAlloc(pwd->len);
+    if (pbe_params->pPassword != NULL) {
+	PORT_Memcpy(pbe_params->pPassword, pwd->data, pwd->len);
+	pbe_params->ulPasswordLen = pwd->len;
+    } else goto loser;
+    pbe_params->pSalt = (CK_CHAR_PTR)PORT_ZAlloc(salt->len);
+    if (pbe_params->pSalt != NULL) {
+	PORT_Memcpy(pbe_params->pSalt, salt->data, salt->len);
+	pbe_params->ulSaltLen = salt->len;
+    } else goto loser;
+    pbe_params->ulIteration = (CK_ULONG)iterations;
+    paramRV = SECITEM_AllocItem(NULL, NULL, sizeof(CK_PBE_PARAMS));
+    paramRV->data = (unsigned char *)pbe_params;
+    return paramRV;
+loser:
+    pk11_destroy_ck_pbe_params(pbe_params);
+    return NULL;
+}
+
+void
+PK11_DestroyPBEParams(SECItem *params)
+{
+    pk11_destroy_ck_pbe_params((CK_PBE_PARAMS *)params->data);
+}
+
 SECAlgorithmID *
 PK11_CreatePBEAlgorithmID(SECOidTag algorithm, int iteration, SECItem *salt)
 {
@@ -4060,6 +4134,8 @@ PK11_CreatePBEAlgorithmID(SECOidTag algorithm, int iteration, SECItem *salt)
     algid = SEC_PKCS5CreateAlgorithmID(algorithm, salt, iteration);
     return algid;
 }
+
+#define PBE_IV_SIZE 8
 
 PK11SymKey *
 PK11_PBEKeyGen(PK11SlotInfo *slot, SECAlgorithmID *algid, SECItem *pwitem,
@@ -4090,9 +4166,17 @@ PK11_PBEKeyGen(PK11SlotInfo *slot, SECAlgorithmID *algid, SECItem *pwitem,
 	return NULL;
     }
 
+    pbe_params->pInitVector = (CK_CHAR_PTR)PORT_ZAlloc(PBE_IV_SIZE);
+    if(pbe_params->pInitVector == NULL) {
+	PORT_ZFree(pbe_params->pPassword, pwitem->len);
+	SECITEM_ZfreeItem(mech, PR_TRUE);
+	return NULL;
+    }
+
     symKey = PK11_KeyGen(slot, type, mech, 0, wincx);
 
     PORT_ZFree(pbe_params->pPassword, pwitem->len);
+    PORT_ZFree(pbe_params->pInitVector, PBE_IV_SIZE);
     SECITEM_ZfreeItem(mech, PR_TRUE);
     return symKey;
 }

@@ -71,7 +71,7 @@
 
 #define HAVE_DLL
 #undef  HAVE_THREAD_AFFINITY
-#define _PR_HAVE_ATOMIC_OPS
+#undef  _PR_HAVE_ATOMIC_OPS
 
 #define HANDLE unsigned long
 #define HINSTANCE HMODULE
@@ -269,22 +269,15 @@ extern PRInt32 _MD_CloseSocket(PRInt32 osfd);
 #define _MD_GETPEERNAME               (_PR_MD_GETPEERNAME)
 #define _MD_GETSOCKOPT                (_PR_MD_GETSOCKOPT)
 #define _MD_SETSOCKOPT                (_PR_MD_SETSOCKOPT)
-
-#ifdef XP_OS2_EMX
-extern PRInt32 _MD_SELECT(int nfds, fd_set *readfds, fd_set *writefds,
-                                    fd_set *exceptfds, struct timeval *timeout);
-#else
 #define _MD_SELECT                    select
-#endif
-
 #define _MD_FSYNC                     _PR_MD_FSYNC
 #define _MD_SET_FD_INHERITABLE        (_PR_MD_SET_FD_INHERITABLE)
 
-#define _MD_INIT_ATOMIC()
-#define _MD_ATOMIC_INCREMENT          _PR_MD_ATOMIC_INCREMENT
-#define _MD_ATOMIC_ADD                _PR_MD_ATOMIC_ADD
-#define _MD_ATOMIC_DECREMENT          _PR_MD_ATOMIC_DECREMENT
-#define _MD_ATOMIC_SET                _PR_MD_ATOMIC_SET
+#define _MD_INIT_ATOMIC               _PR_MD_INIT_ATOMIC
+#define _MD_ATOMIC_INCREMENT(x)       _PR_MD_ATOMIC_INCREMENT(x)
+#define _MD_ATOMIC_ADD(x,y)			  _PR_MD_ATOMIC_ADD(x,y)
+#define _MD_ATOMIC_DECREMENT(x)       _PR_MD_ATOMIC_DECREMENT(x)
+#define _MD_ATOMIC_SET(x,y)           _PR_MD_ATOMIC_SET(x, y)
 
 #define _MD_INIT_IO                   (_PR_MD_INIT_IO)
 #define _MD_PR_POLL                   (_PR_MD_PR_POLL)
@@ -350,10 +343,10 @@ extern PRInt32 _MD_Accept(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
 #define _PR_LOCK                      _MD_LOCK
 #define _PR_UNLOCK					  _MD_UNLOCK
 
-#define _MD_NEW_LOCK                  (_PR_MD_NEW_LOCK)
-#define _MD_FREE_LOCK                 (_PR_MD_FREE_LOCK)
-#define _MD_LOCK                      (_PR_MD_LOCK)
-#define _MD_TEST_AND_LOCK             (_PR_MD_TEST_AND_LOCK)
+#define _MD_NEW_LOCK(lock)            (DosCreateMutexSem(0, &((lock)->mutex), 0, 0),(lock)->notified.length=0,(lock)->notified.link=NULL,PR_SUCCESS)
+#define _MD_FREE_LOCK(lock)           DosCloseMutexSem(((lock)->mutex))
+#define _MD_LOCK(lock)                DosRequestMutexSem(((lock)->mutex), SEM_INDEFINITE_WAIT)
+#define _MD_TEST_AND_LOCK(lock)       (DosRequestMutexSem(((lock)->mutex), SEM_INDEFINITE_WAIT),PR_SUCCESS)
 #define _MD_UNLOCK                    (_PR_MD_UNLOCK)
 
 /* --- lock and cv waiting --- */

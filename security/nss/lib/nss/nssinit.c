@@ -155,8 +155,10 @@ nss_OpenKeyDB(const char * configdir, const char *prefix, PRBool readOnly)
     if (name == NULL) 
 	return SECFailure;
     keydb = SECKEY_OpenKeyDB(readOnly, nss_keydb_name_cb, (void *)name);
-    if (keydb == NULL)
+    if (keydb == NULL) {
+	PORT_Free(name);
 	return SECFailure;
+    }
     SECKEY_SetDefaultKeyDB(keydb);
     PORT_Free(name);
     return SECSuccess;
@@ -215,6 +217,8 @@ nss_OpenVolatileSecModDB() {
       return rv;
 }
 
+extern SECStatus secoid_Init(void);
+
 /*
  * OK there are now lots of options here, lets go through them all:
  *
@@ -248,6 +252,10 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
     if (status != SECSuccess)
 	goto loser;
     RNG_SystemInfoForRNG();
+    
+    if (secoid_Init() != SECSuccess) {
+	goto loser;
+    }
 
     if (noCertDB) {
 	status = nss_OpenVolatileCertDB();
@@ -355,6 +363,10 @@ NSS_NoDB_Init(const char * configdir)
 	   return rv;
       }
       RNG_SystemInfoForRNG();
+    
+      if (secoid_Init() != SECSuccess) {
+	   return rv;
+      }
 
       rv = nss_OpenVolatileCertDB();
       if (rv != SECSuccess) {
