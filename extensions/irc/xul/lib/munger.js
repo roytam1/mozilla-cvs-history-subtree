@@ -65,6 +65,22 @@ function initMunger()
                     insertHyphenatedWord);
 
     client.enableColors = client.prefs["munger.colorCodes"];
+    for (var entry in client.munger.entries)
+    {
+        var branch = client.prefManager.prefBranch;
+        if (entry[0] != ".")
+        {
+            try
+            {
+                munger.entries[entry].enabled = 
+                    branch.getBoolPref("munger." + entry);
+            }
+            catch (ex)
+            {
+                // nada
+            }
+        }
+    }
 }
 
 function CMungerEntry (name, regex, className, enable, tagName)

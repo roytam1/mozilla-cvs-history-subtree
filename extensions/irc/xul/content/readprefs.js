@@ -133,12 +133,15 @@ function initReadPrefs()
         //REMOVED: "debug.tracer"     : ["client.debugHook.enabled",      false],
         //"style.default":     ["client.DEFAULT_STYLE",
         //                      "chrome://chatzilla/skin/output-default.css"],
-        //CHANGED: "views.collapseMsgs":      ["client.COLLAPSE_MSGS",              false],
-        //CHANGED: "views.copyMessages":      ["client.COPY_MESSAGES",               true],
-        //CHANGED:"views.client.maxlines":   ["client.MAX_MESSAGES",                 200],
-        //CHANGED:"views.network.maxlines":  ["CIRCNetwork.prototype.MAX_MESSAGES",  100],
-        //CHANGED:"views.channel.maxlines":  ["CIRCChannel.prototype.MAX_MESSAGES",  300],
-        //CHANGED:"views.chanuser.maxlines": ["CIRCChanUser.prototype.MAX_MESSAGES", 200]
+        //CHANGED: "views.collapseMsgs": ["client.COLLAPSE_MSGS",        false],
+        //CHANGED: "views.copyMessages":      ["client.COPY_MESSAGES",    true],
+        //CHANGED:"views.client.maxlines":   ["client.MAX_MESSAGES",       200],
+        //CHANGED:"views.network.maxlines":
+        //  ["CIRCNetwork.prototype.MAX_MESSAGES",  100],
+        //CHANGED:"views.channel.maxlines":
+        //  ["CIRCChannel.prototype.MAX_MESSAGES",  300],
+        //CHANGED:"views.chanuser.maxlines":
+        //  ["CIRCChanUser.prototype.MAX_MESSAGES", 200]
     };
 
     const PREF_CTRID = "@mozilla.org/preferences-service;1";

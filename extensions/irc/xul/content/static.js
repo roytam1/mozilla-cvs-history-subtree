@@ -34,7 +34,7 @@
  *  Samuel Sieb, samuel@sieb.net, MIRC color codes, munger menu, and various
  */
 
-const __cz_version   = "0.9.20";
+const __cz_version   = "0.9.23";
 const __cz_condition = "yellow";
 
 var warn;
@@ -2886,7 +2886,7 @@ function __display(message, msgtype, sourceObj, destObj)
             setTabState(this, "activity");
     }
 
-    if (isImportant && client.COPY_MESSAGES)
+    if (isImportant && client.prefs["copyMessages"])
     {
         if (o.network != this)
             o.network.displayHere("{" + this.name + "} " + message, msgtype,

@@ -602,7 +602,6 @@ function my_showtonet (e)
             this.updateHeader();
             client.updateHeader();
             updateStalkExpression(this);
-            this.prefs["nickname"] = e.server.me.properNick
             for (var v in client.viewsArray)
             {
                 // reconnect to any existing views
@@ -923,7 +922,7 @@ function my_whoisreply (e)
             break;
             
         case 317:
-            text = getMsg(MSG_WHOIS_IDLE
+            text = getMsg(MSG_WHOIS_IDLE,
                           [nick, formatDateOffset(Number(e.params[3])),
                           new Date(Number(e.params[4]) * 1000)]);
             break;
@@ -1313,12 +1312,12 @@ function my_cpart (e)
 
         if ("noDelete" in this)
             delete this.noDelete;
-        else if (client.DELETE_ON_PART)
+        else if (client.prefs["deleteOnPart"])
             this.dispatch("delete");
     }
     else
     {
-        this.display (getMsg(MSG_SOMEONE_LEFT
+        this.display (getMsg(MSG_SOMEONE_LEFT,
                              [e.user.properNick, e.channel.unicodeName]),
                       "PART", e.user, this);
     }

@@ -1659,6 +1659,7 @@ function serv_dccsend (e)
 function CIRCChannel (parent, encodedName, unicodeName)
 {
     this.normalizedName = encodedName.toLowerCase();
+    this.name = this.normalizedName;
 
     if (this.normalizedName in parent.channels)
         return parent.channels[this.normalizedName];
@@ -1669,7 +1670,6 @@ function CIRCChannel (parent, encodedName, unicodeName)
         this.unicodeName = unicodeName;
     else
         this.unicodeName = toUnicode(encodedName, this);
-    this.name = this.normalizedName;
 
     this.users = new Object();
     this.bans = new Object();
