@@ -59,10 +59,22 @@ REQUIRES = \
 	string \
 	xpcom \
 	xulapp \
-        appshell \
+    appshell \
 	$(NULL)
 
 CPPSRCS = nsMailApp.cpp
+
+# This code removes the console from release builds
+# (unless you've set MOZ_WINCONSOLE=1).
+
+ifndef MOZ_WINCONSOLE
+ifdef MOZ_DEBUG
+MOZ_WINCONSOLE = 1
+else
+MOZ_WINCONSOLE = 0
+endif
+endif
+
 
 EXTRA_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
@@ -70,6 +82,17 @@ EXTRA_LIBS = \
 	$(MOZ_COMPONENT_LIBS) \
 	$(TK_LIBS) \
 	$(NULL)
+
+include $(topsrcdir)/config/config.mk
+
+
+## HACK ALERT...I can't seem to get the console to go away in optimized builds
+## the MOZWINCONSOLE lines above are doing anything...for now, force the right
+## subsytem
+
+ifndef MOZ_DEBUG
+OS_LIBS += /SUBSYSTEM:WINDOWS
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 OS_LIBS += comctl32.lib comdlg32.lib uuid.lib shell32.lib ole32.lib oleaut32.lib version.lib winspool.lib
@@ -89,21 +112,3 @@ include $(topsrcdir)/config/rules.mk
 
 $(PROGRAM): $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
 
-ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
-minotaur:: mozilla.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
-	cat $< | sed -e "s|%MOZAPPDIR%|$(mozappdir)|" \
-		-e "s|%MREDIR%|$(mredir)|" \
-		-e "s|mozilla-bin|$(PROGRAM)|g" > $@
-	chmod +x $@
-
-libs:: minotaur
-	$(INSTALL) $< $(DIST)/bin
-
-install:: minotaur
-	$(SYSINSTALL) $< $(DESTDIR)$(bindir)
-
-GARBAGE += minotaur
-GARBAGE += $(addprefix $(DIST)/bin/defaults/pref/, all.js)
-GARBAGE += $(addprefix $(DIST)/bin/defaults/pref/, mailnews.js)
-
-endif
