@@ -246,7 +246,7 @@ loser:
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert* aEncryptCert)
+NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert* aEncryptCert, unsigned char* aDigestData, PRUint32 aDigestDataLen)
 {
   NSSCMSContentInfo *cinfo;
   NSSCMSSignedData *sigd;
@@ -320,6 +320,18 @@ NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert*
 
   if (NSS_CMSSignedData_AddSignerInfo(sigd, signerinfo) != SECSuccess) {
     goto loser;
+  }
+
+  // Finally, add the pre-computed digest if passed in
+  if (aDigestData) {
+    SECItem digest;
+
+    digest.data = aDigestData;
+    digest.len = aDigestDataLen;
+
+    if (NSS_CMSSignedData_SetDigestValue(sigd, SEC_OID_SHA1, &digest)) {
+      goto loser;
+    }
   }
 
   return NS_OK;

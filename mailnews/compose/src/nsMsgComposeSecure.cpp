@@ -24,7 +24,7 @@
 #include "nsMsgComposeSecure.h"
 #include "nspr.h"
 #include "nsCOMPtr.h"
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 #include "nsIX509Cert.h"
 #include "nsIMimeConverter.h"
 #include "nsMsgEncoders.h"
@@ -40,9 +40,11 @@
 
 static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID); 
 
-#define MIME_MULTIPART_SIGNED_BLURB "test"
-#define MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION "test"
-#define MIME_SMIME_SIGNATURE_CONTENT_DESCRIPTION "test"
+// XXX These strings should go in properties file XXX //
+#define MIME_MULTIPART_SIGNED_BLURB "This is a cryptographically signed message in MIME format."
+#define MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION "S/MIME Encrypted Message"
+#define MIME_SMIME_SIGNATURE_CONTENT_DESCRIPTION "S/MIME Cryptographic Signature"
+
 #define MK_MIME_ERROR_WRITING_FILE -1
 
 #define SEC_ERROR_NO_EMAIL_CERT -100
@@ -375,7 +377,7 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter)
 
   PR_ASSERT (mSelfSigningCert);
   PR_SetError(0,0);
-  rv = cinfo->CreateSigned(mSelfSigningCert, mSelfEncryptionCert);
+  rv = cinfo->CreateSigned(mSelfSigningCert, mSelfEncryptionCert, sec_item_data, sec_item_len);
   if (NS_FAILED(rv))	{
 	  goto FAIL;
 	}
@@ -400,10 +402,8 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter)
   if (NS_FAILED(rv)) {
 	  goto FAIL;
 	}
-  rv = encoder->Update((const char*)sec_item_data, sec_item_len);
-  if (NS_FAILED(rv)) {
-	  goto FAIL;
-	}
+
+  // We're not passing in any data, so no update needed.
   rv = encoder->Finish();
   if (NS_FAILED(rv)) {
 	  goto FAIL;

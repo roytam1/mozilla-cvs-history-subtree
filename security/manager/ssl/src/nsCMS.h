@@ -21,8 +21,8 @@
  *   Ian McGreer <mcgreer@netscape.com>
  */
 
-#ifndef __NS_CMSDECODER_H__
-#define __NS_CMSDECODER_H__
+#ifndef __NS_CMS_H__
+#define __NS_CMS_H__
 
 #include "nsISupports.h"
 #include "nsCOMPtr.h"

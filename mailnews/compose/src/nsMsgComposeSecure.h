@@ -24,7 +24,7 @@
 
 #include "nsIMsgComposeSecure.h"
 #include "nsCOMPtr.h"
-#include "nsICMSDecoder.h"
+#include "nsICMS.h"
 #include "nsIX509Cert.h"
 #include "nsIMimeConverter.h"
 

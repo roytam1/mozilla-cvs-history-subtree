@@ -68,7 +68,7 @@ interface nsICMSMessage : nsISupports
   void verifySignature();
   void verifyDetachedSignature(in UnsignedCharPtr aDigestData, in unsigned long aDigestDataLen);
   void CreateEncrypted(in nsISupportsArray aRecipientCerts);
-  void CreateSigned(in nsIX509Cert scert, in nsIX509Cert ecert);
+  void CreateSigned(in nsIX509Cert scert, in nsIX509Cert ecert, in UnsignedCharPtr aDigestData, in unsigned long aDigestDataLen);
 };
 
 /**

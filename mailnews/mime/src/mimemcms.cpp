@@ -363,7 +363,6 @@ MimeMultCMS_free (void *crypto_closure)
   PR_FREEIF(data);
 }
 
-
 static char *
 MimeMultCMS_generate (void *crypto_closure)
 {
@@ -373,6 +372,9 @@ MimeMultCMS_generate (void *crypto_closure)
   PRBool encrypted_p;
   PRBool unverified_p = PR_FALSE;
   nsresult rv;
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  nsCOMPtr<nsIPrompt> prompter;
+  wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
 
   PR_ASSERT(data);
   if (!data) return 0;
@@ -380,12 +382,6 @@ MimeMultCMS_generate (void *crypto_closure)
 
   if (data->content_info)
 	{
-    nsString msg(NS_LITERAL_STRING("This mail message was digitally signed by the sender").get());
-    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
-    nsCOMPtr<nsIPrompt> prompter;
-    wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
-    prompter->Alert(0, msg.get());
-
 	  rv = data->content_info->VerifyDetachedSignature(data->item_data, data->item_len);
 	  if (NS_FAILED(rv)) {
       if (!data->verify_error)
@@ -393,14 +389,15 @@ MimeMultCMS_generate (void *crypto_closure)
       PR_ASSERT(data->verify_error < 0);
       if (data->verify_error >= 0)
         data->verify_error = -1;
-		} else {
+    } else {
 		  good_p = MimeCMSHeadersAndCertsMatch(data->self,
 												 data->content_info,
 												 &data->sender_addr);
-		  if (!good_p && !data->verify_error)
-			data->verify_error = -1;
-// XXX Fix this		data->verify_error = SEC_ERROR_CERT_ADDR_MISMATCH; XXX //
-		}
+      if (!good_p && !data->verify_error) {
+        data->verify_error = -1;
+        // XXX Fix this		data->verify_error = SEC_ERROR_CERT_ADDR_MISMATCH; XXX //
+      }
+    }
 
 #if 0 // XXX Fix this. What do we do here? //
 	  if (SEC_CMSContainsCertsOrCrls(data->content_info))
@@ -426,6 +423,15 @@ MimeMultCMS_generate (void *crypto_closure)
 	   */
 	  good_p = PR_FALSE;
 	}
+
+  // XXX Temporary hack until we write out to the chrome XXX //
+  if (good_p) {
+    nsString msg(NS_LITERAL_STRING("This is a signed message with a valid signature").get());
+    prompter->Alert(0, msg.get());
+  } else {
+    nsString msg(NS_LITERAL_STRING("This is a signed message with an invalid signature").get());
+    prompter->Alert(0, msg.get());
+  }
 
   unverified_p = data->self->options->missing_parts; 
 

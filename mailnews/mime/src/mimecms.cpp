@@ -391,6 +391,9 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
 {
   MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
   nsresult rv;
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  nsCOMPtr<nsIPrompt> prompter;
+  wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
 
   PR_ASSERT(data && data->output_fn && data->decoder_context);
   if (!data || !data->output_fn || !data->decoder_context)
@@ -408,11 +411,10 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
   rv = data->decoder_context->Finish(getter_AddRefs(data->content_info));
   if (NS_FAILED(rv)) {
 	  data->verify_error = PR_GetError();
+    nsString msg(NS_LITERAL_STRING("Error decrypted message that was encrypted by the sender").get());
+    prompter->Alert(0, msg.get());
   } else {
-    nsString msg(NS_LITERAL_STRING("This mail message was encrypted by the sender").get());
-    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
-    nsCOMPtr<nsIPrompt> prompter;
-    wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+    nsString msg(NS_LITERAL_STRING("Successfully decrypted message that was encrypted by the sender").get());
     prompter->Alert(0, msg.get());
   }
   data->decoder_context = 0;
