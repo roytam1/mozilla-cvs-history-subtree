@@ -1304,6 +1304,8 @@ NS_IMETHODIMP nsImapIncomingServer::PossibleImapMailbox(const char *folderPath, 
         rv = ConvertFolderName(onlineName.get(), getter_Copies(convertedName));
         if (NS_SUCCEEDED(rv))
           child->SetPrettyName(convertedName);
+        if (onlineName.Equals("RECYCLE"))
+          child->SetFlag(MSG_FOLDER_FLAG_TRASH);
       }
     }
   }
