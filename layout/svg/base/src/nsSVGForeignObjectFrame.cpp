@@ -586,7 +586,7 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   WillReflow(presContext);
   Reflow(presContext, desiredSize, reflowState, status);
   SizeTo(presContext, desiredSize.width, desiredSize.height);
-  DidReflow(presContext, NS_FRAME_REFLOW_FINISHED);
+  DidReflow(presContext, &reflowState, NS_FRAME_REFLOW_FINISHED);
 
   AccumulateUta(&dirtyRegion, GetUta());
 
