@@ -41,9 +41,8 @@
 #include "nscore.h"
 #include "nsXPCOMCID.h"
 
-template <class CharT> class nsTAString;
-typedef nsTAString<PRUnichar> nsAString;
-typedef nsTAString<char> nsACString;
+class nsAString;
+class nsACString;
 
 class nsIComponentManager;
 class nsIComponentRegistrar;

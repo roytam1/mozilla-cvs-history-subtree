@@ -49,9 +49,8 @@
 /*
  * Forward declarations for new string types
  */
-template <class CharT> class nsTAString;
-typedef nsTAString<char> nsACString;
-typedef nsTAString<PRUnichar> nsAString;
+class nsACString;
+class nsAString;
 
 /* 
  * Start commenting out the C++ versions of the below in the output header
