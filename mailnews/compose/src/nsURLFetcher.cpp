@@ -38,7 +38,7 @@
 #include "nsIChannel.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
-#include "nsIHTTPChannel.h"
+#include "nsIHttpChannel.h"
 #include "nsIWebProgress.h"
 #include "nsMsgAttachmentHandler.h"
 #include "nsMsgSend.h"
@@ -314,7 +314,7 @@ nsURLFetcher::OnStopRequest(nsIRequest *request, nsISupports * /* ctxt */, nsres
     }
   }
 
-  nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(aChannel);
+  nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(aChannel);
   if (httpChannel)
   {
     if (NS_SUCCEEDED(httpChannel->GetCharset(&charset)) && charset)
