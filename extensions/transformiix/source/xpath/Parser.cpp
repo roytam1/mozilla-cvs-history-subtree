@@ -26,7 +26,6 @@
 
 /**
  * Test App for Expressions
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
  * @version $Revision$ $Date$
 **/
 
@@ -42,11 +41,14 @@ void main(int argc, char** argv) {
 
 
     cout <<endl;
+
+    //-- old test cases, commented for re-use
     //String pattern("element[position()=1]");
     //String pattern("*[text()='foo']");
     //String pattern("@*|node()");
+    //String pattern("FSContext/UserList/User[@id=/FSContext/SessionData/@userref]/@priv = 'admin'");
 
-    String pattern("FSContext/UserList/User[@id=/FSContext/SessionData/@userref]/@priv = 'admin'");
+    String pattern("10/3");
 
     cout <<"Lexically Analyzing: "<<pattern<<endl;
     cout<<endl;
