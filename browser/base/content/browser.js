@@ -669,18 +669,6 @@ function UpdateBackForwardButtons()
   }
 }
 
-#ifdef MOZ_ENABLE_XREMOTE
-const gTabOpenObserver = {
-  observe: function(subject, topic, data)
-  {
-    if (topic != "open-new-tab-request" || subject != window)
-      return;
-
-    delayedOpenTab(data);
-  }
-};
-#endif
-
 const gSessionHistoryObserver = {
   observe: function(subject, topic, data)
   {
@@ -1034,17 +1022,6 @@ function Startup()
       loadOneOrMoreURIs(uriToLoad);
   }
 
-#ifdef MOZ_ENABLE_XREMOTE
-  // hook up remote support
-  var remoteService;
-  remoteService = Components.classes["@mozilla.org/browser/xremoteservice;1"]
-                            .getService(Components.interfaces.nsIXRemoteService);
-  remoteService.addBrowserInstance(window);
-
-  var observerService = Components.classes["@mozilla.org/observer-service;1"]
-    .getService(Components.interfaces.nsIObserverService);
-  observerService.addObserver(gTabOpenObserver, "open-new-tab-request", false);
-#endif
 #endif
 
   var sidebarSplitter;
@@ -1425,15 +1402,6 @@ function Shutdown()
   os.removeObserver(gXPInstallObserver, "xpinstall-install-edit-prefs");
   os.removeObserver(gMissingPluginInstaller, "missing-plugin");
 
-#ifdef MOZ_ENABLE_XREMOTE
-  // remove remote support
-  var remoteService;
-  remoteService = Components.classes["@mozilla.org/browser/xremoteservice;1"]
-                            .getService(Components.interfaces.nsIXRemoteService);
-  remoteService.removeBrowserInstance(window);
-
-  os.removeObserver(gTabOpenObserver, "open-new-tab-request");
-#endif
   try {
     gBrowser.removeProgressListener(window.XULBrowserWindow);
   } catch (ex) {
