@@ -1,3 +1,9 @@
+1999-08-25  John Kristian <kristian@netscape.com>
+
+	* Entry.pm (printLDIF): Bug fix.
+
+	* LDIF.pm: Cleaned out memory leaks.
+
 1999-08-24  Leif Hedstrom  <leif@netscape.com>
 
 	* Merged v1.3.x into trunk, tagged it as v1.4, and released it!
