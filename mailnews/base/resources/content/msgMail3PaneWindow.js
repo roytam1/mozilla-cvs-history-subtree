@@ -817,27 +817,24 @@ function ClearActiveThreadPaneSortColumn()
 
 function GetSelectedMsgFolders()
 {
-  var folderOutliner = GetFolderOutliner();
-  var startRange = {value: 0};
-  var endRange = {value: 0};
-  folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
-	     
-  var count;
-  if (startRange.value >= 0)
-    count = endRange.value - startRange.value + 1;
-  else
-    count = 0;
+    var folderOutliner = GetFolderOutliner();
+    var startRange = {value: 0};
+    var endRange = {value: 0};
+    var count = folderOutliner.outlinerBoxObject.selection.count;
+    
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
   
-  var folderArray = new Array(count);
-  for(var i = 0; i < count; i++)
-  {
-    var folderResource = GetFolderResource(i);
-    var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-    if(msgFolder)
-      folderArray[i] = msgFolder;	
-  }
+    var folderArray = new Array(count);
+    for(var i = 0; i < count; i++)
+    {
+        var folderResource = GetFolderResource(i);
+        var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+
+        if(msgFolder)
+            folderArray[i] = msgFolder;	
+    }
   
-  return folderArray;
+    return folderArray;
 }
 
 function GetFirstSelectedMessage()

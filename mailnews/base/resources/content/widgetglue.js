@@ -112,46 +112,47 @@ function RenameFolder(name,uri)
 
 function MsgEmptyTrash() 
 {
-    var tree = GetFolderTree();
+    var outliner = GetFolderOutliner();
     var selectedFolderURI = GetSelectedFolderURI();
+    var folderList = GetSelectedMsgFolders();
 
-        var folderList = tree.selectedItems;
-        if (folderList)
+    if (folderList)
+    {
+        var folder;
+        folder = folderList[0];
+        if (folder)
         {
-            var folder;
-            folder = folderList[0];
-            if (folder)
+            var trashUri = GetSelectTrashUri(index);
+            if (trashUri)
             {
-                var trashUri = GetSelectTrashUri(index);
-                if (trashUri)
+                var trashElement = document.getElementById(trashUri);
+                if (trashElement)
                 {
-                    var trashElement = document.getElementById(trashUri);
+                    dump ('found trash folder\n');
+                    trashElement.setAttribute('open','');
+                }
+                
+                var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
+                if(trashSelected)
+                    outliner.clearSelection();
+
+                try 
+                {
+                    messenger.EmptyTrash(tree.database, folder.resource);
+                }
+                catch(e)
+                {  
+                    dump ("Exception : messenger.EmptyTrash \n");
+                }
+                if (trashSelected)
+                {
+                    trashElement = document.getElementById(trashUri);
                     if (trashElement)
-                    {
-                        dump ('found trash folder\n');
-                        trashElement.setAttribute('open','');
-                    }
-                    var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
-
-                    if(trashSelected)
-                        tree.clearItemSelection();
-
-                    try {
-                          messenger.EmptyTrash(tree.database, folder.resource);
-                      }
-                      catch(e)
-                       {  
-                          dump ("Exception : messenger.EmptyTrash \n");
-                       }
-                    if (trashSelected)
-                    {
-                        trashElement = document.getElementById(trashUri);
-                        if (trashElement)
-                            ChangeSelection(tree, trashElement);
-                    }
+                        ChangeSelection(tree, trashElement);
                 }
             }
         }
+    }
 }
 
 function MsgCompactFolder(isAll) 
