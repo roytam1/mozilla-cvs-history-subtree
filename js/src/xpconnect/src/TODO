@@ -6,7 +6,6 @@
     - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
 
 - FEATURES
-    - mstoltz wants 'clearAllSecurityPolicy' method
     - followup with shaver on classinfo maps (shared with table driven QI?)
     - deal with shaver's string changes
     ? add HasInstance (or whatever) to nsIClassInfo

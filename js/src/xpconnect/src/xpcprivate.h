@@ -905,6 +905,9 @@ public:
     static void
     MarkAllWrappedNativesAndProtos();
 
+    static nsresult
+    ClearAllWrappedNativeSecurityPolicies(XPCCallContext& ccx);
+
 #ifdef DEBUG
     static void
     ASSERT_NoInterfaceSetsAreMarked();

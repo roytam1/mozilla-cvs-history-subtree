@@ -429,6 +429,14 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     if(!funobj)
         return JS_FALSE;
 
+#ifdef off_DEBUG_jband
+    {
+        static int cloneCount = 0;
+        if(!(++cloneCount%10))
+            printf("<><><> %d cloned functions created\n", cloneCount);
+    }
+#endif
+
     if(member->IsMethod())
     {
         AutoResolveName arn(ccx, idval);

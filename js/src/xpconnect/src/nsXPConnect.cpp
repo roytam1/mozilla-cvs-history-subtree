@@ -790,8 +790,9 @@ nsXPConnect::SetPendingException(nsIXPCException * aPendingException)
 NS_IMETHODIMP
 nsXPConnect::SyncJSContexts(void)
 {
-    if(mRuntime)
-        mRuntime->SyncXPCContextList();
+    XPCJSRuntime* rt = GetRuntime(this);
+    if(rt)
+        rt->SyncXPCContextList();
     return NS_OK;
 }
 
@@ -840,6 +841,17 @@ nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID,
         *_retval = old;
     }
     return NS_OK;
+}
+
+/* void clearAllWrappedNativeSecurityPolicies (); */
+NS_IMETHODIMP 
+nsXPConnect::ClearAllWrappedNativeSecurityPolicies()
+{
+    XPCCallContext ccx(NATIVE_CALLER);
+    if(!ccx.IsValid())
+        return UnexpectedFailure(NS_ERROR_FAILURE);
+
+    return XPCWrappedNativeScope::ClearAllWrappedNativeSecurityPolicies(ccx);
 }
 
 /* void debugDump (in short depth); */

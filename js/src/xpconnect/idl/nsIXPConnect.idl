@@ -542,6 +542,8 @@ interface nsIXPConnect : nsISupports
                                  in JSObjectPtr  aScope,
                                  in JSObjectPtr  aNewParent,
                                  in nsISupports  aCOMObj);
+
+    void clearAllWrappedNativeSecurityPolicies();
 };
 
 

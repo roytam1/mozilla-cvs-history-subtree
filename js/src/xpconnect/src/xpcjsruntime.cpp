@@ -765,6 +765,8 @@ XPCJSRuntime::GenerateStringIDs(JSContext* cx)
     return JS_TRUE;
 }
 
+/***************************************************************************/
+
 #ifdef DEBUG
 JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 ContextMapDumpEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,

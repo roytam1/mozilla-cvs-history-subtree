@@ -564,6 +564,48 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
 }
 
 
+/***************************************************************************/
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WNProtoSecPolicyClearer(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                        uint32 number, void *arg)
+{
+    XPCWrappedNativeProto* proto = 
+        ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value;
+    *(proto->GetSecurityInfoAddr()) = nsnull;
+    return JS_DHASH_NEXT;
+}
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+WNSecPolicyClearer(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                    uint32 number, void *arg)
+{
+    XPCWrappedNative* wrapper = ((Native2WrappedNativeMap::Entry*)hdr)->value;
+    if(wrapper->HasProto() && !wrapper->HasSharedProto())
+        *(wrapper->GetProto()->GetSecurityInfoAddr()) = nsnull;
+    return JS_DHASH_NEXT;
+}
+
+// static 
+nsresult
+XPCWrappedNativeScope::ClearAllWrappedNativeSecurityPolicies(XPCCallContext& ccx)
+{
+    // Hold the lock throughout.
+    XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());
+
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+    {
+        cur->mWrappedNativeProtoMap->Enumerate(WNProtoSecPolicyClearer, nsnull);
+        cur->mWrappedNativeMap->Enumerate(WNSecPolicyClearer, nsnull);
+    }
+
+    DEBUG_TrackScopeTraversal();
+
+    return NS_OK;
+}        
+
+/***************************************************************************/
+
 // static
 void
 XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
