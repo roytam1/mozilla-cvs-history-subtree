@@ -23,9 +23,6 @@ ifneq ($(OS_RELEASE),2.0.35)
 JDK=/share/builds/components/jdk/1.1.7/Linux
 export THREADS_FLAG=native
 
-INCLUDES   += -I$(JDK)/include -I$(JDK)/include/md \
-	      -I$(JDK)/include/genunix
-
 OTHER_LIBS += -L$(JDK)/lib/i386/native_threads -ljava
 
 else # this is a hack to support Linux 2.0.35 builds on discostu
@@ -33,3 +30,7 @@ JDK=/usr/lib/jdk-1.1.5
 
 OTHER_LIBS += -L$(JDK)/lib/i386/green_threads -ljava
 endif
+
+INCLUDES   += -I$(JDK)/include -I$(JDK)/include/md \
+	      -I$(JDK)/include/genunix
+
