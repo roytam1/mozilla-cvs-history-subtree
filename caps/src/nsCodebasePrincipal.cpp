@@ -45,10 +45,10 @@ nsCodebasePrincipal::Release(void)
 NS_IMETHODIMP
 nsCodebasePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
 {
-    if (itsJSPrincipals.refcount == 0) {
+    if (itsJSPrincipals->refcount == 0) {
         this->AddRef();
     }
-    *jsprin = &itsJSPrincipals.jsPrincipals;
+    *jsprin = &itsJSPrincipals->jsPrincipals;
     return NS_OK;
 /*
     char * cb;

@@ -17,6 +17,7 @@
  */
 #include "nsJSPrincipals.h"
 #include "xp.h"
+#include "plstr.h"
 
 PR_STATIC_CALLBACK(void *) 
 getPrincipalArray(JSContext *, struct JSPrincipals *) {
@@ -36,7 +37,9 @@ destroy(JSContext *, struct JSPrincipals * jsPrincipals) {
 
 nsJSPrincipals::nsJSPrincipals(nsIPrincipal * prin) {
   char * cb;
-  prin->GetURLString(& cb);
+  nsICodebasePrincipal * cbprin;
+  prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
+  cbprin->GetURLString(& cb);
   jsPrincipals.codebase = PL_strdup(cb);
   jsPrincipals.getPrincipalArray = getPrincipalArray;
   jsPrincipals.globalPrivilegesEnabled = globalPrivilegesEnabled;
