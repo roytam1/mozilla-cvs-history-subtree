@@ -115,6 +115,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/svg/content/src/nsSVGRect.cpp                 \
 	content/svg/content/src/nsSVGRectElement.cpp          \
 	content/svg/content/src/nsSVGSVGElement.cpp           \
+	content/svg/content/src/nsSVGTransform.cpp            \
 	content/svg/content/src/nsSVGTransformList.cpp        \
 	content/svg/content/src/nsSVGValue.cpp                \
 	content/svg/content/src/nsSVGValue.h                  \
