@@ -663,7 +663,7 @@ nsAppShellService::JustCreateTopWindow(nsIXULWindow *aParent,
       if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_BORDERS)
         widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_border);
       if (aChromeMask & nsIWebBrowserChrome::CHROME_TITLEBAR)
-        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_title);
+        widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_title | eBorderStyle_menu);
       if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_CLOSE)
         widgetInitData.mBorderStyle = NS_STATIC_CAST(enum nsBorderStyle, widgetInitData.mBorderStyle | eBorderStyle_close);
       if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE) {
