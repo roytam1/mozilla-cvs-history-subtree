@@ -54,6 +54,7 @@ REQUIRES	= xpcom \
 		  webshell \
 		  appshell \
 		  history \
+		  windowwatcher \
 		  $(NULL)
 
 CPPSRCS		= nsModule.cpp

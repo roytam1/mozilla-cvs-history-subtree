@@ -52,6 +52,7 @@ REQUIRES	= xpcom \
 		  mozldap \
 		  webbrowserpersist \
 		  appshell \
+		  windowwatcher \
 		  $(NULL)
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
