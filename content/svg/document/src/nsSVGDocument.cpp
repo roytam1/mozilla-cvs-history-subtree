@@ -154,4 +154,5 @@ NS_NewSVGDocument(nsIDocument** aInstancePtrResult)
   }
 
   *aInstancePtrResult = doc;
+  return rv;
 }
