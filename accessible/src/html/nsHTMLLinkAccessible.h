@@ -18,26 +18,24 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  */
 
-#ifndef _nsHTMLTextAccessible_H_
-#define _nsHTMLTextAccessible_H_
+#ifndef _nsHTMLLinkAccessible_H_
+#define _nsHTMLLinkAccessible_H_
 
 #include "nsGenericAccessible.h"
 
-class nsIWeakReference;
-class nsITextControlFrame;
-
-class nsHTMLTextAccessible : public nsLinkableAccessible
+class nsHTMLLinkAccessible : public nsLinkableAccessible
 {
 
 public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLLinkAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
-  NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
-  NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
-  NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
+  NS_IMETHOD GetAccValue(PRUnichar **_retval); 
+
+private:
 };
 
 #endif  

@@ -26,6 +26,8 @@
 #include "domstubs.idl"
 #include "nsIMutableAccessible.idl"
 #include "nsIAtom.idl"
+#include "domstubs.idl"
+#include "nsIAccessible.idl"
 
 [scriptable, uuid(68D9720A-0984-42b6-A3F5-8237ED925727)]
 interface nsIAccessibilityService : nsISupports
@@ -40,10 +42,13 @@ interface nsIAccessibilityService : nsISupports
   nsIAccessible createHTML4ButtonAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLTextAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLImageAccessible(in nsISupports aFrame);
+  nsIAccessible createHTMLAreaAccessible(in nsIDOMNode aDOMNode, in nsIAccessible aAccParent);
   nsIAccessible createHTMLTableAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLTableCellAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLTextFieldAccessible(in nsISupports aFrame);
   nsIAccessible createHTMLIFrameAccessible(in nsIDOMNode aNode, in nsISupports aPresContext);
+  //nsIAccessible createHTMLFrameAccessible(in nsIDOMNode aNode, in nsISupports aPresContext);
+  nsIAccessible createHTMLLinkAccessible(in nsISupports aFrame);
 };
 
 

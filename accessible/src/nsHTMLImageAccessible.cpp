@@ -17,21 +17,39 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Author: Eric Vaughan (evaughan@netscape.com)
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  * Contributor(s): 
  */
 
 #include "nsGenericAccessible.h"
-#include "nsHTMLTextAccessible.h"
 #include "nsHTMLImageAccessible.h"
 #include "nsReadableUtils.h"
 #include "nsAccessible.h"
+#include "nsIHTMLDocument.h"
+#include "nsIDocument.h"
+#include "nsIDOMHTMLCollection.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
 
 // --- image -----
 
-nsHTMLImageAccessible::nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDOMNode):
-nsHTMLTextAccessible(aShell, aDOMNode)  //, mIsALinkCached(PR_FALSE), mLinkContent(nsnull), mIsLinkVisited(PR_FALSE)
+nsHTMLImageAccessible::nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDOMNode, nsIImageFrame *imageFrame):
+nsLinkableAccessible(aShell, aDOMNode)  
 { 
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aDOMNode));
+  nsCOMPtr<nsIDocument> doc;
+  aShell->GetDocument(getter_AddRefs(doc));
+  nsAutoString mapElementName;
+
+  if (doc && element) {
+    nsCOMPtr<nsIHTMLDocument> htmlDoc(do_QueryInterface(doc));
+    element->GetAttribute(NS_LITERAL_STRING("usemap"),mapElementName);
+    if (htmlDoc && !mapElementName.IsEmpty()) {
+      if (mapElementName.CharAt(0) == '#')
+        mapElementName.Cut(0,1);
+      htmlDoc->GetImageMap(mapElementName, getter_AddRefs(mMapElement));      
+    }
+  }
 }
 
 /* wstring getAccName (); */
@@ -50,18 +68,6 @@ NS_IMETHODIMP nsHTMLImageAccessible::GetAccName(PRUnichar **_retval)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* long GetAccState (); */
-NS_IMETHODIMP nsHTMLImageAccessible::GetAccState(PRUint32 *_retval)
-{
-  *_retval |= STATE_READONLY;
-  if (IsALink())
-    *_retval |= STATE_FOCUSABLE | STATE_LINKED;
-  if (mIsLinkVisited)
-    *_retval |= STATE_TRAVERSED;
-  // Focused? Do we implement that here or up the chain?
-  return NS_OK;
-}
-
 /* wstring getAccRole (); */
 NS_IMETHODIMP nsHTMLImageAccessible::GetAccRole(PRUnichar **_retval)
 {
@@ -69,19 +75,71 @@ NS_IMETHODIMP nsHTMLImageAccessible::GetAccRole(PRUnichar **_retval)
   return NS_OK;
 }
 
-/* wstring getAccDefaultAction (); */
-NS_IMETHODIMP nsHTMLImageAccessible::GetAccDefaultAction(PRUnichar **_retval)
+
+nsIAccessible *nsHTMLImageAccessible::CreateAreaAccessible(PRUint32 areaNum)
 {
-  if (mLinkContent) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("Jump"));
-    return NS_OK;
+  if (!mMapElement) 
+    return nsnull;
+
+   if (areaNum == -1) {
+    PRInt32 numAreaMaps;
+    GetAccChildCount(&numAreaMaps);
+    if (numAreaMaps<=0)
+      return nsnull;
+    areaNum = NS_STATIC_CAST(PRUint32,numAreaMaps-1);
   }
-  return NS_ERROR_NOT_IMPLEMENTED;
+
+  nsIDOMHTMLCollection *mapAreas;
+  mMapElement->GetAreas(&mapAreas);
+  if (!mapAreas) 
+    return nsnull;
+
+  nsIDOMNode *domNode = nsnull;
+  mapAreas->Item(areaNum,&domNode);
+  if (!domNode)
+    return nsnull;
+
+  nsresult rv;
+  NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+  if (accService) {
+    nsIAccessible* acc = nsnull;
+    accService->CreateHTMLAreaAccessible(domNode, this, &acc);
+    return acc;
+  }
+  return nsnull;
 }
 
-/* void accDoDefaultAction (); */
-NS_IMETHODIMP nsHTMLImageAccessible::AccDoDefaultAction()
+
+/* nsIAccessible getAccFirstChild (); */
+NS_IMETHODIMP nsHTMLImageAccessible::GetAccFirstChild(nsIAccessible **_retval)
 {
+  *_retval = CreateAreaAccessible(0);
+  return NS_OK;
+}
+
+
+/* nsIAccessible getAccLastChild (); */
+NS_IMETHODIMP nsHTMLImageAccessible::GetAccLastChild(nsIAccessible **_retval)
+{
+  *_retval = CreateAreaAccessible(-1);
+  return NS_OK;
+}
+
+
+/* long getAccChildCount (); */
+NS_IMETHODIMP nsHTMLImageAccessible::GetAccChildCount(PRInt32 *_retval)
+{
+  *_retval = 0;
+  if (mMapElement) {
+    nsIDOMHTMLCollection *mapAreas;
+    mMapElement->GetAreas(&mapAreas);
+    if (mapAreas) {
+      PRUint32 length;
+      mapAreas->GetLength(&length);
+      *_retval = NS_STATIC_CAST(PRInt32, length);
+    }
+  }
+
   return NS_OK;
 }
 

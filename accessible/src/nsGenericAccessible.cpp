@@ -26,6 +26,8 @@
 #include "nsIFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIWeakReference.h"
+#include "nsReadableUtils.h"
+#include "nsILink.h"
 
 #include "nsIContent.h"
 #include "nsITextContent.h"
@@ -435,3 +437,92 @@ NS_IMETHODIMP nsLeafDOMAccessible::GetAccChildCount(PRInt32 *_retval)
   return NS_OK;
 }
 
+
+
+//----------------
+// nsLinkableAccessible
+//----------------
+
+nsLinkableAccessible::nsLinkableAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
+nsDOMAccessible(aShell, aDomNode), mIsALinkCached(PR_FALSE), mLinkContent(nsnull), mIsLinkVisited(PR_FALSE)
+{ 
+}
+
+/* long GetAccState (); */
+NS_IMETHODIMP nsLinkableAccessible::GetAccState(PRUint32 *_retval)
+{
+  *_retval |= STATE_READONLY | STATE_SELECTABLE;
+  if (IsALink()) {
+    *_retval |= STATE_FOCUSABLE | STATE_LINKED;
+    if (mIsLinkVisited)
+      *_retval |= STATE_TRAVERSED;
+  }
+  
+  // Get current selection and find out if current node is in it
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  nsCOMPtr<nsIPresContext> context;
+  shell->GetPresContext(getter_AddRefs(context));
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mNode));
+  nsIFrame *frame;
+  if (content && NS_SUCCEEDED(shell->GetPrimaryFrameFor(content, &frame))) {
+    nsCOMPtr<nsISelectionController> selCon;
+    frame->GetSelectionController(context,getter_AddRefs(selCon));
+    if (selCon) {
+      nsCOMPtr<nsISelection> domSel;
+      selCon->GetSelection(nsISelectionController::SELECTION_NORMAL, getter_AddRefs(domSel));
+      if (domSel) {
+        PRBool isSelected = PR_FALSE, isCollapsed = PR_TRUE;
+        domSel->ContainsNode(mNode, PR_TRUE, &isSelected);
+        domSel->GetIsCollapsed(&isCollapsed);
+        if (isSelected && !isCollapsed)
+          *_retval |=STATE_SELECTED;
+      }
+    }
+  }
+
+  // Focused? Do we implement that here or up the chain?
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsLinkableAccessible::GetAccDefaultAction(PRUnichar **_retval) 
+{
+  if (IsALink()) {
+    *_retval = ToNewUnicode(NS_LITERAL_STRING("jump")); 
+    return NS_OK;
+  }
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsLinkableAccessible::AccDoDefaultAction()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+PRBool nsLinkableAccessible::IsALink()
+{
+  if (mIsALinkCached)  // Cached answer?
+    return mLinkContent? PR_TRUE: PR_FALSE;
+
+  nsCOMPtr<nsIContent> walkUpContent(do_QueryInterface(mNode));
+  if (walkUpContent) {
+    nsCOMPtr<nsIContent> tempContent;
+    while (walkUpContent) {
+      nsCOMPtr<nsILink> link(do_QueryInterface(walkUpContent));
+      if (link) {
+        mLinkContent = tempContent;
+        mIsALinkCached = PR_TRUE;
+        nsLinkState linkState;
+        link->GetLinkState(linkState);
+        if (linkState == eLinkState_Visited)
+          mIsLinkVisited = PR_TRUE;
+        return PR_TRUE;
+      }
+      walkUpContent->GetParent(*getter_AddRefs(tempContent));
+      walkUpContent = tempContent;
+    }
+  }
+  mIsALinkCached = PR_TRUE;  // Cached that there is no link
+  return PR_FALSE;
+}

@@ -40,6 +40,8 @@
 #include "nsHTMLTextAccessible.h"
 #include "nsHTMLTableAccessible.h"
 #include "nsHTMLImageAccessible.h"
+#include "nsHTMLAreaAccessible.h"
+#include "nsHTMLLinkAccessible.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -275,6 +277,24 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLTableCellAccessible(nsISupports 
     return NS_ERROR_OUT_OF_MEMORY;
 }
 
+/* nsIAccessible createHTMLLinkAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLLinkAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTMLLinkAccessible(shell, node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
 /* nsIAccessible createHTMLImageAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
@@ -284,13 +304,44 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFr
   nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
   if (NS_FAILED(rv))
     return rv;
+  nsCOMPtr<nsIImageFrame> imageFrame(do_QueryInterface(aFrame));
+  if (!imageFrame)
+    return NS_ERROR_FAILURE;
 
-  *_retval = new nsHTMLImageAccessible(shell, node);
+  *_retval = new nsHTMLImageAccessible(shell, node, imageFrame);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
   } else 
     return NS_ERROR_OUT_OF_MEMORY;
+}
+
+/* nsIAccessible createHTMLAreaAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
+                                                               nsIAccessible **_retval)
+{
+  /*
+  nsIFrame* frame = nsnull;
+  nsCOMPtr<nsIPresShell> shell;
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aDOMNode));
+  if (!content)
+    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDocument> document;
+  content->GetDocument(*getter_AddRefs(document));
+
+  shell = document->GetShellAt(0);
+  shell->GetPrimaryFrameFor(content, &frame);
+  */
+
+  *_retval = new nsHTMLAreaAccessible(aDOMNode, aAccParent);
+
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+
 }
 
 /* nsIAccessible createHTMLTextFieldAccessible (in nsISupports aPresShell, in nsISupports aFrame); */

@@ -17,27 +17,43 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  * Contributor(s): 
  */
 
-#ifndef _nsHTMLTextAccessible_H_
-#define _nsHTMLTextAccessible_H_
+#ifndef _nsHTMLAreaAccessible_H_
+#define _nsHTMLAreaAccessible_H_
 
 #include "nsGenericAccessible.h"
+#include "nsHTMLLinkAccessible.h"
 
-class nsIWeakReference;
-class nsITextControlFrame;
+/* Accessible for image map areas - must be child of image
+ */
 
-class nsHTMLTextAccessible : public nsLinkableAccessible
+class nsHTMLAreaAccessible : public nsGenericAccessible
 {
 
 public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLAreaAccessible(nsIDOMNode *domNode, nsIAccessible *accParent);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccState(PRUint32 *_retval);
+  NS_IMETHOD GetAccValue(PRUnichar **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
+  NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);
+  NS_IMETHOD GetAccNextSibling(nsIAccessible * *aAccNextSibling);
+  NS_IMETHOD GetAccPreviousSibling(nsIAccessible * *aAccPreviousSibling);
+  NS_IMETHOD GetAccDescription(PRUnichar **_retval);
+  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
+  NS_IMETHOD AccDoDefaultAction();
+  NS_IMETHOD AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height);
+
+protected:
+  nsIAccessible *CreateAreaAccessible(nsIDOMNode *aDOMNode);
+  nsCOMPtr<nsIDOMNode> mDOMNode;
+  nsCOMPtr<nsIAccessible> mAccParent;
 };
 
 #endif  

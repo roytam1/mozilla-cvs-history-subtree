@@ -83,4 +83,22 @@ class nsLeafDOMAccessible : public nsDOMAccessible
     NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 };
 
+
+class nsLinkableAccessible : public nsDOMAccessible
+{
+  public:
+    nsLinkableAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+    NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
+    NS_IMETHOD AccDoDefaultAction();
+    NS_IMETHOD GetAccState(PRUint32 *_retval);
+
+  protected:
+    nsCOMPtr<nsIDOMNode> mDomNode;
+    PRBool IsALink();
+    PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
+    nsCOMPtr<nsIContent> mLinkContent;
+    PRBool mIsLinkVisited;
+};
+
+
 #endif  

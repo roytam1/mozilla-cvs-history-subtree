@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Author: Eric Vaughan (evaughan@netscape.com)
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  * Contributor(s): 
  */
 

@@ -17,30 +17,37 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Author: Eric D Vaughan (evaughan@netscape.com)
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  * Contributor(s): 
  */
 
 #ifndef _nsHTMLImageAccessible_H_
 #define _nsHTMLImageAccessible_H_
 
-#include "nsHTMLTextAccessible.h"
+#include "nsGenericAccessible.h"
+#include "nsIFrame.h"
+#include "nsIImageFrame.h"
+#include "nsIDOMHTMLMapElement.h"
 
 /* Accessible for supporting images
  * supports:
  * - gets name, role
  * - support basic state
  */
-class nsHTMLImageAccessible : public nsHTMLTextAccessible
+class nsHTMLImageAccessible : public nsLinkableAccessible
 {
 
 public:
-  nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode, nsIImageFrame *imageFrame);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
-  NS_IMETHOD GetAccState(PRUint32 *_retval);
-  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-  NS_IMETHOD AccDoDefaultAction();
+  NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
+  NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
+  NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
+
+protected:
+  nsIAccessible *CreateAreaAccessible(PRUint32 areaNum);
+  nsCOMPtr<nsIDOMHTMLMapElement> mMapElement;
 };
 
 #endif  

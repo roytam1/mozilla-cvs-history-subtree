@@ -40,6 +40,8 @@ CPPSRCS		= \
 		nsHTMLTextAccessible.cpp \
 		nsHTMLTableAccessible.cpp \
 		nsHTMLImageAccessible.cpp \
+		nsHTMLAreaAccessible.cpp \
+		nsHTMLLinkAccessible.cpp \
 		nsSelectAccessible.cpp \
 		nsGenericAccessible.cpp \
 		$(NULL)

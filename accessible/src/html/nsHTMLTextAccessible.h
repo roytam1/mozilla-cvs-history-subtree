@@ -28,23 +28,16 @@
 class nsIWeakReference;
 class nsITextControlFrame;
 
-class nsHTMLTextAccessible : public nsLeafDOMAccessible
+class nsHTMLTextAccessible : public nsLinkableAccessible
 {
 
 public:
   nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
-  NS_IMETHOD GetAccState(PRUint32 *_retval);
-  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-  NS_IMETHOD AccDoDefaultAction();
-
-protected:
-  nsCOMPtr<nsIDOMNode> mDomNode;
-  PRBool IsALink();
-  PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
-  nsCOMPtr<nsIContent> mLinkContent;
-  PRBool mIsLinkVisited;
+  NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
+  NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
+  NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 };
 
 #endif  

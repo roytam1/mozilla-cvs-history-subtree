@@ -17,11 +17,11 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Author: Eric Vaughan (evaughan@netscape.com)
+ * Author: Aaron Leventhal (aaronl@netscape.com)
  * Contributor(s): 
  */
 
-#include "nsHTMLTextAccessible.h"
+#include "nsHTMLLinkAccessible.h"
 #include "nsWeakReference.h"
 #include "nsIFrame.h"
 #include "nsILink.h"
@@ -30,54 +30,40 @@
 #include "nsISelectionController.h"
 #include "nsIPresContext.h"
 #include "nsReadableUtils.h"
+#include "nsIDOMElement.h"
 
-nsHTMLTextAccessible::nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
+nsHTMLLinkAccessible::nsHTMLLinkAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
 nsLinkableAccessible(aShell, aDomNode)
 { 
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLLinkAccessible::GetAccName(PRUnichar **_retval)
 { 
 
   nsAutoString nameString;
-  nsresult rv = NS_OK;
-  //if (IsALink()) {
-  //  rv = AppendFlatStringFromSubtree(mLinkContent, &nameString);
-  //}
-  //else 
-  mNode->GetNodeValue(nameString);
+  nsresult rv = AppendFlatStringFromSubtree(mLinkContent, &nameString);
   nameString.CompressWhitespace();
   *_retval = nameString.ToNewUnicode();
   return rv;
 }
 
 /* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLLinkAccessible::GetAccRole(PRUnichar **_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("static text"));
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("link")); 
 
   return NS_OK;
 }
 
-
-/* nsIAccessible getAccFirstChild (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccFirstChild(nsIAccessible **_retval)
-{
-  *_retval = nsnull;
-  return NS_OK;
-}
-
-/* nsIAccessible getAccLastChild (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccLastChild(nsIAccessible **_retval)
-{
-  *_retval = nsnull;
-  return NS_OK;
-}
-
-/* long getAccChildCount (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccChildCount(PRInt32 *_retval)
+NS_IMETHODIMP nsHTMLLinkAccessible::GetAccValue(PRUnichar **_retval)
 {
   *_retval = 0;
+  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mNode));
+  if (elt) {
+    nsAutoString hrefString;
+    elt->GetAttribute(NS_LITERAL_STRING("href"), hrefString);
+    *_retval = hrefString.ToNewUnicode();
+  }
   return NS_OK;
 }
