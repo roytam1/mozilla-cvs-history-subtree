@@ -134,7 +134,8 @@ Rights Reserved.
 
     <box id="sidebar-box">
       <sidebarheader type="box" class="sidebarheader-main" label="&mail-sidebar-header.label;"/>
-      <tree id="folderTree" flex="1000" context="folderPaneContext"  />
+<!--      <tree id="folderTree" flex="1000" context="folderPaneContext"  /> -->
+      <outliner id="folderOutliner" flex="1000" context="folderPaneContext"/>
     </box>
           
     <splitter id="sidebar-splitter"/>

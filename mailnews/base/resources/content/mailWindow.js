@@ -510,10 +510,11 @@ function OpenInboxForServer(server)
     try {
         HideAccountCentral();
         OpenTwistyForServer(server);
-        var inboxFolder    = GetInboxFolder(server);
-        var folderTree     = GetFolderTree();
-        var inboxFolderUri = document.getElementById(inboxFolder.URI);
-        ChangeSelection(folderTree, inboxFolderUri);
+        var inboxFolder = GetInboxFolder(server);
+        var folderOutliner = GetFolderOutliner();
+	var inboxFolderResource = RDF.GetResource(inboxFolder.URI);
+        var folderIndex = GetFolderIndex(inboxFolderResource);
+        ChangeSelection(folderOutliner, folderIndex);
         GetMessagesForInboxOnServer(server);
     }
     catch (ex) {
