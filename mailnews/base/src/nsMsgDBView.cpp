@@ -30,6 +30,8 @@
 #include "nsIMsgFolder.h"
 #include "MailNewsTypes2.h"
 #include "nsMsgUtils.h"
+#include "nsXPIDLString.h"
+#include "nsQuickSort.h"
 
 /* Implementation file */
 
@@ -142,6 +144,61 @@ typedef struct tagIdStr{
     char        str[1];
 } IdStr;
 
+int PR_CALLBACK
+FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
+{
+    IdStr** p1 = (IdStr**)pItem1;
+    IdStr** p2 = (IdStr**)pItem2;
+    int retVal = nsCRT::strcmp((*p1)->str, (*p2)->str); // used to be strcasecmp, but INTL sorting routine lower cases it.
+    if (retVal != 0)
+        return(retVal);
+    if ((*p1)->info.id >= (*p2)->info.id)
+        return(1);
+    else
+        return(-1);
+}
+
+typedef struct tagIdDWord{
+    EntryInfo   info;
+    PRUint32 dword;
+} IdDWord;
+
+int PR_CALLBACK
+FnSortIdDWord(const void *pItem1, const void *pItem2, void *privateData)
+{
+    IdDWord** p1 = (IdDWord**)pItem1;
+    IdDWord** p2 = (IdDWord**)pItem2;
+    if ((*p1)->dword > (*p2)->dword)
+        return(1);
+    else if ((*p1)->dword < (*p2)->dword)
+        return(-1);
+    else if ((*p1)->info.id >= (*p2)->info.id)
+        return(1);
+    else
+        return(-1);
+}
+
+typedef struct tagIdPRTime{
+    EntryInfo   info;
+    PRTime prtime;
+} IdPRTime;
+
+int PR_CALLBACK
+FnSortIdPRTime(const void *pItem1, const void *pItem2, void *privateData)
+{
+    IdPRTime ** p1 = (IdPRTime**)pItem1;
+    IdPRTime ** p2 = (IdPRTime**)pItem2;
+
+    if (LL_CMP((*p1)->prtime, >, (*p2)->prtime)) 
+        return(1);
+    else if (LL_CMP((*p1)->prtime, <, (*p2)->prtime))  
+        return(-1);
+    else if ((*p1)->info.id >= (*p2)->info.id)
+        return(1);
+    else
+        return(-1);
+}
+
 /* better place for these? */
 const int kMaxSubject = 160;
 const int kMaxAuthor = 160;
@@ -168,7 +225,7 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
             *pMaxLen = kMaxAuthor;
             break;
         case nsMsgViewSortType::byDate:
-            *pFieldType = kU64;
+            *pFieldType = kPRTime;
             *pMaxLen = sizeof(PRTime);
             break;
         case nsMsgViewSortType::byPriority:
@@ -188,44 +245,97 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
     return NS_OK;
 }
 
-nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result)
+nsresult nsMsgDBView::GetPRTimeField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRTime *result)
 {
+  nsresult rv;
   NS_ENSURE_ARG_POINTER(msgHdr);
   NS_ENSURE_ARG_POINTER(result);
-  *result = 1;
-  return NS_OK;
+
+  switch (sortType) {
+    case nsMsgViewSortType::byDate:
+        rv = msgHdr->GetDate(result);
+        break;
+    default:
+        NS_ASSERTION(0,"should not be here");
+        rv = NS_ERROR_UNEXPECTED;
+    }
+
+    NS_ENSURE_SUCCESS(rv,rv);
+    return NS_OK;
+}
+
+nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result)
+{
+  nsresult rv;
+  NS_ENSURE_ARG_POINTER(msgHdr);
+  NS_ENSURE_ARG_POINTER(result);
+
+  nsMsgKey key;
+  PRBool isRead;
+  PRUint32 bits;
+
+  switch (sortType) {
+    case nsMsgViewSortType::bySize:
+        rv = msgHdr->GetMessageSize(result);
+        break;
+    case nsMsgViewSortType::byPriority: 
+        // want highest priority to have lowest value
+        // so ascending sort will have highest priority first.
+        nsMsgPriorityValue priority;
+        rv = msgHdr->GetPriority(&priority);
+        *result = nsMsgPriority::highest - priority;
+        break;
+    case nsMsgViewSortType::byStatus:
+        rv = msgHdr->GetStatusOffset(result);
+        break;
+    case nsMsgViewSortType::byFlagged:
+        bits = 0;
+        rv = msgHdr->GetFlags(&bits);
+        *result = !(bits & MSG_FLAG_MARKED);  //make flagged come out on top.
+        break;
+    case nsMsgViewSortType::byUnread:
+        rv = msgHdr->GetMessageKey(&key);
+        if (NS_SUCCEEDED(rv)) {
+            isRead = PR_FALSE;
+            rv = m_db->IsRead(key, &isRead);
+            *result = !isRead;
+        }
+        break;
+    case nsMsgViewSortType::byId:
+        // handled by caller, since caller knows the key
+    default:
+        NS_ASSERTION(0,"should not be here");
+        rv = NS_ERROR_UNEXPECTED;
+        break;
+    }
+    
+    NS_ENSURE_SUCCESS(rv,rv);
+    return NS_OK;
 }
 
 
-nsresult nsMsgDBView::GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, char **result)
+nsresult nsMsgDBView::GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUnichar **result)
 {
+  nsresult rv;
   NS_ENSURE_ARG_POINTER(msgHdr);
   NS_ENSURE_ARG_POINTER(result);
-#if 0
-  const char *pField;
 
   switch (sortType) {
     case nsMsgViewSortType::bySubject:
-        if (msgHdr->GetSubject(string))
-            pField = string;
-        else
-            pField = "";
+        rv = msgHdr->GetSubjectCollationKey(result);
         break;
-    case SortByRecipient:
-        msgHdr->GetNameOfRecipient(string, 0, m_messageDB->GetDB());
-        pField = string;
+    case nsMsgViewSortType::byRecipient:
+        rv = msgHdr->GetRecipientsCollationKey(result);
         break;
-    case SortByAuthor:
-        msgHdr->GetRFC822Author(string);
-        pField = string;
+    case nsMsgViewSortType::byAuthor:
+        rv = msgHdr->GetAuthorCollationKey(result);
         break;
     default:
-//      XP_ASSERT(FALSE);
-        return(0);
+        rv = NS_ERROR_UNEXPECTED;
+        break;
     }
-    return INTL_DecodeMimePartIIAndCreateCollationKey(pField, csid, 0);
-#endif
-    *result = nsnull;
+
+    NS_ENSURE_SUCCESS(rv,rv);
     return NS_OK;
 }
 
@@ -296,6 +406,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
     PRUint32 longValue;
+    PRTime timeValue;
     while (more && numSoFar < arraySize) {
       nsMsgKey thisKey = m_keys.GetAt(numSoFar);
       if (sortType != nsMsgViewSortType::byId) {
@@ -312,13 +423,13 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
       // could be a problem here if the ones that appear here are different than the ones already in the array
       const char* pField = nsnull;
-      char *intlString = nsnull;
+      nsXPIDLString intlString;
       PRUint32 paddedFieldLen = 0;
       PRUint32 actualFieldLen = 0;
       if (fieldType == kString) {
-        rv = GetStringField(msgHdr, sortType, &intlString);
+        rv = GetStringField(msgHdr, sortType, getter_Copies(intlString));
         NS_ENSURE_SUCCESS(rv,rv);
-        pField = intlString;
+        pField = (const char *)((const PRUnichar *)intlString);
         //"Re:" might be encoded inside subject field using MIMEII encoding,
         //It should be stripped before sorting
         NS_MsgStripRE(&pField, 0);
@@ -329,8 +440,12 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
           paddedFieldLen += 4 - mod4;
         }
       }
-      else if (fieldType == kU64) {
-        printf("not implemented yet\n");
+      else if (fieldType == kPRTime) {
+        rv = GetPRTimeField(msgHdr, sortType, &timeValue);
+        NS_ENSURE_SUCCESS(rv,rv);
+
+        pField = (const char *) &timeValue;
+        actualFieldLen = paddedFieldLen = maxLen;
       }
       else {
         if (sortType == nsMsgViewSortType::byId) {
@@ -380,12 +495,11 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       PRInt32 bytesLeft = allocSize - (PRInt32)(pTemp - pBase);
       PRInt32 bytesToCopy = PR_MIN(bytesLeft, (PRInt32)actualFieldLen);
       if (pField && bytesToCopy > 0) {
-        memcpy((char *)pTemp, pField, bytesToCopy);
+        nsCRT::memcpy((char *)pTemp, pField, bytesToCopy);
         if (bytesToCopy < (PRInt32)actualFieldLen) {
           NS_ASSERTION(0, "wow, big block");
           *(pTemp + bytesToCopy - 1) = '\0';
         }
-        PR_FREEIF(intlString); // free intl'ized string
       }
       else {
         *pTemp = 0;
@@ -397,16 +511,13 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     // do the sort
     switch (fieldType) {
         case kString:
-            printf("sort strings, not implemented yet\n");
-            break;
-        case kU16:
-            printf("sort u16s, not implemented yet\n");
+            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdStr*), FnSortIdStr, nsnull);
             break;
         case kU32:
-            printf("sort u32s, not implemented yet\n");
+            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdDWord*), FnSortIdDWord, nsnull);
             break;
-        case kU64:
-            printf("sort u64s, not implemented yet\n");
+        case kPRTime:
+            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdPRTime*), FnSortIdPRTime, nsnull);
             break;
         default:
             NS_ASSERTION(0, "not supposed to get here");

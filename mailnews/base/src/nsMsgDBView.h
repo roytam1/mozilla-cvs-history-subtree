@@ -34,9 +34,8 @@
 
 enum eFieldType {
     kString,
-    kU16,
     kU32,
-    kU64
+    kPRTime
 };
 
 // reserve the top 8 bits in the msg flags for the view-only flags.
@@ -105,8 +104,9 @@ protected:
 							   nsMsgViewNotificationCodeValue changeType);
 
   nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
-  nsresult GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, char **result);
+  nsresult GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUnichar **result);
   nsresult GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result);
+  nsresult GetPRTimeField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRTime *result);
 
   void FreeAll(nsVoidArray *ptrs);
   
