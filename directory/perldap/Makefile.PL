@@ -101,14 +101,14 @@ if ($#ldaplib > 0)
 
 $lline_ldap = $ldaplib[0];
 $lline_ldap =~ s/^lib//;
-$lline_ldap =~ s/\.(so|a|lib)$//;
+$lline_ldap =~ s/\.(so||sl|a|lib|dll)$//;
 $lline = "-L$lib_ldap -l$lline_ldap";
 
 if ($#lberlib >= 0 && $lline =~ /ldap$/)
 {
    $lline_lber = $lberlib[0];
    $lline_lber =~ s/^lib//;
-   $lline_lber =~ s/\.(so|a|lib)$//;
+   $lline_lber =~ s/\.(so|sl|a|lib|dll)$//;
    $lline .= " -l$lline_lber";
 }
 
@@ -151,5 +151,6 @@ WriteMakefile(
 	'LIBS'		=> 	[$lib_line],
 	'MYEXTLIB'	=>	$myextlib,
 	'DEFINE'	=> 	"$v3_def $ssl_def",
+	'XSOPT'		=>	"-nolinenumbers",
     @extras
 );
