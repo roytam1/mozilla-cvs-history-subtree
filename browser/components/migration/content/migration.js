@@ -125,8 +125,7 @@ var MigrationWizard = {
       this._itemsFlags = kIMig.ALL;
       this._selectedProfile = null;
     }
-    if (!this._autoMigrate)
-      this._source = newSource;
+    this._source = newSource;
       
     // check for more than one source profile
     if (this._migrator.sourceHasMultipleProfiles)
