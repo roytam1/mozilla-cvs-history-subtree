@@ -1736,6 +1736,7 @@ HRESULT ProcessWinReg(DWORD dwTiming, char *szSectionPrefix)
   BOOL    bDnu;
   BOOL    bOverwriteKey;
   BOOL    bOverwriteName;
+  BOOL    bOSDetected;
   DWORD   dwIndex;
   DWORD   dwType;
   DWORD   dwSize;
@@ -1753,7 +1754,7 @@ HRESULT ProcessWinReg(DWORD dwTiming, char *szSectionPrefix)
       GetPrivateProfileString(szSection, "Key",                 "", szBuf,           sizeof(szBuf),          szFileIniConfig);
       GetPrivateProfileString(szSection, "Decrypt Key",         "", szDecrypt,       sizeof(szDecrypt),      szFileIniConfig);
       GetPrivateProfileString(szSection, "Overwrite Key",       "", szOverwriteKey,  sizeof(szOverwriteKey), szFileIniConfig);
-
+      ZeroMemory(szKey, sizeof(szKey));
       if(lstrcmpi(szDecrypt, "TRUE") == 0)
         DecryptString(szKey, szBuf);
       else
@@ -1767,7 +1768,7 @@ HRESULT ProcessWinReg(DWORD dwTiming, char *szSectionPrefix)
       GetPrivateProfileString(szSection, "Name",                "", szBuf,           sizeof(szBuf),           szFileIniConfig);
       GetPrivateProfileString(szSection, "Decrypt Name",        "", szDecrypt,       sizeof(szDecrypt),       szFileIniConfig);
       GetPrivateProfileString(szSection, "Overwrite Name",      "", szOverwriteName, sizeof(szOverwriteName), szFileIniConfig);
-
+      ZeroMemory(szName, sizeof(szName));
       if(lstrcmpi(szDecrypt, "TRUE") == 0)
         DecryptString(szName, szBuf);
       else
@@ -1780,6 +1781,7 @@ HRESULT ProcessWinReg(DWORD dwTiming, char *szSectionPrefix)
 
       GetPrivateProfileString(szSection, "Name Value",          "", szBuf,           sizeof(szBuf), szFileIniConfig);
       GetPrivateProfileString(szSection, "Decrypt Name Value",  "", szDecrypt,       sizeof(szDecrypt), szFileIniConfig);
+      ZeroMemory(szValue, sizeof(szValue));
       if(lstrcmpi(szDecrypt, "TRUE") == 0)
         DecryptString(szValue, szBuf);
       else
@@ -1802,19 +1804,44 @@ HRESULT ProcessWinReg(DWORD dwTiming, char *szSectionPrefix)
       else
         bDnu = FALSE;
 
-      GetPrivateProfileString(szSection, "Type",                "", szBuf,           sizeof(szBuf), szFileIniConfig);
-      if(ParseRegType(szBuf, &dwType))
+      /* Read the OS key to see if there are restrictions on which OS to
+       * the Windows registry key for */
+      GetPrivateProfileString(szSection,
+                              "OS",
+                              "",
+                              szBuf,
+                              sizeof(szBuf),
+                              szFileIniConfig);
+      /* If there is no OS key value set, then assume all OS is valid.
+       * If there are any, then compare against the global OS value to
+       * make sure there's a match. */
+      bOSDetected = TRUE;
+      if((*szBuf != '\0') &&
+        ((gSystemInfo.dwOSType & ParseOSType(szBuf)) == 0))
+        bOSDetected = FALSE;
+
+      if(bOSDetected)
       {
-        /* create/set windows registry key here (string value)! */
-        SetWinReg(hRootKey, szKey, bOverwriteKey, szName, bOverwriteName,
-                  dwType, (CONST LPBYTE)szValue, lstrlen(szValue), TRUE, bDnu);
-      }
-      else
-      {
-        iiNum = _atoi64(szValue);
-        /* create/set windows registry key here (binary/dword value)! */
-        SetWinReg(hRootKey, szKey, bOverwriteKey, szName, bOverwriteName,
-                  dwType, (CONST LPBYTE)&iiNum, dwSize, TRUE, bDnu);
+        ZeroMemory(szBuf, sizeof(szBuf));
+        GetPrivateProfileString(szSection,
+                                "Type",
+                                "",
+                                szBuf,
+                                sizeof(szBuf),
+                                szFileIniConfig);
+        if(ParseRegType(szBuf, &dwType))
+        {
+          /* create/set windows registry key here (string value)! */
+          SetWinReg(hRootKey, szKey, bOverwriteKey, szName, bOverwriteName,
+                    dwType, (CONST LPBYTE)szValue, lstrlen(szValue), TRUE, bDnu);
+        }
+        else
+        {
+          iiNum = _atoi64(szValue);
+          /* create/set windows registry key here (binary/dword value)! */
+          SetWinReg(hRootKey, szKey, bOverwriteKey, szName, bOverwriteName,
+                    dwType, (CONST LPBYTE)&iiNum, dwSize, TRUE, bDnu);
+        }
       }
     }
 
