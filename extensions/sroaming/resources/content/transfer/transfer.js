@@ -801,15 +801,9 @@ TransferProgressListener.prototype =
     {
       /* HTTP gives us NS_OK, although the request failed with an HTTP error
          code, so check for that.
-         FTP gives us NS_OK, although the transfer is still ongoing
-         (bug no. ?), but onStatus gives us END_FTP_TRANSACTION, if the
-         request *really* stopped, so just ignore this NS_OK for FTP here.
-         Correction: We can't rely on END_FTP_TRANSACTION either *sigh*. */
-      var channel = this.file.channel;
-      var scheme = channel.URI.scheme;
-      if (!channel || !channel.URI)
-        this.file.setStatus("failed", kErrorUnexpected);
-      else if (scheme == "http")
+         FTP gives us NS_OK, although the transfer is still ongoing */
+      var scheme = this.file.channel.URI.scheme;
+      if (scheme == "http")
         this.privateHTTPResponse();
       //else if (scheme == "ftp")
       //XXX  return;
@@ -830,7 +824,7 @@ TransferProgressListener.prototype =
        real errors. Darin said that real errors are never passed in here,
        so we don't have a hard conflict. To make processing easier, I just
        translate these status codes into made-up, unique error codes,
-       so we can later check them with together other status and error codes
+       so we can later check them together with other status and error codes
        and store them in the normal this.status field (which contains
        normal XPCOM error codes) etc.. */
     if      (aStatusCode == kStatusResolvingHost_Status)
@@ -854,6 +848,16 @@ TransferProgressListener.prototype =
     ddump("  Request: " + aRequest.name);
     ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
     ddump("  StatusArg: " + aStatusArg);
+
+    /* FTP sends us onStopRequest *before* e.g. onStatus(SENDING_TO), so
+       ignore all status msgs after onstop. This is dangerous, because
+       IIRC I saw onStop also on the very beginning of a transfer, and
+       if that happens for the last file, we might close the dialog before
+       the transfer finished, but I don't know another quick and not too bad
+       workaround. */
+    var scheme = this.file.channel.URI.scheme;
+    if (scheme == "ftp" && status == "done")
+      return;
 
     this.privateStatusChange(aStatusCode);
   },

@@ -81,9 +81,13 @@
             - our last upload finished only partially, which we will consider
               a problem and a conflict XXX
             2a. Compare local files with listing-uploaded
-                - if they don't match, we have a conflict (unless the listing
-                  from the server matches listing-uploaded, but then we already
-                  decided above that we don't have a problem)
+                - if they don't match, then
+                  2aa. Compare remote listing with local files
+                       - If they match, listing-uploaded was wrong (maybe the
+                         current files were transmitted by something else), so
+                         there is no problem; ignore it and go on
+                       - If they don't match, use the result for conflict
+                         resolution
        3. If there were conflicts, ask the user what to do
        4. Download files
        5. If transfer succeeded, move listing.xml to listing-downloaded.
@@ -257,6 +261,7 @@ function download(transfer, remoteListing)
       ddump("we're done, no need to actually download.");
       move(kListingTransferFilename, kListingDownloadedFilename);
       onCancel();
+      return;
     }
     else // Mismatch
     {
@@ -278,20 +283,27 @@ function download(transfer, remoteListing)
       }
       else
       {
-        ddump("Step 3: Asking user which version to use");
-        var answer = conflictAsk(true,
-                                 comparisonStep2a.mismatches,
-                                 remoteListing,
-                                 localFiles);
+        ddump("Step 2aa: Comparing remote listing with local files");
+        var comparisonStep2aa = compareFiles(transfer.files,
+                                             remoteListing,
+                                             localFiles);
+        if (comparisonStep2aa.mismatches.length > 0)
+        {
+          ddump("Step 3: Asking user which version to use");
+          var answer = conflictAsk(true,
+                                   comparisonStep2aa.mismatches,
+                                   remoteListing,
+                                   localFiles);
                /* for the mismatching files, pass the stats of the server
                   and local versions to the dialog */
-        if (answer.button != 3) // cancel pressed
-        {
-          onCancel();
-          return;
+          if (answer.button != 3) // cancel pressed
+          {
+            onCancel();
+            return;
+          }
+          transfer.files = substractFiles(transfer.files, answer.local);
+          transfer.filesChanged();
         }
-        transfer.files = substractFiles(transfer.files, answer.local);
-        transfer.filesChanged();
       }
     }
 

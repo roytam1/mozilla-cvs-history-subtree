@@ -1,22 +1,14 @@
-- conflict
-  - fix dialog
+To do:
+- UI
+  - conflict dialog
     - column headings
     - width
-  - some files failed (see XXX - update: eh, where was that?)
-- listing progressmeter doesn't work
+  - listing progressmeter doesn't work
 - Bugs
-  - some files never "finish" (compare feedback below)
-    - ftp upload: ok -> busy [4]
 - error handling
   - (local profile) files missing, also adjust listing.xml
   - copy protocol
     - no remote files yet
-- world gone
-  - problem: ddump, xpcom not defined after files done and dialog closed
-    solution: close dialog only when done with processing.
-    workaround: gTimeout
-  - problem: cancel by user in progress dialog: xpconnect errors
-    solution: prevent dialog closure (even if cancel pressed) until we're done.
 
 Later:
 - nsiprogresseventsink comment
@@ -28,10 +20,20 @@ Later:
 - XXXs
 - clean up progressdialog
 
+don't care (for now):
+- conflict
+  - some files failed (see XXX - update: eh, where was that?)
+- world gone
+  - problem: ddump, xpcom not defined after files done and dialog closed
+    solution: close dialog only when done with processing.
+    workaround: gTimeout
+  - problem: cancel by user in progress dialog: xpconnect errors
+    solution: prevent dialog closure (even if cancel pressed) until we're done.
+
 Enhance
 - protocols
   - HTTPS
-  - LDAP (already done by Sun? :-) )
+  - LDAP (already done by Sun?)
   - IMAP
 - password encrypt
 - rewrite progress dialog
@@ -48,6 +50,7 @@ roaming urls
 Feedback
 - why do I need to implement nsIDocShellTreeItem for a http xml file *download*?
 - onStopRequest (Request: http://ben:pgpben@http.server.bucksch.org/roaming/ben/listing.xml, StatusCode: NS_OK, HTTPResponse 200) called *before*  the file finished.
+- same for ftp: onStopRequest *before* onStatus(SENDING_TO), but only for the first file
 
 clipboard
 
