@@ -31,7 +31,6 @@
 #include "xpassert.h"
 #include "xfe.h"
 #include "PrefsDialog.h"
-#include "PrefsPages.h"
 #include "prefapi.h"
 
 #include <Xm/Label.h>
@@ -591,11 +590,7 @@ struct _prefsCategory prefsCategories[] = {
 		XtNumber(prefsMailNews),
 		PAGE_TYPE_MAILNEWS,
 	},
-<<<<<<< PrefsDialog.cpp
 #endif // MOZ_MAIL_NEWS
-#ifdef EDITOR
-	{
-=======
 #ifdef MOZ_LI
 	{
 		CAT_LI,
@@ -609,8 +604,8 @@ struct _prefsCategory prefsCategories[] = {
 		PAGE_TYPE_LI,
 	},
 #endif /* MOZ_LI */
+#ifdef EDITOR
 	{
->>>>>>> 3.1.14.1
 		CAT_EDITOR,               
 		CAT_RESNAME_EDITOR,               
 		CAT_RESCLASS_EDITOR,               
@@ -1832,38 +1827,30 @@ void XFE_PrefsDialog::newPage(XFE_PrefsPage *&page,
 		break;
 	case PAGE_TYPE_MAILNEWS_MAILSERVER:
 		page = new XFE_PrefsPageMailNewsMserver(this);
-<<<<<<< PrefsDialog.cpp
 		break;
 	case PAGE_TYPE_MAILNEWS_NEWSSERVER:
 		page = new XFE_PrefsPageMailNewsNserver(this);
-=======
 		break;
 	case PAGE_TYPE_MAILNEWS_NSERVER:
 		page = new XFE_PrefsPageNServer(this);
->>>>>>> 3.1.14.1
 		break;
-<<<<<<< PrefsDialog.cpp
 	case PAGE_TYPE_MAILNEWS_ADDRBOOK:
 		page = new XFE_PrefsPageMailNewsAddrBook(this);
-=======
-    case PAGE_TYPE_MAILNEWS_ADDRESS:
-        page = new XFE_PrefsPageAddress(this);
-        break;
+        	break;
+        case PAGE_TYPE_MAILNEWS_ADDRESS:
+        	page = new XFE_PrefsPageAddress(this);
+        	break;
 	case PAGE_TYPE_MAILNEWS_COPIES:
-	    page = new XFE_PrefsPageMailNewsCopies(this);
->>>>>>> 3.1.14.1
+	    	page = new XFE_PrefsPageMailNewsCopies(this);
 		break;
-<<<<<<< PrefsDialog.cpp
-#endif  // MOZ_MAIL_NEWS
-#ifdef EDITOR
-=======
 	case PAGE_TYPE_MAILNEWS_HTML:
-	    page = new XFE_PrefsPageMailNewsHTML(this);
+	    	page = new XFE_PrefsPageMailNewsHTML(this);
 		break;
 	case PAGE_TYPE_MAILNEWS_RECEIPTS:
-	    page = new XFE_PrefsPageMailNewsReceipts(this);
+	    	page = new XFE_PrefsPageMailNewsReceipts(this);
 		break;
->>>>>>> 3.1.14.1
+#endif  // MOZ_MAIL_NEWS
+#ifdef EDITOR
 	case PAGE_TYPE_EDITOR:
 		page = new XFE_PrefsPageEditor(this);
 		break;
