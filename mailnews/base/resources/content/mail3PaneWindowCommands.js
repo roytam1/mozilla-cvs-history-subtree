@@ -503,7 +503,7 @@ var DefaultController =
 				MsgMarkThreadAsRead();
 				return;
 			case "cmd_markAllRead":
-				MsgMarkAllRead();
+        gDBView.doCommand(nsMsgViewCommandType.markAllRead);
 				return;
 			case "cmd_markAsFlagged":
 				MsgMarkAsFlagged(null);

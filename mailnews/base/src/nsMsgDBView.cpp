@@ -1253,7 +1253,7 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
     *selectable_p = (numindices > 0);
     break;
   case nsMsgViewCommandType::markAllRead:
-    printf("fix me\n");
+    *selectable_p = PR_TRUE;
     break;
   case nsMsgViewCommandType::expandAll:
   case nsMsgViewCommandType::collapseAll:

@@ -855,7 +855,7 @@ Rights Reserved.
 				</menupopup>
 			</menu>
 			<menu value="&msgsMenu.label;" id="viewMessagesMenu" accesskey="&msgsMenu.accesskey;">
-				<menupopup>
+				<menupopup oncreate="InitViewMessagesMenu()">
 					<menuitem id="viewAllMessagesMenuItem" type="checkbox" value="&allMsgsCmd.label;" accesskey="&allMsgsCmd.accesskey;" disabled="true" observes="cmd_viewAllMsgs"/>
 					<menuitem id="viewUnreadMessagesMenuItem" type="checkbox" value="&unreadMsgsCmd.label;" accesskey="&unreadMsgsCmd.accesskey;" disabled="true" observes="cmd_viewUnreadMsgs"/>
 					<menuitem id="viewThreadsWithUnreadMenuItem" type="checkbox" value="&threadsWithUnreadCmd.label;" accesskey="&threadsWithUnreadCmd.accesskey;" disabled="true" observes="cmd_viewThreadsWithUnread"/>
