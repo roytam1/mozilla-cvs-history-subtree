@@ -53,6 +53,7 @@ CSRCS			= cvactive.c \
 			  mkautocf.c \
 			  mkcache.c \
 			  mkconect.c \
+                          mkcburl.c \
 			  mkextcac.c \
 			  mkfile.c \
 			  mkftp.c \
