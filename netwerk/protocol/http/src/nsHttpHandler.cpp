@@ -315,7 +315,8 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
     NS_ENSURE_ARG_POINTER(ci);
 
     if (mActiveConnections.Count() == mMaxConnections) {
-        LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
+        LOG(("max-connections reached: unable to perform the transaction at "
+             "this time [trans=%x]\n", trans));
         if (failIfBusy) return NS_ERROR_FAILURE;
         return EnqueueTransaction(trans, ci);
     }
@@ -351,7 +352,8 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
     if (!conn) {
         PRUint32 connectionsPerHost = CountActiveConnections(ci);
         if (connectionsPerHost == PRUint32(mMaxConnectionsPerServer)) {
-            LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
+            LOG(("max-connections-per-host reached: unable to perform the "
+                 "transaction at this time [trans=%x]\n", trans));
             if (failIfBusy) return NS_ERROR_FAILURE;
             return EnqueueTransaction(trans, ci);
         }

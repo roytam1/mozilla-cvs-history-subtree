@@ -1875,12 +1875,18 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
         NS_RELEASE(mTransaction);
         mTransaction = nsnull;
     }
+    
+    if (mCacheEntry && NS_SUCCEEDED(status))
+        mCacheEntry->MarkValid();
+
+    if (mListener) {
+        mListener->OnStopRequest(this, mListenerContext, status);
+        mListener = 0;
+        mListenerContext = 0;
+    }
 
     if (mCacheEntry)
         CloseCacheEntry(status);
-
-    if (mListener)
-        mListener->OnStopRequest(this, mListenerContext, status);
 
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, nsnull, status);
