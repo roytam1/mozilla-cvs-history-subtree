@@ -424,7 +424,7 @@ sub SetupPath {
         }
         if ($Settings::CPU eq 'i86pc') {
             $ENV{PATH} = '/opt/gnu/bin:' . $ENV{PATH};
-            $ENV{LD_LIBRARY_PATH} .= ':/opt/gnu/lib';
+            $ENV{LD_LIBRARY_PATH} = '/opt/gnu/lib:' . $ENV{LD_LIBRARY_PATH};
             if ($Settings::ConfigureEnvArgs eq '') {
                 $Settings::ConfigureEnvArgs ||= 'CC=egcc CXX=eg++';
                 $Settings::Compiler ||= 'egcc';
