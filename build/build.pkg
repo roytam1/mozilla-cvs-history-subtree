@@ -1,3 +1,4 @@
 [unpackaged-files]
 !optional dist/bin/.autoreg
 !optional dist/bin/asdecode
+!optional dist/bin/nsinstall@BINS@
