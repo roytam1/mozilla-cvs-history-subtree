@@ -1412,6 +1412,10 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
   // mark any disposition flags like replied or forwarded on the message.
   mOriginalMsgURI = originalMsgURI;
 
+  // If we are forwarding inline, mime did already setup the compose fields therefore we should stop now
+  if (type == nsIMsgCompType::ForwardInline )
+    return rv;
+  
   char *uriList = PL_strdup(originalMsgURI);
   if (!uriList)
     return NS_ERROR_OUT_OF_MEMORY;
