@@ -53,10 +53,6 @@ endif
 
 DIRS	+= libmocha libstyle
 
-ifeq ($(OS_ARCH),OS2)
-DIRS	+= libcnv
-endif
-
 DIRS	+= libpics
 
 DIRS	+= mariner
