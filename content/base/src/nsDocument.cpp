@@ -443,7 +443,7 @@ nsDocumentChildNodes::DropReference()
 class SubDocMapEntry : public PLDHashEntryHdr
 {
 public:
-  nsIContent *mKey; // must be first, to look like PLDHashEntryStub
+  const nsIContent *mKey; // must be first, to look like PLDHashEntryStub
   nsIDocument *mSubDocument;
 };
 
@@ -1162,7 +1162,7 @@ SubDocInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry, const void *key)
     NS_CONST_CAST(SubDocMapEntry *,
                   NS_STATIC_CAST(const SubDocMapEntry *, entry));
 
-  e->mKey = nsnull;
+  e->mKey = NS_STATIC_CAST(const nsIContent *, key);
   e->mSubDocument = nsnull;
 }
 
@@ -1258,7 +1258,7 @@ FindContentEnumerator(PLDHashTable *table, PLDHashEntryHdr *hdr,
   FindContentData *data = NS_STATIC_CAST(FindContentData*, arg);
 
   if (entry->mSubDocument == data->mSubDocument) {
-    data->mResult = entry->mKey;
+    data->mResult = NS_CONST_CAST(nsIContent *, entry->mKey);
 
     return PL_DHASH_STOP;
   }

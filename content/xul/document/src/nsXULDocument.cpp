@@ -421,8 +421,8 @@ struct BroadcastListener {
 class SubDocMapEntry : public PLDHashEntryHdr
 {
 public:
-  nsIContent *mKey; // must be first, to look like PLDHashEntryStub
-  nsIDocument *mSubDocument;
+    const nsIContent *mKey; // must be first, to look like PLDHashEntryStub
+    nsIDocument *mSubDocument;
 };
 
 //----------------------------------------------------------------------
@@ -1151,33 +1151,55 @@ nsXULDocument::SetParentDocument(nsIDocument* aParent)
     return NS_OK;
 }
 
+PR_STATIC_CALLBACK(void)
+SubDocClearEntry(PLDHashTable *table, PLDHashEntryHdr *entry)
+{
+  SubDocMapEntry *e = NS_STATIC_CAST(SubDocMapEntry *, entry);
+
+  NS_IF_RELEASE(e->mSubDocument);
+}
+
+PR_STATIC_CALLBACK(void)
+SubDocInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry, const void *key)
+{
+  SubDocMapEntry *e =
+    NS_CONST_CAST(SubDocMapEntry *,
+                  NS_STATIC_CAST(const SubDocMapEntry *, entry));
+
+  e->mKey = NS_STATIC_CAST(const nsIContent *, key);
+  e->mSubDocument = nsnull;
+}
+
 NS_IMETHODIMP
 nsXULDocument::SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc)
 {
   // Assert if aContent is not in mSubDocuments
 
-
   if (!aSubDoc) {
     // aSubDoc is nsnull, remove the mapping
 
     if (mSubDocuments) {
-      SubDocMapEntry *entry =
-        NS_STATIC_CAST(SubDocMapEntry*,
-                       PL_DHashTableOperate(mSubDocuments, aContent,
-                                            PL_DHASH_LOOKUP));
-
-      if (PL_DHASH_ENTRY_IS_BUSY(entry)) {
-        NS_RELEASE(entry->mSubDocument);
-
-        PL_DHashTableRawRemove(mSubDocuments, entry);
-      }
+      PL_DHashTableOperate(mSubDocuments, aContent, PL_DHASH_REMOVE);
     }
   } else {
     if (!mSubDocuments) {
       // Create a new hashtable
 
-      mSubDocuments = PL_NewDHashTable(PL_DHashGetStubOps(), nsnull,
-                                      sizeof(SubDocMapEntry), 16);
+      static PLDHashTableOps hash_table_ops =
+      {
+        PL_DHashAllocTable,
+        PL_DHashFreeTable,
+        PL_DHashGetKeyStub,
+        PL_DHashVoidPtrKeyStub,
+        PL_DHashMatchEntryStub,
+        PL_DHashMoveEntryStub,
+        SubDocClearEntry,
+        PL_DHashFinalizeStub,
+        SubDocInitEntry
+      };
+
+      mSubDocuments = PL_NewDHashTable(&hash_table_ops, nsnull,
+                                       sizeof(SubDocMapEntry), 16);
       if (!mSubDocuments) {
         return NS_ERROR_OUT_OF_MEMORY;
       }
@@ -1189,11 +1211,11 @@ nsXULDocument::SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc)
                      PL_DHashTableOperate(mSubDocuments, aContent,
                                           PL_DHASH_ADD));
 
-    if (!entry || !PL_DHASH_ENTRY_IS_BUSY(entry)) {
+    if (!entry) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    entry->mKey = aContent;
+    NS_IF_RELEASE(entry->mSubDocument);
     entry->mSubDocument = aSubDoc;
     NS_ADDREF(entry->mSubDocument);
   }
@@ -1240,7 +1262,7 @@ FindContentEnumerator(PLDHashTable *table, PLDHashEntryHdr *hdr,
   FindContentData *data = NS_STATIC_CAST(FindContentData*, arg);
 
   if (entry->mSubDocument == data->mSubDocument) {
-    data->mResult = entry->mKey;
+    data->mResult = NS_CONST_CAST(nsIContent *, entry->mKey);
 
     return PL_DHASH_STOP;
   }
