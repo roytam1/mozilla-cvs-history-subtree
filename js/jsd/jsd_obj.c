@@ -143,8 +143,6 @@ jsd_ObjectHook(JSContext *cx, JSObject *obj, JSBool isNew, void *closure)
     if( ! jsdc || ! jsdc->inited )
         return;
 
-    jsd_JSContextUsed(jsdc, cx);
-
     JSD_LOCK_OBJECTS(jsdc);
     if(isNew)
     {

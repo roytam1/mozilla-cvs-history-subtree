@@ -66,10 +66,14 @@ function errorReporterHook(msg, filename, lineno, lineBuf, tokenOffset)
 
     var answer = -1
     while(-1 == answer) {
-        switch(prompt("[I]gnore [p]ass along [d]ebug ? ")) {
+        switch(prompt("[E]at [i]gnore [p]ass along [d]ebug ? ")) {
             case "I":
             case "i":
                 answer = jsd.JSD_ERROR_REPORTER_RETURN;
+                break;
+            case "E":
+            case "e":
+                answer = jsd.JSD_ERROR_REPORTER_CLEAR_RETURN;
                 break;
             case "P":
             case "p":
@@ -81,7 +85,7 @@ function errorReporterHook(msg, filename, lineno, lineBuf, tokenOffset)
                 break;
             // let's simplify the user's life
             default:
-                answer = jsd.JSD_ERROR_REPORTER_RETURN;
+                answer = jsd.JSD_ERROR_REPORTER_CLEAR_RETURN;
                 break;
         }
     }
@@ -446,6 +450,9 @@ function _revalToValue(args)
 
 function why()
 {
+    var s;
+    var e;
+
     switch(hookType) {
         case jsd.JSD_HOOK_INTERRUPTED:
             print("hit interrupt hook");
@@ -460,7 +467,12 @@ function why()
             print("hit debugger keyword hook");
             break;
         case jsd.JSD_HOOK_THROW:
-            print("hit throw hook");
+            e = new JSDValue(jsd.GetException());
+            if(e)
+               s = " => " + e.GetValueString();
+            else
+                s = "";
+            print("hit throw hook"+s);
             break;
         default:
             print("hit unknown hook type!")
@@ -866,6 +878,8 @@ function JSDValueProto()
 
 function JSDValue(handle)
 {
+    if(!handle)
+        return null;
     this.handle = handle;
 }
 JSDValue.prototype = new JSDValueProto;
@@ -917,6 +931,8 @@ function JSDPropertyProto()
 
 function JSDProperty(handle)
 {
+    if(!handle)
+        return null;
     this.handle = handle;
 }
 

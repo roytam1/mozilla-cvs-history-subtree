@@ -385,3 +385,45 @@ jsd_IsValidFrameInThreadState(JSDContext*        jsdc,
     
     return JS_TRUE;
 }
+
+static JSContext*
+_getContextForThreadState(JSDContext* jsdc, JSDThreadState* jsdthreadstate)
+{
+    JSBool valid;
+    JSD_LOCK_THREADSTATES(jsdc);
+    valid = jsd_IsValidThreadState(jsdc, jsdthreadstate);
+    JSD_UNLOCK_THREADSTATES(jsdc);
+    if( valid )
+        return jsdthreadstate->context;
+    return NULL;
+}        
+
+JSDValue*
+jsd_GetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate)
+{
+    JSContext* cx;
+    jsval val;
+
+    if(!(cx = _getContextForThreadState(jsdc, jsdthreadstate)))
+        return NULL;
+
+    if(JS_GetPendingException(cx, &val))
+        return jsd_NewValue(jsdc, val);
+    return NULL;
+}        
+
+JSBool
+jsd_SetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate, 
+                 JSDValue* jsdval)
+{
+    JSContext* cx;
+
+    if(!(cx = _getContextForThreadState(jsdc, jsdthreadstate)))
+        return JS_FALSE;
+
+    if(jsdval)
+        JS_SetPendingException(cx, JSD_GetValueWrappedJSVal(jsdc, jsdval));
+    else
+        JS_ClearPendingException(cx);
+    return JS_TRUE;
+}

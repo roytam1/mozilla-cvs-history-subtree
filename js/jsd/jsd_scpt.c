@@ -365,8 +365,6 @@ jsd_NewScriptHookProc(
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return;
     
-    jsd_JSContextUsed(jsdc, cx);
-
 #ifdef LIVEWIRE
     if( 1 == lineno )
         jsdlw_PreLoadSource(jsdc, LWDBG_GetCurrentApp(), filename, JS_TRUE );
@@ -411,8 +409,6 @@ jsd_DestroyScriptHookProc(
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return;
     
-    jsd_JSContextUsed(jsdc, cx);
-
     JSD_LOCK_SCRIPTS(jsdc);
     jsdscript = jsd_FindJSDScript(jsdc, script);
     JSD_UNLOCK_SCRIPTS(jsdc);
@@ -533,8 +529,6 @@ jsd_TrapHandler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rval,
 
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return JSTRAP_CONTINUE;
-
-    jsd_JSContextUsed(jsdc, cx);
 
 #ifdef LIVEWIRE
     if( ! jsdlw_UserCodeAtPC(jsdc, jsdscript, (jsuword)pc) )

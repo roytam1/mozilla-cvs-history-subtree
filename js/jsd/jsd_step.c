@@ -98,8 +98,6 @@ jsd_InterpreterHook(JSContext *cx, JSStackFrame *fp, JSBool before,
     if( ! jsdc || ! jsdc->inited )
         return NULL;
 
-    jsd_JSContextUsed(jsdc, cx);
-
     if(before && JS_IsContructorFrame(cx, fp))
         jsd_Constructing(jsdc, cx, JS_GetFrameThis(cx, fp), fp);
 

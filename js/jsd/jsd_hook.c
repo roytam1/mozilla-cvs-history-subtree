@@ -37,8 +37,6 @@ jsd_InterruptHandler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rva
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return JSTRAP_CONTINUE;
 
-    jsd_JSContextUsed(jsdc, cx);
-
     JSD_LOCK_SCRIPTS(jsdc);
     jsdscript = jsd_FindJSDScript(jsdc, script);
     JSD_UNLOCK_SCRIPTS(jsdc);
@@ -75,8 +73,6 @@ jsd_DebuggerHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return JSTRAP_CONTINUE;
 
-    jsd_JSContextUsed(jsdc, cx);
-
     JSD_LOCK_SCRIPTS(jsdc);
     jsdscript = jsd_FindJSDScript(jsdc, script);
     JSD_UNLOCK_SCRIPTS(jsdc);
@@ -111,8 +107,6 @@ jsd_ThrowHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
     if( JSD_IS_DANGEROUS_THREAD(jsdc) )
         return JSD_HOOK_RETURN_CONTINUE_THROW;
 
-    jsd_JSContextUsed(jsdc, cx);
-
     JSD_LOCK_SCRIPTS(jsdc);
     jsdscript = jsd_FindJSDScript(jsdc, script);
     JSD_UNLOCK_SCRIPTS(jsdc);
@@ -137,7 +131,9 @@ jsd_CallExecutionHook(JSDContext* jsdc,
                       void* hookData,
                       jsval* rval)
 {
-    uintN hookanswer = JSD_HOOK_RETURN_CONTINUE;
+    uintN hookanswer = JSD_HOOK_THROW == type ? 
+                            JSD_HOOK_RETURN_CONTINUE_THROW :
+                            JSD_HOOK_RETURN_CONTINUE;
     JSDThreadState* jsdthreadstate;
 
     if(hook && NULL != (jsdthreadstate = jsd_NewThreadState(jsdc,cx)))

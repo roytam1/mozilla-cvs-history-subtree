@@ -97,15 +97,12 @@ JS_BEGIN_EXTERN_C
 
 typedef struct JSDExecHook          JSDExecHook;
 typedef struct JSDAtom              JSDAtom;
-typedef struct JSDContextWrapper    JSDContextWrapper;
 
 /***************************************************************************/
 /* Our structures */
 
-/**
-* XXX This is lame. What I'm calling a JSDContext is really more of a
-* TaskState. I should use 'JSDContext' for the thing I'm now calling
-* a JSDContextWrapper. arg!
+/*
+* XXX What I'm calling a JSDContext is really more of a JSDTaskState. 
 */
 
 struct JSDContext
@@ -117,7 +114,6 @@ struct JSDContext
     JSD_ExecutionHookProc   interruptHook;
     void*                   interruptHookData;
     JSRuntime*              jsrt;
-    JSHashTable*            jscontexts;
     JSD_ErrorReporter       errorReporter;
     void*                   errorReporterData;
     JSCList                 threadsStates;
@@ -148,14 +144,6 @@ struct JSDContext
 #ifdef JSD_HAS_DANGEROUS_THREAD
     void*                   dangerousThread;
 #endif /* JSD_HAS_DANGEROUS_THREAD */
-
-};
-
-struct JSDContextWrapper
-{
-    JSContext*          context;
-    JSDContext*         jsdc;
-    JSErrorReporter     originalErrorReporter;
 
 };
 
@@ -303,9 +291,6 @@ jsd_DebuggerOff(JSDContext* jsdc);
 extern void
 jsd_SetUserCallbacks(JSRuntime* jsrt, JSD_UserCallbacks* callbacks, void* user);
 
-extern void
-jsd_JSContextUsed(JSDContext* jsdc, JSContext* context);
-
 extern JSDContext*
 jsd_JSDContextForJSContext(JSContext* context);
 
@@ -318,6 +303,10 @@ extern JSBool
 jsd_GetErrorReporter(JSDContext*        jsdc,
                      JSD_ErrorReporter* reporter,
                      void**             callerdata);
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+jsd_DebugErrorHook(JSContext *cx, const char *message,
+                   JSErrorReport *report, void *closure);
 
 /***************************************************************************/
 /* Script functions */
@@ -593,6 +582,13 @@ extern JSBool
 jsd_IsValidFrameInThreadState(JSDContext*        jsdc,
                               JSDThreadState*    jsdthreadstate,
                               JSDStackFrameInfo* jsdframe);
+
+extern JSDValue*
+jsd_GetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate);
+
+extern JSBool
+jsd_SetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate, 
+                 JSDValue* jsdval);
 
 /***************************************************************************/
 /* Locking support */

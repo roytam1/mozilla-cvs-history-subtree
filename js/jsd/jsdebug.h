@@ -710,6 +710,22 @@ JSD_ValToStringInStackFrame(JSDContext* jsdc,
                             JSDStackFrameInfo* jsdframe,
                             jsval val);
 
+/*
+* Get the JSDValue currently being thrown as an exception (may be NULL).
+* NOTE: must eventually release by calling JSD_DropValue (if not NULL)
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSDValue*)
+JSD_GetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate);
+
+/*
+* Set the JSDValue currently being thrown as an exception.
+* *** new for version 1.1 ****
+*/
+extern JSD_PUBLIC_API(JSBool)
+JSD_SetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate, 
+                 JSDValue* jsdval);
+
 /***************************************************************************/
 /* Error Reporter functions */
 
@@ -720,8 +736,9 @@ JSD_ValToStringInStackFrame(JSDContext* jsdc,
 
 /* legal return values for JSD_ErrorReporter */
 #define JSD_ERROR_REPORTER_PASS_ALONG   0 /* pass along to regular reporter */
-#define JSD_ERROR_REPORTER_RETURN       1 /* eat error */
+#define JSD_ERROR_REPORTER_RETURN       1 /* don't pass to error reporter */
 #define JSD_ERROR_REPORTER_DEBUG        2 /* force call to DebugBreakHook */
+#define JSD_ERROR_REPORTER_CLEAR_RETURN 3 /* clear exception and don't pass */
 
 /*
 * Implement a callback of this form in order to hook the ErrorReporter
