@@ -48,17 +48,39 @@ extern "C" {
 /* AUTOLOAD methods for LDAP constants */
 #include "constant.h"
 
-/* Prototypes - Processing LDAP Modifications */
+/* Prototypes */
+static char ** avref2charptrptr(SV *avref);
+
+static struct berval ** avref2berptrptr(SV *avref);
+
+static SV* charptrptr2avref(char **cppval);
+
+static SV* berptrptr2avref(struct berval **bval);
+
 static LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
                 int ldap_add_func,int cont);
+
+static int calc_mod_size(HV *ldap_change);
+
 static LDAPMod **hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func);
 
-/* Prototypes - Calls for Handling Rebinds */
+static int StrCaseCmp(const char *s, const char *t);
+
+static char * StrDup(const char *source);
+
 static int LDAP_CALL internal_rebind_proc(LDAP *ld,char **dnp,char **pwp,
             int *authmethodp,int freeit,void *arg);
 
 static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pswd,
             int *auth, int freeit, void *arg);
+
+static void LDAP_CALL ldap_mods_free_perl(LDAPMod **mods, int freemods);
+
+static void LDAP_CALL ldap_value_free_perl( char **vals );
+
+static void LDAP_CALL ber_bvfree_perl( struct berval *bv );
+
+static void LDAP_CALL ber_bvecfree_perl( struct berval **bv );
 
 
 /* Global Definitions and Variables */
@@ -90,7 +112,9 @@ static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
 	   ldap_value_free_len(bvppvar); }
 
 /* Return a char ** when passed a reference to an AV */
-char ** avref2charptrptr(SV *avref)
+static
+char **
+avref2charptrptr(SV *avref)
 {
    I32 avref_arraylen;
    int ix_av;
@@ -107,7 +131,7 @@ char ** avref2charptrptr(SV *avref)
    for (ix_av = 0;ix_av <= avref_arraylen;ix_av++)
    {
       current_val = av_fetch((AV *)SvRV(avref),ix_av,0);
-      tmp_cpp[ix_av] = strdup(SvPV(*current_val,na));
+      tmp_cpp[ix_av] = StrDup(SvPV(*current_val,na));
    }
    tmp_cpp[ix_av] = NULL;
 
@@ -115,7 +139,9 @@ char ** avref2charptrptr(SV *avref)
 }
 
 /* Return a struct berval ** when passed a reference to an AV */
-struct berval ** avref2berptrptr(SV *avref)
+static
+struct berval **
+avref2berptrptr(SV *avref)
 {
    I32 avref_arraylen;
    int ix_av,val_len;
@@ -151,7 +177,9 @@ struct berval ** avref2berptrptr(SV *avref)
 
 /* Return an AV reference when given a char ** */
 
-SV* charptrptr2avref(char **cppval)
+static
+SV*
+charptrptr2avref(char **cppval)
 {
    AV* tmp_av = newAV();
    SV* tmp_ref = newRV((SV*)tmp_av);
@@ -171,7 +199,9 @@ SV* charptrptr2avref(char **cppval)
 
 /* Return an AV Reference when given a struct berval ** */
 
-SV* berptrptr2avref(struct berval **bval)
+static
+SV*
+berptrptr2avref(struct berval **bval)
 {
    AV* tmp_av = newAV();
    SV* tmp_ref = newRV((SV*)tmp_av);
@@ -195,8 +225,9 @@ SV* berptrptr2avref(struct berval **bval)
 /*   return a single LDAPMod pointer to this data.                  */
 
 static
-LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
-   int ldap_add_func,int cont)
+LDAPMod *
+parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
+          int ldap_add_func,int cont)
 {
    LDAPMod *ldap_current_mod;
    static HV *ldap_current_values_hv;
@@ -209,7 +240,7 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
    if (ldap_current_attribute == NULL)
       return(NULL);
    Newz(1,ldap_current_mod,1,LDAPMod);
-   ldap_current_mod->mod_type = strdup(ldap_current_attribute);
+   ldap_current_mod->mod_type = StrDup(ldap_current_attribute);
    if (SvROK(ldap_value_ref))
    {
      if (SvTYPE(SvRV(ldap_value_ref)) == SVt_PVHV)
@@ -289,7 +320,7 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
             ldap_current_mod->mod_op = LDAP_MOD_REPLACE;
          }
          New(1,ldap_current_mod->mod_values,2,char *);
-         ldap_current_mod->mod_values[0] = strdup(SvPV(ldap_value_ref,na));
+         ldap_current_mod->mod_values[0] = StrDup(SvPV(ldap_value_ref,na));
          ldap_current_mod->mod_values[1] = NULL;
       }
    }
@@ -299,7 +330,8 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
 /* calc_mod_size                                                           */
 /* Calculates the number of LDAPMod's buried inside the ldap_change passed */
 /* in.  This is used by hash2mod to calculate the size to allocate in Newz */
-static int
+static
+int
 calc_mod_size(HV *ldap_change)
 {
    int mod_size = 0;
@@ -339,7 +371,8 @@ calc_mod_size(HV *ldap_change)
 /*    LDAPMod pointers.                                                */
 
 static
-LDAPMod ** hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
+LDAPMod **
+hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
 {
    LDAPMod **ldapmod = NULL;
    LDAPMod *ldap_current_mod;
@@ -379,7 +412,9 @@ LDAPMod ** hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
 /* StrCaseCmp - Replacement for strcasecmp, since it doesn't exist on many
    systems, including NT...  */
 
-int StrCaseCmp(const char *s, const char *t)
+static
+int
+StrCaseCmp(const char *s, const char *t)
 {
    while (*s && *t && toupper(*s) == toupper(*t))
    {
@@ -388,10 +423,35 @@ int StrCaseCmp(const char *s, const char *t)
    return(toupper(*s) - toupper(*t));
 }
 
+/*
+ * StrDup
+ *
+ * Duplicates a string, but uses the Perl memory allocation
+ * routines (so it can be free by the internal routines
+ */
+static
+char *
+StrDup(const char *source)
+{
+   char *dest;
+   STRLEN length;
+
+   if ( source == NULL )
+      return(NULL);
+   length = strlen(source);
+   Newz(1,dest,length+1,char);
+   Copy(source,dest,length+1,char);
+
+   return(dest);
+}
+
 /* internal_rebind_proc - Wrapper to call a PERL rebind process             */
 
-int LDAP_CALL internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
-               int *authmethodp, int freeit, void *arg)
+static
+int
+LDAP_CALL
+internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
+                     int *authmethodp, int freeit, void *arg)
 {
    if (freeit == 0)
    {
@@ -408,19 +468,19 @@ int LDAP_CALL internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
          croak("ldap_perl_rebindproc: Expected DN, PASSWORD, and AUTHTYPE returned.\n");
 
       *authmethodp = POPi;
-      *pwp = strdup(POPp);
-      *dnp = strdup(POPp);
+      *pwp = StrDup(POPp);
+      *dnp = StrDup(POPp);
 
       FREETMPS ;
       LEAVE ;
    } else {
       if (dnp && *dnp)
       {
-         free(*dnp);
+         Safefree(*dnp);
       }
       if (pwp && *pwp)
       {
-         free(*pwp);
+         Safefree(*pwp);
       }
    }
    return(LDAP_SUCCESS);
@@ -428,8 +488,11 @@ int LDAP_CALL internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
 
 /* NT and internal_rebind_proc hate each other, so they need this... */
 
-static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
-   int *auth, int freeit, void *arg)
+static
+int
+LDAP_CALL
+ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
+                         int *auth, int freeit, void *arg)
 {
   if (!ldap_default_rebind_dn || !ldap_default_rebind_pwd)
     {
@@ -453,6 +516,7 @@ static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
  *  here, since we use Perl memory allocation macros. This used to cause
  *  serious problems on Windows/NT and ActiveState Perl for instance...
  */
+static
 void
 LDAP_CALL
 ldap_mods_free_perl(LDAPMod **mods, int freemods)
@@ -468,12 +532,12 @@ ldap_mods_free_perl(LDAPMod **mods, int freemods)
 	{
 	  if (mods[i]->mod_bvalues != NULL)
 	    {
-	      Safefree(mods[i]->mod_bvalues);
+	      ber_bvecfree_perl(mods[i]->mod_bvalues);
 	    }
 	}
       else if (mods[i]->mod_values != NULL)
 	{
-	  Safefree(mods[i]->mod_values);
+	  ldap_value_free_perl(mods[i]->mod_values);
 	}
       if (mods[i]->mod_type != NULL)
 	{
@@ -484,6 +548,46 @@ ldap_mods_free_perl(LDAPMod **mods, int freemods)
 
   if (freemods)
     Safefree((char *) mods);
+}
+
+static
+void
+LDAP_CALL
+ldap_value_free_perl( char **vals )
+{
+	int	i;
+
+	if ( vals == NULL )
+		return;
+	for ( i = 0; vals[i] != NULL; i++ )
+		Safefree( vals[i] );
+	Safefree( (char *) vals );
+}
+
+static
+void
+LDAP_CALL
+ber_bvfree_perl( struct berval *bv )
+{
+	if ( bv != NULL ) {
+		if ( bv->bv_val != NULL ) {
+			Safefree( bv->bv_val );
+		}
+		Safefree( (char *) bv );
+	}
+}
+
+static
+void
+LDAP_CALL
+ber_bvecfree_perl( struct berval **bv )
+{
+	int	i;
+
+	for ( i = 0; bv[i] != NULL; i++ ) {
+		ber_bvfree_perl( bv[i] );
+	}
+	Safefree( (char *) bv );
 }
 
 
@@ -680,7 +784,7 @@ ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
 	char **		valwords
 	CLEANUP:
 	if (valwords)
-	  ldap_value_free(valwords);
+	  ldap_value_free_perl(valwords);
 
 #ifdef LDAPV3
 
@@ -1052,7 +1156,7 @@ ldap_memcache_init(ttl,size,baseDNs,cachep)
 	cachep
 	CLEANUP:
 	if (baseDNs)
-	  ldap_value_free(baseDNs);
+	  ldap_value_free_perl(baseDNs);
 
 int
 ldap_memcache_set(ld,cache)
@@ -1183,7 +1287,7 @@ ldap_multisort_entries(ld,chain,attr)
 	chain
 	CLEANUP:
 	if (attr)
-	  ldap_value_free(attr);
+	  ldap_value_free_perl(attr);
 
 char *
 ldap_next_attribute(ld,entry,ber)
@@ -1378,7 +1482,7 @@ ldap_sasl_bind_s(ld,dn,mechanism,cred,serverctrls,clientctrls,servercredp)
 	struct berval 	&cred
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
-	struct berval **servercredp
+	struct berval **servercredp = NO_INIT
 	OUTPUT:
 	RETVAL
 	servercredp
@@ -1395,7 +1499,7 @@ ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	int		attrsonly
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  ldap_value_free_perl(attrs);
 
 #ifdef LDAPV3
 
@@ -1417,7 +1521,7 @@ ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,tim
 	msgidp
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  ldap_value_free_perl(attrs);
 
 int
 ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,res)
@@ -1437,7 +1541,7 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  ldap_value_free_perl(attrs);
 
 #endif
 
@@ -1455,7 +1559,7 @@ ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  ldap_value_free_perl(attrs);
 
 int
 ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
@@ -1472,7 +1576,7 @@ ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  ldap_value_free_perl(attrs);
 	
 int
 ldap_set_filter_additions(lfdp,prefix,suffix)
@@ -1519,8 +1623,18 @@ ldap_set_default_rebind_proc(ld, dn, pwd, auth)
      int auth
      CODE:
         {
-          ldap_default_rebind_dn = strdup(dn);
-          ldap_default_rebind_pwd = strdup(pwd);
+          if ( ldap_default_rebind_dn != NULL )
+          {
+             Safefree(ldap_default_rebind_dn);
+             ldap_default_rebind_dn = NULL;
+          }
+          if ( ldap_default_rebind_pwd != NULL )
+          {
+             Safefree(ldap_default_rebind_pwd);
+             ldap_default_rebind_pwd = NULL;
+          }
+          ldap_default_rebind_dn = StrDup(dn);
+          ldap_default_rebind_pwd = StrDup(pwd);
           ldap_default_rebind_auth = auth;
 
           ldap_set_rebind_proc(ld,
