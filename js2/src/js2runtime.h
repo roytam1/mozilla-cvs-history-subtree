@@ -1995,8 +1995,9 @@ static const double two31 = 2147483648.0;
             }
 
             // copy instance values from the Ur-instance object
-            for (int i = 0; i < type->mVariableCount; i++)
-                mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
+            if (type->mInitialInstance)
+                for (int i = 0; i < type->mVariableCount; i++)
+                    mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
         }
         else {  // for the static instance...
             // hook up the prototype object
@@ -2017,7 +2018,7 @@ static const double two31 = 2147483648.0;
 
     inline void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
     {
-        mInitialInstance = new JSInstance(cx, NULL);
+        mInitialInstance = newInstance(cx);
         if (mVariableCount) {
             mInitialInstance->mInstanceValues = new JSValue[mVariableCount];
             if (mSuperType) {

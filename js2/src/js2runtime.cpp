@@ -1158,6 +1158,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pushValue(JSValue(base.object->mType->mMethods[index]));
                 }
                 break;
+            case GetMethodRefOp:
+                {
+                    JSValue base = popValue();
+                    ASSERT(dynamic_cast<JSInstance *>(base.object));
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    pushValue(JSValue(new JSBoundFunction(base.object->mType->mMethods[index], base.object)));
+                }
+                break;
             case GetStaticMethodOp:
                 {
                     JSValue base = popValue();
