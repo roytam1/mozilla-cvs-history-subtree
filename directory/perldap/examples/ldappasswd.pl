@@ -114,7 +114,13 @@ foreach $search ($#ARGV >= $[ ? @ARGV : $ld{bind})
     {
       $entry->{userpassword} = ["{crypt}" . $crypted];
       print "Updated: $entry->{dn}\n" if $opt_v;
-      $ret = $conn->update($entry) unless $opt_n;
+
+      if (!$opt_n)
+	{
+	  $conn->update($entry) unless $opt_n;
+	  $conn->printError() if $conn->getError();
+	}
+
       $entry = $conn->nextEntry();
     }
 }
