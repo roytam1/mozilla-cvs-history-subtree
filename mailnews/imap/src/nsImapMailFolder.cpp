@@ -2881,6 +2881,7 @@ NS_IMETHODIMP nsImapMailFolder::BeginCopy(nsIMsgDBHdr *message)
   if (NS_SUCCEEDED(rv) && m_copyState->m_tmpFileSpec)
     rv = m_copyState->m_tmpFileSpec->OpenStreamForWriting();
 
+  if (!m_copyState->m_dataBuffer)
   m_copyState->m_dataBuffer = (char*) PR_CALLOC(COPY_BUFFER_SIZE+1);
   if (!m_copyState->m_dataBuffer)
     return NS_ERROR_OUT_OF_MEMORY;
