@@ -447,7 +447,7 @@ nsLocalFile::nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void*
 // nsLocalFile::nsISupports
 //-----------------------------------------------------------------------------
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsLocalFile, nsILocalFile, nsIFile)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsLocalFile, nsILocalFileWin, nsILocalFile, nsIFile)
 
 
 //-----------------------------------------------------------------------------
@@ -967,6 +967,65 @@ nsLocalFile::GetNativePath(nsACString &_retval)
     return NS_OK;
 }
 
+typedef struct {
+  WORD wLanguage;
+  WORD wCodePage;
+} LANGANDCODEPAGE;
+
+NS_IMETHODIMP
+nsLocalFile::GetVersionInfoField(const nsACString &aField, nsAString& _retval)
+{
+    char* pathCopy = ToNewCString(mWorkingPath);
+    if (!pathCopy)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv = NS_OK;
+    DWORD dummy;
+    DWORD size = ::GetFileVersionInfoSize(pathCopy, &dummy);
+    if (size) 
+    {
+        void* ver = malloc(size);  
+        if (ver) 
+        {
+            memset(ver, 0, size);
+
+            if (::GetFileVersionInfo(pathCopy, 0, size, ver)) 
+            {
+                LANGANDCODEPAGE* translate;
+                UINT pageCount;
+                ::VerQueryValue(ver, TEXT("\\VarFileInfo\\Translation"), (void**)&translate, &pageCount);
+
+                if (pageCount > 0) 
+                {
+                    nsCAutoString field(aField);
+                    TCHAR subBlock[MAX_PATH];
+                    wsprintf(subBlock, TEXT("\\StringFileInfo\\%04x%04x\\%s"), 
+                            translate[0].wLanguage, translate[0].wCodePage, field.get());
+
+                    LPVOID value = NULL;
+                    UINT size;
+                    ::VerQueryValue(ver, subBlock, (void**)&value, &size);
+
+                    NS_CopyNativeToUnicode(Substring((const char *)value, (const char *)value + size), 
+                                           _retval);
+                }
+            }
+            free(ver);
+            ver = nsnull;
+        }
+        else
+            rv = NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (pathCopy)
+    {
+        nsCRT::free(pathCopy);
+        pathCopy = nsnull;
+    }
+
+    return rv;
+}
+ 
 nsresult
 nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const nsACString &newName, 
                             PRBool followSymlinks, PRBool move)

@@ -731,7 +731,7 @@
       <stylesheet src="chrome://global/skin/preferences.css"/>
     </resources>
     <content>
-      <xul:vbox class="content-box">
+      <xul:vbox class="content-box" xbl:inherits="flex">
         <children/>
       </xul:vbox>
     </content>

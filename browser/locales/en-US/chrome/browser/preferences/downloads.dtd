@@ -12,5 +12,6 @@
 
 <!ENTITY fileTypes.label              "File Types">
 <!ENTITY configureActions.label       "Configure Actions...">
+<!ENTITY configureActions.accesskey   "C">
 <!ENTITY fileTypesDescription.label   "&brandShortName; can automatically download or open files of certain types.">
 

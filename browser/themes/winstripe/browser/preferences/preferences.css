@@ -36,6 +36,8 @@
 # ***** END LICENSE BLOCK *****
 */
 
+/* Global Styles */
+
 radio[pane=paneGeneral] {
 	-moz-image-region: rect(0px, 32px,  32px, 0px)
 }
@@ -71,28 +73,40 @@ radio[pane=paneAdvanced]:hover, radio[pane=paneAdvanced][selected="true"] {
 	-moz-image-region: rect(32px, 160px, 64px, 128px)
 }
 
+/* General Pane */
+
 #browserStartupHomepage {
   padding: 2px 2px 3px 4px;
 }
 
-#downloadFolderIcon {
+/* File Field Widget */
+
+filefield {
+  margin: 2px 4px 2px 4px;
+  -moz-appearance: textfield;
+}
+
+.fileFieldContentBox {
+  background-color: -moz-Dialog;
+  color: -moz-DialogText;
+  margin: 1px;
+  padding: 0px 0px 0px 2px;
+}
+
+filefield[disabled="true"] .fileFieldContentBox {
+  -moz-opacity: 0.5;
+}
+
+filefield[disabled="true"] .fileFieldIcon {
+  -moz-opacity: 0.2;
+}
+
+.fileFieldIcon {
   width: 16px;
   height: 16px;
 }
 
-#downloadFolderContainer {
-  margin: 2px 4px 2px 27px;
-  -moz-appearance: textfield;
-}
-
-#downloadFolderContainer2 {
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
-  margin: 1px;
-  padding: 0px 0px 0px 3px;
-}
-
-#downloadFolder {
+.fileFieldLabel {
   -moz-appearance: none;
   background-color: transparent;
   border: none;
@@ -100,3 +114,45 @@ radio[pane=paneAdvanced]:hover, radio[pane=paneAdvanced][selected="true"] {
   margin: none;
 }
 
+/* Download Actions Manager */
+#fileHandlersList {
+  margin: 1px 6px 2px 5px;
+}
+
+#fileExtension {
+  width: 5em; 
+}
+
+.extensionChildren::-moz-tree-image(fileExtension) {
+  margin: 0px 5px 0px 0px;
+}
+
+#typeField {
+  font-weight: bold; 
+}
+
+/* Change Action Dialog */
+#typeIcon {
+  width: 32px;
+  height: 32px;
+  margin-right: 3px;
+}
+
+#typeField {
+  background-color: transparent;
+  margin: 1px 5px 2px 6px !important;
+}
+
+#extensionField {
+  color: GrayText;
+  font-weight: bold;
+}
+#ChangeActionDialog {  padding: 0px;}#ChangeActionDialog .dialog-button-box {  padding: 8px 10px 10px 8px;}#changeActionHeader {  border-bottom: 2px groove ThreeDFace;
+  margin: 0px;
+  padding: 10px;
+  background-color: -moz-Field;
+  color: -moz-FieldText;  }#changeActionContent {  padding: 8px 10px 10px 9px;}#defaultAppIcon {  width: 16px;  height: 16px;  margin-left: 2px;}
+#defaultAppName {
+  margin-left: 6px !important; 
+  font-weight: bold;
+}

@@ -125,11 +125,11 @@ var gDownloadsPane = {
     var customIndex = this._fileToIndex(customDirPref.value);
     
     if (folderListPref.value == 0 || customIndex == 0)
-      downloadFolder.value = bundlePreferences.getString("desktopFolderName");
+      downloadFolder.label = bundlePreferences.getString("desktopFolderName");
     else if (folderListPref.value == 1 || customIndex == 1) 
-      downloadFolder.value = bundlePreferences.getString("myDownloadsFolderName");
+      downloadFolder.label = bundlePreferences.getString("myDownloadsFolderName");
     else
-      downloadFolder.value = this._getDisplayNameOfFile(customDirPref.value);
+      downloadFolder.label = this._getDisplayNameOfFile(customDirPref.value);
     
     var ios = Components.classes["@mozilla.org/network/io-service;1"]
                         .getService(Components.interfaces.nsIIOService);
@@ -137,8 +137,7 @@ var gDownloadsPane = {
                  .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
     var currentDirPref = document.getElementById("browser.download.downloadDir");
     var urlspec = fph.getURLSpecFromFile(currentDirPref.value);
-    var downloadFolderIcon = document.getElementById("downloadFolderIcon");
-    downloadFolderIcon.setAttribute("src", "moz-icon://" + urlspec + "?size=16");
+    downloadFolder.image = "moz-icon://" + urlspec + "?size=16";
     
     return undefined;
   },
@@ -154,6 +153,13 @@ var gDownloadsPane = {
   {
     this.showWhenStartingPrefChanged();
     return undefined;
+  },
+  
+  showFileTypeActions: function ()
+  {
+    document.documentElement.openWindow("Preferences:DownloadActions",
+                                        "chrome://browser/content/preferences/downloadactions.xul",
+                                        "", null);
   },
 };
 

@@ -146,6 +146,9 @@ XPIDLSRCS	= \
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 XPIDLSRCS	+= nsILocalFileMac.idl
 endif
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+XPIDLSRCS += nsILocalFileWin.idl
+endif
 
 SDK_XPIDLSRCS   = \
 		nsIDirectoryService.idl \

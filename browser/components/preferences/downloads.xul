@@ -73,16 +73,11 @@
         <radio id="alwaysAsk" label="&alwaysAsk.label;" value="false"/>
         <vbox flex="1">
           <radio id="neverAsk" label="&neverAsk.label;" value="true"/>
-          <hbox>
-            <hbox id="downloadFolderContainer" flex="1"
-                  preference="browser.download.folderList"
-                  preference-editable="true"
-                  onpreferenceread="return gDownloadsPane.readDownloadDirPref();">
-              <hbox align="center" flex="1" id="downloadFolderContainer2">
-                <image id="downloadFolderIcon"/>
-                <textbox id="downloadFolder" flex="1" readonly="true"/>
-              </hbox>
-            </hbox>
+          <hbox class="indent">
+            <filefield id="downloadFolder" flex="1"
+                       preference="browser.download.folderList"
+                       preference-editable="true"
+                       onpreferenceread="return gDownloadsPane.readDownloadDirPref();"/>
             <button id="chooseFolder" oncommand="gDownloadsPane.chooseFolder();"
 #ifdef XP_MACSOX
                     label="&chooseFolderMac.label;"/>
@@ -110,7 +105,7 @@
       <description>&fileTypesDescription.label;</description>
       <separator class="thin"/>
       <hbox>
-        <button label="&configureActions.label;" 
+        <button label="&configureActions.label;" accesskey="&configureActions.accesskey;"
                 oncommand="gDownloadsPane.showFileTypeActions();"/>
       </hbox>
     </groupbox>

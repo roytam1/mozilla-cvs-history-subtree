@@ -242,6 +242,15 @@ nsMIMEInfoBase::GetDefaultDescription(nsAString& aDefaultDescription)
 }
 
 NS_IMETHODIMP
+nsMIMEInfoBase::GetDefaultApplicationHandler(nsIFile ** aDefaultAppHandler)
+{
+  *aDefaultAppHandler = mDefaultApplication;
+  NS_IF_ADDREF(*aDefaultAppHandler);
+  return NS_OK;
+}
+ 
+
+NS_IMETHODIMP
 nsMIMEInfoBase::GetPreferredApplicationHandler(nsIFile ** aPreferredAppHandler)
 {
   *aPreferredAppHandler = mPreferredApplication;

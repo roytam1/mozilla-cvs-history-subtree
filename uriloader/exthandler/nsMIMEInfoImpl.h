@@ -75,6 +75,7 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     NS_IMETHOD GetApplicationDescription(nsAString & aApplicationDescription);
     NS_IMETHOD SetApplicationDescription(const nsAString & aApplicationDescription);
     NS_IMETHOD GetDefaultDescription(nsAString & aDefaultDescription);
+    NS_IMETHOD GetDefaultApplicationHandler(nsIFile * *aDefaultApplicationHandler);
     NS_IMETHOD LaunchWithFile(nsIFile *aFile);
     NS_IMETHOD GetPreferredAction(nsMIMEInfoHandleAction *aPreferredAction);
     NS_IMETHOD SetPreferredAction(nsMIMEInfoHandleAction aPreferredAction);
@@ -89,6 +90,7 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     void SetMIMEType(const nsACString & aMIMEType) { mMIMEType = aMIMEType; }
 
     void SetDefaultDescription(const nsString& aDesc) { mDefaultAppDescription = aDesc; }
+    void SetDefaultApplicationHandler(nsIFile* aDefaultApplication) { mDefaultApplication = aDefaultApplication; }
 
     /**
      * Copies basic data of this MIME Info Implementation to the given other
@@ -131,6 +133,7 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     nsMIMEInfoHandleAction mPreferredAction; ///< preferred action to associate with this type
     nsString               mPreferredAppDescription;
     nsString               mDefaultAppDescription;
+    nsCOMPtr<nsIFile>      mDefaultApplication;
     PRBool                 mAlwaysAskBeforeHandling;
 };
 
