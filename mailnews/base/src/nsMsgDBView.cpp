@@ -645,6 +645,9 @@ NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 nsresult nsMsgDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr)
 {
   nsMsgKey key = m_keys.GetAt(index);
+  if (key == nsMsgKey_None || !m_db)
+    return NS_MSG_INVALID_DBVIEW_INDEX;
+
   return m_db->GetMsgHdrForKey(key, msgHdr);
 }
 
@@ -900,9 +903,8 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
   switch (colID[0])
   {
   case 'u': // unreadButtonColHeader
-    if (colID[6] == 'B') {
-      ToggleReadByIndex(row);
-    }
+    if (colID[6] == 'B') 
+      ApplyCommandToIndices(nsMsgViewCommandType::toggleMessageRead, (nsMsgViewIndex *) &row, 1);
    break;
   case 't': // threaded cell or total cell
     if ((colID[1] == 'h') && ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))) // 'th' for threaded, 'to' for total
@@ -1190,15 +1192,6 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
 		// be deleted first.
 		if (numIndices > 1)
 			NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
-#ifdef DOING_UNDO
-		if (command != nsMsgViewCommandType::deleteMsg && 
-			command != nsMsgViewCommandType::deleteNoTrash)
-			GetUndoManager()->AddUndoAction(
-				new MarkMessageUndoAction(this, command, indices, 
-										  numIndices, GetFolder()));
-#endif
-//		FEEnd();
-//		calledFEEnd = TRUE;
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
 		rv = ApplyCommandToIndices(command, indices, numIndices);
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
@@ -2864,14 +2857,14 @@ NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags,
       // update the previous view, if any.
       OnExtraFlagChanged(index, aNewFlags);
       NoteChange(index, 1, nsMsgViewNotificationCode::changed);
-    }
-    else
-    {
-      nsMsgViewIndex threadIndex = ThreadIndexOfMsg(aKeyChanged);
-      // may need to fix thread counts
-      if (threadIndex != nsMsgViewIndex_None)
-        NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
-
+      PRUint32 deltaFlags = (aOldFlags ^ aNewFlags);
+      if (deltaFlags & (MSG_FLAG_READ | MSG_FLAG_NEW))
+      {
+        nsMsgViewIndex threadIndex = ThreadIndexOfMsg(aKeyChanged);
+        // may need to fix thread counts
+        if (threadIndex != nsMsgViewIndex_None)
+          NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+      }
     }
   }
   // don't need to propagate notifications, right?
