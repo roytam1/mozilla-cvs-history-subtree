@@ -72,6 +72,7 @@ $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefil
 $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(EXTRA_LIBS_LIST_FILE) $(MISCDEP) makefile.win  $(DEPTH)\config\exe.inc
         echo +++ make: Creating EXE: $@
         cat << $(EXTRA_LIBS_LIST_FILE) << >$(CFGFILE)
+                /NOLOGO /OUT:$@ /PDB:$(PDBFILE)
 !ifdef DEFFILE
                 /DEF:$(DEFFILE)      
 !endif
@@ -80,8 +81,8 @@ $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(EXTRA_LIBS_LIST_
 !endif
                 $(LFLAGS)
                 $(OBJS)
-<<NOKEEP
                 $(RESFILE)
+<<NOKEEP
                 $(LLIBS) $(WIN_LIBS) $(OS_LIBS)
 <<NOKEEP
         $(LD) @$(CFGFILE)
