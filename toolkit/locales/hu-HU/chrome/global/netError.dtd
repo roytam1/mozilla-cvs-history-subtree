@@ -1,0 +1,38 @@
+<!ENTITY loadError.label "Oldalbetöltési hiba">
+<!ENTITY retry.label "Próbálja újra">
+
+<!-- Specific error messages -->
+
+<!ENTITY generic.longDesc "Az oldalt nem lehet betölteni, valószínűleg azért, mert nem létezik, vagy a helyét rosszul adták meg. &lt;br/&gt;Ellenőrizze, hogy az oldal helye érvényes-e és nincs-e benne formázási hiba.">
+
+<!ENTITY malformedURI.title "Érvénytelen cím hiba">
+<!ENTITY malformedURI.longDesc "A cím (URL) formátuma érvénytelen és nem lehet beolvasni. A címek általában a &quot;http://&quot; kifejezéssel kezdődnek, ezt követi a gépnév (pl. www.fsf.hu), és ezt követi a tartalom elérési útja (vagy csak egyszerűen egy &quot;/&quot;). A hiba leggyakoribb oka, hogy a címben '\' karakterek szerepelnek '/' karakterek helyett.">
+
+<!ENTITY fileNotFound.title "Fájl nem található hiba">
+<!ENTITY fileNotFound.longDesc "A cím (URL) által megadott fájl nem található. Ellenőrizze, hogy a fájl létezik-e, és megvan-e a megfelelő jogosultsága a megtekintéséhez.">
+
+<!ENTITY dnsNotFound.title "Cím nem található hiba">
+<!ENTITY dnsNotFound.longDesc "A cím (URL) nem felel meg ismert webhelynek, és ezért nem lehet betölteni. A hiba oka lehet egy elgépelés a címben, vagy a webhely nem létezik. Ha a cím biztosan jó, vagy ha a hiba több webhelynél is fellép, akkor a proxyszolgáltatással (ha használunk ilyet) vagy a névfeloldással lehetnek gondok. Ez esetben forduljon a rendszer dokumentációjához, a rendszergazdához, illetve az internetszolgáltatóhoz.">
+
+<!ENTITY protocolNotFound.title "Ismeretlen protokoll hiba">
+<!ENTITY protocolNotFound.longDesc "A cím (URL) olyan protokollal kezdődik, amelyet a böngésző nem ismer. A protokoll a cím elejének része, például http: vagy ftp:, és azt határozza meg, hogy a böngésző hogyan csatlakozzon a helyhez. Ez esetben a protokoll ismeretlen, így a letöltést nem lehet folytatni. Ellenőrizze a címet, mielőtt újra próbálkozik.">
+
+<!ENTITY connectionFailure.title "Sikertelen kapcsolat hiba">
+<!ENTITY connectionFailure.longDesc "A böngésző nem tudott kapcsolódni a megadott helyhez, bár az létezik. Ennek oka az lehet, hogy a hely nem fogad kapcsolatot az Ön számítógépéről, a szolgáltatás leállt vagy a hely nem támogatja azt a szolgáltatást, illetve portot, amelyhez kapcsolódni próbált.">
+
+<!ENTITY netTimeout.title "Hálózati időtúllépés hiba">
+<!ENTITY netTimeout.longDesc "A böngésző túllépte a maximális időt, miközben a megadott helyhez próbált kapcsolódni. A hely talán nagy terhelésnek van kitéve, és ez lelassítja, vagy hálózati problémák akadályozzák meg, hogy az adatok időben megérkezzenek onnan. Ha a hely valószínűsíthetően túlterhelt, várjon néhány pillanatot az ismételt próbálkozás előtt.">
+
+<!ENTITY redirectLoop.title "Átirányítási hurok hiba">
+<!ENTITY redirectLoop.longDesc "A böngésző megszakította a kapcsolatot, mert a hely saját magára irányította át magát olyan módon, hogy sohasem fejeződne be a művelet.">
+
+<!ENTITY unknownSocketType.title "Ismeretlen foglalat hiba">
+<!ENTITY unknownSocketType.longDesc "A hely a hálózati kérésre váratlan módon válaszolt. Ennek oka lehet, hogy a cím (URL) rossz protokollt határozott meg az adott porthoz, vagy a hely nem szabványos beállításai miatt más szolgáltatások futnak, mint ami elvárható.">
+
+<!ENTITY netReset.title "Hálózat újraindítása hiba">
+<!ENTITY netReset.longDesc "A hálózati összeköttetés a hellyel váratlanul megszakadt a kapcsolat tárgyalása vagy adatátvitel közben. Ez valószínűleg egy hálózati hiba valahol a hely és az Ön gépe között. Ha a probléma tartósan fennáll, forduljon a rendszer dokumentációjához, a rendszergazdához, illetve az internetszolgáltatóhoz.">
+
+<!ENTITY netOffline.title "Kapcsolat nélkül hiba">
+<!ENTITY netOffline.longDesc "A böngésző jelenleg kapcsolat nélküli üzemmódban van, és nem tud kapcsolódni a kért helyhez. Helyezze on-line üzemmódba a böngészőt, mielőtt újra próbálja.">
+
+

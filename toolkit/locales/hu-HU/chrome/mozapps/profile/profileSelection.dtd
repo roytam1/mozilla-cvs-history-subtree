@@ -1,0 +1,49 @@
+<!-- -*- Mode: SGML; indent-tabs-mode: nil; -*- -->
+<!--
+
+  The contents of this file are subject to the Netscape Public
+  License Version 1.1 (the "License"); you may not use this file
+  except in compliance with the License. You may obtain a copy of
+  the License at http://www.mozilla.org/NPL/
+ 
+  Software distributed under the License is distributed on an "AS
+  IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+  implied. See the License for the specific language governing
+  rights and limitations under the License.
+ 
+  The Original Code is mozilla.org code.
+ 
+  The Initial Developer of the Original Code is Netscape
+  Communications Corporation.  Portions created by Netscape are
+  Copyright (C) 1998 Netscape Communications Corporation. All
+  Rights Reserved.
+ 
+  Contributor(s): 
+    Ben Goodger (28/10/99)
+  
+-->
+
+<!ENTITY            windowtitle.label      "&brandShortName; - Felhasználói profil kiválasztása">
+
+<!ENTITY            profilename.label      "Profil neve:">
+
+<!ENTITY            start.label            "&brandShortName; indítása">
+<!ENTITY            exit.label             "Kilépés">
+
+<!ENTITY            availprofiles.label    "Rendelkezésre álló profilok">
+
+<!ENTITY            newButton.label        "Profil létrehozása...">
+<!ENTITY            newButton.accesskey    "l">
+<!ENTITY            renameButton.label     "Profil átnevezése...">
+<!ENTITY            renameButton.accesskey "n">
+<!ENTITY            deleteButton.label     "Profil törlése...">
+<!ENTITY            deleteButton.accesskey "t">
+
+<!-- manager entities -->
+<!ENTITY            pmDescription.label    "A beállításokat, jellemzőket és egyéb felhasználói elemeket a &brandShortName; egy felhasználói profilban tárolja. ">
+
+<!ENTITY            offlineState.label    "Kapcsolat nélküli munka">
+<!ENTITY            offlineState.accesskey "a">
+
+<!ENTITY            autoSelect.label       "Nincs kérdés az indításkor">
+<!ENTITY            autoSelect.accesskey   "N">

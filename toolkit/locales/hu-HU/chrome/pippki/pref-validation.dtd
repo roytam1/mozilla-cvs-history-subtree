@@ -1,0 +1,67 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   - David P. Drinan (ddrinan@netscape.com)
+  -->
+
+<!ENTITY  validation.title          "Érvényesítés">
+
+<!ENTITY  validation.crl.label      "CRL">
+<!ENTITY  validation.crl.description "A CRL-kezelő segítségével kezelheti a tanúsítvány-adatbázisában tárolt visszavont tanúsítványok listáját (CRL).">
+<!ENTITY  validation.managecrls.button      "CRL-ek kezelése...">
+<!ENTITY  validation.managecrls.accesskey   "C">
+<!ENTITY  validation.crlmanager.label       "CRL-ek kezelése">
+<!ENTITY  validation.crlname.label          "Név">
+<!ENTITY  validation.crllastupdate.label    "Utolsó frissítés">
+<!ENTITY  validation.crlnextupdate.label    "Következő frissítés">
+<!ENTITY  validation.crlautoupdateenabled.label   "Automatikus frissítés">
+<!ENTITY  validation.crlautoupdatestatus.label    "Automatikus frissítés állapota">
+<!ENTITY  validation.deletecrl.label        "Törlés">
+<!ENTITY  validation.updatecrl.label        "Frissítés">
+<!ENTITY  validation.advanced.label         "Beállítások">
+
+<!ENTITY  validation.crl.autoupdate.title            "Automatikus CRL-frissítés beállításai">
+<!ENTITY  validation.crl.autoupdate.enable.label     "A CRL automatikus frissítésének engedélyezése">
+<!ENTITY  validation.crl.autoupdate.time.label1      "Frissítés">
+<!ENTITY  validation.crl.autoupdate.time.label2      "nappal a következő frissítés dátuma előtt">
+<!ENTITY  validation.crl.autoupdate.freq.label1      "Frissítés">
+<!ENTITY  validation.crl.autoupdate.freq.label2      "naponként">
+<!ENTITY  validation.crl.autoupdate.url.label        "A CRL-t a következő helyről importálja:">
+<!ENTITY  crl.import.status.title         "CRL-importálás állapota">
+<!ENTITY  crl.import.success.message      "A visszavont tanúsítványok listáját (CRL) sikeresen importáltam.">
+<!ENTITY  crl.issuer.label                "CRL-kibocsátó:">
+<!ENTITY  crl.issuer.org.label            "Szervezet:">
+<!ENTITY  crl.issuer.orgunit.label        "Egység:">
+<!ENTITY  crl.import.nextupdate.label     "Következő frissítés: ">
+<!ENTITY  crl.autoupdate.fail.cnt.label      "Eddigi frissítési hibák: ">
+<!ENTITY  crl.autoupdate.fail.reason.label   "Utolsó hiba részletei: ">
+<!ENTITY  ok.button        "OK">
+<!ENTITY  cancel.button    "Mégse">
+<!ENTITY  help.button      "Súgó">
+<!ENTITY  edit.button      "Beállítások">
+
+<!ENTITY validation.ocsp.label      "OCSP">
+<!ENTITY validation.ocsp.description "A &brandShortName; az Online Certificate Status Protocol (OCSP) segítségével ellenőrizheti a tanúsítványokat. A &brandShortName;:">
+<!ENTITY disableOCSP.label "Ne használjon OCSP-t">
+<!ENTITY certOCSP.label "Csak azokat a tanúsítványokat ellenőrizze, amelyek tartalmazzák az OCSP szolgáltatás webcímét">
+<!ENTITY proxyOCSP.label "Minden tanúsítványt ellenőrizzen a következő szolgáltatási címen és aláíróval:">
+<!ENTITY serviceURL.label "Szolgáltatási URL:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY signingCA.label "A válasz aláírója:">
+<!ENTITY signingCA.accesskey "v">

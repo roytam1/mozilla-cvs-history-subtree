@@ -1,0 +1,21 @@
+<!-- extracted from finddialog.xul -->
+
+<!ENTITY findDialog.title "Keresés ezen az oldalon">
+<!ENTITY findDialogFrame.title "Keresés ebben a keretben">
+<!ENTITY findField.label "Szöveg keresése:">
+<!ENTITY findField.accesskey "S">
+<!ENTITY caseSensitiveCheckbox.label "Kis- és nagybetűk megkülönböztetése">
+<!ENTITY caseSensitiveCheckbox.accesskey "m">
+<!ENTITY wrapCheckbox.label "Keresés az egész oldalon">
+<!ENTITY wrapCheckbox.accesskey "e">
+<!ENTITY backwardsCheckbox.label "Visszafelé keres">
+<!ENTITY backwardsCheckbox.accesskey "V">
+<!ENTITY findField.tooltip "Írjon be egy vagy több szót a kereséshez">
+<!ENTITY findButton.label "Keresés">
+<!ENTITY findButton.accesskey "K">
+<!ENTITY cancelButton.label "Mégse">
+<!ENTITY up.label "Felfelé">
+<!ENTITY up.accesskey "F">
+<!ENTITY down.label "Lefelé">
+<!ENTITY down.accesskey "L">
+<!ENTITY direction.label "Keresés iránya">

@@ -1,0 +1,102 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Ian McGreer <mcgreer@netscape.com>
+  -->
+
+<!ENTITY certmgr.title "Tanúsítványkezelő">
+
+<!ENTITY certmgr.tab.mine "Saját tanúsítványok">
+<!ENTITY certmgr.tab.others "Mások tanúsítványai">
+<!ENTITY certmgr.tab.websites "Webhelyek">
+<!ENTITY certmgr.tab.ca "Hitelesítésszolgáltatók">
+
+<!ENTITY certmgr.ca.builtins "Beépített tanúsító központok">
+<!ENTITY certmgr.ca.mycas "Saját tanúsító központok">
+
+<!ENTITY certmgr.mine "A következő szervezetektől vannak Önt azonosító tanúsítványok:">
+<!ENTITY certmgr.others "A következő embereket lehet azonosítani a meglevő tanúsítványokkal:">
+<!ENTITY certmgr.websites "A következő webhelyeket lehet azonosítani a meglevő tanúsítványokkal:">
+<!ENTITY certmgr.cas "A következő hitelesítésszolgáltatókat lehet azonosítani a meglevő tanúsítványokkal:">
+
+<!ENTITY certmgr.detail.general_tab.title "Általános">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Részletek">
+
+<!ENTITY certmgr.subjectinfo.label "Tulajdonos">
+<!ENTITY certmgr.issuerinfo.label "Kibocsátó">
+<!ENTITY certmgr.validity.label "Érvényesség" >
+<!ENTITY certmgr.fingerprints.label "Ujjlenyomatok">
+<!ENTITY certmgr.certdetail.title "Tanúsítvány részletek">
+<!ENTITY certmgr.certdetail.cn "Általános név (CN)">
+<!ENTITY certmgr.certdetail.o "Szervezet (O)">
+<!ENTITY certmgr.certdetail.ou "Szervezeti egység (OU)">
+<!ENTITY certmgr.certdetail.serialnumber "Sorozatszám">
+<!ENTITY certmgr.certdetail.sha1fingerprint "SHA1-ujjlenyomat">
+<!ENTITY certmgr.certdetail.md5fingerprint "MD5-ujjlenyomat">
+
+<!ENTITY certmgr.editcert.title "Biztonsági tanúsítványok beállításainak szerkesztése">
+<!ENTITY certmgr.editcacert.title "Hitelesítésszolgáltató tanúsítványa megbízhatóságának beállítása">
+<!ENTITY certmgr.editsslcert.title "Webhelytanúsítvány megbízhatóságának beállítása">
+<!ENTITY certmgr.editcert.edittrust "Megbízhatósági beállítások megadása:">
+<!ENTITY certmgr.editcert.trustssl "Ez a tanúsítvány használható webhelyek azonosítására.">
+<!ENTITY certmgr.editcert.trustemail "Ez a tanúsítvány használható elektronikus levelek feladóinak azonosítására.">
+<!ENTITY certmgr.editcert.trustobjsign "Ez a tanúsítvány használható szoftverkészítők azonosítására.">
+<!ENTITY certmgr.editsslcert.edittrust "Tanúsítvány megbízhatósági beállításának megadása:">
+<!ENTITY certmgr.editsslcert.dotrust "Tanúsítvány megbízhatóságának kinyilvánítása.">
+<!ENTITY certmgr.editsslcert.donttrust "Tanúsítvány megbízhatatlanságának kinyilvánítása.">
+<!ENTITY certmgr.editemailcert.title "E-mail tanúsítvány megbízhatóságának beállítása">
+<!ENTITY certmgr.editemailcert.edittrust "Tanúsítvány megbízhatósági beállításának megadása:">
+<!ENTITY certmgr.editemailcert.dotrust "Tanúsítvány megbízhatóságának kinyilvánítása.">
+<!ENTITY certmgr.editemailcert.donttrust "Tanúsítvány megbízhatatlanságának kinyilvánítása.">
+
+<!ENTITY certmgr.deletecert.title "Tanúsítvány törlése">
+<!ENTITY certmgr.deletecert.beforename "A következő tanúsítvány törlését kezdeményezte:">
+<!ENTITY certmgr.deletecert.aftername "Biztosan törli ezt a tanúsítványt?">
+<!ENTITY certmgr.deleteusercert.title "Saját tanúsítvány törlése">
+<!ENTITY certmgr.deleteusercert.beforename "A következő tanúsítvány törlését kezdeményezte:">
+<!ENTITY certmgr.deleteusercert.aftername "Amennyiben letörli ezt a tanúsítványt, a vele titkosított elektronikus leveleket nem fogja tudni elolvasni.">
+
+<!ENTITY certmgr.certname "Tanúsítvány neve">
+<!ENTITY certmgr.tokenname "Adatvédelmi eszköz">
+<!ENTITY certmgr.purpose "Cél">
+<!ENTITY certmgr.issued "Kiadás dátuma">
+<!ENTITY certmgr.expires "Lejárat dátuma">
+<!ENTITY certmgr.email "E-mail cím">
+<!ENTITY certmgr.serial "Sorozatszám">
+<!ENTITY certmgr.ocsp_info "A tanúsítványok nem lettek OCSP-vel érvényesítve. Kattintson ide az érvényesítéshez.">
+
+<!ENTITY certmgr.help.label "Súgó">
+<!ENTITY certmgr.ok.label "OK">
+<!ENTITY certmgr.close.label "Bezárás">
+<!ENTITY certmgr.cancel.label "Mégse">
+<!ENTITY certmgr.view.label "Megjelenítés">
+<!ENTITY certmgr.edit.label "Szerkesztés">
+<!ENTITY certmgr.editca.label "Hitelesítésszolgáltató megbízhatóságának megadása">
+<!ENTITY certmgr.add.label "Hozzáadás">
+<!ENTITY certmgr.delete.label "Törlés">
+<!ENTITY certmgr.backup.label "Biztonsági mentés">
+<!ENTITY certmgr.backupall.label "Biztonsági mentés mindenről">
+<!ENTITY certmgr.restore.label "Betöltés">
+<!ENTITY certmgr.details.label "Tanúsítványmezők">
+<!ENTITY certmgr.fields.label "Mezőérték">
+<!ENTITY certmgr.hierarchy.label "Tanúsítványhierarchia">
+
+<!-- access key definitions -->
+<!ENTITY certmgr.helpButtonAccessKey "S">
+<!ENTITY certmgr.closeWindowAccessKey "b">

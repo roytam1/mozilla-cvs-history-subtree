@@ -1,0 +1,40 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Bob Lord <lord@netscape.com>
+   -   Terry Hayes <thayes@netscape.com>
+  -->
+
+<!ENTITY  lheader    "Mesterjelszó">
+<!ENTITY  managepassword.label    "Mesterjelszó lejárata">
+<!ENTITY  managepassword.text     "A &brandShortName; mikor kérdezze a mesterjelszót:">
+<!ENTITY  managepassword.askfirsttime "Amikor először szükség van rá">
+<!ENTITY  managepassword.askeverytime "Minden alkalommal">
+<!ENTITY  managepassword.asktimeout   "Ha ">
+<!ENTITY  managepassword.timeout.unit   "percig nincs használva">
+
+<!ENTITY  changepassword.label    "Mesterjelszó megváltoztatása">
+<!ENTITY  changepassword.text     "A mesterjelszó olyan érzékeny adatokat véd, mint a webes jelszavak és tanúsítványok.">
+<!ENTITY  changepassword.button   "Jelszó megváltoztatása...">
+<!ENTITY  changepassword.accesskey  "m">
+
+<!ENTITY  resetpassword.label    "Mesterjelszó törlése">
+<!ENTITY  resetpassword.text     "Ha törli a mesterjelszót, minden tárolt webes és e-mail jelszava, űrlapadata, személyes tanúsítványa elveszik.">
+<!ENTITY  resetpassword.button   "Jelszó törlése">
+<!ENTITY  resetpassword.accesskey   "t">

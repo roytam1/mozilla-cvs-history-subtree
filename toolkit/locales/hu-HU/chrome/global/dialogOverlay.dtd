@@ -1,0 +1,6 @@
+<!-- OK Cancel Buttons -->
+<!ENTITY okButton.label			"OK"> 
+<!ENTITY cancelButton.label		"Mégse"> 
+<!ENTITY helpButton.label		"Súgó">
+
+

@@ -1,0 +1,7 @@
+<!ENTITY dateStarted.label      "Kezdés:">
+<!ENTITY dateEnded.label        "Befejezés:">
+<!ENTITY window.title           "Tulajdonságok">
+<!ENTITY downloadedFrom.label   "Forrás:">
+<!ENTITY path.label             "Cél:">
+<!ENTITY acceptButton.label     "Bezárás">
+<!ENTITY cmd.close.commandKey   "w">

@@ -1,0 +1,106 @@
+<!-- 
+   - The contents of this file are subject to the Mozilla Public
+   - License Version 1.1 (the "License"); you may not use this file
+   - except in compliance with the License. You may obtain a copy of
+   - the License at http://www.mozilla.org/MPL/
+   - 
+   - Software distributed under the License is distributed on an "AS
+   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   - implied. See the License for the specific language governing
+   - rights and limitations under the License.
+   - 
+   - The Original Code is mozilla.org code.
+   - 
+   - The Initial Developer of the Original Code is Netscape
+   - Communications Corp.  Portions created by Netscape are
+   - Copyright (C) 2001 Netscape Communications Corp.  All
+   - Rights Reserved.
+   - 
+   - Contributor(s):
+   -   Bob Lord <lord@netscape.com>
+   -   Terry Hayes <thayes@netscape.com>
+  -->
+
+<!ENTITY  SSLProtocolVersions          "SSL protokoll verziói">
+<!ENTITY  SSLWarnings                  "SSL-figyelmeztetések">
+<!ENTITY  SSLClientAuthMethod          "Ügyféloldali tanúsítvány kiválasztása">
+
+<!ENTITY prefheader.title "SSL">
+<!ENTITY enable.ssl2 "SSL v2 engedélyezése">
+<!ENTITY enable.ssl3 "SSL v3 engedélyezése">
+<!ENTITY enable.tls "TLS engedélyezése">
+
+<!ENTITY edit.sslciphers "Kódolások szerkesztése...">
+<!ENTITY edit.sslciphers.accesskey "K">
+
+<!ENTITY warn.description "A &brandShortName; figyelmeztethet az aktuális weboldal titkosítási fokozatára. A &brandShortName; figyelmeztessen és kérdezzen rá, mielőtt">
+<!ENTITY warn.enteringsecure "Betöltene egy titkosított oldalt">
+<!ENTITY warn.enteringweak "Betöltene egy gyengén titkosított oldalt">
+<!ENTITY warn.insecurepost "Űrlapadatot küldene egy titkosítatlan oldalról egy titkosítatlan oldalra">
+<!ENTITY warn.leavingsecure "Elhagyna egy titkosított oldalt">
+<!ENTITY warn.secureredirect "Átirányítana az egyik titkosított oldalról egy másik titkosítottra">
+<!ENTITY warn.secureredirecttoinsecure "Átirányítana egy titkosított oldalról egy nem titkosítottra">
+<!ENTITY warn.viewmixed "Betöltene egy titkosított és nem titkosított elemeket vegyesen tartalmazó oldalt">
+
+<!ENTITY certselect.description "Ha egy webhely tanúsítványt igényel, a &brandShortName; hogyan válassza ki a megfelelőt:">
+<!ENTITY certselect.auto "Automatikusan">
+<!ENTITY certselect.ask "Kérdezzen rá minden alkalommal">
+
+<!-- Cipher pref window -->
+<!ENTITY cipher.title "Kódolások szerkesztése">
+<!ENTITY cipher.ssl2.label "SSL2 kódolócsoport">
+<!ENTITY cipher.ssl3.label "SSL3/TLS kódolócsoport">
+<!ENTITY cipher.ssl3_extra.label "Extra SSL3/TLS kódolócsoport">
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.tab.ssl3tls_extra "Extra SSL3/TLS">
+
+<!-- SSL2 Ciphers -->
+
+<!ENTITY cipher.ssl2.rc4_128 "128 bites RC4 kódolás  RSA-val és MD5 MAC-vel">
+<!ENTITY cipher.ssl2.rc2_128 "128 bites RC2 kódolás RSA-val és MD5 MAC-vel">
+<!ENTITY cipher.ssl2.des_ede3_192 "168 bites tripla DES RSA-val és MD5 MAC-vel">
+<!ENTITY cipher.ssl2.des_64 "56 bites DES kódolás RSA-val és MD5 MAC-vel">
+<!ENTITY cipher.ssl2.rc4_40 "40 bites RC4 kódolás RSA-val és MD5 MAC-vel (export)">
+<!ENTITY cipher.ssl2.rc2_40 "40 bites RC2 kódolás RSA-val és MD5 MAC-vel (export)">
+
+<!-- SSL3/TLS ciphers -->
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "128 bites RC4 kódolás RSA-val és MD5 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "128 bites RC4 kódolás RSA-val és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "168 bites tripla DES RSA-val és SHA1 MAC-vel (FIPS)">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "168 bites tripla DES RSA-val és SHA1 MAC-val">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "56 bites DES kódolás RSA-val és SHA1 MAC-vel (FIPS)">
+<!ENTITY cipher.ssl3.rsa_des_sha "56 bites DES kódolás RSA-val és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "56 bites RC4 kódolás RSA-val és SHA1 MAC-vel (export)">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "56 bites DES kódolás RSA-val és SHA1 MAC-vel (export)">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "40 bites RC4 kódolás RSA-val és MD5 MAC-vel (export)">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "40 bites RC2 kódolás RSA-val és MD5 MAC-vel (export)">
+
+<!-- Extra SSL3/TLS ciphers -->
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "256 bites AES kódolás RSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "256 bites AES kódolás DSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "256 bites AES kódolás RSA-val és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "128 bites AES kódolás RSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "128 bites AES kódolás DSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "128 bites AES kódolás RSA-val és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "168 bites tripla DES RSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "168 bites tripla DES DSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "56 bites DES kódolás RSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "56 bites DES kódolás DSA-val, DHE-vel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_null_sha "Kódolás nélkül RSA hitelesítéssel és SHA1 MAC-vel">
+<!ENTITY cipher.ssl3.rsa_null_md5 "Kódolás nélkül RSA hitelesítéssel és MD5 MAC-vel">
+
+<!-- Labels for cipher attributes -->
+<!ENTITY cipher.name "Kódolók">
+<!ENTITY cipher.encryption "Titkosító algoritmus:">
+<!ENTITY cipher.authAlg "Hitelesítő algoritmus:">
+<!ENTITY cipher.keyAlg "Kulcsalgoritmus:">
+<!ENTITY cipher.keySize "Effektív kulcsméret:">
+<!ENTITY cipher.macAlg "MAC-algoritmus:">
+<!ENTITY cipher.other "Egyéb jellemzők:">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.exportable "Exportálható">
+
+<!ENTITY cipher.details "Részletek...">
+
+<!ENTITY cipherinfo.title "Kódoló adatai">

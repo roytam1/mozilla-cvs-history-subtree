@@ -1,0 +1,6 @@
+<!--LOCALIZATION NOTE printPreviewProgress.dtd Main UI for Print Preview Progress Dialog -->
+<!ENTITY printWindow.title "Nyomtatási kép"> 
+<!ENTITY title   "Cím:"> 
+<!ENTITY spaces    "            ">
+<!ENTITY preparing "Előkészítés...">
+<!ENTITY progress "Folyamat:">

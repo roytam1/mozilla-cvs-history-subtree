@@ -1,0 +1,63 @@
+<!ENTITY extensions.title                 "Kiterjesztések">
+
+<!ENTITY cmd.info.commandKey              "i">
+<!ENTITY cmd.options.commandKey           ",">
+<!ENTITY cmd.close.commandKey             "w">
+
+<!-- Command Bar items -->
+<!ENTITY cmd.uninstall.label              "Eltávolítás">
+<!ENTITY cmd.uninstall.tooltip            "A kijelölt kiterjesztés eltávolítása">
+<!ENTITY cmd.uninstall.accesskey          "E">
+<!ENTITY cmd.update.label                 "Frissítés">
+<!ENTITY cmd.update.accesskey             "F">
+<!ENTITY cmd.update.tooltip               "A kiterjesztés újabb változatának keresése">
+<!ENTITY cmd.useTheme.label               "Téma használata">
+<!ENTITY cmd.useTheme.accesskey           "T">
+<!ENTITY cmd.useTheme.tooltip             "A &brandShortName; témájának módosítása. ">
+<!-- the following command bar items are used by thunderbird only -->
+<!ENTITY cmd.install.label              "Telepítés">
+<!ENTITY cmd.install.tooltip            "Kiterjesztés telepítése">
+<!ENTITY cmd.install.accesskey          "t">
+
+<!-- Context Menu Options: Extension -->
+<!ENTITY cmd.options.label                "Beállítások">
+<!ENTITY cmd.options.accesskey            "B">
+<!ENTITY cmd.optionsUnix.label            "Beállítások">
+<!ENTITY cmd.optionsUnix.accesskey        "e">
+<!ENTITY cmd.homepage.label               "Honlap meglátogatása">
+<!ENTITY cmd.homepage.accesskey           "H">
+<!ENTITY cmd.about.label                  "Kiterjesztés névjegye">
+<!ENTITY cmd.about.accesskey              "n">
+<!ENTITY cmd.enable.label                 "Engedélyezés">
+<!ENTITY cmd.enable.accesskey             "E">
+<!ENTITY cmd.disable.label                "Letiltás">
+<!ENTITY cmd.disable.accesskey            "t">
+<!ENTITY cmd.moveToTop.label              "Mozgatás a tetejére">
+<!ENTITY cmd.moveToTop.accesskey          "t">
+<!ENTITY cmd.moveUp.label                 "Mozgatás felfelé">
+<!ENTITY cmd.moveUp.accesskey             "f">
+<!ENTITY cmd.moveDn.label                 "Mozgatás lefelé">
+<!ENTITY cmd.moveDn.accesskey             "l">
+
+<!-- Extension Items -->
+<!ENTITY options.tooltip                  "Beállítások">
+<!ENTITY optionsUnix.tooltip              "Beállítások">
+<!ENTITY about.tooltip                    "Névjegy">
+<!ENTITY homepage.tooltip                 "Honlap">
+
+<!ENTITY extensionItem.toBeDisabled.label     "Az elem a &brandShortName; újraindítása után le lesz tiltva. ">
+<!ENTITY extensionItem.toBeEnabled.label      "Az elem a &brandShortName; újraindítása után engedélyezve lesz. ">
+<!ENTITY extensionItem.toBeInstalled.label    "Az elem a &brandShortName; újraindítása után telepítésre kerül. ">
+<!ENTITY extensionItem.toBeUninstalled.label  "Az elem a &brandShortName; újraindítása után eltávolításra kerül. ">
+<!ENTITY extensionItem.done.label             "Sikeres telepítés">
+<!ENTITY extensionItem.waiting.label          "Kérem, várjon...">
+<!ENTITY extensionItem.installing.label       "Telepítés...">
+
+<!ENTITY getMoreExtensions.label          "További kiterjesztések letöltése">
+<!ENTITY getMoreExtensions.tooltip        "További kiterjesztések letöltése az update.mozilla.org webhelyről">
+<!ENTITY getMoreThemes.label              "További témák letöltése">
+<!ENTITY getMoreThemes.tooltip            "További témák letöltése az update.mozilla.org webhelyről">
+
+<!ENTITY previewNoThemeSelected.label     "Nincs kijelölt téma">
+<!ENTITY previewNoPreviewImage.label      "A témának nincs előképe">
+

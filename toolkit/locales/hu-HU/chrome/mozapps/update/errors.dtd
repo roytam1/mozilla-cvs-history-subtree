@@ -1,0 +1,6 @@
+<!ENTITY  errors.title                "Hibák">
+<!ENTITY  errors.intro.title          "A következő összetevők telepítése hibák miatt meghiúsult
+                                       (nem lehetett letölteni a fájlt, a fájl sérült volt vagy
+                                       egyéb okok miatt). ">
+
+

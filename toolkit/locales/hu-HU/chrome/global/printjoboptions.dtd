@@ -1,0 +1,16 @@
+<!-- extracted from printjoboptions.xul -->
+
+<!ENTITY printJobOptions.title "Nyomtató tulajdonságai">
+<!ENTITY paperInput.label "Papírméret:">
+<!ENTITY plexInput.label "Plex-mód:">
+<!ENTITY cmdInput.label "Nyomtatóparancs:">
+
+<!ENTITY colorGroup.label "Szín:">
+<!ENTITY grayRadio.label "Szürkeárnyalatos">
+<!ENTITY colorRadio.label "Szín">
+
+<!ENTITY edgeMarginInput.label "Helyköz a papír szélétől a margóig (hüvelyk)">
+<!ENTITY topInput.label "Fent:">
+<!ENTITY bottomInput.label "Lent:">
+<!ENTITY leftInput.label "Baloldalt:">
+<!ENTITY rightInput.label "Jobboldalt:">

@@ -1,0 +1,14 @@
+<!ENTITY cutCmd.label "Kivágás">
+<!ENTITY cutCmd.accesskey "K">
+<!ENTITY copyCmd.label "Másolás">
+<!ENTITY copyCmd.accesskey "M">
+<!ENTITY pasteCmd.label "Beillesztés">
+<!ENTITY pasteCmd.accesskey "B">
+<!ENTITY undoCmd.label "Visszavonás">
+<!ENTITY undoCmd.accesskey "v">
+<!ENTITY redoCmd.label "Újra">
+<!ENTITY redoCmd.accesskey "r">
+<!ENTITY selectAllCmd.label "Mindet kijelöli">
+<!ENTITY selectAllCmd.accesskey "M">
+<!ENTITY deleteCmd.label "Törlés">
+<!ENTITY deleteCmd.accesskey "T">
