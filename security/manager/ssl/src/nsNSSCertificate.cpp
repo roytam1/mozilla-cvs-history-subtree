@@ -600,7 +600,7 @@ nsNSSCertificateDB::GetCertByNickname(nsIPK11Token *aToken,
 {
   CERTCertificate *cert = NULL;
   char *asciiname = NULL;
-  asciiname = NS_ConvertUCS2toUTF8(nickname); 
+  asciiname = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(nickname).get());
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting \"%s\"\n", asciiname));
 #if 0
   // what it should be, but for now...
@@ -702,7 +702,7 @@ nsNSSCertificateDB::ImportCertificate(nsIX509Cert *cert,
                                     NULL, PR_FALSE, PR_TRUE);
   if (!tmpCert) goto done;
   if (nickname) {
-    nick = NS_ConvertUCS2toUTF8(nickname); 
+    nick = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(nickname).get());
   } else {
     nick = CERT_MakeCANickname(tmpCert);
   }
