@@ -1340,18 +1340,32 @@ void HaveFixedSize(const nsHTMLReflowState& aReflowState, PRPackedBool& aConstra
 nsresult
 nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest **aRequest)
 {
+  NS_ENSURE_ARG_POINTER(aPresContext);
+  
   nsresult rv = NS_OK;
-
+    
   /* set this to TRUE here in case we return early */
   mInitialLoadCompleted = PR_TRUE;
 
   /* don't load the image if aSpec is empty */
   if (aSpec.IsEmpty()) return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIURI> realURI;
+  // get compat mode: we use it to decide if we are going to trim the src string of whitespace
+  nsCompatibility mode;
+  aPresContext->GetCompatibilityMode(&mode);
+  PRBool quirksMode = (mode == eCompatibility_NavQuirks);
+  static char whitespace[] = " \r\n\t";
+  
+  nsAutoString src(aSpec);
+  
+  // trim leading and trailing whitespace if we are in NavQuirks mode
+  if(quirksMode) {
+    src.Trim(whitespace, PR_TRUE, PR_TRUE);
+  }
 
+  nsCOMPtr<nsIURI> realURI;
   /* don't load the image if some security check fails... */
-  GetRealURI(aSpec, getter_AddRefs(realURI));
+  GetRealURI(src, getter_AddRefs(realURI));
   if (!CanLoadImage(realURI)) return NS_ERROR_FAILURE;
 
   if (!mListener) {
@@ -1371,7 +1385,7 @@ nsImageFrame::LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresCon
 
   /* get the URI, convert internal-gopher-stuff if needed */
   nsCOMPtr<nsIURI> uri;
-  GetURI(aSpec, getter_AddRefs(uri));
+  GetURI(src, getter_AddRefs(uri));
   if (!uri)
     uri = realURI;
 
