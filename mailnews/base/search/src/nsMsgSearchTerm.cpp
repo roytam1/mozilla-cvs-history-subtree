@@ -60,10 +60,11 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIMsgFilterPlugin.h"
-
+#include "nsIFileSpec.h"
 #include "nsIRDFService.h"
 #include "nsISupportsObsolete.h"
-
+#include "nsNetCID.h"
+#include "nsIFileStreams.h"
 //---------------------------------------------------------------------------
 // nsMsgSearchTerm specifies one criterion, e.g. name contains phil
 //---------------------------------------------------------------------------
@@ -715,18 +716,15 @@ nsresult nsMsgSearchTerm::MatchArbitraryHeader (nsIMsgSearchScopeTerm *scope,
 
     GetMatchAllBeforeDeciding(&result);
 
-	const int kBufSize = 512; // max size of a line??
-	char * buf = (char *) PR_Malloc(kBufSize);
-	if (buf)
-	{
+  nsCAutoString buf;
 		PRBool searchingHeaders = PR_TRUE;
-		while (searchingHeaders && (bodyHandler->GetNextLine(buf, kBufSize) >=0))
+  while (searchingHeaders && (bodyHandler->GetNextLine(buf) >=0))
 		{
-			char * buf_end = buf + PL_strlen(buf);
+    char * buf_end = (char *) (buf.get() + buf.Length());
 			int headerLength = m_arbitraryHeader.Length();
-      if (!PL_strncasecmp(buf, m_arbitraryHeader.get(),headerLength))
+    if (!PL_strncasecmp(buf.get(), m_arbitraryHeader.get(),headerLength))
 			{
-				char * headerValue = buf + headerLength; // value occurs after the header name...
+      const char * headerValue = buf.get() + headerLength; // value occurs after the header name...
 				if (headerValue < buf_end && headerValue[0] == ':')  // + 1 to account for the colon which is MANDATORY
 					headerValue++; 
 
@@ -759,16 +757,9 @@ nsresult nsMsgSearchTerm::MatchArbitraryHeader (nsIMsgSearchScopeTerm *scope,
 				searchingHeaders = PR_FALSE;
 		}
 		delete bodyHandler;
-		PR_Free(buf);
 		*pResult = result;
 		return err;
 	}
-	else
-	{
-		delete bodyHandler;
-		return NS_ERROR_OUT_OF_MEMORY;
-	}
-}
 
 nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offset, PRUint32 length /*in lines*/, const char *folderCharset,
 										   nsIMsgDBHdr *msg, nsIMsgDatabase* db, PRBool *pResult)
@@ -788,10 +779,7 @@ nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offs
 	if (!bodyHan)
 		return NS_ERROR_OUT_OF_MEMORY;
 
-	const int kBufSize = 512; // max size of a line???
-	char *buf = (char*) PR_Malloc(kBufSize);
-	if (buf)
-	{
+  nsCAutoString buf;
 		PRBool endOfFile = PR_FALSE;  // if retValue == 0, we've hit the end of the file
 		uint32 lines = 0;
 
@@ -814,11 +802,11 @@ nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offs
 
 		while (!endOfFile && result == boolContinueLoop)
 		{
-			if (bodyHan->GetNextLine(buf, kBufSize) >= 0)
+    if (bodyHan->GetNextLine(buf) >= 0)
 			{
 				// Do in-place decoding of quoted printable
 				if (isQuotedPrintable)
-					StripQuotedPrintable ((unsigned char*)buf);
+        StripQuotedPrintable ((unsigned char*)buf.get());
 			    nsCString  compare(buf);
 //				ConvertToUnicode(charset, buf, compare);
 				if (!compare.IsEmpty()) {
@@ -837,11 +825,7 @@ nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offs
 		if(conv) 
 			INTL_DestroyCharCodeConverter(conv);
 #endif
-		PR_FREEIF(buf);
 		delete bodyHan;
-	}
-	else
-		err = NS_ERROR_OUT_OF_MEMORY;
 	*pResult = result;
 	return err;
 }
@@ -1439,6 +1423,8 @@ nsMsgSearchScopeTerm::nsMsgSearchScopeTerm ()
 
 nsMsgSearchScopeTerm::~nsMsgSearchScopeTerm ()
 {  
+  if (m_inputStream)
+    m_inputStream->Close();
 }
 
 NS_IMPL_ISUPPORTS1(nsMsgSearchScopeTerm, nsIMsgSearchScopeTerm)
@@ -1459,9 +1445,46 @@ nsMsgSearchScopeTerm::GetSearchSession(nsIMsgSearchSession** aResult)
     return NS_OK;
 }
 
-nsresult nsMsgSearchScopeTerm::GetMailPath(nsIFileSpec **aFileSpec)
+NS_IMETHODIMP nsMsgSearchScopeTerm::GetMailFile(nsILocalFile **aLocalFile)
 {
-	return (m_folder) ? m_folder->GetPath(aFileSpec) : NS_ERROR_NULL_POINTER;
+  NS_ENSURE_ARG_POINTER(aLocalFile);
+ if (!m_folder)
+   return NS_ERROR_NULL_POINTER;
+
+  nsCOMPtr <nsIFileSpec> fileSpec;
+  m_folder->GetPath(getter_AddRefs(fileSpec));
+  nsFileSpec realSpec;
+  fileSpec->GetFileSpec(&realSpec);
+  NS_FileSpecToIFile(&realSpec, aLocalFile);
+  return (*aLocalFile) ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP nsMsgSearchScopeTerm::GetInputStream(nsIInputStream **aInputStream)
+{
+  NS_ENSURE_ARG_POINTER(aInputStream);
+  nsresult rv = NS_OK;
+  if (!m_inputStream)
+  {
+     nsCOMPtr <nsILocalFile> localFile;
+     rv = GetMailFile(getter_AddRefs(localFile));
+     NS_ENSURE_SUCCESS(rv, rv);
+     nsCOMPtr<nsIFileInputStream> fileStream = do_CreateInstance(NS_LOCALFILEINPUTSTREAM_CONTRACTID, &rv);
+     NS_ENSURE_SUCCESS(rv, rv);
+
+     rv = fileStream->Init(localFile,  PR_RDONLY, 0664, PR_FALSE);  //just have to read the messages
+     m_inputStream = do_QueryInterface(fileStream);
+   
+  }
+  NS_IF_ADDREF(*aInputStream = m_inputStream);
+  return rv;
+}
+
+NS_IMETHODIMP nsMsgSearchScopeTerm::SetInputStream(nsIInputStream *aInputStream)
+{
+  if (!aInputStream && m_inputStream)
+    m_inputStream->Close();
+  m_inputStream = aInputStream;
+  return NS_OK;
 }
 
 nsresult nsMsgSearchScopeTerm::TimeSlice (PRBool *aDone)
