@@ -967,10 +967,10 @@ nsFtpConnectionThread::R_pass() {
     }
 }
 
-#define SYST_COMM ("SYST" CRLF)
 nsresult
 nsFtpConnectionThread::S_syst() {
-    return ControlAsyncWrite(nsCAutoString(SYST_COMM));
+    nsCString systString( nsLiteralCString( "SYST" CRLF) );
+    return ControlAsyncWrite( systString );
 }
 
 FTP_STATE
@@ -989,10 +989,10 @@ nsFtpConnectionThread::R_syst() {
     return FTP_S_PWD;
 }
 
-#define ACCT_COMM ("ACCT noaccount" CRLF)
 nsresult
 nsFtpConnectionThread::S_acct() {
-    return ControlAsyncWrite(nsCAutoString(ACCT_COMM));
+    nsCString acctString( nsLiteralCString( "ACCT noaccount" CRLF) );
+    return ControlAsyncWrite(acctString);
 }
 
 FTP_STATE
@@ -1003,10 +1003,11 @@ nsFtpConnectionThread::R_acct() {
         return FTP_ERROR;
 }
 
-#define PWD_COMM ("PWD" CRLF)
+#define PWD_COMM (
 nsresult
 nsFtpConnectionThread::S_pwd() {
-    return ControlAsyncWrite(nsCAutoString(PWD_COMM));
+    nsCString pwdString( nsLiteralCString("PWD" CRLF) ); 
+    return ControlAsyncWrite(pwdString);
 }
 
 
@@ -1051,13 +1052,16 @@ nsFtpConnectionThread::R_pwd() {
 
 nsresult
 nsFtpConnectionThread::S_mode() {
-    char *buffer;
-    if (mBin) {
-        buffer = "TYPE I" CRLF;
-    } else {
-        buffer = "TYPE A" CRLF;
-    }
-    return ControlAsyncWrite(nsCAutoString(buffer));
+    nsresult rv;
+    nsCString iType(nsLiteralCString ("TYPE I" CRLF));
+    nsCString aType(nsLiteralCString ("TYPE A" CRLF));
+
+    if ( mBin )
+        rv = ControlAsyncWrite(iType);
+    else
+        rv = ControlAsyncWrite(aType);
+
+    return rv;
 }
 
 FTP_STATE
@@ -1183,13 +1187,15 @@ nsFtpConnectionThread::R_mdtm() {
 nsresult
 nsFtpConnectionThread::S_list() {
     nsresult rv;
-    char *buffer;
-    if (mList)
-        buffer = "LIST" CRLF;
-    else
-        buffer = "NLST" CRLF;
 
-    rv = ControlAsyncWrite(nsCAutoString(buffer));
+    nsCString listString(nsLiteralCString ("LIST" CRLF));
+    nsCString nlstString(nsLiteralCString ("NLST" CRLF));
+
+    if ( mList )
+        rv = ControlAsyncWrite(listString);
+    else
+        rv = ControlAsyncWrite(nlstString);
+
     if (NS_FAILED(rv)) return rv;
 
 
@@ -1233,8 +1239,8 @@ nsFtpConnectionThread::S_retr() {
     retrStr.Append(mPath);
     retrStr.Append(CRLF);
 
-    /* ignore error? */
-    ControlAsyncWrite(retrStr);
+    rv = ControlAsyncWrite(retrStr);
+    if (NS_FAILED(rv)) return rv;
 
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
     return mDPipe->AsyncRead(mListener, mListenerContext);
@@ -1298,10 +1304,10 @@ nsFtpConnectionThread::R_stor() {
 #define EPSV_COMM ("EPSV" CRLF)
 nsresult
 nsFtpConnectionThread::S_pasv() {
+    nsresult rv;
+
     if (mIPv6Checked == PR_FALSE) {
         // Find IPv6 socket address, if server is IPv6
-        nsresult rv;
-        
         mIPv6Checked = PR_TRUE;
         PR_ASSERT(mIPv6ServerAddress == 0);
         nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(mCPipe, &rv);
@@ -1321,8 +1327,16 @@ nsFtpConnectionThread::S_pasv() {
         }
     }
 
-    const char *comm = mIPv6ServerAddress ? EPSV_COMM : PASV_COMM;
-    return ControlAsyncWrite(nsCAutoString(comm));
+    nsCString pasvString(nsLiteralCString ("PASV" CRLF));
+    nsCString epsvString(nsLiteralCString ("EPSV" CRLF));
+
+    if (mIPv6ServerAddress)
+        rv = ControlAsyncWrite(epsvString);
+    else
+        rv =  ControlAsyncWrite(pasvString);
+    
+    return rv;
+    
 }
 
 FTP_STATE
@@ -1870,3 +1884,4 @@ nsFtpConnectionThread::ControlAsyncWrite(nsCString& command)
 
     return mCPipe->AsyncWrite(inStream, nsnull, nsnull);
 }
+

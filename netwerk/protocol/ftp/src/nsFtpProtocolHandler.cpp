@@ -79,7 +79,7 @@ nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpProtocolHandler, 
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsFtpProtocolHandler, 
                               nsIProtocolHandler, 
                               nsIConnectionCache, 
                               nsIObserver);

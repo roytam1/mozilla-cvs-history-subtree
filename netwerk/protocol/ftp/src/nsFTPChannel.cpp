@@ -49,13 +49,13 @@ nsFTPChannel::nsFTPChannel()
       mSourceOffset(0),
       mAmount(0),
       mContentLength(-1),
+      mConnThread(nsnull),
       mBufferSegmentSize(0),
       mBufferMaxSize(0),
       mLock(nsnull),
       mStatus(NS_OK),
       mProxyPort(-1),
-      mProxyTransparent(PR_FALSE),
-      mConnThread(nsnull)
+      mProxyTransparent(PR_FALSE)
 {
     NS_INIT_REFCNT();
 }
