@@ -19,6 +19,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 #include <gtk/gtkprivate.h>
+#include "gtk_moz_window.h"
 
 #include "nsWindow.h"
 #include "nsWidgetsCID.h"
@@ -238,6 +239,7 @@ static guint n_targets = sizeof(target_table) / sizeof(target_table[0]);
 NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
 {
   mWidget = gtk_layout_new(PR_FALSE, PR_FALSE);
+  mWidget = gtk_moz_window_new();
   GTK_WIDGET_SET_FLAGS(mWidget, GTK_CAN_FOCUS);
   gtk_widget_set_app_paintable(mWidget, PR_TRUE);
 
@@ -397,9 +399,9 @@ void *nsWindow::GetNativeData(PRUint32 aDataType)
     switch(aDataType) {
       case NS_NATIVE_WINDOW:
 #ifdef NS_GTK_REF
-	return (void *)gdk_window_ref(GTK_LAYOUT(mWidget)->bin_window);
+	return (void *)gdk_window_ref(GTK_WIDGET(mWidget)->window);
 #else
-	return (void *)GTK_LAYOUT(mWidget)->bin_window;
+	return (void *)GTK_WIDGET(mWidget)->window;
 #endif
       case NS_NATIVE_DISPLAY:
 	return (void *)GDK_DISPLAY();
@@ -435,9 +437,10 @@ NS_METHOD nsWindow::SetColorMap(nsColorMap *aColorMap)
 //-------------------------------------------------------------------------
 NS_METHOD nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
-  if (GTK_IS_LAYOUT(mWidget)) {
-    GtkAdjustment* horiz = gtk_layout_get_hadjustment(GTK_LAYOUT(mWidget));
-    GtkAdjustment* vert = gtk_layout_get_vadjustment(GTK_LAYOUT(mWidget));
+  printf("*** nsWindow::Scroll was called.  Kill me now.\n");
+  if (GTK_IS_MOZ_WINDOW(mWidget)) {
+    GtkAdjustment* horiz = gtk_moz_window_get_hadjustment(GTK_MOZ_WINDOW(mWidget));
+    GtkAdjustment* vert = gtk_moz_window_get_vadjustment(GTK_MOZ_WINDOW(mWidget));
     horiz->value -= aDx;
     vert->value -= aDy;
     gtk_adjustment_value_changed(horiz);
@@ -541,13 +544,15 @@ PRBool nsWindow::OnPaint(nsPaintEvent &event)
 
 NS_METHOD nsWindow::BeginResizingChildren(void)
 {
-  gtk_layout_freeze(GTK_LAYOUT(mWidget));
+  printf("* nsWindow::BeginResizingChildren\n");
+  /*gtk_layout_freeze(GTK_LAYOUT(mWidget)); */
   return NS_OK;
 }
 
 NS_METHOD nsWindow::EndResizingChildren(void)
 {
-  gtk_layout_thaw(GTK_LAYOUT(mWidget));
+  printf("* nsWindow::EndResizingChildren\n");
+  /*gtk_layout_thaw(GTK_LAYOUT(mWidget)); */
   return NS_OK;
 }
 
