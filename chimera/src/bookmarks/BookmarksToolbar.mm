@@ -213,7 +213,7 @@
   }
   
   float computedHeight = curRowYOrigin + (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding);
-  
+    
   // our size has changed, readjust our view's frame and the content area
   if (computedHeight != oldHeight)
   {
@@ -243,31 +243,23 @@
     return;
 
   int count = [mButtons count];
-  if (count <= 2)
-    return; // We have too few buttons to care.
+  int reflowStart = 0;
   
-  // Do some optimizations when we have only one row.
-  if (aRect.size.height < 25) // We have only one row.
+  // find out where we need to start reflowing
+  for (int i = 0; i < count; i ++)
   {
-    if (oldFrame.size.width < aRect.size.width)
-      // We got bigger.  If we already only have one row, just bail.
-      //	This will optimize for a common resizing case.
-      return;
-    else {
-      // We got smaller.  Just go to the last button and see if it is outside
-      // our bounds.
-      BookmarksButton* button = [mButtons objectAtIndex:(count-1)];
-      if ([button frame].origin.x + [button frame].size.width >
-          [self bounds].size.width - 2) {
-        // The button doesn't fit any more.  Reflow starting at this index.
-        [self reflowButtonsStartingAtIndex:(count-1)];
-      }
+    BookmarksButton* button = [mButtons objectAtIndex:i];
+    NSRect           buttonFrame = [button frame];
+    
+    if ((NSMaxX(buttonFrame) > NSMaxX(aRect)) ||       // we're overhanging the right
+        (NSMaxY(buttonFrame) > kBookmarkButtonHeight)) // we're on the second row
+    {
+      reflowStart = i;
+      break;
     }
   }
-  else {
-    // See if we got bigger or smaller.  We could gain or lose a row.
-    [self reflowButtons];
-  }
+  
+  [self reflowButtonsStartingAtIndex:reflowStart];
 }
 
 -(BOOL)isShown
