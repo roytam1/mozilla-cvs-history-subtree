@@ -4086,17 +4086,6 @@ js_Interpret(JSContext *cx, jsval *result)
             i = (jsint) GET_ATOM_INDEX(pc);
             JS_ASSERT(i >= 0);
             sp = fp->spbase + i;
-            /*
-             * Pop any with objects pushed onto the scope chain after the
-             * scope-depth checkpoint saved in this SETSP.
-             */
-            while (OBJ_GET_CLASS(cx, fp->scopeChain) == &js_WithClass &&
-                   JSVAL_TO_INT(OBJ_GET_SLOT(cx, fp->scopeChain,
-                                             JSSLOT_PRIVATE)) > i) {
-                rval = OBJ_GET_SLOT(cx, fp->scopeChain, JSSLOT_PARENT);
-                JS_ASSERT(JSVAL_IS_OBJECT(rval));
-                fp->scopeChain = JSVAL_TO_OBJECT(rval);
-            }
             break;
 
           case JSOP_GOSUB:
