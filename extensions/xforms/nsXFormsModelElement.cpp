@@ -556,7 +556,10 @@ nsXFormsModelElement::OnLoad(nsISchema* aSchema)
 {
   mSchemas.AppendObject(aSchema);
   if (IsComplete()) {
-    return FinishConstruction();
+    nsresult rv = FinishConstruction();
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    DispatchEvent(eEvent_Refresh);
   }
 
   return NS_OK;
@@ -624,7 +627,10 @@ nsXFormsModelElement::Load(nsIDOMEvent* aEvent)
   } else {
     mInstanceDataLoaded = PR_TRUE;
     if (IsComplete()) {
-      return FinishConstruction();
+      nsresult rv = FinishConstruction();
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      DispatchEvent(eEvent_Refresh);
     }
   }
 
