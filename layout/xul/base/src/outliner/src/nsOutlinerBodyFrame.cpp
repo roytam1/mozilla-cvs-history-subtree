@@ -872,12 +872,14 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int aRowIndex,
   // XXX Now paint the various images.
 
   // Now paint our text, but only if we aren't a cycler column.
-  if (!aColumn->IsCycler()) {
+  // XXX until we have the ability to load images, allow the view to 
+  // insert text into cycler columns...
+//  if (!aColumn->IsCycler()) {
     nsRect textRect(currX, cellRect.y, remainingWidth, cellRect.height);
     nsRect dirtyRect;
     if (dirtyRect.IntersectRect(aDirtyRect, textRect))
       PaintText(aRowIndex, aColumn, textRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
-  }
+  //}
 
   return NS_OK;
 }
