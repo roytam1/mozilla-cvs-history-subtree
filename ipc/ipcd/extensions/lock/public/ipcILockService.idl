@@ -75,17 +75,17 @@ interface ipcILockService : nsISupports
     void releaseLock(in string aLockName);
 };
 
-[scriptable, uuid(b4ac1160-98a4-4030-aecc-01137a05c94b)]
-interface ipcILockNotify : nsISupports
-{
-    /**
-     * Called to complete a call to AcquireLock.
-     *
-     * @status aLockName
-     *         specifies the name of the lock
-     * @status aStatus
-     *         NS_OK if lock has been acquired; reason for failure otherwise.
-     */
-    void onAcquireLockComplete(in string aLockName,
-                               in nsresult aStatus);
-};
+%{C++
+// singleton implementing ipcILockService
+#define IPC_LOCKSERVICE_CLASSNAME \
+    "ipcLockService"
+#define IPC_LOCKSERVICE_CONTRACTID \
+    "@mozilla.org/ipc/lock-service;1"
+#define IPC_LOCKSERVICE_CID                          \
+{ /* d9e56bf8-e32e-4b6d-87f1-06d73b0ce7ca */         \
+    0xd9e56bf8,                                      \
+    0xe32e,                                          \
+    0x4b6d,                                          \
+    {0x87, 0xf1, 0x06, 0xd7, 0x3b, 0x0c, 0xe7, 0xca} \
+}
+%}

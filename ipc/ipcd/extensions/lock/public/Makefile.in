@@ -46,11 +46,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= ipcd
 
 XPIDLSRCS	= \
-            ipcILockService.idl \
-            $(NULL)
-
-EXPORTS		= \
-			ipcLockCID.h \
+			ipcILockService.idl \
+			ipcILockNotify.idl \
 			$(NULL)
 
 include $(topsrcdir)/config/rules.mk

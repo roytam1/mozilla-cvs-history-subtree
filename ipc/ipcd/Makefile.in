@@ -51,7 +51,10 @@ DIRS		= \
 			extensions \
 			client/src \
 			daemon/src \
-			test \
 			$(NULL)
+
+ifdef ENABLE_TESTS
+DIRS		+= test
+endif
 
 include $(topsrcdir)/config/rules.mk

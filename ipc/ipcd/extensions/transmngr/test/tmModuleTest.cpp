@@ -36,8 +36,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 // transaction manager includes
-#include "tmITransactionService.h"
-#include "tmUtils.h"
+#include "ipcITransactionService.h"
+#include "ipcITransactionObserver.h"
 
 // ipc daemon includes
 #include "ipcIService.h"
@@ -85,20 +85,20 @@ static nsIEventQueue* gEventQ = nsnull;
 static PRBool gKeepRunning = PR_TRUE;
 //static PRInt32 gMsgCount = 0;
 static ipcIService *gIpcServ = nsnull;
-static tmITransactionService *gTransServ = nsnull;
+static ipcITransactionService *gTransServ = nsnull;
 
 //-----------------------------------------------------------------------------
 
-class myTransactionObserver : public tmITransactionObserver
+class myTransactionObserver : public ipcITransactionObserver
 {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_TMITRANSACTIONOBSERVER
+    NS_DECL_IPCITRANSACTIONOBSERVER
 
     myTransactionObserver() { }
 };
 
-NS_IMPL_ISUPPORTS1(myTransactionObserver, tmITransactionObserver)
+NS_IMPL_ISUPPORTS1(myTransactionObserver, ipcITransactionObserver)
 
 NS_IMETHODIMP myTransactionObserver::OnTransactionAvailable(PRUint32 aQueueID, const PRUint8 *aData, PRUint32 aDataLen)
 {
@@ -213,13 +213,13 @@ int main(PRInt32 argc, char *argv[])
 
     // Get the transaction service
     printf("tmModuleTest: getting transaction service\n");
-    nsCOMPtr<tmITransactionService> transServ(do_GetService("@mozilla.org/transaction/service;1", &rv));
+    nsCOMPtr<ipcITransactionService> transServ(do_GetService("@mozilla.org/transaction/service;1", &rv));
     RETURN_IF_FAILED(rv, "do_GetService(transServ)");
     NS_ADDREF(gTransServ = transServ);
 
     // transaction specifc startup stuff, done for all cases
 
-    nsCOMPtr<tmITransactionObserver> observ = new myTransactionObserver();
+    nsCOMPtr<ipcITransactionObserver> observ = new myTransactionObserver();
 
     // initialize the transaction service with a specific profile
     gTransServ->Init(nsDependentCString(profileName));

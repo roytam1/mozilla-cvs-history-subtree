@@ -42,16 +42,15 @@ VPATH = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = transmngr
+MODULE = ipcd
 LIBRARY_NAME = transmngr_s
 EXPORT_LIBRARY = 1
 FORCE_STATIC_LIB = 1
-MODULE_NAME = transmngr
+MODULE_NAME = ipcd
 
 REQUIRES = \
   ipcd \
   string \
-  transmngr \
   xpcom \
   $(NULL)
 
