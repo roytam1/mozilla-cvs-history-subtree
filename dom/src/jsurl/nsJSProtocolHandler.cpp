@@ -122,6 +122,8 @@ nsEvaluateStringProxy::EvaluateString(char **aRetValue, PRBool *aIsUndefined)
     if (NS_FAILED(rv)) 
       return rv;
 
+    if (!scriptContext) return NS_ERROR_FAILURE;
+
     // Get principal of code for execution
     nsCOMPtr<nsISupports> owner;
     rv = mChannel->GetOwner(getter_AddRefs(owner));

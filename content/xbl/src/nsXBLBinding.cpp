@@ -1083,6 +1083,8 @@ nsXBLBinding::InstallProperties()
     rv = global->GetContext(getter_AddRefs(context));
     if (NS_FAILED(rv)) return rv;
 
+    if (!context) return NS_OK;
+
     // Init our class and insert it into the prototype chain.
     nsAutoString className;
     nsCAutoString classStr; 
@@ -1777,6 +1779,8 @@ nsXBLBinding::AddScriptEventListener(nsIContent* aElement, nsIAtom* aName,
   nsCOMPtr<nsIScriptContext> context;
   rv = global->GetContext(getter_AddRefs(context));
   if (NS_FAILED(rv)) return rv;
+
+  if (!context) return NS_OK;
 
   nsCOMPtr<nsIEventListenerManager> manager;
   rv = receiver->GetListenerManager(getter_AddRefs(manager));
