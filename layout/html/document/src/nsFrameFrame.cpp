@@ -893,17 +893,17 @@ nsHTMLFrameInnerFrame::GetDocShell(nsIDocShell **aDocShell)
 {
   *aDocShell = nsnull;
 
-  nsIFrame* parent = nsnull;
-  GetParent(&parent);
+  nsCOMPtr<nsIContent> content;
+  GetParentContent(getter_AddRefs(content));
 
-  if (!parent) {
+  if (!content) {
+    // Hmm, no content in this frame (or in the parent, really),
+    // that's odd, not much to be done here then.
+
     return NS_OK;
   }
 
   if (!mFrameLoader) {
-    nsCOMPtr<nsIContent> content;
-    parent->GetContent(getter_AddRefs(content));
-
     nsCOMPtr<nsIFrameLoaderOwner> frame_loader_owner =
       do_QueryInterface(content);
 
@@ -912,18 +912,18 @@ nsHTMLFrameInnerFrame::GetDocShell(nsIDocShell **aDocShell)
     }
 
     if (!mFrameLoader) {
-      // No frame loader available from the content, create our own...
-
       nsresult rv = NS_OK;
+
+      // No frame loader available from the content, create our own...
       mFrameLoader = do_CreateInstance(NS_FRAMELOADER_CONTRACTID, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
       mFrameLoader->Init(content);
 
-      // ... and tell it to start loading.
-
+      // ... and tell it to start loading...
       mFrameLoader->LoadFrame();
 
+      // ... and remember that we own this frame loader.
       mOwnsFrameLoader = PR_TRUE;
     }
   }
