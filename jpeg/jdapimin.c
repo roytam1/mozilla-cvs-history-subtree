@@ -126,23 +126,6 @@ jpeg_abort_decompress (j_decompress_ptr cinfo)
 }
 
 /*
- * Install a special processing method for COM or APPn markers.
- */
-#if 0
-GLOBAL(void)
-jpeg_set_marker_processor (j_decompress_ptr cinfo, int marker_code,
-			   jpeg_marker_parser_method routine)
-{
-  if (marker_code == JPEG_COM)
-    cinfo->marker->process_COM = routine;
-  else if (marker_code >= JPEG_APP0 && marker_code <= JPEG_APP0+15)
-    cinfo->marker->process_APPn[marker_code-JPEG_APP0] = routine;
-  else
-    ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, marker_code);
-}
-#endif
-
-/*
  * Set default decompression parameters.
  */
 
