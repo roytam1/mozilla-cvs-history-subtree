@@ -398,9 +398,13 @@ public:
     }                        
 
     virtual ~MailAccount (void) {
-        PL_strfree(mURI);
         NS_IF_RELEASE(mUser);
         NS_IF_RELEASE(mHost);
+
+        // Need to uncache before freeing mURI, due to the
+        // implementation of the RDF service.
+        gRDFService->UnCacheResource(this);
+        PL_strfree(mURI);
     }
 
 };
@@ -492,6 +496,7 @@ public:
     }                        
     
     virtual ~MailFolder (void) {
+        gRDFService->UnCacheResource(this);
         PL_strfree(mURI);
         NS_IF_RELEASE(mName);
         NS_IF_RELEASE(mAccount);
@@ -626,6 +631,7 @@ public:
     }
 
     virtual ~MailMessage (void) {
+        gRDFService->UnCacheResource(this);
         PL_strfree(mURI);
         NS_IF_RELEASE(mFrom);
         NS_IF_RELEASE(mSubject);
