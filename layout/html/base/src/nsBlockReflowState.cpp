@@ -4951,6 +4951,11 @@ nsBlockFrame::PostPlaceLine(nsBlockReflowState& aState,
   if (aLine->IsInline()) {
     nsIFrame* frame = aLine->mFirstChild;
     for (PRInt32 i = 0; i < aLine->GetChildCount(); i++) {
+      NS_ASSERTION(frame, "aLine->GetChildCount out of synch with actual frame tree");
+      if (!frame) {
+        aLine->SetChildCount(i);
+        break;
+      }
       ::PlaceFrameView(aState.mPresContext, frame);
       frame->GetNextSibling(&frame);
     }
