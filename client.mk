@@ -67,7 +67,11 @@ BUILD_MODULES = all
 #
 CVS = cvs
 
+ifeq ("cygwin","$(OSTYPE)")
+CWD := $(shell cygpath --mixed $(shell pwd))
+else
 CWD := $(shell pwd)
+endif
 
 ifeq "$(CWD)" "/"
 CWD   := /.

@@ -76,7 +76,7 @@ endef
 
 LINK_DLL	= $(LD) $(OS_DLLFLAGS) $(DLLFLAGS)
 
-ifneq (,$(filter WINNT OS2, $(OS_ARCH)))
+ifneq (,$(filter WINNT WINCE OS2, $(OS_ARCH)))
 INSTALL		= $(NSINSTALL)
 else
 ifeq ($(NSDISTMODE),copy)

@@ -1219,7 +1219,11 @@ case "$target" in
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        NSINSTALL=nsinstall
+        if test -n "$CYGWIN_WRAPPER"; then
+            NSINSTALL="$CYGWIN_WRAPPER nsinstall"
+        else
+            NSINSTALL="nsinstall"
+        fi
         RC=rc.exe
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
