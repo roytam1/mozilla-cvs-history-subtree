@@ -25,7 +25,7 @@ include $(DEPTH)/config/autoconf.mk
 include $(DEPTH)/config/config.mk
 
 ifneq ($(PACKAGE_BUILD),)
-	PLUGLETS_DIR=$(DIST)/javadev/examples
+	PLUGLETS_DIR=$(DIST)/javadev/example
 	MISC_DIR=$(DIST)/javadev/misc
 	HTML_DIR=$(DIST)/javadev/html
 else 
