@@ -584,6 +584,12 @@ nsTableRowFrame::InitialReflow(nsIPresContext&  aPresContext,
     if (gsDebug) 
       printf ("TR %p for cell %p Initial Reflow: desired=%d, MES=%d\n", 
              this, kidFrame, kidSize.width, kidMaxElementSize.width);
+    //XXX: this is a hack, shouldn't it be the case that a min size is 
+    //     never larger than a desired size?
+    if (kidMaxElementSize.width>kidSize.width)
+      kidSize.width = kidMaxElementSize.width;
+    if (kidMaxElementSize.height>kidSize.height)
+      kidSize.height = kidMaxElementSize.height;
     ((nsTableCellFrame *)kidFrame)->SetPass1DesiredSize(kidSize);
     ((nsTableCellFrame *)kidFrame)->SetPass1MaxElementSize(kidMaxElementSize);
     NS_ASSERTION(NS_FRAME_IS_COMPLETE(status), "unexpected child reflow status");
@@ -800,6 +806,12 @@ nsresult nsTableRowFrame::IncrementalReflow(nsIPresContext&  aPresContext,
       printf ("TR %p for cell %p Incremental Reflow: desired=%d, MES=%d\n", 
              this, kidFrame, desiredSize.width, kidMaxElementSize.width);
   // Update the cell layout data.
+  //XXX: this is a hack, shouldn't it be the case that a min size is 
+  //     never larger than a desired size?
+  if (kidMaxElementSize.width>desiredSize.width)
+    desiredSize.width = kidMaxElementSize.width;
+  if (kidMaxElementSize.height>desiredSize.height)
+    desiredSize.height = kidMaxElementSize.height;
   ((nsTableCellFrame *)kidFrame)->SetPass1DesiredSize(desiredSize);
   ((nsTableCellFrame *)kidFrame)->SetPass1MaxElementSize(kidMaxElementSize);
 
