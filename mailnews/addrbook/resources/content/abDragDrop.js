@@ -36,21 +36,57 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var nsIDragService = Components.interfaces.nsIDragService;
+var abResultPaneObserver = {
+  onDragStart: function (aEvent, aXferData, aDragAction)
+    {
+      aXferData.data = new TransferData();
+
+      var selArray = GetSelectedAbCards();
+      var count = selArray.length;
+      dump("selArray.length = " + count + "\n");
+      for (i = 0; i < count; i++ ) {
+        var address = GenerateAddressFromCard(selArray[i]);
+        dump("address #" + i + " = " + address + "\n");
+
+        aXferData.data.addDataForFlavour("moz/abcard", selArray[i]);
+        aXferData.data.addDataForFlavour("text/x-moz-address", address);
+      }
+    },
+
+  onDrop: function (aEvent, aXferData, aDragSession)
+    {
+    },
+
+  onDragExit: function (aEvent, aDragSession)
+    {
+    },
+
+  onDragOver: function (aEvent, aFlavour, aDragSession)
+    {
+    },
+
+  getSupportedFlavours: function ()
+    {
+      var flavourSet = new FlavourSet();
+      flavourSet.appendFlavour("moz/abcard");
+      flavourSet.appendFlavour("text/x-moz-address");
+      return flavourSet;
+    }
+};
 
 function debugDump(msg)
 {
   // uncomment for noise
-  // dump(msg+"\n");
+  dump(msg+"\n");
 }
 
 function GetDragService()
 {
-	var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
-	if (dragService) 
-		dragService = dragService.QueryInterface(nsIDragService);
+  var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
+  if (dragService) 
+    dragService = dragService.QueryInterface(nsIDragService);
 
-	return dragService;
+  return dragService;
 }
 
 function DragOverTree(event)
@@ -79,76 +115,6 @@ function DragOverTree(event)
 		retVal = false; // do not propagate message
 	}
 	return(retVal);
-}
-
-function BeginDragAbResultsPane(event)
-{
-	var dragStarted = false;
-    var outliner = GetAbResultsOutliner();
-	var dragService = GetDragService();
-
-	var transArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
-	if ( !transArray ) return(false); 
-
-    // let's build the drag region
-    var region = null;
-    try {
-      region = Components.classesByID["{da5b130a-1dd1-11b2-ad47-f455b1814a78}"].createInstance(Components.interfaces.nsIScriptableRegion);
-      region.init();
-      var obo = outliner.outlinerBoxObject;
-      var bo = obo.outlinerBody.boxObject;
-      var obosel= obo.selection;
-
-      var rowX = bo.x;
-      var rowY = bo.y;
-      var rowHeight = obo.rowHeight;
-      var rowWidth = bo.width;
-
-      //add a rectangle for each visible selected row
-      for (var i = obo.getFirstVisibleRow(); i <= obo.getLastVisibleRow(); i ++)
-      {
-        if (obosel.isSelected(i))
-          region.unionRect(rowX, rowY, rowWidth, rowHeight);
-        rowY = rowY + rowHeight;
-      }
-      
-      //and finally, clip the result to be sure we don't spill over...
-      region.intersectRect(bo.x, bo.y, bo.width, bo.height);
-    } catch(ex) {
-      dump("Error while building selection region: " + ex + "\n");
-      region = null;
-    }
-    
-    var selArray = GetSelectedAbCards();
-
-	var count = selArray.length;
-	debugDump("selArray.length = " + count + "\n");
-    for (i = 0; i < count; i++ ) {
-		var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-		if ( !trans )		return(false);
-
-		var genTextData = Components.classes["@mozilla.org/supports-wstring;1"].createInstance(Components.interfaces.nsISupportsWString);
-		if (!genTextData)	return(false);
-
-        trans.addDataFlavor("text/x-moz-address");
-        
-        var address = GenerateAddressFromCard(selArray[i]);
-        genTextData.data = address;
-        debugDump("address #" + i + " = " + address + "\n");
-
-        trans.setTransferData ( "text/x-moz-address", genTextData, address.length * 2 );  // doublebyte byte data
-
-		// put it into the transferable as an |nsISupports|
-		var genTrans = trans.QueryInterface(Components.interfaces.nsISupports);
-		transArray.AppendElement(genTrans);
-	}
-
-    dragService.invokeDragSession ( event.target, transArray, region, nsIDragService.DRAGDROP_ACTION_COPY +
-		nsIDragService.DRAGDROP_ACTION_MOVE );
-
-	dragStarted = true;
-
-	return(!dragStarted);  // don't propagate the event if a drag has begun
 }
 
 function DropOnDirectoryTree(event)
