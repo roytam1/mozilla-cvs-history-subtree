@@ -459,8 +459,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 	}
   else if (enc->crypto_closure &&
 		   obj->options &&
-//	   obj->options->decrypt_p) XXX Figure this out later XXX //
-		   obj->options->dexlate_p)
+	   obj->options->decrypt_p)
 	{
 	  /* Do this just to cause `mime_set_crypto_stamp' to be called, and to
 		 cause the various `decode_error' and `verify_error' slots to be set:
