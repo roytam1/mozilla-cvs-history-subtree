@@ -44,13 +44,13 @@
 #include "pratom.h"
 #include "prthread.h"
 
-/* Given the address of a (global) pointer to a PZLock, 
+/* Given the address of a (global) pointer to a PRLock, 
  * atomicly create the lock and initialize the (global) pointer, 
  * if it is not already created/initialized.
  */
 
 SECStatus 
-nss_InitLock(   PZLock    **ppLock, nssILockType ltype )
+nss_InitLock(   PRLock    **ppLock)
 {
     static PRInt32  initializers;
 
@@ -60,7 +60,7 @@ nss_InitLock(   PZLock    **ppLock, nssILockType ltype )
     while (!*ppLock) {
         PRInt32 myAttempt = PR_AtomicIncrement(&initializers);
         if (myAttempt == 1) {
-	    *ppLock = PZ_NewLock(ltype);
+	    *ppLock = PR_NewLock();
             (void) PR_AtomicDecrement(&initializers);
             break;
         }
@@ -71,13 +71,13 @@ nss_InitLock(   PZLock    **ppLock, nssILockType ltype )
     return (*ppLock != NULL) ? SECSuccess : SECFailure;
 }
 
-/* Given the address of a (global) pointer to a PZMonitor, 
+/* Given the address of a (global) pointer to a PRMonitor, 
  * atomicly create the monitor and initialize the (global) pointer, 
  * if it is not already created/initialized.
  */
 
 SECStatus 
-nss_InitMonitor(PZMonitor **ppMonitor, nssILockType ltype )
+nss_InitMonitor(PRMonitor **ppMonitor)
 {
     static PRInt32  initializers;
 
@@ -87,7 +87,7 @@ nss_InitMonitor(PZMonitor **ppMonitor, nssILockType ltype )
     while (!*ppMonitor) {
         PRInt32 myAttempt = PR_AtomicIncrement(&initializers);
         if (myAttempt == 1) {
-	    *ppMonitor = PZ_NewMonitor(ltype);
+	    *ppMonitor = PR_NewMonitor();
             (void) PR_AtomicDecrement(&initializers);
             break;
         }

@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef primpl_h___
@@ -565,7 +549,7 @@ NSPR_API(void) _PR_PauseCPU(void);
 #define _PR_LOCK_UNLOCK(_lock) \
     _PR_MD_UNLOCK(&(_lock)->ilock);
     
-extern void _PR_UnblockLockWaiter(PRLock *lock);
+extern PRThread * _PR_AssignLock(PRLock *lock);
 
 #define _PR_LOCK_PTR(_qp) \
     ((PRLock*) ((char*) (_qp) - offsetof(PRLock,links)))
@@ -734,32 +718,6 @@ NSPR_API(void) _PR_Unlock(PRLock *lock);
 
 NSPR_API(void) _PR_SuspendThread(PRThread *t);
 NSPR_API(void) _PR_ResumeThread(PRThread *t);
-
-/***********************************************************************
-** FUNCTION:	_PR_NewSegment()
-** DESCRIPTION:
-**   Allocate a memory segment. The "size" value is rounded up to the
-**   native system page size and a page aligned portion of memory is
-**   returned.  This memory is not part of the malloc heap. If "vaddr" is
-**   not NULL then PR tries to allocate the segment at the desired virtual
-**   address.
-** INPUTS:	size:  size of the desired memory segment
-**          vaddr:  address at which the newly aquired segment is to be
-**                  mapped into memory.
-** OUTPUTS:	a memory segment is allocated, a PRSegment is allocated
-** RETURN:	pointer to PRSegment
-***********************************************************************/
-extern PRSegment* _PR_NewSegment(PRUint32 size, void *vaddr);
-
-/***********************************************************************
-** FUNCTION:	_PR_DestroySegment()
-** DESCRIPTION:
-**   The memory segment and the PRSegment are freed
-** INPUTS:	seg:  pointer to PRSegment to be freed
-** OUTPUTS:	the the PRSegment and its associated memory segment are freed
-** RETURN:	void
-***********************************************************************/
-extern void _PR_DestroySegment(PRSegment *seg);
 
 extern PRThreadStack * _PR_NewStack(PRUint32 stackSize);
 extern void _PR_FreeStack(PRThreadStack *stack);
@@ -1037,16 +995,6 @@ extern void _PR_MD_SWITCH_CONTEXT(PRThread *thread);
 extern void _PR_MD_RESTORE_CONTEXT(PRThread *thread);
 #define    _PR_MD_RESTORE_CONTEXT _MD_RESTORE_CONTEXT
 
-/* Segment related */
-extern void _PR_MD_INIT_SEGS(void);
-#define    _PR_MD_INIT_SEGS _MD_INIT_SEGS
-
-extern PRStatus _PR_MD_ALLOC_SEGMENT(PRSegment *seg, PRUint32 size, void *vaddr);
-#define    _PR_MD_ALLOC_SEGMENT _MD_ALLOC_SEGMENT
-
-extern void _PR_MD_FREE_SEGMENT(PRSegment *seg);
-#define    _PR_MD_FREE_SEGMENT _MD_FREE_SEGMENT
-
 /* Directory enumeration related */
 extern PRStatus _PR_MD_OPEN_DIR(_MDDir *md,const char *name);
 #define    _PR_MD_OPEN_DIR _MD_OPEN_DIR
@@ -1170,6 +1118,9 @@ extern PRInt32 _PR_MD_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock,
                                 PRNetAddr **raddr, void *buf, PRInt32 amount,
                                 PRIntervalTime timeout);
 #define _PR_MD_ACCEPT_READ _MD_ACCEPT_READ
+extern PRInt32 _PR_EmulateAcceptRead(PRFileDesc *sd, PRFileDesc **nd,
+              PRNetAddr **raddr, void *buf, PRInt32 amount,
+              PRIntervalTime timeout);
 
 #ifdef WIN32
 extern PRInt32 _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *addr, 
@@ -1192,6 +1143,8 @@ extern PRInt32 _PR_MD_SENDFILE(
     PRFileDesc *sock, PRSendFileData *sfd, 
 	PRInt32 flags, PRIntervalTime timeout);
 #define _PR_MD_SENDFILE _MD_SENDFILE
+extern PRInt32 _PR_EmulateSendFile(PRFileDesc *sd, PRSendFileData *sfd,
+			  PRTransmitFileFlags flags, PRIntervalTime timeout);
 
 extern PRStatus _PR_MD_GETSOCKNAME(
     PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen);
@@ -1241,21 +1194,6 @@ extern PRInt32 _PR_MD_PIPEAVAILABLE(PRFileDesc *fd);
 extern PRInt32 _PR_MD_PR_POLL(PRPollDesc *pds, PRIntn npds,
                                                                                         PRIntervalTime timeout);
 #define    _PR_MD_PR_POLL _MD_PR_POLL
-
-/*
- * Initialize fd->secret->inheritable for a newly created fd.
- * If 'imported' is false, the osfd (i.e., fd->secret->md.osfd)
- * was created by NSPR and hence has the OS-dependent default
- * inheritable attribute.  If 'imported' is true, the osfd was
- * not created by NSPR and hence a system call is required to
- * query its inheritable attribute.  Since we may never need to
- * know the inheritable attribute of a fd, a platform may choose
- * to initialize fd->secret->inheritable of an imported fd to
- * _PR_TRI_UNKNOWN and only pay the cost of the system call
- * (in _PR_MD_QUERY_FD_INHERITABLE) when necessary.
- */
-extern void _PR_MD_INIT_FD_INHERITABLE(PRFileDesc *fd, PRBool imported);
-#define    _PR_MD_INIT_FD_INHERITABLE _MD_INIT_FD_INHERITABLE
 
 extern PRStatus _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable);
 #define    _PR_MD_SET_FD_INHERITABLE _MD_SET_FD_INHERITABLE
@@ -1547,10 +1485,9 @@ struct PRThread {
     */
     PRUint32 tpdLength;             /* thread's current vector length */
     void **privateData;             /* private data vector or NULL */
+    PRInt32 errorStringSize;        /* byte length of current error string | zero */
     PRErrorCode errorCode;          /* current NSPR error code | zero */
     PRInt32 osErrorCode;            /* mapping of errorCode | zero */
-    PRIntn  errorStringLength;      /* textLength from last call to PR_SetErrorText() */
-    PRInt32 errorStringSize;        /* malloc()'d size of buffer | zero */
     char *errorString;              /* current error string | NULL */
 
 #if defined(_PR_PTHREADS)
@@ -1565,12 +1502,6 @@ struct PRThread {
     pthread_cond_t suspendResumeCV;
 #endif
     PRUint32 interrupt_blocked;     /* interrupt blocked */
-    struct pollfd *syspoll_list;    /* Unix polling list used by PR_Poll */
-    PRUint32 syspoll_count;         /* number of elements in syspoll_list */
-#if defined(_PR_POLL_WITH_SELECT)
-    int *selectfd_list;             /* Unix fd's that PR_Poll selects on */
-    PRUint32 selectfd_count;        /* number of elements in selectfd_list */
-#endif
 #elif defined(_PR_BTHREADS)
     PRUint32 flags;
     _MDThread md;
@@ -1681,30 +1612,12 @@ struct PRFileMap {
 #define _PR_FILEDESC_CLOSED     0x55555555    /* 0101010... */
 #define _PR_FILEDESC_FREED      0x11111111
 
-/*
-** A boolean type with an additional "unknown" state
-*/
-
-typedef enum {
-    _PR_TRI_TRUE = 1,
-    _PR_TRI_FALSE = 0,
-    _PR_TRI_UNKNOWN = -1
-} _PRTriStateBool;
-
 struct PRFilePrivate {
     PRInt32 state;
     PRBool nonblocking;
-    _PRTriStateBool inheritable;
+    PRBool inheritable;
     PRFileDesc *next;
     PRIntn lockCount;
-#ifdef _PR_HAVE_PEEK_BUFFER
-    char *peekBuffer;
-    PRInt32 peekBufSize;
-    PRInt32 peekBytes;
-#endif
-#if !defined(XP_UNIX)   /* BugZilla: 4090 */
-    PRBool  appendMode;                             
-#endif
     _MDFileDesc md;
 };
 
@@ -1758,6 +1671,32 @@ struct PRSegment {
 /* PRSegment.flags */
 #define _PR_SEG_VM    0x1
 
+/***********************************************************************
+** FUNCTION:	_PR_NewSegment()
+** DESCRIPTION:
+**   Allocate a memory segment. The "size" value is rounded up to the
+**   native system page size and a page aligned portion of memory is
+**   returned.  This memory is not part of the malloc heap. If "vaddr" is
+**   not NULL then PR tries to allocate the segment at the desired virtual
+**   address.
+** INPUTS:	size:  size of the desired memory segment
+**          vaddr:  address at which the newly aquired segment is to be
+**                  mapped into memory.
+** OUTPUTS:	a memory segment is allocated, a PRSegment is allocated
+** RETURN:	pointer to PRSegment
+***********************************************************************/
+extern PRSegment* _PR_NewSegment(PRUint32 size, void *vaddr);
+
+/***********************************************************************
+** FUNCTION:	_PR_DestroySegment()
+** DESCRIPTION:
+**   The memory segment and the PRSegment are freed
+** INPUTS:	seg:  pointer to PRSegment to be freed
+** OUTPUTS:	the the PRSegment and its associated memory segment are freed
+** RETURN:	void
+***********************************************************************/
+extern void _PR_DestroySegment(PRSegment *seg);
+
 /************************************************************************/
 
 extern PRInt32 _pr_pageSize;
@@ -1798,6 +1737,9 @@ extern void _PR_MD_EARLY_INIT(void);
 
 extern void _PR_MD_INTERVAL_INIT(void);
 #define    _PR_MD_INTERVAL_INIT _MD_INTERVAL_INIT
+
+NSPR_API(void) _PR_MD_INIT_SEGS(void);
+#define    _PR_MD_INIT_SEGS _MD_INIT_SEGS
 
 NSPR_API(void) _PR_MD_FINAL_INIT(void);
 #define    _PR_MD_FINAL_INIT _MD_FINAL_INIT
@@ -1848,6 +1790,13 @@ extern PRInt32 _PR_MD_ATOMIC_DECREMENT(PRInt32 *);
 extern PRInt32 _PR_MD_ATOMIC_SET(PRInt32 *, PRInt32);
 #define    _PR_MD_ATOMIC_SET _MD_ATOMIC_SET
 
+/* Segment related */
+NSPR_API(PRStatus) _PR_MD_ALLOC_SEGMENT(PRSegment *seg, PRUint32 size, void *vaddr);
+#define    _PR_MD_ALLOC_SEGMENT _MD_ALLOC_SEGMENT
+
+NSPR_API(void) _PR_MD_FREE_SEGMENT(PRSegment *seg);
+#define    _PR_MD_FREE_SEGMENT _MD_FREE_SEGMENT
+
 /* Garbage collection */
 
 /*
@@ -1894,9 +1843,6 @@ extern PRStatus _PR_MD_UNLOCKFILE(PRInt32 osfd);
 
 extern PRStatus _PR_MD_CREATE_FILE_MAP(PRFileMap *fmap, PRInt64 size);
 #define _PR_MD_CREATE_FILE_MAP _MD_CREATE_FILE_MAP
-
-extern PRInt32 _PR_MD_GET_MEM_MAP_ALIGNMENT(void);
-#define _PR_MD_GET_MEM_MAP_ALIGNMENT _MD_GET_MEM_MAP_ALIGNMENT
 
 extern void * _PR_MD_MEM_MAP(
     PRFileMap *fmap,
@@ -2012,16 +1958,6 @@ extern PRStatus _PR_MD_GETHOSTNAME(char *name, PRUint32 namelen);
 
 extern PRStatus _PR_MD_GETSYSINFO(PRSysInfo cmd, char *name, PRUint32 namelen);
 #define    _PR_MD_GETSYSINFO _MD_GETSYSINFO
-
-/* File descriptor inheritance */
-
-/*
- * If fd->secret->inheritable is _PR_TRI_UNKNOWN and we need to
- * know the inheritable attribute of the fd, call this function
- * to find that out.  This typically requires a system call.
- */
-extern void _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd);
-#define    _PR_MD_QUERY_FD_INHERITABLE _MD_QUERY_FD_INHERITABLE
 
 /* --- PR_GetRandomNoise() related things --- */
 

@@ -49,7 +49,7 @@ struct SGNContextStr {
     SECOidTag signalg;
     SECOidTag hashalg;
     void *hashcx;
-    const SECHashObject *hashobj;
+    SECHashObject *hashobj;
     SECKEYPrivateKey *key;
 };
 
@@ -380,9 +380,6 @@ const SEC_ASN1Template CERT_SignedDataTemplate[] =
 	  offsetof(CERTSignedData,signature), },
     { 0, }
 };
-
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_SignedDataTemplate)
-
 
 SECStatus
 SEC_DerSignData(PRArenaPool *arena, SECItem *result, 

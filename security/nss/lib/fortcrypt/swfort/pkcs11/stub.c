@@ -260,7 +260,7 @@ PR_IMPLEMENT(PRInt32) PR_AtomicDecrement(PRInt32 *val) { return --(*val); }
 
 PR_IMPLEMENT(PRStatus) PR_Sleep(PRIntervalTime ticks) { return PR_SUCCESS; }
 
-#include "nssilock.h"
+#include "prlock.h"
 #include "fmutex.h"
 PR_IMPLEMENT(PRLock *)
 PR_NewLock(void) {

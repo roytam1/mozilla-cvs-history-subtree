@@ -36,73 +36,9 @@
 #  are specifed as dependencies within rules.mk.
 #
 
-#TARGETS        = $(LIBRARY)
-#SHARED_LIBRARY =
-#IMPORT_LIBRARY =
-#PURE_LIBRARY   =
-#PROGRAM        =
-
-ifeq ($(OS_ARCH), WINNT)
-
-# don't want the 32 in the shared library name
-SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).dll
-IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).lib
-
-DLLFLAGS += -DEF:ssl.def
-RES = $(OBJDIR)/ssl.res
-RESNAME = ssl.rc
-
-EXTRA_SHARED_LIBS += \
-	$(DIST)/lib/nss3.lib \
-	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plc4.lib \
-	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plds4.lib \
-	$(DIST)/lib/$(NSPR31_LIB_PREFIX)nspr4.lib \
-	$(NULL)
-else
-
-
-# $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)
-# $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
-EXTRA_SHARED_LIBS += \
-	-L$(DIST)/lib/ \
-	-lnss3 \
-	-lplc4 \
-	-lplds4 \
-	-lnspr4 \
-	$(NULL)
-endif
-
-
-ifeq ($(OS_ARCH),SunOS)
-MAPFILE = $(OBJDIR)/sslmap.sun
-ALL_TRASH += $(MAPFILE)
-MKSHLIB += -M $(MAPFILE)
-endif
-
-ifeq ($(OS_ARCH),AIX)
-MAPFILE = $(OBJDIR)/sslmap.aix
-ALL_TRASH += $(MAPFILE)
-EXPORT_RULES = -bexport:$(MAPFILE)
-endif
-
-ifeq ($(OS_ARCH),HP-UX)
-MAPFILE = $(OBJDIR)/sslmap.hp
-ALL_TRASH += $(MAPFILE)
-MKSHLIB += -c $(MAPFILE)
-endif
-
-ifeq ($(OS_ARCH), OSF1)
-MAPFILE = $(OBJDIR)/sslmap.osf
-ALL_TRASH += $(MAPFILE)
-MKSHLIB += -hidden -input $(MAPFILE)
-endif
-
-ifeq ($(OS_ARCH),Linux)
-MAPFILE = $(OBJDIR)/sslmap.linux
-ALL_TRASH += $(MAPFILE)
-MKSHLIB += -Wl,--version-script,$(MAPFILE)
-endif
-
-
-	
+TARGETS        = $(LIBRARY)
+SHARED_LIBRARY =
+IMPORT_LIBRARY =
+PURE_LIBRARY   =
+PROGRAM        =
 

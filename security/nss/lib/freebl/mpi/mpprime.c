@@ -341,15 +341,16 @@ mp_err  mpp_pprime(mp_int *a, int nt)
     for (jx = 1; jx < b; jx++) {
       /* z = z^2 (mod a) */
       MP_CHECKOK( mp_sqrmod(&z, a, &z) );
-      res = MP_NO;	/* previous line set res to MP_YES */
 
       if(mp_cmp_d(&z, 1) == 0) {
+	res = MP_NO;
 	break;
       }
       if(mp_cmp(&z, &amo) == 0) {
 	res = MP_YES;
 	break;
       } 
+      res = MP_NO;
     } /* end testing loop */
 
     /* If the test passes, we will continue iterating, but a failed
@@ -443,31 +444,14 @@ mp_err mpp_make_prime(mp_int *start, mp_size nBits, mp_size strong,
   MP_DIGITS(&q) = 0;
   MP_CHECKOK( mp_init(&trial) );
   MP_CHECKOK( mp_init(&q)     );
-  /* values taken from table 4.4, HandBook of Applied Cryptography */
-  if (nBits >= 1300) {
-    num_tests = 2;
-  } else if (nBits >= 850) {
-    num_tests = 3;
-  } else if (nBits >= 650) {
-    num_tests = 4;
-  } else if (nBits >= 550) {
+  if (nBits >= 1024) {
     num_tests = 5;
-  } else if (nBits >= 450) {
-    num_tests = 6;
-  } else if (nBits >= 400) {
+  } else if (nBits >= 512) {
     num_tests = 7;
-  } else if (nBits >= 350) {
-    num_tests = 8;
-  } else if (nBits >= 300) {
+  } else if (nBits >= 384) {
     num_tests = 9;
-  } else if (nBits >= 250) {
-    num_tests = 12;
-  } else if (nBits >= 200) {
-    num_tests = 15;
-  } else if (nBits >= 150) {
-    num_tests = 18;
-  } else if (nBits >= 100) {
-    num_tests = 27;
+  } else if (nBits >= 256) {
+    num_tests = 13;
   } else
     num_tests = 50;
 

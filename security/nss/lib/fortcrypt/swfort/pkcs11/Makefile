@@ -34,7 +34,6 @@
 
 include manifest.mn
 include $(CORE_DEPTH)/coreconf/config.mk
-include config.mk
 
 
 #SWCILIB			= ../$(OBJDIR)/$(LIB_PREFIX)swfci.$(LIB_SUFFIX)
@@ -68,7 +67,11 @@ else
 
 #	$(DIST)/lib/libdbm.a 
 #	$(DIST)/lib/libnspr3.a 
+# OSF 1 linker is very agressive. It includes the entire archive,
+# not just the .o's that we need from that archive.
 #
+ifneq ($(OS_ARCH), OSF1)
+
 CRYPTO_LIB = $(DIST)/lib/libfreebl.$(LIB_SUFFIX) 
 
 ifdef MOZILLA_SECURITY_BUILD
@@ -96,6 +99,7 @@ EXTRA_LIBS += \
 	$(PLDS_STATIC_LIB) \
 	$(NULL)
 
+endif
 endif
 
 #ifeq ($(OS_TARGET), WIN16)

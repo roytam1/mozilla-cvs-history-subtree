@@ -34,7 +34,6 @@
 
 include manifest.mn
 include $(CORE_DEPTH)/coreconf/config.mk
-include config.mk
 
 CILIB                   = $(OBJDIR)/cilib.$(LIB_SUFFIX)
 ORIG_CILIB              = libci/$(OS_CONFIG).$(LIB_SUFFIX)
@@ -130,7 +129,7 @@ $(LIBCI_JAR): $(DIRS) $(LIBCI_JAR_SRC)
 	zip -5qj $@ $(LIBCI_JAR_SRC) 
 
 force:
-	(cd swfort ; $(MAKE))
+	(cd swfort ; gmake)
 
 
 MD_FILES += $(LIBCI_JAR)

@@ -1949,7 +1949,7 @@ struct NSSCKMDObjectStr {
    * (which is likely the Framework's token or session arena).
    * It may return NULL on error.
    */
-  const NSSItem *(PR_CALLBACK *GetAttribute)(
+  NSSItem *(PR_CALLBACK *GetAttribute)(
     NSSCKMDObject *mdObject,
     NSSCKFWObject *fwObject,
     NSSCKMDSession *mdSession,

@@ -58,7 +58,6 @@ include config.mk
 
 ifeq ($(OS_ARCH),WINNT)
 CSRCS	+= win32err.c
-DEFINES += -DIN_LIBSSL
 else
 ifeq ($(OS_ARCH),OS2)
 CSRCS	+= os2_err.c

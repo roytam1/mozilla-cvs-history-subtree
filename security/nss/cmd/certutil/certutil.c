@@ -62,7 +62,11 @@
 #include "cryptohi.h"
 #include "secoid.h"
 #include "certdb.h"
-#include "nss.h"
+#include "cdbhdl.h"
+
+/* SEC_Init is now declared in secutil.h */
+/* We really should convert to using NSS, but it doesn't provide all
+ * of the functionality we need (like opening the databases writeable). */
 
 #define MIN_KEY_BITS		512
 #define MAX_KEY_BITS		2048
@@ -738,7 +742,19 @@ ValidateCert(CERTCertDBHandle *handle, char *name, char *date,
     return (rv);
 }
 
-#ifdef notdef
+SECKEYLowPrivateKey*
+GetPrivKeyFromNickname(char *nickname)
+{
+    /* check if key actually exists */
+    if (SECU_CheckKeyNameExists(NULL, nickname) == PR_FALSE) {
+	SECU_PrintError(progName, "the key \"%s\" does not exist", nickname);
+	return NULL;
+    }
+
+    /* Read in key */
+    return SECU_GetPrivateKey(NULL, nickname);
+}
+
 static SECStatus
 DumpPublicKey(int dbindex, char *nickname, FILE *out)
 {
@@ -812,7 +828,6 @@ DumpPrivateKey(int dbindex, char *nickname, FILE *out)
     }
     return SECSuccess;
 }
-#endif
 
 static SECStatus
 printKeyCB(SECKEYPublicKey *key, SECItem *data, void *arg)
@@ -852,7 +867,6 @@ listKeys(PK11SlotInfo *slot, KeyType keyType, void *pwarg)
 {
     SECStatus rv = SECSuccess;
 
-#ifdef notdef
     if (PK11_IsInternal(slot)) {
 	/* Print all certs in internal slot db. */
 	rv = SECU_PrintKeyNames(SECKEY_GetDefaultKeyDB(), stdout);
@@ -861,7 +875,6 @@ listKeys(PK11SlotInfo *slot, KeyType keyType, void *pwarg)
 	    return SECFailure;
 	}
     } else {
-#endif
 	/* XXX need a function as below */
 	/* could iterate over certs on slot and print keys */
 	/* this would miss stranded keys */
@@ -873,11 +886,9 @@ listKeys(PK11SlotInfo *slot, KeyType keyType, void *pwarg)
 	    SECU_PrintError(progName, "problem listing keys");
 	    return SECFailure;
 	}
-	return SECSuccess;
-#ifdef notdef
+	return SECFailure;
     }
     return rv;
-#endif
 }
 
 static SECStatus
@@ -892,7 +903,6 @@ ListKeys(PK11SlotInfo *slot, char *keyname, int index,
         pwdata.data = passFile;
     }
 
-#ifdef notdef
     if (keyname) {
 	if (dopriv) {
 	    return DumpPrivateKey(index, keyname, stdout);
@@ -900,7 +910,6 @@ ListKeys(PK11SlotInfo *slot, char *keyname, int index,
 	    return DumpPublicKey(index, keyname, stdout);
 	}
     }
-#endif
     /* For now, split handling of slot to internal vs. other.  slot should
      * probably be allowed to be NULL so that all slots can be listed.
      * In that case, need to add a call to PK11_TraverseSlotCerts().
@@ -919,7 +928,6 @@ ListKeys(PK11SlotInfo *slot, char *keyname, int index,
     return rv;
 }
 
-#ifdef notdef
 static SECStatus
 DeleteKey(SECKEYKeyDBHandle *handle, char *nickname)
 {
@@ -931,7 +939,6 @@ DeleteKey(SECKEYKeyDBHandle *handle, char *nickname)
     }
     return rv;
 }
-#endif
 
 
 /*
@@ -968,38 +975,38 @@ Usage(char *progName)
 {
 #define FPS fprintf(stderr, 
     FPS "Type %s -H for more detailed descriptions\n", progName);
-    FPS "Usage:  %s -N [-d certdir] [-P dbprefix] [-f pwfile]\n", progName);
-    FPS "\t%s -A -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
+    FPS "Usage:  %s -N [-d certdir] [-f pwfile]\n", progName);
+    FPS "\t%s -A -n cert-name -t trustargs [-d certdir] [-a] [-i input]\n", 
     	progName);
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
-        "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5] [-6]\n",
+        "\t\t [-f pwfile] [-d certdir] [-1] [-2] [-3] [-4] [-5] [-6]\n",
 	progName);
-    FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
-    FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
+    FPS "\t%s -D -n cert-name [-d certdir]\n", progName);
+    FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-a] [-i input]\n", 
 	progName);
     FPS "\t%s -G -n key-name [-h token-name] [-k rsa] [-g key-size] [-y exp]\n" 
-	"\t\t [-f pwfile] [-z noisefile] [-d certdir] [-P dbprefix]\n", progName);
+	"\t\t [-f pwfile] [-z noisefile] [-d certdir]\n", progName);
     FPS "\t%s -G [-h token-name] -k dsa [-q pqgfile -g key-size] [-f pwfile]\n"
-	"\t\t [-z noisefile] [-d certdir] [-P dbprefix]\n", progName);
+	"\t\t [-z noisefile] [-d certdir]\n", progName);
     FPS "\t%s -K [-n key-name] [-h token-name] [-k dsa|rsa|all]\n", 
 	progName);
-    FPS "\t\t [-f pwfile] [-d certdir] [-P dbprefix]\n");
-    FPS "\t%s -L [-n cert-name] [-d certdir] [-P dbprefix] [-r] [-a]\n", progName);
-    FPS "\t%s -M -n cert-name -t trustargs [-d certdir] [-P dbprefix]\n",
+    FPS "\t\t [-f pwfile] [-d certdir]\n");
+    FPS "\t%s -L [-n cert-name] [-d certdir] [-r] [-a]\n", progName);
+    FPS "\t%s -M -n cert-name -t trustargs [-d certdir]\n",
 	progName);
-    FPS "\t%s -R -s subj -o cert-request-file [-d certdir] [-P dbprefix] [-p phone] [-a]\n"
+    FPS "\t%s -R -s subj -o cert-request-file [-d certdir] [-p phone] [-a]\n"
 	"\t\t [-k key-type] [-h token-name] [-f pwfile] [-g key-size]\n",
 	progName);
-    FPS "\t%s -V -n cert-name -u usage [-b time] [-e] [-d certdir] [-P dbprefix]\n",
+    FPS "\t%s -V -n cert-name -u usage [-b time] [-e] [-d certdir]\n",
 	progName);
     FPS "\t%s -S -n cert-name -s subj [-c issuer-name | -x]  -t trustargs\n"
 	"\t\t [-k key-type] [-h token-name] [-g key-size]\n"
         "\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
-	"\t\t [-f pwfile] [-d certdir] [-P dbprefix]\n"
+	"\t\t [-f pwfile] [-d certdir]\n"
         "\t\t [-p phone] [-1] [-2] [-3] [-4] [-5] [-6]\n",
 	progName);
-    FPS "\t%s -U [-d certdir] [-P dbprefix]\n", progName);
+    FPS "\t%s -U [-d certdir]\n", progName);
     exit(-1);
 }
 
@@ -1028,8 +1035,6 @@ static void LongUsage(char *progName)
 	"   -f pwfile");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "%-20s The input certificate is encoded in ASCII (RFC1113)\n",
 	"   -a");
     FPS "%-20s Specify the certificate file (default is stdin)\n",
@@ -1056,8 +1061,6 @@ static void LongUsage(char *progName)
 	"   -f pwfile");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "%-20s Create key usage extension\n",
 	"   -1 ");
     FPS "%-20s Create basic constraint extension\n",
@@ -1090,8 +1093,6 @@ static void LongUsage(char *progName)
 	"   -q pqgfile");
     FPS "%-20s Key database directory (default is ~/.netscape)\n",
 	"   -d keydir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s Delete a certificate from the database\n",
@@ -1100,16 +1101,12 @@ static void LongUsage(char *progName)
 	"   -n cert-name");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s List all modules\n", /*, or print out a single named module\n",*/
         "-U");
     FPS "%-20s Module database directory (default is '~/.netscape')\n",
         "   -d moddir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
 
     FPS "%-15s List all keys\n", /*, or print out a single named key\n",*/
         "-K");
@@ -1122,8 +1119,6 @@ static void LongUsage(char *progName)
         "   -f password-file");
     FPS "%-20s Key database directory (default is ~/.netscape)\n",
 	"   -d keydir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s List all certs, or print out a single named cert\n",
@@ -1132,8 +1127,6 @@ static void LongUsage(char *progName)
 	"   -n cert-name");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "%-20s For single cert, print binary DER encoding\n",
 	"   -r");
     FPS "%-20s For single cert, print ASCII encoding (RFC1113)\n",
@@ -1148,16 +1141,12 @@ static void LongUsage(char *progName)
 	"   -t trustargs");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s Create a new certificate database\n",
 	"-N");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s Generate a certificate request (stdout)\n",
@@ -1176,8 +1165,6 @@ static void LongUsage(char *progName)
 	"   -f pwfile");
     FPS "%-20s Key database directory (default is ~/.netscape)\n",
 	"   -d keydir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "%-20s Specify the contact phone number (\"123-456-7890\")\n",
 	"   -p phone");
     FPS "%-20s Output the cert request in ASCII (RFC1113); default is binary\n",
@@ -1199,8 +1186,6 @@ static void LongUsage(char *progName)
     FPS "%-25s R \t Email Recipient\n", "");   
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "\n");
 
     FPS "%-15s Make a certificate and add to database\n",
@@ -1231,8 +1216,6 @@ static void LongUsage(char *progName)
 	"   -f pwfile");
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
-    FPS "%-20s Cert & Key database prefix\n",
-	"   -P dbprefix");
     FPS "%-20s Specify the contact phone number (\"123-456-7890\")\n",
 	"   -p phone");
     FPS "%-20s Create key usage extension\n",
@@ -2028,8 +2011,7 @@ enum {
     cmd_CreateAndAddCert,
     cmd_ListModules,
     cmd_CheckCertValidity,
-    cmd_ChangePassword,
-    cmd_Version
+    cmd_ChangePassword
 };
 
 /*  Certutil options */
@@ -2056,7 +2038,6 @@ enum {
     opt_Nickname,
     opt_OutputFile,
     opt_PhoneNumber,
-    opt_DBPrefix,
     opt_PQGFile,
     opt_BinaryDER,
     opt_Subject,
@@ -2086,8 +2067,7 @@ static secuCommandFlag certutil_commands[] =
 	{ /* cmd_CreateAndAddCert    */  'S', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_ListModules         */  'U', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_CheckCertValidity   */  'V', PR_FALSE, 0, PR_FALSE },
-	{ /* cmd_ChangePassword      */  'W', PR_FALSE, 0, PR_FALSE },
-	{ /* cmd_Version             */  'Y', PR_FALSE, 0, PR_FALSE }
+	{ /* cmd_ChangePassword      */  'W', PR_FALSE, 0, PR_FALSE }
 };
 
 static secuCommandFlag certutil_options[] =
@@ -2114,7 +2094,6 @@ static secuCommandFlag certutil_options[] =
 	{ /* opt_Nickname            */  'n', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_OutputFile          */  'o', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_PhoneNumber         */  'p', PR_TRUE,  0, PR_FALSE },
-	{ /* opt_DBPrefix            */  'P', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_PQGFile             */  'q', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_BinaryDER           */  'r', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_Subject             */  's', PR_TRUE,  0, PR_FALSE },
@@ -2131,6 +2110,7 @@ int
 main(int argc, char **argv)
 {
     CERTCertDBHandle *certHandle;
+    SECKEYKeyDBHandle *keyHandle;
     PK11SlotInfo *slot = NULL;
     CERTName *  subject         = 0;
     PRFileDesc *inFile          = 0;
@@ -2138,7 +2118,6 @@ main(int argc, char **argv)
     char *      certfile        = "tempcert";
     char *      certreqfile     = "tempcertreq";
     char *      slotname        = "internal";
-    char *      certPrefix      = "";
     KeyType     keytype         = rsaKey;
     /*char *	keyslot	        = NULL;*/
     /*char *      keynickname     = NULL;*/
@@ -2225,10 +2204,6 @@ main(int argc, char **argv)
 	    return -1;
 	}
     }
-
-    /*  -P certdb name prefix */
-    if (certutil.options[opt_DBPrefix].activated)
-	certPrefix = strdup(certutil.options[opt_DBPrefix].arg);
 
     /*  -q PQG file  */
     if (certutil.options[opt_PQGFile].activated) {
@@ -2446,14 +2421,15 @@ main(int argc, char **argv)
 
     /*  Initialize NSPR and NSS.  */
     PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
-    NSS_Initialize(SECU_ConfigDirectory(NULL), certPrefix, certPrefix,
-                   "secmod.db", PR_FALSE);
-    certHandle = CERT_GetDefaultCertDB();
-
-    if (certutil.commands[cmd_Version].activated) {
-	int version = CERT_GetDBContentVersion(certHandle);
-	printf("Certificate database content version:  %d\n", version);
+    SEC_Init();
+    certHandle = SECU_OpenCertDB(PR_FALSE);
+    if (certHandle == NULL) {
+	SECU_PrintError(progName, "unable to open cert database");
+	return -1;
     }
+    CERT_SetDefaultCertDB(certHandle);
+    keyHandle = SECKEY_GetDefaultKeyDB();
+    SECU_PKCS11Init(PR_FALSE);
 
     if (PL_strcmp(slotname, "internal") == 0)
 	slot = PK11_GetInternalKeySlot();
@@ -2493,13 +2469,11 @@ main(int argc, char **argv)
 	rv = DeleteCert(certHandle, name);
 	return !rv - 1;
     }
-#ifdef notdef
     /*  Delete key (-F)  */
     if (certutil.commands[cmd_DeleteKey].activated) {
 	rv = DeleteKey(keyHandle, name);
 	return !rv - 1;
     }
-#endif
     /*  Modify trust attribute for cert (-M)  */
     if (certutil.commands[cmd_ModifyCertTrust].activated) {
 	rv = ChangeTrustAttributes(certHandle, name, 

@@ -146,7 +146,7 @@ struct sockbuf {
 
 	int		sb_options;	/* to support copying ber elements */
 	LBER_SOCKET	sb_fd;
-	long		sb_max_incoming;
+	unsigned long	sb_max_incoming;
 
 	LDAP_IOF_READ_CALLBACK *sb_read_fn;
 	LDAP_IOF_WRITE_CALLBACK *sb_write_fn;
