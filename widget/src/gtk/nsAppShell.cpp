@@ -162,7 +162,7 @@ NS_METHOD nsAppShell::Run()
 {
 
   nsresult   rv = NS_OK;
-  PLEventQueue * EQueue = nsnull;
+  nsIEventQueue * EQueue = nsnull;
 
   // Get the event queue service 
   NS_WITH_SERVICE(nsIEventQueueService, mEventQService, kEventQueueServiceCID, &rv);
@@ -176,7 +176,7 @@ NS_METHOD nsAppShell::Run()
   rv = mEventQService->GetThreadEventQueue(PR_GetCurrentThread(), &EQueue);
 
   // If a queue already present use it.
-  if (nsnull != EQueue)
+  if (EQueue)
      goto done;
 
   // Create the event queue for the thread
@@ -202,6 +202,7 @@ done:
 
   gtk_main();
 
+  NS_IF_RELEASE(EQueue);
   return NS_OK;
 }
 
