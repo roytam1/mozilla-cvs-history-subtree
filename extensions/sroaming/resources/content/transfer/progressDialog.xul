@@ -23,8 +23,10 @@
   -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xml-stylesheet href="chrome://communicator/skin/profile/profile.css" type="text/css"?>
-<?xml-stylesheet href="chrome://sroaming/skin/progressDialog.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/profile/profile.css"
+                 type="text/css"?>
+<?xml-stylesheet href="chrome://sroaming/skin/progressDialog.css"
+                 type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?> 
 
@@ -38,11 +40,16 @@
     ondialogcancel="return onClose();"
   >
 
-  <script type="application/x-javascript" src="chrome://global/content/dialogOverlay.js" />
-  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/progressDialog.js" />
-  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/conflictCheck.js" />
-  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/transfer.js" />
-  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/utility.js" />
+  <script type="application/x-javascript"
+          src="chrome://global/content/dialogOverlay.js" />
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/progressDialog.js" />
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/conflictCheck.js" />
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/transfer.js" />
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/utility.js" />
 
   <spacer id="location" offsetY="50" persist="offsetX offsetY"/>
   <broadcaster id="args" value=""/>
@@ -59,18 +66,25 @@
     <vbox align="center" style="max-width:30em" id="aboxingbox">
       <label id="FinalStatusMessage" class="bold" value="&status.label;"/>
     </vbox>
-    <description id="StatusMessage" class="wrap" style="max-width:30em; min-height: 1em"/>
+    <description id="StatusMessage"
+                 class="wrap" style="max-width:30em; min-height: 1em"/>
     <vbox flex="1">
       <listbox id="FileList" rows="1"/>
     </vbox>
-    <button id="errors" label="&troubleshooting.label;" accesskey="&troubleshooting.accessKey;" oncommand="showErrors();" hidden="true"/>
+    <button id="errors"
+            label="&troubleshooting.label;"
+            accesskey="&troubleshooting.accessKey;"
+            oncommand="showErrors();"
+            hidden="true" />
     <hbox align="center" id="failureBox" hidden="true">
       <image class="progressitem" progress="done"/>
       <label value="&succeeded.label;"/>
       <spacer class="bigspacer"/>
       <image class="progressitem" progress="failed"/>
       <label value="&failed.label;"/>
-      <button label="&troubleshooting.label;" accesskey="&troubleshooting.accessKey;" oncommand="doTroubleshooting();"/>
+      <button label="&troubleshooting.label;"
+              accesskey="&troubleshooting.accessKey;"
+              oncommand="doTroubleshooting();" />
     </hbox>
   </groupbox>
 </dialog>

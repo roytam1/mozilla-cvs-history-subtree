@@ -391,48 +391,47 @@ function upload(transfer, remoteListing)
 
 function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
 {
-    ddump("Step 4: Uploading profile files");
-    transfer.finishedCallbacks.push(function(success)
+  ddump("Step 4: Uploading profile files");
+  transfer.finishedCallbacks.push(function(success)
+  {
+    ddump("Step 5: Generating listing file based on facts");
+    var filesDone = extractFiles(transfer.filesWithStatus("done"),
+                                 localFiles);
+    createListingFile(filesDone.concat(substractFiles(remoteFiles, filesDone)),
+                      kListingTransferFilename);
+
+    ddump("Step 6: Uploading listing file to server");
+    var filesListing = new Array();
+    filesListing[0] = new Object();
+    filesListing[0].filename = kListingTransferFilename;
+    filesListing[0].mimetype = kListingMimetype;
+    filesListing[0].size = undefined;
+    var listingTransfer = new Transfer(false, // upload
+                                       transfer.serial,
+                                       transfer.localDir, transfer.remoteDir,
+                                       transfer.password,
+                                       transfer.savePassword,
+                                       filesListing,
+                                       function(success)
     {
-      ddump("Step 5: Generating listing file based on facts");
-      var filesDone = extractFiles(transfer.filesWithStatus("done"),
-                                   localFiles);
-      createListingFile(filesDone.concat(
-                        substractFiles(remoteFiles, filesDone)),
-                        kListingTransferFilename);
+      ddump("Step 7: Generate listing-uploaded");
+      remove(kListingTransferFilename);
+      createListingFile(substractFiles(localFiles, keepServerVersionFiles),
+                        kListingUploadedFilename);
 
-      ddump("Step 6: Uploading listing file to server");
-      var filesListing = new Array();
-      filesListing[0] = new Object();
-      filesListing[0].filename = kListingTransferFilename;
-      filesListing[0].mimetype = kListingMimetype;
-      filesListing[0].size = undefined;
-      var listingTransfer = new Transfer(false, // upload
-                                         transfer.serial,
-                                         transfer.localDir, transfer.remoteDir,
-                                         transfer.password,
-                                         transfer.savePassword,
-                                         filesListing,
-                                         function(success)
-      {
-        ddump("Step 7: Generate listing-uploaded");
-        remove(kListingTransferFilename);
-        createListingFile(substractFiles(localFiles, keepServerVersionFiles),
-                          kListingUploadedFilename);
+      ddump("transfer done");
 
-        ddump("transfer done");
-
-        CloseIfPossible();
+      CloseIfPossible();
             /* in case there were no files to be transferred and
                the progress callback in progressDialog.js thus didn't fire. */
-      }, function()
-      {
-        // XXX progress
-      });
-      //gTransfers.push(listingTransfer);
-      listingTransfer.transfer();
+    }, function()
+    {
+      // XXX progress
     });
-    transfer.transfer();
+    //gTransfers.push(listingTransfer);
+    listingTransfer.transfer();
+  });
+  transfer.transfer();
 }
 
 /*
