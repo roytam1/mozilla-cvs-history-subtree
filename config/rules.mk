@@ -259,6 +259,10 @@ ifndef HOST_OBJS
 HOST_OBJS		= $(HOST_CSRCS:.c=.ho)
 endif
 
+ifndef LIB_OBJS
+LIB_OBJS		= $(LIB_CSRCS:.c=.$(OBJ_SUFFIX)) $(LIB_CPPSRCS:.cpp=.$(OBJ_SUFFIX))
+endif
+
 ifeq ($(OS_ARCH),OS2)
 LIBOBJS			:= $(OBJS)
 else
@@ -289,7 +293,7 @@ ALL_TRASH_DIRS = \
 	$(GARBAGE_DIRS) /no-such-file
 else
 ALL_TRASH = \
-	$(GARBAGE) $(TARGETS) $(OBJS) $(PROGOBJS) LOGS TAGS a.out \
+	$(GARBAGE) $(TARGETS) $(OBJS) $(LIB_OBJS) $(PROGOBJS) LOGS TAGS a.out \
 	$(HOST_PROGOBJS) $(HOST_OBJS) $(IMPORT_LIBRARY) $(DEF_FILE)\
 	$(EXE_DEF_FILE) so_locations _gen _stubs $(wildcard *.res) \
 	$(wildcard *.pdb) $(CODFILE) $(MAPFILE) $(IMPORT_LIBRARY) \
@@ -388,7 +392,7 @@ SUBMAKEFILES		:= $(addsuffix /Makefile, $(filter-out $(STATIC_MAKEFILES), $(DIRS
 endif
 
 # MAKE_DIRS: List of directories to build while looping over directories.
-ifneq (,$(OBJS))
+ifneq (,$(LIB_OBJS)$(OBJS))
 MAKE_DIRS		+= $(MDDEPDIR)
 GARBAGE_DIRS		+= $(MDDEPDIR)
 endif
@@ -939,7 +943,7 @@ SUB_LOBJS	= $(shell for lib in $(SHARED_LIBRARY_LIBS); do $(AR_LIST) $${lib} $(C
 endif
 endif
 
-$(LIBRARY): $(OBJS) $(LOBJS) $(SHARED_LIBRARY_LIBS) Makefile Makefile.in
+$(LIBRARY): $(LIB_OBJS) $(OBJS) $(LOBJS) $(SHARED_LIBRARY_LIBS) Makefile Makefile.in
 	rm -f $@
 ifneq ($(OS_ARCH),WINNT)
 ifdef SHARED_LIBRARY_LIBS
@@ -947,7 +951,7 @@ ifdef SHARED_LIBRARY_LIBS
 	@for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; $(CLEANUP2); done
 endif
 endif
-	$(AR) $(AR_FLAGS) $(OBJS) $(LOBJS) $(SUB_LOBJS)
+	$(AR) $(AR_FLAGS) $(LIB_OBJS) $(OBJS) $(LOBJS) $(SUB_LOBJS)
 	$(RANLIB) $@
 	@rm -f foodummyfilefoo $(SUB_LOBJS)
 
@@ -978,15 +982,15 @@ else
 endif
 	$(ADD_TO_DEF_FILE)
 
-$(IMPORT_LIBRARY): $(OBJS) $(DEF_FILE)
+$(IMPORT_LIBRARY): $(LIB_OBJS) $(OBJS) $(DEF_FILE)
 	rm -f $@
 	$(MAKE_DEF_FILE)
 	$(IMPLIB) $@ $(DEF_FILE)
 	$(RANLIB) $@
 
-$(LIBRARY): $(OBJS) $(LOBJS) $(SHARED_LIBRARY_LIBS) Makefile Makefile.in
+$(LIBRARY): $(LIB_OBJS) $(OBJS) $(LOBJS) $(SHARED_LIBRARY_LIBS) Makefile Makefile.in
 	rm -f $@
-	$(AR) $(AR_FLAGS) $(OBJS) $(LOBJS) $(SUB_LOBJS)
+	$(AR) $(AR_FLAGS) $(LIB_OBJS) $(OBJS) $(LOBJS) $(SUB_LOBJS)
 	$(RANLIB) $@
 endif # OS/2
 
@@ -999,7 +1003,7 @@ ifdef NO_LD_ARCHIVE_FLAGS
 SUB_SHLOBJS = $(SUB_LOBJS)
 endif
 
-$(SHARED_LIBRARY): $(OBJS) $(LOBJS) $(DEF_FILE) $(RESFILE) $(SHARED_LIBRARY_LIBS) $(EXTRA_DEPS) Makefile Makefile.in
+$(SHARED_LIBRARY): $(LIB_OBJS) $(OBJS) $(LOBJS) $(DEF_FILE) $(RESFILE) $(SHARED_LIBRARY_LIBS) $(EXTRA_DEPS) Makefile Makefile.in
 	rm -f $@
 ifneq ($(OS_ARCH),OS2)
 ifneq ($(OS_ARCH),OpenVMS)
@@ -1009,7 +1013,7 @@ ifdef SHARED_LIBRARY_LIBS
 	@for lib in $(SHARED_LIBRARY_LIBS); do $(AR_EXTRACT) $${lib}; $(CLEANUP2); done
 endif # SHARED_LIBRARY_LIBS
 endif # NO_LD_ARCHIVE_FLAGS
-	$(MKSHLIB) $(SHLIB_LDSTARTFILE) $(OBJS) $(LOBJS) $(SUB_SHLOBJS) $(RESFILE) $(LDFLAGS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE) $(SHLIB_LDENDFILE)
+	$(MKSHLIB) $(SHLIB_LDSTARTFILE) $(LIB_OBJS) $(OBJS) $(LOBJS) $(SUB_SHLOBJS) $(RESFILE) $(LDFLAGS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE) $(SHLIB_LDENDFILE)
 	@rm -f foodummyfilefoo $(SUB_SHLOBJS)
 else
 	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
@@ -1021,13 +1025,13 @@ ifndef IS_COMPONENT
 	fi
 	@touch no-such-file.vms; rm -f no-such-file.vms $(SUB_LOBJS)
 endif
-	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(EXTRA_LIBS) VMSuni.opt;
+	$(MKSHLIB) -o $@ $(LIB_OBJS) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(EXTRA_LIBS) VMSuni.opt;
 endif
 else # OS2
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(MKSHLIB) /O:$@ /DLL /INC:_dllentry $(LDFLAGS) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
+	$(MKSHLIB) /O:$@ /DLL /INC:_dllentry $(LDFLAGS) $(LIB_OBJS) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
 else
-	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
+	$(MKSHLIB) -o $@ $(LIB_OBJS) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
 endif
 ifdef RESFILE
 	$(RC) $(RCFLAGS) $(RESFILE) $@
@@ -1042,9 +1046,9 @@ ifdef MOZ_POST_DSO_LIB_COMMAND
 endif
 
 ifeq ($(OS_ARCH),OS2)
-$(DLL): $(OBJS) $(EXTRA_LIBS)
+$(DLL): $(LIB_OBJS) $(OBJS) $(EXTRA_LIBS)
 	rm -f $@
-	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
+	$(MKSHLIB) -o $@ $(LIB_OBJS) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
 endif
 
 ifdef MOZ_AUTO_DEPS
@@ -1787,7 +1791,7 @@ $(MDDEPDIR)/%.pp: %.s
 	$(REPORT_BUILD)
 	@$(MAKE_DEPS_NOAUTO)
 
-ifneq (,$(OBJS))
+ifneq (,$(LIB_OBJS)$(OBJS))
 depend:: $(SUBMAKEFILES) $(MAKE_DIRS) $(MDDEPFILES)
 else
 depend:: $(SUBMAKEFILES)
@@ -1812,7 +1816,7 @@ endif # COMPILER_DEPEND
 $(MDDEPDIR):
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; mkdir $@; else true; fi
 
-ifneq (,$(OBJS))
+ifneq (,$(LIB_OBJS)$(OBJS))
 MDDEPEND_FILES		:= $(strip $(wildcard $(MDDEPDIR)/*.pp))
 
 ifneq (,$(MDDEPEND_FILES))
