@@ -210,7 +210,8 @@
   
   <wizardpage id="errors" pageid="errors"
               label="&errors.title;"
-              align="right">
+              align="right"
+              onpageshow="gErrorsPage.onPageShow();">
     <label>&errors.intro.label;</label>
     <separator/>
     <button label="&errors.details.label;" accesskey="&errors.details.accesskey;"

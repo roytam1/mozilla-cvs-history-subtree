@@ -71,6 +71,8 @@ var gUpdateWizard = {
   
   updatingApp: false,
   remainingExtensionUpdateCount: 0,
+  
+  succeeded: true,
 
   appComps: {
     upgraded: { 
@@ -118,17 +120,19 @@ var gUpdateWizard = {
       pref.setBoolPref("update.extensions.enabled", this.shouldAutoCheck); 
     }
     
-    if (this.updatingApp) {
-      // Clear the "app update available" pref as an interim amnesty assuming
-      // the user actually does install the new version. If they don't, a subsequent
-      // update check will poke them again.
-      this.clearAppUpdatePrefs();
+    if (this.succeeded) {
+      if (this.updatingApp) {
+        // Clear the "app update available" pref as an interim amnesty assuming
+        // the user actually does install the new version. If they don't, a subsequent
+        // update check will poke them again.
+        this.clearAppUpdatePrefs();
+      }
+      else {
+        // Downloading and Installed Extension
+        this.clearExtensionUpdatePrefs();
+      }
     }
-    else {
-      // Downloading and Installed Extension
-      this.clearExtensionUpdatePrefs();
-    }
-
+    
     // Send an event to refresh any FE notification components. 
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(Components.interfaces.nsIObserverService);
@@ -284,7 +288,7 @@ var gUpdatePage = {
   {
     gUpdateWizard.setButtonLabels(null, true, 
                                   "nextButtonText", true, 
-                                  "cancelButtonText", true);
+                                  "cancelButtonText", false);
     document.documentElement.getButton("next").focus();
 
     var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -758,6 +762,8 @@ var gOptionalPage = {
       checkbox.setAttribute("index", i);
       optionalItemsList.appendChild(checkbox);
     }
+    
+    document.documentElement.getButton("accept").focus(); 
   },
   
   onCommand: function (aEvent)
@@ -915,6 +921,7 @@ var gErrorsPage = {
   onPageShow: function ()
   {
     document.documentElement.getButton("finish").focus();
+    gUpdateWizard.succeeded = false;
   },
   
   onShowErrors: function ()
@@ -978,6 +985,7 @@ var gNoUpdatesPage = {
       }
     }
 
+    gUpdateWizard.succeeded = false;
     gUpdateWizard.checkForErrors("updateCheckErrorNotFound");
   }
 };

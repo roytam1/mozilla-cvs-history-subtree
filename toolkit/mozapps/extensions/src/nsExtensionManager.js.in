@@ -3328,17 +3328,23 @@ nsRDFItemUpdater.prototype = {
   
   onEndLoad: function(aSink)
   {
-    aSink.removeXMLSinkObserver(this);
-    
-    var ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
-    this.onDatasourceLoaded(ds, this._item);
+    try {
+      aSink.removeXMLSinkObserver(this);
+      
+      var ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
+      this.onDatasourceLoaded(ds, this._item);
+    }
+    catch (e) { }
   },
   
   onError: function(aSink, aStatus, aErrorMsg)
   {
-    aSink.removeXMLSinkObserver(this);
-    
-    this.onDatasourceError(this._item, aStatus.toString());
+    try {
+      aSink.removeXMLSinkObserver(this);
+      
+      this.onDatasourceError(this._item, aStatus.toString());
+    }
+    catch (e) { }
   }
 };
 

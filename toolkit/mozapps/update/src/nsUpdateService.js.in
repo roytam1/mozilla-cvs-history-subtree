@@ -939,14 +939,20 @@ nsAppUpdater.prototype = {
   
   onEndLoad: function(aSink)
   {
-    this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
-    this.onDatasourceLoaded(this._ds);
+    try {
+      this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
+      this.onDatasourceLoaded(this._ds);
+    }
+    catch (e) { }
   },
   
   onError: function(aSink, aStatus, aErrorMsg)
   {
-    this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
-    this.onDatasourceError(aStatus, aErrorMsg);
+    try {
+      this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
+      this.onDatasourceError(aStatus, aErrorMsg);
+    }
+    catch (e) { }
   },
 
   /////////////////////////////////////////////////////////////////////////////
