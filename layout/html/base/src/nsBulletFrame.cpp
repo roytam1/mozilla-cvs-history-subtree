@@ -154,9 +154,9 @@ nsBulletFrame::Init(nsIPresContext*  aPresContext,
     }
 
     if (imgURI && NS_SUCCEEDED(nsContentUtils::CanLoadImage(imgURI, doc, doc))) {
-    // XXX: initialDocumentURI is NULL !
-    il->LoadImage(imgURI, nsnull, documentURI, loadGroup, mListener, aPresContext, nsIRequest::LOAD_NORMAL, nsnull, nsnull, getter_AddRefs(mImageRequest));
-  }
+      // XXX: initialDocumentURI is NULL !
+      il->LoadImage(imgURI, nsnull, documentURI, loadGroup, mListener, aPresContext, nsIRequest::LOAD_NORMAL, nsnull, nsnull, getter_AddRefs(mImageRequest));
+    }
   }
 
   return NS_OK;
