@@ -125,6 +125,7 @@ public:
 		}
 
   NS_IMETHOD            SetModal(PRBool aModal);
+	NS_IMETHOD            MakeFullScreen(PRBool aFullScreen);
 
  // Native draw function... like doPaint()
  static void            RawDrawFunc( PtWidget_t *pWidget, PhTile_t *damage );

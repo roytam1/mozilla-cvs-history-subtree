@@ -105,7 +105,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
     return PR_FALSE;
   }
 
-  char *title = ConvertToFileSystemCharset(mTitle.get());
+  char *title = ConvertToFileSystemCharset(mTitle);
   if (nsnull == title)
     title = ToNewCString(mTitle);
 
@@ -124,7 +124,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 
 	char extensionBuffer[MAX_EXTENSION_LENGTH+1] = "*";
 	if( !mFilterList.IsEmpty() ) {
-		char *text = ConvertToFileSystemCharset( mFilterList.get( ) );
+		char *text = ConvertToFileSystemCharset( mFilterList );
 		if( text ) {
 			extensionBuffer[0] = 0;
 
@@ -144,7 +144,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 		}
 	else if (!mDefaultExtension.IsEmpty()) {
 		// Someone was cool and told us what to do
-		char *convertedExt = ConvertToFileSystemCharset(mDefaultExtension.get());
+		char *convertedExt = ConvertToFileSystemCharset(mDefaultExtension);
 		if (!convertedExt) {
 			mDefaultExtension.ToCString(extensionBuffer, MAX_EXTENSION_LENGTH);
 			}
