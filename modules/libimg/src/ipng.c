@@ -56,9 +56,6 @@ int
 il_png_init(il_container *ic)
 {
 
-	png_structp read_ptr, write_ptr;
-    png_infop read_info_ptr, write_info_ptr, end_info_ptr;
-
 	ipng_struct *ipngs;
     NI_ColorSpace *src_color_space = ic->src_header->color_space;
 
@@ -91,8 +88,6 @@ int il_png_write(il_container *ic, const unsigned char *buf, int32 len)
 
    png_structp png_ptr;
    png_infop info_ptr;
-  
-   int status, done;
   
 	/*------*/
    
