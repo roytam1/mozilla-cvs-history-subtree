@@ -212,24 +212,21 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
         if (pJVMPI != NULL) {
-            jobject javaObject = pJVMPI->AttachThreadToJavaObject(env);
-            if (javaObject != NULL) {
-                nsIPluginInstance* pPIT = 
-                    pJVMPI->GetPluginInstance(javaObject);
-                if (pPIT != NULL) {
-                    nsIJVMPluginInstance* pJVMPIT;
-                    if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
-                                             (void**)&pJVMPIT) == NS_OK) {
-                        nsPluginInstancePeer* pPITP = 
-                            (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                        if (pPITP != NULL) {
-                            cx = pPITP->GetJSContext();
-                            pPITP->Release();
-                        }
-                        pJVMPIT->Release();
+            nsIPluginInstance* pPIT = 
+                pJVMPI->GetPluginInstance(env);
+            if (pPIT != NULL) {
+                nsIJVMPluginInstance* pJVMPIT;
+                if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
+                                         (void**)&pJVMPIT) == NS_OK) {
+                    nsPluginInstancePeer* pPITP = 
+                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
+                    if (pPITP != NULL) {
+                        cx = pPITP->GetJSContext();
+                        pPITP->Release();
                     }
-                    pPIT->Release();
+                    pJVMPIT->Release();
                 }
+                pPIT->Release();
             }
             pJVMPI->Release();
         }

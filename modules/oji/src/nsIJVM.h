@@ -129,8 +129,8 @@ public:
     NS_IMETHOD_(nsIPluginInstance*)
     GetPluginInstance(jobject javaObject) = 0;
 
-    NS_IMETHOD_(jobject)
-    AttachThreadToJavaObject(JNIEnv *jenv) = 0;
+    NS_IMETHOD_(nsIPluginInstance*)
+    GetPluginInstance(JNIEnv *jenv) = 0;
 
     NS_IMETHOD_(JavaVM *)
     GetJavaVM(void) = 0;
