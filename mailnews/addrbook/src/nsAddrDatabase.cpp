@@ -1403,6 +1403,8 @@ nsresult nsAddrDatabase::AddListCardColumnsToRow
       {
         AddPrimaryEmail(pCardRow, NS_ConvertUCS2toUTF8(email).get());
         err = m_mdbPabTable->AddRow(GetEnv(), pCardRow);
+        // Create a key for this row as well.
+        AddRecordKeyColumnToRow(pCardRow);
       }
       
       cardWasAdded = PR_TRUE;
