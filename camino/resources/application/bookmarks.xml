@@ -3,7 +3,7 @@
 	<folder name="Toolbar Bookmarks" type="toolbar" open="true">
 		<folder name="Chimera Info">
 			<bookmark name="Chimera" href="http://www.mozilla.org/projects/chimera/" />
-			<bookmark name="Chimera Feedback" href="mailto:chimerafeedback@netscape.com?subject=What I like and dislike about Chimera&amp;amp;body=Please tell us what you like and dislike about Chimera, and what we need to do to make Chimera even better." />
+			<bookmark name="Chimera Feedback" href="http://www.mozilla.org/projects/chimera/feedback.html" />
 			<bookmark name="Mozilla.org" href="http://www.mozilla.org" />
 		</folder>
 		<folder name="News">
