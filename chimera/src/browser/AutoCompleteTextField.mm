@@ -22,9 +22,12 @@
 *   David Haas <haasd@cae.wisc.edu> 
 */
 
+#import "NSString+Utils.h"
+
 #import "AutoCompleteTextField.h"
 #import "BrowserWindowController.h"
 #import "PageProxyIcon.h"
+
 #include "nsIServiceManager.h"
 #include "nsMemory.h"
 #include "nsString.h"
@@ -246,11 +249,9 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 
 - (void) performSearch
 {
-  PRUnichar* chars = nsMemory::Alloc(([mSearchString length]+1) * sizeof(PRUnichar));
-  [mSearchString getCharacters:chars];
-  chars[[mSearchString length]] = 0; // I shouldn't have to do this
-  nsresult rv = mSession->OnStartLookup(chars, mResults, mListener);
-  nsMemory::Free(chars);
+  nsAutoString searchString;
+  [mSearchString assignTo_nsAString:searchString];
+  nsresult rv = mSession->OnStartLookup(searchString.get(), mResults, mListener);
 
   if (NS_FAILED(rv))
     NSLog(@"Unable to perform autocomplete lookup");
