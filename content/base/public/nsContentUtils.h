@@ -83,8 +83,7 @@ public:
   static PRUint32 CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSrcStart, const nsReadingIterator<PRUnichar>& aSrcEnd, nsAWritableString& aDest);
 
   static nsISupports *
-  GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
-                       GetDOMClassIIDsFnc aGetIIDsFptr,
+  GetClassInfoInstance(nsDOMClassInfoID aID, GetDOMClassIIDsFnc aGetIIDsFptr,
                        const char *aName);
 
   static void Shutdown();
@@ -105,7 +104,7 @@ private:
 #define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
     foundInterface =                                                          \
-      nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::e##_class##_id,   \
+      nsContentUtils::GetClassInfoInstance(eDOMClassInfo_##_class##_id,       \
                                            Get##_class##IIDs,                 \
                                            #_class);                          \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
@@ -118,7 +117,7 @@ private:
 #define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(_class, _name)     \
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
     foundInterface =                                                          \
-      nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::e##_class##_id,   \
+      nsContentUtils::GetClassInfoInstance(eDOMClassInfo_##_class##_id,       \
                                            Get##_class##IIDs,                 \
                                            #_name);                           \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \

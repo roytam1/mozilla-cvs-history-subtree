@@ -34,7 +34,7 @@ struct nsDOMClassInfoData;
 typedef void (*GetDOMClassIIDsFnc)(nsVoidArray& aArray);
 
 class nsDOMClassInfo : public nsIXPCScriptable,
-                       public nsIDOMClassInfo
+                       public nsIClassInfo
 {
 public:
   nsDOMClassInfo(nsDOMClassInfoID aID);
@@ -845,7 +845,7 @@ public:
 #define NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(_class)                          \
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
     foundInterface =                                                          \
-      nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \
+      nsDOMClassInfo::GetClassInfoInstance(eDOMClassInfo_##_class##_id,       \
                                            Get##_class##IIDs,                 \
                                            #_class);                          \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \

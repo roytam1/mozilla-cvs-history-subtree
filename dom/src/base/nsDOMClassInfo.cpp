@@ -29,7 +29,6 @@
 #include "nsIXPConnect.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptContext.h"
-#include "nsContentUtils.h"
 
 // JavaScript includes
 #include "jsapi.h"
@@ -156,7 +155,7 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
-  (nsDOMClassInfo::nsDOMClassInfoID aID);
+  (nsDOMClassInfoID aID);
 
 struct nsDOMClassInfoData
 {
@@ -173,7 +172,7 @@ struct nsDOMClassInfoData
 
 #ifdef NS_DEBUG
 #define NS_DEFINE_CLASSINFO_DATA_DEBUG(_class)                                \
-    nsIDOMClassInfo::e##_class##_id,
+    eDOMClassInfo_##_class##_id,
 #else
 #define NS_DEFINE_CLASSINFO_DATA_DEBUG(_class)                                \
   // nothing

@@ -312,7 +312,7 @@ nsContentUtils::Shutdown()
 
 // static
 nsISupports *
-nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+nsContentUtils::GetClassInfoInstance(nsDOMClassInfoID aID,
                                      GetDOMClassIIDsFnc aGetIIDsFptr,
                                      const char *aName)
 {

@@ -149,7 +149,7 @@ nsXMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     inst = new nsNode3Tearoff(this);
     NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
   } else if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eElement_id,
+    inst = nsContentUtils::GetClassInfoInstance(eDOMClassInfo_Element_id,
                                                 GetElementIIDs,
                                                 "Element");
     NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);

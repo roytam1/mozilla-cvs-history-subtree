@@ -50,7 +50,7 @@ public:
   NS_IMETHOD NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal) = 0;
 
   NS_IMETHOD_(nsISupports *)
-    GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+    GetClassInfoInstance(nsDOMClassInfoID aID,
                          GetDOMClassIIDsFnc aGetIIDsFptr,
                          const char *aName) = 0;
 };

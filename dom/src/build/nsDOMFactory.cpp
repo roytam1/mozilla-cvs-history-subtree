@@ -82,8 +82,8 @@ public:
   NS_IMETHOD NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
 
   NS_IMETHOD_(nsISupports *)
-    GetClassInfoInstance(nsDOMClassInfo::nsDOMClassInfoID aID,
-                         GetDOMClassIIDsFnc aGetIIDsFptr, const char *aName);
+    GetClassInfoInstance(nsDOMClassInfoID aID, GetDOMClassIIDsFnc aGetIIDsFptr,
+                         const char *aName);
 };
 
 nsDOMSOFactory::nsDOMSOFactory()
@@ -138,7 +138,7 @@ nsDOMSOFactory::NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal)
 }
 
 NS_IMETHODIMP_(nsISupports *)
-nsDOMSOFactory::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+nsDOMSOFactory::GetClassInfoInstance(nsDOMClassInfoID aID,
                                      GetDOMClassIIDsFnc aGetIIDsFptr,
                                      const char *aName)
 {

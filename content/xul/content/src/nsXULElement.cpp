@@ -761,11 +761,11 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
         NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
         xblService->ResolveTag(NS_STATIC_CAST(nsIStyledContent*, this), &dummy, getter_AddRefs(tag));
         if (tag.get() == nsXULAtoms::tree) {
-            inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eXULTreeElement_id,
+            inst = nsContentUtils::GetClassInfoInstance(eDOMClassInfo_XULTreeElement_id,
                                                         GetXULTreeElementIIDs,
                                                         "XULTreeElement");
         } else {
-            inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eXULElement_id,
+            inst = nsContentUtils::GetClassInfoInstance(eDOMClassInfo_XULElement_id,
                                                         GetXULElementIIDs,
                                                         "XULElement");
         }
