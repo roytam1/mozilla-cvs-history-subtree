@@ -1214,7 +1214,7 @@ nsXULDocument::AddStyleSheetToStyleSets(nsIStyleSheet* aSheet)
   PRInt32 count = mPresShells.Count();
   PRInt32 indx;
   for (indx = 0; indx < count; indx++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+    nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1341,7 +1341,7 @@ nsXULDocument::RemoveStyleSheetFromStyleSets(nsIStyleSheet* aSheet)
   PRInt32 count = mPresShells.Count();
   PRInt32 indx;
   for (indx = 0; indx < count; indx++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+    nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1393,7 +1393,7 @@ nsXULDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool 
   if (enabled) {
     count = mPresShells.Count();
     for (i = 0; i < count; i++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(i);
+      nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(i);
       nsCOMPtr<nsIStyleSet> set;
       shell->GetStyleSet(getter_AddRefs(set));
       if (set) {
@@ -1424,7 +1424,9 @@ nsXULDocument::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
     if (-1 != mStyleSheets.IndexOf((void *)aSheet)) {
         count = mPresShells.Count();
         for (i = 0; i < count; i++) {
-            nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(i);
+            nsCOMPtr<nsIPresShell> shell =
+                (nsIPresShell*)mPresShells.ElementAt(i);
+
             nsCOMPtr<nsIStyleSet> set;
             shell->GetStyleSet(getter_AddRefs(set));
             if (set) {
@@ -1513,8 +1515,10 @@ nsXULDocument::SetScriptGlobalObject(nsIScriptGlobalObject* aScriptGlobalObject)
         // keeping the document alive. (While not strictly necessary
         // -- the PresShell owns us -- it's tidy.)
         for (PRInt32 count = mPresShells.Count() - 1; count >= 0; --count) {
-            nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[count]);
-            if (! shell)
+            nsCOMPtr<nsIPresShell> shell =
+                NS_STATIC_CAST(nsIPresShell*, mPresShells[count]);
+
+            if (!shell)
                 continue;
 
             shell->ReleaseAnonymousContent();
@@ -1991,14 +1995,16 @@ nsXULDocument::ExecuteOnBroadcastHandlerFor(nsIContent* aBroadcaster,
 
         PRInt32 j = mPresShells.Count();
         while (--j >= 0) {
-            nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[j]);
+            nsCOMPtr<nsIPresShell> shell =
+                NS_STATIC_CAST(nsIPresShell*, mPresShells[j]);
 
             nsCOMPtr<nsIPresContext> aPresContext;
             shell->GetPresContext(getter_AddRefs(aPresContext));
 
             // Handle the DOM event
             nsEventStatus status = nsEventStatus_eIgnore;
-            child->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+            child->HandleDOMEvent(aPresContext, &event, nsnull,
+                                  NS_EVENT_FLAG_INIT, &status);
         }
     }
 
@@ -2346,7 +2352,9 @@ nsXULDocument::FlushPendingNotifications(PRBool aFlushReflows, PRBool aUpdateVie
     PRInt32 i, count = mPresShells.Count();
 
     for (i = 0; i < count; i++) {
-      nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+      nsCOMPtr<nsIPresShell> shell =
+          NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+
       if (shell) {
         shell->FlushPendingNotifications(aUpdateViews);
       }
@@ -3074,8 +3082,8 @@ nsXULDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)
   NS_ENSURE_ARG_POINTER(aDefaultView);
   *aDefaultView = nsnull;
 
-  nsIPresShell *shell = NS_STATIC_CAST(nsIPresShell *,
-                                       mPresShells.SafeElementAt(0));
+  nsCOMPtr<nsIPresShell> shell = NS_STATIC_CAST(nsIPresShell *,
+                                                mPresShells.SafeElementAt(0));
   NS_ENSURE_TRUE(shell, NS_OK);
 
   nsCOMPtr<nsIPresContext> ctx;
@@ -3369,7 +3377,8 @@ NS_IMETHODIMP
 nsXULDocument::SetTitle(const nsAString& aTitle)
 {
     for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
-        nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+        nsCOMPtr<nsIPresShell> shell =
+            NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
 
         nsCOMPtr<nsIPresContext> context;
         nsresult rv = shell->GetPresContext(getter_AddRefs(context));

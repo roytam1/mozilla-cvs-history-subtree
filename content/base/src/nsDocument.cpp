@@ -749,7 +749,8 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
     PRInt32 pscount = mPresShells.Count();
     PRInt32 psindex;
     for (psindex = 0; psindex < pscount; psindex++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(psindex);
+      nsCOMPtr<nsIPresShell> shell =
+        (nsIPresShell*)mPresShells.ElementAt(psindex);
       nsCOMPtr<nsIStyleSet> set;
       if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
         if (set) {
@@ -1318,7 +1319,7 @@ void nsDocument::AddStyleSheetToStyleSets(nsIStyleSheet* aSheet)
   PRInt32 count = mPresShells.Count();
   PRInt32 indx;
   for (indx = 0; indx < count; indx++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+    nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1358,7 +1359,7 @@ void nsDocument::RemoveStyleSheetFromStyleSets(nsIStyleSheet* aSheet)
   PRInt32 count = mPresShells.Count();
   PRInt32 indx;
   for (indx = 0; indx < count; indx++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+    nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1483,7 +1484,8 @@ nsDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool aNo
   if (enabled) {
     count = mPresShells.Count();
     for (indx = 0; indx < count; indx++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+      nsCOMPtr<nsIPresShell> shell =
+        (nsIPresShell*)mPresShells.ElementAt(indx);
       nsCOMPtr<nsIStyleSet> set;
       shell->GetStyleSet(getter_AddRefs(set));
       if (set) {
@@ -1515,7 +1517,8 @@ void nsDocument::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
   if (-1 != indx) {
     count = mPresShells.Count();
     for (indx = 0; indx < count; indx++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
+      nsCOMPtr<nsIPresShell> shell =
+        (nsIPresShell*)mPresShells.ElementAt(indx);
       nsCOMPtr<nsIStyleSet> set;
       if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
         if (set) {
@@ -1577,8 +1580,9 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
     // PresShell owns us -- it's tidy.)
     PRInt32 count;
     for (count = mPresShells.Count() - 1; count >= 0; --count) {
-      nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[count]);
-      if (! shell)
+      nsCOMPtr<nsIPresShell> shell =
+        NS_STATIC_CAST(nsIPresShell*, mPresShells[count]);
+      if (!shell)
         continue;
 
       shell->ReleaseAnonymousContent();
@@ -2578,8 +2582,8 @@ nsDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)
   *aDefaultView = nsnull;
 
   NS_ENSURE_TRUE(mPresShells.Count() != 0, NS_OK);
-  nsIPresShell *shell = NS_STATIC_CAST(nsIPresShell *,
-                                       mPresShells.ElementAt(0));
+  nsCOMPtr<nsIPresShell> shell = NS_STATIC_CAST(nsIPresShell *,
+                                                mPresShells.ElementAt(0));
   NS_ENSURE_TRUE(shell, NS_OK);
 
   nsCOMPtr<nsIPresContext> ctx;
@@ -2630,7 +2634,8 @@ NS_IMETHODIMP
 nsDocument::SetTitle(const nsAString& aTitle)
 {
   for (PRInt32 i = mPresShells.Count() - 1; i >= 0; --i) {
-    nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+    nsCOMPtr<nsIPresShell> shell =
+      NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
 
     nsCOMPtr<nsIPresContext> context;
     nsresult rv = shell->GetPresContext(getter_AddRefs(context));
@@ -2778,7 +2783,7 @@ NS_IMETHODIMP
 nsDocument::GetDir(nsAString& aDirection)
 {
 #ifdef IBMBIDI
-  nsIPresShell* shell = (nsIPresShell*) mPresShells.SafeElementAt(0);
+  nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.SafeElementAt(0);
   if (shell) {
     nsCOMPtr<nsIPresContext> context;
     shell->GetPresContext(getter_AddRefs(context) );
@@ -2809,7 +2814,7 @@ nsDocument::SetDir(const nsAString& aDirection)
 {
 #ifdef IBMBIDI
   if (mPresShells.Count() != 0) {
-    nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(0);
+    nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.ElementAt(0);
     if (shell) {
       nsCOMPtr<nsIPresContext> context;
       shell->GetPresContext(getter_AddRefs(context) );
@@ -3464,7 +3469,9 @@ nsDocument::FlushPendingNotifications(PRBool aFlushReflows,
     PRInt32 i, count = mPresShells.Count();
 
     for (i = 0; i < count; i++) {
-      nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+      nsCOMPtr<nsIPresShell> shell =
+        NS_STATIC_CAST(nsIPresShell*, mPresShells[i]);
+
       if (shell) {
         shell->FlushPendingNotifications(aUpdateViews);
       }
