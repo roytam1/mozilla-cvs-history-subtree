@@ -63,8 +63,8 @@ public:
   nsIFrame* GetChildBefore(nsIFrame* aParent, nsIFrame* aChild);
   PRInt32 GetCount(nsIFrame* aFrame);
 
-  static PRBool ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext);
-  static void GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent);
+  static PRBool IsSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2);
+  void GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent);
 
   nsCOMPtr<nsIPresContext> mPresContext;
   nsCOMPtr<nsIAccessible> mAccessible;
@@ -108,14 +108,10 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
   // get next sibling
   nsIFrame* next = nsnull;
   aFrame->GetNextSibling(&next);
-  nsIAtom* list = nsnull;
-  mOwner->GetListAtomForFrame(aFrame, list);
 
-  
   // skip any frames with the same content node
-  while(ShouldSkip(mPresContext, list, aFrame, next)) 
+  while(IsSameContent(aFrame,next)) 
     next->GetNextSibling(&next);
-  
 
   // if failed
   if (!next)
@@ -141,11 +137,7 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
       return nsnull;
     } else {
       // next on parent
-      nsIFrame* n = GetNextSibling(parent);
-      if (ShouldSkip(mPresContext, list, aFrame, n))
-        return GetNextSibling(n);
-      else 
-        return n;
+      return GetNextSibling(parent);
     }
   }
 
@@ -163,19 +155,11 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
   nsIFrame* first = GetFirstChild(next);
 
   // if found
-  if (first) {
-    if (ShouldSkip(mPresContext, list, aFrame, first))
-      return GetNextSibling(first);
-    else 
-      return first;
-  }
+  if (first)
+    return first;
 
   // call next on next
-  nsIFrame* n =  GetNextSibling(next);
-  if (ShouldSkip(mPresContext, list, aFrame, next))
-    return GetNextSibling(n);
-  else 
-    return n;
+  return GetNextSibling(next);
 }
 
 nsIFrame* nsFrameTreeWalker::GetFirstChild(nsIFrame* aFrame)
@@ -214,10 +198,7 @@ nsIFrame* nsFrameTreeWalker::GetFirstChild(nsIFrame* aFrame)
     child->GetNextSibling(&next);
 
     // skip children with duplicate content nodes
-    nsIAtom* list = nsnull;
-    mOwner->GetListAtomForFrame(child, list);
-
-    while(ShouldSkip(mPresContext, list, child, next)) 
+    while(IsSameContent(child,next)) 
       next->GetNextSibling(&next);
 
     child = next;
@@ -331,27 +312,19 @@ void nsFrameTreeWalker::GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>&
  //   printf("Found accessible!\n");
 }
 
-PRBool nsFrameTreeWalker::ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext)
+PRBool nsFrameTreeWalker::IsSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2)
 {
-  if (!aStart || !aNext)
+  if (!aFrame1 || !aFrame2)
     return PR_FALSE;
 
-  // is content the same? If so skip it
   nsCOMPtr<nsIContent> content1;
   nsCOMPtr<nsIContent> content2;
 
-  aStart->GetContent(getter_AddRefs(content1));
-  aNext->GetContent(getter_AddRefs(content2));
+  aFrame1->GetContent(getter_AddRefs(content1));
+  aFrame2->GetContent(getter_AddRefs(content2));
 
-  if (content1 == content2 && content1 != nsnull) {
-    // does it have childen? It it does then don't skip it
-    nsIFrame* child = nsnull;
-    aNext->FirstChild(aContext, aList, &child);
-    if (child)
-      return PR_FALSE;
-
+  if (content1 == content2 && content1 != nsnull)
     return PR_TRUE;
-  }
   
   return PR_FALSE;
 }
@@ -1355,7 +1328,7 @@ nsAccessible::CalcOffset(nsIFrame* aFrame,
   nsRect r;
   start->GetRect(r);
   
-  while (nsFrameTreeWalker::ShouldSkip(context,nsnull, start, next))
+  while (nsFrameTreeWalker::IsSameContent(start, next))
   {
     nsRect r2;
     next->GetRect(r2);
