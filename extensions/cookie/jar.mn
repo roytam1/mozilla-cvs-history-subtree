@@ -11,6 +11,7 @@ comm.jar:
     content/cookie/p3pDialog.xul                   (resources/content/p3pDialog.xul)
     content/cookie/taskbar-cookie.gif              (resources/content/taskbar-cookie.gif) 
     content/cookie/status.jpg                      (resources/content/status.jpg) 
+    content/cookie/status-cookie.gif               (resources/content/status-cookie.gif) 
 
 en-US.jar:
     locale/en-US/cookie/contents.rdf               (resources/locale/en-US/contents.rdf)
