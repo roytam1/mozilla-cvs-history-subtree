@@ -215,11 +215,16 @@ JavaArray_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
                             )
 {
     JNIEnv *jEnv;
+    JSBool result;
+    JSErrorReporter old_reporter;
     jsj_MapJSContextToJSJThread(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
 
-    return access_java_array_element(cx, jEnv, obj, id, NULL, JS_FALSE);
+    old_reporter = JS_SetErrorReporter(cx, NULL);
+    result = access_java_array_element(cx, jEnv, obj, id, NULL, JS_FALSE);
+    JS_SetErrorReporter(cx, old_reporter);
+    return result;
 }
 
 static JSBool

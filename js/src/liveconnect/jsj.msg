@@ -36,7 +36,7 @@ MSG_DEF(JSJMSG_PROTO_GETCLASS,      21, 0, "getClass called on prototype object"
 MSG_DEF(JSJMSG_BAD_OP_JOBJECT,      22, 0, "illegal operation on JavaObject prototype object")
 MSG_DEF(JSJMSG_BAD_JOBJECT_EXPR,    23, 0, "invalid JavaObject property expression. "
 				                           "(methods and field properties of a JavaObject object can only be strings)")
-MSG_DEF(JSJMSG_NO_INSTANCE_NAME,    24, 2, "Java class {0} has no public instance field or method named \"{1}\"")
+MSG_DEF(JSJMSG_NO_INSTANCE_NAME,    24, 2, "Java class {0} has no public field or method named \"{1}\"")
 MSG_DEF(JSJMSG_NO_NAME_IN_CLASS,    25, 2, "No instance field named \"{0}\" in Java class {1}")
 MSG_DEF(JSJMSG_JOBJECT_PROP_DEFINE, 26, 0, "Cannot define a new property in a JavaObject")
 MSG_DEF(JSJMSG_JOBJECT_PROP_DELETE, 27, 0, "Properties of JavaObject objects may not be deleted")
@@ -58,3 +58,4 @@ MSG_DEF(JSJMSG_ABSTRACT_JCLASS,     41, 1, "Java class {0} is abstract and there
 MSG_DEF(JSJMSG_IS_INTERFACE,        42, 1, "{0} is a Java interface and therefore may not be instantiated")
 MSG_DEF(JSJMSG_NOT_PUBLIC,          43, 1, "Java class {0} is not public and therefore may not be instantiated")
 MSG_DEF(JSJMSG_NO_CONSTRUCTORS,     44, 1, "No public constructors defined for Java class {0}")
+MSG_DEF(JSJMSG_BAD_PROTO_ASSIGNMENT,45, 0, "Only objects can be assigned as the value of the __proto__ property")

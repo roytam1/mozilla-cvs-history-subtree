@@ -414,11 +414,11 @@ add_java_method_to_class_descriptor(JSContext *cx, JNIEnv *jEnv,
             member_descriptor = jsj_GetJavaStaticMemberDescriptor(cx, jEnv, class_descriptor, method_name_jstr);
         } else {
             member_descriptor = jsj_GetJavaMemberDescriptor(cx, jEnv, class_descriptor, method_name_jstr);
-            fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
-                                 JSFUN_BOUND_METHOD, NULL, member_descriptor->name);
-            member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
-            JS_AddRoot(cx, &member_descriptor->invoke_func_obj);
-        }
+	}
+        fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
+	                     JSFUN_BOUND_METHOD, NULL, member_descriptor->name);
+	member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
+	JS_AddRoot(cx, &member_descriptor->invoke_func_obj);
     }
     if (!member_descriptor)
         return JS_FALSE;
@@ -696,12 +696,10 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
         return NULL;
     }
  
-    if (!is_static) {
-	fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
-			     JSFUN_BOUND_METHOD, NULL, method_name);
-	member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
-	JS_AddRoot(cx, &member_descriptor->invoke_func_obj);
-    }
+    fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
+			 JSFUN_BOUND_METHOD, NULL, method_name);
+    member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
+    JS_AddRoot(cx, &member_descriptor->invoke_func_obj);
 
     /* THREADSAFETY */
     /* Add the new aliased member to the list of all members for the class */
