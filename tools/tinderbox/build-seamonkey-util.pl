@@ -746,9 +746,12 @@ sub run_all_tests {
 
 	# Mozilla java test
     if ($Settings::JavaTest and $test_result eq 'success') {
-	  print_log "binary = $binary\n";
-        $test_result = AliveTest("MozillaJavaTest", $build_dir,
-								 $binary, "http://java.sun.com", 45);
+
+	  # Workaround for rh7.1 & jvm < 1.3.0:
+	  $ENV{LD_ASSUME_KERNEL} = "2.2.5";
+
+	  $test_result = AliveTest("MozillaJavaTest", $build_dir,
+							   $binary, "http://java.sun.com", 45);
     }
 	
 
