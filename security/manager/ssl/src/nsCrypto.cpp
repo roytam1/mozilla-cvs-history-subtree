@@ -63,6 +63,7 @@
 extern "C" {
 #include "crmf.h"
 #include "crmfi.h"
+#include "pk11pqg.h"
 }
 #include "cmmf.h"
 #include "nssb64.h"
@@ -533,7 +534,7 @@ nsConvertToActualKeyGenParams(PRUint32 keyGenMech, char *params,
          returnParams = nsnull;
          break;
        }
-       rv = PQG_ParamGen(0, &pqgParams, &vfy);
+       rv = PK11_PQG_ParamGen(0, &pqgParams, &vfy);
        if (vfy) {
          PQG_DestroyVerify(vfy);
        }
@@ -1770,12 +1771,7 @@ nsCertAlreadyExists(SECItem *derCert)
   if (!arena)
     return PR_FALSE; //What else could we return?
 
-  SECItem key;
-  SECStatus srv = CERT_KeyFromDERCert(arena, derCert, &key);
-  if (srv != SECSuccess)
-    return PR_FALSE;
-
-  cert = CERT_FindCertByKey(handle, &key);
+  cert = CERT_FindCertByDERCert(handle, derCert);
   if (cert) {
     if (cert->isperm && !cert->nickname && !cert->emailAddr) {
       //If the cert doesn't have a nickname or email addr, it is
@@ -1898,9 +1894,8 @@ nsCrypto::ImportUserCertificates(const nsAReadableString& aNickname,
     // Let's figure out which nickname to give the cert.  If 
     // a certificate with the same subject name already exists,
     // then just use that one, otherwise, get the default nickname.
-    if (currCert->subjectList && currCert->subjectList->entry &&
-      currCert->subjectList->entry->nickname) {
-      localNick = currCert->subjectList->entry->nickname;
+    if (currCert->nickname) {
+      localNick = currCert->nickname;
     } else if (nickname == nsnull || nickname[0] == '\0') {
       localNick = default_nickname(currCert, ctx);
       freeLocalNickname = PR_TRUE;
