@@ -821,7 +821,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     PR_END_MACRO
 
     old_cx = JSJ_SetDefaultJSContextForJavaThread(cx, jsj_env);
-    if (old_cx) {
+    if (old_cx && old_cx != cx) {
         JS_ReportError(cx, "Java thread in simultaneous use by more than "
                            "one JSContext ?");
     }
@@ -1043,7 +1043,7 @@ invoke_java_constructor(JSContext *cx,
     }
 
     old_cx = JSJ_SetDefaultJSContextForJavaThread(cx, jsj_env);
-    if (old_cx) {
+    if (old_cx && old_cx != cx) {
         JS_ReportError(cx, "Java thread in simultaneous use by more than "
                            "one JSContext ?");
     }
