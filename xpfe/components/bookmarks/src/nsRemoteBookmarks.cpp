@@ -1513,8 +1513,22 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         return(NS_ERROR_FAILURE);
       }
     }
+
     // success, update the internal graph
-    rv = mInner->Change(mNode, mProperty, mOldTarget, mNewTarget);
+
+    nsCOMPtr<nsIRDFResource> rdfRes;
+    nsCOMPtr<nsIRDFNode> rdfNode;
+    rv = mInner->GetTarget(mNode, kNC_LDAPURL, PR_TRUE, getter_AddRefs(rdfNode));
+    if (NS_SUCCEEDED(rv) && (rv != NS_RDF_NO_VALUE))
+    {
+      rdfRes = do_QueryInterface(rdfNode);
+    }
+    if (!rdfRes)
+    {
+      rdfRes = mNode;
+    }
+
+    rv = mInner->Change(rdfRes, mProperty, mOldTarget, mNewTarget);
     NS_ENSURE_SUCCESS(rv, rv);
     }
     break;
@@ -1617,6 +1631,10 @@ nsRemoteBookmarks::doLDAPRebind()
   {
     rv = mContainer->GetResource(getter_AddRefs(containerRes));
     NS_ENSURE_SUCCESS(rv, rv);
+  }
+  else
+  {
+    containerRes = mNode;
   }
 
   nsAutoString bindDN, password;
@@ -1746,12 +1764,12 @@ nsRemoteBookmarks::doAuthentication(nsIRDFResource *aSource,
                                     nsString &aBindDN,
                                     nsString &aPassword)
 {
-  if (!aSource)
-    return(NS_ERROR_NULL_POINTER);
-
   // XXX hack until nsUTF8AutoString exists
   #define nsUTF8AutoString nsCAutoString
           nsUTF8AutoString spec;
+
+  if (!aSource)
+    return(NS_ERROR_NULL_POINTER);
 
   nsresult rv;
   nsCOMPtr<nsILDAPURL> ldapURL;
@@ -1759,7 +1777,20 @@ nsRemoteBookmarks::doAuthentication(nsIRDFResource *aSource,
   NS_ENSURE_SUCCESS(rv, rv);
 
   const char *srcURI = nsnull;
-  aSource->GetValueConst(&srcURI);
+  nsCOMPtr<nsIRDFNode> rdfNode;
+  rv = mInner->GetTarget(aSource, kNC_LDAPURL, PR_TRUE, getter_AddRefs(rdfNode));
+  if (NS_SUCCEEDED(rv) && (rv != NS_RDF_NO_VALUE))
+  {
+    nsCOMPtr<nsIRDFResource> rdfRes = do_QueryInterface(rdfNode);
+    if (rdfRes)
+    {
+      rdfRes->GetValueConst(&srcURI);
+    }
+  }
+  if (!srcURI)
+  {
+    aSource->GetValueConst(&srcURI);
+  }
   if (!srcURI)
     return(NS_ERROR_NULL_POINTER);
 
