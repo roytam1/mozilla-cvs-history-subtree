@@ -43,9 +43,7 @@ sub new
 {
   my $class = shift;
   my $self = {};
-  my $ref;
 
-  $ref = ref($_[$[]);
   if (ref $_[$[] eq "HASH")
     {
       my $hash;
@@ -108,7 +106,7 @@ sub init
 
   if ($self->{"certdb"} ne "")
     {
-      $ret = ldapssl_client_init($self->{"certdb"}, "");
+      $ret = ldapssl_client_init($self->{"certdb"}, 0);
       return 0 if ($ret < 0);
 
       $ld = ldapssl_init($self->{"host"}, $self->{"port"}, 1);
@@ -117,24 +115,12 @@ sub init
     {
       $ld = ldap_init($self->{"host"}, $self->{"port"});
     }
-  if (!$ld)
-    {
-      perror("ldap_init");
-
-      return 0;
-    }
+  return 0 unless $ld;
 
   $self->{"ld"} = $ld;
   $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
-  if ($ret)
-    {
-      ldap_perror($ld, "Authentication failed");
-
-      return 0;
-    }
-
-  return 1;
+  return ($ret == LDAP_SUCCESS);
 }
 
 
@@ -342,10 +328,19 @@ sub close
 #
 sub delete
 {
-  my ($self, $dn) = @_;
+  my ($self, $id) = @_;
   my $ret = 1;
+  my $dn = $id;
 
-  $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
+  if ($id eq "Mozilla::LDAP::Entry")
+    {
+      $dn = $id->getDN();
+    }
+  else
+    {
+      $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
+    }
+
   $dn = Mozilla::LDAP::Utils::normalizeDN($dn);
   $ret = ldap_delete_s($self->{"ld"}, $dn) if ($dn ne "");
 
