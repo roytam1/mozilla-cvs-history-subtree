@@ -4,14 +4,15 @@
  * This file was automatically generated from bcIJavaSample.idl.
  */
 
-import org.mozilla.xpcom.*;
+
+package org.mozilla.xpcom;
+
 
 /**
  * Interface bcIJavaSample
  *
  * IID: 0xca1e2656-1dd1-11b2-9c4e-f49ea557abde
  */
-
 
 public interface bcIJavaSample extends nsISupports
 {

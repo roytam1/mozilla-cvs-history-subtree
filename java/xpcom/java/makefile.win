@@ -28,6 +28,7 @@ DIRS=   \
 	src \
 	classes \
 	test \
+	xpidl \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
