@@ -380,6 +380,7 @@ nsXmlRpcClient.prototype = {
                     'nsISupportsArray');
 
             case this.STRUCT:
+                uuid.value = Components.interfaces.nsIDictionary
                 return createInstance('@mozilla.org/dictionary;1', 
                     'nsIDictionary');
 
