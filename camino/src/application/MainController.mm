@@ -49,6 +49,7 @@
 #import "KeychainService.h"
 #import "RemoteDataProvider.h"
 #import "ProgressDlgController.h"
+#import "JSConsole.h"
 
 #include "nsCOMPtr.h"
 #include "nsEmbedAPI.h"
@@ -176,7 +177,12 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   mOffline = offline;
     
   // Initialize the keychain service.
-  mKeychainService = [KeychainService instance];  
+  mKeychainService = [KeychainService instance];
+  
+  // bring up the JS console service
+  BOOL success;
+  if ([[PreferenceManager sharedInstance] getBooleanPref:"chimera.log_js_to_console" withSuccess:&success])
+    [JSConsole sharedJSConsole];
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender

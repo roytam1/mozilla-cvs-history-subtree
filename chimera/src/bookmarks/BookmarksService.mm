@@ -1465,7 +1465,7 @@ static BookmarksManager* gBookmarksManager = nil;
 - (void)loadProxyImageFor:(id)requestor withURI:(NSString*)inURIString
 {	
   NSString* faviconURL = [SiteIconProvider faviconLocationStringFromURI:inURIString];
-
+  
   // to avoid redundant loads, we keep a hash table which maps favicons urls
   // to NSDictionaries, which in turn contain a state flag, and an array of
   // UI items that use that url for their favicon.

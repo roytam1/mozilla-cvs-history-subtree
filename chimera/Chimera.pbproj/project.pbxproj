@@ -551,6 +551,7 @@
 				F5B34B05034A50C901A80166,
 				F529788E0371820B01026DCE,
 				F53D36BE037843C201A80166,
+				F58DB2D40381FD3301A9666E,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -690,6 +691,7 @@
 				F5B34B15034A605401A80166,
 				F529788F0371820B01026DCE,
 				F5B63094037A41E301A80166,
+				F58DB2D50381FD3301A9666E,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1569,6 +1571,7 @@
 				F5AE04BA0206A4FE01A967DF,
 				F52D5CD8027D3D5001A80166,
 				F5D33CBD02EF61A901A967F3,
+				F58DB2D30381FD3301A9666E,
 			);
 			isa = PBXGroup;
 			name = Application;
@@ -2313,6 +2316,7 @@
 				F5BF71450231B8BC010001CA,
 				F53C1CD6032FF3B301A96654,
 				F53D36BD037843C201A80166,
+				F58DB2D20381FD3301A9666E,
 			);
 			isa = PBXGroup;
 			name = Headers;
@@ -5639,6 +5643,42 @@
 			name = Nibs;
 			refType = 4;
 		};
+		F58DB2D20381FD3301A9666E = {
+			isa = PBXFileReference;
+			name = JSConsole.h;
+			path = src/application/JSConsole.h;
+			refType = 2;
+		};
+		F58DB2D30381FD3301A9666E = {
+			isa = PBXFileReference;
+			name = JSConsole.mm;
+			path = src/application/JSConsole.mm;
+			refType = 2;
+		};
+		F58DB2D40381FD3301A9666E = {
+			fileRef = F58DB2D20381FD3301A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F58DB2D50381FD3301A9666E = {
+			fileRef = F58DB2D30381FD3301A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F58DB2D60381FD3301A9666E = {
+			fileRef = F58DB2D20381FD3301A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F58DB2D70381FD3301A9666E = {
+			fileRef = F58DB2D30381FD3301A9666E;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F59236C002C89AC90100012B = {
 			isa = PBXFileReference;
 			name = AppDirServiceProvider.cpp;
@@ -6897,6 +6937,7 @@
 				F5B34B06034A50C901A80166,
 				F529788C0371820B01026DCE,
 				F5B63092037A3AAC01A80166,
+				F58DB2D60381FD3301A9666E,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7048,6 +7089,7 @@
 				F5A30033034B8B1A01A96660,
 				F529788D0371820B01026DCE,
 				F5B63090037A3A7501A80166,
+				F58DB2D70381FD3301A9666E,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
