@@ -125,6 +125,8 @@ NS_IMETHODIMP nsJPEGDecoder::Init(nsIImageRequest *aRequest)
   /* Now we can initialize the JPEG decompression object. */
   jpeg_create_decompress(&mInfo);
 
+
+  /* Step 2: specify data source (eg, a file) */
   decoder_source_mgr *src;
 
   if (mInfo.src == NULL) {
@@ -194,24 +196,11 @@ NS_IMETHODIMP nsJPEGDecoder::Close()
   // XXX progressive? ;)
 //  OutputScanlines(mInfo.output_height);
 
-  /* Step 7: Finish decompression */
-
-  (void) jpeg_finish_decompress(&mInfo);
-  /* We can ignore the return value since suspension is not possible
-   * with the stdio data source.
-   */
-
 
   /* Step 8: Release JPEG decompression object */
 
   /* This is an important step since it will release a good deal of memory. */
   jpeg_destroy_decompress(&mInfo);
-
-
-
-
-  printf("nsJPEGDecoder::Close()\n");
-
 
   return NS_OK;
 }
@@ -243,14 +232,13 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
   }
   
   
-  /* Step 2: specify data source (eg, a file) */
 
 
-   /* Register new buffer contents with data source manager. */
+  /* Register new buffer contents with data source manager. */
 
   decoder_source_mgr *src = NS_REINTERPRET_CAST(decoder_source_mgr *, mInfo.src);
 
-
+  int status;
   switch (mState) {
   case JPEG_HEADER:
     /* Step 3: read file parameters with jpeg_read_header() */
@@ -324,7 +312,6 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
     mState = JPEG_DECOMPRESS_PROGRESSIVE;
 
   case JPEG_DECOMPRESS_PROGRESSIVE:
-    int status;
     do {
       status = jpeg_consume_input(&mInfo);
     } while (!((status == JPEG_SUSPENDED) ||
@@ -337,12 +324,23 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
     }
 
   case JPEG_FINAL_PROGRESSIVE_SCAN_OUTPUT:
-    mState = JPEG_DONE;
-
-  case JPEG_DONE:
     jpeg_start_output(&mInfo, mInfo.input_scan_number);
     OutputScanlines(-1);
     jpeg_finish_output(&mInfo);
+    mState = JPEG_DONE;
+
+  case JPEG_DONE:
+    /* Step 7: Finish decompression */
+
+    if (jpeg_finish_decompress(&mInfo) == FALSE)
+      return NS_OK;
+
+    mState = JPEG_SINK_NON_JPEG_TRAILER;
+
+    /* we're done dude */
+    break;
+
+  case JPEG_SINK_NON_JPEG_TRAILER:
     break;
   }
 
