@@ -1134,7 +1134,7 @@ HandleRemoteArgument(const char* remote)
     // did the command fail?
     if (NS_FAILED(rv)) {
       PR_fprintf(PR_STDERR, "Error: Failed to send command: %s\n",
-                 response ? response : "No response included");
+                 response ? response.get() : "No response included");
       return 1;
     }
 
