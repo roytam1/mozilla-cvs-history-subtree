@@ -217,17 +217,17 @@ NS_IMETHODIMP TimerThread::Run()
         }
 #endif
 
-        // We are going to let the call to Fire here handle the release of the
+        // We are going to let the call to PostTimerEvent here handle the release of the
         // timer so that we don't end up releasing the timer on the TimerThread
         // instead of on the thread it targets.
-        timer->Fire();
+        timer->PostTimerEvent();
         timer = nsnull;
 
         lock.lock();
         if (mShutdown)
           break;
 
-        // Update now, as Fire plus the locking may have taken a tick or two,
+        // Update now, as PostTimerEvent plus the locking may have taken a tick or two,
         // and we may goto next below.
         now = PR_IntervalNow();
       }
