@@ -25,6 +25,12 @@ dnl AC_CONFIG_HEADER(include/config.h nsprpub/include/config.h)
 AC_CONFIG_AUX_DIR(${srcdir}/build/autoconf)
 AC_CANONICAL_SYSTEM
 
+d=`pwd`
+if [ test "${srcdir}" = "${d}" || test "${srcdir}" = "." ]; then
+    AC_ERROR(Building in the srcdir is not supported! Please build from a separate objdir.)
+fi
+unset d
+
 dnl Set the version number of the libjpeg included with mozilla
 dnl ========================================================
 dnl MOZJPEG=60
