@@ -791,12 +791,18 @@ time_t icalcomponent_convert_time(icalproperty *p)
 	maybe it can be changed to something better? */
 	
 	{
-		struct tm *tmp_tm;
+#ifdef __sgi
+        tzset();
+        offset = daylight ? altzone : timezone;
+#else
+
+   	    struct tm *tmp_tm;
 		time_t t;
 
 		t = time(NULL);
 	 	offset = localtime(&t)->tm_gmtoff;
-	}
+#endif
+    }
 
 	convt += offset;
 
