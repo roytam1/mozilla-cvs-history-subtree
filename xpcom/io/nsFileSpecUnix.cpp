@@ -200,7 +200,6 @@ static int CrudeFileCopy(const char* in, const char* out)
 	ifp = fopen (in, "r");
 	if (!ifp) 
 	{
-		unlink(in);
 		return -1;
 	}
 
@@ -208,7 +207,6 @@ static int CrudeFileCopy(const char* in, const char* out)
 	if (!ofp)
 	{
 		fclose (ifp);
-		unlink(in);
 		return -1;
 	}
 
@@ -220,7 +218,6 @@ static int CrudeFileCopy(const char* in, const char* out)
 			{
 				fclose (ofp);
 				fclose (ifp);
-				unlink(in);
 				unlink(out);
 				return -1;
 			}
@@ -229,7 +226,6 @@ static int CrudeFileCopy(const char* in, const char* out)
 	}
 	fclose (ofp);
 	fclose (ifp);
-	unlink(in);
 
 	if (stat_result == 0)
 		{
@@ -250,7 +246,7 @@ nsresult nsFileSpec::Copy(const nsFileSpec& inParentDirectory) const
     {
         char *leafname = GetLeafName();
         char* destPath = nsFileSpecHelpers::StringDup(inParentDirectory,  ( strlen(inParentDirectory) + 1 + strlen(leafname) ) );
-        strcat(destPath, "\\");
+        strcat(destPath, "/");
         strcat(destPath, leafname);
         delete [] leafname;
 
@@ -275,12 +271,16 @@ nsresult nsFileSpec::Move(const nsFileSpec& inNewParentDirectory) const
             = nsFileSpecHelpers::StringDup(
                 inNewParentDirectory,
                 strlen(inNewParentDirectory) + 1 + strlen(leafname));
-        strcat(destPath, "\\");
+        strcat(destPath, "/");
         strcat(destPath, leafname);
         delete [] leafname;
 
         result = NS_FILE_RESULT(CrudeFileCopy(*this, destPath));
-        delete [] destPath;
+        if (result == NS_OK)
+	{
+		Delete(PR_FALSE);
+	}
+	delete [] destPath;
     }
     return result;
 } 
