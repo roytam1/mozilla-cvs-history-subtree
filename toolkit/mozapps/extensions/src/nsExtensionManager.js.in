@@ -1790,9 +1790,8 @@ nsExtensionManager.prototype = {
                        .getService(nsIPromptService);
     var flags = (nsIPromptService.BUTTON_TITLE_IS_STRING * nsIPromptService.BUTTON_POS_0) +
                 (nsIPromptService.BUTTON_TITLE_IS_STRING * nsIPromptService.BUTTON_POS_1);
-    var rv = { };
-    ps.confirmEx(win, title, message, flags, quitButton, dontQuitButton, null, null, { }, rv);
-    return rv.value == 0;
+    var rv = ps.confirmEx(win, title, message, flags, quitButton, dontQuitButton, null, null, { });
+    return rv == 1;
   },
   
   // This function checks for and disables any "old-style" extensions 
