@@ -60,6 +60,10 @@ LIBS		+= \
 		$(NSPR_LIBS) \
 		$(NULL)
 
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
+
 # needed for mac linux
 ifeq ($(OS_ARCH),Linux)
 ifneq ($(OS_RELEASE),1.2)

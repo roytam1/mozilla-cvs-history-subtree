@@ -105,9 +105,9 @@
 /**
  *  XP_WIN
  */
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
 #define WM_DNS_SHUTDOWN         (WM_USER + 200)
-static char *windowClass = "Mozilla:DNSWindowClass";
+static TCHAR *windowClass = _T("Mozilla:DNSWindowClass");
 #endif /* XP_WIN */
 
 
@@ -277,7 +277,7 @@ private:
 #endif
 
 
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     void                DoSyncLookup();
     PRStatus            DoSyncLookupInternal();
 #endif
@@ -719,7 +719,7 @@ nsDNSLookup::InitiateLookup()
     PR_REMOVE_AND_INIT_LINK(this);
     return NS_ERROR_UNEXPECTED;
     
-#elif defined(XP_WIN)
+#elif defined(XP_WIN) && !defined(WINCE)
 
     mMsgID = nsDNSService::gService->AllocMsgID();
     if (mMsgID == 0)  return NS_ERROR_UNEXPECTED;
@@ -742,7 +742,7 @@ nsDNSLookup::InitiateLookup()
     }
     return NS_OK;
     
-#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
 
     // Add to pending lookup queue
     nsDNSService::gService->EnqueuePendingQ(this);
@@ -832,7 +832,7 @@ nsDNSLookup::IsExpired()
 }
 
 
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
 
 
 PRStatus
@@ -863,13 +863,13 @@ nsDNSLookup::DoSyncLookup()
     PRStatus status = DoSyncLookupInternal();
     
     if (PR_SUCCESS != status) {
-        if (nsDNSService::Reset());
+        if (nsDNSService::Reset())
             status = DoSyncLookupInternal();
     }
     MarkComplete(PR_SUCCESS == status ? NS_OK : NS_ERROR_UNKNOWN_HOST);
 }
 
-#endif /* XP_UNIX || XP_BEOS || XP_OS2*/
+#endif /* XP_UNIX || XP_BEOS || XP_OS2 || WINCE */
 
 
 /******************************************************************************
@@ -1005,7 +1005,7 @@ nsDNSService::Init()
     mDNSServiceLock = PR_NewLock();
     if (mDNSServiceLock == nsnull)  return NS_ERROR_OUT_OF_MEMORY;
 
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     mDNSCondVar = PR_NewCondVar(mDNSServiceLock);
     if (!mDNSCondVar) {
         rv = NS_ERROR_OUT_OF_MEMORY;
@@ -1043,7 +1043,7 @@ nsDNSService::Init()
 #endif
 error_exit:
 
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     if (mDNSCondVar)  PR_DestroyCondVar(mDNSCondVar);
     mDNSCondVar = nsnull;
 #endif
@@ -1103,7 +1103,7 @@ nsDNSService::~nsDNSService()
     NS_ASSERTION(PR_CLIST_IS_EMPTY(&mPendingQ),  "didn't clean up lookups");
     NS_ASSERTION(PR_CLIST_IS_EMPTY(&mEvictionQ), "didn't clean up lookups");
 
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     NS_ASSERTION(mDNSCondVar == nsnull, "DNS condition variable not destroyed");
 #endif
 
@@ -1123,7 +1123,7 @@ nsDNSService::~nsDNSService()
 #endif
     CRTFREEIF(mMyIPAddress);
 
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
     UnregisterClass(windowClass, (HINSTANCE) NULL);
 #endif
 }
@@ -1362,7 +1362,7 @@ nsDNSService::Run()
 }
 
 
-#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
 
 NS_IMETHODIMP
 nsDNSService::Run()
@@ -1393,7 +1393,7 @@ nsDNSService::Run()
     return NS_OK;
 }
 
-#elif defined(XP_WIN)
+#elif defined(XP_WIN) && !defined(WINCE)
 
 NS_IMETHODIMP
 nsDNSService::Run()
@@ -1558,7 +1558,7 @@ nsDNSService::EnqueuePendingQ(nsDNSLookup * lookup)
 {
     PR_APPEND_LINK(lookup, &mPendingQ);
 
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     // Notify the worker thread that a request has been queued.
     PRStatus  status = PR_NotifyCondVar(mDNSCondVar);
     NS_ASSERTION(status == PR_SUCCESS, "PR_NotifyCondVar failed.");
@@ -1569,7 +1569,7 @@ nsDNSService::EnqueuePendingQ(nsDNSLookup * lookup)
 nsDNSLookup *
 nsDNSService::DequeuePendingQ()
 {
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     // Wait for notification of a queued request, unless  we're shutting down.
     while (PR_CLIST_IS_EMPTY(&mPendingQ) && (mState != DNS_SHUTTING_DOWN)) {
         PRStatus  status = PR_WaitCondVar(mDNSCondVar, PR_INTERVAL_NO_TIMEOUT);
@@ -1827,12 +1827,12 @@ nsDNSService::ShutdownInternal()
     if (dnsServiceThread)
         PR_Mac_PostAsyncNotify(dnsServiceThread);
 
-#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#elif defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
 
     PRStatus status = PR_NotifyCondVar(mDNSCondVar);
     NS_ASSERTION(status == PR_SUCCESS, "unable to notify dns cond var");
 
-#elif defined(XP_WIN)
+#elif defined(XP_WIN) && !defined(WINCE)
 
     SendMessage(mDNSWindow, WM_DNS_SHUTDOWN, 0, 0);
     UnregisterClass(windowClass, NULL);
@@ -1866,7 +1866,7 @@ nsDNSService::ShutdownInternal()
     // and the thread holds onto the nsDNSService via its mRunnable
     mThread = nsnull;
 
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_WIN) || defined(XP_BEOS) || defined(XP_OS2) || defined(WINCE)
     PR_DestroyCondVar(mDNSCondVar);
     mDNSCondVar = nsnull;
 #endif
@@ -1930,7 +1930,7 @@ nsDnsServiceNotifierRoutine(void * contextPtr, OTEventCode code,
 /******************************************************************************
  *  XP_WIN methods
  *****************************************************************************/
-#if defined(XP_WIN)
+#if defined(XP_WIN) && !defined(WINCE)
 
 static LRESULT CALLBACK
 nsDNSEventProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

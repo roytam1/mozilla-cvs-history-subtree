@@ -58,8 +58,10 @@ typedef RASAUTODIALENTRYA RASAUTODIALENTRY, *LPRASAUTODIALENTRY;
 #endif  // WINVER
 
 // Loading the RAS DLL dynamically. 
+#if !defined(WINCE)
 typedef DWORD (WINAPI* tRASPHONEBOOKDLG)(LPTSTR,LPTSTR,LPRASPBDLG);
 typedef DWORD (WINAPI* tRASDIALDLG)(LPTSTR,LPTSTR,LPTSTR,LPRASDIALDLG);
+#endif /* WINCE */
 typedef DWORD (WINAPI* tRASENUMCONNECTIONS)(LPRASCONN,LPDWORD,LPDWORD);
 typedef DWORD (WINAPI* tRASENUMENTRIES)(LPTSTR,LPTSTR,LPRASENTRYNAME,LPDWORD,LPDWORD);
 typedef DWORD (WINAPI* tRASSETAUTODIALADDRESS)(LPCTSTR,DWORD,LPRASAUTODIALENTRY,DWORD,DWORD);
@@ -142,14 +144,18 @@ private:
     OSVERSIONINFO mOSVerInfo;
 
     // DLL instance handles.
+#if !defined(WINCE)
     static HINSTANCE mhRASdlg;
+#endif /* WINCE */
     static HINSTANCE mhRASapi32;
 
     // DLL function pointers.
+#if !defined(WINCE)
     static tRASPHONEBOOKDLG mpRasPhonebookDlg;
+    static tRASDIALDLG mpRasDialDlg;
+#endif /* WINCE */
     static tRASENUMCONNECTIONS	mpRasEnumConnections;
     static tRASENUMENTRIES mpRasEnumEntries;
-    static tRASDIALDLG mpRasDialDlg;
     static tRASSETAUTODIALADDRESS mpRasSetAutodialAddress;
     static tRASGETAUTODIALADDRESS mpRasGetAutodialAddress;
 

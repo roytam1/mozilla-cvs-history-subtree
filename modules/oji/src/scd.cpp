@@ -118,7 +118,7 @@ nsSymantecDebugManager::SetDebugAgentPassword(PRInt32 pwd)
 //               ("SetWindowLong returned %ld (err=%d)\n", err, GetLastError()));
         /* continue so that we try to wake up the DebugManager */
     }
-    sem = OpenSemaphore(SEMAPHORE_MODIFY_STATE, FALSE, "Netscape-Symantec Debugger");
+    sem = OpenSemaphore(SEMAPHORE_MODIFY_STATE, FALSE, _T("Netscape-Symantec Debugger"));
     if (sem) {
         ReleaseSemaphore(sem, 1, NULL);
         CloseHandle(sem);

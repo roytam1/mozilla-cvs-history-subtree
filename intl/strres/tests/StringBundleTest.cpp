@@ -41,7 +41,7 @@
 #include "nsIPersistentProperties2.h"
 #include "nsIStringBundle.h"
 #include "nsIEventQueueService.h"
-#include <iostream.h>
+#include <stdio.h>
 
 #include "nsIURL.h"
 #include "nsIServiceManager.h"
@@ -137,9 +137,7 @@ main(int argc, char *argv[])
 #if DEBUG_tao
   nsAutoString uaStr(uiLang); // testing only
   nsAutoString countryStr(country); // testing only
-  cout << "\n uaStr=" << ToNewCString(uaStr) 
-       << ", country=" << ToNewCString(countryStr) 
-       << "\n" << endl;
+  printf("\n uaStr=%s, country=%s\n", ToNewCString(uaStr), ToNewCString(countryStr));
 #endif
 
   nsIStringBundle* bundle = nsnull;
@@ -164,7 +162,7 @@ main(int argc, char *argv[])
   }
   v = ptrv;
   value = ToNewCString(v);
-  cout << "123=\"" << value << "\"" << endl;
+  printf("123=\"%s\"\n", value);
 
   // file
   nsString strfile;
@@ -177,7 +175,7 @@ main(int argc, char *argv[])
   }
   v = ptrv;
   value = ToNewCString(v);
-  cout << "file=\"" << value << "\"" << endl;
+  printf("file=\"%s\"\n", value);
 
   return 0;
 }

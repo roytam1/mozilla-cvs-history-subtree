@@ -44,18 +44,25 @@ CPPSRCS		= \
 		TestFileTransport.cpp \
 		TestProtocols.cpp \
 		TestHttp.cpp \
-		urltest.cpp \
 		TestFileInput2.cpp \
 		TestCallbacks.cpp \
 		TestDBMAccess.cpp \
 		TestMCTransport.cpp \
-		TestPageLoad.cpp \
 		TestPerf.cpp \
 		TestIDN.cpp \
 		TestURLParser.cpp \
 		TestStandardURL.cpp \
 		TestUpload.cpp \
 		$(NULL)
+
+#   WINCE has no iostream/fstream.
+#   Trivial conversion to stdio possible if required.
+ifneq ($(OS_TARGET),WINCE)
+CPPSRCS		+= \
+		urltest.cpp \
+		TestPageLoad.cpp \
+		$(NULL)
+endif # WINCE
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
@@ -73,6 +80,10 @@ LIBS		= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
+
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
 
 include $(topsrcdir)/config/rules.mk
 

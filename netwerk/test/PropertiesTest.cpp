@@ -49,7 +49,6 @@
 #include "nsIChannel.h"
 #include "nsIComponentManager.h"
 #include "nsIEnumerator.h"
-#include <iostream.h>  //BAD DOG -- no biscuit!
 #include "nsReadableUtils.h"
 
 #include "nsSpecialSystemDirectory.h"
@@ -120,7 +119,7 @@ main(int argc, char* argv[])
     }
     char* value = ToNewCString(v);
     if (value) {
-      cout << "\"" << i << "\"=\"" << value << "\"" << endl;
+      printf("\"%d\"=\"%s\"\n", i, value);
       delete[] value;
     }
     else {
@@ -142,8 +141,8 @@ main(int argc, char* argv[])
 	return 1;
   }
 
-  cout << endl << "Key" << "\t" << "Value" << endl;
-  cout <<		  "---" << "\t" << "-----" << endl;
+  printf("\nKey\tValue\n");
+  printf("---\t-----\n");
   while (NS_SUCCEEDED(ret))
   {
 	  nsIPropertyElement* propElem = nsnull;
@@ -173,7 +172,7 @@ main(int argc, char* argv[])
 	  char* keyCStr = ToNewCString(keyAdjustedLengthBuff);
 	  char* valCStr = ToNewCString(valAdjustedLengthBuff);
 	  if (keyCStr && valCStr) 
-		cout << keyCStr << "\t" << valCStr << endl;
+        printf("%s\t%s\n", keyCStr, valCStr);
 	  delete[] keyCStr;
 	  delete[] valCStr;
     delete[] pKey;

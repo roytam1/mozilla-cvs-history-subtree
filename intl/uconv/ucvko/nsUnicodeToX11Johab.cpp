@@ -52,7 +52,9 @@
 #include "nsUnicodeToX11Johab.h"
 #include "nsUCvKODll.h"
 
-
+#if defined(WINCE)
+#define byte _byte
+#endif /* WINCE */
 typedef char byte;
 
 // XPCOM stuff

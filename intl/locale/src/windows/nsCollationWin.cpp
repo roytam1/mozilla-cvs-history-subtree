@@ -80,10 +80,16 @@ nsresult nsCollationWin::Initialize(nsILocale* locale)
   OSVERSIONINFO os;
   os.dwOSVersionInfoSize = sizeof(os);
   ::GetVersionEx(&os);
+#if defined(WINCE)
+    if(VER_PLATFORM_WIN32_CE == os.dwPlatformId) {
+        mW_API = PR_TRUE;
+    }
+#else /* WINCE */
   if (VER_PLATFORM_WIN32_NT == os.dwPlatformId &&
       os.dwMajorVersion >= 4) {
     mW_API = PR_TRUE;
   }
+#endif /* WINCE */
   else {
     mW_API = PR_FALSE;
   }
@@ -157,6 +163,7 @@ nsresult nsCollationWin::GetSortKeyLen(const nsCollationStrength strength,
                            (LPCWSTR) PromiseFlatString(stringIn).get(),
                            (int) stringIn.Length(), NULL, 0);
   }
+#if !defined(WINCE)
   else {
     char *Cstr = nsnull;
     res = mCollation->UnicodeToChar(stringIn, &Cstr, mCharset);
@@ -165,6 +172,7 @@ nsresult nsCollationWin::GetSortKeyLen(const nsCollationStrength strength,
       PR_Free(Cstr);
     }
   }
+#endif /* WINCE */
 
   return res;
 }
@@ -186,6 +194,7 @@ nsresult nsCollationWin::CreateRawSortKey(const nsCollationStrength strength,
     byteLen = LCMapStringW(mLCID, LCMAP_SORTKEY, 
                           (LPCWSTR) stringNormalized.get(), (int) stringNormalized.Length(), (LPWSTR) key, *outLen);
   }
+#if !defined(WINCE)
   else {
     char *Cstr = nsnull;
     res = mCollation->UnicodeToChar(stringNormalized, &Cstr, mCharset);
@@ -194,6 +203,7 @@ nsresult nsCollationWin::CreateRawSortKey(const nsCollationStrength strength,
       PR_Free(Cstr);
     }
   }
+#endif /* WINCE */
   *outLen = (PRUint32) byteLen;
 
   return res;

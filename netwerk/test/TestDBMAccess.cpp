@@ -63,7 +63,11 @@ int writeDBM(int cycles)
     while (cycles--) {        
         // create database file
         myDB = dbopen(TMPDIR "foodb",
+#if !defined(WINCE)
                       O_RDWR | O_CREAT ,
+#else /* WINCE */
+                      PR_RDWR | PR_CREATE_FILE,
+#endif /* WINCE */
                       0600 ,
                       DB_HASH ,
                       &hash_info) ;

@@ -104,7 +104,7 @@ nsresult GetExtensionFromWindowsMimeDatabase(const char * aMimeType, nsCString& 
 
    mimeDatabaseKey += aMimeType;
    
-   LONG err = ::RegOpenKeyEx( HKEY_CLASSES_ROOT, mimeDatabaseKey.get(), 0, KEY_QUERY_VALUE, &hKey);
+   LONG err = ::RegOpenKeyExA( HKEY_CLASSES_ROOT, mimeDatabaseKey.get(), 0, KEY_QUERY_VALUE, &hKey);
    if (err == ERROR_SUCCESS)
    {
       LPBYTE pBytes = GetValueBytes( hKey, "Extension");
@@ -131,7 +131,7 @@ nsresult GetExtensionFrom4xRegistryInfo(const char * aMimeType, nsCString& aFile
    nsCAutoString command ("Software\\Netscape\\Netscape Navigator\\Suffixes");
    nsresult rv = NS_OK;
    HKEY hKey;
-   LONG err = ::RegOpenKeyEx( HKEY_CURRENT_USER, command.get(), 0, KEY_QUERY_VALUE, &hKey);
+   LONG err = ::RegOpenKeyExA( HKEY_CURRENT_USER, command.get(), 0, KEY_QUERY_VALUE, &hKey);
    if (err == ERROR_SUCCESS)
    {
       LPBYTE pBytes = GetValueBytes( hKey, aMimeType);
@@ -164,10 +164,10 @@ static BYTE * GetValueBytes( HKEY hKey, const char *pValueName, DWORD *pLen)
   DWORD bufSz;
   LPBYTE pBytes = NULL;
 
-  err = ::RegQueryValueEx( hKey, pValueName, NULL, NULL, NULL, &bufSz); 
+  err = ::RegQueryValueExA( hKey, pValueName, NULL, NULL, NULL, &bufSz); 
   if (err == ERROR_SUCCESS) {
     pBytes = new BYTE[bufSz];
-    err = ::RegQueryValueEx( hKey, pValueName, NULL, NULL, pBytes, &bufSz);
+    err = ::RegQueryValueExA( hKey, pValueName, NULL, NULL, pBytes, &bufSz);
     if (err != ERROR_SUCCESS) {
       delete [] pBytes;
       pBytes = NULL;
@@ -189,7 +189,7 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
   if (aProtocolScheme && *aProtocolScheme)
   {
      HKEY hKey;
-     LONG err = ::RegOpenKeyEx( HKEY_CLASSES_ROOT, aProtocolScheme, 0, KEY_QUERY_VALUE, &hKey);
+     LONG err = ::RegOpenKeyExA( HKEY_CLASSES_ROOT, aProtocolScheme, 0, KEY_QUERY_VALUE, &hKey);
      if (err == ERROR_SUCCESS)
      {
        *aHandlerExists = PR_TRUE;
@@ -220,9 +220,31 @@ NS_IMETHODIMP nsOSHelperAppService::LoadUrl(nsIURI * aURL)
     nsCAutoString urlSpec;
     aURL->GetAsciiSpec(urlSpec);
 
+#if !defined(WINCE)
     LONG r = (LONG) ::ShellExecute( NULL, "open", urlSpec.get(), NULL, NULL, SW_SHOWNORMAL);
     if (r < 32) 
       rv = NS_ERROR_FAILURE;
+#else /* WINCE */
+    SHELLEXECUTEINFO sei;
+
+    memset(&sei, 0, sizeof(sei));
+    sei.nShow = SW_SHOWNORMAL;
+    sei.cbSize = sizeof(sei);
+    sei.lpVerb = _T("open");
+
+    rv = NS_ERROR_FAILURE;
+
+    TCHAR wpath[MAX_PATH];
+    if(0 != a2w_buffer(urlSpec.get(), -1, wpath, sizeof(wpath) / sizeof(TCHAR)))
+    {
+        sei.lpFile = wpath;
+        
+        if(FALSE != ShellExecuteEx(&sei))
+        {
+            rv = NS_OK;
+        }
+    }
+#endif /* WINCE */
   }
 
   return rv;
@@ -263,7 +285,7 @@ static nsresult GetMIMEInfoFromRegistry( LPBYTE fileType, nsIMIMEInfo *pInfo )
 
     // Get registry key for the pointed-to "file type."
     HKEY fileTypeKey = 0;
-    LONG rc = ::RegOpenKeyEx( HKEY_CLASSES_ROOT, (const char *)fileType, 0, KEY_QUERY_VALUE, &fileTypeKey );
+    LONG rc = ::RegOpenKeyExA( HKEY_CLASSES_ROOT, (const char *)fileType, 0, KEY_QUERY_VALUE, &fileTypeKey );
     if ( rc == ERROR_SUCCESS )
     {
         // OK, the default value here is the description of the type.
@@ -312,7 +334,7 @@ NS_IMETHODIMP nsOSHelperAppService::GetFromExtension(const char *aFileExt, nsIMI
 
   // o.t. try to get an entry from the windows registry.
    HKEY hKey;
-   LONG err = ::RegOpenKeyEx( HKEY_CLASSES_ROOT, fileExtToUse.get(), 0, KEY_QUERY_VALUE, &hKey);
+   LONG err = ::RegOpenKeyExA( HKEY_CLASSES_ROOT, fileExtToUse.get(), 0, KEY_QUERY_VALUE, &hKey);
    if (err == ERROR_SUCCESS)
    {
       LPBYTE pBytes = GetValueBytes( hKey, "Content Type");

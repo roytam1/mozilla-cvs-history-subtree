@@ -198,6 +198,7 @@ double Stopwatch::GetCPUTime(){
 #elif defined(R__VMS)
    return(double)clock()/gTicks;
 #elif defined(WIN32)
+#if !defined(WINCE)
 
   OSVERSIONINFO OsVersionInfo;
 
@@ -245,6 +246,10 @@ double Stopwatch::GetCPUTime(){
   }
   else
       return GetRealTime();
+
+#else /* WINCE */
+    return GetRealTime();
+#endif /* WINCE */
 
 #endif
 }

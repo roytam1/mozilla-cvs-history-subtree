@@ -1262,7 +1262,11 @@ void pref_Alert(char* msg)
     fputs(msg, stderr);
 #endif
 #if defined(XP_WIN)
+#if defined(WINCE)
+      _MessageBoxA (NULL, msg, "Configuration Warning", MB_OK);
+#else /* WINCE */
       MessageBox (NULL, msg, "Configuration Warning", MB_OK);
+#endif /* WINCE */
 #elif defined(XP_OS2)
       WinMessageBox (HWND_DESKTOP, 0, msg, "Configuration Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
 #endif

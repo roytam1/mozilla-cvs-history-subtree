@@ -65,14 +65,16 @@ static PRLogModuleInfo* gLog = nsnull;
 #define NO_RETRY_PERIOD_SEC 5
 PRIntervalTime nsRASAutodial::mDontRetryUntil = 0;
 
-
+#if !defined(WINCE)
 tRASPHONEBOOKDLG nsRASAutodial::mpRasPhonebookDlg = nsnull;
+tRASDIALDLG nsRASAutodial::mpRasDialDlg = nsnull;
+HINSTANCE nsRASAutodial::mhRASdlg = nsnull;
+#endif /* WINCE */
+
 tRASENUMCONNECTIONS	nsRASAutodial::mpRasEnumConnections = nsnull;
 tRASENUMENTRIES nsRASAutodial::mpRasEnumEntries = nsnull;
-tRASDIALDLG nsRASAutodial::mpRasDialDlg = nsnull;
 tRASSETAUTODIALADDRESS nsRASAutodial::mpRasSetAutodialAddress = nsnull;
 tRASGETAUTODIALADDRESS nsRASAutodial::mpRasGetAutodialAddress = nsnull;
-HINSTANCE nsRASAutodial::mhRASdlg = nsnull;
 HINSTANCE nsRASAutodial::mhRASapi32 = nsnull;
 
 // ctor. 
@@ -124,24 +126,24 @@ nsresult nsRASAutodial::Init()
     // Don't need to load this DLL before now.
     if (!mhRASapi32)
     {
-        mhRASapi32 = ::LoadLibrary("rasapi32.dll");
+        mhRASapi32 = ::LoadLibrary(_T("rasapi32.dll"));
         if ((UINT)mhRASapi32 > 32)
         {
             // RasEnumConnections
             mpRasEnumConnections = (tRASENUMCONNECTIONS)
-             ::GetProcAddress(mhRASapi32, "RasEnumConnectionsA");
+             ::GetProcAddress(mhRASapi32, _T("RasEnumConnectionsA"));
 
             // RasEnumEntries
             mpRasEnumEntries = (tRASENUMENTRIES)
-             ::GetProcAddress(mhRASapi32, "RasEnumEntriesA");
+             ::GetProcAddress(mhRASapi32, _T("RasEnumEntriesA"));
 
             // RasSetAutodialAddress
             mpRasSetAutodialAddress = (tRASSETAUTODIALADDRESS)
-                ::GetProcAddress(mhRASapi32, "RasSetAutodialAddressA");
+                ::GetProcAddress(mhRASapi32, _T("RasSetAutodialAddressA"));
 
             // RasGetAutodialAddress
             mpRasGetAutodialAddress = (tRASGETAUTODIALADDRESS)
-             ::GetProcAddress(mhRASapi32, "RasGetAutodialAddressA");
+             ::GetProcAddress(mhRASapi32, _T("RasGetAutodialAddressA"));
         }
 
         if (!mhRASapi32 
@@ -200,7 +202,7 @@ int nsRASAutodial::QueryAutodialBehavior()
     HKEY hKey = 0;
     LONG result = ::RegOpenKeyEx(
                     HKEY_CURRENT_USER, 
-                    "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", 
+                    _T("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"), 
                     0, 
                     KEY_READ, 
                     &hKey);
@@ -216,7 +218,7 @@ int nsRASAutodial::QueryAutodialBehavior()
     DWORD onDemand = 0;
     DWORD paramSize = sizeof(DWORD);
 
-    result = ::RegQueryValueEx(hKey, "EnableAutodial", nsnull, &entryType, (LPBYTE)&autodial, &paramSize);
+    result = ::RegQueryValueEx(hKey, _T("EnableAutodial"), nsnull, &entryType, (LPBYTE)&autodial, &paramSize);
     if (result != ERROR_SUCCESS)
     {
         ::RegCloseKey(hKey);
@@ -224,7 +226,7 @@ int nsRASAutodial::QueryAutodialBehavior()
         return AUTODIAL_NEVER;
     }
 
-    result = ::RegQueryValueEx(hKey, "NoNetAutodial", nsnull, &entryType, (LPBYTE)&onDemand, &paramSize);
+    result = ::RegQueryValueEx(hKey, _T("NoNetAutodial"), nsnull, &entryType, (LPBYTE)&onDemand, &paramSize);
     if (result != ERROR_SUCCESS)
     {
         ::RegCloseKey(hKey);
@@ -297,19 +299,22 @@ nsresult nsRASAutodial::DialDefault(const char* hostName)
     // Do the dialing ourselves.
     else
     {
+#if defined(WINCE)
+        return NS_ERROR_FAILURE;
+#else /* WINCE */
         // Don't need to load the dll before this.
         if (!mhRASdlg)
         {
-            mhRASdlg = ::LoadLibrary("rasdlg.dll");
+            mhRASdlg = ::LoadLibrary(_T("rasdlg.dll"));
             if ((UINT)mhRASdlg > 32)
             {
                 // RasPhonebookDlg
                 mpRasPhonebookDlg =
-                 (tRASPHONEBOOKDLG)::GetProcAddress(mhRASdlg, "RasPhonebookDlgA");
+                 (tRASPHONEBOOKDLG)::GetProcAddress(mhRASdlg, _T("RasPhonebookDlgA"));
 
                 // RasDialDlg
                 mpRasDialDlg =
-                 (tRASDIALDLG)::GetProcAddress(mhRASdlg, "RasDialDlgA");
+                 (tRASDIALDLG)::GetProcAddress(mhRASdlg, _T("RasDialDlgA"));
 
             }
 
@@ -395,6 +400,7 @@ nsresult nsRASAutodial::DialDefault(const char* hostName)
 
             LOGD(("Autodial: RAS dialup connection successful."));
         }
+#endif /* WINCE */
     }
 
     return NS_OK;
@@ -451,7 +457,14 @@ nsresult nsRASAutodial::GetFirstEntryName(char* entryName, int bufferSize)
     // ERROR_BUFFER_TOO_SMALL is OK because we only need one struct.
     if (result == ERROR_SUCCESS || result == ERROR_BUFFER_TOO_SMALL)
     {
+#if defined(WINCE)
+        if(0 == w2a_buffer(rasEntryName.szEntryName, -1, entryName, bufferSize))
+        {
+            return NS_ERROR_FAILURE;
+        }
+#else /* WINCE */
         strncpy(entryName, rasEntryName.szEntryName, bufferSize);
+#endif /* WINCE */
         return NS_OK;
     }
 
@@ -508,8 +521,8 @@ nsresult nsRASAutodial::GetDefaultEntryName(char* entryName, int bufferSize)
     //              or HKLM/Software/Microsoft/RAS Autodial/Default/DefaultInternet.
     // For Windows 2K: HKCU/RemoteAccess/InternetProfile.
 
-    char* key = nsnull;
-    char* val = nsnull;
+    LPTSTR key = nsnull;
+    LPTSTR val = nsnull;
 
     HKEY hKey = 0;
     LONG result = 0;
@@ -518,8 +531,8 @@ nsresult nsRASAutodial::GetDefaultEntryName(char* entryName, int bufferSize)
     if ((mOSVerInfo.dwMajorVersion == 4) // Windows NT
      || ((mOSVerInfo.dwMajorVersion == 5) && (mOSVerInfo.dwMinorVersion == 0))) // Windows 2000
     {
-        key = "RemoteAccess";
-        val = "InternetProfile";
+        key = _T("RemoteAccess");
+        val = _T("InternetProfile");
 
         result = ::RegOpenKeyEx(
                     HKEY_CURRENT_USER, 
@@ -535,8 +548,8 @@ nsresult nsRASAutodial::GetDefaultEntryName(char* entryName, int bufferSize)
     }
     else  // Windows XP
     {
-        key = "Software\\Microsoft\\RAS Autodial\\Default";
-        val = "DefaultInternet";
+        key = _T("Software\\Microsoft\\RAS Autodial\\Default");
+        val = _T("DefaultInternet");
 
         
         // Try HKCU first.
@@ -591,6 +604,7 @@ nsresult nsRASAutodial::GetDefaultEntryName(char* entryName, int bufferSize)
 // Determine if the autodial service is running on this PC.
 PRBool nsRASAutodial::IsAutodialServiceRunning()
 {
+#if !defined(WINCE)
     SC_HANDLE hSCManager = 
       OpenSCManager(nsnull, SERVICES_ACTIVE_DATABASE, SERVICE_QUERY_STATUS);
 
@@ -621,6 +635,9 @@ PRBool nsRASAutodial::IsAutodialServiceRunning()
     }
 
     return (status.dwCurrentState == SERVICE_RUNNING);
+#else /* WINCE */
+    return PR_FALSE;
+#endif /* WINCE */
 }
 
 // Add the specified address to the autodial directory.
@@ -640,12 +657,27 @@ PRBool nsRASAutodial::AddAddressToAutodialDirectory(const char* hostName)
     // First see if there is already a db entry for this address. 
     DWORD size = 0;
     DWORD entries = 0;
+    DWORD result = 0;
 
-    DWORD result = (*mpRasGetAutodialAddress)(hostName, 
+#if !defined(WINCE)
+    result = (*mpRasGetAutodialAddress)(hostName, 
                                     NULL, 
                                     NULL, 
                                     &size, 
                                     &entries);
+#else /* WINCE */
+    LPTSTR freeMe = a2w_malloc(hostName, -1, NULL);
+
+    result = ERROR_GEN_FAILURE;
+    if(NULL != freeMe)
+    {
+        result = (*mpRasGetAutodialAddress)(freeMe, 
+                                    NULL, 
+                                    NULL, 
+                                    &size, 
+                                    &entries);
+    }
+#endif /* WINCE */
 
     // If there is already an entry in db for this address, return.
     if (size != 0)
@@ -660,11 +692,26 @@ PRBool nsRASAutodial::AddAddressToAutodialDirectory(const char* hostName)
     autodialEntry.dwDialingLocation = 1;
     GetDefaultEntryName(autodialEntry.szEntry, RAS_MaxEntryName);
 
+#if !defined(WINCE)
     result = (*mpRasSetAutodialAddress)(hostName, 
                                     0, 
                                     &autodialEntry, 
                                     sizeof(RASAUTODIALENTRY), 
                                     1);
+#else /* WINCE */
+    result = ERROR_GEN_FAILURE;
+    if(NULL != freeMe)
+    {
+        result = (*mpRasSetAutodialAddress)(freeMe, 
+                                    0, 
+                                    &autodialEntry, 
+                                    sizeof(RASAUTODIALENTRY), 
+                                    1);
+
+        free(freeMe);
+        freeMe = NULL;
+    }
+#endif /* WINCE */
 
     if (result != ERROR_SUCCESS)
     {

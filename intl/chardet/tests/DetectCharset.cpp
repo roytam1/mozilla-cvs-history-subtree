@@ -36,7 +36,6 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#include <iostream.h>
 #include "nsISupports.h"
 #include "nsIComponentManager.h"
 #include "nsICharsetDetector.h"
@@ -352,7 +351,11 @@ int main(int argc, char** argv) {
   PRUint32 i;
   do
   {
+#if !defined(WINCE)
     sz = read(0, buf, bs); 
+#else /* WINCE */
+    sz = fread(buf, 1, bs, stdin);
+#endif /* WINCE */
     if(sz > 0) {
       if(! done) {
 printf("call DoIt %d\n",sz);

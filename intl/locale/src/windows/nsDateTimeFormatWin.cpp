@@ -82,10 +82,16 @@ nsresult nsDateTimeFormatWin::Initialize(nsILocale* locale)
   OSVERSIONINFO os;
   os.dwOSVersionInfoSize = sizeof(os);
   ::GetVersionEx(&os);
+#if defined(WINCE)
+  if(VER_PLATFORM_WIN32_CE == os.dwPlatformId) {
+      mW_API = PR_TRUE;
+  }
+#else /* WINCE */
   if (VER_PLATFORM_WIN32_NT == os.dwPlatformId &&
       os.dwMajorVersion >= 4) {
     mW_API = PR_TRUE;   // has W API
   }
+#endif /* WINCE */
   else {
     mW_API = PR_FALSE;
   }
@@ -294,6 +300,7 @@ int nsDateTimeFormatWin::nsGetTimeFormatW(DWORD dwFlags, const SYSTEMTIME *lpTim
     LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
     len = GetTimeFormatW(mLCID, dwFlags, lpTime, wstr, (LPWSTR) timeStr, cchTime);
   }
+#if !defined(WINCE)
   else {
     char cstr_time[NSDATETIMEFORMAT_BUFFER_LEN];
 
@@ -304,6 +311,7 @@ int nsDateTimeFormatWin::nsGetTimeFormatW(DWORD dwFlags, const SYSTEMTIME *lpTim
     if (len > 0)
       len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_time, len, (LPWSTR) timeStr, cchTime);
   }
+#endif /* WINCE */
   return len;
 }
 
@@ -317,6 +325,7 @@ int nsDateTimeFormatWin::nsGetDateFormatW(DWORD dwFlags, const SYSTEMTIME *lpDat
     LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
     len = GetDateFormatW(mLCID, dwFlags, lpDate, wstr, (LPWSTR) dateStr, cchDate);
   }
+#if !defined(WINCE)
   else {
     char cstr_date[NSDATETIMEFORMAT_BUFFER_LEN];
 
@@ -327,5 +336,6 @@ int nsDateTimeFormatWin::nsGetDateFormatW(DWORD dwFlags, const SYSTEMTIME *lpDat
     if (len > 0)
       len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_date, len, (LPWSTR) dateStr, cchDate);
   }
+#endif /* WINCE */
   return len;
 }
