@@ -30,6 +30,7 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsIDOMLoadListener.h"
+#include "nsIDOMEventTarget.h"
 #include "nsIDOMDocument.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIURI.h"
@@ -53,6 +54,7 @@ enum {
 
 class nsXMLHttpRequest : public nsIXMLHttpRequest,
                          public nsIDOMLoadListener,
+                         public nsIDOMEventTarget,
                          public nsISecurityCheckedComponent,
                          public nsIStreamListener,
                          public nsSupportsWeakReference
@@ -65,6 +67,9 @@ public:
 
   // nsIXMLHttpRequest  
   NS_DECL_NSIXMLHTTPREQUEST
+
+  // nsIDOMEventTarget
+  NS_DECL_NSIDOMEVENTTARGET
 
   // nsIDOMEventListener
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
@@ -190,6 +195,8 @@ protected:
 
   PRInt32 mStatus;
   PRBool mAsync;
+
+  static nsISupports *sClassInfo;
 };
 
 #define NS_IPRIVATEJSEVENTLISTENER_IID              \
