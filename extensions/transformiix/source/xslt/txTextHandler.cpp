@@ -55,7 +55,7 @@ void txTextHandler::attribute(const String& aName,
 {
 }
 
-void txTextHandler::characters(const String& aData)
+void txTextHandler::characters(const String& aData, PRBool aDOE)
 {
     if (mLevel == 0)
         mValue.append(aData);

@@ -54,14 +54,9 @@ void txTextOutput::attribute(const String& aName,
 {
 }
 
-void txTextOutput::characters(const String& aData)
+void txTextOutput::characters(const String& aData, PRBool aDOE)
 {
     *mOut << aData;
-}
-
-void txTextOutput::charactersNoOutputEscaping(const String& aData)
-{
-    characters(aData);
 }
 
 void txTextOutput::comment(const String& aData)

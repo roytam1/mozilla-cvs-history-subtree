@@ -141,6 +141,4 @@ public:
     txExpandedName mName;
     txExpandedName mMode;
     double mPrio;
-    // XXX we should probably refcount instead
-    MBool mOwnsInstructions;
 };

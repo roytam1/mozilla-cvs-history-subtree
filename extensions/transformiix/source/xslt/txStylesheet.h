@@ -50,6 +50,21 @@ public:
                     Expr* aUse);
 
 private:
+    class MatchableTemplate {
+    public:
+        MatchableTemplate(txInstruction* aFirstInstruction,
+                          txPattern* aPattern,
+                          double aPriority)
+            : mFirstInstruction(aFirstInstruction),
+              mMatch(aPattern),
+              mPriority(aPriority)
+        {
+        }
+        txInstruction* mFirstInstruction;
+        txPattern* mMatch;
+        double mPriority;
+    };
+
     addTemplate(txTemplate* aTemplate);
     
     // List of ImportFrames

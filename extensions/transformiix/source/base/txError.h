@@ -98,4 +98,7 @@ typedef PRUint32 nsresult;
 #define NS_ERROR_XSLT_ALREADY_SET                      \
     NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_XSLT, 4)
 
+#define NS_ERROR_XSLT_EXECUTION_FAILURE                \
+    NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_XSLT, 5)
+
 #endif // __TX_ERROR

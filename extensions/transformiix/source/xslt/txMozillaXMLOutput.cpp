@@ -156,7 +156,7 @@ void txMozillaXMLOutput::attribute(const String& aName,
     }
 }
 
-void txMozillaXMLOutput::characters(const String& aData)
+void txMozillaXMLOutput::characters(const String& aData, PRBool aDOE)
 {
     closePrevious(eCloseElement);
 

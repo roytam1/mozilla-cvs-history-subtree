@@ -114,8 +114,9 @@ public:
      * Signals to receive characters.
      *
      * @param aData the characters to receive
+     * @param aDOE disable output escaping for these characters
      */
-    virtual void characters(const String& aData);
+    virtual void characters(const String& aData, PRBool aDOE);
 
     /*
      * Signals to receive characters that don't need output escaping.

@@ -200,8 +200,15 @@ void txHTMLOutput::attribute(const String& aName,
         txXMLOutput::attribute(aName, aNsID, aValue);
 }
 
-void txHTMLOutput::characters(const String& aData)
+void txHTMLOutput::characters(const String& aData, PRBool aDOE)
 {
+    if (aDOE) {
+        closeStartTag(MB_FALSE);
+        printUTF8Chars(aData);
+
+        return;
+    }
+
     // Special-case script and style
     txExpandedName* currentElement = (txExpandedName*)mCurrentElements.peek();
     if (currentElement &&
@@ -212,7 +219,7 @@ void txHTMLOutput::characters(const String& aData)
         printUTF8Chars(aData);
     }
     else {
-        txXMLOutput::characters(aData);
+        txXMLOutput::characters(aData, aDOE);
     }
 }
 

@@ -26,6 +26,8 @@ nsresult txStylesheet::doneCompiling()
                 {
                     rv = addTemplate((txTemplateItem*)item);
                     NS_ENSURE_SUCCESS(rv, rv);
+                    
+                    delete item;
                 }
             }
         }
@@ -34,29 +36,29 @@ nsresult txStylesheet::doneCompiling()
     }
 }
 
+// XXX This one isn't OOM safe.
 void txStylesheet::addTemplate(txTemplateItem* aTemplate,
                                ImportFrame* aImportFrame)
 {
     NS_ASSERTION(aTemplate, "missing template");
 
-    MBool isUsed = MB_FALSE;
-
+    txInstruction* instr = aTemplate->mFirstInstruction;
+    nsresult rv = mTemplateInstructions.add(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
     
+    // mTemplateInstructions now owns the instructions
+    aTemplate->mFirstInstruction = 0;
 
     nsresult rv = NS_OK;
     if (!aTemplate->mName.isNull()) {
-        rv = mNamedTemplates.add(name, aTemplate);
+        rv = mNamedTemplates.add(name, instr);
         NS_ENSURE_TRUE(NS_SUCCEEDED(rv) || rv == NS_ERROR_XSLT_ALREADY_SET,
                        rv);
-
-        isUsed = MB_TRUE;
     }
 
     if (!aTemplate->mMatch) {
         // This is no error, see section 6 Named Templates
-        if (!isUsed) {
-            delete aTemplate;
-        }
+        delete aTemplate;
 
         return NS_OK;
     }
@@ -68,18 +70,14 @@ void txStylesheet::addTemplate(txTemplateItem* aTemplate,
     if (!templates) {
         templates = new txList;
         if (!templates) {
-            if (!isUsed) {
-                delete aTemplate;
-            }
+            delete aTemplate;
             return NS_ERROR_OUT_OF_MEMORY;
         }
 
         rv = aImportFrame->mMatchableTemplates.add(mode, templates);
         if (NS_FAILED(rv)) {
             delete templates;
-            if (!isUsed) {
-                delete aTemplate;
-            }
+            delete aTemplate;
             return rv;
         }
     }
@@ -98,21 +96,19 @@ void txStylesheet::addTemplate(txTemplateItem* aTemplate,
             delete pattern;
             pattern = 0;
         }
-        if (!hasPriority) {
+        double priority = aTemplate->mPrio;
+        if (Double::isNaN(priority)) {
             priority = simple->getDefaultPriority();
+            NS_ASSERTION(!Double::isNaN(priority),
+                         "simple pattern without default priority");
         }
-        MatchableTemplate* nt = new MatchableTemplate(aXslTemplate,
-                                                      simple,
-                                                      priority);
-        if (!nt) {
-            NS_ASSERTION(0, "out of mem");
-            return;
-        }
+        MatchableTemplate* nt = new MatchableTemplate(instr, simple, priority);
+
         txListIterator templ(templates);
         MBool isLast = MB_TRUE;
         while (templ.hasNext() && isLast) {
             MatchableTemplate* mt = (MatchableTemplate*)templ.next();
-            if (priority < mt->mPriority) {
+            if (priority <= mt->mPriority) {
                 continue;
             }
             templ.addBefore(nt);
@@ -121,12 +117,36 @@ void txStylesheet::addTemplate(txTemplateItem* aTemplate,
         if (isLast)
             templates->add(nt);
     }
+
+    return NS_OK;
 }
 
     
-nsresult addKey(const txExpandedName& aName, txPattern* aMatch, Expr* aUse)
+nsresult txStylesheet::addKey(const txExpandedName& aName,
+                              txPattern* aMatch, Expr* aUse)
 {
     delete aMatch;
     delete aUse;
     return NS_OK;
 }
+
+ProcessorState::ImportFrame::ImportFrame(ImportFrame* aFirstNotImported)
+    : mMatchableTemplates(MB_TRUE),
+      mFirstNotImported(aFirstNotImported)
+{
+}
+
+ProcessorState::ImportFrame::~ImportFrame()
+{
+    // Delete templates in mMatchableTemplates
+    txExpandedNameMap::iterator iter(mMatchableTemplates);
+    while (iter.next()) {
+        txListIterator templIter((txList*)iter.value());
+        MatchableTemplate* templ;
+        while ((templ = (MatchableTemplate*)templIter.next())) {
+            delete templ->mMatch;
+            delete templ;
+        }
+    }
+}
+

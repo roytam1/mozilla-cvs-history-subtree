@@ -92,9 +92,15 @@ void txXMLOutput::attribute(const String& aName,
     TX_IF_RELEASE_ATOM(localName);
 }
 
-void txXMLOutput::characters(const String& aData)
+void txXMLOutput::characters(const String& aData, PRBool aDOE)
 {
     closeStartTag(MB_FALSE);
+
+    if (aDOE) {
+        printUTF8Chars(aData);
+
+        return;
+    }
 
     if (mInCDATASection) {
         PRUint32 i = 0;
@@ -136,13 +142,6 @@ void txXMLOutput::characters(const String& aData)
     else {
         printWithXMLEntities(aData);
     }
-}
-
-void txXMLOutput::charactersNoOutputEscaping(const String& aData)
-{
-    closeStartTag(MB_FALSE);
-
-    printUTF8Chars(aData);
 }
 
 void txXMLOutput::comment(const String& aData)

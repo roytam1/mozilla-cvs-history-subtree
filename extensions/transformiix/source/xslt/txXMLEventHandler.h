@@ -66,8 +66,9 @@ public:
      * Signals to receive characters.
      *
      * @param aData the characters to receive
+     * @param aDOE disable output escaping for these characters
      */
-    virtual void characters(const String& aData) = 0;
+    virtual void characters(const String& aData, PRBool aDOE) = 0;
 
     /**
      * Signals to receive data that should be treated as a comment.
@@ -127,22 +128,6 @@ class txIOutputXMLEventHandler : public nsISupports,
 #endif
 {
 public:
-    /**
-     * Signals to receive characters that don't need output escaping.
-     *
-     * @param aData the characters to receive
-     */
-    virtual void charactersNoOutputEscaping(const String& aData) = 0;
-
-    /**
-     * Returns whether the output handler supports
-     * disable-output-escaping.
-     *
-     * @return MB_TRUE if this handler supports
-     *                 disable-output-escaping
-     */
-    virtual MBool hasDisableOutputEscaping() = 0;
-
 #ifndef TX_EXE
     NS_DEFINE_STATIC_IID_ACCESSOR(TX_IOUTPUTXMLEVENTHANDLER_IID)
 

@@ -22,9 +22,4 @@ txStripSpaceItem::~txStripSpaceItem()
 
 txTemplateItem::~txTemplateItem()
 {
-    if (!mOwnsInstructions) {
-        // If we don't own our items make sure that we don't delete them in the
-        // txInstructionContainer dtor
-        mFirstInstruction = 0;
-    }
 }

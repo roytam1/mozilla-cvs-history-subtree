@@ -95,7 +95,7 @@ void txMozillaTextOutput::attribute(const String& aName,
 {
 }
 
-void txMozillaTextOutput::characters(const String& aData)
+void txMozillaTextOutput::characters(const String& aData, PRBool aDOE)
 {
     if (mTextNode)
         mTextNode->AppendData(aData);

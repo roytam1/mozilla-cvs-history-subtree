@@ -63,15 +63,9 @@ public:
      * Signals to receive characters.
      *
      * @param aData the characters to receive
+     * @param aDOE disable output escaping for these characters
      */
-    void characters(const String& aData);
-
-    /*
-     * Signals to receive characters that don't need output escaping.
-     *
-     * @param aData the characters to receive
-     */
-    virtual void charactersNoOutputEscaping(const String& aData);
+    void characters(const String& aData, PRBool aDOE);
 
     /*
      * Signals to receive data that should be treated as a comment.
@@ -94,18 +88,6 @@ public:
      */
     void endElement(const String& aName,
                     const PRInt32 aNsID);
-
-    /**
-     * Returns whether the output handler supports
-     * disable-output-escaping.
-     *
-     * @return MB_TRUE if this handler supports
-     *                 disable-output-escaping
-     */
-    MBool hasDisableOutputEscaping()
-    {
-        return MB_TRUE;
-    }
 
     /*
      * Signals to receive a processing instruction.

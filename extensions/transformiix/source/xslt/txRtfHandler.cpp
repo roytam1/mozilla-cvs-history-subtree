@@ -82,7 +82,7 @@ void txRtfHandler::attribute(const String& aName,
     element->setAttributeNS(nsURI, aName, aValue);
 }
 
-void txRtfHandler::characters(const String& aData)
+void txRtfHandler::characters(const String& aData, PRBool aDOE)
 {
     NS_ASSERTION(mCurrentNode, "We need a node");
     if (!mCurrentNode)

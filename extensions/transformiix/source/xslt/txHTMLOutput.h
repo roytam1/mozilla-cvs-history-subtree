@@ -64,8 +64,9 @@ public:
      * Signals to receive characters.
      *
      * @param aData the characters to receive
+     * @param aDOE disable output escaping for these characters
      */
-    void characters(const String& aData);
+    void characters(const String& aData, PRBool aDOE);
 
     /*
      * Signals to receive the end of an element.
