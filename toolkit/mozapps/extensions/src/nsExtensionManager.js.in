@@ -396,8 +396,7 @@ nsInstalledExtensionReader.prototype = {
   
   read: function ()
   {
-    if (this._installedExtensionsProcessed.exists() ||
-        !this._installedExtensionsProcessed.exists())
+    if (this._installedExtensionsProcessed.exists())
       return;
     
     if (!this._installedExtensions.exists()) {
