@@ -32,7 +32,9 @@
 #include "nsISimpleEnumerator.h"
 #include "nsIComponentManager.h"
 #include "prtypes.h"
-#include "prio.h"
+#include "prerror.h"
+#include "pprio.h" // Include this rather than prio.h so we get def of PR_ImportFile
+#include "prmem.h"
 
 #include "FullPath.h"
 #include "FileCopy.h"
@@ -42,6 +44,15 @@
 #include <Script.h>
 #include <Processes.h>
 
+#include <Aliases.h>
+
+// Stupid @#$% header looks like its got extern mojo but it doesn't really
+extern "C"
+{
+#include <FSp_fopen.h>
+}
+
+#pragma mark [static util funcs]
 // Simple func to map Mac OS errors into nsresults
 static nsresult MacErrorMapper(OSErr inErr)
 {
@@ -55,6 +66,14 @@ static nsresult MacErrorMapper(OSErr inErr)
 
         case dupFNErr:
             outErr = NS_ERROR_FILE_ALREADY_EXISTS;
+            break;
+		
+        case dskFulErr:
+            outErr = NS_ERROR_FILE_DISK_FULL;
+            break;
+		
+        case fLckdErr:
+            outErr = NS_ERROR_FILE_IS_LOCKED;
             break;
 		
 		// Can't find good map for some
@@ -91,7 +110,109 @@ static void myPLstrncpy(Str255 dst, const char* src, int inMax)
 	memcpy(&dst[1], src, srcLength);
 }
 
+// Aaargh!!!!  Gotta roll my own equivalents of PR_OpenDir, PR_ReadDir and PR_CloseDir
+// I can't use the NSPR versions as they expect a unix path and I can't easily adapt
+// the directory iterator fucntion from MoreFIles as it wants to iterate things itself
+// and use a callback function to operate on the iterated entries
 
+typedef struct
+{
+	short		ioVRefNum;
+	long		ioDirID;
+	short		ioFDirIndex;
+	char		*currentEntryName;
+} MyPRDir;
+
+static MyPRDir * My_OpenDir(FSSpec *fileSpec)
+{
+	MyPRDir		*dir = NULL;
+	OSErr 		err;
+	long		theDirID;
+	Boolean		isDirectory;
+	
+	err = ::FSpGetDirectoryID(fileSpec, &theDirID, &isDirectory);
+	if (err == noErr)
+	{
+		if (isDirectory)
+		{
+			/* This is a directory, store away the pertinent information.
+			** We post increment.  I.e. index is always the nth. item we 
+			** should get on the next call
+			*/
+			dir = PR_NEW(MyPRDir);
+			if (dir)
+			{
+				dir->ioVRefNum = fileSpec->vRefNum;
+				dir->ioDirID = theDirID;
+				dir->currentEntryName = NULL;
+				dir->ioFDirIndex = 1;
+			}
+		}
+	}
+	
+	return dir;
+
+}
+
+static char * My_ReadDir(MyPRDir *mdDir, PRIntn flags)
+{
+	OSErr			err;
+	CInfoPBRec		pb;
+	char			*returnedCStr;
+	Str255			pascalName = "\p";
+	PRBool			foundEntry;
+	
+	do
+	{
+		// Release the last name read
+		if (mdDir->currentEntryName)
+		{
+			PR_DELETE(mdDir->currentEntryName);
+			mdDir->currentEntryName = NULL;
+		}
+			
+		// WeÕve got all the info we need, just get info about this guy.
+		pb.hFileInfo.ioNamePtr = pascalName;
+		pb.hFileInfo.ioVRefNum = mdDir->ioVRefNum;
+		pb.hFileInfo.ioFDirIndex = mdDir->ioFDirIndex;
+		pb.hFileInfo.ioDirID = mdDir->ioDirID;
+		err = ::PBGetCatInfoSync(&pb);
+		if (err != noErr)
+			goto ErrorExit;
+		
+		// Convert the Pascal string to a C string (actual allocation occurs in CStrFromPStr)
+		unsigned long len = pascalName[0];
+		returnedCStr = (char *)PR_MALLOC(len);
+		if (returnedCStr)
+		{
+			::BlockMoveData(&pascalName[1], returnedCStr, len);
+			returnedCStr[len] = NULL;
+		}
+		
+		mdDir->currentEntryName = returnedCStr;
+		mdDir->ioFDirIndex++;
+		
+		// If it is not a hidden file and the flags did not specify skipping, we are done.
+		if ((flags & PR_SKIP_HIDDEN) && (pb.hFileInfo.ioFlFndrInfo.fdFlags & fInvisible))
+			foundEntry = PR_FALSE;
+		else
+			foundEntry = PR_TRUE;	
+		
+	} while (!foundEntry);
+	
+	return (mdDir->currentEntryName);
+
+ErrorExit:
+    return NULL;
+}
+
+static void My_CloseDir(MyPRDir *mdDir)
+{
+	if (mdDir->currentEntryName)
+		PR_DELETE(mdDir->currentEntryName);
+}
+
+#pragma mark [nsDirEnumerator]
 class nsDirEnumerator : public nsISimpleEnumerator
 {
     public:
@@ -105,20 +226,22 @@ class nsDirEnumerator : public nsISimpleEnumerator
 
         nsresult Init(nsILocalFile* parent) 
         {
-            char* filepath;
-            parent->GetTarget(&filepath);
-        
-            if (filepath == nsnull)
+        	FSSpec fileSpec;
+        	fileSpec.vRefNum = 0;
+        	fileSpec.parID = 0;
+        	
+        	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(parent);
+			if (localFileMac) {
+            	localFileMac->GetFSSpec(&fileSpec);
+            }
+        	
+        	// See if we managed to get a FSSpec
+            if (!fileSpec.vRefNum && !fileSpec.parID)
             {
-                parent->GetPath(&filepath);
+                return NS_ERROR_FAILURE;
             }
             
-            if (filepath == nsnull)
-            {
-                return NS_ERROR_OUT_OF_MEMORY;
-            }
-
-            mDir = PR_OpenDir(filepath);
+            mDir = My_OpenDir(&fileSpec);
             if (mDir == nsnull)    // not a directory?
                 return NS_ERROR_FAILURE;
         
@@ -131,24 +254,20 @@ class nsDirEnumerator : public nsISimpleEnumerator
             nsresult rv;
             if (mNext == nsnull && mDir) 
             {
-                PRDirEntry* entry = PR_ReadDir(mDir, PR_SKIP_BOTH);
-                if (entry == nsnull) 
+                char* name = My_ReadDir(mDir, PR_SKIP_BOTH);
+                if (name == nsnull) 
                 {
                     // end of dir entries
-
-                    PRStatus status = PR_CloseDir(mDir);
-                    if (status != PR_SUCCESS)
-                        return NS_ERROR_FAILURE;
+					My_CloseDir(mDir);
                     mDir = nsnull;
-
                     *result = PR_FALSE;
                     return NS_OK;
                 }
 
                 nsCOMPtr<nsIFile> file;
                 mParent->Clone(getter_AddRefs(file));
-            
-                rv = file->AppendPath(entry->name);
+
+                rv = file->SetLeafName(name);
                 if (NS_FAILED(rv)) 
                     return rv;
             
@@ -176,26 +295,19 @@ class nsDirEnumerator : public nsISimpleEnumerator
         {
             if (mDir) 
             {
-                PRStatus status = PR_CloseDir(mDir);
-                NS_ASSERTION(status == PR_SUCCESS, "close failed");
+                My_CloseDir(mDir);
             }
         }
 
     protected:
-        PRDir*                  mDir;
-        nsCOMPtr<nsILocalFile>  mParent;
-        nsCOMPtr<nsILocalFile>  mNext;
+        MyPRDir*				mDir;
+        nsCOMPtr<nsILocalFile>	mParent;
+        nsCOMPtr<nsILocalFile>	mNext;
 };
 
 NS_IMPL_ISUPPORTS(nsDirEnumerator, NS_GET_IID(nsISimpleEnumerator));
 
-
-
-
-
-
-
-
+#pragma mark [CTOR/DTOR]
 nsLocalFile::nsLocalFile()
 {
     NS_INIT_REFCNT();
@@ -207,13 +319,14 @@ nsLocalFile::~nsLocalFile()
 {
 }
 
-/* nsISupports interface implementation. */
-NS_IMPL_ISUPPORTS2(nsLocalFile, nsILocalFile, nsIFile)
+#pragma mark [nsISupports interface implementation]
+NS_IMPL_ISUPPORTS3(nsLocalFile, nsILocalFileMac, nsILocalFile, nsIFile)
+
 NS_METHOD
-nsLocalFile::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
+nsLocalFile::nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
     NS_ENSURE_ARG_POINTER(aInstancePtr);
-    NS_ENSURE_PROPER_AGGREGATION(outer, aIID);
+    NS_ENSURE_NO_AGGREGATION(outer);
 
     nsLocalFile* inst = new nsLocalFile();
     if (inst == NULL)
@@ -235,27 +348,131 @@ nsLocalFile::MakeDirty()
     mStatDirty       = PR_TRUE;
 }
 
+// If we were initted with a path then this routine can create mSpec for us
+NS_IMETHODIMP
+nsLocalFile::ConstructDirectoryTree()
+{
+	OSErr	err = noErr;
+    char*	filePath = (char*) nsAllocator::Clone( mWorkingPath, strlen(mWorkingPath)+1 );
+	size_t	inLength = strlen(filePath);
+	
+	// Try making an FSSpec from the path
+	if (inLength < 255)
+	{
+		Str255 pascalpath;
+		myPLstrcpy(pascalpath, filePath);
+		err = ::FSMakeFSSpec(0, 0, pascalpath, &mSpec);
+	}
+	else
+	{
+		err = ::FSpLocationFromFullPath(inLength, filePath, &mSpec);
+	}
+	
+	// If we successfully created a spec then set the flag and leave
+	if (err == noErr)
+	{
+		mHaveValidSpec = PR_TRUE;
+		return NS_OK;
+	}
+	
+	// If we couldn't create the FSSpec then the directory hierarchy doesn't exist
+	// so we'll need to create it
+	if ((err == dirNFErr || err == bdNamErr))
+	{
+		const char* path = filePath;
+		mSpec.vRefNum = 0;
+		mSpec.parID = 0;
+
+		do
+		{
+			// Locate the colon that terminates the node.
+			// But if we've a partial path (starting with a colon), find the second one.
+			const char* nextColon = strchr(path + (*path == ':'), ':');
+			// Well, if there are no more colons, point to the end of the string.
+			if (!nextColon)
+				nextColon = path + strlen(path);
+
+			// Make a pascal string out of this node.  Include initial
+			// and final colon, if any!
+			Str255 ppath;
+			myPLstrncpy(ppath, path, nextColon - path + 1);
+			
+			// Use this string as a relative path using the directory created
+			// on the previous round (or directory 0,0 on the first round).
+			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, ppath, &mSpec);
+
+			// If this was the leaf node, then we are done.
+			if (!*nextColon)
+				break;
+
+			// Since there's more to go, we have to get the directory ID, which becomes
+			// the parID for the next round.
+			if (err == noErr)
+			{
+				// The directory (or perhaps a file) exists. Find its dirID.
+				long dirID;
+				Boolean isDirectory;
+				err = ::FSpGetDirectoryID(&mSpec, &dirID, &isDirectory);
+				if (!isDirectory)
+					err = dupFNErr; // oops! a file exists with that name.
+				if (err != noErr)
+					break;			// bail if we've got an error
+				mSpec.parID = dirID;
+			}
+			else if (err == fnfErr)
+			{
+				// If we got "file not found", then we need to create a directory.
+				err = ::FSpDirCreate(&mSpec, smCurrentScript, &mSpec.parID);
+				// For some reason, this usually returns fnfErr, even though it works.
+				if (err == fnfErr)
+					err = noErr;
+			}
+			if (err != noErr)
+				break;
+			path = nextColon; // next round
+		} while (true);
+	}
+	
+	return (MacErrorMapper(err));
+}
+
+NS_IMETHODIMP
+nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
+{
+    if (!mStatDirty)
+    {
+        return NS_OK;
+    }
+    
+    // See if we have been initialized with a spec
+    if (!mHaveValidSpec)
+    {
+    // If we don't have a spec, see if we've got a working path we can convert to mSpec
+    
+    // now resolve mSpec into mResolvedSpec
+    }
+    
+
+	return NS_ERROR_NOT_IMPLEMENTED;
+}
+    
+
 NS_IMETHODIMP  
 nsLocalFile::Clone(nsIFile **file)
 {
+    nsresult rv;
     NS_ENSURE_ARG(file);
     *file = nsnull;
 
-    nsCOMPtr<nsILocalFile> localFile;
-    nsresult rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
-                                                     nsnull, 
-                                                     nsCOMTypeInfo<nsILocalFile>::GetIID(), 
-                                                     getter_AddRefs(localFile));
-    if (NS_FAILED(rv)) 
-        return rv;
+    nsCOMPtr<nsILocalFile> localFile = new nsLocalFile();
+    if (localFile == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
     
-    char* aFilePath;
-    GetPath(&aFilePath);
-
-    rv = localFile->InitWithPath(aFilePath);
-    
-    nsAllocator::Free(aFilePath);
-    
+	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(localFile);
+	if (localFileMac) {
+		rv = localFileMac->InitWithFSSpec(&mSpec);
+    }
+        
     if (NS_FAILED(rv)) 
         return rv;
     
@@ -280,14 +497,80 @@ nsLocalFile::InitWithPath(const char *filePath)
     // about turniung it into an FSSpec until the Create() method is called
     mWorkingPath.SetString(filePath);
     
+    mInitType = eInitWithPath;
+    
     return NS_OK;
 }
 
 NS_IMETHODIMP  
-nsLocalFile::Open(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
+nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 {
-   return NS_ERROR_FAILURE;
+// Macintosh doesn't really have mode bits, just drop them
+#pragma unused (mode)
+
+    NS_ENSURE_ARG(_retval);
+    
+	OSErr err = noErr;
+
+	// Resolve the alias to the original file.
+	FSSpec	spec = mSpec;
+	Boolean	targetIsFolder;	  
+	Boolean	wasAliased;	  
+	err = ::ResolveAliasFile(&spec, TRUE, &targetIsFolder, &wasAliased);
+	if (err != noErr)
+		return MacErrorMapper(err);
+	
+	if (flags & PR_CREATE_FILE)
+		err = ::FSpCreate(&spec, 'MOSS', 'TEXT', 0);
+	   
+	/* If opening with the PR_EXCL flag the existence of the file prior to opening is an error */
+	if ((flags & PR_EXCL) &&  (err == dupFNErr))
+		return MacErrorMapper(err);
+
+	if (err == dupFNErr)
+		err = noErr;
+	if (err != noErr)
+		return MacErrorMapper(err);
+	
+	SInt8 perm;
+	if (flags & PR_RDWR)
+	   perm = fsRdWrPerm;
+	else if (flags & PR_WRONLY)
+	   perm = fsWrPerm;
+	else
+	   perm = fsRdPerm;
+
+	short refnum;
+	err = ::FSpOpenDF(&spec, perm, &refnum);
+
+	if (err == noErr && (flags & PR_TRUNCATE))
+		err = ::SetEOF(refnum, 0);
+	if (err == noErr && (flags & PR_APPEND))
+		err = ::SetFPos(refnum, fsFromLEOF, 0);
+	if (err != noErr)
+		return MacErrorMapper(err);
+
+	if ((*_retval = PR_ImportFile(refnum)) == 0)
+		return NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_FILES,(PR_GetError() & 0xFFFF));
+	
+	return NS_OK;
 }
+
+NS_IMETHODIMP  
+nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
+{
+    nsresult rv = ResolveAndStat(PR_TRUE);
+    if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
+        return rv; 
+   
+    *_retval = FSp_fopen(&mSpec, mode);
+    
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_FAILURE;
+}
+
 
 NS_IMETHODIMP  
 nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
@@ -394,40 +677,34 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
 }
     
 NS_IMETHODIMP  
-nsLocalFile::AppendPath(const char *node)
+nsLocalFile::Append(const char *node)
 {
-    if ( (node == nsnull) || (*node == '/') || strchr(node, '\\') )
+    if ( (node == nsnull) )
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
     MakeDirty();
 
-    // We only can append relative unix styles strings.
-
-    // Convert '\' to '/'
-	nsString path(node);
-
-    char* nodeCString = path.ToNewCString();    
-    char* temp = nodeCString;
-    for (; *temp; temp++)
+    // Yee Hah!  We only get a single node at a time so just append it
+    // to either the mWorkingPath or mAppendedPath, after adding the ':'
+    // directory delimeter, depending on how we were initialized
+    switch (mInitType)
     {
-        if (*temp == '/')
-            *temp = '\\';
-    }
-
-    // kill any trailing seperator
-    if(nodeCString)
-    {
-        temp = nodeCString;
-        int len = strlen(temp) - 1;
-        if(temp[len] == '\\')
-            temp[len] = '\0';
+    	case eInitWithPath:
+		    mWorkingPath.Append(":");
+		    mWorkingPath.Append(node);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    mAppendedPath.Append(":");
+		    mAppendedPath.Append(node);
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
     }
     
-    mWorkingPath.Append("\\");
-    mWorkingPath.Append(nodeCString);
-    
-    Recycle(nodeCString);
-
     return NS_OK;
 }
 
@@ -442,270 +719,140 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 {
     NS_ENSURE_ARG_POINTER(aLeafName);
 
-    const char* temp = mWorkingPath.GetBuffer();
-    if(temp == nsnull)
-        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+		    const char* temp = mWorkingPath.GetBuffer();
+		    if (temp == nsnull)
+		        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
-    const char* leaf = strrchr(temp, '\\');
-    
-    // if the working path is just a node without any lashes.
-    if (leaf == nsnull)
-        leaf = temp;
-    else
-        leaf++;
+		    const char* leaf = strrchr(temp, ':');
+		    
+		    // if the working path is just a node without any directory delimeters.
+		    if (leaf == nsnull)
+		        leaf = temp;
+		    else
+		        leaf++;
 
-    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+		    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    // See if we've had a path appended
+		    if (mAppendedPath.Length())
+		    {
+			    const char* temp = mAppendedPath.GetBuffer();
+			    if (temp == nsnull)
+			        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+
+			    const char* leaf = strrchr(temp, ':');
+			    
+			    // if the working path is just a node without any directory delimeters.
+			    if (leaf == nsnull)
+			        leaf = temp;
+			    else
+			        leaf++;
+
+			    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+			}
+			else
+			{
+				// We don't have an appended path so grab the leaf name from the FSSpec
+			}
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
+
     return NS_OK;
 }
 
+NS_IMETHODIMP  
+nsLocalFile::SetLeafName(const char * aLeafName)
+{
+    NS_ENSURE_ARG_POINTER(aLeafName);
+    
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+			PRInt32 offset = mWorkingPath.RFindChar(':');
+			if (offset)
+			{
+				mWorkingPath.Truncate(offset + 1);
+			}
+			mWorkingPath.Append(aLeafName);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    // See if we've had a path appended
+		    if (mAppendedPath.Length())
+		    {	// Lop off the end of the appended path and replace it with the new leaf name
+				PRInt32 offset = mAppendedPath.RFindChar(':');
+				if (offset)
+				{
+					mAppendedPath.Truncate(offset + 1);
+				}
+				mAppendedPath.Append(aLeafName);
+			}
+			else
+			{
+				// We don't have an appended path so directly modify the FSSpec
+			}
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
+	
+    return NS_OK;
+}
 
 NS_IMETHODIMP  
 nsLocalFile::GetPath(char **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    *_retval = (char*) nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+    		*_retval = (char*) nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    		break;
+    	
+    	case eInitWithFSSpec:
+    		// Now would be a good time to call the code that makes an FSSpec into a path
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
+
     return NS_OK;
 }
 
-
-
-nsresult
-nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char * newName, PRBool followSymlinks, PRBool move)
-{
-    nsresult rv;
-    char* filePath;
-
-    // get the path that we are going to copy to.
-    // Since windows does not know how to auto
-    // resolve shortcust, we must work with the
-    // target.
-    char* inFilePath;
-    destParent->GetTarget(&inFilePath);  
-    nsCString destPath = inFilePath;
-    nsAllocator::Free(inFilePath);
-
-    destPath.Append("\\");
-
-    if (newName == nsnull)
-    {
-        char *aFileName;
-        sourceFile->GetLeafName(&aFileName);
-        destPath.Append(aFileName);
-        nsAllocator::Free(aFileName);
-    }
-    else
-    {
-        destPath.Append(newName);
-    }
-
-           
-    if (followSymlinks)
-    {
-       rv = sourceFile->GetTarget(&filePath);
-    }
-    else
-    {
-        rv = sourceFile->GetPath(&filePath);
-    }
-
-    if (NS_FAILED(rv))
-        return rv;
-
-    //int copyOK;
-
-    if (!move)
-    {
-        //copyOK = CopyFile(filePath, destPath, PR_TRUE);
-    }
-    else
-    {
-        //copyOK = MoveFile(filePath, destPath);
-    }
-    
-    //if (!copyOK)  // CopyFile and MoveFile returns non-zero if succeeds (backward if you ask me).
-    
-    nsAllocator::Free(filePath);
-
-    return rv;
-}
-
-
-nsresult
-nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move)
-{
-    NS_ENSURE_ARG(newParentDir);
-	nsresult rv = NS_OK;
-	
-    // check to see if this exists, otherwise return an error.
-    PRBool sourceExists;
-    Exists(&sourceExists);
-    if (sourceExists == PR_FALSE)
-    {
-    	return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST;
-    }
-
-    // make sure destination exists and is a directory.  Create it if not there.
-    PRBool parentExists;
-    newParentDir->Exists(&parentExists);
-    if (parentExists == PR_FALSE)
-    {
-        rv = newParentDir->Create(DIRECTORY_TYPE, 0);
-        if (NS_FAILED(rv))
-            return rv;
-    }
-    else
-    {
-        PRBool isDir;
-        newParentDir->IsDirectory(&isDir);
-        if (isDir == PR_FALSE)
-        {
-            if (followSymlinks)
-            {
-                PRBool isLink;
-                newParentDir->IsSymlink(&isLink);
-                if (isLink)
-                {
-                    char* target;
-                    newParentDir->GetTarget(&target);
-
-                    nsCOMPtr<nsILocalFile> realDest;
-
-                    rv = nsComponentManager::CreateInstance(NS_LOCAL_FILE_PROGID, 
-                                                            nsnull, 
-                                                            nsCOMTypeInfo<nsILocalFile>::GetIID(), 
-                                                            getter_AddRefs(realDest));
-                    if (NS_FAILED(rv)) 
-                        return rv;
-
-                    rv = realDest->InitWithPath(target);
-                    
-                    nsAllocator::Free(target);
-
-                    if (NS_FAILED(rv)) 
-                        return rv;
-                    
-                    return CopyMove(realDest, newName, followSymlinks, move);
-                }
-            }
-            else
-            {                
-                return NS_ERROR_FILE_DESTINATION_NOT_DIR;
-            }
-        }        
-    }
-
-    // check to see if we are a directory, if so enumerate it.
-
-    PRBool isDir;
-    IsDirectory(&isDir);
-    if (!isDir)
-    {
-        rv = CopySingleFile(this, newParentDir, newName, followSymlinks, move);
-        if (NS_FAILED(rv))
-            return rv;
-    }
-    else
-    {
-        // create a new target destination in the new parentDir;
-        nsCOMPtr<nsILocalFile> target;
-        newParentDir->Clone(getter_AddRefs(target));
-
-        char *allocatedNewName;
-        if (!newName)
-        {
-            GetLeafName(&allocatedNewName);// this should be the leaf name of the 
-        }
-        else
-        {
-            allocatedNewName = (char*) nsAllocator::Clone( newName, strlen(newName)+1 );
-        }
-        
-        rv = target->AppendPath(allocatedNewName);
-        if (NS_FAILED(rv)) 
-            return rv;
-
-        nsAllocator::Free(allocatedNewName);
-
-        target->Create(DIRECTORY_TYPE, 0);
-        if (NS_FAILED(rv))
-            return rv;
-        
-        nsDirEnumerator* dirEnum = new nsDirEnumerator();
-        if (!dirEnum)
-            return NS_ERROR_OUT_OF_MEMORY;
-        
-        rv = dirEnum->Init(this);
-
-        nsCOMPtr<nsISimpleEnumerator> iterator = do_QueryInterface(dirEnum);
-
-        PRBool more;
-        iterator->HasMoreElements(&more);
-        while (more)
-        {
-            nsCOMPtr<nsISupports> item;
-            nsCOMPtr<nsIFile> file;
-            iterator->GetNext(getter_AddRefs(item));
-            file = do_QueryInterface(item);
-            PRBool isDir, isLink;
-            
-            file->IsDirectory(&isDir);
-            file->IsSymlink(&isLink);
-
-            if (move)
-            {
-                rv = file->MoveTo(target, nsnull);
-            }
-            else
-            {   
-                if (followSymlinks)
-                    rv = file->CopyToFollowingLinks(target, nsnull);
-                else
-                    rv = file->CopyTo(target, nsnull);
-            }
-                    
-            iterator->HasMoreElements(&more);
-        }
-    }
-    
-
-    // If we moved, we want to adjust this.
-    if (move)
-    {
-        if (newName == nsnull)
-        {
-            char *aFileName;
-            GetLeafName(&aFileName);
-            InitWithFile(newParentDir);
-            AppendPath(aFileName); 
-            nsAllocator::Free(aFileName);
-        }
-        else
-        {
-            InitWithFile(newParentDir);
-            AppendPath(newName);
-        }
-        MakeDirty();
-    }
-        
-    return NS_OK;
-}
 
 NS_IMETHODIMP  
 nsLocalFile::CopyTo(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_FALSE, PR_FALSE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
 nsLocalFile::CopyToFollowingLinks(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_TRUE, PR_FALSE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
 nsLocalFile::MoveTo(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_FALSE, PR_TRUE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
@@ -719,6 +866,31 @@ nsLocalFile::Spawn(const char *args)
 
 
     return NS_ERROR_FILE_EXECUTION_FAILED;
+}
+
+NS_IMETHODIMP  
+nsLocalFile::Load(PRLibrary * *_retval)
+{
+    PRBool isFile;
+    nsresult rv = IsFile(&isFile);
+
+    if (NS_FAILED(rv))
+        return rv;
+    
+    if (! isFile)
+        return NS_ERROR_FILE_IS_DIRECTORY;
+	
+	// Use the new PR_LoadLibraryWithFlags which allows us to use a FSSpec
+	PRLibSpec	libSpec;
+    libSpec.type = PR_LibSpec_MacIndexedFragment;
+    libSpec.value.mac_indexed_fragment.fsspec = &mSpec;
+    libSpec.value.mac_indexed_fragment.index = 0;
+    *_retval =  PR_LoadLibraryWithFlags(libSpec, 0);
+    
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_NULL_POINTER;
 }
 
 NS_IMETHODIMP  
@@ -849,7 +1021,35 @@ nsLocalFile::GetFileSize(PRInt64 *aFileSize)
 NS_IMETHODIMP  
 nsLocalFile::SetFileSize(PRInt64 aFileSize)
 {
+    PRBool	exists;
+    
+    Exists(&exists);
+    if (exists)
+    {
+	    short   refNum;
+	    OSErr   err;
+	    PRInt32	aNewLength;
+		
+		LL_L2I(aNewLength, aFileSize);
+		
+		// Need to open the file to set the size
+		if (::FSpOpenDF(&mSpec, fsWrPerm, &refNum) != noErr)
+		    return NS_ERROR_FILE_ACCESS_DENIED;
 
+		err = ::SetEOF(refNum, aNewLength);
+		    
+		// Close the file unless we got an error that it was already closed
+		if (err != fnOpnErr)
+		    (void)::FSClose(refNum);
+		    
+		if (err != noErr)
+			return MacErrorMapper(err);
+	}
+	else
+	{
+		return NS_ERROR_FILE_NOT_FOUND;
+	}
+        
     return NS_OK;
 }
 
@@ -917,7 +1117,13 @@ NS_IMETHODIMP
 nsLocalFile::Exists(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
-            
+    *_retval = PR_FALSE;		// Assume failure
+    (void)ResolveAndStat(PR_TRUE);
+    
+	FSSpec temp;
+	if (::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &temp) == noErr)
+		*_retval = PR_TRUE;
+
     return NS_OK;
 }
 
@@ -959,6 +1165,16 @@ nsLocalFile::IsDirectory(PRBool *_retval)
     NS_ENSURE_ARG(_retval);
     *_retval = PR_FALSE;
 
+    nsresult rv = ResolveAndStat(PR_TRUE);
+    
+    if (NS_FAILED(rv))
+        return rv;
+    
+	long dirID;
+	Boolean isDirectory;
+	if ((::FSpGetDirectoryID(&mResolvedSpec, &dirID, &isDirectory) == noErr) && isDirectory)
+		*_retval = PR_TRUE;
+
     return NS_OK;
 }
 
@@ -967,6 +1183,16 @@ nsLocalFile::IsFile(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
     *_retval = PR_FALSE;
+
+    nsresult rv = ResolveAndStat(PR_TRUE);
+    
+    if (NS_FAILED(rv))
+        return rv;
+    
+	long dirID;
+	Boolean isDirectory;
+	if ((::FSpGetDirectoryID(&mResolvedSpec, &dirID, &isDirectory) == noErr) && !isDirectory)
+		*_retval = PR_TRUE;
 
     return NS_OK;
 }
@@ -1075,6 +1301,92 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator * *entries)
     return NS_OK;
 }
 
+#pragma mark [nsILocalFileMac]
+// Implementation of Mac specific finctions from nsILocalFileMac
 
 
+NS_IMETHODIMP nsLocalFile::GetInitType(nsLocalFileMacInitType *type)
+{
+	NS_ENSURE_ARG(type);
+    *type = mInitType;
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsLocalFile::InitWithFSSpec(const FSSpec *fileSpec)
+{
+	mSpec = *fileSpec;
+    mInitType = eInitWithFSSpec;
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsLocalFile::GetFSSpec(FSSpec *fileSpec)
+{
+    NS_ENSURE_ARG(fileSpec);
+    *fileSpec = mSpec;
+    return NS_OK;
+
+}
+
+NS_IMETHODIMP nsLocalFile::GetAppendedPath(char **_retval)
+{
+	NS_ENSURE_ARG_POINTER(_retval);
+	*_retval = (char*) nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsLocalFile::GetFileTypeAndCreator(OSType *type, OSType *creator)
+{
+    NS_ENSURE_ARG(type);
+    NS_ENSURE_ARG(creator);
+    
+    ResolveAndStat(PR_TRUE);
+    
+	FInfo info;
+	OSErr err = ::FSpGetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_NOT_FOUND;
+	*type = info.fdType;
+	*creator = info.fdCreator;	
+    
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsLocalFile::SetFileTypeAndCreator(OSType type, OSType creator)
+{
+	FInfo info;
+	OSErr err = ::FSpGetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_NOT_FOUND;
+	
+	// See if the user specified a type or creator before changing from what was read
+	if (type)
+		info.fdType = type;
+	if (creator)
+		info.fdCreator = creator;
+	
+	err = ::FSpSetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_ACCESS_DENIED;
+	
+    return NS_OK;
+}
+
+
+// Handy dandy utility create routine for something or the other
+NS_COM nsresult 
+NS_NewLocalFile(const char* path, nsILocalFile* *result)
+{
+    nsLocalFile* file = new nsLocalFile();
+    if (file == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(file);
+
+    nsresult rv = file->InitWithPath(path);
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(file);
+        return rv;
+    }
+    *result = file;
+    return NS_OK;
+}
 
