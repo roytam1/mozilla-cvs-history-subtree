@@ -3374,6 +3374,13 @@ nsDocShell::GetVisibility(PRBool * aVisibility)
         nsCOMPtr<nsIPresShell> pPresShell;
         parentDS->GetPresShell(getter_AddRefs(pPresShell));
 
+        // Null-check for crash in bug 267804
+        if (!pPresShell) {
+            NS_NOTREACHED("docshell has null pres shell");
+            *aVisibility = PR_FALSE;
+            return NS_OK;
+        }
+
         nsCOMPtr<nsIDocument> pDoc;
         pPresShell->GetDocument(getter_AddRefs(pDoc));
 
