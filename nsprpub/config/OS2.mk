@@ -40,8 +40,8 @@ SHELL = GBASH.EXE
 
 CC			= icc -q -DXP_OS2 -N10
 CCC			= icc -q -DXP_OS2 -DOS2=4 -N10
-LINK			= flipper ilink
-AR			= ilibo /noignorecase /nologo $@
+LINK		= ilink
+AR			= ilib /noignorecase /nologo $(subst /,\\,$@)
 RANLIB = @echo RANLIB
 BSDECHO = @echo BSDECHO
 NSINSTALL = nsinstall
@@ -95,6 +95,8 @@ OS_DLLFLAGS = -nologo -DLL -FREE -NOE
 
 ifdef XP_OS2_VACPP
 
+OS_LIBS = so32dll.lib tcp32dll.lib
+
 DEFINES += -DXP_OS2_VACPP
 
 else
@@ -106,6 +108,8 @@ AR      = ar -q $@
 RC 		= rc.exe
 FILTER  = emxexp
 IMPLIB  = emximp -o
+
+OS_LIBS     = -lsocket -lemxio
 
 LIB_SUFFIX = a
 

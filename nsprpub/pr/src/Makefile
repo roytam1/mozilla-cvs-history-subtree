@@ -131,11 +131,7 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifeq ($(OS_TARGET),OS2)
-ifdef XP_OS2_VACPP
-OS_LIBS		= so32dll.lib tcp32dll.lib
-else
-OS_LIBS     = -lsocket -lemxio
-endif
+# We define this in os2.mk.
 else
 ifneq ($(OS_TARGET),WIN16)
 OS_LIBS		= wsock32.lib winmm.lib

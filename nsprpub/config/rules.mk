@@ -233,7 +233,11 @@ endif
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifdef XP_OS2_VACPP
+	$(AR) $(subst /,\\,$(OBJS)) $(AR_EXTRA_ARGS)
+else
 	$(AR) $(OBJS) $(AR_EXTRA_ARGS)
+endif
 	$(RANLIB) $@
 
 ifeq ($(OS_TARGET), WIN16)
