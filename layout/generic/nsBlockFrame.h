@@ -376,7 +376,7 @@ protected:
   nsresult PrepareResizeReflow(nsBlockReflowState& aState);
 
   /** reflow all lines that have been marked dirty */
-  nsresult ReflowDirtyLines(nsBlockReflowState& aState);
+  nsresult ReflowDirtyLines(nsBlockReflowState& aState, PRBool* aALineWasDirty);
 
   //----------------------------------------
   // Methods for line reflow

@@ -763,7 +763,8 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   if (NS_FAILED(rv)) return rv;
 
   // Now reflow...
-  rv = ReflowDirtyLines(state);
+  PRBool didSomething;
+  rv = ReflowDirtyLines(state, &didSomething);
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
 
@@ -1756,12 +1757,14 @@ nsBlockFrame::ReparentFloats(nsIFrame* aFirstFrame,
  * Reflow the dirty lines
  */
 nsresult
-nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
+nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
+                               PRBool* aALineWasDirty)
 {
   nsresult rv = NS_OK;
   PRBool keepGoing = PR_TRUE;
   PRBool repositionViews = PR_FALSE; // should we really need this?
   PRBool foundAnyClears = PR_FALSE;
+  *aALineWasDirty = PR_FALSE;
 
 #ifdef DEBUG
   if (gNoisyReflow) {
@@ -1917,6 +1920,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
     // Now repair the line and update |aState.mY| by calling
     // |ReflowLine| or |SlideLine|.
     if (line->IsDirty()) {
+      *aALineWasDirty = PR_TRUE;
       lastLineMovedUp = PR_TRUE;
 
       PRBool maybeReflowingForFirstTime =
@@ -4332,7 +4336,7 @@ nsBlockFrame::DrainOverflowLines()
       {
         // Remember to recompute the margins on the first line. This will
         // also recompute the correct deltaY if necessary.
-       mLines.front()->MarkPreviousMarginDirty();
+        mLines.front()->MarkPreviousMarginDirty();
         // Join the sibling lists together
         lastFrame->SetNextSibling(mLines.front()->mFirstChild);
       }
