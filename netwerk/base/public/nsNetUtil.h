@@ -27,6 +27,7 @@
 #include "netCore.h"
 #include "nsIInputStream.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamProvider.h"
 #include "nsILoadGroup.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsString.h"
@@ -42,6 +43,8 @@
 #include "nsIStreamIO.h"
 #include "nsXPIDLString.h"
 #include "prio.h"       // for read/write flags, permissions, etc.
+
+#include "nsNetCID.h"
 
 // Helper, to simplify getting the I/O service.
 inline const nsGetServiceByCID
@@ -369,52 +372,113 @@ NS_NewStreamLoader(nsIStreamLoader* *result,
 }
 
 inline nsresult
+NS_NewStreamObserverProxy(nsIStreamObserver **aResult,
+                          nsIStreamObserver *aObserver,
+                          nsIEventQueue *aEventQ=nsnull)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+
+    nsresult rv;
+    nsCOMPtr<nsIStreamObserverProxy> proxy;
+    static NS_DEFINE_CID(kStreamObserverProxyCID, NS_STREAMOBSERVERPROXY_CID);
+
+    rv = nsComponentManager::CreateInstance(kStreamObserverProxyCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIStreamObserverProxy),
+                                            getter_AddRefs(proxy));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = proxy->Init(aObserver, aEventQ);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = proxy;
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewStreamListenerProxy(nsIStreamListener **aResult,
+                          nsIStreamListener *aListener,
+                          nsIEventQueue *aEventQ=nsnull,
+                          PRUint32 aBufferSegmentSize=0,
+                          PRUint32 aBufferMaxSize=0)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+
+    nsresult rv;
+    nsCOMPtr<nsIStreamListenerProxy> proxy;
+    static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
+
+    rv = nsComponentManager::CreateInstance(kStreamListenerProxyCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIStreamListenerProxy),
+                                            getter_AddRefs(proxy));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = proxy->Init(aListener, aEventQ, aBufferSegmentSize, aBufferMaxSize);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = proxy;
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewStreamProviderProxy(nsIStreamProvider **aResult,
+                          nsIStreamProvider *aProvider,
+                          nsIEventQueue *aEventQ=nsnull,
+                          PRUint32 aBufferSegmentSize=0,
+                          PRUint32 aBufferMaxSize=0)
+{
+    NS_ENSURE_ARG_POINTER(aResult);
+
+    nsresult rv;
+    nsCOMPtr<nsIStreamProviderProxy> proxy;
+    static NS_DEFINE_CID(kStreamProviderProxyCID, NS_STREAMPROVIDERPROXY_CID);
+
+    rv = nsComponentManager::CreateInstance(kStreamProviderProxyCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIStreamProviderProxy),
+                                            getter_AddRefs(proxy));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = proxy->Init(aProvider, aEventQ, aBufferSegmentSize, aBufferMaxSize);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = proxy;
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
+}
+
+// Depracated, prefer NS_NewStreamObserverProxy
+inline nsresult
 NS_NewAsyncStreamObserver(nsIStreamObserver **result,
                           nsIStreamObserver *receiver,
                           nsIEventQueue *eventQueue)
 {
-    nsresult rv;
-    nsCOMPtr<nsIAsyncStreamObserver> obs;
-    static NS_DEFINE_CID(kAsyncStreamObserverCID, NS_ASYNCSTREAMOBSERVER_CID);
-    rv = nsComponentManager::CreateInstance(kAsyncStreamObserverCID,
-                                            nsnull, 
-                                            NS_GET_IID(nsIAsyncStreamObserver),
-                                            getter_AddRefs(obs));
-    if (NS_FAILED(rv)) return rv;
-    rv = obs->Init(receiver, eventQueue);
-    if (NS_FAILED(rv)) return rv;
-
-    *result = obs;
-    NS_ADDREF(*result);
-    return NS_OK;
+    return NS_NewStreamObserverProxy(result, receiver, eventQueue);
 }
 
+// Depracated, prefer NS_NewStreamListenerProxy
 inline nsresult
 NS_NewAsyncStreamListener(nsIStreamListener **result,
                           nsIStreamListener *receiver,
                           nsIEventQueue *eventQueue)
 {
-    nsresult rv;
-    nsCOMPtr<nsIAsyncStreamListener> lsnr;
-    static NS_DEFINE_CID(kAsyncStreamListenerCID, NS_ASYNCSTREAMLISTENER_CID);
-    rv = nsComponentManager::CreateInstance(kAsyncStreamListenerCID,
-                                            nsnull, 
-                                            NS_GET_IID(nsIAsyncStreamListener),
-                                            getter_AddRefs(lsnr));
-    if (NS_FAILED(rv)) return rv;
-    rv = lsnr->Init(receiver, eventQueue);
-    if (NS_FAILED(rv)) return rv;
-
-    *result = lsnr;
-    NS_ADDREF(*result);
-    return NS_OK;
+    return NS_NewStreamListenerProxy(result, receiver, eventQueue);
 }
+
 
 inline nsresult
 NS_NewSyncStreamListener(nsIInputStream **inStream, 
                          nsIOutputStream **outStream,
                          nsIStreamListener **listener)
 {
+    NS_NOTREACHED("This implementation is seriously broken!!"); // Darin
+    /*
     nsresult rv;
     nsCOMPtr<nsISyncStreamListener> lsnr;
     static NS_DEFINE_CID(kSyncStreamListenerCID, NS_SYNCSTREAMLISTENER_CID);
@@ -428,7 +492,64 @@ NS_NewSyncStreamListener(nsIInputStream **inStream,
 
     *listener = lsnr;
     NS_ADDREF(*listener);
+    */
     return NS_OK;
+}
+
+//
+// Calls AsyncWrite on the specified channel, with a stream provider that
+// reads data from the specified input stream.
+//
+inline nsresult
+NS_AsyncWriteFromStream(nsIChannel *aChannel,
+                        nsIInputStream *aSource,
+                        nsIStreamObserver *aObserver=NULL,
+                        nsISupports *aContext=NULL)
+{
+    NS_ENSURE_ARG_POINTER(aChannel);
+
+    nsresult rv;
+    nsCOMPtr<nsISimpleStreamProvider> provider;
+    static NS_DEFINE_CID(kSimpleStreamProviderCID, NS_SIMPLESTREAMPROVIDER_CID);
+
+    rv = nsComponentManager::CreateInstance(kSimpleStreamProviderCID,
+                                            nsnull,
+                                            NS_GET_IID(nsISimpleStreamProvider),
+                                            getter_AddRefs(provider));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = provider->Init(aSource, aObserver);
+    if (NS_FAILED(rv)) return rv;
+
+    return aChannel->AsyncWrite(provider, aContext);
+}
+
+//
+// Calls AsyncRead on the specified channel, with a stream listener that
+// writes data to the specified output stream.
+//
+inline nsresult
+NS_AsyncReadToStream(nsIChannel *aChannel,
+                     nsIOutputStream *aSink,
+                     nsIStreamObserver *aObserver=NULL,
+                     nsISupports *aContext=NULL)
+{
+    NS_ENSURE_ARG_POINTER(aChannel);
+
+    nsresult rv;
+    nsCOMPtr<nsISimpleStreamListener> listener;
+    static NS_DEFINE_CID(kSimpleStreamListenerCID, NS_SIMPLESTREAMLISTENER_CID);
+
+    rv = nsComponentManager::CreateInstance(kSimpleStreamListenerCID,
+                                            nsnull,
+                                            NS_GET_IID(nsISimpleStreamListener),
+                                            getter_AddRefs(listener));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = listener->Init(aSink, aObserver);
+    if (NS_FAILED(rv)) return rv;
+
+    return aChannel->AsyncRead(listener, aContext);
 }
 
 #endif // nsNetUtil_h__

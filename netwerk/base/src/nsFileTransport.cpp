@@ -29,29 +29,174 @@
 #include "nsCOMPtr.h"
 #include "nsIProxyObjectManager.h"
 #include "nsNetUtil.h"
+#include "nslog.h"
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 #define NS_OUTPUT_STREAM_BUFFER_SIZE    (64 * 1024)
 
-#ifdef PR_LOGGING
-//
-// Log module for nsFileTransport logging...
-//
-// To enable logging (see prlog.h for full details):
-//
-//    set NSPR_LOG_MODULES=nsFileTransport:5
-//    set NSPR_LOG_FILE=nspr.log
-//
-// this enables PR_LOG_DEBUG level information and places all output in
-// the file nspr.log
-//
-PRLogModuleInfo* gFileTransportLog = nsnull;
+NS_IMPL_LOG(nsFileTransportLog)
+#define PRINTF NS_LOG_PRINTF(nsFileTransportLog)
+#define FLUSH NS_LOG_FLUSH(nsFileTransportLog)
 
-#endif /* PR_LOGGING */
+//////////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////
+#define GET_SOURCE_WRAPPER() \
+    ((nsInputStreamWrapper *) (nsIInputStream *) mSourceWrapper)
+#define GET_SINK_WRAPPER() \
+    ((nsOutputStreamWrapper *) (nsIOutputStream *) mSinkWrapper)
+
+//////////////////////////////////////////////////////////////////////////////////
+
+//
+// An nsInputStreamWrapper captures the number of bytes read from an
+// input stream.
+//
+class nsInputStreamWrapper : public nsIInputStream
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    nsInputStreamWrapper() : mBytesRead(0) {NS_INIT_ISUPPORTS();}
+    virtual ~nsInputStreamWrapper() {}
+
+    //
+    // nsIInputStream implementation...
+    //
+    NS_IMETHOD Close() {
+        return mSource->Close();
+    }
+    NS_IMETHOD Available(PRUint32 *aCount) {
+        return mSource->Available(aCount);
+    }
+    NS_IMETHOD Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead) {
+        nsresult rv = mSource->Read(aBuf, aCount, aBytesRead);
+        if (NS_SUCCEEDED(rv))
+            mBytesRead += *aBytesRead;
+        return rv;
+    }
+    NS_IMETHOD ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
+                            PRUint32 aCount, PRUint32 *aBytesRead) {
+        nsresult rv = mSource->ReadSegments(aWriter, aClosure, aCount, aBytesRead);
+        if (NS_SUCCEEDED(rv))
+            mBytesRead += *aBytesRead;
+        return rv;
+    }
+    NS_IMETHOD GetNonBlocking(PRBool *aValue) {
+        return mSource->GetNonBlocking(aValue);
+    }
+    NS_IMETHOD GetObserver(nsIInputStreamObserver **aObserver) {
+        return mSource->GetObserver(aObserver);
+    }
+    NS_IMETHOD SetObserver(nsIInputStreamObserver *aObserver) {
+        return mSource->SetObserver(aObserver);
+    }
+
+    //
+    // Helper functions
+    //
+    void SetSource(nsIInputStream *aSource) {
+        mSource = aSource;
+    }
+    PRUint32 GetBytesRead() {
+        return mBytesRead;
+    }
+    void ZeroBytesRead() {
+        mBytesRead = 0;
+    }
+
+protected:
+    // 
+    // State variables
+    //
+    PRUint32                 mBytesRead;
+    nsCOMPtr<nsIInputStream> mSource;
+};
+
+// This must be threadsafe since different threads can run the same transport
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamWrapper, nsIInputStream)
+
+//////////////////////////////////////////////////////////////////////////////////
+
+//
+// An nsOutputStreamWrapper captures the number of bytes written to an
+// output stream.
+//
+class nsOutputStreamWrapper : public nsIOutputStream
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    nsOutputStreamWrapper() : mBytesWritten(0) {NS_INIT_ISUPPORTS();}
+    virtual ~nsOutputStreamWrapper() {}
+
+    //
+    // nsIInputStream implementation...
+    //
+    NS_IMETHOD Close() {
+        return mSink->Close();
+    }
+    NS_IMETHOD Flush() {
+        return mSink->Flush();
+    }
+    NS_IMETHOD Write(const char *aBuf, PRUint32 aCount, PRUint32 *aBytesWritten) {
+        nsresult rv = mSink->Write(aBuf, aCount, aBytesWritten);
+        if (NS_SUCCEEDED(rv))
+            mBytesWritten += *aBytesWritten;
+        return rv;
+    }
+    NS_IMETHOD WriteFrom(nsIInputStream *aSource, PRUint32 aCount, PRUint32 *aBytesWritten) {
+        nsresult rv = mSink->WriteFrom(aSource, aCount, aBytesWritten);
+        if (NS_SUCCEEDED(rv))
+            mBytesWritten += *aBytesWritten;
+        return rv;
+    }
+    NS_IMETHOD WriteSegments(nsReadSegmentFun aReader, void *aClosure,
+                            PRUint32 aCount, PRUint32 *aBytesWritten) {
+        nsresult rv = mSink->WriteSegments(aReader, aClosure, aCount, aBytesWritten);
+        if (NS_SUCCEEDED(rv))
+            mBytesWritten += *aBytesWritten;
+        return rv;
+    }
+    NS_IMETHOD GetNonBlocking(PRBool *aValue) {
+        return mSink->GetNonBlocking(aValue);
+    }
+    NS_IMETHOD SetNonBlocking(PRBool aValue) {
+        return mSink->SetNonBlocking(aValue);
+    }
+    NS_IMETHOD GetObserver(nsIOutputStreamObserver **aObserver) {
+        return mSink->GetObserver(aObserver);
+    }
+    NS_IMETHOD SetObserver(nsIOutputStreamObserver *aObserver) {
+        return mSink->SetObserver(aObserver);
+    }
+
+    //
+    // Helper functions
+    //
+    void SetSink(nsIOutputStream *aSink) {
+        mSink = aSink;
+    }
+    PRUint32 GetBytesWritten() {
+        return mBytesWritten;
+    }
+    void ZeroBytesWritten() {
+        mBytesWritten = 0;
+    }
+
+protected:
+    // 
+    // State variables
+    //
+    PRUint32                  mBytesWritten;
+    nsCOMPtr<nsIOutputStream> mSink;
+};
+
+// This must be threadsafe since different threads can run the same transport
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsOutputStreamWrapper, nsIOutputStream)
+
+//////////////////////////////////////////////////////////////////////////////////
 
 nsFileTransport::nsFileTransport()
     : mContentType(nsnull),
@@ -61,25 +206,15 @@ nsFileTransport::nsFileTransport()
       mRunState(RUNNING),
       mCancelStatus(NS_OK),
       mMonitor(nsnull),
+      mActive(PR_FALSE),
       mStatus(NS_OK),
       mOffset(0),
       mTotalAmount(-1),
       mTransferAmount(-1),
       mLoadAttributes(LOAD_NORMAL),
-      mBuffer(nsnull),
       mService(nsnull)
 {
-    NS_INIT_REFCNT();
-
-#ifdef PR_LOGGING
-    //
-    // Initialize the global PRLogModule for socket transport logging
-    // if necessary...
-    //
-    if (nsnull == gFileTransportLog) {
-        gFileTransportLog = PR_NewLogModule("nsFileTransport");
-    }
-#endif /* PR_LOGGING */
+    NS_INIT_ISUPPORTS();
 }
 
 nsresult
@@ -132,10 +267,11 @@ nsFileTransport::~nsFileTransport()
         DoClose();
     }
     NS_ASSERTION(mSource == nsnull, "transport not closed");
-    NS_ASSERTION(mInputStream == nsnull, "transport not closed");
-    NS_ASSERTION(mOutputStream == nsnull, "transport not closed");
+    NS_ASSERTION(mSourceWrapper == nsnull, "transport not closed");
     NS_ASSERTION(mSink == nsnull, "transport not closed");
-    NS_ASSERTION(mBuffer == nsnull, "transport not closed");
+    NS_ASSERTION(mSinkWrapper == nsnull, "transport not closed");
+    //NS_ASSERTION(mPipeIn == nsnull, "transport not closed");
+    //NS_ASSERTION(mPipeOut == nsnull, "transport not closed");
     if (mMonitor)
         nsAutoMonitor::DestroyMonitor(mMonitor);
     if (mContentType)
@@ -197,6 +333,8 @@ nsFileTransport::Cancel(nsresult status)
     nsAutoMonitor mon(mMonitor);
     NS_ASSERTION(NS_FAILED(status), "shouldn't cancel with a success code");
 
+    // Cancel takes precidence over Suspend
+
     nsresult rv = NS_OK;
     if (mRunState == SUSPENDED) {
         rv = Resume();
@@ -206,9 +344,7 @@ nsFileTransport::Cancel(nsresult status)
         mRunState = CANCELED;
         mCancelStatus = status;
     }
-    PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-           ("nsFileTransport: Cancel [this=%x %s]",
-            this, mStreamName.GetBuffer()));
+    PRINTF("Cancel [this=%x %s]\n", this, mStreamName.GetBuffer());
     return rv;
 }
 
@@ -218,11 +354,9 @@ nsFileTransport::Suspend()
     nsAutoMonitor mon(mMonitor);
     nsresult rv = NS_OK;
     if (mRunState != SUSPENDED) {
-        // XXX close the stream here?
+        PRINTF("Suspend [this=%x %s]\n",
+                this, mStreamName.GetBuffer());
         mRunState = SUSPENDED;
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: Suspend [this=%x %s]",
-                this, mStreamName.GetBuffer()));
     }
     return rv;
 }
@@ -233,13 +367,17 @@ nsFileTransport::Resume()
     nsAutoMonitor mon(mMonitor);
     nsresult rv = NS_OK;
     if (mRunState == SUSPENDED) {
-        // XXX re-open the stream and seek here?
+        PRINTF("Resume [this=%x %s] status=%x\n",
+                this, mStreamName.GetBuffer(), mStatus);
         mRunState = RUNNING;  // set this first before resuming!
-        mStatus = mService->DispatchRequest(this);
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: Resume [this=%x %s] status=%x",
-                this, mStreamName.GetBuffer(), mStatus));
+
+        // Only dispatch a new thread, if there isn't one currently active.
+        if (!mActive)
+            mStatus = mService->DispatchRequest(this);
     }
+    else
+        PRINTF("Resume ignored [this=%x %s] status=%x\n",
+                this, mStreamName.GetBuffer(), mStatus);
     return rv;
 }
 
@@ -281,28 +419,33 @@ nsFileTransport::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
         return NS_ERROR_IN_PROGRESS;
 
     NS_ASSERTION(listener, "need to supply an nsIStreamListener");
-    rv = NS_NewAsyncStreamListener(getter_AddRefs(mListener), 
-                                   listener, nsnull);
+    rv = NS_NewStreamListenerProxy(getter_AddRefs(mListener),
+                                   listener, nsnull,
+                                   mBufferSegmentSize,
+                                   mBufferMaxSize);
     if (NS_FAILED(rv)) return rv;
 
-    rv = NS_NewPipe(getter_AddRefs(mInputStream),
-                    getter_AddRefs(mOutputStream),
+    /*
+    rv = NS_NewPipe(getter_AddRefs(mPipeIn),
+                    getter_AddRefs(mPipeOut),
                     mBufferSegmentSize, mBufferMaxSize,
                     PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mInputStream->SetObserver(this);
+    //
+    // As a pipe input observer this transport will be notified when the 
+    // pipe is emptied.
+    // 
+    rv = mPipeIn->SetObserver(this);
     if (NS_FAILED(rv)) return rv;
-    rv = mOutputStream->SetObserver(this);
-    if (NS_FAILED(rv)) return rv;
+    */
 
     NS_ASSERTION(mContext == nsnull, "context not released");
     mContext = ctxt;
     mXferState = OPEN_FOR_READ;
 
-    PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-           ("nsFileTransport: AsyncRead [this=%x %s] mOffset=%d mTransferAmount=%d",
-            this, mStreamName.GetBuffer(), mOffset, mTransferAmount));
+    PRINTF("AsyncRead [this=%x %s] mOffset=%d mTransferAmount=%d\n",
+            this, mStreamName.GetBuffer(), mOffset, mTransferAmount);
 
     rv = mService->DispatchRequest(this);
     if (NS_FAILED(rv)) return rv;
@@ -311,29 +454,39 @@ nsFileTransport::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 }
 
 NS_IMETHODIMP
-nsFileTransport::AsyncWrite(nsIInputStream *fromStream,
-                            nsIStreamObserver *observer,
+nsFileTransport::AsyncWrite(nsIStreamProvider *provider,
                             nsISupports *ctxt)
 {
     nsresult rv = NS_OK;
 
+    PRINTF("AsyncWrite [this=%x, provider=%x]\n", this, provider);
+
     if (mXferState != CLOSED)
         return NS_ERROR_IN_PROGRESS;
 
-    if (observer) {
-        rv = NS_NewAsyncStreamObserver(getter_AddRefs(mObserver),
-                                       observer, NS_CURRENT_EVENTQ);
-        if (NS_FAILED(rv)) return rv;
-    }
+    NS_ASSERTION(provider, "need to supply an nsIStreamProvider");
+    rv = NS_NewStreamProviderProxy(getter_AddRefs(mProvider), provider);
+    if (NS_FAILED(rv)) return rv;
+
+    /*
+    rv = NS_NewPipe(getter_AddRefs(mPipeIn),
+                    getter_AddRefs(mPipeOut),
+                    mBufferSegmentSize, mBufferMaxSize,
+                    PR_TRUE, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+    */
+
+    //rv = mPipeIn->SetObserver(this);
+    //if (NS_FAILED(rv)) return rv;
+    //rv = mPipeOut->SetObserver(this);
+    //if (NS_FAILED(rv)) return rv;
 
     NS_ASSERTION(mContext == nsnull, "context not released");
     mContext = ctxt;
     mXferState = OPEN_FOR_WRITE;
-    mSource = fromStream;
 
-    PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-           ("nsFileTransport: AsyncWrite [this=%x %s]",
-            this, mStreamName.GetBuffer()));
+    PRINTF("AsyncWrite [this=%x %s] mOffset=%d mTransferAmount=%d\n",
+            this, mStreamName.GetBuffer(), mOffset, mTransferAmount);
 
     rv = mService->DispatchRequest(this);
     if (NS_FAILED(rv)) return rv;
@@ -348,6 +501,9 @@ nsFileTransport::AsyncWrite(nsIInputStream *fromStream,
 NS_IMETHODIMP
 nsFileTransport::Run(void)
 {
+    nsAutoMonitor mon(mMonitor);
+    mActive = PR_TRUE;
+
     while (mXferState != CLOSED && mRunState != SUSPENDED) {
         if (mRunState == CANCELED) {
             if (mXferState == READING)
@@ -360,9 +516,11 @@ nsFileTransport::Run(void)
         }
         Process();
     }
+    mActive = PR_FALSE;
     return NS_OK;
 }
 
+/*
 static NS_METHOD
 nsWriteToFile(nsIInputStream* in,
               void* closure,
@@ -375,15 +533,17 @@ nsWriteToFile(nsIInputStream* in,
     nsresult rv = outStr->Write(fromRawSegment, count, writeCount);
     return rv;
 }
+*/
 
 void
 nsFileTransport::Process(void)
 {
+    PRINTF("Process [this=%x, state=%x]\n", this, mXferState);FLUSH();
+
     switch (mXferState) {
       case OPEN_FOR_READ: { 
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: OPEN_FOR_READ [this=%x %s]",
-                this, mStreamName.GetBuffer()));
+        PRINTF("OPEN_FOR_READ [this=%x %s]\n",
+                this, mStreamName.GetBuffer());FLUSH();
         mStatus = mStreamIO->Open(&mContentType, &mTotalAmount);
         if (mListener) {
             nsresult rv = mListener->OnStartRequest(this, mContext);  // always send the start notification
@@ -396,9 +556,8 @@ nsFileTransport::Process(void)
       }
 
       case START_READ: {
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: START_READ [this=%x %s]",
-                this, mStreamName.GetBuffer()));
+        PRINTF("START_READ [this=%x %s]\n",
+                this, mStreamName.GetBuffer());FLUSH();
 
         PR_AtomicIncrement(&mService->mInUseTransports);
 
@@ -409,14 +568,15 @@ nsFileTransport::Process(void)
         }
 
         if (mOffset > 0) {
-            // if we need to set a starting offset, QI for the nsISeekableStream and set it
+            // if we need to set a starting offset, QI for the nsISeekableStream
+            // and set it
             nsCOMPtr<nsISeekableStream> ras = do_QueryInterface(mSource, &mStatus);
             if (NS_FAILED(mStatus)) {
                 mXferState = END_READ;
                 return;
             }
-            // for now, assume the offset is always relative to the start of the file (position 0)
-            // so use PR_SEEK_SET
+            // for now, assume the offset is always relative to the start of the
+            // file (position 0) so use PR_SEEK_SET
             mStatus = ras->Seek(PR_SEEK_SET, mOffset);
             if (NS_FAILED(mStatus)) {
                 mXferState = END_READ;
@@ -424,76 +584,99 @@ nsFileTransport::Process(void)
             }
         }
 
+        if (!mSourceWrapper) {
+            //
+            // Allocate an input stream wrapper to capture the number of bytes
+            // read from mSource.
+            //
+            NS_NEWXPCOM(mSourceWrapper, nsInputStreamWrapper);
+            if (!mSourceWrapper) {
+                mStatus = NS_ERROR_OUT_OF_MEMORY;
+                mXferState = END_READ;
+                return;
+            }
+            GET_SOURCE_WRAPPER()->SetSource(mSource);
+        }
+
         // capture the total amount for progress information
         if (mTransferAmount < 0) {
             mTransferAmount = mTotalAmount;
-        }
-        mTotalAmount = mTransferAmount;
+        } else
+            mTotalAmount = mTransferAmount;
 
         mXferState = READING;
         break;
       }
 
       case READING: {
-        // Use a temporary status variable here so that we don't whack mStatus with 
-        // NS_BASE_STREAM_WOULD_BLOCK. This could cause the async stream listener to
-        // decide an error was happening, and not deliver necessary events.
-        nsresult status;
+        //
+        // Read at most mBufferMaxSize.
+        //
+        PRInt32 transferAmt = mBufferMaxSize;
+        if (mTransferAmount >= 0)
+            transferAmt = PR_MIN(transferAmt, mTransferAmount);
 
-        PRUint32 writeAmt;
-        // and feed the buffer to the application via the buffer stream:
-        status = mOutputStream->WriteFrom(mSource, mTransferAmount, &writeAmt);
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: READING [this=%x %s] amt=%d status=%x",
-                this, mStreamName.GetBuffer(), writeAmt, status));
+        PRINTF("READING [this=%x %s] transferAmt=%u mBufferMaxSize=%u\n",
+                this, mStreamName.GetBuffer(), transferAmt, mBufferMaxSize);
+
+        // Zero the number of bytes read on the source wrapper
+        GET_SOURCE_WRAPPER()->ZeroBytesRead();
+
+        //
+        // Give the listener a chance to read at most transferAmt bytes from
+        // the source input stream.
+        //
+        nsresult status = mListener->OnDataAvailable(this, mContext,
+                                                     mSourceWrapper,
+                                                     mOffset, transferAmt);
+
+        //
+        // Handle the various return codes.
+        //
         if (status == NS_BASE_STREAM_WOULD_BLOCK) {
+            PRINTF("READING [this=%x %s] listener would block; suspending self.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
             mStatus = NS_OK;
-            return;
+            Suspend();
         }
-        mStatus = status;
-        if (NS_FAILED(mStatus) || writeAmt == 0) {
-            PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-                   ("nsFileTransport: READING [this=%x %s] %s writing to buffered output stream",
-                    this, mStreamName.GetBuffer(), NS_SUCCEEDED(mStatus) ? "done" : "error"));
+        else if (status == NS_BASE_STREAM_CLOSED) {
+            PRINTF("READING [this=%x %s] done reading file.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
+            mStatus = NS_OK;
             mXferState = END_READ;
-            return;
         }
-        if (mTransferAmount > 0) {
-            mTransferAmount -= writeAmt;
-            PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-                   ("nsFileTransport: READING [this=%x %s] %d bytes left to transfer",
-                    this, mStreamName.GetBuffer(), mTransferAmount));
+        else if (NS_FAILED(status)) {
+            PRINTF("READING [this=%x %s] error reading file.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
+            mStatus = status;
+            mXferState = END_READ;
         }
-        PRUint32 offset = mOffset;
-        mOffset += writeAmt;
-        if (mListener) {
-            mStatus = mListener->OnDataAvailable(this, mContext,
-                                                 mInputStream,
-                                                 offset, writeAmt);
-            if (NS_FAILED(mStatus)) {
-                PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-                       ("nsFileTransport: READING [this=%x %s] error notifying stream listener",
-                        this, mStreamName.GetBuffer()));
+        else {
+            // 
+            // get the number of bytes read
+            //
+            PRUint32 total = GET_SOURCE_WRAPPER()->GetBytesRead();
+            mOffset += total;
 
+            if (mTransferAmount > 0)
+                mTransferAmount -= total;
+
+            if (0 == total || 0 == mTransferAmount) {
+                PRINTF("READING [this=%x %s] done reading file.\n",
+                        this, mStreamName.GetBuffer());FLUSH();
                 mXferState = END_READ;
-                return;
+            }
+            else
+                PRINTF("READING [this=%x %s] read %u bytes [offset=%u]\n",
+                        this, mStreamName.GetBuffer(), total, mOffset);FLUSH();
+
+            if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)
+                    && (mTransferAmount >= 0)) {
+                mProgress->OnProgress(this, mContext,
+                                      mTotalAmount - mTransferAmount,
+                                      mTotalAmount);
             }
         }
-
-        if (mProgress && mTransferAmount >= 0 && 
-            !(mLoadAttributes & LOAD_BACKGROUND)) {
-            nsresult rv = mProgress->OnProgress(this, mContext,
-                                    mTotalAmount - mTransferAmount,
-                                    mTotalAmount);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnProgress failure");
-        }
-
-        if (mTransferAmount == 0) {
-            mXferState = END_READ;
-            return;
-        }
-
-        // stay in the READING state
         break;
       }
 
@@ -501,52 +684,49 @@ nsFileTransport::Process(void)
         
         PR_AtomicDecrement(&mService->mInUseTransports);
 
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: END_READ [this=%x %s] status=%x",
-                this, mStreamName.GetBuffer(), mStatus));
+        PRINTF("END_READ [this=%x %s] status=%x\n",
+                this, mStreamName.GetBuffer(), mStatus);
 
 #if defined (DEBUG_dougt) || defined (DEBUG_warren)
         NS_ASSERTION(mTransferAmount <= 0 || NS_FAILED(mStatus), "didn't transfer all the data");
 #endif 
         if (mTransferAmount > 0 && NS_SUCCEEDED(mStatus)) {
+            //
             // This happens when the requested read amount is more than the amount
-            // of the data in the stream/file.
+            // of the data in the stream/file, or if the listener returned 
+            // NS_BASE_STREAM_CLOSED.
+            //
             mStatus = NS_BASE_STREAM_CLOSED;
         }
-        if (mOutputStream) {
-            mOutputStream->Flush();
-            mOutputStream = null_nsCOMPtr();
-        }
-        mInputStream = null_nsCOMPtr();
 
-        mSource = null_nsCOMPtr();
+        // close the data source
+        mSource = 0;
+        mSourceWrapper = 0;
 
-        nsresult rv;
         if (mListener) {
-            rv = mListener->OnStopRequest(this, mContext, mStatus, nsnull);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStopRequest failure");
-            mListener = null_nsCOMPtr();
+            mListener->OnStopRequest(this, mContext, mStatus, nsnull);
+            mListener = 0;
         }
         if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)) {
-            nsAutoString fileName; fileName.AssignWithConversion(mStreamName);
-            rv = mProgress->OnStatus(this, mContext, 
-                                     NS_NET_STATUS_READ_FROM, 
-                                     fileName.GetUnicode());
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStopRequest failure");
+            nsAutoString fileName;
+            fileName.AssignWithConversion(mStreamName);
+            mProgress->OnStatus(this, mContext, 
+                                NS_NET_STATUS_READ_FROM, 
+                                fileName.GetUnicode());
         }
-        mContext = null_nsCOMPtr();
+        mContext = 0;
 
         mXferState = CLOSING;
         break;
       }
 
       case OPEN_FOR_WRITE: {
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: OPEN_FOR_WRITE [this=%x %s]",
-                this, mStreamName.GetBuffer()));
+        PRINTF("OPEN_FOR_WRITE [this=%x %s]\n",
+                this, mStreamName.GetBuffer());
         mStatus = mStreamIO->Open(&mContentType, &mTotalAmount);
-        if (mObserver) {
-            nsresult rv = mObserver->OnStartRequest(this, mContext);  // always send the start notification
+        if (mProvider) {
+            // always send the start notification
+            nsresult rv = mProvider->OnStartRequest(this, mContext);
             if (NS_SUCCEEDED(mStatus))
                 mStatus = rv;
         }
@@ -556,9 +736,8 @@ nsFileTransport::Process(void)
       }
 
       case START_WRITE: {
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: START_WRITE [this=%x %s]",
-                this, mStreamName.GetBuffer()));
+        PRINTF("START_WRITE [this=%x %s]\n",
+                this, mStreamName.GetBuffer());
 
         PR_AtomicIncrement(&mService->mInUseTransports);
 
@@ -569,14 +748,15 @@ nsFileTransport::Process(void)
         }
 
         if (mOffset > 0) {
-            // if we need to set a starting offset, QI for the nsISeekableStream and set it
+            // If we need to set a starting offset, QI for the nsISeekableStream
+            // and set it.
             nsCOMPtr<nsISeekableStream> ras = do_QueryInterface(mSink, &mStatus);
             if (NS_FAILED(mStatus)) {
                 mXferState = END_WRITE;
                 return;
             }
-            // for now, assume the offset is always relative to the start of the file (position 0)
-            // so use PR_SEEK_SET
+            // For now, assume the offset is always relative to the start of the
+            // file (position 0) so use PR_SEEK_SET.
             mStatus = ras->Seek(PR_SEEK_SET, mOffset);
             if (NS_FAILED(mStatus)) {
                 mXferState = END_WRITE;
@@ -585,19 +765,18 @@ nsFileTransport::Process(void)
             mOffset = 0;
         }
 
-        mInputStream = do_QueryInterface(mSource, &mStatus);
-        if (NS_FAILED(mStatus)) {
-            // if the given input stream isn't a buffered input
-            // stream, then we need to have our own buffer to do the
-            // transfer
-
-            mStatus = NS_OK;
-            mBuffer = new char[mBufferSegmentSize];
-            if (mBuffer == nsnull) {
+        if (!mSinkWrapper) {
+            //
+            // Allocate an output stream wrapper to capture the number of bytes
+            // written to mSink.
+            //
+            NS_NEWXPCOM(mSinkWrapper, nsOutputStreamWrapper);
+            if (!mSinkWrapper) {
                 mStatus = NS_ERROR_OUT_OF_MEMORY;
                 mXferState = END_WRITE;
                 return;
             }
+            GET_SINK_WRAPPER()->SetSink(mSink);
         }
 
         mXferState = WRITING;
@@ -605,62 +784,75 @@ nsFileTransport::Process(void)
       }
 
       case WRITING: {
-        // Use a temporary status variable here so that we don't whack mStatus with 
-        // NS_BASE_STREAM_WOULD_BLOCK. This could cause the async stream listener to
-        // decide an error was happening, and not deliver necessary events.
-        nsresult status;
-
-        PRUint32 transferAmt = mBufferSegmentSize;
+        //
+        // Write at most mBufferMaxSize
+        //
+        PRUint32 transferAmt = mBufferMaxSize;
         if (mTransferAmount >= 0)
-            transferAmt = PR_MIN(mBufferSegmentSize, (PRUint32)mTransferAmount);
-        PRUint32 writeAmt;
-        if (mInputStream) {
-            status = mInputStream->ReadSegments(nsWriteToFile, mSink,
-                                                transferAmt, &writeAmt);
+            transferAmt = PR_MIN(transferAmt, (PRUint32)mTransferAmount);
+
+        // Zero the number of bytes written to the sink wrapper.
+        GET_SINK_WRAPPER()->ZeroBytesWritten();
+
+        // 
+        // Ask the provider for data
+        //
+        nsresult status = mProvider->OnProvideData(this, mContext,
+                                                   mSinkWrapper,
+                                                   mOffset, transferAmt);
+        
+        //
+        // Handle the various return codes.
+        //
+        if (status == NS_BASE_STREAM_WOULD_BLOCK) {
+            PRINTF("WRITING [this=%x %s] provider would block; suspending self.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
+            mStatus = NS_OK;
+            Suspend();
+        }
+        else if (status == NS_BASE_STREAM_CLOSED) {
+            PRINTF("WRITING [this=%x %s] no more data to be written.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
+            mStatus = NS_OK;
+            mXferState = END_WRITE;
+        }
+        else if (NS_FAILED(status)) {
+            PRINTF("WRITING [this=%x %s] provider failed.\n",
+                    this, mStreamName.GetBuffer());FLUSH();
+            mStatus = status;
+            mXferState = END_WRITE;
         }
         else {
-            PRUint32 readAmt;
-            status = mSource->Read(mBuffer, transferAmt, &readAmt);
-            if (status == NS_BASE_STREAM_WOULD_BLOCK) {
-                mStatus = NS_OK;
-                return;
-            }
-            mStatus = status;
-            if (NS_FAILED(mStatus) || readAmt == 0) {
+            //
+            // Get the number of bytes written
+            //
+            PRUint32 total = GET_SINK_WRAPPER()->GetBytesWritten();
+            mOffset += total;
+
+            if (mTransferAmount > 0)
+                mTransferAmount -= total;
+
+            if (total == 0 || mTransferAmount == 0) {
+                PRINTF("WRITING [this=%x %s] done writing file.\n",
+                        this, mStreamName.GetBuffer());FLUSH();
                 mXferState = END_WRITE;
-                return;
             }
-            status = mSink->Write(mBuffer, readAmt, &writeAmt);
-        }
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: WRITING [this=%x %s] amt=%d status=%x",
-                this, mStreamName.GetBuffer(), writeAmt, status));
-        if (status == NS_BASE_STREAM_WOULD_BLOCK) {
-            mStatus = NS_OK;
-            return;
-        }
-        mStatus = status;
-        if (NS_FAILED(mStatus) || writeAmt == 0) {
-            mXferState = END_WRITE;
-            return;
-        }
+            else 
+                PRINTF("WRITING [this=%x %s] wrote %u bytes [offset=%u]\n",
+                        this, mStreamName.GetBuffer(), total, mOffset);FLUSH();
 
-        mTransferAmount -= writeAmt;
-        mOffset += writeAmt;
-        if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)) {
-            (void)mProgress->OnProgress(this, mContext,
-                                        mTotalAmount - mTransferAmount,
-                                        mTotalAmount);
+            if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)
+                    && (mTransferAmount >= 0))
+                mProgress->OnProgress(this, mContext,
+                                      mTotalAmount - mTransferAmount,
+                                      mTotalAmount);
         }
-
-        // stay in the WRITING state
         break;
       }
 
       case END_WRITE: {
-        PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-               ("nsFileTransport: END_WRITE [this=%x %s] status=%x",
-                this, mStreamName.GetBuffer(), mStatus));
+        PRINTF("END_WRITE [this=%x %s] status=%x\n",
+                this, mStreamName.GetBuffer(), mStatus);
 
         PR_AtomicDecrement(&mService->mInUseTransports);
 
@@ -675,34 +867,28 @@ nsFileTransport::Process(void)
 
         if (mSink) {
             mSink->Flush();
-            mSink = null_nsCOMPtr();
+            mSink = 0;
         }
-        if (mInputStream) {
-            mInputStream = null_nsCOMPtr();
-        }
-        else if (mBuffer) {
-            delete mBuffer;
-            mBuffer = nsnull;
-        }
-        if (mSource) {
-            (void)mSource->Close();
-            mSource = null_nsCOMPtr();
-        }
+        mSinkWrapper = 0;
+        // Close the pipe...
+        //if (mPipeIn)
+        //    mPipeIn = 0;
+        //if (mPipeOut)
+        //    mPipeOut = 0;
 
         nsresult rv;
-        if (mObserver) {
-            rv = mObserver->OnStopRequest(this, mContext, mStatus, nsnull);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStopRequest failure");
-            mObserver = null_nsCOMPtr();
+        if (mProvider) {
+            mProvider->OnStopRequest(this, mContext, mStatus, nsnull);
+            mProvider = 0;
         }
         if (mProgress && !(mLoadAttributes & LOAD_BACKGROUND)) {
             nsAutoString fileName; fileName.AssignWithConversion(mStreamName);
             rv = mProgress->OnStatus(this, mContext,
                                      NS_NET_STATUS_WROTE_TO, 
                                      fileName.GetUnicode());
-            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStopRequest failure");
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected OnStatus failure");
         }
-        mContext = null_nsCOMPtr();
+        mContext = 0;
 
         mXferState = CLOSING;
         break;
@@ -723,14 +909,13 @@ nsFileTransport::Process(void)
 void
 nsFileTransport::DoClose(void)
 {
-    PR_LOG(gFileTransportLog, PR_LOG_DEBUG,
-           ("nsFileTransport: CLOSING [this=%x %s] status=%x",
-            this, mStreamName.GetBuffer(), mStatus));
+    PRINTF("CLOSING [this=%x %s] status=%x\n",
+            this, mStreamName.GetBuffer(), mStatus);
 
     if (mStreamIO) {
         nsresult rv = mStreamIO->Close(mStatus);
         NS_ASSERTION(NS_SUCCEEDED(rv), "unexpected Close failure");
-        mStreamIO = null_nsCOMPtr();
+        mStreamIO = 0;
     }
     mXferState = CLOSED;
 
@@ -744,7 +929,9 @@ nsFileTransport::DoClose(void)
 NS_IMETHODIMP
 nsFileTransport::OnFull(nsIOutputStream* out)
 {
-    return Suspend();
+    PRINTF("OnFull -- suspending transport\n");
+    mRunState = SUSPENDED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -756,6 +943,7 @@ nsFileTransport::OnWrite(nsIOutputStream* out, PRUint32 aCount)
 NS_IMETHODIMP
 nsFileTransport::OnEmpty(nsIInputStream* in)
 {
+    PRINTF("OnEmpty\n");
     return Resume();
 }
 
@@ -999,4 +1187,5 @@ nsFileTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)
     *aSecurityInfo = nsnull;
     return NS_OK;
 }
+
 ////////////////////////////////////////////////////////////////////////////////

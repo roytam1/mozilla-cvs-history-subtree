@@ -349,9 +349,10 @@ nsStreamIOChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 }
 
 NS_IMETHODIMP
-nsStreamIOChannel::AsyncWrite(nsIInputStream *fromStream, 
-                              nsIStreamObserver *observer, nsISupports *ctxt)
+nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
 {
+    NS_WARNING("nsStreamIOChannel::AsyncWrite -- NOT IMPLEMENTED!!");
+#if 0
     nsresult rv;
 
     NS_ASSERTION(observer, "no observer");
@@ -409,6 +410,8 @@ nsStreamIOChannel::AsyncWrite(nsIInputStream *fromStream,
         mFileTransport = nsnull;
     }
     return rv;
+#endif
+    return NS_OK;
 }
 
 NS_IMETHODIMP

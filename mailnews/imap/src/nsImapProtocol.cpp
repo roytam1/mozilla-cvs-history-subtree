@@ -6975,7 +6975,7 @@ NS_IMETHODIMP nsImapMockChannel::AsyncRead(nsIStreamListener *listener, nsISuppo
   return rv;
 }
 
-NS_IMETHODIMP nsImapMockChannel::AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt)
+NS_IMETHODIMP nsImapMockChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
 {
     NS_NOTREACHED("nsImapMockChannel::AsyncWrite");
     return NS_ERROR_NOT_IMPLEMENTED;

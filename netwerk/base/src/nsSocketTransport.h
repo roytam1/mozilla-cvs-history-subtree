@@ -35,6 +35,7 @@
 #include "nsIOutputStream.h"
 #include "nsIEventQueueService.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamProvider.h"
 #include "nsIDNSListener.h"
 #include "nsIPipe.h"
 #include "nsIProgressEventSink.h"
@@ -166,7 +167,9 @@ protected:
     nsresult doConnection(PRInt16 aSelectFlags);
     nsresult doResolveHost(void);
     nsresult doRead(PRInt16 aSelectFlags);
+    nsresult doReadAsync(PRInt16 aSelectFlags);
     nsresult doWrite(PRInt16 aSelectFlags);
+    nsresult doWriteAsync(PRInt16 aSelectFlags);
     
     nsresult doWriteFromBuffer(PRUint32 *aCount);
     nsresult doWriteFromStream(PRUint32 *aCount);
@@ -245,6 +248,9 @@ protected:
     PRInt32		                    mBytesExpected;
     PRUint32                        mReuseCount;
     PRUint32                        mLastReuseCount;
+
+    nsCOMPtr<nsIInputStream>        mSocketInputStream;
+    nsCOMPtr<nsIOutputStream>       mSocketOutputStream;
     
     // The following four members are used when AsyncWrite(...) is called
     // with an nsIInputStream which does not also support the
@@ -254,8 +260,8 @@ protected:
     char *                          mWriteBuffer;
     PRUint32                        mWriteBufferIndex;
     PRUint32                        mWriteBufferLength;
-    
-    nsCOMPtr<nsIStreamObserver>     mWriteObserver;
+
+    nsCOMPtr<nsIStreamProvider>     mWriteProvider;
     nsCOMPtr<nsIInputStream>        mWritePipeIn;
     nsCOMPtr<nsIOutputStream>       mWritePipeOut;
     PRUint32                        mBufferSegmentSize;

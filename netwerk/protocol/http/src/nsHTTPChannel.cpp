@@ -344,11 +344,12 @@ nsHTTPChannel::AsyncRead(nsIStreamListener *listener, nsISupports *aContext)
 }
 
 NS_IMETHODIMP
-nsHTTPChannel::AsyncWrite(nsIInputStream *fromStream,
-                          nsIStreamObserver *observer,
+nsHTTPChannel::AsyncWrite(nsIStreamProvider *provider,
                           nsISupports *ctxt)
 {
     nsresult rv = NS_OK;
+
+#if 0
 
     // parameter validation
     if (!fromStream) return NS_ERROR_NULL_POINTER;
@@ -363,6 +364,7 @@ nsHTTPChannel::AsyncWrite(nsIInputStream *fromStream,
     mWriteObserver = observer;
 
     Open();
+#endif
 
     return rv;
 }

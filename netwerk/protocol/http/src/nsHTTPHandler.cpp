@@ -853,6 +853,8 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
                                          nsIChannel** o_pTrans,
                                          PRUint32 flags)
 {
+    //fprintf(stderr, "**** RequestTransport [channel=%x]\n", i_Channel);
+
     nsresult rv;
     *o_pTrans = nsnull;
     PRUint32 count = 0;
@@ -1055,6 +1057,8 @@ nsresult nsHTTPHandler::CreateTransportOfType(const char* type,
                                               nsIChannel** o_pTrans)
 {
     nsresult rv;
+
+    //fprintf(stderr, "**** CreateTransportOfType [type=%s, host=%s:%d]\n", type, host, port);
     
     NS_WITH_SERVICE(nsISocketTransportService, sts, kSocketTransportServiceCID, &rv);
     if (NS_FAILED (rv))
@@ -1082,6 +1086,8 @@ nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans  ,
                                  PRInt32  aKeepAliveMaxCon
                                 )
 {
+    //fprintf(stderr, "**** ReleaseTransport [transport=%x]\n", i_pTrans);
+
     nsresult rv;
     PRUint32 count = 0, transportsInUseCount = 0;
 

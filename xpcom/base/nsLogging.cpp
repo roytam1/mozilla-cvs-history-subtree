@@ -132,7 +132,7 @@ RecordSetting(const char* name, const char* value)
     else {
         PRINTF("### NS_LOG error: %s = %s (bad level)\n", name, value);
     }
-
+    
     nsCStringKey key(name);
     gSettings->Put(&key, (void*)level);
 }

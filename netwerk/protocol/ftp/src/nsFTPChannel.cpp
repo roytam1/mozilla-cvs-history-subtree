@@ -359,10 +359,10 @@ nsFTPChannel::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
 }
 
 NS_IMETHODIMP
-nsFTPChannel::AsyncWrite(nsIInputStream *fromStream,
-                         nsIStreamObserver *observer,
+nsFTPChannel::AsyncWrite(nsIStreamProvider *provider,
                          nsISupports *ctxt)
 {
+#if 0
     nsresult rv = NS_OK;
 
     mObserver = observer;
@@ -403,6 +403,8 @@ nsFTPChannel::AsyncWrite(nsIInputStream *fromStream,
     mConnected = PR_TRUE;
 
     return mPool->DispatchRequest((nsIRunnable*)thread);
+#endif
+    return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -32,6 +32,7 @@
 #include "nsILoadGroup.h"
 #include "nsCOMPtr.h"
 #include "nsIStreamListener.h"
+#include "nsIStreamProvider.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -107,11 +108,16 @@ protected:
 
     // mXferState is only changed by the file transport thread:
     XferState                           mXferState;
+
     // mRunState is only changed by the user's thread, but looked at by the
     // file transport thread:
     RunState                            mRunState;
     nsresult                            mCancelStatus;
     PRMonitor*                          mMonitor;
+
+    // The transport is active if it is currently being processed by a thread.
+    PRBool                              mActive;
+    PRBool                              mSkipNextResume;
 
     // state variables:
     nsresult                            mStatus;
@@ -123,13 +129,17 @@ protected:
     // reading state varialbles:
     nsCOMPtr<nsIStreamListener>         mListener;
     nsCOMPtr<nsIInputStream>            mSource;
-    nsCOMPtr<nsIInputStream>            mInputStream;
-    nsCOMPtr<nsIOutputStream>           mOutputStream;
+    nsCOMPtr<nsIInputStream>            mSourceWrapper;
 
     // writing state variables:
-    nsCOMPtr<nsIStreamObserver>         mObserver;
+    nsCOMPtr<nsIStreamProvider>         mProvider;
     nsCOMPtr<nsIOutputStream>           mSink;
-    char*                               mBuffer;
+    nsCOMPtr<nsIOutputStream>           mSinkWrapper;
+
+    // pipe ends:
+    //nsCOMPtr<nsIInputStream>            mPipeIn;
+    //nsCOMPtr<nsIOutputStream>           mPipeOut;
+
     nsCString                           mStreamName;
     nsFileTransportService*             mService;
 };

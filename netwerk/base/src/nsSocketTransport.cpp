@@ -41,11 +41,198 @@
 #include "nsNetUtil.h"
 #include "nsISecureSocketInfo.h"
 #include "nsMemory.h"
+#include "nslog.h"
+
+NS_IMPL_LOG(nsSocketTransportLog)
+#define PRINTF NS_LOG_PRINTF(nsSocketTransportLog)
+#define FLUSH NS_LOG_FLUSH(nsSocketTransportLog)
 
 static NS_DEFINE_CID(kSocketProviderService, NS_SOCKETPROVIDERSERVICE_CID);
 static NS_DEFINE_CID(kDNSService, NS_DNSSERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
+
+#define GET_INPUT_STREAM() \
+    ((nsSocketInputStream *) (nsIInputStream *) mSocketInputStream)
+#define GET_OUTPUT_STREAM() \
+    ((nsSocketOutputStream *) (nsIOutputStream *) mSocketOutputStream)
+
+//
+//----------------------------------------------------------------------------
+// nsSocketInputStream
+//----------------------------------------------------------------------------
+//
+class nsSocketInputStream : public nsIInputStream
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    nsSocketInputStream()
+        : mBytesRead(0), mSocketFD(nsnull) { NS_INIT_ISUPPORTS(); }
+    virtual ~nsSocketInputStream() {}
+
+    //
+    // nsIInputStream implementation...
+    //
+    NS_IMETHOD Close() {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD Available(PRUint32 *aCount) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead) {
+        NS_PRECONDITION(mSocketFD, "null socket fd");
+        PRInt32 result = PR_Read(mSocketFD, aBuf, aCount);
+        PRINTF("PR_Read(count=%u) returned %d\n", aCount, result);FLUSH();
+        nsresult rv = NS_OK;
+        if (result < 0) {
+            PRErrorCode code = PR_GetError();
+            if (PR_WOULD_BLOCK_ERROR == code)
+                rv = NS_BASE_STREAM_WOULD_BLOCK;
+            else {
+                PRINTF("PR_Read() failed [error=%x, os_error=%x]\n",
+                        code, PR_GetOSError());
+                rv = NS_ERROR_FAILURE;
+            }
+            *aBytesRead = 0;
+        }
+        else {
+            *aBytesRead = result;
+            mBytesRead += result;
+        }
+        return rv;
+    }
+    NS_IMETHOD ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
+                            PRUint32 aCount, PRUint32 *aBytesRead) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD GetNonBlocking(PRBool *aValue) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD GetObserver(nsIInputStreamObserver **aObserver) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD SetObserver(nsIInputStreamObserver *aObserver) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+
+    //
+    // Helper functions
+    //
+    void SetSocketFD(PRFileDesc *aSocketFD) {
+        mSocketFD = aSocketFD;
+    }
+    PRUint32 GetBytesRead() {
+        return mBytesRead;
+    }
+    void ZeroBytesRead() {
+        mBytesRead = 0;
+    }
+
+protected:
+    //
+    // State variables
+    //
+    PRUint32    mBytesRead;
+    PRFileDesc *mSocketFD;
+};
+
+NS_IMPL_ISUPPORTS1(nsSocketInputStream, nsIInputStream)
+
+//
+//----------------------------------------------------------------------------
+// nsSocketOutputStream
+//----------------------------------------------------------------------------
+//
+class nsSocketOutputStream : public nsIOutputStream
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    nsSocketOutputStream()
+        : mBytesWritten(0), mSocketFD(nsnull) { NS_INIT_ISUPPORTS(); }
+    virtual ~nsSocketOutputStream() {}
+
+    //
+    // nsIInputStream implementation...
+    //
+    NS_IMETHOD Close() {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD Flush() {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD Write(const char *aBuf, PRUint32 aCount, PRUint32 *aBytesWritten) {
+        NS_PRECONDITION(mSocketFD, "null socket fd");
+        PRInt32 result = PR_Write(mSocketFD, aBuf, aCount);
+        PRINTF("PR_Write(count=%u) returned %d\n", aCount, result);FLUSH();
+        nsresult rv = NS_OK;
+        if (result < 0) {
+            PRErrorCode code = PR_GetError();
+            if (PR_WOULD_BLOCK_ERROR == code)
+                rv = NS_BASE_STREAM_WOULD_BLOCK;
+            else {
+                PRINTF("PR_Write() failed [error=%x, os_error=%x]\n",
+                        code, PR_GetOSError());
+                rv = NS_ERROR_FAILURE;
+            }
+            *aBytesWritten = 0;
+        }
+        else {
+            *aBytesWritten = result;
+            mBytesWritten += result;
+        }
+        return rv;
+    }
+    NS_IMETHOD WriteFrom(nsIInputStream *aIS, PRUint32 aCount, PRUint32 *aBytesWritten) {
+        NS_NOTREACHED("WriteFrom");
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD WriteSegments(nsReadSegmentFun aReader, void *aClosure,
+                             PRUint32 aCount, PRUint32 *aBytesWritten) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD GetNonBlocking(PRBool *aValue) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD SetNonBlocking(PRBool aValue) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD GetObserver(nsIOutputStreamObserver **aObserver) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    NS_IMETHOD SetObserver(nsIOutputStreamObserver *aObserver) {
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+
+    //
+    // Helper functions
+    //
+    void SetSocketFD(PRFileDesc *aSocketFD) {
+        mSocketFD = aSocketFD;
+    }
+    PRUint32 GetBytesWritten() {
+        return mBytesWritten;
+    }
+    void ZeroBytesWritten() {
+        mBytesWritten = 0;
+    }
+
+protected:
+    //
+    // State variables
+    //
+    PRUint32    mBytesWritten;
+    PRFileDesc *mSocketFD;
+};
+
+NS_IMPL_ISUPPORTS1(nsSocketOutputStream, nsIOutputStream)
+
+//
+//----------------------------------------------------------------------------
+// nsSocketTransport
+//----------------------------------------------------------------------------
+//
 
 //
 // This is the State table which maps current state to next state
@@ -102,24 +289,10 @@ nsSocketState gStateTable[eSocketOperation_Max][eSocketState_Max] = {
 
 static PRIntervalTime gConnectTimeout  = PR_INTERVAL_NO_WAIT;
 
-#if defined(PR_LOGGING)
-//
-// Log module for SocketTransport logging...
-//
-// To enable logging (see prlog.h for full details):
-//
-//    set NSPR_LOG_MODULES=nsSocketTransport:5
-//    set NSPR_LOG_FILE=nspr.log
-//
-// this enables PR_LOG_DEBUG level information and places all output in
-// the file nspr.log
-//
-PRLogModuleInfo* gSocketLog = nsnull;
-
-#endif /* PR_LOGGING */
-
-static  PRUint32    sTotalTransportsCreated = 0;
-static  PRUint32    sTotalTransportsDeleted = 0;
+#ifdef NS_ENABLE_LOGGING
+static PRUint32 sTotalTransportsCreated = 0;
+static PRUint32 sTotalTransportsDeleted = 0;
+#endif
 
 nsSocketTransport::nsSocketTransport():
     mSocketTimeout        (PR_INTERVAL_NO_TIMEOUT),
@@ -182,41 +355,30 @@ nsSocketTransport::nsSocketTransport():
         gConnectTimeout  = PR_MillisecondsToInterval(CONNECT_TIMEOUT_IN_MS);
     }
     
-#if defined(PR_LOGGING)
-    //
-    // Initialize the global PRLogModule for socket transport logging 
-    // if necessary...
-    //
-    if (nsnull == gSocketLog) {
-        gSocketLog = PR_NewLogModule("nsSocketTransport");
-    }
-#endif /* PR_LOGGING */
-    
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-           ("Creating nsSocketTransport [%x], TotalCreated=%d, TotalDeleted=%d\n", this, ++sTotalTransportsCreated, sTotalTransportsDeleted));
+    PRINTF("Creating nsSocketTransport [%x], TotalCreated=%d, TotalDeleted=%d\n",
+            this, ++sTotalTransportsCreated, sTotalTransportsDeleted);
 }
 
 
 nsSocketTransport::~nsSocketTransport()
 {
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-           ("Deleting nsSocketTransport [%s:%d %x], TotalCreated=%d, TotalDeleted=%d\n", 
-            mHostName, mPort, this, sTotalTransportsCreated, ++sTotalTransportsDeleted));
+    PRINTF("Deleting nsSocketTransport [%s:%d %x], TotalCreated=%d, TotalDeleted=%d\n", 
+            mHostName, mPort, this, sTotalTransportsCreated, ++sTotalTransportsDeleted);
     
     // Release the nsCOMPtrs...
     //
     // It is easier to debug problems if these are released before the 
     // nsSocketTransport context is lost...
     //
-    mReadListener = null_nsCOMPtr();
-    mReadContext  = null_nsCOMPtr();
-    mReadPipeIn   = null_nsCOMPtr();
-    mReadPipeOut  = null_nsCOMPtr();
+    mReadListener = 0;
+    mReadContext  = 0;
+    mReadPipeIn   = 0;
+    mReadPipeOut  = 0;
     
-    mWriteObserver = null_nsCOMPtr();
-    mWriteContext  = null_nsCOMPtr();
-    mWritePipeIn   = null_nsCOMPtr();
-    mWritePipeOut  = null_nsCOMPtr();
+    //mWriteProvider = 0;
+    mWriteContext  = 0;
+    mWritePipeIn   = 0;
+    mWritePipeOut  = 0;
     //
     // Cancel any pending DNS request...
     //
@@ -309,7 +471,7 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
                 
                 if (socketType == nsnull) continue;
 #ifdef DEBUG
-                printf("pushing io layer: %s\n", socketType);
+                PRINTF("pushing io layer: %s\n", socketType);
 #endif
                 mSocketTypes[mSocketTypeCount] = nsCRT::strdup(socketType);
                 if (!mSocketTypes[mSocketTypeCount])
@@ -349,9 +511,8 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
     mLastActiveTime  = PR_IntervalNow ();
     PR_AtomicIncrement (&mService -> mTotalTransports);
     
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("Initializing nsSocketTransport [%s:%d %x].  rv = %x",
-        mHostName, mPort, this, rv));
+    PRINTF("Initializing nsSocketTransport [%s:%d %x].  rv = %x",
+            mHostName, mPort, this, rv);
 
     return rv;
 }
@@ -377,11 +538,9 @@ nsresult nsSocketTransport::CheckForTimeout (PRIntervalTime aCurrentTime)
         mSocketTimeout != PR_INTERVAL_NO_TIMEOUT && mCurrentState  == eSocketState_WaitReadWrite
         && idleInterval >= mSocketTimeout) 
     {
-        PR_LOG (
-                gSocketLog, PR_LOG_ERROR, ("nsSocketTransport::CheckForTimeout() [%s:%d %x].\t"
-                "TIMED OUT... Idle interval: %d\n",
-                mHostName, mPort, this, idleInterval)
-                );
+        PRINTF("nsSocketTransport::CheckForTimeout() [%s:%d %x].\t"
+               "TIMED OUT... Idle interval: %d\n",
+                mHostName, mPort, this, idleInterval);
         
         // Move the transport into the Timeout state...  
         mCurrentState = eSocketState_Timeout;
@@ -402,19 +561,17 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
   //
   PR_EnterMonitor(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::Process() [%s:%d %x].\t"
-          "aSelectFlags = %x.\t"
-          "CurrentState = %d\n",
-          mHostName, mPort, this, aSelectFlags, mCurrentState));
+  PRINTF("+++ Entering nsSocketTransport::Process() [host=%s:%d this=%x], "
+         "aSelectFlags=%x, "
+         "CurrentState=%d.\n",
+          mHostName, mPort, this, aSelectFlags, mCurrentState);
 
   //
   // Check for an error during PR_Poll(...)
   //
   if (PR_POLL_EXCEPT & aSelectFlags) {
-    PR_LOG(gSocketLog, PR_LOG_ERROR, 
-           ("Operation failed via PR_POLL_EXCEPT. [%s:%d %x].\n", 
-            mHostName, mPort, this));
+    PRINTF("Operation failed via PR_POLL_EXCEPT. [host=%s:%d this=%x].\n", 
+            mHostName, mPort, this);
     // An error has occurred, so cancel the read and/or write operation...
     if (mCurrentState == eSocketState_WaitConnect)
         mStatus = NS_ERROR_CONNECTION_REFUSED;
@@ -423,9 +580,8 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
   }
 
   if (PR_POLL_HUP & aSelectFlags) {
-    PR_LOG(gSocketLog, PR_LOG_ERROR, 
-           ("Operation failed via PR_POLL_HUP. [%s:%d %x].\n", 
-            mHostName, mPort, this));
+    PRINTF("Operation failed via PR_POLL_HUP. [host=%s:%d this=%x].\n", 
+            mHostName, mPort, this);
     if (mCurrentState == eSocketState_WaitConnect) {
         mStatus = NS_ERROR_CONNECTION_REFUSED;
     } else { 
@@ -436,32 +592,30 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
   while (!done)
   {
-    //
-    // If the transport has been suspended, then return NS_OK immediately...
-    // This removes the transport from the select list...
-    //
-    if (mSuspendCount) {
-      PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-             ("Transport [%s:%d %x] is suspended.\n", 
-              mHostName, mPort, this));
-  
-      done = PR_TRUE;
-      mStatus = NS_OK;
-      continue;
-    }
-
+    // Cancel takes precidence over Suspend
+   
     //
     // If the transport has been canceled the set the status code to
     // NS_BINDING_ABORTED which is a failure code...  This will cause the
     // transport to move into the error state and end the request...
     //
     if (NS_FAILED(mCancelStatus)) {
-      PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-             ("Transport [%s:%d %x] has been cancelled.\n", 
-              mHostName, mPort, this));
+      PRINTF("Transport [host=%s:%d this=%x] has been cancelled.\n", 
+              mHostName, mPort, this);
 
       mStatus = mCancelStatus;
       mCancelStatus = NS_OK;
+    }
+
+    //
+    // If the transport has been suspended, then return NS_OK immediately...
+    // This removes the transport from the select list...
+    //
+    if (mSuspendCount) {
+      PRINTF("Transport [host=%s:%d this=%x] is suspended.\n", 
+              mHostName, mPort, this);
+      mStatus = NS_OK;
+      break;
     }
 
     //
@@ -473,10 +627,17 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
     switch (mCurrentState) {
       case eSocketState_Created:
+        PRINTF("Transport [host=%s:%d this=%x] is in Created state.\n",
+                mHostName, mPort, this);
+        break;
       case eSocketState_Closed:
+        PRINTF("Transport [host=%s:%d this=%x] is in Closed state.\n",
+                mHostName, mPort, this);
         break;
 
       case eSocketState_Connected:
+        PRINTF("Transport [host=%s:%d this=%x] is in Connected state.\n",
+                mHostName, mPort, this);
         //
         // A connection has been established with the server
         //
@@ -494,7 +655,7 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
             if (mReadListener && !mOnStartReadFired)
             {
                 mOnStartReadFired  = PR_TRUE;
-                mReadListener -> OnStartRequest (this , mReadContext);
+                mReadListener->OnStartRequest(this, mReadContext);
             }
         }
         
@@ -504,38 +665,36 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
             mSelectFlags |= PR_POLL_WRITE;
 
             // Fire a notification that the write has started...
-            if (mWriteObserver && !mOnStartWriteFired)
+            if (mWriteProvider && !mOnStartWriteFired)
             {
                 mOnStartWriteFired = PR_TRUE;
-                mWriteObserver -> OnStartRequest (this, mWriteContext);
+                mWriteProvider->OnStartRequest(this, mWriteContext);
             }
         }
         break;
         
       case eSocketState_Error:
-        PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-               ("Transport [%s:%d %x] is in error state.\n", 
-                mHostName, mPort, this));
+        PRINTF("Transport [host=%s:%d this=%x] is in Error state.\n", 
+                mHostName, mPort, this);
 
         // Cancel any DNS requests...
         if (mDNSRequest) {
           mDNSRequest->Cancel(NS_BINDING_ABORTED);
-          mDNSRequest = null_nsCOMPtr();
+          mDNSRequest = 0;
         }
 
         // Cancel any read and/or write requests...
         SetFlag(eSocketRead_Done);
         SetFlag(eSocketWrite_Done);
 
-        CloseConnection ();
+        CloseConnection();
 
         //
         // Fall into the Done state...
         //
       case eSocketState_Done:
-        PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-               ("Transport [%s:%d %x] is in done state.\n", 
-                mHostName, mPort, this));
+        PRINTF("Transport [host=%s:%d this=%x] is in Done state.\n", 
+                mHostName, mPort, this);
 
         mBytesExpected = -1;
 
@@ -551,16 +710,19 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
                 }
 
                 mReadListener -> OnStopRequest(this, mReadContext, mStatus, nsnull);
-                mReadListener = null_nsCOMPtr ();
-                mReadContext  = null_nsCOMPtr ();
+                mReadListener = 0;
+                mReadContext  = 0;
             }
+
+            if (mSocketInputStream)
+                mSocketInputStream = 0;
 
             // Close the socket transport end of the pipe...
             if (mReadPipeOut)
-                mReadPipeOut -> Close ();
+                mReadPipeOut->Close ();
 
-            mReadPipeIn  = null_nsCOMPtr ();
-            mReadPipeOut = null_nsCOMPtr ();
+            mReadPipeIn  = 0;
+            mReadPipeOut = 0;
             SetReadType (eSocketRead_None);
             ClearFlag (eSocketRead_Done);
 
@@ -572,28 +734,34 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
         if (GetFlag(eSocketWrite_Done))
         {
-          // Fire a notification that the write has finished...
-            if (mWriteObserver)
+            // Fire a notification that the write has finished...
+            if (mWriteProvider)
             {
                 if (!mOnStartWriteFired)
                 {
                     mOnStartWriteFired = PR_TRUE;
-                    mWriteObserver -> OnStartRequest (this, mWriteContext);
+                    mWriteProvider->OnStartRequest(this, mWriteContext);
                 }
-
-                mWriteObserver -> OnStopRequest(this, mWriteContext, mStatus, nsnull);
-                mWriteObserver = null_nsCOMPtr ();
-                mWriteContext  = null_nsCOMPtr ();
+                mWriteProvider->OnStopRequest(this, mWriteContext, mStatus, nsnull);
+                mWriteProvider = 0;
+                mWriteContext  = 0;
             }
-            // Close the socket transport end of the pipe...
+
+            if (mSocketOutputStream)
+                mSocketOutputStream = 0;
+
+            // Close down the pipe
             if (mWritePipeIn)
-                mWritePipeIn -> Close ();
+                mWritePipeIn->Close();
+            if (mWritePipeOut)
+                mWritePipeOut->Close();
+            mWritePipeIn  = 0;
+            mWritePipeOut = 0;
 
-            mWritePipeIn  = null_nsCOMPtr ();
-            mWritePipeOut = null_nsCOMPtr ();
-            SetWriteType (eSocketWrite_None);
-            ClearFlag (eSocketWrite_Done);
+            SetWriteType(eSocketWrite_None);
+            ClearFlag(eSocketWrite_Done);
 
+            // Close down the pipe
             if (mCloseConnectionOnceDone)
                 CloseConnection ();
         } /* eSocketWrite_Done */
@@ -618,14 +786,20 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         continue;
 
       case eSocketState_WaitDNS:
+        PRINTF("Transport [host=%s:%d this=%x] is in WaitDNS state.\n",
+                mHostName, mPort, this);
         mStatus = doResolveHost();
         break;
 
       case eSocketState_WaitConnect:
+        PRINTF("Transport [host=%s:%d this=%x] is in WaitConnect state.\n",
+                mHostName, mPort, this);
         mStatus = doConnection(aSelectFlags);
         break;
 
       case eSocketState_WaitReadWrite:
+        PRINTF("Transport [host=%s:%d this=%x] is in WaitReadWrite state.\n",
+                mHostName, mPort, this);
         // Process the read request...
         if (GetReadType() != eSocketRead_None)
         {
@@ -635,8 +809,10 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
                 mSelectFlags &= (~PR_POLL_READ);
 
             }
+            else if (GetFlag(eSocketRead_Async))
+                mStatus = doReadAsync(aSelectFlags);
             else
-                mStatus = doRead (aSelectFlags);
+                mStatus = doRead(aSelectFlags);
 
             if (NS_SUCCEEDED(mStatus)) 
             {
@@ -644,18 +820,26 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
                 break;
             }
         }
-        // Process the write request...
-        if ((NS_SUCCEEDED(mStatus) || mStatus == NS_BASE_STREAM_WOULD_BLOCK)
-            && (GetWriteType() != eSocketWrite_None)) {
-          mStatus = doWrite(aSelectFlags);
-          if (NS_SUCCEEDED(mStatus)) {
-            SetFlag(eSocketWrite_Done);
+
+        if (NS_FAILED(mStatus) && mStatus != NS_BASE_STREAM_WOULD_BLOCK)
             break;
-          }
+
+        // Process the write request...
+        if (GetWriteType() != eSocketWrite_None)
+        {
+            if (GetFlag(eSocketWrite_Async))
+                mStatus = doWriteAsync(aSelectFlags);
+            else
+                mStatus = doWrite(aSelectFlags);
+
+            if (NS_SUCCEEDED(mStatus))
+                SetFlag(eSocketWrite_Done);
         }
         break;
 
       case eSocketState_Timeout:
+        PRINTF("Transport [host=%s:%d this=%x] is in Timeout state.\n",
+                mHostName, mPort, this);
         mStatus = NS_ERROR_NET_TIMEOUT;
         break;
 
@@ -689,10 +873,9 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
   // Update the active time for timeout purposes...
   mLastActiveTime  = PR_IntervalNow();
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::Process() [%s:%d %x]. mStatus = %x.\t"
-          "CurrentState = %d\n\n",
-          mHostName, mPort, this, mStatus, mCurrentState));
+  PRINTF("--- Leaving nsSocketTransport::Process() [host=%s:%d this=%x], mStatus = %x, "
+         "CurrentState=%d\n\n",
+          mHostName, mPort, this, mStatus, mCurrentState);
 
   PR_ExitMonitor(mMonitor);
   return mStatus;
@@ -718,9 +901,8 @@ nsresult nsSocketTransport::doResolveHost(void)
 
   NS_ASSERTION(eSocketState_WaitDNS == mCurrentState, "Wrong state.");
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::doResolveHost() [%s:%d %x].\n", 
-          mHostName, mPort, this));
+  PRINTF("+++ Entering nsSocketTransport::doResolveHost() [host=%s:%d this=%x].\n", 
+          mHostName, mPort, this);
 
   //
   // The hostname has not been resolved yet...
@@ -774,10 +956,9 @@ nsresult nsSocketTransport::doResolveHost(void)
     }
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::doResolveHost() [%s:%d %x].\t"
-          "rv = %x.\n\n",
-          mHostName, mPort, this, rv));
+  PRINTF("--- Leaving nsSocketTransport::doResolveHost() [%s:%d %x].\t"
+         "rv = %x.\n\n",
+          mHostName, mPort, this, rv);
 
   return rv;
 }
@@ -806,10 +987,9 @@ nsresult nsSocketTransport::doConnection(PRInt16 aSelectFlags)
 
   NS_ASSERTION(eSocketState_WaitConnect == mCurrentState, "Wrong state.");
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::doConnection() [%s:%d %x].\t"
-          "aSelectFlags = %x.\n",
-          mHostName, mPort, this, aSelectFlags));
+  PRINTF("+++ Entering nsSocketTransport::doConnection() [host=%s:%d this=%x], "
+         "aSelectFlags=%x.\n",
+          mHostName, mPort, this, aSelectFlags);
 
   if (!mSocketFD) {
       //
@@ -952,9 +1132,8 @@ nsresult nsSocketTransport::doConnection(PRInt16 aSelectFlags)
               //
               else {
                   // Connection refused...
-                  PR_LOG(gSocketLog, PR_LOG_ERROR, 
-                         ("Connection Refused [%s:%d %x].  PRErrorCode = %x\n",
-                          mHostName, mPort, this, code));
+                  PRINTF("Connection Refused [%s:%d %x].  PRErrorCode = %x\n",
+                          mHostName, mPort, this, code);
                   
                   rv = NS_ERROR_CONNECTION_REFUSED;
               }
@@ -967,9 +1146,8 @@ nsresult nsSocketTransport::doConnection(PRInt16 aSelectFlags)
   //
   else if (aSelectFlags) {
       if (PR_POLL_EXCEPT & aSelectFlags) {
-          PR_LOG(gSocketLog, PR_LOG_ERROR, 
-                 ("Connection Refused via PR_POLL_EXCEPT. [%s:%d %x].\n", 
-                  mHostName, mPort, this));
+          PRINTF("Connection Refused via PR_POLL_EXCEPT. [%s:%d %x].\n", 
+                  mHostName, mPort, this);
           
           rv = NS_ERROR_CONNECTION_REFUSED;
       }
@@ -986,10 +1164,9 @@ nsresult nsSocketTransport::doConnection(PRInt16 aSelectFlags)
       rv = NS_BASE_STREAM_WOULD_BLOCK;
   }
   
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::doConnection() [%s:%d %x].\t"
-          "rv = %x.\n\n",
-          mHostName, mPort, this, rv));
+  PRINTF("--- Leaving nsSocketTransport::doConnection() [%s:%d %x].\t"
+         "rv = %x.\n\n",
+          mHostName, mPort, this, rv);
   
   if (rv == NS_OK && mSecurityInfo && mProxyHost && mProxyHost && proxyTransparent) {
       // if the connection phase is finished, and the ssl layer
@@ -1049,7 +1226,7 @@ nsReadFromSocket(nsIOutputStream* out,
     else
     {
         PRInt32 osCode = PR_GetOSError ();
-        PR_LOG (gSocketLog, PR_LOG_ERROR, ("PR_Read() failed. PRErrorCode = %x, os_error=%d\n", code, osCode));
+        PRINTF("PR_Read() failed. PRErrorCode = %x, os_error=%d\n", code, osCode);
 
         info -> bEOF = PR_TRUE;
 
@@ -1059,9 +1236,8 @@ nsReadFromSocket(nsIOutputStream* out,
     }
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsReadFromSocket [fd=%x].  rv = %x. Buffer space = %d.  Bytes read =%d\n",
-          info->fd, rv, count, *readCount));
+  PRINTF("nsReadFromSocket [fd=%x].  rv = %x. Buffer space = %d.  Bytes read =%d\n",
+          info->fd, rv, count, *readCount);
 
   return rv;
 }
@@ -1094,8 +1270,7 @@ nsWriteToSocket(nsIInputStream* in,
         rv = NS_BASE_STREAM_WOULD_BLOCK;
       } 
       else {
-        PR_LOG(gSocketLog, PR_LOG_ERROR, 
-               ("PR_Write() failed. PRErrorCode = %x\n", code));
+        PRINTF("PR_Write() failed. PRErrorCode = %x\n", code);
 
         // XXX: What should this error code be?
         rv = NS_ERROR_FAILURE;
@@ -1103,12 +1278,88 @@ nsWriteToSocket(nsIInputStream* in,
     }
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsWriteToSocket [fd=%x].  rv = %x. Buffer space = %d.  Bytes written =%d\n",
-          fd, rv, count, *writeCount));
+  PRINTF("nsWriteToSocket [fd=%x].  rv = %x. Buffer space = %d.  Bytes written =%d\n",
+          fd, rv, count, *writeCount);
 
   return rv;
 
+}
+
+//-----
+//
+// doReadAsync:
+//
+// Return values:
+//   NS_OK
+//   NS_BASE_STREAM_WOULD_BLOCK
+//   failure
+//
+//-----
+nsresult nsSocketTransport::doReadAsync(PRInt16 aSelectFlags)
+{
+    if (!(aSelectFlags & PR_POLL_READ)) {
+        // wait for the proper select flags
+        return NS_BASE_STREAM_WOULD_BLOCK;
+    }
+
+    if (!mSocketInputStream) {
+        NS_NEWXPCOM(mSocketInputStream, nsSocketInputStream);
+        if (!mSocketInputStream)
+            return NS_ERROR_OUT_OF_MEMORY;
+        GET_INPUT_STREAM()->SetSocketFD(mSocketFD);
+    }
+
+    GET_INPUT_STREAM()->ZeroBytesRead();
+
+    PRUint32 transferAmt = PR_MIN(mBufferMaxSize, MAX_IO_TRANSFER_SIZE);
+
+    PRINTF("READING [this=%x] calling listener [offset=%u, count=%u]\n",
+            this, mReadOffset, transferAmt);
+
+    nsresult rv = mReadListener->OnDataAvailable(this,
+                                                 mReadContext,
+                                                 mSocketInputStream,
+                                                 mReadOffset,
+                                                 transferAmt);
+
+    //
+    // Handle the error conditions
+    //
+    if (NS_BASE_STREAM_WOULD_BLOCK == rv) {
+        PRINTF("READING [this=%x] listener would block; suspending self.\n",
+                this);FLUSH();
+        mSuspendCount++;
+    }
+    else if (NS_BASE_STREAM_CLOSED == rv) {
+        PRINTF("READING [this=%x] done reading socket.\n", this);FLUSH();
+        rv = NS_OK; // go to done state
+    }
+    else if (NS_FAILED(rv)) {
+        PRINTF("READING [this=%x] error reading socket.\n", this);FLUSH();
+    }
+    else {
+        PRUint32 total = GET_INPUT_STREAM()->GetBytesRead();
+        mReadOffset += total;
+
+        if (0 == total) {
+            PRINTF("READING [this=%x] done reading socket.\n", this);FLUSH();
+            mSelectFlags &= ~PR_POLL_READ;
+        }
+        else {
+            PRINTF("READING [this=%x] read %u bytes [offset=%u]\n",
+                    this, total, mReadOffset);FLUSH();
+            //
+            // Stay in the read state
+            //
+            rv = NS_BASE_STREAM_WOULD_BLOCK;
+        }
+
+        if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+            // we don't have content length info at the socket level
+            // just pass 0 through.
+            mEventSink->OnProgress(this, mReadContext, mReadOffset, 0);
+    }
+    return rv;
 }
 
 //-----
@@ -1134,10 +1385,9 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   NS_ASSERTION(eSocketState_WaitReadWrite == mCurrentState, "Wrong state.");
   NS_ASSERTION(GetReadType() != eSocketRead_None, "Bad Read Type!");
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::doRead() [%s:%d %x].\t"
-          "aSelectFlags = %x.\t",
-          mHostName, mPort, this, aSelectFlags));
+  PRINTF("+++ Entering nsSocketTransport::doRead() [host=%s:%d this=%x], "
+         "aSelectFlags=%x.\n",
+          mHostName, mPort, this, aSelectFlags);
 
   //
   // Fill the stream with as much data from the network as possible...
@@ -1146,7 +1396,7 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   totalBytesWritten = 0;
   info.fd = mSocketFD;
 
-  // Release the transport lock...  WriteSegments(...) aquires the nsBuffer
+  // Release the transport lock...  WriteSegments(...) aquires the nsPipe
   // lock which could cause a deadlock by blocking the socket transport 
   // thread
   //
@@ -1155,9 +1405,8 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
                                    MAX_IO_TRANSFER_SIZE, &totalBytesWritten);
   PR_EnterMonitor(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("WriteSegments [fd=%x].  rv = %x. Bytes read =%d\n",
-         mSocketFD, rv, totalBytesWritten));
+  PRINTF("WriteSegments [fd=%x].  rv = %x. Bytes read =%d\n",
+         mSocketFD, rv, totalBytesWritten);
 
   //
   // Fire a single OnDataAvaliable(...) notification once as much data has
@@ -1198,10 +1447,9 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
     }
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::doRead() [%s:%d %x]. rv = %x.\t"
-          "Total bytes read: %d\n\n",
-          mHostName, mPort, this, rv, totalBytesWritten));
+  PRINTF("--- Leaving nsSocketTransport::doRead() [%s:%d %x]. rv = %x.\t"
+         "Total bytes read: %d\n\n",
+          mHostName, mPort, this, rv, totalBytesWritten);
 
   if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
       // we don't have content length info at the socket level
@@ -1211,6 +1459,88 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   return rv;
 }
 
+//-----
+//
+//  doWriteAsync:
+//
+//  This method is called while holding the SocketTransport lock.  It is
+//  always called on the socket transport thread...
+//
+//  Return values:
+//    NS_OK                      - keep on truckin
+//    NS_BASE_STREAM_WOULD_BLOCK - no data was written at this time
+//    NS_BASE_STREAM_CLOSED      - no more data will ever be written
+//
+//    FAILURE
+//
+//-----
+nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
+{
+    PRINTF("+++ Entering nsSocketTransport::doWriteAsync() [host=%s:%d this=%x], "
+           "aSelectFlags=%x.\n",
+            mHostName, mPort, this, aSelectFlags);
+
+    if (!(aSelectFlags & PR_POLL_WRITE)) {
+        // wait for the proper select flags
+        return NS_BASE_STREAM_WOULD_BLOCK;
+    }
+
+    if (!mSocketOutputStream) {
+        NS_NEWXPCOM(mSocketOutputStream, nsSocketOutputStream);
+        if (!mSocketOutputStream)
+            return NS_ERROR_OUT_OF_MEMORY;
+        GET_OUTPUT_STREAM()->SetSocketFD(mSocketFD);
+    }
+
+    GET_OUTPUT_STREAM()->ZeroBytesWritten();
+
+    PRUint32 transferAmt = PR_MIN(mBufferMaxSize, MAX_IO_TRANSFER_SIZE);
+
+    nsresult rv = mWriteProvider->OnProvideData(this,
+                                                mWriteContext,
+                                                mSocketOutputStream,
+                                                mWriteOffset,
+                                                transferAmt);
+
+    //
+    // Handle the error conditions
+    //
+    if (NS_BASE_STREAM_WOULD_BLOCK == rv) {
+        PRINTF("WRITING [this=%x] provider would block; suspending self.\n",
+                this);FLUSH();
+        mSuspendCount++;
+    }
+    else if (NS_BASE_STREAM_CLOSED == rv) {
+        PRINTF("WRITING [this=%x] provider has finished.\n", this);FLUSH();
+        rv = NS_OK; // go to done state
+    }
+    else if (NS_FAILED(rv)) {
+        PRINTF("WRITING [this=%x] provider failed, rv=%x.\n", this, rv);FLUSH();
+    }
+    else {
+        PRUint32 total = GET_OUTPUT_STREAM()->GetBytesWritten();
+        mWriteOffset += total;
+
+        if (0 == total) {
+            PRINTF("READING [this=%x] done writing to socket.\n", this);FLUSH();
+            mSelectFlags &= ~PR_POLL_WRITE;
+        }
+        else {
+            PRINTF("READING [this=%x] wrote %u bytes [offset=%u]\n",
+                    this, total, mWriteOffset);FLUSH();
+            //
+            // Stay in the write state
+            //
+            rv = NS_BASE_STREAM_WOULD_BLOCK;
+        }
+
+        if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+            // we don't have content length info at the socket level
+            // just pass 0 through.
+            mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
+    }
+    return rv;
+}
 
 //-----
 //
@@ -1220,129 +1550,127 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
 //  always called on the socket transport thread...
 //
 //  Return values:
-//    NS_OK
-//    NS_BASE_STREAM_WOULD_BLOCK
+//    NS_OK                      - keep on truckin
+//    NS_BASE_STREAM_WOULD_BLOCK - no data was written to the pipe at this time
+//    NS_BASE_STREAM_CLOSED      - no more data will ever be written to the pipe
 //
-//    NS_ERROR_FAILURE
+//    FAILURE
 //
 //-----
 nsresult nsSocketTransport::doWrite(PRInt16 aSelectFlags)
 {
-  PRUint32 totalBytesWritten;
-  nsresult rv = NS_OK;
+    PRUint32 totalBytesWritten = 0;
+    nsresult rv = NS_OK;
 
-  NS_ASSERTION(eSocketState_WaitReadWrite == mCurrentState, "Wrong state.");
-  NS_ASSERTION(GetWriteType() != eSocketWrite_None, "Bad Write Type!");
+    NS_ASSERTION(eSocketState_WaitReadWrite == mCurrentState, "Wrong state.");
+    NS_ASSERTION(GetWriteType() != eSocketWrite_None, "Bad Write Type!");
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::doWrite() [%s:%d %x].\t"
-          "aSelectFlags = %x.\t"
-          "mWriteCount = %d\n",
-          mHostName, mPort, this, aSelectFlags, mWriteCount));
+    PRINTF("+++ Entering nsSocketTransport::doWrite() [host=%s:%d this=%x], "
+           "aSelectFlags=%x.\n",
+            mHostName, mPort, this, aSelectFlags);
 
-  do
-  {
-    totalBytesWritten = 0;
-    if (mWritePipeIn) {
+    rv = doWriteFromBuffer(&totalBytesWritten);
+    do {
+        totalBytesWritten = 0;
+
         // Writing from a nsIInputStream...
         rv = doWriteFromBuffer(&totalBytesWritten);
+
+        // Update the counters...
+        if (mWriteCount > 0) {
+            NS_ASSERTION(mWriteCount >= (PRInt32)totalBytesWritten, 
+                         "wrote more than humanly possible");
+            mWriteCount -= totalBytesWritten;
+        }
+        mWriteOffset += totalBytesWritten;
     }
-    else {
-        // Writing from a generic nsIInputStream...
-        rv = doWriteFromStream(&totalBytesWritten);
-    }
+    while (NS_SUCCEEDED (rv) && totalBytesWritten);
 
-    // Update the counters...
-    if (mWriteCount > 0) {
-        NS_ASSERTION(mWriteCount >= (PRInt32)totalBytesWritten, 
-                 "wrote more than humanly possible");
-        mWriteCount -= totalBytesWritten;
-    }
-
-    mWriteOffset += totalBytesWritten;
-
-  }
-  while (NS_SUCCEEDED (rv) && totalBytesWritten);
-
-  //
-  // The write operation has completed...
-  //
-  if (NS_SUCCEEDED(rv) && (0 == totalBytesWritten ||         // eof, or
-      GetFlag(eSocketWrite_Async) && 0 == mWriteCount) ) {    // wrote everything
-    mSelectFlags &= (~PR_POLL_WRITE);
-    rv = NS_OK;
-  }
-  else if (NS_SUCCEEDED(rv)) {
-    // We wrote something, so loop and try again.
-    // return WOULD_BLOCK to keep the transport on the select list...
-    rv = NS_BASE_STREAM_WOULD_BLOCK;
-  }
-  else if (NS_BASE_STREAM_WOULD_BLOCK == rv) {
     //
-    // If the buffer is empty, then notify the reader and stop polling
-    // for write until there is data in the buffer.  See the OnWrite()
-    // notification...
+    // The write operation has completed...
     //
-    NS_ASSERTION((0 == totalBytesWritten), "returned NS_BASE_STREAM_WOULD_BLOCK and a writeCount");
-    if (GetFlag(eSocketWrite_Sync)) {
-      // We can only wait if we created the stream (a pipe -- created in the synchronous 
-      // OpenOutputStream case). If we didn't create it, we couldn't have been the buffer
-      // observer, so we won't get any notification when more data becomes available. 
-      SetFlag(eSocketWrite_Wait);
-      mSelectFlags &= (~PR_POLL_WRITE);
+    if (NS_SUCCEEDED(rv) && (0 == totalBytesWritten ||         // eof, or
+        GetFlag(eSocketWrite_Async) && 0 == mWriteCount) ) {    // wrote everything
+        mSelectFlags &= (~PR_POLL_WRITE);
+        rv = NS_OK;
     }
-  }
+    else if (NS_SUCCEEDED(rv)) {
+        //
+        // We wrote something, so loop and try again.
+        // return WOULD_BLOCK to keep the transport on the select list...
+        //
+        rv = NS_BASE_STREAM_WOULD_BLOCK;
+    }
+    else if (NS_BASE_STREAM_WOULD_BLOCK == rv) {
+        //
+        // If the buffer is empty, then notify the reader and stop polling
+        // for write until there is data in the buffer.  See the OnWrite()
+        // notification...
+        //
+        NS_ASSERTION((0 == totalBytesWritten),
+                     "returned NS_BASE_STREAM_WOULD_BLOCK and a writeCount");
+        //
+        // We can only wait if we created the stream (a pipe -- created 
+        // in the synchronous OpenOutputStream case). If we didn't create
+        // it, we couldn't have been the buffer observer, so we won't get
+        // any notification when more data becomes available. 
+        //
+        SetFlag(eSocketWrite_Wait);
+        mSelectFlags &= (~PR_POLL_WRITE);
+    }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::doWrite() [%s:%d %x]. rv = %x.\t"
-          "Total bytes written: %d\n\n",
-          mHostName, mPort, this, rv, totalBytesWritten));
+    PRINTF("--- Leaving nsSocketTransport::doWrite() [%s:%d %x]. rv = %x.\t"
+           "Total bytes written: %d\n\n",
+           mHostName, mPort, this, rv, totalBytesWritten);
 
-  if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
-      // we don't have content length info at the socket level
-      // just pass 0 through.
-      (void)mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
+    if (!(nsIChannel::LOAD_BACKGROUND & mLoadAttributes) && mEventSink)
+        // we don't have content length info at the socket level
+        // just pass 0 through.
+        mEventSink->OnProgress(this, mWriteContext, mWriteOffset, 0);
 
-  return rv;
+    return rv;
 }
 
 
+//
+// Try to write out everything in the pipe.  Return NS_OK unless
+// there is an error.  This should never return WOULD_BLOCK!
+//
 nsresult nsSocketTransport::doWriteFromBuffer(PRUint32 *aCount)
 {
-  nsresult rv;
-  PRUint32 transferCount;
+    nsresult rv;
+    PRUint32 transferCount;
 
-  // Figure out how much data to write...
-  if (mWriteCount > 0) {
-    transferCount = PR_MIN(mWriteCount, MAX_IO_TRANSFER_SIZE);
-  } else {
-    transferCount = MAX_IO_TRANSFER_SIZE;
-  }
+    // Figure out how much data to write...
+    if (mWriteCount > 0)
+        transferCount = PR_MIN(mWriteCount, MAX_IO_TRANSFER_SIZE);
+    else
+        transferCount = MAX_IO_TRANSFER_SIZE;
 
-  //
-  // Release the transport lock...  ReadSegments(...) aquires the nsBuffer
-  // lock which could cause a deadlock by blocking the socket transport 
-  // thread
-  //
-  PR_ExitMonitor(mMonitor);
-  
-  //
-  // Write the data to the network...
-  // 
-  // return values:
-  //   NS_BASE_STREAM_WOULD_BLOCK - The stream is empty.
-  //   NS_OK                      - The write succeeded.
-  //   FAILURE                    - Something bad happened.
-  //
-  rv = mWritePipeIn->ReadSegments(nsWriteToSocket, (void*)mSocketFD, 
-                                  transferCount, aCount);
-  PR_EnterMonitor(mMonitor);
+    //
+    // Release the transport lock...  ReadSegments(...) aquires the nsBuffer
+    // lock which could cause a deadlock by blocking the socket transport 
+    // thread
+    //
+    PR_ExitMonitor(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("ReadSegments [fd=%x].  rv = %x. Bytes written =%d\n",
-         mSocketFD, rv, *aCount));
+    //
+    // Write the data to the network...
+    // 
+    // return values:
+    //   NS_BASE_STREAM_WOULD_BLOCK - The stream is empty.
+    //   NS_OK                      - The write succeeded.
+    //   FAILURE                    - Something bad happened.
+    //
+    rv = mWritePipeIn->ReadSegments(nsWriteToSocket, (void *) mSocketFD, 
+                                    transferCount, aCount);
+    PR_EnterMonitor(mMonitor);
 
-  return rv;
+    PRINTF("ReadSegments [fd=%x].  rv = %x. Bytes written =%d\n",
+            mSocketFD, rv, *aCount);
+
+    //NS_POSTCONDITION(rv != NS_BASE_STREAM_WOULD_BLOCK, "ReadSegments returned WOULD_BLOCK!");
+    return rv;
 }
 
 
@@ -1573,9 +1901,8 @@ nsSocketTransport::Cancel(nsresult status)
   mLastActiveTime  = PR_IntervalNow ();
   rv = mService->AddToWorkQ(this);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("Canceling nsSocketTransport [%s:%d %x].  rv = %x\n",
-          mHostName, mPort, this, rv));
+  PRINTF("Canceling nsSocketTransport [%s:%d %x].  rv = %x\n",
+          mHostName, mPort, this, rv);
 
   return rv;
 }
@@ -1600,10 +1927,9 @@ nsSocketTransport::Suspend(void)
     rv = mService->AddToWorkQ(this);
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("Suspending nsSocketTransport [%s:%d %x].  rv = %x\t"
-          "mSuspendCount = %d.\n",
-          mHostName, mPort, this, rv, mSuspendCount));
+  PRINTF("Suspending nsSocketTransport [%s:%d %x].  rv = %x\t"
+         "mSuspendCount = %d.\n",
+          mHostName, mPort, this, rv, mSuspendCount);
 
   return rv;
 }
@@ -1632,10 +1958,9 @@ nsSocketTransport::Resume(void)
     rv = NS_ERROR_FAILURE;
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("Resuming nsSocketTransport [%s:%d %x].  rv = %x\t"
-          "mSuspendCount = %d.\n",
-          mHostName, mPort, this, rv, mSuspendCount));
+  PRINTF("Resuming nsSocketTransport [%s:%d %x].  rv = %x\t"
+         "mSuspendCount = %d.\n",
+          mHostName, mPort, this, rv, mSuspendCount);
 
   return rv;
 }
@@ -1646,16 +1971,14 @@ nsSocketTransport::Resume(void)
 // -------------------------------------------------------------------------- 
 // 
 // The pipe observer is used by the following methods: 
-//    AsyncRead(...) 
 //    OpenInputStream(...) 
 //    OpenOutputStream(...). 
 // 
 NS_IMETHODIMP 
 nsSocketTransport::OnFull(nsIOutputStream* out) 
 { 
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("nsSocketTransport::OnFull() [%s:%d %x] nsIOutputStream=%x.\n", 
-        mHostName, mPort, this, out));
+    PRINTF("nsSocketTransport::OnFull() [%s:%d %x] nsIOutputStream=%x.\n", 
+            mHostName, mPort, this, out);
     
     // 
     // The socket transport has filled up the pipe.  Remove the 
@@ -1686,9 +2009,8 @@ nsSocketTransport::OnWrite(nsIOutputStream* out, PRUint32 aCount)
 {
   nsresult rv = NS_OK;
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsSocketTransport::OnWrite() [%s:%d %x]. nsIOutputStream=%x Count=%d\n", 
-         mHostName, mPort, this, out, aCount));
+  PRINTF("nsSocketTransport::OnWrite() [%s:%d %x]. nsIOutputStream=%x Count=%d\n", 
+          mHostName, mPort, this, out, aCount);
 
   // 
   // The consumer has written some data into the pipe... If the transport 
@@ -1719,9 +2041,8 @@ nsSocketTransport::OnEmpty(nsIInputStream* in)
 {
   nsresult rv = NS_OK;
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsSocketTransport::OnEmpty() [%s:%d %x] nsIInputStream=%x.\n", 
-         mHostName, mPort, this, in));
+  PRINTF("nsSocketTransport::OnEmpty() [%s:%d %x] nsIInputStream=%x.\n", 
+          mHostName, mPort, this, in);
 
   // 
   // The consumer has emptied the pipe...  If the transport was waiting 
@@ -1756,9 +2077,8 @@ nsSocketTransport::OnClose(nsIInputStream* inStr)
 NS_IMETHODIMP
 nsSocketTransport::OnStartLookup(nsISupports *aContext, const char *aHostName)
 {
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsSocketTransport::OnStartLookup(...) [%s:%d %x].  Host is %s\n", 
-         mHostName, mPort, this, aHostName));
+  PRINTF("nsSocketTransport::OnStartLookup(...) [%s:%d %x].  Host is %s\n", 
+          mHostName, mPort, this, aHostName);
 
   return NS_OK;
 }
@@ -1771,7 +2091,7 @@ nsSocketTransport::OnFound(nsISupports *aContext,
   // Enter the socket transport lock...
   nsAutoMonitor mon(mMonitor);
   nsresult rv = NS_OK;
-#ifdef PR_LOGGING
+#ifdef NS_ENABLE_LOGGING
   char addrbuf[50];
 #endif
 
@@ -1782,25 +2102,23 @@ nsSocketTransport::OnFound(nsISupports *aContext,
       } else {
           PR_ConvertIPv4AddrToIPv6(*(PRUint32*)aHostEnt->hostEnt.h_addr_list[0], &mNetAddress.ipv6.ip);
     }
-#ifdef PR_LOGGING
+#ifdef NS_ENABLE_LOGGING
     PR_NetAddrToString(&mNetAddress, addrbuf, sizeof(addrbuf));
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-           ("nsSocketTransport::OnFound(...) [%s:%d %x]."
-            "  DNS lookup succeeded => %s (%s)\n",
+    PRINTF("nsSocketTransport::OnFound(...) [%s:%d %x]."
+           "  DNS lookup succeeded => %s (%s)\n",
             mHostName, mPort, this,
             aHostEnt->hostEnt.h_name,
-            addrbuf));
+            addrbuf);
 #endif
   } else {
     // XXX: What should happen here?  The GetHostByName(...) succeeded but 
     //      there are *no* A records...
     rv = NS_ERROR_FAILURE;
 
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-           ("nsSocketTransport::OnFound(...) [%s:%d %x]."
-            "  DNS lookup succeeded (%s) but no address returned!",
+    PRINTF("nsSocketTransport::OnFound(...) [%s:%d %x]."
+           "  DNS lookup succeeded (%s) but no address returned!",
             mHostName, mPort, this,
-            aHostEnt->hostEnt.h_name));
+            aHostEnt->hostEnt.h_name);
   }
 
   return rv;
@@ -1814,10 +2132,9 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
   // Enter the socket transport lock...
   nsAutoMonitor mon(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("nsSocketTransport::OnStopLookup(...) [%s:%d %x]."
-          "  Status = %x Host is %s\n", 
-         mHostName, mPort, this, aStatus, aHostName));
+  PRINTF("nsSocketTransport::OnStopLookup(...) [%s:%d %x]."
+         "  Status = %x Host is %s\n", 
+          mHostName, mPort, this, aStatus, aHostName);
 
   // Release our reference to the DNS Request...
   mDNSRequest = null_nsCOMPtr();
@@ -1897,14 +2214,14 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
     // Enter the socket transport lock...
     nsAutoMonitor mon(mMonitor);
     
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("+++ Entering nsSocketTransport::AsyncRead() [%s:%d %x]\n", 
-        mHostName, mPort, this));
+    PRINTF("+++ Entering nsSocketTransport::AsyncRead() [host=%s:%d this=%x]\n", 
+            mHostName, mPort, this);
     
     // If a read is already in progress then fail...
     if (GetReadType() != eSocketRead_None)
         rv = NS_ERROR_IN_PROGRESS;
     
+    /*
     // Create a new non-blocking input stream for reading data into...
     if (NS_SUCCEEDED(rv) && !mReadPipeIn)
     {
@@ -1919,13 +2236,16 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
         if (NS_SUCCEEDED(rv))
             rv = mReadPipeOut->SetObserver(this);
     }
+    */
     
     // Create a marshalling stream listener to receive notifications...
     if (NS_SUCCEEDED(rv))
     {        
         mOnStartReadFired = PR_FALSE;
-        rv = NS_NewAsyncStreamListener(getter_AddRefs(mReadListener),
-            aListener, NS_CURRENT_EVENTQ);
+        rv = NS_NewStreamListenerProxy(getter_AddRefs(mReadListener),
+                                       aListener, nsnull,
+                                       mBufferSegmentSize,
+                                       mBufferMaxSize);
     }
     
     if (NS_SUCCEEDED(rv))
@@ -1940,27 +2260,24 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
         rv = mService->AddToWorkQ(this);
     }
     
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("--- Leaving nsSocketTransport::AsyncRead() [%s:%d %x]. rv = %x.\n",
-        mHostName, mPort, this, rv));
+    PRINTF("--- Leaving nsSocketTransport::AsyncRead() [host=%s:%d this=%x], rv=%x.\n",
+            mHostName, mPort, this, rv);
     
     return rv;
 }
 
 
 NS_IMETHODIMP
-nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream, 
-                              nsIStreamObserver* aObserver,
+nsSocketTransport::AsyncWrite(nsIStreamProvider* aProvider,
                               nsISupports* aContext)
 {
     nsresult rv = NS_OK;
-    
+
     // Enter the socket transport lock...
     nsAutoMonitor mon(mMonitor);
-    
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("+++ Entering nsSocketTransport::AsyncWrite() [%s:%d %x]\n", 
-        mHostName, mPort, this));
+
+    PRINTF("+++ Entering nsSocketTransport::AsyncWrite() [host=%s:%d this=%x]\n", 
+            mHostName, mPort, this);
     
     // If a write is already in progress then fail...
     if (GetWriteType() != eSocketWrite_None)
@@ -1971,12 +2288,13 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
 //        mWritePipeIn = do_QueryInterface(aFromStream, &rv);
 //        if (NS_FAILED(rv))
 //        {
+#if 0
             // If the input stream does not support nsIInputStream, then
             // an intermediate buffer is necessary to move the data from the
             // stream to the network...
             mWriteFromStream = aFromStream;
             
-            rv = NS_OK;
+            //rv = NS_OK;
             // Create the intermediate buffer if necessary...
             if (!mWriteBuffer)
             {
@@ -1987,6 +2305,12 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
             // Reset to buffer index and length.
             mWriteBufferLength = 0;
             mWriteBufferIndex  = 0;
+#else
+            rv = NS_NewPipe(getter_AddRefs(mWritePipeIn),
+                            getter_AddRefs(mWritePipeOut),
+                            mBufferSegmentSize, mBufferMaxSize,
+                            PR_TRUE, PR_TRUE);
+#endif
 //        }
     }
     
@@ -1998,10 +2322,10 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
         
         mOnStartWriteFired = PR_FALSE;
 
-        if (aObserver) {
-            mWriteObserver = null_nsCOMPtr();
-            rv = NS_NewAsyncStreamObserver(getter_AddRefs(mWriteObserver),
-                aObserver, NS_CURRENT_EVENTQ);
+        if (aProvider) {
+            mWriteProvider = 0;
+            rv = NS_NewStreamProviderProxy(getter_AddRefs(mWriteProvider),
+                                           aProvider, NS_CURRENT_EVENTQ);
         }
     }
     
@@ -2010,13 +2334,12 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
         mOperation = eSocketOperation_ReadWrite;
         SetWriteType(eSocketWrite_Async);
         
-        mLastActiveTime  = PR_IntervalNow ();
+        mLastActiveTime = PR_IntervalNow ();
         rv = mService->AddToWorkQ(this);
     }
     
-    PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-        ("--- Leaving nsSocketTransport::AsyncWrite() [%s:%d %x]. rv = %x.\n",
-        mHostName, mPort, this, rv));
+    PRINTF("--- Leaving nsSocketTransport::AsyncWrite() [host=%s:%d this=%x], rv=%x.\n",
+            mHostName, mPort, this, rv);
     
     return rv;
 }
@@ -2030,9 +2353,8 @@ nsSocketTransport::OpenInputStream(nsIInputStream* *result)
   // Enter the socket transport lock...
   nsAutoMonitor mon(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::OpenInputStream() [%s:%d %x].\n", 
-         mHostName, mPort, this));
+  PRINTF("+++ Entering nsSocketTransport::OpenInputStream() [host=%s:%d this=%x].\n", 
+          mHostName, mPort, this);
 
   // If a read is already in progress then fail...
   if (GetReadType() != eSocketRead_None) {
@@ -2069,10 +2391,9 @@ nsSocketTransport::OpenInputStream(nsIInputStream* *result)
     rv = mService->AddToWorkQ(this);
   }
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::OpenInputStream() [%s:%d %x].\t"
-          "rv = %x.\n",
-          mHostName, mPort, this, rv));
+  PRINTF("--- Leaving nsSocketTransport::OpenInputStream() [host=%s:%d this=%x], "
+         "rv=%x.\n",
+          mHostName, mPort, this, rv);
 
   return rv;
 }
@@ -2086,9 +2407,8 @@ nsSocketTransport::OpenOutputStream(nsIOutputStream* *result)
   // Enter the socket transport lock...
   nsAutoMonitor mon(mMonitor);
 
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("+++ Entering nsSocketTransport::OpenOutputStream() [%s:%d %x].\n", 
-         mHostName, mPort, this));
+  PRINTF("+++ Entering nsSocketTransport::OpenOutputStream() [host=%s:%d this=%x].\n", 
+          mHostName, mPort, this);
 
   // If a write is already in progress then fail...
   if (GetWriteType() != eSocketWrite_None) {
@@ -2096,10 +2416,10 @@ nsSocketTransport::OpenOutputStream(nsIOutputStream* *result)
   }
 
   if (NS_SUCCEEDED(rv)) {
-    // No observer or write context is available...
+    // No provider or write context is available...
     mWriteCount    = 0;
-    mWriteObserver = null_nsCOMPtr();
-    mWriteContext  = null_nsCOMPtr();
+    mWriteProvider = 0;
+    mWriteContext  = 0;
 
     // We want a pipe here so the caller can "write" into one end
     // and the other end (aWriteStream) gets the data. This data
@@ -2135,10 +2455,9 @@ nsSocketTransport::OpenOutputStream(nsIOutputStream* *result)
     rv = mService->AddToWorkQ(this);
   }
 */
-  PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("--- Leaving nsSocketTransport::OpenOutputStream() [%s:%d %x].\t"
-          "rv = %x.\n",
-          mHostName, mPort, this, rv));
+  PRINTF("--- Leaving nsSocketTransport::OpenOutputStream() [host=%s:%d this=%x], "
+         "rv = %x.\n",
+          mHostName, mPort, this, rv);
 
   return rv;
 }

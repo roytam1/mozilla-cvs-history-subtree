@@ -531,8 +531,7 @@ nsMemCacheChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::AsyncWrite(nsIInputStream *fromStream, 
-                              nsIStreamObserver *observer, nsISupports *ctxt)
+nsMemCacheChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
 {
     // Not required to be implemented
     NS_NOTREACHED("nsMemCacheChannel::AsyncWrite");

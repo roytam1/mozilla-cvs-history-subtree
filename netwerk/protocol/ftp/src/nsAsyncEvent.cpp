@@ -101,8 +101,12 @@ nsFTPAsyncWriteEvent::nsFTPAsyncWriteEvent(nsIInputStream* inStream,
 NS_IMETHODIMP
 nsFTPAsyncWriteEvent::HandleEvent()
 {
+#if 0
     nsresult rv;
     rv = mChannel->SetTransferCount(mWriteCount);
     if (NS_FAILED(rv)) return rv;
     return mChannel->AsyncWrite(mInStream, mObserver, mContext);
+#endif
+    NS_WARNING("nsFTPAsyncWriteEvent::HandleEvent -- NOT IMPLEMENTED!!");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
