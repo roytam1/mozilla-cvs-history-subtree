@@ -1492,12 +1492,12 @@ void nsParser::HandleParserContinueEvent() {
   ContinueParsing();
 }
 
-nsresult nsParser::DataAdded(const nsSubstring& aData)
+nsresult nsParser::DataAdded(const nsSubstring& aData, nsIRequest *aRequest)
 {
   NS_ASSERTION(sParserDataListeners,
                "Don't call this with no parser data listeners!");
 
-  if (!mSink || !mParserContext || !mParserContext->mRequest) {
+  if (!mSink || !aRequest) {
     return NS_OK;
   }
 
@@ -1508,10 +1508,10 @@ nsresult nsParser::DataAdded(const nsSubstring& aData)
 
   while (count--) {
     rv |= sParserDataListeners->ObjectAt(count)->
-      OnUnicharDataAvailable(mParserContext->mRequest, ctx, aData);
+      OnUnicharDataAvailable(aRequest, ctx, aData);
 
     if (NS_FAILED(rv) && !canceled) {
-      mParserContext->mRequest->Cancel(rv);
+      aRequest->Cancel(rv);
 
       canceled = PR_TRUE;
     }
@@ -2478,7 +2478,7 @@ ParserWriteFunc(nsIInputStream* in,
   if(pws->mParserFilter) 
     pws->mParserFilter->RawBuffer(buf, &theNumRead); 
 
-  result = pws->mScanner->Append(buf, theNumRead);
+  result = pws->mScanner->Append(buf, theNumRead, pws->mRequest);
   if (NS_SUCCEEDED(result)) {
     *writeCount = count;
   }
