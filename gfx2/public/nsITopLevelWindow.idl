@@ -39,10 +39,63 @@ interface nsIPixmap;
  * @version 0.0
  * @see nsIWindow
  * @see "gfx2"
- **/
+ */
 [scriptable, uuid(e820e062-1dd1-11b2-b677-cd3faed4a440)]
 interface nsITopLevelWindow : nsISupports
 {
+
+  /**
+   * border styles
+   * @name toplevel_window_border_styles Top-level window Border Styles
+   * @attention rename these.  eBorderStyle_ is silly
+   */
+
+  //@{
+  /// whatever the OS wants... i.e. don't do anything
+  const long eBorderStyle_default  = -1;
+
+  /// no border, titlebar, etc.. opposite of all
+  const long eBorderStyle_none     = 0;
+
+  /// all window decorations
+  const long eBorderStyle_all      = 1 << 0;
+
+  /**
+   * enables the border on the window.
+   * @note these are only for decoration and are not resize hadles.
+   */
+  const long eBorderStyle_border   = 1 << 1;
+
+  /**
+   * enables the resize handles for the window.
+   * @note If this is set, border is implied to also be set
+   */
+  const long eBorderStyle_resizeh  = 1 << 2;
+
+  /// enables the titlebar for the window
+  const long eBorderStyle_title    = 1 << 3;
+
+  /**
+   * enables the window menu button on the title bar.  this being
+   * on should force the title bar to display
+   */
+  const long eBorderStyle_menu     = 1 << 4;
+
+  /**
+   * enables the minimize button so the user can minimize the window.
+   * turned off for tranient windows since they can not be minimized
+   * seperate from their parent
+   */
+  const long eBorderStyle_minimize = 1 << 5;
+
+  /// enables the maxmize button so the user can maximize the window
+  const long eBorderStyle_maximize = 1 << 6;
+
+  /// show the close button
+  const long eBorderStyle_close    = 1 << 7;
+  //@}
+
+
   /**
    * Initialize a top level window
    *
@@ -50,9 +103,11 @@ interface nsITopLevelWindow : nsISupports
    * @param aX       the x position, in pixels, relative to aParent.
    * @param aY       the y position, in pixels, relative to aParent.
    * @param aWidth   the width, in pixels, of the window.
-   * @param aHeight  the height, in pixels, of the window.
+   * @param aHeight  the height in pixels, of the window.
+   * @param aBorder  A bitfield of border styles
    *
-   * @attention should you only be able to parent top level windows to other top level windows?
+   * @attention should you only be able to parent top level windows to
+   *            other top level windows?
    *
    * @note This window represents a window that can be drawn into via
    *       a query interface to nsIDrawable.
@@ -62,7 +117,8 @@ interface nsITopLevelWindow : nsISupports
             in gfx_coord aX,
             in gfx_coord aY,
             in gfx_dimension aWidth,
-            in gfx_dimension aHeight);
+            in gfx_dimension aHeight,
+            in long aBorder);
 
 
   /**
@@ -85,7 +141,8 @@ interface nsITopLevelWindow : nsISupports
 
   /**
    * set the window class
-   * @attention is this only needed for unix?  It would be nice to have the XP code set this
+   * @attention is this only needed for unix?
+   *            It would be nice to have the XP code set this
    */
   attribute string windowClass;
 
