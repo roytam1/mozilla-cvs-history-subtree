@@ -52,6 +52,7 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefBranchInternal.h"
+#include "nsIStringBundle.h"
 
 #include "nsIAddrDatabase.h" // for kPriEmailColumn
 
@@ -59,6 +60,8 @@
 #define ALL_ROWS -1
 
 #define PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST "mail.addr_book.lastnamefirst"
+#define PREF_MAIL_ADDR_BOOK_DISPLAYNAME_AUTOGENERATION "mail.addr_book.displayName.autoGeneration"
+#define PREF_MAIL_ADDR_BOOK_DISPLAYNAME_LASTNAMEFIRST "mail.addr_book.displayName.lastnamefirst"
 
 // also, our default primary sort
 #define GENERATED_NAME_COLUMN_ID "GeneratedName" 
@@ -626,6 +629,9 @@ NS_IMETHODIMP nsAbView::SortBy(const PRUnichar *colID, const PRUnichar *sortDir)
     sortColumn = colID;
 
   PRInt32 i;
+  // this function does not optimize for the case when sortColumn and sortDirection
+  // are identical since the last call, the caller is responsible optimizing
+  // for that case
 
   // if we are sorting by how we are already sorted, 
   // and just the sort direction changes, just reverse
@@ -633,7 +639,7 @@ NS_IMETHODIMP nsAbView::SortBy(const PRUnichar *colID, const PRUnichar *sortDir)
   // note, we'll call SortBy() with the existing sort column and the
   // existing sort direction, and that needs to do a complete resort.
   // for example, we do that when the PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST changes
-  if (!nsCRT::strcmp(mSortColumn.get(),sortColumn.get()) && !nsCRT::strcmp(mSortDirection.get(), sortDir)) {
+  if (!nsCRT::strcmp(mSortColumn.get(),sortColumn.get()) && nsCRT::strcmp(mSortDirection.get(), sortDir)) {
     PRInt32 halfPoint = count / 2;
     for (i=0; i < halfPoint; i++) {
       // swap the elements.
@@ -1153,5 +1159,133 @@ nsresult nsAbView::GetSelectedCards(nsISupportsArray **selectedCards)
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP nsAbView::SwapFirstNameLastName()
+{
+  if (!mTreeSelection)
+    return NS_OK;
+  
+  PRInt32 selectionCount; 
+  nsresult rv = mTreeSelection->GetRangeCount(&selectionCount);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  if (!selectionCount)
+    return NS_OK;
+  
+  // prepare for displayname generation
+  // no cache for pref and bundle since the swap operation is not executed frequently
+  PRBool displayNameAutoGeneration;
+  PRBool displayNameLastnamefirst;
+
+  nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIPrefBranch> prefBranch;
+  rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = prefBranch->GetBoolPref(PREF_MAIL_ADDR_BOOK_DISPLAYNAME_AUTOGENERATION, &displayNameAutoGeneration);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIStringBundleService> bundleService;
+  nsCOMPtr<nsIStringBundle> bundle;
+  if (displayNameAutoGeneration)
+  {
+    rv = prefBranch->GetBoolPref(PREF_MAIL_ADDR_BOOK_DISPLAYNAME_LASTNAMEFIRST, &displayNameLastnamefirst);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = bundleService->CreateBundle("chrome://messenger/locale/addressbook/addressBook.properties", 
+                                     getter_AddRefs(bundle));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  for (PRInt32 i = 0; i < selectionCount; i++)
+  {
+    PRInt32 startRange;
+    PRInt32 endRange;
+    rv = mTreeSelection->GetRangeAt(i, &startRange, &endRange);
+    NS_ENSURE_SUCCESS(rv, NS_OK); 
+    PRInt32 totalCards = mCards.Count();
+    if (startRange >= 0 && startRange < totalCards)
+    {
+      for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < totalCards; rangeIndex++) {
+        nsCOMPtr<nsIAbCard> abCard;
+        rv = GetCardFromRow(rangeIndex, getter_AddRefs(abCard));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        // swap FN/LN
+        nsXPIDLString fn, ln;
+        abCard->GetFirstName(getter_Copies(fn));
+        abCard->GetLastName(getter_Copies(ln));
+        if (!fn.IsEmpty() || !ln.IsEmpty())
+        {
+          abCard->SetFirstName(ln);
+          abCard->SetLastName(fn);
+
+          // generate display name using the new order
+          if (displayNameAutoGeneration &&
+              !fn.IsEmpty() && !ln.IsEmpty())
+          {
+            nsXPIDLString dnLnFn;
+            nsXPIDLString dnFnLn;
+            const PRUnichar *formatString[2];
+
+            // generate both ln/fn and fn/ln combination since we need both later
+            // to check to see if the current display name was edited
+            // note that fn/ln still hold the values before the swap
+            formatString[0] = ln.get();
+            formatString[1] = fn.get();
+            rv = bundle->FormatStringFromName(NS_LITERAL_STRING("lastFirstFormat").get(),
+                                              formatString, 2, getter_Copies(dnLnFn));
+            NS_ENSURE_SUCCESS(rv, rv);
+            formatString[0] = fn.get();
+            formatString[1] = ln.get();
+            rv = bundle->FormatStringFromName(NS_LITERAL_STRING("firstLastFormat").get(),
+                                              formatString, 2, getter_Copies(dnFnLn));
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            // get the current display name
+            nsXPIDLString dn;
+            abCard->GetDisplayName(getter_Copies(dn));
+
+            // swap the display name if not edited
+            if (displayNameLastnamefirst)
+            {
+              if (!nsCRT::strcmp(dn.get(), dnLnFn.get()))
+                abCard->SetDisplayName(dnFnLn);
+            }
+            else
+            {
+              if (!nsCRT::strcmp(dn.get(), dnFnLn.get()))
+                abCard->SetDisplayName(dnLnFn);
+            }
+          }
+
+          // swap phonetic names
+          abCard->GetPhoneticFirstName(getter_Copies(fn));
+          abCard->GetPhoneticLastName(getter_Copies(ln));
+          if (!fn.IsEmpty() || !ln.IsEmpty())
+          {
+            abCard->SetPhoneticFirstName(ln);
+            abCard->SetPhoneticLastName(fn);
+          }
+        }
+      }
+    }
+  }
+  // update the tree
+  // re-sort if either generated or phonetic name is primary or secondary sort,
+  // otherwise invalidate to reflect the change
+  if (!nsCRT::strcmp(mSortColumn.get(), NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get()) ||
+      !nsCRT::strcmp(mSortColumn.get(), NS_LITERAL_STRING(kPhoneticNameColumn).get()))
+    rv = SortBy(mSortColumn.get(), mSortDirection.get());
+  else
+    rv = InvalidateTree(ALL_ROWS);
+
+  return rv;
 }
 
