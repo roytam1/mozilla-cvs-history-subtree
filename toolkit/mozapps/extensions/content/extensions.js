@@ -5,7 +5,7 @@ const kObserverServiceProgID = "@mozilla.org/observer-service;1";
 const nsIUpdateItem = Components.interfaces.nsIUpdateItem;
 
 var gExtensionManager = null;
-var gExtensionssView  = null;
+var gExtensionsView   = null;
 var gWindowState      = "";
 var gURIPrefix        = ""; // extension or theme prefix
 var gDSRoot           = ""; // extension or theme root
