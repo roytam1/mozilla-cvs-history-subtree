@@ -506,7 +506,18 @@ BookmarksUIElement.prototype = {
       // If the node is a folder, then we need to create a new anonymous 
       // resource and copy all the arcs over.
       if (rType && rType.Value == NC_NS + "Folder")
-        rCurrent = BookmarksUtils.cloneFolder(rCurrent, krParent, krSource);
+      {
+         // Cannot Paste a folder into itself
+         if (rCurrent.EqualsNode(krParent))
+         {
+            var bundle = document.getElementById("bookmarksbundle");
+            alert (bundle.getString ("CannotPasteFolderIntoSelf"));
+            return;
+          }
+          else
+            rCurrent = BookmarksUtils.cloneFolder(rCurrent, krParent, krSource);
+      }
+
 
       // If this item already exists in this container, don't paste, as 
       // this will result in the creation of multiple copies in the datasource
