@@ -32,7 +32,6 @@
 #include "nsIRDFContentSink.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFService.h"
-#include "nsIRDFXMLDataSource.h"
 #include "nsIXULContentSink.h"
 #include "nsISupports.h"
 #include "nsRDFBaseDataSources.h"
@@ -187,7 +186,7 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
             return rv;
     }
     else if (mClassID.Equals(kRDFXMLDataSourceCID)) {
-        if (NS_FAILED(rv = NS_NewRDFXMLDataSource((nsIRDFXMLDataSource**) &inst)))
+        if (NS_FAILED(rv = NS_NewRDFXMLDataSource((nsIRDFDataSource**) &inst)))
           return rv;
     }
     else if (mClassID.Equals(kRDFFileSystemDataSourceCID)) {
@@ -252,7 +251,7 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
     }
 #if 0 // I think we may need this later, re: rejecting assertions
 	else if (mClassID.Equals(kXULDataSourceCID)) {
-		if (NS_FAILED(rv = NS_NewXULDataSource((nsIRDFXMLDataSource**) &inst)))
+		if (NS_FAILED(rv = NS_NewXULDataSource((nsIRDFDataSource**) &inst)))
 			return rv;
 	}
 #endif
