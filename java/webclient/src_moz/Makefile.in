@@ -110,6 +110,18 @@ PACKAGE_EXAMPLE=$(PACKAGE_DIR)/example
 endif # PACKAGE_BUILD
 
 
+rm_bin:
+ifeq ($(PACKAGE_BUILD),)
+	rm -f $(topsrcdir)/dist/bin/libwebclientstub.so
+	rm -f $(topsrcdir)/dist/bin/libwebclient.so
+	rm -f $(topsrcdir)/dist/lib/libwebclientstub.so
+	rm -f $(topsrcdir)/dist/lib/libwebclient.so
+	rm -f $(topsrcdir)/dist/lib/libwc_share.a
+endif # PACKAGE_BUILD
+
+clobber_all::rm_bin
+
+
 buildRunems:
 ifeq ($(BAL_INTERFACE),)
 ifeq ($(PACKAGE_BUILD),)
