@@ -40,7 +40,7 @@
 
 #include "nspr.h"
 
-NS_IMPL_ISUPPORTS2(nsImageRequestProxy, nsIImageRequest, nsIImageDecoderObserver)
+NS_IMPL_ISUPPORTS3(nsImageRequestProxy, nsIImageRequest, nsIImageDecoderObserver, nsIImageContainerObserver)
 
 nsImageRequestProxy::nsImageRequestProxy()
 {

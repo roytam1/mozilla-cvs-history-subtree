@@ -38,8 +38,9 @@
 #include "ImageCache.h"
 
 
-NS_IMPL_ISUPPORTS4(nsImageRequest, nsIImageRequest, 
-                   nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver)
+NS_IMPL_ISUPPORTS5(nsImageRequest, nsIImageRequest, 
+                   nsIImageDecoderObserver, nsIImageContainerObserver,
+                   nsIStreamListener, nsIStreamObserver)
 
 nsImageRequest::nsImageRequest() : 
   mObservers(0), mProcessing(PR_TRUE), mStatus(nsIImageRequest::STATUS_NONE), mState(0)
