@@ -527,7 +527,7 @@ public class NodeTransformer {
             FunctionNode fn = (FunctionNode)tree;
             String name = fn.getFunctionName();
             if (fn.getFunctionType() == FunctionNode.FUNCTION_EXPRESSION
-                && name != null && name.length() > 0 && vars.hasVariable(name))
+                && name != null && name.length() > 0 && !vars.hasVariable(name))
             {
                 // A function expression needs to have its name as a variable
                 // (if it isn't already allocated as a variable). See
