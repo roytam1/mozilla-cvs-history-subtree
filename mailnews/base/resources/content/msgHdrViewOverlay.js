@@ -799,6 +799,10 @@ function displayAttachmentsForExpandedView()
       cell.setAttribute("label", attachment.displayName);
       cell.setAttribute("tooltip", "attachmentTreeTooltip");
       item.setAttribute("commandSuffix", generateCommandSuffixForAttachment(attachment)); // set the command suffix on the tree item...
+      item.setAttribute("attachmentUrl", attachment.url);
+      item.setAttribute("attachmentdisplayName", escape(attachment.displayName));
+      item.setAttribute("attachmentcontentType", attachment.contentType);
+      item.setAttribute("attachmentUri", attachment.uri);
       setApplicationIconForAttachment(attachment, cell);
 	  row.appendChild(cell);
 	  item.appendChild(row);
@@ -1067,3 +1071,23 @@ function ProcessHeaderValue(containingBox, containerNode, header, boxPartOfPopup
 
   containerNode.appendChild(textNode);
 }
+var attachmentAreaDNDObserver = {
+  onDragStart: function (aEvent, aAttachmentData, aDragAction)
+    {
+      var target = aEvent.originalTarget;
+      var item = target.parentNode.parentNode;
+      if (item.localName == "treeitem")
+      {
+        var attachmentUrl = item.getAttribute("attachmentUrl");
+        var attachmentdisplayName = item.getAttribute("attachmentdisplayName");
+        var attachmentcontentType = item.getAttribute("attachmentcontentType");
+        var tmpurl = attachmentUrl;
+        tmpurl = tmpurl + "&type=" + attachmentcontentType + "&filename=" + attachmentdisplayName;
+        aAttachmentData.data = new TransferData();
+        if (attachmentUrl && attachmentdisplayName)
+        {
+             aAttachmentData.data.addDataForFlavour("text/x-moz-url", tmpurl + "\n" + attachmentdisplayName);
+        }
+      }
+    }
+};

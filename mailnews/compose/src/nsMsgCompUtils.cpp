@@ -778,7 +778,15 @@ mime_generate_attachment_headers (const char *type, const char *encoding,
 
 	PUSH_STRING ("Content-Type: ");
 	PUSH_STRING (type);
-
+        char * r_realname ;
+        char *tmp_realname = PL_strstr(real_name,"&filename=");
+        if (tmp_realname) {
+          r_realname = PL_strchr(real_name,'=');
+          r_realname++;
+        } else {
+          r_realname = new char[PL_strlen(real_name)+1];
+          PL_strcpy(r_realname,real_name);
+        } 
   if (mime_type_needs_charset (type)) 
   {
     
@@ -852,7 +860,7 @@ mime_generate_attachment_headers (const char *type, const char *encoding,
 	if (real_name && *real_name) {
 		if (parmFolding == 0 || parmFolding == 1) {
 			PUSH_STRING (";\r\n name=\"");
-			PUSH_STRING (real_name);
+			PUSH_STRING (r_realname);
 			PUSH_STRING ("\"");
 		}
 		else // if (parmFolding == 2)
@@ -921,7 +929,7 @@ mime_generate_attachment_headers (const char *type, const char *encoding,
 
 		if (parmFolding == 0 || parmFolding == 1) {
 			PUSH_STRING (";\r\n filename=\"");
-			PUSH_STRING (real_name);
+			PUSH_STRING (r_realname);
 			PUSH_STRING ("\"" CRLF);
 		}
 		else // if (parmFolding == 2)

@@ -30,6 +30,11 @@ Rights Reserved.
 <script src="chrome://messenger/content/msgHdrViewOverlay.js"/>
 <script src="chrome://messenger/content/mime.js"/>
 
+<!-- drag and drop -->
+<script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
+
+
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
 </stringbundleset>
@@ -188,7 +193,7 @@ Rights Reserved.
 
    <hbox id="expandedAttachmentBox" class="header-part1">
      <text class="label" id="attachmentText" value="&attachmentsTree.label;" crop="right"/>
-     <tree id="attachmentTree" class="inset" flex="2" onclick="attachmentTreeClick(event);" context="attachmentTreeContext">
+       <tree id="attachmentTree" class="inset" flex="2" onclick="attachmentTreeClick(event);" ondraggesture="nsDragAndDrop.startDrag(event,attachmentAreaDNDObserver);" context="attachmentTreeContext">
        <treecolgroup>
         <treecol flex="1"/>
        </treecolgroup>
