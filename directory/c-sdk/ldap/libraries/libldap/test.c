@@ -1650,6 +1650,7 @@ changetype_num2string( int chgtype )
 	s = "moddn";
 	break;
     default:
+	s = buf;
 	sprintf( s, "unknown (%d)", chgtype );
     }
 
