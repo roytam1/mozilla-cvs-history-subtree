@@ -4553,6 +4553,7 @@
 			files = (
 				3F44ADDF05BDFBA000CB4B08,
 				3F44ADE005BDFBA000CB4B08,
+				3F8C004E06800D6200658CBC,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4740,6 +4741,7 @@
 			files = (
 				3F44ADF605BDFBA000CB4B08,
 				3F44ADF705BDFBA000CB4B08,
+				3F8C005406800DFC00658CBC,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8294,6 +8296,56 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
+		3F8C004C06800D6200658CBC = {
+			children = (
+				3F8C004D06800D6200658CBC,
+			);
+			isa = PBXVariantGroup;
+			name = Localizable.strings;
+			path = PreferencePanes/Personal;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		3F8C004D06800D6200658CBC = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = English;
+			path = PreferencePanes/Security/English.lproj/Localizable.strings;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		3F8C004E06800D6200658CBC = {
+			fileRef = 3F8C004C06800D6200658CBC;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F8C005206800DFC00658CBC = {
+			children = (
+				3F8C005306800DFC00658CBC,
+			);
+			isa = PBXVariantGroup;
+			name = Localizable.strings;
+			path = src/preferences;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		3F8C005306800DFC00658CBC = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = English;
+			path = PreferencePanes/WebFeatures/English.lproj/Localizable.strings;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		3F8C005406800DFC00658CBC = {
+			fileRef = 3F8C005206800DFC00658CBC;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		3FAA54C70587778700BBF630 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -9519,6 +9571,7 @@
 				F51704E9034A30DF01026D5D,
 				F51704EA034A30DF01026D5D,
 				F51704EE034A30F101026D5D,
+				3F8C004C06800D6200658CBC,
 			);
 			isa = PBXGroup;
 			name = Security;
@@ -9576,6 +9629,7 @@
 				F5170516034A398F01026D5D,
 				F5170517034A398F01026D5D,
 				F517051B034A399E01026D5D,
+				3F8C005206800DFC00658CBC,
 			);
 			isa = PBXGroup;
 			name = "Web Features";
