@@ -104,7 +104,7 @@ CVS_FLAGS=$(CVS_FLAGS) -d "$(CVSROOT)"
 MOZ_CO_FLAGS = -P
 !endif
 
-CVSCO = cvs $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(CVS_BRANCH)
+CVSCO = cvs $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(CVS_BRANCH) $(CVS_CO_FLAGS)
 
 #//------------------------------------------------------------------------
 #// Figure out how to pull NSPR.
