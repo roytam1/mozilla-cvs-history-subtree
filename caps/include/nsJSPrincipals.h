@@ -24,10 +24,10 @@
 struct nsJSPrincipals : JSPrincipals {
 
 public:
-  nsJSPrincipals(nsIPrincipal * prin);
+  nsJSPrincipals();
+  nsresult Init(nsIPrincipal * prin);
   ~nsJSPrincipals(void);
 
-  JSPrincipals jsPrincipals;
   nsIPrincipal *nsIPrincipalPtr;
 };
 

@@ -29,6 +29,13 @@ public:
 
   NS_DECL_ISUPPORTS
 
+  nsCodebasePrincipal();
+
+  NS_IMETHOD
+  Init(PRInt16 type, nsIURI * uri);
+
+  virtual ~nsCodebasePrincipal(void);
+
   NS_IMETHOD
   GetURLString(char ** cburl);
   
@@ -59,17 +66,11 @@ public:
   NS_IMETHOD
   Equals(nsIPrincipal * other, PRBool * result);
 
-  nsCodebasePrincipal(PRInt16 type, const char * codebaseURL);
-  nsCodebasePrincipal(PRInt16 type, nsIURI * url);
-  virtual ~nsCodebasePrincipal(void);
-
 protected:
   nsIURI * itsURL;
   PRInt16 itsType;
-  nsJSPrincipals *itsJSPrincipals;
+  nsJSPrincipals itsJSPrincipals;
 
-private:
-  void Init(PRInt16 type, nsIURI * uri);
 };
 
 #endif // _NS_CODEBASE_PRINCIPAL_H_

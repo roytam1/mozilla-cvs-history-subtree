@@ -22,33 +22,17 @@
 #include "xp.h"
 #include "nsIURL.h"
 
-static NS_DEFINE_IID(kURLCID, NS_STANDARDURL_CID);
-static NS_DEFINE_IID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kICodebasePrincipalIID, NS_ICODEBASEPRINCIPAL_IID);
 
 NS_IMPL_ISUPPORTS(nsCodebasePrincipal, kICodebasePrincipalIID);
-/*
-NS_IMPL_QUERY_INTERFACE(nsCodebasePrincipal, kICodebasePrincipalIID);
 
-NS_IMETHODIMP
-nsCodebasePrincipal::AddRef(void)
-{
-  
-}
-
-NS_IMETHODIMP
-nsCodebasePrincipal::Release(void)
-{
-  
-}
-*/
 NS_IMETHODIMP
 nsCodebasePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
 {
-    if (itsJSPrincipals->refcount == 0) {
+    if (itsJSPrincipals.refcount == 0) {
         this->AddRef();
     }
-    *jsprin = &itsJSPrincipals->jsPrincipals;
+    *jsprin = &itsJSPrincipals;
     return NS_OK;
 /*
     char * cb;
@@ -130,39 +114,28 @@ nsCodebasePrincipal::Equals(nsIPrincipal * other, PRBool * result)
 	return NS_OK;
 }
 
-nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const char * codeBaseURL)
+nsCodebasePrincipal::nsCodebasePrincipal()
 {
-  nsresult rv;
-  nsIURI * uri;
-  NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
-  if (!NS_SUCCEEDED(rv)) 
-    compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& uri);
-  uri->SetSpec((char *) codeBaseURL);
-  this->Init(type,uri);
+    NS_INIT_REFCNT();
 }
 
-nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, nsIURI * url)
+NS_IMETHODIMP
+nsCodebasePrincipal::Init(PRInt16 type, nsIURI *uri)
 {
-  this->Init(type,url);
-}
-
-void // nsresult
-nsCodebasePrincipal::Init(PRInt16 type, nsIURI * uri)
-{
-  NS_INIT_REFCNT();
-  NS_ADDREF(this);
-  this->itsType = type;
-  if(NS_SUCCEEDED(uri->Clone(& this->itsURL))) 
-  {
-    NS_ADDREF(this->itsURL);
-  }
-  itsJSPrincipals = new nsJSPrincipals(this);
-  // XXX check result
+    nsresult result;
+    NS_ADDREF(this);
+    this->itsType = type;
+    if (!NS_SUCCEEDED(result = uri->Clone(&itsURL)))
+        return result;
+    if (!NS_SUCCEEDED(result = itsJSPrincipals.Init(this))) {
+        NS_RELEASE(itsURL);
+        return result;
+    }
+    return NS_OK;
 }
 
 nsCodebasePrincipal::~nsCodebasePrincipal(void)
 {
-  JSPrincipals * jsprin;
-  this->ToJSPrincipal(& jsprin);
-  PL_strfree(jsprin->codebase);
+    if (itsURL)
+        NS_RELEASE(itsURL);
 }

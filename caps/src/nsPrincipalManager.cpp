@@ -28,6 +28,9 @@
 #include "nsCertificatePrincipal.h"
 #include "nsCodebasePrincipal.h"
 #include "nsPrivilegeManager.h"
+#include "nsIServiceManager.h"
+#include "nsIComponentManager.h"
+#include "nsIURL.h"
 
 #define UNSIGNED_PRINCIPAL_KEY "4a:52:4f:53:4b:49:4e:44"
 #define UNKNOWN_PRINCIPAL_KEY "52:4f:53:4b:49:4e:44:4a"
@@ -44,6 +47,8 @@ static PRBool RDF_RemovePrincipal(nsIPrincipal * prin);
 static PRBool GetPrincipalString(nsHashKey * aKey, void * aData, void * closure);
 
 static NS_DEFINE_IID(kIPrincipalManagerIID, NS_IPRINCIPALMANAGER_IID);
+static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
+static NS_DEFINE_CID(kURLCID, NS_STANDARDURL_CID);
 
 NS_IMPL_ISUPPORTS(nsPrincipalManager, kIPrincipalManagerIID);
 
@@ -82,12 +87,37 @@ nsPrincipalManager::HasSystemPrincipal(nsIPrincipalArray * prinArray)
 }
 
 NS_IMETHODIMP
-nsPrincipalManager::CreateCodebasePrincipal(const char * codebaseURL, nsIURI * url, nsIPrincipal * * prin) {
-  if(!codebaseURL && !url) return NS_ERROR_FAILURE;
-  * prin = (url) ? new nsCodebasePrincipal(nsIPrincipal::PrincipalType_CodebaseExact, url) :
-                   new nsCodebasePrincipal(nsIPrincipal::PrincipalType_CodebaseExact, codebaseURL);
-	NS_IF_ADDREF(* prin);
-	return (prin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+nsPrincipalManager::CreateCodebasePrincipal(const char *codebaseURL, 
+                                            nsIURI *url, 
+                                            nsIPrincipal **prin) 
+{
+    if (!codebaseURL && !url) 
+        return NS_ERROR_FAILURE;
+    if (!url) {
+        nsresult rv;
+        NS_WITH_SERVICE(nsIComponentManager, compMan, kComponentManagerCID, &rv);
+        if (!NS_SUCCEEDED(rv))
+            return rv;
+        rv = compMan->CreateInstance(kURLCID, nsnull, nsIURL::GetIID(),
+                                     (void **) &url);
+        if (!NS_SUCCEEDED(rv))
+            return rv;
+        if (!NS_SUCCEEDED(rv = url->SetSpec((char *) codebaseURL))) {
+            NS_RELEASE(url);
+            return rv;
+        }
+    }
+    nsCodebasePrincipal *codebasePrin = new nsCodebasePrincipal();
+    if (codebasePrin == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    nsresult result = codebasePrin->Init(nsIPrincipal::PrincipalType_CodebaseExact, 
+                                         url);
+    if (!NS_SUCCEEDED(result)) {
+        NS_RELEASE(codebasePrin);
+        return result;
+    }
+    *prin = codebasePrin;
+    return NS_OK;
 }
 
 NS_IMETHODIMP

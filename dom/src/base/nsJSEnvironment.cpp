@@ -137,8 +137,8 @@ nsJSContext::EvaluateString(const nsString& aScript, const char * aURL, PRUint32
 		NS_RELEASE(globalData);
 	}
 	NS_IF_RELEASE(global);
-  JSPrincipals * jsprin;
-  prin->ToJSPrincipal(& jsprin);
+	JSPrincipals * jsprin;
+	prin->ToJSPrincipal(& jsprin);
 	PRBool ret = ::JS_EvaluateUCScriptForPrincipals(mContext, 
 		JS_GetGlobalObject(mContext),
 		jsprin,

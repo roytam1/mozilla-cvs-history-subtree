@@ -25,8 +25,7 @@ nsGetPrincipalArray(JSContext * cx, struct JSPrincipals * prin) {
     return nsnull;
 }
 
-//PR_STATIC_CALLBACK(JSBool) 
-static JSBool
+PR_STATIC_CALLBACK(JSBool) 
 nsGlobalPrivilegesEnabled(JSContext * cx , struct JSPrincipals *jsprin) {
     return JS_TRUE;
 }
@@ -34,20 +33,40 @@ nsGlobalPrivilegesEnabled(JSContext * cx , struct JSPrincipals *jsprin) {
 PR_STATIC_CALLBACK(void)
 nsDestroyJSPrincipals(JSContext * cx, struct JSPrincipals * jsprin) {
     nsJSPrincipals * nsjsprin = (nsJSPrincipals *)jsprin;
-    PL_strfree(nsjsprin->jsPrincipals.codebase);
-    NS_IF_RELEASE(nsjsprin->nsIPrincipalPtr);
+    nsIPrincipal *p = nsjsprin->nsIPrincipalPtr;
+    NS_IF_RELEASE(p);
+    // The nsIPrincipal that we release owns the JSPrincipal struct,
+    // so we don't need to worry about "codebase"
 }
 
-nsJSPrincipals::nsJSPrincipals(nsIPrincipal * prin) {
-  char * cb;
-  nsICodebasePrincipal * cbprin;
-  prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
-  cbprin->GetURLString(& cb);
-  this->nsIPrincipalPtr = prin;
-  jsPrincipals.codebase = PL_strdup(cb);
-  jsPrincipals.getPrincipalArray = nsGetPrincipalArray;
-  jsPrincipals.globalPrivilegesEnabled = nsGlobalPrivilegesEnabled;
-  jsPrincipals.refcount = 0;
-  jsPrincipals.destroy = nsDestroyJSPrincipals;
+nsJSPrincipals::nsJSPrincipals() {
+    codebase = nsnull;
+    getPrincipalArray = nsGetPrincipalArray;
+    globalPrivilegesEnabled = nsGlobalPrivilegesEnabled;
+    refcount = 0;
+    destroy = nsDestroyJSPrincipals;
+    nsIPrincipalPtr = nsnull;
 }
+
+nsresult
+nsJSPrincipals::Init(nsIPrincipal * prin) {
+    char * cb;
+    nsICodebasePrincipal * cbprin;
+    prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
+    cbprin->GetURLString(& cb);
+    nsIPrincipalPtr = prin;
+    codebase = PL_strdup(cb);
+    if (!codebase) 
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(nsIPrincipalPtr);
+    return NS_OK;
+}
+
+nsJSPrincipals::~nsJSPrincipals() {
+    if (codebase)
+        PL_strfree(codebase); 
+    if (nsIPrincipalPtr)
+        NS_RELEASE(nsIPrincipalPtr);
+}
+
 
