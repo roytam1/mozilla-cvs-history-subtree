@@ -1002,12 +1002,12 @@ struct LO_BuiltinStruct_struct {
 		void * FE_Data;
 		void *session_data;
 		PA_Block builtin_src;
-#ifndef OJI
+#if defined(OJI)
+        struct lo_NVList attributes;
+#else
 		int32 attribute_cnt;
 		char **attribute_list;
 		char **value_list;
-#else
-                lo_NVList attributes;
 #endif /* OJI */
 		int32 alignment;
 		int32 border_width;
