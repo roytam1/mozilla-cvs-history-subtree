@@ -213,6 +213,20 @@ install:: $(srcdir)/splash.xpm
 	$(INSTALL) $< $(DIST)/bin
 endif
 
+ifeq ($(MOZ_REORDER),1)
+
+LDSCRIPT = ldscript
+LDFLAGS += -Wl,-T,$(LDSCRIPT)
+GARBAGE += $(LDSCRIPT)
+ORDERFILE = mozilla-bin.order
+
+$(PROGRAM) : $(LDSCRIPT) $(ORDERFILE)
+
+$(LDSCRIPT): $(ORDERFILE)
+	$(PERL) $(topsrcdir)/config/mklinkscript.pl -o $@ $(ORDERFILE)
+
+endif
+
 nsStaticComponents.cpp: nsStaticComponents.cpp.in Makefile Makefile.in $(FINAL_LINK_COMP_NAMES)
 	rm -f $@
 	cat $< | \
