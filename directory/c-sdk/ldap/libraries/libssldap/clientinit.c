@@ -611,4 +611,40 @@ ldapssl_client_init(const char* certdbpath, void *certdbhandle )
     return( ldapssl_clientauth_init( certdbpath, certdbhandle,
 	    0, NULL, NULL ));
 }
+
+
+/*
+ * ldapssl_serverauth_init() is a server-authentication only version of
+ * ldapssl_clientauth_init().  This function allows the sslstrength
+ * to be passed in.  The sslstrength can take one of the following
+ * values:
+ *	LDAPSSL_AUTH_WEAK: indicate that you accept the server's
+ *			   certificate without checking the CA who
+ *			   issued the certificate
+ *	LDAPSSL_AUTH_CERT: indicates that you accept the server's
+ *			   certificate only if you trust the CA who
+ *			   issued the certificate
+ *	LDAPSSL_AUTH_CNCHECK:
+			   indicates that you accept the server's
+ *			   certificate only if you trust the CA who
+ *			   issued the certificate and if the value
+ * 			   of the cn attribute in the DNS hostname
+ *			   of the server
+ */
+int
+LDAP_CALL
+ldapssl_serverauth_init(const char* certdbpath,
+		     void *certdbhandle,
+		     const int sslstrength )
+{
+    int	rc = LDAP_SUCCESS;
+
+    if ((rc = set_ssl_strength( sslstrength )) != LDAP_SUCCESS) {
+	return ( rc );
+    }
+
+    return( ldapssl_clientauth_init( certdbpath, certdbhandle,
+	    0, NULL, NULL ));
+}
+
 #endif /* NET_SSL */

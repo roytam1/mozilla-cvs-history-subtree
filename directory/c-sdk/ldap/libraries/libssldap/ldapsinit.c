@@ -267,6 +267,14 @@ do_ldapssl_connect(const char *hostlist, int defport, int timeout,
     }
 
     /*
+     * Set hostname which will be retrieved (depending on ssl strength) when
+     * using client or server auth.
+     */
+    if ( SSL_SetURL( sslfd, hostlist ) != SECSuccess ) {
+	goto close_socket_and_exit_with_error;
+    }
+
+    /*
      * Let the standard NSPR to LDAP layer know about the new socket and
      * our own socket-specific data.
      */
@@ -283,32 +291,6 @@ do_ldapssl_connect(const char *hostlist, int defport, int timeout,
     SSL_AuthCertificateHook( soi.soinfo_prfd,
 			     (SSLAuthCertificate)ldapssl_AuthCertificate, 
 			     (void *)CERT_GetDefaultCertDB());
-
-    /*
-     * XXXmcs: 28-April-2000
-     * I deleted some code here that was #if 0'd out that mentioned "the Man
-     * In The Middle fix"... presumably that fix is now in NSS since the
-     * code here was not being compiled in?
-     */
-
-#if 0
-    if ( clientauth ) {
-	/*
-	 * XXXmcs: what is the effect of calling
-	 * SSL_AuthCertificateHook()?  It looks like
-	 * SSL_AuthCertificate() verifies certs.  But what
-	 * cert.?  Leave this commented out until we find out....
-	 */
-
-	if (( certdbh = CERT_GetDefaultCertDB()) == NULL ) {
-	    goto close_socket_and_exit_with_error;
-	} else if ( SSL_AuthCertificateHook( soi.soinfo_prfd,
-		SSL_AuthCertificate,
-		(void *)certdbh ) != 0 ) {
-	    goto close_socket_and_exit_with_error;
-	}
-    }
-#endif
 
     if ( SSL_GetClientAuthDataHook( soi.soinfo_prfd,
 		get_clientauth_data, clientauth ? sseip : NULL ) != 0 ) {
@@ -582,12 +564,14 @@ ldapssl_AuthCertificate(void *certdbarg, PRFileDesc *fd, PRBool checkSig,
 	 * NB: This is our only defense against Man-In-The-Middle (MITM) 
 	 * attacks!
 	 */
+
 	hostname = SSL_RevealURL( fd );
 
-	if (hostname && hostname[0])
+	if (hostname && hostname[0]) {
 	  rv = CERT_VerifyCertName(cert, hostname);
-	else 
+	} else  {
 	  rv = SECFailure;
+     	}
 	if (rv != SECSuccess)
 	  PORT_SetError(SSL_ERROR_BAD_CERT_DOMAIN);
       }

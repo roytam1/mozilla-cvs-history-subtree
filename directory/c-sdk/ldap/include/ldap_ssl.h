@@ -52,8 +52,11 @@ LDAP * LDAP_CALL ldapssl_init( const char *defhost, int defport,
 int LDAP_CALL ldapssl_install_routines( LDAP *ld );
 
 
-/* The next three functions initialize the security code for SSL
+/* The next four functions initialize the security code for SSL
  * The first one ldapssl_client_init() does initialization for SSL only
+ * The next one supports server authentication using clientauth_init()
+ * and allows the caller to specify the ssl strength to use in order to
+ * verify the servers's certificate.
  * The next one supports ldapssl_clientauth_init() intializes security 
  * for SSL for client authentication.  The third function initializes
  * security for doing SSL with client authentication, and PKCS, that is, 
@@ -84,12 +87,48 @@ int LDAP_CALL ldapssl_install_routines( LDAP *ld );
  * Initialize the secure parts (Security and SSL) of the runtime for use
  * by a client application.  This is only called once.
  */
+
 int LDAP_CALL ldapssl_client_init(
     const char *certdbpath, void *certdbhandle );
+
+/*
+ * Initialize the secure parts (Security and SSL) of the runtime for use
+ * by a client application using server authentication.  This is only
+ * called once.
+ *
+ * ldapssl_serverauth_init() is a server-authentication only version of
+ * ldapssl_clientauth_init().  This function allows the sslstrength
+ * to be passed in.  The sslstrength can take one of the following
+ * values:
+ *
+ *      LDAPSSL_AUTH_WEAK: indicate that you accept the server's 
+ *                         certificate without checking the CA who
+ *                         issued the certificate
+ *      LDAPSSL_AUTH_CERT: indicates that you accept the server's 
+ *                         certificate only if you trust the CA who
+ *                         issued the certificate
+ *      LDAPSSL_AUTH_CNCHECK:
+ *                         indicates that you accept the server's
+ *                         certificate only if you trust the CA who
+ *                         issued the certificate and if the value
+ *                         of the cn attribute is the DNS hostname
+ *                         of the server.  If this option is selected,
+ *			   please ensure that the "defhost" parameter
+ *			   passed to ldapssl_init() consist of only 
+ *			   one hostname and not a list of hosts.
+ *			   Furthermore, the port number must be passed
+ *			   via the "defport" parameter, and cannot
+ *			   be passed via a host:port option. 
+ */
+
+int LDAP_CALL ldapssl_serverauth_init(
+    const char *certdbpath, void *certdbhandle, const int sslstrength );
+
 /*
  * Initialize the secure parts (Security and SSL) of the runtime for use
  * by a client application that may want to do SSL client authentication.
  */
+
 int LDAP_CALL ldapssl_clientauth_init( 
     const char *certdbpath, void *certdbhandle, 
     const int needkeydb, const char *keydbpath, void *keydbhandle );
@@ -97,7 +136,14 @@ int LDAP_CALL ldapssl_clientauth_init(
 /*
  * Initialize the secure parts (Security and SSL) of the runtime for use
  * by a client application that may want to do SSL client authentication.
+ *
+ * Please see the description of the sslstrength value in the
+ * ldapssl_serverauth_init() function above and note the potential
+ * problems which can be caused by passing in wrong host & portname 
+ * values.  The same warning applies to the ldapssl_advclientauth_init()
+ * function.
  */
+
 int LDAP_CALL ldapssl_advclientauth_init( 
     const char *certdbpath, void *certdbhandle, 
     const int needkeydb, const char *keydbpath, void *keydbhandle,  
