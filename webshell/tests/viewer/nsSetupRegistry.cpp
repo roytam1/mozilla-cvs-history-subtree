@@ -29,6 +29,7 @@
 #include "nsGfxCIID.h"
 #include "nsViewsCID.h"
 #include "nsPluginsCID.h"
+#include "nsRDFCID.h"
 
 #include "nsIBrowserWindow.h"
 #include "nsIWebShell.h"
@@ -51,6 +52,7 @@
 #define DOM_DLL    "jsdom.dll"
 #define LAYOUT_DLL "raptorhtml.dll"
 #define NETLIB_DLL "netlib.dll"
+#define RDF_DLL    "rdf.dll"
 #else
 #ifdef XP_MAC
 #include "nsMacRepository.h"
@@ -70,6 +72,7 @@
 #define DOM_DLL    "libjsdom.so"
 #define LAYOUT_DLL "libraptorhtml.so"
 #define NETLIB_DLL "libnetlib.so"
+#define RDF_DLL    "librdf.so"
 #endif
 #endif
 
@@ -112,9 +115,12 @@ static NS_DEFINE_IID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID)
 static NS_DEFINE_IID(kCDOMNativeObjectRegistry, NS_DOM_NATIVE_OBJECT_REGISTRY_CID);
 static NS_DEFINE_IID(kCHTMLDocument, NS_HTMLDOCUMENT_CID);
 static NS_DEFINE_IID(kCXMLDocument, NS_XMLDOCUMENT_CID);
+static NS_DEFINE_IID(kCRDFDocument, NS_RDFDOCUMENT_CID);
 static NS_DEFINE_IID(kCImageDocument, NS_IMAGEDOCUMENT_CID);
 static NS_DEFINE_IID(kCHTMLImageElementFactory, NS_HTMLIMAGEELEMENTFACTORY_CID);
 static NS_DEFINE_IID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_IID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
+static NS_DEFINE_IID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
 
 extern "C" void
 NS_SetupRegistry()
@@ -157,7 +163,10 @@ NS_SetupRegistry()
   nsRepository::RegisterFactory(kCDOMNativeObjectRegistry, DOM_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCHTMLDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCXMLDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
+  nsRepository::RegisterFactory(kCRDFDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCImageDocument, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCHTMLImageElementFactory, LAYOUT_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kNetServiceCID, NETLIB_DLL, PR_FALSE, PR_FALSE);
+  nsRepository::RegisterFactory(kRDFMemoryDataSourceCID, RDF_DLL, PR_FALSE, PR_FALSE);
+  nsRepository::RegisterFactory(kRDFResourceManagerCID, RDF_DLL, PR_FALSE, PR_FALSE);
 }
