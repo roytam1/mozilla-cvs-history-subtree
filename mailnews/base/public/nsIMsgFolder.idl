@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   David Bienvenu <bienvenu@nventure.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -148,7 +149,7 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
 	void recursiveDelete(in boolean deleteStorage, in nsIMsgWindow msgWindow);
 
 	void createSubfolder(in wstring folderName, in nsIMsgWindow msgWindow);
-  [noscript] nsIMsgFolder addSubfolder(in nsAutoString folderName);
+    nsIMsgFolder addSubfolder(in AString folderName);
 	/* this method ensures the storage for the folder exists.
 		For local folders, it creates the berkeley mailbox if missing.
 		For imap folders, it subscribes to the folder if it exists,

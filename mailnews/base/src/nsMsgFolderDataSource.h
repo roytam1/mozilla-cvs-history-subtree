@@ -165,6 +165,8 @@ protected:
   nsresult createNewMessagesNode(nsIMsgFolder *folder, nsIRDFNode **target);
   nsresult createFolderNoSelectNode(nsIMsgFolder *folder,
                                     nsIRDFNode **target);
+  nsresult createFolderVirtualNode(nsIMsgFolder *folder,
+                                    nsIRDFNode **target);
   nsresult createFolderImapSharedNode(nsIMsgFolder *folder,
                                     nsIRDFNode **target);
   nsresult createFolderSynchronizeNode(nsIMsgFolder *folder, nsIRDFNode **target);
@@ -191,12 +193,12 @@ protected:
   nsresult DoFolderUnassert(nsIMsgFolder *folder, nsIRDFResource *property, nsIRDFNode *target);
 
   nsresult DoFolderHasAssertion(nsIMsgFolder *folder, nsIRDFResource *property, nsIRDFNode *target,
-													 PRBool tv, PRBool *hasAssertion);
+                                PRBool tv, PRBool *hasAssertion);
 
-	nsresult GetBiffStateString(PRUint32 biffState, nsCAutoString & biffStateStr);
+  nsresult GetBiffStateString(PRUint32 biffState, nsCAutoString & biffStateStr);
 
-	nsresult CreateUnreadMessagesNameString(PRInt32 unreadMessages, nsAutoString &nameString);
-	nsresult CreateArcsOutEnumerator();
+  nsresult CreateUnreadMessagesNameString(PRInt32 unreadMessages, nsAutoString &nameString);
+  nsresult CreateArcsOutEnumerator();
 
 	nsresult OnItemAddedOrRemoved(nsISupports *parentItem, nsISupports *item,
 		const char* viewString, PRBool added);
@@ -249,6 +251,7 @@ protected:
   static nsIRDFResource* kNC_Synchronize;
   static nsIRDFResource* kNC_SyncDisabled;
   static nsIRDFResource* kNC_CanSearchMessages;
+  static nsIRDFResource* kNC_VirtualFolder;
   
 
   // commands

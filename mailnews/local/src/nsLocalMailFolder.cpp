@@ -250,7 +250,7 @@ nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
     if (nsShouldIgnoreFile(currentFolderNameStr))
       continue;
 
-    rv = AddSubfolder(&currentFolderNameStr, getter_AddRefs(child));  
+    rv = AddSubfolder(currentFolderNameStr, getter_AddRefs(child));  
     if (child)
     { 
       nsXPIDLString folderName;
@@ -262,7 +262,7 @@ nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
   return rv;
 }
 
-NS_IMETHODIMP nsMsgLocalMailFolder::AddSubfolder(nsAutoString *name,
+NS_IMETHODIMP nsMsgLocalMailFolder::AddSubfolder(const nsAString &name,
                                                  nsIMsgFolder **child)
 {
   nsresult rv = nsMsgDBFolder::AddSubfolder(name, child);
@@ -347,11 +347,10 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWOReparse(nsIMsgDatabase **aDatab
     
     NS_ENSURE_SUCCESS(rv, rv);
     
-    nsCOMPtr<nsIMsgDatabase> mailDBFactory;
-    rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
-    if (NS_SUCCEEDED(rv) && mailDBFactory)
+    nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
+    if (NS_SUCCEEDED(rv) && msgDBService)
     {
-      rv = mailDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, (nsIMsgDatabase **) getter_AddRefs(mDatabase));
+      rv = msgDBService->OpenFolderDB(this, PR_FALSE, PR_FALSE, (nsIMsgDatabase **) getter_AddRefs(mDatabase));
       if (mDatabase && NS_SUCCEEDED(rv))
         mDatabase->AddListener(this);
     }
@@ -511,12 +510,10 @@ nsresult nsMsgLocalMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
     if (!exists) return NS_ERROR_NULL_POINTER;  //mDatabase will be null at this point.
     
     nsresult folderOpen = NS_OK;
-    nsCOMPtr<nsIMsgDatabase> mailDBFactory;
-    
-    rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(mailDBFactory));
-    if (NS_SUCCEEDED(rv) && mailDBFactory)
+    nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
+    if (msgDBService)
     {
-      folderOpen = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
+      folderOpen = msgDBService->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
       if(NS_FAILED(folderOpen) &&
         folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
       {
@@ -548,7 +545,7 @@ nsresult nsMsgLocalMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
         summarySpec.Delete(PR_FALSE);
       
         // if it's out of date then reopen with upgrade.
-        if (NS_FAILED(rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase)))
+        if (NS_FAILED(rv = msgDBService->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase)))
           && rv != NS_MSG_ERROR_FOLDER_SUMMARY_MISSING)
           return rv;
         else if (transferInfo && mDatabase)
@@ -868,7 +865,7 @@ nsMsgLocalMailFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsgWindow 
   //Now let's create the actual new folder
   nsAutoString folderNameStr(folderName);
   //GetFlags and SetFlags in AddSubfolder will fail because we have no db at this point but mFlags is set.
-  rv = AddSubfolder(&folderNameStr, getter_AddRefs(child));
+  rv = AddSubfolder(folderNameStr, getter_AddRefs(child));
   if (!child || NS_FAILED(rv))
   {
     path.Delete(PR_FALSE);
@@ -876,13 +873,11 @@ nsMsgLocalMailFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsgWindow 
   }
 		
   // Create an empty database for this mail folder, set its name from the user  
-  nsCOMPtr<nsIMsgDatabase> mailDBFactory;
-  
-  rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(mailDBFactory));
-  if (NS_SUCCEEDED(rv) && mailDBFactory)
+  nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
+  if (msgDBService)
   {
     nsCOMPtr<nsIMsgDatabase> unusedDB;
-    rv = mailDBFactory->OpenFolderDB(child, PR_TRUE, PR_TRUE, getter_AddRefs(unusedDB));
+    rv = msgDBService->OpenFolderDB(child, PR_TRUE, PR_TRUE, getter_AddRefs(unusedDB));
     
     if ((NS_SUCCEEDED(rv) || rv == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING 
       || rv == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE) && unusedDB)
@@ -1124,7 +1119,13 @@ NS_IMETHODIMP nsMsgLocalMailFolder::DeleteSubFolders(
   PRBool isChildOfTrash;
   rv = IsChildOfTrash(&isChildOfTrash);
 
-  if (isChildOfTrash)
+  // we don't allow multiple folder selection so this is ok.
+  nsCOMPtr<nsIMsgFolder> folder = do_QueryElementAt(folders, 0);
+  PRUint32 folderFlags = 0;
+  if (folder)
+    folder->GetFlags(&folderFlags);
+  // when deleting from trash, or virtual folder, just delete it.
+  if (isChildOfTrash || folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
     return nsMsgDBFolder::DeleteSubFolders(folders, msgWindow);
 
   if (!msgWindow) 
@@ -1134,8 +1135,6 @@ NS_IMETHODIMP nsMsgLocalMailFolder::DeleteSubFolders(
   rv = GetTrashFolder(getter_AddRefs(trashFolder));
   if (NS_SUCCEEDED(rv))
   {
-    // we don't allow multiple folder selection so this is ok.
-    nsCOMPtr<nsIMsgFolder> folder = do_QueryElementAt(folders, 0);
     if (folder)
       trashFolder->CopyFolder(folder, PR_TRUE, msgWindow, nsnull);
   }
@@ -1263,7 +1262,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Rename(const PRUnichar *aNewName, nsIMsgWind
   if (parentSupport)
   {
     nsAutoString newFolderName(aNewName);
-    rv = parentFolder->AddSubfolder(&newFolderName, getter_AddRefs(newFolder));
+    rv = parentFolder->AddSubfolder(newFolderName, getter_AddRefs(newFolder));
     if (newFolder) 
     {
       newFolder->SetPrettyName(newFolderName.get());
@@ -1315,7 +1314,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::RenameSubFolders(nsIMsgWindow *msgWindow, ns
      rv = msgFolder->GetName(getter_Copies(folderName));
      nsAutoString folderNameStr(folderName.get());
      nsCOMPtr <nsIMsgFolder> newFolder;
-     AddSubfolder(&folderNameStr, getter_AddRefs(newFolder));
+     AddSubfolder(folderNameStr, getter_AddRefs(newFolder));
      if (newFolder)
      {
        newFolder->SetPrettyName(folderName.get());
@@ -1370,11 +1369,9 @@ nsMsgLocalMailFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgD
   }
   else
   {
-    nsCOMPtr<nsIMsgDatabase> mailDBFactory( do_CreateInstance(kCMailDB, &rv) );
-    if (NS_SUCCEEDED(rv) && mailDBFactory)
-    {
-      openErr = mailDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(mDatabase));
-    }
+    nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
+    if (msgDBService)
+      openErr = msgDBService->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(mDatabase));
   }
 
   *db = mDatabase;
@@ -1850,8 +1847,8 @@ nsMsgLocalMailFolder::CopyFolderAcrossServer(nsIMsgFolder* srcFolder, nsIMsgWind
   nsresult rv = CreateSubfolder(folderName, msgWindow);
   if (NS_FAILED(rv)) return rv;
 
-  nsXPIDLCString escapedFolderName;
-  rv = NS_MsgEscapeEncodeURLPath(folderName.get(), getter_Copies(escapedFolderName));
+  nsCAutoString escapedFolderName;
+  rv = NS_MsgEscapeEncodeURLPath(folderName, escapedFolderName);
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr<nsIMsgFolder> newFolder;
@@ -2013,7 +2010,7 @@ nsMsgLocalMailFolder::CopyFolderLocal(nsIMsgFolder *srcFolder, PRBool isMoveFold
   rv = summarySpec.CopyToDir(newPath);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  rv = AddSubfolder(&folderName, getter_AddRefs(newMsgFolder));  
+  rv = AddSubfolder(folderName, getter_AddRefs(newMsgFolder));  
   NS_ENSURE_SUCCESS(rv, rv);
 
   newMsgFolder->SetPrettyName(folderName.get());
@@ -3392,11 +3389,11 @@ nsMsgLocalMailFolder::setSubfolderFlag(const PRUnichar *aFolderName,
 {
   // FindSubFolder() expects the folder name to be escaped
   // see bug #192043
-  nsXPIDLCString escapedFolderName;
-  nsresult rv = NS_MsgEscapeEncodeURLPath(aFolderName, getter_Copies(escapedFolderName));
+  nsCAutoString escapedFolderName;
+  nsresult rv = NS_MsgEscapeEncodeURLPath(nsDependentString(aFolderName), escapedFolderName);
   NS_ENSURE_SUCCESS(rv,rv);
   nsCOMPtr<nsIMsgFolder> msgFolder;
-  rv = FindSubFolder(escapedFolderName, getter_AddRefs(msgFolder));
+  rv = FindSubFolder(escapedFolderName.get(), getter_AddRefs(msgFolder));
   
   if (NS_FAILED(rv)) 
     return rv;

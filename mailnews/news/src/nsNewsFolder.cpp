@@ -216,8 +216,8 @@ nsMsgNewsFolder::AddNewsgroup(const char *name, const char *setStr, nsIMsgFolder
   nsAutoString newsgroupName;
   newsgroupName.AssignWithConversion(name);
   
-  nsXPIDLCString escapedName;
-  rv = NS_MsgEscapeEncodeURLPath(newsgroupName.get(), getter_Copies(escapedName));
+  nsCAutoString escapedName;
+  rv = NS_MsgEscapeEncodeURLPath(newsgroupName, escapedName);
   if (NS_FAILED(rv)) return rv;
   
   rv = nntpServer->AddNewsgroup(escapedName.get());
@@ -372,13 +372,13 @@ nsresult nsMsgNewsFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
     rv = GetPath(getter_AddRefs(pathSpec));
     if (NS_FAILED(rv)) return rv;
     
-    nsCOMPtr <nsIMsgDatabase> newsDBFactory = do_CreateInstance(kCNewsDB, &rv);
+    nsCOMPtr<nsIMsgDBService> msgDBService = do_GetService(NS_MSGDB_SERVICE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    nsresult folderOpen = newsDBFactory->OpenFolderDB(this, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
+    nsresult folderOpen = msgDBService->OpenFolderDB(this, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
     
     if(folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING || folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
-      folderOpen = newsDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
+      folderOpen = msgDBService->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
 
     if (NS_FAILED(folderOpen))
       return folderOpen;
@@ -620,8 +620,8 @@ NS_IMETHODIMP nsMsgNewsFolder::Delete()
   rv = GetName(getter_Copies(name));
   NS_ENSURE_SUCCESS(rv,rv);
   
-  nsXPIDLCString escapedName;
-  rv = NS_MsgEscapeEncodeURLPath(name.get(), getter_Copies(escapedName));
+  nsCAutoString escapedName;
+  rv = NS_MsgEscapeEncodeURLPath(name, escapedName);
   NS_ENSURE_SUCCESS(rv,rv);
   
   rv = nntpServer->RemoveNewsgroup(escapedName.get());

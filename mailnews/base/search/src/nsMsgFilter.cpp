@@ -582,9 +582,9 @@ nsresult nsMsgFilter::ConvertMoveToFolderValue(nsIMsgRuleAction *filterAction, n
         {
           nsAutoString unicodeStr;
           impSvc->SystemStringToUnicode(moveValue.get(), unicodeStr);
-          nsXPIDLCString escapedName;
-          rv = NS_MsgEscapeEncodeURLPath(unicodeStr.get(), getter_Copies(escapedName));
-          if (NS_SUCCEEDED(rv) && escapedName)
+          nsCAutoString escapedName;
+          rv = NS_MsgEscapeEncodeURLPath(unicodeStr, escapedName);
+          if (NS_SUCCEEDED(rv) && !escapedName.IsEmpty())
             moveValue.Assign(escapedName.get());
         }
         destFolderUri.Append(moveValue);

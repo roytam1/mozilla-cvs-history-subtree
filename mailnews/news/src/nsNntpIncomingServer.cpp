@@ -771,8 +771,8 @@ nsNntpIncomingServer::SubscribeToNewsgroup(const char *name)
 	if (NS_FAILED(rv)) return rv;
 	if (!msgfolder) return NS_ERROR_FAILURE;
 
-	nsXPIDLString newsgroupName;
-	rv = NS_MsgDecodeUnescapeURLPath(name, getter_Copies(newsgroupName));
+	nsAutoString newsgroupName;
+	rv = NS_MsgDecodeUnescapeURLPath(nsDependentCString(name), newsgroupName);
 	NS_ENSURE_SUCCESS(rv,rv);
 
 	rv = msgfolder->CreateSubfolder(newsgroupName.get(), nsnull);
@@ -792,8 +792,8 @@ writeGroupToHostInfoFile(nsCString &aElement, void *aData)
         return PR_FALSE;
     }
 
-    nsXPIDLString name;
-    nsresult rv = NS_MsgDecodeUnescapeURLPath(aElement.get(), getter_Copies(name)); 
+    nsAutoString name;
+    nsresult rv = NS_MsgDecodeUnescapeURLPath(aElement, name); 
     if (NS_FAILED(rv)) {
         // stop, something is bad.
         return PR_FALSE;
@@ -1201,8 +1201,8 @@ nsNntpIncomingServer::Unsubscribe(const PRUnichar *aUnicharName)
   
   // to handle non-ASCII newsgroup names, we store them internally as escaped.
   // so we need to escape and encode the name, in order to find it.
-  nsXPIDLCString escapedName;
-  rv = NS_MsgEscapeEncodeURLPath(aUnicharName, getter_Copies(escapedName));
+  nsCAutoString escapedName;
+  rv = NS_MsgEscapeEncodeURLPath(nsDependentString(aUnicharName), escapedName);
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr <nsIMsgFolder> newsgroupFolder;
@@ -1899,9 +1899,8 @@ nsNntpIncomingServer::GetCellText(PRInt32 row, const PRUnichar *colID, nsAString
       mSubscribeSearchResult.CStringAt(row, str);
       // some servers have newsgroup names that are non ASCII.  we store those as escaped
       // unescape here so the UI is consistent
-      // XXX fix me by converting NS_MsgDecodeUnescapeURLPath to take an nsAString&
-      nsXPIDLString cellText;
-      nsresult rv = NS_MsgDecodeUnescapeURLPath(str.get(), getter_Copies(cellText));
+      nsAutoString cellText;
+      nsresult rv = NS_MsgDecodeUnescapeURLPath(str, cellText);
       _retval.Assign(cellText);
       NS_ENSURE_SUCCESS(rv,rv);
     }

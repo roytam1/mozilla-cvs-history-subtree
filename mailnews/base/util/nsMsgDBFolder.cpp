@@ -200,38 +200,38 @@ nsMsgDBFolder::~nsMsgDBFolder(void)
 #endif
   }
 	//shutdown but don't shutdown children.
-	Shutdown(PR_FALSE);
+  Shutdown(PR_FALSE);
 }
 
 NS_IMETHODIMP nsMsgDBFolder::Shutdown(PRBool shutdownChildren)
 {
-	if(mDatabase)
-	{
-		mDatabase->RemoveListener(this);
-		mDatabase->Close(PR_TRUE);
-		mDatabase = nsnull;
-
+  if(mDatabase)
+  {
+    mDatabase->RemoveListener(this);
+    mDatabase->Close(PR_TRUE);
+    mDatabase = nsnull;
+    
   }
-
-	if(shutdownChildren)
-	{
-		PRUint32 count;
-	    nsresult rv = mSubFolders->Count(&count);
-	    if(NS_SUCCEEDED(rv))
-		{
-			for (PRUint32 i = 0; i < count; i++)
-			{
-				nsCOMPtr<nsIMsgFolder> childFolder = do_QueryElementAt(mSubFolders, i);
-				if(childFolder)
-					childFolder->Shutdown(PR_TRUE);
-			}
-		}
+  
+  if(shutdownChildren)
+  {
+    PRUint32 count;
+    nsresult rv = mSubFolders->Count(&count);
+    if(NS_SUCCEEDED(rv))
+    {
+      for (PRUint32 i = 0; i < count; i++)
+      {
+        nsCOMPtr<nsIMsgFolder> childFolder = do_QueryElementAt(mSubFolders, i);
+        if(childFolder)
+          childFolder->Shutdown(PR_TRUE);
+      }
+    }
     // Reset incoming server pointer and pathname.
     mServer = nsnull;
     mPath = nsnull;
     mSubFolders->Clear();
-	}
-	return NS_OK;
+  }
+  return NS_OK;
 }
 
 
@@ -2990,8 +2990,8 @@ NS_IMETHODIMP nsMsgDBFolder::RecursiveDelete(PRBool deleteStorage, nsIMsgWindow 
   }
 
   // now delete the disk storage for _this_
-    if (deleteStorage && (status == NS_OK))
-        status = Delete();
+  if (deleteStorage && (status == NS_OK))
+      status = Delete();
   return status;
 }
 
@@ -3000,7 +3000,7 @@ NS_IMETHODIMP nsMsgDBFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsg
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::AddSubfolder(nsAutoString *name,
+NS_IMETHODIMP nsMsgDBFolder::AddSubfolder(const nsAString& name,
                                    nsIMsgFolder** child)
 {
   NS_ENSURE_ARG_POINTER(child);
@@ -3015,8 +3015,8 @@ NS_IMETHODIMP nsMsgDBFolder::AddSubfolder(nsAutoString *name,
   
   // URI should use UTF-8
   // (see RFC2396 Uniform Resource Identifiers (URI): Generic Syntax)
-  nsXPIDLCString escapedName;
-  rv = NS_MsgEscapeEncodeURLPath((*name).get(), getter_Copies(escapedName));
+  nsCAutoString escapedName;
+  rv = NS_MsgEscapeEncodeURLPath(name, escapedName);
   NS_ENSURE_SUCCESS(rv, rv);
   
   // fix for #192780
@@ -3073,24 +3073,24 @@ NS_IMETHODIMP nsMsgDBFolder::AddSubfolder(nsAutoString *name,
   //Only set these is these are top level children.
   if(NS_SUCCEEDED(rv) && isServer)
   {
-    if(name->Equals(NS_LITERAL_STRING("Inbox"), nsCaseInsensitiveStringComparator()))
+    if(name.Equals(NS_LITERAL_STRING("Inbox"), nsCaseInsensitiveStringComparator()))
     {
       flags |= MSG_FOLDER_FLAG_INBOX;
       SetBiffState(nsIMsgFolder::nsMsgBiffState_Unknown);
     }
-    else if (name->Equals(NS_LITERAL_STRING("Trash"), nsCaseInsensitiveStringComparator()))
+    else if (name.Equals(NS_LITERAL_STRING("Trash"), nsCaseInsensitiveStringComparator()))
       flags |= MSG_FOLDER_FLAG_TRASH;
-    else if (name->Equals(NS_LITERAL_STRING("Unsent Messages"), nsCaseInsensitiveStringComparator()) ||
-      name->Equals(NS_LITERAL_STRING("Outbox"), nsCaseInsensitiveStringComparator()))
+    else if (name.Equals(NS_LITERAL_STRING("Unsent Messages"), nsCaseInsensitiveStringComparator()) ||
+      name.Equals(NS_LITERAL_STRING("Outbox"), nsCaseInsensitiveStringComparator()))
       flags |= MSG_FOLDER_FLAG_QUEUE;
 #if 0
     // the logic for this has been moved into 
     // SetFlagsOnDefaultMailboxes()
-    else if(name->EqualsIgnoreCase(NS_LITERAL_STRING("Sent"), nsCaseInsensitiveStringComparator()))
+    else if(name.EqualsIgnoreCase(NS_LITERAL_STRING("Sent"), nsCaseInsensitiveStringComparator()))
       folder->SetFlag(MSG_FOLDER_FLAG_SENTMAIL);
-    else if(name->EqualsIgnoreCase(NS_LITERAL_STRING("Drafts"), nsCaseInsensitiveStringComparator()))
+    else if(name.EqualsIgnoreCase(NS_LITERAL_STRING("Drafts"), nsCaseInsensitiveStringComparator()))
       folder->SetFlag(MSG_FOLDER_FLAG_DRAFTS);
-    else if(name->EqualsIgnoreCase(NS_LITERAL_STRING("Templates"), nsCaseInsensitiveStringComparator()))
+    else if(name.EqualsIgnoreCase(NS_LITERAL_STRING("Templates"), nsCaseInsensitiveStringComparator()))
       folder->SetFlag(MSG_FOLDER_FLAG_TEMPLATES);
 #endif 
   }
@@ -3248,8 +3248,13 @@ NS_IMETHODIMP nsMsgDBFolder::GetNumUnread(PRBool deep, PRInt32 *numUnread)
         if (NS_SUCCEEDED(rv))
         {
           PRInt32 num;
-          folder->GetNumUnread(deep, &num);
-          total += num;
+          PRUint32 folderFlags;
+          folder->GetFlags(&folderFlags);
+          if (!(folderFlags & MSG_FOLDER_FLAG_VIRTUAL))
+          {
+            folder->GetNumUnread(deep, &num);
+            total += num;
+          }
         }
       }
     }
@@ -3280,8 +3285,13 @@ NS_IMETHODIMP nsMsgDBFolder::GetTotalMessages(PRBool deep, PRInt32 *totalMessage
         if (NS_SUCCEEDED(rv))
         {
           PRInt32 num;
-          folder->GetTotalMessages (deep, &num);
-          total += num;
+          PRUint32 folderFlags;
+          folder->GetFlags(&folderFlags);
+          if (!(folderFlags & MSG_FOLDER_FLAG_VIRTUAL))
+          {
+            folder->GetTotalMessages (deep, &num);
+            total += num;
+          }
         }
       }
     }

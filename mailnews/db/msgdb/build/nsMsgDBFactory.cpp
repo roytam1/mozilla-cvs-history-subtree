@@ -52,16 +52,18 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsNewsDatabase)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsImapMailDatabase)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgRetentionSettings)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgDownloadSettings)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgDBService)
 
 // The list of components we register
 static const nsModuleComponentInfo msgDB_components[] = {
-    { "Mail DB", NS_MAILDB_CID, nsnull, nsMailDatabaseConstructor },
-    { "News DB", NS_NEWSDB_CID, nsnull, nsNewsDatabaseConstructor },
-    { "Imap DB", NS_IMAPDB_CID, nsnull, nsImapMailDatabaseConstructor },
+    { "Mail DB", NS_MAILDB_CID, NS_MAILBOXDB_CONTRACTID, nsMailDatabaseConstructor },
+    { "News DB", NS_NEWSDB_CID, NS_NEWSDB_CONTRACTID, nsNewsDatabaseConstructor },
+    { "Imap DB", NS_IMAPDB_CID, NS_IMAPDB_CONTRACTID, nsImapMailDatabaseConstructor },
     { "Msg Retention Settings", NS_MSG_RETENTIONSETTINGS_CID,
       NS_MSG_RETENTIONSETTINGS_CONTRACTID, nsMsgRetentionSettingsConstructor },
     { "Msg Download Settings", NS_MSG_DOWNLOADSETTINGS_CID,
-      NS_MSG_DOWNLOADSETTINGS_CONTRACTID, nsMsgDownloadSettingsConstructor }
+      NS_MSG_DOWNLOADSETTINGS_CONTRACTID, nsMsgDownloadSettingsConstructor },
+   { "Msg DB Service", NS_MSGDB_SERVICE_CID, NS_MSGDB_SERVICE_CONTRACTID, nsMsgDBServiceConstructor }
 };
 
 PR_STATIC_CALLBACK(void)

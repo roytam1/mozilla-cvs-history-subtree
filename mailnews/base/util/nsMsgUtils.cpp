@@ -523,28 +523,21 @@ char * NS_MsgSACat (char **destination, const char *source)
   return *destination;
 }
 
-nsresult NS_MsgEscapeEncodeURLPath(const PRUnichar *str, char **result)
+nsresult NS_MsgEscapeEncodeURLPath(const nsAString& str, nsAFlatCString& result)
 {
-  NS_ENSURE_ARG_POINTER(str);
-  NS_ENSURE_ARG_POINTER(result);
-
-  *result = nsEscape(NS_ConvertUCS2toUTF8(str).get(), url_Path); 
-  if (!*result) return NS_ERROR_OUT_OF_MEMORY;
+  char *escapedString = nsEscape(NS_ConvertUTF16toUTF8(str).get(), url_Path); 
+  if (!*escapedString)
+    return NS_ERROR_OUT_OF_MEMORY;
+  result.Adopt(escapedString);
   return NS_OK;
 }
 
-nsresult NS_MsgDecodeUnescapeURLPath(const char *path, PRUnichar **result)
+nsresult NS_MsgDecodeUnescapeURLPath(const nsASingleFragmentCString& path, nsAString& result)
 {
-  NS_ENSURE_ARG_POINTER(path);
-  NS_ENSURE_ARG_POINTER(result);
-
-  char *unescapedName = nsCRT::strdup(path);
-  if (!unescapedName) return NS_ERROR_OUT_OF_MEMORY;
-  nsUnescape(unescapedName);
-  nsAutoString resultStr;
-  resultStr = NS_ConvertUTF8toUCS2(unescapedName);
-  *result = ToNewUnicode(resultStr);
-  if (!*result) return NS_ERROR_OUT_OF_MEMORY;
+  nsCAutoString unescapedName;
+  NS_UnescapeURL(path, esc_FileBaseName|esc_Forced|esc_AlwaysCopy,
+                 unescapedName);
+  CopyUTF8toUTF16(unescapedName, result);
   return NS_OK;
 }
 

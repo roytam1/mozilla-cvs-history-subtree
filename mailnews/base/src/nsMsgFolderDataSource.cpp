@@ -97,6 +97,7 @@ nsIRDFResource* nsMsgFolderDataSource::kNC_HasUnreadMessages = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_NewMessages = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_SubfoldersHaveUnreadMessages = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_NoSelect = nsnull;
+nsIRDFResource* nsMsgFolderDataSource::kNC_VirtualFolder = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_ImapShared = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_Synchronize = nsnull;
 nsIRDFResource* nsMsgFolderDataSource::kNC_SyncDisabled = nsnull;
@@ -170,6 +171,7 @@ nsMsgFolderDataSource::nsMsgFolderDataSource()
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_NEWMESSAGES), &kNC_NewMessages);
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_SUBFOLDERSHAVEUNREADMESSAGES), &kNC_SubfoldersHaveUnreadMessages);
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_NOSELECT), &kNC_NoSelect);
+    rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_VIRTUALFOLDER), &kNC_VirtualFolder);
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_IMAPSHARED), &kNC_ImapShared);
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_SYNCHRONIZE), &kNC_Synchronize);
     rdf->GetResource(NS_LITERAL_CSTRING(NC_RDF_SYNCDISABLED), &kNC_SyncDisabled);
@@ -243,6 +245,7 @@ nsMsgFolderDataSource::~nsMsgFolderDataSource (void)
     NS_RELEASE2(kNC_NewMessages, refcnt);
     NS_RELEASE2(kNC_SubfoldersHaveUnreadMessages, refcnt);
     NS_RELEASE2(kNC_NoSelect, refcnt);
+    NS_RELEASE2(kNC_VirtualFolder, refcnt);
     NS_RELEASE2(kNC_ImapShared, refcnt);
     NS_RELEASE2(kNC_Synchronize, refcnt);
     NS_RELEASE2(kNC_SyncDisabled, refcnt);
@@ -472,11 +475,12 @@ NS_IMETHODIMP nsMsgFolderDataSource::GetTargets(nsIRDFResource* source,
              (kNC_CanRename == property) ||
              (kNC_CanCompact == property) ||
              (kNC_ServerType == property) ||
-      (kNC_IsDeferred == property) ||
+             (kNC_IsDeferred == property) ||
              (kNC_RedirectorType == property) ||
              (kNC_CanCreateFoldersOnServer == property) ||
              (kNC_CanFileMessagesOnServer == property) ||
              (kNC_NoSelect == property) ||
+             (kNC_VirtualFolder == property) ||
              (kNC_ImapShared == property) ||
              (kNC_Synchronize == property) ||
              (kNC_SyncDisabled == property) ||
@@ -583,6 +587,7 @@ nsMsgFolderDataSource::HasArcOut(nsIRDFResource *aSource, nsIRDFResource *aArc, 
                aArc == kNC_BiffState ||
                aArc == kNC_Child ||
                aArc == kNC_NoSelect ||
+               aArc == kNC_VirtualFolder ||
                aArc == kNC_ImapShared ||
                aArc == kNC_Synchronize ||
                aArc == kNC_SyncDisabled ||
@@ -654,6 +659,7 @@ nsMsgFolderDataSource::getFolderArcLabelsOut(nsISupportsArray **arcs)
   (*arcs)->AppendElement(kNC_BiffState);
   (*arcs)->AppendElement(kNC_Child);
   (*arcs)->AppendElement(kNC_NoSelect);
+  (*arcs)->AppendElement(kNC_VirtualFolder);
   (*arcs)->AppendElement(kNC_ImapShared);
   (*arcs)->AppendElement(kNC_Synchronize);
   (*arcs)->AppendElement(kNC_SyncDisabled);
@@ -1016,7 +1022,7 @@ nsresult nsMsgFolderDataSource::createFolderNode(nsIMsgFolder* folder,
                                                  nsIRDFNode** target)
 {
   nsresult rv = NS_RDF_NO_VALUE;
-
+  
   if (kNC_NameSort == property)
     rv = createFolderNameNode(folder, target, PR_TRUE);
   else if(kNC_FolderTreeNameSort == property)
@@ -1057,36 +1063,38 @@ nsresult nsMsgFolderDataSource::createFolderNode(nsIMsgFolder* folder,
     rv = createFolderCanRenameNode(folder, target);
   else if ((kNC_CanCompact == property))
     rv = createFolderCanCompactNode(folder, target);
-	else if ((kNC_TotalMessages == property))
-		rv = createTotalMessagesNode(folder, target);
-	else if ((kNC_TotalUnreadMessages == property))
-		rv = createUnreadMessagesNode(folder, target);
-	else if ((kNC_FolderSize == property))
-		rv = createFolderSizeNode(folder, target);
-	else if ((kNC_Charset == property))
-		rv = createCharsetNode(folder, target);
-	else if ((kNC_BiffState == property))
-		rv = createBiffStateNodeFromFolder(folder, target);
-	else if ((kNC_HasUnreadMessages == property))
-		rv = createHasUnreadMessagesNode(folder, PR_FALSE, target);
-	else if ((kNC_NewMessages == property))
-		rv = createNewMessagesNode(folder, target);
-	else if ((kNC_SubfoldersHaveUnreadMessages == property))
-		rv = createHasUnreadMessagesNode(folder, PR_TRUE, target);
-	else if ((kNC_Child == property))
-		rv = createFolderChildNode(folder, target);
-    else if ((kNC_NoSelect == property))
+  else if ((kNC_TotalMessages == property))
+    rv = createTotalMessagesNode(folder, target);
+  else if ((kNC_TotalUnreadMessages == property))
+    rv = createUnreadMessagesNode(folder, target);
+  else if ((kNC_FolderSize == property))
+    rv = createFolderSizeNode(folder, target);
+  else if ((kNC_Charset == property))
+    rv = createCharsetNode(folder, target);
+  else if ((kNC_BiffState == property))
+    rv = createBiffStateNodeFromFolder(folder, target);
+  else if ((kNC_HasUnreadMessages == property))
+    rv = createHasUnreadMessagesNode(folder, PR_FALSE, target);
+  else if ((kNC_NewMessages == property))
+    rv = createNewMessagesNode(folder, target);
+  else if ((kNC_SubfoldersHaveUnreadMessages == property))
+    rv = createHasUnreadMessagesNode(folder, PR_TRUE, target);
+  else if ((kNC_Child == property))
+    rv = createFolderChildNode(folder, target);
+  else if ((kNC_NoSelect == property))
     rv = createFolderNoSelectNode(folder, target);
-    else if ((kNC_ImapShared == property))
+  else if ((kNC_VirtualFolder == property))
+    rv = createFolderVirtualNode(folder, target);
+  else if ((kNC_ImapShared == property))
     rv = createFolderImapSharedNode(folder, target);
-    else if ((kNC_Synchronize == property))
-        rv = createFolderSynchronizeNode(folder, target);
-    else if ((kNC_SyncDisabled == property))
-        rv = createFolderSyncDisabledNode(folder, target);
-    else if ((kNC_CanSearchMessages == property))
-        rv = createCanSearchMessages(folder, target);
-
-
+  else if ((kNC_Synchronize == property))
+    rv = createFolderSynchronizeNode(folder, target);
+  else if ((kNC_SyncDisabled == property))
+    rv = createFolderSyncDisabledNode(folder, target);
+  else if ((kNC_CanSearchMessages == property))
+    rv = createCanSearchMessages(folder, target);
+  
+  
   if (NS_FAILED(rv)) return NS_RDF_NO_VALUE;
   return rv;
 }
@@ -1328,6 +1336,19 @@ nsMsgFolderDataSource::createFolderNoSelectNode(nsIMsgFolder* folder,
   NS_IF_ADDREF(*target);
   return NS_OK;
 }
+
+nsresult
+nsMsgFolderDataSource::createFolderVirtualNode(nsIMsgFolder* folder,
+                                                  nsIRDFNode **target)
+{
+  PRUint32 folderFlags;
+  folder->GetFlags(&folderFlags);
+
+  *target = (folderFlags & MSG_FOLDER_FLAG_VIRTUAL) ? kTrueLiteral : kFalseLiteral;
+  NS_IF_ADDREF(*target);
+  return NS_OK;
+}
+
 
 nsresult
 nsMsgFolderDataSource::createFolderImapSharedNode(nsIMsgFolder* folder,

@@ -485,8 +485,8 @@ nsPop3IncomingServer::GetNewMessages(nsIMsgFolder *aFolder, nsIMsgWindow *aMsgWi
 
   if (deferredToAccount.IsEmpty())
   {
-  aFolder->GetServer(getter_AddRefs(server));
-  GetDeferredServers(server, getter_AddRefs(deferredServers));
+    aFolder->GetServer(getter_AddRefs(server));
+    GetDeferredServers(server, getter_AddRefs(deferredServers));
   }
   PRUint32 numDeferredServers;
   if (deferredToAccount.IsEmpty() && deferredServers && NS_SUCCEEDED(deferredServers->Count(&numDeferredServers))
