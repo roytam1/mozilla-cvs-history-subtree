@@ -9,7 +9,7 @@
     <content orient="vertical">
       <xul:box class="outliner-columns">
         <children includes="outlinercol|splitter"/>
-		<xul:outlinercol class="outliner-columnpicker"/>
+        <xul:outlinercol class="outliner-columnpicker"/>
       </xul:box>
       <xul:outlinerrows class="outliner-rows" flex="1">
         <children/>
@@ -112,6 +112,84 @@
          this.outlinerBoxObject.selection.currentIndex = c+1;
          this.outlinerBoxObject.ensureRowIsVisible(c+1);
          
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_page_up">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         var c = this.currentIndex;
+         if (c == 0)
+           return;
+         var f = this.outlinerBoxObject.getFirstVisibleRow();
+         var i = 0;
+         if (f > 0) {
+           var p = this.outlinerBoxObject.getPageCount();
+           i = c - p;
+           if (i < 0)
+             i = 0;
+           this.outlinerBoxObject.scrollByPages(-1);
+         }
+         this.outlinerBoxObject.selection.timedSelect(i, 500);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_page_down">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         var c = this.currentIndex;
+         var l = this.outlinerBoxObject.view.rowCount - 1;
+         if (c == l)
+           return;
+         var f = this.outlinerBoxObject.getFirstVisibleRow();
+         var p = this.outlinerBoxObject.getPageCount();
+         var i = l;
+         if (f <= l - p) {
+           i = c + p;
+           if (i > l)
+             i = l;
+           this.outlinerBoxObject.scrollByPages(1);
+         }
+         this.outlinerBoxObject.selection.timedSelect(i, 500);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_page_up" modifiers="control">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         var c = this.currentIndex;
+         if (c == 0)
+           return;
+         var f = this.outlinerBoxObject.getFirstVisibleRow();
+         var i = 0;
+         if (f > 0) {
+           var p = this.outlinerBoxObject.getPageCount();
+           i = c - p;
+           if (i < 0)
+             i = 0;
+           this.outlinerBoxObject.scrollByPages(-1);
+         }
+         this.outlinerBoxObject.selection.currentIndex = i;
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_page_down" modifiers="control">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         var c = this.currentIndex;
+         var l = this.outlinerBoxObject.view.rowCount - 1;
+         if (c == l)
+           return;
+         var f = this.outlinerBoxObject.getFirstVisibleRow();
+         var p = this.outlinerBoxObject.getPageCount();
+         var i = l;
+         if (f <= l - p) {
+           i = c + p;
+           if (i > l)
+             i = l;
+           this.outlinerBoxObject.scrollByPages(1);
+         }
+         this.outlinerBoxObject.selection.currentIndex = i;
         ]]>
       </handler>
       <handler event="keypress" keycode="vk_home">
