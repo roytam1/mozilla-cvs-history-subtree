@@ -16,7 +16,7 @@
  * Reserved.
  */
 
-#define KE_DEBUG
+//#define KE_DEBUG
 
 #include "nsWindow.h"
 #include "nsIAppShell.h"
@@ -48,6 +48,9 @@
 #include "nsNativeDragTarget.h"
 #include "nsIRollupListener.h"
 
+// we define the following because there are some MS sample code say
+// we should do it. We are not sure we really need it.
+#define IME_FROM_ON_CHAR
 
 //~~~ windowless plugin support
 #include "nsplugindefs.h"
@@ -71,7 +74,8 @@ static PRBool              gRollupConsumeRollupEvent = PR_FALSE;
 
 nsWindow* nsWindow::gCurrentWindow = nsnull;
 
-#ifdef KE_DEBUG
+#if 0
+// #ifdef KE_DEBUG
 static PRBool is_vk_down(int vk)
 {
    SHORT st = GetKeyState(vk);
@@ -82,6 +86,12 @@ static PRBool is_vk_down(int vk)
 #else
 #define IS_VK_DOWN(a) (PRBool)(((GetKeyState(a) & 0x80)) ? (PR_TRUE) : (PR_FALSE))
 #endif
+
+// The following two line is needed to handle AltGR (right Alt) correctly
+// somehow, when AltGR got pressed, both GetKeyState said both 
+// left control and right alt are pressed.
+#define IS_CONTROL_DOWN (IS_VK_DOWN(NS_VK_CONTROL) && (! IS_VK_DOWN(VK_RMENU)))
+#define IS_ALT_DOWN IS_VK_DOWN(VK_LMENU)
 
 // Global variable 
 //     g_hinst - handle of the application instance 
@@ -94,6 +104,7 @@ extern HINSTANCE g_hinst;
 #define IME_Y_OFFSET	35
 
 
+#ifdef IME_FROM_ON_CHAR
 static PRBool NS_IsDBCSLeadByte(UINT aCP, BYTE aByte)
 {
    switch(aCP) {
@@ -107,6 +118,8 @@ static PRBool NS_IsDBCSLeadByte(UINT aCP, BYTE aByte)
          return PR_FALSE;
    };
 }
+#endif // IME_FROM_ON_CHAR
+
 static PRBool LangIDToCP(WORD aLangID, UINT& oCP)
 {
 	int localeid=MAKELCID(aLangID,SORT_DEFAULT);
@@ -185,8 +198,11 @@ nsWindow::nsWindow() : nsBaseWidget()
 	mIMECompClauseStringLength = 0;
         WORD kblayout = (WORD)GetKeyboardLayout(0);
         LangIDToCP((WORD)(0x0FFFFL & kblayout), mCurrentKeyboardCP);
+
+#ifdef IME_FROM_ON_CHAR
 	mHaveDBCSLeadByte = false;
 	mDBCSLeadByte = '\0';
+#endif // IME_FROM_ON_CHAR
 
   mNativeDragTarget = nsnull;
   mIsTopWidgetWindow = PR_FALSE;
@@ -2007,13 +2023,28 @@ PRBool nsWindow::DispatchKeyEvent(PRUint32 aEventType, WORD aCharCode, UINT aVir
   event.keyCode  = aVirtualCharCode;
 
 #ifdef KE_DEBUG
-  printf("DispatchKE Type: %s charCode %d  keyCode %d ",  (aEventType == NS_KEY_UP?"Up":"Down"), event.charCode, event.keyCode);
+  static cnt=0;
+  printf("%d DispatchKE Type: %s charCode %d  keyCode %d ", cnt++,  
+        (NS_KEY_PRESS == aEventType)?"PRESS":(aEventType == NS_KEY_UP?"Up":"Down"), 
+         event.charCode, event.keyCode);
   printf("Shift: %s Control %s Alt: %s \n",  (mIsShiftDown?"D":"U"), (mIsControlDown?"D":"U"), (mIsAltDown?"D":"U"));
+  printf("[%c][%c][%c] <==   [%c][%c][%c][ space bar ][%c][%c][%c]\n", 
+             IS_VK_DOWN(NS_VK_SHIFT) ? 'S' : ' ',
+             IS_VK_DOWN(NS_VK_CONTROL) ? 'C' : ' ',
+             IS_VK_DOWN(NS_VK_ALT) ? 'A' : ' ',
+             IS_VK_DOWN(VK_LSHIFT) ? 'S' : ' ',
+             IS_VK_DOWN(VK_LCONTROL) ? 'C' : ' ',
+             IS_VK_DOWN(VK_LMENU) ? 'A' : ' ',
+             IS_VK_DOWN(VK_RMENU) ? 'A' : ' ',
+             IS_VK_DOWN(VK_RCONTROL) ? 'C' : ' ',
+             IS_VK_DOWN(VK_RSHIFT) ? 'S' : ' '
+
+  );
 #endif
 
-  event.isMeta   = PR_FALSE;
   event.isShift   = mIsShiftDown;
   event.isControl = mIsControlDown;
+  event.isMeta   =  mIsControlDown; // PR_FALSE; // temporary make it equal to isControl
   event.isAlt     = mIsAltDown;
   event.eventStructType = NS_KEY_EVENT;
 
@@ -2200,6 +2231,11 @@ BOOL TranslateToAscii(BYTE *aKeyState,
 //
 //
 //-------------------------------------------------------------------------
+#define WM_CHAR_LATER(vk) ( ((vk)<= VK_SPACE) || \
+                                 (('0'<=(vk))&&((vk)<='9')) || \
+                                 (('A'<=(vk))&&((vk)<='Z')))
+#define NO_WM_CHAR_LATER(vk) (! WM_CHAR_LATER(vk))
+
 BOOL nsWindow::OnKeyDown( UINT aVirtualKeyCode, UINT aScanCode)
 {
   WORD asciiKey;
@@ -2214,9 +2250,19 @@ BOOL nsWindow::OnKeyDown( UINT aVirtualKeyCode, UINT aScanCode)
   //      do the right thing for all SPECIAL_KEY codes
   // "SPECIAL_KEY" keys don't generate a WM_CHAR, so don't generate an NS_KEY_PRESS
   // this is a special case for the delete key
-  if (aVirtualKeyCode==VK_DELETE)
+  if (aVirtualKeyCode==VK_DELETE) 
   {
     DispatchKeyEvent(NS_KEY_PRESS, 0, aVirtualKeyCode);
+  } 
+  else if (NO_WM_CHAR_LATER(aVirtualKeyCode)) 
+  {
+    DispatchKeyEvent(NS_KEY_PRESS, 0, aVirtualKeyCode);
+  } 
+  else if (mIsControlDown && 
+           (( NS_VK_0 <= aVirtualKeyCode)&&( aVirtualKeyCode <= NS_VK_9)))
+  {
+    // put the 0 - 9 in charcode instead of keycode.
+    DispatchKeyEvent(NS_KEY_PRESS, aVirtualKeyCode, 0);
   }
 
   return result;
@@ -2267,37 +2313,40 @@ BOOL nsWindow::OnChar( UINT mbcsCharCode, UINT virtualKeyCode, bool isMultiByte 
   char		charToConvert[2];
   size_t	length;
 
+#ifdef IME_FROM_ON_CHAR
   if (isMultiByte) {
 	  charToConvert[0]=HIBYTE(mbcsCharCode);
 	  charToConvert[1] = LOBYTE(mbcsCharCode);
 	  length=2;
-  } else {
+  } 
+  else 
+#endif
+  {
 	  charToConvert[0] = LOBYTE(mbcsCharCode);
 	  length=1;
   }
-  ::MultiByteToWideChar(mCurrentKeyboardCP,MB_PRECOMPOSED,charToConvert,length,
+
+  
+  if(mIsControlDown && (virtualKeyCode <= 0x1A)) // Ctrl+A Ctrl+Z, see Programming Windows 3.1 page 110 for details  
+  { 
+     uniChar = virtualKeyCode - 1 + NS_VK_A ;
+     virtualKeyCode = 0;
+  } 
+  else 
+  if(virtualKeyCode < 0x20) 
+  {
+     uniChar = 0;
+  } 
+  else 
+  {
+     ::MultiByteToWideChar(mCurrentKeyboardCP,MB_PRECOMPOSED,charToConvert,length,
 	  &uniChar,sizeof(uniChar));
-
-#ifdef KE_DEBUG
-  printf("OnChar Ctrl=%s Shift=%s Alt=%s [%c][%c][%c]  [%c][%c][%c] (U+%x) (%d %x)\n",
-    mIsControlDown ? "Y" : "n",
-    mIsShiftDown ? "Y" : "n",
-    mIsAltDown ? "Y" : "n",
-    IS_VK_DOWN(VK_LSHIFT) ? 'S' :  ' ',
-    IS_VK_DOWN(VK_LCONTROL) ? 'C' :  ' ',
-    IS_VK_DOWN(VK_LMENU) ? 'A' :  ' ',
-    IS_VK_DOWN(VK_RMENU) ? 'A' :  ' ',
-    IS_VK_DOWN(VK_RCONTROL) ? 'C' :  ' ',
-    IS_VK_DOWN(VK_RSHIFT) ? 'S' :  ' ',
-    uniChar,
-    virtualKeyCode,
-    virtualKeyCode
-  );
-#endif
-
+     virtualKeyCode = 0;
+     mIsShiftDown = PR_FALSE;
+  }
   return DispatchKeyEvent(NS_KEY_PRESS, uniChar, virtualKeyCode);
 
-  //return FALSE;
+  return FALSE;
 }
 
 
@@ -2405,18 +2454,23 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             unsigned char    ch = (unsigned char)wParam;
             UINT            char_result;
 #ifdef KE_DEBUG
-            printf("%s\tchar=%c\twp=%4x\tlp=%8x\n", (msg == WM_CHAR) ? "WM_SYSCHAR" : "WM_CHAR" , ch, wParam, lParam);
+            printf("%s\tchar=%c\twp=%4x\tlp=%8x\n", (msg == WM_SYSCHAR) ? "WM_SYSCHAR" : "WM_CHAR" , ch, wParam, lParam);
 #endif
   
             //
             // check first for backspace or return, handle them specially 
             //
             if (ch==0x0d || ch==0x08) {
+
+#ifdef IME_FROM_ON_CHAR
                 mHaveDBCSLeadByte = PR_FALSE;
+#endif // IME_FROM_ON_CHAR
+
                 result = OnChar(ch,ch==0x0d ? VK_RETURN : VK_BACK,true);
                 break;
             }
   
+#ifdef IME_FROM_ON_CHAR
             //
             // check first to see if we have the first byte of a two-byte DBCS sequence
             //  if so, store it away and do nothing until we get the second sequence
@@ -2437,7 +2491,10 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
                 mHaveDBCSLeadByte = FALSE;
                 mDBCSLeadByte = 0;
                 result = OnChar(char_result,ch,true);
-            } else {
+            } 
+            else 
+#endif // IME_FROM_ON_CHAR
+            {
                 char_result = ch;
                 result = OnChar(char_result,ch,false);
             }
@@ -2459,8 +2516,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             printf("%s\t\twp=%x\tlp=%x\n",  "WM_KEYUP" , wParam, lParam);
 #endif
             mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
-            mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
-            mIsAltDown     = IS_VK_DOWN(NS_VK_ALT);
+            mIsControlDown = IS_CONTROL_DOWN;
+            mIsAltDown     = IS_ALT_DOWN;
 
 			      if (!mIMEIsComposing)
               result = OnKeyUp(wParam, (HIWORD(lParam) & 0xFF));
@@ -2495,8 +2552,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             printf("%s\t\twp=%4x\tlp=%8x\n",  "WM_KEYDOWN" , wParam, lParam);
 #endif
             mIsShiftDown   = IS_VK_DOWN(NS_VK_SHIFT);
-            mIsControlDown = IS_VK_DOWN(NS_VK_CONTROL);
-            mIsAltDown     = IS_VK_DOWN(NS_VK_ALT);
+            mIsControlDown = IS_CONTROL_DOWN;
+            mIsAltDown     = IS_ALT_DOWN;
 
 			      if (!mIMEIsComposing)
 			        result = OnKeyDown(wParam, (HIWORD(lParam) & 0xFF));
@@ -2765,7 +2822,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
 
 			result = PR_FALSE;  // always pass to child window
                         *aRetValue = LangIDToCP((WORD)(lParam&0x0FFFF),mCurrentKeyboardCP);
+#ifdef IME_FROM_ON_CHAR
                         mHaveDBCSLeadByte=PR_FALSE; // reset this when we change keyboard layout
+#endif
    
 			break;
 		}
@@ -3228,10 +3287,10 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   nsMouseEvent event;
   InitEvent(event, aEventType, aPoint);
 
-  event.isMeta   = PR_FALSE;
   event.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
-  event.isControl = IS_VK_DOWN(NS_VK_CONTROL);
-  event.isAlt     = IS_VK_DOWN(NS_VK_ALT);
+  event.isControl = IS_CONTROL_DOWN;
+  event.isMeta    = event.isControl; // PR_FALSE; // temporary make it equal to isControl
+  event.isAlt     = IS_ALT_DOWN;
   event.eventStructType = NS_MOUSE_EVENT;
 
   //Dblclicks are used to set the click count, then changed to mousedowns
@@ -3660,9 +3719,9 @@ nsWindow::HandleTextEvent(HIMC hIMEContext)
   MapDBCSAtrributeArrayToUnicodeOffsets(&(event.rangeCount),&(event.rangeArray));
 
   event.theText = mIMECompositionUniString;
-  event.isMeta	= PR_FALSE;
   event.isShift	= mIsShiftDown;
   event.isControl = mIsControlDown;
+  event.isMeta	= mIsControlDown; // PR_FALSE; // temoprary make it equal to isControl
   event.isAlt = mIsAltDown;
   event.eventStructType = NS_TEXT_EVENT;
 
