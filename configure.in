@@ -808,6 +808,29 @@ LOOP_INPUT
 fi
 
 dnl ========================================================
+dnl Checking for 64-bit OS
+dnl ========================================================
+AC_LANG_SAVE
+AC_LANG_C
+AC_MSG_CHECKING(for 64-bit OS)
+AC_TRY_RUN([ int main () {
+    if (sizeof(long) == 8) { return 0; } return 1; } ],
+        result="yes", result="no", result="maybe" )
+AC_MSG_RESULT("$result")
+if test "$result" = "yes"; then
+    AC_DEFINE(HAVE_64BIT_OS)
+    HAVE_64BIT_OS=1
+fi
+AC_SUBST(HAVE_64BIT_OS)
+
+if test "$HAVE_64BIT_OS"; then
+       case "$target_os" in
+       solaris*) TARGET_NSPR_MDCPUCFG='\"md/_solaris64.cfg\"' ;;
+       esac
+fi
+AC_LANG_RESTORE
+
+dnl ========================================================
 dnl System overrides of the defaults for host
 dnl ========================================================
 case "$host" in
@@ -881,6 +904,19 @@ case "$target" in
 *-aix*)
     AC_DEFINE(AIX)
     if test ! "$GNU_CC"; then
+        if test ! "$HAVE_64BIT_OS"; then
+            # Compiling with Visual Age C++ object model compat is the
+            # default. To compile with object model ibm, add 
+            # AIX_OBJMODEL=ibm to .mozconfig.
+            if test "$AIX_OBJMODEL" = "ibm"; then
+                CXXFLAGS="$CXXFLAGS -qobjmodel=ibm"
+            else
+                AIX_OBJMODEL=compat
+            fi
+        else
+            AIX_OBJMODEL=compat
+        fi
+        AC_SUBST(AIX_OBJMODEL)
         DSO_LDOPTS='-qmkshrobj=1'
         DSO_CFLAGS='-qflag=w:w'
         DSO_PIC_CFLAGS=
@@ -1289,10 +1325,8 @@ case "$target" in
 	if test "$with_x" != "yes"
 	then
 		_PLATFORM_DEFAULT_TOOLKIT="photon"
-    	AC_DEFINE(NO_X11)
 	    TK_CFLAGS='-I/usr/include/photon'
 		TK_LIBS='-lph'
-		no_x="yes"
 	fi
 	case "${target_cpu}" in
 	ppc*)
@@ -1374,6 +1408,7 @@ case "$target" in
         BIN_FLAGS='-Zlinker /ST:0x100000'
         IMPLIB='emximp -o'
         FILTER='emxexp -o'
+        LDFLAGS='-Zmap'
         MOZ_DEBUG_FLAGS="-g -fno-inline"
         MOZ_OPTIMIZE_FLAGS="-O2 -s"
         MOZ_OPTIMIZE_LDFLAGS="-Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
@@ -1468,7 +1503,6 @@ alpha*-*-osf*)
 	    _PLATFORM_DEFAULT_TOOLKIT='photon'
 	    TK_CFLAGS='-I/usr/nto/include/photon'
 	    TK_LIBS='-lphoton -lphrender'
-	    AC_DEFINE(NO_X11)
     fi
     ;;
 
@@ -1814,23 +1848,6 @@ fi
 
 AC_LANG_C
 
-AC_MSG_CHECKING(for 64-bit OS)
-AC_TRY_RUN([ int main () {
-    if (sizeof(long) == 8) { return 0; } return 1; } ],
-        result="yes", result="no", result="maybe" )
-AC_MSG_RESULT("$result")
-if test "$result" = "yes"; then
-    AC_DEFINE(HAVE_64BIT_OS)
-    HAVE_64BIT_OS=1
-fi
-AC_SUBST(HAVE_64BIT_OS)
-
-if test "$HAVE_64BIT_OS"; then
-	case "$target_os" in
-	solaris*) TARGET_NSPR_MDCPUCFG='\"md/_solaris64.cfg\"' ;;
-	esac
-fi
-
 dnl Check for usable wchar_t (2 bytes, unsigned)
 dnl (we really don't need the unsignedness check anymore)
 dnl ========================================================
@@ -2052,7 +2069,6 @@ else
         ;;
     esac
 
-    AC_SUBST(XT_LIBS)
     dnl ========================================================
     dnl = Check for Xinerama
     dnl ========================================================
@@ -2093,25 +2109,6 @@ else
 
 	LDFLAGS="$_SAVE_LDFLAGS"
 
-    dnl ====================================================
-    dnl = Check if X headers exist
-    dnl ====================================================
-    _SAVE_CFLAGS=$CFLAGS
-    CFLAGS="$CFLAGS $XCFLAGS"
-    AC_TRY_COMPILE([
-        #include <stdio.h>
-        #include <X11/Xlib.h>
-    ],
-    [
-        Display *dpy = 0;
-        if ((dpy = XOpenDisplay(NULL)) == NULL) {
-            fprintf(stderr, ": can't open %s\n", XDisplayName(NULL));
-            exit(1);
-        }
-    ], [], 
-    [ AC_MSG_ERROR([Could not compile basic X program.]) ])
-    CFLAGS="$_SAVE_CFLAGS"
-
     AC_CHECK_FT2(6.1.0, [_HAVE_FREETYPE2=1], [_HAVE_FREETYPE2=])
 
 fi # $no_x
@@ -2119,6 +2116,7 @@ fi # $no_x
 AC_SUBST(XCFLAGS)
 AC_SUBST(XLDFLAGS)
 AC_SUBST(XLIBS)
+AC_SUBST(XT_LIBS)
 
 dnl ========================================================
 dnl = pthread support
@@ -3272,9 +3270,9 @@ if test "$MOZ_ENABLE_GTK" \
 || test "$MOZ_ENABLE_GTK2"
 then
     AC_DEFINE(MOZ_X11)
-    _X11_TOOLKIT=1
+    MOZ_X11=1
 fi
-
+AC_SUBST(MOZ_X11)
 
 dnl ========================================================
 dnl =
@@ -3325,6 +3323,16 @@ MOZ_ARG_DISABLE_BOOL(ldap,
     MOZ_LDAP_XPCOM=1)
 
 dnl ========================================================
+dnl = Trademarked Branding 
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(official-branding,
+[  --enable-official-branding    Enable Official Branding],
+    MOZ_USE_OFFICIAL_BRANDING=1,
+    MOZ_USE_OFFICIAL_BRANDING= )
+
+AC_SUBST(MOZ_USE_OFFICIAL_BRANDING)
+
+dnl ========================================================
 dnl = Phoenix
 dnl ========================================================
 MOZ_XUL_APP=
@@ -3370,6 +3378,7 @@ fi
 
 AC_SUBST(MOZ_STANDALONE_COMPOSER)
 AC_SUBST(MOZ_XUL_APP)
+AC_DEFINE_UNQUOTED(MOZ_APP_NAME, "$MOZ_APP_NAME")
 
 dnl ========================================================
 dnl = FreeType2
@@ -3380,11 +3389,11 @@ MOZ_ARG_DISABLE_BOOL(freetype2,
 [  --disable-freetype2     Disable FreeType2 support ],
     MOZ_ENABLE_FREETYPE2=,
     MOZ_ENABLE_FREETYPE2=1,
-    [if test "$_X11_TOOLKIT" -a "$_HAVE_FREETYPE2"; then 
+    [if test "$MOZ_X11" -a "$_HAVE_FREETYPE2"; then 
          MOZ_ENABLE_FREETYPE2=1
      fi])
 
-if test "$MOZ_ENABLE_FREETYPE2" && test -z "$_X11_TOOLKIT" -o -z "$_HAVE_FREETYPE2"; then
+if test "$MOZ_ENABLE_FREETYPE2" && test -z "$MOZ_X11" -o -z "$_HAVE_FREETYPE2"; then
     AC_MSG_ERROR([Cannot enable FreeType2 support for non-X11 toolkits or if FreeType2 is not detected.])
 fi
 
@@ -3437,7 +3446,7 @@ MOZ_ARG_DISABLE_BOOL(postscript,
 dnl ========================================================
 dnl = Xprint print module
 dnl ========================================================
-if test "$_X11_TOOLKIT"
+if test "$MOZ_X11"
 then
     MOZ_ENABLE_XPRINT=1
 
@@ -3461,9 +3470,14 @@ dnl ========================================================
 dnl = GnomeVFS support module
 dnl ========================================================
 
-if test "$_X11_TOOLKIT"
+if test "$MOZ_X11"
 then
-    MOZ_ENABLE_GNOMEVFS=1
+    dnl build the gnomevfs extension by default only when the
+    dnl GTK2 toolkit is in use.
+    if test "$MOZ_ENABLE_GTK2"
+    then
+        MOZ_ENABLE_GNOMEVFS=1
+    fi
 
     MOZ_ARG_DISABLE_BOOL(gnomevfs,
     [  --disable-gnomevfs      Disable GnomeVFS support ],
@@ -3685,7 +3699,7 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth"
 
 MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview layout-debug tasks"
 
@@ -3714,8 +3728,8 @@ fi
 
 if test -z "$MOZ_ENABLE_GNOMEVFS" && test `echo "$MOZ_EXTENSIONS" | grep -c gnomevfs` -ne 0; then
     # Suppress warning on non-X11 platforms
-    if test "$_X11_TOOLKIT"; then
-        AC_MSG_WARN([Cannot build gnomevfs without gnome-vfs-2 toolkit. Removing gnomevfs from MOZ_EXTENSIONS.])
+    if test -n "$MOZ_X11"; then
+        AC_MSG_WARN([Cannot build gnomevfs without required libraries. Removing gnomevfs from MOZ_EXTENSIONS.])
     fi
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|gnomevfs||'`
 fi
@@ -3740,6 +3754,140 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c tridentprofile` -ne 0; then
     MOZ_EXTENSIONS="$MOZ_EXTENSIONS tridentprofile"
   fi
 fi
+
+dnl ========================================================
+dnl Check for GSSAPI libraries and headers needed for
+dnl integrated windows authentication support (disable
+dnl negotiateauth extension if GSSAPI is not available).
+dnl ========================================================
+
+if test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth` -ne 0; then
+    dnl
+    dnl Check for alternative location for GSSAPI libraries.
+    dnl
+    MOZ_ARG_WITH_STRING(gssapi,
+        [  --with-gssapi=PFX	   Location of GSSAPI libraries],
+        GSSAPI_DIR=$withval)
+
+    dnl
+    dnl If not specified, assume GSSAPI lives under /usr
+    dnl
+    if test -z "$GSSAPI_DIR"; then
+        dnl
+        dnl RedHat Linux 7, 8, and 9 install GSSAPI headers and libraries under
+        dnl /usr/kerberos -- perhaps other platforms do the same.  If not, then
+        dnl we count on the default search paths.  Fedora Core 1, at least,
+        dnl puts the headers and libraries under /usr, but it still has
+        dnl /usr/kerberos for the other KRB5 components.
+        dnl
+        if test -d "/usr/kerberos/include"; then
+            GSSAPI_DIR="/usr/kerberos"
+        else
+            GSSAPI_DIR="/usr"
+        fi
+    fi
+
+    _SAVE_CPPFLAGS="$CPPFLAGS"
+    _SAVE_LDFLAGS="$LDFLAGS"
+    _SAVE_LIBS="$LIBS"
+
+    CPPFLAGS="$CPPFLAGS -I$GSSAPI_DIR/include"
+    LDFLAGS="$LDFLAGS -L$GSSAPI_DIR/lib"
+
+    dnl
+    dnl Try to set GSSAPI_INCLUDES ...
+    dnl
+    AC_CHECK_HEADERS(gssapi.h,
+        [GSSAPI_INCLUDES="-I$GSSAPI_DIR/include"])
+    if test -z "$GSSAPI_INCLUDES" ; then
+        AC_CHECK_HEADERS(gssapi/gssapi.h,
+            [GSSAPI_INCLUDES="-I$GSSAPI_DIR/include"])
+    fi
+    CPPFLAGS="$_SAVE_CPPFLAGS $GSSAPI_INCLUDES"
+
+    dnl
+    dnl Try to set GSSAPI_LIBS ...
+    dnl
+    AC_CHECK_LIB(gss, gss_init_sec_context,
+        [GSSAPI_LIBS="-L$GSSAPI_DIR/lib -lgss"],)
+
+    dnl
+    dnl If libgss was not found, look for the MIT Kerberos V5 GSSAPI
+    dnl libraries instead.
+    dnl
+    if test -z "$GSSAPI_LIBS" ; then
+        dnl
+        dnl Some operating systems (like AIX) don't ship the k5crypto
+        dnl and com_err libraries with their Kerberos implementation,
+        dnl so check for their existance before including them in
+        dnl GSSAPI_LIBS.
+        dnl
+        _GSS_LIBS="-L$GSSAPI_DIR/lib -lgssapi_krb5 -lkrb5"
+        AC_CHECK_LIB(k5crypto, main, 
+            [AC_CHECK_LIB(com_err, main,
+                [_GSS_LIBS="$_GSS_LIBS -lk5crypto -lcom_err"],)]
+            ,)
+        LIBS="$LIBS $_GSS_LIBS"
+        AC_CHECK_FUNC(gss_init_sec_context, 
+            [GSSAPI_LIBS="$_GSS_LIBS"],)
+        LIBS="$_SAVE_LIBS"
+    fi
+
+    dnl
+    dnl If GSS libs were STILL not found, try looking for Heimdal
+    dnl Kerberos V5 libraries.
+    dnl
+    if test -z "$GSSAPI_LIBS" ; then
+        if test -x "$GSSAPI_DIR/bin/krb5-config" ; then
+            krb5cfg="$GSSAPI_DIR/bin/krb5-config"
+            TMP_GSSAPI_LIBS=`$krb5cfg --libs gssapi 2>/dev/null`
+            TMP_GSSAPI_INCLUDES=`$krb5cfg --cflags gssapi 2>/dev/null`
+
+            LIBS="$LIBS $TMP_GSSAPI_LIBS"
+            AC_CHECK_LIB(gssapi, gss_init_sec_context,
+                [GSSAPI_LIBS="$TMP_GSSAPI_LIBS"
+                 GSSAPI_INCLUDES="$TMP_GSSAPI_INCLUDES"],
+                [GSSAPI_LIBS=""])
+
+            CPPFLAGS="$_SAVE_CPPFLAGS $GSSAPI_INCLUDES"
+        fi
+    fi
+
+    dnl
+    dnl If GSSAPI libs were not found, remove extension from the list to be
+    dnl built.
+    dnl
+    if test -z "$GSSAPI_LIBS" ; then
+        AC_MSG_WARN([Cannot build negotiateauth without GSSAPI. Removing negotatiate from MOZ_EXTENSIONS.])
+        MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|negotiateauth||'`
+        GSSAPI_INCLUDES=
+    else
+        dnl
+        dnl Try to determine if the GSS_C_NT_HOSTBASED_SERVICE value is
+        dnl defined.  Older MIT releases did not define this correctly.
+        dnl
+        AC_CHECK_HEADERS([gssapi_generic.h])
+        AC_CHECK_HEADERS([gssapi/gssapi_generic.h])
+
+        AC_TRY_COMPILE([ #if defined(HAVE_GSSAPI_H)
+                         #include <gssapi.h>
+                         #elif defined(HAVE_GSSAPI_GSSAPI_H)
+                         #include <gssapi/gssapi.h>
+                         #endif ],
+            [ gss_OID oid = GSS_C_NT_HOSTBASED_SERVICE; ],
+            [AC_DEFINE(HAVE_GSS_C_NT_HOSTBASED_SERVICE)],[
+             AC_MSG_WARN([GSS_C_NT_HOSTBASED_SERVICE not found])
+            ])
+    fi
+
+    LIBS="$_SAVE_LIBS"
+    LDFLAGS="$_SAVE_LDFLAGS"
+    CPPFLAGS="$_SAVE_CPPFLAGS"
+
+    AC_SUBST(GSSAPI_INCLUDES)
+    AC_SUBST(GSSAPI_LIBS)
+fi
+
 
 dnl Remove dupes
 MOZ_EXTENSIONS=`${PERL} ${srcdir}/build/unix/uniq.pl ${MOZ_EXTENSIONS}`
@@ -4574,6 +4722,38 @@ if test "$_IGNORE_LONG_LONG_WARNINGS"; then
      CFLAGS="$_SAVE_CFLAGS"
 fi
 
+dnl Test for profiling options
+dnl Under gcc 3.3, use -fprofile-arcs/-fbranch-probabilities
+dnl Under gcc 3.4+, use -fprofile-generate/-fprofile-use
+
+_SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -fprofile-generate"
+
+AC_MSG_CHECKING([whether C compiler supports -fprofile-generate])
+AC_TRY_COMPILE([], [return 0;],
+               [ PROFILE_GEN_CFLAGS="-fprofile-generate"
+                 result="yes" ], result="no")
+AC_MSG_RESULT([$result])
+
+if test $result = "yes"; then
+  PROFILE_USE_CFLAGS="-fprofile-use"
+else
+  CFLAGS="$_SAVE_CFLAGS -fprofile-arcs"
+  AC_MSG_CHECKING([whether C compiler supports -fprofile-arcs])
+  AC_TRY_COMPILE([], [return 0;],
+                 [ PROFILE_GEN_CFLAGS="-fprofile-arcs"
+                   result="yes" ], result="no")
+  AC_MSG_RESULT([$result])
+  if test $result = "yes"; then
+    PROFILE_USE_CFLAGS="-fbranch-probabilities"
+  fi
+fi
+
+CFLAGS="$_SAVE_CFLAGS"
+
+AC_SUBST(PROFILE_GEN_CFLAGS)
+AC_SUBST(PROFILE_USE_CFLAGS)
+
 AC_LANG_CPLUSPLUS
 
 dnl ========================================================
@@ -4951,6 +5131,7 @@ if test "$MOZ_SVG_RENDERER_LIBART"; then
         MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'
         ;;
     esac
+    AC_FUNC_ALLOCA
   else
 dnl Disable system libart until the pixel format changes are merged upstream
     AC_MSG_ERROR([SVG requires a modified version of libart. To pull and build
@@ -5401,12 +5582,31 @@ if test "$USING_HCC"; then
 fi
 
 dnl Check for missing components
-if test "$no_x" != "yes"; then
-if test ! -z "$MISSING_X"; then
-   AC_MSG_ERROR([ Could not find the following X libraries: $MISSING_X ]);
-fi
+if test -n "$MOZ_X11"; then
+    dnl ====================================================
+    dnl = Check if X headers exist
+    dnl ====================================================
+    _SAVE_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS $XCFLAGS"
+    AC_TRY_COMPILE([
+        #include <stdio.h>
+        #include <X11/Xlib.h>
+    ],
+    [
+        Display *dpy = 0;
+        if ((dpy = XOpenDisplay(NULL)) == NULL) {
+            fprintf(stderr, ": can't open %s\n", XDisplayName(NULL));
+            exit(1);
+        }
+    ], [], 
+    [ AC_MSG_ERROR([Could not compile basic X program.]) ])
+    CFLAGS="$_SAVE_CFLAGS"
 
-fi # $no_x
+    if test ! -z "$MISSING_X"; then
+        AC_MSG_ERROR([ Could not find the following X libraries: $MISSING_X ]);
+    fi
+
+fi # MOZ_X11
 
 dnl Set various defines and substitutions
 dnl ========================================================

@@ -847,6 +847,10 @@ extensions/typeaheadfind/src/Makefile
 extensions/typeaheadfind/Makefile
 "
 
+if [ "$MOZ_USE_OFFICIAL_BRANDING" ]; then
+    MAKEFILES_firefox_branding="other-licenses/branding/firefox/Makefile"
+fi
+
 MAKEFILES_phoenix="
 browser/Makefile
 browser/app/Makefile
@@ -870,6 +874,7 @@ browser/components/sidebar/src/Makefile
 browser/components/shell/Makefile
 browser/components/shell/public/Makefile
 browser/installer/Makefile
+browser/installer/unix/Makefile
 browser/installer/windows/Makefile
 "
 
@@ -934,12 +939,22 @@ mail/Makefile
 mail/app/Makefile
 mail/app/profile/Makefile
 mail/base/Makefile
+mail/base/skin/mac/Makefile
+mail/base/skin/Makefile
 mail/components/Makefile
 mail/components/compose/Makefile
+mail/components/compose/skin/mac/Makefile
+mail/components/compose/skin/Makefile
 mail/components/addrbook/Makefile
+mail/components/addrbook/skin/mac/Makefile
+mail/components/addrbook/skin/Makefile
 mail/components/prefwindow/Makefile
+mail/components/prefwindow/skin/mac/Makefile
+mail/components/prefwindow/skin/Makefile
 mail/extensions/Makefile
 mail/extensions/smime/Makefile
+mail/extensions/smime/skin/mac/Makefile
+mail/extensions/smime/skin/Makefile
 mail/extensions/offline/Makefile
 mail/extensions/inspector/Makefile
 mail/config/Makefile
@@ -1230,6 +1245,9 @@ for extension in $MOZ_EXTENSIONS; do
         finger ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/finger/Makefile
             " ;;
+        negotiateauth ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/negotiateauth/Makefile
+            " ;;
         gnomevfs ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/gnomevfs/Makefile
             " ;;
@@ -1437,6 +1455,9 @@ if test -n "$MOZ_CALENDAR"; then
 fi
 
 if test -n "$MOZ_PHOENIX"; then
+    if test -n "$MOZ_USE_OFFICIAL_BRANDING"; then
+        add_makefiles "$MAKEFILES_firefox_branding"
+    fi
     add_makefiles "$MAKEFILES_phoenix"
 fi
 
