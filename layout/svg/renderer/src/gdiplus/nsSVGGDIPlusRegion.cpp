@@ -192,8 +192,7 @@ nsresult NS_NewSVGGDIPlusClonedRegion(nsISVGRendererRegion** result,
   HWND win;
   HDC devicehandle;
   {
-    nsCOMPtr<nsIDeviceContext> devicecontext;
-    presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+    nsIDeviceContext* devicecontext = presContext->DeviceContext();
     // this better be what we think it is:
     win = (HWND)((nsDeviceContextWin *)(devicecontext.get()))->mWidget;
     devicehandle = ::GetDC(win);

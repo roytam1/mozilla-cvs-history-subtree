@@ -294,8 +294,7 @@ nsSVGLibartGlyphMetricsFT::GetPixelScale()
     return 1.0f;
   }
 
-  nsCOMPtr<nsIDeviceContext> devicecontext;
-  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
+  nsIDeviceContext* devicecontext = presContext->DeviceContext();
 
   float scale;
   devicecontext->GetCanonicalPixelScale(scale);

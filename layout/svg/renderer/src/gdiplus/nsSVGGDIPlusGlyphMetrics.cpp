@@ -85,9 +85,7 @@ private:
 
 nsWindowsDC::nsWindowsDC(nsIPresContext* presContext)
 {
-  nsCOMPtr<nsIDeviceContext> devicecontext;
-  presContext->GetDeviceContext(getter_AddRefs(devicecontext));
-  NS_ASSERTION(devicecontext, "no device context");
+  nsIDeviceContext* devicecontext = presContext->DeviceContext();
 
   isWndDC=((nsDeviceContextWin *)(devicecontext.get()))->mDC==nsnull;
   if (isWndDC) {
