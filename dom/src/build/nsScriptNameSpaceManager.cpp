@@ -28,9 +28,14 @@
 #include "nsISupportsPrimitives.h"
 #include "nsIScriptExternalNameSet.h"
 #include "nsIScriptNameSpaceManager.h"
+#include "nsIInterfaceInfoManager.h"
+#include "nsIInterfaceInfo.h"
+#include "xptinfo.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
 
+
+#define NS_DOM_INTERFACE_PREFIX "nsIDOM"
 
 nsScriptNameSpaceManager::nsScriptNameSpaceManager()
 {
@@ -90,18 +95,107 @@ nsScriptNameSpaceManager::FillHash(nsICategoryManager *aCategoryManager,
       continue;
     }
 
-    nsGlobalNameStruct *s = new nsGlobalNameStruct;
-    NS_ENSURE_TRUE(s, NS_ERROR_OUT_OF_MEMORY);
-
-    s->mType = aType;
-    s->mCID = cid;
-
     nsAutoString name;
     CopyASCIItoUCS2(nsLiteralCString(categoryEntry), name);
 
     nsStringKey key(name);
 
-    mGlobalNames.Put(&key, s);
+    if (!mGlobalNames.Get(&key)) {
+      nsGlobalNameStruct *s = new nsGlobalNameStruct;
+      NS_ENSURE_TRUE(s, NS_ERROR_OUT_OF_MEMORY);
+
+      s->mType = aType;
+      s->mCID = cid;
+
+      mGlobalNames.Put(&key, s);
+    } else {
+      NS_WARNING("Global script name not overwritten!");
+    }
+  }
+
+  return rv;
+}
+
+
+// This method enumerates over all installed interfaces (in .xpt
+// files) and finds ones that start with "nsIDOM" and has constants
+// defined in the interface itself (inherited constants doesn't
+// count), once such an interface is found the "nsIDOM" prefix is cut
+// off the name and the rest of the name is added into the hash for
+// global names. This makes things like 'Node.ELEMENT_NODE' work in
+// JS. See nsWindowSH::GlobalResolve() for detais on how this is used.
+
+nsresult
+nsScriptNameSpaceManager::FillHashWithDOMInterfaces()
+{
+  nsCOMPtr<nsIInterfaceInfoManager> iim =
+    dont_AddRef(XPTI_GetInterfaceInfoManager());
+  NS_ENSURE_TRUE(iim, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIEnumerator> e;
+  nsresult rv = iim->EnumerateInterfaces(getter_AddRefs(e));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsISupports> entry;
+
+  rv = e->First();
+
+  if (NS_FAILED(rv)) {
+    // Empty interface list?
+
+    NS_WARNING("What, no interfaces installed?");
+
+    return NS_OK;
+  }
+
+  while (e->IsDone() == NS_COMFALSE) {
+    rv = e->CurrentItem(getter_AddRefs(entry));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIInterfaceInfo> if_info(do_QueryInterface(entry));
+
+    PRUint16 constant_count = 0, parent_constant_count = 0;
+
+    if (if_info) {
+      rv = if_info->GetConstantCount(&constant_count);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsCOMPtr<nsIInterfaceInfo> parent_info;
+
+      if_info->GetParent(getter_AddRefs(parent_info));
+
+      if (parent_info) {
+        parent_info->GetConstantCount(&parent_constant_count);
+      }
+    } else {
+      NS_WARNING("Interface info not an nsIInterfaceInfo!");
+    }
+
+    if (constant_count && constant_count != parent_constant_count) {
+      nsXPIDLCString if_name;
+
+      rv = if_info->GetName(getter_Copies(if_name));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (!nsCRT::strncmp(if_name.get(), NS_DOM_INTERFACE_PREFIX,
+                          strlen(NS_DOM_INTERFACE_PREFIX))) {
+        nsGlobalNameStruct *s = new nsGlobalNameStruct;
+        NS_ENSURE_TRUE(s, NS_ERROR_OUT_OF_MEMORY);
+
+        s->mType = nsGlobalNameStruct::eTypeInterface;
+
+        nsAutoString name;
+        CopyASCIItoUCS2(nsLiteralCString(if_name.get() +
+                                         strlen(NS_DOM_INTERFACE_PREFIX)),
+                        name);
+
+        nsStringKey key(name);
+
+        mGlobalNames.Put(&key, s);
+      }
+    }
+
+    e->Next();
   }
 
   return rv;
@@ -111,6 +205,9 @@ nsresult
 nsScriptNameSpaceManager::Init()
 {
   nsresult rv = NS_OK;
+
+  rv = FillHashWithDOMInterfaces();
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsICategoryManager> cm =
     do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);

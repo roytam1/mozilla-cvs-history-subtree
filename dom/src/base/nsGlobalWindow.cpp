@@ -3629,7 +3629,7 @@ void GlobalWindowImpl::DropTimeout(nsTimeoutImpl *aTimeout,
     aContext = mContext;
   if (aContext) {
     JSContext *cx;
-    cx = (JSContext *) aContext->GetNativeContext();
+    cx = (JSContext *)aContext->GetNativeContext();
     rt = ::JS_GetRuntime(cx);
   } else {
     /* XXX The timeout *must* be unrooted, even if !aContext. This can be

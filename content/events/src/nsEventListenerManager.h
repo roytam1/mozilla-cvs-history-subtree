@@ -116,7 +116,7 @@ public:
                                          nsIAtom* aName);
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
                                         nsISupports *aObject,
-                                        nsIAtom* aName);
+                                        nsIAtom* aName, PRBool *aDidCompile);
 
   NS_IMETHOD CaptureEvent(PRInt32 aEventTypes);
   NS_IMETHOD ReleaseEvent(PRInt32 aEventTypes);

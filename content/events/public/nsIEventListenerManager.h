@@ -101,7 +101,8 @@ public:
   * @param an event listener */
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
                                         nsISupports *aObject,
-                                        nsIAtom* aName) = 0;
+                                        nsIAtom* aName,
+                                        PRBool *aDidCompile) = 0;
 
   /**
   * Causes a check for event listeners and processing by them if they exist.

@@ -67,6 +67,7 @@
 #include "nsDOMError.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
+#include "nsIDOMNamedNodeMap.h"
 #include "nsIFormControl.h"
 
 // HTMLFormElement helper includes
@@ -157,12 +158,11 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
   WANT_POSTCREATE |                                                           \
-  WANT_GETPROPERTY |                                                          \
+  WANT_NEWRESOLVE |                                                           \
   WANT_SETPROPERTY
 
 #define DOCUMENT_SCRIPTABLE_FLAGS                                             \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
-  WANT_PRECREATE |                                                            \
   WANT_NEWRESOLVE |                                                           \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
@@ -406,7 +406,7 @@ nsDOMClassInfo::Init()
 
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DOMImplementation, nsDOMGenericSH::Create,
@@ -414,7 +414,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(DocumentFragment, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Element, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
@@ -433,8 +433,8 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsNamedNodeMapSH::Create,
+                           ARRAY_SCRIPTABLE_FLAGS);
 
   // Misc Core related classes
 
@@ -616,8 +616,8 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsNamedNodeMapSH::Create,
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULPDGlobalObject, nsDOMGenericSH::Create,
@@ -1060,12 +1060,9 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  jsval v = *vp;
+  nsresult rv = NS_OK;
 
-  nsresult rv = nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp,
-                                               _retval);
-
-  if (*vp == v && JSVAL_IS_NUMBER(id)) {
+  if (JSVAL_IS_NUMBER(id)) {
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
 
@@ -1205,16 +1202,68 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
                     NS_GET_IID(nsISupports), rval);
 }
 
+
+// static
 nsresult
-nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
-                          JSString *str, PRUint32 flags, JSObject **objp,
-                          PRBool *_retval)
+nsWindowSH::DefineInterfaceProperty(JSContext *cx, JSObject *obj, JSString *str)
 {
+  jsval components_val;
+
+  if (!::JS_GetProperty(cx, obj, "Components", &components_val)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  if (!JSVAL_IS_OBJECT(components_val)) {
+    return NS_OK;
+  }
+
+  jsval if_val = JSVAL_VOID;
+
+  // XXX: Once the security manager lets me make this call I should
+  // check for failure here...
+  ::JS_GetProperty(cx, JSVAL_TO_OBJECT(components_val), "interfaces", &if_val);
+
+  if (!JSVAL_IS_OBJECT(if_val)) {
+    return NS_OK;
+  }
+
+  jsval val;
+
+  nsAutoString if_name;
+  if_name.AssignWithConversion("nsIDOM");
+
+  const jschar *name = ::JS_GetStringChars(str);
+
+  if_name.Append(NS_REINTERPRET_CAST(const PRUnichar *, name),
+                 ::JS_GetStringLength(str));
+
+  if (!::JS_GetUCProperty(cx, JSVAL_TO_OBJECT(if_val),
+                          NS_REINTERPRET_CAST(const jschar *, if_name.get()),
+                          if_name.Length(), &val)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  if (!JSVAL_IS_OBJECT(val)) {
+    return NS_OK;
+  }
+
+  if (!::JS_DefineUCProperty(cx, obj, name, ::JS_GetStringLength(str),
+                             val, nsnull, nsnull, 0)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
+                          JSString *str, PRUint32 flags, PRBool *did_resolve)
+{
+  *did_resolve = PR_FALSE;
+
   extern nsScriptNameSpaceManager *gNameSpaceManager;
 
   NS_ENSURE_TRUE(gNameSpaceManager, NS_ERROR_NOT_INITIALIZED);
-
-  nsresult rv = NS_OK;
 
   nsCOMPtr<nsIScriptContext> my_context;
   nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(my_context));
@@ -1232,9 +1281,20 @@ nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
 
   const nsGlobalNameStruct *name_struct = nsnull;
 
-  rv = gNameSpaceManager->LookupName(name, &name_struct);
+  gNameSpaceManager->LookupName(name, &name_struct);
 
   if (!name_struct) {
+    return NS_OK;
+  }
+
+  nsresult rv = NS_OK;
+
+  if (name_struct->mType == nsGlobalNameStruct::eTypeInterface) {
+    rv = DefineInterfaceProperty(cx, obj, str);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    *did_resolve = PR_TRUE;
+
     return NS_OK;
   }
 
@@ -1244,9 +1304,11 @@ nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
     JSFunction *f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(str),
                                         StubConstructor, 0, JSPROP_READONLY);
 
-    *_retval = !!f;
+    if (!f) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
 
-    *objp = obj;
+    *did_resolve = PR_TRUE;
 
     return NS_OK;
   }
@@ -1276,13 +1338,13 @@ nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
 
     NS_ENSURE_SUCCESS(rv, rv);
 
-    *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
-                                     ::JS_GetStringLength(str),
-                                     prop_val, nsnull, nsnull,
-                                     JSPROP_ENUMERATE | JSPROP_READONLY);
-    *objp = obj;
+    PRBool retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                          ::JS_GetStringLength(str),
+                                          prop_val, nsnull, nsnull,
+                                          JSPROP_ENUMERATE | JSPROP_READONLY);
+    *did_resolve = PR_TRUE;
 
-    return *_retval ? NS_OK : NS_ERROR_FAILURE;
+    return retval ? NS_OK : NS_ERROR_FAILURE;
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeDynamicNameSet) {
@@ -1290,7 +1352,7 @@ nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
       do_CreateInstance(name_struct->mCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(aNative));
+    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
     NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
 
     nsCOMPtr<nsIScriptContext> context;
@@ -1300,7 +1362,7 @@ nsWindowSH::GlobalResolve(nsISupports *aNative, JSContext *cx, JSObject *obj,
 
     rv = nameset->InitializeClasses(context);
 
-    *objp = obj;
+    *did_resolve = PR_TRUE;
   }
 
   return rv;
@@ -1327,7 +1389,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   if (JSVAL_IS_STRING(id)) {
     JSString *str = JSVAL_TO_STRING(id);
-    nsresult rv = NS_OK;
 
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
@@ -1335,11 +1396,13 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     const JSObject *o = *objp;
 
-    rv = GlobalResolve(wrapper, cx, obj, str, flags, objp, _retval);
+    nsresult rv = GlobalResolve(wrapper, cx, obj, str, flags, &did_resolve);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (o != *objp) {
+    if (did_resolve) {
       // GlobalResolve() resolved something, we're done here then.
+
+      *objp = obj;
 
       return NS_OK;
     }
@@ -1447,6 +1510,9 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
       return NS_OK;
     }
+
+    return nsEventRecieverSH::NewResolve(wrapper, cx, obj, id, flags, objp,
+                                         _retval);
   }
 
   return NS_OK;
@@ -1583,9 +1649,9 @@ nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   nsCOMPtr<nsIContent> content(do_QueryInterface(native));
 
-  if  (content) {
-    nsCOMPtr<nsIDocument> doc;
+  nsCOMPtr<nsIDocument> doc;
 
+  if  (content) {
 #ifdef DEBUG_jst
     JSString *jsstr = JSVAL_TO_STRING(id);
 
@@ -1594,11 +1660,16 @@ nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     // XXX: Use GetOwnerDocument here!
     content->GetDocument(*getter_AddRefs(doc));
-
-    if (doc) {
-      doc->AddReference(content, wrapper);
-    }
   }
+
+  if (!doc) {
+    doc = do_QueryInterface(native);
+  }
+
+  if (doc) {
+    doc->AddReference(content, wrapper);
+  }
+
 
   return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
@@ -1655,9 +1726,11 @@ nsEventRecieverSH::ReallyIsEventName(JSString *jsstr, jschar aFirstChar)
 nsresult
 nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
                                           JSContext *cx, JSObject *obj,
-                                          jsval id, jsval *vp,
-                                          PRBool aCompile)
+                                          jsval id, PRBool compile,
+                                          PRBool *did_compile)
 {
+  *did_compile = PR_FALSE;
+
   JSString *str = JSVAL_TO_STRING(id);
 
   if (IsEventName(str)) {
@@ -1687,8 +1760,9 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
         nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
         NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
 
-        if (aCompile) {
-          rv = manager->CompileScriptEventListener(script_cx, receiver, atom);
+        if (compile) {
+          rv = manager->CompileScriptEventListener(script_cx, receiver, atom,
+                                                   did_compile);
         } else {
           rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
         }
@@ -1704,15 +1778,25 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsEventRecieverSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
-                               JSContext *cx, JSObject *obj, jsval id,
-                               jsval *vp, PRBool *_retval)
+nsEventRecieverSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                              JSObject *obj, jsval id, PRUint32 flags,
+                              JSObject **objp, PRBool *_retval)
 {
-  if (JSVAL_IS_STRING(id)) {
-    return RegisterCompileHandler(wrapper, cx, obj, id, vp, PR_TRUE);
+  if (!JSVAL_IS_STRING(id)) {
+    return NS_OK;
   }
 
-  return NS_OK;
+  PRBool did_compile = PR_FALSE;
+
+  nsresult rv = RegisterCompileHandler(wrapper, cx, obj, id, PR_TRUE,
+                                       &did_compile);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (did_compile) {
+    *objp = obj;
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -1721,7 +1805,9 @@ nsEventRecieverSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                jsval *vp, PRBool *_retval)
 {
   if (::JS_TypeOfValue(cx, *vp) == JSTYPE_FUNCTION || JSVAL_IS_STRING(id)) {
-    return RegisterCompileHandler(wrapper, cx, obj, id, vp, PR_FALSE);
+    PRBool did_compile; // Ignored here.
+
+    return RegisterCompileHandler(wrapper, cx, obj, id, PR_FALSE, &did_compile);
   }
 
   return NS_OK;
@@ -1914,6 +2000,39 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 }
 
 
+// NamedNodeMap helper
+
+nsresult
+nsNamedNodeMapSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                            nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMNamedNodeMap> map(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(map, NS_ERROR_UNEXPECTED);
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv = map->Item(aIndex, &node);
+
+  *aResult = node;
+
+  return rv;
+}
+
+nsresult
+nsNamedNodeMapSH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
+                               nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMNamedNodeMap> map(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(map, NS_ERROR_UNEXPECTED);
+
+  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv =  map->GetNamedItem(aName, &node);
+
+  *aResult = node;
+
+  return rv;
+}
+
+
 // HTMLCollection helper
 
 nsresult
@@ -1932,8 +2051,7 @@ nsHTMLCollectionSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
 }
 
 nsresult
-nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative,
-                                 nsAReadableString& aName,
+nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
                                  nsISupports **aResult)
 {
   nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(aNative));
@@ -1982,7 +2100,7 @@ nsDocumentSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-  return NS_OK;
+  return nsNodeSH::NewResolve(wrapper, cx, obj, id, flags, objp, _retval);
 }
 
 NS_IMETHODIMP
@@ -2010,7 +2128,7 @@ nsDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-  return nsNodeSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -2140,7 +2258,7 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     }
   }
 
-  return nsElementSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  return NS_OK;
 }
 
 

@@ -154,12 +154,12 @@ protected:
 
   nsresult RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
                                   JSContext *cx, JSObject *obj, jsval id,
-                                  jsval *vp, PRBool aCompile);
+                                  PRBool compile, PRBool *did_compile);
 
 public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
+  NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, PRUint32 flags,
+                        JSObject **objp, PRBool *_retval);
   NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
@@ -186,7 +186,9 @@ protected:
 
   static nsresult GlobalResolve(nsISupports *aNative, JSContext *cx,
                                 JSObject *obj, JSString *str, PRUint32 flags,
-                                JSObject **objp, PRBool *_retval);
+                                PRBool *did_resolve);
+  static nsresult DefineInterfaceProperty(JSContext *cx, JSObject *obj,
+                                          JSString *str);
 
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
@@ -305,6 +307,36 @@ protected:
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+};
+
+
+// NamedNodeMap helper
+
+class nsNamedNodeMapSH : public nsNamedArraySH
+{
+protected:
+  nsNamedNodeMapSH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  {
+  }
+
+  virtual ~nsNamedNodeMapSH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
+
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsISupports *aNative, nsAReadableString& aName,
+                                nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsNamedNodeMapSH(aID);
+  }
 };
 
 

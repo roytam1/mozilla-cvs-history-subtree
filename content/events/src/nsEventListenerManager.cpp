@@ -807,7 +807,7 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
 
   NS_ENSURE_SUCCESS(GetIdentifiersForType(aName, &arrayType, &flags),
                     NS_ERROR_FAILURE);
-  
+
   ls = FindJSEventListener(arrayType);
 
   if (nsnull == ls) {
@@ -889,7 +889,8 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
       if (handlerOwner) {
         // Always let the handler owner compile the event handler, as
         // it may want to use a special context or scope object.
-        rv = handlerOwner->CompileEventHandler(aContext, scriptObject, aName, aBody, &handler);
+        rv = handlerOwner->CompileEventHandler(aContext, scriptObject, aName,
+                                               aBody, &handler);
       }
       else {
         rv = aContext->CompileEventHandler(scriptObject, aName, aBody,
@@ -953,28 +954,38 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 nsresult
 nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext, 
                                                    nsISupports *aObject, 
-                                                   nsIAtom *aName)
+                                                   nsIAtom *aName,
+                                                   PRBool *aDidCompile)
 {
-  nsresult result = NS_OK;
+  nsresult rv = NS_OK;
   nsListenerStruct *ls;
   PRInt32 subType;
   EventArrayType arrayType;
 
-  result = GetIdentifiersForType(aName, &arrayType, &subType);
-  if (NS_SUCCEEDED(result)) {
-    ls = FindJSEventListener(arrayType);
-    if (!ls) {
-      //nothing to compile
-      return NS_OK;
-    }
+  *aDidCompile = PR_FALSE;
 
-    if (ls->mHandlerIsString & subType) {
-      result = CompileEventHandlerInternal(aContext, aObject, aName, ls,
-                                           subType);
-    }
+  rv = GetIdentifiersForType(aName, &arrayType, &subType);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  ls = FindJSEventListener(arrayType);
+
+  if (!ls) {
+    //nothing to compile
+    return NS_OK;
   }
 
-  return result;
+  if (ls->mHandlerIsString & subType) {
+    rv = CompileEventHandlerInternal(aContext, aObject, aName, ls, subType);
+  }
+
+  // Set *aDidCompile to true even if we didn't really compile
+  // anything right now, if we get here it means that this event
+  // handler has been compiled at some point, that's good enough for
+  // us.
+
+  *aDidCompile = PR_TRUE;
+
+  return rv;
 }
 
 nsresult
@@ -1028,15 +1039,32 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
           // Always let the handler owner compile the event
           // handler, as it may want to use a special
           // context or scope object.
+
+          // XXX: Why doesn't this end up calling nsNodeSH::SetProperty()???
           result = handlerOwner->CompileEventHandler(aContext, jsobj, aName, handlerBody, &handler);
         }
         else {
+          // Why doesn't this end up calling nsNodeSH::SetProperty()???
           result = aContext->CompileEventHandler(jsobj, aName, handlerBody,
                                                  (handlerOwner != nsnull),
                                                  &handler);
         }
-        if (NS_SUCCEEDED(result))
+        if (NS_SUCCEEDED(result)) {
           aListenerStruct->mHandlerIsString &= ~aSubType;
+
+          // Make sure the wrapper (holder) doesn't get released.
+
+          // XXX: This shouldn't be needed if the above code would end
+          // up calling nsNodeSH::SetProperty()!!!
+
+          nsCOMPtr<nsIDocument> doc;
+
+          content->GetDocument(*getter_AddRefs(doc));
+
+          if (doc) {
+            doc->AddReference(content, holder);
+          }
+        }
       }
     }
   }

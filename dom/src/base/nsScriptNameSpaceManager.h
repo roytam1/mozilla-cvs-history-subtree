@@ -41,6 +41,7 @@
 
 typedef struct {
   enum nametype {
+    eTypeInterface,
     eTypeProperty,
     eTypeConstructor,
     eTypeStaticNameSet,
@@ -71,6 +72,7 @@ protected:
   nsresult FillHash(nsICategoryManager *aCategoryManager,
                     const char *aCategory,
                     nsGlobalNameStruct::nametype aType);
+  nsresult FillHashWithDOMInterfaces();
 
   nsHashtable mGlobalNames;
 };
