@@ -289,7 +289,6 @@ BASIC_LIBS_2	= \
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libns_mime.a \
 		  $(NULL)
 endif
@@ -304,7 +303,6 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libmozmsg.a \
 		  $(DIST)/lib/libmsg.a \
 		  $(DIST)/lib/libmime.a \
-		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libjulian.a \
 		  $(DIST)/lib/libnscnv30.a \
 		  $(DIST)/lib/libnsuni30.a \
