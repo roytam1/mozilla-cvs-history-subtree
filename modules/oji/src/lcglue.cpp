@@ -21,7 +21,8 @@
 #include "jsjava.h"
 #include "libmocha.h"
 #include "libevent.h"
-#include "jvmmgr.h"
+#include "nsJVMManager.h"
+#include "nsPluginInstancePeer.h"
 #include "npglue.h"
 
 static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
@@ -68,7 +69,7 @@ map_jsj_thread_to_js_context_impl(JSJavaThreadState *jsj_env, JNIEnv *env, char 
 
     *errp = NULL;
 #if 0    
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = LM_GetMochaEnabled();
@@ -136,7 +137,7 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 	}
 
 	JSJavaVM* js_jvm = NULL;
-	nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+	nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
 	if (pJVMMgr != NULL) {
 		js_jvm = pJVMMgr->GetJSJavaVM();
 		pJVMMgr->Release();
@@ -179,7 +180,7 @@ map_java_object_to_js_object_impl(JNIEnv *env, void *pNSIPluginInstanceIn, char 
         return 0;
     }
 
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = LM_GetMochaEnabled();
@@ -250,7 +251,7 @@ get_java_vm_impl(char **errp)
     *errp = NULL;
     JavaVM *pJavaVM = NULL;
     
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         if (pJVMPI != NULL) {
@@ -276,7 +277,7 @@ get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext)
     nsresult       err    = NS_OK;
     void          *pNSPrincipalArray = NULL;
 #if 0 // TODO: =-= sudu: fix it.
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
       nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
       if (pJVMPI != NULL) {
@@ -335,7 +336,7 @@ get_java_wrapper_impl(JNIEnv *pJNIEnv, jint jsobject)
 {
     nsresult       err    = NS_OK;
     jobject  pJSObjectWrapper = NULL;
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
       nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
       if (pJVMPI != NULL) {
@@ -444,7 +445,7 @@ PR_END_EXTERN_C
 /*
  * Callbacks for client-specific jsjava glue
  */
-JSJCallbacks jsj_callbacks = {
+static JSJCallbacks jsj_callbacks = {
     map_jsj_thread_to_js_context_impl,
     map_js_context_to_jsj_thread_impl,
     map_java_object_to_js_object_impl,
@@ -459,5 +460,12 @@ JSJCallbacks jsj_callbacks = {
     detach_current_thread_impl,
     get_java_vm_impl
 };
+
+extern "C" void
+jvm_InitLCGlue(void)
+{
+    PR_NewThreadPrivateIndex(&tlsIndex_g, NULL);
+    JSJ_Init(&jsj_callbacks);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
