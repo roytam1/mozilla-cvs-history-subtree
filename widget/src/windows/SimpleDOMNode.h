@@ -44,7 +44,7 @@ class SimpleDOMNode : public ISimpleDOMNode
 {
   public: // construction, destruction
     SimpleDOMNode(nsIAccessible *, HWND);
-    SimpleDOMNode(nsIDOMNode *, HWND);
+    SimpleDOMNode(nsIAccessible *, nsIDOMNode *, HWND);
     virtual ~SimpleDOMNode();
 
   public: // IUnknown methods - see iunknown.h for documentation

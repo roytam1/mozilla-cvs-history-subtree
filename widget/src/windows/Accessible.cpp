@@ -59,7 +59,7 @@ EXTERN_C GUID CDECL CLSID_Accessible =
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd): SimpleDOMNode(aAcc, aWnd)
+Accessible::Accessible(nsIAccessible* aAcc, nsIDOMNode* aNode, HWND aWnd): SimpleDOMNode(aAcc, aNode, aWnd)
 {
   mAccessible = aAcc;  // The nsIAccessible we're proxying from
 
@@ -75,6 +75,7 @@ Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd): SimpleDOMNode(aAcc, aWnd
   printf("Accessibles=%d\n", ++gAccessibles);
 #endif
 }
+
 
 //-----------------------------------------------------
 // destruction
@@ -204,7 +205,7 @@ STDMETHODIMP Accessible::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *ppdispPa
   mAccessible->GetAccParent(getter_AddRefs(parent));
 
   if (parent) {
-    IAccessible* a = new Accessible(parent, mWnd);
+    IAccessible* a = new Accessible(parent, nsnull, mWnd);
     a->AddRef();
     *ppdispParent = a;
     return S_OK;
@@ -255,7 +256,7 @@ STDMETHODIMP Accessible::get_accChild(
     }
       
     // create a new one.
-    IAccessible* ia = new Accessible(a, mWnd);
+    IAccessible* ia = new Accessible(a, nsnull, mWnd);
     ia->AddRef();
     *ppdispChild = ia;
     return S_OK;
@@ -405,7 +406,7 @@ STDMETHODIMP Accessible::get_accFocus(
   nsCOMPtr<nsIAccessible> focusedAccessible;
   if (NS_SUCCEEDED(mAccessible->GetAccFocused(getter_AddRefs(focusedAccessible)))) {
     pvarChild->vt = VT_DISPATCH;
-    pvarChild->pdispVal = new Accessible(focusedAccessible, mWnd);
+    pvarChild->pdispVal = new Accessible(focusedAccessible, nsnull, mWnd);
     pvarChild->pdispVal->AddRef();
     return S_OK;
   }
@@ -528,7 +529,7 @@ STDMETHODIMP Accessible::accNavigate(
   }
 
   if (acc) {
-     IAccessible* a = new Accessible(acc,mWnd);
+     IAccessible* a = new Accessible(acc, nsnull, mWnd);
      a->AddRef();
      pvarEndUpAt->vt = VT_DISPATCH;
      pvarEndUpAt->pdispVal = a;
@@ -563,7 +564,7 @@ STDMETHODIMP Accessible::accHitTest(
       pvarChild->lVal = CHILDID_SELF;
     } else { // its not create an Accessible for it.
       pvarChild->vt = VT_DISPATCH;
-      pvarChild->pdispVal = new Accessible(a, mWnd);
+      pvarChild->pdispVal = new Accessible(a, nsnull, mWnd);
       pvarChild->pdispVal->AddRef();
     }
   } else {
@@ -704,7 +705,7 @@ DocAccessible::Release(void)
 }
 
 
-DocAccessible::DocAccessible(nsIAccessible* aAcc, HWND aWnd):Accessible(aAcc,aWnd)
+DocAccessible::DocAccessible(nsIAccessible* aAcc, nsIDOMNode *aNode, HWND aWnd):Accessible(aAcc,aNode,aWnd)
 {
 }
 
@@ -821,8 +822,9 @@ RootAccessible::Release(void)
   return DocAccessible::Release();
 }
 
-RootAccessible::RootAccessible(nsIAccessible* aAcc, HWND aWnd):DocAccessible(aAcc,aWnd)
+RootAccessible::RootAccessible(nsIAccessible* aAcc, HWND aWnd):DocAccessible(aAcc,nsnull,aWnd)
 {
+
   mListCount = 0;
   mNextId = -1;
   mNextPos = 0;

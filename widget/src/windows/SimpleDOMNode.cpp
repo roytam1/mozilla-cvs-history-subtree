@@ -70,18 +70,12 @@ static gSimpleDOMNodes = 0;
 // construction 
 //-----------------------------------------------------
 
-SimpleDOMNode::SimpleDOMNode(nsIAccessible* aNSAcc, HWND aWnd): mWnd(aWnd), m_cRef(0)
+SimpleDOMNode::SimpleDOMNode(nsIAccessible* aNSAcc, nsIDOMNode *aNode, HWND aWnd): mWnd(aWnd), m_cRef(0)
 {
-  aNSAcc->AccGetDOMNode(getter_AddRefs(mDOMNode));
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDOMNode));
-
-#ifdef DEBUG_LEAKS
-  printf("SimpleDOMNodes=%d\n", ++gSimpleDOMNodes);
-#endif
-}
-
-SimpleDOMNode::SimpleDOMNode(nsIDOMNode *aNode, HWND aWnd): mDOMNode(aNode), mWnd(aWnd), m_cRef(0)
-{
+  mDOMNode = aNode;
+  if (!aNode && aNSAcc)
+    aNSAcc->AccGetDOMNode(getter_AddRefs(mDOMNode));
+ 
 #ifdef DEBUG_LEAKS
   printf("SimpleDOMNodes=%d\n", ++gSimpleDOMNodes);
 #endif
@@ -337,11 +331,11 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
   if (nsAcc) {
     nsCOMPtr<nsIAccessibleDocument> nsAccDoc(do_QueryInterface(nsAcc));
     if (nsAccDoc) {
-      DocAccessible *accDoc = new DocAccessible(nsAcc, mWnd);
+      DocAccessible *accDoc = new DocAccessible(nsAcc, node, mWnd);
       accDoc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
     }
     else {
-      Accessible *acc = new Accessible(nsAcc, mWnd);
+      Accessible *acc = new Accessible(nsAcc, node, mWnd);
       acc->QueryInterface(IID_ISimpleDOMNode, (void**)&newNode);
     }
   }
@@ -357,7 +351,7 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
     }
   }
   else 
-    newNode = new SimpleDOMNode(node, mWnd);
+    newNode = new SimpleDOMNode(nsnull, node, mWnd);
 
   if (newNode)
     newNode->AddRef();

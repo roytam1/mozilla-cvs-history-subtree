@@ -48,7 +48,7 @@ typedef LRESULT (STDAPICALLTYPE *LPFNNOTIFYWINEVENT)(DWORD event,HWND hwnd,LONG 
 class Accessible : public SimpleDOMNode, public IAccessible
 {
   public: // construction, destruction
-    Accessible(nsIAccessible*, HWND aWin = 0);
+    Accessible(nsIAccessible*, nsIDOMNode*, HWND aWin = 0);
     virtual ~Accessible();
 
   public: // IUnknown methods - see iunknown.h for documentation
@@ -191,7 +191,7 @@ public:
 class DocAccessible: public Accessible, public ISimpleDOMDocument
 {
 public:
-    DocAccessible(nsIAccessible*, HWND aWin = 0);
+    DocAccessible(nsIAccessible*, nsIDOMNode *, HWND aWin = 0);
     virtual ~DocAccessible();
 
     STDMETHODIMP_(ULONG) AddRef        ();
@@ -217,6 +217,7 @@ public:
         /* [in] */ short nameSpaceID,
         /* [out] */ BSTR __RPC_FAR *nameSpaceURI);
 };
+
 
 #define MAX_LIST_SIZE 100
 
