@@ -378,6 +378,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
     if (aIID.Equals(kILiveConnectPluginInstancePeerIID) ||
         aIID.Equals(kIPluginInstancePeer2IID) ||
         aIID.Equals(kIPluginInstancePeerIID) ||
+        aIID.Equals(kPluginInstancePeerCID) ||
         aIID.Equals(kISupportsIID)) {
         *aInstancePtr = (void*)(nsISupports*)(nsIPluginInstancePeer*)this; 
         AddRef(); 
