@@ -1,24 +1,40 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
+ * The Initial Developer of the Original Code is 
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
+ * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s): 
- */
+ * Contributor(s):
+ *
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the NPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the NPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 #include "nscore.h"
 #include "nsICSSDeclaration.h"
 #include "nsString.h"
@@ -993,7 +1009,7 @@ nsCSSXUL::nsCSSXUL(void)
 nsCSSXUL::nsCSSXUL(const nsCSSXUL& aCopy)
   : mBoxAlign(aCopy.mBoxAlign), mBoxDirection(aCopy.mBoxDirection),
     mBoxFlex(aCopy.mBoxFlex), mBoxOrient(aCopy.mBoxOrient),
-    mBoxPack(aCopy.mBoxPack)
+    mBoxPack(aCopy.mBoxPack), mBoxOrdinal(aCopy.mBoxOrdinal)
 {
   MOZ_COUNT_CTOR(nsCSSXUL);
 }
@@ -1019,6 +1035,7 @@ void nsCSSXUL::List(FILE* out, PRInt32 aIndent) const
   mBoxFlex.AppendToString(buffer, eCSSProperty_box_flex);
   mBoxOrient.AppendToString(buffer, eCSSProperty_box_orient);
   mBoxPack.AppendToString(buffer, eCSSProperty_box_pack);
+  mBoxOrdinal.AppendToString(buffer, eCSSProperty_box_ordinal_group);
   fputs(buffer, out);
 }
 
@@ -1834,13 +1851,15 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_box_flex:
     case eCSSProperty_box_orient:
     case eCSSProperty_box_pack:
+    case eCSSProperty_box_ordinal_group:
       CSS_ENSURE(XUL) {
         switch (aProperty) {
-          case eCSSProperty_box_align:       mXUL->mBoxAlign     = aValue;   break;
-          case eCSSProperty_box_direction:   mXUL->mBoxDirection = aValue;   break;
-          case eCSSProperty_box_flex:        mXUL->mBoxFlex      = aValue;   break;
-          case eCSSProperty_box_orient:      mXUL->mBoxOrient    = aValue;   break;
-          case eCSSProperty_box_pack:        mXUL->mBoxPack      = aValue;   break;
+          case eCSSProperty_box_align:         mXUL->mBoxAlign     = aValue;   break;
+          case eCSSProperty_box_direction:     mXUL->mBoxDirection = aValue;   break;
+          case eCSSProperty_box_flex:          mXUL->mBoxFlex      = aValue;   break;
+          case eCSSProperty_box_orient:        mXUL->mBoxOrient    = aValue;   break;
+          case eCSSProperty_box_pack:          mXUL->mBoxPack      = aValue;   break;
+          case eCSSProperty_box_ordinal_group: mXUL->mBoxOrdinal   = aValue;   break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -2628,14 +2647,16 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_box_flex:
       case eCSSProperty_box_orient:
       case eCSSProperty_box_pack:
+      case eCSSProperty_box_ordinal_group:
         if (nsnull != mXUL) {
           CSS_ENSURE_IMPORTANT(XUL) {
             switch (aProperty) {
-              CSS_CASE_IMPORTANT(eCSSProperty_box_align,     mXUL->mBoxAlign);
-              CSS_CASE_IMPORTANT(eCSSProperty_box_direction, mXUL->mBoxDirection);
-              CSS_CASE_IMPORTANT(eCSSProperty_box_flex,      mXUL->mBoxFlex);
-              CSS_CASE_IMPORTANT(eCSSProperty_box_orient,    mXUL->mBoxOrient);
-              CSS_CASE_IMPORTANT(eCSSProperty_box_pack,      mXUL->mBoxPack);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_align,         mXUL->mBoxAlign);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_direction,     mXUL->mBoxDirection);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_flex,          mXUL->mBoxFlex);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_orient,        mXUL->mBoxOrient);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_pack,          mXUL->mBoxPack);
+              CSS_CASE_IMPORTANT(eCSSProperty_box_ordinal_group, mXUL->mBoxOrdinal);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -3358,13 +3379,15 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_box_flex:
     case eCSSProperty_box_orient:
     case eCSSProperty_box_pack:
+    case eCSSProperty_box_ordinal_group:
       CSS_CHECK(XUL) {
         switch(aProperty) {
-        case eCSSProperty_box_align:       mXUL->mBoxAlign.Reset();         break;
-        case eCSSProperty_box_direction:   mXUL->mBoxDirection.Reset();     break;
-        case eCSSProperty_box_flex:        mXUL->mBoxFlex.Reset();          break;
-        case eCSSProperty_box_orient:      mXUL->mBoxOrient.Reset();        break;
-        case eCSSProperty_box_pack:        mXUL->mBoxPack.Reset();          break;
+        case eCSSProperty_box_align:          mXUL->mBoxAlign.Reset();         break;
+        case eCSSProperty_box_direction:      mXUL->mBoxDirection.Reset();     break;
+        case eCSSProperty_box_flex:           mXUL->mBoxFlex.Reset();          break;
+        case eCSSProperty_box_orient:         mXUL->mBoxOrient.Reset();        break;
+        case eCSSProperty_box_pack:           mXUL->mBoxPack.Reset();          break;
+        case eCSSProperty_box_ordinal_group:  mXUL->mBoxOrdinal.Reset();       break;
         CSS_BOGUS_DEFAULT; // Make compiler happy
         }
       }
@@ -4138,13 +4161,15 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_box_flex:
     case eCSSProperty_box_orient:
     case eCSSProperty_box_pack:
+    case eCSSProperty_box_ordinal_group:
       if (nsnull != mXUL) {
         switch (aProperty) {
-          case eCSSProperty_box_align:     aValue = mXUL->mBoxAlign;      break;
-          case eCSSProperty_box_direction: aValue = mXUL->mBoxDirection;  break;
-          case eCSSProperty_box_flex:      aValue = mXUL->mBoxFlex;       break;
-          case eCSSProperty_box_orient:    aValue = mXUL->mBoxOrient;     break;
-          case eCSSProperty_box_pack:      aValue = mXUL->mBoxPack;       break;
+          case eCSSProperty_box_align:          aValue = mXUL->mBoxAlign;      break;
+          case eCSSProperty_box_direction:      aValue = mXUL->mBoxDirection;  break;
+          case eCSSProperty_box_flex:           aValue = mXUL->mBoxFlex;       break;
+          case eCSSProperty_box_orient:         aValue = mXUL->mBoxOrient;     break;
+          case eCSSProperty_box_pack:           aValue = mXUL->mBoxPack;       break;
+          case eCSSProperty_box_ordinal_group:  aValue = mXUL->mBoxOrdinal;    break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
