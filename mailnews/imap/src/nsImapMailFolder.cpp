@@ -6934,6 +6934,13 @@ NS_IMETHODIMP nsImapMailFolder::IsCommandEnabled(const char *command, PRBool *re
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsImapMailFolder::SetFilterList(nsIMsgFilterList *aMsgFilterList)
+{
+  m_filterList = aMsgFilterList;
+  return nsMsgFolder::SetFilterList(aMsgFilterList);
+}
+
 NS_IMETHODIMP 
 nsImapMailFolder::GetCanFileMessages(PRBool *aCanFileMessages) 
 {

@@ -105,6 +105,7 @@ public:
   NS_IMETHOD GetCanSubscribe(PRBool *aCanSubscribe);
   NS_IMETHOD GetCanFileMessages(PRBool *aCanFileMessages);
   NS_IMETHOD GetFilterList(nsIMsgWindow *aMsgWindow, nsIMsgFilterList **aFilterList);
+  NS_IMETHOD SetFilterList(nsIMsgFilterList *aFilterList);
   NS_IMETHOD GetCanCreateSubfolders(PRBool *aCanCreateSubfolders);
   NS_IMETHOD GetCanRename(PRBool *aCanRename);
   NS_IMETHOD GetCanCompact(PRBool *aCanCompact);
