@@ -36,7 +36,6 @@
 #include <nsIWindowWatcher.h>
 #include <nsISupportsPrimitives.h>
 #include <nsIInterfaceRequestor.h>
-#include <nsIInterfaceRequestorUtils.h>
 #include <nsIDocShellTreeItem.h>
 #include <nsIDocShellTreeOwner.h>
 #include <nsIURILoader.h>
