@@ -1148,8 +1148,11 @@ NS_IMETHODIMP nsHTMLEditor::PrepareHTMLTransferable(nsITransferable **aTransfera
       }
       (*aTransferable)->AddDataFlavor(kHTMLMime);
       (*aTransferable)->AddDataFlavor(kFileMime);
+#ifdef XP_WIN32
+      // we only support copy and paste of clipboard images on Windows
       (*aTransferable)->AddDataFlavor(kJPEGImageMime);
       (*aTransferable)->AddDataFlavor(kNativeImageMime);
+#endif
 
     }
     (*aTransferable)->AddDataFlavor(kUnicodeMime);
