@@ -139,10 +139,12 @@ nsContextMenu.prototype = {
         this.showItem( "context-viewsource", !( this.inDirList || this.onImage) );
         if (!this.inDirList && !this.onImage) {
           var viewSourceElt = document.getElementById("context-viewsource");
-          if (isPostData)
-            viewSourceElt.setAttribute("disabled", "true");
-          else
-            viewSourceElt.removeAttribute("disabled");
+          if (viewSourceElt) {
+            if (isPostData)
+              viewSourceElt.setAttribute("disabled", "true");
+            else
+              viewSourceElt.removeAttribute("disabled");
+          }
         }
         // View frame source depends on whether we're in a frame.
         this.showItem( "context-viewframesource", this.inFrame );
