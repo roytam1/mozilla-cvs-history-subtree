@@ -182,6 +182,10 @@ static NS_DEFINE_CID(kRangeCID, NS_RANGE_CID);
 static PRLogModuleInfo *nsObjectFrameLM = PR_NewLogModule("nsObjectFrame");
 #endif /* PR_LOGGING */
 
+ // True if the default plugin is disabled. Initialize to non-boolean
+ // value so that we know if we've checked the pref or not.
+static PRBool sDefaultPluginDisabled = 0xffffffff;
+
 // special class for handeling DOM context menu events
 // because for some reason it starves other mouse events if implemented on the same class
 class nsPluginDOMContextMenuListener : public nsIDOMContextMenuListener,
@@ -655,6 +659,15 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
 {
   mIsBrokenPlugin = PR_FALSE;
 
+  if (sDefaultPluginDisabled == 0xffffffff) {
+    nsCOMPtr<nsIPrefBranch> prefBranch =
+      do_GetService(NS_PREFSERVICE_CONTRACTID);
+    if (NS_FAILED(prefBranch->GetBoolPref("plugin.default_plugin_disabled",
+                                          &sDefaultPluginDisabled)) {
+      sDefaultPluginDisabled = PR_FALSE;
+    }
+  }
+
   nsresult rv = nsObjectFrameSuper::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
 
   if(rv != NS_OK)
@@ -730,6 +743,11 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
     // plugin" since this object tag may have children that we'll load
     // correctly.
     return rv;
+  }
+
+  if (!sDefaultPluginDisabled) {
+    // Nothing more to do here if the default plugin is enabled.
+    return NS_OK;
   }
 
   nsCAutoString type;
@@ -3179,6 +3197,11 @@ nsObjectFrame::PluginNotAvailable(const char *aMimeType)
     if (embed) {
       embed->SetType(mimeType);
     }
+  }
+
+  if (!sDefaultPluginDisabled) {
+    // The default plugin is enabled, don't fire events etc.
+    return;
   }
 
   // For non-image and non-document mime types, fire the plugin not
