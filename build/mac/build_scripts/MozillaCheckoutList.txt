@@ -13,7 +13,7 @@ mozilla/security/psm,   XPCDOM_20010329_BRANCH
 mozilla/security/manager, XPCDOM_20010329_BRANCH
 mozilla/accessible,     XPCDOM_20010329_BRANCH
 DirectorySDKSourceC,    XPCDOM_20010329_BRANCH
-mozilla/lib/mac/Instrumentation XPCDOM_20010329_BRANCH
-mozilla/gfx2            XPCDOM_20010329_BRANCH
-mozilla/modules/libpr0n XPCDOM_20010329_BRANCH
-SeaMonkeyAll            XPCDOM_20010329_BRANCH
+mozilla/lib/mac/Instrumentation
+mozilla/gfx2,           XPCDOM_20010329_BRANCH
+mozilla/modules/libpr0n, XPCDOM_20010329_BRANCH
+SeaMonkeyAll,           XPCDOM_20010329_BRANCH
