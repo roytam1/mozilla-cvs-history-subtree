@@ -132,31 +132,46 @@ extern nsresult NS_NewCaret(nsICaret** aInstancePtrResult);
 
 // handy stack-based class for temporarily disabling the caret
 
-class StCaretHider
+class StCaretHiderInternal
 {
 public:
-               StCaretHider(nsICaret* aSelCon)
-               : mWasVisible(PR_FALSE), mCaret(aSelCon)
-               {
-                 if (mCaret)
-                 {
-                   mCaret->GetCaretVisible(&mWasVisible);
-                   if (mWasVisible)
-                     mCaret->SetCaretVisible(PR_FALSE);
-                 }
-               }
-               
-               ~StCaretHider()
-               {
-                 if (mCaret && mWasVisible)
-                   mCaret->SetCaretVisible(PR_TRUE);
-                 // nsCOMPtr releases mPresShell
-               }
+  StCaretHiderInternal(){}
+  ~StCaretHiderInternal(){}
+  void Hide(nsICaret* aCaret)
+  {
+    mWasVisible = PR_FALSE;
+    mCaret = aCaret;
+    if (mCaret)
+    {
+      mCaret->GetCaretVisible(&mWasVisible);
+      if (mWasVisible)
+        mCaret->SetCaretVisible(PR_FALSE);
+    }
+  }
+
+  void Show()
+  {
+    if (mCaret && mWasVisible)
+      mCaret->SetCaretVisible(PR_TRUE);
+  }
 
 protected:
 
-    PRBool                  mWasVisible;
-    nsCOMPtr<nsICaret>  mCaret;
+  PRBool              mWasVisible;
+  nsCOMPtr<nsICaret>  mCaret;
+};
+
+class StCaretHider: public StCaretHiderInternal
+{
+public:
+  StCaretHider(nsICaret* aCaret)
+  {
+    Hide(aCaret);
+  }
+  ~StCaretHider()
+  {
+    Show();
+  }
 };
 
 
