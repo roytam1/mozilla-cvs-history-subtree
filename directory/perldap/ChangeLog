@@ -1,3 +1,7 @@
+1999-01-11  Leif Hedstrom  <leif@netscape.com>
+
+	* API.xs: Added IF statements around all ldap_value_free() calls.
+
 1999-01-05  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (getRes): Ooops, didn't return the appropriate
