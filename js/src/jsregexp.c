@@ -778,7 +778,7 @@ static RENode *
 ParseAtom(CompilerState *state)
 {
     const jschar *cp, *ocp;
-    uintN num, tmp, len;
+    uintN num, len;
     RENode *ren, *ren2;
     jschar c;
     REOp op;
@@ -854,6 +854,7 @@ ParseAtom(CompilerState *state)
 	break;
 
       case '[':
+        ++cp;
 	ren = NewRENode(state, REOP_CCLASS, (void *)cp);
 	if (!ren)
 	    return NULL;
@@ -910,21 +911,7 @@ ParseAtom(CompilerState *state)
 	  case 'S':
 	    ren = NewRENode(state, REOP_NONSPACE, NULL);
 	    break;
-
 	  case '0':
-	  do_octal:
-	    num = 0;
-	    while ('0' <= (c = *++cp) && c <= '7') {
-		tmp = 8 * num + (uintN)JS7_UNDEC(c);
-		if (tmp > 0377)
-		    break;
-		num = tmp;
-	    }
-	    cp--;
-	    ren = NewRENode(state, REOP_FLAT1, NULL);
-	    c = (jschar)num;
-	    break;
-
 	  case '1':
 	  case '2':
 	  case '3':
@@ -934,33 +921,58 @@ ParseAtom(CompilerState *state)
 	  case '7':
 	  case '8':
 	  case '9':
-	    num = (uintN)JS7_UNDEC(c);
-	    tmp = 1;
-            for (c = *++cp; JS7_ISDEC(c); c = *++cp, tmp++)
-		num = 10 * num - (uintN)JS7_UNDEC(c);
-            /* n in [8-9] and > count of parenetheses, then revert to
-            '8' or '9', ignoring the '\' */
-            if (((num == 8) || (num == 9)) && (num > state->parenCount)) {
-	        ocp = --cp; /* skip beyond the '\' */
-                goto do_flat;
+            if (cp < (state->cpend - 1) && cp[1] >= '0' && cp[1] <= '9') {
+                if (c >= '0' && c <= '3') {
+                    if (c <= '7') { /* ZeroToThree OctalDigit */
+                        if (cp < (state->cpend - 2) 
+                                    && cp[2] >= '0' && cp[2] <= '9') {
+                    	    ren = NewRENode(state, REOP_FLAT1, NULL);
+                            c = 64 * (uintN)JS7_UNDEC(c) 
+                                        + 8 * (uintN)JS7_UNDEC(*++cp) 
+                                            + (uintN)JS7_UNDEC(*++cp);
+                        }
+                        else /*ZeroToThree OctalDigit lookahead != OctalDigit */
+                            goto twodigitescape;
+                    }
+                    else /* ZeroToThree EightOrNine */
+                        goto twodigitescape;
+                }
+                else { /* FourToNine DecimalDigit */
+twodigitescape:
+                    num = 10 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(cp[1]);
+                    if (num >= 10 && num <= state->parenCount) {
+                        cp++;
+                        goto backref;
+                    }
+                    if (c > '7' || cp[1] > '7') {
+	                JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				             JSMSG_INVALID_BACKREF);
+	                return NULL;
+                    }
+                    ren = NewRENode(state, REOP_FLAT1, NULL);
+                    c = 8 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(*++cp);
+                }
             }
-            /* more than 1 digit, or a number greater than
-                the count of parentheses => it's an octal */
-            if ((tmp > 1) || (num > state->parenCount)) {
-		cp = ocp;
-		goto do_octal;
-	    }
-	    cp--;
-	    ren = NewRENode(state, REOP_BACKREF, NULL);
-	    if (!ren)
-		return NULL;
-	    ren->u.num = num - 1;	/* \1 is numbered 0, etc. */
+            else { /* DecimalDigit lookahead != DecimalDigit */
+                if (c == '0') {
+            	    ren = NewRENode(state, REOP_FLAT1, NULL);
+                    c = 0;
+                }
+                else {
+                    num = (uintN)JS7_UNDEC(c);
+backref:                
+	            ren = NewRENode(state, REOP_BACKREF, NULL);
+	            if (!ren)
+		        return NULL;
+	            ren->u.num = num - 1;	/* \1 is numbered 0, etc. */
+	            /* Avoid common chr- and flags-setting code after switch. */
+	            ren->flags = RENODE_NONEMPTY;
+	            goto bump_cp;
+                }
+            }
+            break;
 
-	    /* Avoid common chr- and flags-setting code after switch. */
-	    ren->flags = RENODE_NONEMPTY;
-	    goto bump_cp;
-
-	  case 'x':
+          case 'x':
 	    ocp = cp;
 	    c = *++cp;
 	    if (JS7_ISHEX(c)) {
@@ -1090,7 +1102,6 @@ js_NewRegExp(JSContext *cx, JSString *str, uintN flags)
     if (!re)
 	goto out;
     re->source = str;
-    re->length = state.progLength;
     re->lastIndex = 0;
     re->parenCount = state.parenCount;
     re->flags = flags;
@@ -1622,6 +1633,11 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
           break;
         case REOP_BACKREF:
           num = ren->u.num;
+          if (num >= state->parenCount) {
+	    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				 JSMSG_BAD_BACKREF);
+            return NULL;
+          }
           parsub = &state->parens[num];
           if ((cp + parsub->length) > cpend)
               return NULL;
@@ -2065,7 +2081,8 @@ regexp_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 	    *vp = BOOLEAN_TO_JSVAL((re->flags & JSREG_FOLD) != 0);
 	    break;
 	  case REGEXP_LAST_INDEX:
-	    *vp = INT_TO_JSVAL((jsint)re->lastIndex);
+            if (!js_NewNumberValue(cx, (jsdouble)re->lastIndex, vp))
+	        return JS_FALSE;
 	    break;
 	  case REGEXP_MULTILINE:
 	    *vp = BOOLEAN_TO_JSVAL((re->flags & JSREG_MULTILINE) != 0);
@@ -2091,7 +2108,7 @@ regexp_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     if (re && slot == REGEXP_LAST_INDEX) {
 	if (!js_ValueToNumber(cx, *vp, &d))
 	    return JS_FALSE;
-	re->lastIndex = (size_t)d;
+	re->lastIndex = (uintN)d;
     }
     JS_UNLOCK_OBJ(cx, obj);
     return JS_TRUE;
