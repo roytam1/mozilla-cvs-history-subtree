@@ -32,7 +32,7 @@ NS_NAMED_LITERAL_STRING(kSOAPEncodingPrefix,"SOAP-ENC");
 NS_NAMED_LITERAL_STRING(kXSIURI,"http://www.w3.org/1999/XMLSchema-instance");
 NS_NAMED_LITERAL_STRING(kXSDURI,"http://www.w3.org/1999/XMLSchema");
 NS_NAMED_LITERAL_STRING(kXSIPrefix,"xsi");
-NS_NAMED_LITERAL_STRING(kXSITypeAttribute,"xsi");
+NS_NAMED_LITERAL_STRING(kXSITypeAttribute,"type");
 NS_NAMED_LITERAL_STRING(kXSDPrefix,"xsd");
 NS_NAMED_LITERAL_STRING(kEncodingStyleAttribute,"encodingStyle");
 NS_NAMED_LITERAL_STRING(kEnvelopeTagName,"Envelope");
@@ -278,11 +278,6 @@ nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aScope,
     rc = current->GetAttributes(getter_AddRefs(attrs));
     if (NS_FAILED(rc)) return rc;
     if (attrs) {
-      rc = current->GetLocalName(value);
-      if (NS_FAILED(rc)) return rc;
-      if (value.Equals(prefix)) {
-        return current->GetNamespaceURI(aURI);
-      }
       rc = attrs->GetNamedItemNS(kXMLNamespaceNamespaceURI, prefix, getter_AddRefs(temp));
       if (NS_FAILED(rc)) return rc;
       if (temp != nsnull)
@@ -307,7 +302,7 @@ nsresult nsSOAPUtils::GetLocalName(const nsAReadableString & aQName,
 }
 
 nsresult 
-GetNamespacePrefix(nsIDOMElement* aScope,
+MakeNamespacePrefix(nsIDOMElement* aScope,
                    const nsAReadableString & aURI,
                    nsAWritableString & aPrefix)
 {
@@ -325,6 +320,7 @@ GetNamespacePrefix(nsIDOMElement* aScope,
   nsCOMPtr<nsIDOMNode> temp;
   nsAutoString tstr;
   nsresult rc;
+  PRUint32 maxns = 0;	//  Keep track of max generated NS
   for (;;) {
     rc = current->GetAttributes(getter_AddRefs(attrs));
     if (NS_FAILED(rc)) return rc;
@@ -362,6 +358,33 @@ GetNamespacePrefix(nsIDOMElement* aScope,
 	    return NS_OK;
           }
 	}
+	rc = temp->GetLocalName(tstr);
+        if (NS_FAILED(rc)) 
+	  return rc;
+	else {	//  Decode the generated namespace into a number
+          nsReadingIterator<PRUnichar> i1;
+          nsReadingIterator<PRUnichar> i2;
+	  tstr.BeginReading(i1);
+	  tstr.EndReading(i2);
+	  if (i1 == i2 || *i1 != 'n') 
+	    continue;
+	  i1++;
+	  if (i1 == i2 || *i1 != 's') 
+	    continue;
+	  i1++;
+	  PRUint32 n = 0;
+	  while (i1 != i2) {
+	    PRUnichar c = *i1;
+	    i1++;
+	    if (c < '0' || c > '9') {
+	      n = 0;
+	      break;
+	    }
+	    n = n * 10 + (c - '0');
+	  }
+	  if (n > maxns)
+            maxns = n;
+	}
       }
     }
     current->GetParentNode(getter_AddRefs(temp));
@@ -370,7 +393,28 @@ GetNamespacePrefix(nsIDOMElement* aScope,
     else
       break;
   }
-  aPrefix = nsSOAPUtils::kEmpty;
+// Create a unique prefix...
+  PRUint32 len = 3;
+  PRUint32 c = maxns + 1;
+  while (c >= 10) {
+    c = c / 10;
+    len++;
+  }
+// Set the length and write it backwards since that's the easiest way..
+  aPrefix.SetLength(len);
+  nsWritingIterator<PRUnichar> i2;
+  aPrefix.EndWriting(i2);
+  c = maxns + 1;
+  while (c > 0) {
+    PRUint32 r = c % 10;
+    c = c / 10;
+    i2--;
+    *i2 = (PRUnichar)(r + '0');
+  }
+  i2--;
+  *i2 = 's';
+  i2--;
+  *i2 = 'n';
   return NS_OK;
 }
 

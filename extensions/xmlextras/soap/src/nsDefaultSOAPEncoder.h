@@ -36,6 +36,17 @@ public:
   static nsresult RegisterEncoders(nsISOAPTypeRegistry* aRegistry);
 
 protected:
+  static nsresult MakeNamespacePrefix(nsIDOMElement* aScope,
+		                      nsAReadableString & aURI,
+				      nsAWritableString & aPrefix);
+  static nsresult MarshallValue(
+	                              const nsAReadableString & aValue, 
+		                      const nsAReadableString & aDefaultTag, 
+		                      nsISOAPParameter * aSource, 
+		                      const nsAReadableString & aEncodingStyleURI, 
+				      const nsAReadableString & aSchemaID, 
+				      nsISupports *aConfiguration,
+				      nsIDOMNode* aDestination);
 #if 0
   nsresult StartEmptyMessage(nsISOAPMessage* message);
   nsresult EncodeParameter(nsISOAPParameter* parameter,

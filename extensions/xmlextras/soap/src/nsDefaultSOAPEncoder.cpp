@@ -54,10 +54,14 @@ NS_NAMED_LITERAL_STRING(kShortElementName,"short");
 NS_NAMED_LITERAL_STRING(kByteElementName,"byte");
 NS_NAMED_LITERAL_STRING(kArrayElementName,"Array");
 
+NS_NAMED_LITERAL_STRING(kOne,"1");
+NS_NAMED_LITERAL_STRING(kZero,"0");
+
 #define DECLARE_ENCODER(name) \
 class ns##name##Encoder : \
   public nsISOAPMarshaller, \
-  public nsISOAPUnmarshaller \
+  public nsISOAPUnmarshaller, \
+  public nsDefaultSOAPEncoder \
 {\
 public:\
   ns##name##Encoder();\
@@ -126,6 +130,23 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* regist
   return NS_OK;
 }
 
+NS_IMETHODIMP nsDefaultSOAPEncoder::MakeNamespacePrefix(nsIDOMElement* aScope,
+		                      nsAReadableString & aURI,
+				      nsAWritableString & aPrefix)
+{
+  if (aURI.Equals(nsSOAPUtils::kSOAPEncodingURI))
+    aPrefix = nsSOAPUtils::kSOAPEncodingPrefix;
+  else if (aURI.Equals(nsSOAPUtils::kSOAPEnvURI))
+    aPrefix = nsSOAPUtils::kSOAPEnvPrefix;
+  else if (aURI.Equals(nsSOAPUtils::kXSIURI))
+    aPrefix = nsSOAPUtils::kXSIPrefix;
+  else if (aURI.Equals(nsSOAPUtils::kXSDURI))
+    aPrefix = nsSOAPUtils::kXSDPrefix;
+  else
+    return nsSOAPUtils::MakeNamespacePrefix(aScope, aURI, aPrefix);
+
+  return NS_OK;
+}
 //  Here is the implementation of the encoders.
 
 NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
@@ -179,7 +200,8 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage,
   if (NS_FAILED(rv)) return rv;
 
   nsAutoString docstr;
-  rv = parser->ParseFromString(kEmptySOAPDocStr.get(), "text/xml", getter_AddRefs(document));
+  rv = parser->ParseFromString(kEmptySOAPDocStr.get(), "text/xml", 
+		               getter_AddRefs(document));
   if (NS_FAILED(rv)) return rv;
 
   rv = aMessage->SetMessage(document);
@@ -199,6 +221,13 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage,
     rv = body->AppendChild(call, getter_AddRefs(ignored));
     if (NS_FAILED(rv)) return rv;
     body = call;
+    nsAutoString prefix;
+    rv = MakeNamespacePrefix(body, targetObjectURI, prefix);
+    if (NS_FAILED(rv)) return rv;
+    if (!prefix.IsEmpty()) {
+      rv = body->SetPrefix(prefix);
+      if (NS_FAILED(rv)) return rv;
+    }
   }
 
   PRUint32 count;
@@ -276,7 +305,9 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage,
       rv = current->GetAttributes(getter_AddRefs(attrs));
       if (NS_FAILED(rv)) return rv;
 // Get the encoding
-      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kEncodingStyleAttribute, getter_AddRefs(attr));
+      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, 
+		                 nsSOAPUtils::kEncodingStyleAttribute, 
+				 getter_AddRefs(attr));
       if (NS_FAILED(rv)) return rv;
       if (attr) {
 	attr->GetNodeValue(encoding);
@@ -329,6 +360,58 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage,
   return NS_OK;
 }
 
+//  Generic handling of primitive values
+
+NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallValue(
+		                          const nsAReadableString & aValue, 
+		                          const nsAReadableString & aDefaultTag, 
+		                          nsISOAPParameter * aSource, 
+		                          const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsCOMPtr<nsIDOMDocument>document;
+  nsresult rc = aDestination->GetOwnerDocument(getter_AddRefs(document));
+  if (NS_FAILED(rc)) return rc;
+  nsAutoString name;
+  rc = aSource->GetName(name);
+  if (NS_FAILED(rc)) return rc;
+  if (name.IsEmpty()) {
+    name = aDefaultTag;
+  }
+  nsCOMPtr<nsIDOMElement>element;
+  rc = document->CreateElementNS(nsSOAPUtils::kEmpty, 
+		                 name, 
+				 getter_AddRefs(element));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsIDOMNode>ignore;
+  rc = aDestination->AppendChild(element, getter_AddRefs(ignore));
+  if (NS_FAILED(rc)) return rc;
+  if (nsSOAPUtils::StartsWith(aSchemaID, nsSOAPUtils::kXMLSchemaSchemaIDPrefix)) {
+    PRUint32 l =  nsSOAPUtils::kXMLSchemaSchemaIDPrefix.Length() + 1;
+    PRUint32 i = aSchemaID.FindChar('#', l);
+    if (i >= l) {	//  If possible, convert schema id into type field
+      nsAutoString type;
+      nsAutoString temp;
+      aSchemaID.Mid(temp, i, l - i);
+      rc = MakeNamespacePrefix(element, temp, type);
+      if (NS_FAILED(rc)) return rc;
+      type.Append(nsSOAPUtils::kTypeSeparator);
+      aSchemaID.Right(temp,aSchemaID.Length() - l - 1);
+      type.Append(temp);
+      element->SetAttributeNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, type);
+    }
+  }
+  if (!aValue.IsEmpty()) {
+    nsCOMPtr<nsIDOMText> text;
+    rc = document->CreateTextNode(aValue, getter_AddRefs(text));
+    if (NS_FAILED(rc)) return rc;
+    return element->AppendChild(text, getter_AddRefs(ignore));
+  }
+  return rc;
+}
+
 //  String
 
 NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage, 
@@ -339,7 +422,225 @@ NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage,
 					  nsISupports *aConfiguration,
 					  nsIDOMNode* aDestination)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsWString> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  PRUnichar* pointer;
+  rc = object->GetData(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kStringElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  PRBool
+
+NS_IMETHODIMP nsPRBoolEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsPRBool> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  PRBool b;
+  rc = object->GetData(&b);
+  if (NS_FAILED(rc)) return rc;
+  return MarshallValue(b ? kOne : kZero, 
+		       kBooleanElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  Double
+
+NS_IMETHODIMP nsDoubleEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsDouble> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kDoubleElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  Float
+
+NS_IMETHODIMP nsFloatEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsFloat> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kFloatElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  PRInt64
+
+NS_IMETHODIMP nsPRInt64Encoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsPRInt64> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kLongElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  PRInt32
+
+NS_IMETHODIMP nsPRInt32Encoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsPRInt32> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kIntElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  PRInt16
+
+NS_IMETHODIMP nsPRInt16Encoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsPRInt16> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kShortElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
+}
+
+//  Char
+
+NS_IMETHODIMP nsCharEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsChar> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  char* pointer;
+  rc = object->ToString(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  return MarshallValue(string, 
+		       kByteElementName,
+                       aSource, 
+		       aEncodingStyleURI,
+		       aSchemaID,
+		       aConfiguration,
+		       aDestination);
 }
 
 NS_IMETHODIMP nsStringEncoder::Unmarshall(nsISOAPMessage *aMessage, 
