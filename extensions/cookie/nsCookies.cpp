@@ -716,6 +716,21 @@ COOKIE_GetCookie(char * address, nsIIOService* ioService) {
   if(cookie_GetBehaviorPref() == PERMISSION_DontUse) {
     return nsnull;
   }
+ 
+  /* Hacky security check: If address is of a scheme that
+      doesn't support hostnames, we have no host to get a cookie from,
+      so we must not attempt to get cookies (bug 152725)
+  */
+  nsCOMPtr<nsIURI> uri;
+  nsresult result = ioService->NewURI(nsDependentCString(address),
+                                      nsnull, nsnull, getter_AddRefs(uri));
+  if (NS_FAILED(result))
+      return nsnull;
+  nsCAutoString tempHost;
+  result = uri->GetHost(tempHost);
+  if (NS_FAILED(result))
+      return nsnull;
+
   if (!PL_strncasecmp(address, "https", 5)) {
      isSecure = PR_TRUE;
   }
@@ -726,7 +741,6 @@ COOKIE_GetCookie(char * address, nsIIOService* ioService) {
   }
   nsCAutoString host, path;
   // Get host and path
-  nsresult result;
   NS_ASSERTION(ioService, "IOService not available");
   result = ioService->ExtractUrlPart(nsDependentCString(address),
                                      nsIIOService::url_Host |
@@ -1101,6 +1115,21 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
   nsCAutoString cur_host, cur_path;
   nsresult rv;
   NS_ASSERTION(ioService, "IOService not available");
+
+  /* Hacky security check: If curURL is of a scheme that
+     doesn't support hostnames, we have no host to set cookies to,
+     so we must not attempt to set cookies (bug 152725)
+  */
+  nsCOMPtr<nsIURI> uri;
+  rv = ioService->NewURI(nsDependentCString(curURL),
+                         nsnull, nsnull, getter_AddRefs(uri));
+  if (NS_FAILED(rv))
+      return;
+  nsCAutoString tempHost;
+  rv = uri->GetHost(tempHost);
+  if (NS_FAILED(rv))
+      return;
+
   // Get host and path
   rv = ioService->ExtractUrlPart(nsDependentCString(curURL),
                                  nsIIOService::url_Host | 
