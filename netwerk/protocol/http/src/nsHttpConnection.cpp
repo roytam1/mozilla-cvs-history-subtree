@@ -123,8 +123,8 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
 
     NS_ENSURE_ARG_POINTER(trans);
 
-    // be pesimistic
-    mKeepAlive = PR_FALSE;
+    // we won't change our keep-alive policy unless the server has explicitly
+    // told us to do so.
 
     if (!trans || !trans->ResponseHead()) {
         LOG(("trans->ResponseHead() = %x\n", trans));
@@ -135,6 +135,9 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
     // transaction completed successfully.
     const char *val = trans->ResponseHead()->PeekHeader(nsHttp::Connection);
     if (val) {
+        // be pesimistic
+        mKeepAlive = PR_FALSE;
+
         if (PL_strcasecmp(val, "keep-alive") == 0) {
             mKeepAlive = PR_TRUE;
 
