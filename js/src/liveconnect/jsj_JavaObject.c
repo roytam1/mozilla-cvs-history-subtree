@@ -586,7 +586,7 @@ no_such_field:
 static JSBool
 JavaObject_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
                          JSObject **objp, JSProperty **propp
-#if defined JSJ_THREADSAFE && defined DEBUG
+#if defined JS_THREADSAFE && defined DEBUG
                             , const char *file, uintN line
 #endif
                             )
