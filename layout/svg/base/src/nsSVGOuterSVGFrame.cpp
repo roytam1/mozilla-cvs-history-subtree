@@ -658,7 +658,6 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   nsSVGRenderingContext SVGCtx(aPresContext, &aRenderingContext, aDirtyRect);
   Paint(&SVGCtx);
 
-  
   // paint children:
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {

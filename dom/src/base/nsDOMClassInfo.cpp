@@ -1708,6 +1708,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGSVGElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGFitToViewBox)
+    //DOM_CLASSINFO_MAP_ENTRY(nsIDOMLocatable)
     DOM_CLASSINFO_SVG_ELEMENT_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -2580,7 +2581,7 @@ nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
     return NS_OK;
   }
 
-  PRBool isLocation = STRING_TO_JSVAL(sLocation_id);
+  PRBool isLocation = (id == STRING_TO_JSVAL(sLocation_id));
 
   nsCOMPtr<nsISupports> native;
   wrapper->GetNative(getter_AddRefs(native));
