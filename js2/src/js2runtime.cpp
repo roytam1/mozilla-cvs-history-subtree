@@ -1704,6 +1704,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
             // if it's an extending function, rediscover the extended class
             // and push the class scope onto the scope chain
+
+
 /*
             bool isExtender = false;                
             if (hasAttribute(f->attributes, ExtendKeyWord)) {

@@ -568,7 +568,7 @@ static const double two31 = 2147483648.0;
                 return false;
         }
 
-        bool hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
+        virtual bool hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
         {
             if (hasOwnProperty(name, attr, acc, p))
                 return true;
@@ -956,6 +956,17 @@ static const double two31 = 2147483648.0;
             default:
                 return kUndefinedValue;
             }
+        }
+
+        virtual bool hasProperty(const String &name, AttributeList *attr, Access acc, PropertyIterator *p)
+        {
+            if (hasOwnProperty(name, attr, acc, p))
+                return true;
+            else
+                if (mStatics && mSuperType)
+                    return mSuperType->hasProperty(name, attr, acc, p);
+                else
+                    return false;
         }
 
         virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)

@@ -1933,6 +1933,13 @@ BinaryOpEquals:
             addOp(LoadFunctionOp);
             addPointer(fnc);
             addOp(NewClosureOp);
+            // XXX more needed!!! how does this function get access to the
+            // local variables/parameters of all the functions above on the
+            // scope chain?
+            // Build a list of those functions now, then at 'NewClosureOp' time
+            // acquire a link for each function on the list to the current
+            // activation. That activation object has to survive when those functions
+            // terminate.
         }
         break;
     default:
