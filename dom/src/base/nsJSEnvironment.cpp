@@ -124,19 +124,15 @@ nsJSContext::~nsJSContext()
 NS_IMPL_ISUPPORTS(nsJSContext, kIScriptContextIID);
 
 NS_IMETHODIMP_(PRBool)
-nsJSContext::EvaluateString(const nsString& aScript, 
-                            const char *aURL,
-                            PRUint32 aLineNo,
-                            nsString& aRetValue,
-                            PRBool* aIsUndefined)
+nsJSContext::EvaluateString(const nsString& aScript, const char * aURL,
+                            PRUint32 aLineNo, nsString& aRetValue, PRBool* aIsUndefined)
 {
 	jsval val;
 	nsIScriptGlobalObject *global = GetGlobalObject();
 	nsIScriptGlobalObjectData *globalData;
-	JSPrincipals* principals = nsnull;
-	
+	nsIPrincipal * prin = nsnull;
 	if (global && NS_SUCCEEDED(global->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData))) {
-		if (NS_FAILED(globalData->GetPrincipals((void**)&principals))) {
+		if (NS_FAILED(globalData->GetPrincipal(& prin))) {
 			NS_RELEASE(global);
 			NS_RELEASE(globalData);
 			return NS_ERROR_FAILURE;
@@ -144,16 +140,16 @@ nsJSContext::EvaluateString(const nsString& aScript,
 		NS_RELEASE(globalData);
 	}
 	NS_IF_RELEASE(global);
-	
+  JSPrincipals * jsprin;
+  prin->ToJSPrincipal(& jsprin);
 	PRBool ret = ::JS_EvaluateUCScriptForPrincipals(mContext, 
 		JS_GetGlobalObject(mContext),
-		principals,
+		jsprin,
 		(jschar*)aScript.GetUnicode(), 
 		aScript.Length(),
 		aURL, 
 		aLineNo,
 		&val);
-	
 	if (ret) {
 		*aIsUndefined = JSVAL_IS_VOID(val);
 		JSString* jsstring = JS_ValueToString(mContext, val);   
@@ -162,9 +158,7 @@ nsJSContext::EvaluateString(const nsString& aScript,
 	else {
 		aRetValue.Truncate();
 	}
-	
 	ScriptEvaluated();
-	
 	return ret;
 }
 

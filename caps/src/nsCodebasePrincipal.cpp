@@ -27,6 +27,30 @@ static NS_DEFINE_IID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kICodebasePrincipalIID, NS_ICODEBASEPRINCIPAL_IID);
 
 NS_IMPL_ISUPPORTS(nsCodebasePrincipal, kICodebasePrincipalIID);
+/*
+NS_IMPL_QUERY_INTERFACE(nsCodebasePrincipal, kICodebasePrincipalIID);
+
+NS_IMETHODIMP
+nsCodebasePrincipal::AddRef(void)
+{
+  
+}
+
+NS_IMETHODIMP
+nsCodebasePrincipal::Release(void)
+{
+  
+}
+*/
+NS_IMETHODIMP
+nsCodebasePrincipal::ToJSPrincipal(JSPrincipals * * jsprin)
+{
+  char * cb;
+  this->GetURLString(& cb);
+  * jsprin = NS_STATIC_CAST(JSPrincipals *,this);
+  (* jsprin)->codebase = PL_strdup(cb);
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsCodebasePrincipal::GetURLString(char **cburl)
@@ -64,11 +88,9 @@ nsCodebasePrincipal::GetType(PRInt16 * type)
 NS_IMETHODIMP 
 nsCodebasePrincipal::IsSecure(PRBool * result)
 { 
-	/*
-	if ((0 == memcmp("https:", itsKey, strlen("https:"))) ||
-      (0 == memcmp("file:", itsKey, strlen("file:"))))
-    return PR_TRUE;
-	*/
+//	if ((0 == memcmp("https:", itsKey, strlen("https:"))) ||
+//      (0 == memcmp("file:", itsKey, strlen("file:"))))
+//    return PR_TRUE;
 	return PR_FALSE;
 }
 
@@ -103,21 +125,38 @@ nsCodebasePrincipal::Equals(nsIPrincipal * other, PRBool * result)
 
 nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const char * codeBaseURL)
 {
-	this->itsType = type;
   nsresult rv;
+  nsIURI * uri;
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
   if (!NS_SUCCEEDED(rv)) 
+    compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& uri);
+  char * spec = PL_strdup(codeBaseURL);
+  uri->SetSpec(spec);
+  this->Init(type,uri);
+  PL_strfree(spec);
+  NS_ADDREF(itsURL);
+}
+
+nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, nsIURI * url)
+{
+  this->Init(type,url);
+}
+
+void
+nsCodebasePrincipal::Init(PRInt16 type, nsIURI * uri)
+{
+  NS_INIT_REFCNT();
+  NS_ADDREF(this);
+  this->itsType = type;
+  if(NS_SUCCEEDED(uri->Clone(& this->itsURL))) 
   {
-    compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& itsURL);
+    NS_ADDREF(this->itsURL);
   }
 }
 
-nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const nsIURI * url)
-{
-  this->itsType = type;
-  ((nsIURI *)url)->Clone(& itsURL);
-}  
-
 nsCodebasePrincipal::~nsCodebasePrincipal(void)
 {
+  JSPrincipals * jsprin;
+  this->ToJSPrincipal(& jsprin);
+  PL_strfree(jsprin->codebase);
 }

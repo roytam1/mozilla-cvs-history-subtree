@@ -21,6 +21,7 @@
 
 #include "nsISupports.h"
 #include "nsIURI.h"
+#include "nsIPrincipal.h"
 
 #define NS_ISCRIPTGLOBALOBJECTDATA_IID \
 { 0x98485f80, 0x9615, 0x11d2,  \
@@ -32,9 +33,9 @@
 
 class nsIScriptGlobalObjectData : public nsISupports {
 public:
-  NS_IMETHOD       GetPrincipals(void** aPrincipals) = 0;
-  NS_IMETHOD       SetPrincipals(void* aPrincipals) = 0;
-  NS_IMETHOD       GetOrigin(nsIURI** aOrigin) = 0;
+  NS_IMETHOD       GetPrincipal(nsIPrincipal * * aPrincipal) = 0;
+  NS_IMETHOD       SetPrincipal(nsIPrincipal * aPrincipal) = 0;
+  NS_IMETHOD       GetOrigin(nsIURI * * aOrigin) = 0;
 };
 
 #endif //nsIScriptGlobalObjectData_h__

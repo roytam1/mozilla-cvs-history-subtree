@@ -83,7 +83,7 @@ public:
 	//XXX From lib/libmocha/lm.h
 	NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, char** aOrigin);
 	NS_IMETHOD GetObjectOriginURL(JSContext *aCx, JSObject *object, char** aOrigin);
-	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aCodebase, JSPrincipals** aPrincipals);
+	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsIPrincipal * * aPrin);
 
 #if 0
         //nsICapsSecurityCallbacks interface
@@ -109,17 +109,14 @@ public:
 	NS_IMETHOD CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
 								PRUint16 aMethodIndex, const jsid aName);
 
-        NS_IMETHOD GetContainerPrincipals(JSContext *aCx, JSObject *aContainer, JSPrincipals** aPrincipals);
-        NS_IMETHOD CheckPermissions(JSContext *aCx, JSObject *aObj, short target, PRBool* aReturn);
+  NS_IMETHOD GetContainerPrincipals(JSContext *aCx, JSObject *aContainer, nsIPrincipal * * result);
+  NS_IMETHOD CheckPermissions(JSContext *aCx, JSObject *aObj, short target, PRBool* aReturn);
 	NS_IMETHOD CanAccessTarget(JSContext *aCx, PRInt16 target, PRBool* aReturn);
-        NS_IMETHOD GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals);
-
-
+  NS_IMETHOD GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals);
 #if 0
-        NS_IMETHOD GetCompilationPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, 
+  NS_IMETHOD GetCompilationPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, 
 		JSPrincipals *aLayoutPrincipals, JSPrincipals** aPrincipals);
 	NS_IMETHOD CheckContainerAccess(JSContext *aCx, JSObject *aObj, PRInt16 aTarget, PRBool* aReturn);
-	
 	NS_IMETHOD SetContainerPrincipals(JSContext *aCx, JSObject *aContainer, JSPrincipals* aPrincipals);
 	NS_IMETHOD CanCaptureEvent(JSContext *aCx, JSFunction *aFun, JSObject *aEventTarget, PRBool* aReturn);
 	NS_IMETHOD SetExternalCapture(JSContext *aCx, JSPrincipals* aPrincipals, PRBool aBool);
@@ -132,10 +129,8 @@ public:
 		nsString* aName, nsString* aSrc, JSPrincipals** aRetPrincipals);
 
 #ifdef DO_JAVA_STUFF
-	NS_IMETHOD ExtractFromPrincipalsArchive(JSPrincipals *aPrincipals, char *aName, 
-								uint *aLength, char** aReturn);
-	NS_IMETHOD SetUntransformedSource(JSPrincipals *principals, char *original, 
-						  char *transformed, PRBool* aReturn);
+	NS_IMETHOD ExtractFromPrincipalsArchive(JSPrincipals *aPrincipals, char *aName, uint *aLength, char** aReturn);
+	NS_IMETHOD SetUntransformedSource(JSPrincipals *principals, char *original, char *transformed, PRBool* aReturn);
 	NS_IMETHOD GetJSPrincipalsFromJavaCaller(JSContext *aCx, void *principalsArray, void *pNSISecurityContext, JSPrincipals** aPrincipals);
 #endif
 #if 0
@@ -143,7 +138,7 @@ public:
 #endif
 #endif
 private:
-  NS_IMETHOD GetOriginFromSourceURL(char * sourceURL, char * * result);
+  NS_IMETHOD GetOriginFromSourceURL(nsIURI * origin, char * * result);
   PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
   nsIPref* mPrefs;
   char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);

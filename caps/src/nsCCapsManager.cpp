@@ -62,7 +62,7 @@ nsCCapsManager::GetPrivilegeManager(nsIPrivilegeManager * * privMan)
 NS_IMETHODIMP
 nsCCapsManager::CreateCodebasePrincipal(const char * codebaseURL, nsIPrincipal * * prin)
 {
-	return nsPrincipalManager::GetPrincipalManager()->CreateCodebasePrincipal(codebaseURL, prin);
+	return nsPrincipalManager::GetPrincipalManager()->CreateCodebasePrincipal(codebaseURL, nsnull, prin);
 }
 
 NS_IMETHODIMP

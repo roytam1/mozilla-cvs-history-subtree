@@ -16,11 +16,11 @@
  * Reserved.
  */
 #include "nsISupports.idl"
+#include "nsIPrincipal.idl"
 
 [ptr] native nsJSPrincipalsList(nsJSPrincipalsList);
 [ptr] native JSContext(JSContext);
 [ptr] native JSObject(JSObject);
-[ptr] native JSPrincipals(JSPrincipals);
 [ptr] native JSFunction(JSFunction);
 [ptr] native jsval(jsval);
 
@@ -41,7 +41,6 @@ interface nsIScriptSecurityManager : nsISupports
 	const short SCRIPT_SECURITY_SAME_DOMAIN_ACCESS  = 1 << 1;
 	const short SCRIPT_SECURITY_SIGNED_ACCESS = 1 << 2;
 
-
 	const short eJSTarget_UniversalBrowserRead=0;
 	const short eJSTarget_UniversalBrowserWrite=1;
 	const short eJSTarget_UniversalSendMail=2;
@@ -52,8 +51,7 @@ interface nsIScriptSecurityManager : nsISupports
 	const short eJSTarget_UniversalDialerAccess=7;
 	const short eJSTarget_Max=8;
 
-
-	void NewJSPrincipals(in nsIURI aURL, in nsString aName, in nsString aCodebase, out JSPrincipals aPrincipals);
+	void NewJSPrincipals(in nsIURI aURL, in nsString aName, out nsIPrincipal aPrincipal);
 	void CheckScriptAccess(in nsIScriptContext cx, in voidStar obj, [const] in string prop, out boolean res);
 	void GetSubjectOriginURL(in JSContext cx, out string origin);
 	void GetObjectOriginURL(in JSContext cx, in JSObject obj, out string origin);

@@ -19,10 +19,12 @@
 #ifndef _NS_CODEBASE_PRINCIPAL_H_
 #define _NS_CODEBASE_PRINCIPAL_H_
 
+#include "jsapi.h"
 #include "nsIPrincipal.h"
 #include "nsIURI.h"
 
-class nsCodebasePrincipal : public nsICodebasePrincipal {
+class nsCodebasePrincipal : JSPrincipals,
+                            public nsICodebasePrincipal {
 public:
 
   NS_DECL_ISUPPORTS
@@ -40,6 +42,10 @@ public:
   IsCodebaseRegex(PRBool * result);
 
   NS_IMETHOD
+  ToJSPrincipal(JSPrincipals * * jsprin);
+
+  
+  NS_IMETHOD
   GetType(PRInt16 * type);
 
   NS_IMETHOD
@@ -55,13 +61,14 @@ public:
   Equals(nsIPrincipal * other, PRBool * result);
 
   nsCodebasePrincipal(PRInt16 type, const char * codebaseURL);
-  nsCodebasePrincipal(PRInt16 type, const nsIURI * url);
+  nsCodebasePrincipal(PRInt16 type, nsIURI * url);
   virtual ~nsCodebasePrincipal(void);
 
 protected:
-  char * itsCodeBaseURL;
   nsIURI * itsURL;
   PRInt16 itsType;
+private:
+  void Init(PRInt16 type, nsIURI * uri);
 };
 
 #endif // _NS_CODEBASE_PRINCIPAL_H_

@@ -135,7 +135,7 @@ GlobalWindowImpl::GlobalWindowImpl()
   mLocation = nsnull;
   mFrames = nsnull;
   mOpener = nsnull;
-  mPrincipals = nsnull;
+  mPrincipal = nsnull;
 
   mTimeouts = nsnull;
   mTimeoutInsertionPoint = nsnull;
@@ -150,10 +150,6 @@ GlobalWindowImpl::GlobalWindowImpl()
 
 GlobalWindowImpl::~GlobalWindowImpl() 
 {  
-  if (mPrincipals && mContext) {
-    JSPRINCIPALS_DROP((JSContext*)mContext->GetNativeContext(), mPrincipals);
-  }
-
   NS_IF_RELEASE(mContext);
   NS_IF_RELEASE(mDocument);
   NS_IF_RELEASE(mNavigator);
@@ -168,6 +164,7 @@ GlobalWindowImpl::~GlobalWindowImpl()
   NS_IF_RELEASE(mLocation);
   NS_IF_RELEASE(mFrames);
   NS_IF_RELEASE(mOpener);
+  NS_IF_RELEASE(mPrincipal);
   NS_IF_RELEASE(mListenerManager);
 }
 
@@ -324,9 +321,9 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument *aDocument)
   }
 
   //XXX Should this be outside the about:blank clearscope exception?
-  if (mPrincipals && mContext) {
-    JSPRINCIPALS_DROP((JSContext *)mContext->GetNativeContext(), mPrincipals);
-    mPrincipals = nsnull;
+  if (nsnull != mPrincipal)
+  {
+    NS_RELEASE(mPrincipal);
   }
 
   if (nsnull != mDocument) {
@@ -1690,9 +1687,11 @@ GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                                  timeout->filename,
                                  timeout->lineno, nsAutoString(""), &isundefined);
 #endif
+        JSPrincipals * jsprin;
+        timeout->principal->GetJSPrincipal(& jsprin);
         JS_EvaluateUCScriptForPrincipals(cx,
                                          (JSObject *)mScriptObject,
-                                         timeout->principals,
+                                         jsprin,
                                          JS_GetStringChars(timeout->expr),
                                          JS_GetStringLength(timeout->expr),
                                          timeout->filename,
@@ -1816,12 +1815,11 @@ GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
   nsTimeoutImpl *timeout, **insertion_point;
   jsdouble interval;
   PRInt64 now, delta;
-  JSPrincipals* principals;
+  nsIPrincipal * principal;
 
-  if (NS_FAILED(GetPrincipals((void**)&principals))) {
+  if (NS_FAILED(GetPrincipal(& principal))) {
     return NS_ERROR_FAILURE;
   }
-
   if (argc < 2) {
     JS_ReportError(cx, "Function %s requires at least 2 parameters",
                    aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
@@ -1896,13 +1894,10 @@ GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
       timeout->argc++;
     }
   }
-
-  timeout->principals = principals;
-
+  timeout->principal = principal;
   LL_I2L(now, PR_IntervalNow());
   LL_D2L(delta, PR_MillisecondsToInterval((PRUint32)interval));
   LL_ADD(timeout->when, now, delta);
-
   nsresult err = NS_NewTimer(&timeout->timer);
   if (NS_OK != err) {
     DropTimeout(timeout);
@@ -1915,10 +1910,8 @@ GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
     DropTimeout(timeout);
     return err;
   } 
-
   timeout->window = this;
   NS_ADDREF(this);
-
   insertion_point = (mTimeoutInsertionPoint == NULL)
                     ? &mTimeouts
                     : mTimeoutInsertionPoint;
@@ -2910,66 +2903,44 @@ GlobalWindowImpl::ReleaseEvent(const nsString& aType)
 }
 
 NS_IMETHODIMP
-GlobalWindowImpl::GetPrincipals(void** aPrincipals) 
+GlobalWindowImpl::GetPrincipal(nsIPrincipal * * prin) 
 {
-  if (!mPrincipals) {
+  if (!mPrincipal) {
     if (mContext) {
-      nsIScriptSecurityManager* secMan = nsnull;
+      nsIScriptSecurityManager * secMan = nsnull;
       mContext->GetSecurityManager(&secMan);
       if (secMan) {
-        char *codebase;
-        nsIURI *origin;
-        if (NS_SUCCEEDED(GetOrigin(&origin)) &&
-            NS_SUCCEEDED(origin->GetSpec(&codebase))) 
-        {
-          nsAutoString s(codebase);
-          secMan->NewJSPrincipals(nsnull, nsnull, &s, &mPrincipals);
-        }
+        nsIURI * origin;
+        if (NS_SUCCEEDED(this->GetOrigin(& origin))) secMan->NewJSPrincipals(origin, nsnull, & mPrincipal);
         NS_RELEASE(secMan);
       }
     }
-
-    if (!mPrincipals) {
-      return NS_ERROR_FAILURE;
-    }
-    if (mContext) {
-      JSPRINCIPALS_HOLD((JSContext *)mContext->GetNativeContext(), mPrincipals);
-    }
+    if (!mPrincipal) return NS_ERROR_FAILURE;
+    if (mContext) NS_ADDREF(mPrincipal);
   }
-
-  *aPrincipals = (void*)mPrincipals;
+  * prin = mPrincipal;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-GlobalWindowImpl::SetPrincipals(void* aPrincipals)
+GlobalWindowImpl::SetPrincipal(nsIPrincipal * aPrin)
 {
-  if (mPrincipals && mContext) {
-    JSPRINCIPALS_DROP((JSContext *)mContext->GetNativeContext(), mPrincipals);
-  }
-
-  mPrincipals = (JSPrincipals*)aPrincipals;
-
-  if (mPrincipals && mContext) {
-    JSPRINCIPALS_HOLD((JSContext *)mContext->GetNativeContext(), mPrincipals);
-  }
-
+  NS_IF_RELEASE(mPrincipal);
+  mPrincipal = aPrin;
+  if (mPrincipal) NS_ADDREF(mPrincipal);
   return NS_OK;
 }
 
 NS_IMETHODIMP
-GlobalWindowImpl::GetOrigin(nsIURI** aOrigin)
+GlobalWindowImpl::GetOrigin(nsIURI * * aOrigin)
 {
   nsIDocument* doc;
-  if (mDocument && NS_OK == mDocument->QueryInterface(kIDocumentIID, (void**)&doc)) {
+  if (mDocument && NS_OK == mDocument->QueryInterface(kIDocumentIID, (void * *)&doc)) {
     nsIURI* docURL = doc->GetDocumentURL();
-    if (docURL) {
-      *aOrigin = docURL;
-    } // else return error code
+    if (docURL) * aOrigin = docURL;
+    // else return error code
     NS_RELEASE(doc);
   }
-
-
 #if 0
   //Old code from 4.0 to show what funcitonality needs replicating
   History_entry *he;

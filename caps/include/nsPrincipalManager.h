@@ -34,7 +34,7 @@ public:
 	virtual ~nsPrincipalManager(void);
 
 	NS_IMETHOD
-	CreateCodebasePrincipal(const char *codebaseURL, nsIPrincipal * * prin);
+	CreateCodebasePrincipal(const char *codebaseURL, nsIURI * url, nsIPrincipal * * prin);
 
 	NS_IMETHOD
 	CreateCertificatePrincipal(const unsigned char * * certChain, PRUint32 * certChainLengths, PRUint32 noOfCerts, nsIPrincipal * * prin);

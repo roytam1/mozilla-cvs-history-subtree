@@ -20,13 +20,13 @@
 #include "nsIPrincipal.idl"
 #include "nsITarget.idl"
 #include "nsIPrincipalArray.idl"
-
+interface nsIURI;
 interface nsIScriptContext;
 
 [uuid(dc7d0bb0-25e1-11d2-8160-006008119d7a)]
 interface nsIPrincipalManager : nsISupports
 {
-	void CreateCodebasePrincipal([const] in string codebaseURL, out nsIPrincipal prin);
+	void CreateCodebasePrincipal([const] in string codebaseURL, in nsIURI uri, out nsIPrincipal prin);
 
 %{C++
 	NS_IMETHOD

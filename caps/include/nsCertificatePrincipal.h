@@ -18,10 +18,12 @@
 /*describes principals for use with signed scripts*/
 #ifndef _NS_CERTIFICATE_PRINCIPAL_H_
 #define _NS_CERTIFICATE_PRINCIPAL_H_
+#include "jsapi.h"
 #include "nsVector.h"
 #include "nsIPrincipal.h"
 
-class nsCertificatePrincipal : public nsICertificatePrincipal {
+class nsCertificatePrincipal : JSPrincipals,
+                               public nsICertificatePrincipal {
 public:
 	NS_DECL_ISUPPORTS
 
@@ -43,6 +45,9 @@ public:
 	NS_IMETHOD
 	GetFingerPrint(char ** fp);
 
+  NS_IMETHOD
+  ToJSPrincipal(JSPrincipals * * jsprin);
+  
 	NS_IMETHOD
 	GetType(PRInt16 * type);
 

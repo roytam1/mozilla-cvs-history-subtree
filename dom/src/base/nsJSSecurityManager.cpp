@@ -38,7 +38,6 @@ static NS_DEFINE_IID(kIScriptSecurityManagerIID, NS_ISCRIPTSECURITYMANAGER_IID);
 static NS_DEFINE_IID(kICapsSecurityCallbacksIID, NS_ICAPSSECURITYCALLBACKS_IID);
 static NS_DEFINE_IID(kIPrincipalManagerIID, NS_IPRINCIPALMANAGER_IID);
 static NS_DEFINE_IID(kURLCID, NS_STANDARDURL_CID);
-//static NS_DEFINE_IID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectDataIID, NS_ISCRIPTGLOBALOBJECTDATA_IID);
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
@@ -192,16 +191,14 @@ GlobalPrivilegesEnabled(JSContext *aCx, JSPrincipals *aPrincipals)
 
 
 NS_IMETHODIMP
-nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aCodebase, JSPrincipals** aPrincipals)
+nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsIPrincipal * * result)
 {
-  nsJSPrincipalsData *result;
+  nsJSPrincipalsData * pdata;
   PRBool needUnlock = PR_FALSE;
+#ifdef CERT_PRINS
   void *zip = nsnull; //ns_zip_t
-
- #if 0
   if (aURL) {
     char *fn = nsnull;
-
     if (NET_IsLocalFileURL(archive->address)) {
       char* pathPart = ParseURL(archive->address, GET_PATH_PART);
       fn = WH_FileName(pathPart, xpURL);
@@ -211,7 +208,6 @@ nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aC
       fn = WH_FileName(archive->cache_file, xpCache);
       needUnlock = PR_TRUE;
     }
-
     if (fn) {
 #ifdef XP_MAC
       /*
@@ -229,52 +225,38 @@ nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aC
 #else
       zip = ns_zip_open(fn);
 #endif
+      pdata->zip = zip;
       PR_Free(fn);
     }
   }
 #endif 
-
   //Allocate and fill the nsJSPrincipalsData struct
-  result = PR_NEWZAP(nsJSPrincipalsData);
-  if (result == nsnull) return NS_ERROR_FAILURE;
-  char * codebaseStr = NULL;
+  pdata = PR_NEWZAP(nsJSPrincipalsData);
+  if (pdata == nsnull) return NS_ERROR_FAILURE;
   nsresult rv;
-  char * test = aCodebase->ToNewCString();
-  rv = GetOriginFromSourceURL(test, &codebaseStr);
+  char * codebaseStr = NULL;
+  rv = this->GetOriginFromSourceURL(aURL,& codebaseStr);
   if (rv != NS_OK) return rv;
   if (!codebaseStr) {
-    PR_Free(result);
+    PR_Free(pdata);
     return NS_ERROR_FAILURE;
   }
-  nsString * tmp = new nsString(codebaseStr);
-  result->principals.codebase = tmp->ToNewCString();
-  delete tmp;
-  if (result->principals.codebase == nsnull) {
-    PR_Free(result);
+  pdata->principals.codebase = PL_strdup(codebaseStr);
+  if (pdata->principals.codebase == nsnull) {
+    PR_Free(pdata);
     return NS_ERROR_FAILURE;
   }
-
-  if (aName) {
-    result->name = aName ? aName->ToNewCString() : nsnull;
-    if (result->name == nsnull) {
-      delete result->principals.codebase;
-      PR_Free(result);
-      return NS_ERROR_FAILURE;
-    }
-  }
-
-  result->principals.destroy = DestroyJSPrincipals;
-  result->principals.getPrincipalArray = GetPrincipalArray;
-  result->principals.globalPrivilegesEnabled = GlobalPrivilegesEnabled;
-  result->url = aURL;
+  if (aName) pdata->name = aName ? aName->ToNewCString() : nsnull;
+  pdata->principals.destroy = DestroyJSPrincipals;
+  pdata->principals.getPrincipalArray = GetPrincipalArray;
+  pdata->principals.globalPrivilegesEnabled = GlobalPrivilegesEnabled;
+  pdata->url = aURL;
   NS_IF_ADDREF(aURL);
-  result->zip = zip;
-  result->needUnlock = needUnlock;
-
-  *aPrincipals = (JSPrincipals*)result;
-  return NS_OK;
+  pdata->needUnlock = needUnlock;
+  NS_WITH_SERVICE(nsIPrincipalManager, prinMan,NS_PRINCIPALMANAGER_PROGID,&rv);
+  if (NS_SUCCEEDED(rv)) rv = prinMan->CreateCodebasePrincipal(codebaseStr, aURL, result);
+  return rv;
 }
-
 
 NS_IMETHODIMP
 nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, const char* aProp, PRBool* aResult)
@@ -288,7 +270,6 @@ nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, c
       return NS_OK;
     case SCRIPT_SECURITY_SAME_DOMAIN_ACCESS:
       return this->CheckPermissions(cx, (JSObject*)aObj, eJSTarget_Max, aResult);
-
     default:
       // Default is no access
       *aResult = PR_FALSE;
@@ -349,60 +330,64 @@ nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, char * * aOrigin)
 NS_IMETHODIMP
 nsJSSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, char * * aOrigin)
 {
+  nsresult rv;
   JSObject *parent;
   while (parent = JS_GetParent(aCx, aObj)) aObj = parent;
-  JSPrincipals *principals;
-  nsresult result = GetContainerPrincipals(aCx, aObj, &principals);
-  if (result != NS_OK) return result;
-  *aOrigin = principals ? principals->codebase : nsnull;
-  return *aOrigin ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  nsIPrincipal * prin;
+  if((rv = GetContainerPrincipals(aCx, aObj, & prin)) != NS_OK) return rv;
+  nsICodebasePrincipal * cbprin;
+  if((rv = prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin)) != NS_OK) return rv;
+  cbprin->GetURLString(aOrigin);
+  return (* aOrigin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP
-nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container, 
-                                            JSPrincipals** aPrincipals)
+nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container, nsIPrincipal * * result)
 {
-  *aPrincipals = nsnull;
-
+  nsresult rv;
+  * result = nsnull;
   // Need to check that the origin hasn't changed underneath us
-  char* originUrl = FindOriginURL(aCx, container);
+  char * originUrl = this->FindOriginURL(aCx, container);
   if (!originUrl) return NS_ERROR_FAILURE;
-  nsISupports *tmp;
-  nsIScriptGlobalObjectData *globalData;
-  tmp = (nsISupports*)JS_GetPrivate(aCx, container);
-  nsresult result = NS_ERROR_FAILURE;
-  if (nsnull == tmp ||
-      (result = tmp->QueryInterface(kIScriptGlobalObjectDataIID, 
-      (void**)&globalData)) != NS_OK) 
+  nsISupports * tmp;
+  nsIScriptGlobalObjectData * globalData;
+  tmp = (nsISupports *)JS_GetPrivate(aCx, container);
+  if (tmp == nsnull || (rv = tmp->QueryInterface(kIScriptGlobalObjectDataIID, (void * *)& globalData)) != NS_OK) 
   {
       delete originUrl;
-      return result;
+      return rv;
   }
-  globalData->GetPrincipals((void**)aPrincipals);
-  if (nsnull != *aPrincipals) {
-    if (this->SameOrigins(aCx, originUrl, (*aPrincipals)->codebase)) {
+  globalData->GetPrincipal(result);
+  if (* result) {
+    nsICodebasePrincipal * cbprin;
+    char * cbStr;
+    (* result)->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
+    cbprin->GetURLString(& cbStr);
+    if (this->SameOrigins(aCx, originUrl,cbStr)) {
       delete originUrl;
       return NS_OK;
     }
-    nsJSPrincipalsData* data;
-    data = (nsJSPrincipalsData*)*aPrincipals;
-    if (data->codebaseBeforeSettingDomain &&
-        this->SameOrigins(aCx, originUrl, data->codebaseBeforeSettingDomain)) {
+#ifdef THREADING_ISSUES
+//    nsJSPrincipalsData * data;
+//    data = (nsJSPrincipalsData*)*aPrincipals;
+//    if (data->codebaseBeforeSettingDomain &&
+//        this->SameOrigins(aCx, originUrl, data->codebaseBeforeSettingDomain)) {
       /* document.domain was set, so principals are okay */
-      delete originUrl;
-      return NS_OK;
-    }
+//      delete originUrl;
+//      return NS_OK;
+//    }
     /* Principals have changed underneath us. Remove them. */
-    globalData->SetPrincipals(nsnull);
+//    globalData->SetPrincipals(nsnull);
+#endif    
   }
   /* Create new principals and return them. */
-  nsAutoString originUrlStr(originUrl);
-
-  if (NS_OK != NewJSPrincipals(nsnull, nsnull, &originUrlStr, aPrincipals)) {
-    delete originUrl;
-    return NS_ERROR_FAILURE;
-  }
-  globalData->SetPrincipals((void*)*aPrincipals);
+  //why should we create a new principal, removing this
+//  nsAutoString originUrlStr(originUrl);
+//  if (!NS_SUCCEEDED(this->NewJSPrincipals(nsnull, nsnull, &originUrlStr, aPrincipals))) {
+//    delete originUrl;
+//    return NS_ERROR_FAILURE;
+//  }
+//  globalData->SetPrincipals((void*)*aPrincipals);
   delete originUrl;
   return NS_OK;
 }
@@ -557,12 +542,7 @@ NS_IMETHODIMP
 nsJSSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aTarget, PRBool* aReturn)
 {
   char * subjectOrigin = nsnull, * objectOrigin = nsnull;
-  nsISupports* running;
-  nsIScriptGlobalObjectData *globalData;
-  JSPrincipals *principals;
-  nsresult rv=NS_OK;
-  /* May be in a layer loaded from a different origin.*/
-  rv = GetSubjectOriginURL(aCx, &subjectOrigin);
+  nsresult rv = GetSubjectOriginURL(aCx,& subjectOrigin);
   if (rv != NS_OK) return rv;
   /*
   * Hold onto reference to the running decoder's principals
@@ -570,24 +550,15 @@ nsJSSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aT
   * dropping a reference due to an origin changing
   * underneath us.
   */
-  running = (nsISupports*)JS_GetPrivate(aCx, JS_GetGlobalObject(aCx));
-  if (nsnull != running &&
-      NS_OK == running->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) 
-  {
-      globalData->GetPrincipals((void**)&principals);
-      NS_RELEASE(globalData);
-  }
-
-  if (principals) JSPRINCIPALS_HOLD(aCx, principals);
   rv = GetObjectOriginURL(aCx, aObj, &objectOrigin);
   if (rv != NS_OK || !subjectOrigin || !objectOrigin) {
       *aReturn = PR_FALSE;
-      goto out;
+      return NS_OK;;
   }
   /* Now see whether the origin methods and servers match. */
   if (this->SameOrigins(aCx, subjectOrigin, objectOrigin)) {
       *aReturn = PR_TRUE;
-      goto out;
+      return NS_OK;
   }
   /*
   * If we failed the origin tests it still might be the case that we
@@ -599,22 +570,20 @@ nsJSSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aT
     CanAccessTarget(aCx, aTarget, &canAccess);
     if (canAccess) {
       *aReturn = PR_TRUE;
-      goto out;
+      return NS_OK;
     }
   }
 
   JS_ReportError(aCx, "Access error message", subjectOrigin);
-  *aReturn = PR_FALSE;
-
-out:
-  if (principals) JSPRINCIPALS_DROP(aCx, principals);
+  * aReturn = PR_FALSE;
   return NS_OK;
 }
 
 PRBool
-nsJSSecurityManager::SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2)
+nsJSSecurityManager::SameOrigins(JSContext * aCx, const char * aOrigin1, const char * aOrigin2)
 {
-  if (!aOrigin1 || !aOrigin2) return PR_FALSE;
+  if ((aOrigin1 == nsnull) || (aOrigin2 == nsnull) || (PL_strlen(aOrigin1) == 0) || (PL_strlen(aOrigin2) == 0))
+      return PR_FALSE;
   // Shouldn't return true if both origin1 and origin2 are unknownOriginStr. 
   nsString * tmp = new nsString(aOrigin1);
   if (gUnknownOriginStr.EqualsIgnoreCase(*tmp)) 
@@ -669,14 +638,10 @@ nsJSSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, const char * aUrlStr
 
 #define PMAXHOSTNAMELEN 64
 
-//XXX This is only here until I have a new Netlib equivalent!!!
-
 NS_IMETHODIMP
 nsJSSecurityManager::GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals)
 {
-  /*
-   * Get principals from script of innermost interpreted frame.
-   */
+//* Get principals from script of innermost interpreted frame.
   JSStackFrame *fp;
   JSScript *script;
 #ifdef OJI
@@ -713,36 +678,20 @@ nsJSSecurityManager::GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** 
 }
 
 NS_IMETHODIMP
-nsJSSecurityManager::GetOriginFromSourceURL(char * aSourceURL, char * * result)
+nsJSSecurityManager::GetOriginFromSourceURL(nsIURI * url, char * * result)
 {
-  nsString * buffer = new nsString(aSourceURL);
-  nsIURL * url;
-  nsresult rv;
-  if (!aSourceURL) {
-    *result = nsnull;
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  if (buffer->Length() == 0 || buffer->EqualsIgnoreCase(gUnknownOriginStr)) {
-    *result = nsnull;
-    return NS_OK;
-  }
   char * tempChars;// = ParseURL(aSourceURL, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART);
-  NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
-  if (!NS_SUCCEEDED(rv)) return nsnull;
-  rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
-  if (!NS_SUCCEEDED(rv)) return nsnull;
-  rv = url->SetSpec(aSourceURL);
-  if (!NS_SUCCEEDED(rv)) return nsnull;
   url->GetScheme(& tempChars);
-  buffer->Assign(tempChars);
+  nsString * buffer = new nsString(tempChars);
   buffer->Append("://");
   url->GetHost(& tempChars);
   buffer->Append(tempChars);
   url->GetPath(& tempChars);
   buffer->Append(tempChars);
-  *result = buffer->ToNewCString();
+  * result = (buffer->Length() == 0 || buffer->EqualsIgnoreCase(gUnknownOriginStr)) 
+            ? nsnull : buffer->ToNewCString();
   delete buffer;
-  return *result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  return * result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP
@@ -1084,8 +1033,8 @@ nsJSSecurityManager::PrincipalsCanAccessTarget(JSContext *aCx, PRInt16 aTarget)
 		if (annotationRef) {
 			if (principalArray != nsnull) {
 				PRBool canExtend;
-                                nsresult rv;
-                                NS_WITH_SERVICE(nsIPrincipalManager, prinMan,NS_PRINCIPALMANAGER_PROGID,&rv);
+        nsresult rv;
+        NS_WITH_SERVICE(nsIPrincipalManager, prinMan,NS_PRINCIPALMANAGER_PROGID,&rv);
 				prinMan->CanExtendTrust(current, principalArray, & canExtend);
 				if (!canExtend) return PR_FALSE;
 				break;

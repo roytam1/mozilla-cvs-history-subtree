@@ -82,11 +82,12 @@ nsPrincipalManager::HasSystemPrincipal(nsIPrincipalArray * prinArray)
 }
 
 NS_IMETHODIMP
-nsPrincipalManager::CreateCodebasePrincipal(const char * codebaseURL, nsIPrincipal * * prin) {
-	* prin = new nsCodebasePrincipal(nsIPrincipal::PrincipalType_CodebaseExact, codebaseURL);
-	if (prin == NULL) return NS_ERROR_OUT_OF_MEMORY;
-	(* prin)->AddRef();
-	return NS_OK;
+nsPrincipalManager::CreateCodebasePrincipal(const char * codebaseURL, nsIURI * url, nsIPrincipal * * prin) {
+  if(!codebaseURL && !url) return NS_ERROR_FAILURE;
+  * prin = (url) ? new nsCodebasePrincipal(nsIPrincipal::PrincipalType_CodebaseExact, url) :
+                   new nsCodebasePrincipal(nsIPrincipal::PrincipalType_CodebaseExact, codebaseURL);
+	NS_IF_ADDREF(* prin);
+	return (prin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP
