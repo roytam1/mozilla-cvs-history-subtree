@@ -31,7 +31,7 @@
 #include "nsXPIDLString.h"
 
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC) /* || defined(MACOSX) REMIND HACKING FOR MACOS X!!! */
 #include <Folders.h>
 #include <Script.h>
 #include <Processes.h>
@@ -59,7 +59,7 @@
 // WARNING: These hard coded names need to go away. They need to
 // come from localizable resources
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC) /* || defined(MACOSX) REMIND HACKING FOR MACOS X!!! */
 #define APP_REGISTRY_NAME "Application Registry"
 #elif defined(XP_WIN) || defined(XP_OS2)
 #define APP_REGISTRY_NAME "registry.dat"
@@ -68,7 +68,7 @@
 #endif
 
 // define default product directory
-#if defined(XP_WIN) || defined(XP_MAC) || defined(MACOSX) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
 #define DEFAULT_PRODUCT_DIR "Mozilla"
 #elif defined (XP_UNIX)
 #define DEFAULT_PRODUCT_DIR ".mozilla"
@@ -251,7 +251,7 @@ NS_METHOD nsAppFileLocationProvider::GetProductDirectory(nsILocalFile **aLocalFi
     PRBool exists;
     nsCOMPtr<nsILocalFile> localDir;
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC) /* || defined(MACOSX) REMIND HACKING FOR MACOS X!!! */
     nsCOMPtr<nsIProperties> directoryService = 
              do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;

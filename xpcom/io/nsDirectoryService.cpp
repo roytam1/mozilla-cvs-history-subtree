@@ -61,7 +61,7 @@
 
 #include "nsSpecialSystemDirectory.h"
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 #define COMPONENT_REGISTRY_NAME "Component Registry"
 #define COMPONENT_DIRECTORY     "Components"
 #else
@@ -69,7 +69,7 @@
 #define COMPONENT_DIRECTORY     "components"    
 #endif 
 
-#if defined(XP_MAC) || defined(MACOSX)
+#if defined(XP_MAC)
 #define APP_REGISTRY_NAME "Application Registry"
 #elif defined(XP_WIN) || defined(XP_OS2)
 #define APP_REGISTRY_NAME "registry.dat"
@@ -83,8 +83,8 @@
 #define HOME_DIR NS_WIN_APPDATA_DIR
 #elif defined (XP_MAC)
 #define HOME_DIR NS_MAC_HOME_DIR
-#elif defined (XP_UNIX)
-#define HOME_DIR NS_UNIX_HOME_DIR || defined(MACOSX)
+#elif defined (XP_UNIX) || defined(MACOSX)
+#define HOME_DIR NS_UNIX_HOME_DIR
 #elif defined (XP_OS2)
 #define HOME_DIR NS_OS2_HOME_DIR
 #elif defined (XP_BEOS)
@@ -92,9 +92,9 @@
 #endif
 
 // define default product directory
-#if defined(XP_WIN) || defined(XP_MAC) || defined(MACOSX) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
 #define DEFAULT_PRODUCT_DIR "Mozilla"
-#elif defined (XP_UNIX)
+#elif defined (XP_UNIX) || defined(MACOSX)
 #define DEFAULT_PRODUCT_DIR ".mozilla"
 #endif
 
