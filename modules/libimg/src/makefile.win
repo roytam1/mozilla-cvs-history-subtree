@@ -108,13 +108,14 @@ MAPFILE= $(DLLNAME).map
 
 !endif
 
+
 MODULE=img 
 DEPTH=..\..\.. 
 LOCAL_INCLUDES=-I../png -I. -I$(DEPTH)/dist/public/zlib 
 LIBRARY_NAME=img 
 EXTRA_LIBS=$(DIST)/lib/libzlib.a $(DIST)/lib/libpng.a 
 !ifdef STANDALONE_IMAGE_LIB
-CSRCS=color.c colormap.c dither.c dummy_nc.c gif.c if.c ilclient.c il_util.c \
+CSRCS=color.c colormap.c dither.c gif.c if.c ilclient.c il_util.c \
     ilNetReader.cpp jpeg.c scale.c xbm.c ipng.c	png_png.c xpcompat.cpp
 REQUIRES=zlib nspr jpeg util img png xpcom
 C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
@@ -130,8 +131,8 @@ LINCS=-I$(XPDIST)\public\zlib -I$(XPDIST)\public\nspr \
     -I$(XPDIST)\public\png -I$(XPDIST)\public\xpcom 
 !endif
 !else
-CSRCS=color.c colormap.c dither.c external.c gif.c if.c \
-   ilclient.c il_util.c ilNetReader.cpp jpeg.c scale.c xbm.c ipng.c png_png.c
+CSRCS=color.c colormap.c dither.c dummy_nc.c external.c gif.c if.c \
+   ilclient.c il_util.c jpeg.c scale.c xbm.c ipng.c png_png.c ilNetReader.cpp 
 REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js xpcom
 EXPORTS=PIMGCB.h PPSIMGCB.h 
 JMC_HEADERS=$(JMC_GEN_DIR)\MIMGCB.h $(JMC_GEN_DIR)\MPSIMGCB.h 
