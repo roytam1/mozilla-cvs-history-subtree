@@ -43,6 +43,14 @@
 #include "rsrcids.h"
 #include <string.h>
 
+/* Encryption result - contains the key id and the resulting data */
+/* An empty key id indicates that NO encryption was performed */
+typedef struct EncryptionResult
+{
+  CMTItem keyid;
+  CMTItem data;
+} EncryptionResult;
+
 /* Encrypt request */
 typedef struct EncryptRequestMessage
 {
@@ -63,7 +71,10 @@ static CMTMessageTemplate EncryptRequestTemplate[] =
 
 /* Constants for testing */
 static const char *kPrefix = "Encrypted:";
-static const char *kFailure = "Failure:";
+
+/* Forward ref */
+static void encrypt(CMTItem *data);
+static void decrypt(CMTItem *data);
 
 static CMTItem
 CMT_CopyDataToItem(const unsigned char *data, CMUint32 len)
@@ -107,6 +118,7 @@ tmp_DoEncryptionRequest(CMTItem *message)
   }
 
   if (pLen) memcpy(reply.item.data, kPrefix, pLen);
+  encrypt(&request.data);
   memcpy(&reply.item.data[pLen], request.data.data, request.data.len);
   
   /* Generate response */
@@ -153,6 +165,7 @@ tmp_DoDecryptionRequest(CMTItem *message)
   if (!reply.item.data) { rv = CMTFailure;  goto loser; }
 
   memcpy(reply.item.data, &request.item.data[pLen], reply.item.len);
+  decrypt(&reply.item);
 
   /* Create reply message */
   message->type = SSM_SDR_DECRYPT_REPLY;
@@ -261,3 +274,31 @@ loser:
   return CMTSuccess; /* need return value */
 }
 
+/* "encrypt" */
+static unsigned char mask[64] = {
+ 0x73, 0x46, 0x1a, 0x05, 0x24, 0x65, 0x43, 0xb4, 0x24, 0xee, 0x79, 0xc1, 0xcc,
+ 0x49, 0xc7, 0x27, 0x11, 0x91, 0x2e, 0x8f, 0xaa, 0xf7, 0x62, 0x75, 0x41, 0x7e,
+ 0xb2, 0x42, 0xde, 0x1b, 0x42, 0x7b, 0x1f, 0x33, 0x49, 0xca, 0xd1, 0x6a, 0x85,
+ 0x05, 0x6c, 0xf9, 0x0e, 0x3e, 0x72, 0x02, 0xf2, 0xd8, 0x9d, 0xa1, 0xb8, 0x6e,
+ 0x03, 0x18, 0x3e, 0x82, 0x86, 0x34, 0x1a, 0x61, 0xd9, 0x65, 0xb6, 0x7f
+};
+
+static void
+encrypt(CMTItem *data)
+{
+  unsigned int i, j;
+
+  j = 0;
+  for(i = 0;i < data->len;i++)
+  {
+    data->data[i] ^= mask[j];
+
+    if (++j >= 64) j = 0;
+  }
+}
+
+static void
+decrypt(CMTItem *data)
+{
+  encrypt(data);
+}
