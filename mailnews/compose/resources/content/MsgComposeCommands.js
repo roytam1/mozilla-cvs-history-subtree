@@ -1631,6 +1631,12 @@ function GenericSendMessage( msgType )
             return;
           action = result2.action;
         }
+
+        // we will remember the users "send format" decision
+        // in the address collector code (see nsAbAddressCollecter::CollectAddress())
+        // by using msgCompFields.forcePlainText and msgCompFields.useMultipartAlternative
+        // to determine the nsIAbPreferMailFormat (unknown, plaintext, or html)
+        // if the user sends both, we remember html.
         switch (action)
         {
           case nsIMsgCompSendFormat.PlainText:
@@ -2386,12 +2392,7 @@ function DetermineHTMLAction(convertible)
         dump("DetermineHTMLAction: preferFormat = " + preferFormat + ", noHtmlRecipients are " + noHtmlRecipients + "\n");
 
         //Check newsgroups now...
-        try {
-            noHtmlnewsgroups = gMsgCompose.GetNoHtmlNewsgroups(null);
-        } catch(ex)
-        {
            noHtmlnewsgroups = gMsgCompose.compFields.newsgroups;
-        }
 
         if (noHtmlRecipients != "" || noHtmlnewsgroups != "")
         {

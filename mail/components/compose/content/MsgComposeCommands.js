@@ -2599,13 +2599,7 @@ function DetermineHTMLAction(convertible)
         }
         dump("DetermineHTMLAction: preferFormat = " + preferFormat + ", noHtmlRecipients are " + noHtmlRecipients + "\n");
 
-        //Check newsgroups now...
-        try {
-            noHtmlnewsgroups = gMsgCompose.GetNoHtmlNewsgroups(null);
-        } catch(ex)
-        {
-           noHtmlnewsgroups = gMsgCompose.compFields.newsgroups;
-        }
+        noHtmlnewsgroups = gMsgCompose.compFields.newsgroups;
 
         if (noHtmlRecipients != "" || noHtmlnewsgroups != "")
         {
