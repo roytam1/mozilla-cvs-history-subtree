@@ -663,14 +663,22 @@ function CommandUpdate_UndoRedo()
 function MessagePaneHasFocus()
 
 {
+  // message pane has focus if the iframe has focus OR if the message pane box
+  // has focus....
+  // first, check to see if the message pane box has focus...if it does, return true
+  var messagePane = GetMessagePane();
+  if (WhichPaneHasFocus() == messagePane)
+    return true;
+
+  // second, check to see if the iframe has focus...if it does, return true....
+
+  // check to see if the iframe has focus...
 	var focusedWindow = top.document.commandDispatcher.focusedWindow;
 	var messagePaneWindow = top.frames['messagepane'];
 	
 	if ( focusedWindow && messagePaneWindow && (focusedWindow != top) )
-	{
-        
+	{        
 		var hasFocus = IsSubWindowOf(focusedWindow, messagePaneWindow);
-
 		return hasFocus;
 	}
 	
@@ -1024,7 +1032,7 @@ function SetFocusThreadPane()
 
 function SetFocusMessagePane()
 {
-	var messagePaneFrame = GetMessagePaneFrame();
+	var messagePaneFrame = GetMessagePane();
   messagePaneFrame.focus();
 	return;
 }
