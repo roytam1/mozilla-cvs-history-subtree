@@ -314,7 +314,6 @@ nsFilePicker::FileDialogFilterProc(AEDesc* theItem, void* theInfo,
   Boolean shouldDisplay = true;
   nsFilePicker* self = NS_REINTERPRET_CAST(nsFilePicker*, callbackUD);
   if ( self && !self->mAllFilesDisplayed ) {
-    // on Mac OS 10.3.4, the following line always evaluates as false and this function always returns true.
     if ( theItem->descriptorType == typeFSS ) {
       NavFileOrFolderInfo* info = NS_REINTERPRET_CAST ( NavFileOrFolderInfo*, theInfo );
       if ( !info->isFolder ) {
@@ -692,7 +691,7 @@ nsFilePicker::MapFilterToFileTypes ( )
       NS_ASSERTION ( filterWide.Length(), "Oops. filepicker.properties not correctly installed");       
 
       // look for the flag indicating applications
-      if (filterWide.EqualsLiteral("..apps"))
+      if (filterWide.Equals(NS_LITERAL_STRING("..apps")))
         mApplicationsDisplayed = PR_TRUE;
 
       if ( filterWide.Length() && filter )
@@ -862,7 +861,7 @@ NS_IMETHODIMP nsFilePicker::GetDefaultString(nsAString& aString)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsFilePicker::GetDefaultExtension(nsAString& aExtension)
 {
-   aExtension.Truncate();
+  aExtension.Truncate();
   return NS_OK;
 }
 

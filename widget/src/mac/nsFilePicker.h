@@ -95,8 +95,8 @@ protected:
                                                 NavCallBackUserData callbackUD,
                                                 NavFilterModes filterMode ) ;
                                                 
-  PRBool                 mAllFilesDisplayed;
-  PRBool                 mApplicationsDisplayed;
+  PRPackedBool           mAllFilesDisplayed;
+  PRPackedBool           mApplicationsDisplayed;
   nsString               mTitle;
   PRInt16                mMode;
   nsCOMArray<nsILocalFile> mFiles;
