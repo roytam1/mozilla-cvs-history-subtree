@@ -36,6 +36,7 @@ window.dialog {
   color: #99cccc ! important;
 } 
 
+/* not a list anymore
 #profiles > listitem {
   list-style-image: url("chrome://communicator/skin/profile/profileicon-large.gif");
 }
@@ -43,6 +44,7 @@ window.dialog {
 #profiles > listitem[rowMigrate="no"] {
   list-style-image: url("chrome://communicator/skin/profile/migrate.gif");
 }
+*/
 
 /* profile selection dialog */
 html#intro {
