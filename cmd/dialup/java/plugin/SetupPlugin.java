@@ -18,17 +18,19 @@
 
 package netscape.npasw;
 
+import netscape.npasw.*;
 import netscape.plugin.Plugin;
 import netscape.security.*;
 import java.util.Hashtable;
 import java.util.Enumeration;
 import java.io.*;
-import netscape.npasw.*;
+import java.net.*;
 
 public class SetupPlugin extends Plugin
 {
-    static private Hashtable       iniFileCache = new Hashtable();
-
+    static private Hashtable		iniFileCache = new Hashtable();
+	static private String			netCenterUsername = "";
+	
     static final public void debug( String s )
     {
         System.out.println( s );
@@ -504,8 +506,95 @@ public class SetupPlugin extends Plugin
             return false;
     }
 
+	final public String GetNetcenterUsername()
+	{
+		if ( privilegeCheck() == true )
+			return netCenterUsername;
+		else
+			return null;
+	}
+	
+	final public boolean NetcenterRegister( String sURL, String reggieData[] )
+	{
+		if ( privilegeCheck() == true )
+		{
+			try
+			{
+				URLConnection		urlSrcConn = null;
+				URL					urlSrc = null;
+				String				buffer;
+				int					count;
+				
+				Trace.TRACE( "sURL: " + sURL );
+							
+				urlSrc = new URL( sURL );
+				urlSrcConn = urlSrc.openConnection();
+					
+				urlSrcConn.setDoOutput( true );
+				urlSrcConn.setUseCaches( false );
+				urlSrcConn.setAllowUserInteraction( true );
+								
+				// * send the post
+				PrintWriter out = new PrintWriter( urlSrcConn.getOutputStream() );
+				String traceOut = new String();
+				for ( count = 0; count < reggieData.length; count++ )
+				{
+					if ( count > 0 )
+					{
+						out.print( "&" );
+						traceOut = traceOut + "&";
+					}
+					out.print( reggieData[ count ] );
+					traceOut = traceOut + reggieData[ count ];
+				}
+				
+				Trace.TRACE( traceOut );
+				
+				out.println();
+				out.close();
 
-
+				Trace.TRACE( "getting input stream" );
+				InputStream         origStream = urlSrcConn.getInputStream();
+				
+				//Trace.TRACE( "creating reggie stream" );
+				ReggieStream        is = new ReggieStream( origStream );
+				
+				Trace.TRACE( "reading input stream" );
+								
+				buffer = is.nextToken();
+				Trace.TRACE( "token: " + buffer );
+				
+				if ( buffer.compareTo( "status" ) != 0 )
+					throw new MalformedReggieStreamException( "no STATUS message sent" );
+			
+				buffer = is.nextToken();
+				Trace.TRACE( "token: " + buffer );
+				if ( buffer.compareTo( "SUCCESS" ) != 0 )
+					throw new MalformedReggieStreamException( buffer );
+					
+				buffer = is.nextToken();
+				Trace.TRACE( "token: " + buffer );
+				if ( buffer.compareTo( "username" ) != 0 )
+					throw new MalformedReggieStreamException( buffer );
+				
+				buffer = is.nextToken();
+				Trace.TRACE( "token: " + buffer );
+				if ( buffer != null && buffer.compareTo( "" ) != 0 )
+					netCenterUsername = buffer;
+			}
+			catch ( Throwable e )
+			{
+			    Trace.TRACE( "caught an exception" );
+			    Trace.TRACE( e.getMessage() );
+			    e.printStackTrace();
+			    return false;
+			}
+			return true;
+		}
+		else
+			return false;
+	}
+						
 /*
     Private methods:
 */
