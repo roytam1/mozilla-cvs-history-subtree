@@ -156,7 +156,7 @@ nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
     // create a tempfile.
     if (aURL.Compare(nsString("file://"), false, 7) == 0)
     {       
-        tempFileString = nsFileSpec(nsFileURL(aURL)).GetCString();
+        tempFileString = nsFilePath(nsFileURL(aURL));
     }
     else
     {
@@ -176,7 +176,7 @@ nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
 
         tempFile.MakeUnique();
 
-        tempFileString = nsString(tempFile.GetCString());
+        tempFileString = nsFilePath(tempFile);
     }
 }
 
@@ -1367,7 +1367,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedNa
     // FIX:  We will overwrite what is in the way.  is this something that we want to do?  
     extractHereSpec->Delete(PR_FALSE);
 
-    result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), extractHereSpec->GetCString() );
+    result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), nsFilePath(*extractHereSpec) );
     
     if (result == 0)
     {

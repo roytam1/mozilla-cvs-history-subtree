@@ -137,7 +137,7 @@ nsSoftwareUpdate::Startup()
     jarFile += "test.jar";
     if (jarFile.Exists())
     {
-        InstallJar(nsString(nsFileURL(jarFile).GetAsString()), "", "");
+        InstallJar(nsString(nsFileURL(jarFile)), "", "");
     }
 #endif    
     /***************************************/

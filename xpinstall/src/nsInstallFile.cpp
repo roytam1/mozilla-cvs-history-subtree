@@ -231,7 +231,7 @@ PRInt32 nsInstallFile::CompleteFileMove()
             }
             else
             {
-                ReplaceFileLater(*mExtracedFile, *mFinalFile);
+                ReplaceFileLater(*mExtracedFile, *mFinalFile );
                 result = nsInstall::REBOOT_NEEDED;
             }
         }

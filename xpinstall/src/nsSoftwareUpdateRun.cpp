@@ -119,7 +119,7 @@ GetInstallScriptFromJarfile(const char* jarFile, char** scriptBuffer, PRUint32 *
     installJSFileSpec.MakeUnique();
 
     // Extract the install.js file.
-    rv  = ZIP_ExtractFile( hZip, "install.js", installJSFileSpec.GetCString() );
+    rv  = ZIP_ExtractFile( hZip, "install.js", nsFilePath(installJSFileSpec) );
     if (rv != ZIP_OK)
     {
         ZIP_CloseArchive(&hZip);

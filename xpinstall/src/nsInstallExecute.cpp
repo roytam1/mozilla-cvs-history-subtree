@@ -87,7 +87,7 @@ PRInt32 nsInstallExecute::Complete()
 
     PRInt32 result = app.Execute( mArgs );
     
-    DeleteFileLater(app);
+    DeleteFileLater( app );
     
     return result;
 }
