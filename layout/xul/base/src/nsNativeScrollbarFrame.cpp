@@ -118,7 +118,10 @@ nsNativeScrollbarFrame::Init(nsIPresContext* aPresContext, nsIContent* aContent,
       nsWidgetInitData widgetData;
       if ( NS_SUCCEEDED(myView->CreateWidget(kScrollbarCID, &widgetData, nsnull)) ) {
         myView->GetWidget(*getter_AddRefs(mScrollbar));
-        NS_ASSERTION(mScrollbar, "Couldn't create native scrollbar!");
+        if (!mScrollbar) {
+          NS_WARNING("Couldn't create native scrollbar!");
+          return NS_ERROR_FAILURE;
+        }
         mScrollbar->Show(PR_TRUE);
         mScrollbar->Enable(PR_TRUE);
 
