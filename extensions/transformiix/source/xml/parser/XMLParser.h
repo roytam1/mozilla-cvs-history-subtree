@@ -55,6 +55,7 @@ class XMLParser
    * Sax related methods for XML parsers
    * --------------------------------------------------*/
   friend void charData(void* userData, const XML_Char* s, int len);
+  friend void commentHandler(void* userData, const XML_Char* s);
   friend void startElement(void *userData, const XML_Char* name,
                            const XML_Char** atts);
   friend void endElement(void *userData, const XML_Char* name);
@@ -88,4 +89,5 @@ void charData(void* userData, const XML_Char* s, int len);
 void startElement(void *userData, const XML_Char* name, const XML_Char** atts);
 void endElement(void *userData, const XML_Char* name);
 void piHandler(void *userData, const XML_Char *target, const XML_Char *data);
+void piHandler(void *userData, const XML_Char *s);
 #endif
