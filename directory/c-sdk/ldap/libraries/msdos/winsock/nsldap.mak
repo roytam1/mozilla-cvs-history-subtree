@@ -18,7 +18,6 @@
 #   MOZ_DEBUG   if defined, you are building debug
 #   MOZ_BITS    set to 16 to build Win16, defaults to Win32.
 #   MOZ_SEC     set to DOMESTIC for 128 US, defaults to EXPORT.
-#   MOZ_TOOLS   place holding the build tools (e.g. makedep.exe)
 #   LINK_SEC    if defined and pointing to a directory containing libsec &
 #               friends, then link them in. Default not set.
 #
@@ -455,7 +454,7 @@ all: \
 !if "$(MOZ_BITS)"=="16"
 win16suxrox \
 !endif
-"$(OUTDIR)" $(OUTDIR)\nsldap.dep $(VERFILE)
+"$(OUTDIR)" $(BUILDDIR)\makedep.exe $(OUTDIR)\nsldap.dep $(VERFILE)
 
 !if "$(MOZ_BITS)"=="16"
 # Copy long-named files into 8.3 since NT 3.51 seems to require it. 
@@ -495,7 +494,7 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
         @rem <<$(PROD)$(VERSTR).dep
         $(CINCLUDES) -O $(OUTDIR)\nsldap.dep
 <<
-	$(MOZ_TOOLS)\makedep @$(PROD)$(VERSTR).dep -F <<
+        $(BUILDDIR)\makedep @$(PROD)$(VERSTR).dep -F <<
                 $(LIBLDAP)\abandon.c
                 $(LIBLDAP)\add.c
                 $(LIBLDAP)\bind.c
@@ -567,7 +566,7 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
                 $(LIBLDAP)\unbind.c
                 $(LIBLDAP)\unescape.c
                 $(LIBLDAP)\url.c
-		$(LIBLDAP)\utf8.c
+		$(LIBLDAP)\utf8.c
 		$(LIBLDAP)\vlistctrl.c
 		
                 $(LIBLBER)\bprint.c
@@ -581,6 +580,9 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
 !endif
 
 <<
+
+$(BUILDDIR)\makedep.exe: 
+        copy $(MOZ_SRC)\mozilla\cmd\winfe\mkfiles32\makedep.exe $(BUILDDIR)\makedep.exe
 
 !endif 
 
