@@ -1184,7 +1184,7 @@ paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool a
 PR_PUBLIC_API(HT_Pane)
 HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush)
 {
-  return paneFromResource(newNavCenterDB(), r, n, autoFlush, false, 0);
+  return paneFromResource(newNavCenterDB(), r, n, autoFlush, 1, 0);
 }
 
 
