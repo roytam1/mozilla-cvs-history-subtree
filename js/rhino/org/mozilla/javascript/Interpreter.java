@@ -1305,9 +1305,7 @@ public class Interpreter extends LabelTable {
         }
     }
     
-    public static Object interpret(Context cx, Scriptable scope, 
-                                   Scriptable thisObj, Object[] args, 
-                                   InterpreterData theData)
+    public static Object interpret(InterpreterData theData)
         throws JavaScriptException
     {
         Object lhs;
@@ -1327,15 +1325,18 @@ public class Interpreter extends LabelTable {
         if (i > 0) {
             vars = new Object[i];
             for (i = 0; i < theData.itsVariableTable.getParameterCount(); i++) {
-                if (i >= args.length)
+                if (i >= theData.itsInArgs.length)
                     vars[i] = undefined;
                 else                
-                    vars[i] = args[i];    
+                    vars[i] = theData.itsInArgs[i];    
             }
             for ( ; i < vars.length; i++)
                 vars[i] = undefined;
         }
         
+        Context cx = theData.itsCX;
+        Scriptable scope = theData.itsScope;
+
         if (theData.itsNestedFunctions != null) {
             for (i = 0; i < theData.itsNestedFunctions.length; i++)
                 createFunctionObject(theData.itsNestedFunctions[i], scope);
@@ -1374,6 +1375,8 @@ public class Interpreter extends LabelTable {
         Object savedSecurityDomain = cx.interpreterSecurityDomain;
         cx.interpreterSecurityDomain = theData.securityDomain;
         Object result = undefined;
+        
+        Scriptable theThisObj = theData.itsThisObj;            
         
         while (pc < iCodeLength) {
             try {
@@ -1658,7 +1661,7 @@ public class Interpreter extends LabelTable {
                         lhs = stack[stackTop];
                         stack[stackTop] = ScriptRuntime.callSpecial(
                                             cx, lhs, rhs, outArgs, 
-                                            thisObj, scope, name, i);
+                                            theThisObj, scope, name, i);
                         pc += 6;
                         break;
                     case TokenStream.CALL :
@@ -1763,7 +1766,7 @@ public class Interpreter extends LabelTable {
                         stack[++stackTop] = null;
                         break;
                     case TokenStream.THIS :
-                        stack[++stackTop] = thisObj;
+                        stack[++stackTop] = theThisObj;
                         break;
                     case TokenStream.FALSE :
                         stack[++stackTop] = Boolean.FALSE;
