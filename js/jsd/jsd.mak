@@ -1,14 +1,22 @@
 
 PROJ = jsd
 JSD = .
+JS = $(JSD)\..\src
+JSPROJ = js32
+
+!IF "$(BUILD_OPT)" != ""
+OBJ = Release
+CC_FLAGS = /DNDEBUG 
+!ELSE
 OBJ = Debug
-RUN = Run
-JSSRC = $(JSD)\..\src
-JSSRCPROJ = js32
-JSSRCOBJ = $(JSSRC)\$(OBJ)
+CC_FLAGS = /DDEBUG 
+LINK_FLAGS = /DEBUG
+!ENDIF 
+
+QUIET=@
 
 CFLAGS = /nologo /MDd /W3 /Gm /GX /Zi /Od\
-         /I $(JSSRC)\
+         /I $(JS)\
          /I $(JSD)\
          /DDEBUG /DWIN32 /D_CONSOLE /DXP_PC /D_WINDOWS /D_WIN32\
          /DJSDEBUGGER\
@@ -16,12 +24,13 @@ CFLAGS = /nologo /MDd /W3 /Gm /GX /Zi /Od\
          /DJSD_THREADSAFE\
 !ENDIF 
          /DEXPORT_JSD_API\
+         $(CC_FLAGS)\
          /c /Fp$(OBJ)\$(PROJ).pch /Fd$(OBJ)\$(PROJ).pdb /YX -Fo$@ $<
 
-LFLAGS = /nologo /subsystem:console /DLL /incremental:no /machine:I386 /DEBUG\
-         /pdb:$(OBJ)\$(PROJ).pdb -out:$(OBJ)\$(PROJ).dll
+LFLAGS = /nologo /subsystem:console /DLL /incremental:no /machine:I386 \
+         $(LINK_FLAGS) /pdb:$(OBJ)\$(PROJ).pdb -out:$(OBJ)\$(PROJ).dll
 
-LLIBS = kernel32.lib advapi32.lib $(JSSRCOBJ)\$(JSSRCPROJ).lib
+LLIBS = kernel32.lib advapi32.lib $(JS)\$(OBJ)\$(JSPROJ).lib
 # unused... user32.lib gdi32.lib winspool.lib comdlg32.lib shell32.lib                                    
 
 CPP=cl.exe
@@ -40,19 +49,20 @@ $(OBJ)\$(PROJ).dll:         \
         $(OBJ)\jsd_text.obj \
         $(OBJ)\jsd_lock.obj \
         $(OBJ)\jsd_val.obj 
-  $(LINK32) $(LFLAGS) $** $(LLIBS)
+  $(QUIET)$(LINK32) $(LFLAGS) $** $(LLIBS)
 
 {$(JSD)}.c{$(OBJ)}.obj :
-  $(CPP) $(CFLAGS)
+  $(QUIET)$(CPP) $(CFLAGS)
 
 $(OBJ) :
-    mkdir $(OBJ)
+    $(QUIET)mkdir $(OBJ)
 
 clean:
-    del $(OBJ)\*.pch
-    del $(OBJ)\*.obj
-    del $(OBJ)\*.exp
-    del $(OBJ)\*.lib
-    del $(OBJ)\*.idb
-    del $(OBJ)\*.pdb
-    del $(OBJ)\*.dll
+    @echo deleting old output
+    $(QUIET)del $(OBJ)\*.pch >NUL
+    $(QUIET)del $(OBJ)\*.obj >NUL
+    $(QUIET)del $(OBJ)\*.exp >NUL
+    $(QUIET)del $(OBJ)\*.lib >NUL
+    $(QUIET)del $(OBJ)\*.idb >NUL
+    $(QUIET)del $(OBJ)\*.pdb >NUL
+    $(QUIET)del $(OBJ)\*.dll >NUL

@@ -43,9 +43,7 @@
  */
 
 /*                        
-* Code to start a Java VM (*some* code from the JRE) and  load the JSDebugger.
-* With a small amount of work this can be generalized and made runtime 
-* configuarable.
+* Code to start a Java VM (*some* code from the JRE)
 */                        
 
 #include "jsdj.h"
@@ -56,7 +54,7 @@
 
 static char* more_classpath[] =
 {
-    /* XXX these shouldn't ought to be hard-coded */
+    /* XXX temporary until js/ref/jsd gets moved to js/jsd */
     {"..\\..\\jsdj\\dist\\classes"},
     {"..\\..\\jsdj\\dist\\classes\\ifc11.jar"},
 
@@ -74,8 +72,6 @@ static char* more_classpath[] =
 */
 };
 #define MORE_CLASSPATH_COUNT (sizeof(more_classpath)/sizeof(more_classpath[0]))
-
-/* XXX these shouldn't ought to be hard-coded */
 
 /*
 * static char  main_class[]     = "callnative";

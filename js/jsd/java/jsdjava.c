@@ -22,33 +22,33 @@
 
 #include "jsdj.h"
 
-PUBLIC_API(JSDJContext*)
+JSDJ_PUBLIC_API(JSDJContext*)
 JSDJ_SimpleInitForSingleContextMode(JSDContext* jsdc,
                                     JSDJ_GetJNIEnvProc getEnvProc, void* user)
 {
     return jsdj_SimpleInitForSingleContextMode(jsdc, getEnvProc, user);
 }
 
-PUBLIC_API(JSBool)
+JSDJ_PUBLIC_API(JSBool)
 JSDJ_SetSingleContextMode()
 {
     return jsdj_SetSingleContextMode();
 }
 
-PUBLIC_API(JSDJContext*)
+JSDJ_PUBLIC_API(JSDJContext*)
 JSDJ_CreateContext()
 {
     return jsdj_CreateContext();
 }
 
-PUBLIC_API(void)
+JSDJ_PUBLIC_API(void)
 JSDJ_DestroyContext(JSDJContext* jsdjc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
     jsdj_DestroyContext(jsdjc);
 }
 
-JSD_PUBLIC_API(void)
+JSDJ_PUBLIC_API(void)
 JSDJ_SetUserCallbacks(JSDJContext* jsdjc, JSDJ_UserCallbacks* callbacks, 
                       void* user)
 {
@@ -59,7 +59,7 @@ JSDJ_SetUserCallbacks(JSDJContext* jsdjc, JSDJ_UserCallbacks* callbacks,
     jsdj_SetUserCallbacks(jsdjc, callbacks, user);
 }        
 
-PUBLIC_API(void)
+JSDJ_PUBLIC_API(void)
 JSDJ_SetJNIEnvForCurrentThread(JSDJContext* jsdjc, JNIEnv* env)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
@@ -67,14 +67,14 @@ JSDJ_SetJNIEnvForCurrentThread(JSDJContext* jsdjc, JNIEnv* env)
     jsdj_SetJNIEnvForCurrentThread(jsdjc, env);
 }
 
-PUBLIC_API(JNIEnv*)
+JSDJ_PUBLIC_API(JNIEnv*)
 JSDJ_GetJNIEnvForCurrentThread(JSDJContext* jsdjc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
     return jsdj_GetJNIEnvForCurrentThread(jsdjc);
 }
 
-PUBLIC_API(void)
+JSDJ_PUBLIC_API(void)
 JSDJ_SetJSDContext(JSDJContext* jsdjc, JSDContext* jsdc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
@@ -82,14 +82,14 @@ JSDJ_SetJSDContext(JSDJContext* jsdjc, JSDContext* jsdc)
     jsdj_SetJSDContext(jsdjc, jsdc);
 }
 
-PUBLIC_API(JSDContext*)
+JSDJ_PUBLIC_API(JSDContext*)
 JSDJ_GetJSDContext(JSDJContext* jsdjc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
     return jsdj_GetJSDContext(jsdjc);
 }
 
-PUBLIC_API(JSBool)
+JSDJ_PUBLIC_API(JSBool)
 JSDJ_RegisterNatives(JSDJContext* jsdjc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);
@@ -99,7 +99,7 @@ JSDJ_RegisterNatives(JSDJContext* jsdjc)
 /***************************************************************************/
 #ifdef JSD_STANDALONE_JAVA_VM
 
-PUBLIC_API(JNIEnv*)
+JSDJ_PUBLIC_API(JNIEnv*)
 JSDJ_CreateJavaVMAndStartDebugger(JSDJContext* jsdjc)
 {
     JSDJ_ASSERT_VALID_CONTEXT(jsdjc);

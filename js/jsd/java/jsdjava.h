@@ -43,6 +43,23 @@ JS_END_EXTERN_C
 
 JS_BEGIN_EXTERN_C
 
+/*
+ * The linkage of JSDJ API functions differs depending on whether the file is
+ * used within the JSDJ library or not.  Any source file within the JSDJ
+ * libraray should define EXPORT_JSDJ_API whereas any client of the library
+ * should not.
+ */
+#ifdef EXPORT_JSDJ_API
+#define JSDJ_PUBLIC_API(t)    PUBLIC_API(t)
+#define JSDJ_PUBLIC_DATA(t)   PUBLIC_DATA(t)
+#else
+#define JSDJ_PUBLIC_API(t)    IMPORT_API(t)
+#define JSDJ_PUBLIC_DATA(t)   IMPORT_DATA(t)
+#endif
+
+#define JSDJ_FRIEND_API(t)    JSDJ_PUBLIC_API(t)
+#define JSDJ_FRIEND_DATA(t)   JSDJ_PUBLIC_DATA(t)
+
 /***************************************************************************/
 /* Opaque typedefs for handles */
 
@@ -69,42 +86,42 @@ typedef struct
     JSDJ_GetJNIEnvProc getJNIEnv;
 } JSDJ_UserCallbacks;
 
-extern PUBLIC_API(JSDJContext*)
+extern JSDJ_PUBLIC_API(JSDJContext*)
 JSDJ_SimpleInitForSingleContextMode(JSDContext* jsdc,
                                     JSDJ_GetJNIEnvProc getEnvProc, void* user);
 
-extern PUBLIC_API(JSBool)
+extern JSDJ_PUBLIC_API(JSBool)
 JSDJ_SetSingleContextMode();
 
-extern PUBLIC_API(JSDJContext*)
+extern JSDJ_PUBLIC_API(JSDJContext*)
 JSDJ_CreateContext();
 
-extern PUBLIC_API(void)
+extern JSDJ_PUBLIC_API(void)
 JSDJ_DestroyContext(JSDJContext* jsdjc);
 
-extern JSD_PUBLIC_API(void)
+extern JSDJ_PUBLIC_API(void)
 JSDJ_SetUserCallbacks(JSDJContext* jsdjc, JSDJ_UserCallbacks* callbacks, 
                       void* user);
 
-extern PUBLIC_API(void)
+extern JSDJ_PUBLIC_API(void)
 JSDJ_SetJNIEnvForCurrentThread(JSDJContext* jsdjc, JNIEnv* env);
 
-extern PUBLIC_API(JNIEnv*)
+extern JSDJ_PUBLIC_API(JNIEnv*)
 JSDJ_GetJNIEnvForCurrentThread(JSDJContext* jsdjc);
 
-extern PUBLIC_API(void)
+extern JSDJ_PUBLIC_API(void)
 JSDJ_SetJSDContext(JSDJContext* jsdjc, JSDContext* jsdc);
 
-extern PUBLIC_API(JSDContext*)
+extern JSDJ_PUBLIC_API(JSDContext*)
 JSDJ_GetJSDContext(JSDJContext* jsdjc);
 
-extern PUBLIC_API(JSBool)
+extern JSDJ_PUBLIC_API(JSBool)
 JSDJ_RegisterNatives(JSDJContext* jsdjc);
 
 /***************************************************************************/
 #ifdef JSD_STANDALONE_JAVA_VM
 
-extern PUBLIC_API(JNIEnv*)
+extern JSDJ_PUBLIC_API(JNIEnv*)
 JSDJ_CreateJavaVMAndStartDebugger(JSDJContext* jsdjc);
 
 #endif /* JSD_STANDALONE_JAVA_VM */

@@ -2,32 +2,50 @@
 PROJ = jsdjava
 JSDJAVA = .
 JSD = $(JSDJAVA)\..
-JSSRC = $(JSD)\..\src
+JS = $(JSD)\..\src
+JSPROJ = js32
+JSDPROJ = jsd
+
+!IF "$(BUILD_OPT)" != ""
+OBJ = Release
+CC_FLAGS = /DNDEBUG 
+!ELSE
 OBJ = Debug
+CC_FLAGS = /DDEBUG 
+LINK_FLAGS = /DEBUG
+!ENDIF 
+
+QUIET=@
 
 CFLAGS = /nologo /MDd /W3 /Gm /GX /Zi /Od\
-         /I $(JSSRC)\
+         /I $(JS)\
          /I $(JSD)\
-         /I jre\
-         /I jre\win32\
+         /I $(JSDJAVA)\
          /DDEBUG /DWIN32 /DXP_PC /D_WINDOWS /D_WIN32\
-         /DEXPORT_JSD_API\
+         /DJSD_THREADSAFE\
+         /DEXPORT_JSDJ_API\
          /DJSDEBUGGER\
 !IF "$(JSD_STANDALONE_JAVA_VM)" != ""
+         /I $(JSDJAVA)\jre\
+         /I $(JSDJAVA)\jre\win32\
          /DJSD_STANDALONE_JAVA_VM\
 !ENDIF 
-         /DJSD_THREADSAFE\
+         $(CC_FLAGS)\
          /c /Fp$(OBJ)\$(PROJ).pch /Fd$(OBJ)\$(PROJ).pdb /YX -Fo$@ $<
 
-LIBFLAGS = /nologo /subsystem:console /machine:I386 /out:$(OBJ)\$(PROJ).lib
+LFLAGS = /nologo /subsystem:console /DLL /incremental:no /machine:I386 \
+         $(LINK_FLAGS) /pdb:$(OBJ)\$(PROJ).pdb -out:$(OBJ)\$(PROJ).dll
+
+LLIBS = kernel32.lib advapi32.lib \
+        $(JS)\$(OBJ)\$(JSPROJ).lib $(JSD)\$(OBJ)\$(JSDPROJ).lib
 
 CPP=cl.exe
-LIB32=lib.exe
+LINK32=link.exe
 
-all: $(OBJ) $(OBJ)\$(PROJ).lib
+all: $(OBJ) $(OBJ)\$(PROJ).dll
      
 
-$(OBJ)\$(PROJ).lib:         \
+$(OBJ)\$(PROJ).dll:         \
 !IF "$(JSD_STANDALONE_JAVA_VM)" != ""
         $(OBJ)\jsd_jvm.obj  \
         $(OBJ)\jre.obj      \
@@ -35,25 +53,26 @@ $(OBJ)\$(PROJ).lib:         \
 !ENDIF 
         $(OBJ)\jsdjava.obj  \
         $(OBJ)\jsd_jntv.obj
-  $(LIB32) $(LIBFLAGS) $** $(LLIBS)
+  $(QUIET)$(LINK32) $(LFLAGS) $** $(LLIBS)
 
 {$(JSDJAVA)}.c{$(OBJ)}.obj :
-  $(CPP) $(CFLAGS)
+  $(QUIET)$(CPP) $(CFLAGS)
 
 {$(JSDJAVA)\jre}.c{$(OBJ)}.obj :
-  $(CPP) $(CFLAGS)
+  $(QUIET)$(CPP) $(CFLAGS)
 
 {$(JSDJAVA)\jre\win32}.c{$(OBJ)}.obj :
-  $(CPP) $(CFLAGS)
+  $(QUIET)$(CPP) $(CFLAGS)
 
 $(OBJ) :
-    mkdir $(OBJ)
+    $(QUIET)mkdir $(OBJ)
 
 clean:
-    del $(OBJ)\*.pch
-    del $(OBJ)\*.obj
-    del $(OBJ)\*.exp
-    del $(OBJ)\*.lib
-    del $(OBJ)\*.idb
-    del $(OBJ)\*.pdb
-    del $(OBJ)\*.exe
+    @echo deleting old output
+    $(QUIET)del $(OBJ)\*.pch >NUL
+    $(QUIET)del $(OBJ)\*.obj >NUL
+    $(QUIET)del $(OBJ)\*.exp >NUL
+    $(QUIET)del $(OBJ)\*.lib >NUL
+    $(QUIET)del $(OBJ)\*.idb >NUL
+    $(QUIET)del $(OBJ)\*.pdb >NUL
+    $(QUIET)del $(OBJ)\*.dll >NUL
