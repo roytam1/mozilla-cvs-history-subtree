@@ -32,7 +32,11 @@ struct _MDLock               _pr_ioq_lock;
  * We store the value in a PRTime variable for convenience.
  * This constant is used by _PR_FileTimeToPRTime().
  */
+#if defined(__MINGW32__)
+static const PRTime _pr_filetime_offset = 116444736000000000LL;
+#else
 static const PRTime _pr_filetime_offset = 116444736000000000i64;
+#endif
 
 void
 _PR_MD_INIT_IO()
@@ -464,7 +468,11 @@ _PR_FileTimeToPRTime(const FILETIME *filetime, PRTime *prtm)
 {
     PR_ASSERT(sizeof(FILETIME) == sizeof(PRTime));
     CopyMemory(prtm, filetime, sizeof(PRTime));
+#if defined(__MINGW32__)
+    *prtm = (*prtm - _pr_filetime_offset) / 10LL;
+#else
     *prtm = (*prtm - _pr_filetime_offset) / 10i64;
+#endif
 
 #ifdef DEBUG
     /* Doublecheck our calculation. */
