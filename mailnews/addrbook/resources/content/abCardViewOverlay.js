@@ -74,7 +74,9 @@ function OnLoadCardView()
 	cvData.cvNickname		= doc.getElementById("cvNickname");
 	cvData.cvDisplayName	= doc.getElementById("cvDisplayName");
 	cvData.cvEmail1			= doc.getElementById("cvEmail1");
+        cvData.cvEmail1Box              = doc.getElementById("cvEmail1Box");
 	cvData.cvEmail2			= doc.getElementById("cvEmail2");
+        cvData.cvEmail2Box              = doc.getElementById("cvEmail2Box");
 	// Home section
 	cvData.cvbHome			= doc.getElementById("cvbHome");
 	cvData.cvhHome			= doc.getElementById("cvhHome");
@@ -152,8 +154,11 @@ function DisplayCardViewPane(abNode)
 	cvSetNode(data.cvhName, nameHeader);
 	cvSetNodeWithLabel(data.cvNickname, zNickname, card.nickName);
 	cvSetNodeWithLabel(data.cvDisplayName, zDisplayName, card.displayName);
-	cvSetNode(data.cvEmail1, card.primaryEmail);
-	cvSetNode(data.cvEmail2, card.secondEmail);
+	// cvSetNode(data.cvEmail1, card.primaryEmail);
+	// cvSetNode(data.cvEmail2, card.secondEmail);
+        visible = HandleLink(data.cvEmail1, card.primaryEmail, data.cvEmail1Box,"mailto:") || visible;
+        visible = HandleLink(data.cvEmail2, card.secondEmail, data.cvEmail2Box,"mailto:") || visible;
+
 	// Home section
 	visible = cvSetNode(data.cvHomeAddress, card.homeAddress);
 	visible = cvSetNode(data.cvHomeAddress2, card.homeAddress2) || visible;
@@ -262,5 +267,22 @@ function cvSetVisible(node, visible)
 		node.removeAttribute("collapsed");
 	else
 		node.setAttribute("collapsed", "true");
+}
+
+function HandleLink(node, value, box, prefix)
+{
+  var visible = cvSetNode(node, value);
+  if (visible)
+    node.setAttribute('href', prefix + value);
+  cvSetVisible(box, visible);
+
+  return visible;
+}
+
+function openLink(id)
+{
+  openTopWin(document.getElementById(id).getAttribute("href"));
+  // return false, so we don't load the href in the addressbook window
+  return false;
 }
 
