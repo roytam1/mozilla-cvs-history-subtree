@@ -45,8 +45,11 @@ interface nsIMsgFilterPlugin : nsISupports
      * Ensure the plugin has been initialized.  May be called more
      * than once; calls subsequent to the first one should should
      * simply return.
+     * 
+     * @arg aServerPrefsKey     The preferences key for the server
+     *                          this object will be used with.
      */
-    void init();
+    void init(in ACString aServerPrefsKey);
 
     /**
      * Filter a message by headers.
