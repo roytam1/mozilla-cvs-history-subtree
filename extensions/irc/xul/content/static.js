@@ -29,8 +29,9 @@ else
 
 var client = new Object();
 
-const MSG_CSP       = getMsg ("commaSpace", [" "]);
-const MSG_UNKNOWN = getMsg ("unknown");
+const MSG_CSP       = getMsg ("commaSpace", " ");
+const MSG_NONE      = getMsg ("none");
+const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
@@ -47,7 +48,7 @@ client.MAX_NICK_DISPLAY = 14;
 /* longest word to show in display before abbreviating */
 client.MAX_WORD_DISPLAY = 20;
 client.PRINT_DIRECTION = 1; /*1 => new messages at bottom, -1 => at top */
-client.ADDRESSED_NICK_SEP = ": ";
+client.ADDRESSED_NICK_SEP = ":";
 
 client.NOTIFY_TIMEOUT = 5 * 60 * 1000; /* update notify list every 5 minutes */
 
@@ -70,6 +71,7 @@ client.responseCodeMap["HELLO"]  = getMsg("responseCodeMapHello");
 client.responseCodeMap["HELP"]  = getMsg("responseCodeMapHelp");
 client.responseCodeMap["USAGE"]  = getMsg("responseCodeMapUsage");
 client.responseCodeMap["ERROR"]  = getMsg("responseCodeMapError");
+client.responseCodeMap["WARNING"]  = getMsg("responseCodeMapWarning");
 client.responseCodeMap["INFO"]  = getMsg("responseCodeMapInfo");
 client.responseCodeMap["EVAL-IN"]  = getMsg("responseCodeMapEvalIn");
 client.responseCodeMap["EVAL-OUT"]  = getMsg("responseCodeMapEvalOut");
@@ -1079,7 +1081,7 @@ function gotoIRCURL (url)
                 if (ary[0].indexOf("!") != -1)
                 {
                     client.display (getMsg("gotoIRCURLCharWarning",
-                                           ["!", "%21", url.target]), "WARNING");
+                                           ["!", "%21", url.spec]), "WARNING");
                     ary = ary[0].split("!");
                 }
                 nick = ary[0];
@@ -1095,11 +1097,11 @@ function gotoIRCURL (url)
             if (url.target.indexOf("#") != -1)
             {
                 client.display (getMsg("gotoIRCURLCharWarning", 
-                                       ["#", "%23", url.target]), "WARNING");
+                                       ["#", "%23", url.spec]), "WARNING");
             }
             var key = "";
             if (url.needkey)
-                key = window.prompt (getMsg("gotoIRCURLMsg3",url.spec));
+                key = window.prompt (getMsg("gotoIRCURLMsg3", url.spec));
             ev = {inputData: url.target + " " + key,
                   network: net, server: net.primServ};
             client.onInputJoin (ev);
@@ -1139,13 +1141,13 @@ function updateNetwork(obj)
 {
     var o = getObjectDetails (client.currentObject);
 
-    var lag = "(unknown)";
+    var lag = MSG_UNKNOWN;
     var nick = "";
     if ("server" in o)
     {
         if (o.server.me)
             nick = o.server.me.properNick;
-        lag = (o.server.lag != -1) ? o.server.lag : "(unknown)";
+        lag = (o.server.lag != -1) ? o.server.lag : MSG_UNKNOWN;
     }
     client.statusBar["header-url"].setAttribute("value", 
                                                  client.currentObject.getURL());
@@ -1159,17 +1161,17 @@ function updateChannel (obj)
     
     var o = getObjectDetails (client.currentObject);
 
-    var mode = "(none)", users = "(none)", topic = "(unknown)";
+    var mode = MSG_NONE, users = MSG_NONE, topic = MSG_UNKNOWN;
 
     if ("channel" in o)
     {
         mode = o.channel.mode.getModeStr();
         if (!mode)
-            mode = "(none)";
+            mode = MSG_NONE;
         users = getMsg("userCountDetails",
                        [o.channel.getUsersLength(), o.channel.opCount,
                         o.channel.voiceCount]);
-        topic = o.channel.topic ? o.channel.topic : "(none)";
+        topic = o.channel.topic ? o.channel.topic : MSG_NONE;
     }
     
     client.statusBar["channel-mode"].setAttribute("value", mode);
@@ -1788,8 +1790,9 @@ function cli_connet (netname, pass)
         CIRCNetwork.prototype.INITIAL_NICK =
             prompt (getMsg("cli_attachGetNick"), client.defaultNick);
     
+    if (!("connecting" in netobj))
+        netobj.display (getMsg("cli_attachWorking",netobj.name), "INFO");
     netobj.connect(pass);
-    netobj.display (getMsg("cli_attachWorking",netobj.name), "INFO");
     return true;
 }
 
@@ -1963,10 +1966,12 @@ function __display(message, msgtype, sourceObj, destObj)
     {
         /* do nick things here */
         var nick;
+        var nickURL;
         
         if (sourceObj != me)
         {
             nick = sourceObj.properNick;
+            nickURL = sourceObj.getURL();
             if (toType == "IRCUser") /* msg from user to me */
             {
                 getAttention = true;
@@ -1985,8 +1990,10 @@ function __display(message, msgtype, sourceObj, destObj)
         }
         else if (toType == "IRCUser") /* msg from me to user */
         {
-            nick = (this.TYPE == "IRCUser") ? sourceObj.properNick :
-                destObj.properNick;
+            if (this.TYPE == "IRCUser")
+                nick    = sourceObj.properNick;
+            else
+                nick    = destObj.properNick;
         }
         else /* msg from me to channel */
         {
@@ -2009,7 +2016,20 @@ function __display(message, msgtype, sourceObj, destObj)
             msgSource.setAttribute ("important", "true");
         if (nick.length > client.MAX_NICK_DISPLAY)
             blockLevel = true;
-        msgSource.appendChild (newInlineText (nick));
+        if (nickURL)
+        {
+            var nick_anchor =
+                document.createElementNS("http://www.w3.org/1999/xhtml",
+                                         "html:a");
+            nick_anchor.setAttribute ("class", "chatzilla-link");
+            nick_anchor.setAttribute ("href", nickURL);
+            nick_anchor.appendChild (newInlineText (nick));
+            msgSource.appendChild (nick_anchor);
+        }
+        else
+        {
+            msgSource.appendChild (newInlineText (nick));
+        }
         msgRow.appendChild (msgSource);
 
     }
@@ -2156,6 +2176,7 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorpos)
         matches[0] = this.users[matches[0]].properNick;
         if (wordStart == 0)
             matches[0] += client.ADDRESSED_NICK_SEP;
+
         if (wordEnd == line.length)
         {
             /* add a space if the word is at the end of the line. */

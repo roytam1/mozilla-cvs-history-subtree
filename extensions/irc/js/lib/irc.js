@@ -118,6 +118,11 @@ CIRCNetwork.prototype.connect =
 function net_conenct()
 {
 
+    if ("primServ" in this && this.primServ.connection.isConnected)
+        return;
+
+    this.connecting = true; /* connection is considered "made" when serve
+                             * sends a 001 message (see server.on001 */
     this.connectAttempt = 0;
     this.nextHost = 0;
     var ev = new CEvent ("network", "do-connect", this, "onDoConnect");
@@ -145,9 +150,6 @@ function net_doconnect(e)
     
     if ("primServ" in this && this.primServ.connection.isConnected)
         return true;
-
-    this.connecting = true; /* connection is considered "made" when server
-                             * sends a 001 message (see server.on001 */
 
     var ev;
 
@@ -788,7 +790,7 @@ CIRCServer.prototype.on001 =
 function serv_001 (e)
 {
     this.parent.connectAttempt = 0;
-    this.parent.connecting = false;
+    delete this.parent.connecting;
 
     /* servers wont send a nick change notification if user was forced
      * to change nick while logging in (eg. nick already in use.)  We need
@@ -1212,10 +1214,9 @@ function serv_nick (e)
     
     for (var c in this.channels)
     {
-        var cuser = this.channels[c].users[oldKey];
-
-        if (typeof cuser != "undefined")
+        if (oldKey in this.channels[c].users)
         {
+            var cuser = this.channels[c].users[oldKey];
             renameProperty (this.channels[c].users, oldKey, newKey);
             ev = new CEvent ("channel", "nick", this.channels[c],
                                  "onNick");
@@ -1450,7 +1451,7 @@ function serv_ctcpr (e)
         { /* if there's no place to forward it, send it to unknownCTCP */
             e.type = "unk-ctcp-reply";
             e.destMethod = "onUnknownCTCPReply";
-            if (this[e.destMethod])
+            if (e.destMethod in this)
             {
                 e.set = "server";
                 e.destObject = this;
@@ -1982,7 +1983,7 @@ CIRCUser.prototype.TYPE = "IRCUser";
 CIRCUser.prototype.getURL =
 function usr_geturl ()
 {
-    return this.parent.getURL() + this.nick + "/";
+    return this.parent.getURL() + this.nick + ",isnick";
 }
 
 CIRCUser.prototype.changeNick =
@@ -2093,7 +2094,7 @@ function CIRCChanUser (parent, nick, isOp, isVoice)
 
 function cusr_geturl ()
 {
-    return this.parent.parent.getURL() + escape(this.nick) + "/,isnick";
+    return this.parent.parent.getURL() + escape(this.nick) + ",isnick";
 }
 
 function cusr_setop (f)

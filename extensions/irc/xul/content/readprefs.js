@@ -56,6 +56,8 @@
  *   +- views
  *   |  +- client
  *   |  |  +- maxlines (Number) max lines to keep in *client* view
+ *   |  +- network
+ *   |  |  +- maxlines (Number) max lines to keep in network views
  *   |  +- channel
  *   |  |  +- maxlines (Number) max lines to keep in channel views
  *   |  +- chanuser
@@ -96,7 +98,7 @@ function readIRCPrefs (rootNode)
         getCharPref (pref, rootNode + "initialScripts", "");
     client.ADDRESSED_NICK_SEP =
         getCharPref (pref, rootNode + "nickCompleteStr",
-                     client.ADDRESSED_NICK_SEP);
+                     client.ADDRESSED_NICK_SEP).replace(/\s*$/, "");
     client.INITIAL_VICTIMS =
         getCharPref (pref, rootNode + "stalkWords", "");
     
@@ -128,11 +130,15 @@ function readIRCPrefs (rootNode)
         getIntPref (pref, rootNode + "views.client.maxlines",
                     client.MAX_MESSAGES);
 
+    CIRCNetwork.prototype.MAX_MESSAGES =
+        getIntPref (pref, rootNode + "views.network.maxlines",
+                    CIRCChanUser.prototype.MAX_MESSAGES);
+
     CIRCChannel.prototype.MAX_MESSAGES =
         getIntPref (pref, rootNode + "views.channel.maxlines",
                     CIRCChannel.prototype.MAX_MESSAGES);
 
-    CIRCChanUser.prototype.MAX_MESSAGES =
+    CIRCUser.prototype.MAX_MESSAGES =
         getIntPref (pref, rootNode + "views.chanuser.maxlines",
                     CIRCChanUser.prototype.MAX_MESSAGES);
     

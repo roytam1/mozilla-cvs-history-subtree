@@ -92,7 +92,7 @@ function onClose()
         return true;
     
     client.userClose = true;
-    client.currentObject.display ("Closing ChatZilla...", "INFO");
+    client.currentObject.display (getMsg("cli_closing"), "INFO");
 
     if (client.getConnectionCount() == 0)
         /* if we're not connected to anything, just close the window */
@@ -1233,7 +1233,7 @@ function clie_ilistnets (e)
     var span = document.createElementNS("http://www.w3.org/1999/xhtml",
                                         "html:span");
     
-    span.appendChild (newInlineText("Available networks are ["));
+    span.appendChild (newInlineText(getMsg("cli_listNetworks.a"));
 
     var netnames = keys(client.networks).sort();
     var lastname = netnames[netnames.length - 1];
@@ -1252,7 +1252,7 @@ function clie_ilistnets (e)
             span.appendChild (newInlineText (MSG_CSP));
     }
 
-    span.appendChild (newInlineText("]."));
+    span.appendChild (newInlineText(getMsg("cli_listNetworks.b")));
 
     client.currentObject.display (span, "INFO");
     return true;
