@@ -55,6 +55,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsIStringBundle.h"
 #include "nsCRT.h"
+#include "nsIWindowMediator.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -92,6 +93,33 @@ nsDownloadManager::nsDownloadManager() : mCurrDownloads(nsnull),
 
 nsDownloadManager::~nsDownloadManager()
 {
+
+  // get the downloads container
+  nsCOMPtr<nsIRDFContainer> downloads;
+  nsresult rv = GetDownloadsContainer(getter_AddRefs(downloads));
+
+  // get the container's elements (nsIRDFResource's)
+  nsCOMPtr<nsISimpleEnumerator> items;
+  rv = downloads->GetElements(getter_AddRefs(items));
+
+  // enumerate the resources, use their ids to retrieve the corresponding
+  // nsIDownloads from the hashtable (if they don't exist, the download isn't
+  // a current transfer), get the items' progress information,
+  // and assert it into the graph
+
+  PRBool moreElements;
+  items->HasMoreElements(&moreElements);
+  for( ; moreElements; items->HasMoreElements(&moreElements)) {
+    nsCOMPtr<nsISupports> supports;
+    items->GetNext(getter_AddRefs(supports));
+    nsCOMPtr<nsIRDFResource> res = do_QueryInterface(supports);
+    char* id;
+    res->GetValue(&id);
+    nsCStringKey key(id);
+    if (mCurrDownloads->Exists(&key))
+      CancelDownload(id);
+  }
+
   gRDFService->UnregisterDataSource(mDataSource);
 
   NS_IF_RELEASE(gNC_DownloadsRoot);                                             
@@ -105,7 +133,7 @@ nsDownloadManager::~nsDownloadManager()
   NS_IF_RELEASE(gNC_StatusText);
 
   nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);                
-  gRDFService = nsnull;                                                         
+  gRDFService = nsnull;                                                        
 
   delete mCurrDownloads;
   mCurrDownloads = nsnull;
@@ -621,6 +649,49 @@ nsDownloadManager::RemoveDownload(const char* aPath)
   nsCOMPtr<nsIRDFResource> res;
   gRDFService->GetResource(aPath, getter_AddRefs(res));
 
+  // remove all the arcs for this resource, and then remove it from the Seq
+  nsCOMPtr<nsISimpleEnumerator> arcs;
+  rv = mDataSource->ArcLabelsOut(res, getter_AddRefs(arcs));
+  if (NS_FAILED(rv)) return rv;
+
+  PRBool moreArcs;
+  rv = arcs->HasMoreElements(&moreArcs);
+  if (NS_FAILED(rv)) return rv;
+
+  while (moreArcs) {
+    nsCOMPtr<nsISupports> supports;
+    rv = arcs->GetNext(getter_AddRefs(supports));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIRDFResource> arc(do_QueryInterface(supports, &rv));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISimpleEnumerator> targets;
+    rv = mDataSource->GetTargets(res, arc, PR_TRUE, getter_AddRefs(targets));
+    if (NS_FAILED(rv)) return rv;
+
+    PRBool moreTargets;
+    rv = targets->HasMoreElements(&moreTargets);
+    if (NS_FAILED(rv)) return rv;
+
+    while (moreTargets) {
+      rv = targets->GetNext(getter_AddRefs(supports));
+      if (NS_FAILED(rv)) return rv;
+
+      nsCOMPtr<nsIRDFNode> target(do_QueryInterface(supports, &rv));
+      if (NS_FAILED(rv)) return rv;
+
+      // and now drop this assertion from the graph
+      rv = mDataSource->Unassert(res, arc, target);
+      if (NS_FAILED(rv)) return rv;
+
+      rv = targets->HasMoreElements(&moreTargets);
+      if (NS_FAILED(rv)) return rv;
+    }
+    rv = arcs->HasMoreElements(&moreArcs);
+    if (NS_FAILED(rv)) return rv;
+  }
+
   PRInt32 itemIndex;
   downloads->IndexOf(res, &itemIndex);
   if (itemIndex <= 0)
@@ -658,10 +729,20 @@ nsDownloadManager::Open(nsIDOMWindow* aParent)
   // first assert new progress info so the ui is correctly updated
   // if this fails, it fails -- continue.
   AssertProgressInfo();
-  
+
+  //check for an existing manager window and focus it
+  nsresult rv;
+  nsCOMPtr<nsIWindowMediator> wm = do_GetService("@mozilla.org/rdf/datasource;1?name=window-mediator", &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  // if the window's already open, do nothing (focusing it would be annoying)
+  nsCOMPtr<nsIDOMWindowInternal> recentWindow;
+  wm->GetMostRecentWindow(NS_LITERAL_STRING("Download:Manager").get(), getter_AddRefs(recentWindow));
+  if (recentWindow)
+    return NS_OK;
+
   // if we ever have the capability to display the UI of third party dl managers,
   // we'll open their UI here instead.
-  nsresult rv;
   nsCOMPtr<nsIWindowWatcher> ww = do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv);
   if (NS_FAILED(rv)) return rv;
 
