@@ -240,6 +240,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     jsval *vector;
     jsval *p;
     JSObject *argsObj;
+    JSBool isInteractive = JS_TRUE;
 
     for (i=0; i < argc; i++) {
 	if (argv[i][0] == '-') {
@@ -265,6 +266,11 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 		    filename = NULL;
 		Process(cx, obj, filename);
                 filename = NULL;
+                /* XXX: js -f foo.js should interpret foo.js and then
+                 * drop into interactive mode, but that breaks test
+                 * harness. Just execute foo.js for now. 
+                 */
+                isInteractive = JS_FALSE;
 		i++;
 		break;
 	    default:
@@ -272,6 +278,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 	    }
 	} else {
 	    filename = argv[i++];
+            isInteractive = JS_FALSE;
 	    break;
 	}
     }
@@ -299,7 +306,8 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 			   OBJECT_TO_JSVAL(argsObj), NULL, NULL, 0))
 	return 1;
 
-    Process(cx, obj, filename);
+    if (filename || isInteractive)
+        Process(cx, obj, filename);
     return 0;
 }
 
