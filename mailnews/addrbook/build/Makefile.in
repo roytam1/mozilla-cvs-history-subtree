@@ -47,7 +47,7 @@ REQUIRES	= xpcom \
 		  locale \
 		  mork \
 		  appcomps \
-		  layout_xul \
+		  layout \
 		  $(NULL)
 
 CPPSRCS		= nsAbFactory.cpp
