@@ -936,6 +936,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
 		NS_ASSERTION(NS_SUCCEEDED(rv),"failed to determine if we should force migration");
 	}
 
+#ifdef ALLOW_MIGRATION
     // Start Migaration activity
     rv = cmdLineArgs->GetCmdLineValue(INSTALLER_CMD_LINE_ARG, getter_Copies(cmdResult));
     if (NS_SUCCEEDED(rv) || forceMigration)
@@ -975,6 +976,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
             }
         }
     }
+#endif /* ALLOW_MIGRATION */
 
 #ifdef DEBUG_profile_verbose
     printf("Profile Manager : Command Line Options : End\n");
