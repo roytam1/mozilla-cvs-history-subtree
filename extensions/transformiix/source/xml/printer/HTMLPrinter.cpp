@@ -120,8 +120,6 @@ MBool HTMLPrinter::print(Node* node, String& currentIndent) {
 
     //-- if (node == null) return false;
 
-    NodeList* nl;
-
     switch(node->getNodeType()) {
 
         //-- print Document Node
@@ -131,9 +129,10 @@ MBool HTMLPrinter::print(Node* node, String& currentIndent) {
             out <<endl<< "    \"http://www.w3.org/TR/REC-html40/loose.dtd\">" <<endl;
             Document* doc = (Document*)node;
             //-- printDoctype(doc.getDoctype());
-            nl = doc->getChildNodes();
-            for (int i = 0; i < nl->getLength(); i++) {
-                print(nl->item(i),currentIndent);
+            Node* tmpNode = doc->getFirstChild();
+            while (tmpNode) {
+                print(tmpNode,currentIndent);
+                tmpNode = tmpNode->getNextSibling();
             }
             break;
         }
@@ -166,27 +165,25 @@ MBool HTMLPrinter::print(Node* node, String& currentIndent) {
                     }
                 }
                 out << R_ANGLE_BRACKET;
-                NodeList* nl = element->getChildNodes();
+                Node* child = element->getFirstChild();
                 if (useFormat) out<<endl;
-                for (i = 0; i < nl->getLength(); i++) {
-		  Node* child = nl->item(i);
-		  switch(child->getNodeType()) {
-		      case Node::COMMENT_NODE:
-		      {
-                          out << COMMENT_START;
-                          out << ((CharacterData*)child)->getData();
-                          out << COMMENT_END;
-                          break;
-		      }
-		      case Node::TEXT_NODE:
-                      case Node::CDATA_SECTION_NODE:
-                      {
-			  out << ((Text*)child)->getData();
-                          break;
-                      }
-		      default:
-			  break;
-		  }
+                while (child) {
+                    switch(child->getNodeType()) {
+                        case Node::COMMENT_NODE: {
+                            out << COMMENT_START;
+                            out << ((CharacterData*)child)->getData();
+                            out << COMMENT_END;
+                            break;
+                        }
+                        case Node::TEXT_NODE:
+                        case Node::CDATA_SECTION_NODE: {
+                            out << ((Text*)child)->getData();
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                    child = child->getNextSibling();
                 }
                 out << flush;
                 if (useFormat) {

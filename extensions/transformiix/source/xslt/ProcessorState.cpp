@@ -138,9 +138,8 @@ void ProcessorState::addAttributeSet(Element* attributeSet) {
     }
 
     //-- add xsl:attribute elements to attSet
-    NodeList* nl = attributeSet->getChildNodes();
-    for ( UInt32 i = 0; i < nl->getLength(); i++) {
-        Node* node = nl->item(i);
+    Node* node = attributeSet->getFirstChild();
+    while (node) {
         if ( node->getNodeType() == Node::ELEMENT_NODE) {
             String nodeName = node->getNodeName();
             String ns;
@@ -150,6 +149,7 @@ void ProcessorState::addAttributeSet(Element* attributeSet) {
             XMLUtils::getLocalPart(nodeName, localPart);
             if ( ATTRIBUTE.isEqual(localPart) ) attSet->add(node);
         }
+        node = node->getNextSibling();
     }
 
 } //-- addAttributeSet

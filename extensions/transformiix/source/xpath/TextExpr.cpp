@@ -39,12 +39,11 @@ ExprResult* TextExpr::evaluate(Node* context, ContextState* cs) {
 
     if ( !context ) return nodeSet;
 
-    NodeList* nl = context->getChildNodes();
-
-    for ( UInt32 i = 0; i < nl->getLength(); i++ ) {
-        Node* node = nl->item(i);
+    Node* node = context->getFirstChild();
+    while (node) {
         if ( node->getNodeType() == Node::TEXT_NODE )
             nodeSet->add(node);
+        node = node->getNextSibling();
     }
 
     return nodeSet;
