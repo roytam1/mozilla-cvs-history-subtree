@@ -2,12 +2,12 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"[
     <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
     %brandDTD;
-]
->
-#
-#Contributors:
-#  David Tenser <david.tenser@comhem.se> (original author)
-
+]>
+<!--
+Contributors:
+  David Tenser <david.tenser@comhem.se> (original author)
+  R.J. Keller <rlk@trfenv.com>
+-->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>&brandFullName; Menu Reference</title>
@@ -17,19 +17,20 @@
 <body>
 
 <h1>&brandFullName; Menu Reference</h1>
-	<div>This menu reference describes each menu item in the main &brandFullName; window.</div>
+  <div>This menu reference describes each menu item in the main
+    &brandFullName; window.</div>
 
-	<div class="contentsBox">In this section:
-	  <ul>
-	    <li><a href="#file">File</a></li>
-	    <li><a href="#edit">Edit</a></li>
-	    <li><a href="#view">View</a></li>
-	    <li><a href="#go">Go</a></li>
-	    <li><a href="#bookmarks">Bookmarks</a></li>
-	    <li><a href="#tools">Tools</a></li>
-	    <li><a href="#help">Help</a></li>
-	  </ul>
-	</div>
+  <div class="contentsBox">In this section:
+    <ul>
+      <li><a href="#file">File</a></li>
+      <li><a href="#edit">Edit</a></li>
+      <li><a href="#view">View</a></li>
+      <li><a href="#go">Go</a></li>
+      <li><a href="#bookmarks">Bookmarks</a></li>
+      <li><a href="#tools">Tools</a></li>
+      <li><a href="#help">Help</a></li>
+    </ul>
+  </div>
 
 <h2 id="file">File</h2>
 
@@ -46,13 +47,6 @@
 
   <h3 id="close">Close</h3>
   <p>Closes the current window.</p>
-
-  <h3 id="close_tab">Close Tab</h3>
-  <p>This menu item is visible only if more than one browser tab is currently
-    open. It closes the current tab and selects the next tab to the right.</p>
-
-  <h3 id="close_window">Close Window</h3>
-  <p>Closes the current window, including all opened tabs.</p>
 
   <h3 id="save_page_as">Save Page As...</h3>
   <p>Saves the page you are currently browsing. You have the option to save the
@@ -85,7 +79,7 @@
   <h3 id="work_offline">Work Offline</h3>
   <p>Toggles between online and offline mode. Offline mode allows you to view
     Web pages you've previously visited without being connected to the Internet</p>
-    
+
   <h3 id="exit">Exit</h3>
   <p>Closes all opened windows in &brandShortName;, including any active downloads,
     and exits &brandShortName; completely. If you happen to select this option with
@@ -216,7 +210,7 @@
 
   <p>This menu contains all your stored bookmarks.</p>
 
-  <h3 id="add_to_bookmarks">Add to Bookmarks...</h3>
+  <h3 id="add_to_bookmarks">Bookmark This Page...</h3>
   <p>Adds the current page to your bookmarks. A dialog will be displayed,
     allowing you to choose a title for the bookmark and specify where you
     want it to be stored.</p>
@@ -228,10 +222,24 @@
 
 <h2 id="tools">Tools</h2>
 
+  <h3 id="web_search">Web Search</h3>
+  <p>Highlights the Web Search box. You can then type in a topic that you
+    wish to search the web for.</p>
+
   <h3 id="downloads">Downloads</h3>
   <p>Opens the Download Manager, where you can see the current, as well as
     finished downloads.</p>
-      
+
+  <h3 id="extensions">Extensions</h3>
+  <p>Opens the Extension Manager, where you can see all extensions installed
+    on this version of &brandShortName;. You can also choose to uninstall
+    some extensions from this dialog.</p>
+
+  <h3 id="themes">Themes</h3>
+  <p>Opens the Theme Manager. From here, you can switch the current theme that
+    &brandShortName; is using. You can also install and uninstall themes from
+    this dialog.</p>
+
   <h3 id="javascript_console">JavaScript Console</h3>
   <p>JavaScript is a scripting language commonly used to construct web pages.
     Programmers use JavaScript to make web pages more interactive; JavaScript
@@ -254,19 +262,19 @@
   <p>Opens the &brandShortName; Help window, which contains useful information
     that can help you browse the web.</p>
 
-  <h3 id="release_notes">Release Notes</h3>
-  <p>Displays the release notes for the latest &brandShortName; release.</p>
-
   <h3 id="for_ie_users">For Internet Explorer Users</h3>
   <p>Opens this Help window displaying information that can help Internet
     Explorer users transition to &brandShortName;.  (This item may not appear
     on Linux.)</p>
 
-  <h3 id="about_mozilla_firebird">About &brandShortName;</h3>
+  <h3 id="release_notes">Release Notes</h3>
+  <p>Displays the release notes for the latest &brandShortName; release.</p>
+
+  <h3 id="about_mozilla_firebird">About &brandFullName;</h3>
   <p>Displays a dialog box with information about &brandShortName;, including
     the current version and a brief list of credits.</p>
 
-<div class="contentsBox"><em>21 March 2004</em></div>
-<p>Copyright &copy; 2003 Contributors to the Firebird Help Project.</p>
+<div class="contentsBox"><em>10 July 2004</em></div>
+<p>Copyright &copy; 2003-2004 Contributors to the Firebird Help Project.</p>
 </body>
 </html>
