@@ -1635,7 +1635,7 @@ sub BloatTest {
     }
 
     print_log "<a href=#bloat>\n######################## BLOAT STATISTICS\n";
-    open DIFF, "perl $build_dir/../bloatdiff.pl $build_dir/bloat-prev.log $binary_log $bloatdiff_label|"
+    open DIFF, "perl $build_dir/../bloatdiff.pl $build_dir/bloat-prev.log $binary_log|"
       or die "Unable to run bloatdiff.pl";
     print_log $_ while <DIFF>;
     close DIFF;
