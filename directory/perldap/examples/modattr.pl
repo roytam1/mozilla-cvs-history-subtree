@@ -106,12 +106,9 @@ while ($entry)
 	}
       else
 	{
-	  if ($entry->{$attr}[0] ne $value)
-	    {
-	      $entry->{$attr} = [$value];
-	      $changed = 1;
-	      print "Set attribute for ", $entry->getDN(), "\n" if $opt_v;
-	    }
+	  $entry->setValue($attr, $value);
+	  $changed = 1;
+	  print "Set attribute for ", $entry->getDN(), "\n" if $opt_v;
 	}
     }
   if ($changed && ! $opt_n)
