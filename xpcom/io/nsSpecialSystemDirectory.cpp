@@ -786,7 +786,9 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len]   = '\\';
             path[len+1] = '\0';
 
+#if !defined(WINCE)
             *this = MakeUpperCase(path);
+#endif /* WINCE */
             break;
         }
 

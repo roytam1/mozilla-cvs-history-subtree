@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include <windows.h>
-#include <iostream.h>
+#include <stdio.h>
 #include "nsISupports.h"
 #include "nsIFactory.h"
 
@@ -65,11 +65,11 @@ public:
     NS_INIT_REFCNT();
   }
   virtual ~nsTestCom() {
-    cout << "nsTestCom instance successfully deleted\n";
+    printf("nsTestCom instance successfully deleted\n");
   }
 
   NS_IMETHOD Test() {
-    cout << "Accessed nsITestCom::Test() from COM\n";
+    printf("Accessed nsITestCom::Test() from COM\n");
     return NS_OK;
   }
 };
@@ -80,7 +80,7 @@ nsrefcnt nsTestCom::AddRef()
 {
   nsrefcnt res = ++mRefCnt;
   NS_LOG_ADDREF(this, mRefCnt, "nsTestCom", sizeof(*this));
-  cout << "nsTestCom: Adding ref = " << res << "\n";
+  printf("nsTestCom: Adding ref = %d\n", res);
   return res;
 }
 
@@ -88,7 +88,7 @@ nsrefcnt nsTestCom::Release()
 {
   nsrefcnt res = --mRefCnt;
   NS_LOG_RELEASE(this, mRefCnt, "nsTestCom");
-  cout << "nsTestCom: Releasing = " << res << "\n";
+  printf("nsTestCom: Releasing = %d\n", res);
   if (res == 0) {
     delete this;
   }
@@ -107,9 +107,7 @@ public:
                             void **aResult);
 
   NS_IMETHOD LockFactory(PRBool aLock) {
-    cout << "nsTestComFactory: ";
-    cout << (aLock == PR_TRUE ? "Locking server" : "Unlocking server");
-    cout << "\n";
+    printf("nsTestComFactory: %s\n", (aLock == PR_TRUE ? "Locking server" : "Unlocking server"));
     return S_OK;
   }
 };
@@ -137,7 +135,7 @@ nsresult nsTestComFactory::CreateInstance(nsISupports *aOuter,
     delete t;
   }
 
-  cout << "nsTestComFactory: successfully created nsTestCom instance\n";
+  printf("nsTestComFactory: successfully created nsTestCom instance\n");
 
   return res;
 }

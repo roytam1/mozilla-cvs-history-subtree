@@ -43,12 +43,9 @@ CPPSRCS		= \
 		TestAtoms.cpp \
 		TestAutoLock.cpp \
 		TestCallTemplates.cpp \
-		TestCOMPtr.cpp \
 		TestCOMPtrEq.cpp \
 		TestCRT.cpp \
-		TestFactory.cpp \
 		TestID.cpp \
-		TestObserverService.cpp \
 		TestPermanentAtoms.cpp \
 		TestPipes.cpp \
 		TestServMgr.cpp \
@@ -56,6 +53,17 @@ CPPSRCS		= \
 		TestXPIDLString.cpp \
 		TestDeque.cpp \
 		$(NULL)
+
+ifneq ($(OS_TARGET),WINCE)
+#
+#   Lack of iostreams, trivial source conversion if desired.
+#
+CPPSRCS		+= \
+		TestCOMPtr.cpp \
+		TestFactory.cpp \
+		TestObserverService.cpp \
+		$(NULL)
+endif # WINCE
 
 #CPPSRCS		+= TimerTest.cpp
 
@@ -67,6 +75,10 @@ LIBS		+= \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
+
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
 
 # Needed to resolve __yylex (?)
 ifeq ($(OS_ARCH)$(OS_RELEASE),FreeBSD2)
@@ -82,7 +94,9 @@ LOCAL_INCLUDES	= \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 CXXFLAGS	+= -GX
+endif
 endif
 
 libs::
