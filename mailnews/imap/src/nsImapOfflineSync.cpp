@@ -249,6 +249,10 @@ void nsImapOfflineSync::ProcessFlagOperation(nsIMsgOfflineImapOperation *current
         &currentOp);
     if (currentOp)
     {
+      // init the operation in the currentOp, so we don't crunch it if&when we
+      // call ClearOperation above.
+      nsOfflineImapOperationType operation;
+      currentOp->GetOperation(&operation);
       currentOp->GetFlagOperation(&flagOperation);
       currentOp->GetNewFlags(&newFlags);
     }
