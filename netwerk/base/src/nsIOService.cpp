@@ -82,7 +82,7 @@ nsIOService::Init()
                                       getter_AddRefs(mDNSService));
     if (NS_FAILED(rv)) return rv;
 
-    rv = nsServiceManager::GetService(kDNSServiceCID,
+    rv = nsServiceManager::GetService(kProtocolProxyServiceCID,
                                       NS_GET_IID(nsIProtocolProxyService),
                                       getter_AddRefs(mProxyService));
     if (NS_FAILED(rv)) return rv;
