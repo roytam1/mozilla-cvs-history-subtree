@@ -19,7 +19,7 @@ publish:
 	$(MAKE) clean
 	mkdir -p SOURCES SRPMS RPMS BUILD
 	(cd $(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/lib && tar cphf - .) \
-	 | (mkdir -p usr/lib/mps && cd usr/lib/mps && tar xvfBp -)
+	 | (mkdir -p usr/lib/mps/secv1 && cd usr/lib/mps/secv1 && tar xvfBp -)
 	(cd $(MOD_DEPTH)/../dist/$(OBJDIR_NAME)/include && tar cphf - .) \
 	 | (mkdir -p usr/include/mps/nspr && cd usr/include/mps/nspr && tar xvfBp -)
 	tar czvf SOURCES/$(NAME)-$(VERSION).tar.gz usr
