@@ -79,6 +79,7 @@ CPP_OBJS =                                        \
         .\$(OBJDIR)\nsHashtable.obj               \
         .\$(OBJDIR)\nsID.obj                      \
         .\$(OBJDIR)\nsCOMPtr.obj                  \
+        .\$(OBJDIR)\nsEnumeratorUtils.obj         \
         .\$(OBJDIR)\nsProxyEvent.obj              \
         .\$(OBJDIR)\nsComponentManager.obj        \
         .\$(OBJDIR)\nsRepository.obj              \
