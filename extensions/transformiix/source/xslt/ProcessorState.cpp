@@ -178,6 +178,7 @@ MBool ProcessorState::addToResultTree(Node* node) {
             if (current->getNodeType() != Node::ELEMENT_NODE) return MB_FALSE;
             Element* element = (Element*)current;
             Attr* attr = (Attr*)node;
+#ifdef MOZ_XSL
             String nameSpaceURI, name;
             name = attr->getName();
             getNameSpaceURI(name, nameSpaceURI);
