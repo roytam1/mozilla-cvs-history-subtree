@@ -476,8 +476,10 @@ ipcService::Observe(nsISupports *subject, const char *topic, const PRUnichar *da
         mObserverDB.Reset(ipcReleaseMessageObserver, nsnull);
 
         // drop daemon connection
-        if (mTransport)
+        if (mTransport) {
             mTransport->Shutdown();
+            NS_RELEASE(mTransport);
+        }
     }
     else if (strcmp(topic, "profile-change-net-restore") == 0) {
         if (mTransport)
