@@ -129,7 +129,6 @@ Collector::collect()
                 if (is_float64(ref))
                     ref = copyFloat64(ref);
             }
-            ++refs;
         }
     }
     
@@ -192,7 +191,7 @@ struct ConsCell {
 
     void* operator new(std::size_t n, Collector& gc)
     {
-        return (ConsCell*) gc.allocateObject(n);
+        return gc.allocateObject(n);
     }
 };
 
