@@ -35,6 +35,8 @@
 #ifdef _WIN32
  // Turn off warnings about identifiers too long in browser information
 #pragma warning(disable: 4786)
+#pragma warning(disable: 4711)
+#pragma warning(disable: 4710)
 #endif
 
 #include "parser.h"
@@ -383,6 +385,11 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mLength = bcg->mBuffer->size();
     mCodeBase = new uint8[mLength];
     memcpy(mCodeBase, bcg->mBuffer->begin(), mLength);
+
+    mCodeMapLength = bcg->mPC_Map->size();
+    mCodeMap = new PC_Position[mCodeMapLength];
+    memcpy(mCodeMap, bcg->mPC_Map->begin(), mCodeMapLength * sizeof(PC_Position));
+
     mStringPoolContents = new String[bcg->mStringPoolContents.size()];
 
     int index = 0;
@@ -399,6 +406,140 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mLocalsCount = bcg->mScopeChain->countVars();
     mStackDepth = bcg->mStackMax;
 }
+
+size_t ByteCodeModule::getPositionForPC(uint32 pc)
+{
+    if (mCodeMapLength == 1)
+        return mCodeMap[0].second;
+    for (uint32 i = 0; i < (mCodeMapLength - 1); i++) {
+        uint32 pos1 = mCodeMap[i].first;
+        uint32 pos2 = mCodeMap[i + 1].first;
+        if ((pc >= pos1) && (pc < pos2))
+            return mCodeMap[i].second;
+    }
+    return 0;
+}
+
+
+
+
+
+uint32 ByteCodeGen::getLabel()
+{
+    uint32 result = mLabelList.size();
+    mLabelList.push_back(Label());
+    return result;
+}
+
+uint32 ByteCodeGen::getLabel(Label::LabelKind kind)
+{
+    uint32 result = mLabelList.size();
+    mLabelList.push_back(Label(kind));
+    return result;
+}
+
+uint32 ByteCodeGen::getLabel(LabelStmtNode *lbl)
+{
+    uint32 result = mLabelList.size();
+    mLabelList.push_back(Label(lbl));
+    return result;
+}
+
+uint32 ByteCodeGen::getTopLabel(Label::LabelKind kind, const StringAtom *name)
+{
+    uint32 result = uint32(-1);
+    for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
+                        end = mLabelStack.rend();
+                        (i != end); i++)
+    {
+        // find the closest kind of label
+        if (mLabelList[*i].matches(kind))
+            result = *i;
+        else // and return it when we get the name
+            if (mLabelList[*i].matches(name))
+                return result;
+    }
+    NOT_REACHED("label not found");
+    return false;
+}
+
+uint32 ByteCodeGen::getTopLabel(Label::LabelKind kind)
+{
+    for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
+                        end = mLabelStack.rend();
+                        (i != end); i++)
+    {
+        if (mLabelList[*i].matches(kind))
+            return *i;
+    }
+    NOT_REACHED("label not found");
+    return false;
+}
+
+void ByteCodeGen::addOp(uint8 op)        
+{ 
+    addByte(op);
+    ASSERT(gByteCodeData[op].stackImpact != -128);
+    mStackTop += gByteCodeData[op].stackImpact;
+    if (mStackTop > mStackMax)
+        mStackMax = mStackTop; 
+    ASSERT(mStackTop >= 0);
+}
+
+void ByteCodeGen::addNumberRef(float64 f)
+{
+    NumberPool::iterator i = mNumberPool.find(f);
+    if (i != mNumberPool.end())
+        addLong(i->second);
+    else {
+        addLong(mNumberPoolContents.size());
+        mNumberPool[f] = mNumberPoolContents.size();
+        mNumberPoolContents.push_back(f);
+    }
+}
+
+void ByteCodeGen::addStringRef(const String &str)
+{
+    StringPool::iterator i = mStringPool.find(str);
+    if (i != mStringPool.end())
+        addLong(i->second);
+    else {
+        addLong(mStringPoolContents.size());
+        mStringPool[str] = mStringPoolContents.size();
+        mStringPoolContents.push_back(str);
+    }
+}
+
+
+
+
+
+
+
+
+void Label::setLocation(ByteCodeGen *bcg, uint32 location)
+{
+    mHasLocation = true;
+    mLocation = location;
+    for (std::vector<uint32>::iterator i = mFixupList.begin(), end = mFixupList.end(); 
+                    (i != end); i++)
+    {
+        uint32 branchLocation = *i;
+        bcg->setOffset(branchLocation, int32(mLocation - branchLocation)); 
+    }
+}
+
+void Label::addFixup(ByteCodeGen *bcg, uint32 branchLocation) 
+{ 
+    if (mHasLocation)
+        bcg->addOffset(int32(mLocation - branchLocation));
+    else {
+        mFixupList.push_back(branchLocation); 
+        bcg->addLong(0);
+    }
+}
+
+
 
 void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, bool isConstructor, JSType *topClass)
 {
@@ -955,6 +1096,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
+                addPosition(s->pos);
                 result = genCodeForStatement(s, static_cg);
                 s = s->next;
             }            
@@ -1723,7 +1865,7 @@ BinaryOpEquals:
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
             if (ref == NULL)
-                throw Exception(Exception::semanticError, "incomprehensible assignment designate (and error message)");
+                m_cx->reportError(Exception::semanticError, "incomprehensible assignment designate (and error message)", p->pos);
             ref->emitPreAssignment(this);
             genExpr(b->op2);
             ref->emitCodeSequence(this);
@@ -2152,17 +2294,6 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
         i = printInstruction(f, i, bcm);
     }
     return f;
-}
-
-
-void ByteCodeGen::addOp(uint8 op)        
-{ 
-    addByte(op);
-    ASSERT(gByteCodeData[op].stackImpact != -128);
-    mStackTop += gByteCodeData[op].stackImpact;
-    if (mStackTop > mStackMax)
-        mStackMax = mStackTop; 
-    ASSERT(mStackTop >= 0);
 }
 
 

@@ -155,6 +155,8 @@ struct ByteCodeData {
 };
 extern ByteCodeData gByteCodeData[OpCodeCount];
 
+    typedef std::pair<uint32, size_t> PC_Position;
+
 
     class ByteCodeModule {
     public:
@@ -176,6 +178,11 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         String *mStringPoolContents;
         float64 *mNumberPoolContents;
 
+        PC_Position *mCodeMap;
+        uint32 mCodeMapLength;
+
+        size_t getPositionForPC(uint32 pc);
+            
     };
     Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm);
 
@@ -219,6 +226,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         ByteCodeGen(Context *cx, ScopeChain *scopeChain) 
             :   mBuffer(new CodeBuffer), 
                 mScopeChain(scopeChain), 
+                mPC_Map(new CodeMap),
                 m_cx(cx), 
                 mNamespaceList(NULL) ,
                 mStackTop(0),
@@ -237,9 +245,12 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         typedef std::vector<uint8> CodeBuffer;
 
+        typedef std::vector<PC_Position> CodeMap;
+
         // this is the current code buffer
         CodeBuffer *mBuffer;
         ScopeChain *mScopeChain;
+        CodeMap *mPC_Map;
 
         Context *m_cx;
         
@@ -256,7 +267,9 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             return (mBuffer->size() > 0);
         }
        
-        void addOp(uint8 op);       // XXX move more outline
+        void addOp(uint8 op);       // XXX move more outline if it helps to reduce overall .exe size
+
+        void addPosition(size_t pos)    { mPC_Map->push_back(PC_Position(mBuffer->size(), pos)); }
 
         void addOpStretchStack(uint8 op, int32 n)        
         {
@@ -294,57 +307,15 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             mLabelList[label].addFixup(this, mBuffer->size()); 
         }
 
-        uint32 getLabel()
-        {
-            uint32 result = mLabelList.size();
-            mLabelList.push_back(Label());
-            return result;
-        }
+        uint32 getLabel();
 
-        uint32 getLabel(Label::LabelKind kind)
-        {
-            uint32 result = mLabelList.size();
-            mLabelList.push_back(Label(kind));
-            return result;
-        }
+        uint32 getLabel(Label::LabelKind kind);
 
-        uint32 getLabel(LabelStmtNode *lbl)
-        {
-            uint32 result = mLabelList.size();
-            mLabelList.push_back(Label(lbl));
-            return result;
-        }
+        uint32 getLabel(LabelStmtNode *lbl);
 
-        uint32 getTopLabel(Label::LabelKind kind, const StringAtom *name)
-        {
-            uint32 result = uint32(-1);
-            for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
-                                end = mLabelStack.rend();
-                                (i != end); i++)
-            {
-                // find the closest kind of label
-                if (mLabelList[*i].matches(kind))
-                    result = *i;
-                else // and return it when we get the name
-                    if (mLabelList[*i].matches(name))
-                        return result;
-            }
-            NOT_REACHED("label not found");
-            return false;
-        }
+        uint32 getTopLabel(Label::LabelKind kind, const StringAtom *name);
 
-        uint32 getTopLabel(Label::LabelKind kind)
-        {
-            for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
-                                end = mLabelStack.rend();
-                                (i != end); i++)
-            {
-                if (mLabelList[*i].matches(kind))
-                    return *i;
-            }
-            NOT_REACHED("label not found");
-            return false;
-        }
+        uint32 getTopLabel(Label::LabelKind kind);
 
         void setLabel(uint32 label)
         {
@@ -360,55 +331,12 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         NumberPool mNumberPool;
 
 
-        void addNumberRef(float64 f)
-        {
-            NumberPool::iterator i = mNumberPool.find(f);
-            if (i != mNumberPool.end())
-                addLong(i->second);
-            else {
-                addLong(mNumberPoolContents.size());
-                mNumberPool[f] = mNumberPoolContents.size();
-                mNumberPoolContents.push_back(f);
-            }
-        }
+        void addNumberRef(float64 f);
         
-        
-        void addStringRef(const String &str)
-        {
-            StringPool::iterator i = mStringPool.find(str);
-            if (i != mStringPool.end())
-                addLong(i->second);
-            else {
-                addLong(mStringPoolContents.size());
-                mStringPool[str] = mStringPoolContents.size();
-                mStringPoolContents.push_back(str);
-            }
-        }
+        void addStringRef(const String &str);
 
 
     };
-
-    inline void Label::setLocation(ByteCodeGen *bcg, uint32 location)
-    {
-        mHasLocation = true;
-        mLocation = location;
-        for (std::vector<uint32>::iterator i = mFixupList.begin(), end = mFixupList.end(); 
-                        (i != end); i++)
-        {
-            uint32 branchLocation = *i;
-            bcg->setOffset(branchLocation, int32(mLocation - branchLocation)); 
-        }
-    }
-
-    inline void Label::addFixup(ByteCodeGen *bcg, uint32 branchLocation) 
-    { 
-        if (mHasLocation)
-            bcg->addOffset(int32(mLocation - branchLocation));
-        else {
-            mFixupList.push_back(branchLocation); 
-            bcg->addLong(0);
-        }
-    }
 
 
     int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm);

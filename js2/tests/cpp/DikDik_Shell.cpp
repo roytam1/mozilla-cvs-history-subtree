@@ -130,7 +130,7 @@ static int readEvalPrint(Context *cx, FILE *in)
         appendChars(buffer, line.data(), line.size());
         try {
             Parser p(world, a, buffer, ConsoleName);
-                
+            cx->setReader(&p.lexer.reader);
             if (showTokens) {
                 Lexer &l = p.lexer;
                 while (true) {
