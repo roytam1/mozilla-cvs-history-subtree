@@ -77,7 +77,7 @@ function con_listprefs (prefix)
     var names = console.prefs.prefNames;
     for (var i = 0; i < names.length; ++i)
     {
-        if (names[i].indexOf(prefix) == 0)
+        if (!prefix || names[i].indexOf(prefix) == 0)
             list.push (names[i]);
     }
 

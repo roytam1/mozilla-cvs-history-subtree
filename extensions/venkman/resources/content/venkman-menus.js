@@ -94,7 +94,7 @@ function initMenus()
                  {type: "checkbox",
                   checkedif: "console.enableChromeFilter"}],
          ["-"],
-         ["save-layout"],
+         ["save-default-layout"],
          ["toggle-save-layout",
                  {type: "checkbox",
                   checkedif: "console.prefs['saveLayoutOnExit']"}]

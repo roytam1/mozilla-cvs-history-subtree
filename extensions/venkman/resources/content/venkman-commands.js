@@ -89,13 +89,13 @@ function initCommands(mainWindow)
          ["propsd",         cmdProps,              CMD_CONSOLE],
          ["quit",           cmdQuit,               CMD_CONSOLE],
          ["reload",         cmdReload,             CMD_CONSOLE],
-         ["revert-layout",  cmdRevertLayout,       CMD_CONSOLE],
+         ["restore-layout", cmdRestoreLayout,      CMD_CONSOLE],
          ["save-layout",    cmdSaveLayout,         CMD_CONSOLE],
          ["save-source",    cmdSaveSource,         CMD_CONSOLE],
          ["save-profile",   cmdSaveProfile,        CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
          ["toggle-float",   cmdToggleFloat,        CMD_CONSOLE],
-         ["toggle-save-layout", cmdToggleSaveLayout, CMD_CONSOLE],
+         ["toggle-save-layout", cmdToggleSaveLayout, 0],
          ["toggle-view",    cmdToggleView,         CMD_CONSOLE],
          ["startup-init",   cmdStartupInit,        CMD_CONSOLE],
          ["step",           cmdStep,               CMD_CONSOLE | CMD_NEED_STACK],
@@ -104,21 +104,22 @@ function initCommands(mainWindow)
          ["version",        cmdVersion,            CMD_CONSOLE],
          ["where",          cmdWhere,              CMD_CONSOLE | CMD_NEED_STACK],
          
-         /* aliases */
-         ["profile-tb",     "profile toggle",       CMD_CONSOLE],
-         ["this",           "props this",           CMD_CONSOLE],
-         ["toggle-chrome",  "chrome-filter toggle", 0],
-         ["toggle-ias",     "startup-init toggle",  0],
-         ["toggle-pprint",  "pprint toggle",        0],
-         ["toggle-profile", "profile toggle",       0],
-         ["em-cycle",       "emode cycle",          0],
-         ["em-ignore",      "emode ignore",         0],
-         ["em-trace",       "emode trace",          0],
-         ["em-break",       "emode break",          0],
-         ["tm-cycle",       "tmode cycle",          0],
-         ["tm-ignore",      "tmode ignore",         0],
-         ["tm-trace",       "tmode trace",          0],
-         ["tm-break",       "tmode break",          0],
+         /* aliases */         
+         ["save-default-layout",      "save-layout default",  CMD_CONSOLE],
+         ["profile-tb",               "profile toggle",       CMD_CONSOLE],
+         ["this",                     "props this",           CMD_CONSOLE],
+         ["toggle-chrome",            "chrome-filter toggle", 0],
+         ["toggle-ias",               "startup-init toggle",  0],
+         ["toggle-pprint",            "pprint toggle",        0],
+         ["toggle-profile",           "profile toggle",       0],
+         ["em-cycle",                 "emode cycle",          0],
+         ["em-ignore",                "emode ignore",         0],
+         ["em-trace",                 "emode trace",          0],
+         ["em-break",                 "emode break",          0],
+         ["tm-cycle",                 "tmode cycle",          0],
+         ["tm-ignore",                "tmode ignore",         0],
+         ["tm-trace",                 "tmode trace",          0],
+         ["tm-break",                 "tmode break",          0],
 
          /* hooks */
          ["hook-break-set",                cmdHook, 0],
@@ -914,12 +915,18 @@ function cmdHelp (e)
 function cmdHideView(e)
 {
     if (!(e.viewId in console.views))
-        throw new InvalidParam ("viewId", e.viewId);
-    
+    {
+        display (getMsg(MSN_ERR_INVALID_PARAM, ["viewId", e.viewId]), MT_ERROR);
+        return;    
+    }
+
     var view = console.views[e.viewId];
 
     if (!view || !("currentContent" in view))
-        throw new InvalidParam ("viewId", e.viewId);
+    {
+        display (getMsg(MSN_ERR_INVALID_PARAM, ["viewId", e.viewId]), MT_ERROR);
+        return;    
+    }
 
     dispatch ("move-view", 
               {viewContent: view.currentContent, viewContainer: null});    
@@ -967,11 +974,18 @@ function cmdLoadd (e)
 function cmdMoveView (e)
 {
     if (!e.viewId || !(e.viewId in console.views))
-        throw new InvalidParam ("viewId", e.viewId);
+    {
+        display (getMsg(MSN_ERR_INVALID_PARAM, ["viewId", e.viewId]), MT_ERROR);
+        return;    
+    }
 
     var parsedLocation = console.viewManager.parseLocation (e.locationUrl);
     if (!parsedLocation)
-        throw new InvalidParam ("locationURL", e.locationUrl);
+    {
+        display (getMsg(MSN_ERR_INVALID_PARAM, ["locationURL", e.locationURL]),
+                 MT_ERROR);
+        return;    
+    }
     
     console.viewManager.moveView (parsedLocation, e.viewId);
 }
@@ -1029,7 +1043,7 @@ function cmdPPrint (e)
 
 function cmdPref (e)
 {
-    if (e.prefName)
+    if (e.prefValue)
     {
         if (e.prefName[0] == "-")
         {
@@ -1044,20 +1058,14 @@ function cmdPref (e)
             return false;
         }
         
-        if (e.prefValue)
-            console.prefs[e.prefName] = e.prefValue;
-        else
-            e.prefValue = console.prefs[e.prefName];
-
+        console.prefs[e.prefName] = e.prefValue;
         display (getMsg(MSN_FMT_PREFVALUE, [e.prefName, e.prefValue]));
     }
     else
     {
-        for (var i in console.prefs.prefNames)
-        {
-            var name = console.prefs.prefNames[i];
-            display (getMsg(MSN_FMT_PREFVALUE, [name, console.prefs[name]]));
-        }
+        var ary = console.listPrefs(e.prefName);
+        for (var i = 0; i < ary.length; ++i)
+            display (getMsg(MSN_FMT_PREFVALUE, [ary[i], console.prefs[ary[i]]]));
     }
 
     return true;
@@ -1124,17 +1132,65 @@ function cmdReload()
     }
 }
 
-function cmdRevertLayout ()
-{
-    console.prefs["defaultVURLs"] = DEFAULT_VURLS;
+function cmdRestoreLayout (e)
+{   
+    if (!e.name)
+    {
+        var list = console.listPrefs("layoutState.");
+        for (var i = 0; i < list.length; ++i)
+            list[i] = list[i].substr(12);
+        list.push("factory");
+        display (getMsg(MSN_LAYOUT_LIST, list.sort().join(MSG_COMMASP)));
+        return;
+    }
+    
+    var layout;
+    e.name = e.name.toLowerCase();
+    if (e.name == "factory")
+    {
+        layout = DEFAULT_VURLS;
+    }
+    else
+    {
+        var prefName = "layoutState." + e.name;
+        if (!(prefName in console.prefs))
+        {
+            display (getMsg(MSN_ERR_INVALID_PARAM, ["name", e.name]), MT_ERROR);
+            return;
+        }
+        else
+        {
+            layout = console.prefs[prefName];
+        }
+    }
+    
     console.viewManager.destroyWindows();
-    console.viewManager.reconstituteVURLs (DEFAULT_VURLS.split (/\s*;\s*/));
+    console.viewManager.reconstituteVURLs (layout.split (/\s*;\s*/));
 }
 
 function cmdSaveLayout (e)
 {
+    if (!e.name)
+    {
+        var list = console.listPrefs("layoutState.");
+        for (var i = 0; i < list.length; ++i)
+            list[i] = list[i].substr(12);
+        list.push("factory");
+        display (getMsg(MSN_LAYOUT_LIST, list.sort().join(MSG_COMMASP)));
+        return;
+    }
+    
+    e.name = e.name.toLowerCase();
+    if (e.name == "factory")
+    {
+        display (getMsg(MSN_ERR_INVALID_PARAM, ["name", e.name]), MT_ERROR);
+        return;    
+    }
+    
     var ary = console.viewManager.getLayoutState ();
-    console.prefs["defaultVURLs"] = ary.join ("; ");
+    var prefName = "layoutState." + e.name;
+    console.addPref(prefName);
+    console.prefs[prefName] = ary.join ("; ");
 }
 
 function cmdSaveSource (e)

@@ -33,7 +33,7 @@
  *
  */
 
-const __vnk_version        = "0.9.6";
+const __vnk_version        = "0.9.7";
 const __vnk_requiredLocale = "0.9.x";
 var   __vnk_versionSuffix  = "";
 
@@ -481,9 +481,7 @@ function init()
 
     console.pushStatus(MSG_STATUS_DEFAULT);
 
-    ary = console.prefs["defaultVURLs"].split(/\s*;\s*/);
-    console.viewManager.reconstituteVURLs (ary); 
-
+    dispatch ("restore-layout default");
     dispatch ("version");
     dispatch ("commands");
     dispatch ("help");
@@ -517,7 +515,7 @@ function init()
 function destroy ()
 {
     if (console.prefs["saveLayoutOnExit"])
-        dispatch ("save-layout");
+        dispatch ("save-layout default");
     
     destroyViews();
     destroyHandlers();

@@ -56,7 +56,7 @@ const DEFAULT_VURLS =
 
 function initViews(mainWindow)
 {
-    console.addPref ("defaultVURLs", DEFAULT_VURLS);
+    console.addPref ("layoutState.default", DEFAULT_VURLS);
     console.addPref ("saveLayoutOnExit", true);
 
     const ATOM_CTRID = "@mozilla.org/atom-service;1";

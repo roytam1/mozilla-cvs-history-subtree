@@ -223,7 +223,7 @@ function vmgr_createcontainer (parsedLocation, containerId, type)
     if ("before" in parsedLocation)
         before = getChildById(parentContainer, parsedLocation.before);
     parentContainer.insertBefore(container, before);
-    this.groutContainer(parentContainer);
+    this.groutContainer(parentContainer, true);
 
     return container;
 }
@@ -347,9 +347,19 @@ function vmgr_getcontents (container, recurse, ary)
 }
 
 ViewManager.prototype.reconstituteVURLs =
-function vmgr_remake (ary)
+function vmgr_remake (ary, startIndex)
 {
-    for (var i = 0; i < ary.length; ++i)
+    var viewManager = this;
+    
+    function onWindowLoaded (window)
+    {
+        viewManager.reconstituteVURLs (ary, i);
+    };
+    
+    if (!startIndex)
+        startIndex = 0;
+
+    for (var i = startIndex; i < ary.length; ++i)
     {
         var parsedLocation = this.parseLocation (ary[i]);
         if (!ASSERT(parsedLocation, "can't parse " + ary[i]) ||
@@ -361,6 +371,13 @@ function vmgr_remake (ary)
 
         if (parsedLocation.target == "container")
         {
+            if (!(parsedLocation.windowId in this.windows))
+            {
+                dd ("loading window " + parsedLocation.windowId);
+                this.createWindow (parsedLocation.windowId, onWindowLoaded);
+                return;
+            }
+                
             if (!ASSERT("type" in parsedLocation, "no type in " + ary[i]))
                 parsedLocation.type = "horizontal";
             this.createContainer (parsedLocation, parsedLocation.id,
@@ -538,7 +555,7 @@ function vmgr_move (parsedLocation, viewId)
         var previousParent = content.parentNode;
         previousParent.removeChild(content);
         if (previousParent.localName == "viewcontainer")
-            viewManager.groutContainer (previousParent);
+            viewManager.groutContainer (previousParent, Boolean(newParent));
 
         if (newParent)
         {
@@ -779,7 +796,7 @@ function vmgr_groutbox (viewManager, container, noclose)
     }
 
     if (container.parentNode.localName == "viewcontainer")
-        viewManager.groutContainer(container.parentNode);
+        viewManager.groutContainer(container.parentNode, noclose);
 
     dd ("} " + container.getAttribute("id") +
         " view count: " + container.viewCount);
