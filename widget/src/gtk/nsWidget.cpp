@@ -1879,7 +1879,6 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
           aGdkButtonEvent->y_root < y + h))
     {
       gRollupListener->Rollup();
-      printf("rolling up\n");
       return;
     }
   }

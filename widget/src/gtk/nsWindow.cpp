@@ -981,7 +981,6 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 
   // track focus changes if we have a mozarea
   if (mMozArea) {
-    g_print("setting focus events to area\n");
     GTK_WIDGET_SET_FLAGS(mMozArea, GTK_CAN_FOCUS);
     InstallFocusInSignal(mMozArea);
     InstallFocusOutSignal(mMozArea);
@@ -1851,7 +1850,6 @@ NS_IMETHODIMP nsWindow::CaptureMouse(PRBool aCapture)
   }
   else
   {
-    printf("ungrabbing widget\n");
     gdk_pointer_ungrab(GDK_CURRENT_TIME);
     gtk_grab_remove(grabWidget);
   }
