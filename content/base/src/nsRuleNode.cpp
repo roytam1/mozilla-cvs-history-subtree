@@ -815,7 +815,7 @@ static const PropertyCheckData SVGCheckProperties[] = {
 
 static const PropertyCheckData SVGResetCheckProperties[] = {
 #define CSS_PROP_SVGRESET(name_, id_, method_, datastruct_, member_, type_, iscoord_) \
-  { offsetof(nsRuleData##datastruct_, member_), type_, iscoord_ },
+  { offsetof(nsRuleData##datastruct_, member_), type_ },
 #include "nsCSSPropList.h"
 #undef CSS_PROP_SVGRESET
 };  
