@@ -29,6 +29,7 @@ class  nsIAtom;
 class  nsIFrame;
 class  nsIPresContext;
 class  nsIRenderingContext;
+class  nsVoidArray;
 struct nsHTMLReflowMetrics;
 struct nsSize;
 
@@ -124,6 +125,14 @@ public:
    * Get the type of reflow command.
    */
   NS_IMETHOD GetType(ReflowType& aReflowType) const = 0;
+
+  /**
+   * Return the reflow command's path. The path is stored in
+   * <em>reverse</em> order in the array; i.e., the first element in
+   * the array is the target frame, the last element in the array is
+   * the current frame.
+   */
+  NS_IMETHOD GetPath(nsVoidArray **aPath) = 0;
 
   /**
    * Get the child frame associated with the reflow command.

@@ -191,6 +191,12 @@ NS_IMETHODIMP nsHTMLReflowCommand::GetAttribute(nsIAtom *& aAttribute) const
   return NS_OK;
 }
 
+NS_IMETHODIMP nsHTMLReflowCommand::GetPath(nsVoidArray **aPath)
+{
+  *aPath = &mPath;
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsHTMLReflowCommand::GetChildFrame(nsIFrame*& aChildFrame) const
 {
   aChildFrame = mChildFrame;

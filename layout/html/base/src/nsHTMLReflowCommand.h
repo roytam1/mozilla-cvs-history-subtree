@@ -60,6 +60,7 @@ public:
   /** can return nsnull.  If nsnull is not returned, the caller must NS_RELEASE aAttribute */
   NS_IMETHOD GetAttribute(nsIAtom *& aAttribute) const;
 
+  NS_IMETHOD GetPath(nsVoidArray **aPath);
   NS_IMETHOD GetChildFrame(nsIFrame*& aChildFrame) const;
   NS_IMETHOD GetChildListName(nsIAtom*& aListName) const;
   NS_IMETHOD SetChildListName(nsIAtom* aListName);
