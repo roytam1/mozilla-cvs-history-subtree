@@ -479,31 +479,14 @@ CWebBrowserContainer::SetFocus(void)
 NS_IMETHODIMP 
 CWebBrowserContainer::GetTitle(PRUnichar * *aTitle)
 {
-    NG_ASSERT_POINTER(aTitle, PRUnichar **);
-    if (!aTitle)
-        return E_INVALIDARG;
-
-    *aTitle = m_sTitle.ToNewUnicode();
-
-    return NS_OK;
+	return NS_ERROR_FAILURE;
 }
 
 
 NS_IMETHODIMP 
 CWebBrowserContainer::SetTitle(const PRUnichar * aTitle)
 {
-    NG_ASSERT_POINTER(aTitle, PRUnichar *);
-    if (!aTitle)
-        return E_INVALIDARG;
-
-    m_sTitle = aTitle;
-    // Fire a TitleChange event
-    BSTR bstrTitle = SysAllocString(aTitle);
-    m_pEvents1->Fire_TitleChange(bstrTitle);
-    m_pEvents2->Fire_TitleChange(bstrTitle);
-    SysFreeString(bstrTitle);
-
-    return NS_OK;
+	return NS_ERROR_FAILURE;
 }
 
 

@@ -224,8 +224,7 @@ public:
 			{
 				pCI->pfnCommandProc(pT, pCI->pCmdGUID, pCI->nCmdID, nCmdexecopt, pvaIn, pvaOut);
 			}
-			else if (pCI->nWindowsCmdID != 0 &&
-                     !(nCmdexecopt & OLECMDEXECOPT_SHOWHELP))
+			else if (pCI->nWindowsCmdID != 0)
 			{
 				HWND hwndTarget = pT->GetCommandTargetWindow();
 				if (hwndTarget)
