@@ -54,10 +54,19 @@ nsScrollbar::~nsScrollbar ()
 // Create the native scrollbar widget
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsScrollbar::CreateNative (GtkWidget * parentWindow)
+NS_IMETHODIMP nsScrollbar::CreateNative (GtkObject * parentWindow)
 {
   // Create scrollbar, random default values
   mAdjustment = GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 100, 1, 25, 25));
+
+  if (!GDK_IS_SUPERWIN(parentWindow)) {
+    g_print("Damn, brother.  That's not a superwin.\n");
+    return NS_ERROR_FAILURE;
+  }
+
+  GdkSuperWin *superwin = GDK_SUPERWIN(parentWindow);
+
+  mMozBox = gtk_mozbox_new(superwin->bin_window);
 
   switch (mOrientation)
   {
@@ -68,6 +77,10 @@ NS_IMETHODIMP nsScrollbar::CreateNative (GtkWidget * parentWindow)
       mWidget = gtk_vscrollbar_new (mAdjustment);
       break;
   }
+
+  // make sure that we put the scrollbar into the mozbox
+
+  gtk_container_add(GTK_CONTAINER(mMozBox), mWidget);
 
   gtk_widget_set_name (mWidget, "nsScrollbar");
 
