@@ -31,7 +31,7 @@ const nsStdURL_CONTRACTID     = "@mozilla.org/network/standard-url;1";
 const nsIFileURL          = Components.interfaces.nsIFileURL;
 const nsIOutlinerBoxObject = Components.interfaces.nsIOutlinerBoxObject;
 
-var sfile = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+var sfile = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
 var retvals;
 var filePickerMode;
 var dirHistory;
@@ -300,7 +300,7 @@ function onDblClick(e) {
     return;
 
   if (file.isSymlink()) {
-    var targetFile = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+    var targetFile = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
     targetFile.initWithUnicodePath(file.unicodeTarget);
     file = targetFile;
   }
@@ -400,7 +400,7 @@ function onDirectoryChanged(target)
 {
   var path = target.getAttribute("label");
 
-  var file = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+  var file = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
   file.initWithUnicodePath(path);
 
   if (!sfile.equals(file)) {
