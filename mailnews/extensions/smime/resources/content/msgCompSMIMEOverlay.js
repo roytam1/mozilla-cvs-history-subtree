@@ -20,12 +20,15 @@
  *   Scott MacGreogr <mscott@netscape.com>
  */
 
-var gISMimeCompFields = Components.interfaces.nsIMsgSMIMECompFields;
-var gSMimeCompFieldsContractID = "@mozilla.org/messenger-smime/composefields;1";
+const gISMimeCompFields = Components.interfaces.nsIMsgSMIMECompFields;
+const gSMimeCompFieldsContractID = "@mozilla.org/messenger-smime/composefields;1";
+const gSMimeContractID = "@mozilla.org/messenger-smime/smimejshelper;1";
+const gISMimeJSHelper = Components.interfaces.nsISMimeJSHelper;
 var gNextSecurityButtonCommand = "";
 var gBundle;
 var gBrandBundle;
 var gSMFields;
+var gEncryptedURIService = null;
 
 
 function onComposerClose()
@@ -68,6 +71,15 @@ function onComposerReOpen()
 
     gSMFields.signMessage = gCurrentIdentity.getBoolAttribute("sign_mail");
 
+    if (gEncryptedURIService && !gSMFields.requireEncryptMessage)
+    {
+      if (gEncryptedURIService.isEncrypted(gMsgCompose.originalMsgURI))
+      {
+        // Override encryption setting if original is known as encrypted.
+        gSMFields.requireEncryptMessage = true;
+      }
+    }
+
     if (gSMFields.requireEncryptMessage)
     {
       setEncryptionUI();
@@ -93,6 +105,13 @@ function onComposerReOpen()
 // but only on first open, not on composer recycling
 function smimeComposeOnLoad()
 {
+  if (!gEncryptedURIService)
+  {
+    gEncryptedURIService = 
+      Components.classes["@mozilla.org/messenger-smime/smime-encrypted-uris-service;1"]
+      .getService(Components.interfaces.nsIEncryptedSMIMEURIsService);
+  }
+
   onComposerReOpen();
 }
 
@@ -232,21 +251,25 @@ function doSecurityButton()
 function setNoSignatureUI()
 {
   top.document.getElementById("securityStatus").removeAttribute("signing");
+  top.document.getElementById("signing-status").collapsed = true;
 }
 
 function setSignatureUI()
 {
   top.document.getElementById("securityStatus").setAttribute("signing", "ok");
+  top.document.getElementById("signing-status").collapsed = false;
 }
 
 function setNoEncryptionUI()
 {
   top.document.getElementById("securityStatus").removeAttribute("crypto");
+  top.document.getElementById("encryption-status").collapsed = true;
 }
 
 function setEncryptionUI()
 {
   top.document.getElementById("securityStatus").setAttribute("crypto", "ok");
+  top.document.getElementById("encryption-status").collapsed = false;
 }
 
 function showMessageComposeSecurityStatus()
@@ -269,7 +292,8 @@ function showMessageComposeSecurityStatus()
       compFields : gMsgCompose.compFields,
       subject : GetMsgSubjectElement().value,
       smFields : gSMFields,
-      certsAvailable : areCertsAvailable
+      certsAvailable : areCertsAvailable,
+      currentIdentity : gCurrentIdentity
     }
   );
 }
@@ -304,6 +328,62 @@ var SecurityController =
   }
 };
 
+function onComposerSendMessage()
+{
+  try {
+    if (!gMsgCompose.compFields.securityInfo.requireEncryptMessage) {
+      return;
+    }
+
+    var helper = Components.classes[gSMimeContractID].createInstance(gISMimeJSHelper);
+
+    var emailAddresses = new Object();
+    var missingCount = new Object();
+
+    helper.getNoCertAddresses(
+      gMsgCompose.compFields,
+      missingCount,
+      emailAddresses);
+  }
+  catch (e)
+  {
+    return;
+  }
+
+  if (missingCount.value > 0)
+  {
+    var prefService =
+      Components.classes["@mozilla.org/preferences-service;1"]
+        .getService(Components.interfaces.nsIPrefService);
+    var prefs = prefService.getBranch(null);
+
+    var autocompleteLdap = false;
+    autocompleteLdap = prefs.getBoolPref("ldap_2.autoComplete.useDirectory");
+
+    if (autocompleteLdap)
+    {
+      var autocompleteDirectory = null;
+      autocompleteDirectory = prefs.getCharPref(
+        "ldap_2.autoComplete.directoryServer");
+
+      if(gCurrentIdentity.overrideGlobalPref) {
+        autocompleteDirectory = gCurrentIdentity.directoryServer;
+      }
+
+      if (autocompleteDirectory)
+      {
+        window.openDialog('chrome://messenger-smime/content/certFetchingStatus.xul',
+          '',
+          'chrome,resizable=1,modal=1,dialog=1', 
+          autocompleteDirectory,
+          emailAddresses.value
+        );
+      }
+    }
+  }
+}
+
 top.controllers.appendController(SecurityController);
 addEventListener('compose-window-close', onComposerClose, true);
 addEventListener('compose-window-reopen', onComposerReOpen, true);
+addEventListener('compose-send-message', onComposerSendMessage, true);

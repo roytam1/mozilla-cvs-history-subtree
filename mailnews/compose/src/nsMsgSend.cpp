@@ -450,6 +450,8 @@ nsMsgComposeAndSend::GatherMimeAttachments()
   char *buffer_tail = 0;
   nsXPIDLString msg; 
   PRBool tonews;
+  PRBool body_is_us_ascii = PR_TRUE;
+
   nsMsgSendPart   *mpartcontainer = nsnull;
   nsMsgSendPart* toppart = nsnull;      // The very top most container of the message
                       // that we are going to send.
@@ -712,12 +714,14 @@ nsMsgComposeAndSend::GatherMimeAttachments()
   PR_FREEIF(m_attachment1_encoding);
 
   // Check if the part contains 7 bit only. Re-label charset if necessary.
-  PRBool body_is_us_ascii;
-  if (nsMsgI18Nstateful_charset(mCompFields->GetCharacterSet())) {
-    body_is_us_ascii = nsMsgI18N7bit_data_part(mCompFields->GetCharacterSet(), m_attachment1_body, m_attachment1_body_length); 
-  }
-  else {
-    body_is_us_ascii = mime_7bit_data_p (m_attachment1_body, m_attachment1_body_length);
+  if (m_attachment1_body)
+  {
+    if (nsMsgI18Nstateful_charset(mCompFields->GetCharacterSet())) {
+      body_is_us_ascii = nsMsgI18N7bit_data_part(mCompFields->GetCharacterSet(), m_attachment1_body, m_attachment1_body_length); 
+    }
+    else {
+      body_is_us_ascii = mime_7bit_data_p (m_attachment1_body, m_attachment1_body_length);
+    }
   }
 
   if (nsMsgI18Nstateful_charset(mCompFields->GetCharacterSet()) ||
@@ -1456,7 +1460,9 @@ nsMsgComposeAndSend::GetBodyFromEditor()
         bodyTextPtr++;
       }
       PR_FREEIF(outCString);
-      rv = nsMsgI18NSaveAsCharset(TEXT_PLAIN, aCharset, bodyText, &outCString);
+      
+      nsXPIDLCString fallbackCharset;
+      rv = nsMsgI18NSaveAsCharset(TEXT_PLAIN, aCharset, bodyText, &outCString, getter_Copies(fallbackCharset));
 
       if (NS_ERROR_UENC_NOMAPPING == rv) {
         PRBool proceedTheSend;
@@ -1470,6 +1476,9 @@ nsMsgComposeAndSend::GetBodyFromEditor()
           return NS_ERROR_MSG_MULTILINGUAL_SEND;
         }
       }
+      // re-label to the fallback charset
+      else if (fallbackCharset)
+        mCompFields->SetCharacterSet(fallbackCharset.get());
     }
 
     if (NS_SUCCEEDED(rv)) 
@@ -2261,8 +2270,6 @@ nsMsgComposeAndSend::AddCompFieldRemoteAttachments(PRUint32   aStartLocation,
 
           nsMsgNewURL(getter_AddRefs(m_attachments[newLoc].mURL), url.get());
 
-          PR_FREEIF(m_attachments[newLoc].m_charset);
-          m_attachments[newLoc].m_charset = PL_strdup(mCompFields->GetCharacterSet());
           PR_FREEIF(m_attachments[newLoc].m_encoding);
           m_attachments[newLoc].m_encoding = PL_strdup ("7bit");
 
@@ -4245,7 +4252,7 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
   {
     char *convBcc;
     convBcc = nsMsgI18NEncodeMimePartIIStr(bcc_header, PR_TRUE,
-                    mCompFields->GetCharacterSet(), 0,
+                    mCompFields->GetCharacterSet(), sizeof("BCC: "),
                     nsMsgMIMEGetConformToStandard());
 
     PRInt32 L = strlen(convBcc ? convBcc : bcc_header) + 20;

@@ -896,7 +896,7 @@ Rights Reserved.
           <menuitem label="&newNewMsgCmd.label;"
                     accesskey="&newNewMsgCmd.accesskey;"
                     key="key_newMessage"
-                    oncommand="MsgNewMessage(event);"/>
+                    oncommand="MsgNewMessage(null);"/>
           <menuitem label="&newFolderCmd.label;"
                      oncommand="MsgNewFolder(NewFolder);"
                      accesskey="&newFolderCmd.accesskey;"/>
@@ -1023,7 +1023,7 @@ Rights Reserved.
                 accesskey="&folderPropsCmd.accesskey;"
                 observes="cmd_properties"/>
       <menuitem label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" oncommand="MsgAccountManager(null);"/>
-      <menuitem id="menu_preferences" oncommand="goPreferences('messenger.xul', 'chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
+      <menuitem id="menu_preferences" oncommand="goPreferences('mailnews', 'chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
     </menupopup>
   </menu>
 
@@ -1141,7 +1141,7 @@ Rights Reserved.
     <menuitem label="&newMsgCmd.label;"
     accesskey="&newMsgCmd.accesskey;"
     key="key_newMessage"
-    oncommand="MsgNewMessage(event);"/>
+    oncommand="MsgNewMessage(null);"/>
     <menuitem id="replyMainMenu" label="&replyMsgCmd.label;" 
       accesskey="&replyMsgCmd.accesskey;"
       key="key_reply"
@@ -1517,10 +1517,13 @@ Rights Reserved.
 </toolbox>
 
 <hbox id="searchBox" persist="collapsed" align="center">
-  <label id="searchCriteria" value="&SearchSubjectOrSender.label;"/>
+  <label id="searchCriteria" value="&SearchSubjectOrSender.label;" control="searchInput" 
+         accesskey="&SearchSubjectOrSender.accesskey;"/>
   <textbox id="searchInput" flex="1" onfocus="this.select();" oninput="onSearchInput(false);" onkeypress="onSearchKeyPress(event);"/>
-  <button id="clearButton" label="&clearButton.label;" disabled="true" tooltiptext="&clearButton.tooltip;" oncommand="onClearSearch();" accesskey="&clearButton.accesskey;"/>
-  <button id="advancedButton" label="&advancedButton.label;" tooltiptext="&advancedButton.tooltip;" oncommand="onAdvancedSearch();"/>
+  <button id="clearButton" label="&clearButton.label;" disabled="true" tooltiptext="&clearButton.tooltip;" oncommand="onClearSearch();" 
+          accesskey="&clearButton.accesskey;"/>
+  <button id="advancedButton" label="&advancedButton.label;" tooltiptext="&advancedButton.tooltip;" oncommand="onAdvancedSearch();"
+          accesskey="&advancedButton.accesskey;"/>
 </hbox>
 
 <statusbar class="chromeclass-status" id="status-bar"> 

@@ -105,17 +105,27 @@ nsMsgTxn::SetTransactionType(PRUint32 txnType)
     return NS_OK;
 }
 
-//none of the callers pass null aFolder
+//none of the callers pass null aFolder, we always initialize aResult before we pass in
 nsresult 
 nsMsgTxn::CheckForToggleDelete(nsIMsgFolder *aFolder, const nsMsgKey &aMsgKey, PRBool *aResult)
 {
+  nsresult rv;
   nsCOMPtr<nsIMsgDBHdr> message;
-  nsresult rv = aFolder->GetMessageHeader(aMsgKey, getter_AddRefs(message));
+  nsCOMPtr<nsIMsgDatabase> db;
+  aFolder->GetMsgDatabase(nsnull,getter_AddRefs(db));
+  if (db)
+  {
+    PRBool containsKey;
+    rv = db->ContainsKey(aMsgKey, &containsKey);
+    if (NS_FAILED(rv) || !containsKey)   // the message has been deleted from db, so we cannot do toggle here
+      return NS_OK;
+    rv = db->GetMsgHdrForKey(aMsgKey, getter_AddRefs(message));
   PRUint32 flags;
   if (NS_SUCCEEDED(rv) && message)
   {
     message->GetFlags(&flags);
     *aResult = (flags & MSG_FLAG_IMAP_DELETED) != 0;
+    }
   }
   return rv;
 }

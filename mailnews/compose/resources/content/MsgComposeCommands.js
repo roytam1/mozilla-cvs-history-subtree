@@ -113,7 +113,7 @@ function InitializeGlobalVariables()
   defaultSaveOperation = "draft";
   gSendOrSaveOperationInProgress = false;
   gCloseWindowAfterSave = false;
-  gIsOffline = false;
+  gIsOffline = gIOService.offline;;
   gSessionAdded = false;
   gCurrentAutocompleteDirectory = null;
   gAutocompleteSession = null;
@@ -171,6 +171,7 @@ function enableEditableFields()
 
 var gComposeRecyclingListener = {
   onClose: function() {
+    //Reset recipients and attachments
 	  awResetAllRows();
 	  RemoveAllAttachments();
 
@@ -209,6 +210,11 @@ var gComposeRecyclingListener = {
 	},
 
 	onReopen: function(params) {
+    //Reset focus to work around bug 141648
+    var identityElement = document.getElementById("msgIdentity");
+    if (identityElement)
+      identityElement.focus();
+
     InitializeGlobalVariables();
     window.editorShell.contentWindow.focus();
     enableEditableFields();
@@ -854,12 +860,40 @@ function setupLdapAutocompleteSession()
                     Components.interfaces.nsILDAPURL);
 
             try {
-                serverURL.spec = sPrefs.getCharPref(autocompleteDirectory + 
-                                                    ".uri");
+                serverURL.spec = sPrefs.getComplexValue(autocompleteDirectory +".uri",
+                                             Components.interfaces.nsISupportsWString).data;
             } catch (ex) {
                 dump("ERROR: " + ex + "\n");
             }
             LDAPSession.serverURL = serverURL;
+
+            // get the login to authenticate as, if there is one
+            //
+            var login = "";
+            try {
+                login = sPrefs.getComplexValue(
+                    autocompleteDirectory + ".auth.dn",
+                    Components.interfaces.nsISupportsWString).data;
+            } catch (ex) {
+                // if we don't have this pref, no big deal
+            }
+
+            // find out if we need to authenticate, and if so, tell the LDAP
+            // autocomplete session how to prompt for a password.  This window
+            // (the compose window) is being used to parent the authprompter.
+            //
+            LDAPSession.login = login;
+            if (login != "") {
+                var windowWatcherSvc = Components.classes[
+                    "@mozilla.org/embedcomp/window-watcher;1"]
+                    .getService(Components.interfaces.nsIWindowWatcher);
+                var domWin = 
+                    window.QueryInterface(Components.interfaces.nsIDOMWindow);
+                var authPrompter = 
+                    windowWatcherSvc.getNewAuthPrompter(domWin);
+
+                LDAPSession.authPrompter = authPrompter;
+            }
 
             // don't search on non-CJK strings shorter than this
             //
@@ -1082,7 +1116,7 @@ function DoCommandPrint()
 
 function DoCommandPreferences()
 {
-  goPreferences('messengercompose.xul', 'chrome://messenger/content/messengercompose/pref-composing_messages.xul')
+  goPreferences('mailnews', 'chrome://messenger/content/messengercompose/pref-composing_messages.xul', 'mailcomposepref');
 }
 
 function ToggleWindowLock()
@@ -1591,6 +1625,10 @@ function GenericSendMessage( msgType )
       msgCompFields.subject = subject;
       Attachments2CompFields(msgCompFields);
 
+      var event = document.createEvent('Events');
+      event.initEvent('compose-send-message', false, true);
+      document.getElementById("msgcomposeWindow").dispatchEvent(event);
+
       if (msgType == nsIMsgCompDeliverMode.Now || msgType == nsIMsgCompDeliverMode.Later)
       {
         //Do we need to check the spelling?
@@ -1666,22 +1704,27 @@ function GenericSendMessage( msgType )
             break;
            default: dump("\###SendMessage Error: invalid action value\n"); return;
         }
+      }
 
-        // Check if the headers of composing mail can be converted to a mail charset.
-        if (msgType == nsIMsgCompDeliverMode.Now || 
-          msgType == nsIMsgCompDeliverMode.Later ||
-          msgType == nsIMsgCompDeliverMode.Save || 
-          msgType == nsIMsgCompDeliverMode.SaveAsDraft || 
-          msgType == nsIMsgCompDeliverMode.SaveAsTemplate) 
+      // Check if the headers of composing mail can be converted to a mail charset.
+      if (msgType == nsIMsgCompDeliverMode.Now || 
+        msgType == nsIMsgCompDeliverMode.Later ||
+        msgType == nsIMsgCompDeliverMode.Save || 
+        msgType == nsIMsgCompDeliverMode.SaveAsDraft || 
+        msgType == nsIMsgCompDeliverMode.SaveAsTemplate) 
+      {
+        var fallbackCharset = new Object;
+        if (gPromptService && 
+            !gMsgCompose.checkCharsetConversion(getCurrentIdentity(), fallbackCharset)) 
         {
-          if (gPromptService && !gMsgCompose.checkCharsetConversion(getCurrentIdentity())) 
-          {
-            var dlgTitle = sComposeMsgsBundle.getString("initErrorDlogTitle");
-            var dlgText = sComposeMsgsBundle.getString("12553");  // NS_ERROR_MSG_MULTILINGUAL_SEND
-            if (!gPromptService.confirm(window, dlgTitle, dlgText))
-              return;
-          }
+          var dlgTitle = sComposeMsgsBundle.getString("initErrorDlogTitle");
+          var dlgText = sComposeMsgsBundle.getString("12553");  // NS_ERROR_MSG_MULTILINGUAL_SEND
+          if (!gPromptService.confirm(window, dlgTitle, dlgText))
+            return;
         }
+        if (fallbackCharset &&
+            fallbackCharset.value && fallbackCharset.value != "")
+          gMsgCompose.SetDocumentCharset(fallbackCharset.value);
       }
       try {
         gWindowLocked = true;

@@ -35,6 +35,24 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+// this is a hidden preference setting, see bugzilla bug 80035
+// (http://bugzilla.mozilla.org/show_bug.cgi?id=80035)
+//
+// the default value for this setting is true which means when migrating from
+// Netscape 4.x, mozilla will copy all the contents of Local Folders and Imap
+// Folder to the newly created subfolders of migrated mozilla profile
+// when this value is set to false, mozilla will not copy these contents and
+// still share them with Netscape 4.x
+//
+// Advantages of forbidding copy operation:
+//     reduce the disk usage
+//     quick migration
+// Disadvantage of forbidding copy operation:
+//     without perfect lock mechamism, there is possibility of data corruption
+//     when Netscape 4.x and mozilla run at the same time and access the same
+//     mail file at the same time
+pref("mail.migration.copyMailFiles", true);
+
 //mailnews.timeline_is_enabled should be set to true ONLY for perf measurement-timeline builds.
 pref("mailnews.timeline_is_enabled", false);
 
@@ -132,7 +150,7 @@ pref("mail.incorporate.return_receipt", 0);            // 0: Inbox/filter 1: Sen
 pref("mail.request.return_receipt", 2);                // 1: DSN 2: MDN 3: Both
 pref("mail.receipt.request_header_type", 0);           // 0: MDN-DNT header  1: RRT header 2: Both (MC)
 pref("mail.receipt.request_return_receipt_on", false);
-pref("mail.mdn.report.enabled", false);                // false: Never send true: Send sometimes
+pref("mail.mdn.report.enabled", true);                 // false: Never send true: Send sometimes
 
 pref("news.default_cc",                     "");
 pref("news.default_fcc",                    ""); // mailbox:URL or Imap://Host/OnlineFolderName
@@ -340,6 +358,18 @@ pref("mailnews.html_domains","");
 pref("mailnews.plaintext_domains","");
 pref("mailnews.global_html_domains.version",1);
 
+// Pref controlling the updates on the pre-configured accounts.
+// In order to add new pre-configured accounts (after a version),
+// increase the following version number besides updating the
+// pref mail.accountmanager.appendaccounts 
+pref("mailnews.append_preconfig_accounts.version",1);
+
+// Pref controlling the updates on the pre-configured smtp servers.
+// In order to add new pre-configured smtp servers (after a version),
+// increase the following version number besides updating the
+// pref mail.smtpservers.appendsmtpservers
+pref("mail.append_preconfig_smtpservers.version",1);
+
 pref("mail.biff.play_sound",true);
 pref("mail.biff.show_alert", true);
 
@@ -411,4 +441,6 @@ pref("mailnews.customHeaders", "");
 pref("mailnews.fakeaccount.show", false);
 pref("mailnews.fakeaccount.server", "");
 
-
+// message display properties
+pref("mailnews.message_display.disable_remote_image", false);
+pref("mailnews.message_display.allow.plugins", true);

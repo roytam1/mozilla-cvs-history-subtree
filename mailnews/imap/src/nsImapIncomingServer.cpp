@@ -1333,6 +1333,18 @@ NS_IMETHODIMP nsImapIncomingServer::PossibleImapMailbox(const char *folderPath, 
       else
       {
         rv = ConvertFolderName(onlineName.get(), getter_Copies(convertedName));
+
+        //make sure rv value is not crunched, it is used to SetPrettyName
+        nsXPIDLCString redirectorType;
+        GetRedirectorType(getter_Copies(redirectorType)); //Sent mail folder as per netscape webmail and aol server
+        if ((redirectorType.Equals(NS_LITERAL_CSTRING("aol")) && convertedName.Equals(NS_LITERAL_STRING("Sent Mail"))) ||
+          (redirectorType.Equals(NS_LITERAL_CSTRING("netscape")) && onlineName.Equals(NS_LITERAL_CSTRING("Sent"))))
+          //we know that we don't allowConversion for netscape webmail so just use the onlineName
+          child->SetFlag(MSG_FOLDER_FLAG_SENTMAIL);
+
+        else if (redirectorType.Equals(NS_LITERAL_CSTRING("netscape")) && onlineName.Equals(NS_LITERAL_CSTRING("Draft")))
+          child->SetFlag(MSG_FOLDER_FLAG_DRAFTS);
+
         if (NS_SUCCEEDED(rv))
           child->SetPrettyName(convertedName);
       }
@@ -2354,6 +2366,15 @@ nsresult nsImapIncomingServer::GetUnverifiedSubFolders(nsIFolder *parentFolder, 
 	return rv;
 }
 
+NS_IMETHODIMP nsImapIncomingServer::ForgetSessionPassword()
+{
+  nsresult rv = nsMsgIncomingServer::ForgetSessionPassword();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  m_userAuthenticated = PR_FALSE;
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsImapIncomingServer::GetServerRequiresPasswordForBiff(PRBool *_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
@@ -2582,8 +2603,9 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionError(const PRUnichar *pEr
   
   
   
+  // If password is bad then clean up all cached passwords.
   if (badPassword)
-    SetPassword(nsnull);
+    ForgetPassword();
   
   PRBool resetUrlState = PR_FALSE;
   if (badPassword && ++m_redirectedLogonRetries <= 3)

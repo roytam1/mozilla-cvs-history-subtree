@@ -23,6 +23,11 @@ var gSignedUINode = null;
 var gEncryptedUINode = null;
 var gSMIMEContainer = null;
 var gStatusBar = null;
+var gSignedStatusPanel = null;
+var gEncryptedStatusPanel = null;
+
+var gEncryptedURIService = null;
+var gMyLastEncryptedURI = null;
 
 // manipulates some globals from msgReadSMIMEOverlay.js
 
@@ -47,6 +52,7 @@ var smimeHeaderSink =
 
     gSMIMEContainer.collapsed = false;
     gSignedUINode.collapsed = false;
+    gSignedStatusPanel.collapsed = false;
 
     if (nsICMSMessageErrors.SUCCESS == aSignatureStatus)
     {
@@ -77,6 +83,7 @@ var smimeHeaderSink =
 
     gSMIMEContainer.collapsed = false; 
     gEncryptedUINode.collapsed = false;
+    gEncryptedStatusPanel.collapsed = false; 
 
     if (nsICMSMessageErrors.SUCCESS == aEncryptionStatus)
     {
@@ -88,6 +95,12 @@ var smimeHeaderSink =
       gEncryptedUINode.setAttribute("encrypted", "notok");
       gStatusBar.setAttribute("encrypted", "notok");
     }
+    
+    if (gEncryptedURIService)
+    {
+      gMyLastEncryptedURI = GetLoadedMessage();
+      gEncryptedURIService.rememberEncrypted(gMyLastEncryptedURI);
+    }
   },
 
   QueryInterface : function(iid)
@@ -98,6 +111,15 @@ var smimeHeaderSink =
   }
 };
 
+function forgetEncryptedURI()
+{
+  if (gMyLastEncryptedURI && gEncryptedURIService)
+  {
+    gEncryptedURIService.forgetEncrypted(gMyLastEncryptedURI);
+    gMyLastEncryptedURI = null;
+  }
+}
+
 function onSMIMEStartHeaders()
 {
   gEncryptionStatus = -1;
@@ -107,12 +129,18 @@ function onSMIMEStartHeaders()
   gEncryptionCert = null;
   
   gSMIMEContainer.collapsed = true;
+
   gSignedUINode.collapsed = true;
   gSignedUINode.removeAttribute("signed");
+  gSignedStatusPanel.collapsed = true;
   gStatusBar.removeAttribute("signed");
+
   gEncryptedUINode.collapsed = true;
   gEncryptedUINode.removeAttribute("encrypted");
+  gEncryptedStatusPanel.collapsed = true; 
   gStatusBar.removeAttribute("encrypted");
+
+  forgetEncryptedURI();
 }
 
 function onSMIMEEndHeaders()
@@ -128,6 +156,8 @@ function msgHdrViewSMIMEOnLoad(event)
   gEncryptedUINode = document.getElementById('encryptedHdrIcon');
   gSMIMEContainer = document.getElementById('smimeBox');
   gStatusBar = document.getElementById('status-bar');
+  gSignedStatusPanel = document.getElementById('signed-status');
+  gEncryptedStatusPanel = document.getElementById('encrypted-status');
 
   // add ourself to the list of message display listeners so we get notified when we are about to display a
   // message.
@@ -135,6 +165,16 @@ function msgHdrViewSMIMEOnLoad(event)
   listener.onStartHeaders = onSMIMEStartHeaders;
   listener.onEndHeaders = onSMIMEEndHeaders;
   gMessageListeners.push(listener);
+
+  gEncryptedURIService = 
+    Components.classes["@mozilla.org/messenger-smime/smime-encrypted-uris-service;1"]
+    .getService(Components.interfaces.nsIEncryptedSMIMEURIsService);
+}
+
+function msgHdrViewSMIMEOnUnload(event)
+{
+  forgetEncryptedURI();
 }
 
 addEventListener('messagepane-loaded', msgHdrViewSMIMEOnLoad, true);
+addEventListener('messagepane-unloaded', msgHdrViewSMIMEOnUnload, true);

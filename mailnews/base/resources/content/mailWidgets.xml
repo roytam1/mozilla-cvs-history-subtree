@@ -108,6 +108,16 @@
             aEmailNode.setTextAttribute("emailAddress", aAddress.emailAddress);
             aEmailNode.setTextAttribute("fullAddress", aAddress.fullAddress);  
             aEmailNode.setTextAttribute("displayName", aAddress.displayName);
+
+            try
+            {
+              if ("AddExtraAddressProcessing" in top)
+                AddExtraAddressProcessing(aAddress.emailAddress, aEmailNode);
+            }
+            catch(ex)
+            {
+              dump("AddExtraAddressProcessing failed: " + ex);
+            }
           ]]>
         </body>
       </method>
@@ -251,6 +261,17 @@
             shortNode.collapsed = true;
             longNode.collapsed = false;
             imageNode.setAttribute("open", "true");
+
+            if (!this.mLongViewCreated)
+            {
+              // Need to call UpdateMessageHeaders() because this is the first
+              // time the long view is being built.  This is required in order
+              // to update the addresses of the long view that might contain
+              // extra image info.
+              // It should also only be called from toggleAddressView(), not
+              // from buildView().
+              UpdateMessageHeaders();
+            }
           }
           ]]>  
         </body>

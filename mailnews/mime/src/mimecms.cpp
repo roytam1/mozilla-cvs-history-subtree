@@ -37,6 +37,7 @@
 
 #include "nsICMS.h"
 #include "mimecms.h"
+#include "mimemsig.h"
 #include "nsCRT.h"
 #include "nspr.h"
 #include "nsEscape.h"
@@ -195,7 +196,6 @@ MimeEncryptedCMS_encrypted_p (MimeObject *obj)
 }
 
 // extern MimeMessageClass mimeMessageClass;			/* gag */
-extern MimeObjectClass mimeMultipartSignedClass;	/* double gag */
 
 extern int ParseRFC822Addresses (const char *line,
 									 char **names, char **addresses);
@@ -431,7 +431,9 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
   if (data->self) {
     MimeObject *walker = data->self;
     while (walker) {
-      if (mime_typep(walker, (MimeObjectClass *) &mimeMessageClass)) {
+      // Crypto mime objects are transparent wrt nesting.
+      if (!mime_typep(walker, (MimeObjectClass *) &mimeEncryptedClass)
+          && !mime_typep(walker, (MimeObjectClass *) &mimeMultipartSignedClass)) {
         ++aNestLevel;
       }
       walker = walker->parent;

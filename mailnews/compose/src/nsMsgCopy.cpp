@@ -56,6 +56,7 @@
 #include "nsMsgComposeStringBundle.h"
 #include "nsMsgCompUtils.h"
 #include "prcmon.h"
+#include "nsIImapIncomingServer.h"
 #include "nsIMsgImapMailFolder.h"
 #include "nsIEventQueueService.h"
 #include "nsMsgSimulateError.h"
@@ -430,6 +431,7 @@ LocateMessageFolder(nsIMsgIdentity   *userIdentity,
   RETURN_SIMULATED_ERROR(SIMULATED_SEND_ERROR_5, NS_ERROR_FAILURE)
   
   if (!msgFolder) return NS_ERROR_NULL_POINTER;
+  *msgFolder = nsnull;
 
   if (!aFolderURI || (PL_strlen(aFolderURI) == 0)) {
     return NS_ERROR_INVALID_ARG;
@@ -448,17 +450,41 @@ LocateMessageFolder(nsIMsgIdentity   *userIdentity,
 
     nsCOMPtr <nsIMsgFolder> folderResource;
     folderResource = do_QueryInterface(resource, &rv);
-    if (NS_SUCCEEDED(rv) && folderResource) {
+    if (NS_SUCCEEDED(rv) && folderResource) 
+    {
         // don't check validity of folder - caller will handle creating it
-	*msgFolder = folderResource;
-	NS_ADDREF(*msgFolder);
-	return NS_OK;
+      nsCOMPtr<nsIMsgIncomingServer> server; //make sure that folder hierarchy is built so that legitimate parent-child relationship is established
+      folderResource->GetServer(getter_AddRefs(server));
+      if (server)
+      {
+        nsCOMPtr<nsIMsgFolder> rootMsgFolder;
+        server->GetRootMsgFolder(getter_AddRefs(rootMsgFolder));
+        if (rootMsgFolder)
+        {
+          nsCOMPtr<nsIImapIncomingServer> imapServer = do_QueryInterface(server);
+          rv = rootMsgFolder->GetChildWithURI(aFolderURI, PR_TRUE, imapServer == nsnull /*caseInsensitive*/, msgFolder);
+          /* we didn't find the folder so we will have to create new one.
+             CreateIfMissing does that provided we pass in a dummy folder */
+          if (!*msgFolder)
+          {
+            *msgFolder = folderResource;  
+            NS_ADDREF(*msgFolder);
+          }
+          return rv;
+        }
+        else
+          return NS_MSG_ERROR_FOLDER_MISSING;
+      }
+      else
+	return NS_MSG_ERROR_FOLDER_MISSING;
     }
-    else {
+    else 
+    {
 	return NS_ERROR_FAILURE;
     }
   }
-  else {
+  else 
+  {
     PRUint32                  cnt = 0;
     PRUint32                  i;
 

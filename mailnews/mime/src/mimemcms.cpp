@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "mimemcms.h"
+#include "mimecryp.h"
 #include "nsMimeTypes.h"
 #include "nspr.h"
 #include "nsMimeStringResources.h"
@@ -141,7 +142,6 @@ typedef struct MimeMultCMSdata
     delete [] item_data;
   }
 } MimeMultCMSdata;
-
 
 static void
 MimeMultCMS_get_content_info(MimeObject *obj,
@@ -441,7 +441,9 @@ MimeMultCMS_generate (void *crypto_closure)
   if (data->self) {
     MimeObject *walker = data->self;
     while (walker) {
-      if (mime_typep(walker, (MimeObjectClass *) &mimeMessageClass)) {
+      // Crypto mime objects are transparent wrt nesting.
+      if (!mime_typep(walker, (MimeObjectClass *) &mimeEncryptedClass)
+          && !mime_typep(walker, (MimeObjectClass *) &mimeMultipartSignedClass)) {
         ++aNestLevel;
       }
       walker = walker->parent;

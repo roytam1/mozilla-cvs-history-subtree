@@ -22,7 +22,6 @@
  */
 
 #include "nsCOMPtr.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsHTMLParts.h"
 #include "nsIHTMLContent.h"
 #include "nsFrame.h"
@@ -80,7 +79,7 @@ nsMathMLContainerFrame::ReflowError(nsIPresContext*      aPresContext,
   // Set font
   const nsStyleFont *font = NS_STATIC_CAST(const nsStyleFont*,
     mStyleContext->GetStyleData(eStyleStruct_Font));
-  aRenderingContext.SetFont(font->mFont);
+  aRenderingContext.SetFont(font->mFont, nsnull);
 
   // bounding metrics
   nsAutoString errorMsg; errorMsg.AssignWithConversion("invalid-markup");
@@ -124,7 +123,7 @@ nsMathMLContainerFrame::PaintError(nsIPresContext*      aPresContext,
     // Set color and font ...
     const nsStyleFont *font = NS_STATIC_CAST(const nsStyleFont*,
       mStyleContext->GetStyleData(eStyleStruct_Font));
-    aRenderingContext.SetFont(font->mFont);
+    aRenderingContext.SetFont(font->mFont, nsnull);
 
     aRenderingContext.SetColor(NS_RGB(255,0,0));
     aRenderingContext.FillRect(0, 0, mRect.width, mRect.height);
@@ -1101,22 +1100,11 @@ nsMathMLContainerFrame::ReflowTokenFor(nsIFrame*                aFrame,
 
   // See if this is an incremental reflow
   if (aReflowState.reason == eReflowReason_Incremental) {
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
 #ifdef MATHML_NOISY_INCREMENTAL_REFLOW
 printf("nsMathMLContainerFrame::ReflowTokenFor:IncrementalReflow received by: ");
 nsFrame::ListTag(stdout, aFrame);
-printf("for target: ");
-nsFrame::ListTag(stdout, targetFrame);
 printf("\n");
 #endif
-    if (aFrame == targetFrame) {
-    }
-    else {
-      // Remove the next frame from the reflow path
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-    }
   }
 
   // initializations needed for empty markup like <mtag></mtag>
@@ -1263,25 +1251,11 @@ nsMathMLContainerFrame::Reflow(nsIPresContext*          aPresContext,
 
   // See if this is an incremental reflow
   if (aReflowState.reason == eReflowReason_Incremental) {
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
 #ifdef MATHML_NOISY_INCREMENTAL_REFLOW
 printf("nsMathMLContainerFrame::Reflow:IncrementalReflow received by: ");
 nsFrame::ListTag(stdout, this);
-printf("for target: ");
-nsFrame::ListTag(stdout, targetFrame);
 printf("\n");
 #endif
-    if (this == targetFrame) {
-      // XXX We are the target of the incremental reflow.
-      // Rather than reflowing everything, see if we can speedup things
-      // by just doing the minimal work needed to update ourselves
-    }
-    else {
-      // Remove the next frame from the reflow path
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-    }
   }
 
   /////////////
