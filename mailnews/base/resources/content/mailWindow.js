@@ -588,11 +588,17 @@ function SetKeywords(aKeywords)
     return;
 
   // these are the UI elements who care about keywords
-  var ids = ["expandedKeywordImage","expandedHeaderView","msgHeaderView","collapsedHeaderView","collapsedKeywordImage"];
+  var ids = ["expandedKeywordImage","expandedHeaderView","msgHeaderView","collapsedHeaderView","collapsedKeywordImage","editMessageBox","expandedAttachmentBox"];
   for (i in ids) {
     var element = document.getElementById(ids[i]);
-    if (element)
-      element.setAttribute("keywords", aKeywords);
+    if (element) {
+      if (aKeywords) 
+        element.setAttribute("class", aKeywords);
+      else {
+        // if no keywords, reset class to the original class
+        element.setAttribute("class", element.getAttribute("originalclass"));
+      }
+    }
   }
 
   // cache the keywords 

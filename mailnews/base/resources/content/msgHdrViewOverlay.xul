@@ -51,9 +51,9 @@ Rights Reserved.
 <tooltip id="attachmentListTooltip"
          onpopupshowing="return FillInAttachmentTooltip(document.tooltipNode);"/> 
 
-<hbox id="msgHeaderView" persist="state">
+<hbox id="msgHeaderView" originalclass="none" persist="state">
 
-<grid id="collapsedHeaderView" class="header-part1" flex="1" collapsed="true">
+<grid id="collapsedHeaderView" class="header-part1" originalclass="header-part1" flex="1" collapsed="true">
   <rows>
     <row flex="1"/>
   </rows>
@@ -87,7 +87,7 @@ Rights Reserved.
 
     <column id="collapsedKeywordBox">
       <hbox align="start">
-      <image id="collapsedKeywordImage" class="collapsedAttachmentKeywordImage"/>  
+      <image id="collapsedKeywordImage" originalclass="none"/>  
       </hbox>
     </column>
 
@@ -99,7 +99,7 @@ Rights Reserved.
   </columns>
 </grid>
 
-<hbox id="expandedHeaderView" class="header-part1" flex="1" collapsed="true">
+<hbox id="expandedHeaderView" class="header-part1" originalclass="header-part1" flex="1" collapsed="true">
   <vbox id="expandedHeaders" flex="1">
     <mail-toggle-headerfield id="expandedsubjectBox" class="subjectvalue" label="&subjectField.label;" ontwistyclick="ToggleHeaderView();" collapsed="true"/>
     
@@ -120,17 +120,17 @@ Rights Reserved.
 
    <vbox id="expandedKeywordBox">
      <spacer flex="1"/>
-     <image id="expandedKeywordImage" class="expandedAttachmentKeywordImage"/>
+     <image id="expandedKeywordImage" originalclass="none" />
      <spacer flex="1"/>  
    </vbox>
    
-   <vbox id="editMessageBox" class="header-part1" collapsed="true">
+   <vbox id="editMessageBox" class="header-part1" originalclass="header-part1" collapsed="true">
      <spacer flex="1"/>
      <button id="editMessageButton" label="&editMessage.label;" oncommand="MsgComposeDraftMessage()"/>
      <spacer flex="1"/>
    </vbox> 
 
-   <vbox id="expandedAttachmentBox" class="header-part1" collapsed="true">
+   <vbox id="expandedAttachmentBox" class="header-part1" originalclass="header-part1" collapsed="true">
      <label id="attachmentText" value="&attachmentsTree.label;" crop="right"/>
      <listbox id="attachmentList" flex="2"
               onclick="attachmentListClick(event);" context="attachmentListContext"/>
