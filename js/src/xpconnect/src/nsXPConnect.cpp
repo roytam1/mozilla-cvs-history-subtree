@@ -327,6 +327,9 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!ccx.IsValid())
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
+    if(!xpc_InitJSxIDClassObjects())
+        return UnexpectedFailure(NS_ERROR_FAILURE);
+
     if(!xpc_InitWrappedNativeJSOps())
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
@@ -409,6 +412,8 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
 
     if(!scope)
         return UnexpectedFailure(NS_ERROR_FAILURE);
+
+    NS_ASSERTION(scope->GetGlobalJSObject() == tempGlobal, "stealing scope!");
 
     scope->SetGlobal(ccx, globalJSObj);
 

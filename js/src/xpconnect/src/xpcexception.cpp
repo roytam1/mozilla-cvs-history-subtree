@@ -112,13 +112,19 @@ nsXPCException::GetNSResultCount()
 
 /***************************************************************************/
 
+NS_INTERFACE_MAP_BEGIN(nsXPCException)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCException)
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCException,
-                              nsIXPCException,
-                              nsISecurityCheckedComponent)
-#else
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPCException, nsIXPCException)
+  NS_INTERFACE_MAP_ENTRY(nsISecurityCheckedComponent)
 #endif
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXPCException)
+  NS_IMPL_QUERY_CLASSINFO(nsXPCException)
+NS_INTERFACE_MAP_END_THREADSAFE
+
+NS_IMPL_THREADSAFE_ADDREF(nsXPCException)
+NS_IMPL_THREADSAFE_RELEASE(nsXPCException)
+
+NS_IMPL_CI_INTERFACE_GETTER1(nsXPCException, nsIXPCException)
 
 nsXPCException::nsXPCException()
     : mMessage(nsnull),
@@ -321,6 +327,21 @@ nsXPCException::NewException(const char *aMessage,
                              nsISupports *aData,
                              nsIXPCException** exceptn)
 {
+    // A little hack... The nsIGenericModule nsIClassInfo scheme relies on there
+    // having been at least one instance made via the factory. Otherwise, the
+    // shared factory/classinsance object never gets created and our QI getter
+    // for our instance's pointer to our nsIClassInfo will always return null.
+    // This is bad because it means that wrapped exceptions will never have a
+    // shared prototype. So... We force one to be created via the factory 
+    // *once* and then go about our business.
+    static JSBool everMadeOneFromFactory = JS_FALSE;
+    if(!everMadeOneFromFactory)
+    {
+        nsCOMPtr<nsIXPCException> e =
+            do_CreateInstance("@mozilla.org/js/xpc/Exception;1");
+        everMadeOneFromFactory = JS_TRUE;
+    }
+
     nsresult rv;
     nsXPCException* e = new nsXPCException();
     if(e)

@@ -59,10 +59,12 @@ static int DEBUG_MaxWrappedNativeWithSharedProtoCount;
 static int DEBUG_WrappedNativeWithOneOffProtoCount;
 static int DEBUG_LiveWrappedNativeWithOneOffProtoCount;
 static int DEBUG_MaxWrappedNativeWithOneOffProtoCount;
-static int DEBUG_WrappedTotalCalls;
-static int DEBUG_WrappedMethodCalls;
-static int DEBUG_WrappedGetterCalls;
-static int DEBUG_WrappedSetterCalls;
+static int DEBUG_WrappedNativeTotalCalls;
+static int DEBUG_WrappedNativeMethodCalls;
+static int DEBUG_WrappedNativeGetterCalls;
+static int DEBUG_WrappedNativeSetterCalls;
+#define DEBUG_CHUCKS_TO_COUNT 4
+static int DEBUG_WrappedNativeTearOffChunkCounts[DEBUG_CHUCKS_TO_COUNT+1];
 static PRBool  DEBUG_DumpedWrapperStats;
 #endif
 
@@ -108,23 +110,28 @@ static void DEBUG_TrackDeleteWrapper(XPCWrappedNative* wrapper)
         DEBUG_LiveWrappedNativeWithSharedProtoCount--;
     else
         DEBUG_LiveWrappedNativeWithOneOffProtoCount--;
+
+    int extraChunkCount = wrapper->DEBUG_CountOfTearoffChunks() - 1;
+    if(extraChunkCount > DEBUG_CHUCKS_TO_COUNT)
+        extraChunkCount = DEBUG_CHUCKS_TO_COUNT;
+    DEBUG_WrappedNativeTearOffChunkCounts[extraChunkCount]++;
 #endif
 }
 static void DEBUG_TrackWrapperCall(XPCWrappedNative* wrapper, 
                                    XPCWrappedNative::CallMode mode)
 {
 #ifdef XPC_TRACK_WRAPPER_STATS
-    DEBUG_WrappedTotalCalls++;
+    DEBUG_WrappedNativeTotalCalls++;
     switch(mode)
     {
         case XPCWrappedNative::CALL_METHOD:
-            DEBUG_WrappedMethodCalls++;
+            DEBUG_WrappedNativeMethodCalls++;
             break;
         case XPCWrappedNative::CALL_GETTER:
-            DEBUG_WrappedGetterCalls++;
+            DEBUG_WrappedNativeGetterCalls++;
             break;
         case XPCWrappedNative::CALL_SETTER:
-            DEBUG_WrappedSetterCalls++;
+            DEBUG_WrappedNativeSetterCalls++;
             break;
         default:
             NS_ERROR("bad value");
@@ -158,11 +165,22 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
 
         printf("%d calls to WrappedNatives. "
                "(%d methods, %d getters, %d setters)\n", 
-               DEBUG_WrappedTotalCalls,
-               DEBUG_WrappedMethodCalls,
-               DEBUG_WrappedGetterCalls,
-               DEBUG_WrappedSetterCalls,
-               DEBUG_WrappedMethodCalls);
+               DEBUG_WrappedNativeTotalCalls,
+               DEBUG_WrappedNativeMethodCalls,
+               DEBUG_WrappedNativeGetterCalls,
+               DEBUG_WrappedNativeSetterCalls,
+               DEBUG_WrappedNativeMethodCalls);
+
+
+        printf("(wrappers / tearoffs): (");
+        int i;
+        for(i = 0; i < DEBUG_CHUCKS_TO_COUNT; i++)
+        {
+            printf("%d / %d, ", 
+                   DEBUG_WrappedNativeTearOffChunkCounts[i],
+                   (i+1) * XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK);
+        }    
+        printf("%d / more)\n", DEBUG_WrappedNativeTearOffChunkCounts[i]);
     }
 #endif
 }

@@ -113,6 +113,10 @@
 /***************************************************************************/
 // compile time switches for instrumentation and stuff....
 
+#if defined(DEBUG_jband) || defined(DEBUG_jst) || defined(DEBUG_dbradley) || defined(DEBUG_shaver)
+#define DEBUG_xpc_hacker
+#endif
+
 #ifdef DEBUG
 #define XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
 #endif
@@ -125,14 +129,14 @@
 #define XPC_CHECK_WRAPPER_THREADSAFETY
 #endif
 
-#if defined(DEBUG_jst) || defined(DEBUG_jband)
+#if defined(DEBUG_xpc_hacker)
 #define XPC_CHECK_CLASSINFO_CLAIMS
 #if defined(DEBUG_jst)
 #define XPC_ASSERT_CLASSINFO_CLAIMS
 #endif
 #endif
 
-#if defined(DEBUG_jband) || defined(DEBUG_jst)
+#if defined(DEBUG_xpc_hacker)
 #define XPC_DUMP_AT_SHUTDOWN
 #define XPC_TRACK_WRAPPER_STATS
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
@@ -1281,6 +1285,10 @@ xpc_InitWrappedNativeJSOps();
 * member (as a hidden implementaion detail) to which they delegate many calls.
 */
 
+extern JSBool xpc_InitJSxIDClassObjects();
+extern void xpc_DestroyJSxIDClassObjects();
+
+
 class nsJSID : public nsIJSID
 {
 public:
@@ -2186,7 +2194,7 @@ private:
 
 /***********************************************/
 
-#define XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK 3
+#define XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK 1
 
 class XPCWrappedNativeTearOffChunk
 {
@@ -2312,6 +2320,10 @@ public:
 #ifdef DEBUG
     void ASSERT_SetsNotMarked() const
         {mSet->ASSERT_NotMarked(); GetProto()->ASSERT_SetNotMarked();}
+
+    int DEBUG_CountOfTearoffChunks() const
+        {int i = 0; const XPCWrappedNativeTearOffChunk* to;
+         for(to = &mFirstChunk; to; to = to->mNextChunk) {i++;} return i;}
 #endif
 
     inline void SweepTearOffs();

@@ -238,9 +238,89 @@ nsJSID::NewID(const char* str)
 }
 
 /***************************************************************************/
+// Class object support so that we can share prototypes of wrapper
+
+static JSBool gClassObjectsWhereKilled = JS_FALSE;
+static JSBool gClassObjectsWhereInited = JS_FALSE;
+
+NS_DECL_CI_INTERFACE_GETTER(nsJSIID)
+static nsIClassInfo* NS_CLASSINFO_NAME(nsJSIID);
+static nsModuleComponentInfo CI_nsJSIID =
+    {"JSIID", 
+     {0x26ecb8d0, 0x35c9, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
+     nsnull, nsnull, nsnull,nsnull, nsnull,
+     NS_CI_INTERFACE_GETTER_NAME(nsJSIID), nsnull, 
+     &NS_CLASSINFO_NAME(nsJSIID)};
+
+NS_DECL_CI_INTERFACE_GETTER(nsJSCID)
+static nsIClassInfo* NS_CLASSINFO_NAME(nsJSCID);
+static nsModuleComponentInfo CI_nsJSCID =
+    {"JSCID", 
+     {0x9255b5b0, 0x35cf, 0x11d5, { 0x90, 0xb2, 0x0, 0x10, 0xa4, 0xe7, 0x3d, 0x9a }},
+     nsnull, nsnull, nsnull,nsnull, nsnull,
+     NS_CI_INTERFACE_GETTER_NAME(nsJSCID), nsnull, 
+     &NS_CLASSINFO_NAME(nsJSCID)};
+
+JSBool xpc_InitJSxIDClassObjects()
+{
+    if(gClassObjectsWhereKilled)
+        return JS_FALSE;
+    if(gClassObjectsWhereInited)
+        return JS_TRUE;
+
+    nsresult rv = NS_OK;
+
+    if(!NS_CLASSINFO_NAME(nsJSIID))
+    {
+        nsCOMPtr<nsIGenericFactory> factory;
+        rv = NS_NewGenericFactory(getter_AddRefs(factory), &CI_nsJSIID);
+        if(NS_FAILED(rv))
+            goto return_failure;
+        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo), 
+                                     (void**)&NS_CLASSINFO_NAME(nsJSIID));
+        if(NS_FAILED(rv))
+            goto return_failure;
+    }
+
+    if(!NS_CLASSINFO_NAME(nsJSCID))
+    {
+        nsCOMPtr<nsIGenericFactory> factory;
+        rv = NS_NewGenericFactory(getter_AddRefs(factory), &CI_nsJSCID);
+        if(NS_FAILED(rv))
+            goto return_failure;
+        rv = factory->QueryInterface(NS_GET_IID(nsIClassInfo), 
+                                     (void**)&NS_CLASSINFO_NAME(nsJSCID));
+        if(NS_FAILED(rv))
+            goto return_failure;
+    }
+
+    gClassObjectsWhereInited = JS_TRUE;
+    return JS_TRUE;
+return_failure:
+    return JS_FALSE;
+}
+
+void xpc_DestroyJSxIDClassObjects()
+{
+    NS_IF_RELEASE(NS_CLASSINFO_NAME(nsJSIID));
+    NS_IF_RELEASE(NS_CLASSINFO_NAME(nsJSCID));
+
+    gClassObjectsWhereKilled = JS_TRUE;
+}
+
 /***************************************************************************/
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSIID, nsIJSID, nsIJSIID, nsIXPCScriptable)
+NS_INTERFACE_MAP_BEGIN(nsJSIID)
+  NS_INTERFACE_MAP_ENTRY(nsIJSID)
+  NS_INTERFACE_MAP_ENTRY(nsIJSIID)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSID)
+  NS_IMPL_QUERY_CLASSINFO(nsJSIID)
+NS_INTERFACE_MAP_END_THREADSAFE
+
+NS_IMPL_THREADSAFE_ADDREF(nsJSIID)
+NS_IMPL_THREADSAFE_RELEASE(nsJSIID)
+NS_IMPL_CI_INTERFACE_GETTER2(nsJSIID, nsIJSID, nsIJSIID)
 
 // The nsIXPCScriptable map declaration that will generate stubs for us...
 #define XPC_MAP_CLASSNAME           nsJSIID
@@ -465,7 +545,17 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
 
 /***************************************************************************/
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSCID, nsIJSID, nsIJSCID, nsIXPCScriptable)
+NS_INTERFACE_MAP_BEGIN(nsJSCID)
+  NS_INTERFACE_MAP_ENTRY(nsIJSID)
+  NS_INTERFACE_MAP_ENTRY(nsIJSCID)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIJSID)
+  NS_IMPL_QUERY_CLASSINFO(nsJSCID)
+NS_INTERFACE_MAP_END_THREADSAFE
+
+NS_IMPL_THREADSAFE_ADDREF(nsJSCID)
+NS_IMPL_THREADSAFE_RELEASE(nsJSCID)
+NS_IMPL_CI_INTERFACE_GETTER2(nsJSCID, nsIJSID, nsIJSCID)
 
 // The nsIXPCScriptable map declaration that will generate stubs for us...
 #define XPC_MAP_CLASSNAME           nsJSCID
