@@ -546,57 +546,57 @@ static NSArray* sToolbarDefaults = nil;
 {
     NSToolbarItem *toolbarItem = [[[NSToolbarItem alloc] initWithItemIdentifier:itemIdent] autorelease];
     if ( [itemIdent isEqual:BackToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Back"];
-        [toolbarItem setPaletteLabel:@"Go Back"];
-        [toolbarItem setToolTip:@"Go back one page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Back",@"Back")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Go Back",@"Go Back")];
+        [toolbarItem setToolTip:NSLocalizedString(@"BackToolTip",@"Go back one page")];
         [toolbarItem setImage:[NSImage imageNamed:@"back"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(back:)];
     } else if ( [itemIdent isEqual:ForwardToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Forward"];
-        [toolbarItem setPaletteLabel:@"Go Forward"];
-        [toolbarItem setToolTip:@"Go forward one page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Forward",@"Forward")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Go Forward",@"Go Forward")];
+        [toolbarItem setToolTip:NSLocalizedString(@"ForwardToolTip",@"Go forward one page")];
         [toolbarItem setImage:[NSImage imageNamed:@"forward"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(forward:)];
     } else if ( [itemIdent isEqual:ReloadToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Reload"];
-        [toolbarItem setPaletteLabel:@"Reload Page"];
-        [toolbarItem setToolTip:@"Reload current page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Reload",@"Reload")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Reload Page",@"Reload Page")];
+        [toolbarItem setToolTip:NSLocalizedString(@"ReloadToolTip", @"Reload current page")];
         [toolbarItem setImage:[NSImage imageNamed:@"reload"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(reload:)];
     } else if ( [itemIdent isEqual:StopToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Stop"];
-        [toolbarItem setPaletteLabel:@"Stop Loading"];
-        [toolbarItem setToolTip:@"Stop loading this page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Stop",@"Stop")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Stop Loading", @"Stop Loading")];
+        [toolbarItem setToolTip:NSLocalizedString(@"StopToolTip", @"Stop loading this page")];
         [toolbarItem setImage:[NSImage imageNamed:@"stop"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(stop:)];
     } else if ( [itemIdent isEqual:HomeToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Home"];
-        [toolbarItem setPaletteLabel:@"Go Home"];
-        [toolbarItem setToolTip:@"Go to home page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Home",@"Home")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Go Home",@"Go Home")];
+        [toolbarItem setToolTip:NSLocalizedString(@"HomeToolTip", @"Go to home page")];
         [toolbarItem setImage:[NSImage imageNamed:@"home"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(home:)];
     } else if ( [itemIdent isEqual:SidebarToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Sidebar"];
-        [toolbarItem setPaletteLabel:@"Toggle Sidebar"];
-        [toolbarItem setToolTip:@"Show or hide the Sidebar"];
+        [toolbarItem setLabel:NSLocalizedString(@"Sidebar",@"Sidebar")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Toggle Sidebar",@"Toggle Sidebar")];
+        [toolbarItem setToolTip:NSLocalizedString(@"SidebarToolTip", @"Show or hide the Sidebar")];
         [toolbarItem setImage:[NSImage imageNamed:@"sidebarClosed"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(toggleSidebar:)];
     } else if ( [itemIdent isEqual:SearchToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Search"];
-        [toolbarItem setPaletteLabel:@"Search"];
-        [toolbarItem setToolTip:@"Search the Internet"];
+        [toolbarItem setLabel:NSLocalizedString(@"Search",@"Search")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Search",@"Search")];
+        [toolbarItem setToolTip:NSLocalizedString(@"SearchToolTip", @"Search the Internet")];
         [toolbarItem setImage:[NSImage imageNamed:@"saveShowFile.tif"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(performSearch:)];
     } else if ( [itemIdent isEqual:ThrobberToolbarItemIdentifier] ) {
         [toolbarItem setLabel:@""];
-        [toolbarItem setPaletteLabel:@"Progress"];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Progress",@"Progress")];
         [toolbarItem setToolTip:NSLocalizedStringFromTable(@"ThrobberPageDefault", @"WebsiteDefaults", nil)];
         [toolbarItem setImage:[NSImage imageNamed:@"throbber-01"]];
         [toolbarItem setTarget:self];
@@ -606,8 +606,8 @@ static NSArray* sToolbarDefaults = nil;
         
         NSMenuItem *menuFormRep = [[[NSMenuItem alloc] init] autorelease];
         
-        [toolbarItem setLabel:@"Location"];
-        [toolbarItem setPaletteLabel:@"Location"];
+        [toolbarItem setLabel:NSLocalizedString(@"Location",@"Location")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Location",@"Location")];
         [toolbarItem setView:mLocationToolbarView];
         [toolbarItem setMinSize:NSMakeSize(128,32)];
         [toolbarItem setMaxSize:NSMakeSize(2560,32)];
@@ -618,16 +618,16 @@ static NSArray* sToolbarDefaults = nil;
         
         [toolbarItem setMenuFormRepresentation:menuFormRep];
     } else if ( [itemIdent isEqual:PrintToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"Print"];
-        [toolbarItem setPaletteLabel:@"Print"];
-        [toolbarItem setToolTip:@"Print this page"];
+        [toolbarItem setLabel:NSLocalizedString(@"Print",@"Print")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"Print",@"Print")];
+        [toolbarItem setToolTip:NSLocalizedString(@"PrintToolTip",@"Print this page")];
         [toolbarItem setImage:[NSImage imageNamed:@"print"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(printDocument:)];
     } else if ( [itemIdent isEqual:ViewSourceToolbarItemIdentifier] ) {
-        [toolbarItem setLabel:@"View Source"];
-        [toolbarItem setPaletteLabel:@"View Page Source"];
-        [toolbarItem setToolTip:@"Display the HTML source of this page"];
+        [toolbarItem setLabel:NSLocalizedString(@"View Source",@"View Source")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"View Page Source",@"View Page Source")];
+        [toolbarItem setToolTip:NSLocalizedString(@"ViewSourceToolTip",@"Display the HTML source of this page")];
         [toolbarItem setImage:[NSImage imageNamed:@"showsource"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(viewSource:)];
