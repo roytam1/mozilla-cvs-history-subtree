@@ -72,9 +72,9 @@ typedef void
 (*TimeoutCallbackFunction) (void * closure);
 
 extern void * 
-FE_SetTimeout(TimeoutCallbackFunction func, void * closure, uint32 msecs);
+IL_SetTimeout(TimeoutCallbackFunction func, void * closure, uint32 msecs);
 extern void
-FE_ClearTimeout(void *timer_id);
+IL_ClearTimeout(void *timer_id);
 PR_END_EXTERN_C
 #endif
 /********************************* in xpcompat.h *************************************/

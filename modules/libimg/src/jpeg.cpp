@@ -694,7 +694,7 @@ jpeg_timeout_callback(void *closure)
     }
 
   done:
-    js->timeout = FE_SetTimeout(jpeg_timeout_callback, js, delay);
+    js->timeout = IL_SetTimeout(jpeg_timeout_callback, js, delay);
 }
 
 /*
@@ -860,7 +860,7 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
                     delay = JPEG_TIMEOUT_DELAY;
                 }
                 
-                js->timeout = FE_SetTimeout(jpeg_timeout_callback, js, delay);
+                js->timeout = IL_SetTimeout(jpeg_timeout_callback, js, delay);
             
             }
 
@@ -908,7 +908,7 @@ il_jpeg_write(il_container *ic, const unsigned char *buf, int32 len)
             
             /* Clear any pending timeouts */
             if (js->timeout) {
-                FE_ClearTimeout(js->timeout);
+                IL_ClearTimeout(js->timeout);
                 js->timeout = NULL;
             }
 
@@ -955,7 +955,7 @@ il_jpeg_abort(il_container *ic)
 
         /* Clear any pending timeouts */
         if (js->timeout) {
-            FE_ClearTimeout(js->timeout);
+            IL_ClearTimeout(js->timeout);
             js->timeout = NULL;
         }
         
