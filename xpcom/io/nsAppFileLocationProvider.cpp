@@ -86,7 +86,7 @@
 #define NS_MAC_CLASSIC_PLUGIN_DIR   "MacSysPlugins"
 #endif
 
-#if defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_MAC)
 #define DEFAULTS_DIR_NAME           NS_LITERAL_CSTRING("Defaults")
 #define DEFAULTS_PREF_DIR_NAME      NS_LITERAL_CSTRING("Pref")
 #define DEFAULTS_PROFILE_DIR_NAME   NS_LITERAL_CSTRING("Profile")

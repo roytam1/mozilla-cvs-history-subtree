@@ -69,8 +69,6 @@
     #define NS_OS_SYSTEM_DIR                    "SysD"
 #endif
 
-#define NS_OS_PLUGINS_DIR_LIST                  "OSPluginsDL"
-
 #if defined(XP_MAC)
     #define NS_MAC_DESKTOP_DIR                  "Desk"
     #define NS_MAC_TRASH_DIR                    "Trsh"
