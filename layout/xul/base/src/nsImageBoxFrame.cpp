@@ -213,7 +213,7 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
 
 
   if (mHasImage) {
-    nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+    nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
     if (NS_FAILED(rv))
       return rv;
 
@@ -284,7 +284,7 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
         mImageRequest->Cancel(NS_ERROR_FAILURE);
 
       nsresult rv;
-      nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+      nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
       if (NS_FAILED(rv))
         mHasImage = PR_FALSE;
       else {
@@ -374,7 +374,7 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
     return NS_OK;
 
 #ifdef USE_IMG2
-  nsCOMPtr<nsIImageContainer> imgCon;
+  nsCOMPtr<gfxIImageContainer> imgCon;
   mImageRequest->GetImage(getter_AddRefs(imgCon));
 
   if (imgCon) {
@@ -552,12 +552,12 @@ nsImageBoxFrame::GetBaseURI(nsIURI **uri)
 
 #ifdef USE_IMG2
 
-NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(nsIImageRequest *request, nsIPresContext *aPresContext)
+NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(imgIRequest *request, nsIPresContext *aPresContext)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
+NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageContainer *image)
 {
   
   nsCOMPtr<nsIPresShell> presShell;
@@ -580,12 +580,12 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(nsIImageRequest *request, nsIPre
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnStartFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
+NS_IMETHODIMP nsImageBoxFrame::OnStartFrame(imgIRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect * rect)
+NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(imgIRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect * rect)
 {
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
@@ -618,23 +618,23 @@ NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(nsIImageRequest *request, nsIPres
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnStopFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
+NS_IMETHODIMP nsImageBoxFrame::OnStopFrame(imgIRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnStopContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
+NS_IMETHODIMP nsImageBoxFrame::OnStopContainer(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageContainer *image)
 {
 
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(nsIImageRequest *request, nsIPresContext *aPresContext, nsresult status, const PRUnichar *statusArg)
+NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(imgIRequest *request, nsIPresContext *aPresContext, nsresult status, const PRUnichar *statusArg)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageBoxFrame::FrameChanged(nsIImageContainer *container, nsIPresContext *aPresContext, nsIImageFrame *newframe, nsRect * dirtyRect)
+NS_IMETHODIMP nsImageBoxFrame::FrameChanged(gfxIImageContainer *container, nsIPresContext *aPresContext, nsIImageFrame *newframe, nsRect * dirtyRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -643,7 +643,7 @@ NS_IMETHODIMP nsImageBoxFrame::FrameChanged(nsIImageContainer *container, nsIPre
 
 
 #ifdef USE_IMG2
-NS_IMPL_ISUPPORTS2(nsImgListener, nsIImageDecoderObserver, nsIImageContainerObserver)
+NS_IMPL_ISUPPORTS2(nsImgListener, nsIImageDecoderObserver, gfxIImageContainerObserver)
 
 nsImgListener::nsImgListener()
 {
@@ -654,49 +654,49 @@ nsImgListener::~nsImgListener()
 {
 }
 
-NS_IMETHODIMP nsImgListener::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
+NS_IMETHODIMP nsImgListener::OnStartDecode(imgIRequest *request, nsISupports *cx)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStartDecode(request, pc);
 }
 
-NS_IMETHODIMP nsImgListener::OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
+NS_IMETHODIMP nsImgListener::OnStartContainer(imgIRequest *request, nsISupports *cx, gfxIImageContainer *image)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStartContainer(request, pc, image);
 }
 
-NS_IMETHODIMP nsImgListener::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+NS_IMETHODIMP nsImgListener::OnStartFrame(imgIRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStartFrame(request, pc, frame);
 }
 
-NS_IMETHODIMP nsImgListener::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
+NS_IMETHODIMP nsImgListener::OnDataAvailable(imgIRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect * rect)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnDataAvailable(request, pc, frame, rect);
 }
 
-NS_IMETHODIMP nsImgListener::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+NS_IMETHODIMP nsImgListener::OnStopFrame(imgIRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStopFrame(request, pc, frame);
 }
 
-NS_IMETHODIMP nsImgListener::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
+NS_IMETHODIMP nsImgListener::OnStopContainer(imgIRequest *request, nsISupports *cx, gfxIImageContainer *image)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStopContainer(request, pc, image);
 }
 
-NS_IMETHODIMP nsImgListener::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
+NS_IMETHODIMP nsImgListener::OnStopDecode(imgIRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->OnStopDecode(request, pc, status, statusArg);
 }
 
-NS_IMETHODIMP nsImgListener::FrameChanged(nsIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
+NS_IMETHODIMP nsImgListener::FrameChanged(gfxIImageContainer *container, nsISupports *cx, nsIImageFrame *newframe, nsRect * dirtyRect)
 {
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
   return mFrame->FrameChanged(container, pc, newframe, dirtyRect);

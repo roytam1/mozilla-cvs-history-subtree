@@ -111,7 +111,45 @@ nsImageFrame::~nsImageFrame()
   }
 }
 
-NS_METHOD
+NS_IMETHODIMP
+nsImageFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+  NS_ENSURE_ARG_POINTER(aInstancePtr);
+  *aInstancePtr = nsnull;
+
+#ifdef DEBUG
+  if (aIID.Equals(NS_GET_IID(nsIFrameDebug))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIFrameDebug*,this);
+    return NS_OK;
+  }
+#endif
+
+  if (aIID.Equals(NS_GET_IID(nsIImageFrame))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIImageFrame*,this);
+    return NS_OK;
+  } else if (aIID.Equals(NS_GET_IID(nsIFrame))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIFrame*,this);
+    return NS_OK;
+  } else if (aIID.Equals(NS_GET_IID(nsISupports))) {
+    *aInstancePtr = NS_STATIC_CAST(nsIImageFrame*,this);
+    return NS_OK;
+  }
+  return NS_NOINTERFACE;
+}
+
+NS_IMETHODIMP_(nsrefcnt) nsImageFrame::AddRef(void)
+{
+  NS_WARNING("not supported for frames");
+  return 1;
+}
+
+NS_IMETHODIMP_(nsrefcnt) nsImageFrame::Release(void)
+{
+  NS_WARNING("not supported for frames");
+  return 1;
+}
+
+NS_IMETHODIMP
 nsImageFrame::Destroy(nsIPresContext* aPresContext)
 {
   // Tell our image map, if there is one, to clean up
@@ -791,9 +829,9 @@ nsImageFrame::DisplayAltText(nsIPresContext*      aPresContext,
   NS_RELEASE(fm);
 }
 
-struct nsRecessedBorder : public nsStyleSpacing {
+struct nsRecessedBorder : public nsStyleBorder {
   nsRecessedBorder(nscoord aBorderWidth)
-    : nsStyleSpacing()
+    : nsStyleBorder()
   {
     nsStyleCoord  styleCoord(aBorderWidth);
 
@@ -812,7 +850,7 @@ struct nsRecessedBorder : public nsStyleSpacing {
     mBorderColor[2] = 0;  
     mBorderColor[3] = 0;  
 
-    mHasCachedMargin = mHasCachedPadding = mHasCachedBorder = PR_FALSE;
+    mHasCachedBorder = PR_FALSE;
   }
 };
 
@@ -894,9 +932,9 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer)
 {
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)
-    mStyleContext->GetStyleData(eStyleStruct_Display);
-  if (disp->IsVisible() && mRect.width && mRect.height) {
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && 
+      isVisible && mRect.width && mRect.height) {
     // First paint background and borders
     nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
                        aWhichLayer);

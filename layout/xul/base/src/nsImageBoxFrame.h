@@ -29,14 +29,14 @@
 //#define USE_IMG2 1
 
 #ifdef USE_IMG2
-#include "nsIImageLoader.h"
-#include "nsIImageRequest2.h"
-#include "nsIImageContainer.h"
-#include "nsIImageDecoderObserver.h"
+#include "imgILoader.h"
+#include "imgIRequest.h"
+#include "gfxIImageContainer.h"
+#include "imgIDecoderObserver.h"
 
 class nsImageBoxFrame;
 
-class nsImgListener : nsIImageDecoderObserver
+class nsImgListener : imgIDecoderObserver
 {
 public:
   nsImgListener();
@@ -97,13 +97,13 @@ public:
 
 
 #ifdef USE_IMG2
-  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsIPresContext *cx);
-  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect * rect);
-  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
+  NS_IMETHOD OnStartDecode(imgIRequest *request, nsIPresContext *cx);
+  NS_IMETHOD OnStartContainer(imgIRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStartFrame(imgIRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnDataAvailable(imgIRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect * rect);
+  NS_IMETHOD OnStopFrame(imgIRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnStopContainer(imgIRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStopDecode(imgIRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
   NS_IMETHOD FrameChanged(nsIImageContainer *container, nsIPresContext *cx, nsIImageFrame *newframe, nsRect * dirtyRect);
 #endif
 
@@ -137,8 +137,8 @@ protected:
 private:
 
 #ifdef USE_IMG2
-  nsCOMPtr<nsIImageRequest> mImageRequest;
-  nsCOMPtr<nsIImageDecoderObserver> mListener;
+  nsCOMPtr<imgIRequest> mImageRequest;
+  nsCOMPtr<imgIDecoderObserver> mListener;
 
   nsSize mIntrinsicSize;
 #endif

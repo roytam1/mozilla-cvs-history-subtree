@@ -25,6 +25,8 @@
 #include "nsLeafFrame.h"
 #include "nsString.h"
 #include "nsIPresContext.h"
+#include "nsIImageFrame.h"
+
 
 #define USE_IMG2
 
@@ -32,9 +34,9 @@
 
 #ifdef USE_IMG2
 #include "nsTransform2D.h"
-#include "nsIImageRequest2.h"
-#include "nsIImageDecoderObserver.h"
-#include "nsIImageContainerObserver.h"
+#include "imgIRequest.h"
+#include "imgIDecoderObserver.h"
+#include "gfxIImageContainerObserver.h"
 #endif
 
 class nsIFrame;
@@ -47,15 +49,15 @@ struct nsSize;
 #ifdef USE_IMG2
 class nsImageFrame;
 
-class nsImageListener : nsIImageDecoderObserver
+class nsImageListener : imgIDecoderObserver
 {
 public:
   nsImageListener();
   virtual ~nsImageListener();
 
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIIMAGEDECODEROBSERVER
-  NS_DECL_NSIIMAGECONTAINEROBSERVER
+  NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_GFXIIMAGECONTAINEROBSERVER
 
   void SetFrame(nsImageFrame *frame) { mFrame = frame; }
 
@@ -67,10 +69,12 @@ private:
 
 #define ImageFrameSuper nsLeafFrame
 
-class nsImageFrame : public ImageFrameSuper
-{
+class nsImageFrame : public ImageFrameSuper, public nsIImageFrame {
 public:
   nsImageFrame();
+
+  // nsISupports 
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
   NS_IMETHOD Destroy(nsIPresContext* aPresContext);
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
@@ -89,7 +93,7 @@ public:
   NS_IMETHOD  GetContentForEvent(nsIPresContext* aPresContext,
                                  nsEvent* aEvent,
                                  nsIContent** aContent);
-  NS_METHOD HandleEvent(nsIPresContext* aPresContext,
+  NS_IMETHOD HandleEvent(nsIPresContext* aPresContext,
                         nsGUIEvent* aEvent,
                         nsEventStatus* aEventStatus);
   NS_IMETHOD GetCursor(nsIPresContext* aPresContext,
@@ -113,17 +117,21 @@ public:
 #endif
 
 #ifdef USE_IMG2
-  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsIPresContext *cx);
-  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect * rect);
-  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
-  NS_IMETHOD FrameChanged(nsIImageContainer *container, nsIPresContext *cx, nsIImageFrame *newframe, nsRect * dirtyRect);
+  NS_IMETHOD OnStartDecode(imgIRequest *request, nsIPresContext *cx);
+  NS_IMETHOD OnStartContainer(imgIRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStartFrame(imgIRequest *request, nsIPresContext *cx, gfxIImageFrame *frame);
+  NS_IMETHOD OnDataAvailable(imgIRequest *request, nsIPresContext *cx, gfxIImageFrame *frame, const nsRect * rect);
+  NS_IMETHOD OnStopFrame(imgIRequest *request, nsIPresContext *cx, gfxIImageFrame *frame);
+  NS_IMETHOD OnStopContainer(imgIRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStopDecode(imgIRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
+  NS_IMETHOD FrameChanged(nsIImageContainer *container, nsIPresContext *cx, gfxIImageFrame *newframe, nsRect * dirtyRect);
 #endif
 
 protected:
+  // nsISupports
+  NS_IMETHOD_(nsrefcnt) AddRef(void);
+  NS_IMETHOD_(nsrefcnt) Release(void);
+
   virtual ~nsImageFrame();
 
   virtual void GetDesiredSize(nsIPresContext* aPresContext,
@@ -183,10 +191,10 @@ protected:
   nsHTMLImageLoader * mLowSrcImageLoader;
 
 #ifdef USE_IMG2
-  nsCOMPtr<nsIImageRequest> mImageRequest;
-  nsCOMPtr<nsIImageRequest> mLowImageRequest;
+  nsCOMPtr<imgIRequest> mImageRequest;
+  nsCOMPtr<imgIRequest> mLowImageRequest;
 
-  nsCOMPtr<nsIImageDecoderObserver> mListener;
+  nsCOMPtr<imgIDecoderObserver> mListener;
 
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
