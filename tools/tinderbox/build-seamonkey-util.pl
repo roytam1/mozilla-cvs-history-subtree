@@ -400,7 +400,7 @@ sub SetupEnv {
 
     # Codesighs/codesize test needs this to pull the right stuff.
     if ($Settings::CodesizeTest or $Settings::EmbedCodesizeTest) {
-      $ENV{MOZ_MAPINFO} = "1";
+      $ENV{MOZ_CO_MODULE} = "$ENV{MOZ_CO_MODULE} mozilla/tools/codesighs";
     }
 
 }
