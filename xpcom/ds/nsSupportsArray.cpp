@@ -58,7 +58,7 @@ nsSupportsArray::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
   return rv;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsSupportsArray, nsISupportsArray)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsSupportsArray, nsISupportsArray, nsICollection, nsISerializable)
 
 NS_IMETHODIMP
 nsSupportsArray::Read(nsIObjectInputStream *aStream)
