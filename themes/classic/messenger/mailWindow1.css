@@ -88,13 +88,6 @@
   min-width: 1px;
 }
 
-#threadTree,
-#accountCentralBox,
-#searchBox {
-  border-left: 2px solid;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
-}
-
 #searchBox {
   border-top: 1px solid ThreeDHighlight;
   border-bottom: 1px solid ThreeDShadow;
