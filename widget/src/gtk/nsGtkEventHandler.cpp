@@ -205,7 +205,7 @@ void nsGtkWidget_InitNSKeyEvent(int aEventType, nsKeyEvent& aKeyEvent,
 //==============================================================
 
 // Input keysym is in gtk format; output is in NS_VK format
-int nsPlatformToDOMKeyCode(GdkEventKey *aGEK, int* isPrintable)
+int nsPlatformToDOMKeyCode(GdkEventKey *aGEK)
 {
   int i;
   int length = sizeof(nsKeycodes) / sizeof(struct nsKeyConverter);
@@ -219,31 +219,17 @@ int nsPlatformToDOMKeyCode(GdkEventKey *aGEK, int* isPrintable)
   // since X has different key symbols for upper and lowercase letters and
   // mozilla does not, convert gdk's to mozilla's
   if (keysym >= GDK_a && keysym <= GDK_z)
-  {
-    *isPrintable = 1;
     return keysym - GDK_a + NS_VK_A;
-  }
   if (keysym >= GDK_A && keysym <= GDK_Z)
-  {
-    *isPrintable = 1;
     return keysym - GDK_A + NS_VK_A;
-  }
 
   // numbers
   if (keysym >= GDK_0 && keysym <= GDK_9)
-  {
-    *isPrintable = 1;
     return keysym - GDK_0 + NS_VK_0;
-  }
 
   // keypad numbers
   if (keysym >= GDK_KP_0 && keysym <= GDK_KP_9)
-  {
-    *isPrintable = 1;
     return keysym - GDK_KP_0 + NS_VK_NUMPAD0;
-  }
-
-  *isPrintable = 0;
 
   // misc other things
   for (i = 0; i < length; i++) {
@@ -270,7 +256,12 @@ PRUint32 nsConvertCharCodeToUnicode(GdkEventKey* aGEK)
   // This is only true for control chars; for alt chars, send the
   // ascii for the key, i.e. a for alt-a.
   if (aGEK->state & GDK_CONTROL_MASK)
-    return aGEK->string[0];
+  {
+    if (aGEK->state & GDK_SHIFT_MASK)
+      return aGEK->string[0] + 'A' - 1;
+    else
+      return aGEK->string[0] + 'a' - 1;
+  }
 
   // For now (obviously this will need to change for IME),
   // only set a char code if the result is printable:
@@ -303,8 +294,7 @@ void InitKeyEvent(GdkEventKey *aGEK,
   anEvent.eventStructType = NS_KEY_EVENT;
 
   if (aGEK != nsnull) {
-    int isPrintable;  // Actually we don't care, just need a placeholder
-    anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK, &isPrintable);
+    anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK);
     anEvent.charCode = 0;
     anEvent.time = aGEK->time;
     anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
@@ -326,24 +316,34 @@ void InitKeyPressEvent(GdkEventKey *aGEK,
   anEvent.message = NS_KEY_PRESS;
   anEvent.widget = (nsWidget*)p;
 
-  if (aGEK!=nsnull) {
-    int isPrintable;
-    anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK, &isPrintable);
-
+  if (aGEK!=nsnull)
+  {
     anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isControl = (aGEK->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isAlt = (aGEK->state & GDK_MOD1_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isMeta = (aGEK->state & GDK_MOD2_MASK) ? PR_TRUE : PR_FALSE;
 
-    if (isPrintable && !anEvent.isControl && !anEvent.isAlt && !anEvent.isMeta)
-    {
-      anEvent.keyCode = 0;
-      anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
-    }
+    anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
 
-#ifdef DEBUG_pavlov
-    g_print("%s\n", aGEK->string);
+    if (anEvent.charCode)
+      anEvent.keyCode = 0;
+    else
+      anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK);
+
+#if defined(DEBUG_akkana) || defined(DEBUG_pavlov)
+    printf("Key Press event: keyCode = %d, char code = '%c'",
+           anEvent.keyCode, anEvent.charCode);
+    if (anEvent.isShift)
+      printf(" [shift]");
+    if (anEvent.isControl)
+      printf(" [ctrl]");
+    if (anEvent.isAlt)
+      printf(" [alt]");
+    if (anEvent.isMeta)
+      printf(" [meta]");
+    printf("\n");
 #endif
+
     anEvent.time = aGEK->time;
     anEvent.point.x = 0;
     anEvent.point.y = 0;
