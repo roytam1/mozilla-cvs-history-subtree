@@ -603,6 +603,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         if (err != noErr)
         {
             oserr = err;
+            PR_DELETE(lm);
             goto unlock;    
         }
         
@@ -636,6 +637,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         if (cMacPath == NULL)
         {
             oserr = _MD_ERRNO();
+            PR_DELETE(lm);
             goto unlock;
         }
             
@@ -661,6 +663,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         {
             oserr = _MD_ERRNO();
             PR_DELETE(cMacPath);
+            PR_DELETE(lm);
             goto unlock;
         }
         cMacPath[index] = 0;
@@ -682,6 +685,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         if (err != noErr)
         {
             oserr = err;
+            PR_DELETE(lm);
             goto unlock;
         }
         fileSpec.parID = pb.dirInfo.ioDrDirID;
@@ -692,6 +696,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         if (err != noErr)
         {
             oserr = err;
+            PR_DELETE(lm);
             goto unlock;
         }
 
@@ -703,6 +708,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         if (err != noErr)
         {
             oserr = err;
+            PR_DELETE(lm);
             goto unlock;
         }
     }
@@ -992,8 +998,10 @@ pr_Mac_LoadIndexedFragment(const FSSpec *fileSpec, PRUint32 fragIndex)
     
 	/* Finally, try to load the library */
 	err = NSLoadIndexedFragment(&resolvedSpec, fragIndex, &fragmentName, &connectionID);
-	if (err != noErr)
+	if (err != noErr) {
+		PR_DELETE(newLib);
 		goto unlock;
+	}
 
   newLib->name = fragmentName;			/* was malloced in NSLoadIndexedFragment */
   newLib->dlh = connectionID;
