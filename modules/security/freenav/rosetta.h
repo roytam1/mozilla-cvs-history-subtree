@@ -334,9 +334,9 @@
 #define HG20476
 #define HG87358
 #define HG93765
-#define HG92743
+#define HG92743 Bool dummy,
 #define HG83665
-#define HG98376
+#define HG98376 FALSE,
 #define HG92362
 #define HG26300
 #define HG27229 "rosetta.h"
@@ -430,6 +430,7 @@
 #define HG75442
 #define HG59731
 #define HG56898
+#define HG78111 FALSE
 
 /* WINDOWS FRONT END */
 
