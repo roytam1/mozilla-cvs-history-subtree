@@ -347,6 +347,12 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
 
     Sort(sortType, sortOrder);
 
+    // if the current sort column is NOT equal to the new sort column then clear out the 
+    // sortDirection attribute so we don't leave a sort icon for the column.
+    if (mCurrentSortColumn && mCurrentSortColumn.get() != aElement)
+      mCurrentSortColumn->RemoveAttribute(NS_LITERAL_STRING("sortDirection"));     
+
+    mCurrentSortColumn = aElement;
     if (sortOrder == nsMsgViewSortOrder::ascending)
       aElement->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("ascending"));
     else

@@ -37,6 +37,7 @@
 #include "nsIMsgFolder.h"
 #include "nsIDateTimeFormat.h"
 #include "nsIMsgHeaderParser.h"
+#include "nsIDOMElement.h"
 
 enum eFieldType {
     kString,
@@ -175,6 +176,7 @@ protected:
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgViewFlagsTypeValue m_viewFlags;
+  nsCOMPtr<nsIDOMElement> mCurrentSortColumn;
 
   // I18N date formater service which we'll want to cache locally.
   nsCOMPtr<nsIDateTimeFormat> mDateFormater;
