@@ -95,6 +95,7 @@ interface nsIAbCard : nsISupports {
 	attribute wstring jobTitle;
 	attribute wstring department;
 	attribute wstring company;
+  attribute wstring aimScreenName;
   attribute wstring anniversaryYear;
   attribute wstring anniversaryMonth;
   attribute wstring anniversaryDay;

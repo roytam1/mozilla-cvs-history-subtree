@@ -96,6 +96,7 @@
 #define kServerCustom4Column NS_LITERAL_STRING("Custom_4")
 #define kServerNotesColumn NS_LITERAL_STRING("addl_info")
 #define kServerLastModifiedDateColumn NS_LITERAL_STRING("OMIT:LastModifiedDate")
+#define kServerAimScreenNameColumn NS_LITERAL_STRING("screen_name")
 
 class nsSyncDecoderRing
 {

@@ -105,6 +105,7 @@ protected:
 	nsString m_JobTitle;
 	nsString m_Department;
 	nsString m_Company;
+  nsString m_AimScreenName;
   nsString m_AnniversaryYear;
   nsString m_AnniversaryMonth;
   nsString m_AnniversaryDay;

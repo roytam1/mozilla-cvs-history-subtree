@@ -93,6 +93,7 @@
 #define kJobTitleColumn           "JobTitle"
 #define kDepartmentColumn         "Department"
 #define kCompanyColumn            "Company"
+#define kAimScreenNameColumn      "_AimScreenName"
 #define kAnniversaryYearColumn    "AnniversaryYear"
 #define kAnniversaryMonthColumn   "AnniversaryMonth"
 #define kAnniversaryDayColumn     "AnniversaryDay"
@@ -207,6 +208,7 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addJobTitle(in nsIMdbRow row, in string value);
 	[noscript] void addDepartment(in nsIMdbRow row, in string value);
 	[noscript] void addCompany(in nsIMdbRow row, in string value);
+  [noscript] void addAimScreenName(in nsIMdbRow row, in string value);
   [noscript] void addAnniversaryYear(in nsIMdbRow row, in string value);
   [noscript] void addAnniversaryMonth(in nsIMdbRow row, in string value);
   [noscript] void addAnniversaryDay(in nsIMdbRow row, in string value);

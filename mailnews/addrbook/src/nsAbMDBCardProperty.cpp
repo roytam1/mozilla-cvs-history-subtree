@@ -206,6 +206,8 @@ NS_IMETHODIMP nsAbMDBCardProperty::CopyCard(nsIAbMDBCard* srcCardDB)
 	SetDepartment(str);
 	srcCard->GetCompany(getter_Copies(str));
 	SetCompany(str);
+  srcCard->GetAimScreenName(getter_Copies(str));
+  SetAimScreenName(str);
 
   srcCard->GetAnniversaryYear(getter_Copies(str));
   SetAnniversaryYear(str);

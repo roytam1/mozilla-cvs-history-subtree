@@ -215,6 +215,9 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
   nsresult rv = NS_OK;
 
   switch (attrname[0]) {
+    case '_': // _AimScreenName
+      rv = GetAimScreenName(value);
+      break;
     case 'A':
       // AnniversaryYear, AnniversaryMonth, AnniversaryDay
       switch (attrname[11]) {
@@ -476,6 +479,9 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
   nsresult rv = NS_OK;
 
   switch (attrname[0]) {
+    case '_': // _AimScreenName
+      rv = SetAimScreenName(value);
+      break;
     case 'A':
       // AnniversaryYear, AnniversaryMonth, AnniversaryDay
       switch (attrname[5]) {
@@ -854,6 +860,10 @@ nsAbCardProperty::GetCompany(PRUnichar * *aCompany)
 { return GetAttributeName(aCompany, m_Company); }
 
 NS_IMETHODIMP
+nsAbCardProperty::GetAimScreenName(PRUnichar * *aAimScreenName)
+{ return GetAttributeName(aAimScreenName, m_AimScreenName); }
+
+NS_IMETHODIMP
 nsAbCardProperty::GetAnniversaryYear(PRUnichar * *aAnniversaryYear)
 { return GetAttributeName(aAnniversaryYear, m_AnniversaryYear); }
 
@@ -1058,6 +1068,10 @@ nsAbCardProperty::SetCompany(const PRUnichar * aCompany)
 { return SetAttributeName(aCompany, m_Company); }
 
 NS_IMETHODIMP
+nsAbCardProperty::SetAimScreenName(const PRUnichar *aAimScreenName)
+{ return SetAttributeName(aAimScreenName, m_AimScreenName); }
+
+NS_IMETHODIMP
 nsAbCardProperty::SetAnniversaryYear(const PRUnichar * aAnniversaryYear)
 { return SetAttributeName(aAnniversaryYear, m_AnniversaryYear); }
 
@@ -1204,6 +1218,8 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	SetDepartment(str);
 	srcCard->GetCompany(getter_Copies(str));
 	SetCompany(str);
+  srcCard->GetAimScreenName(getter_Copies(str));
+  SetAimScreenName(str);
 
   srcCard->GetAnniversaryYear(getter_Copies(str));
   SetAnniversaryYear(str);

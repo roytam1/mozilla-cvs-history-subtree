@@ -302,6 +302,7 @@ nsAbSync::InitSchemaColumns()
   mSchemaMappingList[43].abField = kNotesColumn;
   mSchemaMappingList[44].abField = kLastModifiedDateColumn;
   mSchemaMappingList[45].abField = kDefaultEmailColumn;
+  mSchemaMappingList[46].abField = kAimScreenNameColumn;
 
   // Now setup the server fields...
   mSchemaMappingList[0].serverField = kServerFirstNameColumn;
@@ -350,6 +351,7 @@ nsAbSync::InitSchemaColumns()
   mSchemaMappingList[43].serverField = kServerNotesColumn;
   mSchemaMappingList[44].serverField = kServerLastModifiedDateColumn;
   mSchemaMappingList[45].serverField = kServerDefaultEmailColumn;
+  mSchemaMappingList[46].serverField = kServerAimScreenNameColumn;
 
   return NS_OK;
 }
@@ -1015,44 +1017,6 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
         AddValueToProtocolLine(aName, tProtLine);
       
         PR_FREEIF(aName);
-      }
-    }
-
-    // If the aim screen name is present then add it to the protocol string.
-    nsresult rv;
-    nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv));
-    if (NS_SUCCEEDED(rv) && dbcard)
-    {
-      nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv)); 
-      if (NS_SUCCEEDED(rv))
-      {
-        PRUint32 i, prefCount, prefixLen=strlen(SYNC_PREF_PREFIX_CLIENT_MAP);
-        char** prefNames;
-
-        rv = prefs->GetChildList(SYNC_PREF_PREFIX_CLIENT_MAP, &prefCount, &prefNames);
-        if (NS_SUCCEEDED(rv) && prefCount > 0)
-        {
-          for (i = 0; i < prefCount; i++)
-          {
-            nsXPIDLString genericValue;
-            rv = dbcard->GetStringAttribute(prefNames[i]+prefixLen, getter_Copies(genericValue));
-            if (NS_SUCCEEDED(rv) && genericValue.Length())
-            {
-              nsXPIDLCString mapValue;
-              rv = prefs->CopyCharPref(prefNames[i], getter_Copies(mapValue));
-              if (NS_SUCCEEDED(rv) && mapValue.Length())
-              {
-                // Add name tag and value to the protocol string.
-                tProtLine.Append(NS_LITERAL_STRING("&"));
-                tProtLine.AppendWithConversion(mapValue);
-                tProtLine.Append(NS_LITERAL_STRING("="));
-                AddValueToProtocolLine(genericValue.get(), tProtLine);
-              }
-            }
-          } // end of for (i = 0; i < prefCount; i++)
-
-          NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(prefCount, prefNames);
-        }
       }
     }
 
@@ -2962,23 +2926,6 @@ nsAbSync::AddNewUsers()
       }
     }
 
-    // hack
-    // we only support one generic column/value and we need to do this
-    // AFTER we have a mdbcard. We can remove this once #128567 is fixed.
-    if (!mCurrentGenericColumn.IsEmpty())
-    {
-      nsCOMPtr <nsIAbMDBCard> dbcard = do_QueryInterface(newCard, &rv);
-      if (NS_FAILED(rv))
-          continue;
-
-      rv = dbcard->SetStringAttribute(mCurrentGenericColumn.get(), mCurrentGenericValue.get());
-      if (NS_FAILED(rv))
-          continue;
-
-      mCurrentGenericColumn.Truncate();
-      mCurrentGenericValue.Truncate();
-    }
-
     //
     // Now, calculate the NEW CRC for the new or updated card...
     //
@@ -3264,6 +3211,8 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
     aCard->SetDepartment(aTagValue->get());
   else if (aTagName->Equals(kServerCompanyColumn))
     aCard->SetCompany(aTagValue->get());
+  else if (aTagName->Equals(kServerAimScreenNameColumn))
+    aCard->SetAimScreenName(aTagValue->get());
   else if (aTagName->Equals(kServerBirthdayColumn))
     ParseDateFields(aCard, aTagName, aTagValue);
   else if (aTagName->Equals(kServerAnniversaryColumn))
@@ -3293,29 +3242,6 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
       aCard->SetPreferMailFormat(nsIAbPreferMailFormat::html);
     else if (aTagValue->Equals(NS_LITERAL_STRING("0")))
       aCard->SetPreferMailFormat(nsIAbPreferMailFormat::unknown);
-  }
-  else if (aTagName->Length() && aTagValue->Length())
-  {
-    // See if it's a generic tag defined by external source (like netscape).
-    nsCAutoString prefName;
-    nsXPIDLCString mapValue;
-
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv)); 
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    prefName = SYNC_PREF_PREFIX_SERVER_MAP;
-    prefName += NS_LossyConvertUCS2toASCII((*aTagName).get());
-
-    rv = prefs->CopyCharPref(prefName.get(), getter_Copies(mapValue));
-    if (NS_SUCCEEDED(rv) && mapValue.Length())
-    {
-      // OK, this generic column is predefined so remember it.
-      // Note: we only support one generic column for now and
-      // this code can be replaced by what's provided by #128567
-      // to set generic column/value pairs once #128567 is fixed.
-      mCurrentGenericColumn = mapValue;
-      mCurrentGenericValue = aTagValue->get();
-    }
   }
 
   return rv;

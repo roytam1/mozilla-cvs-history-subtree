@@ -131,6 +131,7 @@ nsAddrDatabase::nsAddrDatabase()
       m_WorkZipCodeColumnToken(0),
       m_WorkCountryColumnToken(0),
       m_CompanyColumnToken(0),
+      m_AimScreenNameColumnToken(0),
       m_AnniversaryYearColumnToken(0),
       m_AnniversaryMonthColumnToken(0),
       m_AnniversaryDayColumnToken(0),
@@ -1097,6 +1098,7 @@ nsresult nsAddrDatabase::InitMDBInfo()
             GetStore()->StringToToken(GetEnv(),  kJobTitleColumn, &m_JobTitleColumnToken);
             GetStore()->StringToToken(GetEnv(),  kDepartmentColumn, &m_DepartmentColumnToken);
             GetStore()->StringToToken(GetEnv(),  kCompanyColumn, &m_CompanyColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kAimScreenNameColumn, &m_AimScreenNameColumnToken);
             GetStore()->StringToToken(GetEnv(),  kAnniversaryYearColumn, &m_AnniversaryYearColumnToken);
             GetStore()->StringToToken(GetEnv(),  kAnniversaryMonthColumn, &m_AnniversaryMonthColumnToken);
             GetStore()->StringToToken(GetEnv(),  kAnniversaryDayColumn, &m_AnniversaryDayColumnToken);
@@ -1272,6 +1274,10 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
       
     card->GetCompany(getter_Copies(unicodeStr)); 
     AddCompany(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    // AimScreenName
+    card->GetAimScreenName(getter_Copies(unicodeStr)); 
+    AddAimScreenName(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
 
     card->GetAnniversaryYear(getter_Copies(unicodeStr)); 
     AddAnniversaryYear(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
@@ -2568,6 +2574,11 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
     {
         newCard->SetCompany(tempString.get());
     }
+
+    // AimScreenName
+    err = GetStringColumn(cardRow, m_AimScreenNameColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetAimScreenName(tempString.get());
 
     err = GetStringColumn(cardRow, m_AnniversaryYearColumnToken, tempString);
     if (NS_SUCCEEDED(err) && tempString.Length())

@@ -205,6 +205,9 @@ public:
 	NS_IMETHOD AddCompany(nsIMdbRow * row, const char * value)
 	{ return AddCharStringColumn(row, m_CompanyColumnToken, value); }
 
+  NS_IMETHOD AddAimScreenName(nsIMdbRow * row, const char * value)
+	{ return AddCharStringColumn(row, m_AimScreenNameColumnToken, value); }
+
   NS_IMETHOD AddAnniversaryYear(nsIMdbRow * row, const char * value)
   { return AddCharStringColumn(row, m_AnniversaryYearColumnToken, value); }
 
@@ -418,7 +421,8 @@ protected:
 	mdb_token			m_WorkCountryColumnToken;
 	mdb_token			m_JobTitleColumnToken;
 	mdb_token			m_DepartmentColumnToken;
-	mdb_token			m_CompanyColumnToken;      
+	mdb_token			m_CompanyColumnToken;
+  mdb_token			m_AimScreenNameColumnToken;
   mdb_token			m_AnniversaryYearColumnToken;
   mdb_token			m_AnniversaryMonthColumnToken;
   mdb_token			m_AnniversaryDayColumnToken;
