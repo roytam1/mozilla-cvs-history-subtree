@@ -44,27 +44,29 @@ interface nsISOAPServiceRegistry {
  *   and services.  This will fail if errors occur during
  *   processing of the configuration.
  *
- * @param configuration Root element of configuration XML.
+ * @param aConfiguration Root element of configuration XML.
  */
-  boolean addConfiguration(in nsIDOMElement configuration);
+  boolean addConfiguration(in nsIDOMElement aConfiguration);
 
 /**
  * Add a transport to be serviced by the registered services.
  *   This will fail if the specified source was already added
  *   with the same setting of the capture flag.
  *
- * @param transport string specifying the transport to supply
+ * @param aTransport string specifying the transport to supply
  *   messages for the service.
+ *
+ * @param aCapture True if capturing before later declarations
  */
-  void addSource(in DOMString transport, in boolean capture);
+  void addSource(in DOMString aTransport, in boolean aCapture);
 
 /**
  * Add a service to service the registered transports.  This
  *   will fail if the specified service was already added.
  *
- * @param service Service to be serviced.
+ * @param aService Service to be serviced.
  */
-  void addService(in nsISOAPService service);
+  void addService(in nsISOAPService aService);
 
 /**
  * Registry identifying how to marshall and unmarshall

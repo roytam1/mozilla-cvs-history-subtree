@@ -201,4 +201,43 @@ interface nsISOAPMessage : nsISupports {
    *   may be used to override the default type registry.
    */
   attribute nsISOAPTypeRegistry types;
+
+ /**
+  * Marshall the source object into the specified
+  * parent in the output.
+  *
+  * @param aName The name of the parameter
+  *
+  * @param aType The string identifying the type of the source object
+  *
+  * @param aEncodingStyleURI The encoding style of the source object
+  *
+  * @param aSource The object to be marshalled, usually a parameter
+  *
+  * @return The marshalled object, which may be null if the operation
+  *   attached objects elsewhere in the message.
+  */
+ nsISupports marshall(in DOMString aName, in DOMString aEncodingStyleURI, 
+   in DOMString aType, in nsISupports aSource);
+
+ /**
+  * Unmarshall the source node into the specified
+  * object in the output.
+  *
+  * @param aName The resulting name of the parameter
+  *
+  * @param aEncodingStyleURI The encoding style of the source object
+  *
+  * @param aNamespace The namespace URI of the element
+  *
+  * @param aLocalname The name of the element
+  *
+  * @param aSource The object to be unmarshalled, usually an element
+  *
+  * @return The unmarshalled object, which is null if operation failed.
+  *   In case of failure, a more complete status is recorded in the message.
+  */
+ nsISupports unmarshall(out DOMString aName, in DOMString aEncodingStyleURI, 
+        in DOMString aNamespace, in DOMString aLocalname, 
+        in nsISupports aSource);
 };

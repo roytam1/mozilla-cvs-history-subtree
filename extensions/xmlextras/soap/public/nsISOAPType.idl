@@ -21,6 +21,8 @@
  */
 
 #include "nsISupports.idl"
+#include "nsISOAPMarshaller.idl"
+#include "nsISOAPUnmarshaller.idl"
 
 /**
  * This interface keeps all the info about a type mapping: the encoding style,
@@ -43,22 +45,22 @@ interface nsISOAPType : nsISupports {
 /**
  * Namespace URI of the element of encoding, or null if no namespace URI
  */
-  attribute DOMString elementNamespaceURI;
+  attribute DOMString elementNamespace;
 
 /**
  * Local name of the element of encoding, or null if no namespace URI
  */
-  attribute DOMString elementLocalName;
+  attribute DOMString elementLocalname;
 
 /**
  * Contract ID of service which can marshal this type of object into DOM
  */
-  attribute DOMString marshallContractID;
+  attribute nsISOAPMarshaller marshaller;
 
 /**
  * Contract ID of service which can unmarshal this type of object from DOM
  */
-  attribute DOMString unmarshallContractID;
+  attribute nsISOAPUnmarshaller unmarshaller;
 
 /**
  * Configuration object that may contain more info on the marshalling

@@ -38,7 +38,7 @@ interface nsISOAPResponseListener : nsISupports {
    * a SOAP message. The listener is registered as part of the original
    * asynchronous call invocation. 
    *
-   * @param response The decoded version of the response.  If an
+   * @param aResponse The decoded version of the response.  If an
    *   error occurred transmitting the response, the status field
    *   of the response will contain an error code.  The last call
    *   to the listener may contain a null response, which should
@@ -48,7 +48,7 @@ interface nsISOAPResponseListener : nsISupports {
    *   the last parameter true may only be possible after the
    *   last response has already been delivered.
    *
-   * @param last True if this is the last call to the listener.
+   * @param aLast True if this is the last call to the listener.
    *
    * @return True to make this the last call to the listener, even
    *   if last was not true.  Calls which expect a single response
@@ -56,7 +56,7 @@ interface nsISOAPResponseListener : nsISupports {
    *   possibly recieving another callback with a null response
    *   indicating that the last response was already sent.
    */ 
-  boolean handleResponse(in nsISOAPResponse response, in boolean last);
+  boolean handleResponse(in nsISOAPResponse aResponse, in boolean aLast);
 };
 
 %{ C++

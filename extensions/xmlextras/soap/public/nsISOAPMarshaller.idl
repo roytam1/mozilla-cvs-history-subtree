@@ -33,27 +33,34 @@ interface nsISOAPMarshaller : nsISupports {
 
 /**
  * Marshall the source object into the specified
- * parent in the output.
+ * parent in the output.  Any parameter may be null
+ * as long as the marshaller is OK with it.
  *
- * @param name The name of the source object, if any, or null
+ * @param aName The name of the parameter
  *
- * @param encodingStyleURI The encoding style of the source object
+ * @param aType The string identifying the type of the parameter
  *
- * @param type The string identifying the type of the source object
+ * @param aEncodingStyleURI The encoding style for the parameter
  *
- * @param source The object to be marshalled
+ * @param aNamespace The namespace URI of the element
  *
- * @param message The message receiving the marshalled content
+ * @param aLocalname The name of the element
  *
- * @param configuration Configuration object which may specify more
+ * @param aSource The object to be marshalled, usually a parameter
+ *
+ * @param aMessage The message receiving the marshalled content
+ *
+ * @param aConfiguration Configuration object which may specify more
  *   details used by the marshaller.
  *
  * @return The marshalled object, which may be null if the operation
  *   attached objects elsewhere in the message.
  */
-nsISupports marshall(in DOMString name, in DOMString encodingStyleURI,  
-    in DOMString type, in nsISupports source, in nsISOAPMessage message, 
-    in nsISupports configuration);
+nsISupports marshall(in DOMString aName,
+    in DOMString aType, in DOMString aEncodingStyleURI,
+    in DOMString aNamespace, in DOMString aLocalname, 
+    in nsISupports aSource, in nsISOAPMessage aMessage, 
+    in nsISupports aConfiguration);
 };
 
 %{ C++

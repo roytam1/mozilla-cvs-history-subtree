@@ -36,33 +36,33 @@ interface nsISOAPTypeRegistry : nsISupports {
   /**
    * Process a configuration and add the resulting types
    *
-   * @param configuration Root element of configuration XML.
+   * @param aConfiguration Root element of configuration XML.
    *
    * @return boolean True if types were added, false if an error occurred
    */
-  boolean addConfiguration(in nsIDOMElement configuration);
+  boolean addConfiguration(in nsIDOMElement aConfiguration);
 
   /**
    * Add a type to this registry so it can be serialized / deserialized
    *
-   * @param type The type to be added.
+   * @param aType The type to be added.
    *
    * @return True if type was added, false if type could not be added
    */
-  void addType(in nsISOAPType type);
+  void addType(in nsISOAPType aType);
 
   /**
    * Given an unmarshalled type, find the type information.
    *
-   * @param encodingStyleURI The URI that matches the encoding style of 
+   * @param aEncodingStyleURI The URI that matches the encoding style of 
    *   the type to be located.
    *
-   * @param unmarshalledType The string identifying the type to be located.
+   * @param aParameterType The string identifying the type to be located.
    *
    * @return The type in the registry that matches the encoding and type name
    */
-  nsISOAPType queryByUnmarshalledType(
-        in DOMString encodingStyleURI, in DOMString unmarshalledType);
+  nsISOAPType queryByParameterType(
+        in DOMString aEncodingStyleURI, in DOMString aParameterType);
   
   /**
    * Given an element type, find the type information.
@@ -70,15 +70,15 @@ interface nsISOAPTypeRegistry : nsISupports {
    * @param encodingStyleURI The URI that matches the encoding style of 
    *   the type to be located.
    *
-   * @param elementNamespaceURI the namespace URI of the element.
+   * @param aNamespace the namespace URI of the element.
    *
-   * @param elementLocalName the local name of the element.
+   * @param aName the local name of the element.
    *
    * @return The type in the registry that matches the encoding and element
    */
   nsISOAPType queryByElementType(
-        in DOMString encodingStyleURI, in DOMString elementNamespaceURI,
-        in DOMString elementLocalName);
+        in DOMString aEncodingStyleURI, in DOMString aNamespace,
+        in DOMString aName);
 };
 
 %{ C++

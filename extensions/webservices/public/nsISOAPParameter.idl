@@ -107,83 +107,83 @@ interface nsISOAPParameter : nsISupports {
    * A convenience method to set the value and type as a DOMString.
    * This creates the wrapper and sets the type to "#DOMString".
    *
-   * @param value In DOMString parameter specifying the parameter value.
+   * @param aValue In DOMString parameter specifying the parameter value.
    */
-  void setAsWString(in DOMString value);
+  void setAsWString(in DOMString aValue);
 
   /**
    * A convenience method to set the value and type as a boolean.
    * This creates the wrapper and sets the type to "#boolean".
    *
-   * @param value In boolean parameter specifying the parameter value.
+   * @param aValue In boolean parameter specifying the parameter value.
    */
-  void setAsBoolean(in PRBool value);
+  void setAsBoolean(in PRBool aValue);
 
   /**
    * A convenience method to set the value and type as a double.
    * This creates the wrapper and sets the type to "#double".
    *
-   * @param value In double parameter specifying the parameter value.
+   * @param aValue In double parameter specifying the parameter value.
    */
-  void setAsDouble(in double value);
+  void setAsDouble(in double aValue);
 
   /**
    * A convenience method to set the value and type as a float.
    * This creates the wrapper and sets the type to "#float".
    *
-   * @param value In float parameter specifying the parameter value.
+   * @param aValue In float parameter specifying the parameter value.
    */
-  void setAsFloat(in float value);
+  void setAsFloat(in float aValue);
 
   /**
    * A convenience method to set the value and type as a long.
    * This creates the wrapper and sets the type to "#long".
    *
-   * @param value In long parameter specifying the parameter value.
+   * @param aValue In long parameter specifying the parameter value.
    */
-  void setAsLong(in PRInt64 value);
+  void setAsLong(in PRInt64 aValue);
 
   /**
    * A convenience method to set the value and type as an int.
    * This creates the wrapper and sets the type to "#int".
    *
-   * @param value In int parameter specifying the parameter value.
+   * @param aValue In int parameter specifying the parameter value.
    */
-  void setAsInt(in PRInt32 value);
+  void setAsInt(in PRInt32 aValue);
 
   /**
    * A convenience method to set the value and type as a short.
    * This creates the wrapper and sets the type to "#short".
    *
-   * @param value In short parameter specifying the parameter value.
+   * @param aValue In short parameter specifying the parameter value.
    */
-  void setAsShort(in PRInt16 value);
+  void setAsShort(in PRInt16 aValue);
 
   /**
    * A convenience method to set the value and type as a byte.
    * This creates the wrapper and sets the type to "#byte".
    *
-   * @param value In byte parameter specifying the parameter value.
+   * @param aValue In byte parameter specifying the parameter value.
    */
-  void setAsByte(in PRUint8 value);
+  void setAsByte(in PRUint8 aValue);
 
   /**
    * A convenience method to set the value and type as an array.
    * This sets the type to "#array".
    *
-   * @param value In nsISupportsArray parameter specifying the parameter value.
+   * @param aValue In nsISupportsArray parameter specifying the parameter value.
    */
-  void setAsArray(in nsISupportsArray value);
+  void setAsArray(in nsISupportsArray aValue);
 
   /**
    * A convenience method to set the value and type as an XPCOM
    * interface.
    * This sets the type to "#iid#&lt;specific uuid&gt;".
    *
-   * @param iid In nsIIDRef, iid of xpcom object.
-   * @param value In nsISupports parameter specifying value.
+   * @param aIID In nsIIDRef, iid of xpcom object.
+   * @param aValue In nsISupports parameter specifying value.
    */
-  void setAsInterface(in nsIIDRef iid, in nsISupports value);
+  void setAsInterface(in nsIIDRef aIID, in nsISupports aValue);
 };
 
 %{ C++
