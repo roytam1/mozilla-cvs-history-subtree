@@ -432,18 +432,11 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($nsprpub_tag) = "Netscape_6_0_RTM_BASE";
-    my($nss_tab) = "Netscape_6_0_RTM_SECURITY_MAC_BASE";
-    my($psm_tag) = "Netscape_6_0_RTM_SECURITY_MAC_BASE";
-    my($ldapsdk_tag) = "Netscape_6_0_RTM_BASE";
-    my($sma_tag) = "Netscape_6_0_RTM_BASE";
-
-# this is from the 6.01 core branch
-#    my($nsprpub_tag) = "Netscape_6_01_20010207_RELEASE";
-#    my($nss_tab) = "Netscape_6_01_20010207_SECURITY_MAC_RELEASE";
-#    my($psm_tag) = "Netscape_6_01_20010207_SECURITY_MAC_RELEASE";
-#    my($ldapsdk_tag) = "Netscape_6_01_20010207_RELEASE";
-#    my($sma_tag) = "Netscape_6_01_20010207_RELEASE";
+    my($nsprpub_tag) = "Netscape_6_01_20010207_RELEASE";
+    my($nss_tab) = "Netscape_6_01_20010207_SECURITY_MAC_RELEASE";
+    my($psm_tag) = "Netscape_6_01_20010207_SECURITY_MAC_RELEASE";
+    my($ldapsdk_tag) = "Netscape_6_01_20010207_RELEASE";
+    my($sma_tag) = "Netscape_6_01_20010207_RELEASE";
     
     #//
     #// Checkout commands
