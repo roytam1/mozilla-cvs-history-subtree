@@ -26,7 +26,7 @@
 #ifndef nsIRDFCompositeDataSource_h__
 #define nsIRDFCompositeDataSource_h__
 
-#if defined(USE_XPIDL_INTERFACES)
+#if 1 //defined(USE_XPIDL_INTERFACES)
 #include "nsRDFInterfaces.h"
 #else
 

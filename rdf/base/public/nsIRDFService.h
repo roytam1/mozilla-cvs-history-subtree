@@ -35,7 +35,7 @@
 #ifndef nsIRDFService_h__
 #define nsIRDFService_h__
 
-#if defined(USE_XPIDL_INTERFACES)
+#if 1 //defined(USE_XPIDL_INTERFACES)
 #include "nsRDFInterfaces.h"
 #else
 
