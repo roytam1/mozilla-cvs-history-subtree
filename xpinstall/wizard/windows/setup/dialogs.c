@@ -782,7 +782,6 @@ LRESULT CALLBACK DlgProcSetupType(HWND hDlg, UINT msg, WPARAM wParam, LONG lPara
       SendDlgItemMessage (hDlg, IDC_STATIC_ST2_DESCRIPTION, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
       SendDlgItemMessage (hDlg, IDC_STATIC_ST3_DESCRIPTION, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
       SendDlgItemMessage (hDlg, IDC_STATIC, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
-      SendDlgItemMessage (hDlg, IDC_DESTINATION, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
       SendDlgItemMessage (hDlg, IDC_EDIT_DESTINATION, WM_SETFONT, (WPARAM)sgInstallGui.systemFont, 0L);
       SendDlgItemMessage (hDlg, IDC_BUTTON_BROWSE, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
       SendDlgItemMessage (hDlg, IDWIZBACK, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
@@ -2568,7 +2567,6 @@ LRESULT CALLBACK DlgProcMessage(HWND hDlg, UINT msg, WPARAM wParam, LONG lParam)
       else if((sgProduct.szProductName != NULL) && (*sgProduct.szProductName != '\0'))
         lstrcpy(szBuf, sgProduct.szProductName);
 
-      SendDlgItemMessage(hDlg, IDC_MESSAGE, WM_SETFONT, (WPARAM)sgInstallGui.definedFont, 0L);
       SetWindowText(hDlg, szBuf);
       RepositionWindow(hDlg, NO_BANNER_IMAGE);
       break;
