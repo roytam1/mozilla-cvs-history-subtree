@@ -919,7 +919,7 @@ icalrecur_iterator* icalrecur_iterator_new(struct icalrecurrencetype rule,
 	for (;;) {
             expand_year_days(impl,impl->last.year);
 	    if (impl->days[0] != ICAL_RECURRENCE_ARRAY_MAX)
-	        break; // break when no days are expanded
+	        break; /* break when no days are expanded */
 	    increment_year(impl,impl->rule.interval);
 	}
 

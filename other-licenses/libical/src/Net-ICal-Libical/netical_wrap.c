@@ -96,9 +96,6 @@ extern "C" {
  * SWIGSTATIC.
  *
  * $Log$
- * Revision 1.1  2001/12/21 19:21:13  mikep%oeone.com
- * Adding in files for second import of libical.
- *
  * Revision 1.6  2001/04/02 18:17:40  ebusboom
  * Get perl extension compiling again.
  *

@@ -63,7 +63,13 @@ typedef enum icalset_kind {
 
 /* Create a specific derived type of set */
 icalset* icalset_new_file(const char* path);
+icalset* icalset_new_file_reader(const char* path);
+icalset* icalset_new_file_writer(const char* path);
+
 icalset* icalset_new_dir(const char* path);
+icalset* icalset_new_file_reader(const char* path);
+icalset* icalset_new_file_writer(const char* path);
+
 icalset* icalset_new_heap(void);
 icalset* icalset_new_mysql(const char* path);
 /*icalset* icalset_new_cap(icalcstp* cstp);*/

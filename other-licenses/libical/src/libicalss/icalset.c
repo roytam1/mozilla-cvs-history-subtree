@@ -201,6 +201,28 @@ icalset* icalset_new_file(const char* path)
     return (icalset*)icalset_new_file_from_ref(fset);
 }
 
+icalset* icalset_new_file_writer(const char* path)
+{
+    icalfileset *fset = icalfileset_new_writer(path);
+
+    if(fset == 0){
+	return 0;
+    }
+
+    return (icalset*)icalset_new_file_from_ref(fset);
+}
+
+icalset* icalset_new_file_reader(const char* path)
+{
+    icalfileset *fset = icalfileset_new_reader(path);
+
+    if(fset == 0){
+	return 0;
+    }
+
+    return (icalset*)icalset_new_file_from_ref(fset);
+}
+
 icalset* icalset_new_dir_from_ref(icaldirset *dset)
 {
 
@@ -227,6 +249,28 @@ icalset* icalset_new_dir_from_ref(icaldirset *dset)
 icalset* icalset_new_dir(const char* path)
 {
     icaldirset *dset = icaldirset_new(path);
+
+    if(dset == 0){
+	return 0;
+    }
+
+    return icalset_new_dir_from_ref(dset);
+}
+
+icalset* icalset_new_dir_writer(const char* path)
+{
+    icaldirset *dset = icaldirset_new_writer(path);
+
+    if(dset == 0){
+	return 0;
+    }
+
+    return icalset_new_dir_from_ref(dset);
+}
+
+icalset* icalset_new_dir_reader(const char* path)
+{
+    icaldirset *dset = icaldirset_new_reader(path);
 
     if(dset == 0){
 	return 0;

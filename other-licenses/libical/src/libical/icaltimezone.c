@@ -1420,7 +1420,7 @@ icaltimezone_parse_zone_tab		(void)
 		    &latitude_seconds,
 		    &longitude_degrees, &longitude_minutes,
 		    &longitude_seconds,
-		    &location) != 7) {
+		    location) != 7) {
 	    fprintf (stderr, "Invalid timezone description line: %s\n", buf);
 	    continue;
 	}
@@ -1589,7 +1589,7 @@ icaltimezone_dump_changes		(icaltimezone	*zone,
 
 	fprintf (fp, "\n");
     }
-    return 1;
+	return 1;
 }
 
 
