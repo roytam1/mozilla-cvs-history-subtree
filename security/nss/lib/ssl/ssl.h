@@ -45,8 +45,6 @@
 #include "cert.h"
 #include "keyt.h"
 
-#include "sslt.h"  /* public ssl data types */
-
 #if defined(_WIN32) && !defined(IN_LIBSSL) && !defined(NSS_USE_STATIC_LIBS)
 #define SSL_IMPORT extern __declspec(dllimport)
 #else
@@ -63,6 +61,23 @@ SSL_IMPORT const PRUint16 SSL_NumImplementedCiphers;
 
 /* Macro to tell which ciphers in table are SSL2 vs SSL3/TLS. */
 #define SSL_IS_SSL2_CIPHER(which) (((which) & 0xfff0) == 0xff00)
+
+typedef struct SSL3StatisticsStr {
+    /* statistics from ssl3_SendClientHello (sch) */
+    long sch_sid_cache_hits;
+    long sch_sid_cache_misses;
+    long sch_sid_cache_not_ok;
+
+    /* statistics from ssl3_HandleServerHello (hsh) */
+    long hsh_sid_cache_hits;
+    long hsh_sid_cache_misses;
+    long hsh_sid_cache_not_ok;
+
+    /* statistics from ssl3_HandleClientHello (hch) */
+    long hch_sid_cache_hits;
+    long hch_sid_cache_misses;
+    long hch_sid_cache_not_ok;
+} SSL3Statistics;
 
 /*
 ** Imports fd into SSL, returning a new socket.  Copies SSL configuration
@@ -244,6 +259,15 @@ SSL_IMPORT SECStatus SSL_BadCertHook(PRFileDesc *fd, SSLBadCertHandler f,
 ** certificate for the server and the servers private key. The arguments
 ** are copied.
 */
+/* Key Exchange values */
+typedef enum {
+    kt_null = 0,
+    kt_rsa = 1,
+    kt_dh = 2,
+    kt_fortezza = 3,
+    kt_kea_size
+} SSLKEAType;
+
 SSL_IMPORT SECStatus SSL_ConfigSecureServer(
 				PRFileDesc *fd, CERTCertificate *cert,
 				SECKEYPrivateKey *key, SSLKEAType kea);
@@ -273,17 +297,6 @@ SSL_IMPORT SECStatus SSL_ConfigMPServerSIDCache(int      maxCacheEntries,
 				                PRUint32 timeout,
 			       	                PRUint32 ssl3_timeout, 
 		                          const char *   directory);
-
-/* Get and set the configured maximum number of mutexes used for the 
-** server's store of SSL sessions.  This value is used by the server 
-** session ID cache initialization functions shown above.  Note that on 
-** some platforms, these mutexes are actually implemented with POSIX 
-** semaphores, or with unnamed pipes.  The default value varies by platform.
-** An attempt to set a too-low maximum will return an error and the 
-** configured value will not be changed.
-*/
-SSL_IMPORT PRUint32  SSL_GetMaxServerCacheLocks(void);
-SSL_IMPORT SECStatus SSL_SetMaxServerCacheLocks(PRUint32 maxLocks);
 
 /* environment variable set by SSL_ConfigMPServerSIDCache, and queried by
  * SSL_InheritMPServerSIDCache when envString is NULL.
@@ -419,12 +432,6 @@ SSL_IMPORT SECStatus NSS_SetExportPolicy(void);
 SSL_IMPORT SECStatus NSS_SetFrancePolicy(void);
 
 SSL_IMPORT SSL3Statistics * SSL_GetStatistics(void);
-
-/* Report more information than SSL_SecurityStatus.
-** Caller supplies the info struct.  Function fills it in.
-*/
-SSL_IMPORT SECStatus SSL_GetChannelInfo(PRFileDesc *fd, SSLChannelInfo *info,
-                                        PRUintn len);
 
 SEC_END_PROTOS
 

@@ -740,6 +740,10 @@ extern void _PR_ClockInterrupt(void);
 extern void _PR_Schedule(void);
 extern void _PR_SetThreadPriority(
     PRThread* thread, PRThreadPriority priority);
+NSPR_API(void) _PR_Unlock(PRLock *lock);
+
+NSPR_API(void) _PR_SuspendThread(PRThread *t);
+NSPR_API(void) _PR_ResumeThread(PRThread *t);
 
 /***********************************************************************
 ** FUNCTION:	_PR_NewSegment()
@@ -1741,11 +1745,6 @@ extern void _PR_InitMW(void);
 extern void _PR_InitRWLocks(void);
 extern void _PR_NotifyCondVar(PRCondVar *cvar, PRThread *me);
 extern void _PR_CleanupThread(PRThread *thread);
-extern void _PR_CleanupEnv(void);
-extern void _PR_CleanupIO(void);
-extern void _PR_CleanupLayerCache(void);
-extern void _PR_CleanupStacks(void);
-extern void _PR_CleanupThreads(void);
 extern void _PR_CleanupTPD(void);
 extern void _PR_Cleanup(void);
 extern void _PR_LogCleanup(void);

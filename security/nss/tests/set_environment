@@ -56,26 +56,24 @@ export CVSROOT HOME os_name os_version os_full MANPATH
 
 if [ "$os_name" = "HP-UX" ]
 then
-    PATH=$PATH:/usr/local/bin:/opt/aCC/bin:/usr/local/bin/audio:/tools/ns/bin:/etc:/usr/contrib/bin:/usr/contrib/bin/X11:/usr/local/hpux/bin:/nfs/iapp1/hphome/bin:/etc:/u/svbld/bin/HP/perl/bin
+    PATH=$PATH:/usr/local/bin:/opt/aCC/bin:/usr/local/bin/audio:/tools/ns/bin:/etc:/usr/contrib/bin:/usr/contrib/bin/X11:/usr/local/hpux/bin:/nfs/iapp1/hphome/bin:/etc
 elif [ "$os_name" = "SunOS" ]
 then
     XAPPLRESDIR=/usr/openwin/lib/app-defaults:/usr/local/lib/X11/app-defaults
     OPENWINHOME=/usr/openwin
     LD_LIBRARY_PATH=$OPENWINHOME/lib
     PATH=/tools/ns/bin:$PATH:/opt/SUNWspro/bin:/usr/bin/X11:/usr/openwin/bin:/usr/openwin/demo
-    if [ "$os_version" = "5.8" -o "$os_version" = "5.7" -o \
-         "$os_version" = "5.9" ]
+    if [ "$os_version" = "5.8" -o "$os_version" = "5.7" ]
     then
         PATH=$PATH:/tools/ns/workshop-5.0/bin
     else
         PATH=$PATH:/tools/ns/workshop-4.0/bin
     fi
     PATH=$PATH:/usr/ccs/bin:/usr/ucb/bin:/opt/SUNWwabi/bin:/usr/local/bin:/tools/ns/bin:/etc:/tools/contrib/bin
-    if [ "$os_full" = "SOLARISx86 2.8" -o "$os_full" = "SOLARISx86 2.9" ] 
-    then
+    if [ "$os_full" = "SOLARISx86 2.8" ] ; then
         PATH=/usr/ucb:/opt/usr/local/bin:$PATH
     else
-        PATH=/usr/ucb:$PATH
+        PATH=/usr/ucb:/h/tortoise/export/share/builds/tools/sparc_sun_solaris2.5.1/perl5.004/bin:$PATH
     fi
     export XAPPLRESDIR  OPENWINHOME LD_LIBRARY_PATH
 elif [ "$os_name" = "IRIX" ]
@@ -102,26 +100,25 @@ then
     export TERM
 elif [ "$os_name" = "OSF1" ]
 then
-    PATH=$PATH:/usr/local/bin
+    PATH=/h/tortoise/export/share/builds/tools/alpha_dec_osf4.0/perl5.004/bin:$PATH:/usr/local/bin
 fi
 
-#if [ "$os_full" = "HPUX 11.00" ]
-#then
-    #PATH=$PATH
-#elif [ "$os_full" = "HPUX 10.10" ]
-#then
-    #PATH=$PATH
-#elif [ "$os_full" = "AIX 4.1.4.0" ]
-#then
-    #PATH=$PATH
-#elif [ "$os_full" = "AIX 4.1.5.0" ]
-#then
-    #PATH=$PATH
-#elif [ "$os_full" = "AIX 4.2.1.0" ]
-#then
-    #PATH=$PATH
-#elif [ "$os_name" = "IRIX" ]
-if [ "$os_name" = "IRIX" ]
+if [ "$os_full" = "HPUX 11.00" ]
+then
+    PATH=/h/tortoise/export/share/builds/tools/hppa1.1_hp_hpux11.00/perl5.004/bin:$PATH
+elif [ "$os_full" = "HPUX 10.10" ]
+then
+    PATH=/h/tortoise/export/share/builds/tools/hppa1.1_hp_hpux10.10/perl5.004/bin:$PATH
+elif [ "$os_full" = "AIX 4.1.4.0" ]
+then
+    PATH=/h/tortoise/export/share/builds/tools/rs6000_ibm_aix3.2.5/perl5.004/bin:$PATH
+elif [ "$os_full" = "AIX 4.1.5.0" ]
+then
+    PATH=/h/tortoise/export/share/builds/tools/rs6000_ibm_aix3.2.5/perl5.004/bin:$PATH
+elif [ "$os_full" = "AIX 4.2.1.0" ]
+then
+    PATH=/h/tortoise/export/share/builds/tools/rs6000_ibm_aix4.1/perl5.004/bin:$PATH
+elif [ "$os_name" = "IRIX" ]
 then
     PATH=/tools/ns-arch/soft/perl-5.004_04/run/default/mips_sgi_irix5.3/bin:$PATH
 elif [ "$os_name" = "IRIX64" ]
@@ -195,9 +192,7 @@ then
     os_name="Windows"
     O_MKS=ON
     O_WIN=ON
-    if [ -z $RSH ] ; then 
-        RSH=c:/winnt/system32/rsh
-    fi
+    RSH=c:/winnt/system32/rsh
     
 else
     EDITOR=vi
@@ -212,7 +207,7 @@ fi
 
 BASEPATH=$PATH    # in  case we we set and reset DIST directories the PATH 
                 # needs to change accordingly
-export PATH EDITOR EMACSLOADPATH PYTHONPATH PAGER XMCD_LIBDIR DISPLAY MANPATH os_full os_name BASEPATH RSH O_WIN
+export PATH EDITOR EMACSLOADPATH PYTHONPATH PAGER XMCD_LIBDIR DISPLAY MANPATH os_full os_name BASEPATH
 
 umask 022
 

@@ -86,7 +86,7 @@ DigestFile(unsigned char *digest, unsigned int *len, unsigned int maxLen,
 	   FILE *inFile, HASH_HashType hashType)
 {
     int nb;
-    unsigned char ibuf[4096];
+    char ibuf[4096];
     const SECHashObject *hashObj;
     void *hashcx;
 

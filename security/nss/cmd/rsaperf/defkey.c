@@ -36,7 +36,7 @@
 */
 #include "seccomon.h"
 #include "secoidt.h"
-#include "keytlow.h"
+#include "keyt.h"
 
 #define CONST
 
@@ -105,11 +105,11 @@ static struct SECKEYLowPrivateKeyStr rsaPriv;
 SECKEYLowPrivateKey *
 getDefaultRSAPrivateKey(void)
 {
-    if (rsaPriv.keyType != lowRSAKey) {
+    if (rsaPriv.keyType != rsaKey) {
 
 	/* leaving arena uninitialized. It isn't used in this test. */
 
-	rsaPriv.keyType                     = lowRSAKey;
+	rsaPriv.keyType                     = rsaKey;
 
 	/* leaving arena   uninitialized. It isn't used. */
 	/* leaving version uninitialized. It isn't used. */
@@ -139,9 +139,9 @@ static struct SECKEYLowPublicKeyStr rsaPub;
 SECKEYLowPublicKey *
 getDefaultRSAPublicKey(void)
 {
-    if (rsaPub.keyType != lowRSAKey) {
+    if (rsaPub.keyType != rsaKey) {
 
-	rsaPub.keyType			   = lowRSAKey;
+	rsaPub.keyType			   = rsaKey;
 
 	rsaPub.u.rsa.modulus.data          =        default_n;
 	rsaPub.u.rsa.modulus.len           = sizeof default_n;

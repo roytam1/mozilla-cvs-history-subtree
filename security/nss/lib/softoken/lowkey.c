@@ -40,15 +40,7 @@
 #include "secerr.h"
 
 
-const SEC_ASN1Template SECKEY_LowPQGParamsTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(PQGParams) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,prime) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,subPrime) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,base) },
-    { 0, }
-};
-
-const SEC_ASN1Template SECKEY_LowRSAPrivateKeyTemplate[] = {
+const SEC_ASN1Template SECKEY_RSAPrivateKeyTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYPrivateKey) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.version) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.modulus) },
@@ -63,24 +55,30 @@ const SEC_ASN1Template SECKEY_LowRSAPrivateKeyTemplate[] = {
 };                                                                            
 
 
-const SEC_ASN1Template SECKEY_LowDSAPrivateKeyTemplate[] = {
+const SEC_ASN1Template SECKEY_DSAPrivateKeyTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYLowPrivateKey) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.publicValue) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.privateValue) },
     { 0, }
 };
 
-const SEC_ASN1Template SECKEY_LowDSAPrivateKeyExportTemplate[] = {
+const SEC_ASN1Template SECKEY_DSAPrivateKeyExportTemplate[] = {
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.privateValue) },
 };
 
-const SEC_ASN1Template SECKEY_LowDHPrivateKeyTemplate[] = {
+const SEC_ASN1Template SECKEY_DHPrivateKeyTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYLowPrivateKey) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.publicValue) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.privateValue) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.base) },
     { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.prime) },
     { 0, }
+};
+
+const SEC_ASN1Template SECKEY_DHPrivateKeyExportTemplate[] = {
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.privateValue) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.base) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.prime) },
 };
 
 void
@@ -107,7 +105,7 @@ SECKEY_LowPublicModulusLen(SECKEYLowPublicKey *pubk)
      * fortezza that's the public key length */
 
     switch (pubk->keyType) {
-    case lowRSAKey:
+    case rsaKey:
     	b0 = pubk->u.rsa.modulus.data[0];
     	return b0 ? pubk->u.rsa.modulus.len : pubk->u.rsa.modulus.len - 1;
     default:
@@ -123,7 +121,7 @@ SECKEY_LowPrivateModulusLen(SECKEYLowPrivateKey *privk)
     unsigned char b0;
 
     switch (privk->keyType) {
-    case lowRSAKey:
+    case rsaKey:
 	b0 = privk->u.rsa.modulus.data[0];
 	return b0 ? privk->u.rsa.modulus.len : privk->u.rsa.modulus.len - 1;
     default:
@@ -146,7 +144,7 @@ SECKEY_LowConvertToPublicKey(SECKEYLowPrivateKey *privk)
     }
 
     switch(privk->keyType) {
-      case lowRSAKey:
+      case rsaKey:
       case nullKey:
 	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
 						sizeof (SECKEYLowPublicKey));
@@ -169,7 +167,7 @@ SECKEY_LowConvertToPublicKey(SECKEYLowPrivateKey *privk)
 	    PORT_SetError (SEC_ERROR_NO_MEMORY);
 	}
 	break;
-      case lowDSAKey:
+      case dsaKey:
 	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
 						    sizeof(SECKEYLowPublicKey));
 	if (pubk != NULL) {
@@ -191,7 +189,7 @@ SECKEY_LowConvertToPublicKey(SECKEYLowPrivateKey *privk)
 	    if (rv == SECSuccess) return pubk;
 	}
 	break;
-      case lowDHKey:
+      case dhKey:
 	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
 						    sizeof(SECKEYLowPublicKey));
 	if (pubk != NULL) {
@@ -246,7 +244,7 @@ SECKEY_CopyLowPrivateKey(SECKEYLowPrivateKey *privKey)
     returnKey->arena = poolp;
 
     switch(privKey->keyType) {
-	case lowRSAKey:
+	case rsaKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.rsa.modulus), 
 	    				&(privKey->u.rsa.modulus));
 	    if(rv != SECSuccess) break;
@@ -275,7 +273,7 @@ SECKEY_CopyLowPrivateKey(SECKEYLowPrivateKey *privKey)
 	    				&(privKey->u.rsa.coefficient));
 	    if(rv != SECSuccess) break;
 	    break;
-	case lowDSAKey:
+	case dsaKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dsa.publicValue),
 	    				&(privKey->u.dsa.publicValue));
 	    if(rv != SECSuccess) break;
@@ -293,7 +291,7 @@ SECKEY_CopyLowPrivateKey(SECKEYLowPrivateKey *privKey)
 					&(privKey->u.dsa.params.base));
 	    if(rv != SECSuccess) break;
 	    break;
-	case lowDHKey:
+	case dhKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dh.publicValue),
 	    				&(privKey->u.dh.publicValue));
 	    if(rv != SECSuccess) break;
@@ -307,6 +305,15 @@ SECKEY_CopyLowPrivateKey(SECKEYLowPrivateKey *privKey)
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dh.base),
 					&(privKey->u.dh.base));
 	    if(rv != SECSuccess) break;
+	    break;
+	case fortezzaKey:
+	    returnKey->u.fortezza.certificate = 
+	    				privKey->u.fortezza.certificate;
+	    returnKey->u.fortezza.socket = 
+	    				privKey->u.fortezza.socket;
+	    PORT_Memcpy(returnKey->u.fortezza.serial, 
+	    				privKey->u.fortezza.serial, 8);
+	    rv = SECSuccess;
 	    break;
 	default:
 	    rv = SECFailure;
