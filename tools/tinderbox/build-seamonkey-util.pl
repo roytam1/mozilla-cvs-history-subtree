@@ -1611,14 +1611,14 @@ sub run_all_tests {
         $bash_cmd = $Settings::CodesizeTestType . "summary.win.bash";
       } else {
         # Assume Linux for non-windows for now.
-        $bash_cmd = $Settings::CodesizeTestType . "summary.win.bash";
+        $bash_cmd = $Settings::CodesizeTestType . "summary.linux.bash";
       }
 
       my $test_result =
         FileBasedTest($test_name, 
                       "$build_dir", 
                       "$build_dir",  # run top of tree, not in dist.
-                      ["basesummary.linux.bash $args"], # auto|base
+                      ["$bash_cmd $args"], # auto|base
                       $Settings::CodesizeTestTimeout,
                       "FAILED", # Fake out failure mode, test file instead.
                       0, 0);    # Timeout means failure.
