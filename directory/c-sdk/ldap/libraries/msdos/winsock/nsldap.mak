@@ -330,7 +330,7 @@ LFLAGS=$(LINKFLAGS_RELEASE)
 
 ############### END ###########################################
 
-DIST_XP = $(MOZ_SRC)\mozilla\dist
+DIST_XP = $(MOZ_SRC:/=\)\mozilla\dist
 DIST=$(DIST_XP)\$(DISTBASE)
 DIST_PUBLIC=$(DIST_XP)\include
 
@@ -397,8 +397,8 @@ RCFLAGS_GENERAL= \
 
 CINCLUDES= \
 !if defined (LINK_SEC) && "$(SEC_MODEL)" != "none"
-    /I$(MOZ_SRC)\ns\include \
-    /I$(MOZ_SRC)\ns\dist\public\nspr \
+    /I$(MOZ_SRC:/=\)\ns\include \
+    /I$(MOZ_SRC:/=\)\ns\dist\public\nspr \
 !endif
     /I$(LDAP_SRC)\ldap\include \
     /I$(LIBLDAP) \
