@@ -1051,7 +1051,13 @@ function Startup()
     document.documentElement.setAttribute("height", defaultHeight);
   }
   
-  // BiDi UI  if (isBidiEnabled()) {    document.getElementById("documentDirection-separator").hidden = false;    document.getElementById("documentDirection-swap").hidden = false;    document.getElementById("textfieldDirection-separator").hidden = false;    document.getElementById("textfieldDirection-swap").hidden = false;  }
+  // BiDi UI
+  if (isBidiEnabled()) {
+    document.getElementById("documentDirection-separator").hidden = false;
+    document.getElementById("documentDirection-swap").hidden = false;
+    document.getElementById("textfieldDirection-separator").hidden = false;
+    document.getElementById("textfieldDirection-swap").hidden = false;
+  }
 
   setTimeout(delayedStartup, 0);
 }
@@ -3908,7 +3914,11 @@ nsContextMenu.prototype = {
         this.showItem( "frame", this.inFrame );
         this.showItem( "frame-sep", this.inFrame );
         this.showItem( "context-blockimage", this.onImage);
-        // BiDi UI        var showBIDI = isBidiEnabled();        this.showItem( "context-sep-bidi", this.onTextInput && showBIDI);        this.showItem( "context-bidi-text-direction-toggle", this.onTextInput && showBIDI);
+
+        // BiDi UI
+        var showBIDI = isBidiEnabled();
+        this.showItem( "context-sep-bidi", this.onTextInput && showBIDI);
+        this.showItem( "context-bidi-text-direction-toggle", this.onTextInput && showBIDI);
 
         if (this.onImage) {
           var blockImage = document.getElementById("context-blockimage");
@@ -5722,4 +5732,54 @@ function getUILink(item)
   
   return "";
 }
-function isBidiEnabled(){  var rv = false;  var systemLocale;  try {    var localService = Components.classes["@mozilla.org/intl/nslocaleservice;1"]                                 .getService(Components.interfaces.nsILocaleService);    systemLocale = localService.getSystemLocale().getCategory("NSILOCALE_CTYPE").substr(0,3);  } catch (e){}  rv = ( (systemLocale == "he-") || (systemLocale == "ar-") || (systemLocale == "syr") ||         (systemLocale == "fa-") || (systemLocale == "ur-") );  if (!rv) {    // check the overriding pref    var mPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);    try {      rv = mPrefs.getBoolPref("bidi.browser.ui");    }    catch (e){}  }  return rv;}function GetFrameDocumentsFromWindow(aWindow){ if (aWindow.getComputedStyle(aWindow.document.body, "").direction == "ltr")    aWindow.document.dir = "rtl";  else    aWindow.document.dir = "ltr";  for (var run = 0; run < aWindow.frames.length; run++)    GetFrameDocumentsFromWindow(aWindow.frames[run]);}function SwitchDocumentDirection(){  GetFrameDocumentsFromWindow(window.content);}function SwitchFocusedTextEntryDirection() {  if (isBidiEnabled())  {    var focusedElement = document.commandDispatcher.focusedElement;    if (focusedElement)      if (window.getComputedStyle(focusedElement, "").direction == "ltr")        focusedElement.style.direction = "rtl";      else        focusedElement.style.direction = "ltr";  }}
+
+function isBidiEnabled(){
+  var rv = false;
+
+  var systemLocale;
+  try {
+    var localService = Components.classes["@mozilla.org/intl/nslocaleservice;1"]
+                                 .getService(Components.interfaces.nsILocaleService);
+    systemLocale = localService.getSystemLocale().getCategory("NSILOCALE_CTYPE").substr(0,3);
+  } catch (e){}
+
+  rv = ( (systemLocale == "he-") || (systemLocale == "ar-") || (systemLocale == "syr") ||
+         (systemLocale == "fa-") || (systemLocale == "ur-") );
+
+  if (!rv) {
+    // check the overriding pref
+    var mPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+    try {
+      rv = mPrefs.getBoolPref("bidi.browser.ui");
+    }
+    catch (e){}
+  }
+
+  return rv;
+}
+
+function GetFrameDocumentsFromWindow(aWindow){
+ if (aWindow.getComputedStyle(aWindow.document.body, "").direction == "ltr")
+    aWindow.document.dir = "rtl";
+  else
+    aWindow.document.dir = "ltr";
+
+  for (var run = 0; run < aWindow.frames.length; run++)
+    GetFrameDocumentsFromWindow(aWindow.frames[run]);
+}
+
+function SwitchDocumentDirection(){
+  GetFrameDocumentsFromWindow(window.content);
+}
+
+function SwitchFocusedTextEntryDirection() {
+  if (isBidiEnabled())
+  {
+    var focusedElement = document.commandDispatcher.focusedElement;
+    if (focusedElement)
+      if (window.getComputedStyle(focusedElement, "").direction == "ltr")
+        focusedElement.style.direction = "rtl";
+      else
+        focusedElement.style.direction = "ltr";
+  }
+}

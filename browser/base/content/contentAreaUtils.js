@@ -897,7 +897,12 @@ function getCharsetforSave(aDocument)
   return false;
 }
 
-function SwitchTextEntryDirection(aElement) {  if (window.getComputedStyle(aElement, "").direction == "ltr")    aElement.style.direction = "rtl";  else    aElement.style.direction = "ltr";}
+function SwitchTextEntryDirection(aElement) {
+  if (window.getComputedStyle(aElement, "").direction == "ltr")
+    aElement.style.direction = "rtl";
+  else
+    aElement.style.direction = "ltr";
+}
 
 # -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- 
 # ***** BEGIN LICENSE BLOCK *****
