@@ -63,22 +63,23 @@ struct _GdkSuperWinClass
 
 GtkType gdk_superwin_get_type(void);
 
-GdkSuperWin *gdk_superwin_new    (GdkWindow      *parent_window,
-				  guint           x,
-				  guint           y,
-				  guint           width,
-				  guint           height);
+GdkSuperWin *gdk_superwin_new (GdkWindow      *parent_window,
+                               guint           x,
+                               guint           y,
+                               guint           width,
+                               guint           height);
 
-void         gdk_superwin_set_event_func (GdkSuperWin    *superwin,
-					  GdkSuperWinFunc event_func,
-					  gpointer        func_data,
-					  GDestroyNotify  notify);
-void         gdk_superwin_scroll (GdkSuperWin *superwin,
-				  gint         dx,
-				  gint         dy);
-void         gdk_superwin_resize (GdkSuperWin *superwin,
-				  gint         width,
-				  gint         height);
+void  gdk_superwin_set_event_func (GdkSuperWin    *superwin,
+                                   GdkSuperWinFunc event_func,
+                                   gpointer        func_data,
+                                   GDestroyNotify  notify);
+void gdk_superwin_scroll (GdkSuperWin *superwin,
+                          gint         dx,
+                          gint         dy);
+void gdk_superwin_resize (GdkSuperWin *superwin,
+                          gint         width,
+                          gint         height);
+void gdk_superwin_destroy(GdkSuperWin *superwin);
 
 #ifdef __cplusplus
 }

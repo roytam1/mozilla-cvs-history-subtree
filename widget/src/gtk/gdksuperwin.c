@@ -133,6 +133,22 @@ gdk_superwin_new (GdkWindow *parent_window,
   return superwin;
 }
 
+/* XXX this should really be part of the object... */
+/* XXX and it should chain up to the object's destructor */
+
+void gdk_superwin_destroy(GdkSuperWin *superwin)
+{
+  gdk_window_remove_filter(superwin->shell_window,
+                           gdk_superwin_shell_filter,
+                           superwin);
+  gdk_window_remove_filter(superwin->bin_window,
+                           gdk_superwin_bin_filter,
+                           superwin);
+  gdk_window_destroy(superwin->bin_window);
+  gdk_window_destroy(superwin->shell_window);
+  free(superwin);
+}
+
 void         
 gdk_superwin_scroll (GdkSuperWin *superwin,
 		     gint dx,
@@ -207,7 +223,6 @@ gdk_superwin_set_event_func (GdkSuperWin    *superwin,
   superwin->func_data = func_data;
   superwin->notify = notify;
 }
-
 
 void gdk_superwin_resize (GdkSuperWin *superwin,
 			  gint         width,
