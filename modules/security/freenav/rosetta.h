@@ -230,15 +230,15 @@
 #define HG87237
 #define HG52423
 #define HG76373 TRUE
-#define HG72388 FALSE;
-#define HG52223 FALSE;
+#define HG72388 TRUE;
+#define HG52223 TRUE;
 #define HG53535
 #define HG52528 FALSE;
 #define HG73277 FALSE
 #define HG73738
 #define HG62522
 #define HG62363
-#define HG24242
+#define HG24242 this_entry->protocol = HTTP_TYPE_URL;
 #define HG42469
 #define HG87376
 #define HG76363
@@ -391,6 +391,8 @@
 #define HG03903
 #define HG82773 FALSE
 #define HG22087
+#define HG22088
+#define HG22089 FALSE
 #define HG21092
 #define HG09309
 #define HG29802 0
