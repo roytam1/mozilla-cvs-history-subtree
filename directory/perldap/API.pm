@@ -17,10 +17,11 @@
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
 # Donley. All Rights Reserved.
 #
-# Contributor(s):
+# Contributor(s):	Leif Hedstrom <leif@perldap.org>
+#			Kevin McCarthy <kevin@perldap.org>
 #
 # DESCRIPTION
-#    This is a description.
+#    Perl module to "glue" the XS module into Perl.
 #
 #############################################################################
 
