@@ -279,6 +279,7 @@ private:
   nsIPresContext    *mContext;
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
+  PRPackedBool       mContentFocused;
   
   nsresult DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent);
   nsresult DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent);
@@ -1924,6 +1925,7 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mDocumentBase = nsnull;
   mTagText = nsnull;
   mPluginHost = nsnull;
+  mContentFocused = PR_FALSE;
 }
 
 nsPluginInstanceOwner::~nsPluginInstanceOwner()
@@ -2951,16 +2953,19 @@ void nsPluginInstanceOwner::GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord
 		break;
 	}
 }
+
 #endif
 
 /*=============== nsIFocusListener ======================*/
 nsresult nsPluginInstanceOwner::Focus(nsIDOMEvent * aFocusEvent)
 {
+  mContentFocused = PR_TRUE;
   return DispatchFocusToPlugin(aFocusEvent);
 }
 
 nsresult nsPluginInstanceOwner::Blur(nsIDOMEvent * aFocusEvent)
 {
+  mContentFocused = PR_FALSE;
   return DispatchFocusToPlugin(aFocusEvent);
 }
 
@@ -3188,7 +3193,7 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
         nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(port->port) };
         PRBool eventHandled = PR_FALSE;
         mInstance->HandleEvent(&pluginEvent, &eventHandled);
-        if (eventHandled && anEvent.message != NS_MOUSE_LEFT_BUTTON_DOWN)
+        if (eventHandled && !(anEvent.message == NS_MOUSE_LEFT_BUTTON_DOWN && !mContentFocused))
             rv = nsEventStatus_eConsumeNoDefault;
     }
 #endif
