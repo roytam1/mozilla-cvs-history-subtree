@@ -2893,3 +2893,52 @@ function toggleCcRowVisibility()
   ccRow.hidden = !ccRow.hidden;
 }
 
+function Recipients2CompFields(msgCompFields)
+{
+  if (msgCompFields)
+  {
+    var toValue = document.getElementById("toField").value;
+    try {
+      msgCompFields.to = gMimeHeaderParser.reformatUnquotedAddresses(toValue);
+    } catch (ex) {
+      msgCompFields.to = toValue;
+    }
+
+    var ccValue = document.getElementById("ccField").value;
+    try {
+      msgCompFields.cc = gMimeHeaderParser.reformatUnquotedAddresses(ccValue);
+    } catch (ex) {
+      msgCompFields.cc = ccValue;
+    }
+
+    var bccValue = document.getElementById("bccField").value;
+    try {
+      msgCompFields.bcc = gMimeHeaderParser.reformatUnquotedAddresses(bccValue);
+    } catch (ex) {
+      msgCompFields.bcc = bccValue;
+    }
+
+    gMimeHeaderParser = null;
+  }
+  else
+    dump("Message Compose Error: msgCompFields is null (ExtractRecipients)");
+}
+
+function CompFields2Recipients(msgCompFields, msgType)
+{
+  if (msgCompFields) {
+    top.MAX_RECIPIENTS = 0;
+    var msgReplyTo = msgCompFields.replyTo;
+    var msgTo = msgCompFields.to;
+    var msgCC = msgCompFields.cc;
+    var msgBCC = msgCompFields.bcc;
+    
+    if(msgTo)
+      document.getElementById("toField").value = msgTo;
+    if(msgCC)
+      document.getElementById("ccField").value = msgCC;
+    if(msgBCC)
+      document.getElementById("bccField").value = msgBCC;
+  }
+}
+
