@@ -61,8 +61,8 @@ const FILE_CR_CHROMEDS          = "chrome.rdf";
 const FILE_EXTENSIONS           = "Extensions.rdf";
 const FILE_UNINSTALL_LOG        = "Uninstall";
 const FILE_DEFAULTS             = "Defaults";
-const FILE_COMPONENT_MANIFEST   = "components";
-const FILE_COMPAT_MANIFEST      = "compatibility";
+const FILE_COMPONENT_MANIFEST   = "components.ini";
+const FILE_COMPAT_MANIFEST      = "compatibility.ini";
 const FILE_INSTALL_MANIFEST     = "install.rdf";
 const FILE_CHROME_MANIFEST      = "contents.rdf";
 const FILE_WASINSAFEMODE        = "Safe Mode";
@@ -941,6 +941,7 @@ nsThemeUninstaller.prototype = {
 //
 function nsExtensionManager()
 {
+  dump("*** nsExtensionManager::ctor\n");
   var os = Components.classes["@mozilla.org/observer-service;1"]
                      .getService(Components.interfaces.nsIObserverService);
   os.addObserver(this, "profile-after-change", false);
@@ -978,7 +979,7 @@ function nsExtensionManager()
     // If we did a global install, shut down the app now. 
     // XXXben - change to nsIAppStartup w/bsmedberg change
     var appStartup = Components.classes["@mozilla.org/appshell/appShellService;1"]
-                                .getService(Components.interfaces.nsIAppShellService);
+                               .getService(Components.interfaces.nsIAppShellService);
     appStartup.quit(Components.interfaces.nsIAppShellService.eForceQuit);          
   }
 }
@@ -1043,6 +1044,9 @@ nsExtensionManager.prototype = {
   
   start: function (aIsDirty)
   {
+    dump("*** nsExtensionManager::start\n");
+    return;
+  
     ensureExtensionsFiles(true);
     
     // XXXben - a bit of a hack - clean up any empty dirs that may not have been
@@ -1307,6 +1311,7 @@ nsExtensionManager.prototype = {
   checkForMismatches: function () 
   {
     var rv = false;
+    return rv;
     
     // Check to see if the version of the application that is being started
     // now is the same one that was started last time. 
@@ -3060,13 +3065,15 @@ var gModule = {
       aComponentManager.registerFactoryLocation(obj.CID, obj.className, obj.contractID,
                                                 aFileSpec, aLocation, aType);
     }
-    
+
+/*    
     // Make the Extension Manager a startup observer
     var categoryManager = Components.classes["@mozilla.org/categorymanager;1"]
                                     .getService(Components.interfaces.nsICategoryManager);
     categoryManager.addCategoryEntry("app-startup", this._objects.manager.className,
                                      "service," + this._objects.manager.contractID, 
                                      true, true, null);
+ */
   },
   
   getClassObject: function (aComponentManager, aCID, aIID) 
