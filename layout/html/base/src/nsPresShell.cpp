@@ -1116,6 +1116,7 @@ public:
   NS_IMETHOD DoCopyLinkLocation(nsIDOMNode* aNode);
   NS_IMETHOD DoCopyImageLocation(nsIDOMNode* aNode);
   NS_IMETHOD DoCopyImageContents(nsIDOMNode* aNode);
+  NS_IMETHOD DoGetContents(const nsAString& aMimeType, PRUint32 aFlags, PRBool aSelectionOnly, nsAString& outValue);
 
   NS_IMETHOD CaptureHistoryState(nsILayoutHistoryState** aLayoutHistoryState, PRBool aLeavingPage);
   NS_IMETHOD GetHistoryState(nsILayoutHistoryState** aLayoutHistoryState);
@@ -1317,6 +1318,8 @@ protected:
 
   nsresult SelectRange(nsIDOMRange *aRange);
 
+  nsresult GetSelectionForCopy(nsISelection** outSelection);
+  
   // IMPORTANT: The ownership implicit in the following member variables has been 
   // explicitly checked and set using nsCOMPtr for owning pointers and raw COM interface 
   // pointers for weak (ie, non owning) references. If you add any members to this
@@ -4458,18 +4461,14 @@ NS_IMETHODIMP PresShell::DoCopyImageContents(nsIDOMNode* aNode)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-PresShell::DoCopy()
-{
-  nsCOMPtr<nsIDocument> doc;
-  GetDocument(getter_AddRefs(doc));
-  if (!doc) return NS_ERROR_FAILURE;
 
-  nsresult rv;
+nsresult
+PresShell::GetSelectionForCopy(nsISelection** outSelection)
+{
   nsCOMPtr<nsISelection> sel;
   nsCOMPtr<nsIEventStateManager> manager;
   nsCOMPtr<nsIContent> content;
-  rv = mPresContext->GetEventStateManager(getter_AddRefs(manager));
+  nsresult rv = mPresContext->GetEventStateManager(getter_AddRefs(manager));
   if (NS_FAILED(rv)) 
     return rv;
   if (!manager) 
@@ -4503,7 +4502,52 @@ PresShell::DoCopy()
   }
   if (!sel) //get selection from this PresShell
     rv = GetSelection(nsISelectionController::SELECTION_NORMAL, getter_AddRefs(sel));
-    
+
+  *outSelection = sel;
+  NS_IF_ADDREF(*outSelection);
+  return rv;
+}
+
+
+NS_IMETHODIMP
+PresShell::DoGetContents(const nsAString& aMimeType, PRUint32 aFlags, PRBool aSelectionOnly, nsAString& outValue)
+{
+  nsCOMPtr<nsIDocument> doc;
+  GetDocument(getter_AddRefs(doc));
+  if (!doc) return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  nsCOMPtr<nsISelection> sel;
+
+  // Now we have the selection.  Make sure it's nonzero:
+  if (aSelectionOnly)
+  {
+    rv = GetSelectionForCopy(getter_AddRefs(sel));
+    if (NS_FAILED(rv)) 
+      return rv;
+    if (!sel) 
+      return NS_ERROR_FAILURE;
+  
+    PRBool isCollapsed;
+    sel->GetIsCollapsed(&isCollapsed);
+    if (isCollapsed)
+      return NS_OK;
+  }
+  
+  // call the copy code
+  return nsCopySupport::GetContents(aMimeType, aFlags, sel, doc, outValue);
+}
+
+NS_IMETHODIMP
+PresShell::DoCopy()
+{
+  nsCOMPtr<nsIDocument> doc;
+  GetDocument(getter_AddRefs(doc));
+  if (!doc) return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  nsCOMPtr<nsISelection> sel;
+  rv = GetSelectionForCopy(getter_AddRefs(sel));
   if (NS_FAILED(rv)) 
     return rv;
   if (!sel) 
