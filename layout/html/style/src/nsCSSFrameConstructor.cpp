@@ -7171,6 +7171,7 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
 #ifdef DEBUG
     printf("Warning: Creating SVGGenericContainerFrame for tag <");
     nsAutoString str;
+    aTag->ToString(str);
     printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
 #endif
     processChildren = PR_TRUE;
