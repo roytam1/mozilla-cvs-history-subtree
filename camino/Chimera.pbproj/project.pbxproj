@@ -385,13 +385,46 @@
 	<array>
 		<dict>
 			<key>CFBundleURLIconFile</key>
-			<string>fileBookmark.icns</string>
+			<string>fileHtml.icns</string>
 			<key>CFBundleURLName</key>
-			<string>Web Location</string>
+			<string>http URL</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>http</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLIconFile</key>
+			<string>fileHtml.icns</string>
+			<key>CFBundleURLName</key>
+			<string>https URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
 				<string>https</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ftp URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ftp</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>gopher URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gopher</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>file URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>file</string>
 			</array>
 		</dict>
 	</array>
@@ -5592,13 +5625,46 @@
 	<array>
 		<dict>
 			<key>CFBundleURLIconFile</key>
-			<string>fileBookmark.icns</string>
+			<string>fileHtml.icns</string>
 			<key>CFBundleURLName</key>
-			<string>Web Location</string>
+			<string>http URL</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>http</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLIconFile</key>
+			<string>fileHtml.icns</string>
+			<key>CFBundleURLName</key>
+			<string>https URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
 				<string>https</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ftp URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ftp</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>gopher URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gopher</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>file URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>file</string>
 			</array>
 		</dict>
 	</array>
