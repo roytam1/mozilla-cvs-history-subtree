@@ -431,8 +431,7 @@
   
       </vbox> <!-- user-list-box -->
 
-      <splitter id="main-splitter" orient="vertical" collapse="before"
-        persist="collapsed left">
+      <splitter id="main-splitter" collapse="before" persist="collapsed left">
         <grippy/>
       </splitter>
 
