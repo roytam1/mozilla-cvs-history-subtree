@@ -155,7 +155,10 @@
 
 -(IBAction)addFolder:(id)aSender
 {
-  // TODO
+  BookmarksManager* 		bmManager = [BookmarksManager sharedBookmarksManager];
+  BookmarksDataSource* 	bmDataSource = [(BrowserWindowController*)[[self window] delegate] bookmarksDataSource];
+  BookmarkItem* 				toolbarRootItem = [bmManager getWrapperForContent:[bmManager getToolbarRoot]];
+  [bmDataSource addBookmark:aSender withParent:toolbarRootItem isFolder:YES URL:@"" title:@""]; 
 }
 
 -(void)drawRect:(NSRect)aRect
@@ -180,7 +183,7 @@
 {
   if (!mBookmarkItem || !mElement)
     return NO;
-
+  
   BOOL isBookmark = [mBookmarkItem isFolder] == NO;
   
   nsAutoString group;

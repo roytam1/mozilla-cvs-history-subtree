@@ -326,5 +326,8 @@ typedef enum
 // Accessor to get the proxy icon view
 - (PageProxyIcon *)proxyIconView;
 
+// Accessor for the bm data source
+- (BookmarksDataSource*)bookmarksDataSource;
+
 @end
 

@@ -1903,6 +1903,11 @@ static NSArray* sToolbarDefaults = nil;
   return mProxyIcon;
 }
 
+- (BookmarksDataSource*)bookmarksDataSource
+{
+  return mSidebarBookmarksDataSource;
+}
+
 - (id)windowWillReturnFieldEditor:(NSWindow *)aWindow toObject:(id)anObject
 {
   if ([anObject isEqual:mURLBar]) {

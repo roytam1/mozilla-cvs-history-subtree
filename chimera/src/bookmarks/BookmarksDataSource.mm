@@ -153,7 +153,12 @@ const int kBookmarksRootItemTag = -2;
       }
     }
   }
-  
+
+  [self addBookmark:aSender withParent:item isFolder:aIsFolder URL:aURL title:aTitle];
+}
+
+-(void)addBookmark:(id)aSender withParent:(BookmarkItem*)bmItem isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle
+{
   NSString* titleString = aTitle;
   NSString* urlString   = aURL;
   
@@ -207,7 +212,7 @@ const int kBookmarksRootItemTag = -2;
   BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
   [bmManager buildFlatFolderList:[popup menu] fromRoot:NULL];
   
-  int itemIndex = [popup indexOfItemWithTag:[item intContentID]];
+  int itemIndex = [popup indexOfItemWithTag:[bmItem intContentID]];
   if (itemIndex != -1)
     [popup selectItemAtIndex:itemIndex];
   

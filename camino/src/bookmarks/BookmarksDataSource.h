@@ -73,6 +73,7 @@
 -(IBAction)addFolder:(id)aSender;
 
 -(void)addBookmark:(id)aSender useSelection:(BOOL)aSel isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle;
+-(void)addBookmark:(id)aSender withParent:(BookmarkItem*)bmItem isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle;
 
 -(NSString*)resolveKeyword:(NSString*)aKeyword;
 

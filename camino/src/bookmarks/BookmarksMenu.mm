@@ -243,7 +243,6 @@
 
 - (void)specialFolder:(EBookmarksFolderType)folderType changedTo:(nsIContent*)newFolderContent
 {
-  NSLog(@"Special folder %d changed", folderType);
   if (folderType == mWatchedFolderType)
   {
     NS_IF_RELEASE(mRootContent);

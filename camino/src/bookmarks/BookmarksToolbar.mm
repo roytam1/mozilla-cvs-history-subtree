@@ -25,9 +25,9 @@
 
 #import "BookmarksToolbar.h"
 
-#import "BookmarksButton.h"
-
 #import "CHBrowserService.h"
+#import "BookmarksButton.h"
+#import "BrowserWindowController.h"
 
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
@@ -318,6 +318,37 @@
     dirtyRect.size.height = 1.0;
     [self setNeedsDisplayInRect:dirtyRect];
   }
+}
+
+-(NSMenu*)menuForEvent:(NSEvent*)aEvent
+{
+  // Make a copy of the context menu but change it to target us
+  // FIXME - this will stop to work as soon as we add items to the context menu
+  // that have different targets. In that case, we probably should add code to
+  // BookmarksToolbar that manages the context menu for the CHBookmarksButtons.
+  
+  NSMenu* myMenu = [[[super menu] copy] autorelease];
+  [[myMenu itemArray] makeObjectsPerformSelector:@selector(setTarget:) withObject: self];
+  [myMenu update];
+  return myMenu;
+}
+
+-(BOOL)validateMenuItem:(NSMenuItem*)aMenuItem
+{
+  // we'll only get here if the user clicked on empty space in the toolbar
+  // in which case, Add Folder is the only thing they can do
+  if (([aMenuItem action] == @selector(addFolder:)))
+    return YES;
+
+  return NO;
+}
+
+-(IBAction)addFolder:(id)aSender
+{
+  BookmarksManager* 		bmManager = [BookmarksManager sharedBookmarksManager];
+  BookmarksDataSource* 	bmDataSource = [(BrowserWindowController*)[[self window] delegate] bookmarksDataSource];
+  BookmarkItem* 				toolbarRootItem = [bmManager getWrapperForContent:[bmManager getToolbarRoot]];
+  [bmDataSource addBookmark:aSender withParent:toolbarRootItem isFolder:YES URL:@"" title:@""]; 
 }
 
 -(void)showBookmarksToolbar: (BOOL)aShow

@@ -79,7 +79,6 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   [mDescriptionLabel retain];
   [mDockMenuCheckbox retain];
   
-  NSLog(@"registering bookmarks info listener");
   [[BookmarksManager sharedBookmarksManager] addBookmarksClient:self];
 }
 
@@ -184,8 +183,6 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   // after fix - this should never happen unless disaster strikes.
   if (![aBookmark contentNode])
     return;
-
-  NSLog(@"setBookmark called with item %@", aBookmark);
 
   nsAutoString group;
   [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);

@@ -33,7 +33,12 @@
             LANGUAGE = ObjC; 
             SUPERCLASS = ExtendedOutlineView; 
         }, 
-        {CLASS = BookmarksToolbar; LANGUAGE = ObjC; SUPERCLASS = NSView; }, 
+        {
+            ACTIONS = {addFolder = id; }; 
+            CLASS = BookmarksToolbar; 
+            LANGUAGE = ObjC; 
+            SUPERCLASS = NSView; 
+        }, 
         {CLASS = BrowserContainerView; LANGUAGE = ObjC; SUPERCLASS = NSView; }, 
         {
             CLASS = BrowserContentView; 

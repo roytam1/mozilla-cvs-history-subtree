@@ -54,4 +54,6 @@ class nsIDOMElement;
 -(void)setDrawBottomBorder:(BOOL)drawBorder;
 -(void)showBookmarksToolbar: (BOOL)aShow;
 
+-(IBAction)addFolder:(id)aSender;
+
 @end
