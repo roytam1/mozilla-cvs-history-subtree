@@ -122,6 +122,7 @@ NS_IMETHODIMP nsScriptableDateFormat::FormatDateTime(
     	rv = nsComponentManager::CreateInstance(kDateTimeFormatCID, NULL,
                                               NS_GET_IID(nsIDateTimeFormat), (void **) &aDateTimeFormat);
       if (NS_SUCCEEDED(rv) && aDateTimeFormat) {
+#if !defined(WINCE)
         struct tm tmTime;
         time_t  timetTime;
 
@@ -158,6 +159,22 @@ NS_IMETHODIMP nsScriptableDateFormat::FormatDateTime(
             }
           }
         }
+#else
+        // wince must use NSPR, no time in libc.
+        PRTime prtime;
+        char string[32];
+        sprintf(string, "%.2d/%.2d/%d %.2d:%.2d:%.2d", month, day, year, hour, minute, second);
+        if (PR_SUCCESS != PR_ParseTimeString(string, PR_FALSE, &prtime)) {
+            rv = NS_ERROR_ILLEGAL_VALUE; // invalid arg value
+        }
+        else {
+            rv = aDateTimeFormat->FormatPRTime(aLocale, dateFormatSelector, timeFormatSelector, 
+                prtime, mStringOut);
+            if (NS_SUCCEEDED(rv)) {
+                *dateTimeString = ToNewUnicode(mStringOut);
+            }
+        }
+#endif
         NS_RELEASE(aDateTimeFormat);
       }
       NS_RELEASE(aLocale);

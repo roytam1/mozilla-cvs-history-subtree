@@ -30,7 +30,9 @@
 #include "nsILocale.h"
 #include "nsIScriptableDateFormat.h"
 #include "prtime.h"
+#if !defined(WINCE)
 #include <time.h>
+#endif
 
 
 // {2BBAA0B0-A591-11d2-9119-006008A6EDF6}
