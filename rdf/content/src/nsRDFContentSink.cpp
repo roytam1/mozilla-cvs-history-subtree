@@ -57,6 +57,7 @@
 #include "nsVoidArray.h"
 #include "nsINameSpaceManager.h"
 #include "nsINameSpace.h"
+#include "nsRDFContentUtils.h"
 #include "prlog.h"
 #include "prmem.h"
 #include "rdfutil.h"
@@ -509,15 +510,7 @@ nsRDFContentSink::AddComment(const nsIParserNode& aNode)
 NS_IMETHODIMP 
 nsRDFContentSink::AddProcessingInstruction(const nsIParserNode& aNode)
 {
-    static const char* kDataSourcePI = "rdf-datasource";
     FlushText();
-
-    const nsString& text = aNode.GetText();
-    PRInt32 offset = text.Find(kDataSourcePI);
-    if (offset == 0) {
-        
-    }
-
     return NS_OK;
 }
 

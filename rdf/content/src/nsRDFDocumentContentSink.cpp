@@ -32,6 +32,7 @@
 #include "nsIPresContext.h"
 #include "nsICSSStyleSheet.h"
 #include "nsIRDFContent.h"
+#include "nsIRDFDataBase.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
@@ -222,21 +223,19 @@ nsRDFDocumentContentSink::AddProcessingInstruction(const nsIParserNode& aNode)
 static const char kStyleSheetPI[] = "<?xml-stylesheet";
 static const char kCSSType[] = "text/css";
 
+static const char kDataSourcePI[] = "<?rdf-datasource";
+
     nsresult rv;
     if (NS_FAILED(rv = nsRDFContentSink::AddProcessingInstruction(aNode)))
         return rv;
 
     // XXX For now, we don't add the PI to the content model.
     // We just check for a style sheet PI
-    nsAutoString text, type, href;
-    PRInt32 offset;
-
-    text = aNode.GetText();
-
-    offset = text.Find(kStyleSheetPI);
+    const nsString& text = aNode.GetText();
 
     // If it's a stylesheet PI...
-    if (0 == offset) {
+    if (0 == text.Find(kStyleSheetPI)) {
+        nsAutoString href;
         rv = rdf_GetQuotedAttributeValue(text, "href", href);
         // If there was an error or there's no href, we can't do
         // anything with this PI
@@ -244,6 +243,7 @@ static const char kCSSType[] = "text/css";
             return rv;
         }
     
+        nsAutoString type;
         rv = rdf_GetQuotedAttributeValue(text, "type", type);
         if (NS_OK != rv) {
             return rv;
@@ -281,6 +281,29 @@ static const char kCSSType[] = "text/css";
             rv = LoadStyleSheet(url, uin);
             NS_RELEASE(uin);
             NS_RELEASE(url);
+        }
+    }
+    else if (0 == text.Find(kDataSourcePI)) {
+        nsAutoString href;
+        rv = rdf_GetQuotedAttributeValue(text, "href", href);
+        if (NS_FAILED(rv) || (0 == href.Length()))
+            return rv;
+
+        char uri[256];
+        href.ToCString(uri, sizeof(uri));
+
+        nsIRDFDataSource* ds;
+        if (NS_SUCCEEDED(rv = mRDFService->GetNamedDataSource(uri, &ds))) {
+            nsIRDFDocument* rdfDoc;
+            if (NS_SUCCEEDED(mDocument->QueryInterface(kIRDFDocumentIID, (void**) &rdfDoc))) {
+                nsIRDFDataBase* db;
+                if (NS_SUCCEEDED(rv = rdfDoc->GetDataBase(db))) {
+                    rv = db->AddDataSource(ds);
+                    NS_RELEASE(db);
+                }
+                NS_RELEASE(rdfDoc);
+            }
+            NS_RELEASE(ds);
         }
     }
 
