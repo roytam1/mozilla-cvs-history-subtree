@@ -321,13 +321,13 @@ sub run_tests {
 
     # Mozilla alive test
     print_log "Running AliveTest ...\n";
-    my $build_status = RunAliveTest($build_dir, $binary, 60);
+    my $build_status = RunAliveTest($build_dir, $binary, 45);
     return $build_status if $build_status ne 'success';
 
     # Viewer alive test
     if ($Settings::ViewerTest) {
         print_log "Running ViewerTest ...\n";
-        $build_status = RunAliveTest($build_dir, "$binary_dir/viewer", 60);
+        $build_status = RunAliveTest($build_dir, "$binary_dir/viewer", 45);
         return $build_status if $build_status ne 'success';
     }
     
