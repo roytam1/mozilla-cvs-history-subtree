@@ -532,13 +532,14 @@ KeychainPrompt::~KeychainPrompt()
 
 
 //
-// TODO: add support for ftp username/password. The given realm for
-// an ftp server has the form ftp://<username>@<server>/<path>, see
-// netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp.
+// TODO: add support for ftp username/password. 
 //
 // Get server name and port from the realm ("hostname:port (realm)",
 // see nsHttpChannel.cpp). we can't use CFURL routines or nsIURI
 // routines because they require a protocol, and we don't have one.
+//
+// The given realm for an ftp server has the form ftp://<username>@<server>/<path>, see
+// netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp).
 //
 void
 KeychainPrompt::ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost, PRInt32* outPort)
@@ -548,20 +549,40 @@ KeychainPrompt::ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost,
   *outHost = @"";
   *outPort = kAnyPort;
   
-  // strip off the "(realm)" part
   NSString* realmStr = [NSString stringWithPRUnichars:inRealm];
-  NSRange firstParen = [realmStr rangeOfString:@"("];
-  if ( firstParen.location == NSNotFound )
-    firstParen.location = [realmStr length];
-  realmStr = [realmStr substringToIndex:firstParen.location-1];
-  
-  // separate the host and the port
-  NSRange endOfHost = [realmStr rangeOfString:@":"];
-  if ( endOfHost.location == NSNotFound )
-    *outHost = realmStr;
+
+  // first check for an ftp url and pull out the server from the realm
+  if ( [realmStr rangeOfString:@"ftp://"].location != NSNotFound ) {
+    // cut out ftp://
+    realmStr = [realmStr substringFromIndex:strlen("ftp://")];
+    
+    // cut out any of the path
+    NSRange pathDelimeter = [realmStr rangeOfString:@"/"];
+    if ( pathDelimeter.location != NSNotFound )
+      realmStr = [realmStr substringToIndex:pathDelimeter.location-1];
+    
+    // now we're left with "username@server" with username being optional
+    NSRange usernameMarker = [realmStr rangeOfString:@"@"];
+    if ( usernameMarker.location != NSNotFound )
+      *outHost = [realmStr substringFromIndex:usernameMarker.location+1];
+    else
+      *outHost = realmStr;
+  }
   else {
-    *outHost = [realmStr substringToIndex:endOfHost.location];
-    *outPort = [[realmStr substringFromIndex:endOfHost.location+1] intValue];
+    // we're an http url, strip off the "(realm)" part
+    NSRange firstParen = [realmStr rangeOfString:@"("];
+    if ( firstParen.location == NSNotFound )
+      firstParen.location = [realmStr length];
+    realmStr = [realmStr substringToIndex:firstParen.location-1];
+    
+    // separate the host and the port
+    NSRange endOfHost = [realmStr rangeOfString:@":"];
+    if ( endOfHost.location == NSNotFound )
+      *outHost = realmStr;
+    else {
+      *outHost = [realmStr substringToIndex:endOfHost.location];
+      *outPort = [[realmStr substringFromIndex:endOfHost.location+1] intValue];
+    }
   }
 }
 
