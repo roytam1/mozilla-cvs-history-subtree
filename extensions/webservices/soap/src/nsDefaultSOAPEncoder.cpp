@@ -39,6 +39,7 @@
 #include "nsISOAPEncoder.h"
 #include "nsISOAPDecoder.h"
 #include "prprf.h"
+#include "prdtoa.h"
 #include "nsReadableUtils.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
@@ -396,7 +397,7 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncoding* aEncoding,
   double f;
   rc = aSource->GetAsDouble(&f);//  Check that double works.
   if (NS_FAILED(rc)) return rc;
-  char* ptr = PR_smprintf("%f",f);
+  char* ptr = PR_smprintf("%lf",f);
   if (!ptr) return NS_ERROR_OUT_OF_MEMORY;
   nsAutoString value;
   CopyASCIItoUCS2(nsDependentCString(ptr), value);
@@ -759,6 +760,226 @@ NS_IMETHODIMP nsBooleanEncoder::Decode(nsISOAPEncoding* aEncoding,
 
   nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
   p->SetAsBool(b);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDoubleEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  double f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %lf %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsDouble(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsFloatEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  float f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %f %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsFloat(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsLongEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRInt64 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %lld %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsInt64(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsIntEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRInt32 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %ld %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsInt32(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsShortEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRInt16 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %hd %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsInt16(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsByteEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRInt16 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %hd %n",&f,&n);
+  if (r == 0 || n < strlen(ascii) || f < -128 || f > 127) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsInt8((PRUint8)f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsUnsignedLongEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRUint64 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %llu %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsUint64(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsUnsignedIntEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRUint32 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %lu %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsUint32(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsUnsignedShortEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRUint16 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %hu %n",&f,&n);
+  if (r == 0 || n < strlen(ascii)) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsUint16(f);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsUnsignedByteEncoder::Decode(nsISOAPEncoding* aEncoding,
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsIVariant **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  PRUint16 f;
+  const char* ascii = NS_ConvertUCS2toUTF8(value).get();
+  unsigned int n;
+  int r = PR_sscanf(ascii, " %hu %n",&f,&n);
+  if (r == 0 || n < strlen(ascii) || f < 0 || f > 255) return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsIWritableVariant> p = do_CreateInstance(NS_VARIANT_CONTRACTID);
+  p->SetAsUint8((PRUint8)f);
   *_retval = p;
   NS_ADDREF(*_retval);
   return NS_OK;
