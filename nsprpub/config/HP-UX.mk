@@ -73,7 +73,7 @@ endif
 ifeq (,$(filter-out B.10.10 B.10.20,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_INT_LOCALTIME_R
 endif
-ifeq (,$(filter-out B.10.30 B.11.00,$(OS_RELEASE)))
+ifeq (,$(filter-out B.10.30 B.11.%,$(OS_RELEASE)))
 OS_CFLAGS		+= -DHAVE_POINTER_LOCALTIME_R
 endif
 
@@ -131,8 +131,8 @@ OS_CFLAGS		+= -DHPUX10 -DHPUX10_30
 DEFAULT_IMPL_STRATEGY = _PTH
 endif
 
-# 11.00 is similar to 10.30.
-ifeq ($(OS_RELEASE),B.11.00)
+# 11.00 and 11.11 are similar to 10.30.
+ifeq (,$(filter-out B.11.%,$(OS_RELEASE)))
 	ifndef NS_USE_GCC
 		CCC			        = /opt/aCC/bin/aCC -ext
 		ifeq ($(USE_64), 1)
