@@ -36,11 +36,42 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsString2_h___
-#define nsString2_h___
+#include "nsTDependentSubstring.h"
+#include "nsAlgorithm.h"
 
-#ifndef nsString_h___
-#include "nsString.h"
-#endif
+template <class CharT>
+void
+nsTDependentSubstring<CharT>::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
+  {
+    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
 
-#endif // !defined(nsString2_h___)
+    if (startPos > strLength)
+      startPos = strLength;
+
+    mData += startPos;
+    mLength = NS_MIN(length, strLength - startPos);
+  }
+
+template <class CharT>
+void
+nsTDependentSubstring<CharT>::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
+  {
+    size_type strLength = str.Length();
+
+    if (startPos > strLength)
+      startPos = strLength;
+
+    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
+    mLength = NS_MIN(length, strLength - startPos);
+  }
+
+
+  /**
+   * explicit template instantiation
+   */
+
+template void nsTDependentSubstring<char>::Rebind( const abstract_string_type&, PRUint32, PRUint32 );
+template void nsTDependentSubstring<char>::Rebind( const string_base_type&, PRUint32, PRUint32 );
+
+template void nsTDependentSubstring<PRUnichar>::Rebind( const abstract_string_type&, PRUint32, PRUint32 );
+template void nsTDependentSubstring<PRUnichar>::Rebind( const string_base_type&, PRUint32, PRUint32 );

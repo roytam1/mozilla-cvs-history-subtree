@@ -24,89 +24,20 @@
 #include "nsReadableUtils.h"
 #include "nsMemory.h"
 #include "nsString.h"
-#include "nsCRT.h"
 #include "nsUTF8Utils.h"
 
 #ifndef nsStringTraits_h___
 #include "nsStringTraits.h"
 #endif
 
-  /**
-   * this allocator definition, and the global functions to access it need to move
-   * to their own file
-   */
 
-template <class CharT>
-class XPCOM_StringAllocator
-    : public nsStringAllocator<CharT>
-  {
-    public:
-      virtual void Deallocate( CharT* ) const;
-  };
-
-template <class CharT>
-void
-XPCOM_StringAllocator<CharT>::Deallocate( CharT* aBuffer ) const
-  {
-    nsMemory::Free(aBuffer);
-  }
-
-NS_COM
-nsStringAllocator<char>&
-StringAllocator_char()
-  {
-    static XPCOM_StringAllocator<char> sStringAllocator_char;
-    return sStringAllocator_char;
-  }
-
-NS_COM
-nsStringAllocator<PRUnichar>&
-StringAllocator_wchar_t()
-  {
-    static XPCOM_StringAllocator<PRUnichar> sStringAllocator_wchar_t;
-    return sStringAllocator_wchar_t;
-  }
-
-template <class CharT> class CalculateLength
-  {
-    public:
-      typedef CharT value_type;
-
-      CalculateLength() : mDistance(0) { }
-      size_t GetDistance() const       { return mDistance; }
-
-      PRUint32 write( const CharT*, PRUint32 N )
-                                       { mDistance += N; return N; }
-    private:
-      size_t mDistance;
-  };
-
-template <class CharT>
+template <class Iterator>
 inline
-size_t
-Distance_Impl( const nsReadingIterator<CharT>& aStart,
-          const nsReadingIterator<CharT>& aEnd )
+PRBool
+SameFragment( const Iterator& lhs, const Iterator& rhs )
   {
-    CalculateLength<CharT> sink;
-    nsReadingIterator<CharT> fromBegin(aStart);
-    copy_string(fromBegin, aEnd, sink);
-    return sink.GetDistance();
+    return lhs.start() == rhs.start();
   }
-
-NS_COM
-size_t
-Distance( const nsReadingIterator<PRUnichar>&aStart, const nsReadingIterator<PRUnichar>&aEnd )
-  {
-    return Distance_Impl(aStart, aEnd);
-  }
-
-NS_COM
-size_t
-Distance( const nsReadingIterator<char>&aStart, const nsReadingIterator<char>&aEnd )
-  {
-    return Distance_Impl(aStart, aEnd);
-  }
-
 
 
   /**
@@ -745,13 +676,16 @@ ToUpperCase( nsASingleFragmentCString& aCString )
     converter.write(aCString.BeginWriting(start), aCString.Length());
   }
 
+#if 0
 NS_COM
 void
 ToUpperCase( nsCString& aCString )
   {
     ConvertToUpperCase converter;
-    converter.write(aCString.mStr, aCString.Length());
+    char* start;
+    converter.write(aCString.BeginWriting(start), aCString.Length());
   }
+#endif
 
   /**
    * A character sink for copying with case conversion.
@@ -841,6 +775,7 @@ ToLowerCase( nsASingleFragmentCString& aCString )
     converter.write(aCString.BeginWriting(start), aCString.Length());
   }
 
+#if 0
 NS_COM
 void
 ToLowerCase( nsCString& aCString )
@@ -848,6 +783,7 @@ ToLowerCase( nsCString& aCString )
     ConvertToLowerCase converter;
     converter.write(aCString.mStr, aCString.Length());
   }
+#endif
 
   /**
    * A character sink for copying with case conversion.
@@ -1056,6 +992,7 @@ RFindInReadable( const nsACString& aPattern, nsACString::const_iterator& aSearch
     return found_it;
   }
 
+#if 0
 PRBool
 nsSubstituteString::IsDependentOn( const nsAString& aString ) const
   {
@@ -1229,6 +1166,7 @@ nsSubstituteCString::operator()( char* aDestBuffer ) const
     copy_string(uncopiedStart, textEnd, aDestBuffer);
     return aDestBuffer;
   }
+#endif
 
 NS_COM 
 PRBool 

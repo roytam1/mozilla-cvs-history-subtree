@@ -804,6 +804,8 @@ PRInt32 CompressChars2(PRUnichar* aString,PRUint32 aLength,const char* aSet){
 PRInt32 StripChars1(char* aString,PRUint32 aLength,const char* aSet);
 PRInt32 StripChars1(char* aString,PRUint32 aLength,const char* aSet){ 
 
+  // XXXdarin this code should defer writing until necessary.
+
   char*  to   = aString;
   char*  from = aString-1;
   char*  end  = aString + aLength;
@@ -835,6 +837,8 @@ PRInt32 StripChars1(char* aString,PRUint32 aLength,const char* aSet){
  */
 PRInt32 StripChars2(PRUnichar* aString,PRUint32 aLength,const char* aSet);
 PRInt32 StripChars2(PRUnichar* aString,PRUint32 aLength,const char* aSet){ 
+
+  // XXXdarin this code should defer writing until necessary.
 
   PRUnichar*  to   = aString;
   PRUnichar*  from = aString-1;

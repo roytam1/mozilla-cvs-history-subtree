@@ -36,11 +36,62 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsString2_h___
-#define nsString2_h___
+#include <stdlib.h>
+#include "nsTString.h"
 
-#ifndef nsString_h___
-#include "nsString.h"
-#endif
+template <class CharT> class CBufDescriptorReader {};
 
-#endif // !defined(nsString2_h___)
+NS_SPECIALIZE_TEMPLATE
+class CBufDescriptorReader<char>
+  {
+    public:
+      char* read( const CBufDescriptor& desc ) const
+        {
+          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_SINGLE_BYTE, "wrong string type");
+          return desc.mStr;
+        }
+  };
+
+NS_SPECIALIZE_TEMPLATE
+class CBufDescriptorReader<PRUnichar>
+  {
+    public:
+      PRUnichar* read( const CBufDescriptor& desc ) const
+        {
+          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_DOUBLE_BYTE, "wrong string type");
+          return desc.mUStr;
+        }
+  };
+
+template <class CharT>
+void
+nsTAutoString<CharT>::Init( const CBufDescriptor& desc )
+  {
+    mData = CBufDescriptorReader<CharT>().read(desc);
+    mLength = desc.mLength;
+ 
+    if (desc.mFlags & CBufDescriptor::F_CONST)
+      {
+        mFlags = F_TERMINATED;
+        // mFixedCapacity = 0; // this member will be ignored
+      }
+    else if (desc.mFlags & CBufDescriptor::F_STACK_BASED)
+      {
+        mFlags = F_TERMINATED | F_FIXED;
+        mFixedCapacity = desc.mCapacity;
+      }
+    else
+      {
+        // this is suboptimal since we lose the capacity information
+        mFlags = F_TERMINATED | F_OWNED;
+        // mFixedCapacity = 0; // this member will be ignored
+      }
+  }
+
+
+  /**
+   * explicit template instantiation
+   */
+
+template void nsTAutoString<char>     ::Init( const CBufDescriptor& );
+template void nsTAutoString<PRUnichar>::Init( const CBufDescriptor& );

@@ -33,7 +33,7 @@ inline
 PRBool
 SameFragment( const Iterator& lhs, const Iterator& rhs )
   {
-    return lhs.fragment().mStart == rhs.fragment().mStart;
+    return lhs.start() == rhs.start();
   }
 
 template <class CharT> class nsReadingIterator;
@@ -41,8 +41,13 @@ template <class CharT> class nsReadingIterator;
   // NOTE: need to break iterators out into their own file (as with many classes here), need
   //  these routines, but can't currently |#include "nsReadableUtils.h"|, this hack is bad
   //  but we need it to get OS2 building again.  Fix by splitting things into different files.
-NS_COM size_t Distance( const nsReadingIterator<PRUnichar>&, const nsReadingIterator<PRUnichar>& );
-NS_COM size_t Distance( const nsReadingIterator<char>&, const nsReadingIterator<char>& );
-
+inline size_t Distance( const nsReadingIterator<PRUnichar>& start, const nsReadingIterator<PRUnichar>& end )
+  {
+    return end.get() - start.get();
+  }
+inline size_t Distance( const nsReadingIterator<char>& start, const nsReadingIterator<char>& end )
+  {
+    return end.get() - start.get();
+  }
 
 #endif /* !defined(nsStringIteratorUtils_h___) */

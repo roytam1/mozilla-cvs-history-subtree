@@ -36,11 +36,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsString2_h___
-#define nsString2_h___
+#include "nsTPromiseFlatString.h"
 
-#ifndef nsString_h___
-#include "nsString.h"
-#endif
+template <class CharT>
+void
+nsTPromiseFlatString<CharT>::Init(const string_base_type& str)
+  {
+    // we have to manually set this here since we are being called on an
+    // unitialized object.
+    mVTable = nsTObsoleteAString<char_type>::sCanonicalVTable;
 
-#endif // !defined(nsString2_h___)
+    if (str.IsTerminated())
+      {
+        mData = NS_CONST_CAST(char_type*, str.Data());
+        mLength = str.Length();
+        mFlags = F_TERMINATED; // does not promote F_VOIDED
+      }
+    else
+      {
+        Assign(str);
+      }
+  }
+
+  // this function is non-inline to minimize codesize
+template <class CharT>
+void
+nsTPromiseFlatString<CharT>::Init(const abstract_string_type& readable)
+  {
+    if (readable.mVTable == nsTObsoleteAString<char_type>::sCanonicalVTable)
+      Init(*readable.AsString());
+    else
+      Init(readable.ToString());
+  }
+
+
+  /**
+   * explicit template instantiation
+   */
+
+template void nsTPromiseFlatString<char>     ::Init( const string_base_type& );
+template void nsTPromiseFlatString<char>     ::Init( const abstract_string_type& );
+template void nsTPromiseFlatString<PRUnichar>::Init( const string_base_type& );
+template void nsTPromiseFlatString<PRUnichar>::Init( const abstract_string_type& );

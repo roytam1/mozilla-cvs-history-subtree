@@ -36,11 +36,49 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsString2_h___
-#define nsString2_h___
-
 #ifndef nsString_h___
-#include "nsString.h"
+#define nsString_h___
+
+#ifndef nsTString_h___
+#include "nsTString.h"
 #endif
 
-#endif // !defined(nsString2_h___)
+#ifndef nsTDependentString_h___
+#include "nsTDependentString.h"
+#endif
+
+#ifndef nsLiteralString_h___
+#include "nsLiteralString.h"
+#endif
+
+#ifndef nsTDependentSubstring_h___
+#include "nsTDependentSubstring.h"
+#endif
+
+#ifndef nsTPromiseFlatString_h___
+#include "nsTPromiseFlatString.h"
+#endif
+
+// need to include this for compatibility
+#include "nsMemory.h"
+#include NEW_H
+
+inline PRInt32 MinInt(PRInt32 x, PRInt32 y)
+  {
+    return NS_MIN(x, y);
+  }
+
+inline PRInt32 MaxInt(PRInt32 x, PRInt32 y)
+  {
+    return NS_MAX(x, y);
+  }
+
+/**
+ * Deprecated: don't use |Recycle|, just call |nsMemory::Free| directly
+ *
+ * Return the given buffer to the heap manager. Calls allocator::Free()
+ */
+inline void Recycle( char* aBuffer) { nsMemory::Free(aBuffer); }
+inline void Recycle( PRUnichar* aBuffer) { nsMemory::Free(aBuffer); }
+
+#endif // !defined(nsString_h___)

@@ -26,47 +26,8 @@
 #ifndef nsAFlatString_h___
 #define nsAFlatString_h___
 
-#ifndef nsASingleFragmentString_h___
-#include "nsASingleFragmentString.h"
+#ifndef nsTString_h___
+#include "nsTString.h"
 #endif
-
-  /**
-   * |nsAFlatC?String| is an abstract class.  Strings implementing
-   * |nsAFlatC?String| have a buffer that is stored as a single fragment
-   * and is NULL-terminated.  That buffer can be accessed for reading
-   * using the |get| method.
-   *
-   * See also |nsASingleFragmentC?String| and |nsAC?String|, base
-   * classes of |nsAFlatC?String|.
-   */
-
-class NS_COM nsAFlatString
-    : public nsASingleFragmentString
-  {
-    public:
-        // don't really want this to be virtual, and won't after
-        // |obsolete_nsString| is really dead and |nsXPIDLString| works
-        // differently
-      virtual const char_type* get() const
-        {
-          const char_type* temp;
-          return BeginReading(temp);
-        }
-  };
-
-class NS_COM nsAFlatCString
-    : public nsASingleFragmentCString
-  {
-    public:
-        // don't really want this to be virtual, and won't after
-        // |obsolete_nsCString| is really dead and |nsXPIDLCString|
-        // works differently
-      virtual const char_type* get() const
-        {
-          const char_type* temp;
-          return BeginReading(temp);
-        }
-
-  };
 
 #endif /* !defined(nsAFlatString_h___) */

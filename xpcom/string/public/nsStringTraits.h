@@ -44,9 +44,7 @@
 template <class CharT>
 struct nsStringTraits
   {
-    typedef nsAString                 abstract_string_type;
-    typedef nsAFlatString             abstract_flat_type;
-    typedef const nsDependentString   literal_string_type;
+    typedef nsAString                 abstract_string_class;
   };
 
 #if 0
@@ -64,9 +62,7 @@ struct nsStringTraits<PRUnichar>
 NS_SPECIALIZE_TEMPLATE
 struct nsStringTraits<char>
   {
-    typedef nsACString                abstract_string_type;
-    typedef nsAFlatCString            abstract_flat_type;
-    typedef const nsDependentCString  literal_string_type;
+    typedef nsACString                abstract_string_class;
   };
 
 

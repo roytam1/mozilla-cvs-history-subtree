@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -41,8 +42,7 @@
 
 
 nsPrintfCString::nsPrintfCString( const char_type* format, ... )
-    : mStart(mLocalBuffer),
-      mLength(0)
+  : string_type(mLocalBuffer, 0, F_TERMINATED)
   {
     va_list ap;
 
@@ -50,13 +50,12 @@ nsPrintfCString::nsPrintfCString( const char_type* format, ... )
     size_t physical_capacity = logical_capacity + 1;
 
     va_start(ap, format);
-    mLength = PR_vsnprintf(mStart, physical_capacity, format, ap);
+    mLength = PR_vsnprintf(mData, physical_capacity, format, ap);
     va_end(ap);
   }
 
 nsPrintfCString::nsPrintfCString( size_t n, const char_type* format, ... )
-    : mStart(mLocalBuffer),
-      mLength(0)
+  : string_type(mLocalBuffer, 0, F_TERMINATED)
   {
     va_list ap;
 
@@ -64,51 +63,14 @@ nsPrintfCString::nsPrintfCString( size_t n, const char_type* format, ... )
     size_t logical_capacity = kLocalBufferSize;
     if ( n > logical_capacity )
       {
-        char_type* nonlocal_buffer = new char_type[n];
-
-          // if we got something, use it
-        if ( nonlocal_buffer )
-          {
-            mStart = nonlocal_buffer;
-            logical_capacity = n;
-          }
-        // else, it's the error case ... we'll use what space we have
-        //  (since we can't throw)
+        SetCapacity(n);
+        if (Capacity() < n)
+          return; // out of memory !!
+        logical_capacity = n;
       }
     size_t physical_capacity = logical_capacity + 1;
 
     va_start(ap, format);
-    mLength = PR_vsnprintf(mStart, physical_capacity, format, ap);
+    mLength = PR_vsnprintf(mData, physical_capacity, format, ap);
     va_end(ap);
   }
-
-nsPrintfCString::~nsPrintfCString()
-  {
-    if ( mStart != mLocalBuffer )
-      delete [] mStart;
-  }
-
-PRUint32
-nsPrintfCString::Length() const
-  {
-    return mLength;
-  }
-
-const nsPrintfCString::char_type*
-nsPrintfCString::GetReadableFragment( const_fragment_type& aFragment, nsFragmentRequest aRequest, PRUint32 aOffset ) const
-  {
-    switch ( aRequest )
-      {
-        case kFirstFragment:
-        case kLastFragment:
-        case kFragmentAt:
-          aFragment.mEnd = (aFragment.mStart = mStart) + mLength;
-          return mStart + aOffset;
-
-        case kPrevFragment:
-        case kNextFragment:
-          default:
-          return 0;
-      }
-  }
-

@@ -1,3 +1,4 @@
+# vim:set ts=8 sw=8 noet cindent:
 # 
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
@@ -34,18 +35,21 @@ REQUIRES	=  \
 		  xpcom \
 		  $(NULL)
 
-CPPSRCS		=			\
-		nsStr.cpp		\
-		nsString.cpp		\
-		nsString2.cpp		\
+CPPSRCS		=				\
+		nsTStringBaseObsolete.cpp	\
 		$(NULL)
 
+#		nsStr.cpp		\
+#		nsString.cpp		\
+#		nsString2.cpp		\
+
 EXPORTS		=			\
-		nsStr.h			\
-		nsStrShared.h           \
-		nsString.h		\
 		nsString2.h		\
 		$(NULL)			
+
+#		nsStr.h			\
+#		nsStrShared.h           \
+#		nsString.h		\
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

@@ -1,3 +1,4 @@
+# vim:set ts=8 sw=8 noet:
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -42,59 +43,14 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= standalone
-
 MODULE		= embedstring
-LIBRARY_NAME	= embedstring_s
 
-LOCAL_INCLUDES	= \
-		-I$(srcdir)/../src \
-		-I$(srcdir)/../public \
-		-I$(srcdir)/../obsolete \
-		$(NULL)
-
-REQUIRES	= xpcom \
-		  $(NULL)
-
-STRING_LCSRCS   = \
-		nsAString.cpp		     \
-		nsDependentSubstring.cpp     \
-		nsASingleFragmentString.cpp  \
-		$(NULL)
-
-STRING_CSRCS    := $(addprefix $(srcdir)/../src/, $(STRING_LCSRCS))
-
-CPPSRCS		= \
-		$(STRING_LCSRCS)             \
-		nsEmbedString.cpp	     \
-		$(NULL)
+REQUIRES	= $(NULL)
 
 SDK_HEADERS     = \
 		nsEmbedString.h \
 		$(NULL)
 
-SDK_BINARY     	= \
-		$(LIB_PREFIX)embedstring_s.$(LIB_SUFFIX) \
-		$(NULL)
-
-# we don't want the shared lib, but we want to force the creation of a
-# static lib.
-FORCE_STATIC_LIB = 1
-
-# Force use of PIC
-FORCE_USE_PIC	= 1
-
-GARBAGE         += $(STRING_LCSRCS) $(wildcard *.$(OBJ_SUFFIX))
-
-ifeq ($(OS_ARCH),WINNT)
-GARBAGE		+= $(addprefix $(srcdir)/,$(STRING_LCSRCS))
-endif
-
-SRCS_IN_OBJDIR	= 1
-
 include $(topsrcdir)/config/rules.mk
-
-export:: $(STRING_CSRCS)
-	$(INSTALL) $^ .
 
 DEFINES		+= -DXPCOM_GLUE
