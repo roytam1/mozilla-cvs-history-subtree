@@ -48,7 +48,11 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMPL_ISUPPORTS1(nsAbout, nsIAboutModule)
 
+#ifdef MOZ_XUL_APP
+static const char kURI[] = "chrome://global/content/about.xhtml";
+#else
 static const char kURI[] = "chrome://global/locale/about.xhtml";
+#endif
 
 NS_IMETHODIMP
 nsAbout::NewChannel(nsIURI *aURI, nsIChannel **result)

@@ -1,11 +1,5 @@
-<!--
-#filter substitution
--->
-
-<!ENTITY  lang.version          "1.7">
 <!ENTITY  brandShortName        "Firefox">
 <!ENTITY  brandFullName         "Mozilla Firefox">            
-<!ENTITY  version               "@APP_VERSION@">
 <!ENTITY  vendorShortName       "Mozilla">
 
 <!ENTITY  releaseURL            "http://www.mozilla.org/products/firefox/releases/0.10.html">

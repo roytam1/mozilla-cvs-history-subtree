@@ -5,6 +5,7 @@ toolkit.jar:
 *  content/global-platform/contents.rdf       (contents-platform.rdf)
 *  content/global-region/contents.rdf         (contents-region.rdf)
 *  content/global/xul.css                     (xul.css)
+*  content/global/about.xhtml                 (about.xhtml)
 +  content/global/buildconfig.html            (buildconfig.html)
 +  content/global/charsetOverlay.js           (charsetOverlay.js)
 +  content/global/charsetOverlay.xul          (charsetOverlay.xul)

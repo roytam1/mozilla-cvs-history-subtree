@@ -2,7 +2,6 @@
 
 @AB_CD@.jar:
 * locale/global/contents.rdf                    (generic/chrome/global/contents.rdf)
-+ locale/global/about.xhtml                     (@AB_CD@/chrome/global/about.xhtml)
 + locale/global/accept2locale.properties        (@AB_CD@/chrome/global/accept2locale.properties)
   locale/global/accessible.properties           (@AB_CD@/chrome/global/accessible.properties)
   locale/global/appstrings.properties           (@AB_CD@/chrome/global/appstrings.properties)
@@ -31,6 +30,8 @@
 + locale/global/keys.properties                 (@AB_CD@/chrome/global/keys.properties)
 + locale/global/languageNames.properties        (@AB_CD@/chrome/global/languageNames.properties)
   locale/global/layout_errors.properties        (@AB_CD@/chrome/global/layout_errors.properties)
+  locale/global/license.dtd                     (@AB_CD@/chrome/global/license.dtd)
+  locale/global/mozilla.dtd                     (@AB_CD@/chrome/global/mozilla.dtd)
   locale/global/netError.dtd                    (@AB_CD@/chrome/global/netError.dtd)
   locale/global/nsHelperAppDlg.dtd              (@AB_CD@/chrome/global/nsHelperAppDlg.dtd)
   locale/global/nsHelperAppDlg.properties       (@AB_CD@/chrome/global/nsHelperAppDlg.properties)
