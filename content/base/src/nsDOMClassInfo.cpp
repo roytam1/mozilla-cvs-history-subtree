@@ -43,6 +43,8 @@
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMHTMLDocument.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIDOMLocation.h"
 
 // HTMLFormElement helper includes
 #include "nsIForm.h"
@@ -126,7 +128,8 @@
 #define DOCUMENT_SCRIPTABLE_FLAGS                                             \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
-  WANT_GETPROPERTY                                                            \
+  WANT_GETPROPERTY |                                                          \
+  WANT_SETPROPERTY
 
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
@@ -149,6 +152,46 @@ PRUint32 nsDOMClassInfo::sInstanceCount = 0;
 
 typedef nsDOMClassInfo nsDOMGenericSH;
 
+
+JSString *nsDOMClassInfo::sTop_id             = nsnull;
+JSString *nsDOMClassInfo::sScrollbars_id      = nsnull;
+JSString *nsDOMClassInfo::sLocation_id        = nsnull;
+JSString *nsDOMClassInfo::s_content_id        = nsnull;
+JSString *nsDOMClassInfo::sContent_id         = nsnull;
+JSString *nsDOMClassInfo::sSidebar_id         = nsnull;
+JSString *nsDOMClassInfo::sPrompter_id        = nsnull;
+JSString *nsDOMClassInfo::sMenubar_id         = nsnull;
+JSString *nsDOMClassInfo::sToolbar_id         = nsnull;
+JSString *nsDOMClassInfo::sLocationbar_id     = nsnull;
+JSString *nsDOMClassInfo::sPersonalbar_id     = nsnull;
+JSString *nsDOMClassInfo::sStatusbar_id       = nsnull;
+JSString *nsDOMClassInfo::sDirectories_id     = nsnull;
+JSString *nsDOMClassInfo::sControllers_id     = nsnull;
+JSString *nsDOMClassInfo::sLength_id          = nsnull;
+
+// static
+nsresult
+nsDOMClassInfo::DoDefineStaticJSIds(JSContext *cx)
+{
+  sTop_id = ::JS_InternString(cx, "top");
+
+  sScrollbars_id     = ::JS_InternString(cx, "scrollbars");
+  sLocation_id       = ::JS_InternString(cx, "location");
+  s_content_id       = ::JS_InternString(cx, "_content");
+  sContent_id        = ::JS_InternString(cx, "content");
+  sSidebar_id        = ::JS_InternString(cx, "sidebar");
+  sPrompter_id       = ::JS_InternString(cx, "prompter");
+  sMenubar_id        = ::JS_InternString(cx, "menubar");
+  sToolbar_id        = ::JS_InternString(cx, "toolbar");
+  sLocationbar_id    = ::JS_InternString(cx, "locationbar");
+  sPersonalbar_id    = ::JS_InternString(cx, "personalbar");
+  sStatusbar_id      = ::JS_InternString(cx, "statusbar");
+  sDirectories_id    = ::JS_InternString(cx, "directories");
+  sControllers_id    = ::JS_InternString(cx, "controllers");
+  sLength_id         = ::JS_InternString(cx, "length");
+
+  return NS_OK;
+}
 
 nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoID aID) : mID(aID)
 {
@@ -487,13 +530,10 @@ public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
 
-  // XXX: Is this method needed?
-#if 0
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsNodeSH(aID);
   }
-#endif
 };
 
 NS_IMETHODIMP
@@ -1009,7 +1049,43 @@ NS_IMETHODIMP
 nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  // document.location = "http://..."; code goes here.
+  if (JSVAL_IS_STRING(id)) {
+    DefineStaticJSIds(cx);
+
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    if (jsstr == sLocation_id && JSVAL_IS_STRING(*vp)) {
+      NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+      nsCOMPtr<nsISupports> native;
+
+      wrapper->GetNative(getter_AddRefs(native));
+      NS_ABORT_IF_FALSE(native, "No native!");
+
+      nsCOMPtr<nsIDocument> doc(do_QueryInterface(native));
+      NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIScriptGlobalObject> sgo;
+
+      doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+      nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(sgo));
+
+      if (win) {
+        nsCOMPtr<nsIDOMLocation> location;
+
+        win->GetLocation(getter_AddRefs(location));
+
+        if (location) {
+          nsLiteralString href(NS_REINTERPRET_CAST(const PRUnichar *,
+                                                   ::JS_GetStringChars(jsstr)),
+                               ::JS_GetStringLength(jsstr));
+
+          location->SetHref(href);
+        }
+      }
+    }
+  }
 
   return nsEventPropSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
@@ -1081,7 +1157,7 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
       nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                           s, NS_GET_IID(nsIDOMNodeList),
+                                           s, NS_GET_IID(nsISupports),
                                            getter_AddRefs(holder));
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1288,19 +1364,19 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Text, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Comment, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(CDATASection, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Entity, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(EntityReference, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Notation, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsNodeListSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);

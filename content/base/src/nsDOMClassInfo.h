@@ -192,6 +192,34 @@ protected:
   static nsDOMClassInfoData *sClassInfoData;
   static nsIXPConnect *sXPConnect;
   static PRUint32 sInstanceCount;
+
+  // nsIXPCScriptable code
+  nsresult DoDefineStaticJSIds(JSContext *cx);
+
+  inline nsresult DefineStaticJSIds(JSContext *cx)
+  {
+    if (sLocation_id) {
+      return NS_OK;
+    }
+
+    return DoDefineStaticJSIds(cx);
+  }
+
+  static JSString *sTop_id;
+  static JSString *sScrollbars_id;
+  static JSString *sLocation_id;
+  static JSString *s_content_id;
+  static JSString *sContent_id;
+  static JSString *sSidebar_id;
+  static JSString *sPrompter_id;
+  static JSString *sMenubar_id;
+  static JSString *sToolbar_id;
+  static JSString *sLocationbar_id;
+  static JSString *sPersonalbar_id;
+  static JSString *sStatusbar_id;
+  static JSString *sDirectories_id;
+  static JSString *sControllers_id;
+  static JSString *sLength_id;
 };
 
 
