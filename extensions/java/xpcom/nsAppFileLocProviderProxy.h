@@ -35,13 +35,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-package org.mozilla.xpcom;
+#ifndef _nsAppFileLocProviderProxy_h_
+#define _nsAppFileLocProviderProxy_h_
 
-import java.io.*;
+#include "nsIDirectoryService.h"
+#include "jni.h"
 
-public final class GeckoEmbed {
 
-  public static native void initEmbedding(File aMozBinDirectory, AppFileLocProvider aAppFileLocProvider);
-  public static native void termEmbedding();
+class nsAppFileLocProviderProxy : public nsIDirectoryServiceProvider
+{
+public:
+  nsAppFileLocProviderProxy(JNIEnv* env, jobject aJavaLocProvider);
+  ~nsAppFileLocProviderProxy();
 
-}
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDIRECTORYSERVICEPROVIDER
+
+private:
+  JNIEnv*   mJavaEnv;
+  jobject   mJavaLocProvider;
+};
+
+#endif  //_nsAppFileLocProviderProxy_h_
+
