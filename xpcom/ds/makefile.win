@@ -39,6 +39,7 @@ EXPORTS =                          \
 	nsFixedSizeAllocator.h     \
 	nsHashtable.h              \
 	nsHashtableEnumerator.h    \
+	nsManifestLineReader.h     \
 	nsIArena.h                 \
 	nsIByteBuffer.h            \
 	nsISizeOfHandler.h         \
