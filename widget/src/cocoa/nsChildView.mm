@@ -1246,7 +1246,7 @@ void nsChildView::StartDraw(nsIRenderingContext* aRenderingContext)
     return;
   mDrawing = PR_TRUE;
 
-  CalcWindowRegions();  //¥REVISIT
+  //CalcWindowRegions();  //¥REVISIT
 
   if (aRenderingContext == nsnull)
   {
@@ -1432,9 +1432,10 @@ NS_IMETHODIMP nsChildView::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
     if ( !mVisible)
         return NS_OK;
 
+    BOOL viewWasDirty = [mView needsDisplay];
     NSSize scrollVector = {aDx,aDy};
-    [mView scrollRect: [mView bounds] by:scrollVector];
-
+    [mView scrollRect: [mView visibleRect] by:scrollVector];
+    
     // Scroll the children
     nsCOMPtr<nsIEnumerator> children ( getter_AddRefs(GetChildren()) );
     if ( children ) {
@@ -1456,22 +1457,31 @@ NS_IMETHODIMP nsChildView::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
         } while (NS_SUCCEEDED(children->Next()));     
     }
 
-    NSRect frame = [mView bounds];
-    NSRect horizInvalid = frame;
-    NSRect vertInvalid = frame;
-
-    horizInvalid.size.width = abs(aDx);
-    vertInvalid.size.height = abs(aDy);
-    if (aDy < 0)
-      vertInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
-    if (aDx < 0)
-      horizInvalid.origin.x = frame.origin.x + frame.size.width + aDx;
-
-    if (aDx != 0)
-      [mView setNeedsDisplayInRect: horizInvalid];
-
-    if (aDy != 0)
-      [mView setNeedsDisplayInRect: vertInvalid];
+    if (viewWasDirty)
+    {
+        [mView setNeedsDisplay:YES];
+    }
+    else
+    {
+        NSRect frame = [mView visibleRect];
+        NSRect horizInvalid = frame;
+        NSRect vertInvalid = frame;
+    
+        horizInvalid.size.width = abs(aDx);
+        vertInvalid.size.height = abs(aDy);
+        if (aDy < 0)
+          vertInvalid.origin.y = frame.origin.y + frame.size.height + aDy;
+        if (aDx < 0)
+          horizInvalid.origin.x = frame.origin.x + frame.size.width + aDx;
+    
+        if (aDx != 0)
+          [mView setNeedsDisplayInRect: horizInvalid];
+    
+        if (aDy != 0)
+        {
+          [mView setNeedsDisplayInRect: vertInvalid];
+        }
+    }
     
     return NS_OK;
 }
@@ -2725,7 +2735,9 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   // case we should not fire the key press.
   NSResponder* resp = [[self window] firstResponder];
   if (resp != (NSResponder*)self) {
+#if DEBUG
     printf("No soup for you!\n");
+#endif
     return;
   }
   
