@@ -10401,10 +10401,10 @@ nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext,
       
       // no frames, reconstruct for content
       if (!primaryFrame1 && aContent1) {
-        result = RecreateFramesForContent(aPresContext, aContent1);
+        result = MaybeRecreateFramesForContent(aPresContext, aContent1);
       }
       if (!primaryFrame2 && aContent2) {
-        result = RecreateFramesForContent(aPresContext, aContent2);
+        result = MaybeRecreateFramesForContent(aPresContext, aContent2);
       }
     }
   }
@@ -10570,83 +10570,11 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
       ProcessRestyledFrames(changeList, aPresContext);
     }
     else {  // no frame now, possibly genetate one with new style data
-      result = RecreateFramesForContent(aPresContext, aContent);
+      result = MaybeRecreateFramesForContent(aPresContext, aContent);
     }
   }
 
   return result;
-}
-
-  // Style change notifications
-NS_IMETHODIMP
-nsCSSFrameConstructor::StyleRuleChanged(nsIPresContext* aPresContext,
-                                        nsIStyleSheet* aStyleSheet,
-                                        nsIStyleRule* aStyleRule,
-                                        nsChangeHint aHint)
-{
-  nsresult result = NS_OK;
-  nsCOMPtr<nsIPresShell> shell;
-  aPresContext->GetShell(getter_AddRefs(shell));
-  nsIFrame* frame;
-  shell->GetRootFrame(&frame);
-
-  if (!frame) {
-    return NS_OK;
-  }
-
-  PRBool reframe = (aHint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame
-                             | nsChangeHint_Unknown)) != 0;
-  PRBool restyle = (aHint & ~(nsChangeHint_AttrChange)) != 0;
-  // TBD: add "review" to update view?
-
-  if (restyle) {
-    nsCOMPtr<nsIStyleSet> set;
-    shell->GetStyleSet(getter_AddRefs(set));
-    set->ClearStyleData(aPresContext, aStyleRule);
-  }
-
-  if (reframe) {
-    result = ReconstructDocElementHierarchy(aPresContext);
-  }
-  else {
-    PRBool reflow = (aHint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame
-                              | nsChangeHint_ReflowFrame | nsChangeHint_Unknown)) != 0;
-    PRBool renderOrSync = (aHint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame
-                                    | nsChangeHint_ReflowFrame | nsChangeHint_RepaintFrame
-                                    | nsChangeHint_Unknown | nsChangeHint_SyncFrameView)) != 0;
-
-    // XXX hack, skip the root and scrolling frames
-    frame->FirstChild(aPresContext, nsnull, &frame);
-    frame->FirstChild(aPresContext, nsnull, &frame);
-    if (reflow) {
-      StyleChangeReflow(aPresContext, frame, nsnull);
-    }
-    if (renderOrSync) {
-      ApplyRenderingChangeToTree(aPresContext, frame, nsnull, aHint);
-    }
-  }
-
-  return result;
-}
-
-NS_IMETHODIMP
-nsCSSFrameConstructor::StyleRuleAdded(nsIPresContext* aPresContext,
-                                      nsIStyleSheet* aStyleSheet,
-                                      nsIStyleRule* aStyleRule)
-{
-  // XXX TBI: should query rule for impact and do minimal work
-  ReconstructDocElementHierarchy(aPresContext);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsCSSFrameConstructor::StyleRuleRemoved(nsIPresContext* aPresContext,
-                                        nsIStyleSheet* aStyleSheet,
-                                        nsIStyleRule* aStyleRule)
-{
-  // XXX TBI: should query rule for impact and do minimal work
-  ReconstructDocElementHierarchy(aPresContext);
-  return NS_OK;
 }
 
 //STATIC
@@ -11878,6 +11806,30 @@ nsCSSFrameConstructor::CaptureStateFor(nsIPresContext* aPresContext,
     }
   }
   return rv;
+}
+
+nsresult
+nsCSSFrameConstructor::MaybeRecreateFramesForContent(nsIPresContext* aPresContext,
+                                                     nsIContent* aContent)
+{
+  nsresult result = NS_OK;
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+  nsCOMPtr<nsIFrameManager> frameManager;
+  shell->GetFrameManager(getter_AddRefs(frameManager));
+
+  nsStyleContext *oldContext = frameManager->GetUndisplayedContent(aContent);
+  if (oldContext) {
+    // The parent has a frame, so try resolving a new context.
+    nsRefPtr<nsStyleContext> newContext =
+      aPresContext->ResolveStyleContextFor(aContent,
+                                           oldContext->GetParent());
+    frameManager->ChangeUndisplayedContent(aContent, newContext);
+    if (newContext->GetStyleDisplay()->mDisplay != NS_STYLE_DISPLAY_NONE) {
+      result = RecreateFramesForContent(aPresContext, aContent);
+    }
+  }
+  return result;
 }
 
 nsresult

@@ -543,9 +543,6 @@ nsSVGAttributes::UpdateContentStyleRule()
 {
   NS_ASSERTION(!mContentStyleRule, "we already have a content style rule");
 
-  NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsnull);
-  NS_ASSERTION(mContentStyleRule, "could not create contentstylerule");
-
   nsCSSDeclaration* declaration = new nsCSSDeclaration();
   NS_ASSERTION(declaration, "could not create css declaration");
   if (!declaration->InitializeEmpty()) {
@@ -586,7 +583,8 @@ nsSVGAttributes::UpdateContentStyleRule()
                           nsnull);
   }
   
-  mContentStyleRule->SetDeclaration(declaration);
+  NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsnull, declaration);
+  NS_ASSERTION(mContentStyleRule, "could not create contentstylerule");
 }
 
 
