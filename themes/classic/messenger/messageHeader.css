@@ -58,16 +58,20 @@
 #msgHeaderView {
   border-right: 1px solid ThreeDShadow;
   border-left: 1px solid ThreeDShadow;
+  -moz-appearance: toolbox;
+  background-color: -moz-Dialog;
 }
 
 #collapsedHeaderView,
 #expandedHeaderView {
   border-bottom: 1px solid ThreeDDarkShadow;
   min-width: 1px;
+  background-color: transparent;
 }
 
 .headerNameBox {
   width: 7.7em;
+  background-color: transparent;
 }
 
 .headerName {
@@ -75,16 +79,19 @@
   min-height: 18px;
   font-weight: bold;
   text-align: right;
+  background-color: transparent;
 }
 
 .headerValue {
   margin: 0 0 .25em 0;
   min-width: 50px;
   white-space: normal;
+  background-color: transparent;
 }
 
 .subjectvalue {
   font-weight: bold;
+  background-color: transparent;
 }
 
 /* ::::: msg header email addresses ::::: */
@@ -94,6 +101,7 @@
   color: #0000FF;
   text-decoration: underline;
   margin: 0;
+  background-color: transparent;
 }
 
 .emailDisplayButton:hover {
@@ -140,20 +148,24 @@
 #collapseddateValue {
   margin: 0 .5em;
   text-align: right;
+  background-color: transparent;
 }
 
 #collapsedfromBox {
   width: 18em;
+  background-color: transparent;
 }
 
 #collapseddateBox {
   width: 12em;
+  background-color: transparent;
 }
 
 .collapsedHeaderDisplayName { 
   margin: 0 .5em 0 .7em;
   min-height: 16px;
   font-weight: bold;
+  background-color: transparent;
 }
 
 .collapsedHeaderValue {
