@@ -18,6 +18,19 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ *
+ *
+ * This Original Code has been modified by IBM Corporation.
+ * Modifications made by IBM described herein are
+ * Copyright (c) International Business Machines
+ * Corporation, 2000
+ *
+ * Modifications to Mozilla code or documentation
+ * identified per MPL Section 3.3
+ *
+ * Date         Modified by     Description of modification
+ * 03/27/2000   IBM Corp.       Added PR_CALLBACK for Optlink
+ *                               use in OS2
  */
 
 /* -*- Mode: C; tab-width: 4 -*-
@@ -585,7 +598,7 @@ ConvertRGBToRGB32(il_container *ic,
 }
 
 /* Sorting predicate for NS_QuickSort() */
-int compare_PRUint32(const void *a, const void *b, void *unused)
+int PR_CALLBACK compare_PRUint32(const void *a, const void *b, void *unused)
 {
     PRUint32 a1 = *(PRUint32*)a;
     PRUint32 b1 = *(PRUint32*)b;
