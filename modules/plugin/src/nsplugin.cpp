@@ -268,37 +268,37 @@ nsPluginManager::GetCapsManager(const nsIID& aIID)
     PRThread       *threadAttached = NULL;
 #ifdef OJI
     if (fCapsManager == NULL) {
-	      if ( PR_GetCurrentThread() == NULL )
-	      {
- 		       threadAttached = PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
-	      }
+        if ( PR_GetCurrentThread() == NULL )
+        {
+            threadAttached = PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
+        }
 
-       NS_DEFINE_CID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
-       nsresult err    = NS_OK;
-       err = nsRepository::CreateInstance(kCCapsManagerCID, 
-                                          (nsIPluginManager*)this,    /* outer */
-                                          kISupportsIID,
-                                          (void **)&fCapsManager);
-       NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
-       if (   (err == NS_OK) 
-           && (fCapsManager != NULL) 
-           && (err = (fCapsManager->QueryInterface(kICapsManagerIID, (void**)&result)) == NS_OK)
-          )
-       {
-           ((nsCCapsManager*)result)->SetSystemPrivilegeManager();
-           result->Release();
-       }
-     }
-     if (  (err == NS_OK) 
-         &&(fCapsManager->QueryInterface(aIID, (void**)&result) != NS_OK)
+        NS_DEFINE_CID(kCCapsManagerCID, NS_CCAPSMANAGER_CID);
+        nsresult err    = NS_OK;
+        err = nsRepository::CreateInstance(kCCapsManagerCID, 
+                                           (nsIPluginManager*)this,    /* outer */
+                                           kISupportsIID,
+                                           (void **)&fCapsManager);
+        NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
+        if (   (err == NS_OK) 
+               && (fCapsManager != NULL) 
+               && (err = (fCapsManager->QueryInterface(kICapsManagerIID, (void**)&result)) == NS_OK)
+            )
+        {
+            ((nsCCapsManager*)result)->SetSystemPrivilegeManager();
+            result->Release();
+        }
+    }
+    if (  (err == NS_OK) 
+          &&(fCapsManager->QueryInterface(aIID, (void**)&result) != NS_OK)
         )
-     {
-       result = NULL;
-     }
-	    if (threadAttached != NULL )
-     {
-       PR_DetachThread();
-     }
+    {
+        result = NULL;
+    }
+    if (threadAttached != NULL )
+    {
+        PR_DetachThread();
+    }
 #endif
     return result;
 }
