@@ -567,26 +567,47 @@ sub exists
   return defined($self->{$attr});
 }
 
+sub getLDIFrecords # called from LDIF.pm (at least)
+{
+    my ($self) = @_;
+    my @record = (dn => $self->getDN());
+    my ($attr, $values);
+    while (($attr, $values) = each %$self) {
+	next if "dn" eq lc $attr; # this shouldn't happen; should it?
+	push @record, ($attr => $values);
+	# This is dangerous: @record and %$self now both contain
+	# references to @$values.  To avoid this, copy it:
+	# push @record, ($attr => [@$values]);
+	# But that's not necessary, because the array and its
+	# contents are not modified as a side-effect of getting
+	# other attributes, from this or other objects.
+    }
+    return \@record;
+}
+
 
 #############################################################################
-# Print an entry, in LDIF format. This is idential to the Utils::printEntry
-# function, but this is sort of neat... Note that the support for Base64
-# encoding isn't finished.
+# Print an entry, in LDIF format.
 #
+use vars qw($_no_LDIF_module); $_no_LDIF_module = undef;
+
 sub printLDIF
 {
-  my ($self, $base64) = @_;
-  my $attr;
-
-  print "dn: ", $self->getDN(),"\n";
-  foreach $attr (@{$self->{"_oc_order_"}})
-    {
-      next if ($attr =~ /^_.+_$/);
-      next if $self->{"_${attr}_deleted_"};
-      grep((print "$attr: $_\n"), @{$self->{$attr}});
+    my ($self) = @_;
+    if (not defined $_no_LDIF_module) {
+	eval {require Mozilla::LDAP::LDIF};
+	$_no_LDIF_module = $@;
     }
-
-  print "\n";
+    if ($_no_LDIF_module) { # Bad.  Well, do something half-assed:
+	my $record = $self->getLDIFrecords();
+	my ($attr, $values);
+	while (($attr, $values) = splice @$record, 0, 2) {
+	    grep((print "$attr: $_\n"), @$values);
+	}
+	print "\n";
+    } else {
+	(new Mozilla::LDAP::LDIF (select()))->writeOneEntry ($self);
+    }
 }
 
 
@@ -880,7 +901,7 @@ the value. For instance:
 
 =item B<printLDIF>
 
-Print the entry (on STDOUT) in a format called LDIF (LDAP Data Interchange
+Print the entry in a format called LDIF (LDAP Data Interchange
 Format, RFC xxxx). An example of an LDIF entry is:
 
     dn: uid=leif,ou=people,dc=netscape,dc=com
@@ -895,8 +916,8 @@ The above would be the result of
 
     $entry->printLDIF();
 
-If you need to write to a file, close STDOUT, and open up a file with that
-file handle instead. For more useful LDIF functionality, check out the
+If you need to write to a file, open and then select() it.
+For more useful LDIF functionality, check out the
 Mozilla::LDAP::LDIF.pm module.
 
 =back
