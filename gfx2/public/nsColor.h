@@ -61,33 +61,37 @@ class nsString;
  * otherwise return false.
  * This accepts only 3, 6 or 9 digits
  */
-extern "C" NS_GFX_(PRBool) NS_HexToRGB(const nsString& aBuf, gfx_color* aResult);
+extern "C" NS_GFX_(PRBool) NS_HexToRGB(const nsString& aBuf,
+                                       gfx_color* aResult);
 
 /**
  * Translate a hex string to a color. Return true if it parses ok,
  * otherwise return false.
  * This version accepts 1 to 9 digits (missing digits are 0)
  */
-extern "C" NS_GFX_(PRBool) NS_LooseHexToRGB(const nsString& aBuf, gfx_color* aResult);
+extern "C" NS_GFX_(PRBool) NS_LooseHexToRGB(const nsString& aBuf,
+                                            gfx_color* aResult);
 
 /**
  * Translate a color name to a color. Return true if it parses ok,
  * otherwise return false.
  */
-extern "C" NS_GFX_(PRBool) NS_ColorNameToRGB(const nsString& aBuf, gfx_color* aResult);
+extern "C" NS_GFX_(PRBool) NS_ColorNameToRGB(const nsString& aBuf,
+                                             gfx_color* aResult);
 
 /**
  * Weird color computing code stolen from winfe which was stolen
  * from the xfe which was written originally by Eric Bina. So there.
  */
-extern "C" NS_GFX_(void) NS_Get3DColors(gfx_color aResult[2], gfx_color aColor);
+extern "C" NS_GFX_(void) NS_Get3DColors(gfx_color aResult[2],
+                                        gfx_color aColor);
 
 /**
  * To determin colors based on the background brightness
  */
 extern "C" NS_GFX_(void) NS_GetSpecial3DColors(gfx_color aResult[2],
-											   gfx_color aBackgroundColor,
-											   gfx_color aBorderColor);
+                                               gfx_color aBackgroundColor,
+                                               gfx_color aBorderColor);
 
 /**
  * Special method to brighten a Color and have it shift to white when
@@ -104,6 +108,8 @@ extern "C" NS_GFX_(gfx_color) NS_DarkenColor(gfx_color inColor);
 /**
  * Determins brightness for a specific color
  */
-extern "C" NS_GFX_(int) NS_GetBrightness(PRUint8 aRed, PRUint8 aGreen, PRUint8 aBlue);
+extern "C" NS_GFX_(int) NS_GetBrightness(PRUint8 aRed,
+                                         PRUint8 aGreen,
+                                         PRUint8 aBlue);
 
 #endif /* nsColor_h___ */
