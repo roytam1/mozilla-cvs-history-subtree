@@ -26,23 +26,24 @@ function addTreeItem(num, aName, aUrl, aCertName)
   // first column is the package name
   var item = document.createElement("description");
   item.setAttribute("value", aName);
-  item.setAttribute("tooltiptext", aUrl);
+  item.setAttribute("tooltiptext", aName);
   item.setAttribute("class", "confirmName");
+  item.setAttribute("crop", "center");
 
   // second column is for the cert name
   var certName = document.createElement("description");
-  if (aCertName == "")
-    certName.setAttribute("value", "Unsigned"); // i18n!
-  else
-    certName.setAttribute("value", aCertName);
+  var certNameValue = aCertName ? aCertName : "Unsigned";
+  certName.setAttribute("value", certNameValue);
+  certName.setAttribute("tooltiptext", certNameValue);
+  certName.setAttribute("crop", "center");
 
   // third column is the host serving the file
   var urltext = aUrl.replace(/^([^:]*:\/*[^\/]+).*/, "$1");
-  var url = document.createElement('description');
+  var url = document.createElement("description");
   url.setAttribute("value", aUrl);
   url.setAttribute("tooltiptext", aUrl);
   url.setAttribute("class", "confirmURL");
-  url.setAttribute("crop", "end");
+  url.setAttribute("crop", "center");
 
   // create row and add it to the grid
   var row  = document.createElement("row");
@@ -53,13 +54,10 @@ function addTreeItem(num, aName, aUrl, aCertName)
   document.getElementById("xpirows").appendChild(row);
 }
 
-
 function onLoad()
 {
   var row = 0;
   var moduleName, URL, certName, numberOfDialogTreeElements;
-
-  doSetOKCancel(onOk, onCancel);
 
   gParam = window.arguments[0].QueryInterface(Components.interfaces.nsIDialogParamBlock);
 
@@ -75,15 +73,6 @@ function onLoad()
 
     addTreeItem(row++, moduleName, URL, certName);
   }
-
-  var okText = document.getElementById("xpinstallBundle").getString("OK");
-  var okButton = document.getElementById("ok")
-  okButton.label = okText;
-  okButton.setAttribute("default",false);
-
-  var cancelButton = document.getElementById("cancel")
-  cancelButton.focus();
-  cancelButton.setAttribute("default",true);
 }
 
 function onOk()
@@ -92,7 +81,7 @@ function onOk()
    if (gParam)
      gParam.SetInt(0, 0 );
 
-   window.close();
+  return true;
 }
 
 function onCancel()
@@ -101,6 +90,6 @@ function onCancel()
     if (gParam)
       gParam.SetInt(0, 1 );
 
-    window.close();
+  return true;
 }
 
