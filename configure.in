@@ -733,18 +733,46 @@ dnl ========================================================
 dnl System overrides of the defaults for host
 dnl ========================================================
 case "$host" in
+*-beos*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE -DNO_X11"
+    HOST_NSPR_MDCPUCFG='\"md/_beos.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
+    ;;
+
+*cygwin*|*mingw*|*mksnt*|*msvc*)
+    HOST_CFLAGS="$HOST_CFLAGS -TC -nologo -DXP_PC -DXP_WIN32 -DXP_WIN -DWIN32 -D_WIN32 -DNO_X11"
+    HOST_NSPR_MDCPUCFG='\"md/_winnt.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
+    ;;
+
+*-darwin*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX -DXP_MACOSX -DNO_X11"
+    HOST_NSPR_MDCPUCFG='\"md/_darwin.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
+    ;;
+
 *-linux*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     HOST_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
+    ;;
+
+*os2*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_OS2 -DNO_X11"
+    HOST_NSPR_MDCPUCFG='\"md/_winnt.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
     ;;
 
 *-osf*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     HOST_NSPR_MDCPUCFG='\"md/_osf1.cfg\"'
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
     ;;
 
-*cygwin*)
-    HOST_NSPR_MDCPUCFG='\"md/_winnt.cfg\"'
+*)
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
+    HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
     ;;
-
 esac
 
 dnl ========================================================
@@ -955,6 +983,7 @@ case "$target" in
         fi
         HOST_CC='$(CC)'
         HOST_CXX='$(CXX)'
+        HOST_LD='$(LD)'
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
         RANLIB='echo not_ranlib'
@@ -1034,7 +1063,7 @@ case "$target" in
     if test "$?" != "0" || test -z "$MOZ_TOOLS_DIR"; then
         AC_MSG_ERROR([cd \$MOZ_TOOLS failed. MOZ_TOOLS ==? $MOZ_TOOLS])
     fi
-    if test `echo ${PATH}: | grep -c "$MOZ_TOOLS_DIR/bin:"` = 0; then
+    if test `echo ${PATH}: | grep -ic "$MOZ_TOOLS_DIR/bin:"` = 0; then
         AC_MSG_ERROR([\$MOZ_TOOLS\\bin must be in your path.])
     fi
     MOZ_TOOLS_DIR=`cygpath -w $MOZ_TOOLS_DIR | sed -e 's|\\\\|/|g'`
@@ -1042,7 +1071,7 @@ case "$target" in
     if test -n "$GLIB_PREFIX"; then
         _GLIB_PREFIX_DIR=`cd $GLIB_PREFIX && pwd`
         if test "$?" = "0"; then
-            if test `echo ${PATH}: | grep -c "$_GLIB_PREFIX_DIR/bin:"` = 0; then
+            if test `echo ${PATH}: | grep -ic "$_GLIB_PREFIX_DIR/bin:"` = 0; then
                 AC_MSG_ERROR([GLIB_PREFIX must be in your \$PATH.])
             fi
             _GLIB_PREFIX_DIR=`cygpath -w $_GLIB_PREFIX_DIR | sed -e 's|\\\\|/|g'`
@@ -1061,7 +1090,7 @@ case "$target" in
     if test -n "$LIBIDL_PREFIX"; then
         _LIBIDL_PREFIX_DIR=`cd $LIBIDL_PREFIX && pwd`
         if test "$?" = "0"; then
-            if test `echo ${PATH}: | grep -c "$_LIBIDL_PREFIX_DIR/bin:"` = 0; then
+            if test `echo ${PATH}: | grep -ic "$_LIBIDL_PREFIX_DIR/bin:"` = 0; then
                 AC_MSG_ERROR([LIBIDL_PREFIX must be in your \$PATH.])
             fi
             _LIBIDL_PREFIX_DIR=`cygpath -w $_LIBIDL_PREFIX_DIR | sed -e 's|\\\\|/|g'`
@@ -3490,10 +3519,25 @@ case "$target_os" in
 esac
 
 MOZ_ARG_DISABLE_BOOL(activex,
-[  --disable-activex     Disable building of ActiveX (win32 only)],
+[  --disable-activex       Disable building of ActiveX control (win32 only)],
     MOZ_NO_ACTIVEX_SUPPORT=1,
     MOZ_NO_ACTIVEX_SUPPORT= )
 AC_SUBST(MOZ_NO_ACTIVEX_SUPPORT)
+
+MOZ_ACTIVEX_SCRIPTING_SUPPORT=
+MOZ_ARG_ENABLE_BOOL(activex-scripting,
+[  --enable-activex-scripting
+                          Enable building of ActiveX scripting and plugin support (win32 only)],
+    MOZ_ACTIVEX_SCRIPTING_SUPPORT=1,
+    MOZ_ACTIVEX_SCRIPTING_SUPPORT=)
+AC_SUBST(MOZ_ACTIVEX_SCRIPTING_SUPPORT)
+
+
+if test -n "$MOZ_NO_ACTIVEX_SUPPORT" -a -n "$MOZ_ACTIVEX_SCRIPTING_SUPPORT";
+then
+    AC_MSG_ERROR([Cannot enable ActiveX scripting support when ActiveX support is disabled.])
+fi
+
 
 dnl ========================================================
 dnl build the tests by default
@@ -4742,8 +4786,9 @@ AC_SUBST(HOST_CC)
 AC_SUBST(HOST_CXX)
 AC_SUBST(HOST_CFLAGS)
 AC_SUBST(HOST_CXXFLAGS)
-
+AC_SUBST(HOST_OPTIMIZE_FLAGS)
 AC_SUBST(HOST_AR)
+AC_SUBST(HOST_LD)
 AC_SUBST(HOST_RANLIB)
 AC_SUBST(HOST_NSPR_MDCPUCFG)
 
