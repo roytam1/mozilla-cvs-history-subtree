@@ -26,7 +26,7 @@
 #include "nsISupports.h"
 #include "nsGUIEvent.h"
 
-class nsIRenderingContext;
+class nsIDrawable;
 struct nsRect;
 
 #define NS_IVIEWOBSERVER_IID   \
@@ -40,12 +40,12 @@ public:
   static const nsIID& GetIID() { static nsIID iid = NS_IVIEWOBSERVER_IID; return iid; }
 
   /* called when the observer needs to paint
-   * @param aRenderingContext - rendering context to paint to
+   * @param aDrawable - rendering context to paint to
    * @param aDirtyRect - rectangle of dirty area
    * @return error status
    */
   NS_IMETHOD Paint(nsIView *            aView,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable *        aDrawable,
                    const nsRect&        aDirtyRect) = 0;
 
   /* called when the observer needs to handle an event

@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -28,7 +28,7 @@
 // forward declarations
 class nsIView;
 class nsIViewManager;
-class nsIRenderingContext;
+class nsIDrawable;
 class nsIRegion;
 
 // IID for the nsICompositeListener interface
@@ -57,7 +57,7 @@ public:
    */
   NS_IMETHOD WillRefreshRegion(nsIViewManager *aViewManager,
                                nsIView *aView,
-                               nsIRenderingContext *aContext,
+                               nsIDrawable *aContext,
                                nsIRegion *aRegion,
                                PRUint32 aUpdateFlags) = 0;
 
@@ -73,7 +73,7 @@ public:
    */
   NS_IMETHOD DidRefreshRegion(nsIViewManager *aViewManager,
                               nsIView *aView,
-                              nsIRenderingContext *aContext,
+                              nsIDrawable *aContext,
                               nsIRegion *aRegion,
                               PRUint32 aUpdateFlags) = 0;
 
@@ -89,7 +89,7 @@ public:
    */
   NS_IMETHOD WillRefreshRect(nsIViewManager *aViewManager,
                              nsIView *aView,
-                             nsIRenderingContext *aContext,
+                             nsIDrawable *aContext,
                              const nsRect *aRect,
                              PRUint32 aUpdateFlags) = 0;
 
@@ -105,7 +105,7 @@ public:
    */
   NS_IMETHOD DidRefreshRect(nsIViewManager *aViewManager,
                             nsIView *aView,
-                            nsIRenderingContext *aContext,
+                            nsIDrawable *aContext,
                             const nsRect *aRect,
                             PRUint32 aUpdateFlags) = 0;
 };

@@ -26,9 +26,10 @@
 #include <stdio.h>
 #include "nsISupports.h"
 #include "nsCoord.h"
-#include "nsIWidget.h"
 #include "nsGUIEvent.h"
 
+class nsIWindow;
+class nsIWidget;
 class nsIViewManager;
 class nsIRegion;
 class nsIRenderingContext;
@@ -37,6 +38,10 @@ class nsIFrame;
 class nsIViewObserver;
 class nsVoidArray;
 struct nsRect;
+
+struct nsWidgetInitData {
+  nscoord i;
+};
 
 //this is used by the view clipping APIs since the description of
 //a clip rect is different than a rect
@@ -158,7 +163,7 @@ public:
    * @param x new x position
    * @param y new y position
    */
-  NS_IMETHOD  SetPosition(nscoord x, nscoord y) = 0;
+  NS_IMETHOD  SetPosition(gfx_coord x, gfx_coord y) = 0;
 
   /**
    * Called to get the position of a view.
@@ -166,7 +171,7 @@ public:
    * @param x out parameter for x position
    * @param y out parameter for y position
    */
-  NS_IMETHOD  GetPosition(nscoord *x, nscoord *y) const = 0;
+  NS_IMETHOD  GetPosition(gfx_coord *x, gfx_coord *y) const = 0;
   
   /**
    * Called to indicate that the dimensions of the view (actually the
@@ -174,8 +179,8 @@ public:
    * @param width new width
    * @param height new height
    */
-  NS_IMETHOD  SetDimensions(nscoord width, nscoord height, PRBool aPaint = PR_TRUE) = 0;
-  NS_IMETHOD  GetDimensions(nscoord *width, nscoord *height) const = 0;
+  NS_IMETHOD  SetDimensions(gfx_width width, gfx_height height, PRBool aPaint = PR_TRUE) = 0;
+  NS_IMETHOD  GetDimensions(gfx_width *width, gfx_height *height) const = 0;
 
   /**
    * Called to indicate that the dimensions and position of the view have
@@ -405,7 +410,7 @@ public:
    * @param aDy out parameter for y offset
    * @return widget (if there is one) closest to view
    */
-  NS_IMETHOD  GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWidget *&aWidget) = 0;
+  NS_IMETHOD  GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWindow *&aWindow) = 0;
 
   /**
    * Gets the dirty region associated with this view. Used by the view
@@ -426,9 +431,10 @@ public:
    *        parent view and it's ancestors
    * @return error status
    */
+  NS_IMETHOD CreateWidget(const char *) = 0;
   NS_IMETHOD CreateWidget(const nsIID &aWindowIID,
                           nsWidgetInitData *aWidgetInitData = nsnull,
-        					        nsNativeWidget aNative = nsnull,
+        					        void *aNative = nsnull,
                           PRBool aEnableDragDrop = PR_TRUE) = 0;
 
   /**
@@ -449,7 +455,7 @@ public:
    * @param aWidget out parameter for widget that this view contains,
    *        or nsnull if there is none.
    */
-  NS_IMETHOD GetWidget(nsIWidget *&aWidget) const = 0;
+  NS_IMETHOD GetWidget(nsIWindow *&aWindow) const = 0;
 
 
   /**

@@ -63,7 +63,7 @@ public:
    * @param aNative native widget to use as parent for control widgets
    * @return error status
    */
-  NS_IMETHOD  CreateScrollControls(nsNativeWidget aNative = nsnull) = 0;
+  NS_IMETHOD  CreateScrollControls(void *aNative = nsnull) = 0;
 
   /**
    * Compute the values for the scroll bars and adjust the position

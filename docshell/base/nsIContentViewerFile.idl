@@ -22,14 +22,7 @@
 
 #include "nsISupports.idl"
 
-
-%{ C++
-#include "nsIDeviceContext.h"
-#include "nsIWebShell.h"
-%}
-
-[ptr] native nsIDeviceContext(nsIDeviceContext);
-[ptr] native nsIWebShell(nsIWebShell);
+interface nsIWebShell;
 
 /**
  * The nsIDocShellFile    
@@ -44,6 +37,6 @@ interface nsIContentViewerFile : nsISupports
 	void Print();
 	readonly attribute boolean printable;
 
-  [noscript] void PrintContent(in nsIWebShell parent, in nsIDeviceContext DContext);
+  [noscript] void PrintContent(in nsIWebShell parent);
 };
 

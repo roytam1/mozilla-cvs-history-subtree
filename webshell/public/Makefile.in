@@ -41,8 +41,7 @@ EXPORTS		= \
 		nsIDocStreamLoaderFactory.h \
 		nsILinkHandler.h \
 		nsIWebShell.h \
-        nsIContentViewerFile.h \
-        nsIWebShellServices.h \
+		nsIWebShellServices.h \
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

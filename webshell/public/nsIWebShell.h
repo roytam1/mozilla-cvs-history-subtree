@@ -22,7 +22,6 @@
 #ifndef nsIWebShell_h___
 #define nsIWebShell_h___
 
-#include "nsIWidget.h"
 #include "nsIParser.h"
 #include "nsIScrollableView.h"
 #include "nsIContentViewerContainer.h"

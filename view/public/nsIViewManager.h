@@ -33,8 +33,9 @@ class nsIEvent;
 class nsIPresContext;
 class nsIView;
 class nsIScrollableView;
-class nsIWidget;
+class nsIWindow;
 class nsICompositeListener;
+class nsIDeviceContext;
 struct nsRect;
 
 enum nsContentQuality {
@@ -57,12 +58,11 @@ public:
    * Initialize the ViewManager
    * Note: this instance does not hold a reference to the viewobserver
    * because it holds a reference to this instance.
-   * @param aContext the device context to use.
    * @param aX X offset of the view manager's coordinate space in twips
    * @param aY Y offset of the view manager's coordinate space in twips
    * @result The result of the initialization, NS_OK if no errors
    */
-  NS_IMETHOD  Init(nsIDeviceContext* aContext, nscoord aX = 0, nscoord aY = 0) = 0;
+  NS_IMETHOD  Init(nscoord aX = 0, nscoord aY = 0) = 0;
 
   /**
    * Get the root of the view tree.
@@ -80,7 +80,7 @@ public:
    * @param aView view to set as root
    * @param aWidget widget to render into. (Can not be owned by a view)
    */
-  NS_IMETHOD  SetRootView(nsIView *aView, nsIWidget* aWidget = nsnull) = 0;
+  NS_IMETHOD  SetRootView(nsIView *aView, nsIWindow* aWidget = nsnull) = 0;
 
   /**
    * Get the current framerate i.e. the rate at which timed
@@ -457,7 +457,7 @@ public:
    * @result error status
    */
 
-  NS_IMETHOD GetWidgetForView(nsIView *aView, nsIWidget **aWidget) = 0;
+  NS_IMETHOD GetWidgetForView(nsIView *aView, nsIWindow **aWidget) = 0;
 
   /**
    * Retrieve the widget that a view manager renders into
@@ -465,7 +465,7 @@ public:
    * @result error status
    */
 
-  NS_IMETHOD GetWidget(nsIWidget **aWidget) = 0;
+  NS_IMETHOD GetWidget(nsIWindow **aWidget) = 0;
 
   /**
    * Force update of view manager widget

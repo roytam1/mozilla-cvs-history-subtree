@@ -41,6 +41,7 @@ XPIDLSRCS	= \
 		nsITextScroll.idl		\
 		nsIWebNavigation.idl		\
 		nsIContentViewerEdit.idl	\
+		nsIContentViewerFile.idl	\
 		$(NULL)
 
 CPPSRCS		= \

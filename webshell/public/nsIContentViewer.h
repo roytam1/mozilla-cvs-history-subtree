@@ -22,11 +22,13 @@
 #ifndef nsIContentViewer_h___
 #define nsIContentViewer_h___
 
-#include "nsIWidget.h"
 #include "nsIScrollableView.h"
 
+#include "gfxtypes.h"
+
 // Forward declarations... 
-class nsIDeviceContext;
+class nsIWindow;
+class nsIOutputDevice;
 class nsString;
 struct nsRect;
 class nsIContentViewerContainer;
@@ -51,8 +53,8 @@ public:
    * Initialize the content viewer. Make it a child of the
    * the given native parent widget.
    */
-  NS_IMETHOD Init(nsIWidget* aParentWidget,
-                  nsIDeviceContext* aDeviceContext,
+  NS_IMETHOD Init(nsIWindow* aParentWidget,
+                  nsIOutputDevice* aOutputDevice,
                   const nsRect& aBounds)=0;
 
   NS_IMETHOD BindToDocument(nsISupports* aDoc, const char* aCommand) = 0;
@@ -72,7 +74,7 @@ public:
 
   NS_IMETHOD SetBounds(const nsRect& aBounds) = 0;
 
-  NS_IMETHOD Move(PRInt32 aX, PRInt32 aY) = 0;
+  NS_IMETHOD Move(gfx_coord aX, gfx_coord aY) = 0;
 
   NS_IMETHOD Show(void) = 0;
 
