@@ -32,11 +32,9 @@ NGLAYOUT_MAKEFILE=nglayout.mak
 CVSCO = cvs -q co -P
 
 # Branch tags we use
-NETLIB_BRANCH = MODULAR_NETLIB_BRANCH
 MOZNGLAYOUT_BRANCH = RAPTOR_INTEGRATION0_BRANCH
 
 # CVS commands to pull the appropriate branch versions
-CVSCO_NETLIB = $(CVSCO) -r $(NETLIB_BRANCH)
 
 # If MOZ_BRANCH is set from the user's environment, it will be ignored.
 MOZ_BRANCH=$(MOZNGLAYOUT_BRANCH)
@@ -89,35 +87,51 @@ clobber_build_all:: 	clobber_all \
 			build_all
 
 !if defined(MOZ_NGLAYOUT)
-# Not very efficient, pull_raptor and pull_netlib will repull 
-pull_all:: pull_client_source_product pull_raptor pull_netlib
+# Not very efficient, pull_nglayout and pull_netlib will repull 
+pull_all:: pull_client_source_product repull_c_s_p pull_nglayout pull_netlib
 !else
 pull_all:: pull_client_source_product 
 !endif
 
 !if defined(MOZ_NGLAYOUT)
-pull_raptor:
+pull_nglayout:
 	@cd $(MOZ_SRC)
-	$(CVSCO) $(MOZ_TOP)/raptor.mak
+	$(CVSCO) $(MOZ_TOP)/$(NGLAYOUT_MAKEFILE)
 	@cd $(MOZ_SRC)/$(MOZ_TOP)
-	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) pull_xpcom pull_imglib pull_raptor
+	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) pull_imglib pull_nglayout
 
+# Make sure to get appropriate parts of client_source_product on tip, not
+# on MOZ_NGLAYOUT_BRANCH.  This will go away as soon as the nglayout integration
+# branch gets cleaned up.
+repull_c_s_p:
+	@cd $(MOZ_SRC)
+	$(CVSCO) -A $(MOZ_TOP)/config
+	$(CVSCO) -A $(MOZ_TOP)/nsprpub
+	$(CVSCO) -r $(MOZNGLAYOUT_BRANCH) $(MOZ_TOP)/config/config.mak $(MOZ_TOP)/config/liteness.mak
+## AAAAgggggh. config.mak and liteness.mak need to be on the branch.
+## Kill all this junk when I land RAPTOR_INTEGRATION0_BRANCH
+
+
+# Can't just do a "nmake -f $(NGLAYOUT_MAKEFILE) pull_netlib" because that will
+# update all mozilla/include/*.h to the tip.
 pull_netlib:
 	@cd $(MOZ_SRC)\.
-	$(CVSCO_NETLIB) $(MOZ_TOP)/lib/xp
-	$(CVSCO_NETLIB) $(MOZ_TOP)/lib/libnet
-	$(CVSCO_NETLIB) $(MOZ_TOP)/include/net.h $(MOZ_TOP)/include/npapi.h
+	$(CVSCO) $(MOZ_TOP)/network
+	$(CVSCO) -A $(MOZ_TOP)/include/net.h $(MOZ_TOP)/include/npapi.h
 !endif
 
 pull_client_source_product:
     @echo +++ client.mak: checking out the client with "$(CVS_BRANCH)"
     cd $(MOZ_SRC)\.
     -cvs -q co $(CVS_BRANCH)      MozillaSourceWin
+!ifdef MOZ_NGLAYOUT
+	-cvs -q co $(CVS_BRANCH)      $(MOZ_TOP)/cmd/winfe/nglglue.cpp
+!endif
 
 
 !if defined(MOZ_NGLAYOUT)
-# Build Raptor first.
-build_all:  build_raptor \
+# Build NGLayout first.
+build_all:  build_nglayout \
 			build_dist  \
 			build_client
 !else
@@ -126,9 +140,9 @@ build_all:  build_dist  \
 !endif
 
 !if defined(MOZ_NGLAYOUT)
-build_raptor: 
+build_nglayout: 
 	cd $(MOZ_SRC)\$(MOZ_TOP)
-	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) STANDALONE_IMAGE_LIB=1 NGLAYOUT_BUILD_PREFIX=1
+	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) STANDALONE_IMAGE_LIB=1 MODULAR_NETLIB=1 NGLAYOUT_BUILD_PREFIX=1
 !endif
 
 build_dist:
@@ -151,7 +165,7 @@ build_client:
 # remove all source files from the tree and print a report of what was missed
 #
 !if defined(MOZ_NGLAYOUT)
-clobber_all:: clobber_moz clobber_raptor
+clobber_all:: clobber_moz clobber_nglayout
 !else
 clobber_all:: clobber_moz
 !endif
@@ -167,7 +181,7 @@ clobber_moz:
 !endif
 
 !if defined(MOZ_NGLAYOUT)
-clobber_raptor:
+clobber_nglayout:
 	cd $(MOZ_SRC)\$(MOZ_TOP)
 	$(NMAKE) -f $(NGLAYOUT_MAKEFILE) STANDALONE_IMAGE_LIB=1 NGLAYOUT=1 clobber	
 !endif
