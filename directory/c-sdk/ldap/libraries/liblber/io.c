@@ -599,6 +599,7 @@ get_tag( Sockbuf *sb, BerElement *ber)
         }
 
 	ber->ber_tag_contents[0] = xbyte;
+        ber->ber_struct[BER_STRUCT_TAG].ldapiov_len = 1;
 	return((unsigned long)xbyte);
 }
 
