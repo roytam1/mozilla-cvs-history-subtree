@@ -247,7 +247,7 @@ require AutoLoader;
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
 Exporter::export_ok_tags(keys %EXPORT_TAGS);
 
-$VERSION = '1.1';
+$VERSION = '1.2.1';
 
 # The XS 'constant' routine returns an integer.  There are all constants
 # we want to return something else.
@@ -2837,4 +2837,3 @@ Possible memory leak in ldap_search* is being investigated.
 L<Mozilla::LDAP::Conn>, L<Mozilla::LDAP::Entry>, and L<Perl>
 
 =cut
-

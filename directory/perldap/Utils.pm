@@ -234,7 +234,8 @@ sub ldapArgs
 
   $ld{"host"} = $main::opt_h || "ldap";
   $ld{"port"} = $main::opt_p || LDAP_PORT;
-  $ld{"root"} = $main::opt_b || $base || $ENV{'LDAP_BASEDN'};
+  $ld{"base"} = $main::opt_b || $base || $ENV{'LDAP_BASEDN'};
+  $ld{"root"} = $ld{"base"};
   $ld{"bind"} = $main::opt_D || $bind || "";
   $ld{"pswd"} = $main::opt_w || "";
   $ld{"cert"} = $main::opt_P || "";
@@ -275,11 +276,12 @@ sub userCredentials
 
   if ($ld->{"bind"} eq "")
     {
+      my $base = $ld->{"base"} || $ld->{"root"};
       $conn = new Mozilla::LDAP::Conn($ld);
       die "Could't connect to LDAP server " . $ld->{"host"} unless $conn;
 
       $search = "(&(objectclass=inetOrgPerson)(uid=$ENV{USER}))";
-      $entry = $conn->search($ld->{"root"}, "subtree", $search, 0, ("uid"));
+      $entry = $conn->search($base, "subtree", $search, 0, ("uid"));
       return 0 if (!$entry || $conn->nextEntry());
 
       $conn->close();
