@@ -1338,7 +1338,7 @@ function SetUpToolbarButtons(uri)
 
     // hook for extra toolbar items
     var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-    observerService.notifyObservers(null, "mail:updateToolbarItems", uri);
+    observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
 }
 
 var gMessageBrowser;

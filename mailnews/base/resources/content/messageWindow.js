@@ -75,7 +75,7 @@ function UpdateStandAloneMessageCounts()
 {
   // hook for extra toolbar items
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-  observerService.notifyObservers(null, "mail:updateStandAloneMessageCounts", "");
+  observerService.notifyObservers(window, "mail:updateStandAloneMessageCounts", "");
 }
 
 nsMsgDBViewCommandUpdater.prototype = 
