@@ -74,6 +74,11 @@
 #define kCustom4Column            "Custom4"
 #define kNotesColumn              "Notes"
 #define kLastModifiedDateColumn   "LastModifiedDate"
+#define kAddressCharSetColumn     "AddrCharSet"
+#define kMailListName             "ListName"
+#define kMailListNickName         "ListNickName"
+#define kMailListDescription      "ListDescription"
+#define kMailListTotalAddresses   "ListTotalAddresses"
 %}
 
 [scriptable, uuid(A4186D8B-1DD0-11d3-A303-001083003D0C)] 

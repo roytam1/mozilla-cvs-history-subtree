@@ -72,14 +72,6 @@ extern char *kServerCustom4Column;
 extern char *kServerNotesColumn;
 extern char *kServerLastModifiedDateColumn;
 
-// So far, we aren't really doing anything with these!
-extern char *kAddressCharSetColumn;
-extern char *kMailListName;
-extern char *kMailListNickName;
-extern char *kMailListDescription;
-extern char *kMailListTotalAddresses;
-// So far, we aren't really doing anything with these!
-
 class nsSyncDecoderRing
 {
 public:

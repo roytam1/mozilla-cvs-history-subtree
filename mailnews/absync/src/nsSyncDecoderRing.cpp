@@ -67,14 +67,6 @@ char *kServerCustom4Column = "Custom_4";
 char *kServerNotesColumn = "addl_info";
 char *kServerLastModifiedDateColumn = "OMIT:LastModifiedDate";
 
-// So far, we aren't really doing anything with these!
-char *kAddressCharSetColumn = "AddrCharSet";
-char *kMailListName = "ListName";
-char *kMailListNickName = "ListNickName";
-char *kMailListDescription = "ListDescription";
-char *kMailListTotalAddresses = "ListTotalAddresses";
-// So far, we aren't really doing anything with these!
-
 nsSyncDecoderRing::nsSyncDecoderRing()
 {
 }

@@ -82,13 +82,8 @@ const char *kDataRowScope = "ns:addrbk:db:row:scope:data:all";
 const char *kRecordKeyColumn = "RecordKey";
 const char *kLowerPriEmailColumn = "LowercasePrimaryEmail";
 
-const char *kAddressCharSetColumn = "AddrCharSet";
 const char *kLastRecordKeyColumn = "LastRecordKey";
 
-const char *kMailListName = "ListName";
-const char *kMailListNickName = "ListNickName";
-const char *kMailListDescription = "ListDescription";
-const char *kMailListTotalAddresses = "ListTotalAddresses"; // total number of email addresses in a mailing list
 const char *kMailListTotalLists = "ListTotalLists";	// total number of mail list in a mailing list
 const char *kLowerListNameColumn = "LowercaseListName";
 
