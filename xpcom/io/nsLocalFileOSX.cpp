@@ -241,6 +241,65 @@ public:
     }
 };
 
+#pragma mark -
+#pragma mark [StBuffer]
+
+template <class T>
+class StBuffer
+{
+public:
+  
+  StBuffer() :
+    mBufferPtr(mBuffer),
+    mCurElemCapacity(kStackBufferNumElems)
+  {
+  }
+
+  ~StBuffer()
+  {
+    DeleteBuffer();
+  }
+
+  PRBool EnsureElemCapacity(PRInt32 inElemCapacity)
+  {
+    if (inElemCapacity <= mCurElemCapacity)
+      return PR_TRUE;
+    
+    if (inElemCapacity > kStackBufferNumElems)
+    {
+      DeleteBuffer();
+      mBufferPtr = (T*)malloc(inElemCapacity * sizeof(T));
+      mCurElemCapacity = inElemCapacity;
+      return (mBufferPtr != NULL);
+    }
+    
+    mCurElemCapacity = kStackBufferNumElems;
+    return PR_TRUE;
+  }
+                
+  T*          get()     { return mBufferPtr;    }
+  
+  PRInt32     GetElemCapacity()   { return mCurElemCapacity;  }
+
+protected:
+
+  void DeleteBuffer()
+  {
+    if (mBufferPtr != mBuffer)
+    {
+      free(mBufferPtr);
+      mBufferPtr = mBuffer;
+    }                
+  }
+  
+protected:
+  enum { kStackBufferNumElems		= 512 };
+
+  T             *mBufferPtr;
+  T             mBuffer[kStackBufferNumElems];
+  PRInt32       mCurElemCapacity;
+};
+
 
 //*****************************************************************************
 //  nsLocalFile
@@ -1187,61 +1246,60 @@ NS_IMETHODIMP nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator **aDirectoryE
 /* void initWithPath (in AString filePath); */
 NS_IMETHODIMP nsLocalFile::InitWithPath(const nsAString& filePath)
 {
-  if (filePath.First() != '/' || filePath.Length() == 0)
-    return NS_ERROR_FILE_UNRECOGNIZED_PATH;
-  
-  // First attempt to convert directly to an FSRef.
-  // This will fail if the all of the path does not exist.
-  // XXX - Test is it is faster to do the parse and append and possibly just do that in any case.
-  OSErr err;
-  FSRef newRef;
-  err = ::FSPathMakeRef((UInt8 *)(PromiseFlatCString(NS_ConvertUCS2toUTF8(filePath)).get()),
-                  &newRef, nsnull);
-  if (err == noErr) {
-    mFSRef = newRef;
-    mNonExtantNodes.clear();
-    mIdentityDirty = PR_FALSE;
-    mFollowLinksDirty = PR_TRUE;
-    return NS_OK;
-  }
-
-  // Start with the root and append the nodes in the path  
-  mFSRef = kRootFSRef;
-  mNonExtantNodes.clear();
-  err = noErr;
-  
-  nsAString::const_iterator nodeBegin, pathEnd;
-  filePath.BeginReading(nodeBegin);
-  ++nodeBegin; // Inc over the '/' that we begin with
-  filePath.EndReading(pathEnd);
-  nsAString::const_iterator nodeEnd(nodeBegin);
-  
-  while (nodeEnd != pathEnd) {
-    FindCharInReadable(kPathSepUnichar, nodeEnd, pathEnd);
-    const nsAString& nodeName = Substring(nodeBegin, nodeEnd);
-    if (err == noErr) {
-      err = ::FSMakeFSRefUnicode(&mFSRef,
-                               nodeName.Length(),
-                               (UniChar*)(PromiseFlatString(nodeName).get()),
-                               kTextEncodingUnknown,
-                               &newRef);
-    }
-    if (err == noErr)
-      mFSRef = newRef;
-    else
-      mNonExtantNodes.push_back(nsString(nodeName));
-
-    if (nodeEnd != pathEnd) // If there's more left in the string, inc over the '/' nodeEnd is on.
-      ++nodeEnd;
-    nodeBegin = nodeEnd;
-  }
-  return NS_OK;  
+  return InitWithNativePath(NS_ConvertUCS2toUTF8(filePath));
 }
 
 /* [noscript] void initWithNativePath (in ACString filePath); */
 NS_IMETHODIMP nsLocalFile::InitWithNativePath(const nsACString& filePath)
 {
-  return InitWithPath(NS_ConvertUTF8toUCS2(filePath));
+  if (filePath.First() != '/' || filePath.Length() == 0)
+    return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+
+  mNonExtantNodes.clear();
+  mIdentityDirty = PR_TRUE;
+
+  CFStringRef pathAsCFString;
+  CFURLRef pathAsCFURL;
+
+  pathAsCFString = ::CFStringCreateWithCString(nsnull, PromiseFlatCString(filePath).get(), kCFStringEncodingUTF8);
+  if (!pathAsCFString)
+    return NS_ERROR_FAILURE;
+  pathAsCFURL = ::CFURLCreateWithFileSystemPath(nsnull, pathAsCFString, kCFURLPOSIXPathStyle, PR_FALSE);
+  if (!pathAsCFURL) {
+    ::CFRelease(pathAsCFString);
+    return NS_ERROR_FAILURE;
+  }
+
+  CFStringRef leaf = nsnull;
+  StBuffer<UniChar> buffer;
+  PRBool success;
+  while ((success = ::CFURLGetFSRef(pathAsCFURL, &mFSRef)) == PR_FALSE) {
+    // Extract the last component and push onto the front of mNonExtantNodes
+    leaf = ::CFURLCopyLastPathComponent(pathAsCFURL);
+    if (!leaf)
+      break;
+    CFIndex leafLen = ::CFStringGetLength(leaf);
+    if (!buffer.EnsureElemCapacity(leafLen + 1))
+      break;
+    ::CFStringGetCharacters(leaf, CFRangeMake(0, leafLen), buffer.get());
+    buffer.get()[leafLen] = '\0';
+    mNonExtantNodes.push_front(nsString(nsDependentString(buffer.get())));
+    ::CFRelease(leaf);
+    leaf = nsnull;
+    
+    // Get the parent of the leaf for the next go round
+    CFURLRef parent = ::CFURLCreateCopyDeletingLastPathComponent(NULL, pathAsCFURL);
+    if (!parent)
+      break;
+    ::CFRelease(pathAsCFURL);
+    pathAsCFURL = parent;
+  }
+  ::CFRelease(pathAsCFString);
+  ::CFRelease(pathAsCFURL);
+  if (leaf)
+    ::CFRelease(leaf);
+
+  return success ? NS_OK : NS_ERROR_FAILURE;
 }
 
 /* void initWithFile (in nsILocalFile aFile); */
