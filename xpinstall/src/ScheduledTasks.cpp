@@ -28,6 +28,7 @@
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
 #include "nsInstall.h" // for error codes
+#include "prmem.h"
 
 REGERR DeleteFileLater(nsFileSpec& filename)
 {
@@ -75,7 +76,7 @@ REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target )
     
         char* leafName = target.GetLeafName();
         tmpfile.Rename(leafName);
-        delete [] leafName;
+        PR_Free(leafName);
     }
     else
     {
@@ -219,7 +220,7 @@ void ReplaceScheduledFiles(void)
                         {
                             char* leafName = targetFile.GetLeafName();
                             replaceFile.Rename(leafName);
-                            delete [] leafName;
+                            PR_Free(leafName);
                             
                             NR_RegDeleteEntry( reg, key, tmpfile );
                         }
