@@ -2391,11 +2391,6 @@ int CNetscapeApp::ExitInstance()
     //
     // Free all resources allocated by NSPR...
     //
-#if !defined(_WIN32)
-#if defined(OJI) || defined(JAVA)
-
-#endif
-#endif  /* OJI || JAVA */
 
 	if (theApp.m_bNetworkProfile) {
 		// if we have a network profile command-line we are assuming delete on exit (for now)
