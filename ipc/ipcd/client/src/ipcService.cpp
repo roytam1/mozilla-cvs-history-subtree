@@ -45,7 +45,6 @@
 #include "nsIObserverService.h"
 #include "nsICategoryManager.h"
 #include "nsCategoryManagerUtils.h"
-#include "nsNetError.h"
 #include "nsEventQueueUtils.h"
 
 #include "ipcConfig.h"
@@ -384,7 +383,7 @@ ipcService::CancelQuery(PRUint32 queryID)
     ipcClientQuery *query = mQueryQ.First();
     while (query) {
         if (query->QueryID() == queryID) {
-            query->OnQueryComplete(NS_BINDING_ABORTED, NULL);
+            query->OnQueryComplete(NS_ERROR_ABORT, NULL);
             break;
         }
         query = query->mNext;
@@ -512,7 +511,7 @@ ipcService::OnConnectionLost()
     //
     while (mQueryQ.First()) {
         ipcClientQuery *query = mQueryQ.First();
-        query->OnQueryComplete(NS_BINDING_ABORTED, NULL);
+        query->OnQueryComplete(NS_ERROR_ABORT, NULL);
         mQueryQ.DeleteFirst();
     }
 

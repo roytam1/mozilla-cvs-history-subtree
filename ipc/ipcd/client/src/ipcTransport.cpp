@@ -46,8 +46,6 @@
 #include "nsDirectoryServiceUtils.h"
 #include "nsEventQueueUtils.h"
 #include "nsAutoLock.h"
-#include "nsNetCID.h"
-#include "netCore.h"
 #include "prproces.h"
 #include "prerror.h"
 #include "plstr.h"

@@ -38,7 +38,6 @@
 #ifndef ipcService_h__
 #define ipcService_h__
 
-#include "nsIRequest.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 #include "plevent.h"
