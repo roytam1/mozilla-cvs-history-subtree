@@ -67,7 +67,6 @@ AC_PATH_PROG(WHOAMI, whoami, :)
 AC_PATH_PROG(UNZIP, unzip, :)
 AC_PATH_PROG(ZIP, zip, :)
 
-AC_PATH_X
 AC_PATH_XTRA
 
 dnl CFLAGS="$CFLAGS $X_CFLAGS"
@@ -697,16 +696,6 @@ _SAVE_LIBS=$LIBS
 CFLAGS="$CFLAGS -I${NSPR_DIR}/include"
 LDFLAGS="$LDFLAGS -L${NSPR_DIR}/lib $NSPR_LIBS"
 
-dnl AC_MSG_CHECKING("for nspr.h")
-dnl AC_TRY_COMPILE([#include "nspr.h"], [], 
-dnl [result="yes"],
-dnl [MISSING_NSPR="$MISSING_NSPR nspr.h" result="no"])
-dnl AC_MSG_RESULT("$result")
-
-dnl AC_CHECK_LIB(nspr21, PR_GetUniqueIdentity, 
-dnl	[_FOUND_NSPR_LIB=1 NSPR_LIBS="-lnspr21 $NSPR_LIBS",
-dnl [MISSING_NSPR="$MISSING_NSPR -lnspr21"], $NSPR_LIBS)
-
 AC_MSG_CHECKING("for PR_GetCurrentThread in -lnspr21")
 LIBS="-lnspr21 $NSPR_LIBS $LIBS"
 AC_TRY_RUN(
@@ -727,9 +716,12 @@ if [ test "$_NSPR_NEEDS_THREAD_LIB" = 1 ]; then
 
 LIBS=$_SAVE_LIBS
 case "$target" in
+*-*-solaris*) 
+	AC_CHECK_LIB(pthread, pthread_create, 
+		NSPR_LIBS="-lpthread $NSPR_LIBS") ;;
 *-*-linux*) 
 	AC_CHECK_LIB(pthread, pthread_create, 
-		NSPR_LIBS="-lpthread $NSPR_LIBS" USE_PTHREADS=1) ;;
+		NSPR_LIBS="-lpthread $NSPR_LIBS") ;;
 alpha-*-osf*)
 	CFLAGS="$CFLAGS -pthread" 
 	_SAVE_CFLAGS="$_SAVE_CFLAGS -pthread" ;;
@@ -756,7 +748,7 @@ dnl	[MISSING_NSPR="$MISSING_NSPR -lnspr21"], $NSPR_LIBS)
 
 AC_CHECK_LIB(plc21, PL_CreateOptState, NSPR_LIBS="-lplc21 $NSPR_LIBS",
 	[MISSING_NSPR="$MISSING_NSPR -lplc21"], $NSPR_LIBS)
-AC_CHECK_LIB(plds21, PL_VectorAdd, NSPR_LIBS="-lplds21 $NSPR_LIBS",
+AC_CHECK_LIB(plds21, PL_GetEvent, NSPR_LIBS="-lplds21 $NSPR_LIBS",
 	[MISSING_NSPR="$MISSING_NSPR -lplds21"], $NSPR_LIBS)
 
 CFLAGS=$_SAVE_CFLAGS
