@@ -32,21 +32,8 @@ CPPSRCS = \
 LIBS =	\
 		-L$(DIST)/lib			\
 		-L$(DIST)/bin			\
-		-labouturl \
-		-lfileurl \
-		-lftpurl \
-		-lgophurl \
-		-lremoturl \
-		-lhttpurl \
-		-lsockstuburl \
-		-lnetcache \
-		-lmimetype \
-		-lnetcnvts \
-		-lnetwork \
-		-lnetlib \
 		-lreg   \
 		-lxpcom \
-		-lpwcac \
 		-lmozdbm \
 		-lxp \
 		-lpref \
@@ -67,6 +54,7 @@ LIBS =	\
 		$(ZLIB_LIBS) \
 		$(NSPR_LIBS) \
 		$(TK_LIBS) \
+		-lneckoutil_s \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
