@@ -1323,9 +1323,17 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
 		// if this is the INBOX, tell the stand-alone biff about the new high water mark
 		if (mFlags & MSG_FOLDER_FLAG_INBOX)
 		{
+			PRInt32 numRecentMessages = 0;
+
 			if (keysToFetch.GetSize() > 0)
+			{
 				SetBiffState(nsMsgBiffState_NewMail);
-			SetNumNewMessages(keysToFetch.GetSize());
+				if (aSpec->flagState)
+				{
+					aSpec->flagState->GetNumberOfRecentMessages(&numRecentMessages);
+					SetNumNewMessages(numRecentMessages);
+				}
+			}
 		}
 	   	if (keysToFetch.GetSize())
     	{			
