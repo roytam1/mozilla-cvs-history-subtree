@@ -1171,12 +1171,15 @@ _setvalue(NPP npp, NPPVariable variable, void *result)
   {
   case NPPVpluginWindowBool:
     {
-      NPBool bWindowless = !(*((NPBool *)result));
+      NPBool bWindowless = (result == nsnull);
       return inst->SetWindowless(bWindowless);
     }
 
   case NPPVpluginTransparentBool:
-    return inst->SetTransparent(*((NPBool *)result));
+    {
+      NPBool bTransparent = (result != nsnull);
+      return inst->SetTransparent(bTransparent);
+    }
 
   default:
     return NPERR_NO_ERROR;
