@@ -96,12 +96,11 @@ Document* XMLParser::getDocumentFromURI
     nsCOMPtr<nsISyncLoader>aLoader = do_CreateInstance( TRANSFORMIIX_SYNCLOADER_CONTRACTID, &rv );
     if (NS_FAILED(rv)) return NULL;
 
-    nsCOMPtr <nsIDocument> theDocument;
-    aLoader->LoadDocument(documentURI, getter_AddRefs(theDocument));
-    nsCOMPtr<nsIDOMDocument> theDOMDocument = do_QueryInterface(theDocument, & rv);
+    nsCOMPtr <nsIDOMDocument> theDocument;
+    rv = aLoader->LoadDocument(documentURI, getter_AddRefs(theDocument));
     if (NS_FAILED(rv)) return NULL;
 
-    return new Document(theDOMDocument);
+    return new Document(theDocument);
 #else
     istream* xslInput = URIUtils::getInputStream(href, documentBase, errMsg);
 

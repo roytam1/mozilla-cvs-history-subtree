@@ -44,6 +44,15 @@ const String ProcessorState::wrapperName      = "transformiix:result";
 const String ProcessorState::wrapperNS        = "http://www.mitre.org/TransforMiix";
 
 /**
+ * Creates a new ProcessorState
+**/
+ProcessorState::ProcessorState() {
+    this->xslDocument = NULL;
+    this->resultDocument = NULL;
+    initialize();
+} //-- ProcessorState
+
+/**
  * Creates a new ProcessorState for the given XSL document
  * and resultDocument
 **/
@@ -57,8 +66,10 @@ ProcessorState::ProcessorState(Document& xslDocument, Document& resultDocument) 
  * Destroys this ProcessorState
 **/
 ProcessorState::~ProcessorState() {
-  delete dfWildCardTemplate;
-  delete dfTextTemplate;
+  if (dfWildCardTemplate)
+      delete dfWildCardTemplate;
+  if (dfTextTemplate)
+      delete dfTextTemplate;
   delete nodeStack;
 
   while ( ! variableSets.empty() ) {
@@ -788,6 +799,8 @@ ProcessorState::XMLSpaceMode ProcessorState::getXMLSpaceMode(Node* node) {
  * Initializes this ProcessorState
 **/
 void ProcessorState::initialize() {
+    dfWildCardTemplate = 0;
+    dfTextTemplate = 0;
 
     //-- initialize default-space
     defaultSpace = PRESERVE;
@@ -815,7 +828,9 @@ void ProcessorState::initialize() {
     setDefaultNameSpaceURI("");
 
     //-- determine xsl properties
-    Element* element = xslDocument->getDocumentElement();
+    Element* element = NULL;
+    if (xslDocument)
+        element = xslDocument->getDocumentElement();
     if ( element ) {
 	    //-- process namespace nodes
 	    NamedNodeMap* atts = element->getAttributes();

@@ -40,16 +40,7 @@
 #include "dom.h"
 #include "ExprResult.h"
 
-#ifdef MOZ_XSL
-#include "nsIDOMNodeList.h"
-#include "nsIScriptObjectOwner.h"
-
-class NodeSet : public ExprResult,
-                public nsIDOMNodeList,
-                public nsIScriptObjectOwner
-#else
 class NodeSet : public ExprResult
-#endif
 {
 
 public:
@@ -78,17 +69,6 @@ public:
     **/
     virtual ~NodeSet();
 
-#ifdef MOZ_XSL
-    // nsISupports interface
-    NS_DECL_ISUPPORTS
-
-    // nsIDocumentTransformer interface
-    NS_DECL_IDOMNODELIST
-
-    // nsIScriptObjectOwner interface
-    NS_IMETHOD GetScriptObject(nsIScriptContext *aContext, void** aScriptObject);
-    NS_IMETHOD SetScriptObject(void* aScriptObject);
-#endif
     /**
      * Adds the specified Node to this NodeSet if it is not already
      * contained within in this NodeSet.
@@ -218,10 +198,6 @@ private:
       //-------------------/
      //- Private Members -/
     //-------------------/
-
-#ifdef MOZ_XSL
-    void* mScriptObject;
-#endif
 
     static const int DEFAULT_SIZE;
 

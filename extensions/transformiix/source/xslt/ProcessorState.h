@@ -61,6 +61,11 @@ public:
     static const String wrapperNS;
 
     /**
+     * Creates a new ProcessorState
+    **/
+    ProcessorState();
+
+    /**
      * Creates a new ProcessorState for the given XSL document
      * And result Document
     **/
