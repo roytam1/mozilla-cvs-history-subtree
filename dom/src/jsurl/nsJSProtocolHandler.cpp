@@ -260,6 +260,7 @@ nsJSProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
 
 NS_IMETHODIMP
 nsJSProtocolHandler::NewChannel(const char* verb, nsIURI* uri,
+                                nsILoadGroup *aGroup,
                                 nsIEventSinkGetter* eventSinkGetter,
                                 nsIChannel* *result)
 {
