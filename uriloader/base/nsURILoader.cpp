@@ -595,7 +595,12 @@ NS_IMETHODIMP nsURILoader::OpenURI(nsIChannel *channel,
     channel->GetURI(getter_AddRefs(uri));
     if (uri) {
       PRBool doAbort = PR_FALSE;
-      winContextListener->OnStartURIOpen(uri, &doAbort);
+      
+      if (aIsContentPreferred) {
+        // Only propagate the notification if the load was
+        // initiated from a link click.
+        winContextListener->OnStartURIOpen(uri, &doAbort);
+      }
          
       if (doAbort) {
         return NS_OK;
