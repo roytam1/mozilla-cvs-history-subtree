@@ -855,6 +855,9 @@ XULContentSinkImpl::ProcessStyleLink(nsIContent* aElement,
             }
         }
 
+        // XXX Note that mStyleSheetCount is going to place the style
+        // sheet in a fairly random location if we're loading an
+        // overlay. Should we just use a Very Large Number?
         PRBool doneLoading;
         result = mCSSLoader->LoadStyleLink(aElement, url, aTitle, aMedia, kNameSpaceID_Unknown,
                                            mStyleSheetCount++, 
