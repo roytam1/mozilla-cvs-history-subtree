@@ -27,6 +27,10 @@
 #ifndef _JSJAVA_H
 #define _JSJAVA_H
 
+#ifndef prtypes_h___
+#include "prtypes.h"
+#endif
+
 PR_BEGIN_EXTERN_C
 
 #include "jni.h"             /* Java Native Interface */
