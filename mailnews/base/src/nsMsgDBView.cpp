@@ -528,7 +528,8 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     performSort = PR_TRUE;
     break;
   case 't': // thread column
-    CycleThreadedColumn(aElement);
+    sortType = nsMsgViewSortType::byThread;
+    performSort = PR_TRUE;
     break;
   default:
     break;
