@@ -216,19 +216,26 @@ function OnLoadMessageWindow()
   var msgFolder = GetLoadedMsgFolder();
   CreateBareDBView(msgFolder,viewType, viewFlags, sortType, sortOrder); // create a db view for 
 
-  if (gCurrentMessageUri) {
-    SetUpToolbarButtons(gCurrentMessageUri);
-  }
-  else if (gCurrentFolderUri) {
-    SetUpToolbarButtons(gCurrentFolderUri);
-  }
- 
+  var uri;
+  if (gCurrentMessageUri)
+    uri = gCurrentMessageUri;
+  else if (gCurrentFolderUri)
+    uri = gCurrentFolderUri;
+  else
+    uri = null;
+
+  SetUpToolbarButtons(uri);
+  
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
+     
   setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete; UpdateStandAloneMessageCounts();", 0);
 
   SetupCommandUpdateHandlers();
   var messagePaneFrame = top.frames['messagepane'];
-  if(messagePaneFrame)
-	messagePaneFrame.focus();
+  if (messagePaneFrame)
+	  messagePaneFrame.focus();
 }
 
 function extractMsgKeyFromURI()
