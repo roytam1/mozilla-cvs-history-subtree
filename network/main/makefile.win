@@ -64,6 +64,7 @@ OBJS=   \
 	.\$(OBJDIR)\mkutils.obj		\
 	.\$(OBJDIR)\prefetch.obj	\
 	.\$(OBJDIR)\mkgeturl.obj	\
+	.\$(OBJDIR)\singsign.obj	\
 	$(NULL)
 
 
@@ -77,6 +78,7 @@ CSRCS =	\
 	mkformat.c	\
 	mkfsort.c	\
 	mkgeturl.c	\
+	singsign.c	\
 	mkhelp.c	\
 	mkinit.c	\
 	mkmessag.c	\

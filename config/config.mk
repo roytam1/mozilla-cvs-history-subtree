@@ -502,6 +502,10 @@ ifndef NO_UNIX_ASYNC_DNS
 DEFINES		+= -DUNIX_ASYNC_DNS
 endif
 
+ifdef MOZ_PRIVACY 
+DEFINES 	+= -DPRIVACY_POLICIES -DTRANSACTION_RECEIPTS -DSingleSignon -DCookieManagement
+endif
+
 # For profiling
 ifdef MOZILLA_GPROF
 # Don't want profiling on build tools..
@@ -619,4 +623,3 @@ JAVA_DEFINES    += -DAWT_11
 else
 JAVA_DEFINES    += -DAWT_102
 endif
-

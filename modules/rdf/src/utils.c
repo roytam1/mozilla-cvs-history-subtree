@@ -563,6 +563,7 @@ RDF_AddCookieResource(char* name, char* path, char* host, char* expires) {
   ru = RDF_GetResource(NULL, url, 1);
   setResourceType(ru, COOKIE_RT);
   remoteStoreAdd(gCookieStore, ru, gCoreVocab->RDF_parent, hostUnit, RDF_RESOURCE_TYPE, 1);  
+  freeMem(url);
 }
 
 

@@ -34,6 +34,7 @@ CSRCS		= \
 
 REQUIRES	= net msg js dbm nspr img util layer pref ldap security
 
+
 include $(DEPTH)/config/config.mk
 
 ifdef MOZ_MAIL_NEWS
