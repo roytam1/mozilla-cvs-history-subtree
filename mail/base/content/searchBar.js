@@ -32,7 +32,6 @@ var gSearchBundle;
 var gStatusBar = null;
 var gSearchInProgress = false;
 var gSearchInput = null;
-var gClearButton = null;
 var gDefaultSearchViewTerms = null;
 var gQSViewIsDirty = false;
 var gHighlightedMessageText = false; 
@@ -121,7 +120,6 @@ function getDocumentElements()
 {
   gSearchBundle = document.getElementById("bundle_search");  
   gStatusBar = document.getElementById('statusbar-icon');
-  gClearButton = document.getElementById('clearButton');
   GetSearchInput();
 }
 
@@ -193,7 +191,7 @@ function initializeSearchBar()
 
 function onEnterInSearchBar()
 {
-  viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
+   viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
    if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
    {
      if (gSearchInput.searchMode == kQuickSearchHighlight)
@@ -203,7 +201,6 @@ function onEnterInSearchBar()
         || gDBView.viewType == nsMsgViewType.eShowVirtualFolderResults)
      {
        statusFeedback.showStatusString("");
-       disableQuickSearchClearButton();
 
        viewDebug ("onEnterInSearchBar gDefaultSearchViewTerms = " + gDefaultSearchViewTerms + "gVirtualFolderTerms = " 
         + gVirtualFolderTerms + "gXFVirtualFolderTerms = " + gXFVirtualFolderTerms + "\n");
@@ -219,8 +216,8 @@ function onEnterInSearchBar()
      }
      else if (gPreQuickSearchView && !gDefaultSearchViewTerms)// may be a quick search from a cross-folder virtual folder
        restorePreSearchView();
-       
-       gSearchInput.showingSearchCriteria = true;
+
+     gSearchInput.showingSearchCriteria = true;
      
      gQSViewIsDirty = false;
      return;
@@ -231,9 +228,6 @@ function onEnterInSearchBar()
    else
    {
      initializeSearchBar();
-
-     if (gClearButton)
-       gClearButton.setAttribute("disabled", false); //coming into search enable clear button   
 
      ClearThreadPaneSelection();
      ClearMessagePane();
@@ -546,6 +540,9 @@ function onSearchInputFocus(event)
 
 function onSearchInputBlur(event)
 { 
+  if (gQuickSearchFocusEl && gQuickSearchFocusEl.id == 'searchInput') // ignore the blur if we are in the middle of processing the clear button
+    return;
+
   if (!gSearchInput.value)
     gSearchInput.showingSearchCriteria = true;
     
@@ -574,17 +571,26 @@ function onSearchInput(returnKeyHit)
   }
 }
 
+// temporary global used to make sure we restore focus to the correct element after clearing the quick search box
+// because clearing quick search means stealing focus.
+var gQuickSearchFocusEl = null; 
+
 function onClearSearch()
 {
-  var focusedElement = gLastFocusedElement;  //save of the last focused element so that focus can be restored
-  Search("");
-  focusedElement.focus();
+  if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
+  {
+    gQuickSearchFocusEl = gLastFocusedElement;  //save of the last focused element so that focus can be restored
+    Search("");
+    // this needs to be on a timer otherwise we end up messing up the focus while the Search("") is still happening
+    setTimeout("restoreSearchFocusAfterClear();", 0); 
+  }
 }
 
-function disableQuickSearchClearButton()
+function restoreSearchFocusAfterClear()
 {
- if (gClearButton)
-   gClearButton.setAttribute("disabled", true); //going out of search disable clear button
+  gQuickSearchFocusEl.focus();
+  gSearchInput.clearButtonHidden = 'true';
+  gQuickSearchFocusEl = null;
 }
 
 function ClearQSIfNecessary()
@@ -594,7 +600,6 @@ function ClearQSIfNecessary()
   if (gSearchInput.value == "")
     return;
 
-  viewDebug("clearing QS as Necessary\n");
   Search("");
 }
 
@@ -641,13 +646,22 @@ function changeQuickSearchMode(aMenuItem)
   var oldSearchMode = gSearchInput.searchMode;
   gSearchInput.searchMode = aMenuItem.value;
 
-  if (gSearchInput.value == "")
+  if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria)
+  {
     gSearchInput.showingSearchCriteria = true;
+    if (gSearchInput.value) // 
+      gSearchInput.setSearchCriteriaText();
+  }
+  
+  // if the search box is empty, set showing search criteria to true so it shows up when focus moves out of the box
+  if (!gSearchInput.value)   
+    gSearchInput.showingSearchCriteria = true;
+  else if (gSearchInput.showingSearchCriteria) // if we are showing criteria text and the box isn't empty, change the criteria text
+    gSearchInput.setSearchCriteriaText();     
   else if (oldSearchMode != gSearchInput.searchMode) // the search mode just changed so we need to redo the quick search
   {
     if (gHighlightedMessageText)
-      removeHighlighting(); // remove any existing highlighting in the message before switching gears
-      
+      removeHighlighting(); // remove any existing highlighting in the message before switching gears      
     onEnterInSearchBar();
   }
 }
