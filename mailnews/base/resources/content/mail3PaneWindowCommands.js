@@ -808,11 +808,12 @@ function SetupCommandUpdateHandlers()
 function IsRenameFolderEnabled()
 {
     var folderOutliner = GetFolderOutliner();
-    var startIndex = {};
-    var endIndex = {};
-    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
-    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
+    var selection = folderOutliner.outlinerBoxObject.selection;
+    if (selection.count == 1)
     {
+        var startIndex = {};
+        var endIndex = {};
+        selection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(startIndex.value);
         return GetFolderAttribute(folderResource, "CanRename") == "true";
     }
@@ -838,11 +839,12 @@ function IsViewNavigationItemEnabled()
 function IsFolderSelected()
 {
     var folderOutliner = GetFolderOutliner();
-    var startIndex = {};
-    var endIndex = {};
-    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
-    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
+    var selection = folderOutliner.outlinerBoxObject.selection;
+    if (selection.count == 1)
     {
+        var startIndex = {};
+        var endIndex = {};
+        selection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(startIndex.value);
         return GetFolderAttribute(folderResource, "IsServer") != "true";
     }
