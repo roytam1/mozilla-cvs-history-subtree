@@ -56,7 +56,7 @@ class basic_nsPromiseFlatString
       virtual PRUint32  Length() const { return mLength; }
 
       virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) const;
-      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) { }
+      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 = 0 ) { return 0; }
 
     protected:
       PRUint32      mLength;

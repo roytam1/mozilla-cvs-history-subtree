@@ -58,7 +58,7 @@ class nsPromiseSubstring
 
     protected:
       virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { }
+      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
     public:
       nsPromiseSubstring( const string_type& aString, PRUint32 aStartPos, PRUint32 aLength )
@@ -111,7 +111,7 @@ class nsPromiseCSubstring
 
     protected:
       virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 ) { }
+      virtual       char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
     public:
       nsPromiseCSubstring( const string_type& aString, PRUint32 aStartPos, PRUint32 aLength )

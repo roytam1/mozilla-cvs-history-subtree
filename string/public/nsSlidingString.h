@@ -111,7 +111,7 @@ class NS_COM nsSlidingSubstring
     protected:
       nsSlidingSubstring( nsSlidingSharedBufferList* aBufferList );
       virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { }
+      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
     private:
         // can't assign into me, I'm a read-only reference
@@ -182,7 +182,7 @@ class NS_COM nsSlidingString
 
     protected:
       virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { }
+      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
       void InsertReadable( const nsAString&, const nsReadingIterator<PRUnichar>& ); // ...to implement |nsScannerString::UngetReadable| 
 
