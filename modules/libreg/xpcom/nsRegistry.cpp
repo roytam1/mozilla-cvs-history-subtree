@@ -106,41 +106,42 @@ struct nsRegSubtreeEnumerator : public nsIEnumerator {
     NS_DECL_ISUPPORTS
 
     // This class implements the nsIEnumerator interface functions.
-    NS_IMETHOD First();
-    NS_IMETHOD Next();
-    NS_IMETHOD CurrentItem(nsISupports **aItem);
-    NS_IMETHOD IsDone();
+    NS_IMETHOD HasMoreElements(PRBool* aResult);
+    NS_IMETHOD GetNext(nsISupports** aResult);
 
     // ctor/dtor
     nsRegSubtreeEnumerator( HREG hReg, RKEY rKey, PRBool all );
 
 protected:
-    NS_IMETHOD advance(); // Implementation file; does appropriate NR_RegEnum call.
     HREG    mReg;   // Handle to registry we're affiliated with.
     RKEY    mKey;   // Base key being enumerated.
     REGENUM mEnum;  // Corresponding libreg "enumerator".
     REGENUM mNext;  // Lookahead value.
     uint32  mStyle; // Style (indicates all or some);
-    PRBool  mDone;  // Done flag.
-    REGERR  mErr;   // Last libreg error code.
 }; // nsRegSubtreeEnumerator
 
 
 /*--------------------------- nsRegValueEnumerator -----------------------------
-| This class is a variation on nsRegSubtreeEnumerator that allocates           |
-| nsRegistryValue objects rather than nsRegistryNode objects.  It also         |
-| overrides certain functions to make sure the "value" oriented libreg         |
+| This allocates nsRegistryValue objects rather than nsRegistryNode objects.   |
+| It also overrides certain functions to make sure the "value" oriented libreg |
 | functions used rather than the subtree oriented ones.                        |
 ------------------------------------------------------------------------------*/
-struct nsRegValueEnumerator : public nsRegSubtreeEnumerator {
-    // Override CurrentItem to allocate nsRegistryValue objects.
-    NS_IMETHOD CurrentItem( nsISupports **result );
+struct nsRegValueEnumerator : public nsIEnumerator {
+    NS_DECL_ISUPPORTS
 
-    // Override advance() to use proper NR_RegEnumEntries.
-    NS_IMETHOD advance();
+    // This class implements the nsIEnumerator interface functions
+    NS_IMETHOD HasMoreElements(PRBool* aResult);
+    NS_IMETHOD GetNext(nsISupports **result);
 
     // ctor/dtor
     nsRegValueEnumerator( HREG hReg, RKEY rKey );
+
+protected:
+    HREG    mReg;   // Handle to registry we're affiliated with.
+    RKEY    mKey;   // Base key being enumerated.
+    REGENUM mEnum;  // Corresponding libreg "enumerator".
+    REGENUM mNext;  // Lookahead value.
+
 }; // nsRegValueEnumerator
 
 /*------------------------------ nsRegistryNode --------------------------------
@@ -329,6 +330,7 @@ static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
 ------------------------------------------------------------------------------*/
 NS_IMPL_ISUPPORTS( nsRegistry,             kIRegistryIID      );
 NS_IMPL_ISUPPORTS( nsRegSubtreeEnumerator, kIEnumeratorIID    );
+NS_IMPL_ISUPPORTS( nsRegValueEnumerator,   kIEnumeratorIID    );
 NS_IMPL_ISUPPORTS( nsRegistryNode,         kIRegistryNodeIID  );
 NS_IMPL_ISUPPORTS( nsRegistryValue,        kIRegistryValueIID );
 
@@ -962,99 +964,68 @@ NS_IMETHODIMP nsRegistry::Pack() {
 ------------------------------------------------------------------------------*/
 nsRegSubtreeEnumerator::nsRegSubtreeEnumerator( HREG hReg, RKEY rKey, PRBool all )
     : mReg( hReg ), mKey( rKey ), mEnum( 0 ), mNext( 0 ),
-      mStyle( all ? REGENUM_DESCEND : 0 ), mDone( PR_FALSE ), mErr( -1 ) {
+      mStyle( all ? REGENUM_DESCEND : 0 ) {
     NS_INIT_REFCNT();
-    return;
 }
 
-/*----------------------- nsRegSubtreeEnumerator::First ------------------------
-| Set mEnum to 0; this will cause the next NR_RegEnum call to go to            |
-| the beginning.  We then do a Next() call in order to do a "lookahead" to     |
-| properly detect an empty list (i.e., set the mDone flag).                    |
+/*----------------------- nsRegSubtreeEnumerator::GetNext-----------------------
+| See if we really do have more elements; if so, then HasMoreElements() will   |
+| have stuffed something appropriate into mEnum. Return it, and clear mEnum    |
+| for the next time around.                                                    |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP
-nsRegSubtreeEnumerator::First() {
-    nsresult rv = NS_OK;
-    // Reset "done" flag.
-    mDone = PR_FALSE;
-    // Go to beginning.
-    mEnum = mNext = 0;
-    // Lookahead so mDone flag gets set for empty list.
-    rv = Next();
-    return rv;
+nsRegSubtreeEnumerator::GetNext(nsISupports** aResult) {
+    NS_PRECONDITION(aResult, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    nsresult rv;
+
+    PRBool hasMore;
+    rv = HasMoreElements(&hasMore);
+    if (NS_FAILED(rv)) return rv;
+
+    if (! hasMore)
+        return NS_ERROR_UNEXPECTED;
+
+    *aResult = new nsRegistryNode( mReg, mKey, mEnum );
+    if (! *aResult)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aResult);
+    mEnum = 0;
+
+    return NS_OK;
 }
 
-/*----------------------- nsRegSubtreeEnumerator::Next -------------------------
-| First, we check if we've already advanced to the end by checking the  mDone  |
-| flag.                                                                        |
-|                                                                              |
-| We advance mEnum to the next enumeration value which is in the mNext         |
-| lookahead buffer.  We must then call advance to lookahead and properly set   |
-| the isDone flag.                                                             |
+/*---------------------- nsRegSubtreeEnumerator::HasMoreElements----------------
+| Determine if there are more elements. If one is cached in mEnum, then yes;   |
+| otherwise, go to the registry and try to get one.                            |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP
-nsRegSubtreeEnumerator::Next() {
-    nsresult rv = NS_OK;
-    // Check for at end.
-    if ( !mDone ) {
-        // Advance to next spot.
-        mEnum = mNext;
-        // Lookahead so mDone is properly set (and to update mNext).
-        rv = advance();
-    } else {
-        // Set result accordingly.
-        rv = regerr2nsresult( REGERR_NOMORE );
+nsRegSubtreeEnumerator::HasMoreElements(PRBool* aResult) {
+    NS_PRECONDITION(aResult, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    if (mEnum) {
+        *aResult = PR_TRUE;
+        return NS_OK;
     }
-    return rv;
-}
 
-/*---------------------- nsRegSubtreeEnumerator::advance -----------------------
-| Advance mNext to next subkey using NR_RegEnumSubkeys.  We set mDone if       |
-| there are no more subkeys.                                                   |
-------------------------------------------------------------------------------*/
-NS_IMETHODIMP nsRegSubtreeEnumerator::advance() {
     char name[MAXREGPATHLEN];
     uint32 len = sizeof name;
-    mErr = NR_RegEnumSubkeys( mReg, mKey, &mNext, name, len, mStyle );
-    // See if we ran off end.
-    if( mErr == REGERR_NOMORE ) {
-        // Remember we've run off end.
-        mDone = PR_TRUE;
-    }
-    // Convert result.
-    nsresult rv = regerr2nsresult( mErr );
-    return rv;
-};
+    REGERR err = NR_RegEnumSubkeys( mReg, mKey, &mNext, name, len, mStyle );
 
-/*-------------------- nsRegSubtreeEnumerator::CurrentItem ---------------------
-| Allocates and returns a new instance of class nsRegistryNode.  The node      |
-| object will hold the curent mEnum value so it can obtain its name from       |
-| the registry when asked.                                                     |
-------------------------------------------------------------------------------*/
-NS_IMETHODIMP
-nsRegSubtreeEnumerator::CurrentItem( nsISupports **result) {
-    nsresult rv = NS_OK;
-    // Make sure there is a place to put the result.
-    if( result ) {
-        *result = new nsRegistryNode( mReg, mKey, mEnum );
-        if( *result ) {
- (*result)->AddRef();
-        } else {
-            rv = NS_ERROR_OUT_OF_MEMORY;
-        }
-    } else {
-        rv = NS_ERROR_NULL_POINTER;
+    if ( err == REGERR_NOMORE ) {
+        *aResult = PR_FALSE;
     }
-    return rv;
-}
+    else {
+        *aResult = PR_TRUE;
+        mEnum = mNext;
+    }
 
-/*---------------------- nsRegSubtreeEnumerator::IsDone ------------------------
-| Simply return mDone.                                                         |
-------------------------------------------------------------------------------*/
-NS_IMETHODIMP
-nsRegSubtreeEnumerator::IsDone() {
-    nsresult rv = mDone;
-    return rv;
+    return NS_OK;
 }
 
 
@@ -1062,49 +1033,67 @@ nsRegSubtreeEnumerator::IsDone() {
 | Delegates everything to the base class constructor.                          |
 ------------------------------------------------------------------------------*/
 nsRegValueEnumerator::nsRegValueEnumerator( HREG hReg, RKEY rKey )
-    : nsRegSubtreeEnumerator( hReg, rKey, PR_FALSE ) {
-    return;
+    : mReg( hReg ), mKey( rKey ), mEnum( 0 ), mNext( 0 ) {
+    NS_INIT_REFCNT();
 }
 
 
-/*--------------------- nsRegValueEnumerator::CurrentItem ----------------------
+/*--------------------- nsRegValueEnumerator::GetNext --------------------------
 | As the nsRegSubtreeEnumerator counterpart, but allocates an object of        |
 | class nsRegistryValue.                                                       |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP
-nsRegValueEnumerator::CurrentItem( nsISupports **result ) {
-    nsresult rv = NS_OK;
-    // Make sure there is a place to put the result.
-    if( result ) {
-        *result = new nsRegistryValue( mReg, mKey, mEnum );
-        if( *result ) {
-            (*result)->AddRef();
-        } else {
-            rv = NS_ERROR_OUT_OF_MEMORY;
-        }
-    } else {
-        rv = NS_ERROR_NULL_POINTER;
-    }
-    return rv;
+nsRegValueEnumerator::GetNext( nsISupports **aResult ) {
+    NS_PRECONDITION(aResult, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    nsresult rv;
+
+    PRBool hasMore;
+    rv = HasMoreElements(&hasMore);
+    if (NS_FAILED(rv)) return rv;
+
+    if (! hasMore)
+        return NS_ERROR_UNEXPECTED;
+
+    *aResult = new nsRegistryValue( mReg, mKey, mEnum );
+    if (! *aResult)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aResult);
+    mEnum = 0;
+
+    return NS_OK;
 }
 
-/*----------------------- nsRegValueEnumerator::advance ------------------------
-| Advance mNext to next subkey using NR_RegEnumEntries.  We set mDone if       |
-| there are no more entries.                                                   |
+/*----------------------- nsRegValueEnumerator::HasMoreElements ----------------
+| As for nsRegSubtreeEnumerator                                                |
 ------------------------------------------------------------------------------*/
-NS_IMETHODIMP nsRegValueEnumerator::advance() {
+NS_IMETHODIMP nsRegValueEnumerator::HasMoreElements(PRBool* aResult) {
+    NS_PRECONDITION(aResult, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    if (mEnum) {
+        *aResult = PR_TRUE;
+        return NS_OK;
+    }
+
     char name[MAXREGNAMELEN];
     uint32 len = sizeof name;
     REGINFO info = { sizeof info, 0, 0 };
-    mErr = NR_RegEnumEntries( mReg, mKey, &mNext, name, len, &info );
-    // See if we ran off end.
-    if( mErr == REGERR_NOMORE ) {
-        // Remember we've run off end.
-        mDone = PR_TRUE;
+    REGERR err = NR_RegEnumEntries( mReg, mKey, &mNext, name, len, &info );
+
+    if ( err == REGERR_NOMORE ) {
+        *aResult = PR_FALSE;
     }
-    // Convert result.
-    nsresult rv = regerr2nsresult( mErr );
-    return rv;
+    else {
+        *aResult = PR_TRUE;
+        mEnum = mNext;
+    }
+
+    return NS_OK;
 };
 
 

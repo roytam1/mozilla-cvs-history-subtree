@@ -16,6 +16,7 @@
  * Reserved.
  */
 
+#include "nsCOMPtr.h"
 #include "nsIEnumerator.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -28,14 +29,12 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIEnumerator methods:
-  NS_IMETHOD First(void);
-  NS_IMETHOD Next(void);
-  NS_IMETHOD CurrentItem(nsISupports **aItem);
-  NS_IMETHOD IsDone(void);
+  NS_IMETHOD HasMoreElements(PRBool* aResult);
+  NS_IMETHOD GetNext(nsISupports** aResult);
 
   // nsIBidirectionalEnumerator methods:
-  NS_IMETHOD Last(void);
-  NS_IMETHOD Prev(void);
+  NS_IMETHOD HasPreviousElements(PRBool* aResult);;
+  NS_IMETHOD GetPrev(nsISupports** aResult);
 
   // nsConjoiningEnumerator methods:
   nsConjoiningEnumerator(nsIEnumerator* first, nsIEnumerator* second);
@@ -80,69 +79,92 @@ nsConjoiningEnumerator::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 }
 
 NS_IMETHODIMP 
-nsConjoiningEnumerator::First(void)
+nsConjoiningEnumerator::HasMoreElements(PRBool* aResult)
 {
-  mCurrent = mFirst;
-  return mCurrent->First();
-}
+  nsresult rv;
+  rv = mCurrent->HasMoreElements(aResult);
+  if (NS_FAILED(rv)) return rv;
 
-NS_IMETHODIMP 
-nsConjoiningEnumerator::Next(void)
-{
-  nsresult rv = mCurrent->Next();
-  if (NS_FAILED(rv) && mCurrent == mFirst) {
+  // okay, the current one has more elements. that's all we wanted to know.
+  if (*aResult)
+    return NS_OK;
+
+  // if the current one has no more elements, but we're still looking
+  // at the first enumerator, then switch to the second and try again.
+  if ((! *aResult) && (mCurrent == mFirst))
     mCurrent = mSecond;
-    rv = mCurrent->First();
-  }
-  return rv;
+
+  return mCurrent->HasMoreElements(aResult);
 }
 
 NS_IMETHODIMP 
-nsConjoiningEnumerator::CurrentItem(nsISupports **aItem)
+nsConjoiningEnumerator::GetNext(nsISupports** aResult)
 {
-  return mCurrent->CurrentItem(aItem);
-}
+  nsresult rv;
 
-NS_IMETHODIMP 
-nsConjoiningEnumerator::IsDone(void)
-{
-  return (mCurrent == mFirst && mCurrent->IsDone() == NS_OK)
-      || (mCurrent == mSecond && mCurrent->IsDone() == NS_OK)
-    ? NS_OK : NS_COMFALSE;
+  PRBool hasMore;
+  rv = HasMoreElements(&hasMore);
+  if (NS_FAILED(rv)) return rv;
+
+  if (! hasMore)
+    return NS_ERROR_UNEXPECTED;
+
+  return mCurrent->GetNext(aResult);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP 
-nsConjoiningEnumerator::Last(void)
+nsConjoiningEnumerator::HasPreviousElements(PRBool* aResult)
 {
+  nsCOMPtr<nsIBidirectionalEnumerator> current;
+
+  // get the bi-directional interface on the current enumerator
+  if (! (current = do_QueryInterface(mCurrent)))
+    return NS_ERROR_FAILURE;
+
   nsresult rv;
-  nsIBidirectionalEnumerator* be;
-  rv = mSecond->QueryInterface(nsIBidirectionalEnumerator::GetIID(), (void**)&be);
+  rv = current->HasPreviousElements(aResult);
   if (NS_FAILED(rv)) return rv;
-  mCurrent = mSecond;
-  rv = be->Last();
-  NS_RELEASE(be);
-  return rv;
+
+  // okay, the current one has previous elements. that's all we wanted to know
+  if (*aResult)
+    return NS_OK;
+
+  // if the current one has no previous elements, and we're looking at
+  // the second enumerator, then switch to the first and try again.
+  if ((! *aResult) && (mCurrent == mSecond))
+    mCurrent = mFirst;
+
+  if (! (current = do_QueryInterface(mCurrent)))
+    return NS_ERROR_FAILURE;
+
+  return current->HasPreviousElements(aResult);
 }
 
 NS_IMETHODIMP 
-nsConjoiningEnumerator::Prev(void)
+nsConjoiningEnumerator::GetPrev(nsISupports** aResult)
 {
   nsresult rv;
-  nsIBidirectionalEnumerator* be;
-  rv = mCurrent->QueryInterface(nsIBidirectionalEnumerator::GetIID(), (void**)&be);
+
+  nsCOMPtr<nsIBidirectionalEnumerator> current;
+
+  // get the bi-directional interface on the current enumerator
+  if (! (current = do_QueryInterface(mCurrent)))
+    return NS_ERROR_FAILURE;
+
+  PRBool hasPrevious;
+  rv = current->HasPreviousElements(&hasPrevious);
   if (NS_FAILED(rv)) return rv;
-  rv = be->Prev();
-  NS_RELEASE(be);
-  if (NS_FAILED(rv) && mCurrent == mSecond) {
-    rv = mFirst->QueryInterface(nsIBidirectionalEnumerator::GetIID(), (void**)&be);
-    if (NS_FAILED(rv)) return rv;
-    mCurrent = mFirst;
-    rv = be->Last();
-    NS_RELEASE(be);
-  }  
-  return rv;
+
+  if (! hasPrevious)
+    return NS_ERROR_UNEXPECTED;
+
+  // because mCurrent may have changed in HasPreviousElements()
+  if (! (current = do_QueryInterface(mCurrent)))
+    return NS_ERROR_FAILURE;
+  
+  return current->GetPrev(aResult);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -164,20 +186,29 @@ NS_NewConjoiningEnumerator(nsIEnumerator* first, nsIEnumerator* second,
 ////////////////////////////////////////////////////////////////////////////////
 
 static nsresult
-nsEnumeratorContains(nsIEnumerator* e, nsISupports* item)
+nsEnumeratorContains(nsIEnumerator* e, nsISupports* item, PRBool* aResult)
 {
-  nsresult rv;
-  for (e->First(); e->IsDone() != NS_OK; e->Next()) {
-    nsISupports* other;
-    rv = e->CurrentItem(&other);
+  *aResult = PR_FALSE;
+  while (1) {
+    nsresult rv;
+
+    PRBool hasMore;
+    rv = e->HasMoreElements(&hasMore);
     if (NS_FAILED(rv)) return rv;
-    if (item == other) {
-      NS_RELEASE(other);
-      return NS_OK;     // true -- exists in enumerator
+
+    if (! hasMore)
+      break;
+
+    nsCOMPtr<nsISupports> other;
+    rv = e->GetNext(getter_AddRefs(other));
+    if (NS_FAILED(rv)) return rv;
+
+    if (other.get() == item) {
+      *aResult = PR_TRUE;
+      break;
     }
-    NS_RELEASE(other);
   }
-  return NS_COMFALSE;   // false -- doesn't exist
+  return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -190,10 +221,8 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIEnumerator methods:
-  NS_IMETHOD First(void);
-  NS_IMETHOD Next(void);
-  NS_IMETHOD CurrentItem(nsISupports **aItem);
-  NS_IMETHOD IsDone(void);
+  NS_IMETHOD HasMoreElements(PRBool* aResult);
+  NS_IMETHOD GetNext(nsISupports** aResult);
 
   // nsIntersectionEnumerator methods:
   nsIntersectionEnumerator(nsIEnumerator* first, nsIEnumerator* second);
@@ -220,48 +249,17 @@ nsIntersectionEnumerator::~nsIntersectionEnumerator(void)
 NS_IMPL_ISUPPORTS(nsIntersectionEnumerator, nsIEnumerator::GetIID());
 
 NS_IMETHODIMP 
-nsIntersectionEnumerator::First(void)
+nsIntersectionEnumerator::HasMoreElements(PRBool* aResult)
 {
-  nsresult rv = mFirst->First();
-  if (NS_FAILED(rv)) return rv;
-  return Next();
+  NS_NOTYETIMPLEMENTED("write me");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP 
-nsIntersectionEnumerator::Next(void)
+nsIntersectionEnumerator::GetNext(nsISupports** aResult)
 {
-  nsresult rv;
-
-  // find the first item that exists in both
-  for (; mFirst->IsDone() != NS_OK; mFirst->Next()) {
-    nsISupports* item;
-    rv = mFirst->CurrentItem(&item);
-    if (NS_FAILED(rv)) return rv;
-
-    // see if it also exists in mSecond
-    rv = nsEnumeratorContains(mSecond, item);
-    if (NS_FAILED(rv)) return rv;
-
-    NS_RELEASE(item);
-    if (rv == NS_OK) {
-      // found in both, so return leaving it as the current item of mFirst
-      return NS_OK;
-    }
-  }
-
-  return NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP 
-nsIntersectionEnumerator::CurrentItem(nsISupports **aItem)
-{
-  return mFirst->CurrentItem(aItem);
-}
-
-NS_IMETHODIMP 
-nsIntersectionEnumerator::IsDone(void)
-{
-  return mFirst->IsDone();
+  NS_NOTYETIMPLEMENTED("write me");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -290,10 +288,8 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIEnumerator methods:
-  NS_IMETHOD First(void);
-  NS_IMETHOD Next(void);
-  NS_IMETHOD CurrentItem(nsISupports **aItem);
-  NS_IMETHOD IsDone(void);
+  NS_IMETHOD HasMoreElements(PRBool* aResult);
+  NS_IMETHOD GetNext(nsISupports** aResult);
 
   // nsUnionEnumerator methods:
   nsUnionEnumerator(nsIEnumerator* first, nsIEnumerator* second);
@@ -320,57 +316,17 @@ nsUnionEnumerator::~nsUnionEnumerator(void)
 NS_IMPL_ISUPPORTS(nsUnionEnumerator, nsIEnumerator::GetIID());
 
 NS_IMETHODIMP 
-nsUnionEnumerator::First(void)
+nsUnionEnumerator::HasMoreElements(PRBool* aResult)
 {
-  nsresult rv = mFirst->First();
-  if (NS_FAILED(rv)) return rv;
-  return Next();
+  NS_NOTYETIMPLEMENTED("write me");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP 
-nsUnionEnumerator::Next(void)
+nsUnionEnumerator::GetNext(nsISupports** aResult)
 {
-  nsresult rv;
-
-  // find the first item that exists in both
-  for (; mFirst->IsDone() != NS_OK; mFirst->Next()) {
-    nsISupports* item;
-    rv = mFirst->CurrentItem(&item);
-    if (NS_FAILED(rv)) return rv;
-
-    // see if it also exists in mSecond
-    rv = nsEnumeratorContains(mSecond, item);
-    if (NS_FAILED(rv)) return rv;
-
-    NS_RELEASE(item);
-    if (rv != NS_OK) {
-      // if it didn't exist in mSecond, return, making it the current item
-      return NS_OK;
-    }
-    
-    // each time around, make sure that mSecond gets reset to the beginning
-    // so that when mFirst is done, we'll be ready to enumerate mSecond
-    rv = mSecond->First();
-    if (NS_FAILED(rv)) return rv;
-  }
-  
-  return mSecond->Next();
-}
-
-NS_IMETHODIMP 
-nsUnionEnumerator::CurrentItem(nsISupports **aItem)
-{
-  if (mFirst->IsDone() != NS_OK)
-    return mFirst->CurrentItem(aItem);
-  else
-    return mSecond->CurrentItem(aItem);
-}
-
-NS_IMETHODIMP 
-nsUnionEnumerator::IsDone(void)
-{
-  return (mFirst->IsDone() == NS_OK && mSecond->IsDone() == NS_OK)
-    ? NS_OK : NS_COMFALSE;
+  NS_NOTYETIMPLEMENTED("write me");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -22,13 +22,13 @@
 #include "nsIEnumerator.h"
 #include "nsISupportsArray.h"
 
-class NS_COM nsArrayEnumerator : public nsISimpleEnumerator
+class NS_COM nsArrayEnumerator : public nsIEnumerator
 {
 public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsISimpleEnumerator interface
+    // nsIEnumerator interface
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 
@@ -43,12 +43,12 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NS_COM nsSingletonEnumerator : public nsISimpleEnumerator
+class NS_COM nsSingletonEnumerator : public nsIEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
 
-    // nsISimpleEnumerator methods
+    // nsIEnumerator methods
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 
@@ -62,24 +62,5 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NS_COM nsAdapterEnumerator : public nsISimpleEnumerator
-{
-public:
-    NS_DECL_ISUPPORTS
-
-    // nsISimpleEnumerator methods
-    NS_IMETHOD HasMoreElements(PRBool* aResult);
-    NS_IMETHOD GetNext(nsISupports** aResult);
-
-    nsAdapterEnumerator(nsIEnumerator* aEnum);
-    virtual ~nsAdapterEnumerator();
-
-protected:
-    nsIEnumerator* mEnum;
-    nsISupports*   mCurrent;
-    PRBool mStarted;
-};
-
-////////////////////////////////////////////////////////////////////////
 
 #endif /* nsRDFCursorUtils_h__ */

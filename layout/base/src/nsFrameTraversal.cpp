@@ -28,17 +28,10 @@ class nsFrameIterator: public nsIBidirectionalEnumerator
 public:
   NS_DECL_ISUPPORTS
 
-  NS_IMETHOD First();
-
-  NS_IMETHOD Last();
-  
-  NS_IMETHOD Next()=0;
-
-  NS_IMETHOD Prev()=0;
-
-  NS_IMETHOD CurrentItem(nsISupports **aItem);
-
-  NS_IMETHOD IsDone();//what does this mean??off edge? yes
+  NS_IMETHOD HasMoreElements(PRBool *aResult);
+  NS_IMETHOD GetNext(nsISupports** aResult);
+  NS_IMETHOD HasPreviousElements(PRBool *aResult);
+  NS_IMETHOD GetPrev(nsISupports** aResult);
 
   nsFrameIterator();
 protected:

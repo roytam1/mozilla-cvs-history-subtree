@@ -28,7 +28,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 ////////////////////////////////////////////////////////////////////////
 
-class EmptyEnumeratorImpl : public nsISimpleEnumerator
+class EmptyEnumeratorImpl : public nsIEnumerator
 {
 public:
     EmptyEnumeratorImpl(void) {};
@@ -47,16 +47,16 @@ public:
         if (! result)
             return NS_ERROR_NULL_POINTER;
 
-        if (iid.Equals(nsISimpleEnumerator::GetIID()) ||
+        if (iid.Equals(nsIEnumerator::GetIID()) ||
             iid.Equals(kISupportsIID)) {
-            *result = (nsISimpleEnumerator*) this;
+            *result = (nsIEnumerator*) this;
             NS_ADDREF(this);
             return NS_OK;
         }
         return NS_NOINTERFACE;
     }
 
-    // nsISimpleEnumerator
+    // nsIEnumerator
     NS_IMETHOD HasMoreElements(PRBool* aResult) {
         *aResult = PR_FALSE;
         return NS_OK;
@@ -68,7 +68,7 @@ public:
 };
 
 extern "C" NS_COM nsresult
-NS_NewEmptyEnumerator(nsISimpleEnumerator** aResult)
+NS_NewEmptyEnumerator(nsIEnumerator** aResult)
 {
     static EmptyEnumeratorImpl gEmptyEnumerator;
     *aResult = &gEmptyEnumerator;

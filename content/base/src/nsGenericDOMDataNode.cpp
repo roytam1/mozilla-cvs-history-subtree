@@ -522,9 +522,10 @@ nsGenericDOMDataNode::ConvertContentToXIF(nsXIFConverter& aConverter) const
   {
     nsIEnumerator *enumerator;
     if (NS_SUCCEEDED(sel->QueryInterface(kIEnumeratorIID, (void **)&enumerator))) {
-      for (enumerator->First();NS_OK != enumerator->IsDone(); enumerator->Next()) {
+      PRBool hasMore;
+      while (NS_OK == enumerator->HasMoreElements(&hasMore) && hasMore) {
         nsIDOMRange* range = nsnull;
-        if (NS_SUCCEEDED(enumerator->CurrentItem((nsISupports**)&range))) {
+        if (NS_SUCCEEDED(enumerator->GetNext((nsISupports**)&range))) {
       
           nsCOMPtr<nsIDOMNode> startNode;
           nsCOMPtr<nsIDOMNode> endNode;

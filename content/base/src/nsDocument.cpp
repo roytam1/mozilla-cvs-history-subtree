@@ -2708,9 +2708,10 @@ PRBool nsDocument::IsInSelection(nsIDOMSelection* aSelection, const nsIContent* 
     nsIEnumerator *enumerator;
     if (NS_SUCCEEDED(aSelection->QueryInterface(kIEnumeratorIID, (void **)&enumerator))) 
     {
-      for (enumerator->First();NS_OK != enumerator->IsDone() ; enumerator->Next()) {
+      PRBool hasMore;
+      while (NS_OK == enumerator->HasMoreElements(&hasMore) && hasMore) {
         nsIDOMRange* range = nsnull;
-        if (NS_SUCCEEDED(enumerator->CurrentItem((nsISupports**)&range)))
+        if (NS_SUCCEEDED(enumerator->GetNext((nsISupports**)&range)))
         {
           nsIDOMNode* startNode = nsnull;
           nsIDOMNode* endNode = nsnull;

@@ -128,11 +128,11 @@ void display( nsIRegistry *reg, nsIRegistry::Key root, const char *rootName ) {
     // Check result.
     if ( rv == NS_OK ) {
         // Set enumerator to beginning.
-        rv = keys->First();
         // Enumerate subkeys till done.
-        while( NS_SUCCEEDED( rv ) && !keys->IsDone() ) {
+        PRBool hasMore;
+        while( NS_OK == keys->HasMoreElements(&hasMore) && hasMore ) {
             nsISupports *base;
-            rv = keys->CurrentItem( &base );
+            rv = keys->GetNext( &base );
             // Test result.
             if ( rv == NS_OK ) {
                 // Get specific interface.
@@ -172,13 +172,6 @@ void display( nsIRegistry *reg, nsIRegistry::Key root, const char *rootName ) {
                 // Release item.
                 base->Release();
 
-                // Advance to next key.
-                rv = keys->Next();
-                // Check result.
-                if ( NS_SUCCEEDED( rv ) ) {
-                } else {
-                    printf( "Error advancing enumerator, rv=0x%08X\n", (int)rv );
-                }
             } else {
                 printf( "Error getting current item, rv=0x%08X\n", (int)rv );
             }
@@ -199,13 +192,11 @@ static void displayValues( nsIRegistry *reg, nsIRegistry::Key root ) {
 
     // Check result.
     if ( rv == NS_OK ) {
-        // Go to beginning.
-        rv = values->First();
-
         // Enumerate values till done.
-        while( rv == NS_OK && !values->IsDone() ) {
+        PRBool hasMore;
+        while( NS_OK == values->HasMoreElements(&hasMore) && hasMore ) {
             nsISupports *base;
-            rv = values->CurrentItem( &base );
+            rv = values->GetNext( &base );
             // Test result.
             if ( rv == NS_OK ) {
                 // Get specific interface.
@@ -279,14 +270,6 @@ static void displayValues( nsIRegistry *reg, nsIRegistry::Key root ) {
                 // Release item.
                 base->Release();
 
-                // Advance to next key.
-                rv = values->Next();
-                // Check result.
-                if ( NS_SUCCEEDED( rv ) ) {
-                } else {
-                    printf( "Error advancing enumerator, rv=0x%08X\n", (int)rv );
-                    break;
-                }
             } else {
                 printf( "Error getting current item, rv=0x%08X\n", (int)rv );
                 break;

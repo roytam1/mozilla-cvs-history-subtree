@@ -52,65 +52,57 @@ nsSupportsArrayEnumerator::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 }
 
 NS_IMETHODIMP
-nsSupportsArrayEnumerator::First()
+nsSupportsArrayEnumerator::HasMoreElements(PRBool* aResult)
 {
-  mCursor = 0;
-  PRInt32 end = (PRInt32)mArray->Count();
-  if (mCursor < end)
-    return NS_OK;
-  else
-    return NS_ERROR_FAILURE;
+  NS_PRECONDITION(aResult, "null ptr");
+  if (! aResult)
+    return NS_ERROR_NULL_POINTER;
+
+  *aResult = mCursor < PRInt32(mArray->Count());
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSupportsArrayEnumerator::Next()
+nsSupportsArrayEnumerator::GetNext(nsISupports** aResult)
 {
-  PRInt32 end = (PRInt32)mArray->Count();
-  if (mCursor < end)   // don't count upward forever
-    mCursor++;
-  if (mCursor < end)
-    return NS_OK;
-  else
-    return NS_ERROR_FAILURE;
-}
+  NS_PRECONDITION(aResult, "null ptr");
+  if (! aResult)
+    return NS_ERROR_NULL_POINTER;
 
-NS_IMETHODIMP
-nsSupportsArrayEnumerator::CurrentItem(nsISupports **aItem)
-{
-  NS_ASSERTION(aItem, "null out parameter");
-  if (mCursor >= 0 && mCursor < (PRInt32)mArray->Count()) {
-    *aItem = (*mArray)[mCursor];
-    NS_IF_ADDREF(*aItem);
-    return NS_OK;
-  }
-  return NS_ERROR_FAILURE;
-}
+  if (mCursor >= PRInt32(mArray->Count()))
+    return NS_ERROR_UNEXPECTED;
 
-NS_IMETHODIMP
-nsSupportsArrayEnumerator::IsDone()
-{
-  return (mCursor >= 0 && mCursor < (PRInt32)mArray->Count())
-    ? NS_COMFALSE : NS_OK;
+  // nsISupportsArray addref's the return value.
+  *aResult = mArray->ElementAt(mCursor++);
+  return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsSupportsArrayEnumerator::Last()
+nsSupportsArrayEnumerator::HasPreviousElements(PRBool* aResult)
 {
-  mCursor = mArray->Count() - 1;
+  NS_PRECONDITION(aResult, "null ptr");
+  if (! aResult)
+    return NS_ERROR_NULL_POINTER;
+
+  *aResult = (mCursor > 0);
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSupportsArrayEnumerator::Prev()
+nsSupportsArrayEnumerator::GetPrev(nsISupports** aResult)
 {
-  if (mCursor >= 0)
-    --mCursor;
-  if (mCursor >= 0)
-    return NS_OK;
-  else
-    return NS_ERROR_FAILURE;
+  NS_PRECONDITION(aResult, "null ptr");
+  if (! aResult)
+    return NS_ERROR_NULL_POINTER;
+
+  if (mCursor <= 0)
+    return NS_ERROR_UNEXPECTED;
+
+  // nsISupportsArray addref's the return value.
+  *aResult = mArray->ElementAt(mCursor--);
+  return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

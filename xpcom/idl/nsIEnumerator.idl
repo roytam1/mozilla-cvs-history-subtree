@@ -20,14 +20,12 @@
 
 [uuid(ad385286-cbc4-11d2-8cca-0060b0fc14a3)]
 interface nsIEnumerator : nsISupports {
-  void First();
-  void Next();
-  nsISupports CurrentItem();
-  boolean IsDone();
+  boolean HasMoreElements();
+  nsISupports GetNext();
 };
 
 [uuid(75f158a0-cadd-11d2-8cca-0060b0fc14a3)]
 interface nsIBidirectionalEnumerator : nsIEnumerator {
-  void Last();
-  void Prev();
+  boolean HasPreviousElements();
+  nsISupports GetPrev();
 };

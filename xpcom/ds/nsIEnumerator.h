@@ -21,22 +21,6 @@
 
 #include "nsISupports.h"
 
-// {D1899240-F9D2-11d2-BDD6-000064657374}
-#define NS_ISIMPLEENUMERATOR_IID \
-{ 0xd1899240, 0xf9d2, 0x11d2, { 0xbd, 0xd6, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74 } }
-
-class nsISimpleEnumerator : public nsISupports {
-public:
-  static const nsIID& GetIID(void) { static nsIID iid = NS_ISIMPLEENUMERATOR_IID; return iid; }
-  NS_IMETHOD HasMoreElements(PRBool* aResult) = 0;
-  NS_IMETHOD GetNext(nsISupports** aResult) = 0;
-};
-
-
-extern "C" NS_COM nsresult
-NS_NewEmptyEnumerator(nsISimpleEnumerator** aResult);
-
-
 #define NS_IENUMERATOR_IID                           \
 { /* ad385286-cbc4-11d2-8cca-0060b0fc14a3 */         \
     0xad385286,                                      \
@@ -48,27 +32,9 @@ NS_NewEmptyEnumerator(nsISimpleEnumerator** aResult);
 
 class nsIEnumerator : public nsISupports {
 public:
-
   static const nsIID& GetIID(void) { static nsIID iid = NS_IENUMERATOR_IID; return iid; }
-
-  /** First will reset the list. will return NS_FAILED if no items
-   */
-  NS_IMETHOD First(void) = 0;
-  
-  /** Next will advance the list. will return failed if already at end
-   */
-  NS_IMETHOD Next(void) = 0;
-
-  /** CurrentItem will return the CurrentItem item it will fail if the list is empty
-   *  @param aItem return value
-   */
-  NS_IMETHOD CurrentItem(nsISupports **aItem) = 0;
-
-  /** return if the collection is at the end.  that is the beginning following a call to Prev
-   *  and it is the end of the list following a call to next
-   *  @param aItem return value
-   */
-  NS_IMETHOD IsDone(void) = 0;
+  NS_IMETHOD HasMoreElements(PRBool* aResult) = 0;
+  NS_IMETHOD GetNext(nsISupports** aResult) = 0;
 };
 
 #define NS_IBIDIRECTIONALENUMERATOR_IID              \
@@ -84,14 +50,8 @@ public:
 
   static const nsIID& GetIID(void) { static nsIID iid = NS_IBIDIRECTIONALENUMERATOR_IID; return iid; }
 
-  /** Last will reset the list to the end. will return NS_FAILED if no items
-   */
-  NS_IMETHOD Last(void) = 0;
-
-  /** Prev will decrement the list. will return failed if already at beginning
-   */
-  NS_IMETHOD Prev(void) = 0;
-
+  NS_IMETHOD HasPreviousElements(PRBool* aResult) = 0;
+  NS_IMETHOD GetPrev(nsISupports** aResult) = 0;
 };
 
 // Construct and return an implementation of a "conjoining enumerator." This
@@ -115,6 +75,11 @@ NS_NewUnionEnumerator(nsIEnumerator* first, nsIEnumerator* second,
 extern "C" NS_COM nsresult
 NS_NewIntersectionEnumerator(nsIEnumerator* first, nsIEnumerator* second,
                              nsIEnumerator* *aInstancePtrResult);
+
+// Construct and return an implementation of an empty enuemrator. This enumerator
+// will have no elements.
+extern "C" NS_COM nsresult
+NS_NewEmptyEnumerator(nsIEnumerator** aResult);
 
 #endif // __nsIEnumerator_h
 

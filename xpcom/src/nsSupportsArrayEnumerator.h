@@ -31,14 +31,12 @@ public:
   virtual ~nsSupportsArrayEnumerator();
 
   // nsIEnumerator methods:
-  NS_IMETHOD First();
-  NS_IMETHOD Next();
-  NS_IMETHOD CurrentItem(nsISupports **aItem);
-  NS_IMETHOD IsDone();
+  NS_IMETHOD HasMoreElements(PRBool* aResult);
+  NS_IMETHOD GetNext(nsISupports** aResult);
 
   // nsIBidirectionalEnumerator methods:
-  NS_IMETHOD Last();
-  NS_IMETHOD Prev();
+  NS_IMETHOD HasPreviousElements(PRBool* aResult);
+  NS_IMETHOD GetPrev(nsISupports** aResult);
 
 protected:
   nsISupportsArray*     mArray;
