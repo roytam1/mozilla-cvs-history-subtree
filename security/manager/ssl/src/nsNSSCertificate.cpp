@@ -2217,7 +2217,7 @@ done:
   return (srv) ? NS_ERROR_FAILURE : NS_OK;
 }
 
-static char *
+char *
 default_nickname(CERTCertificate *cert, nsIInterfaceRequestor* ctx)
 {   
   nsresult rv;
