@@ -674,7 +674,7 @@ nsresult nsMsgFilterList::LoadTextFilters(nsIOFileStream *aStream)
                 value.Assign(utf8);
                 nsMemory::Free(utf8);
               }
-              err = ParseCondition(value);
+              err = ParseCondition(m_curFilter, value.get());
               if (err == NS_ERROR_INVALID_ARG)
                 err = m_curFilter->SetUnparseable(PR_TRUE);
               NS_ENSURE_SUCCESS(err, err);
@@ -702,11 +702,11 @@ nsresult nsMsgFilterList::LoadTextFilters(nsIOFileStream *aStream)
 // what about values with close parens and quotes? e.g., (body, isn't, "foo")")
 // I guess interior quotes will need to be escaped - ("foo\")")
 // which will get written out as (\"foo\\")\") and read in as ("foo\")"
-nsresult nsMsgFilterList::ParseCondition(nsCString &value)
+NS_IMETHODIMP nsMsgFilterList::ParseCondition(nsIMsgFilter *aFilter, const char *aCondition)
 {
 	PRBool	done = PR_FALSE;
 	nsresult	err = NS_OK;
-	const char *curPtr = value.get();
+  const char *curPtr = aCondition;
 	while (!done)
 	{
 		// insert code to save the boolean operator if there is one for this search term....
@@ -755,16 +755,14 @@ nsresult nsMsgFilterList::ParseCondition(nsCString &value)
 		{
 			nsMsgSearchTerm	*newTerm = new nsMsgSearchTerm;
             
-			if (newTerm) {
-                if (ANDTerm) {
-                    newTerm->m_booleanOp = nsMsgSearchBooleanOp::BooleanAND;
-                }
-                else {
-                    newTerm->m_booleanOp = nsMsgSearchBooleanOp::BooleanOR;
-                }
+      if (newTerm) 
+      {
+        newTerm->m_booleanOp = (ANDTerm) ? nsMsgSearchBooleanOp::BooleanAND
+                                         : nsMsgSearchBooleanOp::BooleanOR;
+
                 err = newTerm->DeStreamNew(termDup, PL_strlen(termDup));
                 NS_ENSURE_SUCCESS(err, err);
-                m_curFilter->AppendTerm(newTerm);
+        aFilter->AppendTerm(newTerm);
             }
 			PR_FREEIF(termDup);
 		}

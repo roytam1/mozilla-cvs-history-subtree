@@ -59,6 +59,7 @@
 #include "nsIStringBundle.h"
 #include "nntpCore.h"
 #include "nsIWindowWatcher.h"
+#include "nsMsgFolderFlags.h"
 
 #define INVALID_VERSION         0
 #define VALID_VERSION           1
@@ -658,17 +659,29 @@ nsNntpIncomingServer::GetFirstGroupNeedingCounts(nsISupports **aFirstGroupNeedin
 	rv = mGroupsEnumerator->HasMoreElements(&moreFolders);
 	if (NS_FAILED(rv)) return rv;
 
-	if (!moreFolders) {
+  if (!moreFolders) 
+  {
 		*aFirstGroupNeedingCounts = nsnull;
     	delete mGroupsEnumerator;
 		mGroupsEnumerator = nsnull;
 		return NS_OK; // this is not an error - it just means we reached the end of the groups.
 	}
 
+  do 
+  {
     rv = mGroupsEnumerator->GetNext(aFirstGroupNeedingCounts);
 	if (NS_FAILED(rv)) return rv;
 	if (!*aFirstGroupNeedingCounts) return NS_ERROR_FAILURE;
-
+    nsCOMPtr <nsIMsgFolder> folder;
+    (*aFirstGroupNeedingCounts)->QueryInterface(NS_GET_IID(nsIMsgFolder), getter_AddRefs(folder));
+    PRUint32 folderFlags;
+    folder->GetFlags(&folderFlags);
+    if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
+      continue;
+    else
+      break;
+  }
+  while (PR_TRUE);
 	return NS_OK;
 }
 
