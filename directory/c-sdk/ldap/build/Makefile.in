@@ -2,6 +2,8 @@ DEPTH	= ../../../..
 srcdir	= @srcdir@
 ldaptopsrcdir = @top_srcdir@
 
+INTERNAL_TOOLS = 1
+
 CSRCS	= dirver.c
 
 include autoconf.mk
