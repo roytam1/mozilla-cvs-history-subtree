@@ -29,14 +29,6 @@
 
 enum { kBitMapBytes = 4096 };
 
-/*
-typedef struct BlockFile {
-    PRUint32    version;        // we could rely on the verion in the _CACHE_MAP_ file
-    PRUint32    blockSize;      // caller can keep track of this
-    PRUint32    blockCount;     // can be calculated & verified from bitmap and EOF
-    char        bitMap[];
-} BlockFile;
-*/
 
 /******************************************************************************
  *  nsDiskCacheBlockFile
@@ -63,7 +55,7 @@ public:
     PRInt32   AllocateBlocks( PRInt32  numBlocks);
     nsresult  DeallocateBlocks( PRInt32  startBlock, PRInt32  numBlocks);
     nsresult  WriteBlocks( void * buffer, PRInt32  startBlock, PRInt32  numBlocks);
-    nsresult  ReadBlocks(  void * buffer, PRInt32   startBlock, PRInt32  numBlocks);
+    nsresult  ReadBlocks(  void * buffer, PRInt32  startBlock, PRInt32  numBlocks);
     
 private:
     nsresult  FlushBitMap();
