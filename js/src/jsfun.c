@@ -1543,7 +1543,7 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
 
     /* Allocate stack space for fval, obj, and the args. */
-    argc = (uintN)length;
+    argc = (uintN)JS_MIN(length, ARGC_LIMIT - 1);;
     sp = js_AllocStack(cx, 2 + argc, &mark);
     if (!sp)
         return JS_FALSE;
