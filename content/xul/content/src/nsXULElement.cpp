@@ -22,12 +22,6 @@
   Implementation for a "pseudo content element" that acts as a proxy
   to the RDF graph.
 
-  Unfortunately, there is no one right way to transform RDF into a
-  document model. Ideally, one would like to use something like XSL to
-  define how to do it in a declarative, user-definable way. But since
-  we don't have XSL yet, that's not an option. So here we have a
-  hard-coded implementation that does the job.
-
   TO DO
 
   1) Implement DOM interfaces.
