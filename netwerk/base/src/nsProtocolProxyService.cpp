@@ -266,8 +266,7 @@ nsProtocolProxyService::PrefsChanged(const char* pref) {
                          nsProtocolProxyService::DestroyPACLoadEvent);
 
             // post the event into the ui event queue
-            rv = eq->PostEvent(event);
-            if (rv == PR_FAILURE) {
+            if (eq->PostEvent(event) == PR_FAILURE) {
                 NS_ERROR("Failed to post PAC load event to UI EventQueue");
                 NS_RELEASE_THIS();
                 delete event;
@@ -410,39 +409,39 @@ nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, char * *aProxyHost, PRInt3
     
     if (mHTTPProxyHost.get()[0] && mHTTPProxyPort > 0 &&
         !PL_strcasecmp(scheme, "http")) {
-        *aProxyHost = (char*) nsMemory::Clone(mHTTPProxyHost, strlen(mHTTPProxyHost)+1);
-        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyHost = PL_strdup(mHTTPProxyHost);
+        *aProxyType = PL_strdup("http");
         *aProxyPort = mHTTPProxyPort;
         return NS_OK;
     }
     
     if (mHTTPSProxyHost.get()[0] && mHTTPSProxyPort > 0 &&
         !PL_strcasecmp(scheme, "https")) {
-        *aProxyHost = (char*) nsMemory::Clone(mHTTPSProxyHost, strlen(mHTTPSProxyHost)+1);
-        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyHost = PL_strdup(mHTTPSProxyHost);
+        *aProxyType = PL_strdup("http");
         *aProxyPort = mHTTPSProxyPort;
         return NS_OK;
     }
     
     if (mFTPProxyHost.get()[0] && mFTPProxyPort > 0 &&
         !PL_strcasecmp(scheme, "ftp")) {
-        *aProxyHost = (char*) nsMemory::Clone(mFTPProxyHost, strlen(mFTPProxyHost)+1);
-        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyHost = PL_strdup(mFTPProxyHost);
+        *aProxyType = PL_strdup("http");
         *aProxyPort = mFTPProxyPort;
         return NS_OK;
     }
 
     if (mGopherProxyHost.get()[0] && mGopherProxyPort > 0 &&
         !PL_strcasecmp(scheme, "gopher")) {
-        *aProxyHost = (char*) nsMemory::Clone(mGopherProxyHost, strlen(mGopherProxyHost)+1);
-        *aProxyType = (char*) nsMemory::Clone("http", 5);
+        *aProxyHost = PL_strdup(mGopherProxyHost);
+        *aProxyType = PL_strdup("http");
         *aProxyPort = mGopherProxyPort;
         return NS_OK;
     }
     
     if (mSOCKSProxyHost.get()[0] && mSOCKSProxyPort > 0) {
-        *aProxyHost = (char*) nsMemory::Clone(mSOCKSProxyHost, strlen(mSOCKSProxyHost)+1);
-        *aProxyType = (char*) nsMemory::Clone("socks", 6);
+        *aProxyHost = PL_strdup(mSOCKSProxyHost);
+        *aProxyType = PL_strdup("socks");
         *aProxyPort = mSOCKSProxyPort;
         return NS_OK;
     }
