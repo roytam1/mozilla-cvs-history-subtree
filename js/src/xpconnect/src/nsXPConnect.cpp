@@ -43,6 +43,14 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool nsXPConnect::gOnceAliveNowDead = JS_FALSE;
 
+const char XPC_CONTEXT_STACK_CONTRACTID[] = "@mozilla.org/js/xpc/ContextStack;1";
+const char XPC_RUNTIME_CONTRACTID[]       = "@mozilla.org/js/xpc/RuntimeService;1";
+const char XPC_EXCEPTION_CONTRACTID[]     = "@mozilla.org/js/xpc/Exception;1";
+const char XPC_CONSOLE_CONTRACTID[]       = "@mozilla.org/consoleservice;1";
+const char XPC_SCRIPT_ERROR_CONTRACTID[]  = "@mozilla.org/scripterror;1";
+const char XPC_ID_CONTRACTID[]            = "@mozilla.org/js/xpc/ID;1";
+const char XPC_XPCONNECT_CONTRACTID[]     = "@mozilla.org/js/xpc/XPConnect;1";
+
 /***************************************************************************/
 
 nsXPConnect::nsXPConnect()
@@ -53,15 +61,15 @@ nsXPConnect::nsXPConnect()
         mDefaultSecurityManagerFlags(0),
         mShutingDown(JS_FALSE)
 {
-    NS_INIT_REFCNT();
+    NS_INIT_ISUPPORTS();
 
-    // ignore result - if the runtime service is not ready to rumble
+    // Ignore the result. If the runtime service is not ready to rumble
     // then we'll set this up later as needed.
     CreateRuntime();
 
     mInterfaceInfoManager = XPTI_GetInterfaceInfoManager();
 
-    nsServiceManager::GetService("@mozilla.org/js/xpc/ContextStack;1",
+    nsServiceManager::GetService(XPC_CONTEXT_STACK_CONTRACTID,
                                  NS_GET_IID(nsIThreadJSContextStack),
                                  (nsISupports **)&mContextStack);
 
@@ -129,8 +137,8 @@ nsXPConnect::~nsXPConnect()
     // shutdown the logging system
     XPC_LOG_FINISH();
 
-    if(mRuntime)
-        delete mRuntime;
+    delete mRuntime;
+    
     gSelf = nsnull;
     gOnceAliveNowDead = JS_TRUE;
 }
@@ -298,7 +306,7 @@ nsXPConnect::CreateRuntime()
 {
     NS_ASSERTION(!mRuntime,"CreateRuntime called but mRuntime already init'd");
     nsresult rv;
-    NS_WITH_SERVICE(nsIJSRuntimeService, rtsvc, "@mozilla.org/js/xpc/RuntimeService;1", &rv);
+    NS_WITH_SERVICE(nsIJSRuntimeService, rtsvc, XPC_RUNTIME_CONTRACTID, &rv);
     if(NS_SUCCEEDED(rv) && rtsvc)
     {
         mRuntime = XPCJSRuntime::newXPCJSRuntime(this, rtsvc);
@@ -349,10 +357,10 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
-TempGlobalResolve(JSContext *cx, JSObject *obj, jsval id)
+TempGlobalResolve(JSContext *aJSContext, JSObject *obj, jsval id)
 {
     JSBool resolved;
-    return JS_ResolveStandardClass(cx, obj, id, &resolved);
+    return JS_ResolveStandardClass(aJSContext, obj, id, &resolved);
 }
 
 static JSClass xpcTempGlobalClass = {
@@ -364,7 +372,11 @@ static JSClass xpcTempGlobalClass = {
 
 /* nsIXPConnectJSObjectHolder initClassesWithNewWrappedGlobal (in JSContextPtr aJSContext, in nsISupports aCOMObj, in nsIIDRef aIID, in PRBool aCallJS_InitStandardClasses); */
 NS_IMETHODIMP
-nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports *aCOMObj, const nsIID & aIID, PRBool aCallJS_InitStandardClasses, nsIXPConnectJSObjectHolder **_retval)
+nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, 
+                                             nsISupports *aCOMObj, 
+                                             const nsIID & aIID, 
+                                             PRBool aCallJS_InitStandardClasses, 
+                                             nsIXPConnectJSObjectHolder **_retval)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aCOMObj);
@@ -437,7 +449,11 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
 
 /* nsIXPConnectJSObjectHolder wrapNative (in JSContextPtr aJSContext, in JSObjectPtr aScope, in nsISupports aCOMObj, in nsIIDRef aIID); */
 NS_IMETHODIMP
-nsXPConnect::WrapNative(JSContext * aJSContext, JSObject * aScope, nsISupports *aCOMObj, const nsIID & aIID, nsIXPConnectJSObjectHolder **_retval)
+nsXPConnect::WrapNative(JSContext * aJSContext, 
+                        JSObject * aScope, 
+                        nsISupports *aCOMObj, 
+                        const nsIID & aIID, 
+                        nsIXPConnectJSObjectHolder **_retval)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aScope);
@@ -459,7 +475,10 @@ nsXPConnect::WrapNative(JSContext * aJSContext, JSObject * aScope, nsISupports *
 
 /* void wrapJS (in JSContextPtr aJSContext, in JSObjectPtr aJSObj, in nsIIDRef aIID, [iid_is (aIID), retval] out nsQIResult result); */
 NS_IMETHODIMP
-nsXPConnect::WrapJS(JSContext * aJSContext, JSObject * aJSObj, const nsIID & aIID, void * *result)
+nsXPConnect::WrapJS(JSContext * aJSContext, 
+                    JSObject * aJSObj, 
+                    const nsIID & aIID, 
+                    void * *result)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aJSObj);
@@ -480,7 +499,11 @@ nsXPConnect::WrapJS(JSContext * aJSContext, JSObject * aJSObj, const nsIID & aII
 
 /* void wrapJSAggregatedToNative (in nsISupports aOuter, in JSContextPtr aJSContext, in JSObjectPtr aJSObj, in nsIIDRef aIID, [iid_is (aIID), retval] out nsQIResult result); */
 NS_IMETHODIMP
-nsXPConnect::WrapJSAggregatedToNative(nsISupports *aOuter, JSContext * aJSContext, JSObject * aJSObj, const nsIID & aIID, void * *result)
+nsXPConnect::WrapJSAggregatedToNative(nsISupports *aOuter, 
+                                      JSContext * aJSContext, 
+                                      JSObject * aJSObj, 
+                                      const nsIID & aIID, 
+                                      void * *result)
 {
     NS_ENSURE_ARG_POINTER(aOuter);
     NS_ENSURE_ARG_POINTER(aJSContext);
@@ -502,7 +525,9 @@ nsXPConnect::WrapJSAggregatedToNative(nsISupports *aOuter, JSContext * aJSContex
 
 /* nsIXPConnectWrappedNative getWrappedNativeOfJSObject (in JSContextPtr aJSContext, in JSObjectPtr aJSObj); */
 NS_IMETHODIMP
-nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, JSObject * aJSObj, nsIXPConnectWrappedNative **_retval)
+nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, 
+                                        JSObject * aJSObj, 
+                                        nsIXPConnectWrappedNative **_retval)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aJSObj);
@@ -527,7 +552,11 @@ nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, JSObject * aJSOb
 
 /* nsIXPConnectWrappedNative getWrappedNativeOfNativeObject (in JSContextPtr aJSContext, in JSObjectPtr aScope, in nsISupports aCOMObj, in nsIIDRef aIID); */
 NS_IMETHODIMP
-nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * aScope, nsISupports *aCOMObj, const nsIID & aIID, nsIXPConnectWrappedNative **_retval)
+nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, 
+                                            JSObject * aScope, 
+                                            nsISupports *aCOMObj, 
+                                            const nsIID & aIID, 
+                                            nsIXPConnectWrappedNative **_retval)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aScope);
@@ -562,7 +591,11 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
 
 /* nsIXPConnectJSObjectHolder reparentWrappedNativeIfFound (in JSContextPtr aJSContext, in JSObjectPtr aScope, in JSObjectPtr aNewParent, in nsISupports aCOMObj); */
 NS_IMETHODIMP
-nsXPConnect::ReparentWrappedNativeIfFound(JSContext * aJSContext, JSObject * aScope, JSObject * aNewParent, nsISupports *aCOMObj, nsIXPConnectJSObjectHolder **_retval)
+nsXPConnect::ReparentWrappedNativeIfFound(JSContext * aJSContext, 
+                                          JSObject * aScope, 
+                                          JSObject * aNewParent, 
+                                          nsISupports *aCOMObj, 
+                                          nsIXPConnectJSObjectHolder **_retval)
 {
     XPCCallContext ccx(NATIVE_CALLER, aJSContext);
     if(!ccx.IsValid())
@@ -585,7 +618,9 @@ nsXPConnect::ReparentWrappedNativeIfFound(JSContext * aJSContext, JSObject * aSc
 
 /* void setSecurityManagerForJSContext (in JSContextPtr aJSContext, in nsIXPCSecurityManager aManager, in PRUint16 flags); */
 NS_IMETHODIMP
-nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecurityManager *aManager, PRUint16 flags)
+nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext, 
+                                            nsIXPCSecurityManager *aManager, 
+                                            PRUint16 flags)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
 
@@ -606,7 +641,9 @@ nsXPConnect::SetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 
 /* void getSecurityManagerForJSContext (in JSContextPtr aJSContext, out nsIXPCSecurityManager aManager, out PRUint16 flags); */
 NS_IMETHODIMP
-nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecurityManager **aManager, PRUint16 *flags)
+nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, 
+                                            nsIXPCSecurityManager **aManager, 
+                                            PRUint16 *flags)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aManager);
@@ -627,7 +664,8 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 
 /* void setDefaultSecurityManager (in nsIXPCSecurityManager aManager, in PRUint16 flags); */
 NS_IMETHODIMP
-nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16 flags)
+nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, 
+                                       PRUint16 flags)
 {
 #if 1
     NS_IF_ADDREF(aManager);
@@ -640,7 +678,8 @@ nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16
 
 /* void getDefaultSecurityManager (out nsIXPCSecurityManager aManager, out PRUint16 flags); */
 NS_IMETHODIMP
-nsXPConnect::GetDefaultSecurityManager(nsIXPCSecurityManager **aManager, PRUint16 *flags)
+nsXPConnect::GetDefaultSecurityManager(nsIXPCSecurityManager **aManager, 
+                                       PRUint16 *flags)
 {
     NS_ENSURE_ARG_POINTER(aManager);
     NS_ENSURE_ARG_POINTER(flags);
@@ -653,7 +692,12 @@ nsXPConnect::GetDefaultSecurityManager(nsIXPCSecurityManager **aManager, PRUint1
 
 /* nsIJSStackFrameLocation createStackFrameLocation (in PRBool isJSFrame, in string aFilename, in string aFunctionName, in PRInt32 aLineNumber, in nsIJSStackFrameLocation aCaller); */
 NS_IMETHODIMP
-nsXPConnect::CreateStackFrameLocation(PRBool isJSFrame, const char *aFilename, const char *aFunctionName, PRInt32 aLineNumber, nsIJSStackFrameLocation *aCaller, nsIJSStackFrameLocation **_retval)
+nsXPConnect::CreateStackFrameLocation(PRBool isJSFrame, 
+                                      const char *aFilename, 
+                                      const char *aFunctionName, 
+                                      PRInt32 aLineNumber, 
+                                      nsIJSStackFrameLocation *aCaller, 
+                                      nsIJSStackFrameLocation **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
 
@@ -753,7 +797,9 @@ nsXPConnect::SyncJSContexts(void)
 
 /* nsIXPCFunctionThisTranslator setFunctionThisTranslator (in nsIIDRef aIID, in nsIXPCFunctionThisTranslator aTranslator); */
 NS_IMETHODIMP
-nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTranslator *aTranslator, nsIXPCFunctionThisTranslator **_retval)
+nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID, 
+                                       nsIXPCFunctionThisTranslator *aTranslator, 
+                                       nsIXPCFunctionThisTranslator **_retval)
 {
     XPCJSRuntime* rt = GetRuntime(this);
     if(!rt)
@@ -777,7 +823,8 @@ nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTra
 
 /* nsIXPCFunctionThisTranslator getFunctionThisTranslator (in nsIIDRef aIID); */
 NS_IMETHODIMP
-nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTranslator **_retval)
+nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID, 
+                                       nsIXPCFunctionThisTranslator **_retval)
 {
     XPCJSRuntime* rt = GetRuntime(this);
     if(!rt)
@@ -878,12 +925,14 @@ nsXPConnect::DebugDumpObject(nsISupports *p, PRInt16 depth)
 
 /* void debugDumpJSStack (in PRBool showArgs, in PRBool showLocals, in PRBool showThisProps); */
 NS_IMETHODIMP
-nsXPConnect::DebugDumpJSStack(PRBool showArgs, PRBool showLocals, PRBool showThisProps)
+nsXPConnect::DebugDumpJSStack(PRBool showArgs, 
+                              PRBool showLocals, 
+                              PRBool showThisProps)
 {
 #ifdef DEBUG
     JSContext* cx;
     nsresult rv;
-    NS_WITH_SERVICE(nsIThreadJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", &rv);
+    NS_WITH_SERVICE(nsIThreadJSContextStack, stack, XPC_CONTEXT_STACK_CONTRACTID, &rv);
     if(NS_FAILED(rv) || !stack)
         printf("failed to get nsIThreadJSContextStack service!\n");
     else if(NS_FAILED(stack->Peek(&cx)))
@@ -903,7 +952,7 @@ nsXPConnect::DebugDumpEvalInJSStackFrame(PRUint32 aFrameNumber, const char *aSou
 #ifdef DEBUG
     JSContext* cx;
     nsresult rv;
-    NS_WITH_SERVICE(nsIThreadJSContextStack, stack, "@mozilla.org/js/xpc/ContextStack;1", &rv);
+    NS_WITH_SERVICE(nsIThreadJSContextStack, stack, XPC_CONTEXT_STACK_CONTRACTID, &rv);
     if(NS_FAILED(rv) || !stack)
         printf("failed to get nsIThreadJSContextStack service!\n");
     else if(NS_FAILED(stack->Peek(&cx)))

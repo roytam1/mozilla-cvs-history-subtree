@@ -125,7 +125,7 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
     {
         JSRuntime *rt;
         nsCOMPtr<nsIJSRuntimeService> rtsvc =
-            do_GetService("@mozilla.org/js/xpc/RuntimeService;1");
+            do_GetService(XPC_RUNTIME_CONTRACTID);
         if(rtsvc && NS_SUCCEEDED(rtsvc->GetRuntime(&rt)) && rt)
         {
             nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID());

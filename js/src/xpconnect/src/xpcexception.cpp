@@ -338,7 +338,7 @@ nsXPCException::NewException(const char *aMessage,
     if(!everMadeOneFromFactory)
     {
         nsCOMPtr<nsIXPCException> e =
-            do_CreateInstance("@mozilla.org/js/xpc/Exception;1");
+            do_CreateInstance(XPC_EXCEPTION_CONTRACTID);
         everMadeOneFromFactory = JS_TRUE;
     }
 

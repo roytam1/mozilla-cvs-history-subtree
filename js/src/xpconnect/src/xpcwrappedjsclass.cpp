@@ -1044,7 +1044,7 @@ pre_call_clean_up:
                 // Log the exception to the JS Console, so that users can do
                 // something with it.
                 nsCOMPtr<nsIConsoleService> consoleService
-                    (do_GetService("@mozilla.org/consoleservice;1"));
+                    (do_GetService(XPC_CONSOLE_CONTRACTID));
                 if(nsnull != consoleService)
                 {
                     nsresult rv;
@@ -1058,7 +1058,7 @@ pre_call_clean_up:
                     {
                         // No luck getting one from the exception, so
                         // try to cook one up.
-                        scriptError = do_CreateInstance("@mozilla.org/scripterror;1");
+                        scriptError = do_CreateInstance(XPC_SCRIPT_ERROR_CONTRACTID);
                         if(nsnull != scriptError)
                         {
                             char* exn_string;
