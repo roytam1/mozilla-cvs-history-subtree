@@ -97,9 +97,9 @@ CParseState* CEditBuffer::GetParseState() {
 //EDITBUFFER/////////////////////////////////
 /////////////////////////////////////////////
 
-XP_Bool CEditBuffer::m_bEdtBufPrefInitialized=FALSE;
-XP_Bool CEditBuffer::m_bMoveCursor; //no initial value should be depended on
-XP_Bool CEditBuffer::m_bNewCellHasSpace = TRUE; //New cells we create have an &nbsp in them so border displays
+PRBool CEditBuffer::m_bEdtBufPrefInitialized = PR_FALSE;
+PRBool CEditBuffer::m_bMoveCursor; //no initial value should be depended on
+PRBool CEditBuffer::m_bNewCellHasSpace = PR_TRUE; //New cells we create have an &nbsp in them so border displays
 //these variables are set by the pref_registercallback function "PrefCallback";
 
 

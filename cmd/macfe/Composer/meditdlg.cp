@@ -1035,9 +1035,9 @@ Boolean CPublish::CommitChanges( Boolean /* isAllPanes */ )
 	}
 
 	/* get preferences and current URL */
-	XP_Bool bKeepImages;
+	PRBool bKeepImages;
 	PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-	XP_Bool bKeepLinks;
+	PRBool bKeepLinks;
 	PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
     char *pSrcURL;
@@ -1116,7 +1116,7 @@ void CPublish::ListenToMessage( MessageT inMessage, void* ioParam )
 			if (fImageFiles->GetValue()) {
 				fFileList->RemoveAllItems();
 				
-				XP_Bool bKeepImages;
+				PRBool bKeepImages;
 				PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 				XP_Bool *bSelectionArray = NULL;
 				char *images = EDT_GetAllDocumentFilesSelected( fContext, 
@@ -4685,7 +4685,7 @@ void CEDImageContain::ListenToMessage( MessageT inMessage, void* ioParam )
 
 				    // Get the FSSpec for the editor
 				    FSSpec	theApplication;
-				    XP_Bool hasEditor = false;
+				    PRBool hasEditor = false;
 					PREF_GetBoolPref( "editor.use_image_editor", &hasEditor );
 					if ( hasEditor )
 					    theApplication = CPrefs::GetFolderSpec(CPrefs::ImageEditor);

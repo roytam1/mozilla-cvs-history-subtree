@@ -410,7 +410,7 @@ void CEditorWindow::FinishCreateSelf()
 	CBrowserWindow::FinishCreateSelf();
 
 	// Show/hide toolbars based on preference settings
-	XP_Bool	value;
+	PRBool	value;
 	PREF_GetBoolPref(Pref_ShowParagraphBar, &value);
 	mToolbarShown[eParagraphBar] = value;
 	ShowOneDragBar(Paragraph_Bar_PaneID, value);

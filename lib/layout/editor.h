@@ -4095,11 +4095,11 @@ private:
     XP_Bool m_bFillNewCellWithSpace;
 
 //preference information
-    static XP_Bool m_bNewCellHasSpace; //New cells we create have an &nbsp in them so border displays
+    static PRBool m_bNewCellHasSpace; //New cells we create have an &nbsp in them so border displays
 
 
-    static XP_Bool m_bMoveCursor; //true = move cursor when pageup/down false, just move scrollbar
-    static XP_Bool m_bEdtBufPrefInitialized; //are the preferences initialized
+    static PRBool m_bMoveCursor; //true = move cursor when pageup/down false, just move scrollbar
+    static PRBool m_bEdtBufPrefInitialized; //are the preferences initialized
     static int PrefCallback(const char *,void *);//callback for preferences
     static void InitializePrefs();//call this function to force initialization of preferences
 };

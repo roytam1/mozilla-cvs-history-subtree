@@ -520,7 +520,7 @@ Bool CEditView::SaveDocumentAs()
 
 			(GetContext())->SetWinCSID(saveCsid);			
 			
-			XP_Bool doAutoSave;
+			PRBool doAutoSave;
 			int32 iSave;
 			PREF_GetBoolPref( "editor.auto_save", &doAutoSave );
 			if ( doAutoSave )
@@ -559,7 +559,7 @@ Bool CEditView::SaveDocument()
 
 			if ( result == ED_ERROR_NONE )
 			{
-				XP_Bool doAutoSave;
+				PRBool doAutoSave;
 				int32 iSave;
 				PREF_GetBoolPref( "editor.auto_save", &doAutoSave );
 				if ( doAutoSave )
@@ -4233,7 +4233,7 @@ Boolean CEditView::ObeyCommand( CommandT inCommand, void *ioParam )
 			    
 			    // Get the FSSpec for the editor
 			    FSSpec	theApplication;
-			    XP_Bool hasEditor = false;
+			    PRBool hasEditor = false;
 				PREF_GetBoolPref( "editor.use_html_editor", &hasEditor );
 				if ( hasEditor )
 			    	theApplication = CPrefs::GetFolderSpec(CPrefs::HTMLEditor);

@@ -104,7 +104,7 @@ void FE_SetNewDocumentProperties(MWContext * pContext)
 		
 	}
 
-	Bool hasBackgroundImage;
+	PRBool hasBackgroundImage;
 	if ( ( PREF_GetBoolPref( "editor.use_background_image", &hasBackgroundImage ) == PREF_NOERROR )
 		&& hasBackgroundImage )
 	{
@@ -185,7 +185,7 @@ void FE_EditorDocumentLoaded( MWContext *pContext )
 	}
 	else
 	{ 
-		XP_Bool doAutoSave;
+		PRBool doAutoSave;
 		PREF_GetBoolPref( "editor.auto_save", &doAutoSave );
 		if ( doAutoSave )
 			PREF_GetIntPref( "editor.auto_save_delay", &iSave );
