@@ -4249,15 +4249,9 @@ nsresult nsEditor::BeginUpdateViewBatch()
   {
     if (0==mUpdateCount)
     {
-      nsCOMPtr<nsICaret> caret;
-      nsCOMPtr<nsIPresShell> presShell;
-      GetPresShell(getter_AddRefs(presShell));
-
-      if (presShell)
-        presShell->GetCaret(getter_AddRefs(caret));
-      mCaretHider.Hide(caret);
-
       mViewManager->BeginUpdateViewBatch();
+      nsCOMPtr<nsIPresShell> presShell;
+      rv = GetPresShell(getter_AddRefs(presShell));
       if (NS_SUCCEEDED(rv) && presShell)
         presShell->BeginReflowBatching();
     }
@@ -4272,6 +4266,26 @@ nsresult nsEditor::EndUpdateViewBatch()
 {
   NS_PRECONDITION(mUpdateCount>0, "bad state");
   
+  nsresult rv;
+  nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mSelConWeak,&rv);
+  if (NS_FAILED(rv))
+    return rv;
+  if (!selCon)
+    return NS_ERROR_FAILURE;
+    
+  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+  nsCOMPtr<nsICaret> caret;
+  if (!ps)
+    return NS_ERROR_FAILURE;
+
+  rv = ps->GetCaret(getter_AddRefs(caret));
+  if (NS_FAILED(rv))
+    return rv;
+  if (!caret)
+    return NS_ERROR_FAILURE;
+
+  StCaretHider caretHider(caret);
+        
   nsCOMPtr<nsISelection>selection;
   nsresult selectionResult = GetSelection(getter_AddRefs(selection));
   if (NS_SUCCEEDED(selectionResult) && selection) {
@@ -4284,42 +4298,35 @@ nsresult nsEditor::EndUpdateViewBatch()
     mUpdateCount--;
     if (0==mUpdateCount)
     {
-  // By the time we call Show and mCaretHider tries to show the caret, reflow and selection changed
-  // notifications should've happened so the caret should have enough info
-  // to draw at the correct position. DO NOT LEAVE THIS PART OF THE CODE PREMATURELY
-  // if you do you must call mCaretHider.Show
-
       PRUint32 flags = 0;
 
-      nsresult rv = GetFlags(&flags);
+      rv = GetFlags(&flags);
 
-      if (NS_SUCCEEDED(rv))
-      {
+      if (NS_FAILED(rv))
+        return rv;
 
-        // Make sure we enable reflowing before we call
-        // mViewManager->EndUpdateViewBatch().  This will make sure that any
-        // new updates caused by a reflow, that may happen during the
-        // EndReflowBatching(), get included if we force a refresh during
-        // the mViewManager->EndUpdateViewBatch() call.
+      // Make sure we enable reflowing before we call
+      // mViewManager->EndUpdateViewBatch().  This will make sure that any
+      // new updates caused by a reflow, that may happen during the
+      // EndReflowBatching(), get included if we force a refresh during
+      // the mViewManager->EndUpdateViewBatch() call.
 
-        PRBool forceReflow = PR_TRUE;
+      PRBool forceReflow = PR_TRUE;
 
-        if (flags & nsIPlaintextEditor::eEditorUseAsyncUpdatesMask)
-          forceReflow = PR_FALSE;
+      if (flags & nsIPlaintextEditor::eEditorUseAsyncUpdatesMask)
+        forceReflow = PR_FALSE;
 
-        nsCOMPtr<nsIPresShell>    presShell;
-        rv = GetPresShell(getter_AddRefs(presShell));
-        if (NS_SUCCEEDED(rv) && presShell)
-          presShell->EndReflowBatching(forceReflow);
+      nsCOMPtr<nsIPresShell>    presShell;
+      rv = GetPresShell(getter_AddRefs(presShell));
+      if (NS_SUCCEEDED(rv) && presShell)
+        presShell->EndReflowBatching(forceReflow);
 
-        PRUint32 updateFlag = NS_VMREFRESH_IMMEDIATE;
+      PRUint32 updateFlag = NS_VMREFRESH_IMMEDIATE;
 
-        if (flags & nsIPlaintextEditor::eEditorUseAsyncUpdatesMask)
-          updateFlag = NS_VMREFRESH_NO_SYNC;
+      if (flags & nsIPlaintextEditor::eEditorUseAsyncUpdatesMask)
+        updateFlag = NS_VMREFRESH_NO_SYNC;
 
-        mViewManager->EndUpdateViewBatch(updateFlag);
-      }
-      mCaretHider.Show();
+      mViewManager->EndUpdateViewBatch(updateFlag);
     }
   }  
 

@@ -1615,37 +1615,37 @@ nsresult nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
   if (numTiles <= kTilingCopyThreshold)
   {
     // the outside bounds of the tiled area
-    PRInt32 topY    = aTileRect.y - aSYOffset,
-            bottomY = aTileRect.y + aTileRect.height,
-            leftX   = aTileRect.x - aSXOffset,
-            rightX  = aTileRect.x + aTileRect.width;
+    PRInt32 aY0 = aTileRect.y - aSYOffset,
+            aX0 = aTileRect.x - aSXOffset,
+            aY1 = aTileRect.y + aTileRect.height,
+            aX1 = aTileRect.x + aTileRect.width;
 
-    for (PRInt32 y = topY; y < bottomY; y += mHeight)
-    {
-      for (PRInt32 x = leftX; x < rightX; x += mWidth)
-      {
-        Rect    imageDestRect = imageRect;
-        Rect    imageSrcRect  = imageRect;
-        ::OffsetRect(&imageDestRect, x, y);
+  	for (PRInt32 y = aY0; y < aY1; y += mHeight)
+  	{
+	    for (PRInt32 x = aX0; x < aX1; x += mWidth)
+  		{
+	  		Rect		imageDestRect = imageRect;
+	  		Rect    imageSrcRect  = imageRect;
+	  		::OffsetRect(&imageDestRect, x, y);
 
-        if (x > rightX - mWidth) {
-          imageDestRect.right = PR_MIN(imageDestRect.right, rightX);
-          imageSrcRect.right = imageRect.left + (imageDestRect.right - imageDestRect.left);
-        }
+	  		if (x == aX1 - mWidth) {
+	  		  imageDestRect.right = PR_MIN(imageDestRect.right, aX1);
+	  		  imageSrcRect.right = imageRect.left + (imageDestRect.right - imageDestRect.left);
+	  		}
         
-        if (y > bottomY - mHeight) {
-          imageDestRect.bottom = PR_MIN(imageDestRect.bottom, bottomY);
-          imageSrcRect.bottom = imageRect.top + (imageDestRect.bottom - imageDestRect.top);
-        }
-        
-        // CopyBits will do the truncation for us at the edges
+	  		if (y == aY1 - mHeight) {
+	  		  imageDestRect.bottom = PR_MIN(imageDestRect.bottom, aY1);
+	  		  imageSrcRect.bottom = imageRect.top + (imageDestRect.bottom - imageDestRect.top);
+	  		}
+	  		
+	  		// CopyBits will do the truncation for us at the edges
         CopyBitsWithMask((BitMap*)(&mImagePixmap),
             mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
             (BitMap*)(*destPixels), imageSrcRect, imageSrcRect, imageDestRect, PR_TRUE);
-      }
-    }
+	  	}
+  	}
   
-    return NS_OK;
+  	return NS_OK;
   }
 
   Rect  tileDestRect;   // aTileRect as a Mac rect

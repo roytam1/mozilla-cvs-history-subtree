@@ -254,7 +254,7 @@ NS_IMETHODIMP nsHTMLEditor::LoadHTMLWithCharset(const nsAString & aInputString, 
 NS_IMETHODIMP nsHTMLEditor::InsertHTML(const nsAString & aInString)
 {
   return InsertHTMLWithCharsetAndContext(aInString, nsString(), nsString(),
-                                     nsString(), nsString(), nsnull, 0, PR_TRUE, PR_FALSE);
+                                     nsString(), nsString(), nsnull, 0, PR_TRUE);
 }
 
 
@@ -266,8 +266,7 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
                                               const nsAString & aFlavor,
                                               nsIDOMNode *aDestNode,
                                               PRInt32 aDestOffset,
-                                              PRBool aDeleteSelection,
-                                              PRBool aRemoveExistingStyle)
+                                              PRBool aDeleteSelection)
 {
   if (!mRules) return NS_ERROR_NOT_INITIALIZED;
 
@@ -414,14 +413,11 @@ nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAString & aInputString,
     res = DeleteSelectionAndPrepareToCreateNode(parentNode, offsetOfNewNode);
     NS_ENSURE_SUCCESS(res, res);
 
-    if (aRemoveExistingStyle)
-    {
     // pasting does not inherit local inline styles
     // NOTE: cant use RemoveAllInlineProperties() here becasue
     // it applies default styles, which we dont want for html paste.
-      res = RemoveInlinePropertyImpl(nsnull, nsnull);
-      NS_ENSURE_SUCCESS(res, res);
-    }
+    res = RemoveInlinePropertyImpl(nsnull, nsnull);
+    NS_ENSURE_SUCCESS(res, res);
   }
   else
   {
@@ -1097,7 +1093,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
           rv = InsertHTMLWithCharsetAndContext(cffragment, nsString(),
                                               cfcontext, cfselection, mPasteFlavor,
                                               aDestinationNode, aDestOffset,
-                                              aDoDeleteSelection, PR_TRUE);
+                                              aDoDeleteSelection);
         }
       }
     }
@@ -1114,7 +1110,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         rv = InsertHTMLWithCharsetAndContext(stuffToPaste, nsString(),
                                              aContextStr, aInfoStr, mPasteFlavor,
                                              aDestinationNode, aDestOffset,
-                                             aDoDeleteSelection, PR_TRUE);
+                                             aDoDeleteSelection);
       }
     }
     else if (mPasteFlavor.Equals(NS_LITERAL_STRING(kUnicodeMime)))
@@ -1181,7 +1177,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
             rv = InsertHTMLWithCharsetAndContext(stuffToPaste, nsString(),
                                                 nsString(), nsString(), mPasteFlavor, 
                                                 aDestinationNode, aDestOffset,
-                                                aDoDeleteSelection, PR_FALSE);
+                                                aDoDeleteSelection);
           }
         }
       }
