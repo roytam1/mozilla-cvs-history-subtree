@@ -167,6 +167,9 @@ endif
 
 include rules.mk
 
+nsinstall-target:
+	cd ../../config; $(MAKE) OBJDIR=$(OBJDIR) OBJDIR_NAME=$(OBJDIR)
+
 $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
 	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(NSPR_LIBRARY)
 
