@@ -117,7 +117,22 @@ API_HFILES =		\
 	jsdbgapi.h	\
 	$(NULL)
 
-HFILES = $(JS_HFILES) $(API_HFILES)
+OTHER_HFILES =		\
+	jsaddr.h	\
+	jsbit.h		\
+	jscompat.h	\
+	jscpucfg.h	\
+	jsotypes.h	\
+	jsprhash.h	\
+	jsstddef.h	\
+	prmjtime.h	\
+	resource.h	\
+	jsopcode.tbl	\
+	js.msg		\
+	jsshell.msg	\
+	$(NULL)
+
+HFILES = $(JS_HFILES) $(API_HFILES) $(OTHER_HFILES)
 
 JS_CFILES =		\
 	jsapi.c		\

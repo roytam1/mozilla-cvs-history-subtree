@@ -39,9 +39,17 @@ LC_HFILES =		\
 	jsj_private.h   \
 	jsjava.h        \
 	netscape_javascript_JSObject.h \
+	nsCLiveconnectFactory.h        \
+	nsILiveconnect.h               \
+	nsISecureLiveconnect.h         \
+	nsISecurityContext.h           \
 	$(NULL)
 
-HFILES = $(LC_HFILES)
+OTHER_HFILES =		\
+	jsj.msg		\
+	$(NULL)
+
+HFILES = $(LC_HFILES) $(OTHER_HFILES)
 
 LC_CFILES =	\
 	jsj.c \
