@@ -160,17 +160,18 @@ const char *kWebBrowserPersistStringBundle =
     "chrome://global/locale/nsWebBrowserPersist.properties";
 
 nsWebBrowserPersist::nsWebBrowserPersist() :
+    mCurrentThingsToPersist(0),
     mFirstAndOnlyUse(PR_TRUE),
     mCancel(PR_FALSE),
     mJustStartedLoading(PR_TRUE),
     mCompleted(PR_FALSE),
     mStartSaving(PR_FALSE),
     mReplaceExisting(PR_TRUE),
+    mSerializingOutput(PR_FALSE),
     mPersistFlags(kDefaultPersistFlags),
     mPersistResult(NS_OK),
-    mEncodingFlags(0),
     mWrapColumn(72),
-    mCurrentThingsToPersist(0)
+    mEncodingFlags(0)
 {
     NS_INIT_REFCNT();
 }
