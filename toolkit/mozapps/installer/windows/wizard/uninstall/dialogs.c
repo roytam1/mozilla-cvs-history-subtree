@@ -319,7 +319,6 @@ LRESULT CALLBACK DlgProcUninstall(HWND hDlg, UINT msg, WPARAM wParam, LONG lPara
           EnableWindow(GetDlgItem(hDlg, IDWIZNEXT), FALSE);
           EnableWindow(GetDlgItem(hDlg, IDCANCEL), FALSE);
           ParseAllUninstallLogs();
-          VerifyAndDeleteInstallationFolder();
           DestroyWindow(hDlg);
           PostQuitMessage(0);
           break;
