@@ -33,6 +33,7 @@
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
 #include "nsRDFCID.h"
+#include "nsRepository.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
@@ -46,9 +47,9 @@ static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFTreeBuilderCID,         NS_RDFTREEBUILDER_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,       NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFXULBuilderCID,          NS_RDFXULBUILDER_CID);
+static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
 static NS_DEFINE_CID(kXULDataSourceCID,			 NS_XULDATASOURCE_CID);
 static NS_DEFINE_CID(kXULDocumentCID,            NS_XULDOCUMENT_CID);
-static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
 
 class RDFFactoryImpl : public nsIFactory
 {
@@ -216,6 +217,46 @@ NSGetFactory(const nsCID &aClass, nsISupports* aServiceManager, nsIFactory **aFa
 
     NS_ADDREF(factory);
     *aFactory = factory;
+    return NS_OK;
+}
+
+
+
+
+extern "C" PR_IMPLEMENT(nsresult)
+NSRegisterSelf(const char* aPath)
+{
+    nsRepository::RegisterFactory(kRDFBookmarkDataSourceCID,  aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFCompositeDataSourceCID, aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFContentSinkCID,         aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFHTMLBuilderCID,         aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFInMemoryDataSourceCID,  aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFServiceCID,             aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFTreeBuilderCID,         aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFXMLDataSourceCID,       aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kRDFXULBuilderCID,          aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kXULContentSinkCID,         aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kXULDataSourceCID,          aPath, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kXULDocumentCID,            aPath, PR_TRUE, PR_TRUE);
+    return NS_OK;
+}
+
+
+extern "C" PR_IMPLEMENT(nsresult)
+NSUnregisterSelf(const char* aPath)
+{
+    nsRepository::UnregisterFactory(kRDFBookmarkDataSourceCID,  aPath);
+    nsRepository::UnregisterFactory(kRDFCompositeDataSourceCID, aPath);
+    nsRepository::UnregisterFactory(kRDFContentSinkCID,         aPath);
+    nsRepository::UnregisterFactory(kRDFHTMLBuilderCID,         aPath);
+    nsRepository::UnregisterFactory(kRDFInMemoryDataSourceCID,  aPath);
+    nsRepository::UnregisterFactory(kRDFServiceCID,             aPath);
+    nsRepository::UnregisterFactory(kRDFTreeBuilderCID,         aPath);
+    nsRepository::UnregisterFactory(kRDFXMLDataSourceCID,       aPath);
+    nsRepository::UnregisterFactory(kRDFXULBuilderCID,          aPath);
+    nsRepository::UnregisterFactory(kXULContentSinkCID,         aPath);
+    nsRepository::UnregisterFactory(kXULDataSourceCID,          aPath);
+    nsRepository::UnregisterFactory(kXULDocumentCID,            aPath);
     return NS_OK;
 }
 
