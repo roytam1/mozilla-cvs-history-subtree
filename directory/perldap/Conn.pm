@@ -330,11 +330,11 @@ sub delete
 
   if ($dn ne "")
     {
-      $dn = normalizeDN($dn);
+      $dn = Mozilla::LDAP::Utils::normalizeDN($dn);
     }
   else
     {
-      $dn = normalizeDN($self->{dn});
+      $dn = Mozilla::LDAP::Utils::normalizeDN($self->{dn});
     }
   $ret = ldap_delete_s($self->{ld}, $dn) if ($dn ne "");
 
