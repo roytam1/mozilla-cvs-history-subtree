@@ -1243,7 +1243,7 @@ nsWebShellWindow::OnEndDocumentLoad(nsIDocumentLoader* loader,
   // register as document listener
   // this is needed for menus
   nsCOMPtr<nsIContentViewer> cv;
-  mWebShell->GetContentViewer(getter_AddRefs(cv));
+  mDocShell->GetContentViewer(getter_AddRefs(cv));
   if (cv) {
    
     nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(cv));
