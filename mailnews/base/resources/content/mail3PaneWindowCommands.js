@@ -857,36 +857,27 @@ function IsFindEnabled()
 
 function MsgDeleteFolder()
 {
-	//get the selected elements
-	var tree = GetFolderTree();
-	var folderList = tree.selectedItems;
-	var i;
-	var folder, parent;
-    var specialFolder;
-	for(i = 0; i < folderList.length; i++)
-	{
-		folder = folderList[i];
-	    folderuri = folder.getAttribute('id');
-        specialFolder = folder.getAttribute('SpecialFolder');
+    var selectedFolders = GetSelectedMsgFolders();
+    for (var i = 0; i < selectedFolders.length; i++)
+    {
+        var selectedFolder = selectedFolders[i];
+        var folderResource = selectedFolder.QueryInterface(Components.interfaces.nsIRDFResource);
+        var specialFolder = GetFolderAttribute(folderResource, "SpecialFolder");
         if (specialFolder != "Inbox" && specialFolder != "Trash")
         {
-            if (isNewsURI(folderuri)) {
-              var msgfolder = GetMsgFolderFromURI(folderuri);
-              var unsubscribe = ConfirmUnsubscribe(msgfolder);
-              if (unsubscribe) {
-                UnSubscribe(msgfolder);
-              }
+            if (isNewsURI(folderResource.Value))
+            {
+                var unsubscribe = ConfirmUnsubscribe(selectedFolder);
+                if (unsubscribe)
+                    UnSubscribe(selectedFolder);
             }
-            else {
-              parent = folder.parentNode.parentNode;	
-              var parenturi = parent.getAttribute('id');
-              messenger.DeleteFolders(tree.database,
-                                    parent.resource, folder.resource);
+            else
+            {
+                var parentResource = selectedFolder.parent.QueryInterface(Components.interfaces.nsIRDFResource);
+                messenger.DeleteFolders(GetFolderDatasource(), parentResource, folderResource);
             }
         }
-	}
-
-
+    }
 }
 
 // 3pane related commands.  Need to go in own file.  Putting here for the moment.
@@ -1020,7 +1011,7 @@ function SwitchPaneFocus(direction)
 						  SetFocusMessagePane();
 					}
 				}
-				else if(focusedElementId == "folderTree")
+				else if(focusedElementId == "folderOutliner")
 				{
 					if (!(IsThreadAndMessagePaneSplitterCollapsed()))
 						SetFocusMessagePane();
@@ -1072,7 +1063,7 @@ function SwitchPaneFocus(direction)
 						SetFocusFolderPane();
 
 				}
-				else if(focusedElementId == "folderTree")
+				else if(focusedElementId == "folderOutliner")
 					SetFocusThreadPane();
 			}
 			catch(e) 
@@ -1086,23 +1077,20 @@ function SwitchPaneFocus(direction)
 
 function SetFocusFolderPane()
 {
-  var folderTree = GetFolderTree();
-  folderTree.focus();
-	return;
+    var folderOutliner = GetFolderOutliner();
+    folderOutliner.focus();
 }
 
 function SetFocusThreadPane()
 {
-  var threadTree = GetThreadOutliner();
-  threadTree.focus();
-	return;
+    var threadOutliner = GetThreadOutliner();
+    threadOutliner.focus();
 }
 
 function SetFocusMessagePane()
 {
-	var messagePaneFrame = GetMessagePaneFrame();
-  messagePaneFrame.focus();
-	return;
+    var messagePaneFrame = GetMessagePaneFrame();
+    messagePaneFrame.focus();
 }
 
 function is_collapsed(element) 
