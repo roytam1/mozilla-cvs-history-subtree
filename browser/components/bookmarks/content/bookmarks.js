@@ -811,6 +811,17 @@ var BookmarksCommand = {
 
   sortByName: function (aSelection)
   {
+    // do the real sorting in a timeout, to make sure that
+    // if we sort from a menu that the menu gets torn down
+    // before we sort.  the template builder really doesn't
+    // like it if we move things around; the menu code also
+    // doesn't like it if we move the menuparent while a
+    // popup is open.
+    setTimeout(function () { BookmarksCommand.realSortByName(aSelection); }, 0);
+  },
+
+  realSortByName: function (aSelection)
+  {
     var theFolder;
 
     if (aSelection.length != 1)
