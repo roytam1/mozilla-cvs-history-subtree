@@ -102,7 +102,8 @@ nsDrawingSurfaceQT::~nsDrawingSurfaceQT()
     mGC = nsnull;
   }
   if (mPixmap) {
-    delete mPixmap;
+    if (mPixmap != mPaintDevice)
+      delete mPixmap;
     mPixmap = nsnull;
   }
   if (mPaintDevice) {
