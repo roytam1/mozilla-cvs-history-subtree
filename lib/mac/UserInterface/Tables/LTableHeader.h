@@ -226,6 +226,7 @@ protected:
 	Boolean			ColumnHasSortIcon(ColumnIndexT inColumn) 		const;
 	Boolean			CanHideColumns() 								const;
 
+#ifdef Debug_Signal
 	void 			CheckVisible(ColumnIndexT inIndex) const
 		{
 			Assert_(inIndex > 0 && inIndex <= mLastVisibleColumn);
@@ -238,7 +239,12 @@ protected:
 		{
 			Assert_(inIndex >= 0 && inIndex <= mColumnCount);
 		}
-	
+#else
+	void 			CheckVisible(ColumnIndexT /*inIndex*/) const { }
+	void 			CheckLegal(ColumnIndexT /*inIndex*/) const { }
+	void 			CheckLegalHigh(ColumnIndexT /*inIndex*/) const { }
+#endif //Debug_Signal
+
 	LPane*	GetColumnPane(ColumnIndexT inColumn);
 
 protected:
