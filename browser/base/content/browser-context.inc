@@ -230,5 +230,4 @@
                 accesskey="&bidiSwitchTextDirectionItem.accesskey;"
                 oncommand="SwitchTextEntryDirection(gContextMenu.target)"/>
     </popup>
-    
-    
+
