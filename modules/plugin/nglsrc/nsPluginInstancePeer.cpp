@@ -55,7 +55,7 @@ nsPluginInstancePeerImpl::nsPluginInstancePeerImpl()
 nsPluginInstancePeerImpl::~nsPluginInstancePeerImpl()
 {
   mInstance = nsnull;
-  mOwner = nsnull;
+  NS_IF_RELEASE(mOwner);
 
   if (nsnull != mMIMEType)
   {
@@ -895,11 +895,10 @@ NS_IMETHODIMP nsPluginInstancePeerImpl::GetJSContext(JSContext* *outContext)
 nsresult nsPluginInstancePeerImpl::Initialize(nsIPluginInstanceOwner *aOwner,
                                                 const nsMIMEType aMIMEType)
 {
-  //don't add a ref to prevent circular references... MMP
   mOwner = aOwner;
+  NS_IF_ADDREF(mOwner);
 
   aOwner->GetInstance(mInstance);
-  //release this one too... MMP
   NS_IF_RELEASE(mInstance);
 
   if (nsnull != aMIMEType)
@@ -918,8 +917,12 @@ nsresult nsPluginInstancePeerImpl::Initialize(nsIPluginInstanceOwner *aOwner,
 
 nsresult nsPluginInstancePeerImpl::SetOwner(nsIPluginInstanceOwner *aOwner)
 {
-  // do not add refs to these objects to prevent circular references
+  // get rid of the previous owner
+  NS_IF_RELEASE(mOwner);
+
   mOwner = aOwner;
+  NS_IF_ADDREF(mOwner);
+
   aOwner->GetInstance(mInstance);
   NS_IF_RELEASE(mInstance);
   return NS_OK;
