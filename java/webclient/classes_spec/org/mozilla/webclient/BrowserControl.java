@@ -54,7 +54,7 @@ public static String CACHE_MANAGER_NAME = "webclient.cache.NetDataCacheManager";
 public static String PREFERENCES_NAME = "webclient.Preferences";
 public static String PRINT_NAME = "webclient.Print";
 public static String WINDOW_CONTROL_NAME = "webclient.WindowControl";
-
+public static String PROFILE_MANAGER_NAME = "webclient.ProfileManager";
 
 
     /**

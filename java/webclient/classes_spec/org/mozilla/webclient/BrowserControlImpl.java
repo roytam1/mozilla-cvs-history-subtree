@@ -71,6 +71,7 @@ private Navigation navigation = null;
 private History history = null;
 private static Bookmarks bookmarks = null;
 private static Preferences prefs = null;
+private static ProfileManager profileManager = null;
 
 //
 // Constructors and Initializers    
@@ -156,6 +157,10 @@ static void appTerminate() throws Exception
     if (null != prefs) {
         ((ImplObject)prefs).delete();
         prefs = null;
+    }
+    if (null != profileManager) {
+        ((ImplObject)profileManager).delete();
+        profileManager = null;
     }
 
     wrapperFactory.terminate();
@@ -280,6 +285,13 @@ public Object queryInterface(String interfaceName) throws ClassNotFoundException
                 wrapperFactory.newImpl(PREFERENCES_NAME, this);
         }
         return prefs;
+    }
+    if (PROFILE_MANAGER_NAME.equals(interfaceName)) {
+        if (null == profileManager) {
+            profileManager = (ProfileManager)
+                wrapperFactory.newImpl(PROFILE_MANAGER_NAME, this);
+        }
+        return profileManager;
     }
     // extensibility mechanism: just see if wrapperFactory can make one!
     return wrapperFactory.newImpl(interfaceName, this);

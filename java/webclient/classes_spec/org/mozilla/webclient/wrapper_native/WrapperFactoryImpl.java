@@ -35,6 +35,11 @@ public class WrapperFactoryImpl extends WrapperFactory
 // Protected Constants
 //
 
+    final String [] stubsImplementedInterfaces = 
+        {
+        BrowserControl.PROFILE_MANAGER_NAME
+        };
+
 //
 // Class Variables
 //
@@ -109,7 +114,7 @@ public Object newImpl(String interfaceName,
     Object result = null;
 
     synchronized(this) {
-        if (!nativeDoesImplement(interfaceName)) {
+        if (!stubsDoImplement(interfaceName) && !nativeDoesImplement(interfaceName)) {
             throw new ClassNotFoundException("Can't instantiate " + 
                                              interfaceName + 
                                              ": not implemented.");
@@ -144,6 +149,10 @@ public Object newImpl(String interfaceName,
             result = new PreferencesImpl(this, browserControl);
             return result;
         }
+        if (BrowserControl.PROFILE_MANAGER_NAME == interfaceName) {
+            result = new ProfileManagerImpl(this, browserControl);
+            return result;
+        }
     }
 
     return result;
@@ -173,6 +182,19 @@ public boolean hasBeenInitialized()
 {
     return initialized;
 }
+
+
+private boolean stubsDoImplement(String interfaceName) 
+{
+    boolean foundInterface = false;
+    for (int i=0; i<stubsImplementedInterfaces.length; i++) {
+        if (interfaceName.equals(stubsImplementedInterfaces[i])) {
+            foundInterface = true;
+        }
+    }
+    return foundInterface;
+}
+
 
 // 
 // Native methods
