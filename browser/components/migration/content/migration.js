@@ -41,9 +41,12 @@ var MigrationWizard = {
     this._wiz = document.documentElement;
 
     if ("arguments" in window) {
-      this._migrator = window.arguments[0].QueryInterface(Components.interfaces.nsIBrowserProfileMigrator);
+      this._source = window.arguments[0];
+      this._migrator = window.arguments[1].QueryInterface(nsIBPM);
       this._automigrate = true;
-      this._wiz.goTo(this._migrator.sourceHasMultipleProfiles ? "selectProfile" : "migrating");
+      
+      // Advance past the first page
+      this._wiz.advance();
     }
   },
   
@@ -65,20 +68,27 @@ var MigrationWizard = {
   
   onImportSourcePageAdvanced: function ()
   {
-    this._source = document.getElementById("importSourceGroup").selectedItem.id;
+    if (!this._automigrate)
+      this._source = document.getElementById("importSourceGroup").selectedItem.id;
 
     // Create the migrator for the selected source.
-    var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=" + this._source;
-    this._migrator = Components.classes[contractID].createInstance(nsIBPM);
+    if (!this._migrator) {
+      var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=" + this._source;
+      this._migrator = Components.classes[contractID].createInstance(nsIBPM);
+    }
 
-    if (this._source == "opera") {
+    switch (this._source) {
+    case "opera":
+    case "dogbert":
+    case "seamonkey":
       // check for more than one Opera profile
       this._wiz.currentPage.next = this._migrator.sourceHasMultipleProfiles ? "selectProfile" : "importItems";
-    }
-    else {
+      break;
+    default:
       // Don't show the Select Profile page for sources that don't support
       // multiple profiles
       this._wiz.currentPage.next = "importItems";
+      break;
     }
   },
   
@@ -89,11 +99,11 @@ var MigrationWizard = {
     while (profiles.hasChildNodes()) 
       profiles.removeChild(profiles.firstChild);
     
-    var profiles = this._migrator.sourceProfiles;
-    var count = profiles.Count();
+    var sourceProfiles = this._migrator.sourceProfiles;
+    var count = sourceProfiles.Count();
     for (var i = 0; i < count; ++i) {
       var item = document.createElement("radio");
-      var str = profiles.QueryElementAt(i, Components.interfaces.nsISupportsString);
+      var str = sourceProfiles.QueryElementAt(i, Components.interfaces.nsISupportsString);
       item.id = str.data;
       item.setAttribute("label", str.data);
       profiles.appendChild(item);
@@ -128,7 +138,7 @@ var MigrationWizard = {
       var item = this._items[ds[i]];
       var checkbox = document.createElement("checkbox");
       checkbox.id = item._id;
-      checkbox.setAttribute("label", bundle.getString(item._key));
+      checkbox.setAttribute("label", bundle.getString(item._key + "_" + this._source));
       dataSources.appendChild(checkbox);
       checkbox.checked = true;
     }
@@ -154,12 +164,20 @@ var MigrationWizard = {
   // 4 - Migrating
   onMigratingPageShow: function ()
   {
-    this._migrator.migrate(this._itemsFlags, true, this._selectedProfile);
+    setTimeout(this.onMigratingMigrate, 0, this);
   },
+  
+  onMigratingMigrate: function (aOuter)
+  {
+    aOuter._migrator.migrate(aOuter._itemsFlags, true, aOuter._selectedProfile);
+  },
+  
+  goat: function () { },
 
   observe: function (aSubject, aTopic, aData)
   {
     var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "downloads": 6 };
+    var goats = document.getElementById("goats");
     switch (aTopic) {
     case "Migration:Started":
       dump("*** migration started\n");
@@ -172,28 +190,25 @@ var MigrationWizard = {
         var index = this._selectedIndices[i];
         var label = document.createElement("label");
         label.id = this._items[index]._key;
-        label.setAttribute("value", bundle.getString(this._items[index]._key));
+        label.setAttribute("value", bundle.getString(this._items[index]._key + "_" + this._source));
         items.appendChild(label);
       } 
       break;
     case "Migration:ItemBeforeMigrate":
-      dump("*** item about to be migrated...\n");
       var index = itemToIndex[aData];
       var item = this._items[index];
-      var checkbox = document.getElementById(item._key);
-      if (checkbox)
-        checkbox.setAttribute("style", "font-weight: bold");
+      var label = document.getElementById(item._key);
+      if (label)
+        label.setAttribute("style", "font-weight: bold");
       break;
     case "Migration:ItemAfterMigrate":
-      dump("*** item was migrated...\n");
       var index = itemToIndex[aData];
       var item = this._items[index];
-      var checkbox = document.getElementById(item._key);
-      if (checkbox)
-        checkbox.removeAttribute("style");
+      var label = document.getElementById(item._key);
+      if (label)
+        label.removeAttribute("style");
       break;
     case "Migration:Ended":
-      dump("*** migration ended\n");
       break;
     }
   }

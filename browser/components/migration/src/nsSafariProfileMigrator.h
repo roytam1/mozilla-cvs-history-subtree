@@ -35,38 +35,25 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef dogbertprofilemigrator___h___
-#define dogbertprofilemigrator___h___
+#ifndef safariprofilemigrator___h___
+#define safariprofilemigrator___h___
 
 #include "nsIBrowserProfileMigrator.h"
-#include "nsILocalFile.h"
 #include "nsISupportsArray.h"
 #include "nsString.h"
 
-class nsIFile;
-
-class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
+class nsSafariProfileMigrator : public nsIBrowserProfileMigrator
 {
 public:
   NS_DECL_NSIBROWSERPROFILEMIGRATOR
   NS_DECL_ISUPPORTS
 
-  nsDogbertProfileMigrator();
-  virtual ~nsDogbertProfileMigrator();
+  nsSafariProfileMigrator();
+  virtual ~nsSafariProfileMigrator();
 
 protected:
-  nsresult CopyPreferences(PRBool aReplace);
-  nsresult CopyCookies(PRBool aReplace);
-  nsresult CopyBookmarks(PRBool aReplace);
-
-  nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);
-  void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
 
 private:
-  nsCOMPtr<nsISupportsArray> mProfiles;
-
-  nsCOMPtr<nsILocalFile> mSourceProfile;
-  nsCOMPtr<nsILocalFile> mTargetProfile;
 };
  
 #endif

@@ -35,38 +35,61 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef dogbertprofilemigrator___h___
-#define dogbertprofilemigrator___h___
-
-#include "nsIBrowserProfileMigrator.h"
-#include "nsILocalFile.h"
+#include "nsBrowserProfileMigratorUtils.h"
+#include "nsSafariProfileMigrator.h"
+#include "nsIObserverService.h"
+#include "nsIProfile.h"
+#include "nsIProfileInternal.h"
+#include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
-#include "nsString.h"
+#include "nsISupportsPrimitives.h"
 
-class nsIFile;
+///////////////////////////////////////////////////////////////////////////////
+// nsSafariProfileMigrator
 
-class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
+NS_IMPL_ISUPPORTS1(nsSafariProfileMigrator, nsIBrowserProfileMigrator)
+
+static nsIObserverService* sObserverService = nsnull;
+
+nsSafariProfileMigrator::nsSafariProfileMigrator()
 {
-public:
-  NS_DECL_NSIBROWSERPROFILEMIGRATOR
-  NS_DECL_ISUPPORTS
+  CallGetService("@mozilla.org/observer-service;1", &sObserverService);
+}
 
-  nsDogbertProfileMigrator();
-  virtual ~nsDogbertProfileMigrator();
+nsSafariProfileMigrator::~nsSafariProfileMigrator()
+{
+  NS_IF_RELEASE(sObserverService);
+}
 
-protected:
-  nsresult CopyPreferences(PRBool aReplace);
-  nsresult CopyCookies(PRBool aReplace);
-  nsresult CopyBookmarks(PRBool aReplace);
+///////////////////////////////////////////////////////////////////////////////
+// nsIBrowserProfileMigrator
 
-  nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);
-  void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
+NS_IMETHODIMP
+nsSafariProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnichar* aProfile)
+{
+  nsresult rv = NS_OK;
 
-private:
-  nsCOMPtr<nsISupportsArray> mProfiles;
+  NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
-  nsCOMPtr<nsILocalFile> mSourceProfile;
-  nsCOMPtr<nsILocalFile> mTargetProfile;
-};
- 
-#endif
+  NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsSafariProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
+{
+  *aResult = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSafariProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
+{
+  *aResult = nsnull;
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsSafariProfileMigrator
+

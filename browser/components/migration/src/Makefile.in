@@ -64,7 +64,12 @@ CPPSRCS		= nsProfileMigrator.cpp \
             nsDogbertProfileMigrator.cpp \
             nsOperaProfileMigrator.cpp \
             nsIEProfileMigrator.cpp \
+            nsSeamonkeyProfileMigrator.cpp \
             $(NULL)
+            
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS += nsSafariProfileMigrator.cpp
+endif            
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

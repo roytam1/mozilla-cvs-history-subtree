@@ -35,14 +35,49 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsDogbertProfileMigrator.h"
+#include "nsIFile.h"
 #include "nsIObserverService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
 #include "nsIServiceManager.h"
+#include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsReadableUtils.h"
+
+#define PREF_FILE_HEADER_STRING "# Mozilla User Preferences    " 
+
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
+#define COOKIES_FILE_NAME_IN_4x   "cookies"
+#define BOOKMARKS_FILE_NAME_IN_4x "bookmarks.html"
+#define PSM_CERT7_DB              "cert7.db"
+#define PSM_KEY3_DB               "key3.db"
+#define PSM_SECMODULE_DB          "secmodule.db"
+#elif defined(XP_MAC) || defined(XP_MACOSX)
+#define COOKIES_FILE_NAME_IN_4x   "MagicCookie"
+#define BOOKMARKS_FILE_NAME_IN_4x "Bookmarks.html"
+#define SECURITY_PATH             "Security"
+#define PSM_CERT7_DB              "Certificates7"
+#define PSM_KEY3_DB               "Key Database3"
+#define PSM_SECMODULE_DB          "Security Modules"
+#else /* XP_WIN || XP_OS2 */
+#define COOKIES_FILE_NAME_IN_4x   "cookies.txt"
+#define BOOKMARKS_FILE_NAME_IN_4x "bookmark.htm"
+#define PSM_CERT7_DB              "cert7.db"
+#define PSM_KEY3_DB               "key3.db"
+#define PSM_SECMODULE_DB          "secmod.db"
+#endif /* XP_UNIX */
+
+#define COOKIES_FILE_NAME_IN_5x   "cookies.txt"
+#define BOOKMARKS_FILE_NAME_IN_5x "bookmarks.html"
+#define HISTORY_FILE_NAME_IN_5x   "history.dat"
+
+#define MIGRATION_BUNDLE          "chrome://browser/locale/migration/migration.properties"
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDogbertProfileMigrator
@@ -70,6 +105,8 @@ nsDogbertProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
   nsresult rv = NS_OK;
 
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
+
+  CreateTemplateProfile(aProfile);
 
   if (aReplace) {
     COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
@@ -120,12 +157,69 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
     }
   }
   
-  *aResult = mProfiles;
+  NS_IF_ADDREF(*aResult = mProfiles);
   return NS_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDogbertProfileMigrator
+
+nsresult
+nsDogbertProfileMigrator::CreateTemplateProfile(const PRUnichar* aSuggestedName)
+{
+  nsCOMPtr<nsIFile> profilesDir;
+  NS_GetSpecialDirectory(NS_APP_USER_PROFILES_ROOT_DIR, getter_AddRefs(profilesDir));
+
+  nsXPIDLString profileName;
+  GetUniqueProfileName(profilesDir, aSuggestedName, getter_Copies(profileName));
+
+  nsAutoString profilesDirPath;
+  profilesDir->GetPath(profilesDirPath);
+
+  nsCOMPtr<nsIProfile> pm(do_GetService("@mozilla.org/profile/manager;1"));
+  pm->CreateNewProfile(profileName.get(), profilesDirPath.get(), nsnull, PR_TRUE);
+
+  nsCOMPtr<nsIProfileInternal> pmi(do_QueryInterface(pm));
+  nsCOMPtr<nsIFile> target;
+  pmi->GetProfileDir(profileName.get(), getter_AddRefs(target));
+  mTargetProfile = do_QueryInterface(target);
+  pmi->GetOriginalProfileDir(aSuggestedName, getter_AddRefs(mSourceProfile));
+
+  return NS_OK;
+}
+
+void
+nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir, 
+                                               const PRUnichar* aSuggestedName,
+                                               PRUnichar** aUniqueName)
+{
+  nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
+
+  nsCOMPtr<nsIStringBundle> bundle;
+  bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
+
+  PRBool exists = PR_FALSE;
+  PRUint32 count = 1;
+  nsXPIDLString profileName;
+
+  do {
+    nsAutoString countString;
+    countString.AppendInt(count);
+    const PRUnichar* strings[2] = { aSuggestedName, countString.get() };
+    bundle->FormatStringFromName(NS_LITERAL_STRING("profileName_format").get(), strings, 2, getter_Copies(profileName));
+
+    nsCOMPtr<nsIFile> newProfileDir;
+    aProfilesDir->Clone(getter_AddRefs(newProfileDir));
+    newProfileDir->Append(profileName);
+    newProfileDir->Exists(&exists);
+
+    ++count;
+  } 
+  while (exists);
+  
+  *aUniqueName = ToNewUnicode(profileName);
+}
+
 
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)

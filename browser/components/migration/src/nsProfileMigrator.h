@@ -42,6 +42,9 @@
 #include "nsIObserver.h"
 #include "nsIProfileMigrator.h"
 
+
+class nsISupportsString;
+
 class nsProfileMigrator : public nsIProfileMigrator,
                           public nsIObserver
 {
@@ -54,7 +57,10 @@ public:
   virtual ~nsProfileMigrator() { };
 
 protected:
-  nsresult GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult);
+  nsresult GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMigrator, nsISupportsString** aKey);
+
+private:
+  nsCOMPtr<nsIBrowserProfileMigrator> mMigrator;
 };
 
 #endif

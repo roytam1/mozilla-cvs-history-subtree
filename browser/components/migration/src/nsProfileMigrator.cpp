@@ -43,6 +43,7 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
 #include "nsIWindowWatcher.h"
 #include "nsProfileMigrator.h"
 #include "nsReadableUtils.h"
@@ -55,20 +56,21 @@
 // nsIProfileMigrator
 
 #define MIGRATION_WIZARD_FE_URL "chrome://browser/content/migration/migration.xul"
-#define MIGRATION_WIZARD_FE_FEATURES "chrome,dialog,modal"
+#define MIGRATION_WIZARD_FE_FEATURES "chrome,dialog,modal,centerscreen"
 NS_IMETHODIMP
 nsProfileMigrator::Migrate()
 {
-  nsCOMPtr<nsIBrowserProfileMigrator> bpm;
-  GetDefaultBrowserMigrator(getter_AddRefs(bpm));
+  nsCOMPtr<nsISupportsString> key;
+  GetDefaultBrowserMigratorKey(getter_AddRefs(mMigrator), getter_AddRefs(key));
 
-  if (bpm) {
+  if (key && mMigrator) {
     // By opening the Migration FE with a supplied bpm, it will automatically
     // migrate from it. 
     nsCOMPtr<nsIWindowWatcher> ww(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
     nsCOMPtr<nsISupportsArray> params;
     NS_NewISupportsArray(getter_AddRefs(params));
-    params->AppendElement(bpm);
+    params->AppendElement(key);
+    params->AppendElement(mMigrator);
     nsCOMPtr<nsIDOMWindow> migrateWizard;
     return ww->OpenWindow(nsnull, 
                           MIGRATION_WIZARD_FE_URL,
@@ -108,8 +110,11 @@ typedef struct {
 #endif
 
 nsresult
-nsProfileMigrator::GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult)
+nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMigrator, nsISupportsString** aKey)
 {
+  *aMigrator = nsnull;
+  *aKey = nsnull;
+
 #ifdef XP_WIN
   HKEY hkey;
 
@@ -171,18 +176,31 @@ nsProfileMigrator::GetDefaultBrowserMigrator(nsIBrowserProfileMigrator** aResult
             UINT size;
             ::VerQueryValue(ver, subBlock, (void**)&internalName, &size);
 
+            nsCOMPtr<nsISupportsString> key(do_CreateInstance("@mozilla.org/supports-string;1"));
             nsCOMPtr<nsIBrowserProfileMigrator> bpm;
-            if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_IEXPLORE))
+            if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_IEXPLORE)) {
+              key->SetData(NS_LITERAL_STRING("ie"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie");
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_SEAMONKEY))
+            }
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_SEAMONKEY)) {
+              key->SetData(NS_LITERAL_STRING("seamonkey"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_DOGBERT))
+            }
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_DOGBERT)) {
+              key->SetData(NS_LITERAL_STRING("dogbert"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
-            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA))
+            }
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_FIREBIRD)) {
+              key->SetData(NS_LITERAL_STRING("dogbert"));
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
+            }
+            else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA)) {
+              key->SetData(NS_LITERAL_STRING("opera"));
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera");
+            }
 
-            *aResult = bpm;
-            NS_IF_ADDREF(*aResult);
+            NS_IF_ADDREF(*aKey = key);
+            NS_IF_ADDREF(*aMigrator = bpm);
           }
         }
       }

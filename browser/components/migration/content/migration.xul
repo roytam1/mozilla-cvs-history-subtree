@@ -60,7 +60,7 @@
     <radiogroup id="importSourceGroup">
       <radio id="ie"        label="&importFromIE.label;"        accesskey="&importFromIE.accesskey;"/>
       <radio id="seamonkey" label="&importFromSeamonkey.label;" accesskey="&importFromSeamonkey.accesskey;"/>
-      <radio id="netscape4" label="&importFromNetscape4.label;" accesskey="&importFromNetscape4.accesskey;"/>
+      <radio id="dogbert"   label="&importFromNetscape4.label;" accesskey="&importFromNetscape4.accesskey;"/>
 <!--      
       <radio id="opera"     label="&importFromOpera.label;"     accesskey="&importFromOpera.accesskey;"/>
   -->      
