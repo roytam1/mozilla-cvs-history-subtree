@@ -499,7 +499,7 @@ nsBlockReflowState::AddFloat(nsLineLayout&       aLineLayout,
   // Allocate a nsFloatCache for the float
   nsFloatCache* fc = mFloatCacheFreeList.Alloc();
   fc->mPlaceholder = aPlaceholder;
-  fc->mIsCurrentLineFloat = !aLineLayout.GetIntrinsicWidthPass &&
+  fc->mIsCurrentLineFloat = !aLineLayout.GetIntrinsicWidthPass() &&
                             aLineLayout.CanPlaceFloatNow();
 
   // Now place the float immediately if possible. Otherwise stash it
