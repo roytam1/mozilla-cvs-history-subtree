@@ -45,7 +45,7 @@ exn_finalize(JSContext *cx, JSObject *obj);
 static JSClass exn_class = {
     "Exception",
     JSCLASS_HAS_PRIVATE,
-    JS_PropertyStub,   JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
+    JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
     JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   exn_finalize,
     NULL,             NULL,             NULL,             Exception
 };
@@ -157,12 +157,26 @@ exn_initPrivate(JSContext *cx, JSErrorReport *report)
 static void
 exn_destroyPrivate(JSContext *cx, JSExnPrivate *privateData)
 {
-    JS_ASSERT(privateData->errorReport);
-    if (privateData->errorReport->uclinebuf)
-	JS_free(cx, (void *)privateData->errorReport->uclinebuf);
-    if (privateData->errorReport->filename)
-	JS_free(cx, (void *)privateData->errorReport->filename);
-    JS_free(cx, privateData->errorReport);
+    JSErrorReport *report;
+    const jschar **args;
+    
+    report = privateData->errorReport;
+    JS_ASSERT(report);
+    if (report->uclinebuf)
+	JS_free(cx, (void *)report->uclinebuf);
+    if (report->filename)
+	JS_free(cx, (void *)report->filename);
+    if (report->ucmessage)
+        JS_free(cx, (void *)report->ucmessage);
+    if (report->ucmessage)
+	JS_free(cx, (void *)report->ucmessage);
+    if (report->messageArgs) {
+        args = report->messageArgs;
+        while(*args++ != NULL)
+            JS_free(cx, (void *)*args);
+        JS_free(cx, (void *)report->messageArgs);
+    }
+    JS_free(cx, report);
     JS_free(cx, privateData);
 }
 
@@ -433,22 +447,12 @@ JSObject *
 js_InitExceptionClasses(JSContext *cx, JSObject *obj)
 {
     int i;
-    JSObject **protos;
+    JSObject *protos[JSEXN_LIMIT];
 
-    /*
-     * The browser seems to call js_InitExceptionClasses on a context
-     * that has already been initialized.  In this case, just reuse
-     * the existing exception proto array.
-     */
-    if (cx->exceptionProtos == NULL)
-        cx->exceptionProtos =
-            JS_malloc(cx, sizeof(JSObject *) * (JSEXN_LIMIT + 1));
-    if (!cx->exceptionProtos)
-        return NULL;
-    protos = cx->exceptionProtos;
-    
     /* Initialize the prototypes first. */
     for (i = 0; exceptions[i].name != 0; i++) {
+        JSAtom *atom;
+        JSFunction *fun;
         JSString *nameString;
         int protoidx = exceptions[i].protoIndex;
         
@@ -458,7 +462,19 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
                                  obj);
         if (!protos[i])
             return NULL;
-        
+
+        atom = js_Atomize(cx, exceptions[i].name, strlen(exceptions[i].name), 0);
+
+        /* Make a constructor function for the current name. */
+        fun = js_DefineFunction(cx, obj, atom, Exception, 1, 0);
+        if (!fun)
+            return NULL; /* XXX also remove named property from obj... */
+
+        /* Make the prototype and constructor links. */
+        if (!js_SetClassPrototype(cx, fun->object, protos[i],
+                                  JSPROP_READONLY | JSPROP_PERMANENT))
+            return NULL;
+
         /* proto bootstrap bit from JS_InitClass omitted. */
         nameString = JS_NewStringCopyZ(cx, exceptions[i].name);
         if (nameString == NULL)
@@ -478,12 +494,6 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     }
     
     /*
-     * NULL-terminate the proto list, so that other modules
-     * that don't have acess to JSEXN_LIMIT can traverse it.
-     */
-    protos[i] = NULL;
-    
-    /*
      * Add an empty message property.  (To Exception.prototype only,
      * because this property will be the same for all the exception
      * protos.)
@@ -500,33 +510,10 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     if (!JS_DefineFunctions(cx, protos[0], exception_methods))
         return NULL;
 
-    /*
-     * Now that we have all these nice prototypes to attach to,
-     * create a bunch of functions to attach to them.
-     */
-    for (i = 0; exceptions[i].name != 0; i++) {
-        JSAtom *atom;
-        JSFunction *fun;
-
-        atom = js_Atomize(cx, exceptions[i].name, strlen(exceptions[i].name), 0);
-
-        /* Make a constructor function for the current name. */
-        fun = js_DefineFunction(cx, obj, atom, Exception, 1, 0);
-
-        if (!fun)
-            return NULL; /* XXX also remove named property from obj... */
-
-        /* Make the prototype and constructor links. */
-        if (!js_SetClassPrototype(cx, fun->object, protos[i],
-                                  JSPROP_READONLY | JSPROP_PERMANENT))
-            return NULL;
-    }
-
     return protos[0];
 }
 
-
-static JSExnType errorToException[] = {
+static JSExnType errorToExceptionNum[] = {
 #define MSG_DEF(name, number, count, exception, format) \
     exception,
 #include "js.msg"
@@ -547,7 +534,7 @@ JSBool
 js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
 {
     JSErrNum errorNumber;
-    JSObject *errobj;
+    JSObject *errObject, *errProto;
     JSExnType exn;
     JSExnPrivate *privateData;
     JSString *msgstr;
@@ -555,7 +542,7 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     /* Find the exception index associated with this error. */
     JS_ASSERT(reportp);
     errorNumber = reportp->errorNumber;
-    exn = errorToException[errorNumber];
+    exn = errorToExceptionNum[errorNumber];
     JS_ASSERT(exn < JSEXN_LIMIT);
 
 #if defined( DEBUG_mccabe ) && defined ( PRINTNAMES )
@@ -572,20 +559,24 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
     if (exn == JSEXN_NONE)
 	return JS_FALSE;
 
-    /* js_InitExceptionClasses should set this. */
-    JS_ASSERT(cx->exceptionProtos);
+    /*
+     * Try to get an appropriate prototype by looking up the corresponding
+     * exception constructor name in the current context.  If the constructor
+     * has been deleted or overwritten, this may fail or return NULL, and
+     * js_NewObject will fall back to using Object.prototype.
+     */
+    if (!js_GetClassPrototype(cx, exceptions[exn].name, &errProto))
+        errProto = NULL;
 
     /*
      * Use js_NewObject instead of js_ConstructObject, because
-     * js_ConstructObject seems to require a frame.  Get the appropriate
-     * exception prototype from the exceptionProtos array in the context.
+     * js_ConstructObject seems to require a frame.
      */
-    errobj = js_NewObject(cx, &exn_class,
-			  cx->exceptionProtos[exn], NULL);
+    errObject = js_NewObject(cx, &exn_class, errProto, NULL);
 
     /* Store 'message' as a javascript-visible value. */
     msgstr = JS_NewStringCopyZ(cx, message);
-    if (!JS_DefineProperty(cx, errobj, "message", STRING_TO_JSVAL(msgstr),
+    if (!JS_DefineProperty(cx, errObject, "message", STRING_TO_JSVAL(msgstr),
                            NULL, NULL,
                            JSPROP_ENUMERATE))
         return JS_FALSE;
@@ -597,10 +588,10 @@ js_ErrorToException(JSContext *cx, const char *message, JSErrorReport *reportp)
      * data in the JSTokenStream.
      */
     privateData = exn_initPrivate(cx, reportp);
-    OBJ_SET_SLOT(cx, errobj, JSSLOT_PRIVATE, PRIVATE_TO_JSVAL(privateData));
+    OBJ_SET_SLOT(cx, errObject, JSSLOT_PRIVATE, PRIVATE_TO_JSVAL(privateData));
 
     /* Set the generated Exception object as the current exception. */
-    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errobj));
+    JS_SetPendingException(cx, OBJECT_TO_JSVAL(errObject));
 
     /* Flag the error report passed in to indicate an exception was raised. */
     reportp->flags |= JSREPORT_EXCEPTION;

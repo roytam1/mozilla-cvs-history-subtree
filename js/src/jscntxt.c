@@ -81,9 +81,6 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
 #if JS_HAS_EXCEPTIONS
     cx->throwing = JS_FALSE;
 #endif
-#if JS_HAS_ERROR_EXCEPTIONS
-    cx->exceptionProtos = NULL;
-#endif
 
     return cx;
 }
@@ -141,8 +138,6 @@ js_DestroyContext(JSContext *cx)
     JS_FinishArenaPool(&cx->stackPool);
     JS_FinishArenaPool(&cx->codePool);
     JS_FinishArenaPool(&cx->tempPool);
-    if (cx->exceptionProtos)
-        free(cx->exceptionProtos);
     if (cx->lastMessage)
 	free(cx->lastMessage);
     free(cx);
