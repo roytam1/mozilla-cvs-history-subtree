@@ -28,7 +28,7 @@ RANLIB = echo
 CPU_ARCH = x86 # XXX fixme
 GFX_ARCH = win32
 
-OS_CFLAGS = -DXP_PC -DWIN32 -D_WINDOWS -D_WIN32
+OS_CFLAGS = -DXP_PC -DWIN32 -D_WINDOWS -D_WIN32 -DEXPORT_JS_API
 OS_LIBS = -lm -lc
 
 PREBUILT_CPUCFG = 1
@@ -38,6 +38,11 @@ LIB_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
  /subsystem:windows /dll /incremental:yes /debug\
  /machine:I386
+
+
+ifdef JS_THREADSAFE
+LIB_LINK_FLAGS += $(DIST)/lib/libnspr21.lib
+endif
 
 CAFEDIR = t:/cafe
 JCLASSPATH = $(CAFEDIR)/Java/Lib/classes.zip
