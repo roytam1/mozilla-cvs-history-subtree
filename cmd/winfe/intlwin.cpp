@@ -811,6 +811,10 @@ BOOL CIntlWin::UseVirtualFont()
 }
 BOOL CIntlWin::GetTextExtentPoint(int wincsid, HDC hDC, LPCSTR pString, int iLength, LPSIZE lpSize)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	if(0 == iLength)
 	{
 		lpSize->cx = 0;
@@ -845,10 +849,15 @@ BOOL CIntlWin::GetTextExtentPoint(int wincsid, HDC hDC, LPCSTR pString, int iLen
 #else
 	return::GetTextExtentPoint(hDC, pString, iLength, lpSize);
 #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CIntlWin::GetTextExtentPointWithCyaFont(CyaFont *theNSFont,int wincsid, HDC hDC, LPCSTR pString, int iLength, LPSIZE lpSize)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	if(0 == iLength)
 	{
 		lpSize->cx = 0;
@@ -885,6 +894,7 @@ BOOL CIntlWin::GetTextExtentPointWithCyaFont(CyaFont *theNSFont,int wincsid, HDC
 // #else
 //	return::GetTextExtentPoint(hDC, pString, iLength, lpSize);
 // #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 CSize CIntlWin::GetTextExtent(int16 wincsid, HDC pDC, LPCTSTR pString, int iLength)
@@ -897,6 +907,10 @@ CSize CIntlWin::GetTextExtent(int16 wincsid, HDC pDC, LPCTSTR pString, int iLeng
 
 BOOL CIntlWin::TextOut(int16 wincsid, HDC hDC, int nXStart, int nYStart, LPCSTR  lpString,int  iLength)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	if(0 == iLength)
 		return TRUE;
 	wincsid = INTL_DocToWinCharSetID(wincsid) & ~ CS_AUTO;
@@ -921,12 +935,17 @@ BOOL CIntlWin::TextOut(int16 wincsid, HDC hDC, int nXStart, int nYStart, LPCSTR 
 		return CIntlUnicodeVirtualFontStrategy::TextOut(hDC, nXStart, nYStart, lpString, iLength);
 	}    
 	return ::TextOut(hDC, nXStart, nYStart, lpString, iLength);		// The final fallback
+#endif /* MOZ_NGLAYOUT */
 }
 
 //based on BOOL CIntlWin::TextOut(int16 wincsid, HDC hDC, int nXStart, int nYStart, LPCSTR  lpString,int  iLength)
 BOOL CIntlWin::TextOutWithCyaFont(CyaFont *theNSFont, int16 wincsid, HDC hDC,  
 								  int nXStart, int nYStart, LPCSTR  lpString,int  iLength)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	if(0 == iLength)
 		return TRUE;
 #ifdef XP_WIN32
@@ -959,11 +978,16 @@ BOOL CIntlWin::TextOutWithCyaFont(CyaFont *theNSFont, int16 wincsid, HDC hDC,
 		return(TRUE);
 	else
 		return(FALSE);
+#endif /* MOZ_NGLAYOUT */
 }
 
 //	*** Fix Me: Need to change to support UTF8
 BOOL CIntlWin::ExtTextOut(int16 wincsid, HDC pDC, int x, int y, UINT nOptions, LPCRECT lpRect, LPCSTR lpszString, UINT nCount, LPINT lpDxWidths)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	if(0 == nCount)
 		return TRUE;
 	wincsid = INTL_DocToWinCharSetID(wincsid) & ~ CS_AUTO;
@@ -993,11 +1017,16 @@ BOOL CIntlWin::ExtTextOut(int16 wincsid, HDC pDC, int x, int y, UINT nOptions, L
 			pDC, x, y, lpszString, nCount);
 	}
     return  ::ExtTextOut(pDC, x, y, nOptions, lpRect, lpszString, nCount, lpDxWidths);
+#endif /* MOZ_NGLAYOUT */
 }
 
 #ifdef XP_WIN32
 int CIntlWin::DrawTextEx(int16 wincsid, HDC hdc, LPSTR lpchText, int cchText,LPRECT lprc,UINT dwDTFormat,LPDRAWTEXTPARAMS lpDTParams)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return 0;
+#else
 	wincsid = INTL_DocToWinCharSetID(wincsid) & ~ CS_AUTO;
 
 	int iRetval;
@@ -1049,11 +1078,16 @@ int CIntlWin::DrawTextEx(int16 wincsid, HDC hdc, LPSTR lpchText, int cchText,LPR
 			iRetval =  ::DrawTextEx(hdc, lpchText, cchText, lprc, dwDTFormat, lpDTParams);
 	}
 	return iRetval;
+#endif /* MOZ_NGLAYOUT */
 }
 #endif
 
 int CIntlWin::DrawText(int16 wincsid, HDC hdc, LPSTR lpchText, int cchText,LPRECT lprc,UINT dwDTFormat)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return 0;
+#else
 #ifdef _WIN32
 	return CIntlWin::DrawTextEx( wincsid,  hdc,  lpchText,  cchText, lprc, dwDTFormat, NULL);
 #else
@@ -1090,6 +1124,7 @@ int CIntlWin::DrawText(int16 wincsid, HDC hdc, LPSTR lpchText, int cchText,LPREC
     }
     return  ::DrawText(hdc, lpchText, cchText, lprc, dwDTFormat );
 #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 extern "C" void *FE_GetSingleByteTable(int16 from_csid, int16 to_csid, int resourceid)

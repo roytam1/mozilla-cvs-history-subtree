@@ -591,8 +591,12 @@ BOOL CSaveCX::CanCreate(URL_Struct* pUrl)
 
 		    switch(m_iFileType) {
 				case TXT:
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 					//  We need to ask the text front end to handle.
 					TranslateText(m_pUrl, m_csFileName);
+#endif /* MOZ_NGLAYOUT */
 					break;
 
 				default:

@@ -1018,6 +1018,9 @@ URL_Struct *CDCCX::CreateUrlFromHist(BOOL bClearStateData, SHIST_SavedData *pSav
 	//		that is needed to perform the next load (such as position)....
 	//	Other's not dealing with history, save their data in the GetUrl call.
     SHIST_SetPositionOfCurrentDoc(&(GetContext()->hist), 0);
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     if(GetOriginX() || GetOriginY())    {
 #ifdef LAYERS
 	    LO_Any *pAny = (LO_Any *)LO_XYToNearestElement(GetDocumentContext(), GetOriginX(), GetOriginY(), NULL);
@@ -1029,6 +1032,7 @@ URL_Struct *CDCCX::CreateUrlFromHist(BOOL bClearStateData, SHIST_SavedData *pSav
 		    SHIST_SetPositionOfCurrentDoc(&(GetContext()->hist), pAny->ele_id);
 	    }
     }
+#endif /* MOZ_NGLAYOUT */
 
 	//	Call/return the base.
 	URL_Struct *pUrl = CStubsCX::CreateUrlFromHist(bClearStateData, pSavedData, bWysiwyg);

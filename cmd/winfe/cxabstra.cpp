@@ -193,9 +193,13 @@ void CAbstractCX::DestroyContext()	{
         //      unstable state.
 	    XP_RemoveContextFromList(m_pXPCX);
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
         //  Have mocha perform cleanup and continue destruction in the
         //    callback
         ET_RemoveWindowContext(m_pXPCX, mocha_done_callback, this);
+#endif /* MOZ_NGLAYOUT */
     }
 }
 
@@ -824,6 +828,7 @@ void CAbstractCX::Forward()	{
 	}
 }
 
+#ifndef MOZ_NGLAYOUT
 XL_TextTranslation CAbstractCX::TranslateText(URL_Struct *pUrl, const char *pFileName, const char *pPrefix, int iWidth)  {
 //	Purpose:    Translate a url into text.
 //	Arguments:  pUrl        The URL to translate.
@@ -858,6 +863,7 @@ XL_TextTranslation CAbstractCX::TranslateText(URL_Struct *pUrl, const char *pFil
     //  Do it.
     return(XL_TranslateText(GetContext(), pUrl, pTextFE));
 }
+#endif /* MOZ_NGLAYOUT */
 
 void CAbstractCX::Interrupt()	{
 //	Purpose:	Interrupt any loads in a context.

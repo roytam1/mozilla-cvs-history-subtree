@@ -348,7 +348,9 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
 !endif
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\hook.lib \
+!endif
 #!if defined(EDITOR)
 !ifdef MOZ_JAVA
     $(DIST)\lib\edtplug.lib \
@@ -380,11 +382,15 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\jmc.lib \
 !endif
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\font.lib \
+!endif
     $(DIST)\lib\rdf32.lib \
     $(DIST)\lib\xml.lib \
     $(OUTDIR)\appicon.res \
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\winfont.lib \
+!endif
 !ifdef MOZ_LDAP
 !ifdef MOZ_JAVA
     $(DIST)\lib\nsldap32.lib \
@@ -667,6 +673,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !ENDIF
 <<
     $(DEPTH)\cmd\winfe\mkfiles32\makedep.exe @$(PROD)$(VERSTR).dep -F <<
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\liblayer\src\cl_comp.c
 	$(DEPTH)\lib\liblayer\src\cl_drwbl.c
 	$(DEPTH)\lib\liblayer\src\cl_layer.c
@@ -723,6 +730,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\layout\ptinpoly.c
 	$(DEPTH)\lib\layout\layrelay.c 
 	$(DEPTH)\lib\layout\laytrav.c 
+!endif
 
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libaddr\line64.c
@@ -840,6 +848,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmisc\shist.c  
 	$(DEPTH)\lib\libmisc\undo.c   
 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\libmocha\et_mocha.c
 	$(DEPTH)\lib\libmocha\et_moz.c
 	$(DEPTH)\lib\libmocha\lm_applt.c
@@ -867,6 +876,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !if "$(MOZ_BITS)" == "32"
 !ifdef MOZ_JAVA
 	$(DEPTH)\lib\libmocha\lm_jsd.c
+!endif
 !endif
 !endif
 
@@ -898,6 +908,10 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmsg\maildb.cpp
 	$(DEPTH)\lib\libmsg\mailhdr.cpp
 	$(DEPTH)\lib\libmsg\mhtmlstm.cpp
+#ifdef MOZ_NGLAYOUT
+	$(DEPTH)\lib\libnet\moz_depend.cpp
+	$(DEPTH)\lib\libnet\depend.cpp
+#endif
 	$(DEPTH)\lib\libmsg\msgbg.cpp
 	$(DEPTH)\lib\libmsg\msgbgcln.cpp
 	$(DEPTH)\lib\libmsg\msgbiff.c
@@ -1067,6 +1081,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\jsautocf.c
 	$(DEPTH)\lib\libnet\txview.c 
 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\libparse\pa_amp.c
 	$(DEPTH)\lib\libparse\pa_hash.c   
 	$(DEPTH)\lib\libparse\pa_hook.c   
@@ -1077,11 +1092,14 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libstyle\csslex.c
 	$(DEPTH)\lib\libstyle\csstab.c
 	$(DEPTH)\lib\libstyle\csstojs.c
+!endif
 	$(DEPTH)\lib\libnet\pllist.c 
 	$(DEPTH)\lib\libnet\plstr2.c 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\libstyle\jssrules.c
 	$(DEPTH)\lib\libstyle\stystack.c
 	$(DEPTH)\lib\libstyle\stystruc.c
+!endif
 
 	$(DEPTH)\modules\libutil\src\obs.c
 !if "$(MOZ_BITS)"=="16"
@@ -1110,12 +1128,12 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\plugin\npglue.cpp
 	$(DEPTH)\lib\plugin\npwplat.cpp 
 	$(DEPTH)\lib\plugin\nsplugin.cpp 
-!endif
 
 	$(DEPTH)\lib\xlate\isotab.c   
 	$(DEPTH)\lib\xlate\stubs.c
 	$(DEPTH)\lib\xlate\tblprint.c 
 	$(DEPTH)\lib\xlate\text.c 
+!endif
 
 	$(DEPTH)\lib\xp\allxpstr.c
 	$(DEPTH)\lib\xp\xp_alloc.c
@@ -1233,9 +1251,11 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\confhook.cpp
 	$(DEPTH)\cmd\winfe\csttlbr2.cpp
 	$(DEPTH)\cmd\winfe\custom.cpp 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\cuvfm.cpp
 	$(DEPTH)\cmd\winfe\cuvfs.cpp
 	$(DEPTH)\cmd\winfe\cvffc.cpp
+!endif
 	$(DEPTH)\cmd\winfe\cxabstra.cpp   
 	$(DEPTH)\cmd\winfe\cxdc.cpp   
 	$(DEPTH)\cmd\winfe\cxdc1.cpp   
@@ -1332,8 +1352,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\mozilla.cpp   
 	$(DEPTH)\cmd\winfe\nsapp.cpp   
 	$(DEPTH)\cmd\winfe\netsdoc.cpp
-	$(DEPTH)\cmd\winfe\nsfont.cpp
 !ifndef MOZ_NGLAYOUT
+	$(DEPTH)\cmd\winfe\nsfont.cpp
 	$(DEPTH)\cmd\winfe\netsprnt.cpp   
 !endif
 	$(DEPTH)\cmd\winfe\netsvw.cpp 
@@ -1370,7 +1390,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\spiwrap.c 
 	$(DEPTH)\cmd\winfe\srvritem.cpp   
 	$(DEPTH)\cmd\winfe\statbar.cpp 
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\stshfont.cpp 
+!endif
 !ifdef MOZ_LOC_INDEP
 	$(DEPTH)\cmd\winfe\stshli.cpp 
 !endif
@@ -2395,11 +2417,15 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\crypto.lib +
     $(DIST)\lib\secutil.lib +
     $(DIST)\lib\hash.lib +
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\font.lib +
     $(DIST)\lib\winfont.lib +
+!endif
     $(DIST)\lib\prefuuid.lib +
     $(DIST)\lib\htmldg16.lib +
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\hook.lib +
+!endif
     $(DIST)\lib\png.lib +
 	$(DIST)\lib\sched16.lib +
     $(DIST)\lib\rdf16.lib +

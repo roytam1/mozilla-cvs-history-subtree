@@ -236,7 +236,7 @@ void CPrefInfo::Initialize()
 	wfe_SetLayoutColor(LO_COLOR_BG, m_rgbBackgroundColor);
 	PREF_RegisterCallback("browser.background_color", prefWatcher, (void *)6);
 	
-#ifdef MOZ_NGLAYOUT
+#ifndef MOZ_NGLAYOUT
 	// See if the user's choices override the document
 	PREF_GetBoolPref("browser.use_document_colors", &prefBool);
   m_bUseDocumentColors = prefBool;

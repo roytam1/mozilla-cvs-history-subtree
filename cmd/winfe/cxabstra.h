@@ -92,7 +92,9 @@ public:
 	//	Function to load a URL with this context, with the custom exit routing handler.
 	//	Use this to NET_GetURL instead or XL_TranslateText instead.
 	virtual int GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoad = TRUE, BOOL bForceNew = FALSE);
+#ifndef MOZ_NGLAYOUT
     virtual XL_TextTranslation TranslateText(URL_Struct *pUrl, const char *pFileName, const char *pPrefix = NULL, int iWidth = 75);
+#endif /* MOZ_NGLAYOUT */
 
     virtual void UpdateStopState(MWContext *pContext) = 0;
 

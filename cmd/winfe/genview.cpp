@@ -1161,6 +1161,7 @@ void CGenericView::OnUpdateViewFrameSource(CCmdUI* pCmdUI)
 
 void CGenericView::OnSetFocus(CWnd* pOldWnd) 
 {
+#ifndef MOZ_NGLAYOUT
 	CView::OnSetFocus(pOldWnd);
     if(GetContext() && !GetContext()->IsDestroyed() && GetContext()->GetContext())    {
         // send the event to libmocha --- do any further processing
@@ -1172,10 +1173,12 @@ void CGenericView::OnSetFocus(CWnd* pOldWnd)
 	ET_SendEvent(GetContext()->GetContext(), NULL, event, NULL, 
                      this);
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CGenericView::OnKillFocus(CWnd* pNewWnd) 
 {
+#ifndef MOZ_NGLAYOUT
 	CView::OnKillFocus(pNewWnd);
     if(GetContext() && !GetContext()->IsDestroyed() && GetContext()->GetContext())    {
         // send the event to libmocha --- do any further processing
@@ -1187,5 +1190,6 @@ void CGenericView::OnKillFocus(CWnd* pNewWnd)
         ET_SendEvent(GetContext()->GetContext(), NULL, event, NULL, 
                      this);
     }
+#endif /* MOZ_NGLAYOUT */
 }
 

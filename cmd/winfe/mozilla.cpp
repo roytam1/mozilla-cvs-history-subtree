@@ -211,10 +211,10 @@ static const CLSID BASED_CODE clsid =
 
 CNetscapeApp NEAR theApp;
 
-//#ifdef MOZ_NETSCAPE_FONT_MODULE
+#ifndef MOZ_NGLAYOUT
 // the only one object of CNetscapeFontModule
 CNetscapeFontModule    theGlobalNSFont;
-//#endif // MOZ_NETSCAPE_FONT_MODULE
+#endif /* MOZ_NGLAYOUT */
 
 NET_StreamClass *null_stream(FO_Present_Types format_out, void *newshack, URL_Struct *urls, MWContext *cx)      {
 	//      Stream which does nothing.
@@ -796,7 +796,9 @@ BOOL CNetscapeApp::InitInstance()
     // Get the main NSPR event queue
     mozilla_event_queue  = PR_GetMainEventQueue();
 
+#ifndef MOZ_NGLAYOUT
     LM_InitMocha();
+#endif /* MOZ_NGLAYOUT */
 
     // Initialize the XP file extension mapping
     NET_InitFileFormatTypes(NULL, NULL);
@@ -827,11 +829,11 @@ BOOL CNetscapeApp::InitInstance()
 	m_iCSID = (int16)csid;
 	INTL_ChangeDefaultCharSetID((int16)csid);
 
+#ifndef MOZ_NGLAYOUT
 	STARTUP_cvffc();
 
-//#ifdef MOZ_NETSCAPE_FONT_MODULE
 	VERIFY( FONTERR_OK == theGlobalNSFont.InitFontModule() );
-//#endif MOZ_NETSCAPE_FONT_MODULE
+#endif /* MOZ_NGLAYOUT */
 
 	// Initialize RDF
     m_pRDFCX = new CRDFCX(::RDFSlave, MWContextRDFSlave);
@@ -911,10 +913,12 @@ BOOL CNetscapeApp::InitInstance()
     else
 	m_bUseLockedPrefs = FALSE;
 
+#ifdef MOZ_NGLAYOUT
     // Frame creation may cause the loading of the home page so register
     // all of the parser and network functions first
     static PA_InitData parser_data;
     parser_data.output_func = LO_ProcessTag;
+#endif /* MOZ_NGLAYOUT */
 
 	PREF_GetIntPref("network.max_connections",&prefInt);
     int nMaxConnect = CASTINT(prefInt);
@@ -1125,7 +1129,9 @@ BOOL CNetscapeApp::InitInstance()
     NET_RegisterContentTypeConverter(TEXT_MDL, FO_PRINT, NULL, INTL_ConvCharCode);
     NET_RegisterContentTypeConverter(TEXT_PLAIN, FO_PRINT, NULL, NET_PlainTextConverter);
     NET_RegisterContentTypeConverter(UNKNOWN_CONTENT_TYPE, FO_PRINT, NULL, NET_PlainTextConverter);
+#ifdef MOZ_NGLAYOUT
     NET_RegisterContentTypeConverter(INTERNAL_PARSER, FO_PRINT, (void *)&parser_data, PA_BeginParseMDL);
+#endif /* MOZ_NGLAYOUT */
     NET_RegisterContentTypeConverter(IMAGE_GIF, FO_PRINT, NULL, IL_ViewStream);
     NET_RegisterContentTypeConverter(IMAGE_XBM, FO_PRINT, NULL, IL_ViewStream);
     NET_RegisterContentTypeConverter(IMAGE_JPG, FO_PRINT, NULL, IL_ViewStream);
@@ -2033,9 +2039,12 @@ int CNetscapeApp::ExitInstance()
     //  Save certs and keys early, since if they are lost the user is screwed
     SECNAV_Shutdown();
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     //  Shut down mocha.
     ET_FinishMocha();
-
+#endif /* MOZ_NGLAYOUT */
 
 
     BOOL javaShutdownSuccessful = fe_ShutdownJava();
@@ -2100,7 +2109,9 @@ int CNetscapeApp::ExitInstance()
     Ctl3dUnregister(m_hInstance);
 #endif
 
+#ifndef MOZ_NGLAYOUT
 	SHUTDOWN_cvffc();
+#endif /* MOZ_NGLAYOUT */
     //  Free off various allocated memory.
     if(XP_AppName)    {
 	XP_FREE(XP_AppName);

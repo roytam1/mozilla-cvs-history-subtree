@@ -690,6 +690,10 @@ int CDCCX::SelectNetscapeFontWithCache( HDC hdc, LO_TextAttr *pAttr, CyaFont *& 
 //    link-list the font, so it can be deleted when destroy document.
 int CDCCX::SelectNetscapeFont( HDC hdc, LO_TextAttr *pAttr, CyaFont *& pMyFont )
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return 0;
+#else
 	// create font for the text and cache it in pAttr->FE_Data.
 	EncodingInfo *pEncoding = theApp.m_pIntlFont->GetEncodingInfo(GetContext());
 	BOOL bItalic = FALSE;
@@ -931,6 +935,7 @@ int CDCCX::SelectNetscapeFont( HDC hdc, LO_TextAttr *pAttr, CyaFont *& pMyFont )
 	m_cplCachedFontList.AddTail((void *)pMyFont);  // pSelectThis
 
 	return( returnCode );
+#endif /* MOZ_NGLAYOUT */
 }	// HFONT CDCCX::SelectNetscapeFont()
 
 void CDCCX::ReleaseNetscapeFontWithCache(HDC hdc, CyaFont * pNetscapeFont)	
@@ -947,7 +952,11 @@ void CDCCX::ReleaseNetscapeFontWithCache(HDC hdc, CyaFont * pNetscapeFont)
 
 void CDCCX::ReleaseNetscapeFont(HDC hdc, CyaFont * pNetscapeFont)
 {	
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	pNetscapeFont->EndDrawText( hdc );					// restore the old font.
+#endif /* MOZ_NGLAYOUT */
 }
 
 // m_iOffset can be at most 8 or at least -8 based on the values in
@@ -1011,6 +1020,10 @@ BOOL CDCCX::ResolveElement(LTRB& Rect, int32 x, int32 y, int32 x_offset, int32 y
 	return bRetval;
 }
 BOOL CDCCX::ResolveElement(LTRB& Rect, LO_TextStruct *pText, int iLocation, int32 lStartPos, int32 lEndPos, int iClear)	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	BOOL bRetval = TRUE;
 
 	//	Subtext, in order to be considered at all, must first pass the text resolution.
@@ -1048,6 +1061,7 @@ BOOL CDCCX::ResolveElement(LTRB& Rect, LO_TextStruct *pText, int iLocation, int3
 	}
 
 	return(bRetval);
+#endif /* MOZ_NGLAYOUT */
 }
 
 /* 
@@ -2283,6 +2297,10 @@ int CDCCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoa
 	//	Save the location of the current document, if not at the very top.
     //  Reset to top, then see if we need to change more....
     SHIST_SetPositionOfCurrentDoc(&(GetContext()->hist), 0);
+
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     if(GetOriginX() || GetOriginY())    {
 #ifdef LAYERS
 	    LO_Any *pAny = (LO_Any *)LO_XYToNearestElement(GetDocumentContext(), GetOriginX(), GetOriginY(), NULL);
@@ -2294,6 +2312,7 @@ int CDCCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoa
 		    SHIST_SetPositionOfCurrentDoc(&(GetContext()->hist), pAny->ele_id);
 	    }
     }
+#endif /* MOZ_NGLAYOUT */
 
 	//	Handle forced image loading.
 	m_csForceLoadImage = m_csNexttimeForceLoadImage;
@@ -3736,6 +3755,10 @@ void CDCCX::GetTextFrame(MWContext *pContext, LO_TextStruct *pText,
 #endif  /* LAYERS */
 
 int CDCCX::GetTextInfo(MWContext *pContext, LO_TextStruct *pText, LO_TextInfo *pTextInfo)	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	HDC hdc = GetAttribDC();
 
 	//	Determine and select the font.
@@ -3757,6 +3780,7 @@ int CDCCX::GetTextInfo(MWContext *pContext, LO_TextStruct *pText, LO_TextInfo *p
 	ReleaseNetscapeFontWithCache( hdc, pMyFont );
 	ReleaseContextDC(hdc);
 	return(TRUE);
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CDCCX::ResolveTextExtent(int16 wincsid, HDC pDC, LPCTSTR pString, int iLength, LPSIZE pSize, CyaFont *pMyFont)	

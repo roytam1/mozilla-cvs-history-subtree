@@ -765,6 +765,9 @@ void CPaneCX::ShowScrollBars(int iBars, BOOL bShow)  {
 
 void CPaneCX::RealizeScrollBars(int32 *pX, int32 *pY)  
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     if(m_lDocHeight && m_lDocWidth) {
         if(AlwaysShowScrollBars()) {
             ShowScrollBars(SB_BOTH, TRUE);
@@ -930,6 +933,7 @@ void CPaneCX::RealizeScrollBars(int32 *pX, int32 *pY)
             CL_ScrollCompositorWindow(pContext->compositor, m_lOrgX, m_lOrgY);
         }
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CPaneCX::SetDocDimension(MWContext *pContext, int iLocation, int32 lWidth, int32 lLength)   {

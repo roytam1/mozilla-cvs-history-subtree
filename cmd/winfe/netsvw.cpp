@@ -1171,7 +1171,10 @@ win_on_drop_callback(MWContext * pContext, LO_Element * pEle, int32 event,
 BOOL CViewDropTarget::OnDrop(CWnd* pWnd, 
                 COleDataObject* pDataObject, DROPEFFECT dropEffect, CPoint point)
 {
-
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
     if(!pDataObject || !pWnd)
         return(FALSE);
 
@@ -1276,6 +1279,7 @@ BOOL CViewDropTarget::OnDrop(CWnd* pWnd,
     return(TRUE);
 
     //Mocha will handle cleanup and free tmpUrl when it calls back in.
+#endif /* MOZ_NGLAYOUT */
 }
 
 

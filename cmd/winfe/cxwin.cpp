@@ -772,6 +772,7 @@ void CWinCX::ScrollWindow(int x, int y)
 #endif
 //	This function get's called when the window moves around.
 void CWinCX::OnMoveCX()	{
+#ifndef MOZ_NGLAYOUT
     //  WARNING:m_crWindowRect will be invalid until next AftWMSize!
 
 	//	Go through all our immediate children, telling them their screen location
@@ -800,6 +801,7 @@ void CWinCX::OnMoveCX()	{
 #ifdef DDRAW
 	CalcWinPos();
 #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 static void
@@ -4642,6 +4644,9 @@ void CWinCX::AllConnectionsComplete(MWContext *pContext)
     	}
     }
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	if( theGlobalNSFont.WebfontsNeedReload( pContext ) )
 	{
 		// need to remove all font cache before reload.
@@ -4649,6 +4654,7 @@ void CWinCX::AllConnectionsComplete(MWContext *pContext)
 		int usePassInType = 1;
 		NiceReload(usePassInType, NET_RESIZE_RELOAD );
 	}
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CWinCX::UpdateStopState(MWContext *pContext)
@@ -4781,9 +4787,13 @@ void CWinCX::SetDocDimension(MWContext *pContext, int iLocation, int32 lWidth, i
     // height shrinks, which currently only happens when editing.)
     m_lOrgY = max(0, min(m_lOrgY, lLength - m_lHeight));
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     // Anytime we change the scrolling origin, we have to tell the compositor.
     if ( GetContext()->compositor)
         CL_ScrollCompositorWindow(GetContext()->compositor, m_lOrgX, m_lOrgY);
+#endif /* MOZ_NGLAYOUT */
 
     //  Call the base.
     CPaneCX::SetDocDimension(pContext, iLocation, lWidth, lLength);
