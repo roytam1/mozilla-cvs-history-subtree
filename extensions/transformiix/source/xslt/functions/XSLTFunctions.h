@@ -32,12 +32,9 @@
 #define TRANSFRMX_XSLT_FUNCTIONS_H
 
 #include "Expr.h"
-#include "Map.h"
-#include "NodeSet.h"
 #include "txNamespaceMap.h"
 #include "XMLUtils.h"
 
-class NamedMap;
 class txPattern;
 class txStylesheet;
 class txKeyValueHashKey;

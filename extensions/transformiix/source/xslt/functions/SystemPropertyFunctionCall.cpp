@@ -2,6 +2,7 @@
 #include "txAtoms.h"
 #include "XMLUtils.h"
 #include "XSLTFunctions.h"
+#include "ExprResult.h"
 
 /*
   Implementation of XSLT 1.0 extension function: system-property

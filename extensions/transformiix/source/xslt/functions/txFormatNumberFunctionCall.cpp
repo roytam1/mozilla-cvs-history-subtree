@@ -42,6 +42,7 @@
 #include "txIXPathContext.h"
 #include "txStylesheet.h"
 #include <math.h>
+#include "ExprResult.h"
 
 #include "prdtoa.h"
 
