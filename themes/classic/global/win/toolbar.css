@@ -30,27 +30,26 @@
 /* ::::: toolbox ::::: */
 
 toolbox {
-  -moz-appearance: toolbox;
-  background-color: -moz-Dialog;
-  border-left: 1px solid ThreeDShadow;
-  border-top: 1px solid ThreeDShadow;
-  border-right: 1px solid ThreeDHighlight;
+  border-bottom: 1px solid #494F5D;
 }
+ 
+/* ::::: toolbar ::::: */
 
-/* ::::: toolbar & menubar ::::: */
-
-toolbar,
-menubar {
+toolbar,menubar {
   min-width: 1px; /* DON'T DELETE!
     Prevents hiding of scrollbars in browser when window is made smaller.*/
+  background: #3398cc;
+  color: #000000;
 }
 
-.toolbar-holder {
-  border-left: 1px solid ThreeDHighlight;
-  border-top: 1px solid ThreeDHighlight;
-  border-right: 1px solid ThreeDShadow;
-  border-bottom: 1px solid ThreeDShadow;
-}  
+toolbar > .toolbar-holder {
+  color: white;
+  background: #3398cc;
+  border-right: 1px solid #02659c !important;
+  border-left: 1px solid #84affd !important;
+  border-top: 1px solid #84affd !important;
+  border-bottom: 1px solid #02659c !important;
+}
 
 /* ::::: toolbargrippy ::::: */
 
