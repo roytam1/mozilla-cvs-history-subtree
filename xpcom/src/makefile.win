@@ -69,7 +69,6 @@ CPPSRCS =                             \
         nsEventQueueService.cpp       \
         nsAllocator.cpp               \
         xcDll.cpp                     \
-        xcDllStore.cpp                \
         nsGenericFactory.cpp          \
         $(NULL)
 
@@ -91,7 +90,6 @@ CPP_OBJS =                                        \
         .\$(OBJDIR)\nsEventQueueService.obj       \
         .\$(OBJDIR)\nsAllocator.obj               \
         .\$(OBJDIR)\xcDll.obj                     \
-        .\$(OBJDIR)\xcDllStore.obj                \
         .\$(OBJDIR)\nsGenericFactory.obj          \
         $(NULL)
 
