@@ -31,10 +31,13 @@
 
 #include "prtypes.h"
 
+class nsIRDFArcsInCursor;
+class nsIRDFArcsOutCursor;
+class nsIRDFAssertionCursor;
 class nsIRDFCursor;
-class nsIRDFDataBase;
 class nsIRDFDataSource;
 class nsIRDFNode;
+class nsIRDFResource;
 class nsString;
 
 /**
