@@ -593,8 +593,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     caller = cx->fp->down;
     implicitWith = JS_FALSE; /* Unnecessary init to kill gcc warning */
 
-    if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
-            && (*caller->pc != JSOP_CALLSPECIAL)) {
+    if (JSVERSION_IS_ECMA(cx->version) && *caller->pc != JSOP_EVAL) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_BAD_INDIRECT_CALL, js_eval_str);
         return JS_FALSE;

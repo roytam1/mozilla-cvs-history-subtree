@@ -2176,15 +2176,14 @@ js_Interpret(JSContext *cx, jsval *result)
 	    PUSH_OPND(OBJECT_TO_JSVAL(obj));
 	    break;
 
-	  case JSOP_CALLSPECIAL:
 	  case JSOP_CALL:
+	  case JSOP_EVAL:
 	    argc = GET_ARGC(pc);
 	    SAVE_SP(fp);
 	    ok = js_Invoke(cx, argc, JS_FALSE);
 	    RESTORE_SP(fp);
-	    if (!ok) {
+	    if (!ok)
 		goto out;
-	    }
 	    obj = NULL;
 	    break;
 

@@ -1956,14 +1956,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	op = JSOP_CALL;
       emit_call:
 	pn2 = pn->pn_head;
-	if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
-                && (pn2->pn_op == JSOP_NAME)
-                /*
-                * below, is it sufficient to compare the atom values ?
-                */
-                 && (ATOM_KEY(pn2->pn_atom)
-                            == ATOM_KEY(cx->runtime->atomState.evalAtom)))
-            op = JSOP_CALLSPECIAL;
+	if (JSVERSION_IS_ECMA(cx->version) &&
+	    pn2->pn_op == JSOP_NAME &&
+	    pn2->pn_atom == cx->runtime->atomState.evalAtom) {
+	    op = JSOP_EVAL;
+	}
 
 	if (!js_EmitTree(cx, cg, pn2))
 	    return JS_FALSE;

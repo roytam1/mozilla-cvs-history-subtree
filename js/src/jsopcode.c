@@ -1304,7 +1304,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 	      case JSOP_NEW:
 	      case JSOP_CALL:
-	      case JSOP_CALLSPECIAL:
+	      case JSOP_EVAL:
 		saveop = op;
 		op = JSOP_NOP;           /* turn off parens */
 		argc = GET_ARGC(pc);
