@@ -732,7 +732,7 @@ sub BuildCommonProjects()
 	# is now included in the xpcom library. But many projects still link with base, and it is faster to
 	# make a dummy base library than to remove base from all the projects in the tree. Eventually, though,
 	# we want to do this.
-	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"base$D.shlb(dummy)", "", 1, $main::ALIAS_SYM_FILES, 0);
+	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"base$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
 	
 	BuildOneProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp",						"xpcom.xpt", "", 1, 0, 1);
 
