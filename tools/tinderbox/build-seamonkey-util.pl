@@ -219,6 +219,8 @@ sub GetSystemInfo {
             $Settings::BuildName = "$host $Settings::OS/arm $os_ver $build_type";
         } elsif ($Settings::CPU eq 'ppc') {
             $Settings::BuildName = "$host $Settings::OS/$Settings::CPU $os_ver $build_type";
+        } elsif ($Settings::CPU eq 'i686') {
+            $Settings::BuildName = "$host $Settings::OS $build_type";
         } else {
             # $Settings::BuildName set above
         }
