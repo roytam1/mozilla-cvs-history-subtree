@@ -27,6 +27,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+PACKAGE_FILE = unix.pkg
+
 include $(topsrcdir)/config/rules.mk
 
 # Hack to make sure that mozilla-config has the proper nspr dependencies
