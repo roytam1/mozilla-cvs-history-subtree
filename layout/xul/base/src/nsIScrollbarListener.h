@@ -37,6 +37,7 @@ public:
   NS_IMETHOD PositionChanged(nsIPresContext& aPresContext, PRInt32 aOldIndex, PRInt32 aNewIndex) = 0;
 
   NS_IMETHOD PagedUpDown() = 0;
+  //  NS_IMETHOD GoingAway() = 0;
 };
 
 #endif

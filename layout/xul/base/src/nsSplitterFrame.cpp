@@ -444,7 +444,7 @@ nsSplitterFrame::HandleEvent(nsIPresContext& aPresContext,
     break;
   }
 
-  return nsHTMLContainerFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
+  return nsBoxFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 }
 
 void
@@ -690,8 +690,8 @@ nsSplitterFrameImpl::MouseDown(nsIDOMEvent* aMouseEvent)
   ResizeType resizeBefore = GetResizeBefore();
   ResizeType resizeAfter  = GetResizeAfter();
 
-  delete mChildInfosBefore;
-  delete mChildInfosAfter;
+  delete[] mChildInfosBefore;
+  delete[] mChildInfosAfter;
 
   mChildInfosBefore = new nsSplitterInfo[childCount];
   mChildInfosAfter  = new nsSplitterInfo[childCount];
@@ -823,7 +823,7 @@ nsSplitterFrameImpl::Reverse(nsSplitterInfo*& aChildInfos, PRInt32 aCount)
     for (int i=0; i < aCount; i++)
        infos[i] = aChildInfos[aCount - 1 - i];
 
-    delete aChildInfos;
+    delete[] aChildInfos;
     aChildInfos = infos;
 }
 
