@@ -147,7 +147,9 @@ IDB_BUTTON_FOLDER       BITMAP  DISCARDABLE     "res\\button_f.bmp"
 IDB_BACK                BITMAP  DISCARDABLE     "res\\msgback.bmp"
 IDB_USERBTN             BITMAP  DISCARDABLE     "res\\defuser.bmp"
 IDB_SECURE_STATUS       BITMAP  DISCARDABLE     "res\\ssecure.bmp"
+#if defined(MOZ_OFFLINE)
 IDB_OFFLINE_STATUS      BITMAP  DISCARDABLE     "res\\offline.bmp"
+#endif
 LANGDOWND               BITMAP  DISCARDABLE     "RES\\DOWND.BMP"
 IDB_NAV_BAR             BITMAP  DISCARDABLE     "res\\hdrgbar.bmp"
 IDB_NAV_BAR1            BITMAP  DISCARDABLE     "res\\vdrgbar.bmp"
@@ -987,18 +989,17 @@ END
 
 IDD_NEWSGROUP_ADDSERVER DIALOG DISCARDABLE  0, 0, 186, 101
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "New Newsgroups Server"
+CAPTION "New Discussion Groups Server"
 FONT 8, "MS Sans Serif"
 BEGIN
-    LTEXT           "Server:",IDC_STATIC,7,10,25,10
-    LTEXT           "Static",IDC_STATIC_HOST,35,10,140,12
     LTEXT           "&Port:",IDC_STATIC,7,29,25,10
     EDITTEXT        IDC_EDIT_PORT,35,28,83,12,ES_AUTOHSCROLL
     CONTROL         "Se&cure",IDC_SECURE,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,35,47,49,13
+    DEFPUSHBUTTON   "OK",IDOK,21,79,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,76,79,50,14
     CONTROL         "&Always use name and password",IDC_USE_NAME,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,35,62,143,13
-<<<<<<< mozilla.rc
     PUSHBUTTON      "Help",ID_HELP,129,79,50,14
     LTEXT           "Server:",IDC_STATIC,7,10,25,10
     LTEXT           "Static",IDC_STATIC_HOST,36,10,140,12
@@ -1015,13 +1016,8 @@ BEGIN
                     WS_VSCROLL | WS_TABSTOP
     EDITTEXT        IDC_ADDRNAME,134,16,133,13,ES_AUTOHSCROLL
     PUSHBUTTON      "Search...",IDC_DIRSEARCH,277,16,50,13
-=======
-    DEFPUSHBUTTON   "OK",IDOK,21,80,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,75,80,50,14
-    PUSHBUTTON      "Help",ID_HELP,129,80,50,14
-    EDITTEXT        IDC_EDIT_HOST,35,8,142,14,ES_AUTOHSCROLL
->>>>>>> 3.2.4.2
 END
+
 
 1536 DIALOG DISCARDABLE  0, 0, 181, 132
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -2412,7 +2408,6 @@ BEGIN
     IDC_COMBO_SCOPE, 0x403, 24, 0
 0x6e69, 0x5320, 0x6c65, 0x6365, 0x6574, 0x2064, 0x654e, 0x7377, 0x7267, 
 0x756f, 0x7370, 0x0020, 
-<<<<<<< mozilla.rc
     IDC_COMBO_AND_OR, 0x403, 33, 0
 0x614d, 0x6374, 0x2068, 0x6c61, 0x206c, 0x666f, 0x7420, 0x6568, 0x6620, 
 0x6c6f, 0x6f6c, 0x6977, 0x676e, 0x7720, 0x6568, 0x6572, "\000" 
@@ -2425,9 +2420,6 @@ END
 IDD_MAILFILTER DLGINIT
 BEGIN
     IDC_COMBO_AND_OR, 0x403, 33, 0
-=======
-    1503, 0x403, 33, 0
->>>>>>> 3.2.4.2
 0x614d, 0x6374, 0x2068, 0x6c61, 0x206c, 0x666f, 0x7420, 0x6568, 0x6620, 
 0x6c6f, 0x6f6c, 0x6977, 0x676e, 0x7720, 0x6568, 0x6572, "\000" 
     1503, 0x403, 33, 0
@@ -2436,7 +2428,6 @@ BEGIN
     0
 END
 
-<<<<<<< mozilla.rc
 IDD_ADVANCED_LDAP_SEARCH DLGINIT
 BEGIN
     IDC_COMBO_AND_OR, 0x403, 30, 0
@@ -2449,8 +2440,6 @@ BEGIN
 END
 
 
-=======
->>>>>>> 3.2.4.2
 /////////////////////////////////////////////////////////////////////////////
 //
 // String Table
