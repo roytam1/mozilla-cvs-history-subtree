@@ -3630,7 +3630,7 @@ void CRDFOutlinerParent::CreateColumns ( void )
 		// We have retrieved a new column.  Contruct a front end column object
 		CRDFColumn* newColumn = new CRDFColumn(columnName, columnWidth, token, tokenType);
 		index = (UINT)columnMap.AddCommand(newColumn);
-		m_pOutliner->AddColumn(columnName, index, 0);
+		m_pOutliner->AddColumn(columnName, index);
 	}
 	HT_DeleteColumnCursor(columnCursor);
 	m_pOutliner->SetVisibleColumns(1); // For now... TODO: Get visible/invisible info!
