@@ -41,6 +41,11 @@ ifeq ($(PTHREADS_USER),1)
 CSRCS += pthreads_user.c
 endif
 
+CSRCS += $(PR_MD_CSRCS)
+ASFILES += $(PR_MD_ASFILES)
+
+TARGETS = $(OBJS)
+
 ifeq ($(OS_ARCH),SunOS)
 	ifneq ($(OS_RELEASE),4.1.3_U1)
 		ifeq ($(OS_TEST),sun4u)
@@ -53,11 +58,6 @@ ifeq ($(OS_ARCH),SunOS)
 		endif
 	endif
 endif
-
-CSRCS += $(PR_MD_CSRCS)
-ASFILES += $(PR_MD_ASFILES)
-
-TARGETS = $(OBJS)
 
 INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
