@@ -13,17 +13,9 @@
 Netscape Directory SDK 4.0 for Java&nbsp;<br>
 Release Notes</font></font></h2></center>
 
-<center><b>Last updated August 02, 1999</b></center>
+<center><b>Last updated August 03, 1999</b></center>
 
 <p><br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
 <br>
 <br>
 <p><font face="Arial, Helvetica"><font size=-1>These release notes apply
@@ -34,24 +26,12 @@ using the product.</font></font>
 <font face="Arial, Helvetica"><font size=-1><a href="#new">What's New</a></font></font></li>
 
 <li>
-<font face="Arial, Helvetica"><font size=-1><a href="#install">Installing
-the Netscape Directory SDK for Java</a></font></font></li>
-
-<li>
 <font face="Arial, Helvetica"><font size=-1><a href="#changes3">Bugs Fixed
 Since 3.10</a></font></font></li>
 
 <li>
-<font face="Arial, Helvetica"><font size=-1><a href="#getting">Getting
-Started</a></font></font></li>
-
-<li>
 <font face="Arial, Helvetica"><font size=-1><a href="#report">Reporting
 Problems</a></font></font></li>
-
-<li>
-<font face="Arial, Helvetica"><font size=-1><a href="#newsgroup">Accessing
-the Directory Developers Newsgroup</a></font></font></li>
 </ul>
 
 <hr SIZE=1 NOSHADE WIDTH="100%"><a NAME="new"></a><font face="Arial, Helvetica"><font size=-1>Here
@@ -91,10 +71,11 @@ instead.</font></font></li>
 
 <li>
 <font face="Arial, Helvetica"><font size=-1>When searching from </font></font><tt>LDAPConnection</tt>,
-r<font face="Arial, Helvetica"><font size=-1>etrieval of server response
-controls&nbsp; is moved to LDAPSearchResults.&nbsp; So you would call</font></font></li>
+<font size=-1><font face="Arial,Helvetica">r</font><font face="Arial, Helvetica">etrieval
+of server response controls&nbsp; is moved to LDAPSearchResults.&nbsp;
+So you would call</font></font></li>
 
-<br><tt>LDAPSearchResults.retResponseControls()</tt><font face="Arial, Helvetica"><font size=-1>
+<br><tt>LDAPSearchResults.getResponseControls()</tt><font face="Arial, Helvetica"><font size=-1>
 instead of </font></font><tt>LDAPConnection.getResponseControls()</tt><font face="Arial, Helvetica"><font size=-1>.
 For backwards compatibility, you can still get the controls from LDAPConnection,
 but it is recommended for new code to get them from LDAPSearchResults.</font></font>
@@ -104,13 +85,10 @@ failover connection policies. The available policies are: (1) serial ,
 (2) parallel with no delay and (3) parallel&nbsp; with delay. See </font></font><tt>LDAPConnection.setConnSetupDelay()</tt><font face="Arial, Helvetica"><font size=-1>.</font></font></li>
 
 <li>
-<font face="Arial, Helvetica"><font size=-1>Added support for connection
-setup policies. The available policies are: (1) serial , (2) parallel with
-no delay&nbsp; and (3) parallel&nbsp; with delay. See </font></font><tt>LDAPConnection.setConnSetupDelay()</tt><font face="Arial, Helvetica"><font size=-1>.</font></font></li>
-
-<li>
 <tt>LDAPConnection</tt><font face="Arial, Helvetica"><font size=-1> has
-a new method </font></font><tt>reconnect()</tt><font face="Arial, Helvetica"><font size=-1>.</font></font></li>
+a new method </font></font><tt>reconnect()</tt><font size=-1><font face="Arial,Helvetica">
+which first disconnects and then connects and binds again using the same
+parameters and mechanisms</font><font face="Arial, Helvetica">.</font></font></li>
 
 <li>
 <font face="Arial, Helvetica"><font size=-1>Added support for connection
@@ -119,11 +97,11 @@ in the online JavaDocs.</font></font></li>
 
 <li>
 <font face="Arial, Helvetica"><font size=-1>Added </font></font><tt>LDAPInterruptedException</tt><font face="Arial, Helvetica"><font size=-1>
-which is thrown if a LDAP operation is interrupted.</font></font></li>
+which is thrown if an LDAP operation is interrupted.</font></font></li>
 
 <li>
-<tt>LDAPSchema</tt><font face="Arial, Helvetica"><font size=-1> now fully
-supports RFC2252.</font></font></li>
+<tt>LDAPSchema</tt><font face="Arial, Helvetica"><font size=-1> and the
+associated schema element classes now fully support RFC2252.</font></font></li>
 </ul>
 <b><font face="Arial, Helvetica"><font size=-1>New asynchronous Java LDAP
 API</font></font></b>
@@ -156,7 +134,7 @@ LDAPExtendedResponse</tt>,<tt> LDAPSearchResult and LDAPSearchResponseReference.
 and Directory Interface (JNDI) Service Provider</font></font></b>
 <p><font face="Arial, Helvetica"><font size=-1>The JNDI service provider
 support for event notification is implemented more efficiently on top of
-the asynchronous JAVA LDAP API.&nbsp; For more information on JNDI, see
+the asynchronous Java LDAP API.&nbsp; For more information on JNDI, see
 the <a href="http://java.sun.com/products/jndi/index.html">java.sun website
 </a>and
 the <a href="ldapsp-relnotes.htm">Release Notes for the Netscape LDAP Service
@@ -170,44 +148,7 @@ for</a> <a href="http://www.ietf.org/rfc/rfc2222.txt">Simple Authentication
 and Security Layer (SASL).</a> You will need to have </font></font><tt>jaas.jar</tt><font face="Arial, Helvetica"><font size=-1>
 in your CLASSPATH if you are using SASL authentication.</font></font>
 <p>
-<hr SIZE=1 NOSHADE WIDTH="100%"><a NAME="install"></a><b><font face="Arial, Helvetica"><font size=-1>INSTALLING
-THE NETSCAPE DIRECTORY SDK FOR JAVA</font></font></b>
-<p><font face="Arial, Helvetica"><font size=-1>Follow these instructions
-to install the Netscape Directory SDK:</font></font>
-<ul>
-<li>
-<font face="Arial, Helvetica"><font size=-1>UNIX</font></font></li>
-
-<ol>
-<li>
-<font face="Arial, Helvetica"><font size=-1>Save the file to a location
-on your hard drive where you want the SDK installed.</font></font></li>
-
-<li>
-<font face="Arial, Helvetica"><font size=-1>Unzip the file by entering
-the command:</font></font></li>
-
-<br><tt>gunzip <i>&lt;filename>.tar.gz</i></tt>
-<li>
-<font face="Arial, Helvetica"><font size=-1>Untar the resulting tar file
-by entering the command:</font></font></li>
-
-<br><tt>tar xvof <i>&lt;filename>.tar</i></tt><font face="Arial, Helvetica"><font size=-1>.</font></font></ol>
-
-<li>
-<font face="Arial, Helvetica"><font size=-1>Windows 3.x/95/NT</font></font></li>
-
-<ol>
-<li>
-<font face="Arial, Helvetica"><font size=-1>Save the file to disk.</font></font></li>
-
-<li>
-<font face="Arial, Helvetica"><font size=-1>Double-click the file to extract
-its contents.</font></font></li>
-</ol>
-</ul>
-
-<hr SIZE=1 WIDTH="100%">
+<hr SIZE=1 NOSHADE WIDTH="100%">
 <br><a NAME="changes3.05"></a><b><font face="Arial, Helvetica"><font size=-1>BUGS
 FIXED SINCE 3.10</font></font></b>
 <blockquote><font face="Arial, Helvetica"><font size=-1>355365&nbsp; </font></font><tt>LDAPSearchResults.getCount()</tt><font face="Arial, Helvetica"><font size=-1>
@@ -323,162 +264,19 @@ doesn't work</font></font>
 <br><font face="Arial, Helvetica"><font size=-1>359646&nbsp;&nbsp; modDN
 doesn't work</font></font></blockquote>
 
-<hr SIZE=1 NOSHADE WIDTH="100%"><a NAME="getting"></a><b><font face="Arial, Helvetica"><font size=-1>GETTING
-STARTED</font></font></b>
-<p><font face="Arial, Helvetica"><font size=-1>The Netscape Directory SDK
-for Java includes the classes for the Lightweight Directory Access Protocol
-(LDAP) Application Programming Interface (API). You can use these classes
-to write your own application to connect to, search, and update LDAP servers
-on the Internet.</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>After installing the SDK,
-read the documentation in the </font></font><tt>doc</tt><font face="Arial, Helvetica"><font size=-1>
-directory and look at the samples in the </font></font><tt>examples</tt><font face="Arial, Helvetica"><font size=-1>
-directory.</font></font>
-<p><b><font face="Arial, Helvetica"><font size=-1>Reading the Online Documentation</font></font></b>
-<br><font face="Arial, Helvetica"><font size=-1>The Netscape Directory
-SDK for Java includes documentation in HTML format. To read this documentation:</font></font>
-<ol>
-<li>
-<font face="Arial, Helvetica"><font size=-1>Start Netscape Navigator or
-Communicator.</font></font></li>
-
-<li>
-<font face="Arial, Helvetica"><font size=-1>Open the file named </font></font><tt>index.htm</tt><font face="Arial, Helvetica"><font size=-1>
-in the </font></font><tt>doc</tt><font face="Arial, Helvetica"><font size=-1>
-directory.</font></font></li>
-</ol>
-<b><font face="Arial, Helvetica"><font size=-1>Compiling the Examples</font></font></b>
-<br><font face="Arial, Helvetica"><font size=-1>The Netscape Directory
-SDK for Java also includes sample applications that you can modify, compile,
-and run. The samples are in the </font></font><tt>examples</tt><font face="Arial, Helvetica"><font size=-1>
-directory.</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>Each application is an example
-that shows how you can use the classes to search or update an LDAP server.</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>For more information on
-these sample clients, see the </font></font><tt>README</tt><font face="Arial, Helvetica"><font size=-1>
-file in the </font></font><tt>examples</tt><font face="Arial, Helvetica"><font size=-1>
-directory.</font></font>
-<p><a NAME="exploring"></a><b><font face="Arial, Helvetica"><font size=-1>Exploring
-the SDK</font></font></b>
-<p><font face="Arial, Helvetica"><font size=-1>The Netscape Directory SDK
-for Java contains the following directories:</font></font>
-<ul>
-<li>
-<tt>beans</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This directory contains
-the LDAP Java bean class files, which are part of the<tt> </tt></font></font><tt>netscape.ldap.beans</tt><font face="Arial, Helvetica"><font size=-1>package.</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>The </font></font><tt>netscape.ldap.beans.*</tt><font face="Arial, Helvetica"><font size=-1>
-classes are not included with Netscape Communicator. If you are writing
-applications that use these classes, be sure to provide these classes to
-your end users.</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>This directory also contains
-a<tt> </tt></font></font><tt>makejars.bat</tt><font face="Arial, Helvetica"><font size=-1>file
-and a<tt> </tt></font></font><tt>makejars.sh</tt><font face="Arial, Helvetica"><font size=-1>shell
-script. You can use these to create JAR files for the LDAP Java beans.</font></font>
-<br>&nbsp;
-<li>
-<tt>doc</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This directory contains
-the documentation for the Netscape Directory SDK for Java. To view this
-documentation, start Netscape Navigator or Communicator and open the file
-named </font></font><tt>index.htm</tt><font face="Arial, Helvetica"><font size=-1>in
-the</font></font><tt>doc</tt><font face="Arial, Helvetica"><font size=-1>directory.</font></font>
-<br>&nbsp;
-<li>
-<tt>examples</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This directory contains
-sample source code for LDAP applications in Java. The examples are organized
-into different subdirectories:</font></font>
-<ul>
-<li>
-<tt>java</tt><font face="Arial, Helvetica"><font size=-1> contains examples
-of the standard LDAP operations, such as adding an entry and searching
-for entries.</font></font></li>
-
-<li>
-<tt>java/beans</tt><font face="Arial, Helvetica"><font size=-1> contains
-examples of using the LDAP Java beans.</font></font></li>
-
-<li>
-<tt>java/ldapfilt</tt><font face="Arial, Helvetica"><font size=-1> contains
-an example of using an LDAP filter configuration file with the LDAP filter
-classes.</font></font></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>(Note that the LDAP filter
-classes are not included with Netscape Communicator.)</font></font>
-<li>
-<tt>js</tt><font face="Arial, Helvetica"><font size=-1> contains examples
-of using LiveConnect to create and manipulate LDAP Java objects from JavaScript.</font></font></li>
-
-<br>&nbsp;</ul>
-
-<li>
-<a NAME="packages"></a><tt>packages</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This directory contains
-JAR files for most of the main LDAP Java class files. (The classes for
-LDAP Java beans are still under the </font></font><tt>beans</tt><font face="Arial, Helvetica"><font size=-1>
-directory.)</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>Make sure that you update
-your </font></font><tt>CLASSPATH</tt><font face="Arial, Helvetica"><font size=-1>
-variable to point to the following files:</font></font>
-<ul>
-<li>
-<tt>ldapjdk.jar</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This JAR file contains
-the classes in the </font></font><tt>netscape.ldap</tt><font face="Arial, Helvetica"><font size=-1>
-package, the </font></font><tt>netscape.ldap.controls</tt><font face="Arial, Helvetica"><font size=-1>
-package, and the </font></font><tt>com.netscape.sasl</tt><font face="Arial, Helvetica"><font size=-1>
-package. It also includes all classes in the </font></font><tt>netscape.ldap.util</tt><font face="Arial, Helvetica"><font size=-1>
-package except for the LDAP filter classes.</font></font>
-<br>&nbsp;
-<li>
-<tt>ldapfilt.jar</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This JAR file contains
-the classes in the <tt>netscape.ldap.util</tt> package and the </font></font><tt>com.oroinc.text.regex</tt><font face="Arial, Helvetica"><font size=-1>
-package.</font></font>
-<br><tt>com.oroinc.text.regex</tt><font face="Arial, Helvetica"><font size=-1>
-is the OROMatcher(tm) regular expression package from ORO Inc. If you want
-to use the OROMatcher package separately (not through the Netscape Directory
-SDK for Java classes), you must obtain a license to use the OROMatcher
-package from ORO, Inc. (You can also obtain the OROMatcher documentation
-directly from ORO.)</font></font>
-<p><font face="Arial, Helvetica"><font size=-1>For details, see the ORO,
-Inc. home page at </font></font><tt><a href="http://www.oroinc.com/" TARGET="_top">http://www.oroinc.com/</a></tt><font face="Arial, Helvetica"><font size=-1>.</font></font>
-<br>&nbsp;</ul>
-
-<li>
-<a NAME="tools"></a><tt>tools</tt></li>
-
-<br><font face="Arial, Helvetica"><font size=-1>This directory contains
-classes that implement equivalents to the command-line tools provided with
-Netscape Directory Server.</font></font></ul>
-
-<hr SIZE=1 WIDTH="100%"><a NAME="report"></a><b><font face="Arial, Helvetica"><font size=-1>REPORTING
+<hr SIZE=0 WIDTH="100%"><a NAME="report"></a><b><font face="Arial, Helvetica"><font size=-1>REPORTING
 PROBLEMS</font></font></b>
 <p><font face="Arial, Helvetica"><font size=-1>Please submit your problem
-via the <a href="http://blues/support/bugs/index.html" TARGET="_top">DevEdge
-Bug Report Form</a></font></font>
-<p>
-<hr SIZE=1 NOSHADE WIDTH="100%"><a NAME="newsgroup"></a><b><font face="Arial, Helvetica"><font size=-1>ACCESSING
-THE DIRECTORY DEVELOPERS NEWSGROUP</font></font></b>
+via the the <a href="http://bugzilla.mozilla.org">Bugzilla bugsystem</a>
+. Use the "LDAP Java SDK" component.</font></font>
 <p><font face="Arial, Helvetica"><font size=-1>If you have additional questions
-or need more information about the LDAP Java SDK, see the <a href="http://blues/support/newsgroups/index.html?content=newsgrp.html#directory" TARGET="_top">Directory
-Developers newsgroup</a>.</font></font>
-<p>
-<hr SIZE=1 NOSHADE WIDTH="100%">
-<pre><font face="Arial, Helvetica"><font size=-1>Contains OROMatcher(TM) regular expression software from <a href="http://www.oroinc.com">ORO Java Software</a>.
-(C) Copyright 1997 by <a href="http://www.oroinc.com">ORO Java Software</a>.
-Redistribution separate from Netscape JAVA LDAP SDK or direct use
-of OROMatcher interfaces requires a license from <a href="http://www.oroinc.com">ORO Java Software</a>.
-OROMatcher(TM) is a trademark of Original Reusable Objects, Inc.</font></font></pre>
-
-<center><font face="Arial, Helvetica"><font size=-1>For more Internet development
+or need more information about the LDAP Java SDK, see the <a href="news://news.mozilla.org/netscape.public.mozilla.directory">directory
+newsgroup at Mozilla</a> and the <a href="http://developer.netscape.com/support/newsgroups/index.html?content=newsgrp.html#directory" TARGET="_top">Directory
+Developers newsgroup</a> at <a href="http://developer.netscape.com">Netscape
+DevEdge</a>.</font></font>
+<br>&nbsp;
+<center>
+<p><font face="Arial, Helvetica"><font size=-1>For more Internet development
 resources, try <a href="http://home.netscape.com/computing/techsearch/index.html?cp=dev01bnts" TARGET="_top">Netscape
 TechSearch</a></font></font></center>
 
@@ -487,11 +285,11 @@ TechSearch</a></font></font></center>
 <tr>
 <td WIDTH="15"></td>
 
-<td ALIGN=LEFT VALIGN=TOP WIDTH="165"><font face="Arial, Helvetica"><font size=-2><a href="http://blues/support/faqs/index.html?content=deofaq.html" TARGET="_top">DevEdge
+<td ALIGN=LEFT VALIGN=TOP WIDTH="165"><font face="Arial, Helvetica"><font size=-2><a href="/support/faqs/index.html?content=deofaq.html" TARGET="_top">DevEdge
 Online FAQ</a></font></font>
-<br><font face="Arial, Helvetica"><font size=-2><a href="http://blues/program/index_frame.html?content=contact.html" TARGET="_top">Developer
+<br><font face="Arial, Helvetica"><font size=-2><a href="/program/index_frame.html?content=contact.html" TARGET="_top">Developer
 Response Center</a></font></font>
-<br><font face="Arial, Helvetica"><font size=-2><a href="http://blues/program/index.html" TARGET="_top">Join
+<br><font face="Arial, Helvetica"><font size=-2><a href="/program/index.html" TARGET="_top">Join
 DevEdge Program</a></font></font></td>
 
 <td WIDTH="5"></td>
@@ -507,5 +305,7 @@ Compass Server</a>.</font></font></td>
 </tr>
 </table></center>
 
+<br>&nbsp;
+<br>&nbsp;
 </body>
 </html>
