@@ -316,6 +316,16 @@ function Startup()
     document.documentElement.setAttribute("height", defaultHeight);
   }
   
+  var navBar = document.getElementById("nav-bar");
+  if (!navBar.hasAttribute("_updated_iconsize") && 
+      navBar.getAttribute("iconsize") == "small") {
+    dump("*** resetting icon size for the main toolbar...\n");
+    navBar.setAttribute("iconsize", "large");
+    navBar.setAttribute("_updated_iconsize", "true");
+    document.persist("nav-bar", "iconsize");
+    document.persist("nav-bar", "_updated_iconsize");
+  }
+  
   setTimeout(delayedStartup, 0);
 }
 

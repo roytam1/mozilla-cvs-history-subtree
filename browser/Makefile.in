@@ -50,4 +50,9 @@ DIRS += installer/windows
 endif
 endif
 
+ifeq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+ifdef MOZ_PHOENIX
+DIRS += themes
+endif
+endif
 include $(topsrcdir)/config/rules.mk
