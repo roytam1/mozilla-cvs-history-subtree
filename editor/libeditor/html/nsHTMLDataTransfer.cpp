@@ -1591,11 +1591,11 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
         }
       }
 
-     // handle transferable hooks
-     nsCOMPtr<nsIDOMDocument> domdoc;
-     GetDocument(getter_AddRefs(domdoc));
-     if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
-       return NS_OK;
+      // handle transferable hooks
+      nsCOMPtr<nsIDOMDocument> domdoc;
+      GetDocument(getter_AddRefs(domdoc));
+      if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
+        return NS_OK;
 
       rv = InsertFromTransferable(trans, contextStr, infoStr,
                                   nsnull, 0, PR_TRUE);
