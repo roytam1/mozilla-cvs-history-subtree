@@ -103,6 +103,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_Command;
   RDF_Resource RDF_Command_Launch;
   RDF_Resource RDF_Command_Refresh;
+  RDF_Resource RDF_Command_Reveal;
   RDF_Resource RDF_Command_Atalk_FlatHierarchy;
   RDF_Resource RDF_Command_Atalk_Hierarchy;
 

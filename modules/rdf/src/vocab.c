@@ -137,7 +137,8 @@ createNavCenterVocab () {
   gNavCenter->RDF_largeIcon  = newResource("largeIcon", RDF_LARGE_ICON_URL_STR);
   gNavCenter->RDF_HTMLURL = newResource("htmlURL", RDF_HTML_URL_STR);
   gNavCenter->RDF_HTMLHeight = newResource("htmlHeight", RDF_HTML_HEIGHT_STR);
-  gNavCenter->RDF_LocalFiles = RDF_GetResource(gCoreDB, "NC:LocalFiles", true);
+  gNavCenter->RDF_LocalFiles = createContainer("NC:LocalFiles");
+  setResourceType(gNavCenter->RDF_LocalFiles, LFS_RT);
   gNavCenter->RDF_FTP = createContainer("NC:FTP");
   gNavCenter->RDF_FTP = newResource("NC:FTP", RDF_FTP_NAME_STR);
   gNavCenter->RDF_Appletalk = createContainer("NC:Appletalk");
@@ -169,6 +170,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_Command = RDF_GetResource (gCoreDB, "Command", true);
   gNavCenter->RDF_Command_Launch = RDF_GetResource(gCoreDB, "Command:Launch", true);
   gNavCenter->RDF_Command_Refresh = RDF_GetResource(gCoreDB, "Command:Refresh", true);
+  gNavCenter->RDF_Command_Reveal = RDF_GetResource(gCoreDB, "Command:Reveal", true);
   gNavCenter->RDF_Command_Atalk_FlatHierarchy = RDF_GetResource(gCoreDB, "Command:at:View Zone List", true);
   gNavCenter->RDF_Command_Atalk_Hierarchy = RDF_GetResource(gCoreDB, "Command:at:View Zone Hierarchy", true);
 
@@ -201,7 +203,7 @@ createNavCenterVocab () {
   gNavCenter->triggerPlacement = newResource("triggerPlacement", RDF_TRIGGER_PLACEMENT_STR);
 
   /* Toolbar Appearance Styles */
-  gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", "Toolbar Bitmap Position");
+  gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* "Toolbar Bitmap Position" */ );
 
 #endif /* MOZILLA_CLIENT */
 }

@@ -964,6 +964,8 @@ HT_GetCountVisibleChildren(HT_Resource node)
 	return(count);
 }
 
+
+
 PRBool
 initToolbars (HT_Pane pane)
 {
@@ -990,7 +992,9 @@ initToolbars (HT_Pane pane)
 	return(err);
 }
 
-HT_Pane
+
+
+PR_PUBLIC_API(HT_Pane)
 HT_NewToolbarPane(HT_Notification notify)
 {
 	HT_Pane			pane;
@@ -1050,6 +1054,8 @@ HT_NewToolbarPane(HT_Notification notify)
 	}
 	return(pane);
 }
+
+
 
 HT_Pane
 paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag)
@@ -3958,6 +3964,19 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 
 				case	HT_CMD_FIND:
 				HT_Find((node != NULL) ? HT_GetNodeName(node): NULL);
+				break;
+
+				case	HT_CMD_REVEAL_FILEFOLDER:
+				if (node != NULL)
+				{
+					if (startsWith("file://", resourceID(node->node)))
+					{
+						RDF_Assert(node->view->pane->db, node->node,
+							gNavCenter->RDF_Command,
+							gNavCenter->RDF_Command_Reveal,
+							RDF_RESOURCE_TYPE);
+					}
+				}
 				break;
 
 				case	HT_CMD_PROPERTIES:
