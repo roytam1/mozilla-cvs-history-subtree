@@ -232,6 +232,7 @@ public:
   NS_IMETHOD IsRoot(PRBool* aResult);
   NS_IMETHOD GetRule(nsIStyleRule** aResult);
   NS_IMETHOD ClearCachedData(nsIStyleRule* aRule);
+  NS_IMETHOD ClearCachedDataInSubtree(nsIStyleRule* aRule);
   NS_IMETHOD GetPresContext(nsIPresContext** aResult);
   const nsStyleStruct* GetStyleData(nsStyleStructID aSID, 
                                     nsIStyleContext* aContext);

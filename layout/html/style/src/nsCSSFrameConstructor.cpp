@@ -9800,6 +9800,66 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   }
 #endif // INCLUDE_XUL
 
+  // check for inline style.  we need to clear the data at the style context's rule
+  // node whenever the inline style property changes.
+  if (aAttribute == nsHTMLAtoms::style) {
+    nsCOMPtr<nsIHTMLContent> html(do_QueryInterface(aContent));
+    if (html) {
+      nsHTMLValue val;
+      html->GetHTMLAttribute(nsHTMLAtoms::style, val);
+      if (eHTMLUnit_ISupports == val.GetUnit()) {
+        // This style rule exists and we need to blow away any computed data that this
+        // rule cached in the rule tree.
+        nsCOMPtr<nsIStyleRule> rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
+        nsCOMPtr<nsIStyleContext> context;
+        if (primaryFrame)
+          primaryFrame->GetStyleContext(getter_AddRefs(context));
+        else {
+          // We might be in the undisplayed map.  Retrieve the style context from there.
+          nsCOMPtr<nsIFrameManager> frameManager;
+          shell->GetFrameManager(getter_AddRefs(frameManager));
+          frameManager->GetUndisplayedContent(aContent, getter_AddRefs(context));
+          if (!context) {
+            // Well, we don't have a context to use as a guide.  
+            // Attempt #3 will be to resolve style if we at least have a parent frame.
+            nsCOMPtr<nsIContent> parent;
+            aContent->GetParent(*getter_AddRefs(parent));
+            if (parent) {
+              nsIFrame* parentFrame;
+              shell->GetPrimaryFrameFor(parent, &parentFrame);
+              if (parentFrame) {
+                nsCOMPtr<nsIStyleContext> parentContext;
+                parentFrame->GetStyleContext(getter_AddRefs(parentContext));
+                aPresContext->ResolveStyleContextFor(aContent, parentContext, PR_FALSE,
+                                                     getter_AddRefs(context));  
+              }
+            }
+          }
+        }
+
+        if (context) {
+          nsCOMPtr<nsIRuleNode> ruleNode;
+          context->GetRuleNode(getter_AddRefs(ruleNode));
+          ruleNode->ClearCachedData(rule); // XXXdwh.  If we're willing to *really* special case
+                                           // inline style, we could only invalidate the struct data
+                                           // that actually changed.  For example, if someone changes
+                                           // style.left, we really only need to blow away cached
+                                           // data in the position struct.
+        }
+        else {
+          // Ok, our only option left is to just crawl the entire rule
+          // tree and blow away the data that way.
+          nsCOMPtr<nsIStyleSet> set;
+          shell->GetStyleSet(getter_AddRefs(set));
+          nsCOMPtr<nsIRuleNode> rootNode;
+          set->GetRuleTree(getter_AddRefs(rootNode));
+          if (rootNode)
+            rootNode->ClearCachedDataInSubtree(rule);
+        }
+      }
+    }
+  }
+
   // apply changes
   if (primaryFrame && aHint == NS_STYLE_HINT_ATTRCHANGE)
     result = primaryFrame->AttributeChanged(aPresContext, aContent, aNameSpaceID, aAttribute, aHint);
@@ -9813,30 +9873,6 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     // If there is no frame then there is no point in re-styling it,
     // is there?
     if (primaryFrame) {
-
-      // check for inline style.  we need to clear the data at the style context's rule
-      // node whenever the inline style property changes.
-      if (aAttribute == nsHTMLAtoms::style) {
-        nsCOMPtr<nsIHTMLContent> html(do_QueryInterface(aContent));
-        if (html) {
-          nsHTMLValue val;
-          html->GetHTMLAttribute(nsHTMLAtoms::style, val);
-          if (eHTMLUnit_ISupports == val.GetUnit()) {
-            // This style rule exists and we need to blow away any computed data that this
-            // rule cached in the rule tree.
-            nsCOMPtr<nsIStyleRule> rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
-            nsCOMPtr<nsIStyleContext> context;
-            primaryFrame->GetStyleContext(getter_AddRefs(context));
-            nsCOMPtr<nsIRuleNode> ruleNode;
-            context->GetRuleNode(getter_AddRefs(ruleNode));
-            ruleNode->ClearCachedData(rule); // XXXdwh.  If we're willing to *really* special case
-                                             // inline style, we could only invalidate the struct data
-                                             // that actually changed.  For example, if someone changes
-                                             // style.left, we really only need to blow away cached
-                                             // data in the position struct.
-          }
-        }
-      }
 
       PRInt32 maxHint = aHint;
       nsStyleChangeList changeList;

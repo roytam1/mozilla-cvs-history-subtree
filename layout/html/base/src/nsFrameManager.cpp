@@ -161,6 +161,8 @@ public:
   nsresult RemoveNodeFor(nsIContent* aParentContent, UndisplayedNode* aNode);
   nsresult RemoveNodesFor(nsIContent* aParentContent);
 
+  nsresult GetNodeFor(nsIContent* aContent, nsIStyleContext** aResult);
+
   // Removes all entries from the hash table
   void  Clear(void);
 
@@ -223,6 +225,7 @@ public:
   NS_IMETHOD ClearPlaceholderFrameMap();
 
   // Undisplayed content functions
+  NS_IMETHOD GetUndisplayedContent(nsIContent* aContent, nsIStyleContext** aStyleContext);
   NS_IMETHOD SetUndisplayedContent(nsIContent* aContent, nsIStyleContext* aStyleContext);
   NS_IMETHOD SetUndisplayedPseudoIn(nsIStyleContext* aPseudoContext, 
                                     nsIContent* aParentContent);
@@ -675,6 +678,20 @@ FrameManager::ClearPlaceholderFrameMap()
 
 //----------------------------------------------------------------------
 
+NS_IMETHODIMP
+FrameManager::GetUndisplayedContent(nsIContent* aContent, nsIStyleContext** aResult)
+{
+  if (!aContent || !aResult) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  *aResult = nsnull;  // initialize out param
+
+  if (mUndisplayedMap)
+    mUndisplayedMap->GetNodeFor(aContent, aResult);
+    
+  return NS_OK;
+}
+  
 NS_IMETHODIMP
 FrameManager::SetUndisplayedContent(nsIContent* aContent, 
                                     nsIStyleContext* aStyleContext)
@@ -2581,6 +2598,20 @@ UndisplayedMap::AddNodeFor(nsIContent* aParentContent, nsIStyleContext* aPseudoS
     return NS_ERROR_OUT_OF_MEMORY;
   }
   return AppendNodeFor(node, aParentContent);
+}
+
+nsresult 
+UndisplayedMap::GetNodeFor(nsIContent* aContent, nsIStyleContext** aResult)
+{
+  PLHashEntry** entry = GetEntryFor(aContent);
+  if (*entry) {
+    UndisplayedNode* node = (UndisplayedNode*)((*entry)->value);
+    *aResult = node->mStyle;
+    NS_IF_ADDREF(*aResult);
+  }
+  else
+    *aResult = nsnull;
+  return NS_OK;
 }
 
 nsresult 

@@ -418,12 +418,39 @@ nsRuleNode::ClearCachedData(nsIStyleRule* aRule)
   while (curr) {
     if (curr->mRule == aRule) {
       // We have a match.  Blow away all data stored at this node.
-      if (mStyleData.mResetData || mStyleData.mInheritedData)
-        mStyleData.Destroy(0, mPresContext);
+      if (curr->mStyleData.mResetData || curr->mStyleData.mInheritedData)
+        curr->mStyleData.Destroy(0, mPresContext);
+      curr->mNoneBits &= ~NS_STYLE_INHERIT_MASK;
+      curr->mInheritBits &= ~NS_STYLE_INHERIT_MASK;
       break;
     }
     curr = curr->mParent;
   }
+
+  return NS_OK;
+}
+
+PRBool PR_CALLBACK ClearCachedDataHelper(nsHashKey* aKey, void* aData, void* aClosure)
+{
+  nsIRuleNode* ruleNode = (nsIRuleNode*)aData;
+  nsIStyleRule* rule = (nsIStyleRule*)aClosure;
+  ruleNode->ClearCachedDataInSubtree(rule);
+  return PR_TRUE;
+}
+
+NS_IMETHODIMP
+nsRuleNode::ClearCachedDataInSubtree(nsIStyleRule* aRule)
+{
+  if (mRule == aRule) {
+    // We have a match.  Blow away all data stored at this node.
+    if (mStyleData.mResetData || mStyleData.mInheritedData)
+      mStyleData.Destroy(0, mPresContext);
+    mNoneBits &= ~NS_STYLE_INHERIT_MASK;
+    mInheritBits &= ~NS_STYLE_INHERIT_MASK;  
+  }
+
+  if (mChildren)
+    mChildren->Enumerate(ClearCachedDataHelper, (void*)aRule);
 
   return NS_OK;
 }

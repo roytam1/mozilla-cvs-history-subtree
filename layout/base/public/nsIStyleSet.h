@@ -37,6 +37,7 @@ class nsIFrame;
 class nsIDocument;
 class nsIFrameManager;
 class nsISupportsArray;
+class nsIRuleNode;
 struct nsFindFrameHint;
 
 #include "nsVoidArray.h"
@@ -79,6 +80,8 @@ public:
   virtual nsIStyleSheet* GetBackstopStyleSheetAt(PRInt32 aIndex) = 0;
   virtual void ReplaceBackstopStyleSheets(nsISupportsArray* aNewSheets) = 0;
   
+  virtual nsresult GetRuleTree(nsIRuleNode** aResult) = 0;
+
   // enable / disable the Quirk style sheet: 
   // returns NS_FAILURE if none is found, otherwise NS_OK
   NS_IMETHOD EnableQuirkStyleSheet(PRBool aEnable) = 0;

@@ -113,6 +113,7 @@ public:
                                                PRBool aForceUnique = PR_FALSE);
 
   NS_IMETHOD ClearRuleTree();
+  virtual nsresult GetRuleTree(nsIRuleNode** aResult);
 
   NS_IMETHOD ReParentStyleContext(nsIPresContext* aPresContext,
                                   nsIStyleContext* aStyleContext, 
@@ -968,6 +969,14 @@ StyleSetImpl::ClearRuleTree()
 {
   mRuleWalker = nsnull; // Drop our ref.  This destroys all rule nodes.
   mRuleTree = nsnull;
+  return NS_OK;
+}
+
+nsresult
+StyleSetImpl::GetRuleTree(nsIRuleNode** aResult)
+{
+  *aResult = mRuleTree;
+  NS_IF_ADDREF(*aResult);
   return NS_OK;
 }
 
