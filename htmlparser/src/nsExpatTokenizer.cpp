@@ -949,7 +949,7 @@ int Tokenizer_HandleExternalEntityRef(XML_Parser parser,
 #define svgPublicIdPrefix "-//W3C//DTD SVG "
   
   if (publicId && !nsCRT::strncmp((const PRUnichar*)publicId,
-                                  svgPublicIdPrefix,
+                                  NS_ConvertASCIItoUCS2(svgPublicIdPrefix).get(),
                                   sizeof(svgPublicIdPrefix)-1)) {
     uniBuf = ToNewUnicode(svgDtd);
     retLen = svgDtd.Length();
