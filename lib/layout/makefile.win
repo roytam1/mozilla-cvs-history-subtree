@@ -18,6 +18,12 @@
 DEPTH = ..\..
 LIBRARY_NAME = lay
 MODULE = lay
-EXPORTS = layout.h
+EXPORTS = layout.h 
+
+ifdef MOZ_PRIVACY
+REQUIRES = privacy
+EXPORTS += laylayer.h
+endif
+
 !include $(DEPTH)\config\rules.mak
 # 
