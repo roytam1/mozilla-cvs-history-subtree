@@ -56,6 +56,8 @@ public:
 
 protected:
   nsresult CopyPreferences(PRBool aReplace);
+  nsresult TransformPreferences();
+
   nsresult CopyCookies(PRBool aReplace);
 #ifdef NEED_TO_FIX_4X_COOKIES
   nsresult FixDogbertCookies();
