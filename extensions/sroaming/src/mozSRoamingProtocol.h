@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -16,8 +16,9 @@
  *
  * The Initial Developer of the Original Code is 
  * Ben Bucksch <http://www.bucksch.org>
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Portions created by the Initial Developer are Copyright (C) 2002-2003
  * the Initial Developer. All Rights Reserved.
+ * Or maybe not. I believe that interfaces should be free ;-).
  *
  * Contributor(s):
  *

@@ -1,4 +1,9 @@
 <?xml version="1.0"?>
+<!-- -*- Mode: SGML; indent-tabs-mode: nil; -*- -->
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - The contents of this file are too trivial to have copyright protection
+   - and are thus in the public domain.
+   - ***** END LICENSE BLOCK ***** -->
 
 <RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:chrome="http://www.mozilla.org/rdf/chrome#">

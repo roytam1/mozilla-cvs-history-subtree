@@ -1,6 +1,4 @@
 todo:
-- nsiprogresseventsink comment
-- license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
 - experimental warning
