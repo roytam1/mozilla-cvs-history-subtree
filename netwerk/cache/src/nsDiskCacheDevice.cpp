@@ -698,13 +698,17 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     nsCacheEntry * entry = nsnull;
     nsDiskCacheEntry * diskEntry = mBoundEntries.GetEntry(key->get());
     if (!diskEntry) {
-        nsresult rv = readDiskCacheEntry(key->get(), &diskEntry);
-        if (NS_FAILED(rv)) return nsnull;
-        entry = diskEntry->getCacheEntry();
-        rv = mBoundEntries.AddEntry(diskEntry);
-        if (NS_FAILED(rv)) {
-            delete entry;
-            return nsnull;
+        PLDHashNumber hashNumber = nsDiskCacheEntry::Hash(key->get());
+        nsDiskCacheRecord* record = mCacheMap->GetRecord(hashNumber);
+        if (record->HashNumber() == hashNumber) {
+            nsresult rv = readDiskCacheEntry(key->get(), &diskEntry);
+            if (NS_FAILED(rv)) return nsnull;
+            entry = diskEntry->getCacheEntry();
+            rv = mBoundEntries.AddEntry(diskEntry);
+            if (NS_FAILED(rv)) {
+                delete entry;
+                return nsnull;
+            }
         }
     } else {
         // XXX need to make sure this is an exact match, not just
@@ -799,11 +803,6 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
     PRUint32 dataSize = newEntry->DataSize();
     if (dataSize)
         OnDataSizeChange(newEntry, dataSize);
-
-    // XXX add this disk entry to the cache map.
-    rv = updateCacheMap(newDiskEntry);
-    if (NS_FAILED(rv))
-        return rv;
 
     // XXX Need to make this entry known to other entries?
     // this probably isn't needed while the entry is bound,
@@ -1160,9 +1159,13 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntries()
 
 nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
 {
+    nsresult rv;
     nsCacheEntry* entry = diskEntry->getCacheEntry();
     if (entry->IsMetaDataDirty() || entry->IsEntryDirty()) {
-        nsresult rv;
+        // make sure this disk entry is known to the cache map.
+        rv = updateCacheMap(diskEntry);
+        if (NS_FAILED(rv)) return rv;
+
         nsCOMPtr<nsIFile> file;
         rv = getFileForDiskCacheEntry(diskEntry, PR_TRUE,
                                  getter_AddRefs(file));
@@ -1282,6 +1285,9 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
         // NS_ASSERTION(NS_SUCCEEDED(rv), "nsDiskCacheDevice::deleteDiskCacheEntry");
     }
     
+    // remove from cache map.
+    mCacheMap->DeleteRecord(diskEntry->getHashNumber());
+
     return NS_OK;
 }
 
