@@ -174,7 +174,6 @@ menuitem.bookmark-item {
 
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
   padding: 5px;
-	margin-right: 2px;
 }
 
 .toolbarbutton-1:hover:active:not([disabled]),
@@ -818,8 +817,7 @@ toolbar[mode="text"] #navigator-throbber[busy="true"] {
 
 #sidebar-box .tabs-closebutton {
   margin-bottom: 0px !important;
-  padding-right: 2px !important;
-  padding-left: 2px !important;
+  padding: 0px 2px 0px 2px !important;
 }
 
 #FindToolbar > .tabs-closebutton {
