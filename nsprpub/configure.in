@@ -1368,11 +1368,11 @@ case "$target" in
             AC_DEFINE(REENTRANT)
             AC_DEFINE(_PR_DCETHREADS)
         else
-            AC_DEFINE(_POSIX_C_SOURCE=199506L)
+            AC_DEFINE(_POSIX_C_SOURCE,"199506L")
         fi
     fi
     if test "$USE_USER_PTHREADS"; then
-        AC_DEFINE(_POSIX_C_SOURCE=199506L)
+        AC_DEFINE(_POSIX_C_SOURCE,"199506L")
     fi
     ;;
 *-mingw*|*-cygwin*|*-uwin*|*-msvc*)
