@@ -1527,6 +1527,17 @@ nsGenericElement::GetRangeList(nsVoidArray*& aResult) const
 nsresult 
 nsGenericElement::SetFocus(nsIPresContext* aPresContext)
 {
+  if(mContent) {
+    nsAutoString disabled;
+    if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::disabled, disabled))
+      return NS_OK;
+ 
+    nsIEventStateManager* esm;
+    if (NS_OK == aPresContext->GetEventStateManager(&esm)) {
+      esm->SetContentState(mContent, NS_EVENT_STATE_FOCUS);
+      NS_RELEASE(esm);
+    }
+  }
   return NS_OK;
 }
 
