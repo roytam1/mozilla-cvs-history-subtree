@@ -189,6 +189,12 @@ nsBaseStateUpdatingCommand::IsCommandEnabled(const nsAString & aCommandName, nsI
     // also udpate the command state. 
     UpdateCommandState(aCommandName, refCon);
   }
+  else
+  {
+    nsCOMPtr<nsIEditor> editor = do_QueryInterface(refCon);
+    if (editor)
+      *outCmdEnabled = PR_TRUE;
+  }
   
   return NS_OK;
 }
@@ -799,6 +805,12 @@ nsIndentCommand::IsCommandEnabled(const nsAString & aCommandName, nsISupports *r
     if (editor)
       *outCmdEnabled = PR_TRUE;     // can always indent (I guess)
   }
+  else
+  {
+    nsCOMPtr<nsIEditor> editor = do_QueryInterface(refCon);
+    if (editor)
+      *outCmdEnabled = PR_TRUE;
+  }
   
   return NS_OK;
 }
@@ -860,6 +872,17 @@ nsOutdentCommand::IsCommandEnabled(const nsAString & aCommandName, nsISupports *
     nsCOMPtr<nsIEditor> editor;
     editorShell->GetEditor(getter_AddRefs(editor));
     nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(editor);
+    if (htmlEditor)
+    {
+      PRBool canIndent, canOutdent;
+      htmlEditor->GetIndentState(&canIndent, &canOutdent);
+      
+      *outCmdEnabled = canOutdent;
+    }
+  }
+  else
+  {
+    nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(refCon);
     if (htmlEditor)
     {
       PRBool canIndent, canOutdent;
@@ -1643,9 +1666,11 @@ nsRemoveStylesCommand::DoCommand(const nsAString & aCommandName, nsISupports *re
 NS_IMETHODIMP
 nsRemoveStylesCommand::DoCommandParams(nsICommandParams *aParams, nsISupports *refCon)
 {
-  nsString tString;
-  aParams->GetStringValue(COMMAND_NAME,tString);
-  return DoCommand(tString, refCon);
+  nsCOMPtr<nsIHTMLEditor> editor = do_QueryInterface(refCon);
+  if (editor)
+    editor->RemoveAllInlineProperties();
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP
