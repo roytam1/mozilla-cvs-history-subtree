@@ -119,6 +119,11 @@ nsMemoryCacheDevice::Init()
     return rv;
 }
 
+nsresult
+nsMemoryCacheDevice::Shutdown()
+{
+    return NS_OK;
+}
 
 const char *
 nsMemoryCacheDevice::GetDeviceID()
