@@ -237,10 +237,7 @@ NS_IMETHODIMP nsOSHelperAppService::LoadUrl(nsIURI * aURL)
       return NS_ERROR_FAILURE;
 
     LONG r = (LONG) ::ShellExecute( NULL, "open", urlSpec.get(), NULL, NULL, SW_SHOWNORMAL);
-    if (r == 30) // application busy
-      return NS_OK;
-    else if (r < 32) 
-      rv = NS_ERROR_FAILURE;
+    rv = NS_OK;
   }
 
   return rv;
