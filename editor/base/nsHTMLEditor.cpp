@@ -238,12 +238,12 @@ static PRBool IsCellNode(nsIDOMNode *aNode)
 
 nsHTMLEditor::nsHTMLEditor()
 : nsEditor()
+, mIgnoreSpuriousDragEvent(PR_FALSE)
 , mTypeInState(nsnull)
 , mRules(nsnull)
 , mIsComposing(PR_FALSE)
 , mMaxTextLength(-1)
 , mSelectedCellIndex(0)
-, mIgnoreSpuriousDragEvent(PR_FALSE)
 {
 // Done in nsEditor
 // NS_INIT_REFCNT();
@@ -2690,7 +2690,6 @@ nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
   NS_ENSURE_SUCCESS(res, res);   
   
   // now go throught the list and remove anything that isn't editable
-  PRBool bDidInsert = PR_FALSE;
   PRUint32 listCount, j;
   nodeList->Count(&listCount);
   for (j=0; j<listCount; j++)
@@ -2734,7 +2733,7 @@ nsHTMLEditor::GetPasteNodeParent(nsIDOMNode *aNode,
   }
   nsresult res = aNode->GetParentNode(getter_AddRefs(*outParentNode));
   NS_ENSURE_SUCCESS(res, res);
-  if (*outParentNode == aFragAsNode)
+  if (outParentNode->get() == aFragAsNode)
   {
     if (aContextLeaf) 
       *outParentNode = aContextLeaf;
