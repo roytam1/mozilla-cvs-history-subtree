@@ -40,7 +40,7 @@ AC_DEFINE(USE_AUTOCONF)
 dnl ========================================================
 dnl = Defaults
 dnl ========================================================
-NSPR_VERSION=3
+NSPR_VERSION=4
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
