@@ -658,6 +658,7 @@ nsresult nsMsgSearchOfflineMail::Search (PRBool *aDone)
   NS_ENSURE_ARG(aDone);
   nsresult dbErr = NS_OK;
 	nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
+  const PRInt32 kNumHdrsInSlice = 100;
 
   *aDone = PR_FALSE;
   // Try to open the DB lazily. This will set up a parser if one is required
@@ -673,14 +674,16 @@ nsresult nsMsgSearchOfflineMail::Search (PRBool *aDone)
       dbErr = m_db->EnumerateMessages (getter_AddRefs(m_listContext));
     if (NS_SUCCEEDED(dbErr) && m_listContext)
     {
+      for (PRInt32 hdrIndex = 0; !*aDone && hdrIndex < kNumHdrsInSlice; hdrIndex++)
+      {
 	    nsCOMPtr<nsISupports> currentItem;
 
 	    dbErr = m_listContext->GetNext(getter_AddRefs(currentItem));
 	    if(NS_SUCCEEDED(dbErr))
 	    {
 		    msgDBHdr = do_QueryInterface(currentItem, &dbErr);
-	    }
     }
+    
     if (!NS_SUCCEEDED(dbErr))      
       *aDone = PR_TRUE; //###phil dbErr is dropped on the floor. just note that we did have an error so we'll clean up later
     else
@@ -700,6 +703,8 @@ nsresult nsMsgSearchOfflineMail::Search (PRBool *aDone)
 //      m_scope->m_frame->IncrementOfflineProgress();
     }
 
+    }
+    }    
   }
   else
       *aDone = PR_TRUE; // we couldn't open up the DB. This is an unrecoverable error so mark the scope as done.
