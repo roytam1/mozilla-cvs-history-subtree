@@ -1543,6 +1543,7 @@ sub run_all_tests {
                                           ",");
       
       if($layout_time) {
+        # Pick off first number.
         chomp($layout_time);
         my @times = split(',', $layout_time);
         $layout_time = $times[0];  # Set layout time to first number that we scraped.
@@ -1566,7 +1567,12 @@ sub run_all_tests {
         
         # Print failure message if we fail 2nd time.
         unless($layout_time) {
-          print_log "TinderboxPrint:Tp:[CRASH]\n";          
+            print_log "TinderboxPrint:Tp:[CRASH]\n";          
+        } else {
+            # Pick off first number.
+            chomp($layout_time);
+            my @times = split(',', $layout_time);
+            $layout_time = $times[0];  # Set layout time to first number that we scraped.
         }
       }
       
