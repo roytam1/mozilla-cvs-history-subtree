@@ -1,5 +1,5 @@
 #
-# Copyright 2002 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #ident	"$Id$"
@@ -9,30 +9,26 @@ CORE_DEPTH = ../../..
 
 %: %.ksh
 	$(RM) $@
-	cp $< $@
+	$(CP) $< $@
 	chmod +x $@
 
 
-ifeq ($(USE_64), 1)
 DIRS = \
-    SUNWjssx
-else
-DIRS = \
-    SUNWjss
-endif
+	SUNWjss
+
+include Makefile.com
 
 PROTO = \
 	$(ROOT) \
-	$(ROOT)/usr \
-	$(ROOT)/usr/share \
-	$(ROOT)/usr/share/lib \
 	$(ROOT)/usr/share/lib/mps \
-	$(ROOT)/usr/share/lib/mps/sparcv9 \
-	$(ROOT)/usr/lib \
-	$(ROOT)/usr/lib/mps \
-	$(ROOT)/usr/lib/mps/sparcv9
+	$(ROOT)/usr/lib/mps
 
-include Makefile.com
+ifeq ($(MACH),sparc)
+	PROTO += $(ROOT)/usr/share/lib/mps/sparcv9 \
+	$(ROOT)/usr/lib/mps/sparcv9
+endif
+
+DIST64 = $(shell echo $(DIST) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
 
 awk_pkginfo: bld_awk_pkginfo
 	./bld_awk_pkginfo -m $(MACH) -p "$(PRODUCT_VERSION)" -o $@ -v $(PRODUCT_VERSION)
@@ -45,17 +41,21 @@ clean clobber::
 	$(RM) awk_pkginfo bld_awk_pkginfo
 	$(RM) -r $(ROOT)
 
-$(ROOT) $(ROOT)/%:
+$(ROOT):
 	mkdir -p $@
 
-ifdef USE_64
-$(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
+$(ROOT)/usr/lib/mps/sparcv9:
+	mkdir -p $@
+	$(CP) -r $(DIST64)/lib/*.so $@ 
+$(ROOT)/usr/share/lib/mps/sparcv9:
 	echo "target=$(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR)"
-	$(LN) -sf ../../../../$(DIST)/lib $@ 
-	cp $(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR) $(ROOT)/usr/share/lib/mps/sparcv9/jss3.jar
-else
-$(ROOT)/usr/lib/mps: $(ROOT)/usr/lib
+	mkdir -p $@
+	$(CP) $(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR) $@/jss3.jar
+$(ROOT)/usr/lib/mps:
+	mkdir -p $@
+	$(CP) -r $(DIST)/lib/*.so $@
+$(ROOT)/usr/share/lib/mps:
 	echo "target=$(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR)"
-	$(LN) -sf ../../../$(DIST)/lib $@
-	cp $(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR) $(ROOT)/usr/share/lib/mps/jss3.jar
-endif
+	mkdir -p $@
+	$(CP) $(SOURCE_RELEASE_XP_DIR)/$(SOURCE_RELEASE_XP_CLASSES_DIR)/$(IMPORT_XPCLASS_JAR) $@/jss3.jar
+
