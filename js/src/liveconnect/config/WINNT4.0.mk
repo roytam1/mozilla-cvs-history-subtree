@@ -19,3 +19,5 @@ JDK = c:/jdk1.1.6
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/win32
 
 OTHER_LIBS += $(JDK)/lib/javai.lib ../$(OBJDIR)/js32.lib
+
+JSDLL_CFLAGS = 
