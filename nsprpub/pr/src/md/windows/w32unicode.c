@@ -69,7 +69,7 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
     {
         int neededWChars = 0;
 
-        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (inString), -1, NULL, 0); \
+        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (inString), -1, NULL, 0);
         if(0 < neededWChars)
         {
             LPWSTR wstr = NULL;
@@ -79,7 +79,7 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
             {
                 int convertRes = 0;
 
-                convertRes = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (str), -1, wstr, neededWChars);
+                convertRes = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (inString), -1, wstr, neededWChars);
                 if(0 == convertRes)
                 {
                     PR_Free(wstr);

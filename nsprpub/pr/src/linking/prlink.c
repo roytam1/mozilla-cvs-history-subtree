@@ -615,7 +615,24 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     HINSTANCE h;
     NODL_PROC *pfn;
 
+#if !defined(WINCE)
     h = LoadLibrary(name);
+#else
+    {
+        LPWSTR ceName = NULL;
+        
+        ceName = _PR_MD_MALLOC_A2W(name);
+        if(NULL != ceName)
+        {
+            h = LoadLibrary(ceName);
+            PR_Free(ceName);
+        }
+        else
+        {
+            h = NULL;
+        }
+    }
+#endif
     if (h < (HINSTANCE)HINSTANCE_ERROR) {
         oserr = _MD_ERRNO();
         PR_DELETE(lm);
@@ -630,7 +647,11 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
         ** Try to load a table of "static functions" provided by the DLL
         */
 
+#if !defined(WINCE)
         pfn = (NODL_PROC *)GetProcAddress(h, "NODL_TABLE");
+#else
+        pfn = (NODL_PROC *)GetProcAddress(h, TEXT("NODL_TABLE"));
+#endif
         if (pfn != NULL) {
             lm->staticTable = (*pfn)();
         }
@@ -1221,7 +1242,24 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
 #endif  /* XP_OS2 */
 
 #if defined(WIN32) || defined(WIN16)
+#if !defined(WINCE)
     f = GetProcAddress(lm->dlh, name);
+#else
+    {
+        LPWSTR ceName = NULL;
+
+        ceName = _PR_MD_MALLOC_A2W(name);
+        if(NULL != ceName)
+        {
+            f = GetProcAddress(lm->dlh, ceName);
+            PR_Free(ceName);
+        }
+        else
+        {
+            f = NULL;
+        }
+    }
+#endif
 #endif  /* WIN32 || WIN16 */
 
 #ifdef XP_MAC
