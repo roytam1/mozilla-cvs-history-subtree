@@ -58,6 +58,9 @@
 #include "nsIDocShellTreeOwner.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIDOMElement.h"
+#include "nsIDOMNodeList.h"
+#include "nsIDOMHTMLObjectElement.h"
+#include "nsIDOMHTMLAppletElement.h"
 #include "nsContentPolicyUtils.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMMouseListener.h"
@@ -268,12 +271,6 @@ private:
   nsPluginWindow    mPluginWindow;
   nsIPluginInstance *mInstance;
   nsObjectFrame     *mOwner;
-  PRInt32           mNumAttrs;
-  char              **mAttrNames;
-  char              **mAttrVals;
-  PRInt32           mNumParams;
-  char              **mParamNames;
-  char              **mParamVals;
   char              *mDocumentBase;
   char              *mTagText;
   nsIWidget         *mWidget;
@@ -281,23 +278,26 @@ private:
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
   PRPackedBool       mContentFocused;
+  PRUint16          mNumCachedAttrs;
+  PRUint16          mNumCachedParams;
+  char              **mCachedAttrParamNames;
+  char              **mCachedAttrParamValues;
   
   nsresult DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent);
   nsresult DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent);
   nsresult DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent);
+
+  nsresult EnsureCachedAttrParamArrays();
 };
 
   // Mac specific code to fix up port position and clip during paint
 #ifdef XP_MAC
   // get the absolute widget position and clip
   static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect); 
-#endif // XP_MAC
-
-#if defined(XP_MAC) || defined(XP_WIN)
   static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRect, nsRect& aPixelRect);
   // convert relative coordinates to absolute
   static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&aContainerWidget);
-#endif // XP_MAC || XP_WIN
+#endif // XP_MAC
 
 nsObjectFrame::~nsObjectFrame()
 {
@@ -1495,11 +1495,9 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
           nsIFrame* parentFrame;
           GetParentWithView(aPresContext, &parentFrame);
 
-          if(parentFrame != nsnull) {
-            nsPoint originFrame;
-            parentFrame->GetOffsetFromView(aPresContext, originFrame, &parentWithView);
-            origin+=originFrame;
-          }
+          if(parentFrame != nsnull)
+            parentFrame->GetOffsetFromView(aPresContext, origin, &parentWithView);
+
         }
 
         window->x = NSTwipsToIntPixels(origin.x + offx, t2p);
@@ -1925,18 +1923,16 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   memset(&mPluginWindow, 0, sizeof(mPluginWindow));
   mInstance = nsnull;
   mOwner = nsnull;
-  mNumAttrs = 0;
-  mAttrNames = nsnull;
-  mAttrVals = nsnull;
   mWidget = nsnull;
   mContext = nsnull;
-  mNumParams = 0;
-  mParamNames = nsnull;
-  mParamVals = nsnull;
   mDocumentBase = nsnull;
   mTagText = nsnull;
   mPluginHost = nsnull;
   mContentFocused = PR_FALSE;
+  mNumCachedAttrs = 0;
+  mNumCachedParams = 0;
+  mCachedAttrParamNames = nsnull;
+  mCachedAttrParamValues = nsnull;
 }
 
 nsPluginInstanceOwner::~nsPluginInstanceOwner()
@@ -1952,68 +1948,34 @@ nsPluginInstanceOwner::~nsPluginInstanceOwner()
   NS_IF_RELEASE(mPluginHost);
   mOwner = nsnull;
 
-  for (cnt = 0; cnt < mNumAttrs; cnt++)
-  {
-    if ((nsnull != mAttrNames) && (nsnull != mAttrNames[cnt]))
-    {
-      PR_Free(mAttrNames[cnt]);
-      mAttrNames[cnt] = nsnull;
+  for (cnt = 0; cnt < (mNumCachedAttrs + 1 + mNumCachedParams); cnt++) {
+    if ((nsnull != mCachedAttrParamNames) && (nsnull != mCachedAttrParamNames[cnt])) {
+      PR_Free(mCachedAttrParamNames[cnt]);
+      mCachedAttrParamNames[cnt] = nsnull;
     }
 
-    if ((nsnull != mAttrVals) && (nsnull != mAttrVals[cnt]))
-    {
-      PR_Free(mAttrVals[cnt]);
-      mAttrVals[cnt] = nsnull;
+    if ((nsnull != mCachedAttrParamValues) && (nsnull != mCachedAttrParamValues[cnt])) {
+      PR_Free(mCachedAttrParamValues[cnt]);
+      mCachedAttrParamValues[cnt] = nsnull;
     }
   }
 
-  if (nsnull != mAttrNames)
-  {
-    PR_Free(mAttrNames);
-    mAttrNames = nsnull;
+  if (nsnull != mCachedAttrParamNames) {
+    PR_Free(mCachedAttrParamNames);
+    mCachedAttrParamNames = nsnull;
   }
 
-  if (nsnull != mAttrVals)
-  {
-    PR_Free(mAttrVals);
-    mAttrVals = nsnull;
+  if (nsnull != mCachedAttrParamValues) {
+    PR_Free(mCachedAttrParamValues);
+    mCachedAttrParamValues = nsnull;
   }
 
-  for (cnt = 0; cnt < mNumParams; cnt++)
-  {
-    if ((nsnull != mParamNames) && (nsnull != mParamNames[cnt]))
-    {
-      PR_Free(mParamNames[cnt]);
-      mParamNames[cnt] = nsnull;
-    }
-
-    if ((nsnull != mParamVals) && (nsnull != mParamVals[cnt]))
-    {
-      PR_Free(mParamVals[cnt]);
-      mParamVals[cnt] = nsnull;
-    }
-  }
-
-  if (nsnull != mParamNames)
-  {
-    PR_Free(mParamNames);
-    mParamNames = nsnull;
-  }
-
-  if (nsnull != mParamVals)
-  {
-    PR_Free(mParamVals);
-    mParamVals = nsnull;
-  }
-
-  if (nsnull != mDocumentBase)
-  {
+  if (nsnull != mDocumentBase) {
     nsCRT::free(mDocumentBase);
     mDocumentBase = nsnull;
   }
   
-  if (nsnull != mTagText)
-  {
+  if (nsnull != mTagText) {
     nsCRT::free(mTagText);
     mTagText = nsnull;
   }
@@ -2059,108 +2021,29 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetAttributes(PRUint16& n,
                                                      const char*const*& names,
                                                      const char*const*& values)
 {
-  nsresult    rv;
-  nsIContent* iContent;
+  nsresult rv = EnsureCachedAttrParamArrays();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if ((nsnull == mAttrNames) && (nsnull != mOwner)) {
-    rv = mOwner->GetContent(&iContent);
-
-    if (NS_SUCCEEDED(rv)) {
-      PRInt32 count;
-
-      if (NS_SUCCEEDED(iContent->GetAttrCount(count))) {
-        PRInt32 index;
-        mAttrNames = (char **)PR_Calloc(sizeof(char *) * count, 1);
-        mAttrVals = (char **)PR_Calloc(sizeof(char *) * count, 1);
-        mNumAttrs = 0;
-
-        if ((nsnull != mAttrNames) && (nsnull != mAttrVals)) {
-          for (index = 0; index < count; index++) {
-            PRInt32 nameSpaceID;
-            nsCOMPtr<nsIAtom> atom;
-            nsCOMPtr<nsIAtom> prefix;
-            iContent->GetAttrNameAt(index, nameSpaceID,
-                                    *getter_AddRefs(atom),
-                                    *getter_AddRefs(prefix));
-            nsAutoString  value;
-            if (NS_CONTENT_ATTR_HAS_VALUE ==
-                  iContent->GetAttr(nameSpaceID, atom, value)) {
-              nsAutoString  name;
-              atom->ToString(name);
-
-/*       Changing to ToNewUTF8String addressing 17169, 39789
-
-              mAttrNames[mNumAttrs] = (char *)PR_Malloc(name.Length() + 1);
-              mAttrVals[mNumAttrs] = (char *)PR_Malloc(value.Length() + 1);
-
-              if ((nsnull != mAttrNames[mNumAttrs]) &&
-                  (nsnull != mAttrVals[mNumAttrs]))
-              {
-                name.ToCString(mAttrNames[mNumAttrs], name.Length() + 1);
-                value.ToCString(mAttrVals[mNumAttrs], value.Length() + 1);
-
-                mNumAttrs++;
-              }
-              else
-              {
-                if (nsnull != mAttrNames[mNumAttrs])
-                {
-                  PR_Free(mAttrNames[mNumAttrs]);
-                  mAttrNames[mNumAttrs] = nsnull;
-                }
-                if (nsnull != mAttrVals[mNumAttrs])
-                {
-                  PR_Free(mAttrVals[mNumAttrs]);
-                  mAttrVals[mNumAttrs] = nsnull;
-                }
-              }
-*/
-              mAttrNames[mNumAttrs] = name.ToNewUTF8String();
-              mAttrVals[mNumAttrs] = value.ToNewUTF8String();
-              mNumAttrs++;
-            }
-          }
-        }
-        else {
-          rv = NS_ERROR_OUT_OF_MEMORY;
-          if (nsnull != mAttrVals) {
-            PR_Free(mAttrVals);
-            mAttrVals = nsnull;
-          }
-          if (nsnull != mAttrNames) {
-            PR_Free(mAttrNames);
-            mAttrNames = nsnull;
-          }
-        }
-      }
-      NS_RELEASE(iContent);
-    }
-  }
-  else {
-    rv = NS_OK;
-  }
-
-  n = mNumAttrs;
-  names = (const char **)mAttrNames;
-  values = (const char **)mAttrVals;
+  n = mNumCachedAttrs;
+  names  = (const char **)mCachedAttrParamNames;
+  values = (const char **)mCachedAttrParamValues;
 
   return rv;
 }
 
 NS_IMETHODIMP nsPluginInstanceOwner::GetAttribute(const char* name, const char* *result)
 {
-  if (nsnull == mAttrNames) {
-    PRUint16  numattrs;
-    const char * const *names, * const *vals;
+  NS_ENSURE_ARG_POINTER(name);
+  NS_ENSURE_ARG_POINTER(result);
 
-    GetAttributes(numattrs, names, vals);
-  }
+  nsresult rv = EnsureCachedAttrParamArrays();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  *result = NULL;
+  *result = nsnull;
 
-  for (int i = 0; i < mNumAttrs; i++) {
-    if (0 == PL_strcasecmp(mAttrNames[i], name)) {
-      *result = mAttrVals[i];
+  for (int i = 0; i < mNumCachedAttrs; i++) {
+    if (0 == PL_strcasecmp(mCachedAttrParamNames[i], name)) {
+      *result = mCachedAttrParamValues[i];
       return NS_OK;
     }
   }
@@ -2515,169 +2398,39 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetTagText(const char* *result)
 
 NS_IMETHODIMP nsPluginInstanceOwner::GetParameters(PRUint16& n, const char*const*& names, const char*const*& values)
 {
-  nsresult rv = NS_ERROR_FAILURE;
+  nsresult rv = EnsureCachedAttrParamArrays();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if ((nsnull == mParamNames) && (nsnull != mOwner))
-  {
-    nsIContent  *cont;
-
-    mOwner->GetContent(&cont);
-
-    if (nsnull != cont)
-    {
-      PRBool  haskids = PR_FALSE;
-
-      cont->CanContainChildren(haskids);
-
-      if (PR_TRUE == haskids)
-      {
-        PRInt32 numkids, idx, numparams = 0;
-
-        cont->ChildCount(numkids);
-
-        //first pass, count number of param tags...
-
-        for (idx = 0; idx < numkids; idx++)
-        {
-          nsIContent  *kid;
-
-          cont->ChildAt(idx, kid);
-
-          if (nsnull != kid)
-          {
-            nsIAtom     *atom;
-
-            kid->GetTag(atom);
-
-            if (nsnull != atom)
-            {
-              if (atom == nsHTMLAtoms::param)
-                numparams++;
-
-              NS_RELEASE(atom);
-            }
-
-            NS_RELEASE(kid);
-          }
-        }
-
-        if (numparams > 0)
-        {
-          //now we need to create arrays
-          //representing the parameter name/value pairs...
-
-          mParamNames = (char **)PR_Calloc(sizeof(char *) * numparams, 1);
-          mParamVals = (char **)PR_Calloc(sizeof(char *) * numparams, 1);
-
-          if ((nsnull != mParamNames) && (nsnull != mParamVals))
-          {
-            for (idx = 0; idx < numkids; idx++)
-            {
-              nsIContent  *kid;
-
-              cont->ChildAt(idx, kid);
-
-              if (nsnull != kid)
-              {
-                nsIAtom     *atom;
-
-                kid->GetTag(atom);
-
-                if (nsnull != atom)
-                {
-                  if (atom == nsHTMLAtoms::param)
-                  {
-                    nsAutoString  val, name;
-
-                    //add param to list...
-
-                    if ((NS_CONTENT_ATTR_HAS_VALUE == kid->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::name, name)) &&
-                        (NS_CONTENT_ATTR_HAS_VALUE == kid->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::value, val)))
-                    {
-
-/*       Changing to ToNewUTF8String addressing 17169, 39789
-
-                      mParamNames[mNumParams] = (char *)PR_Malloc(name.Length() + 1);
-                      mParamVals[mNumParams] = (char *)PR_Malloc(val.Length() + 1);
-
-                      if ((nsnull != mParamNames[mNumParams]) &&
-                          (nsnull != mParamVals[mNumParams]))
-                      {
-                        name.ToCString(mParamNames[mNumParams], name.Length() + 1);
-                        val.ToCString(mParamVals[mNumParams], val.Length() + 1);
-
-                        mNumParams++;
-                      }
-                      else
-                      {
-                        if (nsnull != mParamNames[mNumParams])
-                        {
-                          PR_Free(mParamNames[mNumParams]);
-                          mParamNames[mNumParams] = nsnull;
-                        }
-
-                        if (nsnull != mParamVals[mNumParams])
-                        {
-                          PR_Free(mParamVals[mNumParams]);
-                          mParamVals[mNumParams] = nsnull;
-                        }
-                      }
-*/
-                      mParamNames[mNumParams] = name.ToNewUTF8String();
-                      mParamVals[mNumParams]  = val.ToNewUTF8String();
-                      mNumParams++;
-                    }
-                  }
-
-                  NS_RELEASE(atom);
-                }
-              }
-
-              NS_RELEASE(kid);
-            }
-          }
-        }
-      }
-
-      rv = NS_OK;
-      NS_RELEASE(cont);
-    }
-  }
-
-  n = mNumParams;
-  names = (const char **)mParamNames;
-  values = (const char **)mParamVals;
+  n = mNumCachedParams;
+  if (n) {
+    names  = (const char **)(mCachedAttrParamNames + mNumCachedAttrs + 1);
+    values = (const char **)(mCachedAttrParamValues + mNumCachedAttrs + 1);
+  } else
+    names = values = nsnull;
 
   return rv;
 }
 
 NS_IMETHODIMP nsPluginInstanceOwner::GetParameter(const char* name, const char* *result)
 {
-  PRInt32 count;
+  NS_ENSURE_ARG_POINTER(name);
+  NS_ENSURE_ARG_POINTER(result);
 
-  if (nsnull == mParamNames)
-  {
-    PRUint16  numattrs;
-    const char * const *names, * const *vals;
+  nsresult rv = EnsureCachedAttrParamArrays();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    GetParameters(numattrs, names, vals);
-  }
+  *result = nsnull;
 
-  for (count = 0; count < mNumParams; count++)
-  {
-    if (0 == PL_strcasecmp(mParamNames[count], name))
-    {
-      *result = mParamVals[count];
-      break;
+  for (int i = mNumCachedAttrs + 1; i < (mNumCachedParams + 1 + mNumCachedAttrs); i++) {
+    if (0 == PL_strcasecmp(mCachedAttrParamNames[i], name)) {
+      *result = mCachedAttrParamValues[i];
+      return NS_OK;
     }
   }
 
-  if (count >= mNumParams)
-    *result = "";
-
-  return NS_OK;
+  return NS_ERROR_FAILURE;
 }
-  
+
 NS_IMETHODIMP nsPluginInstanceOwner::GetDocumentBase(const char* *result)
 {
   nsresult rv = NS_OK;
@@ -2935,6 +2688,163 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetMayScript(PRBool *result)
 {
   const char* unused;
   *result = (GetAttribute("MAYSCRIPT", &unused) == NS_OK ? PR_TRUE : PR_FALSE);
+  return NS_OK;
+}
+
+
+// Cache the attributes and/or parameters of our tag into a single set of arrays
+// to be compatible with 4.x. The attributes go first, followed by a PARAM/null and
+// then any PARAM tags. Also, hold the cached array around for the duration
+// of the life of the instance because 4.x did. See bug 111008.
+nsresult nsPluginInstanceOwner::EnsureCachedAttrParamArrays()
+{
+  if (mCachedAttrParamValues)
+    return NS_OK;
+
+  NS_PRECONDITION((((mNumCachedAttrs + mNumCachedParams) == 0) && !mCachedAttrParamNames),
+                  "re-cache of attrs/params not implemented! use the DOM node directy instead");
+  NS_ENSURE_TRUE(mOwner, NS_ERROR_NULL_POINTER);
+
+  // first, we need to find out how much we need to allocate for our arrays
+  // count up attributes
+  mNumCachedAttrs = 0;
+  nsCOMPtr<nsIContent> content;
+  nsresult rv = mOwner->GetContent(getter_AddRefs(content));
+  NS_ENSURE_TRUE(content, rv);
+  PRInt32 cattrs;
+  rv = content->GetAttrCount(cattrs);
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (cattrs < 0x0000FFFF)
+    mNumCachedAttrs = NS_STATIC_CAST(PRUint16, cattrs);  // signed 32 bits to unsigned 16 bits conversion
+  else 
+    mNumCachedParams = 0xFFFF;
+
+  // now, we need to find all the PARAM tags that are children of us
+  // however, be carefull NOT to include any PARAMs that don't have us as a direct
+  // parent. For nested object (or applet) tags, be sure to only round up the
+  // param tags that coorespond with THIS instance. And also, weed out any bogus
+  // tags that may get in the way, see bug 39609. Then, with any param tag that meet our
+  // qualification, temporarly cache them in an nsISupportsArray until we can figure out
+  // what size to make our fixed char* array.
+  mNumCachedParams = 0;
+  nsCOMPtr<nsISupportsArray> ourParams;
+  rv = NS_NewISupportsArray(getter_AddRefs(ourParams));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMNode> mydomNode = do_QueryInterface(content);
+  NS_ENSURE_TRUE(mydomNode, NS_ERROR_NO_INTERFACE);
+
+  // use the DOM to get us ALL our dependant PARAM tags, even if not ours
+  nsCOMPtr<nsIDOMElement> mydomElement = do_QueryInterface(mydomNode);
+  NS_ENSURE_TRUE(mydomElement, NS_ERROR_NO_INTERFACE);
+  nsCOMPtr<nsIDOMNodeList> allParams;
+  mydomElement->GetElementsByTagName(NS_LITERAL_STRING("PARAM"), getter_AddRefs(allParams));
+  if (allParams) {
+    PRUint32 numAllParams;
+    allParams->GetLength(&numAllParams);
+    // loop through every so called dependant PARAM tag to check if it "belongs" to us
+    for (PRUint32 i = 0; i < numAllParams; i++) {
+      nsCOMPtr<nsIDOMNode> pnode;
+      allParams->Item(i, getter_AddRefs(pnode));
+      if (pnode) {
+        nsCOMPtr<nsIDOMElement> domelement = do_QueryInterface(pnode);
+        if (domelement) {
+          // let's NOT count up param tags that don't have a name attribute
+          nsAutoString name;
+          domelement->GetAttribute(NS_LITERAL_STRING("name"), name);
+          if (name.Length() > 0) {
+            nsCOMPtr<nsIDOMNode> parent;
+            nsCOMPtr<nsIDOMHTMLObjectElement> domobject;
+            nsCOMPtr<nsIDOMHTMLAppletElement> domapplet;
+            pnode->GetParentNode(getter_AddRefs(parent));
+            // walk up the parents of this PARAM until we find an object (or applet) tag
+            while (!(domobject || domapplet) && parent) {
+              domobject = do_QueryInterface(parent);
+              domapplet = do_QueryInterface(parent);
+              nsCOMPtr<nsIDOMNode> temp;
+              parent->GetParentNode(getter_AddRefs(temp));
+              parent = temp;
+            }
+            if (domapplet || domobject) {
+              parent = domapplet ? do_QueryInterface(domapplet) : do_QueryInterface(domobject);
+              // now check to see if this PARAM's parent is us. if so, cache it for later
+              if (parent.get() == mydomNode.get()) {
+                nsCOMPtr<nsISupports> sup = do_QueryInterface(pnode);
+                NS_ASSERTION(sup,  "lame! DOM node does doesn't QI to nsISupports");
+                ourParams->AppendElement(sup);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  PRUint32 cparams;
+  ourParams->Count(&cparams); // unsigned 32 bits to unsigned 16 bits conversion
+  if (cparams < 0x0000FFFF)
+    mNumCachedParams = NS_STATIC_CAST(PRUint16, cparams);
+  else 
+    mNumCachedParams = 0xFFFF;
+
+
+  // now lets make the arrays
+  mCachedAttrParamNames  = (char **)PR_Calloc(sizeof(char *) * (mNumCachedAttrs + 1 + mNumCachedParams), 1);
+  NS_ENSURE_TRUE(mCachedAttrParamNames,  NS_ERROR_OUT_OF_MEMORY);
+  mCachedAttrParamValues = (char **)PR_Calloc(sizeof(char *) * (mNumCachedAttrs + 1 + mNumCachedParams), 1);
+  NS_ENSURE_TRUE(mCachedAttrParamValues, NS_ERROR_OUT_OF_MEMORY);
+
+  // let's fill in our attributes
+  PRInt16 c = 0;
+  for (PRInt16 index = 0; index < mNumCachedAttrs; index++) {
+    PRInt32 nameSpaceID;
+    nsCOMPtr<nsIAtom> atom;
+    nsCOMPtr<nsIAtom> prefix;
+    content->GetAttrNameAt(index, nameSpaceID,
+                           *getter_AddRefs(atom),
+                           *getter_AddRefs(prefix));
+    nsAutoString value;
+    if (NS_CONTENT_ATTR_NOT_THERE != content->GetAttr(nameSpaceID, atom, value)) {
+      nsAutoString name;
+      atom->ToString(name);
+      mCachedAttrParamNames [c] = ToNewUTF8String(name);
+      mCachedAttrParamValues[c] = ToNewUTF8String(value);
+      c++;
+    }
+  }
+
+  // add our PARAM and null seperator
+  mCachedAttrParamNames [mNumCachedAttrs] = ToNewUTF8String(NS_LITERAL_STRING("PARAM"));
+  mCachedAttrParamValues[mNumCachedAttrs] = nsnull;
+
+  // now fill in the PARAM name/value pairs from the cached DOM nodes
+  c = 0;
+  for (PRInt16 idx = 0; idx < mNumCachedParams; idx++) {
+    nsCOMPtr<nsISupports> sup = ourParams->ElementAt(idx);
+    if (sup) {
+     nsCOMPtr<nsIDOMElement> param = do_QueryInterface(sup);
+     if (param) {
+       nsAutoString name;
+       nsAutoString value;
+       param->GetAttribute(NS_LITERAL_STRING("name"), name); // check for empty done above
+       param->GetAttribute(NS_LITERAL_STRING("value"), value);
+       /*
+        * According to the HTML 4.01 spec, at
+        * http://www.w3.org/TR/html4/types.html#type-cdata
+        * ''User agents may ignore leading and trailing
+        * white space in CDATA attribute values (e.g., "
+        * myval " may be interpreted as "myval"). Authors
+        * should not declare attribute values with
+        * leading or trailing white space.''
+        */
+       name.CompressWhitespace();  // XXX right function?
+       value.CompressWhitespace();
+       mCachedAttrParamNames [mNumCachedAttrs + 1 + c] = ToNewUTF8String(name);
+       mCachedAttrParamValues[mNumCachedAttrs + 1 + c] = ToNewUTF8String(value);
+       c++;                                                      // rules!
+     }
+    }
+  }
+
   return NS_OK;
 }
 
@@ -3330,11 +3240,12 @@ nsPluginInstanceOwner::Destroy()
 
 void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 {
-#if defined(XP_MAC) || defined(XP_WIN)
-  if (!mInstance)
-    return;
+#ifdef XP_MAC
+  if (mInstance != NULL) {
 
-#if defined(DO_DIRTY_INTERSECT) || defined(XP_WIN) // aDirtyRect isn't always correct, see bug 56128
+    nsPluginPort* pluginPort = GetPluginPort();
+
+#ifdef DO_DIRTY_INTERSECT   // aDirtyRect isn't always correct, see bug 56128
     nsPoint rel(aDirtyRect.x, aDirtyRect.y);
     nsPoint abs(0,0);
     nsCOMPtr<nsIWidget> containerWidget;
@@ -3348,10 +3259,6 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
     nsRect absDirtyRectInPixels;
     ConvertTwipsToPixels(*mContext, absDirtyRect, absDirtyRectInPixels);
 #endif
-
-#ifdef XP_MAC
-  nsPluginPort* pluginPort = GetPluginPort();
-
     FixUpPluginWindow();
 
     EventRecord updateEvent;
@@ -3362,24 +3269,17 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
     nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
     PRBool eventHandled = PR_FALSE;
     mInstance->HandleEvent(&pluginEvent, &eventHandled);
-#endif // XP_MAC
-#endif // XP_MAC || XP_WIN
+    }
+#endif
 
 #ifdef XP_WIN
-  // prepare rectangle to pass with paint message
-  RECT rc;
-  rc.left   = absDirtyRectInPixels.x;
-  rc.top    = absDirtyRectInPixels.y;
-  rc.right  = rc.left + absDirtyRectInPixels.width;
-  rc.bottom = rc.top + absDirtyRectInPixels.height;
-
     nsPluginEvent pluginEvent;
   pluginEvent.event = 0x000F; //!!! This is bad, but is it better to include <windows.h> for WM_PAINT only?
   pluginEvent.wParam = (uint32)ndc;
-  pluginEvent.lParam = (uint32)&rc;
+  pluginEvent.lParam = nsnull;
     PRBool eventHandled = PR_FALSE;
     mInstance->HandleEvent(&pluginEvent, &eventHandled);
-#endif // XP_WIN
+#endif
 }
 
 // Here's how we give idle time to plugins.
@@ -3648,9 +3548,9 @@ static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbs
   //printf("Widget clip X %d Y %d rect %d %d %d %d\n", aAbsX, aAbsY,  aClipRect.x,  aClipRect.y, aClipRect.width,  aClipRect.height ); 
   //printf("--------------\n"); 
 } 
-#endif // XP_MAC
 
-#if (defined (XP_MAC) && defined(DO_DIRTY_INTERSECT)) || defined(XP_WIN) 
+
+#ifdef DO_DIRTY_INTERSECT
 // Convert from a frame relative coordinate to a coordinate relative to its
 // containing window
 static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&
@@ -3716,9 +3616,7 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
   aPixelRect.width = NSTwipsToIntPixels(aTwipsRect.width, t2p);
   aPixelRect.height = NSTwipsToIntPixels(aTwipsRect.height, t2p);
 }
-#endif // (XP_MAC && DO_DIRTY_INTERSECT) || XP_WIN
-
-#ifdef XP_MAC
+#endif // DO_DIRTY_INTERSECT
 
 void nsPluginInstanceOwner::FixUpPluginWindow()
 {
