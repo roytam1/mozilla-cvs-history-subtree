@@ -28,7 +28,6 @@
 
 #include "nsIDocumentLoader.h"
 
-#include "nsDOMCID.h"
 #include "nsIProperties.h"
 
 #include "nsIObserverService.h"
@@ -52,24 +51,20 @@
     #define GFXWIN_DLL      "GFX_OS2"
     #define VIEW_DLL        "NGVIEW"
     #define WEB_DLL         "WEBSHELL"
-    #define DOM_DLL         "JSDOM"
     #define CAPS_DLL        "CAPS"
 #elif defined(XP_PC)
     #define WIDGET_DLL "gkwidget.dll"
     #define GFXWIN_DLL "gkgfxwin.dll"
     #define VIEW_DLL   "gkview.dll"
-    #define DOM_DLL    "jsdom.dll"
     #define CAPS_DLL   "caps.dll"
 #elif defined(XP_MAC)
     #define WIDGET_DLL    "WIDGET_DLL"
     #define GFXWIN_DLL    "GFXWIN_DLL"
     #define VIEW_DLL        "VIEW_DLL"
     #define WEB_DLL            "WEB_DLL"
-    #define DOM_DLL        "DOM_DLL"
     #define CAPS_DLL    "CAPS_DLL"
 #else
     #define VIEW_DLL   "libgkview"MOZ_DLL_SUFFIX
-    #define DOM_DLL    "libjsdom"MOZ_DLL_SUFFIX
     #define CAPS_DLL   "libcaps"MOZ_DLL_SUFFIX
 #endif
 
@@ -136,10 +131,6 @@ static NS_DEFINE_IID(kCViewManagerCID, NS_VIEW_MANAGER_CID);
 static NS_DEFINE_IID(kCViewCID, NS_VIEW_CID);
 static NS_DEFINE_IID(kCScrollingViewCID, NS_SCROLLING_VIEW_CID);
 static NS_DEFINE_IID(kCScrollPortViewCID, NS_SCROLL_PORT_VIEW_CID);
-
-// DOM
-static NS_DEFINE_IID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-static NS_DEFINE_IID(kCScriptNameSetRegistry, NS_SCRIPT_NAMESET_REGISTRY_CID);
 
 extern "C" void
 NS_SetupRegistry()
@@ -231,8 +222,4 @@ NS_SetupRegistry()
   nsComponentManager::RegisterComponentLib(kCViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponentLib(kCScrollingViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponentLib(kCScrollPortViewCID, NULL, NULL, VIEW_DLL, PR_FALSE, PR_FALSE);
-
-  // DOM
-  nsComponentManager::RegisterComponentLib(kCDOMScriptObjectFactory, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponentLib(kCScriptNameSetRegistry, NULL, NULL, DOM_DLL, PR_FALSE, PR_FALSE);
 }

@@ -58,36 +58,9 @@ OBJS =                                      \
 	$(NULL)
 
 LINCS=  \
-  -I$(PUBLIC)\raptor \
-  -I$(PUBLIC)\xpcom \
-  -I$(PUBLIC)\dom \
-  -I$(PUBLIC)\js \
-!ifdef NECKO
-  -I$(PUBLIC)\necko \
-!else
-  -I$(PUBLIC)\netlib \
-!endif
-  -I$(PUBLIC)\java \
-  -I$(PUBLIC)\plugin \
-  -I$(PUBLIC)\pref \
-  -I$(PUBLIC)\editor \
-  -I$(PUBLIC)\uconv \
-  -I$(PUBLIC)\strres \
-  -I$(PUBLIC)\locale \
-  -I$(PUBLIC)\lwbrk \
-  -I$(PUBLIC)\unicharutil \
-  -I$(PUBLIC)\intl \
-  -I$(PUBLIC)\rdf \
-  -I$(PUBLIC)\wallet \
-  -I$(PUBLIC)\profile \
-!if defined(NGPREFS)
-  -I$(PUBLIC)\ngprefs \
-!endif
 !ifdef MOZ_FULLCIRCLE
   -I$(MOZ_TOOLS)\include \
 !endif
-  -I$(PUBLIC)\oji \
-  -I$(PUBLIC)\caps \
   $(NULL)
 
 LLIBS=                         \
@@ -102,7 +75,6 @@ LLIBS=                         \
  $(DIST)\lib\xpcom.lib        \
  $(DIST)\lib\js32$(VERSION_NUMBER).lib \
  $(LIBNSPR)                     \
- $(DIST)\lib\jsdom.lib          \
 !ifdef MOZ_FULLCIRCLE
  $(MOZ_TOOLS)\lib\fulls32.lib \
 !endif

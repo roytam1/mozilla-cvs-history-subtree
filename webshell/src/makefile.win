@@ -40,23 +40,7 @@ CPP_OBJS=				\
  .\$(OBJDIR)\nsWebShell.obj		\
  $(NULL)
 
-LINCS=-I..\public -I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \
-      -I$(PUBLIC)\dom -I$(PUBLIC)\js \
-      -I$(PUBLIC)\necko \
-      -I$(PUBLIC)\plugin -I$(PUBLIC)\java -I$(PUBLIC)\pref -I$(PUBLIC)\profile \
-      -I$(PUBLIC)\js -I$(DEPTH)\include -I$(PUBLIC)\jsurl \
-      -I$(PUBLIC)\editor -I$(PUBLIC)\rdf \
-      -I$(PUBLIC)\xpfe\components \
-      -I$(PUBLIC)\walletlib \
-      -I$(PUBLIC)\oji \
-      -I$(PUBLIC)\uconv \
-      -I$(PUBLIC)\strres \
-      -I$(PUBLIC)\locale \
-      -I$(PUBLIC)\lwbrk \
-      -I$(PUBLIC)\unicharutil \
-      -I$(PUBLIC)\intl \
-      -I$(PUBLIC)\caps \
-		-I..\..\docshell\base
+LINCS= -I..\..\docshell\base
 
 MAKE_OBJ_TYPE = DLL
 DLLNAME = gkweb
@@ -77,7 +61,6 @@ LLIBS=				\
  $(DIST)\lib\timer_s.lib \
  $(DIST)\lib\img32$(VERSION_NUMBER).lib     \
  $(DIST)\lib\util.lib        \
- $(DIST)\lib\jsdom.lib       \
  $(LIBNSPR)
 
 WIN_LIBS= OLE32.LIB
