@@ -39,6 +39,8 @@
 
 #import "BookmarksService.h"
 
+#import "BookmarksExport.h"
+
 #import "PreferenceManager.h"
 #import "CHBrowserView.h"
 #import "CHBrowserService.h"
@@ -174,6 +176,7 @@ nsIDOMElement* BookmarksService::gDockMenuRoot = nsnull;
 nsIAtom* BookmarksService::gBookmarkAtom = nsnull;
 nsIAtom* BookmarksService::gDescriptionAtom = nsnull;
 nsIAtom* BookmarksService::gFolderAtom = nsnull;
+nsIAtom* BookmarksService::gSeparatorAtom = nsnull;
 nsIAtom* BookmarksService::gGroupAtom = nsnull;
 nsIAtom* BookmarksService::gHrefAtom = nsnull;
 nsIAtom* BookmarksService::gKeywordAtom = nsnull;
@@ -199,6 +202,7 @@ BookmarksService::Init()
   sInitted = true;
   gBookmarkAtom = NS_NewAtom("bookmark");
   gFolderAtom = NS_NewAtom("folder");
+  gSeparatorAtom = NS_NewAtom("separator");
   gNameAtom = NS_NewAtom("name");
   gHrefAtom = NS_NewAtom("href");
   gOpenAtom = NS_NewAtom("open");
@@ -221,6 +225,7 @@ BookmarksService::Shutdown()
 
   NS_RELEASE(gBookmarkAtom);
   NS_RELEASE(gFolderAtom);
+  NS_RELEASE(gSeparatorAtom);
   NS_RELEASE(gNameAtom);
   NS_RELEASE(gHrefAtom);
   NS_RELEASE(gOpenAtom);
@@ -562,6 +567,13 @@ BookmarksService::FlushBookmarks()
     return;
   
   SaveBookmarksToFile(NS_LITERAL_STRING("bookmarks.xml"));
+}
+
+nsresult
+BookmarksService::ExportBookmarksToHTML(const nsAString& inFilePath)
+{
+  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(gBookmarksDocument);
+  return BookmarksExport::ExportBookmarksToHTML(domDoc, inFilePath);
 }
 
 void

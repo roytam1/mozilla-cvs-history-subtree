@@ -94,6 +94,9 @@ public:
   static void ReadBookmarks();
   static void FlushBookmarks();
 
+  static nsresult ExportBookmarksToHTML(const nsAString& inFilePath);
+  
+  
   static void SetDockMenuRoot(nsIContent* inDockRootContent);
   static void SetToolbarRoot(nsIContent* inToolbarRootContent);
     
@@ -130,6 +133,7 @@ public:
   static nsIDOMElement* gDockMenuRoot;
 
   static nsIAtom* gFolderAtom;
+  static nsIAtom* gSeparatorAtom;
   static nsIAtom* gNameAtom;
   static nsIAtom* gHrefAtom;
   static nsIAtom* gKeywordAtom;

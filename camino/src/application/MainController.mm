@@ -39,6 +39,8 @@
 #include <mach-o/dyld.h>
 #include <sys/utsname.h>
 
+#import "NSString+Utils.h"
+
 #import "MainController.h"
 #import "BrowserWindowController.h"
 #import "BookmarksMenu.h"
@@ -566,7 +568,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   // IE favorites: ~/Library/Preferences/Explorer/Favorites.html
   // Omniweb favorites: ~/Library/Application Support/Omniweb/Bookmarks.html
   // For now, open the panel to IE's favorites.
-  NSOpenPanel* openPanel = [[[NSOpenPanel alloc] init] autorelease];
+  NSOpenPanel* openPanel = [NSOpenPanel openPanel];
   [openPanel setCanChooseFiles: YES];
   [openPanel setCanChooseDirectories: NO];
   [openPanel setAllowsMultipleSelection: NO];
@@ -588,6 +590,21 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
     
     [[browserWindow windowController] importBookmarks: [url absoluteString]];
   }
+}
+
+-(IBAction) exportBookmarks:(id)aSender
+{
+  NSSavePanel* savePanel = [NSSavePanel savePanel];
+  [savePanel setPrompt:@"Export"];		// XXX localize
+  [savePanel setRequiredFileType:@"html"];
+  
+  int saveResult = [savePanel runModalForDirectory:@"" file:@"Exported Bookmarks"];
+  if (saveResult != NSFileHandlingPanelOKButton)
+    return;
+
+  nsAutoString filePath;
+  [[savePanel filename] assignTo_nsAString:filePath];
+  BookmarksService::ExportBookmarksToHTML(filePath);
 }
 
 -(IBAction) addBookmark:(id)aSender

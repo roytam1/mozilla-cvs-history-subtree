@@ -18,6 +18,7 @@
                 doReload = id; 
                 doSearch = id; 
                 doStop = id; 
+                exportBookmarks = id; 
                 feedbackLink = id; 
                 findAgain = id; 
                 findInPage = id; 
