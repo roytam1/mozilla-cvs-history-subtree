@@ -161,11 +161,11 @@ nss_Init(const char *configdir, PRBool readOnly)
     RNG_RNGInit();     		/* initialize random number generator */
     RNG_SystemInfoForRNG();
 
-    status = nss_OpenCertDB(configdir, readOnly);
+    status = nss_OpenCertDB(configdir, PR_TRUE);
     if (status != SECSuccess)
 	goto loser;
 
-    status = nss_OpenKeyDB(configdir, readOnly);
+    status = nss_OpenKeyDB(configdir, PR_TRUE);
     if (status != SECSuccess)
 	goto loser;
 

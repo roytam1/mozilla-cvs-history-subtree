@@ -1,12 +1,10 @@
 ; This is a DEF file to create an import library for Borland C++
 ;    implib -c -i nsldap32bc.lib nsldap32bc.def
 ;
-LIBRARY         NSLDAP32V30
+LIBRARY         NSLDAP32V40
 DESCRIPTION     'Lightweight Directory Access Protocol Client API for 32-bit Windows'
-CODE            PRELOAD MOVEABLE DISCARDABLE
-DATA            PRELOAD MOVEABLE SINGLE
 ; VERSION is not supported in Borland
-;VERSION			3.1
+;VERSION			4.0
 HEAPSIZE        4096
 
 EXPORTS
@@ -266,6 +264,7 @@ EXPORTS
 	_ldap_create_virtuallist_control=ldap_create_virtuallist_control		@525
 	_ldap_parse_virtuallist_control=ldap_parse_virtuallist_control		@526
 	_ldap_create_proxyauth_control=ldap_create_proxyauth_control		@527
+	_ldap_unbind_ext=ldap_unbind_ext		@528
 	_ldap_memcache_init=ldap_memcache_init		@1000
 	_ldap_memcache_set=ldap_memcache_set		@1001
 	_ldap_memcache_get=ldap_memcache_get		@1002

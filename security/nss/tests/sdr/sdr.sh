@@ -1,23 +1,21 @@
-#! /bin/sh  
+#! /bin/ksh  
 #
 # This is just a quick script so we can still run our testcases.
 # Longer term we need a scriptable test environment..
 #
 . ../common/init.sh
-
-VALUEDIR=`dirname $RESULTS`
-
 CURDIR=`pwd`
 
 #temporary files
-VALUE1=$VALUEDIR/tests.v1.$$
-VALUE2=$VALUEDIR/tests.v2.$$
+VALUE1=/tmp/tests.v1.$$
+VALUE2=/tmp/tests.v2.$$
+
+TEMPFILES="${VALUE1} ${VALUE2} cert7.db key3.db"
 
 #
 # should also try to kill any running server
 #
-#trap "rm -f ${TEMPFILES};  exit"  2 3 - leave this line for now, in case we 
-	#need other cleanup
+trap "rm -f ${TEMPFILES};  exit"  2 3
 
 T1=Test1
 T2="The quick brown fox jumped over the lazy dog"
@@ -69,3 +67,5 @@ else
 fi
 
 echo "</TABLE><BR>" >> ${RESULTS}
+
+rm -f ${TEMPFILES}

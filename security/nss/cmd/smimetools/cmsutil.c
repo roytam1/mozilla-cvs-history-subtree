@@ -390,22 +390,6 @@ signed_data(struct signOptionsStr signOptions)
     NSSCMSSignerInfo *signerinfo;
     CERTCertificate *cert, *ekpcert;
 
-#ifdef DEBUG
-    fprintf(stderr, "Input to signed_data:\n");
-    if (signOptions.options->password)
-	fprintf(stderr, "password [%s]\n", signOptions.options->password);
-    else
-	fprintf(stderr, "password [NULL]\n");
-    fprintf(stderr, "certUsage [%d]\n", signOptions.options->certUsage);
-    if (signOptions.options->certHandle)
-	fprintf(stderr, "certdb [%x]\n", signOptions.options->certHandle);
-    else
-	fprintf(stderr, "certdb [NULL]\n");
-    if (signOptions.nickname)
-	fprintf(stderr, "nickname [%s]\n", signOptions.nickname);
-    else
-	fprintf(stderr, "nickname [NULL]\n");
-#endif
     if (signOptions.nickname == NULL) {
 	fprintf(stderr, 
         "ERROR: please indicate the nickname of a certificate to sign with.\n");
@@ -418,9 +402,6 @@ signed_data(struct signOptionsStr signOptions)
 	                signOptions.nickname);
 	return NULL;
     }
-#ifdef DEBUG
-    fprintf(stderr, "Found certificate for %s\n", signOptions.nickname);
-#endif
     /*
      * create the message object
      */
@@ -458,9 +439,6 @@ signed_data(struct signOptionsStr signOptions)
 	fprintf(stderr, "ERROR: cannot create CMS signerInfo object.\n");
 	goto loser;
     }
-#ifdef DEBUG
-    fprintf(stderr, "Created CMS message, added signed data w/ signerinfo\n");
-#endif
     /* we want the cert chain included for this one */
     if (NSS_CMSSignerInfo_IncludeCerts(signerinfo, NSSCMSCM_CertChain, 
                                        signOptions.options->certUsage) 
@@ -468,9 +446,6 @@ signed_data(struct signOptionsStr signOptions)
 	fprintf(stderr, "ERROR: cannot find cert chain.\n");
 	goto loser;
     }
-#ifdef DEBUG
-    fprintf(stderr, "imported certificate\n");
-#endif
     if (signOptions.signingTime) {
 	if (NSS_CMSSignerInfo_AddSigningTime(signerinfo, PR_Now()) 
 	      != SECSuccess) {
@@ -519,9 +494,6 @@ signed_data(struct signOptionsStr signOptions)
 	fprintf(stderr, "ERROR: cannot add CMS signerInfo object.\n");
 	goto loser;
     }
-#ifdef DEBUG
-    fprintf(stderr, "created signed-date message\n");
-#endif
     return cmsg;
 loser:
     NSS_CMSMessage_Destroy(cmsg);
@@ -932,18 +904,11 @@ main(int argc, char **argv)
     encryptOptions.bulkkey = NULL;
     encryptOptions.keysize = -1;
 
-#ifdef DEBUG
-    fprintf(stderr, "starting program\n");
-#endif
-
     /*
      * Parse command line arguments
      */
     optstate = PL_CreateOptState(argc, argv, 
                                  "CDSEOnN:TGPY:h:p:i:c:d:e:o:s:u:r:");
-#ifdef DEBUG
-    fprintf(stderr, "parsed command line\n");
-#endif
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	case '?':
@@ -1064,6 +1029,8 @@ main(int argc, char **argv)
 			progName, optstate->value);
 		exit(1);
 	    }
+	    SECU_FileToItem(&input, inFile);
+	    PR_Close(inFile);
 	    break;
 
 	case 'c':
@@ -1142,17 +1109,6 @@ main(int argc, char **argv)
 	}
     }
 
-    if (mode == UNKNOWN)
-	Usage(progName);
-
-    if (mode != CERTSONLY)
-	SECU_FileToItem(&input, inFile);
-    if (inFile != PR_STDIN)
-	PR_Close(inFile);
-#ifdef DEBUG
-    fprintf(stderr, "received commands\n");
-#endif
-
     /* Call the libsec initialization routines */
     PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
     rv = NSS_InitReadWrite(SECU_ConfigDirectory(NULL));
@@ -1160,17 +1116,11 @@ main(int argc, char **argv)
 	SECU_PrintError(progName, "NSS_Init failed");
 	exit(1);
     }
-#ifdef DEBUG
-    fprintf(stderr, "NSS has been initialized.\n");
-#endif
     options.certHandle = CERT_GetDefaultCertDB();
     if (!options.certHandle) {
 	SECU_PrintError(progName, "No default cert DB");
 	exit(1);
     }
-#ifdef DEBUG
-    fprintf(stderr, "Got default certdb\n");
-#endif
 
 #if defined(WIN32)
     /*if (outFile == stdout && mode != DECODE) {*/
@@ -1288,14 +1238,6 @@ main(int argc, char **argv)
 	}
 	pwcb     = (options.password != NULL) ? ownpw                    : NULL;
 	pwcb_arg = (options.password != NULL) ? (void *)options.password : NULL;
-#ifdef DEBUG
-	fprintf(stderr, "cmsg [%x]\n", cmsg);
-	fprintf(stderr, "arena [%x]\n", arena);
-	if (pwcb_arg)
-	    fprintf(stderr, "password [%s]\n", (char *)pwcb_arg);
-	else
-	    fprintf(stderr, "password [NULL]\n");
-#endif
 	ecx = NSS_CMSEncoder_Start(cmsg, 
                                    NULL, NULL,     /* DER output callback  */
                                    &output, arena, /* destination storage  */
@@ -1306,13 +1248,6 @@ main(int argc, char **argv)
 	    fprintf(stderr, "%s: cannot create encoder context.\n", progName);
 	    exit(1);
 	}
-#ifdef DEBUG
-	fprintf(stderr, "input len [%d]\n", input.len);
-	{ int j; 
-	  for(j=0;j<input.len;j++)
-	     fprintf(stderr, "%2x%c", input.data[j], (j>0&&j%35==0)?'\n':' ');
-	}
-#endif
 	if (input.len > 0) { /* skip if certs-only (or other zero content) */
 	    rv = NSS_CMSEncoder_Update(ecx, input.data, input.len);
 	    if (rv) {
@@ -1326,14 +1261,8 @@ main(int argc, char **argv)
 	    fprintf(stderr, "%s: failed to encode data.\n", progName);
 	    exit(1);
 	}
-#ifdef DEBUG
-	fprintf(stderr, "encoding passed\n");
-#endif
 	/*PR_Write(output.data, output.len);*/
 	fwrite(output.data, output.len, 1, outFile);
-#ifdef DEBUG
-	fprintf(stderr, "wrote to file\n");
-#endif
 	PORT_FreeArena(arena, PR_FALSE);
     }
     if (cmsg)

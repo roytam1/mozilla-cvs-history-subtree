@@ -1,5 +1,5 @@
 #! gmake
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -52,11 +52,30 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-include ../platlibs.mk
+#include config.mk
 
+include $(CORE_DEPTH)/security/cmd/platlibs.mk
+
+# can't do this in manifest.mn because OS_ARCH isn't defined there.
+ifeq ($(OS_ARCH), WINNT)
+
+EXTRA_LIBS = \
+	$(DIST)/lib/pkcs12.lib \
+	$(DIST)/lib/pkcs7.lib \
+	$(NULL)
+
+else
+
+EXTRA_LIBS += \
+	$(DIST)/lib/libpkcs12.$(LIB_SUFFIX) \
+	$(DIST)/lib/libpkcs7.$(LIB_SUFFIX) \
+	$(NULL)
+endif
 
 #######################################################################
 # (5) Execute "global" rules. (OPTIONAL)                              #
+# NOTE: CC linker has to be used to resolve C++ stuff, hence the      #
+#       customized rules.mk                                           #
 #######################################################################
 
 include $(CORE_DEPTH)/coreconf/rules.mk
@@ -72,5 +91,4 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 
 
-include ../platrules.mk
- 
+

@@ -79,9 +79,8 @@ endif
 ifeq ($(OS_ARCH),IRIX)
 ifeq ($(USE_N32),1)
     ASFILES  = mpi_mips.s
-    ASFLAGS = -O -OPT:Olimit=4000 -dollar -fullwarn -xansi -n32 -mips3 
+    ASFLAGS = -O -OPT:Olimit=4000 -dollar -fullwarn -xansi -n32 -mips3 -exceptions 
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE
-    DEFINES += -DMP_USE_UINT_DIGIT
 else
 endif
 endif
@@ -93,31 +92,10 @@ ifeq ($(CPU_ARCH),x86)
 endif
 endif
 
-ifeq ($(OS_ARCH),AIX)
-DEFINES += -DMP_USE_UINT_DIGIT
-ifndef USE_64
-DEFINES += -DMP_NO_DIV_WORD -DMP_NO_ADD_WORD -DMP_NO_SUB_WORD
-endif
-endif
-
 ifeq ($(OS_ARCH), HP-UX)
-ifdef USE_PURE_32
-# build for DA1.1 (HP PA 1.1) pure 32 bit model
-    DEFINES  += -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
-else
 ifdef USE_64
-# this builds for DA2.0W (HP PA 2.0 Wide), the LP64 ABI, using 32-bit digits 
-    MPI_SRCS += montmulf.c
-    DEFINES  += -DMP_USING_MONT_MULF -DMP_USE_UINT_DIGIT
-    DEFINES  += -DMP_USE_LONG_LONG_MULTIPLY -DMP_NO_MP_WORD
 else
-# this builds for DA2.0 (HP PA 2.0 Narrow) hybrid model 
-# (the 32-bit ABI with 64-bit registers) using 32-bit digits
-    MPI_SRCS += montmulf.c
-    DEFINES  += -DMP_USING_MONT_MULF -DMP_USE_UINT_DIGIT
-    DEFINES  += -DMP_USE_LONG_LONG_MULTIPLY -DMP_NO_MP_WORD
-    OS_CFLAGS += -Aa +e +DA2.0 +DS2.0
-endif
+    DEFINES += -DMP_NO_MP_WORD
 endif
 endif
 
@@ -140,30 +118,17 @@ ifeq ($(OS_RELEASE),5.8)
     SYSV_SPARC = 1
 endif
 ifeq ($(SYSV_SPARC),1)
-SOLARIS_AS = /usr/ccs/bin/as
-ifdef USE_PURE_32
-# this builds for Sparc v8 pure 32-bit architecture
-    DEFINES += -DMP_USE_LONG_LONG_MULTIPLY -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
-else
 ifdef USE_64
-# this builds for Sparc v9a pure 64-bit architecture
-    MPI_SRCS += mpi_sparc.c
-    ASFILES   = mpv_sparcv9.s montmulfv9.s
-    DEFINES  += -DMP_ASSEMBLY_MULTIPLY -DMP_USING_MONT_MULF
-    DEFINES  += -DMP_USE_UINT_DIGIT 
-#   MPI_SRCS += mpv_sparc.c
-# removed -xdepend from the following line
-    SOLARIS_FLAGS = -fast -xO5 -xrestrict=%all -xchip=ultra -xarch=v9a -KPIC -mt
-    SOLARIS_AS_FLAGS = -xarch=v9a -K PIC
+    DEFINES += -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD -DMP_ASSEMBLY_MULTIPLY
+    MPI_SRCS += mpi_sparc.c mpv_sparc.c
+    SOLARIS_FLAGS = -fast -xO5 -xrestrict=%all -xdepend -xchip=ultra -xarch=v9a -KPIC -mt
 else
-# this builds for Sparc v8+a hybrid architecture, 64-bit registers, 32-bit ABI
+    DEFINES += -DMP_NO_MP_WORD -DMP_ASSEMBLY_MULTIPLY
+    ASFILES  = mpv_sparc32.S
+    ASM_SUFFIX = .S
     MPI_SRCS += mpi_sparc.c
-    ASFILES  = mpv_sparcv8.s montmulfv8.s
-    DEFINES  += -DMP_NO_MP_WORD -DMP_ASSEMBLY_MULTIPLY -DMP_USING_MONT_MULF
-    DEFINES  += -DMP_USE_UINT_DIGIT 
-    SOLARIS_AS_FLAGS = -xarch=v8plusa -K PIC
-#   ASM_SUFFIX = .S
-endif
+    SOLARIS_AS = /usr/ccs/bin/as
+    SOLARIS_FLAGS = -xarch=v8plusa -K PIC
 endif
 endif
 endif
@@ -187,11 +152,6 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 
 export:: private_export
-
-rijndael_tables:
-	$(CC) -o $(OBJDIR)/make_rijndael_tab rijndael_tables.c \
-	         $(DEFINES) $(INCLUDES) $(OBJDIR)/libfreebl.a
-	$(OBJDIR)/make_rijndael_tab
 
 ifdef MOZILLA_BSAFE_BUILD
 
@@ -229,12 +189,9 @@ vis%.il : mpi/vis%.il
 vis%.h : mpi/vis%.h
 	cd mpi; cp $@ ..
 
-mont% : mpi/mont%
-	cd mpi; cp $@ ..
-
 .PRECIOUS : $(MPI_SRCS) $(MPI_HDRS) $(ASFILES)
 
-ALL_TRASH += $(MPI_SRCS) $(MPI_HDRS) $(ASFILES) primes.c mont*
+ALL_TRASH += $(MPI_SRCS) $(MPI_HDRS) $(ASFILES) primes.c
 
 DEFINES += -DMP_API_COMPATIBLE
 
@@ -252,24 +209,13 @@ $(SPARCFIX): sparcfix.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -O sparcfix.c -lelf
 
-$(OBJDIR)/mpv_sparcv8.o $(OBJDIR)/montmulfv8.o : $(OBJDIR)/%.o : %.s $(SPARCFIX)
+$(OBJDIR)/mpv_sparc32.o: $(SPARCFIX) mpv_sparc32.S
 	@$(MAKE_OBJDIR)
-	$(SOLARIS_AS) -o $@ $(SOLARIS_AS_FLAGS) $*.s
+	$(SOLARIS_AS) -o $@ $(SOLARIS_FLAGS) mpv_sparc32.S
 	$(SPARCFIX) $@
-
-$(OBJDIR)/mpv_sparcv9.o $(OBJDIR)/montmulfv9.o : $(OBJDIR)/%.o : %.s
-	@$(MAKE_OBJDIR)
-	$(SOLARIS_AS) -o $@ $(SOLARIS_AS_FLAGS) $*.s
-#	$(SPARCFIX) $@
 
 $(OBJDIR)/mpv_sparc.o: vis_64.il vis_proto.h mpv_sparc.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ $(SOLARIS_FLAGS) -c vis_64.il mpv_sparc.c
 #       $(SPARCFIX) $@
-
-$(OBJDIR)/mpmontg.o: mpmontg.c montmulf.h
-endif
-
-ifeq ($(OS_ARCH), HP-UX)
-$(OBJDIR)/mpmontg.o: mpmontg.c montmulf.h
 endif

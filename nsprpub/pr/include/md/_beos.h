@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef nspr_beos_defs_h___
@@ -84,9 +68,6 @@
 #define _PR_GLOBAL_THREADS_ONLY
 #define _PR_BTHREADS
 #define _PR_NEED_FAKE_POLL
-#define _PR_HAVE_PEEK_BUFFER
-#define _PR_PEEK_BUFFER_MAX (16 * 1024)
-#define _PR_FD_NEED_EMULATE_MSG_PEEK(fd) 1
 
 /* Define threading functions and objects as native BeOS */
 struct _MDThread {
@@ -304,8 +285,6 @@ struct protoent* getprotobynumber(int number);
 #define _MD_READ_DIR _MD_read_dir
 #define _MD_CLOSE_DIR _MD_close_dir
 #define _MD_MAKE_NONBLOCK _MD_make_nonblock
-#define _MD_INIT_FD_INHERITABLE _MD_init_fd_inheritable
-#define _MD_QUERY_FD_INHERITABLE _MD_query_fd_inheritable
 #define _MD_OPEN _MD_open
 #define _MD_OPEN_FILE _MD_open
 #define _MD_CLOSE_FILE _MD_close_file
@@ -378,7 +357,6 @@ struct protoent* getprotobynumber(int number);
 /* Memory mapped file I/O */
 
 #define _MD_CREATE_FILE_MAP _MD_create_file_map
-#define _MD_GET_MEM_MAP_ALIGNMENT _MD_get_mem_map_alignment
 #define _MD_MEM_MAP _MD_mem_map
 #define _MD_MEM_UNMAP _MD_mem_unmap
 #define _MD_CLOSE_FILE_MAP _MD_close_file_map
@@ -503,8 +481,6 @@ NSPR_API(PRStatus) _MD_open_dir(struct _MDDir *md,const char *name);
 NSPR_API(char *) _MD_read_dir(struct _MDDir *md, PRIntn flags);
 NSPR_API(PRInt32) _MD_close_dir(struct _MDDir *md);
 NSPR_API(void) _MD_make_nonblock(PRFileDesc *fd);
-NSPR_API(void) _MD_init_fd_inheritable(PRFileDesc *fd, PRBool imported);
-NSPR_API(void) _MD_query_fd_inheritable(PRFileDesc *fd);
 NSPR_API(PRInt32) _MD_open(const char *name, PRIntn osflags, PRIntn mode);
 NSPR_API(PRInt32) _MD_close_file(PRInt32 osfd);
 NSPR_API(PRInt32) _MD_read(PRFileDesc *fd, void *buf, PRInt32 amount);
@@ -574,7 +550,6 @@ NSPR_API(void) _MD_free_segment(PRSegment *seg);
 /* Memory mapped file I/O */
 
 NSPR_API(PRStatus) _MD_create_file_map(PRFileMap *fmap, PRInt64 size);
-NSPR_API(PRInt32) _MD_get_mem_map_alignment(void);
 NSPR_API(void *) _MD_mem_map(PRFileMap *fmap, PRInt64 offset, PRUint32 len);
 NSPR_API(PRStatus) _MD_mem_unmap(void *addr, PRUint32 size);
 NSPR_API(PRStatus) _MD_close_file_map(PRFileMap *fmap);

@@ -114,12 +114,8 @@ int ssl3CipherSuites[] = {
     0
 };
 
-/* data and structures for shutdown */
-int	stopping;
-PRLock    * stopLock;
-PRCondVar * stopQ;
-
 int     requestCert;
+int	stopping;
 int	verbose;
 SECItem	bigBuf;
 
@@ -148,7 +144,7 @@ Usage(const char *progName)
 {
     fprintf(stderr, 
 
-"Usage: %s -n rsa_nickname -p port [-3RTmrvx] [-w password] [-t threads]\n"
+"Usage: %s -n rsa_nickname -p port [-3RTmrvx] [-w password]\n"
 "         [-i pid_file] [-c ciphers] [-d dbdir] [-f fortezza_nickname] \n"
 "-3 means disable SSL v3\n"
 "-T means disable TLS\n"
@@ -159,7 +155,6 @@ Usage(const char *progName)
 "    2 -r's mean request  and require, cert on initial handshake.\n"
 "    3 -r's mean request, not require, cert on second handshake.\n"
 "    4 -r's mean request  and require, cert on second handshake.\n"
-"-t threads -- specify the number of threads to use for connections.\n"
 "-v means verbose output\n"
 "-x means use export policy.\n"
 "-i pid_file file to write the process id of selfserve\n"
@@ -369,20 +364,17 @@ extern long ssl3_hch_sid_cache_not_ok;
 /**************************************************************************
 ** Begin thread management routines and data.
 **************************************************************************/
-#define MIN_THREADS 3
-#define DEFAULT_THREADS 8
-#define MAX_THREADS 128
-static int  maxThreads = DEFAULT_THREADS;
 
+#define MAX_THREADS 32
 
 typedef int startFn(PRFileDesc *a, PRFileDesc *b, int c);
 
 PRLock    * threadLock;
-PRCondVar * threadQ;
+PRCondVar * threadStartQ;
+PRCondVar * threadEndQ;
 
-PRLock    * stopLock;
-PRCondVar * stopQ;
-static int threadCount = 0;
+int         numUsed;
+int         numRunning;
 
 typedef enum { rs_idle = 0, rs_running = 1, rs_zombie = 2 } runState;
 
@@ -393,23 +385,29 @@ typedef struct perThreadStr {
     int         rv;
     startFn  *  startFunc;
     PRThread *  prThread;
-    runState	state;
+    PRBool	inUse;
+    runState	running;
 } perThread;
 
-perThread *threads;
+perThread threads[MAX_THREADS];
 
 void
 thread_wrapper(void * arg)
 {
     perThread * slot = (perThread *)arg;
 
+    /* wait for parent to finish launching us before proceeding. */
+    PR_Lock(threadLock);
+    PR_Unlock(threadLock);
+
     slot->rv = (* slot->startFunc)(slot->a, slot->b, slot->c);
 
-    /* notify the thread exit handler. */
     PR_Lock(threadLock);
-    slot->state = rs_zombie;
-    --threadCount;
-    PR_NotifyAllCondVar(threadQ);
+    slot->running = rs_zombie;
+
+    /* notify the thread exit handler. */
+    PR_NotifyCondVar(threadEndQ);
+
     PR_Unlock(threadLock);
 }
 
@@ -422,45 +420,98 @@ launch_thread(
 {
     perThread * slot;
     int         i;
-    static int highWaterMark = 0;
-    int workToDo = 1;
 
+    if (!threadStartQ) {
+	threadLock = PR_NewLock();
+	threadStartQ = PR_NewCondVar(threadLock);
+	threadEndQ   = PR_NewCondVar(threadLock);
+    }
     PR_Lock(threadLock);
-    /* for each perThread structure in the threads array */
-    while( workToDo )  {
-        for (i = 0; i < maxThreads; ++i) {
-            slot = threads + i;
+    while (numRunning >= MAX_THREADS) {
+    	PR_WaitCondVar(threadStartQ, PR_INTERVAL_NO_TIMEOUT);
+    }
+    for (i = 0; i < numUsed; ++i) {
+	slot = threads + i;
+    	if (slot->running == rs_idle) 
+	    break;
+    }
+    if (i >= numUsed) {
+	if (i >= MAX_THREADS) {
+	    /* something's really wrong here. */
+	    PORT_Assert(i < MAX_THREADS);
+	    PR_Unlock(threadLock);
+	    return SECFailure;
+	}
+	++numUsed;
+	PORT_Assert(numUsed == i + 1);
+	slot = threads + i;
+    }
 
-            /* create new thread */
-            if (( slot->state == rs_idle ) || ( slot->state == rs_zombie ))  {
-                slot->state = 1;
-                workToDo = 0;
-                slot->a = a;
-                slot->b = b;
-                slot->c = c;
-                slot->startFunc = startFunc;
-                slot->prThread = PR_CreateThread(PR_USER_THREAD, thread_wrapper, slot,
-				                  PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
-				                  PR_UNJOINABLE_THREAD, 0);
-                if (slot->prThread == NULL) {
-    	            printf("selfserv: Failed to launch thread!\n");
-                    slot->state = rs_idle;
-    	            return SECFailure;
-                } 
+    slot->a = a;
+    slot->b = b;
+    slot->c = c;
 
-                highWaterMark = ( i > highWaterMark )? i : highWaterMark;
-                PRINTF("selfserv: Launched thread in slot %d, highWaterMark: %d \n", i, highWaterMark );
-                FLUSH;
-                ++threadCount;
-                break; /* we did what we came here for, leave */
-            }
-        } /* end for() */
-        if ( workToDo )
-            PR_WaitCondVar(threadQ, PR_INTERVAL_NO_TIMEOUT);
-    } /* end while() */
-    PR_Unlock(threadLock); 
+    slot->startFunc = startFunc;
+
+    slot->prThread      = PR_CreateThread(PR_USER_THREAD,
+                                      thread_wrapper, slot,
+				      PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
+				      PR_JOINABLE_THREAD, 0);
+    if (slot->prThread == NULL) {
+	PR_Unlock(threadLock);
+	printf("selfserv: Failed to launch thread!\n");
+	return SECFailure;
+    } 
+
+    slot->inUse   = 1;
+    slot->running = 1;
+    ++numRunning;
+    PR_Unlock(threadLock);
+    PRINTF("selfserv: Launched thread in slot %d \n", i);
+    FLUSH;
 
     return SECSuccess;
+}
+
+int 
+reap_threads(void)
+{
+    perThread * slot;
+    int         i;
+
+    if (!threadLock)
+    	return 0;
+    PR_Lock(threadLock);
+    while (numRunning > 0) {
+    	PR_WaitCondVar(threadEndQ, PR_INTERVAL_NO_TIMEOUT);
+	for (i = 0; i < numUsed; ++i) {
+	    slot = threads + i;
+	    if (slot->running == rs_zombie)  {
+		/* Handle cleanup of thread here. */
+		PRINTF("selfserv: Thread in slot %d returned %d\n", i, slot->rv);
+
+		/* Now make sure the thread has ended OK. */
+		PR_JoinThread(slot->prThread);
+		slot->running = rs_idle;
+		--numRunning;
+
+		/* notify the thread launcher. */
+		PR_NotifyCondVar(threadStartQ);
+	    }
+	}
+    }
+
+    /* Safety Sam sez: make sure count is right. */
+    for (i = 0; i < numUsed; ++i) {
+	slot = threads + i;
+    	if (slot->running != rs_idle)  {
+	    FPRINTF(stderr, "selfserv: Thread in slot %d is in state %d!\n", 
+	            i, slot->running);
+    	}
+    }
+    PR_Unlock(threadLock);
+    FLUSH;
+    return 0;
 }
 
 void
@@ -468,13 +519,17 @@ destroy_thread_data(void)
 {
     PORT_Memset(threads, 0, sizeof threads);
 
-    if (threadQ) {
-        PR_DestroyCondVar(threadQ);
-    	threadQ = NULL;
+    if (threadEndQ) {
+    	PR_DestroyCondVar(threadEndQ);
+	threadEndQ = NULL;
+    }
+    if (threadStartQ) {
+    	PR_DestroyCondVar(threadStartQ);
+	threadStartQ = NULL;
     }
     if (threadLock) {
-        PR_DestroyLock(threadLock);
-        threadLock = NULL;
+    	PR_DestroyLock(threadLock);
+	threadLock = NULL;
     }
 }
 
@@ -936,13 +991,6 @@ server_main(
     PRSocketOptionData opt;
 
     networkStart();
-    
-    /* create the thread management serialization structs */
-  	threadLock = PR_NewLock();
-    threadQ   = PR_NewCondVar(threadLock);
-    stopLock = PR_NewLock();
-    stopQ = PR_NewCondVar(stopLock);
-
 
     addr.inet.family = PR_AF_INET;
     addr.inet.ip     = PR_INADDR_ANY;
@@ -1065,11 +1113,7 @@ server_main(
     if (rv != SECSuccess) {
     	PR_Close(listen_sock);
     } else {
-        PR_Lock( stopLock );
-        while ( !stopping && threadCount > 0 ) {
-            PR_WaitCondVar(stopQ, PR_INTERVAL_NO_TIMEOUT);
-        }
-        PR_Unlock( stopLock );
+	reap_threads();
 	destroy_thread_data();
     }
 
@@ -1143,7 +1187,7 @@ main(int argc, char **argv)
     progName = strrchr(tmp, '\\');
     progName = progName ? progName + 1 : tmp;
 
-    optstate = PL_CreateOptState(argc, argv, "RT2:3c:d:p:mn:i:f:rt:vw:x");
+    optstate = PL_CreateOptState(argc, argv, "RT2:3c:d:p:mn:i:f:rvw:x");
     while (PL_GetNextOpt(optstate) == PL_OPT_OK) {
 	switch(optstate->option) {
 	default:
@@ -1173,25 +1217,12 @@ main(int argc, char **argv)
 
 	case 'r': ++requestCert; 		break;
 
-    case 't':
-        maxThreads = PORT_Atoi(optstate->value);
-        if ( maxThreads > MAX_THREADS ) maxThreads = MAX_THREADS;
-        if ( maxThreads < MIN_THREADS ) maxThreads = MIN_THREADS;
-        break;
-
         case 'v': verbose++; 			break;
 
 	case 'w': passwd = optstate->value;	break;
 
         case 'x': useExportPolicy = PR_TRUE; 	break;
 	}
-    }
-
-    /* allocate the array of thread slots */
-    threads = PR_Calloc(maxThreads, sizeof(perThread));
-    if ( NULL == threads )  {
-        fprintf(stderr, "Oh Drat! Can't allocate the perThread array\n");
-        goto mainExit;
     }
 
     if ((nickName == NULL) && (fNickName == NULL))
@@ -1290,7 +1321,6 @@ main(int argc, char **argv)
 
     server_main(port, requestCert, privKey, cert);
 
-mainExit:
     NSS_Shutdown();
     PR_Cleanup();
     return 0;
