@@ -632,13 +632,11 @@ function SortFolderPane(column, sortKey)
 
 function GetSelectedFolderResource()
 {
-  var folderTree = GetFolderTree();
-  var selectedFolderList = folderTree.selectedItems;
-  var selectedFolder = selectedFolderList[0];
-  var uri = selectedFolder.getAttribute('id');
-
-	var folderResource = RDF.GetResource(uri);
-	return folderResource;
+    var folderOutliner = GetFolderOutliner();
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    return GetFolderResource(startIndex.value);
 }
 
 function OnMouseUpThreadAndMessagePaneSplitter()
@@ -711,46 +709,6 @@ function ClearThreadPane()
     gDBView.close();
     gDBView = null; 
   }
-}
-
-function OpenFolderTreeToFolder(folderURI)
-{
-	var tree = GetFolderTree();
-	return OpenToFolder(tree, folderURI);
-}
-
-function OpenToFolder(item, folderURI)
-{
-	if(item.nodeType != Node.ELEMENT_NODE)
-		return null;
-
-  var uri = item.getAttribute('id');
-  dump(uri);
-  dump('\n');
-  if(uri == folderURI)
-  {
-    dump('found folder: ' + uri);
-    dump('\n');
-    return item;
-  }
-
-  var children = item.childNodes;
-  var length = children.length;
-  var i;
-  dump('folder ' + uri);
-  dump('has ' + length);
-  dump('children\n');
-  for(i = 0; i < length; i++)
-  {
-    var child = children[i];
-    var folder = OpenToFolder(child, folderURI);
-    if(folder)
-    {
-      child.setAttribute('open', 'true');
-      return folder;
-    }
-  }
-  return null;
 }
 
 function IsSpecialFolder(msgFolder, flags)
