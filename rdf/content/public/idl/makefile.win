@@ -23,7 +23,7 @@ MODULE=rdf
 IDLSRCS =  \
         NodeObserver.idl        \
         XULDocument.idl         \
-        XULNode.idl             \
+        XULElement.idl          \
         $(NULL)
 
 XPCOM_DESTDIR=$(DEPTH)\rdf\content\public
