@@ -342,6 +342,10 @@ txXSLTProcessor::processAction(Node* aAction,
 
         if (exprResult->getResultType() == ExprResult::NODESET) {
             NodeSet* nodeSet = (NodeSet*)exprResult;
+            if (nodeSet->isEmpty()) {
+                delete nodeSet;
+                return;
+            }
 
             // Look for xsl:sort elements
             txNodeSorter sorter(aPs);
@@ -352,8 +356,7 @@ txXSLTProcessor::processAction(Node* aAction,
                     txAtom* childLocalName;
                     child->getLocalName(&childLocalName);
                     if (childLocalName == txXSLTAtoms::sort) {
-                        sorter.addSortElement((Element*)child,
-                                              aPs->getEvalContext()->getContextNode());
+                        sorter.addSortElement((Element*)child);
                     }
                     TX_IF_RELEASE_ATOM(childLocalName);
                 }
@@ -650,6 +653,10 @@ txXSLTProcessor::processAction(Node* aAction,
 
         if (exprResult->getResultType() == ExprResult::NODESET) {
             NodeSet* nodeSet = (NodeSet*)exprResult;
+            if (nodeSet->isEmpty()) {
+                delete nodeSet;
+                return;
+            }
             txNodeSetContext evalContext(nodeSet, aPs);
             txIEvalContext* priorEC =
                 aPs->setEvalContext(&evalContext);
@@ -668,8 +675,7 @@ txXSLTProcessor::processAction(Node* aAction,
                         TX_IF_RELEASE_ATOM(childLocalName);
                         break;
                     }
-                    sorter.addSortElement((Element*)child,
-                                          aPs->getEvalContext()->getContextNode());
+                    sorter.addSortElement((Element*)child);
                     TX_RELEASE_ATOM(childLocalName);
                 }
                 else if ((nodeType == Node::TEXT_NODE ||
@@ -983,6 +989,10 @@ txXSLTProcessor::processDefaultTemplate(ProcessorState* aPs,
             }
 
             NodeSet* nodeSet = (NodeSet*)exprResult;
+            if (nodeSet->isEmpty()) {
+                delete nodeSet;
+                return;
+            }
             txNodeSetContext evalContext(nodeSet, aPs);
             txIEvalContext* priorEC = aPs->setEvalContext(&evalContext);
 
