@@ -22,8 +22,8 @@
 #
 
 MOD_DEPTH = ../../..
-srcdir = /cygdrive/s/mozilla/directory/c-sdk/ldap/libraries/libldif
-topsrcdir = /cygdrive/s/mozilla/directory/c-sdk
+srcdir = .
+topsrcdir = ../../..
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
