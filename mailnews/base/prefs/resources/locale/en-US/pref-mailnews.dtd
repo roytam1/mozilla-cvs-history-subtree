@@ -35,9 +35,10 @@ Rights Reserved.
 <!ENTITY useDefault.accesskey             "R">
 <!ENTITY rememberLastMsg.label            "Remember the last selected message">
 <!ENTITY rememberLastMsg.accesskey        "e">
-<!ENTITY toolbarIntro.label               "Select the buttons you want to see in the toolbar">
-<!ENTITY fileButton.label                 "File">
-<!ENTITY nextButton.label                 "Next">
-<!ENTITY junkMailButton.label             "Junk Mail">
-<!ENTITY printButton.label                "Print">
-<!ENTITY stopButton.label                 "Stop">
+
+<!ENTITY windowSettings.label             "Windows">
+<!ENTITY selectWindowLayout.label         "Select the window layout you prefer for Mail:">
+<!ENTITY selectWindowLayout.accesskey     "l">
+<!ENTITY chooseExp.label                  "Note: For this setting to take effect, you will need to exit and then restart Mail.">
+<!ENTITY warnOnSendAccelKey.label         "Confirm when using keyboard shortcut to send message">
+<!ENTITY warnOnSendAccelKey.accesskey     "o">

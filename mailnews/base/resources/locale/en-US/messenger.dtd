@@ -136,6 +136,9 @@ Rights Reserved.
 <!ENTITY showMessengerToolbarCmd.label		"Mail Toolbar">
 <!ENTITY showMessengerToolbarCmd.accesskey	"o">
 
+<!ENTITY customizeToolbar.label		"Customize...">
+<!ENTITY customizeToolbar.accesskey	"C">
+
 <!-- showSearchToolbarCmd is also used by addressbook -->
 <!ENTITY showSearchToolbarCmd.label		"Search Bar">
 <!ENTITY showSearchToolbarCmd.accesskey	"e">
@@ -147,7 +150,7 @@ Rights Reserved.
 
 <!-- sortMenu is also used by addressbook -->
 <!ENTITY sortMenu.label "Sort by">
-<!ENTITY sortMenu.accesskey "t">
+<!ENTITY sortMenu.accesskey "S">
 
 <!ENTITY sortByDateCmd.label "Date">
 <!ENTITY sortByDateCmd.accesskey "e">
@@ -387,8 +390,8 @@ Rights Reserved.
 <!ENTITY totalColumn.label "Total">
 
 <!-- Toolbar items -->
-<!ENTITY getMsgButton.label "Get Msgs">
-<!ENTITY newMsgButton.label "Compose">
+<!ENTITY getMsgButton.label "Get Mail">
+<!ENTITY newMsgButton.label "Write">
 <!ENTITY replyButton.label "Reply">
 <!ENTITY replyAllButton.label "Reply All">
 <!ENTITY forwardButton.label "Forward">
@@ -399,6 +402,7 @@ Rights Reserved.
 <!ENTITY printButton.label "Print">
 <!ENTITY stopButton.label "Stop">
 <!ENTITY junkButton.label "Junk">
+<!ENTITY addressBookButton.label "Address Book">
 
 <!--Tooltips-->
 <!ENTITY menuBar.tooltip "Menu Bar">
@@ -418,6 +422,7 @@ Rights Reserved.
 <!ENTITY stopButton.tooltip "Stop the current transfer">
 <!ENTITY throbber.tooltip "Go to the &vendorShortName; home page">
 <!ENTITY junkButton.tooltip "Mark the selected messages as junk (or not junk)">
+<!ENTITY addressBookButton.tooltip "Go to the address book">
 
 <!-- Statusbar -->
 <!ENTITY  statusText.label "Done">
@@ -523,3 +528,28 @@ Rights Reserved.
 <!ENTITY markSelectedAsJunk.label "Mark Selected Messages As Junk">
 <!ENTITY markSelectedAsNotJunk.label "Mark Selected Messages As Not Junk">
 
+<!--- Tools Menu Bar-->
+<!-- LOCALIZATION NOTE (messengerCmd.label): DONT_TRANSLATE -->
+<!ENTITY messengerCmd.label					"Mail &amp; Newsgroups">
+<!ENTITY messengerCmd.accesskey				"m">
+<!ENTITY messengerCmd.commandkey			"1">
+<!ENTITY addressBookCmd.label				"Address Book">  
+<!ENTITY addressBookCmd.accesskey			"a">
+<!ENTITY addressBookCmd.commandkey			"2">
+
+<!ENTITY taskMessenger.tooltip  "Mail &amp; Newsgroups">
+<!ENTITY taskAddressBook.tooltip  "Address Book">
+
+<!-- searchAddressesCmd is also used by addressbook -->
+<!ENTITY searchAddressesCmd.label                       "Search Addresses...">
+<!ENTITY searchAddressesCmd.accesskey                   "A">
+
+<!ENTITY searchMailCmd.label "Search Messages...">
+<!ENTITY searchMailCmd.accesskey "e">
+<!ENTITY searchMailCmd.key "f">
+
+<!ENTITY javaScriptConsoleCmd.label                             "JavaScript Console">
+<!ENTITY javaScriptConsoleCmd.accesskey				"S">
+
+<!ENTITY tasksMenu.label "Tools">
+<!ENTITY tasksMenu.accesskey "T"> 

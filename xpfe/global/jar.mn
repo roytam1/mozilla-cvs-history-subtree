@@ -76,6 +76,9 @@ toolkit.jar:
         content/global/bindings/toolbarbutton.xml   (resources/content/bindings/toolbarbutton.xml)
         content/global/bindings/tree.xml            (resources/content/bindings/tree.xml)
         content/global/bindings/wizard.xml          (resources/content/bindings/wizard.xml)
+        content/global/customizeToolbar.xul         (resources/content/customizeToolbar.xul)
+        content/global/customizeToolbar.js          (resources/content/customizeToolbar.js)
+        content/global/customizeToolbar.css         (resources/content/customizeToolbar.css)
 
 en-US.jar:
     locale/en-US/global/contents.rdf                (resources/locale/en-US/contents.rdf) 
@@ -105,6 +108,8 @@ en-US.jar:
     locale/en-US/global/printdialog.dtd             (resources/locale/en-US/printdialog.dtd)
     locale/en-US/global/printProgress.dtd           (resources/locale/en-US/printProgress.dtd)
     locale/en-US/global/printPreviewProgress.dtd    (resources/locale/en-US/printPreviewProgress.dtd)
+    locale/en-US/global/customizeToolbar.dtd        (resources/locale/en-US/customizeToolbar.dtd)
+    locale/en-US/global/customizeToolbar.properties (resources/locale/en-US/customizeToolbar.properties)
 
 US.jar:
     locale/US/global-region/contents.rdf            (resources/locale/en-US/contents-region.rdf) 

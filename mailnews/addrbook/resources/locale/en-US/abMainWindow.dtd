@@ -85,7 +85,7 @@ Rights Reserved.
 <!ENTITY newcardButton.label                            "New Card">  
 <!ENTITY newlistButton.label                            "New List">  
 <!ENTITY editButton.label                               "Properties">  
-<!ENTITY newmsgButton.label                             "Compose">  
+<!ENTITY newmsgButton.label                             "Write">  
 <!ENTITY deleteButton.label                             "Delete">  
 <!ENTITY stopButton.label                               ".Stop">  
 <!ENTITY searchButton.label                             ".Search">  

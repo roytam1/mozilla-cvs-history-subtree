@@ -22,7 +22,6 @@ Rights Reserved.
 
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/platformMailnewsOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
@@ -121,8 +120,7 @@ Rights Reserved.
 
   <popup id="attachmentListContext"/>
 
-  <toolbox id="mailToolbarToolbox">
-    <menubar id="mailMenubar"/>
+  <toolbox id="mail-toolbox" class="toolbox-top">
   </toolbox>
   
  <!-- msg header view -->

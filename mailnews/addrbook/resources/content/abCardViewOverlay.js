@@ -485,7 +485,11 @@ function HandleLink(node, label, value, box, link)
 function MapIt(id)
 {
   var button = document.getElementById(id);
-  openTopWin(button.getAttribute('url'));
+  try {
+    var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+    messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+    messenger.loadURL(window, button.getAttribute('url'));  
+  } catch (ex) {}
 }
 
 function CreateMapItURL(address1, address2, city, state, zip, country)
@@ -503,9 +507,15 @@ function CreateMapItURL(address1, address2, city, state, zip, country)
   return urlFormat;
 }
 
+// XXX merge with the code in Map It
 function openLink(id)
 {
-  openTopWin(document.getElementById(id).getAttribute("href"));
+  try {
+    var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+    messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+    messenger.loadURL(window, document.getElementById(id).getAttribute("href"));  
+  } catch (ex) {}
+
   // return false, so we don't load the href in the addressbook window
   return false;
 }

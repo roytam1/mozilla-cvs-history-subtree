@@ -28,9 +28,9 @@
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://editor/skin/editorFormatToolbar.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/addressingWidget.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
@@ -98,8 +98,6 @@
   <commandset id="tasksCommands"/>
   <command id="cmd_quit"/>
   <!-- File Menu -->
-  <command id="cmd_newNavigator"/>
-  <command id="cmd_newEditor"/>
   <command id="cmd_new" oncommand="goDoCommand('cmd_newMessage')"/>
   <command id="cmd_attachFile" oncommand="goDoCommand('cmd_attachFile')"/>
   <command id="cmd_attachPage" oncommand="goDoCommand('cmd_attachPage')"/>
@@ -133,6 +131,10 @@
   <command id="cmd_outputFormat" oncommand="OutputFormatMenuSelect(event.target)"/>
   <command id="cmd_quoteMessage" oncommand="goDoCommand('cmd_quoteMessage')"/>
   <command id="cmd_insert"/>
+
+  <!-- Tools menu --> 
+  <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+  <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
 </commandset>
 
 <broadcasterset id="composeBroadcasters">
@@ -143,8 +145,6 @@
 
 <keyset id="tasksKeys">
   <!-- File Menu -->
-  <key id="key_newNavigator"/>
-  <key id="key_newBlankPage"/>
   <key id="key_close"/>
   <key id="key_save"  key="&saveCmd.key;" command="cmd_saveDefault" modifiers="accel"/>
   <key id="key_send" keycode="&sendCmd.keycode;" observes="cmd_sendWithCheck" modifiers="accel"/>
@@ -170,6 +170,10 @@
   <!-- Options Menu -->
   <!-- key id="key_selectAddresses" xulkey="true" key="&selectAddressCmd.key;" command="cmd_selectAddress"/ -->
   <key id="key_checkspelling"  key="&checkSpellingCmd.key;" command="cmd_spelling"  modifiers="accel"/>
+
+   <!-- Tools Menu -->
+  <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+  <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
   
   <!-- Tab/F6 Keys -->
   <key keycode="VK_TAB" oncommand="SwitchElementFocus(event);" modifiers="control"/>
@@ -200,16 +204,20 @@
   <menuitem label="&addAttachment.label;" accesskey="&addAttachment.accesskey;" command="cmd_attachFile"/>
 </popup>
 
-  <toolbox class="toolbox-top" id="headers-box">
-    <menubar id="compose-menubar" grippytooltiptext="&menuBar.tooltip;">
+  <toolbox id="compose-toolbox" class="toolbox-top" mode="icons"> 
+  <!-- Menu -->
+  
+  <toolbar type="menubar" id="msgcompose-toolbar-menubar" class="chromeclass-menubar" customizable="false"
+     defaultset="menubar-items" mode="icons">
+
+     <toolbaritem id="menubar-items" align="center">
+      <menubar id="mail-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
       <menu id="menu_File">
         <menupopup id="menu_FilePopup">
           <menu id="menu_New">
             <menupopup id="menu_NewPopup">
               <menuitem label="&newMessage.label;" accesskey="&newMessage.accesskey;" key="key_newMessage" oncommand="goOpenNewMessage();"/>
               <menuseparator/>
-              <menuitem id="menu_newNavigator"/>
-              <menuitem id="menu_newEditor"/>
             </menupopup>
           </menu>
           <menuitem label="&attachFileCmd.label;" accesskey="&attachFileCmd.accesskey;" command="cmd_attachFile"/>
@@ -263,7 +271,7 @@
               <menuitem id="menu_showComposeToolbar"
                         type="checkbox"
                         label="&showComposeToolbarCmd.label;"
-                        command="cmd_showComposeToolbar"
+                        oncommand="onViewToolbarCommand('composeToolbar', event);"
                         accesskey="&showComposeToolbarCmd.accesskey;"
                         checked="true"/>
               <menuitem id="menu_showFormatToolbar"
@@ -274,6 +282,9 @@
                         checked="true"/>
               <menuitem id="menu_showTaskbar"
                         type="checkbox"/>
+              <menuseparator/>
+              <menuitem id="menu_customizeToolbar" oncommand="CustomizeMailToolbar('compose-toolbox');" label="&customizeToolbar.label;" accesskey="&customizeToolbar.accesskey;"/>
+                    
             </menupopup>
           </menu>
           <menuseparator/>
@@ -374,15 +385,19 @@
           <menuitem label="&attachVCardCmd.label;" disabled="true" accesskey="&attachVCardCmd.accesskey;" oncommand="AttachVCard()"/-->     
         </menupopup>
       </menu>
-      <!--menu id="debugMenu"/-->
-      <menu id="tasksMenu"/>
-      <menu id="windowMenu"/>
-      <menu id="menu_Help"/>
-    </menubar>
 
-    <toolbar class="toolbar-primary chromeclass-toolbar" id="composeToolbar" persist="collapsed" grippytooltiptext="&mailToolbar.tooltip;">
-      <hbox id="toolbar_button_box">
-       <toolbarbutton class="toolbarbutton-1"
+      <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
+          <menupopup id="taskPopup">
+            <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
+            <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+          </menupopup>
+      </menu>
+    </menubar>
+   </toolbaritem>
+  </toolbar>
+
+  <toolbarpalette id="MsgComposeToolbarPalette">
+    <toolbarbutton class="toolbarbutton-1"
                id="button-send" label="&sendButton.label;"
                tooltiptext="&sendButton.tooltip;" 
                command="cmd_sendButton"
@@ -390,38 +405,44 @@
                now_tooltiptext="&sendButton.tooltip;"
                later_label="&sendLaterCmd.label;"
                later_tooltiptext="&sendlaterButton.tooltip;">
-        <observes element="Communicator:WorkMode" attribute="offline"/>
-       </toolbarbutton>
-       <toolbarseparator class="toolbarseparator-primary"/>
-       <toolbarbutton class="toolbarbutton-1"
+      <observes element="Communicator:WorkMode" attribute="offline"/>
+    </toolbarbutton>
+    <toolbarbutton class="toolbarbutton-1"
                id="button-address" label="&addressButton.label;" 
                tooltiptext="&addressButton.tooltip;" 
                command="cmd_selectAddress"/>
-       <toolbarbutton class="toolbarbutton-1"
+    <toolbarbutton class="toolbarbutton-1"
                id="button-attach" label="&attachButton.label;" 
                tooltiptext="&attachButton.tooltip;" 
                command="cmd_attachFile"/>
-       <toolbarbutton class="toolbarbutton-1"
+    <toolbarbutton class="toolbarbutton-1"
                id="spellingButton" label="&spellingButton.label;" 
                command="cmd_spelling"/>
-       <toolbarseparator id="saveSeparator" class="toolbarseparator-primary"/>
-       <toolbarbutton class="toolbarbutton-1"
+    <toolbarbutton class="toolbarbutton-1"
                id="button-save" label="&saveButton.label;" 
                tooltiptext="&saveButton.tooltip;" 
                command="cmd_saveDefault"/>
-       <spacer flex="1"/>
-       <hbox id="throbber-box" align="center">
-         <button id="navigator-throbber" 
-               oncommand="goClickThrobber('compose.throbber.url')" tooltiptext="&throbber.tooltip;">
-           <observes element="broadcaster_throbber" attribute="busy"/>
-         </button>
-       </hbox>
-       </hbox>
-    </toolbar>
-  
+    <toolbaritem id="throbber-box" align="center" pack="center">
+      <button id="navigator-throbber" oncommand="loadThrobberUrl('compose.throbber.url')" tooltiptext="&throbber.tooltip;">
+          <observes element="broadcaster_throbber" attribute="busy"/>
+      </button>
+    </toolbaritem>
+  </toolbarpalette>
+
+  <toolbar id="composeToolbar" class="toolbar-primary chromeclass-toolbar"
+           toolbarname="Compose" 
+           fullscreentoolbar="true" mode="icons"
+           customizable="true"
+           defaultset="button-send,spacer,button-address,button-attach,button-security,spacer,button-save,spring,throbber-box">
+  </toolbar>
+
+  <toolbarset id="customToolbars" context="toolbar-context-menu"/>
+  </toolbox>
+
+  <toolbox id="headers-box" class="toolbox-top" mode="icons"> 
     <toolbar id="MsgHeadersToolbar" persist="collapsed" flex="1"
              tborient="vertical" tbalign="stretch"
-             grippytooltiptext="&addressBar.tooltip;">
+             customizable="true">
       <hbox id="msgheaderstoolbar-box" flex="1">
         <vbox flex="1" id="addresses-box">
           <hbox align="center">
@@ -454,7 +475,7 @@
     </toolbar>
   
     <!-- These toolbar items get filled out from the editorOverlay -->
-    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" grippytooltiptext="&formatToolbar.tooltip;">
+    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" customizable="true">
       <menulist id="ParagraphSelect"/>
       <menulist id="FontFaceSelect"/>
       <stack id="ColorButtons"/>
@@ -486,7 +507,6 @@
   </vbox>
 
   <statusbar id="status-bar" class="chromeclass-status">
-    <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusText" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress">
       <progressmeter id="compose-progressmeter" class="progressmeter-statusbar" mode="normal" value="0"/>

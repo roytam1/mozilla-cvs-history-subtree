@@ -1567,6 +1567,13 @@ function ComposeLoad()
   window.tryToClose=ComposeCanClose;
   if (gLogComposePerformance)
     sMsgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about:blank", false);
+  
+  // initialize the customizeDone method on the customizeable toolbar
+  var toolbox = document.getElementById("compose-toolbox");
+  toolbox.customizeDone = MailToolboxCustomizeDone;
+
+  var toolbarset = document.getElementById('customToolbars');
+  toolbox.toolbarset = toolbarset;
 }
 
 function ComposeUnload()
@@ -2944,15 +2951,6 @@ function GetMsgHeadersToolbarElement()
   return gMsgHeadersToolbarElement;
 }
 
-function IsMsgHeadersToolbarCollapsed()
-{
-  var element = GetMsgHeadersToolbarElement();
-  if(element)
-    return(element.getAttribute('moz-collapsed') == "true");
-
-  return(0);
-}
-
 function WhichElementHasFocus()
 {
   var msgIdentityElement             = GetMsgIdentityElement();
@@ -2994,9 +2992,7 @@ function SwitchElementFocus(event)
 
   if (event && event.shiftKey)
   {
-    if (IsMsgHeadersToolbarCollapsed())
-      SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgAddressingWidgetTreeElement)
+    if (focusedElement == gMsgAddressingWidgetTreeElement)
       SetMsgIdentityElementFocus();
     else if (focusedElement == gMsgIdentityElement)
       SetMsgBodyFrameFocus();
@@ -3016,9 +3012,7 @@ function SwitchElementFocus(event)
   }
   else
   {
-    if (IsMsgHeadersToolbarCollapsed())
-      SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgAddressingWidgetTreeElement)
+    if (focusedElement == gMsgAddressingWidgetTreeElement)
       SetMsgSubjectElementFocus();
     else if (focusedElement == gMsgSubjectElement)
     {
@@ -3036,4 +3030,16 @@ function SwitchElementFocus(event)
     else
       SetMsgAddressingWidgetTreeElementFocus();
   }
+}
+
+// XXX hack, reuse the implementation in mailWindowOverlay.js by moving that method to an overlay that is included here too
+function loadThrobberUrl(urlPref)
+{
+    var url;
+    try {
+        url = sPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+        messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+        messenger.loadURL(window, url);  
+    } catch (ex) {}
 }

@@ -16,27 +16,16 @@
 
 
 <keyset id="tasksKeys">
-  <key id="key_navigator"    key="&navigatorCmd.commandkey;"   command="Tasks:Navigator" modifiers="accel"/>
-
 </keyset>
+
 <commandset id="tasksCommands">
-  <command id="Tasks:Navigator" oncommand="toNavigator();"/>
 </commandset>
 
 
       <!-- Tasks Menu -->
       <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
         <menupopup id="taskPopup">
-          <menuitem id="downloadmgr" label="&downloadManagerCmd.label;" accesskey="&downloadManagerCmd.accesskey;" oncommand="toDownloadManager();"/>
-          <menuseparator/>
-          <menu label="&webDevelopment.label;" accesskey="&webDevelopment.accesskey;">
-            <menupopup id="toolsPopup" onpopupshowing="javaItemEnabling();">
-              <menuitem label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" oncommand="toJavaScriptConsole();"/>
-              <menuitem id="java" label="&javaConsoleCmd.label;" accesskey="&javaConsoleCmd.accesskey;" oncommand="toJavaConsole()"/>
-            </menupopup>
-          </menu>
-          <menuseparator/>
-          <menuitem id="cmd_switchprofile" label="&switchProfileCmd.label;" accesskey="&switchProfileCmd.accesskey;" oncommand="toProfileManager();"/>
+          <menuitem label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" oncommand="toJavaScriptConsole();"/>
         </menupopup>
       </menu>
 
@@ -51,11 +40,7 @@
             </menupopup>
           </rule>
         </template>
-        <menupopup id="windowPopup">
-          <menuitem label="&navigatorCmd.label;" accesskey="&navigatorCmd.accesskey;" key="key_navigator" command="Tasks:Navigator" id="tasksMenuNavigator" class="menuitem-iconic icon-navigator16"/>
-
-          <!-- Overlays get stuffed in here. -->
-          <menuseparator id="sep-window-list"/>
+        <menupopup id="windowPopup">          
         </menupopup>
       </menu>
 

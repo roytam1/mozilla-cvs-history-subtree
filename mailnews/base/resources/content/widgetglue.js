@@ -265,3 +265,95 @@ function GetResourceFromUri(uri)
     return resource;
 }  
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// XXX: TO DO: These methods will all move to mailCore.js when we move to our new toolkit
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function CustomizeMailToolbar(id)
+{
+  // Disable the toolbar context menu items
+  var menubar = document.getElementById("mail-menubar");
+  for (var i = 0; i < menubar.childNodes.length; ++i)
+    menubar.childNodes[i].setAttribute("disabled", true);
+    
+  //var cmd = document.getElementById("cmd_CustomizeToolbars");
+  //cmd.setAttribute("disabled", "true");
+   
+   window.openDialog("chrome://global/content/customizeToolbar.xul", "CustomizeToolbar",
+                     "chrome,all,dependent", document.getElementById(id));
+}
+
+function MailToolboxCustomizeDone(aToolboxChanged)
+{
+  // Update global UI elements that may have been added or removed
+
+  // Re-enable parts of the UI we disabled during the dialog
+  var menubar = document.getElementById("mail-menubar");
+  for (var i = 0; i < menubar.childNodes.length; ++i)
+    menubar.childNodes[i].setAttribute("disabled", false);
+
+  //var cmd = document.getElementById("cmd_CustomizeToolbars");
+  //cmd.removeAttribute("disabled");
+
+  // make sure our toolbar buttons have the correct enabled state restored to them...
+  if (this.UpdateMailToolbar != undefined)
+    UpdateMailToolbar(focus); 
+}
+
+function onViewToolbarCommand(id, aEvent)
+{
+  var toolbar = document.getElementById(id);
+  if (!toolbar) return;
+  
+  toolbar.collapsed = aEvent.originalTarget.getAttribute("checked") != "true";
+  document.persist(id, "collapsed");
+}
+
+function toJavaScriptConsole()
+{
+    toOpenWindowByType("global:console", "chrome://global/content/console.xul");
+}
+
+const nsIWindowMediator = Components.interfaces.nsIWindowMediator;
+
+function toOpenWindowByType( inType, uri )
+{
+	var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
+
+	var	windowManagerInterface = windowManager.QueryInterface(nsIWindowMediator);
+
+	var topWindow = windowManagerInterface.getMostRecentWindow( inType );
+	
+	if ( topWindow )
+		topWindow.focus();
+	else
+		window.open(uri, "_blank", "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
+}
+
+function toMessengerWindow()
+{
+  var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                       .getService(Components.interfaces.nsIPrefBranch);
+  var windowDoc = "chrome://messenger/content/messenger.xul";
+  try
+  {
+    var layoutType = pref.getIntPref("mail.pane_config");
+    windowDoc = !layoutType ? "chrome://messenger/content/messenger.xul" : 
+                              "chrome://messenger/content/mail3PaneWindowVertLayout.xul";
+   }
+   catch(ex)
+   {
+   }    
+   
+   toOpenWindowByType("mail:3pane", windowDoc);
+}
+    
+function toAddressBook() 
+{
+  toOpenWindowByType("mail:addressbook", "chrome://messenger/content/addressbook/addressbook.xul");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// XXX: End of methods to move to mailCore.js when we move to our new toolkit
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+

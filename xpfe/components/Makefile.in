@@ -26,9 +26,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifndef MOZ_MINOTAUR
 DIRS	= \
 			bookmarks \
-			directory \
 			filepicker \
 			find \
 			search \
@@ -44,14 +44,11 @@ DIRS	= \
 			resetPref \
 			killAll \
 			windowds \
+			directory \
 			$(NULL)
 
 ifndef MOZ_PHOENIX
 DIRS += autocomplete history urlbarhistory download-manager
-endif
-
-ifdef MOZ_ENABLE_XREMOTE
-DIRS		+= xremote
 endif
 
 ifeq ($(OS_ARCH),WINNT)
@@ -60,5 +57,31 @@ endif
 
 DIRS		+= build
 
+else
+
+DIRS    = \
+          intl \
+          download-manager \
+          autocomplete \
+          windowds \
+          prefwindow \
+          console \
+          sidebar/public \
+          history/public \
+          shistory/public \
+	  timebomb \
+          $(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+DIRS    += alerts winhooks
+endif
+
+ifdef MOZ_ENABLE_XREMOTE
+DIRS		+= xremote
+endif
+
+DIRS    += build2
+
+endif
 include $(topsrcdir)/config/rules.mk
 

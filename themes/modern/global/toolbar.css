@@ -44,109 +44,87 @@
 /* ::::: toolbox ::::: */
 
 toolbox {
-  border-bottom: 1px solid #494F5D;
-}
- 
-/* ::::: toolbar ::::: */
-
-toolbar {
-  min-width: 1px; /* DON'T DELETE!
-    Prevents hiding of scrollbars in browser when window is made smaller.*/
-  background: #C7D0D9;
-  color: #000000;
+  -moz-appearance: toolbox;
+  background-color: -moz-Dialog;
 }
 
-toolbar > .toolbar-holder {
-  border-top: 1px solid #EEF0F3;
-  border-right: 1px solid #86929E;
-  border-bottom: 1px solid #86929E;
-}
+/* ::::: toolbar & menubar ::::: */
 
-/* ::::: menubar ::::: */
-
+toolbar,
 menubar {
-  cursor: default;
-  min-width: 1px; /* DON'T DELETE!
-    Prevents hiding of scrollbars in browser when window is made smaller.*/
+  min-width: 1px;
+  min-height: 20px;
+  border-left: 1px solid ThreeDHighlight;
+  border-top: 1px solid ThreeDHighlight;
+  border-right: 1px solid ThreeDShadow;
+  border-bottom: 1px solid ThreeDShadow;
   background-color: #DDE3EB;
-  color: #000000;
-}
-  
-menubar > .toolbar-holder {
-  border-top: 1px solid #EBF4FF;
-  border-right: 1px solid #86929E;
-  border-bottom: 1px solid #B9BFC7;
-  border-left: 1px solid #EEF4FC;
-}  
-
-/* ::::: toolbargrippy ::::: */
- 
-toolbargrippy {
-  -moz-box-orient: vertical;
-  -moz-box-align: center;
-  -moz-box-pack: end;
-  -moz-box-direction: reverse;
-  border-top: 1px solid #EEF0F3;
-  border-right: 1px solid #86929E;
-  border-bottom: 1px solid #86929E;
-  border-left: 1px solid #EEF0F3;
-  list-style-image: url("chrome://global/skin/toolbar/tbgrip-arrow.gif");
 }
 
-toolbargrippy:hover:active {
-  border-color: #67737E;
-  background-color: #9DA9B6;
-  list-style-image: url("chrome://global/skin/toolbar/tbgrip-arrow-act.gif");
+/* ::::: toolbar decorations ::::: */
+
+toolbarseparator {
+  margin : 2px 0.2em 0 0.2em;
+  border-left : 1px solid ThreeDShadow;
+  width : 2px;
 }
 
-.toolbargrippy-arrow {
-  margin: 0px 1px 3px 1px;
-  width: 8px;
-  height: 5px;
+toolbarspacer {
+  width: 15px;
 }
 
-/* ::::: menubar grippy ::::: */
+/* ::::: toolbarpaletteitem ::::: */
 
-menubar > toolbargrippy { 
-  border-top: 1px solid #EBF4FF;
-  border-right: 1px solid #B9BFC7;
-  border-bottom: 1px solid #B9BFC7;
-  border-left: 1px solid #F4FAFF;
-  background-color: #DDE3EB;
-  list-style-image: url("chrome://global/skin/toolbar/mbgrip-arrow.gif");
-} 
-
-/* ::::: collapsed toolbargrippy and tray ::::: */
-  
-toolbargrippy[tbgrippy-collapsed="true"] {
-  -moz-box-orient: horizontal;
-  -moz-box-pack: start;
-  -moz-box-direction: normal;
-  width: 40px;
-  list-style-image: url("chrome://global/skin/toolbar/tbgrip-arrow-clps.gif");
+toolbarpaletteitem {
+  cursor: -moz-grab;
 }
 
-toolbargrippy[tbgrippy-collapsed="true"] > .toolbargrippy-arrow {
-  margin: 1px 0px 1px 3px;
-  width: 5px;
-  height: 8px;
+.toolbarpaletteitem-box[type="spacer"],
+.toolbarpaletteitem-box[type="spring"] {
+  border: 1px solid #808080;
 }
 
-toolbargrippy[tbgrippy-collapsed="true"]:hover:active > .toolbargrippy-arrow {
-  list-style-image: url("chrome://global/skin/toolbar/tbgrip-arrow-clps-act.gif");
+toolbarpaletteitem[place="toolbar"] {
+  margin-left: -2px;
+  margin-right: -2px;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
 }
 
-.collapsed-tray-holder {
-  background-color: #C7D0D9;
+toolbarpaletteitem[place="toolbar"] > toolbarspacer {
+  width: 11px;
 }
 
-/* ::::: toolbarseparator ::::: */
-
-toolbarseparator { 
-  margin: 0px 0.2em;
-  border-right: 1px solid #E2E7EB;
-  border-left: 1px solid #95A0AD;
-  width: 0px;
+.toolbarpaletteitem-box[type="spacer"][place="toolbar"],
+.toolbarpaletteitem-box[type="spring"][place="toolbar"] {
+  margin: 2px 2px 2px 0;
 }
+
+.toolbarpaletteitem-box[type="separator"][place="palette"] {
+  width: 2px;
+  height: 50px;
+}
+
+.toolbarpaletteitem-box[type="spacer"][place="palette"],
+.toolbarpaletteitem-box[type="spring"][place="palette"] {
+  margin-bottom: 2px;
+  width: 50px;
+  height: 50px;
+}
+
+.toolbarpaletteitem-box[type="spring"][place="palette"] {
+  background: url("chrome://global/skin/toolbar/spacer-mid.gif") no-repeat center;
+}
+
+/* ..... drag and drop feedback ..... */
+
+toolbarpaletteitem[dragover="left"] {
+  border-left-color: #000000;
+}
+
+toolbarpaletteitem[dragover="right"] {
+  border-right-color: #000000;
+}
+
 
 

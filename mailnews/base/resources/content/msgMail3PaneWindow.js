@@ -596,8 +596,13 @@ var gThreePaneIncomingServerListener = {
 }
 
 
-/* Functions related to startup */
 function OnLoadMessenger()
+{
+  setTimeout(delayedOnLoadMessenger, 0); // when debugging, set this to 5000, so you can see what happens after the window comes up.
+}
+
+/* Functions related to startup */
+function delayedOnLoadMessenger()
 {
   AddMailOfflineObserver();
   CreateMailWindowGlobals();
@@ -657,6 +662,13 @@ function OnLoadMessenger()
 
   //Set focus to the Thread Pane the first time the window is opened.
   SetFocusThreadPane();
+
+  // initialize the customizeDone method on the customizeable toolbar
+  var toolbox = document.getElementById("mail-toolbox");
+  toolbox.customizeDone = MailToolboxCustomizeDone;
+
+  var toolbarset = document.getElementById('customToolbars');
+  toolbox.toolbarset = toolbarset;
 }
 
 function OnUnloadMessenger()

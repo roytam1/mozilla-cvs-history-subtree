@@ -3268,6 +3268,19 @@ fi
 AC_SUBST(MOZ_PHOENIX)
 
 dnl ========================================================
+dnl = Minotaur
+dnl ========================================================
+MOZ_XUL_APP=
+if test "$MOZ_MINOTAUR"; then
+   AC_DEFINE(MOZ_MINOTAUR)
+   MOZ_XUL_APP=1
+   AC_DEFINE(MOZ_XUL_APP)
+fi
+
+AC_SUBST(MOZ_MINOTAUR)
+AC_SUBST(MOZ_XUL_APP)
+
+dnl ========================================================
 dnl = FreeType2
 dnl ========================================================
 MOZ_ARG_DISABLE_BOOL(freetype2,

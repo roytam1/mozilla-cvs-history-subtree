@@ -85,7 +85,7 @@ nsContextMenu.prototype = {
         this.initMetadataItems();
     },
     initOpenItems : function () {
-        this.showItem( "context-openlink", this.onSaveableLink || ( this.inDirList && this.onLink ) );
+        // this.showItem( "context-openlink", this.onSaveableLink || ( this.inDirList && this.onLink ) );
         this.showItem( "context-openlinkintab", this.onSaveableLink || ( this.inDirList && this.onLink ) );
 
         this.showItem( "context-sep-open", this.onSaveableLink || ( this.inDirList && this.onLink ) );
@@ -528,21 +528,6 @@ nsContextMenu.prototype = {
       const PM = Components.classes["@mozilla.org/PopupWindowManager;1"]
                  .getService(Components.interfaces.nsIPopupWindowManager);
       PM.add(this.popupURL, true);
-    },
-    // Open linked-to URL in a new window.
-    openLink : function () {
-        // Determine linked-to URL.
-        openNewWindowWith( this.linkURL(), true );
-    },
-    // Open linked-to URL in a new tab.
-    openLinkInTab : function () {
-        // Determine linked-to URL.
-        openNewTabWith( this.linkURL(), true, false );
-    },
-    // Open frame in a new tab.
-    openFrameInTab : function () {
-        // Determine linked-to URL.
-        openNewTabWith( this.target.ownerDocument.location.href );
     },
     // Reload clicked-in frame.
     reloadFrame : function () {

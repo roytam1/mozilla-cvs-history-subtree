@@ -45,7 +45,7 @@
 
 /* ::::: primary toolbar masthead ::::: */
 
-#abToolbar > .toolbar-holder > .toolbar-primary-icon {
+#ab-bar> .toolbar-holder > .toolbar-primary-icon {
   background-image: url("chrome://messenger/skin/addressbook/icons/mast-ab.gif");
 }
 

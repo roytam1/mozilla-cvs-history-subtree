@@ -23,9 +23,9 @@ Contributor(s):
 --> 
 
 <?xml-stylesheet href="chrome://messenger/skin/addressbook/addressbook.css" type="text/css"?> 
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/addressbook/abDirTreeOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/addressbook/abResultsPaneOverlay.xul"?>
@@ -76,8 +76,6 @@ Contributor(s):
   <commandset id="selectEditMenuItems"/> 
   <commandset id="undoEditMenuItems"/>
   <commandset id="globalEditMenuItems"/>
-    <command id="cmd_newNavigator"/>
-    <command id="cmd_newEditor"/>
     <command id="cmd_printSetup" oncommand="NSPrintSetup()"/>
     <command id="cmd_printCard" oncommand="AbPrintCard()"/>
     <command id="cmd_printPreviewCard" oncommand="AbPrintPreviewCard()"/>
@@ -93,7 +91,8 @@ Contributor(s):
     <command id="cmd_cut"/>
     <command id="cmd_selectAll"/>
     <command id="cmd_swapFirstNameLastName" oncommand="AbSwapFirstNameLastName()"/>
-    <commandset id="tasksCommands"/>
+    <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+    <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
 </commandset>
 
 <broadcasterset id="abBroadcasters">
@@ -111,7 +110,6 @@ Contributor(s):
 
 <keyset id="tasksKeys">
   <!-- File Menu -->
-  <key id="key_newNavigator"/>
   <key id="key_printCard"  key="&printCardViewCmd.key;" command="cmd_printCard"  modifiers="accel"/>
   <key id="key_close"/>
   <key id="key_quit"/>
@@ -132,10 +130,17 @@ Contributor(s):
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);" modifiers="control"/>
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);" modifiers="shift"/>
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);"/>
+
+  <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+  <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
 </keyset>
 
-<toolbox class="toolbox-top">
-    <menubar id="ab-menubar" grippytooltiptext="&menuBar.tooltip;">
+<toolbox id="ab-toolbox" class="toolbox-top" mode="icons">
+  <toolbar type="menubar" id="addrbook-toolbar-menubar" class="chromeclass-menubar" customizable="false"
+     defaultset="menubar-items" mode="icons">
+
+   <toolbaritem id="menubar-items" align="center">
+     <menubar id="mail-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
         <menu id="menu_File">
             <menupopup id="menu_FilePopup">
                 <menu id="menu_New">
@@ -145,8 +150,6 @@ Contributor(s):
                       <menuitem label="&newAddressBookCmd.label;" accesskey="&newAddressBookCmd.accesskey;" oncommand="AbNewAddressBook()"/>
                       <menuitem label="&newLDAPDirectoryCmd.label;" id="addLDAP" accesskey="&newLDAPDirectoryCmd.accesskey;" oncommand="AbNewLDAPDirectory()"/>
                       <menuseparator/>
-                      <menuitem id="menu_newNavigator"/>
-                      <menuitem id="menu_newEditor"/>
                     </menupopup>
                 </menu>
                 <menuitem id="menu_close"/>
@@ -192,7 +195,7 @@ Contributor(s):
                         <menuitem id="menu_showAbToolbar"
                                   label="&showAbToolbarCmd.label;"
                                   accesskey="&showAbToolbarCmd.accesskey;"
-                                  oncommand="goToggleToolbar('abToolbar', 'menu_showAbToolbar')"
+                                  oncommand="onViewToolbarCommand('ab-bar', event);"
                                   checked="true" type="checkbox"/>
                         <menuitem label="&showSearchToolbarCmd.label;"
                                   accesskey="&showSearchToolbarCmd.accesskey;" 
@@ -200,12 +203,13 @@ Contributor(s):
                                   checked="true" type="checkbox"/>
                         <menuitem id="menu_showTaskbar" 
                                   type="checkbox"/>
-                        <menuseparator/>
                         <menuitem id="menu_showCardPane"
                                   label="&showCardPane.label;"
                                   accesskey="&showCardPane.accesskey;"
                                   oncommand="goToggleSplitter('results-splitter', 'menu_showCardPane')"
                                   checked="true" type="checkbox"/>
+                        <menuseparator/>
+                        <menuitem id="menu_customizeToolbar" oncommand="CustomizeMailToolbar('ab-toolbox');" label="&customizeToolbar.label;" accesskey="&customizeToolbar.accesskey;"/>
                     </menupopup>
                 </menu>
                 <menuseparator/>
@@ -298,51 +302,45 @@ Contributor(s):
                 </menu>
             </menupopup>
         </menu>       
-        <menu id="tasksMenu">
+        <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
           <menupopup id="taskPopup">
+            <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
+            <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+            <menuseparator />  
             <menuitem label="&searchAddressesCmd.label;" 
                       accesskey="&searchAddressesCmd.accesskey;"
                       id="menu_search_addresses" 
                       oncommand="onAdvancedAbSearch();"/>
             <menuitem label="&importCmd.label;" accesskey="&importCmd.accesskey;" oncommand="toImport()"/>
             <menuitem label="&exportCmd.label;" accesskey="&exportCmd.accesskey;" oncommand="AbExport()"/>
-            <menuseparator/>
           </menupopup>
         </menu>
-
-        <menu id="windowMenu"/>
-        <menu id="menu_Help"/>
-        <spacer flex="1"/>
     </menubar>
-    
-    <!-- toolbar -->
-        <toolbar class="chromeclass-toolbar toolbar-primary" id="abToolbar" persist="collapsed" grippytooltiptext="&addressbookToolbar.tooltip;">
-            <hbox id="toolbar_button_box">
-        <toolbarbutton class="toolbarbutton-1" id="button-newcard" label="&newcardButton.label;" tooltiptext="&newcardButton.tooltip;" oncommand="AbNewCard('dirTree');"/>
-        <toolbarbutton class="toolbarbutton-1" id="button-newlist" label="&newlistButton.label;" tooltiptext="&newlistButton.tooltip;" oncommand="AbNewList('dirTree');"/>
-        <toolbarseparator class="toolbarseparator-primary"/>
-        <toolbarbutton class="toolbarbutton-1" id="button-editcard" label="&editButton.label;" tooltiptext="&editButton.tooltip;" oncommand="goDoCommand('button_edit');"/>
-        <toolbarbutton class="toolbarbutton-1" id="button-newmessage" label="&newmsgButton.label;" tooltiptext="&newmsgButton.tooltip;" oncommand="AbNewMessage();"/>
-        <toolbarbutton class="toolbarbutton-1" id="button-newim" label="&newIM.label;" tooltiptext="&newIM.tooltip;" oncommand="AbIMSelected();"/>
-        <toolbarbutton class="toolbarbutton-1" id="button-delete" observes="button_delete" label="&deleteButton.label;" tooltiptext="&deleteButton.tooltip;" oncommand="goDoCommand('button_delete');"/>
+   </toolbaritem>
+  </toolbar>
+  
+  <toolbarpalette id="AddressBookToolbarPalette">
+      <toolbarbutton class="toolbarbutton-1" id="button-newcard" label="&newcardButton.label;" tooltiptext="&newcardButton.tooltip;" oncommand="AbNewCard('dirTree');"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-newlist" label="&newlistButton.label;" tooltiptext="&newlistButton.tooltip;" oncommand="AbNewList('dirTree');"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-editcard" label="&editButton.label;" tooltiptext="&editButton.tooltip;" oncommand="goDoCommand('button_edit');"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-newmessage" label="&newmsgButton.label;" tooltiptext="&newmsgButton.tooltip;" oncommand="AbNewMessage();"/>
+      <toolbarbutton id="button-newim" class="toolbarbutton-1" label="&newIM.label;" tooltiptext="&newIM.tooltip;" oncommand="AbIMSelected();"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-delete" observes="button_delete" label="&deleteButton.label;" tooltiptext="&deleteButton.tooltip;" oncommand="goDoCommand('button_delete');"/>
 
-        <vbox flex="1">
-          <spacer flex="1"/> 
-          <!--html id="searchlabel">&showNames.label;</html>
-          <textbox id="searchtext" type="text" align="bottom"/> 
-          <spacer flex="1"/--> 
-        </vbox>
-
-        <!--button id="button_stop" class="other28" align="top" label="&stopButton.label;" tooltiptext="&stopButton.tooltip;" disabled="true" oncommand="AbStop()"/>
-        <button id="button_search" class="other28" align="top" label="&searchButton.label;" disabled="true" tooltiptext="&searchButton.tooltip;" oncommand="AbSearch()"/-->
-     </hbox>
-
-     <hbox id="throbber-box" align="center">
-      <button id="navigator-throbber" oncommand="goClickThrobber('addressbook.throbber.url')" tooltiptext="&throbber.tooltip;">
-        <observes element="broadcaster_throbber" attribute="busy"/>
-      </button>
-     </hbox>
-    </toolbar>
+      <toolbaritem id="throbber-box" align="center" pack="center">
+        <button id="navigator-throbber" oncommand="loadThrobberUrl('addressbook.throbber.url')" tooltiptext="&throbber.tooltip;">
+          <observes element="broadcaster_throbber" attribute="busy"/>
+        </button>
+      </toolbaritem>
+  </toolbarpalette>
+  <!-- toolbar -->
+  <toolbar id="ab-bar" class="toolbar-primary chromeclass-toolbar"
+           toolbarname="Mail" 
+           fullscreentoolbar="true" mode="icons"
+           customizable="true"
+           defaultset="button-newcard,button-newlist,space,button-editcard,button-newmessage,button-newim,button-delete,spring,throbber-box">
+   </toolbar>
+   <toolbarset id="customToolbars" context="toolbar-context-menu"/>
   </toolbox>
 
   <!-- The main address book three pane -->
@@ -389,7 +387,6 @@ Contributor(s):
   </hbox>
   
   <statusbar id="status-bar" class="chromeclass-status">
-    <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusText" flex="1" value="&statusText.label;"/>  
     <statusbarpanel id="offline-status" class="statusbarpanel-iconic"/>           
   </statusbar>  

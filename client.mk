@@ -52,13 +52,13 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = MOZILLA_1_3_BRANCH 
-NSPR_CO_TAG = MOZILLA_1_3_BRANCH 
-PSM_CO_TAG = MOZILLA_1_3_BRANCH 
-NSS_CO_TAG = MOZILLA_1_3_BRANCH 
-LDAPCSDK_CO_TAG = MOZILLA_1_3_BRANCH 
-ACCESSIBLE_CO_TAG = MOZILLA_1_3_BRANCH 
-IMGLIB2_CO_TAG = MOZILLA_1_3_BRANCH 
+MOZ_CO_TAG = MINOTAUR_0_1_BRANCH 
+NSPR_CO_TAG = MINOTAUR_0_1_BRANCH 
+PSM_CO_TAG = MINOTAUR_0_1_BRANCH  
+NSS_CO_TAG = MINOTAUR_0_1_BRANCH 
+LDAPCSDK_CO_TAG = MINOTAUR_0_1_BRANCH 
+ACCESSIBLE_CO_TAG = MINOTAUR_0_1_BRANCH 
+IMGLIB2_CO_TAG = MINOTAUR_0_1_BRANCH 
 BUILD_MODULES = all
 
 #######################################################################
@@ -361,6 +361,24 @@ CHECKOUT_PHOENIX := true
 FASTUPDATE_PHOENIX := true
 endif
 
+CVSCO_XUL_APP := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/embedding/xre
+ifdef MOZ_XUL_APP
+CHECKOUT_XUL_APP := cvs_co $(CVSCO_XUL_APP)
+FASTUPDATE_XUL_APP:= fast_update $(CVSCO_XUL_APP)
+else
+CHECKOUT_XUL_APP := true
+FASTUPDATE_XUL_APP:= true
+endif
+
+CVSCO_MINOTAUR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/mailnews/app
+ifdef MOZ_MINOTAUR
+CHECKOUT_MINOTAUR := cvs_co $(CVSCO_MINOTAUR)
+FASTUPDATE_MINOTAUR := fast_update $(CVSCO_MINOTAUR)
+else
+CHECKOUT_MINOTAUR := true
+FASTUPDATE_MINOTAUR := true
+endif
+
 ####################################
 # CVS defines for codesighs (pulled and built if MOZ_MAPINFO is set)
 #
@@ -442,6 +460,8 @@ real_checkout:
 	cvs_co $(CVSCO_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	$(CHECKOUT_PHOENIX) && \
+    $(CHECKOUT_XUL_APP) && \
+    $(CHECKOUT_MINOTAUR) && \
 	$(CHECKOUT_CODESIGHS) && \
 	cvs_co $(CVSCO_SEAMONKEY)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
@@ -502,6 +522,8 @@ real_fast-update:
 	fast_update $(CVSCO_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	$(FASTUPDATE_PHOENIX) && \
+    $(FASTUPDATE_XUL_APP) && \
+    $(FASTUPDATE_MINOTAUR) && \
 	$(FASTUPDATE_CODESIGHS) && \
 	fast_update $(CVSCO_SEAMONKEY)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)

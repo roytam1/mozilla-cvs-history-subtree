@@ -24,228 +24,249 @@
     </implementation>
   </binding>
 
-  <binding id="toolbox" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
-    <content orient="vertical">
-      <xul:vbox flex="1" class="toolbar-internal-box">
-        <children/>
-      </xul:vbox>
-      <xul:hbox tbattr="collapsed-tray-holder" class="collapsed-tray-holder" moz-collapsed="true">
-        <xul:hbox tbattr="collapsed-tray" class="collapsed-tray"/>
-        <xul:spacer flex="1" class="collapsed-tray-spacer"/>
-      </xul:hbox>
-    </content>
-    
+  <binding id="toolbox" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">  
     <implementation>
-      <method name="collapseToolbar">
-        <parameter name="toolbar"/>
-        <body>
-        <![CDATA[
-          const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-          try {
-            this.createCollapsedGrippy(toolbar);
-            toolbar.setAttribute("moz-collapsed", "true");
-            document.persist(toolbar.id, "moz-collapsed");
-          }
-          catch(e) {
-          }
-        ]]>
-        </body>
-      </method>
-      
-      <method name="expandToolbar">
-        <parameter name="aGrippyID"/>
-        <body>
-        <![CDATA[
-          var idString = aGrippyID.substring("moz_tb_collapsed_".length, aGrippyID.length);
-          var toolbar = document.getElementById(idString);
-          toolbar.setAttribute("moz-collapsed", "false");
-          var collapsedTray = this.findNodeByAttribute("tbattr", "collapsed-tray");
-          var collapsedToolbar = document.getElementById("moz_tb_collapsed_" + toolbar.id);
-          collapsedTray.removeChild(collapsedToolbar);
-          if (!collapsedTray.hasChildNodes()) 
-            this.findNodeByAttribute("tbattr", "collapsed-tray-holder").setAttribute("moz-collapsed", "true");
-          document.persist(toolbar.id, "moz-collapsed");
-        ]]>
-        </body>
-      </method>
-      
-      <method name="findNodeByAttribute">
-        <parameter name="aAttribute"/>
-        <parameter name="aValue"/>
-        <body>
-        <![CDATA[
-          var nodes = document.getAnonymousNodes(this);
-          for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i].getAttribute(aAttribute) == aValue)
-              return nodes[i];
-            else {
-              var subnodes = nodes[i].getElementsByAttribute(aAttribute, aValue);
-              if (!subnodes.length) continue;
-              return subnodes[0];
-            }
-          }
-          return null;
-        ]]>
-        </body>
-      </method>
-      
-      <method name="createCollapsedGrippy">
-        <parameter name="aToolbar"/>
-        <body>
-        <![CDATA[
-          const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-          try {
-            var grippy = aToolbar.findNodeByAttribute("tbattr", "toolbar-grippy");
-            var boxObject = grippy.boxObject.QueryInterface(Components.interfaces.nsIBoxObject);
-            var collapsedGrippy = document.createElementNS(XUL_NS, "toolbargrippy");
-            if (collapsedGrippy) {
-              var width = boxObject.height > 20 ? boxObject.height : 23;
-              var height = boxObject.width > 10 ? boxObject.width : 12;
-              var styleString = "width: " + width + "px; height: " + height + "px;";
-              collapsedGrippy.setAttribute("style", styleString);
-              collapsedGrippy.setAttribute("tooltiptext", aToolbar.getAttribute("grippytooltiptext"));
-              collapsedGrippy.setAttribute("id", "moz_tb_collapsed_" + aToolbar.id);
-              collapsedGrippy.setAttribute("moz_grippy_collapsed", "true"); 
-              collapsedGrippy.setAttribute("tbgrippy-collapsed", "true");
-              var collapsedTrayHolder = this.findNodeByAttribute("tbattr", "collapsed-tray-holder");
-              if (collapsedTrayHolder.getAttribute("moz-collapsed") == "true")
-                collapsedTrayHolder.removeAttribute("moz-collapsed");
-              this.findNodeByAttribute("tbattr", "collapsed-tray").appendChild(collapsedGrippy);
-              collapsedGrippy = document.getElementById("moz_tb_collapsed_" + aToolbar.id);
-            }
-          }
-          catch (e) {
-            throw e;
-          }
-        ]]>        
-        </body>
-      </method>
+      <field name="palette">
+        null
+      </field>
 
-      <property name="deferAttached">
+      <field name="toolbarset">
+        null
+      </field>
+      
+      <field name="customToolbarCount">
+        0
+      </field>
+      
+      <constructor>
+        <![CDATA[
+          // Look to see if there is a toolbarset.
+          this.toolbarset = this.firstChild;
+          while (this.toolbarset && this.toolbarset.localName != "toolbarset")
+            this.toolbarset = toolbarset.nextSibling;
+          
+          if (this.toolbarset) {
+            // Create each toolbar described by the toolbarset.
+            var index = 0;
+            while (toolbarset.hasAttribute("toolbar"+(++index))) {
+              var toolbarInfo = toolbarset.getAttribute("toolbar"+index);
+              var infoSplit = toolbarInfo.split(":");
+              this.appendCustomToolbar(infoSplit[0], infoSplit[1]);
+            }
+          }
+        ]]>
+      </constructor>
+      
+      <method name="appendCustomToolbar">
+        <parameter name="aName"/>
+        <parameter name="aCurrentSet"/>
+        <body>
+          <![CDATA[            
+            var toolbar = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                  "toolbar");
+            toolbar.id = "__customToolbar_" + aName.replace(" ", "");
+            toolbar.setAttribute("customizable", "true");
+            toolbar.setAttribute("customindex", ++this.customToolbarCount);
+            toolbar.setAttribute("toolbarname", aName);
+            toolbar.setAttribute("currentset", aCurrentSet);
+            toolbar.setAttribute("mode", this.getAttribute("mode"));
+            toolbar.setAttribute("iconsize", this.getAttribute("iconsize"));
+            toolbar.setAttribute("context", this.toolbarset.getAttribute("context"));
+                        
+            this.insertBefore(toolbar, this.toolbarset);
+            return toolbar;
+          ]]>
+        </body>
+      </method>
+    </implementation>
+  </binding>
+
+
+   <binding id="toolbar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
+    <implementation>
+      <field name="firstPermanentChild">
+        null
+      </field>
+      <field name="lastPermanentChild">
+        null
+      </field>
+      
+      <property name="toolbarName"
+                onget="return this.getAttribute('toolbarname');"
+                onset="this.setAttribute('toolbarname', val); return val;"/>
+      
+      <constructor>
+        <![CDATA[
+          this.firstPermanentChild = this.firstChild;
+          this.lastPermanentChild = this.lastChild;
+          
+          // Searching for the toolbox palette in the toolbar binding because
+          // toolbars are constructed first.
+          var toolbox = this.parentNode;
+          
+          if (!toolbox.palette) {
+            // Look to see if there is a toolbarpalette.
+            var node = toolbox.firstChild;
+            while (node) {
+              if (node.localName == "toolbarpalette")
+                break;
+              node = node.nextSibling;
+            }
+            
+            if (!node)
+              return;
+
+            // Hold on to the palette but remove it from the document.
+            toolbox.palette = node;       
+            toolbox.removeChild(node);
+          }
+          
+          // Build up our contents from the palette.
+          var currentSet = this.getAttribute("currentset");
+          if (!currentSet)
+            currentSet = this.getAttribute("defaultset");
+          if (currentSet)
+            this.currentSet = currentSet;
+        ]]>
+      </constructor>
+
+      <property name="currentSet">
         <getter>
-          return (this.hasAttribute("deferattached") ? "true" : "false");
+          <![CDATA[
+            var node = this.firstChild;
+            var currentSet = "";
+            while (node) {
+              if (node.id &&
+                  node.localName == "toolbaritem" || 
+                  node.localName == "toolbarbutton" ||
+                  node.localName == "toolbarseparator" ||
+                  node.localName == "toolbarspring" ||
+                  node.localName == "toolbarspacer")
+              {
+                if (currentSet)
+                  currentSet += ",";
+
+                if (node.localName == "toolbarseparator")
+                  currentSet += "separator";
+                else if (node.localName == "toolbarspring")
+                  currentSet += "spring";
+                else if (node.localName == "toolbarspacer")
+                  currentSet += "spacer";
+                else
+                  currentSet += node.id;
+              }
+              node = node.nextSibling;
+            }
+            
+            return currentSet ? currentSet : "__empty";
+          ]]>
         </getter>
+        
         <setter>
-          if (val)
-            this.setAttribute("deferattached", "true");
-          else
-            this.removeAttribute("deferattached");
-          return val;
+          <![CDATA[
+            // Remove all items before the first permanent child and after the last permanent child.
+            while (this.lastChild) {
+              if (this.lastChild == this.lastPermanentChild ||
+                  (this.lastChild.localName == "toolbarpaletteitem" &&
+                  this.lastChild.firstChild == this.lastPermanentChild))
+                break;
+              this.removeChild(this.lastChild);
+            }
+
+            while (this.firstChild) {
+              if (this.firstChild == this.firstPermanentChild ||
+                  (this.firstChild.localName == "toolbarpaletteitem" &&
+                  this.firstChild.firstChild == this.firstPermanentChild))
+                break;
+              this.removeChild(this.firstChild);
+            }
+
+            var firstChildID = this.firstPermanentChild ? this.firstPermanentChild.id : "";
+            var lastChildID = this.lastPermanentChild ? this.lastPermanentChild.id : "";
+
+            if (val == "__empty")
+              return;
+
+            if (val) {
+              var itemIds = val.split(",");
+              var before = true;
+              for (var i = 0; i < itemIds.length; i++) {
+                if (itemIds[i] == firstChildID || itemIds[i] == lastChildID)
+                  before = false;
+                else
+                  this.insertItem(itemIds[i], null, null, before);
+              }
+            }
+          ]]>
         </setter>
       </property>
       
-    </implementation>
-  </binding>
-
-  <binding id="toolbar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
-    <content>
-      <xul:toolbargrippy xbl:inherits="last-toolbar,hidden=grippyhidden"
-                         tbattr="toolbar-grippy"
-                         class="toolbar-grippy"/>
-      <xul:hbox class="toolbar-prefix" 
-                xbl:inherits="onclick=prefixonclick,tooltiptext=prefixtooltip,hidden=prefixhidden,prefixopen"/>
-      <xul:hbox flex="1" class="toolbar-holder" align="center"
-                xbl:inherits="collapsed,last-toolbar,orient=tborient,align=tbalign,pack=tbpack">
-        <children/>
-      </xul:hbox>
-    </content>
-    
-    <implementation>
-      <constructor>
-        <![CDATA[
-          if (this.getAttribute("moz-collapsed") == "true" &&
-              this.parentNode.localName == "toolbox")
-            this.parentNode.createCollapsedGrippy(this);
-        ]]>
-      </constructor>
-
-      <method name="findNodeByAttribute">
-        <parameter name="aAttribute"/>
-        <parameter name="aValue"/>
-        <body>
-        <![CDATA[
-          var nodes = document.getAnonymousNodes(this);
-          for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i].getAttribute(aAttribute) == aValue)
-              return nodes[i];
-            else {
-              var subnodes = nodes[i].getElementsByAttribute(aAttribute, aValue);
-              return subnodes.length ? subnodes[0] : null;
-            }
-          }
-          return null;
-        ]]>
-        </body>
-      </method>
-    </implementation>
-  </binding>
-
-  <binding id="toolbar-primary" extends="chrome://global/content/bindings/toolbar.xml#toolbar">
-    <implementation implements="nsIObserver">
-      <field name="domain" readonly="true">
-        "browser.chrome.toolbar_style"
-      </field>
-
-      <field name="prefs" readonly="true">
-        Components.classes["@mozilla.org/preferences-service;1"]
-                  .getService(Components.interfaces.nsIPrefService).getBranch(null)
-                  .QueryInterface(Components.interfaces.nsIPrefBranchInternal)
-      </field>
-
-      <method name="observe">
-        <parameter name="subject"/>
-        <parameter name="topic"/>
-        <parameter name="name"/>
+      <method name="insertItem">
+        <parameter name="aId"/>
+        <parameter name="aBeforeElt"/>
+        <parameter name="aWrapper"/>
+        <parameter name="aBeforePermanent"/>
         <body>
           <![CDATA[
-            if (topic == "nsPref:changed" && name == this.domain) {
-              const styles = ["pictures", "text", null];
-              const style = styles[this.prefs.getIntPref(name)];
-              this.setAttribute("buttonstyle", style);
-              this.update("toolbarbutton", style);
-              this.update("button", style);
+            var newItem = null;
+            
+            // Create special cases of palette items.
+            if (aId == "separator") {
+              newItem = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                 "toolbarseparator");
+              var uniqueId = (new Date()).getTime()+this.childNodes.length;
+              newItem.id = "separator" + uniqueId;
+            } else if (aId == "spring") {
+              newItem = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                 "toolbarspring");
+              var uniqueId = (new Date()).getTime()+this.childNodes.length;
+              newItem.flex = 1;
+              newItem.id = "spring" + uniqueId;
+            } else if (aId == "spacer") {
+              newItem = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+                                                 "toolbarspacer");
+              var uniqueId = (new Date()).getTime()+this.childNodes.length;
+              newItem.id = "spacer" + uniqueId;
+            } else {
+              // Attempt to locate an item with a matching id within palette.
+              var paletteItem = this.parentNode.palette.firstChild;
+              while (paletteItem) {
+                var paletteId = paletteItem.id;
+                if (paletteId == aId) {
+                  newItem = paletteItem.cloneNode(true);
+                  break;
+                }
+                paletteItem = paletteItem.nextSibling;
+              }
             }
+            
+            if (!newItem)
+              return;
+
+            var insertItem = newItem;
+            
+            // Wrap the item in another node if so inclined.
+            if (aWrapper) {
+              aWrapper.appendChild(newItem);
+              insertItem = aWrapper;
+            }
+            
+            // Insert the palette item into the toolbar.
+            if (aBeforeElt)
+              this.insertBefore(insertItem, aBeforeElt);
+            else if (aBeforePermanent && this.firstPermanentChild)
+                this.insertBefore(insertItem, this.firstPermanentChild);
+            else
+                this.appendChild(insertItem);
+               
+            return newItem;
           ]]>
         </body>
-      </method>
-
-      <method name="update">
-        <parameter name="tag"/>
-        <parameter name="style"/>
-        <body>
-          <![CDATA[
-            var elements = this.getElementsByTagName(tag);
-            for (var i = 0; i < elements.length; i++)
-              elements[i].setAttribute("buttonstyle", style);
-          ]]>
-        </body>
-      </method>
-
-      <constructor>
-        this.prefs.addObserver(this.domain, this, false);
-        if (this.prefs.getIntPref(this.domain) != 2)
-          this.observe(this.prefs, "nsPref:changed", this.domain);
-      </constructor>
-
-      <destructor>
-        this.prefs.removeObserver(this.domain, this);
-      </destructor>
+      </method>      
     </implementation>
   </binding>
 
-  <binding id="menubar" extends="xul:menubar">
-    <resources>
-      <stylesheet src="chrome://global/skin/toolbar.css"/>
-    </resources>
-
-    <content>
-      <xul:toolbargrippy xbl:inherits="last-toolbar,hidden=grippyhidden"
-                         tbattr="toolbar-grippy" class="toolbar-grippy"/>
-      <xul:hbox flex="1" class="toolbar-holder" xbl:inherits="collapsed,last-toolbar" align="center">
-        <children/>
-      </xul:hbox>
-    </content>
-    
+  <binding id="menubar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base" display="xul:menubar">
     <implementation implements="nsIAccessibleProvider">
       <property name="accessible">
         <getter>
@@ -256,95 +277,27 @@
         </getter>
        </property>
 
-      <constructor>
-        <![CDATA[
-          if (this.getAttribute("moz-collapsed") == "true" &&
-              this.parentNode.localName == "toolbox")
-            this.parentNode.createCollapsedGrippy(this);
-        ]]>
-      </constructor>
-
-      <method name="findNodeByAttribute">
-        <parameter name="aAttribute"/>
-        <parameter name="aValue"/>
-        <body>
-        <![CDATA[
-          var nodes = document.getAnonymousNodes(this);
-          for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i].getAttribute(aAttribute) == aValue)
-              return nodes[i];
-            else {
-              var subnodes = nodes[i].getElementsByAttribute(aAttribute, aValue);
-              return subnodes.length ? subnodes[0] : null;
-            }
-          }
-          return null;
-        ]]>
-        </body>
-      </method>
     </implementation>
   </binding>
 
-  <binding id="toolbargrippy" display="xul:button"
-           extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
+  <binding id="toolbardecoration" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base"/>
+
+  <binding id="toolbarpaletteitem" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base" display="xul:button">
     <content>
-      <xul:image class="toolbargrippy-arrow"/>
-      <xul:spacer class="toolbargrippy-texture" flex="1"/>
+      <xul:hbox class="toolbarpaletteitem-box" flex="1" xbl:inherits="type,place">
+        <children/>
+      </xul:hbox>
     </content>
-
-    <implementation>
-      <property name="collapsed">
-        <getter>
-          return this.hasAttribute("moz_grippy_collapsed");
-        </getter>
-        <setter>
-          if (val)
-            this.setAttribute("moz_grippy_collapsed", "true");
-          else
-            this.removeAttribute("moz_grippy_collapsed");
-          return val;
-        </setter>
-      </property>
-      
-      <method name="returnNode">
-        <parameter name="aNodeA"/>
-        <parameter name="aNodeB"/>
-        <body>
-        <![CDATA[
-          var node = this.parentNode;
-          while (node && node.localName != "window" && 
-                 (node.localName != aNodeA && (node.localName != aNodeB)))  {
-            node = node.parentNode;
-          }
-          return node;
-        ]]>
-        </body>
-      </method>
-      
-      <method name="grippyTriggered">
-        <body>
-        <![CDATA[
-          var toolbox = this.returnNode("toolbox");
-          var toolbar = this.returnNode("toolbar", "menubar");
-          if (this.collapsed) 
-            toolbox.expandToolbar(this.id);
-          else
-            toolbox.collapseToolbar(toolbar);
-        ]]>
-        </body>
-      </method>
-    </implementation>  
+  </binding>
     
-    <handlers>
-      <handler event="command">
-      <![CDATA[
-        this.grippyTriggered();
-      ]]>
-      </handler>
-    </handlers>
-  </binding>  
-
-  <binding id="toolbarseparator" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base"/>
+  <binding id="toolbarpaletteitem-palette" extends="chrome://global/content/bindings/toolbar.xml#toolbarpaletteitem">
+    <content>
+      <xul:hbox class="toolbarpaletteitem-box" xbl:inherits="type,place">
+        <children/>
+      </xul:hbox>
+      <xul:label xbl:inherits="value=title"/>
+    </content>
+  </binding>
 
 </bindings>          
 

@@ -66,6 +66,7 @@ broadcasterset, broadcaster, observes,
 keyset, key, 
 template, rule, conditions, action, 
 bindings, binding, content, member, triple,
+toolbarset, toolbarpalette,
 treechildren, treeitem, treeseparator, treerow, treecell {
   display: none;
 }
@@ -208,7 +209,6 @@ caption {
 /******* toolbar *******/
 
 toolbox { 
-  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbox");
   -moz-box-orient: vertical;
 }
   
@@ -216,12 +216,29 @@ toolbar {
   -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbar");
 }
 
-toolbargrippy {
-  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbargrippy");
+toolbarspring {
+  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbardecoration");
+  -moz-box-flex: 1000;
+   display: inline;
 }
 
+
 toolbarseparator {
-  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbarseparator");
+  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbardecoration");
+}
+
+toolbarspacer {
+  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbardecoration");
+  display: inline;
+}
+
+toolbarpaletteitem {
+  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbarpaletteitem");
+}
+
+toolbarpaletteitem[place="palette"] {
+  -moz-box-orient: vertical;
+  -moz-binding: url("chrome://global/content/bindings/toolbar.xml#toolbarpaletteitem-palette");
 }
 
 /********* menubar ***********/

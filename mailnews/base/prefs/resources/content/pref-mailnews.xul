@@ -38,10 +38,7 @@ Contributor(s):
   <script type="application/x-javascript">
   <![CDATA[
     var _elementIDs = ["mailnewsConfirmMoveFoldersToTrash", 
-                       "mailnewsStartPageEnabled", "mailnewsStartPageUrl", 
-                       "fileButton", "nextButton",
-                       "printButton", "stopButton", 
-                       "mailRememberLastMsg", "junkMailButton"];
+                       "mailnewsStartPageEnabled", "mailnewsStartPageUrl", "mailPaneConfig"];
   ]]>
   </script>
   
@@ -88,31 +85,19 @@ Contributor(s):
         <observes element="mailnewsStartPageUrl" attribute="disabled"/>
       </button>
      </hbox>
-
   </groupbox>
 
-  <!-- toolbar buttons customization -->
-  <groupbox flex="1" orient="horizontal">
-    <caption label="&toolbarIntro.label;"/>
-    <vbox>
-      <checkbox id="fileButton"
-                label="&fileButton.label;"
-                prefstring="mail.toolbars.showbutton.file"/>
-      <checkbox id="nextButton"
-                label="&nextButton.label;"
-                prefstring="mail.toolbars.showbutton.next"/>
-      <checkbox id="printButton"
-                label="&printButton.label;"
-                prefstring="mail.toolbars.showbutton.print"/>
-    </vbox>
-    <vbox>
-      <checkbox id="stopButton"
-                label="&stopButton.label;"
-                prefstring="mail.toolbars.showbutton.stop"/>
-      <checkbox id="junkMailButton"
-                label="&junkMailButton.label;"
-                prefstring="mail.toolbars.showbutton.junk"/>
-    </vbox>
+  <groupbox>
+    <caption label="&windowSettings.label;"/>
+    
+    <hbox align="center">
+      <label value="&selectWindowLayout.label;" accesskey="&selectWindowLayout.accesskey;" control="mailPaneConfig"/>
+      <spacer flex="1"/>
+      <radiogroup id="mailPaneConfig" prefstring="mail.pane_config" orient="horizontal">
+        <radio class="iconic" value="0" id="classic"/>
+        <radio class="iconic" value="1" id="wide"/>
+      </radiogroup>
+    </hbox>
   </groupbox>
- 
+
 </page>

@@ -1983,3 +1983,11 @@ function OpenOrFocusWindow(args, windowType, chromeURL)
     window.openDialog(chromeURL, "", "chrome,resizable,status,centerscreen,dialog=no", args);
 }
 
+function loadThrobberUrl(urlPref)
+{
+    var url;
+    try {
+        url = gPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        messenger.loadURL(window, url);  
+    } catch (ex) {}
+}

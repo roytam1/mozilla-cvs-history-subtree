@@ -43,7 +43,7 @@
 
 /* ::::: primary toolbar masthead ::::: */
 
-#msgToolbar > .toolbar-holder > .toolbar-primary-icon {
+#mail-bar > .toolbar-holder > .toolbar-primary-icon {
   list-style-image: url("chrome://messenger/skin/icons/mast-mail.gif");
 }
 
@@ -196,6 +196,22 @@
 
 #button-mark[disabled] {
   -moz-image-region: rect(136px 199px 169px 150px) !important;
+} 
+
+#button-address {
+  -moz-image-region: rect(306px 49px 339px 0);
+}
+
+#button-address:hover {
+  -moz-image-region: rect(306px 99px 339px 50px);
+} 
+
+#button-address:hover:active {
+  -moz-image-region: rect(306px 149px 339px 100px);
+} 
+
+#button-address[disabled="true"] {
+  -moz-image-region: rect(306px 199px 339px 150px) !important;
 } 
 
 #button-print {

@@ -129,7 +129,14 @@ function RemovePrefObservers()
   prefBranch.removeObserver(kPrefMailAddrBookLastNameFirst, gMailAddrBookLastNameFirstObserver);
 }
 
+// we won't show the window until the onload() handler is finished
+// so we do this trick (suggested by hyatt / blaker)
 function OnLoadAddressBook()
+{
+  setTimeout(delayedOnLoadAddressBook, 0); // when debugging, set this to 5000, so you can see what happens after the window comes up.
+}
+
+function delayedOnLoadAddressBook()
 {
   gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchInput = document.getElementById("searchInput");
@@ -152,6 +159,7 @@ function OnLoadAddressBook()
   SetupAbCommandUpdateHandlers();
 
   //workaround - add setTimeout to make sure dynamic overlays get loaded first
+  // XXX does this still have to be on a timeout, since the function is on a timeout??
   setTimeout('SelectFirstAddressBook()',0);
 
   // if the pref is locked disable the menuitem New->LDAP directory
@@ -163,6 +171,13 @@ function OnLoadAddressBook()
   var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
   // this listener only cares when a directory is removed
   addrbookSession.addAddressBookListener(gAddressBookAbListener, Components.interfaces.nsIAbListener.directoryRemoved);
+
+  // initialize the customizeDone method on the customizeable toolbar
+  var toolbox = document.getElementById("ab-toolbox");
+  toolbox.customizeDone = MailToolboxCustomizeDone;
+
+  var toolbarset = document.getElementById('customToolbars');
+  toolbox.toolbarset = toolbarset;
 }
 
 function GetCurrentPrefs()
@@ -734,4 +749,15 @@ function AbIMSelected()
   }
 
   LaunchUrl(url);
+}
+
+function loadThrobberUrl(urlPref)
+{
+    var url;
+    try {
+        url = gPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+        var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+        messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+        messenger.loadURL(window, url);  
+    } catch (ex) {}
 }
