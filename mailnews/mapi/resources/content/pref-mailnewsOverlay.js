@@ -21,15 +21,16 @@
  */
 
 parent.hPrefWindow.registerOKCallbackFunc( onOK );
-try {
-    var mapiRegistry = Components.classes[ "@mozilla.org/mapiregistry;1" ].
-                   getService( Components.interfaces.nsIMapiRegistry );
-}
-catch(ex){
-    mapiRegistry = null;
-}
 
 function mailnewsOverlayInit() {
+    try {
+        var mapiRegistry = Components.classes[ "@mozilla.org/mapiregistry;1" ].
+                   getService( Components.interfaces.nsIMapiRegistry );
+    }
+    catch(ex){
+        mapiRegistry = null;
+    }
+
     const prefbase = "system.windows.lock_ui.";
     var mailnewsEnableMapi = document.getElementById("mailnewsEnableMapi");
     if (mapiRegistry) {
@@ -41,8 +42,8 @@ function mailnewsOverlayInit() {
                           .getService()
                           .QueryInterface(Components.interfaces.nsIPrefService);
             var prefBranch = prefService.getBranch(prefbase);
-            if (prefBranch && prefBranch.prefIsLocked("defaultMailClient")) {
-                if (prefBranch.getBoolPref("defaultMailClient"))
+            if (prefBranch && prefBranch.prefIsLocked("default_mail_client")) {
+                if (prefBranch.getBoolPref("default_mail_client"))
                     mapiRegistry.setDefaultMailClient();
                 else
                     mapiRegistry.unsetDefaultMailClient();
@@ -60,7 +61,14 @@ function mailnewsOverlayInit() {
 }
 
 function onOK()
-{ 
+{
+    try {
+        var mapiRegistry = Components.classes[ "@mozilla.org/mapiregistry;1" ].
+                   getService( Components.interfaces.nsIMapiRegistry );
+    }
+    catch(ex){
+        mapiRegistry = null;
+    } 
     if (mapiRegistry) { 
         if (document.getElementById("mailnewsEnableMapi").checked)
             mapiRegistry.setDefaultMailClient();

@@ -1,3 +1,6 @@
+<!-- If you modify this file, please also update the following files -->
+<!-- mailnews/mapi/resources/content/contents.rdf in the ns tree -->
+
 <?xml version="1.0"?>
 <RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:chrome="http://www.mozilla.org/rdf/chrome#">
@@ -33,8 +36,6 @@
     <RDF:li resource="chrome://messenger/content/addressbook/abSelectAddressesDialog.xul"/>
     <RDF:li resource="chrome://editor/content/editor.xul"/>
     <RDF:li resource="chrome://messenger/content/pref-mailnews.xul"/>
-    <RDF:li resource="chrome://messenger/content/messenger.xul"/>
-    <RDF:li resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul"/>
   </RDF:Seq>
 
 
@@ -110,16 +111,6 @@
   <!-- mapi items for Mail And Newsgroups preferences pane -->
   <RDF:Seq about="chrome://messenger/content/pref-mailnews.xul">
     <RDF:li>chrome://messenger/content/pref-mailnewsOverlay.xul</RDF:li>
-  </RDF:Seq>
-
-  <!-- mail Integration dialog -->
-  <RDF:Seq about="chrome://messenger/content/messenger.xul">
-    <RDF:li>chrome://messenger/content/mailIntegrationOverlay.xul</RDF:li>
-  </RDF:Seq>
- 
-  <!-- mail Integration dialog --> 
-  <RDF:Seq about="chrome://messenger/content/mail3PaneWindowVertLayout.xul">
-    <RDF:li>chrome://messenger/content/mailIntegrationOverlay.xul</RDF:li>
   </RDF:Seq>
 
 </RDF:RDF>

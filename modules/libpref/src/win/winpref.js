@@ -159,6 +159,8 @@ pref("win.font.enablesymbol", true);
 
 pref("font.size.nav4rounding", false);
 
+pref("system.windows.lock_ui.default_mail_client", false);
+
 pref("netinst.profile.show_profile_wizard", true); 
 
 //The following pref is internal to Communicator. Please
