@@ -38,3 +38,7 @@ OS_LIBS = -lbsd -lsvld -lm
 MKSHLIB = $(LD) -brtl -bM:SRE -bnoentry -bexpall -berok
 XLDFLAGS += -lc
 
+ifdef JS_THREADSAFE
+XLDFLAGS += -ldl
+endif
+
