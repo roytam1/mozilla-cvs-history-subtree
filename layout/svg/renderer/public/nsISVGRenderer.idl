@@ -46,8 +46,8 @@ struct nsRect;
 
 
 interface nsISVGPathGeometrySource;
+interface nsISVGGlyphMetricsSource;
 interface nsISVGGlyphGeometrySource;
-interface nsISVGPositionedGlyphGeometrySource;
 interface nsISVGRendererPathGeometry;
 interface nsISVGRendererGlyphMetrics;
 interface nsISVGRendererGlyphGeometry;
@@ -61,8 +61,8 @@ interface nsISVGRenderer : nsISupports
 {
   // void Init(in nsIPresContext presContext);
   nsISVGRendererPathGeometry createPathGeometry(in nsISVGPathGeometrySource src);
-  nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphGeometrySource src);
-  nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGPositionedGlyphGeometrySource src);
+  nsISVGRendererGlyphMetrics createGlyphMetrics(in nsISVGGlyphMetricsSource src);
+  nsISVGRendererGlyphGeometry createGlyphGeometry(in nsISVGGlyphGeometrySource src);
   [noscript] nsISVGRendererCanvas createCanvas(in nsIRenderingContext ctx,
                                                in nsIPresContext presContext,
                                                [const] in nsRectRef dirtyRect);

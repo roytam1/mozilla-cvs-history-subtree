@@ -45,7 +45,7 @@
 using namespace Gdiplus;
 
 #include "nsCOMPtr.h"
-#include "nsISVGGlyphGeometrySource.h"
+#include "nsISVGGlyphMetricsSource.h"
 #include "nsPromiseFlatString.h"
 #include "nsFont.h"
 #include "nsIFontMetrics.h"
@@ -102,8 +102,8 @@ class nsSVGGDIPlusGlyphMetrics : public nsISVGGDIPlusGlyphMetrics
 {
 protected:
   friend nsresult NS_NewSVGGDIPlusGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                                               nsISVGGlyphGeometrySource *src);
-  nsSVGGDIPlusGlyphMetrics(nsISVGGlyphGeometrySource *src);
+                                               nsISVGGlyphMetricsSource *src);
+  nsSVGGDIPlusGlyphMetrics(nsISVGGlyphMetricsSource *src);
   ~nsSVGGDIPlusGlyphMetrics();
 public:
   // nsISupports interface:
@@ -114,6 +114,7 @@ public:
 
   // nsISVGGDIPlusGlyphMetrics interface:
   NS_IMETHOD_(const RectF*) GetBoundingRect();
+  NS_IMETHOD_(void) GetSubBoundingRect(PRUint32 charoffset, PRUint32 count, RectF* retval);
   NS_IMETHOD_(const Font*) GetFont();
   NS_IMETHOD_(TextRenderingHint) GetTextRenderingHint();
   
@@ -129,14 +130,14 @@ private:
   PRBool mRectNeedsUpdate;
   RectF mRect;
   Font *mFont;
-  nsCOMPtr<nsISVGGlyphGeometrySource> mSource;
+  nsCOMPtr<nsISVGGlyphMetricsSource> mSource;
   
 };
 
 //----------------------------------------------------------------------
 // implementation:
 
-nsSVGGDIPlusGlyphMetrics::nsSVGGDIPlusGlyphMetrics(nsISVGGlyphGeometrySource *src)
+nsSVGGDIPlusGlyphMetrics::nsSVGGDIPlusGlyphMetrics(nsISVGGlyphMetricsSource *src)
     : mRectNeedsUpdate(PR_TRUE), mFont(nsnull), mSource(src)
 {
   NS_INIT_ISUPPORTS();
@@ -149,7 +150,7 @@ nsSVGGDIPlusGlyphMetrics::~nsSVGGDIPlusGlyphMetrics()
 
 nsresult
 NS_NewSVGGDIPlusGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                             nsISVGGlyphGeometrySource *src)
+                             nsISVGGlyphMetricsSource *src)
 {
   *result = new nsSVGGDIPlusGlyphMetrics(src);
   if (!*result) return NS_ERROR_OUT_OF_MEMORY;
@@ -254,11 +255,25 @@ nsSVGGDIPlusGlyphMetrics::GetAdvance(float *aAdvance)
   return NS_OK;
 }
 
-/* readonly attribute float height; */
+/* readonly attribute nsIDOMSVGRect boundingBox; */
 NS_IMETHODIMP
-nsSVGGDIPlusGlyphMetrics::GetHeight(float *aHeight)
+nsSVGGDIPlusGlyphMetrics::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
 {
-  *aHeight = GetBoundingRect()->Height;
+  *aBoundingBox = nsnull;
+
+  nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
+
+  NS_ASSERTION(rect, "could not create rect");
+  if (!rect) return NS_ERROR_FAILURE;
+  
+  rect->SetX(GetBoundingRect()->X);
+  rect->SetY(GetBoundingRect()->Y);
+  rect->SetWidth(GetBoundingRect()->Width);
+  rect->SetHeight(GetBoundingRect()->Height);
+
+  *aBoundingBox = rect;
+  NS_ADDREF(*aBoundingBox);
+  
   return NS_OK;
 }
 
@@ -267,48 +282,10 @@ NS_IMETHODIMP
 nsSVGGDIPlusGlyphMetrics::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 {
   *_retval = nsnull;
-  
-  
-  nsCOMPtr<nsIPresContext> presContext;
-  mSource->GetPresContext(getter_AddRefs(presContext));
-  if (!presContext) {
-    NS_ERROR("null prescontext");
-    return NS_ERROR_FAILURE;
-  }
 
-  nsWindowsDC devicehandle(presContext);
-  Graphics graphics(devicehandle);
-  PrepareGraphics(graphics);
-  
-  nsAutoString text;
-  mSource->GetCharacterData(text);
-  
-  StringFormat stringFormat(StringFormat::GenericTypographic());
-  stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
-                              StringFormatFlagsMeasureTrailingSpaces);
-  
-  CharacterRange charRange(charnum, 1);
-  stringFormat.SetMeasurableCharacterRanges(1, &charRange);
-  
-  Region region;
-  region.MakeEmpty();
-  
-  // we measure in the transformed coordinate system...
-  GraphicsState state = graphics.Save();
-  
-  Matrix m;
-  GetGlobalTransform(&m);
-  graphics.MultiplyTransform(&m);
-  
-  graphics.MeasureCharacterRanges(PromiseFlatString(text).get(), -1, GetFont(),
-                                  RectF(0.0f, 0.0f, FLT_MAX, FLT_MAX), &stringFormat, 1, &region);
-  
-  graphics.Restore(state);
-  
-  // ... and obtain the bounds in our local coord system
   RectF bounds;
-  region.GetBounds(&bounds, &graphics);
-
+  GetSubBoundingRect(charnum, 1, &bounds);
+  
   nsCOMPtr<nsIDOMSVGRect> rect = do_CreateInstance(NS_SVGRECT_CONTRACTID);
 
   NS_ASSERTION(rect, "could not create rect");
@@ -347,33 +324,42 @@ nsSVGGDIPlusGlyphMetrics::Update(PRUint32 updatemask, PRBool *_retval)
 
 //----------------------------------------------------------------------
 // nsISVGGDIPlusGlyphMetrics methods:
+
 NS_IMETHODIMP_(const RectF*)
 nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
 {
   if (!mRectNeedsUpdate) return &mRect;
   mRectNeedsUpdate = PR_FALSE;
   
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+
+  GetSubBoundingRect(0, text.Length(), &mRect);
+
+  return &mRect;
+
+}
+
+NS_IMETHODIMP_(void)
+nsSVGGDIPlusGlyphMetrics::GetSubBoundingRect(PRUint32 charoffset, PRUint32 count,
+                                             RectF* retval)
+{
   nsCOMPtr<nsIPresContext> presContext;
   mSource->GetPresContext(getter_AddRefs(presContext));
-  if (!presContext) {
-    NS_ERROR("null prescontext");
-    return &mRect;
-  }
+  NS_ASSERTION(presContext, "null prescontext");
 
   nsWindowsDC devicehandle(presContext);
-  Graphics graphics(devicehandle);  
+  Graphics graphics(devicehandle);
   PrepareGraphics(graphics);
   
   nsAutoString text;
   mSource->GetCharacterData(text);
   
-  //NS_ASSERTION(text.Length(), "zero length string");
-  
   StringFormat stringFormat(StringFormat::GenericTypographic());
   stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
                               StringFormatFlagsMeasureTrailingSpaces);
   
-  CharacterRange charRange(0, text.Length());
+  CharacterRange charRange(charoffset, count);
   stringFormat.SetMeasurableCharacterRanges(1, &charRange);
   
   Region region;
@@ -392,9 +378,7 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
   graphics.Restore(state);
   
   // ... and obtain the bounds in our local coord system
-  region.GetBounds(&mRect, &graphics);
-  
-  return &mRect;
+  region.GetBounds(retval, &graphics);  
 }
 
 NS_IMETHODIMP_(const Font*)
@@ -419,16 +403,16 @@ nsSVGGDIPlusGlyphMetrics::GetTextRenderingHint()
   PRUint16 textRendering;
   mSource->GetTextRendering(&textRendering);
   switch (textRendering) {
-    case nsISVGGlyphGeometrySource::TEXT_RENDERING_OPTIMIZESPEED:
+    case nsISVGGlyphMetricsSource::TEXT_RENDERING_OPTIMIZESPEED:
       return TextRenderingHintSingleBitPerPixel;
       break;
-    case nsISVGGlyphGeometrySource::TEXT_RENDERING_OPTIMIZELEGIBILITY:
+    case nsISVGGlyphMetricsSource::TEXT_RENDERING_OPTIMIZELEGIBILITY:
       return forceUnhinted ?
         TextRenderingHintAntiAlias :
         TextRenderingHintAntiAliasGridFit;
       break;
-    case nsISVGGlyphGeometrySource::TEXT_RENDERING_GEOMETRICPRECISION:
-    case nsISVGGlyphGeometrySource::TEXT_RENDERING_AUTO:
+    case nsISVGGlyphMetricsSource::TEXT_RENDERING_GEOMETRICPRECISION:
+    case nsISVGGlyphMetricsSource::TEXT_RENDERING_AUTO:
     default:
       return TextRenderingHintAntiAlias;
       break;

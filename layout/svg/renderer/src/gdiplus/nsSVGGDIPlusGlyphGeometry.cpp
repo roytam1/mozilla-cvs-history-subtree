@@ -51,7 +51,7 @@ using namespace Gdiplus;
 #include "nsIDOMSVGMatrix.h"
 #include "nsSVGGDIPlusRegion.h"
 #include "nsISVGRendererRegion.h"
-#include "nsISVGPosGlyphGeometrySrc.h"
+#include "nsISVGGlyphGeometrySource.h"
 #include "nsPromiseFlatString.h"
 #include "nsSVGGDIPlusGlyphMetrics.h"
 #include "nsISVGGDIPlusGlyphMetrics.h"
@@ -59,17 +59,150 @@ using namespace Gdiplus;
 #include "nsMemory.h"
 
 ////////////////////////////////////////////////////////////////////////
+// SectionIterator helper class:
+// we section the text into highlighted & non-highlighted regions and use
+// this helper class to iterate over them
+class SectionIterator
+{
+public:
+  SectionIterator(nsISVGGlyphGeometrySource *src);
+
+  void First() { mPointer=0; }
+  void Next() { ++mPointer; }
+  PRBool IsEnd() { return mPointer>=mCount; }
+
+  PRBool IsOnlySection() { return mCount==1; }
+
+  PRBool IsHighlighted() {
+    NS_ASSERTION(mPointer<mCount, "iterator out of range");
+    return mSections[mPointer].highlighted;
+  }
+  
+  const WCHAR *GetSectionPtr() {
+    NS_ASSERTION(mPointer<mCount, "iterator out of range");
+    return PromiseFlatString(mText).get()+mSections[mPointer].offset;
+  }
+  
+  PRUint32 GetLength() {
+    NS_ASSERTION(mPointer<mCount, "iterator out of range");
+    return mSections[mPointer].length;
+  }
+
+  float GetAdvance() {
+    NS_ASSERTION(mPointer<mCount, "iterator out of range");
+    return mSections[mPointer].bounds.X;
+  }
+
+  const RectF& GetBounds() {
+    NS_ASSERTION(mPointer<mCount, "iterator out of range");
+    return mSections[mPointer].bounds;
+  }
+
+  nscolor GetHighlightForeground(){ return mHighlightForeground; }
+  nscolor GetHighlightBackground(){ return mHighlightBackground; }
+  
+private:
+  struct Section{
+    PRUint32 offset;
+    PRUint32 length;
+    PRBool highlighted;
+    RectF bounds;
+  };
+
+  Section mSections[3];
+  nscolor mHighlightForeground;
+  nscolor mHighlightBackground;
+  int mCount;
+  int mPointer;
+  nsString mText;
+};
+
+SectionIterator::SectionIterator(nsISVGGlyphGeometrySource *src)
+    : mCount(0), mPointer(0)
+{
+  NS_ASSERTION(src, "no glyphgeometrysource");
+  
+  src->GetCharacterData(mText);
+  PRUint32 length = mText.Length();
+  PRUint32 roffset,rcount;
+
+  PRBool hasHighlight;
+  src->GetHasHighlight(&hasHighlight);
+  if (!hasHighlight) {
+    // no highlight. this is the 'normal' case
+    // we have only one section
+    roffset=0;
+    rcount=0;
+  }
+  else {
+    src->GetHighlight(&roffset, &rcount,
+                      &mHighlightForeground,
+                      &mHighlightBackground);
+  }
+  
+  // create the sections. There are between 1-3 sections.
+  
+  if (roffset>0) {
+    mSections[mCount].offset = 0;
+    mSections[mCount].length = min(length, roffset);
+    mSections[mCount].highlighted = PR_FALSE;
+    ++mCount;
+  }
+  
+  if (rcount>0 && roffset<length) {
+    mSections[mCount].offset = roffset;
+    mSections[mCount].length = min(rcount, length-roffset);
+    mSections[mCount].highlighted = PR_TRUE;
+    ++mCount;
+  }
+
+  if (roffset+rcount<length) {
+    mSections[mCount].offset = roffset+rcount;
+    mSections[mCount].length = length-mSections[mCount].offset;
+    mSections[mCount].highlighted = PR_FALSE;
+    ++mCount;
+  }
+
+  // calculate the bounds of the sections
+  if (!mCount) return;
+  
+  nsCOMPtr<nsISVGGDIPlusGlyphMetrics> metrics;
+  {
+    nsCOMPtr<nsISVGRendererGlyphMetrics> xpmetrics;
+    src->GetMetrics(getter_AddRefs(xpmetrics));
+    metrics = do_QueryInterface(xpmetrics);
+    NS_ASSERTION(metrics, "wrong metrics object!");
+    if (!metrics) return;
+  }
+
+  if (mCount==1) {
+    // Use GetBoundingRect() when there is only one section. This is
+    // the normal case and faster than calling getSubBoundingRect(),
+    // since the glyph metrics object caches the bb.
+    mSections[0].bounds = *metrics->GetBoundingRect();
+    return;
+  }
+  // else
+  // generic case
+  for (int i=0; i<mCount; ++i) {
+    metrics->GetSubBoundingRect(mSections[i].offset, mSections[i].length,
+                                &mSections[i].bounds);
+  }
+    
+}
+  
+////////////////////////////////////////////////////////////////////////
 // nsSVGGDIPlusGlyphGeometry class
 
 class nsSVGGDIPlusGlyphGeometry : public nsISVGRendererGlyphGeometry
 {
 protected:
   friend nsresult NS_NewSVGGDIPlusGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                                                nsISVGPositionedGlyphGeometrySource *src);
+                                                nsISVGGlyphGeometrySource *src);
 
   nsSVGGDIPlusGlyphGeometry();
   ~nsSVGGDIPlusGlyphGeometry();
-  nsresult Init(nsISVGPositionedGlyphGeometrySource* src);
+  nsresult Init(nsISVGGlyphGeometrySource* src);
 
 public:
   // nsISupports interface:
@@ -79,11 +212,12 @@ public:
   NS_DECL_NSISVGRENDERERGLYPHGEOMETRY
   
 protected:
+  void DrawFill(Graphics* g, Brush& b, const WCHAR* start, INT length, float x, float y);
   void GetGlobalTransform(Matrix *matrix);
   void UpdateStroke();
   void UpdateRegions(); // update covered region & hit-test region
   
-  nsCOMPtr<nsISVGPositionedGlyphGeometrySource> mSource;
+  nsCOMPtr<nsISVGGlyphGeometrySource> mSource;
   nsCOMPtr<nsISVGRendererRegion> mCoveredRegion;
   Region *mHitTestRegion;
   GraphicsPath *mStroke;
@@ -105,7 +239,7 @@ nsSVGGDIPlusGlyphGeometry::~nsSVGGDIPlusGlyphGeometry()
 }
 
 nsresult
-nsSVGGDIPlusGlyphGeometry::Init(nsISVGPositionedGlyphGeometrySource* src)
+nsSVGGDIPlusGlyphGeometry::Init(nsISVGGlyphGeometrySource* src)
 {
   mSource = src;
   return NS_OK;
@@ -114,7 +248,7 @@ nsSVGGDIPlusGlyphGeometry::Init(nsISVGPositionedGlyphGeometrySource* src)
 
 nsresult
 NS_NewSVGGDIPlusGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                              nsISVGPositionedGlyphGeometrySource *src)
+                              nsISVGGlyphGeometrySource *src)
 {
   *result = nsnull;
   
@@ -153,78 +287,110 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 {
+  // make sure that we have constructed our render objects
+  if (!mCoveredRegion) {
+    nsCOMPtr<nsISVGRendererRegion> region;
+    Update(UPDATEMASK_ALL, getter_AddRefs(region));
+  }
+
+  PRBool hasFill = PR_FALSE;
+  {
+    PRUint16 filltype;
+    mSource->GetFillPaintType(&filltype);
+    if (filltype == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR)
+      hasFill = PR_TRUE;
+  }
+
+  PRBool hasStroke = PR_FALSE;
+  {
+    PRUint16 stroketype;
+    mSource->GetStrokePaintType(&stroketype);
+    if (stroketype == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR && mStroke)
+      hasStroke = PR_TRUE;
+  }
+
+  if (!hasFill && !hasStroke) return NS_OK; // nothing to paint
+  
+  SectionIterator sections(mSource);
+  if (sections.IsEnd()) return NS_OK; // nothing to paint
+
   nsCOMPtr<nsISVGGDIPlusCanvas> gdiplusCanvas = do_QueryInterface(canvas);
   NS_ASSERTION(gdiplusCanvas, "wrong svg canvas for geometry!");
   if (!gdiplusCanvas) return NS_ERROR_FAILURE;
   gdiplusCanvas->GetGraphics()->SetSmoothingMode(SmoothingModeAntiAlias);
   //gdiplusCanvas->GetGraphics()->SetPixelOffsetMode(PixelOffsetModeHalf);
-  nsCOMPtr<nsISVGGDIPlusGlyphMetrics> metrics;
-  {
-    nsCOMPtr<nsISVGRendererGlyphMetrics> xpmetrics;
-    mSource->GetMetrics(getter_AddRefs(xpmetrics));
-    metrics = do_QueryInterface(xpmetrics);
-    NS_ASSERTION(metrics, "wrong metrics object!");
-    if (!metrics) return NS_ERROR_FAILURE;
-  }
-
-  if (!mCoveredRegion) {
-    nsCOMPtr<nsISVGRendererRegion> region;
-    Update(UPDATEMASK_ALL, getter_AddRefs(region));
-  }
   
-  nscolor color;
-  float opacity;
-  PRUint16 type;
+  nsAutoString text;
+  mSource->GetCharacterData(text);
+
+  float x,y;
+  mSource->GetX(&x);
+  mSource->GetY(&y);
   
-  // paint fill:
-  mSource->GetFillPaintType(&type);
-
-  if (type == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR) {
-    mSource->GetFillPaint(&color);
-    mSource->GetFillOpacity(&opacity);
+  // iterate over all sections
+  while (!sections.IsEnd()) {
     
-    SolidBrush brush(Color((BYTE)(opacity*255),NS_GET_R(color),NS_GET_G(color),NS_GET_B(color)));
+    if (sections.IsHighlighted()) {
+      nscolor bg = sections.GetHighlightBackground();
+      SolidBrush brush(Color(NS_GET_R(bg), NS_GET_G(bg), NS_GET_B(bg)));
 
-    // prepare graphics object:
-    GraphicsState state = gdiplusCanvas->GetGraphics()->Save();
-        
-    Matrix m;
-    GetGlobalTransform(&m);
-    gdiplusCanvas->GetGraphics()->MultiplyTransform(&m);
-    gdiplusCanvas->GetGraphics()->SetTextRenderingHint(metrics->GetTextRenderingHint());
+      GraphicsState state = gdiplusCanvas->GetGraphics()->Save();
+      Matrix m;
+      GetGlobalTransform(&m);
+      gdiplusCanvas->GetGraphics()->MultiplyTransform(&m);
+      
+      gdiplusCanvas->GetGraphics()->FillRectangle(&brush, sections.GetBounds().X+x,
+                                                  sections.GetBounds().Y+y,
+                                                  sections.GetBounds().Width,
+                                                  sections.GetBounds().Height);
+      gdiplusCanvas->GetGraphics()->Restore(state);
+    }
 
-    // paint:
-    nsAutoString text;
-    mSource->GetCharacterData(text);
+    if (hasFill) {
+      nscolor color;
+      if (!sections.IsHighlighted())
+        mSource->GetFillPaint(&color);
+      else
+        color = sections.GetHighlightForeground();
+      
+      float opacity;
+      mSource->GetFillOpacity(&opacity);
+
+      SolidBrush brush(Color((BYTE)(opacity*255),NS_GET_R(color),NS_GET_G(color),NS_GET_B(color)));
+
+      DrawFill(gdiplusCanvas->GetGraphics(), brush,
+               sections.GetSectionPtr(), sections.GetLength(), sections.GetAdvance()+x, y);
+    }
+
+    if (hasStroke) {
+      nscolor color;
+      if (!sections.IsHighlighted())
+        mSource->GetStrokePaint(&color);
+      else
+        color = sections.GetHighlightForeground();
+      
+      float opacity;
+      mSource->GetStrokeOpacity(&opacity);
+
+      SolidBrush brush(Color((BYTE)(opacity*255), NS_GET_R(color), NS_GET_G(color), NS_GET_B(color)));
+
+      if (sections.IsOnlySection()) {
+        // this is the 'normal' case
+        gdiplusCanvas->GetGraphics()->FillPath(&brush, mStroke);
+      }
+      else {
+        // There is more than one section, so we need to clip our cached mStroke
+        // XXX For now we just paint the stroke as in the unhighlighted case...
+        gdiplusCanvas->GetGraphics()->FillPath(&brush, mStroke);
+        // ... and paint a fill on top if the section is highlighted:
+        if (sections.IsHighlighted())
+          DrawFill(gdiplusCanvas->GetGraphics(), brush,
+                   sections.GetSectionPtr(), sections.GetLength(), sections.GetAdvance()+x, y);
+      }
+      
+    }      
     
-    float x,y;
-    mSource->GetX(&x);
-    mSource->GetY(&y);
-
-    StringFormat stringFormat(StringFormat::GenericTypographic());
-    stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
-                                StringFormatFlagsMeasureTrailingSpaces);
-    stringFormat.SetLineAlignment(StringAlignmentNear);
-    
-    gdiplusCanvas->GetGraphics()->DrawString(PromiseFlatString(text).get(), -1,
-                                             metrics->GetFont(), PointF(x,y),
-                                             &stringFormat, &brush);
-#ifdef DEBUG
-//  gdiplusCanvas->GetGraphics()->TranslateTransform(x, y);
-//  gdiplusCanvas->GetGraphics()->DrawRectangle(&Pen(Color(255,0,0,0)), *(metrics->GetBoundingRect()));
-#endif
-    // restore state:
-    gdiplusCanvas->GetGraphics()->Restore(state);
-  }
-
-  // paint stroke
-  mSource->GetStrokePaintType(&type);
-  if (type == nsISVGGeometrySource::PAINT_TYPE_SOLID_COLOR && mStroke) {
-    mSource->GetStrokePaint(&color);
-    mSource->GetStrokeOpacity(&opacity);
-    SolidBrush brush(Color((BYTE)(opacity*255), NS_GET_R(color), NS_GET_G(color), NS_GET_B(color)));
-    gdiplusCanvas->GetGraphics()->SetPageUnit(UnitWorld);
-    gdiplusCanvas->GetGraphics()->FillPath(&brush, mStroke);
+    sections.Next();      
   }
   
   return NS_OK;
@@ -237,9 +403,11 @@ nsSVGGDIPlusGlyphGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_r
   nsCOMPtr<nsISVGRendererRegion> regionBefore = mCoveredRegion;
   
   if ((updatemask & UPDATEMASK_FILL_PAINT) == updatemask) {
+    // force update of regions:
     mCoveredRegion = nsnull;
   }
   else if (updatemask != UPDATEMASK_NOTHING) {
+    // force update of regions:
     mCoveredRegion = nsnull;
     UpdateStroke();
   }
@@ -290,6 +458,38 @@ nsSVGGDIPlusGlyphGeometry::ContainsPoint(float x, float y, PRBool *_retval)
 
 //----------------------------------------------------------------------
 //
+
+void
+nsSVGGDIPlusGlyphGeometry::DrawFill(Graphics* g, Brush& b,
+                                    const WCHAR* start, INT length,
+                                    float x, float y)
+{
+  nsCOMPtr<nsISVGGDIPlusGlyphMetrics> metrics;
+  {
+    nsCOMPtr<nsISVGRendererGlyphMetrics> xpmetrics;
+    mSource->GetMetrics(getter_AddRefs(xpmetrics));
+    metrics = do_QueryInterface(xpmetrics);
+    NS_ASSERTION(metrics, "wrong metrics object!");
+    if (!metrics) return;
+  }
+
+  GraphicsState state = g->Save();
+  
+  Matrix m;
+  GetGlobalTransform(&m);
+  g->MultiplyTransform(&m);
+  g->SetTextRenderingHint(metrics->GetTextRenderingHint());
+
+  StringFormat stringFormat(StringFormat::GenericTypographic());
+  stringFormat.SetFormatFlags(stringFormat.GetFormatFlags() |
+                              StringFormatFlagsMeasureTrailingSpaces);
+  stringFormat.SetLineAlignment(StringAlignmentNear);
+  
+  g->DrawString(start, length, metrics->GetFont(), PointF(x,y),
+                &stringFormat, &b);
+  
+  g->Restore(state);
+}
 
 void
 nsSVGGDIPlusGlyphGeometry::GetGlobalTransform(Matrix *matrix)

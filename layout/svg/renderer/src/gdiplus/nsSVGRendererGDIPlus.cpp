@@ -119,17 +119,17 @@ nsSVGRendererGDIPlus::CreatePathGeometry(nsISVGPathGeometrySource *src,
   return NS_NewSVGGDIPlusPathGeometry(_retval, src);
 }
 
-/* nsISVGRendererGlyphMetrics createGlyphMetrics (in nsISVGGlyphGeometrySource src); */
+/* nsISVGRendererGlyphMetrics createGlyphMetrics (in nsISVGGlyphMetricsSource src); */
 NS_IMETHODIMP
-nsSVGRendererGDIPlus::CreateGlyphMetrics(nsISVGGlyphGeometrySource *src,
+nsSVGRendererGDIPlus::CreateGlyphMetrics(nsISVGGlyphMetricsSource *src,
                                          nsISVGRendererGlyphMetrics **_retval)
 {
   return NS_NewSVGGDIPlusGlyphMetrics(_retval, src);
 }
 
-/* nsISVGRendererGlyphGeometry createGlyphGeometry (in nsISVGPositionedGlyphGeometrySource src); */
+/* nsISVGRendererGlyphGeometry createGlyphGeometry (in nsISVGGlyphGeometrySource src); */
 NS_IMETHODIMP
-nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGPositionedGlyphGeometrySource *src,
+nsSVGRendererGDIPlus::CreateGlyphGeometry(nsISVGGlyphGeometrySource *src,
                                           nsISVGRendererGlyphGeometry **_retval)
 {
   return NS_NewSVGGDIPlusGlyphGeometry(_retval, src);

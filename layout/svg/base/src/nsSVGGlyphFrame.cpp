@@ -40,7 +40,7 @@
 #include "nsISVGRendererGlyphGeometry.h"
 #include "nsISVGRendererGlyphMetrics.h"
 #include "nsISVGRenderer.h"
-#include "nsISVGPosGlyphGeometrySrc.h"
+#include "nsISVGGlyphGeometrySource.h"
 #include "nsISVGGlyphFragmentLeaf.h"
 #include "nsITextContent.h"
 #include "nsISVGChildFrame.h"
@@ -53,11 +53,12 @@
 #include "nsCRT.h"
 #include "prdtoa.h"
 #include "nsIDOMSVGRect.h"
+#include "nsILookAndFeel.h"
 
 typedef nsFrame nsSVGGlyphFrameBase;
 
 class nsSVGGlyphFrame : public nsSVGGlyphFrameBase,
-                        public nsISVGPositionedGlyphGeometrySource, // : nsISVGGlyphGeometrySource : nsISVGGeometrySource
+                        public nsISVGGlyphGeometrySource, // : nsISVGGlyphMetricsSource : nsISVGGeometrySource
                         public nsISVGGlyphFragmentLeaf, // : nsISVGGlyphFragmentNode
                         public nsISVGChildFrame
 {
@@ -86,6 +87,13 @@ public:
                              nsIContent*     aChild,
                              nsISupports*    aSubContent);
 
+  NS_IMETHOD  SetSelected(nsIPresContext* aPresContext,
+                          nsIDOMRange*    aRange,
+                          PRBool          aSelected,
+                          nsSpread        aSpread);
+  NS_IMETHOD  GetSelected(PRBool *aSelected) const;
+  NS_IMETHOD  IsSelectable(PRBool* aIsSelectable, PRUint8* aSelectStyle);
+
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererCanvas* canvas);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);
@@ -99,11 +107,11 @@ public:
   // nsISVGGeometrySource interface: 
   NS_DECL_NSISVGGEOMETRYSOURCE
 
+  // nsISVGGlyphMetricsSource interface:
+  NS_DECL_NSISVGGLYPHMETRICSSOURCE
+
   // nsISVGGlyphGeometrySource interface:
   NS_DECL_NSISVGGLYPHGEOMETRYSOURCE
-
-  // nsISVGPositionedGlyphGeometrySource interface:
-  NS_DECL_NSISVGPOSITIONEDGLYPHGEOMETRYSOURCE
 
   // nsISVGGlyphFragmentLeaf interface:
   NS_IMETHOD_(void) SetGlyphPosition(float x, float y);
@@ -186,8 +194,8 @@ nsSVGGlyphFrame::~nsSVGGlyphFrame()
 
 NS_INTERFACE_MAP_BEGIN(nsSVGGlyphFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGGeometrySource)
+  NS_INTERFACE_MAP_ENTRY(nsISVGGlyphMetricsSource)
   NS_INTERFACE_MAP_ENTRY(nsISVGGlyphGeometrySource)
-  NS_INTERFACE_MAP_ENTRY(nsISVGPositionedGlyphGeometrySource)
   NS_INTERFACE_MAP_ENTRY(nsISVGGlyphFragmentLeaf)
   NS_INTERFACE_MAP_ENTRY(nsISVGGlyphFragmentNode)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
@@ -253,6 +261,39 @@ nsSVGGlyphFrame::ContentChanged(nsIPresContext* aPresContext,
   outerSVGFrame->UnsuspendRedraw();
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::SetSelected(nsIPresContext* aPresContext,
+                             nsIDOMRange*    aRange,
+                             PRBool          aSelected,
+                             nsSpread        aSpread)
+{
+#if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
+  printf("nsSVGGlyphFrame(%p)::SetSelected()\n", this);
+#endif
+  return nsSVGGlyphFrameBase::SetSelected(aPresContext, aRange, aSelected, aSpread); 
+}
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetSelected(PRBool *aSelected) const
+{
+  nsresult rv = nsSVGGlyphFrameBase::GetSelected(aSelected);
+#if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
+  printf("nsSVGGlyphFrame(%p)::GetSelected()=%d\n", this, *aSelected);
+#endif
+  return rv;
+}
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::IsSelectable(PRBool* aIsSelectable,
+                              PRUint8* aSelectStyle)
+{
+  nsresult rv = nsSVGGlyphFrameBase::IsSelectable(aIsSelectable, aSelectStyle);
+#if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
+  printf("nsSVGGlyphFrame(%p)::IsSelectable()=(%d,%d)\n", this, *aIsSelectable, aSelectStyle);
+#endif
+  return rv;
 }
 
 
@@ -349,21 +390,16 @@ NS_IMETHODIMP
 nsSVGGlyphFrame::GetBBox(nsIDOMSVGRect **_retval)
 {
   *_retval = nsnull;
-  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
-  if (!outerSVGFrame) {
-    NS_ERROR("null outerSVGFrame");
-    return NS_ERROR_FAILURE;
-  }
 
-  outerSVGFrame->CreateSVGRect(_retval);
-
-  float width,height;
-  mMetrics->GetAdvance(&width);
-  mMetrics->GetHeight(&height);
-  (*_retval)->SetWidth(width);
-  (*_retval)->SetHeight(height);
-  (*_retval)->SetX(mX);
-  (*_retval)->SetY(mY);
+  nsresult rv = mMetrics->GetBoundingBox(_retval);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  
+  // offset the bounds by the position of this glyph fragment:
+  float x,y;
+  (*_retval)->GetX(&x);
+  (*_retval)->GetY(&y);
+  (*_retval)->SetX(x+mX);
+  (*_retval)->SetY(y+mY);
   
   return NS_OK;
 }
@@ -538,7 +574,7 @@ nsSVGGlyphFrame::GetFillPaint(nscolor *aFillPaint)
 }
 
 //----------------------------------------------------------------------
-// nsISVGGlyphGeometrySource methods:
+// nsISVGGlyphMetricsSource methods:
 
 /* [noscript] readonly attribute nsFont font; */
 NS_IMETHODIMP
@@ -584,7 +620,7 @@ nsSVGGlyphFrame::GetTextRendering(PRUint16 *aTextRendering)
 }
 
 //----------------------------------------------------------------------
-// nsISVGPositionedGlyphGeometrySource methods:
+// nsISVGGlyphGeometrySource methods:
 
 /* readonly attribute nsISVGRendererGlyphMetrics metrics; */
 NS_IMETHODIMP
@@ -610,6 +646,56 @@ nsSVGGlyphFrame::GetY(float *aY)
   *aY = mY;
   return NS_OK;
 }
+
+/* readonly attribute boolean hasHighlight; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetHasHighlight(PRBool *aHasHighlight)
+{
+  nsFrameState  frameState;
+  GetFrameState(&frameState);
+  *aHasHighlight = (frameState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
+
+  return NS_OK;
+}
+
+/* [noscript] void getHighlight (out unsigned long charnum, out unsigned long nchars, out nscolor foreground, out nscolor background); */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *foreground, nscolor *background)
+{
+  *foreground = NS_RGB(255,255,255);
+  *background = NS_RGB(0,0,0); 
+
+    PRBool hasHighlight;
+  GetHasHighlight(&hasHighlight);
+
+  if (!hasHighlight) {
+    NS_ERROR("nsSVGGlyphFrame::GetHighlight() called by renderer when there is no highlight");
+    *charnum=0;
+    *nchars=0;
+    return NS_ERROR_FAILURE;
+  }
+
+  // XXX get selection range:
+  *charnum=0;
+  *nchars=mCharacterData.Length();
+
+  // XXX get colors from selection:
+  
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(getter_AddRefs(presContext));
+  NS_ASSERTION(presContext, "no prescontext");
+    
+  nsCOMPtr<nsILookAndFeel> look;
+  presContext->GetLookAndFeel(getter_AddRefs(look));
+  NS_ASSERTION(look, "no LookAndFeel");
+  if (look) {
+    look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, *background);
+    look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, *foreground);
+  }
+    
+  return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 // nsISVGGlyphFragmentLeaf interface:

@@ -47,8 +47,8 @@ XPIDL_MODULE = gksvgrenderer
 XPIDLSRCS =                                   \
 	nsISVGGeometrySource.idl                  \
 	nsISVGGlyphGeometrySource.idl             \
+	nsISVGGlyphMetricsSource.idl              \
 	nsISVGPathGeometrySource.idl              \
-	nsISVGPosGlyphGeometrySrc.idl             \
 	nsISVGRectangleSink.idl                   \
 	nsISVGRenderer.idl                        \
 	nsISVGRendererCanvas.idl                  \

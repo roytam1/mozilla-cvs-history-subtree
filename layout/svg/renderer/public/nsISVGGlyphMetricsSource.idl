@@ -36,15 +36,25 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsISVGGlyphGeometrySource.idl"
+%{C++
+#include "nsFont.h"
+%}    
 
-interface nsISVGRendererGlyphMetrics;
+#include "nsISVGGeometrySource.idl"
 
-[scriptable, uuid(b36065f1-c52b-4eda-b9ad-e483cf1a63bf)]
-interface nsISVGPositionedGlyphGeometrySource : nsISVGGlyphGeometrySource
+native nsFont(nsFont);
+
+[scriptable, uuid(8e96a973-c8bb-43a2-8584-4976e75ca478)]
+interface nsISVGGlyphMetricsSource : nsISVGGeometrySource
 {
-  readonly attribute nsISVGRendererGlyphMetrics metrics;
-  
-  readonly attribute float x; // start position of glyph *before* applying CTM
-  readonly attribute float y;
+  [noscript] readonly attribute nsFont font;
+  readonly attribute DOMString characterData;
+
+  /* enums for textRendering */
+  const unsigned short TEXT_RENDERING_AUTO               = 0;
+  const unsigned short TEXT_RENDERING_OPTIMIZESPEED      = 1;
+  const unsigned short TEXT_RENDERING_OPTIMIZELEGIBILITY = 2;
+  const unsigned short TEXT_RENDERING_GEOMETRICPRECISION = 3;
+
+  readonly attribute unsigned short textRendering;
 };

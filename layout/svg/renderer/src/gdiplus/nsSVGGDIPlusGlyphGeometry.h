@@ -40,10 +40,10 @@
 #define __NS_SVGGDIPLUS_GLYPHGEOMETRY_H__
 
 class nsISVGRendererGlyphGeometry;
-class nsISVGPositionedGlyphGeometrySource;
+class nsISVGGlyphGeometrySource;
 
 nsresult
 NS_NewSVGGDIPlusGlyphGeometry(nsISVGRendererGlyphGeometry **result,
-                              nsISVGPositionedGlyphGeometrySource *src);
+                              nsISVGGlyphGeometrySource *src);
 
 #endif // __NS_SVGGDIPLUS_GLYPHGEOMETRY_H__

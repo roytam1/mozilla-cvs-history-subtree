@@ -51,6 +51,7 @@ public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISVGGDIPLUSGLYPHMETRICS_IID)
 
   NS_IMETHOD_(const RectF*) GetBoundingRect()=0;
+  NS_IMETHOD_(void) GetSubBoundingRect(PRUint32 charoffset, PRUint32 count, RectF* retval)=0;
   NS_IMETHOD_(const Font*) GetFont()=0;
   NS_IMETHOD_(TextRenderingHint) GetTextRenderingHint()=0;
 };

@@ -44,7 +44,7 @@ interface nsIDOMSVGRect;
 interface nsISVGRendererGlyphMetrics : nsISupports
 {
   readonly attribute float advance;
-  readonly attribute float height;
+  readonly attribute nsIDOMSVGRect boundingBox;
 
   [noscript] nsIDOMSVGRect getExtentOfChar(in unsigned long charnum);
   

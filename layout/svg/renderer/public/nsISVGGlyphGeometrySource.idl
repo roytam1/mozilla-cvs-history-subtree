@@ -36,26 +36,20 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-%{C++
-#include "nsFont.h"
-%}    
 
-#include "nsISVGGeometrySource.idl"
+#include "nsISVGGlyphMetricsSource.idl"
 
-native nsFont(nsFont);
+interface nsISVGRendererGlyphMetrics;
 
-[scriptable, uuid(8e96a973-c8bb-43a2-8584-4976e75ca478)]
-interface nsISVGGlyphGeometrySource : nsISVGGeometrySource
+[scriptable, uuid(b36065f1-c52b-4eda-b9ad-e483cf1a63bf)]
+interface nsISVGGlyphGeometrySource : nsISVGGlyphMetricsSource
 {
-  [noscript] readonly attribute nsFont font;
-  readonly attribute DOMString characterData;
+  readonly attribute nsISVGRendererGlyphMetrics metrics;
+  
+  readonly attribute float x; // start position of glyph *before* applying CTM
+  readonly attribute float y;
 
-  /* enums for textRendering */
-  const unsigned short TEXT_RENDERING_AUTO               = 0;
-  const unsigned short TEXT_RENDERING_OPTIMIZESPEED      = 1;
-  const unsigned short TEXT_RENDERING_OPTIMIZELEGIBILITY = 2;
-  const unsigned short TEXT_RENDERING_GEOMETRICPRECISION = 3;
-
-  readonly attribute unsigned short textRendering;
-
+  readonly attribute boolean hasHighlight;
+  [noscript] void getHighlight(out unsigned long charnum, out unsigned long nchars,
+                               out nscolor foreground, out nscolor background);
 };

@@ -40,9 +40,9 @@
 #define __NS_SVGGDIPLUS_GLYPHMETRICS_H__
 
 class nsISVGRendererGlyphMetrics;
-class nsISVGGlyphGeometrySource;
+class nsISVGGlyphMetricsSource;
 
 nsresult NS_NewSVGGDIPlusGlyphMetrics(nsISVGRendererGlyphMetrics **result,
-                                      nsISVGGlyphGeometrySource *src);
+                                      nsISVGGlyphMetricsSource *src);
 
 #endif // __NS_SVGGDIPLUS_GLYPHMETRICS_H__
