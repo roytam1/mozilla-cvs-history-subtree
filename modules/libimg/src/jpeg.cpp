@@ -39,11 +39,11 @@
 #	 include <sys/types.h>
 #endif
 
+PR_BEGIN_EXTERN_C
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"
 
-PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
 PR_END_EXTERN_C
 
