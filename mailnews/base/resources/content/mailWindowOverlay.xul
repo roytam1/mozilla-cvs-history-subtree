@@ -1382,7 +1382,6 @@ Rights Reserved.
   </menupopup>
 </menu>
 <menu id="windowMenu"/>
-<menu id="menu_Help"/>
 <spacer flex="100%"/>
 </menubar>
 
