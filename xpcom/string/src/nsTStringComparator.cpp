@@ -40,19 +40,6 @@
 #include "nsTAString.h"
 #include "plstr.h"
 
-template <class CharT>
-int
-nsTDefaultStringComparator<CharT>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
-  {
-    return nsCharTraits<CharT>::compare(lhs, rhs, aLength);
-  }
-
-template <class CharT>
-int
-nsTDefaultStringComparator<CharT>::operator()( char_type lhs, char_type rhs) const
-  {
-    return lhs - rhs;
-  } 
 
 template <class CharT>
 NS_COM int
@@ -85,6 +72,43 @@ Compare( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs, const nsTSt
     return result;
   }
 
+template NS_COM int Compare( const nsTAString<char>&      lhs, const nsTAString<char>&      rhs, const nsTStringComparator<char>&      comp );
+template NS_COM int Compare( const nsTAString<PRUnichar>& lhs, const nsTAString<PRUnichar>& rhs, const nsTStringComparator<PRUnichar>& comp );
+
+
+  /**
+   * MSVC cannot handle template instantion of operators :-(
+   */
+
+NS_SPECIALIZE_TEMPLATE
+int
+nsTDefaultStringComparator<char>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
+  {
+    return nsCharTraits<char>::compare(lhs, rhs, aLength);
+  }
+
+NS_SPECIALIZE_TEMPLATE
+int
+nsTDefaultStringComparator<char>::operator()( char_type lhs, char_type rhs) const
+  {
+    return lhs - rhs;
+  } 
+
+NS_SPECIALIZE_TEMPLATE
+int
+nsTDefaultStringComparator<PRUnichar>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
+  {
+    return nsCharTraits<PRUnichar>::compare(lhs, rhs, aLength);
+  }
+
+NS_SPECIALIZE_TEMPLATE
+int
+nsTDefaultStringComparator<PRUnichar>::operator()( char_type lhs, char_type rhs) const
+  {
+    return lhs - rhs;
+  } 
+
+
 int
 nsCaseInsensitiveCStringComparator::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
   {
@@ -106,16 +130,3 @@ nsCaseInsensitiveCStringComparator::operator()( char lhs, char rhs ) const
 
     return lhs - rhs;
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template int nsTDefaultStringComparator<char>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const;
-template int nsTDefaultStringComparator<char>::operator()( char_type lhs, char_type rhs) const;
-template int Compare( const nsTAString<char>& lhs, const nsTAString<char>& rhs, const nsTStringComparator<char>& comp );
-
-template int nsTDefaultStringComparator<PRUnichar>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const;
-template int nsTDefaultStringComparator<PRUnichar>::operator()( char_type lhs, char_type rhs) const;
-template int Compare( const nsTAString<PRUnichar>& lhs, const nsTAString<PRUnichar>& rhs, const nsTStringComparator<PRUnichar>& comp );

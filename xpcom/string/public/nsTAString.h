@@ -61,6 +61,8 @@ class NS_COM nsTStringComparator
     public:
       typedef CharT char_type;
 
+      nsTStringComparator() {}
+
       virtual int operator()( const char_type*, const char_type*, PRUint32 length ) const = 0;
       virtual int operator()( char_type, char_type ) const = 0;
   };
@@ -71,6 +73,8 @@ class NS_COM nsTDefaultStringComparator
   {
     public:
       typedef CharT char_type;
+
+      nsTDefaultStringComparator() {}
 
       virtual int operator()( const char_type*, const char_type*, PRUint32 length ) const;
       virtual int operator()( char_type, char_type ) const;
