@@ -48,6 +48,7 @@ static int cldap_select1( LDAP *ld, struct timeval *timeout );
 static void link_pend( LDAP *ld, LDAPPend *lp );
 static void unlink_pend( LDAP *ld, LDAPPend *lp );
 static int unlink_msg( LDAP *ld, int msgid, int all );
+static int nsldapi_mutex_trylock( LDAP *ld, LDAPLock lockno );
 
 /*
  * ldap_result - wait for an ldap result response to a message from the
@@ -82,11 +83,10 @@ ldap_result(
 	}
 
 	while( 1 ) {
-		if( (ret = LDAP_MUTEX_TRYLOCK( ld, LDAP_RESULT_LOCK )) == 0 )
+		if( (ret = nsldapi_mutex_trylock( ld, LDAP_RESULT_LOCK )) == 0 )
 		{
 			LDAP_MUTEX_BC_LOCK( ld, LDAP_RESULT_LOCK );
 			rc= nsldapi_result_nolock( ld, msgid, all, 1, timeout, result );
-			LDAP_MUTEX_BC_UNLOCK( ld, LDAP_RESULT_LOCK );
 			break;
 		}
 		else {
@@ -236,8 +236,7 @@ add_to_cache_and_return:
 		    (all || NSLDAPI_IS_SEARCH_RESULT( rc )), *result );
 	}
 
-	if( ld->ld_mutex_trylock_fn != NULL )
-		LDAP_MUTEX_UNLOCK( ld, LDAP_RESULT_LOCK );
+	LDAP_MUTEX_UNLOCK( ld, LDAP_RESULT_LOCK );
 	POST( ld, LDAP_RES_ANY, NULL );
 	return( rc );
 }
@@ -769,28 +768,16 @@ check_for_refs( LDAP *ld, LDAPRequest *lr, BerElement *ber,
 
 	if ( origerr == LDAP_REFERRAL ) {	/* ldapv3 */
 		if ( v3refs != NULL ) {
-			LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK);
-			LDAP_MUTEX_UNLOCK(ld, LDAP_REQ_LOCK);
-			LDAP_MUTEX_UNLOCK(ld, LDAP_RESULT_LOCK);
 			err = nsldapi_chase_v3_refs( ld, lr, v3refs,
 			    ( lr->lr_res_msgtype == LDAP_RES_SEARCH_REFERENCE ),
 			    totalcountp, chasingcountp );
-			LDAP_MUTEX_LOCK(ld, LDAP_RESULT_LOCK);
-			LDAP_MUTEX_LOCK(ld, LDAP_REQ_LOCK);
-			LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
 			ldap_value_free( v3refs );
 		}
 	} else if ( ldapversion == LDAP_VERSION2
 	    && origerr != LDAP_SUCCESS ) {
 		/* referrals may be present in the error string */
-		LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK);
-		LDAP_MUTEX_UNLOCK(ld, LDAP_REQ_LOCK);
-		LDAP_MUTEX_UNLOCK(ld, LDAP_RESULT_LOCK);
 		err = nsldapi_chase_v2_referrals( ld, lr, &errstr,
 		    totalcountp, chasingcountp );
-		LDAP_MUTEX_LOCK(ld, LDAP_RESULT_LOCK);
-		LDAP_MUTEX_LOCK(ld, LDAP_REQ_LOCK);
-		LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
 	}
 
 	/* set LDAP errno, message, and matched string appropriately */
@@ -1346,4 +1333,41 @@ unlink_msg( LDAP *ld, int msgid, int all )
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
 	return ( rc );
+}
+
+static int nsldapi_mutex_trylock( LDAP *ld, LDAPLock i )
+{
+ 
+        if( (ld)->ld_mutex_trylock_fn == NULL ) {
+                return (0) ;
+        }
+        else {
+                int ret;
+
+                if( (ld)->ld_threadid_fn != NULL ) {
+                        (ld)->ld_mutex_lock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] );
+                        if( (ld)->ld_mutex_threadid[i] == (ld)->ld_threadid_fn() ) {
+                                (ld)->ld_mutex_refcnt[i]++ ;
+                        	(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] );
+                        }
+                        else if( (ld)->ld_mutex_threadid[i] == (void *) -1 ) {
+                                ret = (ld)->ld_mutex_trylock_fn( (ld)->ld_mutex[i] );
+				if( ret == 0 ) {
+                                	(ld)->ld_mutex_threadid[i] =
+						(ld)->ld_threadid_fn() ;
+                                	(ld)->ld_mutex_refcnt[i]++ ;
+                        		(ld)->ld_mutex_unlock_fn (
+					   (ld)->ld_mutex[LDAP_THREADID_LOCK] );
+				}
+                        }
+			else {
+				ret = -1;
+                        	(ld)->ld_mutex_unlock_fn ( (ld)->ld_mutex[LDAP_THREADID_LOCK] );
+			}
+                }
+                else {
+                        ret = (ld)->ld_mutex_trylock_fn( (ld)->ld_mutex[i] ) ;
+                }
+                return (ret);
+        }
 }

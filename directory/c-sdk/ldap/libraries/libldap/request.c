@@ -293,8 +293,8 @@ nsldapi_send_server_request(
 			LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
 			nsldapi_free_request( ld, lr, 0 );
 			nsldapi_free_connection( ld, lc, 0, 0 );
-			LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 			LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+			LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 			return( -1 );
 		}
 
@@ -312,8 +312,8 @@ nsldapi_send_server_request(
 
 		nsldapi_mark_select_read( ld, lc->lconn_sb );
 	}
-	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
 	LDAP_SET_LDERRNO( ld, LDAP_SUCCESS, NULL, NULL );
 	return( msgid );
@@ -488,13 +488,13 @@ nsldapi_new_connection( LDAP *ld, LDAPServer **srvlistp, int use_ldsb,
 			 * if we get back "protocol error" from bind attempts
 			 */
 			for ( ;; ) {
-				LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK);
+				/* LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK); */
 				if (( lderr = ldap_bind_s( ld, binddn, passwd,
 				    authmethod )) == LDAP_SUCCESS ) {
-					LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
+					/* LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK); */
 					break;
 				}
-				LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
+				/* LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK); */
 				if ( lc->lconn_version <= LDAP_VERSION2
 				    || lderr != LDAP_PROTOCOL_ERROR ) {
 					err = -1;

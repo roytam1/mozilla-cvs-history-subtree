@@ -93,14 +93,6 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
 		return( -1 );	/* punt */
 	}
-    /* 
-     * Don't accept optdata == NULL in ldap_set_option
-     */
-    if (NULL == optdata)
-    {
-		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
-		return( LDAP_PARAM_ERROR );
-	}
 
 	rc = 0;
 	LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
@@ -201,6 +193,11 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	/* extra thread function pointers */
 	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:
 		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata);
+		memset( ld->ld_mutex_threadid, 0xFF,
+			LDAP_MAX_LOCK * sizeof( void * ) );
+		memset( ld->ld_mutex_refcnt, 0,
+			LDAP_MAX_LOCK * sizeof( unsigned long ) );
+		ld->ld_mutex_refcnt[LDAP_OPTION_LOCK] = 1;
 		break;
 
 	/* DNS function pointers */
