@@ -62,7 +62,7 @@ ifeq ($(OS_ARCH), WINNT)
 endif
 SHIP_LIBS := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
-SHIP_INCS  = js*.h
+SHIP_INCS  = js*.h netscape*.h
 SHIP_INCS := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
 
 SHIP_BINS  = js jsj
