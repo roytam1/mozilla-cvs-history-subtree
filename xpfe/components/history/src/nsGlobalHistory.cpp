@@ -189,9 +189,9 @@ public:
     MOZ_COUNT_DTOR(searchTerm);
   }
   
-  nsDependentSingleFragmentCSubstring datasource;  // should always be "history" ?
-  nsDependentSingleFragmentCSubstring property;    // AgeInDays, Hostname, etc
-  nsDependentSingleFragmentCSubstring method;      // is, isgreater, isless
+  nsDependentCSubstring datasource;  // should always be "history" ?
+  nsDependentCSubstring property;    // AgeInDays, Hostname, etc
+  nsDependentCSubstring method;      // is, isgreater, isless
   nsXPIDLString text;          // text to match
   rowMatchCallback match;      // matching callback if needed
 };
