@@ -37,6 +37,17 @@
 #expand  	chrome:localeVersion="__MOZILLA_LOCALE_VERSION__">
   </RDF:Description>
 
+#ifdef MOZ_XUL_APP
+  <!-- Declare overlay points used in this package -->
+  <RDF:Seq about="urn:mozilla:overlays">
+    <RDF:li resource="chrome://browser/content/pageInfo.xul"/>
+  </RDF:Seq>
+
+  <!-- Define the local overlay file(s) for each overlay point -->
+  <RDF:Seq about="chrome://browser/content/pageInfo.xul">
+    <RDF:li>chrome://pippki/content/PageInfoOverlay.xul</RDF:li>
+  </RDF:Seq>
+#else
   <!-- Declare overlay points used in this package -->
   <RDF:Seq about="urn:mozilla:overlays">
     <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
@@ -50,6 +61,6 @@
   <RDF:Seq about="chrome://navigator/content/pageInfo.xul">
     <RDF:li>chrome://pippki/content/PageInfoOverlay.xul</RDF:li>
   </RDF:Seq>
+#endif
 
 </RDF:RDF>  
-
