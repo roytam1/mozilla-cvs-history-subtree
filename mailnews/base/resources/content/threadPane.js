@@ -67,12 +67,12 @@ function ThreadPaneOnClick(event)
 			msgNavigationService.OpenTreeitemAndDescendants(treeitem);
 		}
     }
-	else if(event.detail == 2)
-	{
+*/
+    // XXX, TODO, do we need to handle clicks on special columns, or is mscott
+    // already handling that?
+	if (event.detail == 2) {
 		ThreadPaneDoubleClick();
 	}
-
-*/
 }
 
 
@@ -86,26 +86,21 @@ function MsgComposeDraftMessage()
 
 function ThreadPaneDoubleClick()
 {
-/*
 	var loadedFolder;
 	var messageArray;
 	var messageUri;
 
-	if(IsSpecialFolderSelected("Drafts"))
-	{
+	if (IsSpecialFolderSelected("Drafts")) {
 		MsgComposeDraftMessage();
 	}
-	else if(IsSpecialFolderSelected("Templates"))
-	{
+	else if(IsSpecialFolderSelected("Templates")) {
 		loadedFolder = GetLoadedMsgFolder();
 		messageArray = GetSelectedMessages();
 		ComposeMessage(msgComposeType.Template, msgComposeFormat.Default, loadedFolder, messageArray);
 	}
-	else
-	{
+	else {
         MsgOpenSelectedMessages();
 	}
-*/
 }
 
 function ThreadPaneKeyPress(event)
@@ -115,78 +110,69 @@ function ThreadPaneKeyPress(event)
 
 function MsgSortByDate()
 {
-//	SortThreadPane('DateColumn', 'http://home.netscape.com/NC-rdf#Date', null, true, null, true);
+    gDBView.sort(nsMsgViewSortType.byDate,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortBySender()
 {
-//	SortThreadPane('AuthorColumn', 'http://home.netscape.com/NC-rdf#Sender', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.byAuthor,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByRecipient()
 {
-//	SortThreadPane('AuthorColumn', 'http://home.netscape.com/NC-rdf#Recipient', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.byRecipient,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByStatus()
 {
-//	SortThreadPane('StatusColumn', 'http://home.netscape.com/NC-rdf#Status', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.byStatus,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortBySubject()
 {
-//	SortThreadPane('SubjectColumn', 'http://home.netscape.com/NC-rdf#Subject', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.bySubject,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByFlagged() 
 {
-//	SortThreadPane('FlaggedButtonColumn', 'http://home.netscape.com/NC-rdf#Flagged', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.byFlagged,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByPriority()
 {
-//	SortThreadPane('PriorityColumn', 'http://home.netscape.com/NC-rdf#Priority', 'http://home.netscape.com/NC-rdf#Date',true, null, true);
+    gDBView.sort(nsMsgViewSortType.byPriority,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortBySize() 
 {
-//	SortThreadPane('MemoryColumn', 'http://home.netscape.com/NC-rdf#Size', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.bySize,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByLines() 
 {
-//	SortThreadPane('MemoryColumn', 'http://home.netscape.com/NC-rdf#Lines', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    dump("XXX fix this\n");
+    //gDBView.sort(nsMsgViewSortType.byLines,nsMsgViewSortOrder.ascending);
 }
-
 
 function MsgSortByUnread()
 {
-//	SortThreadPane('UnreadColumn', 'http://home.netscape.com/NC-rdf#TotalUnreadMessages','http://home.netscape.com/NC-rdf#Date', true, null, true);
+    gDBView.sort(nsMsgViewSortType.byUnread,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByOrderReceived()
 {
-//	SortThreadPane('OrderReceivedColumn', 'http://home.netscape.com/NC-rdf#OrderReceived','http://home.netscape.com/NC-rdf#Date', true, null, true);
-}
-
-function MsgSortByRead()
-{
-//	SortThreadPane('UnreadButtonColumn', 'http://home.netscape.com/NC-rdf#IsUnread','http://home.netscape.com/NC-rdf#Date', true, null,true);
+    gDBView.sort(nsMsgViewSortType.byId,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByTotal()
 {
-//	SortThreadPane('TotalColumn', 'http://home.netscape.com/NC-rdf#TotalMessages', 'http://home.netscape.com/NC-rdf#Date', true, null, true);
+    dump("XXX fix this\n");
+    //gDBView.sort(nsMsgViewSortType.byTotal,nsMsgViewSortOrder.ascending);
 }
 
 function MsgSortByThread()
 {
-	ChangeThreadView()
-}
-
-function ChangeThreadView()
-{
-  // this needs to go away
+    gDBView.sort(nsMsgViewSortType.byThread,nsMsgViewSortOrder.ascending);
 }
 
 function IsSpecialFolderSelected(folderName)

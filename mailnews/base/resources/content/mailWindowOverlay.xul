@@ -795,7 +795,7 @@ Rights Reserved.
 					<menuitem id="sortBySizeMenuitem" type="checkbox" value="&sortBySizeCmd.label;" accesskey="&sortBySizeCmd.accesskey;" oncommand="MsgSortBySize()"/>
 					<menuitem id="sortByStatusMenuitem" type="checkbox" value="&sortByStatusCmd.label;" accesskey="&sortByStatusCmd.accesskey;" oncommand="MsgSortByStatus()"/>
 					<menuitem id="sortBySubjectMenuitem" type="checkbox" value="&sortBySubjectCmd.label;" accesskey="&sortBySubjectCmd.accesskey;" oncommand="MsgSortBySubject()"/>
-					<menuitem id="sortByUnreadMenuitem" type="checkbox" value="&sortByUnreadCmd.label;"  accesskey="&sortByUnreadCmd.accesskey;" oncommand="MsgSortByRead()"/>
+					<menuitem id="sortByUnreadMenuitem" type="checkbox" value="&sortByUnreadCmd.label;"  accesskey="&sortByUnreadCmd.accesskey;" oncommand="MsgSortByUnread()"/>
 				</menupopup>
 			</menu>
 			<menu value="&msgsMenu.label;" id="viewMessagesMenu" accesskey="&msgsMenu.accesskey;" oncreate="InitViewMessagesMenu();">
