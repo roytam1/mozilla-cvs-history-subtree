@@ -24,7 +24,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE	= pref
 
-EXPORTS= prefapi.h prefldap.h
+EXPORTS= prefapi.h prefldap.h nsIPrefsManager.h nsIBrowserPrefsManager.h
 
 EXPORTS         := $(addprefix $(srcdir)/, $(EXPORTS))
 
