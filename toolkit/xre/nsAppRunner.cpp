@@ -1267,7 +1267,7 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   // restart this process by exec'ing it into the current process
   // if supported by the platform.  otherwise, use nspr ;-)
 
-#if defined(XP_WIN)
+#if defined(XP_WIN_EXECV)
   if (_execv(exePath, gRestartArgv) == -1)
     return NS_ERROR_FAILURE;
 #elif defined(XP_UNIX)
@@ -1836,6 +1836,11 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   }
 
   PRBool needsRestart = PR_FALSE;
+
+  // Allows the user to forcefully bypass the restart process at their
+  // own risk. Useful for debugging or for tinderboxes where child 
+  // processes can be problematic.
+  PRBool noRestart = PR_FALSE;
   {
     // Start the real application
     ScopedXPCOMStartup xpcom;
@@ -1881,14 +1886,16 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
       // Extension Compatibility Checking and Startup
       nsCOMPtr<nsIExtensionManager> em(do_GetService("@mozilla.org/extensions/manager;1"));
       NS_ENSURE_TRUE(em, 1);
-      
-      if (upgraded)
+
+      char* noEMRestart = PR_GetEnv("NO_EM_RESTART");
+      noRestart = noEMRestart && !strcmp("1", noEMRestart);
+      if (!noRestart && upgraded)
         em->CheckForMismatches(&needsRestart);
-      
-      if (!upgraded || !needsRestart)
+
+      if (noRestart || (!upgraded || !needsRestart))
         em->Start(componentsListChanged, &needsRestart);
 
-      if (!upgraded && !needsRestart) {
+      if (noRestart || (!upgraded && !needsRestart)) {
         nsCOMPtr<nsICmdLineService> cmdLineArgs
           (do_GetService("@mozilla.org/appshell/commandLineService;1"));
         NS_ENSURE_TRUE(cmdLineArgs, 1);
@@ -1959,7 +1966,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   }
 
   // Restart the app after XPCOM has been shut down cleanly. 
-  if (needsRestart) {
+  if (!noRestart && needsRestart) {
     nsCAutoString path;
     lf->GetNativePath(path);
 
