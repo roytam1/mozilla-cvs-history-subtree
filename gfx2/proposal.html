@@ -128,8 +128,13 @@ strong { font-size: 0.7em; color: red; }
         do the job of making native looking and feeling form controls or wrapping native
         control implementations.</div>
       </li>
+      <li>UNIX Toolkit
+        <div>The use of GTK introduces a little bit of extra memory footprint that is
+        no longer needed since we no longer use native widgets.</div>
+      </li>
     </ul></div>
   </div>
+
 </div>
 
 <hr/>
@@ -249,6 +254,11 @@ strong { font-size: 0.7em; color: red; }
           this could change. The APIs have been designed so that native form controls
           and other native widgets may be added later without disrupting the current
           set of GFX2 APIs.</div>
+        </li>
+        <li>UNIX Toolkit
+          <div>Since we no longer need native widgets, we can remove the dependencies on
+          Unix build dependencies on GTK which will reduce build dependencies and reduce some
+          memory footprint by only depending on Xlib.</div>
         </li>
       </ul></div>
     </li>
