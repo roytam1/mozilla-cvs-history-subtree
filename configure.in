@@ -434,6 +434,7 @@ TARGET_MD_ARCH=unix
 DIRENT_INO=d_ino
 CYGWIN_WRAPPER=
 VPS=:
+MKINSTALLDIRS='$(NSINSTALL) -D'
 
 MOZ_JPEG_CFLAGS=
 MOZ_JPEG_LIBS='-L$(DIST)/lib -lmozjpeg'
@@ -982,6 +983,7 @@ case "$target" in
     USE_SHORT_LIBNAME=1
     MOZ_ENABLE_POSTSCRIPT=
     VPS=;
+    MKINSTALLDIRS='$(NSINSTALL) -D'
 
     dnl Hardcode to win95 for now - cls
     TARGET_NSPR_MDCPUCFG='\"md/_win95.cfg\"'
@@ -1154,6 +1156,7 @@ case "$target" in
     RC=rc.exe
     RCFLAGS='-n -x2'
     VPS=;
+    MKINSTALLDIRS='$(NSINSTALL) -D'
 
     if test "$MOZTOOLS"; then
         MOZ_TOOLS_DIR=`echo $MOZTOOLS | sed -e 's|\\\\|/|g'`
@@ -4458,9 +4461,9 @@ dnl =
 dnl = Cleanup section for misc ordering snafus
 dnl =
 if test "$_WIN32_MSVC"; then
-    XPCOM_GLUE_LIBS='$(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) $(DIST)/lib/$(LIB_PREFIX)string_s.$(LIB_SUFFIX) $(DIST)/lib/$(LIB_PREFIX)string_obsolete_s.$(LIB_SUFFIX)'
+    XPCOM_GLUE_LIBS='$(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) $(DIST)/lib/$(LIB_PREFIX)string_s.$(LIB_SUFFIX)'
 else
-    XPCOM_GLUE_LIBS='-L${DIST}/bin -L${DIST}/lib -lxpcomglue -lstring_s -lstring_obsolete_s'
+    XPCOM_GLUE_LIBS='-L${DIST}/bin -L${DIST}/lib -lxpcomglue -lstring_s'
 fi
 
 dnl ========================================================
@@ -4551,6 +4554,7 @@ AC_SUBST(LDAP_CFLAGS)
 AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
 AC_SUBST(VPS)
+AC_SUBST(MKINSTALLDIRS)
 
 AC_SUBST(HAVE_XIE)
 AC_SUBST(MOZ_XIE_LIBS)
