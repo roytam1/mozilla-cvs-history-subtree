@@ -1,5 +1,6 @@
 #include "txAtoms.h"
 #include "XSLTFunctions.h"
+#include "txExecutionState.h"
 
 /*
   Implementation of XSLT 1.0 extension function: current
@@ -20,9 +21,7 @@ CurrentFunctionCall::CurrentFunctionCall()
  */
 ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
 {
-//    return new NodeSet(mPs->getEvalContext()->getContextNode());
-    // XXX
-    return new NodeSet;
+    return new NodeSet(((txExecutionState*)aContext->getPrivateContext())->getEvalContext()->getContextNode());
 }
 
 nsresult CurrentFunctionCall::getNameAtom(nsIAtom** aAtom)

@@ -48,6 +48,7 @@
 #include "nsVoidArray.h"
 #include "txIXPathContext.h"
 #include "txVariableMap.h"
+#include "nsDoubleHashtable.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
@@ -55,6 +56,35 @@ class ExprResult;
 class txStylesheet;
 class txRecursionCheckpointStart;
 class txExpandedNameMap;
+
+
+class txLoadedDocumentEntry : public PLDHashStringEntry {
+public:
+    txLoadedDocumentEntry(const void* aKey) : PLDHashStringEntry(aKey)
+    {
+    }
+    ~txLoadedDocumentEntry()
+    {
+        delete mDocument;
+    }
+    Document* mDocument;
+};
+
+DECL_DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
+
+class txLoadedDocumentsHash : public txLoadedDocumentsBase
+{
+public:
+    ~txLoadedDocumentsHash();
+    nsresult init(Document* aSourceDocument);
+    void Add(Document* aDocument);
+    Document* Get(const nsAString& aURI);
+
+private:
+    friend class txExecutionState;
+    Document* mSourceDocument;
+};
+
 
 class txExecutionState : public txIMatchContext
 {
@@ -80,6 +110,7 @@ public:
     txIEvalContext* getEvalContext();
     nsresult getRTFDocument(Document** aDocument);
     txExpandedNameMap* getParamMap();
+    Node* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
 
     // state-modification functions
     txInstruction* getNextInstruction();
@@ -128,6 +159,8 @@ private:
     
     nsVoidArray mRecursionInstructions;
     nsVoidArray mRecursionContexts;
+    
+    txLoadedDocumentsHash mLoadedDocuments;
 };
 
 #endif

@@ -43,12 +43,62 @@
 #include "txVariableMap.h"
 #include "txRtfHandler.h"
 #include "txXSLTProcessor.h"
+#include "TxLog.h"
+#include "txURIUtils.h"
+#include "XMLParser.h"
 
 #ifndef TX_EXE
 #include "nsIDOMDocument.h"
 #include "nsContentCID.h"
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 #endif
+
+DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
+
+nsresult txLoadedDocumentsHash::init(Document* aSourceDocument)
+{
+    nsresult rv = Init(8);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mSourceDocument = aSourceDocument;
+    Add(mSourceDocument);
+
+    return NS_OK;
+}
+
+txLoadedDocumentsHash::~txLoadedDocumentsHash()
+{
+    if (!mHashTable.ops) {
+        return;
+    }
+
+    nsAutoString baseURI;
+    mSourceDocument->getBaseURI(baseURI);
+    txLoadedDocumentEntry* entry = GetEntry(baseURI);
+    if (entry) {
+        entry->mDocument = nsnull;
+    }
+}
+
+void txLoadedDocumentsHash::Add(Document* aDocument)
+{
+    nsAutoString baseURI;
+    aDocument->getBaseURI(baseURI);
+    txLoadedDocumentEntry* entry = AddEntry(baseURI);
+    if (entry) {
+        entry->mDocument = aDocument;
+    }
+}
+
+Document* txLoadedDocumentsHash::Get(const nsAString& aURI)
+{
+    txLoadedDocumentEntry* entry = GetEntry(aURI);
+    if (entry) {
+        return entry->mDocument;
+    }
+
+    return nsnull;
+}
 
 txExecutionState::txExecutionState(txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
@@ -87,12 +137,14 @@ txExecutionState::init(Node* aNode,
                        txExpandedNameMap* aGlobalParams)
 {
     nsresult rv = NS_OK;
+
+    // Set up initial context
     mEvalContext = new txSingleNodeContext(aNode, this);
     NS_ENSURE_TRUE(mEvalContext, NS_ERROR_OUT_OF_MEMORY);
 
     mInitialEvalContext = mEvalContext;
 
-
+    // Set up output and result-handler
     txIOutputXMLEventHandler* handler = 0;
     rv = mOutputHandlerFactory->
         createHandlerWith(mStylesheet->getOutputFormat(), &handler);
@@ -102,14 +154,26 @@ txExecutionState::init(Node* aNode,
     mResultHandler = handler;
     mOutputHandler->startDocument();
 
+    // Initiate first instruction
     txStylesheet::ImportFrame* frame = 0;
     txInstruction* templ = mStylesheet->findTemplate(aNode, txExpandedName(),
                                                      this, nsnull, &frame);
     rv = runTemplate(templ);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX ToDo: set global parameters
+    // Set up loaded-documents-hash
+    Document* sourceDoc;
+    if (aNode->getNodeType() == Node::DOCUMENT_NODE) {
+        sourceDoc = (Document*)aNode;
+    }
+    else {
+        sourceDoc = aNode->getOwnerDocument();
+    }
+    rv = mLoadedDocuments.init(sourceDoc);
+    NS_ENSURE_SUCCESS(rv, rv);
     
+    // XXX ToDo: set global parameters
+
     return NS_OK;
 }
 
@@ -206,6 +270,12 @@ txExecutionState::isStripSpaceAllowed(Node* aNode)
 {
     // XXX implement me
     return PR_FALSE;
+}
+
+void*
+txExecutionState::getPrivateContext()
+{
+    return this;
 }
 
 void
@@ -319,6 +389,65 @@ txExpandedNameMap*
 txExecutionState::getParamMap()
 {
     return mTemplateParams;
+}
+
+Node*
+txExecutionState::retrieveDocument(const nsAString& uri,
+                                   const nsAString& baseUri)
+{
+    nsAutoString absUrl;
+    URIUtils::resolveHref(uri, baseUri, absUrl);
+
+    PRInt32 hash = absUrl.RFindChar(PRUnichar('#'));
+    PRUint32 urlEnd, fragStart, fragEnd;
+    if (hash == kNotFound) {
+        urlEnd = absUrl.Length();
+        fragStart = 0;
+        fragEnd = 0;
+    }
+    else {
+        urlEnd = hash;
+        fragStart = hash + 1;
+        fragEnd = absUrl.Length();
+    }
+
+    nsDependentSubstring docUrl(absUrl, 0, urlEnd);
+    nsDependentSubstring frag(absUrl, fragStart, fragEnd);
+
+    PR_LOG(txLog::xslt, PR_LOG_DEBUG,
+           ("Retrieve Document %s, uri %s, baseUri %s, fragment %s\n", 
+            NS_LossyConvertUCS2toASCII(docUrl).get(),
+            NS_LossyConvertUCS2toASCII(uri).get(),
+            NS_LossyConvertUCS2toASCII(baseUri).get(),
+            NS_LossyConvertUCS2toASCII(frag).get()));
+
+    // try to get already loaded document
+    Document* xmlDoc = mLoadedDocuments.Get(docUrl);
+
+    if (!xmlDoc) {
+        // open URI
+        nsAutoString errMsg;
+        XMLParser xmlParser;
+
+        xmlDoc = xmlParser.getDocumentFromURI(docUrl,
+                                              mLoadedDocuments.mSourceDocument,
+                                              errMsg);
+
+        if (!xmlDoc) {
+            receiveError(NS_LITERAL_STRING("Couldn't load document '") +
+                         docUrl + NS_LITERAL_STRING("': ") + errMsg,
+                         NS_ERROR_XSLT_INVALID_URL);
+            return NULL;
+        }
+        // add to list of documents
+        mLoadedDocuments.Add(xmlDoc);
+    }
+
+    // return element with supplied id if supplied
+    if (!frag.IsEmpty())
+        return xmlDoc->getElementById(frag);
+
+    return xmlDoc;
 }
 
 txInstruction*

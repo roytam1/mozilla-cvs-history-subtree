@@ -40,6 +40,7 @@
 #include "txIXPathContext.h"
 #include "XMLDOMUtils.h"
 #include "XSLTFunctions.h"
+#include "txExecutionState.h"
 
 /*
  * Creates a new DocumentFunctionCall.
@@ -58,7 +59,10 @@ DocumentFunctionCall::DocumentFunctionCall(const nsAString& aBaseURI)
  */
 ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
 {
+    txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
+
     NodeSet* nodeSet = new NodeSet();
+    NS_ENSURE_TRUE(nodeSet, nsnull);
 
     // document(object, node-set?)
     if (requireParams(1, 2, aContext)) {
@@ -107,17 +111,21 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
                     // the baseUri of node itself
                     node->getBaseURI(baseURI);
                 }
-                //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
+                Node* loadNode = es->retrieveDocument(uriStr, baseURI);
+                if (loadNode) {
+                    nodeSet->add(loadNode);
+                }
             }
         }
         else {
             // The first argument is not a NodeSet
             nsAutoString uriStr;
             exprResult1->stringValue(uriStr);
-            if (!baseURISet) {
-                //mDefResolveNode->getBaseURI(baseURI);
+            Node* loadNode =
+                es->retrieveDocument(uriStr, baseURISet ? baseURI : mBaseURI);
+            if (loadNode) {
+                nodeSet->add(loadNode);
             }
-            //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
         }
         delete exprResult1;
     }
