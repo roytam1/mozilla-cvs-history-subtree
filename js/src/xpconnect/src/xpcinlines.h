@@ -418,7 +418,7 @@ inline JSBool
 XPCNativeSet::MatchesSetUpToInterface(XPCNativeSet* other, 
                                       XPCNativeInterface* iface) const
 {
-    int count = JS_MAX((int)mInterfaceCount, (int)other->mInterfaceCount);
+    int count = JS_MIN((int)mInterfaceCount, (int)other->mInterfaceCount);
     for(int i = 0; i < count; i++)
     {
         XPCNativeInterface* cur = other->mInterfaces[i];
