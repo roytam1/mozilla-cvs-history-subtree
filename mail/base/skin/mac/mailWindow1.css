@@ -959,8 +959,6 @@ splitter {
   border: 1px solid transparent; 
 }
 
-
-
 #searchBox {
 	padding: 2px 0px;
   margin: 0px;
@@ -999,6 +997,7 @@ splitter {
 #searchInput > .textbox-input-box {
 	border: none;
   padding-right: 10px;
+  padding-top: 3px;
   height: 21px !important;
   margin: 0px;
 }
