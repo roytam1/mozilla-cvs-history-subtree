@@ -1045,7 +1045,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::Compact(nsIUrlListener *aListener, nsIMsgWin
     // check if we need to compact the folder
 
     if (expungedBytes > 0)
-      rv = folderCompactor->Compact(this, aMsgWindow);
+      rv = folderCompactor->Compact(this, PR_FALSE, aMsgWindow);
     else
       rv = NotifyCompactCompleted();
   }
