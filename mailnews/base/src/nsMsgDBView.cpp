@@ -3828,8 +3828,6 @@ nsMsgDBView::GetURIForFirstSelectedMessage(char **uri)
 #ifdef DEBUG_mscott
   printf("inside GetURIForFirstSelectedMessage\n");
 #endif
-
-  if (!mOutlinerSelection) return NS_ERROR_UNEXPECTED;
   nsresult rv;
   nsMsgKey key;
   rv = GetKeyForFirstSelectedMessage(&key);
