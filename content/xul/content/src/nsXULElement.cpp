@@ -753,12 +753,6 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
       else
         return NS_NOINTERFACE;
     }
-//    else if (mDocument) {
-//        nsCOMPtr<nsIBindingManager> manager;
-//        mDocument->GetBindingManager(getter_AddRefs(manager));
-        //        return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mScriptObject, 
-        //                                                 iid, result);
-//    }
     else if (iid.Equals(NS_GET_IID(nsIClassInfo))) {
         nsISupports *inst = nsnull;
 
@@ -783,6 +777,49 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
         *result = inst;
 
         return NS_OK;
+    }
+    else if (mDocument) {
+        // Whoa, this could be very expensive!
+
+        nsCOMPtr<nsIScriptGlobalObject> sgo;
+
+        mDocument->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+        if (!sgo) {
+            return NS_NOINTERFACE;
+        }
+
+        nsCOMPtr<nsIScriptContext> sctx;
+
+        sgo->GetContext(getter_AddRefs(sctx));
+
+        JSContext *cx;
+
+        if (!sctx || !(cx = (JSContext *)sctx->GetNativeContext())) {
+            return NS_NOINTERFACE;
+        }
+
+        nsCOMPtr<nsIXPConnect> xpc(do_CreateInstance(nsIXPConnect::GetCID()));
+        nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+
+        xpc->GetWrappedNativeOfNativeObject(cx, ::JS_GetGlobalObject(cx),
+                                            NS_STATIC_CAST(nsIContent *, this),
+                                            NS_GET_IID(nsISupports),
+                                            getter_AddRefs(wrapper));
+
+        if (wrapper) {
+            JSObject *o = nsnull;
+
+            nsresult rv = wrapper->GetJSObject(&o);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            nsCOMPtr<nsIBindingManager> manager;
+            mDocument->GetBindingManager(getter_AddRefs(manager));
+            return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this),
+                                                     o, iid, result);
+        }
+
+        return NS_NOINTERFACE;
     } else {
         *result = nsnull;
         return NS_NOINTERFACE;
@@ -1844,7 +1881,9 @@ nsXULElement::GetLazyState(PRInt32 aFlag, PRBool& aResult)
 
 
 NS_IMETHODIMP
-nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aValue, REFNSIID aIID)
+nsXULElement::AddScriptEventListener(nsIAtom* aName,
+                                     const nsAReadableString& aValue,
+                                     REFNSIID aIID)
 {
     if (! mDocument)
         return NS_OK; // XXX
@@ -1880,8 +1919,10 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aV
         rv = GetListenerManager(getter_AddRefs(manager));
         if (NS_FAILED(rv)) return rv;
 
-        //        rv = manager->AddScriptEventListener(context, this, aName,
-        //                                             aValue, aIID, PR_TRUE);
+        rv = manager->AddScriptEventListener(context,
+                                             NS_STATIC_CAST(nsIContent *,
+                                                            this),
+                                             aName, aValue, aIID, PR_TRUE);
     }
 
     return rv;
