@@ -110,6 +110,13 @@ public:
    * (i.e. whether we accept foreign cookies or not, etc.) if necessary.
    */
   NS_IMETHOD CookieEnabled(PRBool* aEnabled)=0;
+
+  /* Saves the cookies to disk. This must be called *before* its companion,
+   * Load(), is called, otherwise it's an error. */
+  NS_IMETHOD Save(void)=0;
+
+  /* Loads the cookies from disk */
+  NS_IMETHOD Load(void)=0;
 };
 
 #endif /* nsICookieService_h__ */

@@ -46,13 +46,15 @@ public:
   NS_IMETHOD Image_CheckForPermission
     (char * hostname, char * firstHostname, PRBool &permission);
   NS_IMETHOD CookieEnabled(PRBool* aEnabled);
+  NS_IMETHOD Save(void);
+  NS_IMETHOD Load(void);
 
   nsCookieService();
   virtual ~nsCookieService(void);
   nsresult Init();
   
 protected:
-  PRBool   mInitted;
+  PRBool   mCookiesRead;
 };
 
 #endif /* nsCookieService_h__ */

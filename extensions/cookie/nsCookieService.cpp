@@ -40,7 +40,7 @@
 NS_IMPL_ISUPPORTS1(nsCookieService, nsICookieService);
 
 nsCookieService::nsCookieService()
-: mInitted(PR_FALSE)
+: mCookiesRead(PR_FALSE)
 {
   NS_INIT_REFCNT();
 }
@@ -54,7 +54,7 @@ nsresult nsCookieService::Init()
 {
   // make sure we're not initted twice, because this has the serious
   // consequence of reading the cookies file twice
-  if (mInitted)
+  if (mCookiesRead)
   {
     NS_ASSERTION(0, "Baking the cookies twice. Doesn't that make them biscuits?");
     return NS_ERROR_ALREADY_INITIALIZED;
@@ -62,7 +62,7 @@ nsresult nsCookieService::Init()
     
   COOKIE_RegisterCookiePrefCallbacks();
   COOKIE_ReadCookies();
-  mInitted = PR_TRUE;
+  mCookiesRead = PR_TRUE;
   return NS_OK;
 }
 
@@ -184,6 +184,22 @@ NS_IMETHODIMP nsCookieService::CookieEnabled(PRBool* aEnabled)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsCookieService::Save(void) {
+	::COOKIE_SaveCookies();
+	mCookiesRead = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsCookieService::Load(void) {
+	if (mCookiesRead) {
+		NS_ASSERTION(0, "reading cookies before saving them.");
+		return NS_ERROR_FAILURE;
+	}
+	::COOKIE_RemoveAllCookies();
+	::COOKIE_ReadCookies();
+	mCookiesRead = PR_TRUE;
+	return NS_OK;
+}
 
 //----------------------------------------------------------------------
 
