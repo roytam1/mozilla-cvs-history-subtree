@@ -37,22 +37,18 @@
 #include "nscore.h"
 #include "nsINameSpaceManager.h"
 #include "nsINameSpace.h"
+#include "nsINodeInfo.h"
 #include "nsCOMArray.h"
-#include "nsIElementFactory.h"
-#include "nsIServiceManager.h"
+#include "nsContentCreatorFunctions.h"
 #include "nsDoubleHashtable.h"
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
 
 #ifdef MOZ_XTF
+#include "nsIServiceManager.h"
 #include "nsIXTFService.h"
-#include "nsIXTFElementFactory.h"
 static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #endif
-
-static nsINameSpaceManager* gNameSpaceManager = nsnull;
-
-nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
 
 #define kXMLNSNameSpaceURI "http://www.w3.org/2000/xmlns/"
 #define kXMLNameSpaceURI "http://www.w3.org/XML/1998/namespace"
@@ -64,6 +60,7 @@ nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
 #define kRDFNameSpaceURI "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 #define kXULNameSpaceURI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 #define kSVGNameSpaceURI "http://www.w3.org/2000/svg"
+#define kXMLEventsNameSpaceURI "http://www.w3.org/2001/xml-events"
 
 //-----------------------------------------------------------
 // Name Space 
@@ -104,6 +101,87 @@ private:
   nsCOMPtr<nsIAtom> mPrefix;
   PRInt32 mID;
 };
+
+class nsNameSpaceEntry : public PLDHashEntryHdr
+{
+public:
+  nsNameSpaceEntry(const void* aKey) :
+    mKey(NS_STATIC_CAST(const nsAString*, aKey))
+  {
+  }
+  ~nsNameSpaceEntry()
+  {
+  }
+  const void* GetKey() const {
+    return mKey;
+  }
+  static PLDHashNumber HashKey(const void* aKey) {
+    return HashString(*NS_STATIC_CAST(const nsAString*, aKey));
+  }
+  PRBool MatchEntry(const void* aKey) const {
+    return NS_STATIC_CAST(const nsAString*, aKey)->Equals(*mKey);
+  }
+
+  const nsAString* mKey;
+  PRInt32 mNameSpaceID;
+};
+
+DECL_DHASH_WRAPPER(nsNameSpaceHashBase, nsNameSpaceEntry, nsAString&)
+DHASH_WRAPPER(nsNameSpaceHashBase, nsNameSpaceEntry, nsAString&)
+
+class nsNameSpaceHash : public nsNameSpaceHashBase
+{
+public:
+  nsNameSpaceHash()
+  {
+  }
+  ~nsNameSpaceHash()
+  {
+  }
+  nsNameSpaceEntry* LookupEntry(const nsAString& aUri)
+  {
+    return NS_STATIC_CAST(nsNameSpaceEntry*,
+                          PL_DHashTableOperate(&mHashTable, &aUri,
+                                               PL_DHASH_LOOKUP));
+  }
+};
+
+class NameSpaceManagerImpl : public nsINameSpaceManager {
+public:
+  NameSpaceManagerImpl();
+  virtual ~NameSpaceManagerImpl();
+
+  NS_DECL_ISUPPORTS
+
+  nsresult Init();
+
+  NS_IMETHOD CreateRootNameSpace(nsINameSpace** aRootNameSpace);
+
+  NS_IMETHOD RegisterNameSpace(const nsAString& aURI, 
+			                         PRInt32& aNameSpaceID);
+
+  NS_IMETHOD GetNameSpaceURI(PRInt32 aNameSpaceID, nsAString& aURI);
+  NS_IMETHOD GetNameSpaceID(const nsAString& aURI,
+                            PRInt32* aNameSpaceID);
+
+  PRBool HasElementCreator(PRInt32 aNameSpaceID);
+
+  PRBool HasNameSpaceURI(PRInt32 aNameSpaceID);
+
+private:
+  // These are not supported and are not implemented!
+  NameSpaceManagerImpl(const NameSpaceManagerImpl& aCopy);
+  NameSpaceManagerImpl& operator=(const NameSpaceManagerImpl& aCopy);
+
+  nsresult AddNameSpace(const nsAString& aURI, const PRInt32 aNameSpaceID);
+
+  nsNameSpaceHash mURIToIDTable;
+  nsStringArray mURIArray;
+};
+
+static NameSpaceManagerImpl* gNameSpaceManager = nsnull;
+
+
 
 NameSpaceImpl::NameSpaceImpl(NameSpaceImpl* aParent, 
                              nsIAtom* aPrefix, 
@@ -243,9 +321,7 @@ NS_IMETHODIMP
 NameSpaceImpl::CreateChildNameSpace(nsIAtom* aPrefix, PRInt32 aNameSpaceID,
                                     nsINameSpace** aChildNameSpace)
 {
-  PRBool hasNSURI;
-  gNameSpaceManager->HasNameSpaceURI(aNameSpaceID, &hasNSURI);
-  if (hasNSURI) {
+  if (gNameSpaceManager->HasNameSpaceURI(aNameSpaceID)) {
     NameSpaceImpl* child = new NameSpaceImpl(this, aPrefix, aNameSpaceID);
     NS_ENSURE_TRUE(child, NS_ERROR_OUT_OF_MEMORY);
 
@@ -258,90 +334,6 @@ NameSpaceImpl::CreateChildNameSpace(nsIAtom* aPrefix, PRInt32 aNameSpaceID,
 
   return NS_ERROR_ILLEGAL_VALUE;
 }
-
-class nsNameSpaceEntry : public PLDHashEntryHdr
-{
-public:
-  nsNameSpaceEntry(const void* aKey) :
-    mKey(NS_STATIC_CAST(const nsAString*, aKey))
-  {
-  }
-  ~nsNameSpaceEntry()
-  {
-  }
-  const void* GetKey() const {
-    return mKey;
-  }
-  static PLDHashNumber HashKey(const void* aKey) {
-    return HashString(*NS_STATIC_CAST(const nsAString*, aKey));
-  }
-  PRBool MatchEntry(const void* aKey) const {
-    return NS_STATIC_CAST(const nsAString*, aKey)->Equals(*mKey);
-  }
-
-  const nsAString* mKey;
-  PRInt32 mNameSpaceID;
-};
-
-DECL_DHASH_WRAPPER(nsNameSpaceHashBase, nsNameSpaceEntry, nsAString&)
-DHASH_WRAPPER(nsNameSpaceHashBase, nsNameSpaceEntry, nsAString&)
-
-class nsNameSpaceHash : public nsNameSpaceHashBase
-{
-public:
-  nsNameSpaceHash()
-  {
-  }
-  ~nsNameSpaceHash()
-  {
-  }
-  nsNameSpaceEntry* LookupEntry(const nsAString& aUri)
-  {
-    return NS_STATIC_CAST(nsNameSpaceEntry*,
-                          PL_DHashTableOperate(&mHashTable, &aUri,
-                                               PL_DHASH_LOOKUP));
-  }
-};
-
-//-----------------------------------------------------------
-// Name Space Manager
-
-class NameSpaceManagerImpl : public nsINameSpaceManager {
-public:
-  NameSpaceManagerImpl();
-  virtual ~NameSpaceManagerImpl();
-
-  NS_DECL_ISUPPORTS
-
-  nsresult Init();
-
-  NS_IMETHOD CreateRootNameSpace(nsINameSpace** aRootNameSpace);
-
-  NS_IMETHOD RegisterNameSpace(const nsAString& aURI, 
-			                         PRInt32& aNameSpaceID);
-
-  NS_IMETHOD GetNameSpaceURI(PRInt32 aNameSpaceID, nsAString& aURI);
-  NS_IMETHOD GetNameSpaceID(const nsAString& aURI,
-                            PRInt32* aNameSpaceID);
-  NS_IMETHOD GetElementFactory(PRInt32 aNameSpaceID,
-                               nsIElementFactory **aElementFactory);
-  NS_IMETHOD HasRegisteredFactory(PRInt32 aNameSpaceID,
-                                  PRBool* aHasFactory);
-  NS_IMETHOD HasNameSpaceURI(PRInt32 aNameSpaceID,
-                             PRBool* aHasNameSpaceURI);
-
-private:
-  // These are not supported and are not implemented!
-  NameSpaceManagerImpl(const NameSpaceManagerImpl& aCopy);
-  NameSpaceManagerImpl& operator=(const NameSpaceManagerImpl& aCopy);
-
-  nsresult AddNameSpace(const nsAString& aURI, const PRInt32 aNameSpaceID);
-
-  nsNameSpaceHash mURIToIDTable;
-  nsStringArray mURIArray;
-  nsCOMArray<nsIElementFactory> mElementFactoryArray;
-  nsCOMPtr<nsIElementFactory> mDefaultElementFactory;
-};
 
 NameSpaceManagerImpl::NameSpaceManagerImpl()
 {
@@ -369,8 +361,9 @@ nsresult NameSpaceManagerImpl::Init()
   AddNameSpace(NS_LITERAL_STRING(kRDFNameSpaceURI), kNameSpaceID_RDF);
   AddNameSpace(NS_LITERAL_STRING(kXULNameSpaceURI), kNameSpaceID_XUL);
   AddNameSpace(NS_LITERAL_STRING(kSVGNameSpaceURI), kNameSpaceID_SVG);
+  AddNameSpace(NS_LITERAL_STRING(kXMLEventsNameSpaceURI), kNameSpaceID_XMLEvents);
 
-  return NS_NewXMLElementFactory(getter_AddRefs(mDefaultElementFactory));
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -455,111 +448,64 @@ NameSpaceManagerImpl::GetNameSpaceID(const nsAString& aURI, PRInt32* aNameSpaceI
   return NS_OK;
 }
 
-NS_IMETHODIMP
-NameSpaceManagerImpl::GetElementFactory(PRInt32 aNameSpaceID,
-                                        nsIElementFactory **aElementFactory)
+nsresult
+NS_NewElement(nsIContent** aResult, PRInt32 aElementType,
+              nsINodeInfo* aNodeInfo)
 {
-  *aElementFactory = nsnull;
-
-  // Parsing should have aborted before we get here, but for now we'll have to
-  // live with returning the default factory. Bugs 184697 and 103255
-  if (aNameSpaceID == kNameSpaceID_Unknown) {
-    *aElementFactory = mDefaultElementFactory;
-    NS_ADDREF(*aElementFactory);
-
-    return NS_OK;
+  if (aElementType == kNameSpaceID_XHTML) {
+    return NS_NewHTMLElement(aResult, aNodeInfo);
   }
-
-  NS_ENSURE_TRUE(aNameSpaceID >= 0, NS_ERROR_ILLEGAL_VALUE);
-
-  if (aNameSpaceID < mElementFactoryArray.Count()) {
-    *aElementFactory = mElementFactoryArray.ObjectAt(aNameSpaceID);
-    if (*aElementFactory) {
-      NS_ADDREF(*aElementFactory);
-
-      return NS_OK;
-    }
+#ifdef MOZ_XUL
+  if (aElementType == kNameSpaceID_XUL) {
+    return NS_NewXULElement(aResult, aNodeInfo);
   }
-
-  nsAutoString uri;
-  GetNameSpaceURI(aNameSpaceID, uri);
-
-  nsCOMPtr<nsIElementFactory> ef;
-
-  if (!uri.IsEmpty()) {
-    nsCAutoString contract_id(NS_ELEMENT_FACTORY_CONTRACTID_PREFIX);
-    AppendUTF16toUTF8(uri, contract_id);
-    ef = do_GetService(contract_id.get());
+#endif
+#ifdef MOZ_MATHML
+  if (aElementType == kNameSpaceID_MathML) {
+    return NS_NewMathMLElement(aResult, aNodeInfo);
+  }
+#endif
+#ifdef MOZ_SVG
+  if (aElementType == kNameSpaceID_SVG) {
+    return NS_NewSVGElement(aResult, aNodeInfo);
+  }
+#endif
+  if (aElementType == kNameSpaceID_XMLEvents) {
+    return NS_NewXMLEventsElement(aResult, aNodeInfo);
+  }
 #ifdef MOZ_XTF
-    if (!ef) {
-      // check if we maybe have an XTF factory for the given uri:
-      nsCAutoString xtf_contract_id(NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX);
-      AppendUTF16toUTF8(uri, xtf_contract_id);
-#ifdef DEBUG
-      printf("Testing for XTF factory at %s\n", xtf_contract_id.get());
+  {
+    nsCOMPtr<nsIXTFService> xtfService = do_GetService(kXTFServiceCID); // XXX we should cache this somehow
+    NS_ASSERTION(xtfService, "could not get XTF service!");
+    if (NS_SUCCEEDED(xtfService->CreateElement(aResult, aNodeInfo)))
+      return NS_OK;
+  }
 #endif
-      nsCOMPtr<nsIXTFElementFactory> xtfFactory = do_GetService(xtf_contract_id.get());
-      if (xtfFactory) {
-#ifdef DEBUG
-        printf("We've got an XTF factory.\n");
-#endif
-        // bingo. create a wrapper.
-        nsCOMPtr<nsIXTFService> xtfService = do_GetService(kXTFServiceCID); // XXX we'll want to cache this
-        NS_ASSERTION(xtfService, "could not get XTF service!");
-        xtfService->WrapXTFElementFactory(xtfFactory, getter_AddRefs(ef));        
-      }
-    }
-#endif    
-  }
-
-  if (!ef) {
-    ef = mDefaultElementFactory;
-  }
-
-  PRInt32 count = mElementFactoryArray.Count();
-
-  if (aNameSpaceID < count) {
-    mElementFactoryArray.ReplaceObjectAt(ef, aNameSpaceID);
-  } else {
-    // This sucks, simply doing an InsertObjectAt() should IMNSHO
-    // automatically grow the array and insert null's as needed to
-    // fill up the array!?!!
-    
-    for (PRInt32 i = count; i < aNameSpaceID; ++i) {
-      mElementFactoryArray.AppendObject(nsnull);
-    }
-
-    mElementFactoryArray.AppendObject(ef);
-  }
-
-  *aElementFactory = ef;
-  NS_ADDREF(*aElementFactory);
-
-  return NS_OK;
+  return NS_NewXMLElement(aResult, aNodeInfo);
 }
 
-NS_IMETHODIMP
-NameSpaceManagerImpl::HasRegisteredFactory(PRInt32 aNameSpaceID,
-                                           PRBool* aHasFactory)
+PRBool
+NameSpaceManagerImpl::HasElementCreator(PRInt32 aNameSpaceID)
 {
-  *aHasFactory = PR_FALSE;
-  NS_ENSURE_TRUE(mDefaultElementFactory, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIElementFactory> ef;
-  GetElementFactory(aNameSpaceID, getter_AddRefs(ef));
-  *aHasFactory = ef != mDefaultElementFactory;
-
-  return NS_OK;
+  return aNameSpaceID == kNameSpaceID_XHTML ||
+#ifdef MOZ_XUL
+         aNameSpaceID == kNameSpaceID_XUL ||
+#endif
+#ifdef MOZ_MATHML
+         aNameSpaceID == kNameSpaceID_MathML ||
+#endif
+#ifdef MOZ_SVG
+         aNameSpaceID == kNameSpaceID_SVG ||
+#endif
+         aNameSpaceID == kNameSpaceID_XMLEvents ||
+         PR_FALSE;
 }
 
-NS_IMETHODIMP
-NameSpaceManagerImpl::HasNameSpaceURI(PRInt32 aNameSpaceID,
-                                      PRBool* aHasNameSpaceURI)
+PRBool
+NameSpaceManagerImpl::HasNameSpaceURI(PRInt32 aNameSpaceID)
 {
-  *aHasNameSpaceURI = (aNameSpaceID > kNameSpaceID_None ||
-                       aNameSpaceID <= mURIArray.Count());
-
-  return NS_OK;
+  return (aNameSpaceID > kNameSpaceID_None &&
+          aNameSpaceID <= mURIArray.Count());
 }
 
 nsresult NameSpaceManagerImpl::AddNameSpace(const nsAString& aURI,
@@ -595,8 +541,7 @@ NS_GetNameSpaceManager(nsINameSpaceManager** aInstancePtrResult)
     if (manager) {
       nsresult rv = manager->Init();
       if (NS_SUCCEEDED(rv)) {
-        gNameSpaceManager = manager;
-        NS_ADDREF(gNameSpaceManager);
+        manager.swap(gNameSpaceManager);
       }
     }
   }

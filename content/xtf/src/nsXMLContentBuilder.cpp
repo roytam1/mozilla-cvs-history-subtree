@@ -45,13 +45,14 @@
 #include "nsIContent.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
-#include "nsIElementFactory.h"
 #include "nsIAtom.h"
 #include "nsContentCID.h"
 #include "nsIDocument.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMText.h"
+#include "nsNodeInfoManager.h"
+#include "nsContentCreatorFunctions.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
@@ -72,14 +73,11 @@ public:
   NS_DECL_NSIXMLCONTENTBUILDER
 
 private:
-  nsIElementFactory* GetElementFactory();
-  
   nsCOMPtr<nsIContent> mTop;
   nsCOMPtr<nsIContent> mCurrent;
   nsCOMPtr<nsIDocument> mDocument;
   nsCOMPtr<nsINameSpaceManager> mNamespaceManager;
   PRInt32 mNamespaceId;
-  nsCOMPtr<nsIElementFactory> mElementFactory;
 };
 
 //----------------------------------------------------------------------
@@ -142,7 +140,6 @@ NS_IMETHODIMP nsXMLContentBuilder::Clear()
   mTop = nsnull;
   if (mNamespaceId != kNameSpaceID_None) {
     mNamespaceId = kNameSpaceID_None;
-    mElementFactory = nsnull;
   }
   return NS_OK;
 }
@@ -150,11 +147,7 @@ NS_IMETHODIMP nsXMLContentBuilder::Clear()
 /* void setElementNamespace (in AString ns); */
 NS_IMETHODIMP nsXMLContentBuilder::SetElementNamespace(const nsAString & ns)
 {
-  PRInt32 oldId = mNamespaceId;
   mNamespaceManager->RegisterNameSpace(ns, mNamespaceId);
-  if (oldId != mNamespaceId)
-    mElementFactory = nsnull; // invalidate so that it gets resolved
-                              // again when needed
   return NS_OK;
 }
 
@@ -164,14 +157,17 @@ NS_IMETHODIMP nsXMLContentBuilder::BeginElement(const nsAString & tagname)
   nsCOMPtr<nsIContent> node;
   {
     nsCOMPtr<nsINodeInfo> nodeInfo;
-    mDocument->GetNodeInfoManager()->GetNodeInfo(tagname, nsnull,
-                                                 mNamespaceId,
-                                                 getter_AddRefs(nodeInfo));
+    mDocument->NodeInfoManager()->GetNodeInfo(tagname, nsnull,
+                                              mNamespaceId,
+                                              getter_AddRefs(nodeInfo));
     NS_ASSERTION(nodeInfo, "could not get node info");
-  
-    GetElementFactory()->CreateInstanceByTag(nodeInfo, getter_AddRefs(node));
+    
+    NS_NewElement(getter_AddRefs(node), nodeInfo->NamespaceID(), nodeInfo);
   }
-  NS_ASSERTION(node, "could not create node");
+  if (!node) {
+    NS_ERROR("could not create node");
+    return NS_ERROR_FAILURE;
+  }
 
   // ok, we created a content element. now either append it to our
   // top-level array or to the current element.
@@ -243,14 +239,3 @@ NS_IMETHODIMP nsXMLContentBuilder::GetCurrent(nsIDOMElement * *aCurrent)
   return mCurrent->QueryInterface(nsIDOMElement::GetIID(), (void**)aCurrent);
 }
 
-//----------------------------------------------------------------------
-// helpers
-
-nsIElementFactory*
-nsXMLContentBuilder::GetElementFactory() {
-  if (!mElementFactory) {
-    mNamespaceManager->GetElementFactory(mNamespaceId, getter_AddRefs(mElementFactory));
-    NS_ASSERTION(mElementFactory, "could not get element factory");
-  }
-  return mElementFactory;
-}

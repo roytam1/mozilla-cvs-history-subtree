@@ -96,7 +96,6 @@
 #include "nsBoxLayoutState.h"
 #include "nsIBindingManager.h"
 #include "nsIXBLBinding.h"
-#include "nsIElementFactory.h"
 #include "nsITheme.h"
 #include "nsContentCID.h"
 #include "nsContentUtils.h"
@@ -117,7 +116,6 @@
 #include "nsBoxFrame.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
-static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
 
 #include "nsIDOMWindowInternal.h"
 #include "nsIMenuFrame.h"
@@ -184,6 +182,8 @@ extern nsresult
 NS_NewSVGTextFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 extern nsresult
 NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGDefsFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 #endif
 
 #include "nsIDocument.h"
@@ -195,6 +195,8 @@ NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* pa
 #include "nsINodeInfo.h"
 #include "prenv.h"
 #include "nsWidgetsCID.h"
+#include "nsNodeInfoManager.h"
+#include "nsContentCreatorFunctions.h"
 
 // Global object maintenance
 nsIXBLService * nsCSSFrameConstructor::gXBLService = nsnull;
@@ -636,11 +638,40 @@ nsAbsoluteItems::AddChild(nsIFrame* aChild)
 
 // Structures used to record the creation of pseudo table frames where 
 // the content belongs to some ancestor. 
+// PseudoFrames are necessary when the childframe cannot be the direct
+// ancestor of the content based parent frame. The amount of necessary pseudo
+// frames is limited as the worst case would be table frame nested directly
+// into another table frame. So the member structures of nsPseudoFrames can be
+// viewed as a ring buffer where you start with the necessary frame type and
+// add higher frames as long as necessary to fit into the initial parent frame.
+// mLowestType is some sort of stack pointer which shows the start of the
+// ringbuffer. The insertion of pseudo frames can happen between every
+// two frames so we need to push and pop the pseudo frame data when children
+// of a frame are created.
+// The colgroup frame is special as it can harbour only col children.
+// Once all children of given frame are known, the pseudo frames can be
+// processed that means attached to the corresponding parent frames.
+// The behaviour is in general described at
+// http://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
+// however there are implementation details that extend the CSS 2.1
+// specification:
+// 1. every table frame is wrapped in an outer table frame, which is always a
+//    pseudo frame.
+// 2. the outer table frame will be also created to hold a caption.
+// 3. each table cell will have a pseudo inner table cell frame.
+// 4. a colgroup frame is created between a column and a table
+// 5. a rowgroup frame is created between a row and a table
+// A table frame can only have rowgroups or column groups as children.
+// A outer table frame can only have one caption and one table frame
+// as children.
+// Every table even if all table frames are specified will require the
+// creation of two types of pseudo frames: the outer table frame and the inner
+// table cell frames.
 
 struct nsPseudoFrameData {
-  nsIFrame*    mFrame;
-  nsFrameItems mChildList;
-  nsFrameItems mChildList2;
+  nsIFrame*    mFrame; // created pseudo frame
+  nsFrameItems mChildList;  // child frames pending to be added to the pseudo
+  nsFrameItems mChildList2; // child frames pending to be added to the pseudo
 
   nsPseudoFrameData();
   nsPseudoFrameData(nsPseudoFrameData& aOther);
@@ -1366,35 +1397,26 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
 
   nsIPresShell *shell = aPresContext->PresShell();
 
-  if (eStyleContentType_URL == type) {
-    if (!data.mContent.mURL) {
-      // CSS had something specified that couldn't be converted to a URI object
+  if (eStyleContentType_Image == type) {
+    if (!data.mContent.mImage) {
+      // CSS had something specified that couldn't be converted to an
+      // image object
       *aFrame = nsnull;
       return NS_ERROR_FAILURE;
     }
     
-    // Create an HTML image content object, and set the SRC.
+    // Create an image content object and pass it the image request.
     // XXX Check if it's an image type we can handle...
 
-    nsINodeInfoManager *nimgr = aDocument->GetNodeInfoManager();
-    NS_ENSURE_TRUE(nimgr, NS_ERROR_FAILURE);
-
     nsCOMPtr<nsINodeInfo> nodeInfo;
-    nimgr->GetNodeInfo(nsHTMLAtoms::img, nsnull, kNameSpaceID_None,
-                       getter_AddRefs(nodeInfo));
-
-    nsresult rv;
-    nsCOMPtr<nsIElementFactory> ef(do_GetService(kHTMLElementFactoryCID,&rv));
-    NS_ENSURE_SUCCESS(rv, rv);
+    aDocument->NodeInfoManager()->GetNodeInfo(nsHTMLAtoms::img, nsnull,
+                                              kNameSpaceID_None,
+                                              getter_AddRefs(nodeInfo));
 
     nsCOMPtr<nsIContent> content;
-    rv = ef->CreateInstanceByTag(nodeInfo,getter_AddRefs(content));
+    nsresult rv = NS_NewGenConImageContent(getter_AddRefs(content), nodeInfo,
+                                           data.mContent.mImage);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCAutoString spec;
-    data.mContent.mURL->GetSpec(spec); // XXXldb Ugh.
-    content->SetAttr(kNameSpaceID_None, nsHTMLAtoms::src,
-                     NS_ConvertUTF8toUCS2(spec), PR_FALSE);
 
     // Set aContent as the parent content and set the document object. This
     // way event handling works
@@ -1483,8 +1505,11 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
   
     case eStyleContentType_Counter:
     case eStyleContentType_Counters:
-    case eStyleContentType_URL:
       return NS_ERROR_NOT_IMPLEMENTED;  // XXX not supported yet...
+
+    case eStyleContentType_Image:
+      NS_NOTREACHED("handled by if above");
+      return NS_ERROR_UNEXPECTED;
   
     case eStyleContentType_OpenQuote:
     case eStyleContentType_CloseQuote:
@@ -1818,7 +1843,8 @@ ProcessPseudoCellFrame(nsIPresContext* aPresContext,
   return rv;
 }
 
-
+// limit the processing up to the frame type indicated by aHighestType.
+// make a complete processing when aHighestType is null
 static nsresult 
 ProcessPseudoFrames(nsIPresContext* aPresContext,
                     nsPseudoFrames& aPseudoFrames,
@@ -1831,6 +1857,16 @@ ProcessPseudoFrames(nsIPresContext* aPresContext,
   aHighestFrame = nsnull;
 
   if (nsLayoutAtoms::tableFrame == aPseudoFrames.mLowestType) {
+    // if the processing should be limited to the colgroup frame and the
+    // table frame is the lowest type of created pseudo frames that
+    // can have pseudo frame children, process only the colgroup pseudo frames
+    // and leave the table frame untouched.
+    if (nsLayoutAtoms::tableColGroupFrame == aHighestType) {
+      if (aPseudoFrames.mColGroup.mFrame) {
+        rv = ProcessPseudoFrame(aPresContext, aPseudoFrames.mColGroup, aHighestFrame);
+      }
+      return rv;
+    }
     rv = ProcessPseudoTableFrame(aPresContext, aPseudoFrames, aHighestFrame);
     if (nsLayoutAtoms::tableOuterFrame == aHighestType) return rv;
     
@@ -2055,6 +2091,10 @@ nsCSSFrameConstructor::CreatePseudoColGroupFrame(nsIPresShell*            aPresS
                                    PR_TRUE, items, pseudo.mFrame, pseudoParent);
   if (NS_FAILED(rv)) return rv;
   ((nsTableColGroupFrame*)pseudo.mFrame)->SetColType(eColGroupAnonymousCol);
+
+  // Do not set  aState.mPseudoFrames.mLowestType here as colgroup frame will
+  // be always below a table frame but we can not descent any further as col
+  // frames can not have children and will not wrap table foreign frames.
 
   // set pseudo data for the parent
   if (aState.mPseudoFrames.mTableInner.mFrame) {
@@ -2972,11 +3012,8 @@ nsCSSFrameConstructor::ConstructTableForeignFrame(nsIPresShell*            aPres
   nsIFrame* parentFrame = nsnull;
   aIsPseudoParent = PR_FALSE;
 
-  // XXX form code needs to be fixed so that the forms can work
-  // without a frame.
   nsIAtom *tag = aContent->Tag();
-
-  // Do not construct pseudo frames for trees 
+ 
   if (MustGeneratePseudoParent(aPresContext, aParentFrameIn, tag, aContent,
                                aStyleContext)) {
     // this frame may have a pseudo parent, use block frame type to
@@ -2986,21 +3023,24 @@ nsCSSFrameConstructor::ConstructTableForeignFrame(nsIPresShell*            aPres
     if (!aIsPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aChildItems);
     }
-    //char buf[256];
-    //sprintf(buf, "anonymous frame constructed for %s", tag.get());
-    //NS_WARN_IF_FALSE(PR_FALSE, buf); 
   }
 
   if (!parentFrame) return rv; // if pseudo frame wasn't created
-
-  NS_ASSERTION(parentFrame == aState.mPseudoFrames.mCellInner.mFrame,
+ 
+  // there are two situations where table related frames will wrap around
+  // foreign frames
+  // a) inner table cell, which is a pseudo frame
+  // b) caption frame which will be always a real frame.
+  NS_ASSERTION(nsLayoutAtoms::tableCaptionFrame == parentFrame->GetType() ||
+               parentFrame == aState.mPseudoFrames.mCellInner.mFrame,
                "Weird parent in ConstructTableForeignFrame");
 
   // Push the parent as the floater containing block
   nsFrameConstructorSaveState saveState;
   aState.PushFloatContainingBlock(parentFrame, saveState, PR_FALSE, PR_FALSE);
   
-  // save the pseudo frame state XXX - why
+  // save the pseudo frame state now, as descendants of the child frame may require
+  // other pseudo frame creations
   nsPseudoFrames prevPseudoFrames; 
   aState.mPseudoFrames.Reset(&prevPseudoFrames);
 
@@ -3008,7 +3048,7 @@ nsCSSFrameConstructor::ConstructTableForeignFrame(nsIPresShell*            aPres
   rv = ConstructFrame(aPresShell, aPresContext, aState, aContent, parentFrame, items);
   aNewFrame = items.childList;
 
-  // restore the pseudo frame state XXX - why
+  // restore the pseudo frame state
   aState.mPseudoFrames = prevPseudoFrames;
 
   if (aIsPseudoParent) {
@@ -6977,16 +7017,17 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   nsIFrame* newFrame = nsnull;
   //nsSVGTableCreator svgTableCreator(aPresShell); // Used to make table views.
  
-  // See if the element is absolute or fixed positioned
-  const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
-  if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
-    isAbsolutelyPositioned = PR_TRUE;
-  }
-  else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
-    isFixedPositioned = PR_TRUE;
-  }
-
   if (aTag == nsSVGAtoms::svg) {
+    // See if the element is absolute or fixed positioned. These
+    // properties only apply to outer SVG elements.
+    const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
+    if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
+      isAbsolutelyPositioned = PR_TRUE;
+    }
+    else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
+      isFixedPositioned = PR_TRUE;
+    }
+    
     forceView = PR_TRUE;
     isBlock = PR_TRUE;
     processChildren = PR_TRUE;
@@ -7002,8 +7043,10 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     rv = NS_NewSVGPolylineFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::circle)
     rv = NS_NewSVGCircleFrame(aPresShell, aContent, &newFrame);
-  else if (aTag == nsSVGAtoms::defs)
-    rv = NS_NewSVGGenericContainerFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::defs) {
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGDefsFrame(aPresShell, aContent, &newFrame);
+  }
   else if (aTag == nsSVGAtoms::ellipse)
     rv = NS_NewSVGEllipseFrame(aPresShell, aContent, &newFrame);
   else if (aTag == nsSVGAtoms::line)
@@ -7057,6 +7100,7 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
       // containing block so that we get the SPACE_MGR bit set.
       nsFrameConstructorSaveState saveState;
       aState.PushFloatContainingBlock(nsnull, saveState, PR_FALSE, PR_FALSE);
+      const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
       rv = ConstructBlock(aPresShell, aPresContext, aState, disp, aContent,
                           geometricParent, aParentFrame, aStyleContext,
                           newFrame, PR_TRUE);

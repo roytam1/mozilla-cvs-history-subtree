@@ -44,126 +44,14 @@
 #include "nsIXTFSVGVisual.h"
 #include "nsIXTFXMLVisual.h"
 #include "nsIXTFXULVisual.h"
-#include "nsIElementFactory.h"
 #include "nsString.h"
 #include "nsINodeInfo.h"
-#include "nsIXMLContent.h"
 #include "nsXTFGenericElementWrapper.h"
 #include "nsXTFSVGVisualWrapper.h"
 #include "nsXTFXMLVisualWrapper.h"
 #include "nsXTFXULVisualWrapper.h"
-
-////////////////////////////////////////////////////////////////////////
-// nsXTFElementFactoryWrapper class
-class nsXTFElementFactoryWrapper : public nsIElementFactory
-{
-protected:
-  friend nsresult
-  NS_NewXTFElementFactoryWrapper(nsIXTFElementFactory* xtfFactory,
-                                 nsIElementFactory** aResult);
-
-  nsXTFElementFactoryWrapper(nsIXTFElementFactory* xtfFactory);
-  
-public:
-  // nsISupports interface
-  NS_DECL_ISUPPORTS
-
-  // nsIElementFactory interface
-  NS_IMETHOD CreateInstanceByTag(nsINodeInfo *aNodeInfo,
-                                 nsIContent** aResult);
-private:
-  nsCOMPtr<nsIXTFElementFactory> mXTFFactory;
-};
-
-//----------------------------------------------------------------------
-// implementation:
-
-nsXTFElementFactoryWrapper::nsXTFElementFactoryWrapper(nsIXTFElementFactory* xtfFactory)
-    : mXTFFactory(xtfFactory)
-{
-}
-
-nsresult
-NS_NewXTFElementFactoryWrapper(nsIXTFElementFactory* xtfFactory,
-                               nsIElementFactory** aResult)
-{
-  NS_PRECONDITION(aResult != nsnull, "null ptr");
-  if (!aResult)
-    return NS_ERROR_NULL_POINTER;
-
-  if (!xtfFactory) {
-    NS_ERROR("can't construct an xtf element factory wrapper without a factory");
-    return NS_ERROR_FAILURE;
-  }
-  
-  nsXTFElementFactoryWrapper* result = new nsXTFElementFactoryWrapper(xtfFactory);
-  if (! result)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  NS_ADDREF(result);
-  *aResult = result;
-  return NS_OK;
-}
-
-//----------------------------------------------------------------------
-// nsISupports implementation
-
-NS_IMPL_ISUPPORTS1(nsXTFElementFactoryWrapper, nsIElementFactory);
-
-//----------------------------------------------------------------------
-// nsIElementFactory implementation
-
-NS_IMETHODIMP
-nsXTFElementFactoryWrapper::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
-                                                nsIContent** aResult)
-{
-  nsCOMPtr<nsIXTFElement> elem;
-  nsAutoString tagName;
-  aNodeInfo->GetName(tagName);
-#ifdef DEBUG
-//  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag(%s)\n",NS_ConvertUTF16toUTF8(tagName).get());
-#endif
-  mXTFFactory->CreateElement(tagName, getter_AddRefs(elem));
-  if (elem) {
-    // we've got an xtf element. create an appropriate wrapper for it:
-    PRUint32 elementType;
-    elem->GetElementType(&elementType);
-    switch (elementType) {
-      case nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT:
-      {
-        nsCOMPtr<nsIXTFGenericElement> elem2 = do_QueryInterface(elem);
-        return NS_NewXTFGenericElementWrapper(elem2, aNodeInfo, aResult);
-      break;
-      }
-      case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
-      {
-        nsCOMPtr<nsIXTFSVGVisual> elem2 = do_QueryInterface(elem);
-        return NS_NewXTFSVGVisualWrapper(elem2, aNodeInfo, aResult);
-        break;
-      }
-      case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
-      {
-        nsCOMPtr<nsIXTFXMLVisual> elem2 = do_QueryInterface(elem);
-        return NS_NewXTFXMLVisualWrapper(elem2, aNodeInfo, aResult);
-        break;
-      }
-      case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
-      {
-        nsCOMPtr<nsIXTFXULVisual> elem2 = do_QueryInterface(elem);
-        return NS_NewXTFXULVisualWrapper(elem2, aNodeInfo, aResult);
-        break;
-      }
-      default:
-        NS_ERROR("unknown xtf element type");
-        break;
-    }
-  }
-#ifdef DEBUG
-//  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag: element could not be created\n");
-#endif
-  // if we don't know what to create, just create a standard xml element:
-  return NS_NewXMLElement(aResult, aNodeInfo);
-}
+#include "nsInterfaceHashtable.h"
+#include "nsIServiceManager.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsXTFService class 
@@ -179,10 +67,10 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIXTFService interface
-  NS_IMETHOD WrapXTFElementFactory(nsIXTFElementFactory* xtfFactory,
-                                   nsIElementFactory** wrapper);
+  nsresult CreateElement(nsIContent** aResult, nsINodeInfo* aNodeInfo);
 
 private:
+  nsInterfaceHashtable<nsUint32HashKey, nsIXTFElementFactory> mFactoryHash;
 };
 
 //----------------------------------------------------------------------
@@ -190,6 +78,7 @@ private:
 
 nsXTFService::nsXTFService()
 {
+  mFactoryHash.Init(); // XXX this can fail. move to Init()
 }
 
 nsresult
@@ -216,12 +105,71 @@ NS_IMPL_ISUPPORTS1(nsXTFService, nsIXTFService);
 //----------------------------------------------------------------------
 // nsIXTFService methods
 
-NS_IMETHODIMP
-nsXTFService::WrapXTFElementFactory(nsIXTFElementFactory* xtfFactory,
-                                    nsIElementFactory** wrapper)
+nsresult
+nsXTFService::CreateElement(nsIContent** aResult, nsINodeInfo* aNodeInfo)
 {
+  nsCOMPtr<nsIXTFElementFactory> factory;
+
+  // Check if we have an xtf factory for the given namespaceid in our cache:
+  if (!mFactoryHash.Get(aNodeInfo->NamespaceID(), getter_AddRefs(factory))) {
+    // No. See if there is one registered with the component manager:
+    nsCAutoString xtf_contract_id(NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX);
+    nsAutoString uri;
+    aNodeInfo->GetNamespaceURI(uri);
+    AppendUTF16toUTF8(uri, xtf_contract_id);
 #ifdef DEBUG
-//  printf("nsXTFService::WrapXTFElementFactory\n");
+    printf("Testing for XTF factory at %s\n", xtf_contract_id.get());
 #endif
-  return NS_NewXTFElementFactoryWrapper(xtfFactory, wrapper);
+    factory = do_GetService(xtf_contract_id.get());
+    if (factory) {
+#ifdef DEBUG
+      printf("We've got an XTF factory.\n");
+#endif
+      // Put into hash:
+      mFactoryHash.Put(aNodeInfo->NamespaceID(), factory);
+    }
+  }
+  if (!factory) return NS_ERROR_FAILURE;
+
+  // We have an xtf factory. Now try to create an element for the given tag name:
+  nsCOMPtr<nsIXTFElement> elem;
+  nsAutoString tagName;
+  aNodeInfo->GetName(tagName);
+  factory->CreateElement(tagName, getter_AddRefs(elem));
+  if (!elem) return NS_ERROR_FAILURE;
+  
+  // We've got an xtf element. Create an appropriate wrapper for it:
+  PRUint32 elementType;
+  elem->GetElementType(&elementType);
+  switch (elementType) {
+    case nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT:
+    {
+      nsCOMPtr<nsIXTFGenericElement> elem2 = do_QueryInterface(elem);
+      return NS_NewXTFGenericElementWrapper(elem2, aNodeInfo, aResult);
+      break;
+    }
+    case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
+    {
+      nsCOMPtr<nsIXTFSVGVisual> elem2 = do_QueryInterface(elem);
+      return NS_NewXTFSVGVisualWrapper(elem2, aNodeInfo, aResult);
+      break;
+    }
+    case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
+    {
+      nsCOMPtr<nsIXTFXMLVisual> elem2 = do_QueryInterface(elem);
+      return NS_NewXTFXMLVisualWrapper(elem2, aNodeInfo, aResult);
+      break;
+    }
+    case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
+    {
+      nsCOMPtr<nsIXTFXULVisual> elem2 = do_QueryInterface(elem);
+      return NS_NewXTFXULVisualWrapper(elem2, aNodeInfo, aResult);
+      break;
+    }
+    default:
+      NS_ERROR("unknown xtf element type");
+      break;
+  }
+  return NS_ERROR_FAILURE;
 }
+

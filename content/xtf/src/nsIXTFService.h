@@ -36,14 +36,13 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-
 #ifndef __NS_IXTFSERVICE_H__
 #define __NS_IXTFSERVICE_H__
 
 #include "nsISupports.h"
 
-class nsIXTFElementFactory;
-class nsIElementFactory;
+class nsIContent;
+class nsINodeInfo;
 
 // {02AD2ADD-C5EC-4362-BB5F-E2C69BA76151}
 #define NS_IXTFSERVICE_IID                             \
@@ -53,9 +52,10 @@ class nsIXTFService : public nsISupports
 {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXTFSERVICE_IID)
-  
-  NS_IMETHOD WrapXTFElementFactory(nsIXTFElementFactory* xtfFactory,
-                                   nsIElementFactory** wrapper)=0;
+
+    // try to create an xtf element based on namespace
+    virtual nsresult CreateElement(nsIContent** aResult,
+                                   nsINodeInfo* aNodeInfo)=0;
 };
 
 //----------------------------------------------------------------------
