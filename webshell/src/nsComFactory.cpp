@@ -34,6 +34,7 @@
 #include "nsIWebShell.h"
 #include "nsString.h"
 #include "plevent.h"
+#include "prthread.h"
 #include "private/pprthred.h"
 
 static HMODULE g_DllInst = NULL;
@@ -133,7 +134,7 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
 /*
  * Helper function to register a key/sub-key in the Windows registry...
  */
-void RegisterKey(char *aKey, const char *aSubKey, const char *aValue)
+void RegisterKey(char *aKey, const char *aSubKey, const char *aValue, const char* aValueName=NULL)
 {
     LONG rv;
     HKEY hKey;
@@ -158,7 +159,7 @@ void RegisterKey(char *aKey, const char *aSubKey, const char *aValue)
     if (rv == ERROR_SUCCESS) {
         if (NULL != aValue) {
             RegSetValueEx(hKey,
-                          NULL,
+                          aValueName,
                           0,
                           REG_SZ,
                           (const BYTE*)aValue,
@@ -167,7 +168,6 @@ void RegisterKey(char *aKey, const char *aSubKey, const char *aValue)
         RegCloseKey(hKey);
     }
 }
-
 
 /*
  * Helper function to remove a key/sub-key from the Windows registry...
@@ -252,6 +252,7 @@ STDAPI DllRegisterServer(void)
     RegisterKey(WebShellCLSIDkey, "VersionIndependentProgID", WEBSHELL_GLOBAL_PROGID_KEY);
     RegisterKey(WebShellCLSIDkey, "NotInsertable",            NULL);
     RegisterKey(WebShellCLSIDkey, "InprocServer32",           WebShellDLLPath);
+    RegisterKey(WebShellCLSIDkey, "InprocServer32",           "Apartment", "ThreadingModel");
 
     // Free up memory...
     if (WebShellCLSID) {
@@ -332,3 +333,4 @@ STDAPI DllUnregisterServer(void)
 }
 
 #endif // XP_PC
+
