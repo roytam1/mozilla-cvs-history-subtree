@@ -122,6 +122,17 @@ _MD_CreateSemaphoreA(
     IN LPCSTR lpName
     );
 
+HANDLE
+WINAPI
+_MD_CreateFileMappingA(
+    HANDLE hFile,
+    LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+    DWORD flProtect,
+    DWORD dwMaximumSizeHigh,
+    DWORD dwMaximumSizeLow,
+    LPCSTR lpName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */

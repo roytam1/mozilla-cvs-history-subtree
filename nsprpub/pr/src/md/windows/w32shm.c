@@ -121,7 +121,7 @@ extern PRSharedMemory * _MD_OpenSharedMemory(
 #if !defined(WINCE)
             CreateFileMapping
 #else
-            CreateFileMappingA
+            _MD_CreateFileMappingA
 #endif
             (
             (HANDLE)-1 ,
@@ -185,7 +185,7 @@ extern PRSharedMemory * _MD_OpenSharedMemory(
          *   mapping.  We use CreateFileMapping and must use GetLastError
          *   to determine if the the mapping already existed.
          */
-        shm->handle = CreateFileMappingA(
+        shm->handle = _MD_CreateFileMappingA(
             (HANDLE)INVALID_HANDLE_VALUE,
             NULL,
             flProtect,

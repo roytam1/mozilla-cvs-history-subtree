@@ -448,4 +448,44 @@ _MD_CreateSemaphoreA(
     return retval;
 }
 
+HANDLE
+WINAPI
+_MD_CreateFileMappingA(
+    HANDLE hFile,
+    LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+    DWORD flProtect,
+    DWORD dwMaximumSizeHigh,
+    DWORD dwMaximumSizeLow,
+    LPCSTR lpName
+    )
+{
+    HANDLE retval = NULL;
+    LPWSTR wideStr = NULL;
+
+    wideStr = _PR_MD_MALLOC_A2W(lpName);
+    if(NULL == lpName || NULL != wideStr)
+    {
+        retval = CreateFileMappingW(
+            hFile,
+            lpFileMappingAttributes,
+            flProtect,
+            dwMaximumSizeHigh,
+            dwMaximumSizeLow,
+            wideStr
+            );
+
+        if(NULL != wideStr)
+        {
+            PR_Free(wideStr);
+        }
+    }
+    else
+    {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+    }
+
+    return retval;
+}
+
+
 #endif /* WINCE */
