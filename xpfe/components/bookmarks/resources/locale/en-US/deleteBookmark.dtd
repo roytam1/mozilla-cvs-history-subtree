@@ -1,0 +1,12 @@
+
+<!ENTITY  deleteBookmark.title  "Delete Bookmarks">
+<!-- FIX ME! -->
+<!ENTITY  deleteMessage.label   "&brandShortName; cannot delete following items 
+                                 as they are Special Bookmarks.">
+<!ENTITY  specialInfo.label     "Special Bookmarks are items like Internet 
+                                 Explorer Favorites, search results inside saved 
+                                 search queries, or files on your hard disk or 
+                                 on a remote computer. To remove Special Bookmarks,
+                                 you must remove the folder that contains them.">
+
+ 
