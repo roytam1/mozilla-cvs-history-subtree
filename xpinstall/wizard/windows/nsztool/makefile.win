@@ -45,6 +45,7 @@ include <$(DEPTH)\config\rules.mak>
 
 install:: $(PROGRAM)
     $(MAKE_INSTALL) $(PROGRAM) $(DIST)\install
+    $(DIST)\install\$(MODULE).exe -g $(DIST)\install\nszip.exe $(DIST)\install\nsinstall.exe
 
 clobber_all::
     $(RM) $(DIST)\install\$(MODULE).exe
