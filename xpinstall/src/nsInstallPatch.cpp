@@ -427,7 +427,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 
 		// make a unique file at the same location of our source file  (FILENAME-ptch.EXT)
         nsString patchFileName = "-ptch";
-        nsString newFileName(sourceFile);
+		nsString newFileName = sourceFile.GetLeafName();
 
         PRInt32 index;
 		if ((index = newFileName.RFind(".")) > 0)
@@ -443,7 +443,8 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
         }
         
 
-		nsFileSpec newName(newFileName);
+		nsFileSpec newName = sourceFile;
+		newName.SetLeafName(newFileName);
 		newName.MakeUnique();
 		nsFileSpec *newOutFileSpec = new nsFileSpec(newName); 
 
