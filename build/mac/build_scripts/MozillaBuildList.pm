@@ -1714,7 +1714,7 @@ sub BuildViewerProjects()
 
     if (! $main::options{"static_build"})
     {
-  		BuildOneProject(":mozilla:webshell:tests:viewer:mac:viewer.mcp",            "viewer$C$D",  0, 0, 0);
+  		BuildProject(":mozilla:webshell:tests:viewer:mac:viewer.mcp",            "viewer$C$D");
     }
 
     EndBuildModule("viewer");
@@ -2004,19 +2004,21 @@ sub BuildMozilla()
     StartBuildModule("apprunner");
 
     if ($main::options{static_build}) {
-        BuildOneProject(":mozilla:xpfe:bootstrap:macbuild:StaticMerge.mcp",    "StaticMerge$D.o", 0, 0, 0);
+        BuildProject(":mozilla:xpfe:bootstrap:macbuild:StaticMerge.mcp",    "StaticMerge$D.o");
+    } else {
+        BuildProject(":mozilla:xpfe:bootstrap:macbuild:StaticMerge.mcp",    "StaticMergeDummy$D.o");
     }
     
-    BuildOneProject(":mozilla:xpfe:bootstrap:macbuild:apprunner.mcp",          "apprunner$C$D", 0, 0, 1);
+    BuildProject(":mozilla:xpfe:bootstrap:macbuild:apprunner.mcp",          "apprunner$C$D");
 
     # build tool to create Component Registry in release builds only.
     if (!($main::DEBUG)) {
-        BuildOneProject(":mozilla:xpcom:tools:registry:macbuild:RegXPCOM.mcp", "RegXPCOM", 0, 0, 1);
+        BuildProject(":mozilla:xpcom:tools:registry:macbuild:RegXPCOM.mcp", "RegXPCOM");
     }
     
     # build XPCShell to test the cache in debugging builds only.
     if ($main::DEBUG && $main::options{cache}) {
-        BuildOneProject(":mozilla:js:macbuild:XPCShell.mcp", "XPCShellDebug", 0, 0, 1);
+        BuildProject(":mozilla:js:macbuild:XPCShell.mcp", "XPCShellDebug");
     }
     
     # copy command line documents into the Apprunner folder and set correctly the signature
