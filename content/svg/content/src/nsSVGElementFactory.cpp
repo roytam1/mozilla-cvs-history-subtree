@@ -121,7 +121,7 @@ nsSVGElementFactory::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
     return NS_NewSVGPathElement(aResult, aNodeInfo);
 
   // if we don't know what to create, just create a standard xml element:
-  nsCOMPtr<nsIXMLContent> xmlContent;
+  nsCOMPtr<nsIContent> xmlContent;
   nsresult rv;
   rv = NS_NewXMLElement(getter_AddRefs(xmlContent), aNodeInfo);
   

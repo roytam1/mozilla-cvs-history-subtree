@@ -127,7 +127,6 @@ protected:
   virtual void InternalInsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex);
 
   nsresult CreateElement(nsINodeInfo *aNodeInfo, nsIDOMElement** aResult);
-  void GetElementFactory(PRInt32 aNameSpaceID, nsIElementFactory** aResult);
   
   // For HTML elements in our content model
   // XXX This is not clean, but is there a better way? 

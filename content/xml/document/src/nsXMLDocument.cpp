@@ -1018,67 +1018,30 @@ nsXMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
 nsresult
 nsXMLDocument::CreateElement(nsINodeInfo *aNodeInfo, nsIDOMElement** aResult)
 {
-  NS_ENSURE_ARG_POINTER(aNodeInfo);
-  NS_ENSURE_ARG_POINTER(aResult);
   *aResult = nsnull;
   
   nsresult rv;
   
   nsCOMPtr<nsIContent> content;
 
-  if (aNodeInfo->NamespaceEquals(kNameSpaceID_HTML)) {
-    nsCOMPtr<nsIHTMLContent> htmlContent;
-    rv = NS_CreateHTMLElement(getter_AddRefs(htmlContent), aNodeInfo, PR_TRUE);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    content = do_QueryInterface(htmlContent, &rv);
-  }
-  else {
-    PRInt32 namespaceID;
-    aNodeInfo->GetNamespaceID(namespaceID);
+  PRInt32 namespaceID;
+  aNodeInfo->GetNamespaceID(namespaceID);
 
-    nsCOMPtr<nsIElementFactory> elementFactory;
-    GetElementFactory(namespaceID, getter_AddRefs(elementFactory));
-    if (elementFactory) {
-      rv = elementFactory->CreateInstanceByTag(aNodeInfo, getter_AddRefs(content));
-    }
-    else {
-      nsCOMPtr<nsIXMLContent> xmlContent;
-      rv = NS_NewXMLElement(getter_AddRefs(xmlContent), aNodeInfo);
-      NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIElementFactory> elementFactory;
 
-      content = do_QueryInterface(xmlContent, &rv);
-    }
+  mNameSpaceManager->GetElementFactory(namespaceID,
+                                       getter_AddRefs(elementFactory));
+
+  if (elementFactory) {
+    rv = elementFactory->CreateInstanceByTag(aNodeInfo,
+                                             getter_AddRefs(content));
+  } else {
+    rv = NS_NewXMLElement(getter_AddRefs(content), aNodeInfo);
   }
 
-  if (content) {
-    content->SetContentID(mNextContentID++);
-    rv = content->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aResult);
-  }
-  
-  return rv;
-}
+  NS_ENSURE_SUCCESS(rv, rv);
 
-void 
-nsXMLDocument::GetElementFactory(PRInt32 aNameSpaceID, nsIElementFactory** aResult)
-{
-  nsresult rv;
+  content->SetContentID(mNextContentID++);
 
-  *aResult = nsnull;
-  
-  nsCOMPtr<nsINameSpaceManager> nameSpaceManager(do_GetService(kNameSpaceManagerCID, &rv));
-  if (!nameSpaceManager) return;
-  
-  nsAutoString nameSpace;
-  nameSpaceManager->GetNameSpaceURI(aNameSpaceID, nameSpace);
-
-  nsCAutoString contractID( NS_ELEMENT_FACTORY_CONTRACTID_PREFIX );
-  contractID.AppendWithConversion(nameSpace);
-
-  // Retrieve the appropriate factory.
-  nsCOMPtr<nsIElementFactory> elementFactory(do_GetService(contractID.get(),
-                                                           &rv));
-
-  *aResult = elementFactory;
-  NS_IF_ADDREF(*aResult);
+  return CallQueryInterface(content, aResult);
 }
