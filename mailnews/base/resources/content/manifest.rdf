@@ -19,7 +19,9 @@
     <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-appearance.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-advanced.xul"/>
+    <!-- commenting out tasksOverlay.xul because the menu items have been moved to mailTasksOverlay.xul
     <RDF:li resource="chrome://communicator/content/tasksOverlay.xul"/>
+    -->
     <RDF:li resource="chrome://navigator/content/navigatorOverlay.xul"/>
     <RDF:li resource="chrome://messenger/content/messenger.xul"/>
     <RDF:li resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul"/>
@@ -45,10 +47,12 @@
     <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
   </RDF:Seq>
 
+  <!-- commenting out tasksOverlay.xul because the menu items have been moved to mailTasksOverlay.xul
   <!-- messenger taskbar/tasks menu items -->
   <RDF:Seq about="chrome://communicator/content/tasksOverlay.xul">
     <RDF:li>chrome://messenger/content/mailTasksOverlay.xul</RDF:li>
   </RDF:Seq>
+  -->
 
   <!-- messenger items for Navigator -->
   <RDF:Seq about="chrome://navigator/content/navigatorOverlay.xul">

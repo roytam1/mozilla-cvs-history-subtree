@@ -1354,15 +1354,19 @@ Rights Reserved.
 
 <menu id="tasksMenu">
   <menupopup id="taskPopup">
+    <menuseparator/>
     <menuitem label="&searchMailCmd.label;" key="key_searchMail" accesskey="&searchMailCmd.accesskey;" command="cmd_searchMsgs"/>
+    <menuitem label="&searchAddressesCmd.label;" accesskey="&searchAddressesCmd.accesskey;" oncommand="MsgSearchAddresses()"/>
+    <menuseparator/>
     <menuitem label="&filtersCmd.label;"
               accesskey="&filtersCmd.accesskey;"
               oncommand="MsgFilters(null);"/>
     <menuitem label="&importCmd.label;" accesskey="&importCmd.accesskey;" oncommand="toImport();"/>
-    <menuseparator/>
   </menupopup>
 </menu>
+<!-- removing windowMenu since the menu items are moved to tasksMenu
 <menu id="windowMenu"/>
+-->
 <spacer flex="100%"/>
 </menubar>
 

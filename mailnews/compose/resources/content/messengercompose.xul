@@ -29,7 +29,9 @@
 <?xml-stylesheet href="chrome://messenger/skin/addressingWidget.css" type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
+<!-- commenting out the tasksOverlay.xul because we are removing it from the jar files
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+-->
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
@@ -364,7 +366,9 @@
       </menu>
       <!--menu id="debugMenu"/-->
       <menu id="tasksMenu"/>
+      <!-- removing windowMenu since the menu items are moved to tasksMenu
       <menu id="windowMenu"/>
+      -->
     </menubar>
 
     <toolbar class="toolbar-primary chromeclass-toolbar" id="composeToolbar" persist="collapsed" grippytooltiptext="&mailToolbar.tooltip;">

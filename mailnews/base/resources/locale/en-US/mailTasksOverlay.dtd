@@ -10,6 +10,9 @@
 <!ENTITY taskMessenger.tooltip  "Mail &amp; Newsgroups">
 <!ENTITY taskAddressBook.tooltip  "Address Book">
 
+<!ENTITY tasksMenu.label "Tools">
+<!ENTITY tasksMenu.accesskey "T"> 
+
 <!-- searchAddressesCmd is also used by addressbook -->
 <!ENTITY searchAddressesCmd.label                       "Search Addresses...">
 <!ENTITY searchAddressesCmd.accesskey                   "A">

@@ -28,7 +28,9 @@ Rights Reserved.
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailOverlay.xul"?>
+<!-- commenting out the tasksOverlay.xul because we are removing it from the jar files
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+-->
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <!DOCTYPE window [

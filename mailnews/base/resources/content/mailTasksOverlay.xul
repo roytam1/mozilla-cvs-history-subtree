@@ -7,7 +7,7 @@
 
 <overlay id="mailPrefsOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-
+  <script type="application/x-javascript" src="chrome://communicator/content/tasksOverlay.js"/>
   <script type="application/x-javascript">
   <![CDATA[
     // uses "toOpenWindowByType" function provided by utilityOverlay.js
@@ -96,11 +96,22 @@
     <menuitem label="&searchAddressesCmd.label;" accesskey="&searchAddressesCmd.accesskey;" oncommand="MsgSearchAddresses(null)" position="3"/>
   </menupopup>
 
+  <!-- Commenting out windowPopup because we are getting rid of tasksOverlay.xul which uses it and instead 
+  moving the menu items to the tasksMenu in mailTasksOverlay.xul
   <menupopup id="windowPopup">
     <menuitem id="tasksMenuMail" accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" class="menuitem-iconic icon-mail16 menu-iconic"/>
     <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
     <menuseparator id="sep-window-list"/>
   </menupopup>
-  
+  -->
+
+  <!-- Tasks Menu -->
+  <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
+    <menupopup id="taskPopup">
+      <menuitem id="tasksMenuMail" accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" class="menuitem-iconic icon-mail16 menu-iconic" position="1"/>
+      <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic" position="2"/>
+    </menupopup>
+  </menu>
+
 </overlay>         
 

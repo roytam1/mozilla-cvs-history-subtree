@@ -531,9 +531,15 @@ function onAdvancedAbSearch()
 {
   var selectedABURI = GetSelectedDirectory();
   if (!selectedABURI) return;
+  var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+  var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
+  var abSearchWindow = windowManagerInterface.getMostRecentWindow("mailnews:absearch");
 
-  window.openDialog("chrome://messenger/content/ABSearchDialog.xul", "", 
-                    "chrome,resizable,status,centerscreen,dialog=no", {directory: selectedABURI} );
+  if (abSearchWindow)
+    abSearchWindow.focus();
+  else
+    window.openDialog("chrome://messenger/content/ABSearchDialog.xul", "", 
+                      "chrome,resizable,status,centerscreen,dialog=no", {directory: selectedABURI} );
 }
 
 function onEnterInSearchBar()
