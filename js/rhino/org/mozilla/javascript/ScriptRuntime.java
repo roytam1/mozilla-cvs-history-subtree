@@ -1918,7 +1918,7 @@ public class ScriptRuntime {
         global.put("arguments", global, argsObj);
 
         try {
-            Class cl = Class.forName(scriptClassName);
+            Class cl = loadClassName(scriptClassName);
             Script script = (Script) cl.newInstance();
             script.exec(cx, global);
             return;
@@ -2107,6 +2107,42 @@ public class ScriptRuntime {
                                             NativeCall activation)
     {
         cx.currentActivation = activation;
+    }
+
+    private static Method getContextClassLoaderMethod;
+    static {
+        try {
+            // We'd like to use "getContextClassLoader", but 
+            // that's only available on Java2. 
+            getContextClassLoaderMethod = 
+                Thread.class.getDeclaredMethod("getContextClassLoader", 
+                                               new Class[0]);
+        } catch (NoSuchMethodException e) {
+            // ignore exceptions; we'll use Class.forName instead.
+        } catch (SecurityException e) {
+            // ignore exceptions; we'll use Class.forName instead.
+        }
+    }
+        
+    public static Class loadClassName(String className) 
+        throws ClassNotFoundException
+    {
+        try {
+            if (getContextClassLoaderMethod != null) {
+                ClassLoader cl = (ClassLoader) 
+                                  getContextClassLoaderMethod.invoke(
+                                    Thread.currentThread(), 
+                                    new Object[0]);
+                return cl.loadClass(className);
+            }
+        } catch (SecurityException e) {
+            // fall through...
+        } catch (IllegalAccessException e) {
+            // fall through...
+        } catch (InvocationTargetException e) {
+            // fall through...
+        }
+        return Class.forName(className);                
     }
 
     private static boolean hasProp(Scriptable start, String name) {
