@@ -820,15 +820,17 @@
   
   <binding id="browsermessage" extends="xul:hbox">
     <content align="center">
-      <xul:image        anonid="messageImage"   class="messageImage"/>
-      <xul:description  anonid="messageText"    class="messageText" flex="1"/>
+      <xul:hbox anonid="messagePopupContainer" align="center" flex="1">
+        <xul:image       anonid="messageImage"   class="messageImage"/>
+        <xul:description anonid="messageText"    class="messageText" flex="1"/>
+      </xul:hbox>
       <xul:button       anonid="messageButton"  class="messageButton"/>
       <xul:spacer class="tabs-right"/>
       <xul:hbox hidden="true" anonid="messageClose" class="tabs-closebutton-box" 
                 align="center" pack="end">
         <xul:toolbarbutton ondblclick="event.preventBubble();" 
                            class="tabs-closebutton close-button" 
-                           oncommand="this.parentNode.parentNode.hide()"/>
+                           oncommand="this.parentNode.parentNode.hide();"/>
       </xul:hbox>
     </content>
     <implementation>
@@ -862,15 +864,15 @@
         <setter>
           <![CDATA[
             if (val)
-              this.setAttribute("popup", val);
+              document.getAnonymousElementByAttribute(this, "anonid", "messagePopupContainer").setAttribute("popup", val);
             else
-              this.removeAttribute("popup");
+              document.getAnonymousElementByAttribute(this, "anonid", "messagePopupContainer").removeAttribute("popup");
             return val;
           ]]>
         </setter>
         <getter>
           <![CDATA[
-            return this.getAttribute("popup");
+            return document.getAnonymousElementByAttribute(this, "anonid", "messagePopupContainer").getAttribute("popup");
           ]]>
         </getter>
       </property>

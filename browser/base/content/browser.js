@@ -704,7 +704,7 @@ const gPopupBlockerObserver = {
         else
           message = bundle_browser.getFormattedString("popupWarning", [brandShortName]);
         gBrowser.showMessage(gBrowser.selectedBrowser, "chrome://browser/skin/Info.png", 
-                             message, "", null, null, "blockedPopupOptions", "top", false);
+                             message, "", null, null, "blockedPopupOptions", "top", true);
       }
     }
     else
