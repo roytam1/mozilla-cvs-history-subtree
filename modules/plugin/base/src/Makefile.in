@@ -125,6 +125,9 @@ endif		#MOZ_ENABLE_GTK
 
 ifdef MOZ_ENABLE_XLIB
 EXTRA_DSO_LDOPTS += -lxlibxtbin -lxlibrgb -L/usr/X11R6/lib -lXt
+ifneq (,$(filter HP-UX,$(OS_ARCH)))
+EXTRA_DSO_LDOPTS += -lXm
+endif
 ifndef MOZ_MONOLITHIC_TOOLKIT
 CXXFLAGS        += $(MOZ_XLIB_CFLAGS)
 CFLAGS          += $(MOZ_XLIB_CFLAGS)
