@@ -371,14 +371,13 @@ nsPresContext::SetShell(nsIPresShell* aShell)
           GetFontPreferences();
 #ifdef IBMBIDI
           PRBool isVisual = PR_FALSE;
-          PRUint8 textType;
   //ahmed
 	nsBidiOptions mBidioptions;
           GetBidi(&mBidioptions);
           if (IBMBIDI_TEXTTYPE_VISUAL == mBidioptions.mtexttype) {
 	  isVisual = PR_TRUE;
           }
-          else if (textType != IBMBIDI_TEXTTYPE_LOGICAL) {
+          else if (mBidioptions.mtexttype != IBMBIDI_TEXTTYPE_LOGICAL) {
             // XXX shouldn't be hard-coded.
             if ( (charset.EqualsIgnoreCase("visual") )
                 || (charset.EqualsIgnoreCase("ibm-864") )           // Arabic
