@@ -164,7 +164,6 @@ function highlightDoc(color, word, win)
     var finder = Components.classes["@mozilla.org/embedcomp/rangefind;1"].createInstance()
                          .QueryInterface(Components.interfaces.nsIFind);
 
-
     while ((retRange = finder.Find(gLastHighlightString, searchRange,startPt, endPt))) {
       var startContainer = retRange.startContainer;
       var elem = null;
@@ -213,6 +212,8 @@ function highlightText(word, baseNode)
   var retRange = null;
   var finder = Components.classes["@mozilla.org/embedcomp/rangefind;1"].createInstance()
                          .QueryInterface(Components.interfaces.nsIFind);
+
+  finder.caseSensitive = document.getElementById("find-case-sensitive").checked;
 
   while((retRange = finder.Find(word, searchRange, startPt, endPt))) {
     // Highlight
