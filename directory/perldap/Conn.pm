@@ -185,7 +185,7 @@ sub newEntry
   if (ref $self) {
     $entry = $self->{"entryclass"}->new();
   } else {
-    $entry = new Mozilla::LDAP::Entry;
+    $entry = Mozilla::LDAP::Entry->new();
   }
 
   $entry->setDN($dn) if (defined($dn) && $dn ne "");
@@ -1086,7 +1086,7 @@ Before you can do anything with PerLDAP, you'll need to instantiate at
 least one Mozilla::LDAP::Conn object, and connect it to an LDAP server. As
 you probably guessed already, this is done with the B<new> method:
 
-    $conn = new Mozilla::LDAP::Conn("ldap", "389", $bind, $pswd, $cert, $ver);
+    $conn = Mozilla::LDAP::Conn->new("ldap", "389", $bind, $pswd, $cert, $ver);
     die "Couldn't connect to LDAP server ldap" unless  $conn;
 
 The arguments are: Host name, port number, and optionally a bind-DN, it's
@@ -1102,7 +1102,7 @@ providing each individual argument, you can provide one hash array
 (actually, a pointer to a hash). For example:
 
     %ld = Mozilla::LDAP::Utils::ldapArgs();
-    $conn = new Mozilla::LDAP::Conn(\%ld);
+    $conn = Mozilla::LDAP::Conn->new(\%ld);
 
 The components of the hash are:
 
@@ -1174,7 +1174,7 @@ requires indexes to perform reasonably well.
 Ok, now we are prepared to actually do a real search on the LDAP server:
 
     $base = "o=netscape.com";
-    $conn = new Mozilla::LDAP::Conn("ldap", "389", "", ""); die "No LDAP
+    $conn = Mozilla::LDAP::Conn->new("ldap", "389", "", ""); die "No LDAP
     connection" unless $conn;
 
     $entry = $conn->search($base, "subtree", "(uid=leif)");
@@ -1261,7 +1261,7 @@ new entry, the first thing to set it it's DN, like
 
 alternatively you can still use the B<new> method on the Entry class, like
 
-    $entry = new Mozilla::LDAP::Entry;
+    $entry = Mozilla::LDAP::Entry->new();
 
 You should not do this for an existing LDAP entry, changing the RDN (or
 DN) for such an entry must be done with B<modifyRDN>. To populate (or
@@ -1397,7 +1397,7 @@ authentication method (i.e. with a password).
 A typical usage could be something like
 
     %ld = Mozilla::LDAP::Utils::ldapArgs();
-    $conn = new Mozilla::LDAP::Conn(\%ld);
+    $conn = Mozilla::LDAP::Conn->new(\%ld);
 
 Also, remember that if you use SSL, the port is (usually) 636.
 
@@ -1459,7 +1459,7 @@ example:
 
     $user = "leif";
     $password = "secret";
-    $conn = new Mozilla::LDAP::Conn($host, $port);	# Anonymous bind
+    $conn = Mozilla::LDAP::Conn->new($host, $port);	# Anonymous bind
     die "Could't connect to LDAP server $host" unless $conn;
 
     $entry = $conn->search($base, $scope, "(uid=$user)", 0, (uid));

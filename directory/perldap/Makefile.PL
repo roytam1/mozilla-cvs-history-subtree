@@ -120,8 +120,12 @@ if ($#nsprlib >= 0)
       print "$ldapsdk_pr\n";
     }
 }
-$pr_def = "-DPRLDAP" if ($ldapsdk_pr =~ /^y/i);
-@nsprlib = () unless ($ldapsdk_pr =~ /^y/i);
+if ($ldapsdk_pr =~ /^y/i) {
+  $pr_def = "-DPRLDAP"
+} else {
+  @nsprlib = ();
+  @prldaplib = ();
+}
 
 if ($#ldaplib < 0)
 {

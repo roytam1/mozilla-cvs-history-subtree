@@ -775,14 +775,14 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
        sort_attributes references enlist_values delist_values
        read_v1 read_v0 read_file_URL_or_name);
 
- $ldif = new Mozilla::LDAP::LDIF (*FILEHANDLE, \&read_reference, $comments);
+ $ldif = Mozilla::LDAP::LDIF->new(*FILEHANDLE, \&read_reference, $comments);
  @record = get $ldif;
  @records = get $ldif ($maximum_number);
  $entry = set_Entry (\entry, \@record);
  $entry = readOneEntry $ldif;
  @entries = readEntries $ldif ($maximum_number);
 
- $ldif = new Mozilla::LDAP::LDIF (*FILEHANDLE, $options);
+ $ldif = Mozilla::LDAP::LDIF->new(*FILEHANDLE, $options);
  $success = put $ldif (@record);
  $success = put $ldif (\@record, \object ...);
  $success = writeOneEntry $ldif (\entry);
@@ -990,7 +990,7 @@ Return false if the file can't be read.
 
 =over 4
 
-=item B<new> Mozilla::LDAP::LDIF (*FILEHANDLE, $options)
+=item Mozilla::LDAP::LDIF->B<new>(*FILEHANDLE, $options)
 
 Create and return an object used to write LDIF to the given file.
 $options are described below.
@@ -1222,14 +1222,14 @@ to pass it only a single record.
 
     use Mozilla::LDAP::LDIF qw(read_file_URL_or_name);
 
-    $in  = new Mozilla::LDAP::LDIF (*STDIN, \&read_file_URL_or_name);
-    $out = new Mozilla::LDAP::LDIF (*STDOUT, 78);
+    $in  = Mozilla::LDAP::LDIF->new(*STDIN, \&read_file_URL_or_name);
+    $out = Mozilla::LDAP::LDIF->new(*STDOUT, 78);
     @records = get $in (undef); # read to end of file (^D)
     put $out (@records);
 
     use Mozilla::LDAP::Conn();
 
-    $conn = new Mozilla::LDAP::Conn (...);
+    $conn = Mozilla::LDAP::Conn->new(...);
     while ($entry = readOneEntry $in) {
         add $conn ($entry);
     }

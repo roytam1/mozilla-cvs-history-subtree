@@ -61,7 +61,7 @@ $nocase = (defined($opt_i) && $opt_i) ? 1 : 0;
 # Let's process the changes requested, and commit them unless the "-n"
 # option was given.
 #
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 $conn->setDefaultRebindProc($ld{bind}, $ld{pswd});

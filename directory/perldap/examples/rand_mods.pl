@@ -73,7 +73,7 @@ if (!getopts('b:h:D:p:s:w:P:'))
    exit;
 }
 %ld = Mozilla::LDAP::Utils::ldapArgs();
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 croak "Could't connect to LDAP server $ld{host}" unless $conn;
 
 

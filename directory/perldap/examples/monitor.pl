@@ -55,7 +55,7 @@ if (!getopts('b:h:D:p:w:P:V:'))
 # Instantiate an LDAP object, which also binds to the LDAP server, and then
 # do the simple search.
 #
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 $entry = $conn->search($ld{root}, "base", "objectclass=*");

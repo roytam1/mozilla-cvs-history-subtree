@@ -1069,7 +1069,7 @@ directly. Failing to do so may actually break the functionality.
 
 To create a completely new entry, use the B<new> method, for instance
 
-    $entry = new Mozilla::LDAP::Entry()
+    $entry = Mozilla::LDAP::Entry->new()
     $entry->setDN("uid=leif,ou=people,dc=netscape,dc=com");
     $entry->{objectclass} = [ "top", "person", "inetOrgPerson" ];
     $entry->addValue("cn", "Leif Hedstrom");

@@ -60,7 +60,7 @@ die "Need to specify a list of attributes and the search filter.\n"
 #################################################################################
 # Do the searches, and produce the output.
 #
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 @attr = split(/,/, $attributes);

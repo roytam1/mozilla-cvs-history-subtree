@@ -287,7 +287,7 @@ sub userCredentials
     {
       my ($base) = $ld->{"base"} || $ld->{"root"};
 
-      $conn = new Mozilla::LDAP::Conn($ld);
+      $conn = Mozilla::LDAP::Conn->new($ld);
       die "Could't connect to LDAP server " . $ld->{"host"} unless $conn;
 
       $search = "(&(objectclass=inetOrgPerson)(uid=$ENV{USER}))";

@@ -165,7 +165,7 @@ sub readDump
       next unless /$DELIMITER/;
 
       @info = split(/\s*%%\s*/);
-      $entry = new PsoftEntry($info[$[]);
+      $entry = PsoftEntry->new($info[$[]);
       foreach $attr (@ORDER)
 	{
 	  $val = shift(@info);
@@ -243,7 +243,7 @@ if (!getopts('nvMWb:h:D:p:s:w:P:V:'))
 %ld = Mozilla::LDAP::Utils::ldapArgs();
 Mozilla::LDAP::Utils::userCredentials(\%ld) unless $opt_n;
 
-$out = new Mail();
+$out = Mail->new();
 if ($opt_M)
 {
   $out->set("to", $MAILTO);
@@ -261,7 +261,7 @@ else
 # which also binds to the LDAP server.
 #
 %psoft = readDump(@ARGV[$[]);
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 

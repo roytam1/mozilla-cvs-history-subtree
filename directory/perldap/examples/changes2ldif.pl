@@ -58,7 +58,7 @@ $ld{root} = "cn=changelog" if (!defined($ld{root}) || $ld{root} eq "");
 #################################################################################
 # Instantiate an LDAP object, which also binds to the LDAP server.
 #
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 

@@ -74,7 +74,7 @@ $crypted = Mozilla::LDAP::Utils::unixCrypt("$new");
 # Now do all the searches, one by one. If there are no search criteria, we
 # will change the password for the user running the script.
 #
-$conn = new Mozilla::LDAP::Conn(\%ld);
+$conn = Mozilla::LDAP::Conn->new(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 foreach $search ($#ARGV >= $[ ? @ARGV : $ld{bind})

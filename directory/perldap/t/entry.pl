@@ -72,7 +72,7 @@ sub getConn
     {
       if (!defined($main::mainConn))
 	{
-	  $main::mainConn = new Mozilla::LDAP::Conn(\%main::ld);
+	  $main::mainConn = Mozilla::LDAP::Conn->new(\%main::ld);
 	  die "Could't connect to LDAP server $main::ld{host}"
 	    unless $main::mainConn;
 	}
@@ -80,7 +80,7 @@ sub getConn
     }
   else
     {
-      $conn = new Mozilla::LDAP::Conn(\%main::ld);
+      $conn = Mozilla::LDAP::Conn->new(\%main::ld);
       die "Could't connect to LDAP server $main::ld{host}" unless $conn;
     }
 
