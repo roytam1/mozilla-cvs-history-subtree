@@ -111,6 +111,11 @@ RDFJSec_AddPrincipal(JSec_Principal pr)
   if (pr == NULL) {
     return JSec_NullObject;
   }
+  if (RDF_HasAssertion(gJSecDB, pr, gNavCenter->RDF_JSecPrincipal, gNavCenter->RDF_JSec, 
+                       RDF_RESOURCE_TYPE, PR_FALSE)) {
+    return JSec_OK;
+  }
+
   setContainerp(pr, PR_TRUE);
   setResourceType(pr, JSEC_RT);
   RDF_Assert(gJSecDB, pr, gNavCenter->RDF_JSecPrincipal, gNavCenter->RDF_JSec, RDF_RESOURCE_TYPE);  
@@ -155,6 +160,30 @@ RDFJSec_PrincipalID(JSec_Principal pr)
   return ans;
 }
 
+void *
+RDFJSec_AttributeOfPrincipal(JSec_Principal pr, char* attributeType)
+{
+  RDF_Resource attributeResource = RDF_GetResource(NULL, attributeType, TRUE);
+  void *attValue;
+  RDF_Cursor c = NULL;
+  c = RDF_GetTargets(gJSecDB, pr, attributeResource, RDF_STRING_TYPE,  TRUE);
+  if (c == NULL) {
+    return NULL;
+  }
+  attValue = RDF_NextValue(c);
+  RDF_DisposeCursor(c);
+  return attValue;
+}
+
+JSec_Error 
+RDFJSec_SetPrincipalAttribute(JSec_Principal pr, char* attributeType, void* attValue)
+{
+  RDF_Resource attributeResource = RDF_GetResource(NULL, attributeType, TRUE);
+  RDF_Assert(gJSecDB, pr, attributeResource, attValue, RDF_STRING_TYPE);  
+  return JSec_OK;
+}
+
+
 RDF_Cursor
 RDFJSec_ListAllPrincipalUses(JSec_Principal pr)
 {
@@ -186,12 +215,9 @@ RDFJSec_NewPrincipalUse(JSec_Principal pr, JSec_Target tr, char* priv)
   principalUseUnit = RDF_GetResource(NULL, principalUseID, FALSE);
   if (!principalUseUnit) {
     principalUseUnit = RDF_GetResource(NULL, principalUseID, TRUE);
-  } else {
-    RDFJSec_DeleteTargetToPrincipalUse(principalUseUnit, tr);
-    RDFJSec_DeletePrincipalUsePrivilege(principalUseUnit, priv);
-  }
-  RDFJSec_AddTargetToPrincipalUse(principalUseUnit, tr);
-  RDFJSec_AddPrincipalUsePrivilege(principalUseUnit, priv);
+    RDFJSec_AddTargetToPrincipalUse(principalUseUnit, tr);
+    RDFJSec_AddPrincipalUsePrivilege(principalUseUnit, priv);
+  } 
   return principalUseUnit;
 }
 
@@ -265,8 +291,6 @@ RDFJSec_PrivilegeOfPrincipalUse (JSec_PrincipalUse prUse)
     return NULL;
   }
   privilege = RDF_NextValue(c);
-  /* XXX: fix it */
-  PR_ASSERT(NULL == RDF_NextValue(c));
   RDF_DisposeCursor(c);
   return privilege;
 }
@@ -303,21 +327,21 @@ RDFJSec_TargetOfPrincipalUse (JSec_PrincipalUse prUse)
   if (prUse == NULL) {
     return NULL;
   }
-  c = RDF_GetTargets(gJSecDB, (RDF_Resource)prUse, gNavCenter->RDF_JSecTarget, RDF_STRING_TYPE,  true);
+  c = RDF_GetTargets(gJSecDB, (RDF_Resource)prUse, gNavCenter->RDF_JSecTarget, RDF_RESOURCE_TYPE,  true);
   if (c == NULL) {
     return NULL;
   }
   tr = RDF_NextValue(c);
-  /* XXX: fix it */
-  PR_ASSERT(NULL == RDF_NextValue(c));
   RDF_DisposeCursor(c);
   return tr;
 }
 
 JSec_Target
-RDFJSec_NewTarget(char* targetName, char *principalID)
+RDFJSec_NewTarget(char* targetName, JSec_Principal pr)
 {
   RDF_Resource tr;
+  RDF_Resource prResource;
+  char *principalID = RDFJSec_PrincipalID(pr);
   char *targetID = getMem(strlen(targetName) + strlen(principalID) + 2);
   if (targetID == NULL) {
     return NULL;
@@ -330,9 +354,15 @@ RDFJSec_NewTarget(char* targetName, char *principalID)
       return NULL;
     }
     RDFJSec_SetTargetAttribute(tr, "targetName", targetName);
-    RDFJSec_SetTargetAttribute(tr, "principalID", principalID);
+    RDF_Assert(gJSecDB, tr, gNavCenter->RDF_JSecPrincipal, pr, RDF_RESOURCE_TYPE);  
   } 
   return tr;
+}
+
+char *
+RDFJSec_GetTargetName(JSec_Target tr)
+{
+  return RDFJSec_AttributeOfTarget(tr, "targetName");
 }
 
 char *
@@ -346,8 +376,6 @@ RDFJSec_AttributeOfTarget(JSec_Target tr, char* attributeType)
     return NULL;
   }
   attValue = RDF_NextValue(c);
-  /* XXX: fix it */
-  PR_ASSERT(NULL == RDF_NextValue(c));
   RDF_DisposeCursor(c);
   return attValue;
 }
@@ -359,6 +387,5 @@ RDFJSec_SetTargetAttribute(JSec_Target tr, char* attributeType, char* attValue)
   RDF_Assert(gJSecDB, tr, attributeResource, attValue, RDF_STRING_TYPE);  
   return JSec_OK;
 }
-
 
 NSPR_END_EXTERN_C

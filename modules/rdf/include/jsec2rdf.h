@@ -44,6 +44,8 @@ JSec_Principal     RDFJSec_NewPrincipal(char* principalID);
 JSec_Error         RDFJSec_AddPrincipal(JSec_Principal pr);
 JSec_Error         RDFJSec_DeletePrincipal(JSec_Principal pr);
 char*              RDFJSec_PrincipalID(JSec_Principal pr);
+void *             RDFJSec_AttributeOfPrincipal(JSec_Principal pr, char* attributeType);
+JSec_Error         RDFJSec_SetPrincipalAttribute(JSec_Principal pr, char* attributeType, void* attValue);
 
 RDF_Cursor         RDFJSec_ListAllPrincipalUses(JSec_Principal pr);
 JSec_PrincipalUse  RDFJSec_NextPrincipalUse(RDF_Cursor c);
@@ -60,13 +62,10 @@ JSec_Error         RDFJSec_AddTargetToPrincipalUse(JSec_PrincipalUse prUse, JSec
 JSec_Error         RDFJSec_DeleteTargetToPrincipalUse(JSec_PrincipalUse prUse, JSec_Target tr);
 JSec_Target        RDFJSec_TargetOfPrincipalUse (JSec_PrincipalUse p);
 
-JSec_Target        RDFJSec_NewTarget(char* targetName, char *principalID);
+JSec_Target        RDFJSec_NewTarget(char* targetName, JSec_Principal pr);
+char*              RDFJSec_GetTargetName(JSec_Target tr);
 char*              RDFJSec_AttributeOfTarget(JSec_Target tr, char* attributeType);
 JSec_Error         RDFJSec_SetTargetAttribute(JSec_Target tr, char* attributeType, char* attValue);
-
-char *		   RDFJSec_GetPrincipalURLString(char *principalID);
-const char *	   RDFJSec_PrincipalUseID(JSec_PrincipalUse prUse);
-
 
 NSPR_END_EXTERN_C
 

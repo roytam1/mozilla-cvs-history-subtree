@@ -180,7 +180,7 @@ createNavCenterVocab () {
   setResourceType(gNavCenter->RDF_Cookies, COOKIE_RT);
   gNavCenter->RDF_Toolbar = createContainer("NC:Toolbar");
   gNavCenter->RDF_JSec = createContainer("NC:Jsec");
-  gNavCenter->RDF_JSecTarget = RDF_GetResource(gCoreDB, "JsecPrincipal", true);
+  gNavCenter->RDF_JSecPrincipal = RDF_GetResource(gCoreDB, "JsecPrincipal", true);
   gNavCenter->RDF_JSecTarget = RDF_GetResource(gCoreDB, "JsecTarget", true);
   gNavCenter->RDF_JSecAccess = RDF_GetResource(gCoreDB, "JsecAccess", true);
 
