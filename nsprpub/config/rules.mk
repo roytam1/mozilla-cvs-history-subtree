@@ -267,7 +267,7 @@ else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
 endif
 endif
-ifdef BUILD_OPT
+ifdef ENABLE_STRIP
 	$(STRIP) $@
 endif
 
@@ -324,10 +324,9 @@ endif	# OpenVMS
 endif   # OS2
 endif	# WINNT
 endif	# AIX 4.1
-ifdef BUILD_OPT
+ifdef ENABLE_STRIP
 	$(STRIP) $@
 endif
-
 
 ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 $(RES): $(RESNAME)
