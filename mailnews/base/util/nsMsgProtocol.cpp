@@ -21,12 +21,9 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsISocketTransportService.h"
 #include "nsIFileTransportService.h"
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
-static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 NS_IMPL_ISUPPORTS(nsMsgProtocol, nsIStreamListener::GetIID())
 
@@ -186,22 +183,10 @@ nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 		rv = aMsgUrl->SetUrlState(PR_TRUE, NS_OK); // set the url as a url currently being run...
 		if (!m_socketIsOpen)
 		{
-
-			// in order to run a url, we need to know our current event queue...
-			// Create the Event Queue for this thread...
-			NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &rv);
-			if (NS_SUCCEEDED(rv))
-			{
-				nsCOMPtr<nsIEventQueue> queue;
-				rv = pEventQService->GetThreadEventQueue(PR_GetCurrentThread(),getter_AddRefs(queue));
-				if (NS_SUCCEEDED(rv))
-				{
-					// put us in a state where we are always notified of incoming data
-					m_channel->AsyncRead(0, -1, aURL, queue, this /* stream observer */ );
-					m_socketIsOpen = PR_TRUE; // mark the channel as open
-				}
-			} // if we got an event queue service
-		}
+			// put us in a state where we are always notified of incoming data
+			m_channel->AsyncRead(0, -1, aURL,this /* stream observer */ );
+			m_socketIsOpen = PR_TRUE; // mark the channel as open
+		} // if we got an event queue service
 		else  // the connection is already open so we should begin processing our new url...
 			rv = ProcessProtocolState(aURL, nsnull, 0, 0); 
 	}
