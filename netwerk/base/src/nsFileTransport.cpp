@@ -513,8 +513,10 @@ nsFileTransport::Process(void)
             // of the data in the stream/file.
             mStatus = NS_BASE_STREAM_CLOSED;
         }
-        mOutputStream->Flush();
-        mOutputStream = null_nsCOMPtr();
+        if (mOutputStream) {
+            mOutputStream->Flush();
+            mOutputStream = null_nsCOMPtr();
+        }
         mInputStream = null_nsCOMPtr();
 
         mSource = null_nsCOMPtr();
