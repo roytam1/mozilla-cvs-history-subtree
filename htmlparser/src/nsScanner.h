@@ -201,9 +201,6 @@ class nsScanner {
                               nsScannerIterator& aEnd,
                               PRBool allowPunct=PR_FALSE);
       nsresult ReadNumber(nsString& aString,PRInt32 aBase);
-      nsresult ReadNumber(nsScannerIterator& aStart, 
-                          nsScannerIterator& aEnd,
-                          PRInt32 aBase);
       nsresult ReadWhitespace(nsString& aString, 
                               PRInt32& aNewlinesSkipped);
       nsresult ReadWhitespace(nsScannerIterator& aStart, 
@@ -370,6 +367,7 @@ class nsScanner {
 
       void AppendToBuffer(nsScannerString::Buffer*);
       void AppendToBuffer(const nsAString& aStr) { AppendToBuffer(nsScannerString::AllocBufferFromString(aStr)); }
+      void AppendASCIItoBuffer(const char* aData, PRUint32 aLen);
 
       nsCOMPtr<nsIInputStream>     mInputStream;
       nsScannerString*             mSlidingBuffer;

@@ -47,6 +47,7 @@
 #include "nsIInputStream.h"
 #include "nsILocalFile.h"
 #include "nsNetUtil.h"
+#include "nsUTF8Utils.h" // for LossyConvertEncoding
 
 static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 
@@ -378,7 +379,7 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
     res = NS_OK; 
   }
   else {
-    AppendToBuffer(NS_ConvertASCIItoUTF16(aBuffer, aLen));
+    AppendASCIItoBuffer(aBuffer, aLen);
     mTotalRead+=aLen;
   }
 
@@ -416,17 +417,14 @@ nsresult nsScanner::FillBuffer(void) {
     buf[kBufsize]=0;
 
     // XXX use ReadSegments to avoid extra buffer copy? --darin
-    // XXX we know that mInputStream is non-null !!
 
-    if(mInputStream) {
-    	result = mInputStream->Read(buf, kBufsize, &numread);
-      if (0 == numread) {
-        return kEOF;
-      }
+    result = mInputStream->Read(buf, kBufsize, &numread);
+    if (0 == numread) {
+      return kEOF;
     }
 
     if((0<numread) && (0==result)) {
-      AppendToBuffer(NS_ConvertASCIItoUTF16(buf, numread));
+      AppendASCIItoBuffer(buf, numread);
     }
     mTotalRead+=numread;
   }
@@ -970,54 +968,6 @@ nsresult nsScanner::ReadNumber(nsString& aString,PRInt32 aBase) {
   return result;
 }
 
-// XXX looks like this is unused --darin
-nsresult nsScanner::ReadNumber(nsScannerIterator& aStart,
-                               nsScannerIterator& aEnd,
-                               PRInt32 aBase) {
-
-  if (!mSlidingBuffer) {
-    return kEOF;
-  }
-
-  NS_ASSERTION(aBase == 10 || aBase == 16,"base value not supported");
-
-  PRUnichar         theChar=0;
-  nsresult          result=Peek(theChar);
-  nsScannerIterator origin, current, end;
-
-  origin = mCurrentPosition;
-  current = origin;
-  end = mEndPosition;
-
-  PRBool done = PR_FALSE;
-  while(current != end) {
-    theChar=*current;
-    if(theChar) {
-      done = (theChar < '0' || theChar > '9') && 
-             ((aBase == 16)? (theChar < 'A' || theChar > 'F') &&
-                             (theChar < 'a' || theChar > 'f')
-                             :PR_TRUE);
-      if(done) {
-        aStart = origin;
-        aEnd = current;
-        break;
-      }
-    }
-    ++current;
-  }
-
-  SetPosition(current);
-  if (current == end) {
-    aStart = origin;
-    aEnd = current;
-    return Eof();
-  }
-
-  //DoErrTest(aString);
-
-  return result;
-}
-
 /**
  *  Consume characters until you find the terminal char
  *  
@@ -1414,6 +1364,18 @@ void nsScanner::AppendToBuffer(nsScannerString::Buffer* aBuf)
     }
     mSlidingBuffer->EndReading(mEndPosition);
     mCountRemaining += aBuf->DataLength();
+  }
+}
+
+void nsScanner::AppendASCIItoBuffer(const char* aData, PRUint32 aLen)
+{
+  nsScannerString::Buffer* buf = nsScannerString::AllocBuffer(aLen);
+  if (buf)
+  {
+    LossyConvertEncoding<char, PRUnichar> converter(buf->DataStart());
+    converter.write(aData, aLen);
+    converter.write_terminator();
+    AppendToBuffer(buf);
   }
 }
 

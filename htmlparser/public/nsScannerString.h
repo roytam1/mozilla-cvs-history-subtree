@@ -325,8 +325,8 @@ class nsScannerIterator
 
     public:
       nsScannerIterator() {}
-      // nsScannerIterator( const nsScannerIterator& );                    // auto-generated copy-constructor OK
-      // nsScannerIterator<CharT>& operator=( const nsScannerIterator& );  // auto-generated copy-assignment operator OK
+      // nsScannerIterator( const nsScannerIterator& );             // auto-generated copy-constructor OK
+      // nsScannerIterator& operator=( const nsScannerIterator& );  // auto-generated copy-assignment operator OK
 
       inline void normalize_forward();
       inline void normalize_backward();
