@@ -169,12 +169,7 @@ void row_callback( png_structp png_ptr,  png_bytep new_row,
     il_container *ic = (il_container *)png_ptr->io_ptr;  
 
 	if(new_row){
-#if 0
-      if(png_ptr->color_type & PNG_COLOR_MASK_ALPHA){
-        il_get_alpha_channel(new_row, png_ptr->width, (uint8 *)ic->mask->bits, ic->mask->header.width);
-        png_set_strip_alpha(png_ptr);
-      }
-#endif 
+
   		ic->imgdcb->ImgDCBHaveRow( 0,  new_row, 0, png_ptr->width, 
         row_num, 1, ilErase /* ilOverlay */, png_ptr->pass );
     
