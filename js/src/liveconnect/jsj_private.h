@@ -257,13 +257,13 @@ extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException
 extern jmethodID njJSException_JSException_wrap;/*netscape.javascipt.JSException alternate constructor */
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
-extern jmethodID njJSException_getWrappedExceptionType;       /* netscape.javascript.JSException.getWrappedExceptionType() */
-extern jmethodID njJSException_getWrappedException;       /* netscape.javascript.JSException.getWrappedException() */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
 extern jfieldID njJSException_lineno;          /* netscape.javascript.JSException.lineno */
 extern jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 extern jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 extern jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
+extern jfieldID njJSException_wrappedExceptionType;        /* netscape.javascript.JSException.wrappedExceptionType */
+extern jfieldID njJSException_wrappedException;        /* netscape.javascript.JSException.wrappedException */
 
 /**************** Java <==> JS conversions and Java types *******************/
 extern JSBool

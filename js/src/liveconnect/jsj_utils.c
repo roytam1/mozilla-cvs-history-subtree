@@ -217,14 +217,8 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     const char *java_stack_trace;
     const char *java_error_msg;
     jthrowable java_exception;
-    JSType wrappedExceptionType;
+    JSType wrapped_exception_type;
     jsval js_exception;
-    
-    /* All this just to get a class descriptor. Go figure.*/
-    js_obj = JS_GetGlobalObject(cx);
-    java_wrapper = JS_GetPrivate(cx, js_obj); 
-    java_obj = java_wrapper->java_obj; 
-    class_descriptor = java_wrapper->class_descriptor; 
     
     /* Get the exception out of the java environment. */
     java_error_msg = NULL;
@@ -235,22 +229,23 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
         if (njJSException && 
             (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
 
-            wrappedExceptionType = 
-                (*jEnv)->CallIntMethod(jEnv, java_exception,
-                                       njJSException_getWrappedExceptionType);
-                
-            if (wrappedExceptionType != JSTYPE_EMPTY) {
+            wrapped_exception_type = 
+                (*jEnv)->GetIntField(jEnv, java_exception,
+                                     njJSException_wrappedExceptionType);
+            
+            if (wrapped_exception_type != JSTYPE_EMPTY) {
                 java_obj = 
-                    (*jEnv)->CallObjectMethod(jEnv, java_exception, 
-                        njJSException_getWrappedException);
-                
-                if (java_obj == NULL) {
-                    jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
-                    return;
-                } 
+                    (*jEnv)->GetObjectField(jEnv, java_exception, 
+                                            njJSException_wrappedException);
+
+                /* All this just to get a class descriptor. Go figure.*/
+                js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_obj);
+                java_wrapper = JS_GetPrivate(cx, js_obj); 
+                java_obj = java_wrapper->java_obj; 
+                class_descriptor = java_wrapper->class_descriptor; 
 
                 /* Convert native JS values back to native types. */
-                switch(wrappedExceptionType) {
+                switch(wrapped_exception_type) {
                 case JSTYPE_NUMBER:
                     if (!jsj_ConvertJavaObjectToJSNumber(cx, jEnv,
                                                          class_descriptor,
@@ -294,20 +289,12 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
             }
         }
 
-        /* Free resources associated with java_wrapper */
-        jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
-        JS_free(cx, java_wrapper);
-        
         /* Set pending JS exception and clear the java exception. */
         JS_SetPendingException(cx, js_exception);                        
         (*jEnv)->ExceptionClear(jEnv);
         return;
     }
 do_report:
-
-    /* Free resources associated with java_wrapper */
-    jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
-    JS_free(cx, java_wrapper);
 
     js_error_msg = JS_vsmprintf(format, ap);
 
