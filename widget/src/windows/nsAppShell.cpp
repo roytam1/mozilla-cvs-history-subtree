@@ -144,18 +144,6 @@ NS_METHOD nsAppShell::Run(void)
         } else {
           // Block and wait for any posted application message
           ::WaitMessage();
-          PRBool hasTimers;
-          timerManager->HasIdleTimers(&hasTimers);
-          if (hasTimers) {
-            do {
-              timerManager->FireNextIdleTimer();
-              timerManager->HasIdleTimers(&hasTimers);
-            } while (hasTimers && !::PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE));
-          } else {
-            // Block and wait for any posted application message
-            ::WaitMessage();
-          }
-
         }
       }
     }
@@ -194,8 +182,17 @@ nsAppShell::GetNativeEvent(PRBool &aRealEvent, void *&aEvent)
 
       gotMessage = true;
     } else {
-       // Block and wait for any posted application message
-      ::WaitMessage();
+      PRBool hasTimers;
+      timerManager->HasIdleTimers(&hasTimers);
+      if (hasTimers) {
+        do {
+          timerManager->FireNextIdleTimer();
+          timerManager->HasIdleTimers(&hasTimers);
+        } while (hasTimers && !::PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE));
+      } else {
+        // Block and wait for any posted application message
+        ::WaitMessage();
+      }
     }
 
   } while (!gotMessage);
