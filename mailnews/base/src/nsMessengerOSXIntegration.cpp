@@ -296,7 +296,7 @@ nsMessengerOSXIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom 
 }
 
 NS_IMETHODIMP
-nsMessengerOSXIntegration::OnItemAdded(nsIRDFResource *, nsISupports *)
+nsMessengerOSXIntegration::OnItemAdded(nsISupports *, nsISupports *, const char *)
 {
   return NS_OK;
 }
