@@ -45,6 +45,7 @@ XPIDLSRCS = \
 	.\nsIXPCSecurityManager.idl \
 	.\nsIXPCScriptable.idl \
 	.\nsIScriptError.idl \
+	.\mozIJSSubScriptLoader.idl \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -44,6 +44,7 @@
 #include "jsarena.h" /* Added by JSIFY */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsclist.h"
+#include "jsdhash.h"
 #include "jsprf.h"
 #include "jsapi.h"
 #include "jsarray.h"
@@ -88,28 +89,24 @@
 JS_PUBLIC_API(jsval)
 JS_GetNaNValue(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return DOUBLE_TO_JSVAL(cx->runtime->jsNaN);
 }
 
 JS_PUBLIC_API(jsval)
 JS_GetNegativeInfinityValue(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return DOUBLE_TO_JSVAL(cx->runtime->jsNegativeInfinity);
 }
 
 JS_PUBLIC_API(jsval)
 JS_GetPositiveInfinityValue(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return DOUBLE_TO_JSVAL(cx->runtime->jsPositiveInfinity);
 }
 
 JS_PUBLIC_API(jsval)
 JS_GetEmptyStringValue(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return STRING_TO_JSVAL(cx->runtime->emptyString);
 }
 
@@ -598,7 +595,6 @@ JS_TypeOfValue(JSContext *cx, jsval v)
 JS_PUBLIC_API(const char *)
 JS_GetTypeName(JSContext *cx, JSType type)
 {
-    CHECK_REQUEST(cx);
     if ((uintN)type >= (uintN)JSTYPE_LIMIT)
 	return NULL;
     return js_type_str[type];
@@ -929,7 +925,6 @@ JS_SetVersion(JSContext *cx, JSVersion version)
 {
     JSVersion oldVersion;
 
-    CHECK_REQUEST(cx);
     oldVersion = cx->version;
     if (version == oldVersion)
         return oldVersion;
@@ -1010,7 +1005,7 @@ JS_ToggleOptions(JSContext *cx, uint32 options)
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
-    return "JavaScript-C 1.5 pre-release 1 1999 10 31";
+    return "JavaScript-C 1.5 pre-release 3 2001-03-07";
 }
 
 
@@ -1422,7 +1417,6 @@ JS_EnumerateStandardClasses(JSContext *cx, JSObject *obj)
 JS_PUBLIC_API(JSObject *)
 JS_GetScopeChain(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return cx->fp ? cx->fp->scopeChain : NULL;
 }
 
@@ -1495,6 +1489,12 @@ JS_AddRoot(JSContext *cx, void *rp)
 }
 
 JS_PUBLIC_API(JSBool)
+JS_AddNamedRootRT(JSRuntime *rt, void *rp, const char *name)
+{
+    return js_AddRootRT(rt, rp, name);
+}
+
+JS_PUBLIC_API(JSBool)
 JS_RemoveRoot(JSContext *cx, void *rp)
 {
     CHECK_REQUEST(cx);
@@ -1514,9 +1514,9 @@ JS_AddNamedRoot(JSContext *cx, void *rp, const char *name)
     return js_AddRoot(cx, rp, name);
 }
 
-#ifdef DEBUG
-
 #include "jshash.h" /* Added by JSIFY */
+
+#ifdef DEBUG
 
 typedef struct NamedRootDumpArgs {
     void (*dump)(const char *name, void *rp, void *data);
@@ -1529,7 +1529,7 @@ js_named_root_dumper(JSHashEntry *he, intN i, void *arg)
     NamedRootDumpArgs *args = (NamedRootDumpArgs *) arg;
 
     if (he->value)
-	args->dump((char *) he->value, (void *)he->key, args->data);
+	args->dump((char *)he->value, (void *)he->key, args->data);
     return HT_ENUMERATE_NEXT;
 }
 
@@ -1546,6 +1546,48 @@ JS_DumpNamedRoots(JSRuntime *rt,
 }
 
 #endif /* DEBUG */
+
+typedef struct GCRootMapArgs {
+    JSGCRootMapFun map;
+    void *data;
+} GCRootMapArgs;
+
+JS_STATIC_DLL_CALLBACK(intN)
+js_gcroot_mapper(JSHashEntry *he, intN i, void *arg)
+{
+    GCRootMapArgs *args = (GCRootMapArgs *) arg;
+    intN mapflags, htflags;
+
+    mapflags = args->map((void *)he->key, (char *)he->value, args->data);
+
+#if JS_MAP_GCROOT_NEXT == HT_ENUMERATE_NEXT &&                                \
+    JS_MAP_GCROOT_STOP == HT_ENUMERATE_STOP &&                                \
+    JS_MAP_GCROOT_REMOVE == HT_ENUMERATE_REMOVE
+    htflags = mapflags;
+#else
+    htflags = HT_ENUMERATE_NEXT;
+    if (mapflags & JS_MAP_GCROOT_STOP)
+        htflags |= HT_ENUMERATE_STOP;
+    if (mapflags & JS_MAP_GCROOT_REMOVE)
+        htflags |= HT_ENUMERATE_REMOVE;
+#endif
+
+    return htflags;
+}
+
+JS_PUBLIC_API(intN)
+JS_MapGCRoots(JSRuntime *rt, JSGCRootMapFun map, void *data)
+{
+    GCRootMapArgs args;
+    intN rv;
+
+    args.map = map;
+    args.data = data;
+    JS_LOCK_GC(rt);
+    rv = JS_HashTableEnumerateEntries(rt->gcRootsHash, js_gcroot_mapper, &args);
+    JS_UNLOCK_GC(rt);
+    return rv;
+}
 
 JS_PUBLIC_API(JSBool)
 JS_LockGCThing(JSContext *cx, void *thing)
@@ -1699,28 +1741,24 @@ JS_IdToValue(JSContext *cx, jsid id, jsval *vp)
 JS_PUBLIC_API(JSBool)
 JS_PropertyStub(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
-    CHECK_REQUEST(cx);
     return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
 JS_EnumerateStub(JSContext *cx, JSObject *obj)
 {
-    CHECK_REQUEST(cx);
     return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
 JS_ResolveStub(JSContext *cx, JSObject *obj, jsval id)
 {
-    CHECK_REQUEST(cx);
     return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
 JS_ConvertStub(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 {
-    CHECK_REQUEST(cx);
 #if JS_BUG_EAGER_TOSTRING
     if (type == JSTYPE_STRING)
 	return JS_TRUE;
@@ -1813,14 +1851,12 @@ bad:
 JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSContext *cx, JSObject *obj)
 {
-    CHECK_REQUEST(cx);
     return OBJ_GET_CLASS(cx, obj);
 }
 #else
 JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSObject *obj)
 {
-    CHECK_REQUEST(cx);
     return LOCKED_OBJ_GET_CLASS(obj);
 }
 #endif
@@ -1850,7 +1886,6 @@ JS_GetPrivate(JSContext *cx, JSObject *obj)
 {
     jsval v;
 
-    CHECK_REQUEST(cx);
     JS_ASSERT(OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_HAS_PRIVATE);
     v = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     if (!JSVAL_IS_INT(v))
@@ -1861,7 +1896,6 @@ JS_GetPrivate(JSContext *cx, JSObject *obj)
 JS_PUBLIC_API(JSBool)
 JS_SetPrivate(JSContext *cx, JSObject *obj, void *data)
 {
-    CHECK_REQUEST(cx);
     JS_ASSERT(OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_HAS_PRIVATE);
     OBJ_SET_SLOT(cx, obj, JSSLOT_PRIVATE, PRIVATE_TO_JSVAL(data));
     return JS_TRUE;
@@ -1871,7 +1905,6 @@ JS_PUBLIC_API(void *)
 JS_GetInstancePrivate(JSContext *cx, JSObject *obj, JSClass *clasp,
 		      jsval *argv)
 {
-    CHECK_REQUEST(cx);
     if (!JS_InstanceOf(cx, obj, clasp, argv))
 	return NULL;
     return JS_GetPrivate(cx, obj);
@@ -1904,7 +1937,6 @@ JS_GetParent(JSContext *cx, JSObject *obj)
 {
     JSObject *parent;
 
-    CHECK_REQUEST(cx);
     parent = JSVAL_TO_OBJECT(OBJ_GET_SLOT(cx, obj, JSSLOT_PARENT));
 
     /* Beware ref to dead object (we may be called from obj's finalizer). */
@@ -2452,7 +2484,6 @@ JS_NewArrayObject(JSContext *cx, jsint length, jsval *vector)
 JS_PUBLIC_API(JSBool)
 JS_IsArrayObject(JSContext *cx, JSObject *obj)
 {
-    CHECK_REQUEST(cx);
     return OBJ_GET_CLASS(cx, obj) == &js_ArrayClass;
 }
 
@@ -3130,7 +3161,7 @@ JS_ExecuteScriptPart(JSContext *cx, JSObject *obj, JSScript *script,
     JSScript tmp;
     JSRuntime *rt;
     JSBool ok;
-    
+
     /* Make a temporary copy of the JSScript structure and farble it a bit. */
     tmp = *script;
     if (part == JSEXEC_PROLOG) {
@@ -3279,7 +3310,6 @@ JS_SetBranchCallback(JSContext *cx, JSBranchCallback cb)
 {
     JSBranchCallback oldcb;
 
-    CHECK_REQUEST(cx);
     oldcb = cx->branchCallback;
     cx->branchCallback = cb;
     return oldcb;
@@ -3294,7 +3324,6 @@ JS_IsRunning(JSContext *cx)
 JS_PUBLIC_API(JSBool)
 JS_IsConstructing(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
     return cx->fp && cx->fp->constructing;
 }
 
@@ -3468,7 +3497,6 @@ JS_ReportError(JSContext *cx, const char *format, ...)
 {
     va_list ap;
 
-    CHECK_REQUEST(cx);
     va_start(ap, format);
     js_ReportErrorVA(cx, JSREPORT_ERROR, format, ap);
     va_end(ap);
@@ -3480,7 +3508,6 @@ JS_ReportErrorNumber(JSContext *cx, JSErrorCallback errorCallback,
 {
     va_list ap;
 
-    CHECK_REQUEST(cx);
     va_start(ap, errorNumber);
     js_ReportErrorNumberVA(cx, JSREPORT_ERROR, errorCallback, userRef,
 			   errorNumber, JS_TRUE, ap);
@@ -3493,7 +3520,6 @@ JS_ReportErrorNumberUC(JSContext *cx, JSErrorCallback errorCallback,
 {
     va_list ap;
 
-    CHECK_REQUEST(cx);
     va_start(ap, errorNumber);
     js_ReportErrorNumberVA(cx, JSREPORT_ERROR, errorCallback, userRef,
 			   errorNumber, JS_FALSE, ap);
@@ -3520,7 +3546,6 @@ JS_ReportErrorFlagsAndNumber(JSContext *cx, uintN flags,
     va_list ap;
     JSBool ok;
 
-    CHECK_REQUEST(cx);
     va_start(ap, errorNumber);
     ok = js_ReportErrorNumberVA(cx, flags, errorCallback, userRef,
                                 errorNumber, JS_TRUE, ap);
@@ -3536,7 +3561,6 @@ JS_ReportErrorFlagsAndNumberUC(JSContext *cx, uintN flags,
     va_list ap;
     JSBool ok;
 
-    CHECK_REQUEST(cx);
     va_start(ap, errorNumber);
     ok = js_ReportErrorNumberVA(cx, flags, errorCallback, userRef,
                                 errorNumber, JS_FALSE, ap);
@@ -3555,7 +3579,6 @@ JS_SetErrorReporter(JSContext *cx, JSErrorReporter er)
 {
     JSErrorReporter older;
 
-    CHECK_REQUEST(cx);
     older = cx->errorReporter;
     cx->errorReporter = er;
     return older;
@@ -3631,7 +3654,6 @@ JS_ClearRegExpRoots(JSContext *cx)
 {
     JSRegExpStatics *res;
 
-    CHECK_REQUEST(cx);
     /* No locking required, cx is thread-private and input must be live. */
     res = &cx->regExpStatics;
     res->input = NULL;
@@ -3648,7 +3670,7 @@ JS_SetLocaleCallbacks(JSContext *cx, JSLocaleCallbacks *callbacks)
     cx->localeCallbacks = callbacks;
 }
 
-JS_PUBLIC_API(JSLocaleCallbacks *) 
+JS_PUBLIC_API(JSLocaleCallbacks *)
 JS_GetLocaleCallbacks(JSContext *cx)
 {
     return cx->localeCallbacks;
@@ -3659,7 +3681,6 @@ JS_GetLocaleCallbacks(JSContext *cx)
 JS_PUBLIC_API(JSBool)
 JS_IsExceptionPending(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
 #if JS_HAS_EXCEPTIONS
     return (JSBool) cx->throwing;
 #else
@@ -3670,8 +3691,8 @@ JS_IsExceptionPending(JSContext *cx)
 JS_PUBLIC_API(JSBool)
 JS_GetPendingException(JSContext *cx, jsval *vp)
 {
-    CHECK_REQUEST(cx);
 #if JS_HAS_EXCEPTIONS
+    CHECK_REQUEST(cx);
     if (!cx->throwing)
 	return JS_FALSE;
     *vp = cx->exception;
@@ -3694,7 +3715,6 @@ JS_SetPendingException(JSContext *cx, jsval v)
 JS_PUBLIC_API(void)
 JS_ClearPendingException(JSContext *cx)
 {
-    CHECK_REQUEST(cx);
 #if JS_HAS_EXCEPTIONS
     cx->throwing = JS_FALSE;
 #endif

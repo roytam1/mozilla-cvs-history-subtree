@@ -373,6 +373,27 @@ endif
 endif
 
 #
+# On NetBSD a.out systems, use -Bsymbolic.  This fixes what would otherwise be
+# fatal symbol name clashes between components.
+#
+ifeq ($(OS_ARCH),NetBSD)
+ifeq ($(DLL_SUFFIX),.so.1.0)
+ifdef IS_COMPONENT
+EXTRA_DSO_LDOPTS += -Wl,-Bsymbolic
+endif
+endif
+endif
+
+ifeq ($(OS_ARCH),NetBSD)
+ifneq (,$(filter arc cobalt hpcmips mipsco newsmips pmax sgimips,$(OS_TEST)))
+ifeq ($(MODULE),layout)
+OS_CFLAGS += -Wa,-xgot
+OS_CXXFLAGS += -Wa,-xgot
+endif
+endif
+endif
+
+#
 # HP-UXBeOS specific section: for COMPONENTS only, add -Bsymbolic flag
 # which uses internal symbols first
 #
@@ -697,10 +718,14 @@ $(DEF_FILE): $(DEF_OBJS)
 	@cmd /C "echo CODE    LOADONCALL MOVEABLE DISCARDABLE >>$(DEF_FILE)"
 	@cmd /C "echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >>$(DEF_FILE)"        
 	@cmd /C "echo EXPORTS >>$(DEF_FILE)"
-ifeq ($(XPCOM_SWITCH),1)
+ifeq ($(IS_COMPONENT),1)
+ifeq ($(HAS_EXTRAEXPORTS),1)
 	$(FILTER) $(DEF_OBJS) >> $(DEF_FILE)
 else
-	$(FILTER) $(DEF_OBJS) | grep -v getter_Copies__FR| grep -v getc | grep -v putc | grep -v __ctime >> $(DEF_FILE)
+	@cmd /C "echo    NSGetModule>>$(DEF_FILE)"
+endif
+else
+	$(FILTER) $(DEF_OBJS) >> $(DEF_FILE)
 endif
 	$(ADD_TO_DEF_FILE)
 $(IMPORT_LIBRARY): $(OBJS) $(DEF_FILE)
@@ -1154,20 +1179,18 @@ endif
 
 JAR_MANIFEST := $(srcdir)/jar.mn
 
-ifdef MOZ_DISABLE_JAR_PACKAGING
-_JAR_FLAT_FILES_ONLY=-f
-_JAR_REGCHROME_JAR=1
+ifeq (flat,$(MOZ_CHROME_FILE_FORMAT))
+_JAR_REGCHROME_DISABLE_JAR=1
 else
-_JAR_FLAT_FILES_ONLY=
-_JAR_REGCHROME_JAR=0
+_JAR_REGCHROME_DISABLE_JAR=0
 endif
 
 chrome:: $(CHROME_DEPS)
-	@if test -f $(JAR_MANIFEST); then $(PERL) $(MOZILLA_DIR)/config/make-jars.pl $(_JAR_FLAT_FILES_ONLY) -d $(DIST)/bin/chrome -s $(srcdir) < $(JAR_MANIFEST); fi
+	@if test -f $(JAR_MANIFEST); then $(PERL) $(MOZILLA_DIR)/config/make-jars.pl -f $(MOZ_CHROME_FILE_FORMAT) -d $(DIST)/bin/chrome -s $(srcdir) < $(JAR_MANIFEST); fi
 
 install:: chrome
 
-REGCHROME = $(PERL) $(MOZILLA_DIR)/config/add-chrome.pl $(DIST)/bin/chrome/installed-chrome.txt $(_JAR_REGCHROME_JAR)
+REGCHROME = $(PERL) $(MOZILLA_DIR)/config/add-chrome.pl $(DIST)/bin/chrome/installed-chrome.txt $(_JAR_REGCHROME_DISABLE_JAR)
 
 ##############################################################################
 
@@ -1413,7 +1436,7 @@ showbuild:
 	@echo "OS_CFLAGS          = $(OS_CFLAGS)"
 	@echo "COMPILE_CFLAGS     = $(COMPILE_CFLAGS)"
 	@echo "CXXFLAGS           = $(CXXFLAGS)"
-	@echo "OS_CXXFLAGS        = $(OS_CFXXFLAGS)"
+	@echo "OS_CXXFLAGS        = $(OS_CXXFLAGS)"
 	@echo "COMPILE_CXXFLAGS   = $(COMPILE_CXXFLAGS)"
 	@echo "LDFLAGS            = $(LDFLAGS)"
 	@echo "OS_LDFLAGS         = $(OS_LDFLAGS)"

@@ -60,6 +60,7 @@ CPPSRCS		= \
 		xpcnativecallcontext.cpp \
 		xpcruntimesvc.cpp \
 		xpcstack.cpp \
+		xpcstring.cpp \
 		xpcthreadcontext.cpp \
 		xpcthrower.cpp \
 		xpcwrappedjs.cpp \
@@ -94,5 +95,6 @@ DEFINES		+= -DJSFILE -DJS_THREADSAFE
 
 ifdef MOZ_XPCTOOLS
 DEFINES         +=  -DXPC_TOOLS_SUPPORT
+REQUIRES	+= xpctools
 endif
 

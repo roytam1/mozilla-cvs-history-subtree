@@ -547,7 +547,7 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
     // file extension.
 
     char temp[4];
-    const char* workingFilePath = mWorkingPath.GetBuffer();
+    const char* workingFilePath = mWorkingPath.get();
     const char* nsprPath = workingFilePath;
 
     if (mWorkingPath.Length() == 2 && mWorkingPath.CharAt(1) == ':') {
@@ -729,7 +729,7 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
         return rv;  
     
    // create nested directories to target
-    unsigned char* slash = _mbschr((const unsigned char*) mResolvedPath.GetBuffer(), '\\');
+    unsigned char* slash = _mbschr((const unsigned char*) mResolvedPath.get(), '\\');
     // skip the first '\\'
     ++slash;
     slash = _mbschr(slash, '\\');
@@ -739,11 +739,11 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
         *slash = '\0';
 
 #ifdef XP_OS2
-        rv = CreateDirectoryA(mResolvedPath, NULL);
+        rv = CreateDirectoryA(NS_CONST_CAST(char*, mResolvedPath.get()), NULL);
         if (rv) {
             rv = ConvertOS2Error(rv);
 #else
-        if (!CreateDirectoryA(mResolvedPath, NULL)) {
+        if (!CreateDirectoryA(NS_CONST_CAST(char*, mResolvedPath.get()), NULL)) {
             rv = ConvertWinError(GetLastError());
 #endif
             if (rv != NS_ERROR_FILE_ALREADY_EXISTS) return rv;
@@ -766,11 +766,11 @@ nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
     if (type == DIRECTORY_TYPE)
     {
 #ifdef XP_OS2
-        rv = CreateDirectoryA(mResolvedPath, NULL);
+        rv = CreateDirectoryA(NS_CONST_CAST(char*, mResolvedPath.get()), NULL);
         if (rv) 
             return ConvertOS2Error(rv);
 #else
-        if (!CreateDirectoryA(mResolvedPath, NULL))
+        if (!CreateDirectoryA(NS_CONST_CAST(char*, mResolvedPath.get()), NULL))
             return ConvertWinError(GetLastError());
 #endif
         else 
@@ -817,7 +817,7 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 {
     NS_ENSURE_ARG_POINTER(aLeafName);
 
-    const char* temp = mWorkingPath.GetBuffer();
+    const char* temp = mWorkingPath.get();
     if(temp == nsnull)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
@@ -838,7 +838,7 @@ nsLocalFile::SetLeafName(const char * aLeafName)
 {
     MakeDirty();
     
-    const unsigned char* temp = (const unsigned char*) mWorkingPath.GetBuffer();
+    const unsigned char* temp = (const unsigned char*) mWorkingPath.get();
     if(temp == nsnull)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
@@ -858,11 +858,7 @@ NS_IMETHODIMP
 nsLocalFile::GetPath(char **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-#ifdef XP_OS2_VACPP
-    *_retval = (char*) nsMemory::Clone((void *)mWorkingPath, strlen(mWorkingPath)+1);
-#else
-    *_retval = (char*) nsMemory::Clone(mWorkingPath, strlen(mWorkingPath)+1);
-#endif
+    *_retval = (char*) nsMemory::Clone(mWorkingPath.get(), strlen(mWorkingPath)+1);
     return NS_OK;
 }
 
@@ -910,9 +906,19 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char
     if (NS_FAILED(rv))
         return rv;
 
-    APIRET rc;
-    if (!move) {
-        rc = DosCopy(filePath, (PSZ)destPath, DCPY_EXISTING);
+    APIRET rc = NO_ERROR;
+
+    if( move )
+    {
+        rc = DosMove(filePath, (PSZ)NS_CONST_CAST(char*, destPath.get()));
+    }
+
+    if (!move || rc == ERROR_NOT_SAME_DEVICE) {
+        /* will get an error if the destination and source files aren't on the
+         * same drive.  "MoveFile()" on Windows will go ahead and move the
+         * file without error, so we need to do the same   IBM-AKR
+         */
+        rc = DosCopy(filePath, (PSZ)NS_CONST_CAST(char*, destPath.get()), DCPY_EXISTING);
         /* WSOD2 HACK */
         if (rc == 65) { // NETWORK_ACCESS_DENIED
           CHAR         achProgram[CCHMAXPATH];  // buffer for program name, parameters
@@ -922,7 +928,7 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char
           strcat(achProgram, """COPY ");
           strcat(achProgram, filePath);
           strcat(achProgram, " ");
-          strcat(achProgram, (PSZ)destPath);
+          strcat(achProgram, (PSZ)NS_CONST_CAST(char*, destPath.get()));
           strcat(achProgram, """");
           achProgram[strlen(achProgram) + 1] = '\0';
           achProgram[7] = '\0';
@@ -930,10 +936,16 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char
                      EXEC_SYNC, achProgram, (PSZ)NULL,
                      &rescResults, achProgram);
           rc = 0; // Assume it worked
-        } /* endif */
-    } else {
-        rc = DosMove(filePath, (PSZ)destPath);
-    }
+
+          /* moving the file is supposed to act like a rename, so delete the
+           * original file if we got this far without error  IBM-AKR
+           */
+          if( move && (rc == NO_ERROR) )
+          {
+             DosDelete( filePath );
+          }
+        } /* rc == 65 */
+    } /* !move or ERROR */
     
     if (rc)
         rv = ConvertOS2Error(rc);
@@ -1215,7 +1227,7 @@ nsLocalFile::Spawn(const char **args, PRUint32 count)
     PID pid;
     memset(&sd, 0, sizeof(STARTDATA));
     sd.Length = 24;
-    sd.PgmName = mResolvedPath;
+    sd.PgmName = NS_CONST_CAST(char*, mResolvedPath.get());
     sd.PgmInputs = pszInputs;
     APIRET rc = DosStartSession(&sd, &sid, &pid);
 
@@ -1259,7 +1271,7 @@ nsLocalFile::Delete(PRBool recursive)
     if (NS_FAILED(rv))
         return rv;
 
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
 
     if (isDir)
     {
@@ -1360,7 +1372,7 @@ nsLocalFile::SetModDate(PRInt64 aLastModificationDate, PRBool resolveTerminal)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
     
 #ifndef XP_OS2
     HANDLE file = CreateFile(  filePath,          // pointer to name of the file
@@ -1459,7 +1471,7 @@ nsLocalFile::GetPermissions(PRUint32 *aPermissions)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
 
 
     return NS_OK;
@@ -1480,7 +1492,7 @@ nsLocalFile::SetPermissions(PRUint32 aPermissions)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
     if( chmod(filePath, aPermissions) == -1 )
         return NS_ERROR_FAILURE;
         
@@ -1495,7 +1507,7 @@ nsLocalFile::SetPermissionsOfLink(PRUint32 aPermissions)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
     if( chmod(filePath, aPermissions) == -1 )
         return NS_ERROR_FAILURE;
         
@@ -1535,7 +1547,7 @@ nsLocalFile::SetFileSize(PRInt64 aFileSize)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
 
 
 #ifdef XP_OS2   
@@ -1649,7 +1661,7 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
                                                     fsAllocate.cSectorUnit *
                                                     (ULONG)fsAllocate.cbSector);
 #else   
-    const char *filePath = mResolvedPath.GetBuffer();
+    const char *filePath = mResolvedPath.get();
 
     PRInt64 int64;
     
@@ -1708,15 +1720,15 @@ nsLocalFile::GetParent(nsIFile * *aParent)
     nsCString parentPath = mWorkingPath;
 
     // cannot use nsCString::RFindChar() due to 0x5c problem
-    PRInt32 offset = (PRInt32) (_mbsrchr((const unsigned char *) parentPath.GetBuffer(), '\\')
-                     - (const unsigned char *) parentPath.GetBuffer());
+    PRInt32 offset = (PRInt32) (_mbsrchr((const unsigned char *) parentPath.get(), '\\')
+                     - (const unsigned char *) parentPath.get());
     if (offset < 0)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
     parentPath.Truncate(offset);
 
     nsCOMPtr<nsILocalFile> localFile;
-    nsresult rv =  NS_NewLocalFile(parentPath.GetBuffer(), mFollowSymlinks, getter_AddRefs(localFile));
+    nsresult rv =  NS_NewLocalFile(parentPath.get(), mFollowSymlinks, getter_AddRefs(localFile));
     
     if(NS_SUCCEEDED(rv) && localFile)
     {
@@ -1752,7 +1764,7 @@ nsLocalFile::IsWritable(PRBool *_retval)
     if (NS_FAILED(rv))
         return rv;  
     
-    const char *workingFilePath = mWorkingPath.GetBuffer();
+    const char *workingFilePath = mWorkingPath.get();
 
 #ifdef XP_OS2
     APIRET rc;
@@ -1882,7 +1894,7 @@ nsLocalFile::IsHidden(PRBool *_retval)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *workingFilePath = mWorkingPath.GetBuffer();
+    const char *workingFilePath = mWorkingPath.get();
 
 #ifdef XP_OS2
     APIRET rc;
@@ -1948,7 +1960,7 @@ nsLocalFile::IsSpecial(PRBool *_retval)
     if (NS_FAILED(rv))
         return rv;
     
-    const char *workingFilePath = mWorkingPath.GetBuffer();
+    const char *workingFilePath = mWorkingPath.get();
 
 #ifdef XP_OS2
     APIRET rc;
@@ -2051,11 +2063,7 @@ nsLocalFile::GetTarget(char **_retval)
 #endif
     ResolveAndStat(PR_TRUE);
  
-#ifdef XP_OS2_VACPP
-    *_retval = (char*) nsMemory::Clone( (void *)mResolvedPath, strlen(mResolvedPath)+1 );
-#else       
-    *_retval = (char*) nsMemory::Clone( mResolvedPath, strlen(mResolvedPath)+1 );
-#endif
+    *_retval = (char*) nsMemory::Clone( mResolvedPath.get(), strlen(mResolvedPath)+1 );
     return NS_OK;
 }
 
@@ -2108,7 +2116,7 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator * *entries)
 NS_IMETHODIMP nsLocalFile::GetURL(char * *aURL)
 {
     nsresult rv;
-    char* ePath = (char*) nsMemory::Clone((char*)mWorkingPath, strlen(mWorkingPath)+1);
+    char* ePath = (char*) nsMemory::Clone(mWorkingPath.get(), strlen(mWorkingPath)+1);
     if (ePath == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 #if defined (XP_WIN) || defined(XP_OS2)

@@ -564,7 +564,7 @@ nsNativeComponentLoader::DumpLoadError(nsDll *dll,
         
         nsTraceRefcnt::DemangleSymbol(symbol,demangled,sizeof(demangled));
         
-        if (demangled && strlen(demangled))
+        if (demangled && *demangled != '\0')
             demangledSymbol = demangled;
         
         if (!demangledSymbol.IsEmpty())
@@ -846,9 +846,9 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
             nsCOMPtr<nsIFile> dllSpec;
             if (NS_SUCCEEDED(dll->GetDllSpec(getter_AddRefs(dllSpec))) && dllSpec)
             {
-              nsXPIDLCString leafName;
-              dllSpec->GetLeafName(getter_Copies(leafName));
-              fileName.AssignWithConversion(leafName);
+              nsXPIDLCString dllLeafName;
+              dllSpec->GetLeafName(getter_Copies(dllLeafName));
+              fileName.AssignWithConversion(dllLeafName);
             }
             statusMsg.Append(fileName);
             

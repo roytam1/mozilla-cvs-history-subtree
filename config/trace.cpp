@@ -85,7 +85,7 @@ struct ModulesEntry {
     Node*                  byCount;
 };
 
-BOOL CRT_CALL
+BOOL PR_CALLBACK
 ModuleMatchEntry(PLDHashTable* aTable, 
                  const PLDHashEntryHdr* aEntry, 
                  const void* aKey)
@@ -156,30 +156,33 @@ void _penter()
    win32.order
 */
 
-static PLDHashOperator CRT_CALL
+static PLDHashOperator PR_CALLBACK
 DumpFiles(PLDHashTable* table, PLDHashEntryHdr* hdr,
-           PRUint32 number, void* arg)
+          PRUint32 number, void* arg)
 {
     ModulesEntry* entry = (ModulesEntry*) hdr;    
     Node*         cur = entry->byCount;
     char          dest[256];
-    char          ilkName[256];
+    char          pdbName[256];
     FILE*         orderFile;
 
-    strcpy(ilkName, entry->moduleName);
-    strcat(ilkName, ".ilk");
+    strcpy(pdbName, entry->moduleName);
+    strcat(pdbName, ".pdb");
 
-    if ( !::FindExecutableImage(ilkName, MOZ_SRC, dest) ) {
-        printf("+++ERROR Could not find %s\n",ilkName);
+    if ( !::FindExecutableImage(pdbName, MOZ_SRC, dest) ) {
+        printf("+++ERROR Could not find %s\n",pdbName);
         return PL_DHASH_NEXT;
     }
-    dest[strlen(dest)-strlen(ilkName)-strlen("WIN32_D.OBJ\\")] = 0;
+    dest[strlen(dest)-strlen(pdbName)-strlen("WIN32_D.OBJ\\")] = 0;
     strcat(dest,"win32.order");
     orderFile = fopen(dest,"w");
     printf("Creating order file %s\n",dest);
     
     while( cur ) {
-        fprintf(orderFile,"%s ; %d\n", cur->function, cur->count );
+	if(cur->function[0] == '_' && cur->function[1] == '_')
+            fprintf(orderFile,"%s ; %d\n", cur->function+1, cur->count );
+        else
+            fprintf(orderFile,"%s ; %d\n", cur->function, cur->count );
         cur = cur->next;
     }
 
@@ -193,7 +196,7 @@ DumpFiles(PLDHashTable* table, PLDHashEntryHdr* hdr,
    function and its call count into the module's sorted list.
 */
 
-static PLDHashOperator CRT_CALL
+static PLDHashOperator PR_CALLBACK
 ListCounts(PLDHashTable* table, PLDHashEntryHdr* hdr,
            PRUint32 number, void* arg)
 {
@@ -247,10 +250,14 @@ ListCounts(PLDHashTable* table, PLDHashEntryHdr* hdr,
             foo->count = entry->count;
 
             if ( cur->count < entry->count ) {
+                if (!strcmp(cur->function,symbol->Name)) 
+                    return PL_DHASH_NEXT;
                 foo->next = mod->byCount;
                 mod->byCount = foo;                
             } else {
                 while ( cur->next ) {
+                    if (!strcmp(cur->function,symbol->Name)) 
+                        return PL_DHASH_NEXT;
                     if ( cur->next->count > entry->count ) { cur = cur->next; }
                     else { break; }
                 }

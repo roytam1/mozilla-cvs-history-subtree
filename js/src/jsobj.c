@@ -1061,12 +1061,25 @@ obj_hasOwnProperty(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     jsid id;
     JSObject *obj2;
     JSProperty *prop;
+    JSScopeProperty *sprop;
+    JSBool sharedPermanent;
 
     if (!JS_ValueToId(cx, argv[0], &id))
         return JS_FALSE;
     if (!OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
         return JS_FALSE;
-    *rval = BOOLEAN_TO_JSVAL(prop && obj2 == obj);
+    if (!prop) {
+        *rval = JSVAL_FALSE;
+    } else if (obj2 == obj) {
+        *rval = JSVAL_TRUE;
+    } else if (OBJ_IS_NATIVE(obj2)) {
+        sprop = (JSScopeProperty *)prop;
+        sharedPermanent =
+            (~sprop->attrs & (JSPROP_SHARED | JSPROP_PERMANENT)) == 0;
+        *rval = BOOLEAN_TO_JSVAL(sharedPermanent);
+    } else {
+        *rval = JSVAL_FALSE;
+    }
     if (prop)
         OBJ_DROP_PROPERTY(cx, obj2, prop);
     return JS_TRUE;
@@ -1918,7 +1931,7 @@ js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
     CHECK_FOR_FUNNY_INDEX(id);
 
     /* Search scopes starting with obj and following the prototype link. */
-    hash = js_HashValue(id);
+    hash = js_HashId(id);
     for (;;) {
         JS_LOCK_OBJ(cx, obj);
         SET_OBJ_INFO(obj, file, line);
@@ -2219,7 +2232,7 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     JS_LOCK_OBJ(cx, obj);
     clasp = LOCKED_OBJ_GET_CLASS(obj);
     scope = OBJ_SCOPE(obj);
-    hash = js_HashValue(id);
+    hash = js_HashId(id);
 
     sym = scope->ops->lookup(cx, scope, id, hash);
     if (sym) {
@@ -2536,11 +2549,27 @@ js_DeleteProperty(JSContext *cx, JSObject *obj, jsid id, jsval *rval)
     if (!js_LookupProperty(cx, obj, id, &proto, &prop))
         return JS_FALSE;
     if (!prop || proto != obj) {
-        if (prop)
-            OBJ_DROP_PROPERTY(cx, proto, prop);
         /*
-         * If no property, or the property comes from a prototype, call the
-         * class's delProperty hook with rval as the result parameter.
+         * If the property was found in a native prototype, check whether it's
+         * shared and permanent.  Such a property stands for direct properties
+         * in all delegating objects, matching ECMA semantics without bloating
+         * each delegating object.
+         */
+        if (prop) {
+            if (OBJ_IS_NATIVE(proto)) {
+                sprop = (JSScopeProperty *)prop;
+                if ((~sprop->attrs & (JSPROP_SHARED | JSPROP_PERMANENT)) == 0)
+                    *rval = JSVAL_FALSE;
+            }
+            OBJ_DROP_PROPERTY(cx, proto, prop);
+            if (*rval == JSVAL_FALSE)
+                return JS_TRUE;
+        }
+
+        /*
+         * If no property, or the property comes unshared or impermanent from
+         * a prototype, call the class's delProperty hook, passing rval as the
+         * result parameter.
          */
         return OBJ_GET_CLASS(cx, obj)->delProperty(cx, obj, js_IdToValue(id),
                                                    rval);
@@ -3107,9 +3136,9 @@ js_XDRObject(JSXDRState *xdr, JSObject **objp)
     if (xdr->mode == JSXDR_ENCODE) {
         clasp = OBJ_GET_CLASS(cx, *objp);
         className = clasp->name;
-        classId = JS_FindClassIdByName(xdr, className);
+        classId = JS_XDRFindClassIdByName(xdr, className);
         classDef = !classId;
-        if (classDef && !JS_RegisterClass(xdr, clasp, &classId))
+        if (classDef && !JS_XDRRegisterClass(xdr, clasp, &classId))
             return JS_FALSE;
     } else {
         classDef = 0;
@@ -3134,11 +3163,11 @@ js_XDRObject(JSXDRState *xdr, JSObject **objp)
             if (!ok)
                 goto out;
             clasp = OBJ_GET_CLASS(cx, proto);
-            ok = JS_RegisterClass(xdr, clasp, &classId);
+            ok = JS_XDRRegisterClass(xdr, clasp, &classId);
             if (!ok)
                 goto out;
         } else {
-            clasp = JS_FindClassById(xdr, classId);
+            clasp = JS_XDRFindClassById(xdr, classId);
             if (!clasp) {
                 char numBuf[12];
                 JS_snprintf(numBuf, sizeof numBuf, "%ld", (long)classId);
@@ -3323,4 +3352,3 @@ void printAtom(JSAtom *atom) {
 }
 
 #endif
-

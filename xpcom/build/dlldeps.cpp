@@ -66,6 +66,7 @@
 #include "nsStaticNameTable.h"
 #include "nsProcess.h"
 #include "nsSlidingString.h"
+#include "nsIInputStreamTee.h"
 #ifdef DEBUG
 #include "pure.h"
 #endif
@@ -133,7 +134,7 @@ void XXXNeverCalled()
     xptc_dummy();
     xptc_dummy2();
     XPTI_GetInterfaceInfoManager();
-    NS_NewGenericFactory(NULL, NULL, NULL);
+    NS_NewGenericFactory(NULL, NULL);
     NS_NewHashtableEnumerator(NULL, NULL, NULL, NULL);
     nsCWeakProxy(0, 0);
     nsCWeakReferent(0);
@@ -160,6 +161,7 @@ void XXXNeverCalled()
     ToNewCString(str2);
     PL_DHashTableFinish(NULL);
     nsSlidingString sliding(NULL, NULL, NULL);
+    NS_NewInputStreamTee(NULL, NULL, NULL);
 #ifdef NS_ENABLE_LOGGING
     nsLog();
 #endif

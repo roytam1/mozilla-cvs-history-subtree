@@ -51,7 +51,7 @@ private:
 };
 
 
-NS_IMPL_ISUPPORTS2(xpcTestCallJS, nsIXPCTestCallJS, nsIXPCScriptable);
+NS_IMPL_ISUPPORTS2_CI(xpcTestCallJS, nsIXPCTestCallJS, nsIXPCScriptable);
 
 // The nsIXPCScriptable map declaration that will generate stubs for us...
 #define XPC_MAP_CLASSNAME           xpcTestCallJS

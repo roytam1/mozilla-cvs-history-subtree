@@ -21,6 +21,7 @@
  * Contributor(s): 
  *   John Bandhauer <jband@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   IBM Corp.
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -32,13 +33,6 @@
  * and other provisions required by the GPL.  If you do not delete
  * the provisions above, a recipient may use your version of this
  * file under either the NPL or the GPL.
- *
- * This Original Code has been modified by IBM Corporation. Modifications made by IBM 
- * described herein are Copyright (c) International Business Machines Corporation, 2000.
- * Modifications to Mozilla code or documentation identified per MPL Section 3.3
- *
- * Date             Modified by     Description of modification
- * 04/20/2000       IBM Corp.      OS/2 VisualAge build.
  */
 
 /* XPConnect JavaScript interactive shell. */
@@ -111,7 +105,7 @@ int gExitCode = 0;
 JSBool gQuitting = JS_FALSE;
 static JSBool reportWarnings = JS_TRUE;
 
-static void PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(void)
 my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
     int i, j, k, n;
@@ -178,7 +172,7 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     JS_free(cx, prefix);
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Print(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     uintN i, n;
@@ -196,7 +190,7 @@ Print(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Dump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSString *str;
@@ -220,7 +214,7 @@ Dump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     uintN i;
@@ -249,7 +243,7 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     if (argc > 0 && JSVAL_IS_INT(argv[0]))
@@ -259,14 +253,14 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 BuildDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     fprintf(gOutFile, "built on %s at %s\n", __DATE__, __TIME__);
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Quit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 #ifdef LIVECONNECT
@@ -281,7 +275,7 @@ Quit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_FALSE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 DumpXPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     int32 depth = 2;
@@ -301,7 +295,7 @@ DumpXPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 extern "C" JS_FRIEND_DATA(FILE *) js_DumpGCHeap;
 #endif
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 GC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSRuntime *rt;
@@ -342,7 +336,7 @@ GC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static JSBool PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(JSBool)
 Clear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     if (argc > 0 && !JSVAL_IS_PRIMITIVE(argv[0])) {
@@ -396,7 +390,7 @@ JSErrorFormatString jsShell_ErrorFormatString[JSErr_Limit] = {
 #undef MSG_DEF
 };
 
-static const JSErrorFormatString * PR_CALLBACK
+JS_STATIC_DLL_CALLBACK(const JSErrorFormatString *)
 my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
 {
     if ((errorNumber > 0) && (errorNumber < JSShellErr_Limit))
@@ -443,7 +437,7 @@ GetLine(JSContext *cx, char *bufp, FILE *fh, const char *prompt) {
 }
 
 static void
-Process(JSContext *cx, JSObject *obj, char *filename)
+Process(JSContext *cx, JSObject *obj, char *filename, FILE *filehandle)
 {
     JSBool ok, hitEOF;
     JSScript *script;
@@ -465,7 +459,7 @@ Process(JSContext *cx, JSObject *obj, char *filename)
             return;
         }
     } else {
-        fh = stdin;
+        fh = filehandle;
     }
 
     if (!isatty(fileno(fh))) {
@@ -574,11 +568,20 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 {
     int i;
     char *filename = NULL;
+    FILE *filehandle = NULL;
     jsint length;
     jsval *vector;
     jsval *p;
     JSObject *argsObj;
     JSBool isInteractive = JS_TRUE;
+
+    filehandle = fopen("xpcshell.js", "r");
+    if (filehandle != NULL) {
+        printf("[loading 'xpcshell.js'...]\n");
+        Process(cx, obj, NULL, filehandle);
+        // evidently JS closes this for us.
+        // fclose(filehandle);
+    }
 
     for (i=0; i < argc; i++) {
         if (argv[i][0] == '-') {
@@ -607,7 +610,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
                 /* "-f -" means read from stdin */
                 if (filename[0] == '-' && filename[1] == '\0')
                     filename = NULL;
-                Process(cx, obj, filename);
+                Process(cx, obj, filename, NULL);
                 filename = NULL;
                 /* XXX: js -f foo.js should interpret foo.js and then
                  * drop into interactive mode, but that breaks test
@@ -655,7 +658,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         return 1;
 
     if (filename || isInteractive)
-        Process(cx, obj, filename);
+        Process(cx, obj, filename, filename ? NULL : stdin);
     return gExitCode;
 }
 

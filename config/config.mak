@@ -279,10 +279,19 @@ CFLAGS=$(CFLAGS) -DMOZ_MATHML
 CFLAGS=$(CFLAGS) -DMOZ_SVG
 !endif
 
-!ifdef MOZ_REFLOW_PERF
-CFLAGS=$(CFLAGS) -DMOZ_REFLOW_PERF
+!ifdef MOZ_DEBUG
+CFLAGS=$(CFLAGS) -DMOZ_REFLOW_PERF -DMOZ_REFLOW_PERF_DSP
 !endif
 
+#!ifdef MOZ_NEW_CACHE
+MOZ_NEW_CACHE=1
+CFLAGS=$(CFLAGS) -DMOZ_NEW_CACHE
+#!endif
+
+#!ifdef USE_IMG2
+USE_IMG2=1
+CFLAGS=$(CFLAGS) -DUSE_IMG2
+#!endif
 
 #//-----------------------------------------------------------------------
 #//

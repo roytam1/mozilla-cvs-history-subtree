@@ -64,6 +64,9 @@ protected:
   virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
   virtual char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 );
 
+public:
+  virtual const char* get() const { return mStr; }
+
 public: 
   /**
    * Default constructor. 
@@ -124,14 +127,6 @@ public:
   /**********************************************************************
     Accessor methods...
    *********************************************************************/
-
-
-   /**
-     * Retrieve const ptr to internal buffer; DO NOT TRY TO FREE IT!
-     */
-  const char* GetBuffer() const { return get(); } // to be deprecated, prefer |get()|
-
-  const char* get() const { return mStr; }
 
   PRBool SetCharAt(PRUnichar aChar,PRUint32 anIndex);
 
@@ -237,7 +232,6 @@ public:
     string conversion methods...
    *********************************************************************/
 //#ifndef STANDALONE_STRING_TESTS
-  operator char*() {return mStr;}
   operator const char*() const {return (const char*)mStr;}
 //#endif
 
@@ -533,22 +527,13 @@ class NS_COM NS_ConvertUCS2toUTF8
 
       explicit NS_ConvertUCS2toUTF8( const nsAReadableString& aString );
 
-      const char* get() const
-        {
-          return mStr;
-        }
-
-      operator const char*() const  // to be deprecated, prefer |get()|
-        {
-          return get();
-        }
-
     protected:
       void Append( const PRUnichar* aString, PRUint32 aLength );
 
     private:
         // NOT TO BE IMPLEMENTED
       NS_ConvertUCS2toUTF8( char );
+      operator const char*() const; // use |get()|
   };
 
 

@@ -44,7 +44,12 @@ DIRS = liveconnect
 !endif
 !endif
 
+# Because WIN95 doesn't support recursive make, still need fdlibm in DIRS
+!if "$(WINOS)" == "WIN95"
 DIRS = $(DIRS) fdlibm xpconnect
+!else
+DIRS = $(DIRS) xpconnect
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -193,7 +198,7 @@ $(FDLIBM_LIBRARY):
     @cd $(MAKEDIR) 
 !endif
 
-export:: $(DLL)	INSTALL_FILES
+export:: INSTALL_FILES $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 

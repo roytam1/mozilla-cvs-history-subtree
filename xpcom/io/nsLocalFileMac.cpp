@@ -1093,19 +1093,35 @@ nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 NS_IMETHODIMP  
 nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
 {
-	nsresult rv = ResolveAndStat(PR_TRUE);
-	if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
-		return rv; 
+    NS_ENSURE_ARG(mode);
+    NS_ENSURE_ARG_POINTER(_retval);
+    
+    nsresult rv; 
+    FSSpec spec;
    
-   
-   // Resolve the alias to the original file.
-	FSSpec	spec = mTargetSpec;
-	Boolean targetIsFolder;	  
-	Boolean wasAliased;	  
-	OSErr err = ::ResolveAliasFile(&spec, TRUE, &targetIsFolder, &wasAliased);
-	if (err != noErr)
-		return MacErrorMapper(err);
-		
+    if (mode[0] == 'w' || mode[0] == 'a') // Check if the file exists
+    {
+        PRBool exists;
+        rv = Exists(&exists);
+        if (NS_FAILED(rv))
+            return rv;
+        if (!exists) {
+            mType = (mode[1] == 'b') ? 'BiNA' : 'TEXT';
+            rv = Create(nsIFile::NORMAL_FILE_TYPE, 0);
+            if (NS_FAILED(rv))
+                return rv;
+            spec = mResolvedSpec;
+        }
+        else
+            spec = mTargetSpec;
+    }
+    else
+    {
+      rv = ResolveAndStat(PR_TRUE);
+      if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
+	        return rv;
+      spec = mTargetSpec; 
+    }
 		
 	*_retval = FSp_fopen(&spec, mode);
 	
@@ -1236,7 +1252,7 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 	switch (mInitType)
 	{
 		case eInitWithPath:
-			const char* temp = mWorkingPath.GetBuffer();
+			const char* temp = mWorkingPath.get();
 			if (temp == nsnull)
 				return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
@@ -1255,7 +1271,7 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 			// See if we've had a path appended
 			if (mAppendedPath.Length())
 			{
-				const char* temp = mAppendedPath.GetBuffer();
+				const char* temp = mAppendedPath.get();
 				if (temp == nsnull)
 					return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
@@ -1533,7 +1549,7 @@ nsLocalFile::Delete(PRBool recursive)
 	if (NS_FAILED(rv))
 		return rv;
 
-	const char *filePath = mResolvedPath.GetBuffer();
+	const char *filePath = mResolvedPath.get();
 	OSErr macerror;
 	if (isDir && recursive)
 		macerror = ::DeleteDirectory( mResolvedSpec.vRefNum, mResolvedSpec.parID, mResolvedSpec.name );
@@ -1780,7 +1796,7 @@ nsLocalFile::GetParent(nsIFile * *aParent)
 			parentPath.Truncate(offset);
 
 			nsCOMPtr<nsILocalFile> localFile;
-			rv =  NS_NewLocalFile(parentPath.GetBuffer(), mFollowSymlinks, getter_AddRefs(localFile));
+			rv =  NS_NewLocalFile(parentPath.get(), mFollowSymlinks, getter_AddRefs(localFile));
 			if (NS_SUCCEEDED(rv) && localFile)
 			{
 				rv = localFile->QueryInterface(NS_GET_IID(nsIFile), (void**)aParent);

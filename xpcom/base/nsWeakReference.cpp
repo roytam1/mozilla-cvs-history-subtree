@@ -43,26 +43,40 @@ nsQueryReferent::operator()( const nsIID& aIID, void** answer ) const
     return status;
   }
 
-NS_COM nsIWeakReference*
-NS_GetWeakReference( nsISupports* aInstancePtr, nsresult* aErrorPtr )
+nsresult
+nsGetWeakReference::operator()( const nsIID&, void** aResult ) const
   {
     nsresult status;
-    nsIWeakReference* result = 0;
+    // nsIWeakReference** result = &NS_STATIC_CAST(nsIWeakReference*, *aResult);
+    *aResult = 0;
 
-    if ( aInstancePtr )
+    if ( mRawPtr )
       {
-        nsCOMPtr<nsISupportsWeakReference> factoryPtr = do_QueryInterface(aInstancePtr, &status);
-        NS_ASSERTION(factoryPtr, "Did you know you were calling |NS_GetWeakReference()| on something that doesn't support weak references?");
+        nsCOMPtr<nsISupportsWeakReference> factoryPtr = do_QueryInterface(mRawPtr, &status);
+        NS_ASSERTION(factoryPtr, "Oops!  You're asking for a weak reference to an object that doesn't support that.");
         if ( factoryPtr )
-          status = factoryPtr->GetWeakReference(&result);
+          {
+            nsIWeakReference* temp;
+            status = factoryPtr->GetWeakReference(&temp);
+            *aResult = temp;
+          }
         // else, |status| has already been set by |do_QueryInterface|
       }
     else
       status = NS_ERROR_NULL_POINTER;
 
-    if ( aErrorPtr )
-      *aErrorPtr = status;
-    return result;
+    if ( mErrorPtr )
+      *mErrorPtr = status;
+    return status;
+  }
+
+
+NS_COM nsIWeakReference*  // or else |already_AddRefed<nsIWeakReference>|
+NS_GetWeakReference( nsISupports* aInstancePtr, nsresult* aErrorPtr )
+  {
+    void* result = 0;
+    nsGetWeakReference(aInstancePtr, aErrorPtr)(NS_GET_IID(nsIWeakReference), &result);
+    return NS_STATIC_CAST(nsIWeakReference*, result);
   }
 
 NS_IMETHODIMP

@@ -17,7 +17,10 @@
  * Copyright (C) 1999,2000 Netscape Communications Corporation.
  * All Rights Reserved.
  *
- * Contributor(s): 
+ * Original Contributor: 
+ *   Brendan Eich <brendan@mozilla.org>
+ *
+ * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License (the "GPL"), in which case the
@@ -88,6 +91,70 @@ struct PLDHashEntryHdr {
  * A PLDHashTable is currently 8 words (without the PL_DHASHMETER overhead)
  * on most architectures, and may be allocated on the stack or within another
  * structure or class (see below for the Init and Finish functions to use).
+ *
+ * To decide whether to use double hashing vs. chaining, we need to develop a
+ * trade-off relation, as follows:
+ *
+ * Let alpha be the load factor, esize the entry size in words, count the
+ * entry count, and pow2 the power-of-two table size in entries.
+ *
+ *   (PLDHashTable overhead)    > (PLHashTable overhead)
+ *   (unused table entry space) > (malloc and .next overhead per entry) +
+ *                                (buckets overhead)
+ *   (1 - alpha) * esize * pow2 > 2 * count + pow2
+ *
+ * Notice that alpha is by definition (count / pow2):
+ *
+ *   (1 - alpha) * esize * pow2 > 2 * alpha * pow2 + pow2
+ *   (1 - alpha) * esize        > 2 * alpha + 1
+ *
+ *   esize > (1 + 2 * alpha) / (1 - alpha)
+ *
+ * This assumes both tables must keep keyHash, key, and value for each entry,
+ * where key and value point to separately allocated strings or structures.
+ * If key and value can be combined into one pointer, then the trade-off is:
+ *
+ *   esize > (1 + 3 * alpha) / (1 - alpha)
+ *
+ * If the entry value can be a subtype of PLDHashEntryHdr, rather than a type
+ * that must be allocated separately and referenced by an entry.value pointer
+ * member, and provided key's allocation can be fused with its entry's, then
+ * k (the words wasted per entry with chaining) is 4.
+ *
+ * To see these curves, feed gnuplot input like so:
+ *
+ *   gnuplot> f(x,k) = (1 + k * x) / (1 - x)
+ *   gnuplot> plot [0:.75] f(x,2), f(x,3), f(x,4)
+ *
+ * For k of 2 and a well-loaded table (alpha > .5), esize must be more than 4
+ * words for chaining to be more space-efficient than double hashing.
+ *
+ * Solving for alpha helps us decide when to shrink an underloaded table:
+ *
+ *   esize                     > (1 + k * alpha) / (1 - alpha)
+ *   esize - alpha * esize     > 1 + k * alpha
+ *   esize - 1                 > (k + esize) * alpha
+ *   (esize - 1) / (k + esize) > alpha
+ *
+ *   alpha < (esize - 1) / (esize + k)
+ *
+ * Therefore double hashing should keep alpha >= (esize - 1) / (esize + k),
+ * assuming esize is not too large (in which case, chaining should probably be
+ * used for any alpha).  For esize=2 and k=3, we want alpha >= .2; for esize=3
+ * and k=2, we want alpha >= .4.  For k=4, esize could be 6, and alpha >= .5
+ * would still obtain.
+ *
+ * The current implementation uses a constant .25 as alpha's lower bound when
+ * deciding to shrink the table (while respecting PL_DHASH_MIN_SIZE).
+ *
+ * Note a qualitative difference between chaining and double hashing: under
+ * chaining, entry addresses are stable across table shrinks and grows.  With
+ * double hashing, you can't safely hold an entry pointer and use it after an
+ * ADD or REMOVE operation.
+ *
+ * The moral of this story: there is no one-size-fits-all hash table scheme,
+ * but for small table entry size, and assuming entry address stability is not
+ * required, double hashing wins.
  */
 struct PLDHashTable {
     PLDHashTableOps     *ops;           /* virtual operations, see below */
@@ -114,17 +181,11 @@ struct PLDHashTable {
         PRUint32        removeEnums;    /* removes done by Enumerate */
         PRUint32        grows;          /* table expansions */
         PRUint32        shrinks;        /* table contractions */
+        PRUint32        compresses;     /* table compressions */
+        PRUint32        enumShrinks;    /* contractions after Enumerate */
     } stats;
 #endif
 };
-
-#ifndef CRT_CALL
-#ifdef XP_OS2_VACPP
-#define CRT_CALL _Optlink
-#else
-#define CRT_CALL
-#endif
-#endif
 
 /*
  * Table space at entryStore is allocated and freed using these callbacks.
@@ -132,10 +193,10 @@ struct PLDHashTable {
  * equal to 0; but note that jsdhash.c code will never call with 0 nbytes).
  */
 typedef void *
-(* CRT_CALL PLDHashAllocTable)(PLDHashTable *table, PRUint32 nbytes);
+(* PR_CALLBACK PLDHashAllocTable)(PLDHashTable *table, PRUint32 nbytes);
 
 typedef void
-(* CRT_CALL PLDHashFreeTable) (PLDHashTable *table, void *ptr);
+(* PR_CALLBACK PLDHashFreeTable) (PLDHashTable *table, void *ptr);
 
 /*
  * When a table grows or shrinks, each entry is queried for its key using this
@@ -144,23 +205,23 @@ typedef void
  * moved via moveEntry callbacks.
  */
 typedef const void *
-(* CRT_CALL PLDHashGetKey)    (PLDHashTable *table, PLDHashEntryHdr *entry);
+(* PR_CALLBACK PLDHashGetKey)    (PLDHashTable *table, PLDHashEntryHdr *entry);
 
 /*
  * Compute the hash code for a given key to be looked up, added, or removed
  * from table.  A hash code may have any PLDHashNumber value.
  */
 typedef PLDHashNumber
-(* CRT_CALL PLDHashHashKey)   (PLDHashTable *table, const void *key);
+(* PR_CALLBACK PLDHashHashKey)   (PLDHashTable *table, const void *key);
 
 /*
  * Compare the key identifying entry in table with the provided key parameter.
  * Return PR_TRUE if keys match, PR_FALSE otherwise.
  */
 typedef PRBool
-(* CRT_CALL PLDHashMatchEntry)(PLDHashTable *table,
-                               const PLDHashEntryHdr *entry,
-                               const void *key);
+(* PR_CALLBACK PLDHashMatchEntry)(PLDHashTable *table,
+                                  const PLDHashEntryHdr *entry,
+                                  const void *key);
 
 /*
  * Copy the data starting at from to the new entry storage at to.  Do not add
@@ -169,9 +230,9 @@ typedef PRBool
  * any reference-decrementing callback shortly.
  */
 typedef void
-(* CRT_CALL PLDHashMoveEntry)(PLDHashTable *table,
-                              const PLDHashEntryHdr *from,
-                              PLDHashEntryHdr *to);
+(* PR_CALLBACK PLDHashMoveEntry)(PLDHashTable *table,
+                                 const PLDHashEntryHdr *from,
+                                 PLDHashEntryHdr *to);
 
 /*
  * Clear the entry and drop any strong references it holds.  This callback is
@@ -179,7 +240,7 @@ typedef void
  * but only if the given key is found in the table.
  */
 typedef void
-(* CRT_CALL PLDHashClearEntry)(PLDHashTable *table, PLDHashEntryHdr *entry);
+(* PR_CALLBACK PLDHashClearEntry)(PLDHashTable *table, PLDHashEntryHdr *entry);
 
 /*
  * Called when a table (whether allocated dynamically by itself, or nested in
@@ -187,7 +248,7 @@ typedef void
  * allows table->ops-specific code to finalize table->data.
  */
 typedef void
-(* CRT_CALL PLDHashFinalize)  (PLDHashTable *table);
+(* PR_CALLBACK PLDHashFinalize)  (PLDHashTable *table);
 
 /* Finally, the "vtable" structure for PLDHashTable. */
 struct PLDHashTableOps {
@@ -364,8 +425,8 @@ PL_DHashTableRawRemove(PLDHashTable *table, PLDHashEntryHdr *entry);
  * otherwise undefined behavior results.
  */
 typedef PLDHashOperator
-(* CRT_CALL PLDHashEnumerator)(PLDHashTable *table, PLDHashEntryHdr *hdr,
-                               PRUint32 number, void *arg);
+(* PR_CALLBACK PLDHashEnumerator)(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                                  PRUint32 number, void *arg);
 
 PR_EXTERN(PRUint32)
 PL_DHashTableEnumerate(PLDHashTable *table, PLDHashEnumerator etor, void *arg);

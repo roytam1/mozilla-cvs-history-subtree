@@ -34,6 +34,9 @@ DIRS=   typelib        \
         build          \
         appshell       \
         tools          \
+!if defined(MOZ_DEBUG)
+        windbgdlg      \
+!endif
 !if !defined(DISABLE_TESTS)
         sample         \
         tests          \

@@ -321,15 +321,6 @@ static JSPropertySpec string_props[] = {
 };
 
 static JSBool
-str_delProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
-{
-    /* Make delete s.length fail even though length is in s.__proto__. */
-    if (id == ATOM_KEY(cx->runtime->atomState.lengthAtom))
-        *vp = JSVAL_FALSE;
-    return JS_TRUE;
-}
-
-static JSBool
 str_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JSString *str;
@@ -402,7 +393,7 @@ str_resolve(JSContext *cx, JSObject *obj, jsval id)
 static JSClass string_class = {
     js_String_str,
     JSCLASS_HAS_PRIVATE,
-    JS_PropertyStub,  str_delProperty,  str_getProperty,  JS_PropertyStub,
+    JS_PropertyStub,  JS_PropertyStub,  str_getProperty,  JS_PropertyStub,
     str_enumerate,    str_resolve,      JS_ConvertStub,   JS_FinalizeStub,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };
@@ -2419,21 +2410,12 @@ JSHashNumber
 js_HashString(const JSString *str)
 {
     JSHashNumber h;
-    size_t n, m;
     const jschar *s;
+    size_t n;
 
     h = 0;
-    n = str->length;
-    s = str->chars;
-    if (n < 16) {
-        /* Hash every char in a short string. */
-        for (; n; s++, n--)
-            h = (h >> 28) ^ (h << 4) ^ *s;
-    } else {
-        /* Sample a la java.lang.String.hash(). */
-        for (m = n / 8; n >= m; s += m, n -= m)
-            h = (h >> 28) ^ (h << 4) ^ *s;
-    }
+    for (s = str->chars, n = str->length; n; s++, n--)
+        h = (h >> (JS_HASH_BITS - 4)) ^ (h << 4) ^ *s;
     return h;
 }
 
