@@ -12,7 +12,6 @@
     - trunk: upload fails on trunk with "not initialized"
     m wrong path in url (but working server) vv
     - test same situations with ftp
-  - ui: (error/success) messages
   - cancel by user in progress dialog: xpconnect errors
   - pressing cancel after finished with failed, all files are set to abort
   - copy protocol

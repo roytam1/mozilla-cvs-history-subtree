@@ -406,7 +406,7 @@ function SetGlobalStatusMessage(message)
 {
   alert(message); // XXX
   CloseDialog(); // XXX
-  SetFileStatusMessage(-1, message)
+  //SetFileStatusMessage(-1, message)
 }
 
 function SetFileStatusMessage(filei, message)
