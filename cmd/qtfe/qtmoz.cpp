@@ -23,9 +23,8 @@
 // This is a kludge to get around the fact that DEBUG turns on internal QT
 // debugging information that we do not want.
 
-#ifdef DEBUG
-#undef DEBUG
-#define DEBUG_qt
+#ifndef DEBUG
+#define debug_off
 #endif
 
 // Qt includes
@@ -33,8 +32,9 @@
 #include <qsocknot.h>
 #include <qmsgbox.h>
 
-#ifdef DEBUG_qt
-#define DEBUG
+#ifdef debug_off
+#undef DEBUG
+#undef debug_off
 #endif
 
 #include "client.h"
