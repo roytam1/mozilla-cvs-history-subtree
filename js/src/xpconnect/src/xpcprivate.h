@@ -139,6 +139,7 @@
 #if defined(DEBUG_xpc_hacker)
 #define XPC_DUMP_AT_SHUTDOWN
 #define XPC_TRACK_WRAPPER_STATS
+#define XPC_TRACK_SCOPE_STATS
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
 //#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
@@ -1599,7 +1600,7 @@ public:
 
     static inline JSBool
     IsTaggedScope(XPCWrappedNativeScope* s) 
-        {return (XPC_SCOPE_WORD(s) & XPC_SCOPE_TAG);}
+        {return XPC_SCOPE_WORD(s) & XPC_SCOPE_TAG;}
 
     static inline XPCWrappedNativeScope*
     TagScope(XPCWrappedNativeScope* s) 

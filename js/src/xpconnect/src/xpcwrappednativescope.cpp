@@ -37,6 +37,70 @@
 
 #include "xpcprivate.h"
 
+/***************************************************************************/
+
+#ifdef XPC_TRACK_SCOPE_STATS
+static int DEBUG_TotalScopeCount;
+static int DEBUG_TotalLiveScopeCount;
+static int DEBUG_TotalMaxScopeCount;
+static int DEBUG_TotalScopeTraversalCount;
+static PRBool  DEBUG_DumpedStats;
+#endif
+
+#ifdef DEBUG
+static void DEBUG_TrackNewScope(XPCWrappedNativeScope* scope)
+{
+#ifdef XPC_TRACK_SCOPE_STATS
+    DEBUG_TotalScopeCount++;
+    DEBUG_TotalLiveScopeCount++;
+    if(DEBUG_TotalMaxScopeCount < DEBUG_TotalLiveScopeCount)
+        DEBUG_TotalMaxScopeCount = DEBUG_TotalLiveScopeCount;
+#endif
+}
+
+static void DEBUG_TrackDeleteScope(XPCWrappedNativeScope* scope)
+{
+#ifdef XPC_TRACK_SCOPE_STATS
+    DEBUG_TotalLiveScopeCount--;
+#endif
+}
+
+static void DEBUG_TrackScopeTraversal()
+{
+#ifdef XPC_TRACK_SCOPE_STATS
+    DEBUG_TotalScopeTraversalCount++;
+#endif
+}
+
+static void DEBUG_TrackScopeShutdown()
+{
+#ifdef XPC_TRACK_SCOPE_STATS
+    if(!DEBUG_DumpedStats)
+    {
+        DEBUG_DumpedStats = PR_TRUE;
+        printf("%d XPCWrappedNativeScope(s) were constructed.\n",
+               DEBUG_TotalScopeCount);
+        
+        printf("%d XPCWrappedNativeScopes(s) max alive at one time.\n",
+               DEBUG_TotalMaxScopeCount);
+
+        printf("%d XPCWrappedNativeScope(s) alive now.\n" ,
+               DEBUG_TotalLiveScopeCount);
+
+        printf("%d traversals of Scope list.\n",
+               DEBUG_TotalScopeTraversalCount);
+    }
+#endif
+}
+#else
+#define DEBUG_TrackNewScope(scope) ((void)0)
+#define DEBUG_TrackDeleteScope(scope) ((void)0)
+#define DEBUG_TrackScopeTraversal() ((void)0)
+#define DEBUG_TrackScopeShutdown(scope) ((void)0)
+#endif
+
+/***************************************************************************/
+
 XPCWrappedNativeScope* XPCWrappedNativeScope::gScopes = nsnull;
 XPCWrappedNativeScope* XPCWrappedNativeScope::gDyingScopes = nsnull;
 
@@ -76,6 +140,8 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 
     if(aGlobal)
         SetGlobal(ccx, aGlobal);
+    
+    DEBUG_TrackNewScope(this);
 }
 
 void
@@ -121,6 +187,8 @@ XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 
 XPCWrappedNativeScope::~XPCWrappedNativeScope()
 {
+    DEBUG_TrackDeleteScope(this);
+
     // We can do additional cleanup assertions here...
 
     if(mWrappedNativeMap)
@@ -222,6 +290,8 @@ XPCWrappedNativeScope::MarkAllWrappedNativesAndProtos()
         cur->mWrappedNativeMap->Enumerate(WrappedNativeMarker, nsnull);
         cur->mWrappedNativeProtoMap->Enumerate(WrappedNativeProtoMarker, nsnull);
     }
+
+    DEBUG_TrackScopeTraversal();
 }
 
 #ifdef DEBUG
@@ -269,6 +339,8 @@ XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs()
 {
     for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         cur->mWrappedNativeMap->Enumerate(WrappedNativeTearoffSweeper, nsnull);
+
+    DEBUG_TrackScopeTraversal();
 }
 
 // static
@@ -327,6 +399,9 @@ WrappedNativeProtoShutdownEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
 void
 XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
+    DEBUG_TrackScopeTraversal();
+    DEBUG_TrackScopeShutdown();
+
     int liveScopeCount = 0;
 
     ShutdownData data(ccx);
@@ -462,6 +537,9 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
     // the linked list is more reasonable then doing a hashtable lookup.
     {   // scoped lock
         XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());
+
+        DEBUG_TrackScopeTraversal();
+
         for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         {
             if(obj == cur->GetGlobalJSObject())
