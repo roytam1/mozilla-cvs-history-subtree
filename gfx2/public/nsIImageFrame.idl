@@ -23,6 +23,7 @@
 
 #include "nsISupports.idl"
 #include "gfxtypes.idl"
+#include "nsIGFXFormat.idl"
 
 /**
  * nsIImage interface
