@@ -8,6 +8,7 @@ mozilla/rdf/base/src/nsRDFService.cpp
 mozilla/rdf/base/src/nsRDFXMLDataSource.cpp
 mozilla/rdf/base/src/rdfutil.cpp
 mozilla/rdf/build/nsRDFFactory.cpp
+mozilla/rdf/content/src/nsJSElementObserver.cpp
 mozilla/rdf/content/src/nsJSNodeObserver.cpp
 mozilla/rdf/content/src/nsJSXULDocument.cpp
 mozilla/rdf/content/src/nsJSXULElement.cpp
