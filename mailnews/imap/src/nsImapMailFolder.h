@@ -303,7 +303,6 @@ public:
                                      nsISupports* copyState);
 
 	NS_IMETHOD MatchName(nsString *name, PRBool *matches);
-#ifdef DOING_FILTERS
 	// nsIMsgFilterHitNotification method(s)
 	NS_IMETHOD ApplyFilterHit(nsIMsgFilter *filter, PRBool *applyMore);
 
