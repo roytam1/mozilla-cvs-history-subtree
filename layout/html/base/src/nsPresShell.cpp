@@ -3570,6 +3570,15 @@ NotifyAncestorFramesOfReflowCommand(nsIPresShell*        aPresShell,
       target->GetParent(&ancestor);
       while(ancestor) {
         ancestor->ReflowCommandNotify(aPresShell, aRC, aCommandAdded);
+
+        // Stop if we encounter a reflow root: when dispatched, the
+        // reflow command will never visit any of the frames above the
+        // it.
+        nsFrameState state;
+        ancestor->GetFrameState(&state);
+        if (state & NS_FRAME_REFLOW_ROOT)
+          break;
+
         ancestor->GetParent(&ancestor);
       }
     }
