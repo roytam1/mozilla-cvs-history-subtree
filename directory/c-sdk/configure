@@ -502,7 +502,7 @@ echo > confdefs.h
 
 # A filename unique to this package, relative to the directory that
 # configure is in, which we can look for to find out if srcdir is correct.
-ac_unique_file=ldap/include/ldap.h
+ac_unique_file=ldap/build/dirver.c
 
 # Find the source files, if location was not specified.
 if test -z "$srcdir"; then
@@ -3909,7 +3909,6 @@ EOF
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
-        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
@@ -3917,7 +3916,7 @@ EOF
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        RC='$(CYGWIN_WRAPPER) rc.exe'
+        RC=rc.exe
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -4346,8 +4345,9 @@ EOF
         CXXFLAGS="$CFLAGS -Wall -Zomf"
         MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
         DSO_CFLAGS=
-        DSO_LDOPTS='-Zomf -Zdll'
-        _OPTIMIZE_FLAGS=-O3
+        DSO_LDOPTS='-Zmap -Zomf -Zdll'
+        LDFLAGS='-Zmap'
+        _OPTIMIZE_FLAGS="-O2 -s"
         _DEBUG_FLAGS="-g -fno-inline"
         if test -n "$MOZ_OPTIMIZE"; then
           DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
@@ -5543,7 +5543,7 @@ fi
 RELEASE_OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${COMPILER_TAG}${IMPL_STRATEGY}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
 
 case "$target_os" in
-mingw*|cygwin*|msvc*|mksnt*)
+mingw*|cygwin*|msvc*|mks*)
     CC="\$(CYGWIN_WRAPPER) $CC"
     CXX="\$(CYGWIN_WRAPPER) $CXX"
     RC="\$(CYGWIN_WRAPPER) $RC"
@@ -5641,6 +5641,7 @@ Makefile
 config/Makefile
 config/autoconf.mk
 ldap/Makefile
+ldap/build/Makefile
 ldap/clients/tools/Makefile
 ldap/include/Makefile
 ldap/libraries/Makefile

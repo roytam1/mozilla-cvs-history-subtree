@@ -1,496 +1,373 @@
+# Generated automatically from Makefile.in by configure.
+# 
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
+# The Original Code is Mozilla Communicator client code, released
+# March 31, 1998.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
 #
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
-# http://www.mozilla.org/MPL/
-# 
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-# 
-# The Original Code is Mozilla Communicator client code.
-# 
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1996-2000
-# the Initial Developer. All Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
-
-#
-# GNU Makefile for LDAP client tools.
+# Contributor(s): 
 #
 
-LDAP_SRC = ../..
-MCOM_ROOT = ../../../..
+MOD_DEPTH	= ../../..
+srcdir		= .
+topsrcdir 	= ../../..
 
-NOSTDCLEAN=true # don't let nsconfig.mk define target clean
-NOSTDSTRIP=true # don't let nsconfig.mk define target strip
-NSPR20=true	# probably should be defined somewhere else (not sure where)
+include $(MOD_DEPTH)/config/autoconf.mk
+include $(topsrcdir)/build.mk
 
-OBJDEST = $(OBJDIR)/clients/tools/obj
-BINDIR = $(OBJDIR)/clients/bin
+INSTALLDIR     = $(DIST)/$(OBJDIR_NAME)/bin
+HEADERDIR      = $(MOD_DEPTH)/dist/$(OBJDIR_NAME)
 
-include $(MCOM_ROOT)/c-sdk/nsdefs.mk
-include $(MCOM_ROOT)/c-sdk/nsconfig.mk
+INCLUDES	+= -I$(HEADERDIR)/include \
+		-I$(DIST)/include/obsolete \
+		-I$(DIST)/include/nspr \
+		-I$(DIST)/include \
+		-I$(DIST)/public/security \
+		-I$(DIST)/public/nss \
+		-I$(DIST)/public/ldap \
+		-I$(topsrcdir)/ldap/include
 
-include $(LDAP_SRC)/nsldap.mk
-ifndef LDAP_USE_OLD_DB
-include $(MCOM_ROOT)/c-sdk/ns_usedb.mk
+ifeq ($(HAVE_CCONF), 1)
+COMPS_FROM_OBJDIR=1
 endif
 
-# NLS Library
-
-NLS_COMP_NAME = libnls
-NLS_VERS_NUM = 31
-NLS_COMP_DIR = $(NLS_COMP_NAME)$(NLS_VERS_NUM)
-NLS_ROOT = $(MCOM_ROOT)/../components/$(NLS_COMP_DIR)
-
-NLS_LIBPATH = $(NLS_ROOT)/$(NLSOBJDIR)/lib
-NLS_INCLUDE = $(NLS_ROOT)/$(NLSOBJDIR)/include
-NLS_LOCALE  = $(NLS_ROOT)/$(NLSOBJDIR)/locale$(NLS_VERS_NUM)
-NLS_CONV    = $(NLS_ROOT)/$(NLSOBJDIR)/conv$(NLS_VERS_NUM)
-NLS_VERSION_FILE = $(NLS_ROOT)/Version
-
-
-NLS_RELDATE=v3.2
-
-NLS_VERSION = $(NLS_RELDATE)
-
-ifeq ($(ARCH), WINNT)
-  ifeq ($(OS_TARGET), WIN95)
-	ifeq ($(DEBUG), full)
-	  NLSOBJDIR = WIN954.0_DBG.OBJ
-	else
-	  ifeq ($(DEBUG), fulld)
-	    NLSOBJDIR = WIN954.0_DBG.OBJD
-	  else
-	    NLSOBJDIR = WIN954.0_OPT.OBJ
-	  endif
-	endif
-  else
-	ifeq ($(DEBUG), full)
-	  NLSOBJDIR = WINNT4.0_DBG.OBJ
-	else
-	  ifeq ($(DEBUG), fulld)
-	    NLSOBJDIR = WINNT4.0_DBG.OBJD
-	  else
-	    NLSOBJDIR = WINNT4.0_OPT.OBJ
-	  endif
-	endif
-  endif
-  NLS_RELEASE = $(COMPONENTS_DIR)/libnls$(NLS_VERS_NUM)/$(NLS_VERSION)/$(NLSOBJDIR)
-#  NLS_LIBNAMES = brk32$(NLS_VERS_NUM) cnv32$(NLS_VERS_NUM) col32$(NLS_VERS_NUM) fmt32$(NLS_VERS_NUM) res32$(NLS_VERS_NUM) uni32$(NLS_VERS_NUM)
-  NLS_LIBNAMES = cnv32$(NLS_VERS_NUM) 
-  NLS_CONV_LIBNAMES = jpn32$(NLS_VERS_NUM) cck32$(NLS_VERS_NUM) sb32$(NLS_VERS_NUM)
-  NLS_LIBS = $(addsuffix .lib,  $(addprefix ns, $(NLS_LIBNAMES)))
-  NLS_CONV_LIBS = $(addsuffix .lib, $(addprefix ns, $(NLS_CONV_LIBNAMES)))
-  NLSDLL_NAMES = $(addsuffix .dll, $(addprefix ns, $(NLS_LIBNAMES)))
-  NLS_CONVDLL_NAMES = $(addsuffix .dll, $(addprefix ns, $(NLS_CONV_LIBNAMES)))
-  LIBNLS = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS))
-  LIBNLS_CONV = $(addprefix $(NLS_LIBPATH)/, $(NLS_CONV_LIBS))
-  NLSOBJNAME = $(NLS_LIBNAMES)
-else
-ifeq ($(ARCH), HPUX)
-  ifeq ($(NSOS_RELEASE), B.11.00)
-    NLSOBJDIR = $(NSOBJDIR_NAME)
-    NLS_RELEASE = $(COMPONENTS_DIR)/libnls$(NLS_VERS_NUM)/$(NLS_VERSION)/$(NLSOBJDIR)
-  else
-    NLSOBJDIR = $(NSOBJDIR_NAME)
-    NLS_RELEASE = $(COMPONENTS_DIR)/libnls$(NLS_VERS_NUM)/$(NLS_VERSION)/$(NLSOBJDIR)
-  endif
-else
-# Here is a hack to replace _PTH with n32, this must be done before
-# the _PTH substitustion
-
-  ifeq ($(ARCH),IRIX)
-    ifeq ($(USE_N32),1)
-      NLSOBJDIR = $(NSOBJDIR_NAME2_NOTAG)
-    else 
-      NLSOBJDIR = $(NSOBJDIR_NAME_NOTAG)
-    endif
-  else
-    NLSOBJDIR = $(NSOBJDIR_NAME_NOTAG)
-
-  ifeq ($(ARCH), OSF1)
-    NLSOBJDIR = $(NSOBJDIR_NAME)
-  endif
-  endif
-
-# NLS Does not has PTH version, so here is the hack which treat non PTH
-# version as PTH version
- ifeq ($(USE_PTHREADS), 1)
-    NLS_RELEASE = $(COMPONENTS_DIR)/libnls$(NLS_VERS_NUM)/$(NLS_VERSION)/$(NLSOBJDIR)
- else
-  NLS_RELEASE = $(COMPONENTS_DIR)/libnls$(NLS_VERS_NUM)/$(NLS_VERSION)/$(NLSOBJDIR)
- endif
-endif # HPUX
-  NLS_LIBNAMES = cnv$(NLS_VERS_NUM)
-  NLS_CONV_LIBNAMES = jpn$(NLS_VERS_NUM) cck$(NLS_VERS_NUM) sb$(NLS_VERS_NUM)
-  NLS_SOLIB_NAMES = $(addsuffix $(DLL_PRESUF), $(addprefix libns, $(NLS_LIBNAMES)))
-  NLS_CONV_SOLIB_NAMES = $(addsuffix $(DLL_PRESUF), $(addprefix libns, $(NLS_CONV_LIBNAMES)))
-  NLS_LIBS = $(addsuffix .a, $(NLS_SOLIB_NAMES))
-  NLS_CONV_LIBS = $(addsuffix .a, $(NLS_CONV_SOLIB_NAMES))
-  NLS_SOLIBS = $(addsuffix .$(DLL_SUFFIX), $(NLS_SOLIB_NAMES))
-  NLS_CONV_SOLIBS = $(addsuffix .$(DLL_SUFFIX), $(NLS_CONV_SOLIB_NAMES))
-  NLSOBJNAME = $(NLS_SOLIBS)
-  LIBNLS = $(addprefix $(NLS_LIBPATH)/, $(NLS_SOLIBS))
- 
-  ifeq ($(ARCH), OSF1)
-   NLSLINK = -L$(NLS_LIBPATH) $(addprefix -l,  $(addsuffix $(DLL_PRESUF), $(addprefix ns, $(NLS_LIBNAMES)))) -lcxx
-   NLSLINK_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS)) -lcxx
-   NLSLINK_CONV_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_CONV_LIBS))
-  else
-  ifeq ($(ARCH),HPUX)
-   #linking with libC is *BAD* on HPUX11
-   NLSLINK = -L$(NLS_LIBPATH) $(addprefix -l,  $(addsuffix $(DLL_PRESUF), $(addprefix ns, $(NLS_LIBNAMES))))
-   NLSLINK_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS))
-   NLSLINK_CONV_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_CONV_LIBS))
-  else
-  ifeq ($(ARCH),Linux)
-   NLSLINK = -L$(NLS_LIBPATH) $(addprefix -l,  $(addsuffix $(DLL_PRESUF), $(addprefix ns, $(NLS_LIBNAMES)))) -lresolv -lpthread
-   NLSLINK_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS)) -lresolv -lpthread
-  else
-  ifeq ($(ARCH),IRIX)
-   NLSLINK = -L$(NLS_LIBPATH) $(addprefix -l,  $(addsuffix $(DLL_PRESUF), $(addprefix ns, $(NLS_LIBNAMES))))  -lpthread
-   NLSLINK_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS)) -lpthread
-  else
-   NLSLINK = -L$(NLS_LIBPATH) $(addprefix -l,  $(addsuffix $(DLL_PRESUF), $(addprefix ns, $(NLS_LIBNAMES)))) -lC
-   NLSLINK_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_LIBS)) -lC
-  endif             # Irix
-  endif             # Linux
-   NLSLINK_CONV_STATIC = $(addprefix $(NLS_LIBPATH)/, $(NLS_CONV_LIBS))
-  endif             # HPUX
-endif               # OSF1
-endif
- 
-ifeq ($(ARCH), SOLARIS)
-NLSLINK += -lw
+#
+# The "arg pin" feature depends on the server core library.
+#
+ifeq ($(HAVE_SVRCORE), 1)
+LDAP_TOOL_ARGPIN=1
 endif
 
-$(LIBNLS): $(NLS_VERSION_FILE) nls_version_check
- 
-$(NLS_VERSION_FILE):
-		mkdir -p $(NLS_ROOT); \
-		cd $(NLS_ROOT); echo "garbage" > Version
+ifeq ($(LDAP_TOOL_ARGPIN),1)
+INCLUDES += -I../../../../../dist/public/svrcore
+CFLAGS+=-DLDAP_TOOL_ARGPIN -DLDAP_TOOL_PKCS11
+SVRCORE_LINK=-l$(SVRCORE_LIBNAME) 
+endif
 
-ifneq ($(ARCH), WINNT)
-ifndef FORCE_FTP
-nls_version_check:
-		@if [ `cat $(NLS_VERSION_FILE)` != "$(NLS_VERSION)" -o ! -d $(NLS_ROOT)/$(NLSOBJDIR) ]; then \
- 		if [ -d $(NLS_RELEASE) ]; then \
-			if [ "$(RELEASE_TREE)" != "" ]; then \
-                                (cd $(NLS_ROOT); \
-				\rm -rf $(NLSOBJDIR) $(NLS_VERSION_FILE); \
-				ln -s $(RELEASE_TREE)/libnls31/$(NLSOBJDIR) $(NLSOBJDIR)); \
-				echo "$(NLS_VERSION)" > $(NLS_VERSION_FILE); \
-			else \
-				(cd $(NLS_ROOT); \
-				\rm -rf $(NLSOBJDIR) $(NLS_VERSION_FILE); \
-				ln -s $(NLS_RELEASE) $(NLSOBJDIR)); \
-				echo "$(NLS_VERSION)" > $(NLS_VERSION_FILE); \
-			fi; \
-		else \
-			echo "************************** ERROR *************************"; \
-			echo "LIBNLS client libraries are missing.  Make sure your machine"; \
-			echo "has access to $(NLS_RELEASE)"; \
-			echo "**********************************************************"; \
-			exit 1; \
-		fi; \
-	fi; \
- 
-else
- 
-nls_version_check:
-# The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
-# $(NLS_VERSION_FILE)
-	sh $(MCOM_ROOT)/c-sdk/compver.sh $(NLS_ROOT) $(NLS_VERSION) \
-	$(NLSOBJDIR) $(MCOM_ROOT) $(MODULE) $(NLS_RELEASE) libnls$(NLS_VERS_NUM) \
-	"' include lib conv$(NLS_VERS_NUM) locale$(NLS_VERS_NUM) '" $(NLS_ROOT)/$(NLSOBJDIR)/locale$(NLS_VERS_NUM)/index.txt
+ifdef HAVE_LIBNLS
+INCLUDES	+= -I$(LIBNLS_INCLUDES)
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+DEFS		+= -DXP_WIN -DXP_WIN32
+endif
+DEFINES         += $(DEFS)
+
+CXXSRCS		= convutf8.cpp
+
+OBJDEST		= $(OBJDIR_NAME)
+BINDIR		= $(OBJDIR_NAME)/bin
+LIBDIR		= $(OBJDIR_NAME)/lib
+
+ifeq ($(OS_ARCH), WINNT)
+LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.obj)
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.obj)
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.obj)
+LDAPCOMPARE_OBJ    	= $(addprefix $(OBJDEST)/, ldapcompare.obj)
+LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.obj)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.obj) \
+			  $(addprefix $(OBJDEST)/, convutf8.obj) \
+			  $(addprefix $(OBJDEST)/, fileurl.obj) 
+ifeq ($(LDAP_TOOL_ARGPIN),1)
+LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.obj) \
+			   $(addprefix $(OBJDEST)/, ntuserpin.obj)
 endif
 else
- 
-nls_version_check:
-# The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
-# $(NLS_VERSION_FILE)
-	sh $(MCOM_ROOT)/c-sdk/compver.sh $(NLS_ROOT) $(NLS_VERSION) \
-	$(NLSOBJDIR) $(MCOM_ROOT) ldapsdk $(NLS_RELEASE) \
-	libnls$(NLS_VERS_NUM) \
-	"' include lib conv$(NLS_VERS_NUM) locale$(NLS_VERS_NUM) '" \
-	$(NLS_ROOT)/$(NLSOBJDIR)/locale$(NLS_VERS_NUM)/index.txt
-endif
-
-ifeq ($(ARCH), HPUX)
-  ifeq ($(NSOS_RELEASE), B.11.00)
-    EXTRA_LIBS += -lrt 
-    CXX=aCC -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L
-    LINK_EXE_NOLIBSOBJS_NOCXX       = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-	  $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
-    LINK_EXE_NOCXX = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-	$(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS)
-  endif
-  ifeq ($(NSOS_RELEASE), B.11.00_64)
-    EXTRA_LIBS += -lrt 
-    CXX=aCC -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0
-    LINK_EXE_NOLIBSOBJS_NOCXX       = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-	  $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
-    LINK_EXE_NOCXX = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-	$(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS)
-  endif
-  ifeq ($(NSOS_RELEASE), B.10.10)
-     CC= CC +a1
-#    CXX=CC -D__STDC_EXT__
-#    $(subst "+e", "",$(CFLAGS))
-  endif
-endif
-
-ifeq ($(ARCH),Linux)
-CXX = egcs
-LINK_EXE        = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			$(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) \
-			-o $@ $(OBJS) $(EXTRA_LIBS)
-LINK_EXE_NOLIBSOBJS     = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			$(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
-
+LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.o)
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o)
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o)
+LDAPCOMPARE_OBJ         = $(addprefix $(OBJDEST)/, ldapcompare.o)
+LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
 else
-ifeq ($(ARCH), OSF1)
-ifdef USE_LD_RUN_PATH
-#does RPATH differently.  instead we export RPATHFLAG as LD_RUN_PATH
-#see ns/c-sdk/ldap/clients/tools/Makefile for an example
-export LD_RUN_PATH=$(RPATHFLAG)
-LINK_EXE        = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			-o $@ $(OBJS) $(EXTRA_LIBS)
-LINK_EXE_NOLIBSOBJS     =  $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@
-else # USE_LD_RUN_PATH
-LINK_EXE        = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			$(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) \
-			-o $@ $(OBJS) $(EXTRA_LIBS)
-LINK_EXE_NOLIBSOBJS     = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			$(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
-endif # USE_LD_RUN_PATH
-endif 
-endif 
-MCOM_INCLUDE += -I$(NLS_INCLUDE)
-
-INCLUDES += $(SSLINCLUDE) $(NO_LIBLCACHE)
-DEFS += $(SSL)
-
-ALDFLAGS += $(SSLLIBFLAG)
-
-ifeq ($(ARCH), WINNT)
-SUBSYSTEM=console
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
+			  $(addprefix $(OBJDEST)/, convutf8.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
 endif
-
-ifneq ($(ARCH), WINNT)
-# Run-time search path for shared libraries: in admin server 3.x installations,
-# the ldap tools get installed under NSHOME/userdb/ldap/tools and the LDAP SDK
-# libraries (libldap and liblcache) get installed under NSHOME/lib, so the
-# correct library search path is ../../../lib. We also want to search
-# NSHOME/bin/slapd, where more recent versions of the SDK so's may be.
-RPATHFLAG=..:../lib:../../lib:../../../lib:../../../../lib
-ifdef USE_LD_RUN_PATH
-LD_RUN_PATH=$(RPATHFLAG)
-export LD_RUN_PATH
+ifeq ($(LDAP_TOOL_ARGPIN),1)
+LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \
+			   $(addprefix $(OBJDEST)/, ntuserpin.o)
 endif
 endif
 
-# svrcore is used by ntpinobj, and pinarg handling
-LIBSVRCORE_DEP=  $(NSCP_DISTDIR)/lib/svrcore.$(LIB_SUFFIX)
-ifeq ($(ARCH), WINNT)
-LIBSVRCORE= $(NSCP_DISTDIR)/lib/svrcore.$(LIB_SUFFIX)
-else
-LIBSVRCORE = -lsvrcore
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCPPCOMMON_OBJ   = $(addprefix $(OBJDEST)/, convutf8.o)
 endif
 
-ifeq ($(INCLUDE_SSL),1)
-# libsec and friends are already in libldap, so don't link with them here
-  LDTOOLS_LIBS_DEP = $(LDAP_SDK_LIBLDAP_DLL_DEP) $(EXTRA_LIBS_DEP)
-  LDTOOLS_LIBS = $(LDAP_SDK_LIBLDAP_DLL)
-  ifneq ($(LDAP_NO_LIBLCACHE),1)
-    LDTOOLS_LIBS_DEP += $(LDAP_LIBLDIF_DEP)
-    LDTOOLS_LIBS += $(LDAP_LIBLDIF) $(LDAP_SDK_LIBLCACHE_DLL)
-  else
-    LDTOOLS_LIBS_DEP += $(LDAP_LIBLDIF_DEP)
-    LDTOOLS_LIBS += $(LDAP_LIBLDIF)
-  endif
+CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
+	$(LDAPSEARCH_OBJ) $(LDAPCOMPARE_OBJ) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ)
 
-  LDTOOLS_LIBS += $(EXTRA_LIBS) $(EXTRA_MALLOC_LIBS) $(LDAP_SDK_LIBLDAP_DLL) $(LIBSVRCORE)
+LDAPDELETE = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapdelete))
+LDAPMODIFY = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapmodify))
+LDAPSEARCH = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapsearch))
+LDAPCOMPARE = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapcompare))
+LDAPCMP    = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapcmp))
 
-# XXXceb The linker on NT is auto optimizing.  We still need to have libsec around for svrcore
-#        Do Not Mess with the link order.  This was not straightforward, and "optimizing" the text
-#        will break the builds.
-  ifeq ($(ARCH), WINNT)
-    LDTOOLS_LIBS += $(LIBSEC)
-  endif
-  ifeq ($(ARCH), SOLARIS)
-    LDTOOLS_LIBS += $(LIBSEC) $(LIBDB)
-  endif
-  ifeq ($(ARCH), HPUX)
-    LDTOOLS_LIBS += $(LIBSEC)
-  endif
-  ifeq ($(ARCH), IRIX)
-    LDTOOLS_LIBS += $(LIBSEC) $(LIBDB)
-  endif
-  ifeq ($(ARCH), AIX)
-    LDTOOLS_LIBS += $(LIBSEC) $(LIBDB)
-  endif
-  ifeq ($(ARCH), WINNT)
-  LDTOOLS_LIBS += $(LIBNSPR)
-  else
-  LDTOOLS_LIBS += $(DYNAMICNSPR)
-  endif
-else
-# SSL is not included in the LDAP shared library...
-# need to link with libsec and friends explicitly
-  LDTOOLS_LIBS_DEP = $(LDAP_SDK_LIBS_DEP) $(LDAP_LIBLDIF_DEP) \
-	$(EXTRA_LIBS_DEP)
-  LDTOOLS_LIBS_DEP += $(LDAP_LIBLDIF_DEP)
-ifeq ($(ARCH), OSF1)
-  LDTOOLS_LIBS = $(LDAP_SDK_LIBSSLDAP_LIB) $(LDAP_SDK_LIBLDAP_DLL) $(LDAP_SDK_LIBPRLDAP_DLL) 
-else
-  LDTOOLS_LIBS = $(LDAP_SDK_LIBSSLDAP_LIB) $(LDAP_SDK_LIBPRLDAP_DLL) $(LDAP_SDK_LIBLDAP_DLL) 
-endif
-  ifneq ($(LDAP_NO_LIBLCACHE),1)
-    LDTOOLS_LIBS += $(LDAP_SDK_LIBLCACHE_DLL)
-  endif
-  LDTOOLS_LIBS +=  $(LIBSVRCORE) $(LIBSEC) $(LIBDB) $(EXTRA_LIBS)\
-	$(EXTRA_MALLOC_LIBS) $(LDAP_LIBLDIF)
+BINS=	 $(LDAPDELETE) $(LDAPMODIFY) $(LDAPSEARCH) $(LDAPCOMPARE) $(LDAPCMP)
 
-  ifneq ($(LDAP_NO_LIBLCACHE),1)
-    ifndef LDAP_USE_OLD_DB
-      LDTOOLS_LIBS_DEP+=$(DB_LIB_DEP)
-      LDTOOLS_LIBS+=$(DB_LIB)
-    endif
-  endif
-
-  ifeq ($(LDAP_NO_LIBLCACHE),1)
-    CFLAGS+=-DNO_LIBLCACHE
-  endif
-
-ifeq ($(ARCH), WINNT)
+ifeq ($(OS_ARCH), WINNT)
 LDTOOLS_LIBS += $(LIBNSPR)
 else
 LDTOOLS_LIBS += $(DYNAMICNSPR)
 endif
 
-# INCLUDE_SSL
-endif
-
-LDTOOLS_LIBS_DEP += $(LIBNLS)
-ifeq ($(ARCH), WINNT)
-LDTOOLS_LIBS += $(LIBNLS) $(LIBNLS_CONV)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+LDAPTOOLS_NSS_LINK=-l$(SSL_LIBNAME) -l$(NSS_LIBNAME) -l$(SOFTOKN_LIBNAME)
 else
-LDTOOLS_LIBS += $(NLSLINK_STATIC) $(NLSLINK_CONV_STATIC)
+LDAPTOOLS_NSS_LINK=-l$(SSL_LIBNAME) -l$(NSS_LIBNAME)
 endif
 
-
-
-
-#LDTOOLS_LIBS += $(LIBSVRCORE)
-
-ifeq ($(ARCH), AIX)
-LDTOOLS_LIBS += $(EXE_EXTRA_LIBS)
-endif 
-
-ifeq ($(ARCH), WINNT)
-ALDFLAGS += -FORCE:MULTIPLE /NODEFAULTLIB:MSVCRTD
+ifeq ($(OS_ARCH), SunOS)
+EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
+	     $(LDAPTOOLS_NSS_LINK) \
+	     -lthread -lposix4 -lsocket -lnls \
+	     -ldl -lresolv -lgen 
+EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
 endif
 
-#ifeq ($(ARCH), HPUX)
-#CC=CC +a1
-#LINK_EXE = $(LINK_EXE_NOCXX)
-#endif
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
+            comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
+            rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(LBER_LIBNAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(LDAP_LIBNAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(LDIF_LIBNAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(UTIL_LIBNAME).lib
+ifeq ($(LDAP_TOOL_ARGPIN),1)
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SVRCORE_LIBNAME).lib
+endif
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SSLDAP_LIBNAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(PRLDAP_LIBNAME).lib
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SOFTOKN_LIBNAME).lib
+endif
+EXTRA_LIBS += $(DIST)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).lib
+endif
 
-ifeq ($(ARCH),IRIX)
-ifeq ($(USE_N32),1)
-CXX=CC
-LDFLAGS += -n32 -mips3
-CC=cc
-LINK_EXE        = $(CXX) $(ALDFLAGS) $(LDFLAGS) \
-			-o $@ $(OBJS) $(EXTRA_LIBS)
+ifeq ($(OS_ARCH), OSF1)
+EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
+	     $(LDAPTOOLS_NSS_LINK) \
+	     -lcxx -lpthread -lrt -lmach -lexc 
+EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), Linux)
+EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
+	     $(LDAPTOOLS_NSS_LINK) \
+	     -l$(LBER_LIBNAME) \
+	     -ldl -lresolv -lpthread 
+EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), HP-UX)
+EXTRA_LIBS = -ldld -lm -lpthread -lrt \
+	     -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(DIST)/lib $(SVRCORE_LINK) -l$(LBER_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK)
+EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
+endif
+
+ifeq ($(OS_ARCH), AIX)
+EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
+	     $(LDAPTOOLS_NSS_LINK) \
+	     -ldl -brtl -lpthreads -lc_r -lm
+EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
+endif
+
+ifdef HAVE_LIBNLS
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+ifeq ($(OS_ARCH), SunOS)
+OS_VERS		:= $(shell uname -r)
+ifeq ($(OS_VERS),5.6)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lCrun \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
+else
+endif
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
 endif
 endif
 
-ifeq ($(ARCH), SOLARIS)
-ifeq ($(USE_64), 1)
-LINK_EXE += -xarch=v9 -L/usr/lib/sparcv9 -lCrun
+LDTOOLS_LIBS += $(EXTRA_LIBS)
+LIBLOCATION   = $(DIST)/$(OBJDIR_NAME)/lib
+
+include $(topsrcdir)/config/rules.mk
+
+###########################################################################
+
+all::	$(BINS) $(OBJDEST) linklibnls libdir $(BINS)
+
+libdir: linklibnls
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(LIBLOCATION)/$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+else
+	$(NSINSTALL) $(LIBLOCATION)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+ifeq ($(COMPS_FROM_OBJDIR), 1)
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+else
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+endif
+ifeq ($(COPYFREEBL), 1)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+else
+ifeq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) $(DIST)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+else
+	$(NSINSTALL) $(DIST)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(DIST)/lib/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+endif
+ifeq ($(COPYFREEBL), 1)
+	$(NSINSTALL) $(DIST)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 endif
 
-LINK_EXE += -$(LIBPATH)../$(MCOM_ROOT)/dist/$(NC_BUILD_FLAVOR)/lib
+linklibnls: FORCE
+ifneq ($(COMPONENT_PULL_METHOD), FTP)
+ifeq ($(HAVE_LIBNLS), 1)
+	$(RM) -f $(LIBNLS_INCLUDES)
+	$(RM) -f $(LIBNLS_LIBDIR)
+	ln -s $(LIBNLS_INCLUDES_LOC) $(LIBNLS_INCLUDES)
+	ln -s $(LIBNLS_LIB_LOC) $(LIBNLS_LIBDIR)
+endif
+else
+ifeq ($(HAVE_LIBNLS), 1)
+	@echo "Pulling libnls......"
+# The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
+# $(NLS_VERSION_FILE)
+	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
+	$(OBJDIR_NAME) ../../../../dist ldapsdk \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
+	libnls$(NLS_LIBVERSION) \
+	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
+	../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
+endif
+endif
 
-LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.o) 
-LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o fileurl.o) 
-LDAPMODRDN_OBJ		= $(addprefix $(OBJDEST)/, ldapmodrdn.o) 
-LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o fileurl.o)
-LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
-LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o convutf8.o argpin.o ntuserpin.o)
+$(LDAPTOOLCOMMON_OBJ):
 
-CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) $(LDAPMODRDN_OBJ) \
-	$(LDAPSEARCH_OBJ) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ)
+ifeq ($(OS_ARCH), HP-UX)
+$(LDAPTOOLCPPCOMMON_OBJ): convutf8.cpp
+ifneq ($(USE_64), 1)
+	/opt/aCC/bin/aCC -ext -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L -c -DHPUX11 -DHPUX11_00 +DAportable +DS1.1 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T -DNO_NODELOCK -DNO_LIBLCACHE -DXP_UNIX -DHPUX -DMCC_HTTPD -DNS_DOMESTIC -DNET_SSL -DCLIENT_AUTH -DNSPR20 -D_PR_NTHREAD -D_PR_USECPU -D_REENTRANT -DNS_DS -DSPAPI20 -DBUILD_NUM=\"01.081.1519\" -DCPU_hppa -DOS_hpux -D_NO_THREADS_ -Dhpux -Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa -DLDAP_REFERRALS -DLDAP_LDBM -DLDAP_LDIF -DLDBM_USE_DBBTREE -DSLAPD_PASSWD_SHA1 -D__DBINTERFACE_PRIVATE -DNO_LIBLCACHE -DNS_DIRECTORY -DNET_SSL -DUSE_NSPR_MT -O $(INCLUDES) convutf8.cpp -o $(OBJDIR_NAME)/convutf8.o
+else
+	/opt/aCC/bin/aCC -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -c -DHPUX11 -DHPUX11_00 -DIS_64 +e +DA2.0W +DS2.0 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T -DNO_NODELOCK  -DNO_LIBLCACHE -DXP_UNIX -DHPUX -DMCC_DEBUG -g -DMCC_HTTPD -DNS_DOMESTIC -DNET_SSL -DCLIENT_AUTH -DNSPR20 -D_PR_NTHREAD -D_PR_USECPU -D_REENTRANT -DNS_DS -DSPAPI20 -DBUILD_NUM=\"01.081.1617\" -DCPU_hppa -DOS_hpux -D_NO_THREADS_ -Dhpux -Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa -DLDAP_DEBUG -DLDAP_REFERRALS -DLDAP_LDBM -DLDAP_LDIF -DLDBM_USE_DBBTREE -DSLAPD_PASSWD_SHA1 -D__DBINTERFACE_PRIVATE -DNO_LIBLCACHE  -DNS_DIRECTORY -DNET_SSL -DUSE_NSPR_MT $(INCLUDES) -g convutf8.cpp -o $(OBJDIR_NAME)/convutf8.o
+endif
+else
+$(LDAPTOOLCPPCOMMON_OBJ):
 
-LDAPDELETE = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapdelete))
-LDAPMODIFY = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapmodify))
-LDAPMODRDN = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapmodrdn))
-LDAPSEARCH = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapsearch))
-LDAPADD    = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapadd))
-LDAPCMP    = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapcmp))
+endif
 
-BINS=	 $(LDAPDELETE) $(LDAPMODIFY) $(LDAPSEARCH) $(LDAPCMP)
+$(LDAPCOMPARE):	$(LDAPCOMPARE_OBJ) $(LDAPTOOLCOMMON_OBJ) \
+		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPCOMPARE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
-all:	$(OBJDEST) $(BINDIR) $(BINS)
-cmp:	$(LDAPCMP)
+$(LDAPDELETE):	$(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) \
+		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
-$(LDAPTOOLCOMMON_OBJ):	$(LIBNLS)
+$(LDAPMODIFY):	$(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) \
+		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
-$(LDAPDELETE):	$(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
-	$(LINK_EXE) $(LDAPDELETE_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
+$(LDAPSEARCH):	$(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) \
+		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
-$(LDAPMODIFY):	$(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
-	$(LINK_EXE) $(LDAPMODIFY_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
-
-$(LDAPMODRDN):	$(LDAPMODRDN_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
-	$(LINK_EXE) $(LDAPMODRDN_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
-
-$(LDAPSEARCH):	$(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
-	$(LINK_EXE) $(LDAPSEARCH_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
-
-$(LDAPADD): $(LDAPMODIFY) $(LDTOOLS_LIBS_DEP)
-	$(RM) $(LDAPADD)
-	$(HARDLN) $(LDAPMODIFY) $(LDAPADD)
-
-$(LDAPCMP):	$(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
-	$(LINK_EXE) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDTOOLS_LIBS)
-
-clientSDK:	all
+$(LDAPCMP):	$(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) \
+		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
+	$(LINK_EXE) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
 $(OBJDEST):
-	$(MKDIR) $(OBJDEST)
+	$(NSINSTALL) -D $(OBJDEST)
+	$(NSINSTALL) -D $(BINDIR)
+	$(NSINSTALL) -D $(LIBDIR)
 
-$(BINDIR):
-	$(MKDIR) $(BINDIR)
+export:: $(OBJDEST) libdir $(BINS)
+	$(NSINSTALL) $(LDAPDELETE) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPSEARCH) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPMODIFY) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPCOMPARE)	   $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPCMP)	   $(INSTALLDIR)
 
-clean:
-	$(RM) $(CLIENT_OBJS)
-	$(RM) $(BINS)
 
 #
 # Simple, local dependencies
@@ -499,6 +376,8 @@ LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile
 $(LDAPTOOLCOMMON_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPDELETE_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPMODIFY_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
-$(LDAPMODRDN_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPSEARCH_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h
+$(LDAPCOMPARE_OBJ):		$(LDAPTOOL_COMMON_DEPS)
 $(LDAPCMP_OBJ):		$(LDAPTOOL_COMMON_DEPS)
+
+FORCE:
