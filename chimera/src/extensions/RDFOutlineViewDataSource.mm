@@ -380,7 +380,7 @@
   RDFOutlineViewItem* item = [mDictionary objectForKey:key];
   if (!item)
   {
-    item = [[RDFOutlineViewItem alloc] init];
+    item = [[[RDFOutlineViewItem alloc] init] autorelease];
     [item setResource: aRDFResource];
     [mDictionary setObject:item forKey:key];				// retains |item|
   }
@@ -396,7 +396,7 @@
 - (void)updateItemProperties:(id)item enumerateChildren:(BOOL)doChildren
 {
   BOOL isExpandable = NO;
-  NSMutableArray* itemChildren = doChildren ? [[NSMutableArray alloc] initWithCapacity:10] : nil;
+  NSMutableArray* itemChildren = doChildren ? [[[NSMutableArray alloc] initWithCapacity:10] autorelease] : nil;
   
   nsCOMPtr<nsIRDFResource> itemResource = dont_AddRef([item resource]);
   
