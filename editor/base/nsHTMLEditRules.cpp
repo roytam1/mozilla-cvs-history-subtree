@@ -2604,6 +2604,7 @@ nsHTMLEditRules::WillIndent(nsISelection *aSelection, PRBool *aCancel, PRBool * 
   
   if (liNode)
   {
+    // make our array contain just this li node
     res = NS_NewISupportsArray(getter_AddRefs(arrayOfNodes));
     if (NS_FAILED(res)) return res;
     nsCOMPtr<nsISupports> isupports = do_QueryInterface(liNode);
@@ -2615,7 +2616,6 @@ nsHTMLEditRules::WillIndent(nsISelection *aSelection, PRBool *aCancel, PRBool * 
     // this basically just expands the range to include the immediate
     // block parent, and then further expands to include any ancestors
     // whose children are all in the range
-    
     res = GetPromotedRanges(aSelection, address_of(arrayOfRanges), kIndent);
     if (NS_FAILED(res)) return res;
     
@@ -2754,23 +2754,53 @@ nsHTMLEditRules::WillOutdent(nsISelection *aSelection, PRBool *aCancel, PRBool *
   *aHandled = PR_TRUE;
   
   nsAutoSelectionReset selectionResetter(aSelection, mHTMLEditor);
+  nsCOMPtr<nsISupportsArray> arrayOfRanges;
+  nsCOMPtr<nsISupportsArray> arrayOfNodes;
   nsresult res = NS_OK;
   
-  // convert the selection ranges into "promoted" selection ranges:
-  // this basically just expands the range to include the immediate
-  // block parent, and then further expands to include any ancestors
-  // whose children are all in the range
+  // short circuit: detect case of collapsed selection inside an <li>.
+  // just sublist that <li>.  This prevents bug 100753.
   
-  nsCOMPtr<nsISupportsArray> arrayOfRanges;
-  res = GetPromotedRanges(aSelection, address_of(arrayOfRanges), kOutdent);
+  PRBool bCollapsed;
+  nsCOMPtr<nsIDOMNode> liNode;
+  res = aSelection->GetIsCollapsed(&bCollapsed);
   if (NS_FAILED(res)) return res;
+  if (bCollapsed) 
+  {
+    nsCOMPtr<nsIDOMNode> node, block;
+    PRInt32 offset;
+    nsresult res = mHTMLEditor->GetStartNodeAndOffset(aSelection, address_of(node), &offset);
+    if (NS_FAILED(res)) return res;
+    if (IsBlockNode(node)) 
+      block = node;
+    else
+      block = mHTMLEditor->GetBlockNodeParent(node);
+    if (block && nsHTMLEditUtils::IsListItem(block))
+      liNode = block;
+  }
   
-  // use these ranges to contruct a list of nodes to act on.
-
-  nsCOMPtr<nsISupportsArray> arrayOfNodes;
-  res = GetNodesForOperation(arrayOfRanges, address_of(arrayOfNodes), kOutdent);
-  if (NS_FAILED(res)) return res;                                 
-                                     
+  if (liNode)
+  {
+    // make our array contain just this li node
+    res = NS_NewISupportsArray(getter_AddRefs(arrayOfNodes));
+    if (NS_FAILED(res)) return res;
+    nsCOMPtr<nsISupports> isupports = do_QueryInterface(liNode);
+    arrayOfNodes->AppendElement(isupports);
+  }
+  else
+  {
+    // convert the selection ranges into "promoted" selection ranges:
+    // this basically just expands the range to include the immediate
+    // block parent, and then further expands to include any ancestors
+    // whose children are all in the range
+    res = GetPromotedRanges(aSelection, address_of(arrayOfRanges), kOutdent);
+    if (NS_FAILED(res)) return res;
+    
+    // use these ranges to contruct a list of nodes to act on.
+    res = GetNodesForOperation(arrayOfRanges, address_of(arrayOfNodes), kOutdent);
+    if (NS_FAILED(res)) return res;                                 
+  }
+                                       
   // Ok, now go through all the nodes and remove a level of blockquoting, 
   // or whatever is appropriate.  Wohoo!
 
