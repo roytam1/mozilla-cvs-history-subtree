@@ -57,6 +57,9 @@ menubutton:not([disabled="true"]):hover:active {
 	color: ButtonText !important;
 }
 
+/* Set the minimum sidebar width so the help contents aren't squeezed together.*/
+#helpsidebar-box { width: 200px; }
+
 #help-back-button { -moz-image-region: rect(0px 144px 24px 120px); }
 #help-back-button[buttonover="true"] { -moz-image-region: rect(24px 144px 48px 120px); }
 #help-back-button[disabled="true"] { -moz-image-region: rect(48px 144px 72px 120px); }
