@@ -985,11 +985,13 @@ nsTreeRowGroupFrame::ReflowBeforeRowLayout(nsIPresContext*      aPresContext,
                                            nsReflowStatus&      aStatus,
                                            nsReflowReason       aReason)
 {
+#ifndef DEBUG_warren
   NS_ASSERTION(!aReflowState.unconstrainedWidth, 
                "Reflowing tree row group with unconstrained width!!!!");
   
   NS_ASSERTION(!aReflowState.unconstrainedHeight, 
                "Reflowing tree row group with unconstrained height!!!!");
+#endif
 
   //if (mScrollbar)
   //  printf("TRG Width: %d, TRG Height: %d\n", aReflowState.availSize.width, 
