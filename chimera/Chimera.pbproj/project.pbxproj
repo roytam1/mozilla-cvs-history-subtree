@@ -2198,6 +2198,27 @@
 			settings = {
 			};
 		};
+		F517052F034B5E9701026D5D = {
+			children = (
+				F5170530034B5E9701026D5D,
+			);
+			isa = PBXVariantGroup;
+			name = Localizable.strings;
+			path = PreferencePanes/Privacy;
+			refType = 2;
+		};
+		F5170530034B5E9701026D5D = {
+			isa = PBXFileReference;
+			name = English;
+			path = English.lproj/Localizable.strings;
+			refType = 4;
+		};
+		F5170531034B5E9701026D5D = {
+			fileRef = F517052F034B5E9701026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F5173958020CE1E50189DA0C = {
 			isa = PBXFileReference;
 			name = English;
@@ -5037,7 +5058,7 @@
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
 				FRAMEWORK_SEARCH_PATHS = "";
-				HEADER_SEARCH_PATHS = "../dist/include/pref ../dist/include/nspr ../dist/include/cookie ../dist/include/nkcache ../dist/include/xpcom";
+				HEADER_SEARCH_PATHS = "../dist/include/pref ../dist/include/nspr ../dist/include/cookie ../dist/include/nkcache ../dist/include/string ../dist/include/xpcom";
 				LIBRARY_SEARCH_PATHS = "../dist/Embed ../embedding/base ../string/obsolete ../intl/unicharutil/util ../js/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "";
@@ -5096,6 +5117,7 @@
 				F57F205F029997E701000106,
 				F57F2060029997E701000106,
 				F57F2061029997E701000106,
+				F517052F034B5E9701026D5D,
 			);
 			isa = PBXGroup;
 			name = Privacy;
@@ -5150,6 +5172,7 @@
 			files = (
 				F507A85E0311948201026D5D,
 				F57F2068029997E701000106,
+				F5170531034B5E9701026D5D,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
