@@ -547,3 +547,14 @@ VFY_EndWithSignature;
 ;+    local:
 ;+       *;
 ;+};
+;+NSS_3.3.1 { 	# NSS 3.3.1 release
+;+    global:
+;+#
+;+# The following symbols are exported only to make libsmime3.so work. 
+;+# These are still private!!!
+;+#
+PK11_CreatePBEParams;
+PK11_DestroyPBEParams;
+;+    local:
+;+       *;
+;+};

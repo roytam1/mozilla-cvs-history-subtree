@@ -136,7 +136,7 @@ endif
 ifeq ($(OS_TARGET),SunOS)
 ifeq ($(CPU_ARCH),sparc)
 ifndef NS_USE_GCC
-ifndef USE_PURE_32
+ifdef USE_HYBRID
     OS_CFLAGS += -xchip=ultra2
 endif
 endif
@@ -187,6 +187,7 @@ endif
 endif
 else
 # Solaris x86
+    DEFINES += -D_X86_
     DEFINES += -DMP_USE_UINT_DIGIT
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
     ASFILES  = mpi_i86pc.s
