@@ -492,6 +492,11 @@ nsPresContext::GetUserPreferences()
   if (NS_SUCCEEDED(mPrefs->GetIntPref("browser.display.use_document_fonts", &prefInt))) {
     mUseDocumentFonts = prefInt == 0 ? PR_FALSE : PR_TRUE;
   }
+
+  // * replace backslashes with Yen signs? (bug 245770)
+  if (NS_SUCCEEDED(mPrefs->GetBoolPref("layout.enable_japanese_specific_transform", &boolPref))) {
+    mEnableJapaneseTransform = boolPref;
+  }
   
   GetFontPreferences();
 
@@ -690,24 +695,23 @@ nsPresContext::UpdateCharSet(const char* aCharSet)
   if (mLangService) {
     NS_IF_RELEASE(mLanguage);
     mLangService->LookupCharSet(aCharSet, &mLanguage);  // addrefs
-    GetFontPreferences();
     if (mLanguage) {
       nsCOMPtr<nsIAtom> langGroupAtom;
       mLanguage->GetLanguageGroup(getter_AddRefs(langGroupAtom));
       NS_ASSERTION(langGroupAtom, "non-NULL language group atom expected");
-      if (langGroupAtom.get() == nsLayoutAtoms::Japanese) {
+      // bug 245770 comment #23 
+      if (langGroupAtom.get() == nsLayoutAtoms::Japanese &&
+          mEnableJapaneseTransform &&
+          nsCRT::strncasecmp(aCharSet, "UTF-", 4)) { // not very robust
         mLanguageSpecificTransformType =
         eLanguageSpecificTransformType_Japanese;
-      }
-      else if (langGroupAtom.get() == nsLayoutAtoms::Korean) {
-        mLanguageSpecificTransformType =
-        eLanguageSpecificTransformType_Korean;
       }
       else {
         mLanguageSpecificTransformType =
         eLanguageSpecificTransformType_None;
       }
     }
+    GetFontPreferences();
   }
 #ifdef IBMBIDI
   //ahmed

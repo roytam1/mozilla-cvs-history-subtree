@@ -135,6 +135,8 @@ protected:
 
   nsSupportsHashtable   mImageLoaders;
 
+  PRBool                mEnableJapaneseTransform;
+
 #ifdef IBMBIDI
   nsBidiPresUtils*      mBidiUtils;
   PRUint32              mBidi;

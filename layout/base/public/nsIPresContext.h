@@ -96,8 +96,7 @@ enum nsWidgetType {
 enum nsLanguageSpecificTransformType {
   eLanguageSpecificTransformType_Unknown = -1,
   eLanguageSpecificTransformType_None = 0,
-  eLanguageSpecificTransformType_Japanese,
-  eLanguageSpecificTransformType_Korean
+  eLanguageSpecificTransformType_Japanese
 };
 
 // supported values for cached bool types
