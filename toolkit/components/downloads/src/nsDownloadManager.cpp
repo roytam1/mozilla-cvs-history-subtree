@@ -1194,17 +1194,19 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
       return CancelDownload(path.get());  
     }
   }
-  else if (nsCRT::strcmp(aTopic, "quit-application") == 0 && mCurrDownloads.Count()) {
+  else if (nsCRT::strcmp(aTopic, "quit-application") == 0) {
     gStoppingDownloads = PR_TRUE;
-    mCurrDownloads.Enumerate(CancelAllDownloads, this);
+    if (mCurrDownloads.Count()) {
+      mCurrDownloads.Enumerate(CancelAllDownloads, this);
 
-    // Download Manager is shutting down! Tell the XPInstallManager to stop
-    // transferring any files that may have been being downloaded. 
-    gObserverService->NotifyObservers(mXPIProgress, "xpinstall-progress", NS_LITERAL_STRING("cancel").get());
+      // Download Manager is shutting down! Tell the XPInstallManager to stop
+      // transferring any files that may have been being downloaded. 
+      gObserverService->NotifyObservers(mXPIProgress, "xpinstall-progress", NS_LITERAL_STRING("cancel").get());
+
+      // Now go and update the datasource so that we "cancel" all paused downloads. 
+      SaveState();
+    }
     
-    // Now go and update the datasource so that we "cancel" all paused downloads. 
-    SaveState();
-
     // Now that active downloads have been canceled, remove all downloads if 
     // the user's retention policy specifies it. 
     if (GetRetentionBehavior() == 1) {
