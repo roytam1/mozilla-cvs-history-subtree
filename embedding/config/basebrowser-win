@@ -19,8 +19,8 @@
 ;
 ; ActiveX control
 ;
-;mozctl.dll
-;mozctlx.dll
+mozctl.dll
+mozctlx.dll
 
 
 ; 
@@ -78,8 +78,6 @@ components\content_base.xpt
 ; 
 zlib.dll
 components\imglib2.dll
-components\imglib2.xpt
-components\imgicon.xpt
 
 ; 
 ; Components: (need to trim fat)
@@ -167,8 +165,6 @@ components\jsurl.xpt
 ; editor
 components\editor.dll                   
 components\editor.xpt
-components\composer.dll
-components\composer.xpt
 
 ; find functionality
 ; Optional - only if your code uses nsIWebBrowserFind
@@ -223,14 +219,11 @@ ssl3.dll
 nssckbi.dll
 
 ; xmlextras, optional for XMLHttpRequest support
-;components\xmlextras.dll
-;components\xmlextras.xpt
+components\xmlextras.dll
+components\xmlextras.xpt
 
 ;
 ; MathML, optional for MathML charset conversion
 ;
 components\ucvmath.dll
 
-; mozcomps
-components\meta_mozcomps.dll
-components\meta_embed_mozcomps.dll

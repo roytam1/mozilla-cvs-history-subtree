@@ -580,7 +580,6 @@ CONFIG_STATUS_DEPS := \
 	$(wildcard $(TOPSRCDIR)/mailnews/makefiles) \
 	$(CONFIG_STATUS_DEPS_L10N) \
 	$(wildcard $(TOPSRCDIR)/themes/makefiles) \
-	$(wildcard $(TOPSRCDIR)/../config/mozilla.mk) \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without

@@ -4260,11 +4260,6 @@ MOZ_ARG_ENABLE_STRING(meta-components,
 if test -n "$MOZ_STATIC_COMPONENTS" && test -n "$MOZ_META_COMPONENTS"; then
     AC_MSG_ERROR([Simultaneous use of static-components & meta-components is not supported.])
 fi
-_OTHER_META_COMPS=`echo "$MOZ_META_COMPONENTS" | egrep -v '(mozcomps|embed_mozcomps| )'`
-if `echo "$MOZ_META_COMPONENTS" | grep -c embed_mozcomps` != 0 && \
-   test -n "$_OTHER_META_COMPS"; then
-   AC_MSG_ERROR([The embed_mozcomps meta component cannot be used in conjunction with meta components other than mozcomps.])
-fi
 
 case "$target" in
     *-*-aix*)
