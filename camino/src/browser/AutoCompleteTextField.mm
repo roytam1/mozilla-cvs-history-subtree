@@ -586,11 +586,16 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 - (void)controlTextDidChange:(NSNotification *)aNote
 {
   NSTextView *fieldEditor = [[aNote userInfo] objectForKey:@"NSFieldEditor"];
+
+  // we are here either because the user is typing or they are selecting
+  // an item in the autocomplete popup. When they are typing, the location of
+  // the selection will be non-zero (wherever the insertion point is). When
+  // they autocomplete, the length and the location will both be zero.
+  // We use this info in the following way: if they are typing or backspacing,
+  // restart the search and no longer use the selection in the popup.
   NSRange range = [fieldEditor selectedRange];
-  // make sure we're typing at the end of the string (and that there is a string)
   NSString* currentText = [fieldEditor string];
-  unsigned int len = [currentText length];
-  if (len && range.location == len) {
+  if ([currentText length] && range.location) {
     // when we ask for a NSTextView string, Cocoa returns
     // a pointer to the view's backing store.  So, the value
     // of the string continually changes as we edit the text view.
