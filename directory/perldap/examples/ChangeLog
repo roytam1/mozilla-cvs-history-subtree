@@ -1,3 +1,8 @@
+1999-01-05  Leif Hedstrom  <leif@netscape.com>
+
+	* psoftsync.pl (delAttr): Fixed annoying bug where I missed to
+	"my" $entry.
+
 1999-01-04  Leif Hedstrom  <leif@netscape.com>
 
 	* modattr.pl: Bug fixes for handling bad cases better (like

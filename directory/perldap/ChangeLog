@@ -2,6 +2,13 @@
 
 	* Conn.pm (getRes): Ooops, didn't return the appropriate
 	value... :(
+	(init): Changed test for LDAP_SUCCESS, to always return 0 or 1.
+	(close): Dito.
+	(delete): Dito.
+	(add): Dito.
+	(modifyRDN): Dito.
+	(update): Dito.
+	(simpleAuth): Dito.
 
 	* Entry.pm (NEXTKEY): Don't return the last $key if it's one that
 	should be hidden.
