@@ -20,8 +20,8 @@
  * Contributor(s): 
  */
 
-#include "nsRect.h"
-#include "nsMargin.h"
+#include "nsRect2.h"
+#include "nsMargin2.h"
 
 #ifdef DEBUG_STRING
 #include "nsString.h"
@@ -41,13 +41,13 @@
   ((a) > (b) ? (a) : (b))
 
 // Containment
-PRBool nsRect::Contains(gfx_coord aX, gfx_coord aY) const
+PRBool nsRect2::Contains(gfx_coord aX, gfx_coord aY) const
 {
   return (PRBool) ((aX >= x) && (aY >= y) &&
                    (aX < XMost()) && (aY < YMost()));
 }
 
-PRBool nsRect::Contains(const nsRect &aRect) const
+PRBool nsRect2::Contains(const nsRect2 &aRect) const
 {
   return (PRBool) ((aRect.x >= x) && (aRect.y >= y) &&
                    (aRect.XMost() <= XMost()) && (aRect.YMost() <= YMost()));
@@ -55,7 +55,7 @@ PRBool nsRect::Contains(const nsRect &aRect) const
 
 // Intersection. Returns TRUE if the receiver overlaps aRect and
 // FALSE otherwise
-PRBool nsRect::Intersects(const nsRect &aRect) const
+PRBool nsRect2::Intersects(const nsRect2 &aRect) const
 {
   return (PRBool) ((x < aRect.XMost()) && (y < aRect.YMost()) &&
                    (aRect.x < XMost()) && (aRect.y < YMost()));
@@ -63,7 +63,7 @@ PRBool nsRect::Intersects(const nsRect &aRect) const
 
 // Computes the area in which aRect1 and aRect2 overlap and fills 'this' with
 // the result. Returns FALSE if the rectangles don't intersect.
-PRBool nsRect::IntersectRect(const nsRect &aRect1, const nsRect &aRect2)
+PRBool nsRect2::IntersectRect(const nsRect2 &aRect1, const nsRect2 &aRect2)
 {
   gfx_coord  xmost1 = aRect1.XMost();
   gfx_coord  ymost1 = aRect1.YMost();
@@ -96,7 +96,7 @@ PRBool nsRect::IntersectRect(const nsRect &aRect1, const nsRect &aRect2)
 // Computes the smallest rectangle that contains both aRect1 and aRect2 and
 // fills 'this' with the result. Returns FALSE if both aRect1 and aRect2 are
 // empty and TRUE otherwise
-PRBool nsRect::UnionRect(const nsRect &aRect1, const nsRect &aRect2)
+PRBool nsRect2::UnionRect(const nsRect2 &aRect1, const nsRect2 &aRect2)
 {
   PRBool  result = PR_TRUE;
 
@@ -132,7 +132,7 @@ PRBool nsRect::UnionRect(const nsRect &aRect1, const nsRect &aRect2)
 }
 
 // Inflate the rect by the specified width and height
-void nsRect::Inflate(gfx_coord aDx, gfx_coord aDy)
+void nsRect2::Inflate(gfx_coord aDx, gfx_coord aDy)
 {
   x -= aDx;
   y -= aDy;
@@ -141,7 +141,7 @@ void nsRect::Inflate(gfx_coord aDx, gfx_coord aDy)
 }
 
 // Inflate the rect by the specified margin
-void nsRect::Inflate(const nsMargin &aMargin)
+void nsRect2::Inflate(const nsMargin2 &aMargin)
 {
   x -= aMargin.left;
   y -= aMargin.top;
@@ -150,7 +150,7 @@ void nsRect::Inflate(const nsMargin &aMargin)
 }
 
 // Deflate the rect by the specified width and height
-void nsRect::Deflate(gfx_coord aDx, gfx_coord aDy)
+void nsRect2::Deflate(gfx_coord aDx, gfx_coord aDy)
 {
   x += aDx;
   y += aDy;
@@ -159,7 +159,7 @@ void nsRect::Deflate(gfx_coord aDx, gfx_coord aDy)
 }
 
 // Deflate the rect by the specified margin
-void nsRect::Deflate(const nsMargin &aMargin)
+void nsRect2::Deflate(const nsMargin2 &aMargin)
 {
   x += aMargin.left;
   y += aMargin.top;
@@ -168,7 +168,7 @@ void nsRect::Deflate(const nsMargin &aMargin)
 }
 
 // scale the rect but round to smallest containing rect
-nsRect& nsRect::ScaleRoundOut(const float aScale) 
+nsRect2& nsRect2::ScaleRoundOut(const float aScale) 
 {
   gfx_coord right = GFXCoordCeil((x + width) * aScale);
   gfx_coord bottom = GFXCoordCeil((y + height) * aScale);
@@ -180,7 +180,7 @@ nsRect& nsRect::ScaleRoundOut(const float aScale)
 }
 
 // scale the rect but round to largest contained rect
-nsRect& nsRect::ScaleRoundIn(const float aScale) 
+nsRect2& nsRect2::ScaleRoundIn(const float aScale) 
 {
   gfx_coord right = GFXCoordFloor((x + width) * aScale);
   gfx_coord bottom = GFXCoordFloor((y + height) * aScale);
@@ -193,7 +193,7 @@ nsRect& nsRect::ScaleRoundIn(const float aScale)
 
 // Diagnostics
 #ifdef DEBUG_RECT
-FILE* operator<<(FILE* out, const nsRect& rect)
+FILE* operator<<(FILE* out, const nsRect2& rect)
 {
   nsAutoString tmp;
 

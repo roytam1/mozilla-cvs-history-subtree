@@ -30,8 +30,8 @@
 
 #include "nsIFontMetrics.h"
 #include "nsIRegion.h"
-#include "nsPoint.h"
-#include "nsRect.h"
+#include "nsPoint2.h"
+#include "nsRect2.h"
 
 class nsGCCache;
 class xGC;

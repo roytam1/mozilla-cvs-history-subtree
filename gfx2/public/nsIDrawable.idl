@@ -212,24 +212,24 @@ interface nsIDrawable : nsISupports
   /**
    * Draw a polygon
    *
-   * @param points An array of nsPoint structs that define the vertices of the polygon.
+   * @param points An array of nsPoint2 structs that define the vertices of the polygon.
    * @param npoints The number of points in the array.  This number must be at least two.
    *
    * @note currently noscript because xpidl doesn't support structs
    * @see fillPolygon()
    */
-  [noscript] void drawPolygon([array, size_is(npoints), const] in nsPoint points,
+  [noscript] void drawPolygon([array, size_is(npoints), const] in nsPoint2 points,
                               [const] in unsigned long npoints);
   /**
    * Draw a polygon filled with backgroundColor
    *
-   * @param points An array of nsPoint structs that define the vertices of the polygon.
+   * @param points An array of nsPoint2 structs that define the vertices of the polygon.
    * @param npoints The number of points in the array.  This number must be at least two.
    *
    * @note currently noscript because xpidl doesn't support structs
    * @see drawPolygon()
    */
-  [noscript] void fillPolygon([array, size_is(npoints), const] in nsPoint points,
+  [noscript] void fillPolygon([array, size_is(npoints), const] in nsPoint2 points,
                               [const] in unsigned long npoints);
 
   /**
@@ -319,8 +319,8 @@ interface nsIDrawable : nsISupports
    * @see drawScaledTile()
    */
   [noscript] void drawImage(in nsIImage aImage,
-                            [const] in nsRect aSrcRect,
-                            [const] in nsPoint aDestPoint);
+                            [const] in nsRect2 aSrcRect,
+                            [const] in nsPoint2 aDestPoint);
 
   /**
    * Draw an image scaling \a aSrcRect to \a aDestRect
@@ -339,8 +339,8 @@ interface nsIDrawable : nsISupports
    * @see drawScaledTile()
    */
   [noscript] void drawScaledImage(in nsIImage aImage,
-                                  [const] in nsRect aSrcRect,
-                                  [const] in nsRect aDestRect);
+                                  [const] in nsRect2 aSrcRect,
+                                  [const] in nsRect2 aDestRect);
 
   /**
    * Tile an image without scaling.
@@ -357,7 +357,7 @@ interface nsIDrawable : nsISupports
   [noscript] void drawTile(in nsIImage aImage,
                            in gfx_coord aXOffset,
                            in gfx_coord aYOffset,
-                           [const] in nsRect aTargetRect);
+                           [const] in nsRect2 aTargetRect);
 
   /**
    * Tile an an image scaling \a aSrcRect to \a aDestRect
@@ -373,7 +373,7 @@ interface nsIDrawable : nsISupports
                                  in gfx_coord aYOffset,
                                  in gfx_dimension aTileWidth,
                                  in gfx_dimension aTileHeight,
-                                 [const] in nsRect aTargetRect);
+                                 [const] in nsRect2 aTargetRect);
 
   /* drawBezierCurve() */
 
@@ -403,13 +403,13 @@ interface nsIDrawable : nsISupports
   void setClipOrigin(in gfx_coord x, in gfx_coord y);
 
   /* these should all set the same thing */
-  /*  [noscript] attribute nsRect clipRectangle; */
+  /*  [noscript] attribute nsRect2 clipRectangle; */
   void getClipRectangle(out gfx_coord x, out gfx_coord y, out gfx_dimension width, out gfx_dimension height);
   void setClipRectangle(in gfx_coord x, in gfx_coord y, in gfx_dimension width, in gfx_dimension height);
 
   attribute nsIRegion clipRegion;
 
-  [noscript] void changeClipRectangle([const] in nsRect rect, in short clipOperation);
+  [noscript] void changeClipRectangle([const] in nsRect2 rect, in short clipOperation);
   void changeClipRegion(/*[const]*/in nsIRegion aRegion, in short clipOperation);
 
 };

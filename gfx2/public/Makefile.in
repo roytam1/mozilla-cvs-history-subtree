@@ -62,16 +62,17 @@ XPIDLSRCS	= \
 		$(NULL)
 
 EXPORTS		= \
+		gfxcompat.h \
 		nsColor.h \
 		nsColorNameList.h \
 		nsColorNames.h \
 		nsGUIEvent.h \
-		nsMargin.h \
+		nsMargin2.h \
 		nsMatrix.h \
 		nsFont.h \
-		nsPoint.h \
-		nsRect.h \
-		nsSize.h \
+		nsPoint2.h \
+		nsRect2.h \
+		nsSize2.h \
 		nsTransform.h \
 		nsUnitConverters.h \
 		$(NULL)

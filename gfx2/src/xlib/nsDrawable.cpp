@@ -278,13 +278,13 @@ NS_IMETHODIMP nsDrawable::Clear()
   return NS_OK;
 }
 
-/* [noscript] void drawImage (in nsIImage aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
-NS_IMETHODIMP nsDrawable::DrawImage(nsIImage *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+/* [noscript] void drawImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsDrawable::DrawImage(nsIImage *aImage, const nsRect2 * aSrcRect, const nsPoint * aDestPoint)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledImage (in nsIImage aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+/* [noscript] void drawScaledImage (in nsIImage aImage, [const] in nsRect2 aSrcRect, [const] in nsRect aDestRect); */
 NS_IMETHODIMP nsDrawable::DrawScaledImage(nsIImage *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;

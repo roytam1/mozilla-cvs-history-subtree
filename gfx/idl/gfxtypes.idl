@@ -121,10 +121,12 @@ interface nsIGFXFormat
 [ptr] native nsRect2(nsRect2);
 [ptr] native nsSize2(nsSize2);
 [ptr] native nsPoint2(nsPoint2);
+[ptr] native nsFont(nsFont);
 
 %{C++
  struct nsPoint2;
  struct nsSize2;
  struct nsRect2;
+ struct nsFont;
 %}
 /*! @endverbatim */

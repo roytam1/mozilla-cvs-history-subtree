@@ -180,12 +180,12 @@ interface nsIRegion : nsISupports
   /**
    * Get an array of rectangles that make up this region.
    *
-   * @param rects An array of nsRect structs that make up the region.
+   * @param rects An array of nsRect2 structs that make up the region.
    * @param nrects The number rects that make up this region.
    *
    * @note i'd like to be able to do this without allocating...
    **/
-  [noscript] void getRects([array, size_is(nrects)] out nsRect rects,
+  [noscript] void getRects([array, size_is(nrects)] out nsRect2 rects,
                            out unsigned long nrects);
 
   /**

@@ -32,7 +32,7 @@ interface nsIRollupListener;
 
 /*! @verbatim */
 // remove this later...
-[ref] native nsRectRef(nsRect);
+[ref] native nsRectRef(nsRect2);
 /*! @endverbatim */
 
 /**
@@ -180,7 +180,7 @@ interface nsIWindow : nsISupports
    * @param aIsSynchronouse If TRUE then repaint now else repaint later.
    * @see update()
    */
-  [noscript] void invalidateRect([const] in nsRect aRect, in boolean aIsSynchronous);
+  [noscript] void invalidateRect([const] in nsRect2 aRect, in boolean aIsSynchronous);
 
   /**
    * Invalidate the area \a aRegion in 'this' window.

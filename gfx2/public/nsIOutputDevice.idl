@@ -103,7 +103,7 @@ interface nsIOutputDevice : nsISupports
 
 
 
-  [noscript] readonly attribute nsSize size;
+  [noscript] readonly attribute nsSize2 size;
 
 
   readonly attribute gfx_depth depth;

@@ -60,7 +60,7 @@ interface nsITransferable : nsISupports
    * @param nFlavors The number of strings in the \a aFlavors array.
    * @note This is a copy of the internal list, so it may be edited w/out affecting the transferable.
    */
-  void flavorsTransferableCanExport([retval, array, size_is(nFlavors)] out string aFlavors,
+  void flavorsTransferableCanExport([array, size_is(nFlavors)] out string aFlavors,
                                     out unsigned long nFlavors);
 
   /**
@@ -102,7 +102,7 @@ interface nsITransferable : nsISupports
    * @param nFlavors The number of strings in the \a aFlavors array.
    * @note This is a copy of the internal list, so it may be edited w/out affecting the transferable.
    */
-  void flavorsTransferableCanImport([retval, array, size_is(nFlavors)] out string aFlavors,
+  void flavorsTransferableCanImport([array, size_is(nFlavors)] out string aFlavors,
                                     out unsigned long nFlavors);
 
   /**
