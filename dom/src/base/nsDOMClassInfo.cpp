@@ -1160,11 +1160,8 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   nsCOMPtr<nsIScriptContext> my_context;
   nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(my_context));
-  NS_ENSURE_TRUE(my_context, NS_ERROR_UNEXPECTED);
 
-  rv = my_context->IsContextInitialized();
-
-  if (NS_FAILED(rv)) {
+  if (!my_context || NS_FAILED(my_context->IsContextInitialized())) {
     // The context is not yet initialized so there's nothing we can do
     // here yet.
 
