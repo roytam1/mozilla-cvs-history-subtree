@@ -176,13 +176,9 @@ PREventQueue *mozilla_event_queue = NULL;
 #include "m_cvstrm.h"
 #include "prefapi.h"
 #include "NSReg.h"
-<<<<<<< uapp.cp
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
-=======
-#include "softupdt.h"
->>>>>>> 3.5.14.2
 #include <Balloons.h>
 
 // HERE ONLY UNTIL NAV SERVICES CODE MERGED INTO TIP
@@ -692,17 +688,11 @@ static void DisplayExceptionCodeDialog ( ExceptionCode err )
 				stringIndex = 2;  //"of an unknown error."
 				break;
 		}
-<<<<<<< uapp.cp
 		CStr255 p0, p1;
 		
 		::NumToString(err, p1);     // The error is supposed to be numeric, not an OSType
 									// Initializing it in the CStr255 constructor doesn't handle this properly
 
-=======
-		CStr255		p0, p1;				// initialized to empty
-		
-		::NumToString(err, p1);
->>>>>>> 3.5.14.2
 		::GetIndString(p0, 7098, stringIndex);
 		::ParamText(p0, p1, nil, nil);
 		::CautionAlert(ALRT_ErrorOccurred, nil);
@@ -884,17 +874,10 @@ CFrontApp::CFrontApp()
 
 	UHTMLPrinting::InitCustomPageSetup();
 	
-<<<<<<< uapp.cp
 #ifdef MOZ_SMARTUPDATE
     SU_Startup();
 #endif
     NR_StartupRegistry();
-=======
-#ifdef MOZ_SMARTUPDATE
-   SU_Startup();
-#endif // MOZ_SMARTUPDATE
-	NR_StartupRegistry();
->>>>>>> 3.5.14.2
     
 	// ¥ PowerPlant initialization
 	UScreenPort::Initialize();
@@ -1091,15 +1074,9 @@ CFrontApp::~CFrontApp()
 	CFileMgr::DeleteCommTemporaryItems();
 	
 	NR_ShutdownRegistry();
-<<<<<<< uapp.cp
-#ifdef MOZ_SMARTUPDATE
-    SU_Shutdown();
-#endif
-=======
 #ifdef MOZ_SMARTUPDATE
    	SU_Shutdown();
 #endif // MOZ_SMARTUPDATE
->>>>>>> 3.5.14.2
 
 	ET_FinishMocha();
 
@@ -1673,7 +1650,7 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	SplashProgress( GetPString(MAC_PROGRESS_ADDRESS) );
 	CAddressBookManager::OpenAddressBookManager();
 #endif // MOZ_MAIL_NEWS
-	NET_FinishInitNetLib();
+//	NET_FinishInitNetLib();
 	if (agreedToLicense)
 		CreateStartupEnvironment(! gotPrefsFile);
 	
@@ -4024,41 +4001,9 @@ CFrontApp::ProcessNextEvent()
 		// the mouse location in global coordinates and the state 
 		// of the modifier keys. 
 
-<<<<<<< uapp.cp
-	catch (OSErr err)
-	{
-		DisplayErrorDialog ( err );
-=======
 		haveUserEvent = ::OSEventAvail(everyEvent, &macEvent);
 		AdjustCursor(macEvent); 
->>>>>>> 3.5.14.2
 	}
-<<<<<<< uapp.cp
-	catch (ExceptionCode err)
-	{
-		DisplayExceptionCodeDialog ( err );
-	}
-	
-	//
-	// Plug-ins and Java need key up events, which are masked by default
-	// (the event mask lomem is set to everyEvent - keyUp).  To ensure
-	// that itÕs always set to mask out nothing, reset it here every time
-	// before we call WaitNextEvent.
-	//
-	SetEventMask(everyEvent);				
-	
-	// The block surrounded by *** ... from LApplication::ProcessNextEvent() ***
-	// is identical to LApplication::ProcessNextEvent with one exception:
-	// the EventRecord is declared static in order to persist across calls
-	// to ProcessNextEvent to prevent dangling references to the event
-	// recorded by CApplicationEventAttachment (read the usage notes for
-	// CApplicationEventAttachment).
-	
-	// *** Begin block from LApplication::ProcessNextEvent() ***
-	
-	static EventRecord		macEvent;
-=======
->>>>>>> 3.5.14.2
 
 #ifdef DAVIDM_SPEED2
 #ifndef NSPR20
