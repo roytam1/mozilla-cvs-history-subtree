@@ -51,6 +51,7 @@ CSRCS  = \
 	art_vpath.c \
 	art_vpath_bpath.c \
 	art_vpath_dash.c \
+	art_vpath_filters.c \
 	art_vpath_svp.c	\
 	libart-features.c \
 	$(NULL)
@@ -96,6 +97,7 @@ EXPORTS = \
 	art_vpath.h \
 	art_vpath_bpath.h \
 	art_vpath_dash.h \
+	art_vpath_filters.h \
 	art_vpath_svp.h	\
 	config.h \
 	libart.h	\

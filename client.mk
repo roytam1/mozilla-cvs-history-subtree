@@ -152,6 +152,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	other-licenses/libart_lgpl/art_gray_svp.h             \
 	other-licenses/libart_lgpl/art_misc.c                 \
 	other-licenses/libart_lgpl/art_misc.h                 \
+	other-licenses/libart_lgpl/art_pathcode.h             \
 	other-licenses/libart_lgpl/art_pixbuf.c               \
 	other-licenses/libart_lgpl/art_pixbuf.h               \
 	other-licenses/libart_lgpl/art_rect.c                 \
@@ -302,6 +303,8 @@ SVG_BRANCH_NEW_FILES = \
 	other-licenses/libart_lgpl/acconfig.h \
 	other-licenses/libart_lgpl/art_render_mask.c \
 	other-licenses/libart_lgpl/art_render_mask.h \
+	other-licenses/libart_lgpl/art_vpath_filters.c \
+	other-licenses/libart_lgpl/art_vpath_filters.h \
 	other-licenses/libart_lgpl/autogen.sh \
 	other-licenses/libart_lgpl/configure.in \
 	other-licenses/libart_lgpl/gen_art_config.c \
