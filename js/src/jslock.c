@@ -45,8 +45,9 @@
 #include "jstypes.h"
 #include "jsbit.h"
 #include "jscntxt.h"
-#include "jslock.h"
+#include "jsdtoa.h"
 #include "jsgc.h"
+#include "jslock.h"
 #include "jsscope.h"
 #include "jsstr.h"
 
