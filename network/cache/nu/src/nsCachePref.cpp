@@ -33,6 +33,10 @@
 #include "uprefd.h"
 #endif
 
+#ifdef XP_UNIX
+#include "sys/param.h"
+#include "nspr.h"
+#endif
 
 static const PRUint32 MEM_CACHE_SIZE_DEFAULT = 1024*1024;
 static const PRUint32 DISK_CACHE_SIZE_DEFAULT = 5*MEM_CACHE_SIZE_DEFAULT;
@@ -113,7 +117,7 @@ nsCachePref::SetupPrefs(const char* i_Pref)
 
     if (bSetupAll || !PL_strcmp(i_Pref,CACHE_DIR_PREF)) 
     {
-	    if (PREF_OK == PREF_CopyPathPref(CACHE_DIR_PREF,&tempPref))
+	if (PREF_OK == PREF_CopyPathPref(CACHE_DIR_PREF,&tempPref))
         {
             PR_ASSERT(tempPref);
             delete [] m_DiskCacheFolder;
@@ -151,7 +155,38 @@ nsCachePref::SetupPrefs(const char* i_Pref)
                 }
             }
             m_DiskCacheFolder = cacheDir;
-#else 
+
+#elif defined(MODULAR_NETLIB) && defined(XP_UNIX)
+
+	    /* XXX prefs are broken - this mess will got away
+	     * when they're fixed
+	     */
+	    PRFileInfo dir;
+	    PRStatus status;
+	    char *cacheDir = new char [MAXPATHLEN];
+
+	    if (!cacheDir)
+		return;
+
+	    cacheDir = PR_GetEnv ("MOZILLA_HOME");
+	    if (!cacheDir)
+		cacheDir = "/tmp/cache/";
+
+	    status = PR_GetFileInfo(cacheDir, &dir);
+            if (PR_FAILURE == status) {
+                // Create the dir.
+                status = PR_MkDir(cacheDir, 0666);
+                if (PR_SUCCESS != status) {
+                    m_DiskCacheFolder = new char[1];
+		    *m_DiskCacheFolder = '\0';
+		    return;
+		}
+	    }
+	    m_DiskCacheFolder = cacheDir;
+
+	    if (!m_DiskCacheFolder)
+		return;
+#else
             m_DiskCacheFolder = new char [1];
             if (!m_DiskCacheFolder)
                 return;

@@ -34,7 +34,7 @@
 #include "nsDiskModule.h"
 #include "nsCacheObject.h"
 #include "nsCacheManager.h"
-#include "nsFileStream.h"
+#include "nsCacheFileStream.h"
 #include "nsCachePref.h"
 
 #include "mcom_db.h"
@@ -151,8 +151,10 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
         
         //Close the corresponding file 
         PR_ASSERT(io_pObject->Stream());
-		if (io_pObject->Stream())
-			PR_Close(((nsFileStream*)io_pObject->Stream())->FileDesc());
+		if (io_pObject->Stream()) {
+			/* XXX is this too heavy-handed? */
+			delete io_pObject->Stream();
+		}
 
         key->data = (void*)io_pObject->Address(); 
         /* Later on change this to include post data- io_pObject->KeyData() */
@@ -309,7 +311,7 @@ nsStream* nsDiskModule::GetStreamFor(const nsCacheObject* i_pObject)
 
         if (fullname)
         {
-            return new nsFileStream(fullname);
+            return new nsCacheFileStream(fullname);
         }
     }
     return 0;

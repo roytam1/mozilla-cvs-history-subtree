@@ -31,7 +31,7 @@ EXPORTS=	\
     nsCachePref.h 		\
     nsDiskModule.h 		\
 	nsEnumeration.h     \
-	nsFileStream.h      \
+	nsCacheFileStream.h      \
 	nsIterator.h        \
 	nsMemCacheObject.h  \
 	nsMemModule.h 		\

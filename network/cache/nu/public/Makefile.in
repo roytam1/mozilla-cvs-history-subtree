@@ -26,6 +26,7 @@ EXPORTS =               \
     CacheStubs.h 		\
 	nsBkgThread.h       \
 	nsCacheBkgThd.h 	\
+	nsCacheFileStream.h      \
 	nsCacheIterator.h 	\
 	nsCacheManager.h	\
 	nsCacheModule.h 	\
@@ -33,7 +34,6 @@ EXPORTS =               \
     nsCachePref.h 		\
     nsDiskModule.h 		\
 	nsEnumeration.h     \
-	nsFileStream.h      \
 	nsIterator.h        \
 	nsMemCacheObject.h  \
 	nsMemModule.h 		\
