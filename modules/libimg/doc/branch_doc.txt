@@ -1,0 +1,99 @@
+Branch  for imglib components:
+
+Basic description:
+
+I have 3 new subdirectories to make below mozilla/modules/libimg.
+Some of the files in mozilla/modules/libimg/src and libimg/public
+should be moved to one of the new directories or retired into the
+attic, and created as new in one of the new directories.
+
+I have new exports in libimg/public and libimg/public_com. 
+I have a few new files that should go into the new directories.
+
+------------------------------
+The old structure:
+
+libimg/
+	/src
+	/public
+	/png
+------------------------------
+The new structure:
+
+libimg/
+	/src
+	/public
+	/public_com
+	/gifcom
+	/jpgcom
+	/pngcom
+------------------------------
+******************************************************
+mozilla/modules/libimg/doc.
+-----------------------------------------------------------------
+To get a buildable tree with the branch:
+
+1> pull a fresh tree and build as usual
+
+2> delete the mozilla/modules/libimg directory.
+(Pulling the branch over the existing libimg directory
+will not work.)
+
+
+3> pull the branch
+
+cvs co -r IMGLIB_DECODERS_BRANCH mozilla/modules/libimg
+
+
+4> You can now build just the imglib:
+cd modules/libimg
+clobber the libimg build
+rebuild.
+
+You should be ready to run.
+The new decoder components will be installed 
+in bin/components. 
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+If you want to do a clean top level build, you will need to modify
+the build files that specify the tree structure.  The top level build 
+files don't know about new directories and the directories that 
+have been removed.
+
+for linux:         add these files to allmakefiles.sh:
+                            modules/libimg/public_com
+                            modules/libimg/gifcom
+                            modules/libimg/jpgcom
+                            modules/libimg/pngcom
+                        
+                      remove these files from allmakefiles.sh:
+                            modules/libimg/classes/makefile
+                            modules/libimg/classes/netscape/Makefile
+                            modules/libimg/classes/netscape/libimg/Makefile
+--------------------------------------------------------------------------------
+
+for mac:     add to the mozilla::build::mac::BuildList.pm:
+                  under BUILD THE DIST at #LIBIMAGE   add the following exports:
+                
+                 InstallFromManifest(":mozilla:modules:libimg:public_com:MANIFEST", ":mozilla:dist:libimg:");
+           
+                 and under BUILD COMMON PROJECTS:
+
+                 BuildOneProject(":mozilla:modules:libimg:macbuild:gifcom.mcp",  "gifdecoder$D.shlb", "gifdecoder.toc",1,$main::ALIAS_SYM_FILES, 0);
+                 BuildOneProject(":mozilla:modules:libimg:macbuild:pngcom.mcp",  "pngdecoder$D.shlb", "pngdecoder.toc",1,$main::ALIAS_SYM_FILES, 0);
+                 BuildOneProject(":mozilla:modules:libimg:macbuild:jpgcom.mcp",  "jpgdecoder$D.shlb", "jpgdecoder.toc",1,$main::ALIAS_SYM_FILES, 0);
+
+--------------------------------------------------------------------------------
+
+for win/NT:    mozilla/modules/libimg/makefile.win specifies the
+                     new directories. It will be pulled when the module
+                     is pulled with the branch tag IMGLIB_DECODERS_BRANCH.
+
+--------------------------------------------------------------------------------   
+
+
+
