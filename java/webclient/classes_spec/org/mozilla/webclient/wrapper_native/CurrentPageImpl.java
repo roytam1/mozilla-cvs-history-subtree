@@ -167,12 +167,12 @@ public byte [] getSourceBytes(boolean viewMode)
     byte [] result = null;
     myFactory.throwExceptionIfNotInitialized();
     
-    /*    synchronized(myBrowserControl) {
+        synchronized(myBrowserControl) {
         result = nativeGetSourceBytes(nativeWebShell, viewMode);
     }
-    */
+    
 
-    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getSourceBytes has not yet been implemented.\n Will be available after Webclient M3 Release\n");
+    //throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getSourceBytes has not yet been implemented.\n Will be available after Webclient M3 Release\n");
     
     // PENDING (Ashu) - This should work - but it does not get anything from URl
     // and hangs up from time to time. Have to Debug. In M15, other native solution
@@ -201,9 +201,9 @@ public byte [] getSourceBytes(boolean viewMode)
 	{
 	  System.out.println("Error occurred while establishing connection -- \n ERROR - " + e);
 	}
-    
-    return result;
     */
+    return result;
+    
 }
             
 public void resetFind()

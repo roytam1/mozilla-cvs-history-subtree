@@ -121,6 +121,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 		MenuItem sourceItem = new MenuItem("View Page Source");
 		MenuItem pageInfoItem = new MenuItem("View Page Info");
 		MenuItem selectAllItem = new MenuItem("Select All");
+        MenuItem copyItem = new MenuItem("Copy");
 		menuBar.add(fileMenu);
 		menuBar.add(viewMenu);
 		menuBar.add(searchMenu);
@@ -139,6 +140,8 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 		pageInfoItem.addActionListener(this);
 		editMenu.add(selectAllItem);
 		selectAllItem.addActionListener(this);
+        editMenu.add(copyItem);
+        copyItem.addActionListener(this);
 
 		// Create the URL field
 		urlField = new TextField("", 30);
@@ -363,6 +366,9 @@ public void actionPerformed (ActionEvent evt)
             }
             else if (command.equals("Select All")) {
                 currentPage.selectAll();
+            }
+            else if (command.equals("Copy")) {
+                currentPage.copyCurrentSelectionToSystemClipboard();
             }
 	    }
         // deal with the button bar commands
