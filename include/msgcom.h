@@ -1128,15 +1128,8 @@ typedef struct MSG_AttachedFile
   uint32 null_count;
   uint32 max_line_length;
   
-  XP_Bool decrypted_p;	/* S/MIME -- when attaching a message that was
-						   encrypted, it's necessary to decrypt it first
-						   (since nobody but the original recipient can read
-						   it -- if you forward it to someone in the raw, it
-						   will be useless to them.)  This flag indicates
-						   whether decryption occurred, so that libmsg can
-						   issue appropriate warnings about doing a cleartext
-						   forward of a message that was originally encrypted.
-						 */
+  HG68452
+
 } MSG_AttachedFile;
 
 
