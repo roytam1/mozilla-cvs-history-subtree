@@ -45,10 +45,8 @@
 /*
  * Creates a new DocumentFunctionCall.
  */
-DocumentFunctionCall::DocumentFunctionCall(ProcessorState* aPs,
-                                           Node* aDefResolveNode)
-    : mProcessorState(aPs),
-      mDefResolveNode(aDefResolveNode)
+DocumentFunctionCall::DocumentFunctionCall(const String& aBaseURI)
+    : mBaseURI(aBaseURI)
 {
 }
 
@@ -121,7 +119,7 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
             exprResult1->stringValue(uriStr);
             if (!baseURISet) {
                 nodeSet->add(mProcessorState->retrieveDocument(uriStr,
-                    mDefResolveNode->getBaseURI()));
+                                                               mBaseURI));
             }
             else {
                 nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));

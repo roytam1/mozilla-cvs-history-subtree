@@ -14,9 +14,10 @@ class txHandlerTable;
 class txElementContext;
 class txStylesheet;
 
-class txStylesheetCompilerState
+class txStylesheetCompilerState : class txIParseContext
 {
 public:
+    txStylesheetCompilerState(String aBase, txStylesheet* aStylesheet);
     ~txStylesheetCompilerState();
 
     // Stack functions
@@ -31,11 +32,18 @@ public:
     nsresult parsePattern(const String& aPattern, txPattern** aResult);
     nsresult parseExpr(const String& aExpr, Expr** aResult);
     nsresult parseAVT(const String& aExpr, Expr** aResult);
-    nsresult parseQName(const String& aQName, txExpandedName& aExName);
+    nsresult parseQName(const String& aQName, txExpandedName& aExName,
+                        MBool aUseDefault);
 
     // State-checking functions
-    nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
     MBool fcp();
+
+    // txIParseContext
+    nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
+    nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                 FunctionCall*& aFunction);
+    void receiveError(const String& aMsg, nsresult aRes);
+
 
     txStylesheet* mStylesheet;
     txHandlerTable* mHandlerTable;
@@ -59,6 +67,8 @@ class txStylesheetCompiler
 {
 public:
     txStylesheetCompiler(const String& aBaseURI);
+    txStylesheetCompiler(const String& aBaseURI,
+                         txStylesheetCompiler* aParent);
     nsresult startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
                           txAtom* aPrefix, txStylesheetAttr* aAttributes,
                           PRInt32 aAttrCount);
@@ -75,6 +85,17 @@ private:
 
     txStylesheetCompilerState mState;
     String mCharacters;
+};
+
+class txElementContext : public TxObject
+{
+public:
+    MBool mPreserveWhitespace;
+    MBool mForwardsCompatibleParsing;
+    String mBaseURI;
+    txNamespaceMap mMappings;
+    txList mInstructionNamespaces;
+    PRInt32 mDepth;
 };
 
 #endif

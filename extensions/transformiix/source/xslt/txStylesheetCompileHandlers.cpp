@@ -153,13 +153,13 @@ txFnStartTemplate(PRInt32 aNamespaceID,
     
     txExpandedName name;
     if ((attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::name))) {
-        rv = aState.parseQName(attr->mValue, name);
+        rv = aState.parseQName(attr->mValue, name, MB_FALSE);
         TX_ENSURE_SUCCESS_OR_FCP(rv, aState);
     }
 
     txExpandedName mode;
     if ((attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::mode))) {
-        rv = aState.parseQName(attr->mValue, mode);
+        rv = aState.parseQName(attr->mValue, mode, MB_FALSE);
         TX_ENSURE_SUCCESS_OR_FCP(rv, aState);
     }
 
@@ -221,7 +221,7 @@ txFnStartKey(PRInt32 aNamespaceID,
     NS_ENSURE_TRUE(attr, NS_ERROR_XSLT_PARSE_FAILURE);
 
     txExpandedName name;
-    rv = aState.parseQName(attr->mValue, name);
+    rv = aState.parseQName(attr->mValue, name, MB_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txPattern* match = 0;
@@ -296,7 +296,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
             tok.nextToken(qname);
 
             txExpandedName name;
-            rv = aState.parseQName(qname, name);
+            rv = aState.parseQName(qname, name, MB_FALSE);
             NS_ENSURE_SUCCESS(rv, rv);
 
             instr = new txInsertAttrSet(name);

@@ -32,10 +32,8 @@
 /*
  * Creates a new key function call
  */
-txKeyFunctionCall::txKeyFunctionCall(ProcessorState* aPs,
-                                     Node* aQNameResolveNode)
-    : mProcessorState(aPs),
-      mQNameResolveNode(aQNameResolveNode)
+txKeyFunctionCall::txKeyFunctionCall(txNamespaceMap& aMappings)
+    : mMappings(aMappings)
 {
 }
 

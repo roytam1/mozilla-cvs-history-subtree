@@ -45,14 +45,3 @@ private:
     txElementHandler* mOtherHandler;
     txExpandedNameMap mHandlers;
 };
-
-class txElementContext : public TxObject
-{
-public:
-    MBool mPreserveWhitespace;
-    MBool mForwardsCompatibleParsing;
-    String mBaseURI;
-    txNamespaceMap mMappings;
-    txList mInstructionNamespaces;
-    PRInt32 mDepth;
-};

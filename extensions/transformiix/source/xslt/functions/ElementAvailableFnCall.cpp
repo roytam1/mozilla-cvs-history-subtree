@@ -51,8 +51,8 @@
  * aNode is the Element in the stylesheet containing the 
  * Expr and is used for namespaceID resolution
 **/
-ElementAvailableFunctionCall::ElementAvailableFunctionCall(Node* aQNameResolveNode)
-    : mQNameResolveNode(aQNameResolveNode)
+ElementAvailableFunctionCall::ElementAvailableFunctionCall(txNamespaceMap& aMappings)
+    : mMappings(aMappings)
 {
 }
 
@@ -77,7 +77,7 @@ ExprResult* ElementAvailableFunctionCall::evaluate(txIEvalContext* aContext)
             String property;
             exprResult->stringValue(property);
             txExpandedName qname;
-            nsresult rv = qname.init(property, mQNameResolveNode, MB_TRUE);
+            nsresult rv = qname.init(property, mMappings, MB_TRUE);
             if (NS_SUCCEEDED(rv) &&
                 qname.mNamespaceID == kNameSpaceID_XSLT &&
                 (qname.mLocalName == txXSLTAtoms::applyImports ||

@@ -43,12 +43,11 @@
 #include "txXSLTPatterns.h"
 
 txPattern* txPatternParser::createPattern(const String& aPattern,
-                                          txIParseContext* aContext,
-                                          ProcessorState* aPs)
+                                          txIParseContext* aContext)
 {
     txPattern* pattern = 0;
     ExprLexer lexer(aPattern);
-    nsresult rv = createUnionPattern(lexer, aContext, aPs, pattern);
+    nsresult rv = createUnionPattern(lexer, aContext, pattern);
     if (NS_FAILED(rv)) {
         // XXX error report parsing error
         return 0;
@@ -58,13 +57,12 @@ txPattern* txPatternParser::createPattern(const String& aPattern,
 
 nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
                                              txIParseContext* aContext,
-                                             ProcessorState* aPs,
                                              txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
     txPattern* locPath = 0;
 
-    rv = createLocPathPattern(aLexer, aContext, aPs, locPath);
+    rv = createLocPathPattern(aLexer, aContext, locPath);
     if (NS_FAILED(rv))
         return rv;
 
@@ -95,7 +93,7 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
 
     aLexer.nextToken();
     do {
-        rv = createLocPathPattern(aLexer, aContext, aPs, locPath);
+        rv = createLocPathPattern(aLexer, aContext, locPath);
         if (NS_FAILED(rv)) {
             delete unionPattern;
             return rv;
@@ -122,7 +120,6 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
 
 nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
                                                txIParseContext* aContext,
-                                               ProcessorState* aPs,
                                                txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
@@ -157,7 +154,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
                     rv = createIdPattern(aLexer, stepPattern);
                 }
                 else if (nameAtom == txXSLTAtoms::key) {
-                    rv = createKeyPattern(aLexer, aContext, aPs, stepPattern);
+                    rv = createKeyPattern(aLexer, aContext, stepPattern);
                 }
                 TX_IF_RELEASE_ATOM(nameAtom);
                 if (NS_FAILED(rv))
@@ -247,7 +244,6 @@ nsresult txPatternParser::createIdPattern(ExprLexer& aLexer,
 
 nsresult txPatternParser::createKeyPattern(ExprLexer& aLexer,
                                            txIParseContext* aContext,
-                                           ProcessorState* aPs,
                                            txPattern*& aPattern)
 {
     // check for '(' Literal, Literal ')'
@@ -270,7 +266,7 @@ nsresult txPatternParser::createKeyPattern(ExprLexer& aLexer,
     if (NS_FAILED(rv))
         return rv;
 
-    aPattern  = new txKeyPattern(aPs, prefix, localName, namespaceID, value);
+    aPattern  = new txKeyPattern(prefix, localName, namespaceID, value);
     TX_IF_RELEASE_ATOM(prefix);
     TX_RELEASE_ATOM(localName);
 

@@ -49,13 +49,12 @@ public:
     /**
      * Creates a new document() function call
     **/
-    DocumentFunctionCall(ProcessorState* aPs, Node* aDefResolveNode);
+    DocumentFunctionCall(const String& aBaseURI);
 
     TX_DECL_FUNCTION;
 
 private:
-    ProcessorState* mProcessorState;
-    Node* mDefResolveNode;
+    String mBaseURI;
 };
 
 /*
@@ -68,13 +67,12 @@ public:
     /*
      * Creates a new key() function call
      */
-    txKeyFunctionCall(ProcessorState* aPs, Node* aQNameResolveNode);
+    txKeyFunctionCall(txNamespaceMap& aMappings);
 
     TX_DECL_FUNCTION;
 
 private:
-    ProcessorState* mProcessorState;
-    Node* mQNameResolveNode;
+    txNamespaceMap mMappings;
 };
 
 /*
@@ -174,7 +172,7 @@ public:
     /**
      * Creates a new format-number() function call
     **/
-    txFormatNumberFunctionCall(ProcessorState* aPs, Node* aQNameResolveNode);
+    txFormatNumberFunctionCall(txStylesheet* aStylesheet, txNamespaceMap& aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -191,8 +189,8 @@ private:
         Finished
     };
     
-    ProcessorState* mPs;
-    Node* mQNameResolveNode;
+    txStylesheet* mStylesheet;
+    txNamespaceMap mMappings;
 };
 
 /**
@@ -231,7 +229,7 @@ public:
     /**
      * Creates a new current() function call
     **/
-    CurrentFunctionCall(ProcessorState* ps);
+    CurrentFunctionCall();
 
     TX_DECL_FUNCTION;
 
@@ -286,7 +284,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    SystemPropertyFunctionCall(Node* aQNameResolveNode);
+    SystemPropertyFunctionCall(txNamespaceMap& aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -294,7 +292,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    Node* mQNameResolveNode;
+    txNamespaceMap mMappings;
 };
 
 /**
@@ -309,7 +307,7 @@ public:
      * aNode is the Element in the stylesheet containing the 
      * Expr and is used for namespaceID resolution
     **/
-    ElementAvailableFunctionCall(Node* aQNameResolveNode);
+    ElementAvailableFunctionCall(txNamespaceMap& aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -317,7 +315,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    Node* mQNameResolveNode;
+    txNamespaceMap mMappings;
 };
 
 /**
@@ -330,7 +328,7 @@ public:
     /**
      * Creates a new function-available() function call
     **/
-    FunctionAvailableFunctionCall(Node* aQNameResolveNode);
+    FunctionAvailableFunctionCall(txNamespaceMap& aMappings);
 
     TX_DECL_FUNCTION;
 
@@ -338,7 +336,7 @@ private:
     /*
      * resolve namespaceIDs with this node
      */
-    Node* mQNameResolveNode;
+    txNamespaceMap mMappings;
 };
 
 #endif

@@ -6,71 +6,14 @@
 #include "txStylesheet.h"
 
 txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI)
+    : mState(aBaseURI, nsnull)
 {
-    mState.mStylesheet = new txStylesheet;
-    if (!mState.mStylesheet) {
-        // XXX invalidate
-        return;
-    }
-    
-    // XXX Embedded stylesheets have another handler. Probably
-    mState.mHandlerTable = gTxRootHandler;
-
-    mState.mElementContext = new txElementContext;
-    if (!mState.mElementContext) {
-        // XXX invalidate
-        return;
-    }
-
-    mState.mElementContext->mPreserveWhitespace = MB_FALSE;
-    mState.mElementContext->mForwardsCompatibleParsing = MB_TRUE;
-    mState.mElementContext->mBaseURI = aBaseURI;
-    mState.mElementContext->mDepth = 0;
-    nsresult rv = mState.mElementContext->
-        mInstructionNamespaces.add(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
-    if (NS_FAILED(rv)) {
-        // XXX invalidate
-        return;
-    }
-
-    // Push the "old" txElementContext
-    rv = mState.pushObject(0);
-    if (NS_FAILED(rv)) {
-        // XXX invalidate
-        return;
-    }
-
-    mDOE = MB_FALSE;    
 }
 
 txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI,
                                            txStylesheetCompiler* aParent)
+    : mState(aBaseURI, aParent->mState.mStylesheet)
 {
-    mState.mElementContext = new txElementContext;
-    if (!mState.mElementContext) {
-        // XXX invalidate
-        return;
-    }
-
-    mState.mElementContext->mPreserveWhitespace = MB_FALSE;
-    mState.mElementContext->mForwardsCompatibleParsing = MB_TRUE;
-    mState.mElementContext->mBaseURI = aBaseURI;
-    mState.mElementContext->mDepth = 0;
-    nsresult rv = mState.mElementContext->
-        mInstructionNamespaces.add(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
-    if (NS_FAILED(rv)) {
-        // XXX invalidate
-        return;
-    }
-
-    // Push the "old" txElementContext
-    rv = mState.pushObject(0);
-    if (NS_FAILED(rv)) {
-        // XXX invalidate
-        return;
-    }
-
-    mStylesheet = aParent->mState.mStylesheet;
 }
 
 nsresult
@@ -289,6 +232,50 @@ txStylesheetCompiler::ensureNewElementContext()
  * txStylesheetCompilerState
  */
 
+
+txStylesheetCompilerState::txStylesheetCompilerState(const String& aBase,
+                                                     txStylesheet* aStylesheet)
+    mStylesheet(aStylesheet)
+{
+    if (!mStylesheet) {
+        mStylesheet = new txStylesheet;
+        if (!mStylesheet) {
+            // XXX invalidate
+            return;
+        }
+    }
+    
+    // XXX Embedded stylesheets have another handler. Probably
+    mHandlerTable = gTxRootHandler;
+
+    mElementContext = new txElementContext;
+    if (!mElementContext) {
+        // XXX invalidate
+        return;
+    }
+
+    mElementContext->mPreserveWhitespace = MB_FALSE;
+    mElementContext->mForwardsCompatibleParsing = MB_TRUE;
+    mElementContext->mBaseURI = aBaseURI;
+    mElementContext->mDepth = 0;
+    nsresult rv = mElementContext->
+        mInstructionNamespaces.add(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
+    if (NS_FAILED(rv)) {
+        // XXX invalidate
+        return;
+    }
+
+    // Push the "old" txElementContext
+    rv = pushObject(0);
+    if (NS_FAILED(rv)) {
+        // XXX invalidate
+        return;
+    }
+
+    mDOE = MB_FALSE;    
+}
+
+
 txStylesheetCompilerState::~txStylesheetCompilerState()
 {
     delete mElementContext;
@@ -342,4 +329,134 @@ MBool
 txStylesheetCompilerState::fcp()
 {
     return mElementContext->mForwardsCompatibleParsing;
+}
+
+
+nsresult
+txStylesheetCompilerState::parsePattern(const String& aPattern,
+                                        txPattern** aResult)
+{
+    *aResult = txPatternParser::createPattern(aPattern, this)
+    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
+
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::parseExpr(const String& aExpr, Expr** aResult)
+{
+    *aResult = ExprParser::createExpr(aExpr, this)
+    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
+
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::parseAVT(const String& aExpr, Expr** aResult)
+{
+    *aResult = ExprParser::createAttributeValueTemplate(aExpr, this)
+    NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
+
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::parseQName(const String& aQName,
+                                      txExpandedName& aExName,
+                                      MBool aUseDefault)
+{
+    return aExName.init(aQName, mElementContext->mMappings, aUseDefault);
+}
+
+
+nsresult
+txStylesheetCompilerState::resolveNamespacePrefix(txAtom* aPrefix,
+                                                  PRInt32& aID)
+{
+#ifdef DEBUG
+    if (!aPrefix || aPrefix == txXMLAtoms::_empty) {
+        // default namespace is not forwarded to xpath
+        NS_ASSERTION(0, "caller should handle default namespace ''");
+        aID = kNameSpaceID_None;
+        return NS_OK;
+    }
+#endif
+    aID = mElementContext->mMappings->lookupNamespace(aPrefix);
+    return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
+}
+
+
+#define CHECK_FN(_name) aName == txXSLTAtoms::_name
+nsresult
+txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+                                               FunctionCall*& aFunction)
+{
+   aFunction = 0;
+
+   if (aID != kNameSpaceID_None) {
+       return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
+   }
+   if (CHECK_FN(document)) {
+       aFunction = new DocumentFunctionCall(mElementContext->mBaseURI);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(key)) {
+       aFunction = new txKeyFunctionCall(mElementContext->mMappings);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(formatNumber)) {
+       aFunction = new txFormatNumberFunctionCall(mStylesheet,
+                                                  mElementContext->mMappings);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(current)) {
+       aFunction = new CurrentFunctionCall();
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(unparsedEntityUri)) {
+
+       return NS_ERROR_NOT_IMPLEMENTED;
+   }
+   if (CHECK_FN(generateId)) {
+       aFunction = new GenerateIdFunctionCall();
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(systemProperty)) {
+       aFunction = new SystemPropertyFunctionCall(mElementContext->mMappings);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(elementAvailable)) {
+       aFunction =
+          new ElementAvailableFunctionCall(mElementContext->mMappings);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+   if (CHECK_FN(functionAvailable)) {
+       aFunction =
+          new FunctionAvailableFunctionCall(mElementContext->mMappings);
+       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+
+       return NS_OK;
+   }
+
+   return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
+}
+
+void
+txStylesheetCompilerState::receiveError(const String& aMsg, nsresult aRes)
+{
+    // XXX implement me
 }

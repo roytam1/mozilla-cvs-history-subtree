@@ -113,7 +113,7 @@ const String XPathNames::LANG_FN("lang");
  * Creates an Attribute Value Template using the given value
  * This should move to XSLProcessor class
 **/
-AttributeValueTemplate* ExprParser::createAttributeValueTemplate
+Expr* ExprParser::createAttributeValueTemplate
     (const String& attValue, txIParseContext* aContext)
 {
     AttributeValueTemplate* avt = new AttributeValueTemplate();

@@ -59,10 +59,10 @@ const UNICODE_CHAR txFormatNumberFunctionCall::FORMAT_QUOTE = '\'';
 /*
  * Creates a new format-number function call
  */
-txFormatNumberFunctionCall::txFormatNumberFunctionCall(ProcessorState* aPs,
-                                                       Node* aQNameResolveNode)
-    : mPs(aPs),
-      mQNameResolveNode(aQNameResolveNode)
+txFormatNumberFunctionCall::txFormatNumberFunctionCall(txStylesheet* aStylesheet,
+                                                       txNamespaceMap& aMappings)
+    : mStylesheet(aStylesheet),
+      mMappings(aMappings)
 {
 }
 
@@ -91,12 +91,12 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
     if (iter.hasNext()) {
         String formatQName;
         evaluateToString((Expr*)iter.next(), aContext, formatQName);
-        rv = formatName.init(formatQName, mQNameResolveNode, MB_FALSE);
+        rv = formatName.init(formatQName, mMappings, MB_FALSE);
         if (NS_FAILED(rv))
             formatName.mNamespaceID = kNameSpaceID_Unknown;
     }
 
-    txDecimalFormat* format = mPs->getDecimalFormat(formatName);
+    txDecimalFormat* format = mStylesheet->getDecimalFormat(formatName);
     if (!format) {
         String err("unknown decimal format for: ");
         toString(err);

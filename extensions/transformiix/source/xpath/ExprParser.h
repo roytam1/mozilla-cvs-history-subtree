@@ -57,7 +57,7 @@ public:
     /**
      * Creates an Attribute Value Template using the given value
     **/
-    static AttributeValueTemplate* createAttributeValueTemplate
+    static Expr* createAttributeValueTemplate
         (const String& attValue, txIParseContext* aContext);
 
 
