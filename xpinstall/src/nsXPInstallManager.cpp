@@ -32,6 +32,8 @@
 
 #include "nsIURL.h"
 
+#include "nsIFileTransportService.h"
+#include "nsIOutputStream.h"
 #include "nsNetUtil.h"
 #include "nsIBufferInputStream.h"
 #include "nsIInputStream.h"
@@ -518,13 +520,26 @@ nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
     NS_ASSERTION( mItem && mItem->mFile, "XPIMgr::OnStartRequest bad state");
     if ( mItem && mItem->mFile )
     {
-        //rv = mItem->mFile->OpenStreamForWriting(); //nsIFileXXX: what is nsIFile comparable operation?
-        rv = NS_NewLocalFileOutputStream(getter_AddRefs(mOutStream),
-                                                       mItem->mFile,
-                                                       PR_CREATE_FILE | PR_WRONLY,
-                                                       0664);
-    }
-
+        NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
+        NS_WITH_SERVICE( nsIFileTransportService, fts, kFileTransportServiceCID, &rv );
+            
+        
+        if (NS_SUCCEEDED(rv)) 
+        {
+            nsCOMPtr<nsIChannel> outChannel;
+            
+        	rv = fts->CreateTransport(mItem->mFile, 
+        	                          PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
+                                      0664, 
+                                      getter_AddRefs( outChannel));
+                                      
+			if (NS_SUCCEEDED(rv)) 
+        	{                          
+                // Open output stream.
+    			rv = outChannel->OpenOutputStream( getter_AddRefs( mOutStream ) );
+			}
+    	}
+	}
     return rv;
 }
 
