@@ -309,7 +309,6 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
      //                              Boolean forceUpdate);  
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
-
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
@@ -387,7 +386,6 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     //                               Boolean forceUpdate); 
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
-    nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
@@ -397,10 +395,28 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
       return JS_FALSE;
     }
 
-//    if(NS_OK != nativeThis->AddSubcomponent(b0, b1, b2, b3, b4, b5, &nativeRet))
-//    {
-      return JS_FALSE;
-//    }
+    if(JSVAL_IS_OBJECT(argv[1]))
+    {
+      JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
+      JSClass* jsclass = JS_GetClass(cx, jsobj);
+      if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
+      {
+//        nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
+
+//        if(NS_OK != nativeThis->AddDirectory(b0, version, b2, b3, b4, b5, &nativeRet))
+//        {
+          return JS_FALSE;
+//        }
+      }
+    }
+    else
+    {
+      nsCvrtJSValToStr(b1, cx, argv[1]);
+//      if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+//      {
+        return JS_FALSE;
+//      }
+    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -999,15 +1015,32 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     //                    String relativeLocalPath);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
-    nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
 
-//    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, b4, &nativeRet))
-//    {
-      return JS_FALSE;
-//    }
+    if(JSVAL_IS_OBJECT(argv[1]))
+    {
+      JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
+      JSClass* jsclass = JS_GetClass(cx, jsobj);
+      if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
+      {
+//        nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
+
+//        if(NS_OK != nativeThis->AddDirectory(b0, version, b2, b3, b4, b5, &nativeRet))
+//        {
+          return JS_FALSE;
+//        }
+      }
+    }
+    else
+    {
+      nsCvrtJSValToStr(b1, cx, argv[1]);
+//      if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+//      {
+        return JS_FALSE;
+//      }
+    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -1144,7 +1177,6 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     //                           int flags);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
-    nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
 
     if(!JS_ValueToInt32(cx, argv[3], (int32 *)&b3))
@@ -1153,10 +1185,28 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
       return JS_FALSE;
     }
 
-//    if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
-//    {
-      return JS_FALSE;
-//    }
+    if(JSVAL_IS_OBJECT(argv[1]))
+    {
+      JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
+      JSClass* jsclass = JS_GetClass(cx, jsobj);
+      if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
+      {
+//        nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
+
+//        if(NS_OK != nativeThis->AddDirectory(b0, version, b2, b3, b4, b5, &nativeRet))
+//        {
+          return JS_FALSE;
+//        }
+      }
+    }
+    else
+    {
+      nsCvrtJSValToStr(b1, cx, argv[1]);
+//      if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+//      {
+        return JS_FALSE;
+//      }
+    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
