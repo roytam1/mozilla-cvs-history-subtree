@@ -20,6 +20,7 @@
  * Contributors: timeless
  *               slucy@objectivesw.co.uk
  *               Håkan Waara <hwaara@chello.se>
+ *               Jan Varga <varga@utcru.sk>
  */
 
 var gMessengerBundle;
@@ -1081,18 +1082,18 @@ function IsEmptyTrashEnabled()
 
 function IsCompactFolderEnabled()
 {
-    var folderTree = GetFolderTree();
-    var selectedFolders = folderTree.selectedItems;
-    var numFolders = selectedFolders.length;
-
-    if (numFolders <= 0 )
+    var folderOutliner = GetFolderOutliner();
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value < 0)
         return false;
 
-    var folder = selectedFolders[0];
-    if (!folder)
+    var folderResource = GetFolderResource(folderOutliner, startIndex.value);
+    if (! folderResource)
         return false;
 
-    return (folder.getAttribute('CanCompact') == "true" && isCommandEnabled("cmd_compactFolder"));
+    return GetFolderAttribute(folderOutliner, folderResource, "CanCompact") == "true" && isCommandEnabled("cmd_compactFolder");
 }
 
 var gDeleteButton = null;

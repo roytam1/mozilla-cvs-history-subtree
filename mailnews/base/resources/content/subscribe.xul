@@ -68,7 +68,6 @@ Rights Reserved.
               <text class="label" value="&server.label;" for="serverMenu"/>
               <menulist oncommand="onServerClick(event);" id="serverMenu"
                         datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
-                        ignore="http://home.netscape.com/NC-rdf#MessageChild"
                         containment="http://home.netscape.com/NC-rdf#child"
                         ref="msgaccounts:/" flex="1">
                 <template>

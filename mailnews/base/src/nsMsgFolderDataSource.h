@@ -113,6 +113,7 @@ protected:
                             nsIRDFNode **target);
 	nsresult createFolderNameNode(nsIMsgFolder *folder, nsIRDFNode **target, PRBool sort);
 	nsresult createFolderTreeNameNode(nsIMsgFolder *folder, nsIRDFNode **target, PRBool sort);
+  nsresult createFolderTreeSimpleNameNode(nsIMsgFolder *folder, nsIRDFNode **target, PRBool sort);
 	nsresult createFolderSpecialNode(nsIMsgFolder *folder, nsIRDFNode **target);
   nsresult createFolderServerTypeNode(nsIMsgFolder *folder,
                                       nsIRDFNode **target);
@@ -190,12 +191,13 @@ protected:
 	nsresult CreateLiterals(nsIRDFService *rdf);
 
   static nsIRDFResource* kNC_Child;
-  static nsIRDFResource* kNC_MessageChild;
   static nsIRDFResource* kNC_Folder;
   static nsIRDFResource* kNC_Name;
   static nsIRDFResource* kNC_FolderTreeName;
+  static nsIRDFResource* kNC_FolderTreeSimpleName;
   static nsIRDFResource* kNC_NameSort;
   static nsIRDFResource* kNC_FolderTreeNameSort;
+  static nsIRDFResource* kNC_FolderTreeSimpleNameSort;
   static nsIRDFResource* kNC_Columns;
   static nsIRDFResource* kNC_MSGFolderRoot;
   static nsIRDFResource* kNC_SpecialFolder;
@@ -246,6 +248,7 @@ protected:
   static nsIAtom* kBiffStateAtom;
   static nsIAtom* kNewMessagesAtom;
   static nsIAtom* kNameAtom;
+  static nsIAtom* kSynchronizeAtom;
   
   static nsrefcnt gFolderResourceRefCnt;
 

@@ -18,6 +18,9 @@
  * Copyright (C) 2000 Netscape Communications Corporation. All
  * Rights Reserved.
  *
+ * Contributors(s):
+ *   Jan Varga <varga@utcru.sk>
+ *   Hakan Waara <hwaara@chello.se>
  */
 
 //NOTE: gMessengerBundle must be defined and set or this Overlay won't work
@@ -163,21 +166,18 @@ function SetupAddAllToABMenuItem(menuID, numSelected, forceHide)
 
 function fillFolderPaneContextMenu()
 {
-  var tree = GetFolderTree();
-  var selectedItems = tree.selectedItems;
-  var numSelected = selectedItems.length;
+  var folderOutliner = GetFolderOutliner();
+  var startIndex = {};
+  var endIndex = {};
+  folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+  if (startIndex.value < 0)
+    return;
+  var numSelected = endIndex.value - startIndex.value + 1;
+  var folderResource = GetFolderResource(folderOutliner, startIndex.value);
 
-  var popupNode = document.getElementById('folderPaneContext');
-
-  var targetFolder = document.popupNode.parentNode.parentNode;
-  if (targetFolder.getAttribute('selected') != 'true')
-  {
-    tree.selectItem(targetFolder);
-  }
-
-  var isServer = targetFolder.getAttribute('IsServer') == 'true';
-  var serverType = targetFolder.getAttribute('ServerType');
-  var specialFolder = targetFolder.getAttribute('SpecialFolder');
+  var isServer = GetFolderAttribute(folderOutliner, folderResource, "IsServer") == 'true';
+  var serverType = GetFolderAttribute(folderOutliner, folderResource, "ServerType");
+  var specialFolder = GetFolderAttribute(folderOutliner, folderResource, "SpecialFolder");
   var canSubscribeToFolder = (serverType == "nntp") || (serverType == "imap");
   var isNewsgroup = !isServer && serverType == 'nntp';
   var canGetMessages =  (isServer && (serverType != "nntp") && (serverType !="none")) || isNewsgroup;
@@ -189,9 +189,9 @@ function fillFolderPaneContextMenu()
   ShowMenuItem("folderPaneContext-openNewWindow", (numSelected <= 1) && !isServer);
   EnableMenuItem("folderPaneContext-openNewWindow", (true));
 
-  SetupRenameMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder);
-  SetupRemoveMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder);
-  SetupCompactMenuItem(targetFolder, numSelected);
+  SetupRenameMenuItem(folderResource, numSelected, isServer, serverType, specialFolder);
+  SetupRemoveMenuItem(folderResource, numSelected, isServer, serverType, specialFolder);
+  SetupCompactMenuItem(folderResource, numSelected);
 
   ShowMenuItem("folderPaneContext-emptyTrash", (numSelected <= 1) && (specialFolder == 'Trash'));
   EnableMenuItem("folderPaneContext-emptyTrash", true);
@@ -199,12 +199,12 @@ function fillFolderPaneContextMenu()
   var showSendUnsentMessages = (numSelected <= 1) && (specialFolder == 'Unsent Messages');
   ShowMenuItem("folderPaneContext-sendUnsentMessages", showSendUnsentMessages);
   if (showSendUnsentMessages) {
-    EnableMenuItem("folderPaneContext-sendUnsentMessages", IsSendUnsentMsgsEnabled(targetFolder));
+    EnableMenuItem("folderPaneContext-sendUnsentMessages", IsSendUnsentMsgsEnabled(folderResource));
   }
 
   ShowMenuItem("folderPaneContext-sep-edit", (numSelected <= 1));
 
-  SetupNewMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder);
+  SetupNewMenuItem(folderResource, numSelected, isServer, serverType, specialFolder);
 
   ShowMenuItem("folderPaneContext-subscribe", (numSelected <= 1) && canSubscribeToFolder);
   EnableMenuItem("folderPaneContext-subscribe", true);
@@ -224,14 +224,15 @@ function fillFolderPaneContextMenu()
   return(true);
 }
 
-function SetupRenameMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder)
+function SetupRenameMenuItem(folderResource, numSelected, isServer, serverType, specialFolder)
 {
   var isSpecialFolder = specialFolder != 'none';
   var isMail = serverType != 'nntp';
-  var canRename = (targetFolder.getAttribute('CanRename') == "true");
+  var folderOutliner = GetFolderOutliner();
+  var canRename = GetFolderAttribute(folderOutliner, folderResource, "CanRename") == "true";
 
   ShowMenuItem("folderPaneContext-rename", (numSelected <= 1) && !isServer && (specialFolder == "none") && canRename);
-  var folder = GetMsgFolderFromNode(targetFolder);
+  var folder = GetMsgFolderFromResource(folderResource);
   EnableMenuItem("folderPaneContext-rename", !isServer && folder.isCommandEnabled("cmd_renameFolder"));
 
   if(canRename)
@@ -240,7 +241,7 @@ function SetupRenameMenuItem(targetFolder, numSelected, isServer, serverType, sp
   }
 }
 
-function SetupRemoveMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder)
+function SetupRemoveMenuItem(folderResource, numSelected, isServer, serverType, specialFolder)
 {
   var isMail = serverType != 'nntp';
   var isSpecialFolder = specialFolder != "none";
@@ -251,7 +252,7 @@ function SetupRemoveMenuItem(targetFolder, numSelected, isServer, serverType, sp
   ShowMenuItem("folderPaneContext-remove", showRemove);
   if(showRemove)
   {
-    var folder = GetMsgFolderFromNode(targetFolder);
+    var folder = GetMsgFolderFromResource(folderResource);
     EnableMenuItem("folderPaneContext-remove", folder.isCommandEnabled("cmd_delete"));
   }
   if(isMail && !isSpecialFolder)
@@ -260,11 +261,12 @@ function SetupRemoveMenuItem(targetFolder, numSelected, isServer, serverType, sp
   }
 }
 
-function SetupCompactMenuItem(targetFolder, numSelected)
+function SetupCompactMenuItem(folderResource, numSelected)
 {
-    var canCompact = (targetFolder.getAttribute('CanCompact') == "true");
+  var folderOutliner = GetFolderOutliner();
+  var canCompact = GetFolderAttribute(folderOutliner, folderResource, "CanCompact") == "true";
   ShowMenuItem("folderPaneContext-compact", (numSelected <=1) && canCompact);
-  var folder = GetMsgFolderFromNode(targetFolder);
+  var folder = GetMsgFolderFromResource(folderResource);
   EnableMenuItem("folderPaneContext-compact", folder.isCommandEnabled("cmd_compactFolder"));
 
   if(canCompact)
@@ -273,9 +275,10 @@ function SetupCompactMenuItem(targetFolder, numSelected)
   }
 }
 
-function SetupNewMenuItem(targetFolder, numSelected, isServer, serverType, specialFolder)
+function SetupNewMenuItem(folderResource, numSelected, isServer, serverType, specialFolder)
 {
-  var canCreateNew = targetFolder.getAttribute('CanCreateSubfolders') == 'true';
+  var folderOutliner = GetFolderOutliner();
+  var canCreateNew = GetFolderAttribute(folderOutliner, folderResource, "CanCreateSubfolders") == "true";
   var isInbox = specialFolder == "Inbox";
 
   var showNew = ((numSelected <=1) && (serverType != 'nntp') && canCreateNew) || isInbox;

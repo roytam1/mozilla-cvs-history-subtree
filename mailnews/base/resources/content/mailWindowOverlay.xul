@@ -323,8 +323,7 @@ Rights Reserved.
     <menu id="threadPaneContext-moveMenu"
         label="&contextMoveMsgMenu.label;"
         accesskey="&contextMoveMsgMenu.accesskey;"
-        datasources="rdf:null"
-        ignore="http://home.netscape.com/NC-rdf#MessageChild">
+        datasources="rdf:null">
       <menupopup/>
       <template> 
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -390,8 +389,7 @@ Rights Reserved.
     <menu id="threadPaneContext-copyMenu"
       label="&contextCopyMsgMenu.label;"
       accesskey="&contextCopyMsgMenu.accesskey;"
-      datasources="rdf:null" 
-      ignore="http://home.netscape.com/NC-rdf#MessageChild">
+      datasources="rdf:null">
       <menupopup/>
       <template>
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -570,8 +568,7 @@ Rights Reserved.
     <menu id="messagePaneContext-moveMenu"
         label="&contextMoveMsgMenu.label;"
         accesskey="&contextMoveMsgMenu.accesskey;"
-        datasources="rdf:null"
-        ignore="http://home.netscape.com/NC-rdf#MessageChild">
+        datasources="rdf:null">
       <menupopup/>
       <template> 
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -637,8 +634,7 @@ Rights Reserved.
     <menu id="messagePaneContext-copyMenu"
       label="&contextCopyMsgMenu.label;"
       accesskey="&contextCopyMsgMenu.accesskey;"
-      datasources="rdf:null" 
-      ignore="http://home.netscape.com/NC-rdf#MessageChild">
+      datasources="rdf:null">
       <menupopup/>
       <template>
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -1045,8 +1041,7 @@ Rights Reserved.
             key="key_editAsNew"
             observes="cmd_editAsNew"/>
     <menuseparator/>
-    <menu label="&moveMsgMenu.label;" accesskey="&moveMsgMenu.accesskey;" id="moveMenu" datasources="rdf:null"
-     ignore="http://home.netscape.com/NC-rdf#MessageChild">
+    <menu label="&moveMsgMenu.label;" accesskey="&moveMsgMenu.accesskey;" id="moveMenu" datasources="rdf:null">
       <menupopup/>
       <template> 
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -1109,8 +1104,7 @@ Rights Reserved.
         </rule>
       </template>
     </menu>
-    <menu label="&copyMsgMenu.label;" accesskey="&copyMsgMenu.accesskey;" id="copyMenu" datasources="rdf:null"
-     ignore="http://home.netscape.com/NC-rdf#MessageChild">
+    <menu label="&copyMsgMenu.label;" accesskey="&copyMsgMenu.accesskey;" id="copyMenu" datasources="rdf:null">
       <menupopup/>
       <template>
       <rule nc:NoSelect="true" iscontainer="true" isempty="false">
@@ -1235,7 +1229,7 @@ Rights Reserved.
       <button class="button-toolbar-2 top" id="button-replyall" label="&replyAllButton.label;" tooltip="aTooltip" tooltiptext="&replyAllButton.tooltip;" observes="button_replyall" oncommand="MsgReplyToAllMessage(event)"/>
       <button class="button-toolbar-2 top" id="button-forward" label="&forwardButton.label;" tooltip="aTooltip"  tooltiptext="&forwardButton.tooltip;" observes="button_forward" oncommand="MsgForwardMessage(event)"/>
       <toolbarseparator class="toolbarseparator-primary"/>
-      <menubutton class="button-toolbar-2 top" id="button-file" observes="button_file" datasources="rdf:null" ignore="http://home.netscape.com/NC-rdf#MessageChild" label="&fileButton.label;" tooltip="aTooltip" tooltiptext="&fileButton.tooltip;">
+      <menubutton class="button-toolbar-2 top" id="button-file" observes="button_file" datasources="rdf:null" label="&fileButton.label;" tooltip="aTooltip" tooltiptext="&fileButton.tooltip;">
         <template> 
         <rule nc:NoSelect="true" iscontainer="true" isempty="false">
           <menupopup>

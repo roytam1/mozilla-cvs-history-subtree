@@ -55,6 +55,10 @@ function ThreadPaneOnClick(event)
        var col = document.getElementById(colID.value);
        if (col && col.getAttribute("cycler") != "true" && (childElt.value != "twisty")) {
          ThreadPaneDoubleClick();
+         // double clicking should not toggle the open / close state of the 
+         // thread.  this will happen if we don't prevent the event from
+         // bubbling to the default handler in outliner.xml
+	 event.preventBubble();
        }
     }
 }
