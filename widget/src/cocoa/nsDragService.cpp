@@ -345,11 +345,13 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
       ::LocalToGlobal ( &offsetFromLocalToGlobal );
       ::OffsetRgn ( ioDragRgn, offsetFromLocalToGlobal.h, offsetFromLocalToGlobal.v );
 
-      // for cocoa, we have to transform this region into cocoa screen coordinates
+      // for cocoa, we have to transform this region into cocoa screen 
+      // coordinates. Only the main screen is important in this caculation
+      // as that's where the 2 coord systems differ.
       Rect regionBounds;
       GetRegionBounds(ioDragRgn, &regionBounds);
       
-      GDHandle  screenDevice = ::GetMaxDevice(&regionBounds);
+      GDHandle  screenDevice = ::GetMainDevice();
       Rect      screenRect   = (**screenDevice).gdRect;
       // offset the rect
       short screenHeight = screenRect.bottom - screenRect.top;
@@ -371,8 +373,10 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
       NS_WARNING ( "Can't find anything to get a drag rect from. I'm dyin' out here!" );
     }
     
-    // for cocoa, we have to transform this rect into cocoa screen coordinates
-    GDHandle  screenDevice = ::GetMaxDevice(&frameRect);
+    // for cocoa, we have to transform this region into cocoa screen 
+    // coordinates. Only the main screen is important in this caculation
+    // as that's where the 2 coord systems differ.
+    GDHandle  screenDevice = ::GetMainDevice();
     Rect      screenRect   = (**screenDevice).gdRect;
     // offset the rect
     short screenHeight = screenRect.bottom - screenRect.top;
