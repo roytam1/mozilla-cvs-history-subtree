@@ -78,5 +78,5 @@ skin,install,url,jar:resource:/chrome/offline.jar!/content/messenger-offline/
 
 # optional registration for RSS support which may or may not be installed
 content,install,url,jar:resource:/chrome/newsblog.jar!/content/messenger-newsblog/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-newsblog/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger-newsblog/
 skin,install,url,jar:resource:/chrome/qute.jar!/skin/classic/messenger-newsblog/
