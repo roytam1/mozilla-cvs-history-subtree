@@ -81,7 +81,7 @@ INCLUDES   = -I$(OBJDIR)
 #
 CFLAGS          = $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
                   -DJSFILE $(XCFLAGS)
-LDFLAGS		= -lm $(XLDFLAGS)
+LDFLAGS		= -lm $(XLDFLAGS) -Lfdlibm -lfdm
 
 # For purify
 PURE_CFLAGS     = -DXP_UNIX $(OPTIMIZER) $(PURE_OS_CFLAGS) $(DEFINES) \
@@ -204,19 +204,24 @@ endif
 ifdef USE_MSVC
 TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
 else
-TARGETS = $(LIBRARY) $(PROGRAM)
+TARGETS = fdlibm/libfdm.a $(LIBRARY) $(PROGRAM)
 endif
 
 all: $(TARGETS)
 
 clean:
 	rm -rf $(OBJS)
+	cd fdlibm; gmake clean
 
 clobber:
 	rm -rf $(OBJS) $(TARGETS) $(DEPENDENCIES)
+	cd fdlibm; gmake clean
 
 depend:
 	gcc -MM $(CFLAGS) $(JS_CFILES)
+
+fdlibm/libfdm.a:
+	cd fdlibm; gmake
 
 $(OBJDIR)/%: %.c
 	@$(MAKE_OBJDIR)

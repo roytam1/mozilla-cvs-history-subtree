@@ -45,9 +45,9 @@
 union dpun {
     struct {
 #ifdef IS_LITTLE_ENDIAN
-	uint32 lo, hi;
+    uint32 lo, hi;
 #else
-	uint32 hi, lo;
+    uint32 hi, lo;
 #endif
     } s;
     jsdouble d;
@@ -59,7 +59,7 @@ num_isNaN(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsdouble x;
 
     if (!js_ValueToNumber(cx, argv[0], &x))
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = BOOLEAN_TO_JSVAL(JSDOUBLE_IS_NaN(x));
     return JS_TRUE;
 }
@@ -70,7 +70,7 @@ num_isFinite(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsdouble x;
 
     if (!js_ValueToNumber(cx, argv[0], &x))
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = BOOLEAN_TO_JSVAL(JSDOUBLE_IS_FINITE(x));
     return JS_TRUE;
 }
@@ -106,6 +106,16 @@ num_parseInt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     str = js_ValueToString(cx, argv[0]);
     if (!str)
 	return JS_FALSE;
+
+    /* This assumes that the char strings are null-terminated - JS_ISSPACE will
+     * always evaluate to false at the end of a string containing only
+     * whitespace.
+     */
+    while (JS_ISSPACE(*chars))
+        chars++;
+
+    if ((negative = (*chars == '-')) != 0 || *chars == '+')
+        chars++;
 
     if (argc > 1) {
 	if (!js_ValueToECMAInt32(cx, argv[1], &radix))
@@ -149,16 +159,16 @@ Number(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsval v;
 
     if (argc != 0) {
-	if (!js_ValueToNumber(cx, argv[0], &d))
-	    return JS_FALSE;
+    if (!js_ValueToNumber(cx, argv[0], &d))
+        return JS_FALSE;
     } else {
-	d = 0.0;
+    d = 0.0;
     }
     if (!js_NewNumberValue(cx, d, &v))
-	return JS_FALSE;
+    return JS_FALSE;
     if (!cx->fp->constructing) {
-	*rval = v;
-	return JS_TRUE;
+    *rval = v;
+    return JS_TRUE;
     }
     OBJ_SET_SLOT(cx, obj, JSSLOT_PRIVATE, v);
     return JS_TRUE;
@@ -175,10 +185,10 @@ num_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
 
     if (!JS_InstanceOf(cx, obj, &number_class, argv))
-	return JS_FALSE;
+    return JS_FALSE;
     v = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     if (!JSVAL_IS_NUMBER(v))
-	return js_obj_toSource(cx, obj, argc, argv, rval);
+    return js_obj_toSource(cx, obj, argc, argv, rval);
     d = JSVAL_IS_INT(v) ? (jsdouble)JSVAL_TO_INT(v) : *JSVAL_TO_DOUBLE(v);
     i = PR_snprintf(buf, sizeof buf, "(new %s(", number_class.name);
 
@@ -187,7 +197,7 @@ num_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     PR_snprintf(buf + i, sizeof buf - i, "))");
     str = JS_NewStringCopyZ(cx, buf);
     if (!str)
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = STRING_TO_JSVAL(str);
     return JS_TRUE;
 }
@@ -203,36 +213,36 @@ num_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
 
     if (!JS_InstanceOf(cx, obj, &number_class, argv))
-	return JS_FALSE;
+    return JS_FALSE;
     v = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     if (!JSVAL_IS_NUMBER(v))
-	return js_obj_toString(cx, obj, argc, argv, rval);
+    return js_obj_toString(cx, obj, argc, argv, rval);
     d = JSVAL_IS_INT(v) ? (jsdouble)JSVAL_TO_INT(v) : *JSVAL_TO_DOUBLE(v);
     if (argc != 0) {
-	if (!js_ValueToECMAInt32(cx, argv[0], &base))
-	    return JS_FALSE;
-	if (base < 2 || base > 36) {
-	    JS_ReportError(cx, "illegal radix %d", base);
-	    return JS_FALSE;
-	}
-	if (base != 10 && JSDOUBLE_IS_FINITE(d)) {
-	    ival = (jsint) js_DoubleToInteger(d);
-	    bp = buf + sizeof buf;
-	    for (*--bp = '\0'; ival != 0 && --bp >= buf; ival /= base) {
-		dval = ival % base;
-		*bp = (char)((dval >= 10) ? 'a' - 10 + dval : '0' + dval);
-	    }
-	    if (*bp == '\0')
-		*--bp = '0';
-	    str = JS_NewStringCopyZ(cx, bp);
-	} else {
-	    str = js_NumberToString(cx, d);
-	}
+    if (!js_ValueToECMAInt32(cx, argv[0], &base))
+        return JS_FALSE;
+    if (base < 2 || base > 36) {
+        JS_ReportError(cx, "illegal radix %d", base);
+        return JS_FALSE;
+    }
+    if (base != 10 && JSDOUBLE_IS_FINITE(d)) {
+        ival = (jsint) js_DoubleToInteger(d);
+        bp = buf + sizeof buf;
+        for (*--bp = '\0'; ival != 0 && --bp >= buf; ival /= base) {
+        dval = ival % base;
+        *bp = (char)((dval >= 10) ? 'a' - 10 + dval : '0' + dval);
+        }
+        if (*bp == '\0')
+        *--bp = '0';
+        str = JS_NewStringCopyZ(cx, bp);
     } else {
-	str = js_NumberToString(cx, d);
+        str = js_NumberToString(cx, d);
+    }
+    } else {
+    str = js_NumberToString(cx, d);
     }
     if (!str)
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = STRING_TO_JSVAL(str);
     return JS_TRUE;
 }
@@ -241,7 +251,7 @@ static JSBool
 num_valueOf(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     if (!JS_InstanceOf(cx, obj, &number_class, argv))
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     return JS_TRUE;
 }
@@ -250,8 +260,8 @@ static JSFunctionSpec number_methods[] = {
 #if JS_HAS_TOSOURCE
     {js_toSource_str,   num_toSource,   0},
 #endif
-    {js_toString_str,	num_toString,	0},
-    {js_valueOf_str,	num_valueOf,	0},
+    {js_toString_str,   num_toString,   0},
+    {js_valueOf_str,    num_valueOf,    0},
     {0}
 };
 
@@ -292,68 +302,68 @@ js_InitNumberClass(JSContext *cx, JSObject *obj)
     if (!rt->jsNaN) {
 #ifdef XP_PC
 #ifdef XP_OS2
-	/*DSR071597 - I have no idea what this really does other than mucking with the floating     */
-	/*point unit, but it does fix a "floating point underflow" exception I am getting, and there*/
-	/*is similar code in the Hursley java. Making sure we have the same code in Javascript      */
-	/*where Netscape was calling control87 on Windows...                                        */
-	_control87(MCW_EM+PC_53+RC_NEAR,MCW_EM+MCW_PC+MCW_RC);
+    /*DSR071597 - I have no idea what this really does other than mucking with the floating     */
+    /*point unit, but it does fix a "floating point underflow" exception I am getting, and there*/
+    /*is similar code in the Hursley java. Making sure we have the same code in Javascript      */
+    /*where Netscape was calling control87 on Windows...                                        */
+    _control87(MCW_EM+PC_53+RC_NEAR,MCW_EM+MCW_PC+MCW_RC);
 #else
-	_control87(MCW_EM, MCW_EM);
+    _control87(MCW_EM, MCW_EM);
 #endif
 #endif
 
-	u.s.hi = JSDOUBLE_HI32_EXPMASK | JSDOUBLE_HI32_MANTMASK;
-	u.s.lo = 0xffffffff;
-	number_constants[NC_NaN].dval = NaN = u.d;
-	rt->jsNaN = js_NewDouble(cx, NaN);
-	if (!rt->jsNaN || !js_LockGCThing(cx, rt->jsNaN))
-	    return NULL;
+    u.s.hi = JSDOUBLE_HI32_EXPMASK | JSDOUBLE_HI32_MANTMASK;
+    u.s.lo = 0xffffffff;
+    number_constants[NC_NaN].dval = NaN = u.d;
+    rt->jsNaN = js_NewDouble(cx, NaN);
+    if (!rt->jsNaN || !js_LockGCThing(cx, rt->jsNaN))
+        return NULL;
 
-	u.s.hi = JSDOUBLE_HI32_EXPMASK;
-	u.s.lo = 0x00000000;
-	number_constants[NC_POSITIVE_INFINITY].dval = u.d;
-	rt->jsPositiveInfinity = js_NewDouble(cx, u.d);
-	if (!rt->jsPositiveInfinity ||
-	    !js_LockGCThing(cx, rt->jsPositiveInfinity)) {
-	    return NULL;
-	}
+    u.s.hi = JSDOUBLE_HI32_EXPMASK;
+    u.s.lo = 0x00000000;
+    number_constants[NC_POSITIVE_INFINITY].dval = u.d;
+    rt->jsPositiveInfinity = js_NewDouble(cx, u.d);
+    if (!rt->jsPositiveInfinity ||
+        !js_LockGCThing(cx, rt->jsPositiveInfinity)) {
+        return NULL;
+    }
 
-	u.s.hi = JSDOUBLE_HI32_SIGNBIT | JSDOUBLE_HI32_EXPMASK;
-	u.s.lo = 0x00000000;
-	number_constants[NC_NEGATIVE_INFINITY].dval = u.d;
-	rt->jsNegativeInfinity = js_NewDouble(cx, u.d);
-	if (!rt->jsNegativeInfinity ||
-	    !js_LockGCThing(cx, rt->jsNegativeInfinity)) {
-	    return NULL;
-	}
+    u.s.hi = JSDOUBLE_HI32_SIGNBIT | JSDOUBLE_HI32_EXPMASK;
+    u.s.lo = 0x00000000;
+    number_constants[NC_NEGATIVE_INFINITY].dval = u.d;
+    rt->jsNegativeInfinity = js_NewDouble(cx, u.d);
+    if (!rt->jsNegativeInfinity ||
+        !js_LockGCThing(cx, rt->jsNegativeInfinity)) {
+        return NULL;
+    }
 
-	u.s.hi = 0;
-	u.s.lo = 1;
-	number_constants[NC_MIN_VALUE].dval = u.d;
+    u.s.hi = 0;
+    u.s.lo = 1;
+    number_constants[NC_MIN_VALUE].dval = u.d;
     }
 
     if (!JS_DefineFunctions(cx, obj, number_functions))
-	return NULL;
+    return NULL;
 
     proto = JS_InitClass(cx, obj, NULL, &number_class, Number, 1,
-			 NULL, number_methods, NULL, NULL);
+             NULL, number_methods, NULL, NULL);
     if (!proto || !(ctor = JS_GetConstructor(cx, proto)))
-	return NULL;
+    return NULL;
     OBJ_SET_SLOT(cx, proto, JSSLOT_PRIVATE, JSVAL_ZERO);
     if (!JS_DefineConstDoubles(cx, ctor, number_constants))
-	return NULL;
+    return NULL;
 
     /* ECMA 15.1.1.1 */
     if (!JS_DefineProperty(cx, obj, "NaN", DOUBLE_TO_JSVAL(rt->jsNaN),
-			   NULL, NULL, 0)) {
-	return NULL;
+               NULL, NULL, 0)) {
+    return NULL;
     }
 
     /* ECMA 15.1.1.2 */
     if (!JS_DefineProperty(cx, obj, "Infinity",
-			   DOUBLE_TO_JSVAL(rt->jsPositiveInfinity),
-			   NULL, NULL, 0)) {
-	return NULL;
+               DOUBLE_TO_JSVAL(rt->jsPositiveInfinity),
+               NULL, NULL, 0)) {
+    return NULL;
     }
     return proto;
 }
@@ -365,7 +375,7 @@ js_NewDouble(JSContext *cx, jsdouble d)
 
     dp = js_AllocGCThing(cx, GCX_DOUBLE);
     if (!dp)
-	return NULL;
+    return NULL;
     *dp = d;
     return dp;
 }
@@ -383,7 +393,7 @@ js_NewDoubleValue(JSContext *cx, jsdouble d, jsval *rval)
 
     dp = js_NewDouble(cx, d);
     if (!dp)
-	return JS_FALSE;
+    return JS_FALSE;
     *rval = DOUBLE_TO_JSVAL(dp);
     return JS_TRUE;
 }
@@ -395,10 +405,10 @@ js_NewNumberValue(JSContext *cx, jsdouble d, jsval *rval)
 
     i = (jsint)d;
     if (JSDOUBLE_IS_INT(d, i) && INT_FITS_IN_JSVAL(i)) {
-	*rval = INT_TO_JSVAL(i);
+    *rval = INT_TO_JSVAL(i);
     } else {
-	if (!js_NewDoubleValue(cx, d, rval))
-	    return JS_FALSE;
+    if (!js_NewDoubleValue(cx, d, rval))
+        return JS_FALSE;
     }
     return JS_TRUE;
 }
@@ -411,10 +421,10 @@ js_NumberToObject(JSContext *cx, jsdouble d)
 
     obj = js_NewObject(cx, &number_class, NULL, NULL);
     if (!obj)
-	return NULL;
+    return NULL;
     if (!js_NewNumberValue(cx, d, &v)) {
-	cx->newborn[GCX_OBJECT] = NULL;
-	return NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
+    return NULL;
     }
     OBJ_SET_SLOT(cx, obj, JSSLOT_PRIVATE, v);
     return obj;
@@ -429,9 +439,9 @@ js_NumberToString(JSContext *cx, jsdouble d)
 
     i = (jsint)d;
     if (JSDOUBLE_IS_INT(d, i)) {
-	PR_snprintf(buf, sizeof buf, "%ld", (long)i);
+    PR_snprintf(buf, sizeof buf, "%ld", (long)i);
     } else {
-	PR_cnvtf(buf, sizeof buf, 20, d);
+    PR_cnvtf(buf, sizeof buf, 20, d);
     }
     return JS_NewStringCopyZ(cx, buf);
 }
@@ -443,20 +453,22 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
     JSString *str;
     const jschar *ep;
     jsdouble d;
+    int sign;
+    jschar *s;
 
     if (JSVAL_IS_OBJECT(v)) {
-	obj = JSVAL_TO_OBJECT(v);
-	if (!obj) {
-	    *dp = 0;
-	    return JS_TRUE;
-	}
-	if (!OBJ_DEFAULT_VALUE(cx, obj, JSTYPE_NUMBER, &v))
-	    return JS_FALSE;
+    obj = JSVAL_TO_OBJECT(v);
+    if (!obj) {
+        *dp = 0;
+        return JS_TRUE;
+    }
+    if (!OBJ_DEFAULT_VALUE(cx, obj, JSTYPE_NUMBER, &v))
+        return JS_FALSE;
     }
     if (JSVAL_IS_INT(v)) {
-	*dp = (jsdouble)JSVAL_TO_INT(v);
+    *dp = (jsdouble)JSVAL_TO_INT(v);
     } else if (JSVAL_IS_DOUBLE(v)) {
-	*dp = *JSVAL_TO_DOUBLE(v);
+    *dp = *JSVAL_TO_DOUBLE(v);
     } else if (JSVAL_IS_STRING(v)) {
 	str = JSVAL_TO_STRING(v);
 	errno = 0;
@@ -469,19 +481,19 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
 	}
 	*dp = d;
     } else if (JSVAL_IS_BOOLEAN(v)) {
-	*dp = JSVAL_TO_BOOLEAN(v) ? 1 : 0;
+    *dp = JSVAL_TO_BOOLEAN(v) ? 1 : 0;
     } else {
 #if JS_BUG_FALLIBLE_TONUM
-	str = js_DecompileValueGenerator(cx, v, NULL);
+    str = js_DecompileValueGenerator(cx, v, NULL);
 badstr:
-	if (str) {
-	    JS_ReportError(cx, "%s is not a number",
-			   JS_GetStringBytes(str));
-	}
-	return JS_FALSE;
+    if (str) {
+        JS_ReportError(cx, "%s is not a number",
+               JS_GetStringBytes(str));
+    }
+    return JS_FALSE;
 #else
 badstr:
-	*dp = *cx->runtime->jsNaN;
+    *dp = *cx->runtime->jsNaN;
 #endif
     }
     return JS_TRUE;
@@ -555,14 +567,14 @@ js_ValueToInt32(JSContext *cx, jsval v, int32 *ip)
     JSString *str;
 
     if (!js_ValueToNumber(cx, v, &d))
-	return JS_FALSE;
+    return JS_FALSE;
     if (JSDOUBLE_IS_NaN(d) || d <= -2147483649.0 || 2147483648.0 <= d) {
-	str = js_DecompileValueGenerator(cx, v, NULL);
-	if (str) {
-	    JS_ReportError(cx, "can't convert %s to an integer",
-			   JS_GetStringBytes(str));
-	}
-	return JS_FALSE;
+    str = js_DecompileValueGenerator(cx, v, NULL);
+    if (str) {
+        JS_ReportError(cx, "can't convert %s to an integer",
+               JS_GetStringBytes(str));
+    }
+    return JS_FALSE;
     }
     *ip = (int32)floor(d + 0.5);     /* Round to nearest */
     return JS_TRUE;
@@ -576,15 +588,15 @@ js_ValueToUint16(JSContext *cx, jsval v, uint16 *ip)
     JSBool neg;
 
     if (!js_ValueToNumber(cx, v, &d))
-	return JS_FALSE;
+    return JS_FALSE;
     if (d == 0 || !JSDOUBLE_IS_FINITE(d)) {
-	*ip = 0;
-	return JS_TRUE;
+    *ip = 0;
+    return JS_TRUE;
     }
     i = (jsuint)d;
     if ((jsdouble)i == d) {
-	*ip = (uint16)i;
-	return JS_TRUE;
+    *ip = (uint16)i;
+    return JS_TRUE;
     }
     neg = (d < 0);
     d = floor(neg ? -d : d);
@@ -592,7 +604,7 @@ js_ValueToUint16(JSContext *cx, jsval v, uint16 *ip)
     m = PR_BIT(16);
     d = fmod(d, m);
     if (d < 0)
-	d += m;
+    d += m;
     *ip = (uint16) d;
     return JS_TRUE;
 }
@@ -603,11 +615,11 @@ js_DoubleToInteger(jsdouble d)
     JSBool neg;
 
     if (d == 0)
-	return d;
+    return d;
     if (!JSDOUBLE_IS_FINITE(d)) {
-	if (JSDOUBLE_IS_NaN(d))
-	    return 0;
-	return d;
+    if (JSDOUBLE_IS_NaN(d))
+        return 0;
+    return d;
     }
     neg = (d < 0);
     d = floor(neg ? -d : d);
@@ -651,7 +663,6 @@ js_strtod(JSContext *cx, const jschar *s, const jschar **ep, jsdouble *dp)
 	    else if (d == -HUGE_VAL)
 		d = *cx->runtime->jsNegativeInfinity;
     }
-
     free(cstr);
     i = estr - cstr;
     *ep = i ? s1 + i : s;
