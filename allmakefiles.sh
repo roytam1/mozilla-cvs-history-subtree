@@ -645,8 +645,8 @@ embedding/browser/setup/Makefile
 security/Makefile
 security/psm/Makefile
 security/psm/lib/Makefile
-security/psm/lib/client/Makefile.in
-security/psm/lib/protocol/Makefile.in
+security/psm/lib/client/Makefile
+security/psm/lib/protocol/Makefile
 
 
 # xpfe/browser/public/Makefile
