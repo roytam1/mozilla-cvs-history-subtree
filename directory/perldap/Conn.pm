@@ -385,20 +385,22 @@ sub add
 
 
 #############################################################################
-# Modify the RDN, and update the entry accordingly
+# Modify the RDN, and update the entry accordingly. Note that the last
+# two arguments (DN and "delete") are optional.
 #
 sub modifyRDN
 {
-  my ($self, $rdn, $del) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2]);
+  my ($self, $rdn, $dn, $del) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2], $_[$[ + 3]);
   my (@vals);
   my $ret = 1;
 
   $del = 1 if ($del eq "");
+  $dn = $self->{dn} if ($dn eq "");
 
-  @vals = ldap_explode_dn(lc $self->{dn}, 0);
+  @vals = ldap_explode_dn(lc $dn, 0);
   if ($vals[$[] ne $rdn)
     {
-      $ret = ldap_modrdn2_s($self->{ld}, $self->{dn}, $rdn, $del);
+      $ret = ldap_modrdn2_s($self->{ld}, $dn, $rdn, $del);
       if ($ret == LDAP_SUCCESS)
 	{
 	  shift(@vals);
