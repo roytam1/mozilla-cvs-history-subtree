@@ -20,6 +20,8 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
+// FUR - Add overall description comment here
+
 #include "nsDBEnumerator.h"
 #include "nsDiskCacheRecord.h"
 

@@ -20,6 +20,8 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
+// FUR - Add overall description comment here
+
 #ifndef _NSIDBACCESSOR_H_
 #define _NSIDBACCESSOR_H_
 
@@ -27,6 +29,7 @@
 #include "mcom_db.h"
 
 // bogus string for the key of session id 
+// FUR - suggest "SK" instead of "^^"
 static const char * const SessionKey = "^^" ;
 
 // initial session id number 

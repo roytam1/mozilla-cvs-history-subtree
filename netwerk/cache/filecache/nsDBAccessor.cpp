@@ -20,6 +20,8 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
+// FUR - Add overall description comment here
+
 #include "nsDBAccessor.h"
 #include "nscore.h"
 
@@ -55,6 +57,7 @@ NS_IMPL_ISUPPORTS(nsDBAccessor, NS_GET_IID(nsIDBAccessor))
 NS_IMETHODIMP
 nsDBAccessor::Init(nsIFileSpec* dbfile)
 {
+  // FUR - lock not needed
   m_Lock = PR_NewLock() ;
   if(!m_Lock)
     return NS_ERROR_OUT_OF_MEMORY ;
@@ -64,6 +67,8 @@ nsDBAccessor::Init(nsIFileSpec* dbfile)
   // this should cover all platforms. 
   dbfile->GetNativePath(&dbname) ;
 
+  // FUR - how is page size chosen ?  It's worth putting a comment
+  // in here about the possible usefulness of tuning these parameters
   HASHINFO hash_info = {
     16*1024 , /* bucket size */
     0 ,       /* fill factor */
@@ -72,6 +77,7 @@ nsDBAccessor::Init(nsIFileSpec* dbfile)
     0 ,       /* hash function */
     0} ;      /* byte order */
 
+  // FUR - lock not needed
   nsAutoLock lock(m_Lock) ;
 
   mDB = dbopen(dbname,
@@ -80,10 +86,13 @@ nsDBAccessor::Init(nsIFileSpec* dbfile)
                DB_HASH ,
                & hash_info) ;
 
+  // FUR - does dbname have to be free'ed ?
+
   if(!mDB)
     return NS_ERROR_FAILURE ;
 
   // set mSessionID
+  // FUR - Why the +1 ?  (No need for key to be NUL-terminated string.)
   PRUint32 len = PL_strlen(SessionKey)+1 ;
   DBT db_key, db_data ;
 
@@ -103,6 +112,8 @@ nsDBAccessor::Init(nsIFileSpec* dbfile)
       NS_ERROR("ERROR: Bad Session ID in database, corrupted db.") ;
       return NS_ERROR_FAILURE ;
     }
+
+    // FUR - need to comment out all printfs, or turn them into PR_LOG statements
     printf("found previous session, id = %d\n", *old_ID) ;
     mSessionID = *old_ID + 1 ;
   } 
@@ -134,6 +145,7 @@ nsDBAccessor::Shutdown(void)
     mDB = nsnull ;
   }
 
+  // FUR - locks not necessary
   if(m_Lock) 
     PR_DestroyLock(m_Lock);
   return NS_OK ;
@@ -188,10 +200,14 @@ nsDBAccessor::Put(PRInt32 aID, void* anEntry, PRUint32 aLength)
   db_data.size = aLength ;
 
   if(0 == (*mDB->put)(mDB, &db_key, &db_data, 0)) {
+    // FUR - I would avoid unnecessary sync'ing for performance's
+    // sake.  Maybe you could limit sync to max rate of, say, once
+    // every few seconds by keeping track of last sync time, using PR_Now().
     (*mDB->sync)(mDB, 0) ;
     return NS_OK ;
   }
   else {
+    // FUR - Try to avoid using NS_ERROR unless error is unrecoverable and serious
     NS_ERROR("ERROR: Failed to put anEntry into db.\n") ;
     return NS_ERROR_FAILURE ;
   }
@@ -206,6 +222,7 @@ nsDBAccessor::Del(PRInt32 aID, void* anEntry, PRUint32 aLength)
 {
   NS_ASSERTION(mDB, "no database") ;
 
+  // FUR - no locks necessary
   // Lock the db
   nsAutoLock lock(m_Lock) ;
   DBT db_key ;
@@ -218,6 +235,7 @@ nsDBAccessor::Del(PRInt32 aID, void* anEntry, PRUint32 aLength)
   status = (*mDB->del)(mDB, &db_key, 0) ;
 
   if(-1 == status) {
+    // FUR - no printf's, use PR_LOG, NS_WARNING, or NS_ASSERTION, as the situation warrants
     printf(" delete error\n") ;
     return NS_ERROR_FAILURE ;
   } 
@@ -227,9 +245,12 @@ nsDBAccessor::Del(PRInt32 aID, void* anEntry, PRUint32 aLength)
   db_key.size = aLength ;
   status = (*mDB->del)(mDB, &db_key, 0) ;
   if(-1 == status) {
+    // FUR - no printf's
     printf(" delete error\n") ;
     return NS_ERROR_FAILURE ;
   } 
+
+  // FUR - Defer sync ?  See above
   (*mDB->sync)(mDB, 0) ;
 
   return NS_OK ;
@@ -268,6 +289,7 @@ nsDBAccessor::GetID(const char* key, PRUint32 length, PRInt32* aID)
       NS_ERROR("updating db failure.") ;
       return NS_ERROR_FAILURE ;
     }
+    // FUR - defer sync ?
     (*mDB->sync)(mDB, 0) ;
     *aID = id ;
     return NS_OK ;
@@ -300,6 +322,7 @@ nsDBAccessor::EnumEntry(void** anEntry, PRUint32* aLength, PRBool bReset)
   nsAutoLock lock(m_Lock) ;
   DBT db_key, db_data ;
 
+  // FUR - +1 unnecessary ?
   PRUint32 len = PL_strlen(SessionKey)+1 ;
 
   int status ;

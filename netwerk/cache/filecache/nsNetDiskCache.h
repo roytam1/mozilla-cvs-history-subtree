@@ -20,6 +20,7 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
+// FUR - Add overall description comment here
 
 #ifndef __gen_nsNetDiskCache_h__
 #define __gen_nsNetDiskCache_h__

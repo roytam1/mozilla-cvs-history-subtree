@@ -80,6 +80,13 @@ NS_IMETHODIMP
 nsNetDiskCache::Init(void) 
 {
   nsresult rv ;
+
+  // FUR!! - I really don't think prefs belong here, since that breaks modularity.
+  //         It presupposes that the file cache code is embedded in the browser or some
+  //         other application that uses the prefs, i.e. the code might be used in a standalone
+  //         cache manipulation tool or, someday, in server code.
+  //         Pref reading belongs at a higher level, 
+  //         either in the application itself or possibly the I/O manager.
   NS_WITH_SERVICE(nsIPref, pref, kPrefCID, &rv) ;
   if (NS_FAILED(rv)) 
     NS_ERROR("Failed to get globle preference!\n") ;
@@ -118,6 +125,8 @@ nsNetDiskCache::Init(void)
     m_pDiskCacheFolder->SetUnixStyleFilePath("/tmp") ;
   }
 
+  // FUR - suggest you use nsCOMPtr for m_DB - it will eliminate
+  //       manual addref/release and reduce likelihood of bugs
   NS_IF_RELEASE(m_DB) ;
   m_DB = new nsDBAccessor() ;
   if(!m_DB)
@@ -145,6 +154,7 @@ nsNetDiskCache::InitDB(void)
   nsCOMPtr<nsIFileSpec> cacheSubDir;
   rv = NS_NewFileSpec(getter_AddRefs(cacheSubDir));
 
+  // FUR - any way to avoid doing this, if it's already been done ?
   for (int i=0; i < 32; i++) {
     rv = cacheSubDir->FromFileSpec(m_pDiskCacheFolder) ;
     if(NS_FAILED(rv))
@@ -169,6 +179,8 @@ nsNetDiskCache::InitDB(void)
 
 //////////////////////////////////////////////////////////////////////////
 // nsISupports methods
+
+// FUR - Suggest you use NS_IMPL_ISUPPORTS3() macro instead
 NS_IMETHODIMP
 nsNetDiskCache::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
@@ -586,6 +598,8 @@ nsNetDiskCache::DBRecovery(void)
 
   // remove corrupted db file
   rv = m_DB->Shutdown() ;
+  
+  // You shouldn't return if this fails.  Corruption might prevent clean shutdown
   if(NS_FAILED(rv))
     return rv ;
 

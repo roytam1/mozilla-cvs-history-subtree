@@ -20,6 +20,8 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
+// FUR - Add overall description comment here
+
 #ifndef _NS_DBENUMERATOR_H_
 #define _NS_DBENUMERATOR_H_
 
@@ -33,25 +35,27 @@
 class nsCachedDiskData ; /* forward decl */
 
 class nsDBEnumerator : public nsISimpleEnumerator {
-  public:
-  NS_DECL_ISUPPORTS
+public:
+    NS_DECL_ISUPPORTS
 
-  /* boolean HasMoreElements (); */
-  NS_IMETHOD HasMoreElements(PRBool *_retval) ;
+    // FUR can use NS_DECL_NSISIMPLEENUMERATOR here
+    /* boolean HasMoreElements (); */
+    NS_IMETHOD HasMoreElements(PRBool *_retval) ;
 
-  /* nsISupports GetNext (); */
-  NS_IMETHOD GetNext(nsISupports **_retval) ;
+    /* nsISupports GetNext (); */
+    NS_IMETHOD GetNext(nsISupports **_retval) ;
 
-  nsDBEnumerator(nsIDBAccessor* aDB, nsNetDiskCache* aCache) ;
-  virtual ~nsDBEnumerator() ;
+    nsDBEnumerator(nsIDBAccessor* aDB, nsNetDiskCache* aCache) ;
+    virtual ~nsDBEnumerator() ;
 
-  private:
-  nsCOMPtr<nsIDBAccessor>                m_DB ;
-  nsCOMPtr<nsNetDiskCache>                        m_DiskCache ;
-  void *                                 tempEntry ;
-  PRUint32                               tempEntry_length ;
-  nsDiskCacheRecord*                    m_CacheEntry ;
-  PRBool                                 bReset ;
+    // FUR all members should be prefixed by 'm', e.g. mbReset
+private:
+    nsCOMPtr<nsIDBAccessor>                m_DB ;
+    nsCOMPtr<nsNetDiskCache>                        m_DiskCache ;
+    void *                                 tempEntry ;
+    PRUint32                               tempEntry_length ;
+    nsDiskCacheRecord*                    m_CacheEntry ;
+    PRBool                                 bReset ;
 };
 
 #endif // _NS_DBENUMERATOR_H_
