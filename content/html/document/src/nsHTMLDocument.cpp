@@ -1645,7 +1645,7 @@ nsHTMLDocument::SetDomain(const nsAReadableString& aDomain)
     nsAutoString suffix;
     current.Right(suffix, aDomain.Length());
     PRUnichar c = current.CharAt(current.Length() - aDomain.Length() - 1);
-    if (suffix.EqualsIgnoreCase(nsPromiseFlatString(aDomain)) &&
+    if (suffix.EqualsIgnoreCase(nsAutoString(aDomain)) &&
         (c == '.' || c == '/'))
       ok = PR_TRUE;
   }
