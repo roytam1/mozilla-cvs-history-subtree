@@ -1,2 +1,2 @@
 [xpfe-browser]
-dist/package/PrintPDE.plugin approot/Contents/Plug-Ins/PrintPDE.plugin
+dist/package/PrintPDE.plugin approot/Plug-Ins/PrintPDE.plugin
