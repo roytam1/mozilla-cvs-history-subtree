@@ -963,7 +963,7 @@ sub run_all_tests {
 		# Report data back to server
 		if($Settings::TestsPhoneHome) {
 		  print_log "phonehome = 1\n";
-		  send_startup_results_to_server($avg_startuptime,
+		  send_startup_results_to_server($min_startuptime,
 										$times_string, 
 										::hostname());
 		}
