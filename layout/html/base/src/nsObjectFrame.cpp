@@ -1452,9 +1452,9 @@ nsObjectFrame::DidReflow(nsIPresContext*           aPresContext,
   // positioned then we show it.
   if (aStatus != NS_FRAME_REFLOW_FINISHED) 
     return rv;
-
+  
   PRBool bHidden = IsHidden();
-
+  
   nsIView* view = nsnull;
   GetView(aPresContext, &view);
   if (view) {
@@ -1463,54 +1463,45 @@ nsObjectFrame::DidReflow(nsIPresContext*           aPresContext,
     if (vm)
       vm->SetViewVisibility(view, bHidden ? nsViewVisibility_kHide : nsViewVisibility_kShow);
   }
-
+  
+  nsPluginWindow *window;
+  
+  nsCOMPtr<nsIPluginInstance> pi; 
+  if (!mInstanceOwner ||
+     NS_FAILED(rv = mInstanceOwner->GetWindow(window)) || 
+     NS_FAILED(rv = mInstanceOwner->GetInstance(*getter_AddRefs(pi))) ||
+     !pi ||
+     !window)
+   return rv;
+  
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  mInstanceOwner->FixUpPluginWindow();
+#endif // XP_MAC || XP_MACOSX
+  
   if (bHidden)
     return rv;
-
-  nsPluginWindow *window;
-
-  if (!mInstanceOwner || NS_FAILED(mInstanceOwner->GetWindow(window)))
-    return rv;
-
+  
   PRBool windowless = (window->type == nsPluginWindowType_Drawable);
-
-  // if we are on Mac or windowless on Windows we will get Paint 
-  // event anyway so there is no need to update plugin window
-  // and call NPP_SetWindow here, it'll be done in Paint.
-  // Windowed plugins thought need it to be done here, there will
-  // no chance to do it later because they will get paint event
-  // from the OS itself
-#if defined(XP_MAC) || defined(XP_MACOSX)
-  return rv;
-#endif // XP_MAC || XP_MACOSX
-
   if(windowless)
     return rv;
-
+  
   nsPoint origin;
   GetWindowOriginInPixels(aPresContext, windowless, &origin);
-
+  
   window->x = origin.x;
   window->y = origin.y;
-
+  
   // refresh the plugin port as well
   window->window = mInstanceOwner->GetPluginPort();
-
-  nsIPluginInstance *inst;
-
-  if (NS_OK == mInstanceOwner->GetInstance(inst)) {
-    inst->SetWindow(window);
-    NS_RELEASE(inst);
-  }
-
+  pi->SetWindow(window);
   mInstanceOwner->ReleasePluginPort((nsPluginPort *)window->window);
-
+  
   if (mWidget) {
     PRInt32 x = origin.x;
     PRInt32 y = origin.y;
     mWidget->Move(x, y);
   }
-
+  
   return rv;
 }
 
