@@ -22,6 +22,7 @@ interface nsIOutputStream;
 interface nsIInputStream;
 interface nsIURI;
 interface nsIStreamListener;
+interface nsIChannel;
 
 [scriptable, uuid(39E329E2-357F-11d3-8EFD-00A024A7D144)] 
 interface nsMimeHeaderDisplayTypes 
@@ -35,7 +36,7 @@ interface nsMimeHeaderDisplayTypes
 interface nsIMimeEmitter : nsISupports{
 
     // These will be called to start and stop the total operation
-    void    Initialize(in nsIURI url);
+    void    Initialize(in nsIURI url, in nsIChannel aChannel);
     void    Complete();
 
     // Set the output stream/listener for processed data.
