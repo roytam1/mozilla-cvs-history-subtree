@@ -22,6 +22,8 @@
  *    -- original author.
  * Bob Miller, kbob@oblix.com
  *    -- plugged core leak.
+ * Pierre Phaneuf, pp@ludusdesign.com
+ *    -- fixed some XPCOM usage.
  *
  * $Id$
  */
@@ -126,7 +128,7 @@ XSLProcessor::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
     return rv;
 }
 
-NS_IMPL_ISUPPORTS(XSLProcessor, nsIDocumentTransformer::GetIID());
+NS_IMPL_ISUPPORTS(XSLProcessor, NS_GET_IID(nsIDocumentTransformer));
 #endif
 
 /**
