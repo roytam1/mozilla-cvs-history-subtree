@@ -236,19 +236,6 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
     if ((addr != NULL)
             && (addr->raw.family != AF_UNIX)
             && (PR_NETADDR_SIZE(addr) != addr_len)) {
-#if defined(LINUX) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 1
-        /*
-         * In glibc 2.1, struct sockaddr_in6 is 24 bytes.  In glibc 2.2
-         * and in the 2.4 kernel, struct sockaddr_in6 has the scope_id
-         * field and is 28 bytes.  It is possible for socket functions
-         * to return an addr_len greater than sizeof(struct sockaddr_in6).
-         * We need to allow that.  (Bugzilla bug #77264)
-         */
-        if ((PR_AF_INET6 == addr->raw.family)
-                && (sizeof(addr->ipv6) == addr_len)) {
-            return PR_TRUE;
-        }
-#endif
         return PR_FALSE;
     }
     return PR_TRUE;
@@ -356,15 +343,13 @@ struct pt_Continuation
 
 PTDebug pt_debug;  /* this is shared between several modules */
 
-PR_IMPLEMENT(void) PT_GetStats(PTDebug* here) { *here = pt_debug; }
-
 PR_IMPLEMENT(void) PT_FPrintStats(PRFileDesc *debug_out, const char *msg)
 {
     PTDebug stats;
     char buffer[100];
     PRExplodedTime tod;
     PRInt64 elapsed, aMil;
-    PT_GetStats(&stats);  /* a copy */
+    stats = pt_debug;  /* a copy */
     PR_ExplodeTime(stats.timeStarted, PR_LocalTimeParameters, &tod);
     (void)PR_FormatTime(buffer, sizeof(buffer), "%T", &tod);
 
@@ -387,6 +372,13 @@ PR_IMPLEMENT(void) PT_FPrintStats(PRFileDesc *debug_out, const char *msg)
     PR_fprintf(
         debug_out, "\tcvars [notified: %u, delayed_delete: %u]\n",
         stats.cvars_notified, stats.delayed_cv_deletes);
+}  /* PT_FPrintStats */
+
+#else
+
+PR_IMPLEMENT(void) PT_FPrintStats(PRFileDesc *debug_out, const char *msg)
+{
+    /* do nothing */
 }  /* PT_FPrintStats */
 
 #endif  /* DEBUG */
@@ -706,7 +698,7 @@ static PRBool pt_accept_cont(pt_Continuation *op, PRInt16 revents)
     if (-1 == op->result.code)
     {
         op->syserrno = errno;
-        if (EWOULDBLOCK == errno || EAGAIN == errno || ECONNABORTED == errno)
+        if (EWOULDBLOCK == errno || EAGAIN == errno)  /* the only thing we allow */
             return PR_FALSE;  /* do nothing - this one ain't finished */
     }
     return PR_TRUE;
@@ -1546,9 +1538,7 @@ static PRFileDesc* pt_Accept(
     {
         if (fd->secret->nonblocking) goto failed;
 
-        if (EWOULDBLOCK != syserrno && EAGAIN != syserrno
-        && ECONNABORTED != syserrno)
-            goto failed;
+        if (EWOULDBLOCK != syserrno && EAGAIN != syserrno) goto failed;
         else
         {
             if (PR_INTERVAL_NO_WAIT == timeout) syserrno = ETIMEDOUT;

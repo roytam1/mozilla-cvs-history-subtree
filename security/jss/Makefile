@@ -80,6 +80,18 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # from source, we rename mozilla/dist/public/nss to
 # mozilla/dist/public/security after unpacking a binary release.
 #
+
+build_coreconf:
+	cd $(CORE_DEPTH)/coreconf ;  $(MAKE)
+
 import::
 	rm -rf $(SOURCE_XP_DIR)/public/security
 	mv $(SOURCE_XP_DIR)/public/nss $(SOURCE_XP_DIR)/public/security
+
+ifeq ($(OS_ARCH),SunOS)
+solarispkg::
+	@echo Making Solaris packages.
+	rm -rf pkg/$(OBJDIR)
+	cp -r pkg/solaris pkg/$(OBJDIR)
+	$(MAKE) -C  pkg/$(OBJDIR) publish
+endif

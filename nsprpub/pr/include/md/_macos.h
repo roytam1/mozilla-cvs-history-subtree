@@ -112,7 +112,7 @@ typedef struct _MDSocketCallerInfo {
 
 struct _MDFileDesc {
     PRInt32     osfd;
-	PRBool      orderlyDisconnect;
+	PRBool      connectionOpen;
 	PRBool      readReady;
 	PRBool      writeReady;
 	PRBool      exceptReady;
@@ -124,7 +124,6 @@ struct _MDFileDesc {
 	_MDSocketCallerInfo  misc;
 	_MDSocketCallerInfo  read;
 	_MDSocketCallerInfo  write;
-	_MDSocketCallerInfo  poll;
 };
 
 /*

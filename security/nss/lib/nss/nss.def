@@ -460,7 +460,10 @@ CERT_CreateName;
 ;+NSS_3.3 { 	# NSS 3.3. release
 ;+    global:
 CERT_CheckCertUsage;
+CERT_FindCertIssuer;
+PK11_GetModule;
 SECKEY_CreateDHPrivateKey;
+SECKEY_GetPublicKeyType;
 SECMOD_AddNewModule;
 ;+#
 ;+# The following symbols are exported only to make JSS work.
@@ -541,6 +544,17 @@ SECKEY_ImportDERPublicKey;
 SECKEY_NewPrivateKeyList;
 SECKEY_RemovePrivateKeyListNode;
 VFY_EndWithSignature;
+;+    local:
+;+       *;
+;+};
+;+NSS_3.3.1 { 	# NSS 3.3.1 release
+;+    global:
+;+#
+;+# The following symbols are exported only to make libsmime3.so work. 
+;+# These are still private!!!
+;+#
+PK11_CreatePBEParams;
+PK11_DestroyPBEParams;
 ;+    local:
 ;+       *;
 ;+};

@@ -65,11 +65,11 @@
 /*                                                                  */
 /********************************************************************/
 
-static const char* DLL_JSS_VERSION     = "JSS_VERSION = JSS_3_0";
-static const char* DLL_JDK_VERSION     = "JDK_VERSION = JDK 1.2.2";
-static const char* DLL_NSS_VERSION     = "NSS_VERSION = NSS_3_2_RTM";
-static const char* DLL_DBM_VERSION     = "DBM_VERSION = NSS_3_1_1_RTM";
-static const char* DLL_NSPR_VERSION    = "NSPR_VERSION = NSPRPUB_RELEASE_4_1";
+static const char* DLL_JSS_VERSION     = "JSS_VERSION = JSS_3_1_2_2_RTM";
+static const char* DLL_JDK_VERSION     = "JDK_VERSION = JDK 1.4.0";
+static const char* DLL_NSS_VERSION     = "NSS_VERSION = NSS_3_3_3_RTM";
+static const char* DLL_DBM_VERSION     = "DBM_VERSION = NSS_3_3_3_RTM";
+static const char* DLL_NSPR_VERSION    = "NSPR_VERSION = NSPRPUB_RELEASE_4_1_3_RTM";
 
 static jobject
 makePWCBInfo(JNIEnv *env, PK11SlotInfo *slot);
@@ -380,6 +380,14 @@ Java_org_mozilla_jss_CryptoManager_initializeAllNative
         PR_ASSERT(PR_FALSE);
     }
     JSS_javaVM = VMs[0];
+
+    /*
+     * Set up policy. We're always domestic now. Thanks to the US Government!
+     */
+    if( NSS_SetDomesticPolicy() != SECSuccess ) {
+        JSS_throwMsg(env, SECURITY_EXCEPTION, "Unable to set security policy");
+        goto finish;
+    }
 
     initialized = PR_TRUE;
 

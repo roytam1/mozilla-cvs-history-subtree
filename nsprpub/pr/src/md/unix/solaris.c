@@ -32,6 +32,8 @@
  * GPL.
  */
 
+#undef _FILE_OFFSET_BITS
+
 #include "primpl.h"
 
 
@@ -83,7 +85,7 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, PRIntn isCurrent, PRIntn *np)
 }
 #endif /* _PR_PTHREADS */
 
-#if !defined(i386) && !defined(IS_64)
+#if !defined(i386)
 #if defined(_PR_HAVE_ATOMIC_OPS)
 /* NOTE:
  * SPARC v9 (Ultras) do have an atomic test-and-set operation.  But
