@@ -67,6 +67,7 @@ sub new
       $self->{"version"} = $hash->{"vers"} || $hash->{"version"} || LDAP_VERSION3;
       $self->{"usenspr"} = $hash->{"nspr"} if defined($hash->{"nspr"});
       $self->{"callback"} = $hash->{"callback"} if defined($hash->{"callback"});
+      $self->{"entryclass"} = $hash->{"entryclass"} || 'Mozilla::LDAP::Entry';
     }
   else
     {
@@ -179,7 +180,13 @@ sub init
 sub newEntry
 {
   my ($self, $dn) = @_;
-  my $entry = new Mozilla::LDAP::Entry;
+  my $entry;
+
+  if (ref $self) {
+    $entry = $self->{"entryclass"}->new();
+  } else {
+    $entry = new Mozilla::LDAP::Entry;
+  }
 
   $entry->setDN($dn) if (defined($dn) && $dn ne "");
 
@@ -315,7 +322,7 @@ sub search
 
       ($basedn, $scope, $filter, $attrsonly, @rest) = @_;
       $scope = Mozilla::LDAP::Utils::str2Scope($scope);
-      if (ref($rest[0]) eq "ARRAY")
+      if (ref $rest[0] eq "ARRAY")
         {
           $attrs = $rest[0];
         }
@@ -518,7 +525,7 @@ sub nextEntry
   my $ber = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
-  $obj = tie %entry, 'Mozilla::LDAP::Entry';
+  $obj = tie %entry, $self->{"entryclass"};
 
   $self->{"dn"} = "";
   if ($self->{"ldfe"} == 1)
@@ -554,7 +561,7 @@ sub nextEntry
   $self->{"dn"} = $dn;
 
   $attr = ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
-  return (bless \%entry, 'Mozilla::LDAP::Entry') unless $attr;
+  return (bless \%entry, $self->{"entryclass"}) unless $attr;
 
   $lcattr = lc $attr;
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
@@ -577,7 +584,7 @@ sub nextEntry
 
   ldap_ber_free($ber, 0) if $ber;
 
-  return bless \%entry, 'Mozilla::LDAP::Entry';
+  return bless \%entry, $self->{"entryclass"};
 }
 
 # This is deprecated...
@@ -612,7 +619,7 @@ sub delete
   my $ret = LDAP_SUCCESS;
   my $dn = $id;
 
-  if (ref($id) eq 'Mozilla::LDAP::Entry')
+  if (UNIVERSAL::isa($id, 'Mozilla::LDAP::Entry'))
     {
       $dn = $id->getDN();
     }
@@ -635,11 +642,10 @@ sub add
 {
   my ($self, $entry) = @_;
   my %ent;
-  my ($ref, $key, $val);
+  my ($key, $val);
   my ($ret, $gotcha) = (1, 0);
 
-  $ref = ref($entry);
-  if ($ref eq 'Mozilla::LDAP::Entry')
+  if (UNIVERSAL::isa($entry, 'Mozilla::LDAP::Entry'))
     {
       foreach $key (@{$entry->{"_oc_order_"}})
 	{
@@ -650,7 +656,7 @@ sub add
 	  $entry->attrClean($key);
 	}
     }
-  elsif  ($ref eq 'HASH')
+  elsif  (ref $entry eq 'HASH')
     {
       foreach $key (keys(%{$entry}))
 	{
@@ -949,7 +955,7 @@ sub installNSPR
   my $arg = shift;
   my $ret;
 
-  if (ref($arg))
+  if (ref $arg)
     {
       my $shared = shift || 0;
 
@@ -1031,8 +1037,8 @@ internal state. It depends heavily on the ::Entry class, which are used to
 retrieve, modify and update a single entry.
 
 The B<search> and B<nextEntry> methods returns Mozilla::LDAP::Entry
-objects, naturally. You also have to instantiate (and modify) a new
-::Entry object when you want to add new entries to an LDAP
+objects, or an appropriately subclass of it. You also have to instantiate
+(and modify) a new ::Entry object when you want to add new entries to an LDAP
 server. Alternatively, the add() method will also take a hash array as
 argument, to make it easy to create new LDAP entries.
 
@@ -1112,6 +1118,25 @@ and (not used in the B<new> method)
 
     $ld->{"scope"}
 
+New for PerLDAP v1.5 and later are the following:
+
+    $ld->{"nspr"}
+    $ld->{"callback"}
+    $ld->{"entryclass"}
+
+The B<nspr> flag (1/0) indicates that we wish to use the NSPR layer for all
+TCP connections. This obviously only works if PerLDAP has been compiled
+with NSPR support and libraries. The default is off.
+
+During the bind process, you can provide a callback function to be called
+when the asynchronus bind has completed. The callback should take two
+arguments, a reference to the ::Conn object ("self") and a result structure
+as returned by the call to B<ldap_result()>.
+
+Finally, you can optionally specify what class the different methods
+should use when instantiating B<Entry> result objects. The default is
+Mozilla::LDAP::Entry.
+
 Once a connection is established, the package will take care of the
 rest. If for some reason the connection is lost, the object should
 reconnect on it's own, automatically. [Note: This doesn't work
@@ -1166,7 +1191,8 @@ Ok, now we are prepared to actually do a real search on the LDAP server:
       }
 
 This is in fact a poor mans implementation of the I<ldapsearch> command
-line utility. The B<search> method returns an Mozilla::LDAP::Entry object,
+line utility. The B<search> method returns an Mozilla::LDAP::Entry
+object (or derived subclass),
 which holds the first entry from the search, if any. To get the second and
 subsequent entries you call the B<entry> method, until there are no more
 entries. The B<printLDIF> method is a convenient function, requesting the
