@@ -26,7 +26,9 @@
 #include "laylayer.h"
 #include "pa_parse.h"
 #include "libevent.h"
-#ifdef JAVA
+#if defined (JAVA)
+#include "jsjava.h"
+#elif defined (OJI)
 #include "jsjava.h"
 #endif
 #include "layers.h"
@@ -557,7 +559,7 @@ LO_EnumerateLinks(MWContext *context, int32 layer_id)
     return count;
 }
 
-#ifdef JAVA
+#if defined(JAVA) || defined (OJI)
 LO_JavaAppStruct *
 LO_GetAppletByIndex(MWContext *context, int32 layer_id, uint index)
 {
@@ -566,9 +568,20 @@ LO_GetAppletByIndex(MWContext *context, int32 layer_id, uint index)
     int i, count;
     lo_DocLists *doc_lists;
 
+
+#ifdef OJI
+    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
+    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+        jvmMochaPrefsEnabled = PR_TRUE;
+    }
+    if (jvmMochaPrefsEnabled == PR_FALSE) {
+        return NULL;
+    }
+#else
     /* XXX */
     if (!JSJ_IsEnabled())
         return NULL;
+#endif
 
     top_state = lo_GetTopState(context);
     if (top_state == NULL)
@@ -604,9 +617,20 @@ LO_EnumerateApplets(MWContext *context, int32 layer_id)
     LO_JavaAppStruct *applet;
     lo_DocLists *doc_lists;
 
+#ifdef OJI
+    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
+    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+        jvmMochaPrefsEnabled = PR_TRUE;
+    }
+    if (jvmMochaPrefsEnabled == PR_FALSE) {
+        return NULL;
+    }
+#else
     /* XXX */
     if (!JSJ_IsEnabled())
-        return 0;
+        return NULL;
+#endif
+
 
     top_state = lo_GetMochaTopState(context);
     if (top_state == NULL)
@@ -643,9 +667,20 @@ LO_GetEmbedByIndex(MWContext *context, int32 layer_id, uint index)
     int i, count;
     lo_DocLists *doc_lists;
 
+#ifdef OJI
+    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
+    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+        jvmMochaPrefsEnabled = PR_TRUE;
+    }
+    if (jvmMochaPrefsEnabled == PR_FALSE) {
+        return NULL;
+    }
+#else
     /* XXX */
     if (!JSJ_IsEnabled())
-        return NULL;
+        return 0;
+#endif
+
 
     top_state = lo_GetTopState(context);
     if (top_state == NULL)
@@ -681,9 +716,19 @@ LO_EnumerateEmbeds(MWContext *context, int32 layer_id)
     LO_EmbedStruct *embed;
     lo_DocLists *doc_lists;
 
+#ifdef OJI
+    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
+    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+        jvmMochaPrefsEnabled = PR_TRUE;
+    }
+    if (jvmMochaPrefsEnabled == PR_FALSE) {
+        return NULL;
+    }
+#else
     /* XXX */
     if (!JSJ_IsEnabled())
-        return 0;
+        return NULL;
+#endif
 
     top_state = lo_GetMochaTopState(context);
     if (top_state == NULL)

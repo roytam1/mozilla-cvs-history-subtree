@@ -811,9 +811,6 @@ BOOL CNetscapeApp::InitInstance()
     // Get the main NSPR event queue
     mozilla_event_queue  = PR_GetMainEventQueue();
 
-#ifndef MOZ_NGLAYOUT
-    LM_InitMocha();
-#endif /* MOZ_NGLAYOUT */
 
     // Initialize the XP file extension mapping
     NET_InitFileFormatTypes(NULL, NULL);
@@ -1442,6 +1439,11 @@ BOOL CNetscapeApp::InitInstance()
 	}
 
 	STARTUP_np();
+
+#ifndef MOZ_NGLAYOUT
+    LM_InitMocha();
+#endif /* MOZ_NGLAYOUT */
+
 
 	// if PE mode, start up java too!
 #if defined(OJI) || defined(JAVA)

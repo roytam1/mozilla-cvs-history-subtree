@@ -22,6 +22,7 @@
 #include "nsIJVM.h"
 #include "nsscd.h"
 #include "nsAgg.h"
+#include "jsjava.h"
 
 class nsSymantecDebugManager;
 
@@ -68,7 +69,7 @@ public:
     static NS_METHOD
     Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
 
-    nsIJVMPlugin* GetJVM(void);
+    nsIJVMPlugin* GetJVMPlugin(void);
 
     // Unlike the nsIJVMPlugin::StartupJVM, this version handles putting
     // up any error dialog:
@@ -78,6 +79,10 @@ public:
     void SetJVMEnabled(PRBool enabled);
 
     nsPluginError AddToClassPathRecursively(const char* dirPath);
+    void        JSJInit();
+    PRBool      IsJVMAndMochaPrefsEnabled(void);
+    JSJavaVM*   GetJSJavaVM() { return fJSJavaVM; }
+
 
 protected:    
     nsJVMMgr(nsISupports* outer);
@@ -90,7 +95,7 @@ protected:
     nsJVMStatus         fStatus;
     PRBool              fRegisteredJavaPrefChanged;
     nsISupports*        fDebugManager;
- 
+    JSJavaVM *          fJSJavaVM;  
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,6 +204,12 @@ JVM_PrintToConsole(const char* msg);
 
 PR_EXTERN(void)
 JVM_StartDebugger(void);
+
+PR_EXTERN(JavaVM*)
+JVM_GetJavaVM(void);
+
+PR_EXTERN(JNIEnv*)
+JVM_GetJNIEnv(void);
 
 PR_END_EXTERN_C
 

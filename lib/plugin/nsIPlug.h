@@ -500,7 +500,6 @@ public:
     // (Corresponds to NPP_SetValue.)
     NS_IMETHOD_(nsPluginError)
     SetValue(nsPluginManagerVariable variable, void *value) = 0;
-
 };
 
 #define NS_IPLUGININSTANCE_IID                       \

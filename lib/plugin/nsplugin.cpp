@@ -149,20 +149,21 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         AddRef(); 
         return NS_OK; 
     } 
+#if 0   // Browser interface should be JNI from now on. Hence all new code
+        // should be written using JNI. sudu.
     if (aIID.Equals(kIJRIEnvIID)) {
         // XXX Need to implement ISupports for JRIEnv
         *aInstancePtr = (void*) ((nsISupports*)npn_getJavaEnv()); 
 //        AddRef();     // XXX should the plugin instance peer and the env be linked?
         return NS_OK; 
     } 
-#if 0   // later
+#endif 
     if (aIID.Equals(kIJNIEnvIID)) {
         // XXX Need to implement ISupports for JNIEnv
-        *aInstancePtr = (void*) ((nsISupports*)npn_getJavaEnv());       // XXX need JNI version
+        *aInstancePtr = (void*) ((nsISupports*)npn_getJavaEnv(NULL));       //=-= Fix this to return a Interface XXX need JNI version
 //        AddRef();     // XXX should the plugin instance peer and the env be linked?
         return NS_OK; 
     }
-#endif 
     if (aIID.Equals(kISupportsIID)) {
         *aInstancePtr = (void*) ((nsISupports*)this); 
         AddRef(); 
@@ -486,6 +487,38 @@ nsPluginInstancePeer::GetJavaPeer(void)
 {
     return npn_getJavaPeer(npp);
 }
+
+extern "C" JSContext *lm_crippled_context; /* XXX kill me */
+
+JSContext *
+nsPluginInstancePeer::GetJSContext(void)
+{
+    MWContext *pMWCX = GetMWContext();
+    JSContext *pJSCX = NULL;
+    if (!pMWCX || (pMWCX->type != MWContextBrowser && pMWCX->type != MWContextPane))
+    {
+       return 0;
+    }
+    if( pMWCX->mocha_context == NULL)
+    {
+      pJSCX = pMWCX->mocha_context;
+    }
+    else
+    {
+       pJSCX = lm_crippled_context;
+    }
+    return pJSCX;
+}
+
+MWContext *
+nsPluginInstancePeer::GetMWContext(void)
+{
+    np_instance* instance = (np_instance*) npp->ndata;
+    MWContext *pMWCX = instance->cx;
+
+    return pMWCX;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Tag Info Interface

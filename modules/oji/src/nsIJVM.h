@@ -125,6 +125,14 @@ public:
     NS_IMETHOD_(const char*)
     GetClassPath(void) = 0;
     
+    NS_IMETHOD_(nsIPluginInstance*)
+    GetPluginInstance(void *applet) = 0;
+
+    NS_IMETHOD_(jobject)
+    AttachThreadToJavaObject(JNIEnv *jenv) = 0;
+
+    NS_IMETHOD_(JavaVM *)
+    GetJavaVM(void) = 0;
 };
 
 #define NS_IJVMPLUGIN_IID                            \
@@ -238,6 +246,15 @@ public:
     NS_IMETHOD_(jobject) 
     GetJavaObject(void) = 0;
 
+    NS_IMETHOD_(nsIPluginInstancePeer2 *)
+    GetPeer(void) = 0;
+
+    /* =-= sudu: Ask Eric Bina, what is GetText used for in layform.c
+                 Check to see if this should be more general api applicaple to
+                 applets/beans and plugins.
+    */
+    NS_IMETHOD_(char *)
+    GetText(void) = 0;
 };
 
 #define NS_IJVMPLUGININSTANCE_IID                    \
@@ -280,6 +297,20 @@ public:
     0x11d1,                                          \
     {0x85, 0xb1, 0x00, 0x80, 0x5f, 0x0e, 0x4d, 0xfe} \
 }
+
+class nsIJVMPluginInstanceJSContext : public nsISupports {
+public:
+
+};
+
+#define NS_IJVMPLUGINTAGINFO_IID                     \
+{ /* 27b42df0-a1bd-11d1-85b1-00805f0e4dfe */         \
+    0x27b42df0,                                      \
+    0xa1bd,                                          \
+    0x11d1,                                          \
+    {0x85, 0xb1, 0x00, 0x80, 0x5f, 0x0e, 0x4d, 0xfe} \
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 #endif /* nsIJVM_h___ */

@@ -248,8 +248,13 @@ npn_forceredraw(NPP npp);
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_D0
 #endif
+#if defined(OJI)
+JNIEnv* NP_EXPORT
+npn_getJavaEnv(PRThread *pPRThread);
+#else
 JRIEnv* NP_EXPORT
 npn_getJavaEnv(void);
+#endif
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_A0
 #endif
@@ -382,6 +387,7 @@ protected:
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+typedef struct JSContext JSContext;
 
 class nsPluginTagInfo;
 
@@ -477,7 +483,8 @@ public:
     }
     
     NPP GetNPP(void) { return npp; }
-
+    JSContext *GetJSContext(void);
+    MWContext *GetMWContext(void);
 protected:
 
     // NPP is the old plugin structure. If we were implementing this

@@ -21,6 +21,12 @@
 #//------------------------------------------------------------------------
 DEPTH=..\..
 
+DIRS =  \
+!ifdef MOZ_OJI
+liveconnect \
+!endif
+$(NULL)
+
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)

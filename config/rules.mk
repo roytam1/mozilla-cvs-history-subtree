@@ -59,6 +59,9 @@
 #	JRI_GEN	-- files to run through javah to generate headers and stubs
 #			(output goes into the _jri sub-dir)
 # j)
+#	JNI_GEN	-- files to run through javah to generate headers and stubs
+#			(output goes into the _jni sub-dir)
+# k)
 #	JMC_GEN	-- files to run through jmc to generate headers and stubs
 #			(output goes into the _jmc sub-dir)
 #
@@ -186,11 +189,13 @@ ifdef NSBUILDROOT
 JDK_GEN_DIR		= $(XPDIST)/_gen
 JMC_GEN_DIR		= $(XPDIST)/$(JMC_SUBDIR)
 JRI_GEN_DIR		= $(XPDIST)/_jri
+JNI_GEN_DIR		= $(XPDIST)/_jni
 JDK_STUB_DIR		= $(XPDIST)/_stubs
 else
 JDK_GEN_DIR		= _gen
 JMC_GEN_DIR		= $(JMC_SUBDIR)
 JRI_GEN_DIR		= _jri
+JNI_GEN_DIR		= _jni
 JDK_STUB_DIR		= _stubs
 endif
 
@@ -563,6 +568,45 @@ ifdef MOZ_GENMAC
 endif
 endif # JAVA_OR_OJI
 endif
+
+
+
+#
+# JNI_GEN -- for generating JNI native methods
+#
+# Generate JNI Headers and Stubs into the 'jni' directory
+#
+ifneq ($(JNI_GEN),)
+ifdef JAVA_OR_OJI
+ifdef NSBUILDROOT
+INCLUDES		+= -I$(JNI_GEN_DIR) -I$(XPDIST)
+else
+INCLUDES		+= -I$(JNI_GEN_DIR)
+endif
+JNI_PACKAGE_CLASSES	= $(JNI_GEN)
+JNI_PATH_CLASSES	= $(subst .,/,$(JNI_PACKAGE_CLASSES))
+JNI_HEADER_CLASSFILES	= $(patsubst %,$(JAVA_DESTPATH)/%.class,$(JNI_PATH_CLASSES))
+JNI_HEADER_CFILES	= $(patsubst %,$(JNI_GEN_DIR)/%.h,$(JNI_GEN))
+JNI_STUB_CFILES		= $(patsubst %,$(JNI_GEN_DIR)/%.c,$(JNI_GEN))
+
+$(JNI_HEADER_CFILES): $(JNI_HEADER_CLASSFILES)
+
+export::
+	@echo Generating/Updating JNI headers
+	$(JAVAH) -jni -d $(JNI_GEN_DIR) $(JNI_PACKAGE_CLASSES)
+ifdef MOZ_GENMAC
+	@if test ! -d $(DEPTH)/lib/mac/Java/; then						\
+		echo "!!! You need to have a ns/lib/mac/Java directory checked out.";		\
+		echo "!!! This allows us to automatically update generated files for the mac.";	\
+		echo "!!! If you see any modified files there, please check them in.";		\
+	fi
+	@echo Generating/Updating JNI headers for the Mac
+	$(JAVAH) -jni -mac -d $(DEPTH)/lib/mac/Java/_jni $(JNI_PACKAGE_CLASSES)
+endif
+endif # JAVA_OR_OJI
+endif # JNI_GEN
+
+
 
 #
 # JMC_EXPORT -- for declaring which java classes are to be exported for jmc

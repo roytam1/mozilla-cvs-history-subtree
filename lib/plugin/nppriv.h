@@ -96,7 +96,11 @@ struct _np_instance {
     URL_Struct *delayedload;
     XP_List *url_list;
     JRIEnv* javaEnv;
+#ifdef OJI
+    jobject javaInstance;
+#else
     JRIGlobalRef javaInstance;
+#endif /* OJI */
     XP_Bool windowed;           /* TRUE = has its own window, FALSE = windowless */
     XP_Bool transparent;        /* TRUE = transparent, FALSE = opaque */
 	XP_Bool calling_netlib_all_the_time;

@@ -987,6 +987,7 @@ struct LO_CommonPluginStruct_struct {
 #ifdef MOCHA
     struct JSObject *mocha_object;
 #endif		
+    int16 sub_type;
 };
 
 #ifdef SHACK

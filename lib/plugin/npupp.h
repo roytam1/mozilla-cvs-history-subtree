@@ -38,7 +38,11 @@
 #include "npapi.h"
 #endif
 
+#ifdef OJI
+#include "jni.h"
+#else
 #include "jri.h"
+#endif
 
 /******************************************************************************************
    plug-in function table macros
@@ -925,8 +929,11 @@ enum {
 		(JRIEnv*)CallUniversalProc((UniversalProcPtr)(FUNC), uppNPN_GetJavaEnvProcInfo)	
 
 #else
-
+#ifdef OJI
+typedef JNIEnv* (* NP_LOADDS NPN_GetJavaEnvUPP)(void);
+#else
 typedef JRIEnv* (* NP_LOADDS NPN_GetJavaEnvUPP)(void);
+#endif /* ! OJI */
 #define NewNPN_GetJavaEnvProc(FUNC)		\
 		((NPN_GetJavaEnvUPP) (FUNC))
 #define CallNPN_GetJavaEnvProc(FUNC)		\
@@ -1068,7 +1075,11 @@ typedef struct _NPPluginFuncs {
     NPP_PrintUPP print;
     NPP_HandleEventUPP event;
     NPP_URLNotifyUPP urlnotify;
+#if defined(OJI)
+    jobject javaClass;
+#else
     JRIGlobalRef javaClass;
+#endif
     NPP_GetValueUPP getvalue;
     NPP_SetValueUPP setvalue;
 } NPPluginFuncs;

@@ -28,6 +28,10 @@
 
 #include "xp.h"
 #include "npglue.h"
+#ifdef OJI
+#include "jni.h"
+#include "jvmmgr.h"
+#endif
 
 #ifdef ANTHRAX
 static char* np_FindAppletNForMimeType(const char* mimetype, char index);
@@ -2140,6 +2144,33 @@ npn_forceredraw(NPP npp)
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_D0
 #endif
+#if defined(OJI)
+JNIEnv* NP_EXPORT
+npn_getJavaEnv(PRThread *pPRThread)
+{
+
+#ifdef	XP_MAC
+	short resNum1, resNum2;
+	resNum1 = CurResFile();
+#endif /* XP_MAC */ 
+ JNIEnv    *pJNIEnv = NULL;
+
+ /* =-= What do we do with the thread passed in? Looks like we cannot
+ *      get a JNIEnv for any arbitrary thread. One can only attach to a
+ *      current thread.
+ */
+ pJNIEnv = JVM_GetJNIEnv(); /* This may startup the VM. */
+
+#ifdef	XP_MAC
+	/* if Java changed the res file, change it back to the plugin's res file */
+	resNum2 = CurResFile();
+	if(resNum1 != resNum2)
+		UseResFile(resNum1);
+#endif  /* XP_MAC */ 
+
+ return pJNIEnv;
+}
+#else /* OJI */
 JRIEnv* NP_EXPORT
 npn_getJavaEnv(void)
 {
@@ -2165,11 +2196,36 @@ npn_getJavaEnv(void)
     return NULL;
 #endif /* JAVA */
 }
+#endif /* !OJI */
+
+
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_A0
 #endif
 
-#ifdef JAVA
+#if defined(OJI)
+#define fieldname_netscape_plugin_Plugin_window	"window"
+#define fieldsig_netscape_plugin_Plugin_window 	"Lnetscape/javascript/JSObject;"
+
+jclass NP_EXPORT
+npn_getJavaClass(np_handle* handle);
+
+void
+np_recover_mochaWindow(JNIEnv * env, np_instance * instance)
+{
+	 if (env && instance && instance->mochaWindow && instance->javaInstance){
+ 			/* Store the JavaScript context as the window object: */
+    env->SetObjectField(instance->javaInstance, 
+                        env->GetFieldID(npn_getJavaClass(instance->handle), 
+                                   fieldname_netscape_plugin_Plugin_window, fieldsig_netscape_plugin_Plugin_window),
+                        (jobject)instance->mochaWindow);
+
+	 }
+}
+jobject classPlugin = NULL;
+#define NPN_NO_JAVA_INSTANCE	((jobject)-1)
+
+#elif defined(JAVA)
 void
 np_recover_mochaWindow(JRIEnv * env, np_instance * instance)
 {
@@ -2186,12 +2242,10 @@ np_recover_mochaWindow(JRIEnv * env, np_instance * instance)
 		 }		
 	 }
 }
-
+jglobal classPlugin = NULL;
 #define NPN_NO_JAVA_INSTANCE	((jglobal)-1)
 
-jglobal classPlugin = NULL;
-
-#endif // JAVA
+#endif /* ! OJI */
 
 extern void
 ET_SetPluginWindow(MWContext *cx, void *instance);
@@ -2203,7 +2257,33 @@ NS_DEFINE_IID(kLiveConnectPluginIID, NS_ILIVECONNECTPLUGIN_IID);
 #pragma pointers_in_D0
 #endif
 
-#ifdef JAVA
+#if defined(OJI)
+jclass NP_EXPORT
+npn_getJavaClass(np_handle* handle)
+{
+    if (handle->userPlugin) {
+        nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
+        nsILiveConnectPlugin* lcPlugin;
+        if (userPluginClass->QueryInterface(kLiveConnectPluginIID,
+                                            (void**)&lcPlugin) != NS_NOINTERFACE) {
+            jclass clazz = lcPlugin->GetJavaClass();
+
+            // Remember, QueryInterface increments the ref count;
+            // since we're done with it in this scope, release it.
+            lcPlugin->Release();
+
+            return clazz;
+        }
+        return NULL;    // not a LiveConnected plugin
+    }
+    else if (handle && handle->f) {
+        JNIEnv* env = npn_getJavaEnv(NULL);		/* may start up the java runtime */
+        if (env == NULL) return NULL;
+        return (jclass) env->NewGlobalRef(handle->f->javaClass);
+    }
+    return NULL;
+}
+#elif defined(JAVA)
 java_lang_Class* NP_EXPORT
 npn_getJavaClass(np_handle* handle)
 {
@@ -2229,12 +2309,94 @@ npn_getJavaClass(np_handle* handle)
     }
     return NULL;
 }
-#endif
+#endif /* JAVA */
 
+#if defined(OJI)
+jobject NP_EXPORT
+npn_getJavaPeer(NPP npp)
+{
+    jobject      javaInstance = NULL;
+    np_instance* instance;
+ 
+    if (npp == NULL)
+		    return NULL;
+    instance = (np_instance*) npp->ndata;
+	   if (instance == NULL) return NULL;
+
+	   if (instance->javaInstance == NPN_NO_JAVA_INSTANCE) {
+		   /* Been there, done that. */
+		   return NULL;
+	   }
+    else if (instance->javaInstance != NULL) {
+		   /*
+		   ** It's ok to get the JNIEnv here -- it won't initialize the
+		   ** runtime because it would have already been initialized to
+		   ** create the instance that we're just about to return.
+		   */
+
+	    /* But first, see if we need to recover the mochaWindow... */
+		   np_recover_mochaWindow(npn_getJavaEnv(NULL),instance);
+
+		   return (jref)instance->javaInstance;
+	   }
+    else {
+		    jclass clazz = npn_getJavaClass(instance->handle);
+      if (clazz) {
+        JNIEnv* env = npn_getJavaEnv(NULL);		/* may start up the java runtime */
+			     if (classPlugin == NULL) {
+				     /*
+				     ** Make sure we never unload the Plugin class. Why? Because
+				     ** the method and field IDs we're using below have the same
+				     ** lifetime as the class (theoretically):
+				     */
+				     classPlugin = env->NewGlobalRef(clazz);
+			     }
+
+			/* instantiate the plugin's class: */
+#define methodname_netscape_plugin_Plugin_new	"<init>"
+#define methodsig_netscape_plugin_Plugin_new 	"()V"
+
+			     javaInstance = env->NewObject(clazz, env->GetMethodID(clazz, 
+                                       methodname_netscape_plugin_Plugin_new, methodsig_netscape_plugin_Plugin_new));
+			     if (javaInstance) {
+ 			     instance->javaInstance = env->NewGlobalRef(javaInstance);
+				     np_recover_mochaWindow(env,instance);
+
+				/* Store the plugin as the peer: */
+#define fieldname_netscape_plugin_Plugin_peer	"peer"
+#define fieldsig_netscape_plugin_Plugin_peer 	"I"
+         env->SetIntField(javaInstance, 
+                             env->GetFieldID(clazz, 
+                                        fieldname_netscape_plugin_Plugin_peer, fieldsig_netscape_plugin_Plugin_peer),
+                             (jint)instance->npp);
+
+#define methodname_netscape_plugin_Plugin_init	"init"
+#define methodsig_netscape_plugin_Plugin_init 	"()V"
+        env->CallVoidMethod(javaInstance, 
+                            env->GetMethodID(clazz, 
+                                       methodname_netscape_plugin_Plugin_init, methodsig_netscape_plugin_Plugin_init));
+      
+      			}
+         if (env->ExceptionOccurred()) {
+             env->DeleteGlobalRef(instance->javaInstance);
+			          instance->javaInstance = NPN_NO_JAVA_INSTANCE;		/* prevent trying this every time around */
+             env->DeleteGlobalRef(classPlugin);
+             classPlugin = NULL;
+             env->ExceptionClear();
+             return NULL;
+         }                                                                        \
+		    }
+		    else {
+			    instance->javaInstance = NPN_NO_JAVA_INSTANCE;		/* prevent trying this every time around */
+			    return NULL;
+		    }
+	  }
+   return (jref)javaInstance;
+}
+#elif defined(JAVA)
 jref NP_EXPORT
 npn_getJavaPeer(NPP npp)
 {
-#ifdef JAVA
     netscape_plugin_Plugin* javaInstance = NULL;
     np_instance* instance;
  
@@ -2293,10 +2455,9 @@ npn_getJavaPeer(NPP npp)
 		}
 	}
     return (jref)javaInstance;
-#else
-	return NULL;
-#endif
 }
+#endif /* JAVA */
+
 #if defined(XP_MAC) && !defined(powerc)
 #pragma pointers_in_A0
 #endif
@@ -2320,18 +2481,14 @@ np_IsLiveConnected(np_handle* handle)
         }
     }
     else {
-#ifdef JAVA
         return npn_getJavaClass(handle) != NULL;
-#else
-        return FALSE;
-#endif
     }
 }
 
 /* Is the plugin associated with this embedStruct liveconnected? */
 XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 {
-#ifdef JAVA
+#if defined(JAVA) || defined(OJI)
 	NPEmbeddedApp* app;
 	np_data* ndata;
 
@@ -2345,8 +2502,6 @@ XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 	ndata = (np_data*) app->np_data;
 	XP_ASSERT(ndata);
     return np_IsLiveConnected(ndata->instance->handle);
-#else
-	return FALSE; 
 #endif
 }
 
@@ -2417,7 +2572,15 @@ np_UnloadPluginClass(np_handle *handle)
 	/* only called when we truly want to dispose the plugin class */
 	XP_ASSERT(handle && handle->refs == 0);
 
-#ifdef JAVA
+#if defined(OJI)
+    if (handle->userPlugin == NULL && handle->f && handle->f->javaClass != NULL) {
+		/* Don't get the environment unless there is a Java class,
+		   because this would cause the java runtime to start up. */
+		JNIEnv* env = npn_getJavaEnv(NULL);
+		env->DeleteGlobalRef(handle->f->javaClass);
+		handle->f->javaClass = NULL;
+	}
+#elif defined(JAVA)
     if (handle->userPlugin == NULL && handle->f && handle->f->javaClass != NULL) {
 		/* Don't get the environment unless there is a Java class,
 		   because this would cause the java runtime to start up. */
@@ -2697,7 +2860,7 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
         }
     }
 #endif /* MOCHA */
-
+           
     return instance;
     
 error:
@@ -4260,6 +4423,100 @@ NPL_LoadPluginByType(const char* typeAttribute)
         return NULL;
     }
 }
+
+extern "C"
+{
+// Used by layout code to translate between a np_instance and a 
+// OJI plugin instance.
+PR_IMPLEMENT(struct nsIPluginInstance*)
+NPL_GetOJIPluginInstance(NPEmbeddedApp *embed)
+{
+   struct nsIPluginInstance *psNPIT = NULL;
+   np_data     *ndata    = (np_data*) embed->np_data;
+   np_instance *instance = ndata->instance;
+   if (instance)
+   {
+      nsIPluginInstancePeer *pNPIP = (nsIPluginInstancePeer *)instance->npp->pdata;
+      nsIPluginInstance     *pNPI  = ((nsPluginInstancePeer *)pNPIP)->GetUserInstance();
+      psNPIT                       = (struct nsIPluginInstance*)pNPI;
+   }
+   return (psNPIT);
+}
+
+
+// Used by layout code to get to a text representing a java bean.
+PR_IMPLEMENT(char *)
+NPL_GetText(struct nsIPluginInstance *psNPIT)
+{
+   nsIPluginInstance *pNPIT = (nsIPluginInstance *)psNPIT;
+   char *text = NULL;
+
+   nsIJVMPluginInstance  *pJVMPIT = NULL;
+   NS_DEFINE_IID(kJvmPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
+   if (pNPIT->QueryInterface(kJvmPluginInstanceIID,
+                            (void**)&pJVMPIT) == NS_OK) {
+
+      text = pJVMPIT->GetText();
+      pJVMPIT->Release();
+   }
+   return text;
+}
+
+PR_IMPLEMENT(jobject)
+NPL_GetJavaObject(struct nsIPluginInstance *psNPIT)
+{
+   nsIPluginInstance *pNPIT = (nsIPluginInstance *)psNPIT;
+   jobject javaobject = NULL;
+
+   nsIJVMPluginInstance  *pJVMPIT = NULL;
+   NS_DEFINE_IID(kJvmPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
+   if (pNPIT->QueryInterface(kJvmPluginInstanceIID,
+                            (void**)&pJVMPIT) == NS_OK) {
+
+      javaobject = pJVMPIT->GetJavaObject();
+      pJVMPIT->Release();
+   }
+   return javaobject;
+}
+
+PR_IMPLEMENT(void) NPL_Release(struct nsISupports *psnsISup)
+{
+   nsISupports *pnsISup = (nsISupports *)psnsISup;
+   pnsISup->Release();
+}
+
+PR_IMPLEMENT(XP_Bool) NPL_IsJVMAndMochaPrefsEnabled(void)
+{
+   XP_Bool  bPrefs  = PR_FALSE;
+   nsJVMMgr  *pJVMMgr = JVM_GetJVMMgr();
+
+   if (pJVMMgr != NULL) {
+     if (pJVMMgr->IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+         bPrefs = PR_TRUE;
+     }
+     pJVMMgr->Release();
+   }
+   
+   return bPrefs;
+}
+
+PR_IMPLEMENT(void)NPL_JSJInit(void)
+{
+    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    if (pJVMMgr != NULL) {
+        pJVMMgr->JSJInit();
+       pJVMMgr->Release();
+    }
+}
+
+PR_IMPLEMENT(JNIEnv *)NPL_EnsureJNIExecEnv(PRThread* thread)
+{
+    return npn_getJavaEnv(thread);
+}
+
+
+} /* extern "C" */
+
 
 /*
  * This is called by the front-end to create a new plug-in. It will

@@ -13,11 +13,31 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
+DIRS =  \
+!ifdef MOZ_OJI
+liveconnect \
+!endif
+$(NULL)
+
 #//------------------------------------------------------------------------
 #//
 #// Makefile to build the NS tree
 #//
 #//------------------------------------------------------------------------
+
+DIRS =  \
+!ifdef MOZ_OJI
+liveconnect \
+!endif
+$(NULL)
+
+
+DIRS =  \
+!ifdef MOZ_OJI
+liveconnect \
+!endif
+$(NULL)
+
 
 #//------------------------------------------------------------------------
 #//

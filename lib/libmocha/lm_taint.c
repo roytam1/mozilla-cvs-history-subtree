@@ -386,6 +386,8 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
         }
     }
 #ifdef JAVA
+    /* =-= sudu: What do we do here for OJI? Ask raman.
+    */
     if (JSJ_IsCalledFromJava(cx)) {
         return LM_GetJSPrincipalsFromJavaCaller(cx, 0);
     }

@@ -54,6 +54,10 @@ JMC_GEN_DIR=$(LOCAL_JMC_SUBDIR)
 JRI_GEN_DIR=_jri
 !endif
 
+!if !defined(JNI_GEN_DIR)
+JNI_GEN_DIR=_jni
+!endif
+
 
 MANIFEST_LEVEL=MACROS
 !IF EXIST(manifest.mn) && !defined(IGNORE_MANIFEST)
@@ -582,7 +586,7 @@ clobber::
 #//------------------------------------------------------------------------
 !if defined(JAVA_OR_OJI)
 GARBAGE	= $(JMC_GEN_DIR) $(JMC_HEADERS) $(JMC_STUBS) \
-	  $(JDK_STUB_DIR) $(JRI_GEN_DIR) $(JDK_GEN_DIR)
+	  $(JDK_STUB_DIR) $(JRI_GEN_DIR) $(JNI_GEN_DIR) $(JDK_GEN_DIR)
 !endif
 
 

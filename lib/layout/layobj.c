@@ -55,6 +55,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	LO_ObjectStruct* object;
 	PA_Block buff;
 	int16 type = LO_NONE;
+	int16 sub_type = LO_NONE;
 	char* str;
 	char* pluginName;
 
@@ -191,7 +192,10 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			/* It's a Java class */
 #ifdef OJI
 			if (type == LO_NONE)
-				type = LO_EMBED;
+   {
+				 type = LO_EMBED;
+     sub_type = LO_JAVA;
+   }
 			else if (type != LO_EMBED) /* XXX */
 #else
 			if (type == LO_NONE)
@@ -330,6 +334,10 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	if (type == LO_EMBED)
 	{
 		object->lo_element.lo_plugin.type = LO_EMBED;
+  if(sub_type == LO_JAVA)
+  {
+    object->lo_element.lo_plugin.sub_type = LO_JAVA;
+  }
 	}
 #ifdef SHACK
 	else if (type == LO_BUILTIN)

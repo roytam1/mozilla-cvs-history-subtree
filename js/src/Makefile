@@ -16,6 +16,13 @@
 
 DEPTH		= ../..
 
+DIRS =  \
+ifdef MOZ_OJI
+liveconnect \
+endif
+$(NULL)
+
+
 LIBRARY_NAME	= js
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
