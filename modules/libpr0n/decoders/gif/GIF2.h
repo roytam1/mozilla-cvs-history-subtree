@@ -68,7 +68,6 @@ typedef enum {
     gif_consume_netscape_extension,
     gif_consume_comment,
     gif_delay,
-    gif_wait_for_buffer_full,
     gif_stop_animating   //added for animation stop 
 } gstate;
 
@@ -92,7 +91,6 @@ typedef struct gif_struct {
     int32 gather_request_size;  /* Number of bytes to accumulate */
     int32 gathered;             /* bytes accumulated so far*/
     gstate post_gather_state;   /* State after requested bytes accumulated */
-    int32 requested_buffer_fullness; /* For netscape application extension */
 
     /* LZW decoder state machine */
     PRUint8 *stack;               /* Base of decoder stack */
