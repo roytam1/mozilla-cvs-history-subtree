@@ -25,7 +25,6 @@
 #include "nslayout.h"
 #include "nsISupports.h"
 #include "nsColor.h"
-#include "nsCoord.h"
 #include "nsMargin.h"
 #include "nsRect.h"
 #include "nsFont.h"
@@ -72,8 +71,8 @@ struct nsStyleColor : public nsStyleStruct {
   PRUint8 mBackgroundRepeat;      // [reset] See nsStyleConsts.h
 
   nscolor mBackgroundColor;       // [reset]
-  nscoord mBackgroundXPosition;   // [reset]
-  nscoord mBackgroundYPosition;   // [reset]
+  gfx_coord mBackgroundXPosition;   // [reset]
+  gfx_coord mBackgroundYPosition;   // [reset]
   nsString mBackgroundImage;      // [reset] absolute url string
 
   PRUint8 mCursor;                // [reset] See nsStyleConsts.h NS_STYLE_CURSOR_*
@@ -112,7 +111,7 @@ struct nsStyleSpacing: public nsStyleStruct {
   void    SetBorderTransparent(PRUint8 aSide); 
   void    UnsetBorderColor(PRUint8 aSide);
 
-  PRBool  GetOutlineWidth(nscoord& aWidth) const; // PR_TRUE if pre-computed
+  PRBool  GetOutlineWidth(gfx_coord& aWidth) const; // PR_TRUE if pre-computed
   PRUint8 GetOutlineStyle(void) const;
   void    SetOutlineStyle(PRUint8 aStyle);
   PRBool  GetOutlineColor(nscolor& aColor) const; // PR_FALSE means INVERT
@@ -134,7 +133,7 @@ protected:
   nsMargin  mCachedPadding;
   nsMargin  mCachedBorder;
   nsMargin  mCachedBorderPadding;
-  nscoord   mCachedOutlineWidth;
+  gfx_coord   mCachedOutlineWidth;
 
   PRUint8   mBorderStyle[4];  // [reset] See nsStyleConsts.h
   nscolor   mBorderColor[4];  // [reset] 
@@ -350,9 +349,9 @@ struct nsBorderEdges;
 struct nsBorderEdge
 {
   /** the thickness of the edge */
-  nscoord mWidth;
+  gfx_coord mWidth;
   /** the length of the edge */
-  nscoord mLength;
+  gfx_coord mLength;
   PRUint8 mStyle;  
   nscolor mColor;
   /** which side does this edge represent? */

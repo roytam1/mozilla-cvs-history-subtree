@@ -75,7 +75,7 @@ struct SelectionDetails
 struct nsPeekOffsetStruct
 {
   void SetData(nsIFocusTracker *aTracker, 
-               nscoord aDesiredX, 
+               gfx_coord aDesiredX, 
                nsSelectionAmount aAmount,
                nsDirection aDirection,
                PRInt32 aStartOffset, 
@@ -88,7 +88,7 @@ struct nsPeekOffsetStruct
        mPreferLeft=aPreferLeft;mJumpLines = aJumpLines;
       }
   nsIFocusTracker *mTracker;
-  nscoord mDesiredX;
+  gfx_coord mDesiredX;
   nsSelectionAmount mAmount;
   nsDirection mDirection;
   PRInt32 mStartOffset;

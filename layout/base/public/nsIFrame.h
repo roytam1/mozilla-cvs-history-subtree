@@ -239,15 +239,15 @@ enum nsContextProviderRelationship {
  * @see #Reflow()
  */
 struct nsHTMLReflowMetrics {
-  nscoord width, height;        // [OUT] desired width and height
-  nscoord ascent, descent;      // [OUT] ascent and descent information
+  gfx_dimension width, height;  // [OUT] desired width and height
+  gfx_coord ascent, descent;    // [OUT] ascent and descent information
 
   // Set this to null if you don't need to compute the max element size
   nsSize* maxElementSize;       // [OUT]
 
   // Used for incremental reflow. If the NS_REFLOW_CALC_MAX_WIDTH flag is set,
   // then the caller is requesting that you update and return your maximum width
-  nscoord mMaximumWidth;        // [OUT]
+  gfx_coord mMaximumWidth;      // [OUT]
 
 #ifdef MOZ_MATHML
   // Metrics that _exactly_ enclose the text to allow precise MathML placements.
@@ -261,7 +261,7 @@ struct nsHTMLReflowMetrics {
 
   // Carried out bottom margin values. This is the collapsed
   // (generational) bottom margin value.
-  nscoord mCarriedOutBottomMargin;
+  gfx_coord mCarriedOutBottomMargin;
   
   // For frames that have content that overflow their content area
   // (NS_FRAME_OUTSIDE_CHILDREN) this rectangle represents the total area
@@ -658,11 +658,11 @@ public:
   NS_IMETHOD  SetRect(nsIPresContext* aPresContext,
                       const nsRect&   aRect) = 0;
   NS_IMETHOD  MoveTo(nsIPresContext* aPresContext,
-                     nscoord         aX,
-                     nscoord         aY) = 0;
+                     gfx_coord       aX,
+                     gfx_coord       aY) = 0;
   NS_IMETHOD  SizeTo(nsIPresContext* aPresContext,
-                     nscoord         aWidth,
-                     nscoord         aHeight) = 0;
+                     gfx_dimension   aWidth,
+                     gfx_dimension   aHeight) = 0;
 
   /**
    * Used to iterate the list of additional child list names. Returns the atom
@@ -938,13 +938,13 @@ public:
   // Justification helper method used to distribute extra space in a
   // line to leaf frames. aUsedSpace is filled in with the amount of
   // space actually used.
-  NS_IMETHOD AdjustFrameSize(nscoord aExtraSpace, nscoord& aUsedSpace) = 0;
+  NS_IMETHOD AdjustFrameSize(gfx_coord aExtraSpace, gfx_coord& aUsedSpace) = 0;
 
   // Justification helper method that is used to remove trailing
   // whitespace before justification.
   NS_IMETHOD TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
                                     nsIDrawable*    aDrawable,
-                                    nscoord& aDeltaWidth) = 0;
+                                    gfx_dimension& aDeltaWidth) = 0;
 
   /**
    * Accessor functions to get/set the associated view object

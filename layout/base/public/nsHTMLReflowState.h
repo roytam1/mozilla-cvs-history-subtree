@@ -23,6 +23,8 @@
 #define nsHTMLReflowState_h___
 
 #include "nslayout.h"
+#include "gfxtypes.h"
+#include "nsMargin.h"
 
 class nsIFrame;
 class nsIPresContext;
@@ -126,7 +128,7 @@ struct nsHTMLReflowState {
   // A value of NS_UNCONSTRAINEDSIZE for the available height means you can
   // choose whatever size you want. In galley mode the available height is always
   // NS_UNCONSTRAINEDSIZE, and only page mode involves a constrained height
-  nscoord              availableWidth, availableHeight;
+  gfx_coord              availableWidth, availableHeight;
 
   // drawable to use for measurement
   nsIDrawable* drawable;
@@ -155,7 +157,7 @@ struct nsHTMLReflowState {
   // A value of NS_SHRINKWRAPWIDTH means that you should choose a width based
   // on your content. The width may be as large as the specified maximum width
   // (see mComputedMaxWidth).
-  nscoord          mComputedWidth; 
+  gfx_coord          mComputedWidth; 
 
   // The computed height specifies the frame's content height, and it does
   // not apply to inline non-replaced elements
@@ -170,7 +172,7 @@ struct nsHTMLReflowState {
   //
   // For replaced block-level frames, a value of NS_INTRINSICSIZE
   // means you use your intrinsic height as the computed height
-  nscoord          mComputedHeight;
+  gfx_coord          mComputedHeight;
 
   // Computed margin values
   nsMargin         mComputedMargin;
@@ -186,18 +188,18 @@ struct nsHTMLReflowState {
   nsMargin         mComputedOffsets;
 
   // Computed values for 'min-width/max-width' and 'min-height/max-height'
-  nscoord          mComputedMinWidth, mComputedMaxWidth;
-  nscoord          mComputedMinHeight, mComputedMaxHeight;
+  gfx_coord          mComputedMinWidth, mComputedMaxWidth;
+  gfx_coord          mComputedMinHeight, mComputedMaxHeight;
 
   // Compact margin available space
-  nscoord          mCompactMarginWidth;
+  gfx_coord          mCompactMarginWidth;
 
   // The following data members are relevant if nsStyleText.mTextAlign
   // == NS_STYLE_TEXT_ALIGN_CHAR
 
   // distance from reference edge (as specified in nsStyleDisplay.mDirection) 
   // to the align character (which will be specified in nsStyleTable)
-  nscoord          mAlignCharOffset;
+  gfx_coord          mAlignCharOffset;
 
   // if true, the reflow honors alignCharOffset and does not
   // set it. if false, the reflow sets alignCharOffset
@@ -255,8 +257,8 @@ struct nsHTMLReflowState {
                     const nsHTMLReflowState& aParentReflowState,
                     nsIFrame*                aFrame,
                     const nsSize&            aAvailableSpace,
-                    nscoord                  aContainingBlockWidth,
-                    nscoord                  aContainingBlockHeight);
+                    gfx_coord                  aContainingBlockWidth,
+                    gfx_coord                  aContainingBlockHeight);
 
   /**
    * Get the containing block reflow state, starting from a frames
@@ -271,7 +273,7 @@ struct nsHTMLReflowState {
    * GetContainingBlockReflowState, then ask the containing block for
    * it's content width using GetContentWidth
    */
-  static nscoord
+  static gfx_coord
     GetContainingBlockContentWidth(const nsHTMLReflowState* aParentRS);
 
   /**
@@ -299,7 +301,7 @@ struct nsHTMLReflowState {
    * value, if line-height was applied and is valid will be >= 0. Otherwise,
    * the return value will be <0 which is illegal (CSS2 spec: section 10.8.1).
    */
-  static nscoord CalcLineHeight(nsIPresContext* aPresContext,
+  static gfx_coord CalcLineHeight(nsIPresContext* aPresContext,
                                 nsIDrawable* aDrawable,
                                 nsIFrame* aFrame);
 
@@ -309,23 +311,23 @@ struct nsHTMLReflowState {
 
   void ComputeContainingBlockRectangle(nsIPresContext*          aPresContext,
                                        const nsHTMLReflowState* aContainingBlockRS,
-                                       nscoord&                 aContainingBlockWidth,
-                                       nscoord&                 aContainingBlockHeight);
+                                       gfx_coord&                 aContainingBlockWidth,
+                                       gfx_coord&                 aContainingBlockHeight);
 
-  void CalculateBlockSideMargins(nscoord aAvailWidth,
-                                 nscoord aComputedWidth);
+  void CalculateBlockSideMargins(gfx_coord aAvailWidth,
+                                 gfx_coord aComputedWidth);
 
 
 protected:
   // This method initializes various data members. It is automatically
   // called by the various constructors
   void Init(nsIPresContext* aPresContext,
-            nscoord         aContainingBlockWidth = -1,
-            nscoord         aContainingBlockHeight = -1);
+            gfx_coord         aContainingBlockWidth = -1,
+            gfx_coord         aContainingBlockHeight = -1);
 
   void InitConstraints(nsIPresContext* aPresContext,
-                       nscoord         aContainingBlockWidth,
-                       nscoord         aContainingBlockHeight);
+                       gfx_coord         aContainingBlockWidth,
+                       gfx_coord         aContainingBlockHeight);
 
   void CalculateHypotheticalBox(nsIPresContext*    aPresContext,
                                 nsIFrame*          aPlaceholderFrame,
@@ -336,29 +338,29 @@ protected:
 
   void InitAbsoluteConstraints(nsIPresContext* aPresContext,
                                const nsHTMLReflowState* cbrs,
-                               nscoord aContainingBlockWidth,
-                               nscoord aContainingBlockHeight);
+                               gfx_coord aContainingBlockWidth,
+                               gfx_coord aContainingBlockHeight);
 
   void ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
-                              nscoord aContainingBlockWidth,
-                              nscoord aContainingBlockHeight);
+                              gfx_coord aContainingBlockWidth,
+                              gfx_coord aContainingBlockHeight);
 
   void ComputeBlockBoxData(nsIPresContext* aPresContext,
                            const nsHTMLReflowState* cbrs,
                            nsStyleUnit aWidthUnit,
                            nsStyleUnit aHeightUnit,
-                           nscoord aContainingBlockWidth,
-                           nscoord aContainingBlockHeight);
+                           gfx_coord aContainingBlockWidth,
+                           gfx_coord aContainingBlockHeight);
 
-  void ComputeHorizontalValue(nscoord aContainingBlockWidth,
+  void ComputeHorizontalValue(gfx_coord aContainingBlockWidth,
                                      nsStyleUnit aUnit,
                                      const nsStyleCoord& aCoord,
-                                     nscoord& aResult);
+                                     gfx_coord& aResult);
 
-  void ComputeVerticalValue(nscoord aContainingBlockHeight,
+  void ComputeVerticalValue(gfx_coord aContainingBlockHeight,
                                    nsStyleUnit aUnit,
                                    const nsStyleCoord& aCoord,
-                                   nscoord& aResult);
+                                   gfx_coord& aResult);
 
   static nsCSSFrameType DetermineFrameType(nsIFrame* aFrame,
                                            const nsStylePosition* aPosition,
@@ -366,22 +368,22 @@ protected:
 
   // Computes margin values from the specified margin style information, and
   // fills in the mComputedMargin member
-  void ComputeMargin(nscoord aContainingBlockWidth,
+  void ComputeMargin(gfx_coord aContainingBlockWidth,
                      const nsHTMLReflowState* aContainingBlockRS);
   
   // Computes padding values from the specified padding style information, and
   // fills in the mComputedPadding member
-  void ComputePadding(nscoord aContainingBlockWidth,
+  void ComputePadding(gfx_coord aContainingBlockWidth,
                       const nsHTMLReflowState* aContainingBlockRS);
 
   // Calculates the computed values for the 'min-Width', 'max-Width',
   // 'min-Height', and 'max-Height' properties, and stores them in the assorted
   // data members
-  void ComputeMinMaxValues(nscoord                  aContainingBlockWidth,
-                           nscoord                  aContainingBlockHeight,
+  void ComputeMinMaxValues(gfx_coord                  aContainingBlockWidth,
+                           gfx_coord                  aContainingBlockHeight,
                            const nsHTMLReflowState* aContainingBlockRS);
 
-  nscoord CalculateHorizBorderPaddingMargin(nscoord aContainingBlockWidth);
+  gfx_coord CalculateHorizBorderPaddingMargin(gfx_coord aContainingBlockWidth);
 };
 
 #endif /* nsHTMLReflowState_h___ */

@@ -23,9 +23,12 @@
 #define nsStyleCoord_h___
 
 #include "nscore.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsCRT.h"
 class nsString;
+
+
+// XXX pav could we remove the union and just have the float?
 
 enum nsStyleUnit {
   eStyleUnit_Null         = 0,      // (no value) value is not specified
@@ -34,7 +37,7 @@ enum nsStyleUnit {
   eStyleUnit_Inherit      = 3,      // (no value) value should be inherited
   eStyleUnit_Percent      = 10,     // (float) 1.0 == 100%
   eStyleUnit_Factor       = 11,     // (float) a multiplier
-  eStyleUnit_Coord        = 20,     // (nscoord) value is twips
+  eStyleUnit_Coord        = 20,     // (gfx_coord) value is twips
   eStyleUnit_Integer      = 30,     // (int) value is simple integer
   eStyleUnit_Proportional = 31,     // (int) value has proportional meaning
   eStyleUnit_Enumerated   = 32,     // (int) value has enumerated meaning
@@ -49,7 +52,7 @@ typedef union {
 class nsStyleCoord {
 public:
   nsStyleCoord(nsStyleUnit aUnit = eStyleUnit_Null);
-  nsStyleCoord(nscoord aValue);
+  nsStyleCoord(gfx_coord aValue);
   nsStyleCoord(PRInt32 aValue, nsStyleUnit aUnit);
   nsStyleCoord(float aValue, nsStyleUnit aUnit);
   nsStyleCoord(const nsStyleCoord& aCopy);
@@ -59,14 +62,14 @@ public:
   PRBool         operator!=(const nsStyleCoord& aOther) const;
 
   nsStyleUnit GetUnit(void) const { return mUnit; }
-  nscoord     GetCoordValue(void) const;
+  gfx_coord     GetCoordValue(void) const;
   PRInt32     GetIntValue(void) const;
   float       GetPercentValue(void) const;
   float       GetFactorValue(void) const;
   void        GetUnionValue(nsStyleUnion& aValue) const;
 
   void  Reset(void);  // sets to null
-  void  SetCoordValue(nscoord aValue);
+  void  SetCoordValue(gfx_coord aValue);
   void  SetIntValue(PRInt32 aValue, nsStyleUnit aUnit);
   void  SetPercentValue(float aValue);
   void  SetFactorValue(float aValue);
@@ -130,11 +133,11 @@ inline PRBool nsStyleCoord::operator!=(const nsStyleCoord& aOther) const
   return PRBool(! ((*this) == aOther));
 }
 
-inline PRInt32 nsStyleCoord::GetCoordValue(void) const
+inline gfx_coord nsStyleCoord::GetCoordValue(void) const
 {
   NS_ASSERTION((mUnit == eStyleUnit_Coord), "not a coord value");
   if (mUnit == eStyleUnit_Coord) {
-    return mValue.mInt;
+    return mValue.mFloat;
   }
   return 0;
 }

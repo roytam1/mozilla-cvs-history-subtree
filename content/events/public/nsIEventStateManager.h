@@ -32,7 +32,7 @@ class nsIPresContext;
 class nsIDOMEvent;
 class nsIFrame;
 class nsIView;
-class nsIWidget;
+class nsIWindow;
 
 /*
  * Event listener manager interface.
@@ -81,7 +81,7 @@ public:
   NS_IMETHOD RegisterAccessKey(nsIFrame * aFrame, nsIContent* aContent, PRUint32 aKey) = 0;
   NS_IMETHOD UnregisterAccessKey(nsIFrame * aFrame, nsIContent* aContent, PRUint32 aKey) = 0;
 
-  NS_IMETHOD SetCursor(PRInt32 aCursor, nsIWidget* aWidget, PRBool aLockCursor) = 0;
+  NS_IMETHOD SetCursor(PRInt32 aCursor, nsIWindow* aWindow, PRBool aLockCursor) = 0;
 
   //Method for centralized distribution of new DOM events
   NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent) = 0;

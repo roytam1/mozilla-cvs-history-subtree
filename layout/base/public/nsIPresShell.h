@@ -38,7 +38,7 @@
 
 #include "nslayout.h"
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsISelection.h"
 #include "nsIReflowCommand.h"
 #include "nsGUIEvent.h"
@@ -191,13 +191,13 @@ public:
    *
    * The coordinates for aWidth and aHeight must be in standard nscoord's.
    */
-  NS_IMETHOD InitialReflow(nscoord aWidth, nscoord aHeight) = 0;
+  NS_IMETHOD InitialReflow(gfx_dimension aWidth, gfx_dimension aHeight) = 0;
 
   /**
    * Reflow the frame model into a new width and height.  The
    * coordinates for aWidth and aHeight must be in standard nscoord's.
    */
-  NS_IMETHOD ResizeReflow(nscoord aWidth, nscoord aHeight) = 0;
+  NS_IMETHOD ResizeReflow(gfx_dimension aWidth, gfx_dimension aHeight) = 0;
 
   /**
    * Reflow the frame model with a reflow reason of eReflowReason_StyleChange
