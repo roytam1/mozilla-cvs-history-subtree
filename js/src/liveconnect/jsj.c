@@ -445,7 +445,8 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
 
     /* Load the Java classes, and the method and field descriptors required for
        Java reflection. */
-    if (!init_java_VM_reflection(jsjava_vm, jEnv)) {
+    if (!init_java_VM_reflection(jsjava_vm, jEnv) || 
+        !jsj_InitJavaObjReflectionsTable()) {
         JSJ_DisconnectFromJavaVM(jsjava_vm);
         return NULL;
     }

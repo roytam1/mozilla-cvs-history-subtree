@@ -56,9 +56,11 @@ static JSJHashTable *java_obj_reflections = NULL;
 static PRMonitor *java_obj_reflections_monitor = NULL;
 #endif
 
-static JSBool
-init_java_obj_reflections_table(void)
+JSBool
+jsj_InitJavaObjReflectionsTable(void)
 {
+    JS_ASSERT(!java_obj_reflections);
+
     java_obj_reflections =
         JSJ_NewHashTable(512, jsj_HashJavaObject, jsj_JavaObjectComparator,
                          NULL, NULL, NULL);
@@ -814,5 +816,5 @@ jsj_init_JavaObject(JSContext *cx, JSObject *global_obj)
         0, 0))
         return JS_FALSE;
 
-    return init_java_obj_reflections_table();
+    return JS_TRUE;
 }

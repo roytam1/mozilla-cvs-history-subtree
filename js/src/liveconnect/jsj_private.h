@@ -486,6 +486,9 @@ jsj_CreateJavaMember(JSContext *cx, jsval method_val, jsval field_val);
 extern JSBool
 jsj_init_JavaObject(JSContext *, JSObject *);
 
+extern JSBool
+jsj_InitJavaObjReflectionsTable(void);
+
 extern JSObject *
 jsj_WrapJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_obj, jclass java_class);
 
