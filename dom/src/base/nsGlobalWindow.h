@@ -225,7 +225,7 @@ protected:
   nsCOMPtr<nsIControllers>      mControllers;
   nsCOMPtr<nsIEventListenerManager> mListenerManager;
   nsCOMPtr<nsISidebar>          mSidebar;
-  JSObject*                     mScriptObject;
+  JSObject*                     mJSObject;
   NavigatorImpl*                mNavigator;
   ScreenImpl*                   mScreen;
   HistoryImpl*                  mHistory;

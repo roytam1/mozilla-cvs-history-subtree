@@ -134,12 +134,11 @@ static const char *kPkcs11ContractID = NS_PKCS11_CONTRACTID;
 //*****************************************************************************
 
 GlobalWindowImpl::GlobalWindowImpl() :
-  mScriptObject(nsnull),
-  mNavigator(nsnull), mScreen(nsnull), mHistory(nsnull), mFrames(nsnull),
-  mLocation(nsnull), mMenubar(nsnull), mToolbar(nsnull), mLocationbar(nsnull),
-  mPersonalbar(nsnull), mStatusbar(nsnull), mScrollbars(nsnull),
-  mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts), mRunningTimeout(nsnull),
-  mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
+  mJSObject(nsnull), mNavigator(nsnull), mScreen(nsnull), mHistory(nsnull),
+  mFrames(nsnull), mLocation(nsnull), mMenubar(nsnull), mToolbar(nsnull),
+  mLocationbar(nsnull), mPersonalbar(nsnull), mStatusbar(nsnull),
+  mScrollbars(nsnull), mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts),
+  mRunningTimeout(nsnull), mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
   mFirstDocumentLoad(PR_TRUE), mGlobalObjectOwner(nsnull), mDocShell(nsnull),
   mMutationBits(0), mChromeEventHandler(nsnull)
 {
@@ -175,6 +174,10 @@ void
 GlobalWindowImpl::ShutDown()
 {
   NS_IF_RELEASE(sXPConnect);
+
+#ifdef DEBUG_jst
+  printf ("---- Leaked %d GlobalWindowImpl's\n", gRefCnt);
+#endif
 }
 
 void GlobalWindowImpl::CleanUp()
@@ -284,7 +287,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetContext(nsIScriptContext* aContext)
   if (!aContext) {
     NS_WARNING("Possibly early removal of script object, see bug #41608");
   } else {
-    mScriptObject = ::JS_GetGlobalObject((JSContext *)aContext->GetNativeContext());
+    mJSObject = ::JS_GetGlobalObject((JSContext *)aContext->GetNativeContext());
   }
 
   mContext = aContext;
@@ -325,9 +328,9 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
   // when those sub-window objects are finalized, after JS_ClearScope and
   // a GC run that finds them to be garbage.
 
-  if (mContext && mScriptObject)
+  if (mContext && mJSObject)
     ::JS_ClearWatchPointsForObject((JSContext *)mContext->GetNativeContext(),
-                                   mScriptObject);
+                                   mJSObject);
 
   if (mFirstDocumentLoad) {
     if (aDocument) {
@@ -399,13 +402,12 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
         if (mListenerManager)
           mListenerManager->RemoveAllListeners(PR_FALSE);
 
-        if (mContext && mScriptObject) {
-//      if (mContext && mScriptObject && aDocument) {
+        if (mContext && mJSObject) {
+//      if (mContext && mJSObject && aDocument) {
 //      not doing this unless there's a new document prevents a closed window's
 //      JS properties from going away (that's good) and causes everything,
 //      and I mean everything, to be leaked (that's bad)
-          ::JS_ClearScope((JSContext *)mContext->GetNativeContext(),
-                          mScriptObject);
+          ::JS_ClearScope((JSContext *)mContext->GetNativeContext(), mJSObject);
         }
       }
       nsCRT::free(str);
@@ -425,10 +427,6 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 
   if (mDocument && mContext) {
     mContext->InitContext(this);
-
-    JSContext *cx = (JSContext *)mContext->GetNativeContext();
-
-    mScriptObject = ::JS_GetGlobalObject(cx);
   }
 
   // Clear our mutation bitfield.
@@ -496,6 +494,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetDocShell(nsIDocShell* aDocShell)
       else NS_NewWindowRoot(this, getter_AddRefs(mChromeEventHandler));
     }
   }
+
   return NS_OK;
 }
 
@@ -641,7 +640,7 @@ NS_IMETHODIMP GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
 JSObject *
 GlobalWindowImpl::GetGlobalJSObject()
 {
-  return mScriptObject;
+  return mJSObject;
 }
 
 
@@ -2591,8 +2590,8 @@ PRBool GlobalWindowImpl::Resolve(JSContext* aContext, JSObject* aObj,
             }
             // Okay, if we now have a childObj, we can define it and proceed.
             if (childObj) {
-              if (!::JS_DefineUCProperty(aContext, mScriptObject,
-                                         chars, ::JS_GetStringLength(str),
+              if (!::JS_DefineUCProperty(aContext, mJSObject, chars,
+                                         ::JS_GetStringLength(str),
                                          OBJECT_TO_JSVAL(childObj), nsnull,
                                          nsnull, 0)) {
                 return PR_FALSE;
@@ -2849,7 +2848,7 @@ NS_IMETHODIMP GlobalWindowImpl::GetObjectProperty(const PRUnichar *aProperty,
 
   jsval propertyVal;
 
-  if (!::JS_LookupUCProperty(cx, mScriptObject,
+  if (!::JS_LookupUCProperty(cx, mJSObject,
                              NS_REINTERPRET_CAST(const jschar *, aProperty),
                              nsCRT::strlen(aProperty), &propertyVal)) {
     return NS_ERROR_FAILURE;
@@ -3410,10 +3409,8 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
                                                 ::JS_GetStringChars(timeout->expr)));
         nsAutoString blank;
         PRBool isUndefined;
-        rv = mContext->EvaluateString(script, mScriptObject,
-                                      timeout->principal,
-                                      timeout->filename,
-                                      timeout->lineno,
+        rv = mContext->EvaluateString(script, mJSObject, timeout->principal,
+                                      timeout->filename, timeout->lineno,
                                       timeout->version, blank, &isUndefined);
       }
       else {
@@ -3427,7 +3424,7 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
         lateness = PR_IntervalToMilliseconds(lateness);
         timeout->argv[timeout->argc] = INT_TO_JSVAL((jsint) lateness);
         PRBool aBoolResult;
-        rv = mContext->CallEventHandler(mScriptObject, timeout->funobj,
+        rv = mContext->CallEventHandler(mJSObject, timeout->funobj,
                                         timeout->argc + 1, timeout->argv,
                                         &aBoolResult, PR_FALSE);
       }
@@ -4104,7 +4101,7 @@ NS_IMETHODIMP NavigatorImpl::Preference(nsISupports** aReturn)
 
   *aReturn = JSVAL_NULL;
 
-  JSObject *self = mScriptObject;
+  JSObject *self = mJSObject;
   if (!self)
     return NS_ERROR_FAILURE;
 
