@@ -105,6 +105,7 @@
 
 #ifdef XP_WIN
 #include <windows.h>
+#include <process.h>
 #endif
 
 #ifdef XP_MACOSX
@@ -1263,6 +1264,16 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
 #error Oops, you need platform-specific code here
 #endif
 
+  // restart this process by exec'ing it into the current process
+  // if supported by the platform.  otherwise, use nspr ;-)
+
+#if defined(XP_WIN)
+  if (_execv(exePath, gRestartArgv) == -1)
+    return NS_ERROR_FAILURE;
+#elif defined(XP_UNIX)
+  if (execv(exePath, gRestartArgv) == -1)
+    return NS_ERROR_FAILURE;
+#else
   PRProcess* process = PR_CreateProcess(exePath, gRestartArgv,
                                         nsnull, nsnull);
   if (!process) return NS_ERROR_FAILURE;
@@ -1271,6 +1282,7 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   PRStatus failed = PR_WaitProcess(process, &exitCode);
   if (failed || exitCode)
     return NS_ERROR_FAILURE;
+#endif
 
   return NS_ERROR_LAUNCHED_CHILD_PROCESS;
 }
