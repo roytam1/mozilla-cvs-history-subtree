@@ -1109,8 +1109,7 @@ gtk_moz_embed_reload(GtkMozEmbed *embed, gint32 flags)
     break;
   }
 
-  if (embedPrivate->mNavigation)
-    embedPrivate->mNavigation->Reload(reloadFlags);
+  embedPrivate->Reload(reloadFlags);
 }
 
 void
