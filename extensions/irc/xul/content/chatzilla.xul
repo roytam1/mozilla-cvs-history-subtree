@@ -121,24 +121,24 @@
               grippytooltiptext="&header.tooltip;" crop="right">
               <hbox flex="1" class="header-box">
                 <vbox flex="1%">
-                    <text class="header-label" value="&url.label;"/>
-                    <text class="header-label" value="&topic.label;"/>
+                  <label class="header-label" value="&url.label;"/>
+                  <label class="header-label" value="&topic.label;"/>
                 </vbox>
                 <vbox flex="99%">
                   <hbox flex="1">
                     <hbox flex="1">
-                      <text class="header-data" id="header-url"
+                      <label class="header-data" id="header-url"
                         ondraggesture="nsDragAndDrop.startDrag(event, tabDNDObserver);"
                         crop="right"/>
                     </hbox>
                     <hbox flex="1">
-                      <text class="header-label" value="&mode.label;"/>
-                      <text class="header-data" id="channel-mode"
+                      <label class="header-label" value="&mode.label;"/>
+                      <label class="header-data" id="channel-mode"
                         crop="right"/>
                     </hbox>
                     <hbox flex="1">
-                      <text class="header-label" value="&users.label;"/>
-                      <text class="header-data" id="channel-users"/>
+                      <label class="header-label" value="&users.label;"/>
+                      <label class="header-data" id="channel-users"/>
                     </hbox>
                   </hbox>
                   <hbox flex="1">
@@ -192,7 +192,6 @@
       <textbox id="input" class="input-widget" flex="1" autostretch="true"
         onfocus="onInputFocus();"/>
     </hbox>
-  
   </vbox> <!-- outer-box -->
   
   <statusbar id="status-bar" persist="collapsed">
@@ -204,4 +203,3 @@
   </statusbar>  
   
 </window>
-  

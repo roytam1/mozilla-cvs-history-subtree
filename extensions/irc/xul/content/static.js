@@ -152,7 +152,7 @@ function setCharset (charset)
         return;
     }
     
-    if (!client.ucConverter)
+    if (!("ucConverter" in client))
     {
         const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
         const nsIUnicodeConverter = 
