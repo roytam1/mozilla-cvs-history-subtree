@@ -72,9 +72,8 @@ void String::deleteChars(const PRUint32 aOffset, const PRUint32 aCount)
 
 UNICODE_CHAR String::charAt(const PRUint32 aIndex) const
 {
-  if (aIndex < mString.Length())
-    return mString.CharAt(aIndex);
-  return (UNICODE_CHAR)-1;
+  NS_ASSERTION(aIndex < mString.Length(), "|charAt| out-of-range");
+  return mString.CharAt(aIndex);
 }
 
 void String::clear()

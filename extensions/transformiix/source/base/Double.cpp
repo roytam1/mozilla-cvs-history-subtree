@@ -168,11 +168,11 @@ double Double::toDouble(const String& aSrc)
     }
 
     // ending whitespace
-    while ((aSrc.charAt(idx) == ' ' ||
+    while (idx < len &&
+           (aSrc.charAt(idx) == ' ' ||
             aSrc.charAt(idx) == '\n' ||
             aSrc.charAt(idx) == '\r' ||
-            aSrc.charAt(idx) == '\t') &&
-           idx < len)
+            aSrc.charAt(idx) == '\t'))
         ++idx;
 
     // "."==NaN, ".0"=="0."==0

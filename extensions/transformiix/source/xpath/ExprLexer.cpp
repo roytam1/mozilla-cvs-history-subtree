@@ -278,7 +278,7 @@ void ExprLexer::parse(const String& pattern)
       while (++iter < size && 
              isNCNameChar(pattern.charAt(iter))) /* just go */ ;
       PRUint32 end = iter;
-      if (pattern.charAt(iter)==COLON) {
+      if (iter < size && pattern.charAt(iter) == COLON) {
         // try QName or wildcard, might need to step back for axis
         if (++iter < size)
           if (isLetter(pattern.charAt(iter)))
@@ -318,7 +318,7 @@ void ExprLexer::parse(const String& pattern)
       start = iter;
       while (++iter < size && 
              isDigit(pattern.charAt(iter))) /* just go */;
-      if (pattern.charAt(iter)=='.')
+      if (iter < size && pattern.charAt(iter)=='.')
         while (++iter < size && 
                isDigit(pattern.charAt(iter))) /* just go */;
       addToken(new Token(pattern.subString(start,iter,subStr),Token::NUMBER));
