@@ -84,6 +84,16 @@ EVENT_HELPER_NC(ModelConstructDone, "model-construct-done", PR_TRUE)
 EVENT_HELPER_NC(Ready, "ready", PR_TRUE)
 EVENT_HELPER_NC(ModelDestruct, "model-destruct", PR_TRUE)
 
+// Interaction events
+EVENT_HELPER(Rebuild, "rebuild", PR_TRUE)
+EVENT_HELPER(Refresh, "refresh", PR_TRUE)
+EVENT_HELPER(Revalidate, "revalidate", PR_TRUE)
+EVENT_HELPER(Recalculate, "recalculate", PR_TRUE)
+EVENT_HELPER(Reset, "reset", PR_TRUE)
+
+// Notification events
+EVENT_HELPER_NC(SubmitError, "submit-error", PR_TRUE)
+
 // Error events
 EVENT_HELPER_NC(BindingException, "binding-exception", PR_TRUE)
 EVENT_HELPER_NC(LinkException, "link-exception", PR_TRUE)
