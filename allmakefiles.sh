@@ -861,9 +861,6 @@ if [ "$USE_IMG2" ]; then
         gfx2/Makefile
         gfx2/public/Makefile
         gfx2/src/Makefile
-        gfx2/src/gtk/Makefile
-        gfx2/src/xlib/Makefile
-        gfx2/src/mac/Makefile
 "
 fi
 
