@@ -57,6 +57,7 @@
 #include "nsIDOMPlugin.h"
 #include "nsIDOMMimeTypeArray.h"
 #include "nsIDOMMimeType.h"
+#include "nsIFormControl.h"
 
 // DOM core includes
 #include "nsDOMError.h"
@@ -347,10 +348,7 @@ nsDOMClassInfo::Init()
 
   // Base classes
   NS_DEFINE_CLASSINFO_DATA(Window, nsWindowSH::Create,
-                           USE_JSSTUB_FOR_ADDPROPERTY |
-                           USE_JSSTUB_FOR_DELPROPERTY |
-                           USE_JSSTUB_FOR_SETPROPERTY |
-                           ALLOW_PROP_MODS_DURING_RESOLVE |
+                           DEFAULT_SCRIPTABLE_FLAGS |
                            WANT_GETPROPERTY |
                            WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
@@ -1374,16 +1372,33 @@ NS_IMETHODIMP
 nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
                     JSObject **parentObj)
 {
-  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(nativeObj));
-  NS_WARN_IF_FALSE(node, "nativeObj not a node!");
+  nsCOMPtr<nsIContent> content(do_QueryInterface(nativeObj));
+  nsCOMPtr<nsIDocument> doc;
 
-  nsCOMPtr<nsIDOMDocument> owner_doc;
-
-  node->GetOwnerDocument(getter_AddRefs(owner_doc));
-
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(owner_doc));
+  if (content) {
+    content->GetDocument(*getter_AddRefs(doc));
+  }
 
   if (!doc) {
+#if 0
+    // Once nsIDOMNode::GetOwnerDocument() does the right thing we
+    // could call it here to get to the document even if the node is
+    // not in a document.
+
+    nsCOMPtr<nsIDOMNode> node(do_QueryInterface(nativeObj));
+    NS_WARN_IF_FALSE(node, "nativeObj not a node!");
+
+    nsCOMPtr<nsIDOMDocument> owner_doc;
+
+    node->GetOwnerDocument(getter_AddRefs(owner_doc));
+
+    doc = do_QueryInterface(owner_doc);
+
+    if (!doc) {
+      ...
+    }
+#endif
+
     doc = do_QueryInterface(nativeObj);
 
     if (!doc) {
@@ -1396,39 +1411,45 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     }
   }
 
-  // Get the script global object from the document and get the
-  // JSContext from the global object.
+  nsISupports *native_parent = nsnull;
 
-  nsCOMPtr<nsIScriptGlobalObject> sgo;
+  if (content) {
+    if (content->IsContentOfType(nsIContent::eELEMENT |
+                                 nsIContent::eHTML |
+                                 nsIContent::eHTML_FORM_CONTROL)) {
+      nsCOMPtr<nsIFormControl> form_control(do_QueryInterface(content));
 
-  doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+      if (form_control) {
+        nsCOMPtr<nsIDOMHTMLFormElement> form;
 
-  if (sgo) {
-    nsCOMPtr<nsIScriptContext> sctx;
+        form_control->GetForm(getter_AddRefs(form));
 
-    sgo->GetContext(getter_AddRefs(sctx));
+        native_parent = form;
+      }
+    }
 
-    if (sctx) {
-      // Use the context of the global object in stead of the one
-      // we're called from.
+    if (!native_parent) {
+      nsCOMPtr<nsIContent> parentContent;
 
-      cx = (JSContext *)sctx->GetNativeContext();
+      content->GetParent(*getter_AddRefs(parentContent));
+      native_parent = parentContent;
+
+      if (!native_parent) {
+        native_parent = doc;
+      }
     }
   }
 
+  if (!native_parent) {
+    // We're called for a document object (since content is null),
+    // set the parent to be the document's global object, if there
+    // is one
 
+    // Get the script global object from the document.
 
-  // XXX: Form controls, they need their form as parent!!!
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+    doc->GetScriptGlobalObject(getter_AddRefs(sgo));
 
-
-
-  nsCOMPtr<nsIDOMNode> parentNode;
-
-  nsresult rv = node->GetParentNode(getter_AddRefs(parentNode));
-
-  nsISupports *native_parent = parentNode;
-
-  if (!parentNode) {
     if (!sgo) {
       // No global object reachable from this document, use the
       // global object that was passed to this method.
@@ -1441,18 +1462,15 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     native_parent = sgo;
   }
 
-  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
   jsval v;
 
-  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
-                  NS_GET_IID(nsISupports), &v);
+  nsresult rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
+                           NS_GET_IID(nsISupports), &v);
 
   *parentObj = JSVAL_TO_OBJECT(v);
 
   return rv;
 }
-
 
 // EventProp helper
 
