@@ -656,7 +656,6 @@ ifdef DIRS
 endif
 
 export:: $(SUBMAKEFILES) $(MAKE_DIRS)
-	+$(LOOP_OVER_DIRS)
 
 
 #
