@@ -80,6 +80,14 @@ ifndef NS_CONFIG_MK
 include $(topsrcdir)/config/config.mk
 endif
 
+ifdef INTERNAL_TOOLS
+CC=$(HOST_CC)
+CXX=$(HOST_CXX)
+CFLAGS=$(HOST_CFLAGS) -I$(DIST)/include
+CXXFLAGS=$(HOST_CXXFLAGS) -I$(DIST)/include
+RANLIB=$(HOST_RANLIB)
+endif
+
 ifdef PROGRAM
 PROGRAM			:= $(addprefix $(OBJDIR)/, $(PROGRAM))
 endif
@@ -105,51 +113,36 @@ ifeq ($(OS_ARCH),OS2)
 ifndef DEF_FILE
 DEF_FILE		:= $(LIBRARY:.lib=.def)
 endif # DEF_FILE
-endif # LIBRARY
+endif # OS2
 
 LIBRARY			:= $(addprefix $(OBJDIR)/, $(LIBRARY))
 
 ifndef NO_SHARED_LIB
 ifdef MKSHLIB
 
-ifeq ($(OS_ARCH),OS2)
-SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
-MAPS			:= $(LIBRARY:.lib=.map)
-else  # OS2
-ifeq ($(OS_ARCH),WINNT)
-SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
-else  # WINNT
+SHARED_LIBRARY		:= $(LIBRARY:.$(LIB_SUFFIX)=.$(DLL_SUFFIX))
 
-# Unix only
+ifeq ($(TARGET_ARCH),OS2)
+MAPS			:= $(LIBRARY:$(LIB_SUFFIX)=.map)
+endif # OS2
+
 ifdef LIB_IS_C_ONLY
+ifneq (, $(filter-out $(TARGET_ARCH), WIN32 OS2))
+# Unix only
 MKSHLIB			= $(MKCSHLIB)
 endif
+endif # LIB_IS_C_ONLY
 
-ifeq ($(OS_ARCH),HP-UX)
-SHARED_LIBRARY		:= $(LIBRARY:.a=.sl)
-else  # HPUX
-ifeq ($(OS_ARCH)$(OS_RELEASE),SunOS4.1)
-SHARED_LIBRARY		:= $(LIBRARY:.a=.so.1.0)
-else  # SunOS4
-ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
-SHARED_LIBRARY		:= $(LIBRARY:.a=)_shr.a
-else  # AIX
-SHARED_LIBRARY		:= $(LIBRARY:.a=.$(DLL_SUFFIX))
-endif # AIX
-endif # SunOS4
-endif # HPUX
-endif # WINNT
-endif # OS2
 endif # MKSHLIB
 endif # !NO_SHARED_LIB
-endif
+endif # LIBRARY
 
 ifdef NO_STATIC_LIB
 LIBRARY			= $(NULL)
 endif
 
 ifdef NO_SHARED_LIB
-DLL_SUFFIX		= a
+DLL_SUFFIX		= $(LIB_SUFFIX)
 endif
 
 ifndef TARGETS
@@ -547,7 +540,11 @@ endif
 ifneq ($(OS_ARCH),OS2)
 $(SHARED_LIBRARY): $(OBJS) $(LOBJS)
 	rm -f $@
+ifdef USE_AUTOCONF_2
+	$(MKSHLIB) $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
+else
 	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
+endif
 	chmod +x $@
 	$(MOZ_POST_DSO_LIB_COMMAND) $@
 else
@@ -1108,7 +1105,7 @@ endif
 endif
 #############################################################################
 
--include $(MY_RULES)
+#-include $(MY_RULES)
 
 #
 # This speeds up gmake's processing if these files don't exist.
