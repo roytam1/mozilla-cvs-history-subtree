@@ -71,11 +71,15 @@ rdf_complete(NET_StreamClass *stream)
 }
 
 
-
+extern char* gDefaultNavcntr ;
 void
 rdf_abort(NET_StreamClass *stream, int status)
 {
   RDFFile f = (RDFFile)stream->data_object;
+  if (strcmp(f->url, gNavCntrUrl) == 0) {
+    parseNextRDFXMLBlob(f, gDefaultNavcntr, strlen(gDefaultNavcntr));
+  }
+    
   if (f) {
      f->locked = false;
      gcRDFFile (f);
