@@ -1532,7 +1532,23 @@ static pascal OSStatus _md_EventReceiverProc(EventHandlerCallRef nextHandler,
                               typeUInt32, NULL, sizeof(PREventQueue*), NULL,
                               &queue) == noErr)
         {
+            // we have to be careful to save/restore port state here
+            // XXX this is a hack. it needs to be done in the gfx code somehow.
+            GrafPtr curPort;
+            Rect portBounds;
+            RgnHandle portClip = NewRgn();
+
+            GetPort(&curPort);
+            GetPortClipRegion((CGrafPtr)curPort, portClip);
+            GetPortBounds((CGrafPtr)curPort, &portBounds);
+            
             PL_ProcessPendingEvents(queue);
+
+            SetPort(curPort);
+            SetOrigin(portBounds.left, portBounds.top);
+            SetPortClipRegion((CGrafPtr)curPort, portClip);
+            DisposeRgn(portClip);
+            
             return noErr;
         }
     }
