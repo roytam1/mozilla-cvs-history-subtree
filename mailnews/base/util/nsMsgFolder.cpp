@@ -2513,3 +2513,15 @@ NS_IMETHODIMP nsMsgFolder::ListDescendents(nsISupportsArray *descendents)
 	}
   return rv;
 } 
+
+NS_IMETHODIMP nsMsgFolder::GetBaseMessageURI(char **baseMessageURI)
+{
+  NS_ENSURE_ARG_POINTER(baseMessageURI);
+  if (mBaseMessageURI)
+  {
+    *baseMessageURI = nsCRT::strdup(mBaseMessageURI);
+    return NS_OK;
+  }                                                                           
+  else                                                                        
+    return NS_ERROR_FAILURE;
+}
