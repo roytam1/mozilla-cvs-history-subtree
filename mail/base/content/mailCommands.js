@@ -169,9 +169,8 @@ function ComposeMessage(type, format, folder, messageArray)
 			{
         type = msgComposeType.NewsPost;
         newsgroup = folder.folderURL;
-			}
+			}  
 
-      // 
       identity = getIdentityForServer(server);
       // dump("identity = " + identity + "\n");
 		}
@@ -219,31 +218,35 @@ function ComposeMessage(type, format, folder, messageArray)
 		for (var i = 0; i < messageArray.length; i ++)
 		{	
 			var messageUri = messageArray[i];
-
       var hdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
       var hintForIdentity = (type == msgComposeType.Template) ? hdr.author : hdr.recipients + hdr.ccList;
 
-        if (folder)
-          server = folder.server;
-        if (server)
-          identity = getIdentityForServer(server, hintForIdentity);
+      if (folder)
+        server = folder.server;
 
-        if (!identity || hintForIdentity.search(identity.email) < 0)
-        {
-      var accountKey = hdr.accountKey;
-      if (accountKey.length > 0)
-      {
-        var account = accountManager.getAccount(accountKey);
-        if (account)
-            {
-          server = account.incomingServer;
       if (server)
         identity = getIdentityForServer(server, hintForIdentity);
-            }
+
+      if (!identity || hintForIdentity.search(identity.email) < 0)
+      {
+        var accountKey = hdr.accountKey;
+        if (accountKey.length > 0)
+        {
+          var account = accountManager.getAccount(accountKey);
+          if (account)
+          {
+            server = account.incomingServer;
+            if (server)
+              identity = getIdentityForServer(server, hintForIdentity);
           }
         }
+      }
 
-			if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||
+      var messageID = hdr.messageId;
+      var messageIDScheme = messageID.split(":")[0];
+      if ((messageIDScheme == 'http' || messageIDScheme == 'https') &&  "openComposeWindowForRSSArticle" in this) 
+        openComposeWindowForRSSArticle(messageID, hdr, type); 
+      else	if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||
 				type == msgComposeType.ReplyToGroup || type == msgComposeType.ReplyToSender || 
 				type == msgComposeType.ReplyToSenderAndGroup ||
 				type == msgComposeType.Template || type == msgComposeType.Draft)
@@ -261,7 +264,7 @@ function ComposeMessage(type, format, folder, messageArray)
 			}
 		}
 
-		if (type == msgComposeType.ForwardAsAttachment)
+		if (type == msgComposeType.ForwardAsAttachment && uri)
 			msgComposeService.OpenComposeWindow(null, uri, type, format, identity, msgWindow);
 	}
 	else
