@@ -98,7 +98,7 @@ sub STORE
 
   if (defined($self->{$attr}))
     {
-      @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
+      $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
         unless defined($self->{"_${attr}_save_"});
     }
 
@@ -227,7 +227,7 @@ sub attrModified
   return 0 unless defined($self->{$attr});
   return 0 if defined($self->{"_${attr}_deleted_"});
 
-  @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
+  $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
     unless defined($self->{"_${attr}_save_"});
   $self->{"_${attr}_modified_"} = 1;
   delete $self->{"_${attr}_deleted_"}
@@ -390,7 +390,7 @@ sub unRemove
     {
       undef @{$self->{$attr}};
       delete $self->{$attr};
-      @{$self->{$attr}} = @{$self->{"_${attr}_save_"}};
+      $self->{$attr} = [ @{$self->{"_${attr}_save_"}} ];
       undef @{$self->{"_${attr}_save_"}};
       delete $self->{"_${attr}_save_"};
     }
@@ -418,7 +418,7 @@ sub removeValue
   return 0 unless defined($self->{$attr});
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
-  @{$self->{"_${attr}_save_"}} = @{$self->{$attr}} unless
+  $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ] unless
     defined($self->{"_${attr}_save_"});
 
   foreach $attrval (@{$self->{$attr}})
@@ -488,12 +488,12 @@ sub addValue
 
   if (defined($self->{$attr}))
     {
-      @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
+      $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
         unless defined($self->{"_${attr}_save_"});
     }
   else
     {
-      @{$self->{"_${attr}_save_"}} = ()
+      $self->{"_${attr}_save_"} = []
         unless defined($self->{"_${attr}_save_"});
     }
 
