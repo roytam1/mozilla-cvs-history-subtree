@@ -50,6 +50,9 @@
 #elif defined(linux)
 #define JS_USE_FDLIBM_MATH 1
 
+#elif defined(OSF1)
+#define JS_USE_FDLIBM_MATH 1
+
 #else
 #define JS_USE_FDLIBM_MATH 0
 #endif
@@ -366,6 +369,55 @@ extern double fd_acos __P((double));
 extern double fd_log __P((double));
 extern double fd_pow __P((double, double));
 extern double fd_copysign __P((double, double));
+
+#elif defined(OSF1)
+
+#define fd_acos acos
+#define fd_acosh acosh
+#define fd_asin asin
+#define fd_asinh asinh
+#define fd_atan atan
+#define fd_atanh atanh
+#define fd_cbrt cbrt
+#define fd_copysign copysign
+#define fd_cos cos
+#define fd_cosh cosh
+#define fd_erf erf
+#define fd_erfc erfc
+#define fd_exp exp
+#define fd_fabs fabs
+#define fd_finite finite
+#define fd_fmod fmod
+#define fd_frexp frexp
+#define fd_gamma gamma
+#define fd_hypot hypot
+#define fd_isnan isnan
+#define fd_j0 j0
+#define fd_j1 j1
+#define fd_jn jn
+#define fd_ldexp ldexp
+#define fd_lgamma lgamma
+#define fd_log10 log10
+#define fd_logb logb
+#define fd_matherr matherr
+#define fd_modf modf
+#define fd_nextafter nextafter
+#define fd_remainder remainder
+#define fd_scalb scalb
+#define fd_sin sin
+#define fd_sinh sinh
+#define fd_sqrt sqrt
+#define fd_tan tan
+#define fd_tanh tanh
+#define fd_y0 y0
+#define fd_y1 y1
+#define fd_yn yn
+
+extern double fd_atan2 __P((double, double));
+extern double fd_ceil __P((double));
+extern double fd_floor __P((double));
+extern double fd_log __P((double));
+extern double fd_pow __P((double, double));
 
 #else /* other platform.. generic paranoid slow fdlibm */
 
