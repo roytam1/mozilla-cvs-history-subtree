@@ -98,7 +98,7 @@ nsPrincipalManager::CreateCodebasePrincipal(const char *codebaseURL,
         NS_WITH_SERVICE(nsIComponentManager, compMan, kComponentManagerCID, &rv);
         if (!NS_SUCCEEDED(rv))
             return rv;
-        rv = compMan->CreateInstance(kURLCID, nsnull, nsIURL::GetIID(),
+        rv = compMan->CreateInstance(kURLCID, nsnull, NS_GET_IID(nsIURL),
                                      (void **) &url);
         if (!NS_SUCCEEDED(rv))
             return rv;

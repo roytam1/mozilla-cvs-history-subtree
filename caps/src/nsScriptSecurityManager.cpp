@@ -195,7 +195,7 @@ nsScriptSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, char
   nsIPrincipal * prin;
   if((rv = this->GetContainerPrincipals(aCx, aObj, & prin)) != NS_OK) return rv;
   nsICodebasePrincipal * cbprin;
-  if((rv = prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin)) != NS_OK) return rv;
+  if((rv = prin->QueryInterface(NS_GET_IID(nsICodebasePrincipal),(void * *)& cbprin)) != NS_OK) return rv;
   cbprin->GetURLString(aOrigin);
   return (* aOrigin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
@@ -226,7 +226,7 @@ nsScriptSecurityManager::CheckForPrivilege(JSContext *cx, char *prop_name, int p
   if(tmp_prop_name == NULL) return SCRIPT_SECURITY_NO_ACCESS;
   PRInt32 secLevel = SCRIPT_SECURITY_NO_ACCESS;
   nsIPref * mPrefs;
-  nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
+  nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref), (nsISupports**)&mPrefs);
   if (NS_OK == mPrefs->GetIntPref(tmp_prop_name, &secLevel)) {
     PR_FREEIF(tmp_prop_name);
     return secLevel;
@@ -296,7 +296,7 @@ nsScriptSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *contai
   if (* result) {
     nsICodebasePrincipal * cbprin;
     char * cbStr;
-    (* result)->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
+    (* result)->QueryInterface(NS_GET_IID(nsICodebasePrincipal),(void * *)& cbprin);
     cbprin->GetURLString(& cbStr);
     if (this->SameOrigins(aCx, originUrl, cbStr)) {
       delete originUrl;
@@ -366,7 +366,7 @@ nsScriptSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, const char * aUr
   char * origin = (char *)aUrlString;
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
   if (!NS_SUCCEEDED(rv)) return nsnull;
-  rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& url);
+  rv = compMan->CreateInstance(kURLCID,NULL,NS_GET_IID(nsIURL),(void * *)& url);
   if (!NS_SUCCEEDED(rv)) return nsnull;
   rv = url->SetSpec(origin);
   if (!NS_SUCCEEDED(rv)) return nsnull;
@@ -428,7 +428,7 @@ nsScriptSecurityManager::AddSecPolicyPrefix(JSContext *cx, char *pref_str)
   if ((policy_str = this->GetSitePolicy(subjectOrigin)) == 0) {
     /* No site-specific policy.  Get global policy name. */
     nsIPref * mPrefs;
-    nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
+    nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref), (nsISupports**)&mPrefs);
     if (NS_OK != mPrefs->CopyCharPref("javascript.security_policy", &policy_str))
       policy_str = PL_strdup("default");
   }
@@ -515,9 +515,9 @@ nsScriptSecurityManager::GetSitePolicy(const char *org)
   nsIPref * mPrefs;
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
   if (!NS_SUCCEEDED(rv)) return nsnull;
-  rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
+  rv = compMan->CreateInstance(kURLCID,NULL,NS_GET_IID(nsIURL),(void**)&url);
   if (!NS_SUCCEEDED(rv)) return nsnull;
-  nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
+  nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref::GetIID(), (nsISupports**)&mPrefs);
   if (NS_OK != mPrefs->CopyCharPref("js_security.site_policy", &sitepol)) return 0;
   /* Site policy comprises text of the form site1-policy,site2-policy,siteNpolicy
    * where each site-policy is site|policy and policy is presumed to be one of strict/moderate/default

@@ -52,7 +52,7 @@ nsresult
 nsJSPrincipals::Init(nsIPrincipal * prin) {
     char * cb;
     nsICodebasePrincipal * cbprin;
-    prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
+    prin->QueryInterface(NS_GET_IID(nsICodebasePrincipal),(void * *)& cbprin);
     cbprin->GetURLString(& cb);
     nsIPrincipalPtr = prin;
     codebase = PL_strdup(cb);

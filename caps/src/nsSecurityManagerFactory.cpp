@@ -161,7 +161,7 @@ NSGetFactory(nsISupports * aServMgr, const nsCID & aClass, const char * aClassNa
 	NS_WITH_SERVICE1(nsIComponentManager, compMgr, aServMgr, kComponentManagerCID,& rv);
 	if (NS_FAILED(rv)) return rv;
 	nsIGenericFactory * factory;
-	rv = compMgr->CreateInstance(kGenericFactoryCID, nsnull, nsIGenericFactory::GetIID(), (void * *)& factory);
+	rv = compMgr->CreateInstance(kGenericFactoryCID, nsnull,NS_GET_IID(nsIGenericFactory), (void * *)& factory);
 	if (NS_FAILED(rv)) return rv;
 	if(aClass.Equals(kCCapsManagerCID)) rv = factory->SetConstructor(Construct_nsISecurityManager);
 	else if(aClass.Equals(kPrivilegeManagerCID)) rv = factory->SetConstructor(Construct_nsIPrivilegeManager);
