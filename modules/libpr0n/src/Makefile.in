@@ -36,10 +36,11 @@ XPIDLSRCS	= nsPIImageRequest.idl       \
 			nsPIImageRequestProxy.idl    \
 			$(NULL)
 
-CPPSRCS		= nsImageFactory.cpp    \
-		  nsImageLoader.cpp         \
-		  nsImageRequest.cpp        \
-		  nsImageRequestProxy.cpp
+CPPSRCS		= ImageCache.cpp \
+			nsImageFactory.cpp    \
+			nsImageLoader.cpp         \
+			nsImageRequest.cpp        \
+			nsImageRequestProxy.cpp
 
 EXTRA_DSO_LDOPTS = \
 		$(MOZ_COMPONENT_LIBS) \
