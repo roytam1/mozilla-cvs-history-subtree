@@ -3308,7 +3308,7 @@ nsImapIncomingServer::GetCanCreateFoldersOnServer(PRBool *aCanCreateFoldersOnSer
     // Initialize aCanCreateFoldersOnServer true, a default value for IMAP
     *aCanCreateFoldersOnServer = PR_TRUE;
 
-    GetPrefForServerAttribute("aCanCreateFoldersOnServer", aCanCreateFoldersOnServer);
+    GetPrefForServerAttribute("canCreateFoldersOnServer", aCanCreateFoldersOnServer);
 
     return NS_OK;
 }
@@ -3497,7 +3497,7 @@ nsImapIncomingServer::GetCanFileMessagesOnServer(PRBool *aCanFileMessagesOnServe
     // Initialize aCanFileMessagesOnServer true, a default value for IMAP
     *aCanFileMessagesOnServer = PR_TRUE;
 
-    GetPrefForServerAttribute("aCanFileMessagesOnServer", aCanFileMessagesOnServer);
+    GetPrefForServerAttribute("canFileMessagesOnServer", aCanFileMessagesOnServer);
 
     return NS_OK;
 }
