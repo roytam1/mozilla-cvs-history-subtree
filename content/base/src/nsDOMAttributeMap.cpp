@@ -26,6 +26,7 @@
 #include "nsIContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsDOMError.h"
+#include "nsContentUtils.h"
 
 //----------------------------------------------------------------------
 
@@ -58,6 +59,7 @@ NS_CLASSINFO_MAP_END
 NS_INTERFACE_MAP_BEGIN(nsDOMAttributeMap)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNamedNodeMap)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(NamedNodeMap)
 NS_INTERFACE_MAP_END
 
 NS_IMPL_ADDREF(nsDOMAttributeMap)
