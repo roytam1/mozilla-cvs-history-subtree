@@ -1719,7 +1719,8 @@ ULONGLONG GetDiskSpaceRequired(DWORD dwType)
           break;
 
         case DSR_TEMP:
-          if(LocateJar(siCTemp) == FALSE)
+        case DSR_DOWNLOAD_SIZE:
+          if((LocateJar(siCTemp) == FALSE) || (dwType == DSR_DOWNLOAD_SIZE))
             ullTotalSize += siCTemp->ullInstallSizeArchive;
           break;
       }
@@ -1741,7 +1742,8 @@ ULONGLONG GetDiskSpaceRequired(DWORD dwType)
             break;
 
           case DSR_TEMP:
-            if(LocateJar(siCTemp) == FALSE)
+          case DSR_DOWNLOAD_SIZE:
+            if((LocateJar(siCTemp) == FALSE) || (dwType == DSR_DOWNLOAD_SIZE))
               ullTotalSize += siCTemp->ullInstallSizeArchive;
             break;
         }
