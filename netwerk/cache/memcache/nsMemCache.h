@@ -47,7 +47,7 @@ class nsMemCache : public nsINetDataCache
 {
 public:
     nsMemCache();
-    ~nsMemCache();
+    virtual ~nsMemCache();
     nsresult Init();
 
     // nsISupports methods

@@ -52,7 +52,8 @@ nsMemCache::~nsMemCache()
 
     rv = RemoveAll();
     NS_ASSERTION(NS_SUCCEEDED(rv) && (mNumEntries == 0),
-                 "Failure to shut down memory cache");
+                 "Failure to shut down memory cache. "
+                 "Somewhere, someone is holding references to at least one cache record");
     delete mHashTable;
 }
 
@@ -222,7 +223,8 @@ NS_IMETHODIMP
 nsMemCache::GetMaxEntries(PRUint32 *aMaxEntries)
 {
     NS_ENSURE_ARG(aMaxEntries);
-    return MEM_CACHE_MAX_ENTRIES;
+    *aMaxEntries = MEM_CACHE_MAX_ENTRIES;
+    return NS_OK;
 }
 
 static NS_METHOD
@@ -301,11 +303,14 @@ nsMemCache::GetStorageInUse(PRUint32 *aStorageInUse)
 NS_IMETHODIMP
 nsMemCache::RemoveAll(void)
 {
+    PRBool failed;
+
     nsCOMPtr<nsISimpleEnumerator> iterator;
     nsCOMPtr<nsISupports> recordSupports;
     nsCOMPtr<nsINetDataCacheRecord> record;
     nsresult rv;
 
+    failed = PR_FALSE;
     rv = NewCacheEntryIterator(getter_AddRefs(iterator));
     if (NS_FAILED(rv))
         return rv;
@@ -324,10 +329,14 @@ nsMemCache::RemoveAll(void)
         PRUint32 bytesUsed;
         record->GetStoredContentLength(&bytesUsed);
         rv = record->Delete();
-        if (NS_FAILED(rv))
-            break;
+        if (NS_FAILED(rv)) {
+            failed = PR_TRUE;
+            continue;
+        }
         mOccupancy -= bytesUsed;
     }
 
-    return rv;
+    if (failed)
+        return NS_ERROR_FAILURE;
+    return NS_OK;
 }

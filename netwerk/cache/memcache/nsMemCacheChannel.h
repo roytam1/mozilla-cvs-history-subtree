@@ -51,11 +51,11 @@ protected:
 
     nsCOMPtr<nsMemCacheRecord>   mRecord;
     nsCOMPtr<nsIInputStream>     mInputStream;
-    nsCOMPtr<nsILoadGroup>       mLoadGroup;
     nsCOMPtr<nsISupports>        mOwner;
-    nsCOMPtr<AsyncReadStreamAdaptor>  mAsyncReadStream;
+    AsyncReadStreamAdaptor*      mAsyncReadStream; // non-owning pointer
 
     friend class MemCacheWriteStreamWrapper;
+    friend class AsyncReadStreamAdaptor;
 };
 
 #endif // _nsMemCacheChannel_h_
