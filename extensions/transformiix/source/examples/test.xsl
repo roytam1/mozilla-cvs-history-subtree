@@ -289,6 +289,25 @@
          </xsl:if>
       </TD>
    </TR>
+   <!-- new test -->
+   <TR>
+      <TD VALIGN="TOP"><B>Test:</B></TD>
+      <TD>
+         &lt;xsl:value-of select="count(x/attribute::*)"/&gt;<BR />
+      </TD>
+   </TR>
+   <TR>
+      <TD><B>Desired Result:</B></TD>
+      <TD>
+         <FONT COLOR="blue">1</FONT><BR/>
+      </TD>
+    </TR>
+    <TR>
+      <TD><B>Result:</B></TD>
+      <TD>
+         <FONT COLOR="blue"><xsl:value-of select="count(x/attribute::*)"/></FONT>
+      </TD>
+   </TR>
    </TABLE>
 
   <HR/>
