@@ -25,10 +25,10 @@ public class JSUtil {
     /* Return the stack trace of an exception or error as a String */
     public static String getStackTrace(Throwable t) {
 	ByteArrayOutputStream captureStream;
-	PrintStream p;
+	PrintWriter p;
 	
 	captureStream = new ByteArrayOutputStream();
-	p = new PrintStream(captureStream);
+	p = new PrintWriter(captureStream);
 
 	t.printStackTrace(p);
 	p.flush();
