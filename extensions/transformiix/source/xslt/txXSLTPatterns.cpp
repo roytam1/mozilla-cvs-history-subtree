@@ -40,6 +40,7 @@
 #include "txNodeSetContext.h"
 #include "txForwardContext.h"
 #include "XSLTFunctions.h"
+#include "txExecutionState.h"
 #ifndef TX_EXE
 #include "nsReadableUtils.h"
 #include "nsIContent.h"
@@ -429,15 +430,15 @@ txKeyPattern::~txKeyPattern()
 
 MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
 {
+    txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
     Document* contextDoc;
     if (aNode->getNodeType() == Node::DOCUMENT_NODE)
         contextDoc = (Document*)aNode;
     else
         contextDoc = aNode->getOwnerDocument();
-    NodeSet* nodes = 0;
-    // What to do here?
-    //mProcessorState->getKeyValue(mName, contextDoc, mValue, PR_TRUE, &nodes);
-    if (!nodes || nodes->isEmpty())
+    const NodeSet* nodes = 0;
+    nsresult rv = es->getKeyNodes(mName, contextDoc, mValue, PR_TRUE, &nodes);
+    if (NS_FAILED(rv) || !nodes)
         return MB_FALSE;
     MBool isTrue = nodes->contains(aNode);
     return isTrue;

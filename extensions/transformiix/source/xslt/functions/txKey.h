@@ -41,6 +41,12 @@
 
 #include "nsDoubleHashtable.h"
 #include "XMLUtils.h"
+#include "NodeSet.h"
+#include "List.h"
+
+class txPattern;
+class Expr;
+class txExecutionState;
 
 class txKeyValueHashKey
 {
@@ -187,7 +193,7 @@ private:
 class txKeyHash
 {
 public:
-    txKeyHash(txExpandedNameMap& aKeys)
+    txKeyHash(const txExpandedNameMap& aKeys)
         : mKeys(aKeys)
     {
     }
@@ -209,7 +215,7 @@ private:
     txIndexedKeyHash mIndexedKeys;
     
     // Map of txXSLKeys
-    txExpandedNameMap& mKeys;
+    const txExpandedNameMap& mKeys;
 };
 
 

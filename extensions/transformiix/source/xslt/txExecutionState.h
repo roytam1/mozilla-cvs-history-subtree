@@ -49,6 +49,7 @@
 #include "txIXPathContext.h"
 #include "txVariableMap.h"
 #include "nsDoubleHashtable.h"
+#include "txKey.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
@@ -111,6 +112,9 @@ public:
     nsresult getRTFDocument(Document** aDocument);
     txExpandedNameMap* getParamMap();
     Node* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
+    nsresult getKeyNodes(const txExpandedName& aKeyName, Document* aDocument,
+                         const nsAString& aKeyValue, PRBool aIndexIfNotFound,
+                         const NodeSet** aResult);
 
     // state-modification functions
     txInstruction* getNextInstruction();
@@ -161,6 +165,7 @@ private:
     nsVoidArray mRecursionContexts;
     
     txLoadedDocumentsHash mLoadedDocuments;
+    txKeyHash mKeyHash;
 };
 
 #endif

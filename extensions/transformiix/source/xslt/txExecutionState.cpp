@@ -107,7 +107,8 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
       mTemplateParams(nsnull),
       mEvalContext(nsnull),
       mInitialEvalContext(nsnull),
-      mRTFDocument(nsnull)
+      mRTFDocument(nsnull),
+      mKeyHash(aStylesheet->getKeyMap())
 {
 }
 
@@ -172,6 +173,10 @@ txExecutionState::init(Node* aNode,
     rv = mLoadedDocuments.init(sourceDoc);
     NS_ENSURE_SUCCESS(rv, rv);
     
+    
+    rv = mKeyHash.init();
+    NS_ENSURE_SUCCESS(rv, rv);
+
     // XXX ToDo: set global parameters
 
     return NS_OK;
@@ -448,6 +453,17 @@ txExecutionState::retrieveDocument(const nsAString& uri,
         return xmlDoc->getElementById(frag);
 
     return xmlDoc;
+}
+
+nsresult
+txExecutionState::getKeyNodes(const txExpandedName& aKeyName,
+                              Document* aDocument,
+                              const nsAString& aKeyValue,
+                              PRBool aIndexIfNotFound,
+                              const NodeSet** aResult)
+{
+    return mKeyHash.getKeyNodes(aKeyName, aDocument, aKeyValue,
+                                aIndexIfNotFound, *this, aResult);
 }
 
 txInstruction*

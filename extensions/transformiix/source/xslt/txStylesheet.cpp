@@ -49,6 +49,7 @@ txStylesheet::txStylesheet()
       mDecimalFormats(PR_TRUE),
       mAttributeSets(PR_TRUE),
       mGlobalVariables(PR_TRUE),
+      mKeys(PR_TRUE),
       mContainerTemplate(nsnull),
       mCharactersTemplate(nsnull),
       mEmptyTemplate(nsnull)
@@ -260,6 +261,13 @@ txStylesheet::getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
     aInstr = var->mFirstInstruction;
 }
 
+const txExpandedNameMap&
+txStylesheet::getKeyMap()
+{
+    return mKeys;
+}
+
+
 nsresult
 txStylesheet::doneCompiling()
 {
@@ -431,9 +439,22 @@ nsresult
 txStylesheet::addKey(const txExpandedName& aName,
                      txPattern* aMatch, Expr* aUse)
 {
-    // XXX implement me
-    delete aMatch;
-    delete aUse;
+    nsresult rv = NS_OK;
+
+    txXSLKey* xslKey = (txXSLKey*)mKeys.get(aName);
+    if (!xslKey) {
+        xslKey = new txXSLKey(aName);
+        NS_ENSURE_TRUE(xslKey, NS_ERROR_OUT_OF_MEMORY);
+
+        rv = mKeys.add(aName, xslKey);
+        if (NS_FAILED(rv)) {
+            delete xslKey;
+            return rv;
+        }
+    }
+    if (!xslKey->addKey(aMatch, aUse)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
     return NS_OK;
 }
 

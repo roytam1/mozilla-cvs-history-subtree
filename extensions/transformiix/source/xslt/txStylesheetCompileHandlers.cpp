@@ -641,9 +641,7 @@ txFnStartKey(PRInt32 aNamespaceID,
              PRInt32 aAttrCount,
              txStylesheetCompilerState& aState)
 {
-    nsresult rv = aState.pushHandlerTable(gTxIgnoreHandler);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
+    nsresult rv = NS_OK;
     txExpandedName name;
     rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
                       aState, name);
@@ -662,7 +660,7 @@ txFnStartKey(PRInt32 aNamespaceID,
     rv = aState.mStylesheet->addKey(name, match, use);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    return NS_OK;
+    return aState.pushHandlerTable(gTxIgnoreHandler);
 }
 
 nsresult
@@ -1869,9 +1867,10 @@ txHandlerTableData gTxRootTableData = {
 
 txHandlerTableData gTxTopTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
-    { kNameSpaceID_XSLT, "variable", txFnStartTopVariable, txFnEndTopVariable },
+  { { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
     { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },
+    { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
+    { kNameSpaceID_XSLT, "variable", txFnStartTopVariable, txFnEndTopVariable },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartOtherTop, txFnEndOtherTop },

@@ -74,6 +74,7 @@ public:
     txOutputFormat* getOutputFormat();
     nsresult getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
                                txInstruction*& aInstr);
+    const txExpandedNameMap& getKeyMap();
 
     /**
      * Called by the stylesheet compiler once all stylesheets has been read.
@@ -158,6 +159,9 @@ private:
     
     // Map with all global variables and parameters
     txExpandedNameMap mGlobalVariables;
+    
+    // Map with all keys
+    txExpandedNameMap mKeys;
     
     // Default templates
     txInstruction* mContainerTemplate;

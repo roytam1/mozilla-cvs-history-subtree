@@ -142,7 +142,7 @@ nsresult txExpandedNameMap::set(const txExpandedName& aKey, TxObject* aValue)
  * @param  aKey  key for item to get
  * @return item with specified key, or null if no such item exists
  */
-TxObject* txExpandedNameMap::get(const txExpandedName& aKey)
+TxObject* txExpandedNameMap::get(const txExpandedName& aKey) const
 {
     int i;
     for (i = 0; i < mItemCount; ++i) {

@@ -54,6 +54,8 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
     if (!aContext || !requireParams(2, 2, aContext))
         return new StringResult(NS_LITERAL_STRING("error"));
 
+    txExecutionState* es = (txExecutionState*)aContext->getPrivateContext();
+
     NodeSet* res = new NodeSet;
     if (!res) {
         // ErrorReport: out of memory
@@ -90,8 +92,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
             nsAutoString val;
             XMLDOMUtils::getNodeValue(nodeSet->get(i), val);
             const NodeSet* nodes = 0;
-            //rv = mProcessorState->getKeyNodes(keyName, contextDoc, val,
-            //                                  i == 0, &nodes);
+            rv = es->getKeyNodes(keyName, contextDoc, val, i == 0, &nodes);
             if (NS_FAILED(rv)) {
                 delete res;
                 delete exprResult;
@@ -106,8 +107,7 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         nsAutoString val;
         exprResult->stringValue(val);
         const NodeSet* nodes = 0;
-        //rv = mProcessorState->getKeyNodes(keyName, contextDoc, val,
-        //                                  PR_TRUE, &nodes);
+        rv = es->getKeyNodes(keyName, contextDoc, val, PR_TRUE, &nodes);
         if (NS_FAILED(rv)) {
             delete res;
             delete exprResult;
@@ -264,6 +264,8 @@ txKeyHash::init()
 
     rv = mIndexedKeys.Init(1);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
 }
 
 /**
@@ -306,7 +308,7 @@ PRBool txXSLKey::addKey(txPattern* aMatch, Expr* aUse)
  * Indexes a document and adds it to the hash of key values
  * @param aDocument     Document to index and add
  * @param aKeyValueHash Hash to add values to
- * @param aEs           ProcessorState to use for XPath evaluation
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
 nsresult txXSLKey::indexDocument(Document* aDocument,
                                  txKeyValueHash& aKeyValueHash,
@@ -322,7 +324,7 @@ nsresult txXSLKey::indexDocument(Document* aDocument,
  * @param aNode         Node to search
  * @param aKey          Key to use when adding into the hash
  * @param aKeyValueHash Hash to add values to
- * @param aEs           ProcessorState to use for XPath evaluation
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
 nsresult txXSLKey::indexTree(Node* aNode, txKeyValueHashKey& aKey,
                              txKeyValueHash& aKeyValueHash,
@@ -357,7 +359,7 @@ nsresult txXSLKey::indexTree(Node* aNode, txKeyValueHashKey& aKey,
  * @param aNode         Node to test
  * @param aKey          Key to use when adding into the hash
  * @param aKeyValueHash Hash to add values to
- * @param aEs           ProcessorState to use for XPath evaluation
+ * @param aEs           txExecutionState to use for XPath evaluation
  */
 nsresult txXSLKey::testNode(Node* aNode, txKeyValueHashKey& aKey,
                             txKeyValueHash& aKeyValueHash, txExecutionState& aEs)
