@@ -52,37 +52,40 @@ static nsModuleComponentInfo components[] =
 {
   { "xlib cursor",
     NS_CURSOR_CID,
-    "@mozilla/gfx/cursor;2",
+    "@mozilla.org/gfx/cursor;2",
     nsCursorConstructor, },
   { "xlib pixmap",
     NS_PIXMAP_CID,
-    "@mozilla/gfx/pixmap;2",
+    "@mozilla.org/gfx/pixmap;2",
     nsPixmapConstructor, },
   { "xlib image",
     NS_IMAGE_CID,
-    "@mozilla/gfx/image;2",
+    "@mozilla.org/gfx/image;2",
     nsImageConstructor, },
   { "xlib region",
     NS_REGION_CID,
-    "@mozilla/gfx/region;2",
+    "@mozilla.org/gfx/region;2",
     nsRegionConstructor, },
   { "xlib window",
     NS_CHILDWINDOW_CID,
-    "@mozilla/gfx/window/child;2",
+    "@mozilla.org/gfx/window/child;2",
     nsChildWindowConstructor, },
   { "xlib window",
     NS_POPUPWINDOW_CID,
-    "@mozilla/gfx/window/popup;2",
+    "@mozilla.org/gfx/window/popup;2",
     nsPopupWindowConstructor, },
   { "xlib window",
     NS_TOPLEVELWINDOW_CID,
-    "@mozilla/gfx/window/toplevel;2",
+    "@mozilla.org/gfx/window/toplevel;2",
     nsTopLevelWindowConstructor, },
   { "xlib run app run",
     NS_RUNAPPRUN_CID,
-    "@mozilla/gfx/run;2",
+    "@mozilla.org/gfx/run;2",
     nsRunAppRunConstructor, }
 };
+
+
+// @mozilla/gfx/systemlook;2
 
 NS_IMPL_NSGETMODULE("nsGfx2Module", components)
 

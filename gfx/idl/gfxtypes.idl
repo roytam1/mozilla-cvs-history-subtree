@@ -49,6 +49,8 @@ typedef float               gfx_dimension;
  */
 typedef float               gfx_coord;
 
+typedef gfx_coord nscoord;
+
 /**
  * typedef that should be used for angles
  * @var typedef float gfx_angle
@@ -62,6 +64,8 @@ typedef float               gfx_angle;
  * @var typedef unsigned long gfx_color
  */
 typedef unsigned long       gfx_color;
+
+typedef gfx_color nscolor;
 
 /**
  * typedef that should be used for bit depths
