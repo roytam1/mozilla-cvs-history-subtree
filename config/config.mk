@@ -275,9 +275,9 @@ endif
 #
 _ALL_META_COMPONENTS=mail crypto
 
-MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_services nsMimeEmitterModule nsMsgNewsModule  nsMsgComposeModule local_mail_services nsAbSyncModule nsImportServiceModule nsTextImportModule nsAbModule nsMsgDBModule
-MOZ_META_COMPONENTS_mail_comps = mailnews msgimap mime mimeemitter msgnews msgcompose localmail absyncsvc import addrbook impText vcard msgdb #smime
-MOZ_META_COMPONENTS_mail_libs = msgbaseutil
+MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_services nsMimeEmitterModule nsMsgNewsModule  nsMsgComposeModule local_mail_services nsAbSyncModule nsImportServiceModule nsTextImportModule nsAbModule nsMsgDBModule nsSMIMEModule
+MOZ_META_COMPONENTS_mail_comps = mailnews msgimap mime mimeemitter msgnews msgcompose localmail absyncsvc import addrbook impText vcard msgdb smimestb
+MOZ_META_COMPONENTS_mail_libs = msgbaseutil mimecthglue_s
 
 MOZ_META_COMPONENTS_crypto = PKI NSS
 MOZ_META_COMPONENTS_crypto_comps = pippki pipnss
