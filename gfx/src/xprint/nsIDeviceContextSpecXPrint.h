@@ -124,6 +124,14 @@ public:
    NS_IMETHOD GetPath (  char **aPath ) = 0;    
 
   /*
+   * If PR_TRUE, user chose Landscape
+   * @update 
+   * @param aLandscape
+   * @return 
+   **/
+   NS_IMETHOD GetLandscape ( PRBool &aLandscape ) = 0;   
+
+  /*
    * If PR_TRUE, user cancelled 
    * @update 
    * @param aCancel -- 
