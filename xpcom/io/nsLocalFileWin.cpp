@@ -547,7 +547,7 @@ nsLocalFile::InitWithPath(const char *filePath)
     // just do a sanity check.  if it has any forward slashes, it is not a Native path
     // on windows.  Also, it must have a colon at after the first char.
 
-    if ( ( (filePath[1] == ':') && ( strchr(filePath, '/') == 0) ) ||  // normal windows path
+    if ( ( (filePath[0] != 0) && filePath[1] == ':') && ( strchr(filePath, '/') == 0) ) ||  // normal windows path
          ( (filePath[0] == '\\') && (filePath[1] == '\\') ) )  // netwerk path
     {
         // This is a native path
