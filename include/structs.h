@@ -37,7 +37,6 @@
 #include "edttypes.h"
 
 #ifdef JAVA
-#include "prosdep.h"
 #include "prlong.h"
 #include "prclist.h"
 #endif /* JAVA */
