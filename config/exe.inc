@@ -71,26 +71,26 @@ $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefil
 #//------------------------------------------------------------------------
 $(PROGRAM):: $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(LIBFILE) $(MISCDEP) makefile.win  $(DEPTH)\config\exe.inc
         echo +++ make: Creating EXE: $@
-        echo /NOLOGO /OUT:$@ /PDB:$(PDBFILE)  > $(CFGFILE)
+        echo /NOLOGO /OUT:$@ /PDB:$(PDBFILE:\=\\)  > $(CFGFILE)
 !ifdef DEFFILE
-        echo /DEF:$(DEFFILE)                 >> $(CFGFILE)      
+        echo /DEF:$(DEFFILE:\=\\)                 >> $(CFGFILE)      
 !endif
 !ifdef MAPFILE
-        echo /MAP:$(MAPFILE)                 >> $(CFGFILE)
+        echo /MAP:$(MAPFILE:\=\\)                 >> $(CFGFILE)
 !endif
 !ifdef LFLAGS
-        echo $(LFLAGS)                       >> $(CFGFILE)
+        echo $(LFLAGS)                            >> $(CFGFILE)
 !endif
 !ifdef OBJS
-        echo $(OBJS)                         >> $(CFGFILE)
+        echo $(OBJS:\=\\)                         >> $(CFGFILE)
 !endif
 !ifdef LIBFILE
-        cat $(LIBFILE)                       >> $(CFGFILE)
+        cat $(LIBFILE)                            >> $(CFGFILE)
 !endif
 !ifdef RESFILE
-        echo $(RESFILE)                      >> $(CFGFILE)
+        echo $(RESFILE:\=\\)                      >> $(CFGFILE)
 !endif
-        echo $(LLIBS) $(WIN_LIBS) $(OS_LIBS) >> $(CFGFILE)
+        echo $(LLIBS:\=\\) $(WIN_LIBS) $(OS_LIBS) >> $(CFGFILE)
         $(LD) @$(CFGFILE)
 !endif
 

@@ -74,12 +74,12 @@ $(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefile.win
 #//------------------------------------------------------------------------
 $(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(LIBFILE) $(MISCDEP) makefile.win $(DEPTH)\config\dll.inc
 	echo +++ make: Creating DLL: $@
-        echo /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE)       > $(CFGFILE)
+        echo /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE:\=\\)  > $(CFGFILE)
 !ifdef DEFFILE
-        echo /DEF:$(DEFFILE)                           >> $(CFGFILE)
+        echo /DEF:$(DEFFILE:\=\\)                      >> $(CFGFILE)
 !endif
 !ifdef MAPFILE
-        echo /MAP:$(MAPFILE)                           >> $(CFGFILE)
+        echo /MAP:$(MAPFILE:\=\\)                      >> $(CFGFILE)
 !endif
 !if exist(win32.order) && !defined(MOZ_DEBUG) && defined(MOZ_COVERAGE)
         echo /ORDER:@win32.order                       >> $(CFGFILE)
@@ -88,15 +88,15 @@ $(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(LIBFILE) $(MISCDEP) m
         echo $(LFLAGS)                                 >> $(CFGFILE)
 !endif
 !ifdef OBJS
-        echo $(OBJS)                                   >> $(CFGFILE)
+        echo $(OBJS:\=\\)                              >> $(CFGFILE)
 !endif
 !ifdef RESFILE
-        echo $(RESFILE)                                >> $(CFGFILE)
+        echo $(RESFILE:\=\\)                           >> $(CFGFILE)
 !endif
 !ifdef LIBFILE
         cat $(LIBFILE)                                 >> $(CFGFILE)
 !endif
-        echo $(LLIBS) $(WIN_LIBS) $(OS_LIBS)           >> $(CFGFILE)
+        echo $(LLIBS:\=\\) $(WIN_LIBS) $(OS_LIBS)      >> $(CFGFILE)
         $(LD) @$(CFGFILE)
 !endif
 
