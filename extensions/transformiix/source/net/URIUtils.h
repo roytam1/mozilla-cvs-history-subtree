@@ -41,14 +41,6 @@
 #include "baseutils.h"
 #ifndef MOZ_XSL
 #include <fstream.h>
-#else
-#include "nsIServiceManager.h"
-#include "nsIIOService.h"
-#include "nsIURL.h"
-#include "nsXPIDLString.h"
-#include "nsCOMPtr.h"
-
-static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 #endif
 
 

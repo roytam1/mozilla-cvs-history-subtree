@@ -41,6 +41,10 @@
 #ifdef MOZ_XSL
 #include "nsSyncLoader.h"
 #include "URIUtils.h"
+#include "nsIIOService.h"
+#include "nsIURL.h"
+#include "nsNetCID.h"
+#include "nsIServiceManager.h"
 #endif
 /**
  *  Implementation of an In-Memory DOM based XML parser.  The actual XML
@@ -86,7 +90,8 @@ Document* XMLParser::getDocumentFromURI
 #ifdef MOZ_XSL
     nsresult rv = NS_OK;
     nsCOMPtr<nsIURI> documentURI;
-    NS_WITH_SERVICE(nsIIOService, pService, kIOServiceCID, &rv);
+    nsCOMPtr<nsIIOService> pService(do_GetService(NS_IOSERVICE_CONTRACTID,
+                                                  &rv));
     if (NS_FAILED(rv)) return NULL;
 
     char *hrefStr = (documentURL.getConstNSString()).ToNewCString();

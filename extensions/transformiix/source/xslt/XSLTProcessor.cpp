@@ -53,6 +53,8 @@
 #include "URIUtils.h"
 #ifdef MOZ_XSL
 #include "nsIObserverService.h"
+#include "nsIURL.h"
+#include "nsIServiceManager.h"
 //#include "nslog.h"
 #else
 #include "printers.h"
