@@ -36,10 +36,10 @@
 
 #include <Events.h>
 #include "prtypes.h"
+#include "nsIEventQueueService.h"
 
 class nsToolkit;
 class nsMacMessageSink;
-struct PLEventQueue;
 
 //================================================
 

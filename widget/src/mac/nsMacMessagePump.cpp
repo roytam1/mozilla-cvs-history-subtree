@@ -338,8 +338,9 @@ void nsMacMessagePump::DispatchEvent(PRBool aRealEvent, EventRecord *anEvent)
 		PRBool eventAvailable;
 		mEventQueue->EventAvailable(eventAvailable);
 		if (eventAvailable) {
-			PL_HandleEvent(mEventQueue->GetEvent(mEventQueue));
-			mEventQueue->EventAvailable(eventAvailable);
+			PLEvent* plEvent;
+			mEventQueue->GetEvent(&plEvent);
+			PL_HandleEvent(plEvent);
 		}
 	}
 }
