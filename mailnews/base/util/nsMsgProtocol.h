@@ -52,6 +52,7 @@
 #include "nsITransport.h"
 #include "nsIAsyncOutputStream.h"
 #include "nsIEventQueue.h"
+#include "nsIAuthModule.h"
 
 #define UNKNOWN_ERROR             101
 #define UNKNOWN_HOST_ERROR        102
@@ -141,6 +142,9 @@ protected:
 
   virtual nsresult InitFromURI(nsIURI *aUrl);
 
+  nsresult DoNtlmStep1(const char *username, const char *password, nsCString &response);
+  nsresult DoNtlmStep2(nsCString &commandResponse, nsCString &response);
+
 	// Ouput stream for writing commands to the socket	
 	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
     nsCOMPtr<nsIInputStream>    m_inputStream;
@@ -156,6 +160,9 @@ protected:
 	PRInt32		m_readCount;
 
 	nsFileSpec	m_tempMsgFileSpec;  // we currently have a hack where displaying a msg involves writing it to a temp file first
+
+  // auth module for access to NTLM functions
+  nsCOMPtr<nsIAuthModule> m_authModule;
 
 	// the following is a catch all for nsIChannel related data
 	nsCOMPtr<nsIURI>            m_originalUrl;  // the original url
