@@ -45,6 +45,8 @@
 #include "nsDOMClassInfo.h"
 #include "nsGlobalWindow.h"
 #include "nsIObserverService.h"
+#include "nsIJSContextStack.h"
+
 
 extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
                                        nsIScriptContext **aContext);
@@ -142,9 +144,6 @@ nsDOMSOFactory::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
 {
   return nsDOMClassInfo::GetClassInfoInstance(aID, aGetIIDsFptr, aName);
 }
-
-#include "jsapi.h"
-#include "nsIJSContextStack.h"
 
 NS_IMETHODIMP
 nsDOMSOFactory::Observe(nsISupports *aSubject, const PRUnichar *aTopic,
