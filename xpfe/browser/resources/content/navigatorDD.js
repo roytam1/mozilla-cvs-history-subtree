@@ -440,6 +440,11 @@ var gOpenFolder = null;
 var folderObserver = {
   onDragOver: function(aEvent, aFlavour, aDragSession)
     {
+      // XXX disable dropping onto toolbar folders on unices
+      // XXX see <http://bugzilla.mozilla.org/show_bug.cgi?id=96504#c131>
+      if (navigator.appVersion.indexOf("X11") != -1)
+        return false;
+
       if (aEvent.target.getAttribute("open") == "true")
         return false;
 
