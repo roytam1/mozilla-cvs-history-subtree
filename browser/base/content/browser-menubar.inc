@@ -322,10 +322,8 @@
                         oncommand="toJavaScriptConsole();"/>
               <menuitem accesskey="&pageInfoCmd.accesskey;" label="&pageInfoCmd.label;"   
                         key="key_viewInfo" command="View:PageInfo"/>
-#ifndef XP_MACOSX
-              <menuseparator id="prefSep"/>
-#endif
 #ifndef XP_UNIX
+              <menuseparator id="prefSep"/>
               <menuitem id="menu_preferences"
                         label="&preferencesCmd.label;"
                         accesskey="&preferencesCmd.accesskey;"
