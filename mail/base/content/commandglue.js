@@ -810,7 +810,7 @@ function FolderPaneSelectionChange()
         if (msgFolder == gMsgFolderSelected)
            return;
 
-	gPrevSelectedFolder = gMsgFolderSelected;
+	      gPrevSelectedFolder = gMsgFolderSelected;
         gMsgFolderSelected = msgFolder;
         var folderFlags = msgFolder.flags;
         // if this is same folder, and we're not showing a virtual folder
@@ -899,9 +899,8 @@ function FolderPaneSelectionChange()
                 gPreQuickSearchView.close();
                 gPreQuickSearchView = null;  
               }
-              var searchInput = document.getElementById("searchInput");  //reset the search input on folder switch
-              if (searchInput) 
-                searchInput.value = "";
+              
+              clearQuickSearchAfterFolderChange();
             }
             ClearMessagePane();
 
