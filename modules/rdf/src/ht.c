@@ -43,6 +43,7 @@ RDF			gNCDB = NULL;
 PRBool			gInited = PR_FALSE, gHTEventsEnabled = PR_TRUE;
 PRBool			gBatchUpdate = false, gAutoEditNewNode = false, gPaneDeletionMode = false;
 XP_Bool			gMissionControlEnabled = false;
+char			*gAutoOpenTo = NULL;
 HT_MenuCommand		menuCommandsList = NULL;
 void			*htTimerID = NULL;
 _htmlElementPtr         htmlElementList = NULL;
@@ -475,7 +476,7 @@ htrdfNotifFunc (RDF_Event ns, void* pdata)
 				htr = PR_HashTableLookup(hash, vu);
 				while (htr != NULL)
 				{
-					if (HT_IsContainerOpen(htr))
+					if ((htr->child != NULL) || (HT_IsContainerOpen(htr)))
 					{
 						if (aev->tv)
 						{ 
@@ -2421,6 +2422,7 @@ resynchContainer (HT_Resource container)
 		{
 			gAutoOpenPane = NULL;
 			HT_SetOpenState(nc, PR_TRUE);
+			nc->flags &= (~HT_INITED_FLAG);
 		}
 
 	}
@@ -2510,6 +2512,7 @@ addContainerItem (HT_Resource container, RDF_Resource item)
 		{
 			gAutoOpenPane = NULL;
 			HT_SetOpenState(nc, PR_TRUE);
+			nc->flags &= (~HT_INITED_FLAG);
 		}
 	}
 	return(nc);
@@ -2715,7 +2718,8 @@ sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event wh
 PR_PUBLIC_API(HT_Cursor)
 HT_NewCursor (HT_Resource node)
 {
-	HT_Cursor		c;
+	HT_Cursor		c = NULL;
+	PRBool			openFlag = PR_FALSE;
 
 	XP_ASSERT(node != NULL);
 	XP_ASSERT(node->view != NULL);
@@ -2724,37 +2728,51 @@ HT_NewCursor (HT_Resource node)
 	{
 		return(NULL);
 	}
-	if (!HT_IsContainerOpen(node))
+
+	if (gAutoOpenTo != NULL)
 	{
-		/* determine if container should be auto opened */
-
-		if (node->view->pane->special == PR_TRUE)	return(NULL);
-
-		if (node->flags & HT_INITED_FLAG)		return(NULL);
-		node->flags |= HT_INITED_FLAG;
-		if (RDF_HasAssertion(gNCDB, node->node, gNavCenter->RDF_AutoOpen,
-			"yes", RDF_STRING_TYPE, 1))
+		if (startsWith(resourceID(node->node), gAutoOpenTo))
 		{
-			node->flags |= HT_OPEN_FLAG;
+			openFlag = PR_TRUE;
+		}
+	}
+	if (!openFlag)
+	{
+		if (HT_IsContainerOpen(node))
+		{
+			openFlag = PR_TRUE;
 		}
 		else
 		{
-			return(NULL);
+			/* determine if container should be auto opened */
+
+			if (node->view->pane->special == PR_TRUE)	return(NULL);
+
+			if (node->flags & HT_INITED_FLAG)		return(NULL);
+			if (RDF_HasAssertion(gNCDB, node->node, gNavCenter->RDF_AutoOpen,
+				"yes", RDF_STRING_TYPE, 1))
+			{
+				openFlag = PR_TRUE;
+			}
 		}
 	}
 
-	if ((c = (HT_Cursor)getMem(sizeof(HT_CursorStruct))) != NULL)
+	if (openFlag == PR_TRUE)
 	{
-		c->container = node;
-		if (node->child != NULL)
+		node->flags |= (HT_INITED_FLAG | HT_OPEN_FLAG);
+		if ((c = (HT_Cursor)getMem(sizeof(HT_CursorStruct))) != NULL)
 		{
-			c->node = node->child;
-			c->numElements = node->numChildren;
-		}
-		else
-		{
-			c->numElements = fillContainer(node);
-			c->node = node->child;
+			c->container = node;
+			if (node->child != NULL)
+			{
+				c->node = node->child;
+				c->numElements = node->numChildren;
+			}
+			else
+			{
+				c->numElements = fillContainer(node);
+				c->node = node->child;
+			}
 		}
 	}
 	return(c);
@@ -3975,39 +3993,56 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 	switch(menuCmd)
 	{
 		case	HT_CMD_NEW_WORKSPACE:
-		uniqueCount = 0;
-		do
+		/* XXX localization */
+		if (FE_Confirm(((MWContext *)gRDFMWContext()),
+				"Create a workspace for remote data?"))
 		{
-			url = PR_smprintf("container%d.rdf",
-				(int)++uniqueCount);
-			rNode = RDF_GetResource(pane->db, url, false);
-			if ((rNode != NULL) && (url != NULL))
+			/* XXX localization */
+			if ((url = FE_Prompt(((MWContext *)gRDFMWContext()),
+					"Enter the URL for the remote workspace:", "http://")) != NULL)
+			{
+				if (url[0] != '\0')
+				{
+					HT_NewWorkspace(pane, url, NULL);
+				}
+			}
+		}
+		else
+		{
+			uniqueCount = 0;
+			do
+			{
+				url = PR_smprintf("container%d.rdf",
+					(int)++uniqueCount);
+				rNode = RDF_GetResource(pane->db, url, false);
+				if ((rNode != NULL) && (url != NULL))
+				{
+					XP_FREE(url);
+					url = NULL;
+				}
+			} while (rNode != NULL);
+			if ((url != NULL) && (title = FE_Prompt(((MWContext *)gRDFMWContext()),
+					XP_GetString(RDF_NEWWORKSPACEPROMPT), "")) != NULL)
+			{
+				if (!strcmp(title, "about"))
+				{
+					XP_FREE(title);
+					title = NULL;
+					XP_FREE(url);
+					url = PR_smprintf("http://people.netscape.com/rjc/about.rdf#root");
+				}
+				HT_NewWorkspace(pane, url, title);
+			}
+			if (title != NULL)
+			{
+				XP_FREE(title);
+				title = NULL;
+			}
+			if (url != NULL)
 			{
 				XP_FREE(url);
 				url = NULL;
 			}
-		} while (rNode != NULL);
-		if ((url != NULL) && (title = FE_Prompt(((MWContext *)gRDFMWContext()),
-				XP_GetString(RDF_NEWWORKSPACEPROMPT), "")) != NULL)
-		{
-			if (!strcmp(title, "about"))
-			{
-				XP_FREE(title);
-				title = NULL;
-				XP_FREE(url);
-				url = PR_smprintf("http://people.netscape.com/rjc/about.rdf#root");
-			}
-			HT_NewWorkspace(pane, url, title);
-		}
-		if (title != NULL)
-		{
-			XP_FREE(title);
-			title = NULL;
-		}
-		if (url != NULL)
-		{
-			XP_FREE(url);
-			url = NULL;
 		}
 		break;
 
@@ -7211,6 +7246,88 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 
 
 
+void
+htOpenTo(HT_View view, RDF_Resource u, PRBool selectView)
+{
+	HT_Pane			pane;
+	HT_Resource		htr;
+	RDF_Resource		r;
+	char			*id, *tempID, *p;
+
+	XP_ASSERT(view != NULL);
+	if (view == NULL)	return;
+	XP_ASSERT(u != NULL);
+	if (u == NULL)		return;
+
+	if ((pane = HT_GetPane(view)) == NULL)	return;
+	if (selectView == PR_TRUE)
+	{
+		HT_SetSelectedView (pane, view);
+		refreshItemList ((view)->top, HT_EVENT_VIEW_REFRESH);
+	}
+
+	if ((id = copyString(resourceID(u))) != NULL)
+	{
+		if ((startsWith("file://", id)) && (!endsWith("/", id)))
+		{
+			if ((r = RDF_GetResource(pane->db, id, 1)) != NULL)
+			{
+				if (iscontainerp(r))
+				{
+					p = append2Strings(id, "/");
+					freeMem(id);
+					id = p;
+					r = RDF_GetResource(pane->db, id, 1);
+				}
+			}
+		}
+		if ((tempID = copyString(id)) != NULL)
+		{
+			while ((p = strrchr(tempID, '/')) != NULL)
+			{
+				*(p+1) = '\0';
+
+				if ((r = RDF_GetResource(pane->db, tempID, 1)) == NULL)	break;
+				htr = PR_HashTableLookup(pane->hash, r);
+				while (htr != NULL)
+				{
+					if (htr->view == view)
+					{
+						if ((HT_IsContainer(htr)) && (!HT_IsContainerOpen(htr)))
+						{
+							HT_SetOpenState(htr, PR_TRUE);
+						}
+					}
+					htr = htr->nextItem;
+				}
+				*p = 0;
+			}
+			freeMem(tempID);
+		}
+		gAutoOpenTo = id;
+		refreshItemList (HT_TopNode(view), HT_EVENT_VIEW_REFRESH);
+		gAutoOpenTo = NULL;
+
+		if ((r = RDF_GetResource(pane->db, id, 1)) != NULL)
+		{
+			htr = PR_HashTableLookup(pane->hash, r);
+			while (htr != NULL)
+			{
+				if (htr->view == view)
+				{
+					HT_SetSelection (htr);
+					sendNotification(htr, HT_EVENT_NODE_SCROLLTO);
+					break;
+				}
+				htr = htr->nextItem;
+			}
+		}
+		freeMem(id);
+	}
+}
+
+
+
 PR_PUBLIC_API(PRBool)
 HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 {
@@ -7253,7 +7370,20 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 	{
 		if (pane != NULL)
 		{
-			if (startsWith("ftp://", url) && endsWith("/", url))
+			if (startsWith("file://", url))
+			{
+				if ((u = RDF_GetResource(pane->db, url, 1)) != NULL)
+				{
+					if (iscontainerp(u))
+					{
+						parent = NULL;
+						view = HT_GetViewType(pane, HT_VIEW_FILES);
+						htOpenTo(view, u, PR_TRUE);
+						retVal = PR_TRUE;
+					}
+				}
+			}
+			else if (startsWith("ftp://", url) && endsWith("/", url))
 			{
 				u = RDF_GetResource(pane->db, url, 1);
 				parent = gNavCenter->RDF_FTP;
@@ -7271,32 +7401,33 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 				view = HT_GetViewType(pane, HT_VIEW_SEARCH);
 			}
 		}
-		if ((pane != NULL) && (parent != NULL))
+		if (pane != NULL)
 		{
-			if (startsWith("ftp://", resourceID(u)))
-			{
-				if (!RDF_HasAssertion(pane->db, gNavCenter->RDF_FTP,
-					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-					RDF_RESOURCE_TYPE, PR_TRUE))
-				{
-					gAutoOpenPane = pane;
-					RDF_Assert(pane->db, gNavCenter->RDF_FTP,
-						gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-						RDF_RESOURCE_TYPE);
-					gAutoOpenPane = NULL;
-				}
-			}
-			gAutoOpenPane = pane;
-			RDF_Assert(pane->db, u, gCoreVocab->RDF_parent,
-				parent, RDF_RESOURCE_TYPE);
-			gAutoOpenPane = NULL;
-			htSetBookmarkAddDateToNow(u);
-
 			if (view != NULL)
 			{
 				HT_SetSelectedView (pane, view);
+				refreshItemList ((view)->top, HT_EVENT_VIEW_REFRESH);
 			}
-			retVal = PR_TRUE;
+
+			if (parent != NULL)
+			{
+				if (startsWith("ftp://", resourceID(u)))
+				{
+					gAutoOpenPane = pane;
+					remoteStoreAdd (gRemoteStore, gNavCenter->RDF_FTP,
+						gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+						RDF_RESOURCE_TYPE, PR_TRUE);
+
+					gAutoOpenPane = NULL;
+				}
+				gAutoOpenPane = pane;
+				remoteStoreAdd (gRemoteStore, u, gCoreVocab->RDF_parent,
+					parent, RDF_RESOURCE_TYPE, PR_TRUE);
+				gAutoOpenPane = NULL;
+				htSetBookmarkAddDateToNow(u);
+
+				retVal = PR_TRUE;
+			}
 		}
 		else if ((isShortcut == PR_TRUE) && (context != NULL))
 		{

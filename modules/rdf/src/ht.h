@@ -313,6 +313,7 @@ static PRBool			rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int a
 char *				constructBasicHTML(char *dynStr, int strID, char *data1, char *data2);
 void				setHiddenState (HT_Resource node);
 void				htSetFindResourceName(RDF db, RDF_Resource r);
+void				htOpenTo(HT_View view, RDF_Resource u, PRBool selectView);
 PRBool				mutableContainerp (RDF_Resource node);
 void				possiblyCleanUpTitle (char* title);
 PRBool				htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash);
