@@ -424,6 +424,11 @@ export LD_RUN_PATH=$(RPATHFLAG)
 LINK_EXE      = $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
 else # ReliantUNIX
+ifeq ($(OS_ARCH), Linux)
+LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS) \
+                        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE_NOLIBSOBJS     =  $(CCC) $(ALDFLAGS) $(LDFLAGS) -o $@
+else
 ifdef USE_LD_RUN_PATH
 #does RPATH differently.  instead we export RPATHFLAG as LD_RUN_PATH
 #see ns/netsite/ldap/clients/tools/Makefile for an example
@@ -438,6 +443,7 @@ LINK_EXE        = $(CC) $(ALDFLAGS) $(LDFLAGS) \
 LINK_EXE_NOLIBSOBJS     = $(CC) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
 endif # USE_LD_RUN_PATH
+endif # Linux
 endif # ReliantUNIX
 endif # HP-UX
 endif # WINNT
