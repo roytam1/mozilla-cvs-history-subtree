@@ -2869,7 +2869,7 @@ nsresult	nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIn
   nsMsgViewIndex viewIndex = startOfThreadViewIndex + 1;
 	*pNumListed = 0;
   nsUint8Array levelStack;
-
+  nsMsgKey topLevelMsgKey = m_keys[startOfThreadViewIndex];
 
   PRUint32 numChildren;
   threadHdr->GetNumChildren(&numChildren);
@@ -2906,20 +2906,23 @@ nsresult	nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIn
 				PRUint8 levelToAdd;
 				// just make sure flag is right in db.
 				m_db->MarkHdrRead(msgHdr, PR_FALSE, nsnull);
-				m_keys.InsertAt(viewIndex, msgKey);
-        m_flags.InsertAt(viewIndex, msgFlags);
-//					pLevels[i] = msgHdr->GetLevel();
-				if (levelStack.GetSize() == 0)
-					levelToAdd = 0;
-				else
-					levelToAdd = levelStack.GetAt(levelStack.GetSize() - 1) + 1;
-        m_levels.InsertAt(viewIndex, levelToAdd);
+        if (msgKey != topLevelMsgKey)
+        {
+				  m_keys.InsertAt(viewIndex, msgKey);
+          m_flags.InsertAt(viewIndex, msgFlags);
+  //					pLevels[i] = msgHdr->GetLevel();
+				  if (levelStack.GetSize() == 0)
+					  levelToAdd = 1;
+				  else
+					  levelToAdd = levelStack.GetAt(levelStack.GetSize() - 1) + 1;
+          m_levels.InsertAt(viewIndex, levelToAdd);
 #ifdef DEBUG_bienvenu
 //					XP_Trace("added at level %d\n", levelToAdd);
 #endif
-				levelStack.Add(levelToAdd);
-        viewIndex++;
-				(*pNumListed)++;
+				  levelStack.Add(levelToAdd);
+          viewIndex++;
+				  (*pNumListed)++;
+        }
 			}
 		}
 	}
