@@ -279,6 +279,7 @@ wsSelectAllEvent::handleEvent ()
     return result;
 }
 
+/*
 wsViewSourceEvent::wsViewSourceEvent(nsIDocShell* docShell, PRBool viewMode) :
     nsActionEvent(),
     mDocShell(docShell),
@@ -302,6 +303,7 @@ wsViewSourceEvent::handleEvent ()
     }
     return nsnull;
 }
+*/
 
 
 wsGetDOMEvent::wsGetDOMEvent(JNIEnv *yourEnv, jclass clz, 

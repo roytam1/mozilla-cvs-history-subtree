@@ -188,6 +188,8 @@ JNIEXPORT jobject JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
  * Method:    nativeGetSource
  * Signature: ()Ljava/lang/String;
  */
+
+/*
 JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSource
 (JNIEnv * env, jobject jobj)
 {
@@ -195,12 +197,16 @@ JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPage
     
     return result;
 }
+*/
+
 
 /*
  * Class:     org_mozilla_webclient_wrapper_0005fnative_CurrentPageImpl
  * Method:    nativeGetSourceBytes
  * Signature: ()[B
  */
+
+/*
 JNIEXPORT jbyteArray JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSourceBytes
 (JNIEnv * env, jobject jobj, jint webShellPtr, jboolean viewMode)
 {
@@ -219,6 +225,8 @@ JNIEXPORT jbyteArray JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentP
     jbyteArray result = nsnull;
     return result;
 }
+*/
+
 
 /*
  * Class:     org_mozilla_webclient_wrapper_0005fnative_CurrentPageImpl

@@ -80,6 +80,7 @@ protected:
     WebShellInitContext *mInitContext;
 };
 
+/*
 class wsViewSourceEvent : public nsActionEvent {
 public:
     wsViewSourceEvent (nsIDocShell * docShell, PRBool viewMode);
@@ -89,6 +90,7 @@ protected:
     nsIDocShell * mDocShell;
     PRBool mViewMode;
 };
+*/
 
 class wsGetDOMEvent : public nsActionEvent {
 public:
