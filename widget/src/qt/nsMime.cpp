@@ -80,7 +80,11 @@ const char* nsMimeStore::format(int n) const
     return 0;
 
   // because of const
+#if QT_VERSION >= 300
+  QPtrList<nsMimeStoreData> *pMimeStore = (QPtrList<nsMimeStoreData>*)&mMimeStore;
+#else
   QList<nsMimeStoreData> *pMimeStore = (QList<nsMimeStoreData>*)&mMimeStore;
+#endif
 
   nsMimeStoreData* msd;
   msd = pMimeStore->at((unsigned int)n);
@@ -92,7 +96,11 @@ QByteArray nsMimeStore::encodedData(const char* name) const
   QByteArray qba;
 
   // because of const
+#if QT_VERSION >= 300
+  QPtrList<nsMimeStoreData> *pMimeStore = (QPtrList<nsMimeStoreData>*)&mMimeStore;
+#else
   QList<nsMimeStoreData> *pMimeStore = (QList<nsMimeStoreData>*)&mMimeStore;
+#endif
 
   nsMimeStoreData* msd;
   for (msd = pMimeStore->first(); msd != 0; msd = pMimeStore->next()) {

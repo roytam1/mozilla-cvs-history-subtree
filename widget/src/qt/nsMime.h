@@ -41,11 +41,15 @@
 #include "nsITransferable.h"
 #include "nsCOMPtr.h"
 
-#include <qlist.h> 
 #include <qcstring.h> 
 #include <qmime.h> 
 #include <qwidget.h> 
 #include <qdragobject.h> 
+#if QT_VERSION >= 300
+#include <qptrlist.h> 
+#else
+#include <qlist.h> 
+#endif
 
 class nsMimeStoreData
 {
@@ -71,7 +75,11 @@ public:
     PRUint32  count();
 
 protected:
+#if QT_VERSION >= 300
+    QPtrList<nsMimeStoreData> mMimeStore;
+#else
     QList<nsMimeStoreData> mMimeStore;
+#endif
     nsMimeStoreData*       at(int n);
 };
 
