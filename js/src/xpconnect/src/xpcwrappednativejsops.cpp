@@ -1084,6 +1084,7 @@ XPC_WN_Shared_Proto_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp
 JS_STATIC_DLL_CALLBACK(void)
 XPC_WN_Shared_Proto_Finalize(JSContext *cx, JSObject *obj)
 {
+    // This can be null if xpc shutdown has already happened
     XPCWrappedNativeProto* p = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
     if(p)
         p->JSProtoObjectFinalized(cx, obj);

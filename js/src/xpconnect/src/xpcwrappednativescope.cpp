@@ -109,17 +109,13 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
     if(mWrappedNativeMap)
     {
-        // XXX assertion or warning???
-        // XXX walk them and unlink?
-//        NS_ASSERTION(0 == mWrappedNativeMap->Count(), "scope has non-empty map");
+        NS_ASSERTION(0 == mWrappedNativeMap->Count(), "scope has non-empty map");
         delete mWrappedNativeMap;    
     }
 
     if(mWrappedNativeProtoMap)
     {
-        // XXX assertion or warning???
-        // XXX walk them and unlink?
-//        NS_ASSERTION(0 == mWrappedNativeProtoMap->Count(), "scope has non-empty map");
+        NS_ASSERTION(0 == mWrappedNativeProtoMap->Count(), "scope has non-empty map");
         delete mWrappedNativeProtoMap;    
     }
 
@@ -207,23 +203,50 @@ XPCWrappedNativeScope::KillDyingScopes()
     gDyingScopes = nsnull;
 }        
 
+struct ShutdownData
+{
+    ShutdownData(XPCCallContext& accx)
+        : ccx(accx), wrapperCount(0), protoCount(0) {}
+    XPCCallContext& ccx;
+    int wrapperCount;
+    int protoCount;
+};
+
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
+    ShutdownData* data = (ShutdownData*) arg;
+    XPCWrappedNative* wrapper = (XPCWrappedNative*) he->value;
+    
+    if(wrapper->IsValid())
+    {
+        if(!wrapper->HasSharedProto())
+            data->protoCount++;
+        wrapper->SystemIsBeingShutDown(data->ccx);
+        data->wrapperCount++;
+    }
+    return HT_ENUMERATE_REMOVE;
+}
 
-//    ((XPCWrappedNative*)he->value)->SystemIsBeingShutDown();
-    ++ *((int*)arg);
-    return HT_ENUMERATE_NEXT;
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeProtoShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
+{
+    ShutdownData* data = (ShutdownData*) arg;
+    XPCWrappedNativeProto* proto = (XPCWrappedNativeProto*) he->value;
+    
+    proto->SystemIsBeingShutDown(data->ccx);
+    data->protoCount++;
+    return HT_ENUMERATE_REMOVE;
 }
 
 //static
 void 
-XPCWrappedNativeScope::SystemIsBeingShutDown()
+XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
     int liveScopeCount = 0;
-    int liveWrapperCount = 0;
-    int liveWrapperProtoCount = 0;
+    
+    ShutdownData data(ccx);
+
     XPCWrappedNativeScope* cur;
     
     // First move all the scopes to the dying list.
@@ -238,37 +261,27 @@ XPCWrappedNativeScope::SystemIsBeingShutDown()
         liveScopeCount++;
     }
     gScopes = nsnull;
-
     
-    // XXX fix this
     // Walk the unified dying list and call shutdown on all wrappers and protos
 
     for(cur = gDyingScopes; cur; cur = cur->mNext)
     {
-// fix this
-/*
+        // Walk the protos first. Wrapper shutdown can leave dangling
+        // proto pointers in the proto map.
+        cur->mWrappedNativeProtoMap->
+                Enumerate(WrappedNativeProtoShutdownEnumerator,  &data);
         cur->mWrappedNativeMap->
-                Enumerate(WrappedNativeShutdownEnumerator,  &liveWrapperCount);
-        ++count;
-
-        if(cur->mDefaultJSObjectPrototype && cur->mRuntime)
-        {
-            JSRuntime* rt = cur->mRuntime->GetJSRuntime();
-            if(rt)
-                JS_RemoveRootRT(rt, &cur->mDefaultJSObjectPrototype);
-            cur->mDefaultJSObjectPrototype = nsnull;
-        }
-*/
+                Enumerate(WrappedNativeShutdownEnumerator,  &data);
     }
 
     // Now it is safe to kill all the scopes.
     KillDyingScopes();
 
 #ifdef XPC_DUMP_AT_SHUTDOWN
-    if(liveWrapperCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", liveWrapperCount);
-    if(liveWrapperProtoCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos\n", liveWrapperProtoCount);
+    if(data.wrapperCount)
+        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", data.wrapperCount);
+    if(data.protoCount)
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos\n", data.protoCount);
     if(liveScopeCount)
         printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n", liveScopeCount);
 #endif

@@ -240,6 +240,7 @@ public:
         {return mNativeSetMap;}
 
     PRLock* GetMapLock() const {return mMapLock;}
+    PRLock* GetContextMapLock() const {return mContextMapLock;}
 
     XPCContext* GetXPCContext(JSContext* cx);
     XPCContext* SyncXPCContextList(JSContext* cx = nsnull);
@@ -297,9 +298,9 @@ public:
         {nsAutoLock lock(mMapLock);
          JS_HashTableRemove(DEBUG_WrappedNativeHashtable, wrapper);}
 
-   private:
+private:
    JSHashTable *DEBUG_WrappedNativeHashtable;
-   public:
+public:
 #endif
 
 private:
@@ -326,6 +327,7 @@ private:
     ClassInfo2NativeSetMap*  mClassInfo2NativeSetMap;
     NativeSetMap*            mNativeSetMap;
     PRLock* mMapLock;
+    PRLock* mContextMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
 };
 
@@ -593,8 +595,8 @@ public:
     static XPCWrappedNativeScope*
     FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj);
 
-    static void
-    SystemIsBeingShutDown();
+    static void 
+    SystemIsBeingShutDown(XPCCallContext& ccx);
 
     static void
     FinishedMarkPhaseOfGC(JSContext* cx);
@@ -1711,6 +1713,7 @@ private:
     JSClass                    mJSClass;
 };
 
+/***********************************************/
 
 class XPCWrappedNativeProto
 {
@@ -1734,12 +1737,15 @@ public:
     void**                   GetSecurityInfoAddr() {return &mSecurityInfo;}
 
     JSBool                   IsShared() const {return nsnull != mClassInfo;}
-    void                     ReleaseOneOff();
+    void                     AddRef();
+    void                     Release();
 
     void SetScriptableInfo(XPCNativeScriptableInfo* si)
         {NS_ASSERTION(!mScriptableInfo, "leak here!"); mScriptableInfo = si;}
 
     void JSProtoObjectFinalized(JSContext *cx, JSObject *obj);
+
+    void SystemIsBeingShutDown(XPCCallContext& ccx);
 
     void DebugDump(PRInt16 depth);
 
@@ -1758,12 +1764,18 @@ private:
     JSBool Init(XPCCallContext& ccx);
 
 private:
+#ifdef DEBUG
+    static PRInt32 gDEBUG_LiveProtoCount;        
+#endif
+
+private:
     XPCWrappedNativeScope*   mScope;
     JSObject*                mJSProtoObject;
     nsIClassInfo*            mClassInfo;
     XPCNativeSet*            mSet;
     void*                    mSecurityInfo;
     XPCNativeScriptableInfo* mScriptableInfo;
+    nsrefcnt                 mRefCnt;
 };
 
 
@@ -1780,7 +1792,7 @@ public:
     void SetNative(nsISupports*  Native)              {mNative = Native;}
     void SetJSObject(JSObject*  JSObject)             {mJSObject = JSObject;}
 
-    void JSObjectFinalized() {mJSObject = nsnull; NS_RELEASE(mNative);}
+    void JSObjectFinalized() {mJSObject = nsnull;}
 
     XPCWrappedNativeTearOff()
         : mJSObject(nsnull), mNative(nsnull), mInterface(nsnull) {}
@@ -1843,7 +1855,7 @@ public:
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
 
     // XXX the rules may change here...
-    JSBool IsValid() const {return nsnull != mIdentity;}
+    JSBool IsValid() const {return nsnull != mFlatJSObject;}
     JSBool HasSharedProto() const {return GetProto()->IsShared();}
     XPCWrappedNativeScope* GetScope() const {return GetProto()->GetScope();}
 
@@ -1854,6 +1866,7 @@ public:
 
     void FlatJSObjectFinalized(JSContext *cx, JSObject *obj);
 
+    void SystemIsBeingShutDown(XPCCallContext& ccx);
 
 #ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
     // This will try to find a member that is of the form "camelCased"

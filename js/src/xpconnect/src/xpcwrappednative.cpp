@@ -50,16 +50,23 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(!identity)
         return nsnull;
 
+    XPCWrappedNative* wrapper;
+
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
+    {   // scoped lock
+        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        wrapper = map->Find(identity);
+        if(wrapper)
+            NS_ADDREF(wrapper);
+    }
 
-    // XXX add locking
-
-    XPCWrappedNative* wrapper = map->Find(identity);
     if(wrapper)
     {
         if(!wrapper->FindTearOff(ccx, Interface))
+        {
+            NS_RELEASE(wrapper);
             return nsnull;
-        NS_ADDREF(wrapper);
+        }
         return wrapper;
     }
 
@@ -90,7 +97,10 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     wrapper = new XPCWrappedNative(Object, proto);
     if(!wrapper)
+    {
+        proto->Release();
         return nsnull;
+    }
 
     if(!wrapper->Init(ccx))
     {
@@ -107,7 +117,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
     }
 
-    map->Add(wrapper);
+    {   // scoped lock
+        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        map->Add(wrapper);
+    }
+
     return wrapper;
 }
 
@@ -124,20 +138,24 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
     if(!identity)
         return nsnull;
 
+    XPCWrappedNative* wrapper;
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
 
-    // XXX add locking
-
-    XPCWrappedNative* wrapper = map->Find(identity);
-    if(wrapper)
-    {
-        if(!wrapper->FindTearOff(ccx, Interface))
+    {   // scoped lock
+        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        wrapper = map->Find(identity);
+        if(!wrapper)
             return nsnull;
         NS_ADDREF(wrapper);
-        return wrapper;
     }
 
-    return nsnull;
+    if(!wrapper->FindTearOff(ccx, Interface))
+    {
+        NS_RELEASE(wrapper);
+        return nsnull;
+    }
+    
+    return wrapper;
 }
 
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
@@ -156,11 +174,19 @@ XPCWrappedNative::~XPCWrappedNative()
     if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
         delete mScriptableInfo;
 
-    if(!mProto->IsShared())
-        mProto->ReleaseOneOff();
-    mProto = nsnull;
+    if(mProto)
+    {
+        Native2WrappedNativeMap* map = mProto->GetScope()->GetWrappedNativeMap();
+        {   // scoped lock
+            nsAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());  
+            map->Remove(this);
+        }
 
-    // XXX fill me in...
+        mProto->Release();
+        mProto = nsnull;
+    }
+
+    NS_IF_RELEASE(mIdentity);
 }
 
 JSBool
@@ -390,6 +416,59 @@ XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
 
     mFlatJSObject = nsnull;
     Release();
+}
+
+void 
+XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
+{
+    if(!IsValid())
+        return;
+
+    // The long standing strategy is to leak the objects still held at shutdown.
+    // The general problem is that propigating release out of xpconnect at 
+    // shutdown time causes a world of problems.
+
+    // We leak mIdentity.
+
+    // short circuit future finalization
+    JS_SetPrivate(ccx.GetJSContext(), mFlatJSObject, nsnull);
+    mFlatJSObject = nsnull; // This makes 'IsValid()' return false.
+    
+    if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
+    {
+        delete mScriptableInfo;
+        mScriptableInfo = nsnull;
+    }
+    
+    mProto->SystemIsBeingShutDown(ccx);
+    mProto->Release();
+    mProto = nsnull;
+
+    // cleanup the tearoffs...
+
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
+    {
+        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        {
+            if(to->GetJSObject())
+            {
+                JS_SetPrivate(ccx.GetJSContext(), to->GetJSObject(), nsnull);
+                to->SetJSObject(nsnull);
+                // We leak the tearoff mNative
+            }
+        }
+    }
+
+    if(mFirstChunk.mNextChunk)
+    {
+        delete mFirstChunk.mNextChunk;
+        mFirstChunk.mNextChunk = nsnull;
+    }
+
+    // XXX do more stuff?
+
 }
 
 /***************************************************************************/

@@ -256,6 +256,8 @@ XPCJSRuntime::~XPCJSRuntime()
 
     if(mMapLock)
         PR_DestroyLock(mMapLock);
+    if(mContextMapLock)
+        PR_DestroyLock(mContextMapLock);
     NS_IF_RELEASE(mJSRuntimeService);
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
@@ -280,6 +282,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mClassInfo2NativeSetMap(ClassInfo2NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mMapLock(PR_NewLock()),
+   mContextMapLock(PR_NewLock()),
    mWrappedJSToReleaseArray()
 {
 
@@ -331,7 +334,8 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
        self->GetIID2NativeInterfaceMap() &&
        self->GetClassInfo2NativeSetMap() &&
        self->GetNativeSetMap()           &&
-       self->GetMapLock())
+       self->GetMapLock()                &&
+       self->GetContextMapLock())
     {
         return self;
     }
@@ -346,9 +350,10 @@ XPCJSRuntime::GetXPCContext(JSContext* cx)
 
     // find it in the map.
 
-    PR_Lock(mMapLock);
-    xpcc = mContextMap->Find(cx);
-    PR_Unlock(mMapLock);
+    { // scoped lock
+        nsAutoLock lock(mContextMapLock);
+        xpcc = mContextMap->Find(cx);
+    }
 
     // else resync with the JSRuntime's JSContext list and see if it is found
     if(!xpcc)
@@ -382,7 +387,7 @@ XPCContext*
 XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
 {
     // hold the map lock through this whole thing
-    nsAutoLock lock(mMapLock);
+    nsAutoLock lock(mContextMapLock);
 
     // get rid of any XPCContexts that represent dead JSContexts
     mContextMap->Enumerate(KillDeadContextsCB, mJSRuntime);
@@ -423,7 +428,7 @@ void
 XPCJSRuntime::PurgeXPCContextList()
 {
     // hold the map lock through this whole thing
-    nsAutoLock lock(mMapLock);
+    nsAutoLock lock(mContextMapLock);
 
     // get rid of all XPCContexts
     mContextMap->Enumerate(PurgeContextsCB, nsnull);
@@ -484,6 +489,7 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mXPConnect @ %x", mXPConnect));
         XPC_LOG_ALWAYS(("mJSRuntime @ %x", mJSRuntime));
         XPC_LOG_ALWAYS(("mMapLock @ %x", mMapLock));
+        XPC_LOG_ALWAYS(("mContextMapLock @ %x", mContextMapLock));
         XPC_LOG_ALWAYS(("mJSRuntimeService @ %x", mJSRuntimeService));
 
         XPC_LOG_ALWAYS(("mWrappedJSToReleaseArray @ %x with %d wrappers(s)", \

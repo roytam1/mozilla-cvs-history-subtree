@@ -94,11 +94,15 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
+    { // scoped callcontext
+        XPCCallContext ccx(NATIVE_CALLER);
+        if(ccx.IsValid())
+            XPCWrappedNativeScope::SystemIsBeingShutDown(ccx);
+    }
+
     NS_IF_RELEASE(mInterfaceInfoManager);
     NS_IF_RELEASE(mContextStack);
     NS_IF_RELEASE(mDefaultSecurityManager);
-
-    XPCWrappedNativeScope::SystemIsBeingShutDown();
 
     // Unfortunately calling CleanupAllThreads before the stuff above
     // (esp. SystemIsBeingShutDown) causes too many bad things to happen 

@@ -888,7 +888,7 @@ main(int argc, char **argv)
     js_ForceGC(jscontext);
     JS_DestroyContext(jscontext);
     xpc->SyncJSContexts();
-    xpc->DebugDump(4);
+    xpc->DebugDump(8);
     xpc = nsnull;   // force nsCOMPtr to Release the service
     secman = nsnull;
     rtsvc = nsnull;
