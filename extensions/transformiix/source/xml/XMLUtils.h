@@ -69,7 +69,7 @@ public:
         mLocalName = nsnull;
     }
 
-    MBool isNull()
+    PRBool isNull()
     {
         return mNamespaceID == kNameSpaceID_None && !mLocalName;
     }
