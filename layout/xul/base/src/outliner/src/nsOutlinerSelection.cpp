@@ -368,8 +368,10 @@ NS_IMETHODIMP nsOutlinerSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEn
 {
   if (!aAugment) {
     // Clear our selection.
-    mFirstRange->Invalidate();
-    delete mFirstRange;
+    if (mFirstRange) {
+        mFirstRange->Invalidate();
+        delete mFirstRange;
+    }
   }
 
   if (aStartIndex == -1) {
@@ -384,7 +386,7 @@ NS_IMETHODIMP nsOutlinerSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEn
   PRInt32 start = aStartIndex < aEndIndex ? aStartIndex : aEndIndex;
   PRInt32 end = aStartIndex < aEndIndex ? aEndIndex : aStartIndex;
 
-  if (aAugment) {
+  if (aAugment && mFirstRange) {
     // We need to remove all the items within our selected range from the selection,
     // and then we insert our new range into the list.
     mFirstRange->RemoveRange(start, end);
@@ -405,9 +407,11 @@ NS_IMETHODIMP nsOutlinerSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEn
 
 NS_IMETHODIMP nsOutlinerSelection::ClearSelection()
 {
-  mFirstRange->Invalidate();
-  delete mFirstRange;
-  mFirstRange = nsnull;
+  if (mFirstRange) {
+    mFirstRange->Invalidate();
+    delete mFirstRange;
+    mFirstRange = nsnull;
+  }
   mShiftSelectPivot = -1;
 
   FireOnSelectHandler();
