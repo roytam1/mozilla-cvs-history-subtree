@@ -33,8 +33,10 @@ CSRCS		= xpt_struct.c 	\
 
 REQUIRES	= $(MODULE)
 
-# build libxpt (but not xptinfo, xptcall subdirs) early so that it'll be
-# available to xpidl, which also must be built early.
+EXPORTS = $(NULL)
+
+# build libxpt early so that it'll be available to xpidl, which also
+# must be built early.
 export:: libs
 
 include $(topsrcdir)/config/rules.mk
