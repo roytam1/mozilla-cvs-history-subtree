@@ -76,6 +76,7 @@ clean clobber::	FORCE
 	    echo "cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) clean"; \
 	    ( cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) clean ); \
 	done
+	cd clients/tools; $(MAKE) -f Makefile.client $(MFLAGS) clean
 
 realclean clobber_all::	FORCE
 	@for i in $(SRCDIRS); do \
