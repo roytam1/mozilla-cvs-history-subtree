@@ -39,6 +39,7 @@
 #include "nsILocalFile.idl"
 
 %{C++
+#undef DARWIN
 #include <Files.h>
 #include <CFURL.h>
 %}
