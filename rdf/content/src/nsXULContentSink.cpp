@@ -451,9 +451,16 @@ XULContentSinkImpl::~XULContentSinkImpl()
         }
     }
 
-    {
-        // XXXwaterson Pop all of the elements off of the context
-        // stack, and delete any remaining content elements.
+    // Pop all of the elements off of the context stack, and delete
+    // any remaining content elements. The context stack _should_ be
+    // empty, unless something has gone wrong.
+    while (mContextStack.Depth()) {
+        nsXULPrototypeNode* node;
+        nsVoidArray children;
+        State state;
+        mContextStack.Pop(&node, &children, &state);
+
+        // XXX delete stuff here.
     }
 
     PR_FREEIF(mText);
@@ -666,6 +673,11 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
     }
 #endif
 
+    // Flush any text _now_, so that we'll get text nodes created
+    // before popping the stack.
+    FlushText();
+
+    // Pop the context stack and do prototype hookup.
     nsXULPrototypeNode* node;
     nsVoidArray children;
     rv = mContextStack.Pop(&node, &children, &mState);
@@ -679,8 +691,6 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         nsCRT::free(tagStr);
     }
 #endif
-
-    FlushText();
 
     switch (node->mType) {
     case nsXULPrototypeNode::eType_Element: {
@@ -1436,13 +1446,20 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, ns
         return rv;
     }
 
-    // Push the element onto the context stack, so that child
-    // containers will hook up to us as their parent.
-    rv = mContextStack.Push(element, mState);
+    // Link this element to its parent.
+    nsVoidArray* children;
+    rv = mContextStack.GetTopChildren(&children);
     if (NS_FAILED(rv)) {
         delete element;
         return rv;
     }
+
+    children->AppendElement(element);
+
+    // Push the element onto the context stack, so that child
+    // containers will hook up to us as their parent.
+    rv = mContextStack.Push(element, mState);
+    if (NS_FAILED(rv)) return rv;
 
     // Add the attributes
     rv = AddAttributes(aNode, element);
