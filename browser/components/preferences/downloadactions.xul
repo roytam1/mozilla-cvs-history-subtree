@@ -51,7 +51,7 @@
             dlgbuttons="accept"
             onload="gDownloadActionsDialog.init();"
             title="&downloadactionsDialog.title;"
-            width="400" height="290" persist="width height screenX screenY">
+            width="480" height="310" persist="width height screenX screenY">
 
   <prefpane id="DownloadActionsDialogPane" flex="1">  
     <script type="application/x-javascript" src="chrome://browser/content/preferences/helperapplications.js"/>
@@ -63,20 +63,20 @@
              than one built with treebuilder but for some reason treebuilder is
              throwing "can't do open ended queries like that!" assertions for
              no discernible reason -->
-    <tree id="fileHandlersList" flex="1" hidecolumnpicker="true"
+    <tree id="fileHandlersList" flex="1"
           datasources="rdf:null" lastSelected="0" persist="lastSelected"
           onselect="gDownloadActionsDialog.onSelectionChanged();">
       <template>
         <rule>
           <conditions>
             <content uri="?uri"/>
-            <triple subject="?uri" 
-                    predicate="http://home.netscape.com/NC-rdf#MIME-types"
-                    object="?MIME-types"/>
-            <member container="?MIME-types" child="?type"/>
+            <member container="?uri" child="?type"/>
             <triple subject="?type" 
                     predicate="http://home.netscape.com/NC-rdf#FileType"
                     object="?file-type"/>
+            <triple subject="?type" 
+                    predicate="http://home.netscape.com/NC-rdf#FileMIMEType"
+                    object="?file-mime-type"/>
             <triple subject="?type" 
                     predicate="http://home.netscape.com/NC-rdf#FileHandler"
                     object="?file-handler"/>
@@ -98,6 +98,7 @@
                 <treerow>
                   <treecell label="?file-extension" src="?file-icon"/>
                   <treecell label="?file-type"/>
+                  <treecell label="?file-mime-type"/>
                   <treecell label="?file-handler"/>
                 </treerow>
               </treeitem>
@@ -110,12 +111,19 @@
         <treecol id="fileExtension"
                  class="sortDirectionIndicator" persist="width"
                  sort="rdf:http://home.netscape.com/NC-rdf#FileExtension"
-                 sortActive="true" sortDirection="none"/>
+                 sortActive="true" sortDirection="none"
+                 label="&fileExtensionColumn.label;" accesskey="&fileExtensionColumn.accesskey;"/>
         <treecol id="fileType" flex="1"
                  class="sortDirectionIndicator" persist="width"
                  sort="rdf:http://home.netscape.com/NC-rdf#FileType"
                  sortActive="false" sortDirection="none"
                  label="&fileTypeColumn.label;" accesskey="&fileTypeColumn.accesskey;"/>
+        <splitter class="tree-splitter" />
+        <treecol id="fileMIMEType" flex="1" hidden="true"
+                 class="sortDirectionIndicator" persist="width"
+                 sort="rdf:http://home.netscape.com/NC-rdf#FileMIMEType"
+                 sortActive="false" sortDirection="none"
+                 label="&fileMIMETypeColumn.label;" accesskey="&fileMIMETypeColumn.accesskey;"/>
         <splitter class="tree-splitter" />
         <treecol id="fileHandler" flex="1"
                  class="sortDirectionIndicator" persist="width"
@@ -126,7 +134,7 @@
     </tree>
     <separator class="thin"/>
     <hbox>
-      <hbox flex="1">
+      <hbox flex="1" id="downloadActionsButtons">
         <button id="removeFileHandler"
                 label="&remove.label;" accesskey="&remove.accesskey;"
                 oncommand="gDownloadActionsDialog.removeFileHandler();"/>
@@ -134,7 +142,7 @@
                 label="&edit.label;" accesskey="&edit.accesskey;"
                 oncommand="gDownloadActionsDialog.editFileHandler();"/>
       </hbox>
-      <resizer direction="bottomright"/>
+      <resizer dir="bottomright"/>
     </hbox>
         
   </prefpane>

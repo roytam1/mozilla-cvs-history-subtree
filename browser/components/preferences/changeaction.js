@@ -74,6 +74,8 @@ var gChangeActionDialog = {
 
     var handlerGroup = document.getElementById("handlerGroup");
     
+    var handledByPlugin = this._helperApps.getLiteralValue(this._itemRes.Value, 
+                                                           "FileHandledByPlugin") == "true";
     this._handlerRes = this._helperApps.GetTarget(this._itemRes, this._handlerPropArc, true);
     if (this._handlerRes) {
       this._handlerRes = this._handlerRes.QueryInterface(Components.interfaces.nsIRDFResource);
@@ -105,6 +107,7 @@ var gChangeActionDialog = {
       var defaultApp = document.getElementById("defaultApp");
       var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
       defaultApp.label = mimeInfo.defaultDescription;
+      dump("*** mimeInfo.defaultDescription = " + this._getDisplayNameForFile(mimeInfo.defaultApplicationHandler) + "\n");
       defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
       
       var pluginName = document.getElementById("pluginName");
@@ -125,19 +128,24 @@ var gChangeActionDialog = {
       }
       
       // Selected Action Radiogroup
-      var handleInternal = this._helperApps.getLiteralValue(this._handlerRes.Value, "useSystemDefault");
-      var saveToDisk = this._helperApps.getLiteralValue(this._handlerRes.Value, "saveToDisk");
-      if (handleInternal == "true")
-        handlerGroup.selectedItem = document.getElementById("openDefault");
-      else if (saveToDisk == "true")
-        handlerGroup.selectedItem = document.getElementById("saveToDisk");
-      else
-        handlerGroup.selectedItem = document.getElementById("openApplication");
+      if (!handledByPlugin) {
+        var handleInternal = this._helperApps.getLiteralValue(this._handlerRes.Value, "useSystemDefault");
+        var saveToDisk = this._helperApps.getLiteralValue(this._handlerRes.Value, "saveToDisk");
+        if (handleInternal == "true")
+          handlerGroup.selectedItem = document.getElementById("openDefault");
+        else if (saveToDisk == "true")
+          handlerGroup.selectedItem = document.getElementById("saveToDisk");
+        else
+          handlerGroup.selectedItem = document.getElementById("openApplication");
+      }
     }
-    else {
+    else if (!handledByPlugin) {
       // No Handler/ExtApp Resources for this type for some reason
       handlerGroup.selectedItem = document.getElementById("openDefault");
     }
+
+    if (handledByPlugin)
+      handlerGroup.selectedItem = document.getElementById("plugin");
     
     this._lastSelectedMode = handlerGroup.selectedItem;
     

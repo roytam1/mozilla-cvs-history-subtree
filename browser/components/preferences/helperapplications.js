@@ -35,7 +35,11 @@
 # 
 # ***** END LICENSE BLOCK *****
 
-var gRDF;    
+var gRDF;
+
+const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
+const kDisabledPluginTypesPref = "browser.download.pluginOverrideTypes";
+const kPluginOverrideTypesNotHandled = "browser.download.pluginOverrideTypesNotHandled";
 
 ///////////////////////////////////////////////////////////////////////////////
 // MIME Types DataSource Wrapper
@@ -92,33 +96,63 @@ function ArrayEnumerator(aItems)
 
 function HelperApps()
 {
-  if (!gRDF) 
-    gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+  if (!gRDF) {
+    gRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                     .getService(Components.interfaces.nsIRDFService);
+  }
   
   const mimeTypes = "UMimTyp";
-  var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"].getService(Components.interfaces.nsIProperties);
+  var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
+                              .getService(Components.interfaces.nsIProperties);
   
   var file = fileLocator.get(mimeTypes, Components.interfaces.nsIFile);
 
-  var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
-  var fileHandler = ioService.getProtocolHandler("file").QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+  var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                            .getService(Components.interfaces.nsIIOService);
+  var fileHandler = ioService.getProtocolHandler("file")
+                             .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
   this._inner = gRDF.GetDataSourceBlocking(fileHandler.getURLSpecFromFile(file));
   this._inner.AddObserver(this);
 
-  this._fileTypeArc       = gRDF.GetResource(NC_URI("FileType"));
-  this._fileMimeTypeArc   = gRDF.GetResource(NC_URI("FileMIMEType"));
-  this._fileHandlerArc    = gRDF.GetResource(NC_URI("FileHandler"));
-  this._fileIconArc       = gRDF.GetResource(NC_URI("FileIcon"));
-  this._largeFileIconArc  = gRDF.GetResource(NC_URI("LargeFileIcon"));
-  this._fileExtensionArc  = gRDF.GetResource(NC_URI("FileExtension"));
-  this._fileExtensionsArc = gRDF.GetResource(NC_URI("FileExtensions"));
-  this._handleAutoArc     = gRDF.GetResource(NC_URI("FileHandleAuto"));
-  this._valueArc          = gRDF.GetResource(NC_URI("value"));
-  this._handlerPropArc    = gRDF.GetResource(NC_URI("handlerProp"));
-  this._externalAppArc    = gRDF.GetResource(NC_URI("externalApplication"));
+  this._fileTypeArc         = gRDF.GetResource(NC_URI("FileType"));
+  this._fileMimeTypeArc     = gRDF.GetResource(NC_URI("FileMIMEType"));
+  this._fileHandlerArc      = gRDF.GetResource(NC_URI("FileHandler"));
+  this._fileHandledByPlugin = gRDF.GetResource(NC_URI("FileHandledByPlugin"));
+  this._fileIconArc         = gRDF.GetResource(NC_URI("FileIcon"));
+  this._largeFileIconArc    = gRDF.GetResource(NC_URI("LargeFileIcon"));
+  this._fileExtensionArc    = gRDF.GetResource(NC_URI("FileExtension"));
+  this._fileExtensionsArc   = gRDF.GetResource(NC_URI("FileExtensions"));
+  this._handleAutoArc       = gRDF.GetResource(NC_URI("FileHandleAuto"));
+  this._valueArc            = gRDF.GetResource(NC_URI("value"));
+  this._handlerPropArc      = gRDF.GetResource(NC_URI("handlerProp"));
+  this._externalAppArc      = gRDF.GetResource(NC_URI("externalApplication"));
+  this._childArc            = gRDF.GetResource(NC_URI("child"));
+  this._mimeTypes           = gRDF.GetResource("urn:mimetypes");
+  this._mimeTypesRoot       = gRDF.GetResource("urn:mimetypes:root");
+  
+  // Read enabled plugin type information from the category manager
+  var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                        .getService(Components.interfaces.nsIPrefBranch);
+  var disabled = "";
+  if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) 
+    disabled = prefs.getCharPref(kDisabledPluginTypesPref);
+
+  var catman = Components.classes["@mozilla.org/categorymanager;1"].getService(Components.interfaces.nsICategoryManager);
+  var types = catman.enumerateCategory("Gecko-Content-Viewers");
+  while (types.hasMoreElements()) {
+    var currType = types.getNext().QueryInterface(Components.interfaces.nsISupportsCString).data;
+    var contractid = catman.getCategoryEntry("Gecko-Content-Viewers", currType);
+    if (contractid == kPluginHandlerContractID) {
+      this._availableTypes[currType] = { mimeURI: MIME_URI(currType),
+                                         isHandledByPlugin: true,
+                                         isPluginEnabled: disabled.indexOf("currType") == -1 };
+    }
+  }
 }
 
 HelperApps.prototype = {
+  _availableTypes: { },
+
   mimeHandlerExists: function (aMIMEType)
   {
     var valueProperty = gRDF.GetUnicodeResource(NC_URI("value"));
@@ -251,6 +285,18 @@ HelperApps.prototype = {
         else if (aProperty.EqualsNode(this._fileMimeTypeArc))
           return gRDF.GetLiteral(typeInfo.MIMEType);
         else if (aProperty.EqualsNode(this._fileHandlerArc)) {
+          // Look for a plugin handler first
+          if (this._availableTypes[typeInfo.MIMEType].isHandledByPlugin && 
+              this._availableTypes[typeInfo.MIMEType].isPluginEnabled) {
+            for (var i = 0; i < navigator.plugins.length; ++i) {
+              var plugin = navigator.plugins[i];
+              for (var j = 0; j < plugin.length; ++j) {
+                if (typeInfo.MIMEType == plugin[j].type)
+                  return gRDF.GetLiteral(bundleUCT.getFormattedString("openWith", [plugin.name]));
+              }
+            }
+          }
+          
           var handler = this.GetTarget(aSource, this._handlerPropArc, true);
           if (handler) {
             handler = handler.QueryInterface(Components.interfaces.nsIRDFResource);
@@ -267,9 +313,13 @@ HelperApps.prototype = {
               }
             }
           }     
-          
           var openWith2 = bundleUCT.getFormattedString("openWith", [typeInfo.defaultDescription]);
           return gRDF.GetLiteral(openWith2);
+        }
+        else if (aProperty.EqualsNode(this._fileHandledByPlugin)) {
+          var handledByPlugin = (this._availableTypes[typeInfo.MIMEType].isHandledByPlugin && 
+                                 this._availableTypes[typeInfo.MIMEType].isPluginEnabled);
+          return gRDF.GetLiteral(handledByPlugin ? "true" : "false");
         }
         else if (aProperty.EqualsNode(this._fileIconArc)) {
           try {
@@ -318,6 +368,29 @@ HelperApps.prototype = {
   GetTargets: function (aSource, aProperty, aTruthValue) {
     if (this._isRootTypeResource(aSource)) { 
       return new ArrayEnumerator([this.GetTarget(aSource, aProperty, aTruthValue)]);
+    }
+    
+    if (aSource.EqualsNode(this._mimeTypes)) {
+      if (aProperty.EqualsNode(this._childArc)) {
+        var ctr = Components.classes["@mozilla.org/rdf/container;1"]
+                            .createInstance(Components.interfaces.nsIRDFContainer);
+        ctr.Init(this._inner, this._mimeTypesRoot);
+        var elements = ctr.GetElements();
+        while (elements.hasMoreElements()) {
+          var type = elements.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+          var mi = this.getMIMEInfo(type);
+          if (!(mi.MIMEType in this._availableTypes)) {
+            this._availableTypes[mi.MIMEType] = { mimeURI: MIME_URI(mi.MIMEType),
+                                                  isHandledByPlugin: false,
+                                                  isPluginEnabled: false };
+          }
+        }
+        var types = [];
+        for (var type in this._availableTypes)
+          types.push(gRDF.GetResource(this._availableTypes[type].mimeURI));
+        return new ArrayEnumerator(types);
+      }
+      return new ArrayEnumerator([]);
     }
     
     return this._inner.GetTargets(aSource, aProperty, aTruthValue);

@@ -90,7 +90,6 @@ filefield {
   background-color: -moz-Dialog;
   color: -moz-DialogText;
   margin: 1px;
-  padding: 0px 0px 0px 2px;
 }
 
 filefield[disabled="true"] .fileFieldContentBox {
@@ -104,6 +103,7 @@ filefield[disabled="true"] .fileFieldIcon {
 .fileFieldIcon {
   width: 16px;
   height: 16px;
+  margin: 2px 4px 2px 2px;
 }
 
 .fileFieldLabel {
@@ -111,12 +111,20 @@ filefield[disabled="true"] .fileFieldIcon {
   background-color: transparent;
   border: none;
   padding: 1px 0px 0px 0px;
-  margin: none;
+  margin: 0px;
 }
 
 /* Download Actions Manager */
+#DownloadActionsDialogPane {
+  padding: 0px; 
+}
+
 #fileHandlersList {
-  margin: 1px 6px 2px 5px;
+  margin: 9px 8px 5px 8px;
+}
+
+#downloadActionsButtons {
+  margin: 0px 3px 6px 3px !important;
 }
 
 #fileExtension {

@@ -686,7 +686,7 @@
           if (win)
             win.focus();
           else 
-            win = openDialog(aURL, "", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+            win = openDialog(aURL, "centerscreen", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
           return win;
         </body>
       </method>
