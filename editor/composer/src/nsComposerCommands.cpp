@@ -58,6 +58,14 @@
 #include "nsComposerUtils.h"
 #include "nsComposerCommands.h"
 
+#include "nsIComponentManager.h"
+
+
+#define STATE_BEGIN NS_LITERAL_STRING("state_begin")
+#define STATE_ANY   NS_LITERAL_STRING("state_any")
+#define STATE_ALL   NS_LITERAL_STRING("state_all")
+
+
 
 nsBaseComposerCommand::nsBaseComposerCommand()
 {
@@ -174,7 +182,7 @@ nsBaseStateUpdatingCommand::UpdateCommandState(const nsAReadableString & aComman
 }
 
 NS_IMETHODIMP
-nsBaseStateUpdatingCommand::GetCommandState(nsICommandParams *aCommandParams,nsISupports *aCommandRefCon)
+nsBaseStateUpdatingCommand::GetCommandState(nsICommandParams **aCommandParams,nsISupports *aCommandRefCon)
 {
     return NS_OK;
 }
@@ -334,15 +342,52 @@ nsStyleUpdatingCommand::nsStyleUpdatingCommand(const char* aTagName)
 {
 }
 
-NS_IMETHODIMP
-nsStyleUpdatingCommand::GetCommandState(nsICommandParams *aCommandParams, nsISupports *aCommandRefCon)
+nsresult GetCommandParamsForState(nsICommandParams **aRetVal);
+
+nsresult
+GetCommandParamsForState(nsICommandParams **aRetVal)
 {
-  nsCOMPtr<nsIHTMLEditor> editor = do_QueryInterface(aCommandParams);
+  if (!aRetVal)
+    return NS_ERROR_NULL_POINTER;
+  *aRetVal = 0;
+  nsresult rv;
+	nsCOMPtr<nsICommandParams> params = do_CreateInstance(NS_COMMAND_PARAMS_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv))
+  {
+    params->SetBooleanValue(STATE_BEGIN,0);//the values dont matter, they will be filled in
+    params->SetBooleanValue(STATE_ANY,0);//the values dont matter, they will be filled in
+    params->SetBooleanValue(STATE_ALL,0);//the values dont matter, they will be filled in
+  }
+  else
+    return rv;
+  *aRetVal = params;
+  NS_IF_ADDREF((*aRetVal));
+  return NS_OK;
+}
+
+
+
+NS_IMETHODIMP
+nsStyleUpdatingCommand::GetCommandState(nsICommandParams **aCommandParams, nsISupports *aCommandRefCon)
+{
+  if (!aCommandRefCon || !aCommandParams)
+    return NS_ERROR_NULL_POINTER;
+  nsCOMPtr<nsICommandParams> params(*aCommandParams);
+  nsresult rv = NS_OK;
+
+  if (!(*aCommandParams))
+  {
+    if (NS_FAILED(rv = GetCommandParamsForState(aCommandParams)))
+      return rv;
+    params = *aCommandParams;
+  }
+  if (!params)
+    return NS_ERROR_NULL_POINTER;
+  nsCOMPtr<nsIHTMLEditor> editor = do_QueryInterface(*aCommandParams);
   NS_ASSERTION(editor, "Need editor here");
   if (!editor)
-    return NS_ERROR_INVALID_PARAM;
+    return NS_ERROR_NOT_INITIALIZED;
 
-  nsresult rv = NS_OK;
 
   PRBool firstOfSelectionHasProp = PR_FALSE;
   PRBool anyOfSelectionHasProp = PR_FALSE;
@@ -350,10 +395,28 @@ nsStyleUpdatingCommand::GetCommandState(nsICommandParams *aCommandParams, nsISup
 
   nsCOMPtr<nsIAtom> styleAtom = getter_AddRefs(NS_NewAtom(mTagName));
   rv = editor->GetInlineProperty(styleAtom, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""), &firstOfSelectionHasProp, &anyOfSelectionHasProp, &allOfSelectionHasProp);
-  outStyleSet = allOfSelectionHasProp;			// change this to alter the behaviour
+  //outStyleSet = allOfSelectionHasProp;			// change this to alter the behaviour
 
   //parse through commandparams
+  params->First();
+  nsAutoString name;
+  while (NS_OK == params->GetNext(name))
+  {
+    PRInt16 type;
+    if (NS_FAILED(params->GetValueType(name,&type)))
+      continue;
+    //all we know are booleans
+    if (!type == nsICommandParams::eBooleanType)
+      continue;
 
+
+    if (name.Equals(STATE_BEGIN))
+      params->SetBooleanValue(name,firstOfSelectionHasProp);
+    else if (name.Equals(STATE_ANY))
+      params->SetBooleanValue(name,anyOfSelectionHasProp);
+    else if (name.Equals(STATE_ALL))
+      params->SetBooleanValue(name,allOfSelectionHasProp);
+  }
   return rv;
 }
 
@@ -705,7 +768,7 @@ nsMultiStateCommand::GetCommandState(const nsAReadableString & aCommandName, nsI
 }
 
 NS_IMETHODIMP
-nsMultiStateCommand::GetCommandState(nsICommandParams *aCommandParams,nsISupports *aCommandRefCon)
+nsMultiStateCommand::GetCommandState(nsICommandParams **aCommandParams,nsISupports *aCommandRefCon)
 {
     return NS_OK;
 }

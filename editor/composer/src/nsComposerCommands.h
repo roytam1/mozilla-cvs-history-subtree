@@ -128,7 +128,7 @@ public:
 
   nsStyleUpdatingCommand(const char* aTagName);
 //override this method to  parse the command parameters for this command params.           
-  NS_IMETHOD GetCommandState(nsICommandParams *aCommandParams, nsISupports *aCommandRefCon);
+  NS_IMETHOD GetCommandState(nsICommandParams **aCommandParams, nsISupports *aCommandRefCon);
 
 protected:
   
