@@ -114,7 +114,7 @@
   
   <popup id="downloadContextMenu" onpopupshowing="return buildContextMenu(event);"/>
 
-  <vbox id="downloadView" flex="1" 
+  <vbox id="downloadView" flex="1" style="overflow: auto;"
         datasources="rdf:null" ref="NC:DownloadsRoot"
         ondragover="nsDragAndDrop.dragOver(event, gDownloadDNDObserver);"
         ondragdrop="nsDragAndDrop.drop(event, gDownloadDNDObserver);">
