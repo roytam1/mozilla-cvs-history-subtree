@@ -74,7 +74,7 @@
     
   <keyset id="downloadKeys">
     <key id="key_cleanUp" keycode="VK_DELETE" command="cmd_cleanUp" modifiers="accel,shift"/>
-    <key id="key_close"   key="&cmd.close.commandKey;" onkeypress="window.close();" modifiers="accel"/>
+    <key id="key_close"   key="&cmd.close.commandKey;" oncommand="window.close();" modifiers="accel"/>
   </keyset>
   
   <vbox id="contextMenuPalette" hidden="true">
@@ -114,7 +114,7 @@
   
   <popup id="downloadContextMenu" onpopupshowing="return buildContextMenu(event);"/>
 
-  <vbox id="downloadView" flex="1" style="overflow: auto;"
+  <vbox id="downloadView" flex="1" 
         datasources="rdf:null" ref="NC:DownloadsRoot"
         ondragover="nsDragAndDrop.dragOver(event, gDownloadDNDObserver);"
         ondragdrop="nsDragAndDrop.drop(event, gDownloadDNDObserver);">
@@ -135,14 +135,14 @@
         </conditions>
         <bindings>
           <binding subject="?download"
-                   predicate="http://home.netscape.com/NC-rdf#DownloadAnimated"
-                   object="?animated"/>
+                  predicate="http://home.netscape.com/NC-rdf#DownloadAnimated"
+                  object="?animated"/>
           <binding subject="?download"
-                   predicate="http://home.netscape.com/NC-rdf#DownloadStatus"
-                   object="?status"/>
+                  predicate="http://home.netscape.com/NC-rdf#DownloadStatus"
+                  object="?status"/>
           <binding subject="?download"
-                   predicate="http://home.netscape.com/NC-rdf#ProgressPercent"
-                   object="?progress-percent"/>
+                  predicate="http://home.netscape.com/NC-rdf#ProgressPercent"
+                  object="?progress-percent"/>
         </bindings>            
         <action>
           <download uri="?download" context="downloadContextMenu"
@@ -151,16 +151,19 @@
         </action>
       </rule>
     </template>
-  </vbox>
+  </vbox> 
   
   <hbox>
-    <hbox id="commandBar">
+    <hbox id="commandBar" flex="1">
       <button id="cleanUpButton" 
-              label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" 
+              label="&cmd.cleanUp.label;" accesskey="&cmd.cleanUp.accesskey;" tooltiptext="&cmd.cleanUp.tooltip;" 
               command="cmd_cleanUp"/>
+      <separator id="commandBarSeparator"/>              
+      <button id="optionsButton" 
+              label="&cmd.options.label;" accesskey="&cmd.options.accesskey;" 
+              oncommand="onDownloadShowOptions();"/>
     </hbox>
     
-    <spacer flex="1"/>
     <resizer dir="bottomright"/>
   </hbox>  
 

@@ -50,6 +50,9 @@
 <!ENTITY cmd.cleanUp.tooltip              "Removes completed, canceled or failed downloads from the list">
 <!ENTITY cmd.cleanUp.accesskey            "a">
 
+<!ENTITY cmd.options.label                "Options">
+<!ENTITY cmd.options.accesskey            "o">
+
 <!ENTITY closeWhenDone.label              "Close when downloads complete">
 <!ENTITY closeWhenDone.tooltip            "Closes the Downloads window when all files are done downloading">
 
