@@ -109,6 +109,9 @@ LOCAL_INCLUDES += -I.
 libs:: MozillaControl.html
 	$(INSTALL) $^ $(DIST)/bin/res
 
+install:: MozillaControl.html
+	$(SYSINSTALL) $^ $(DESTDIR)$(mozappdir)/res
+
 export:: $(DEFFILE) MozillaControl_i.c MozillaControl.h
 
 $(DEFFILE): mkctldef.sh

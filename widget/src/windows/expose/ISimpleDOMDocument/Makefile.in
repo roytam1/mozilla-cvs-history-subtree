@@ -69,3 +69,7 @@ export:: $(MIDL_GENERATED_FILES)
 
 libs::
 	regsvr32 /s $(DIST)/bin/$(SHARED_LIBRARY)
+
+install::
+	regsvr32 /s $(DESTDIR)$(mozappdir)/$(SHARED_LIBRARY)
+

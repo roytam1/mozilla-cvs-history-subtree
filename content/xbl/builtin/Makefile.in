@@ -51,3 +51,7 @@ endif
 
 libs:: $(_BUILTINS)
 	$(INSTALL) $^ $(DIST)/bin/res/builtin
+
+install:: $(_BUILTINS)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res/builtin 
+

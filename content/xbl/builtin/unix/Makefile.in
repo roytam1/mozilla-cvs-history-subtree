@@ -28,6 +28,14 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/rules.mk
 
-libs:: $(TARGETS)
-	$(INSTALL) $(srcdir)/platformHTMLBindings.xml $(DIST)/bin/res/builtin
-	$(INSTALL) $(srcdir)/xbl-forms.css $(DIST)/bin/res/builtin
+_FILES = \
+	platformHTMLBindings.xml \
+	xbl-forms.css \
+	$(NULL)
+
+libs:: $(_FILES)
+	$(INSTALL) $^ $(DIST)/bin/res/builtin
+
+install:: $(_FILES)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res/builtin
+

@@ -83,8 +83,19 @@ else
 FORMS_CSS	= $(srcdir)/forms.css
 endif
 
-libs:: $(TARGETS)
-	$(INSTALL) $(srcdir)/html.css $(FORMS_CSS) $(srcdir)/quirk.css $(srcdir)/viewsource.css $(srcdir)/arrow.gif $(srcdir)/arrowd.gif $(DIST)/bin/res
+_FILES = \
+	html.css \
+	quirk.css \
+	viewsource.css \
+	arrow.gif \
+	arrowd.gif \
+	$(NULL)
+
+libs:: $(_FILES) $(FORMS_CSS)
+	$(INSTALL) $^ $(DIST)/bin/res
 	rm -f $(DIST)/bin/res/ua.css
 	cp $(srcdir)/ua.css $(DIST)/bin/res
+
+install:: $(_FILES) $(FORMS_CSS) ua.css
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res
 
