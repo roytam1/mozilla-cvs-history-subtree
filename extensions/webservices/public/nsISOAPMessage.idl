@@ -93,7 +93,7 @@ interface nsISOAPMessage : nsISupports {
    * marshalling. If this attribute is NULL (the default case),
    * no SOAPAction header will be added.
    */
-  attribute DOMString actionURI;
+  attribute AString actionURI;
 
   /**
    * The encodingStyle to be used for the envelope. This URI is used
@@ -105,7 +105,7 @@ interface nsISOAPMessage : nsISupports {
    * If this has not been set by a calling application, it will be the 
    * default SOAP encoding style for RPC style calls.
    */
-  attribute DOMString encodingStyleURI;
+  attribute AString encodingStyleURI;
 
   /**
    * The name of the method being invoked. The methodName is used 
@@ -133,7 +133,7 @@ interface nsISOAPMessage : nsISupports {
    * will produce
    * a non-RPC-style message.
    */
-  attribute DOMString methodName;   
+  attribute AString methodName;   
 
   /**
    * The target object on which the method is being invoked. This URI
@@ -157,7 +157,7 @@ interface nsISOAPMessage : nsISupports {
    * will be null.  If this is null and method is not null, 
    * marshalling parameters fails.
    */
-  attribute DOMString targetObjectURI;
+  attribute AString targetObjectURI;
 
   /**
    * Marshalls the specified parameters into this message, if
@@ -194,7 +194,7 @@ interface nsISOAPMessage : nsISupports {
    *  When a transport places a message into the message object,
    *  it provides this container of protocol parameters.
    */
-  attribute nsISupportsArray protocol;
+  attribute nsISupportsArray protocolParameters;
 
   /**
    * A local registry of type information.  This is optional but

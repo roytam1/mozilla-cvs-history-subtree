@@ -41,17 +41,17 @@ interface nsISOAPFault : nsISupports {
   /**
    * The fault code
    */
-  readonly attribute DOMString faultCode;
+  readonly attribute AString faultCode;
 
   /**
    * The fault string
    */
-  readonly attribute DOMString faultString;
+  readonly attribute AString faultString;
   
   /**
    * The fault actor if one was specified.
    */
-  readonly attribute DOMString faultActor;
+  readonly attribute AString faultActor;
 
   /**
    * The DOM element representing the fault details

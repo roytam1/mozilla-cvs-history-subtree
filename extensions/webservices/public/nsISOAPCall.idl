@@ -49,7 +49,7 @@ interface nsISOAPCall : nsISOAPMessage {
    *   destination.
    * This does not have to match the <code>targetObjectURI</code>.
    */
-  attribute DOMString transportURI;
+  attribute AString transportURI;
 
   /**
    * Synchronously invoke the call. The method returns only when 

@@ -45,7 +45,7 @@ interface nsISOAPStruct : nsISupports {
    * Get the value of a nsISOAPStruct member
    * @param member parameter structure used to set the member
    */
-  nsISOAPParameter getMember(in DOMString name);
+  nsISOAPParameter getMember(in AString name);
 
   /**
    * Set the value of a nsISOAPStruct member

@@ -53,6 +53,6 @@ interface nsISOAPMarshaller : nsISupports {
  */
 nsISupports marshall(
     in nsISOAPMessage aMessage, in nsISupports aSource, 
-    in DOMString aEncodingStyleURI, in DOMString aTypeID, 
-    in DOMString aSchemaID, in nsISupports aConfiguration);
+    in AString aEncodingStyleURI, in AString aTypeID, 
+    in AString aSchemaID, in nsISupports aConfiguration);
 };

@@ -41,14 +41,14 @@ interface nsISOAPParameter : nsISupports {
    * schema. For example, <code>&lt;SOAP-ENC:int&gt;45&lt;/SOAP-ENC:int&gt;
    * </code>
    */
-  attribute DOMString name;
+  attribute AString name;
 
   /**
    * An optional encodingStyle specifically for this parameter. The
    * default is to inherit the encodingStyle from the element parent
    * chain.
    */
-  attribute DOMString encodingStyleURI;
+  attribute AString encodingStyleURI;
 
   /**
    * The type of the parameter.  Usually, the type is automatically
@@ -62,7 +62,7 @@ interface nsISOAPParameter : nsISupports {
    *      custom uses.
    * <p>Notes:
    * <ul>
-   *   <li><code>"#DOMString"</code> - The value is of type
+   *   <li><code>"#string"</code> - The value is of type
    *       nsISupportsWString.</li>
    *   <li><code>"#boolean"</code> - The value is of type
    *       nsISupportsPRBool.</li>
@@ -89,15 +89,15 @@ interface nsISOAPParameter : nsISupports {
    * </ul>
    * </p>
    */
-  attribute DOMString type;
+  attribute AString type;
 
   /**
    * The schema type associated with a parameter.  In addition
    *   to a language data type, there may be a schema type associated
-   *   with a parameter.  If this is not specified, the serializer
-   *   or application must make its own choice as appropriate.
+   *   with a parameter.  If this is not specified, the recipient
+   *   must make its own choice as appropriate.
    */
-  attribute DOMString schemaType;
+  attribute AString schemaType;
 
   /**
    * <p>The getter is for native and script callers (despite the
@@ -112,12 +112,12 @@ interface nsISOAPParameter : nsISupports {
   [noscript] readonly attribute nsISupports value;
 
   /**
-   * A convenience method to set the value and type as a DOMString.
-   * This creates the wrapper and sets the type to "#DOMString".
+   * A convenience method to set the value and type as a AString.
+   * This creates the wrapper and sets the type to "#string".
    *
-   * @param aValue In DOMString parameter specifying the parameter value.
+   * @param aValue In AString parameter specifying the parameter value.
    */
-  void setAsWString(in DOMString aValue);
+  void setAsWString(in AString aValue);
 
   /**
    * A convenience method to set the value and type as a boolean.

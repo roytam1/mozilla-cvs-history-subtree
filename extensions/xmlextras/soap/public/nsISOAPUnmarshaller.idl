@@ -56,6 +56,6 @@ interface nsISOAPUnmarshaller : nsISupports {
  */
 nsISupports unmarshall(
     in nsISOAPMessage aMessage, in nsISupports aSource,
-    in DOMString aEncodingStyleURI, in DOMString aSchemaID, 
-    in DOMString aTypeID, in nsISupports aConfiguration);
+    in AString aEncodingStyleURI, in AString aSchemaID, 
+    in AString aTypeID, in nsISupports aConfiguration);
 };

@@ -35,17 +35,17 @@ interface nsISOAPType : nsISupports {
 /**
  * Encoding style
  */
-  attribute DOMString encodingStyleURI;
+  attribute AString encodingStyleURI;
 
 /**
  * ID of type of parameter or object
  */
-  attribute DOMString typeID;
+  attribute AString typeID;
 
 /**
  * ID of schema of marshalled DOM node or data
  */
-  attribute DOMString schemaID;
+  attribute AString schemaID;
 
 /**
  * Service which can marshal this parameter or object

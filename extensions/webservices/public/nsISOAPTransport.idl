@@ -45,7 +45,7 @@ interface nsISOAPTransport : nsISupports {
  * @param aResponse Message to be recieved.  Calling synchronously assumes that 
  *   exactly one response is expected.
  */
-  void syncCall(in DOMString aURI,
+  void syncCall(in AString aURI,
                  in nsISOAPMessage aCall,
                  in nsISOAPResponse aResponse);
 
@@ -67,7 +67,7 @@ interface nsISOAPTransport : nsISupports {
  * @param response Message to recieve response and be handled by listener.  May be 
  *   null if listener is null.
  */
-  void asyncCall(in DOMString aURI,
+  void asyncCall(in AString aURI,
                  in nsISOAPMessage aCall,
                  in nsISOAPResponseListener aListener,
                  in nsISOAPResponse aResponse);

@@ -203,14 +203,14 @@ NS_IMETHODIMP nsSOAPMessage::GetStatus(PRUint32 *aStatus)
 }
 
 /* attribute nsISupportsArray protocol; */
-NS_IMETHODIMP nsSOAPMessage::GetProtocol(nsISupportsArray * *aProtocol)
+NS_IMETHODIMP nsSOAPMessage::GetProtocolParameters(nsISupportsArray * *aProtocol)
 {
   NS_ENSURE_ARG_POINTER(aProtocol);
   *aProtocol = mProtocol;
   NS_IF_ADDREF(*aProtocol);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPMessage::SetProtocol(nsISupportsArray * aProtocol)
+NS_IMETHODIMP nsSOAPMessage::SetProtocolParameters(nsISupportsArray * aProtocol)
 {
   mProtocol = aProtocol;
   return NS_OK;
