@@ -508,10 +508,10 @@ NS_IMETHODIMP nsImapService::GetUrlForUri(const char *aMessageURI, nsIURI **aURL
       rv = CreateStartOfImapUrl(aMessageURI, getter_AddRefs(imapUrl), folder, nsnull, urlSpec, hierarchySeparator);
       if (NS_FAILED(rv)) return rv;
     	imapUrl->SetImapMessageSink(imapMessageSink);
-      imapUrl->SetImapFolder(folder);
+      nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(imapUrl);
+      mailnewsUrl->SetFolder(folder);
       if (folder)
       {
-        nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(imapUrl);
         if (mailnewsUrl)
         {
           PRBool useLocalCache = PR_FALSE;
@@ -1844,7 +1844,8 @@ nsImapService::SetImapUrlSink(nsIMsgFolder* aMsgFolder,
   NS_IF_RELEASE (aInst);
   aInst = nsnull;
 
-  aImapUrl->SetImapFolder(aMsgFolder);
+  nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(aImapUrl);
+  mailnewsUrl->SetFolder(aMsgFolder);
 
   return NS_OK;
 }
@@ -3515,7 +3516,7 @@ NS_IMETHODIMP nsImapService::NewChannel(nsIURI *aURI, nsIChannel **_retval)
         nsCOMPtr <nsIMsgFolder> imapFolder;
         nsCOMPtr <nsIImapServerSink> serverSink;
 
-        imapUrl->GetImapFolder(getter_AddRefs(imapFolder));
+        mailnewsUrl->GetFolder(getter_AddRefs(imapFolder));
         imapUrl->GetImapServerSink(getter_AddRefs(serverSink));
         // need to see if this is a link click - one way is to check if the url is set up correctly
         // if not, it's probably a url click. We need a better way of doing this. 

@@ -71,7 +71,8 @@ public:
   // nsIMsgMailNewsUrl overrides
   NS_IMETHOD IsUrlType(PRUint32 type, PRBool *isType);
   NS_IMETHOD SetMsgWindow(nsIMsgWindow *aMsgWindow);
-
+  NS_IMETHOD GetFolder(nsIMsgFolder **aFolder);
+  NS_IMETHOD SetFolder(nsIMsgFolder *aFolder);
   // nsIMsgMessageUrl
   NS_DECL_NSIMSGMESSAGEURL
   NS_DECL_NSIMSGI18NURL

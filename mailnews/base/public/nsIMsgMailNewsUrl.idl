@@ -48,6 +48,7 @@ interface nsIMsgSearchSession;
 interface nsICacheEntryDescriptor;
 interface nsICacheSession;
 interface nsIMimeHeaders;
+interface nsIMsgFolder;
 [scriptable, uuid(6CFFCEB0-CB8C-11d2-8065-006008128C4E)]
 interface nsIMsgMailNewsUrl : nsIURL {
 	///////////////////////////////////////////////////////////////////////////////
@@ -69,6 +70,7 @@ interface nsIMsgMailNewsUrl : nsIURL {
 	void GetUrlState(out boolean runningUrl);
 
 	readonly attribute nsIMsgIncomingServer server;
+        attribute nsIMsgFolder folder;
 
 	// the ownership model for msg feedback
 	attribute nsIMsgStatusFeedback statusFeedback;

@@ -955,7 +955,8 @@ nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, PRBool *interr
       if (NS_SUCCEEDED(rv) && runningImapURL)
       {
         nsCOMPtr <nsIMsgFolder> runningImapFolder;
-        runningImapURL->GetImapFolder(getter_AddRefs(runningImapFolder));
+        nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(runningImapURL);
+        mailnewsUrl->GetFolder(getter_AddRefs(runningImapFolder));
         if (aImapFolder == runningImapFolder)
         {
           PseudoInterrupt(PR_TRUE);
@@ -7555,7 +7556,7 @@ PRBool nsImapMockChannel::ReadFromLocalCache()
 
     imapUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
     nsCOMPtr <nsIMsgFolder> folder;
-    rv = imapUrl->GetImapFolder(getter_AddRefs(folder));
+    rv = mailnewsUrl->GetFolder(getter_AddRefs(folder));
     if (folder && NS_SUCCEEDED(rv))
     {
       // we want to create a file channel and read the msg from there.

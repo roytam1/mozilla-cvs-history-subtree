@@ -193,7 +193,7 @@ NS_IMETHODIMP nsImapUrl::SetImapAction(nsImapAction aImapAction)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImapUrl::GetImapFolder(nsIMsgFolder **aMsgFolder)
+NS_IMETHODIMP nsImapUrl::GetFolder(nsIMsgFolder **aMsgFolder)
 {
   NS_ENSURE_ARG_POINTER(aMsgFolder);
   NS_ENSURE_ARG_POINTER(m_imapFolder);
@@ -204,7 +204,7 @@ NS_IMETHODIMP nsImapUrl::GetImapFolder(nsIMsgFolder **aMsgFolder)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImapUrl::SetImapFolder(nsIMsgFolder  * aMsgFolder)
+NS_IMETHODIMP nsImapUrl::SetFolder(nsIMsgFolder  * aMsgFolder)
 {
   nsresult rv;
   m_imapFolder = getter_AddRefs(NS_GetWeakReference(aMsgFolder, &rv));

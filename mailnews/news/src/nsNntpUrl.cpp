@@ -320,7 +320,7 @@ nsNntpUrl::SetOriginalSpec(const char *aSpec)
     return NS_OK;
 }
 
-nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
+NS_IMETHODIMP nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
 {
    nsresult rv;
 
