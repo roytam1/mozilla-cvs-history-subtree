@@ -100,6 +100,10 @@ public:
     PRBool moveToFirstFollowing();
     PRBool moveToFirstFollowingSibling();
     PRBool moveToFirstPreceding();
+    /**
+     * used for xsl:number
+     *  works like preceding "-or-" ancestor-or-self axes
+     */
     PRBool moveToFirstPrecedingInDocOrder();
     PRBool moveToFirstPrecedingSibling();
     PRBool moveToNextDescendant();

@@ -182,9 +182,7 @@ txXPathTreeWalker::moveToFirstPreceding()
 PRBool
 txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
 {
-    NS_NOTREACHED("what does this do?");
-
-    return PR_FALSE;
+    return moveToNextPrecedingInDocOrder();
 }
 
 PRBool
@@ -292,9 +290,19 @@ txXPathTreeWalker::moveToPreceding(NodeDefinition* aNode)
 PRBool
 txXPathTreeWalker::moveToNextPrecedingInDocOrder()
 {
-    NS_NOTREACHED("what does this do?");
-
-    return PR_FALSE;
+    // Almost the same as moveToNextPreceding, just include ancestors as well.
+    NS_ASSERTION(INNER->nodeType != Node::ATTRIBUTE_NODE, 
+                 "Attributes are excluded");
+    NodeDefinition* node = INNER;
+    if (!node->previousSibling) {
+        return moveToParent();
+    }
+    node = node->previousSibling;
+    while (node->lastChild) {
+        node = node->lastChild;
+    }
+    INNER = node;
+    return PR_TRUE;
 }
 
 PRBool
@@ -358,9 +366,11 @@ txXPathTreeWalker::moveToParent()
         return PR_TRUE;
     }
 
-    if (!INNER->parentNode) {
+    if (INNER->nodeType == Node::DOCUMENT_NODE) {
         return PR_FALSE;
     }
+
+    NS_ASSERTION(INNER->parentNode, "orphaned node shouldn't happen");
 
     INNER = INNER->parentNode;
 
