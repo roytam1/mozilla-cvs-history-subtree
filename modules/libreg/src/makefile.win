@@ -109,12 +109,11 @@ include <$(DEPTH)/config/rules.mak>
 
 !ifdef MOZ_STATIC_COMPONENT_LIBS
 export:: $(LIB)	
-    $(MAKE_INSTALL) $(LIB) $(DIST)\bin
     $(MAKE_INSTALL) $(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
 
 clobber::
-    $(RM) $(DIST)\bin\$(LIBRARY_NAME).lib
     $(RM) $(DIST)\lib\$(LIBRARY_NAME).lib
+
 !else
 export:: $(DLL)	
     $(MAKE_INSTALL) $(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
