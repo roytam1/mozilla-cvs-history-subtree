@@ -219,82 +219,120 @@ nsRDFDOMDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aPropert
   // node is now the node we're interested in.
 
   if (aProperty == kNC_Child && node ) {
-    
-    PRUint32 i;
-
-    // attributes
-    nsCOMPtr<nsIDOMNamedNodeMap> attrmap;
-    node->GetAttributes(getter_AddRefs(attrmap));
-
-    PRUint32 length=0;
-    if (attrmap) {
-      rv = attrmap->GetLength(&length);
-      if (NS_FAILED(rv)) return rv;
-    }
-    for (i=0; i<length; i++) {
-      nsCOMPtr<nsIDOMNode> attrNode;
-      attrmap->Item(i,getter_AddRefs(attrNode));
-      
-      nsAutoString attrName;
-      attrNode->GetNodeName(attrName);
-      char *attr_name = attrName.ToNewCString();
-      char *uri = PR_smprintf("%s#%s",
-                              (const char*)sourceval,
-                              attr_name);
-      nsCRT::free(attr_name);
-      if (uri) {
-        nsCOMPtr<nsIRDFResource> resource;
-        getRDFService()->GetResource(uri,
-                                     getter_AddRefs(resource));
-        {
-          // now fill in the resource stuff
-          nsCOMPtr<nsIDOMViewerElement> nodeContainer =
-            do_QueryInterface(resource);
-          if (nodeContainer)
-            nodeContainer->SetNode(attrNode);
-        }
-        arcs->AppendElement(resource);
-      }
-    }
-    
-    // child nodes
-    nsCOMPtr<nsIDOMNodeList> childNodes;
-    rv = node->GetChildNodes(getter_AddRefs(childNodes));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = childNodes->GetLength(&length);
-    if (NS_FAILED(rv)) return rv;
-
-    
-    nsCOMPtr<nsIDOMNode> childNode;
-    for (i=0; i<length; i++) {
-      
-      rv = childNodes->Item(i, getter_AddRefs(childNode));
-      if (NS_FAILED(rv)) return rv;
-
-
-      char *uri =
-        PR_smprintf("dom://%8.8X", gCurrentId++);
-
-      if (uri) {
-        nsCOMPtr<nsIRDFResource> resource;
-        getRDFService()->GetResource(uri,
-                                     getter_AddRefs(resource));
-        {
-          // now fill in the resource stuff
-          nsCOMPtr<nsIDOMViewerElement> nodeContainer =
-            do_QueryInterface(resource);
-          if (nodeContainer)
-            nodeContainer->SetNode(childNode);
-        }
-        arcs->AppendElement(resource);
-      }
-    }
+    createDOMNodeArcs(node, sourceval, arcs);
 
   }
 
   return NS_OK;
 }
+
+nsresult
+nsRDFDOMDataSource::createDOMNodeArcs(nsIDOMNode *node,
+                                      const char* baseID,
+                                      nsISupportsArray* arcs)
+{
+  nsresult rv;
+
+  rv = createDOMAttributeArcs(node, baseID, arcs);
+  rv = createDOMChildArcs(node, baseID, arcs);
+    
+  return rv;
+
+}
+
+nsresult
+nsRDFDOMDataSource::createDOMAttributeArcs(nsIDOMNode *node,
+                                           const char* baseID,
+                                           nsISupportsArray *arcs)
+{
+  nsresult rv;
+  // attributes
+  nsCOMPtr<nsIDOMNamedNodeMap> attrmap;
+  rv = node->GetAttributes(getter_AddRefs(attrmap));
+  if (NS_FAILED(rv)) return rv;
+
+  PRUint32 length=0;
+  if (attrmap) {
+    rv = attrmap->GetLength(&length);
+    if (NS_FAILED(rv)) return rv;
+  }
+
+  PRUint32 i;
+  for (i=0; i<length; i++) {
+    nsCOMPtr<nsIDOMNode> attrNode;
+    attrmap->Item(i,getter_AddRefs(attrNode));
+      
+    nsAutoString attrName;
+    attrNode->GetNodeName(attrName);
+    char *attr_name = attrName.ToNewCString();
+    char *uri = PR_smprintf("%s#%s",
+                            baseID,
+                            attr_name);
+    nsCRT::free(attr_name);
+    if (uri) {
+      nsCOMPtr<nsIRDFResource> resource;
+      getRDFService()->GetResource(uri,
+                                   getter_AddRefs(resource));
+      {
+        // now fill in the resource stuff
+        nsCOMPtr<nsIDOMViewerElement> nodeContainer =
+          do_QueryInterface(resource);
+        if (nodeContainer)
+          nodeContainer->SetNode(attrNode);
+      }
+      rv = arcs->AppendElement(resource);
+    }
+  }
+
+  return rv;
+}
+
+nsresult
+nsRDFDOMDataSource::createDOMChildArcs(nsIDOMNode *node,
+                                       const char* baseID,
+                                       nsISupportsArray *arcs)
+{
+  nsresult rv;
+  // child nodes
+  nsCOMPtr<nsIDOMNodeList> childNodes;
+  rv = node->GetChildNodes(getter_AddRefs(childNodes));
+  if (NS_FAILED(rv)) return rv;
+    
+  PRUint32 length=0;
+  rv = childNodes->GetLength(&length);
+  if (NS_FAILED(rv)) return rv;
+
+    
+  PRUint32 i;
+  for (i=0; i<length; i++) {
+      
+    nsCOMPtr<nsIDOMNode> childNode;
+    rv = childNodes->Item(i, getter_AddRefs(childNode));
+    if (NS_FAILED(rv)) return rv;
+
+
+    char *uri =
+      PR_smprintf("dom://%8.8X", gCurrentId++);
+
+    if (uri) {
+      nsCOMPtr<nsIRDFResource> resource;
+      getRDFService()->GetResource(uri,
+                                   getter_AddRefs(resource));
+      {
+        // now fill in the resource stuff
+        nsCOMPtr<nsIDOMViewerElement> nodeContainer =
+          do_QueryInterface(resource);
+        if (nodeContainer)
+          nodeContainer->SetNode(childNode);
+      }
+      rv = arcs->AppendElement(resource);
+    }
+  }
+
+  return rv;
+}
+
+
 
 
 /* void Assert (in nsIRDFResource aSource, in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */

@@ -64,6 +64,16 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
 
  private:
 
+    nsresult createDOMNodeArcs(nsIDOMNode *node,
+                               const char *baseID,
+                               nsISupportsArray *arcs);
+    nsresult createDOMAttributeArcs(nsIDOMNode *node,
+                               const char *baseID,
+                               nsISupportsArray *arcs);
+    nsresult createDOMChildArcs(nsIDOMNode *node,
+                                const char *baseID,
+                                nsISupportsArray *arcs);
+    
     PRBool init;
     nsIRDFService *mRDFService;
     PRInt32 mMode;
