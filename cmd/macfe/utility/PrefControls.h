@@ -60,5 +60,8 @@ public:
 								LPane* inDescriptionPane,
 								int inKind, /* actually UFolderDialogs::FolderKind */
 								const CMessageFolder& inFolder);
+	static void		NoteSpecialFolderChanged(
+								LPane* inDescriptionPane,
+								const char* inNewCaptionPrefName);
 #endif // MOZ_MAIL_NEWS
 };
