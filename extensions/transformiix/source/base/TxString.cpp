@@ -42,6 +42,17 @@ String::String(const String& aSource) : mBuffer(aSource.toUnicode()),
 {
 }
 
+String::String(UNICODE_CHAR* aSource, const PRUint32 aLength) : mBuffer(0),
+                                                                mBufferLength(0)
+{
+  PRUint32 length = aLength;
+  if (length == 0)
+    length = unicodeLength(aSource);
+  ensureCapacity(length);
+  memcpy(mBuffer, aSource, length * sizeof(UNICODE_CHAR));
+  mLength = length;
+}
+
 String::~String()
 {
   delete mBuffer;
@@ -178,7 +189,8 @@ PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
   PRUint32 searchLimit = mLength - aData.mLength;
 
   while (searchIndex <= searchLimit) {
-    if (memcmp(&mBuffer[searchIndex], aData.mBuffer, aData.mLength) == 0)
+    if (memcmp(&mBuffer[searchIndex], aData.mBuffer,
+        aData.mLength * sizeof(UNICODE_CHAR)) == 0)
       return searchIndex;
     ++searchIndex;
   }
@@ -203,7 +215,7 @@ MBool String::isEqual(const String& aData) const
   if (mLength != aData.mLength)
     return MB_FALSE;
 
-  return (memcmp(mBuffer, aData.mBuffer, mLength) == 0);
+  return (memcmp(mBuffer, aData.mBuffer, mLength * sizeof(UNICODE_CHAR)) == 0);
 }
 
 MBool String::isEqualIgnoreCase(const String& aData) const
@@ -368,4 +380,16 @@ void String::trim()
     }
     mLength -= trimLoop;
   }
+}
+
+PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
+{
+  PRUint32 index = 0;
+
+  // Count UNICODE_CHARs Until a Unicode "NULL" is found.
+  while (aData[index] != 0x0000) {
+    ++index;
+  }
+
+  return index;
 }

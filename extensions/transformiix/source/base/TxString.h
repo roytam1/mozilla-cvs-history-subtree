@@ -47,8 +47,7 @@ public:
     String();
     String(const String& aSource);
 #ifdef TX_EXE
-    String(const UNICODE_CHAR* source);
-    String(const UNICODE_CHAR* source, const PRUint32 length = 0);
+    String(UNICODE_CHAR* aSource, const PRUint32 aLength = 0);
 #else
     explicit String(const nsAString& aSource);
 #endif
@@ -154,6 +153,7 @@ public:
 private:
 #ifdef TX_EXE
     UNICODE_CHAR* toUnicode() const;
+    PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
     //Translate UNICODE_CHARs to Chars and output to the provided stream
     friend ostream& operator<<(ostream& output, const String& source);
 #endif
