@@ -522,6 +522,14 @@ nsDOMEvent::PreventCapture()
 }
 
 NS_IMETHODIMP
+nsDOMEvent::GetIsTrusted(PRBool *aIsTrusted)
+{
+  *aIsTrusted = mEventIsTrusted;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsDOMEvent::PreventDefault()
 {
   if (!(mEvent->flags & NS_EVENT_FLAG_CANT_CANCEL)) {
