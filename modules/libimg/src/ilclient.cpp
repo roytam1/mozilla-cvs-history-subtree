@@ -460,7 +460,8 @@ il_get_container(IL_GroupContext *img_cx,
 		/* 2) Their namespace crosses document boundaries, so caching    */
 		/*    could result in incorrect behavior.                        */
 
-        else if ((FORCE_RELOAD(cache_reload_policy) && !ic->forced) ||
+        else if((cache_reload_policy == NET_SUPER_RELOAD) ||
+		((cache_reload_policy == NET_NORMAL_RELOAD) && (!ic->forced)) ||
 				 (cache_reload_policy != NET_CACHE_ONLY_RELOAD &&
 				  ic->expires && (time(NULL) > ic->expires))
 #ifndef STANDALONE_IMAGE_LIB
