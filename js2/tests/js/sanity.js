@@ -94,4 +94,27 @@ if (s != 'XXXXX') result = false;
 var t = "abcdeXXXXXghij";
 if (t.split('XXXXX').length != 2) result = false;
 
+
+function x()
+{
+    var a = 44; 
+    throw('frisbee');
+}
+
+function ZZ(b)
+{
+    var a = 12;
+    var c = b * 5;
+    try {
+        x();
+        result = false;
+    }
+    catch (e) {
+        if (a != 12) result = false;
+        if (b != c / 5) result = false;
+        if (e != "frisbee") result = false;
+    }
+}
+ZZ(6);
+
 if (result) print("still sane") else print("gone off the deep end");

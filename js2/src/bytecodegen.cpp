@@ -836,8 +836,8 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 */
             TryStmtNode *t = static_cast<TryStmtNode *>(p);
 
-            uint32 catchClauseLabel = (t->catches) ? getLabel() : -1;
-            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : -1;
+            uint32 catchClauseLabel = (t->catches) ? getLabel() : (uint32)(-1);
+            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : (uint32)(-1);
             uint32 finishedLabel = getLabel();
 
             addByte(TryOp);
@@ -875,8 +875,16 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 addByte(HandlerOp);
                 CatchClause *c = t->catches;
                 while (c) {
+                    Reference *ref = mScopeChain->getName(c->name, CURRENT_ATTR, Write);
+                    ref->emitCodeSequence(this);
+                    delete ref;
                     genCodeForStatement(c->stmt, static_cg);
                     c = c->next;
+                    if (c) {
+                        Reference *ref = mScopeChain->getName(c->name, CURRENT_ATTR, Read);
+                        ref->emitCodeSequence(this);
+                        delete ref;
+                    }
                 }
                 if (t->finally) {
                     addByte(JsrOp);

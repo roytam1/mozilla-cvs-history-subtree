@@ -1112,6 +1112,18 @@ void ScopeChain::collectNames(StmtNode *p)
             }            
         }
         break;
+    case StmtNode::Try:
+        {
+            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+            if (t->catches) {
+                CatchClause *c = t->catches;
+                while (c) {
+                    c->prop = defineVariable(c->name, NULL, NULL);
+                    c = c->next;
+                }
+            }
+        }
+        break;
     case StmtNode::For:
     case StmtNode::ForIn:
         {
@@ -1273,6 +1285,21 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 buildRuntimeForStmt(s);
                 s = s->next;
             }            
+        }
+        break;
+    case StmtNode::Try:
+        {
+            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+            if (t->catches) {
+                CatchClause *c = t->catches;
+                while (c) {
+                    if (c->type) {
+                        Property &prop = PROPERTY(c->prop);
+                        prop.mType = mScopeChain->extractType(c->type);
+                    }
+                    c = c->next;
+                }
+            }
         }
         break;
     case StmtNode::For:
@@ -1898,12 +1925,22 @@ JSValue Boolean_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint
 {
     ASSERT(thisValue->isObject());
     JSObject *thisObj = thisValue->object;
+    if (argc > 0)
+        thisObj->mPrivate = (void *)(argv[0].toBoolean(cx).boolean);
+    else
+        thisObj->mPrivate = (void *)(false);
     return *thisValue;
 }
 
 JSValue Boolean_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    JSObject *thisObj = thisValue->object;
+
+    if ((bool)(thisObj->mPrivate))
+        return JSValue(new String(widenCString("true")));
+    else
+        return JSValue(new String(widenCString("false")));
 }
 
 
@@ -1927,10 +1964,21 @@ JSValue JSValue::valueToObject(Context *cx, JSValue& value)
             }
             return thisValue;
         }
-/*
     case boolean_tag:
-        return JSValue((value.boolean) ? 1.0 : 0.0);
-*/
+        {
+            JSObject *obj = Boolean_Type->newInstance(cx);
+            JSFunction *defCon = Boolean_Type->getDefaultConstructor();
+            JSValue argv[1];
+            JSValue thisValue = JSValue(obj);
+            argv[0] = value;
+            if (defCon->mCode) {
+                (defCon->mCode)(cx, &thisValue, &argv[0], 1); 
+            }
+            else {
+                ASSERT(false);
+            }
+            return thisValue;
+        }
     case string_tag: 
         {
             JSObject *obj = String_Type->newInstance(cx);
@@ -1942,12 +1990,10 @@ JSValue JSValue::valueToObject(Context *cx, JSValue& value)
                 (defCon->mCode)(cx, &thisValue, &argv[0], 1); 
             }
             else {
-                ASSERT(false);  // need to throw a hot potato back to
-                                // ye interpreter loop
+                ASSERT(false);
             }
             return thisValue;
         }
-
     case object_tag:
     case function_tag:
         return value;

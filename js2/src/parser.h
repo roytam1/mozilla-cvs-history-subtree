@@ -662,6 +662,9 @@ namespace JavaScript {
         ExprNode *type;                 // Type expression or nil if not provided
         StmtNode *stmt;                 // The catch clause's body; non-nil only
 
+        JS2Runtime::PropertyIterator prop;
+        
+
         CatchClause(uint32 pos, const StringAtom &name, ExprNode *type,
                     StmtNode *stmt) :
                 ParseNode(pos), next(0), name(name), type(type), stmt(stmt) {
