@@ -144,6 +144,48 @@ static void PR_CALLBACK FinalizeInstall(JSContext *cx, JSObject *obj)
 {
 }
 
+void nsCvrtJSValToStr(nsString&  aString,
+                      JSContext* aContext,
+                      jsval      aValue)
+{
+  JSString *jsstring;
+  if((jsstring = JS_ValueToString(aContext, aValue)) != nsnull)
+  {
+    aString.SetString(JS_GetStringChars(jsstring));
+  }
+  else
+  {
+    aString.Truncate();
+  }
+}
+
+void nsCvrtStrToJSVal(const nsString& aProp,
+                      JSContext* aContext,
+                      jsval* aReturn)
+{
+  JSString *jsstring = JS_NewUCStringCopyN(aContext, aProp, aProp.Length());
+  // set the return value
+  *aReturn = STRING_TO_JSVAL(jsstring);
+}
+
+PRBool nsCvrtJSValToBool(PRBool* aProp,
+                         JSContext* aContext,
+                         jsval aValue)
+{
+  JSBool temp;
+  if(JSVAL_IS_BOOLEAN(aValue) && JS_ValueToBoolean(aContext, aValue, &temp))
+  {
+    *aProp = (PRBool)temp;
+  }
+  else
+  {
+    JS_ReportError(aContext, "Parameter must be a boolean");
+    return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 
 //
 // Native method AbortInstall
@@ -201,29 +243,28 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  if (argc >= 6) {
+  if(argc >= 6)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+    nsCvrtJSValToStr(b4, cx, argv[4]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    nsJSUtils::nsConvertJSValToString(b2, cx, argv[2]);
-
-    nsJSUtils::nsConvertJSValToString(b3, cx, argv[3]);
-
-    nsJSUtils::nsConvertJSValToString(b4, cx, argv[4]);
-
-    if (!nsJSUtils::nsConvertJSValToBool(&b5, cx, argv[5])) {
+    if(!nsCvrtJSValToBool(&b5, cx, argv[5]))
+    {
       return JS_FALSE;
     }
 
-    if (NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet)) {
+    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function AddDirectory requires 6 parameters");
     return JS_FALSE;
   }
@@ -255,29 +296,28 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     return JS_TRUE;
   }
 
-  if (argc >= 6) {
+  if(argc >= 6)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+    nsCvrtJSValToStr(b4, cx, argv[4]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    nsJSUtils::nsConvertJSValToString(b2, cx, argv[2]);
-
-    nsJSUtils::nsConvertJSValToString(b3, cx, argv[3]);
-
-    nsJSUtils::nsConvertJSValToString(b4, cx, argv[4]);
-
-    if (!nsJSUtils::nsConvertJSValToBool(&b5, cx, argv[5])) {
+    if(!nsCvrtJSValToBool(&b5, cx, argv[5]))
+    {
       return JS_FALSE;
     }
 
-    if (NS_OK != nativeThis->AddSubcomponent(b0, b1, b2, b3, b4, b5, &nativeRet)) {
+    if(NS_OK != nativeThis->AddSubcomponent(b0, b1, b2, b3, b4, b5, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function AddSubcomponent requires 6 parameters");
     return JS_FALSE;
   }
@@ -304,17 +344,19 @@ InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->DeleteComponent(b0, &nativeRet)) {
+    if(NS_OK != nativeThis->DeleteComponent(b0, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function DeleteComponent requires 1 parameters");
     return JS_FALSE;
   }
@@ -342,19 +384,20 @@ InstallDeleteFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    if (NS_OK != nativeThis->DeleteFile(b0, b1, &nativeRet)) {
+    if(NS_OK != nativeThis->DeleteFile(b0, b1, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function DeleteFile requires 2 parameters");
     return JS_FALSE;
   }
@@ -381,17 +424,19 @@ InstallDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->DiskSpaceAvailable(b0, &nativeRet)) {
+    if(NS_OK != nativeThis->DiskSpaceAvailable(b0, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function DiskSpaceAvailable requires 1 parameters");
     return JS_FALSE;
   }
@@ -419,19 +464,20 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    if (NS_OK != nativeThis->Execute(b0, b1, &nativeRet)) {
+    if(NS_OK != nativeThis->Execute(b0, b1, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function Execute requires 2 parameters");
     return JS_FALSE;
   }
@@ -457,15 +503,17 @@ InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->FinalizeInstall(&nativeRet)) {
+  if(argc >= 0)
+  {
+    if(NS_OK != nativeThis->FinalizeInstall(&nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function FinalizeInstall requires 0 parameters");
     return JS_FALSE;
   }
@@ -492,17 +540,19 @@ InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->Gestalt(b0, &nativeRet)) {
+    if(NS_OK != nativeThis->Gestalt(b0, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function Gestalt requires 1 parameters");
     return JS_FALSE;
   }
@@ -530,19 +580,20 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    if (NS_OK != nativeThis->GetComponentFolder(b0, b1, &nativeRet)) {
+    if(NS_OK != nativeThis->GetComponentFolder(b0, b1, &nativeRet))
+    {
       return JS_FALSE;
     }
 
-    nsJSUtils::nsConvertStringToJSVal(*nativeRet, cx, rval);
+    nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function GetComponentFolder requires 2 parameters");
     return JS_FALSE;
   }
@@ -570,19 +621,20 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    if (NS_OK != nativeThis->GetFolder(b0, b1, &nativeRet)) {
+    if(NS_OK != nativeThis->GetFolder(b0, b1, &nativeRet))
+    {
       return JS_FALSE;
     }
 
-    nsJSUtils::nsConvertStringToJSVal(*nativeRet, cx, rval);
+    nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function GetFolder requires 2 parameters");
     return JS_FALSE;
   }
@@ -608,15 +660,19 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
+  if(argc >= 0)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if (NS_OK != nativeThis->GetLastError(&nativeRet)) {
+    if(NS_OK != nativeThis->GetLastError(&nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function GetLastError requires 0 parameters");
     return JS_FALSE;
   }
@@ -644,19 +700,20 @@ InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if(argc >= 2)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    if (NS_OK != nativeThis->GetWinProfile(b0, b1, &nativeRet)) {
+    if(NS_OK != nativeThis->GetWinProfile(b0, b1, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function GetWinProfile requires 2 parameters");
     return JS_FALSE;
   }
@@ -682,15 +739,17 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->GetWinRegistry(&nativeRet)) {
+  if(argc >= 0)
+  {
+    if(NS_OK != nativeThis->GetWinRegistry(&nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function GetWinRegistry requires 0 parameters");
     return JS_FALSE;
   }
@@ -721,25 +780,23 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
   }
 
-  if (argc >= 5) {
+  if(argc >= 5)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+    nsCvrtJSValToStr(b4, cx, argv[4]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    nsJSUtils::nsConvertJSValToString(b2, cx, argv[2]);
-
-    nsJSUtils::nsConvertJSValToString(b3, cx, argv[3]);
-
-    nsJSUtils::nsConvertJSValToString(b4, cx, argv[4]);
-
-    if (NS_OK != nativeThis->Patch(b0, b1, b2, b3, b4, &nativeRet)) {
+    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, b4, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function Patch requires 5 parameters");
     return JS_FALSE;
   }
@@ -764,15 +821,17 @@ InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->ResetError()) {
+  if(argc >= 0)
+  {
+    if(NS_OK != nativeThis->ResetError())
+    {
       return JS_FALSE;
     }
 
     *rval = JSVAL_VOID;
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function ResetError requires 0 parameters");
     return JS_FALSE;
   }
@@ -798,17 +857,19 @@ InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->SetPackageFolder(b0)) {
+    if(NS_OK != nativeThis->SetPackageFolder(b0))
+    {
       return JS_FALSE;
     }
 
     *rval = JSVAL_VOID;
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function SetPackageFolder requires 1 parameters");
     return JS_FALSE;
   }
@@ -837,26 +898,27 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  if (argc >= 4) {
+  if(argc >= 4)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    nsJSUtils::nsConvertJSValToString(b1, cx, argv[1]);
-
-    nsJSUtils::nsConvertJSValToString(b2, cx, argv[2]);
-
-    if (!JS_ValueToInt32(cx, argv[3], (int32 *)&b3)) {
+    if(!JS_ValueToInt32(cx, argv[3], (int32 *)&b3))
+    {
       JS_ReportError(cx, "Parameter must be a number");
       return JS_FALSE;
     }
 
-    if (NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet)) {
+    if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function StartInstall requires 4 parameters");
     return JS_FALSE;
   }
@@ -883,17 +945,19 @@ InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     return JS_TRUE;
   }
 
-  if (argc >= 1) {
+  if(argc >= 1)
+  {
+    nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (NS_OK != nativeThis->Uninstall(b0, &nativeRet)) {
+    if(NS_OK != nativeThis->Uninstall(b0, &nativeRet))
+    {
       return JS_FALSE;
     }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function Uninstall requires 1 parameters");
     return JS_FALSE;
   }
