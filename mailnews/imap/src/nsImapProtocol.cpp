@@ -691,8 +691,6 @@ NS_IMETHODIMP nsImapProtocol::Run()
     // call the platform specific main loop ....
     me->ImapThreadMainLoop();
 
-    me->m_eventQueue->StopAcceptingEvents();
-    me->m_eventQueue->ProcessPendingEvents();
     me->m_eventQueue = null_nsCOMPtr();
 
     nsCOMPtr<nsIMsgIncomingServer> me_server = do_QueryReferent(m_server);
@@ -724,8 +722,6 @@ NS_IMETHODIMP nsImapProtocol::Run()
     me->m_imapMessageSink = null_nsCOMPtr();
     me->m_imapMiscellaneousSink = null_nsCOMPtr();
     m_iThread = null_nsCOMPtr();
-
-    result = pEventQService->DestroyThreadEventQueue(); 
     return NS_OK;
 }
 
