@@ -12,6 +12,7 @@
           <NC:nsIMsgIncomingServer>
             <NC:hostName>News &amp; Blogs</NC:hostName>
             <NC:type>rss</NC:type>
+            <NC:biffMinutes>45</NC:biffMinutes>
             <NC:username>nobody</NC:username>
           </NC:nsIMsgIncomingServer>
         </NC:incomingServer>
@@ -23,7 +24,7 @@
         </NC:identity>
 
         <NC:wizardHideIncoming>true</NC:wizardHideIncoming>
-	  <NC:wizardAccountName>News &amp; Blogs</NC:wizardAccountName>
+	      <NC:wizardAccountName>News &amp; Blogs</NC:wizardAccountName>
         <NC:wizardSkipPanels>identitypage,serverpage,loginpage</NC:wizardSkipPanels>
         <NC:wizardShortName>RSS</NC:wizardShortName>
         <NC:wizardLongName>RSS News &amp; Blogs Account</NC:wizardLongName>
