@@ -691,7 +691,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     NSLog(@"No command manager");
 #endif
   }
-  
   return (isEnabled) ? YES : NO;
 }
 
@@ -1017,15 +1016,27 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 // ******** services support *************** //
 
 // this needs to be efficient.
+// if sendType is nil, the service doesn't require input from us.
+// if returnType is nil, the service doesn't return data
 - (id)validRequestorForSendType:(NSString *)sendType returnType:(NSString *)returnType
 {
-  if (!sendType || [sendType isEqual:NSStringPboardType])
-    return self;
-
-  BOOL canPaste = NO;
- 	// need to somehow test if we can insert here
-  if (canPaste && !returnType || [returnType isEqual:NSStringPboardType])
-    return self;
+  if (sendType && returnType)
+  {
+    // service needs to both get and put data
+    if (([sendType isEqual:NSStringPboardType] && [self isCommandEnabled:"cmd_getContents"]) &&
+        ([returnType isEqual:NSStringPboardType] && [self isCommandEnabled:"cmd_insertText"]))
+      return self;
+  }
+  else if (sendType)
+  {
+    if ([sendType isEqual:NSStringPboardType] && [self isCommandEnabled:"cmd_getContents"])
+      return self;
+  }
+  else if (returnType)
+  {
+    if ([returnType isEqual:NSStringPboardType] && [self isCommandEnabled:"cmd_insertText"])
+      return self;
+  }
 
   return [super validRequestorForSendType:sendType returnType:returnType];
 }
