@@ -135,8 +135,7 @@ if (empty($reqItemGuid) || empty($reqItemVersion) || empty($reqTargetAppGuid)) {
     bail ("Invalid request.");
 }
 
-// XXX PUT VALUES IN
-$db = mysql_connect($db_server, $db_user, $db_pass)
+mysql_connect($db_server, $db_user, $db_pass)
     || bail ("Failed to connect to database.");
 
 mysql_select_db ($db_name)
@@ -250,8 +249,6 @@ if (!empty($highestVersionData))
     print_update ($highestVersionData);
 
 print "</RDF:RDF>\n";
-
-mysql_close($link);
 
 ?>
 
