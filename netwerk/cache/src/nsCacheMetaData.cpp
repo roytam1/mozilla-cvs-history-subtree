@@ -231,7 +231,6 @@ nsCacheMetaData::MoveEntry(PLDHashTable * /* table */,
 				    const PLDHashEntryHdr *from,
 				    PLDHashEntryHdr       *to)
 {
-    to->keyHash = from->keyHash;
     ((nsCacheMetaDataHashTableEntry *)to)->key =
         ((nsCacheMetaDataHashTableEntry *)from)->key;
     ((nsCacheMetaDataHashTableEntry *)to)->value =
@@ -243,7 +242,6 @@ void PR_CALLBACK
 nsCacheMetaData::ClearEntry(PLDHashTable * /* table */,
                             PLDHashEntryHdr * hashEntry)
 {
-    ((nsCacheMetaDataHashTableEntry *)hashEntry)->keyHash  = 0;
     ((nsCacheMetaDataHashTableEntry *)hashEntry)->key      = 0;
     ((nsCacheMetaDataHashTableEntry *)hashEntry)->value    = 0;
 }

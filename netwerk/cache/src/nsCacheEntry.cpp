@@ -535,7 +535,6 @@ nsCacheEntryHashTable::MoveEntry(PLDHashTable * /* table */,
                                  const PLDHashEntryHdr *from,
                                  PLDHashEntryHdr       *to)
 {
-    to->keyHash = from->keyHash;
     ((nsCacheEntryHashTableEntry *)to)->cacheEntry =
         ((nsCacheEntryHashTableEntry *)from)->cacheEntry;
 }
@@ -545,7 +544,6 @@ void PR_CALLBACK
 nsCacheEntryHashTable::ClearEntry(PLDHashTable * /* table */,
                                   PLDHashEntryHdr * hashEntry)
 {
-    ((nsCacheEntryHashTableEntry *)hashEntry)->keyHash    = 0;
     ((nsCacheEntryHashTableEntry *)hashEntry)->cacheEntry = 0;
 }
 
