@@ -1394,6 +1394,12 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
         }
     }
 
+    /* Prevent deadlocking if we re-enter JS on another thread as a result of a Java
+       method call and that new thread wants to perform a GC. */
+#ifdef JSJ_THREADSAFE
+    JS_SuspendRequest(cx);
+#endif
+
 #define CALL_JAVA_METHOD(type, member)                                       \
     JS_BEGIN_MACRO                                                           \
     if (is_static_method) {                                                  \
@@ -1458,7 +1464,8 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
         
     case JAVA_SIGNATURE_UNKNOWN:
         JS_ASSERT(0);
-        return JS_FALSE;
+        error_occurred = JS_TRUE;
+        goto out;
             
     /* Non-primitive (reference) type */
     default:
@@ -1468,6 +1475,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     }
 
 out:
+
     JSJ_SetDefaultJSContextForJavaThread(old_cx, jsj_env);
 
     if (localv) {
@@ -1479,6 +1487,10 @@ out:
     }
     if (jargv)
        JS_free(cx, jargv);
+
+#ifdef JSJ_THREADSAFE
+    JS_ResumeRequest(cx);
+#endif
 
     if (!error_occurred) {
         success = jsj_ConvertJavaValueToJSValue(cx, jEnv, return_val_signature, &java_value, vp);
@@ -1556,8 +1568,18 @@ invoke_java_constructor(JSContext *cx,
     }
 #endif
 
+    /* Prevent deadlocking if we re-enter JS on another thread as a result of a Java
+       method call and that new thread wants to perform a GC. */
+#ifdef JSJ_THREADSAFE
+    JS_SuspendRequest(cx);
+#endif
+
     /* Call the constructor */
     java_object = (*jEnv)->NewObjectA(jEnv, java_class, methodID, jargv);
+
+#ifdef JSJ_THREADSAFE
+    JS_ResumeRequest(cx);
+#endif
 
     JSJ_SetDefaultJSContextForJavaThread(old_cx, jsj_env);
 

@@ -709,6 +709,10 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
     *old_error_reporterp =
         JS_SetErrorReporter(cx, capture_js_error_reports_for_java);
 
+#ifdef JSJ_THREADSAFE
+    JS_BeginRequest(cx);
+#endif
+
     return jsj_env;
 
 error:
@@ -735,6 +739,10 @@ JSBool
 jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter original_reporter)
 {
     JNIEnv *jEnv;
+
+#ifdef JSJ_THREADSAFE
+    JS_EndRequest(cx);
+#endif
 
     /* Restore the JS error reporter */
     JS_SetErrorReporter(cx, original_reporter);
