@@ -239,9 +239,6 @@ public:
   // nsISelectElement
   NS_DECL_NSISELECTELEMENT
 
-  virtual void DoneAddingChildren();
-  virtual PRBool IsDoneAddingChildren();
-
   virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
@@ -1753,13 +1750,15 @@ nsHTMLSelectElement::SelectSomething()
   return PR_FALSE;
 }
 
-PRBool
-nsHTMLSelectElement::IsDoneAddingChildren()
+NS_IMETHODIMP
+nsHTMLSelectElement::IsDoneAddingChildren(PRBool * aIsDone)
 {
-  return mIsDoneAddingChildren;
+  *aIsDone = mIsDoneAddingChildren;
+
+  return NS_OK;
 }
 
-void
+NS_IMETHODIMP
 nsHTMLSelectElement::DoneAddingChildren()
 {
   mIsDoneAddingChildren = PR_TRUE;
@@ -1784,6 +1783,8 @@ nsHTMLSelectElement::DoneAddingChildren()
   // Now that we're done, select something (if it's a single select something
   // must be selected)
   CheckSelectSomething();
+
+  return NS_OK;
 }
 
 PRBool

@@ -313,7 +313,7 @@ TableRowsCollection::ParentDestroyed()
 
 nsresult
 NS_NewHTMLTableElement(nsIHTMLContent** aInstancePtrResult,
-                       nsINodeInfo *aNodeInfo, PRBool aFromParser)
+                       nsINodeInfo *aNodeInfo)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 

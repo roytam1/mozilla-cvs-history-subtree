@@ -69,7 +69,7 @@ public:
 
 nsresult
 NS_NewHTMLBaseFontElement(nsIHTMLContent** aInstancePtrResult,
-                          nsINodeInfo *aNodeInfo, PRBool aFromParser)
+                          nsINodeInfo *aNodeInfo)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 

@@ -985,16 +985,6 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
   // Get our desired size
   GetDesiredSize(aPresContext, aReflowState, aMetrics);
 
-  // delay plugin instantiation until all children have
-  // arrived. Otherwise there may be PARAMs or other stuff that the
-  // plugin needs to see that haven't arrived yet.
-  PRBool doneAddingChildren;
-  doneAddingChildren = GetContent()->IsDoneAddingChildren();
-  if (!doneAddingChildren) {
-    aStatus = NS_FRAME_COMPLETE;
-    return rv;
-  }
-
   // if we are printing or print previewing, bail for now
   nsCOMPtr<nsIPrintContext> thePrinterContext = do_QueryInterface(aPresContext);
   nsCOMPtr<nsIPrintPreviewContext> thePrintPreviewContext = do_QueryInterface(aPresContext);
@@ -1165,7 +1155,6 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
   else { // if (!mInstanceOwner)
     rv = ReinstantiatePlugin(aPresContext, aMetrics, aReflowState);
   }
-
   // finish up
   if (NS_FAILED(rv)) {
     // if we got an error, we are probably going to be replaced
@@ -1180,7 +1169,6 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
   } else {
     NotifyContentObjectWrapper();
   }
-
   aStatus = NS_FRAME_COMPLETE;
 
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
