@@ -865,7 +865,8 @@ nsMsgLocalMailFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsgWindow 
   }
   
   //Now let's create the actual new folder
-  nsAutoString folderNameStr(folderName);
+  nsAutoString folderNameStr;
+  folderNameStr.AssignWithConversion(safeFolderName);
   //GetFlags and SetFlags in AddSubfolder will fail because we have no db at this point but mFlags is set.
   rv = AddSubfolder(folderNameStr, getter_AddRefs(child));
   if (!child || NS_FAILED(rv))
@@ -904,7 +905,7 @@ nsMsgLocalMailFolder::CreateSubfolder(const PRUnichar *folderName, nsIMsgWindow 
   {
     //we need to notify explicitly the flag change because it failed when we did AddSubfolder
     child->OnFlagChange(mFlags);
-    child->SetPrettyName(folderNameStr.get());  //because empty trash will create a new trash folder
+    child->SetPrettyName(nsDependentString(folderName).get());  //because empty trash will create a new trash folder
     nsCOMPtr<nsISupports> childSupports(do_QueryInterface(child));
     nsCOMPtr<nsISupports> folderSupports(do_QueryInterface(NS_STATIC_CAST(nsIMsgLocalMailFolder*, this), &rv));
     if(childSupports && NS_SUCCEEDED(rv))
