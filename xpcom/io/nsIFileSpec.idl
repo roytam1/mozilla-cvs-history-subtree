@@ -46,7 +46,6 @@ interface nsIFileSpec : nsISupports
 // File Widget stuff depends on widget/public/nsIWidget.h
 // Until the following is moved out of xpcom/ ifdeffing it
 // out.
-#ifdef FILE_WIDGET_DEPENDENCY
 %}
 %{C++
 	//
@@ -87,7 +86,6 @@ interface nsIFileSpec : nsISupports
 		);
 	void chooseDirectory(in string title);
 %{C++
-#endif /* FILE_WIDGET_DEPENDENCY */
 %}
 
 	attribute string URLString;
