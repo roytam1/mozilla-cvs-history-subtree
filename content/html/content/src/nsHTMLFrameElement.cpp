@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLFrameElement.h"
 #include "nsIDOMNSHTMLFrameElement.h"
-#include "nsIDOMEventListener.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
@@ -55,8 +54,7 @@
 class nsHTMLFrameElement : public nsGenericHTMLLeafElement,
                            public nsIDOMHTMLFrameElement,
                            public nsIDOMNSHTMLFrameElement,
-                           public nsIChromeEventHandler,
-                           public nsIDOMEventListener
+                           public nsIChromeEventHandler
 {
 public:
   nsHTMLFrameElement();
@@ -82,9 +80,6 @@ public:
 
   // nsIChromeEventHandler
   NS_DECL_NSICHROMEEVENTHANDLER
-
-  // nsIDOMEventListener
-  NS_DECL_NSIDOMEVENTLISTENER
 
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
@@ -143,7 +138,6 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLFrameElement,
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLFrameElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLFrameElement)
   NS_INTERFACE_MAP_ENTRY(nsIChromeEventHandler)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLFrameElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -338,8 +332,3 @@ nsHTMLFrameElement::HandleChromeEvent(nsIPresContext* aPresContext,
   return HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags,aEventStatus);
 }
 
-nsresult
-nsHTMLFrameElement::HandleEvent(nsIDOMEvent *aEvent)
-{
-  return HandleFrameOnloadEvent(aEvent);
-}

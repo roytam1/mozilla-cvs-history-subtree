@@ -41,6 +41,8 @@
 #include "nsIDOMHTMLIFrameElement.h"
 #include "nsIDOMHTMLFrameElement.h"
 #include "nsIDOMEventListener.h"
+#include "nsIDOMEvent.h"
+#include "nsGUIEvent.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMWindow.h"
 #include "nsIPresContext.h"
@@ -81,6 +83,7 @@
 
 class nsFrameLoader : public nsIFrameLoader,
                       public nsIWebProgressListener,
+                      public nsIDOMEventListener,
                       public nsSupportsWeakReference
 {
 public:
@@ -98,6 +101,9 @@ public:
 
   // nsIWebProgressListener
   NS_DECL_NSIWEBPROGRESSLISTENER
+
+  // nsIDOMEventListener
+  NS_DECL_NSIDOMEVENTLISTENER
 
 protected:
   nsresult GetPresContext(nsIPresContext **aPresContext);
@@ -144,6 +150,7 @@ NS_INTERFACE_MAP_BEGIN(nsFrameLoader)
   NS_INTERFACE_MAP_ENTRY(nsIFrameLoader)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIFrameLoader)
 NS_INTERFACE_MAP_END
 
@@ -574,11 +581,9 @@ nsFrameLoader::OnStateChange(nsIWebProgress *aWebProgress,
                           nsIWebProgressListener::STATE_TRANSFERRING))) {
     nsCOMPtr<nsIDOMWindow> win(do_GetInterface(mDocShell));
     nsCOMPtr<nsIDOMEventTarget> event_target(do_QueryInterface(win));
-    nsCOMPtr<nsIDOMEventListener> event_listener =
-      do_QueryInterface(mOwnerContent);
 
     if (event_target) {
-      event_target->AddEventListener(NS_LITERAL_STRING("load"), event_listener,
+      event_target->AddEventListener(NS_LITERAL_STRING("load"), this,
                                      PR_FALSE);
     }
   }
@@ -617,5 +622,45 @@ nsFrameLoader::OnSecurityChange(nsIWebProgress *aWebProgress,
                                 nsIRequest *aRequest, PRInt32 state)
 {
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFrameLoader::HandleEvent(nsIDOMEvent *aEvent)
+{
+  NS_ENSURE_TRUE(aEvent && mOwnerContent, NS_OK);
+
+  nsAutoString type;
+  aEvent->GetType(type);
+
+  if (!type.EqualsIgnoreCase("load")) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIDocument> doc;
+  mOwnerContent->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPresShell> shell;
+  doc->GetShellAt(0, getter_AddRefs(shell));
+
+  if (!shell) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPresContext> ctx;
+  shell->GetPresContext(getter_AddRefs(ctx));
+  NS_ENSURE_TRUE(ctx, NS_OK);
+
+  nsEventStatus status = nsEventStatus_eIgnore;
+  nsEvent event;
+
+  event.eventStructType = NS_EVENT;
+  event.message = NS_PAGE_LOAD;
+
+  return mOwnerContent->HandleDOMEvent(ctx, &event, nsnull,
+                                       NS_EVENT_FLAG_INIT, &status);
 }
 
