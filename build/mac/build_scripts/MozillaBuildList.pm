@@ -364,6 +364,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:layout:html:forms:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:base:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:mailnews:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:mailnews:extensions:smime:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:netwerk:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:pref-migrator:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:resources:jar.mn", $chrome_dir, \%jars);
@@ -1969,7 +1970,8 @@ sub BuildMailNewsProjects()
     BuildOneProject(":mozilla:mailnews:import:macbuild:msgImport.mcp",                  "msgImport$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:mailnews:import:text:macbuild:msgImportText.mcp",         "msgImportText$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:mailnews:import:eudora:macbuild:msgImportEudora.mcp",     "msgImportEudora$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-             
+    BuildOneProject(":mozilla:mailnews:extensions:smime:macbuild:smime.mcp",             "msgsmime$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
+         
     if ($main::options{static_build}) {
         BuildOneProject(":mozilla:modules:staticmod:macbuild:mailnewsComponent.mcp",  "MetaMailNews$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     }
