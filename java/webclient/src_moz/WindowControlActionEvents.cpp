@@ -116,7 +116,6 @@ wsDeallocateInitContextEvent::handleEvent ()
     mInitContext->webShell = nsnull;
     mInitContext->webNavigation = nsnull;
     mInitContext->presShell = nsnull;
-    mInitContext->sHistory = nsnull;
     mInitContext->baseWindow = nsnull;
 
     mInitContext->embeddedThread = nsnull;

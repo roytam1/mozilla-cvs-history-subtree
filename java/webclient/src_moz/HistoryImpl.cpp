@@ -304,8 +304,7 @@ JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_HistoryImpl
       }
       
       wsGetURLForIndexEvent * actionEvent = 
-	new wsGetURLForIndexEvent(initContext->sHistory,
-				  historyIndex);
+	new wsGetURLForIndexEvent(sHistory, historyIndex);
       PLEvent	   	  	* event       = (PLEvent*) *actionEvent;
       
       charResult = (char *) ::util_PostSynchronousEvent(initContext, event);

@@ -53,6 +53,7 @@
 #include "nsIEventQueueService.h" // for PLEventQueue
 #include "nsRepository.h"
 #include "nsIServiceManager.h" // for do_GetService
+#include "nsISHistory.h" // for sHistory
 #include "nsIPref.h" // for preferences
 #include "nsIThread.h" // for PRThread
 #include "nsIDocShell.h"
@@ -127,7 +128,7 @@ int processEventLoop(WebShellInitContext * initContext);
 
 /**
 
- * Called from Java nativeInitialize to create the webshell, history
+ * Called from Java nativeInitialize to create the webshell 
  * and other mozilla things, then start the event loop.
 
  */
@@ -138,7 +139,6 @@ nsresult InitMozillaStuff (WebShellInitContext * arg);
 // Local data
 //
 
-nsISHistory *gHistory = nsnull;
 nsIComponentManager *gComponentManager = nsnull;
 static PRBool	gFirstTime = PR_TRUE;
 
@@ -641,26 +641,10 @@ nsresult InitMozillaStuff (WebShellInitContext * initContext)
     nsCOMPtr<nsIDocumentLoaderObserver> observer(do_QueryInterface(initContext->browserContainer));
     initContext->docShell->SetDocLoaderObserver(observer);
     
-    if (nsnull == gHistory) {
-        rv = gComponentManager->CreateInstance(kSHistoryCID, nsnull, 
-                                               kISHistoryIID, 
-                                               (void**)&gHistory);
-        if (NS_FAILED(rv)) {
-            initContext->initFailCode = kHistoryWebShellError;
-            return rv;
-        }
-    }
-    
 	printf("Creation Done.....\n");
     // Get the WebNavigation Object from the DocShell
     nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(initContext->docShell));
     initContext->webNavigation = webNav;
-    
-    // Set the History
-    //    initContext->webNavigation->SetSessionHistory(gHistory);
-    
-    // Save the sessionHistory in the initContext
-    //    initContext->sHistory = gHistory;
     
     printf("Show the webBrowser\n");
     // Show the webBrowser

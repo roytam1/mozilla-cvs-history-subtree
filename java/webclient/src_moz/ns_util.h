@@ -44,7 +44,6 @@
 #include "nsIDocShell.h" // so we can save our nsIDocShell
 #include "nsIBaseWindow.h" // to get methods like SetVisibility
 #include "nsIWebNavigation.h" // for all Navigation commands
-#include "nsISHistory.h" // for session history
 #include "nsIPresShell.h"
 #include "nsIThread.h" // for PRThread
 #include "nsIWebShell.h" // for nsIWebShell
@@ -80,7 +79,6 @@ struct WebShellInitContext {
 	nsCOMPtr<nsIWebShell> webShell;
     nsCOMPtr<nsIDocShell> docShell;
     nsCOMPtr<nsIBaseWindow> baseWindow;
-  nsCOMPtr<nsISHistory> sHistory;
   nsCOMPtr<nsIWebNavigation> webNavigation;
   nsCOMPtr<nsIPresShell> presShell;
   nsCOMPtr<nsIWebBrowser> webBrowser;

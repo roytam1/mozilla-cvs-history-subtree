@@ -87,7 +87,6 @@ JNIEXPORT jint JNICALL Java_org_mozilla_webclient_wrapper_1native_WindowControlI
     initContext->webShell = nsnull;
     initContext->docShell = nsnull;
     initContext->baseWindow = nsnull;
-    initContext->sHistory = nsnull;
     initContext->webNavigation = nsnull;
     initContext->presShell = nsnull;
     initContext->embeddedThread = nsnull;
