@@ -139,7 +139,6 @@ private:
     ///////////////////////////////////
 
     // internal methods
-    nsresult    StopProcessing();
     FTP_STATE   FindActionState(void);
     void        SetDirMIMEType(nsString& aString);
     nsresult    Process();
@@ -149,7 +148,9 @@ private:
                                      PRUint32 bufferMaxSize,
                                      nsIChannel** o_pTrans);
 
-    nsresult EnsureControlConnection();
+    nsresult KillControlConnnection();
+    nsresult StopProcessing();
+    nsresult EstablishControlConnection();
     nsresult ControlAsyncWrite(nsCString& command);
     
     ///////////////////////////////////

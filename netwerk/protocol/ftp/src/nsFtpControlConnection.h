@@ -44,6 +44,7 @@ public:
     nsresult Connect();
     nsresult Disconnect();
     nsresult Write(nsCString& command);
+    PRBool   IsConnected() { return mConnected; }
 
     nsresult GetChannel(nsIChannel** controlChannel);
     nsresult SetStreamListener(nsIStreamListener *aListener);
