@@ -136,8 +136,19 @@ void nsFileSpecHelpers::LeafReplace(
     }
     char* lastSeparator = strrchr(ioPath, inSeparator);
     int oldLength = strlen(ioPath);
-    *(++lastSeparator) = '\0'; // strip the current leaf name
-    int newLength = lastSeparator - ioPath + strlen(inLeafName);
+    PRBool trailingSeparator = (lastSeparator + 1 == ioPath + oldLength);
+    if (trailingSeparator)
+    {
+        *lastSeparator = '\0';
+        lastSeparator = strrchr(ioPath, inSeparator);
+    }
+    if (lastSeparator)
+        lastSeparator++; // point at the trailing string
+    else
+        lastSeparator = ioPath; // the full monty
+    *lastSeparator = '\0'; // strip the current leaf name
+
+    int newLength = (lastSeparator - ioPath) + strlen(inLeafName) + int(trailingSeparator);
     if (newLength > oldLength)
     {
         char* newPath = StringDup(ioPath, newLength + 1);
@@ -145,6 +156,13 @@ void nsFileSpecHelpers::LeafReplace(
         ioPath = newPath;
     }
     strcat(ioPath, inLeafName);
+    if (trailingSeparator)
+    {
+        // If the original ended in a slash, then the new one should, too.
+        char sepStr[2] = "/";
+        *sepStr = inSeparator;
+        strcat(ioPath, sepStr);
+    }
 } // nsFileSpecHelpers::LeafReplace
 
 //----------------------------------------------------------------------------------------
@@ -154,10 +172,30 @@ char* nsFileSpecHelpers::GetLeaf(const char* inPath, char inSeparator)
 {
     if (!inPath)
         return nsnull;
-    char* lastSeparator = strrchr(inPath, inSeparator);
-    if (lastSeparator)
-        return StringDup(++lastSeparator);
-    return StringDup(inPath);
+    const char* lastSeparator = strrchr(inPath, inSeparator);
+    
+    // If there was no separator, then return a copy of the caller's path.
+    if (!lastSeparator)
+        return StringDup(inPath);
+
+    // So there's at least one separator.  What's just after it?
+    // If the separator was not the last character, return the trailing string.
+    const char* leafPointer = lastSeparator + 1;
+    if (*leafPointer)
+        return StringDup(leafPointer);
+
+    // So now, separator was the last character. Poke in a null instead.
+    *(char*)lastSeparator = '\0'; // Should use const_cast, but Unix has old compiler.
+    leafPointer = strrchr(inPath, inSeparator);
+    char* result = leafPointer ? StringDup(leafPointer++) : StringDup(inPath);
+    // Restore the poked null before returning.
+    *(char*)lastSeparator = inSeparator;
+#ifdef XP_PC
+	// If it's a drive letter use the colon notation.
+	if (!leafPointer && strlen(result) == 2 && result[1] == '|')
+	    result[1] = ':';
+#endif
+    return result;
 } // nsFileSpecHelpers::GetLeaf
 
 #if defined(XP_UNIX) || defined(XP_PC)
