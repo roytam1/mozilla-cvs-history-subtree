@@ -61,7 +61,7 @@ public:
 
 private:
     // txIParseContext implementation
-    class parseContextImpl : public txIParseContext
+    class ParseContextImpl : public txIParseContext
     {
     public:
         ParseContextImpl(nsIDOMXPathNSResolver* aResolver)
