@@ -84,12 +84,6 @@
 
 static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
 
-#define MAPI_PROPERTIES_CHROME  "chrome://messenger/locale/mapi.properties"
-#define PREF_MAPI_WARN_PRIOR_TO_BLIND_SEND "mapi.blind-send.warn"
-#define PREF_MAPI_BLIND_SEND_ENABLED       "mapi.blind-send.enabled"
-
-#define RAJIV_DEBUG 1
-
 class nsMAPISendListener : public nsIMsgSendListener
 {
 public:
@@ -111,9 +105,6 @@ public:
     /* void OnStopSending (in string aMsgID, in nsresult aStatus, in wstring aMsg, in nsIFileSpec returnFileSpec); */
     NS_IMETHOD OnStopSending(const char *aMsgID, nsresult aStatus, const PRUnichar *aMsg, 
                            nsIFileSpec *returnFileSpec) {
-#ifdef RAJIV_DEBUG 
-        printf("Sending Done - OnStopSending \n");
-#endif
         m_done = PR_TRUE;
         HANDLE hEvent = CreateEvent (NULL, FALSE, FALSE, (LPCTSTR) MAPI_SENDCOMPLETE_EVENT) ;
         SetEvent (hEvent) ;
@@ -121,6 +112,12 @@ public:
         return NS_OK ;
     }
 
+ /* void OnSendNotPerformed */
+ NS_IMETHOD OnSendNotPerformed(const char *aMsgID, nsresult aStatus)
+ {
+ return OnStopSending(aMsgID, aStatus, nsnull, nsnull) ;
+ }
+ 
     /* void OnGetDraftFolderURI (); */
     NS_IMETHOD OnGetDraftFolderURI(const char *aFolderURI) {return NS_OK;}
 

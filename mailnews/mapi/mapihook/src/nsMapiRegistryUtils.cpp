@@ -40,6 +40,7 @@
 
 #include "nsIServiceManager.h"
 #include "msgMapiImp.h"
+#include "msgMapiMain.h"
 #include "nsMapiRegistryUtils.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
@@ -49,10 +50,14 @@
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsIPref.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 #define EXE_EXTENSION ".exe" 
+#define USERAGENT_VERSION_PREF "general.useragent.misc"
+#define USERAGENT_VERSION_NS_PREF "general.useragent.vendorSub"
+#define USERAGENT_PREF_PREFIX "rv:"
 
 nsMapiRegistryUtils::nsMapiRegistryUtils()
 {
@@ -100,6 +105,30 @@ const PRUnichar * nsMapiRegistryUtils::brandName()
 
     return m_brand.get()  ;
 }
+
+const PRUnichar * nsMapiRegistryUtils::versionNo()
+{
+ if (!m_versionNo.IsEmpty())
+   return m_versionNo.get() ;
+
+ nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+ if (prefs) {
+     nsXPIDLCString versionStr ;
+     nsresult rv = prefs->GetCharPref(USERAGENT_VERSION_NS_PREF, getter_Copies(versionStr));
+     if (NS_SUCCEEDED(rv) && versionStr)
+         m_versionNo.AssignWithConversion (versionStr.get()) ;
+     else {
+         rv = prefs->GetCharPref(USERAGENT_VERSION_PREF, getter_Copies(versionStr));
+         if (NS_SUCCEEDED(rv) && versionStr)  {
+             m_versionNo.AssignWithConversion (versionStr.get()) ;
+             m_versionNo.StripChars (USERAGENT_PREF_PREFIX) ;
+         }
+     }
+ }
+
+ return m_versionNo.get() ;
+}
+
 
 PRBool nsMapiRegistryUtils::verifyRestrictedAccess() {
     char   subKey[] = "Software\\Mozilla - Test Key";
@@ -448,11 +477,22 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
     nsCAutoString appName (NS_ConvertUCS2toUTF8(brandName()).get());
     if (!appName.IsEmpty()) {
         keyName.Append(appName.get());
-        // hardcoding this for 0.9.4 branch
-        // need to change it before merging into the trunk
+
+ nsCOMPtr<nsIStringBundle> bundle;
+ rv = MakeMapiStringBundle (getter_AddRefs (bundle)) ;
+ if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+ nsXPIDLString defaultMailTitle;
+ const PRUnichar *keyValuePrefixStr[] = { brandName(), versionNo() };
+ NS_NAMED_LITERAL_STRING(defaultMailTitleTag, "defaultMailDisplayTitle");
+ rv = bundle->FormatStringFromName(defaultMailTitleTag.get(),
+ keyValuePrefixStr, 2,
+ getter_Copies(defaultMailTitle));
+ if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                         keyName.get(), 
-                        "", "Netscape 6.2 Mail"); 
+ "", NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(defaultMailTitle).get()) ) ; 
     }
     else
         rv = NS_ERROR_FAILURE;
@@ -660,9 +700,11 @@ nsresult nsMapiRegistryUtils::MakeMapiStringBundle(nsIStringBundle ** aMapiStrin
     if (NS_FAILED(rv) || !bundleService) return NS_ERROR_FAILURE;
 
     rv = bundleService->CreateBundle(
-                    "chrome://messenger/locale/mapi.properties",
+ MAPI_PROPERTIES_CHROME,
                     getter_AddRefs(m_mapiStringBundle));
     if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+ NS_ADDREF(*aMapiStringBundle = m_mapiStringBundle) ;
 
     return rv ;
 }

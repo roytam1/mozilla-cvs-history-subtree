@@ -51,6 +51,7 @@ class nsMapiRegistryUtils
 private :
     nsCAutoString m_thisApp ;
     nsAutoString m_brand ;
+ nsAutoString m_versionNo ;
 
     nsCOMPtr<nsIStringBundle> m_mapiStringBundle ;
 public :
@@ -65,6 +66,8 @@ public :
     const char * thisApplication() ; 
     // This returns the brand name for this application
     const PRUnichar * brandName() ;
+ // This returns the version no for this application
+ const PRUnichar * versionNo() ;
     // verifyRestrictedAccess - Returns PR_TRUE if this user only has restricted access
     // to the registry keys we need to modify.
     PRBool verifyRestrictedAccess() ;
