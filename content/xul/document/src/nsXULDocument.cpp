@@ -2490,16 +2490,6 @@ XULDocumentImpl::GetStyleSheets(nsIDOMStyleSheetCollection** aStyleSheets)
 // nsIDOMXULDocument interface
 
 NS_IMETHODIMP
-XULDocumentImpl::GetRdf(nsIRDFService** aRDFService)
-{
-    // XXX this is a temporary hack until the component manager starts
-    // to work.
-    return nsServiceManager::GetService(kRDFServiceCID,
-                                        nsIRDFService::GetIID(),
-                                        (nsISupports**) aRDFService);
-}
-
-NS_IMETHODIMP
 XULDocumentImpl::GetElementById(const nsString& aId, nsIDOMElement** aReturn)
 {
     NS_PRECONDITION(mRootContent != nsnull, "document contains no content");

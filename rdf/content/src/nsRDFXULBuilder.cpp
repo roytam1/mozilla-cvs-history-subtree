@@ -582,34 +582,29 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
 
     // Iterate through all of the element's children, and construct
     // appropriate children for each arc.
-    nsCOMPtr<nsIRDFAssertionCursor> children;
-    if (NS_FAILED(rv = NS_NewContainerCursor(mDB, resource, getter_AddRefs(children)))) {
-        NS_ERROR("unable to create cursor for children");
-        return rv;
-    }
+    nsCOMPtr<nsIRDFEnumerator> children;
+    rv = NS_NewContainerEnumerator(mDB, resource, getter_AddRefs(children));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create cursor for children");
+    if (NS_FAILED(rv)) return rv;
 
     while (1) {
-        rv = children->Advance();
-        if (NS_FAILED(rv))
-            return rv;
+        PRBool hasMore;
+        rv = children->HasMoreElements(&hasMore);
+        if (NS_FAILED(rv)) return rv;
 
-        if (rv == NS_RDF_CURSOR_EMPTY)
+        if (! hasMore)
             break;
 
-        nsCOMPtr<nsIRDFNode> child;
-        if (NS_FAILED(rv = children->GetTarget(getter_AddRefs(child)))) {
-            NS_ERROR("error reading cursor");
-            return rv;
-        }
+        nsCOMPtr<nsISupports> isupports;
+        rv = children->GetNext(getter_AddRefs(isupports));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "error reading cursor");
+        if (NS_FAILED(rv)) return rv;
 
-        NS_ASSERTION(rv != NS_RDF_NO_VALUE, "null value in cursor");
-        if (rv == NS_RDF_NO_VALUE)
-            continue;
+        nsCOMPtr<nsIRDFNode> child = do_QueryInterface(isupports);
 
-        if (NS_FAILED(AppendChild(containingNameSpace, aElement, child))) {
-            NS_ERROR("problem appending child to content model");
-            return rv;
-        }
+        rv = AppendChild(containingNameSpace, aElement, child);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "problem appending child to content model");
+        if (NS_FAILED(rv)) return rv;
     }
 
     // Now that we've built the children, check to see if the includesrc attribute
@@ -981,7 +976,7 @@ RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
 
             if (isXULElement) {
                 // remove the child from the old collection
-                rv = rdf_ContainerRemoveElement(mDB, oldParent, newChild);
+                rv = rdf_ContainerRemoveElement(mDB, oldParent, newChild, PR_TRUE);
                 NS_ASSERTION(NS_SUCCEEDED(rv), "unable to remove newChild from oldParent");
                 if (NS_FAILED(rv)) return rv;
             }
@@ -1011,7 +1006,7 @@ RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             if (NS_FAILED(rv)) return rv;
 
             // ...and insert the newChild before it.
-            rv = rdf_ContainerInsertElementAt(mDB, parent, newChild, index);
+            rv = rdf_ContainerInsertElementAt(mDB, parent, newChild, index, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert new element into container");
             if (NS_FAILED(rv)) return rv;
         }
@@ -1076,12 +1071,12 @@ RDFXULBuilderImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, ns
             if (NS_FAILED(rv)) return rv;
 
             // ...then remove the old child from the old collection...
-            rv = rdf_ContainerRemoveElement(mDB, parent, oldChild);
+            rv = rdf_ContainerRemoveElement(mDB, parent, oldChild, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to remove old child from container");
             if (NS_FAILED(rv)) return rv;
 
             // ...and add the new child to the collection at the old child's index
-            rv = rdf_ContainerInsertElementAt(mDB, parent, newChild, index);
+            rv = rdf_ContainerInsertElementAt(mDB, parent, newChild, index, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add new child to container");
             if (NS_FAILED(rv)) return rv;
         }
@@ -1129,7 +1124,7 @@ RDFXULBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 
         if (isXULElement) {
             // ...then remove it from the container
-            rv = rdf_ContainerRemoveElement(mDB, parent, oldChild);
+            rv = rdf_ContainerRemoveElement(mDB, parent, oldChild, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert new element into container");
             if (NS_FAILED(rv)) return rv;
         }
@@ -1181,7 +1176,7 @@ RDFXULBuilderImpl::OnAppendChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild)
 
             if (isXULElement) {
                 // remove the child from the old collection
-                rv = rdf_ContainerRemoveElement(mDB, oldParent, newChild);
+                rv = rdf_ContainerRemoveElement(mDB, oldParent, newChild, PR_TRUE);
                 NS_ASSERTION(NS_SUCCEEDED(rv), "unable to remove newChild from oldParent");
                 if (NS_FAILED(rv)) return rv;
             }
@@ -1665,27 +1660,26 @@ RDFXULBuilderImpl::CreateHTMLElement(nsINameSpace* aContainingNameSpace,
     // attributes on the element.  First, create a cursor that'll
     // iterate through all the properties that lead out of this
     // resource.
-    nsCOMPtr<nsIRDFArcsOutCursor> properties;
-    if (NS_FAILED(rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties)))) {
-        NS_ERROR("unable to create arcs-out cursor");
-        return rv;
-    }
+    nsCOMPtr<nsIRDFEnumerator> properties;
+    rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create arcs-out cursor");
+    if (NS_FAILED(rv)) return rv;
 
     // Advance that cursor 'til it runs outta steam
     while (1) {
-        rv = properties->Advance();
-        if (NS_FAILED(rv))
-            return rv;
+        PRBool hasMore;
+        rv = properties->HasMoreElements(&hasMore);
+        if (NS_FAILED(rv)) return rv;
 
-        if (rv == NS_RDF_CURSOR_EMPTY)
+        if (! hasMore)
             break;
 
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> isupports;
+        rv = properties->GetNext(getter_AddRefs(isupports));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get property from cursor");
+        if (NS_FAILED(rv)) return rv;
 
-        if (NS_FAILED(rv = properties->GetLabel(getter_AddRefs(property)))) {
-            NS_ERROR("unable to get property from cursor");
-            return rv;
-        }
+        nsCOMPtr<nsIRDFResource> property = do_QueryInterface(isupports);
 
         // These are special beacuse they're used to specify the tree
         // structure of the XUL: ignore them b/c they're not attributes
@@ -1805,25 +1799,25 @@ RDFXULBuilderImpl::CreateHTMLContents(nsINameSpace* aContainingNameSpace,
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFAssertionCursor> children;
-    if (NS_FAILED(rv = NS_NewContainerCursor(mDB, aResource, getter_AddRefs(children)))) {
-        NS_ERROR("unable to create cursor for children");
-        return rv;
-    }
+    nsCOMPtr<nsIRDFEnumerator> children;
+    rv = NS_NewContainerEnumerator(mDB, aResource, getter_AddRefs(children));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create cursor for children");
+    if (NS_FAILED(rv)) return rv;
 
     while (1) {
-        rv = children->Advance();
-        if (NS_FAILED(rv))
-            return rv;
+        PRBool hasMore;
+        rv = children->HasMoreElements(&hasMore);
+        if (NS_FAILED(rv)) return rv;
 
-        if (rv == NS_RDF_CURSOR_EMPTY)
+        if (! hasMore)
             break;
 
-        nsCOMPtr<nsIRDFNode> child;
-        if (NS_FAILED(rv = children->GetTarget(getter_AddRefs(child)))) {
-            NS_ERROR("error reading cursor");
-            return rv;
-        }
+        nsCOMPtr<nsISupports> isupports;
+        rv = children->GetNext(getter_AddRefs(isupports));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "error reading cursor");
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFNode> child = do_QueryInterface(isupports);
 
         rv = AppendChild(aContainingNameSpace, aElement, child);
         NS_ASSERTION(NS_SUCCEEDED(rv), "problem appending child to content model");
@@ -1867,27 +1861,26 @@ RDFXULBuilderImpl::CreateXULElement(nsINameSpace* aContainingNameSpace,
     // attributes on the element.  First, create a cursor that'll
     // iterate through all the properties that lead out of this
     // resource.
-    nsCOMPtr<nsIRDFArcsOutCursor> properties;
-    if (NS_FAILED(rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties)))) {
-        NS_ERROR("unable to create arcs-out cursor");
-        return rv;
-    }
+    nsCOMPtr<nsIRDFEnumerator> properties;
+    rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create arcs-out cursor");
+    if (NS_FAILED(rv)) return rv;
 
     // Advance that cursor 'til it runs outta steam
     while (1) {
-        rv = properties->Advance();
-        if (NS_FAILED(rv))
-            return rv;
+        PRBool hasMore;
+        rv = properties->HasMoreElements(&hasMore);
+        if (NS_FAILED(rv)) return rv;
 
-        if (rv == NS_RDF_CURSOR_EMPTY)
+        if (! hasMore)
             break;
 
-        nsCOMPtr<nsIRDFResource> property;
+        nsCOMPtr<nsISupports> isupports;
+        rv = properties->GetNext(getter_AddRefs(isupports));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get property from cursor");
+        if (NS_FAILED(rv)) return rv;
 
-        if (NS_FAILED(rv = properties->GetLabel(getter_AddRefs(property)))) {
-            NS_ERROR("unable to get property from cursor");
-            return rv;
-        }
+        nsCOMPtr<nsIRDFResource> property = do_QueryInterface(isupports);
 
         // These are special beacuse they're used to specify the tree
         // structure of the XUL: ignore them b/c they're not attributes

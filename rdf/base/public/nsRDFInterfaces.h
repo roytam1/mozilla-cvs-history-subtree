@@ -9,7 +9,7 @@
 #include "nsISupportsArray.h" /* interface nsISupportsArray */
 #include "nsICollection.h" /* interface nsICollection */
 #include "nsIEnumerator.h" /* interface nsIEnumerator */
-#include "nsID.h" /* interface nsID */
+#include "nsrootidl.h" /* interface nsrootidl */
 
 #ifdef XPIDL_JS_STUBS
 #include "jsapi.h"
@@ -141,129 +141,27 @@ class nsIRDFInt : public nsIRDFNode {
 };
 class nsIRDFDataSource; /* forward decl */
 
-/* starting interface:    nsIRDFCursor */
+/* starting interface:    nsIRDFEnumerator */
 
-/* {1C2ABDB0-4CEF-11D2-BC16-00805F912FE7} */
-#define NS_IRDFCURSOR_IID_STR "1C2ABDB0-4CEF-11D2-BC16-00805F912FE7"
-#define NS_IRDFCURSOR_IID \
-  {0x1C2ABDB0, 0x4CEF, 0x11D2, \
-    { 0xBC, 0x16, 0x00, 0x80, 0x5F, 0x91, 0x2F, 0xE7 }}
+/* {0F4819D0-F883-11D2-BDD2-000064657374} */
+#define NS_IRDFENUMERATOR_IID_STR "0F4819D0-F883-11D2-BDD2-000064657374"
+#define NS_IRDFENUMERATOR_IID \
+  {0x0F4819D0, 0xF883, 0x11D2, \
+    { 0xBD, 0xD2, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74 }}
 
-class nsIRDFCursor : public nsISupports {
+class nsIRDFEnumerator : public nsISupports {
  public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFCURSOR_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFENUMERATOR_IID)
 
-  /* void Advance (); */
-  NS_IMETHOD Advance() = 0;
+  /* boolean HasMoreElements (); */
+  NS_IMETHOD HasMoreElements(PRBool *_retval) = 0;
 
-  /* readonly attribute nsIRDFDataSource DataSource; */
-  NS_IMETHOD GetDataSource(nsIRDFDataSource * *aDataSource) = 0;
-
-  /* readonly attribute nsIRDFNode Value; */
-  NS_IMETHOD GetValue(nsIRDFNode * *aValue) = 0;
+  /* nsISupports GetNext (); */
+  NS_IMETHOD GetNext(nsISupports **_retval) = 0;
 
 #ifdef XPIDL_JS_STUBS
   static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFCursor *priv);
-#endif
-};
-
-/* starting interface:    nsIRDFAssertionCursor */
-
-/* {1ED57100-9904-11d2-8EBA-00805F29F370} */
-#define NS_IRDFASSERTIONCURSOR_IID_STR "1ED57100-9904-11d2-8EBA-00805F29F370"
-#define NS_IRDFASSERTIONCURSOR_IID \
-  {0x1ED57100, 0x9904, 0x11d2, \
-    { 0x8E, 0xBA, 0x00, 0x80, 0x5F, 0x29, 0xF3, 0x70 }}
-
-class nsIRDFAssertionCursor : public nsIRDFCursor {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFASSERTIONCURSOR_IID)
-
-  /* readonly attribute nsIRDFResource Source; */
-  NS_IMETHOD GetSource(nsIRDFResource * *aSource) = 0;
-
-  /* readonly attribute nsIRDFResource Label; */
-  NS_IMETHOD GetLabel(nsIRDFResource * *aLabel) = 0;
-
-  /* readonly attribute nsIRDFNode Target; */
-  NS_IMETHOD GetTarget(nsIRDFNode * *aTarget) = 0;
-
-  /* readonly attribute boolean TruthValue; */
-  NS_IMETHOD GetTruthValue(PRBool *aTruthValue) = 0;
-
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFAssertionCursor *priv);
-#endif
-};
-
-/* starting interface:    nsIRDFArcsInCursor */
-
-/* {1ED57102-9904-11d2-8EBA-00805F29F370} */
-#define NS_IRDFARCSINCURSOR_IID_STR "1ED57102-9904-11d2-8EBA-00805F29F370"
-#define NS_IRDFARCSINCURSOR_IID \
-  {0x1ED57102, 0x9904, 0x11d2, \
-    { 0x8E, 0xBA, 0x00, 0x80, 0x5F, 0x29, 0xF3, 0x70 }}
-
-class nsIRDFArcsInCursor : public nsIRDFCursor {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFARCSINCURSOR_IID)
-
-  /* readonly attribute nsIRDFResource Label; */
-  NS_IMETHOD GetLabel(nsIRDFResource * *aLabel) = 0;
-
-  /* readonly attribute nsIRDFNode Target; */
-  NS_IMETHOD GetTarget(nsIRDFNode * *aTarget) = 0;
-
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFArcsInCursor *priv);
-#endif
-};
-
-/* starting interface:    nsIRDFArcsOutCursor */
-
-/* {1ED57101-9904-11d2-8EBA-00805F29F370} */
-#define NS_IRDFARCSOUTCURSOR_IID_STR "1ED57101-9904-11d2-8EBA-00805F29F370"
-#define NS_IRDFARCSOUTCURSOR_IID \
-  {0x1ED57101, 0x9904, 0x11d2, \
-    { 0x8E, 0xBA, 0x00, 0x80, 0x5F, 0x29, 0xF3, 0x70 }}
-
-class nsIRDFArcsOutCursor : public nsIRDFCursor {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFARCSOUTCURSOR_IID)
-
-  /* readonly attribute nsIRDFResource Source; */
-  NS_IMETHOD GetSource(nsIRDFResource * *aSource) = 0;
-
-  /* readonly attribute nsIRDFResource Label; */
-  NS_IMETHOD GetLabel(nsIRDFResource * *aLabel) = 0;
-
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFArcsOutCursor *priv);
-#endif
-};
-
-/* starting interface:    nsIRDFResourceCursor */
-
-/* {C2850C10-B0CF-11d2-A684-00104BDE6048} */
-#define NS_IRDFRESOURCECURSOR_IID_STR "C2850C10-B0CF-11d2-A684-00104BDE6048"
-#define NS_IRDFRESOURCECURSOR_IID \
-  {0xC2850C10, 0xB0CF, 0x11d2, \
-    { 0xA6, 0x84, 0x00, 0x10, 0x4B, 0xDE, 0x60, 0x48 }}
-
-class nsIRDFResourceCursor : public nsIRDFCursor {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFRESOURCECURSOR_IID)
-
-  /* readonly attribute nsIRDFResource Resource; */
-  NS_IMETHOD GetResource(nsIRDFResource * *aResource) = 0;
-
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFResourceCursor *priv);
+  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFEnumerator *priv);
 #endif
 };
 
@@ -312,14 +210,14 @@ class nsIRDFDataSource : public nsISupports {
   /* nsIRDFResource GetSource (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
   NS_IMETHOD GetSource(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFResource **_retval) = 0;
 
-  /* nsIRDFAssertionCursor GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
-  NS_IMETHOD GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFAssertionCursor **_retval) = 0;
+  /* nsIRDFEnumerator GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
+  NS_IMETHOD GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFEnumerator **_retval) = 0;
 
   /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFNode **_retval) = 0;
 
-  /* nsIRDFAssertionCursor GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
-  NS_IMETHOD GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFAssertionCursor **_retval) = 0;
+  /* nsIRDFEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
+  NS_IMETHOD GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFEnumerator **_retval) = 0;
 
   /* void Assert (in nsIRDFResource aSource, in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
   NS_IMETHOD Assert(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue) = 0;
@@ -336,14 +234,14 @@ class nsIRDFDataSource : public nsISupports {
   /* void RemoveObserver (in nsIRDFObserver aObserver); */
   NS_IMETHOD RemoveObserver(nsIRDFObserver *aObserver) = 0;
 
-  /* nsIRDFArcsInCursor ArcLabelsIn (in nsIRDFNode aNode); */
-  NS_IMETHOD ArcLabelsIn(nsIRDFNode *aNode, nsIRDFArcsInCursor **_retval) = 0;
+  /* nsIRDFEnumerator ArcLabelsIn (in nsIRDFNode aNode); */
+  NS_IMETHOD ArcLabelsIn(nsIRDFNode *aNode, nsIRDFEnumerator **_retval) = 0;
 
-  /* nsIRDFArcsOutCursor ArcLabelsOut (in nsIRDFResource aSource); */
-  NS_IMETHOD ArcLabelsOut(nsIRDFResource *aSource, nsIRDFArcsOutCursor **_retval) = 0;
+  /* nsIRDFEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
+  NS_IMETHOD ArcLabelsOut(nsIRDFResource *aSource, nsIRDFEnumerator **_retval) = 0;
 
-  /* nsIRDFResourceCursor GetAllResources (); */
-  NS_IMETHOD GetAllResources(nsIRDFResourceCursor **_retval) = 0;
+  /* nsIRDFEnumerator GetAllResources (); */
+  NS_IMETHOD GetAllResources(nsIRDFEnumerator **_retval) = 0;
 
   /* void Flush (); */
   NS_IMETHOD Flush() = 0;
