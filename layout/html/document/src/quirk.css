@@ -187,3 +187,8 @@ dl dl {
 dt dl, dd dl {
   margin: 0 0 0 0;
 }
+
+/* Quirk: MAP acts like an inline, not a block */
+map {
+  display: inline;
+}
