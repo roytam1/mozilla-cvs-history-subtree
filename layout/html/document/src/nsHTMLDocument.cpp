@@ -105,7 +105,9 @@
 #include "nsIBookmarksService.h"
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
-
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
 
 #define DETECTOR_PROGID_MAX 127
 static char g_detector_progid[DETECTOR_PROGID_MAX + 1];
@@ -800,6 +802,17 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 #endif
 
   if (NS_FAILED(rv)) { return rv; }
+
+#ifdef IBMBIDI
+  // Check if 864 but in Implicit mode !
+  nsBidiOptions mBidioptions;
+  this->GetBidi(&mBidioptions);
+  if (mBidioptions.mtexttype == IBMBIDI_TEXTTYPE_LOGICAL)
+    if (charset.RFind("864", PR_TRUE ))
+      //charset = "IBM864i";
+      //nsAutoString ibm8641str("IBM864i");
+      charset.AssignWithConversion("IBM864i");
+#endif // IBMBIDI
 
   rv = this->SetDocumentCharacterSet(charset);
   if (NS_FAILED(rv)) { return rv; }

@@ -2808,6 +2808,9 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
     nsStyleDisplay* display = (nsStyleDisplay*)
       aStyleContext->GetMutableStyleData(eStyleStruct_Display);
     display->mDirection = value.GetIntValue();
+#ifdef IBMBIDI
+    display->mExplicitDirection = display->mDirection;
+#endif // IBMBIDI
   }
   aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
   if (value.GetUnit() == eHTMLUnit_String) {

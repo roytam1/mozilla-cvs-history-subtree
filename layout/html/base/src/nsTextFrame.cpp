@@ -66,6 +66,20 @@
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 
+#ifdef IBMBIDI
+// {2DC80A03-66EF-11d4-BA58-006008CD3717}
+#define NS_TEXT_FRAME_CID \
+{ 0x2dc80a03, 0x66ef, 0x11d4, { 0xba, 0x58, 0x00, 0x60, 0x08, 0xcd, 0x37, 0x17 } }
+
+static NS_DEFINE_CID(kTextFrameCID, NS_TEXT_FRAME_CID);
+
+// {90D69900-67AF-11d4-BA59-006008CD3717}
+#define NS_DIRECTIONAL_FRAME_CID \
+{ 0x90d69900, 0x67af, 0x11d4, { 0xba, 0x59, 0x00, 0x60, 0x08, 0xcd, 0x37, 0x17 } }
+
+static NS_DEFINE_CID(kDirectionalFrameCID, NS_DIRECTIONAL_FRAME_CID);
+#endif // IBMBIDI
+
 #ifndef PR_ABS
 #define PR_ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
@@ -695,6 +709,11 @@ public:
 
   void ToCString(nsString& aBuf, PRInt32* aTotalContentLength) const;
 
+#ifdef IBMBIDI
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+  nsresult   SetContentLengthAndOffsetForBidi(PRInt32 aLength, PRInt32 aOffset);
+#endif // IBMBIDI
+
 protected:
   virtual ~nsTextFrame();
 
@@ -752,8 +771,43 @@ nsContinuingTextFrame::Init(nsIPresContext*  aPresContext,
     // Hook the frame into the flow
     mPrevInFlow = aPrevInFlow;
     aPrevInFlow->SetNextInFlow(this);
-  }
+#ifdef IBMBIDI
+    PRBool bidiEnabled;
+    aPresContext->BidiEnabled(bidiEnabled);
+    if (bidiEnabled) {
+      void* value;
+      aPrevInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
+                                   &value);
+      SetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, value);
 
+      aPrevInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel,
+                                   &value);
+      SetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, value);
+
+      aPrevInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::textClass,
+                                   &value);
+      SetBidiProperty(aPresContext, nsLayoutAtoms::textClass, value);
+
+      aPrevInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi,
+                                   &value);
+      if (value) {  // nextBidi
+        // aPrevInFlow and this frame will point to the same next bidi frame.
+        SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, value);
+
+        PRInt32 start, end;
+        aPrevInFlow->GetOffsets(start, end);
+
+        if (start < end) {
+          mContentOffset = end;
+          ( (nsIFrame*) value)->GetOffsets(start, end);
+          if (start < end) {
+            mContentLength = start - mContentOffset;
+          } // length > 0
+        } // length > 0
+      } // value
+    } // bidiEnabled
+#endif // IBMBIDI
+  }
   return rv;
 }
 
@@ -1102,6 +1156,53 @@ NS_NewContinuingTextFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
   return NS_OK;
 }
 
+#ifdef IBMBIDI
+NS_IMETHODIMP
+nsTextFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+  nsresult rv = NS_NOINTERFACE;
+
+  if (!aInstancePtr) {
+    rv = NS_ERROR_NULL_POINTER;
+  }
+  if (aIID.Equals(kTextFrameCID) ) {
+    *aInstancePtr = (void*) this;
+    rv = NS_OK;
+  }
+  return rv;
+}
+
+//const nsIID&
+//nsTextFrame::GetIID()
+//{
+  //return kTextFrameCID;
+//}
+
+nsresult
+NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aStart, PRInt32 aEnd)
+{
+  if (!aFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsTextFrame* textFrame;
+  nsresult rv = aFrame->QueryInterface(kTextFrameCID, (void**) &textFrame);
+
+  if (NS_SUCCEEDED(rv) && textFrame) {
+    textFrame->SetContentLengthAndOffsetForBidi(aEnd - aStart, aStart);
+  }
+  return rv;
+}
+
+nsresult
+nsTextFrame::SetContentLengthAndOffsetForBidi(PRInt32 aLength, PRInt32 aOffset)
+{
+  mContentLength = aLength;
+  mContentOffset = aOffset;
+  
+  return NS_OK;
+}
+#endif // IBMBIDI
+
 nsTextFrame::nsTextFrame()
 {
 }
@@ -1248,7 +1349,14 @@ nsTextFrame::Paint(nsIPresContext* aPresContext,
       // If we have ascii text that doesn't contain multi-byte characters
       // and the text doesn't need transforming then always render as ascii
       if ((0 == (mState & TEXT_WAS_TRANSFORMED)) && !frag->Is2b() && !hasMultiByteChars) {
-        PaintAsciiText(aPresContext, aRenderingContext, sc, ts, 0, 0);
+#ifdef IBMBIDI
+        PRBool bidiEnabled;
+        aPresContext->BidiEnabled(bidiEnabled);
+        if (bidiEnabled)
+          PaintUnicodeText(aPresContext, aRenderingContext, sc, ts, 0, 0);
+        else
+#endif // IBMBIDI
+          PaintAsciiText(aPresContext, aRenderingContext, sc, ts, 0, 0);
       
       } else if (hasMultiByteChars || (0 == (hints & NS_RENDERING_HINT_FAST_8BIT_TEXT))) {
         // If it has multi-byte characters then we have to render it as Unicode
@@ -1795,6 +1903,32 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
 
   if (0 != textLength) 
   {
+#ifdef IBMBIDI
+    PRBool isRTL = PR_FALSE;
+    PRBool isBidiSystem;
+    aRenderingContext.IsBidiSystem(isBidiSystem);
+    PRBool bidiEnabled;
+    aPresContext->BidiEnabled(bidiEnabled);
+
+    if (bidiEnabled) {
+      UCharDirection textClass;
+      PRUint8 level;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+      GetBidiProperty(aPresContext, nsLayoutAtoms::textClass, (void **) &textClass);
+      if (CLASS_IS_RTL(textClass) && isBidiSystem) {
+        isRTL = PR_TRUE;
+        // indicate the text requires RTL reading
+        aRenderingContext.SetRTLReading(PR_TRUE);
+      }
+      nsBidiPresUtils* bidiUtils;
+      aPresContext->GetBidiUtils(&bidiUtils);
+      if (bidiUtils) {
+        bidiUtils->FormatUnicodeText(aPresContext, text, textLength, textClass,
+                                     level & 1,  isBidiSystem);
+      }
+    }
+    if (0 != textLength) { // textLength might change due to the bidi formattimg
+#endif // IBMBIDI
     if (!displaySelection || !isSelected ) //draw text normally
     { 
       // When there is no selection showing, use the fastest and
@@ -1843,6 +1977,12 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
       {
         nscoord currentX = dx;
         nscoord newWidth;//temp
+#ifdef IBMBIDI // Simon - display substrings RTL in RTL frame
+        nscoord FrameWidth = 0;
+        if (isRTL)
+            if (NS_SUCCEEDED(aRenderingContext.GetWidth(text, textLength, FrameWidth)))
+                currentX = dx + FrameWidth;
+#endif
         while (!iter.IsDone())
         {
           PRUnichar *currenttext  = iter.CurrentTextUnicharPtr();
@@ -1853,6 +1993,10 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
 
           if (NS_SUCCEEDED(aRenderingContext.GetWidth(currenttext, currentlength,newWidth)))//ADJUST FOR CHAR SPACING
           {
+#ifdef IBMBIDI
+            if (isRTL)
+              currentX -= newWidth;
+#endif
             if (iter.CurrentBackGroundColor(currentBKColor))
             {//DRAW RECT HERE!!!
               aRenderingContext.SetColor(currentBKColor);
@@ -1867,6 +2011,9 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
           aRenderingContext.SetColor(currentFGColor);
           aRenderingContext.DrawString(currenttext, currentlength, currentX, dy);
 
+#ifdef IBMBIDI
+          if (!isRTL)
+#endif
           currentX+=newWidth;//increment twips X start
 
           iter.Next();
@@ -1888,6 +2035,13 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
         delete details;
       }
     }
+#ifdef IBMBIDI
+    }
+    if (isRTL) {
+      // Indicate we don't know RTL reading
+      aRenderingContext.SetRTLReading(PR_FALSE);
+    }
+#endif // IBMBIDI
   }
 }
 
@@ -2313,7 +2467,28 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
   PRBool        isSelected;
   GetFrameState(&frameState);
   isSelected = (frameState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
+
   if (0 != textLength) {
+#ifdef IBMBIDI
+    PRBool bidiEnabled;
+    aPresContext->BidiEnabled(bidiEnabled);
+
+    if (bidiEnabled) {
+      nsBidiPresUtils* bidiUtils;
+      aPresContext->GetBidiUtils(&bidiUtils);
+  
+      if (bidiUtils) {
+        UCharDirection textClass;
+        PRUint8 level;
+        GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+        GetBidiProperty(aPresContext, nsLayoutAtoms::textClass, (void **) &textClass);
+        // Since we paint char by char, handle the text like on non-bidi platform
+        bidiUtils->FormatUnicodeText(aPresContext, text, textLength, textClass,
+                                     level & 1, PR_FALSE);
+      }
+    }
+    if (0 != textLength) { // textLength might change due to the bidi formattimg
+#endif // IBMBIDI
     ComputeExtraJustificationSpacing(aRenderingContext, aTextStyle, text, textLength, numSpaces);
     if (!displaySelection || !isSelected) { 
       // When there is no selection showing, use the fastest and
@@ -2401,6 +2576,9 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
         delete details;
       }
     }
+#ifdef IBMBIDI
+  }
+#endif // IBMBIDI
   }
 }
 
@@ -2496,6 +2674,13 @@ nsTextFrame::PaintAsciiText(nsIPresContext* aPresContext,
     text = frag->Get1b() + mContentOffset;
     textLength = mContentLength;
 
+#ifdef IBMBIDI
+    nsIFrame* nextInFlow;
+    GetNextInFlow(&nextInFlow);
+    // Due to the Bidi processing, this whitespace may not be leading.
+    // Skip it only at the end of line or if it has no logical continuation
+    if (nextInFlow || textLength == frag->GetLength() )
+#endif // IBMBIDI
     // See if we should skip leading whitespace
     if (0 != (mState & TEXT_SKIP_LEADING_WS)) {
       while ((textLength > 0) && XP_IS_SPACE(*text)) {
@@ -2759,6 +2944,22 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
         PRInt32 indx;
         PRInt32 textWidth = 0;
         PRUnichar* text = paintBuffer.mBuffer;
+
+#ifdef IBMBIDI // Simon -- reverse RTL text here
+        PRUint8 level;
+        GetBidiProperty(aCX, nsLayoutAtoms::embeddingLevel, (void**) &level);
+        PRBool isOddLevel = (level & 1);
+        if (isOddLevel) {
+          PRUnichar *tStart, *tEnd;
+          PRUnichar tSwap;
+          for (tStart = text, tEnd = tStart + textLength - 1; tEnd > tStart; tStart++, tEnd--) {
+            tSwap = *tStart;
+            *tStart = *tEnd;
+            *tEnd = tSwap;
+          }
+        }
+#endif // IBMBIDI
+
         PRBool found = BinarySearchForPosition(acx, text, origin.x, 0, 0,
                                                PRInt32(textLength),
                                                PRInt32(aPoint.x) , //go to local coordinates
@@ -2772,6 +2973,11 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
             indx++;
           }
         }
+
+#ifdef IBMBIDI // Simon -- convert the index from the visual text to a content-based index
+        if (isOddLevel)
+          indx = textLength - indx - 1;
+#endif
 
         aContentOffset = indx + mContentOffset;
         //reusing wordBufMem
@@ -2970,6 +3176,12 @@ nsTextFrame::SetSelected(nsIPresContext* aPresContext,
       if (NS_FAILED(result))
         break;
     }
+#ifdef IBMBIDI
+    GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &frame);
+    if (frame) {
+      frame->SetSelected(aPresContext, aRange, aSelected, aSpread);
+    }
+#endif // IBMBIDI
   }
   return NS_OK;
 }
@@ -3015,6 +3227,22 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
   PRInt32 numSpaces;
 
   numSpaces = PrepareUnicodeText(tx, &indexBuffer, &paintBuffer, &textLength);
+
+#ifdef IBMBIDI // Simon -- reverse RTL text here
+  PRUint8 level;
+  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+  if (level & 1) {
+    PRUnichar* text = paintBuffer.mBuffer;
+    PRUnichar *tStart, *tEnd;
+    PRUnichar tSwap;
+    for (tStart = text, tEnd = tStart + textLength - 1; tEnd > tStart; tStart++, tEnd--) {
+      tSwap = *tStart;
+      *tStart = *tEnd;
+      *tEnd = tSwap;
+    }
+    inOffset = textLength - inOffset;
+  }
+#endif // IBMBIDI
 
   ComputeExtraJustificationSpacing(*inRendContext, ts, paintBuffer.mBuffer, textLength, numSpaces);
 
@@ -3197,7 +3425,18 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       nsIFrame *frameUsed = nsnull;
       PRInt32 start;
       PRBool found = PR_TRUE;
-      if (aPos->mDirection == eDirPrevious){
+#ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
+      PRUint8 level;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+      // so that right arrow always moves to the right on screen
+      // and left arrow always moves left
+      PRBool isOddLevel = (level & 1);
+      if ( ((aPos->mDirection == eDirPrevious) && !isOddLevel) ||
+           ((aPos->mDirection == eDirNext) && isOddLevel) )
+#else
+      if (aPos->mDirection == eDirPrevious)
+#endif
+      {
         aPos->mContentOffset = 0;
         PRInt32 i;
         for (i = aPos->mStartOffset -1 - mContentOffset; i >=0;  i--){
@@ -3213,7 +3452,13 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           aPos->mContentOffset = start;//in case next call fails we stop at this offset
         }
       }
-      else if (aPos->mDirection == eDirNext){
+#ifdef IBMBIDI // Simon, as above 
+      else if ( ((aPos->mDirection == eDirNext) && !isOddLevel) ||
+                ((aPos->mDirection == eDirPrevious) && isOddLevel) )
+#else
+      else if (aPos->mDirection == eDirNext)
+#endif
+      {
         PRInt32 i;
         aPos->mContentOffset = mContentLength;
         for (i = aPos->mStartOffset +1 - mContentOffset; i <= mContentLength;  i++){
@@ -3268,7 +3513,17 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
       PRBool found = PR_FALSE;
       PRBool isWhitespace, wasTransformed;
       PRInt32 wordLen, contentLen;
+#ifdef IBMBIDI // Simon - RTL frames reverse meaning of previous and next
+      PRUint8 level;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**) &level);
+      // so that right arrow always moves to the right on screen
+      // and left arrow always moves left
+      PRBool isOddLevel = (level & 1);
+      if ( ((aPos->mDirection == eDirPrevious) && !isOddLevel) ||
+           ((aPos->mDirection == eDirNext) && isOddLevel) ) {
+#else
       if (aPos->mDirection == eDirPrevious){
+#endif
         keepSearching = PR_TRUE;
         tx.Init(this, mContent, aPos->mStartOffset);
         aPos->mContentOffset = mContentOffset;//initialize
@@ -3306,7 +3561,12 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           }
         }
       }
+#ifdef IBMBIDI // Simon, as above 
+      else if ( ((aPos->mDirection == eDirNext) && !isOddLevel) ||
+                ((aPos->mDirection == eDirPrevious) && isOddLevel) ) {
+#else
       else if (aPos->mDirection == eDirNext) {
+#endif
         tx.Init(this, mContent, aPos->mStartOffset );
         aPos->mContentOffset = mContentOffset + mContentLength;//initialize
 
@@ -3628,9 +3888,41 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   // width divided by the average character width
   estimatedNumChars = (maxWidth - aTextData.mX) / aTs.mAveCharWidth;
   estimatedNumChars += estimatedNumChars / 20;
+#ifdef IBMBIDI
+  nsIFrame* nextBidi = nsnull;
+  PRBool    done = PR_FALSE;
+
+  PRBool bidiEnabled;
+  aPresContext->BidiEnabled(bidiEnabled);
+  if (bidiEnabled) {
+    PRInt32 start, end;
+
+    if (mContentLength > 0) {
+      nsIFrame* nextInFlow = mNextInFlow;
+      GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &nextBidi);
+  
+      while (nextInFlow && nextInFlow != nextBidi) {
+        nextInFlow->GetOffsets(start, end);
+        mContentLength = end - mContentOffset;
+        nextInFlow->GetNextInFlow(&nextInFlow);
+      }
+    }
+  }
+#endif //IBMBIDI
 
   aTextData.mX = 0;
   for (;;firstThing = PR_FALSE) {
+#ifdef IBMBIDI
+    if (done) {
+      if (textRun.IsBuffering()) {
+        // Measure the remaining text
+        goto MeasureTextRun;
+      }
+      else {
+        break;
+      }
+    }
+#endif // IBMBIDI
     // Get next word/whitespace from the text
     PRBool isWhitespace, wasTransformed;
     PRInt32 wordLen, contentLen;
@@ -3640,6 +3932,24 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
     };
     bp2 = aTx.GetNextWord(aTextData.mInWord, &wordLen, &contentLen, &isWhitespace,
                           &wasTransformed, textRun.mNumSegments == 0);
+#ifdef IBMBIDI
+    if (nextBidi) {
+      PRInt32 extraLength = (aTextData.mOffset + textRun.mTotalNumChars + contentLen)
+            - (startingOffset + mContentLength);
+      if (extraLength > 0) {
+        contentLen -= extraLength;
+        wordLen = PR_MAX(0, wordLen - extraLength);
+        done = PR_TRUE;
+        if (!contentLen || !wordLen) {
+          bp2 = nsnull;
+          wasTransformed = PR_FALSE;
+        }
+      }
+      else if (0 == extraLength) {
+        done = PR_TRUE;
+      }
+    }
+#endif // IBMBIDI
     // Remember if the text was transformed
     if (wasTransformed) {
       mState |= TEXT_WAS_TRANSFORMED;
@@ -3711,7 +4021,11 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
         // a transformation of the text
         mState |= TEXT_WAS_TRANSFORMED;
       }
-      else if (textRun.IsBuffering()) {
+      else if (textRun.IsBuffering()
+#ifdef IBMBIDI
+          || (bidiEnabled && mContentLength > 0)
+#endif // IBMBIDI
+        ) {
         // Add a whitespace segment
         textRun.AddSegment(wordLen, contentLen, PR_TRUE);
         continue;
@@ -3835,6 +4149,10 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
                                          textRun.mBreaks, textRun.mNumSegments,
                                          width, numCharsFit);
     } else {
+#ifdef IBMBIDI
+      width = 0;
+      if ( (!bidiEnabled) || (textRun.mNumSegments > 0) )
+#endif // IBMBIDI
       aReflowState.rendContext->GetWidth(aTx.GetWordBuffer(), textRun.mTotalNumChars,
                                          maxWidth - aTextData.mX,
                                          textRun.mBreaks, textRun.mNumSegments,
@@ -3846,6 +4164,9 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
       break;
     }
 
+#ifdef IBMBIDI
+    if ( (!bidiEnabled) || (textRun.mNumSegments > 0) ) {
+#endif // IBMBIDI
     // Find the index of the last segment that fit
     PRInt32 lastSegment;
     if (numCharsFit == textRun.mTotalNumChars) { // fast path, normal case
@@ -3896,6 +4217,13 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
     if (numCharsFit != textRun.mTotalNumChars) {
       break;
     }
+
+#ifdef IBMBIDI
+    }
+    if (done) {
+      break;
+    }
+#endif // IBMBIDI
 
     if (nsnull == bp2) {
       // No more text so we're all finished. Advance the offset in case the last
@@ -4064,6 +4392,10 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
 
   // Return our reflow status
   nsReflowStatus rs = (aTextData.mOffset == contentLength)
+#ifdef IBMBIDI
+      || ( (nextBidi) && (mContentLength == aTextData.mOffset - startingOffset) )
+#endif // IBMBIDI
+
     ? NS_FRAME_COMPLETE
     : NS_FRAME_NOT_COMPLETE;
   if (endsInNewline) {
@@ -4126,7 +4458,15 @@ nsTextFrame::Reflow(nsIPresContext* aPresContext,
       mState &= ~TEXT_OPTIMIZE_RESIZE;
     }
   }
-
+#ifdef IBMBIDI
+  if (mContentLength > 0) {
+    PRBool bidiEnabled;
+    aPresContext->BidiEnabled(bidiEnabled);
+    if (bidiEnabled) {
+      startingOffset = mContentOffset;
+    }
+  }
+#endif //IBMBIDI
   nsLineLayout& lineLayout = *aReflowState.mLineLayout;
   TextStyle ts(aPresContext, *aReflowState.rendContext, mStyleContext);
 
@@ -4735,3 +5075,100 @@ nsTextFrame::List(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent) cons
   return NS_OK;
 }
 #endif
+
+#ifdef IBMBIDI
+class nsDirectionalFrame : public nsFrame {
+
+public:
+  nsDirectionalFrame(PRUnichar aChar);
+  PRUnichar GetChar(void) const { return mChar; }
+  NS_IMETHOD GetFrameType(nsIAtom** aType) const;
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+  //const nsIID& GetIID(void);
+  void* operator new(size_t aSize);
+
+private:
+  PRUnichar mChar;
+};
+
+nsDirectionalFrame::nsDirectionalFrame(PRUnichar aChar)
+  : mChar(aChar)
+{
+}
+
+/**
+ * Get the "type" of the frame
+ *
+ * @see nsLayoutAtoms::directionalFrame
+ */
+NS_IMETHODIMP
+nsDirectionalFrame::GetFrameType(nsIAtom** aType) const
+{ 
+  NS_PRECONDITION(nsnull != aType, "null OUT parameter pointer");
+  *aType = nsLayoutAtoms::directionalFrame; 
+  NS_ADDREF(*aType);
+  return NS_OK;
+}
+  
+NS_IMETHODIMP
+nsDirectionalFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+  nsresult rv = NS_NOINTERFACE;
+
+  if (!aInstancePtr) {
+    rv = NS_ERROR_NULL_POINTER;
+  }
+  if (aIID.Equals(kDirectionalFrameCID) ) {
+    *aInstancePtr = (void*) this;
+    rv = NS_OK;
+  }
+  return rv;
+}
+
+//const nsIID&
+//nsDirectionalFrame::GetIID()
+//{
+  //return kDirectionalFrameCID;
+//}
+
+void*
+nsDirectionalFrame::operator new(size_t aSize)
+{
+  void* frame = ::operator new(aSize);
+  if (frame) {
+    nsCRT::zero(frame, aSize);
+  }
+  return frame;
+}
+
+nsresult
+NS_NewDirectionalFrame(nsIFrame** aNewFrame, PRUnichar aChar)
+{
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsDirectionalFrame* frame = new nsDirectionalFrame(aChar);
+  if (nsnull == frame) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = frame;
+  return NS_OK;
+}
+
+PRUnichar
+NS_GetControlCharacter(nsIFrame* aFrame)
+{
+  PRUnichar ch = 0xFFFD; // unknown or unrepresentable character replacement,
+                         // according to the Unicode Standard
+  if (aFrame) {
+    nsDirectionalFrame* frame;
+    nsresult result = aFrame->QueryInterface(kDirectionalFrameCID,
+                                             (void**) &frame);
+    if (NS_SUCCEEDED(result) ) {
+      ch = frame->GetChar();
+    }
+  }
+  return ch;
+}
+#endif // IBMBIDI
