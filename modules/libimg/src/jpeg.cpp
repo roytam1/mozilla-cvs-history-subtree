@@ -40,7 +40,6 @@
 #endif
 
 PR_BEGIN_EXTERN_C
-#include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"
 
