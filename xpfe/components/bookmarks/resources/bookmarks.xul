@@ -63,15 +63,12 @@
 
   <!-- Shared Bookmarks Utility Library -->
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
-  <!-- Tree-based Bookmarks UI Utility Library -->
-  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksTree.js"/>
   <!-- Bookmarks Window -->
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarks.js"/>
 
   <!-- Bookmarks Window Drag & Drop -->
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
   <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksDD.js"/>
 
   <popupset id="bookmarksPopupset"/>
 
