@@ -55,14 +55,14 @@
    	appropriately for this OS. 
    */
 
-#ifdef XP_WIN 
+#if defined(XP_WIN ) || defined(XP_OS2)
 #define 	XP_FILENAMECMP	 	stricmp	
 #else
 #define 	XP_FILENAMECMP		XP_STRCMP
 #endif
 
 
-#if !defined(XP_WIN) && !defined(XP_OS2)
+#if !defined(XP_WIN) && !defined(XP_OS2_VACPP)
 	/* strdup is not an ANSI function */
 	XP_BEGIN_PROTOS
 	extern char * strdup (const char * s);
