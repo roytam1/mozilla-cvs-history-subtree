@@ -19,10 +19,13 @@
 //Note eventually this file moves to plughttp.dll. post DP work.
 //
 #include "nsHTTPInstance.h"
+#include "nsIInputStream.h"
 
 nsHTTPInstance::nsHTTPInstance(nsICoolURL* i_URL):
     m_pURL(i_URL),
-    m_bConnected(PR_FALSE)
+    m_bConnected(PR_FALSE),
+    m_pInputStream(0),
+    m_pUserAgent(0)
 {
     //TODO think if we need to make a copy of the URL and keep it here
     //since it might get deleted off the creators thread. And the
@@ -32,6 +35,7 @@ nsHTTPInstance::nsHTTPInstance(nsICoolURL* i_URL):
 nsHTTPInstance::~nsHTTPInstance()
 {
     //TODO if we keep our copy of m_pURL, then delete it too.
+    NS_IF_RELEASE(m_pInputStream);
 }
 
 NS_IMPL_ADDREF(nsHTTPInstance);
@@ -69,7 +73,14 @@ NS_IMPL_RELEASE(nsHTTPInstance);
 NS_METHOD
 nsHTTPInstance::GetInputStream(nsIInputStream* *o_Stream)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (!m_bConnected)
+    {
+        //Load will set up the stream.
+        Load();
+        NS_POSTCONDITION(0 != m_pInputStream, "Failed to create input stream!");
+    }
+    *o_Stream = m_pInputStream;
+    return NS_OK;
 }
 
 NS_METHOD
@@ -84,10 +95,13 @@ nsHTTPInstance::Load(void)
     if (m_bConnected) 
         return NS_ERROR_ALREADY_CONNECTED;
 
+    // So here lies the nasty hack to get some freakin work done 
+    // when your hands are tied and you can't rewrite the HTTP state
+    // machine. 
 
-
+    //Create a dummy URLStruct
+    
     m_bConnected = PR_TRUE;
-
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -114,6 +128,8 @@ nsHTTPInstance::SetUserAgent(const char* i_UserAgent)
 {
     if (m_bConnected) 
         return NS_ERROR_ALREADY_CONNECTED;
+	//We should probably keep our own copy here...
+    m_pUserAgent = (char*)i_UserAgent;
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 

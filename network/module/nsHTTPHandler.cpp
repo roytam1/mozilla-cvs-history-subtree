@@ -60,6 +60,15 @@ nsHTTPHandler::GetProtocolInstance(
             nsHTTPInstance* pNewInstance = new nsHTTPInstance(i_URL);
             if (pNewInstance)
             {
+                /* 
+                    Set all the default values on this instance 
+                    like set the User-Agent, Proxy info, etc... TODO
+                    This should just move to an easy copy constructor 
+                    then we could save a copy of the default 
+                    nsHTTPInstance with this handler, and always
+                    construct new instances with the default one
+                */
+                pNewInstance->SetUserAgent("Mozilla 5.0 User Agent Tester");
                 *o_Instance = pNewInstance;
                 return NS_OK;
             }

@@ -64,8 +64,10 @@ public:
     NS_METHOD               GetServer(const char* *o_String) const;
 
 private:
-    nsICoolURL*     m_pURL;
     PRBool          m_bConnected;
+    nsIInputStream* m_pInputStream;
+    nsICoolURL*     m_pURL;
+    char*           m_pUserAgent;
 };
 
 #endif /* _nsHTTPInstance_h_ */
