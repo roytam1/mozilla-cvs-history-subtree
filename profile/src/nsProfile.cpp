@@ -60,6 +60,9 @@
 #include "nsPrefMigration.h"
 #include "nsIPrefMigration.h"
 #include "nsPrefMigrationCIDs.h"
+#ifdef MOZ_PHOENIX
+#include "nsIProfileMigrator.h"
+#endif
 #include "nsFileStream.h"
 #include "nsIPromptService.h"
 #include "nsIStreamListener.h"
@@ -76,6 +79,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIChromeRegistry.h" // chromeReg
 #include "nsIStringBundle.h"
+#include "nsIObserver.h"
 #include "nsIObserverService.h"
 #include "nsHashtable.h"
 #include "nsIAtom.h"
@@ -905,21 +909,34 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
 
     // Start Migaration activity
     rv = cmdLineArgs->GetCmdLineValue(INSTALLER_CMD_LINE_ARG, getter_Copies(cmdResult));
-    if (allowAutoMigration && (NS_SUCCEEDED(rv) || forceMigration))
-    {        
+    if (allowAutoMigration && (NS_SUCCEEDED(rv) || forceMigration)) {        
         if (cmdResult || forceMigration) {
-        PRBool migrateAll = PR_FALSE;
-        (void)prefBranch->GetBoolPref(PREF_MIGRATE_ALL, &migrateAll);
+            PRBool migrateAll = PR_FALSE;
+            prefBranch->GetBoolPref(PREF_MIGRATE_ALL, &migrateAll);
 
             rv = MigrateProfileInfo();
             if (NS_FAILED(rv)) return rv;
 
+            PRInt32 numProfiles = 0;
+            GetProfileCount(&numProfiles);
+#ifdef MOZ_PHOENIX
+            // This will eventually change to MOZ_XULAPP
+            if (numProfiles == 0) {
+              nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+              nsCOMPtr<nsIProfileMigrator> pm(do_CreateInstance("@mozilla.org/profile/migrator;1"));
+              nsCOMPtr<nsIObserver> obs(do_QueryInterface(pm));
+              os->AddObserver(obs, "profile-initial-state", PR_FALSE);
+              rv = pm->Migrate();
+              if (NS_FAILED(rv)) {
+                // Migration failed for some reason, just create a generic default profile
+                CreateDefaultProfile();
+              }
+            }
+#else
             PRInt32 num4xProfiles = 0;
             rv = Get4xProfileCount(&num4xProfiles);
             if (NS_FAILED(rv)) return rv;
             
-            PRInt32 numProfiles = 0;
-            GetProfileCount(&numProfiles);
             if (num4xProfiles == 0 && numProfiles == 0) {
                 // Let us create a default 5.0 profile
                 CreateDefaultProfile();
@@ -943,6 +960,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
                 // show the profile manager
                 profileURLStr = PROFILE_MANAGER_URL;
             }
+#endif
         }
     }
 

@@ -36,8 +36,9 @@ SDK_XPIDLSRCS	= \
 
 XPIDLSRCS	= \
 		nsIProfileInternal.idl \
+	  nsIProfileMigrator.idl \
 		nsIProfileStartupListener.idl \
-	        nsISessionRoaming.idl \
+	  nsISessionRoaming.idl \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
