@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsIDocShell.h"
-#include "nsPresContext.h"
+#include "nsIPresContext.h"
 
 #include "nsDOMWindowUtils.h"
 #include "nsGlobalWindow.h"
@@ -65,7 +65,7 @@ nsDOMWindowUtils::GetImageAnimationMode(PRUint16 *aMode) {
   if (mWindow) {
     nsIDocShell *docShell = mWindow->GetDocShell();
     if (docShell) {
-      nsCOMPtr<nsPresContext> presContext;
+      nsCOMPtr<nsIPresContext> presContext;
       docShell->GetPresContext(getter_AddRefs(presContext));
       if (presContext) {
         *aMode = presContext->ImageAnimationMode();
@@ -82,7 +82,7 @@ nsDOMWindowUtils::SetImageAnimationMode(PRUint16 aMode) {
   if (mWindow) {
     nsIDocShell *docShell = mWindow->GetDocShell();
     if (docShell) {
-      nsCOMPtr<nsPresContext> presContext;
+      nsCOMPtr<nsIPresContext> presContext;
       docShell->GetPresContext(getter_AddRefs(presContext));
       if (presContext) {
         presContext->SetImageAnimationMode(aMode);
@@ -92,3 +92,4 @@ nsDOMWindowUtils::SetImageAnimationMode(PRUint16 aMode) {
   }
   return NS_ERROR_NOT_AVAILABLE;
 }
+
