@@ -31,12 +31,15 @@ var gSrcCanRename;
 
 function debugDump(msg)
 {
-  // uncomment for noise
-  // dump(msg+"\n");
+    // uncomment for noise
+    dump(msg+"\n");
 }
 
-function DragOverTree(event)
+function DragOverOutliner(event)
 {
+    debugDump("In DragOverOutliner");
+    return false;
+
     if (event.target.localName != "treecell" &&
         event.target.localName != "treeitem") {        
         event.preventBubble();
@@ -192,8 +195,11 @@ function DragOverTree(event)
     return false;
 }
 
+/*
 function BeginDragTree(event, tree, flavor)
 {
+    debugDump("In BeginDragOutliner2");
+
     if ( event.target == tree )
         return(true); // continue propagating the event
     
@@ -246,30 +252,65 @@ function BeginDragTree(event, tree, flavor)
 
     return(!dragStarted);  // don't propagate the event if a drag has begun
 }
+*/
 
-function BeginDragFolderTree(event)
+function BeginDragFolderOutliner(event)
 {
-    debugDump("BeginDragFolderTree\n");
-    if (event.target.localName != "treecell" &&
-        event.target.localName != "treeitem")
-           return false;
+    debugDump("In BeginDragFolderTree");
 
-    var tree = GetFolderTree();
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    var folderResource = GetFolderResource(row.value);
 
-    var treeItem = event.target.parentNode.parentNode;
-    if (!treeItem)	return(false);
+    gSrcCanRename = GetFolderAttribute(folderResource, "CanRename");
 
-    gSrcCanRename = treeItem.getAttribute('CanRename');  //used in DragOverTree
-
-    var serverType = treeItem.getAttribute('ServerType') // do not allow the drag when news is the source
-    if ( serverType == "nntp") 
+    var serverType = GetFolderAttribute(folderResource, "ServerType")
+    if (serverType == "nntp") 
     {
-      debugDump("***serverType == nntp \n");
-      return(false);
-	}
+        // do not allow the drag when news is the source
+        debugDump("serverType == nntp");
+        return false;
+    }
 
-    return BeginDragTree(event, tree, "text/nsmessageOrfolder");
+    var transArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 
+    var rangeCount = folderOutliner.outlinerBoxObject.selection.getRangeCount();
+    for (var i = 0; i < rangeCount; i++)
+    {
+        dump("i: "+i+"\n");
+        var startRange = {};
+        var endRange = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(i, startRange, endRange);
+        for(var j = startRange.value; j <= endRange.value; j++)
+        {
+            dump("j: "+j+"\n");
+            var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+            trans.addDataFlavor("text/nsmessageOrfolder");
+
+            var genTextData = Components.classes["@mozilla.org/supports-wstring;1"].createInstance(Components.interfaces.nsISupportsWString);
+            var resource = GetFolderResource(j);
+            dump("resource: "+resource.Value+"\n");
+            dump("resource.length: "+resource.Value.length+"\n");
+            genTextData.data = resource;
+
+            // double byte data
+            trans.setTransferData ("text/nsmessageOrfolder", genTextData, resource.Value.length * 2 );
+
+            // put it into the transferable as an |nsISupports|
+            var genTrans = trans.QueryInterface(Components.interfaces.nsISupports);
+            transArray.AppendElement(genTrans);
+        }
+    }
+
+    var nsIDragService = Components.interfaces.nsIDragService;
+    dragService.invokeDragSession (event.target, transArray, null, nsIDragService.DRAGDROP_ACTION_COPY + 
+                                   nsIDragService.DRAGDROP_ACTION_MOVE);
+
+    // don't propagate the event if a drag has begun
+    return false;
 }
 
 function DropOnFolderTree(event)

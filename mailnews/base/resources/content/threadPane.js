@@ -69,7 +69,7 @@ nsMsgDBViewCommandUpdater.prototype =
 
   displayMessageChanged : function(aFolder, aSubject)
   {
-    setTitleFromFolder(aFolder, aSubject);
+    SetTitleFromFolder(aFolder, aSubject);
     gHaveLoadedMessage = true;
   },
 

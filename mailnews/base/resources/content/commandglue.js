@@ -96,7 +96,7 @@ function LoadMessageByUri(uri)
         var resource = RDF.GetResource(uri);
         var message = resource.QueryInterface(Components.interfaces.nsIMessage);
         if (message)
-            setTitleFromFolder(message.msgFolder, message.mimef2DecodedSubject);
+            SetTitleFromFolder(message.msgFolder, message.mimef2DecodedSubject);
 
         var nsIMsgFolder = Components.interfaces.nsIMsgFolder;
         if (message.msgFolder.server.downloadOnBiff)
@@ -255,7 +255,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 
     try
     {
-        setTitleFromFolder(msgfolder, null);
+        SetTitleFromFolder(msgfolder, null);
     } catch (ex)
     {
         dump("error setting title: " + ex + "\n");
