@@ -202,7 +202,7 @@ sub askPassword
   eval "use Term::ReadKey";
   $hasReadKey=1 unless ($@);
 
-  print "LDAP password: " if $prompt;
+  print "LDAP password: " unless $prompt;
   if ($hasReadKey)
     {
       ReadMode(2);
