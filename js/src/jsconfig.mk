@@ -13,7 +13,7 @@ ifeq ($(OS_ARCH), SunOS)
 endif
 ifeq ($(OS_ARCH), Linux)
   LINUX_REL     := $(shell uname -r)
-  ifneq ($(findstring 2.0, $(LINUX_REL)), "")
+  ifneq (,$(findstring 2.0,$(LINUX_REL)))
     NSPR_OBJDIR := $(subst _All,2.0.35_x86_PTH,$(NSPR_OBJDIR))
   else
     NSPR_OBJDIR := $(subst _All,2.1.108_x86_PTH,$(NSPR_OBJDIR))
