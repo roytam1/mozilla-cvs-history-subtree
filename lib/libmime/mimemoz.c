@@ -2438,6 +2438,7 @@ mime_TranslateCalendar(char* caldata, char** html)
  *
  */
 
+#ifdef MOZ_CALENDAR
 struct mime_calendar_data {
     URL_Struct *url;                         /* original url */
     int format_out;                          /* intended output format; should be TEXT-CALENDAR */
@@ -2619,4 +2620,5 @@ extern NET_StreamClass * MIME_JulianConverter (int format_out, void *closure, UR
 
     return stream;
 }
+#endif
 
