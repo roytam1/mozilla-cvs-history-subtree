@@ -121,6 +121,7 @@ static JVMContext* GetJVMContext()
 		context->securityStack = NULL;
 		context->jsj_env = NULL;
 		context->js_context = NULL;
+		context->js_startframe = NULL;
 		localContext.set(context);
 	}
 	return context;
