@@ -93,6 +93,7 @@ protected:
   static nsIRDFResource      *kNC_Name;
   static nsIRDFResource      *kNC_ShortcutURL;
   static nsIRDFResource      *kNC_Description;
+  static nsIRDFResource      *kWEB_LastCharset;
   static nsIRDFLiteral       *kTrueLiteral;
 
   static nsIRDFResource      *kNC_BookmarkCommand_NewBookmark;
