@@ -24,7 +24,6 @@
      Seth Spitzer <sspitzer@netscape.com>
 -->
 
-<?xml-stylesheet href="chrome://messenger/skin/addressbook/sidebarPanel.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/addressbook/addressPanes.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/addressbook/abResultsPane.css" type="text/css"?>
 
