@@ -58,8 +58,10 @@ class JSException extends RuntimeException {
 
     /**
      * Constructs a JSException with a wrapped JavaScript exception object.
+     * This constructor needs to be public so that Java users can throw 
+     * exceptions to JS cleanly.
      */
-    private JSException(Object wrappedException) {
+    public JSException(Object wrappedException) {
 	super();
 	this.wrappedException = wrappedException;
     }
