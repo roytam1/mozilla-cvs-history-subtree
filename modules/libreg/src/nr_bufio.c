@@ -35,7 +35,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 #if defined(XP_MAC) || defined(XP_MACOSX)
   #include <Errors.h>
 #endif
@@ -140,7 +142,7 @@ BufioFile*  bufio_Open(const char* name, const char* mode)
     else
     {
         /* couldn't open file. Figure out why and set NSPR errors */
-        
+#if !defined(WINCE)        
         switch (errno)
         {
             /* file not found */
@@ -165,6 +167,9 @@ BufioFile*  bufio_Open(const char* name, const char* mode)
                 PR_SetError(PR_UNKNOWN_ERROR,0);
                 break;
         }
+#else
+        PR_SetError(PR_UNKNOWN_ERROR,0);
+#endif
     }
 
     return file;

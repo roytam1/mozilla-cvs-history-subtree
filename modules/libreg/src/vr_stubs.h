@@ -53,7 +53,9 @@
 #if ( defined(BSDI) && !defined(BSDI_2) ) || defined(XP_OS2_EMX)
 #include <sys/types.h>
 #endif
+#if !defined(WINCE)
 #include <sys/stat.h>
+#endif
 #endif
 
 #ifdef XP_OS2_VACPP

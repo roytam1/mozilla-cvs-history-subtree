@@ -163,8 +163,13 @@ extern void vr_findGlobalRegName ()
 {
     char    path[ PATHLEN ];
     int     pathlen;
-   
+
+#if defined(WINCE)
+    XP_STRCPY(path, "\\windows");
+    pathlen = 8;
+#else
     pathlen = GetWindowsDirectory(path, PATHLEN);
+#endif
     if ( pathlen > 0 ) {
         XP_FREEIF(globalRegName);
         XP_STRCPY( path+pathlen, WIN_REG );
@@ -179,7 +184,12 @@ char* vr_findVerRegName()
    
     if ( verRegName == NULL )
     {
+#if defined(WINCE)
+        XP_STRCPY(path, "\\windows");
+        pathlen = 8;
+#else
         pathlen = GetWindowsDirectory(path, PATHLEN);
+#endif
         if ( pathlen > 0 ) {
             XP_STRCPY( path+pathlen, WIN_VERREG );
             verRegName = XP_STRDUP(path);

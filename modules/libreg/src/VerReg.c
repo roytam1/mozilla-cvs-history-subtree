@@ -36,11 +36,13 @@
  *
  * --------------------------------------------------------------------
  */
+#if !defined(WINCE)
 #include <fcntl.h>
 #include <errno.h>
 
 #if defined(XP_WIN) 
 #include <io.h>
+#endif
 #endif
 
 #if defined(XP_OS2)
@@ -1011,9 +1013,7 @@ VR_INTERFACE(REGERR) VR_ValidateComponent(char *component_path)
     }
 
     {
-        struct stat  statStruct;
-
-        if ( stat ( path, &statStruct ) != 0 ) {
+        if ( PR_FAILURE == PR_Access(path, PR_ACCESS_EXISTS) ) {
             err = REGERR_NOFILE;
         }
     }

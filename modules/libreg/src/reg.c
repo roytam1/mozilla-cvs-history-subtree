@@ -385,8 +385,7 @@ static REGERR nr_OpenFile(char *path, FILEHANDLE *fh)
     *fh = XP_FileOpen(path, XP_FILE_UPDATE_BIN);
     if ( !VALID_FILEHANDLE(*fh) )
     {
-        XP_StatStruct st;
-        if ( XP_Stat( path, &st ) != 0 )
+        if ( PR_FAILURE == PR_Access(path, PR_ACCESS_EXISTS) )
         {
             /* file doesn't exist, so create */
             *fh = XP_FileOpen(path, XP_FILE_TRUNCATE_BIN);

@@ -77,6 +77,9 @@ PUBLIC=$(XPDIST)\include\$(MODULE)
 PUBLIC=$(XPDIST)\include
 !endif
 
+!if "$(OS_TARGET)" == "WINCE"
+DIST_PREFIX=$(OSVERSION)$(TARGETCPU)
+!else
 !ifdef NGLAYOUT_BUILD_PREFIX
 DIST_PREFIX=NGL
 !else
@@ -86,9 +89,23 @@ DIST_PREFIX=NAV
 DIST_PREFIX=WIN
 !endif
 !endif
+!endif
 
+!if "$(OS_TARGET)" == "WINCE"
+!ifndef MOZ_DEBUG
+OBJDIR=$(DIST_PREFIX)$(OBJTYPE)_O.OBJ
+!else
+OBJDIR=$(DIST_PREFIX)$(OBJTYPE)_D.OBJ
+!endif
+!else
 !ifndef MOZ_DEBUG
 OBJDIR=$(DIST_PREFIX)$(MOZ_BITS)$(OBJTYPE)_O.OBJ
+!else
+OBJDIR=$(DIST_PREFIX)$(MOZ_BITS)$(OBJTYPE)_D.OBJ
+!endif
+!endif
+
+!ifndef MOZ_DEBUG
 JAVA_OPTIMIZER = -O
 !ifdef NO_CAFE
 JAVAC_OPTIMIZER =
@@ -97,7 +114,6 @@ JAVAC_OPTIMIZER =
 JAVAC_OPTIMIZER =
 !endif
 !else
-OBJDIR=$(DIST_PREFIX)$(MOZ_BITS)$(OBJTYPE)_D.OBJ
 JAVA_OPTIMIZER = -g
 JAVAC_OPTIMIZER = -g
 !endif
@@ -105,10 +121,18 @@ JAVAC_OPTIMIZER = -g
 #//
 #// DIST DEFINES SHOULD NEVER BE COMPONENT SPECIFIC.
 #//
+!if "$(OS_TARGET)" == "WINCE"
+!ifndef MOZ_DEBUG
+DIST=$(XPDIST)\$(DIST_PREFIX)_O.OBJ
+!else
+DIST=$(XPDIST)\$(DIST_PREFIX)_D.OBJ
+!endif
+!else
 !ifndef MOZ_DEBUG
 DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_O.OBJ
 !else
 DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_D.OBJ
+!endif
 !endif
 
 # This will always give the location of NGLayout's dist, even if "NGLAYOUT_BUILD_PREFIX" is not defined.

@@ -28,7 +28,15 @@
 #// Define the OS dependent commands used by MAKE
 #//
 #//------------------------------------------------------------------------
+!if "$(OS_TARGET)" == "WINCE"
+!if "$(TARGETCPU)" == "ARM"
+CC=clarm
+!else
 CC=cl
+!endif
+!else
+CC=cl
+!endif
 LD=link
 AR=lib
 RC=rc
@@ -63,14 +71,22 @@ OPTIMIZER=-Zi -DDEBUG -UNDEBUG -D_DEBUG
 !if defined(GLOWCODE) && "$(MOZ_BITS)"=="32"
 OS_LFLAGS=/DEBUG /DEBUGTYPE:BOTH /INCLUDE:_GlowCode /PDB:NONE
 !else
+!if "$(OS_TARGET)" == "WINCE"
+OS_LFLAGS=/DEBUG /DEBUGTYPE:CV
+!else
 OS_LFLAGS=/DEBUG /DEBUGTYPE:CV /PDB:$(PDBFILE)
+!endif
 !endif
 
 !else
 
 # Initialize to non-profile, non-coverage optimization
 OPTIMIZER=-O1 -UDEBUG -DNDEBUG
+!if "$(OS_TARGET)" == "WINCE"
+OS_LFLAGS=
+!else
 OS_LFLAGS=/OPT:nowin98
+!endif
 
 
 # if MOZ_DEBUG is not set and MOZ_PROFILE is set, then we generate
@@ -117,6 +133,10 @@ OS_LFLAGS=$(OS_LFLAGS) /MAP:$(MAPFILE) /MAPINFO:LINES
 #// DLL version of the RTL is used...
 #//
 #//------------------------------------------------------------------------
+!if "$(OS_TARGET)" == "WINCE"
+RTL_FLAGS=-Zl
+OS_LFLAGS=$(OS_FLAGS) /NODEFAULTLIB:OLDNAMES.lib
+!else
 !ifdef USE_STATIC_LIBS
 RTL_FLAGS=-MT          # Statically linked multithreaded RTL
 !if defined(MOZ_DEBUG) || defined(MOZ_TRACE_MALLOC)
@@ -138,16 +158,29 @@ RTL_FLAGS=-MDd         # Dynamically linked, multithreaded MSVC4.0 debug RTL
 !endif
 !endif
 !endif
+!endif
 
 #//------------------------------------------------------------------------
 #//
 #// Specify the OS dependent compiler flags, linker flags and libraries
 #//
 #//------------------------------------------------------------------------
+!if "$(OS_TARGET)" == "WINCE"
+OS_CFLAGS=$(OPTIMIZER) $(RTL_FLAGS) -W3 -nologo -D_$(TARGETCPU)_ -D_WINDOWS  -DWIN32 \
+            -DXP_PC -DXP_WIN -DXP_WIN32 -DHW_THREADS -DWINVER=0x400 -Gy \
+            -DWINCE -DUNICODE -D_UNICODE -DUNDER_CE=300 -D_WIN32_WCE=300 \
+            -DMSVC4
+
+!if "$(TARGETCPU)" == "X86"
+OS_CFLAGS=$(OS_CFLAGS) -Dx86 -D_WIN32_WCE_CEPC
+!else
+OS_CFLAGS=$(OS_CFLAGS) -D$(TARGETCPU)
+!endif
+!else
 OS_CFLAGS=$(OPTIMIZER) $(RTL_FLAGS) -W3 -nologo -D_X86_ -D_WINDOWS  -DWIN32 \
             -DXP_PC -DXP_WIN -DXP_WIN32 -DHW_THREADS -DWINVER=0x400 -Gy
-
 OS_CFLAGS=$(OS_CFLAGS) -DMSVC4 
+!endif
 
 !ifdef MOZ_DEBUG
 # Enable browse info in VC++
@@ -158,8 +191,17 @@ OS_CFLAGS=$(OS_CFLAGS) /FR
 
 ## Removed MOZ_LITE/MOZ_MEDIUM stuff from OS_CFLAGS
 
+!if "$(OS_TARGET)" == "WINCE"
+!if "$(TARGETCPU)" == "X86"
+OS_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWSCE,3.00 /MACHINE:IX86 /STACK:0x10000,0x1000
+!else
+OS_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWSCE,3.00 /MACHINE:$(TARGETCPU) /STACK:0x10000,0x1000
+!endif
+OS_LIBS=corelibc.lib winsock.lib
+!else
 OS_LFLAGS=$(OS_LFLAGS)
 OS_LIBS=kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -173,9 +215,9 @@ EXE_CFLAGS=/Gh
 EXE_CFLAGS=/Gy
 !endif
 !if defined(MOZ_PROFILE)
-EXE_LFLAGS=/FIXED:NO
+EXE_LFLAGS=$(OS_LFLAGS) /FIXED:NO 
 !else
-EXE_LFLAGS=
+EXE_LFLAGS=$(OS_LFLAGS)
 !endif
 EXE_LIBS=
 
@@ -188,9 +230,15 @@ EXE_LIBS=$(EXE_LIBS) $(DIST)/lib/trace.lib
 #// Specify the special flags for creating DLLs
 #//
 #//------------------------------------------------------------------------
+!if "$(OS_TARGET)" == "WINCE"
 DLL_CFLAGS=
-DLL_LFLAGS=/SUBSYSTEM:WINDOWS
+DLL_LFLAGS=$(OS_LFLAGS) /DLL /ENTRY:_DllMainCRTStartup
+DLL_LIBS=coredll.lib
+!else
+DLL_CFLAGS=
+DLL_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWS
 DLL_LIBS=
+!endif
 
 !if defined(MOZ_COVERAGE) && !defined(MOZ_NO_COVERAGE)
 DLL_LIBS=$(DLL_LIBS) $(DIST)/lib/trace.lib
