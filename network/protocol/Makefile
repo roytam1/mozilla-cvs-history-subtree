@@ -44,7 +44,6 @@ DIRS += \
 	smtp \
 	nntp \
 	pop3 \
-	callback \
 	imap4 \
 	$(NULL)
 endif

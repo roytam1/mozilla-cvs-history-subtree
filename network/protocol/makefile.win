@@ -26,6 +26,7 @@ IGNORE_MANIFEST=1
 
 
 DEPTH=..\..
+include <$(DEPTH)\config\config.mak> 
 DIRS= \
 	about \
 	file \
@@ -43,7 +44,6 @@ DIRS= \
 	smtp \
 	nntp \
 	mailbox \
-	callback \
 	imap4 \
 !endif
 !ifdef MOZ_LDAP

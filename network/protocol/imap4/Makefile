@@ -32,7 +32,7 @@ CPPSRCS		= \
 	mkimap4.cpp	\
 	$(NULL)
 
-#EXPORTS=
+EXPORTS= imap4pvt.h imap4url.h imapbody.h imaphier.h mkimap4.h
 
 REQUIRES	=  network nspr2 security
 #netcache network nspr2 dbm util pref js java fileurl \

@@ -97,7 +97,7 @@ LIBRARY_NAME=network
 
 EXTRA_LIBS=
 
-REQUIRES= foo parse jtools java zlib nspr dbm util network js security mimetype ldap net progress
+REQUIRES= foo parse jtools java zlib nspr dbm util network js security mimetype ldap imap4url ldapurl net progress
 EXPORTS= mkstream.h \
 	 mkparse.h \
 	 mkfsort.h \
@@ -140,6 +140,8 @@ LINCS=-I$(PUBLIC)\jtools	\
     -I$(PUBLIC)\ldap		\
     -I$(PUBLIC)\net		\
     -I$(PUBLIC)\progress		\
+    -I$(PUBLIC)\ldapurl		\
+    -I$(PUBLIC)\imap4url		\
     -I$(PUBLIC)\security 
 #!endif
 
