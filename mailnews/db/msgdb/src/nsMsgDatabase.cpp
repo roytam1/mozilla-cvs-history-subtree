@@ -3767,7 +3767,7 @@ NS_IMETHODIMP nsMsgDatabase::GetMsgDownloadSettings(nsIMsgDownloadSettings **dow
       PRUint32 ageLimitOfMsgsToDownload;
       PRBool downloadUnreadOnly;
 
-      m_dbFolderInfo->GetBooleanProperty("useServerDefaults", &useServerDefaults, PR_FALSE);
+      m_dbFolderInfo->GetBooleanProperty("useServerDefaults", &useServerDefaults, PR_TRUE);
       m_dbFolderInfo->GetBooleanProperty("downloadByDate", &downloadByDate, PR_FALSE);
       m_dbFolderInfo->GetBooleanProperty("downloadUnreadOnly", &downloadUnreadOnly, PR_FALSE);
       m_dbFolderInfo->GetUint32Property("ageLimit", &ageLimitOfMsgsToDownload, 0);
