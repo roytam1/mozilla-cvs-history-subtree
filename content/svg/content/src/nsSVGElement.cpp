@@ -476,7 +476,7 @@ nsSVGElement::WalkContentStyleRules(nsRuleWalker* aRuleWalker)
 NS_IMETHODIMP
 nsSVGElement::GetInlineStyleRule(nsIStyleRule** aStyleRule)
 {
-  return mStyle->GetStyleRule(mDocument, aStyleRule);
+  return mStyle->GetStyleRule(this, aStyleRule);
 }
 
 NS_IMETHODIMP
