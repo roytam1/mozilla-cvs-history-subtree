@@ -81,6 +81,7 @@
 // XXX This is sure to change. Copied from mozilla/layout/xul/content/src/nsXULAtoms.cpp
 #define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
+static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
 // End of XUL interface includes
 
 ////////////////////////////////////////////////////////////////////////
@@ -225,9 +226,13 @@ public:
 
 private:
     // pseudo-constants
-    static nsrefcnt       gRefCnt;
-    static nsIRDFService* gRDFService;
-    static nsIAtom*       kIdAtom;
+    static nsrefcnt             gRefCnt;
+    static nsIRDFService*       gRDFService;
+    static nsINameSpaceManager* gNameSpaceManager;
+    static PRInt32              kNameSpaceID_RDF;
+    static PRInt32              kNameSpaceID_XUL;
+    static nsIAtom*             kIdAtom;
+    static nsIAtom*             kContainerAtom;
 
     nsIDocument*      mDocument;
     void*             mScriptObject;
@@ -243,9 +248,13 @@ private:
 };
 
 
-nsrefcnt       RDFElementImpl::gRefCnt;
-nsIRDFService* RDFElementImpl::gRDFService;
-nsIAtom*       RDFElementImpl::kIdAtom;
+nsrefcnt             RDFElementImpl::gRefCnt;
+nsIRDFService*       RDFElementImpl::gRDFService;
+nsINameSpaceManager* RDFElementImpl::gNameSpaceManager;
+nsIAtom*             RDFElementImpl::kIdAtom;
+nsIAtom*             RDFElementImpl::kContainerAtom;
+PRInt32              RDFElementImpl::kNameSpaceID_RDF;
+PRInt32              RDFElementImpl::kNameSpaceID_XUL;
 
 ////////////////////////////////////////////////////////////////////////
 // RDFElementImpl
@@ -273,7 +282,20 @@ RDFElementImpl::RDFElementImpl(PRInt32 aNameSpaceID, nsIAtom* aTag)
 
         NS_VERIFY(NS_SUCCEEDED(rv), "unable to get RDF service");
 
-        kIdAtom = NS_NewAtom("ID");
+        kIdAtom        = NS_NewAtom("ID");
+        kContainerAtom = NS_NewAtom("container");
+
+        rv = nsRepository::CreateInstance(kNameSpaceManagerCID,
+                                          nsnull,
+                                          kINameSpaceManagerIID,
+                                          (void**) &gNameSpaceManager);
+
+        NS_VERIFY(NS_SUCCEEDED(rv), "unable to create namespace manager");
+
+        if (gNameSpaceManager) {
+            gNameSpaceManager->RegisterNameSpace(kRDFNameSpaceURI, kNameSpaceID_RDF);
+            gNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
+        }
     }
 }
 
@@ -308,7 +330,9 @@ RDFElementImpl::~RDFElementImpl()
             gRDFService = nsnull;
         }
 
-        NS_RELEASE(kIdAtom);
+        NS_IF_RELEASE(kIdAtom);
+        NS_IF_RELEASE(kContainerAtom);
+        NS_IF_RELEASE(gNameSpaceManager);
     }
 }
 
@@ -1204,10 +1228,7 @@ static char kNameSpaceSeparator[] = ":";
     // XXX This is wrong: we need to implement nsIXMLContent so
     // that we can get the namespace scoping set up properly for
     // this tag.
-    nsINameSpaceManager* mgr;
-    mDocument->GetNameSpaceManager(mgr);
-    mgr->GetNameSpaceID(kXULNameSpaceURI, aNameSpaceID);
-    NS_RELEASE(mgr);
+    aNameSpaceID = kNameSpaceID_XUL;
 
 #if 0
     // Figure out the namespace ID
@@ -1227,7 +1248,7 @@ static char kNameSpaceSeparator[] = ":";
 
 NS_IMETHODIMP
 RDFElementImpl::GetNameSpacePrefix(PRInt32 aNameSpaceID, 
-                                           nsIAtom*& aPrefix)
+                                   nsIAtom*& aPrefix)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -1245,13 +1266,12 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
                              PRBool aNotify)
 {
     NS_ASSERTION(kNameSpaceID_Unknown != aNameSpaceID, "must have name space ID");
-    if (kNameSpaceID_Unknown == aNameSpaceID) {
+    if (kNameSpaceID_Unknown == aNameSpaceID)
         return NS_ERROR_ILLEGAL_VALUE;
-    }
+
     NS_ASSERTION(nsnull != aName, "must have attribute name");
-    if (nsnull == aName) {
+    if (nsnull == aName)
         return NS_ERROR_NULL_POINTER;
-    }
 
     if (nsnull == mAttributes) {
         if ((mAttributes = new nsVoidArray()) == nsnull)
@@ -1306,6 +1326,15 @@ RDFElementImpl::SetAttribute(PRInt32 aNameSpaceID,
 
     if (NS_SUCCEEDED(rv) && aNotify && (nsnull != mDocument)) {
         mDocument->AttributeChanged(this, aName, NS_STYLE_HINT_UNKNOWN);
+    }
+
+    // Check to see if this is the RDF:container property; if so, and
+    // the value is "true", then remember to generate our kids on
+    // demand.
+    if ((aNameSpaceID == kNameSpaceID_RDF) &&
+        (aName == kContainerAtom) &&
+        (aValue.EqualsIgnoreCase("true"))) {
+        mContentsMustBeGenerated = PR_TRUE;
     }
 
     return rv;
@@ -1431,8 +1460,8 @@ RDFElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNot
 
 NS_IMETHODIMP
 RDFElementImpl::GetAttributeNameAt(PRInt32 aIndex,
-                                         PRInt32& aNameSpaceID,
-                                         nsIAtom*& aName) const
+                                   PRInt32& aNameSpaceID,
+                                   nsIAtom*& aName) const
 {
 #if defined(CREATE_PROPERTIES_AS_ATTRIBUTES)
     // XXX I'm not sure if we should support attributes or not...
@@ -1484,7 +1513,6 @@ done:
     return rv;
 #endif // defined(CREATE_PROPERTIES_AS_ATTRIBUTES)
 
-    --aIndex;
     if (nsnull != mAttributes) {
         nsGenericAttribute* attr = (nsGenericAttribute*)mAttributes->ElementAt(aIndex);
         if (nsnull != attr) {
@@ -1508,13 +1536,12 @@ RDFElementImpl::GetAttributeCount(PRInt32& aResult) const
 
     nsresult rv = NS_OK;
     if (nsnull != mAttributes) {
-      aResult = mAttributes->Count();
+        aResult = mAttributes->Count();
     }
     else {
-      aResult = 0;
+        aResult = 0;
     }
 
-    ++aResult; // For the implicit RDF:ID property
     return rv;
 }
 
@@ -1810,19 +1837,11 @@ RDFElementImpl::EnsureContentsGenerated(void) const
 nsresult
 RDFElementImpl::GetResource(nsIRDFResource** aResource)
 {
-    // Ick.
-    nsINameSpaceManager* mgr;
-    mDocument->GetNameSpaceManager(mgr);
-    PRInt32 kNameSpaceID_RDF;
-    mgr->GetNameSpaceID(kXULNameSpaceURI, kNameSpaceID_RDF);
-    NS_RELEASE(mgr);
-
     nsAutoString uri;
     if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(kNameSpaceID_RDF, kIdAtom, uri)) {
-        
+        return gRDFService->GetUnicodeResource(uri, aResource);
     }
-    else {
-        *aResource = nsnull;
-    }
+
+    *aResource = nsnull;
     return NS_OK;
 }
