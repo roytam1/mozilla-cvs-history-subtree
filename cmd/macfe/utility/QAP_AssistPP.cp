@@ -50,6 +50,7 @@ To use this assistance hook with your PowerPlant application, do the following:
 */
 
 #include "QAP_Assist.h"
+#ifdef QAP_BUILD
 #include <string.h>
 
 #include <LButton.h>
@@ -578,7 +579,7 @@ static short LPaneGetContents (LPane * lpanep, PWCINFO wcp, short * sp_count, sh
 	//¥ NETSCAPE: below is the generic LView handler - put your custom types above
 	if ((lviewp = dynamic_cast <LView*> (lpanep)) != NULL)
 	{
-		LArrayIterator 	iterator (lviewp->GetSubPanes (), iterate_FromStart);
+		LArrayIterator 	iterator (lviewp->GetSubPanes (), LArrayIterator::from_Start);
 		LPane 			* lpanep_sub;
 
 		while (iterator.Next (& lpanep_sub)) 
@@ -814,3 +815,4 @@ short	CQAPartnerTableMixin::QapGetListContents(Ptr pBuf, short index)
 	return count;
 }
 
+#endif // QAP_BUILD

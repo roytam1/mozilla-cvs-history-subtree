@@ -24,7 +24,7 @@
 
 
 //¥NETSCAPE: added this definition
-#define QAP_BUILD			0
+//#define QAP_BUILD
 
 // The internal name of the QA Partner 4.0 driver
 #define QAP_DRIVER_NAME     "\p.QAP40"
