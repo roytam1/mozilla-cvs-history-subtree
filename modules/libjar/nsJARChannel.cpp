@@ -373,7 +373,7 @@ nsJARChannel::AsyncReadJARElement()
            ("nsJarProtocol: AsyncRead jar entry %s", (const char*)jarURLStr));
 #endif
 
-    rv = jarTransport->AsyncRead(this, nsnull, 0, 0, 0, getter_AddRefs(mJarExtractionTransport));
+    rv = jarTransport->AsyncRead(this, nsnull, 0, -1, 0, getter_AddRefs(mJarExtractionTransport));
     return rv;
 }
 

@@ -175,7 +175,7 @@ TestProvider::OnStopRequest(nsIRequest* request, nsISupports* context,
         treq->GetTransport(getter_AddRefs(transport));
         if (transport) {
             nsCOMPtr<nsIRequest> readRequest;
-            transport->AsyncRead(listener, nsnull, 0, 0, 0, getter_AddRefs(readRequest));
+            transport->AsyncRead(listener, nsnull, 0, -1, 0, getter_AddRefs(readRequest));
         }
     } else
         gKeepRunning = 0;
@@ -318,7 +318,7 @@ main(int argc, char* argv[])
 
     if (!sync) {
         nsCOMPtr<nsIRequest> request;
-        rv = transport->AsyncWrite(new TestProvider(buffer), nsnull, 0, 0, 0, getter_AddRefs(request));
+        rv = transport->AsyncWrite(new TestProvider(buffer), nsnull, 0, -1, 0, getter_AddRefs(request));
         if (NS_FAILED(rv)) {
             NS_WARNING("failed calling: AsyncWrite!");
             return rv;
@@ -353,7 +353,7 @@ main(int argc, char* argv[])
         // synchronous write
         {
             nsCOMPtr<nsIOutputStream> os;
-            rv = transport->OpenOutputStream(0, 0, 0, getter_AddRefs(os));
+            rv = transport->OpenOutputStream(0, -1, 0, getter_AddRefs(os));
             if (NS_FAILED(rv)) return rv;
             rv = WriteRequest(os, buffer);
             if (NS_FAILED(rv)) return rv;
@@ -361,7 +361,7 @@ main(int argc, char* argv[])
         // synchronous read
         {
             nsCOMPtr<nsIInputStream> is;
-            rv = transport->OpenInputStream(0, 0, 0, getter_AddRefs(is));
+            rv = transport->OpenInputStream(0, -1, 0, getter_AddRefs(is));
             if (NS_FAILED(rv)) return rv;
             rv = ReadResponse(is);
             if (NS_FAILED(rv)) return rv;

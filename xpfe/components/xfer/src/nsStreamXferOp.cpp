@@ -285,7 +285,7 @@ nsStreamXferOp::OnStartRequest(nsIRequest *request, nsISupports* aContext) {
 
 #ifdef USE_ASYNC_READ
     // Open output stream.
-    rv = mOutputTransport->OpenOutputStream(0,0,0,getter_AddRefs( mOutputStream ) );
+    rv = mOutputTransport->OpenOutputStream(0,-1,0,getter_AddRefs( mOutputStream ) );
 
     if ( NS_FAILED( rv ) ) {
         // Give up all hope.

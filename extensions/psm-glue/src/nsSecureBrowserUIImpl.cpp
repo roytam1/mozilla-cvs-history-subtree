@@ -301,6 +301,9 @@ nsSecureBrowserUIImpl::Notify(nsIContent* formNode, nsIDOMWindowInternal* window
     document->GetScriptGlobalObject(getter_AddRefs(globalObject)); 
     nsCOMPtr<nsIDOMWindowInternal> postingWindow = do_QueryInterface(globalObject); 
     
+    // No posting window!
+    if (!postingWindow) return NS_OK;
+
     PRBool isChild;
     IsChildOfDomWindow(mWindow, postingWindow, &isChild);
 

@@ -725,7 +725,7 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   rv = fts->CreateTransport(mTempFile, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE, 0664, getter_AddRefs(fileTransport));
   if (NS_FAILED(rv)) return rv;
 
-  rv = fileTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mOutStream));
+  rv = fileTransport->OpenOutputStream(0, -1, 0, getter_AddRefs(mOutStream));
   
   return rv;
 }

@@ -811,7 +811,7 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* i_Contex
                     if (pListener)
                     {
                         NS_ADDREF(pListener);
-                        rv = mTransport->AsyncRead(pListener, i_Context, 0, 0, 0,
+                        rv = mTransport->AsyncRead(pListener, i_Context, 0, -1, 0,
                                                    getter_AddRefs(mCurrentReadRequest));
                         mListener  = pListener;
                         NS_RELEASE(pListener);

@@ -865,7 +865,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports
         m_typeWanted = ARTICLE_WANTED;
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this), mailnewsUrl);
         nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, 0, 0, getter_AddRefs(request));  // dougt full read now.  This maybe bad.
+        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));  // dougt full read now.  This maybe bad.
         NS_RELEASE(cacheListener);
 
         MarkCurrentMsgRead();

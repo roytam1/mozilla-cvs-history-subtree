@@ -1246,9 +1246,9 @@ nsFtpState::S_list() {
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
 
 #ifdef FTP_NO_HTTP_INDEX_FORMAT
-    return mDPipe->AsyncRead(mListener, nsnull, 0, 0, 0, getter_AddRefs(mDPipeRequest));
+    return mDPipe->AsyncRead(mListener, nsnull, 0, -1, 0, getter_AddRefs(mDPipeRequest));
 #else
-    return mDPipe->AsyncRead(converterListener, mListenerContext, 0, 0, 0, getter_AddRefs(mDPipeRequest));
+    return mDPipe->AsyncRead(converterListener, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
 #endif
 
 }
@@ -1273,7 +1273,7 @@ nsFtpState::S_retr() {
     if (NS_FAILED(rv)) return rv;
 
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
-    return mDPipe->AsyncRead(mListener, mListenerContext, 0, 0, 0, getter_AddRefs(mDPipeRequest));
+    return mDPipe->AsyncRead(mListener, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
 }
 
 FTP_STATE

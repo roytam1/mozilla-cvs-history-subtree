@@ -333,7 +333,7 @@ nsStreamIOChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
         if (NS_FAILED(rv)) goto done;
     }
 #endif
-    rv = mFileTransport->AsyncRead(this, ctxt, 0, 0, 0, getter_AddRefs(mRequest));
+    rv = mFileTransport->AsyncRead(this, ctxt, 0, -1, 0, getter_AddRefs(mRequest));
 
   done:
     if (NS_FAILED(rv)) {
@@ -393,7 +393,7 @@ nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
         if (NS_FAILED(rv)) goto done;
     }
 #endif
-    rv = mFileTransport->AsyncWrite(this, ctxt, 0, -1, getter_AddRefs(mRequest));
+    rv = mFileTransport->AsyncWrite(this, ctxt, 0, -1, 0, getter_AddRefs(mRequest));
 
   done:
     if (NS_FAILED(rv)) {

@@ -397,7 +397,7 @@ NS_IMETHODIMP nsWebBrowserPersist::OnProgress(PRUint32 aStatus, nsIURI *aURI, PR
 
 NS_IMETHODIMP nsWebBrowserPersist::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 {
-    nsresult rv = mOutputTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mOutputStream));
+    nsresult rv = mOutputTransport->OpenOutputStream(0, -1, 0, getter_AddRefs(mOutputStream));
     return rv;
 }
  

@@ -322,8 +322,8 @@ TestConnection::TestConnection(const char* aHostName, PRInt32 aPort,
     } 
     // Synchronous transport...
     else {
-      rv = mTransport->OpenInputStream(0, 0, 0, &mInStream);
-      rv = mTransport->OpenOutputStream(0, 0, 0, &mOutStream);
+      rv = mTransport->OpenInputStream(0, -1, 0, &mInStream);
+      rv = mTransport->OpenOutputStream(0, -1, 0, &mOutStream);
     }
   }
 }
@@ -373,7 +373,7 @@ TestConnection::Run(void)
       //
       // Initiate an async read...
       //
-      rv = mTransport->AsyncRead(this, mTransport, 0, 0, 0, getter_AddRefs(mReadRequest));
+      rv = mTransport->AsyncRead(this, mTransport, 0, -1, 0, getter_AddRefs(mReadRequest));
 
       if (NS_FAILED(rv)) {
         printf("Error: AsyncRead failed...");

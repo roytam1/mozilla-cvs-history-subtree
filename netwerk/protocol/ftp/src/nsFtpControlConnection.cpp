@@ -162,7 +162,7 @@ nsFtpControlConnection::Connect()
 
     // get the ball rolling by reading on the control socket.
     rv = mCPipe->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, this), 
-                           nsnull, 0, 0, 0, 
+                           nsnull, 0, -1, 0, 
                            getter_AddRefs(mReadRequest));
 
     if (NS_FAILED(rv)) return rv;

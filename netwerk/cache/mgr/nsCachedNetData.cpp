@@ -1176,7 +1176,7 @@ public:
         rv = mCacheEntry->NewTransport(nsnull, getter_AddRefs(mTransport));
         if (NS_FAILED(rv)) return rv;
 
-        return mTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mCacheStream));
+        return mTransport->OpenOutputStream(0, -1, 0, getter_AddRefs(mCacheStream));
     }
 
     NS_DECL_ISUPPORTS

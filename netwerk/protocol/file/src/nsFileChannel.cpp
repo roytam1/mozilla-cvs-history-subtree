@@ -247,7 +247,7 @@ nsFileChannel::Open(nsIInputStream **result)
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
 
-    rv = mFileTransport->OpenInputStream(0, 0, 0, result);
+    rv = mFileTransport->OpenInputStream(0, -1, 0, result);
   done:
     if (NS_FAILED(rv)) {
         // release the transport so that we don't think we're in progress
@@ -322,7 +322,7 @@ nsFileChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
     rv = EnsureTransport();
     if (NS_FAILED(rv)) goto done;
     
-    rv = mFileTransport->AsyncRead(tempListener, ctxt, 0, 0, 0,
+    rv = mFileTransport->AsyncRead(tempListener, ctxt, 0, -1, 0,
                                    getter_AddRefs(mCurrentRequest));
 
   done:

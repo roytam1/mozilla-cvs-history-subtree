@@ -263,7 +263,7 @@ public:
         //rv = NS_NewLocalFileChannel(getter_AddRefs(outCh), mOutPath);
         //if (NS_FAILED(rv)) return rv;
 
-        //rv = outCh->OpenOutputStream(0, 0, 0, getter_AddRefs(outStr));
+        //rv = outCh->OpenOutputStream(0, -1, 0, getter_AddRefs(outStr));
         //if (NS_FAILED(rv)) return rv;
 
         // Copy from one to the other

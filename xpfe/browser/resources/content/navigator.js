@@ -260,9 +260,7 @@ nsXULBrowserWindow.prototype =
           this.onProgress(null, this.finishedRequests, this.totalRequests);
       }
       if (state & nsIWebProgressListener.STATE_IS_NETWORK) {
-        var channel = request.parent;
-		channel = channel.QueryInterface(Components.interfaces.nsIChannel);
-		
+        var channel = request.QueryInterface(Components.interfaces.nsIChannel);
 		var location = channel.URI.spec;
         var msg = "";
         if (location != "about:blank") {

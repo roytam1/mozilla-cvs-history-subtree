@@ -244,8 +244,8 @@ public:
     NS_IMETHOD OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
         nsresult rv;
         char* contentType;
-        nsCOMPtr<nsIStreamContentInfo> cr;
-        rv = cr->GetContentType(&contentType);
+        nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+        rv = channel->GetContentType(&contentType);
         if (NS_FAILED(rv)) return rv;
         PRInt32 length;
         rv = cr->GetContentLength(&length);

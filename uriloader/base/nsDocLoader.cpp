@@ -67,6 +67,11 @@ void GetURIStringFromRequest(nsIRequest* request, nsXPIDLCString &aStr)
 {
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
 
+  if (!channel) {
+      aStr = "???";
+      return;
+  }
+
   nsCOMPtr<nsIURI> uri;
   nsresult rv = channel->GetURI(getter_AddRefs(uri));
 
@@ -507,7 +512,7 @@ nsDocLoaderImpl::OnStopRequest(nsIRequest *request,
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(aChannel);
+  nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
   //
   // Only fire the OnEndDocumentLoad(...) if the document loader 

@@ -60,7 +60,7 @@ static HINSTANCE ghInstanceResources = NULL;
 static HINSTANCE ghInstanceApp = NULL;
 
 int main(int argc, char *argv[])
-6{
+{
     printf("\nYou are embedded, man!\n\n");
     
     // Sophisticated command-line parsing in action

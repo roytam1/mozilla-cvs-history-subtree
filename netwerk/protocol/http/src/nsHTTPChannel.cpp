@@ -1136,7 +1136,7 @@ nsHTTPChannel::ReadFromCache()
 
     // Pump the cache data downstream
     nsCOMPtr<nsIRequest> request;
-    rv = mCacheTransport->AsyncRead(listener, mResponseContext, 0, 0, 0, getter_AddRefs(request));
+    rv = mCacheTransport->AsyncRead(listener, mResponseContext, 0, -1, 0, getter_AddRefs(request));
     NS_RELEASE(listener);
     if (NS_FAILED(rv)) {
         ResponseCompleted(nsnull, rv, nsnull);
@@ -2491,7 +2491,7 @@ nsHTTPChannel::ProcessNotModifiedResponse(nsIStreamListener *aListener)
 
     nsCOMPtr<nsIRequest> request;
     rv = mCacheTransport->AsyncRead(cacheListener, mResponseContext, 
-                                    0, 0, 0, getter_AddRefs(request));
+                                    0, -1, 0, getter_AddRefs(request));
     if (NS_FAILED(rv)) {
       ResponseCompleted(cacheListener, rv, nsnull);
     }

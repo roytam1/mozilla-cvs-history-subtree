@@ -600,7 +600,7 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
 			    rv = socketService->CreateTransportOfType(connectionType, hostName, port, nsnull, -1, 0, 0, getter_AddRefs(m_channel));
         
         if (NS_SUCCEEDED(rv))
-          rv = m_channel->OpenOutputStream(0, 0, 0, getter_AddRefs(m_outputStream));
+          rv = m_channel->OpenOutputStream(0, -1, 0, getter_AddRefs(m_outputStream));
       }
     } // if m_runningUrl
 
@@ -998,7 +998,7 @@ PRBool nsImapProtocol::ProcessCurrentURL()
   if (!TestFlag(IMAP_CONNECTION_IS_OPEN) && m_channel)
   {
       nsCOMPtr<nsIRequest> request;
-    m_channel->AsyncRead(this /* stream observer */, nsnull, 0,0,0, getter_AddRefs(request));
+    m_channel->AsyncRead(this /* stream observer */, nsnull, 0,-1,0, getter_AddRefs(request));
     SetFlag(IMAP_CONNECTION_IS_OPEN);
   }
 #ifdef DEBUG_bienvenu   
@@ -6926,7 +6926,7 @@ NS_IMETHODIMP nsImapMockChannel::AsyncOpen(nsIStreamListener *listener, nsISuppo
         NS_ADDREF(cacheListener);
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this));
         nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, 0, 0, getter_AddRefs(request));
+        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));
         NS_RELEASE(cacheListener);
 
         if (NS_SUCCEEDED(rv)) // ONLY if we succeeded in actually starting the read should we return

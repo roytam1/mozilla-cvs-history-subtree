@@ -44,7 +44,6 @@
 #include "nsIProxyObjectManager.h"
 #include "nsIServiceManager.h"
 #include "nsIConsoleService.h"
-#include "nsIStreamContentInfo.h"
 
 #if !INVOKE_LDAP_CALLBACKS_ON_MAIN_THREAD
 #include "nsNetUtil.h"
@@ -58,7 +57,6 @@ static NS_DEFINE_IID(kIProgressEventSink, NS_IPROGRESSEVENTSINK_IID);
 NS_IMPL_THREADSAFE_ISUPPORTS4(nsLDAPChannel, 
                               nsIChannel, 
                               nsIRequest,	
-                              nsIStreamContentInfo,
                               nsILDAPMessageListener);
 
 nsLDAPChannel::nsLDAPChannel()

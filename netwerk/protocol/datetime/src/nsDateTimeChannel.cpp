@@ -179,7 +179,7 @@ nsDateTimeChannel::Open(nsIInputStream **_retval)
             transport->SetProgressEventSink(sink);
     }
 
-    return transport->OpenInputStream(0, 0, 0, _retval);
+    return transport->OpenInputStream(0, -1, 0, _retval);
 }
 
 NS_IMETHODIMP
@@ -203,7 +203,7 @@ nsDateTimeChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     mListener = aListener;
     
     nsCOMPtr<nsIRequest> request;
-    return transport->AsyncRead(this, ctxt, 0, 0, 0, getter_AddRefs(request));
+    return transport->AsyncRead(this, ctxt, 0, -1, 0, getter_AddRefs(request));
 }
 
 NS_IMETHODIMP

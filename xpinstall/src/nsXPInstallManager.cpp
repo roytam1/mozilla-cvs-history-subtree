@@ -717,7 +717,7 @@ nsXPInstallManager::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
             if (NS_SUCCEEDED(rv)) 
             {                          
                 // Open output stream.
-                rv = outChannel->OpenOutputStream(0, 0, 0,  getter_AddRefs( mItem->mOutStream ) );
+                rv = outChannel->OpenOutputStream(0, -1, 0,  getter_AddRefs( mItem->mOutStream ) );
             }
         }
     }

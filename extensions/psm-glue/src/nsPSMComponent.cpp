@@ -700,11 +700,11 @@ CertDownloader::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
 	nsresult rv = NS_OK;
     
-    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
-    if (contentInfo)
-        rv = contentInfo->GetContentLength(&mContentLength);
+    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+    if (channel)
+        rv = channel->GetContentLength(&mContentLength);
     
-    if (!contentInfo || rv != NS_OK || mContentLength == -1)
+    if (!channel || rv != NS_OK || mContentLength == -1)
       mContentLength = kDefaultCertAllocLength;
     
     mBufferOffset = 0;

@@ -158,7 +158,7 @@ nsresult nsMsgProtocol::SetupTransportState()
 
 	if (!m_socketIsOpen && m_transport)
 	{
-		rv = m_transport->OpenOutputStream(0, 0, 0, getter_AddRefs(m_outputStream));
+		rv = m_transport->OpenOutputStream(0, -1, 0, getter_AddRefs(m_outputStream));
 
 		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output stream");
 		// we want to open the stream 

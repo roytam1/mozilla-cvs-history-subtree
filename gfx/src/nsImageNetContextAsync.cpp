@@ -834,7 +834,7 @@ ImageNetContextImpl::GetURL (ilIURL * aURL,
       rv = pURILoader->OpenURI(channel, loadCmd, nsnull /* window target */, 
                                window);
     }
-    // rv = channel->AsyncRead(ic, nsnull);
+    // rv = channel->AsyncOpen(ic, nsnull);
     if (NS_FAILED(rv)) goto error;
   }
 
@@ -896,8 +896,8 @@ Need code to check freshness of necko cache.
      if (NS_SUCCEEDED(group->GetDefaultLoadRequest(
                         getter_AddRefs(defLoadRequest))) && defLoadRequest)
      {
-         defLoadRequest = do_QueryInterface(channel);
-         channel->GetLoadAttributes(&defchan_attribs);
+         channel = do_QueryInterface(defLoadRequest);
+         if (channel) channel->GetLoadAttributes(&defchan_attribs);
      }
 
 #if defined( DEBUG )

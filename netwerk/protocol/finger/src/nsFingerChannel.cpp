@@ -223,7 +223,7 @@ nsFingerChannel::Open(nsIInputStream **_retval)
             mTransport->SetProgressEventSink(sink);
     }
 
-    return mTransport->OpenInputStream(0, 0, 0, _retval);
+    return mTransport->OpenInputStream(0, -1, 0, _retval);
 }
 
 NS_IMETHODIMP
@@ -411,7 +411,7 @@ nsFingerChannel::OnStopRequest(nsIRequest *aRequest, nsISupports* aContext,
           converter->PreFormatHTML(PR_TRUE);
         }
 
-        return mTransport->AsyncRead(converterListener, mResponseContext, 0, 0, 0,
+        return mTransport->AsyncRead(converterListener, mResponseContext, 0,-1, 0,
                                      getter_AddRefs(mTransportRequest));
     }
 
