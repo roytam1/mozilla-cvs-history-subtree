@@ -88,7 +88,7 @@ nsURLFetcher::StillRunning(PRBool *running)
 
 // Methods for nsIStreamListener...
 nsresult
-nsURLFetcher::OnDataAvailable(nsISupports * ctxt, nsIInputStream *aIStream, 
+nsURLFetcher::OnDataAvailable(nsIChannel * aChannel, nsISupports * ctxt, nsIInputStream *aIStream, 
                               PRUint32 sourceOffset, PRUint32 aLength)
 {
   PRUint32        readLen = aLength;
@@ -120,24 +120,13 @@ nsURLFetcher::OnDataAvailable(nsISupports * ctxt, nsIInputStream *aIStream,
 
 // Methods for nsIStreamObserver 
 nsresult
-nsURLFetcher::OnStartRequest(nsISupports * /* ctxt */)
+nsURLFetcher::OnStartRequest(nsIChannel * /* aChannel */, nsISupports * /* ctxt */)
 {
   return NS_OK;
 }
 
-/**
-* Notify the observer that the URL has finished loading.  This method is 
-* called once when the networking library has finished processing the 
-* URL transaction initiatied via the nsINetService::Open(...) call.<BR><BR>
-* 
-* This method is called regardless of whether the URL loaded successfully.<BR><BR>
-* 
-* @param status    Status code for the URL load.
-* @param msg   A text string describing the error.
-* @return The return value is currently ignored.
-*/
 nsresult
-nsURLFetcher::OnStopRequest(nsISupports * /* ctxt */, nsresult aStatus, const PRUnichar* aMsg)
+nsURLFetcher::OnStopRequest(nsIChannel * /* aChannel */, nsISupports * /* ctxt */, nsresult aStatus, const PRUnichar* aMsg)
 {
 #ifdef NS_DEBUG_richie
   printf("nsURLFetcher::OnStopRequest()\n");
