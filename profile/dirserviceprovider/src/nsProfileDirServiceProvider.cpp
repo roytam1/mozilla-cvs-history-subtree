@@ -49,7 +49,7 @@
 
 #ifdef MOZ_PROFILESHARING
 #include "nsIProfileSharingSetup.h"
-#include "tmITransactionService.h"
+#include "ipcITransactionService.h"
 #endif
 
 // File Name Defines
@@ -92,7 +92,8 @@ nsIAtom*   nsProfileDirServiceProvider::sApp_MessengerFolderCache50;
 //*****************************************************************************   
 
 nsProfileDirServiceProvider::nsProfileDirServiceProvider(PRBool aNotifyObservers) :
-  mNotifyObservers(aNotifyObservers), mProfileDirLock(nsnull),
+  mProfileDirLock(nsnull),
+  mNotifyObservers(aNotifyObservers),
   mSharingEnabled(PR_FALSE)
 {
 }
@@ -126,8 +127,8 @@ nsProfileDirServiceProvider::SetProfileDir(nsIFile* aProfileDir)
 
 #ifdef MOZ_PROFILESHARING
   if (mSharingEnabled) {
-    nsCOMPtr<tmITransactionService> transServ =
-        do_GetService("@mozilla.org/transaction/service;1", &rv);
+    nsCOMPtr<ipcITransactionService> transServ =
+        do_GetService(IPC_TRANSACTIONSERVICE_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv)) {
       nsCAutoString nativePath;
       rv = mProfileDir->GetNativePath(nativePath);
