@@ -320,19 +320,17 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
       ioParamBlock->GetString(0, getter_Copies(username));
       ioParamBlock->GetString(1, getter_Copies(password));
       printf("got username: -%s-\n", NS_ConvertUCS2toUTF8(username).get());
-    	printf("got password: -%s-\n", NS_ConvertUCS2toUTF8(password).get());
+      printf("got password: -%s-\n", NS_ConvertUCS2toUTF8(password).get());
 
       mPassword = password;
-	    printf("will save encrypted password: -%s-\n",
-	                                  NS_ConvertUCS2toUTF8(password).get());
-	    nsCOMPtr<nsIRegistry> registry = mController->Registry();
-	    rv = registry->SetInt(mRegkeyStream, kRegKeySavePassword.get(),
-				                              1);
-	    rv = registry->SetString(mRegkeyStream, kRegKeyUsername.get(),
-				                             	username.get());
-	    rv = registry->SetString(mRegkeyStream, kRegKeyPassword.get(),
-				                             	mPassword.get());
-    	// failure is not fatal. then it's not saved *shrug*. ;-)
+      printf("will save password:-%s-\n",NS_ConvertUCS2toUTF8(password).get());
+      nsCOMPtr<nsIRegistry> registry = mController->Registry();
+      rv = registry->SetInt(mRegkeyStream, kRegKeySavePassword.get(),  1);
+      rv = registry->SetString(mRegkeyStream, kRegKeyUsername.get(),
+                               username.get());
+      rv = registry->SetString(mRegkeyStream, kRegKeyPassword.get(),
+                               mPassword.get());
+      // failure is not fatal. then it's not saved *shrug*. ;-)
     }
 
     printf("Done\n");
