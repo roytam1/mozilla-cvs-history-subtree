@@ -444,10 +444,13 @@ js_Invoke(JSContext *cx, uintN argc, JSBool constructing)
 	/* Function is inlined, all other classes use object ops. */
 	ops = funobj->map->ops;
 
-	/* Try converting to function, for closure and API compatibility. */
-	ok = clasp->convert(cx, funobj, JSTYPE_FUNCTION, &v);
-	if (!ok)
-	    goto out2;
+        if (cx->version == JSVERSION_1_2) {
+            /* Try converting to function, for closure and API compatibility. */
+	    ok = clasp->convert(cx, funobj, JSTYPE_FUNCTION, &v);
+            if (!ok)
+	        goto out2;
+        }
+
 	if (!JSVAL_IS_FUNCTION(cx, v)) {
 	    fun = NULL;
 	    script = NULL;
