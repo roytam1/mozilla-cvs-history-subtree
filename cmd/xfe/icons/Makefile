@@ -129,11 +129,7 @@ MKICONS_EXE	 = $(OBJDIR)/mkicons
 ifdef JAVA_OR_OJI
 JAVA_JMC = $(DIST)/lib/libjmc.a        # XXX To be removed...
 else
-ifdef MOZ_OJI
-JAVA_JMC = $(DIST)/lib/libjmc.a
-else
 JAVA_JMC = $(DIST)/lib/libstubsj.a
-endif
 endif
 
 ifndef NSPR20
