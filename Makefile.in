@@ -62,6 +62,7 @@ endif
 DIRS		+= \
 		include \
 		modules/libutil \
+		security \
 		netwerk \
 		uriloader \
 		intl \
@@ -88,7 +89,6 @@ DIRS		+= \
 		editor \
 		sun-java \
 		profile \
-		security \
 		$(NULL)
 
 ifdef MOZ_BUILD_XPFE
