@@ -130,7 +130,8 @@ BOOL              LocatePath(LPSTR szSection, LPSTR szPath, DWORD dwPathSize);
 int               VR_GetPath(char *component_path, unsigned long sizebuf, char *buf);
 dsN               *CreateDSNode();
 void              DsNodeInsert(dsN **dsNHead, dsN *dsNTemp);
-void              DsNodeDelete(dsN *dsNTemp);
+void              DsNodeDelete(dsN **dsNTemp);
+void              DeInitDSNode(dsN **dsnComponentDSRequirement);
 void              UpdatePathDiskSpaceRequired(LPSTR szPath, ULONGLONG ullInstallSize, dsN **dsnComponentDSRequirement);
 HRESULT           InitComponentDiskSpaceInfo(dsN **dsnComponentDSRequirement);
 
