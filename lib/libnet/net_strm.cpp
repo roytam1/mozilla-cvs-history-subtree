@@ -145,19 +145,26 @@ nsBufferedStream::~nsBufferedStream()
 }
 
 
-PRInt32 nsBufferedStream::GetAvailableSpace(void)
+PRInt32 nsBufferedStream::GetAvailableSpace(PRInt32 *aErrorCode)
 {
-    PRInt32 size;
+    PRInt32 size = 0;
 
-    LockStream();
-    size = m_bIsClosed ? 0 : m_BufferLength - m_WriteOffset;
-    UnlockStream();
+    if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+    } else {
+        *aErrorCode = 0;
 
+        LockStream();
+        size = m_BufferLength - m_WriteOffset;
+        UnlockStream();
+    }
     return size;
 }
 
 
-PRInt32 nsBufferedStream::Write(const char *aBuf, PRInt32 aLen)
+PRInt32 nsBufferedStream::Write(PRInt32 *aErrorCode, 
+                                const char *aBuf, 
+                                PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
     PRInt32 bytesFree;
@@ -167,9 +174,20 @@ PRInt32 nsBufferedStream::Write(const char *aBuf, PRInt32 aLen)
     NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
     NS_PRECONDITION((m_WriteOffset >= m_ReadOffset), "Read past the end of buffer.");
 
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
     if (!m_bIsClosed && aBuf) {
         /* Grow the buffer if necessary */
-        bytesFree = GetAvailableSpace();
+        bytesFree = m_BufferLength - m_WriteOffset;
         if (aLen > bytesFree) {
             char *newBuffer;
 
@@ -281,19 +299,26 @@ nsAsyncStream::~nsAsyncStream()
 }
 
 
-PRInt32 nsAsyncStream::GetAvailableSpace(void)
+PRInt32 nsAsyncStream::GetAvailableSpace(PRInt32 *aErrorCode)
 {
-    PRInt32 size;
+    PRInt32 size = 0;
 
-    LockStream();
-    size = m_bIsClosed ? 0 : m_BufferLength - m_DataLength;
-    UnlockStream();
+    if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+    } else {
+        *aErrorCode = 0;
 
+        LockStream();
+        size = m_BufferLength - m_DataLength;
+        UnlockStream();
+    }
     return size;
 }
 
 
-PRInt32 nsAsyncStream::Write(const char *aBuf, PRInt32 aLen)
+PRInt32 nsAsyncStream::Write(PRInt32 *aErrorCode,
+                             const char *aBuf, 
+                             PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
     PRInt32 bytesFree;
@@ -302,9 +327,20 @@ PRInt32 nsAsyncStream::Write(const char *aBuf, PRInt32 aLen)
     
     NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
 
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
     if (!m_bIsClosed && aBuf) {
         /* Do not store more data than there is space for... */
-        bytesFree = GetAvailableSpace();
+        bytesFree = m_BufferLength - m_DataLength;
         if (aLen > bytesFree) {
             aLen = bytesFree;
         }
@@ -329,6 +365,7 @@ PRInt32 nsAsyncStream::Write(const char *aBuf, PRInt32 aLen)
         m_DataLength += aLen;
     }
 
+done:
     UnlockStream();
 
     return bytesWritten;
@@ -429,19 +466,26 @@ nsBlockingStream::~nsBlockingStream()
 }
 
 
-PRInt32 nsBlockingStream::GetAvailableSpace(void)
+PRInt32 nsBlockingStream::GetAvailableSpace(PRInt32 *aErrorCode)
 {
-    PRInt32 size;
+    PRInt32 size = 0;
 
-    LockStream();
-    size = m_bIsClosed ? 0 : m_BufferLength - m_DataLength;
-    UnlockStream();
+    if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+    } else {
+        *aErrorCode = 0;
 
+        LockStream();
+        size = m_BufferLength - m_DataLength;
+        UnlockStream();
+    }
     return size;
 }
 
 
-PRInt32 nsBlockingStream::Write(const char *aBuf, PRInt32 aLen)
+PRInt32 nsBlockingStream::Write(PRInt32 *aErrorCode,
+                                const char *aBuf, 
+                                PRInt32 aLen)
 {
     PRInt32 bytesWritten = 0;
     PRInt32 bytesFree;
@@ -450,9 +494,20 @@ PRInt32 nsBlockingStream::Write(const char *aBuf, PRInt32 aLen)
 
     NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
     
+    /* Check for initial error conditions... */
+    if (NULL == aBuf) {
+        *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
+        goto done;
+    } else if (m_bIsClosed) {
+        *aErrorCode = NS_INPUTSTREAM_EOF;
+        goto done;
+    } else {
+        *aErrorCode = 0;
+    }
+
     if (!m_bIsClosed && aBuf) {
         /* Do not store more data than there is space for... */
-        bytesFree = GetAvailableSpace();
+        bytesFree = m_BufferLength - m_DataLength;
         if (aLen > bytesFree) {
             aLen = bytesFree;
         }
@@ -477,6 +532,7 @@ PRInt32 nsBlockingStream::Write(const char *aBuf, PRInt32 aLen)
         m_DataLength += aLen;
     }
 
+done:
     UnlockStream();
 
     return bytesWritten;

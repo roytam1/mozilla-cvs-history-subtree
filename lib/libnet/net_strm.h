@@ -27,7 +27,7 @@
 
 /* Forward declaration... */
 class nsNetlibStream;
-
+struct _URL_Struct;
 
 class nsConnectionInfo : public nsISupports 
 {
@@ -44,7 +44,7 @@ protected:
 public:
     nsIURL                *pURL;
     nsNetlibStream        *pNetStream;
-    nsIStreamListener *pConsumer;
+    nsIStreamListener     *pConsumer;
 };
 
 
@@ -55,8 +55,10 @@ public:
 
     nsNetlibStream(void);
 
-    virtual PRInt32 GetAvailableSpace(void) = 0;
-    virtual PRInt32 Write(const char *aBuf, PRInt32 aLen) = 0;
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode) = 0;
+    virtual PRInt32 Write(PRInt32 *aErrorCode, 
+                          const char *aBuf, 
+                          PRInt32 aLen) = 0;
 
     /* From nsIInputStream... */
     virtual void Close(void);
@@ -90,8 +92,10 @@ public:
                          PRInt32 aCount);
 
     /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(void);
-    virtual PRInt32 Write(const char *aBuf, PRInt32 aLen);
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    virtual PRInt32 Write(PRInt32 *aErrorCode,
+                          const char *aBuf, 
+                          PRInt32 aLen);
 
 protected:
     virtual ~nsBufferedStream();
@@ -122,8 +126,10 @@ public:
                          PRInt32 aCount);
 
     /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(void);
-    virtual PRInt32 Write(const char *aBuf, PRInt32 aLen);
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    virtual PRInt32 Write(PRInt32 *aErrorCode,
+                          const char *aBuf, 
+                          PRInt32 aLen);
 
 protected:
     virtual ~nsAsyncStream();
@@ -153,8 +159,10 @@ public:
                          PRInt32 aCount);
 
     /* nsNetlibStream methods... */
-    virtual PRInt32 GetAvailableSpace(void);
-    virtual PRInt32 Write(const char *aBuf, PRInt32 aLen);
+    virtual PRInt32 GetAvailableSpace(PRInt32 *aErrorCode);
+    virtual PRInt32 Write(PRInt32 *aErrorCode,
+                          const char *aBuf, 
+                          PRInt32 aLen);
 
 protected:
     virtual ~nsBlockingStream();

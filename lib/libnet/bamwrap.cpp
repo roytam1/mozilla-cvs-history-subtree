@@ -42,6 +42,67 @@ stub_noop(int x, ...)
     return 0;
 }
 
+PRIVATE void stub_GraphProgressInit(MWContext  *context, 
+                                    URL_Struct *URL_s, 
+                                    int32       content_length)
+{
+    nsConnectionInfo *pConn;
+
+    if (NULL != URL_s->fe_data) {
+        /* 
+         * Retrieve the nsConnectionInfo object from the fe_data field
+         * of the URL_Struct...
+         */
+        pConn = (nsConnectionInfo *)URL_s->fe_data;
+        if ((NULL != pConn) && (NULL != pConn->pConsumer)) {
+            pConn->pConsumer->OnProgress(0, content_length, NULL);
+        }
+    }
+}
+
+
+PRIVATE void stub_GraphProgress(MWContext  *context, 
+                                URL_Struct *URL_s, 
+                                int32       bytes_received,
+                                int32       bytes_since_last_time,
+                                int32       content_length)
+{
+    nsConnectionInfo *pConn;
+
+    if (NULL != URL_s->fe_data) {
+        /* 
+         * Retrieve the nsConnectionInfo object from the fe_data field
+         * of the URL_Struct...
+         */
+        pConn = (nsConnectionInfo *)URL_s->fe_data;
+        if ((NULL != pConn) && (NULL != pConn->pConsumer)) {
+            pConn->pConsumer->OnProgress(bytes_received, content_length, NULL);
+        }
+    }
+}
+
+PRIVATE void stub_GraphProgressDestroy(MWContext  *context, 
+                                       URL_Struct *URL_s, 
+                                       int32       content_length,
+                                       int32       total_bytes_read)
+{
+    nsConnectionInfo *pConn;
+
+    if (NULL != URL_s->fe_data) {
+        /* 
+         * Retrieve the nsConnectionInfo object from the fe_data field
+         * of the URL_Struct...
+         */
+        pConn = (nsConnectionInfo *)URL_s->fe_data;
+        if ((NULL != pConn) && (NULL != pConn->pConsumer)) {
+            pConn->pConsumer->OnProgress(total_bytes_read, content_length, NULL);
+        }
+    }
+}
+
+
+
+
 #define MAKE_FE_TYPES_PREFIX(func)	func##_t
 #define MAKE_FE_FUNCS_TYPES
 #include "mk_cx_fn.h"
@@ -102,9 +163,9 @@ stub_noop(int x, ...)
 #define stub_Alert                          (Alert_t)stub_noop
 #define stub_SetCallNetlibAllTheTime        (SetCallNetlibAllTheTime_t)stub_noop
 #define stub_ClearCallNetlibAllTheTime      (ClearCallNetlibAllTheTime_t)stub_noop
-#define stub_GraphProgressInit              (GraphProgressInit_t)stub_noop
-#define stub_GraphProgressDestroy           (GraphProgressDestroy_t)stub_noop
-#define stub_GraphProgress                  (GraphProgress_t)stub_noop
+#define stub_GraphProgressInit              (GraphProgressInit_t)stub_GraphProgressInit
+#define stub_GraphProgressDestroy           (GraphProgressDestroy_t)stub_GraphProgressDestroy
+#define stub_GraphProgress                  (GraphProgress_t)stub_GraphProgress
 #define stub_UseFancyFTP                    (UseFancyFTP_t)stub_noop
 #define stub_UseFancyNewsgroupListing       (UseFancyNewsgroupListing_t)stub_noop
 #define stub_FileSortMethod                 (FileSortMethod_t)stub_noop
@@ -167,10 +228,16 @@ void free_stub_context(MWContext *window_id)
     free(window_id);
 }
 
-
 /****************************************************************************/
 /* End of MWContext Evil!!!                                                 */
 /****************************************************************************/
+
+nsConnectionInfo *GetConnectionInfoFromStream(NET_StreamClass *stream)
+{
+    URL_Struct *URL_s = (URL_Struct *)stream->data_object;
+
+    return (URL_s) ? (nsConnectionInfo *)URL_s->fe_data : NULL;
+}
 
 
 /*
@@ -180,7 +247,8 @@ void free_stub_context(MWContext *window_id)
 
 void stub_complete(NET_StreamClass *stream)
 {
-    nsConnectionInfo *pConn = (nsConnectionInfo *)stream->data_object;
+    URL_Struct *URL_s = (URL_Struct *)stream->data_object;
+    nsConnectionInfo *pConn = GetConnectionInfoFromStream(stream);
 
     TRACEMSG(("+++ stream complete.\n"));
 
@@ -196,14 +264,15 @@ void stub_complete(NET_StreamClass *stream)
         pConn->pConsumer = NULL;
     }
 
-    /* Release the nsConnectionInfo object hanging off of the data_object */
+    /* Release the URL_Struct hanging off of the data_object */
     stream->data_object = NULL;
-    pConn->Release();
+    NET_DropURLStruct(URL_s);
 }
 
 void stub_abort(NET_StreamClass *stream, int status)
 {
-    nsConnectionInfo *pConn = (nsConnectionInfo *)stream->data_object;
+    URL_Struct *URL_s = (URL_Struct *)stream->data_object;
+    nsConnectionInfo *pConn = GetConnectionInfoFromStream(stream);
 
     TRACEMSG(("+++ stream abort.  Status = %d\n", status));
 
@@ -223,35 +292,55 @@ void stub_abort(NET_StreamClass *stream, int status)
         pConn->pConsumer = NULL;
     }
 
-    /* Free the nsConnectionInfo object hanging off of the data_object */
+    /* Release the URL_Struct hanging off of the data_object */
     stream->data_object = NULL;
-    pConn->Release();
+    NET_DropURLStruct(URL_s);
 }
 
 int stub_put_block(NET_StreamClass *stream, const char *buffer, int32 length)
 {
-    PRInt32 bytesWritten;
-    nsConnectionInfo *pConn = (nsConnectionInfo *)stream->data_object;
+    PRInt32 bytesWritten, errorCode;
+    nsConnectionInfo *pConn = GetConnectionInfoFromStream(stream);
 
     TRACEMSG(("+++ stream put_block.  Length = %d\n", length));
 
-    bytesWritten = pConn->pNetStream->Write(buffer, length);
+    /*
+     * XXX:  Sometimes put_block(...) will be called without having 
+     *       called is_write_ready(...) first.  Once case is when a stream
+     *       is interrupted...  In this case, Netlib will call put_block(...)
+     *       with the string "Transfer Interrupted!"
+     */
+    bytesWritten = pConn->pNetStream->Write(&errorCode, buffer, length);
+
+    /* Abort the connection... */
+    if (NS_INPUTSTREAM_EOF == errorCode) {
+        return -1;
+    }
 
     /* XXX: check return value to abort connection if necessary */
-    if (pConn->pConsumer) {
+    if (pConn->pConsumer && (0 < bytesWritten)) {
         pConn->pConsumer->OnDataAvailable(pConn->pNetStream, bytesWritten);
     }
 
-    PR_ASSERT(bytesWritten == length);
     return (bytesWritten == length);
 }
 
 unsigned int stub_is_write_ready(NET_StreamClass *stream)
 {
+    PRInt32 errorCode;
     unsigned int free_space = 0;
-    nsConnectionInfo *pConn = (nsConnectionInfo *)stream->data_object;
+    URL_Struct *URL_s = (URL_Struct *)stream->data_object;
+    nsConnectionInfo *pConn = GetConnectionInfoFromStream(stream);
 
-    free_space = (unsigned int)pConn->pNetStream->GetAvailableSpace();
+    free_space = (unsigned int)pConn->pNetStream->GetAvailableSpace(&errorCode);
+
+    /*
+     * If the InputStream has been closed...  Return 1 byte available so
+     * Netlib will call put_block(...) one more time...
+     */
+    if (NS_INPUTSTREAM_EOF == errorCode) {
+        free_space = 1;
+    }
 
     TRACEMSG(("+++ stream is_write_ready.  Returning %d\n", free_space));
     return free_space;
@@ -320,9 +409,9 @@ NET_StreamBuilder  (FO_Present_Types format_out,
                 pConn->pNetStream->AddRef();
             }
 
-            /* Hang the nsConnectionInfo off of the NET_StreamClass */
-            pConn->AddRef();
-            stream->data_object = pConn;
+            /* Hang the URL_Struct off of the NET_StreamClass */
+            NET_HoldURLStruct(URL_s);
+            stream->data_object = URL_s;
 
             /* Notify the data consumer that Binding is beginning...*/
             /* XXX: check result to terminate connection if necessary */
