@@ -1630,7 +1630,7 @@ nsExtensionManager.prototype = {
           try {
             lastSelectedSkin = gPref.getCharPref(PREF_EM_LAST_SELECTED_SKIN);
             gPref.clearUserPref(PREF_EM_LAST_SELECTED_SKIN);
-            pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, lastSelectedSkin);
+            gPref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, lastSelectedSkin);
           } 
           catch (e) { }
           
@@ -1649,7 +1649,7 @@ nsExtensionManager.prototype = {
           catch (e) { }
         }
         catch (e) {
-          dump("*** nsExtensionManager::start - failure, catching exception so finalize window can close\n");
+          dump("*** nsExtensionManager::start - failure, catching exception so finalize window can close = " + e + "\n");
         }
         win.close();
         
@@ -1670,7 +1670,8 @@ nsExtensionManager.prototype = {
         if (!gPref.prefHasUserValue(PREF_EM_LAST_SELECTED_SKIN)) {
           gPref.setCharPref(PREF_EM_LAST_SELECTED_SKIN,
                             gPref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN));
-          pref.clearUserPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
+          if (gPref.prefHasUserValue(PREF_GENERAL_SKINS_SELECTEDSKIN))
+            gPref.clearUserPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
         }
 
         var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
@@ -1698,7 +1699,7 @@ nsExtensionManager.prototype = {
         }
       }
       catch (e) {
-        dump("*** nsExtensionManager::start - (safe mode) failure, catching exception so finalize window can close\n");
+        dump("*** nsExtensionManager::start - (safe mode) failure, catching exception so finalize window can close = " + e + "\n");
       }
       win.close();
       
@@ -2189,8 +2190,9 @@ nsExtensionManager.prototype = {
   
   _writeDefaults: function nsExtensionManager__writeDefaults (aIsProfile)
   {
-    this._writeProfileFile(getFile(KEY_PROFILEDIR, [FILE_DEFAULTS]), 
-                           this._getPreferencesDir, aIsProfile);
+    var manifest = aIsProfile ? getFile(KEY_PROFILEDIR, [FILE_DEFAULTS]) : 
+                                getFile(KEY_APPDIR, [FILE_DEFAULTS]);
+    this._writeProfileFile(manifest, this._getPreferencesDir, aIsProfile);
   },
   
   _cleanDirs: function nsExtensionManager__cleanDirs ()

@@ -628,11 +628,12 @@ var gFoundPage = {
           var patches = this._currentInfo.getCollection("patches", { });
           if (patches.length > 0 && !updatePerformed)
             this.buildPatches(patches);
-            
-          var components = this._currentInfo.getCollection("optional", { });
-          if (components.length > 0)
-            this.buildOptional(components);
 
+          // Turning this off until we can better determine what is and is not installed. 
+          // var components = this._currentInfo.getCollection("optional", { });
+          // if (components.length > 0)
+          //   this.buildOptional(components);
+ 
           var languages = this._currentInfo.getCollection("languages", { });
           if (languages.length > 0)
             this.buildLanguages(languages);

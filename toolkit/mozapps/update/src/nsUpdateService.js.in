@@ -795,7 +795,8 @@ nsAppUpdater.prototype = {
           newestVersionObj.resource = update;
         }
       }
-      this._parseVersionData(aDataSource, newestVersionObj.resource, this._service._newestVersion);
+      if (newestVersionObj.resource)
+        this._parseVersionData(aDataSource, newestVersionObj.resource, this._service._newestVersion);
       
       // There is a newer version of the app available or there are any critical
       // patches available update the severity and available updates preferences.
@@ -808,7 +809,7 @@ nsAppUpdater.prototype = {
       var languages = this._service._newestVersion.languages;
       if (languages) {
         var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                          .getService(Components.interfaces.nsIXULChromeRegistry);
+                           .getService(Components.interfaces.nsIXULChromeRegistry);
         var selectedLocale = cr.getSelectedLocale("global");
         for (var i = 0; i < languages.length; ++i) {
           if (languages[i].internalName == selectedLocale)
@@ -816,8 +817,8 @@ nsAppUpdater.prototype = {
         }
       }
       
-      if (haveLanguage && 
-          (newestVersionObj.version != appVersion || (patches && patches.length > 0))) {
+      if ((haveLanguage && (newestVersionObj.version != appVersion)) || 
+          (patches && patches.length > 0)) {
         gPref.setIntPref(PREF_UPDATE_SEVERITY, 2);
         gPref.setBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE, true);
       }
@@ -875,7 +876,7 @@ nsAppUpdater.prototype = {
     try {
       collectionResource = collectionResource.QueryInterface(Components.interfaces.nsIRDFResource);
     }
-    catch (e) { return; }
+    catch (e) { return null; }
     
     var cu = Components.classes["@mozilla.org/rdf/container-utils;1"]
                        .getService(Components.interfaces.nsIRDFContainerUtils);
@@ -883,7 +884,7 @@ nsAppUpdater.prototype = {
       var c = Components.classes["@mozilla.org/rdf/container;1"]
                         .getService(Components.interfaces.nsIRDFContainer);
       c.Init(aDataSource, collectionResource);
-
+      
       var elements = c.GetElements();
       var fileArc = gRDF.GetResource(APP_NS("file"));
       var platform = getOSKey();
@@ -915,7 +916,7 @@ nsAppUpdater.prototype = {
         result.push(info);
       }
     }
-    
+
     return result;
   },
   
