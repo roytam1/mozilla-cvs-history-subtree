@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+@import('chrome://help/content/platformClasses.css');
+
 body {
 	margin: 2ex;
 	color: black;
