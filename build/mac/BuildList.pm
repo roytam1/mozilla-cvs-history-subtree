@@ -331,6 +331,10 @@ sub DistMozilla()
 
 		#CAPS
 		InstallFromManifest(":mozilla:caps:include:MANIFEST",							":mozilla:dist:caps:");
+
+		#BASE
+		InstallFromManifest(":mozilla:base:public:MANIFEST",							":mozilla:dist:base:");
+		InstallFromManifest(":mozilla:base:src:MANIFEST",								":mozilla:dist:base:");
 	}
 
 1;
