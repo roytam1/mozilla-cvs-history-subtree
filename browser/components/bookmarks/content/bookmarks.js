@@ -1423,18 +1423,24 @@ var BookmarksUtils = {
         rSource = BMSVC.cloneResource(rSource);
       transaction.item  [i] = rSource;
       transaction.parent[i] = aTarget.parent;
-      // if aTargetIndex is -1, then we prefix the ++,
-      // to get this thing to go to the end.  Otherwise,
-      // our caller already chose a +1'd index for us (e.g.
-      // drag and drop).  If the desired target is -1,
-      // then we pass the -1 down.
+      // Broken Insert Code attempts to always insert items in the
+      // right place (i.e. after the selected item).  However, because
+      // of RDF Container suckyness, this code gets very confused, due
+      // to rdf container indexes not matching up to number of items,
+      // and because we can't trust GetCount to return a real count.
+      // The -1 is there to handle inserting into the persontal toolbar
+      // folder via right-click on the PTF.
       if (aTarget.index == -1) {
         transaction.index[i] = -1;
       } else {
+#ifdef BROKEN_INSERT_CODE
         if (aTargetIndex == -1)
           transaction.index [i] = (++index);
         else
           transaction.index [i] = (index++);
+#else
+      transaction.index [i] = index++;
+#endif
       }
     }
     BMSVC.transactionManager.doTransaction(transaction);
@@ -1711,6 +1717,7 @@ BookmarkInsertTransaction.prototype =
         this.RDFC.AppendElement(this.item[i]);
         this.index[i] = this.RDFC.GetCount();
       } else {
+#ifdef BROKEN_INSERT_CODE
         try {
           this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
         } catch (e if e.result == Components.results.NS_ERROR_ILLEGAL_VALUE) {
@@ -1720,6 +1727,9 @@ BookmarkInsertTransaction.prototype =
           // and then fix up the index so undo works
           this.index[i] = this.RDFC.GetCount();
         }
+#else
+        this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
+#endif
       }
     }
     this.endUpdateBatch();
