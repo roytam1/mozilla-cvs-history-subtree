@@ -480,7 +480,7 @@ function GetMessagesForInboxOnServer(server)
 function MsgGetMessage()
 {
   var alertsService = Components.classes['@mozilla.org/alerts-service;1'].getService(Components.interfaces.nsIAlertsService);
-  alertsService.showAlertNotification("chrome://messenger/skin/icons/mast-mail.gif", "New Mail", "3 unread messages", false, "", null);
+  alertsService.showAlertNotification("chrome://messenger/skin/icons/new-mail-alert.png", "New Messages", "3 unread messages", false, "", null);
 
   // if offline, prompt for getting messages
   if(CheckOnline()) {
