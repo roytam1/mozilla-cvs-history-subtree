@@ -26,23 +26,52 @@
 #include "mcf.h"
 #include "mcff2mcf.h"
 
+#define wsCharp(c) ((c == '\r') || (c == '\t') || (c == ' ') || (c == '\n'))
+
+char decodeEntityRef (char* string, int32* stringIndexPtr, int32 len) {
+  if (startsWith("lt;", string)) {
+    *stringIndexPtr = *stringIndexPtr + 3;
+    return '<';
+  } else if (startsWith("gt;", string)) {
+    *stringIndexPtr = *stringIndexPtr + 3;
+    return '>';
+  } else  if (startsWith("amp;", string)) {
+    *stringIndexPtr = *stringIndexPtr + 4;
+    return '&';
+  } else return -1;
+}
+
 
 
 char *
 copyStringIgnoreWhiteSpace(char* string)
 {
-   char* buf = (char*)malloc(strlen(string) + 1);
-   char* token = strtok(string, " \t\n\r");
+   int32 len = strlen(string);
+   char* buf = (char*)getMem(len + 1);
+   PRBool inWhiteSpace = 1;
+   int32 buffIndex = 0;
+   int32 stringIndex = 0;
 
-   char* p = buf;
-   while(token)
-   {
-      strcpy(p, token);
-      p += strlen(token);
-      token = strtok(NULL, " \t\n\r");
-      if(token)
-         strcpy(p++, " ");
+   while (stringIndex < len) {
+     char nextChar = *(string + stringIndex);
+     PRBool wsp = wsCharp(nextChar);
+     if (!wsp) {
+       if (nextChar == '&') {
+         *(buf + buffIndex++) = decodeEntityRef(&string[stringIndex+1], 
+                                                &stringIndex, len-stringIndex);
+       } else {
+         *(buf + buffIndex++) = nextChar;
+       }
+       inWhiteSpace = 0;
+     } else if (!inWhiteSpace) {
+       *(buf + buffIndex++) = ' ';
+       inWhiteSpace = 1;
+     } else {
+       inWhiteSpace = 1;
+     }
+     stringIndex++;
    }
+
    return buf;
 }
 
@@ -52,12 +81,11 @@ char *
 getHref(char** attlist)
 {
 	char* ans = getAttributeValue(attlist, "rdf:href");
-	if (ans != NULL) {
-			return ans;
-	} else return getAttributeValue(attlist, "href");
+	if (!ans) ans = getAttributeValue(attlist, "RDF:href"); 
+	if (!ans) ans = getAttributeValue(attlist, "href");
+	return ans;
 }
-
-
+ 
 
 int
 parseNextRDFXMLBlob (NET_StreamClass *stream, char* blob, int32 size)
@@ -76,12 +104,12 @@ parseNextRDFXMLBlob (NET_StreamClass *stream, char* blob, int32 size)
     char c = blob[n];
     m = 0;
     somethingseenp = 0;
-    memset(f->line, '\0', RDF_BUF_SIZE);
+    memset(f->line, '\0', RDF_BUF_SIZE-1);
     if (f->holdOver[0] != '\0') {
       memcpy(f->line, f->holdOver, strlen(f->holdOver));
       m = strlen(f->holdOver);
       somethingseenp = 1;
-      memset(f->holdOver, '\0', RDF_BUF_SIZE);
+      memset(f->holdOver, '\0', RDF_BUF_SIZE-1);
     }   
     while ((n < size) && (wsc(c))) {c = blob[++n];}
   /*  f->line[m++] = c;
@@ -181,7 +209,7 @@ addElementProps (char** attlist, char* elementName, RDFFile f, RDF_Resource obj)
     char* attName = attlist[count++];
     char* attValue = attlist[count++];
     if ((attName == NULL) || (attValue == NULL)) break;
-    if (!tagEquals(f, attName, "href") && !tagEquals(f, attName, "rdf:href") 
+    if (!tagEquals(f, attName, "href") && !tagEquals(f, attName, "rdf:href")  && !tagEquals(f, attName, "RDF:href") 
         && !tagEquals(f, attName, "id")) {
       addSlotValue(f, obj, ResourceFromElementName(f, attName), copyStringIgnoreWhiteSpace(attValue), 
 		   RDF_STRING_TYPE, 1);
@@ -221,7 +249,8 @@ containerTagp (RDFFile f, char* elementName)
 	    (tagEquals(f, elementName, "RelatedLinks")));
 }
 
-
+#define DC_TITLE "http://purl.org/metadata/dublin_core/title"
+#define SM_CHILD "http://purl.org/metadata/sitemap/child"
 
 RDF_Resource
 ResourceFromElementName (RDFFile f, char* elementName)
@@ -238,12 +267,17 @@ ResourceFromElementName (RDFFile f, char* elementName)
         char* url = getMem(strlen(ns->url) + strlen(elementName)-asn);
         memcpy(url, ns->url, urln);
         strcat(url, &elementName[asn+1]);
-        ans = RDF_GetResource(NULL, url, 1);
+		if (strcmp(url, DC_TITLE) == 0) {
+          ans = gCoreVocab->RDF_name;
+        } else if (strcmp(url, SM_CHILD) == 0) {
+          ans = gCoreVocab->RDF_child;
+        } else  
+          ans = RDF_GetResource(NULL, url, 1);
         freeMem(url);
         return ans;
       }
       ns = ns->next;
-    }
+    }    
     return RDF_GetResource(NULL, elementName, 1);
   }
 }

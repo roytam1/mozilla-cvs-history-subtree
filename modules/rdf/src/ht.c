@@ -1200,7 +1200,7 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush, int32 param_count
         char*                   dburl = getBaseURL(url);
         int32                   pn = 0;
         HT_View                 view;
-	HT_Column		*columnList, column, nextColumn;
+	HT_Column		*columnList, column;
         
 	XP_ASSERT(url != NULL);
 
@@ -1209,6 +1209,7 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush, int32 param_count
 	if ((db = RDF_GetDB(dbstr)) != NULL) {
           if ((r = RDF_GetResource(db, url, 1)) != NULL)
             {
+              setContainerp(r, 1);
               pane = paneFromResource(db, r, n, autoFlush, 1, 0);
               view = pane->viewList;
             }
@@ -1229,7 +1230,6 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush, int32 param_count
           }	
           pn++;
         }    
-        readRDFFile (dburl, r, 0, db->translators[0]);     
         freeMem(dburl);        
         return (pane);
 }
