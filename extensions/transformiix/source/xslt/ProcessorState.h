@@ -436,7 +436,7 @@ private:
 **/
 class txNameTestItem {
 public:
-    txNameTestItem(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+    txNameTestItem(txAtom* aPrefix, txAtom* aLocalName, PRUint32 aNSID,
                    MBool stripSpace)
         : mNameTest(aPrefix, aLocalName, aNSID, Node::ELEMENT_NODE),
           mStrips(stripSpace)

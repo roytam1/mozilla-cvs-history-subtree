@@ -625,15 +625,18 @@ void ProcessorState::shouldStripSpace(String& aNames, Element* aElement,
         tokenizer.nextToken(name);
         String prefix, lname;
         PRInt32 aNSID = kNameSpaceID_None;
+        txAtom* prefixAtom = 0;
         XMLUtils::getPrefix(name, prefix);
         if (!prefix.isEmpty()) {
-            txAtom* prefixAtom = TX_GET_ATOM(prefix);
+            prefixAtom = TX_GET_ATOM(prefix);
             aNSID = aElement->lookupNamespaceID(prefixAtom);
-            TX_IF_RELEASE_ATOM(prefixAtom);
         }
         XMLUtils::getLocalPart(name, lname);
-        txNameTestItem* nti = new txNameTestItem(prefix, lname, aNSID,
-                                                 aShouldStrip);
+        txAtom* lNameAtom = TX_GET_ATOM(lname);
+        txNameTestItem* nti = new txNameTestItem(prefixAtom, lNameAtom,
+                                                 aNSID, aShouldStrip);
+        TX_IF_RELEASE_ATOM(prefixAtom);
+        TX_IF_RELEASE_ATOM(lNameAtom);
         if (!nti) {
             // XXX error report, parsing error or out of mem
             break;
@@ -1082,6 +1085,14 @@ ProcessorState::ImportFrame::~ImportFrame()
 nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
                                                   PRInt32& aID)
 {
+    #ifdef DEBUG
+    if (!aPrefix || txXMLAtoms::_empty == aPrefix) {
+        // default namespace is not forwarded to xpath
+        NS_ASSERTION(0, "caller should handle default namespace ''");
+        aID = kNameSpaceID_None;
+        return NS_OK;
+    }
+    #endif
     aID = mStyle->lookupNamespaceID(aPrefix);
     return (kNameSpaceID_Unknown != aID) ? NS_OK : NS_ERROR_FAILURE;
 }

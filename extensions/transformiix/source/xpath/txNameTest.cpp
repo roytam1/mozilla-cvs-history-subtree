@@ -27,15 +27,21 @@
 #include "txAtoms.h"
 #include "txIXPathContext.h"
 
-txNameTest::txNameTest(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+txNameTest::txNameTest(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID,
                        Node::NodeType aNodeType)
-    :mPrefix(aPrefix), mNamespace(aNSID), mNodeType(aNodeType)
+    :mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID),
+     mNodeType(aNodeType)
 {
-    mLocalName = TX_GET_ATOM(aLocalName);
+    if (txXMLAtoms::_empty == aPrefix)
+        mPrefix = 0;
+    NS_ASSERTION(aLocalName, "txNameTest without a local name?");
+    TX_IF_ADDREF_ATOM(mPrefix);
+    TX_IF_ADDREF_ATOM(mLocalName);
 }
 
 txNameTest::~txNameTest()
 {
+    TX_IF_RELEASE_ATOM(mPrefix);
     TX_IF_RELEASE_ATOM(mLocalName);
 }
 
@@ -48,8 +54,7 @@ MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
         return MB_FALSE;
 
     // Totally wild?
-    if (mLocalName == txXPathAtoms::_asterix &&
-        (kNameSpaceID_None == mNamespace))
+    if (mLocalName == txXPathAtoms::_asterix && !mPrefix)
         return MB_TRUE;
 
     // Compare namespaces
@@ -75,7 +80,7 @@ MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
 double txNameTest::getDefaultPriority()
 {
     if (mLocalName == txXPathAtoms::_asterix) {
-        if (kNameSpaceID_None == mNamespace)
+        if (!mPrefix)
             return -0.5;
         return -0.25;
     }
@@ -89,8 +94,10 @@ double txNameTest::getDefaultPriority()
  */
 void txNameTest::toString(String& aDest)
 {
-    if (kNameSpaceID_None != mNamespace) {
-        aDest.append(mPrefix);
+    if (mPrefix) {
+        String prefix;
+        TX_GET_ATOM_STRING(mPrefix, prefix);
+        aDest.append(prefix);
         aDest.append(':');
     }
     String localName;

@@ -83,8 +83,8 @@ protected:
      * Resolve a QName, given the mContext parse context.
      * Returns prefix and localName as well as namespace ID
     **/
-    nsresult resolveQName(const String& aQName, String& aPrefix,
-                          String& aLocalName, PRInt32& aNamespace);
+    nsresult resolveQName(const String& aQName, txAtom*& aPrefix,
+                          txAtom*& aLocalName, PRInt32& aNamespace);
 
     /**
      * Using the given lexer, parses the tokens if they represent a predicate list

@@ -41,7 +41,7 @@
 #include "ExprParser.h"
 #include "FunctionLib.h"
 #include "Names.h"
-#include "txAtom.h"
+#include "txAtoms.h"
 #include "txIXPathContext.h"
 
 /**
@@ -319,7 +319,7 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
             break;
         case Token::VAR_REFERENCE :
             {
-                String prefix, lName;
+                txAtom *prefix, *lName;
                 nsresult rv = NS_OK;
                 PRInt32 nspace;
                 rv = resolveQName(tok->value, prefix, lName, nspace);
@@ -328,6 +328,8 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer) {
                     return 0;
                 }
                 expr = new VariableRefExpr(prefix, lName, nspace);
+                TX_IF_RELEASE_ATOM(prefix);
+                TX_IF_RELEASE_ATOM(lName);
             }
             break;
         case Token::L_PAREN:
@@ -474,28 +476,18 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
         fnCall = new NumberFunctionCall(NumberFunctionCall::FLOOR);
     }
     else {
-        txAtom* name;
+        txAtom *prefix, *lName;
         PRInt32 namespaceID;
-        int idx = tok->value.indexOf(':');
-        if (idx >= 0) {
-            String nameStr, prefixStr;
-            tok->value.subString(idx+1, nameStr);
-            name = TX_GET_ATOM(nameStr);
-
-            tok->value.subString(0, idx, prefixStr);
-            txAtom* prefix = TX_GET_ATOM(prefixStr);
-            rv = mContext->resolveNamespacePrefix(prefix, namespaceID);
-            // XXX report error
-            TX_IF_RELEASE_ATOM(prefix);
+        nsresult rv = NS_OK;
+        rv = resolveQName(tok->value, prefix, lName, namespaceID);
+        if (NS_FAILED(rv)) {
+            // XXX error report namespace resolve failed
+            return 0;
         }
-        else {
-            name = TX_GET_ATOM(tok->value);
-            namespaceID = kNameSpaceID_None;
-        }
-
-        rv = mContext->resolveFunctionCall(name, namespaceID, fnCall);
+        rv = mContext->resolveFunctionCall(lName, namespaceID, fnCall);
         // XXX report error
-        TX_IF_RELEASE_ATOM(name);
+        TX_IF_RELEASE_ATOM(prefix);
+        TX_IF_RELEASE_ATOM(lName);
     }
     
     if (!fnCall)
@@ -605,7 +597,7 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
             case Token::CNAME :
                 {
                     // resolve QName
-                    String prefix, lName;
+                    txAtom *prefix, *lName;
                     nsresult rv = NS_OK;
                     PRInt32 nspace;
                     rv = resolveQName(tok->value, prefix, lName, nspace);
@@ -623,6 +615,8 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
                                                       Node::ELEMENT_NODE);
                             break;
                     }
+                    TX_IF_RELEASE_ATOM(prefix);
+                    TX_IF_RELEASE_ATOM(lName);
                 }
                 if (!nodeTest) {
                     //XXX ErrorReport: out of memory
@@ -966,28 +960,31 @@ short ExprParser::precedenceLevel(short tokenType) {
 }
 
 nsresult ExprParser::resolveQName(const String& aQName,
-                                  String& aPrefix, String& aLocalName,
+                                  txAtom*& aPrefix, txAtom*& aLocalName,
                                   PRInt32& aNamespace)
 {
     nsresult rv = NS_OK;
     aNamespace = kNameSpaceID_None;
+    String prefix, lName;
     int idx = aQName.indexOf(':');
     if (idx > 0) {
-        aQName.subString(0, idx, aPrefix);
-        txAtom* prefix = TX_GET_ATOM(aPrefix);
-        if (!prefix) {
+        aQName.subString(0, idx, prefix);
+        aPrefix = TX_GET_ATOM(prefix);
+        if (!aPrefix) {
             return NS_ERROR_OUT_OF_MEMORY;
         }
-        rv = mContext->resolveNamespacePrefix(prefix, aNamespace);
-        TX_RELEASE_ATOM(prefix);
-        if (NS_FAILED(rv)) {
-            return rv;
+        aQName.subString(idx+1, lName);
+        aLocalName = TX_GET_ATOM(lName);
+        if (!aLocalName) {
+            return NS_ERROR_OUT_OF_MEMORY;
         }
-        aQName.subString(idx+1, aLocalName);
+        return mContext->resolveNamespacePrefix(aPrefix, aNamespace);
     }
-    else {
-        // the lexer dealt with idx == 0 
-        aLocalName.append(aQName);
+    // the lexer dealt with idx == 0
+    aPrefix = 0;
+    aLocalName = TX_GET_ATOM(aQName);
+    if (!aLocalName) {
+        return NS_ERROR_OUT_OF_MEMORY;
     }
-    return rv;
+    return NS_OK;
 }

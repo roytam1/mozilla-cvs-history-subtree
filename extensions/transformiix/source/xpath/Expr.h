@@ -216,7 +216,7 @@ public:
      * Creates a new txNameTest with the given type and the given
      * principal node type
      */
-    txNameTest(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+    txNameTest(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID,
                Node::NodeType aNodeType);
 
     ~txNameTest();
@@ -224,9 +224,9 @@ public:
     TX_DECL_NODE_TEST;
 
 private:
-    String mPrefix;
+    txAtom* mPrefix;
     txAtom* mLocalName;
-    PRUint32 mNamespace;
+    PRInt32 mNamespace;
     Node::NodeType mNodeType;
 };
 
@@ -546,15 +546,14 @@ class VariableRefExpr : public Expr {
 
 public:
 
-    VariableRefExpr(const String& aPrefix,
-                    const String& aLocalName, PRInt32 aID);
+    VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID);
 
     TX_DECL_EXPR;
 
 private:
-    String mPrefix;
+    txAtom* mPrefix;
     txAtom* mLocalName;
-    PRUint32 mNamespace;
+    PRInt32 mNamespace;
 };
 
 /**

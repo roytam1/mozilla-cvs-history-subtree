@@ -24,7 +24,7 @@
  */
 
 #include "Expr.h"
-#include "txAtom.h"
+#include "txAtoms.h"
 #include "txIXPathContext.h"
 
   //-------------------/
@@ -34,17 +34,22 @@
 /**
  * Creates a VariableRefExpr with the given variable name
 **/
-VariableRefExpr::VariableRefExpr(const String& aPrefix,
-                                 const String& aLocalName, PRInt32 aID)
-    : mPrefix(aPrefix), mNamespace(aID)
+VariableRefExpr::VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName,
+                                 PRInt32 aNSID)
+    : mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID)
 {
-    mLocalName = TX_GET_ATOM(aLocalName);
+    NS_ASSERTION(mLocalName, "VariableRefExpr without local name?");
+    if (txXMLAtoms::_empty == mPrefix)
+        mPrefix = 0;
+    TX_IF_ADDREF_ATOM(mPrefix);
+    TX_IF_ADDREF_ATOM(mLocalName);
 }
 
 /*
  * Release the local name atom
 VariableRefExpr::~VariableRefExpr()
 {
+    TX_IF_RELEASE_ATOM(mPrefix);
     TX_IF_RELEASE_ATOM(mLocalName);
 }
 
@@ -109,8 +114,10 @@ ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
 void VariableRefExpr::toString(String& aDest)
 {
     aDest.append('$');
-    if (kNameSpaceID_None != mNamespace) {
-        aDest.append(mPrefix);
+    if (mPrefix) {
+        String prefix;
+        TX_GET_ATOM_STRING(mPrefix, prefix);
+        aDest.append(prefix);
         aDest.append(':');
     }
     String lname;

@@ -82,9 +82,16 @@ void Numbering::doNumbering(Element* xslNumber, String& dest,
                         String prefix, lname;
                         XMLUtils::getPrefix(name, prefix);
                         XMLUtils::getLocalPart(name, lname);
+                        txAtom* prefixAtom = 0;
+                        if (!prefix.isEmpty()) {
+                            prefixAtom = TX_GET_ATOM(prefix);
+                        }
+                        txAtom* lNameAtom = TX_GET_ATOM(lname);
                         PRInt32 NSid = context->getNamespaceID();
-                        txNameTest* nt = new txNameTest(prefix, lname, NSid,
-                                                        type);
+                        txNameTest* nt = new txNameTest(prefixAtom, lNameAtom,
+                                                        NSid, type);
+                        TX_IF_RELEASE_ATOM(prefixAtom);
+                        TX_IF_RELEASE_ATOM(lNameAtom);
                         countPattern = new txStepPattern(nt, isAttr);
                     }
                     break;

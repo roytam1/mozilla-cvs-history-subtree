@@ -290,7 +290,7 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
     txNodeTest* nodeTest = 0;
     if (Token::CNAME == tok->type) {
         // resolve QName
-        String prefix, lName;
+        txAtom *prefix, *lName;
         PRInt32 nspace;
         rv = resolveQName(tok->value, prefix, lName, nspace);
         if (NS_FAILED(rv)) {
@@ -305,6 +305,8 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
             nodeTest = new txNameTest(prefix, lName, nspace,
                                       Node::ELEMENT_NODE);
         }
+        TX_IF_RELEASE_ATOM(prefix);
+        TX_IF_RELEASE_ATOM(lName);
         if (!nodeTest) {
             return NS_ERROR_OUT_OF_MEMORY;
         }
