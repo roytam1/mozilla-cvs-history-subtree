@@ -1,7 +1,12 @@
 #bookmark-window toolbarbutton {
   list-style-image: url("chrome://browser/skin/bookmarks/Bookmarks-toolbar.png");
   -moz-box-orient: vertical;
-  padding: 6px !important;
+  min-width: 57px;
+  padding: 5px;
+}
+
+#bookmark-window toolbarbutton > .toolbarbutton-icon {
+  margin-right: 0px;
 }
 
 /* new bookmark */

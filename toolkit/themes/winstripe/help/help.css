@@ -50,6 +50,21 @@
   list-style-image: url("chrome://browser/skin/Toolbar.png");
 }
 
+.toolbarbutton-1, .browserButton, .toolbarbutton-menubutton-button {
+  padding: 5px;
+}
+
+.toolbarbutton-1 .toolbarbutton-icon,
+.browserButton .toolbarbutton-icon {
+  margin-right: 0px;
+}
+
+#helpToolbar[mode="full"] .toolbarbutton-1,
+#helpToolbar[mode="full"] .browserButton,
+#helpToolbar[mode="full"] .toolbarbutton-menubutton-button {
+  min-width: 57px;
+}
+
 toolbarbutton:not([disabled="true"]):hover,
 menubutton:not([disabled="true"]):hover,
 toolbarbutton:not([disabled="true"]):hover:active,

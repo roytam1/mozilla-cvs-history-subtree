@@ -172,6 +172,11 @@ menuitem.bookmark-item {
   margin-right: 0px;
 }
 
+toolbar[mode="full"] .toolbarbutton-1,
+toolbar[mode="full"] .toolbarbutton-menubutton-button {
+  min-width: 57px;
+}
+
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
   padding: 5px;
 }
@@ -403,7 +408,6 @@ toolbar[mode="text"] .toolbarbutton-text {
 
 toolbar[iconsize="small"] .toolbarbutton-1 {
   -moz-box-orient: vertical;
-  min-width: 0px;
   list-style-image: url("chrome://browser/skin/Toolbar-small.png");
 }
 
@@ -691,11 +695,16 @@ statusbarpanel#statusbar-display {
 
 #go-button {
   list-style-image: url("chrome://browser/skin/Go.png");
-  -moz-image-region: rect(0px 20px 20px 0px);  
+  -moz-image-region: rect(0px 20px 20px 0px);
+  padding: 2px 5px 2px 3px;
 }
 
 #go-button:hover {
   -moz-image-region: rect(0px 40px 20px 20px);
+}
+
+#go-button:hover:active {
+  padding: 3px 4px 1px 4px;
 }
 
 #go-button[disabled="true"] {
