@@ -1267,7 +1267,8 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     }
 
     mState |= NS_FRAME_IS_DIRTY;
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
     nsBoxLayoutState state(GetPresContext()->PresShell());
@@ -1276,7 +1277,8 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     GetParentBox(&parent);
     parent->RelayoutChildAtOrdinal(state, this);
     mState |= NS_FRAME_IS_DIRTY;
-    aPresShell.FrameNeedsReflow(this, nsIPresShell::eStyleChange);
+    GetPresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eStyleChange);
   }
   // If the accesskey changed, register for the new value
   // The old value has been unregistered in nsXULElement::SetAttr
