@@ -62,12 +62,10 @@
 <!ENTITY menuitem.personaltoolbarfolder.label       "Set as Personal Toolbar Folder">
 <!ENTITY menuitem.personaltoolbarfolder.accesskey   "p">
 
-<!ENTITY tree.header.name.label         "Name">
-<!ENTITY tree.header.url.label          "Location">
-<!ENTITY tree.header.shortcut.label     "Keyword">
-<!ENTITY tree.header.addedon.label      "Added">
-<!ENTITY tree.header.lastmod.label      "Last Modified">
-<!ENTITY tree.header.lastvisit.label    "Last Visited">
-<!ENTITY tree.header.description.label  "Description">
 <!ENTITY bookmarksWindowTitle.label	    "Bookmarks">
+
+<!ENTITY outliner.name.column.label         "Name">
+<!ENTITY outliner.location.column.label     "Location">
+<!ENTITY outliner.adddate.column.label      "Add Date">
+<!ENTITY outliner.lastmoddate.column.label  "Last Modified Date">
 
