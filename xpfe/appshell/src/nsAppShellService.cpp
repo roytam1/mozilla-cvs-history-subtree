@@ -53,6 +53,10 @@
 #include "prprf.h"    
 #endif
 
+#ifdef XP_WIN32
+#include "nsIWindowsHooks.h"
+#endif
+
 #include "nsWidgetsCID.h"
 #include "nsIRequestObserver.h"
 
@@ -232,14 +236,25 @@ nsAppShellService::DoProfileStartup(nsICmdLineService *aCmdLineService, PRBool c
 
     PRBool saveQuitOnLastWindowClosing = mQuitOnLastWindowClosing;
     mQuitOnLastWindowClosing = PR_FALSE;
-        
-    // If we being launched in turbo mode, profile mgr cannot show UI
-    rv = profileMgr->StartupWithArgs(aCmdLineService, canInteract);
-    if (!canInteract && rv == NS_ERROR_PROFILE_REQUIRES_INTERACTION) {
-        NS_WARNING("nsIProfileInternal::StartupWithArgs returned NS_ERROR_PROFILE_REQUIRES_INTERACTION");       
-        rv = NS_OK;
-    }
     
+    // canInteract will be FALSE when we are being launched in turbo
+    // mode at Windows startup time. If the profile mgr needed to show UI
+    // when canInteract is FALSE, it will fail. Return this error to abort
+    // launching of the app.
+    rv = profileMgr->StartupWithArgs(aCmdLineService, canInteract);
+
+    // If we have more than 1 profile, completely disable turbo mode.
+    PRInt32 numProfiles = 0;
+    if (NS_SUCCEEDED(profileMgr->GetProfileCount(&numProfiles)) && numProfiles > 1) {
+        if (mNativeAppSupport)
+            mNativeAppSupport->SetIsServerMode(PR_FALSE);
+#ifdef XP_WIN32
+        nsCOMPtr<nsIWindowsHooks> winHooks(do_GetService("@mozilla.org/winhooks;1"));
+        if (winHooks)
+            winHooks->StartupTurboDisable();
+#endif
+    }
+   
     mQuitOnLastWindowClosing = saveQuitOnLastWindowClosing;
 
     return rv;

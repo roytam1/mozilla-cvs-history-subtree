@@ -1566,10 +1566,7 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
     return rv;
 }
 
-// Check to see if we have a profile. We will not have a profile
-// at this point if we were launched invisibly in -turbo mode, and
-// the profile mgr needed to show UI (to pick from multiple profiles).
-// At this point, we can show UI, so call DoProfileStartUp().
+// Check to see if we have a profile.
 nsresult
 nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
 {
@@ -1592,7 +1589,7 @@ nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
   if (NS_FAILED(rv) || doingProfileStartup) return NS_ERROR_FAILURE;
 
   rv = appShell->DoProfileStartup(args, PR_TRUE);
-
+ 
   return rv;
 }
 
@@ -2040,11 +2037,6 @@ nsNativeAppSupportWin::OnLastWindowClosing( nsIXULWindow *aWindow ) {
                                       nsnull, getter_AddRefs( newWindow ) );
         }
     }
-
-    nsCOMPtr<nsIProfileInternal> profileMgr(do_GetService(NS_PROFILE_CONTRACTID, &rv));
-    if (NS_FAILED(rv)) return rv;
-    rv = profileMgr->ShutDownCurrentProfile(nsIProfile::SHUTDOWN_PERSIST);
-    if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
 }

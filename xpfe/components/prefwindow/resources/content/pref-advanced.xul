@@ -62,7 +62,7 @@
      * required to check for it in a non-trivial way) and then explicitly set the
      * checkbox here based on what we find. Finally, we have to hide the checkbox
      * (and the group box that frames it) if we are not executing on a Win32 
-     * platform.
+     * platform or if we have multiple profiles.
      *
      * Return Value: void
      *
@@ -73,7 +73,8 @@
     function turboCheck()
     {
       var frame = document.getElementById("perfSettings");
-      if (navigator.platform != "Win32") {
+      var profileMgr = Components.classes["@mozilla.org/profile/manager;1"].getService(Components.interfaces.nsIProfile);
+      if (navigator.platform != "Win32" || profileMgr.profileCount > 1) {
         frame.setAttribute("hidden", "true");
         return;
       }
@@ -109,6 +110,9 @@
 
     function saveTurboSetting() {
       if (navigator.platform != "Win32")
+        return;
+      var profileMgr = Components.classes["@mozilla.org/profile/manager;1"].getService(Components.interfaces.nsIProfile);
+      if (profileMgr.profileCount > 1)
         return;   
 
       var winhooksService = Components.classes["@mozilla.org/winhooks;1"].getService(Components.interfaces.nsIWindowsHooks);
