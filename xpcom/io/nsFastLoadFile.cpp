@@ -747,7 +747,6 @@ nsFastLoadFileWriter::Close()
 
 nsresult
 nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
-                                        const nsCID& aCID,
                                         PRBool aIsStrongRef,
                                         PRUint32 aTags)
 {
@@ -819,13 +818,17 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
     if (NS_FAILED(rv)) return rv;
 
     if (oid & MFL_OBJECT_DEF_TAG) {
-        NSFastLoadID fastCID = MapID(aCID);
-        rv = Write32(fastCID);
-        if (NS_FAILED(rv)) return rv;
-
         nsCOMPtr<nsISerializable> serializable(do_QueryInterface(aObject));
         if (!serializable)
             return NS_ERROR_FAILURE;
+
+        nsCID slowCID;
+        rv = serializable->GetCID(&slowCID);
+        if (NS_FAILED(rv)) return rv;
+
+        NSFastLoadID fastCID = MapID(slowCID);
+        rv = Write32(fastCID);
+        if (NS_FAILED(rv)) return rv;
 
         rv = serializable->Write(this);
         if (NS_FAILED(rv)) return rv;
@@ -835,9 +838,7 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
 }
 
 NS_IMETHODIMP
-nsFastLoadFileWriter::WriteObject(nsISupports* aObject,
-                                  const nsCID& aCID,
-                                  PRBool aIsStrongRef)
+nsFastLoadFileWriter::WriteObject(nsISupports* aObject, PRBool aIsStrongRef)
 {
 #ifdef NS_DEBUG
     nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
@@ -846,12 +847,11 @@ nsFastLoadFileWriter::WriteObject(nsISupports* aObject,
                  "bad call to WriteObject -- call WriteCompoundObject!");
 #endif
 
-    return WriteObjectCommon(aObject, aCID, aIsStrongRef, 0);
+    return WriteObjectCommon(aObject, aIsStrongRef, 0);
 }
 
 NS_IMETHODIMP
-nsFastLoadFileWriter::WriteSingleRefObject(nsISupports* aObject,
-                                           const nsCID& aCID)
+nsFastLoadFileWriter::WriteSingleRefObject(nsISupports* aObject)
 {
 #ifdef NS_DEBUG
     nsCOMPtr<nsISupports> rootObject(do_QueryInterface(aObject));
@@ -860,12 +860,11 @@ nsFastLoadFileWriter::WriteSingleRefObject(nsISupports* aObject,
                  "bad call to WriteObject -- call WriteCompoundObject!");
 #endif
 
-    return WriteObjectCommon(aObject, aCID, PR_TRUE, MFL_SINGLE_REF_PSEUDO_TAG);
+    return WriteObjectCommon(aObject, PR_TRUE, MFL_SINGLE_REF_PSEUDO_TAG);
 }
 
 NS_IMETHODIMP
 nsFastLoadFileWriter::WriteCompoundObject(nsISupports* aObject,
-                                          const nsCID& aCID,
                                           const nsIID& aIID,
                                           PRBool aIsStrongRef)
 {
@@ -882,8 +881,7 @@ nsFastLoadFileWriter::WriteCompoundObject(nsISupports* aObject,
                  "bad aggregation or multiple inheritance detected by call to WriteCompoundObject!");
 #endif
 
-    rv = WriteObjectCommon(rootObject, aCID, aIsStrongRef,
-                           MFL_QUERY_INTERFACE_TAG);
+    rv = WriteObjectCommon(rootObject, aIsStrongRef, MFL_QUERY_INTERFACE_TAG);
     if (NS_FAILED(rv)) return rv;
 
     NSFastLoadID iid = MapID(aIID);

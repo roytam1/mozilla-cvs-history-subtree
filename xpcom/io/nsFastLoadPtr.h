@@ -72,11 +72,10 @@ class nsFastLoadPtr : public nsCOMPtr<T> {
      * Lowercase name _a la_ get, because it's called the same way -- not via
      * operator->().
      */
-    nsresult write(nsIObjectOutputStream* aOutputStream, const nsCID& aCID) {
+    nsresult write(nsIObjectOutputStream* aOutputStream) {
         return gFastLoadService_->WriteFastLoadPtr(aOutputStream,
                                                    NS_STATIC_CAST(nsISupports*,
-                                                                  mRawPtr),
-                                                   aCID);
+                                                                  mRawPtr));
     }
 };
 

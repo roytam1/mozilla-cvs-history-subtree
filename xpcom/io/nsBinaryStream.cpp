@@ -246,17 +246,14 @@ nsBinaryOutputStream::WriteBytes(const char *aString, PRUint32 aLength)
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteObject(nsISupports* aObject,
-                                  const nsCID& aCID,
-                                  PRBool aIsStrongRef)
+nsBinaryOutputStream::WriteObject(nsISupports* aObject, PRBool aIsStrongRef)
 {
     NS_NOTREACHED("WriteObject");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsBinaryOutputStream::WriteSingleRefObject(nsISupports* aObject,
-                                           const nsCID& aCID)
+nsBinaryOutputStream::WriteSingleRefObject(nsISupports* aObject)
 {
     NS_NOTREACHED("WriteSingleRefObject");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -264,7 +261,6 @@ nsBinaryOutputStream::WriteSingleRefObject(nsISupports* aObject,
 
 NS_IMETHODIMP
 nsBinaryOutputStream::WriteCompoundObject(nsISupports* aObject,
-                                          const nsCID& aCID,
                                           const nsIID& aIID,
                                           PRBool aIsStrongRef)
 {

@@ -46,8 +46,7 @@ interface nsIFastLoadService : nsISupports
                                     inout nsISupports aPtr);
 
     [noscript] void writeFastLoadPtr(in nsIObjectOutputStream aOutputStream,
-                                     in nsISupports aPtr,
-                                     in nsCIDRef aCID);
+                                     in nsISupports aPtr);
 };
 
 %{C++

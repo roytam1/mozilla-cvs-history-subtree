@@ -319,8 +319,7 @@ nsFastLoadService::ReadFastLoadPtr(nsIObjectInputStream* aInputStream,
 
 NS_IMETHODIMP
 nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
-                                    nsISupports* aObject,
-                                    const nsCID& aCID)
+                                    nsISupports* aObject)
 {
     NS_ASSERTION(aObject != nsnull, "writing an unread nsFastLoadPtr?!");
     if (!aObject)
@@ -340,7 +339,7 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
     rv = aOutputStream->Write32(0);       // nextOffset placeholder
     if (NS_FAILED(rv)) return rv;
 
-    rv = aOutputStream->WriteObject(aObject, aCID, PR_TRUE);
+    rv = aOutputStream->WriteObject(aObject, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 nextOffset;

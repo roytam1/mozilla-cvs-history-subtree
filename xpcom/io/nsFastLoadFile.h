@@ -313,11 +313,11 @@ class NS_COM nsFastLoadFileWriter
     NS_DECL_ISUPPORTS
 
     // overridden nsIObjectOutputStream methods
-    NS_IMETHOD WriteObject(nsISupports* aObject, const nsCID& aCID,
-                           PRBool aIsStrongRef);
-    NS_IMETHOD WriteSingleRefObject(nsISupports* aObject, const nsCID& aCID);
-    NS_IMETHOD WriteCompoundObject(nsISupports* aObject, const nsCID& aCID,
-                                   const nsIID& aIID, PRBool aIsStrongRef);
+    NS_IMETHOD WriteObject(nsISupports* aObject, PRBool aIsStrongRef);
+    NS_IMETHOD WriteSingleRefObject(nsISupports* aObject);
+    NS_IMETHOD WriteCompoundObject(nsISupports* aObject,
+                                   const nsIID& aIID,
+                                   PRBool aIsStrongRef);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
@@ -333,7 +333,6 @@ class NS_COM nsFastLoadFileWriter
     NS_IMETHOD Close(void);
 
     nsresult WriteObjectCommon(nsISupports* aObject,
-                               const nsCID& aCID,
                                PRBool aIsStrongRef,
                                PRUint32 aQITag);
 
