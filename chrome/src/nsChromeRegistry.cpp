@@ -2231,7 +2231,7 @@ nsChromeRegistry::InstallProvider(const nsACString& aProviderType,
                                   PRBool aRemove)
 {
   // XXX don't allow local chrome overrides of install chrome!
-#ifdef DEBUG
+#ifdef DEBUG2
   printf("*** Chrome Registration of %-7s: Checking for contents.rdf at %s\n", PromiseFlatCString(aProviderType).get(), PromiseFlatCString(aBaseURL).get());
 #endif
 
@@ -3477,7 +3477,7 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
       if (isSelection) {
 
         rv = SelectSkin(nsDependentCString(chromeLocation), isProfile);
-#ifdef DEBUG
+#ifdef DEBUG2
         printf("***** Chrome Registration: Selecting skin %s as default\n", (const char*)chromeLocation);
 #endif
       }
@@ -3490,7 +3490,7 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
       if (isSelection) {
 
         rv = SelectLocale(nsDependentCString(chromeLocation), isProfile);
-#ifdef DEBUG
+#ifdef DEBUG2
         printf("***** Chrome Registration: Selecting locale %s as default\n", (const char*)chromeLocation);
 #endif
       }

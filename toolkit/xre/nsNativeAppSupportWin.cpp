@@ -843,7 +843,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
     if (!mCanHandleRequests)
         return 0;
 
-#ifdef DEBUG
+#ifdef DEBUG_blake
     printf( "DDE: uType  =%s\n",      uTypeDesc( uType ).get() );
     printf( "     uFmt   =%u\n",      (unsigned)uFmt );
     printf( "     hconv  =%08x\n",    (int)hconv );

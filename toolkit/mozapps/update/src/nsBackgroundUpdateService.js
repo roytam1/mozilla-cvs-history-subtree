@@ -56,6 +56,7 @@ const PREF_UPDATE_EXTENSIONS_SEVERITY_THRESHOLD = "update.extensions.severity.th
 
 const PREF_UPDATE_INTERVAL                  = "update.interval";
 const PREF_UPDATE_SEVERITY                  = "update.severity";
+const PREF_UPDATE_APP_PERFORMED             = "update.app.performed";
 
 const nsIExtensionManager = Components.interfaces.nsIExtensionManager;
 const nsIUpdateService    = Components.interfaces.nsIUpdateService;
@@ -64,9 +65,22 @@ const nsIUpdateItem       = Components.interfaces.nsIUpdateItem;
 const UPDATED_EXTENSIONS  = 0x01;
 const UPDATED_APP         = 0x02;
 
-const SEVERITY_HIGH       = 2;
-const SEVERITY_MEDIUM     = 1;
-const SEVERITY_LOW        = 0;
+function APP_NS(aProperty)
+{
+  return "http://www.mozilla.org/2004/app-rdf#" + aProperty;
+}
+
+function getOSKey()
+{
+#ifdef XP_UNIX
+#ifdef XP_MACOSX
+  return "mac";
+#else
+  return "lin";
+#else
+  return "win";
+#endif
+}
 
 var gPref   = null;
 var gOS     = null;
@@ -93,6 +107,10 @@ function nsUpdateService()
   // Observe xpcom-shutdown to unhook pref branch observers above to avoid 
   // shutdown leaks.
   gOS.addObserver(this, "xpcom-shutdown", false);
+  
+  // Reset update state from previous session if an app update was installed.
+  if (gPref.prefHasUserValue(PREF_UPDATE_APP_PERFORMED)) 
+    gPref.clearUserPref(PREF_UPDATE_APP_PERFORMED);
 }
 
 nsUpdateService.prototype = {
@@ -120,6 +138,24 @@ nsUpdateService.prototype = {
     switch (aSourceEvent) {
     case nsIUpdateService.SOURCE_EVENT_MISMATCH:
     case nsIUpdateService.SOURCE_EVENT_USER:
+    
+      if (aSourceEvent == nsIUpdateService.SOURCE_EVENT_USER && 
+          gPref.getBoolPref(PREF_UPDATE_APP_PERFORMED)) {
+        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                            .getService(Components.interfaces.nsIStringBundleService);
+        var bundle = sbs.createBundle("chrome://mozapps/locale/update/update.properties");
+        var brandBundle = sbs.createBundle("chrome://global/locale/brand.properties");
+        var brandShortName = brandBundle.GetStringFromName("brandShortName");        
+        var message = bundle.formatStringFromName("appupdateperformedmessage",
+                                                  [brandShortName, brandShortName], 2);
+        var ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                          .getService(Components.interfaces.nsIPromptService);
+        ps.alert(aParentWindow, 
+                 bundle.GetStringFromName("appupdateperformedtitle"), 
+                 message);
+        return;
+      }
+    
       var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                          .getService(Components.interfaces.nsIWindowWatcher);
       var ary = Components.classes["@mozilla.org/supports-array;1"]
@@ -180,6 +216,9 @@ nsUpdateService.prototype = {
       if (this._canUpdate(this._appUpdatesEnabled, aSourceEvent)) {
         gOS.addObserver(this._updateObserver, "Update:App:Ended", false);
         
+        this._currentVersion  = new nsAppUpdateInfo();
+        this._newestVersion   = new nsAppUpdateInfo();
+
         if (!this._updateObserver.appUpdater) {
           this._updateObserver.appUpdater = new nsAppUpdater(this);
           this._updateObserver.appUpdater.checkForUpdates();
@@ -229,24 +268,6 @@ nsUpdateService.prototype = {
     return gPref.getIntPref(PREF_UPDATE_SEVERITY);
   },
   
-  get appUpdateVersion()
-  {
-    return gPref.getComplexValue(PREF_UPDATE_APP_UPDATEVERSION, 
-                                 Components.interfaces.nsIPrefLocalizedString).data;
-  },
-  
-  get appUpdateDescription()
-  {
-    return gPref.getComplexValue(PREF_UPDATE_APP_UPDATEDESCRIPTION, 
-                                 Components.interfaces.nsIPrefLocalizedString).data;
-  },
-  
-  get appUpdateURL()
-  {
-    return gPref.getComplexValue(PREF_UPDATE_APP_UPDATEURL, 
-                                 Components.interfaces.nsIPrefLocalizedString).data;
-  },
-  
   _appUpdatesAvailable: undefined,
   get appUpdatesAvailable() 
   {
@@ -275,6 +296,17 @@ nsUpdateService.prototype = {
     return aValue;
   },
   
+  _newestVersion: null,
+  get newestVersion()
+  {
+    return this._newestVersion;
+  },
+  _currentVersion: null,
+  get currentVersion()
+  {
+    return this._currentVersion;
+  },
+    
   /////////////////////////////////////////////////////////////////////////////
   // nsITimerCallback
   _shouldUpdate: function nsUpdateService__shouldUpdate (aIntervalPref, aLastCheckPref)
@@ -472,11 +504,11 @@ nsUpdateObserver.prototype = {
       var newCount = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_COUNT) + 1;
       gPref.setIntPref(PREF_UPDATE_EXTENSIONS_COUNT, newCount);
       var threshold = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_SEVERITY_THRESHOLD);
-      if (this._service.updateSeverity < SEVERITY_HIGH) {
+      if (this._service.updateSeverity < nsIUpdateService.SEVERITY_HIGH) {
         if (newCount > threshold)
-          gPref.setIntPref(PREF_UPDATE_SEVERITY, SEVERITY_MEDIUM);
+          gPref.setIntPref(PREF_UPDATE_SEVERITY, nsIUpdateService.SEVERITY_MEDIUM);
         else
-          gPref.setIntPref(PREF_UPDATE_SEVERITY, SEVERITY_LOW);
+          gPref.setIntPref(PREF_UPDATE_SEVERITY, nsIUpdateService.SEVERITY_LOW);
       }
       break;
     case "Update:Extension:Ended":
@@ -589,13 +621,12 @@ function nsAppUpdater(aUpdateService)
 
 nsAppUpdater.prototype = {
   _service    : null,
-  _ds         : null,
 
   checkForUpdates: function ()
   {
     var dsURI = gPref.getComplexValue(PREF_UPDATE_APP_URI, 
                                       Components.interfaces.nsIPrefLocalizedString).data;
-
+    dsURI += "?" + Math.round(Math.random() * 1000);
     this._ds = gRDF.GetDataSource(dsURI);
     var rds = this._ds.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource)
     if (rds.loaded)
@@ -614,7 +645,6 @@ nsAppUpdater.prototype = {
     var sink = this._ds.QueryInterface(Components.interfaces.nsIRDFXMLSink);
     sink.removeXMLSinkObserver(this);
     this._service = null;
-    this._ds = null;
   },
   
   /////////////////////////////////////////////////////////////////////////////
@@ -624,64 +654,180 @@ nsAppUpdater.prototype = {
     return gRDF.GetResource("http://home.netscape.com/NC-rdf#" + aProperty);
   },
   
-  _getProperty: function nsUpdateService__getProperty (aDS, aAppID, aProperty)
+  _getPropertyFromResource: function nsAppUpdater__getPropertyFromResource (aDataSource,
+                                                                            aSourceResource, 
+                                                                            aProperty)
   {
-    var app = gRDF.GetResource("urn:mozilla:app:" + aAppID);
-    return aDS.GetTarget(app, this._ncR(aProperty), true).QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+    var rv;
+    try {
+      var property = gRDF.GetResource(APP_NS(aProperty));
+      rv = this._stringData(aDataSource.GetTarget(aSourceResource, property, true));
+      if (rv == "--")
+        throw Components.results.NS_ERROR_FAILURE;
+    }
+    catch (e) { 
+      return null;
+    }
+    return rv;
+  },
+
+  _stringData: function nsAppUpdater__stringData (aLiteralOrResource)
+  {
+    try {
+      var obj = aLiteralOrResource.QueryInterface(Components.interfaces.nsIRDFLiteral);
+      return obj.Value;
+    }
+    catch (e) {
+      try {
+        obj = aLiteralOrResource.QueryInterface(Components.interfaces.nsIRDFResource);
+        return obj.Value;
+      }
+      catch (e) {}
+    }
+    return "--";
   },
 
   /////////////////////////////////////////////////////////////////////////////
   //
-  onDatasourceLoaded: function (aDataSource)
+  onDatasourceLoaded: function nsAppUpdater_onDatasourceLoaded (aDataSource)
   {
-    var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                         .getService(Components.interfaces.nsIPrefBranch);
-    var appID = pref.getCharPref(PREF_APP_ID);
-    var appVersion = pref.getCharPref(PREF_APP_VERSION);
- 
-    // do update checking here, parsing something like this format:
-    var version = this._getProperty(aDataSource, appID, "version");
-    var versionChecker = Components.classes["@mozilla.org/updates/version-checker;1"]
-                                   .getService(Components.interfaces.nsIVersionChecker);
-    if (versionChecker.compare(appVersion, version) < 0) {
-      pref.setCharPref(PREF_UPDATE_APP_UPDATEVERSION, version);
+    var appID = gPref.getCharPref(PREF_APP_ID);
+    var appVersion = gPref.getCharPref(PREF_APP_VERSION);
     
-      var severity = this._getProperty(aDataSource, appID, "severity");
-      // Synthesize the real severity value using the hint from the web site
-      // and the version.
-      pref.setIntPref(PREF_UPDATE_SEVERITY, severity);
-      pref.setBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE, true);
-      
-      var urlStr = Components.classes["@mozilla.org/supports-string;1"]
-                             .createInstance(Components.interfaces.nsISupportsString);
-      urlStr.data = this._getProperty(aDataSource, appID, "URL");
-      pref.setComplexValue(PREF_UPDATE_APP_UPDATEURL, 
-                           Components.interfaces.nsISupportsString, 
-                           urlStr);
-
-      var descStr = Components.classes["@mozilla.org/supports-string;1"]
-                              .createInstance(Components.interfaces.nsISupportsString);
-      descStr.data = this._getProperty(aDataSource, appID, "description");
-      pref.setComplexValue(PREF_UPDATE_APP_UPDATEDESCRIPTION, 
-                           Components.interfaces.nsISupportsString, 
-                           descStr);
+    var appResource = gRDF.GetResource("urn:mozilla:app:" + appID);
+    var updatesArc = gRDF.GetResource(APP_NS("updates"));
+    var updatesResource = aDataSource.GetTarget(appResource, updatesArc, true);
+    
+    try {
+      updatesResource = updatesResource.QueryInterface(Components.interfaces.nsIRDFResource);
     }
-    else {
-      this._clearAppUpdatePrefs();
+    catch (e) { return; }
+    
+    var cu = Components.classes["@mozilla.org/rdf/container-utils;1"]
+                       .getService(Components.interfaces.nsIRDFContainerUtils);
+    if (cu.IsContainer(aDataSource, updatesResource)) {
+      var c = Components.classes["@mozilla.org/rdf/container;1"]
+                        .getService(Components.interfaces.nsIRDFContainer);
+      c.Init(aDataSource, updatesResource);
+      
+      var versionChecker = Components.classes["@mozilla.org/updates/version-checker;1"]
+                                     .getService(Components.interfaces.nsIVersionChecker);
+      
+      var newestVersionObj = { version: appVersion, resource: null };
+      var updates = c.GetElements();
+      while (updates.hasMoreElements()) {
+        var update = updates.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        var version = this._getPropertyFromResource(aDataSource, update, "version");
+        if (!version)
+          continue;
+        if (versionChecker.compare(appVersion, version) == 0)
+          this._parseVersionData(aDataSource, update, this._service._currentVersion);
+        else if (versionChecker.compare(newestVersionObj.version, version) < 0) {
+          newestVersionObj.version = version;
+          newestVersionObj.resource = update;
+        }
+      }
+      this._parseVersionData(aDataSource, newestVersionObj.resource, this._service._newestVersion);
+      
+      // There is a newer version of the app available or there are any critical
+      // patches available update the severity and available updates preferences.
+      // XXXben also note if there are langpacks available that match the user's
+      //        preference if they previously installed an app update when a 
+      //        langpack for their language was not available and they used another
+      //        in the meantime. 
+      var patches = this._service._currentVersion.patches;
+      var languages = this._service._newestVersion.languages;
+      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                        .getService(Components.interfaces.nsIXULChromeRegistry);
+      var selectedLocale = cr.getSelectedLocale("global");
+      var haveLanguage = false;
+      for (var i = 0; i < languages.length; ++i) {
+        if (languages[i].internalName == selectedLocale)
+          haveLanguage = true;
+      }
 
-      // Lower the severity to reflect the fact that there are now only Extension/
-      // Theme updates available
-      var newCount = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_COUNT);
-      var threshold = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_SEVERITY_THRESHOLD);
-      if (newCount >= threshold)
-        gPref.setIntPref(PREF_UPDATE_SEVERITY, SEVERITY_MEDIUM);
+      if (haveLanguage && 
+          (newestVersionObj.version != appVersion || (patches && patches.length > 0))) {
+        gPref.setIntPref(PREF_UPDATE_SEVERITY, 2);
+        gPref.setBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE, true);
+      }
       else
-        gPref.setIntPref(PREF_UPDATE_SEVERITY, SEVERITY_LOW);
+        gPref.setBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE, false);
+
+      if (!gPref.getBoolPref(PREF_UPDATE_APP_UPDATESAVAILABLE)) {
+        this._service._clearAppUpdatePrefs();
+
+        // Lower the severity to reflect the fact that there are now only Extension/
+        // Theme updates available
+        var newCount = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_COUNT);
+        var threshold = gPref.getIntPref(PREF_UPDATE_EXTENSIONS_SEVERITY_THRESHOLD);
+        if (newCount >= threshold)
+          gPref.setIntPref(PREF_UPDATE_SEVERITY, nsIUpdateService.SEVERITY_MEDIUM);
+        else
+          gPref.setIntPref(PREF_UPDATE_SEVERITY, nsIUpdateService.SEVERITY_LOW);
+      }
     }
 
     // The Update Wizard uses this notification to determine that the application
     // update process is now complete. 
     gOS.notifyObservers(null, "Update:App:Ended", "");
+  },
+  
+  _parseVersionData: function nsAppUpdater__parseVersionData (aDataSource, 
+                                                              aUpdateResource, 
+                                                              aTargetObj)
+  {
+    aTargetObj.updateVersion        = this._getPropertyFromResource(aDataSource, aUpdateResource, "version");
+    aTargetObj.updateDisplayVersion = this._getPropertyFromResource(aDataSource, aUpdateResource, "displayVersion");
+    aTargetObj.updateInfoURL        = this._getPropertyFromResource(aDataSource, aUpdateResource, "infoURL");
+    
+    aTargetObj.features   = this._parseUpdateCollection(aDataSource, aUpdateResource, "features");
+    aTargetObj.files      = this._parseUpdateCollection(aDataSource, aUpdateResource, "files");
+    aTargetObj.optional   = this._parseUpdateCollection(aDataSource, aUpdateResource, "optional");
+    aTargetObj.languages  = this._parseUpdateCollection(aDataSource, aUpdateResource, "languages");
+    aTargetObj.patches    = this._parseUpdateCollection(aDataSource, aUpdateResource, "patches");
+  },
+  
+  _parseUpdateCollection: function nsAppUpdater__parseUpdateCollection (aDataSource, 
+                                                                        aUpdateResource, 
+                                                                        aCollectionName)
+  {
+    if (!aUpdateResource)
+      return null;
+  
+    var result = [];
+    
+    var collectionArc = gRDF.GetResource(APP_NS(aCollectionName));
+    var collectionResource = aDataSource.GetTarget(aUpdateResource, collectionArc, true);
+    
+    try {
+      collectionResource = collectionResource.QueryInterface(Components.interfaces.nsIRDFResource);
+    }
+    catch (e) { return; }
+    
+    var cu = Components.classes["@mozilla.org/rdf/container-utils;1"]
+                       .getService(Components.interfaces.nsIRDFContainerUtils);
+    if (cu.IsContainer(aDataSource, collectionResource)) {
+      var c = Components.classes["@mozilla.org/rdf/container;1"]
+                        .getService(Components.interfaces.nsIRDFContainer);
+      c.Init(aDataSource, collectionResource);
+
+      var elements = c.GetElements();
+      while (elements.hasMoreElements()) {
+        var element = elements.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        var info = new nsAppUpdateInfoItem();
+        info.name          = this._getPropertyFromResource(aDataSource, element, "name");
+        info.internalName  = this._getPropertyFromResource(aDataSource, element, "internalName");
+        info.URL           = this._getPropertyFromResource(aDataSource, element, getOSKey() + "URL");
+        if (!info.URL)
+          info.URL         = this._getPropertyFromResource(aDataSource, element, "URL");
+        info.infoURL       = this._getPropertyFromResource(aDataSource, element, "infoURL");
+        info.description   = this._getPropertyFromResource(aDataSource, element, "description");
+        result.push(info);
+      }
+    }
+    
+    return result;
   },
   
   onDatasourceError: function (aStatus, aErrorMsg)
@@ -704,12 +850,13 @@ nsAppUpdater.prototype = {
   
   onEndLoad: function(aSink)
   {
-    var ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
-    this.onDatasourceLoaded(ds);
+    this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
+    this.onDatasourceLoaded(this._ds);
   },
   
   onError: function(aSink, aStatus, aErrorMsg)
   {
+    this._ds = aSink.QueryInterface(Components.interfaces.nsIRDFDataSource);
     this.onDatasourceError(aStatus, aErrorMsg);
   },
 
@@ -787,6 +934,58 @@ UpdateItem.prototype = {
   QueryInterface: function UpdateItem_QueryInterface (aIID) 
   {
     if (!aIID.equals(Components.interfaces.nsIUpdateItem) &&
+        !aIID.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+};
+
+function nsAppUpdateInfoItem ()
+{
+}
+nsAppUpdateInfoItem.prototype = {
+  internalName: "",
+  name        : "",
+  URL         : "",
+  infoURL     : "",
+
+  /////////////////////////////////////////////////////////////////////////////
+  // nsISupports
+  QueryInterface: function nsAppUpdater_QueryInterface (aIID) 
+  {
+    if (!aIID.equals(Components.interfaces.nsIAppUpdateInfo) &&
+        !aIID.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+};
+
+function nsAppUpdateInfo ()
+{
+}
+nsAppUpdateInfo.prototype = {
+  updateVersion       : "",
+  updateDisplayVersion: "",
+  updateInfoURL       : "",
+
+  features  : [],
+  files     : [],
+  optional  : [],
+  languages : [],
+  patches   : [], 
+  
+  getCollection: function (aCollectionName, aItemCount)
+  {
+    var collection = aCollectionName in this ? this[aCollectionName] : null;
+    aItemCount.value = collection ? collection.length : 0;
+    return collection;
+  },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // nsISupports
+  QueryInterface: function nsAppUpdater_QueryInterface (aIID) 
+  {
+    if (!aIID.equals(Components.interfaces.nsIAppUpdateInfoCollection) &&
         !aIID.equals(Components.interfaces.nsISupports))
       throw Components.results.NS_ERROR_NO_INTERFACE;
     return this;
