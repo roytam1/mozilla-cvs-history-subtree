@@ -1274,11 +1274,11 @@ extern PRIOMethods _pr_faulty_methods;
 ** member corresponding to the specified address family.
 */
 
-extern PRUintn PR_NetAddrSize(const PRNetAddr* addr);
+extern PRUintn _PR_NetAddrSize(const PRNetAddr* addr);
 
 #if defined(_PR_INET6)
 
-#define PR_NETADDR_SIZE(_addr) PR_NetAddrSize(_addr)
+#define PR_NETADDR_SIZE(_addr) _PR_NetAddrSize(_addr)
 
 #else
 
