@@ -68,12 +68,15 @@ rect {
 
 svg {
 
-  //XXX can't have binding on outermost element. see bug#71191
-  //  -moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
-    
-  /* We give svg elements block display style, so that they reflow
-     correctly when given a relative width/height: */  
-  display: block;
+  /* XXX can't have binding on outermost element. see bug#71191
+     -moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
+  */
+  
+  /* XXX Pending bug#172574, We want to give svg elements block
+     display style, so that they reflow correctly when given a
+     relative width/height:   
+     display: block;
+  */
 
   font-family: Helvetica;
 }
