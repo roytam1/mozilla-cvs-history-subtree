@@ -144,6 +144,7 @@ nsDiskCacheRecordChannel::Init(void)
                         mLoadGroup,
                         nsnull,    // no eventsink getter
                         nsnull,    // original uri same as uri
+			0,
                         getter_AddRefs(mFileTransport)) ;
   return rv ;
 }
@@ -348,16 +349,40 @@ nsDiskCacheRecordChannel::SetOwner(nsISupports* aOwner)
 }
 
 NS_IMETHODIMP
-nsDiskCacheRecordChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
-{
-  *aLoadGroup = mLoadGroup ;
-  NS_IF_ADDREF(*aLoadGroup) ;
-  return NS_OK ;
-}
-
-NS_IMETHODIMP
 nsDiskCacheRecordChannel::GetOriginalURI(nsIURI* *aURI)
 {
   // FUR - might need to implement this - not sure
   return NS_ERROR_NOT_IMPLEMENTED ;
+}
+
+NS_IMETHODIMP
+nsDiskCacheRecordChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
+{
+  // Not required to be implemented, since it is implemented by cache manager
+  NS_ASSERTION(0, "nsDiskCacheRecordChannel method unexpectedly called");
+  return NS_OK ;
+}
+
+NS_IMETHODIMP
+nsDiskCacheRecordChannel::SetLoadGroup(nsILoadGroup* aLoadGroup)
+{
+  // Not required to be implemented, since it is implemented by cache manager
+  NS_ASSERTION(0, "nsDiskCacheRecordChannel method unexpectedly called");
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDiskCacheRecordChannel::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
+{
+  // Not required to be implemented, since it is implemented by cache manager
+  NS_ASSERTION(0, "nsDiskCacheRecordChannel method unexpectedly called");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDiskCacheRecordChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
+{
+  // Not required to be implemented, since it is implemented by cache manager
+  NS_ASSERTION(0, "nsDiskCacheRecordChannel method unexpectedly called");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
