@@ -112,9 +112,9 @@ typedef struct JSJCallbacks {
 /*===========================================================================*/
 
 /* A flag that denotes that a Java package has no sub-packages other than those
-   explicitly pre-defined at the time of JSContext initialization.  An access
+   explicitly pre-defined at the time of initialization.  An access
    to a simple name within such a package, therefore, must either correspond to
-   one of these explicitly named sub-packages or to a class within this
+   one of these explicitly pre-defined sub-packages or to a class within this
    package.  It is reasonable for LiveConnect to signal an error if a simple
    name does not comply with these criteria. */
 #define PKG_SYSTEM      1
@@ -240,9 +240,5 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *);
 PR_IMPLEMENT(JSBool)
 JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp);
 
-PR_IMPLEMENT(JSObject *)
-JSJ_WrapJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_obj, jclass java_class);
-
 PR_END_EXTERN_C
-
 #endif  /* _JSJAVA_H */
