@@ -29,6 +29,29 @@
 	/* external string references in allxpstr */
 extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
+#define IMPORT_LIST_SIZE 10
+
+char* importList[IMPORT_LIST_SIZE] = {"Favorites", "NC:Bookmarks", "History", "NC:History", 
+                       "Recent", "NC:Bookmarks",   "Start Menu", "NC:Bookmarks", "Desktop", "NC:LocalFiles"};
+
+void importForProfile (char* dir, const char* uname) {
+  int32 n = 0;
+  char* pn = getMem(100 + strlen(dir));
+  char* name = getMem(100 + strlen(uname));
+  RDF_Resource item;
+  RDF_Resource parent;
+  while (n < IMPORT_LIST_SIZE) {
+    sprintf(pn, "%s%s/", dir, importList[n++]);
+    item = RDF_GetResource(NULL, pn, 1);
+    parent = RDF_GetResource(NULL, importList[n++], 1);
+    sprintf(name, "%s IE %s", uname,  importList[n-2]);
+    remoteStoreAdd(gRemoteStore, item, gCoreVocab->RDF_name, copyString(name), 
+                   RDF_STRING_TYPE, 1);
+    remoteStoreAdd(gRemoteStore, item, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE, 1);   
+  }
+  freeMem(pn);
+  freeMem(name);
+}
 
 
 void
@@ -38,26 +61,18 @@ GuessIEBookmarks (void)
   RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
   PRDir* ProfilesDir = OpenDir("file:///c|/winnt/profiles/");
   if (!ProfilesDir) { 
-    RDF_Resource bmkdir = RDF_GetResource(NULL,"file:///c|/windows/favorites/", 1);
-    remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_parent, bmk, RDF_RESOURCE_TYPE, 1);    
+    importForProfile("file:///c|/windows/", "Your");
   } else {
     int32 n = PR_SKIP_BOTH;
     PRDirEntry	*de;
     while (de = PR_ReadDir(ProfilesDir, n++)) {
-      char* pn = getMem(400);
-      sprintf(pn, "file:///c|/winnt/profiles/%s/favorites/", de->name);
       if (strcmp(de->name, "Administrator") && strcmp(de->name, "Default User") && 
           strcmp(de->name, "All Users")) {
-        RDF_Resource bmkdir = RDF_GetResource(NULL,pn, 1);
-        char* name = getMem(300);
-        /* XXX localization ! */
-        sprintf(name, "%s's imported Favorites", de->name);
-        remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_name, copyString(name), 
-                       RDF_STRING_TYPE, 1);
-        remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_parent, bmk, RDF_RESOURCE_TYPE, 1);   
-        freeMem(name);
+        char* dir = getMem(100 + strlen(de->name));
+        sprintf(dir, "file:///c|/winnt/profiles/%s/", de->name);
+        importForProfile(dir, de->name);
+        freeMem(dir);
       }
-      freeMem(pn);
     }
     PR_CloseDir(ProfilesDir);
   }
