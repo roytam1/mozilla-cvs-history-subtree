@@ -266,6 +266,7 @@ res/broken-image.gif
 res/builtin/*
 res/entityTables/*
 res/fonts/*
+res/html/*
 
 ;
 ; MathML
