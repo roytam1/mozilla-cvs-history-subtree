@@ -70,6 +70,7 @@ protected:
   PRBool            mIsForMail;
   nsCOMPtr<nsIAtom> mBlockQuoteAtom;
   nsCOMPtr<nsIAtom> mDivAtom;
+  nsCOMPtr<nsIAtom> mSpanAtom;
   nsCOMPtr<nsIAtom> mTypeAtom;
   nsCOMPtr<nsIAtom> mScriptAtom;
   nsCOMPtr<nsIAtom> mTextAreaAtom;
