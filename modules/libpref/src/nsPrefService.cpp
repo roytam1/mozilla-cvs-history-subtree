@@ -37,10 +37,12 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsPrefService.h"
+#include "nsSafeSaveFile.h"
 #include "jsapi.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsICategoryManager.h"
+#include "nsIFile.h"
 #include "nsIFileStreams.h"
 #include "nsILocalFile.h"
 #include "nsIObserverService.h"
@@ -53,28 +55,20 @@
 #include "pldhash.h"
 
 #include "prefapi.h"
-class nsIFileSpec;	// needed for prefapi_private_data.h inclusion
 #include "prefapi_private_data.h"
 
 // supporting PREF_Init()
 #include "nsIJSRuntimeService.h"
 
-// lose these if possible (need NS_NewFileSpecFromIFile)
-#include "nsIFileSpec.h"
-#include "nsFileStream.h"
-
 #include "nsITimelineService.h"
 
 // Definitions
-#define PREFS_HEADER_LINE_1 "# Mozilla User Preferences"
-#define PREFS_HEADER_LINE_2	"// This is a generated file!"
 #define INITIAL_MAX_DEFAULT_PREF_FILES 10
 
 
 // Prototypes
 static nsresult openPrefFile(nsIFile* aFile, PRBool aIsErrorFatal,
                              PRBool aIsGlobalContext, PRBool aSkipFirstLine);
-static nsresult savePrefFile(nsIFile* aFile);
 
 
   // needed so we can still get the JS Runtime Service during XPCOM shutdown
@@ -190,11 +184,11 @@ NS_IMETHODIMP nsPrefService::ReadUserPrefs(nsIFile *aFile)
   nsresult rv;
 
   if (nsnull == aFile) {
-    rv = useDefaultPrefFile();  // really should return a value...
+    rv = UseDefaultPrefFile();  // really should return a value...
     if (NS_SUCCEEDED(rv))
-      useUserPrefFile(); 
+      UseUserPrefFile(); 
 
-    notifyObservers(NS_PREFSERVICE_READ_TOPIC_ID);
+    NotifyServiceObservers(NS_PREFSERVICE_READ_TOPIC_ID);
     
     JS_MaybeGC(gMochaContext);
   } else {
@@ -214,7 +208,7 @@ NS_IMETHODIMP nsPrefService::ReadUserPrefs(nsIFile *aFile)
 
 NS_IMETHODIMP nsPrefService::ResetPrefs()
 {
-  notifyObservers(NS_PREFSERVICE_RESET_TOPIC_ID);
+  NotifyServiceObservers(NS_PREFSERVICE_RESET_TOPIC_ID);
   PREF_CleanupPrefs();
 
   if (!PREF_Init(nsnull))
@@ -229,14 +223,13 @@ NS_IMETHODIMP nsPrefService::ResetUserPrefs()
   return NS_OK;    
 }
 
-/* void savePrefFile (in nsIFile filename); */
 NS_IMETHODIMP nsPrefService::SavePrefFile(nsIFile *aFile)
 {
   if (nsnull == aFile) {
     // It's possible that we never got a prefs file.
-    return mCurrentFile ? savePrefFile(mCurrentFile) : NS_OK;
+    return mCurrentFile ? WritePrefFile(mCurrentFile) : NS_OK;
   } else {
-    return savePrefFile(aFile);
+    return WritePrefFile(aFile);
   }
 }
 
@@ -295,7 +288,7 @@ NS_IMETHODIMP nsPrefService::RemoveObserver(const char *aDomain, nsIObserver *aO
 }
 
 
-nsresult nsPrefService::notifyObservers(const char *aTopic)
+nsresult nsPrefService::NotifyServiceObservers(const char *aTopic)
 {
   nsresult rv;
   nsCOMPtr<nsIObserverService> observerService = 
@@ -310,8 +303,7 @@ nsresult nsPrefService::notifyObservers(const char *aTopic)
   return NS_OK;
 }
 
-
-nsresult nsPrefService::useDefaultPrefFile()
+nsresult nsPrefService::UseDefaultPrefFile()
 {
   nsresult rv;
   nsCOMPtr<nsIFile> aFile;
@@ -339,7 +331,7 @@ nsresult nsPrefService::useDefaultPrefFile()
   return rv;
 }
 
-nsresult nsPrefService::useUserPrefFile()
+nsresult nsPrefService::UseUserPrefFile()
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIFile> aFile;
@@ -349,6 +341,77 @@ nsresult nsPrefService::useUserPrefFile()
     rv = aFile->AppendNative(NS_LITERAL_CSTRING("user.js"));
     if (NS_SUCCEEDED(rv)) {
       rv = openPrefFile(aFile, PR_FALSE, PR_FALSE, PR_FALSE);
+    }
+  }
+  return rv;
+}
+
+nsresult nsPrefService::WritePrefFile(nsIFile* aFile)
+{
+  const char                outHeader[] = "# Mozilla User Preferences" 
+                                          NS_LINEBREAK 
+                                          "// This is a generated file!" 
+                                          NS_LINEBREAK 
+                                          NS_LINEBREAK;
+  nsCOMPtr<nsIOutputStream> outStream;
+  PRUint32                  writeAmount;
+  nsresult                  rv;
+
+  if (!gHashTable.ops)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  /* ?! Don't save (blank) user prefs if there was an error reading them */
+  if (gErrorOpeningUserPrefs)
+    return NS_OK;
+
+  // execute a "safe" save by saving through a tempfile
+  PRInt32 numCopies = 1;
+  mRootBranch->GetIntPref("backups.number_of_prefs_copies", &numCopies);
+
+  nsSafeSaveFile safeSave(aFile, numCopies);
+  rv = safeSave.CreateBackup(nsSafeSaveFile::kPurgeNone);
+  if (NS_FAILED(rv))
+    return rv;
+
+  char** valueArray = (char**) PR_Calloc(sizeof(char*), gHashTable.entryCount);
+  if (!valueArray)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  rv = NS_NewLocalFileOutputStream(getter_AddRefs(outStream), aFile);
+  if (NS_FAILED(rv)) 
+      return rv;
+
+  // write out the file header
+  rv = outStream->Write(outHeader, sizeof(outHeader) - 1, &writeAmount);
+
+  // get the lines that we're supposed to be writing to the file
+  PL_DHashTableEnumerate(&gHashTable, pref_savePref, valueArray);
+    
+  /* Sort the preferences to make a readable file on disk */
+  NS_QuickSort(valueArray, gHashTable.entryCount, sizeof(char*), pref_CompareStrings, NULL);
+  char** walker = valueArray;
+  for (PRUint32 valueIdx = 0; valueIdx < gHashTable.entryCount; valueIdx++, walker++) {
+    if (*walker) {
+      // skip writing if an has error occurred
+      if (NS_SUCCEEDED(rv)) {
+        rv = outStream->Write(*walker, strlen(*walker), &writeAmount);
+        if (NS_SUCCEEDED(rv))
+          rv = outStream->Write(NS_LINEBREAK, NS_LINEBREAK_LEN, &writeAmount);
+      }
+      // always free though...
+      PR_Free(*walker);
+    }
+  }
+  PR_Free(valueArray);
+  outStream->Close();
+
+  // if save failed replace the original file from backup
+  if (NS_FAILED(rv)) {
+    nsresult rv2;
+    rv2 = safeSave.RestoreFromBackup();
+    if (NS_SUCCEEDED(rv2)) {
+      // we failed to write the file, but managed to restore the previous one...
+      rv = NS_OK;
     }
   }
   return rv;
@@ -405,51 +468,6 @@ static nsresult openPrefFile(nsIFile* aFile, PRBool aIsErrorFatal,
 
   return rv;        
 }
-
-static nsresult savePrefFile(nsIFile* aFile)
-{
-  nsresult              rv;
-  nsCOMPtr<nsIFileSpec> fileSpec;
-
-  if (!gHashTable.ops)
-    return NS_ERROR_NOT_INITIALIZED;
-
-  /* ?! Don't save (blank) user prefs if there was an error reading them */
-  if (gErrorOpeningUserPrefs)
-    return NS_OK;
-
-  // TODO: Convert the rest of this code to nsIFile and avoid this conversion to nsIFileSpec
-  rv = NS_NewFileSpecFromIFile(aFile, getter_AddRefs(fileSpec));
-  if (NS_FAILED(rv))
-    return rv;        
-
-  char** valueArray = (char**) PR_Calloc(sizeof(char*), gHashTable.entryCount);
-  if (!valueArray)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  nsOutputFileStream stream(fileSpec);
-  if (!stream.is_open())
-    return NS_BASE_STREAM_OSERROR;
-
-  stream << PREFS_HEADER_LINE_1 << nsEndl << PREFS_HEADER_LINE_2 << nsEndl << nsEndl;
-
-  // get the lines that we're supposed to be writing to the file
-  PL_DHashTableEnumerate(&gHashTable, pref_savePref, valueArray);
-    
-  /* Sort the preferences to make a readable file on disk */
-  NS_QuickSort(valueArray, gHashTable.entryCount, sizeof(char*), pref_CompareStrings, NULL);
-  char** walker = valueArray;
-  for (PRUint32 valueIdx = 0; valueIdx < gHashTable.entryCount; valueIdx++, walker++) {
-    if (*walker) {
-      stream << *walker << nsEndl;
-      PR_Free(*walker);
-    }
-  }
-  PR_Free(valueArray);
-  fileSpec->CloseStream();
-  return NS_OK;
-}
-
 
 /*
  * some stuff that gets called from Pref_Init()
