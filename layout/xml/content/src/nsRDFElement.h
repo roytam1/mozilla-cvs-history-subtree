@@ -28,11 +28,12 @@
 #include "nsGenericElement.h"
 
 class nsIContent;
-class nsIDocument;
+class nsIRDFDocument;
 class nsIAtom;
 class nsIEventListenerManager;
 class nsIHTMLAttributes;
 class nsIRDFNode;
+class nsISupportsArray;
 
 // XXX should we make this inheirit from the nsXMLElement
 // implementation???
@@ -122,11 +123,15 @@ public:
     virtual void   Finalize(JSContext *aContext);
 
 protected:
-    nsIDocument* mDocument;
-    nsIAtom*     mNameSpace;
-    PRInt32      mNameSpaceId;
-    void*        mScriptObject;
-    nsIRDFNode*  mResource;
+    nsIRDFDocument*   mDocument;
+    nsIAtom*          mNameSpace;
+    PRInt32           mNameSpaceId;
+    void*             mScriptObject;
+    nsIRDFNode*       mResource;
+    mutable nsISupportsArray* mChildren;
+    nsIContent*       mParent;
+
+    nsresult GenerateChildren(void) const;
 };
 
 #endif // nsRDFElement_h___
