@@ -50,3 +50,20 @@ The .xpi archives will also be copied to:
 This is so setup.exe can install them.  Setup.exe is usually run when debugging the
 installer code.  This makes it easier to debug.
 
+
+
+---
+
+Ben Bucksch:
+IIRC, I had to:
+- Do usual build foo until you have a working build in dist/bin/
+- Use DOS-prompt
+- Use cygwin (first perl in path).
+  If using the 1.0 branch, apply patch in bug 173122.
+- cd xpinstall/wizard/windows/; make
+- cd xpinstall/wizard/windows/nsztool/; make
+- cd xpinstall/wizard/windows/nsinstall/; make
+- cd xpinstall/wizard/windows/builder/
+- set MOZ_SRC=f:\mozsrc\beonex\mozilla\
+- perl build.pl -topsrcdir f:\mozsrc\beonex\mozilla
+- get your package from dist/install/
