@@ -220,27 +220,27 @@
 
 #define ASCIIB	0177
 
-#if defined( DOS ) && !defined( _WINDOWS )
-typedef unsigned char CHAR;
 /* Plain char, on the other hand, may be signed or unsigned; it depends on
  * the platform and perhaps a compiler option.  A hard fact of life, in C.
+ *
+ * 6-April-1999 mcs@netscape.com: replaced CHAR with REGEXCHAR to avoid
+ *              conflicts with system types on Win32.   Changed typedef
+ *              for REGEXCHAR to always be unsigned, which seems right.
  */
-#else /* DOS */
-typedef /*unsigned*/ char CHAR;
-#endif /* DOS */
+typedef unsigned char REGEXCHAR;
 
 static int  tagstk[MAXTAG];             /* subpat tag stack..*/
-static CHAR nfa[MAXNFA];		/* automaton..       */
+static REGEXCHAR nfa[MAXNFA];		/* automaton..       */
 static int  sta = NOP;               	/* status of lastpat */
 
-static CHAR bittab[BITBLK];		/* bit table for CCL */
+static REGEXCHAR bittab[BITBLK];	/* bit table for CCL */
 					/* pre-set bits...   */
-static CHAR bitarr[] = {1,2,4,8,16,32,64,128};
+static REGEXCHAR bitarr[] = {1,2,4,8,16,32,64,128};
 
-static void nfadump( CHAR *ap);
+static void nfadump( REGEXCHAR *ap);
 
 static void
-chset(CHAR c)
+chset(REGEXCHAR c)
 {
 	bittab[((c) & (unsigned)BLKIND) >> 3] |= bitarr[(c) & BITIND];
 }
@@ -252,16 +252,16 @@ char *
 LDAP_CALL
 re_comp( char *pat )
 {
-	register CHAR *p;               /* pattern pointer   */
-	register CHAR *mp=nfa;          /* nfa pointer       */
-	register CHAR *lp;              /* saved pointer..   */
-	register CHAR *sp=nfa;          /* another one..     */
+	register REGEXCHAR *p;          /* pattern pointer   */
+	register REGEXCHAR *mp=nfa;     /* nfa pointer       */
+	register REGEXCHAR *lp;         /* saved pointer..   */
+	register REGEXCHAR *sp=nfa;     /* another one..     */
 
 	register int tagi = 0;          /* tag stack index   */
 	register int tagc = 1;          /* actual tag count  */
 
 	register int n;
-	register CHAR mask;		/* xor mask -CCL/NCL */
+	register REGEXCHAR mask;	/* xor mask -CCL/NCL */
 	int c1, c2;
 		
 	if (!pat || !*pat)
@@ -271,7 +271,7 @@ re_comp( char *pat )
 			return badpat("No previous regular expression");
 	sta = NOP;
 
-	for (p = (CHAR*)pat; *p; p++) {
+	for (p = (REGEXCHAR*)pat; *p; p++) {
 		lp = mp;
 		switch(*p) {
 
@@ -280,7 +280,7 @@ re_comp( char *pat )
 			break;
 
 		case '^':               /* match beginning.. */
-			if (p == (CHAR*)pat)
+			if (p == (REGEXCHAR*)pat)
 				store(BOL);
 			else {
 				store(CHR);
@@ -317,7 +317,7 @@ re_comp( char *pat )
 					c1 = *(p-2) + 1;
 					c2 = *p++;
 					while (c1 <= c2)
-						chset((CHAR)c1++);
+						chset((REGEXCHAR)c1++);
 				}
 #ifdef EXTEND
 				else if (*p == '\\' && *(p+1)) {
@@ -331,14 +331,14 @@ re_comp( char *pat )
 			if (!*p)
 				return badpat("Missing ]");
 
-			for (n = 0; n < BITBLK; bittab[n++] = (CHAR) 0)
+			for (n = 0; n < BITBLK; bittab[n++] = (REGEXCHAR) 0)
 				store(mask ^ bittab[n]);
 	
 			break;
 
 		case '*':               /* match 0 or more.. */
 		case '+':               /* match 1 or more.. */
-			if (p == (CHAR*)pat)
+			if (p == (REGEXCHAR*)pat)
 				return badpat("Empty closure");
 			lp = sp;		/* previous opcode */
 			if (*lp == CLO)		/* equivalence..   */
@@ -461,13 +461,13 @@ re_comp( char *pat )
 }
 
 
-static CHAR *bol;
-static CHAR *bopat[MAXTAG];
-static CHAR *eopat[MAXTAG];
+static REGEXCHAR *bol;
+static REGEXCHAR *bopat[MAXTAG];
+static REGEXCHAR *eopat[MAXTAG];
 #ifdef NEEDPROTOS
-static CHAR *pmatch( CHAR *lp, CHAR *ap );
+static REGEXCHAR *pmatch( REGEXCHAR *lp, REGEXCHAR *ap );
 #else /* NEEDPROTOS */
-static CHAR *pmatch();
+static REGEXCHAR *pmatch();
 #endif /* NEEDPROTOS */
 
 /*
@@ -496,11 +496,11 @@ int
 LDAP_CALL
 re_exec( char *lp )
 {
-	register CHAR c;
-	register CHAR *ep = 0;
-	register CHAR *ap = nfa;
+	register REGEXCHAR c;
+	register REGEXCHAR *ep = 0;
+	register REGEXCHAR *ap = nfa;
 
-	bol = (CHAR*)lp;
+	bol = (REGEXCHAR*)lp;
 
 	bopat[0] = 0;
 	bopat[1] = 0;
@@ -516,17 +516,17 @@ re_exec( char *lp )
 	switch(*ap) {
 
 	case BOL:			/* anchored: match from BOL only */
-		ep = pmatch((CHAR*)lp,ap);
+		ep = pmatch((REGEXCHAR*)lp,ap);
 		break;
 	case CHR:			/* ordinary char: locate it fast */
 		c = *(ap+1);
-		while (*lp && *(CHAR*)lp != c)
+		while (*lp && *(REGEXCHAR*)lp != c)
 			lp++;
 		if (!*lp)		/* if EOS, fail, else fall thru. */
 			return 0;
 	default:			/* regular matching all the way. */
 		do {
-			if ((ep = pmatch((CHAR*)lp,ap)))
+			if ((ep = pmatch((REGEXCHAR*)lp,ap)))
 				break;
 			lp++;
 		} while (*lp);
@@ -538,7 +538,7 @@ re_exec( char *lp )
 	if (!ep)
 		return 0;
 
-	bopat[0] = (CHAR*)lp;
+	bopat[0] = (REGEXCHAR*)lp;
 	eopat[0] = ep;
 	return 1;
 }
@@ -615,14 +615,14 @@ static char chrtyp[MAXCHR] = {
 #define CHRSKIP	3	/* [CLO] CHR chr END ...     */
 #define CCLSKIP 18	/* [CLO] CCL 16bytes END ... */
 
-static CHAR *
-pmatch( CHAR *lp, CHAR *ap)
+static REGEXCHAR *
+pmatch( REGEXCHAR *lp, REGEXCHAR *ap)
 {
 	register int op, c, n;
-	register CHAR *e;		/* extra pointer for CLO */
-	register CHAR *bp;		/* beginning of subpat.. */
-	register CHAR *ep;		/* ending of subpat..	 */
-	CHAR *are;			/* to save the line ptr. */
+	register REGEXCHAR *e;		/* extra pointer for CLO */
+	register REGEXCHAR *bp;		/* beginning of subpat.. */
+	register REGEXCHAR *ep;		/* ending of subpat..	 */
+	REGEXCHAR *are;			/* to save the line ptr. */
 
 	while ((op = *ap++) != END)
 		switch(op) {
@@ -722,7 +722,7 @@ pmatch( CHAR *lp, CHAR *ap)
  *	the compact bitset representation for the default table]
  */
 
-static CHAR deftab[16] = {	
+static REGEXCHAR deftab[16] = {	
 	0, 0, 0, 0, 0, 0, 0377, 003, 0376, 0377, 0377, 0207,  
 	0376, 0377, 0377, 007 
 }; 
@@ -757,10 +757,10 @@ int
 LDAP_CALL
 re_subs( char *src, char *dst)
 {
-	register char c;
-	register int  pin;
-	register CHAR *bp;
-	register CHAR *ep;
+	register char      c;
+	register int       pin;
+	register REGEXCHAR *bp;
+	register REGEXCHAR *ep;
 
 	if (!*src || !bopat[0])
 		return 0;
@@ -824,7 +824,7 @@ symbolic( char *s )
 }
 
 static void
-nfadump( CHAR *ap)
+nfadump( REGEXCHAR *ap)
 {
 	register int n;
 
@@ -876,7 +876,7 @@ nfadump( CHAR *ap)
 		case CCL:
 			printf("\tCCL [");
 			for (n = 0; n < MAXCHR; n++)
-				if (isinset(ap,(CHAR)n)) {
+				if (isinset(ap,(REGEXCHAR)n)) {
 					if (n < ' ')
 						printf("^%c", n ^ 0x040);
 					else

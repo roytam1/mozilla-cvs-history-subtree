@@ -35,7 +35,7 @@ LDAP_CALL
 ldap_extended_operation(
     LDAP		*ld,
     const char		*exoid,
-    struct berval	*exdata,
+    const struct berval	*exdata,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     int			*msgidp
@@ -114,7 +114,7 @@ ldap_extended_operation(
 	}
 
 	/* send the message */
-	rc = nsldapi_send_initial_request( ld, *msgidp, LDAP_REQ_EXTENDED, NULL,
+	rc = nsldapi_send_initial_request( ld, msgid, LDAP_REQ_EXTENDED, NULL,
 		ber );
 	*msgidp = rc;
 	return( rc < 0 ? LDAP_GET_LDERRNO( ld, NULL, NULL ) : LDAP_SUCCESS );
@@ -138,7 +138,7 @@ LDAP_CALL
 ldap_extended_operation_s(
     LDAP		*ld,
     const char		*requestoid,
-    struct berval	*requestdata,
+    const struct berval	*requestdata,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     char		**retoidp,

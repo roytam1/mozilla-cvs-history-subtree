@@ -111,14 +111,12 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 #endif
 	int			err;
 
-#ifdef LDAP_ASYNC_IO
-#ifdef _WINDOWS
-	u_long		status;	/* for ioctl call */
-#else
-	int			status;	/* for ioctl call */
-#endif
-#endif
 
+#ifdef _WINDOWS
+	u_long		iostatus;	/* for ioctl call */
+#else
+	int			iostatus;	/* for ioctl call */
+#endif
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_to_host: %s:%d\n",
 	    ( host == NULL ) ? "(by address)" : host,
@@ -227,19 +225,20 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 			return( -1 );
 		}
 
+
 		if ( async && ld->ld_options & LDAP_BITOPT_ASYNC ) {
-            status = 1;
+            iostatus = 1;
 			if ( ld->ld_ioctl_fn == NULL ) {
 #ifdef _WINDOWS
-				err = ioctlsocket( s, FIONBIO, &status );
+				err = ioctlsocket( s, FIONBIO, &iostatus );
 #else
-				err = ioctl( s, FIONBIO, (caddr_t)&status );
+				err = ioctl( s, FIONBIO, (caddr_t)&iostatus );
 #endif /* _WINDOWS */
 			} else {
 #ifdef _WINDOWS
-				err = ld->ld_ioctl_fn( s, FIONBIO, &status );
+				err = ld->ld_ioctl_fn( s, FIONBIO, &iostatus );
 #else
-				err = ld->ld_ioctl_fn( s, FIONBIO, (caddr_t)&status );
+				err = ld->ld_ioctl_fn( s, FIONBIO, (caddr_t)&iostatus );
 #endif /* _WINDOWS */
 			}
 			if ( err == -1 ) {
@@ -756,29 +755,3 @@ find_in_pollfds( int fd, struct selectinfo *sip, short revents )
 }
 #endif /* NSLDAPI_HAVE_POLL */
 
-
-/******************************************************
- *  ntstubs.c - Stubs needed on NT when linking in
- *  the SSL code. If these stubs were not here, the 
- *  named functions below would not be located at link
- *  time, because there is no implementation of the 
- *  functions for Win32 in cross-platform libraries.
- *
- ******************************************************/
-#if defined( _WIN32 ) && defined ( NET_SSL )
-/*#include <xp_file.h>*/
-typedef enum {xpAddrBook} XP_FileType ;
-typedef FILE          * XP_File;
-typedef char          * XP_FilePerm;
-XP_File XP_FileOpen(const char* name, XP_FileType type, 
-		    const XP_FilePerm permissions)
-{
-    return NULL;
-}
-
-char *
-WH_FileName (const char *name, XP_FileType type)
-{
-	return NULL;
-}
-#endif /* WIN32 && NET_SSL */

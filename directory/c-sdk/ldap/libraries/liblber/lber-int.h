@@ -142,7 +142,7 @@ struct sockbuf {
 
 	int		sb_options;	/* to support copying ber elements */
 	LBER_SOCKET	sb_fd;
-	long		sb_max_incoming;
+	unsigned long	sb_max_incoming;
 
 	LDAP_IOF_READ_CALLBACK *sb_read_fn;
 	LDAP_IOF_WRITE_CALLBACK *sb_write_fn;
@@ -196,6 +196,8 @@ void *nslberi_malloc( size_t size );
 void *nslberi_calloc( size_t nelem, size_t elsize );
 void *nslberi_realloc( void *ptr, size_t size );
 void nslberi_free( void *ptr );
+int nslberi_ber_realloc( BerElement *ber, unsigned long len );
+
 
 
 /* blame: dboreham 

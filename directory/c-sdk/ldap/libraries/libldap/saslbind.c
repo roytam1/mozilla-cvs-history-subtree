@@ -38,7 +38,7 @@ ldap_sasl_bind(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     int			*msgidp
@@ -166,7 +166,7 @@ ldap_sasl_bind_s(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     struct berval	**servercredp

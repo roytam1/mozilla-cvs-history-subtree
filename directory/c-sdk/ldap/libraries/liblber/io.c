@@ -161,6 +161,12 @@ BerRead( Sockbuf *sb, char *buf, long len )
 }
 
 
+/*
+ * Note: ber_read() only uses the ber_end and ber_ptr elements of ber.
+ * Functions like ber_get_tag(), ber_skip_tag, and ber_peek_tag() rely on
+ * that fact, so if this code is changed to use any additional elements of
+ * the ber structure, those functions will need to be changed as well.
+ */
 long
 LDAP_CALL
 ber_read( BerElement *ber, char *buf, unsigned long len )
@@ -181,8 +187,8 @@ ber_read( BerElement *ber, char *buf, unsigned long len )
  * enlarge the ber buffer.
  * return 0 on success, -1 on error.
  */
-static int
-ber_realloc( BerElement *ber, unsigned long len )
+int
+nslberi_ber_realloc( BerElement *ber, unsigned long len )
 {
 	unsigned long	need, have, total;
 	size_t		have_bytes;
@@ -253,7 +259,7 @@ ber_write( BerElement *ber, char *buf, unsigned long len, int nosos )
 {
 	if ( nosos || ber->ber_sos == NULL ) {
 		if ( ber->ber_ptr + len > ber->ber_end ) {
-			if ( ber_realloc( ber, len ) != 0 )
+			if ( nslberi_ber_realloc( ber, len ) != 0 )
 				return( -1 );
 		}
 		SAFEMEMCPY( ber->ber_ptr, buf, (size_t)len );
@@ -261,7 +267,7 @@ ber_write( BerElement *ber, char *buf, unsigned long len, int nosos )
 		return( len );
 	} else {
 		if ( ber->ber_sos->sos_ptr + len > ber->ber_end ) {
-			if ( ber_realloc( ber, len ) != 0 )
+			if ( nslberi_ber_realloc( ber, len ) != 0 )
 				return( -1 );
 		}
 		SAFEMEMCPY( ber->ber_sos->sos_ptr, buf, (size_t)len );
@@ -372,6 +378,16 @@ ber_alloc_t( int options )
 	    sizeof(struct berelement) + EXBUFSIZ )) == NULL ) {
 		return( NULL );
 	}
+
+	/*
+	 * for compatibility with the C LDAP API standard, we recognize
+	 * LBER_USE_DER as LBER_OPT_USE_DER.  See lber.h for a bit more info.
+	 */
+	if ( options & LBER_USE_DER ) {
+		options &= ~LBER_USE_DER;
+		options |= LBER_OPT_USE_DER;
+	}
+
 	ber->ber_tag = LBER_DEFAULT;
 	ber->ber_options = options;
 	ber->ber_buf = (char*)ber + sizeof(struct berelement);
@@ -418,6 +434,16 @@ ber_init_w_nullchar( BerElement *ber, int options )
 {
 	(void) memset( (char *)ber, '\0', sizeof(struct berelement) );
 	ber->ber_tag = LBER_DEFAULT;
+
+	/*
+	 * For compatibility with the C LDAP API standard, we recognize
+	 * LBER_USE_DER as LBER_OPT_USE_DER.  See lber.h for a bit more info.
+	 */
+	if ( options & LBER_USE_DER ) {
+		options &= ~LBER_USE_DER;
+		options |= LBER_OPT_USE_DER;
+	}
+
 	ber->ber_options = options;
 }
 
@@ -787,7 +813,7 @@ ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 
 	switch ( option ) {
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
-		sb->sb_max_incoming = *((int *) value);
+		sb->sb_max_incoming = *((unsigned long *) value);
 		/* FALL */
 	case LBER_SOCKBUF_OPT_TO_FILE:
 	case LBER_SOCKBUF_OPT_TO_FILE_ONLY:
@@ -830,7 +856,7 @@ ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 
 	switch ( option ) {
 	case LBER_SOCKBUF_OPT_MAX_INCOMING_SIZE:
-		*((int *) value) = sb->sb_max_incoming;
+		*((unsigned long *) value) = sb->sb_max_incoming;
 		break;
 	case LBER_SOCKBUF_OPT_TO_FILE:
 	case LBER_SOCKBUF_OPT_TO_FILE_ONLY:
@@ -879,7 +905,7 @@ ber_special_alloc(size_t size, BerElement **ppBer)
 	char *mem = NULL;
 
 	/* Make sure mem size requested is aligned */
-	if (0 != size & 0x03) {
+	if (0 != ( size & 0x03 )) {
 		size += (sizeof(long) - (size & 0x03));
 	}
 
@@ -1054,7 +1080,7 @@ ber_get_next_buffer( void *buffer, size_t buffer_size, unsigned long *len,
 #endif /* DOS && !_WIN32 */
 
 		if ( ber->ber_buf + *len > ber->ber_end ) {
-			if ( ber_realloc( ber, *len ) != 0 )
+			if ( nslberi_ber_realloc( ber, *len ) != 0 )
 				goto premature_exit;
 		}
 		ber->ber_ptr = ber->ber_buf;
@@ -1141,15 +1167,16 @@ ber_flatten( BerElement *ber, struct berval **bvPtr )
  */
 BerElement *
 LDAP_CALL
-ber_init( struct berval *bv )
+ber_init( const struct berval *bv )
 {
 	BerElement *ber;
 
 	/* construct BerElement */
 	if (( ber = ber_alloc_t( 0 )) != NULLBER ) {
 		/* copy data from the bv argument into BerElement */
+		/* XXXmcs: had to cast unsigned long bv_len to long */
 		if ( (ber_write ( ber, bv->bv_val, bv->bv_len, 0 ))
-		    != bv->bv_len ) {
+		    != (long)bv->bv_len ) {
 			ber_free( ber, 1 );
 			return( NULL );
 		}

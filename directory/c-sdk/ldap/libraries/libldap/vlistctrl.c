@@ -170,9 +170,10 @@ ldap_parse_virtuallist_control
     int *errcodep
 )
 {
-    BerElement *ber;
-    int i, foundListControl;
-    LDAPControl *listCtrlp;
+    BerElement		*ber;
+    int			i, foundListControl, errcode;
+    LDAPControl		*listCtrlp;
+    unsigned long	target_pos, list_size;
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
         return( LDAP_PARAM_ERROR );
@@ -210,11 +211,21 @@ ldap_parse_virtuallist_control
     }           
 
     /* decode the result from the Berelement */
-    if (  LBER_ERROR == ber_scanf( ber, "{iie}", target_posp, list_sizep,
-	    errcodep ) ) {
+    if (  LBER_ERROR == ber_scanf( ber, "{iie}", &target_pos, &list_size,
+	    &errcode ) ) {
         LDAP_SET_LDERRNO( ld, LDAP_DECODING_ERROR, NULL, NULL );
         ber_free( ber, 1 );
         return( LDAP_DECODING_ERROR );
+    }
+
+    if ( target_posp != NULL ) {
+	*target_posp = target_pos;
+    }
+    if ( list_sizep != NULL ) {
+	*list_sizep = list_size;
+    }
+    if ( errcodep != NULL ) {
+	*errcodep = errcode;
     }
 
     /* the ber encoding is no longer needed */

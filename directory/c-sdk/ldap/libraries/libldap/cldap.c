@@ -218,7 +218,7 @@ XXX
 void
 cldap_close( LDAP *ld )
 {
-	ldap_ld_free( ld, 0 );
+	ldap_ld_free( ld, NULL, NULL, 0 );
 }
 
 

@@ -184,7 +184,7 @@ file_read( char *path, struct berval *bv )
 	eof = feof( fp );
 	fclose( fp );
 
-	if ( rlen != bv->bv_len ) {
+	if ( (unsigned long)rlen != bv->bv_len ) {
 		perror( path );
 		free( bv->bv_val );
 		return( -1 );
@@ -272,7 +272,7 @@ get_modlist( char *prompt1, char *prompt2, char *prompt3 )
 }
 
 
-int
+int LDAP_CALL LDAP_CALLBACK
 bind_prompt( LDAP *ld, char **dnp, char **passwdp, int *authmethodp,
 	int freeit, void *dummy )
 {
@@ -515,8 +515,10 @@ main(
 	dnsuffix = "";
 	cldapflg = errflg = 0;
 	ldapversion = 0;	/* use default */
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 	ldap_debug = LDAP_DEBUG_ANY;
+#endif
 #endif
 
 	while (( c = getopt( argc, argv, "uh:d:s:p:t:T:V:" )) != -1 ) {
@@ -530,13 +532,17 @@ main(
 			break;
 
 		case 'd':
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 			ldap_debug = atoi( optarg ) | LDAP_DEBUG_ANY;
+#if 0
 			if ( ldap_debug & LDAP_DEBUG_PACKETS ) {
 				lber_debug = ldap_debug;
 			}
+#endif
 #else
 			printf( "Compile with -DLDAP_DEBUG for debugging\n" );
+#endif
 #endif
 			break;
 
@@ -884,14 +890,18 @@ main(
 			break;
 
 		case 'd':	/* turn on debugging */
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 			getline( line, sizeof(line), stdin, "debug level? " );
 			ldap_debug = atoi( line ) | LDAP_DEBUG_ANY;
+#if 0
 			if ( ldap_debug & LDAP_DEBUG_PACKETS ) {
 				lber_debug = ldap_debug;
 			}
+#endif
 #else
 			printf( "Compile with -DLDAP_DEBUG for debugging\n" );
+#endif
 #endif
 			break;
 
@@ -1103,10 +1113,8 @@ main(
 			    } else {
 				printf( "%d\n", ludp->lud_port );
 			    }
-#if defined(NET_SSL)
 			    printf( "\tsecure: %s\n", ( ludp->lud_options &
 				    LDAP_URL_OPT_SECURE ) != 0 ? "Yes" : "No" );
-#endif
 			    printf( "\t    dn: " );
 			    if ( ludp->lud_dn == NULL ) {
 				printf( "ROOT\n" );
@@ -1182,7 +1190,7 @@ main(
 				"Critical (0=no, 1=yes)? " );
 			if ( ldap_create_persistentsearch_control( ld,
 			    changetypes, changesonly, return_echg_ctls,
-			    atoi(line), &newctrl ) != LDAP_SUCCESS ) {
+			    (char)atoi(line), &newctrl ) != LDAP_SUCCESS ) {
 				ldap_perror( ld, "ldap_create_persistent"
 				    "search_control" );
 			} else {
@@ -1426,8 +1434,13 @@ handle_result( LDAP *ld, LDAPMessage *lm, int onlyone )
 		print_ldap_result( ld, lm, "bind" );
 		break;
 	case LDAP_RES_EXTENDED:
-		printf( "ExtendedOp result\n" );
-		print_ldap_result( ld, lm, "extendedop" );
+		if ( ldap_msgid( lm ) == LDAP_RES_UNSOLICITED ) {
+			printf( "Unsolicited result\n" );
+			print_ldap_result( ld, lm, "unsolicited" );
+		} else {
+			printf( "ExtendedOp result\n" );
+			print_ldap_result( ld, lm, "extendedop" );
+		}
 		break;
 
 	default:
@@ -1443,7 +1456,7 @@ handle_result( LDAP *ld, LDAPMessage *lm, int onlyone )
 static void
 print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s )
 {
-	int		i, lderr;
+	int		lderr;
 	char		*matcheddn, *errmsg, *oid, **refs;
 	LDAPControl	**ctrls;
 	struct berval	*servercred, *data;
@@ -1490,11 +1503,18 @@ print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s )
 	    ldap_parse_extended_result( ld, lm, &oid, &data, 0 ) ==
 	    LDAP_SUCCESS ) {
 		if ( oid != NULL ) {
-			printf( "\tExtendedOp OID: %s\n", oid );
+			if ( strcmp ( oid, LDAP_NOTICE_OF_DISCONNECTION )
+			    == 0 ) {
+				printf(
+				    "\t%s Notice of Disconnection (OID: %s)\n",
+				    s, oid );
+			} else {
+				printf( "\t%s OID: %s\n", s, oid );
+			}
 			ldap_memfree( oid );
 		}
 		if ( data != NULL ) {
-			fputs( "\tExtendedOp data:\n", stderr );
+			printf( "\t%s data:\n", s );
 			bprint( data->bv_val, data->bv_len );
 			ber_bvfree( data );
 		}
@@ -1507,7 +1527,7 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 	BerElement	*ber;
 	char		*a, *dn, *ufn;
 	struct berval	**vals;
-	int		i, count, msgtype;
+	int		i, count;
 	LDAPMessage	*e, *msg;
 	LDAPControl	**ectrls;
 
@@ -1542,9 +1562,9 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 				printf( "\t\t\t(no values)\n" );
 			} else {
 				for ( i = 0; vals[i] != NULL; i++ ) {
-					int	j, nonascii;
+					int		nonascii = 0;
+					unsigned long	j;
 
-					nonascii = 0;
 					for ( j = 0; j < vals[i]->bv_len; j++ )
 						if ( !isascii( vals[i]->bv_val[j] ) ) {
 							nonascii = 1;

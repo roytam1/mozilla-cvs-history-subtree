@@ -36,7 +36,7 @@ static int simple_bind_nolock( LDAP *ld, const char *dn, const char *passwd,
 static int simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd );
 
 /*
- * ldap_simple_bind - bind to the ldap server (and X.500).  The dn and
+ * ldap_simple_bind - bind to the ldap server.  The dn and
  * password of the entry to which to bind are supplied.  The message id
  * of the request initiated is returned.
  *
@@ -133,7 +133,7 @@ simple_bind_nolock( LDAP *ld, const char *dn, const char *passwd,
 
 
 /*
- * ldap_simple_bind - bind to the ldap server (and X.500) using simple
+ * ldap_simple_bind - bind to the ldap server using simple
  * authentication.  The dn and password of the entry to which to bind are
  * supplied.  LDAP_SUCCESS is returned upon success, the ldap error code
  * otherwise.
@@ -206,7 +206,7 @@ simple_bindifnot_s( LDAP *ld, const char *dn, const char *passwd )
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
 	if ( NULL != ld->ld_defconn 
 		&& LDAP_CONNST_DEAD == ld->ld_defconn->lconn_status ) {
-	    nsldapi_free_connection( ld, ld->ld_defconn, 1, 0 );
+	    nsldapi_free_connection( ld, ld->ld_defconn, NULL, NULL, 1, 0 );
 	    ld->ld_defconn = NULL;
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );

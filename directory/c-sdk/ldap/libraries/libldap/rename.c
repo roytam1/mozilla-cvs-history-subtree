@@ -32,7 +32,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 /*
- * ldap_rename - initiate an ldap (and X.500) modifyDN operation. Parameters:
+ * ldap_rename - initiate an ldap modifyDN operation. Parameters:
  *
  *	ld		LDAP descriptor
  *	dn		DN of the object to modify
@@ -58,8 +58,8 @@ ldap_rename(
 	   const char *newrdn, 
 	   const char *newparent,
 	   int deleteoldrdn, 
-	   PLDAPControl	*serverctrls,
-	   PLDAPControl	*clientctrls,  /* not used for anything yet */
+	   LDAPControl	**serverctrls,
+	   LDAPControl	**clientctrls,  /* not used for anything yet */
 	   int *msgidp
 )
 {
@@ -202,8 +202,8 @@ ldap_rename_s(
 	   const char *newrdn, 
 	   const char *newparent,
 	   int deleteoldrdn, 
-	   PLDAPControl	*serverctrls,
-	   PLDAPControl	*clientctrls  /* not used for anything yet */
+	   LDAPControl	**serverctrls,
+	   LDAPControl	**clientctrls  /* not used for anything yet */
 )
 {
 	int		msgid;

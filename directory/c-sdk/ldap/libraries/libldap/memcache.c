@@ -708,7 +708,7 @@ ldap_memcache_result(LDAP *ld, int msgid, unsigned long key)
 #endif /* LDAP_DEBUG */
 
     LDAP_MEMCACHE_MUTEX_UNLOCK( ld->ld_memcache );
-    LDAP_MUTEX_LOCK( ld, LDAP_MEMCACHE_LOCK );
+    LDAP_MUTEX_UNLOCK( ld, LDAP_MEMCACHE_LOCK );
 
     return nRes;
 }
