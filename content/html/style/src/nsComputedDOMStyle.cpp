@@ -38,7 +38,7 @@
 
 #include "prprf.h"
 #include "nsReadableUtils.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 /*
  * This is the implementation of the readonly CSSStyleDeclaration that is

@@ -48,7 +48,7 @@
 #include "nsIScriptError.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsDOMCID.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,

@@ -36,15 +36,18 @@
 
 #include "jsapi.h"
 #include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
 #include "nsContentUtils.h"
 #include "nsVoidArray.h"
 #include "nsIXPConnect.h"
 
 
 nsVoidArray *nsContentUtils::sKungFuDeathGripArray = nsnull;
-
+nsIDOMScriptObjectFactory *nsContentUtils::sDOMScriptObjectFactory = nsnull;
 
 // static 
 nsresult
@@ -321,4 +324,29 @@ nsContentUtils::Shutdown()
   delete sKungFuDeathGripArray;
 
   sKungFuDeathGripArray = nsnull;
+
+  NS_IF_RELEASE(sDOMScriptObjectFactory);
+}
+
+// static
+nsISupports *
+nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+                                     GetDOMClassIIDsFnc aGetIIDsFptr,
+                                     const char *aName)
+{
+  if (!sDOMScriptObjectFactory) {
+    static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
+                         NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
+
+    nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
+                                 NS_GET_IID(nsIDOMScriptObjectFactory),
+                                 (nsISupports **)&sDOMScriptObjectFactory);
+
+    if (!sDOMScriptObjectFactory) {
+      return nsnull;
+    }
+  }
+
+  return sDOMScriptObjectFactory->GetClassInfoInstance(aID, aGetIIDsFptr,
+                                                       aName);
 }

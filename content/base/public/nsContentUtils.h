@@ -40,6 +40,7 @@
 #include "nslayout.h"
 #include "jspubtd.h"
 #include "nsAReadableString.h"
+#include "nsIDOMScriptObjectFactory.h"
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;
@@ -72,12 +73,38 @@ public:
 
   static PRUint32 CopyNewlineNormalizedUnicodeTo(nsReadingIterator<PRUnichar>& aSrcStart, const nsReadingIterator<PRUnichar>& aSrcEnd, nsAWritableString& aDest);
 
+  static nsISupports *
+  GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+                       GetDOMClassIIDsFnc aGetIIDsFptr,
+                       const char *aName);
+
   static nsresult ReleaseOnShutdown(nsISupports **aPointer);
 
   static void Shutdown();
 
 private:
   static nsVoidArray *sKungFuDeathGripArray;
+
+  static nsIDOMScriptObjectFactory *sDOMScriptObjectFactory;
 };
+
+#define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
+    foundInterface =                                                          \
+      nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::e##_class##_id,   \
+                                           Get##_class##IIDs,                 \
+                                           #_class);                          \
+    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+  } else
+
+#define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(_class, _name)     \
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
+    foundInterface =                                                          \
+      nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::e##_class##_id,   \
+                                           Get##_class##IIDs,                 \
+                                           #_name);                           \
+    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+  } else
+
 
 #endif /* nsContentUtils_h___ */

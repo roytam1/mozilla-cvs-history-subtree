@@ -38,7 +38,7 @@
 #include "nsIEventListenerManager.h"
 #include "nsINodeInfo.h"
 #include "nsIParser.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 class nsIDOMAttr;
 class nsIDOMEventListener;

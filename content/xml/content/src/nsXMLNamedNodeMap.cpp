@@ -27,8 +27,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsISupportsArray.h"
-
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 class nsXMLNamedNodeMap : public nsIDOMNamedNodeMap
 {

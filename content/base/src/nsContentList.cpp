@@ -27,7 +27,7 @@
 #include "nsINameSpaceManager.h"
 #include "nsGenericElement.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 #include "nsLayoutAtoms.h"
 #include "nsHTMLAtoms.h" // XXX until atoms get factored into nsLayoutAtoms

@@ -37,7 +37,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFDOMNodeList.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors

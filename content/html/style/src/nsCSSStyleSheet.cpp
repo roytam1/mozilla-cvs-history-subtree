@@ -73,7 +73,7 @@
 #include "nsIXULContent.h"
 #endif
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 //#define DEBUG_RULES
 //#define EVENT_DEBUG

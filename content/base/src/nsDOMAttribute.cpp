@@ -26,8 +26,7 @@
 #include "nsITextContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsDOMError.h"
-
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 //----------------------------------------------------------------------

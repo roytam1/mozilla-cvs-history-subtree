@@ -144,7 +144,7 @@ nsXMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   } else if (aIID.Equals(NS_GET_IID(nsIXMLContent))) {
     inst = NS_STATIC_CAST(nsIXMLContent *, this);
   } else if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eElement_id,
+    inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eElement_id,
                                                 GetElementIIDs,
                                                 "Element");
     NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);

@@ -44,7 +44,7 @@
 // XXX Temporary inclusion to deal with fragment parsing
 #include "nsHTMLParts.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kCParserCID, NS_PARSER_CID);

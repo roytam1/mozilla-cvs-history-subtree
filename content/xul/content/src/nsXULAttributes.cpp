@@ -50,7 +50,7 @@
 #include "nsXULAttributes.h"
 #include "nsLayoutCID.h"
 #include "nsReadableUtils.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 static NS_DEFINE_CID(kCSSParserCID, NS_CSSPARSER_CID);
 

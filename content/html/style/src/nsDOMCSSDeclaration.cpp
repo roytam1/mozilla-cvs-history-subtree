@@ -29,7 +29,7 @@
 #include "nsCOMPtr.h"
 #include "nsIURL.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 nsDOMCSSDeclaration::nsDOMCSSDeclaration()

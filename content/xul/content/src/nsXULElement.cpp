@@ -122,7 +122,8 @@
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsXULAtoms.h"
 #include "nsITreeBoxObject.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
+#include "nsIXPConnect.h"
 
 #include "nsMutationEvent.h"
 #include "nsIDOMMutationEvent.h"
@@ -756,11 +757,11 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
         NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
         xblService->ResolveTag(NS_STATIC_CAST(nsIStyledContent*, this), &dummy, getter_AddRefs(tag));
         if (tag.get() == nsXULAtoms::tree) {
-            inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULTreeElement_id,
+            inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eXULTreeElement_id,
                                                         GetXULTreeElementIIDs,
                                                         "XULTreeElement");
         } else {
-            inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULElement_id,
+            inst = nsContentUtils::GetClassInfoInstance(nsIDOMClassInfo::eXULElement_id,
                                                         GetXULElementIIDs,
                                                         "XULElement");
         }

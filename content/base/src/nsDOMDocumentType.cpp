@@ -25,7 +25,7 @@
 #include "nsIDOMNamedNodeMap.h"
 #include "nsLayoutAtoms.h"
 #include "nsCOMPtr.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 nsresult

@@ -110,7 +110,7 @@
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
 #include "nsIJSContextStack.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 #include "nsContentCID.h"
 #include "nsIPrompt.h"

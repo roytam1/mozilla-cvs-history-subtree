@@ -63,7 +63,7 @@ static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
 
 #include "nsIDOMText.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 //included for desired x position;
 #include "nsIPresContext.h"

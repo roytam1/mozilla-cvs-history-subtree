@@ -29,7 +29,7 @@
 #include "nsCRT.h"
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 class nsTextNode : public nsITextContent,

@@ -49,7 +49,7 @@
 #include "nsXULCommandDispatcher.h"
 #include "prlog.h"
 #include "nsIDOMEventTarget.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;

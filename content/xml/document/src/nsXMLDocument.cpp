@@ -82,7 +82,7 @@
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 static NS_DEFINE_CID(kHTMLStyleSheetCID,NS_HTMLSTYLESHEET_CID);
 

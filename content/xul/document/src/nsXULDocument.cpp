@@ -133,7 +133,7 @@
 #include "nsIMIMEService.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 //----------------------------------------------------------------------

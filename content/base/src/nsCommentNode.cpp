@@ -32,7 +32,7 @@
 #include "nsIDOMRange.h"
 #include "nsString.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 class nsCommentNode : public nsIDOMComment,

@@ -30,8 +30,7 @@
 #include "nsLayoutAtoms.h"
 #include "nsIXMLContent.h"
 #include "nsString.h"
-
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 class nsXMLCDATASection : public nsIDOMCDATASection,

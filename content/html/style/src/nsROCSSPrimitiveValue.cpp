@@ -25,8 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsDOMError.h"
 #include "prprf.h"
-
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(nsISupports *aOwner, float aT2P)
   : mType(CSS_PX), mTwips(0), mString(), mOwner(aOwner), mT2P(aT2P)

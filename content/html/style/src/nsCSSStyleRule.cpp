@@ -55,7 +55,7 @@
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 // MJA: bug 31816
 #include "nsIPresShell.h"

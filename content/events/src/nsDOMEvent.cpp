@@ -42,7 +42,7 @@
 #include "prmem.h"
 #include "nsLayoutAtoms.h"
 #include "nsMutationEvent.h"
-#include "nsDOMClassInfo.h"
+#include "nsContentUtils.h"
 
 
 static char* mEventNames[] = {
