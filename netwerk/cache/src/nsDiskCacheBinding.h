@@ -73,7 +73,7 @@ public:
     nsCacheEntry*           mCacheEntry;    // back pointer to parent nsCacheEntry
     nsDiskCacheRecord       mRecord;
     PRBool                  mDoomed;        // record is not stored in cache map
-    PRInt8                  mGeneration;    // possibly just reservation
+    PRUint8                 mGeneration;    // possibly just reservation
 
 private:
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
