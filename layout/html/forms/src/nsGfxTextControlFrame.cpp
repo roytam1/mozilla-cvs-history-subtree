@@ -1962,6 +1962,7 @@ nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
+    uiEvent->GetMetaKey(&(event.isMeta));
 
 
     nsIEventStateManager *manager=nsnull;
@@ -2016,6 +2017,7 @@ nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
+    uiEvent->GetMetaKey(&(event.isMeta));
 
 
     nsIEventStateManager *manager=nsnull;
@@ -2070,6 +2072,7 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
+    uiEvent->GetMetaKey(&(event.isMeta));
 
 
     nsIEventStateManager *manager=nsnull;
@@ -2202,6 +2205,7 @@ nsEnderMouseListener::MouseDown(nsIDOMEvent* aEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
+    uiEvent->GetMetaKey(&(event.isMeta));
     PRUint16 clickCount;
     uiEvent->GetClickcount(&clickCount);
     NS_ASSERTION(clickCount>0 && clickCount<3, "bad click count");
