@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 /*
@@ -32,6 +36,11 @@
 
 #include "lber-int.h"
 
+/*
+ * Note: ber_get_tag() only uses the ber_end and ber_ptr elements of ber.
+ * If that changes, the ber_peek_tag() and/or ber_skip_tag() implementations
+ * will need to be changed.
+ */
 /* return the tag - LBER_DEFAULT returned means trouble */
 unsigned long
 LDAP_CALL
@@ -68,6 +77,11 @@ ber_get_tag( BerElement *ber )
 	return( tag >> (sizeof(long) - i - 1) );
 }
 
+/*
+ * Note: ber_skip_tag() only uses the ber_end and ber_ptr elements of ber.
+ * If that changes, the implementation of ber_peek_tag() will need to
+ * be changed.
+ */
 unsigned long
 LDAP_CALL
 ber_skip_tag( BerElement *ber, unsigned long *len )
@@ -120,18 +134,22 @@ ber_skip_tag( BerElement *ber, unsigned long *len )
 	return( tag );
 }
 
+
+/*
+ * Note: Previously, we passed the "ber" parameter directly to ber_skip_tag(),
+ * saving and restoring the ber_ptr element only.  We now take advantage
+ * of the fact that the only ber structure elements touched by ber_skip_tag()
+ * are ber_end and ber_ptr.  If that changes, this code must change too.
+ */
 unsigned long
 LDAP_CALL
 ber_peek_tag( BerElement *ber, unsigned long *len )
 {
-	char		*save;
-	unsigned long	tag;
+	BerElement	bercopy;
 
-	save = ber->ber_ptr;
-	tag = ber_skip_tag( ber, len );
-	ber->ber_ptr = save;
-
-	return( tag );
+	bercopy.ber_end = ber->ber_end;
+	bercopy.ber_ptr = ber->ber_ptr;
+	return( ber_skip_tag( &bercopy, len ));
 }
 
 static int
@@ -178,7 +196,11 @@ ber_get_int( BerElement *ber, long *num )
 	if ( (tag = ber_skip_tag( ber, &len )) == LBER_DEFAULT )
 		return( LBER_DEFAULT );
 
-	if ( ber_getnint( ber, num, (int)len ) != len )
+	/*
+     * len is being demoted to a long here --  possible conversion error
+     */
+  
+	if ( ber_getnint( ber, num, (int)len ) != (long)len )
 		return( LBER_DEFAULT );
 	else
 		return( tag );
@@ -198,7 +220,11 @@ ber_get_stringb( BerElement *ber, char *buf, unsigned long *len )
 	if ( datalen > (*len - 1) )
 		return( LBER_DEFAULT );
 
-	if ( ber_read( ber, buf, datalen ) != datalen )
+	/*
+     * datalen is being demoted to a long here --  possible conversion error
+     */
+
+	if ( ber_read( ber, buf, datalen ) != (long) datalen )
 		return( LBER_DEFAULT );
 
 	buf[datalen] = '\0';
@@ -238,7 +264,10 @@ ber_get_stringa( BerElement *ber, char **buf )
 	if ( (*buf = (char *)NSLBERI_MALLOC( (size_t)datalen + 1 )) == NULL )
 		return( LBER_DEFAULT );
 
-	if ( ber_read( ber, *buf, datalen ) != datalen )
+	/*
+     * datalen is being demoted to a long here --  possible conversion error
+     */
+	if ( ber_read( ber, *buf, datalen ) != (long) datalen )
 		return( LBER_DEFAULT );
 	(*buf)[datalen] = '\0';
 
@@ -277,7 +306,10 @@ ber_get_stringal( BerElement *ber, struct berval **bv )
 		return( LBER_DEFAULT );
 	}
 
-	if ( ber_read( ber, (*bv)->bv_val, len ) != len )
+	/*
+     * len is being demoted to a long here --  possible conversion error
+     */
+	if ( ber_read( ber, (*bv)->bv_val, len ) != (int) len )
 		return( LBER_DEFAULT );
 	((*bv)->bv_val)[len] = '\0';
 	(*bv)->bv_len = len;
@@ -315,7 +347,10 @@ ber_get_bitstringa( BerElement *ber, char **buf, unsigned long *blen )
 	if ( ber_read( ber, (char *)&unusedbits, 1 ) != 1 )
 		return( LBER_DEFAULT );
 
-	if ( ber_read( ber, *buf, datalen ) != datalen )
+	/*
+     * datalen is being demoted to a long here --  possible conversion error
+     */
+	if ( ber_read( ber, *buf, datalen ) != (long) datalen )
 		return( LBER_DEFAULT );
 
 	*blen = datalen * 8 - unusedbits;
@@ -382,7 +417,7 @@ ber_next_element( BerElement *ber, unsigned long *len, char *last )
 /* VARARGS */
 unsigned long
 LDAP_C
-ber_scanf( BerElement *ber, char *fmt, ... )
+ber_scanf( BerElement *ber, const char *fmt, ... )
 {
 	va_list		ap;
 	char		*last;
@@ -479,7 +514,7 @@ ber_scanf( BerElement *ber, char *fmt, ... )
 				    *sss = (char **)NSLBERI_MALLOC(16 * sizeof(char *) );
 				    array_size = 16;
 				} else {
-				    if ( (j+2) > array_size) {
+				    if ( (size_t)(j+2) > array_size) {
 					/* We'v overflowed our buffer */
 					*sss = (char **)NSLBERI_REALLOC( *sss, (array_size * 2) * sizeof(char *) );
 					array_size = array_size * 2;
@@ -573,15 +608,17 @@ ber_bvecfree( struct berval **bv )
 {
 	int	i;
 
-	for ( i = 0; bv[i] != NULL; i++ ) {
-		ber_bvfree( bv[i] );
+	if ( bv != NULL ) {
+		for ( i = 0; bv[i] != NULL; i++ ) {
+			ber_bvfree( bv[i] );
+		}
+		NSLBERI_FREE( (char *) bv );
 	}
-	NSLBERI_FREE( (char *) bv );
 }
 
 struct berval *
 LDAP_CALL
-ber_bvdup( struct berval *bv )
+ber_bvdup( const struct berval *bv )
 {
 	struct berval	*new;
 

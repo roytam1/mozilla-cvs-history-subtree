@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 /*
@@ -142,7 +146,7 @@ struct sockbuf {
 
 	int		sb_options;	/* to support copying ber elements */
 	LBER_SOCKET	sb_fd;
-	long		sb_max_incoming;
+	unsigned long	sb_max_incoming;
 
 	LDAP_IOF_READ_CALLBACK *sb_read_fn;
 	LDAP_IOF_WRITE_CALLBACK *sb_write_fn;
@@ -196,6 +200,8 @@ void *nslberi_malloc( size_t size );
 void *nslberi_calloc( size_t nelem, size_t elsize );
 void *nslberi_realloc( void *ptr, size_t size );
 void nslberi_free( void *ptr );
+int nslberi_ber_realloc( BerElement *ber, unsigned long len );
+
 
 
 /* blame: dboreham 
@@ -224,6 +230,11 @@ void nslberi_free( void *ptr );
 #define NSLBERI_CALLOC( nelem, elsize )	nslberi_calloc( nelem, elsize )
 #define NSLBERI_REALLOC( ptr, size )	nslberi_realloc( ptr, size )
 #define NSLBERI_FREE( ptr )		nslberi_free( ptr )
+
+/* allow the library to access the debug variable */
+
+extern int lber_debug;
+
 
 #ifdef __cplusplus
 }

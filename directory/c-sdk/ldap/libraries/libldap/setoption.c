@@ -1,22 +1,26 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
- * `setoption.c - ldap_set_option implementation 
+ * setoption.c - ldap_set_option implementation 
  */
 
 #include "ldap-int.h"
@@ -31,10 +35,10 @@
 
 int
 LDAP_CALL
-ldap_set_option( LDAP *ld, int option, void *optdata )
+ldap_set_option( LDAP *ld, int option, const void *optdata )
 {
 	int		rc;
-	struct ldap	copyld;
+	char		*matched, *errstr;
 
 	if ( !nsldapi_initialized ) {
 		nsldapi_initialize_defaults();
@@ -65,12 +69,26 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 
 		return( 0 );
 	}
+	/* 
+     * LDAP_OPT_DEBUG_LEVEL is global 
+     */
+    if (LDAP_OPT_DEBUG_LEVEL == option) 
+    {
+#ifdef LDAP_DEBUG	  
+        ldap_debug = *((int *) optdata);
+#endif
+        return 0;
+    }
 
 	/*
 	 * if ld is NULL, arrange to modify our default settings
 	 */
 	if ( ld == NULL ) {
 		ld = &nsldapi_ld_defaults;
+#ifdef LDAP_DEBUG
+		ldap_debug = 0;
+#endif
+
 	}
 
 	/*
@@ -82,7 +100,6 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 
 	rc = 0;
 	LDAP_MUTEX_LOCK( ld, LDAP_OPTION_LOCK );
-	LDAP_SET_LDERRNO( ld, LDAP_SUCCESS, NULL, NULL );
 	switch( option ) {
 	/* options that can be turned on and off */
 #ifdef LDAP_DNS
@@ -108,9 +125,12 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	case LDAP_OPT_RECONNECT:
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_RECONNECT, optdata );
 		break;
+
+#ifdef LDAP_ASYNC_IO
 	case LDAP_OPT_ASYNC_CONNECT:
  		LDAP_SETCLR_BITOPT(ld, LDAP_BITOPT_ASYNC, optdata );
 	 	break;
+#endif /* LDAP_ASYNC_IO */
 
 	/* fields in the LDAP structure */
 	case LDAP_OPT_DEREF:
@@ -132,10 +152,12 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 		}
 		break;
 	case LDAP_OPT_SERVER_CONTROLS:
+		/* nsldapi_dup_controls returns -1 and sets lderrno on error */
 		rc = nsldapi_dup_controls( ld, &ld->ld_servercontrols,
 		    (LDAPControl **)optdata );
 		break;
 	case LDAP_OPT_CLIENT_CONTROLS:
+		/* nsldapi_dup_controls returns -1 and sets lderrno on error */
 		rc = nsldapi_dup_controls( ld, &ld->ld_clientcontrols,
 		    (LDAPControl **)optdata );
 		break;
@@ -153,10 +175,19 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	case LDAP_OPT_IO_FN_PTRS:
 		/* struct copy */
 		ld->ld_io = *((struct ldap_io_fns *) optdata);
-		rc = ber_sockbuf_set_option( ld->ld_sbp,
-		    LBER_SOCKBUF_OPT_READ_FN, (void *) ld->ld_read_fn );
-		rc |= ber_sockbuf_set_option( ld->ld_sbp,
-		    LBER_SOCKBUF_OPT_WRITE_FN, (void *) ld->ld_write_fn );
+		if ( NULL != ld->ld_sbp ) {
+			rc = ber_sockbuf_set_option( ld->ld_sbp,
+			    LBER_SOCKBUF_OPT_READ_FN,
+			    (void *) ld->ld_read_fn );
+			rc |= ber_sockbuf_set_option( ld->ld_sbp,
+			    LBER_SOCKBUF_OPT_WRITE_FN,
+			    (void *) ld->ld_write_fn );
+			if ( rc != 0 ) {
+				LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR,
+				    NULL, NULL );
+				rc = -1;
+			}
+		}
 		break;
 #endif
 
@@ -171,12 +202,52 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 			for( i=0; i<LDAP_MAX_LOCK; i++ )
 				ld->ld_mutex[i] = (ld->ld_mutex_alloc_fn)();
 		}
-		break;
+		/*
+		 * Because we have just replaced the locking functions,
+		 * we return here without unlocking the LDAP_OPTION_LOCK.
+		 */
+		return (rc);
 
 	/* extra thread function pointers */
 	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:
-		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata);
-		break;
+        /*
+         * XXXceb removing the full deal extra thread funcs to only 
+         * pick up the threadid.  Should this assumes that the LD 
+         * was nulled prior to setting the functions.?
+         *
+         *  this is how it previously went.
+         *		ld->ld_thread2 = *((struct ldap_extra_thread_fns *) optdata); 
+        */
+	    
+	    /* structure copy */
+	    ld->ld_thread2  = *((struct ldap_extra_thread_fns *) optdata);
+	    
+            /*
+	     *
+	    ld->ld_threadid_fn = *((struct ldap_extra_thread_fns *) optdata)ltf_threadid_fn;
+	    */	    
+	    
+	    ld->ld_mutex_trylock_fn =  (LDAP_TF_MUTEX_TRYLOCK_CALLBACK *)NULL;
+	    ld->ld_sema_alloc_fn = (LDAP_TF_SEMA_ALLOC_CALLBACK *) NULL;
+	    ld->ld_sema_free_fn = (LDAP_TF_SEMA_FREE_CALLBACK *) NULL;
+	    ld->ld_sema_wait_fn = (LDAP_TF_SEMA_WAIT_CALLBACK *) NULL;
+	    ld->ld_sema_post_fn = (LDAP_TF_SEMA_POST_CALLBACK *) NULL;
+
+		
+	
+	/* 
+	 * In the case where the threadid function is being set, the
+	 * LDAP_OPTION_LOCK was acquired without recording the lock
+	 * owner and updating the reference count.  We set that
+	 * information here. 
+	 */ 
+            if (ld->ld_mutex_lock_fn != NULL
+	        && ld->ld_threadid_fn != NULL) {
+	        ld->ld_mutex_threadid[LDAP_OPTION_LOCK] =
+		ld->ld_threadid_fn();
+	        ld->ld_mutex_refcnt[LDAP_OPTION_LOCK] = 1;
+            }
+	    break;
 
 	/* DNS function pointers */
 	case LDAP_OPT_DNS_FN_PTRS:
@@ -195,15 +266,42 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	case LDAP_OPT_CACHE_ENABLE:
 		ld->ld_cache_on = *((int *) optdata);
 		break;
+
+	case LDAP_OPT_ERROR_NUMBER:
+		LDAP_GET_LDERRNO( ld, &matched, &errstr );
+		matched = nsldapi_strdup( matched );
+		errstr = nsldapi_strdup( errstr );
+		LDAP_SET_LDERRNO( ld, *((int *) optdata), matched, errstr );
+		break;
+
+	case LDAP_OPT_ERROR_STRING:
+		rc = LDAP_GET_LDERRNO( ld, &matched, NULL );
+		matched = nsldapi_strdup( matched );
+		LDAP_SET_LDERRNO( ld, rc, matched,
+		    nsldapi_strdup((char *) optdata));
+		rc = LDAP_SUCCESS;
+		break;
+
+	case LDAP_OPT_MATCHED_DN:
+		rc = LDAP_GET_LDERRNO( ld, NULL, &errstr );
+		errstr = nsldapi_strdup( errstr );
+		LDAP_SET_LDERRNO( ld, rc,
+		    nsldapi_strdup((char *) optdata), errstr );
+		rc = LDAP_SUCCESS;
+		break;
+
 	case LDAP_OPT_PREFERRED_LANGUAGE:
-		if ( NULL != ld->ld_preferred_language )
+		if ( NULL != ld->ld_preferred_language ) {
 			NSLDAPI_FREE(ld->ld_preferred_language);
-		if ( NULL == optdata ) {
-			ld->ld_preferred_language = NULL;
-		} else {
-			ld->ld_preferred_language =
-			    nsldapi_strdup((char *) optdata);
 		}
+		ld->ld_preferred_language = nsldapi_strdup((char *) optdata);
+		break;
+
+	case LDAP_OPT_HOST_NAME:
+		if ( NULL != ld->ld_defhost ) {
+			NSLDAPI_FREE(ld->ld_defhost);
+		}
+		ld->ld_defhost = nsldapi_strdup((char *) optdata);
 		break;
 
 	default:

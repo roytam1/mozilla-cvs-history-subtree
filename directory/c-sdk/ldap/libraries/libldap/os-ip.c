@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /*
  *  Copyright (c) 1995 Regents of the University of Michigan.
@@ -63,6 +67,7 @@ static int find_in_pollfds( int fd, struct selectinfo *sip, short revents );
 #endif
 
 #ifdef irix
+#ifndef _PR_THREADS
 /*
  * XXXmcs: on IRIX NSPR's poll() and select() wrappers will crash if NSPR
  * has not been initialized.  We work around the problem by bypassing
@@ -77,11 +82,15 @@ extern int _select(int nfds, fd_set *readfds, fd_set *writefds,
 #define NSLDAPI_POLL		poll
 #define NSLDAPI_SELECT		select
 #endif
+#else
+#define NSLDAPI_POLL		poll
+#define NSLDAPI_SELECT		select
+#endif
 
 
 int
 nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
-	unsigned long address, int port, int async, int secure )
+	nsldapi_in_addr_t address, int port, int async, int secure )
 /*
  * if host == NULL, connect using address
  * "address" and "port" must be in network byte order
@@ -100,8 +109,12 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 	struct hostent		hent;
 #endif
 	int			err;
-#ifdef LDAP_ASYNC_IO
-	int			status;	/* for ioctl call */
+
+
+#ifdef _WINDOWS
+	u_long		iostatus;	/* for ioctl call */
+#else
+	int			iostatus;	/* for ioctl call */
 #endif
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_to_host: %s:%d\n",
@@ -206,21 +219,27 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 			return( -1 );
 		}
 
-#ifdef LDAP_ASYNC_IO
-		status = 1;
-		if ( async ) {
+
+		if ( async && ld->ld_options & LDAP_BITOPT_ASYNC ) {
+            iostatus = 1;
 			if ( ld->ld_ioctl_fn == NULL ) {
-				err = ioctl( s, FIONBIO, (caddr_t)&status );
+#ifdef _WINDOWS
+				err = ioctlsocket( s, FIONBIO, &iostatus );
+#else
+				err = ioctl( s, FIONBIO, (caddr_t)&iostatus );
+#endif /* _WINDOWS */
 			} else {
-				err = ld->ld_ioctl_fn( s, FIONBIO,
-				    (caddr_t)&status );
+#ifdef _WINDOWS
+				err = ld->ld_ioctl_fn( s, FIONBIO, &iostatus );
+#else
+				err = ld->ld_ioctl_fn( s, FIONBIO, (caddr_t)&iostatus );
+#endif /* _WINDOWS */
 			}
 			if ( err == -1 ) {
 				LDAPDebug( LDAP_DEBUG_ANY,
 				    "FIONBIO ioctl failed on %d\n", s, 0, 0 );
 			}
 		}
-#endif /* LDAP_ASYNC_IO */
 
 		(void)memset( (char *)&sin, 0, sizeof( struct sockaddr_in ));
 		sin.sin_family = AF_INET;
@@ -284,16 +303,21 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 			connected = 1;
 			rc = 0;
 			break;
-		} else {
-#ifdef LDAP_ASYNC_IO
-			err = LDAP_GET_ERRNO( ld );
-			if ( NSLDAPI_ERRNO_IO_INPROGRESS( err )) {
-				LDAPDebug( LDAP_DEBUG_TRACE,
-					"connect would block...\n", 0, 0, 0 );
-				rc = -2;
-				break;
+		} else 
+        {
+			if ( async &&  ld->ld_options & LDAP_BITOPT_ASYNC) {
+#ifdef _WINDOWS
+				if (err == -1 && WSAGetLastError() == WSAEWOULDBLOCK)
+					LDAP_SET_ERRNO( ld, EWOULDBLOCK );
+#endif /* _WINDOWS */
+				err = LDAP_GET_ERRNO( ld );
+				if ( NSLDAPI_ERRNO_IO_INPROGRESS( err )) {
+					LDAPDebug( LDAP_DEBUG_TRACE, "connect would block...\n",
+					           0, 0, 0 );
+					rc = -2;
+					break;
+				}
 			}
-#endif /* LDAP_ASYNC_IO */
 
 #ifdef LDAP_DEBUG
 			if ( ldap_debug & LDAP_DEBUG_TRACE ) {
@@ -725,29 +749,3 @@ find_in_pollfds( int fd, struct selectinfo *sip, short revents )
 }
 #endif /* NSLDAPI_HAVE_POLL */
 
-
-/******************************************************
- *  ntstubs.c - Stubs needed on NT when linking in
- *  the SSL code. If these stubs were not here, the 
- *  named functions below would not be located at link
- *  time, because there is no implementation of the 
- *  functions for Win32 in cross-platform libraries.
- *
- ******************************************************/
-#if defined( _WIN32 ) && defined ( NET_SSL )
-/*#include <xp_file.h>*/
-typedef enum {xpAddrBook} XP_FileType ;
-typedef FILE          * XP_File;
-typedef char          * XP_FilePerm;
-XP_File XP_FileOpen(const char* name, XP_FileType type, 
-		    const XP_FilePerm permissions)
-{
-    return NULL;
-}
-
-char *
-WH_FileName (const char *name, XP_FileType type)
-{
-	return NULL;
-}
-#endif /* WIN32 && NET_SSL */

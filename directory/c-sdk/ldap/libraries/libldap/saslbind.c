@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 #include "ldap-int.h"
 
@@ -38,7 +42,7 @@ ldap_sasl_bind(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     int			*msgidp
@@ -106,13 +110,28 @@ ldap_sasl_bind(
 
 	/* fill it in */
 	if ( simple ) {		/* simple bind; works in LDAPv2 or v3 */
+		struct berval	tmpcred;
+
+		if ( cred == NULL ) {
+			tmpcred.bv_val = "";
+			tmpcred.bv_len = 0;
+			cred = &tmpcred;
+		}
 		rc = ber_printf( ber, "{it{isto}", msgid, LDAP_REQ_BIND,
 		    ldapversion, dn, LDAP_AUTH_SIMPLE, cred->bv_val,
-		    cred->bv_len );
+		    (int)cred->bv_len /* XXX lossy cast */ );
+
 	} else {		/* SASL bind; requires LDAPv3 or better */
-		rc = ber_printf( ber, "{it{ist{so}}", msgid, LDAP_REQ_BIND,
-		    ldapversion, dn, LDAP_AUTH_SASL, mechanism, cred->bv_val,
-		    cred->bv_len );
+		if ( cred == NULL ) {
+			rc = ber_printf( ber, "{it{ist{s}}", msgid,
+			    LDAP_REQ_BIND, ldapversion, dn, LDAP_AUTH_SASL,
+			    mechanism );
+		} else {
+			rc = ber_printf( ber, "{it{ist{so}}", msgid,
+			    LDAP_REQ_BIND, ldapversion, dn, LDAP_AUTH_SASL,
+			    mechanism, cred->bv_val,
+			    (int)cred->bv_len /* XXX lossy cast */ );
+		}
 	}
 
 	if ( rc == -1 ) {
@@ -152,7 +171,7 @@ ldap_sasl_bind_s(
     LDAP		*ld,
     const char		*dn,
     const char		*mechanism,
-    struct berval	*cred,
+    const struct berval	*cred,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     struct berval	**servercredp

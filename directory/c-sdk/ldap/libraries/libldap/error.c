@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 #include "ldap-int.h"
 
@@ -30,7 +34,7 @@ static struct ldaperror ldap_errlist[] = {
 	{ LDAP_SIZELIMIT_EXCEEDED, 		"Sizelimit exceeded" },
 	{ LDAP_COMPARE_FALSE, 			"Compare false" },
 	{ LDAP_COMPARE_TRUE, 			"Compare true" },
-	{ LDAP_STRONG_AUTH_NOT_SUPPORTED,	"Strong authentication not supported" },
+	{ LDAP_STRONG_AUTH_NOT_SUPPORTED,	"Authentication method not supported" },
 	{ LDAP_STRONG_AUTH_REQUIRED, 		"Strong authentication required" },
 	{ LDAP_PARTIAL_RESULTS, 		"Partial results and referral received" },
 	{ LDAP_REFERRAL, 			"Referral received" },
@@ -59,8 +63,10 @@ static struct ldaperror ldap_errlist[] = {
 	{ LDAP_UNAVAILABLE, 			"DSA is unavailable" },
 	{ LDAP_UNWILLING_TO_PERFORM, 		"DSA is unwilling to perform" },
 	{ LDAP_LOOP_DETECT, 			"Loop detected" },
-
-	{ LDAP_NAMING_VIOLATION, 		"Naming violation" },
+    { LDAP_SORT_CONTROL_MISSING,    "Sort Control is missing"  },
+    { LDAP_INDEX_RANGE_ERROR,              "Search results exceed the range specified by the offsets" }, 
+    
+    { LDAP_NAMING_VIOLATION, 		"Naming violation" },
 	{ LDAP_OBJECT_CLASS_VIOLATION, 		"Object class violation" },
 	{ LDAP_NOT_ALLOWED_ON_NONLEAF, 		"Operation not allowed on nonleaf" },
 	{ LDAP_NOT_ALLOWED_ON_RDN, 		"Operation not allowed on RDN" },
@@ -203,6 +209,7 @@ ldap_get_lderrno( LDAP *ld, char **m, char **s )
  * between threads they *must* perform their own locking around the
  * session handle or they must install a "set lderrno" thread callback
  * function.
+ * 
  */
 int
 LDAP_CALL
@@ -212,10 +219,10 @@ ldap_set_lderrno( LDAP *ld, int e, char *m, char *s )
 		return( LDAP_PARAM_ERROR );
 	}
 
-	LDAP_MUTEX_LOCK( ld, LDAP_ERR_LOCK );
 	if ( ld->ld_set_lderrno_fn != NULL ) {
 		ld->ld_set_lderrno_fn( e, m, s, ld->ld_lderrno_arg );
 	} else {
+        LDAP_MUTEX_LOCK( ld, LDAP_ERR_LOCK );
 		ld->ld_errno = e;
 		if ( ld->ld_matched ) {
 			NSLDAPI_FREE( ld->ld_matched );
@@ -225,8 +232,8 @@ ldap_set_lderrno( LDAP *ld, int e, char *m, char *s )
 			NSLDAPI_FREE( ld->ld_error );
 		}
 		ld->ld_error = s;
+        LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 	}
-	LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 
 	return( LDAP_SUCCESS );
 }
@@ -320,6 +327,7 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 	BerElement	ber;
 	unsigned long	len;
 	int		berrc, err, errcode;
+	long		along;
 	char		*m, *e;
 
 	/*
@@ -364,10 +372,12 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 	ber = *rber;		/* struct copy */
 
 	if ( NSLDAPI_LDAP_VERSION( ld ) < LDAP_VERSION2 ) {
-		berrc = ber_scanf( &ber, "{ia}", &errcode, &e );
+		berrc = ber_scanf( &ber, "{ia}", &along, &e );
+		errcode = (int)along;	/* XXX lossy cast */
 	} else {
-		if (( berrc = ber_scanf( &ber, "{iaa", &errcode, &m, &e ))
+		if (( berrc = ber_scanf( &ber, "{iaa", &along, &m, &e ))
 		    != LBER_ERROR ) {
+			errcode = (int)along;	/* XXX lossy cast */
 			/* check for optional referrals */
 			if ( ber_peek_tag( &ber, &len ) == LDAP_TAG_REFERRAL ) {
 				if ( referralsp == NULL ) {

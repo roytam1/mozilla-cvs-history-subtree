@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 /* test.c - a simple test harness. */
 #include <stdio.h>
@@ -53,13 +57,6 @@
 #endif /* _WINDOWS */
 #endif /* DOS */
 #endif /* MACOS */
-
-#undef NET_SSL
-
-#if defined(NET_SSL)
-#include <sec.h>
-static SECCertDBHandle        certdbhandle;
-#endif
 
 #include "ldap.h"
 #include "disptmpl.h"
@@ -184,7 +181,7 @@ file_read( char *path, struct berval *bv )
 	eof = feof( fp );
 	fclose( fp );
 
-	if ( rlen != bv->bv_len ) {
+	if ( (unsigned long)rlen != bv->bv_len ) {
 		perror( path );
 		free( bv->bv_val );
 		return( -1 );
@@ -272,7 +269,7 @@ get_modlist( char *prompt1, char *prompt2, char *prompt3 )
 }
 
 
-int
+int LDAP_CALL LDAP_CALLBACK
 bind_prompt( LDAP *ld, char **dnp, char **passwdp, int *authmethodp,
 	int freeit, void *dummy )
 {
@@ -515,8 +512,10 @@ main(
 	dnsuffix = "";
 	cldapflg = errflg = 0;
 	ldapversion = 0;	/* use default */
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 	ldap_debug = LDAP_DEBUG_ANY;
+#endif
 #endif
 
 	while (( c = getopt( argc, argv, "uh:d:s:p:t:T:V:" )) != -1 ) {
@@ -530,13 +529,17 @@ main(
 			break;
 
 		case 'd':
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 			ldap_debug = atoi( optarg ) | LDAP_DEBUG_ANY;
+#if 0
 			if ( ldap_debug & LDAP_DEBUG_PACKETS ) {
 				lber_debug = ldap_debug;
 			}
+#endif
 #else
 			printf( "Compile with -DLDAP_DEBUG for debugging\n" );
+#endif
 #endif
 			break;
 
@@ -884,14 +887,18 @@ main(
 			break;
 
 		case 'd':	/* turn on debugging */
+#ifndef _WIN32
 #ifdef LDAP_DEBUG
 			getline( line, sizeof(line), stdin, "debug level? " );
 			ldap_debug = atoi( line ) | LDAP_DEBUG_ANY;
+#if 0
 			if ( ldap_debug & LDAP_DEBUG_PACKETS ) {
 				lber_debug = ldap_debug;
 			}
+#endif
 #else
 			printf( "Compile with -DLDAP_DEBUG for debugging\n" );
+#endif
 #endif
 			break;
 
@@ -1103,10 +1110,8 @@ main(
 			    } else {
 				printf( "%d\n", ludp->lud_port );
 			    }
-#if defined(NET_SSL)
 			    printf( "\tsecure: %s\n", ( ludp->lud_options &
 				    LDAP_URL_OPT_SECURE ) != 0 ? "Yes" : "No" );
-#endif
 			    printf( "\t    dn: " );
 			    if ( ludp->lud_dn == NULL ) {
 				printf( "ROOT\n" );
@@ -1182,7 +1187,7 @@ main(
 				"Critical (0=no, 1=yes)? " );
 			if ( ldap_create_persistentsearch_control( ld,
 			    changetypes, changesonly, return_echg_ctls,
-			    atoi(line), &newctrl ) != LDAP_SUCCESS ) {
+			    (char)atoi(line), &newctrl ) != LDAP_SUCCESS ) {
 				ldap_perror( ld, "ldap_create_persistent"
 				    "search_control" );
 			} else {
@@ -1245,31 +1250,6 @@ main(
 					    NULL );
 				}
 			}
-#ifdef NET_SSL
-			getline( line, sizeof(line), stdin,
-				"Use Secure Sockets Layer - SSL (0=no, 1=yes)?" );
-			optval = ( atoi( line ) != 0 );
-			if ( optval ) {
-				getline( line, sizeof(line), stdin,
-				    "security DB path?" ); 
-				if ( ldapssl_client_init( (*line == '\0') ?
-				    NULL : line, &certdbhandle ) < 0 ) {
-					perror( "ldapssl_client_init" );
-					optval = 0;     /* SSL not avail. */
-				} else if ( ldapssl_install_routines( ld )
-				    < 0 ) {
-					ldap_perror( ld,
-					    "ldapssl_install_routines" );
-					optval = 0;     /* SSL not avail. */
-				}
-			}
-
-#ifdef LDAP_SSLIO_HOOKS
-			ldap_set_option( ld, LDAP_OPT_SSL,
-			    optval ? LDAP_OPT_ON : LDAP_OPT_OFF );
-#endif
-#endif
-
 			getline( line, sizeof(line), stdin, "Reconnect?" );
 			ldap_set_option( ld, LDAP_OPT_RECONNECT,
 			    ( atoi( line ) == 0 ) ? LDAP_OPT_OFF :
@@ -1426,8 +1406,13 @@ handle_result( LDAP *ld, LDAPMessage *lm, int onlyone )
 		print_ldap_result( ld, lm, "bind" );
 		break;
 	case LDAP_RES_EXTENDED:
-		printf( "ExtendedOp result\n" );
-		print_ldap_result( ld, lm, "extendedop" );
+		if ( ldap_msgid( lm ) == LDAP_RES_UNSOLICITED ) {
+			printf( "Unsolicited result\n" );
+			print_ldap_result( ld, lm, "unsolicited" );
+		} else {
+			printf( "ExtendedOp result\n" );
+			print_ldap_result( ld, lm, "extendedop" );
+		}
 		break;
 
 	default:
@@ -1443,7 +1428,7 @@ handle_result( LDAP *ld, LDAPMessage *lm, int onlyone )
 static void
 print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s )
 {
-	int		i, lderr;
+	int		lderr;
 	char		*matcheddn, *errmsg, *oid, **refs;
 	LDAPControl	**ctrls;
 	struct berval	*servercred, *data;
@@ -1490,11 +1475,18 @@ print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s )
 	    ldap_parse_extended_result( ld, lm, &oid, &data, 0 ) ==
 	    LDAP_SUCCESS ) {
 		if ( oid != NULL ) {
-			printf( "\tExtendedOp OID: %s\n", oid );
+			if ( strcmp ( oid, LDAP_NOTICE_OF_DISCONNECTION )
+			    == 0 ) {
+				printf(
+				    "\t%s Notice of Disconnection (OID: %s)\n",
+				    s, oid );
+			} else {
+				printf( "\t%s OID: %s\n", s, oid );
+			}
 			ldap_memfree( oid );
 		}
 		if ( data != NULL ) {
-			fputs( "\tExtendedOp data:\n", stderr );
+			printf( "\t%s data:\n", s );
 			bprint( data->bv_val, data->bv_len );
 			ber_bvfree( data );
 		}
@@ -1507,7 +1499,7 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 	BerElement	*ber;
 	char		*a, *dn, *ufn;
 	struct berval	**vals;
-	int		i, count, msgtype;
+	int		i, count;
 	LDAPMessage	*e, *msg;
 	LDAPControl	**ectrls;
 
@@ -1542,9 +1534,9 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 				printf( "\t\t\t(no values)\n" );
 			} else {
 				for ( i = 0; vals[i] != NULL; i++ ) {
-					int	j, nonascii;
+					int		nonascii = 0;
+					unsigned long	j;
 
-					nonascii = 0;
 					for ( j = 0; j < vals[i]->bv_len; j++ )
 						if ( !isascii( vals[i]->bv_val[j] ) ) {
 							nonascii = 1;
