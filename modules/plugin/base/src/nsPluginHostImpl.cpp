@@ -4464,6 +4464,12 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
 
       pluginTag->mLibrary = pluginLibrary;
 
+      // we should construct a check sum for all possible
+      // plugins we can see, to be able to determine later
+      // if change in plugins was made
+      PRInt64 flmt = getFileLastModifiedTime(pluginTag->mFileName);
+      LL_ADD(mPluginCheckSum, mPluginCheckSum, flmt);
+
       PRBool bAddIt = PR_TRUE;
 
       // check if there are specific plugins we don't want
@@ -4490,10 +4496,6 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
       // so if we still want it -- do it
       if(bAddIt)
       {
-        // add to plugin check sum
-        PRInt64 flmt = getFileLastModifiedTime(pluginTag->mFileName);
-        LL_ADD(mPluginCheckSum, mPluginCheckSum, flmt);
-
         if(!mCalculatingCheckSumOnly) {
           pluginTag->mNext = mPlugins;
           mPlugins = pluginTag;
