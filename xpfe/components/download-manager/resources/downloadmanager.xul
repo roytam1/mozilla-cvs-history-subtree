@@ -23,12 +23,14 @@
     Ben Goodger <ben@netscape.com> (Original Author)
     Blake Ross  <blaker@netscape.com>
     Jan Varga   <varga@utcru.sk>
+    Christian Biesinger <cbiesinger@web.de>
 -->
 
 <?xml-stylesheet href="chrome://communicator/skin/"?>
 
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+<?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 
 <!DOCTYPE window [
 <!ENTITY % downloadManagerDTD SYSTEM "chrome://communicator/locale/downloadmanager/downloadmanager.ent">
@@ -41,7 +43,7 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         windowtype="Download:Manager"
-        width="500" height="300" screenX="10" screenY="10"
+        width="400" height="150" screenX="10" screenY="10"
         persist="width height screenX screenY"
         title="&downloadManager.title;"
         onload="Startup();"
@@ -50,6 +52,8 @@
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <script type="application/x-javascript" src="chrome://communicator/content/downloadmanager/downloadmanager.js"/>
+
+  <script type="application/x-javascript" src="chrome://communicator/content/contentAreaUtils.js"/>
 
   <stringbundle id="dlMgrBundle"
                 src="chrome://communicator/locale/downloadmanager/downloadmanager.properties"/>
@@ -65,6 +69,8 @@
   <data id="strings.longTimeFormat">&longTimeFormat;</data>
   <data id="strings.unknownTime">&unknownTime;</data>
   <data id="strings.pausedMsg">&pausedMsg;</data>
+
+  <commandset id="tasksCommands"/>
 
   <commandset id="commands">
     <commandset id="commandUpdate_Downloads"
@@ -88,9 +94,19 @@
     </commandset>
 
     <!-- File Menu -->
+    <command id="cmd_newDownload" oncommand="newDownload()"/>
     <command id="cmd_newNavigator"/>
     <command id="cmd_close" oncommand="close()"/>
     <command id="cmd_quit"/>
+    <!-- Edit Menu -->
+    <command id="cmd_undo"/>
+    <command id="cmd_redo"/>
+    <command id="cmd_cut"/>
+    <command id="cmd_copy"/>
+    <command id="cmd_paste"/>
+    <command id="cmd_selectAll"/>
+    <command id="cmd_preferences"
+             oncommand="goPreferences('navigator', 'chrome://communicator/content/pref/pref-download.xul', 'downloads')"/>
 
   </commandset>
   
@@ -98,19 +114,89 @@
 
   <keyset id="tasksKeys">
     <!-- File Menu -->
+    <key id="key_newDownload" command="cmd_newDownload" key="N" modifiers="accel"/>
+    <key id="key_openfile" command="cmd_openfile" key="O" modifiers="accel"/>
+    <key id="key_stop" command="cmd_cancel" keycode="VK_ESCAPE"/>
+    <!-- the key_stop_mac key will be enabled on mac only -->
+    <key id="key_stop_mac" command="cmd_cancel" key="." modifiers="accel"/>
     <key id="key_newNavigator"/>
     <key id="key_close"/>
     <key id="key_quit"/>
+
+    <!-- Edit Menu -->
+    <key id="key_undo"/>
+    <key id="key_redo"/>
+    <key id="key_cut"/>
+    <key id="key_copy"/>
+    <key id="key_paste"/>
+    <key id="key_preferences" key=";" modifiers="accel" command="cmd_preferences"/>
 
     <!-- These keybindings do not have a command specified in the overlay,
          which is good, but we need to specify it ourselves here -->
     <key id="key_selectAll" command="cmd_selectAll"/>
 
-    <key id="key_remove" keycode="VK_DELETE" command="cmd_remove"/>
+    <key id="key_remove" keycode="VK_DELETE" modifiers="accel" command="cmd_remove"/>
 
     <key id="key_properties" key="&cmd.properties.keybinding;"
          command="cmd_properties" modifiers="accel"/>
   </keyset>
+
+  <menubar class="chromeclass-menubar">
+    <menu id="menu_File">
+      <menupopup id="menu_FilePopup">
+        <menuitem id="menu_newDownload" label="&file.newDownload.label;"
+                  accesskey="&file.newDownload.accesskey;" key="key_newDownload"
+                  command="cmd_newDownload"/>
+        <menuitem id="menu_openFile" label="&file.open.label;" accesskey="&file.open.accesskey;"
+                  key="key_openfile" command="cmd_openfile"/>
+        <menuitem id="menu_close"/>
+        <menuseparator/>
+        <menuitem id="menu_stop" label="&file.stop.label;" accesskey="&file.stop.accesskey;"
+                  key="key_stop" command="cmd_cancel"/>
+        <menuitem id="menu_remove" label="&file.remove.label;" accesskey="&file.remove.accesskey;"
+                  key="key_remove" command="cmd_remove"/>
+        <menuseparator/>
+        <menuitem id="menu_properties" label="&file.properties.label;"
+                  accesskey="&file.properties.accesskey;" key="key_properties"
+                  command="cmd_properties"/>
+        <menuitem id="menu_reveal" label="&file.reveal.label;" accesskey="&file.reveal.accesskey;"
+                  command="cmd_showinshell"/>
+      </menupopup>
+    </menu>
+
+    <menu id="menu_Edit">
+      <menupopup id="menu_Edit_Popup">
+        <menuitem id="menu_undo"/>
+        <menuitem id="menu_redo"/>
+        <menuseparator/>
+        <menuitem id="menu_cut"/>
+        <menuitem id="menu_copy"/>
+        <menuitem id="menu_paste"/>
+        <menuitem id="menu_selectAll" command="cmd_selectAll"/>
+        <menuseparator/>
+        <menuitem id="menu_preferences" label="&edit.prefs.label;"
+                  accesskey="&edit.prefs.accesskey;" command="cmd_preferences"
+                  key="key_preferences"/>
+
+      </menupopup>
+    </menu>
+
+    <menu id="menu_View">
+      <menupopup id="menu_View_Popup" onpopupshowing="updateViewMenu();">
+        <menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_Progress" label="&view.header.progress.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_ProgressPercent" label="&view.header.progresstext.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_TimeRemaining" label="&view.header.timeremaining.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_Transferred" label="&view.header.transferred.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_TransferRate" label="&view.header.transferrate.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_TimeElapsed" label="&view.header.timeelapsed.label;"/>
+	<menuitem oncommand="toggleColumn(this);" type="checkbox" id="menu_Source" label="&view.header.source.label;"/>
+      </menupopup>
+    </menu>
+
+    <menu id="tasksMenu"/>
+    <menu id="windowMenu"/>
+    <menu id="menu_Help"/>
+  </menubar>
 
   <toolbox id="toolbox">
     <toolbar id="download-toolbar" tbalign="stretch" class="chromeclass-toolbar" persist="collapsed" grippytooltiptext="&dm.tooltip;">

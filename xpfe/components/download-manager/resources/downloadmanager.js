@@ -45,6 +45,7 @@ var gDownloadManager = null;
 var gRDFService = null;
 var gNC_File = null;
 var gStatusBar = null;
+var gClipboardHelper = null;
 
 const dlObserver = {
   observe: function(subject, topic, state) {
@@ -86,22 +87,34 @@ function Startup()
   const dlmgrIID = Components.interfaces.nsIDownloadManager;
   gDownloadManager = Components.classes[dlmgrContractID].getService(dlmgrIID);
 
+  const clipContractID = "@mozilla.org/widget/clipboardhelper;1";
+  const clipIID = Components.interfaces.nsIClipboardHelper;
+  gClipboardHelper = Components.classes[clipContractID].getService(clipIID);
+
   var ds = window.arguments[0];
   gDownloadView.database.AddDataSource(ds);
   gDownloadView.builder.rebuild();
   window.setTimeout(onRebuild, 0);
   
+  var bundle = document.getElementById("dlMgrBundle")
   var key;
-  if (navigator.platform.indexOf("Win") != -1)
+  var stopMac = document.getElementById("key_stop_mac");
+  if (navigator.platform.indexOf("Win") != -1) {
     key = "Win";
-  else if (navigator.platform.indexOf("Mac") != -1)
+    stopMac.parentNode.removeChild(stopMac);
+  }
+  else if (navigator.platform.indexOf("Mac") != -1) {
     key = "Mac";
+    var propsLabel = bundle.getString("propertiesLabelMac");
+    document.getElementById("menu_properties").setAttribute("label", propsLabel);
+  }
   else {
     key = "Unix";
     document.getElementById("btn_openfile").hidden = true;
+    document.getElementById("menu_openFile").hidden = true;
+    stopMac.parentNode.removeChild(stopMac);
   }
 
-  var bundle = document.getElementById("dlMgrBundle")
   var label = bundle.getString("showInShellLabel" + key);
   var accesskey = bundle.getString("showInShellAccesskey" + key);
   var showBtn = document.getElementById("btn_showinshell");
@@ -149,6 +162,7 @@ var downloadViewController = {
     case "cmd_openfile":
     case "cmd_showinshell":
     case "cmd_selectAll":
+    case "cmd_copy":
       return true;
     }
     return false;
@@ -171,6 +185,7 @@ var downloadViewController = {
         return false;
       }      
     case "cmd_showinshell":
+    case "cmd_copy":
       // some apps like kazaa/morpheus let you "preview" in-progress downloads because
       // that's possible for movies and music. for now, just disable indiscriminately.
       return selectionCount == 1;
@@ -187,10 +202,11 @@ var downloadViewController = {
       //     and how to handle multiple selection?
       return !isDownloading;
     case "cmd_selectAll":
-      return gDownloadView.view.rowCount != selectionCount;
+      return gDownloadView.view.rowCount > 0;
     default:
       return false;
     }
+    return false;
   },
   
   doCommand: function dVC_doCommand (aCommand)
@@ -259,6 +275,14 @@ var downloadViewController = {
     case "cmd_selectAll":
       gDownloadView.treeBoxObject.selection.selectAll();
       break;
+    case "cmd_copy":
+      if (navigator.platform.indexOf("Mac") != -1) {
+        file = getFileForItem(getSelectedItem());
+	gClipboardHelper.copyString(file.leafName);
+      }
+      else
+        gClipboardHelper.copyString(getSelectedItem().id);
+      break;
     default:
     }
   },  
@@ -274,7 +298,7 @@ var downloadViewController = {
   onCommandUpdate: function dVC_onCommandUpdate ()
   {
     var cmds = ["cmd_properties", "cmd_pause", "cmd_cancel", "cmd_remove",
-                "cmd_openfile", "cmd_showinshell"];
+                "cmd_openfile", "cmd_showinshell", "cmd_copy", "cmd_selectAll"];
     for (var command in cmds)
       goUpdateCommand(cmds[command]);
   }
@@ -318,6 +342,35 @@ function createLocalFile(aFilePath)
   var lf = Components.classes[lfContractID].createInstance(lfIID);
   lf.initWithPath(aFilePath);
   return lf;
+}
+
+function updateViewMenu() {
+  const columns = ["Progress", "ProgressPercent", "TimeRemaining",
+                   "Transferred", "TransferRate", "TimeElapsed", "Source"];
+  for (var i = 0; i < columns.length; i++) {
+    var col = document.getElementById(columns[i]);
+    var menuItem = document.getElementById("menu_" + columns[i]);
+    if (col.getAttribute("hidden") == "true")
+      menuItem.removeAttribute("checked");
+    else
+      menuItem.setAttribute("checked", "true");
+  }
+  return true;
+}
+
+function toggleColumn(menuitem) {
+  var id = menuitem.getAttribute("id");
+  id = id.substring(5, id.length);
+  var theCol = document.getElementById(id);
+  if (theCol.getAttribute("hidden") == "true")
+    theCol.removeAttribute("hidden");
+  else
+    theCol.setAttribute("hidden", "true");
+}
+
+function newDownload() {
+  openDialog("chrome://communicator/content/downloadmanager/newdownload.xul", "_blank", "chrome,modal,titlebar", window);
+
 }
 
 function Shutdown()
