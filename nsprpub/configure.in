@@ -656,6 +656,7 @@ case "$target" in
     else
         DSO_CFLAGS=-fPIC
     fi
+
     if test -n "$MOZILLA_CLIENT"; then
         DEFAULT_IMPL_STRATEGY=_EMU
     fi
@@ -664,7 +665,7 @@ case "$target" in
         AC_DEFINE(_PR_NEED_H_ERRNO)
         AC_DEFINE(HPUX9)
         DEFAULT_IMPL_STRATEGY=_EMU
-	USE_NSPR_THREADS=1
+    	USE_NSPR_THREADS=1
     fi
 
     if echo "$OS_RELEASE" | egrep '^(B.10.10|B.10.20)' >/dev/null; then
@@ -693,7 +694,7 @@ case "$target" in
     if test "$OS_RELEASE" = "B.10.20"; then
         AC_DEFINE(HPUX10)
         AC_DEFINE(HPUX10_20)
-        if test -z "$GNU_CC"; then
+        if test -z "$GNU_CC" && test 0 = 1; then
             CFLAGS="$CFLAGS +DAportable +DS1.1"
             CXXFLAGS="$CXXFLAGS +DAportable +DS1.1"
         fi
@@ -704,7 +705,7 @@ case "$target" in
         AC_DEFINE(HPUX10)
         AC_DEFINE(HPUX10_30)
         #CXX="/opt/aCC/bin/aCC -ext"
-        if test -z "$GNU_CC"; then
+        if test -z "$GNU_CC" && test 0 = 1; then
             CFLAGS="$CFLAGS +DAportable +DS1.1"
             CXXFLAGS="$CXXFLAGS +DAportable +DS1.1"
         fi
@@ -718,12 +719,14 @@ case "$target" in
         AC_DEFINE(_PR_HAVE_OFF64_T)
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
         if test -z "$GNU_CC"; then
+            if test 0 = 1; then
             if test -z "$USE_64"; then
                 CFLAGS="$CFLAGS +DAportable +DS2.0"
                 CXXFLAGS="$CXXFLAGS +DAportable +DS2.0"
             else
                 CFLAGS="$CFLAGS +DA2.0W +DS2.0"
                 CXXFLAGS="$CXXFLAGS +DA2.0W +DS2.0"
+            fi
             fi
         fi
         DEFAULT_IMPL_STRATEGY=_PTH
