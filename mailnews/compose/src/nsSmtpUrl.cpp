@@ -266,23 +266,25 @@ nsresult nsSmtpUrl::ParseMessageToPost(char * searchPart)
 }
 
 
+NS_IMETHODIMP nsSmtpUrl::SetSpec(char * aSpec)
+{
+	nsresult rv = nsMsgMailNewsUrl::SetSpec(aSpec);
+	if (NS_SUCCEEDED(rv))
+		rv = ParseUrl();
+	return rv;
+}
 
 // mscott - i think this function can be obsoleted and its functionality
 // moved into SetSpec or an init method....
-nsresult nsSmtpUrl::ParseUrl(const nsString& /* aSpec */)
+nsresult nsSmtpUrl::ParseUrl()
 {
-#ifdef DEBUG_mscott
-	char * spec = nsnull;
-	GetSpec(&spec);
-	NS_ASSERTION(spec && *spec, "uhoh...parse wasn't set up with a spec!!!");
-#endif
     NS_LOCK_INSTANCE();
 
 	nsresult rv = NS_OK;
 
 	// the recipients should consist of just the path part up to to the query part
 	char * uriPath = nsnull;
-	rv = GetDirectory(&m_toPart);
+	rv = GetFileName(&m_toPart);
 	
 	// now parse out the search field...
 	char * searchPart = nsnull;
