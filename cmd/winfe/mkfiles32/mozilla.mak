@@ -255,7 +255,7 @@ POLICY  = moz40p3
 #
 # If you add a file in a new directory, you must add flags for that directory
 #
-CFLAGS_LIBMIME_C=       $(CFLAGS_DEFAULT)
+CFLAGS_LIBMIME_C=       $(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\mime
 CFLAGS_LIBI18N_C=       $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/intlpriv.pch" /YX"intlpriv.h"
 CFLAGS_LIBIMG_C=        $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/xp.pch" /YX"xp.h"
 CFLAGS_JTOOLS_C=        $(CFLAGS_DEFAULT)
