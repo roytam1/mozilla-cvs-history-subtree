@@ -119,7 +119,7 @@ class BackstagePass : public nsIScriptObjectPrincipal, public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
   
   NS_IMETHOD GetPrincipal(nsIPrincipal **aPrincipal) {
     NS_ADDREF(*aPrincipal = mPrincipal);
@@ -146,7 +146,7 @@ class BackstagePass : public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
 
   BackstagePass()
   {
@@ -160,22 +160,14 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
 
 #endif
 
-XPC_IMPLEMENT_IGNORE_CREATE(BackstagePass)
-XPC_IMPLEMENT_IGNORE_GETFLAGS(BackstagePass);
-XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_GETPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_SETPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_GETATTRIBUTES(BackstagePass)
-XPC_IMPLEMENT_FORWARD_SETATTRIBUTES(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DELETEPROPERTY(BackstagePass)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(BackstagePass)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CALL(BackstagePass)
-XPC_IMPLEMENT_FORWARD_CONSTRUCT(BackstagePass)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(BackstagePass);
-XPC_IMPLEMENT_FORWARD_FINALIZE(BackstagePass)
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           BackstagePass
+#define XPC_MAP_QUOTED_CLASSNAME   "BackstagePass"
+#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_GETPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
+#include "xpc_map_end.h" /* This will #undef the above */
 
 mozJSComponentLoader::mozJSComponentLoader()
     : mCompMgr(nsnull),
