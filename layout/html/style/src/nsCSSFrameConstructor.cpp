@@ -10349,10 +10349,6 @@ nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext,
           result = RecreateFramesForContent(aPresContext, aContent1);
           changeList.Clear();
         } else {
-          if (frameChange & ~(nsChangeHint_AttrChange | nsChangeHint_Aural)) {
-            // let primary frame deal with it
-            result = primaryFrame1->ContentStateChanged(aPresContext, aContent1, frameChange);
-          }
           ProcessRestyledFrames(changeList, aPresContext);
         }
       }
@@ -10381,11 +10377,7 @@ nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext,
           result = RecreateFramesForContent(aPresContext, aContent2);
           changeList.Clear();
         } else {
-          if (frameChange & ~(nsChangeHint_AttrChange | nsChangeHint_Aural)) {
-            // let primary frame deal with it
-            result = primaryFrame2->ContentStateChanged(aPresContext, aContent2, frameChange);
-          }
-          // then process any children that need it
+          // process any children that need it
           ProcessRestyledFrames(changeList, aPresContext);
         }
       }
