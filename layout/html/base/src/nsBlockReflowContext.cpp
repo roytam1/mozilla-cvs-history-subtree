@@ -120,10 +120,12 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(nsIPresContext* aPresContext,
           // generational collapse is required we need to compute the
           // child blocks margin and so in so that we can look into
           // it. For its margins to be computed we need to have a reflow
-          // state for it.
+          // state for it. Since the reflow reason is irrelevant, we'll
+          // arbitrarily make it a `resize' to avoid the path-plucking
+          // behavior if we're in an incremental reflow.
           nsSize availSpace(aRS.mComputedWidth, aRS.mComputedHeight);
           nsHTMLReflowState reflowState(aPresContext, aRS, childFrame,
-                                        availSpace);
+                                        availSpace, eReflowReason_Resize);
           ComputeCollapsedTopMargin(aPresContext, reflowState, aMargin);
         }
       }
@@ -264,10 +266,9 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   if (NS_FRAME_FIRST_REFLOW & state) {
     reason = eReflowReason_Initial;
   }
-  else if (mNextRCFrame == aFrame) {
+  else if (mOuterReflowState.reason == eReflowReason_Incremental &&
+           mOuterReflowState.path->HasChild(aFrame)) {
     reason = eReflowReason_Incremental;
-    // Make sure we only incrementally reflow once
-    mNextRCFrame = nsnull;
   }
   else if (mOuterReflowState.reason == eReflowReason_StyleChange) {
     reason = eReflowReason_StyleChange;
@@ -282,16 +283,12 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
       // and it's target is the current block, then make sure we send
       // StyleChange reflow reasons down to all the children so that
       // they don't over-optimize their reflow.
-      nsHTMLReflowCommand* rc = mOuterReflowState.reflowCommand;
+      nsHTMLReflowCommand* rc = mOuterReflowState.path->mReflowCommand;
       if (rc) {
         nsReflowType type;
         rc->GetType(type);
         if (type == eReflowType_StyleChanged) {
-          nsIFrame* target;
-          rc->GetTarget(target);
-          if (target == mOuterReflowState.frame) {
-            reason = eReflowReason_StyleChange;
-          }
+          reason = eReflowReason_StyleChange;
         }
         else if (type == eReflowType_ReflowDirty &&
                  (state & NS_FRAME_IS_DIRTY)) {

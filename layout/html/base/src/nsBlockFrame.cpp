@@ -54,7 +54,7 @@
 #include "nsIFrameManager.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsIStyleContext.h"
 #include "nsIView.h"
 #include "nsIFontMetrics.h"
@@ -605,17 +605,18 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     reflow.Append(nsHTMLReflowState::ReasonToString(aReflowState.reason));
 
     if (aReflowState.reason == eReflowReason_Incremental) {
-      reflow += " (";
+      nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
 
-      nsReflowType type;
-      aReflowState.reflowCommand->GetType(type);
-      reflow += kReflowCommandType[type];
+      if (command) {
+        // We're the target.
+        reflow += " (";
 
-      nsIFrame* target;
-      aReflowState.reflowCommand->GetTarget(target);
-      reflow += nsPrintfCString("@%p", target);
+        nsReflowType type;
+        command->GetType(type);
+        reflow += kReflowCommandType[type];
 
-      reflow += ")";
+        reflow += ")";
+      }
     }
 
     IndentBy(stdout, gNoiseIndent);
@@ -695,7 +696,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 #else
       nsHTMLReflowState reflowState(aReflowState);
       reflowState.reason = eReflowReason_Resize;
-      reflowState.reflowCommand = nsnull;
+      reflowState.path = nsnull;
       nsBlockFrame::Reflow(aPresContext, aMetrics, reflowState, aStatus);
 #endif
       
@@ -785,7 +786,6 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   nsresult rv = NS_OK;
   PRBool isStyleChange = PR_FALSE;
 
-  nsIFrame* target;
   switch (aReflowState.reason) {
   case eReflowReason_Initial:
 #ifdef NOISY_REFLOW_REASON
@@ -801,14 +801,18 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // Do nothing; the dirty lines will already have been marked.
     break;
 
-  case eReflowReason_Incremental:  
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this == target) {
-      nsReflowType type;
-      aReflowState.reflowCommand->GetType(type);
+  case eReflowReason_Incremental: {
 #ifdef NOISY_REFLOW_REASON
-      ListTag(stdout);
-      printf(": reflow=incremental type=%d\n", type);
+    ListTag(stdout);
+    printf(": reflow=incremental ");
+#endif
+    nsReflowPath *path = aReflowState.path;
+    nsHTMLReflowCommand *command = path->mReflowCommand;
+    if (command) {
+      nsReflowType type;
+      command->GetType(type);
+#ifdef NOISY_REFLOW_REASON
+      printf("type=%d", type);
 #endif
       switch (type) {
       case eReflowType_StyleChanged:
@@ -824,22 +828,33 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         break;
       }
     }
-    else {
-      // Get next frame in reflow command chain
-      aReflowState.reflowCommand->GetNext(state.mNextRCFrame);
+
+    if (path->FirstChild() != path->EndChildren()) {
+      // We're along the reflow path, but not necessarily the target
+      // of the reflow.
 #ifdef NOISY_REFLOW_REASON
       ListTag(stdout);
-      printf(": reflow=incremental");
-      if (state.mNextRCFrame) {
-        printf(" next=");
-        nsFrame::ListTag(stdout, state.mNextRCFrame);
+      printf(" next={ ");
+
+      for (nsReflowPath::iterator iter = path->FirstChild();
+           iter != path->EndChildren();
+           ++iter) {
+        nsFrame::ListTag(stdout, *iter);
+        printf(" ");
       }
-      printf("\n");
+
+      printf("}");
 #endif
 
       rv = PrepareChildIncrementalReflow(state);
     }
+
+#ifdef NOISY_REFLOW_REASON
+    printf("\n");
+#endif
+
     break;
+  }
 
   case eReflowReason_StyleChange:
     DrainOverflowLines(aPresContext);
@@ -1560,79 +1575,89 @@ nsBlockFrame::PrepareInitialReflow(nsBlockReflowState& aState)
 nsresult
 nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
 {
-  // Determine the line being impacted
-  PRBool isFloater;
-  line_iterator line;
-  FindLineFor(aState.mNextRCFrame, &isFloater, &line);
-  if (line == end_lines()) {
-    // This assertion actually fires on lots of pages
-    // (e.g., bugzilla, bugzilla query page), so limit it
-    // to a few people until we fix the problem causing it.
-    //
-    // I think waterson explained once why it was happening -- I think
-    // it has something to do with the interaction of the unconstrained
-    // reflow in multi-pass reflow with the reflow command's chain, but
-    // I don't remember the details.
-#if defined(DEBUG_dbaron) || defined(DEBUG_waterson)
-    NS_NOTREACHED("We don't have a line for the target of the reflow.  "
-                  "Being inefficient");
-#endif
-    // This can't happen, but just in case it does...
-    return PrepareResizeReflow(aState);
-  }
+  // XXXwaterson this is non-optimal. We'd rather do this in
+  // ReflowDirtyLines; however, I'm not quite ready to figure out how
+  // to deal with reflow path retargeting yet.
+  nsReflowPath *path = aState.mReflowState.path;
 
-  // XXX: temporary: If the child frame is a floater then punt
-  // XXX_perf XXXldb How big a perf problem is this?
-  if (isFloater) {
-    return PrepareResizeReflow(aState);
-  }
+  nsReflowPath::iterator iter = path->FirstChild();
+  nsReflowPath::iterator end = path->EndChildren();
 
-  if (line->IsInline()) {
-    if (aState.GetFlag(BRS_COMPUTEMAXWIDTH)) {
-      // We've been asked to compute the maximum width of the block
-      // frame, which ReflowLine() will handle this by performing an
-      // unconstrained reflow on the line. If this incremental reflow
-      // is targeted at a continuing frame, we may have to retarget
-      // it, as the unconstrained reflow can destroy some of the
-      // continuations.
+  for ( ; iter != end; ++iter) {
+    // Determine the line being impacted
+    PRBool isFloater;
+    line_iterator line;
+    FindLineFor(*iter, &isFloater, &line);
+    if (line == end_lines()) {
+      // This assertion actually fires on lots of pages
+      // (e.g., bugzilla, bugzilla query page), so limit it
+      // to a few people until we fix the problem causing it.
       //
-      // XXXwaterson if we implement some sort of ``reflow root''
-      // frame, rather than requiring incremental reflows to always
-      // walk from the real root frame, this code may not be needed
-      // anymore. Or will it?
-      NS_ASSERTION(aState.mNextRCFrame, "aState has no mNextRCFrame");
-
-      nsIFrame *prevInFlow;
-      aState.mNextRCFrame->GetPrevInFlow(&prevInFlow);
-      if (prevInFlow)
-        RetargetInlineIncrementalReflow(aState, line, prevInFlow);
+      // I think waterson explained once why it was happening -- I think
+      // it has something to do with the interaction of the unconstrained
+      // reflow in multi-pass reflow with the reflow command's chain, but
+      // I don't remember the details.
+#if defined(DEBUG_dbaron) || defined(DEBUG_waterson)
+      NS_NOTREACHED("We don't have a line for the target of the reflow.  "
+                    "Being inefficient");
+#endif
+      // This can't happen, but just in case it does...
+      PrepareResizeReflow(aState);
+      continue;
     }
+
+    // XXX: temporary: If the child frame is a floater then punt
+    // XXX_perf XXXldb How big a perf problem is this?
+    if (isFloater) {
+      PrepareResizeReflow(aState);
+      continue;
+    }
+
+    if (line->IsInline()) {
+      if (aState.GetFlag(BRS_COMPUTEMAXWIDTH)) {
+        // We've been asked to compute the maximum width of the block
+        // frame, which ReflowLine() will handle this by performing an
+        // unconstrained reflow on the line. If this incremental reflow
+        // is targeted at a continuing frame, we may have to retarget
+        // it, as the unconstrained reflow can destroy some of the
+        // continuations.
+        //
+        // XXXwaterson if we implement some sort of ``reflow root''
+        // frame, rather than requiring incremental reflows to always
+        // walk from the real root frame, this code may not be needed
+        // anymore. Or will it?
+        // XXXwaterson it will, but less frequently; e.g., DHTML.
+        nsIFrame *prevInFlow;
+        (*iter)->GetPrevInFlow(&prevInFlow);
+        if (prevInFlow)
+          RetargetInlineIncrementalReflow(iter, line, prevInFlow);
+      }
+    }
+
+    // Just mark this line dirty.  We never need to mark the
+    // previous line dirty since either:
+    //  * the line is a block, and there would never be a chance to pull
+    //    something up
+    //  * It's an incremental reflow to something within an inline, which
+    //    we know must be very limited.
+    line->MarkDirty();
   }
-
-  // Just mark this line dirty.  We never need to mark the
-  // previous line dirty since either:
-  //  * the line is a block, and there would never be a chance to pull
-  //    something up
-  //  * It's an incremental reflow to something within an inline, which
-  //    we know must be very limited.
-  line->MarkDirty();
-
   return NS_OK;
 }
 
 void
-nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
+nsBlockFrame::RetargetInlineIncrementalReflow(nsReflowPath::iterator &aTarget,
                                               line_iterator &aLine,
                                               nsIFrame *aPrevInFlow)
 {
   // To retarget the reflow, we'll walk back through the continuations
   // until we reach the primary frame, or we reach a continuation that
   // is preceded by a ``hard'' line break.
-  NS_ASSERTION(aLine->Contains(aState.mNextRCFrame),
+  NS_ASSERTION(aLine->Contains(*aTarget),
                "line doesn't contain the target of the incremental reflow");
 
-  // Now fix aState's mNextRCFrame, keeping track of how many lines we
-  // walk back through.
+  // Now fix the iterator, keeping track of how many lines we walk
+  // back through.
   PRInt32 lineCount = 0;
   do {
     // XXX this might happen if the block is split; e.g.,
@@ -1647,15 +1672,15 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
     if (aLine->GetBreakType() == NS_STYLE_CLEAR_LINE)
       break;
 
-    aState.mNextRCFrame = aPrevInFlow;
-    aState.mNextRCFrame->GetPrevInFlow(&aPrevInFlow);
+    *aTarget = aPrevInFlow;
+    aPrevInFlow->GetPrevInFlow(&aPrevInFlow);
 
 #ifdef DEBUG
     // Paranoia. Ensure that the prev-in-flow is really in the
     // previous line.
     PRBool dummy;
     line_iterator check;
-    FindLineFor(aState.mNextRCFrame, &dummy, &check);
+    FindLineFor(*aTarget, &dummy, &check);
     NS_ASSERTION(check == aLine, "prev-in-flow not in previous linebox");
 #endif
 
@@ -1664,6 +1689,8 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
 
   if (lineCount > 0) {
     // Fix any frames deeper in the reflow path.
+
+#if 0 // XXXwaterson fix me! we've got to recurse through the iterator's kids.
 
     // Get the reflow path, which is stored as a stack (i.e., the next
     // frame in the reflow is at the _end_ of the array).
@@ -1688,6 +1715,9 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
 
       path->ReplaceElementAt(frame, i);
     }
+#else
+    NS_NOTYETIMPLEMENTED("blowing a reflow targeted at a nested inline");
+#endif
   }
 }
 
@@ -2137,12 +2167,16 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState)
 #ifdef DEBUG
   if (gNoisyReflow) {
     if (aState.mReflowState.reason == eReflowReason_Incremental) {
-      nsReflowType type;
-      aState.mReflowState.reflowCommand->GetType(type);
       IndentBy(stdout, gNoiseIndent);
       ListTag(stdout);
-      printf(": incrementally reflowing dirty lines: type=%s(%d)",
-             kReflowCommandType[type], type);
+      printf(": incrementally reflowing dirty lines");
+
+      nsHTMLReflowCommand *command = aState.mReflowState.path->mReflowCommand;
+      if (command) {
+        nsReflowType type;
+        command->GetType(type);
+        printf(": type=%s(%d)", kReflowCommandType[type], type);
+      }
     }
     else {
       IndentBy(stdout, gNoiseIndent);
@@ -3121,7 +3155,6 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
                            aState.GetFlag(BRS_COMPUTEMAXELEMENTSIZE),
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
-  brc.SetNextRCFrame(aState.mNextRCFrame);
 
   // See if we should apply the top margin. If the block frame being
   // reflowed is a continuation (non-null prev-in-flow) then we don't
@@ -3166,7 +3199,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
     // on the childs available space.
     nsSize availSpace(aState.mContentArea.width, NS_UNCONSTRAINEDSIZE);
     nsHTMLReflowState reflowState(aState.mPresContext, aState.mReflowState,
-                                  frame, availSpace);
+                                  frame, availSpace, eReflowReason_Resize);
 
     // Now compute the collapsed margin-top value into aState.mPrevBottomMargin
     nsCollapsingMargin oldPrevBottomMargin = aState.mPrevBottomMargin;
@@ -3216,11 +3249,10 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
     Invalidate(aState.mPresContext, mRect);
   }
 
-  if (frame == aState.mNextRCFrame) {
-    // NULL out mNextRCFrame so if we reflow it again we don't think it's still
-    // an incremental reflow
-    aState.mNextRCFrame = nsnull;
-  }
+  // Remove the frame from the reflow tree.
+  if (aState.mReflowState.path)
+    aState.mReflowState.path->RemoveChild(frame);
+
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -3703,13 +3735,8 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
   // Reflow the inline frame
   nsReflowStatus frameReflowStatus;
   PRBool         pushedFrame;
-  nsresult rv = aLineLayout.ReflowFrame(aFrame, &aState.mNextRCFrame,
-                                        frameReflowStatus, nsnull, pushedFrame);
-  if (aFrame == aState.mNextRCFrame) {
-    // NULL out mNextRCFrame so if we reflow it again we don't think it's still
-    // an incremental reflow
-    aState.mNextRCFrame = nsnull;
-  }
+  nsresult rv = aLineLayout.ReflowFrame(aFrame, frameReflowStatus,
+                                        nsnull, pushedFrame);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -5139,8 +5166,6 @@ nsBlockFrame::ReflowFloater(nsBlockReflowState& aState,
                            computeMaxElementSize,
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
 
-  brc.SetNextRCFrame(aState.mNextRCFrame);
-
   // Reflow the floater
   PRBool isAdjacentWithTop = aState.IsAdjacentWithTop();
 
@@ -5167,11 +5192,9 @@ nsBlockFrame::ReflowFloater(nsBlockReflowState& aState,
     Invalidate(aState.mPresContext, mRect);
   }
 
-  if (floater == aState.mNextRCFrame) {
-    // Null out mNextRCFrame so if we reflow it again, we don't think
-    // it's still an incremental reflow
-    aState.mNextRCFrame = nsnull;
-  }
+  // Remove the floater from the reflow tree.
+  if (aState.mReflowState.path)
+    aState.mReflowState.path->RemoveChild(floater);
 
   if (NS_FAILED(rv)) {
     return rv;
@@ -6336,8 +6359,32 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
   nsSize availSize;
   availSize.width = NS_UNCONSTRAINEDSIZE;
   availSize.height = NS_UNCONSTRAINEDSIZE;
-  nsHTMLReflowState reflowState(aState.mPresContext, aState.mReflowState,
-                                mBullet, availSize);
+
+  // Get the reason right.
+  // XXXwaterson Should this look just like the logic in
+  // nsBlockReflowContext::ReflowBlock and nsLineLayout::ReflowFrame?
+  const nsHTMLReflowState &rs = aState.mReflowState;
+  nsReflowReason reason = rs.reason;
+  if (reason == eReflowReason_Incremental) {
+    if (! rs.path->HasChild(mBullet)) {
+      // An incremental reflow not explicitly destined to (or through)
+      // the child should be treated as a resize...
+      reason = eReflowReason_Resize;
+    }
+
+    // ...unless its an incremental `style changed' reflow targeted at
+    // the block, in which case, we propagate that to its children.
+    nsHTMLReflowCommand *command = rs.path->mReflowCommand;
+    if (command) {
+      nsReflowType type;
+      command->GetType(type);
+      if (type == eReflowType_StyleChanged)
+        reason = eReflowReason_StyleChange;
+    }
+  }
+
+  nsHTMLReflowState reflowState(aState.mPresContext, rs,
+                                mBullet, availSize, reason);
   nsReflowStatus  status;
   mBullet->WillReflow(aState.mPresContext);
   mBullet->Reflow(aState.mPresContext, aMetrics, reflowState, status);
