@@ -607,9 +607,9 @@ PR_IMPLEMENT(PRStatus) PR_JoinThread(PRThread *thred)
     return (0 == rv) ? PR_SUCCESS : PR_FAILURE;
 }  /* PR_JoinThread */
 
-PR_IMPLEMENT(void) PR_DetachThread() { }  /* PR_DetachThread */
+PR_IMPLEMENT(void) PR_DetachThread(void) { }  /* PR_DetachThread */
 
-PR_IMPLEMENT(PRThread*) PR_GetCurrentThread()
+PR_IMPLEMENT(PRThread*) PR_GetCurrentThread(void)
 {
     void *thred;
 
@@ -724,25 +724,25 @@ PR_IMPLEMENT(PRStatus) PR_Interrupt(PRThread *thred)
     return PR_SUCCESS;
 }  /* PR_Interrupt */
 
-PR_IMPLEMENT(void) PR_ClearInterrupt()
+PR_IMPLEMENT(void) PR_ClearInterrupt(void)
 {
     PRThread *me = PR_CurrentThread();
     me->state &= ~PT_THREAD_ABORTED;
 }  /* PR_ClearInterrupt */
 
-PR_IMPLEMENT(void) PR_BlockInterrupt()
+PR_IMPLEMENT(void) PR_BlockInterrupt(void)
 {
     PRThread *me = PR_CurrentThread();
     _PT_THREAD_BLOCK_INTERRUPT(me);
 }  /* PR_BlockInterrupt */
 
-PR_IMPLEMENT(void) PR_UnblockInterrupt()
+PR_IMPLEMENT(void) PR_UnblockInterrupt(void)
 {
     PRThread *me = PR_CurrentThread();
     _PT_THREAD_UNBLOCK_INTERRUPT(me);
 }  /* PR_UnblockInterrupt */
 
-PR_IMPLEMENT(PRStatus) PR_Yield()
+PR_IMPLEMENT(PRStatus) PR_Yield(void)
 {
     static PRBool warning = PR_TRUE;
     if (warning) warning = _PR_Obsolete(
@@ -908,7 +908,7 @@ void _PR_InitThreads(
     PR_SetThreadPriority(thred, priority);
 }  /* _PR_InitThreads */
 
-PR_IMPLEMENT(PRStatus) PR_Cleanup()
+PR_IMPLEMENT(PRStatus) PR_Cleanup(void)
 {
     PRThread *me = PR_CurrentThread();
     PR_LOG(_pr_thread_lm, PR_LOG_MIN, ("PR_Cleanup: shutting down NSPR"));
@@ -920,9 +920,14 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
             PR_WaitCondVar(pt_book.cv, PR_INTERVAL_NO_TIMEOUT);
         PR_Unlock(pt_book.ml);
 
+        _PR_CleanupMW();
+        _PR_CleanupDtoa();
+        _PR_CleanupCallOnce();
+        _PR_ShutdownLinker();
         _PR_LogCleanup();
-        /* Close all the fd's before calling _PR_CleanupFdCache */
-        _PR_CleanupFdCache();
+        _PR_CleanupNet();
+        /* Close all the fd's before calling _PR_CleanupIO */
+        _PR_CleanupIO();
 
         /*
          * I am not sure if it's safe to delete the cv and lock here,
@@ -936,6 +941,10 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
             PR_DestroyLock(pt_book.ml); pt_book.ml = NULL;
         }
         _pt_thread_death(me);
+        PR_DestroyLock(_pr_sleeplock);
+        _pr_sleeplock = NULL;
+        _PR_CleanupLayerCache();
+        _PR_CleanupEnv();
 #ifdef _PR_ZONE_ALLOCATOR
         _PR_DestroyZones();
 #endif
@@ -1022,7 +1031,7 @@ static void null_signal_handler(PRIntn sig);
  * conflict with the use of these two signals in our GC support.
  * So we don't know how to support GC on Linux pthreads.
  */
-static void init_pthread_gc_support()
+static void init_pthread_gc_support(void)
 {
     PRIntn rv;
 
@@ -1033,7 +1042,7 @@ static void init_pthread_gc_support()
     PR_ASSERT(0 == rv);
 #else  /* defined(_PR_DCETHREADS) */
 	{
-	    struct sigaction sigact_usr2 = {0};
+	    struct sigaction sigact_usr2;
 
 	    sigact_usr2.sa_handler = suspend_signal_handler;
 	    sigact_usr2.sa_flags = SA_RESTART;
@@ -1051,7 +1060,7 @@ static void init_pthread_gc_support()
 	}
 #if defined(PT_NO_SIGTIMEDWAIT)
 	{
-	    struct sigaction sigact_null = {0};
+	    struct sigaction sigact_null;
 	    sigact_null.sa_handler = null_signal_handler;
 	    sigact_null.sa_flags = SA_RESTART;
 	    sigemptyset (&sigact_null.sa_mask);
@@ -1062,14 +1071,14 @@ static void init_pthread_gc_support()
 #endif /* defined(_PR_DCETHREADS) */
 }
 
-PR_IMPLEMENT(void) PR_SetThreadGCAble()
+PR_IMPLEMENT(void) PR_SetThreadGCAble(void)
 {
     PR_Lock(pt_book.ml);
 	PR_CurrentThread()->state |= PT_THREAD_GCABLE;
     PR_Unlock(pt_book.ml);
 }
 
-PR_IMPLEMENT(void) PR_ClearThreadGCAble()
+PR_IMPLEMENT(void) PR_ClearThreadGCAble(void)
 {
     PR_Lock(pt_book.ml);
 	PR_CurrentThread()->state &= (~PT_THREAD_GCABLE);
@@ -1352,7 +1361,7 @@ PR_IMPLEMENT(void) PR_ResumeTest(PRThread *thred)
 
 static pthread_once_t pt_gc_support_control = PTHREAD_ONCE_INIT;
 
-PR_IMPLEMENT(void) PR_SuspendAll()
+PR_IMPLEMENT(void) PR_SuspendAll(void)
 {
 #ifdef DEBUG
     PRIntervalTime stime, etime;
@@ -1398,7 +1407,7 @@ PR_IMPLEMENT(void) PR_SuspendAll()
 #endif
 }  /* PR_SuspendAll */
 
-PR_IMPLEMENT(void) PR_ResumeAll()
+PR_IMPLEMENT(void) PR_ResumeAll(void)
 {
 #ifdef DEBUG
     PRIntervalTime stime, etime;

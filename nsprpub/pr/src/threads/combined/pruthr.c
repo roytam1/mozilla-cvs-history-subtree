@@ -85,7 +85,6 @@ PRThread *suspendAllThread = NULL;
 
 extern PRCList _pr_active_global_threadQ;
 extern PRCList _pr_active_local_threadQ;
-extern _PRCPU  *_pr_primordialCPU;
 
 static void _PR_DecrActiveThreadCount(PRThread *thread);
 static PRThread *_PR_AttachThread(PRThreadType, PRThreadPriority, PRThreadStack *);
@@ -177,6 +176,27 @@ void _PR_InitThreads(PRThreadType type, PRThreadPriority priority,
     _pr_numUserDead = 0;
     PR_INIT_CLIST(&_pr_deadNativeQ);
     PR_INIT_CLIST(&_pr_deadUserQ);
+}
+
+void _PR_CleanupThreads(void)
+{
+    if (_pr_terminationCVLock) {
+        PR_DestroyLock(_pr_terminationCVLock);
+        _pr_terminationCVLock = NULL;
+    }
+    if (_pr_activeLock) {
+        PR_DestroyLock(_pr_activeLock);
+        _pr_activeLock = NULL;
+    }
+    if (_pr_primordialExitCVar) {
+        PR_DestroyCondVar(_pr_primordialExitCVar);
+        _pr_primordialExitCVar = NULL;
+    }
+    /* TODO _pr_dead{Native,User}Q need to be deleted */
+    if (_pr_deadQLock) {
+        PR_DestroyLock(_pr_deadQLock);
+        _pr_deadQLock = NULL;
+    }
 }
 
 /*

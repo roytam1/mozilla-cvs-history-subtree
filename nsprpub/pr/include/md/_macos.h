@@ -122,7 +122,7 @@ struct _MDFileDesc {
     PRLock *        miscLock;
 
     /* Server sockets: listen bit tells the notifier func what to do */
-    PRBool		    doListen;
+    PRBool          doListen;
 
     /* stored error for non-blocking connects, as a Unix-style error code */
     OTReason        disconnectError;

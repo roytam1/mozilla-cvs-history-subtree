@@ -277,11 +277,16 @@ void _PR_LogCleanup(void)
 
     while (lm != NULL) {
         PRLogModuleInfo *next = lm->next;
-        PR_Free((/*const*/ char *)lm->name);
+        free((/*const*/ char *)lm->name);
         PR_Free(lm);
         lm = next;
     }
     logModules = NULL;
+
+    if (_pr_logLock) {
+        PR_DestroyLock(_pr_logLock);
+        _pr_logLock = NULL;
+    }
 }
 
 static void _PR_SetLogModuleLevel( PRLogModuleInfo *lm )

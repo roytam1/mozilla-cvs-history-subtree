@@ -459,7 +459,7 @@ static PRIOMethods pl_methods = {
     (PRReservedFN)_PR_InvalidInt
 };
 
-PR_IMPLEMENT(const PRIOMethods*) PR_GetDefaultIOMethods()
+PR_IMPLEMENT(const PRIOMethods*) PR_GetDefaultIOMethods(void)
 {
     return &pl_methods;
 }  /* PR_GetDefaultIOMethods */
@@ -736,11 +736,30 @@ PR_IMPLEMENT(PRFileDesc*) PR_GetIdentitiesLayer(PRFileDesc* fd, PRDescIdentity i
     return NULL;
 }  /* PR_GetIdentitiesLayer */
 
-void _PR_InitLayerCache()
+void _PR_InitLayerCache(void)
 {
     memset(&identity_cache, 0, sizeof(identity_cache));
     identity_cache.ml = PR_NewLock();
     PR_ASSERT(NULL != identity_cache.ml);
 }  /* _PR_InitLayerCache */
+
+void _PR_CleanupLayerCache(void)
+{
+    if (identity_cache.ml)
+    {
+        PR_DestroyLock(identity_cache.ml);
+        identity_cache.ml = NULL;
+    }
+
+    if (identity_cache.name)
+    {
+        PRDescIdentity ident;
+
+        for (ident = 0; ident <= identity_cache.ident; ident++)
+            PR_DELETE(identity_cache.name[ident]);
+
+        PR_DELETE(identity_cache.name);
+    }
+}  /* _PR_CleanupLayerCache */
 
 /* prlayer.c */
