@@ -90,7 +90,7 @@ short NumberResult::getResultType() {
     return ExprResult::NUMBER;
 } //-- getResultType
 
-void NumberResult::stringValue(DOMString& str)  {
+void NumberResult::stringValue(String& str)  {
     int intVal = (int)value;
     if (intVal == value) { //-- no fraction
         Integer::toString(intVal, str);

@@ -50,7 +50,7 @@ class ExprResult : public MITREObject {
 public:
 
     //-- ResultTypes
-    enum _ResultType {
+    enum ResultType {
         NODESET  = 1,
         STRING,
         BOOLEAN,
@@ -69,7 +69,7 @@ public:
      * Creates a String representation of this ExprResult
      * @param str the destination string to append the String representation to.
     **/
-    virtual void stringValue(DOMString& str) = 0;
+    virtual void stringValue(String& str) = 0;
 
     /**
      * Converts this ExprResult to a Boolean (MBool) value
@@ -100,7 +100,7 @@ public:
     void setValue(const BooleanResult& boolResult);
 
     virtual short  getResultType();
-    virtual void   stringValue(DOMString& str);
+    virtual void   stringValue(String& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -125,7 +125,7 @@ public:
     MBool isNaN() const;
 
     virtual short  getResultType();
-    virtual void   stringValue(DOMString& str);
+    virtual void   stringValue(String& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
@@ -148,7 +148,7 @@ public:
     void setValue(const String& str);
 
     virtual short  getResultType();
-    virtual void   stringValue(DOMString& str);
+    virtual void   stringValue(String& str);
     virtual MBool  booleanValue();
     virtual double numberValue();
 
