@@ -61,9 +61,6 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     if(!(mThreadData = XPCPerThreadData::GetData()))
         return;
 
-    // hook into call context chain for our thread
-    mPrevCallContext = mThreadData->SetCallContext(this);
-
     XPCJSContextStack* stack = mThreadData->GetJSContextStack();
     JSContext* topJSContext;
 
@@ -79,6 +76,12 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
             return;
     }
 
+    // Get into the request as early as we can to avoid problems with scanning
+    // callcontexts on other threads from within the gc callbacks.
+
+    if(mCallerLanguage == NATIVE_CALLER && JS_GetContextThread(mJSContext))
+        JS_BeginRequest(mJSContext);
+
     if(topJSContext != mJSContext)
     {
         if(NS_FAILED(stack->Push(mJSContext)))
@@ -89,17 +92,14 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
         mContextPopRequired = JS_TRUE;
     }
 
-
     if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
         return;
-
     // XXX we might hook into a list on the contexts???
-
 
     mPrevCallerLanguage = mXPCContext->SetCallingLangType(mCallerLanguage);
 
-    if(mCallerLanguage == NATIVE_CALLER)
-        JS_BeginRequest(mJSContext);
+    // hook into call context chain for our thread
+    mPrevCallContext = mThreadData->SetCallContext(this);
 
     mState = HAVE_CONTEXT;
 
@@ -164,9 +164,10 @@ XPCCallContext::SetJSID(jsid id)
             XPCNativeSet* mProtoSet = mWrapper->GetProto()->GetSet();
 
             mStaticMemberIsLocal =
-                        mProtoSet != mSet &&
-                        (!mProtoSet->FindMember(id, &protoMember, &ignored) ||
-                         protoMember != mMember);
+                        !mMember ||
+                        (mProtoSet != mSet &&
+                         (!mProtoSet->FindMember(id, &protoMember, &ignored) ||
+                          protoMember != mMember));
         }
         else
         {
@@ -263,9 +264,6 @@ XPCCallContext::~XPCCallContext()
 
     if(mXPCContext)
     {
-        if(mCallerLanguage == NATIVE_CALLER)
-            JS_EndRequest(mJSContext);
-
         mXPCContext->SetCallingLangType(mPrevCallerLanguage);
 
         if(mContextPopRequired)
@@ -286,6 +284,9 @@ XPCCallContext::~XPCCallContext()
                 NS_ASSERTION(0, "bad!");
             }
         }
+
+        if(mCallerLanguage == NATIVE_CALLER && JS_GetContextThread(mJSContext))
+            JS_EndRequest(mJSContext);
     }
 
     if(mThreadData)

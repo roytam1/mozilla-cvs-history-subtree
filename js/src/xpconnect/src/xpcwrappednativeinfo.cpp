@@ -331,8 +331,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
             continue;
 
         idval = STRING_TO_JSVAL(JS_InternString(cx, info->GetName()));
-        JS_ValueToId(cx, idval, &id);
-        if(!id)
+        if(!idval || !JS_ValueToId(cx, idval, &id) || !id)
         {
             NS_ASSERTION(0,"bad method name");
             failed = JS_TRUE;
@@ -374,8 +373,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
             }
 
             idval = STRING_TO_JSVAL(JS_InternString(cx, constant->GetName()));
-            JS_ValueToId(cx, idval, &id);
-            if(!id)
+            if(!idval || !JS_ValueToId(cx, idval, &id) || !id)
             {
                 NS_ASSERTION(0,"bad constant name");
                 failed = JS_TRUE;
@@ -395,7 +393,9 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     {
         const char* name;
         if(NS_FAILED(aInfo->GetNameShared(&name)) ||
-           !name || !(nameID = STRING_TO_JSVAL(JS_InternString(cx, name))))
+           !name ||
+           !(idval = STRING_TO_JSVAL(JS_InternString(cx, name))) ||
+           !JS_ValueToId(cx, idval, &nameID) || !nameID)
         {
             failed = JS_TRUE;
         }
@@ -631,6 +631,9 @@ XPCNativeSet::NewInstance(XPCNativeInterface** array, PRUint16 count)
 
     if(obj)
     {
+        obj->mMemberCount = 0;
+        for(PRUint16 i = 0; i < count; i++)
+            obj->mMemberCount += array[i]->GetMemberCount();
         obj->mInterfaceCount = count;
         memcpy(obj->mInterfaces, array, count * sizeof(XPCNativeInterface*));
     }
@@ -664,6 +667,8 @@ XPCNativeSet::NewInstanceMutate(XPCNativeSet*       otherSet,
     {
         if(otherSet)
         {
+            obj->mMemberCount = otherSet->GetMemberCount() +
+                                newInterface->GetMemberCount();
             obj->mInterfaceCount = otherSet->mInterfaceCount + 1;
 
             XPCNativeInterface** src = otherSet->mInterfaces;
@@ -678,6 +683,8 @@ XPCNativeSet::NewInstanceMutate(XPCNativeSet*       otherSet,
         }
         else
         {
+            obj->mMemberCount = newInterface->GetMemberCount();
+            obj->mInterfaceCount = 1;
             obj->mInterfaces[0] = newInterface;
         }
     }

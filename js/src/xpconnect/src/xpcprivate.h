@@ -470,8 +470,8 @@ public:
     inline PRUint16                     GetMethodIndex() const ;
     inline void                         SetMethodIndex(PRUint16 index) ;
 
-    inline jsword GetHackyResolveBugID() const;
-    inline jsword SetHackyResolveBugID(jsword id);
+    inline jsword GetResolveID() const;
+    inline jsword SetResolveID(jsword id);
 
     inline XPCWrappedNative* GetResolvingWrapper() const;
     inline XPCWrappedNative* SetResolvingWrapper(XPCWrappedNative* w);
@@ -1134,9 +1134,9 @@ public:
     XPCCallContext*  SetCallContext(XPCCallContext* ccx)
         {XPCCallContext* old = mCallContext; mCallContext = ccx; return old;}
 
-    jsword GetHackyResolveBugID() const {return mHackyResolveBugID;}
-    jsword SetHackyResolveBugID(jsword id)
-        {jsword old = mHackyResolveBugID; mHackyResolveBugID = id; return old;}
+    jsword GetResolveID() const {return mResolveID;}
+    jsword SetResolveID(jsword id)
+        {jsword old = mResolveID; mResolveID = id; return old;}
 
     XPCWrappedNative* GetResolvingWrapper() const {return mResolvingWrapper;}
     XPCWrappedNative* SetResolvingWrapper(XPCWrappedNative* w)
@@ -1155,7 +1155,7 @@ private:
     XPCJSContextStack*  mJSContextStack;
     XPCPerThreadData*   mNextThread;
     XPCCallContext*     mCallContext;
-    jsword              mHackyResolveBugID;
+    jsword              mResolveID;
     XPCWrappedNative*   mResolvingWrapper;
 
     static PRLock*           gLock;
@@ -1397,6 +1397,24 @@ private:
 
 
 /***************************************************************************/
+class AutoResolveID
+{
+public:
+    AutoResolveID(XPCCallContext& ccx, jsid id)
+        : mTLS(ccx.GetThreadData()), 
+          mOld(mTLS->SetResolveID(id)),
+          mCheck(id) {}
+    ~AutoResolveID()
+        {jsid old = mTLS->SetResolveID(mOld); 
+         NS_ASSERTION(old == mCheck, "Bad Nesting!");}
+
+private:
+    XPCPerThreadData* mTLS;
+    jsid mOld;
+    jsid mCheck;
+};
+
+/***************************************************************************/
 
 // Tight. No virtual methods.
 class XPCCallableInfo
@@ -1591,8 +1609,14 @@ public:
 
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
 
-    PRUint16 Count() const {return mInterfaceCount;}
+    inline XPCNativeInterface* FindNamedInterface(jsid id) const;
+
+    PRUint16 GetMemberCount() const {return mMemberCount;}
+    PRUint16 GetInterfaceCount() const {return mInterfaceCount;}
     XPCNativeInterface** GetInterfaceArray() {return mInterfaces;}
+
+    XPCNativeInterface* GetInterfaceAt(PRUint16 i)
+        {NS_ASSERTION(i < mInterfaceCount, "bad index"); return mInterfaces[i];}
 
 private:
     static XPCNativeSet* NewInstance(XPCNativeInterface** array, PRUint16 count);
@@ -1606,6 +1630,7 @@ private:
     void* operator new(size_t, void* p) {return p;}
 
 private:
+    PRUint16                mMemberCount;
     PRUint16                mInterfaceCount;
     XPCNativeInterface*     mInterfaces[1];  // always last - object sized for array
 };
@@ -1721,19 +1746,18 @@ private:
 class XPCWrappedNativeTearOff
 {
 public:
-    XPCWrappedNative*   GetWrapper()   const {return mWrapper;}
-    JSObject*           GetJSObject()  const {return mJSObject;}
-    nsISupports*        GetNative()    const {return mNative;}
     XPCNativeInterface* GetInterface() const {return mInterface;}
+    nsISupports*        GetNative()    const {return mNative;}
+    JSObject*           GetJSObject()  const {return mJSObject;}
 
-    void SetWrapper(XPCWrappedNative*  Wrapper)       {mWrapper = Wrapper;}
-    void SetJSObject(JSObject*  JSObject)             {mJSObject = JSObject;}
-    void SetNative(nsISupports*  Native)              {mNative = Native;}
     void SetInterface(XPCNativeInterface*  Interface) {mInterface = Interface;}
+    void SetNative(nsISupports*  Native)              {mNative = Native;}
+    void SetJSObject(JSObject*  JSObject)             {mJSObject = JSObject;}
+
+    void JSObjectFinalized() {mJSObject = nsnull; NS_RELEASE(mNative);}
 
     XPCWrappedNativeTearOff()
-        : mWrapper(nsnull), mJSObject(nsnull), 
-          mNative(nsnull), mInterface(nsnull) {}
+        : mJSObject(nsnull), mNative(nsnull), mInterface(nsnull) {}
     ~XPCWrappedNativeTearOff() {}
 
 private:
@@ -1741,10 +1765,9 @@ private:
     XPCWrappedNativeTearOff& operator= (const XPCWrappedNativeTearOff& r); // not implemented
 
 private:
-    XPCWrappedNative*   mWrapper;
-    JSObject*           mJSObject;
-    nsISupports*        mNative;
     XPCNativeInterface* mInterface;
+    nsISupports*        mNative;
+    JSObject*           mJSObject;
 };
 
 /***********************************************/
@@ -1803,7 +1826,7 @@ public:
     XPCNativeScriptableInfo* GetScriptableInfo() const {return mScriptableInfo;}
     nsIXPCScriptable* GetScriptable() const  {return mScriptableInfo->GetScriptable();}
 
-    void JSObjectFinalized(JSContext *cx, JSObject *obj);
+    void FlatJSObjectFinalized(JSContext *cx, JSObject *obj);
 
 
 #ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
@@ -1813,15 +1836,19 @@ public:
     // convention 'foo' while C++ members are by convention 'Foo'.
     static void
     HandlePossibleNameCaseError(XPCCallContext& ccx,
-                                XPCNativeSet* set, jsid id);
+                                XPCNativeSet* set, 
+                                XPCNativeInterface* iface,
+                                jsid id);
     static void
     HandlePossibleNameCaseError(JSContext* cx,
-                                XPCNativeSet* set, jsid id);
+                                XPCNativeSet* set, 
+                                XPCNativeInterface* iface,
+                                jsid id);
 
-#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, id) \
-            XPCWrappedNative::HandlePossibleNameCaseError(context, set, id)
+#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, id) \
+    XPCWrappedNative::HandlePossibleNameCaseError(context, set, iface, id)
 #else
-#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, id) ((void)0)
+#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, id) ((void)0)
 #endif
 
     enum CallMode {CALL_METHOD, CALL_GETTER, CALL_SETTER};
@@ -1839,9 +1866,9 @@ public:
     inline JSBool HasInterfaceNoQI(const nsIID& iid);
 
     inline XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx, 
-                                                XPCNativeInterface* aInterface);
+                                                XPCNativeInterface* aInterface,
+                                                JSBool needJSObject = JS_FALSE);
 
-    JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
 
 private:
     XPCWrappedNative(nsISupports* aIdentity,
@@ -1849,6 +1876,10 @@ private:
     virtual ~XPCWrappedNative();
 
     JSBool Init(XPCCallContext& ccx);
+
+    JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
+    JSBool InitTearOffJSObject(XPCCallContext& ccx, 
+                               XPCWrappedNativeTearOff* to);
 
     XPCJSRuntime* GetRuntime() const {return mProto->GetScope()->GetRuntime();}
 

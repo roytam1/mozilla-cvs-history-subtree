@@ -72,7 +72,9 @@ XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 void 
 XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 {
-//    NS_ASSERTION(!mGlobalJSObject && aGlobal, "bad");
+    // We allow for calling this more than once. This feature is used by
+    // nsXPConnect::InitClassesWithNewWrappedGlobal.
+    
     mGlobalJSObject = aGlobal;
 
     JSContext* cx = ccx.GetJSContext();

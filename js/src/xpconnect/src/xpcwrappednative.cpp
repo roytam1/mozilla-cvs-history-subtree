@@ -334,6 +334,25 @@ NS_INTERFACE_MAP_END_THREADSAFE
  *
  */
 
+/*
+ * A note on Tearoff states...
+ *
+ * Tearoffs have 4 pieces of data: mInterface, mWrapper, mNative, and mJSObject.
+ * 
+ * - If mInterface is null then the tearoff is not in use.
+ * - When the tearoff is first used we set mInterface.
+ * - mNative is set when the tearoof is holding a reference to that interface
+ *   pointer on the wrapped object. And cleared if that reference is realease.
+ * - mJSObject is set when we have created a JSObject to relect the interface
+ *   into JS. mWrapper is set at that time also to povide a back pointer to 
+ *   the wrapper (since the JSObject's private data points only to the tearoff).
+ * - mInterface is held for the lifetime of mJSObject. EXCEPT if the wrapper's
+ *   mFlatJSObject is collected. Then it is release and null'd. Since 
+ *   mFlatJSObject is the parent of mJSObject this case only happens if
+ *   mJSObject is also about to be colleded.
+ */
+
+
 nsrefcnt
 XPCWrappedNative::AddRef(void)
 {
@@ -370,17 +389,31 @@ XPCWrappedNative::Release(void)
 }
 
 void
-XPCWrappedNative::JSObjectFinalized(JSContext *cx, JSObject *obj)
+XPCWrappedNative::FlatJSObjectFinalized(JSContext *cx, JSObject *obj)
 {
-    // XXX fix me to deal with tearoff issues
+    // Iterate the tearoffs and null out each of their JSObject's privates.
+    // This will keep them from trying to access their pointers to the
+    // dying tearoff object. We can safely assume that those remaining 
+    // JSObjects are about to be finalized too.
 
-    NS_ASSERTION(mFlatJSObject == obj, "huh?");
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
+    {
+        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        {
+            JSObject* jso = to->GetJSObject();
+            if(jso)
+            {
+                to->JSObjectFinalized();
+                JS_SetPrivate(cx, jso, nsnull);
+            }
+        }
+    }
+
     mFlatJSObject = nsnull;
     Release();
 }
-
-
-
 
 /***************************************************************************/
 
@@ -413,9 +446,12 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
 
             XPCWrappedNativeTearOff* to =
                 (XPCWrappedNativeTearOff*) JS_GetPrivate(cx, cur);
+            if(!to)
+                return nsnull;
             if(pTearOff)
                 *pTearOff = to;
-            return to->GetWrapper();
+            
+            return (XPCWrappedNative*) JS_GetPrivate(cx, JS_GetParent(cx,cur));
         }
 
         cur = JS_GetPrototype(cx, cur);
@@ -431,7 +467,8 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
     if(!mSet->HasInterface(aInterface))
     {
         XPCNativeSet* newSet = 
-            XPCNativeSet::GetNewOrUsed(ccx, mSet, aInterface, mSet->Count());
+            XPCNativeSet::GetNewOrUsed(ccx, mSet, aInterface, 
+                                       mSet->GetInterfaceCount());
         if(!newSet)
             return JS_FALSE;
         mSet = newSet;
@@ -439,6 +476,20 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
     return JS_TRUE;        
 }
 
+JSBool 
+XPCWrappedNative::InitTearOffJSObject(XPCCallContext& ccx, 
+                                      XPCWrappedNativeTearOff* to)
+{
+    JSContext* cx = ccx.GetJSContext();
+    JSObject* obj = JS_NewObject(cx, &XPC_WN_Tearoff_JSClass,
+                                 GetScope()->GetPrototypeJSObject(),
+                                 mFlatJSObject);
+    
+    if(!obj || !JS_SetPrivate(cx, obj, to))
+        return JS_FALSE;
+    to->SetJSObject(obj);
+    return JS_TRUE;
+}
 
 /***************************************************************************/
 
@@ -447,16 +498,18 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
 void
 XPCWrappedNative::HandlePossibleNameCaseError(JSContext* cx,
                                               XPCNativeSet* set,
+                                              XPCNativeInterface* iface,
                                               jsid id)
 {
     XPCCallContext ccx(JS_CALLER, cx);
-    HandlePossibleNameCaseError(ccx, set, id);
+    HandlePossibleNameCaseError(ccx, set, iface, id);
 }
 
 // static
 void
 XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
                                               XPCNativeSet* set,
+                                              XPCNativeInterface* iface,
                                               jsid id)
 {
     if(!ccx.IsValid())
@@ -485,7 +538,8 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
         nsCRT::free(newStr);
         if(newJSStr &&
            JS_ValueToId(cx, STRING_TO_JSVAL(newJSStr), &newID) &&
-           newID && set->FindMember(newID, &member, &interface))
+           newID && (set ? set->FindMember(newID, &member, &interface) :
+                           (JSBool) iface->FindMember(newID)))
         {
             // found it!
             const char* ifaceName = interface->GetName();

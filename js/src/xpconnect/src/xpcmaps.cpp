@@ -270,7 +270,7 @@ hash_NativeKey(const void *key)
     else
     {
         XPCNativeInterface** Current = Set->GetInterfaceArray();
-        PRUint16 count = Set->Count() + (Addition ? 1 : 0);
+        PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
         for(PRUint16 i = 0; i < count; i++)
         {
             if(Addition && i == Position)
@@ -294,15 +294,15 @@ compare_NativeKeyToSet(const void *v1, const void *v2)
     
     if(!Set)
     {
-        return SetInTable->Count() == 1 &&
+        return SetInTable->GetInterfaceCount() == 1 &&
                *SetInTable->GetInterfaceArray() == Addition;
     }
 
     if(!Addition && Set == SetInTable)
         return 1;
         
-    PRUint16 count = Set->Count() + (Addition ? 1 : 0);
-    if(count != Set->Count())
+    PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
+    if(count != Set->GetInterfaceCount())
         return 0;
 
     PRUint16 Position = Key->GetPosition();

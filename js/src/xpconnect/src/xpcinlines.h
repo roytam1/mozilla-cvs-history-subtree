@@ -256,17 +256,17 @@ XPCCallContext::SetRetVal(jsval val)
 }
 
 inline jsword
-XPCCallContext::GetHackyResolveBugID() const
+XPCCallContext::GetResolveID() const
 {
     CHECK_STATE(HAVE_CONTEXT);
-    return mThreadData->GetHackyResolveBugID();
+    return mThreadData->GetResolveID();
 }
 
 inline jsword
-XPCCallContext::SetHackyResolveBugID(jsword id)
+XPCCallContext::SetResolveID(jsword id)
 {
     CHECK_STATE(HAVE_CONTEXT);
-    return mThreadData->SetHackyResolveBugID(id);
+    return mThreadData->SetResolveID(id);
 }
 
 inline XPCWrappedNative* 
@@ -335,8 +335,10 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
     {
         if(id == mInterfaces[i]->GetNameID())
         {
-            *pMember = nsnull;
-            *pInterfaceIndex = (PRUint16) i;
+            if(pMember) 
+                *pMember = nsnull;
+            if(pInterfaceIndex) 
+                *pInterfaceIndex = (PRUint16) i;
             return JS_TRUE;
         }
     }
@@ -347,8 +349,10 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
         XPCNativeMember* member = mInterfaces[i]->FindMember(id);
         if(member)
         {
-            *pMember = member;
-            *pInterfaceIndex = (PRUint16) i;
+            if(pMember) 
+                *pMember = member;
+            if(pInterfaceIndex) 
+                *pInterfaceIndex = (PRUint16) i;
             return JS_TRUE;
         }
     }
@@ -364,6 +368,19 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
         return JS_FALSE;
     *pInterface = mInterfaces[index];
     return JS_TRUE;
+}
+
+inline XPCNativeInterface* XPCNativeSet::FindNamedInterface(jsid id) const
+{
+    int count = (int) mInterfaceCount;
+    int i;
+
+    for(i = 0; i < count; i++)
+    {
+        if(id == mInterfaces[i]->GetNameID())
+            return mInterfaces[i];
+    }
+    return nsnull;
 }
 
 inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
@@ -420,7 +437,8 @@ XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
 
 inline XPCWrappedNativeTearOff*
 XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
-                              XPCNativeInterface* aInterface)
+                              XPCNativeInterface* aInterface,
+                              JSBool needJSObject /* = JS_FALSE */)
 {
     // XXX locking !
     XPCWrappedNativeTearOff* firstAvailable = nsnull;
@@ -435,7 +453,12 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
         {
             if(to->GetInterface() == aInterface)
+            {
+                if(needJSObject && !to->GetJSObject() && 
+                   !InitTearOffJSObject(ccx, to))
+                   return nsnull;
                 return to;
+            }
             if(!to->GetInterface() && !firstAvailable)
                 firstAvailable = to;
         }
@@ -468,9 +491,11 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         firstAvailable = newChunk->mTearOffs;
     }
 
-    firstAvailable->SetWrapper(this);
     firstAvailable->SetInterface(aInterface);
     firstAvailable->SetNative(obj);
+
+    if(needJSObject && !InitTearOffJSObject(ccx, firstAvailable))
+        return nsnull;
 
     return firstAvailable;
 }

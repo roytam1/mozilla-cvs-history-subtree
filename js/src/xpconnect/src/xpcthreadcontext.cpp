@@ -336,7 +336,7 @@ XPCPerThreadData::XPCPerThreadData()
         mJSContextStack(new XPCJSContextStack()),
         mNextThread(nsnull),
         mCallContext(nsnull),
-        mHackyResolveBugID(0)
+        mResolveID(0)
 {
     if(gLock)
     {
