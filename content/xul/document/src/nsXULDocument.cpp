@@ -4478,12 +4478,12 @@ nsXULDocument::CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aRe
         gHTMLElementFactory->CreateInstanceByTag(tagStr.GetUnicode(), getter_AddRefs(element));
         if (NS_FAILED(rv)) return rv;
 
-        rv = result->SetDocument(this, PR_FALSE);
-        if (NS_FAILED(rv)) return rv;
-
         result = do_QueryInterface(element);
         if (! result)
             return NS_ERROR_UNEXPECTED;
+
+        rv = result->SetDocument(this, PR_FALSE);
+        if (NS_FAILED(rv)) return rv;
 
         rv = AddAttributes(aPrototype, result);
         if (NS_FAILED(rv)) return rv;
