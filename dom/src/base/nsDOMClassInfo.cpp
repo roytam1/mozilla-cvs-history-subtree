@@ -1131,7 +1131,6 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     if (str == sTop_id          ||
         str == sScrollbars_id   ||
-        str == s_content_id     ||
         str == sContent_id      ||
         str == sSidebar_id      ||
         str == sPrompter_id     ||
