@@ -16,4 +16,4 @@ DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
 mozilla/lib/mac/Instrumentation
 mozilla/gfx2
 mozilla/modules/libpr0n
-SeaMonkeyAll
+SeaMonkeyAll,           CONRAD_PROMPT_1_BRANCH
