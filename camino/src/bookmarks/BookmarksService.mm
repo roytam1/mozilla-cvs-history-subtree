@@ -627,8 +627,8 @@ BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement)
   if (tagName == BookmarksService::gFolderAtom)
     return [NSImage imageNamed:@"folder"];
   
-  // fire off a proxy icon load
-  if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.site_icons" withSuccess:NULL])
+  // fire off a site icon load
+  if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.favicons" withSuccess:NULL])
   {
     nsAutoString href;
     content->GetAttr(kNameSpaceID_None, gHrefAtom, href);
