@@ -1337,8 +1337,9 @@ si_RestoreOldSignonDataFromBrowser
     si_lock_signon_list();
     user = si_GetUser(context, URLName, pickFirstUser);
     if (!user) {
-	*username = 0;
-	*password = 0;
+	/* leave original username and password from caller unchanged */
+	/* username = 0; */
+	/* *password = 0; */
 	si_unlock_signon_list();
 	return;
     }
@@ -1399,6 +1400,8 @@ SI_PromptPassword
     (MWContext *context, char *prompt, char *URLName, Bool pickFirstUser)
 {
     char *password=0, *username=0, *copyOfPrompt=0, *result;
+    char *urlname = URLName;
+    char *s;
 
     /* just for safety -- really is a problem in SI_Prompt */
     StrAllocCopy(copyOfPrompt, prompt);
@@ -1410,9 +1413,19 @@ SI_PromptPassword
 	return result;
     }
 
-    /* get previous password used  with this username */
+    /* get host part of URL which is of form user@host */
+    s = URLName;
+    while (*s && (*s != '@')) {
+	s++;
+    }
+    if (*s) {
+	/* @ found, host is URL part following the @ */
+	urlname = s+1; /* urlname is part of URL after the @ */
+    }
+
+    /* get previous password used with this username */
     si_RestoreOldSignonDataFromBrowser
-	(context, URLName, pickFirstUser, &username, &password);
+	(context, urlname, pickFirstUser, &username, &password);
     if (password && XP_STRLEN(password)) {
 	XP_FREEIF(copyOfPrompt);
 	return password;
@@ -1421,14 +1434,28 @@ SI_PromptPassword
     /* if no password found, get new password from user */
     password = FE_PromptPassword(context, copyOfPrompt);
 
-    /* if username wasn't even found, substitute the URLName */
+    /* if username wasn't even found, extract it from URLName */
     if (!username) {
-	StrAllocCopy(username, URLName);
+	s = URLName;
+
+	/* get to @ in URL if any */
+        while (*s && (*s != '@')) {
+	    s++;
+	}
+	if (*s) {
+	    /* @ found, username is URL part preceding the @ */
+            *s = '\0';
+	    StrAllocCopy(username, URLName);
+            *s = '@';
+	} else {
+	    /* no @ found, use entire URL as uername */
+	    StrAllocCopy(username, URLName);
+	}
     }
 
     /* remember these values for next time */
     if (password && XP_STRLEN(password)) {
-	si_RememberSignonDataFromBrowser (URLName, username, password);
+	si_RememberSignonDataFromBrowser (urlname, username, password);
     }
 
     /* cleanup and return */
