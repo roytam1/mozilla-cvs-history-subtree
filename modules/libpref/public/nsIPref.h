@@ -20,6 +20,7 @@
 #define nsIPref_h__
 
 #include "xp_core.h"
+#include "jsapi.h"
 #include "nsISupports.h"
 
 typedef int (*PrefChangedFunc) (const char *, void *); 
@@ -39,6 +40,7 @@ NS_DECLARE_ID(kPrefCID,
 #define NS_PREF_VALUE_CHANGED 1
 
 class nsIPref: public nsISupports {
+public:
   // Initialize/shutdown
   NS_IMETHOD Startup(char *filename) = 0;
   NS_IMETHOD Shutdown() = 0;
