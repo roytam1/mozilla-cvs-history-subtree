@@ -971,7 +971,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\addrfrm.cpp   
 	$(DEPTH)\cmd\winfe\addrdlg.cpp   
 	$(DEPTH)\cmd\winfe\abmldlg.cpp   
-	$(DEPTH)\cmd\winfe\advopdlg.cpp
+	$(DEPTH)\cmd\winfe\advprosh.cpp
 	$(DEPTH)\cmd\winfe\compbar.cpp
 	$(DEPTH)\cmd\winfe\compfe.cpp
 	$(DEPTH)\cmd\winfe\compfile.cpp
