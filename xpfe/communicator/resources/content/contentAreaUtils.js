@@ -197,6 +197,23 @@ function saveInternal(aURL, aDocument,
 function foundHeaderInfo(aSniffer, aData)
 {
   var contentType = aSniffer.contentType;
+  var contentEncodingType = aSniffer.contentEncodingType;
+
+  var shouldDecode = false;
+  // Are we allowed to decode?
+  try {
+    const helperAppService =
+      Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].
+        getService(Components.interfaces.nsIExternalHelperAppService);
+    var url = aSniffer.uri.QueryInterface(Components.interfaces.nsIURL);
+    var urlExt = url.fileExtension;
+    if (helperAppService.applyDecodingForType(contentType) &&
+        (!urlExt || helperAppService.applyDecodingForExtension(urlExt))) {
+      shouldDecode = true;
+    }
+  }
+  catch (e) {
+  }
 
   var fp = makeFilePicker();
   var titleKey = aData.filePickerTitle || "SaveLinkTitle";
@@ -206,7 +223,10 @@ function foundHeaderInfo(aSniffer, aData)
 
 
   var isDocument = aData.document != null && isDocumentType(contentType);
-  appendFiltersForContentType(fp, aSniffer.contentType,
+  if (!isDocument && !shouldDecode && contentEncodingType)
+    contentType = contentEncodingType;
+  
+  appendFiltersForContentType(fp, contentType,
                               isDocument ? MODE_COMPLETE : MODE_FILEONLY);  
 
   const prefSvcContractID = "@mozilla.org/preferences-service;1";
@@ -279,15 +299,9 @@ function foundHeaderInfo(aSniffer, aData)
   else 
     persist.persistFlags = flags | nsIWBP.PERSIST_FLAGS_FROM_CACHE;
 
-  try {
-    const helperAppService =
-      Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].getService(Components.interfaces.nsIExternalHelperAppService);
-    if (helperAppService.applyDecodingForType(persistArgs.contentType)) {
-      persist.persistFlags &= ~nsIWBP.PERSIST_FLAGS_NO_CONVERSION;
-    }
-  } catch (e) {
-  }      
-  
+  if (shouldDecode)
+    persist.persistFlags &= ~nsIWBP.PERSIST_FLAGS_NO_CONVERSION;
+    
   if (isDocument && fp.filterIndex != 1) {
     // Saving a Document, not a URI:
     var filesFolder = null;
@@ -356,6 +370,7 @@ nsHeaderSniffer.prototype = {
         this.contentType = channel.contentType;
         try {
           var httpChannel = channel.QueryInterface(Components.interfaces.nsIHttpChannel);
+          this.contentEncodingType = httpChannel.contentEncoding;
           this.mContentDisposition = httpChannel.getResponseHeader("content-disposition");
         }
         catch (e) {

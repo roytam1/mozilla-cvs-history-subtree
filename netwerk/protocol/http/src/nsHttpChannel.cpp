@@ -2405,6 +2405,37 @@ nsHttpChannel::GetCharset(char **value)
 }
 
 NS_IMETHODIMP
+nsHttpChannel::GetContentEncoding(char** aEncoding)
+{
+    NS_PRECONDITION(aEncoding, "Null out param");
+    const char *encoding = mResponseHead->PeekHeader(nsHttp::Content_Encoding);
+    if (!encoding) {
+        *aEncoding = nsnull;
+        return NS_OK;
+    }
+    
+    if (PL_strcasestr(encoding, "gzip")) {
+        *aEncoding = nsCRT::strdup(APPLICATION_GZIP);
+        return NS_OK;
+    }
+    if (PL_strcasestr(encoding, "compress")) {
+        *aEncoding = nsCRT::strdup(APPLICATION_COMPRESS);
+        return NS_OK;
+    }
+    if (PL_strcasestr(encoding, "deflate")) {
+        *aEncoding = nsCRT::strdup(APPLICATION_ZIP);
+        return NS_OK;
+    }
+#ifdef DEBUG
+    if (!PL_strcasestr(encoding, "identity")) {
+        NS_WARNING("Unknown encoding type");
+    }
+#endif
+    *aEncoding = nsnull;
+    return NS_OK;        
+}
+
+NS_IMETHODIMP
 nsHttpChannel::GetApplyConversion(PRBool *value)
 {
     NS_ENSURE_ARG_POINTER(value);
