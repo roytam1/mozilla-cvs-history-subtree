@@ -469,6 +469,11 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
   TranslateLineEnding(aBuf);
   TranslateLineEnding(aSignature);
 
+  // this is probably a mapi send, so we need to replace '\n' with <br>
+  // so that the line breaks won't be lost by html.
+  if (!aQuoted && aHTMLEditor)
+    aBuf.ReplaceSubstring(NS_LITERAL_STRING("\n").get(), NS_LITERAL_STRING("<br>").get());
+
   // We're going to be inserting stuff, and MsgComposeCommands
   // may have set the editor to readonly in the recycled case.
   // So set it back to writable.
@@ -905,7 +910,7 @@ nsresult nsMsgCompose::_SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity *ide
           // Apply entity conversion then convert to a mail charset. 
           PRBool isAsciiOnly;
           rv = nsMsgI18NSaveAsCharset(attachment1_type, m_compFields->GetCharacterSet(), 
-                                      NS_ConvertASCIItoUCS2(bodyString).get(), &outCString,
+                                      NS_ConvertUTF8toUTF16(bodyString).get(), &outCString,
                                       nsnull, &isAsciiOnly);
           if (NS_SUCCEEDED(rv)) 
           {
@@ -975,33 +980,40 @@ nsresult nsMsgCompose::_SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity *ide
 NS_IMETHODIMP nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode,  nsIMsgIdentity *identity, nsIMsgWindow *aMsgWindow, nsIMsgProgress *progress)
 {
   nsresult rv = NS_OK;
-  // if no editor, we're probably doing mapi, and don't need entity conversion
-  PRBool entityConversionDone = !m_editor; 
+  PRBool entityConversionDone = PR_FALSE;
   nsCOMPtr<nsIPrompt> prompt;
 
   // i'm assuming the compose window is still up at this point...
   if (!prompt && m_window)
      m_window->GetPrompter(getter_AddRefs(prompt));
 
-  if (m_editor && m_compFields && !m_composeHTML)
+  if (m_compFields && !m_composeHTML)
   {
-    // Reset message body previously stored in the compose fields
-    // There is 2 nsIMsgCompFields::SetBody() functions using a pointer as argument,
-    // therefore a casting is required.
-    m_compFields->SetBody((const char *)nsnull);
-
     // The plain text compose window was used
     const char contentType[] = "text/plain";
     nsAutoString msgBody;
     nsAutoString format; format.AssignWithConversion(contentType);
     PRUint32 flags = nsIDocumentEncoder::OutputFormatted;
+    if (m_editor)
+    {
+      // Reset message body previously stored in the compose fields
+      // There is 2 nsIMsgCompFields::SetBody() functions using a pointer as argument,
+      // therefore a casting is required.
+      m_compFields->SetBody((const char *)nsnull);
 
-    const char *charset = m_compFields->GetCharacterSet();
-    if(UseFormatFlowed(charset))
-        flags |= nsIDocumentEncoder::OutputFormatFlowed;
+      const char *charset = m_compFields->GetCharacterSet();
+      if(UseFormatFlowed(charset))
+          flags |= nsIDocumentEncoder::OutputFormatFlowed;
     
-    rv = m_editor->OutputToString(format, flags, msgBody);
+      rv = m_editor->OutputToString(format, flags, msgBody);
     
+    }
+    else
+    {
+      PRUnichar *msgBodyStr;
+      m_compFields->GetBody(&msgBodyStr);
+      msgBody.Adopt(msgBodyStr);
+    }
     if (NS_SUCCEEDED(rv) && !msgBody.IsEmpty())
     {
       // Convert body to mail charset not to utf-8 (because we don't manipulate body text)
@@ -1014,8 +1026,8 @@ NS_IMETHODIMP nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode,  nsIMsgIdentity
       SET_SIMULATED_ERROR(SIMULATED_SEND_ERROR_14, rv, NS_ERROR_UENC_NOMAPPING);
       if (NS_SUCCEEDED(rv) && nsnull != outCString) 
       {
-        // body contains multilingual data, confirm send to the user
-        if (NS_ERROR_UENC_NOMAPPING == rv) {
+        // body contains multilingual data, confirm send to the user, if not blind send
+        if (NS_ERROR_UENC_NOMAPPING == rv && m_editor) {
           PRBool proceedTheSend;
           rv = nsMsgAskBooleanQuestionByID(prompt, NS_ERROR_MSG_MULTILINGUAL_SEND, &proceedTheSend);
           if (!proceedTheSend) {

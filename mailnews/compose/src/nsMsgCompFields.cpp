@@ -469,11 +469,6 @@ NS_IMETHODIMP nsMsgCompFields::GetBodyIsAsciiOnly(PRBool *_retval)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompFields::SetBodyFromCString(const char *aBody)
-{
-  return SetBody(aBody);
-}
-
 NS_IMETHODIMP nsMsgCompFields::SetBody(const PRUnichar *value)
 {
   PR_FREEIF(m_body);
