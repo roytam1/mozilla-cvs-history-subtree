@@ -931,7 +931,7 @@ nsCacheService::SearchCacheDevices(nsCString * key, nsCacheStoragePolicy policy)
     nsCacheEntry * entry = nsnull;
 
     if ((policy == nsICache::STORE_ANYWHERE) || (policy == nsICache::STORE_IN_MEMORY)) {
-        if (mEnableMemoryDevice)
+        if (mEnableMemoryDevice && mMemoryDevice)
             entry = mMemoryDevice->FindEntry(key);
     }
 
