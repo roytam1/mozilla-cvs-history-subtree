@@ -46,8 +46,6 @@ function onLoad()
 
   repositionDialog();
   
-  document.documentElement.setAttribute("hidechrome", "true");
-
   initDialog();
 }
 
