@@ -140,12 +140,14 @@ NS_IMETHODIMP imgRequestProxy::GetName(PRUnichar * *aName)
 /* boolean isPending (); */
 NS_IMETHODIMP imgRequestProxy::IsPending(PRBool *_retval)
 {
+    NS_NOTYETIMPLEMENTED("imgRequestProxy::IsPending");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* readonly attribute nsresult status; */
 NS_IMETHODIMP imgRequestProxy::GetStatus(nsresult *aStatus)
 {
+    NS_NOTYETIMPLEMENTED("imgRequestProxy::GetStatus");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -174,12 +176,14 @@ NS_IMETHODIMP imgRequestProxy::Cancel(nsresult status)
 /* void suspend (); */
 NS_IMETHODIMP imgRequestProxy::Suspend()
 {
+    NS_NOTYETIMPLEMENTED("imgRequestProxy::Suspend");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* void resume (); */
 NS_IMETHODIMP imgRequestProxy::Resume()
 {
+    NS_NOTYETIMPLEMENTED("imgRequestProxy::Resume");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
