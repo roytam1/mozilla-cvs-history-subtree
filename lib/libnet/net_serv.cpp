@@ -101,9 +101,10 @@ NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl,
      *
      * Both the Data Consumer and the URL_Struct are freed in the 
      * bam_exit_routine(...)
+     * 
+     * The Reference count on pConn is already 1 so no AddRef() is necessary.
      */
     URL_s->fe_data = pConn;
-    pConn->AddRef();
 
     /* Start the URL load... */
     NET_GetURL (URL_s,                      /* URL_Struct      */
@@ -112,8 +113,6 @@ NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl,
                 bam_exit_routine);          /* Exit routine... */
 
     /* Remember, the URL_s may have been freed ! */
-
-    aUrl->Set(NET_URLStruct_Address(URL_s));
 
     return NS_OK;
 }
@@ -170,6 +169,8 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(nsIURL *aUrl,
          *
          * Both the ConnectionInfo and the URL_Struct are freed in the 
          * bam_exit_routine(...)
+         * The Reference count on pConn is already 1 so no AddRef() is 
+         * necessary.
          */
         URL_s->fe_data = pConn;
 
