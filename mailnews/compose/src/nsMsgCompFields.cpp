@@ -470,25 +470,25 @@ NS_IMETHODIMP nsMsgCompFields::GetReturnReceipt(PRBool *_retval)
 NS_IMETHODIMP nsMsgCompFields::SetSignMessage(PRBool value)
 {
   m_signMessage = value;
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgCompFields::GetSignMessage(PRBool *_retval)
 {
   *_retval = m_signMessage;
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgCompFields::SetAlwaysEncryptMessage(PRBool value)
 {
   m_alwaysEncryptMessage = value;
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgCompFields::GetAlwaysEncryptMessage(PRBool *_retval)
 {
   *_retval = m_alwaysEncryptMessage;
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgCompFields::SetAttachVCard(PRBool value)

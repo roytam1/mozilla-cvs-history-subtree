@@ -6,7 +6,6 @@
 #include "mimecryp.h"
 #include "nsICMS.h"
 
-
 /* The MimeEncryptedCMS class implements a type of MIME object where the
    object is passed through a CMS decryption engine to decrypt or verify
    signatures.  That module returns a new MIME object, which is then presented

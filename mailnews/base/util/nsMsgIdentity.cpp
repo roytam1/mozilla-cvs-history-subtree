@@ -440,19 +440,14 @@ NS_IMPL_IDPREF_BOOL(Valid, "valid");
 
 NS_IMPL_IDPREF_BOOL(IfPossibleEncryptMessage, 
                     "encrypt_mail_if_possible");
-
 NS_IMPL_IDPREF_BOOL(AlwaysEncryptMessage, 
                     "encrypt_mail_always");
-
 NS_IMPL_IDPREF_WSTR(EncryptionCertName, 
                    "encryption_cert_name");
-
 NS_IMPL_IDPREF_BOOL(SignMessage, 
                     "sign_mail");
-
 NS_IMPL_IDPREF_WSTR(SigningCertName, 
                    "signing_cert_name");
-
 
 nsresult 
 nsMsgIdentity::getFolderPref(const char *prefname, char **retval, PRBool mustHaveDefault)

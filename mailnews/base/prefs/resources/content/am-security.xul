@@ -43,12 +43,6 @@ Contributors:
     <groupbox orient="vertical" id="encryption.titlebox"  hidable="true" hidefor="nntp">
       <label value="&encryptionGroupTitle.label;"/>
 
-    <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
-              id="encryption.ifPossibleEncryptMessage" disabled="true" label="&ifPossibleEncryptMessage.label;" />
-
-    <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
-              id="encryption.alwaysEncryptMessage" label="&alwaysEncryptMessage.label;" />
-
     <separator class="thin" hidable="true" hidefor="nntp"/>
     <html iscontrolcontainer="true" hidable="true" hidefor="nntp"> &encryptionCert.message;</html>
     <separator class="thin" hidable="true" hidefor="nntp"/>
@@ -60,14 +54,18 @@ Contributors:
               label="&certificate.button;"
               oncommand="smimeSelectCert('encryption.certificateName')"/>
     </hbox>
+
+    <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
+              id="encryption.ifPossibleEncryptMessage" disabled="true" label="&ifPossibleEncryptMessage.label;" />
+
+    <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
+              id="encryption.alwaysEncryptMessage" label="&alwaysEncryptMessage.label;" />
     </groupbox>    
     
     <separator class="thin"/>
     <groupbox orient="vertical" id="signing.titlebox">
       <label value="&signingGroupTitle.label;"/>
       
-    <checkbox iscontrolcontainer="true" id="signing.signMessage" label="&signMessage.label;" />
-
     <separator class="thin"/>
     <html>&signingCert.message;</html>
     <separator class="thin"/>
@@ -79,5 +77,7 @@ Contributors:
               label="&certificate.button;"
               oncommand="smimeSelectCert('signing.certificateName')"/>
     </hbox>
+
+    <checkbox iscontrolcontainer="true" id="signing.signMessage" label="&signMessage.label;" />
     </groupbox>
 </window>

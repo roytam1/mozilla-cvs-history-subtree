@@ -24,7 +24,7 @@ struct MimeMultipartSignedCMSClass {
 							char **sender_email_addr_return,
 							PRInt32 *decode_error_ret,
 							PRInt32 *verify_error_ret,
-                            PRBool * ci_is_encrypted);
+              PRBool * ci_is_encrypted);
 };
 
 extern MimeMultipartSignedCMSClass mimeMultipartSignedCMSClass;

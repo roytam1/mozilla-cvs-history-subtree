@@ -59,7 +59,7 @@ CPPSRCS		= \
 		nsSmtpServer.cpp \
 		nsSmtpDataSource.cpp \
 		nsSmtpDelegateFactory.cpp \
-                nsMsgComposeSecure.cpp \
+        nsMsgComposeSecure.cpp \
 		$(NULL)
 
 EXPORTS		= \

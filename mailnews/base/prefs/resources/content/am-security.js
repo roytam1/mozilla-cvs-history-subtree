@@ -215,7 +215,7 @@ function smimeSelectCert(smime_cert)
       if (smime_cert == "encryption.certificateName") {
         document.getElementById("encryption.alwaysEncryptMessage").removeAttribute("disabled");
       } else {
-        document.getElementById("encryption.signMessage").removeAttribute("disabled");
+        document.getElementById("signing.signMessage").removeAttribute("disabled");
       }
 	  }
   }

@@ -62,6 +62,16 @@ nsMsgComposeSecure::nsMsgComposeSecure()
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
+  mStream = 0;
+  mDataHash = 0;
+  mSigEncoderData = 0;
+  mMultipartSignedBoundary  = 0;
+  mSelfSigningCert = 0;
+  mSelfEncryptionCert = 0;
+  mCerts = 0;
+  mEncryptionCinfo = 0;
+  mEncryptionContext = 0;
+  mCryptoEncoderData = 0;
 }
 
 nsMsgComposeSecure::~nsMsgComposeSecure()
@@ -113,27 +123,27 @@ NS_IMETHODIMP nsMsgComposeSecure::BeginCryptoEncapsulation(nsOutputFileStream * 
   switch (mCryptoState)
 	{
 	case mime_crypto_clear_signed:
-	  rv = MimeInitMultipartSigned(PR_TRUE);
-	  break;
+    rv = MimeInitMultipartSigned(PR_TRUE);
+    break;
 	case mime_crypto_opaque_signed:
-	  PR_ASSERT(0);    /* #### no api for this yet */
-	  rv = -1;
+    PR_ASSERT(0);    /* #### no api for this yet */
+    rv = -1;
 	  break;
 	case mime_crypto_signed_encrypted:
-	  rv = MimeInitEncryption(PR_TRUE);
+    rv = MimeInitEncryption(PR_TRUE);
 	  break;
 	case mime_crypto_encrypted:
-	  rv = MimeInitEncryption(PR_FALSE);
+    rv = MimeInitEncryption(PR_FALSE);
 	  break;
 	case mime_crypto_none:
 	  /* This can happen if mime_crypto_hack_certs() decided to turn off
 		 encryption (by asking the user.) */
-	  rv = 1;
-	  break;
-	default:
-	  PR_ASSERT(0);
-	  break;
-	}
+    rv = 1;
+    break;
+  default:
+    PR_ASSERT(0);
+    break;
+  }
 
 FAIL:
   return rv;
@@ -147,14 +157,14 @@ NS_IMETHODIMP nsMsgComposeSecure::FinishCryptoEncapsulation(PRBool aAbort)
   if (!aAbort) {
 	  switch (mCryptoState) {
 		case mime_crypto_clear_signed:
-		  rv = MimeFinishMultipartSigned (PR_TRUE);
-		  break;
-		case mime_crypto_opaque_signed:
-		  PR_ASSERT(0);    /* #### no api for this yet */
-		  rv = NS_ERROR_FAILURE;
-		  break;
-		case mime_crypto_signed_encrypted:
-		  rv = MimeFinishEncryption (PR_TRUE);
+      rv = MimeFinishMultipartSigned (PR_TRUE);
+      break;
+    case mime_crypto_opaque_signed:
+      PR_ASSERT(0);    /* #### no api for this yet */
+      rv = NS_ERROR_FAILURE;
+      break;
+    case mime_crypto_signed_encrypted:
+      rv = MimeFinishEncryption (PR_TRUE);
 		  break;
 		case mime_crypto_encrypted:
 		  rv = MimeFinishEncryption (PR_FALSE);

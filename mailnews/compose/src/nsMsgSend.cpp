@@ -2711,8 +2711,10 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields)
 	mCompFields->SetUseMultipartAlternative(fields->GetUseMultipartAlternative());
 	mCompFields->SetReturnReceipt(fields->GetReturnReceipt());
 	mCompFields->SetUuEncodeAttachments(fields->GetUuEncodeAttachments());
+
   mCompFields->SetAlwaysEncryptMessage(fields->GetAlwaysEncryptMessage());
   mCompFields->SetSignMessage(fields->GetSignMessage());
+
 
 	//
   // Check the fields for legitimacy...

@@ -386,7 +386,7 @@ MimeMultCMS_generate (void *crypto_closure)
     wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
     prompter->Alert(0, msg.get());
 
-	  rv = data->content_info->VerifyDetachedSignature();
+	  rv = data->content_info->VerifyDetachedSignature(data->item_data, data->item_len);
 	  if (NS_FAILED(rv)) {
       if (!data->verify_error)
         data->verify_error = PR_GetError();

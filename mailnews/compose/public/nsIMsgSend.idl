@@ -249,5 +249,4 @@ interface nsIMsgSend : nsISupports
     [noscript] attribute nsresult status;
 
     [noscript] attribute nsIMsgComposeSecure cryptoclosure;
-
 };

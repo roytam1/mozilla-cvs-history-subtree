@@ -31,6 +31,7 @@
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/securityOverlay.xul"?>
+
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
@@ -346,7 +347,7 @@
 
           <menuseparator/>
           <menu label="&securityMenu.label;">
-            <menupopup>
+            <menupopup onpopupshowing="setSecuritySettings()">
             <menuitem id="menu_securityEncryptIfPossible" type="checkbox" label="&menu_securityEncryptIfPossible.label;" disabled="true"/>
             <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="encryptMessage()"/>
             <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="signMessage()"/>
@@ -481,7 +482,6 @@
                    mode="normal" value="0" statusbar="true"/>
     <statusbarpanel checkfunc="MailCheckBeforeOfflineChange()" id="offline-status" class="statusbarpanel-icononly"/> 
   </statusbar>
-
 
 </window>
 

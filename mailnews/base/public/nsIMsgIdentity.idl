@@ -122,7 +122,6 @@ interface nsIMsgIdentity : nsISupports {
   attribute boolean signMessage;
   attribute wstring signingCertName;
 
-  
   /* copy the attributes of the identity we pass in */
   void copy(in nsIMsgIdentity identity);
 

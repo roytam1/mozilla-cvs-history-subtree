@@ -2146,8 +2146,8 @@ function LoadIdentity(startup)
       }
     }
 
-    // Set our security options
-    setSecuritySettings();
+    // Initialize our security options
+    initSecuritySettings();
 }
 
 function setupAutocomplete()
@@ -2329,6 +2329,12 @@ function DisplaySaveFolderDlg(folderURI)
 
 function encryptMessage()
 {
+    if (gCurrentIdentity.encryptionCertName == null) {
+        alert("You must choose an encryption certificate first");
+        document.getElementById("menu_securityEncryptAlways").removeAttribute("checked");
+        return;
+    }
+
     var msgCompFields = msgCompose.compFields;
     if (msgCompFields) {
         if (msgCompFields.alwaysEncryptMessage) {
@@ -2341,6 +2347,12 @@ function encryptMessage()
 
 function signMessage()
 {
+    if (gCurrentIdentity.signingCertName == null) {
+        alert("You must choose a signing certificate first");
+        document.getElementById("menu_securitySign").removeAttribute("checked");
+        return;
+    }
+
     var msgCompFields = msgCompose.compFields;
     if (msgCompFields) {
         if (msgCompFields.signMessage) {
@@ -2351,14 +2363,15 @@ function signMessage()
     }
 }
 
-function setSecuritySettings()
+function initSecuritySettings()
 {
     document.getElementById("menu_securityEncryptAlways").setAttribute("checked", gCurrentIdentity.alwaysEncryptMessage);
-    if (gCurrentIdentity.encryptionCertName == null) {
-        document.getElementById("menu_securityEncryptAlways").setAttribute("disabled", "true");
-    }
     document.getElementById("menu_securitySign").setAttribute("checked", gCurrentIdentity.signMessage);
-    if (gCurrentIdentity.signingCertName == null) {
-        document.getElementById("menu_securitySign").setAttribute("disabled", "true");
-    }
+}
+
+function setSecuritySettings()
+{
+    var msgCompFields = msgCompose.compFields;
+    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", msgCompFields.alwaysEncryptMessage);
+    document.getElementById("menu_securitySign").setAttribute("checked", msgCompFields.signMessage);
 }

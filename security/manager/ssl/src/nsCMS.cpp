@@ -88,6 +88,9 @@ nsCMSMessage::nsCMSMessage(NSSCMSMessage *aCMSMsg)
 
 nsCMSMessage::~nsCMSMessage()
 {
+  if (m_cmsMsg) {
+    NSS_CMSMessage_Destroy(m_cmsMsg);
+  }
 }
 
 NS_IMETHODIMP nsCMSMessage::VerifySignature()
@@ -115,13 +118,48 @@ NS_IMETHODIMP nsCMSMessage::ContentIsSigned(int *)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
+NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature(unsigned char* aDigestData, PRUint32 aDigestDataLen)
 {
-  if (NSS_CMSMessage_IsSigned(m_cmsMsg) == PR_TRUE) {
-    return NS_OK;
-  } else {
+  NSSCMSContentInfo *cinfo = nsnull;
+  NSSCMSSignedData *sigd = nsnull;
+  NSSCMSSignerInfo *si;
+  SECItem digest;
+  PRInt32 nsigners;
+  nsresult rv = NS_ERROR_FAILURE;
+
+  digest.data = aDigestData;
+  digest.len = aDigestDataLen;
+
+  if (NSS_CMSMessage_IsSigned(m_cmsMsg) == PR_FALSE) {
     return NS_ERROR_FAILURE;
+  } 
+
+  cinfo = NSS_CMSMessage_ContentLevel(m_cmsMsg, 0);
+  sigd = (NSSCMSSignedData*)NSS_CMSContentInfo_GetContent(cinfo);
+  if (sigd == nsnull) {
+    goto loser;
   }
+
+  if (NSS_CMSSignedData_SetDigestValue(sigd, SEC_OID_SHA1, &digest)) {
+    goto loser;
+  }
+
+  // Import certs //
+  if (NSS_CMSSignedData_ImportCerts(sigd, CERT_GetDefaultCertDB(), certUsageEmailSigner, PR_TRUE) != SECSuccess) {
+    goto loser;
+  }
+
+  nsigners = NSS_CMSSignedData_SignerInfoCount(sigd);
+  PR_ASSERT(nsigners > 0);
+
+  si = NSS_CMSSignedData_GetSignerInfo(sigd, 0);
+  if (NSS_CMSSignedData_VerifySignerInfo(sigd, 0, CERT_GetDefaultCertDB(), certUsageEmailSigner) != SECSuccess) {
+    goto loser;
+  }
+
+  rv = NS_OK;
+loser:
+  return rv;
 }
 
 NS_IMETHODIMP nsCMSMessage::CreateEncrypted(nsISupportsArray * aRecipientCerts)
@@ -286,7 +324,10 @@ NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert*
 
   return NS_OK;
 loser:
-  NSS_CMSMessage_Destroy(m_cmsMsg);
+  if (m_cmsMsg) {
+    NSS_CMSMessage_Destroy(m_cmsMsg);
+    m_cmsMsg = nsnull;
+  }
   return NS_ERROR_FAILURE;
 }
 

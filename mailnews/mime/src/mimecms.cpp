@@ -25,7 +25,6 @@ static void MimeCMS_get_content_info (MimeObject *,
 										nsICMSMessage **,
 										char **, PRInt32 *, PRInt32 *, PRBool *);
 
-
 extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 
 static int
@@ -298,9 +297,9 @@ MimeCMSHeadersAndCertsMatch(MimeObject *obj,
   /* If there is a sender but no from, and it doesn't match, then error. */
   else if (sender_name && *sender_name)
 	{
-	  if (!!strcasecomp(cert_name, sender_name))
-		match = PR_FALSE;
-	}
+    if (!!strcasecomp(cert_name, sender_name))
+    match = PR_FALSE;
+  }
   /* Else there are no names at all -- consider that a match. */
 #endif /* 0 */
 
@@ -315,7 +314,6 @@ MimeCMSHeadersAndCertsMatch(MimeObject *obj,
 
   return match;
 }
-
 
 static void *
 MimeCMS_init(MimeObject *obj,
@@ -370,7 +368,6 @@ MimeCMS_init(MimeObject *obj,
   return data;
 }
 
-
 static int
 MimeCMS_write (const char *buf, PRInt32 buf_size, void *closure)
 {
@@ -388,7 +385,6 @@ MimeCMS_write (const char *buf, PRInt32 buf_size, void *closure)
 
   return 0;
 }
-
 
 static int
 MimeCMS_eof (void *crypto_closure, PRBool abort_p)
@@ -514,7 +510,6 @@ MimeCMS_MakeSAURL(MimeObject *obj)
 	}
   return stamp_url;
 }
-
 
 static char *
 MimeCMS_generate (void *crypto_closure)
