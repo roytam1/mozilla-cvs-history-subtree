@@ -151,18 +151,24 @@ menuitem.bookmark-item {
   -moz-box-orient: vertical;
   min-width: 0px;
   list-style-image: url("chrome://browser/skin/Toolbar.png");
+}
 
+.toolbarbutton-1 .toolbarbutton-icon {
+  margin-right: 0px;
 }
 
 .toolbarbutton-1, .toolbarbutton-menubutton-button {
-  padding: 7px;
+  padding: 5px;
+	margin-right: 2px;
 }
 
+.toolbarbutton-1:active,
 .toolbarbutton-1[checked="true"], 
 .toolbarbutton-1[open="true"], 
+.toolbarbutton-menubutton-button:active,
 .toolbarbutton-menubutton-button[checked="true"], 
 .toolbarbutton-menubutton-button[open="true"] {
-  padding: 8px 6px 6px 8px !important;
+  padding: 6px 4px 4px 6px !important;
 }
 
 .toolbarbutton-1[type="menu-button"] {
@@ -381,6 +387,38 @@ toolbar[iconsize="small"] .toolbarbutton-1 {
   -moz-box-orient: vertical;
   min-width: 0px;
   list-style-image: url("chrome://browser/skin/Toolbar-small.png");
+}
+
+toolbar[iconsize="small"] .toolbarbutton-1 .toolbarbutton-icon {
+  margin-right: 0px;
+}
+
+toolbar[iconsize="small"] .toolbarbutton-1, toolbar[iconsize="small"] .toolbarbutton-menubutton-button {
+  padding: 3px;
+	margin-right: 2px;
+}
+
+toolbar[iconsize="small"] .toolbarbutton-1:active,
+toolbar[iconsize="small"] .toolbarbutton-1[checked="true"], 
+toolbar[iconsize="small"] .toolbarbutton-1[open="true"], 
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button:active,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button[checked="true"], 
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button[open="true"] {
+  padding: 4px 2px 2px 4px !important;
+}
+
+toolbar[iconsize="small"] .toolbarbutton-1[type="menu-button"] {
+  padding: 0px !important;
+}
+
+toolbar[iconsize="small"] .toolbarbutton-menubutton-stack,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-stack:hover:active,
+toolbar[iconsize="small"] .toolbarbutton-menubutton-button:hover:active {
+  margin: 0 !important;
+  display: -moz-box;
 }
 
 /* back button-- */
@@ -753,23 +791,39 @@ toolbar[mode="text"] #navigator-throbber[busy="true"] {
   -moz-opacity: 0.5;
 }
 
+.tabs-closebutton > .toolbarbutton-icon {
+  margin-right: 0px !important;
+  padding-right: 2px !important;
+  padding-left: 2px !important;
+}
+
 .tabs-closebutton {
   list-style-image: url("chrome://browser/skin/Close-tab.png");
+	-moz-appearance: none;
   -moz-image-region: rect(0px, 16px, 16px, 0px);
-  -moz-appearance: none;
-  padding: 0px !important;
-  border: none !important;
-  margin-right: 2px;
+  padding-right: 2px !important;
+  padding-left: 2px !important;
+	border: none !important;
 }
 
 .tabs-closebutton:hover {
   -moz-image-region: rect(0px, 32px, 16px, 16px);
-  padding: 0px !important;
 }
 
 .tabs-closebutton:hover:active {
   -moz-image-region: rect(0px, 48px, 16px, 32px);
-  padding: 0px !important;
+	padding-top: 1px !important;
+}
+
+#sidebar-box .tabs-closebutton {
+  margin-bottom: 0px !important;
+  padding-right: 2px !important;
+  padding-left: 2px !important;
+}
+
+#FindToolbar > .tabs-closebutton {
+	border: 1px solid transparent;
+  padding: 3px 2px 4px 2px !important;
 }
 
 toolbarbutton.chevron {
@@ -916,5 +970,3 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 {
   -moz-appearance: textfield;
 }
-
-
