@@ -26,16 +26,32 @@
                   class="indented"
 #endif
         >
-          <xul:hbox flex="1">
+          <xul:hbox flex="1" align="center">
             <xul:progressmeter mode="normal" value="0" flex="1"
                               xbl:inherits="value=progress,mode=progressmode"/>
             <xul:label xbl:inherits="value=progress" class="progressField"/>
           </xul:hbox>
           <xul:label xbl:inherits="value=status"/>
         </xul:vbox>
-        <xul:hbox align="start">
-          <xul:label value="&cancel.label;" class="link" onclick="this.parentNode.parentNode.parentNode.cancel();"/>
-        </xul:hbox>
+        <xul:label xbl:inherits="value=state"/>
+        <xul:deck xbl:inherits="index=state">
+          <xul:vbox align="start">
+            <xul:label value="&cancel.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.cancel();"/>
+          </xul:vbox>
+          <xul:vbox align="start">
+            <xul:label value="&show.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.show();"/>
+            <xul:label value="&open.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.open();"/>
+          </xul:vbox>
+          <xul:vbox align="start">
+            <xul:label value="&retry.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.retry();"/>
+            <xul:label value="&close.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.close();"/>
+          </xul:vbox>
+          <xul:vbox align="start">
+            <xul:label value="&retry.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.retry();"/>
+            <xul:label value="&close.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.close();"/>
+          </xul:vbox>
+
+        </xul:deck>
       </xul:hbox>
     </content>
     <implementation>           
@@ -49,6 +65,39 @@
         ]]>
         </body>
       </method>
+      
+      <method name="show">
+        <body>
+        <![CDATA[
+          dump("*** SHOW\n");
+        ]]>
+        </body>
+      </method>
+      
+      <method name="open">
+        <body>
+        <![CDATA[
+          dump("*** RUN\n");
+        ]]>
+        </body>
+      </method>
+      
+      <method name="retry">
+        <body>
+        <![CDATA[
+          dump("*** RETRY\n");
+        ]]>
+        </body>
+      </method>
+      
+      <method name="close">
+        <body>
+        <![CDATA[
+          dump("*** CLOSE\n");
+        ]]>
+        </body>
+      </method>
+      
     </implementation>
   </binding>
 </bindings>

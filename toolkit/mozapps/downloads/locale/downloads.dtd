@@ -15,6 +15,10 @@
 <!ENTITY launch.label                     "Launch">
 <!ENTITY divider.label                    "-">
 <!ENTITY show.label                       "Show">
+<!ENTITY open.label                       "Open">
+<!ENTITY retry.label                      "Retry">
+<!ENTITY close.label                      "Close">
+
 <!ENTITY failed.label                     "Failed">
 
 <!ENTITY downloads.title                  "Downloads">
