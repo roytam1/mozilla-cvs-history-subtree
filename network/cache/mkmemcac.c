@@ -1271,16 +1271,17 @@ typedef struct _MemCacheConData {
 	NET_StreamClass *stream;
 } MemCacheConData;
 
-#define CD_CUR_LIST_PTR  connection_data->cur_list_ptr
-#define CD_BYTES_WRITTEN_IN_SEGMENT connection_data->bytes_written_in_segment
-#define CD_STREAM        connection_data->stream
+#if 0 /* Removed hard to debug defines */
+#define connection_data->cur_list_ptr  connection_data->cur_list_ptr
+#define connection_data->bytes_written_in_segment connection_data->bytes_written_in_segment
+#define connection_data->stream        connection_data->stream
 
-#define CE_URL_S          cur_entry->URL_s
-#define CE_WINDOW_ID      cur_entry->window_id
-#define CE_FORMAT_OUT     cur_entry->format_out
-#define CE_STATUS         cur_entry->status
-#define CE_BYTES_RECEIVED cur_entry->bytes_received
-
+#define cur_entry->URL_s          cur_entry->URL_s
+#define cur_entry->window_id      cur_entry->window_id
+#define cur_entry->format_out     cur_entry->format_out
+#define cur_entry->status         cur_entry->status
+#define cur_entry->bytes_received cur_entry->bytes_received
+#endif
 /* begin the load, This is called from NET_GetURL
  */
 #ifdef MOZ_MAIL_NEWS
@@ -1306,12 +1307,12 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 	if(!connection_data)
 	  {
-		CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
-		CE_STATUS = MK_OUT_OF_MEMORY;
-		return (CE_STATUS);
+		cur_entry->URL_s->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
+		cur_entry->status = MK_OUT_OF_MEMORY;
+		return (cur_entry->status);
 	  }
 
-	if (!CE_URL_S->memory_copy)
+	if (!cur_entry->URL_s->memory_copy)
 	{
 		/* the memory_copy has been freed before fully
 		 * making it into the cache.  In other words, it's
@@ -1322,8 +1323,8 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		 * and we have not set the delete_me flag.
 		 */
 		PR_ASSERT(FALSE);
-		CE_STATUS = MK_OBJECT_NOT_IN_CACHE;
-		return (CE_STATUS);
+		cur_entry->status = MK_OBJECT_NOT_IN_CACHE;
+		return (cur_entry->status);
 	}
 
     cur_entry->protocol = MEMORY_CACHE_TYPE_URL;
@@ -1331,12 +1332,12 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 	/* point to the first list struct that contains data
 	 */
-	CD_CUR_LIST_PTR = CE_URL_S->memory_copy->list->next;
-	CD_BYTES_WRITTEN_IN_SEGMENT = 0;
+	connection_data->cur_list_ptr = cur_entry->URL_s->memory_copy->list->next;
+	connection_data->bytes_written_in_segment = 0;
 
 	/* put a read lock on the data
 	 */
-	CE_URL_S->memory_copy->mem_read_lock++;
+	cur_entry->URL_s->memory_copy->mem_read_lock++;
 
 	cur_entry->con_data = connection_data;
 
@@ -1344,11 +1345,11 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 	cur_entry->socket = NULL;
 
-	NET_SetCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+	NET_SetCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
     cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
 	
-	FE_EnableClicking(CE_WINDOW_ID);
+	FE_EnableClicking(cur_entry->window_id);
 
 #ifdef MOZ_MAIL_NEWS    
     if (cur_entry->format_out == FO_PRESENT)
@@ -1363,7 +1364,7 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
             return cur_entry->status;
           }
       }
-      else if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
+      else if (!PL_strncmp(cur_entry->URL_s->address, "Mailbox://", 10))
       {
         /* #### DISGUSTING KLUDGE to make cacheing work for imap articles. */
         cur_entry->status = IMAP_InitializeImapFeData (cur_entry);
@@ -1378,20 +1379,20 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 
 	/* open the outgoing stream
 	 */
-    CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, CE_URL_S, CE_WINDOW_ID);
-	if(!CD_STREAM)
+    connection_data->stream = NET_StreamBuilder(cur_entry->format_out, cur_entry->URL_s, cur_entry->window_id);
+	if(!connection_data->stream)
 	  {
-        NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+        NET_ClearCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
 		PR_Free(connection_data);
 
-		CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_UNABLE_TO_CONVERT);
-        CE_STATUS = MK_UNABLE_TO_CONVERT;
-        return (CE_STATUS);
+		cur_entry->URL_s->error_msg = NET_ExplainErrorDetails(MK_UNABLE_TO_CONVERT);
+        cur_entry->status = MK_UNABLE_TO_CONVERT;
+        return (cur_entry->status);
 	  }
 
-	if (!CE_URL_S->load_background)
-        FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+	if (!cur_entry->URL_s->load_background)
+        FE_GraphProgressInit(cur_entry->window_id, cur_entry->URL_s, cur_entry->URL_s->content_length);
 
 	/* process one chunk of the
 	 * cache file so that
@@ -1399,14 +1400,14 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 	 * when images are in the cache
 	 */
 #define FIRST_BUFF_SIZE 1024
-	if (CE_URL_S->memory_copy->completed)
+	if (cur_entry->URL_s->memory_copy->completed)
 	{
-		mem_seg = (net_MemorySegment *) CD_CUR_LIST_PTR->object;
+		mem_seg = (net_MemorySegment *) connection_data->cur_list_ptr->object;
 
 		mem_seg_ptr = mem_seg->segment;
 
 		chunk_size = MIN(FIRST_BUFF_SIZE, 	
-						 mem_seg->in_use-CD_BYTES_WRITTEN_IN_SEGMENT);
+						 mem_seg->in_use-connection_data->bytes_written_in_segment);
 
 		/* malloc this first buffer because we can't use
  		 * the NET_SocketBuffer in calls from NET_GetURL 
@@ -1417,56 +1418,56 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		if(!first_buffer)
 		  {
 			PR_Free(connection_data);
-			CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
+			cur_entry->URL_s->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
 			return(MK_OUT_OF_MEMORY);
 		  }
 
 		/* copy the segment because the parser will muck with it
 		 */
 		memcpy(first_buffer,
-				  mem_seg_ptr+CD_BYTES_WRITTEN_IN_SEGMENT,
+				  mem_seg_ptr+connection_data->bytes_written_in_segment,
 				  (size_t) chunk_size);
 
-		CD_BYTES_WRITTEN_IN_SEGMENT += chunk_size;
+		connection_data->bytes_written_in_segment += chunk_size;
 
-		CE_STATUS = (*CD_STREAM->put_block)(CD_STREAM,
+		cur_entry->status = (*connection_data->stream->put_block)(connection_data->stream,
 											first_buffer,
 											chunk_size);
-		if(CE_STATUS < 0)
+		if(cur_entry->status < 0)
 		  {
-			NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+			NET_ClearCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
-			if (!CE_URL_S->load_background)
-				FE_GraphProgressDestroy(CE_WINDOW_ID,
-										CE_URL_S,
-										CE_URL_S->content_length,
-										CE_BYTES_RECEIVED);
+			if (!cur_entry->URL_s->load_background)
+				FE_GraphProgressDestroy(cur_entry->window_id,
+										cur_entry->URL_s,
+										cur_entry->URL_s->content_length,
+										cur_entry->bytes_received);
 
 			PR_Free(connection_data);
 
-			return (CE_STATUS);
+			return (cur_entry->status);
 		  }
 
-		CE_BYTES_RECEIVED += chunk_size;
+		cur_entry->bytes_received += chunk_size;
 
 		/* check to see if we need to advance the pointer yet.
 		 * should hardly ever happen here since the first buffer
 		 * is so small
 		 */
-		if(CD_BYTES_WRITTEN_IN_SEGMENT >= mem_seg->in_use)
+		if(connection_data->bytes_written_in_segment >= mem_seg->in_use)
 		  {
-			CD_CUR_LIST_PTR = CD_CUR_LIST_PTR->next;
-			CD_BYTES_WRITTEN_IN_SEGMENT = 0;
+			connection_data->cur_list_ptr = connection_data->cur_list_ptr->next;
+			connection_data->bytes_written_in_segment = 0;
 		  }
 
 		PR_Free(first_buffer);
 	}
 	else
 	{
-		CE_STATUS = 0;
+		cur_entry->status = 0;
 	}
 
-    return(CE_STATUS);
+    return(cur_entry->status);
 	
 }
 
@@ -1483,40 +1484,40 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	char  *mem_seg_ptr;
 
 
-	if (!CE_URL_S->memory_copy)
+	if (!cur_entry->URL_s->memory_copy)
 	{
 		/* the memory_copy has been freed before fully
 		 * making it into the cache.  In other words, it's
 		 * been aborted.  Abort this load then, also,
 		 * since it's a concurrent load.
-		 * We know that CE_URL_S->memory_copy will be NULL
+		 * We know that cur_entry->URL_s->memory_copy will be NULL
 		 * if it's been removed, because we have a read lock
 		 * on the entry, and that will cause the delete_me
 		 * flag to be set, rather than just deleting the
 		 * object initially.  We catch the delete_me flag
-		 * here, and set CE_URL_S->memory_copy to NULL.
+		 * here, and set cur_entry->URL_s->memory_copy to NULL.
 		 */
-		CE_STATUS = MK_OBJECT_NOT_IN_CACHE;
-		return (CE_STATUS);
+		cur_entry->status = MK_OBJECT_NOT_IN_CACHE;
+		return (cur_entry->status);
 	}
 
 
 	/* wait until the object has been fully inserted into
 	 * the cache.
 	 */
-	if (!CE_URL_S->memory_copy->completed &&
-		!(CE_URL_S->memory_copy->delete_me &&
-		  CE_URL_S->memory_copy->aborted))
+	if (!cur_entry->URL_s->memory_copy->completed &&
+		!(cur_entry->URL_s->memory_copy->delete_me &&
+		  cur_entry->URL_s->memory_copy->aborted))
 	{
 		/* normal case - we are still waiting for it to complete */
 		return 0;
 	}
 
-	if(!CD_CUR_LIST_PTR ||
-		(CE_URL_S->memory_copy->aborted &&
-		  CE_URL_S->memory_copy->delete_me))
+	if(!connection_data->cur_list_ptr ||
+		(cur_entry->URL_s->memory_copy->aborted &&
+		  cur_entry->URL_s->memory_copy->delete_me))
 	  {
-		/* when CD_CUR_LIST_PTR turns NULL we are at the end
+		/* when connection_data->cur_list_ptr turns NULL we are at the end
  		 * of the document.  Finish up the stream and exit.
 		 *
 		 * If the entry is aborted and the delete_me flag is set,
@@ -1527,15 +1528,15 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 
 		/* complete the stream
 		 */
-		(*CD_STREAM->complete)(CD_STREAM);
+		(*connection_data->stream->complete)(connection_data->stream);
 
 		/* free the stream
 		 */
-		PR_Free(CD_STREAM);
+		PR_Free(connection_data->stream);
 
 		/* remove the read lock
          */
-        CE_URL_S->memory_copy->mem_read_lock--;
+        cur_entry->URL_s->memory_copy->mem_read_lock--;
 
 		/* check to see if we should delete this memory cached object
 		 *
@@ -1543,11 +1544,11 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 		 * to free it but couldn't because of read locks on the
 		 * object
          */
-        if(CE_URL_S->memory_copy->delete_me && 
-                    CE_URL_S->memory_copy->mem_read_lock == 0)
+        if(cur_entry->URL_s->memory_copy->delete_me && 
+                    cur_entry->URL_s->memory_copy->mem_read_lock == 0)
           {
-            net_FreeMemoryCopy(CE_URL_S->memory_copy);
-            CE_URL_S->memory_copy = 0;
+            net_FreeMemoryCopy(cur_entry->URL_s->memory_copy);
+            cur_entry->URL_s->memory_copy = 0;
           }
 
 		/* PR_Free the structs used by this protocol module
@@ -1555,35 +1556,35 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 		PR_Free(connection_data);
 
 		/* set the status to success */
-		if (CE_URL_S->memory_copy && CE_URL_S->memory_copy->completed)
-			CE_STATUS = MK_DATA_LOADED;
+		if (cur_entry->URL_s->memory_copy && cur_entry->URL_s->memory_copy->completed)
+			cur_entry->status = MK_DATA_LOADED;
 		else
-			CE_STATUS = MK_OBJECT_NOT_IN_CACHE;
+			cur_entry->status = MK_OBJECT_NOT_IN_CACHE;
 
 		/* clear the CallNetlibAllTheTime if there are no
 		 * other readers
 		 */
-	    NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+	    NET_ClearCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
-        if (!CE_URL_S->load_background)
-            FE_GraphProgressDestroy(CE_WINDOW_ID,
-                                    CE_URL_S,
-                                    CE_URL_S->content_length,
-                                    CE_BYTES_RECEIVED);
+        if (!cur_entry->URL_s->load_background)
+            FE_GraphProgressDestroy(cur_entry->window_id,
+                                    cur_entry->URL_s,
+                                    cur_entry->URL_s->content_length,
+                                    cur_entry->bytes_received);
 
 #ifdef MOZ_MAIL_NEWS
-	if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
+	if (!PL_strncmp(cur_entry->URL_s->address, "Mailbox://", 10))
         /* #### DISGUSTING KLUDGE to make cacheing work for imap articles. */
-        IMAP_URLFinished(CE_URL_S);
+        IMAP_URLFinished(cur_entry->URL_s);
 #endif
 		/* Tell ProcessNet that we are all done */
 		return(-1);
 	  }
 
-	/* CD_CUR_LIST_PTR is pointing to the most current
+	/* connection_data->cur_list_ptr is pointing to the most current
 	 * memory segment list object
  	 */
-    mem_seg = (net_MemorySegment *) CD_CUR_LIST_PTR->object;
+    mem_seg = (net_MemorySegment *) connection_data->cur_list_ptr->object;
 
 	TRACEMSG(("ProcessMemoryCache: printing segment %p",mem_seg));
 
@@ -1591,7 +1592,7 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 
 	/* write out at least part of the buffer
 	 */
-	buffer_size = (*CD_STREAM->is_write_ready)(CD_STREAM);
+	buffer_size = (*connection_data->stream->is_write_ready)(connection_data->stream);
     buffer_size = MIN(buffer_size, (unsigned int) NET_Socket_Buffer_Size);
 
 	/* make it ??? at the most
@@ -1599,42 +1600,42 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	 */
 	buffer_size = MIN(buffer_size, NET_MEM_CACHE_OUTPUT_SIZE);
 
-    chunk_size = MIN(buffer_size, mem_seg->in_use-CD_BYTES_WRITTEN_IN_SEGMENT);
+    chunk_size = MIN(buffer_size, mem_seg->in_use-connection_data->bytes_written_in_segment);
 
     /* copy the segment because the parser will muck with it
      */
     memcpy(NET_Socket_Buffer, 
-			  mem_seg_ptr+CD_BYTES_WRITTEN_IN_SEGMENT, 
+			  mem_seg_ptr+connection_data->bytes_written_in_segment, 
 			  (size_t) chunk_size);
 
 	/* remember how much of this segment we have written */
-    CD_BYTES_WRITTEN_IN_SEGMENT += chunk_size;
+    connection_data->bytes_written_in_segment += chunk_size;
 
-    CE_STATUS = (*CD_STREAM->put_block)(CD_STREAM,
+    cur_entry->status = (*connection_data->stream->put_block)(connection_data->stream,
                                         NET_Socket_Buffer,
                                         chunk_size);
-	CE_BYTES_RECEIVED += chunk_size;
+	cur_entry->bytes_received += chunk_size;
 
 	/* check to see if we need to advance the pointer yet
 	 */
-	if(CD_BYTES_WRITTEN_IN_SEGMENT >= mem_seg->in_use)
+	if(connection_data->bytes_written_in_segment >= mem_seg->in_use)
 	  {
-	    CD_CUR_LIST_PTR = CD_CUR_LIST_PTR->next;
-        CD_BYTES_WRITTEN_IN_SEGMENT = 0;
+	    connection_data->cur_list_ptr = connection_data->cur_list_ptr->next;
+        connection_data->bytes_written_in_segment = 0;
 	  }
 
-	if (!CE_URL_S->load_background)
-        FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED,
-                         chunk_size, CE_URL_S->content_length);
+	if (!cur_entry->URL_s->load_background)
+        FE_GraphProgress(cur_entry->window_id, cur_entry->URL_s, cur_entry->bytes_received,
+                         chunk_size, cur_entry->URL_s->content_length);
 
-	if(CE_STATUS < 0)
+	if(cur_entry->status < 0)
 	  {
-        NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+        NET_ClearCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
-	    (*CD_STREAM->abort)(CD_STREAM, CE_STATUS);
+	    (*connection_data->stream->abort)(connection_data->stream, cur_entry->status);
 	  }
 
-	return(CE_STATUS);
+	return(cur_entry->status);
 
 }
 
@@ -1648,41 +1649,41 @@ net_InterruptMemoryCache (ActiveEntry * cur_entry)
 
 	/* abort and free the outgoing stream
 	 */
-	(*CD_STREAM->abort)(CD_STREAM, MK_INTERRUPTED);
-	PR_Free(CD_STREAM);
+	(*connection_data->stream->abort)(connection_data->stream, MK_INTERRUPTED);
+	PR_Free(connection_data->stream);
 
-	if (!CE_URL_S->memory_copy)
+	if (!cur_entry->URL_s->memory_copy)
 	{
 		/* the memory_copy has been freed before fully
 		 * making it into the cache.  In other words, it's
 		 * been aborted.  Abort this load then, also,
 		 * since it's a concurrent load.
 		 */
-		CE_STATUS = MK_OBJECT_NOT_IN_CACHE;
-		return (CE_STATUS);
+		cur_entry->status = MK_OBJECT_NOT_IN_CACHE;
+		return (cur_entry->status);
 	}
     
 	/* remove the read lock
      */
-    CE_URL_S->memory_copy->mem_read_lock--;
+    cur_entry->URL_s->memory_copy->mem_read_lock--;
 
     /* check to see if we should delete this memory cached object
      */
-    if(CE_URL_S->memory_copy->delete_me && 
-			CE_URL_S->memory_copy->mem_read_lock == 0)
+    if(cur_entry->URL_s->memory_copy->delete_me && 
+			cur_entry->URL_s->memory_copy->mem_read_lock == 0)
       {
-        net_FreeMemoryCopy(CE_URL_S->memory_copy);
-        CE_URL_S->memory_copy = 0;
+        net_FreeMemoryCopy(cur_entry->URL_s->memory_copy);
+        cur_entry->URL_s->memory_copy = 0;
       }
 
 	/* PR_Free the structs
 	 */
 	PR_Free(connection_data);
-	CE_STATUS = MK_INTERRUPTED;
+	cur_entry->status = MK_INTERRUPTED;
 
-    NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
+    NET_ClearCallNetlibAllTheTime(cur_entry->window_id, "mkmemcac");
 
-	return(CE_STATUS);
+	return(cur_entry->status);
 }
 
 /* create an HTML stream and push a bunch of HTML about

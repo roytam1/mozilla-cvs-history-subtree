@@ -32,7 +32,7 @@ class nsDiskModule : public nsCacheModule
 {
 
 public:
-    nsDiskModule(const PRUint32 size = nsCachePref::DiskCacheSize());
+    nsDiskModule(const PRUint32 size = nsCachePref::GetInstance()->DiskCacheSize());
     ~nsDiskModule();
 
     // Cache module interface

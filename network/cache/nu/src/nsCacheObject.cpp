@@ -148,19 +148,23 @@ nsCacheObject::nsCacheObject():
     m_Flags(INIT), 
     m_Url(new char[1]), 
     m_Etag(new char[1]),
+    m_Filename(new char[1]),
     m_ContentType(new char[1]),
     m_Module(-1),
     m_pInfo(0)
 {
     Init();
-    *m_Url = '\0';
+    *m_ContentType = '\0';
     *m_Etag = '\0';
+    *m_Filename = '\0';
+    *m_Url = '\0';
 }
 
 nsCacheObject::~nsCacheObject() 
 {
     delete[] m_ContentType;
     delete[] m_Etag;
+    delete[] m_Filename;
     delete[] m_Url;
 }
 
@@ -168,11 +172,14 @@ nsCacheObject::nsCacheObject(const nsCacheObject& another):
     m_Flags(another.m_Flags),
     m_Url(new char[PL_strlen(another.m_Url)+1]), 
     m_Etag(new char[PL_strlen(another.m_Etag)+1]),
+    m_Filename(new char[PL_strlen(another.m_Filename)+1]),
     m_ContentType(new char[PL_strlen(another.m_ContentType)+1]),
     m_pInfo(0)
 {
-    strcpy(m_Url, another.m_Url);
+    strcpy(m_ContentType, another.m_ContentType);
     strcpy(m_Etag, another.m_Etag);
+    strcpy(m_Filename, another.m_Filename);
+    strcpy(m_Url, another.m_Url);
 
     m_Hits = another.m_Hits;
     m_LastAccessed = another.m_LastAccessed;
@@ -184,8 +191,9 @@ nsCacheObject::nsCacheObject(const nsCacheObject& another):
 nsCacheObject::nsCacheObject(const char* i_url):
     m_Flags(INIT), 
     m_ContentType(new char[1]),
-    m_Url(new char[strlen(i_url)+1]), 
     m_Etag(new char[1]),
+    m_Filename(new char[1]),
+    m_Url(new char[strlen(i_url)+1]), 
     m_Module(-1),
     m_pInfo(0)
 {
@@ -193,6 +201,7 @@ nsCacheObject::nsCacheObject(const char* i_url):
     PR_ASSERT(i_url);
     strcpy(m_Url, i_url);
     *m_Etag = '\0';
+    *m_Filename = '\0';
     *m_ContentType = '\0';
 }
 
@@ -209,7 +218,7 @@ void nsCacheObject::ContentType(const char* i_Type)
 {
     if (!i_Type)
     {
-        /* Reset to empty */ // TODO 
+        /* Reset to empty */ // TODO ??
         return;
     }
     if (m_ContentType)
@@ -245,18 +254,14 @@ void* nsCacheObject::Info(void) const
     
     nsCacheObject* pThis = (nsCacheObject*) this;
     if (m_Url){
-/*
-        char* tmpBuff = PR_smprintf(READ_WRITE_FORMAT, READ_WRITE_ELEMENTS);
-        int tmpLen = PL_strlen(tmpBuff);
-        pThis->m_pInfo = PR_Malloc(tmpLen);
-        memcpy(pThis->m_pInfo, tmpBuff, tmpLen);
-        PR_Free(tmpBuff);
-*/
+
         pThis->m_info_size = sizeof(nsCacheObject);
         pThis->m_info_size -= sizeof(void*); //m_info itself is not being serialized
 
         //Add the strings sizes
+        pThis->m_info_size += PL_strlen(m_ContentType)+1;
         pThis->m_info_size += PL_strlen(m_Etag)+1;
+        pThis->m_info_size += PL_strlen(m_Filename)+1;
         pThis->m_info_size += PL_strlen(m_Url)+1;
         
         void* new_obj = PR_Malloc(m_info_size * sizeof(char));
@@ -287,8 +292,11 @@ void* nsCacheObject::Info(void) const
         COPY_INT32((void *)cur_ptr, &kCACHE_VERSION);
         cur_ptr += sizeof(PRUint32);
 
+        STUFF_NUMBER(m_ContentLength);
+        STUFF_STRING(m_ContentType);
         STUFF_STRING(m_Etag);
         STUFF_TIME(m_Expires);
+        STUFF_STRING(m_Filename);
         STUFF_NUMBER(m_Flags);
         STUFF_NUMBER(m_Hits);
         STUFF_TIME(m_LastAccessed);
@@ -298,6 +306,9 @@ void* nsCacheObject::Info(void) const
         STUFF_STRING(m_Url);
 
         // Important Assertion. Dont remove!
+        // If this fails then you or somebody has added a variable to the 
+        // nsCacheObject class and a decision on its "cacheability" has
+        // not yet been made. 
         PR_ASSERT(cur_ptr == (char*) new_obj + m_info_size);
         pThis->m_pInfo = new_obj;
     }
@@ -330,9 +341,12 @@ PRBool nsCacheObject::Info(void* i_data)
     }
 
     PRUint32 len;
-    //m_Etag,m_Expires,m_Flags,m_Hits,m_LastAccessed,m_LastModified,m_Module,m_Size,m_Url
+    
+    RETRIEVE_NUMBER(m_ContentLength);
+    RETRIEVE_STRING(m_ContentType);
     RETRIEVE_STRING(m_Etag);
     RETRIEVE_TIME(m_Expires);
+    RETRIEVE_STRING(m_Filename);
     RETRIEVE_NUMBER(m_Flags);
     RETRIEVE_NUMBER(m_Hits);
     RETRIEVE_TIME(m_LastAccessed);

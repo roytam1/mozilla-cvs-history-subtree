@@ -42,7 +42,7 @@ class nsMemModule : public nsCacheModule
 {
 
 public:
-    nsMemModule(const PRUint32 size=nsCachePref::MemCacheSize());
+    nsMemModule(const PRUint32 size=nsCachePref::GetInstance()->MemCacheSize());
     ~nsMemModule();
 
 /*

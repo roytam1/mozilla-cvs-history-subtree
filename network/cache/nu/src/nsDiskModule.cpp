@@ -72,25 +72,27 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
     if (io_pObject && io_pObject->Address())
     {
         ModuleLocker ml(this);
-        static DBT key,data;
+        // TODO optimize these further- make static - Gagan
+        DBT* key = PR_NEW(DBT);
+        DBT* data = PR_NEW(DBT);
         
         io_pObject->Module(nsCacheManager::DISK);
 
-        PR_FREEIF(key.data);
-        PR_FREEIF(data.data);
+        
+        key->data = (void*)io_pObject->Address(); /* Later on change this to include post data- io_pObject->KeyData() */
+        key->size = PL_strlen(io_pObject->Address());
 
-        key.data = (void*)io_pObject->Address(); /* Later on change this to include post data- io_pObject->KeyData() */
-        key.size = PL_strlen(io_pObject->Address());
+        data->data = io_pObject->Info();
+        data->size = io_pObject->InfoSize();
 
-        data.data = io_pObject->Info();
-        data.size = io_pObject->InfoSize();
-
-        int status = (*m_pDB->put)(m_pDB, &key, &data, 0);
+        int status = (*m_pDB->put)(m_pDB, key, data, 0);
         if (status == 0)
         {
 //            if (m_Sync == EVERYTIME)
                 status = (*m_pDB->sync)(m_pDB, 0);
         }
+        PR_Free(key);
+        PR_Free(data);
         return (status == 0);
     }
     return PR_FALSE;
@@ -188,7 +190,7 @@ PRBool nsDiskModule::InitDB(void)
         0};       /* byte order */
 
     m_pDB = dbopen(
-        nsCachePref::DiskCacheDBFilename(), 
+        nsCachePref::GetInstance()->DiskCacheDBFilename(), 
         O_RDWR | O_CREAT, 
         0600, 
         DB_HASH, 

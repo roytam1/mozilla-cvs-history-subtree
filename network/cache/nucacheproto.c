@@ -18,23 +18,12 @@
 #include "nucacheproto.h"
 #include "xp.h"
  
-
-/*  complete the stream
-*/
-PRIVATE void net_NuCacheComplete (NET_StreamClass *stream)
-{
-}
-
-/* Abort the stream 
- * 
- */
-PRIVATE void net_NuCacheAbort (NET_StreamClass *stream, int status)
-{
-}
-
 PRIVATE int32
 net_NuCacheLoad (ActiveEntry * cur_entry)
 {
+    cur_entry->protocol = NU_CACHE_TYPE_URL;
+    cur_entry->memory_file = TRUE; /* TODO */
+
     return -1;
 }
 

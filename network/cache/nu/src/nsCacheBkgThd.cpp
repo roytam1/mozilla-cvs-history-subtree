@@ -69,7 +69,7 @@ void nsCacheBkgThd::Run(void)
         if (!pModule->IsReadOnly())
         {
             pModule->GarbageCollect();
-            if (nsCachePref::RevalidateInBkg())
+            if (nsCachePref::GetInstance()->RevalidateInBkg())
             {
                 pModule->Revalidate();
             }

@@ -264,37 +264,37 @@ CacheObject_Destroy(void* pThis)
 PRUint32
 CachePref_GetDiskCacheSize(void)
 {
-    return nsCachePref::DiskCacheSize();
+    return nsCachePref::GetInstance()->DiskCacheSize();
 }
 
 PRBool
 CachePref_GetDiskCacheSSL(void)
 {
-    return nsCachePref::DiskCacheSSL();
+    return nsCachePref::GetInstance()->DiskCacheSSL();
 }
 
 PRUint32
 CachePref_GetMemCacheSize(void)
 {
-    return nsCachePref::MemCacheSize();
+    return nsCachePref::GetInstance()->MemCacheSize();
 }
 
 void
 CachePref_SetDiskCacheSize(const PRUint32 i_Size)
 {
-    nsCachePref::DiskCacheSize(i_Size);
+    nsCachePref::GetInstance()->DiskCacheSize(i_Size);
 }
 
 void
 CachePref_SetDiskCacheSSL(PRBool bSet)
 {
-    nsCachePref::DiskCacheSSL(bSet);
+    nsCachePref::GetInstance()->DiskCacheSSL(bSet);
 }
 
 void
 CachePref_SetMemCacheSize(const PRUint32 i_Size)
 {
-    nsCachePref::MemCacheSize(i_Size);
+    nsCachePref::GetInstance()->MemCacheSize(i_Size);
 }
 
 /* CacheTrace functions */

@@ -1734,9 +1734,13 @@ NET_CacheConverter (FO_Present_Types format_out,
 	if((HG73896 
 			PL_strncasecmp(URL_s->address, "https:", 6))
 	   && !URL_s->dont_cache
+#ifdef NU_CACHE
+       && (DiskModule_GetSize() > 0 || URL_s->must_cache)
+#else
 	   && (net_MaxDiskCacheSize > 0 || URL_s->must_cache)
-	   && net_OpenCacheFatDB() /* make sure database is open */
-  	   && PL_strncasecmp(URL_s->address, "news:", 5)   /* not news: */
+       && net_OpenCacheFatDB() /* make sure database is open */
+#endif
+	   && PL_strncasecmp(URL_s->address, "news:", 5)   /* not news: */
 	   HG73684
 	   && PL_strncasecmp(URL_s->address, "mailbox://", 10))  /* not IMAP */
 		do_disk_cache = TRUE;
@@ -2478,6 +2482,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
         void* pObject = CacheManager_GetObject(URL_s->address);
         /* Copy all the stuff from CacheObject to URL_struct */
         /* TODO */
+        return NU_CACHE_TYPE_URL;
     }
 }
 #else
@@ -3511,7 +3516,7 @@ NET_CloneWysiwygCacheFile(MWContext *window_id, URL_Struct *URL_s,
 			  const char * base_href)
 #ifdef NU_CACHE
 {
-    PR_ASSERT(0);
+    /*PR_ASSERT(0);*/ /* I hate GOTOs == I hate Lou's programming */
     return NULL;
 }
 #else

@@ -36,6 +36,7 @@
 #include "nsDiskModule.h"
 #include "nsCacheBkgThd.h"
 
+/* TODO move this to InitNetLib */
 static nsCacheManager TheManager;
 
 nsCacheManager::nsCacheManager(): m_pFirstModule(0), m_bOffline(PR_FALSE)
@@ -181,12 +182,12 @@ nsCacheManager::Init()
     if (m_pFirstModule)
         delete m_pFirstModule;
 
-    m_pFirstModule = new nsMemModule(nsCachePref::MemCacheSize());
+    m_pFirstModule = new nsMemModule(nsCachePref::GetInstance()->MemCacheSize());
     PR_ASSERT(m_pFirstModule);
-    nsDiskModule* pTemp = new nsDiskModule(nsCachePref::DiskCacheSize());
+    nsDiskModule* pTemp = new nsDiskModule(nsCachePref::GetInstance()->DiskCacheSize());
     PR_ASSERT(pTemp);
     m_pFirstModule->Next(pTemp);
-    m_pBkgThd = new nsCacheBkgThd(PR_SecondsToInterval(nsCachePref::BkgSleepTime()));
+    m_pBkgThd = new nsCacheBkgThd(PR_SecondsToInterval(nsCachePref::GetInstance()->BkgSleepTime()));
     PR_ASSERT(m_pBkgThd);
 }
 
