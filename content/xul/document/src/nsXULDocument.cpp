@@ -146,6 +146,7 @@
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 #include "nsIPref.h"
+#include "nsTreeWalker.h"
 
 
 //----------------------------------------------------------------------
@@ -581,6 +582,7 @@ NS_INTERFACE_MAP_BEGIN(nsXULDocument)
     NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentXBL)
     NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentStyle)
     NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentRange)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentTraversal)
     NS_INTERFACE_MAP_ENTRY(nsIHTMLContentContainer)
     NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
     NS_INTERFACE_MAP_ENTRY(nsIDOMEventTarget)
@@ -2702,6 +2704,31 @@ nsXULDocument::CreateRange(nsIDOMRange** aRange)
                                               NS_GET_IID(nsIDOMRange),
                                               (void **)aRange);
 }
+
+NS_IMETHODIMP
+nsXULDocument::CreateNodeIterator(nsIDOMNode *aRoot,
+                                  PRUint32 aWhatToShow,
+                                  nsIDOMNodeFilter *aFilter,
+                                  PRBool aEntityReferenceExpansion,
+                                  nsIDOMNodeIterator **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsXULDocument::CreateTreeWalker(nsIDOMNode *aRoot,
+                                PRUint32 aWhatToShow,
+                                nsIDOMNodeFilter *aFilter,
+                                PRBool aEntityReferenceExpansion,
+                                nsIDOMTreeWalker **_retval)
+{
+    return NS_NewTreeWalker(aRoot,
+                            aWhatToShow,
+                            aFilter,
+                            aEntityReferenceExpansion,
+                            _retval);
+}
+
 
 NS_IMETHODIMP
 nsXULDocument::GetDefaultView(nsIDOMAbstractView** aDefaultView)

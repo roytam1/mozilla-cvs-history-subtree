@@ -60,6 +60,7 @@ CPPSRCS =				\
 	nsContentUtils.cpp 		\
 	nsScriptLoader.cpp		\
 	nsStyleLinkElement.cpp		\
+	nsTreeWalker.cpp                \
 	$(NULL)
 
 MODULE=raptor 
@@ -96,6 +97,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsContentUtils.obj   \
 	.\$(OBJDIR)\nsScriptLoader.obj   \
 	.\$(OBJDIR)\nsStyleLinkElement.obj   \
+	.\$(OBJDIR)\nsTreeWalker.obj            \
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \
