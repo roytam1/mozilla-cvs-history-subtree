@@ -895,6 +895,7 @@ void
 handle_xlib_bin_event(GdkSuperWin *superwin, XEvent *event, gpointer p)
 {
   nsWindow *window = (nsWindow *)p;
+
   switch(event->xany.type) {
   case Expose:
     window->HandleXlibExposeEvent(event);

@@ -84,7 +84,7 @@ nsWindow::~nsWindow()
   printf("nsWindow::~nsWindow:%p\n", this);
 #endif
   mIsDestroyingWindow = PR_TRUE;
-  if (nsnull != mShell) {
+  if (nsnull != mShell || nsnull != mSuperWin) {
     Destroy();
   }
 #ifdef USE_SUPERWIN
@@ -154,7 +154,9 @@ NS_IMETHODIMP nsWindow::Destroy()
      		gtk_widget_destroy(mShell);
     	mShell = nsnull;
     }
-
+    if (mSuperWin) {
+      gdk_superwin_destroy(mSuperWin);
+    }
   }
 
   return NS_OK;
