@@ -187,7 +187,7 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   listener->SetFrame(this);
   listener->QueryInterface(NS_GET_IID(nsIImageDecoderObserver), getter_AddRefs(mListener));
   NS_RELEASE(listener);
-  
+
 
   nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
   if (NS_FAILED(rv))
@@ -226,6 +226,8 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   return rv;
 }
 
+#ifndef USE_IMG2
+
 nsresult
 nsImageFrame::UpdateImageFrame(nsIPresContext* aPresContext,
                                nsHTMLImageLoader* aLoader,
@@ -236,6 +238,7 @@ nsImageFrame::UpdateImageFrame(nsIPresContext* aPresContext,
   nsImageFrame* frame = (nsImageFrame*) aFrame;
   return frame->UpdateImage(aPresContext, aStatus, aClosure);
 }
+#endif
 
 
 #ifdef USE_IMG2
@@ -340,6 +343,8 @@ NS_IMETHODIMP nsImageFrame::OnStopDecode(nsIImageRequest *request, nsIPresContex
 }
 #endif
 
+#ifndef USE_IMG2
+
 nsresult
 nsImageFrame::UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus, void* aClosure)
 {
@@ -435,6 +440,8 @@ nsImageFrame::UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus, void* 
 
   return NS_OK;
 }
+
+#endif
 
 
 #ifdef USE_IMG2
@@ -899,7 +906,11 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
           !mInitialLoadCompleted) {
         DisplayAltFeedback(aPresContext, aRenderingContext,
+#ifdef USE_IMG2
+                           (loadStatus & nsIImageRequest::STATUS_ERROR)
+#else
                            mImageLoader.GetLoadImageFailed()
+#endif
                            ? NS_ICON_BROKEN_IMAGE
                            : NS_ICON_LOADING_IMAGE);
       }
@@ -911,14 +922,15 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         // borders and padding)
         nsRect inner;
         GetInnerArea(aPresContext, inner);
-        if (mImageLoader.GetLoadImageFailed()) {
 
 #ifdef USE_IMG2
+        if (loadStatus & nsIImageRequest::STATUS_ERROR) {
           if (imgCon) {
             inner.SizeTo(mComputedSize);
           } else if (lowImgCon) {
           }
 #else
+        if (mImageLoader.GetLoadImageFailed()) {
           float p2t;
           aPresContext->GetScaledPixelsToTwips(&p2t);
           if (image) {
@@ -1402,7 +1414,11 @@ nsImageFrame::GetFrameType(nsIAtom** aType) const
 NS_IMETHODIMP 
 nsImageFrame::GetIntrinsicImageSize(nsSize& aSize)
 {
+#ifdef USE_IMG2
+  aSize = mIntrinsicSize;
+#else
   mImageLoader.GetIntrinsicSize(aSize);
+#endif
   return NS_OK;
 }
 
@@ -1410,7 +1426,12 @@ NS_IMETHODIMP
 nsImageFrame::GetNaturalImageSize(PRUint32* naturalWidth, 
                                   PRUint32 *naturalHeight)
 { 
+#ifdef USE_IMG2
+  *naturalWidth = mIntrinsicSize.width;
+  *naturalHeight = mIntrinsicSize.height;
+#else
   mImageLoader.GetNaturalImageSize(naturalWidth, naturalHeight);
+#endif
   return NS_OK;
 }
 

@@ -126,7 +126,9 @@ protected:
                               const nsHTMLReflowState& aReflowState,
                               nsHTMLReflowMetrics& aDesiredSize);
 
+#ifndef USE_IMG2
   nsresult UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus, void* aClosure);
+#endif
 
   nsImageMap* GetImageMap(nsIPresContext* aPresContext);
 
@@ -163,11 +165,13 @@ protected:
   void GetInnerArea(nsIPresContext* aPresContext,
                     nsRect& aInnerArea) const;
 
+#ifndef USE_IMG2
   static nsresult UpdateImageFrame(nsIPresContext* aPresContext,
                                    nsHTMLImageLoader* aLoader,
                                    nsIFrame* aFrame,
                                    void* aClosure,
                                    PRUint32 aStatus);
+#endif
 
   void GetBaseURI(nsIURI **uri);
 
@@ -183,14 +187,14 @@ protected:
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
 
-  PRBool mGotInitialReflow;
+  PRPackedBool mGotInitialReflow;
 #endif
-  nsImageMap*         mImageMap;
   PRPackedBool        mSizeFrozen;
   PRPackedBool        mInitialLoadCompleted;
   PRPackedBool        mCanSendLoadEvent;
   nsMargin            mBorderPadding;
   PRUint32 mNaturalImageWidth, mNaturalImageHeight;
+  nsImageMap*         mImageMap;
 };
 
 #endif /* nsImageFrame_h___ */
