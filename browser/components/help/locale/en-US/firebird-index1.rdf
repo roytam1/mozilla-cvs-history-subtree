@@ -185,7 +185,6 @@
             <rdf:li><rdf:Description ID="extensions-installing" nc:name="Installing" nc:link="customization.xhtml#getting_installing_extensions"/></rdf:li>
             <rdf:li><rdf:Description ID="extensions-uninstalling" nc:name="Uninstalling" nc:link="customization.xhtml#uninstalling_extensions"/></rdf:li>
             <rdf:li><rdf:Description ID="extensions-updating" nc:name="Updating Extensions" nc:link="customization.xhtml#updating_extensions"/></rdf:li>
-            <rdf:li><rdf:Description ID="extensions-manual-remove" nc:name="Manually Removing Extensions" nc:link="customization.xhtml#manually_removing_extensions"/></rdf:li>
           </rdf:Seq>
         </nc:subheadings>
     </rdf:Description>
