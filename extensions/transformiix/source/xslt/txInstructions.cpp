@@ -111,13 +111,17 @@ txConditionalGoto::execute(txExecutionState& aEs)
 }
 
 nsresult
-txEndLREElement::execute(txExecutionState& aEs)
+txEndElement::execute(txExecutionState& aEs)
 {
     PRInt32 namespaceID = aEs.popInt();
     nsAutoString nodeName;
     aEs.popString(nodeName);
-
-    aEs.mResultHandler->endElement(nodeName, namespaceID);
+    
+    
+    // For xsl:elements with a bad name we push an empty name
+    if (!nodeName.IsEmpty()) {
+        aEs.mResultHandler->endElement(nodeName, namespaceID);
+    }
 
     return NS_OK;
 }
@@ -275,6 +279,96 @@ txRecursionCheckpointStart::execute(txExecutionState& aEs)
     return aEs.enterRecursionCheckpoint(this, aEs.getEvalContext());
 }
 
+nsresult
+txReturn::execute(txExecutionState& aEs)
+{
+    aEs.returnFromTemplate();
+
+    return NS_OK;
+}
+
+txStartElement::txStartElement(Expr* aName, Expr* aNamespace,
+                               const txNamespaceMap& aMappings)
+    : mName(aName),
+      mNamespace(aNamespace),
+      mMappings(aMappings)
+{
+}
+
+txStartElement::~txStartElement()
+{
+    delete mName;
+    delete mNamespace;
+}
+
+nsresult
+txStartElement::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+
+    ExprResult* exprRes = mName->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    nsAutoString name;
+    exprRes->stringValue(name);
+    delete exprRes;
+
+    if (!XMLUtils::isValidQName(name)) {
+        // tunkate name to indicate failure
+        name.Truncate();
+    }
+
+    PRInt32 nsId = kNameSpaceID_None;
+    if (!name.IsEmpty()) {
+        if (mNamespace) {
+            exprRes = mNamespace->evaluate(aEs.getEvalContext());
+            NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+            nsAutoString nspace;
+            exprRes->stringValue(nspace);
+            delete exprRes;
+
+            if (!nspace.IsEmpty()) {
+#ifdef TX_EXE
+                nsId = txNamespaceManager::getNamespaceID(nspace);
+#else
+                NS_ASSERTION(gTxNameSpaceManager, "No namespace manager");
+                rv = gTxNameSpaceManager->RegisterNameSpace(nspace, nsId);
+                NS_ENSURE_SUCCESS(rv, rv);
+#endif
+            }
+        }
+        else {
+            nsCOMPtr<nsIAtom> prefix;
+            XMLUtils::getPrefix(name, getter_AddRefs(prefix));
+            nsId = mMappings.lookupNamespace(prefix);
+            if (nsId == kNameSpaceID_Unknown) {
+                // tunkate name to indicate failure
+                name.Truncate();
+            }
+        }
+    }
+
+    if (!name.IsEmpty()) {
+        // add element if everything was ok
+        aEs.mResultHandler->startElement(name, nsId);
+    }
+    else {
+        // we call characters with an empty string to "close" any element to
+        // make sure that no attributes are added
+        aEs.mResultHandler->characters(nsString(), PR_FALSE);
+    }
+
+    rv = aEs.pushString(name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aEs.pushInt(nsId);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+
 txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
                                      nsIAtom* aLocalName,
                                      nsIAtom* aPrefix)
@@ -282,14 +376,6 @@ txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
       mLocalName(aLocalName),
       mPrefix(aPrefix)
 {
-}
-
-nsresult
-txReturn::execute(txExecutionState& aEs)
-{
-    aEs.returnFromTemplate();
-
-    return NS_OK;
 }
 
 nsresult
@@ -358,7 +444,3 @@ txValueOf::execute(txExecutionState& aEs)
     }
     return NS_OK;
 }
-
-
-
-

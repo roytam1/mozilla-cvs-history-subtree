@@ -415,7 +415,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
 nsresult
 txFnEndLRE(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txEndLREElement;
+    txInstruction* instr = new txEndElement;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -538,6 +538,54 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
 
     // txCallTemplate
     nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+// xsl:element
+nsresult
+txFnStartElement(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txStylesheetAttr* attr = 0;
+
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::name);
+    NS_ENSURE_TRUE(attr, NS_ERROR_XSLT_PARSE_FAILURE);
+
+    Expr* name;
+    rv = aState.parseAVT(attr->mValue, &name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* nspace = nsnull;
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::_namespace);
+    if (attr) {
+        rv = aState.parseAVT(attr->mValue, &nspace);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    txInstruction* instr =
+        new txStartElement(name, nspace, aState.mElementContext->mMappings);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndElement(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txEndElement;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -783,6 +831,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },
+    { kNameSpaceID_XSLT, "element", txFnStartElement, txFnEndElement },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },

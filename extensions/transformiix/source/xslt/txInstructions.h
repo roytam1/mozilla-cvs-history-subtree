@@ -102,7 +102,7 @@ public:
     txInstruction* mTarget;
 };
 
-class txEndLREElement : public txInstruction
+class txEndElement : public txInstruction
 {
 public:
     TX_DECL_TXINSTRUCTION
@@ -187,6 +187,20 @@ public:
 class txReturn : public txInstruction
 {
     TX_DECL_TXINSTRUCTION
+};
+
+class txStartElement : public txInstruction
+{
+public:
+    txStartElement(Expr* aName, Expr* aNamespace,
+                   const txNamespaceMap& aMappings);
+    ~txStartElement();
+
+    TX_DECL_TXINSTRUCTION
+
+    Expr* mName;
+    Expr* mNamespace;
+    txNamespaceMap mMappings;
 };
 
 class txStartLREElement : public txInstruction
