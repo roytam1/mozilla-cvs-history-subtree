@@ -1460,7 +1460,6 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
     if (msgHdr)
     {
       nsXPIDLCString subject;
-      nsCString subjectStr;
       nsXPIDLString decodedString;
       nsXPIDLCString decodedCString;
 
@@ -1477,7 +1476,16 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
       rv = msgHdr->GetSubject(getter_Copies(subject));
       if (NS_FAILED(rv)) return rv;
 
-      subjectStr.SetLength(0);
+      // Strip of the "(was: old subject)" part
+      nsACString::const_iterator wasStart, wasEnd;
+      subject.BeginReading(wasStart);
+      subject.EndReading(wasEnd);
+      PRBool found = RFindInReadable(NS_LITERAL_CSTRING(" (was:"), wasStart, wasEnd);
+      if (found)  {
+        nsACString::const_iterator start;
+        subject.BeginReading(start);
+        subject.Assign(Substring(start, wasStart));
+      }
 
       switch (type)
       {
@@ -1495,7 +1503,7 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
             }
             mQuotingToFollow = PR_TRUE;
 
-            subjectStr.Append("Re: ");
+            nsCAutoString subjectStr("Re: ");
             subjectStr.Append(subject);
             rv = mimeConverter->DecodeMimeHeader(subjectStr.get(),
                 getter_Copies(decodedString),
@@ -1530,8 +1538,9 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
             PRUint32 flags;
 
             msgHdr->GetFlags(&flags);
+            nsCAutoString subjectStr;
             if (flags & MSG_FLAG_HAS_RE)
-              subjectStr.Append("Re: ");
+              subjectStr.Assign("Re: ");
             subjectStr.Append(subject);
 
             rv = mimeConverter->DecodeMimeHeader(subjectStr.get(), 
