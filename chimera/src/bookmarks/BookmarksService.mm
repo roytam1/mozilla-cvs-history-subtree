@@ -52,6 +52,7 @@
 #include "nsIContent.h"
 #include "nsIAtom.h"
 #include "nsITextContent.h"
+#include "nsIDOMDocumentType.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMWindow.h"
@@ -63,7 +64,7 @@
 #include "nsIPrefBranch.h"
 #include "nsIFile.h"
 #include "nsAppDirectoryServiceDefs.h"
-#include "nsIXMLHttpRequest.h"
+//#include "nsIXMLHttpRequest.h"
 #include "nsIDOMSerializer.h"
 #include "nsIDocumentEncoder.h"
 #include "nsNetUtil.h"
@@ -566,10 +567,11 @@ BookmarksService::ReadBookmarks()
   // behaviour.
   nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));    
   xblService->FetchSyncXMLDocument(uri, &gBookmarksDocument);   // addref here
-    
+
+  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc = do_QueryInterface(gBookmarksDocument);
+
   // test for a parser error. The XML parser replaces the document with one
   // that has a <parsererror> node as the root.
-  nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc = do_QueryInterface(gBookmarksDocument);
   BOOL validBookmarksFile = CheckXMLDocumentParseSuccessful(bookmarksDOMDoc);
   
   if (!validBookmarksFile) {
@@ -636,12 +638,34 @@ BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
     return;
   }
 
-  nsCOMPtr<nsIOutputStream> outputStream;
-  NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksFile);
+  PRBool writeDocType = PR_TRUE;
 
+  // write a docType if we didn't read one in (to convert older BM files)
+  nsCOMPtr<nsIDOMDocumentType> docType;
+  domDoc->GetDoctype(getter_AddRefs(docType));
+  if (docType)
+    writeDocType = PR_FALSE;		// maybe check the type too?
+
+  nsCOMPtr<nsIOutputStream> outputStream;
+  nsresult rv = NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksFile);
+  if (NS_FAILED(rv)) return;
+
+  const char* const kBoomarksHeader = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+
+  PRUint32 bytesWritten = 0;
+  rv = outputStream->Write(kBoomarksHeader, strlen(kBoomarksHeader), &bytesWritten);
+  if (NS_FAILED(rv)) return;
+
+  if (writeDocType)
+  {
+    const char* const kDocTypeString = "<!DOCTYPE bookmarks SYSTEM \"http://www.mozilla.org/DTDs/ChimeraBookmarks.dtd\">\n";
+    rv = outputStream->Write(kDocTypeString, strlen(kDocTypeString), &bytesWritten);
+    if (NS_FAILED(rv)) return;
+  }
+  
   nsCOMPtr<nsIDOMSerializer> domSerializer(do_CreateInstance(NS_XMLSERIALIZER_CONTRACTID));
   if (domSerializer)
-    domSerializer->SerializeToStream(domDoc, outputStream, nsnull);
+    rv = domSerializer->SerializeToStream(domDoc, outputStream, "UTF-8");
 }
 
 NSImage*
@@ -908,7 +932,7 @@ static void CreateBookmark(nsIDOMElement* aSrc, nsIDOMElement* aDst,
   aDst->AppendChild(*aResult, getter_AddRefs(dummy));
 }
 
-static void AddImportedBookmarks(nsIDOMElement* aSrc, nsIDOMElement* aDst, nsIDOMDocument* aDstDoc,
+static void AddImportedHTMLBookmarks(nsIDOMElement* aSrc, nsIDOMElement* aDst, nsIDOMDocument* aDstDoc,
                                  PRInt32& aBookmarksType)
 {
   nsAutoString localName;
@@ -967,7 +991,7 @@ static void AddImportedBookmarks(nsIDOMElement* aSrc, nsIDOMElement* aDst, nsIDO
     while (curr) {
       nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(curr));
       if (elt)
-        AddImportedBookmarks(elt, newBookmark, aDstDoc, aBookmarksType);
+        AddImportedHTMLBookmarks(elt, newBookmark, aDstDoc, aBookmarksType);
       nsCOMPtr<nsIDOMNode> temp = curr;
       temp->GetNextSibling(getter_AddRefs(curr));
     }
@@ -979,20 +1003,110 @@ static void AddImportedBookmarks(nsIDOMElement* aSrc, nsIDOMElement* aDst, nsIDO
     while (curr) {
       nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(curr));
       if (elt)
-        AddImportedBookmarks(elt, aDst, aDstDoc, aBookmarksType);
+        AddImportedHTMLBookmarks(elt, aDst, aDstDoc, aBookmarksType);
       nsCOMPtr<nsIDOMNode> temp = curr;
       temp->GetNextSibling(getter_AddRefs(curr));
     }
   }
 }
 
+static PRBool
+AddImportedChimeraXMLBookmarks(nsIDOMDocument* inImportDoc, nsIDOMDocument* inDestDoc, nsIDOMElement* inImportedRoot)
+{
+  if (!inImportedRoot) return PR_FALSE;
+  
+  PRBool isChimeraBookmarks = PR_TRUE;		// default to yes, and keep fingers crossed
+  nsCOMPtr<nsIDOMDocumentType> docType;
+  inImportDoc->GetDoctype(getter_AddRefs(docType));
+
+  if (docType)
+  {
+    nsAutoString systemIDString;
+    docType->GetSystemId(systemIDString);
+    if (!systemIDString.Equals(NS_LITERAL_STRING("http://www.mozilla.org/DTDs/ChimeraBookmarks.dtd")))
+      return PR_FALSE;
+  }
+  
+  // check that the root element is <bookmarks>
+  if (isChimeraBookmarks)
+  {
+    nsCOMPtr<nsIDOMElement> importRootElement;
+    inImportDoc->GetDocumentElement(getter_AddRefs(importRootElement));
+
+    nsAutoString rootTagName;
+    importRootElement->GetTagName(rootTagName);
+    if (!rootTagName.Equals(NS_LITERAL_STRING("bookmarks")))
+      return PR_FALSE;
+  }
+
+  // we now have a valid (we think) chimera bookarmarks XML DOM. We need to
+  // move all of the children of the root into the new folder, taking care
+  // to fix up ContentIDs (since moving elements between documents does not
+  // ensure unique IDs for us, sadly).
+  nsCOMPtr<nsIDOMElement> importRoot;
+  inImportDoc->GetDocumentElement(getter_AddRefs(importRoot));
+  if (!importRoot) return PR_FALSE;
+  
+  nsCOMPtr<nsIContent> rootContent = do_QueryInterface(importRoot);
+  if (!rootContent) return PR_FALSE;
+
+  // remove all whitespace nodes
+  StripWhitespaceNodes(rootContent);
+
+  PRInt32 numChildren;
+  rootContent->ChildCount(numChildren);
+  for (PRInt32 i = 0; i < numChildren; i ++)
+  {
+    nsCOMPtr<nsIContent> curChild;
+    rootContent->ChildAt(i, *getter_AddRefs(curChild));
+  
+    // clone it, and put it under the importedRoot.
+    nsCOMPtr<nsIDOMElement> childElement = do_QueryInterface(curChild);
+    if (childElement)
+    {
+      nsCOMPtr<nsIDOMNode> clonedChild;
+      childElement->CloneNode(PR_TRUE, getter_AddRefs(clonedChild));
+      
+      nsCOMPtr<nsIDOMNode> dummy;
+      inImportedRoot->AppendChild(clonedChild, getter_AddRefs(dummy));
+    }
+  }
+
+  // now nuke the contentIDs
+  nsCOMPtr<nsIDocument> importDoc = do_QueryInterface(inDestDoc);
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIContentIterator> iterator = do_CreateInstance(kCContentIteratorCID);
+  if (iterator)
+  {
+    nsCOMPtr<nsIContent> root = do_QueryInterface(inImportedRoot);
+  
+    rv = iterator->Init(root);
+    if (NS_FAILED(rv))
+      return PR_FALSE;
+      
+    while (iterator->IsDone() == NS_ENUMERATOR_FALSE)
+    {
+      nsCOMPtr<nsIContent> curContent;
+      iterator->CurrentNode(getter_AddRefs(curContent));
+
+      if (curContent)
+      {
+        PRInt32 newID;
+        importDoc->GetAndIncrementContentID(&newID);
+        curContent->SetContentID((PRUint32)newID);
+      }
+      
+      iterator->Next();
+    }
+  }
+  
+  return PR_TRUE;
+}
 
 void
-BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
+BookmarksService::ImportBookmarks(nsIDOMDocument* inImportDoc)
 {
-  nsCOMPtr<nsIDOMElement> htmlDocRoot;
-  aHTMLDoc->GetDocumentElement(getter_AddRefs(htmlDocRoot));
-
   nsCOMPtr<nsIDOMElement>  bookmarksRoot;
   nsCOMPtr<nsIDOMDocument> bookmarksDOMDoc(do_QueryInterface(gBookmarksDocument));
   if (!bookmarksDOMDoc) return;
@@ -1010,14 +1124,38 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
   // Now crawl through the file and look for <DT> elements.  They signify folders
   // or leaves.
   PRInt32 bookmarksType = 0; // Assume IE.
-  AddImportedBookmarks(htmlDocRoot, importedRootElement, bookmarksDOMDoc, bookmarksType);
-
+  
+  nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(inImportDoc);
+  if (htmlDoc)
+  {
+    // HTML bookmarks (IE, Mozilla, Omniweb)
+    nsCOMPtr<nsIDOMElement> htmlDocRoot;
+    htmlDoc->GetDocumentElement(getter_AddRefs(htmlDocRoot));
+    AddImportedHTMLBookmarks(htmlDocRoot, importedRootElement, bookmarksDOMDoc, bookmarksType);
+  }
+  else
+  {
+    // XML bookmarks. Chimera (we hope)
+    if (!AddImportedChimeraXMLBookmarks(inImportDoc, bookmarksDOMDoc, importedRootElement))
+    {
+      NSString *alert     = NSLocalizedString(@"ErrorImportingBookmarksAlert",@"");
+      NSString *message   = NSLocalizedString(@"ErrorImportingXMLBookmarksMsg",@"");
+      NSString *okButton  = NSLocalizedString(@"OKButtonText",@"");
+      NSRunAlertPanel(alert, message, okButton, nil, nil);
+      return;
+    }
+    
+    bookmarksType = 3;
+  }
+  
   if (bookmarksType == 0)
     importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Internet Explorer Favorites"));
   else if (bookmarksType == 1)
-    importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Omniweb Favorites"));
+    importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Omniweb Bookmarks"));
   else if (bookmarksType == 2)
-    importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Mozilla/Netscape Favorites"));
+    importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Mozilla/Netscape Bookmarks"));
+  else if (bookmarksType == 3)
+    importedRootElement->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Navigator Bookmarks"));
 
   // now put the new child into the doc, and validate it
   bookmarksRoot->AppendChild(importedRootElement, getter_AddRefs(dummy));

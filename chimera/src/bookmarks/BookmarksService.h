@@ -106,7 +106,7 @@ public:
     
   static NSImage* CreateIconForBookmark(nsIDOMElement* aElement, PRBool useSiteIcon = PR_FALSE);
 
-  static void ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc);
+  static void ImportBookmarks(nsIDOMDocument* aDoc);
   
   static bool GetContentForKeyword(NSString* aKeyword, nsIContent** outFoundContent);
 

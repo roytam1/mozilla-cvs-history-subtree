@@ -354,9 +354,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     {
       nsCOMPtr<nsIDOMDocument> domDocument;
       domWindow->GetDocument(getter_AddRefs(domDocument));
-      nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(domDocument));
-      if (htmlDoc)
-        BookmarksService::ImportBookmarks(htmlDoc);
+      if (domDocument)
+        BookmarksService::ImportBookmarks(domDocument);
     }
     [self windowClosed];
     [self removeFromSuperview];
