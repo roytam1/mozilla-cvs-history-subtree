@@ -20,6 +20,7 @@
  * Contributor(s):
  *
  *    William Cook <william.cook@crocodile-clips.com> (original author)
+ *    Håkan Waara <hwaara@chello.se>
  *
  */
 
@@ -166,7 +167,7 @@ nsresult nsSVGRectFrame::Init()
 
 void nsSVGRectFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
 {
-  float x,y,width,height,rx,ry;
+  float x, y, width, height, rx, ry;
 
   mX->GetValue(&x);
   mY->GetValue(&y);
@@ -175,19 +176,27 @@ void nsSVGRectFrame::ConstructPath(nsASVGPathBuilder* pathBuilder)
   mRx->GetValue(&rx);
   mRy->GetValue(&ry);
 
-  if( width == 0) return;
-  if( height == 0) return;
+  /* In a perfect world, this would be handled by the DOM, and 
+     return a DOM exception. */
+  if (width == 0 || height == 0 || ry < 0 || rx < 0)
+    return;
 
-  // XXX rx, ry range checking
-/*
-    if( !rx && ry)
+  /* If any of the attributes are not set, we need to set it to the corresponding
+     attribute's value (e.g. if rx is not set, assign ry's value to rx). */
+  if (!rx || !ry)
+  {
+    if (rx < ry)
       rx = ry;
-    if( !ry && rx)
+    else
       ry = rx;
-    if( !rx && !ry)
-      rx = ry = 0;
+  }
 
-*/
+  // Rx/ry must not be values higher than half the rectangle's width/height
+  if (rx > (width/2))
+    rx = width/2;
+
+  if (ry > (height/2))
+    ry = height/2;
 
   pathBuilder->Moveto(x+rx, y);
   pathBuilder->Lineto(x+width-rx, y);
