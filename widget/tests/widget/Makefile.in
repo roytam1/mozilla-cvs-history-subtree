@@ -40,7 +40,6 @@ CPPSRCS = \
 
 LIBS := \
 	-lraptorgfx \
-	-lgmbase$(MOZ_TOOLKIT) \
 	$(TK_LIBS) \
 	-lgfxps \
 	-lnetlib \

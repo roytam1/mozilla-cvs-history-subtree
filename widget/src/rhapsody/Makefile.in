@@ -37,6 +37,7 @@ EXTRA_DSO_LDOPTS += -L$(DIST)/bin -lxpcom -lreg $(NSPR_LIBS)
 
 CPPSRCS= \
 	nsObject.cpp \
+	nsTimer.cpp \
 	$(NULL)
 
 #########################################
