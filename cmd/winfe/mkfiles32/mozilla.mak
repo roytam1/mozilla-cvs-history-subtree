@@ -407,6 +407,9 @@ LINK_LIBS= \
 !endif
 !ifdef MOZ_CALENDAR
     $(DIST)\lib\jul3240.lib \
+    $(DIST)\lib\nsfmt3230.lib \
+    $(DIST)\lib\nsuni3230.lib \
+    $(DIST)\lib\nscnv3230.lib \
 !endif
     $(DIST)\lib\zip$(MOZ_BITS)$(VERSION_NUMBER).lib \
     $(DIST)\lib\jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib \
@@ -1462,6 +1465,15 @@ install:    \
 !IF EXIST($(DIST)\bin\jul3240.dll)
 	    $(OUTDIR)\jul3240.dll    \
 !ENDIF
+!IF EXIST($(DIST)\bin\nsfmt3230.dll)
+	   $(OUTDIR)\nsfmt3230.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\nsuni3230.dll)
+	   $(OUTDIR)\nsuni3230.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\nscnv3230.dll)
+	   $(OUTDIR)\nscnv3230.dll    \
+!ENDIF
 !endif
 !IF EXIST($(DIST)\bin\xpstrdll.dll)
 	    $(OUTDIR)\xpstrdll.dll    \
@@ -1874,6 +1886,12 @@ $(OUTDIR)\nsinit.exe: $(DIST)\bin\nsinit.exe
 !if defined(MOZ_CALENDAR)
 $(OUTDIR)\jul3240.dll:   $(DIST)\bin\jul3240.dll
     @IF EXIST $(DIST)\bin\jul3240.dll copy $(DIST)\bin\jul3240.dll $(OUTDIR)\jul3240.dll
+$(OUTDIR)\nsfmt3230.dll:   $(DIST)\bin\nsfmt3230.dll
+    @IF EXIST $(DIST)\bin\nsfmt3230.dll copy $(DIST)\bin\nsfmt3230.dll $(OUTDIR)\nsfmt3230.dll
+$(OUTDIR)\nsuni3230.dll:   $(DIST)\bin\nsuni3230.dll
+    @IF EXIST $(DIST)\bin\nsuni3230.dll copy $(DIST)\bin\nsuni3230.dll $(OUTDIR)\nsuni3230.dll
+$(OUTDIR)\nscnv3230.dll:   $(DIST)\bin\nscnv3230.dll
+    @IF EXIST $(DIST)\bin\nscnv3230.dll copy $(DIST)\bin\nscnv3230.dll $(OUTDIR)\nscnv3230.dll
 !endif
 
 # XXX this will copy them all, we really only want the ones that changed
@@ -2137,6 +2155,9 @@ BUILD_SOURCE: $(OBJ_FILES)
 !endif
 !ifdef MOZ_CALENDAR
     $(DIST)\lib\jul3240.lib +
+    $(DIST)\lib\nsfmt3230.lib +
+    $(DIST)\lib\nsuni3230.lib +
+    $(DIST)\lib\nscnv3230.lib +
 !endif
     $(DIST)\lib\zip$(MOZ_BITS)$(VERSION_NUMBER).lib +
     $(DIST)\lib\jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib +
@@ -2542,6 +2563,9 @@ ns.zip:
 		xpstrdll.dll		\
 		js3240.dll		\
 		jul3240.dll		\
+		nsfmt3230.dll   \
+		nsuni3230.dll	\
+		nscnv3230.dll	\
 		jpeg3240.dll		\
 		edpref32.dll		\
 		editor32.dll		\
