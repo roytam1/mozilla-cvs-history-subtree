@@ -71,6 +71,14 @@ typedef struct
 
 /*----------------------------------------------------------------------*/
 /*																		*/
+/* XmTOOL_BOX_NOT_FOUND - Used by XfeToolBox methods that return an		*/
+/* 'int' index.															*/
+/*																		*/
+/*----------------------------------------------------------------------*/
+#define XmTOOL_BOX_NOT_FOUND -1
+
+/*----------------------------------------------------------------------*/
+/*																		*/
 /* XfeBox class names													*/
 /*																		*/
 /*----------------------------------------------------------------------*/
@@ -121,12 +129,6 @@ extern int
 XfeToolBoxItemGetIndex			(Widget			w,
 								 Widget			item);
 /*----------------------------------------------------------------------*/
-#if 0
-extern int
-XfeToolBoxTabGetIndex			(Widget			w,
-								 Widget			tab);
-/*----------------------------------------------------------------------*/
-#endif
 extern Widget
 XfeToolBoxItemGetByIndex		(Widget			w,
 								 Cardinal		index);
