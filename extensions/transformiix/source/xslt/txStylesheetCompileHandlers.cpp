@@ -83,6 +83,32 @@ getStyleAttr(txStylesheetAttr* aAttributes,
     return getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None, aName);
 }
 
+
+nsresult
+parseUseAttrSets(txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    txStylesheetAttr* attr = getStyleAttr(aAttributes, aAttrCount,
+                                          kNameSpaceID_XSLT,
+                                          txXSLTAtoms::useAttributeSets);
+    if (attr) {
+        txTokenizer tok(attr->mValue);
+        while (tok.hasMoreTokens()) {
+            txExpandedName name;
+            nsresult rv = aState.parseQName(tok.nextToken(), name, MB_FALSE);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            txInstruction* instr = new txInsertAttrSet(name);
+            NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+            rv = aState.addInstruction(instr);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+    }
+    return NS_OK;
+}
+
 #define TX_ENSURE_SUCCESS_OR_FCP(_rv, _state)                               \
     NS_ENSURE_TRUE(NS_SUCCEEDED(_rv) || _state.fcp(), _rv)
 
@@ -367,25 +393,10 @@ txFnStartLRE(PRInt32 aNamespaceID,
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = parseUseAttrSets(aAttributes, aAttrCount, aState);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     txStylesheetAttr* attr = 0;
-    
-    attr = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_XSLT,
-                        txXSLTAtoms::name);
-    if (attr) {
-        txTokenizer tok(attr->mValue);
-        while (tok.hasMoreTokens()) {
-            txExpandedName name;
-            rv = aState.parseQName(tok.nextToken(), name, MB_FALSE);
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            instr = new txInsertAttrSet(name);
-            NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
-
-            rv = aState.addInstruction(instr);
-            NS_ENSURE_SUCCESS(rv, rv);
-        }
-    }
-
     PRInt32 i;
     for (i = 0; i < aAttrCount; ++i) {
         attr = aAttributes + i;
@@ -574,6 +585,9 @@ txFnStartElement(PRInt32 aNamespaceID,
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = parseUseAttrSets(aAttributes, aAttrCount, aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
