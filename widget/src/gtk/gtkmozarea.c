@@ -22,7 +22,10 @@
 static void gtk_mozarea_class_init (GtkMozAreaClass *klass);
 static void gtk_mozarea_init       (GtkMozArea      *mozarea);
 static void gtk_mozarea_realize    (GtkWidget       *widget);
+static void gtk_mozarea_unrealize  (GtkWidget       *widget);
 static void gtk_mozarea_size_allocate (GtkWidget    *widget, GtkAllocation *allocation);        
+
+GtkWidgetClass *parent_class = NULL;
 
 GtkType
 gtk_mozarea_get_type (void)
@@ -57,7 +60,11 @@ gtk_mozarea_class_init (GtkMozAreaClass *klass)
   widget_class = GTK_WIDGET_CLASS (klass);
 
   widget_class->realize = gtk_mozarea_realize;
+  widget_class->unrealize = gtk_mozarea_unrealize;
   widget_class->size_allocate = gtk_mozarea_size_allocate;
+
+  parent_class = gtk_type_class(gtk_widget_get_type());
+
 }
 
 static void
@@ -78,10 +85,32 @@ gtk_mozarea_realize (GtkWidget *widget)
   mozarea = GTK_MOZAREA (widget);
 
   mozarea->superwin = gdk_superwin_new (gtk_widget_get_parent_window (widget),
-					widget->allocation.x, widget->allocation.y,
-					widget->allocation.width, widget->allocation.height);
+                                        widget->allocation.x, widget->allocation.y,
+                                        widget->allocation.width, widget->allocation.height);
   gdk_window_set_user_data (mozarea->superwin->shell_window, mozarea);
   widget->window = mozarea->superwin->shell_window;
+  /* make sure that we add a reference to this window.
+     if we don't then it will be destroyed by both the superwin
+     destroy method and the widget class destructor */
+  gdk_window_ref(widget->window);
+}
+
+static void
+gtk_mozarea_unrealize(GtkWidget *widget)
+{
+  GtkMozArea *mozarea;
+  
+  g_return_if_fail(GTK_IS_MOZAREA(widget));
+
+  GTK_WIDGET_UNSET_FLAGS(widget, GTK_REALIZED);
+
+  mozarea = GTK_MOZAREA(widget);
+  
+  if (mozarea->superwin) {
+    gdk_superwin_destroy(mozarea->superwin);
+    mozarea->superwin = NULL;
+  }
+  GTK_WIDGET_CLASS(parent_class)->unrealize(widget);
 }
 
 static void 
@@ -108,3 +137,4 @@ gtk_mozarea_new (GdkWindow *parent_window)
 {
   return GTK_WIDGET (gtk_type_new (GTK_TYPE_MOZAREA));
 }
+

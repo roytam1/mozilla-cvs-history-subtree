@@ -147,7 +147,6 @@ void gdk_superwin_destroy(GdkSuperWin *superwin)
                            superwin);
   gdk_window_destroy(superwin->bin_window);
   gdk_window_destroy(superwin->shell_window);
-  /* XXX this needs to free itself */
 }
 
 void         

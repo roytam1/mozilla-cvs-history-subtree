@@ -149,14 +149,24 @@ NS_IMETHODIMP nsWindow::Destroy()
         nsWidget::OnDestroy();
     }
 
+    if (mMozArea) {
+      /* destroy the moz area.  the superwin will be destroyed by that mozarea */
+      gtk_widget_destroy(mMozArea);
+      mMozArea = nsnull;
+      mSuperWin = nsnull;
+    }
+    else if (mSuperWin) {
+      /* destroy our superwin if we are a child window*/
+      gdk_superwin_destroy(mSuperWin);
+      mSuperWin = nsnull;
+    }
+
     if (mShell) {
     	if (GTK_IS_WIDGET(mShell))
      		gtk_widget_destroy(mShell);
     	mShell = nsnull;
     }
-    if (mSuperWin) {
-      gdk_superwin_destroy(mSuperWin);
-    }
+
   }
 
   return NS_OK;
