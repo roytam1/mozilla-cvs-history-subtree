@@ -4725,7 +4725,7 @@ nsDocShell::OnNewURI(nsIURI * aURI, nsIChannel * aChannel,
      *  frameset pages is to add new methods to nsIDocShellTreeItem.
      * Hopefully I don't have to do that. 
      */
-    if (NS_SUCCEEDED(aURI->Equals(mCurrentURI, &equalUri))
+    if (mCurrentURI && NS_SUCCEEDED(aURI->Equals(mCurrentURI, &equalUri))
        && equalUri && !inputStream &&
        (mLoadType == LOAD_NORMAL || mLoadType == LOAD_LINK || mLoadType == LOAD_REFRESH))
         mLoadType = LOAD_NORMAL_REPLACE;
