@@ -480,7 +480,7 @@ nsresult nsMsgDBView::SetReadByIndex(nsMsgViewIndex index, PRBool read)
 	return rv;
 }
 
-nsresult nsMsgDBView::SetThreadOfMsgReadByIndex(nsMsgViewIndex index, nsMsgKeyArray &keysMarkedRead, XP_Bool /*read*/)
+nsresult nsMsgDBView::SetThreadOfMsgReadByIndex(nsMsgViewIndex index, nsMsgKeyArray &keysMarkedRead, PRBool /*read*/)
 {
 	nsresult rv;
 
