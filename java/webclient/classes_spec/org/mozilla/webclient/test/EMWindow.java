@@ -248,6 +248,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
             System.out.println("debug: edburns: got Bookmarks instance");
 
             bookmarksTree = bookmarks.getBookmarks();
+            /*********
             TreeNode bookmarksRoot = (TreeNode) bookmarksTree.getRoot();
 
             System.out.println("debug: edburns: testing the Enumeration");
@@ -271,6 +272,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
                                i + "): index should be " + i + ".");
             childIndex = bookmarksRoot.getIndex(currentChild);
             System.out.println("debug: edburns: index is: " + childIndex);
+            *****/
 
             /**********
             BookmarkEntry folder = bookmarks.newBookmarkFolder("newFolder");
