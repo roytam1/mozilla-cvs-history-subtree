@@ -133,7 +133,8 @@ important that a module or method doesn't work without it). The oustanding
 
     <LI><B>Conn.pm</B>: The delete() method does not work as documented,
     it should handle taking an Entry:: object as argument. Reported by 
-    Thomas Lockney <tlockney@tivoli.com>. <B><I>[leif]</I></B>
+    Thomas Lockney <tlockney@tivoli.com>.
+    <B><I>[leif, fixed 09/25]</I></B>
 
     <LI><B>Conn.pm</B>: On line 399, the "$del = 1 if ..." needs to check if
     $del is defined or not, or the strict parsing will complain. Reported
@@ -168,7 +169,7 @@ important that a module or method doesn't work without it). The oustanding
     build. <B><I>[clayton, added 9/12]</I></B>
 
     <LI>Remove all error print statements in the library modules
-    (*.pm). [leif]
+    (*.pm). <B><I>[leif, fixed 9/24]</I></B>
 
     <LI>Problems reported using SSL on NT, giving a Dr Watson. Could this
     be related to the bug in API.xs? [clayton]
@@ -188,6 +189,10 @@ important that a module or method doesn't work without it). The oustanding
     to produce binary distributions. We already have the source
     distribution target, but we need one that can prepare a CVS compatible
     source dist as well. <B><I>[clayton]</I></B>
+
+    <LI><B>Entry.pm</B>: Add a setValue() method, to make it easier to set
+    an entire value set for a single attribute.
+    <B><I>[leif, fixed 09/25]</I></B>
 
     <LI><B>LDIF.pm</B>: Add documentation! [leif]
   </UL>
