@@ -59,6 +59,9 @@
 #include <stdio.h> /* for printf (debugging) */
 #include <stdlib.h> /* for malloc, realloc */
 #include <string.h> /* for memset(), strdup */
+#ifdef XP_MAC
+#include <extras.h> /* for strdup */
+#endif
 
 #define BUFFER_RING_SIZE 2500
 #define MIN_BUFFER_SIZE 200

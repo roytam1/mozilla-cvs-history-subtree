@@ -30,6 +30,9 @@
 #endif
 
 #include "icalerror.h"
+#ifdef XP_MAC
+#include <string.h>
+#endif
 
 icalerrorenum icalerrno;
 

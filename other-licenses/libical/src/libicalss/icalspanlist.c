@@ -30,6 +30,9 @@
 #include "icalspanlist.h"
 #include "pvl.h" 
 #include <stdlib.h> /* for free and malloc */
+#ifdef XP_MAC
+#include <string.h> /* for memcpy */
+#endif
 
 struct icalspanlist_impl {
 	pvl_list spans;

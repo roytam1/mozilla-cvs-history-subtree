@@ -32,7 +32,9 @@
 #include <ctype.h>   /* For tolower() */
 #include <string.h> /* for index() */
 #include <stdlib.h> /* for malloc and free */
-
+#ifdef XP_MAC
+#include <extras.h> /* for strdup */
+#endif
 
 
 struct icalclassify_parts {

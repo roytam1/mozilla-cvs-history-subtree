@@ -40,6 +40,9 @@
 #include <ctype.h> /* for tolower */
 #include <stdlib.h>   /* for malloc, free */
 #include <string.h> /* for strcasecmp */
+#ifdef XP_MAC
+#include <extras.h> /* for strdup */
+#endif
 
 #ifdef DMALLOC
 #include "dmalloc.h"

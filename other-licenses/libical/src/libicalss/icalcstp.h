@@ -72,6 +72,7 @@ struct icalcstp_statement {
 
 const char* icalcstp_command_to_string(icalcstp_command command);
 icalcstp_command icalcstp_string_to_command(const char* str);
+int icalcstp_line_is_endofdata(char* line);
 
 #endif /* !ICALCSTP_H */
 

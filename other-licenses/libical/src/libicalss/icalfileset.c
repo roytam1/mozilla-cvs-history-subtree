@@ -33,6 +33,7 @@
 #include "icalfileset.h"
 #include "icalgauge.h"
 #include <errno.h>
+#ifndef XP_MAC
 #include <sys/stat.h> /* for stat */
 #ifndef WIN32
 #include <unistd.h> /* for stat, getpid */
@@ -40,9 +41,13 @@
 #include <io.h>
 #include <share.h>
 #endif
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h> /* for fcntl */
+#ifdef XP_MAC
+#include <extras.h>
+#endif
 #include "icalfilesetimpl.h"
 
 #ifdef WIN32
@@ -281,7 +286,7 @@ const char* icalfileset_path(icalfileset* cluster)
 
 int icalfileset_lock(icalfileset *cluster)
 {
-#ifndef WIN32
+#if !defined(WIN32) && !defined(XP_MAC)
     struct icalfileset_impl *impl = (struct icalfileset_impl*)cluster;
     struct flock lock;
     int rtrn;
@@ -303,7 +308,7 @@ int icalfileset_lock(icalfileset *cluster)
 
 int icalfileset_unlock(icalfileset *cluster)
 {
-#ifndef WIN32
+#if !defined(WIN32) && !defined(XP_MAC)
     struct icalfileset_impl *impl = (struct icalfileset_impl*)cluster;
     struct flock lock;
     icalerror_check_arg_rz((impl->fd>0),"impl->fd");
@@ -343,6 +348,7 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
 	return ICAL_NO_ERROR;
     }
     
+#ifndef XP_MAC
     if(icalfileset_safe_saves == 1){
 #ifndef WIN32
 	snprintf(tmp,ICAL_PATH_MAX,"cp '%s' '%s.bak'",impl->path,impl->path);
@@ -355,6 +361,7 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
 	    return ICAL_FILE_ERROR;
 	}
     }
+#endif
 
     if(lseek(impl->fd,0,SEEK_SET) < 0){
 	icalerror_set_errno(ICAL_FILE_ERROR);
@@ -381,6 +388,7 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
     
     impl->changed = 0;    
 
+#ifndef XP_MAC
 #ifndef WIN32
     if(ftruncate(impl->fd,write_size) < 0){
 	return ICAL_FILE_ERROR;
@@ -388,7 +396,9 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
 #else
 	chsize( impl->fd, tell( impl->fd ) );
 #endif
-    
+#else
+    // XXX THIS IS BROKEN ON MAC, NEED REPLACEMENT FOR ftruncate()
+#endif    
     return ICAL_NO_ERROR;
     
 } 

@@ -32,8 +32,10 @@
 #include "ical.h"
 #include "icalset.h"
 #include "icalgauge.h"
+#ifndef XP_MAC
 #include <sys/types.h> /* For open() flags and mode */
 #include <sys/stat.h> /* For open() flags and mode */
+#endif
 #include <fcntl.h> /* For open() flags and mode */
 
 #ifdef WIN32

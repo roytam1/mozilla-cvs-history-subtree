@@ -22,8 +22,13 @@
 #include "icalproperty.h"
 #include "icalerror.h"
 #include "icalmemory.h"
-#include <malloc.h>
 #include <string.h>
+#ifdef XP_MAC
+#include <extras.h> /* for malloc */
+#include <stdlib.h> /* for free */
+#else
+#include <malloc.h>
+#endif
 
 #ifdef WIN32
 #define snprintf      _snprintf

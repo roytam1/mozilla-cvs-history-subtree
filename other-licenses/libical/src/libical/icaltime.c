@@ -61,6 +61,11 @@
 #define strcasecmp    stricmp
 #endif
 
+#ifdef XP_MAC
+#include "prenv.h"
+#define getenv PR_GetEnv
+#define putenv PR_SetEnv
+#endif
 
 /**********************************************************************
  * Deprecated TIme functions

@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef XP_MAC
+#include <extras.h> /* for strdup */
+#endif
 #include "icalproperty.h"
 #include "icalarray.h"
 #include "icalerror.h"
@@ -38,6 +41,9 @@
 
 #ifdef WIN32
 #define snprintf _snprintf
+#define PACKAGE_DATA_DIR "/Projects/libical"
+#endif
+#ifdef XP_MAC
 #define PACKAGE_DATA_DIR "/Projects/libical"
 #endif
 

@@ -195,7 +195,9 @@ icalcomponent* icalset_get_next_component(icalset* set);
 #ifndef ICALFILESET_H
 #define ICALFILESET_H
 
+#ifndef XP_MAC
 #include <sys/types.h> /* For open() flags and mode */
+#endif
 #include <sys/stat.h> /* For open() flags and mode */
 #include <fcntl.h> /* For open() flags and mode */
 

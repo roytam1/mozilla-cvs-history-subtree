@@ -41,6 +41,9 @@
 #include "icaldirset.h"
 #include "icaldirsetimpl.h"
 #include <stdlib.h>
+#ifdef XP_MAC
+#include <string.h>
+#endif
 /*#include "icalheapset.h"*/
 /*#include "icalmysqlset.h"*/
 

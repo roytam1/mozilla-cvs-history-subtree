@@ -31,10 +31,12 @@
 #include "icalcstpclient.h"
 #include "pvl.h" 
 
+#ifndef XP_MAC
 #include <sys/types.h> /* For send(), others */
 #ifndef WIN32
 #include <sys/socket.h>  /* For send(), others. */
 #include <unistd.h> /* For alarm */
+#endif
 #endif
 #include <errno.h>
 #include <stdlib.h> /* for malloc */

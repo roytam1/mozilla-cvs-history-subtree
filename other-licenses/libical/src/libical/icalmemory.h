@@ -27,7 +27,11 @@
 #define ICALMEMORY_H
 
 #ifndef WIN32
+#ifdef XP_MAC
+#include <size_t.h> /* for size_t */
+#else
 #include <sys/types.h> /* for size_t */
+#endif
 #else
 #include <stddef.h>
 #endif

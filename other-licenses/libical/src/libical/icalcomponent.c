@@ -46,6 +46,10 @@
 #include <assert.h>
 #include <stdio.h> /* for fprintf */
 #include <string.h> /* for strdup */
+#ifdef XP_MAC
+#include <extras.h> /* for strdup */
+#include <ctime>
+#endif
 
 #define MAX_TMP 1024
 
@@ -799,12 +803,23 @@ time_t icalcomponent_convert_time(icalproperty *p)
 		tzset();
 		offset = daylight ? altzone : timezone;
 #else
+#ifdef XP_MAC
+		time_t now = time(NULL);
 
+		struct tm *utctm = gmtime(&now);
+		time_t utc = mktime(utctm);
+
+		struct tm localtm = *localtime(&now);
+		time_t local = mktime(&localtm);
+
+		offset = difftime(local, utc);
+#else
 		struct tm *tmp_tm;
 		time_t t;
 
 		t = time(NULL);
-	 	offset = localtime(&t)->tm_gmtoff;
+	 	offset = GMTDelta;
+#endif
 #endif
 	}
 
