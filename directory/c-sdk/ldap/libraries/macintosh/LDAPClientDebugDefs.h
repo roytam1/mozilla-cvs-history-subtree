@@ -26,7 +26,6 @@
 
 #define MOZILLA_CLIENT 1
 #define NET_SSL 1
-#define LDAP_SSLIO_HOOKS 1
 
 #ifdef __powerc
 #define SUPPORT_OPENTRANSPORT	1

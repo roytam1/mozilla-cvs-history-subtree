@@ -24,6 +24,5 @@
 #define SUPPORT_OPENTRANSPORT	1
 #define OTUNIXERRORS			1
 #define NET_SSL					1
-#define LDAP_SSLIO_HOOKS		1
 // #define NO_USERINTERFACE
 // #define LDAP_DEBUG

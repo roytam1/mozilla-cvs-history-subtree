@@ -425,8 +425,7 @@ CDEFINES= \
         $(SSL_FLAG) \
         $(LINK_SSL_FLAG) \
         /DLDAP_REFERRALS \
-        /DNO_USERINTERFACE \
-        /DLDAP_SSLIO_HOOKS
+        /DNO_USERINTERFACE
 
 LIB_FLAGS= \
 !if "$(MOZ_BITS)"=="32"

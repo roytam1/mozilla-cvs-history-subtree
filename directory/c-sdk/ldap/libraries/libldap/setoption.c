@@ -115,11 +115,9 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_REFERRALS, optdata );
 		break;
 
-#ifdef LDAP_SSLIO_HOOKS
 	case LDAP_OPT_SSL:
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_SSL, optdata );
 		break;
-#endif
 
 	case LDAP_OPT_RESTART:
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_RESTART, optdata );
@@ -173,7 +171,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 		ld->ld_rebind_arg = (void *) optdata;
 		break;
 
-#ifdef LDAP_SSLIO_HOOKS
 	/* i/o function pointers */
 	case LDAP_OPT_IO_FN_PTRS:
 		if (( rc = nsldapi_install_compat_io_fns( ld,
@@ -212,7 +209,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	    rc = -1;
 	  }
 	  break;
-#endif
 
 	/* thread function pointers */
 	case LDAP_OPT_THREAD_FN_PTRS:

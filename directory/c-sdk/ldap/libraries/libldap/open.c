@@ -586,11 +586,9 @@ nsldapi_open_ldap_defconn( LDAP *ld )
 	}
 	srv->lsrv_port = ld->ld_defport;
 
-#ifdef LDAP_SSLIO_HOOKS
 	if (( ld->ld_options & LDAP_BITOPT_SSL ) != 0 ) {
 		srv->lsrv_options |= LDAP_SRV_OPT_SECURE;
 	}
-#endif
 
 	if (( ld->ld_defconn = nsldapi_new_connection( ld, &srv, 1, 1, 0 ))
 	    == NULL ) {

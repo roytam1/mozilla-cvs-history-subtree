@@ -78,8 +78,7 @@ DEFS		= $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(KERBEROS) $(AFSKERBEROS) \
 		  $(UOFM) $(UOFA) $(NO_USERINTERFACE) $(CLDAP) $(NO_CACHE) \
 		  $(LDAP_REFERRALS) $(LDAP_DNS) $(STR_TRANSLATION) \
 		  $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
-		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC) \
-		  $(LDAP_SSLIO_HOOKS)
+		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC)
 
 include ../../build/autoconf.mk
 include $(NSPR_TREE)/config/rules.mk
@@ -138,11 +137,6 @@ endif
 # uncomment this line to enable support for LDAP referrals in libldap
 #
 LDAP_REFERRALS		= -DLDAP_REFERRALS
-
-#
-# uncomment this line to enable support for SSL I/O in libldap
-#
-LDAP_SSLIO_HOOKS	= -DLDAP_SSLIO_HOOKS
 
 ###########################################################################
 

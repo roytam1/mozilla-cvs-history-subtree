@@ -101,11 +101,10 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 		    LDAP_GET_BITOPT( ld, LDAP_BITOPT_REFERRALS );
 		break;
 
-#ifdef LDAP_SSLIO_HOOKS
 	case LDAP_OPT_SSL:
 		*((int *) optdata) = LDAP_GET_BITOPT( ld, LDAP_BITOPT_SSL );
 		break;
-#endif
+
 	case LDAP_OPT_RESTART:
 		*((int *) optdata) = LDAP_GET_BITOPT( ld, LDAP_BITOPT_RESTART );
 		break;
@@ -165,7 +164,6 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 		*((void **) optdata) = ld->ld_rebind_arg;
 		break;
 
-#ifdef LDAP_SSLIO_HOOKS
 	/* i/o function pointers */
 	case LDAP_OPT_IO_FN_PTRS:
 		if ( ld->ld_io_fns_ptr == NULL ) {
@@ -196,7 +194,6 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 	    rc = -1;
 	  }
 	  break;
-#endif /* LDAP_SSLIO_HOOKS */
 
 	/* thread function pointers */
 	case LDAP_OPT_THREAD_FN_PTRS:
