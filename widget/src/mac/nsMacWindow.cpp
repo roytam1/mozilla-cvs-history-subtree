@@ -596,7 +596,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
   // to fix all cases.
   //
   // Luckily, NONE of this is required on OSX, which uses CarbonEvents ;)
-  Rect sbRect = { 100, 0, 200, 1 };
+  Rect sbRect = { 100, -1, 150, 1 };
   mPhantomScrollbarData = new PhantomScrollbarData;
   mPhantomScrollbar = ::NewControl ( mWindowPtr, &sbRect, nil, true, 50, 0, 100, 
                                             kControlScrollBarLiveProc, (long)mPhantomScrollbarData );
