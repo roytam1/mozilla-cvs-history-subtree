@@ -117,22 +117,28 @@ LDAP_EXPORT_FLAGS=$(addprefix $(DLLEXPORTS_PREFIX), $(LDAP_EXPORT_DEFS))
 
 GENEXPARGS=$(BUILD_DEBUG) $(LDAPVERS_SUFFIX) $(LDAPVERS)
 
-ifeq ($(OS_ARCH), AIX)
-    EXTRA_LIBS += $(LIBNSPR)
-else
-ifneq ($(OS_ARCH), OSF1)
-ifeq ($(OS_ARCH), WINNT)
-    EXTRA_LIBS = $(LIBNSPR)
-else
-    EXTRA_LIBS = $(DYNAMICNSPR)
-endif
-endif
-endif
-
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
+
+ifeq ($(OS_ARCH), AIX)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
+endif
+
+#ifeq ($(OS_ARCH), AIX)
+#    EXTRA_LIBS += $(LIBNSPR)
+#else
+#ifneq ($(OS_ARCH), OSF1)
+#ifeq ($(OS_ARCH), WINNT)
+#    EXTRA_LIBS = $(LIBNSPR)
+#else
+#    EXTRA_LIBS = $(DYNAMICNSPR)
+#endif
+#endif
+#endif
 
 OBJDEST = $(OBJDIR_NAME)
 
