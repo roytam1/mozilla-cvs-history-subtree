@@ -34,6 +34,7 @@
 #include "nsIPref.h"
 #include "nsTextFormatter.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsNetUtil.h"
 
 #define MAX_NUMBER_OF_COOKIES 300
 #define MAX_COOKIES_PER_SERVER 20
@@ -455,6 +456,20 @@ COOKIE_GetCookie(char * address) {
      isSecure = PR_TRUE;
   }
 
+  /* Hacky security check: If address is of a scheme that
+     doesn't support hostnames, we have no host to get a cookie for,
+     so we must not attempt to get cookies (bug 152725)
+  */
+  nsCOMPtr<nsIURI> uri;
+  nsresult secResult = NS_NewURI(getter_AddRefs(uri),
+                                 address, nsnull);
+  if (NS_FAILED(secResult))
+      return nsnull;
+  nsXPIDLCString tempHost;
+  secResult = uri->GetHost(getter_Copies(tempHost));
+  if (NS_FAILED(secResult))
+      return nsnull;
+
   /* search for all cookies */
   if (cookie_list == nsnull) {
     return NULL;
@@ -709,6 +724,20 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
     PR_Free(cur_host);
     return;
   }
+
+  /* Hacky security check: If address is of a scheme that
+     doesn't support hostnames, we have no host to set a cookie on,
+     so we must not attempt to set cookies (bug 152725)
+  */
+  nsCOMPtr<nsIURI> uri;
+  nsresult secResult = NS_NewURI(getter_AddRefs(uri),
+                                 curURL, nsnull);
+  if (NS_FAILED(secResult))
+      return;
+  nsXPIDLCString tempHost;
+  secResult = uri->GetHost(getter_Copies(tempHost));
+  if (NS_FAILED(secResult))
+      return;
 
 //printf("\nSetCookieString(URL '%s', header '%s') time %d == %s\n",curURL,setCookieHeader,timeToExpire,asctime(gmtime(&timeToExpire)));
   if(cookie_GetLifetimePref() == COOKIE_Discard) {
