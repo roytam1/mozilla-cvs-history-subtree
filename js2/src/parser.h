@@ -124,7 +124,8 @@ namespace JavaScript {
         bool constant;                  // true for const variables and
                                         // parameters
 
-        
+        // the sematics/codegen passes stuff their
+        // data in here.
         JS2Runtime::PropertyIterator prop;
         
         
@@ -663,6 +664,8 @@ namespace JavaScript {
         ExprNode *type;                 // Type expression or nil if not provided
         StmtNode *stmt;                 // The catch clause's body; non-nil only
 
+        // the sematics/codegen passes stuff their
+        // data in here.
         JS2Runtime::PropertyIterator prop;
         
 
@@ -769,7 +772,7 @@ namespace JavaScript {
     
     struct FunctionStmtNode: AttributeStmtNode {
         FunctionDefinition function;    // Function definition
-        JS2Runtime::JSFunction *mFunction;
+        JS2Runtime::JSFunction *mFunction;  // used by backend
 
         FunctionStmtNode(uint32 pos, Kind kind, IdentifierList *attributes) :
                 AttributeStmtNode(pos, kind, attributes) {}
@@ -798,7 +801,7 @@ namespace JavaScript {
                                         // nil if omitted
         BlockStmtNode *body;            // The class's body; nil if omitted
 
-        JS2Runtime::JSType *mType;
+        JS2Runtime::JSType *mType;      // used by backend
 
         ClassStmtNode(uint32 pos, Kind kind, IdentifierList *attributes,
                       ExprNode *name, ExprNode *superclass,

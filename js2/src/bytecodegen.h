@@ -58,116 +58,93 @@ namespace ByteCode {
         Explicit
     } ThisFlag;     // maybe have three different invoke ops instead?
 
-    typedef enum {
+typedef enum {
 
-        LoadConstantUndefinedOp,//                     --> <undefined value object>
-        LoadConstantTrueOp,     //                     --> <true value object>
-        LoadConstantFalseOp,    //                     --> <false value object>
-        LoadConstantNullOp,     //                     --> <null value object>
-        LoadConstantNumberOp,   // <poolindex>         --> <Number value object>
-        LoadConstantStringOp,   // <poolindex>         --> <String value object>
-
-        LoadThisOp,             //                     --> <this object>
-        
-        LoadFunctionOp,         // <pointer>        XXX !!! XXX
-        LoadTypeOp,             // <pointer>        XXX !!! XXX
-
-
-        InvokeOp,               // <argCount> <thisflag>         <function> <args>  --> [<result>]
-
-        GetTypeOp,              //                     <object> --> <type of object>
-        CastOp,                 //                     <type> <object> --> <object>
-
-        DoUnaryOp,              // <operation>         <object> --> <result>
-        DoOperatorOp,           // <operation>         <object> <object> --> <result>
-
-        PushNullOp,             //                     --> <Object(null)>
-        PushIntOp,              // <int>               --> <Object(int)>
-        PushNumOp,              // <num>               --> <Object(num)>
-        PushStringOp,           // <poolindex>         --> <Object(index)>
-        PushTypeOp,             // <poolindex>
-
-        ReturnOp,               //                     <function> <args> <result> --> <result>
-        ReturnVoidOp,           //                     <function> <args> -->
-
-        GetConstructorOp,       //                     <type> --> <function> 
-        NewObjectOp,            //                     --> <object>
-        NewInstanceOp,          //                     <type> --> <object> <type>
-        TypeOfOp,               //                     <object> --> <string>
-        InstanceOfOp,           //                     <object> <object> --> <boolean>
-        AtOp,                   //                     <object> <type> --> <object>
-
-        ToBooleanOp,            //                     <object> --> <boolean>
-
-
-        JumpFalseOp,            // <target>            <object> -->
-        JumpTrueOp,             // <target>            <object> -->
-        JumpOp,                 // <target>            
-
-        TryOp,
-        JsrOp,
-        RtsOp,
-        ThrowOp,
-        HandlerOp,
-
-        LogicalXorOp,           //                     <object> <object> <boolean> <boolean> --> <object> 
-        LogicalNotOp,           //                     <object> --> <object>
-
-        SwapOp,                 //                     <object1> <object2> --> <object2> <object1>
-        DupOp,                  //                     <object> --> <object> <object>
-        DupInsertOp,            //                     <object1> <object2> --> <object2> <object1> <object2>
-        DupNOp,                 // <N>                 <object> --> <object> { N times }
-        DupInsertNOp,           // <N>                 <object> { N times }  <object2> --> <object2> <object> { N times }  <object2>
-        PopOp,                  //                     <object> -->
-    
-        // for instance members
-        GetFieldOp,             // <slot>              <base> --> <object>
-        SetFieldOp,             // <slot>              <base> <object> --> <object>
-        // for static members
-        GetStaticFieldOp,       // <slot>              <base> --> <object>
-        SetStaticFieldOp,       // <slot>              <base> <object> --> <object>
-
-        // for instance methods
-        GetMethodOp,            // <slot>              <base> --> >base> <function>
-        GetMethodRefOp,         // <slot>              <base> --> <bound function> 
-        // for static methods
-        GetStaticMethodOp,      // <slot>              <base> --> <function>
-        GetStaticMethodRefOp,   // <slot>              <base> --> <bound function> 
-
-        // for argumentz
-        GetArgOp,               // <index>             --> <object>
-        SetArgOp,               // <index>             <object> --> <object>
-
-        // for local variables in the immediate scope
-        GetLocalVarOp,          // <index>             --> <object>
-        SetLocalVarOp,          // <index>             <object> --> <object>
-
-        // for local variables in the nth closure scope
-        GetClosureVarOp,        // <depth>, <index>    --> <object>
-        SetClosureVarOp,        // <depth>, <index>    <object> --> <object>
-
-        // for array elements
-        GetElementOp,           //                     <base> <index> --> <object>
-        SetElementOp,           //                     <base> <index> <object> --> <object>
-
-        // for properties
-        GetPropertyOp,          // <poolindex>         <base> --> <object>
-        GetInvokePropertyOp,    // <poolindex>         <base> --> <base> <object> 
-        SetPropertyOp,          // <poolindex>         <base> <object> --> <object>
-
-        // for all generic names 
-        GetNameOp,              // <poolindex>         --> <object>
-        GetTypeOfNameOp,        // <poolindex>         --> <object>
-        SetNameOp,              // <poolindex>         <object> --> <object>
-
-        LoadGlobalObjectOp,     //                     --> <object>
-
-        
-        PushScopeOp,            // <pointer>        XXX !!! XXX
-        PopScopeOp,             // <pointer>        XXX !!! XXX
+LoadConstantUndefinedOp,//                          --> <undefined value object>
+LoadConstantTrueOp,     //                          --> <true value object>
+LoadConstantFalseOp,    //                          --> <false value object>
+LoadConstantNullOp,     //                          --> <null value object>
+LoadConstantNumberOp,   // <poolindex>              --> <Number value object>
+LoadConstantStringOp,   // <poolindex>              --> <String value object>
+LoadThisOp,             //                          --> <this object>      
+LoadFunctionOp,         // <pointer>        XXX !!! XXX
+LoadTypeOp,             // <pointer>        XXX !!! XXX
+InvokeOp,               // <argc> <thisflag>        <function> <args>  --> [<result>]
+GetTypeOp,              //                          <object> --> <type of object>
+CastOp,                 //                          <type> <object> --> <object>
+DoUnaryOp,              // <operation>              <object> --> <result>
+DoOperatorOp,           // <operation>              <object> <object> --> <result>
+PushNullOp,             //                          --> <Object(null)>
+PushIntOp,              // <int>                    --> <Object(int)>
+PushNumOp,              // <num>                    --> <Object(num)>
+PushStringOp,           // <poolindex>              --> <Object(index)>
+PushTypeOp,             // <poolindex>
+ReturnOp,               //                          <function> <args> <result> --> <result>
+ReturnVoidOp,           //                          <function> <args> -->
+GetConstructorOp,       //                          <type> --> <function> 
+NewObjectOp,            //                          <type> --> <object>
+NewThisOp,              //                          <type> -->
+NewInstanceOp,          //  <argc>                  <type> <args> --> <object>
+TypeOfOp,               //                          <object> --> <string>
+InstanceOfOp,           //                          <object> <object> --> <boolean>
+AtOp,                   //                          <object> <type> --> <object>
+ToBooleanOp,            //                          <object> --> <boolean>
+JumpFalseOp,            // <target>                 <object> -->
+JumpTrueOp,             // <target>                 <object> -->
+JumpOp,                 // <target>            
+TryOp,                  // <handler> <handler>
+JsrOp,                  // <target>
+RtsOp,
+WithinOp,               //                          <object> -->
+WithoutOp,              //
+ThrowOp,                //                          <whatever> <object> --> <object>
+HandlerOp,
+LogicalXorOp,           //                          <object> <object> <boolean> <boolean> --> <object> 
+LogicalNotOp,           //                          <object> --> <object>
+SwapOp,                 //                          <object1> <object2> --> <object2> <object1>
+DupOp,                  //                          <object> --> <object> <object>
+DupInsertOp,            //                          <object1> <object2> --> <object2> <object1> <object2>
+DupNOp,                 // <N>                      <object> --> <object> { N times }
+DupInsertNOp,           // <N>                      <object> {xN} <object2> --> <object2> <object> {xN} <object2>
+PopOp,                  //                          <object> -->   
+// for instance members
+GetFieldOp,             // <slot>                   <base> --> <object>
+SetFieldOp,             // <slot>                   <base> <object> --> <object>
+// for static members
+GetStaticFieldOp,       // <slot>                   <base> --> <object>
+SetStaticFieldOp,       // <slot>                   <base> <object> --> <object>
+// for instance methods
+GetMethodOp,            // <slot>                   <base> --> >base> <function>
+GetMethodRefOp,         // <slot>                   <base> --> <bound function> 
+// for static methods
+GetStaticMethodOp,      // <slot>                   <base> --> <function>
+GetStaticMethodRefOp,   // <slot>                   <base> --> <bound function> 
+// for argumentz
+GetArgOp,               // <index>                  --> <object>
+SetArgOp,               // <index>                  <object> --> <object>
+// for local variables in the immediate scope
+GetLocalVarOp,          // <index>                  --> <object>
+SetLocalVarOp,          // <index>                  <object> --> <object>
+// for local variables in the nth closure scope
+GetClosureVarOp,        // <depth>, <index>         --> <object>
+SetClosureVarOp,        // <depth>, <index>         <object> --> <object>
+// for array elements
+GetElementOp,           //                          <base> <index> --> <object>
+SetElementOp,           //                          <base> <index> <object> --> <object>
+// for properties
+GetPropertyOp,          // <poolindex>              <base> --> <object>
+GetInvokePropertyOp,    // <poolindex>              <base> --> <base> <object> 
+SetPropertyOp,          // <poolindex>              <base> <object> --> <object>
+// for all generic names 
+GetNameOp,              // <poolindex>              --> <object>
+GetTypeOfNameOp,        // <poolindex>              --> <object>
+SetNameOp,              // <poolindex>              <object> --> <object>
+LoadGlobalObjectOp,     //                          --> <object>
+PushScopeOp,            // <pointer>        XXX !!! XXX
+PopScopeOp,             // <pointer>        XXX !!! XXX
 
 
-    } ByteCodeOp;
+} ByteCodeOp;
 
 
     class ByteCodeModule {
@@ -230,7 +207,7 @@ namespace ByteCode {
     public:
 
         ByteCodeGen(Context *cx, ScopeChain *scopeChain) 
-            : mBuffer(new CodeBuffer), mScopeChain(scopeChain), m_cx(cx) { }
+            : mBuffer(new CodeBuffer), mScopeChain(scopeChain), m_cx(cx), mNamespaceList(NULL) { }
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);

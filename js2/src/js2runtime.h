@@ -228,7 +228,6 @@ static const double two31 = 2147483648.0;
         Const,
         Call,
         New,
-        NewArgs,
         Index,
         IndexEqual,
         DeleteIndex,
@@ -400,12 +399,13 @@ static const double two31 = 2147483648.0;
     // a constructor
     class ConstructorReference : public Reference {
     public:
-        ConstructorReference(JSFunction *f, JSType *baseClass)
-            : Reference(baseClass), mFunction(f) { }
-        JSFunction *mFunction;
+        ConstructorReference(uint32 index, JSType *baseClass)
+            : Reference(baseClass), mIndex(index) { }
+        uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
         bool isConstructor()    { return true; }
-        bool needsThis() { return true; }
+        bool needsThis() { return false; }          // i.e. there is no 'this' specified by the
+                                                    // the call sequence (it's a static function)
         uint32 baseExpressionDepth() { return 1; }
     };
     // a getter function
@@ -503,6 +503,9 @@ static const double two31 = 2147483648.0;
         JSObject      *mPrototype;
 
         JSType *getType() const { return mType; }
+
+        virtual bool isDynamic() { return true; }
+
 /*
         // see if the property exists in any form
         bool hasProperty(const String &name)
@@ -739,6 +742,8 @@ static const double two31 = 2147483648.0;
             mInstanceValues[index] = v;
         }
 
+        virtual bool isDynamic();
+
         JSValue         *mInstanceValues;
     };
     Formatter& operator<<(Formatter& f, const JSInstance& obj);
@@ -758,8 +763,11 @@ static const double two31 = 2147483648.0;
                     mStatics(NULL), 
                     mVariableCount(0),
                     mInitialInstance(NULL),
-                    mClassName(name)
+                    mClassName(name),
+                    mIsDynamic(false)
         {
+            for (uint32 i = 0; i < OperatorCount; i++)
+                mUnaryOperators[i] = NULL;
         }
 
         JSType(Context *cx, JSType *super) 
@@ -767,8 +775,11 @@ static const double two31 = 2147483648.0;
                     mSuperType(super), 
                     mStatics(NULL), 
                     mVariableCount(0),
-                    mInitialInstance(NULL)
+                    mInitialInstance(NULL),
+                    mIsDynamic(false)
         {
+            for (uint32 i = 0; i < OperatorCount; i++)
+                mUnaryOperators[i] = NULL;
         }
 
         void setStaticInitializer(Context *cx, JSFunction *f);
@@ -974,7 +985,7 @@ static const double two31 = 2147483648.0;
                 case Constructor:
                     // the mSuperType of the static component is the actual class
                     ASSERT(mStatics == NULL);
-                    return new ConstructorReference(mMethods[prop.mData.index], mSuperType);
+                    return new ConstructorReference(prop.mData.index, mSuperType);
                 case ValuePointer:
                     return new PropertyReference(name, acc, prop.mType);
                 default:
@@ -1005,6 +1016,7 @@ static const double two31 = 2147483648.0;
         // assumes that the super types have been completed already
         void completeClass(Context *cx, ScopeChain *scopeChain, JSType *super);
 
+        virtual bool isDynamic() { return mIsDynamic; }
 
         JSType          *mSuperType;        // NULL implies that this is the base Object
 
@@ -1017,6 +1029,8 @@ static const double two31 = 2147483648.0;
         String          mClassName;
 
         JSFunction      *mUnaryOperators[OperatorCount];    // XXX too wasteful
+
+        bool            mIsDynamic;
 
         void printSlotsNStuff(Formatter& f) const;
 
@@ -1176,7 +1190,7 @@ static const double two31 = 2147483648.0;
     public:
         typedef JSValue (NativeCode)(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
 
-        JSFunction(Context *cx, JSType *resultType, uint32 argCount) 
+        JSFunction(Context *cx, JSType *resultType, uint32 argCount, bool isConstructor = false) 
                     : mByteCode(NULL), 
                         mCode(NULL), 
                         mResultType(resultType), 
@@ -1323,9 +1337,27 @@ static const double two31 = 2147483648.0;
                 PropertyIterator i;
                 if ((*s)->hasProperty(name, attr, acc, &i))
                     return (*s)->genReference(name, attr, acc, depth);
+                else
+                    if ((*s)->isDynamic())
+                        return NULL;
+
             }
             return NULL;
         }
+
+        bool hasNameValue(const String& name, IdentifierList *attr)
+        {
+            uint32 depth = 0;
+            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
+            {
+                PropertyIterator i;
+                if ((*s)->hasProperty(name, attr, Read, &i))
+                    return true;
+            }
+            return false;
+        }
+
+        bool getNameValue(const String& name, IdentifierList *attr, Context *cx);
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
@@ -1357,26 +1389,6 @@ static const double two31 = 2147483648.0;
         }
 
 
-        // a runtime request to get the value for a name
-        // it'll either return a value or cause the
-        // interpreter to switch execution to a getter function
-        bool getNameValue(const String& name, IdentifierList *attr, Context *cx)
-        {
-            Reference *ref = getName(name, attr, Read);
-            if (ref == NULL)
-                throw Exception(Exception::referenceError, name);
-            bool result = ref->getValue(cx);
-            delete ref;
-            return result;
-        }
-
-        bool hasNameValue(const String& name, IdentifierList *attr)
-        {
-            Reference *ref = getName(name, attr, Read);
-            bool result = (ref != NULL);
-            delete ref;
-            return result;
-        }
 
         bool setNameValue(const String& name, IdentifierList *attr, Context *cx);
 
@@ -1883,6 +1895,27 @@ static const double two31 = 2147483648.0;
         }
     }
 
+    inline bool ScopeChain::getNameValue(const String& name, IdentifierList *attr, Context *cx)
+    {
+        uint32 depth = 0;
+        for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
+        {
+            PropertyIterator i;
+            if ((*s)->hasProperty(name, attr, Read, &i)) {
+                
+                if (PROPERTY_KIND(i) == ValuePointer) {
+                    cx->mStack.push_back(*PROPERTY_VALUEPOINTER(i));
+                    return false;
+                }
+                else
+                    ASSERT(false);      // what else needs to be implemented ?
+            }
+        }
+        throw Exception(Exception::referenceError, "Not defined");
+        return false;
+    }
+
+    inline bool JSInstance::isDynamic() { return mType->isDynamic(); }
 
 }
 }

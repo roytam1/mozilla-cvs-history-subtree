@@ -225,8 +225,8 @@ void FunctionReference::emitCodeSequence(ByteCodeGen *bcg)
 
 void ConstructorReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
-    bcg->addByte(LoadFunctionOp);
-    bcg->addPointer(mFunction);
+    bcg->addByte(GetStaticMethodOp);
+    bcg->addLong(mIndex); 
 }
 
 void GetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -333,12 +333,20 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
     // calls, all other references to the variables mapped
     // inside these scopes will have been turned into
     // localVar references.
+/*
     addByte(PushScopeOp);
     addPointer(fnc->mParameterBarrel);
     addByte(PushScopeOp);   
     addPointer(&fnc->mActivation);
-
+*/
     if (isConstructor) {
+        //
+        // add a code sequence to create a new empty instance if the
+        // incoming 'this' is null
+        //
+        addByte(LoadTypeOp);
+        addPointer(topClass);
+        addByte(NewThisOp);
         //
         //  Invoke the super class constructor if there isn't an explicit
         // statement to do so.
@@ -404,11 +412,11 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
 
     genCodeForStatement(f->function.body, NULL);
     
-
+/*
     // OPT - see above
     addByte(PopScopeOp);
     addByte(PopScopeOp);
-    
+*/    
     if (isConstructor) {        // the codegen model depends on all constructors returning the 'this'
         addByte(LoadThisOp);
         addByte(ReturnOp);
@@ -884,6 +892,17 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             addByte(ThrowOp);
         }
         break;
+    case StmtNode::With:
+        {
+            UnaryStmtNode *w = static_cast<UnaryStmtNode *>(p);
+            JSType *objType = genExpr(w->expr);
+            addByte(WithinOp);
+            mScopeChain->addScope(objType);
+            genCodeForStatement(w->stmt, static_cg);
+            mScopeChain->popScope();
+            addByte(WithoutOp);
+        }
+        break;
     case StmtNode::Try:
         {
 /*
@@ -1084,6 +1103,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
 
         }
     default:
+        NOT_REACHED("Invalid l-value");      // XXX should be a semantic error
         return NULL;
     }
     return NULL;
@@ -1626,8 +1646,8 @@ BinaryOpEquals:
         {
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             JSType *type = genExpr(i->op);
-            addByte(NewInstanceOp);
-            addByte(GetConstructorOp);
+//            addByte(NewInstanceOp);
+//            addByte(GetConstructorOp);
 
             ExprPairList *p = i->pairs;
             uint32 argCount = 0;
@@ -1636,9 +1656,10 @@ BinaryOpEquals:
                 argCount++;
                 p = p->next;
             }
-            addByte(InvokeOp);
+//            addByte(InvokeOp);
+            addByte(NewInstanceOp);
             addLong(argCount);
-            addByte(Explicit);
+//            addByte(Explicit);
             return type;
         }
     case ExprNode::index:
@@ -1662,11 +1683,12 @@ BinaryOpEquals:
             //    ASSERT(i->pairs->next == NULL);
             //    addByte(CastOp);
             //}
-
+/*
             if (ref->isConstructor()) {
                 addByte(NewInstanceOp);
                 addByte(PopOp);     // don't need type anymore
             }
+*/
             ref->emitInvokeSequence(this);
 
             ExprPairList *p = i->pairs;
@@ -1733,7 +1755,7 @@ BinaryOpEquals:
             addByte(LoadTypeOp);
             addPointer(Array_Type);
             addByte(NewInstanceOp);
-            addByte(PopOp);
+            addLong(0);
             PairListExprNode *plen = static_cast<PairListExprNode *>(p);
             ExprPairList *e = plen->pairs;
             int index = 0;
@@ -1803,7 +1825,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         i++;
         break;
     case PopOp:
-        f << "PopOp\n";
+        f << "Pop\n";
         i++;
         break;
     case DupOp:
@@ -1993,6 +2015,14 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         f << "PopScope\n";
         i++;
         break;
+    case WithinOp:
+        f << "Within\n";
+        i += 5;
+        break;
+    case WithoutOp:
+        f << "Without\n";
+        i++;
+        break;
     case GetConstructorOp:
         f << "GetConstructor\n";
         i++;
@@ -2002,7 +2032,11 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         i++;
         break;
     case NewInstanceOp:
-        f << "NewInstance\n";
+        f << "NewInstance " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case NewThisOp:
+        f << "NewThis\n";
         i++;
         break;
     case TypeOfOp:
