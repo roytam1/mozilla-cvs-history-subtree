@@ -408,7 +408,7 @@ nsMimeXmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
     nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
     if (inputStream)
     {
-      mOutListener->OnDataAvailable(mURL, inputStream, 0, written);
+      mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
     }
     *amountWritten = written;
 
@@ -433,7 +433,7 @@ nsMimeXmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten)
 
   nsCOMPtr<nsIInputStream> inputStream = do_QueryInterface(mOutStream); 
   if (mOutListener)
-    mOutListener->OnDataAvailable(mURL, inputStream, 0, written);
+    mOutListener->OnDataAvailable(nsnull, mURL, inputStream, 0, written);
 
   return rc;
 }
