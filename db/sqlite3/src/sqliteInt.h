@@ -68,6 +68,17 @@
 #endif
 
 /*
+** OMIT_TEMPDB is set to 1 if SQLITE_OMIT_TEMPDB is defined, or 0
+** afterward. Having this macro allows us to cause the C compiler 
+** to omit code used by TEMP tables without messy #ifndef statements.
+*/
+#ifdef SQLITE_OMIT_TEMPDB
+#define OMIT_TEMPDB 1
+#else
+#define OMIT_TEMPDB 0
+#endif
+
+/*
 ** If the following macro is set to 1, then NULL values are considered
 ** distinct for the SELECT DISTINCT statement and for UNION or EXCEPT
 ** compound queries.  No other SQL database engine (among those tested) 
@@ -292,7 +303,7 @@ extern int sqlite3_iMallocReset; /* Set iMallocFail to this when it reaches 0 */
 /*
 ** The name of the schema table.
 */
-#define SCHEMA_TABLE(x)  (x==1?TEMP_MASTER_NAME:MASTER_NAME)
+#define SCHEMA_TABLE(x)  ((!OMIT_TEMPDB)&&(x==1)?TEMP_MASTER_NAME:MASTER_NAME)
 
 /*
 ** A convenience macro that returns the number of elements in

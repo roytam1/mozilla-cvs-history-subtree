@@ -645,6 +645,8 @@ void sqlite3Pragma(
       HashElem *x;
       int cnt = 0;
 
+      if( OMIT_TEMPDB && i==1 ) continue;
+
       sqlite3CodeVerifySchema(pParse, i);
 
       /* Do an integrity check of the B-Tree

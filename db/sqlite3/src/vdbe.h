@@ -78,7 +78,7 @@ typedef struct VdbeOpList VdbeOpList;
 ** from a single sqliteMalloc().  But no copy is made and the calling
 ** function should *not* try to free the KeyInfo.
 */
-#define P3_KEYINFO_HANDOFF (-7)
+#define P3_KEYINFO_HANDOFF (-9)
 
 /*
 ** The following macro converts a relative address in the p2 field
