@@ -1115,6 +1115,9 @@ void StyleTextImpl::ResetFrom(const nsStyleText* aParent, nsIPresContext* aPresC
     }
     mTextIndent = aParent->mTextIndent;
     mWordSpacing = aParent->mWordSpacing;
+#ifdef IBMBIDI
+    mUnicodeBidi = aParent->mUnicodeBidi;
+#endif // IBMBIDI
   }
   else {
     mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
@@ -1125,6 +1128,9 @@ void StyleTextImpl::ResetFrom(const nsStyleText* aParent, nsIPresContext* aPresC
     mLineHeight.SetNormalValue();
     mTextIndent.SetCoordValue(0);
     mWordSpacing.SetNormalValue();
+#ifdef IBMBIDI
+    mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
+#endif // IBMBIDI
   }
 }
 
@@ -1147,6 +1153,9 @@ PRInt32 StyleTextImpl::CalcDifference(const StyleTextImpl& aOther) const
       (mLineHeight == aOther.mLineHeight) &&
       (mTextIndent == aOther.mTextIndent) &&
       (mWordSpacing == aOther.mWordSpacing) &&
+#ifdef IBMBIDI
+      (mUnicodeBidi == aOther.mUnicodeBidi) &&
+#endif // IBMBIDI
       (mVerticalAlign == aOther.mVerticalAlign)) {
     if (mTextDecoration == aOther.mTextDecoration) {
       return NS_STYLE_HINT_NONE;
@@ -1170,6 +1179,9 @@ PRUint32 StyleTextImpl::ComputeCRC32(PRUint32 aCrc) const
   crc = StyleCoordCRC(crc,&mTextIndent);
   crc = StyleCoordCRC(crc,&mWordSpacing);
   crc = StyleCoordCRC(crc,&mVerticalAlign);
+#ifdef IBMBIDI
+  crc = StyleCoordCRC(crc,&mUnicodeBidi);
+#endif // IBMBIDI
 #endif
   return crc;
 }
@@ -1199,12 +1211,18 @@ void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* 
   }
   else {
 #ifdef IBMBIDI
-  nsBidiOptions mBidioptions;
-  aPresContext->GetBidi(&mBidioptions);
-  if (mBidioptions.mdirection == IBMBIDI_TEXTDIRECTION_RTL)
-    mDirection = NS_STYLE_DIRECTION_RTL;
-  else
-    mDirection = NS_STYLE_DIRECTION_LTR;
+    // ------------------------------
+    // IBM Bidi prefs
+    // ------------------------------
+    // IBMBIDI_TEXTDIRECTION
+    // -------- Valid Valus -------
+    // IBMBIDI_TEXTDIRECTION_LTR
+    // IBMBIDI_TEXTDIRECTION_RTL
+    //
+    PRUint8 value;
+    aPresContext->GetDocumentBidi(IBMBIDI_TEXTDIRECTION, &value);
+    if (value == IBMBIDI_TEXTDIRECTION_RTL) mDirection = NS_STYLE_DIRECTION_RTL;
+    else mDirection = NS_STYLE_DIRECTION_LTR;
 #else // ifndef IBMBIDI
     aPresContext->GetDefaultDirection(&mDirection);
 #endif // IBMBIDI
@@ -1219,11 +1237,17 @@ void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* 
   mOverflow = NS_STYLE_OVERFLOW_VISIBLE;
   mClipFlags = NS_STYLE_CLIP_AUTO;
   mClip.SetRect(0,0,0,0);
+#ifdef IBMBIDI
+  mExplicitDirection = NS_STYLE_DIRECTION_INHERIT;
+#endif // IBMBIDI
 }
 
 void StyleDisplayImpl::SetFrom(const nsStyleDisplay& aSource)
 {
   mDirection = aSource.mDirection;
+#ifdef IBMBIDI
+  mExplicitDirection = aSource.mExplicitDirection;
+#endif // IBMBIDI
   mDisplay = aSource.mDisplay;
   mFloats = aSource.mFloats;
   mBreakType = aSource.mBreakType;
@@ -1239,6 +1263,9 @@ void StyleDisplayImpl::SetFrom(const nsStyleDisplay& aSource)
 void StyleDisplayImpl::CopyTo(nsStyleDisplay& aDest) const
 {
   aDest.mDirection = mDirection;
+#ifdef IBMBIDI
+  aDest.mExplicitDirection = mExplicitDirection;
+#endif // IBMBIDI
   aDest.mDisplay = mDisplay;
   aDest.mFloats = mFloats;
   aDest.mBreakType = mBreakType;
@@ -1283,6 +1310,9 @@ PRUint32 StyleDisplayImpl::ComputeCRC32(PRUint32 aCrc) const
   PRUint32 crc = aCrc;
 #ifdef COMPUTE_STYLEDATA_CRC
   crc = AccumulateCRC(crc,(const char *)&mDirection,sizeof(mDirection));
+#ifdef IBMBIDI
+  crc = AccumulateCRC(crc,(const char *)&mExplicitDirection,sizeof(mExplicitDirection));
+#endif // IBMBIDI
   crc = AccumulateCRC(crc,(const char *)&mDisplay,sizeof(mDisplay));
   crc = AccumulateCRC(crc,(const char *)&mFloats,sizeof(mFloats));
   crc = AccumulateCRC(crc,(const char *)&mBreakType,sizeof(mBreakType));
@@ -2791,11 +2821,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     }
     mRules->EnumerateForwards(MapStyleRule, &data);
   }
-#ifdef IBMBIDI
-  else if (!(GETSCDATA(Display).IsBlockLevel() ) ) {
-    GETSCDATA(Display).mDirection = NS_STYLE_DIRECTION_INHERIT;
-  }
-#endif // IBMBIDI
   if (-1 == mDataCode) {
     mDataCode = 0;
   }

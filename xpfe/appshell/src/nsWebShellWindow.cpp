@@ -349,35 +349,98 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
     NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
     NS_ENSURE_SUCCESS(webNav->LoadURI(urlString.GetUnicode()), NS_ERROR_FAILURE);
   }
-                     
+
 #ifdef IBMBIDI
-  PRInt8 prefInt;
+	 PRInt8 prefInt;
   nsIPref *prefs;
 
   rv = nsServiceManager::GetService(kPrefCID, 
                                     NS_GET_IID(nsIPref), 
                                     (nsISupports **)&prefs);
-  //ahmed
   if (NS_SUCCEEDED(rv)) {
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTDIRECTION_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mdirection= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTTYPE_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mtexttype= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CONTROLSTEXTMODE_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mcontrolstextmode= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CLIPBOARDTEXTMODE_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mclipboardtextmode= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_NUMERAL_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mnumeral= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.msupport= prefInt;
-  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CHARSET_STR, ((PRInt32*)&prefInt)));
-  this->mBidi.mcharacterset= prefInt;
-  if (mWebShell != nsnull)
-    mWebShell->SetBidi(mBidi);
-}
-#endif // IBMBIDI
+    // Set the prefs in the outermost webshell.
+		// --------------------------------------------------
+		// IBMBIDI 
+		// --------------------------------------------------
+		// Don't bather with IBMBIDI_* they R mapped to
+		// bidi.* Prefs in nsBidi.h
+		//
+		// -------------------------------------
+		// IBM Bidi prefs
+		// -------------------------------------
+		// IBMBIDI_TEXTDIRECTION		(1,2)
+		// IBMBIDI_TEXTTYPE				(1,2,3)
+		// IBMBIDI_CONTROLSTEXTMODE		(1,2,3)
+		// IBMBIDI_CLIPBOARDTEXTMODE	(1,2,3)
+		// IBMBIDI_NUMERAL				(1,2,3,4)
+		// IBMBIDI_SUPPORTMODE			(1,2,3)
+		// IBMBIDI_CHARSET				(1,2)
 
+		//	------------------
+		// 	Text Direction
+		//	------------------
+		//	bidi.direction
+		// 	1 = directionLTRBidi *
+		//	2 = directionRTLBidi
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTDIRECTION_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_TEXTDIRECTION,		prefInt);
+		//	------------------
+		// 	Text Type
+		//	------------------
+		//	bidi.texttype
+		// 	1 = charsettexttypeBidi *
+		//	2 = logicaltexttypeBidi
+		//	3 = visualtexttypeBidi
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTTYPE_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_TEXTTYPE,			prefInt);
+		//	------------------
+		// 	Controls Text Mode
+		//	------------------
+		//	bidi.controlstextmode
+		// 	1 = logicalcontrolstextmodeBidiCmd
+		//	2 = visiualcontrolstextmodeBidi
+		//	3 = containercontrolstextmodeBidi *
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CONTROLSTEXTMODE_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_CONTROLSTEXTMODE,	prefInt);
+		//	------------------
+		// 	Clipboard Text Mode
+		//	------------------
+		//	bidi.clipboardtextmode
+		// 	1 = logicalclipboardtextmodeBidi
+		//	2 = visiualclipboardtextmodeBidi
+		//	3 = sourceclipboardtextmodeBidi *
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CLIPBOARDTEXTMODE_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_CLIPBOARDTEXTMODE,	prefInt);
+		//	------------------
+		// 	Numeral Style
+		//	------------------
+		//	bidi.numeral
+		// 	1 = regularcontextnumeralBidi *
+		//	2 = hindicontextnumeralBidi
+		//	3 = arabicnumeralBidi
+		//	4 = hindinumeralBidi
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_NUMERAL_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_NUMERAL,			prefInt);
+		//	------------------
+		// 	Support Mode
+		//	------------------
+		//	bidi.support
+		// 	1 = mozillaBidisupport *
+		//	2 = OsBidisupport
+		//	3 = disableBidisupport
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_SUPPORTMODE,		prefInt);
+		//	------------------
+		// 	Charset Mode
+		//	------------------
+		//	bidi.characterset
+		// 	1 = doccharactersetBidi *
+		//	2 = defaultcharactersetBidi
+		  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CHARSET_STR, ((PRInt32*)&prefInt)));
+		  this->SetDocumentBidi(IBMBIDI_CHARSET,			prefInt);
+  }
+#endif // IBMBIDI
+                     
   return rv;
 }
 
@@ -589,32 +652,121 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
 }
 
 #ifdef IBMBIDI
+//*****************************************************************************
+// nsWebShellWindow::SetDocumentBidi
+//*****************************************************************************   
+
+NS_IMETHODIMP
+nsWebShellWindow::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
+{
+	// -------------------------------------
+	// IBM Bidi prefs
+	// -------------------------------------
+	// IBMBIDI_TEXTDIRECTION		(1,2)
+	// IBMBIDI_TEXTTYPE				(1,2,3)
+	// IBMBIDI_CONTROLSTEXTMODE		(1,2,3)
+	// IBMBIDI_CLIPBOARDTEXTMODE	(1,2,3)
+	// IBMBIDI_NUMERAL				(1,2,3,4)
+	// IBMBIDI_SUPPORTMODE			(1,2,3)
+	// IBMBIDI_CHARSET				(1,2)
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		this->mBidi.mdirection = value;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		this->mBidi.mtexttype = value;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		this->mBidi.mcontrolstextmode = value;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		this->mBidi.mclipboardtextmode = value;
+		break;
+	case IBMBIDI_NUMERAL:
+		this->mBidi.mnumeral = value;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		this->mBidi.msupport = value;
+		break;
+	case IBMBIDI_CHARSET:
+		this->mBidi.mcharacterset = value;
+		break;
+	}
+	if (mWebShell != nsnull)
+		mWebShell->SetDocumentBidi(member,value);
+
+	return NS_OK;
+}
+
+NS_IMETHODIMP    
+nsWebShellWindow::GetDocumentBidi(const PRUint8 member, PRUint8 * value)
+{
+// -------------------------------------
+// IBM Bidi prefs
+// -------------------------------------
+// IBMBIDI_TEXTDIRECTION		(1,2)
+// IBMBIDI_TEXTTYPE				(1,2,3)
+// IBMBIDI_CONTROLSTEXTMODE		(1,2,3)
+// IBMBIDI_CLIPBOARDTEXTMODE	(1,2,3)
+// IBMBIDI_NUMERAL				(1,2,3,4)
+// IBMBIDI_SUPPORTMODE			(1,2,3)
+// IBMBIDI_CHARSET				(1,2)
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		*value = this->mBidi.mdirection;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		*value = this->mBidi.mtexttype;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		*value = this->mBidi.mcontrolstextmode;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		*value = this->mBidi.mclipboardtextmode;
+		break;
+	case IBMBIDI_NUMERAL:
+		*value = this->mBidi.mnumeral;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		*value = this->mBidi.msupport;
+		break;
+	case IBMBIDI_CHARSET:
+		*value = this->mBidi.mcharacterset;
+		break;
+	}
+  return NS_OK;
+}
+
 NS_IMETHODIMP   nsWebShellWindow::SetBidi(nsBidiOptions Source)
 {
-  this->mBidi.mdirection        = Source.mdirection;
-  this->mBidi.mtexttype          = Source.mtexttype;
-  this->mBidi.mcontrolstextmode = Source.mcontrolstextmode;
-  this->mBidi.mclipboardtextmode = Source.mclipboardtextmode;
-  this->mBidi.mnumeral          = Source.mnumeral;
-  this->mBidi.msupport          = Source.msupport;
-  this->mBidi.mcharacterset      = Source.mcharacterset;
+	this->mBidi.mdirection				= Source.mdirection;
+	this->mBidi.mtexttype					= Source.mtexttype;
+	this->mBidi.mcontrolstextmode = Source.mcontrolstextmode;
+	this->mBidi.mclipboardtextmode = Source.mclipboardtextmode;
+	this->mBidi.mnumeral					= Source.mnumeral;
+	this->mBidi.msupport					= Source.msupport;
+	this->mBidi.mcharacterset			= Source.mcharacterset;
 
-  if (mWebShell != nsnull)
-    mWebShell->SetBidi(Source);
+	if (mWebShell != nsnull)
+		mWebShell->SetBidi(Source);
 
-  return NS_OK;
+	return NS_OK;
 }
 NS_IMETHODIMP   nsWebShellWindow::GetBidi(nsBidiOptions * Dist)
 {
-  Dist->mdirection        = this->mBidi.mdirection;
-  Dist->mtexttype          = this->mBidi.mtexttype;
-  Dist->mcontrolstextmode = this->mBidi.mcontrolstextmode;
-  Dist->mclipboardtextmode = this->mBidi.mclipboardtextmode;
-  Dist->mnumeral          = this->mBidi.mnumeral;
-  Dist->msupport          = this->mBidi.msupport;
-  Dist->mcharacterset      = this->mBidi.mcharacterset;
-  return NS_OK;
+	Dist->mdirection				= this->mBidi.mdirection;
+	Dist->mtexttype					= this->mBidi.mtexttype;
+	Dist->mcontrolstextmode = this->mBidi.mcontrolstextmode;
+	Dist->mclipboardtextmode = this->mBidi.mclipboardtextmode;
+	Dist->mnumeral					= this->mBidi.mnumeral;
+	Dist->msupport					= this->mBidi.msupport;
+	Dist->mcharacterset			= this->mBidi.mcharacterset;
+	return NS_OK;
 }
+
+
 #endif //IBMBIDI
 
 #if 0

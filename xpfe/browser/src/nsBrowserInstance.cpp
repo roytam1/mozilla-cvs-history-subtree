@@ -1219,44 +1219,42 @@ nsBrowserInstance::SetDocumentCharset(const PRUnichar *aCharset)
 }
 
 #ifdef IBMBIDI
-
 NS_IMETHODIMP    
-nsBrowserInstance::SetDocumentBiDi(const PRUint8 member, const PRUint8 value)
+nsBrowserInstance::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
 {
-  if (mWebShellWin != nsnull){
-  nsBiDiOptions mBidiop;
-  mWebShellWin->GetBiDi(&mBidiop);
-  this->mBiDi = mBidiop;
-  }
-    switch (member)
-  {
-  case IBMBIDI_TEXTDIRECTION:
-    this->mBiDi.mdirection = value;
-    break;
-  case IBMBIDI_TEXTTYPE:
-    this->mBiDi.mtexttype = value;
-    break;
-  case IBMBIDI_CONTROLSTEXTMODE:
-    this->mBiDi.mcontrolstextmode = value;
-    break;
-  case IBMBIDI_CLIPBOARDTEXTMODE:
-    this->mBiDi.mclipboardtextmode = value;
-    break;
-  case IBMBIDI_NUMERAL:
-    this->mBiDi.mnumeral = value;
-    break;
-  case IBMBIDI_SUPPORTMODE:
-    this->mBiDi.msupport = value;
-    break;
-  case IBMBIDI_CHARSET:
-    this->mBiDi.mcharacterset = value;
-    break;
-  }
-  if (mWebShellWin != nsnull)
-    mWebShellWin->SetBiDi(mBiDi);
-  return NS_OK;
+
+		switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		this->mBidi.mdirection = value;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		this->mBidi.mtexttype = value;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		this->mBidi.mcontrolstextmode = value;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		this->mBidi.mclipboardtextmode = value;
+		break;
+	case IBMBIDI_NUMERAL:
+		this->mBidi.mnumeral = value;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		this->mBidi.msupport = value;
+		break;
+	case IBMBIDI_CHARSET:
+		this->mBidi.mcharacterset = value;
+		break;
+	}
+	if (mWebShellWin != nsnull)
+	{
+		mWebShellWin->SetDocumentBidi(member, value);
+	}
+	return NS_OK;
 }
 #endif //IBMBIDI
+
 
 // XXX isolate the common code in the next two methods into a common method
 

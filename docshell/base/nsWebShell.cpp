@@ -414,34 +414,34 @@ nsWebShell::SetupNewViewer(nsIContentViewer* aViewer)
       }
 #ifdef IBMBIDI
    if(mContentViewer)
-   {
-     nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(mContentViewer));
-     if(docv)
-     {
-       nsBidiOptions tempBidi;
-       //ahmed
-       nsCOMPtr<nsIWebShell>  WebShellParent;
-       nsCOMPtr<nsIWebShellWindow> aTopLevelWindow;
-       nsCOMPtr<nsIWebShellContainer> topLevelWindow;
-       GetTopLevelWindow(getter_AddRefs(topLevelWindow));
-       nsCOMPtr<nsIDocument>  doc;
-       NS_ENSURE_SUCCESS(docv->GetDocument(*getter_AddRefs(doc)), NS_ERROR_FAILURE);
-       if (topLevelWindow)
-         topLevelWindow->QueryInterface(kIWebShellWindowIID, (void **)getter_AddRefs(aTopLevelWindow));
-       if ( aTopLevelWindow != nsnull ) {
-         aTopLevelWindow->GetBidi(&tempBidi);
-         this->SetBidi(tempBidi);
-         if (doc != nsnull) {
-           doc->SetBidi(tempBidi);
-         }
-       } else { // No Top level webshellwindow
-         if (doc != nsnull) {
-           doc->GetBidi(&tempBidi);
-           this->SetBidi(tempBidi);
-         }
-       } // If-Else : TopLevelWindow
-     } // If : nsIDocumentViewer
-   } // If : mContentViewer
+             {
+                       nsCOMPtr<nsIDocumentViewer> docv(do_QueryInterface(mContentViewer));
+                       if(docv)
+                                 {
+                                 nsBidiOptions tempBidi;
+                                 //ahmed
+                                 nsCOMPtr<nsIWebShell>  WebShellParent;
+                                 nsCOMPtr<nsIWebShellWindow> aTopLevelWindow;
+                                 nsCOMPtr<nsIWebShellContainer> topLevelWindow;
+                                 GetTopLevelWindow(getter_AddRefs(topLevelWindow));
+                                 nsCOMPtr<nsIDocument>  doc;
+                                 NS_ENSURE_SUCCESS(docv->GetDocument(*getter_AddRefs(doc)), NS_ERROR_FAILURE);
+                                 if (topLevelWindow)
+           topLevelWindow->QueryInterface(kIWebShellWindowIID, (void **)getter_AddRefs(aTopLevelWindow));
+                                 if ( aTopLevelWindow != nsnull ) {
+                                           aTopLevelWindow->GetBidi(&tempBidi);
+                                           this->SetBidi(tempBidi);
+                                           if (doc != nsnull) {
+                                                     doc->SetBidi(tempBidi);
+                                           }
+                                 } else { // No Top level webshellwindow
+                                           if (doc != nsnull) {
+                                                     doc->GetBidi(&tempBidi);
+                                                     this->SetBidi(tempBidi);
+                                           }
+                                 } // If-Else : TopLevelWindow
+                       } // If : nsIDocumentViewer
+             } // If : mContentViewer
 #endif // IBMBIDI
    return NS_OK;
 }
@@ -454,43 +454,44 @@ nsWebShell::Embed(nsIContentViewer* aContentViewer,
 #ifdef IBMBIDI
   nsresult rv = SetupNewViewer(aContentViewer);
 
-  nsBidiOptions tempBidi;
+	nsBidiOptions tempBidi;
   //ahmed
   nsCOMPtr<nsIWebShell>  WebShellParent;
-  nsCOMPtr<nsIWebShellWindow> aTopLevelWindow;
-  nsCOMPtr<nsIWebShellContainer> topLevelWindow;
+	nsCOMPtr<nsIWebShellWindow> aTopLevelWindow;
+	nsCOMPtr<nsIWebShellContainer> topLevelWindow;
   GetTopLevelWindow(getter_AddRefs(topLevelWindow));
-  if (topLevelWindow)
+	if (topLevelWindow)
     topLevelWindow->QueryInterface(kIWebShellWindowIID, (void **)getter_AddRefs(aTopLevelWindow));
-  nsCOMPtr<nsIDocumentViewer> markupCV = do_QueryInterface(mContentViewer); // nsIMarkupDocumentViewer
+	nsCOMPtr<nsIDocumentViewer> markupCV = do_QueryInterface(mContentViewer); // nsIMarkupDocumentViewer
   if (aTopLevelWindow != nsnull) {
-    aTopLevelWindow->GetBidi(&tempBidi);
-    this->SetBidi(tempBidi);
-    if (markupCV) {
-      nsCOMPtr<nsIDocument> doc;
-      NS_ENSURE_SUCCESS(markupCV->GetDocument(*getter_AddRefs(doc)), NS_ERROR_FAILURE);
-      if (doc != nsnull) {
-        doc->SetBidi(tempBidi);
-      }
-    }
-  } else { // No Top level webshellwindow
-    if (mContentViewer != nsnull) {
-      if (markupCV) {
-        nsIDocument * doc=nsnull;NS_ENSURE_SUCCESS(markupCV->GetDocument(doc), NS_ERROR_FAILURE);//NS_ENSURE_SUCCESS(markupCV->mDocument->SetDocumentBidi(member, value), NS_ERROR_FAILURE);
-        if (doc != nsnull) {
-          doc->GetBidi(&tempBidi);
-          this->SetBidi(tempBidi);
-        }
-      }
-    }
+		aTopLevelWindow->GetBidi(&tempBidi);
+		this->SetBidi(tempBidi);
+		if (markupCV) {
+			nsCOMPtr<nsIDocument> doc;
+			NS_ENSURE_SUCCESS(markupCV->GetDocument(*getter_AddRefs(doc)), NS_ERROR_FAILURE);//NS_ENSURE_SUCCESS(markupCV->mDocument->SetDocumentBidi(member, value), NS_ERROR_FAILURE);
+			if (doc != nsnull) {
+				doc->SetBidi(tempBidi);
+			}
+		}
+	} else { // No Top level webshellwindow
+		if (mContentViewer != nsnull) {
+			if (markupCV) {
+				nsIDocument * doc=nsnull;NS_ENSURE_SUCCESS(markupCV->GetDocument(doc), NS_ERROR_FAILURE);//NS_ENSURE_SUCCESS(markupCV->mDocument->SetDocumentBidi(member, value), NS_ERROR_FAILURE);
+				if (doc != nsnull) {
+					doc->GetBidi(&tempBidi);
+					this->SetBidi(tempBidi);
+				}
+			}
+		}
   }
-  nsIPresContext* CurrentPresContext = nsnull;
-  this->GetPresContext(&CurrentPresContext);
-  if (CurrentPresContext != nsnull) {
-    this->GetBidi(&tempBidi);
-    CurrentPresContext->SetBidi(tempBidi);
-  }
-  return rv;
+	//ahmed
+	nsCOMPtr<nsIPresContext>  CurrentPresContext;
+	this->GetPresContext(getter_AddRefs(CurrentPresContext));
+		if (CurrentPresContext != nsnull) {
+		this->GetBidi(&tempBidi);
+		CurrentPresContext->SetBidi(tempBidi);
+	}
+	return rv;
 #else // #ifndef IBMBIDI
  
 #ifdef SH_IN_FRAMES
@@ -613,6 +614,76 @@ nsWebShell::SetURL(const PRUnichar* aURL)
 }
 
 #ifdef IBMBIDI
+
+
+NS_IMETHODIMP
+nsWebShell::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
+{
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		this->mBidi.mdirection = value;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		this->mBidi.mtexttype = value;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		this->mBidi.mcontrolstextmode = value;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		this->mBidi.mclipboardtextmode = value;
+		break;
+	case IBMBIDI_NUMERAL:
+		this->mBidi.mnumeral = value;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		this->mBidi.msupport = value;
+		break;
+	case IBMBIDI_CHARSET:
+		this->mBidi.mcharacterset = value;
+		break;
+	}
+	//ahmed 
+	nsCOMPtr<nsIPresContext>  CurrentPresContext;
+	if (mContentViewer != nsnull) this->GetPresContext(getter_AddRefs(CurrentPresContext));
+		if (CurrentPresContext != nsnull) {
+			CurrentPresContext->SetDocumentBidi(member,value);
+		}
+  return NS_OK;
+}
+
+NS_IMETHODIMP    
+nsWebShell::GetDocumentBidi(const PRUint8 member, PRUint8 * value)
+{
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		*value = this->mBidi.mdirection;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		*value = this->mBidi.mtexttype;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		*value = this->mBidi.mcontrolstextmode;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		*value = this->mBidi.mclipboardtextmode;
+		break;
+	case IBMBIDI_NUMERAL:
+		*value = this->mBidi.mnumeral;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		*value = this->mBidi.msupport;
+		break;
+	case IBMBIDI_CHARSET:
+		*value = this->mBidi.mcharacterset;
+		break;
+	}
+  return NS_OK;
+}
+
+
+
 NS_IMETHODIMP   nsWebShell::SetBidi(nsBidiOptions Source)
 {
   this->mBidi.mdirection        = Source.mdirection;

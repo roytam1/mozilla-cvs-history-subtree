@@ -1,24 +1,24 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Mozilla Public
+ * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+ * the License at http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is Mozilla Communicator client code.
  *
- * The Initial Developer of the Original Code is
- * IBM Corporation.  Portions created by IBM are
- * Copyright (C) 2000 IBM Corporation. All
+ * The Initial Developer of the Original Code is Netscape Communications
+ * Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
  * Contributor(s): 
- *
+ * IBM Corporation
  */
 
 #ifdef IBMBIDI
@@ -34,8 +34,8 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsINameSpaceManager.h"
 #include "nsHTMLAtoms.h"
+#include "nsCSSValue.h"
 #include "nsIUBidiUtils.h"
-#include "nsBidiImp.h"
 
 #define kSpace            0x0020
 #define kLineSeparator    0x2028
@@ -50,13 +50,11 @@ static NS_DEFINE_CID(kBidiCID, NS_BIDI_CID);
 static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
 
 extern nsresult
-NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aLength, PRInt32 aOffset);
-extern nsresult
-NS_GetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32& aLength, PRInt32& aOffset);
+NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aStart, PRInt32 aEnd);
 extern nsresult
 NS_NewContinuingTextFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
 extern nsresult
-NS_NewBidiControlFrame(nsIFrame** aNewFrame, PRUnichar aChar);
+NS_NewDirectionalFrame(nsIFrame** aNewFrame, PRUnichar aChar);
 extern PRUnichar
 NS_GetControlCharacter(nsIFrame* aFrame);
 
@@ -118,15 +116,15 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
     mSuccess = NS_OK;
     return mSuccess;
   }
-  nsIFrame* frame;
-  PRInt32   lineOffset = 0;
-  PRInt32   logicalLimit = 0;
-  PRInt32   numRun = 0;
-  PRInt32   runCount;
-  PRInt32   frameCount = mLogicalFrames.Count();
-  PRUint8   textClass;
-  PRUint8   embeddingLevel;
-    
+  nsIFrame*             frame;
+  PRInt32               lineOffset = 0;
+  PRInt32               logicalLimit = 0;
+  PRInt32               numRun = 0;
+  PRInt32               runCount;
+  PRInt32               frameCount = mLogicalFrames.Count();
+  PRUint8               textClass;
+  PRUint8               embeddingLevel;
+  const nsStyleText*    text;
   const nsStyleDisplay* display;
   aBlockFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
 
@@ -135,8 +133,6 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
     ? UBIDI_RTL : UBIDI_LTR;
 
   mBidiEngine->setPara(mBuffer.GetUnicode(), bufferLength, paraLevel, nsnull);
-
-  nsBidi * BidiEngineAsnsBidi = (nsBidi*) mBidiEngine;
 
   PRBool isVisual;
   aPresContext->IsVisualMode(isVisual);
@@ -148,8 +144,9 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
   if ( (runCount > 1) || (frameCount > 1) ) {
     PRInt32                  runLength = 0;
     PRInt32                  fragmentLength = 0;
-    PRInt32                  contentLength;
+    //PRInt32                  contentLength;
     PRInt32                  contentOffset;
+    PRInt32                  end;
     PRInt32                  temp;
     PRInt32                  frameIndex = 0;
     PRBool                   madeContinuation = PR_FALSE;
@@ -183,10 +180,10 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
             mSuccess = NS_ERROR_FAILURE;
             break;
           }
-          NS_GetContentLengthAndOffsetForBidi(frame, contentLength, contentOffset);
           fragmentLength = fragment->GetLength();
-          if (contentLength > 0 && contentLength < fragmentLength) {
-            fragmentLength = contentLength;
+          frame->GetOffsets(contentOffset, end);
+          if (end > 0) {
+            fragmentLength = end - contentOffset;
           }
           isTextFrame = PR_TRUE;
         } // if text frame
@@ -204,23 +201,41 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
         runLength = logicalLimit - lineOffset;
         ++numRun;
       } // if (runLength <= 0)
-      
-      if (nsLayoutAtoms::bidiControlFrame == frameType) {
+
+      if (nsLayoutAtoms::directionalFrame == frameType) {
         delete frame;
       }
       else {
+        PRUint8 adjustedLevel = embeddingLevel;
+
+        frame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&) text);
+        if (NS_STYLE_UNICODE_BIDI_OVERRIDE == text->mUnicodeBidi) {
+          frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+          
+          if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
+            // ensure odd embedding level
+            adjustedLevel = (embeddingLevel - 1) | 0x01;
+          }
+          else { // if (NS_STYLE_DIRECTION_LTR == display->mDirection)
+            // ensure even embedding level
+            adjustedLevel &= ~0x01;
+          }
+        }
         frame->SetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                               (void *)embeddingLevel);
+                               (void *)adjustedLevel);
+        frame->SetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel,
+                               (void *)paraLevel);
         if (isTextFrame) {
-          for (PRInt32 offset = lineOffset; ; offset++) {
-             textClass = BidiEngineAsnsBidi->mDirProps[offset];
-           if ( (offset >= logicalLimit)
-                && (CLASS_IS_WEAK(textClass) ) ) {
-              textClass = CLASS_FOR_EMBEDDING_LEVEL(paraLevel);
-            }
-            if (!CLASS_IS_WEAK(textClass) ) {
+          PRInt32 limit = PR_MIN(logicalLimit, lineOffset + fragmentLength);
+          for (; ;) {
+            // IBMBIDI - Egypt - Start
+            mBidiEngine->getClassAt(lineOffset, &textClass);
+            // IBMBIDI - Egypt - End
+            if ( (lineOffset >= limit) 
+               || (!CLASS_IS_WEAK(textClass) ) ) {
               break;
             }
+            ++lineOffset;
           }
           if (U_RIGHT_TO_LEFT_ARABIC == textClass) {
             lastClassIsArabic = PR_TRUE;
@@ -232,13 +247,16 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
           else {
             lastClassIsArabic = PR_FALSE;
           }
+          // IBMBIDI - Egypt - Start
           frame->SetBidiProperty(aPresContext,nsLayoutAtoms::textClass,(void *)textClass);
-          if (runLength < fragmentLength) {
+          // IBMBIDI - Egypt - End
+
+          if (runLength > 0 && runLength < fragmentLength) {
             frame->GetNextSibling(&nextSibling);
             nsIFrame* newFrame = nsnull;
 
-            nsIPresShell* presShell;
-            aPresContext->GetShell(&presShell);
+            nsCOMPtr<nsIPresShell> presShell;
+            aPresContext->GetShell(getter_AddRefs(presShell) );
 
             NS_NewContinuingTextFrame(presShell, &newFrame);
             if (!newFrame) {
@@ -249,32 +267,36 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
             if (parent == aBlockFrame) {
               ++aChildCountGrow;
             }
-            nsIStyleContext*  styleContext;
-            frame->GetStyleContext(&styleContext);
+            nsCOMPtr<nsIStyleContext> styleContext;
+            frame->GetStyleContext(getter_AddRefs(styleContext) );
 
             newFrame->Init(aPresContext, content, parent, styleContext, nsnull);
             nsHTMLContainerFrame::CreateViewForFrame(aPresContext, newFrame,
                                                      styleContext, PR_FALSE);
-            NS_RELEASE(presShell);
-            NS_RELEASE(styleContext);
-
             frame->SetNextSibling(newFrame);
             newFrame->SetNextSibling(nextSibling);
-
+            
+            frame->GetNextInFlow(&nextSibling);
+            if (nextSibling) {
+              frame->SetNextInFlow(nsnull);
+              newFrame->SetNextInFlow(nextSibling);
+              nextSibling->SetPrevInFlow(newFrame);
+            }
             madeContinuation = PR_TRUE;
             frame->SetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, newFrame);
 
-            NS_SetContentLengthAndOffsetForBidi(frame, runLength, contentOffset);
+            NS_SetContentLengthAndOffsetForBidi(frame, contentOffset,
+                                                contentOffset + runLength);
             frame = newFrame;
             contentOffset += runLength;
           } // if (runLength < fragmentLength)
         } // isTextFrame
-      } // not bidiControlFrame
+      } // not directionalFrame
       if (fragmentLength <= runLength) { // not only for text frames
         ++frameIndex;
-        lineOffset += fragmentLength;  // needed for textClass calculation
         if (madeContinuation) {
-          NS_SetContentLengthAndOffsetForBidi(frame, fragmentLength, contentOffset);
+          NS_SetContentLengthAndOffsetForBidi(frame, contentOffset,
+                                              contentOffset + fragmentLength);
         }
       } // fragmentLength <= runLength
       temp = runLength;
@@ -285,22 +307,24 @@ nsBidiPresUtils::Resolve(nsIPresContext* aPresContext,
   else {
     frame = (nsIFrame*) (mLogicalFrames[0]);
     if (frame) {
+      frame->SetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel,
+                             (void *)paraLevel);
       if (runCount > 0) {
         if (!isVisual) {
           mBidiEngine->getLogicalRun(lineOffset, &logicalLimit, &paraLevel);
         }
         do {
-          textClass = BidiEngineAsnsBidi->mDirProps[lineOffset++];
-          if ( (lineOffset >= logicalLimit)
-              && (CLASS_IS_WEAK(textClass) ) ) {
-            textClass = CLASS_FOR_EMBEDDING_LEVEL(paraLevel);
-          }
-        } while (CLASS_IS_WEAK(textClass) );
+          // IBMBIDI - Egypt - Start
+          mBidiEngine->getClassAt(lineOffset++, &textClass);
+          // IBMBIDI - Egypt - End
+        } while ( (lineOffset < logicalLimit) && (CLASS_IS_WEAK(textClass) ) );
       }
       frame->SetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
-                             (void *)embeddingLevel);
+                             (void*)paraLevel);
+      // IBMBIDI - Egypt - Start
       frame->SetBidiProperty(aPresContext,nsLayoutAtoms::textClass,(void *)textClass);
-     } // frame
+      // IBMBIDI - Egypt - End
+    } // frame
   } // runCount <= 1 && frameCount <= 1
   return mSuccess;
 }
@@ -312,7 +336,7 @@ nsBidiPresUtils::InitLogicalArray(nsIPresContext* aPresContext,
                                   PRBool          aAddMarkers)
 {
   nsIFrame*             frame;
-  nsIFrame*             bidiControlFrame;
+  nsIFrame*             directionalFrame;
   nsIFrame*             kid;
   nsIAtom*              frameType = nsnull;
   const nsStyleDisplay* display;
@@ -324,16 +348,16 @@ nsBidiPresUtils::InitLogicalArray(nsIPresContext* aPresContext,
 
     rv = NS_ERROR_FAILURE;
     frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-
+    
     if ( (aAddMarkers) && (!display->IsBlockLevel() ) ) {
-      if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
-        rv = NS_NewBidiControlFrame(&bidiControlFrame, kRLE);
+      if (NS_STYLE_DIRECTION_RTL == display->mExplicitDirection) {
+        rv = NS_NewDirectionalFrame(&directionalFrame, kRLE);
       }
-      else if (NS_STYLE_DIRECTION_LTR == display->mDirection) {
-        rv = NS_NewBidiControlFrame(&bidiControlFrame, kLRE);
+      else if (NS_STYLE_DIRECTION_LTR == display->mExplicitDirection) {
+        rv = NS_NewDirectionalFrame(&directionalFrame, kLRE);
       }
       if (NS_SUCCEEDED(rv) ) {
-        mLogicalFrames.AppendElement(bidiControlFrame);
+        mLogicalFrames.AppendElement(directionalFrame);
       }
     } // if (aAddMarkers)
 
@@ -353,9 +377,9 @@ nsBidiPresUtils::InitLogicalArray(nsIPresContext* aPresContext,
 
     // If the element is attributed by dir, indicate direction pop (add PDF frame)
     if (NS_SUCCEEDED(rv) ) {
-      rv = NS_NewBidiControlFrame(&bidiControlFrame, kPDF);
+      rv = NS_NewDirectionalFrame(&directionalFrame, kPDF);
       if (NS_SUCCEEDED(rv) ) {
-        mLogicalFrames.AppendElement(bidiControlFrame);
+        mLogicalFrames.AppendElement(directionalFrame);
       }
     }
   } // for
@@ -411,7 +435,7 @@ nsBidiPresUtils::CreateBlockBuffer(nsIPresContext* aPresContext)
       // Append line separator
       mBuffer.Append( (PRUnichar) kLineSeparator);
     }
-    else if (nsLayoutAtoms::bidiControlFrame == frameType) {
+    else if (nsLayoutAtoms::directionalFrame == frameType) {
       mBuffer.Append(NS_GetControlCharacter(frame) );
     }
     else { // not text frame
@@ -571,9 +595,10 @@ nsBidiPresUtils::RepositionInlineFrames(nsIPresContext* aPresContext,
   frame = aFirstChild;
   for (i = 0; i < aChildCount; i++) {
     frame->GetFrameType(getter_AddRefs(frameType) );
-    if (frameType 
-        && (nsLayoutAtoms::inlineFrame == frameType.get()
-          || nsLayoutAtoms::letterFrame == frameType.get() ) ) {
+    if ( frameType
+        && ( (nsLayoutAtoms::inlineFrame == frameType.get() )
+          || (nsLayoutAtoms::letterFrame == frameType.get() )
+          || (nsLayoutAtoms::blockFrame == frameType.get() ) ) ) {
       PRInt32 minX = 0x7FFFFFFF;
       PRInt32 maxX = 0;
       RepositionContainerFrame(aPresContext, frame, minX, maxX);
@@ -601,7 +626,8 @@ nsBidiPresUtils::RepositionContainerFrame(nsIPresContext* aPresContext,
     frame->GetFrameType(getter_AddRefs(frameType) );
     if ( (frameType)
       && ( (nsLayoutAtoms::inlineFrame == frameType.get() )
-        || (nsLayoutAtoms::letterFrame == frameType.get() ) ) ) {
+        || (nsLayoutAtoms::letterFrame == frameType.get() )
+        || (nsLayoutAtoms::blockFrame == frameType.get() ) ) ) {
       RepositionContainerFrame(aPresContext, frame, minX, maxX);
     }
     else {
@@ -630,8 +656,6 @@ nsBidiPresUtils::RepositionContainerFrame(nsIPresContext* aPresContext,
   }
 }
 
-#define NUM_STATES  4//6
-
 nsresult
 nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
                                    PRUnichar*      aText,
@@ -640,7 +664,7 @@ nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
                                    PRBool          aIsOddLevel,
                                    PRBool          aIsBidiSystem)
 {
-  nsresult rv = NS_OK;
+  nsresult rv;
   if (!mUnicodeUtils) {
     NS_WITH_SERVICE(nsIUBidiUtils, bidiUtils, kUBidiUtilCID, &rv);
     if (NS_FAILED(rv) ) {
@@ -648,58 +672,54 @@ nsBidiPresUtils::FormatUnicodeText(nsIPresContext* aPresContext,
     }
     mUnicodeUtils = bidiUtils;
   }
-  //ahmed
-	nsBidiOptions mBidioptions;
-  aPresContext->GetBidi(&mBidioptions);
-    //adjusted for correct numeral shaping	
-		if (IBMBIDI_NUMERAL_HINDI == mBidioptions.mnumeral)
-		  mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_HINDI);
- 		else if (IBMBIDI_NUMERAL_ARABIC == value)
-   	  mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_ARABIC);
- 		else if ( (IBMBIDI_NUMERAL_REGULAR == mBidioptions.mnumeral) || (IBMBIDI_NUMERAL_HINDICONTEXT == mBidioptions.mnumeral) ) {
-			if (U_EUROPEAN_NUMBER == aTextClass)
-				mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_ARABIC);
-			else if (U_ARABIC_NUMBER == aTextClass)
-				mUnicodeUtils->HandleNumbers(aText,aTextLength,IBMBIDI_NUMERAL_HINDI);
-     }
+  PRUint8 value;
+  aPresContext->GetDocumentBidi(IBMBIDI_NUMERAL, &value);
 
-  static const PRInt8 reverseStates[NUM_STATES] = {
-  /************************************************************
-   * Class Is RTL * Is Odd Level * Is Bidi System * Is Visual *
-   ************************************************************/
-                     (1 << 1),
-          1      +   (1 << 1),
-          1      +                   (1 << 2),
-                     (1 << 1)   +    (1 << 2)
+  if ( (U_EUROPEAN_NUMBER == aTextClass) && (IBMBIDI_NUMERAL_HINDI == value) ) {
+    mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_HINDI);
+  }
+  else if (U_ARABIC_NUMBER == aTextClass) {
+    if (IBMBIDI_NUMERAL_ARABIC == value) {
+      mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_ARABIC);
+    }
+    else {
+      mUnicodeUtils->HandleNumbers(aText, aTextLength, IBMBIDI_NUMERAL_HINDI);
+    }
+  }
+  PRInt32 newLen;
+  PRUnichar* buffer = (PRUnichar*) mBuffer.GetUnicode();
+  // buffer can't be shorter than aText, since it was created from entire block
+
+  PRBool doReverse = PR_FALSE;
+
+  if (aIsBidiSystem) {
+    if (CLASS_IS_RTL(aTextClass) ^ aIsOddLevel) {
+      doReverse = PR_TRUE;
+    }
+  }
+  else if (aIsOddLevel) {
+    doReverse = PR_TRUE;
+  }
+  if (doReverse) {
+    rv = mBidiEngine->writeReverse(aText, aTextLength, buffer,
+                                   UBIDI_REMOVE_BIDI_CONTROLS | UBIDI_DO_MIRRORING,
+                                   &newLen);
+  }
+  else {
+    rv = NS_ERROR_FAILURE;
+    // XXX: todo
 #if 0
-          ,
-          1      +                   (1 << 2)    +  (1 << 3),
-          1      +   (1 << 1)   +    (1 << 2)    +  (1 << 3)
-#endif // 0
-  };
-
-  PRInt8 currentState = CLASS_IS_RTL(aTextClass) + (aIsOddLevel << 1)
-      + (aIsBidiSystem << 2) /*+ (isVisual << 3)*/;
-
-  for (int i = 0; i < NUM_STATES; i++) {
-    if (currentState == reverseStates[i]) {
-      PRUint16 options = UBIDI_REMOVE_BIDI_CONTROLS;
-      if (currentState & 0x03) {
-        options |= UBIDI_DO_MIRRORING;
-      }
-      PRInt32 newLen;
-      PRUnichar* buffer = (PRUnichar*) mBuffer.GetUnicode();
-      // buffer can't be shorter than aText, since it was created from entire block
-      rv = mBidiEngine->writeReverse(aText, aTextLength, buffer, options, &newLen);
-      if ( (NS_SUCCEEDED(rv) )&& (newLen <= aTextLength) ) {
-        aTextLength = newLen;
-        for (PRInt32 i = 0; i < aTextLength; i++) {
-          aText[i] = buffer[i];
-        }
-      }
-      break;
-    } // currentState == reverseStates[i]
-  } // for
+    // Still need to remove bidi controls
+    rv = mBidiEngine->writeForward(aText, aTextLength, buffer,
+                                   UBIDI_REMOVE_BIDI_CONTROLS, &newLen);
+#endif
+  }
+  if (NS_SUCCEEDED(rv) ) {
+    aTextLength = newLen;
+    for (PRInt32 i = 0; i < aTextLength; i++) {
+      aText[i] = buffer[i];
+    }
+  }
   return rv;
 }
 #endif // IBMBIDI

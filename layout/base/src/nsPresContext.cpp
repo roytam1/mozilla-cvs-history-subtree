@@ -371,13 +371,13 @@ nsPresContext::SetShell(nsIPresShell* aShell)
           GetFontPreferences();
 #ifdef IBMBIDI
           PRBool isVisual = PR_FALSE;
-  //ahmed
-	nsBidiOptions mBidioptions;
-          GetBidi(&mBidioptions);
-          if (IBMBIDI_TEXTTYPE_VISUAL == mBidioptions.mtexttype) {
-	  isVisual = PR_TRUE;
+          PRUint8 textType;
+          GetDocumentBidi(IBMBIDI_TEXTTYPE, &textType);
+
+          if (IBMBIDI_TEXTTYPE_VISUAL == textType) {
+            isVisual = PR_TRUE;
           }
-          else if (mBidioptions.mtexttype != IBMBIDI_TEXTTYPE_LOGICAL) {
+          else if (textType != IBMBIDI_TEXTTYPE_LOGICAL) {
             // XXX shouldn't be hard-coded.
             if ( (charset.EqualsIgnoreCase("visual") )
                 || (charset.EqualsIgnoreCase("ibm-864") )           // Arabic
@@ -1228,6 +1228,70 @@ nsPresContext::GetBidiUtils(nsBidiPresUtils** aBidiUtils)
   }
   *aBidiUtils = mBidiUtils;
   return rv;
+}
+
+//*****************************************************************************
+// nsPresContext::SetDocumentBidi
+//*****************************************************************************   
+
+NS_IMETHODIMP
+nsPresContext::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
+{
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		this->mBidi.mdirection = value;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		this->mBidi.mtexttype = value;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		this->mBidi.mcontrolstextmode = value;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		this->mBidi.mclipboardtextmode = value;
+		break;
+	case IBMBIDI_NUMERAL:
+		this->mBidi.mnumeral = value;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		this->mBidi.msupport = value;
+		break;
+	case IBMBIDI_CHARSET:
+		this->mBidi.mcharacterset = value;
+		break;
+	}
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPresContext::GetDocumentBidi(const PRUint8 member, PRUint8 * value)
+{
+	switch (member)
+	{
+	case IBMBIDI_TEXTDIRECTION:
+		*value = this->mBidi.mdirection;
+		break;
+	case IBMBIDI_TEXTTYPE:
+		*value = this->mBidi.mtexttype;
+		break;
+	case IBMBIDI_CONTROLSTEXTMODE:
+		*value = this->mBidi.mcontrolstextmode;
+		break;
+	case IBMBIDI_CLIPBOARDTEXTMODE:
+		*value = this->mBidi.mclipboardtextmode;
+		break;
+	case IBMBIDI_NUMERAL:
+		*value = this->mBidi.mnumeral;
+		break;
+	case IBMBIDI_SUPPORTMODE:
+		*value = this->mBidi.msupport;
+		break;
+	case IBMBIDI_CHARSET:
+		*value = this->mBidi.mcharacterset;
+		break;
+	}
+  return NS_OK;
 }
 
 NS_IMETHODIMP   nsPresContext::SetBidi(nsBidiOptions Source)
