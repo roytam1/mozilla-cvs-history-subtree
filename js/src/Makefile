@@ -19,14 +19,10 @@ DEPTH		= ../..
 LIBRARY_NAME	= js
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
-ifndef XCFLAGS
-OS2_IMPLIB=1
-LIBRARY	= js$(MOZ_BITS)$(VERSION_NUMBER).$(LIB_SUFFIX)
-DEF_FILE	= jsos2$(VERSION_NUMBER).def
-EXTRA_LIBS	= $(LIBNSPR) $(LIBNSJAVA)
+EXTRA_LIBS	= $(LIBNSPR)
+MAKE_DLL	= 1
 else
 EXTRA_LIBS	= $(LIBNSPR) $(LIBNSJAVA) $(OBJDIR)/libjs.lib
-endif
 endif
 
 MODULE		= js
@@ -142,7 +138,7 @@ js:
 
 .PHONY: js$(BIN_SUFFIX)
 
-ifneq ($(OS_ARCH),OS2)
+ifndef XP_OS2_VACPP
 $(OBJDIR)/js$(BIN_SUFFIX): $(OBJDIR)/js.o $(LIBRARY)
 	    @$(MAKE_OBJDIR)
 	    $(CC) -o $@ $(OBJDIR)/js.o $(LIBRARY) $(LDFLAGS)
@@ -155,19 +151,6 @@ endif
 
 # hardwire dependencies on jsopcode.def
 jsopcode.h jsopcode.c: jsopcode.def
-
-# this section was put in the merged by danda into the
-# JAVA_*_MERGE section and normally would have
-# been removed.  However it looks like it shouldn't have
-# been put there in the first place, so we're leaving it
-# here until danda can confirm (we don't have OS/2 machines
-# to build on) - hshaw/sudu
-#
-ifeq ($(OS_ARCH),OS2)
-$(OBJDIR)/js.o: js.c
-	@$(MAKE_OBJDIR)
-	$(CC) -Fo$@ -c $(CFLAGS) $(JSJAVA_CFLAGS) js.c
-endif
 
 
 refdiff:
