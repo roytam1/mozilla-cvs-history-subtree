@@ -550,9 +550,6 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
 	 * report.flags.  Proper behavior for error reporters is probably to
 	 * ignore this for all but toplevel compilation errors.
 
-	 * XXXmccabe it's still at issue if there's a public API to distinguish
-	 * between toplevel compilation and other types.
-
 	 * XXX it'd probably be best if there was only one call to this
 	 * function, but there seem to be two error reporter call points.
 	 */
@@ -564,9 +561,14 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
          */
         if (!JS_IsExceptionPending(cx))
             (void)js_ErrorToException(cx, &report, message);
-#endif
 
-	(*onError)(cx, message, &report);
+        /*
+         * If compiletime errors are already reflected as exceptions, suppress
+         * any compiletime errors that don't occur at the top level.
+         */
+        if (cx->interpLevel == 0)
+#endif
+            (*onError)(cx, message, &report);
 
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {
