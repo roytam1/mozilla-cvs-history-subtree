@@ -39,11 +39,13 @@ include $(MOD_DEPTH)/config/config.mk
 
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
+OS_LIBS += -lc
+ifeq ($(OS_RELEASE),4.1.3_U1)
+OPTIMIZER =
+else
 MAPFILE = $(OBJDIR)/plcmap.sun
 ALL_TRASH += $(MAPFILE)
 MKSHLIB += -M $(MAPFILE)
-ifeq ($(OS_RELEASE),4.1.3_U1)
-OPTIMIZER =
 endif
 endif
 
@@ -183,11 +185,6 @@ else
 endif
 ifeq ($(OS_ARCH), OpenVMS)
 	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/lib
-endif
-ifeq ($(OS_ARCH), SunOS)
-ifeq ($(USE_64), 1)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib/sparcv9
-endif
 endif
 endif
 ifeq ($(MOZ_BITS),16)

@@ -62,25 +62,27 @@ endif
 
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
-MAPFILE = $(OBJDIR)/nsprmap.sun
-ALL_TRASH += $(MAPFILE)
-MKSHLIB += -M $(MAPFILE)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 export OPTIMIZER
-OS_LIBS			= -lm
+OS_LIBS			= -lm -lc
 else	# 4.1.3_U1
+MAPFILE = $(OBJDIR)/nsprmap.sun
+ALL_TRASH += $(MAPFILE)
+MKSHLIB += -M $(MAPFILE)
 ifdef USE_PTHREADS
-OS_LIBS			= -lpthread -lthread -lposix4 -lsocket -lnsl -ldl
+OS_LIBS			= -lpthread -lthread -lposix4 -lsocket -lnsl -ldl -lc
 else
 ifdef LOCAL_THREADS_ONLY
-OS_LIBS			= -lsocket -lnsl -ldl
+OS_LIBS			= -lsocket -lnsl -ldl -lc
 else
-OS_LIBS			= -lthread -lposix4 -lsocket -lnsl -ldl
+OS_LIBS			= -lthread -lposix4 -lsocket -lnsl -ldl -lc
 endif	# LOCAL_THREADS_ONLY
 endif	# USE_PTHREADS
 ifeq ($(OS_TEST),sun4u)
-DSO_LDOPTS		+= -f \$$ORIGIN/cpu/\$$ISALIST/lib$(ULTRASPARC_LIBRARY)$(MOD_VERSION)_flt.so
+ifndef USE_64
+DSO_LDOPTS		+= -f \$$ORIGIN/cpu/\$$ISALIST/lib$(ULTRASPARC_LIBRARY)$(LIBRARY_VERSION).so
+endif
 endif	# sun4u
 endif	# 4.1.3_U1
 endif	# SunOS
@@ -448,11 +450,6 @@ else
 endif
 ifeq ($(OS_ARCH), OpenVMS)
 	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/lib
-endif
-ifeq ($(OS_ARCH), SunOS)
-ifeq ($(USE_64), 1)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib/sparcv9
-endif
 endif
 endif
 ifeq ($(MOZ_BITS),16)

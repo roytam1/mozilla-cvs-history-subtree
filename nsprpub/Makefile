@@ -124,7 +124,7 @@ endif
 
 solarispkg:
 	@echo Making Solaris packages.
-	cd pkg/solaris && $(MAKE) publish
+	$(MAKE) -C pkg/solaris publish
 
 depend:
 	@echo "NSPR20 has no dependencies.  Skipped."

@@ -33,16 +33,30 @@ clean clobber::
 	$(RM) awk_pkginfo bld_awk_pkginfo
 	$(RM) -r $(ROOT)
 
+ifdef USE_64
+PROTO: \
+	$(ROOT) \
+	$(ROOT)/usr \
+	$(ROOT)/usr/lib \
+	$(ROOT)/usr/lib/mps \
+	$(ROOT)/usr/lib/mps/sparcv9
+else
 PROTO: \
 	$(ROOT) \
 	$(ROOT)/usr \
 	$(ROOT)/usr/lib \
 	$(ROOT)/usr/lib/mps
+endif
 
 $(ROOT) $(ROOT)/%:
 	mkdir -p $@
 
+ifdef USE_64
+$(ROOT)/usr/lib/mps/sparcv9:
+	$(LN) -sf ../../../$(DIST)/lib $@
+else
 $(ROOT)/usr/lib/mps:
 	$(LN) -sf ../../../$(DIST)/lib $@
+endif
 
 .PHONY: PROTO

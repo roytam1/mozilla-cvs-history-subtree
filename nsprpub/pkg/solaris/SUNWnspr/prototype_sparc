@@ -30,4 +30,4 @@
 #
 d none usr/lib/mps/cpu 755 root bin
 d none usr/lib/mps/cpu/sparcv8plus 755 root bin
-f none usr/lib/mps/cpu/sparcv8plus/libnspr4_flt.so 755 root bin
+f none usr/lib/mps/cpu/sparcv8plus/libnspr_flt4.so 755 root bin

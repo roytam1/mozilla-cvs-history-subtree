@@ -160,7 +160,7 @@ MKSHLIB			= $(LD) $(DSO_LDOPTS)
 # ld options:
 # -G: produce a shared object
 # -z defs: no unresolved symbols allowed
-DSO_LDOPTS		= -G -h $(notdir $@) -z combreloc
+DSO_LDOPTS		= -G -h $(notdir $@) -z combreloc -z defs
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)
@@ -180,5 +180,5 @@ NOSUCHFILE		= /no-such-file
 # through the -f option to ld.  See the nspr Makefile for how this is used.
 #
 ifeq ($(OS_TEST),sun4u)
-ULTRASPARC_LIBRARY = nspr
+ULTRASPARC_LIBRARY = nspr_flt
 endif

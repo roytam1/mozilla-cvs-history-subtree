@@ -1,6 +1,9 @@
 # nm -n -C -p libnspr4.so | awk '/[^ ]* T PR_/ {print $3}'
-NSPR_4.1 {
+NSPR_4.0 {
 	global:
+		LL_MaxInt;
+		LL_MinInt;
+		LL_Zero;
 		PR_Abort;
 		PR_Accept;
 		PR_AcceptRead;
@@ -41,11 +44,9 @@ NSPR_4.1 {
 		PR_CloseSemaphore;
 		PR_CloseSharedMemory;
 		PR_Connect;
-		PR_ConnectContinue;
 		PR_ConvertIPv4AddrToIPv6;
 		PR_CreateAlarm;
 		PR_CreateFileMap;
-		PR_CreateIOLayer;
 		PR_CreateIOLayerStub;
 		PR_CreateMWaitEnumerator;
 		PR_CreatePipe;
@@ -76,8 +77,6 @@ NSPR_4.1 {
 		PR_DetachSharedMemory;
 		PR_DetachThread;
 		PR_DisableClockInterrupts;
-		PR_EmulateAcceptRead;
-		PR_EmulateSendFile;
 		PR_EnableClockInterrupts;
 		PR_EnterMonitor;
 		PR_EnumerateHostEnt;
@@ -99,8 +98,6 @@ NSPR_4.1 {
 		PR_FD_SET;
 		PR_FD_ZERO;
 		PR_FileDesc2NativeHandle;
-		PR_FindFunctionSymbol;
-		PR_FindFunctionSymbolAndLibrary;
 		PR_FindLibrary;
 		PR_FindSymbol;
 		PR_FindSymbolAndLibrary;
@@ -133,10 +130,8 @@ NSPR_4.1 {
 		PR_GetLayersIdentity;
 		PR_GetLibraryName;
 		PR_GetLibraryPath;
-		PR_GetMemMapAlignment;
 		PR_GetMonitorEntryCount;
 		PR_GetNameForIdentity;
-		PR_GetNumberOfProcessors;
 		PR_GetOSError;
 		PR_GetOpenFileInfo;
 		PR_GetOpenFileInfo64;
@@ -167,7 +162,6 @@ NSPR_4.1 {
 		PR_ImplodeTime;
 		PR_ImportFile;
 		PR_ImportFileMapFromString;
-		PR_ImportPipe;
 		PR_ImportTCPSocket;
 		PR_ImportUDPSocket;
 		PR_Init;
@@ -270,7 +264,6 @@ NSPR_4.1 {
 		PR_SendTo;
 		PR_SetAlarm;
 		PR_SetConcurrency;
-		PR_SetEnv;
 		PR_SetError;
 		PR_SetErrorText;
 		PR_SetFDCacheSize;
@@ -346,13 +339,25 @@ NSPR_4.1 {
 		PR_vsnprintf;
 		PR_vsprintf_append;
 		PR_vsxprintf;
+	local: *;
 };
+
+NSPR_4.1 {
+	global:
+		PR_ConnectContinue;
+		PR_CreateIOLayer;
+		PR_EmulateAcceptRead;
+		PR_EmulateSendFile;
+		PR_FindFunctionSymbol;
+		PR_FindFunctionSymbolAndLibrary;
+		PR_GetMemMapAlignment;
+		PR_GetNumberOfProcessors;
+		PR_ImportPipe;
+		PR_SetEnv;
+} NSPR_4.0;
 
 NSPRprivate {
 	global:
-		LL_MaxInt;
-		LL_MinInt;
-		LL_Zero;
 		libVersionPoint;
 	local: *;
 };
