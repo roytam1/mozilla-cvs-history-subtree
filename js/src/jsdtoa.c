@@ -230,6 +230,16 @@ static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
 #include "math.h"
 #endif
 
+/* 
+ * MacOS 10.2 defines the macro FLT_ROUNDS to an internal function
+ * which does not exist on 10.1.  We can safely #define it to 1 here
+ * to allow 10.2 builds to run on 10.1, since we don't use fesetround().
+ */
+#if MACOS_DEPLOYMENT_TARGET < 100200
+#undef FLT_ROUNDS
+#define FLT_ROUNDS 1
+#endif
+
 #ifndef CONST
 #define CONST const
 #endif
