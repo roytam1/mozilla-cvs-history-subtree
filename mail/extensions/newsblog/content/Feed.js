@@ -270,7 +270,7 @@ Feed.prototype.parseAsRSS2 = function() {
 
     this.itemsToStore[i] = item;
   }
-  
+
   this.storeNextItem();
 }
 
@@ -294,12 +294,12 @@ Feed.prototype.parseAsRSS1 = function() {
   this.invalidateItems();
 
   var items = ds.GetTarget(channel, RSS_ITEMS, true);
-  //items = items.QueryInterface(Components.interfaces.nsIRDFContainer);
-  items = rdfcontainer.MakeSeq(ds, items);
-  items = items.GetElements();
+  if (items)
+    items = rdfcontainer.MakeSeq(ds, items).GetElements();
+  
   // If the channel doesn't list any items, look for resources of type "item"
   // (a hacky workaround for some buggy feeds).
-  if (!items.hasMoreElements())
+  if (!items || !items.hasMoreElements())
     items = ds.GetSources(RDF_TYPE, RSS_ITEM, true);
 
   this.itemsToStore = new Array();
@@ -334,8 +334,9 @@ Feed.prototype.parseAsRSS1 = function() {
 
     this.itemsToStore[index++] = item;
   }
-  
-  this.storeNextItem();
+
+  if (index) // at least one item to store?
+    this.storeNextItem();
 }
 
 Feed.prototype.parseAsAtom = function() {
@@ -384,12 +385,14 @@ Feed.prototype.parseAsAtom = function() {
                  || (item.description ? item.description.substr(0, 150) : null)
                  || item.title;
 
-    var author = itemNode.getElementsByTagName("author")[0]
+    var authorEl = itemNode.getElementsByTagName("author")[0]
                  || itemNode.getElementsByTagName("contributor")[0]
                  || channel.getElementsByTagName("author")[0];
-    if (author) {
-      var name = getNodeValue(author.getElementsByTagName("name")[0]);
-      var email = getNodeValue(author.getElementsByTagName("email")[0]);
+    var author = "";
+
+    if (authorEl) {
+      var name = getNodeValue(authorEl.getElementsByTagName("name")[0]);
+      var email = getNodeValue(authorEl.getElementsByTagName("email")[0]);
       if (name)
         author = name + (email ? " <" + email + ">" : "");
       else if (email)
@@ -478,6 +481,7 @@ Feed.prototype.removeInvalidItems = function() {
 Feed.prototype.storeNextItem = function()
 {
   var item = this.itemsToStore[this.itemsToStoreIndex]; 
+
   item.store();
   item.markValid();
 
