@@ -33,15 +33,14 @@
 #include "nsICacheVisitor.h"
 
 #include "nsAutoLock.h"
-#include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
-#include "nsProxiedService.h"
 #include "nsIObserverService.h"
 #include "nsIPref.h"
 
+#if 0
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
-
+#endif
 
 
 
@@ -219,6 +218,13 @@ nsCacheService::Init()
             // ignore errors
         }
     }
+
+    // get references to services we'll be using frequently
+    mEventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    mProxyObjectManager = do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
 
     if (mEnableMemoryDevice) {   // create memory cache
         mMemoryDevice = new nsMemoryCacheDevice;
@@ -488,11 +494,13 @@ nsCacheService::CreateRequest(nsCacheSession *   session,
 
     // get the nsIEventQueue for the request's thread
     nsresult  rv;
+#if 0
     // XXX can we just keep a reference so we don't have to do this everytime?
     NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
     if (NS_FAILED(rv))  goto error;
+#endif
     
-    rv = eventQService->ResolveEventQueue(NS_CURRENT_EVENTQ,
+    rv = mEventQService->ResolveEventQueue(NS_CURRENT_EVENTQ,
                                           getter_AddRefs((*request)->mEventQ));
     if (NS_FAILED(rv))  goto error;
     
@@ -519,17 +527,19 @@ nsCacheService::NotifyListener(nsCacheRequest *          request,
 {
     nsresult rv;
 
+#if 0
     // XXX can we hold onto the proxy object manager?
     NS_WITH_SERVICE(nsIProxyObjectManager, proxyObjMgr, kProxyObjectManagerCID, &rv);
     if (NS_FAILED(rv)) return rv;
+#endif
 
     nsCOMPtr<nsICacheListener> listenerProxy;
     NS_ASSERTION(request->mEventQ, "no event queue for async request!");
-    rv = proxyObjMgr->GetProxyForObject(request->mEventQ,
-                                        NS_GET_IID(nsICacheListener),
-                                        request->mListener,
-                                        PROXY_ASYNC|PROXY_ALWAYS,
-                                        getter_AddRefs(listenerProxy));
+    rv = mProxyObjectManager->GetProxyForObject(request->mEventQ,
+                                                NS_GET_IID(nsICacheListener),
+                                                request->mListener,
+                                                PROXY_ASYNC|PROXY_ALWAYS,
+                                                getter_AddRefs(listenerProxy));
     if (NS_FAILED(rv)) return rv;
 
     return listenerProxy->OnCacheEntryAvailable(descriptor, accessGranted, error);
@@ -841,6 +851,21 @@ nsCacheService::SetCacheDevicesEnabled(PRBool  enableDisk, PRBool  enableMemory)
 
 
 nsresult
+nsCacheService::SetCacheElement(nsCacheEntry * entry, nsISupports * element)
+{
+    nsresult rv;
+    nsIEventQueue *  eventQ;
+    rv = mEventQService->ResolveEventQueue(NS_CURRENT_EVENTQ, &eventQ);
+    if (NS_FAILED(rv))  return rv;
+
+    entry->SetEventQ(eventQ);
+    entry->SetData(element);
+    entry->TouchData();
+    return NS_OK;
+}
+
+
+nsresult
 nsCacheService::OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize)
 {
     if (this == nsnull)  return NS_ERROR_NOT_AVAILABLE;
@@ -1044,6 +1069,7 @@ nsCacheService::ClearActiveEntries()
 {
     // XXX really we want a different finalize callback for mActiveEntries
     PL_DHashTableEnumerate(&mActiveEntries.table, DeactivateAndClearEntry, nsnull);
+    mActiveEntries.Shutdown();
 }
 
 
