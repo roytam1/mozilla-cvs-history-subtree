@@ -145,8 +145,8 @@ struct matchSearchTerm_t {
   
   searchTerm *term;
   PRBool haveClosure;           // are the rest of the fields valid?
-  PRInt64 now;
   PRInt32 intValue;
+  nsGlobalHistory* globalHist;
 };
 
 struct matchQuery_t {
@@ -258,53 +258,6 @@ CharsToPRInt64(const char* aBuf, PRUint32 aCount, PRInt64* aResult)
   return NS_OK;
 }
 
-static PRTime
-NormalizeTime(PRInt64 aTime)
-{
-  // normalize both now and date to 00:00 of the day they occur on (rounding down)
-  PRExplodedTime explodedTime;
-  PR_ExplodeTime(aTime, PR_LocalTimeParameters, &explodedTime);
-
-  // set to midnight (0:00)
-  explodedTime.tm_min =
-    explodedTime.tm_hour =
-    explodedTime.tm_sec =
-    explodedTime.tm_usec = 0;
-
-  return PR_ImplodeTime(&explodedTime);
-}
-
-// pass in a pre-normalized now and a date, and we'll find
-// the difference since midnight on each of the days..
-static PRInt32
-GetAgeInDays(PRInt64 aNormalizedNow, PRInt64 aDate)
-{
-  PRInt64 dateMidnight = NormalizeTime(aDate);
-
-  PRInt64 diff;
-  LL_SUB(diff, aNormalizedNow, dateMidnight);
-
-  // two-step process since I can't seem to load
-  // MSECS_PER_DAY * PR_MSEC_PER_SEC into a PRInt64 at compile time
-  PRInt64 msecPerSec;
-  LL_I2L(msecPerSec, PR_MSEC_PER_SEC);
-  PRInt64 ageInSeconds;
-  LL_DIV(ageInSeconds, diff, msecPerSec);
-
-  PRInt32 ageSec; LL_L2I(ageSec, ageInSeconds);
-  
-  PRInt64 msecPerDay;
-  LL_I2L(msecPerDay, MSECS_PER_DAY);
-  
-  PRInt64 ageInDays;
-  LL_DIV(ageInDays, ageInSeconds, msecPerDay);
-
-  PRInt32 retval;
-  LL_L2I(retval, ageInDays);
-  return retval;
-}
-
-
 PRBool
 nsGlobalHistory::MatchExpiration(nsIMdbRow *row, PRInt64* expirationDate)
 {
@@ -347,7 +300,6 @@ matchAgeInDaysCallback(nsIMdbRow *row, void *aClosure)
   if (!matchSearchTerm->haveClosure) {
     PRInt32 err;
     matchSearchTerm->intValue = term->text.ToInteger(&err);
-    //matchSearchTerm->now = NormalizeTime(PR_Now());   // we call this before use now, to be able to use GetNow().
     if (err != 0) return PR_FALSE;
     matchSearchTerm->haveClosure = PR_TRUE;
   }
@@ -365,7 +317,7 @@ matchAgeInDaysCallback(nsIMdbRow *row, void *aClosure)
   
   CharsToPRInt64((const char*)yarn.mYarn_Buf, yarn.mYarn_Fill, &rowDate);
 
-  PRInt32 days = GetAgeInDays(matchSearchTerm->now, rowDate);
+  PRInt32 days = matchSearchTerm->globalHist->GetAgeInDays(rowDate);
   
   if (term->method.Equals("is"))
     return (days == matchSearchTerm->intValue);
@@ -1631,7 +1583,7 @@ nsGlobalHistory::GetTarget(nsIRDFResource* aSource,
       rv = GetRowValue(row, kToken_LastVisitDateColumn, &lastVisitDate);
       if (NS_FAILED(rv)) return rv;
       
-      PRInt32 days = GetAgeInDays(NormalizeTime(GetNow()), lastVisitDate);
+      PRInt32 days = GetAgeInDays(lastVisitDate);
 
       nsCOMPtr<nsIRDFInt> ageLiteral;
       rv = gRDFService->GetIntLiteral(days, getter_AddRefs(ageLiteral));
@@ -1754,6 +1706,15 @@ nsGlobalHistory::GetNow()
 {
   if (!mNowValid) {             // not dirty, mLastNow is crufty
     mLastNow = PR_Now();
+
+    // we also cache our offset from GMT, to optimize NormalizeTime
+    // note that this cache is only valid if GetNow() is called before
+    // NormalizeTime(), but that is always the case here.
+    PRExplodedTime explodedNow;
+    PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &explodedNow);
+    mCachedGMTOffset = nsInt64(explodedNow.tm_params.tp_gmt_offset) * nsInt64((PRUint32)PR_USEC_PER_SEC) +
+                       nsInt64(explodedNow.tm_params.tp_dst_offset) * nsInt64((PRUint32)PR_USEC_PER_SEC);
+
     mNowValid = PR_TRUE;
     if (!mExpireNowTimer)
       mExpireNowTimer = do_CreateInstance("@mozilla.org/timer;1");
@@ -1765,6 +1726,60 @@ nsGlobalHistory::GetNow()
   
   return mLastNow;
 }
+
+// pass in a pre-normalized now and a date, and we'll find
+// the difference since midnight on each of the days..
+PRInt32
+nsGlobalHistory::GetAgeInDays(PRInt64 aDate)
+{
+  PRInt64 timeNow      = GetNow();
+  PRInt64 dateMidnight = NormalizeTime(aDate);
+
+  PRInt64 diff;
+  LL_SUB(diff, timeNow, dateMidnight);
+
+  const PRInt64 kMicrosecPerDay = LL_INIT(20, 500654080);  // (1000000LL * 60 * 60 * 24)
+  PRInt64 ageInDays;
+  LL_DIV(ageInDays, diff, kMicrosecPerDay);
+  PRInt32 retval;
+  LL_L2I(retval, ageInDays);
+
+  return retval;
+}
+
+PRTime
+nsGlobalHistory::NormalizeTime(PRInt64 aTime)
+{
+#if 0
+  // normalize both now and date to 00:00 of the day they occur on (rounding down)
+  PRExplodedTime explodedTime;
+  PR_ExplodeTime(aTime, PR_LocalTimeParameters, &explodedTime);
+
+  // set to midnight (0:00)
+  explodedTime.tm_min =
+    explodedTime.tm_hour =
+    explodedTime.tm_sec =
+    explodedTime.tm_usec = 0;
+
+  return PR_ImplodeTime(&explodedTime);
+#else
+  // we can optimize this by converting the time to local time, rounding
+  // down to the previous day boundary, and then converting back to UTC.
+  // This avoids two costly calls to localtime()
+  const PRInt64 kMicrosecPerDay = LL_INIT(20, 500654080);  // (1000000LL * 60 * 60 * 24)
+  // we calculate (gmtTime - (gmtTime % kMicrosecPerDay)) - mCachedGMTOffset
+  PRInt64 gmtTime;
+  LL_ADD(gmtTime, aTime, mCachedGMTOffset);
+  PRInt64 curDayUSec;
+  LL_MOD(curDayUSec, gmtTime, kMicrosecPerDay);
+  PRInt64 gmtMidnight;
+  LL_SUB(gmtMidnight, gmtTime, curDayUSec);
+  PRInt64 localMidnight;
+  LL_SUB(localMidnight, gmtMidnight, mCachedGMTOffset);
+  return localMidnight;
+#endif
+}
+
 
 NS_IMETHODIMP
 nsGlobalHistory::GetTargets(nsIRDFResource* aSource,
@@ -3211,7 +3226,7 @@ nsGlobalHistory::NotifyFindAssertions(nsIRDFResource *aSource,
   PRInt64 lastVisited;
   GetRowValue(aRow, kToken_LastVisitDateColumn, &lastVisited);
 
-  PRInt32 ageInDays = GetAgeInDays(NormalizeTime(GetNow()), lastVisited);
+  PRInt32 ageInDays = GetAgeInDays(lastVisited);
   nsCAutoString ageString; ageString.AppendInt(ageInDays);
 
   nsCAutoString hostname;
@@ -3303,7 +3318,7 @@ nsGlobalHistory::NotifyFindUnassertions(nsIRDFResource *aSource,
   //    first get age in days
   PRInt64 lastVisited;
   GetRowValue(aRow, kToken_LastVisitDateColumn, &lastVisited);
-  PRInt32 ageInDays = GetAgeInDays(NormalizeTime(GetNow()), lastVisited);
+  PRInt32 ageInDays = GetAgeInDays(lastVisited);
   nsCAutoString ageString; ageString.AppendInt(ageInDays);
 
   //    now get hostname
@@ -3688,7 +3703,7 @@ nsGlobalHistory::RowMatches(nsIMdbRow *aRow,
     if (term->match) {
       // queue up some values just in case callback needs it
       // (how would we do this dynamically?)
-      matchSearchTerm_t matchSearchTerm = { mEnv, mStore, term, PR_FALSE, NormalizeTime(GetNow()), 0 };
+      matchSearchTerm_t matchSearchTerm = { mEnv, mStore, term, PR_FALSE, 0, this };
       
       if (!term->match(aRow, (void *)&matchSearchTerm))
         return PR_FALSE;
@@ -3710,7 +3725,7 @@ nsGlobalHistory::RowMatches(nsIMdbRow *aRow,
       if (err != 0 || !yarn.mYarn_Buf) return PR_FALSE;
 
       const char* startPtr;
-      PRInt32 yarnLength = yarn.mYarn_Fill;;
+      PRInt32 yarnLength = yarn.mYarn_Fill;
       nsCAutoString titleStr;
       if (property_column == kToken_NameColumn) {
         titleStr =  NS_ConvertUCS2toUTF8((const PRUnichar*)yarn.mYarn_Buf, yarnLength);
