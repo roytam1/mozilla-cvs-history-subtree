@@ -331,7 +331,7 @@ NS_IMETHODIMP nsDeviceContextSpecOS2::Init(nsIPrintSettings* aPS, PRBool aIsPrin
 }
 
 
-NS_IMETHODIMP nsDeviceContextSpecOS2 :: GetDestination( PRBool &aDestination )     
+NS_IMETHODIMP nsDeviceContextSpecOS2 :: GetDestination( int &aDestination )     
 {
   aDestination = mPrData.destination;
   return NS_OK;
