@@ -28,7 +28,7 @@
 
 // needed to build with mingw
 #ifndef _WIN32_IE
-#define _WIN32_IE 0x0400
+#define _WIN32_IE 0x0500
 #endif
 
 #include "extern.h"
@@ -51,8 +51,12 @@
 #define DEFAULT_SAFE_UPGRADE FALSE
 
 static WNDPROC OldListBoxWndProc;
+static WNDPROC OldDialogWndProc;
 static DWORD   gdwACFlag;
 static BOOL    gDidShowUpgradePanel;
+
+// function prototype
+LRESULT CALLBACK NewDialogWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 ///////////////////////////////////////////////////////////////////////////////
 // INSTALL WIZARD SEQUENCER
@@ -195,8 +199,7 @@ void InitSequence(HINSTANCE hInstance)
   psh.hInstance         = hSetupRscInst;
   psh.hwndParent        = NULL;
   psh.phpage            = pages;
-  psh.dwFlags           = PSH_WIZARD97|PSH_WATERMARK|PSH_HEADER;
-  psh.pszbmWatermark    = MAKEINTRESOURCE(IDB_WATERMARK);
+  psh.dwFlags           = PSH_WIZARD97|PSH_HEADER;
   psh.pszbmHeader       = MAKEINTRESOURCE(IDB_HEADER);
   psh.nStartPage        = 0;
   psh.nPages            = count;
@@ -305,6 +308,8 @@ LRESULT CALLBACK DlgProcWelcome(HWND hDlg, UINT msg, WPARAM wParam, LONG lParam)
     wsprintf(szBuf, diWelcome.szMessage3, sgProduct.szProductName);
     SetDlgItemText(hDlg, IDC_STATIC3, szBuf);
 
+    // Subclass dialog to paint all static controls white.
+    OldDialogWndProc = SubclassWindow(hDlg, (WNDPROC)NewDialogWndProc);
     break;
 
   case WM_NOTIFY:
@@ -1082,6 +1087,22 @@ WNDPROC SubclassWindow( HWND hWnd, WNDPROC NewWndProc)
   SetWindowLong(hWnd, GWL_WNDPROC, (LONG) NewWndProc);
 
   return OldWndProc;
+}
+
+// ************************************************************************
+// FUNCTION : NewDialogWndProc( HWND, UINT, WPARAM, LPARAM )
+// PURPOSE  : Processes messages for the Welcome and Finish dialogs.
+// COMMENTS : Paints all static control backgrounds in white.
+// ************************************************************************
+LRESULT CALLBACK NewDialogWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+  switch(uMsg)
+  {
+    case WM_CTLCOLORSTATIC:
+      return (HRESULT)GetStockObject(WHITE_BRUSH);
+  }
+  
+  return(CallWindowProc(OldDialogWndProc, hWnd, uMsg, wParam, lParam));
 }
 
 // ************************************************************************
@@ -2009,6 +2030,8 @@ LRESULT CALLBACK DlgProcInstallSuccessful(HWND hDlg, UINT msg, WPARAM wParam, LO
     launchAppChecked = diInstallSuccessful.bLaunchAppChecked;
     resetHomepageChecked = diInstallSuccessful.bResetHomepageChecked;
 
+    // Subclass dialog to paint all static controls white.
+    OldDialogWndProc = SubclassWindow(hDlg, (WNDPROC)NewDialogWndProc);
     break;
 
   case WM_NOTIFY:
@@ -2317,4 +2340,5 @@ void InitPathDisplay (HWND aWindow, char* aPath, int aFolderIcon, int aFolderFie
                  aPath, buf, sizeof(buf));
   SetDlgItemText(aWindow, aFolderField, buf);
 }
+
 
