@@ -326,16 +326,17 @@ NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc,
     //        and we block all navigation inside 
     //        OnStartURIOpen anyways. 
     //
-    // TODO:  Replace this when there's a more official 
-    //        Gecko way to get link status notifications.
-#if 0
+    // Unfortunately leaving the link handler in place can
+    // cause problems such as intercepting key events so
+    // no text is inserted.  Rather than risk unknown bugs
+    // we are setting the link handler to null in the editor. 
+
     // disable links
     nsCOMPtr<nsIPresContext> context;
     aPresShell->GetPresContext(getter_AddRefs(context));
     if (!context) return NS_ERROR_NULL_POINTER;
     if (!(mFlags & eEditorPlaintextMask))
       context->SetLinkHandler(0);  
-#endif
 
     nsCOMPtr<nsIDOMElement> bodyElement;
     result = nsEditor::GetRootElement(getter_AddRefs(bodyElement));
