@@ -72,11 +72,11 @@ typedef union {
     double value;
     struct {
 #ifdef IS_BIG_ENDIAN
-        u_int32_t msw;
-        u_int32_t lsw;
+        PRUint32 msw;
+        PRUint32 lsw;
 #else
-        u_int32_t lsw;
-        u_int32_t msw;
+        PRUint32 lsw;
+        PRUint32 msw;
 #endif
     } parts;
 } tx_ieee_double_shape_type;
