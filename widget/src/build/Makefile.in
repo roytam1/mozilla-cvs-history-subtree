@@ -59,7 +59,7 @@ OS_LIBS		+= $(call EXPAND_LIBNAME, comctl32 comdlg32 uuid ole32 \
 		shell32 oleaut32 gdi32 imm32 )
 
 ifndef GNU_CC
-OS_LIBS		+= urlmon
+OS_LIBS		+= $(call EXPAND_LIBNAME, urlmon)
 endif
 
 SHARED_LIBRARY_LIBS = \
