@@ -16,7 +16,6 @@
  * Reserved.
  */
 
-#include "prtpool.h"
 #include "nspr.h"
 
 /*
@@ -84,7 +83,7 @@ struct PRThreadPool {
 	PRInt32		max_threads;
 	PRInt32		current_threads;
 	PRInt32		idle_threads;
-	PRInt32		stacksize;
+	PRUint32	stacksize;
 	tp_jobq		jobq;
 	io_jobq		ioq;
 	timer_jobq	timerq;
@@ -99,8 +98,6 @@ typedef enum _PRJobStatus
 	{ JOB_ON_TIMERQ, JOB_ON_IOQ, JOB_QUEUED, JOB_RUNNING, JOB_COMPLETED,
 					JOB_CANCELED, JOB_FREED } _PRJobStatus;
 
-typedef void (* Jobfn)(void *arg);
-
 #ifdef OPT_WINNT
 typedef struct NT_notifier {
 	OVERLAPPED overlapped;		/* must be first */
@@ -112,7 +109,7 @@ struct PRJob {
 	PRCList			links;		/* 	for linking jobs */
 	_PRJobStatus 	status;
 	PRBool			joinable;
-	Jobfn			job_func;
+	PRJobFn			job_func;
 	void 			*job_arg;
 	PRLock			*jlock;
 	PRCondVar		*join_cv;
@@ -581,7 +578,7 @@ failed:
 /* Create thread pool */
 PR_IMPLEMENT(PRThreadPool *)
 PR_CreateThreadPool(PRInt32 initial_threads, PRInt32 max_threads,
-                                PRSize stacksize)
+                                PRUint32 stacksize)
 {
 PRThreadPool *tp;
 PRThread *thr;
@@ -686,7 +683,7 @@ failed:
 
 /* queue a job */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob(PRThreadPool *tpool, JobFn fn, void *arg, PRBool joinable)
+PR_QueueJob(PRThreadPool *tpool, PRJobFn fn, void *arg, PRBool joinable)
 {
 	PRJob *jobp;
 
@@ -705,7 +702,7 @@ PR_QueueJob(PRThreadPool *tpool, JobFn fn, void *arg, PRBool joinable)
 
 /* queue a job, when a socket is readable */
 static PRJob *
-queue_io_job(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
+queue_io_job(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
 				PRBool joinable, io_op_type op)
 {
 	PRJob *jobp;
@@ -789,7 +786,7 @@ queue_io_job(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
 
 /* queue a job, when a socket is readable */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob_Read(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
+PR_QueueJob_Read(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
 											PRBool joinable)
 {
 	return (queue_io_job(tpool, iod, fn, arg, joinable, JOB_IO_READ));
@@ -797,7 +794,7 @@ PR_QueueJob_Read(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
 
 /* queue a job, when a socket is writeable */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob_Write(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn,void * arg,
+PR_QueueJob_Write(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn,void * arg,
 										PRBool joinable)
 {
 	return (queue_io_job(tpool, iod, fn, arg, joinable, JOB_IO_WRITE));
@@ -806,7 +803,7 @@ PR_QueueJob_Write(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn,void * arg,
 
 /* queue a job, when a socket has a pending connection */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
+PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
 												PRBool joinable)
 {
 	return (queue_io_job(tpool, iod, fn, arg, joinable, JOB_IO_ACCEPT));
@@ -815,7 +812,7 @@ PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod, JobFn fn, void * arg,
 /* queue a job, when a socket can be connected */
 PR_IMPLEMENT(PRJob *)
 PR_QueueJob_Connect(PRThreadPool *tpool, PRJobIoDesc *iod, PRNetAddr *addr,
-				JobFn fn, void * arg, PRBool joinable)
+				PRJobFn fn, void * arg, PRBool joinable)
 {
 	/*
 	 * not implemented
@@ -826,7 +823,7 @@ PR_QueueJob_Connect(PRThreadPool *tpool, PRJobIoDesc *iod, PRNetAddr *addr,
 /* queue a job, when a timer expires */
 PR_IMPLEMENT(PRJob *)
 PR_QueueJob_Timer(PRThreadPool *tpool, PRIntervalTime timeout,
-							JobFn fn, void * arg, PRBool joinable)
+							PRJobFn fn, void * arg, PRBool joinable)
 {
 	PRIntervalTime now;
 	PRJob *jobp;

@@ -22,7 +22,6 @@
 #include "prtypes.h"
 #include "prthread.h"
 #include "prio.h"
-#include "prerr.h"
 #include "prerror.h"
 
 PR_BEGIN_EXTERN_C
@@ -35,36 +34,36 @@ typedef struct PRJobIoDesc {
 
 typedef struct PRThreadPool PRThreadPool;
 typedef struct PRJob PRJob;
-typedef void (PR_CALLBACK *JobFn) (void *arg);
+typedef void (PR_CALLBACK *PRJobFn) (void *arg);
 
 /* Create thread pool */
 PR_EXTERN(PRThreadPool *)
 PR_CreateThreadPool(PRInt32 initial_threads, PRInt32 max_threads,
-                          PRSize stacksize);
+                          PRUint32 stacksize);
 
 /* queue a job */
 PR_EXTERN(PRJob *)
-PR_QueueJob(PRThreadPool *tpool, JobFn fn, void *arg, PRBool joinable);
+PR_QueueJob(PRThreadPool *tpool, PRJobFn fn, void *arg, PRBool joinable);
 
 /* queue a job, when a socket is readable */
 PR_EXTERN(PRJob *)
 PR_QueueJob_Read(PRThreadPool *tpool, PRJobIoDesc *iod,
-							JobFn fn, void * arg, PRBool joinable);
+							PRJobFn fn, void * arg, PRBool joinable);
 
 /* queue a job, when a socket is writeable */
 PR_EXTERN(PRJob *)
 PR_QueueJob_Write(PRThreadPool *tpool, PRJobIoDesc *iod,
-								JobFn fn, void * arg, PRBool joinable);
+								PRJobFn fn, void * arg, PRBool joinable);
 
 /* queue a job, when a socket has a pending connection */
 PR_EXTERN(PRJob *)
 PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod,
-									JobFn fn, void * arg, PRBool joinable);
+									PRJobFn fn, void * arg, PRBool joinable);
 
 /* queue a job, when a timer exipres */
 PR_EXTERN(PRJob *)
 PR_QueueJob_Timer(PRThreadPool *tpool, PRIntervalTime timeout,
-								JobFn fn, void * arg, PRBool joinable);
+								PRJobFn fn, void * arg, PRBool joinable);
 /* cancel a job */
 PR_EXTERN(PRStatus)
 PR_CancelJob(PRJob *job);
