@@ -18,14 +18,15 @@
 
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#include "nsRDFTreeDataModel.h"
-#include "nsRDFToolbarDataModel.h"
+#include "nsRDFResourceManager.h"
+#include "nsMemoryDataSource.h"
 #include "nsRDFCID.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
-static NS_DEFINE_CID(kRDFTreeDataModelCID, NS_RDFTREEDATAMODEL_CID);
-static NS_DEFINE_CID(kRDFToolbarDataModelCID, NS_RDFTOOLBARDATAMODEL_CID);
+static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
+
+static NS_DEFINE_CID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
 
 class nsRDFFactory : public nsIFactory
 {
@@ -107,11 +108,11 @@ nsRDFFactory::CreateInstance(nsISupports *aOuter,
     *aResult = NULL;
 
     nsISupports *inst = NULL;
-    if (mClassID.Equals(kRDFTreeDataModelCID)) {
-        inst = static_cast<nsITreeDataModel*>(new nsRDFTreeDataModel());
+    if (mClassID.Equals(kRDFResourceManagerCID)) {
+        inst = static_cast<nsISupports*>(new nsRDFResourceManager());
     }
-    else if (mClassID.Equals(kRDFToolbarDataModelCID)) {
-        inst = static_cast<nsIToolbarDataModel*>(new nsRDFToolbarDataModel());
+    else if (mClassID.Equals(kRDFMemoryDataSourceCID)) {
+        inst = static_cast<nsISupports*>(new nsMemoryDataSource());
     }
 
     if (! inst)
@@ -140,7 +141,7 @@ NSGetFactory(const nsCID &aClass, nsIFactory **aFactory)
         gInitialized = PR_TRUE;
 
         // do one-time library initialization
-        RDF_Init();
+        //RDF_Init();
     }
 
     if (! aFactory)

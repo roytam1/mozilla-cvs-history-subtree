@@ -90,6 +90,34 @@ nsRDFToolbarDataModel::GetDMWidget(nsIDMWidget*& widget) const
 
 
 NS_IMETHODIMP
+nsRDFToolbarDataModel::GetFirstVisibleItemIndex(PRUint32& index) const
+{
+    return nsRDFDataModel::GetFirstVisibleItemIndex(index);
+}
+
+
+NS_IMETHODIMP
+nsRDFToolbarDataModel::SetFirstVisibleItemIndex(PRUint32 index)
+{
+    return nsRDFDataModel::SetFirstVisibleItemIndex(index);
+}
+
+
+NS_IMETHODIMP
+nsRDFToolbarDataModel::GetItemCount(PRUint32& count) const
+{
+    return nsRDFDataModel::GetItemCount(count);
+}
+
+
+NS_IMETHODIMP
+nsRDFToolbarDataModel::GetNthItem(nsIDMItem*& pItem, PRUint32 n) const
+{
+    return nsRDFDataModel::GetNthItem(pItem, n);
+}
+	
+
+NS_IMETHODIMP
 nsRDFToolbarDataModel::SetDMWidget(nsIDMWidget* widget)
 {
     return nsRDFDataModel::SetDMWidget(widget);

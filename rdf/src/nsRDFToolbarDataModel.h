@@ -50,6 +50,12 @@ public:
     // Inspectors
     NS_IMETHOD GetDMWidget(nsIDMWidget*& pWidget) const;
 	
+    NS_IMETHOD GetFirstVisibleItemIndex(PRUint32& index) const;
+    NS_IMETHOD SetFirstVisibleItemIndex(PRUint32 index);
+
+    NS_IMETHOD GetItemCount(PRUint32& count) const;
+    NS_IMETHOD GetNthItem(nsIDMItem*& pItem, PRUint32 n) const;
+	
     // Setters
     NS_IMETHOD SetDMWidget(nsIDMWidget* pWidget);
 

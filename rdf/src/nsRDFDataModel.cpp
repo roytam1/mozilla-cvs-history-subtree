@@ -68,6 +68,60 @@ rdf_GetDefaultDB(void)
     return RDF_GetDB(gNavCenterDataSources1);
 }
 
+////////////////////////////////////////////////////////////////////////
+
+
+static nsIDMItem*
+rdf_GetNth(nsIDMItem* node, PRUint32 n)
+{
+    // XXX this algorithm sucks: it's O(m*log(n)), where m is the
+    // branching factor and n is the depth of the tree. We need to
+    // eventually do something like the old HT did: keep a
+    // vector. Alternatively, hyatt suggested that is we can keep a
+    // pointer to the topmost node, m will be kept small.
+
+    if (n == 0) {
+        node->AddRef();
+        return node;
+    }
+
+    // iterate through all of the children. since we know the subtree
+    // height of each child, we can determine a range of indices
+    // contained within the subtree.
+    PRUint32 childCount;
+    if (NS_SUCCEEDED(node->GetChildCount(childCount))) {
+        PRUint32 firstIndexInSubtree = 1;
+        for (PRUint32 i = 0; i < childCount; ++i) {
+            nsIDMItem* child;
+            if (NS_FAILED(node->GetNthChild(child, i))) {
+                PR_ASSERT(0);
+                continue;
+            }
+
+            PRUint32 subtreeSize;
+            child->GetSubtreeSize(subtreeSize);
+
+            PRUint32 lastIndexInSubtree = firstIndexInSubtree + subtreeSize;
+
+            nsIDMItem* result = NULL;
+            if (n >= firstIndexInSubtree && n < lastIndexInSubtree)
+                result = rdf_GetNth(child, n - firstIndexInSubtree); 
+
+            child->Release();
+            if (result)
+                return result;
+
+            firstIndexInSubtree = lastIndexInSubtree;
+        }
+    }
+
+    // n was larger than the total number of elements in the tree! You
+    // should've called GetTreeItemCount() first...
+    PR_ASSERT(0);
+    return NULL;
+}
+
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -185,6 +239,46 @@ nsRDFDataModel::GetDMWidget(nsIDMWidget*& widget) const
     widget = mWidget;
     return NS_OK;
 }
+
+NS_IMETHODIMP
+nsRDFDataModel::GetFirstVisibleItemIndex(PRUint32& index) const
+{
+    index = mFirstVisibleItemIndex;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsRDFDataModel::SetFirstVisibleItemIndex(PRUint32 index)
+{
+    mFirstVisibleItemIndex = index;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsRDFDataModel::GetItemCount(PRUint32& count) const
+{
+    nsRDFDataModelItem* root = GetRoot();
+    if (! root)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    return root->GetSubtreeSize(count);
+}
+
+
+NS_IMETHODIMP
+nsRDFDataModel::GetNthItem(nsIDMItem*& pItem, PRUint32 n) const
+{
+    nsRDFDataModelItem* root = GetRoot();
+    if (! root)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    pItem = rdf_GetNth(root, n);
+    return pItem ? NS_OK : NS_ERROR_INVALID_ARG;
+}
+	
+
 
 NS_IMETHODIMP
 nsRDFDataModel::SetDMWidget(nsIDMWidget* widget)

@@ -52,6 +52,12 @@ public:
     // Inspectors
     NS_IMETHOD GetDMWidget(nsIDMWidget*& pWidget) const;
 	
+    NS_IMETHOD GetFirstVisibleItemIndex(PRUint32& index) const;
+    NS_IMETHOD SetFirstVisibleItemIndex(PRUint32 index);
+
+    NS_IMETHOD GetItemCount(PRUint32& count) const;
+    NS_IMETHOD GetNthItem(nsIDMItem*& pItem, PRUint32 n) const;
+	
     // Setters
     NS_IMETHOD SetDMWidget(nsIDMWidget* pWidget);
 
@@ -69,9 +75,6 @@ public:
     NS_IMETHOD GetNthColumn(nsITreeColumn*& pColumn, PRUint32 n) const;
 	
     // TreeItem APIs
-    NS_IMETHOD GetFirstVisibleItemIndex(PRUint32& index) const;
-    NS_IMETHOD GetTreeItemCount(PRUint32& result) const;
-    NS_IMETHOD GetNthTreeItem(nsITreeDMItem*& pItem, PRUint32 n) const;
     NS_IMETHOD GetItemTextForColumn(nsString& nodeText, nsITreeDMItem* pItem, nsITreeColumn* pColumn) const;
 
     ////////////////////////////////////////////////////////////////////////
