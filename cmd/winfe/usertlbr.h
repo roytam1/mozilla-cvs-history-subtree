@@ -115,8 +115,7 @@ public:
 	virtual HT_View GetHTView() { return HT_GetView(m_Node); }
 
 	virtual BOOL NeedsUpdate();
-	virtual void RemoveButtonFocus(void);
-
+	
 protected:
 	virtual void DrawPicturesMode(HDC hDC, CRect rect);
 	virtual void DrawPicturesAndTextMode(HDC hDC, CRect rect);
@@ -137,8 +136,7 @@ protected:
 	afx_msg LRESULT OnFillInMenu(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysColorChange( );
 	afx_msg void OnPaint();
-	afx_msg BOOL OnEraseBkgnd( CDC* pDC );
-
+	
 	//}}AFX_MSG
 
 	DECLARE_MESSAGE_MAP()
@@ -181,7 +179,7 @@ protected:
 
 };
 
-class CRDFToolbar : public CNSToolbar2 {
+class CRDFToolbar : public CNSToolbar2, public CCustomImageObject {
 
 private:
 	CRDFToolbarDropTarget m_DropTarget;
@@ -262,8 +260,8 @@ public:
 	void SetDisabledColor(COLORREF c) { m_DisabledColor = c; }
 	void SetBackgroundImage(CRDFImage* p) { m_pBackgroundImage = p; }
 
-	virtual BOOL ShouldClipChildren() { return FALSE; }
-	
+	void LoadComplete(HT_Resource r) { Invalidate(); }
+
 protected:
     // Helper function used in conjunction with LayoutButtons
     void ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, int rowWidth, int& usedSpace);
@@ -273,19 +271,16 @@ protected:
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg BOOL OnCommand( WPARAM wParam, LPARAM lParam );
 	afx_msg void OnPaint(void);
-	afx_msg BOOL OnEraseBkgnd( CDC* pDC );
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 
 };
 
-class CRDFDragToolbar : public CDragToolbar, public CCustomImageObject
+class CRDFDragToolbar : public CDragToolbar
 {
 public:
-	virtual BOOL ShouldClipChildren() { return FALSE; }
-	void LoadComplete(HT_Resource r) { Invalidate(); }
-
+	
 	// Generated message map functions
 	//{{AFX_MSG(CDragToolbar)
 	afx_msg void OnPaint(void);

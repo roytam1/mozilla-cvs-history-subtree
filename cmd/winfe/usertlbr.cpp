@@ -549,48 +549,11 @@ BEGIN_MESSAGE_MAP(CRDFToolbarButton, CRDFToolbarButtonBase)
 	ON_MESSAGE(DM_MENUCLOSED, OnDropMenuClosed)
 	ON_WM_SYSCOLORCHANGE()
 	ON_WM_PAINT()
-	ON_WM_ERASEBKGND()
-	//}}AFX_MSG_MAP
+		//}}AFX_MSG_MAP
 
 END_MESSAGE_MAP()
 
-BOOL CRDFToolbarButton::OnEraseBkgnd( CDC* pDC )
-{
-	return TRUE;
-}
 
-void CRDFToolbarButton::RemoveButtonFocus(void)
-{
-/*
-	// need to make the parent redraw
-	POINT point;
-	GetCursorPos(&point);
-
-	CRect rcClient;
-	GetWindowRect(&rcClient);
-
-	if (!rcClient.PtInRect(point))
-	{
-		CRect clientRect;
-		GetClientRect(&clientRect);
-		if (foundOnRDFToolbar() && m_eState != eNORMAL)
-		{
-			CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
-			if (pToolbar->GetBackgroundImage() != NULL &&
-				pToolbar->GetBackgroundImage()->FrameSuccessfullyLoaded())
-			{
-				CWnd* pGrandParent = pToolbar->GetParent();
-				MapWindowPoints(pGrandParent, &clientRect);
-				ShowWindow(SW_HIDE);
-				pGrandParent->InvalidateRect(&clientRect);
-				pGrandParent->UpdateWindow();
-				ShowWindow(SW_SHOW);
-			}
-		}
-	}
-*/
-	CToolbarButton::RemoveButtonFocus();
-}
 
 void CRDFToolbarButton::OnPaint()
 {
@@ -1861,11 +1824,6 @@ void CRDFToolbar::WidthChanged(int animWidth)
         GetParentFrame()->RecalcLayout();
 }
 
-BOOL CRDFToolbar::OnEraseBkgnd( CDC* pDC )
-{
-	return TRUE;
-}
-
 void CRDFToolbar::OnPaint(void)
 {
 	CRect rcClient, updateRect, buttonRect, intersectRect;
@@ -1875,6 +1833,77 @@ void CRDFToolbar::OnPaint(void)
 
 	CPaintDC dcPaint(this);
 	
+	// background color
+	HT_Resource top = HT_TopNode(GetHTView());
+	void* data;
+	COLORREF backgroundColor = GetSysColor(COLOR_BTNFACE);
+	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &backgroundColor);
+	}
+	SetBackgroundColor(backgroundColor);
+
+	// Foreground color
+	COLORREF foregroundColor = GetSysColor(COLOR_BTNTEXT);
+	HT_GetNodeData(top, gNavCenter->viewFGColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &foregroundColor);
+	}
+	SetForegroundColor(foregroundColor);
+
+	// Rollover color
+	COLORREF rolloverColor = RGB(0, 0, 255);
+	HT_GetNodeData(top, gNavCenter->viewRolloverColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &rolloverColor);
+	}
+	SetRolloverColor(rolloverColor);
+
+	// Pressed color
+	COLORREF pressedColor = RGB(0, 0, 128);
+	HT_GetNodeData(top, gNavCenter->viewPressedColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &pressedColor);
+	}
+	SetPressedColor(pressedColor);
+
+	// Disabled color
+	COLORREF disabledColor = -1;
+	HT_GetNodeData(top, gNavCenter->viewDisabledColor, HT_COLUMN_STRING, &data);
+	if (data)
+	{
+		WFE_ParseColor((char*)data, &disabledColor);
+	}
+	SetDisabledColor(disabledColor);
+
+	// Background image URL
+	CString backgroundImageURL = "";
+	HT_GetNodeData(top, gNavCenter->viewBGURL, HT_COLUMN_STRING, &data);
+	if (data)
+		backgroundImageURL = (char*)data;
+	SetBackgroundImage(NULL); // Clear out the BG image.
+
+	HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(backgroundColor); 
+	if (backgroundImageURL != "")
+	{
+		// There's a background that needs to be drawn.
+		SetBackgroundImage(LookupImage(backgroundImageURL, NULL));
+	}
+
+	if (GetBackgroundImage() && 
+		GetBackgroundImage()->FrameSuccessfullyLoaded())
+	{
+		PaintBackground(dcPaint.m_hDC, &rcClient, GetBackgroundImage(), 0);
+	}
+	else
+	{
+		::FillRect(dcPaint.m_hDC, &rcClient, hRegBrush);
+	}
+
 	for (int i = 0; i < m_nNumButtons; i++)
 	{
 		m_pButtonArray[i]->GetClientRect(&buttonRect);
@@ -1899,8 +1928,7 @@ BEGIN_MESSAGE_MAP(CRDFToolbar, CNSToolbar2)
 	//{{AFX_MSG_MAP(CNSToolbar2)
 	ON_WM_RBUTTONDOWN()
 	ON_WM_PAINT()
-	ON_WM_ERASEBKGND()
-	//}}AFX_MSG_MAP
+//}}AFX_MSG_MAP
 
 END_MESSAGE_MAP()
 
@@ -1986,80 +2014,6 @@ void CRDFDragToolbar::OnPaint(void)
 	CRect rect;
 
 	GetClientRect(&rect);
-
-	CRDFToolbar* pToolbar = (CRDFToolbar*)m_pToolbar->GetToolbar();
-
-	// background color
-	HT_Resource top = HT_TopNode(pToolbar->GetHTView());
-	void* data;
-	COLORREF backgroundColor = GetSysColor(COLOR_BTNFACE);
-	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
-	if (data)
-	{
-		WFE_ParseColor((char*)data, &backgroundColor);
-	}
-	pToolbar->SetBackgroundColor(backgroundColor);
-
-	// Foreground color
-	COLORREF foregroundColor = GetSysColor(COLOR_BTNTEXT);
-	HT_GetNodeData(top, gNavCenter->viewFGColor, HT_COLUMN_STRING, &data);
-	if (data)
-	{
-		WFE_ParseColor((char*)data, &foregroundColor);
-	}
-	pToolbar->SetForegroundColor(foregroundColor);
-
-	// Rollover color
-	COLORREF rolloverColor = RGB(0, 0, 255);
-	HT_GetNodeData(top, gNavCenter->viewRolloverColor, HT_COLUMN_STRING, &data);
-	if (data)
-	{
-		WFE_ParseColor((char*)data, &rolloverColor);
-	}
-	pToolbar->SetRolloverColor(rolloverColor);
-
-	// Pressed color
-	COLORREF pressedColor = RGB(0, 0, 128);
-	HT_GetNodeData(top, gNavCenter->viewPressedColor, HT_COLUMN_STRING, &data);
-	if (data)
-	{
-		WFE_ParseColor((char*)data, &pressedColor);
-	}
-	pToolbar->SetPressedColor(pressedColor);
-
-	// Disabled color
-	COLORREF disabledColor = -1;
-	HT_GetNodeData(top, gNavCenter->viewDisabledColor, HT_COLUMN_STRING, &data);
-	if (data)
-	{
-		WFE_ParseColor((char*)data, &disabledColor);
-	}
-	pToolbar->SetDisabledColor(disabledColor);
-
-
-	// Background image URL
-	CString backgroundImageURL = "";
-	HT_GetNodeData(top, gNavCenter->viewBGURL, HT_COLUMN_STRING, &data);
-	if (data)
-		backgroundImageURL = (char*)data;
-	pToolbar->SetBackgroundImage(NULL); // Clear out the BG image.
-
-	HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(backgroundColor); 
-	if (backgroundImageURL != "")
-	{
-		// There's a background that needs to be drawn.
-		pToolbar->SetBackgroundImage(LookupImage(backgroundImageURL, NULL));
-	}
-
-	if (pToolbar->GetBackgroundImage() && 
-		pToolbar->GetBackgroundImage()->FrameSuccessfullyLoaded())
-	{
-		PaintBackground(dcPaint.m_hDC, &rect, pToolbar->GetBackgroundImage(), 0);
-	}
-	else
-	{
-		::FillRect(dcPaint.m_hDC, &rect, hRegBrush);
-	}
 
 	CDC *pDC = &dcPaint;
 	HPALETTE hOldPal = ::SelectPalette(pDC->m_hDC, WFE_GetUIPalette(GetParentFrame()), FALSE);
