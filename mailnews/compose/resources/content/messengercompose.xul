@@ -60,7 +60,7 @@ Rights Reserved.
 	<broadcaster id="cmd_selectAll"/>
 	<broadcaster id="cmd_preferences"/>
 
-	<broadcaster id="broadcaster_throbber"/>
+	<broadcaster id="broadcaster_throbber" busy="false"/>
 </broadcasterset>
 
 <broadcaster id="args" value="editorType=default"/>
@@ -302,7 +302,11 @@ ACTUALLY, EVERY TIME YOU TYPE ANY OF THE KEY DEFINED HERE AFTER WITHOUT ANY OF T
 	    	<spring flex="100%"/>
 		</box>
 
-		<box id="toolbar_throbber_box"/>
+		<box id="toolbar_throbber_box" align="vertical">
+			<titledbutton id="Throbber">
+				<observes element="broadcaster_throbber" attribute="busy"/>
+			</titledbutton>
+		</box>
 	</toolbar>
 
 	<toolbar>

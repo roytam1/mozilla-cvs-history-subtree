@@ -74,7 +74,7 @@ Rights Reserved.
 	<broadcaster id="cmd_selectAll"/>
 	<broadcaster id="cmd_preferences"/>
 
-	<broadcaster id="broadcaster_throbber"/>
+	<broadcaster id="Messenger:Throbber" busy="false"/>
 	<broadcaster id="Messenger:Status"/>
 	<broadcaster id="Messenger:LoadingProgress"/>
 </broadcasterset>
@@ -483,7 +483,12 @@ Rights Reserved.
             <spring flex="100%"/>
           </box>
 
-		  <box id="toolbar_throbber_box"/>
+		  <box id="toolbar_throbber_box" align="vertical">
+			  <titledbutton id="Throbber">
+				  <observes element="Messenger:Throbber" attribute="busy"/>
+			  </titledbutton>
+		  </box>
+		
 		</toolbar>
       </toolbox>
 
@@ -516,7 +521,7 @@ Rights Reserved.
 			<progressmeter id="statusbar-icon" mode="normal" value="0" onclick="dumpProgress()">
 				<observes element="Messenger:LoadingProgress" attribute="mode"/>
 				<observes element="Messenger:LoadingProgress" attribute="value"/>
-				<observes element="broadcaster_throbber" attribute="busy" onbroadcast="onProgress()"/>
+				<observes element="Messenger:Throbber" attribute="busy" onbroadcast="onProgress()"/>
 			</progressmeter>
 			<spring flex="100%"/>
 		  </box>

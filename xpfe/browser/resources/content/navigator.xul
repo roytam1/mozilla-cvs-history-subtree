@@ -57,7 +57,7 @@ Contributor(s): ______________________________________. -->
   <broadcaster id="Browser:LoadingProgress"/>
   <broadcaster id="Browser:Status"/>
   <broadcaster id="Browser:ProtocolIcon" uri=""/>
-  <broadcaster id="broadcaster_throbber"/>
+  <broadcaster id="Browser:Throbber" busy="false"/>
   <broadcaster id="args" value=""/>
 </broadcasterset>
 
@@ -348,7 +348,11 @@ Contributor(s): ______________________________________. -->
     </box>
 
 	<!-- throbber area of navigation toolbar -->
-	<box id="navbar-endcap" align="vertical" width="68px"/>
+	<box id="toolbar_throbber_box" align="vertical">
+		<titledbutton id="Throbber" onclick="window.content.location.href='&throbber.url;'">
+			<observes element="Browser:Throbber" attribute="busy"/>
+		</titledbutton>
+	</box>
   </toolbar>
 
 </toolbox>
@@ -376,7 +380,7 @@ Contributor(s): ______________________________________. -->
           <progressmeter id="statusbar-icon" mode="normal"
             align="horizontal" value="0" onclick="dumpProgress()">
               <observes element="Browser:LoadingProgress" attribute="mode"/>
-              <observes element="broadcaster_throbber" attribute="busy" 
+              <observes element="Browser:Throbber" attribute="busy" 
                 onbroadcast="onProgress()"/>
           </progressmeter>
           <spring flex="100%"/>

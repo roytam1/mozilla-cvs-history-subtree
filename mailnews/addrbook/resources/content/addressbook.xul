@@ -71,6 +71,8 @@ Rights Reserved.
 				 valueCards="&deleteCardsCmd.label;"/>
 	<broadcaster id='cmd_selectAll'/>
 	<broadcaster id="cmd_preferences"/>
+
+  <broadcaster id="broadcaster-throbber" busy="false"/>
 </broadcasterset>
 
 <keyset id="keyset">
@@ -208,7 +210,11 @@ Rights Reserved.
 				<titledbutton id="button_search" align="top" value="&searchButton.label;" onclick="AbSearch()"/>
 			</box>
 
-			<box id="toolbar_throbber_box"/>
+			<box id="toolbar_throbber_box" align="vertical">
+				<titledbutton id="Throbber">
+					<observes element="broadcaster_throbber" attribute="busy"/>
+				</titledbutton>
+			</box>
 		</toolbar>
 	</toolbox>
 

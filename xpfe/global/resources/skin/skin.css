@@ -151,8 +151,8 @@ toolbar.standard titledbutton {
 	color: #CCFFFF;
 	border: none;
 	padding: 0px;
-	min-width: 40px;
-	margin: 3px 1px 1px 1px;
+	min-width: 28px;
+	margin: 3px 7px 1px 1px;
 	font-size: smaller;
 }
 
@@ -167,7 +167,7 @@ toolbar.standard titledbutton:active {
 	background-image:url("chrome://global/skin/otherbutton28-bg-active.gif");
 	color: #FFFFFF;
 	text-decoration: none;
-	margin: 4px 0px 0px 2px;
+	margin: 4px 6px 0px 2px;
 }
 
 toolbar.standard titledbutton[disabled="true"] { 
@@ -250,19 +250,25 @@ toolbar titledbutton.button32:active {
  * Throbber
  */
 /* FIX ME - move these gifs to global */
-titledbutton#Throbber
-{
+titledbutton#Throbber {
+	border: none;
 	margin-top: 8px;
 	margin-left: 9px;
-	list-style-image:url("chrome://navigator/skin/animthrob_single.gif");
+	list-style-image: url("chrome://global/skin/animthrob_single.gif");
+	background-image: none;
+}
+
+titledbutton#Throbber:active {
+	margin-top: 9px;
+	margin-left: 10px;
 }
 
 titledbutton#Throbber[busy="true"] {
-	list-style-image:url("chrome://navigator/skin/animthrob.gif");
+	list-style-image:url("chrome://global/skin/animthrob.gif");
 }
 
 
-toolbar.standard #toolbar_throbber_box{ 
+toolbar.standard #toolbar_throbber_box { 
 	background-color: #CCCCCC;
 	min-width: 59px;
 	max-width: 59px;
@@ -417,34 +423,32 @@ splitter.gray-horizontal-splitter {
 	padding: 0px;
 }
 
-splitter.gray-horizontal-splitter grippy{ 
+splitter.gray-horizontal-splitter grippy { 
 	margin: 0px;
 	border: 2px solid #CCCCCC;
 	padding: 0px;
 	background-color: #6699CC;
 	list-style-image: none;
 }
-splitter.gray-horizontal-splitter grippy:hover{ 
+splitter.gray-horizontal-splitter grippy:hover { 
 	background-color: #003366;
 }
 
-splitter.gray-horizontal-splitter grippy:active{ 
+splitter.gray-horizontal-splitter grippy:active { 
 	background-color: #003366;
 }
 
-splitter.gray-horizontal-splitter #begincap{ 
+splitter.gray-horizontal-splitter #begincap { 
 	min-width: 8px;
 	max-width: 8px;
 	background-image: url("chrome://global/skin/gray-bottomleft.gif");
 	background-repeat: no-repeat;
 	background-position: 0% 100%;
 }
+
 splitter.gray-horizontal-splitter #endcap { 
 	min-width: 8px;
 	max-width: 8px;
-	background-image: url("chrome://global/skin/gray-bottomright.gif");
-	background-repeat: no-repeat;
-	background-position: 100% 100%;
 }
 
 
@@ -645,9 +649,6 @@ titledbutton {
   padding: 2px;
   margin: 2px;
   text-align: center;
-  font: inherit;
-  background-color:inherit;
-  background-image: inherit;
 }
 
 window.dialog titledbutton{
@@ -659,10 +660,10 @@ titledbutton[class~=popup] {
 }
 
 titledbutton:hover {
-  border: 1px outset white;
+	border: 1px outset white;
 	color:#003366;
 	text-decoration:underline;
-  padding: 2px;
+	padding: 2px;
 }
  
 titledbutton:hover:-moz-outline {
@@ -818,7 +819,7 @@ tree {
 
 treeitem[selected="true"] > treerow { 
  color: white;
- background-color: #003366;
+ background-color: #336699;
 }
 
 treecell { 
@@ -1008,7 +1009,7 @@ tabcontrol {
 /********* XP Scrollbar *********/
 
 thumb {
-   background-color: rgb(206, 207, 206);
+   background-color: #CCCCCC;
    border: 1px outset white;
    list-style-image: url("chrome://global/skin/scroll-thumb-horiz.gif")
 }
@@ -1041,11 +1042,11 @@ slider[align="vertical"] thumb[disabled="true"] {
 }
 
 thumb:active {
-   background-color: rgb(220, 210, 210);
+   background-color: #CCCCCC;
 }
 
 slider[align="vertical"] thumb:active {
-   background-color: rgb(220, 210, 210);
+   background-color: #CCCCCC;
 }
 
 
@@ -1058,7 +1059,7 @@ scrollbarbutton {
   cursor: default;
 
   border: 1px outset white;
-  background-color: rgb(206, 207, 206);
+  background-color: #CCCCCC;
   color:black; 
 
   padding: 1px;
@@ -1074,7 +1075,7 @@ scrollbarbutton:active {
 }
 
 scrollbarbutton[type="decrement"] {
-   list-style-image: url(chrome://global/skin/scroll-left.gif)
+   list-style-image: url("chrome://global/skin/scroll-left.gif")
 }
 
 /*
@@ -1085,11 +1086,11 @@ scrollbarbutton[type="decrement"]:hover {
 */
 
 scrollbarbutton[type="decrement"][disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-left-disabled.gif) 
+   list-style-image: url("chrome://global/skin/scroll-left-disabled.gif") 
 }
 
 scrollbarbutton[type="increment"] {
-   list-style-image: url(chrome://global/skin/scroll-right.gif)
+   list-style-image: url("chrome://global/skin/scroll-right.gif")
 }
 
 /*
@@ -1100,12 +1101,12 @@ scrollbarbutton[type="increment"]:hover {
 */
 
 scrollbarbutton[type="increment"][disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-right-disabled.gif) 
+   list-style-image: url("chrome://global/skin/scroll-right-disabled.gif") 
 }
 
 
 scrollbar[align="vertical"] scrollbarbutton[type="decrement"] {
-   list-style-image: url(chrome://global/skin/scroll-up.gif)
+   list-style-image: url("chrome://global/skin/scroll-up.gif")
 }
 
 /*
@@ -1116,11 +1117,11 @@ scrollbar[align="vertical"] scrollbarbutton[type="decrement"]:hover {
 */
 
 scrollbar[align="vertical"] scrollbarbutton[type="decrement"][disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-up-disabled.gif) 
+   list-style-image: url("chrome://global/skin/scroll-up-disabled.gif") 
 }
 
 scrollbar[align="vertical"] scrollbarbutton[type="increment"] {
-   list-style-image: url(chrome://global/skin/scroll-down.gif)
+   list-style-image: url("chrome://global/skin/scroll-down.gif")
 }
 
 /*
@@ -1131,7 +1132,7 @@ scrollbar[align="vertical"] scrollbarbutton[type="increment"]:hover {
 */
 
 scrollbar[align="vertical"] scrollbarbutton[type="increment"][disabled="true"] {
-   list-style-image: url(chrome://global/skin/scroll-down-disabled.gif) 
+   list-style-image: url("chrome://global/skin/scroll-down-disabled.gif") 
 }
 
 

@@ -72,13 +72,13 @@
 	      </box>
 		  <spring flex="100%"/>
 	 	  <box align="horizontal">
-  	 		<titledbutton align="left"  class="popup" popup="mozillaPopup" tooltip="aTooltip" tooltiptext="Mozilla development info"
+  	 		<titledbutton align="right"  class="popup" popup="mozillaPopup" tooltip="aTooltip" tooltiptext="Mozilla development info"
 			   popupanchor="bottomright" value="&mozillaButton.label;" />
   	 		
   	 		
   	 
 			   
-			<titledbutton align="left" class="popup" value="&openWinButton.label;" popup="windowPopup"
+			<titledbutton align="right" class="popup" value="&openWinButton.label;" popup="windowPopup"
 			 popupanchor="topleft" popupalign="bottomleft"  />
           </box>
 		  <spring flex="100%"/>
