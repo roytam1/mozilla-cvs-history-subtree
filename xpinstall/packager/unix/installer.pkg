@@ -1,3 +1,35 @@
+[gre-xpi]
+!error GRE not implemented on *nix yet!
+
+[xpi-bootstrap]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/xpcom.jst
+
+[xpfe-browser-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/browser.jst
+
+[xpfe-lang-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/langenus.jst
+
+[xpfe-locale-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/regus.jst
+
+[xpfe-default-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/deflenus.jst
+
+[xpfe-mailnews-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/mail.jst
+
+[spellcheck-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/spellcheck.jst
+
+# right now this is the "dummy XPI" but leaf thinks we can integrate talkback
+# more successfully later
+[talkback-xpi]
+@topsrcdir@/xpinstall/packager/unix/talkback.jst xpiroot/install.js
+
+[psm-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/psm.jst
+
 [seamonkey-installer-stub-en seamonkey-installer-en]
 @topsrcdir@/xpinstall/wizard/unix/src2/mozilla-installer installer/mozilla-installer
 @topsrcdir@/xpinstall/wizard/unix/src2/README            installer/README

@@ -28,7 +28,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 ifeq (WINNT,$(OS_ARCH))
-DIRS = windows
+DIRS = windows win_gre win_mfcembed
 INSTALLER_DIR = windows
 else
 ifeq (OS2,$(OS_ARCH))

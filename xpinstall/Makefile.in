@@ -40,8 +40,6 @@ DIRS		= \
 	packager \
 	$(NULL)
 
-PACKAGE_FILE = installjs.pkg
-
 ifdef MOZ_INSTALLER
 DIRS		+= wizard/libxpnet
 ifdef MOZ_ENABLE_GTK
