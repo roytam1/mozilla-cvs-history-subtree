@@ -76,6 +76,8 @@ interface nsIXTFElement : nsISupports
   void willRemoveChild(in unsigned long index);
   void childRemoved(in unsigned long index);
 
+  void doneAddingChildren();
+
   // attribute management: xxx these must handle namespaces
   void setAttribute(in AString name, in AString newValue);
   void unsetAttribute(in AString name);

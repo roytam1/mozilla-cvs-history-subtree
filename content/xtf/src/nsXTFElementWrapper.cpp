@@ -239,6 +239,11 @@ nsXTFElementWrapper::GetAttrCount() const
   return rval;
 }
 
+void
+nsXTFElementWrapper::DoneAddingChildren()
+{
+  GetXTFElement()->DoneAddingChildren();
+}
 
 //----------------------------------------------------------------------
 // nsIClassInfo implementation

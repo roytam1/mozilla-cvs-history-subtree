@@ -81,7 +81,8 @@ public:
   nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                          nsIAtom** aName, nsIAtom** aPrefix) const;
   PRUint32 GetAttrCount() const;
-  
+  void     DoneAddingChildren();
+
   // nsIClassInfo interface
   NS_DECL_NSICLASSINFO
 
