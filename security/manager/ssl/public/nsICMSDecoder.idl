@@ -76,11 +76,24 @@ interface nsICMSDecoder : nsISupports
 };
 
 /**
+ * nsICMSDecoder
+ *  Interface to decode an CMS message
+ */
+[uuid(a15789aa-8903-462b-81e9-4aa2cff4d5cb)]
+interface nsICMSEncoder : nsISupports
+{
+  void start();
+  void update();
+  void finish();
+};
+
+/**
  * NS_CMSMESSAGE_CONTRACTID - contract id of a class that
  *   implements nsICMSMessage
  */
 %{C++
 #define NS_CMSDECODER_CONTRACTID "@mozilla.org/nsCMSDecoder;1"
+#define NS_CMSENCODER_CONTRACTID "@mozilla.org/nsCMSEncoder;1"
 #define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
 #define NS_HASH_CONTRACTID "@mozilla.org/nsHash;1"
 %}
