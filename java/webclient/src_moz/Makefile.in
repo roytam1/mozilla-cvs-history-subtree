@@ -135,6 +135,19 @@ else
 	cp $(topsrcdir)/dist/bin/libplugletjni.so $(PACKAGE_LIB)/libplugletjni.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libpluglet.so $(PACKAGE_LIB)/libpluglet.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libjavadom.so $(PACKAGE_LIB)/libjavadom.so.$(VERSION_NUMBER)
+	rm -f $(topsrcdir)/dist/bin/libwebclientstub.so
+	rm -f $(topsrcdir)/dist/lib/libwebclientstub.so
+	rm -f $(topsrcdir)/dist/bin/libwebclient.so
+	rm -f $(topsrcdir)/dist/lib/libwebclient.so
+	rm -f $(topsrcdir)/dist/lib/libwc_share.a
+	rm -f $(topsrcdir)/dist/bin/libjavadomjni.so
+	rm -f $(topsrcdir)/dist/lib/libjavadomjni.so
+	rm -f $(topsrcdir)/dist/bin/libplugletjni.so
+	rm -f $(topsrcdir)/dist/lib/libplugletjni.so
+	rm -f $(topsrcdir)/dist/bin/components/libpluglet.so
+	rm -f $(topsrcdir)/dist/lib/components/libpluglet.so
+	rm -f $(topsrcdir)/dist/bin/components/libjavadom.so
+	rm -f $(topsrcdir)/dist/lib/components/libjavadom.so
 	chmod 555 $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwebclient.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwc_share.a.$(VERSION_NUMBER)
