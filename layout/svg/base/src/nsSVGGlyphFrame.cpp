@@ -212,7 +212,6 @@ nsSVGGlyphFrame::Init(nsIPresContext*  aPresContext,
                       nsStyleContext*  aContext,
                       nsIFrame*        aPrevInFlow)
 {
-  nsresult rv;
 //  rv = nsSVGGlyphFrameBase::Init(aPresContext, aContent, aParent,
 //                                 aContext, aPrevInFlow);
 
@@ -236,9 +235,9 @@ nsSVGGlyphFrame::Init(nsIPresContext*  aPresContext,
   if (!mGeometry) return NS_ERROR_FAILURE;
   
   
-  rv = SetStyleContext(aPresContext, aContext);
+  SetStyleContext(aPresContext, aContext);
     
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -609,7 +608,7 @@ nsSVGGlyphFrame::GetFont(nsFont *aFont)
   // glyph.
   
   NS_ASSERTION(mParent, "no parent");
-  nsStyleContext parentContext = mParent->GetStyleContext();
+  nsStyleContext *parentContext = mParent->GetStyleContext();
   NS_ASSERTION(parentContext, "no style context on parent");
   
   PRUint8 styleDecorations =

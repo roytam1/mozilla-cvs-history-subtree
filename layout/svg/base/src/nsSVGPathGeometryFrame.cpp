@@ -93,7 +93,6 @@ nsSVGPathGeometryFrame::Init(nsIPresContext*  aPresContext,
                              nsStyleContext*  aContext,
                              nsIFrame*        aPrevInFlow)
 {
-  nsresult rv;
 //  rv = nsSVGPathGeometryFrameBase::Init(aPresContext, aContent, aParent,
 //                                        aContext, aPrevInFlow);
 
@@ -103,9 +102,9 @@ nsSVGPathGeometryFrame::Init(nsIPresContext*  aPresContext,
 
   Init();
   
-  rv = SetStyleContext(aPresContext, aContext);
+  SetStyleContext(aPresContext, aContext);
     
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
