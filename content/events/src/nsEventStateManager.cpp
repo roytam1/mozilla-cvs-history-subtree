@@ -105,7 +105,7 @@ static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 
 nsIContent * gLastFocusedContent = 0; // Strong reference
-nsIDocument * gLastFocusedDocument = 0; // Strong reference
+static nsIDocument * gLastFocusedDocument = 0; // Strong reference
 nsIPresContext* gLastFocusedPresContext = 0; // Weak reference
 
 PRUint32 nsEventStateManager::mInstanceCount = 0;
@@ -3522,11 +3522,6 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
           
           EnsureDocument(presShell);
           
-          #ifndef XP_PC // Hack to not cause undue suppression when you have multiple geckos in one
-                        // top level window. This is being done for an embedding customer, and is only
-                        // safe and verfied on win32. MacOS Composer in particular will probably regress if this
-                        // code is not present. Thus the #ifndef XP_PC. See bugscape bug 11427
-          
           // Make sure we're not switching command dispatchers, if so, surpress the blurred one
           if(gLastFocusedDocument && mDocument) {
             nsCOMPtr<nsIFocusController> newFocusController;
@@ -3542,11 +3537,24 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             if(newWindow)
               newWindow->GetRootFocusController(getter_AddRefs(newFocusController));
             if(oldWindow)
-			  oldWindow->GetRootFocusController(getter_AddRefs(oldFocusController));
-            if(oldFocusController && oldFocusController != newFocusController)
-              oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
+			        oldWindow->GetRootFocusController(getter_AddRefs(oldFocusController));
+			      if(oldFocusController && oldFocusController != newFocusController) {
+            // Hack to not cause undue suppression when you have multiple geckos in one
+            // top level window. This is being done for an embedding customer, and is only 
+            // safe and verfied on win32. MacOS Composer in particular will probably regress if this
+            // code is not present. Thus the #ifndef XP_PC. See bugscape bug 11427
+            #ifndef XP_PC     
+                 oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
+            #else
+                 PRBool isSuppressed;
+                 newFocusController->GetSuppressFocus(&isSuppressed);
+                 while (isSuppressed) {
+                   newFocusController->SetSuppressFocus(PR_FALSE, "SendFocusBlur Window Switch");
+                   newFocusController->GetSuppressFocus(&isSuppressed);
+                 }
+            #endif
+            }
           }
-          #endif
           
           nsCOMPtr<nsIEventStateManager> esm;
           oldPresContext->GetEventStateManager(getter_AddRefs(esm));
