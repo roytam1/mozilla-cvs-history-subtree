@@ -31,9 +31,8 @@ CPPSRCS =				\
 	nsJSXULElement.cpp		\
 	nsRDFContentUtils.cpp           \
 	nsRDFDOMNodeList.cpp		\
-	nsRDFGenericElement.cpp         \
+	nsRDFElement.cpp		\
 	nsRDFHTMLBuilder.cpp		\
-	nsRDFResourceElement.cpp	\
 	nsRDFTreeBuilder.cpp		\
 	nsRDFXULBuilder.cpp		\
 	nsXULDocument.cpp               \
