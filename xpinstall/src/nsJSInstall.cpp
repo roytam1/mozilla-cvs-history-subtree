@@ -207,15 +207,17 @@ InstallAbortInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->AbortInstall()) {
+  if(argc >= 0)
+  {
+//    if(NS_OK != nativeThis->AbortInstall())
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = JSVAL_VOID;
   }
-  else {
+  else
+  {
     JS_ReportError(cx, "Function AbortInstall requires 0 parameters");
     return JS_FALSE;
   }
@@ -332,10 +334,10 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     else
     {
         nsCvrtJSValToStr(b1, cx, argv[1]);
-        if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
-        {
+//        if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+//        {
             return JS_FALSE;
-        }
+//        }
     }
         
     *rval = INT_TO_JSVAL(nativeRet);
@@ -386,10 +388,10 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->AddSubcomponent(b0, b1, b2, b3, b4, b5, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->AddSubcomponent(b0, b1, b2, b3, b4, b5, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -401,10 +403,10 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
 
-    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -415,10 +417,10 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
 
-    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -426,10 +428,10 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->AddDirectory(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->AddDirectory(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -465,10 +467,10 @@ InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->DeleteComponent(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->DeleteComponent(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -506,10 +508,10 @@ InstallDeleteFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->DeleteFile(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->DeleteFile(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -545,10 +547,10 @@ InstallDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->DiskSpaceAvailable(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->DiskSpaceAvailable(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -586,10 +588,10 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->Execute(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Execute(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -597,10 +599,10 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->Execute(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Execute(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -633,10 +635,10 @@ InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
   if(argc >= 0)
   {
-    if(NS_OK != nativeThis->FinalizeInstall(&nativeRet))
-    {
+//    if(NS_OK != nativeThis->FinalizeInstall(&nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -672,10 +674,10 @@ InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->Gestalt(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Gestalt(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -713,10 +715,10 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->GetComponentFolder(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetComponentFolder(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
@@ -724,10 +726,10 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->GetComponentFolder(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetComponentFolder(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
@@ -765,10 +767,10 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->GetFolder(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetFolder(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
@@ -776,10 +778,10 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->GetFolder(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetFolder(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     nsCvrtStrToJSVal(*nativeRet, cx, rval);
   }
@@ -816,10 +818,10 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->GetLastError(&nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetLastError(&nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -857,10 +859,10 @@ InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->GetWinProfile(b0, b1, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetWinProfile(b0, b1, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -893,10 +895,10 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 
   if(argc >= 0)
   {
-    if(NS_OK != nativeThis->GetWinRegistry(&nativeRet))
-    {
+//    if(NS_OK != nativeThis->GetWinRegistry(&nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -940,10 +942,10 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
 
-    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, b4, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, b4, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -954,10 +956,10 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
 
-    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Patch(b0, b1, b2, b3, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -989,10 +991,10 @@ InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 
   if(argc >= 0)
   {
-    if(NS_OK != nativeThis->ResetError())
-    {
+//    if(NS_OK != nativeThis->ResetError())
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = JSVAL_VOID;
   }
@@ -1027,10 +1029,10 @@ InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->SetPackageFolder(b0))
-    {
+//    if(NS_OK != nativeThis->SetPackageFolder(b0))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = JSVAL_VOID;
   }
@@ -1076,10 +1078,10 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->StartInstall(b0, b1, b2, b3, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
@@ -1127,10 +1129,10 @@ InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
   {
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->Uninstall(b0, &nativeRet))
-    {
+//    if(NS_OK != nativeThis->Uninstall(b0, &nativeRet))
+//    {
       return JS_FALSE;
-    }
+//    }
 
     *rval = INT_TO_JSVAL(nativeRet);
   }
