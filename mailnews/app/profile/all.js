@@ -559,31 +559,31 @@ pref("wallet.creditPanel.hide",             false);
 pref("wallet.employPanel.hide",             false);
 pref("wallet.miscPanel.hide",               false);
 pref("imageblocker.enabled",                true);
-pref("intl.accept_languages",               "chrome://navigator/locale/navigator.properties");
+pref("intl.accept_languages",               "chrome://messenger/locale/messenger.properties");
 pref("intl.accept_charsets",                "iso-8859-1,*,utf-8");
 pref("intl.collationOption",                "chrome://navigator-platform/locale/navigator.properties");
-pref("intl.menuitems.alwaysappendacceskeys","chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.static",     "chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.more1",      "chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.more2",      "chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.more3",      "chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.more4",      "chrome://navigator/locale/navigator.properties");
-pref("intl.charsetmenu.browser.more5",      "chrome://navigator/locale/navigator.properties");
+pref("intl.menuitems.alwaysappendacceskeys","chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.static",     "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.more1",      "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.more2",      "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.more3",      "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.more4",      "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.browser.more5",      "chrome://messenger/locale/messenger.properties");
 // moved from navigator.properties, see bugscape bug 20611
 pref("intl.charsetmenu.mailedit", "chrome://messenger/locale/messenger.properties");
 pref("intl.charsetmenu.browser.cache",      "");
 pref("intl.charsetmenu.mailview.cache",     "");
 pref("intl.charsetmenu.composer.cache",     "");
 pref("intl.charsetmenu.browser.cache.size", 5);
-pref("intl.charset.detector",               "chrome://navigator/locale/navigator.properties");
-pref("intl.charset.default",                "chrome://navigator-platform/locale/navigator.properties");
+pref("intl.charset.detector",               "chrome://messenger/locale/messenger.properties");
+pref("intl.charset.default",                "chrome://messenger/locale/messenger.properties");
 pref("intl.content.langcode",               "chrome://communicator-region/locale/region.properties");
 pref("intl.locale.matchOS",                 false);
 // fallback charset list for Unicode conversion (converting from Unicode)
 // currently used for mail send only to handle symbol characters (e.g Euro, trademark, smartquotes)
 // for ISO-8859-1
 pref("intl.fallbackCharsetList.ISO-8859-1", "windows-1252");
-pref("font.language.group",                 "chrome://navigator/locale/navigator.properties");
+pref("font.language.group",                 "chrome://messenger/locale/messenger.properties");
 
 // -- folders (Mac: these are binary aliases.)
 localDefPref("mail.signature_file",             "");
