@@ -874,18 +874,7 @@ nsresult FillPropertyValues(nsIAbCard *aCard, nsIAbDirectoryQueryArguments *aArg
 			NS_ENSURE_SUCCESS(retCode, retCode) ;
 			newValue = new nsAbDirectoryQueryPropertyValue (cPropName.get(), bogusInterface) ;
 		}
-		else if (cPropName.EqualsWithConversion ("card:URI")) {
-			nsCOMPtr<nsIRDFResource> rdfResource (do_QueryInterface(aCard, &retCode)) ;
-			nsXPIDLCString uri;
-			nsAutoString convertedString ;
-
-			NS_ENSURE_SUCCESS(retCode, retCode) ;
-			retCode = rdfResource->GetValue(getter_Copies(uri)) ;
-			NS_ENSURE_SUCCESS(retCode, retCode) ;
-			convertedString.AssignWithConversion(uri.get()) ;
-			newValue = new nsAbDirectoryQueryPropertyValue(cPropName.get(), convertedString.get()) ;
-		}
-        else {
+    else {
 			nsXPIDLString value ;
 
 			retCode = aCard->GetCardValue(cPropName.get(), getter_Copies(value)) ;

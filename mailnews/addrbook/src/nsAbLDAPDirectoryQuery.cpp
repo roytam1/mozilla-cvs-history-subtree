@@ -338,24 +338,8 @@ nsresult nsAbQueryLDAPMessageListener::OnLDAPMessageSearchEntry (nsILDAPMessage 
         n.Assign (properties[i]);
 
         nsAbDirectoryQueryPropertyValue* _propertyValue = 0;
-        if (n.EqualsWithConversion ("card:URI"))
-        {
-            // Meta property
-            nsXPIDLString dn;
-            rv = aMessage->GetDn (getter_Copies (dn));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            nsXPIDLCString uri;
-            NS_ASSERTION(0, "remove me?");
-            //rv = mDirectoryQuery->CreateCardURI (mUrl, NS_ConvertUCS2toUTF8(dn).get(), getter_Copies (uri));
-            NS_ENSURE_SUCCESS(rv, rv);
-            NS_ConvertUTF8toUCS2 v (uri.get ());
-
-            _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), v.get ());
-            if (_propertyValue == NULL)
-                return NS_ERROR_OUT_OF_MEMORY;
-        }
-        else if (n.EqualsWithConversion ("card:nsIAbCard"))
+        
+        if (n.EqualsWithConversion ("card:nsIAbCard"))
         {
             // Meta property
             nsXPIDLString dn;
@@ -691,13 +675,7 @@ nsresult nsAbLDAPDirectoryQuery::getLdapReturnAttributes (
     {
         n.Assign (properties[i]);
 
-        if (n.EqualsWithConversion ("card:URI"))
-        {
-            // Meta property
-            //
-            continue;
-        }
-        else if (n.EqualsWithConversion ("card:nsIAbCard"))
+        if (n.EqualsWithConversion ("card:nsIAbCard"))
         {
             // Meta property
             // require all attributes

@@ -652,8 +652,7 @@ nsresult nsAbDirectoryQuery::matchCardCondition (nsIAbCard* card,
     rv = condition->GetName (getter_Copies (name));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (name.Equals ("card:URI") ||
-        name.Equals ("card:nsIAbCard"))
+    if (name.Equals ("card:nsIAbCard"))
     {
         if (conditionType == nsIAbBooleanConditionTypes::Exists)
             *matchFound = PR_TRUE;
@@ -760,22 +759,6 @@ nsresult nsAbDirectoryQuery::queryMatch (nsIAbCard* card,
             NS_ENSURE_SUCCESS(rv, rv);
 
             _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), supports);
-            if (!_propertyValue)
-                return NS_ERROR_OUT_OF_MEMORY;
-        }
-        else if (n.EqualsWithConversion ("card:URI"))
-        {
-            nsCOMPtr<nsIRDFResource> rdfResource(do_QueryInterface(card, &rv));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            nsXPIDLCString uri;
-            rv = rdfResource->GetValue (getter_Copies (uri));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            nsAutoString v;
-            v.AssignWithConversion (uri.get ());
-
-            _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), v.get ());
             if (!_propertyValue)
                 return NS_ERROR_OUT_OF_MEMORY;
         }
