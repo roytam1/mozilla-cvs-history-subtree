@@ -31,7 +31,6 @@
 #include "nsICharsetConverterManager.h"
 #include "prprf.h"
 #include "nsMsgQuote.h" 
-#include "nsINetService.h"
 #include "nsMsgCompUtils.h"
 #include "nsIMsgMessageService.h"
 #include "nsMsgUtils.h"
@@ -83,8 +82,6 @@ NS_NewMsgQuote(const nsIID &aIID, void ** aInstancePtrResult)
 		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
 }
 
-// net service definitions....
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 
 // stream converter
 static NS_DEFINE_CID(kStreamConverterCID,    NS_STREAM_CONVERTER_CID);
@@ -243,14 +240,14 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   }
 
   // Assuming this is an RFC822 message...
-  mimeParser->OnStartBinding(aURL, MESSAGE_RFC822);
+  mimeParser->OnStartBinding(aURL);
 
   // Just pump all of the data from the file into libmime...
   while (NS_SUCCEEDED(fileStream->PumpFileStream()))
   {
     PRUint32    len;
     in->GetLength(&len);
-    mimeParser->OnDataAvailable(aURL, in, len);
+    mimeParser->OnDataAvailable(aURL, in, 0, len);
   }
 
   mimeParser->OnStopBinding(aURL, NS_OK, nsnull);
