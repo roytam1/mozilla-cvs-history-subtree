@@ -51,7 +51,7 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD GetAccName(PRUnichar * *aAccName);
     NS_IMETHOD GetAccValue(PRUnichar * *aAccValue);
     NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);
-    NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
+    NS_IMETHOD GetAccRole(PRUint32 *aAccRole);
 
     // ----- nsIAccessibleEventReceiver -------------------
 

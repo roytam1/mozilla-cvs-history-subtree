@@ -52,10 +52,10 @@ NS_IMETHODIMP nsHTMLTextAccessible::GetAccName(PRUnichar **_retval)
   return rv;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLTextAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("static text"));
+  *_retval = ROLE_STATICTEXT;
 
   return NS_OK;
 }

@@ -142,10 +142,10 @@ nsHTMLFormControlAccessible(aShell, aNode)
 { 
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("check box"));
+  *_retval = ROLE_CHECKBUTTON;
   return NS_OK;
 }
 
@@ -189,10 +189,10 @@ NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccDefaultAction(PRUnichar **_retv
     return NS_OK;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("radio button"));
+  *_retval = ROLE_RADIOBUTTON;
 
   return NS_OK;
 }
@@ -219,14 +219,14 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetAccDefaultAction(PRUnichar **_retval)
   return NS_OK;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLButtonAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLButtonAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("push button"));
+  *_retval = ROLE_PUSHBUTTON;
   return NS_OK;
 }
 
-/* wstring getAccRole (); */
+/* wstring getAccName (); */
 NS_IMETHODIMP nsHTMLButtonAccessible::GetAccName(PRUnichar **_retval)
 {
   *_retval = nsnull;
@@ -266,10 +266,10 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccDefaultAction(PRUnichar **_retval)
   return NS_OK;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("push button"));
+  *_retval = ROLE_PUSHBUTTON;
   return NS_OK;
 }
 
@@ -317,10 +317,10 @@ nsHTMLFormControlAccessible(aShell, aNode)
 { 
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("text"));
+  *_retval = ROLE_TEXT;
   return NS_OK;
 }
 

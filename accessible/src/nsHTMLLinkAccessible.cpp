@@ -50,10 +50,10 @@ NS_IMETHODIMP nsHTMLLinkAccessible::GetAccName(PRUnichar **_retval)
   return rv;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLLinkAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLLinkAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("link")); 
+  *_retval = ROLE_LINK;
 
   return NS_OK;
 }

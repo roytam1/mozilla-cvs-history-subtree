@@ -37,7 +37,7 @@ class nsHTMLIFrameAccessible : public nsDOMAccessible
     NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
     NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
     NS_IMETHOD GetAccName(PRUnichar * *aAccName);
-    NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
+    NS_IMETHOD GetAccRole(PRUint32 *aAccRole);
 
   protected:
     nsCOMPtr<nsIAccessible> mRootAccessible;
@@ -61,7 +61,7 @@ class nsIFrameRootAccessible : public nsRootAccessible
 
     NS_IMETHOD GetAccName(PRUnichar * *aAccName);
 
-    NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
+    NS_IMETHOD GetAccRole(PRUint32 *aAccRole);
 
   protected:
 

@@ -30,7 +30,7 @@ class nsHTMLTableCellAccessible : public nsDOMAccessible
 {
 public:
   nsHTMLTableCellAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccRole(PRUint32 *_retval); 
 };
 
 
@@ -38,7 +38,7 @@ class nsHTMLTableAccessible : public nsDOMAccessible
 {
 public:
   nsHTMLTableAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccRole(PRUint32 *_retval); 
 };
 
 #endif  

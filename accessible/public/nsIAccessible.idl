@@ -59,7 +59,7 @@ interface nsIAccessible : nsISupports
   void setAccValue(in wstring value);
 
   wstring getAccDescription();
-  wstring getAccRole();
+  unsigned long getAccRole();
   unsigned long getAccState();
   unsigned long getAccExtState();
   wstring getAccDefaultAction();
@@ -134,7 +134,6 @@ interface nsIAccessible : nsISupports
   const unsigned long  STATE_VERTICAL           = 0x80000000;  // Especially used for sliders and scrollbars  
 
 
-/*
 // MSAA Roles - only one per nsIAccessible or IAccessible
   const unsigned long  ROLE_TITLEBAR            = 0x00000001;
   const unsigned long  ROLE_MENUBAR             = 0x00000002;
@@ -199,7 +198,5 @@ interface nsIAccessible : nsISupports
   const unsigned long  ROLE_CLOCK               = 0x0000003D;
   const unsigned long  ROLE_SPLITBUTTON         = 0x0000003E;   // New in MSAA 2.0 
   const unsigned long  ROLE_IPADDRESS           = 0x0000003F;   // New in MSAA 2.0 
-
-  */
 
 };

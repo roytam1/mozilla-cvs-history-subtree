@@ -122,8 +122,8 @@ NS_IMETHODIMP nsGenericAccessible::GetAccDescription(PRUnichar **_retval)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsGenericAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsGenericAccessible::GetAccRole(PRUint32 *_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

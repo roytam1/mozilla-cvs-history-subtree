@@ -250,56 +250,13 @@ STDMETHODIMP Accessible::get_accRole(
    if (!a)
      return S_FALSE;
 
-   nsXPIDLString idlrole;
-   nsresult rv = a->GetAccRole(getter_Copies(idlrole));
+   PRUint32 role = 0;
+   nsresult rv = a->GetAccRole(&role);
    if (NS_FAILED(rv))
-       return S_FALSE;
+     return S_FALSE;
 
-   nsAutoString role(idlrole);
-
-   if (role.EqualsIgnoreCase("text"))
-      pvarRole->lVal = ROLE_SYSTEM_TEXT;
-   else if (role.EqualsIgnoreCase("static text"))
-      pvarRole->lVal = ROLE_SYSTEM_STATICTEXT;  // Do we want to follow IE and say ROLE_SYSTEM_TEXT here?
-   else if (role.EqualsIgnoreCase("graphic"))
-      pvarRole->lVal = ROLE_SYSTEM_GRAPHIC;
-   else if (role.EqualsIgnoreCase("table"))
-      pvarRole->lVal = ROLE_SYSTEM_TABLE;
-   else if (role.EqualsIgnoreCase("cell"))
-      pvarRole->lVal = ROLE_SYSTEM_CELL;
-   else if (role.EqualsIgnoreCase("row"))
-      pvarRole->lVal = ROLE_SYSTEM_ROW;
-   else if (role.EqualsIgnoreCase("combo box"))
-      pvarRole->lVal = ROLE_SYSTEM_COMBOBOX;
-   else if (role.EqualsIgnoreCase("link"))
-      pvarRole->lVal = ROLE_SYSTEM_LINK;
-   else if (role.EqualsIgnoreCase("list"))
-      pvarRole->lVal = ROLE_SYSTEM_LIST;
-   else if (role.EqualsIgnoreCase("list item"))
-      pvarRole->lVal = ROLE_SYSTEM_LISTITEM;
-   else if (role.EqualsIgnoreCase("push button"))
-      pvarRole->lVal = ROLE_SYSTEM_PUSHBUTTON;
-   else if (role.EqualsIgnoreCase("radio button"))
-      pvarRole->lVal = ROLE_SYSTEM_RADIOBUTTON;
-   else if (role.EqualsIgnoreCase("indicator"))  
-      pvarRole->lVal = ROLE_SYSTEM_INDICATOR;
-   else if (role.EqualsIgnoreCase("check box"))
-     pvarRole->lVal = ROLE_SYSTEM_CHECKBUTTON;
-   else if (role.EqualsIgnoreCase("scrollbar"))
-     pvarRole->lVal = ROLE_SYSTEM_SCROLLBAR;
-   else if (role.EqualsIgnoreCase("slider"))
-      pvarRole->lVal = ROLE_SYSTEM_SLIDER;
-   else if (role.EqualsIgnoreCase("client"))
-      pvarRole->lVal = ROLE_SYSTEM_CLIENT;
-   else if (role.EqualsIgnoreCase("window"))
-      pvarRole->lVal = ROLE_SYSTEM_WINDOW;
-   else if (role.EqualsIgnoreCase("pane"))
-      pvarRole->lVal = ROLE_SYSTEM_PANE;
-   else
-      pvarRole->lVal = ROLE_SYSTEM_ALERT;
-
+   pvarRole->lVal = role;
    return S_OK;
-
 }
 
 STDMETHODIMP Accessible::get_accState( 

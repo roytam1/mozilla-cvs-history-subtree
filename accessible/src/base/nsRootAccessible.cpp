@@ -113,8 +113,8 @@ NS_IMETHODIMP nsRootAccessible::GetAccParent(nsIAccessible * *aAccParent)
   return NS_OK;
 }
 
-  /* readonly attribute wstring accRole; */
-NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUnichar * *aAccRole) 
+  /* readonly attribute unsigned long accRole; */
+NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole) 
 { 
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
   nsCOMPtr<nsIPresContext> context; //(do_QueryInterface(shell));
@@ -126,13 +126,13 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUnichar * *aAccRole)
     if (docTreeItem) {
       docTreeItem->GetSameTypeParent(getter_AddRefs(parentTreeItem));
       if (parentTreeItem) {
-        *aAccRole = ToNewUnicode(NS_LITERAL_STRING("pane"));
+        *aAccRole = ROLE_PANE;
         return NS_OK;
       }
     }
   }
 
-  *aAccRole = ToNewUnicode(NS_LITERAL_STRING("client"));
+  *aAccRole = ROLE_CLIENT;
   return NS_OK;  
 }
 

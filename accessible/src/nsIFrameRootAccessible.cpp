@@ -64,8 +64,8 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccChildCount(PRInt32 *_retval)
     return mRootAccessible->GetAccChildCount(_retval);
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 {
     return mRootAccessible->GetAccRole(_retval);
 }
@@ -127,10 +127,10 @@ NS_IMETHODIMP nsIFrameRootAccessible::GetAccPreviousSibling(nsIAccessible **_ret
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsIFrameRootAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("pane"));
+  *_retval = ROLE_PANE;
   return NS_OK;
 }
 

@@ -50,7 +50,7 @@ public:
 
   NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccName(PRUnichar **_retval);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval);
+  NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccValue(PRUnichar **_retval);
 
   virtual nsIAccessible* CreateNewNextAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
@@ -88,7 +88,7 @@ public:
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
   NS_IMETHOD GetAccName(PRUnichar **_retval);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval);
+  NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccState(PRUint32 *_retval);
   NS_IMETHOD GetAccExtState(PRUint32 *_retval);
   
@@ -122,7 +122,7 @@ public:
 
   NS_IMETHOD GetAccParent(nsIAccessible **_retval);
   NS_IMETHOD GetAccName(PRUnichar **_retval);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval);
+  NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
   NS_IMETHOD AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height);
@@ -143,7 +143,7 @@ public:
   virtual ~nsListChildAccessible() {}
 
   NS_IMETHOD GetAccParent(nsIAccessible **_retval);
-  NS_IMETHOD GetAccRole(PRUnichar **_retval);
+  NS_IMETHOD GetAccRole(PRUint32 *_retval);
 
   virtual void GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aList);
   virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
@@ -190,9 +190,9 @@ NS_IMETHODIMP nsSelectAccessible::GetAccName(PRUnichar **_retval)
    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsSelectAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsSelectAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("combo box"));
+  *_retval = ROLE_COMBOBOX;
   return NS_OK;
 }
 
@@ -271,52 +271,44 @@ nsAccessible(aAccessible, aContent, aShell)
 NS_IMETHODIMP nsSelectChildAccessible::GetAccValue(PRUnichar **_retval)
 {
   nsresult rv = NS_OK;
-  PRUnichar* string = nsnull;
+  PRUint32 role = 0;
 
   // look at our role
-  rv = nsAccessible::GetAccRole(&string);
+  rv = nsAccessible::GetAccRole(&role);
   if (NS_FAILED(rv)) {
    *_retval = nsnull;
    return rv;
   }
 
-  nsAutoString role(string);
-
   // if its the text in the combo box then
   // its value should be its name.
-  if (role.EqualsIgnoreCase("text")) {
+  if (role == ROLE_TEXT) {
     rv = nsAccessible::GetAccName(_retval);
   } else {
     rv = nsAccessible::GetAccValue(_retval);
   }
 
-  delete string;
   return rv;
 }
 
-NS_IMETHODIMP nsSelectChildAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsSelectChildAccessible::GetAccRole(PRUint32 *_retval)
 {
   nsresult rv = NS_OK;
-  PRUnichar* string = nsnull;
+  PRUint32 role = 0;
 
   // look at our role
-  rv = nsAccessible::GetAccRole(&string);
-  if (NS_FAILED(rv)) {
-   *_retval = nsnull;
-   return rv;
-  }
-
-  nsAutoString role(string);
+  rv = nsAccessible::GetAccRole(&role);
+  if (NS_FAILED(rv)) 
+    return rv;
 
   // any text in the combo box is static
-  if (role.EqualsIgnoreCase("text")) {
+  if (role == ROLE_STATICTEXT) {
     // if it the comboboxes text. Make it static
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("static text"));
+    *_retval = role; 
   } else {
     rv = nsAccessible::GetAccRole(_retval);
   }
 
-  delete string;
   return rv;
 }
 
@@ -324,14 +316,13 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccRole(PRUnichar **_retval)
 NS_IMETHODIMP nsSelectChildAccessible::GetAccName(PRUnichar **_retval)
 {
   nsresult rv = NS_OK;
-  PRUnichar* string = nsnull;
+  PRUint32 role = 0;
 
   // look at our role
-  nsAccessible::GetAccRole(&string);
-  nsAutoString role(string);
+  nsAccessible::GetAccRole(&role);
 
   // if button then we need to make the name be open or close
-  if (role.EqualsIgnoreCase("push button"))
+  if (role == ROLE_PUSHBUTTON) {
   {
      // if its a button and not already registered, 
      // register ourselves as a popup listener   
@@ -362,8 +353,6 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccName(PRUnichar **_retval)
     rv = NS_ERROR_NOT_IMPLEMENTED;
     *_retval = nsnull;
   }
-
-  delete string;
 
   return rv;
 }
@@ -539,9 +528,9 @@ NS_IMETHODIMP nsSelectWindowAccessible::GetAccName(PRUnichar **_retval)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
  
-NS_IMETHODIMP nsSelectWindowAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsSelectWindowAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("window"));
+  *_retval = ROLE_WINDOW;
   return NS_OK;
 }
 
@@ -646,9 +635,9 @@ NS_IMETHODIMP nsSelectListAccessible::GetAccName(PRUnichar **_retval)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsSelectListAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsSelectListAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("list"));
+  *_retval = ROLE_LIST;
   return NS_OK;
 }
 
@@ -703,9 +692,9 @@ void nsListChildAccessible::GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aLis
      aList = nsnull;
 }
 
-NS_IMETHODIMP nsListChildAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsListChildAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("list item"));
+  *_retval = ROLE_LISTITEM;
   return NS_OK;
 }
 

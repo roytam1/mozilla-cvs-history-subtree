@@ -972,13 +972,13 @@ NS_IMETHODIMP nsAccessible::GetAccDescription(PRUnichar * *aAccDescription)
   return NS_ERROR_NOT_IMPLEMENTED;  
 }
 
-  /* readonly attribute wstring accRole; */
-NS_IMETHODIMP nsAccessible::GetAccRole(PRUnichar * *aAccRole) 
+  /* readonly attribute unsigned long accRole; */
+NS_IMETHODIMP nsAccessible::GetAccRole(PRUint32  *aAccRole) 
 { 
   // delegate
   if (mAccessible) {
     nsresult rv = mAccessible->GetAccRole(aAccRole);
-    if (NS_SUCCEEDED(rv) && *aAccRole != nsnull)
+    if (NS_SUCCEEDED(rv))
       return rv;
   }
 

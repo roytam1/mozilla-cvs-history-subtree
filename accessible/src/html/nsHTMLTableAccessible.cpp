@@ -30,10 +30,10 @@ nsDOMAccessible(aShell, aDomNode)
 { 
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLTableCellAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLTableCellAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("cell"));
+  *_retval = ROLE_CELL;
   return NS_OK;
 }
 
@@ -42,10 +42,10 @@ nsDOMAccessible(aShell, aDomNode)
 { 
 }
 
-/* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLTableAccessible::GetAccRole(PRUnichar **_retval)
+/* unsigned long getAccRole (); */
+NS_IMETHODIMP nsHTMLTableAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("table")); 
+  *_retval = ROLE_TABLE;
 
   return NS_OK;
 }

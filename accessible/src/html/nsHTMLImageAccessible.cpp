@@ -69,9 +69,9 @@ NS_IMETHODIMP nsHTMLImageAccessible::GetAccName(PRUnichar **_retval)
 }
 
 /* wstring getAccRole (); */
-NS_IMETHODIMP nsHTMLImageAccessible::GetAccRole(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLImageAccessible::GetAccRole(PRUint32 *_retval)
 {
-  *_retval = ToNewUnicode(NS_LITERAL_STRING("graphic"));
+  *_retval = ROLE_GRAPHIC;
   return NS_OK;
 }
 

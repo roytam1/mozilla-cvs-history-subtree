@@ -31,6 +31,6 @@ interface nsIMutableAccessible : nsIAccessible
   void SetNameAsNodeValue();
   void SetName(in wstring aName);
   void SetNameAsAttribute(in nsIAtom aAtom);
-  void SetRole(in wstring aRole);
+  void SetRole(in unsigned long aRole);
   void SetIsLeaf(in boolean aLeaf);
 };
