@@ -6365,6 +6365,7 @@ nsPluginHostImpl::ParsePostBufferToFixHeaders(
       return NS_ERROR_FAILURE;
     }
     p += headersLen;
+    newBufferLen = headersLen + dataLen;
   }
   // at this point we've done with headers.
   // there is a possibility that input buffer has only headers info in it
@@ -6388,29 +6389,49 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
   PRInt64 fileSize;
   nsCAutoString filename;
   // stat file == get size & convert file:///c:/ to c: if needed
-  nsCOMPtr<nsILocalFile> file = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
+  nsCOMPtr<nsILocalFile> inFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
   if (NS_FAILED(rv) || 
-    (NS_FAILED(rv = NS_InitFileFromURLSpec(file, nsDependentCString(postDataURL))) &&
-     NS_FAILED(rv = file->InitWithNativePath(nsDependentCString(postDataURL)))) ||
-    NS_FAILED(rv = file->GetFileSize(&fileSize)) ||
-    NS_FAILED(rv = file->GetNativePath(filename))
+    (NS_FAILED(rv = NS_InitFileFromURLSpec(inFile, nsDependentCString(postDataURL))) &&
+     NS_FAILED(rv = inFile->InitWithNativePath(nsDependentCString(postDataURL)))) ||
+    NS_FAILED(rv = inFile->GetFileSize(&fileSize)) ||
+    NS_FAILED(rv = inFile->GetNativePath(filename))
     )
     return rv;
   if (!LL_IS_ZERO(fileSize)) {
     nsCOMPtr<nsIInputStream> inStream;
-    rv = NS_NewLocalFileInputStream(getter_AddRefs(inStream), file);
+    rv = NS_NewLocalFileInputStream(getter_AddRefs(inStream), inFile);
     if (NS_FAILED(rv)) return rv;
     
     // Create a temporary file to write the http Content-length: %ld\r\n\" header 
     // and "\r\n" == end of headers for post data to
     nsCOMPtr<nsIFile> tempFile;
-    nsresult rv;
     rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tempFile));
-    if (tempFile) {
-      tempFile->AppendNative(NS_LITERAL_CSTRING("pluginpost"));
-      // mode is 0600 so that it's not world-readable
-      rv = tempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
-    }
+    if (NS_FAILED(rv))
+      return rv;
+    
+    rv = tempFile->AppendNative(kPluginTmpDirName);
+    if (NS_FAILED(rv))
+      return rv;
+
+    PRBool dirExists;
+    tempFile->Exists(&dirExists);
+    if (!dirExists)
+      (void) tempFile->Create(nsIFile::DIRECTORY_TYPE, 0600);
+    
+    nsCAutoString inFileName;
+    inFile->GetNativeLeafName(inFileName);
+    // XXX hack around bug 70083
+    inFileName.Insert(NS_LITERAL_CSTRING("post-"), 0);
+    rv = tempFile->AppendNative(inFileName);
+    
+    if (NS_FAILED(rv)) 
+      return rv;
+    
+    // make it unique, and mode == 0600, not world-readable
+    rv = tempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600); 
+    if (NS_FAILED(rv))
+      return rv;
+
     nsCOMPtr<nsIOutputStream> outStream;
     if (NS_SUCCEEDED(rv)) {
       rv = NS_NewLocalFileOutputStream(getter_AddRefs(outStream),
@@ -6419,32 +6440,49 @@ nsPluginHostImpl::CreateTmpFileToPost(const char *postDataURL, char **pTmpFileNa
         0600); // 600 so others can't read our form data
     }
     NS_ASSERTION(NS_SUCCEEDED(rv), "Post data file couldn't be created!");
-    if (NS_FAILED(rv)) return rv;
-    
-    PRInt32 contentLen = nsInt64(fileSize);
-    char p[128];
-    sprintf(p, "Content-length: %ld\r\n\r\n",contentLen);
-    PRUint32 bw = 0,  br= 0;
-    rv = outStream->Write(p, bw = PL_strlen(p), &br) ||
-      bw != br ? NS_ERROR_FAILURE : NS_OK;
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to write Post data into tmp file!");
-    if (NS_FAILED(rv)) return rv;
-    
+    if (NS_FAILED(rv))
+      return rv;
+
     char buf[1024];
+    PRUint32 br, bw;
+    PRBool firstRead = PR_TRUE;
     while (1) {
       // Read() mallocs if buffer is null
       rv = inStream->Read(buf, 1024, &br);
-      if (NS_FAILED(rv) || (PRInt32)br <= 0) break;
+      if (NS_FAILED(rv) || (PRInt32)br <= 0) 
+        break;
+      if (firstRead) {
+        // according to the 4.x spec 
+        // http://developer.netscape.com/docs/manuals/communicator/plugin/pgfn2.htm#1007707
+        //"For protocols in which the headers must be distinguished from the body, 
+        // such as HTTP, the buffer or file should contain the headers, followed by
+        // a blank line, then the body. If no custom headers are required, simply 
+        // add a blank line ('\n') to the beginning of the file or buffer.
+    
+        char *parsedBuf;
+        // assuming first 1K (or what we got) has all headers in,
+        // lets parse it through nsPluginHostImpl::ParsePostBufferToFixHeaders()
+        ParsePostBufferToFixHeaders((const char *)buf, br, &parsedBuf, &bw);
+        rv = outStream->Write(parsedBuf, bw, &br);
+        nsMemory::Free(parsedBuf);
+        if (NS_FAILED(rv) || (bw != br)) 
+          break;
+
+        firstRead = PR_FALSE;
+        continue;
+      }
       bw = br;
       rv = outStream->Write(buf, bw, &br);
-      if (NS_FAILED(rv) || (bw != br)) break;
+      if (NS_FAILED(rv) || (bw != br)) 
+        break;
     }
+
     inStream->Close();
     outStream->Close();
     if (NS_SUCCEEDED(rv)) {
-      nsCAutoString tempFileName;
-      tempFile->GetNativePath(tempFileName);
-      *pTmpFileName = ToNewCString(tempFileName);
+      nsCAutoString path;
+      if (NS_SUCCEEDED(tempFile->GetNativePath(path)))
+        *pTmpFileName = ToNewCString(path);
     }
   }
   return rv;
