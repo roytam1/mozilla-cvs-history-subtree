@@ -443,7 +443,7 @@ else
 FASTUPDATE_MODULES := fast_update $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MOZ_MODULE_LIST)
 CHECKOUT_MODULES   := $(foreach module,$(MOZ_MODULE_LIST),cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(module);)
 
-CHECKOUT_MODULES   := $(subst SeaMonkeyAll, SeaMonkeyAll \!mozilla/layout \!mozilla/client.mk, $(CHECKOUT_MODULES))
+CHECKOUT_MODULES   := $(subst SeaMonkeyAll, SeaMonkeyAll \!mozilla/layout, $(CHECKOUT_MODULES))
 endif
 ifeq (,$(NOSUBDIRS_MODULE))
 FASTUPDATE_MODULES_NS := true
@@ -561,7 +561,9 @@ real_checkout:
 	cvs_co $(CVSCO_LAYOUT); \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
-	$(CHECKOUT_LOCALES);
+	$(CHECKOUT_LOCALES); \
+	echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk' && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) -r $(LAYOUT_CO_TAG) mozilla/client.mk;
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
