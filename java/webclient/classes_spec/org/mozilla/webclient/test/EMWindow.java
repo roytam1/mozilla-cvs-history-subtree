@@ -99,7 +99,6 @@ private UniversalDialog           uniDialog = null;
   private Document       currentDocument = null;
 
   private EmbeddedMozilla creator;
-  private boolean viewMode = true;
 
     private Component forwardButton;
     private Component backButton;
@@ -303,7 +302,16 @@ private UniversalDialog           uniDialog = null;
                                               "This IS the Closure!");
             prefs.setPref("network.cookie.warnAboutCookies", "true");
             prefs.setPref("browser.cache.disk_cache_size", "0");
-            //prefs.setPref("network.proxy.http", "webcache-mpk.eng.sun.com");
+     
+            // pull out the proxies, and make java aware of them
+            Properties prefsProps = prefs.getPrefs();
+            String proxyHost = (String) prefsProps.get("network.proxy.http");
+            String proxyPort = (String) prefsProps.get("network.proxy.http_port");
+            if (null != proxyHost && null != proxyPort) {
+                System.setProperty("http.proxyHost", proxyHost);
+                System.setProperty("http.proxyPort", proxyPort);
+            }
+             
             Properties prefsProps = prefs.getPrefs();
             //prefsProps.list(System.out);  // This works, try it!
         }
@@ -434,8 +442,9 @@ public void actionPerformed (ActionEvent evt)
             currentPage.findNextInPage();
         }
         else if (command.equals("View Page Source")) {
-            currentPage.getSourceBytes(viewMode);
-            viewMode = !viewMode;
+            byte source[] = currentPage.getSourceBytes();
+            String sou = new String(source);
+            System.out.println("+++++++++++ Page Source is +++++++++++\n\n" + sou);
         }
         else if (command.equals("View Page Info")) {
             currentPage.getPageInfo();
@@ -908,9 +917,10 @@ public void actionPerformed(ActionEvent event) {
     String command = event.getActionCommand();
     if (command.equals("View Source"))
         {
-            System.out.println("I will now View Soure");
-            EMWindow.this.currentPage.getSourceBytes(EMWindow.this.viewMode);
-            EMWindow.this.viewMode = !EMWindow.this.viewMode;
+            System.out.println("I will now View Source");
+            byte source[] = EMWindow.this.currentPage.getSourceBytes();
+            String sou = new String(source);
+            System.out.println("+++++++++++ Page Source is +++++++++++\n\n" + sou);
         }
     else if (command.equals("Select All"))
         {
