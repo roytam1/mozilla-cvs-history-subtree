@@ -20,7 +20,6 @@ MODULE=mime
 
 
 XPIDLSRCS = \
-	.\nsIStreamConverter.idl			\
 	.\nsIMimeEmitter.idl				\
 	.\nsIMimeURLUtils.idl				\
 	.\nsIMsgHeaderParser.idl			\
