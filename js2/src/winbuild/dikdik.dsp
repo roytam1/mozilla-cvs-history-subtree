@@ -64,7 +64,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "DikDik___Win32_Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GR /GX /ZI /Od /D "_LIB" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "DEBUG" /FR /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GR /GX /ZI /Od /I "../../../js/src/fdlibm" /D "_LIB" /D "DEBUG" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "__STDC__" /FR /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -90,6 +90,10 @@ SOURCE=..\bytecodegen.cpp
 # Begin Source File
 
 SOURCE=..\exception.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\fdlibm_ns.cpp
 # End Source File
 # Begin Source File
 
@@ -158,6 +162,10 @@ SOURCE=..\ds.h
 # Begin Source File
 
 SOURCE=..\exception.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\fdlibm_ns.h
 # End Source File
 # Begin Source File
 

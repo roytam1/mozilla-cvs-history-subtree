@@ -117,4 +117,25 @@ function ZZ(b)
 }
 ZZ(6);
 
+function sw(t) 
+{
+    var result = "0";
+    switch (t) {
+
+        case 1:
+            result += "1";
+        case 2:
+            result += "2";
+        default:
+            result += "d";
+            break;
+        case 4:
+            result += "4";
+            break;
+    }
+    return result;
+}
+if (sw(2) != "02d") result = false;
+
+
 if (result) print("still sane") else print("gone off the deep end");

@@ -742,8 +742,8 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             SetVarOp    <switchTemp>
             Pop
 
-        // test sequence in source order EXCEPT 
-        // default is moved to end.
+        // test sequence in source order except 
+        // the default is moved to end.
 
             GetVarOp    <switchTemp>
             <case1expr>

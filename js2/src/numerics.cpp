@@ -38,6 +38,8 @@
 #include "parser.h"
 #include "js2runtime.h"
 
+#include "fdlibm_ns.h"
+
 namespace JavaScript
 {
     using namespace JS2Runtime;
