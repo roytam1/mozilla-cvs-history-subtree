@@ -30,7 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLLIElement : public nsGenericHTMLContainerElement,
                         public nsIDOMHTMLLIElement
@@ -211,21 +211,27 @@ nsHTMLLIElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aAttributes || !aData || !aData->mListData)
+    return;
+
+  if (aData->mListData->mType.GetUnit() == eCSSUnit_Null) {
+    nsHTMLValue value;
+    
+    // type: enum
+    aAttributes->GetAttribute(nsHTMLAtoms::type, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated)
+      aData->mListData->mType = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+  }
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    nsStyleList* list = (nsStyleList*)
-      aContext->GetMutableStyleData(eStyleStruct_List);
-
-    // type: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::type, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      list->mListStyleType = value.GetIntValue();
-    }
-  }
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                 aPresContext);
 }
@@ -250,7 +256,7 @@ NS_IMETHODIMP
 nsHTMLLIElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                               nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }
