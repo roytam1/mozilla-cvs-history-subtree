@@ -527,7 +527,7 @@ nsNSSCertificate::GetWindowTitle(char * *aWindowTitle)
 NS_IMETHODIMP
 nsNSSCertificate::GetNickname(PRUnichar **_nickname)
 {
-  char *nickname = (mCert->nickname) ? mCert->nickname : "(no nickname)";
+  const char *nickname = (mCert->nickname) ? mCert->nickname : "(no nickname)";
   nsAutoString nn = NS_ConvertASCIItoUCS2(nickname);
   *_nickname = nn.ToNewUnicode();
   return NS_OK;
@@ -537,7 +537,7 @@ nsNSSCertificate::GetNickname(PRUnichar **_nickname)
 NS_IMETHODIMP
 nsNSSCertificate::GetEmailAddress(PRUnichar **_emailAddress)
 {
-  char *email = (mCert->emailAddr) ? mCert->emailAddr : "(no email address)";
+  const char *email = (mCert->emailAddr) ? mCert->emailAddr : "(no email address)";
   nsAutoString em = NS_ConvertASCIItoUCS2(email);
   *_emailAddress = em.ToNewUnicode();
   return NS_OK;
