@@ -113,9 +113,9 @@ void (* nativeProcessEvents) (JNIEnv *, jobject, jint);
 jint (* nativeGetBookmarks) (JNIEnv *, jobject, jint);
 jint (* nativeNewRDFNode)  (JNIEnv *, jobject, jint, jstring, jboolean);
 // from PreferencesImpl.h
-void (* nativeSetUnicharPref) (JNIEnv *env, jobject obj, jstring, jstring);
-void (* nativeSetIntPref) (JNIEnv *env, jobject obj, jstring, jint);
-void (* nativeSetBoolPref) (JNIEnv *env, jobject obj, jstring, jboolean);
+void (* nativeSetUnicharPref) (JNIEnv *, jobject, jstring, jstring);
+void (* nativeSetIntPref) (JNIEnv *, jobject, jstring, jint);
+void (* nativeSetBoolPref) (JNIEnv *, jobject, jstring, jboolean);
 // from CurrentPageImpl.h
 void (* nativeCopyCurrentSelectionToSystemClipboard) (JNIEnv *, jobject, jint);
 void (* nativeFindInPage) (JNIEnv *, jobject, jint, jstring, jboolean, jboolean);
@@ -394,15 +394,15 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeNewRDFNode) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetUnicharPref = (void (*) (JNIEnv *env, jobject obj, jstring, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetUnicharPref");
+  nativeSetUnicharPref = (void (*) (JNIEnv *, jobject, jstring, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetUnicharPref");
   if (!nativeSetUnicharPref) {
       printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetIntPref = (void (*) (JNIEnv *env, jobject obj, jstring, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetIntPref");
+  nativeSetIntPref = (void (*) (JNIEnv *, jobject, jstring, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetIntPref");
   if (!nativeSetIntPref) {
       printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetBoolPref = (void (*) (JNIEnv *env, jobject obj, jstring, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetBoolPref");
+  nativeSetBoolPref = (void (*) (JNIEnv *, jobject, jstring, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref");
   if (!nativeSetBoolPref) {
       printf("got dlsym error %s\n", dlerror());
   }
