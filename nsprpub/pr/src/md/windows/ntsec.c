@@ -143,7 +143,7 @@ _PR_NT_MakeSecurityDescriptorACL(
 {
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
-    DWORD cbACL = 1024;
+    DWORD cbACL;  /* size of ACL */
     DWORD accessMask;
 
     if (_pr_nt_sids.owner == NULL) {
@@ -172,11 +172,14 @@ _PR_NT_MakeSecurityDescriptorACL(
     /*
      * Construct a discretionary access-control list with three
      * access-control entries, one each for owner, primary group,
-     * and Everyone.  The read, write, and execute bits in the
-     * specified mode get mapped to NT's GENERIC_READ,
-     * GENERIC_WRITE, and GENERIC_EXECUTE access rights.
+     * and Everyone.
      */
 
+    cbACL = sizeof(ACL)
+          + 3 * (sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD))
+          + GetLengthSid(_pr_nt_sids.owner)
+          + GetLengthSid(_pr_nt_sids.group)
+          + GetLengthSid(_pr_nt_sids.everyone);
     pACL = (PACL) PR_Malloc(cbACL);
     if (pACL == NULL) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
