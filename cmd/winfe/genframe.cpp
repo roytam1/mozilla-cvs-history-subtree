@@ -19,9 +19,6 @@
 // genframe.cpp : implementation file
 //
 
-#ifdef PRIVACY_POLICIES
-#include "privacy.h"
-#endif
 #include "stdafx.h"
 #include "confhook.h"
 #ifdef MOZ_MAIL_NEWS
@@ -52,6 +49,9 @@
 #include "jvmmgr.h"
 #elif defined(JAVA)
 #include "java.h"
+#endif
+#ifdef PRIVACY_POLICIES
+#include "privacy.h"
 #endif
 
 // for whitebox testing
