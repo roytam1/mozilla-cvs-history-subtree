@@ -1599,7 +1599,7 @@ js_GetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 	CHECK_FOR_FUNNY_INDEX(id);
 
 #if JS_BUG_NULL_INDEX_PROPS
-	/* Indexd properties defaulted to null in old versions. */
+	/* Indexed properties defaulted to null in old versions. */
 	*vp = (JSVAL_IS_INT(id) && JSVAL_TO_INT(id) >= 0)
 	      ? JSVAL_NULL
 	      : JSVAL_VOID;
@@ -2540,6 +2540,7 @@ out:
 
 #endif /* JS_HAS_XDR */
 
+
 #ifdef DEBUG
 
 /* Routines to print out values during debugging. */
@@ -2561,6 +2562,26 @@ void printString(JSString *str) {
     fputc('\n', stderr);
 }
 
+void printVal(jsval val);
+
+void printObj(JSObject *jsobj) { 
+    jsuint i;
+    jsval val;
+    JSClass *clasp;
+
+    fprintf(stderr, "object 0x%x\n", jsobj);
+    clasp = OBJ_GET_CLASS(NULL, jsobj);
+    fprintf(stderr, "class 0x%x %s\n", clasp, clasp->name);
+    for (i=0; i < jsobj->map->nslots; i++) {
+        fprintf(stderr, "slot %3d ", i);
+        val = jsobj->slots[i];
+        if (JSVAL_IS_OBJECT(val))
+	    fprintf(stderr, "object 0x%x\n", JSVAL_TO_OBJECT(val));
+        else
+            printVal(val);
+    }
+}
+
 void printVal(jsval val) {
     fprintf(stderr, "val %d (0x%x) = ", val, val);
     if (JSVAL_IS_NULL(val)) {
@@ -2568,8 +2589,7 @@ void printVal(jsval val) {
     } else if (JSVAL_IS_VOID(val)) {
 	fprintf(stderr, "undefined\n");
     } else if (JSVAL_IS_OBJECT(val)) {
-	/* XXX can do more here */
-	fprintf(stderr, "object\n");
+        printObj(JSVAL_TO_OBJECT(val));
     } else if (JSVAL_IS_INT(val)) {
 	fprintf(stderr, "(int) %d\n", JSVAL_TO_INT(val));
     } else if (JSVAL_IS_STRING(val)) {
