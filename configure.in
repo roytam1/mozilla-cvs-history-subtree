@@ -162,6 +162,7 @@ if test -n "$_WIN32_MSVC"; then
     SKIP_PATH_CHECKS=1
     SKIP_COMPILER_CHECKS=1
     SKIP_LIBRARY_CHECKS=1
+    AC_CHECK_HEADERS(mmintrin.h)
 fi
 
 if test -z "$SKIP_COMPILER_CHECKS"; then
@@ -1620,6 +1621,9 @@ AC_CHECK_HEADERS(X11/XKBlib.h)
 
 dnl These are all the places some variant of statfs can be hiding.
 AC_CHECK_HEADERS(sys/statvfs.h sys/statfs.h sys/vfs.h sys/mount.h)
+
+dnl Try for MMX support
+AC_CHECK_HEADERS(mmintrin.h)
 
 dnl Check whether the compiler supports the new-style C++ standard
 dnl library headers (i.e. <new>) or needs the old "new.h"
@@ -3187,24 +3191,6 @@ MOZ_ARG_DISABLE_BOOL(jsd,
     MOZ_JSDEBUGGER=)
 
 
-dnl =========================================================
-dnl = Blackwood Java Code                                   =
-dnl =========================================================
-if test "$no_x" != "yes"
-then
-	AC_ARG_ENABLE(java-supplement,
-	[  --enable-java-supplement
-                          Enable Blackwood Java Code],
-	[
-		if test "$enableval" = "yes"
-		then
-			MOZ_JAVA_SUPPLEMENT=1
-    	else
-			MOZ_JAVA_SUPPLEMENT=
-    	fi
-	])
-fi
-
 dnl ========================================================
 dnl = This turns on xinerama support.  We just can't use the
 dnl = autodetection of the libraries since on Red Hat 7 linking with
@@ -3273,7 +3259,7 @@ dnl ========================================================
 
 MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet typeaheadfind"
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin p3p interfaceinfo" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin p3p interfaceinfo datetime finger" 
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],
@@ -4123,7 +4109,8 @@ MOZ_AUTO_DEPS=1
 fi
 MOZ_ARG_DISABLE_BOOL(auto-deps,
 [  --disable-auto-deps     Do not automatically generate dependency info],
-    MOZ_AUTO_DEPS=)
+    MOZ_AUTO_DEPS=,
+    MOZ_AUTO_DEPS=1)
 
 if test -n "$MOZ_AUTO_DEPS"; then
 dnl ========================================================
@@ -4352,6 +4339,9 @@ if test "$MOZ_SVG_RENDERER_LIBART"; then
     case "$target_os" in
     msvc*|mksnt*|cygwin*|mingw*)
         MOZ_LIBART_LIBS='$(DIST)/lib/$(LIB_PREFIX)moz_art_lgpl.$(LIB_SUFFIX)' 
+        ;;
+    beos*)
+        MOZ_LIBART_LIBS='-lmoz_art_lgpl -lroot -lbe'
         ;;
     *)
         MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'

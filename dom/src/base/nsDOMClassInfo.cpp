@@ -43,6 +43,7 @@
 #include "nsIServiceManager.h"
 #include "nsICategoryManager.h"
 #include "nsIComponentRegistrar.h"
+#include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIXPConnect.h"
 #include "nsIJSContextStack.h"
@@ -303,6 +304,7 @@
 #include "nsIDOMSVGPolygonElement.h"
 #include "nsIDOMSVGPolylineElement.h"
 #include "nsIDOMSVGSVGElement.h"
+#include "nsIDOMSVGTextElement.h"
 #include "nsIDOMSVGTransformable.h"
 #include "nsIDOMSVGTransform.h"
 #include "nsIDOMSVGTransformList.h"
@@ -817,6 +819,9 @@ static nsDOMClassInfoData sClassInfoData[] = {
                                      nsContentListSH,
                                      ARRAY_SCRIPTABLE_FLAGS |
                                      nsIXPCScriptable::WANT_PRECREATE)
+
+  NS_DEFINE_CLASSINFO_DATA(XMLStylesheetProcessingInstruction, nsNodeSH,
+                           NODE_SCRIPTABLE_FLAGS)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -1035,7 +1040,7 @@ nsDOMClassInfo::ThrowJSException(JSContext *cx, nsresult aResult)
 
 nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoData* aData) : mData(aData)
 {
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 }
 
 nsDOMClassInfo::~nsDOMClassInfo()
@@ -1372,7 +1377,6 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(ProcessingInstruction, nsIDOMProcessingInstruction)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMProcessingInstruction)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLinkStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
   DOM_CLASSINFO_MAP_END
 
@@ -1908,6 +1912,12 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(Pkcs11, nsIDOMPkcs11)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMPkcs11)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XMLStylesheetProcessingInstruction, nsIDOMProcessingInstruction)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMProcessingInstruction)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLinkStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
   DOM_CLASSINFO_MAP_END
 
 #ifdef MOZ_SVG

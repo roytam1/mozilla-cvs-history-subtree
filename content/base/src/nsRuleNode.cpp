@@ -1646,6 +1646,25 @@ ZoomFont(nsIPresContext* aPresContext, nscoord aInSize)
   return nscoord(aInSize * textZoom);
 }
 
+static PRBool
+IsChrome(nsIPresContext* aPresContext)
+{
+  PRBool isChrome = PR_FALSE;
+  nsCOMPtr<nsISupports> container;
+  nsresult result = aPresContext->GetContainer(getter_AddRefs(container));
+  if (NS_SUCCEEDED(result) && container) {
+    nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+    if (NS_SUCCEEDED(result) && docShell) {
+      PRInt32 docShellType;
+      result = docShell->GetItemType(&docShellType);
+      if (NS_SUCCEEDED(result)) {
+        isChrome = nsIDocShellTreeItem::typeChrome == docShellType;
+      }
+    }
+  }
+  return isChrome;
+}
+
 const nsStyleStruct*
 nsRuleNode::SetDefaultOnRoot(const nsStyleStructID aSID, nsIStyleContext* aContext)
 {
@@ -1655,8 +1674,16 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID aSID, nsIStyleContext* aConte
       const nsFont* defaultFont;
       mPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID, &defaultFont);
       nsStyleFont* fontData = new (mPresContext) nsStyleFont(*defaultFont);
-      fontData->mSize = fontData->mFont.size =
-          ZoomFont(mPresContext, fontData->mFont.size);
+      fontData->mSize = ZoomFont(mPresContext, fontData->mFont.size);
+
+      nscoord minimumFontSize = 0;
+      mPresContext->GetCachedIntPref(kPresContext_MinimumFontSize, minimumFontSize);
+      if (minimumFontSize > 0 && !IsChrome(mPresContext)) {
+        fontData->mFont.size = PR_MAX(fontData->mSize, minimumFontSize);
+      }
+      else {
+        fontData->mFont.size = fontData->mSize;
+      }
       aContext->SetStyle(eStyleStruct_Font, fontData);
       return fontData;
     }
@@ -2238,18 +2265,7 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
   // document fonts (overriding the useDocumentFonts flag), or to
   // determine if we have to override the minimum font-size constraint.
   if (!useDocumentFonts || minimumFontSize > 0) {
-    nsCOMPtr<nsISupports> container;
-    nsresult result = mPresContext->GetContainer(getter_AddRefs(container));
-    if (NS_SUCCEEDED(result) && container) {
-      nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
-      if (NS_SUCCEEDED(result) && docShell) {
-        PRInt32 docShellType;
-        result = docShell->GetItemType(&docShellType);
-        if (NS_SUCCEEDED(result)) {
-          chromeOverride = nsIDocShellTreeItem::typeChrome == docShellType;
-        }
-      }
-    }
+    chromeOverride = IsChrome(mPresContext);
   }
 
   // If we don't have to use document fonts, then we are only entitled
