@@ -64,14 +64,14 @@ CCC		= $(CC)
 LINK		= $(CC)
 
 # Determine which object format to use.  Two choices:
-# a.out and omf.  We default to a.out.
-ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), OMF)
+# a.out and omf.  We default to omf.
+ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT), A.OUT)
+AR      	= ar -q $@
+LIB_SUFFIX	= a
+else
 OMF_FLAG 	= -Zomf
 AR		= emxomfar -p64 r $@
 LIB_SUFFIX	= lib
-else
-AR      	= ar -q $@
-LIB_SUFFIX	= a
 endif
 
 PLATFORM_FLAGS	= $(OMF_FLAG) -ansi -Wall -Zmtd -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_EMX -DOS2
@@ -79,8 +79,9 @@ MOVEMAIL_FLAGS	=
 PORT_FLAGS		= -DNEED_GETOPT_H -DHAVE_SIGNED_CHAR
 
 OS_CFLAGS		= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
-OS_LIBS     		= -lsocket -lemxio
-OS_DLLFLAGS 		= $(OMF_FLAG) -Zmap -Zmt -Zdll -Zcrtdll -o $@
+OS_LIBS     	= -lsocket -lemxio
+OS_DLLFLAGS 	= $(OMF_FLAG) -Zmap -Zmt -Zdll -Zcrtdll  -L$(DIST)/lib -o $@
+LDFLAGS			= -Zlinker /PM:VIO
 
 MKSHLIB			= $(LD) $(DSO_LDOPTS)
 RC 			= rc.exe
@@ -92,7 +93,7 @@ OPTIMIZER		= -O3
 DLLFLAGS		= 
 else
 OPTIMIZER		= -g
-DLLFLAGS		= -g -L$(DIST)/lib -o $@
+DLLFLAGS		= -g
 endif
 
 
@@ -122,7 +123,7 @@ endif
 PLATFORM_FLAGS	= $(DLL_FLAGS) -q -W3 -DOS2::4 -DXP_OS2 -DXP_OS2_FIX -DXP_OS2_VACPP -N10 -D_X86_
 PLATFORM_FLAGS += -Gm -Gd+ -Su4 -Ss -I. -I$(DEPTH)/config/os2
 MOVEMAIL_FLAGS	=
-PORT_FLAGS	= -DHAVE_SIGNED_CHAR
+PORT_FLAGS	= -DHAVE_SIGNED_CHAR -DNO_ANSI_KEYWORDS
 
 OS_CFLAGS	= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
 OS_LFLAGS	= /PM:VIO /NOLOGO
@@ -138,6 +139,9 @@ AR_EXTRA_ARGS   = ,,
 MKSHLIB		= ilink
 FILTER		= cppfilt -q -B -P
 LIB_SUFFIX      = lib
+
+# Disable unix-dns processing in lib/libnet.
+NO_UNIX_ASYNC_DNS = 1
 
 ######################################################################
 # End XP_OS2_VACPP

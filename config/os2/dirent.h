@@ -23,6 +23,9 @@
 #else
 #if defined(__IBMC__) || defined(__IBMCPP__)
 #include <stdio.h>
+#ifdef MAXPATHLEN
+	#undef MAXPATHLEN
+#endif
 #define MAXPATHLEN (FILENAME_MAX*4)
 #define MAXNAMLEN FILENAME_MAX
 

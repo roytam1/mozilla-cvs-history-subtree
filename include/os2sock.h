@@ -25,7 +25,11 @@
 
 /*DSR050297 - this is based on types.h in the TCP/IP headers...               */
 /*I'm not including types.h because that causes all sorts of damage...        */
+#ifdef XP_OS2_VACPP
+#ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 120
+#endif
+#endif
 
 #if defined(XP_OS2_DOUGSOCK)
 #ifndef BSD_SELECT
@@ -40,8 +44,13 @@
 #include <utils.h>
 
 #else
-/*DSR072196 - replaced many files with pmwsock.h...*/
-#include <pmwsock.h>
+
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
+#include <netdb.h>
 
 #ifndef IP_MULTICAST_IF
 #define IP_MULTICAST_IF    2            /* set/get IP multicast interface*/

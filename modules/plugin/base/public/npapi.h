@@ -473,7 +473,7 @@ typedef struct NP_Port
 #define NP_LOADDS  _loadds
 #else
 #if defined(__OS2__)
-#define NP_LOADDS _System
+#define NP_LOADDS
 #else
 #define NP_LOADDS
 #endif

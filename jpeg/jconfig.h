@@ -10,10 +10,6 @@
       #error should be including jwinfig.h!
 #endif
 
-#ifdef XP_OS2 /* os2 */
-      #error should be including jos2fig.h!
-#endif
-
 #define HAVE_PROTOTYPES 
 #define HAVE_UNSIGNED_CHAR 
 #define HAVE_UNSIGNED_SHORT 

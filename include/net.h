@@ -38,7 +38,7 @@
 
 #include "xp_error.h"
 
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_OS2_EMX)
 #include <sys/param.h> /* for MAXPATHLEN */
 #endif
 
@@ -196,11 +196,20 @@ typedef struct _net_MemoryCacheObject net_MemoryCacheObject;
 #define FO_ONLY_FROM_CACHE_AND_LOAD_HTML_HELP_MAP_FILE		(FO_ONLY_FROM_CACHE | FO_LOAD_HTML_HELP_MAP_FILE)
 #define FO_ONLY_FROM_CACHE_AND_PRESENT_INLINE				(FO_ONLY_FROM_CACHE | FO_PRESENT_INLINE)
 
+#if defined(__cplusplus) && defined(XP_OS2_VACPP)
+/* OS/2 VACPP requires this so extern "C" function match these types. */
+extern "C" {
+#endif
+
 typedef void
 Net_GetUrlExitFunc (URL_Struct *URL_s, int status, MWContext *window_id);
 
 typedef void
 Net_GetUrlProgressFunc (URL_Struct *URL_s, int status, MWContext *window_id);
+
+#if defined(__cplusplus) && defined(XP_OS2_VACPP)
+}
+#endif
 
 
 /* A structure to store all headers that can be passed into HTTPLOAD. 
@@ -481,6 +490,10 @@ struct URL_Struct_ {
 
 /* stream functions
  */
+#if defined(__cplusplus) && defined(XP_OS2_VACPP)
+/* OS/2 VACPP requires this so extern "C" functions conform to these types. */
+extern "C" {
+#endif
 typedef unsigned int
 (*MKStreamWriteReadyFunc) (NET_StreamClass *stream);
 
@@ -494,6 +507,10 @@ typedef void
 
 typedef void 
 (*MKStreamAbortFunc) (NET_StreamClass *stream, int status);
+
+#if defined(__cplusplus) && defined(XP_OS2_VACPP)
+}
+#endif
 
 /* streamclass function
  */
