@@ -1611,18 +1611,20 @@ nsPlaintextEditor::InsertAsCitedQuotation(const nsAString& aQuotedText,
 }
 
 nsresult
-nsPlaintextEditor::SharedOutputString(PRUint32 aFlags, PRBool* aIsCollapsed, nsAString& aResult)
+nsPlaintextEditor::SharedOutputString(PRUint32 aFlags,
+                                      PRBool* aIsCollapsed,
+                                      nsAString& aResult)
 {
   nsCOMPtr<nsISelection> selection;
   nsresult rv = GetSelection(getter_AddRefs(selection));
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
   if (!selection)
     return NS_ERROR_NOT_INITIALIZED;
 
   rv = selection->GetIsCollapsed(aIsCollapsed);
-  if (NS_FAILED(rv)) return rv;
 
-  if (*aIsCollapsed)    // rewrap the whole document
+  if (NS_FAILED(rv) || !*aIsCollapsed)
+        // Collapsed selection, so use the whole document
     aFlags |= nsIDocumentEncoder::OutputSelectionOnly;
 
   return OutputToString(NS_LITERAL_STRING("text/plain"), aFlags, aResult);
