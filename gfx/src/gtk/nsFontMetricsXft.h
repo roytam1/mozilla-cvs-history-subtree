@@ -46,7 +46,6 @@
 #include "nsIFontMetricsGTK.h"
 
 #include <X11/Xlib.h>
-#include <X11/Xdefs.h>
 #include <X11/Xft/Xft.h>
 
 class nsFontXft;
