@@ -145,7 +145,7 @@ JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
     "nsXULPrototypeScript compilation scope",
     JSCLASS_HAS_PRIVATE,
     JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,  nsnull /*nsJSUtils::nsGenericFinalize */
+    JS_EnumerateStub, JS_ResolveStub,  JS_ConvertStub,  JS_FinalizeStub /*nsJSUtils::nsGenericFinalize */
 };
 
 
