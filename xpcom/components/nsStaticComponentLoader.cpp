@@ -88,8 +88,10 @@ nsStaticComponentLoader::GetInfoFor(const char *aLocation,
             if (!mInfo[i].module) {
                 rv = mInfo[i].getModule(mComponentMgr, nsnull,
                                         getter_AddRefs(mInfo[i].module));
+#ifdef DEBUG
                 fprintf(stderr, "nSCL: GetInfoFor(\"%s\"): %lx\n",
                         aLocation, rv);
+#endif
                 if (NS_FAILED(rv))
                     return rv;
             }
@@ -127,8 +129,10 @@ nsStaticComponentLoader::AutoRegisterComponents(PRInt32 when, nsIFile *dir)
             rv = mInfo[i].module->RegisterSelf(mComponentMgr, dir,
                                                mInfo[i].name,
                                                staticComponentType);
+#ifdef DEBUG
             fprintf(stderr, "nSCL: autoreg of \"%s\": %lx\n",
                     mInfo[i].name, rv);
+#endif
             // XXX handle deferred registration
         }
     }
