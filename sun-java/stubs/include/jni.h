@@ -202,7 +202,7 @@ struct JNINativeInterface_ {
 
     void *reserved3;
 
-    JNI_CFM_VECTORS
+    JNI_NATIVE_INTERFACE_CFM_VECTORS
 
     jint (JNICALL *GetVersion)(JNIEnv *env);
 
@@ -1766,6 +1766,8 @@ struct JNIInvokeInterface_ {
     void *reserved0;
     void *reserved1;
     void *reserved2;
+
+    JNI_INVOKE_INTERFACE_CFM_VECTORS
 
     jint (JNICALL *DestroyJavaVM)(JavaVM *vm);
 

@@ -169,7 +169,12 @@
   the start of the table, and MachO pointers at the end. See
   /System/Library/Frameworks/JavaVM.framework/Headers/jni.h
 */
-#	define JNI_CFM_VECTORS				void* cfm_vectors[225];
+#	define JNI_NATIVE_INTERFACE_CFM_VECTORS		void* cfm_vectors[225];
+
+/*
+  JNIInvokeInterface_ is similarly padded
+*/
+#	define JNI_INVOKE_INTERFACE_CFM_VECTORS		void* cfm_vectors[4];
 
 #	define JNI_PUBLIC_API(ResultType)		ResultType
 #	define JNI_PUBLIC_VAR(VarType) 			VarType
@@ -188,8 +193,12 @@
 #	define JNIEXPORT
 #endif
 
-#ifndef JNI_CFM_VECTORS		/* for non-MachO */
-#define JNI_CFM_VECTORS
+#ifndef JNI_NATIVE_INTERFACE_CFM_VECTORS		/* for non-MachO */
+#define JNI_NATIVE_INTERFACE_CFM_VECTORS
+#endif
+
+#ifndef JNI_INVOKE_INTERFACE_CFM_VECTORS		/* for non-MachO */
+#define JNI_INVOKE_INTERFACE_CFM_VECTORS
 #endif
 
 #ifndef FAR		/* for non-Win16 */
