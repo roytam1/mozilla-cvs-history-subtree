@@ -86,16 +86,25 @@
       },
 
       initImageBlocking : function () {
+        var showImageBlockingContextMenu;
         try {
+          var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                     .getService(Components.interfaces.nsIPrefBranch);
+          showImageBlockingContextMenu = prefs.getBoolPref("imageblocker.enabled");
+        }
+        catch (ex) {
+          showImageBlockingContextMenu = true;
+        }
+        
+        try {        
         // Block image depends on whether an image was clicked on
-
         gContextMenu.showItem
           ("context-blockimage",
-           gContextMenu.onImage && cookieContextMenu.isBlockingImages());
+           showImageBlockingContextMenu && gContextMenu.onImage && cookieContextMenu.isBlockingImages());
 
         gContextMenu.showItem
           ("context-unblockimage",
-           gContextMenu.onImage && !cookieContextMenu.isBlockingImages());
+           showImageBlockingContextMenu && gContextMenu.onImage && !cookieContextMenu.isBlockingImages());
         } catch (e) {}
       },
 
