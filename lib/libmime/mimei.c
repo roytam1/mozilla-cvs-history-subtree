@@ -42,14 +42,16 @@
 #include "mimetenr.h"	/*   |     |     |     |--- MimeInlineTextEnriched	*/
 #ifndef MOZILLA_30
 #include "mimevcrd.h"   /*   |     |     |--------- MimeInlineTextVCard		*/
+#ifdef MOZ_CALENDAR
 #include "mimecal.h"    /*   |     |     |--------- MimeInlineTextCalendar  */
+#endif
 #include "prefapi.h"
 #endif /* !MOZILLA_30 */
 #include "mimeiimg.h"	/*   |     |--- MimeInlineImage						*/
 #include "mimeeobj.h"	/*   |     |--- MimeExternalObject					*/
 #include "mimeebod.h"	/*   |--- MimeExternalBody							*/
 
-#ifndef NO_SECURITY
+#ifdef MOZ_SECURITY
 #include "mimesec.h"
 #endif /* NO_SECURITY */
 
@@ -150,10 +152,12 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
 	  else if (!strcasecomp(content_type+5,		"plain"))
 		class = (MimeObjectClass *)&mimeInlineTextPlainClass;
 #ifndef MOZILLA_30
+#ifdef MOZ_CALENDAR
 	  else if (!strcasecomp(content_type+5,		"x-vcard"))
 		class = (MimeObjectClass *)&mimeInlineTextVCardClass;
 	  else if (!strcasecomp(content_type+5,		"calendar"))
 		class = (MimeObjectClass *)&mimeInlineTextCalendarClass;
+#endif
 #endif /* !MOZILLA_30 */
 	  else if (!exact_match_p)
 		class = (MimeObjectClass *)&mimeInlineTextPlainClass;

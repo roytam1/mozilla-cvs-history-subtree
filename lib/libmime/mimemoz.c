@@ -35,7 +35,9 @@
 #include "mimemalt.h"
 # include "xpgetstr.h"
 # include "mimevcrd.h"  /* for MIME_VCardConverter */
+#ifdef MOZ_CALENDAR
 # include "mimecal.h"   /* for MIME_JulianConverter */
+#endif
 # include "edt.h"
   extern int XP_FORWARDED_MESSAGE_ATTACHMENT;
 #endif /* !MOZILLA_30 */

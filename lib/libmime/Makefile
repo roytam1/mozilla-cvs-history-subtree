@@ -21,7 +21,6 @@ MODULE		= mime
 LIBRARY_NAME	= mime
 
 CSRCS		= \
-		  mimecal.c \
 		  mimecont.c \
 		  mimedrft.c \
 		  mimeebod.c \
