@@ -900,16 +900,14 @@ PRBool DocumentViewerImpl::mIsDoingPrinting        = PR_FALSE;
 nsresult
 NS_NewDocumentViewer(nsIDocumentViewer** aResult)
 {
-  NS_PRECONDITION(aResult, "null OUT ptr");
-  if (!aResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  DocumentViewerImpl* it = new DocumentViewerImpl();
-  if (nsnull == it) {
-    *aResult = nsnull;
+  *aResult = new DocumentViewerImpl();
+  if (!*aResult) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  return CallQueryInterface(it, aResult);
+
+  NS_ADDREF(*aResult);
+
+  return NS_OK;
 }
 
 // Note: operator new zeros our memory
@@ -1069,6 +1067,19 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 #endif
   }
 
+  if (mPresContext) {
+    // Create the ViewManager and Root View...
+
+    // We must do this before we tell the script global object about
+    // this new document since doing that will cause us to re-enter
+    // into nsHTMLFrameInnerFrame code through reflows caused by
+    // FlushPendingNotifications() calls down the road...
+
+    rv = MakeWindow(aParentWidget, aBounds);
+    NS_ENSURE_SUCCESS(rv, rv);
+    Hide();
+  }
+
   nsCOMPtr<nsIInterfaceRequestor> requestor(do_QueryInterface(mContainer));
   if (requestor) {
     if (mPresContext) {
@@ -1098,10 +1109,7 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
   }
 
   if (mPresContext) {
-    // Create the ViewManager and Root View...
-    rv = MakeWindow(aParentWidget, aBounds);
-    NS_ENSURE_SUCCESS(rv, rv);
-    Hide();
+    // The ViewManager and Root View was created above...
 
     // Create the style set...
     nsCOMPtr<nsIStyleSet> styleSet;
@@ -4584,13 +4592,13 @@ DocumentViewerImpl::CreateDocumentViewerUsing(nsIPresContext* aPresContext,
     // XXX better error
     return NS_ERROR_NULL_POINTER;
   }
-  if (nsnull == aPresContext) {
+  if (!aPresContext) {
     return NS_ERROR_NULL_POINTER;
   }
 
   // Create new viewer
   DocumentViewerImpl* viewer = new DocumentViewerImpl(aPresContext);
-  if (nsnull == viewer) {
+  if (!viewer) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
   NS_ADDREF(viewer);

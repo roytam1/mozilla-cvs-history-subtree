@@ -552,6 +552,15 @@ nsFrameLoader::EnsureDocShell()
     mDocShell->SetChromeEventHandler(chromeEventHandler);
   }
 
+  nsCOMPtr<nsIBaseWindow> base_win(do_QueryInterface(mDocShell));
+  NS_ENSURE_TRUE(base_win, NS_ERROR_UNEXPECTED);
+
+  // This is kinda whacky, this call doesn't really create anything,
+  // but it must be called to make sure things are properly
+  // initialized
+
+  base_win->Create();
+
   return NS_OK;
 }
 
