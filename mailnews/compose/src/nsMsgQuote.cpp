@@ -23,7 +23,7 @@
 #include "nsIGenericFactory.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
-#include "nsIStreamConverter.h"
+#include "nsIStreamConverter2.h"
 #include "nsIMimeStreamConverter.h"
 #include "nsFileStream.h"
 #include "nsFileSpec.h"
@@ -196,9 +196,9 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   }
 
   // Create a mime parser (nsIStreamConverter)!
-  nsCOMPtr<nsIStreamConverter> mimeParser;
+  nsCOMPtr<nsIStreamConverter2> mimeParser;
   rv = nsComponentManager::CreateInstance(kStreamConverterCID, 
-                                          NULL, nsCOMTypeInfo<nsIStreamConverter>::GetIID(), 
+                                          NULL, nsCOMTypeInfo<nsIStreamConverter2>::GetIID(), 
                                           (void **) getter_AddRefs(mimeParser)); 
   if (NS_FAILED(rv) || !mimeParser)
   {
