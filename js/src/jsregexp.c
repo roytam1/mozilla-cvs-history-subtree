@@ -778,7 +778,7 @@ static RENode *
 ParseAtom(CompilerState *state)
 {
     const jschar *cp, *ocp;
-    uintN num, len;
+    uintN tmp, num, len;
     RENode *ren, *ren2;
     jschar c;
     REOp op;
@@ -855,7 +855,7 @@ ParseAtom(CompilerState *state)
 
       case '[':
         ++cp;
-	ren = NewRENode(state, REOP_CCLASS, (void *)cp);
+        ren = NewRENode(state, REOP_CCLASS, (void *)cp);
 	if (!ren)
 	    return NULL;
 
@@ -921,58 +921,116 @@ ParseAtom(CompilerState *state)
 	  case '7':
 	  case '8':
 	  case '9':
-            if (cp < (state->cpend - 1) && cp[1] >= '0' && cp[1] <= '9') {
-                if (c >= '0' && c <= '3') {
-                    if (c <= '7') { /* ZeroToThree OctalDigit */
-                        if (cp < (state->cpend - 2) 
-                                    && cp[2] >= '0' && cp[2] <= '9') {
-                    	    ren = NewRENode(state, REOP_FLAT1, NULL);
-                            c = 64 * (uintN)JS7_UNDEC(c) 
-                                        + 8 * (uintN)JS7_UNDEC(*++cp) 
-                                            + (uintN)JS7_UNDEC(*++cp);
-                        }
-                        else /*ZeroToThree OctalDigit lookahead != OctalDigit */
-                            goto twodigitescape;
+            /*
+                Yuk. Keeping the old style \n interpretation for 1.2
+                compatibility.
+            */
+            if (state->context->version == JSVERSION_1_2) {
+                switch (c) {
+	          case '0':
+do_octal:
+	            num = 0;
+	            while ('0' <= (c = *++cp) && c <= '7') {
+		        tmp = 8 * num + (uintN)JS7_UNDEC(c);
+		        if (tmp > 0377)
+		            break;
+		        num = tmp;
+	            }
+	            cp--;
+	            ren = NewRENode(state, REOP_FLAT1, NULL);
+	            c = (jschar)num;
+	            break;
+
+	          case '1':
+	          case '2':
+	          case '3':
+	          case '4':
+	          case '5':
+	          case '6':
+	          case '7':
+	          case '8':
+	          case '9':
+	            num = (uintN)JS7_UNDEC(c);
+	            tmp = 1;
+                    for (c = *++cp; JS7_ISDEC(c); c = *++cp, tmp++)
+		        num = 10 * num - (uintN)JS7_UNDEC(c);
+                    /* n in [8-9] and > count of parenetheses, then revert to
+                    '8' or '9', ignoring the '\' */
+                    if (((num == 8) || (num == 9)) && (num > state->parenCount)) {
+	                ocp = --cp; /* skip beyond the '\' */
+                        goto do_flat;
                     }
-                    else /* ZeroToThree EightOrNine */
-                        goto twodigitescape;
-                }
-                else { /* FourToNine DecimalDigit */
-twodigitescape:
-                    num = 10 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(cp[1]);
-                    if (num >= 10 && num <= state->parenCount) {
-                        cp++;
-                        goto backref;
-                    }
-                    if (c > '7' || cp[1] > '7') {
-	                JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				             JSMSG_INVALID_BACKREF);
-	                return NULL;
-                    }
-                    ren = NewRENode(state, REOP_FLAT1, NULL);
-                    c = 8 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(*++cp);
-                }
-            }
-            else { /* DecimalDigit lookahead != DecimalDigit */
-                if (c == '0') {
-            	    ren = NewRENode(state, REOP_FLAT1, NULL);
-                    c = 0;
-                }
-                else {
-                    num = (uintN)JS7_UNDEC(c);
-backref:                
+                    /* more than 1 digit, or a number greater than
+                        the count of parentheses => it's an octal */
+                    if ((tmp > 1) || (num > state->parenCount)) {
+		        cp = ocp;
+		        goto do_octal;
+	            }
+	            cp--;
 	            ren = NewRENode(state, REOP_BACKREF, NULL);
 	            if (!ren)
 		        return NULL;
 	            ren->u.num = num - 1;	/* \1 is numbered 0, etc. */
+
 	            /* Avoid common chr- and flags-setting code after switch. */
 	            ren->flags = RENODE_NONEMPTY;
 	            goto bump_cp;
                 }
             }
+            else {
+                if (cp < (state->cpend - 1) && cp[1] >= '0' && cp[1] <= '9') {
+                    if (c >= '0' && c <= '3') {
+                        if (c <= '7') { /* ZeroToThree OctalDigit */
+                            if (cp < (state->cpend - 2) 
+                                        && cp[2] >= '0' && cp[2] <= '9') {
+                    	        ren = NewRENode(state, REOP_FLAT1, NULL);
+                                c = 64 * (uintN)JS7_UNDEC(c) 
+                                            + 8 * (uintN)JS7_UNDEC(*++cp) 
+                                                + (uintN)JS7_UNDEC(*++cp);
+                            }
+                            else /*ZeroToThree OctalDigit lookahead != OctalDigit */
+                                goto twodigitescape;
+                        }
+                        else /* ZeroToThree EightOrNine */
+                            goto twodigitescape;
+                    }
+                    else { /* FourToNine DecimalDigit */
+twodigitescape:
+                        num = 10 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(cp[1]);
+                        if (num >= 10 && num <= state->parenCount) {
+                            cp++;
+                            goto backref;
+                        }
+                        if (c > '7' || cp[1] > '7') {
+	                    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				                 JSMSG_INVALID_BACKREF);
+	                    return NULL;
+                        }
+                        ren = NewRENode(state, REOP_FLAT1, NULL);
+                        c = 8 * (uintN)JS7_UNDEC(c) + (uintN)JS7_UNDEC(*++cp);
+                    }
+                }
+                else { /* DecimalDigit lookahead != DecimalDigit */
+                    if (c == '0') {
+            	        ren = NewRENode(state, REOP_FLAT1, NULL);
+                        c = 0;
+                    }
+                    else {
+                        num = (uintN)JS7_UNDEC(c);
+backref:                
+	                ren = NewRENode(state, REOP_BACKREF, NULL);
+	                if (!ren)
+		            return NULL;
+	                ren->u.num = num - 1;	/* \1 is numbered 0, etc. */
+	                /* Avoid common chr- and flags-setting code after switch. */
+	                ren->flags = RENODE_NONEMPTY;
+	                goto bump_cp;
+                    }
+                }
+              }
             break;
 
-          case 'x':
+	  case 'x':
 	    ocp = cp;
 	    c = *++cp;
 	    if (JS7_ISHEX(c)) {
@@ -1589,8 +1647,10 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
           }
           kidMatch = matchRENodes(state, (RENode *)ren->kid,
                                         ren->next, cp);
-          if (kidMatch == NULL)
+          if (kidMatch == NULL) {
+              state->parenCount = num;
               break;
+          }
           else {
               const jschar *restMatch = matchRENodes(state, ren->next,
                                             stop, kidMatch);
@@ -2473,11 +2533,11 @@ regexp_exec_sub(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	argv[0] = STRING_TO_JSVAL(str);
     }
     if (re->flags & JSREG_GLOB) {
-	JS_LOCK_OBJ(cx, obj);
-	locked = JS_TRUE;
-	i = re->lastIndex;
+        JS_LOCK_OBJ(cx, obj);
+        locked = JS_TRUE;
+        i = re->lastIndex;
     } else {
-	i = 0;
+        i = 0;
     }
     ok = js_ExecuteRegExp(cx, re, str, &i, test, rval);
     if (re->flags & JSREG_GLOB)
