@@ -43,9 +43,6 @@ void pw_EnableClicking(MWContext * context);
 void pw_AllConnectionsComplete(MWContext * context);
 void pw_SetProgressBarPercent(MWContext *context, int32 percent);
 
-#ifdef XP_UNIX
-extern "C" void XFE_PW_AssociateWindowWithContext(MWContext *context, pw_ptr pw);
-#endif
 
 /* This struct encapsulates the data we need to store in our progress context */
 
@@ -137,10 +134,6 @@ void PW_AssociateWindowWithContext(MWContext * context, pw_ptr pw)
 	{
 		PW_SetProgressText( pw, NULL);
 	}
-#ifdef XP_UNIX
-    // Unix needs a mapping from context->widget
-    XFE_PW_AssociateWindowWithContext(context, pw);
-#endif
 }
 
 pw_ptr PW_GetAssociatedWindowForContext(MWContext *context)
