@@ -478,10 +478,6 @@ typedef short PROSFD;
 #define UNIX_THIS_DIRECTORY_STR			"./"
 #define UNIX_PARENT_DIRECTORY_STR		"../"
 
-#define MAX_PATH 			512
-#define MAX_MAC_FILENAME	31
-#define MAXPATHLEN			MAX_PATH
-
 
 // Alias a few names
 #define getenv	PR_GetEnv
@@ -532,10 +528,6 @@ extern void dprintf(const char *format, ...);
 #if defined(MAC_NSPR_STANDALONE)
 extern PRUint8 CallCacheFlushers(size_t blockSize);
 #endif
-
-enum {
-	kPrivateNSPREventType = 13
-};
 
 #if defined(MAC_NSPR_STANDALONE)
 extern void* reallocSmaller(void* block, size_t newSize);
