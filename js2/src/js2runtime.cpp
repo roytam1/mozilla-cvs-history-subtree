@@ -105,7 +105,7 @@ JSType *ScopeChain::extractType(ExprNode *t)
 }
 
 
-JS2Runtime::Operator simpleLookup[ExprNode::kindsEnd] = {
+JS2Runtime::Operator simpleLookup[Token::kindsEnd] = {
    JS2Runtime::None,                    // none,
    JS2Runtime::None,                    // identifier,
    JS2Runtime::None,                    // number,
@@ -190,48 +190,80 @@ JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &n
     Lexer operatorLexer(mWorld, name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
     const Token &t = operatorLexer.get(false);  // XXX what's correct for preferRegExp parameter ???
 
-    JS2Runtime::Operator op = simpleLookup[t.getKind()];
-    if (op != JS2Runtime::None)
-        return op;
-    else {
-        switch (t.getKind()) {
-            default:
-                NOT_REACHED("Illegal operator name");
+    switch (t.getKind()) {
+    case Token::complement:
+        return JS2Runtime::Complement;
+    case Token::increment:
+        return JS2Runtime::Increment;
+    case Token::decrement:
+        return JS2Runtime::Decrement;
+    case Token::Const:
+        return JS2Runtime::Const;
+    case Token::times:
+        return JS2Runtime::Multiply;
+    case Token::divide:
+        return JS2Runtime::Divide;
+    case Token::modulo:
+        return JS2Runtime::Remainder;
+    case Token::leftShift:
+        return JS2Runtime::ShiftLeft;
+    case Token::rightShift:
+        return JS2Runtime::ShiftRight;
+    case Token::logicalRightShift:
+        return JS2Runtime::UShiftRight;
+    case Token::lessThan:
+        return JS2Runtime::Less;
+    case Token::lessThanOrEqual:
+        return JS2Runtime::LessEqual;
+    case Token::In:
+        return JS2Runtime::In;
+    case Token::equal:
+        return JS2Runtime::Equal;
+    case Token::identical:
+        return JS2Runtime::SpittingImage;
+    case Token::bitwiseAnd:
+        return JS2Runtime::BitAnd;
+    case Token::bitwiseXor:
+        return JS2Runtime::BitXor;
+    case Token::bitwiseOr:
+        return JS2Runtime::BitOr;
 
-            case Token::plus:
-                if (parameterCount == 1)
-                    return JS2Runtime::Posate;
-                else
-                    return JS2Runtime::Plus;
-            case Token::minus:
-                if (parameterCount == 1)
-                    return JS2Runtime::Negate;
-                else
-                    return JS2Runtime::Minus;
+    default:
+        NOT_REACHED("Illegal operator name");
 
-            case Token::openParenthesis:
-                return JS2Runtime::Call;
-            
-            case Token::New:
-                if (parameterCount > 1)
-                    return JS2Runtime::NewArgs;
-                else
-                    return JS2Runtime::New;
-            
-            case Token::openBracket:
-                {
-                    const Token &t2 = operatorLexer.get(false);
-                    ASSERT(t2.getKind() == Token::closeBracket);
-                    const Token &t3 = operatorLexer.get(false);
-                    if (t3.getKind() == Token::equal)
-                        return JS2Runtime::IndexEqual;
-                    else
-                        return JS2Runtime::Index;
-                }
-                
-            case Token::Delete:
-                return JS2Runtime::DeleteIndex;
+    case Token::plus:
+        if (parameterCount == 1)
+            return JS2Runtime::Posate;
+        else
+            return JS2Runtime::Plus;
+    case Token::minus:
+        if (parameterCount == 1)
+            return JS2Runtime::Negate;
+        else
+            return JS2Runtime::Minus;
+
+    case Token::openParenthesis:
+        return JS2Runtime::Call;
+    
+    case Token::New:
+        if (parameterCount > 1)
+            return JS2Runtime::NewArgs;
+        else
+            return JS2Runtime::New;
+    
+    case Token::openBracket:
+        {
+            const Token &t2 = operatorLexer.get(false);
+            ASSERT(t2.getKind() == Token::closeBracket);
+            const Token &t3 = operatorLexer.get(false);
+            if (t3.getKind() == Token::equal)
+                return JS2Runtime::IndexEqual;
+            else
+                return JS2Runtime::Index;
         }
+        
+    case Token::Delete:
+        return JS2Runtime::DeleteIndex;
     }
     return JS2Runtime::None;    
 }
@@ -297,6 +329,7 @@ JSValue Context::readEvalFile(const String& fileName)
             }
     	    stdOut << '\n';
     /*******/
+/*
             Context cx(mGlobal, mWorld);        // the file is compiled into
                                                 // the current global object, not
                                                 // the current scope.
@@ -307,6 +340,15 @@ JSValue Context::readEvalFile(const String& fileName)
                 result = cx.interpret(bcm, JSValueList());
                 delete bcm;
             }
+*/        
+
+            buildRuntime(parsedStatements);
+            JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
+            if (bcm) {
+                result = interpret(bcm, JSValueList());
+                delete bcm;
+            }
+        
         
         } catch (Exception &e) {
             throw e;
@@ -330,7 +372,7 @@ void Context::buildRuntime(StmtNode *p)
 ByteCodeModule *Context::genCode(StmtNode *p, String sourceName)
 {
     mScopeChain.addScope(mGlobal);
-    ByteCodeGen bcg(&mScopeChain);
+    ByteCodeGen bcg(this, &mScopeChain);
     ByteCodeModule *result = bcg.genCodeForScript(p);
     mScopeChain.popScope();
     return result;
@@ -363,8 +405,14 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
         mStack.push_back(result);
         return false;
     }
-    else
+    else {
+        // have to lie about the argCount since the Return sequence expects to 
+        // consume the arguments AND the target pointer from the stack.
+        mActivationStack.push(new Activation(mLocals, mArgumentBase, mPC, mCurModule, 1));
+        mCurModule = candidate->mByteCode;
+        mArgumentBase = mStack.size() - 2;
         return true;
+    }
 }
 
 JSValue Context::interpret(ByteCodeModule *bcm, JSValueList args)
@@ -545,8 +593,13 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     Operator op = (Operator)(*pc++);
                     JSValue v1 = *(mStack.end() - 2);
                     JSValue v2 = *(mStack.end() - 1);
+                    mPC = pc;
                     if (executeOperator(op, v1.getType(), v2.getType())) {
                         // need to invoke
+                        pc = mCurModule->mCodeBase;
+                        endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                        delete mLocals;
+                        mLocals = new JSValue[mCurModule->mLocalsCount];
                     }
                 }
                 break;
@@ -783,11 +836,11 @@ void ScopeChain::collectNames(StmtNode *p)
         }
         break;
     default:
-        NOT_REACHED("Implement me");
+        break;
     }
 }
 
-void JSType::completeClass(ScopeChain *scopeChain, JSType *super)
+void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
 {    
     // Note test of mStatics:
     // we want to complete the statics classes but not to the
@@ -796,7 +849,7 @@ void JSType::completeClass(ScopeChain *scopeChain, JSType *super)
     // if none exists, build a default constructor that calls 'super()'
     if (mStatics && getDefaultConstructor() == NULL) {
         JSFunction *fnc = new JSFunction(NULL);
-        ByteCodeGen bcg(scopeChain);
+        ByteCodeGen bcg(cx, scopeChain);
 
         if (mSuperType && mSuperType->getDefaultConstructor()) {
             bcg.addByte(LoadFunctionOp);
@@ -848,7 +901,7 @@ void JSType::completeClass(ScopeChain *scopeChain, JSType *super)
     }
     // complete the static class (inherit static instances etc)
     if (mStatics && mSuperType)
-        mStatics->completeClass(scopeChain, mSuperType->mStatics);
+        mStatics->completeClass(cx, scopeChain, mSuperType->mStatics);
 }
 
 
@@ -881,9 +934,6 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             JSType *resultType = mScopeChain.extractType(f->function.resultType);
             JSFunction *fnc = new JSFunction(resultType);
  
-            Property &prop = PROPERTY(p->prop);
-            prop.mType = resultType;
-
             if (isOperator) {
                 ASSERT(f->function.name->getKind() == ExprNode::string);
                 const String& name = static_cast<StringExprNode *>(f->function.name)->str;
@@ -895,6 +945,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                                    getParameterType(f->function, 1), fnc);
             }
             else {
+                Property &prop = PROPERTY(p->prop);
+                prop.mType = resultType;
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
                     if (mScopeChain.topClass() 
@@ -967,7 +1019,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     s = s->next;
                 }
             }
-            thisClass->completeClass(&mScopeChain, superClass);
+            thisClass->completeClass(this, &mScopeChain, superClass);
             thisClass->createStaticInstance();      // XXX should be a part of the class initialization code
 
             mScopeChain.popScope();
@@ -975,7 +1027,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         }        
         break;
     default:
-        NOT_REACHED("Implement me");
+        break;
     }
 
 }
@@ -1239,8 +1291,7 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
         }
         if (target) {
             if (target->mByteCode) {
-                // XXX
-
+                // here we need to get the interpreter to
             }
             else
                 return (target->mCode)(cx, &value, 1);

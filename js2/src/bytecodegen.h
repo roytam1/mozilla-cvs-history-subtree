@@ -156,8 +156,8 @@ namespace ByteCode {
     class ByteCodeGen {
     public:
 
-        ByteCodeGen(ScopeChain *scopeChain) 
-            : mBuffer(new CodeBuffer), mScopeChain(scopeChain) { }
+        ByteCodeGen(Context *cx, ScopeChain *scopeChain) 
+            : mBuffer(new CodeBuffer), mScopeChain(scopeChain), m_cx(cx) { }
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
@@ -175,6 +175,8 @@ namespace ByteCode {
         // this is the current code buffer
         CodeBuffer *mBuffer;
         ScopeChain *mScopeChain;
+
+        Context *m_cx;
 /*
         void pushOnGrumpy()
         {

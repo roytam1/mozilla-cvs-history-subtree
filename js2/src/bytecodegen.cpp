@@ -357,7 +357,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
             mScopeChain->addScope(thisClass->mStatics);
             mScopeChain->addScope(thisClass);
-            ByteCodeGen bcg(mScopeChain);       // this will capture the initializations
+            ByteCodeGen bcg(m_cx, mScopeChain);       // this will capture the initializations
             if (classStmt->body) {
                 StmtNode* s = classStmt->body->statements;
                 while (s) {
@@ -400,38 +400,48 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
             bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
-
-            ASSERT(f->function.name->getKind() == ExprNode::identifier);
-            const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-            if (mScopeChain->topClass() 
-                        && (mScopeChain->topClass()->mClassName.compare(name) == 0))
-                isConstructor = true;
-
+            bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
             JSFunction *fnc = NULL;    
-            if (isStatic || isConstructor) {
-                JSValue v = mScopeChain->getStaticValue(PROPERTY(p->prop));
-                ASSERT(v.isFunction());
-                fnc = v.function;
+            
+            if (isOperator) {   // XXX
+                ASSERT(f->function.name->getKind() == ExprNode::string);
+                const String& name = static_cast<StringExprNode *>(f->function.name)->str;
+                Operator op = m_cx->getOperator(m_cx->getParameterCount(f->function), name);
+
+                fnc = m_cx->getOperator(op, m_cx->getParameterType(f->function, 0), 
+                                   m_cx->getParameterType(f->function, 1));
             }
             else {
-                switch (f->function.prefix) {
-                case FunctionName::Get:
-                    fnc = mScopeChain->getGetterValue(PROPERTY(p->prop));
-                    break;
-                case FunctionName::Set:
-                    fnc = mScopeChain->getSetterValue(PROPERTY(p->prop));
-                    break;
-                case FunctionName::normal:
-                    {
-                        JSValue v = mScopeChain->getValue(PROPERTY(p->prop));
-                        ASSERT(v.isFunction());
-                        fnc = v.function;
+                ASSERT(f->function.name->getKind() == ExprNode::identifier);
+                const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
+                if (mScopeChain->topClass() 
+                            && (mScopeChain->topClass()->mClassName.compare(name) == 0))
+                    isConstructor = true;
+
+                if (isStatic || isConstructor) {
+                    JSValue v = mScopeChain->getStaticValue(PROPERTY(p->prop));
+                    ASSERT(v.isFunction());
+                    fnc = v.function;
+                }
+                else {
+                    switch (f->function.prefix) {
+                    case FunctionName::Get:
+                        fnc = mScopeChain->getGetterValue(PROPERTY(p->prop));
+                        break;
+                    case FunctionName::Set:
+                        fnc = mScopeChain->getSetterValue(PROPERTY(p->prop));
+                        break;
+                    case FunctionName::normal:
+                        {
+                            JSValue v = mScopeChain->getValue(PROPERTY(p->prop));
+                            ASSERT(v.isFunction());
+                            fnc = v.function;
+                        }
+                        break;
                     }
-                    break;
                 }
             }
-
-            ByteCodeGen bcg(mScopeChain);
+            ByteCodeGen bcg(m_cx, mScopeChain);
             bcg.genCodeForFunction(f, fnc, isConstructor, mScopeChain->topClass());
         }
         break;
@@ -555,6 +565,15 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
             genExpr(b->op2);
             addByte(DoOperatorOp);
             addByte(Plus);
+            return Object_Type;
+        }
+    case ExprNode::multiply:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            genExpr(b->op1);
+            genExpr(b->op2);
+            addByte(DoOperatorOp);
+            addByte(Multiply);
             return Object_Type;
         }
     case ExprNode::assignment:

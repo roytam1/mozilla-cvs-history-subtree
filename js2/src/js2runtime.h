@@ -947,7 +947,7 @@ namespace JS2Runtime {
         }
 
         // assumes that the super types have been completed already
-        void completeClass(ScopeChain *scopeChain, JSType *super);
+        void completeClass(Context *cx, ScopeChain *scopeChain, JSType *super);
 
 
         JSType          *mSuperType;        // NULL implies that this is the base Object
@@ -1359,12 +1359,14 @@ namespace JS2Runtime {
             initOperators();
             if (Object_Type == NULL) {
                 Object_Type = new JSType(NULL);
+
                 Number_Type = new JSType(widenCString("Number"), Object_Type);
                 Number_Type->createStaticComponent();
                 Number_Type->setDefaultConstructor(new JSFunction(&Number_Constructor, Object_Type));
                 Number_Type->addStaticMethod(widenCString("toString"), new JSFunction(&Number_ToString, String_Type));
-                Number_Type->completeClass(&mScopeChain, Object_Type);
+                Number_Type->completeClass(this, &mScopeChain, Object_Type);
                 Number_Type->createStaticInstance();
+                global->defineVariable(widenCString("Number"), Type_Type, JSValue(Number_Type));
                 
                 String_Type = new JSType(Object_Type);
                 Boolean_Type = new JSType(Object_Type);
@@ -1374,9 +1376,22 @@ namespace JS2Runtime {
 
         void initOperators();
         
-        void defineOperator(Operator op, JSType *t1, JSType *t2, JSFunction *imp)
+        void defineOperator(Operator which, JSType *t1, JSType *t2, JSFunction *imp)
         {
-        
+            OperatorDefinition *op = new OperatorDefinition(t1, t2, imp);
+            mOperatorTable[which].push_back(op);
+        }
+
+        JSFunction *getOperator(Operator which, JSType *t1, JSType *t2)
+        {
+            for (OperatorList::iterator oi = mOperatorTable[which].begin(),
+                        end = mOperatorTable[which].end();
+                            (oi != end); oi++) 
+                if ( ((*oi)->mType1 == t1) && ((*oi)->mType2 == t2) )
+                    return (*oi)->mImp;
+
+            NOT_REACHED("operator gone missing");
+            return NULL;
         }
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
@@ -1392,6 +1407,8 @@ namespace JS2Runtime {
 
         // the currently executing 'function'
         ByteCodeModule *mCurModule;
+
+        uint8 *mPC;
 
         // this is the execution stack (for the current function at least)
         std::vector<JSValue> mStack;
