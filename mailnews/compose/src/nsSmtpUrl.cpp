@@ -297,11 +297,6 @@ nsresult nsSmtpUrl::ParseUrl(const nsString& /* aSpec */)
     return rv;
 }
 
-void nsSmtpUrl::ReconstructSpec(void)
-{
-	// mscott - i think i can obsolete this function.
-}
-
 nsresult nsSmtpUrl::GetUserEmailAddress(const char ** aUserName)
 {
 	nsresult rv = NS_OK;
