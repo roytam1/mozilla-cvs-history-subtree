@@ -655,7 +655,6 @@ function msgIsImportant (msg, sourceNick, myNick)
 
 function cycleView (amount)
 {
-    dd ("cycleView " + amount);
     var len = client.viewsArray.length;
     if (len <= 1)
         return;

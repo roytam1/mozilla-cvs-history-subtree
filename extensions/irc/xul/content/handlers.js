@@ -735,7 +735,6 @@ function onTest ()
 
 function onTabCompleteRequest (e)
 {
-    dd ("tab complete request");
     var elem = document.commandDispatcher.focusedElement;
     var singleInput = document.getElementById("input");
     if (document.getBindingParent(elem) != singleInput)
