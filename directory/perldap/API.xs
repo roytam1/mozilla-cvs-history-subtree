@@ -812,9 +812,11 @@ ldap_get_lderrno(ld, ...)
            SV *tmp, *m = (SV *)NULL, *s = (SV *)NULL;
 
 	   if (items > 1)
+	   {
 	      m = ST(1);
-	   if (items > 2)
-	      s = ST(2);
+	      if (items > 2)
+	         s = ST(2);
+           }
 
 	   RETVAL = ldap_get_lderrno(ld, (m && SvROK(m)) ? &match : (char **)NULL,
 	                                 (s && SvROK(s)) ? &msg : (char **)NULL);
