@@ -186,24 +186,71 @@ localDefPref("browser.navcenter.floating.rect", "20, 20, 400, 600"); // Window d
 // Editing these may create a security risk - be sure you know what you're doing
 pref("capability.policy.default.barprop.visible.write", "UniversalBrowserWrite");
 
+pref("capability.policy.default.domexception.code", "allAccess");
+pref("capability.policy.default.domexception.message", "allAccess");
+pref("capability.policy.default.domexception.name", "allAccess");
+pref("capability.policy.default.domexception.result", "allAccess");
+pref("capability.policy.default.domexception.tostring", "allAccess");
+
 pref("capability.policy.default.history.current.read", "UniversalBrowserRead");
 pref("capability.policy.default.history.next.read", "UniversalBrowserRead");
 pref("capability.policy.default.history.previous.read", "UniversalBrowserRead");
 pref("capability.policy.default.history.item.read", "UniversalBrowserRead");
 
+pref("capability.policy.default.location.hash.write", "allAccess");
+pref("capability.policy.default.location.host.write", "allAccess");
+pref("capability.policy.default.location.hostname.write", "allAccess");
+pref("capability.policy.default.location.href.write", "allAccess");
+pref("capability.policy.default.location.pathname.write", "allAccess");
+pref("capability.policy.default.location.port.write", "allAccess");
+pref("capability.policy.default.location.protocol.write", "allAccess");
+pref("capability.policy.default.location.search.write", "allAccess");
+
 pref("capability.policy.default.navigator.preference.read", "UniversalPreferencesRead");
 pref("capability.policy.default.navigator.preference.write", "UniversalPreferencesWrite");
-pref("capability.policy.default.windowinternal.location.write", "allAccess");
 
+pref("capability.policy.default.windowinternal.close", "allAccess");
+pref("capability.policy.default.windowinternal.location.write", "allAccess");
 // window.openDialog is insecure and must be made inaccessible from web scripts - see bug 56009
 pref("capability.policy.default.windowinternal.opendialog", "noAccess");
 
-pref("capability.policy.mailnews.sites", "mailbox: imap: news: pop: pop3:");
-
+// DOM restrictions for mail/news
+pref("capability.policy.mailnews.characterdata.data", "noAccess");
+pref("capability.policy.mailnews.characterdata.substringdata", "noAccess");
+pref("capability.policy.mailnews.element.getattribute", "noAccess");
+pref("capability.policy.mailnews.element.getattributenode", "noAccess");
+pref("capability.policy.mailnews.element.getattributenodens", "noAccess");
+pref("capability.policy.mailnews.element.getattributens", "noAccess");
+pref("capability.policy.mailnews.htmlanchorelement.href", "noAccess");
+pref("capability.policy.mailnews.htmlareaelement.href", "noAccess");
+pref("capability.policy.mailnews.htmlbaseelement.href", "noAccess");
+pref("capability.policy.mailnews.htmlblockquoteelement.cite", "noAccess");
 pref("capability.policy.mailnews.domexception.tostring", "noAccess");
 pref("capability.policy.mailnews.htmldocument.domain", "noAccess");
 pref("capability.policy.mailnews.htmldocument.url", "noAccess");
+pref("capability.policy.mailnews.htmlelement.innerhtml", "noAccess");
+pref("capability.policy.mailnews.htmlimageelement.src", "noAccess");
+pref("capability.policy.mailnews.image.lowsrc", "noAccess");
+pref("capability.policy.mailnews.node.attributes", "noAccess");
+pref("capability.policy.mailnews.node.nodevalue", "noAccess");
 pref("capability.policy.mailnews.nsdocument.location", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.hash", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.host", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.hostname", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.pathname", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.port", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.protocol", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.search", "noAccess");
+pref("capability.policy.mailnews.nshtmlanchorelement.text", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.hash", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.host", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.hostname", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.pathname", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.port", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.protocol", "noAccess");
+pref("capability.policy.mailnews.nshtmlareaelement.search", "noAccess");
+pref("capability.policy.mailnews.range.tostring", "noAccess");
+pref("capability.policy.mailnews.sites", "mailbox: imap: news: pop: pop3:");
 pref("capability.policy.mailnews.window.name.write", "noAccess");
 pref("capability.policy.mailnews.windowinternal.location", "noAccess");
 
