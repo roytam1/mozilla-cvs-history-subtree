@@ -110,28 +110,28 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamGuard,
 //
 
 nsStreamListenerProxy::nsStreamListenerProxy()
-    : mCMonitor(nsnull)
+    : mCLock(nsnull)
     , mListenerStatus(NS_OK)
     , mPendingCount(0)
-    , mPMonitor(nsnull)
+    , mPLock(nsnull)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
 {
-    if (mCMonitor) {
-        nsAutoMonitor::DestroyMonitor(mCMonitor);
-        mCMonitor = nsnull;
+    if (mCLock) {
+        PR_DestroyLock(mCLock);
+        mCLock = nsnull;
     }
-    if (mPMonitor) {
-        nsAutoMonitor::DestroyMonitor(mPMonitor);
-        mPMonitor = nsnull;
+    if (mPLock) {
+        PR_DestroyLock(mPLock);
+        mPLock = nsnull;
     }
 }
 
 PRUint32
 nsStreamListenerProxy::GetPendingCount()
 {
-    nsAutoMonitor mon(mPMonitor);
+    nsAutoLock lock(mPLock);
     PRUint32 c = mPendingCount;
     mPendingCount = 0;
     return c;
@@ -318,17 +318,17 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     }
     
     //
-    // Enter the ChannelToResume monitor
+    // Enter the ChannelToResume lock
     //
     {
-        nsAutoMonitor mon(mCMonitor);
+        nsAutoLock lock(mCLock);
 
         // 
         // Try to copy data into the pipe.
         //
         // If the pipe is full, then suspend the calling channel.  It
         // will be resumed when the pipe is emptied.  Being inside the 
-        // ChannelToResume monitor ensures that the resume will follow
+        // ChannelToResume lock ensures that the resume will follow
         // the suspend.
         //
         PRINTF("Writing to the pipe...\n");FLUSH();
@@ -352,10 +352,10 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     }
 
     //
-    // Enter the PendingCount monitor
+    // Enter the PendingCount lock
     //
     {
-        nsAutoMonitor mon(mPMonitor);
+        nsAutoLock lock(mPLock);
 
         //
         // If the pending count is non-zero then there is a pending
@@ -409,10 +409,10 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
     NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
-    mCMonitor = nsAutoMonitor::NewMonitor("ChannelToResume");
-    if (!mCMonitor) return NS_ERROR_OUT_OF_MEMORY;
-    mPMonitor = nsAutoMonitor::NewMonitor("PendingCount");
-    if (!mPMonitor) return NS_ERROR_OUT_OF_MEMORY;
+    mCLock = PR_NewLock();
+    if (!mCLock) return NS_ERROR_OUT_OF_MEMORY;
+    mPLock = PR_NewLock();
+    if (!mPLock) return NS_ERROR_OUT_OF_MEMORY;
 
     //
     // Create the pipe
@@ -454,11 +454,11 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     // The pipe has been emptied by the listener.  If the channel
     // has been suspended (waiting for the pipe to be emptied), then
     // go ahead and resume it.  But take care not to resume while 
-    // holding the "ChannelToResume" monitor.
+    // holding the "ChannelToResume" lock.
     //
     nsCOMPtr<nsIChannel> chan;
     {
-        nsAutoMonitor mon(mCMonitor);
+        nsAutoLock lock(mCLock);
 
         chan = mChannelToResume;
         mChannelToResume = 0;

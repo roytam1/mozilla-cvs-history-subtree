@@ -39,12 +39,12 @@ protected:
     nsCOMPtr<nsIOutputStream> mPipeOut;
 
     nsCOMPtr<nsIChannel>      mChannelToResume;
-    PRMonitor                *mCMonitor;
+    PRLock                   *mCLock;
 
     nsresult                  mListenerStatus;
 
     PRUint32                  mPendingCount;
-    PRMonitor                *mPMonitor;
+    PRLock                   *mPLock;
 };
 
 #endif /* !nsStreamListenerProxy_h__ */

@@ -26,6 +26,7 @@
 #include "nsIURI.h"
 #include "netCore.h"
 #include "nsIInputStream.h"
+#include "nsIOutputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
 #include "nsILoadGroup.h"
@@ -41,6 +42,7 @@
 #include "nsIDownloader.h"
 #include "nsIStreamLoader.h"
 #include "nsIStreamIO.h"
+#include "nsIPipe.h"
 #include "nsXPIDLString.h"
 #include "prio.h"       // for read/write flags, permissions, etc.
 
@@ -471,29 +473,44 @@ NS_NewAsyncStreamListener(nsIStreamListener **result,
     return NS_NewStreamListenerProxy(result, receiver, eventQueue);
 }
 
-
+// Depracated, prefer a true synchonous implementation
 inline nsresult
 NS_NewSyncStreamListener(nsIInputStream **inStream, 
                          nsIOutputStream **outStream,
-                         nsIStreamListener **listener)
+                         nsIStreamListener **result)
 {
-    NS_NOTREACHED("This implementation is seriously broken!!"); // Darin
-    /*
+    NS_ENSURE_ARG_POINTER(inStream);
+    NS_ENSURE_ARG_POINTER(outStream);
+    NS_ENSURE_ARG_POINTER(result);
+
     nsresult rv;
-    nsCOMPtr<nsISyncStreamListener> lsnr;
-    static NS_DEFINE_CID(kSyncStreamListenerCID, NS_SYNCSTREAMLISTENER_CID);
-    rv = nsComponentManager::CreateInstance(kSyncStreamListenerCID,
-                                            nsnull, 
-                                            NS_GET_IID(nsISyncStreamListener),
-                                            getter_AddRefs(lsnr));
-    if (NS_FAILED(rv)) return rv;
-    rv = lsnr->Init(inStream, outStream);
+    nsCOMPtr<nsIInputStream> pipeIn;
+    nsCOMPtr<nsIOutputStream> pipeOut;
+
+    rv = NS_NewPipe(getter_AddRefs(pipeIn),
+                    getter_AddRefs(pipeOut),
+                    4*1024,   // NS_SYNC_STREAM_LISTENER_SEGMENT_SIZE
+                    32*1024); // NS_SYNC_STREAM_LISTENER_BUFFER_SIZE
     if (NS_FAILED(rv)) return rv;
 
-    *listener = lsnr;
-    NS_ADDREF(*listener);
-    */
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsCOMPtr<nsISimpleStreamListener> listener;
+    static NS_DEFINE_CID(kSimpleStreamListenerCID, NS_SIMPLESTREAMLISTENER_CID);
+    rv = nsComponentManager::CreateInstance(kSimpleStreamListenerCID,
+                                            nsnull,
+                                            NS_GET_IID(nsISimpleStreamListener),
+                                            getter_AddRefs(listener));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = listener->Init(pipeOut, nsnull);
+    if (NS_FAILED(rv)) return rv;
+
+    *inStream = pipeIn;
+    *outStream = pipeOut;
+    *result = listener;
+    NS_ADDREF(*inStream);
+    NS_ADDREF(*outStream);
+    NS_ADDREF(*result);
+    return NS_OK;
 }
 
 //
