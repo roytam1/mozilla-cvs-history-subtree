@@ -342,6 +342,43 @@ function SetProgressStatusCancel()
   }
 }
 
+function SetGlobalStatusMessage(message)
+{
+  alert(message); // XXX
+  CloseDialog(); // XXX
+  //SetFileStatusMessage(-1, message)
+}
+
+function SetFileStatusMessage(filei, message)
+{
+  if (gTransfer.files[filei].status == "failed")
+  {
+    gTransferingFailed = true;
+    gDialog.FinalStatusMessage.value = GetString("TransferFailed");
+    window.sizeToContent();
+  }
+  return;//XXX
+  // Status message is a child of <description> element
+  //  so text can wrap to multiple lines if necessary
+  var textNode = document.createTextNode(message);
+  if (textNode)
+    gDialog.StatusMessage.appendChild(textNode);
+
+  /*
+  if (gDialog.StatusMessage.firstChild)
+  {
+    gDialog.StatusMessage.firstChild.data = message;
+  }
+  else
+  {
+    var textNode = document.createTextNode(message);
+    if (textNode)
+      gDialog.StatusMessage.appendChild(textNode);
+  }
+  */
+  window.sizeToContent();
+}
+
 /*
   checks, if all fines finished (failed or success) and change dialog, if so
   @param close  bool  If all files finished successfully, also close dialog
@@ -446,43 +483,6 @@ function onEnterKey()
     return CloseDialog();
 
   return false;
-}
-
-function SetGlobalStatusMessage(message)
-{
-  alert(message); // XXX
-  CloseDialog(); // XXX
-  //SetFileStatusMessage(-1, message)
-}
-
-function SetFileStatusMessage(filei, message)
-{
-  if (gTransfer.files[filei].status == "failed")
-  {
-    gTransferingFailed = true;
-    gDialog.FinalStatusMessage.value = GetString("TransferFailed");
-    window.sizeToContent();
-  }
-  return;//XXX
-  // Status message is a child of <description> element
-  //  so text can wrap to multiple lines if necessary
-  var textNode = document.createTextNode(message);
-  if (textNode)
-    gDialog.StatusMessage.appendChild(textNode);
-
-  /*
-  if (gDialog.StatusMessage.firstChild)
-  {
-    gDialog.StatusMessage.firstChild.data = message;
-  }
-  else
-  {
-    var textNode = document.createTextNode(message);
-    if (textNode)
-      gDialog.StatusMessage.appendChild(textNode);
-  }
-  */
-  window.sizeToContent();
 }
 
 /*

@@ -84,8 +84,10 @@ function AddItem(fileid, filename, server, local)
 
 function FileLabel(lastModified, size)
 {
-  if (!lastModified || lastModified == "" || !size || size == "")
+  if (!lastModified || lastModified == "" || !size || size == "" || size == -2)
     return GetString("FileStatsUnknown");
+  if (size == -1)
+    return GetString("NonExistant");
 
   var dateString = new Date(Number(lastModified)).toLocaleString();
   return GetString("FileStats")

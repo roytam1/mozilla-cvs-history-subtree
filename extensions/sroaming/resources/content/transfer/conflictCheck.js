@@ -560,10 +560,6 @@ function substractFiles(files1, filesList)
       result.push(files1[i]);
   }
 
-  ddump("substract A - B = C");
-  dumpObject(files1, "  A", 1);
-  dumpObject(filesList, "  B", 1);
-  dumpObject(result, "  C", 1);
   return result;
 }
 
@@ -831,11 +827,13 @@ function localFilesStats(checkFiles)
       }
       else
       {
+        f.size = -1;
         // use error field?
       }
     }
     catch(e)
     {
+      f.size = -2;
       // XXX use error field? (see also above)
     }
     result.push(f);

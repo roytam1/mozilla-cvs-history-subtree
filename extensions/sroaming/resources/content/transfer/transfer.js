@@ -849,14 +849,13 @@ TransferProgressListener.prototype =
     ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
     ddump("  StatusArg: " + aStatusArg);
 
-    /* FTP sends us onStopRequest *before* e.g. onStatus(SENDING_TO), so
+    /* We sometimes get onStopRequest *before* e.g. onStatus(SENDING_TO), so
        ignore all status msgs after onstop. This is dangerous, because
        IIRC I saw onStop also on the very beginning of a transfer, and
        if that happens for the last file, we might close the dialog before
        the transfer finished, but I don't know another quick and not too bad
        workaround. */
-    var scheme = this.file.channel.URI.scheme;
-    if (scheme == "ftp" && status == "done")
+    if (status == "done")
       return;
 
     this.privateStatusChange(aStatusCode);
