@@ -207,8 +207,7 @@ $(OBJDEST):
 	$(NSINSTALL) -D $(LIBDIR)
 
 clean::
-	$(RM) $(CLIENT_OBJS)
-	$(RM) $(BINS)
+	$(RM) $(OBJDEST)
 
 install:: $(OBJDEST) libdir $(BINS)
 	$(NSINSTALL) $(LDAPDELETE) $(INSTALLDIR)

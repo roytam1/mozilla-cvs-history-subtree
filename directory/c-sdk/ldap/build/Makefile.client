@@ -26,6 +26,7 @@ NSPR_TREE	= ../..
 CSRCS	= dirver.c
 
 include $(NSPR_TREE)/config/rules.mk
+include ../../build.mk
 
 TARGETS	= $(OBJDIR)/dirver$(BIN_SUFFIX)
 

@@ -45,7 +45,12 @@ ifeq ($(NS_USE_GCC), 1)
 	OS_CFLAGS		    =
 	COMPILER_TAG        = _gcc
 else
-	CC			        = cc -Ae
+	CC				= cc -Ae
+ifeq ($(HAVE_CCONF), 1)
+ifeq ($(USE_64), 1)
+	CC			        = cc -Ae +DD64
+endif
+endif
 	CCC			        = CC -ext
 	OS_CFLAGS           = +ESlit
 endif
@@ -135,8 +140,8 @@ endif
 ifeq ($(OS_RELEASE),B.11.00)
 	ifneq ($(NS_USE_GCC), 1)
 		CCC			        = /opt/aCC/bin/aCC -ext
-		ifeq ($(USE_64), 1)
-			OS_CFLAGS       += +DA2.0W +DS2.0
+		ifeq ($(USE_64),1)
+			OS_CFLAGS       += +DA2.0W +DS2.0 +DD64
 			COMPILER_TAG    = _64
 		else
 			OS_CFLAGS       += +DAportable +DS2.0

@@ -318,12 +318,10 @@ ifeq ($(OS_ARCH), HP-UX)
 #    in an executable visible to shared libraries loaded at runtime.
 LINK_EXE        = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
         -o $@ $(OBJS) $(EXTRA_LIBS)
-LINK_EXE_NOLIBSOBJS     = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-        $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
-LINK_EXE_NOLIBSOBJS_NOCXX       = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
-        $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
-LINK_EXE_NOCXX = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
+ifeq ($(USE_64), 1)
+LINK_EXE        = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
         -o $@ $(OBJS) $(EXTRA_LIBS)
+endif
 
 else # HP-UX
 # everything except HPUX
@@ -331,9 +329,6 @@ ifeq ($(OS_ARCH), ReliantUNIX)
 # Use the C++ compiler for linking if at least ONE object is C++
 export LD_RUN_PATH=$(RPATHFLAG)
 LINK_EXE      = $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS)
-LINK_EXE_NOLIBSOBJS   = $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@
-LINK_EXE_NOLIBSOBJS_NOCXX     = $(CC) $(ALDFLAGS) $(LDFLAGS) -o $@
-LINK_EXE_NOCXX = $(CC) $(ALDFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS)
 
 else # ReliantUNIX
 ifdef USE_LD_RUN_PATH

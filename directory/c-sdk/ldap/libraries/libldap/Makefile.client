@@ -157,6 +157,12 @@ EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 EXTRA_LIBS += -ldl -brtl -lpthreads -lc_r -lm
 endif
 
+ifeq ($(OS_ARCH), HP-UX)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
+EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+EXTRA_LIBS += -ldld -lm -lpthread
+endif
+
 OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
