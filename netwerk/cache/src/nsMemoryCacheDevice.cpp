@@ -232,7 +232,8 @@ nsMemoryCacheDevice::GetTransportForEntry( nsCacheEntry *    entry,
                                                 (void **) transport);
         if (NS_FAILED(rv)) return rv;
 
-        return entry->SetData(*transport);
+        entry->SetData(*transport);
+        return NS_OK;
     }
 }
 
@@ -341,6 +342,13 @@ nsMemoryCacheDevice::Visit(nsICacheVisitor * visitor)
     }
 
     return NS_OK;
+}
+
+
+nsresult
+nsMemoryCacheDevice::EvictEntries(const char * clientID)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
