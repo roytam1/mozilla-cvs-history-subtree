@@ -25,13 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-#ifndef NSPR20
-#include "jsarena.h"
-#else
 /* Removed by JSIFY: #include "plarena.h"
  */
 #include "jsarena.h" /* Added by JSIFY */
-#endif
 /* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsclist.h"
@@ -796,13 +792,9 @@ JS_AddNamedRoot(JSContext *cx, void *rp, const char *name)
 
 #ifdef DEBUG
 
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 
 typedef struct NamedRootDumpArgs {
     void (*dump)(const char *name, void *rp, void *data);
@@ -2717,7 +2709,7 @@ JS_IsAssigning(JSContext *cx)
 
 #ifdef XP_PC
 #include <windows.h>
-#if defined(XP_OS2_HACK)
+#ifdef XP_OS2_HACK
 /*DSR031297 - the OS/2 equiv is dll_InitTerm, but I don't see the need for it*/
 #else
 /*

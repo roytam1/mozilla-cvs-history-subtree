@@ -21,13 +21,13 @@
  */
 #include <stdio.h>
 
-#if defined(sgi)
+#ifdef sgi
 #ifndef IRIX
 # error "IRIX is not defined"
 #endif
 #endif
 
-#if defined(__sun)
+#ifdef __sun
 #if defined(__svr4) || defined(__svr4__)
 #ifndef SOLARIS
 # error "SOLARIS is not defined"
@@ -39,37 +39,37 @@
 #endif
 #endif
 
-#if defined(__hpux)
+#ifdef __hpux
 #ifndef HPUX
 # error "HPUX is not defined"
 #endif
 #endif
 
-#if defined(__osf__)
+#ifdef __osf__
 #ifndef OSF1
 # error "OSF1 is not defined"
 #endif
 #endif
 
-#if defined(_IBMR2)
+#ifdef _IBMR2
 #ifndef AIX
 # error "AIX is not defined"
 #endif
 #endif
 
-#if defined(linux)
+#ifdef linux
 #ifndef LINUX
 # error "LINUX is not defined"
 #endif
 #endif
 
-#if defined(bsdi)
+#ifdef bsdi
 #ifndef BSDI
 # error "BSDI is not defined"
 #endif
 #endif
 
-#if defined(M_UNIX)
+#ifdef M_UNIX
 #ifndef SCO
 # error "SCO is not defined"
 #endif

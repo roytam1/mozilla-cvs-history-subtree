@@ -23,13 +23,9 @@
 #include "jstypes.h"
 #include "prlock.h"
 #include "prcvar.h"
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 
 #define Thin_GetWait(W) ((jsword)(W) & 0x1)
 #define Thin_SetWait(W) ((jsword)(W) | 0x1)

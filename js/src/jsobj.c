@@ -23,22 +23,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-#ifndef NSPR20
-#include "jsarena.h"
-#else
 /* Removed by JSIFY: #include "plarena.h"
  */
 #include "jsarena.h" /* Added by JSIFY */
-#endif
 /* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 #include "jsprf.h"
 #include "jsapi.h"
 #include "jsatom.h"

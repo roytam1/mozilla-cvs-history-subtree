@@ -32,13 +32,9 @@
 #include "jstypes.h"
 /* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 #include "jsprf.h"
 #include "jsapi.h"
 #include "jsarray.h"

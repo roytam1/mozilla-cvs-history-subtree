@@ -21,13 +21,9 @@
 /*
  * JS execution context.
  */
-#ifndef NSPR20
-#include "jsarena.h"
-#else
 /* Removed by JSIFY: #include "plarena.h"
  */
 #include "jsarena.h" /* Added by JSIFY */
-#endif
 #include "jsclist.h"
 #include "jslong.h"
 #include "jsatom.h"

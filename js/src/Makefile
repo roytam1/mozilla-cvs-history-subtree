@@ -19,7 +19,7 @@ DEPTH		= ../..
 include $(DEPTH)/config/config.mk
 
 ifdef MOZ_OJI
-#DIRS = liveconnect
+DIRS = liveconnect
 endif
 
 LIBRARY_NAME	= js
@@ -71,10 +71,14 @@ CSRCS		= 	jsapi.c		\
 			prmjtime.c	\
 			$(NULL)
 
-EXPORTS		= jsapi.h \
+EXPORTS		= js.msg \
+		  jsapi.h \
 		  jsarray.h \
+		  jsarena.h \
 		  jsatom.h \
+		  jsbit.h \
 		  jsbool.h \
+		  jsclist.h \
 		  jscntxt.h \
 		  jscompat.h \
 		  jsconfig.h \
@@ -84,6 +88,7 @@ EXPORTS		= jsapi.h \
 		  jsemit.h \
 		  jsfun.h \
 		  jsgc.h \
+	          jshash.h \
 		  jsinterp.h \
 		  jslock.h \
 		  jslong.h \
@@ -95,6 +100,7 @@ EXPORTS		= jsapi.h \
 		  jsosdep.h \
 		  jsotypes.h \
 		  jsparse.h \
+		  jsprf.h \
 		  jsprvtd.h \
 		  jspubtd.h \
 		  jsregexp.h \
@@ -103,6 +109,7 @@ EXPORTS		= jsapi.h \
 		  jsscript.h \
 		  jsstr.h \
 		  jstypes.h \
+		  jsutil.h \
 		  jsxdrapi.h \
 		  $(NULL)
 

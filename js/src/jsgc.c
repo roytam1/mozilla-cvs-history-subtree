@@ -30,22 +30,14 @@
 #include <stdlib.h>     /* for free, called by JS_ARENA_DESTROY */
 #include <string.h>	/* for memset, called by jsarena.h macros if DEBUG */
 #include "jstypes.h"
-#ifndef NSPR20
-#include "jsarena.h"
-#else
 /* Removed by JSIFY: #include "plarena.h"
  */
 #include "jsarena.h" /* Added by JSIFY */
-#endif
 /* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 #include "jsapi.h"
 #include "jsatom.h"
 #include "jscntxt.h"

@@ -22,13 +22,9 @@
  * JS symbol tables.
  */
 #include "jstypes.h"
-#ifndef NSPR20
-#include "jshash.h"
-#else
 /* Removed by JSIFY: #include "JShash.h"
  */
 #include "jshash.h" /* Added by JSIFY */
-#endif
 #include "jsobj.h"
 #include "jsprvtd.h"
 #include "jspubtd.h"
