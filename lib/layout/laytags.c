@@ -6905,7 +6905,9 @@ XP_TRACE(("lo_LayoutTag(%d)\n", tag->type));
 		 */
 		case P_SPAN:
 		{
+#ifdef DOM
 			lo_process_span_tag(context, state, tag);
+#endif
 			break;
 		}
 
