@@ -52,7 +52,7 @@ class nsIRDFResource;
 class nsIBookmarksService;
 class nsIPrefBranch;
 
-#import "c:\windows\system32\pstorec.dll"
+#import PSTOREC_DLL
 using namespace PSTORECLib;
 
 class nsIEProfileMigrator : public nsIBrowserProfileMigrator {
