@@ -26,6 +26,10 @@
 #include "prclist.h"
 #include "nsError.h"
 
+#ifdef ERROR
+#undef ERROR
+#endif
+
 class nsISupports;
 class nsIDOMNode;
 struct PRLogModuleInfo;
