@@ -1111,7 +1111,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMScreen)
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN(XMLDocument, nsIDOMDocument)
+  DOM_CLASSINFO_MAP_BEGIN(XMLDocument, nsIDOMXMLDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMXMLDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
@@ -2895,7 +2895,7 @@ nsWindowSH::DefineInterfaceProperty(JSContext *cx, JSObject *obj,
   nsCAutoString name("nsIDOM");
   name.Append(::JS_GetStringBytes(str));
 
-  JSObject *if_object = GetInterfaceObject(cx, obj, name);
+  JSObject *if_object = GetInterfaceObject(cx, obj, name.get());
 
   if (!if_object) {
     return NS_ERROR_UNEXPECTED;

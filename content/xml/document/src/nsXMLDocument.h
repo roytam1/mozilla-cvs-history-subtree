@@ -57,8 +57,7 @@ class nsXMLDocument : public nsMarkupDocument,
                       public nsIXMLDocument,
                       public nsIHTMLContentContainer,
                       public nsIInterfaceRequestor,
-                      public nsIHttpEventSink,
-                      public nsIDOMXMLDocument
+                      public nsIHttpEventSink
 {
 public:
   nsXMLDocument();

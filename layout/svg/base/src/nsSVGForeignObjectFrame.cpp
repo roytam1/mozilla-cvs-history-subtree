@@ -558,13 +558,11 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   // XXX we always pass this off as an initial reflow. is that a problem?
   nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial, renderingContext, availableSpace);
 
-  nsCOMPtr<nsISpaceManager> spaceManager;
-  nsSpaceManager* rawPtr = nsSpaceManager::Create(this);
-  if (!rawPtr) {
+  nsSpaceManager* spaceManager = new nsSpaceManager(mPresShell, this);
+  if (!spaceManager) {
     return dirtyRegion;
   }
-  spaceManager = do_QueryInterface(rawPtr);
-  reflowState.mSpaceManager = spaceManager.get();
+  reflowState.mSpaceManager = spaceManager;
    
   nsHTMLReflowMetrics desiredSize(nsnull);
   nsReflowStatus status;
