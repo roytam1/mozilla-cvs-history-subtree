@@ -600,16 +600,6 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 
   PtWidget_t *parentWidget = nsnull;
 
-  nsIWidget *baseParent = aInitData &&
-                            (aInitData->mWindowType == eWindowType_dialog ||
-                             aInitData->mWindowType == eWindowType_toplevel ||
-                             aInitData->mWindowType == eWindowType_invisible) ?
-                          nsnull : aParent;
-
-  BaseCreate( baseParent, aRect, aHandleEventFunction, aContext, aAppShell, aToolkit, aInitData );
-
-  mParent = aParent;
-
   if( aNativeParent ) {
     parentWidget = (PtWidget_t*)aNativeParent;
     // we've got a native parent so listen for resizes
@@ -620,6 +610,17 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
 		mListenForResizes = aInitData ? aInitData->mListenForResizes : PR_FALSE;
   	}
 
+	if( aInitData->mWindowType == eWindowType_child && !parentWidget ) return NS_ERROR_FAILURE;
+
+  nsIWidget *baseParent = aInitData &&
+                            (aInitData->mWindowType == eWindowType_dialog ||
+                             aInitData->mWindowType == eWindowType_toplevel ||
+                             aInitData->mWindowType == eWindowType_invisible) ?
+                          nsnull : aParent;
+
+  BaseCreate( baseParent, aRect, aHandleEventFunction, aContext, aAppShell, aToolkit, aInitData );
+
+  mParent = aParent;
   mBounds = aRect;
 
   CreateNative (parentWidget);
