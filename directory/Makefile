@@ -77,12 +77,18 @@ ifneq ($(HAVE_CCONF), 1)
 	else \
 		echo "No NSS $(NSS_VERSION) directory found"; \
 	fi
-else
 	@if [ -d $(CONFIGDIR)/ ]; then \
 		cd $(CONFIGDIR); \
 		gmake; \
 	else \
 		echo "No NSS $(CONFIGDIR) directory found"; \
+	fi
+else
+	@if [ -d $(CORECONFDIR)/ ]; then \
+		cd $(CORECONFDIR); \
+		gmake; \
+	else \
+		echo "No NSS $(CORECONFDIR) directory found"; \
 	fi
 endif
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
