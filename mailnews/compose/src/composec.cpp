@@ -692,7 +692,7 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
 	  mailbox = mailbox_list;
 	  for (; count > 0; count--) {
       nsCOMPtr<nsIX509Cert> cert;
-		  certdb->GetCertByEmailAddress(nsnull, NS_ConvertUTF8toUCS2(mailbox).get(), getter_AddRefs(cert));
+		  certdb->GetCertByEmailAddress(nsnull, mailbox, getter_AddRefs(cert));
 		  if (!cert) {
 			  mailbox += nsCRT::strlen(mailbox) + 1;
 			  continue;
