@@ -185,6 +185,7 @@ nsrefcnt _class::AddRef(void)                                \
 #define NS_IMPL_RELEASE(_class)                        \
 nsrefcnt _class::Release(void)                         \
 {                                                      \
+  NS_PRECONDITION(0 != mRefCnt, "dup release");        \
   if (--mRefCnt == 0) {                                \
     delete this;                                       \
     return 0;                                          \
