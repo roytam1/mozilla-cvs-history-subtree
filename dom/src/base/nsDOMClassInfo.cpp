@@ -1323,7 +1323,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
   nsresult rv = node->GetParentNode(getter_AddRefs(parentNode));
 
-  nsISupports *p = parentNode;
+  nsISupports *native_parent = parentNode;
 
   if (!parentNode) {
     if (!sgo) {
@@ -1335,15 +1335,15 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
       return NS_OK;
     }
 
-    p = sgo;
+    native_parent = sgo;
   }
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
   jsval v;
 
-  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), p, NS_GET_IID(nsISupports),
-                  &v);
+  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native_parent,
+                  NS_GET_IID(nsISupports), &v);
 
   *parentObj = JSVAL_TO_OBJECT(v);
 
