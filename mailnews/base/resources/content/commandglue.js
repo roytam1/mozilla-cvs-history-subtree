@@ -811,7 +811,7 @@ function FolderPaneSelectionChange()
     var endRange = {value: 0};
 
     outliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
-    if (startRange.value >=0 && startRange.value == endRange.value)
+    if (outliner.outlinerBoxObject.selection.count <= 1)
         ChangeFolderByIndex(startRange.value);
     else
         ClearThreadPane();

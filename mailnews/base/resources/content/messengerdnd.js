@@ -360,6 +360,7 @@ function DropOnFolderOutliner(event)
     if (!dragSession)
         return false;
 
+
     var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
 
     var list = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);

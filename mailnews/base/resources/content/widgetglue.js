@@ -55,7 +55,7 @@ function GetSelectedFolderURI()
     folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
     
     //  you can only select one folder / server to add new folder / subscribe to
-    if (folderOutliner.outlinerBoxObject.selection.count == 1)
+    if (folderOutliner.outlinerBoxObject.selection.count <= 1)
     {
         var resource = GetFolderResource(startRange.value);
         if (resource)

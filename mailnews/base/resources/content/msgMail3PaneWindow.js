@@ -708,9 +708,9 @@ function FolderPaneOnClick(event)
     dump("In FolderPaneClick()\n");
 
     var folderOutliner = GetFolderOutliner();
-    var row = { };
-    var col = { };
-    var elt = { };
+    var row;
+    var col;
+    var elt;
     folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
     var folderResource = GetFolderResource(row.value);
 
@@ -841,9 +841,8 @@ function GetSelectedMsgFolders()
   
     var folderArray = new Array(count);
     for(var i = 0; i < count; i++)
-    {
-        var folderResource = GetFolderResource(i);
-        var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    {        
+        var msgFolder = GetFolderResource(i).QueryInterface(Components.interfaces.nsIMsgFolder);
 
         if(msgFolder)
             folderArray[i] = msgFolder;	
@@ -915,9 +914,7 @@ function ClearMessageSelection()
 function GetCompositeDataSource(command)
 {
 	if (command == "GetNewMessages" || command == "NewFolder" || command == "MarkAllMessagesRead")
-	{
         return GetFolderDatasource();
-	}
 
 	return null;
 }
