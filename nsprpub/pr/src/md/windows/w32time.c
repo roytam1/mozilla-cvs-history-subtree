@@ -461,7 +461,14 @@ size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const stru
                         }
                         break;
                     case 'j':
-                        PR_ASSERT(0);
+                        {
+                            /*
+                             * Day of year.
+                             */
+                            traverse++;
+                            wsprintfW(buf, (PR_TRUE == poundOutput) ? _T("d") : _T(".3d"), convertTM.tm_yday);
+                            helper_Winstrftime(buf, &outDst, &outMax, &errorOut, &hadEnoughSpace, *traverse);
+                        }
                         break;
                     case 'm':
                         PR_ASSERT(0);
