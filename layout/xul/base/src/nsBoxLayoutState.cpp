@@ -43,15 +43,9 @@
 //
 
 #include "nsBoxLayoutState.h"
-#include "nsBoxFrame.h"
-#include "nsHTMLAtoms.h"
-#include "nsXULAtoms.h"
-#include "nsIContent.h"
-#include "nsPresContext.h"
 
 nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext):mPresContext(aPresContext), 
                                                                  mReflowState(nsnull), 
-                                                                 mType(Dirty),
                                                                  mScrolledBlockSizeConstraint(-1,-1),
                                                                  mLayoutFlags(0),
                                                                  mPaintingDisabled(PR_FALSE)
@@ -62,7 +56,6 @@ nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext):mPresContext(aPr
 nsBoxLayoutState::nsBoxLayoutState(const nsBoxLayoutState& aState)
 {
   mPresContext = aState.mPresContext;
-  mType        = aState.mType;
   mReflowState = aState.mReflowState;
   mScrolledBlockSizeConstraint = aState.mScrolledBlockSizeConstraint;
   mLayoutFlags = aState.mLayoutFlags;
@@ -72,7 +65,6 @@ nsBoxLayoutState::nsBoxLayoutState(const nsBoxLayoutState& aState)
 }
 
 nsBoxLayoutState::nsBoxLayoutState(nsIPresShell* aShell):mReflowState(nsnull), 
-                                                         mType(Dirty),
                                                          mScrolledBlockSizeConstraint(-1,-1),
                                                          mLayoutFlags(0),
                                                          mPaintingDisabled(PR_FALSE)
@@ -85,7 +77,6 @@ nsBoxLayoutState::nsBoxLayoutState(nsPresContext* aPresContext,
                                    const nsHTMLReflowState& aReflowState, 
                                    nsHTMLReflowMetrics& aDesiredSize):mPresContext(aPresContext),
                                                                       mReflowState(&aReflowState),                                                                    
-                                                                      mType(Dirty),
                                                                       mScrolledBlockSizeConstraint(-1,-1),
                                                                       mLayoutFlags(0),
                                                                       mPaintingDisabled(PR_FALSE)
