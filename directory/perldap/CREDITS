@@ -2,24 +2,40 @@ This is a short list of people that have contributed to the success of
 this project.
 
 
-* Leif Hedstrom <leif@perldap.org> and Clayton Donley:
+* Leif Hedstrom <leif@perldap.org>
 
-	- Wrote most of the API and OO layers.
+	- Project lead.
+	- Wrote some of the API code,  and most of OO layers (Conn.pm,
+	  Entry.pm etc.)
+	- Unix portability test.
+	- Port to Windows/NT and ActivePerl.
+
+
+* Clayton Donley
+
+	  - Wrote a lot of the initial API code (API.xs and API.pm).
+
+
+* Kevin McCarthy <kmccarth@perldap.org>
+
+	- Bug fixes, tons of contribution, particularly to the API.xs file.
+
+
+* Michelle Wyner <mwyner@perldap.org>
+
+	- Testing, bug fixes, and documentation, as well as working on new
+          modules for PerLDAP v2.0.
+
+
+* John Kristian <kristian@netscape.com>
+
+	- Rewrote the entire LDIF module, great stuff!
 
 
 * Netscape Netcenter team (Kevin Burns, Max Block, Mark Takacs etc.)
 
 	- Tons of ideas and requests for features.
 	- Discovering bugs daily (great, thanks... ;-).
-
-
-* Kevin McCarthy <kmccarth@nortelnetworks.com>
-
-	- Bug fixes.
-
-* John Kristian <kristian@netscape.com>
-
-	- Rewrote the entire LDIF module, great stuff!
 
 
 * Bob Ferguson <rferguso@netscape.com>

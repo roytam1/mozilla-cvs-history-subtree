@@ -1050,6 +1050,7 @@ matching. The usage is identical to the example for hasValue, e.g.
 Like B<matchValue>, except the attribute values are considered being DNs.
 
 =item B<move>
+
 Identical to the copy method, except the original attribute is
 deleted once the move to the new attribute is complete.
 
