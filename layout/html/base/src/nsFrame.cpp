@@ -1766,7 +1766,7 @@ NS_IMETHODIMP nsFrame::HandleRelease(nsIPresContext* aPresContext,
       nsMouseEvent *me = 0;
 
       result = frameselection->GetDelayedCaretData(&me);
-
+      nsIFrame *resultFrame = this;
       if (NS_SUCCEEDED(result) && !mouseDown && me && me->clickCount < 2)
       {
         // We are doing this to simulate what we would have done on HandlePress
@@ -1778,13 +1778,23 @@ NS_IMETHODIMP nsFrame::HandleRelease(nsIPresContext* aPresContext,
 
         result = GetContentAndOffsetsFromPoint(aPresContext, me->point, getter_AddRefs(content), startOffset, endOffset, beginFrameContent);
         if (NS_FAILED(result)) return result;
+        if (content != mContent) //get primary frame for style purposes
+        {
+          nsCOMPtr<nsIPresShell> shell;
+          aPresContext->GetShell(getter_AddRefs(shell));
+          if (shell)
+          {
+            if (NS_FAILED(shell->GetPrimaryFrameFor(content, &resultFrame)))
+              resultFrame = this;
+          }
+        }
 
       // do we have CSS that changes selection behaviour?
       {
         PRBool    changeSelection;
         nsCOMPtr<nsIContent>  selectContent;
         PRInt32   newStart, newEnd;
-        if (NS_SUCCEEDED(frameselection->AdjustOffsetsFromStyle(this, &changeSelection, getter_AddRefs(selectContent), &newStart, &newEnd))
+        if (NS_SUCCEEDED(frameselection->AdjustOffsetsFromStyle(resultFrame, &changeSelection, getter_AddRefs(selectContent), &newStart, &newEnd))
           && changeSelection)
         {
           content = selectContent;
@@ -3297,6 +3307,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
       if (NS_SUCCEEDED(result) && newIt)
       {
         aPos->mResultFrame = resultFrame;
+        aPos->mInlineFrameStop = PR_FALSE; //failed to find final stop
         return NS_OK;
       }
       //resultFrame is not a block frame
@@ -3414,24 +3425,27 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
                 nsIFrame *resultFrameParent;
                 nsIFrame *currentFrame = resultFrame;
                 currentFrame->GetParent(&resultFrameParent);
-
-                resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                do
+                currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+                while (display->mDisplay == NS_STYLE_DISPLAY_INLINE)
                 {
-                  currentFrame = resultFrameParent;
-                  currentFrame->GetParent(&resultFrameParent);
-                  if (!resultFrameParent)
-                    break;
                   //check for a link. if we hit one we know we have 1 more level to go
                   currentFrame->GetContent(getter_AddRefs(content));
                   nsCOMPtr<nsIDOMHTMLAnchorElement> a(do_QueryInterface(content));
                   if (a)
                   {
                     a->GetHref(href);
-                    isLink = !href.IsEmpty();
+                    if (!href.IsEmpty())
+                    {
+                      isLink = PR_TRUE;
+                      break;
+                    }
                   }
-                  resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                } while (display->mDisplay == NS_STYLE_DISPLAY_INLINE && !isLink);
+                  currentFrame = resultFrameParent;
+                  currentFrame->GetParent(&resultFrameParent);
+                  if (!resultFrameParent)
+                    break;
+                  currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+                }
                 //get next in flow...
                 if (isLink)
                 {
@@ -3512,7 +3526,8 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
                                           getter_AddRefs(aPos->mResultContent), aPos->mContentOffset,
                                           aPos->mContentOffsetEnd, aPos->mPreferLeft);
 			  PRBool selectable;
-        resultFrame->IsSelectable(&selectable, nsnull);
+        PRUint8 selectStyle;
+        resultFrame->IsSelectable(&selectable, &selectStyle);
 			  if (!selectable)
           return NS_ERROR_FAILURE;//cant go to unselectable frame
         
@@ -3523,6 +3538,54 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
             aPos->mPreferLeft = PR_FALSE;
           else
             aPos->mPreferLeft = PR_TRUE;
+            //now check for user_select_all. its its set then start at the respective edge of this content
+            //to make sure we go over
+            if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
+            {
+              //get parent frame until we no longer have this style
+              //then grab the content and set the offsets accordingly
+              nsIFrame *parentFrame = resultFrame;
+              nsIFrame *currentFrame;
+              nsCOMPtr<nsIContent> newContent;
+              PRInt32 newOffset;
+
+              PRUint8 parentStyle;
+              do 
+              {
+                currentFrame = parentFrame;
+                currentFrame->GetParent(&parentFrame);
+                if (parentFrame)
+                  parentFrame->IsSelectable(&selectable, &parentStyle);
+              }
+              while (parentFrame && (parentStyle == NS_STYLE_USER_SELECT_ALL));
+              if (parentFrame)
+              {
+                nsCOMPtr<nsIContent> parentContent;
+                currentFrame->GetContent(getter_AddRefs(newContent));
+
+                if (newContent)
+                {
+                  result = newContent->GetParent(*getter_AddRefs(parentContent));
+                  if (NS_SUCCEEDED(result) && parentContent)
+                  {
+                    if (NS_SUCCEEDED(parentContent->IndexOf(newContent, newOffset)))
+                    {
+                      aPos->mResultContent = parentContent;
+                      if (aPos->mDirection == eDirNext)
+                        aPos->mContentOffset = newOffset;
+                      else //previous
+                        aPos->mContentOffset = newOffset+1;
+                      aPos->mContentOffsetEnd = aPos->mContentOffset;
+                      aPos->mInlineFrameStop = PR_TRUE;//success
+                      aPos->mResultFrame = parentFrame;
+                      return NS_OK;
+
+                    }
+                  }
+                }
+              }
+
+            }
         }
         else {
           if (aPos->mDirection == eDirPrevious && (resultFrame == nearStoppingFrame))
@@ -3895,6 +3958,7 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
                       }
                       aPos->mResultContent = newContent;
                       aPos->mContentOffset = newOffset;
+                      break;
                     }
                   }
                 }
