@@ -264,7 +264,9 @@ int ReturnErrorStatus (int status)
 		status |= status; /* set a breakpoint HERE to find errors */
 	return status;
 }
+
 #define STATUS(Status)			ReturnErrorStatus (Status)
+
 
 #define PUTBLOCK(b, l)  NET_StreamPutBlock \
                                     (cd->stream, b, l)
@@ -274,6 +276,8 @@ int ReturnErrorStatus (int status)
                                     (cd->stream)
 #define ABORT_STREAM(s) NET_StreamAbort \
                                     (cd->stream, s)
+
+
 PUBLIC void
 NET_SetSendRefererHeader(Bool b)
 {

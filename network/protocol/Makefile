@@ -48,6 +48,7 @@ DIRS += \
 	nntp \
 	pop3 \
 	imap4 \
+	certld \
 	$(NULL)
 endif
 

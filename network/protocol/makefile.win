@@ -44,6 +44,7 @@ DIRS= \
 	smtp \
 	nntp \
 	mailbox \
+	certld \
 	imap4 \
 !endif
 !ifdef MOZ_LDAP
