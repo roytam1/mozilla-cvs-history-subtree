@@ -455,7 +455,7 @@ nsContextMenu.prototype = {
     },
     // Open clicked-in frame in the same window
     showOnlyThisFrame : function () {
-        window._content.location.href = this.target.ownerDocument.location.href;
+        window.loadURI(this.target.ownerDocument.location.href);
     },
     // Open new "view source" window with the frame's URL.
     viewFrameSource : function () {
