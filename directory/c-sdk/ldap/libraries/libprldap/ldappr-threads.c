@@ -233,8 +233,12 @@ prldap_set_ld_error( int err, char *matched, char *errmsg, void *errorarg )
 		map->prtm_index )) == NULL ) {
 	    /*
 	     * error info. has not yet been allocated for this thread.
-	     * do it now (we never free this memory since it is recycled
-	     * and used by other LDAP sessions, etc.
+	     * do it now.  Note that we free this memory only for the
+	     * thread that calls prldap_thread_dispose_handle(), which
+	     * should be the one that called ldap_unbind() -- see
+	     * prldap_return_map().  Not freeing the memory used by
+	     * other threads is deemed acceptable since it will be
+	     * recycled and used by other LDAP sessions.
 	     */
 	    eip = (PRLDAP_ErrorInfo *)PR_Calloc( 1,
 		    sizeof( PRLDAP_ErrorInfo ));
@@ -383,7 +387,11 @@ prldap_return_map( PRLDAP_TPDMap *map )
 
     PR_Lock( prldap_map_mutex );
 
-    /* dispose of thread-private LDAP error information */
+    /*
+     * Dispose of thread-private LDAP error information.  Note that this
+     * only disposes of the memory consumed on THIS thread, but that is
+     * okay.  See the comment in prldap_set_ld_error() for the reason why.
+     */
     if (( eip = (PRLDAP_ErrorInfo *)PR_GetThreadPrivate( map->prtm_index ))
 		!= NULL ) {
 	if ( eip->plei_matched != NULL ) {
