@@ -146,6 +146,9 @@ public:
     {
     }
 
+    /*
+     * Get the context node.
+     */
     virtual const txXPathNode& getContextNode() = 0;
 
     /*
