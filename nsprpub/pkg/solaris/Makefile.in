@@ -43,7 +43,6 @@ else
 # AMD64
 	PROTO += $(ROOT)/usr/lib/mps/amd64
 endif
-	PROTO += $(ROOT)/usr/include/mps/64
 	abs_dist64_libdir = $(abs_dist_libdir)
 	abs_dist32_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_64_OPT|_OPT|g" -e "s|_64_DBG|_DBG|g")
 	abs_dist64_includedir = $(abs_dist_includedir)
@@ -84,6 +83,3 @@ $(ROOT)/usr/lib/mps/cpu/sparcv8plus:
 $(ROOT)/usr/include/mps:
 	mkdir -p $@
 	$(CP) -r $(abs_dist32_includedir)/* $@
-$(ROOT)/usr/include/mps/64:
-	mkdir -p $@
-	$(CP) -r $(abs_dist64_includedir)/* $@
