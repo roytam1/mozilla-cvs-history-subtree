@@ -3787,12 +3787,12 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 
 
 
-#include "nsIImageContainer.h"
+#include "gfxIImageContainer.h"
 #include "nsIImageFrame.h"
 #include "nsPIImageContainerWin.h"
 
-/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
-NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+/* [noscript] void drawImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextWin::DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
   nsPoint pt;
   nsRect sr;
@@ -3813,8 +3813,8 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   return cw->DrawImage(mDC, &sr, &pt);
 }
 
-/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
-NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+/* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
   nsRect dr;
   nsRect sr;
@@ -3835,14 +3835,14 @@ NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(nsIImageContainer *aImage, 
   return cw->DrawScaledImage(mDC, &sr, &dr);
 }
 
-/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsRenderingContextWin::DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect)
+/* [noscript] void drawTile (in gfxIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsRenderingContextWin::DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect)
+/* [noscript] void drawScaledTile (in gfxIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextWin::DrawScaledTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

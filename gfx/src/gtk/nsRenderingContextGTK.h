@@ -172,10 +172,10 @@ public:
   NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
 
-  NS_IMETHOD DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint);
-  NS_IMETHOD DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect);
-  NS_IMETHOD DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect);
-  NS_IMETHOD DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect);
+  NS_IMETHOD DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+  NS_IMETHOD DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect);
+  NS_IMETHOD DrawTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect);
+  NS_IMETHOD DrawScaledTile(gfxIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect);
 
 
 #ifdef MOZ_MATHML

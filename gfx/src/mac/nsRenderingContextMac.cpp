@@ -1484,11 +1484,11 @@ nsRenderingContextMac::GetBoundingMetrics(const PRUnichar*   aString,
 
 #endif /* MOZ_MATHML */
 
-#include "nsIImageContainer.h"
+#include "gfxIImageContainer.h"
 #include "nsIImageFrame.h"
 
-/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
-NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+/* [noscript] void drawImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextMac::DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
 
   // XXX there are some rounding problems in this code (or in the image frame)
@@ -1609,20 +1609,20 @@ NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImageContainer *aImage, const 
   return NS_OK;
 }
 
-/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
-NS_IMETHODIMP nsRenderingContextMac::DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+/* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
-NS_IMETHODIMP nsRenderingContextMac::DrawTile(nsIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+/* [noscript] void drawTile (in gfxIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
-NS_IMETHODIMP nsRenderingContextMac::DrawScaledTile(nsIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+/* [noscript] void drawScaledTile (in gfxIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
+NS_IMETHODIMP nsRenderingContextMac::DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
