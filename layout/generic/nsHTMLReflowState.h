@@ -65,23 +65,6 @@ struct nsHypotheticalBox;
 #define NS_UNCONSTRAINEDSIZE NS_MAXSIZE
 
 /**
- * The reason the frame is being reflowed.
- *
- * XXX Should probably be a #define so it can be extended for specialized
- * reflow interfaces...
- *
- * @see nsHTMLReflowState
- */
-enum nsReflowReason {
-  eReflowReason_Initial = 0,       // initial reflow of a newly created frame
-  eReflowReason_Incremental = 1,   // an incremental change has occured. see the reflow command for details
-  eReflowReason_Resize = 2,        // general request to determine a desired size
-  eReflowReason_StyleChange = 3,   // request to reflow because of a style change. Note: you must reflow
-                                   // all your child frames
-  eReflowReason_Dirty = 4          // request to reflow because you and/or your children are dirty
-};
-
-/**
  * CSS Frame type. Included as part of the reflow state.
  */
 typedef PRUint32  nsCSSFrameType;
@@ -124,7 +107,10 @@ typedef PRUint32  nsCSSFrameType;
 //       at least update AdjustComputedHeight/Width and test ad nauseum
 
 /**
- * Reflow state passed to a frame during reflow.
+ * State passed to a frame during reflow or intrinsic size calculation.
+ *
+ * XXX Refactor so only a base class (nsSizingState?) is used for intrinsic
+ * size calculation.
  *
  * @see nsIFrame#Reflow()
  */
@@ -135,17 +121,6 @@ struct nsHTMLReflowState {
 
   // the frame being reflowed
   nsIFrame*           frame;
-
-  // the reason for the reflow
-  nsReflowReason      reason;
-
-  // the incremental reflow path, when the reflow reason is
-  // eReflowReason_Incremental. Specifically, this corresponds to the
-  // portion of the incremental reflow path from `frame' down. Note
-  // that it is safe to assume that this is non-null: we maintain the
-  // invariant that it contains a valid nsReflowPath pointer when
-  // reason == eReflowReason_Incremental.
-  nsReflowPath        *path;
 
   // the available space in which to reflow the frame. The space represents the
   // amount of room for the frame's border, padding, and content area (not the

@@ -181,8 +181,8 @@ typedef PRUint32 nsFrameState;
 // If this bit is set then the frame is unflowable.
 #define NS_FRAME_IS_UNFLOWABLE                        0x00000800
 
-// If this bit is set, the frame has dirty children.
-#define NS_FRAME_HAS_DIRTY_CHILDREN                   0x00001000
+// If this bit is set, the frame has dirty descendants.
+#define NS_FRAME_HAS_DIRTY_DESCENDANTS                0x00001000
 
 // If this bit is set, the frame has an associated view
 #define NS_FRAME_HAS_VIEW                             0x00002000
@@ -858,6 +858,16 @@ public:
   virtual nsIFrame* GetLastInFlow() const {
     return NS_CONST_CAST(nsIFrame*, this);
   }
+
+
+  /**
+   * Mark any stored intrinsic width information as dirty (requiring
+   * re-calculation).  Note that this should generally not be called
+   * directly; nsLayoutUtils::MarkIntrinsicWidthsDirty should be used
+   * instead.
+   */
+  NS_IMETHOD IntrinsicWidthsDirty() = 0;
+                                  
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
