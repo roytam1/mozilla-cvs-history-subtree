@@ -74,6 +74,9 @@ private:
 
   png_structp mPNG;
   png_infop mInfo;
+  PRUint8 *colorLine, *alphaLine;
+  PRUint8 *interlacebuf;
+  PRUint32 ibpr;
 };
 
 #endif // nsPNGDecoder_h__

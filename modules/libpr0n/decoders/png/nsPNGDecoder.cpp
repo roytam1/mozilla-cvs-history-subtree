@@ -36,6 +36,8 @@
 
 #include "nsRect2.h"
 
+#include "nsMemory.h"
+
 // XXX we need to be sure to fire onStopDecode messages to mObserver in error cases.
 
 
@@ -48,11 +50,19 @@ nsPNGDecoder::nsPNGDecoder()
 
   mPNG = nsnull;
   mInfo = nsnull;
+  colorLine = 0;
+  alphaLine = 0;
+  interlacebuf = 0;
 }
 
 nsPNGDecoder::~nsPNGDecoder()
 {
-
+  if (colorLine)
+    nsMemory::Free(colorLine);
+  if (alphaLine)
+    nsMemory::Free(alphaLine);
+  if (interlacebuf)
+    nsMemory::Free(interlacebuf);
 }
 
 
@@ -151,7 +161,7 @@ PRUint32 nsPNGDecoder::ProcessData(unsigned char *data, PRUint32 count)
 /* unsigned long writeFrom (in nsIInputStream inStr, in unsigned long count); */
 NS_IMETHODIMP nsPNGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval)
 {
-  PRUint32 sourceOffset = *_retval;
+//  PRUint32 sourceOffset = *_retval;
 
   if (setjmp(mPNG->jmpbuf)) {
     png_destroy_read_struct(&mPNG, &mInfo, NULL);
@@ -336,7 +346,7 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
     format = nsIGFXFormat::RGB;
   } else if (channels > 3) {
     if (alpha_bits == 8) {
-      format = nsIGFXFormat::RGBA;
+      format = nsIGFXFormat::RGB_A8;
     } else if (alpha_bits == 1) {
       format = nsIGFXFormat::RGB_A1;
     }
@@ -353,6 +363,21 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
 
   if (decoder->mObserver)
     decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mFrame);
+
+  PRUint32 bpr, abpr;
+  decoder->mFrame->GetImageBytesPerRow(&bpr);
+  decoder->mFrame->GetAlphaBytesPerRow(&abpr);
+  decoder->colorLine = (PRUint8 *)nsMemory::Alloc(bpr);
+  if (channels > 3)
+    decoder->alphaLine = (PRUint8 *)nsMemory::Alloc(abpr);
+
+  if (interlace_type == PNG_INTERLACE_ADAM7) {
+    decoder->interlacebuf = (PRUint8 *)nsMemory::Alloc(channels*width*height);
+    decoder->ibpr = channels*width;
+    if (!decoder->interlacebuf) {
+//      return NS_ERROR_FAILURE;
+    }            
+  }
 
   return;
 }
@@ -394,25 +419,63 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
    */
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, png_get_progressive_ptr(png_ptr));
 
-  PRUint32 bpr;
+  PRUint32 bpr, abpr;
   decoder->mFrame->GetImageBytesPerRow(&bpr);
+  decoder->mFrame->GetAlphaBytesPerRow(&abpr);
 
   PRUint32 length;
   PRUint8 *bits;
   decoder->mFrame->GetImageData(&bits, &length);
 
   png_bytep line;
-  if (bits) {
-    line = bits+(row_num*bpr);
+  if (decoder->interlacebuf) {
+    line = decoder->interlacebuf+(row_num*decoder->ibpr);
     png_progressive_combine_row(png_ptr, line, new_row);
   }
   else
     line = new_row;
 
   if (new_row) {
-    decoder->mFrame->SetImageData((PRUint8*)line, bpr, row_num*bpr);
     gfx_dimension width;
     decoder->mFrame->GetWidth(&width);
+    PRUint32 iwidth = width;
+
+    gfx_format format;
+    decoder->mFrame->GetFormat(&format);
+    PRUint8 *aptr, *cptr;
+
+    switch (format) {
+    case nsIGFXFormat::RGB:
+      decoder->mFrame->SetImageData((PRUint8*)line, bpr, row_num*bpr);
+      break;
+    case nsIGFXFormat::RGB_A1:
+      cptr = decoder->colorLine;
+      aptr = decoder->alphaLine;
+      memset(aptr, 0, abpr);
+      for (PRUint32 x=0; x<iwidth; x++) {
+        *cptr++ = *line++;
+        *cptr++ = *line++;
+        *cptr++ = *line++;
+        if (*line++)
+          aptr[x>>3] |= 1<<(7-x&0x7);
+      }
+      decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
+      decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
+      break;
+    case nsIGFXFormat::RGB_A8:
+      cptr = decoder->colorLine;
+      aptr = decoder->alphaLine;
+      for (PRUint32 x=0; x<iwidth; x++) {
+        *cptr++ = *line++;
+        *cptr++ = *line++;
+        *cptr++ = *line++;
+        *aptr++ = *line++;
+      }
+      decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
+      decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
+      break;
+    }
+
     nsRect2 r(0, row_num, width, 1);
     decoder->mObserver->OnDataAvailable(nsnull, nsnull, decoder->mFrame, &r);
   }
