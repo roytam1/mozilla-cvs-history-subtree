@@ -317,6 +317,65 @@ ifeq ($(MOZ_CO_MODULE),)
 endif
 CVSCO_SEAMONKEY := $(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZ_CO_MODULE)
 
+# HACK FOR SVG SEMI_BRANCH
+
+# add new files here
+SVG_BRANCH_FILES := \
+	content/svg \
+	layout/svg \
+	dom/public/idl/svg \
+	\
+	aclocal.m4 \
+	allmakefiles.sh \
+	build/autoconf/libart.m4 \
+	config/autoconf.mk.in \
+	configure \
+	configure.in \
+	content/Makefile.in \
+	content/base/public/nsIDocument.h \
+	content/base/public/nsIElementFactory.h \
+	content/base/src/nsStyleContext.cpp \
+	content/build/Makefile.in \
+	content/build/makefile.win \
+	content/build/nsContentCID.h \
+	content/build/nsContentDLF.cpp \
+	content/build/nsContentFactory.cpp \
+	content/build/nsContentModule.cpp \
+	content/html/document/src/nsHTMLDocument.cpp \
+	content/html/style/public/nsIRuleNode.h \
+	content/html/style/src/nsCSSDeclaration.cpp \
+	content/html/style/src/nsCSSParser.cpp \
+	content/html/style/src/nsCSSStyleRule.cpp \
+	content/html/style/src/nsICSSDeclaration.h \
+	content/html/style/src/nsRuleNode.cpp \
+	content/html/style/src/nsRuleNode.h \
+	content/makefile.win \
+	content/shared/public/Makefile.in \
+	content/shared/public/makefile.win \
+	content/shared/public/nsCSSPropList.h \
+	content/shared/public/nsSVGAtomList.h \
+	content/shared/public/nsSVGAtoms.h \
+	content/shared/public/nsStyleStruct.h \
+	content/shared/src/Makefile.in \
+	content/shared/src/makefile.win \
+	content/shared/src/nsCSSProps.cpp \
+	content/shared/src/nsSVGAtoms.cpp \
+	content/shared/src/nsStyleStruct.cpp \
+	gfx/public/nsTransform2D.h \
+	htmlparser/src/nsIParser.h \
+	htmlparser/src/nsViewSourceHTML.cpp \
+	layout/build/Makefile.in \
+	layout/build/makefile.win \
+	layout/html/style/src/makefile.win \
+	layout/html/style/src/nsCSSFrameConstructor.cpp \
+	layout/html/style/src/nsCSSFrameConstructor.h \
+	layout/html/tests/makefile.win \
+	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
+	uriloader/exthandler/nsExternalHelperAppService.cpp \
+	xpfe/browser/src/nsBrowserInstance.cpp
+
+CVSBRANCH_SVG := $(CVSCO) -r SVG_20010721_BRANCH $(patsubst %,mozilla/%,$(SVG_BRANCH_FILES))
+
 #######################################################################
 # Rules
 # 
@@ -374,6 +433,7 @@ real_checkout:
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
+	cvs_co $(CVSBRANCH_SVG) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
