@@ -40,14 +40,14 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
-#NSPR_CO_TAG=SeaMonkey_M17_BRANCH
-#PSM_CO_TAG=SeaMonkey_M17_BRANCH
-#LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
-#ACCESSIBLE_CO_TAG=SeaMonkey_M17_BRANCH
-#IMGLIB2_BRANCH=SeaMonkey_M17_BRANCH
-#GFX2_BRANCH=SeaMonkey_M17_BRANCH
-
+MOZ_BRANCH=Accessible_042501_Branch3
+NSPR_CO_TAG=Accessible_042501_Branch3
+NSS_CO_TAG=Accessible_042501_Branch3
+PSM_CO_TAG=Accessible_042501_Branch3
+LDAPCSDK_CO_TAG=Accessible_042501_Branch3
+ACCESSIBLE_CO_TAG=Accessible_042501_Branch3
+IMGLIB2_CO_TAG=Accessible_042501_Branch3
+GFX2_CO_TAG=Accessible_042501_Branch3
 
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
@@ -94,10 +94,10 @@ CVSCO_TAG = cvs -q co -P
 
 # Branch tags we use
 
-IMGLIB2_BRANCH =
-GFX2_BRANCH =
-PLUGIN_BRANCH =
-XPCOM_BRANCH =
+#IMGLIB2_BRANCH =
+#GFX2_BRANCH =
+#PLUGIN_BRANCH =
+#XPCOM_BRANCH =
 
 !if defined(MOZ_DATE)
 # CVS commands to pull the appropriate branch versions
@@ -115,6 +115,7 @@ CVSCO_GFX2 = $(CVSCO)
 CVSCO_RAPTOR = $(CVSCO)
 CVSCO_LIZARD = $(CVSCO)
 CVSCO_NETWORK = $(CVSCO)
+CVSCO_ACCESSIBLE = $(CVSCO)
 
 #//------------------------------------------------------------------------
 #// Figure out how to pull NSPR.
