@@ -91,6 +91,7 @@ public:
     void setValue(nsIVariant* aValue)
     {
         mValue = aValue;
+        delete mTxValue;
         mTxValue = nsnull;
     }
 
