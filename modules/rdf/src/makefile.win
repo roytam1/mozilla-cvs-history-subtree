@@ -34,9 +34,9 @@ OBJS= $(OBJS) .\$(OBJDIR)\test.obj
 # LLIBS=$(LIBNSPR) 
 # !endif
 !ifndef	MOZ_DEBUG
-LLIBS=$(LIBNSPR) 
+LLIBS=$(LIBNSPR)
 !else
-LLIBS=$(LIBNSPR) 
+LLIBS=$(LIBNSPR)
 !endif
 !endif
 
@@ -56,9 +56,17 @@ C_OBJS=.\$(OBJDIR)\vocab.obj \
        .\$(OBJDIR)\mcff2mcf.obj \
        .\$(OBJDIR)\bmk2mcf.obj \
        .\$(OBJDIR)\glue.obj \
-       .\$(OBJDIR)\rdfht.obj
+       .\$(OBJDIR)\rdfht.obj \
+       $(NULL)
+
        
-!ifndef RDF_STANDALONE
+!ifdef RDF_STANDALONE
+# evil hack since no xp library on windows.
+EXTRA_OBJS =  \
+       $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\allxpstr.obj \
+       $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\xp_str.obj \
+       $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\xpassert.obj
+!else
 C_OBJS = $(C_OBJS) \
        .\$(OBJDIR)\ht.obj \
        .\$(OBJDIR)\find2rdf.obj \
@@ -95,11 +103,18 @@ libs:: $(LIBRARY)
 
 test: 
 	echo make test
-	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE PROGRAM=$(TESTPROG) $(TESTPROG)
+	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE $(TESTPROG)
 	
 spf2ldif:
 	echo make spf2ldif
-	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE MAKE_SPF=1 PROGRAM=$(SPFPROG) $(SPFPROG)
+	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE MAKE_SPF=1 $(SPFPROG)
+	
+$(TESTPROG): $(OBJS)
+   $(LD) /NOLOGO /OUT:$@ $(LFLAGS) $(OBJS) $(EXTRA_OBJS) $(LLIBS) $(OS_LIBS)
+	
+$(SPFPROG) : $(OBJS)
+   $(LD) /NOLOGO /OUT:$@ $(LFLAGS) $(OBJS) $(EXTRA_OBJS) $(LLIBS) $(OS_LIBS)
+
 
 JNI_GEN_DIR = _jni
 
@@ -114,5 +129,5 @@ LINCS = $(LINCS) -I$(JNI_GEN_DIR)
 
 display_jni_header_msg:
 	echo +++ make: Generating JNI header files...
-
+	
 !endif

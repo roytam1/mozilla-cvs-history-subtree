@@ -533,4 +533,19 @@ CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const voi
 
 	return result;
 }
+#else
+#if defined(XP_WIN) && defined(DEBUG)
+/* Some XP functions that are implemented in winfe
+ * in the client.
+ */
+void XP_AssertAtLine( char *pFileName, int iLine )
+{
+   fprintf(stderr, "assert: line %d, file %s%c\n", __LINE__, pFileName, 7);
+}
+
+char* NOT_NULL(const char* x)
+{
+   return (char*)x;
+}
+#endif
 #endif

@@ -503,7 +503,7 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return NULL;
   } else {
     RDFFile newFile = makeRDFFile(url, top, localp);  
-#ifdef DEBUG
+#if defined(DEBUG) && defined(MOZILLA_CLIENT)
 #ifdef XP_WIN
     char* traceLine = getMem(500);
     sprintf(traceLine, "\nAccessing %s (%s)\n", url, db->url);
