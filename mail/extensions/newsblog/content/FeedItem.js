@@ -183,7 +183,7 @@ FeedItem.prototype.isStored = function() {
     folder = server.rootMsgFolder.FindSubFolder(this.feed.name);
     var msgdb = folder.getMsgDatabase(null);
     var folderInfo = msgdb.dBFolderInfo;
-    folderInfo.setCharPtrProperty("feedUrl", this.url);
+    folderInfo.SetCharPtrProperty("feedUrl", this.url);
     debug(this.identity + " not stored (folder didn't exist)");
     return false;
   }

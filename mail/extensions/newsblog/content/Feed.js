@@ -23,6 +23,8 @@ function Feed(resource) {
 
   this.request = null;
 
+    this.downloadCallback = null;
+
     this.items = new Array();
   
   return this;
@@ -49,9 +51,7 @@ Feed.prototype.name getter = function() {
   return name;
 }
 
-Feed.prototype.download = function(async, parseItems) {
-  // Whether or not to download the feed asynchronously.
-  async = async == null ? true : async ? true : false;
+Feed.prototype.download = function(parseItems, aCallback) {
 
   // Whether or not to parse items when downloading and parsing the feed.
   // Defaults to true, but setting to false is useful for obtaining
@@ -59,17 +59,17 @@ Feed.prototype.download = function(async, parseItems) {
   this.parseItems = parseItems == null ? true : parseItems ? true : false;
 
   this.request = new XMLHttpRequest();
-  this.request.open("GET", this.url, async);
+  this.request.onprogress = Feed.onProgress; // must be set before calling .open
+  this.request.open("GET", this.url, true);
+
+  this.downloadCallback = aCallback; // may be null
+
+  // var loadgroup = this.request.channel.loadgroup;
   this.request.overrideMimeType("text/xml");
-  if (async) {
     this.request.onload = Feed.onDownloaded;
     this.request.onerror = Feed.onDownloadError;
     gFzFeedCache[this.url] = this;
-  }
   this.request.send(null);
-  if (!async) {
-    this.parse();
-  }
 }
 
 Feed.onDownloaded = function(event) {
@@ -80,6 +80,18 @@ Feed.onDownloaded = function(event) {
   if (!feed)
     throw("error after downloading " + url + ": couldn't retrieve feed from request");
   feed.parse();
+
+  if (feed.downloadCallback)
+    feed.downloadCallback.downloaded(feed);
+}
+
+Feed.onProgress = function(event) {
+  var request = event.target;
+  var url = request.channel.originalURI.spec;
+  var feed = gFzFeedCache[url];
+
+  if (feed.downloadCallback)
+    feed.downloadCallback.onProgress(event.position, event.totalSize);
 }
 
 Feed.onDownloadError = function(event) {
@@ -88,7 +100,11 @@ Feed.onDownloadError = function(event) {
   var url = request.channel.originalURI.spec;
   var feed = gFzFeedCache[url];
   if (feed)
+  {
     debug(feed.title + " download failed");
+    if (feed.downloadCallback)
+      feed.downloaded(nsnull);
+  }
   throw("error downloading feed " + url);
 }
 
