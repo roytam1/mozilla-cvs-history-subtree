@@ -54,6 +54,7 @@ REQUIRES = \
 	dom \
 	embed_base \
 	embedcomponents \
+	extensions \
 	gfx \
 	intl \
 	locale \

@@ -61,7 +61,8 @@ const FILE_CR_CHROMEDS          = "chrome.rdf";
 const FILE_EXTENSIONS           = "Extensions.rdf";
 const FILE_UNINSTALL_LOG        = "Uninstall";
 const FILE_DEFAULTS             = "Defaults";
-const FILE_AUTOREG              = ".autoreg";
+const FILE_COMPONENT_MANIFEST   = "components";
+const FILE_COMPAT_MANIFEST      = "compatibility";
 const FILE_INSTALL_MANIFEST     = "install.rdf";
 const FILE_CHROME_MANIFEST      = "contents.rdf";
 const FILE_WASINSAFEMODE        = "Safe Mode";
@@ -529,6 +530,7 @@ nsExtensionInstaller.prototype = {
                              this._extensionID + ".xpi"]);
     var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
                               .createInstance(Components.interfaces.nsIZipReader);
+    dumpFile(sourceXPI);
     zipReader.init(sourceXPI);
     zipReader.open();
 
@@ -942,11 +944,43 @@ function nsExtensionManager()
   var os = Components.classes["@mozilla.org/observer-service;1"]
                      .getService(Components.interfaces.nsIObserverService);
   os.addObserver(this, "profile-after-change", false);
-  os.addObserver(this, "profile-do-change", false);
 
   ensureExtensionsFiles(false);
 
-  // XXXben TODO - do global command line flag checks HERE. 
+  var cmdLineSvc = Components.classes["@mozilla.org/appshell/commandLineService;1"]
+                             .getService(Components.interfaces.nsICmdLineService);
+  var globalExtension = cmdLineSvc.getCmdLineValue("-install-global-extension");
+  if (globalExtension)
+    this._checkForGlobalInstalls(globalExtension, nsIUpdateItem.TYPE_EXTENSION);
+    
+  var globalTheme = cmdLineSvc.getCmdLineValue("-install-global-theme");
+  if (globalTheme)
+    this._checkForGlobalInstalls(globalTheme, nsIUpdateItem.TYPE_THEME);
+  
+  var showList = cmdLineSvc.getCmdLineValue("-list-global-items");
+  if (showList)
+    this._showGlobalItemList();
+    
+  var locked = cmdLineSvc.getCmdLineValue("-lock-item");
+  if (locked) {
+    this._ensureDS();
+    this._ds.lockUnlockItem(locked, true);
+  }
+
+  var unlocked = cmdLineSvc.getCmdLineValue("-unlock-item");
+  if (unlocked) {
+    this._ensureDS();
+    this._ds.lockUnlockItem(unlocked, false);
+  }
+
+  var needsToQuit = globalExtension || globalTheme || showList || locked || unlocked;
+  if (needsToQuit) {
+    // If we did a global install, shut down the app now. 
+    // XXXben - change to nsIAppStartup w/bsmedberg change
+    var appStartup = Components.classes["@mozilla.org/appshell/appShellService;1"]
+                                .getService(Components.interfaces.nsIAppShellService);
+    appStartup.quit(Components.interfaces.nsIAppShellService.eForceQuit);          
+  }
 }
 
 nsExtensionManager.prototype = {
@@ -968,98 +1002,6 @@ nsExtensionManager.prototype = {
       this.checkForMismatches();
 
       this._disableObsoleteExtensions();
-      break;
-    case "profile-do-change":
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Components.interfaces.nsIObserverService);
-      os.removeObserver(this, "profile-do-change");
-      
-      ensureExtensionsFiles(true);
-      
-      // XXXben - a bit of a hack - clean up any empty dirs that may not have been
-      //          properly removed by [un]install... I should really investigate those
-      //          cases to see what is stopping these dirs from being removed, but no
-      //          time now.
-      this._cleanDirs();
-    
-      var cmdLineSvc = Components.classes["@mozilla.org/appshell/commandLineService;1"]
-                                 .getService(Components.interfaces.nsICmdLineService);
-      var safeMode = cmdLineSvc.getCmdLineValue("-no-extensions") != null;
-      if (!safeMode) {
-        var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                             .getService(Components.interfaces.nsIPrefBranch);
-        var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
-        if (wasInSafeModeFile.exists()) {
-          var win = this._showProgressWindow();
-          this._ensureDS();
-          
-          // Walk the list of extensions and re-activate overlays for packages 
-          // that aren't disabled.
-          var items = this._ds.getItemsWithFlagUnset("disabled", nsIUpdateItem.TYPE_EXTENSION);
-          for (var i = 0; i < items.length; ++i)
-            this._finalizeEnableDisable(items[i], false);
-            
-          wasInSafeModeFile.remove(false);
-          
-          win.close();
-        }
-
-        // XXXben we should be doing all of this in the EM's ctor, NOT after profile
-        //        selection... this means we need to verify that all the services
-        //        invoked by these operations are globally available.
-
-        var globalExtension = cmdLineSvc.getCmdLineValue("-install-global-extension");
-        if (globalExtension)
-          this._checkForGlobalInstalls(globalExtension, nsIUpdateItem.TYPE_EXTENSION);
-          
-        var globalTheme = cmdLineSvc.getCmdLineValue("-install-global-theme");
-        if (globalTheme)
-          this._checkForGlobalInstalls(globalTheme, nsIUpdateItem.TYPE_THEME);
-        
-        var showList = cmdLineSvc.getCmdLineValue("-list-global-items");
-        if (showList)
-          this._showGlobalItemList();
-          
-        var locked = cmdLineSvc.getCmdLineValue("-lock-item");
-        if (locked) {
-          this._ensureDS();
-          this._ds.lockUnlockItem(locked, true);
-        }
-
-        var unlocked = cmdLineSvc.getCmdLineValue("-unlock-item");
-        if (unlocked) {
-          this._ensureDS();
-          this._ds.lockUnlockItem(unlocked, false);
-        }
-
-        var needsToQuit = globalExtension || globalTheme || showList || locked || unlocked;
-
-        this._finishOperations();
-        this._loadDefaults();
-        if (needsToQuit) {
-          // If we did a global install, shut down the app now. 
-          // XXXben - change to nsIAppStartup w/bsmedberg change
-          var appStartup = Components.classes['@mozilla.org/appshell/appShellService;1']
-                                     .getService(Components.interfaces.nsIAppShellService);
-          appStartup.quit(Components.interfaces.nsIAppShellService.eForceQuit);          
-        }
-      }
-      else {
-        var win = this._showProgressWindow();
-      
-        this._ensureDS();
-        var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
-        for (var i = 0; i < items.length; ++i)
-          this._finalizeEnableDisable(items[i].id, true);
-          
-        this._ds.safeMode = true;
-
-        var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
-        if (!wasInSafeModeFile.exists())
-          wasInSafeModeFile.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
-          
-        win.close();
-      }
       break;
     case "quit-application-requested":
       if (this._downloadCount > 0) {
@@ -1096,6 +1038,61 @@ nsExtensionManager.prototype = {
         PRBool.data = result;
       }
       break;  
+    }
+  },
+  
+  start: function (aIsDirty)
+  {
+    ensureExtensionsFiles(true);
+    
+    // XXXben - a bit of a hack - clean up any empty dirs that may not have been
+    //          properly removed by [un]install... I should really investigate those
+    //          cases to see what is stopping these dirs from being removed, but no
+    //          time now.
+    this._cleanDirs();
+  
+    var cmdLineSvc = Components.classes["@mozilla.org/appshell/commandLineService;1"]
+                                .getService(Components.interfaces.nsICmdLineService);
+    var safeMode = cmdLineSvc.getCmdLineValue("-no-extensions") != null;
+    if (!safeMode) {
+      var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
+      if (wasInSafeModeFile.exists()) {
+        // Clean up after we were in safe mode
+        var win = this._showProgressWindow();
+        this._ensureDS();
+        
+        // Walk the list of extensions and re-activate overlays for packages 
+        // that aren't disabled.
+        var items = this._ds.getItemsWithFlagUnset("disabled", nsIUpdateItem.TYPE_EXTENSION);
+        for (var i = 0; i < items.length; ++i)
+          this._finalizeEnableDisable(items[i], false);
+          
+        wasInSafeModeFile.remove(false);
+        
+        win.close();
+      }
+      
+      if (aIsDirty)
+        this._finishOperations();
+      
+      this._loadDefaults();
+    }
+    else {
+      var win = this._showProgressWindow();
+    
+      // Enter safe mode
+      this._ensureDS();
+      var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
+      for (var i = 0; i < items.length; ++i)
+        this._finalizeEnableDisable(items[i].id, true);
+        
+      this._ds.safeMode = true;
+
+      var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
+      if (!wasInSafeModeFile.exists())
+        wasInSafeModeFile.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
+        
+      win.close();
     }
   },
 
@@ -1220,50 +1217,39 @@ nsExtensionManager.prototype = {
   
   _finishOperations: function ()
   {
-    var profileAutoReg = getFile(KEY_PROFILEDIR, [FILE_AUTOREG]);
-    var globalAutoReg = getFile(KEY_APPDIR, [FILE_AUTOREG]);
-    if (profileAutoReg.exists() || globalAutoReg.exists()) {
-      var win = this._showProgressWindow();
+    var win = this._showProgressWindow();
+  
+    // An existing autoreg file is an indication that something major has 
+    // happened to the extensions datasource (install/uninstall/enable/disable)
+    // and as such we must load it now and see what needs to happen.
+    this._ensureDS();
     
-      // An existing autoreg file is an indication that something major has 
-      // happened to the extensions datasource (install/uninstall/enable/disable)
-      // and as such we must load it now and see what needs to happen.
-      this._ensureDS();
+    // Look for items that need to be installed
+    var items = this._ds.getItemsWithFlagSet("toBeInstalled");
+    for (var i = 0; i < items.length; ++i)
+      this._finalizeInstall(items[i]);
+    
+    // Look for extensions that need to be enabled
+    items = this._ds.getItemsWithFlagSet("toBeEnabled");
+    for (var i = 0; i < items.length; ++i)
+      this._finalizeEnableDisable(items[i], false);
+    
+    // Look for extensions that need to be disabled
+    items = this._ds.getItemsWithFlagSet("toBeDisabled");
+    for (var i = 0; i < items.length; ++i)
+      this._finalizeEnableDisable(items[i], true);
+    
+    // Look for extensions that need to be removed
+    items = this._ds.getItemsWithFlagSet("toBeUninstalled");
+    for (var i = 0; i < items.length; ++i)
+      this._finalizeUninstall(items[i]);
       
-      // Look for items that need to be installed
-      var items = this._ds.getItemsWithFlagSet("toBeInstalled");
-      for (var i = 0; i < items.length; ++i)
-        this._finalizeInstall(items[i]);
+    // Clean up any helper objects
+    delete this._extInstaller;
+    delete this._extUninstaller;
+    delete this._extEnabler;
       
-      // Look for extensions that need to be enabled
-      items = this._ds.getItemsWithFlagSet("toBeEnabled");
-      for (var i = 0; i < items.length; ++i)
-        this._finalizeEnableDisable(items[i], false);
-      
-      // Look for extensions that need to be disabled
-      items = this._ds.getItemsWithFlagSet("toBeDisabled");
-      for (var i = 0; i < items.length; ++i)
-        this._finalizeEnableDisable(items[i], true);
-      
-      // Look for extensions that need to be removed
-      items = this._ds.getItemsWithFlagSet("toBeUninstalled");
-      for (var i = 0; i < items.length; ++i)
-        this._finalizeUninstall(items[i]);
-        
-      // Clean up any helper objects
-      delete this._extInstaller;
-      delete this._extUninstaller;
-      delete this._extEnabler;
-        
-      win.close();
-      
-      // Now that we've finalized the EM operation, remove the autoreg files so
-      // we don't do this every time we start.
-      if (profileAutoReg.exists()) 
-        profileAutoReg.remove(false);
-      if (globalAutoReg.exists())
-        globalAutoReg.remove(false);
-    }
+    win.close();
   },
   
   // XXXben - this is actually a cheap stunt to load all the chrome registry 
@@ -1423,9 +1409,9 @@ nsExtensionManager.prototype = {
                    DIR_DEFAULTS, DIR_DEFAULTS_PREFS]);
   },
   
-  _writeAutoregLines: function (aStream, aSourceDir, aExtensionID)
+  _writeComponentManifestLines: function (aStream, aSourceDir, aExtensionID)
   {
-    var line = "reg:extensions/" + aExtensionID + "/components/\n";
+    var line = "Extensions/" + aExtensionID + "/components/\r\n";
     aStream.write(line, line.length);
   },
   
@@ -1434,18 +1420,40 @@ nsExtensionManager.prototype = {
     var files = aSourceDir.directoryEntries;
     while (files.hasMoreElements()) {
       var file = files.getNext().QueryInterface(Components.interfaces.nsILocalFile);
-      var line = file.path + "\n";
+      var line = file.path + "\r\n";
       aStream.write(line, line.length);
     }
   },
 
-  _writeAutoReg: function (aIsProfile)
+  _writeComponentManifest: function (aIsProfile)
   {
-    var autoRegFile = aIsProfile ? getFile(KEY_PROFILEDIR, [FILE_AUTOREG]) : 
-                                   getFile(KEY_APPDIR, [FILE_AUTOREG]);
-    this._writeProfileFile(autoRegFile, 
+    var manifest = aIsProfile ? getFile(KEY_PROFILEDIR, [FILE_COMPONENT_MANIFEST]) : 
+                                getFile(KEY_APPDIR, [FILE_COMPONENT_MANIFEST]);
+    this._writeProfileFile(manifest, 
                            this._getComponentsDir, 
-                           this._writeAutoregLines);
+                           this._writeComponentManifestLines);
+
+    // Now refresh the compatibility manifest.
+    var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                        .createInstance(Components.interfaces.nsIFileOutputStream);
+    const MODE_WRONLY   = 0x02;
+    const MODE_CREATE   = 0x08;
+    const MODE_TRUNCATE = 0x20;
+    var compat = aIsProfile ? getFile(KEY_PROFILEDIR, [FILE_COMPAT_MANIFEST]) : 
+                              getFile(KEY_APPDIR, [FILE_COMPAT_MANIFEST]);
+    fos.init(compat, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE, 0664, 0);
+
+    var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                         .getService(Components.interfaces.nsIPrefBranch);
+    var currAppVersion = pref.getCharPref(PREF_EM_APP_VERSION);
+
+    var lines = ["[Compatibility]\r\n",
+                 "LastVersion=" + currAppVersion + "\r\n",
+                 "ComponentsChanged=1\r\n"];
+    for (var i = 0; i < lines.length; ++i)
+      fos.write(lines[i], lines[i].length);
+
+    fos.close();
   },
   
   _writeDefaults: function ()
@@ -1481,6 +1489,7 @@ nsExtensionManager.prototype = {
     //         components/ 
     //         defaults/
     //                  prefs/
+    dumpFile(aXPIFile);
     var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
                               .createInstance(Components.interfaces.nsIZipReader);
     zipReader.init(aXPIFile);
@@ -1497,7 +1506,7 @@ nsExtensionManager.prototype = {
       // can extract them after the next restart. 
       this._stageExtensionXPI(zipReader, extensionID, installProfile);
 
-      this._writeAutoReg(installProfile);
+      this._writeComponentManifest(installProfile);
     }
     zipReader.close();
     tempManifest.remove(false);
@@ -1633,19 +1642,19 @@ nsExtensionManager.prototype = {
   uninstallExtension: function (aExtensionID)
   {
     this._ds.uninstallExtension(aExtensionID);
-    this._writeAutoReg(this._ds.isProfileItem(aExtensionID));
+    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
   },
   
   enableExtension: function (aExtensionID)
   {
     this._ds.enableExtension(aExtensionID);
-    this._writeAutoReg(this._ds.isProfileItem(aExtensionID));
+    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
   },
   
   disableExtension: function (aExtensionID)
   {
     this._ds.disableExtension(aExtensionID);
-    this._writeAutoReg(this._ds.isProfileItem(aExtensionID));
+    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
   },
   
   update: function (aItems, aItemCount)
@@ -1735,6 +1744,7 @@ nsExtensionManager.prototype = {
   
   removeDownload: function (aURL, aType)
   {
+    dump("*** calling into removeDownload for " + aURL + "\n");
     for (var i = 0; i < this._transactions.length; ++i) {
       if (this._transactions[i].containsURL(aURL)) {
         this._transactions[i].removeDownload(aURL, aType);
@@ -1762,20 +1772,16 @@ nsExtensionManager.prototype = {
       this._progressData[aURL] = { };
     this._progressData[aURL].state = aState;
     
-    dump("*** sending state changes for " + aURL + "\n");
     for (var i = 0; i < this._downloadObservers.length; ++i)
       this._downloadObservers[i].onStateChange(aURL, aState, aValue);
 
     const nsIXPIProgressDialog = Components.interfaces.nsIXPIProgressDialog;
     switch (aState) {
     case nsIXPIProgressDialog.INSTALL_DONE:
-      dump("*** install done for " + aURL + "\n");
       --this._downloadCount;
       break;
     case nsIXPIProgressDialog.DIALOG_CLOSE:
-      dump("*** dialogClose trying to remove " + aTransaction.id + "\n");
       for (var i = 0; i < this._transactions.length; ++i) {
-        dump("*** this txn = " + this._transactions[i].id + "\n");
         if (this._transactions[i].id == aTransaction.id) {
           this._transactions.splice(i, 1);
           delete aTransaction;
@@ -1811,7 +1817,8 @@ nsExtensionManager.prototype = {
   removeDownloadObserverAt: function (aIndex)
   {
     this._downloadObservers.splice(aIndex, 1);
-    this._ds.flushProgressInfo(this._progressData);
+    if (this._downloadCount != 0)
+      this._ds.flushProgressInfo(this._progressData);
   },
 
   //
@@ -1923,6 +1930,7 @@ nsItemDownloadTransaction.prototype = {
   
   removeDownload: function (aURL, aItemType)
   {
+    dump("*** txn rD = " + aURL + "\n");
     this._manager._ds.removeDownload(aURL, aItemType);
   },
   
@@ -2200,6 +2208,19 @@ nsExtensionsDataSource.prototype = {
     return this._rdf.GetLiteral(aLiteral);
   },
   
+  _stringData: function (aLiteralOrResource)
+  {
+    try {
+      var obj = aLiteralOrResource.QueryInterface(Components.interfaces.nsIRDFLiteral);
+      return obj.Value;
+    }
+    catch (e) {
+      obj = aLiteralOrResource.QueryInterface(Components.interfaces.nsIRDFResource);
+      return obj.Value;
+    }
+    return "--";
+  },
+  
   isCompatible: function (aDS, aSource)
   {
     var pref = Components.classes["@mozilla.org/preferences-service;1"]
@@ -2208,15 +2229,20 @@ nsExtensionsDataSource.prototype = {
     var appID = pref.getCharPref(PREF_EM_APP_ID);
 
     var targets = aDS.GetTargets(aSource, this._emR("targetApplication"), true);
+    var idRes = this._emR("id");
+    var minVersionRes = this._emR("minVersion");
+    var maxVersionRes = this._emR("maxVersion");
     while (targets.hasMoreElements()) {
-      var targetApp = targets.getNext().QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+      var targetApp = targets.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var id          = this._stringData(aDS.GetTarget(targetApp, idRes, true));
+      var minVersion  = this._stringData(aDS.GetTarget(targetApp, minVersionRes, true));
+      var maxVersion  = this._stringData(aDS.GetTarget(targetApp, maxVersionRes, true));
 
-      var versionParts = targetApp.split(",");
-      if (versionParts[0] == appID) {
+      if (id == appID) {
         var versionChecker = Components.classes["@mozilla.org/updates/version-checker;1"]
                                        .getService(Components.interfaces.nsIVersionChecker);
-        return ((versionChecker.compare(appVersion, versionParts[1]) >= 0) &&
-                (versionChecker.compare(appVersion, versionParts[2]) <= 0));
+        return ((versionChecker.compare(appVersion, minVersion) >= 0) &&
+                (versionChecker.compare(appVersion, maxVersion) <= 0));
       }
     }
     return false;
@@ -2459,7 +2485,7 @@ nsExtensionsDataSource.prototype = {
     }    
 
     // Assert properties with multiple values    
-    var manyProps = ["targetApplication", "requires", "contributor"];
+    var manyProps = ["contributor"];
     for (var i = 0; i < singleProps.length; ++i) {
       var property = this._emR(manyProps[i]);
       var literals = aSourceDS.GetTargets(sourceRes, property, true);
@@ -2472,6 +2498,31 @@ nsExtensionsDataSource.prototype = {
       while (literals.hasMoreElements()) {
         var literal = literals.getNext().QueryInterface(Components.interfaces.nsIRDFNode);
         targetDS.Assert(targetRes, property, literal, true);
+      }
+    }
+    
+    // Version/Dependency Info
+    var versionProps = ["targetApplication", "requires"];
+    var idRes = this._emR("id");
+    var minVersionRes = this._emR("minVersion");
+    var maxVersionRes = this._emR("maxVersion");
+    for (var i = 0; i < versionProps.length; ++i) {
+      var property = this._emR(versionProps[i]);
+      var newVersionInfos = aSourceDS.GetTargets(sourceRes, property, true);
+      
+      var oldVersionInfos = targetDS.GetTargets(targetRes, property, true);
+      while (oldVersionInfos.hasMoreElements()) {
+        var oldVersionInfo = oldVersionInfos.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        this._cleanResource(oldVersionInfo, targetDS);
+        targetDS.Unassert(targetRes, property, oldVersionInfo);
+      }
+      while (newVersionInfos.hasMoreElements()) {
+        var newVersionInfo = newVersionInfos.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        var anon = this._rdf.GetAnonymousResource();
+        targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, idRes, true), true);
+        targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, minVersionRes, true), true);
+        targetDS.Assert(anon, idRes, aSourceDS.GetTarget(newVersionInfo, maxVersionRes, true), true);
+        targetDS.Assert(targetRes, property, anon, true);
       }
     }
     

@@ -95,6 +95,7 @@
 #include "nsIXULWindow.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIDocShell.h"
+#include "nsIExtensionManager.h"
 
 // for X remote support
 #ifdef MOZ_ENABLE_XREMOTE
@@ -1245,6 +1246,9 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp)
     nsAutoString userMessage; userMessage.AssignWithConversion("Creating first window...");
     obsService->NotifyObservers(nsnull, "startup_user_notifcations", userMessage.get());
   }
+
+  nsCOMPtr<nsIExtensionManager> em(do_CreateInstance("@mozilla.org/extensions/manager;1"));
+  em->Start(PR_TRUE);
   
 
   // Make sure there exists at least 1 window.
