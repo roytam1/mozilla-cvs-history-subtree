@@ -1,0 +1,48 @@
+now
+- XXXs
+  - username replacement, $USERID in URL
+  - pref dialog loses state
+  - pref dialog saves (only) "," as files pref
+  - small stuff
+- error handling
+  - (local profile) files missing
+  - empty pref
+  m cancel by user in progress dialog: xpconnect errors
+  - ftp
+    - xpconnect errors after upload
+  - http
+    - no user name (upload to <http://checker/roaming/ben/localstore.rdf>
+           gives NS_OK)
+    m wrong path in url (but working server)
+    - test same situations with ftp
+  - non existant files: stops during upload, doesn't during download
+  m if something fails horribly (e.g. a JS error in the prompt* functions),
+    then the UI reports success or is completely malfunctional.
+  m ui: (error/success) messages
+  - copy protocol
+    - no remote files yet
+m mod/upload times
+
+Later:
+- license headers
+- nsresult for internal functions, clean up interfaces
+- warn before saving pw
+- remove printfs
+- polish
+  - conflict ui
+  - progress ui
+    - focus cancel button?
+
+Enhance
+- protocols
+  - HTTPS
+  - LDAP
+  - IMAP
+- password encrypt
+- ProfileManager
+
+roaming urls
+ <ftp://user@ftp-server//path/to/dir/>
+ <http://user@http-server/path/to/dir/>
+ Mind the number of slashes.
+ Servers used: wu-FTPd and Apache with mod_roaming.
