@@ -360,7 +360,7 @@ private:
     ExprParser     exprParser;
     String         xsltNameSpace;
     NamedMap       nameSpaceMap;
-    HashTable      nameSpaceURITable;
+    StringList     nameSpaceURIList;
     Stack          defaultNameSpaceURIStack;
 
     //-- default templates

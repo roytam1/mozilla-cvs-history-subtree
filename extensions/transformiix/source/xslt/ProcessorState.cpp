@@ -484,16 +484,20 @@ void ProcessorState::preserveSpace(String& names) {
  * Sets a new default Namespace URI.
 **/ 
 void ProcessorState::setDefaultNameSpaceURI(const String& nsURI) {
-    Int32 len = nsURI.length();
-    unsigned long hashCode = 0;
-    for (Int32 i = 0; i < len; i++) {
-        hashCode +=  ((Int32)nsURI.charAt(i)) << 3;
-    }
+    String* nsTempURIPointer = 0;
+    String* nsURIPointer = 0;
+    StringListIterator theIterator(&nameSpaceURIList);
 
-    String* nsURIPointer = (String*)nameSpaceURITable.retrieve(hashCode);
+    while (theIterator.hasNext()) {
+        nsTempURIPointer = theIterator.next();
+        if (nsTempURIPointer->isEqual(nsURI)) {
+            nsURIPointer = nsTempURIPointer;
+            break;
+        }
+    }
     if ( ! nsURIPointer ) {
         nsURIPointer = new String(nsURI);
-        nameSpaceURITable.add(nsURIPointer, hashCode);
+        nameSpaceURIList.add(nsURIPointer);
     }
     defaultNameSpaceURIStack.push(nsURIPointer);
 } //-- setDefaultNameSpaceURI
