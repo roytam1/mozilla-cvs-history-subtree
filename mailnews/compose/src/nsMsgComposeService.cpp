@@ -766,7 +766,23 @@ nsresult nsMsgComposeService::ShowCachedComposeWindow(nsIDOMWindowInternal *aCom
   NS_ENSURE_SUCCESS(rv,rv);
   
   if (webShellContainer) {
+
+    // disable (enable) the cached window
     nsCOMPtr <nsIWebShellWindow> webShellWindow = do_QueryInterface(webShellContainer, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIDocShellTreeItem>  treeItem(do_QueryInterface(docShell, &rv));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
+    rv = treeItem->GetTreeOwner(getter_AddRefs(treeOwner));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIBaseWindow> baseWindow;
+    baseWindow = do_QueryInterface(treeOwner, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    baseWindow->SetEnabled(aShow);
     NS_ENSURE_SUCCESS(rv,rv);
 
     // hide (show) the cached window
