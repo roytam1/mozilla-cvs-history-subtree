@@ -167,14 +167,10 @@ static NS_DEFINE_CID(kLWBrkCID,                  NS_LWBRK_CID);
 static NS_DEFINE_IID(kIParserIID, NS_IPARSER_IID); // no comment
 
 ////////////////////////////////////////////////////////////////////////
-// Standard vocabulary items
 
 #define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 
 static PRLogModuleInfo* gXULLog;
-
-////////////////////////////////////////////////////////////////////////
-// nsElementMap
 
 ////////////////////////////////////////////////////////////////////////
 // XULDocumentImpl
@@ -479,7 +475,11 @@ public:
     NS_IMETHOD GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult);
     NS_IMETHOD GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult);
 
+protected:
     // Implementation methods
+    friend nsresult
+    NS_NewXULDocument(nsIXULDocument** aResult);
+
     nsresult Init(void);
     nsresult StartLayout(void);
 
@@ -527,11 +527,13 @@ public:
                            nsIAtom* aTag,
                            nsIContent** aResult);
 
-protected:
     nsresult PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
                            nsIContentViewerContainer* aContainer,
                            const char* aCommand,
                            nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
+
+    nsresult ApplyPersistentAttributes();
+    nsresult ApplyPersistentAttributesToElements(nsIRDFResource* aResource, nsISupportsArray* aElements);
 
 protected:
     // pseudo constants
@@ -551,6 +553,10 @@ protected:
     static nsIAtom** kIdentityAttrs[];
 
     static nsIRDFService* gRDFService;
+    static nsIRDFResource* kNC_persist;
+    static nsIRDFResource* kNC_attribute;
+    static nsIRDFResource* kNC_value;
+
     static nsIHTMLElementFactory* gHTMLElementFactory;
 
     static nsINameSpaceManager* gNameSpaceManager;
@@ -638,6 +644,10 @@ nsIAtom* XULDocumentImpl::kTargetsAtom;
 nsIAtom* XULDocumentImpl::kTemplateAtom;
 
 nsIRDFService* XULDocumentImpl::gRDFService;
+nsIRDFResource* XULDocumentImpl::kNC_persist;
+nsIRDFResource* XULDocumentImpl::kNC_attribute;
+nsIRDFResource* XULDocumentImpl::kNC_value;
+
 nsIHTMLElementFactory* XULDocumentImpl::gHTMLElementFactory;
 
 nsINameSpaceManager* XULDocumentImpl::gNameSpaceManager;
@@ -660,67 +670,6 @@ XULDocumentImpl::XULDocumentImpl(void)
       mForwardReferencesResolved(PR_FALSE)
 {
     NS_INIT_REFCNT();
-
-    // XXX Anything that can fail should be moved into separate
-    // initialization routine.
-    nsresult rv;
-
-#if 0
-    // construct a selection object
-    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRangeListCID,
-                                                    nsnull,
-                                                    kIDOMSelectionIID,
-                                                    (void**) &mSelection))) {
-        NS_ERROR("unable to create DOM selection");
-    }
-#endif
-
-    if (gRefCnt++ == 0) {
-        kCommandUpdaterAtom             = NS_NewAtom("commandupdater");
-        kEventsAtom                     = NS_NewAtom("events");
-        kIdAtom                         = NS_NewAtom("id");
-        kObservesAtom                   = NS_NewAtom("observes");
-        kOpenAtom                       = NS_NewAtom("open");
-        kPersistAtom                    = NS_NewAtom("persist");
-        kRefAtom                        = NS_NewAtom("ref");
-        kRuleAtom                       = NS_NewAtom("rule");
-        kTargetsAtom                    = NS_NewAtom("targets");
-        kTemplateAtom                   = NS_NewAtom("template");
-
-        // Keep the RDF service cached in a member variable to make using
-        // it a bit less painful
-        rv = nsServiceManager::GetService(kRDFServiceCID,
-                                          NS_GET_IID(nsIRDFService),
-                                          (nsISupports**) &gRDFService);
-
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF Service");
-
-        rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
-                                                nsnull,
-                                                NS_GET_IID(nsIHTMLElementFactory),
-                                                (void**) &gHTMLElementFactory);
-
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get HTML element factory");
-
-        rv = nsServiceManager::GetService(kNameSpaceManagerCID,
-                                          nsCOMTypeInfo<nsINameSpaceManager>::GetIID(),
-                                          (nsISupports**) &gNameSpaceManager);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get namespace manager");
-
-#define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
-        gNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
-
-
-        rv = nsServiceManager::GetService(kXULContentUtilsCID,
-                                          nsCOMTypeInfo<nsIXULContentUtils>::GetIID(),
-                                          (nsISupports**) &gXULUtils);
-    }
-
-#ifdef PR_LOGGING
-    if (! gXULLog)
-        gXULLog = PR_NewLogModule("nsXULDocument");
-#endif
 }
 
 XULDocumentImpl::~XULDocumentImpl()
@@ -816,6 +765,10 @@ XULDocumentImpl::~XULDocumentImpl()
             nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
             gRDFService = nsnull;
         }
+
+        NS_IF_RELEASE(kNC_persist);
+        NS_IF_RELEASE(kNC_attribute);
+        NS_IF_RELEASE(kNC_value);
 
         NS_IF_RELEASE(gHTMLElementFactory);
 
@@ -1681,6 +1634,9 @@ XULDocumentImpl::EndLoad()
 
     // Do any initial hookup that needs to happen.
     rv = ResolveForwardReferences();
+    if (NS_FAILED(rv)) return rv;
+
+    rv = ApplyPersistentAttributes();
     if (NS_FAILED(rv)) return rv;
 
     StartLayout();
@@ -2804,46 +2760,79 @@ XULDocumentImpl::Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aA
 
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> source;
-    rv = gXULUtils->GetElementResource(aElement, getter_AddRefs(source));
+    nsCOMPtr<nsIRDFResource> element;
+    rv = gXULUtils->GetElementResource(aElement, getter_AddRefs(element));
     if (NS_FAILED(rv)) return rv;
 
     // No ID, so nothing to persist.
-    if (! source)
+    if (! element)
         return NS_OK;
 
-    // Ick. Construct a resource from the namespace and attribute.
-    nsCOMPtr<nsIRDFResource> property;
-    rv = gXULUtils->GetResource(aNameSpaceID, aAttribute, getter_AddRefs(property));
+    // Ick. Construct a property from the attribute. Punt on
+    // namespaces for now.
+    const PRUnichar* attrstr;
+    rv = aAttribute->GetUnicode(&attrstr);
     if (NS_FAILED(rv)) return rv;
 
-    nsAutoString value;
-    rv = aElement->GetAttribute(kNameSpaceID_None, aAttribute, value);
+    nsCOMPtr<nsIRDFResource> attr;
+    rv = gRDFService->GetResource(nsCAutoString(attrstr), getter_AddRefs(attr));
+    if (NS_FAILED(rv)) return rv;
+
+    // Turn the value into a literal
+    nsAutoString valuestr;
+    rv = aElement->GetAttribute(kNameSpaceID_None, aAttribute, valuestr);
     if (NS_FAILED(rv)) return rv;
 
     PRBool novalue = (rv != NS_CONTENT_ATTR_HAS_VALUE);
 
-    nsCOMPtr<nsIRDFNode> oldtarget;
-    rv = mLocalStore->GetTarget(source, property, PR_TRUE, getter_AddRefs(oldtarget));
+    // See if there was an old value...
+    nsCOMPtr<nsIRDFNode> oldvalue;
+    rv = mLocalStore->GetTarget(element, attr, PR_TRUE, getter_AddRefs(oldvalue));
     if (NS_FAILED(rv)) return rv;
 
-    if (oldtarget && novalue) {
-        rv = mLocalStore->Unassert(source, property, oldtarget);
+    if (oldvalue && novalue) {
+        // ...there was an oldvalue, and they've removed it. XXXThis
+        // handling isn't quite right...
+        rv = mLocalStore->Unassert(element, attr, oldvalue);
     }
     else {
-        nsCOMPtr<nsIRDFLiteral> newtarget;
-        rv = gRDFService->GetLiteral(value.GetUnicode(), getter_AddRefs(newtarget));
+        // Now either 'change' or 'assert' based on whether there was
+        // an old value.
+        nsCOMPtr<nsIRDFLiteral> newvalue;
+        rv = gRDFService->GetLiteral(valuestr.GetUnicode(), getter_AddRefs(newvalue));
         if (NS_FAILED(rv)) return rv;
 
-        if (oldtarget) {
-            rv = mLocalStore->Change(source, property, oldtarget, newtarget);
+        if (oldvalue) {
+            rv = mLocalStore->Change(element, attr, oldvalue, newvalue);
         }
         else {
-            rv = mLocalStore->Assert(source, property, newtarget, PR_TRUE);
+            rv = mLocalStore->Assert(element, attr, newvalue, PR_TRUE);
         }
     }
 
     if (NS_FAILED(rv)) return rv;
+
+    // Add it to the persisted set for this document (if it's not
+    // there already).
+    {
+        nsXPIDLCString docurl;
+        rv = mDocumentURL->GetSpec(getter_Copies(docurl));
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFResource> doc;
+        rv = gRDFService->GetResource(docurl, getter_AddRefs(doc));
+        if (NS_FAILED(rv)) return rv;
+
+        PRBool hasAssertion;
+        rv = mLocalStore->HasAssertion(doc, kNC_persist, element, PR_TRUE, &hasAssertion);
+        if (NS_FAILED(rv)) return rv;
+
+        if (! hasAssertion) {
+            rv = mLocalStore->Assert(doc, kNC_persist, element, PR_TRUE);
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
     return NS_OK;
 }
 
@@ -3722,34 +3711,113 @@ XULDocumentImpl::Init(void)
 {
     nsresult rv;
 
-    if (NS_FAILED(rv = NS_NewHeapArena(getter_AddRefs(mArena), nsnull)))
-        return rv;
+    rv = NS_NewHeapArena(getter_AddRefs(mArena), nsnull);
+    if (NS_FAILED(rv)) return rv;
 
     // Create a namespace manager so we can manage tags
-    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
-                                                    nsnull,
-                                                    NS_GET_IID(nsINameSpaceManager),
-                                                    getter_AddRefs(mNameSpaceManager))))
-        return rv;
+    rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
+                                            nsnull,
+                                            NS_GET_IID(nsINameSpaceManager),
+                                            getter_AddRefs(mNameSpaceManager));
+    if (NS_FAILED(rv)) return rv;
 
     // Create our focus tracker and hook it up.
     nsCOMPtr<nsIXULCommandDispatcher> commandDis;
-    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kXULCommandDispatcherCID,
-                                                    nsnull,
-                                                    NS_GET_IID(nsIXULCommandDispatcher),
-                                                    getter_AddRefs(commandDis)))) {
-        NS_ERROR("unable to create a focus tracker");
-        return rv;
-    }
+    rv = nsComponentManager::CreateInstance(kXULCommandDispatcherCID,
+                                            nsnull,
+                                            NS_GET_IID(nsIXULCommandDispatcher),
+                                            getter_AddRefs(commandDis));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create a focus tracker");
+    if (NS_FAILED(rv)) return rv;
 
     mCommandDispatcher = do_QueryInterface(commandDis);
 
-    nsCOMPtr<nsIDOMEventListener> CommandDispatcher = do_QueryInterface(mCommandDispatcher);
+    nsCOMPtr<nsIDOMEventListener> CommandDispatcher =
+        do_QueryInterface(mCommandDispatcher);
+
     if (CommandDispatcher) {
       // Take the focus tracker and add it as an event listener for focus and blur events.
         AddEventListener("focus", CommandDispatcher, PR_TRUE);
         AddEventListener("blur", CommandDispatcher, PR_TRUE);
     }
+
+    // Get the local store. Yeah, I know. I wish GetService() used a
+    // 'void**', too.
+    nsIRDFDataSource* localstore;
+    rv = nsServiceManager::GetService(kLocalStoreCID,
+                                      NS_GET_IID(nsIRDFDataSource),
+                                      (nsISupports**) &localstore);
+    mLocalStore = localstore;
+    NS_IF_RELEASE(localstore);
+
+    // this _could_ fail; e.g., if we've tried to grab the local store
+    // before profiles have initialized. If so, no big deal; nothing
+    // will persist.
+
+#if 0
+    // construct a selection object
+    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRangeListCID,
+                                                    nsnull,
+                                                    kIDOMSelectionIID,
+                                                    (void**) &mSelection))) {
+        NS_ERROR("unable to create DOM selection");
+    }
+#endif
+
+    if (gRefCnt++ == 0) {
+        kCommandUpdaterAtom             = NS_NewAtom("commandupdater");
+        kEventsAtom                     = NS_NewAtom("events");
+        kIdAtom                         = NS_NewAtom("id");
+        kObservesAtom                   = NS_NewAtom("observes");
+        kOpenAtom                       = NS_NewAtom("open");
+        kPersistAtom                    = NS_NewAtom("persist");
+        kRefAtom                        = NS_NewAtom("ref");
+        kRuleAtom                       = NS_NewAtom("rule");
+        kTargetsAtom                    = NS_NewAtom("targets");
+        kTemplateAtom                   = NS_NewAtom("template");
+
+        // Keep the RDF service cached in a member variable to make using
+        // it a bit less painful
+        rv = nsServiceManager::GetService(kRDFServiceCID,
+                                          NS_GET_IID(nsIRDFService),
+                                          (nsISupports**) &gRDFService);
+
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF Service");
+        if (NS_FAILED(rv)) return rv;
+
+        gRDFService->GetResource(NC_NAMESPACE_URI "persist",   &kNC_persist);
+        gRDFService->GetResource(NC_NAMESPACE_URI "attribute", &kNC_attribute);
+        gRDFService->GetResource(NC_NAMESPACE_URI "value",     &kNC_value);
+
+        rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
+                                                nsnull,
+                                                NS_GET_IID(nsIHTMLElementFactory),
+                                                (void**) &gHTMLElementFactory);
+
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get HTML element factory");
+        if (NS_FAILED(rv)) return rv;
+
+        rv = nsServiceManager::GetService(kNameSpaceManagerCID,
+                                          NS_GET_IID(nsINameSpaceManager),
+                                          (nsISupports**) &gNameSpaceManager);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get namespace manager");
+        if (NS_FAILED(rv)) return rv;
+
+#define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
+        gNameSpaceManager->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
+
+
+        rv = nsServiceManager::GetService(kXULContentUtilsCID,
+                                          NS_GET_IID(nsIXULContentUtils),
+                                          (nsISupports**) &gXULUtils);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+#ifdef PR_LOGGING
+    if (! gXULLog)
+        gXULLog = PR_NewLogModule("nsXULDocument");
+#endif
 
     return NS_OK;
 }
@@ -4364,3 +4432,153 @@ XULDocumentImpl::CreateElement(PRInt32 aNameSpaceID,
     NS_ADDREF(*aResult);
     return NS_OK;
 }
+
+
+nsresult
+XULDocumentImpl::ApplyPersistentAttributes()
+{
+    // Add all of the 'persisted' attributes into the content
+    // model.
+    if (! mLocalStore)
+        return NS_OK;
+
+    nsresult rv;
+    nsCOMPtr<nsISupportsArray> array;
+
+    nsXPIDLCString docurl;
+    rv = mDocumentURL->GetSpec(getter_Copies(docurl));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIRDFResource> doc;
+    rv = gRDFService->GetResource(docurl, getter_AddRefs(doc));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISimpleEnumerator> elements;
+    rv = mLocalStore->GetTargets(doc, kNC_persist, PR_TRUE, getter_AddRefs(elements));
+    if (NS_FAILED(rv)) return rv;
+
+    while (1) {
+        PRBool hasmore;
+        rv = elements->HasMoreElements(&hasmore);
+        if (NS_FAILED(rv)) return rv;
+
+        if (! hasmore)
+            break;
+
+        if (! array) {
+            rv = NS_NewISupportsArray(getter_AddRefs(array));
+            if (NS_FAILED(rv)) return rv;
+        }
+
+        nsCOMPtr<nsISupports> isupports;
+        rv = elements->GetNext(getter_AddRefs(isupports));
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFResource> resource = do_QueryInterface(isupports);
+        if (! resource) {
+            NS_WARNING("expected element to be a resource");
+            continue;
+        }
+
+        const char* uri;
+        rv = resource->GetValueConst(&uri);
+        if (NS_FAILED(rv)) return rv;
+
+        nsAutoString id;
+        rv = gXULUtils->MakeElementID(this, nsAutoString(uri), id);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to compute element ID");
+        if (NS_FAILED(rv)) return rv;
+
+        rv = GetElementsForID(id, array);
+        if (NS_FAILED(rv)) return rv;
+
+        PRUint32 cnt;
+        rv = array->Count(&cnt);
+        if (NS_FAILED(rv)) return rv;
+
+        if (! cnt)
+            continue;
+
+        rv = ApplyPersistentAttributesToElements(resource, array);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return NS_OK;
+}
+
+
+nsresult
+XULDocumentImpl::ApplyPersistentAttributesToElements(nsIRDFResource* aResource, nsISupportsArray* aElements)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsISimpleEnumerator> attrs;
+    rv = mLocalStore->ArcLabelsOut(aResource, getter_AddRefs(attrs));
+    if (NS_FAILED(rv)) return rv;
+
+    while (1) {
+        PRBool hasmore;
+        rv = attrs->HasMoreElements(&hasmore);
+        if (NS_FAILED(rv)) return rv;
+
+        if (! hasmore)
+            break;
+
+        nsCOMPtr<nsISupports> isupports;
+        rv = attrs->GetNext(getter_AddRefs(isupports));
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFResource> property = do_QueryInterface(isupports);
+        if (! property) {
+            NS_WARNING("expected a resource");
+            continue;
+        }
+
+        const char* attrname;
+        rv = property->GetValueConst(&attrname);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIAtom> attr = dont_AddRef(NS_NewAtom(attrname));
+        if (! attr)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        // XXX could hang namespace off here, as well...
+
+        nsCOMPtr<nsIRDFNode> node;
+        rv = mLocalStore->GetTarget(aResource, property, PR_TRUE, getter_AddRefs(node));
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIRDFLiteral> literal = do_QueryInterface(node);
+        if (! literal) {
+            NS_WARNING("expected a literal");
+            continue;
+        }
+
+        const PRUnichar* value;
+        rv = literal->GetValueConst(&value);
+        if (NS_FAILED(rv)) return rv;
+
+        PRUint32 cnt;
+        rv = aElements->Count(&cnt);
+        if (NS_FAILED(rv)) return rv;
+            
+        for (PRInt32 i = PRInt32(cnt) - 1; i >= 0; --i) {
+            nsISupports* isupports2 = aElements->ElementAt(i);
+            if (! isupports2)
+                continue;
+
+            nsCOMPtr<nsIContent> element = do_QueryInterface(isupports2);
+            NS_RELEASE(isupports2);
+
+            CBufDescriptor wrapper(value, PR_TRUE, 0, -1);
+            rv = element->SetAttribute(/* XXX */ kNameSpaceID_None,
+                                       attr,
+                                       nsAutoString(wrapper),
+                                       PR_FALSE);
+        }
+    }
+
+    return NS_OK;
+}
+
+
