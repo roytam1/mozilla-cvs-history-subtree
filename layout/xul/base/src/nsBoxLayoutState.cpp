@@ -194,8 +194,9 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aCommand->GetCurrentReflowNode());
-  NS_ASSERTION(reflowIterator.CurrentNode(),
-               "NULL reflowIterator.CurrentNode() in UnWind(); we're crashing");
+  if (!reflowIterator.CurrentNode())
+    return;
+
   nsIFrame* currFrame = reflowIterator.CurrentNode()->GetFrame();
 
   {
