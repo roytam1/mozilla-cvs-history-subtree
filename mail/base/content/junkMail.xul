@@ -75,7 +75,7 @@
     <tabs id="junkMailTabs">
       <tab label="&settingsTab.label;"/>
       <tab label="&adaptiveTab.label;"/>
-      <tab label="&blackListsTab.label;"/>
+      <tab hidden="true" label="&blackListsTab.label;"/>
     </tabs>
 
     <tabpanels id="junkMailTabsPanels" flex="1">
@@ -204,8 +204,8 @@
           </hbox>
         </vbox>
 
-        <!-- Real Time Black Lists Tab -->        
-        <vbox index="blackLists" flex="1">
+        <!-- Real Time Black Lists Tab (not implemented yet so hide it) -->        
+        <vbox hidden="true" index="blackLists" flex="1">
           <description width="1">This hasn't been implemented yet</description>
         </vbox>
 
