@@ -520,7 +520,7 @@ gif_init_transparency(gif_struct* gs, int index)
     /* Set the source image's transparent pixel index.  Do this even if the source
        image's transparent pixel has previously been set, since the index can vary
        from frame to frame in an animated gif. */
-    src_trans_pixel->index = index;
+//    src_trans_pixel->index = index;
 
     return PR_TRUE;
 }

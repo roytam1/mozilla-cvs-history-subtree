@@ -46,6 +46,7 @@ nsGIFDecoder2::nsGIFDecoder2()
 {
   NS_INIT_ISUPPORTS();
   memset(&mGIFStruct, 0, sizeof(gif_struct));
+  mImageFrame = nsnull;
 }
 
 nsGIFDecoder2::~nsGIFDecoder2(void)
@@ -383,10 +384,10 @@ int HaveDecodedRow(
     case nsIGFXFormat::BGR:
       {
         while(rowBufIndex != decoder->mGIFStruct.rowend) {
-          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
-          *rgbRowIndex++ = 0;// pad XXX why do I need to pad data that I say is 3 bytes?
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
+          //          *rgbRowIndex++ = 0;// pad XXX why do I need to pad data that I say is 3 bytes?
           ++rowBufIndex;
         }
 
