@@ -3153,10 +3153,10 @@ nsXULElement::GetInlineStyleRules(nsISupportsArray* aRules)
 {
     // Fetch the cached style rule from the attributes.
     nsresult result = NS_ERROR_NULL_POINTER;
-    nsIStyleRule* rule = nsnull;
+    nsCOMPtr<nsIStyleRule> rule;
     if (aRules) {
         if (Attributes()) {
-            result = Attributes()->GetInlineStyleRule(rule);
+            result = Attributes()->GetInlineStyleRule(*getter_AddRefs(rule));
         }
         else if (mPrototype && mPrototype->mInlineStyleRule) {
             rule = mPrototype->mInlineStyleRule;
@@ -3165,7 +3165,6 @@ nsXULElement::GetInlineStyleRules(nsISupportsArray* aRules)
     }
     if (rule) {
         aRules->AppendElement(rule);
-        NS_RELEASE(rule);
     }
     return result;
 }
