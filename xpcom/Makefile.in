@@ -31,7 +31,7 @@ DIRS=   typelib        \
         proxy          \
         tools          \
         build          \
-	@(NULL)
+	$(NULL)
 
 ifdef ENABLE_TESTS
 DIRS += tests
