@@ -555,10 +555,16 @@ BEGIN_MESSAGE_MAP(CRDFToolbarButton, CRDFToolbarButtonBase)
 	ON_MESSAGE(DM_MENUCLOSED, OnDropMenuClosed)
 	ON_WM_SYSCOLORCHANGE()
 	ON_WM_PAINT()
+	ON_WM_MOUSEACTIVATE()
 		//}}AFX_MSG_MAP
 
 END_MESSAGE_MAP()
 
+
+int CRDFToolbarButton::OnMouseActivate( CWnd* pDesktopWnd, UINT nHitTest, UINT message )
+{
+	return MA_ACTIVATE;
+}
 
 
 void CRDFToolbarButton::OnPaint()

@@ -75,20 +75,31 @@ void CNavTitleBar::OnPaint( )
 	void* data;
 	PRBool foundData = FALSE;
 	
+	CRDFOutliner* pOutliner = (CRDFOutliner*)HT_GetViewFEData(m_View);
+	if (pOutliner->InNavigationMode())
+	{
+		m_ForegroundColor = pOutliner->GetForegroundColor();
+		m_BackgroundColor = pOutliner->GetBackgroundColor();
+		m_BackgroundImageURL = pOutliner->GetBackgroundImageURL();
+	}
+	else
+	{
+		m_ForegroundColor = RGB(255,255,255);
+		m_BackgroundColor = RGB(64,64,64);
+		m_BackgroundImageURL = "";
+	}
+
 	// Foreground color
 	HT_GetNodeData(topNode, gNavCenter->titleBarFGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_ForegroundColor);
-	else m_ForegroundColor = RGB(255,255,255);
-
+	
 	// background color
 	HT_GetNodeData(topNode, gNavCenter->titleBarBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_BackgroundColor);
-	else m_BackgroundColor = RGB(0,0,0);
-
+	
 	// Background image URL
-	m_BackgroundImageURL = "";
 	HT_GetNodeData(topNode, gNavCenter->titleBarBGURL, HT_COLUMN_STRING, &data);
 	if (data)
 		m_BackgroundImageURL = (char*)data;

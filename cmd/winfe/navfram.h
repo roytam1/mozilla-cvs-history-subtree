@@ -115,6 +115,7 @@ public:
 	
 	void SetHTNode(HT_Resource node) { m_Node = node; }
 	void SetRDFButton(CRDFToolbarButton* pButton) { m_pButton = pButton; }
+	CRDFToolbarButton* GetRDFButton() { return m_pButton; }
 
 protected:  // control bar embedded members
 	friend class CSelector;

@@ -146,6 +146,10 @@ public:
 	~CRDFOutliner ( );
 
 	// Inspectors
+	COLORREF GetForegroundColor() { return m_ForegroundColor; }
+	COLORREF GetBackgroundColor() { return m_BackgroundColor; }
+	CString GetBackgroundImageURL() { return m_BackgroundImageURL; }
+
 	HT_View GetHTView() { return m_View; } // Return a handle to the hypertree view
 	HT_Resource GetAcquiredNode() { return m_Node; } // Return handle to the acquired HT node
 	CRDFOutlinerParent* GetRDFParent() { return m_Parent; } // RDFOutlinerParent handle

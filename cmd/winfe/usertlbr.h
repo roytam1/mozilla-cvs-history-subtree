@@ -140,6 +140,7 @@ protected:
 	afx_msg LRESULT OnFillInMenu(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysColorChange( );
 	afx_msg void OnPaint();
+	afx_msg int OnMouseActivate( CWnd* pDesktopWnd, UINT nHitTest, UINT message );
 	
 	//}}AFX_MSG
 

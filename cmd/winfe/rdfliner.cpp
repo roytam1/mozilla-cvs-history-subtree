@@ -989,6 +989,10 @@ void CRDFOutliner::SetNavigationMode(BOOL mode)
 {
 	m_bInNavigationMode = mode;
 	((CRDFOutlinerParent*)GetParent())->EnableHeaders(!m_bInNavigationMode);
+
+	// Need to invalidate the title strip.
+	CRDFContentView* pView = (CRDFContentView*)(GetParent()->GetParent());
+	pView->GetTitleBar()->Invalidate();
 }
 
 void CRDFOutliner::OnSelDblClk(int iLine)
@@ -1764,10 +1768,27 @@ void CRDFOutliner::OnPaint()
 	if (m_bInNavigationMode)
 	{
 		// Options for navigation mode.
-		m_ForegroundColor = RGB(255,255,255);
-		m_BackgroundColor = RGB(0,0,0);
-		m_SortBackgroundColor = RGB(0,0,0);
-		m_SortForegroundColor = RGB(255,255,255);
+		// Inherit colors from the toolbar if we point to a button.
+		CFrameWnd* pFrameWnd = GetParentFrame();
+		if (pFrameWnd->IsKindOf(RUNTIME_CLASS(CNSNavFrame)))
+		{
+			// We have a parent navframe that could POTENTIALLY be attached to a button.
+			CNSNavFrame* pNav = (CNSNavFrame*)pFrameWnd;
+			if (pNav->GetRDFButton() != NULL)
+			{
+				// There's a button from which to inherit colors.
+				CRDFToolbar* pToolbar = (CRDFToolbar*)(pNav->GetRDFButton()->GetParent());
+				m_ForegroundColor = m_SortForegroundColor = pToolbar->GetForegroundColor();
+				m_BackgroundColor = m_SortBackgroundColor = pToolbar->GetBackgroundColor();
+			}
+		}
+		else
+		{
+			// Use some defaults
+			m_ForegroundColor = m_SortForegroundColor = RGB(0,0,0);
+			m_BackgroundColor = m_SortBackgroundColor = RGB(240,240,240);
+		}
+
 		m_bHasPipes = FALSE;
 		m_bDrawDividers = FALSE;
 		m_bUseSingleClick = TRUE;
