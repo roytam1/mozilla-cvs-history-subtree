@@ -1925,11 +1925,7 @@ js_Interpret(JSContext *cx, jsval *result)
 		parent = OBJ_GET_PARENT(cx, obj2);
 	    }
 
-	    /* If there is no class prototype, use js_ObjectClass. */
-	    if (!proto)
-		obj = js_NewObject(cx, &js_ObjectClass, NULL, parent);
-	    else
-		obj = js_NewObject(cx, OBJ_GET_CLASS(cx, proto), proto, parent);
+	    obj = js_NewObject(cx, &js_ObjectClass, proto, parent);
 	    if (!obj) {
 		ok = JS_FALSE;
 		goto out;
