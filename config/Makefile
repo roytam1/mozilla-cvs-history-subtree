@@ -21,10 +21,6 @@ DEPTH		= ..
 HSRCS		= pathsub.h
 CSRCS		= nsinstall.c pathsub.c
 
-ifeq ($(subst /,_,$(shell uname -s)),OS2)
-LOCAL_INCLUDES += -Ios2
-endif
-
 PLSRCS		= nfspwd.pl revdepth.pl
 
 TARGETS		= $(PROGRAM) $(PLSRCS:.pl=)
