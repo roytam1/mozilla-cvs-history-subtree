@@ -18,10 +18,6 @@
 
 #include "msgCore.h"    // precompiled header...
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
-
 #include "nsIURI.h"
 #include "nsIMailboxUrl.h"
 #include "nsMailboxUrl.h"
@@ -53,7 +49,7 @@ static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 
 static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 
-static char *nsMailboxGetURI(char *nativepath)
+static char *nsMailboxGetURI(const char *nativepath)
 {
 
     nsresult rv;
@@ -103,7 +99,7 @@ static char *nsMailboxGetURI(char *nativepath)
             if (NS_FAILED(rv)) continue;
             
             // the relpath is just past the serverpath
-            char *relpath = nativepath + len;
+            const char *relpath = nativepath + len;
             // skip past leading / if any
             while (*relpath == '/') relpath++;
             uri = PR_smprintf("%s/%s", (const char*)serverURI, relpath);
@@ -364,6 +360,7 @@ nsresult nsMailboxUrl::ParseUrl(const nsString& aSpec)
 {
 	if (m_filePath)
 		delete m_filePath;
+	GetPath(getter_Copies(m_file));
 	ParseSearchPart();
 	m_filePath = new nsFileSpec(nsFilePath(m_file));
     return NS_OK;
