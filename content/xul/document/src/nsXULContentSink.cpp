@@ -1404,8 +1404,8 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsIContent* aEleme
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
             nsCAutoString extraWhiteSpace;
-            PRInt32 count = mContextStack.Depth();
-            while (--count >= 0)
+            PRInt32 cnt = mContextStack.Depth();
+            while (--cnt >= 0)
                 extraWhiteSpace += "  ";
 
             PR_LOG(gLog, PR_LOG_DEBUG,
@@ -1776,10 +1776,6 @@ XULContentSinkImpl::OpenRoot(const nsIParserNode& aNode, PRInt32 aNameSpaceID, n
     if (NS_FAILED(rv)) return rv;
 
     if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-        nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(mDocument);
-        if (! xuldoc)
-            return NS_ERROR_UNEXPECTED;
-
         rv = xuldoc->AddElementForID(id, element);
         if (NS_FAILED(rv)) return rv;
     }
