@@ -37,7 +37,6 @@ OS_CFLAGS = $(OS_EXE_CFLAGS)
 endif
 
 CSRCS =             \
-	acceptread.c    \
 	accept.c		\
 	alarm.c			\
 	atomic.c		\
@@ -63,6 +62,7 @@ CSRCS =             \
 	instrumt.c      \
 	intrupt.c       \
 	io_timeout.c    \
+	ioconthr.c      \
 	ipv6.c          \
 	join.c    		\
 	joinkk.c        \
