@@ -1,0 +1,38 @@
+# xxxbsmedberg this will probably fail in static builds, but I didn't
+# have the patience to separate out each platform to its own manifest
+
+[gecko]
+#if MOZ_WIDGET_TOOLKIT==beos
+dist/bin/components/@DLLP@widget_beos@DLLS@
+#endif
+#if MOZ_WIDGET_TOOLKIT==os2
+dist/bin/components/@DLLP@wdgtos2@DLLS@
+#endif
+#if MOZ_WIDGET_TOOLKIT==mac
+dist/bin/components/@DLLP@widget_mac@DLLS@
+#endif
+#if MOZ_WIDGET_TOOLKIT==cocoa
+dist/bin/components/@DLLP@widget_cocoa@DLLS@
+#endif
+#if MOZ_WIDGET_TOOLKIT==windows
+dist/bin/components/@DLLP@gkwidget@DLLS@
+#endif
+#if MOZ_ENABLE_GTK
+dist/bin/@DLLP@gtksuperwin@DLLS@
+dist/bin/components/@DLLP@widget_gtk@DLLS@
+#endif
+#if MOZ_ENABLE_GTK2
+dist/bin/components/@DLLP@widget_gtk2@DLLS@
+#endif
+#if MOZ_ENABLE_XLIB
+dist/bin/@DLLP@xlibxtbin@DLLS@
+dist/bin/components/@DLLP@widget_xlib@DLLS@
+#endif
+#if MOZ_ENABLE_PHOTON
+dist/bin/components/@DLLP@widget_photon@DLLS@
+#endif
+#if MOZ_ENABLE_XREMOTE
+dist/bin/components/@DLLP@xremote_client@DLLS@
+#endif
+
+!xpt dist/bin/components/widget.xpt

@@ -28,6 +28,15 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= xpwidgets support
 
+PACKAGE_FILE = widget.pkg
+PACKAGE_VARS += \
+	MOZ_ENABLE_GTK \
+	MOZ_ENABLE_GTK2 \
+	MOZ_ENABLE_XLIB \
+	MOZ_ENABLE_PHOTON \
+	MOZ_ENABLE_XREMOTE \
+	$(NULL)
+
 ifneq (,$(filter beos os2 mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 DIRS		+= $(MOZ_WIDGET_TOOLKIT)
 endif
