@@ -190,6 +190,9 @@ public:
     mFrameConstructor = aFC;
   }
 
+  static void GetContextMenu(nsIMenuParent** aContextMenu);
+  static PRBool IsContextMenuActive();
+
   static PRBool IsSizedToPopup(nsIContent* aContent, PRBool aRequireAlways);
 
 protected:

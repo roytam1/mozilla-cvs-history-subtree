@@ -1454,10 +1454,11 @@ NS_IMETHODIMP nsMenuPopupFrame::SetCurrentMenuItem(nsIMenuFrame* aMenuItem)
 {
   // When a context menu is open, the current menu is locked, and no change
   // to the menu is allowed.
-  nsCOMPtr<nsIMenuParent> contextMenu;
-  GetContextMenu(getter_AddRefs(contextMenu));
-  if (contextMenu)
+  nsIMenuParent *contextMenu = nsnull;
+  GetContextMenu(&contextMenu);
+  if (contextMenu) {
     return NS_OK;
+  }
 
   if (mCurrentMenu == aMenuItem)
     return NS_OK;
@@ -1503,8 +1504,8 @@ nsMenuPopupFrame::Escape(PRBool& aHandledFlag)
   mIncrementalString.Truncate();
 
   // See if we have a context menu open.
-  nsCOMPtr<nsIMenuParent> contextMenu;
-  GetContextMenu(getter_AddRefs(contextMenu));
+  nsIMenuParent *contextMenu = nsnull;
+  GetContextMenu(&contextMenu);
   if (contextMenu) {
     // Get the context menu parent.
     nsIFrame* childFrame;
@@ -1542,8 +1543,8 @@ nsMenuPopupFrame::Enter()
   mIncrementalString.Truncate();
 
   // See if we have a context menu open.
-  nsCOMPtr<nsIMenuParent> contextMenu;
-  GetContextMenu(getter_AddRefs(contextMenu));
+  nsIMenuParent *contextMenu = nsnull;
+  GetContextMenu(&contextMenu);
   if (contextMenu)
     return contextMenu->Enter();
 
@@ -1558,20 +1559,10 @@ void
 nsMenuPopupFrame::GetContextMenu(nsIMenuParent** aContextMenu)
 {
   *aContextMenu = nsnull;
-  if (mIsContextMenu || !nsMenuFrame::sDismissalListener)
+  if (mIsContextMenu)
     return;
 
-  nsCOMPtr<nsIMenuParent> menuParent;
-  nsMenuFrame::sDismissalListener->GetCurrentMenuParent(getter_AddRefs(menuParent));
-  if (!menuParent)
-    return;
-
-  PRBool isContextMenu;
-  menuParent->GetIsContextMenu(isContextMenu);
-  if (isContextMenu) {
-    *aContextMenu = menuParent;
-    NS_ADDREF(*aContextMenu);
-  }
+  nsMenuFrame::GetContextMenu(aContextMenu);
 }
 
 nsIMenuFrame*
@@ -1773,8 +1764,8 @@ NS_IMETHODIMP
 nsMenuPopupFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
 {
   // See if we have a context menu open.
-  nsCOMPtr<nsIMenuParent> contextMenu;
-  GetContextMenu(getter_AddRefs(contextMenu));
+  nsIMenuParent *contextMenu = nsnull;
+  GetContextMenu(&contextMenu);
   if (contextMenu)
     return contextMenu->KeyboardNavigation(aKeyCode, aHandledFlag);
 
