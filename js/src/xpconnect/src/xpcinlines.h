@@ -464,40 +464,20 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         }
     }
 
-    // We need to determine if the object really does this interface...
-
-    const nsIID* iid = aInterface->GetIID();
-    nsISupports* identity = GetIdentityObject();
-    nsISupports* obj;
-
-    identity->QueryInterface(*iid, (void**)&obj);
-    if(!obj)
-        return nsnull;
-
-    if(!GetSet()->HasInterface(aInterface) &&
-       !ExtendSet(ccx, aInterface))
-        return nsnull;
-
     if(!firstAvailable)
     {
         XPCWrappedNativeTearOffChunk* newChunk =
             new XPCWrappedNativeTearOffChunk();
         if(!newChunk)
-        {
-            NS_RELEASE(obj);
             return nsnull;
-        }
         lastChunk->mNextChunk = newChunk;
         firstAvailable = newChunk->mTearOffs;
     }
 
-    firstAvailable->SetInterface(aInterface);
-    firstAvailable->SetNative(obj);
-
-    if(needJSObject && !InitTearOffJSObject(ccx, firstAvailable))
+    if(!InitTearOff(ccx, firstAvailable, aInterface, needJSObject))
         return nsnull;
 
-    return firstAvailable;
+    return firstAvailable;    
 }
 
 /***************************************************************************/

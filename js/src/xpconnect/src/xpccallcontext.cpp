@@ -179,6 +179,7 @@ XPCCallContext::SetJSID(jsid id)
 
             mMember = nsnull;
             mInterface = nsnull;
+            mStaticMemberIsLocal = JS_FALSE;
         }
     }
 

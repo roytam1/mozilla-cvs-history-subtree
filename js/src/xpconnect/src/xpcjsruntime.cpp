@@ -122,6 +122,8 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Do cleanup in NativeInterfaces
                 self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, cx);
+
+                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(cx);
             }
             else // status == JSGC_END
             {
@@ -136,6 +138,8 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                     NS_RELEASE(wrapper);
                 }
                 array->Clear();
+
+                XPCWrappedNativeScope::FinshedGC(cx);
             }
         }
     }

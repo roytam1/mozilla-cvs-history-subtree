@@ -115,6 +115,18 @@
 //#define DEBUG_stats_jband 1
 #endif
 
+// Defeat possible Windows macro-mangling of the name
+#ifdef GetClassInfo
+#undef GetClassInfo
+#endif
+
+// To kill #define index(a,b) strchr(a,b) macro in Toolkit types.h
+#ifdef XP_OS2_VACPP
+#ifdef index
+#undef index
+#endif
+#endif
+
 /***************************************************************************/
 // default initial sizes for maps (hashtables)
 
@@ -1702,7 +1714,9 @@ public:
                                               XPCWrappedNativeScope* Scope,
                                               XPCNativeSet* Set);
 
-    XPCWrappedNativeScope*   GetScope()         const {return mScope;}
+    XPCWrappedNativeScope*   GetScope()   const {return mScope;}
+    XPCJSRuntime*            GetRuntime() const {return mScope->GetRuntime();}
+
     JSObject*                GetJSProtoObject() const {return mJSProtoObject;}
     nsIClassInfo*            GetClassInfo()     const {return mClassInfo;}
     XPCNativeSet*            GetSet()           const {return mSet;}
@@ -1878,6 +1892,12 @@ private:
     JSBool Init(XPCCallContext& ccx);
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
+    
+    JSBool InitTearOff(XPCCallContext& ccx,
+                       XPCWrappedNativeTearOff* aTearOff,
+                       XPCNativeInterface* aInterface,
+                       JSBool needJSObject);
+     
     JSBool InitTearOffJSObject(XPCCallContext& ccx, 
                                XPCWrappedNativeTearOff* to);
 

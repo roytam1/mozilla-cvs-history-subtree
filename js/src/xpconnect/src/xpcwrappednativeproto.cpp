@@ -83,12 +83,27 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
         }
     }
 
-    mJSProtoObject = JS_NewObject(ccx.GetJSContext(),
+
+    // XXX Hackomatic - We force a lookup of 'toString' to cause the JSObject
+    // to mutate its scope. I was seeing problems with the wrappers' JSObjects
+    // sharing a scope with 'Object.prototype' and a lookup of properties
+    // that exist on 'Object.prototype' *never* calling the resolver of this
+    // prototype object. By forcing a scope mutate here (by triggering the
+    // define of a property) we ensure that the wrappers' JSObjects will not 
+    // share the scope of 'Object.prototype'. [Here the 'scope' is the scope
+    // inside the JS Engine. Not the xpconnect kind of scope]
+    JSProperty* prop;
+    JSObject* obj2;
+    jsid id = GetRuntime()->GetStringID(XPCJSRuntime::IDX_TO_STRING);
+
+    JSContext* cx = ccx.GetJSContext();
+    mJSProtoObject = JS_NewObject(cx,
                                   &XPC_WN_Proto_JSClass,
                                   mScope->GetPrototypeJSObject(),
                                   mScope->GetGlobalJSObject());
     return mJSProtoObject &&
-           JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, this);
+           JS_SetPrivate(cx, mJSProtoObject, this) &&
+           OBJ_LOOKUP_PROPERTY(cx, mJSProtoObject, id, &obj2, &prop);
 }
 
 void

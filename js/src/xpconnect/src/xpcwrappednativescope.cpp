@@ -313,6 +313,8 @@ GetScopeOfObject(JSContext* cx, JSObject* obj)
 XPCWrappedNativeScope* 
 XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
 {
+    // XXX We can fix this to not have to lookup 'Components' now.
+
     JSContext* cx = ccx.GetJSContext();
     XPCWrappedNativeScope* scope;
 

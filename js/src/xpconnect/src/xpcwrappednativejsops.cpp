@@ -165,6 +165,11 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 
 /***************************************************************************/
 
+/*
+ * We *never* set the tearoff names (e.g. nsIFoo) as JS_ENUMERATE.
+ * We *never* set toString or toSource as JS_ENUMERATE.
+ */
+
 static JSBool
 DefinePropertyIfFound(XPCCallContext& ccx, 
                       JSObject *obj, jsid id, 
@@ -220,8 +225,15 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                 return OBJ_DEFINE_PROPERTY(cx, obj, id, 
                                            OBJECT_TO_JSVAL(JS_GetFunctionObject(fun)),
                                            nsnull, nsnull,
-                                           propFlags, nsnull);
+                                           propFlags & ~JSPROP_ENUMERATE, 
+                                           nsnull);
             }
+
+            // XXX This *might* be an nsIFoo that this not yet part of our
+            // set. Do we want to grovel through the interface names (from
+            // the InterfaceInfoManager) to look for a match? I think we want
+            // to *not* do this. They only find a named tearoff if it is
+            // already part of the set.
         }
         return JS_TRUE;    
     }
@@ -231,7 +243,8 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         if(wrapperToReflectInterfaceNames)
         {
             XPCWrappedNativeTearOff* to = 
-               wrapperToReflectInterfaceNames->FindTearOff(ccx, iface, JS_TRUE);
+              wrapperToReflectInterfaceNames->FindTearOff(ccx, iface, JS_TRUE);
+            
             if(!to)
                 return JS_FALSE;
             JSObject* jso = to->GetJSObject();
@@ -241,7 +254,8 @@ DefinePropertyIfFound(XPCCallContext& ccx,
             AutoResolveID arid(ccx, id);
             return OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
                                        nsnull, nsnull, 
-                                       propFlags, nsnull);
+                                       propFlags & ~JSPROP_ENUMERATE, 
+                                       nsnull);
         }        
         return JS_TRUE;    
     }
@@ -292,124 +306,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 }
 
 /***************************************************************************/
-
-class JSIDIterator
-{
-public:
-    JSBool HasMore() const {return mIndex < mCount;}
-    jsid   GetNext()       {return mArray[mIndex++];}
-    PRUint16 GetCount() const {return mCount;}
-      
-    virtual ~JSIDIterator() {delete mArray;}
-protected:
-    JSIDIterator() : mArray(nsnull) {}
-        
-protected:
-    PRUint16 mIndex;
-    PRUint16 mCount;
-    jsid*    mArray;            
-};
-
-/**********************************************************/
-
-class InterfaceMemberNamesIterator : public JSIDIterator
-{
-public:
-    static InterfaceMemberNamesIterator* 
-    newIter(XPCNativeInterface* iface, 
-            jsid*    extraArray,
-            PRUint16 extraCount);
-private:
-    InterfaceMemberNamesIterator() {}
-    JSBool Init(XPCNativeInterface* iface, 
-                jsid*    extraArray,
-                PRUint16 extraCount);
-};        
-
-// static 
-InterfaceMemberNamesIterator* 
-InterfaceMemberNamesIterator::newIter(XPCNativeInterface* iface, 
-                                      jsid*    extraArray,
-                                      PRUint16 extraCount)
-{
-    InterfaceMemberNamesIterator* iter = new InterfaceMemberNamesIterator();
-    if(iter && iter->Init(iface, extraArray,extraCount))
-        return iter;
-    delete iter;
-    return nsnull;        
-}
-
-JSBool 
-InterfaceMemberNamesIterator::Init(XPCNativeInterface* iface, 
-                                   jsid*    extraArray,
-                                   PRUint16 extraCount)
-{
-    PRUint16 memberCount = iface->GetMemberCount();
-
-    mArray = new jsid[memberCount + extraCount];
-    if(!mArray) 
-        return JS_FALSE;
-    mCount = mIndex = 0;
-
-    PRUint16 i;
-    
-    for(i = 0; i < memberCount; i++)
-        mArray[mCount++] = iface->GetMemberAt(i)->GetID();
-    
-    for(i = 0; i < extraCount; i++)
-    {
-        PRUint16 k;
-        jsid id = extraArray[i];
-        for(k = 0; k < mCount; k++)
-            if(mArray[k] == id)
-                break;
-        if(k == mCount)
-            mArray[mCount++] = id;
-    }
-    return JS_TRUE;    
-}
-
-/***********************************************/
-
-class InterfaceNamesIterator : public JSIDIterator
-{
-public:
-    static InterfaceNamesIterator* 
-    newIter(XPCNativeSet* set);
-private:
-    InterfaceNamesIterator() {}
-    JSBool Init(XPCNativeSet* set);
-};        
-
-// static 
-InterfaceNamesIterator* 
-InterfaceNamesIterator::newIter(XPCNativeSet* set)
-{
-    InterfaceNamesIterator* iter = new InterfaceNamesIterator();
-    if(iter && iter->Init(set))
-        return iter;
-    delete iter;
-    return nsnull;        
-}
-
-JSBool 
-InterfaceNamesIterator::Init(XPCNativeSet* set)
-{
-    PRUint16 count = set->GetInterfaceCount();
-
-    mArray = new jsid[count];
-    if(!mArray) 
-        return JS_FALSE;
-    mCount = mIndex = 0;
-
-    PRUint16 i;
-    for(i = 0; i < count; i++)
-        mArray[mCount++] = set->GetInterfaceAt(i)->GetNameID();
-    return JS_TRUE;    
-}
-
-
-/***************************************************************************/
 /***************************************************************************/
 
 JS_STATIC_DLL_CALLBACK(JSBool)
@@ -452,11 +348,14 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
     {
         case JSTYPE_FUNCTION:
             {
-                XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
-                if(si && (si->WantCall() || si->WantConstruct()))
+                if(!ccx.GetTearOff())
                 {
-                    *vp = OBJECT_TO_JSVAL(obj);
-                    return JS_TRUE;
+                    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+                    if(si && (si->WantCall() || si->WantConstruct()))
+                    {
+                        *vp = OBJECT_TO_JSVAL(obj);
+                        return JS_TRUE;
+                    }
                 }
             }
             return Throw(NS_ERROR_XPC_CANT_CONVERT_WN_TO_FUN, cx);
@@ -493,20 +392,8 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
     return JS_FALSE;
 }
 
-JS_STATIC_DLL_CALLBACK(void)
-XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
-{
-    XPCWrappedNative* p = (XPCWrappedNative*) JS_GetPrivate(cx, obj);
-    if(!p)
-        return;
-    p->FlatJSObjectFinalized(cx, obj);
-}
-
-/***************************************************************************/
-
-
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_NoHelper_Enumerate(JSContext *cx, JSObject *obj)
+XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 {
     // Could support a lazier lookup scheme here.
     
@@ -514,9 +401,19 @@ XPC_WN_NoHelper_Enumerate(JSContext *cx, JSObject *obj)
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
+    // Since we aren't going to enumerate tearoff names and the prototype
+    // handles non-mutated members, we can do this potential short-circuit.
+    if(!wrapper->HasMutatedSet())
+        return JS_TRUE;
+
+    // Since we might be using this in the helper case, we check to
+    // see if this is all avoidable.
+    if(wrapper->GetScriptableInfo() &&
+       wrapper->GetScriptableInfo()->DontEnumStaticProps())
+        return JS_TRUE;
+
     XPCNativeSet* set = wrapper->GetSet();
-    if(!set)
-        return JS_FALSE;
+    XPCNativeSet* protoSet = wrapper->GetProto()->GetSet();
 
     JSProperty* prop;
     JSObject* obj2;
@@ -526,36 +423,38 @@ XPC_WN_NoHelper_Enumerate(JSContext *cx, JSObject *obj)
     for(PRUint16 i = 0; i < interface_count; i++)
     {
         XPCNativeInterface* interface = interfaceArray[i];
-        if(!OBJ_LOOKUP_PROPERTY(cx, obj, interface->GetNameID(), &obj2, &prop))
-            return JS_FALSE;
-
         PRUint16 member_count = interface->GetMemberCount();
         for(PRUint16 k = 0; k < member_count; k++)
         {
             XPCNativeMember* member = interface->GetMemberAt(k);
+            jsid id = member->GetID();
+
+            // Skip if this member is going to come from the proto.
+            PRUint16 index;
+            if(protoSet->FindMember(id, nsnull, &index) && index == i)
+                continue;
 
             // The Lookup will force a Resolve and eager Define of the property
-            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+            if(!OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
                 return JS_FALSE;
         }
     }
-
-    XPCJSRuntime* rt = ccx.GetRuntime();
-
-    if(!OBJ_LOOKUP_PROPERTY(cx, obj, 
-            rt->GetStringID(XPCJSRuntime::IDX_TO_STRING),
-            &obj2, &prop) ||
-       !OBJ_LOOKUP_PROPERTY(cx, obj, 
-            rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE),
-            &obj2, &prop))
-        return JS_FALSE;
-
     return JS_TRUE;
 }
 
+/***************************************************************************/
+
+JS_STATIC_DLL_CALLBACK(void)
+XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
+{
+    XPCWrappedNative* p = (XPCWrappedNative*) JS_GetPrivate(cx, obj);
+    if(!p)
+        return;
+    p->FlatJSObjectFinalized(cx, obj);
+}
+
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_NoHelper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
-                           JSObject **objp)
+XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
     jsid id;
     if(!JS_ValueToId(cx, idval, &id))
@@ -569,50 +468,33 @@ XPC_WN_NoHelper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flag
     if(!set)
         return JS_TRUE;
 
-    if(!ccx.GetStaticMemberIsLocal())
+    // Don't resolve properties that are on our prototype.
+    if(ccx.GetInterface() && !ccx.GetStaticMemberIsLocal())
         return JS_TRUE;
 
     return DefinePropertyIfFound(ccx, obj, id, 
                                  set, nsnull, wrapper->GetScope(),
-                                 JS_FALSE, wrapper,
+                                 JS_TRUE, wrapper,
                                  JSPROP_ENUMERATE |
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT);
-
-#if 0
-    // XXX hacky test...
-
-    JSObject* o = JS_NewObject(cx, &XPC_WN_Tearoff_JSClass, nsnull, obj);
-    *objp = o;
-    const char test[] = "this is the prop";
-    // jsid id;
-    AutoResolveID arid(ccx, id);
-    return OBJ_DEFINE_PROPERTY(cx, o, id,
-                               STRING_TO_JSVAL(JS_NewStringCopyZ(cx,test)),
-                               nsnull, nsnull,
-                               JSPROP_ENUMERATE |
-                               JSPROP_READONLY |
-                               JSPROP_PERMANENT,
-                               nsnull);
-#endif
 }
 
 JSClass XPC_WN_NoHelper_JSClass = {
     "XPCWrappedNative_NoHelper",    // name;
     JSCLASS_HAS_PRIVATE |
-    JSCLASS_NEW_RESOLVE |
     JSCLASS_PRIVATE_IS_NSISUPPORTS, // flags;
 
     /* Mandatory non-null function pointer members. */
-    XPC_WN_OnlyIWrite_PropertyStub,    // addProperty;
-    XPC_WN_CannotModifyPropertyStub,   // delProperty;
-    JS_PropertyStub,                   // getProperty;
-    XPC_WN_OnlyIWrite_PropertyStub,    // setProperty;
+    XPC_WN_OnlyIWrite_PropertyStub, // addProperty;
+    XPC_WN_CannotModifyPropertyStub,// delProperty;
+    JS_PropertyStub,                // getProperty;
+    XPC_WN_OnlyIWrite_PropertyStub, // setProperty;
 
-    XPC_WN_NoHelper_Enumerate, // enumerate;
-    (JSResolveOp) XPC_WN_NoHelper_NewResolve,     // resolve;
-    XPC_WN_Shared_Convert,            // convert;
-    XPC_WN_NoHelper_Finalize,         // finalize;
+    XPC_WN_Shared_Enumerate,        // enumerate;
+    XPC_WN_NoHelper_Resolve,        // resolve;
+    XPC_WN_Shared_Convert,          // convert;
+    XPC_WN_NoHelper_Finalize,       // finalize;
 
     /* Optionally non-null members start here. */
     nsnull,                         // getObjectOps;
@@ -637,6 +519,28 @@ XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
                       jsval *statep, jsid *idp)
 {
     // XXX fix this...
+
+/*
+    Here are the cases:
+
+    if( helper want NO enumerate )
+        if( DON_ENUM_STATICS )
+            use enumerate stub - don't use this JSOp thing at all
+        else
+            do shared enumerate - don't use this JSOp thing at all
+    else        
+
+
+
+
+
+
+
+
+
+
+*/
+
     
     //XPC_WN_NoHelper_NewEnumerate
     
@@ -1046,6 +950,8 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
 {
+    // Could support a lazier lookup here.
+    
     NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
     XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
     if(!self)
@@ -1077,24 +983,12 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
         {
             XPCNativeMember* member = interface->GetMemberAt(k);
 
-            // Could support a lazier lookup here.
-
             // The Lookup will force a Resolve and eager Define of the property
 
             if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
                 return JS_FALSE;
         }
     }
-
-    XPCJSRuntime* rt = ccx.GetRuntime();
-
-    if(!OBJ_LOOKUP_PROPERTY(cx, obj, 
-            rt->GetStringID(XPCJSRuntime::IDX_TO_STRING),
-            &obj2, &prop) ||
-       !OBJ_LOOKUP_PROPERTY(cx, obj, 
-            rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE),
-            &obj2, &prop))
-        return JS_FALSE;
 
     return JS_TRUE;
 }
@@ -1172,68 +1066,34 @@ JSClass XPC_WN_Proto_JSClass = {
 // XXX fix me
 
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_TearOff_NewEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
-                             jsval *statep, jsid *idp)
+XPC_WN_TearOff_Enumerate(JSContext *cx, JSObject *obj)
 {
-    JSIDIterator* iter;
-    switch(enum_op)
-    {
-        case JSENUMERATE_INIT:
-        {
-            XPCCallContext ccx(JS_CALLER, cx, obj);
-            XPCWrappedNative* wrapper = ccx.GetWrapper();
-            THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+    XPCCallContext ccx(JS_CALLER, cx, obj);
+    XPCWrappedNative* wrapper = ccx.GetWrapper();
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
-            XPCWrappedNativeTearOff* to = ccx.GetTearOff();
-            XPCNativeInterface* iface;
+    XPCWrappedNativeTearOff* to = ccx.GetTearOff();
+    XPCNativeInterface* iface;
+
+    if(!to || nsnull == (iface = to->GetInterface()))    
+        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
     
-            if(!to || nsnull == (iface = to->GetInterface()))    
-                return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
-            
-            XPCJSRuntime* rt = ccx.GetRuntime();
+    JSProperty* prop;
+    JSObject* obj2;
 
-            jsid extra[2] = {
-                rt->GetStringID(XPCJSRuntime::IDX_TO_STRING),
-                rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE)};
+    PRUint16 member_count = iface->GetMemberCount();
+    for(PRUint16 k = 0; k < member_count; k++)
+    {
+        XPCNativeMember* member = iface->GetMemberAt(k);
+        jsid id = member->GetID();
 
-            iter = InterfaceMemberNamesIterator::newIter(iface, extra, 2);
-                                
-            if(!iter)
-            {
-                JS_ReportOutOfMemory(cx);
-                return JS_FALSE;
-            }
-
-            if(idp)
-                *idp = INT_TO_JSVAL(iter->GetCount());
-            *statep = PRIVATE_TO_JSVAL(iter);
-            return JS_TRUE;
-        }
-        case JSENUMERATE_NEXT:
-        {
-            iter = (JSIDIterator*) JSVAL_TO_PRIVATE(*statep);
-            if(iter->HasMore())
-            {
-                *idp = iter->GetNext();
-                return JS_TRUE;
-            }
-            // else... FALL THROUGH
-        }
-
-        case JSENUMERATE_DESTROY:
-            iter = (JSIDIterator*) JSVAL_TO_PRIVATE(*statep);
-            delete iter;
-            *statep = JSVAL_NULL;
-            return JS_TRUE;
-
-        default:
-            NS_ERROR("bad enum_op");
+        // The Lookup will force a Resolve and eager Define of the property
+        if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
             return JS_FALSE;
     }
 
-    NS_NOTREACHED("huh?");
-    return JS_FALSE;
-}
+    return JS_TRUE;
+}        
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
@@ -1260,56 +1120,6 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
                                  JSPROP_ENUMERATE);
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_TearOff_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
-{
-    if(type == JSTYPE_OBJECT)
-    {
-        *vp = OBJECT_TO_JSVAL(obj);
-        return JS_TRUE;
-    }
-
-    XPCCallContext ccx(JS_CALLER, cx, obj);
-    XPCWrappedNative* wrapper = ccx.GetWrapper();
-    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
-
-    switch (type)
-    {
-        case JSTYPE_FUNCTION:
-            return Throw(NS_ERROR_XPC_CANT_CONVERT_WN_TO_FUN, cx);
-        case JSTYPE_NUMBER:
-            *vp = JSVAL_ONE;
-            return JS_TRUE;
-        case JSTYPE_BOOLEAN:
-            *vp = JSVAL_TRUE;
-            return JS_TRUE;
-        case JSTYPE_VOID:
-        case JSTYPE_STRING:
-        {
-            ccx.SetJSID(ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_TO_STRING));
-            ccx.SetArgsAndResultPtr(0, nsnull, vp);
-
-            XPCNativeMember* member = ccx.GetMember();
-            if(member && member->IsMethod())
-            {
-                if(!XPCWrappedNative::CallMethod(ccx))
-                    return JS_FALSE;
-
-                if(JSVAL_IS_PRIMITIVE(*vp))
-                    return JS_TRUE;
-            }
-
-            // else...
-            return ToStringGuts(ccx);
-        }
-        default:
-            NS_ERROR("bad type in conversion");
-            return JS_FALSE;
-    }
-    NS_NOTREACHED("huh?");
-    return JS_FALSE;
-}
-
 JS_STATIC_DLL_CALLBACK(void)
 XPC_WN_TearOff_Finalize(JSContext *cx, JSObject *obj)
 {
@@ -1321,18 +1131,17 @@ XPC_WN_TearOff_Finalize(JSContext *cx, JSObject *obj)
 }
 
 JSClass XPC_WN_Tearoff_JSClass = {
-    "WrappedNative_TearOff",    // name;
-    JSCLASS_HAS_PRIVATE |
-    JSCLASS_NEW_ENUMERATE,              // flags;
+    "WrappedNative_TearOff",            // name;
+    JSCLASS_HAS_PRIVATE,                // flags;
 
     /* Mandatory non-null function pointer members. */
     XPC_WN_OnlyIWrite_PropertyStub,     // addProperty;
     XPC_WN_CannotModifyPropertyStub,    // delProperty;
     JS_PropertyStub,                    // getProperty;
     XPC_WN_OnlyIWrite_PropertyStub,     // setProperty;
-    (JSEnumerateOp) XPC_WN_TearOff_NewEnumerate,    // enumerate;
+    XPC_WN_TearOff_Enumerate,           // enumerate;
     XPC_WN_TearOff_Resolve,             // resolve;
-    XPC_WN_TearOff_Convert,             // convert;
+    XPC_WN_Shared_Convert,              // convert;
     XPC_WN_TearOff_Finalize,            // finalize;
 
     /* Optionally non-null members start here. */
@@ -1420,68 +1229,6 @@ GetDoubleWrappedJSObject(XPCWrappedNativeCallContext& ccx)
             }
         }
     }
-
-// I wrote this to use in a newEnumerate in the proto, but then I have the 
-// problem of enumerating plain old properties. I might use this later...
-
-class SetJSIDIterator
-{
-public:
-    SetJSIDIterator() : mArray(nsnull) {}
-    ~SetJSIDIterator() {delete mArray;}
-    
-    JSBool Init(XPCNativeSet* set, 
-                JSBool includeInterfaceNames,
-                jsid*    extraArray,
-                PRUint16 extraCount)
-    {
-
-        PRUint16 allocCount = set->GetMemberCount() + extraCount +
-                              (includeInterfaceNames ? 
-                                set->GetInterfaceCount() : 0); 
-        mArray = new jsid[allocCount];
-        if(!mArray) 
-            return JS_FALSE;
-        mCount = mIndex = 0;
-        
-        XPCNativeInterface** ifaceArray = set->GetInterfaceArray();
-        PRUint16 ifaceCount = set->GetInterfaceCount();
-        PRUint16 i;
-        for(i = 0; i < ifaceCount; i++)
-            mArray[mCount++] = ifaceArray[i]->GetNameID();
-            
-        for(i = 0; i < ifaceCount; i++)
-        {
-            XPCNativeInterface* iface = ifaceArray[i];
-            PRUint16 memberCount = iface->GetMemberCount();
-            for(PRUint16 k = 0; k < memberCount; k++)
-            {
-                jsid id = iface->GetMemberAt(k)->GetID();
-                PRUint16 index;
-                set->FindMember(id, nsnull, &index);
-                if(index != i)
-                    mArray[mCount++] = id;
-            }
-        }
-        for(i = 0; i < extraCount; i++)
-        {
-            jsid id = extraArray[i];
-            if(!set->FindMember(id, nsnull, (PRUint16*)nsnull))
-                mArray[mCount++] = id;
-        }
-        return JS_TRUE;    
-    }
-
-    JSBool HasMore() {return mIndex < mCount;}
-    jsid   GetNext() {return mArray[mIndex++];}
-
-private:
-    PRUint16 mIndex;
-    PRUint16 mCount;
-    jsid*    mArray;            
-};        
-
-
 
 /***************************************************************************/
 #endif

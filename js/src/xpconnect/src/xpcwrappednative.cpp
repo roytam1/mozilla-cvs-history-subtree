@@ -66,7 +66,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNativeProto* proto;
 
     nsCOMPtr<nsIClassInfo> info(do_QueryInterface(Object));
-    if(info)
+
+    // If we are making a wrapper for the nsIClassInfo interface then
+    // We *don't* want to have it use the prototype meant for instances
+    // of that class.
+    if(info && !Interface->GetIID()->Equals(NS_GET_IID(nsIClassInfo)))
     {
         proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info);
     }
@@ -475,6 +479,48 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
     }
     return JS_TRUE;        
 }
+
+JSBool 
+XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
+                              XPCWrappedNativeTearOff* aTearOff,
+                              XPCNativeInterface* aInterface,
+                              JSBool needJSObject)
+{
+    // Determine if the object really does this interface...
+
+    const nsIID* iid = aInterface->GetIID();
+    nsISupports* identity = GetIdentityObject();
+    nsISupports* obj;
+
+    if(NS_FAILED(identity->QueryInterface(*iid, (void**)&obj)) || !obj)
+        return JS_FALSE;
+
+    // Guard against trying to build a tearoff for a shared nsIClassInfo. 
+    if(iid->Equals(NS_GET_IID(nsIClassInfo)))
+    {
+        nsCOMPtr<nsISupports> alternate_identity(do_QueryInterface(obj));
+        if(alternate_identity.get() != identity)
+        {
+            NS_RELEASE(obj);
+            return JS_FALSE;
+        }
+    }
+
+    // If this is not already in our set we need to extend our set.
+    if(!GetSet()->HasInterface(aInterface) && !ExtendSet(ccx, aInterface))
+    {
+        NS_RELEASE(obj);
+        return JS_FALSE;
+    }
+
+    aTearOff->SetInterface(aInterface);
+    aTearOff->SetNative(obj);
+
+    if(needJSObject && !InitTearOffJSObject(ccx, aTearOff))
+        return JS_FALSE;
+
+    return JS_TRUE;
+}     
 
 JSBool 
 XPCWrappedNative::InitTearOffJSObject(XPCCallContext& ccx, 
