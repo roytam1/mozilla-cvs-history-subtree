@@ -47,6 +47,9 @@ pref("app.id", "{3550f703-e582-4d05-9a08-453d09bdfdc6}");
 pref("app.version", 
 #expand __APP_VERSION__
 );
+pref("app.build_id", 
+#expand __BUILD_ID__
+);
 
 #ifdef XP_MACOSX
 pref("mail.biff.animate_dock_icon", false);

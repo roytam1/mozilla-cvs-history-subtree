@@ -117,6 +117,9 @@ include $(topsrcdir)/config/rules.mk
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
 DEFINES += -DAPP_VERSION=\"$(APP_VERSION)\"
 
+BUILD_ID = $(shell cat $(DEPTH)/config/build_number)
+DEFINES += -DBUILD_ID=\"$(BUILD_ID)\"
+
 ifeq ($(OS_ARCH),WINNT)
 #
 # Control the default heap size.
