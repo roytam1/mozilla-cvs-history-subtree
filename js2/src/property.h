@@ -57,43 +57,55 @@ namespace JS2Runtime {
     public:
         Property() { }
 
-        Property(uint32 g, uint32 s, JSType *type)
-            : mType(type), mFlag(IndexPair) 
+        // a pair (or just one) of getter & setter methods - specify the vtable indices
+        Property(uint32 g, uint32 s, JSType *type, PropertyAttribute attr)
+            : mType(type), mAttributes(attr), mFlag(IndexPair) 
         { 
             mData.iPair.getterI = g;
             mData.iPair.setterI = s;
         }
 
-        Property(JSType *type, JSFunction *g, JSFunction *s)    // XXX the type is the return
+        // a pair (or just one) of getter & setter functions
+        Property(JSType *type, JSFunction *g, JSFunction *s, PropertyAttribute attr)    
+                                                                // XXX the type is the return
                                                                 // type of the getter function.
-            : mType(type), mFlag(FunctionPair) 
+            : mType(type), mAttributes(attr), mFlag(FunctionPair) 
         { 
             mData.fPair.getterF = g;  
             mData.fPair.setterF = s;
         }
 
-        Property(uint32 i, JSType *type, PropertyFlag flag) 
-            : mType(type), mFlag(flag)
+        // a member - either a vtable index or a slot index
+        Property(uint32 i, JSType *type, PropertyFlag flag, PropertyAttribute attr) 
+            : mType(type), mAttributes(attr), mFlag(flag)
         { 
             mData.index = i;
         }
 
-        Property(JSValue *p, JSType *type) 
-            : mType(type), mFlag(ValuePointer) 
+        // a generic property
+        Property(JSValue *p, JSType *type, PropertyAttribute attr) 
+            : mType(type), mAttributes(attr), mFlag(ValuePointer) 
         { 
             mData.vp = p;
         }
         
         enum {      
-                    Indexable   = 0x0001, 
-                    Static      = 0x0002,
-                    Dynamic     = 0x0004,
-                    Constructor = 0x0008,
-                    Operator    = 0x0010,
-                    Prototype   = 0x0020,
-                    Extend      = 0x0040,
-                    Virtual     = 0x0080,
-                    True        = 0x0100
+                Indexable   = 0x0001, 
+                Static      = 0x0002,
+                Dynamic     = 0x0004,
+                Constructor = 0x0008,
+                Operator    = 0x0010,
+                Prototype   = 0x0020,
+                Extend      = 0x0040,
+                Virtual     = 0x0080,
+                True        = 0x0100,
+                Abstract    = 0x0200,
+                Override    = 0x0400,
+                MayOverride = 0x0800,
+                Enumerable  = 0x1000, 
+                Public      = 0x2000, 
+                Private     = 0x4000, 
+                Final       = 0x8000, 
         };
 
         
@@ -131,6 +143,7 @@ namespace JS2Runtime {
 
 
 #define PROPERTY_KIND(it)           ((it)->second->first->mFlag)
+#define PROPERTY_ATTR(it)           ((it)->second->first->mAttributes)
 #define PROPERTY(it)                ((it)->second->first)
 #define NAMESPACED_PROPERTY(it)     ((it)->second)
 #define PROPERTY_NAMESPACELIST(it)  ((it)->second->second)

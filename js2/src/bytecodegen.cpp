@@ -601,7 +601,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFuncti
         }
     }
 
-    bool hasReturn = genCodeForStatement(f.body, NULL);
+    bool hasReturn = genCodeForStatement(f.body, NULL, NotALabel);
     
 /*
     // OPT - see above
@@ -648,7 +648,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFuncti
 ByteCodeModule *ByteCodeGen::genCodeForScript(StmtNode *p)
 {
     while (p) {
-        genCodeForStatement(p, NULL);
+        genCodeForStatement(p, NULL, NotALabel);
         p = p->next;
     }
     return new ByteCodeModule(this);
@@ -664,7 +664,7 @@ ByteCodeModule *ByteCodeGen::genCodeForExpression(ExprNode *p)
 
 // emit bytecode for the single statement p. Return true if that statement
 // was a return statement (or contained only paths leading to a return statement)
-bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
+bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg, uint32 finallyLabel)
 {
     bool result = false;    
     addPosition(p->pos);
@@ -680,7 +680,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 ByteCodeGen bcg(m_cx, mScopeChain);             // this will capture the instance initializations
                 StmtNode* s = classStmt->body->statements;
                 while (s) {
-                    bcg.genCodeForStatement(s, &static_cg);
+                    bcg.genCodeForStatement(s, &static_cg, finallyLabel);
                     s = s->next;
                 }
                 JSFunction *f = NULL;
@@ -774,7 +774,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
             mLabelStack.push_back(breakLabel);
             mLabelStack.push_back(labelAtTestCondition);
-            genCodeForStatement(w->stmt, static_cg);
+            genCodeForStatement(w->stmt, static_cg, finallyLabel);
             mLabelStack.pop_back();
             mLabelStack.pop_back();
             
@@ -796,7 +796,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
             mLabelStack.push_back(breakLabel);
             mLabelStack.push_back(labelAtTestCondition);
-            genCodeForStatement(d->stmt, static_cg);
+            genCodeForStatement(d->stmt, static_cg, finallyLabel);
             mLabelStack.pop_back();
             mLabelStack.pop_back();
 
@@ -868,7 +868,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
                     mLabelStack.push_back(breakLabel);
                     mLabelStack.push_back(labelAtIncrement);
-                    genCodeForStatement(f->stmt, static_cg);
+                    genCodeForStatement(f->stmt, static_cg, finallyLabel);
                     mLabelStack.pop_back();
                     mLabelStack.pop_back();
 
@@ -925,7 +925,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             uint32 labelAtTestCondition = getLabel(); 
 
             if (f->initializer) 
-                genCodeForStatement(f->initializer, static_cg);
+                genCodeForStatement(f->initializer, static_cg, finallyLabel);
             addOp(JumpOp);
             addFixup(labelAtTestCondition);
 
@@ -933,7 +933,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 
             mLabelStack.push_back(breakLabel);
             mLabelStack.push_back(labelAtIncrement);
-            genCodeForStatement(f->stmt, static_cg);
+            genCodeForStatement(f->stmt, static_cg, finallyLabel);
             mLabelStack.pop_back();
             mLabelStack.pop_back();
 
@@ -958,12 +958,17 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         {
             LabelStmtNode *l = checked_cast<LabelStmtNode *>(p);
             mLabelStack.push_back(getLabel(l));
-            genCodeForStatement(l->stmt, static_cg);
+            genCodeForStatement(l->stmt, static_cg, finallyLabel);
             mLabelStack.pop_back();
         }
         break;
     case StmtNode::Break:
         {
+            if (finallyLabel != NotALabel) {
+                addOp(JsrOp);
+                addFixup(finallyLabel);
+            }
+
             GoStmtNode *g = checked_cast<GoStmtNode *>(p);
             addOp(JumpOp);
             if (g->name)
@@ -1057,7 +1062,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                     setLabel(c->label);
                 }
                 else
-                    genCodeForStatement(s, static_cg);
+                    genCodeForStatement(s, static_cg, finallyLabel);
                 s = s->next;
             }
             mLabelStack.pop_back();
@@ -1075,7 +1080,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             addOp(JumpFalseOp);
             uint32 label = getLabel(); 
             addFixup(label);
-            genCodeForStatement(i->stmt, static_cg);
+            genCodeForStatement(i->stmt, static_cg, finallyLabel);
             setLabel(label);
         }
         break;
@@ -1087,12 +1092,12 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             addOp(JumpFalseOp);
             uint32 elseStatementLabel = getLabel(); 
             addFixup(elseStatementLabel);
-            result = genCodeForStatement(i->stmt, static_cg);
+            result = genCodeForStatement(i->stmt, static_cg, finallyLabel);
             addOp(JumpOp);
             uint32 branchAroundElselabel = getLabel(); 
             addFixup(branchAroundElselabel);
             setLabel(elseStatementLabel);
-            result &= genCodeForStatement(i->stmt2, static_cg);
+            result &= genCodeForStatement(i->stmt2, static_cg, finallyLabel);
             setLabel(branchAroundElselabel);
         }
         break;
@@ -1101,7 +1106,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             BlockStmtNode *b = checked_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
-                result = genCodeForStatement(s, static_cg);
+                result = genCodeForStatement(s, static_cg, finallyLabel);
                 s = s->next;
             }            
         }
@@ -1144,7 +1149,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             JSType *objType = genExpr(w->expr);
             addOp(WithinOp);
             mScopeChain->addScope(objType);
-            genCodeForStatement(w->stmt, static_cg);
+            genCodeForStatement(w->stmt, static_cg, finallyLabel);
             mScopeChain->popScope();
             addOp(WithoutOp);
         }
@@ -1186,32 +1191,46 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 */
             TryStmtNode *t = checked_cast<TryStmtNode *>(p);
 
-            uint32 catchClauseLabel = (t->catches) ? getLabel() : toUInt32(-1);
-            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : toUInt32(-1);
+            uint32 catchClauseLabel;
+            uint32 finallyInvokerLabel;
+            uint32 t_finallyLabel;
+            addOp(TryOp);
+            if (t->finally) {
+                finallyInvokerLabel = getLabel();
+                addFixup(finallyInvokerLabel);            
+                t_finallyLabel = getLabel(); 
+            }
+            else {
+                finallyInvokerLabel = NotALabel;
+                addLong(NotALabel);
+                t_finallyLabel = NotALabel;
+            }
+            if (t->catches) {
+                catchClauseLabel = getLabel();
+                addFixup(catchClauseLabel);            
+            }
+            else {
+                catchClauseLabel = NotALabel;
+                addLong(NotALabel);
+            }
             uint32 finishedLabel = getLabel();
 
-            addOp(TryOp);
-            addFixup(finallyInvokerLabel);            
-            addFixup(catchClauseLabel);
+            genCodeForStatement(t->stmt, static_cg, t_finallyLabel);
 
-            genCodeForStatement(t->stmt, static_cg);
-
-            uint32 finallyLabel;
             if (t->finally) {
-                finallyLabel = getLabel(); 
                 addOp(JsrOp);
-                addFixup(finallyLabel);
+                addFixup(t_finallyLabel);
                 addOp(JumpOp);
                 addFixup(finishedLabel);
-                setLabel(finallyLabel);
+                setLabel(t_finallyLabel);
                 addOp(HandlerOp);
-                genCodeForStatement(t->finally, static_cg);
+                genCodeForStatement(t->finally, static_cg, finallyLabel);
                 addOp(RtsOp);
 
                 setLabel(finallyInvokerLabel);
                 // the exception object is on the top of the stack already
                 addOp(JsrOp);
-                addFixup(finallyLabel);
+                addFixup(t_finallyLabel);
                 addOpSetDepth(ThrowOp, 0);
 
             }
@@ -1232,7 +1251,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                     ref->emitImplicitLoad(this);
                     ref->emitCodeSequence(this);
                     delete ref;
-                    genCodeForStatement(c->stmt, static_cg);
+                    genCodeForStatement(c->stmt, static_cg, t_finallyLabel);
                     c = c->next;
                     if (c) {
                         mStackTop = 1;
@@ -1245,7 +1264,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                                     // on the top of the stack until here
                 if (t->finally) {
                     addOp(JsrOp);
-                    addFixup(finallyLabel);
+                    addFixup(t_finallyLabel);
                 }
             }
             setLabel(finishedLabel);
@@ -2363,10 +2382,16 @@ uint32 printInstruction(Formatter &f, uint32 i, const ByteCodeModule& bcm)
 
     case TryOp:
         offset = bcm.getOffset(i);
-        f << offset << " --> " << i + offset;
+        if (offset == -1)
+            f << "no finally; ";
+        else
+            f << "(finally) " << offset << " --> " << i + offset << "; ";
         i += 4;
         offset = bcm.getOffset(i);
-        f << " " << offset << " --> " << i + offset;
+        if (offset == -1)
+            f << "no catch;";
+        else
+            f << "(catch) " << offset << " --> " << i + offset;
         i += 4;
         break;
     default:

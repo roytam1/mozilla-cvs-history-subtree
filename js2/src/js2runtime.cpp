@@ -187,6 +187,7 @@ JSValue JSObject::getPropertyValue(PropertyIterator &i)
 void JSObject::defineGetterMethod(Context * /*cx*/, const String &name, AttributeStmtNode *attr, JSFunction *f)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
     PropertyIterator i;
     if (hasProperty(name, names, Write, &i)) {
         ASSERT(PROPERTY_KIND(i) == FunctionPair);
@@ -194,13 +195,14 @@ void JSObject::defineGetterMethod(Context * /*cx*/, const String &name, Attribut
         PROPERTY_GETTERF(i) = f;
     }
     else {
-        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, f, NULL), names));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, f, NULL, attrFlags), names));
         mProperties.insert(e);
     }
 }
 void JSObject::defineSetterMethod(Context * /*cx*/, const String &name, AttributeStmtNode *attr, JSFunction *f)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
     PropertyIterator i;
     if (hasProperty(name, names, Read, &i)) {
         ASSERT(PROPERTY_KIND(i) == FunctionPair);
@@ -208,7 +210,7 @@ void JSObject::defineSetterMethod(Context * /*cx*/, const String &name, Attribut
         PROPERTY_SETTERF(i) = f;
     }
     else {
-        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, NULL, f), names));
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(Function_Type, NULL, f, attrFlags), names));
         mProperties.insert(e);
     }
 }
@@ -217,11 +219,12 @@ void JSObject::defineSetterMethod(Context * /*cx*/, const String &name, Attribut
 Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
     PropertyIterator it;
     if (hasOwnProperty(name, names, Read, &it))
         cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
 
-    Property *prop = new Property(new JSValue(), type);
+    Property *prop = new Property(new JSValue(), type, attrFlags);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
     mProperties.insert(e);
     return prop;
@@ -232,7 +235,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, NamespaceLis
     if (hasOwnProperty(name, names, Read, &it))
         cx->reportError(Exception::typeError, "Duplicate definition '{0}'", name);
 
-    Property *prop = new Property(new JSValue(), type);
+    Property *prop = new Property(new JSValue(), type, 0);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
     mProperties.insert(e);
     return prop;
@@ -246,7 +249,8 @@ Property *JSObject::defineVariable(Context *cx, const String &name, AttributeStm
     if (hasOwnProperty(name, names, Read, &it))
         cx->reportError(Exception::typeError, "Duplicate definition '{0}'", attr->pos, name);
 
-    Property *prop = new Property(new JSValue(v), type);
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
+    Property *prop = new Property(new JSValue(v), type, attrFlags);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
     mProperties.insert(e);
     return prop;
@@ -257,7 +261,7 @@ Property *JSObject::defineVariable(Context *cx, const String &name, NamespaceLis
     if (hasOwnProperty(name, names, Read, &it))
         cx->reportError(Exception::typeError, "Duplicate definition '{0}'", name);
 
-    Property *prop = new Property(new JSValue(v), type);
+    Property *prop = new Property(new JSValue(v), type, 0);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, names));
     mProperties.insert(e);
     return prop;
@@ -489,7 +493,7 @@ void JSStringInstance::getProperty(Context *cx, const String &name, NamespaceLis
 }
 
 
-void JSInstance::initInstance(Context *, JSType *type)
+void JSInstance::initInstance(Context *cx, JSType *type)
 {
     if (type->mVariableCount)
         mInstanceValues = new JSValue[type->mVariableCount];
@@ -514,10 +518,11 @@ void JSInstance::initInstance(Context *, JSType *type)
         t = t->mSuperType;
     }
 
-    // copy instance values from the Ur-instance object
-    if (type->mInitialInstance)
-        for (uint32 i = 0; i < type->mVariableCount; i++)
-            mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
+    // run the initializer
+    if (type->mInstanceInitializer) {
+        cx->invokeFunction(type->mInstanceInitializer, JSValue(this), NULL, 0);
+    }
+
     mType = type;
 }
 
@@ -531,24 +536,10 @@ JSInstance *JSType::newInstance(Context *cx)
     return result;
 }
 
-// allocate a new (empty) instance of the class and then
-// run the instance initializer on that object. This becomes
-// the initial instance that then gets copied into each new
-// instance of this class.
+// this function gets executed each time a new instance is created
 void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
 {
-    mInitialInstance = newInstance(cx);
-    if (mVariableCount) {
-        mInitialInstance->mInstanceValues = new JSValue[mVariableCount];
-        if (mSuperType) {
-            for (uint32 i = 0; i < mSuperType->mVariableCount; i++)
-                mInitialInstance->mInstanceValues[i] = mSuperType->mInitialInstance->mInstanceValues[i];
-        }
-    }
-    if (f) {
-        JSValue thisValue(mInitialInstance);
-        cx->interpret(f->getByteCode(), 0, f->getScopeChain(), thisValue, NULL, 0);
-    }
+    mInstanceInitializer = f;
 }
 
 // Run the static initializer against this type
@@ -560,7 +551,8 @@ void JSType::setStaticInitializer(Context *cx, JSFunction *f)
 
 Property *JSType::defineVariable(Context * /*cx*/, const String& name, AttributeStmtNode *attr, JSType *type)
 {
-    Property *prop = new Property(mVariableCount++, type, Slot);
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
+    Property *prop = new Property(mVariableCount++, type, Slot, attrFlags);
     const PropertyMap::value_type e(name, new NamespacedProperty(prop, (attr) ? attr->attributeValue->mNamespaceList : NULL));
     mProperties.insert(e);
     return prop;
@@ -746,7 +738,7 @@ void ScopeChain::collectNames(StmtNode *p)
             const StringAtom& name = classStmt->name;
             JSType *thisClass = new JSType(name, NULL);
 
-            m_cx->setAttributeValue(classStmt);            
+            m_cx->setAttributeValue(classStmt, 0);              // XXX default attribute for a class?
 
             PropertyIterator it;
             if (hasProperty(name, NULL, Read, &it))
@@ -807,7 +799,7 @@ void ScopeChain::collectNames(StmtNode *p)
         {
             VariableStmtNode *vs = checked_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
-            m_cx->setAttributeValue(vs);
+            m_cx->setAttributeValue(vs, Property::Final);
             bool isStatic = (vs->attributeValue->mTrueFlags & Property::Static) == Property::Static;
 
             while (v)  {
@@ -822,7 +814,7 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
-            m_cx->setAttributeValue(f);
+            m_cx->setAttributeValue(f, Property::Virtual);
 
             bool isStatic = (f->attributeValue->mTrueFlags & Property::Static) == Property::Static;
             bool isConstructor = (f->attributeValue->mTrueFlags & Property::Constructor) == Property::Constructor;
@@ -1000,12 +992,26 @@ void JSType::defineMethod(Context *cx, const String& name, AttributeStmtNode *at
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
     PropertyIterator it;
     if (hasOwnProperty(name, names, Read, &it))
-        cx->reportError(Exception::typeError, "Duplicate method '{0}' definition", name);
+        cx->reportError(Exception::typeError, "Duplicate method definition", attr->pos);
+
+    // now check if the method exists in the supertype
+    if (mSuperType && mSuperType->hasOwnProperty(name, names, Read, &it)) {
+        // if it does, it must have been overridable:
+        PropertyAttribute superAttr = PROPERTY_ATTR(it);
+        if (superAttr & Property::Final)
+            cx->reportError(Exception::typeError, "Attempting to override a final method", attr->pos);
+        // if it was marked as virtual, then the new one must specifiy 'override' or 'mayoverride'
+        if (superAttr & Property::Virtual) {
+            if ((attr->attributeValue->mTrueFlags & (Property::Override | Property::MayOverride)) == 0)
+                cx->reportError(Exception::typeError, "Must specify 'override' or 'mayOverride'", attr->pos);
+        }
+    }
 
     uint32 vTableIndex = mMethods.size();
     mMethods.push_back(f);
 
-    const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, Function_Type, Method), names));
+    PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
+    const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, Function_Type, Method, attrFlags), names));
     mProperties.insert(e);
 }
 
@@ -1023,7 +1029,8 @@ void JSType::defineGetterMethod(Context * /*cx*/, const String &name, AttributeS
         PROPERTY_GETTERI(i) = vTableIndex;
     }
     else {
-        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, 0, Function_Type), names));
+        PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(vTableIndex, 0, Function_Type, attrFlags), names));
         mProperties.insert(e);
     }
 }
@@ -1042,7 +1049,8 @@ void JSType::defineSetterMethod(Context * /*cx*/, const String &name, AttributeS
         PROPERTY_SETTERI(i) = vTableIndex;
     }
     else {
-        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(0, vTableIndex, Function_Type), names));
+        PropertyAttribute attrFlags = (attr) ? attr->attributeValue->mTrueFlags : 0;
+        const PropertyMap::value_type e(name, new NamespacedProperty(new Property(0, vTableIndex, Function_Type, attrFlags), names));
         mProperties.insert(e);
     }
 }
@@ -1118,7 +1126,7 @@ JSType::JSType(const String &name, JSType *super)
             : JSObject(Type_Type),
                     mSuperType(super), 
                     mVariableCount(0),
-                    mInitialInstance(NULL),
+                    mInstanceInitializer(NULL),
                     mClassName(name),
                     mIsDynamic(false),
                     mUninitializedValue(kNullValue),
@@ -1138,7 +1146,7 @@ JSType::JSType(JSType *xClass)     // used for constructing the static component
             : JSObject(Type_Type),
                     mSuperType(xClass), 
                     mVariableCount(0),
-                    mInitialInstance(NULL),
+                    mInstanceInitializer(NULL),
                     mIsDynamic(false),
                     mUninitializedValue(kNullValue),
                     mPrototypeObject(NULL)
@@ -1231,9 +1239,13 @@ void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
     mScopeChain->popScope();
 }
 
-void Context::setAttributeValue(AttributeStmtNode *s)
+void Context::setAttributeValue(AttributeStmtNode *s, PropertyAttribute defaultValue)
 {
-    Attribute *attributeValue = executeAttributes(s->attributes);
+    Attribute *attributeValue = NULL;
+    if (s->attributes == NULL)
+        attributeValue = new Attribute(defaultValue, 0);
+    else
+        attributeValue = executeAttributes(s->attributes);
     s->attributeValue = attributeValue;
 }
 
@@ -1572,7 +1584,7 @@ uint32 JSFunction::findParameterName(const String *name)
         if (mArguments[i].mName->compare(*name) == 0)
             return i;
     }
-    return (uint32)(-1);
+    return NotABanana;
 }
 
 void Context::assureStackSpace(uint32 s)
@@ -1816,6 +1828,10 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
         uint32 falseFlags;
     } attribute_init[] = 
     {
+                                                        // XXX these false flags are WAY NOT COMPLETE!!
+                                                        //
+        { "indexable",      Property::Indexable,        0 },
+        { "enumerable",     Property::Enumerable,       0 },
         { "virtual",        Property::Virtual,          Property::Static | Property::Constructor },
         { "constructor",    Property::Constructor,      Property::Virtual },
         { "operator",       Property::Operator,         Property::Virtual | Property::Constructor },
@@ -1823,6 +1839,14 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
         { "fixed",          0,                          Property::Dynamic },
         { "prototype",      Property::Prototype,        0 },
         { "static",         Property::Static,           Property::Virtual },
+        { "abstract",       Property::Abstract,         Property::Static },
+        { "override",       Property::Override,         Property::Static },
+        { "mayOverride",    Property::MayOverride,      Property::Static },
+        { "true",           Property::True,             0 },
+        { "false",          0,                          Property::True },
+        { "public",         Property::Public,           Property::Private },
+        { "private",        Property::Private,          Property::Public },
+        { "final",          Property::Final,            Property::Virtual | Property::Abstract },
     };
     
     for (uint32 i = 0; i < (sizeof(attribute_init) / sizeof(Attribute_Init)); i++) {
@@ -1911,7 +1935,7 @@ Formatter& operator<<(Formatter& f, const JSValue& value)
         break;
     case JSValue::function_tag:
         if (!value.function->isNative())
-            f << "function\n" << *value.function->getByteCode();
+            f << "function '" << value.function->getFunctionName() << "'\n" << *value.function->getByteCode();
         else
             f << "function\n";
         break;

@@ -92,6 +92,7 @@ static const double two32 = 4294967296.0;
 static const double two16 = 65536.0;
 static const double two31 = 2147483648.0;
 
+#define NotABanana ((uint32)(-1))
 
     class JSObject;
     class JSFunction;
@@ -750,8 +751,8 @@ XXX ...couldn't get this to work...
         JSType          *mSuperType;        // NULL implies that this is the base Object
 
         uint32          mVariableCount;
-        JSInstance      *mInitialInstance;
-    
+        JSFunction      *mInstanceInitializer;
+
         // the 'vtable'
         MethodList      mMethods;
         String          mClassName;
@@ -1416,7 +1417,7 @@ XXX ...couldn't get this to work...
         
         // compiles attribute expression into an attribute object
         // which is stored back into the statement node.
-        void setAttributeValue(AttributeStmtNode *s);
+        void setAttributeValue(AttributeStmtNode *s, PropertyAttribute defaultValue);
         Attribute *executeAttributes(ExprNode *attr);
 
 

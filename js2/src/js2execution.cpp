@@ -487,7 +487,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                     NamedArgument *arg = static_cast<NamedArgument *>(v.object);
                                     // if this argument matches a parameter name, that's bad because
                                     // it's a duplicate case
-                                    if (target->findParameterName(arg->mName) != (uint32)(-1))
+                                    if (target->findParameterName(arg->mName) != NotABanana)
                                         reportError(Exception::referenceError, "Duplicate named argument");                                
                                     else {
                                         if (target->hasRestParameter()) {

@@ -65,91 +65,91 @@ namespace JS2Runtime {
 
 typedef enum {
 
-LoadConstantUndefinedOp,//                          --> <undefined value object>
-LoadConstantTrueOp,     //                          --> <true value object>
-LoadConstantFalseOp,    //                          --> <false value object>
-LoadConstantNullOp,     //                          --> <null value object>
-LoadConstantZeroOp,     //                          --> <+0.0 value object>
-LoadConstantNumberOp,   // <poolindex>              --> <Number value object>
-LoadConstantStringOp,   // <poolindex>              --> <String value object>
-LoadThisOp,             //                          --> <this object>      
-LoadFunctionOp,         // <pointer>        XXX !!! XXX
-LoadTypeOp,             // <pointer>        XXX !!! XXX
-InvokeOp,               // <argc> <thisflag>        <function> <args>  --> [<result>]
-GetTypeOp,              //                          <object> --> <type of object>
-CastOp,                 //                          <object> <type> --> <object>
-DoUnaryOp,              // <operation>              <object> --> <result>
-DoOperatorOp,           // <operation>              <object> <object> --> <result>
-PushNullOp,             //                          --> <Object(null)>
-PushIntOp,              // <int>                    --> <Object(int)>
-PushNumOp,              // <num>                    --> <Object(num)>
-PushStringOp,           // <poolindex>              --> <Object(index)>
-PushTypeOp,             // <poolindex>
-ReturnOp,               //                          <function> <args> <result> --> <result>
-ReturnVoidOp,           //                          <function> <args> -->
-GetConstructorOp,       //                          <type> --> <function> 
-NewObjectOp,            //                          --> <object>
-NewThisOp,              //                          <type> -->
-NewInstanceOp,          //  <argc>                  <type> <args> --> <object>
-DeleteOp,               //  <index>                 <object> --> <boolean>
-TypeOfOp,               //                          <object> --> <string>
-InstanceOfOp,           //                          <object> <object> --> <boolean>
-AsOp,                   //                          <object> <type> --> <object>
-IsOp,                   //                          <object> <object> --> <boolean>
-ToBooleanOp,            //                          <object> --> <boolean>
-JumpFalseOp,            // <target>                 <object> -->
-JumpTrueOp,             // <target>                 <object> -->
-JumpOp,                 // <target>            
-TryOp,                  // <handler> <handler>
-JsrOp,                  // <target>
-RtsOp,
-WithinOp,               //                          <object> -->
-WithoutOp,              //
-ThrowOp,                //                          <whatever> <object> --> <object>
-HandlerOp,
-LogicalXorOp,           //                          <object> <object> <boolean> <boolean> --> <object> 
-LogicalNotOp,           //                          <object> --> <object>
-SwapOp,                 //                          <object1> <object2> --> <object2> <object1>
-DupOp,                  //                          <object> --> <object> <object>
-DupInsertOp,            //                          <object1> <object2> --> <object2> <object1> <object2>
-DupNOp,                 // <N>                      <object> --> <object> { N times }
-DupInsertNOp,           // <N>                      <object> {xN} <object2> --> <object2> <object> {xN} <object2>
-PopOp,                  //                          <object> -->   
-// for instance members
-GetFieldOp,             // <slot>                   <base> --> <object>
-SetFieldOp,             // <slot>                   <base> <object> --> <object>
-// for instance methods
-GetMethodOp,            // <slot>                   <base> --> <base> <function>
-GetMethodRefOp,         // <slot>                   <base> --> <bound function> 
-// for argumentz
-GetArgOp,               // <index>                  --> <object>
-SetArgOp,               // <index>                  <object> --> <object>
-// for local variables in the immediate scope
-GetLocalVarOp,          // <index>                  --> <object>
-SetLocalVarOp,          // <index>                  <object> --> <object>
-// for local variables in the nth closure scope
-GetClosureVarOp,        // <depth>, <index>         --> <object>
-SetClosureVarOp,        // <depth>, <index>         <object> --> <object>
-// for array elements
-GetElementOp,           //                          <base> <index> --> <object>
-SetElementOp,           //                          <base> <index> <object> --> <object>
-// for properties
-GetPropertyOp,          // <poolindex>              <base> --> <object>
-GetInvokePropertyOp,    // <poolindex>              <base> --> <base> <object> 
-SetPropertyOp,          // <poolindex>              <base> <object> --> <object>
-// for all generic names 
-GetNameOp,              // <poolindex>              --> <object>
-GetTypeOfNameOp,        // <poolindex>              --> <object>
-SetNameOp,              // <poolindex>              <object> --> <object>
-LoadGlobalObjectOp,     //                          --> <object>
-PushScopeOp,            // <pointer>        XXX !!! XXX
-PopScopeOp,             // <pointer>        XXX !!! XXX
-NewClosureOp,           //                          <function> --> <function>
-ClassOp,                //                          <object> --> <type>
-JuxtaposeOp,            //                          <attribute> <attribute> --> <attribute>
-NamedArgOp,             //                          <object> <string> --> <named arg object>
+    LoadConstantUndefinedOp,//                          --> <undefined value object>
+    LoadConstantTrueOp,     //                          --> <true value object>
+    LoadConstantFalseOp,    //                          --> <false value object>
+    LoadConstantNullOp,     //                          --> <null value object>
+    LoadConstantZeroOp,     //                          --> <+0.0 value object>
+    LoadConstantNumberOp,   // <poolindex>              --> <Number value object>
+    LoadConstantStringOp,   // <poolindex>              --> <String value object>
+    LoadThisOp,             //                          --> <this object>      
+    LoadFunctionOp,         // <pointer>        XXX !!! XXX
+    LoadTypeOp,             // <pointer>        XXX !!! XXX
+    InvokeOp,               // <argc> <thisflag>        <function> <args>  --> [<result>]
+    GetTypeOp,              //                          <object> --> <type of object>
+    CastOp,                 //                          <object> <type> --> <object>
+    DoUnaryOp,              // <operation>              <object> --> <result>
+    DoOperatorOp,           // <operation>              <object> <object> --> <result>
+    PushNullOp,             //                          --> <Object(null)>
+    PushIntOp,              // <int>                    --> <Object(int)>
+    PushNumOp,              // <num>                    --> <Object(num)>
+    PushStringOp,           // <poolindex>              --> <Object(index)>
+    PushTypeOp,             // <poolindex>
+    ReturnOp,               //                          <function> <args> <result> --> <result>
+    ReturnVoidOp,           //                          <function> <args> -->
+    GetConstructorOp,       //                          <type> --> <function> 
+    NewObjectOp,            //                          --> <object>
+    NewThisOp,              //                          <type> -->
+    NewInstanceOp,          //  <argc>                  <type> <args> --> <object>
+    DeleteOp,               //  <index>                 <object> --> <boolean>
+    TypeOfOp,               //                          <object> --> <string>
+    InstanceOfOp,           //                          <object> <object> --> <boolean>
+    AsOp,                   //                          <object> <type> --> <object>
+    IsOp,                   //                          <object> <object> --> <boolean>
+    ToBooleanOp,            //                          <object> --> <boolean>
+    JumpFalseOp,            // <target>                 <object> -->
+    JumpTrueOp,             // <target>                 <object> -->
+    JumpOp,                 // <target>            
+    TryOp,                  // <handler> <handler>
+    JsrOp,                  // <target>
+    RtsOp,
+    WithinOp,               //                          <object> -->
+    WithoutOp,              //
+    ThrowOp,                //                          <whatever> <object> --> <object>
+    HandlerOp,
+    LogicalXorOp,           //                          <object> <object> <boolean> <boolean> --> <object> 
+    LogicalNotOp,           //                          <object> --> <object>
+    SwapOp,                 //                          <object1> <object2> --> <object2> <object1>
+    DupOp,                  //                          <object> --> <object> <object>
+    DupInsertOp,            //                          <object1> <object2> --> <object2> <object1> <object2>
+    DupNOp,                 // <N>                      <object> --> <object> { N times }
+    DupInsertNOp,           // <N>                      <object> {xN} <object2> --> <object2> <object> {xN} <object2>
+    PopOp,                  //                          <object> -->   
+    // for instance members
+    GetFieldOp,             // <slot>                   <base> --> <object>
+    SetFieldOp,             // <slot>                   <base> <object> --> <object>
+    // for instance methods
+    GetMethodOp,            // <slot>                   <base> --> <base> <function>
+    GetMethodRefOp,         // <slot>                   <base> --> <bound function> 
+    // for argumentz
+    GetArgOp,               // <index>                  --> <object>
+    SetArgOp,               // <index>                  <object> --> <object>
+    // for local variables in the immediate scope
+    GetLocalVarOp,          // <index>                  --> <object>
+    SetLocalVarOp,          // <index>                  <object> --> <object>
+    // for local variables in the nth closure scope
+    GetClosureVarOp,        // <depth>, <index>         --> <object>
+    SetClosureVarOp,        // <depth>, <index>         <object> --> <object>
+    // for array elements
+    GetElementOp,           //                          <base> <index> --> <object>
+    SetElementOp,           //                          <base> <index> <object> --> <object>
+    // for properties
+    GetPropertyOp,          // <poolindex>              <base> --> <object>
+    GetInvokePropertyOp,    // <poolindex>              <base> --> <base> <object> 
+    SetPropertyOp,          // <poolindex>              <base> <object> --> <object>
+    // for all generic names 
+    GetNameOp,              // <poolindex>              --> <object>
+    GetTypeOfNameOp,        // <poolindex>              --> <object>
+    SetNameOp,              // <poolindex>              <object> --> <object>
+    LoadGlobalObjectOp,     //                          --> <object>
+    PushScopeOp,            // <pointer>        XXX !!! XXX
+    PopScopeOp,             // <pointer>        XXX !!! XXX
+    NewClosureOp,           //                          <function> --> <function>
+    ClassOp,                //                          <object> --> <type>
+    JuxtaposeOp,            //                          <attribute> <attribute> --> <attribute>
+    NamedArgOp,             //                          <object> <string> --> <named arg object>
 
-OpCodeCount
+    OpCodeCount
 
 } ByteCodeOp;
 
@@ -197,6 +197,8 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
     Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm);
 
     #define BufferIncrement (32)
+
+#define NotALabel ((uint32)(-1))
 
     class Label {
     public:
@@ -248,7 +250,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 #endif
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
-        bool genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
+        bool genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg, uint32 finallyLabel);
         void genCodeForFunction(FunctionDefinition &f, 
                                     size_t pos,
                                     JSFunction *fnc, 
