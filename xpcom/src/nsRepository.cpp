@@ -133,7 +133,7 @@ static FactoryEntry *platformFind(const nsCID &aCID)
   if (err == REGERR_OK) {
     RKEY key;
     err = NR_RegGetKey(hreg, ROOTKEY_COMMON, 
-                       "SOFTWARE/Netscape/CID", &key);
+                       "Classes", &key);
     if (err == REGERR_OK) {
       char *cidString = aCID.ToString();
       char library[256];
