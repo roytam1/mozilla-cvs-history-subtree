@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<!-- retrieve generic commands -->
+<?xul-overlay href="chrome://navigator/content/platformMailOverlay.xul"?>
 
 <!DOCTYPE overlay SYSTEM "chrome://navigator/locale/mailNavigatorOverlay.dtd" >
 
