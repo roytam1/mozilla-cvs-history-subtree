@@ -240,6 +240,7 @@ class NS_COM nsFastLoadFileReader
      */
     struct nsFastLoadSharpObjectEntry : public nsFastLoadSharpObjectInfo {
         nsCOMPtr<nsISupports>   mObject;
+        PRUint32                mSkipOffset;
     };
 
     /**
