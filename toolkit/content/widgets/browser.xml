@@ -847,13 +847,16 @@
       <property name="popup">
         <setter>
           <![CDATA[
-            this.setAttribute("popup", val);
+            if (val)
+              this.setAttribute("popup", val);
+            else
+              this.removeAttribute("popup");
             return val;
           ]]>
         </setter>
         <getter>
           <![CDATA[
-            return this._buttonElement.getAttribute("popup");
+            return this.getAttribute("popup");
           ]]>
         </getter>
       </property>
@@ -892,8 +895,10 @@
         </getter>
         <setter>
           <![CDATA[
-            if (val != "") 
+            if (val != "") {
+              this._buttonElement.hidden = false;
               this._buttonElement.setAttribute("label", val);
+            }
             else
               this._buttonElement.hidden = true;
             return val;

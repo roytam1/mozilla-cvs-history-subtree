@@ -192,10 +192,14 @@
             message.text = aMessage;
             message.buttonText = aButtonLabel;
             message.hidden = false;
-            if (aSource)
+            if (aSource) {
               message.source = aSource;
-            else if (aPopup)
+              message.popup = null;
+            }
+            else if (aPopup) {
               message.popup = aPopup;
+              message.source = null;
+            }
             message.uri = aURI;
             
             aBrowser.isShowingMessage = true;

@@ -741,10 +741,8 @@ const gXPInstallObserver = {
 
   observe: function (aSubject, aTopic, aData)
   {
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-    var brandBundle = sbs.createBundle("chrome://global/locale/brand.properties");
-    var browserBundle = sbs.createBundle("chrome://browser/locale/browser.properties");
+    var brandBundle = document.getElementById("bundle_brand");
+    var browserBundle = document.getElementById("bundle_browser");
     switch (aTopic) {
     case "xpinstall-install-blocked":
       var tabbrowser = getBrowser();
@@ -754,7 +752,7 @@ const gXPInstallObserver = {
         var shell = this._findChildShell(browser.docShell, soughtShell);
         if (shell) {
           var host = browser.docShell.QueryInterface(Components.interfaces.nsIWebNavigation).currentURI.host;
-          var brandShortName = brandBundle.GetStringFromName("brandShortName");
+          var brandShortName = brandBundle.getString("brandShortName");
           var iconURL, messageKey, buttonKey;
           if (aData == "install-chrome") {
             // XXXben - use regular software install warnings for now until we can
@@ -770,9 +768,8 @@ const gXPInstallObserver = {
             buttonKey = "xpinstallWarningButton";
           }
 
-          var params = [brandShortName, host];
-          var messageString = browserBundle.formatStringFromName(messageKey, params, params.length);
-          var buttonString = browserBundle.GetStringFromName(buttonKey);
+          var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
+          var buttonString = browserBundle.getString(buttonKey);
           var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
           tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
                                  webNav.currentURI, "xpinstall-install-edit-permissions",
