@@ -113,7 +113,7 @@ public:
      * @return MB_TRUE if this handler supports
      *                 disable-output-escaping
      */
-    MBool getDisableOutputEscaping()
+    MBool hasDisableOutputEscaping()
     {
         return MB_FALSE;
     }

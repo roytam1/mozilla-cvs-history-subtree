@@ -135,7 +135,7 @@ public:
      * @return MB_TRUE if this handler supports
      *                 disable-output-escaping
      */
-    virtual MBool getDisableOutputEscaping() = 0;
+    virtual MBool hasDisableOutputEscaping() = 0;
 };
 
 #ifdef TX_EXE

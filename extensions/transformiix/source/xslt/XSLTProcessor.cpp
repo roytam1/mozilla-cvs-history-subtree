@@ -784,7 +784,7 @@ txXSLTProcessor::processAction(Node* aAction,
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         MBool doe = PR_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
-            aPs->mOutputHandler->getDisableOutputEscaping()) {
+            aPs->mOutputHandler->hasDisableOutputEscaping()) {
             String attValue;
             doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
                                          kNameSpaceID_None, attValue) &&
@@ -818,7 +818,7 @@ txXSLTProcessor::processAction(Node* aAction,
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         MBool doe = PR_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
-            aPs->mOutputHandler->getDisableOutputEscaping()) {
+            aPs->mOutputHandler->hasDisableOutputEscaping()) {
             String attValue;
             doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
                                          kNameSpaceID_None, attValue) &&
