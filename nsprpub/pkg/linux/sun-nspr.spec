@@ -58,15 +58,16 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root)
-/opt/sun/private/lib/libnspr4.a
-/opt/sun/private/lib/libplc4.a
-/opt/sun/private/lib/libplds4.a
 %dir /opt
 %dir /opt/sun
 %dir /opt/sun/private
 %dir /opt/sun/private/include
 %dir /opt/sun/private/include/nspr
 %dir /opt/sun/private/include/nspr/obsolete
+%dir /opt/sun/private/lib
+/opt/sun/private/lib/libnspr4.a
+/opt/sun/private/lib/libplc4.a
+/opt/sun/private/lib/libplds4.a
 /opt/sun/private/include/nspr/prcpucfg.h
 /opt/sun/private/include/nspr/obsolete/protypes.h
 /opt/sun/private/include/nspr/nspr.h
