@@ -708,10 +708,6 @@ XRemoteService::OpenURL(nsCString &aArgument,
 			nsIDOMWindowInternal *aParent,
 			PRBool aOpenBrowser)
 {
-  // check if we can handle this type of URL
-  if (!MayOpenURL(aArgument))
-    return NS_ERROR_ABORT;
-
   // the eventual toplevel target of the load
   nsCOMPtr<nsIDOMWindowInternal> finalWindow = aParent;
 
@@ -751,6 +747,10 @@ XRemoteService::OpenURL(nsCString &aArgument,
     else
       newWindow = PR_TRUE;
   }
+
+  // check if we can handle this type of URL
+  if (!MayOpenURL(aArgument))
+    return NS_ERROR_ABORT;
 
   // try to fixup the argument passed in
   nsString url;
