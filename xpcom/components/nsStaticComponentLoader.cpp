@@ -50,7 +50,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsStaticComponentLoader, nsIComponentLoader);
 
 NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
 
-NS_IMETHODIMP
+nsresult
 nsStaticComponentLoader::GetModuleInfo()
 {
     if (!mInfo) {
@@ -73,7 +73,7 @@ nsStaticComponentLoader::GetModuleInfo()
     return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsStaticComponentLoader::GetInfoFor(const char *aLocation,
                                     StaticModuleInfo **retval)
 {
