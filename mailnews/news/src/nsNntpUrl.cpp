@@ -31,6 +31,7 @@
 #include "nntpCore.h"
 
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 #include "nsIMsgDatabase.h"
 #include "nsMsgDBCID.h"
 
@@ -234,8 +235,10 @@ NS_IMETHODIMP nsNntpUrl::GetURI(char ** aURI)
 		if (filePath)
 		{
 			char * uri = nsnull;
+			nsXPIDLCString spec;
+			GetSpec(getter_Copies(spec));
 			nsFileSpec folder = *filePath;
-			nsBuildNewsMessageURI(m_spec, 0 /* don't have keys yet */, &uri);
+			nsBuildNewsMessageURI(spec, 0 /* don't have keys yet */, &uri);
 			*aURI = uri;
 		}
 		else
@@ -279,11 +282,12 @@ NS_IMETHODIMP nsNntpUrl::GetMessageHeader(nsIMsgDBHdr ** aMsgHdr)
 
     if (!m_newsgroupName) return NS_ERROR_FAILURE;
 
-    if (!m_host) return NS_ERROR_FAILURE;
+	nsXPIDLCString hostName;
+	GetHost(getter_Copies(hostName));
 
     nsString2 newsgroupURI(kNewsMessageRootURI, eOneByte);
     newsgroupURI.Append("/");
-    newsgroupURI.Append(m_host);
+    newsgroupURI.Append(hostName);
     newsgroupURI.Append("/");
     newsgroupURI.Append(m_newsgroupName);
     
