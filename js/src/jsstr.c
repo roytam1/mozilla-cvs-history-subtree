@@ -1366,10 +1366,23 @@ find_split(JSContext *cx, JSString *str, JSRegExp *re, jsint *ip,
     /*
      * Special case: if sep is the empty string, split str into one character
      * substrings.  Let our caller worry about whether to split once at end of
-     * string into an empty substring. Return string length when at end of string.
+     * string into an empty substring.
+     *
+     * For 1.2 compatibility, at the end of the string, we return the string length
+     * as the result, and set the separator length to 1 - this allows the caller
+     * to include an additional null string at the end of the substring list.
      */
     if (sep->length == 0)
-	return ((size_t)i == str->length) ? i : i + 1;
+        if (cx->version == JSVERSION_1_2) {
+            if ((size_t)i == str->length) {
+                sep->length = 1;
+                return i;
+            }
+            else
+                return i + 1;
+        }
+        else
+            return ((size_t)i == str->length) ? -1 : i + 1;
 
     /*
      * Now that we know sep is non-empty, search starting at i in str for an
