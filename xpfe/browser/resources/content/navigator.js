@@ -956,11 +956,17 @@ function OpenAddressbook()
 
 function BrowserViewSource()
 {
+  var isPostData = false;
+  var webNav = getWebNavigation();
+  if (webNav)
+    isPostData = webNav.postData;
+
+  if (isPostData) return;
+
   var focusedWindow = document.commandDispatcher.focusedWindow;
   if (focusedWindow == window)
     focusedWindow = _content;
 
-  dump("focusedWindow = " + focusedWindow + "\n");
   if (focusedWindow)
     var docCharset = "charset=" + focusedWindow.document.characterSet;
 
@@ -1479,4 +1485,18 @@ function updateToolbarStates(toolbarMenuElt)
   }
   updateComponentBarBroadcaster();
 }
+
+function UpdateNecessaryItems(eltId)
+{
+  var eltToUpdate = document.getElementById(eltId);
+  if (!eltToUpdate) return;
+  var webNav = getWebNavigation();
+  if (!webNav) return;
+
+  if (webNav.postData)
+    eltToUpdate.setAttribute("disabled", "true");
+  else if (eltToUpdate.getAttribute("disabled"))
+    eltToUpdate.removeAttribute("disabled");
+}
+
 

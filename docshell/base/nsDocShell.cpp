@@ -2371,6 +2371,26 @@ nsDocShell::GetSessionHistory(nsISHistory ** aSessionHistory)
 
 }
 
+NS_IMETHODIMP
+nsDocShell::GetPostData(nsIInputStream **aPostStream)
+{
+    NS_ENSURE_ARG_POINTER(aPostStream);
+
+    if (mLSHE) {
+        mLSHE->GetPostData(aPostStream);
+    }
+    else if (mOSHE) {
+        mOSHE->GetPostData(aPostStream);
+    }
+    else {
+        // XXX: If session history is disabled, then there is no way to
+        //      get the post data :-(
+        *aPostStream = nsnull;
+    }
+
+    return NS_OK;
+}
+
 //*****************************************************************************
 // nsDocShell::nsIBaseWindow
 //*****************************************************************************   
