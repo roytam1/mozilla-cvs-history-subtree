@@ -68,7 +68,6 @@ LIBS		= \
 		$(DIST)/bin/components/libraptorhtml.$(DLL_SUFFIX) \
 		-lexpat \
 		-lxmltok \
-		-ljsurl \
 		$(TIMER_LIBS) \
 		$(TK_LIBS) \
 		$(NET_LIBS) \
