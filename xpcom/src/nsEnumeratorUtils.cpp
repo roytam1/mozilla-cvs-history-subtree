@@ -17,7 +17,7 @@
  */
 
 #include "nsEnumeratorUtils.h"
-#include "nscore.h"
+
 
 nsArrayEnumerator::nsArrayEnumerator(nsISupportsArray* aValueArray)
     : mValueArray(aValueArray),
@@ -37,7 +37,7 @@ NS_IMPL_ISUPPORTS(nsArrayEnumerator, nsISimpleEnumerator::GetIID());
 NS_IMETHODIMP
 nsArrayEnumerator::HasMoreElements(PRBool* aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    NS_PRECONDITION(aResult != 0, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
@@ -48,7 +48,7 @@ nsArrayEnumerator::HasMoreElements(PRBool* aResult)
 NS_IMETHODIMP
 nsArrayEnumerator::GetNext(nsISupports** aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    NS_PRECONDITION(aResult != 0, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
@@ -79,7 +79,7 @@ NS_IMPL_ISUPPORTS(nsSingletonEnumerator, nsISimpleEnumerator::GetIID());
 NS_IMETHODIMP
 nsSingletonEnumerator::HasMoreElements(PRBool* aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    NS_PRECONDITION(aResult != 0, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
@@ -91,7 +91,7 @@ nsSingletonEnumerator::HasMoreElements(PRBool* aResult)
 NS_IMETHODIMP
 nsSingletonEnumerator::GetNext(nsISupports** aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    NS_PRECONDITION(aResult != 0, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
@@ -110,7 +110,7 @@ nsSingletonEnumerator::GetNext(nsISupports** aResult)
 
 
 nsAdapterEnumerator::nsAdapterEnumerator(nsIEnumerator* aEnum)
-    : mEnum(aEnum), mCurrent(nsnull), mStarted(PR_FALSE)
+    : mEnum(aEnum), mCurrent(0), mStarted(PR_FALSE)
 {
     NS_INIT_REFCNT();
     NS_ADDREF(mEnum);
@@ -179,7 +179,7 @@ nsAdapterEnumerator::GetNext(nsISupports** aResult)
 
     // No need to addref, we "transfer" the ownership to the caller.
     *aResult = mCurrent;
-    mCurrent = nsnull;
+    mCurrent = 0;
     return NS_OK;
 }
 

@@ -19,11 +19,10 @@
 #ifndef nsRDFCursorUtils_h__
 #define nsRDFCursorUtils_h__
 
-#include "nsISimpleEnumerator.h"
-#include "nsIRDFNode.h"
-#include "rdf.h"
+#include "nsIEnumerator.h"
+#include "nsISupportsArray.h"
 
-class NS_RDF nsArrayEnumerator : public nsISimpleEnumerator
+class NS_COM nsArrayEnumerator : public nsISimpleEnumerator
 {
 public:
     // nsISupports interface
@@ -44,7 +43,7 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NS_RDF nsSingletonEnumerator : public nsISimpleEnumerator
+class NS_COM nsSingletonEnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
@@ -63,7 +62,7 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NS_RDF nsAdapterEnumerator : public nsISimpleEnumerator
+class NS_COM nsAdapterEnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
