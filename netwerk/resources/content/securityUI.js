@@ -29,7 +29,7 @@ function SetSecurityButton()
 {
     const ui = Components.classes["@mozilla.org/secure_browser_ui;1"];
     if (ui) {
-        var securityUI = ui.createInstance(Components.interfaces.nsSecureBrowserUI);
+        var securityUI = ui.createInstance(Components.interfaces.nsISecureBrowserUI);
 
         if ("gBrowser" in window) { // XXXjag see bug 68662
             gBrowser.boxObject.setPropertyAsSupports("xulwindow", window);
@@ -44,8 +44,8 @@ function SetSecurityButton()
 
 function displayPageInfo()
 {
-   if (securityUI)
-     securityUI.displayPageInfoUI();
+   window.openDialog("chrome://navigator/content/pageInfo.xul", "_blank",
+                     "dialog=no", null, "securityTab");
 }
 
 function DestroySecurity()

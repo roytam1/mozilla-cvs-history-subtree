@@ -908,5 +908,5 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
 
 };
 
-NS_IMPL_NSGETMODULE_WITH_DTOR("necko core and primary protocols", gNetModuleInfo,
+NS_IMPL_NSGETMODULE_WITH_DTOR(necko_core_and_primary_protocols, gNetModuleInfo,
                               nsNeckoShutdown)
