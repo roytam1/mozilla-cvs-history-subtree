@@ -3519,7 +3519,7 @@ NS_IMETHODIMP nsMsgDatabase::GetMsgHdrForMessageID(const char *msgID, nsIMsgDBHd
 		  rv = CreateMsgHdr(hdrRow, key, &msgHdr);
   }
   NS_IF_ADDREF(*aHdr = msgHdr);
-  return (*aHdr) ? NS_OK : NS_ERROR_NULL_POINTER;
+  return NS_OK; // it's not an error not to find a msg hdr.
 }
 
 nsIMsgDBHdr *nsMsgDatabase::GetMsgHdrForSubject(nsCString &subject)

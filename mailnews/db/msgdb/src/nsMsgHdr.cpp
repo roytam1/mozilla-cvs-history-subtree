@@ -355,7 +355,14 @@ NS_IMETHODIMP nsMsgHdr::GetDate(PRTime *result)
 
 NS_IMETHODIMP nsMsgHdr::SetMessageId(const char *messageId)
 {
-	return SetStringColumn(messageId, m_mdb->m_messageIdColumnToken);
+  if (messageId && *messageId == '<')
+  {
+    nsCAutoString tempMessageID(messageId + 1);
+    if (tempMessageID.Last() == '>')
+      tempMessageID.SetLength(tempMessageID.Length() - 1);
+    return SetStringColumn(tempMessageID.get(), m_mdb->m_messageIdColumnToken);
+  }
+  return SetStringColumn(messageId, m_mdb->m_messageIdColumnToken);
 }
 
 NS_IMETHODIMP nsMsgHdr::SetSubject(const char *subject)
