@@ -18,15 +18,15 @@
 #include "prprf.h"
 #include "prmem.h"
 #include "nsCOMPtr.h"
-#include "nsINetService.h"
 #include "nsIStringBundle.h"
 #include "nsMsgComposeStringBundle.h"
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
+#include "nsIIOService.h"
 
 /* This is the next generation string retrieval call */
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
@@ -46,7 +46,7 @@ ComposeBEGetStringByIDREAL(PRInt32 stringID)
   if (!NS_SUCCEEDED(res) || !prefs)
     propertyURL = COMPOSE_BE_URL;
 
-  NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &res); 
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &res);
   if (!NS_SUCCEEDED(res) || (nsnull == pNetService)) 
   {
       return PL_strdup("???");   // Don't I18N this string...failsafe return value
@@ -55,13 +55,11 @@ ComposeBEGetStringByIDREAL(PRInt32 stringID)
   NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
   if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
   {
-    nsIURI      *url = nsnull;
+    nsCOMPtr<nsIURI>	url;
     nsILocale   *locale = nsnull;
 
-    res = pNetService->CreateURL(&url, nsString(propertyURL), nsnull, nsnull, nsnull);
-    // cleanup...if necessary
-    if (propertyURL != COMPOSE_BE_URL)
-      PR_FREEIF(propertyURL);
+
+	res = pNetService->NewURI(propertyURL, nsnull, getter_AddRefs(url));
 
     // Cleanup property URL
     PR_FREEIF(propertyURL);
