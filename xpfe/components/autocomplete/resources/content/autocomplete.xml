@@ -678,12 +678,18 @@
           this.mFinishAfterSearch = false;
           this.mFireAfterSearch = false;
           if (this.mNeedToFinish && !this.disableAutocomplete) {
-            // if a search is happening at this juncture, bail out of this function
-            // and let the search finish, and tell it to come back here when it's done
+                        
             if (this.isSearching || this.isWaiting) {
-              this.mFinishAfterSearch = true;
-              this.mFireAfterSearch = aFireTextCommand;
-              return;
+              // if we have a default match, abort any search sessions still in progress
+              if (this.mDefaultMatchFilled) 
+                this.stopLookup(); 
+              else {
+                // otherwise,  bail out of this function
+                // and let the search finish, and tell it to come back here when it's done
+                this.mFinishAfterSearch = true;
+                this.mFireAfterSearch = aFireTextCommand;
+                return;
+              }
             }
             
             this.mNeedToFinish = false;
