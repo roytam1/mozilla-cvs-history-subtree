@@ -26,8 +26,12 @@ include config.mk
 
 ifdef JS_THREADSAFE
 DEFINES += -DJS_THREADSAFE
-OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
 INCLUDES += -I../../dist/$(OBJDIR)/include
+ifdef USE_MSVC
+OTHER_LIBS += ../../dist/$(OBJDIR)/lib/libnspr21.lib
+else
+OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
+endif
 else
 # Look in OBJDIR to find prcpucfg.h
 INCLUDES   += -I$(OBJDIR)
