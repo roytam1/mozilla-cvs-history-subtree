@@ -1,5 +1,5 @@
 todo:
-- firebird/thunderbird extension
+- firebird: doesn't start up after the roaming dialog closed
 
 don't care (for now):
 - conflict
