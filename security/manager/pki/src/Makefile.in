@@ -44,6 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= pippki
 LIBRARY_NAME	= pippki
 IS_COMPONENT	= 1
+COMPONENT_NAME	= PKI
 
 EXPORTS =  \
 	$(NULL)
