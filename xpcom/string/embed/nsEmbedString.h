@@ -83,29 +83,29 @@ class nsEmbedString : public nsStringContainer
 
       const char_type* get() const
         {
-          return NS_StringGetDataPtr(*this);
+          const char_type* data;
+          NS_StringGetData(*this, &data);
+          return data;
         }
 
       size_type Length() const
         {
-          return NS_StringGetLength(*this);
+          const char_type* data;
+          return NS_StringGetData(*this, &data);
         }
-      
+
       void Assign(const self_type& aString)
         {
           NS_StringCopy(*this, aString);
         }
-
       void Assign(const abstract_string_type& aReadable)
         {
           NS_StringCopy(*this, aReadable);
         }
-
       void Assign(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
           NS_StringSetData(*this, aData, aLength);
         }
-
       void Assign(char_type aChar)
         {
           NS_StringSetData(*this, &aChar, 1);
@@ -115,6 +115,35 @@ class nsEmbedString : public nsStringContainer
       self_type& operator=(const abstract_string_type& aReadable) { Assign(aReadable); return *this; }
       self_type& operator=(const char_type* aPtr)                 { Assign(aPtr);      return *this; }
       self_type& operator=(char_type aChar)                       { Assign(aChar);     return *this; }
+
+      void Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) )
+        {
+          NS_StringSetDataRange(*this, cutStart, cutLength, data, length);
+        }
+      void Replace( index_type cutStart, size_type cutLength, char_type c )
+        {
+          Replace(cutStart, cutLength, &c, 1);
+        }
+      void Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
+        {
+          const char_type* data;
+          PRUint32 dataLen = NS_StringGetData(readable, &data);
+          NS_StringSetDataRange(*this, cutStart, cutLength, data, dataLen);
+        }
+
+      void Append( char_type c )                                                                 { Replace(size_type(-1), 0, c); }
+      void Append( const char_type* data, size_type length = size_type(-1) )                     { Replace(size_type(-1), 0, data, length); }
+      void Append( const abstract_string_type& readable )                                        { Replace(size_type(-1), 0, readable); }
+
+      self_type& operator+=( char_type c )                                                       { Append(c);        return *this; }
+      self_type& operator+=( const char_type* data )                                             { Append(data);     return *this; }
+      self_type& operator+=( const abstract_string_type& readable )                              { Append(readable); return *this; }
+
+      void Insert( char_type c, index_type pos )                                                 { Replace(pos, 0, c); }
+      void Insert( const char_type* data, index_type pos, size_type length = size_type(-1) )     { Replace(pos, 0, data, length); }
+      void Insert( const abstract_string_type& readable, index_type pos )                        { Replace(pos, 0, readable); }
+
+      void Cut( index_type cutStart, size_type cutLength )                                       { Replace(cutStart, cutLength, nsnull, 0); }
   };
 
 class nsEmbedCString : public nsCStringContainer
@@ -158,29 +187,29 @@ class nsEmbedCString : public nsCStringContainer
 
       const char_type* get() const
         {
-          return NS_CStringGetDataPtr(*this);
+          const char_type* data;
+          NS_CStringGetData(*this, &data);
+          return data;
         }
 
       size_type Length() const
         {
-          return NS_CStringGetLength(*this);
+          const char_type* data;
+          return NS_CStringGetData(*this, &data);
         }
-      
+
       void Assign(const self_type& aString)
         {
           NS_CStringCopy(*this, aString);
         }
-
       void Assign(const abstract_string_type& aReadable)
         {
           NS_CStringCopy(*this, aReadable);
         }
-
       void Assign(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
           NS_CStringSetData(*this, aData, aLength);
         }
-
       void Assign(char_type aChar)
         {
           NS_CStringSetData(*this, &aChar, 1);
@@ -190,6 +219,35 @@ class nsEmbedCString : public nsCStringContainer
       self_type& operator=(const abstract_string_type& aReadable) { Assign(aReadable); return *this; }
       self_type& operator=(const char_type* aPtr)                 { Assign(aPtr);      return *this; }
       self_type& operator=(char_type aChar)                       { Assign(aChar);     return *this; }
+
+      void Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) )
+        {
+          NS_CStringSetDataRange(*this, cutStart, cutLength, data, length);
+        }
+      void Replace( index_type cutStart, size_type cutLength, char_type c )
+        {
+          Replace(cutStart, cutLength, &c, 1);
+        }
+      void Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
+        {
+          const char_type* data;
+          PRUint32 dataLen = NS_CStringGetData(readable, &data);
+          NS_CStringSetDataRange(*this, cutStart, cutLength, data, dataLen);
+        }
+
+      void Append( char_type c )                                                                 { Replace(size_type(-1), 0, c); }
+      void Append( const char_type* data, size_type length = size_type(-1) )                     { Replace(size_type(-1), 0, data, length); }
+      void Append( const abstract_string_type& readable )                                        { Replace(size_type(-1), 0, readable); }
+
+      self_type& operator+=( char_type c )                                                       { Append(c);        return *this; }
+      self_type& operator+=( const char_type* data )                                             { Append(data);     return *this; }
+      self_type& operator+=( const abstract_string_type& readable )                              { Append(readable); return *this; }
+
+      void Insert( char_type c, index_type pos )                                                 { Replace(pos, 0, c); }
+      void Insert( const char_type* data, index_type pos, size_type length = size_type(-1) )     { Replace(pos, 0, data, length); }
+      void Insert( const abstract_string_type& readable, index_type pos )                        { Replace(pos, 0, readable); }
+
+      void Cut( index_type cutStart, size_type cutLength )                                       { Replace(cutStart, cutLength, nsnull, 0); }
   };
 
 #endif // !defined(nsEmbedString_h___)

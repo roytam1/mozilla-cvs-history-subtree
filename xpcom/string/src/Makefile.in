@@ -46,6 +46,7 @@ CPPSRCS			=			\
 		nsSubstring.cpp			\
 		nsSubstringTuple.cpp		\
 		nsStringComparator.cpp		\
+		nsStringObsolete.cpp		\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a

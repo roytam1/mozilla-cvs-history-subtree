@@ -68,56 +68,55 @@ NS_StringContainerFinish(nsStringContainer &aContainer)
 /* ------------------------------------------------------------------------- */
 
 NS_STRINGAPI(PRUint32)
-NS_StringGetLength(const nsAString &aStr)
+NS_StringGetData(const nsAString &aStr, const PRUnichar **aData,
+                 PRBool *aTerminated)
 {
-  return aStr.Length();
-}
+  if (aTerminated)
+    *aTerminated = aStr.IsTerminated();
 
-NS_STRINGAPI(const PRUnichar *)
-NS_StringGetDataPtr(const nsAString &aStr)
-{
-  if (aStr.IsTerminated())
-  {
-    const nsAFlatString &flat = NS_STATIC_CAST(const nsAFlatString &, aStr);
-    return flat.get();
-  }
-  return nsnull;
-}
-
-NS_STRINGAPI(PRUint32)
-NS_StringGetData(const nsAString &aStr, PRUnichar *aBuf, PRUint32 aBufLen)
-{
-  nsAString::const_iterator start, end;
-  aStr.BeginReading(start);
-  aStr.EndReading(end);
-  PRUint32 result = Distance(start, end);
-  if (result >= aBufLen)
-  {
-    end = start;
-    end.advance(aBufLen - 1);
-    result = aBufLen - 1;
-  }
-  *copy_string(start, end, aBuf) = PRUnichar(0);
-  return result;
+  nsAString::const_iterator begin;
+  aStr.BeginReading(begin);
+  *aData = begin.get();
+  return begin.size_forward();
 }
 
 NS_STRINGAPI(void)
-NS_StringSetData(nsAString &aStr, const PRUnichar *aBuf, PRUint32 aCount)
+NS_StringSetData(nsAString &aStr, const PRUnichar *aData, PRUint32 aDataLength)
 {
-  if (aCount == PR_UINT32_MAX)
-    aCount = (PRUint32) nsCharTraits<PRUnichar>::length(aBuf);
-
-  aStr.Assign(aBuf, aCount);
+  aStr.Assign(aData, aDataLength);
 }
 
 NS_STRINGAPI(void)
-NS_StringCopy(nsAString &aDest, const nsAString &aSrc, PRUint32 aOffset,
-              PRUint32 aCount)
+NS_StringSetDataRange(nsAString &aStr,
+                      PRUint32 aCutOffset, PRUint32 aCutLength,
+                      const PRUnichar *aData, PRUint32 aDataLength)
 {
-  if (aOffset == 0 && aCount == PR_UINT32_MAX)
-    aDest.Assign(aSrc);
+  if (aCutOffset == PR_UINT32_MAX)
+  {
+    // append case
+    if (aData)
+      aStr.Append(aData, aDataLength);
+    return;
+  }
+
+  if (aCutLength == PR_UINT32_MAX)
+    aCutLength = aStr.Length() - aCutOffset;
+
+  if (aData)
+  {
+    if (aDataLength == PR_UINT32_MAX)
+      aStr.Replace(aCutOffset, aCutLength, nsDependentString(aData));
+    else
+      aStr.Replace(aCutOffset, aCutLength, Substring(aData, aData + aDataLength));
+  }
   else
-    aDest.Assign(Substring(aSrc, aOffset, aCount));
+    aStr.Cut(aCutOffset, aCutLength);
+}
+
+NS_STRINGAPI(void)
+NS_StringCopy(nsAString &aDest, const nsAString &aSrc)
+{
+  aDest.Assign(aSrc);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -144,54 +143,53 @@ NS_CStringContainerFinish(nsCStringContainer &aContainer)
 /* ------------------------------------------------------------------------- */
 
 NS_STRINGAPI(PRUint32)
-NS_CStringGetLength(const nsACString &aStr)
+NS_CStringGetData(const nsACString &aStr, const char **aData,
+                  PRBool *aTerminated)
 {
-  return aStr.Length();
-}
+  if (aTerminated)
+    *aTerminated = aStr.IsTerminated();
 
-NS_STRINGAPI(const char *)
-NS_CStringGetDataPtr(const nsACString &aStr)
-{
-  if (aStr.IsTerminated())
-  {
-    const nsAFlatCString &flat = NS_STATIC_CAST(const nsAFlatCString &, aStr);
-    return flat.get();
-  }
-  return nsnull;
-}
-
-NS_STRINGAPI(PRUint32)
-NS_CStringGetData(const nsACString &aStr, char *aBuf, PRUint32 aBufLen)
-{
-  nsACString::const_iterator start, end;
-  aStr.BeginReading(start);
-  aStr.EndReading(end);
-  PRUint32 result = Distance(start, end);
-  if (result >= aBufLen)
-  {
-    end = start;
-    end.advance(aBufLen - 1);
-    result = aBufLen - 1;
-  }
-  *copy_string(start, end, aBuf) = char(0);
-  return result;
+  nsACString::const_iterator begin;
+  aStr.BeginReading(begin);
+  *aData = begin.get();
+  return begin.size_forward();
 }
 
 NS_STRINGAPI(void)
-NS_CStringSetData(nsACString &aStr, const char *aBuf, PRUint32 aCount)
+NS_CStringSetData(nsACString &aStr, const char *aData, PRUint32 aDataLength)
 {
-  if (aCount == PR_UINT32_MAX)
-    aCount = (PRUint32) nsCharTraits<char>::length(aBuf);
-
-  aStr.Assign(aBuf, aCount);
+  aStr.Assign(aData, aDataLength);
 }
 
 NS_STRINGAPI(void)
-NS_CStringCopy(nsACString &aDest, const nsACString &aSrc, PRUint32 aOffset,
-               PRUint32 aCount)
+NS_CStringSetDataRange(nsACString &aStr,
+                       PRUint32 aCutOffset, PRUint32 aCutLength,
+                       const char *aData, PRUint32 aDataLength)
 {
-  if (aOffset == 0 && aCount == PR_UINT32_MAX)
-    aDest.Assign(aSrc);
+  if (aCutOffset == PR_UINT32_MAX)
+  {
+    // append case
+    if (aData)
+      aStr.Append(aData, aDataLength);
+    return;
+  }
+
+  if (aCutLength == PR_UINT32_MAX)
+    aCutLength = aStr.Length() - aCutOffset;
+
+  if (aData)
+  {
+    if (aDataLength == PR_UINT32_MAX)
+      aStr.Replace(aCutOffset, aCutLength, nsDependentCString(aData));
+    else
+      aStr.Replace(aCutOffset, aCutLength, Substring(aData, aData + aDataLength));
+  }
   else
-    aDest.Assign(Substring(aSrc, aOffset, aCount));
+    aStr.Cut(aCutOffset, aCutLength);
+}
+
+NS_STRINGAPI(void)
+NS_CStringCopy(nsACString &aDest, const nsACString &aSrc)
+{
+  aDest.Assign(aSrc);
 }

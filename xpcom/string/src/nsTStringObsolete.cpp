@@ -97,7 +97,7 @@ nsTString_CharT::RFind( const char* aString, PRBool aIgnoreCase, PRInt32 aOffset
 PRInt32
 nsTString_CharT::RFindChar( PRUnichar aChar, PRInt32 aOffset, PRInt32 aCount) const
   {
-    return nsObsoleteBufferRoutines<CharT>::rfind_char(mData, mLength, aOffset, aChar, aCount);
+    return nsBufferRoutines<CharT>::rfind_char(mData, mLength, aOffset, aChar, aCount);
   }
 
 
@@ -298,7 +298,7 @@ void
 nsTString_CharT::StripChars( const char* aSet )
   {
     EnsureMutable();
-    mLength = nsObsoleteBufferRoutines<CharT>::strip_chars(mData, mLength, aSet);
+    mLength = nsBufferRoutines<CharT>::strip_chars(mData, mLength, aSet);
   }
 
 void
@@ -474,7 +474,7 @@ nsTString_CharT::CompressWhitespace( PRBool aTrimLeading, PRBool aTrimTrailing )
     Trim(set, aTrimLeading, aTrimTrailing);
 
       // this one does some questionable fu... just copying the old code!
-    mLength = nsObsoleteBufferRoutines<char_type>::compress_chars(mData, mLength, set);
+    mLength = nsBufferRoutines<char_type>::compress_chars(mData, mLength, set);
   }
 
 

@@ -63,20 +63,20 @@
 #endif
 
 class nsAString_external
-  {
-    private:
-      void *v;
-  };
+{
+private:
+  void *v;
+};
 
 #ifndef nsACString_external
 #define nsACString_external nsACString
 #endif
 
 class nsACString_external
-  {
-    private:
-      void *v;
-  };
+{
+private:
+  void *v;
+};
 
 /* ------------------------------------------------------------------------- */
 
@@ -135,15 +135,15 @@ class nsACString_external
  *   }
  */
 class nsStringContainer : public nsAString_external
-  {
-    private:
-      void     *d1;
-      PRUint32  d2;
-      void     *d3;
+{
+private:
+  void     *d1;
+  PRUint32  d2;
+  void     *d3;
 
-    public:
-      nsStringContainer() {} // MSVC6 needs this
-  };
+public:
+  nsStringContainer() {} // MSVC6 needs this
+};
 
 /**
  * NS_StringContainerInit
@@ -170,78 +170,155 @@ NS_StringContainerFinish(nsStringContainer &aContainer);
 /* ------------------------------------------------------------------------- */
 
 /**
- * NS_StringGetLength
- *
- * @param aStr          abstract string reference
- * @return              length of string (number of storage units excluding
- *                      terminating null character)
- */
-NS_STRINGAPI(PRUint32)
-NS_StringGetLength(const nsAString &aStr);
-
-/**
- * NS_StringGetDataPtr
- *
- * @param aStr          abstract string reference
- * @return              pointer to null-terminated string data or NULL if string
- *                      is not single fragment and null-terminated
- *
- * If this function returns NULL, then the string data should be read by
- * calling NS_StringGetData.  If aStr is a reference to a nsStringContainer,
- * then this function will never return NULL.
- */
-NS_STRINGAPI(const PRUnichar *)
-NS_StringGetDataPtr(const nsAString &aStr);
-
-/**
  * NS_StringGetData
  *
- * @param aStr          abstract string reference
- * @param aBuf          character buffer
- * @param aBufLen       number of characters that can be written to aBuf,
- *                      including space for the null-terminator.
- * @return              number of characters written to aBuf
+ * This function returns a const character pointer to the string's internal
+ * buffer, the length of the string, and a boolean value indicating whether
+ * or not the buffer is null-terminated.
  *
- * This function null-terminates aBuf, provided aBufLen > 0.
+ * @param aStr          abstract string reference
+ * @param aData         out param that will hold the address of aStr's
+ *                      internal buffer
+ * @param aTerminated   if non-null, this out param will be set to indicate
+ *                      whether or not aStr's internal buffer is null-
+ *                      terminated
+ * @return              length of aStr's internal buffer
  */
 NS_STRINGAPI(PRUint32)
-NS_StringGetData(const nsAString &aStr, PRUnichar *aBuf, PRUint32 aBufLen);
+NS_StringGetData
+  (const nsAString &aStr, const PRUnichar **aData,
+   PRBool *aTerminated = nsnull);
 
 /**
  * NS_StringSetData
  *
+ * This function copies aData into aStr.
+ *
  * @param aStr          abstract string reference
- * @param aBuf          character buffer
- * @param aCount        number of characters to copy from source string (pass
- *                      PR_UINT32_MAX to copy until end of aSrc, designated by
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to copy from source string (pass
+ *                      PR_UINT32_MAX to copy until end of aData, designated by
  *                      a null character)
  *
  * This function does not necessarily null-terminate aStr after copying data
- * from aBuf.  The behavior depends on the implementation of the abstract 
+ * from aData.  The behavior depends on the implementation of the abstract 
  * string, aStr.  If aStr is a reference to a nsStringContainer, then its data
  * will be null-terminated by this function.
  */
 NS_STRINGAPI(void)
-NS_StringSetData(nsAString &aStr, const PRUnichar *aBuf,
-                 PRUint32 aCount = PR_UINT32_MAX);
+NS_StringSetData
+  (nsAString &aStr, const PRUnichar *aData,
+   PRUint32 aDataLength = PR_UINT32_MAX);
+
+/**
+ * NS_StringSetDataRange
+ *
+ * This function copies aData into a section of aStr.  As a result it can be
+ * used to insert new characters into the string.
+ *
+ * @param aStr          abstract string reference
+ * @param aCutOffset    starting index where the string's existing data
+ *                      is to be overwritten (pass PR_UINT32_MAX to cause
+ *                      aData to be appended to the end of aStr, in which
+ *                      case the value of aCutLength is ignored).
+ * @param aCutLength    number of characters to overwrite starting at
+ *                      aCutOffset (pass PR_UINT32_MAX to overwrite until the
+ *                      end of aStr).
+ * @param aData         character buffer (pass null to cause this function
+ *                      to simply remove the "cut" range)
+ * @param aDataLength   number of characters to copy from source string (pass
+ *                      PR_UINT32_MAX to copy until end of aData, designated by
+ *                      a null character)
+ *
+ * This function does not necessarily null-terminate aStr after copying data
+ * from aData.  The behavior depends on the implementation of the abstract 
+ * string, aStr.  If aStr is a reference to a nsStringContainer, then its data
+ * will be null-terminated by this function.
+ */
+NS_STRINGAPI(void)
+NS_StringSetDataRange
+  (nsAString &aStr, PRUint32 aCutOffset, PRUint32 aCutLength,
+   const PRUnichar *aData, PRUint32 aDataLength = PR_UINT32_MAX);
 
 /**
  * NS_StringCopy
  *
- * @param aDest         abstract string reference to be modified
- * @param aSrc          abstract string reference containing source string
- * @param aOffset       offset into source string from which to start copying
- * @param aCount        number of characters to copy from source string (pass
- *                      PR_UINT32_MAX to copy until end of aSrc)
+ * This function makes aDestStr have the same value as aSrcStr.  It is
+ * provided as an optimization.
  *
- * This function does not necessarily null-terminate aDest after copying data
- * from aSrc.  The behavior depends on the implementation of the abstract 
- * string, aDest.  If aDest is a reference to a nsStringContainer, then its data
- * will be null-terminated by this function.
+ * @param aDestStr      abstract string reference to be modified
+ * @param aSrcStr       abstract string reference containing source string
+ *
+ * This function does not necessarily null-terminate aDestStr after copying
+ * data from aSrcStr.  The behavior depends on the implementation of the
+ * abstract string, aDestStr.  If aDestStr is a reference to a
+ * nsStringContainer, then its data will be null-terminated by this function.
  */
 NS_STRINGAPI(void)
-NS_StringCopy(nsAString &aDest, const nsAString &aSrc,
-              PRUint32 aOffset = 0, PRUint32 aCount = PR_UINT32_MAX);
+NS_StringCopy
+  (nsAString &aDestStr, const nsAString &aSrcStr);
+
+/**
+ * NS_StringAppendData
+ *
+ * This function appends data to the existing value of aStr.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to append (pass PR_UINT32_MAX to
+ *                      append until a null-character is encountered)
+ *
+ * This function does not necessarily null-terminate aStr upon completion.
+ * The behavior depends on the implementation of the abstract string, aStr.
+ * If aStr is a reference to a nsStringContainer, then its data will be null-
+ * terminated by this function.
+ */
+inline void
+NS_StringAppendData(nsAString &aStr, const PRUnichar *aData,
+                    PRUint32 aDataLength = PR_UINT32_MAX)
+{
+  NS_StringSetDataRange(aStr, PR_UINT32_MAX, 0, aData, aDataLength);
+}
+
+/**
+ * NS_StringInsertData
+ *
+ * This function inserts data into the existing value of aStr at the specified
+ * offset.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aOffset       specifies where in the string to insert aData
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to append (pass PR_UINT32_MAX to
+ *                      append until a null-character is encountered)
+ *
+ * This function does not necessarily null-terminate aStr upon completion.
+ * The behavior depends on the implementation of the abstract string, aStr.
+ * If aStr is a reference to a nsStringContainer, then its data will be null-
+ * terminated by this function.
+ */
+inline void
+NS_StringInsertData(nsAString &aStr, PRUint32 aOffset, const PRUnichar *aData,
+                    PRUint32 aDataLength = PR_UINT32_MAX)
+{
+  NS_StringSetDataRange(aStr, aOffset, 0, aData, aDataLength);
+}
+      
+/**
+ * NS_StringCutData
+ *
+ * This function shortens the existing value of aStr, by removing characters
+ * at the specified offset.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aCutOffset    specifies where in the string to insert aData
+ * @param aCutLength    number of characters to remove
+ */
+inline void
+NS_StringCutData(nsAString &aStr, PRUint32 aCutOffset, PRUint32 aCutLength)
+{
+  NS_StringSetDataRange(aStr, aCutOffset, aCutLength, nsnull, 0);
+}
 
 /* ------------------------------------------------------------------------- */
 
@@ -258,15 +335,15 @@ NS_StringCopy(nsAString &aDest, const nsAString &aSrc,
  * @see nsStringContainer for use cases and further documentation.
  */
 class nsCStringContainer : public nsACString_external
-  {
-    private:
-      void    *d1;
-      PRUint32 d2;
-      void    *d3;
+{
+private:
+  void    *d1;
+  PRUint32 d2;
+  void    *d3;
 
-    public:
-      nsCStringContainer() {} // MSVC6 needs this
-  };
+public:
+  nsCStringContainer() {} // MSVC6 needs this
+};
 
 /**
  * NS_CStringContainerInit
@@ -293,77 +370,154 @@ NS_CStringContainerFinish(nsCStringContainer &aContainer);
 /* ------------------------------------------------------------------------- */
 
 /**
- * NS_CStringGetLength
- *
- * @param aStr          abstract string reference
- * @return              length of string (number of storage units excluding
- *                      terminating null character)
- */
-NS_STRINGAPI(PRUint32)
-NS_CStringGetLength(const nsACString &aStr);
-
-/**
- * NS_CStringGetDataPtr
- *
- * @param aStr          abstract string reference
- * @return              pointer to null-terminated string data or NULL if string
- *                      is not single fragment and null-terminated
- *
- * If this function returns NULL, then the string data should be read by
- * calling NS_CStringGetData.  If aStr is a reference to a nsCStringContainer,
- * then this function will never return NULL.
- */
-NS_STRINGAPI(const char *)
-NS_CStringGetDataPtr(const nsACString &aStr);
-
-/**
  * NS_CStringGetData
  *
- * @param aStr          abstract string reference
- * @param aBuf          character buffer
- * @param aBufLen       number of characters that can be written to aBuf,
- *                      including space for the null-terminator.
- * @return              number of characters written to aBuf
+ * This function returns a const character pointer to the string's internal
+ * buffer, the length of the string, and a boolean value indicating whether
+ * or not the buffer is null-terminated.
  *
- * This function null-terminates aBuf, provided aBufLen > 0.
+ * @param aStr          abstract string reference
+ * @param aData         out param that will hold the address of aStr's
+ *                      internal buffer
+ * @param aTerminated   if non-null, this out param will be set to indicate
+ *                      whether or not aStr's internal buffer is null-
+ *                      terminated
+ * @return              length of aStr's internal buffer
  */
 NS_STRINGAPI(PRUint32)
-NS_CStringGetData(const nsACString &aStr, char *aBuf, PRUint32 aBufLen);
+NS_CStringGetData
+  (const nsACString &aStr, const char **aData,
+   PRBool *aTerminated = nsnull);
 
 /**
  * NS_CStringSetData
  *
+ * This function copies aData into aStr.
+ *
  * @param aStr          abstract string reference
- * @param aBuf          character buffer
- * @param aCount        number of characters to copy from source string (pass
- *                      PR_UINT32_MAX to copy until end of aSrc, designated by
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to copy from source string (pass
+ *                      PR_UINT32_MAX to copy until end of aData, designated by
  *                      a null character)
  *
  * This function does not necessarily null-terminate aStr after copying data
- * from aBuf.  The behavior depends on the implementation of the abstract 
- * string, aStr.  If aStr is a reference to a nsCStringContainer, then its data
+ * from aData.  The behavior depends on the implementation of the abstract 
+ * string, aStr.  If aStr is a reference to a nsStringContainer, then its data
  * will be null-terminated by this function.
  */
 NS_STRINGAPI(void)
-NS_CStringSetData(nsACString &aStr, const char *aBuf,
-                  PRUint32 aCount = PR_UINT32_MAX);
+NS_CStringSetData
+  (nsACString &aStr, const char *aData,
+   PRUint32 aDataLength = PR_UINT32_MAX);
+
+/**
+ * NS_CStringSetDataRange
+ *
+ * This function copies aData into a section of aStr.  As a result it can be
+ * used to insert new characters into the string.
+ *
+ * @param aStr          abstract string reference
+ * @param aCutOffset    starting index where the string's existing data
+ *                      is to be overwritten (pass PR_UINT32_MAX to cause
+ *                      aData to be appended to the end of aStr, in which
+ *                      case the value of aCutLength is ignored).
+ * @param aCutLength    number of characters to overwrite starting at
+ *                      aCutOffset (pass PR_UINT32_MAX to overwrite until the
+ *                      end of aStr).
+ * @param aData         character buffer (pass null to cause this function
+ *                      to simply remove the "cut" range)
+ * @param aDataLength   number of characters to copy from source string (pass
+ *                      PR_UINT32_MAX to copy until end of aData, designated by
+ *                      a null character)
+ *
+ * This function does not necessarily null-terminate aStr after copying data
+ * from aData.  The behavior depends on the implementation of the abstract 
+ * string, aStr.  If aStr is a reference to a nsStringContainer, then its data
+ * will be null-terminated by this function.
+ */
+NS_STRINGAPI(void)
+NS_CStringSetDataRange
+  (nsACString &aStr, PRUint32 aCutOffset, PRUint32 aCutLength,
+   const char *aData, PRUint32 aDataLength = PR_UINT32_MAX);
 
 /**
  * NS_CStringCopy
  *
- * @param aDest         abstract string reference to be modified
- * @param aSrc          abstract string reference containing source string
- * @param aOffset       offset into source string from which to start copying
- * @param aCount        number of characters to copy from source string (pass
- *                      PR_UINT32_MAX to copy until end of aSrc)
+ * This function makes aDestStr have the same value as aSrcStr.  It is
+ * provided as an optimization.
  *
- * This function does not necessarily null-terminate aDest after copying data
- * from aSrc.  The behavior depends on the implementation of the abstract 
- * string, aDest.  If aDest is a reference to a nsCStringContainer, then its
- * data will be null-terminated by this function.
+ * @param aDestStr      abstract string reference to be modified
+ * @param aSrcStr       abstract string reference containing source string
+ *
+ * This function does not necessarily null-terminate aDestStr after copying
+ * data from aSrcStr.  The behavior depends on the implementation of the
+ * abstract string, aDestStr.  If aDestStr is a reference to a
+ * nsStringContainer, then its data will be null-terminated by this function.
  */
 NS_STRINGAPI(void)
-NS_CStringCopy(nsACString &aDest, const nsACString &aSrc,
-               PRUint32 aOffset = 0, PRUint32 aCount = PR_UINT32_MAX);
+NS_CStringCopy
+  (nsACString &aDestStr, const nsACString &aSrcStr);
+
+/**
+ * NS_CStringAppendData
+ *
+ * This function appends data to the existing value of aStr.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to append (pass PR_UINT32_MAX to
+ *                      append until a null-character is encountered)
+ *
+ * This function does not necessarily null-terminate aStr upon completion.
+ * The behavior depends on the implementation of the abstract string, aStr.
+ * If aStr is a reference to a nsStringContainer, then its data will be null-
+ * terminated by this function.
+ */
+inline void
+NS_CStringAppendData(nsACString &aStr, const char *aData,
+                    PRUint32 aDataLength = PR_UINT32_MAX)
+{
+  NS_CStringSetDataRange(aStr, PR_UINT32_MAX, 0, aData, aDataLength);
+}
+
+/**
+ * NS_CStringInsertData
+ *
+ * This function inserts data into the existing value of aStr at the specified
+ * offset.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aOffset       specifies where in the string to insert aData
+ * @param aData         character buffer
+ * @param aDataLength   number of characters to append (pass PR_UINT32_MAX to
+ *                      append until a null-character is encountered)
+ *
+ * This function does not necessarily null-terminate aStr upon completion.
+ * The behavior depends on the implementation of the abstract string, aStr.
+ * If aStr is a reference to a nsStringContainer, then its data will be null-
+ * terminated by this function.
+ */
+inline void
+NS_CStringInsertData(nsACString &aStr, PRUint32 aOffset, const char *aData,
+                    PRUint32 aDataLength = PR_UINT32_MAX)
+{
+  NS_CStringSetDataRange(aStr, aOffset, 0, aData, aDataLength);
+}
+      
+/**
+ * NS_CStringCutData
+ *
+ * This function shortens the existing value of aStr, by removing characters
+ * at the specified offset.
+ *
+ * @param aStr          abstract string reference to be modified
+ * @param aCutOffset    specifies where in the string to insert aData
+ * @param aCutLength    number of characters to remove
+ */
+inline void
+NS_CStringCutData(nsACString &aStr, PRUint32 aCutOffset, PRUint32 aCutLength)
+{
+  NS_CStringSetDataRange(aStr, aCutOffset, aCutLength, nsnull, 0);
+}
 
 #endif // nsStringAPI_h__
