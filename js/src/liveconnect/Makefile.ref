@@ -20,8 +20,6 @@
 
 DEPTH = ..
 
-INCLUDES   += -I. -I..
-
 #
 # XCFLAGS may be set in the environment or on the gmake command line
 #
@@ -68,6 +66,8 @@ PROG_FILE = js
 
 include $(DEPTH)/config.mk
 include config/$(OS_CONFIG).mk
+
+INCLUDES   += -I. -I.. -I../$(OBJDIR)
 
 ifdef JS_THREADSAFE
 ifdef USE_MSVC
