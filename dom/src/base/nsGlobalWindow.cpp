@@ -3353,14 +3353,15 @@ NS_IMETHODIMP
 GlobalWindowImpl::OpenDialog(const nsAReadableString& aUrl,
                              const nsAReadableString& aName,
                              const nsAReadableString& aOptions,
-                             nsISupportsArray* aArgsArray,
+                             nsISupports* aExtraArgument,
                              nsIDOMWindow** _retval)
 {
   jsval *argv = nsnull;
-  PRUint32 argc;
+  PRUint32 argc = 0;
 
-  nsresult rv = SupportsArrayTojsvals(&argv, &argc, aArgsArray);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv;
+  //  nsresult rv = SupportsArrayTojsvals(&argv, &argc, aArgsArray);
+  //  NS_ENSURE_SUCCESS(rv, rv);
 
   rv = OpenInternal(aUrl, aName, aOptions, PR_TRUE, argv, argc, _retval);
 
