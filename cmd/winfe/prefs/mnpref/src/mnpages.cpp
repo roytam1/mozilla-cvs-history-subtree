@@ -16,6 +16,7 @@
  * Reserved.
  */
 
+#include "xp_help.h"
 #include "pch.h"
 #include <assert.h>
 #include "dllcom.h"
@@ -23,7 +24,6 @@
 #include "resource.h"
 #include "structs.h"
 #include "xp_core.h"
-#include "xp_help.h"
 #include "prefapi.h"
 #include "colorbtn.h"
 #include "bitmpbtn.h"
