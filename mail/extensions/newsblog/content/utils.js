@@ -88,6 +88,28 @@ function addFeed(url, title, quickMode, destFolder) {
     ds.Flush();
 }
 
+// updates the "feedUrl" property in the message database for the folder in question.
+
+var kFeedUrlDelimiter = '|'; // the delimiter used to delimit feed urls in the msg folder database "feedUrl" property
+
+// updates the "feedUrl" property in the message database for the folder in question.
+function updateFolderFeedUrl(aFolder, aFeedUrl, aRemoveUrl)
+{
+  var msgdb = aFolder.QueryInterface(Components.interfaces.nsIMsgFolder).getMsgDatabase(null);
+  var folderInfo = msgdb.dBFolderInfo;
+  var oldFeedUrl = {};
+  folderInfo.GetCharPtrProperty("feedUrl", oldFeedUrl);
+  oldFeedUrl = oldFeedUrl.value;
+
+  if (aRemoveUrl)
+  { 
+    // remove our feed url string from the list of feed urls
+    var newFeedUrl = oldFeedUrl.replace(kFeedUrlDelimiter + aFeedUrl, "");
+    folderInfo.SetCharPtrProperty("feedUrl", newFeedUrl);
+  }  
+  else 
+    folderInfo.SetCharPtrProperty("feedUrl", oldFeedUrl + kFeedUrlDelimiter + aFeedUrl);  
+}
 
 function getNodeValue(node) {
   if (node && node.textContent)
