@@ -22,6 +22,7 @@
 #include "mkutils.h"
 #include "xpgetstr.h"
 #include "jsapi.h"
+#include "fe_proto.h"
 
 static XP_Bool                  m_GettingConfigFile = FALSE;
 static XP_Bool                  m_FindProxyInJSC = FALSE;
