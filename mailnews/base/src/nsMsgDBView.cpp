@@ -18,6 +18,7 @@
  * Rights Reserved.
  *
  * Contributor(s):
+ * Jan Varga (varga@utcru.sk)
  */
 
 #include "msgCore.h"
@@ -518,7 +519,7 @@ NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
   if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
   {
     PRUint32 flags = m_flags[index];
-    *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) != 0;
+    *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN);
   }
   else
     *_retval = PR_FALSE;
@@ -527,15 +528,25 @@ NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
 
 NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 {
-  PRUint32 flags = m_flags[index];
-  *_retval = (flags & MSG_FLAG_ELIDED) == 0;
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  {
+    PRUint32 flags = m_flags[index];
+    *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) && !(flags & MSG_FLAG_ELIDED);
+  }
+  else
+    *_retval = PR_FALSE;
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::IsContainerEmpty(PRInt32 index, PRBool *_retval)
 {
-  PRUint32 flags = m_flags[index];
-  *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) == 0;
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  {
+    PRUint32 flags = m_flags[index];
+    *_retval = !(flags & MSG_VIEW_FLAG_HASCHILDREN);
+  }
+  else
+    *_retval = PR_FALSE;
   return NS_OK;
 }
 
@@ -750,6 +761,9 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     break;
   }
   
+  PRInt32 countBeforeSort;
+  GetRowCount(&countBeforeSort);
+
   if (performSort)
   {
     // if we are already sorted by the same order, then toggle ascending / descending.
@@ -766,12 +780,19 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
 
   } // if performSort
 
+  PRInt32 countAfterSort;
+  GetRowCount(&countAfterSort);
+
+  if (countBeforeSort != countAfterSort) {
+    mOutliner->RowCountChanged(0, -countBeforeSort);
+    mOutliner->RowCountChanged(0, countAfterSort);
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
 {
-   
   switch (colID[0])
   {
   case 'u': // unread column
