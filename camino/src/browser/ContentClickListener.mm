@@ -73,28 +73,6 @@
 
 #import "CHBrowserView.h"
 
-static void FindOptionWithContentID(nsIDOMHTMLSelectElement* aSel, PRUint32 aID, nsIDOMHTMLOptionElement** aResult)
-{
-  *aResult = nsnull;
-  nsCOMPtr<nsIDOMHTMLCollection> options;
-  aSel->GetOptions(getter_AddRefs(options));
-  PRUint32 count;
-  options->GetLength(&count);
-  for (PRUint32 i = 0; i < count; i++) {
-    nsCOMPtr<nsIDOMNode> node;
-    options->Item(i, getter_AddRefs(node));
-    PRUint32 contentID;
-    nsCOMPtr<nsIContent> content(do_QueryInterface(node));
-    content->GetContentID(&contentID);
-    if (contentID == aID) {
-      nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(node));
-      *aResult = option;
-      NS_ADDREF(*aResult);
-      break;
-    }
-  }
-}
-
 @interface CHOptionSelector : NSObject
 {
   nsIDOMHTMLSelectElement* mSelectElt;
@@ -117,9 +95,7 @@ static void FindOptionWithContentID(nsIDOMHTMLSelectElement* aSel, PRUint32 aID,
 
 -(IBAction)selectOption:(id)aSender
 {
-  int tag = [aSender tag];
-  nsCOMPtr<nsIDOMHTMLOptionElement> optionElt;
-  FindOptionWithContentID(mSelectElt, tag, getter_AddRefs(optionElt));
+  nsIDOMHTMLOptionElement* optionElt = (nsIDOMHTMLOptionElement*) [aSender tag];
   optionElt->SetSelected(PR_TRUE);
   [self autorelease]; // Free up ourselves.
   [[aSender menu] autorelease]; // Free up the menu.
@@ -172,9 +148,6 @@ ContentClickListener::MouseDown(nsIDOMEvent* aEvent)
     for (PRUint32 i = 0; i < count; i++) {
       nsCOMPtr<nsIDOMNode> node;
       options->Item(i, getter_AddRefs(node));
-      PRUint32 contentID;
-      nsCOMPtr<nsIContent> content(do_QueryInterface(node));
-      content->GetContentID(&contentID);
       nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(node));
       nsAutoString text;
       option->GetLabel(text);
@@ -183,7 +156,7 @@ ContentClickListener::MouseDown(nsIDOMEvent* aEvent)
       NSString* title = [[NSString stringWith_nsAString: text] stringByTruncatingTo:75 at:kTruncateAtMiddle];
       NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
       [menu addItem: menuItem];
-      [menuItem setTag: contentID];
+      [menuItem setTag: (int)option.get()];
       PRBool selected;
       option->GetSelected(&selected);
       if (selected) {
