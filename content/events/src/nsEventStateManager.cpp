@@ -4559,10 +4559,16 @@ nsEventStateManager::DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent,
     nsIScriptSecurityManager *securityManager =
       nsContentUtils::GetSecurityManager();
 
-    PRBool enabled;
-    nsresult res =
-      securityManager->IsCapabilityEnabled("UniversalBrowserWrite", &enabled);
-    privEvt->SetTrusted(NS_SUCCEEDED(res) && enabled);
+    PRBool trusted;
+    privEvt->IsTrustedEvent(&trusted);
+
+    if (!trusted) {
+      PRBool enabled;
+      nsresult res =
+        securityManager->IsCapabilityEnabled("UniversalBrowserWrite",
+                                             &enabled);
+      privEvt->SetTrusted(NS_SUCCEEDED(res) && enabled);
+    }
 
     nsEvent * innerEvent;
     privEvt->GetInternalNSEvent(&innerEvent);

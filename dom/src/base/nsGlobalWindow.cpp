@@ -2163,6 +2163,10 @@ NS_IMETHODIMP GlobalWindowImpl::SetFullScreen(PRBool aFullScreen)
     return NS_ERROR_FAILURE;
 
   event->InitEvent(NS_LITERAL_STRING("fullscreen"), PR_FALSE, PR_TRUE);
+
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+  privateEvent->SetTrusted(PR_TRUE);
+
   PRBool allowDefault;
   DispatchEvent(event, &allowDefault);
 
@@ -3063,6 +3067,9 @@ void FirePopupBlockedEvent(nsIDOMDocument* aDoc,
       nsCOMPtr<nsIDOMPopupBlockedEvent> pbev(do_QueryInterface(event));
       pbev->InitPopupBlockedEvent(NS_LITERAL_STRING("DOMPopupBlocked"),
               PR_TRUE, PR_TRUE, aRequestingURI, aPopupURI, aPopupWindowFeatures);
+      nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+      privateEvent->SetTrusted(PR_TRUE);
+
       PRBool noDefault;
       nsCOMPtr<nsIDOMEventTarget> targ(do_QueryInterface(aDoc));
       targ->DispatchEvent(event, &noDefault);
@@ -3079,6 +3086,10 @@ void FirePopupWindowEvent(nsIDOMDocument* aDoc)
     docEvent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
     if (event) {
       event->InitEvent(NS_LITERAL_STRING("PopupWindow"), PR_TRUE, PR_TRUE);
+
+      nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+      privateEvent->SetTrusted(PR_TRUE);
+
       PRBool noDefault;
       nsCOMPtr<nsIDOMEventTarget> targ(do_QueryInterface(aDoc));
       targ->DispatchEvent(event, &noDefault);
@@ -3578,6 +3589,9 @@ GlobalWindowImpl::Close()
 
   if (event) {
     event->InitEvent(NS_LITERAL_STRING("DOMWindowClose"), PR_TRUE, PR_TRUE);
+
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+    privateEvent->SetTrusted(PR_TRUE);
 
     PRBool executeDefault = PR_TRUE;
     DispatchEvent(event, &executeDefault);
