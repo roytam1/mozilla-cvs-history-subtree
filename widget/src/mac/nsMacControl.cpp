@@ -80,7 +80,7 @@ static pascal OSStatus MacControlDrawHandler(EventHandlerCallRef inHandlerCallRe
 	if (::GetEventParameter(inEvent, kEventParamGrafPort, typeGrafPtr, NULL, sizeof(CGrafPtr), NULL, &controlPort) != noErr)
 		controlPort = ::GetWindowPort(::GetControlOwner(theControl));
 
-	OSStatus err;
+  OSStatus err = eventNotHandledErr;
 		
 	// see if we're already inside a StartDraw/EndDraw (e.g. OnPaint())
 	if (macControl->IsDrawing())
@@ -89,12 +89,18 @@ static pascal OSStatus MacControlDrawHandler(EventHandlerCallRef inHandlerCallRe
 	}
 	else
 	{	 
+    // only draw if our hiearchy is visible
+    if (macControl->ContainerHierarchyIsVisible())
+    {
 		// make sure we leave the origin set for other controls
 		StOriginSetter originSetter(controlPort);
 		macControl->StartDraw();
 		err = ::CallNextEventHandler(inHandlerCallRef, inEvent);
 		macControl->EndDraw();
 	}
+    else
+      err = noErr;
+  }
 	
 	return err;
 }
