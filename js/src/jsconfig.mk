@@ -56,7 +56,7 @@ endif
 SHIP_DIST  = $(MOZ_DEPTH)/dist/$(OBJDIR)
 SHIP_DIR   = $(SHIP_DIST)/SHIP
 
-SHIP_LIBS  = jsj.so libjs.so
+SHIP_LIBS  = jsj.so libjs.so libnspr21.so
 SHIP_LIBS := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
 SHIP_INCS  = js*.h
