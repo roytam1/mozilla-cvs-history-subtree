@@ -1,2 +1,2 @@
 [xpfe-mailnews]
-dist/bin/components/offline-startup.js
+dist/bin/components/offlineStartup.js
