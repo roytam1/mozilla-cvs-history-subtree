@@ -39,6 +39,7 @@ bin\defaults\profile\mimeTypes.rdf
 
 [xpcom]
 bin\js3250.dll
+bin\nsldap32v40.dll
 bin\plc4.dll
 bin\plds4.dll
 bin\xpcom.dll
@@ -105,6 +106,7 @@ bin\components\locale.xpt
 bin\components\mozbrwsr.xpt
 bin\components\mozcomps.xpt
 bin\components\mozfind.xpt
+bin\components\mozldap.xpt
 bin\components\mozucth.xpt
 bin\components\mozxfer.xpt
 bin\components\necko.xpt
@@ -226,7 +228,6 @@ bin\res\builtin\platformHTMLBindings.xml
 
 [mail]
 bin\components\mail.dll
-bin\nsldap32v40.dll
 bin\components\addrbook.xpt
 bin\components\mailnewspublic.xpt
 bin\components\mime.xpt
@@ -239,7 +240,6 @@ bin\components\msgnews.xpt
 bin\components\msgsearch.xpt
 bin\components\import.xpt
 bin\components\absync.xpt
-bin\components\mozldap.xpt
 bin\chrome\messenger.jar
 bin\chrome\messenger\*
 

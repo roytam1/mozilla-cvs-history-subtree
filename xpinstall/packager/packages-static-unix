@@ -32,6 +32,7 @@ bin/defaults/profile/search.rdf
 bin/defaults/profile/mimeTypes.rdf
 
 [xpcom]
+bin/libldap40.so
 bin/libnspr4.so
 bin/libplc4.so
 bin/libplds4.so
@@ -88,6 +89,7 @@ bin/components/chardet.xpt
 bin/components/jar.xpt
 bin/components/jsconsole-clhandler.js
 bin/components/locale.xpt
+bin/components/mozldap.xpt
 bin/components/mozbrwsr.xpt
 bin/components/mozcomps.xpt
 bin/components/mozfind.xpt
@@ -209,12 +211,10 @@ bin/res/builtin/platformHTMLBindings.xml
 
 
 [mail]
-bin/libldap40.so
 bin/liblber40.so
 bin/components/addrbook.xpt
 bin/components/mailnews.xpt
 bin/components/mime.xpt
-bin/components/mozldap.xpt
 bin/components/msgbase.xpt
 bin/components/msgcompose.xpt
 bin/components/msgdb.xpt

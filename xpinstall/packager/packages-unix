@@ -54,6 +54,7 @@ bin/libgtkxtbin.so
 bin/libjsj.so
 bin/libprotocol.so
 bin/libgkgfx.so
+bin/libldap40.so
 bin/run-mozilla.sh
 bin/regExport
 bin/regxpcom
@@ -132,6 +133,7 @@ bin/components/libgklayout.so
 bin/components/libgkplugin.so
 bin/components/libhtmlpars.so
 bin/components/libgkview.so
+bin/components/libmozldap.so
 bin/components/librdf.so
 bin/components/libshistory.so
 bin/components/libstrres.so
@@ -157,6 +159,7 @@ bin/components/locale.xpt
 bin/components/mozbrwsr.xpt
 bin/components/mozcomps.xpt
 bin/components/mozfind.xpt
+bin/components/mozldap.xpt
 bin/components/mozucth.xpt
 bin/components/mozxfer.xpt
 bin/components/libnecko.so
@@ -288,7 +291,6 @@ bin/res/builtin/platformHTMLBindings.xml
 
 
 [mail]
-bin/libldap40.so
 bin/liblber40.so
 bin/libmsgbaseutil.so
 bin/components/addrbook.xpt
@@ -297,7 +299,6 @@ bin/components/liblocalmail.so
 bin/components/libmailnews.so
 bin/components/libmime.so
 bin/components/libmimeemitter.so
-bin/components/libmozldap.so
 bin/components/libmsgcompose.so
 bin/components/libmsgdb.so
 bin/components/libmsgimap.so
@@ -310,7 +311,6 @@ bin/components/libimpText.so
 bin/components/libabsyncsvc.so
 bin/components/mailnews.xpt
 bin/components/mime.xpt
-bin/components/mozldap.xpt
 bin/components/msgbase.xpt
 bin/components/msgcompose.xpt
 bin/components/msgdb.xpt

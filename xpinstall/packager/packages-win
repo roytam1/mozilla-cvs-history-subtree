@@ -61,6 +61,7 @@ bin\jsj3250.dll
 bin\mozilla.exe
 bin\mozctl.dll
 bin\mozctlx.dll
+bin\nsldap32v40.dll
 bin\regxpcom.exe
 bin\xpicleanup.exe
 bin\res\cmessage.txt
@@ -147,6 +148,8 @@ bin\components\mozbrwsr.xpt
 bin\components\mozcomps.xpt
 bin\components\mozfind.dll
 bin\components\mozfind.xpt
+bin\components\mozldap.dll
+bin\components\mozldap.xpt
 bin\components\mozucth.dll
 bin\components\mozucth.xpt
 bin\components\mozxfer.dll
@@ -333,9 +336,6 @@ bin\components\impText.dll
 bin\components\absyncsv.dll
 bin\components\absync.xpt
 bin\components\nsLDAPPrefsService.js
-bin\components\mozldap.dll
-bin\components\mozldap.xpt
-bin\nsldap32v40.dll
 bin\chrome\messenger.jar
 bin\chrome\messenger\*
 

@@ -63,6 +63,7 @@ viewer:Plug-ins:Default Plug-in
 
 viewer:Essential Files:gfx.shlb 
 viewer:Essential Files:libutil.shlb 
+viewer:Essential Files:LDAPClient.shlb
 viewer:Essential Files:RaptorShell.shlb 
 viewer:Essential Files:widget.shlb 
 viewer:Essential Files:XPICleanup
@@ -121,6 +122,8 @@ viewer:Components:Mork.shlb
 viewer:Components:mozBrowser.shlb 
 viewer:Components:mozBrowser.xpt 
 viewer:Components:mozcomps.xpt 
+viewer:Components:mozldap.shlb
+viewer:Components:mozldap.xpt
 viewer:Components:gfx.xpt 
 viewer:Components:nsIStringBundle.xpt 
 viewer:Components:nslocale.shlb 
@@ -302,10 +305,8 @@ viewer:Components:msgImportEudora.shlb
 viewer:Components:AbSyncSvc.shlb 
 viewer:Components:AbSyncSvc.xpt
 viewer:Components:nsLDAPPrefsService.js 
-viewer:Components:mozldap.shlb
-viewer:Components:mozldap.xpt
 viewer:Components:ldapAutoComplete.xpt
-viewer:Essential Files:LDAPClient.shlb
+
 
 [chatzilla]
 viewer:Components:chatzilla-service.js
