@@ -858,8 +858,13 @@
         <body>
           <![CDATA[
             var l = this.mPanelContainer.childNodes.length;
-            for (var i = 0; i < l; i++)
-              this.mPanelContainer.childNodes[i].webNavigation.reload(true);
+            for (var i = 0; i < l; i++) {
+              try {
+                this.mPanelContainer.childNodes[i].reload();
+              } catch (e) {
+                // ignore failure to reload so others will be reloaded
+              }
+            }
           ]]>
         </body>
       </method>
