@@ -415,10 +415,6 @@ private:
     Stack          defaultNameSpaceURIStack;
     Stack          xsltNameSpaces;
 
-    //-- default templates
-    Element*      dfWildCardTemplate;
-    Element*      dfTextTemplate;
-
     /**
      * Returns the closest xml:space value for the given node
     **/

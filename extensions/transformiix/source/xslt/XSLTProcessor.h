@@ -337,6 +337,14 @@ private:
     void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps, NamedMap* actualParams = NULL);
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps, NamedMap* actualParams);
 
+    /**
+     * Invokes the default template for the specified node
+     * @param node  context node
+     * @param ps    current ProcessorState
+     * @param mode  template mode
+    **/
+    void processDefaultTemplate(Node* node, ProcessorState* ps, String* mode);
+
     void processTopLevel(Document* aSource, Document* aStylesheet, ProcessorState* aPs);
     void processTopLevel(Document* aSource, Element* aStylesheet, ProcessorState* aPs);
 
