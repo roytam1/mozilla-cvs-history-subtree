@@ -350,31 +350,32 @@ sub Checkout()
     my($nss_tab) = "NSS_30_BRANCH";
     my($psm_tag) = "SECURITY_MAC_BRANCH";
     my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH"; 
+    my($m17_tag) = "SeaMonkey_M17_BRANCH";
     
     #//
     #// Checkout commands
     #//
     if ($main::pull{moz})
     {
-        $session->checkout("mozilla/nsprpub", $nsprpub_tag)            || print "checkout of nsprpub failed\n";        
-        $session->checkout("mozilla/security/nss", $nss_tab)           || print "checkout of security/nss failed\n";
-        $session->checkout("mozilla/security/psm", $psm_tag)           || print "checkout of security/psm failed\n";
-        $session->checkout("DirectorySDKSourceC", $ldapsdk_tag)        || print "checkout of LDAP C SDK failed\n";
-        $session->checkout("SeaMonkeyAll")                             || 
+        $session->checkout("mozilla/nsprpub", $m17_tag)            || print "checkout of nsprpub failed\n";        
+        $session->checkout("mozilla/security/nss", $m17_tag)       || print "checkout of security/nss failed\n";
+        $session->checkout("mozilla/security/psm", $m17_tag)       || print "checkout of security/psm failed\n";
+        $session->checkout("DirectorySDKSourceC", $m17_tag)        || print "checkout of LDAP C SDK failed\n";
+        $session->checkout("SeaMonkeyAll", $m17_tag)               || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
     {
-        $session->checkout("mozilla/build/mac")                     || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/InterfaceLib")          || print "checkout failure\n";
-        $session->checkout("mozilla/config/mac")                    || print "checkout failure\n";
-        $session->checkout("mozilla/gc")                            || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSStartup")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSStdLib")              || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/NSRuntime")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/MoreFiles")             || print "checkout failure\n";
-        $session->checkout("mozilla/lib/mac/MacMemoryAllocator")    || print "checkout failure\n";
-        $session->checkout("mozilla/nsprpub", $nsprpub_tag)         || print "checkout failure\n";
+        $session->checkout("mozilla/build/mac", $m17_tag)                     || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/InterfaceLib", $m17_tag)          || print "checkout failure\n";
+        $session->checkout("mozilla/config/mac", $m17_tag)                    || print "checkout failure\n";
+        $session->checkout("mozilla/gc", $m17_tag)                            || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSStartup", $m17_tag)             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSStdLib", $m17_tag)              || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/NSRuntime", $m17_tag)             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/MoreFiles", $m17_tag)             || print "checkout failure\n";
+        $session->checkout("mozilla/lib/mac/MacMemoryAllocator", $m17_tag)    || print "checkout failure\n";
+        $session->checkout("mozilla/nsprpub", $m17_tag)    				      || print "checkout failure\n";
     }
 }
 
