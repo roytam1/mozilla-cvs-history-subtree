@@ -251,7 +251,7 @@ public:
 //
 // this message is sent from a client to the daemon to request the ID of the
 // client corresponding to the given name.  in response the daemon will either
-// send a CLIENT_ID or ERROR message.
+// send a CLIENT_ID or an ERROR message.
 //
 class ipcmMessageQueryClientByName : public ipcMessage_DWORD_STR
 {
@@ -267,9 +267,9 @@ public:
 //
 // IPCM_MSG_TYPE_QUERY_CLIENT_INFO
 //
-// thie message is sent from a client to the daemon to request complete
+// this message is sent from a client to the daemon to request complete
 // information about the client corresponding to the given client ID. in
-// response the daemon will either send a CLIENT_INFO or ERROR message.
+// response the daemon will either send a CLIENT_INFO or an ERROR message.
 //
 class ipcmMessageQueryClientInfo : public ipcMessage_DWORD_DWORD
 {

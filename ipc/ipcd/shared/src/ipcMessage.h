@@ -121,7 +121,7 @@ public:
 
     //
     // copy data into the message's data section, starting from offset.  this
-    // function can be used to write only a portion of the message's data.
+    // function can be used to write any portion of the message's data.
     //
     // param:
     //   offset  - destination offset

@@ -402,7 +402,7 @@ int main(int argc, char **argv)
 
     listenFD = PR_OpenTCPSocket(PR_AF_LOCAL);
     if (!listenFD) {
-        LOG(("PR_OpenUDPSocket failed [%d]\n", PR_GetError()));
+        LOG(("PR_OpenTCPSocket failed [%d]\n", PR_GetError()));
         goto end;
     }
 

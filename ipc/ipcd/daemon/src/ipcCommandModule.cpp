@@ -65,13 +65,14 @@ struct ipcCommandModule
         for (node = nodes; node; node = node->mNext)
             count++;
 
-        char **strs = (char **) calloc(count + 1, sizeof(char *));
+        char **strs = (char **) malloc((count + 1) * sizeof(char *));
         if (!strs)
             return NULL;
 
         count = 0;
         for (node = nodes; node; node = node->mNext, ++count)
             strs[count] = (char *) node->Value();
+        strs[count] = 0;
 
         return strs;
     }
