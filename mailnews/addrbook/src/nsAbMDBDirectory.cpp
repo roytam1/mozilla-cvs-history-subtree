@@ -215,19 +215,18 @@ nsresult nsAbMDBDirectory::NotifyItemChanged(nsISupports *item)
   return rv;
 }
 
-nsresult nsAbMDBDirectory::NotifyPropertyChanged(const char *property, const PRUnichar* oldValue, const PRUnichar* newValue)
+nsresult nsAbMDBDirectory::NotifyPropertyChanged(nsIAbDirectory *list, const char *property, const PRUnichar* oldValue, const PRUnichar* newValue)
 {
-	nsCOMPtr<nsISupports> supports;
-	if(NS_SUCCEEDED(QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports))))
-	{
-		nsresult rv;
-		nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
-	  NS_ENSURE_SUCCESS(rv,rv);
-    rv = abSession->NotifyItemPropertyChanged(supports, property, oldValue, newValue);
-    NS_ENSURE_SUCCESS(rv,rv);
-	}
+  nsresult rv;
+	nsCOMPtr<nsISupports> supports = do_QueryInterface(list, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-	return NS_OK;
+  nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = abSession->NotifyItemPropertyChanged(supports, property, oldValue, newValue);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
 }
 
 nsresult nsAbMDBDirectory::NotifyItemAdded(nsISupports *item)
@@ -914,23 +913,20 @@ NS_IMETHODIMP nsAbMDBDirectory::OnListEntryChange
 	if (abCode == AB_NotifyPropertyChanged && list)
 	{
 		PRBool bIsMailList = PR_FALSE;
-		list->GetIsMailList(&bIsMailList);
-		
-		PRUint32 rowID;
+		rv = list->GetIsMailList(&bIsMailList);
+	  NS_ENSURE_SUCCESS(rv,rv);
+
 		nsCOMPtr<nsIAbMDBDirectory> dblist(do_QueryInterface(list, &rv));
-		if(NS_SUCCEEDED(rv))
-		{
-			dblist->GetDbRowID(&rowID);
+    NS_ENSURE_SUCCESS(rv,rv);
 
-			if (bIsMailList && m_dbRowID == rowID)
-			{
-				nsXPIDLString pListName;
-				list->GetDirName(getter_Copies(pListName));
-				if (pListName)
-					NotifyPropertyChanged("DirName", nsnull, pListName.get());
-			}
+    if (bIsMailList) {
+      nsXPIDLString pListName;
+      rv = list->GetDirName(getter_Copies(pListName));
+      NS_ENSURE_SUCCESS(rv,rv);
+
+      rv = NotifyPropertyChanged(list, "DirName", nsnull, pListName.get());
+      NS_ENSURE_SUCCESS(rv,rv);
 		}
-
 	}
 	return rv;
 }

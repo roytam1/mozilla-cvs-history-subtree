@@ -108,7 +108,7 @@ public:
 	PRBool IsMailingList(){ return (mIsMailingList == 1); }
 
 protected:
-	nsresult NotifyPropertyChanged(const char *property, const PRUnichar* oldValue, const PRUnichar* newValue);
+	nsresult NotifyPropertyChanged(nsIAbDirectory *list, const char *property, const PRUnichar* oldValue, const PRUnichar* newValue);
 	nsresult NotifyItemAdded(nsISupports *item);
 	nsresult NotifyItemDeleted(nsISupports *item);
   nsresult NotifyItemChanged(nsISupports *item);
