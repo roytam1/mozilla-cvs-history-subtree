@@ -1395,7 +1395,7 @@ nsNntpService::GetListOfGroupsOnServer(nsINntpIncomingServer *aNntpServer, nsIMs
 {
 	nsresult rv;
 
-  NS_ENSURE_ARG_POINTER(aNntpServer);
+    NS_ENSURE_ARG_POINTER(aNntpServer);
 
 	nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(aNntpServer, &rv);
 	if (NS_FAILED(rv)) return rv;

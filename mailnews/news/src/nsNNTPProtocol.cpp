@@ -954,7 +954,7 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 		 news:/GROUP
 		 news://HOST/GROUP
 	   */
-	  if (PL_strchr((const char *)group,'*')) {
+	  if (PL_strchr(group.get(),'*')) {
 		m_typeWanted = LIST_WANTED;
 	  }
 	  else {
@@ -1147,6 +1147,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     PR_LOG(NNTP,PR_LOG_ALWAYS,("ParseURL"));
 
     nsresult rv;
+    nsCOMPtr <nsIMsgFolder> folder;
     nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
@@ -1166,7 +1167,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 	    rv = aURL->GetScheme(getter_Copies(scheme));
         NS_ENSURE_SUCCESS(rv,rv);
         
-        if (!nsCRT::strcmp((const char *)scheme, "news_message")) {
+        if (!nsCRT::strcmp(scheme.get(), "news_message")) {
             rv = aURL->GetSpec(getter_Copies(spec));
             NS_ENSURE_SUCCESS(rv,rv);
         }
@@ -1174,10 +1175,9 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 
     // if the spec is non empty, then use it.  
     if (spec.get() && spec.get()[0]) {
-        PR_LOG(NNTP,PR_LOG_ALWAYS,("original message spec = %s",(const char *)spec));
+        PR_LOG(NNTP,PR_LOG_ALWAYS,("original message spec = %s",spec.get()));
 
-        nsCOMPtr <nsIMsgFolder> folder;
-        rv = nntpService->DecomposeNewsURI((const char *)spec, getter_AddRefs(folder), &m_key);
+        rv = nntpService->DecomposeNewsURI(spec.get(), getter_AddRefs(folder), &m_key);
         NS_ENSURE_SUCCESS(rv,rv);
 
         // since we are reading a message in this folder, we can set m_newsFolder
@@ -1284,6 +1284,41 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 	  PR_FREEIF(group);
 	  PR_FREEIF(message_id);
 	  PR_FREEIF(command_specific_data);
+  }
+
+  nsXPIDLCString serverURI;
+
+  if (*aMessageID) {
+    // if this is a message id, use the pre path (the server) for the folder uri.
+    rv = aURL->GetPrePath(getter_Copies(serverURI));
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  else if (*aGroup) {
+    if (PL_strchr(*aGroup,'*')) {
+      rv = aURL->GetPrePath(getter_Copies(serverURI));
+      NS_ENSURE_SUCCESS(rv,rv);
+    }
+    else {
+      // let if fall through.  we'll set m_newsFolder later.
+    }
+  }
+
+  if (serverURI.get() && serverURI.get()[0]) {
+    // if we get here, we, we are either doing:
+    // news://host/message-id or news://host/*
+    // for authentication, we se set m_newsFolder to be the server's folder.
+    // while we are here, we set m_nntpServer.
+    rv = nntpService->DecomposeNewsURI(serverURI.get(), getter_AddRefs(folder), &m_key);
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    // since we are reading a message in this folder, we can set m_newsFolder
+    m_newsFolder = do_QueryInterface(folder, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    rv = m_newsFolder->GetNntpServer(getter_AddRefs(m_nntpServer));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    m_currentGroup = "";
   }
 
   // mscott - this function might need to be re-written to use nsresults
@@ -1839,36 +1874,10 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 		ClearFlag(NNTP_USE_FANCY_NEWSGROUP);
         PRUint32 last_update;
       	
-        // XXX fix this, so we pass in the nntpServer when we create the protocol instance.
-        // if we don't know the m_nntpServer, go get it
         NS_ASSERTION(m_nntpServer, "no m_nntpServer");
 		if (!m_nntpServer) {
-          nsCOMPtr<nsIMsgMessageUrl> msgUrl = do_QueryInterface(m_runningURL, &rv);
-          NS_ENSURE_SUCCESS(rv,rv);
-          
-          nsXPIDLCString uri;
-          rv = msgUrl->GetUri(getter_Copies(uri));
-          NS_ENSURE_SUCCESS(rv,rv);
-          
-          nsCAutoString serverURI(uri.get());
-          serverURI.Cut(serverURI.Length() - 2, 2);  /* turn news://host/* into news://host */
-          
-          nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
-          NS_ENSURE_SUCCESS(rv,rv);
-
-          nsCOMPtr <nsIMsgFolder> folder;
-          nsMsgKey key;
-          rv = nntpService->DecomposeNewsURI(serverURI.get(), getter_AddRefs(folder), &key);
-          NS_ENSURE_SUCCESS(rv,rv);
-
-          nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(folder, &rv);
-          NS_ENSURE_SUCCESS(rv,rv);
-
-          rv = newsFolder->GetNntpServer(getter_AddRefs(m_nntpServer));
-          NS_ENSURE_SUCCESS(rv,rv);
-
           NNTP_LOG_NOTE("m_nntpServer is null, panic!");
-          if (!m_nntpServer) return -1;
+          return -1;
 		}
 
 		rv = m_nntpServer->GetLastUpdatedTime(&last_update); 
