@@ -90,6 +90,8 @@
 
 #include "nsITextToSubURI.h"
 
+#include "prlog.h"
+
 // this is going away - see
 // http://bugzilla.mozilla.org/show_bug.cgi?id=71482
 #include "nsIBrowserHistory.h"
@@ -129,6 +131,9 @@ static NS_METHOD AHTC_WriteFunc(nsIInputStream * in,
                                 PRUint32 toOffset,
                                 PRUint32 count, PRUint32 * writeCount);
 
+#ifdef PR_LOGGING
+static PRLogModuleInfo* gDocShellLog;
+#endif
 
 //*****************************************************************************
 //***    nsDocShell: Object Management
@@ -158,6 +163,10 @@ nsDocShell::nsDocShell():
     mChromeEventHandler(nsnull)
 {
     NS_INIT_REFCNT();
+#ifdef PR_LOGGING
+    if (! gDocShellLog)
+        gDocShellLog = PR_NewLogModule("nsDocShell");
+#endif
 }
 
 nsDocShell::~nsDocShell()
@@ -168,18 +177,19 @@ nsDocShell::~nsDocShell()
 NS_IMETHODIMP
 nsDocShell::DestroyChildren()
 {
-    PRInt32 i, n = mChildren.Count();
-    nsCOMPtr<nsIDocShellTreeItem> shell;
-    for (i = 0; i < n; i++) {
-        shell = dont_AddRef((nsIDocShellTreeItem *) mChildren.ElementAt(i));
-        if (!NS_WARN_IF_FALSE(shell, "docshell has null child"))
-            shell->SetParent(nsnull);
-        nsCOMPtr<nsIBaseWindow> shellWin(do_QueryInterface(shell));
-        if (shellWin)
-            shellWin->Destroy();
-    }
-    mChildren.Clear();
-    return NS_OK;
+  PRInt32 i, n = mChildren.Count();
+  nsCOMPtr<nsIDocShellTreeItem> shell;
+  for (i = 0; i < n; i++) {
+    shell = dont_AddRef((nsIDocShellTreeItem *) mChildren.ElementAt(i));
+    if (!NS_WARN_IF_FALSE(shell, "docshell has null child"))
+      shell->SetParent(nsnull);
+      shell->SetTreeOwner(nsnull);
+      // just clear out the array.  When the nsFrameFrame that holds the subshell is
+      // destroyed, then the Destroy() method of that subshell will actually get
+      // called.
+  }
+  mChildren.Clear();
+  return NS_OK;
 }
 
 //*****************************************************************************
@@ -446,6 +456,16 @@ nsDocShell::LoadURI(nsIURI * aURI, nsIDocShellLoadInfo * aLoadInfo,
         aLoadInfo->GetTarget(getter_Copies(target));
     }
 
+#ifdef PR_LOGGING
+    if (PR_LOG_TEST(gDocShellLog, PR_LOG_DEBUG)) {
+        nsXPIDLCString uristr;
+        aURI->GetSpec(getter_Copies(uristr));
+        PR_LOG(gDocShellLog, PR_LOG_DEBUG,
+               ("nsDocShell[%p]: loading %s with flags 0x%08x",
+                this, uristr.get(), aLoadFlags));
+    }
+#endif
+
     if (!shEntry && loadType != LOAD_NORMAL_REPLACE && mCurrentURI == nsnull) {
         /* Check if we are in the middle of loading a subframe whose parent
          * was originally loaded thro' Session History. ie., you were in a frameset
@@ -477,6 +497,8 @@ nsDocShell::LoadURI(nsIURI * aURI, nsIDocShellLoadInfo * aLoadInfo,
     }
     if (shEntry) {
         // Load is from SH. SH does normal load only
+        PR_LOG(gDocShellLog, PR_LOG_DEBUG,
+               ("nsDocShell[%p]: loading from session history", this));
 
         rv = LoadHistoryEntry(shEntry, loadType);
     }
@@ -2154,6 +2176,14 @@ nsDocShell::SetFocus()
         nsIFrame *focusFrame = nsnull;
         presShell->GetPrimaryFrameFor(focusContent, &focusFrame);
         esm->ChangeFocus(focusContent, focusFrame, PR_TRUE);
+    } else {
+        nsCOMPtr<nsIScriptGlobalObject> sgo;
+        document->GetScriptGlobalObject(getter_AddRefs(sgo));
+        if (sgo) {
+            nsCOMPtr<nsIDOMWindowInternal> domwin(do_QueryInterface(sgo));
+            if (domwin)
+                domwin->Focus();
+        }
     }
 
     return NS_OK;
@@ -3204,28 +3234,8 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
         // Stop any activity that may be happening in the old document before
         // releasing it...
         mContentViewer->Stop();
-
-        // Try to extract the default background color from the old
-        // view manager, so we can use it for the next document.
-        nsCOMPtr<nsIDocumentViewer> docviewer =
-            do_QueryInterface(mContentViewer);
-
-        if (docviewer) {
-            nsCOMPtr<nsIPresShell> shell;
-            docviewer->GetPresShell(*getter_AddRefs(shell));
-
-            if (shell) {
-                nsCOMPtr<nsIViewManager> vm;
-                shell->GetViewManager(getter_AddRefs(vm));
-
-                if (vm) {
-                    vm->GetDefaultBackgroundColor(&bgcolor);
-                    bgSet = PR_TRUE;
-                }
-            }
-        }
-
         mContentViewer->Destroy();
+        aNewViewer->SetPreviousViewer(mContentViewer);
         mContentViewer = nsnull;
     }
 
@@ -3285,7 +3295,9 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
 // XXX: It looks like the LayoutState gets restored again in Embed()
 //      right after the call to SetupNewViewer(...)
 
-    mContentViewer->Show();
+    // We don't show the mContentViewer yet, since we want to draw the old page
+    // until we have enough of the new page to show.  Just return with the new
+    // viewer still set to hidden.
 
     // Now that we have switched documents, forget all of our children
     DestroyChildren();
@@ -3585,7 +3597,7 @@ nsDocShell::DoURILoad(nsIURI * aURI, nsIURI * aReferrerURI,
             rv = AddHeadersToChannel(aHeadersData, httpChannel);
         }
         // Set the referrer explicitly
-        if (aReferrerURI)       // Referrer is currenly only set for link clicks here.
+        if (aReferrerURI)
             httpChannel->SetReferrer(aReferrerURI);
     }
     else {
@@ -4249,8 +4261,7 @@ nsDocShell::RefreshURIFromHeader(nsIURI * aBaseURI,
 
 NS_IMETHODIMP nsDocShell::SetupRefreshURI(nsIChannel * aChannel)
 {
-    nsresult
-        rv;
+    nsresult rv;
     nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aChannel, &rv));
     if (NS_SUCCEEDED(rv)) {
         nsCOMPtr<nsIURI> referrer;
