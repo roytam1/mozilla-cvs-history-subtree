@@ -70,7 +70,6 @@
 #include "nsMsgFilterDataSource.h"
 #include "nsMsgFilterDelegateFactory.h"
 #include "nsMsgWindow.h"
-#include "nsMessage.h"
 
 #include "nsMsgServiceProvider.h"
 #include "nsSubscribeDataSource.h"
@@ -112,7 +111,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCopyService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFolderCache)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgStatusFeedback)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgWindow,Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessage)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgServiceProviderService, Init);
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSubscribeDataSource, Init);
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSubscribableServer, Init);
@@ -247,18 +245,6 @@ static nsModuleComponentInfo gComponents[] = {
     { "Mail/News MsgWindow", NS_MSGWINDOW_CID,
       NS_MSGWINDOW_CONTRACTID,
       nsMsgWindowConstructor,
-    },
-    { "Message Resource", NS_MESSAGE_CID,
-      NS_MESSAGE_MAILBOX_CONTRACTID,
-      nsMessageConstructor,
-    },
-    { "Message Resource", NS_MESSAGE_CID,
-      NS_MESSAGE_IMAP_CONTRACTID,
-      nsMessageConstructor,
-    },
-    { "Message Resource", NS_MESSAGE_CID,
-      NS_MESSAGE_NEWS_CONTRACTID,
-      nsMessageConstructor,
     },
     { "Mail/News Print Engine", NS_MSG_PRINTENGINE_CID,
       NS_MSGPRINTENGINE_CONTRACTID,
