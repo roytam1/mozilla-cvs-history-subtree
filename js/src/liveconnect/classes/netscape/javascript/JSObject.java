@@ -53,9 +53,10 @@ public final class JSObject {
      */
     private static native void initClass();
     static {
-    	// Currently, MRJ loads this library again, which is useless to us.
-    	if (System.getProperty("mrj.version", null) == null) {
-			System.loadLibrary("LiveConnect");
+    	// On MRJ, this property won't exist, because the library is preloaded.
+    	String liveConnectLibrary = System.getProperty("netscape.jsj.dll", null);
+    	if (liveConnectLibrary != null) {
+			System.loadLibrary(liveConnectLibrary);
 			initClass();
 		}
     }
