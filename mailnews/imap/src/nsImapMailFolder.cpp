@@ -101,7 +101,6 @@
 #include "nsIMimeHeaders.h"
 #include "nsIMsgMdnGenerator.h"
 #include <time.h>
-#include "nsIMsgFilterPlugin.h"
 
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -624,35 +623,73 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
   return folderOpen;
 }
 
+/**
+ * Initialize any message filtering plugin objects to be used by
+ * this server.
+ *
+ * XXX note this currently only initializes the one m_filterPlugin;
+ * it should really be initializing a list
+ */
+nsresult
+nsImapMailFolder::InitializeFilterPlugins(void)
+{
+    nsresult rv;
+
+    // create the plugin object
+    //
+    m_filterPlugin = do_CreateInstance(
+        "@mozilla.org/messenger/filter-plugin;1?name=junkmail", &rv);
+
+    if (NS_FAILED(rv)) {
+        NS_ERROR("nsImapMailFolder::InitializeFilterPlugins():" 
+                 " error creating filter plugin");
+        return rv;
+    }
+
+    // figure out the preferences key for this server so we can pass
+    // it to the initialization routine
+    //
+    nsXPIDLCString serverKey;
+    rv = GetServerKey(getter_Copies(serverKey));
+    if (NS_FAILED(rv)) {
+        NS_ERROR("nsImapMailFolder::InitializeFilterPlugins():" 
+                 " error getting server prefs key");
+        m_filterPlugin = 0;
+        return rv;
+    }
+
+    // initialize it
+    //
+    rv = m_filterPlugin->Init(serverKey);
+    if (NS_FAILED(rv)) {
+        NS_ERROR("nsImapMailFolder::InitializeFilterPlugins():" 
+                 " call to filterPlugin->Init() failed");
+        m_filterPlugin = 0;
+        return rv;
+    }
+
+    return NS_OK;
+}
+
 NS_IMETHODIMP
 nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
 {
     nsresult rv = NS_ERROR_NULL_POINTER;
     PRBool selectFolder = PR_FALSE;
 
-    if (mFlags & MSG_FOLDER_FLAG_INBOX && !m_filterList) {
-        rv = GetFilterList(msgWindow, getter_AddRefs(m_filterList));
-        // YYY rv ignored
+    if (mFlags & MSG_FOLDER_FLAG_INBOX) {
+        if (!m_filterList) {
+            rv = GetFilterList(msgWindow, getter_AddRefs(m_filterList));
+            // YYY rv ignored
+        }
 
-        // Initialize filter plugins
-        // YYY should be moved somewhere else, should enumerate category
-        // rather than hard-coding contract-id
+        // Initialize filter plugins.  If this fails; just continue.
         //
-        nsCOMPtr<nsIMsgFilterPlugin> filterPlugin = 
-            do_GetService(
-                "@mozilla.org/messenger/filter-plugin;1?name=junkmail",
-                &rv);
-
-        if (NS_SUCCEEDED(rv)) {
-            rv = filterPlugin->Init();
-            if (NS_FAILED(rv)) {
-                // YYY use PR_LOG
-                NS_ERROR("Error initializing junkmail plugin");
-            }
-        } else {
-            NS_ERROR("Failed to get junkmail service");
+        if (!m_filterPlugin) {
+            (void)InitializeFilterPlugins();
         }
     }
+
     if (m_filterList) { // YYY need to do this for spam-whacker too
         nsCOMPtr<nsIMsgIncomingServer> server;
         rv = GetServer(getter_AddRefs(server));

@@ -53,6 +53,7 @@
 #include "nsIMsgMessageService.h"
 #include "nsIMsgFilterHitNotify.h"
 #include "nsIMsgFilterList.h"
+#include "nsIMsgFilterPlugin.h"
 #include "prmon.h"
 #include "nsIEventQueue.h"
 #include "nsIMsgImapMailFolder.h"
@@ -346,6 +347,7 @@ public:
                                      const char *destFolder,
                                    nsIMsgFilter *filter,
                                    nsIMsgWindow *msgWindow);
+    nsresult InitializeFilterPlugins(void);
   static nsresult  AllocateUidStringFromKeys(nsMsgKey *keys, PRInt32 numKeys, nsCString &msgIds);
 protected:
     // Helper methods
@@ -432,6 +434,7 @@ protected:
   PRBool m_haveReadNameFromDB;
 	nsCOMPtr<nsIMsgParseMailMsgState> m_msgParser;
 	nsCOMPtr<nsIMsgFilterList> m_filterList;
+    nsCOMPtr<nsIMsgFilterPlugin> m_filterPlugin;  // XXX should be a list
 	PRBool				m_msgMovedByFilter;
 	nsImapMoveCoalescer *m_moveCoalescer;
 	nsMsgKey			m_curMsgUid;
