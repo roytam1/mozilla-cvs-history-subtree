@@ -41,6 +41,8 @@
 #include <shlobj.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+#include "nsNativeCharsetUtils.h"
 #elif defined(XP_OS2)
 #define MAX_PATH _MAX_PATH
 #define INCL_WINWORKPLACE
@@ -163,42 +165,32 @@ NS_COM_OBSOLETE void ShutdownSpecialSystemDirectory()
 
 #if defined (XP_WIN)
 
-static PRBool gGlobalOSInitialized = PR_FALSE;
-static PRBool gGlobalDBCSEnabledOS = PR_FALSE;
-
 //----------------------------------------------------------------------------------------
 static char* MakeUpperCase(char* aPath)
 //----------------------------------------------------------------------------------------
 {
-  // check if the Windows is DBCSEnabled once.
-  if (PR_FALSE == gGlobalOSInitialized) {
-    if (GetSystemMetrics(SM_DBCSENABLED))
-      gGlobalDBCSEnabledOS = PR_TRUE;
-    gGlobalOSInitialized = PR_TRUE;
+  // windows does not care about case.  push to uppercase:
+  nsAutoString widePath;
+
+  if (NS_FAILED(NS_CopyNativeToUnicode(nsDependentCString(aPath), widePath))) {
+    NS_ASSERTION(0, "failed to convert a path to Unicode");
+    return aPath;
   }
 
-  // windows does not care about case.  pu sh to uppercase:
-  int length = strlen(aPath);
-  int i = 0; /* C++ portability guide #20 */
-  if (!gGlobalDBCSEnabledOS)  {
-    // for non-DBCS windows
-    for (i = 0; i < length; i++)
-        if (islower(aPath[i]))
-          aPath[i] = _toupper(aPath[i]);
+  nsString::iterator start, end;
+  widePath.BeginWriting(start);
+  widePath.EndWriting(end);
+
+  while (start != end) {
+    *start = towupper(*start);
+    ++start;
   }
-  else {
-    // for DBCS windows
-    for (i = 0; i < length; i++)  {
-      if (IsDBCSLeadByte(aPath[i])) {
-        // begining of the double bye char
-        i++;
-      }
-      else  {
-        if ( islower(aPath[i]))
-          aPath[i] = _toupper(aPath[i]);
-      }
-    } //end of for loop
-  }
+
+  nsCAutoString newCPath;
+  NS_CopyUnicodeToNative(widePath, newCPath);
+  // strncpy(aPath, newCPath.get(), strlen(aPath) + 1);
+  strcpy(aPath, newCPath.get());
+
   return aPath;
 }
 
