@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Håkan Waara (hwaara@chello.se)
+ *   Jan Varga (varga@utcru.sk)
  */
 
 /*
@@ -45,14 +49,13 @@ function ConvertDOMListToResourceArray(nodeList)
 function GetSelectedFolderURI()
 {
     var uri = null;
-  
     var folderOutliner = GetFolderOutliner();
     var startRange = {value: 0};
     var endRange = {value: 0};
     folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
     
     //  you can only select one folder / server to add new folder / subscribe to
-    if (startRange.value >= 0 && startRange.value == endRange.value)
+    if (folderOutliner.outlinerBoxObject.selection.count == 1)
     {
         var resource = GetFolderResource(startRange.value);
         if (resource)
@@ -113,33 +116,34 @@ function RenameFolder(name,uri)
 function MsgEmptyTrash() 
 {
     var outliner = GetFolderOutliner();
-    var selectedFolderURI = GetSelectedFolderURI();
     var folderList = GetSelectedMsgFolders();
 
     if (folderList)
     {
-        var folder = folderList[0];
-        var resource = GetFolderResource(folder);
+        var folder = folderList[0];       
 
         if (folder)
         {
-            var trashUri = GetSelectTrashUri(index);
+            var trashUri = GetSelectTrashUri(folder);
+            var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
+
             if (trashUri)
             {
                 var trashElement = document.getElementById(trashUri);
                 if (trashElement)
                 {
-                    dump ('found trash folder\n');
+                    //dump ('found trash folder\n');
                     trashElement.setAttribute('open','');
                 }
                 
                 var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
+
                 if(trashSelected)
                     outliner.outlinerBoxObject.selection.clearSelection();
 
                 try 
                 {
-                    messenger.EmptyTrash(GetFolderDatasource(), GetSelectedFolderURI());
+                    messenger.EmptyTrash(GetFolderDatasource(), folderResource);
                 }
                 catch(e)
                 {  
@@ -171,9 +175,7 @@ function MsgCompactFolder(isAll)
             {
                 selectedFolderUri = folderList[0].getAttribute('id');
                 if (selectedFolderUri.indexOf("imap:") != -1)
-                {
                     isImap = true;
-                }
                 else
                 {
                     ClearThreadPaneSelection();
@@ -208,7 +210,7 @@ function MsgCompactFolder(isAll)
                     document.getElementById(selectedFolderUri);
                 ChangeSelection(tree, selectedFolder);
                 */
-                tree.clearItemSelection();
+                outliner.outlinerBoxObject.selection.clearSelection();
             }
         }
     }

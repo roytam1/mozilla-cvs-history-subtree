@@ -177,7 +177,7 @@ function ChangeFolderByIndex(index)
 {
     dump('In ChangeFolderByIndex\n');
     if (index == gCurrentFolderIndex)
-        return;
+        return null;
 
     var resource = GetFolderResource(index);
     if (!resource) 
