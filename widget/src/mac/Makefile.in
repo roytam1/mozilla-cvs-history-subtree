@@ -65,7 +65,6 @@ CPPSRCS         = nsAppShell.cpp \
 # XXX thus can't be statically linked against.
 CPPSRCS += \
 		$(topsrcdir)/gfx/src/mac/nsRegionMac.cpp \
-		$(topsrcdir)/gfx/src/mac/nsRepeater.cpp \
 		$(topsrcdir)/gfx/src/mac/nsWatchTask.cpp \
 		$(NULL)
 
