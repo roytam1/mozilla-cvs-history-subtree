@@ -721,7 +721,6 @@ nsContextMenu.prototype = {
           attrib = type.toUpperCase();
 
         return( (attrib != "IMAGE") &&
-                (attrib != "PASSWORD") &&
                 (attrib != "CHECKBOX") &&
                 (attrib != "RADIO") &&
                 (attrib != "SUBMIT") &&
