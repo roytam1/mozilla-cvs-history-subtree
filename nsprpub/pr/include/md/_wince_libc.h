@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 /* 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -18,6 +19,7 @@
  * Rights Reserved.
  * 
  * Contributor(s):
+ *  Garrett Arch Blythe 01/15/2002
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -32,57 +34,77 @@
  * GPL.
  */
 
-#ifndef prpcos_h___
-#define prpcos_h___
+#ifndef wince_libc___
+#define wince_libc___
 
-#define PR_DLL_SUFFIX		".dll"
+/*
+ * This file contains various #defines, typedefs and functions that are
+ * mising from the WinCE libc implementation.
+ *
+ * They are provided here for compatability with other systems.
+ */
 
 #include <stdlib.h>
 
-#define DIRECTORY_SEPARATOR         '\\'
-#define DIRECTORY_SEPARATOR_STR     "\\"
-#define PATH_SEPARATOR              ';'
-
-#ifdef WIN16
-#define GCPTR __far
-#else
-#define GCPTR
+#ifdef  __cplusplus
+extern "C" {
 #endif
+
+#if defined(_NSPR_BUILD_)
+#define _NSPRIMP __declspec(dllexport)
+#else
+#define _NSPRIMP __declspec(dllimport)
+#endif
+
+/* The following definitions are generally expected in <stddef.h> */
+
+typedef int ptrdiff_t; /* pointer difference */
+
+
+/* The following definitions are generally expected in <errno.h> */
+
+#define ERANGE 34
+
+#define errno (*PR_GetOSErrorAddress())
+
+
+/* The following definitions are generally expected in <time.h> */
+
+#ifndef _TM_DEFINED
+#define _TM_DEFINED
+/*
+ * struct tm
+ *
+ * And related windows specific functions to mimic LIBC's tm funcs.
+ */
+struct tm {
+    int tm_sec;
+    int tm_min;
+    int tm_hour;
+    int tm_mday;
+    int tm_mon;
+    int tm_year;
+    int tm_wday;
+    int tm_yday;
+    int tm_isdst;
+};
+
+/* WinCE defines time_t in <stdlib.h> */
 
 /*
-** Routines for processing command line arguments
-*/
-PR_BEGIN_EXTERN_C
-#ifndef XP_OS2_EMX
-extern char *optarg;
-extern int optind;
-extern int getopt(int argc, char **argv, char *spec);
+ * subset of the function prototypes provided by <time.h>
+ */
+
+_NSPRIMP struct tm* gmtime(const time_t* inTimeT);
+_NSPRIMP struct tm* localtime(const time_t* inTimeT);
+_NSPRIMP time_t mktime(struct tm* inTM);
 #endif
-PR_END_EXTERN_C
+_NSPRIMP size_t strftime(char *strDest, size_t maxsize, const char *format,
+                         const struct tm *timeptr);
 
 
-/*
-** Definitions of directory structures amd functions
-** These definitions are from:
-**      <dirent.h>
-*/
-#ifdef XP_OS2_EMX
-#include <sys/types.h>
-#endif
-#if !defined(WINCE)
-#include <sys/stat.h>
-#include <io.h>
-#include <fcntl.h>          /* O_BINARY */
+#ifdef  __cplusplus
+}
 #endif
 
-#ifdef OS2
-extern PRStatus _MD_OS2GetHostName(char *name, PRUint32 namelen);
-#define _MD_GETHOSTNAME _MD_OS2GetHostName
-#else
-extern PRStatus _MD_WindowsGetHostName(char *name, PRUint32 namelen);
-#define _MD_GETHOSTNAME _MD_WindowsGetHostName
-extern PRStatus _MD_WindowsGetSysInfo(PRSysInfo cmd, char *name, PRUint32 namelen);
-#define _MD_GETSYSINFO _MD_WindowsGetSysInfo
-#endif
-
-#endif /* prpcos_h___ */
+#endif /* wince_libc___ */

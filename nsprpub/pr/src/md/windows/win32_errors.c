@@ -34,7 +34,9 @@
 
 #include "prerror.h"
 #include "prlog.h"
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 #include <windows.h>
 
 /*
@@ -62,12 +64,14 @@ static void _MD_win32_map_default_errno(PRInt32 err)
     PRErrorCode prError;
 
     switch (err) {
+#if !defined(WINCE)
         case EACCES:
             prError = PR_NO_ACCESS_RIGHTS_ERROR;
             break;
         case ENOENT:
             prError = PR_FILE_NOT_FOUND_ERROR;
             break;
+#endif
         default:
             prError = PR_UNKNOWN_ERROR;
             break;

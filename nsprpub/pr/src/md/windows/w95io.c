@@ -39,8 +39,10 @@
  */
 
 #include "primpl.h"
+#if !defined(WINCE)
 #include <direct.h>
 #include <mbstring.h>
+#endif
 
 
 struct _MDLock               _pr_ioq_lock;
@@ -204,13 +206,20 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFile(name,
-                      access,
-                      FILE_SHARE_READ|FILE_SHARE_WRITE,
-                      NULL,
-                      flags,
-                      flag6,
-                      NULL);
+    file =
+#if !defined(WINCE)
+           CreateFile
+#else
+           _MD_CreateFileA
+#endif
+                      (
+                       name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       NULL,
+                       flags,
+                       flag6,
+                       NULL);
     if (file == INVALID_HANDLE_VALUE) {
 		_PR_MD_MAP_OPEN_ERROR(GetLastError());
         return -1; 
@@ -262,13 +271,20 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFile(name,
-                      access,
-                      FILE_SHARE_READ|FILE_SHARE_WRITE,
-                      lpSA,
-                      flags,
-                      flag6,
-                      NULL);
+    file =
+#if !defined(WINCE)
+          CreateFile
+#else
+          _MD_CreateFileA
+#endif
+                      (
+                       name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       lpSA,
+                       flags,
+                       flag6,
+                       NULL);
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
     }
@@ -446,7 +462,18 @@ _MD_CloseFile(PRInt32 osfd)
 
 
 /* --- DIR IO ------------------------------------------------------------ */
+#if !defined(WINCE)
 #define GetFileFromDIR(d)       (d)->d_entry.cFileName
+#else
+char* GetFileFromDIR(_MDDir* d)
+{
+    char* retval = NULL;
+
+    retval = _PR_MD_W2A(d->d_entry.cFileName, d->cFileNameA, sizeof(d->cFileNameA));
+
+    return retval;
+}
+#endif
 #define FileIsHidden(d)	((d)->d_entry.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
 
 void FlipSlashes(char *cp, int len)
@@ -455,7 +482,11 @@ void FlipSlashes(char *cp, int len)
         if (cp[0] == '/') {
             cp[0] = PR_DIRECTORY_SEPARATOR;
         }
+#if !defined(WINCE)
         cp = _mbsinc(cp);
+#else
+        cp++;
+#endif
     }
 } /* end FlipSlashes() */
 
@@ -508,7 +539,23 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
     strcpy(&filename[len], "\\*.*");
     FlipSlashes( filename, strlen(filename) );
 
+#if !defined(WINCE)
     d->d_hdl = FindFirstFile( filename, &(d->d_entry) );
+#else
+    {
+        WCHAR ceFileName[MAX_PATH];
+        LPWSTR ceResult = _PR_MD_A2W(filename, ceFileName, MAX_PATH);
+
+        if(NULL != ceResult)
+        {
+            d->d_hdl = FindFirstFile( ceFileName, &(d->d_entry) );
+        }
+        else
+        {
+            d->d_hdl = INVALID_HANDLE_VALUE;
+        }
+    }
+#endif
     if ( d->d_hdl == INVALID_HANDLE_VALUE ) {
 		_PR_MD_MAP_OPENDIR_ERROR(GetLastError());
         return PR_FAILURE;
@@ -531,11 +578,17 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
                 d->firstEntry = PR_FALSE;
                 rv = 1;
             } else {
+#if !defined(WINCE)
                 rv = FindNextFile(d->d_hdl, &(d->d_entry));
+#else
+                rv = FindNextFile(d->d_hdl, &(d->d_entry));
+#endif
             }
             if (rv == 0) {
                 break;
             }
+            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
+                 continue;
             fileName = GetFileFromDIR(d);
             if ( (flags & PR_SKIP_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '\0'))
@@ -543,8 +596,6 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
             if ( (flags & PR_SKIP_DOT_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '.') &&
                  (fileName[2] == '\0'))
-                 continue;
-            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
                  continue;
             return fileName;
         }
@@ -560,7 +611,13 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
 PRInt32
 _PR_MD_DELETE(const char *name)
 {
-    if (DeleteFile(name)) {
+    if (
+#if !defined(WINCE)
+        DeleteFile(name)
+#else
+        _MD_DeleteFileA(name)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_DELETE_ERROR(GetLastError());
@@ -624,6 +681,7 @@ _PR_MD_STAT(const char *fn, struct stat *info)
 {
     PRInt32 rv;
 
+#if !defined(WINCE)
     rv = _stat(fn, (struct _stat *)info);
     if (-1 == rv) {
         /*
@@ -652,6 +710,86 @@ _PR_MD_STAT(const char *fn, struct stat *info)
     if (-1 == rv) {
         _PR_MD_MAP_STAT_ERROR(errno);
     }
+#else
+    HANDLE readHandle = NULL;
+
+    /*
+     * Initialize the out arguments.
+     */
+    memset(info, 0, sizeof(struct stat));
+    rv = 0;
+
+    /*
+     * Attempt to fill in relevant parts of the struct.
+     * In order to do this we'll need read access to the file.
+     * We won't mind sharing the file.
+     */
+    readHandle = 
+#if !defined(WINCE)
+                 CreateFile
+#else
+                 _MD_CreateFileA
+#endif
+                           (
+                            fn,
+                            GENERIC_READ,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if(NULL == readHandle)
+    {
+        rv = -1;
+    }
+    else
+    {
+        BOOL bRes = FALSE;
+        BY_HANDLE_FILE_INFORMATION fileInfo;
+
+        bRes = GetFileInformationByHandle(readHandle, &fileInfo);
+        if(FALSE == bRes)
+        {
+            rv = -1;
+        }
+        else
+        {
+            /*
+             * Access Times
+             */
+            _MD_FILETIME_2_time_t(info->st_ctime, fileInfo.ftCreationTime);
+            _MD_FILETIME_2_time_t(info->st_atime, fileInfo.ftLastAccessTime);
+            _MD_FILETIME_2_time_t(info->st_mtime, fileInfo.ftLastWriteTime);
+
+            /*
+             * Size.
+             * Note, this is not stat64.
+             */
+            info->st_size = (_off_t)fileInfo.nFileSizeLow;
+
+            /*
+             * Mode.
+             */
+            info->st_mode |= _S_IREAD;
+            if(0 == (FILE_ATTRIBUTE_READONLY & fileInfo.dwFileAttributes))
+            {
+                info->st_mode |= _S_IWRITE;
+            }
+            if(FILE_ATTRIBUTE_DIRECTORY & fileInfo.dwFileAttributes)
+            {
+                info->st_mode |= _S_IFDIR;
+            }
+            else
+            {
+                info->st_mode |= _S_IFREG;
+            }
+        }
+
+        CloseHandle(readHandle);
+        readHandle = NULL;
+    }
+#endif
+
     return rv;
 }
 
@@ -686,11 +824,13 @@ IsRootDirectory(char *fn, size_t buflen)
         return PR_TRUE;
     }
 
+#if !defined(WINCE)
     if (isalpha(fn[0]) && fn[1] == ':' && _PR_IS_SLASH(fn[2])
             && fn[3] == '\0') {
         rv = GetDriveType(fn) > 1 ? PR_TRUE : PR_FALSE;
         return rv;
     }
+#endif
 
     /* The UNC root directory */
 
@@ -722,6 +862,7 @@ IsRootDirectory(char *fn, size_t buflen)
         if (_PR_IS_SLASH(*p) && p[1] != '\0') {
             return PR_FALSE;
         }
+#if !defined(WINCE)
         if (*p == '\0') {
             /*
              * GetDriveType() doesn't work correctly if the
@@ -741,6 +882,12 @@ IsRootDirectory(char *fn, size_t buflen)
         if (slashAdded) {
             *--p = '\0';
         }
+#else
+        /*
+         * Assume the path as root.
+         */
+        rv = PR_TRUE;
+#endif
     }
     return rv;
 }
@@ -761,15 +908,39 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
      * FindFirstFile() expands wildcard characters.  So
      * we make sure the pathname contains no wildcard.
      */
-    if (NULL != _mbspbrk(fn, "?*")) {
+    if (NULL !=
+#if !defined(WINCE)
+        _mbspbrk(fn, "?*")
+#else
+        strpbrk(fn, "?*")
+#endif
+        ) {
         PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
         return -1;
     }
 
+#if !defined(WINCE)
     hFindFile = FindFirstFile(fn, &findFileData);
+#else
+    {
+        WCHAR ceFileName[MAX_PATH + 1];
+        LPWSTR ceResult = _PR_MD_A2W(fn, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+
+        if(NULL != ceResult)
+        {
+            hFindFile = FindFirstFile(ceFileName, &findFileData);
+        }
+        else
+        {
+            hFindFile = INVALID_HANDLE_VALUE;
+        }
+    }
+#endif
     if (INVALID_HANDLE_VALUE == hFindFile) {
         DWORD len;
+#if !defined(WINCE)
         char *filePart;
+#endif
 
         /*
          * FindFirstFile() does not work correctly on root directories.
@@ -783,12 +954,23 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
          * If the pathname does not contain ., \, and /, it cannot be
          * a root directory or a pathname that ends in a slash.
          */
-        if (NULL == _mbspbrk(fn, ".\\/")) {
+        if (NULL ==
+#if !defined(WINCE)
+            _mbspbrk(fn, ".\\/")
+#else
+            strpbrk(fn, ".\\/")
+#endif
+            ) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 
+#if !defined(WINCE)
         len = GetFullPathName(fn, sizeof(pathbuf), pathbuf,
                 &filePart);
+#else
+        strncpy(pathbuf, fn, sizeof(pathbuf));
+        len = strlen(pathbuf);
+#endif
         if (0 == len) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
@@ -812,7 +994,23 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
             return -1;
         } else {
             pathbuf[len - 1] = '\0';
+#if !defined(WINCE)
             hFindFile = FindFirstFile(pathbuf, &findFileData);
+#else
+            {
+                WCHAR ceFileName[MAX_PATH + 1];
+                LPWSTR ceResult = _PR_MD_A2W(pathbuf, ceFileName, sizeof(ceFileName) / sizeof(WCHAR));
+                
+                if(NULL != ceResult)
+                {
+                    hFindFile = FindFirstFile(ceFileName, &findFileData);
+                }
+                else
+                {
+                    hFindFile = INVALID_HANDLE_VALUE;
+                }
+            }
+#endif
             if (INVALID_HANDLE_VALUE == hFindFile) {
                 _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
                 return -1;
@@ -904,6 +1102,7 @@ _PR_MD_GETOPENFILEINFO(const PRFileDesc *fd, PRFileInfo *info)
 PRStatus
 _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
 {
+#if !defined(WINCE)
     BOOL rv;
 
     /*
@@ -919,6 +1118,10 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
         return PR_FAILURE;
     }
     return PR_SUCCESS;
+#else
+    _PR_MD_MAP_DEFAULT_ERROR(ERROR_CALL_NOT_IMPLEMENTED);
+    return PR_FAILURE;
+#endif
 } 
 
 void
@@ -934,6 +1137,7 @@ _PR_MD_INIT_FD_INHERITABLE(PRFileDesc *fd, PRBool imported)
 void
 _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
 {
+#if !defined(WINCE)
     DWORD flags;
 
     PR_ASSERT(_PR_TRI_UNKNOWN == fd->secret->inheritable);
@@ -944,13 +1148,22 @@ _PR_MD_QUERY_FD_INHERITABLE(PRFileDesc *fd)
             fd->secret->inheritable = _PR_TRI_FALSE;
         }
     }
+#else
+    fd->secret->inheritable = _PR_TRI_FALSE;
+#endif
 }
 
 PRInt32
 _PR_MD_RENAME(const char *from, const char *to)
 {
     /* Does this work with dot-relative pathnames? */
-    if (MoveFile(from, to)) {
+    if (
+#if !defined(WINCE)
+        MoveFile(from, to)
+#else
+        _MD_MoveFileA(from, to)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_RENAME_ERROR(GetLastError());
@@ -961,7 +1174,9 @@ _PR_MD_RENAME(const char *from, const char *to)
 PRInt32
 _PR_MD_ACCESS(const char *name, PRAccessHow how)
 {
-PRInt32 rv;
+    PRInt32 rv = -1;
+
+#if !defined(WINCE)
     switch (how) {
       case PR_ACCESS_WRITE_OK:
         rv = _access(name, 02);
@@ -978,6 +1193,37 @@ PRInt32 rv;
     }
 	if (rv < 0)
 		_PR_MD_MAP_ACCESS_ERROR(errno);
+#else
+    DWORD attribs = 0;
+
+#if !defined(WINCE)
+    attribs = GetFileAttributes(name);
+#else
+    attribs = _MD_GetFileAttributesA(name);
+#endif
+    if((DWORD)-1 != attribs)
+    {
+        switch(how)
+        {
+        case PR_ACCESS_WRITE_OK:
+            if(FILE_ATTRIBUTE_READONLY & attribs)
+            {
+                rv = 0;
+            }
+            break;
+        case PR_ACCESS_READ_OK:
+            rv = 0;
+            break;
+        case PR_ACCESS_EXISTS:
+            rv = 0;
+            break;
+        default:
+            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+            break;
+        }
+    }
+#endif
+
     return rv;
 }
 
@@ -985,7 +1231,13 @@ PRInt32
 _PR_MD_MKDIR(const char *name, PRIntn mode)
 {
     /* XXXMB - how to translate the "mode"??? */
-    if (CreateDirectory(name, NULL)) {
+    if (
+#if !defined(WINCE)
+        CreateDirectory(name, NULL)
+#else
+        _MD_CreateDirectoryA(name, NULL)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_MKDIR_ERROR(GetLastError());
@@ -1009,7 +1261,11 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
         sa.bInheritHandle = FALSE;
         lpSA = &sa;
     }
+#if !defined(WINCE)
     rv = CreateDirectory(name, lpSA);
+#else
+    rv = _MD_CreateDirectoryA(name, lpSA);
+#endif
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
     }
@@ -1024,7 +1280,13 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
 PRInt32
 _PR_MD_RMDIR(const char *name)
 {
-    if (RemoveDirectory(name)) {
+    if (
+#if !defined(WINCE)
+        RemoveDirectory(name)
+#else
+        _MD_RemoveDirectoryA(name)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_RMDIR_ERROR(GetLastError());
@@ -1035,6 +1297,7 @@ _PR_MD_RMDIR(const char *name)
 PRStatus
 _PR_MD_LOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
     PRStatus  rc = PR_SUCCESS;
 	DWORD     rv;
 
@@ -1049,6 +1312,10 @@ _PR_MD_LOCKFILE(PRInt32 f)
     }
 
     return rc;
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_LOCKFILE() */
 
 PRStatus
@@ -1062,6 +1329,7 @@ _PR_MD_TLOCKFILE(PRInt32 f)
 PRStatus
 _PR_MD_UNLOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
 	PRInt32   rv;
     
     rv = UnlockFile( (HANDLE) f,
@@ -1077,6 +1345,10 @@ _PR_MD_UNLOCKFILE(PRInt32 f)
 		_PR_MD_MAP_DEFAULT_ERROR(GetLastError());
 		return PR_FAILURE;
     }
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_UNLOCKFILE() */
 
 PRInt32

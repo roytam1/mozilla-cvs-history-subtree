@@ -158,7 +158,7 @@ NSPR_API(PRInt32)     PR_FD_NISSET(PRInt32 osfd, PR_fd_set *set);
 #ifndef NO_NSPR_10_SUPPORT
 #ifdef XP_MAC
 #include <stat.h>
-#else
+#elif !defined(WINCE)
 #include <sys/stat.h>
 #endif
 

@@ -33,10 +33,12 @@
  */
 
 #include <windows.h>
+#if !defined(WINCE)
 #include <time.h>
 #include <io.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#endif
 #include <stdio.h>
 #include <primpl.h>
 
@@ -94,7 +96,11 @@ extern PRSize _PR_MD_GetRandomNoise( void *buf, PRSize size )
         return n;
 
     // get the time in seconds since midnight Jan 1, 1970
+#if !defined(WINCE)
     time(&sTime);
+#else
+    sTime = (time_t)(PR_Now() / PR_MSEC_PER_SEC);
+#endif
     nBytes = sizeof(sTime) > size ? size : sizeof(sTime);
     memcpy(((char *)buf) + n, &sTime, nBytes);
     n += nBytes;

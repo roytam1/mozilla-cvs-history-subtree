@@ -37,7 +37,9 @@
 
 #include <windows.h>
 #include <winsock.h>
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 
 
 extern void _MD_win32_map_default_error(PRInt32 err);

@@ -41,7 +41,11 @@
 
 char *_PR_MD_GET_ENV(const char *name)
 {
+#if !defined(WINCE)
     return getenv(name);
+#else
+    return NULL;
+#endif
 }
 
 /*
@@ -51,7 +55,11 @@ char *_PR_MD_GET_ENV(const char *name)
 */
 PRIntn _PR_MD_PUT_ENV(const char *name)
 {
+#if !defined(WINCE)
     return(putenv(name));
+#else
+    return -1;
+#endif
 }
 
 
@@ -65,7 +73,9 @@ PRIntn _PR_MD_PUT_ENV(const char *name)
  **************************************************************************
  */
 
+#if !defined(WINCE)
 #include <sys/timeb.h>
+#endif
 
 /*
  *-----------------------------------------------------------------------
@@ -84,7 +94,9 @@ PRIntn _PR_MD_PUT_ENV(const char *name)
 PR_IMPLEMENT(PRTime)
 PR_Now(void)
 {
-    PRInt64 s, ms, ms2us, s2us;
+    PRInt64 s;
+#if !defined(WINCE)
+    PRInt64 ms, ms2us, s2us;
     struct timeb b;
 
     ftime(&b);
@@ -95,7 +107,13 @@ PR_Now(void)
     LL_MUL(ms, ms, ms2us);
     LL_MUL(s, s, s2us);
     LL_ADD(s, s, ms);
-    return s;       
+#else
+    SYSTEMTIME sysTime;
+
+    GetSystemTime(&sysTime);
+    _MD_SYSTEMTIME_2_PRTime(s, sysTime);
+#endif
+    return s;
 }
 
 /*
@@ -116,11 +134,14 @@ PR_Now(void)
  * calling GetTimeZoneInformation().
  */
 
+#if !defined(WINCE)
 #include <time.h>     /* for _tzname, _daylight, _timezone */
+#endif
 
 void
 _PR_Win32InitTimeZone(void)
 {
+#if !defined(WINCE)
     OSVERSIONINFO version;
     TIME_ZONE_INFORMATION tzinfo;
 
@@ -161,6 +182,7 @@ _PR_Win32InitTimeZone(void)
     _timezone = tzinfo.Bias * 60;
     _daylight = tzinfo.DaylightBias ? 1 : 0;
     return;
+#endif
 }
 
 /*
@@ -291,6 +313,7 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
  */
 static int assembleEnvBlock(char **envp, char **envBlock)
 {
+#if !defined(WINCE)
     char *p;
     char *q;
     char **env;
@@ -352,6 +375,13 @@ static int assembleEnvBlock(char **envp, char **envBlock)
     }
     *p = '\0';
     return 0;
+#else
+    /*
+     * No env strings on wince.
+     */
+    *envBlock = NULL;
+    return 0;
+#endif
 }
 
 /*
@@ -369,6 +399,7 @@ PRProcess * _PR_CreateWindowsProcess(
     char *const *envp,
     const PRProcessAttr *attr)
 {
+#if !defined(WINCE)
     STARTUPINFO startupInfo;
     PROCESS_INFORMATION procInfo;
     BOOL retVal;
@@ -509,6 +540,62 @@ errorExit:
         PR_DELETE(proc);
     }
     return NULL;
+#else
+    PROCESS_INFORMATION procInfo;
+    BOOL retVal;
+    char *cmdLine = NULL;
+    PRProcess *proc = NULL;
+
+    proc = PR_NEW(PRProcess);
+    if (!proc) {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+        goto errorExit;
+    }
+
+    if (assembleCmdLine(argv, &cmdLine) == -1) {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+        goto errorExit;
+    }
+
+    retVal =
+#if !defined(WINCE)
+             CreateProcess(
+#else
+             CreateProcessA(
+#endif
+                           path,
+                           cmdLine,
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           FALSE, /* not supported */
+                           0,     /* creation flags */
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           NULL,  /* not supported */
+                           &procInfo
+                          );
+    if (retVal == FALSE) {
+        /* XXX what error code? */
+        PR_SetError(PR_UNKNOWN_ERROR, GetLastError());
+        goto errorExit;
+    }
+
+    CloseHandle(procInfo.hThread);
+    proc->md.handle = procInfo.hProcess;
+    proc->md.id = procInfo.dwProcessId;
+
+    PR_DELETE(cmdLine);
+    return proc;
+
+errorExit:
+    if (cmdLine) {
+        PR_DELETE(cmdLine);
+    }
+    if (proc) {
+        PR_DELETE(proc);
+    }
+    return NULL;
+#endif
 }  /* _PR_CreateWindowsProcess */
 
 PRStatus _PR_DetachWindowsProcess(PRProcess *process)
@@ -668,8 +755,13 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
         fmap->md.dwAccess = FILE_MAP_WRITE;
     } else {
         PR_ASSERT(fmap->prot == PR_PROT_WRITECOPY);
+#if !defined(WINCE)
         flProtect = PAGE_WRITECOPY;
         fmap->md.dwAccess = FILE_MAP_COPY;
+#else
+        PR_SetError(PR_OPERATION_NOT_SUPPORTED_ERROR, GetLastError());
+        return PR_FAILURE;
+#endif
     }
 
     fmap->md.hFileMap = CreateFileMapping(

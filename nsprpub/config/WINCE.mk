@@ -17,6 +17,7 @@
 # Rights Reserved.
 # 
 # Contributor(s):
+#  Garrett Arch Blythe  01/15/2002
 # 
 # Alternatively, the contents of this file may be used under the
 # terms of the GNU General Public License Version 2 or later (the
@@ -31,81 +32,8 @@
 # GPL.
 # 
 
+#
+# Config stuff for WINCE
+#
 
-ifeq ($(OS_TARGET),WINNT)
-CSRCS = ntmisc.c \
-	ntsec.c \
-	ntsem.c \
-	ntinrval.c \
-	ntgc.c \
-	ntio.c \
-	ntthread.c \
-	ntdllmn.c \
-	win32_errors.c \
-	w32ipcsem.c \
-	w32poll.c \
-	w32rng.c \
-	w32shm.c
-else
-ifeq ($(OS_TARGET),WINCE)
-CSRCS =	ntmisc.c \
-	ntsec.c \
-	ntsem.c \
-	ntinrval.c \
-	ntgc.c \
-	w95thred.c \
-	w95io.c \
-	w95cv.c \
-	w95sock.c \
-	win32_errors.c \
-	w32ipcsem.c \
-	w32poll.c \
-	w32rng.c \
-	w32shm.c \
-	w95dllmain.c \
-	w32time.c \
-	w32unicode.c \
-	w32netdb.c
-else
-ifeq ($(OS_TARGET),WIN95)
-CSRCS =	ntmisc.c \
-	ntsec.c \
-	ntsem.c \
-	ntinrval.c \
-	ntgc.c \
-	w95thred.c \
-	w95io.c \
-	w95cv.c \
-	w95sock.c \
-	win32_errors.c \
-	w32ipcsem.c \
-	w32poll.c \
-	w32rng.c \
-	w32shm.c \
-	w95dllmain.c
-else
-ifeq ($(OS_TARGET),WIN16)
-CSRCS =	w16null.c \
-	w16thred.c \
-	w16proc.c \
-	w16fmem.c \
-	w16sock.c \
-	w16mem.c \
-	w16io.c \
-	w16gc.c \
-	w16error.c \
-	w16stdio.c \
-	w16callb.c \
-	ntinrval.c
-endif # win16
-endif # win95
-endif # wince
-endif # winnt
-
-CSRCS	+= $(PR_MD_CSRCS)
-ASFILES += $(PR_MD_ASFILES)
-
-OBJS += $(addprefix md/windows/$(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX)))  \
-	$(addprefix md/windows/$(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
-
-
+include $(MOD_DEPTH)/config/WIN32.mk

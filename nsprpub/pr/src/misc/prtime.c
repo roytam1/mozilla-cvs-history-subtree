@@ -45,13 +45,16 @@
 #include "prprf.h"
 #include "prlog.h"
 
+#if defined(WINCE)
+#include "primpl.h"
+#endif
+
 #include <string.h>
 #include <ctype.h>
 
 #ifdef XP_MAC
 #include <time.h>
 #endif
-
 
 
 
@@ -538,7 +541,9 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
  *-------------------------------------------------------------------------
  */
 
+#if !defined(WINCE)
 #include <time.h>
+#endif
 
 #if defined(HAVE_INT_LOCALTIME_R)
 
@@ -564,6 +569,8 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
 
 #if defined(XP_MAC)
 extern struct tm *Maclocaltime(const time_t * t);
+#endif
+#if defined(WINCE)
 #endif
 
 static PRLock *monitor = NULL;

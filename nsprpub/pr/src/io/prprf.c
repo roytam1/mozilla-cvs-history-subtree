@@ -414,11 +414,11 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
     /*
     ** set the l10n_debug flag
     ** this routine should be executed only once
-    ** 'cause getenv does take time
+    ** 'cause _PR_MD_GET_ENV does take time
     */
     if( !l10n_debug_init ){
 	l10n_debug_init = PR_TRUE;
-	p = getenv( "NETSCAPE_LOCALIZATION_DEBUG" );
+	p = _PR_MD_GET_ENV( "NETSCAPE_LOCALIZATION_DEBUG" );
 	if( ( p != NULL ) && ( *p == '1' ) ){
 	    l10n_debug = PR_TRUE;
 	}
