@@ -1392,7 +1392,7 @@ nsComponentManagerImpl::SpecForRegistryLocation(const char *aLocation,
         
         if (NS_FAILED(rv)) return rv;
         
-        rv = file->AppendPath(aLocation + 4);
+        rv = file->Append(aLocation + 4);
         *aSpec = file;
         return rv;
     }
