@@ -270,6 +270,14 @@ BodyRule::MapRuleInfoInto(nsRuleData* aData)
   
   PRInt32 bodyMarginWidth  = -1;
   PRInt32 bodyMarginHeight = -1;
+  PRInt32 bodyTopMargin = -1;
+  PRInt32 bodyLeftMargin = -1;
+
+  // check the mode (fortunately, the ruleData has a presContext for us to use!)
+  nsCompatibility mode;
+  NS_ASSERTION(aData->mPresContext, "null presContext in ruleNode was unexpected");
+  aData->mPresContext->GetCompatibilityMode(&mode);
+
 
   if (attrCount > 0) {
     // if marginwidth/marginheight are set, reflect them as 'margin'
@@ -294,6 +302,29 @@ BodyRule::MapRuleInfoInto(nsRuleData* aData)
       if (margin->mBottom.GetUnit() == eCSSUnit_Null)
         margin->mBottom.SetFloatValue((float)bodyMarginHeight, eCSSUnit_Pixel);
     }
+
+    if (eCompatibility_NavQuirks == mode){
+      // topmargin (IE-attribute)
+      mPart->GetHTMLAttribute(nsHTMLAtoms::topmargin, value);
+      if (eHTMLUnit_Pixel == value.GetUnit()) {
+        bodyTopMargin = value.GetPixelValue();
+        if (bodyTopMargin < 0) bodyTopMargin = 0;
+        nsCSSRect* margin = aData->mMarginData->mMargin;
+        if (margin->mTop.GetUnit() == eCSSUnit_Null)
+          margin->mTop.SetFloatValue((float)bodyTopMargin, eCSSUnit_Pixel);
+      }
+
+      // leftmargin (IE-attribute)
+      mPart->GetHTMLAttribute(nsHTMLAtoms::leftmargin, value);
+      if (eHTMLUnit_Pixel == value.GetUnit()) {
+        bodyLeftMargin = value.GetPixelValue();
+        if (bodyLeftMargin < 0) bodyLeftMargin = 0;
+        nsCSSRect* margin = aData->mMarginData->mMargin;
+        if (margin->mLeft.GetUnit() == eCSSUnit_Null)
+          margin->mLeft.SetFloatValue((float)bodyLeftMargin, eCSSUnit_Pixel);
+      }
+    }
+
   }
 
   // if marginwidth or marginheight is set in the <frame> and not set in the <body>
@@ -302,8 +333,6 @@ BodyRule::MapRuleInfoInto(nsRuleData* aData)
     nsCOMPtr<nsISupports> container;
     aData->mPresContext->GetContainer(getter_AddRefs(container));
     if (container) {
-      nsCompatibility mode;
-      aData->mPresContext->GetCompatibilityMode(&mode);
       nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
       if (docShell) {
         nscoord frameMarginWidth=-1;  // default value
@@ -831,7 +860,9 @@ nsHTMLBodyElement::StringToAttribute(nsIAtom* aAttribute,
     }
   }
   else if ((aAttribute == nsHTMLAtoms::marginwidth) ||
-           (aAttribute == nsHTMLAtoms::marginheight)) {
+           (aAttribute == nsHTMLAtoms::marginheight) ||
+           (aAttribute == nsHTMLAtoms::topmargin) ||
+           (aAttribute == nsHTMLAtoms::leftmargin)) {
     if (ParseValue(aValue, 0, aResult, eHTMLUnit_Pixel)) {
       return NS_CONTENT_ATTR_HAS_VALUE;
     }
