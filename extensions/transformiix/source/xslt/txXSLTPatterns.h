@@ -155,16 +155,18 @@ public:
 class txIdPattern : public txPattern
 {
 public:
-    txIdPattern(const String aString) : mIds(aString)
-    {
-    }
+    txIdPattern(const String aString);
 
     ~txIdPattern();
 
     TX_DECL_PATTERN;
 
 private:
-    const String mIds;
+#ifdef TX_EXE
+    String mIds;
+#else
+    nsAutoString mIds;
+#endif
 };
 
 class txKeyPattern : public txPattern

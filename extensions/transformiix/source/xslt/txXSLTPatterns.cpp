@@ -316,6 +316,31 @@ void txRootPattern::toString(String& aDest)
  * argument.
  */
 
+#define TX_IS_WHITE(c) (c == ' ' || c == '\r' || c == '\n'|| c == '\t')
+
+txIdPattern::txIdPattern(const String aString)
+{
+#ifdef TX_EXE
+    mIds = aString;
+#else
+    const nsString& ids = aString.getConstNSString();
+    nsAString::const_iterator pos, begin, end;
+    ids.BeginReading(begin);
+    ids.EndReading(end);
+    pos = begin;
+    while (pos != end) {
+        while (pos != end && TX_IS_WHITE(*pos))
+            ++pos;
+        begin = pos;
+        if (!mIds.IsEmpty())
+            mIds += PRUnichar(' ');
+        while (pos != end && !TX_IS_WHITE(*pos))
+            ++pos;
+        mIds += Substring(begin, pos);
+    }
+#endif
+}
+
 txIdPattern::~txIdPattern()
 {
 }
@@ -351,10 +376,9 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
     if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
         return MB_FALSE; // no ID attribute given
     }
-    const nsString ids = mIds.getConstNSString();
     nsAString::const_iterator pos, begin, end;
-    ids.BeginReading(begin);
-    ids.EndReading(end);
+    mIds.BeginReading(begin);
+    mIds.EndReading(end);
     pos = begin;
     const PRUnichar space = PRUnichar(' ');
     PRBool found = FindCharInReadable(space, pos, end);
@@ -363,9 +387,7 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
         if (value.Equals(Substring(begin, pos))) {
             return MB_TRUE;
         }
-        while (*pos == space) {
-            ++pos; // skip ' '
-        }
+        ++pos; // skip ' '
         begin = pos;
         found = FindCharInReadable(PRUnichar(' '), pos, end);
     }
@@ -387,7 +409,11 @@ void txIdPattern::toString(String& aDest)
     aDest.append("txIdPattern{");
     #endif
     aDest.append("id('");
+#ifdef TX_EXE
     aDest.append(mIds);
+#else
+    aDest.append(mIds.get());
+#endif
     aDest.append("')");
     #ifdef DEBUG
     aDest.append("}");
