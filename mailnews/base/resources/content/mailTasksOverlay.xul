@@ -90,14 +90,6 @@
     <command id="cmd_searchMsgs" oncommand="MsgSearchMessages();"/>
   </commandset>
   
-
-  <statusbarpanel id="component-bar">
-    <toolbarbutton class="taskbutton" id="mini-mail" oncommand="toMessengerWindow()" 
-            position="2" tooltiptext="&taskMessenger.tooltip;"/>
-    <toolbarbutton id="mini-comp" insertafter="mini-mail"/>
-    <toolbarbutton class="taskbutton" id="mini-addr" oncommand="toAddressBook();"
-            insertafter="mini-comp" tooltiptext="&taskAddressBook.tooltip;"/>
-  </statusbarpanel>
   
   <menupopup id="searchMenu">
     <menuitem label="&searchMailCmd.label;" key="key_searchMail" accesskey="&searchMailCmd.accesskey;" command="cmd_searchMsgs" position="2"/>
