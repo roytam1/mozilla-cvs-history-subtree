@@ -1353,7 +1353,11 @@ BookmarksService::PerformBookmarkDrop(BookmarkItem* parent, BookmarkItem* before
     //  remove it from the tree
     if (draggedNode != proposedParent)		// paranoia. This should never happen
     {
-      if (doCopy)
+      nsCOMPtr<nsIAtom> tagName;
+      draggedNode->GetTag(*getter_AddRefs(tagName));
+      bool srcIsFolder = (tagName == BookmarksService::gFolderAtom);
+
+      if (doCopy && !srcIsFolder)
       {
         // need to clone
         nsCOMPtr<nsIDOMElement> srcElement = do_QueryInterface(draggedNode);
