@@ -452,9 +452,9 @@ nsSVGContainerFrame::PaintChildren(nsIPresContext*      aPresContext,
     nsMargin im(0,0,0,0);
     GetInset(im);
     nsMargin border(0,0,0,0);
-    const nsStyleBorderPadding* borderpadding = (const nsStyleBorderPadding*)
-      mStyleContext->GetStyleData(eStyleStruct_BorderPaddingShortcut);
-    borderpadding->GetBorderPadding(border);
+    nsStyleBorderPadding borderpadding;
+    mStyleContext->GetBorderPaddingFor(borderpadding);
+    borderpadding.GetBorderPadding(border);
     r.Deflate(im);
     //r.Deflate(dm);
     r.Deflate(border);    

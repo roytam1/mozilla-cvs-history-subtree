@@ -26,7 +26,6 @@
 #include "nsTableBorderCollapser.h"
 #include "nsIRenderingContext.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIContent.h"
 #include "nsCellMap.h"
@@ -647,6 +646,8 @@ PRBool nsTableFrame::HasGroupRules() const
 // this won't work until bug 12948 is resolved and col groups are considered 
 void nsTableFrame::ProcessGroupRules(nsIPresContext* aPresContext)
 {
+  /* The RULES code below has been disabled because collapsing borders have been disabled 
+     and RULES depend on collapsing borders
   PRInt32 numCols = GetColCount();
 
   // process row groups
@@ -669,18 +670,16 @@ void nsTableFrame::ProcessGroupRules(nsIPresContext* aPresContext)
           if (originates) {
             nsCOMPtr<nsIStyleContext> styleContext;
             cell->GetStyleContext(getter_AddRefs(styleContext));
-            {
-              nsMutableStyleBorder border(styleContext);
-              if (rowX == startRow) { 
-                border->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-              }
-              else if (rowX == endRow) { 
-                border->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-              }
-              else {
-                border->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
-                border->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
-              }
+            nsStyleBorder* border = (nsStyleBorder*)styleContext->GetMutableStyleData(eStyleStruct_Border);
+            if (rowX == startRow) { 
+              border->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
+            }
+            else if (rowX == endRow) { 
+              border->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
+            }
+            else {
+              border->SetBorderStyle(NS_SIDE_TOP, NS_STYLE_BORDER_STYLE_NONE);
+              border->SetBorderStyle(NS_SIDE_BOTTOM, NS_STYLE_BORDER_STYLE_NONE);
             }
             styleContext->RecalcAutomaticData(aPresContext);
           }
@@ -689,6 +688,7 @@ void nsTableFrame::ProcessGroupRules(nsIPresContext* aPresContext)
     }
     NS_IF_RELEASE(frameType);
   }
+  */
 }
 
 
@@ -3684,44 +3684,6 @@ PRBool nsTableFrame::ConvertToPixelValue(nsHTMLValue& aValue, PRInt32 aDefault, 
 
 void nsTableFrame::MapBorderMarginPadding(nsIPresContext* aPresContext)
 {
-#if 0
-  // Check to see if the table has either cell padding or 
-  // Cell spacing defined for the table. If true, then
-  // this setting overrides any specific border, margin or 
-  // padding information in the cell. If these attributes
-  // are not defined, the the cells attributes are used
-  
-  nsHTMLValue padding_value;
-  nsHTMLValue spacing_value;
-  nsHTMLValue border_value;
-
-
-  nsresult border_result;
-
-  nscoord   padding = 0;
-  nscoord   spacing = 0;
-  nscoord   border  = 1;
-
-  float     p2t = aPresContext->GetPixelsToTwips();
-
-  nsIHTMLContent*  table = (nsIHTMLContent*)mContent;
-
-  NS_ASSERTION(table,"Table Must not be null");
-  if (!table)
-    return;
-
-  nsMutableStyleBorder borderData(mStyleContext);
-
-  border_result = table->GetAttribute(nsHTMLAtoms::border,border_value);
-  if (border_result == NS_CONTENT_ATTR_HAS_VALUE)
-  {
-    PRInt32 intValue = 0;
-
-    if (ConvertToPixelValue(border_value,1,intValue)) //XXX this is busted if this code is ever used again. MMP
-      border = NSIntPixelsToTwips(intValue, p2t); 
-  }
-  MapHTMLBorderStyle(*borderData,border);
-#endif
 }
 
 nscoord 

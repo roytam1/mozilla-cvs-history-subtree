@@ -740,6 +740,7 @@ nscoord xstart,xwidth,ystart,ywidth;
 void nsCSSRendering::DrawDashedSides(PRIntn startSide,
                                      nsIRenderingContext& aContext,
                                      const nsRect& aDirtyRect,
+                                     const nsStyleColor* aColorStyle,
                                      const nsStyleBorder* aBorderStyle,  
                                      const nsStyleOutline* aOutlineStyle,  
                                      PRBool aDoOutline,
@@ -809,9 +810,13 @@ PRBool  skippedSide = PR_FALSE;
       if (aDoOutline) {
         aOutlineStyle->GetOutlineColor(sideColor);
       } else {
-        if (!aBorderStyle->GetBorderColor(whichSide, sideColor)) {
+        PRBool transparent; 
+        PRBool foreground;
+        aBorderStyle->GetBorderColor(whichSide, sideColor, transparent, foreground);
+        if (foreground)
+          sideColor = aColorStyle->mColor;
+        if (transparent)
           continue; // side is transparent
-        }
       }
       aContext.SetColor(sideColor);  
       switch (whichSide) {
@@ -1488,6 +1493,17 @@ nsresult GetFrameForBackgroundUpdate(nsIPresContext *aPresContext,nsIFrame *aFra
 #define MOZ_BG_BORDER(a)\
 ((a==NS_STYLE_BORDER_STYLE_BG_INSET) || (a==NS_STYLE_BORDER_STYLE_BG_OUTSET))
 
+static
+PRBool GetBorderColor(const nsStyleColor* aColor, const nsStyleBorder& aBorder, PRUint8 aSide, nscolor& aColorVal)
+{
+  PRBool transparent;
+  PRBool foreground;
+  aBorder.GetBorderColor(aSide, aColorVal, transparent, foreground);
+  if (foreground)
+    aColorVal = aColor->mColor;
+
+  return !transparent;
+}
 
 // XXX improve this to constrain rendering to the damaged area
 void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
@@ -1509,6 +1525,9 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
   float               percent;
   nsCompatibility     compatMode;
   aPresContext->GetCompatibilityMode(&compatMode);
+
+  // Get our style context's color struct.
+  const nsStyleColor* ourColor = (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
 
   // in NavQuirks mode we want to use the parent's context as a starting point 
   // for determining the background color
@@ -1617,7 +1636,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
     }
   }
   if (cnt < 4) {
-    DrawDashedSides(cnt, aRenderingContext,aDirtyRect,&aBorderStyle,nsnull, PR_FALSE,
+    DrawDashedSides(cnt, aRenderingContext,aDirtyRect, ourColor, &aBorderStyle,nsnull, PR_FALSE,
                     outerRect, innerRect, aSkipSides, aGap);
   }
 
@@ -1632,7 +1651,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
 
   nscolor sideColor;
   if (0 == (aSkipSides & (1<<NS_SIDE_BOTTOM))) {
-    if (aBorderStyle.GetBorderColor(NS_SIDE_BOTTOM, sideColor)) {
+    if (GetBorderColor(ourColor, aBorderStyle, NS_SIDE_BOTTOM, sideColor)) {
       DrawSide(aRenderingContext, NS_SIDE_BOTTOM,
                aBorderStyle.GetBorderStyle(NS_SIDE_BOTTOM),
                sideColor,
@@ -1644,7 +1663,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
     }
   }
   if (0 == (aSkipSides & (1<<NS_SIDE_LEFT))) {
-    if (aBorderStyle.GetBorderColor(NS_SIDE_LEFT, sideColor)) {
+    if (GetBorderColor(ourColor, aBorderStyle, NS_SIDE_LEFT, sideColor)) {
       DrawSide(aRenderingContext, NS_SIDE_LEFT,
                aBorderStyle.GetBorderStyle(NS_SIDE_LEFT), 
                sideColor,
@@ -1656,7 +1675,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
     }
   }
   if (0 == (aSkipSides & (1<<NS_SIDE_TOP))) {
-    if (aBorderStyle.GetBorderColor(NS_SIDE_TOP, sideColor)) {
+    if (GetBorderColor(ourColor, aBorderStyle, NS_SIDE_TOP, sideColor)) {
       DrawSide(aRenderingContext, NS_SIDE_TOP,
                aBorderStyle.GetBorderStyle(NS_SIDE_TOP),
                sideColor,
@@ -1668,7 +1687,7 @@ void nsCSSRendering::PaintBorder(nsIPresContext* aPresContext,
     }
   }
   if (0 == (aSkipSides & (1<<NS_SIDE_RIGHT))) {
-    if (aBorderStyle.GetBorderColor(NS_SIDE_RIGHT, sideColor)) {
+    if (GetBorderColor(ourColor, aBorderStyle, NS_SIDE_RIGHT, sideColor)) {
       DrawSide(aRenderingContext, NS_SIDE_RIGHT,
                aBorderStyle.GetBorderStyle(NS_SIDE_RIGHT),
                sideColor,
@@ -1698,6 +1717,9 @@ PRInt16             borderRadii[4],i;
 float               percent;
 const nsStyleColor* bgColor = nsStyleUtil::FindNonTransparentBackground(aStyleContext);
 nscoord width;
+
+  // Get our style context's color struct.
+  const nsStyleColor* ourColor = (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
 
 
   aOutlineStyle.GetOutlineWidth(width);
@@ -1773,7 +1795,7 @@ nscoord width;
   //see if any sides are dotted or dashed
   if ((outlineStyle == NS_STYLE_BORDER_STYLE_DOTTED) || 
       (outlineStyle == NS_STYLE_BORDER_STYLE_DASHED))  {
-    DrawDashedSides(0, aRenderingContext, aDirtyRect, nsnull, &aOutlineStyle, PR_TRUE,
+    DrawDashedSides(0, aRenderingContext, aDirtyRect, ourColor, nsnull, &aOutlineStyle, PR_TRUE,
                     outside, inside, aSkipSides, aGap);
     aRenderingContext.PopState(clipState);
     return;
@@ -2887,10 +2909,13 @@ nsCSSRendering::RenderSide(nsFloatPoint aPoints[],nsIRenderingContext& aRenderin
   PRInt8    border_Style;
   PRInt16   thickness;
 
+  // Get our style context's color struct.
+  const nsStyleColor* ourColor = (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
+
   NS_ASSERTION((aIsOutline && aOutlineStyle) || (!aIsOutline && aBorderStyle), "null params not allowed");
   // set the style information
   if (!aIsOutline) {
-    aBorderStyle->GetBorderColor(aSide,sideColor);
+    GetBorderColor(ourColor, *aBorderStyle, aSide, sideColor);
   } else {
     aOutlineStyle->GetOutlineColor(sideColor);
   }

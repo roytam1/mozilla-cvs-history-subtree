@@ -248,7 +248,7 @@ nsButtonFrameRenderer::GetButtonOuterFocusBorderAndPadding()
 
   if (mOuterFocusStyle) {
     nsStyleBorderPadding  bPad;
-    mOuterFocusStyle->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+    mOuterFocusStyle->GetBorderPaddingFor(bPad);
     if (!bPad.GetBorderPadding(focusBorderAndPadding)) {
       NS_NOTYETIMPLEMENTED("percentage border");
     }
@@ -265,7 +265,7 @@ nsButtonFrameRenderer::GetButtonBorderAndPadding()
 
   nsMargin innerFocusBorderAndPadding(0,0,0,0);
   nsStyleBorderPadding  bPad;
-  context->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+  context->GetBorderPaddingFor(bPad);
   if (!bPad.GetBorderPadding(innerFocusBorderAndPadding)) {
     NS_NOTYETIMPLEMENTED("percentage border");
   }
@@ -297,7 +297,7 @@ nsButtonFrameRenderer::GetButtonInnerFocusBorderAndPadding()
   if (mInnerFocusStyle) {
     // get the outer focus border and padding
     nsStyleBorderPadding  bPad;
-    mInnerFocusStyle->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+    mInnerFocusStyle->GetBorderPaddingFor(bPad);
     if (!bPad.GetBorderPadding(innerFocusBorderAndPadding)) {
       NS_NOTYETIMPLEMENTED("percentage border");
     }

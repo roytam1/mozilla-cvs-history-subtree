@@ -1696,7 +1696,11 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
   nscolor underColor;
   nscolor strikeColor;
   nsIStyleContext*  context = aStyleContext;
-  PRUint8 decorations = aTextStyle.mFont->mFont.decorations;
+
+  const nsStyleText* styleText = 
+      (const nsStyleText*)context->GetStyleData(eStyleStruct_Text);
+    
+  PRUint8 decorations = styleText->mTextDecorations; // All the decorations.
   PRUint8 decorMask = decorations;
 
   NS_ADDREF(context);

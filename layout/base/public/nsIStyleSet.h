@@ -44,15 +44,11 @@ class nsISizeOfHandler;
 
 class nsICSSPseudoComparator;
 
-//#define SHARE_STYLECONTEXTS
+#define SHARE_STYLECONTEXTS
 
 #ifdef SHARE_STYLECONTEXTS
-#define USE_FAST_CACHE
-// - Fast cache uses a CRC32 on the style context to quickly find sharing candidates.
-//   Enabling it by defining USE_FAST_CACHE makes style sharing significantly faster
-//   but introduces more code and logic, and is thus potentially more error-prone
+#include "nsHashtable.h"
 #endif
-
 
 // IID for the nsIStyleSet interface {e59396b0-b244-11d1-8031-006008159b5a}
 #define NS_ISTYLE_SET_IID     \
@@ -122,6 +118,8 @@ public:
                                                nsIAtom* aPseudoTag,
                                                nsIStyleContext* aParentContext,
                                                PRBool aForceUnique = PR_FALSE) = 0;
+
+  NS_IMETHOD ClearRuleTree()=0;
 
   // Get a new style context that lives in a different parent
   // The new context will be the same as the old if the new parent == the old parent

@@ -1092,6 +1092,7 @@ DumpContext(nsIFrame* aFrame, nsIStyleContext* aContext)
       NS_RELEASE(pseudoTag);
     }
 
+/* XXXdwh fix debugging here
     PRInt32 count = aContext->GetStyleRuleCount();
     if (0 < count) {
       fputs("{\n", stdout);
@@ -1105,7 +1106,9 @@ DumpContext(nsIFrame* aFrame, nsIStyleContext* aContext)
       NS_RELEASE(rules);
       fputs("}\n", stdout);
     }
-    else {
+    else 
+    */
+    {
       fputs("{}\n", stdout);
     }
   }
@@ -1631,12 +1634,11 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
         }
         // if old context had image and new context does not have the same image, 
         // stop the image load for the frame
-        nsStyleColor oldColor;
-        nsStyleColor newColor;
-        oldContext->GetStyle(eStyleStruct_Color, (nsStyleColor &)oldColor);
-        newContext->GetStyle(eStyleStruct_Color, (nsStyleColor &)newColor);
-        if(oldColor.mBackgroundImage.Length() > 0 &&
-          oldColor.mBackgroundImage != newColor.mBackgroundImage ){
+        const nsStyleColor* oldColor = (const nsStyleColor*)oldContext->GetStyleData(eStyleStruct_Color); 
+        const nsStyleColor* newColor = (const nsStyleColor*)newContext->GetStyleData(eStyleStruct_Color);
+
+        if(oldColor->mBackgroundImage.Length() > 0 &&
+          oldColor->mBackgroundImage != newColor->mBackgroundImage ){
           // stop the image loading for the frame, the image has changed
           aPresContext->StopAllLoadImagesFor(aFrame, aFrame);
         }
@@ -1843,10 +1845,10 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
         }
         // if old context had image and new context does not have the same image, 
         // stop the image load for the frame
-        nsStyleColor oldColor;
-        nsStyleColor newColor;
-        oldContext->GetStyle(eStyleStruct_Color, (nsStyleColor &)oldColor);
-        newContext->GetStyle(eStyleStruct_Color, (nsStyleColor &)newColor);
+        nsStyleColor* oldColor;
+        nsStyleColor* newColor;
+        oldContext->GetStyle(eStyleStruct_Color, &oldColor);
+        newContext->GetStyle(eStyleStruct_Color, &newColor);
         if(oldColor.mBackgroundImage.Length() > 0 &&
           oldColor.mBackgroundImage != newColor.mBackgroundImage ){
           // stop the image loading for the frame, the image has changed

@@ -400,7 +400,7 @@ AdjustForBorderPadding(nsIStyleContext* aContext, nsRect& aRect)
 {
   nsMargin m(0,0,0,0);
   nsStyleBorderPadding  bPad;
-  aContext->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+  aContext->GetBorderPaddingFor(bPad);
   bPad.GetBorderPadding(m);
   aRect.Deflate(m);
 }
@@ -1025,7 +1025,7 @@ nsRect nsOutlinerBodyFrame::GetImageSize(PRInt32 aRowIndex, const PRUnichar* aCo
   nsRect r(0,0,0,0);
   nsMargin m(0,0,0,0);
   nsStyleBorderPadding  bPad;
-  aStyleContext->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+  aStyleContext->GetBorderPaddingFor(bPad);
   bPad.GetBorderPadding(m);
   r.Inflate(m);
 
@@ -1128,7 +1128,7 @@ nsRect nsOutlinerBodyFrame::GetInnerBox()
   nsRect r(0,0,mRect.width, mRect.height);
   nsMargin m(0,0,0,0);
   nsStyleBorderPadding  bPad;
-  mStyleContext->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+  mStyleContext->GetBorderPaddingFor(bPad);
   bPad.GetBorderPadding(m);
   r.Deflate(m);
   return r;
@@ -1384,7 +1384,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
 
       const nsStyleBorder* borderStyle = (const nsStyleBorder*)lineContext->GetStyleData(eStyleStruct_Border);
       nscolor color;
-      borderStyle->GetBorderColor(NS_SIDE_LEFT, color);
+      PRBool transparent; PRBool foreground;
+      borderStyle->GetBorderColor(NS_SIDE_LEFT, color, transparent, foreground);
+
       aRenderingContext.SetColor(color);
       PRUint8 style;
       style = borderStyle->GetBorderStyle(NS_SIDE_LEFT);

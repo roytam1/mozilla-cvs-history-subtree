@@ -505,7 +505,9 @@ GetNearestContainingBlock(nsIFrame* aFrame, nsMargin& aContentArea)
     // it's percentage based (for example) then just ignore it
     nsStyleBorderPadding  bPad;
     nsMargin              borderPadding;
-    aFrame->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+    nsCOMPtr<nsIStyleContext> styleContext;
+    aFrame->GetStyleContext(getter_AddRefs(styleContext));
+    styleContext->GetBorderPaddingFor(bPad);
     if (bPad.GetBorderPadding(borderPadding)) {
       aContentArea.left += borderPadding.left;
       aContentArea.top += borderPadding.top;

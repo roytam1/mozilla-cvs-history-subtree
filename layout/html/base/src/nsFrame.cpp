@@ -495,7 +495,7 @@ NS_IMETHODIMP nsFrame::GetStyleData(nsStyleStructID aSID, const nsStyleStruct*& 
   return NS_OK;
 }
 
-NS_IMETHODIMP  nsFrame::GetStyle(nsStyleStructID aSID, nsStyleStruct& aStruct) const {
+NS_IMETHODIMP  nsFrame::GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct) const {
   NS_ASSERTION(mStyleContext!=nsnull,"null style context");
   if (mStyleContext) {
     return mStyleContext->GetStyle(aSID, aStruct);
@@ -506,7 +506,9 @@ NS_IMETHODIMP  nsFrame::GetStyle(nsStyleStructID aSID, nsStyleStruct& aStruct) c
 NS_IMETHODIMP  nsFrame::CalcBorderPadding(nsMargin& aBorderPadding) const {
   NS_ASSERTION(mStyleContext!=nsnull,"null style context");
   if (mStyleContext) {
-    mStyleContext->CalcBorderPaddingFor(this, aBorderPadding);
+    nsStyleBorderPadding bpad;
+    mStyleContext->GetBorderPaddingFor(bpad);
+    bpad.GetBorderPadding(aBorderPadding);
     return NS_OK;
   }
   return NS_ERROR_FAILURE;
@@ -4006,13 +4008,14 @@ nsFrame::SetDefaultBackgroundColor(nsIPresContext* aPresContext)
     shell->GetViewManager(getter_AddRefs(vm));
 
     if (vm) {
-      nsStyleColor color;
-      mStyleContext->GetStyle(eStyleStruct_Color, color);
+      nsStyleStruct* colorStruct = nsnull;
+      mStyleContext->GetStyle(eStyleStruct_Color, &colorStruct);
+      nsStyleColor* color = NS_STATIC_CAST(nsStyleColor*, colorStruct);
 
       vm->SetDefaultBackgroundColor(
-          (color.mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) == 0
-             ? color.mBackgroundColor
-             : NS_RGBA(0, 0, 0, 0));
+            (color->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) == 0
+               ? color->mBackgroundColor
+               : NS_RGBA(0, 0, 0, 0));
     }
   }
 }

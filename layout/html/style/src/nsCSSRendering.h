@@ -119,6 +119,7 @@ public:
   static void DrawDashedSides(PRIntn startSide,
                               nsIRenderingContext& aContext,
                               const nsRect& aDirtyRect,
+                              const nsStyleColor* aColorStyle,
                               const nsStyleBorder* aBorderStyle,  
                               const nsStyleOutline* aOutlineStyle,  
                               PRBool aDoOutline,

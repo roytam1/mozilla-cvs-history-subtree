@@ -228,7 +228,7 @@ nsTextBoxFrame::Paint(nsIPresContext*      aPresContext,
 
         // remove the border and padding
         nsStyleBorderPadding  bPad;
-        mStyleContext->GetStyle(eStyleStruct_BorderPaddingShortcut, (nsStyleStruct&)bPad);
+        mStyleContext->GetBorderPaddingFor(bPad);
         nsMargin border(0,0,0,0);
         bPad.GetBorderPadding(border);
 
@@ -262,7 +262,13 @@ nsTextBoxFrame::PaintTitle(nsIPresContext*      aPresContext,
         return NS_OK;
 
     // paint the title
-    const nsStyleFont* fontStyle = (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
+    // This is a total hack.  We should really support all the text decorations by painting
+    // them ourselves.
+    nsStyleFont* fontStyle = (nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
+    const nsStyleText* textStyle = (const nsStyleText*)mStyleContext->GetStyleData(eStyleStruct_Text);
+    PRUint8 oldDec = fontStyle->mFont.decorations;
+    fontStyle->mFont.decorations = textStyle->mTextDecorations;
+
     aRenderingContext.SetFont(fontStyle->mFont);
 
     CalculateUnderline(aRenderingContext);
@@ -279,6 +285,7 @@ nsTextBoxFrame::PaintTitle(nsIPresContext*      aPresContext,
                                    mAccessKeyInfo->mAccessUnderlineSize);
     }
 
+    fontStyle->mFont.decorations = oldDec;
     return NS_OK;
 }
 
