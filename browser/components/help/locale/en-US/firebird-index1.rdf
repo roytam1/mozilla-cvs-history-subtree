@@ -311,6 +311,16 @@
         </nc:subheadings>
     </rdf:Description>
 
+    <rdf:Description about="#l">
+        <nc:subheadings>
+            <rdf:Seq>
+                <rdf:li>
+                    <rdf:Description ID="live-bookmark" nc:name="Live Bookmark" nc:link="glossary.xhtml#live_bookmark"/>
+                </rdf:li>
+            </rdf:Seq>
+        </nc:subheadings>
+    </rdf:Description>
+
     <rdf:Description about="#m">
         <nc:subheadings>
             <rdf:Seq>
