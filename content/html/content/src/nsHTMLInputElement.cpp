@@ -170,6 +170,7 @@ public:
                                nsIContent* aSubmitElement);
   NS_IMETHOD SaveState();
   NS_IMETHOD RestoreState(nsIPresState* aState);
+  virtual PRBool AllowDrop();
 
   // nsIContent
   NS_IMETHOD SetFocus(nsIPresContext* aPresContext);
@@ -2585,6 +2586,13 @@ nsHTMLInputElement::RestoreState(nsIPresState* aState)
   return rv;
 }
 
+PRBool
+nsHTMLInputElement::AllowDrop()
+{
+  // Allow drop on anything other than file inputs.
+
+  return mType != NS_FORM_INPUT_FILE;
+}
 
 /*
  * Radio group stuff

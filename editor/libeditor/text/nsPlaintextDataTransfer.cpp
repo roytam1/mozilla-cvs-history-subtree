@@ -42,6 +42,8 @@
 
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
+#include "nsIContent.h"
+#include "nsIFormControl.h"
 #include "nsIDOMEventReceiver.h" 
 #include "nsIDOMNSEvent.h"
 #include "nsIDOMMouseEvent.h"
@@ -305,6 +307,23 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       doPlaceCaret = PR_FALSE;
     }
     
+    nsCOMPtr<nsIContent> content = do_QueryInterface(newSelectionParent);
+
+    while (content) {
+      nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(content));
+
+      if (formControl && !formControl->AllowDrop()) {
+        // Don't allow dropping into a form control that doesn't allow being
+        // dropped into.
+
+        return NS_OK;
+      }
+
+      nsCOMPtr<nsIContent> parent;
+      content->GetParent(*getter_AddRefs(parent));
+      content.swap(parent);
+    }
+
     PRBool doInsert = nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans);
     if (!doInsert)
       return NS_OK;
