@@ -584,7 +584,7 @@ int FilesTest::RunAllTests()
 	// Change path to suit.
     if NS_FAILED(Execute("/Projects/Nav45_BRANCH/ns/cmd/macfe/"\
         "projects/client45/Client45PPC", ""))
-#elseif XP_WIN
+#elif XP_PC
     if NS_FAILED(Execute("c:\\windows\\notepad.exe", ""))
 #else
     if NS_FAILED(Execute("/bin/ls", "/"))
