@@ -1115,7 +1115,18 @@ function GetFirstSelectedMessage()
         // Use this instead of gDBView.URIForFirstSelectedMessage, else it
         // will return the currentIndex message instead of the highlighted
         // message.
-        return GetSelectedMessages()[0];
+        //
+        // note, there may not be any selected messages
+        //
+        // XXX todo
+        // this is bad when we've got a lot of messages selected
+        // use gDBView.URIForFirstSelectedMessage or
+        // gDBView.hdrForFirstSelectedMessage
+        var selectedMessages = GetSelectedMessages();
+        if (selectedMessages)
+          return selectedMessages[0];
+        else
+          return null;
     }
     catch (ex) {
         return null;
