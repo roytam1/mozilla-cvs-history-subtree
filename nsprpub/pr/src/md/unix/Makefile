@@ -322,8 +322,8 @@ ifeq ($(OS_ARCH),SunOS)
 ifneq ($(OS_RELEASE),4.1.3_U1)
 ifeq ($(OS_TEST),sun4u)
 $(SHARED_LIBRARY): $(ULTRASPARC_ASOBJS)
-	$(LD) -G -z text -o $@ $(ULTRASPARC_ASOBJS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/lib
+	$(LD) -G -z text -z endfiltee -o $@ $(ULTRASPARC_ASOBJS)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/lib/sparcv8plus
 
 $(ULTRASPARC_ASOBJS): $(ULTRASPARC_ASFILES)
 ifeq ($(USE_64),1)

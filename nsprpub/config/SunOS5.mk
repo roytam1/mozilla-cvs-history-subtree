@@ -173,24 +173,17 @@ endif
 NOSUCHFILE		= /no-such-file
 
 #
-# Library of atomic functions for UltraSparc systems
-#
-# The nspr makefiles build ULTRASPARC_LIBRARY (which contains assembly language
-# implementation of the nspr atomic functions for UltraSparc systems) in addition
-# to libnspr.so. (The actual name of the library is
-# lib$(ULTRASPARC_LIBRARY)$(MOD_VERSION).so
-#
-# The actual name of the filter-library, recorded in libnspr.so, is set to the
-# value of $(ULTRASPARC_FILTER_LIBRARY).
-# For an application to use the assembly-language implementation, a link should be
-# made so that opening ULTRASPARC_FILTER_LIBRARY results in opening
-# ULTRASPARC_LIBRARY. This indirection requires the user to explicitly set up
-# library for use on UltraSparc systems, thereby helping to avoid using it by
-# accident on non-UltraSparc systems.
-# The directory containing the ultrasparc libraries should be in LD_LIBRARY_PATH.
+# There is an assembly language implementation of the NSPR atomic functions
+# available for UltraSparc systems.  On Solaris, these are used by setting up a
+# "filtee" which contains those routines.  The "filter" (libnspr.so, for
+# instance) loads the filtee if it can find it, based on what's passed in
+# through the -f option to ld.  $ORIGIN is the directory in which the calling
+# object lives (used for relocation purposes) and $ISALIST is a magic token
+# which expands to all the architectures the machine the object is running on
+# can support.  The filter will load functions from the "highest" available
+# filtee.
 #
 ifeq ($(OS_TEST),sun4u)
-ULTRASPARC_LIBRARY = ultrasparc
-ULTRASPARC_FILTER_LIBRARY = libatomic.so
-DSO_LDOPTS		+= -f $(ULTRASPARC_FILTER_LIBRARY)
+ULTRASPARC_LIBRARY = atomic
+DSO_LDOPTS        += -f \$$ORIGIN/\$$ISALIST/lib$(ULTRASPARC_LIBRARY)$(MOD_VERSION).so
 endif

@@ -62,6 +62,9 @@ endif
 
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
+MAPFILE = $(OBJDIR)/nsprmap.sun
+ALL_TRASH += $(MAPFILE)
+MKSHLIB += -M $(MAPFILE)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 export OPTIMIZER
