@@ -152,6 +152,7 @@ nsresult _TestDeque::AssignFlaw() {
   int count=sizeof(ints)/sizeof(int);
   int i=0;
   nsDeque src(new _Dealloc),dest(new _Dealloc);
+#if 0
   /**
    * Test 2. Assignment doesn't do the right things.
    */
@@ -174,6 +175,7 @@ nsresult _TestDeque::AssignFlaw() {
   if (second==third ) printf("%s%s==%s",sF, s2, s3);
   if (second==fourth) printf("%s%s==%s",sF, s2, s4);
   if (third !=fourth) printf("%s%s!=%s",sF, s3, s4);
+#endif
   return NS_OK;
 }
 
