@@ -50,6 +50,8 @@ REQUIRES	= xpcom \
 		  appcomps \
 		  find \
 		  commandhandler \
+		  editor \
+		  composer \
 		  $(NULL)
 
 CPPSRCS		= \

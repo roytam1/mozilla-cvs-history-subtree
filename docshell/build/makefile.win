@@ -39,6 +39,8 @@ REQUIRES	= xpcom \
 		  appcomps \
 		  find \
 		  commandhandler \
+		  editor \
+		  composer \
 		  raptor \
 		  gfx \
 		  history \
