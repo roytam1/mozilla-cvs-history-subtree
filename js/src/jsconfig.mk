@@ -53,11 +53,27 @@ else
 	echo $(NSPR_VERSION) > $(NSPR_VERSIONFILE)
 endif
 
-nspr_hack: $(NSPR_DIST)/include/md/prosdep.h
+SHIP_DIST  = $(MOZ_DEPTH)/dist/$(OBJDIR)
+SHIP_DIR   = $(SHIP_DIST)/SHIP
 
-$(NSPR_DIST)/include/md/prosdep.h: $(MOZ_DEPTH)/js/ref/prosdep.h
-	mkdir -p $(NSPR_DIST)/include/md
-	cp $< $@
+SHIP_LIBS  = jsj.so libjs.so
+SHIP_LIBS := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
-$(NSPR_DIST)/include/prpcos.h: $(MOZ_DEPTH)/js/ref/prpcos.h
-	cp $< $@
+SHIP_INCS  = js*.h
+SHIP_INCS := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
+
+SHIP_BINS  = js jsj
+SHIP_BINS := $(addprefix $(SHIP_DIST)/bin/, $(SHIP_BINS))
+
+ship:
+	mkdir -p $(SHIP_DIR)/lib
+	mkdir -p $(SHIP_DIR)/include
+	mkdir -p $(SHIP_DIR)/bin
+	cp $(SHIP_LIBS) $(SHIP_DIR)/lib
+	cp $(SHIP_INCS) $(SHIP_DIR)/include
+	cp $(SHIP_BINS) $(SHIP_DIR)/bin
+	cd $(SHIP_DIR); \
+	  zip -r jsref.jar bin lib include
+ifdef BUILD_SHIP
+	cp $(SHIP_DIR)/jsref.jar $(BUILD_SHIP)
+endif
