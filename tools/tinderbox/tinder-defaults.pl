@@ -40,7 +40,18 @@ $QATest                   = 0;
 $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
+# Release Build options
+# requires an appropriate post-mozilla.pl
 $ReleaseBuild             = 0;  # Make a release build?
+$package_creation_path    = "mozilla/xpinstall/packager";
+$package_location         = "mozilla/dist/install";  
+$ftp_path = "/home/ftp/pub/mozilla/tinderbox-builds";
+$url_path = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/tinderbox-builds";
+$build_hour               = "8";
+$ssh_server               = "stage.mozilla.org";
+$ssh_user                 = "cltbld";
+
+# end Release Build options
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
 $results_server           = "axolotl.mozilla.org"; # was tegu
