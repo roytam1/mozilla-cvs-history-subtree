@@ -149,6 +149,7 @@ jsj_WrapJavaObject(JSContext *cx,
     }
     JS_SetPrivate(cx, js_wrapper_obj, java_wrapper);
     java_wrapper->class_descriptor = class_descriptor;
+    java_wrapper->java_obj = NULL;
 
 #ifdef JSJ_THREADSAFE
     PR_EnterMonitor(java_obj_reflections_monitor);
