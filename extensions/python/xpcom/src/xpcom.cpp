@@ -13,7 +13,7 @@
  * Portions created by ActiveState Tool Corp. are Copyright (C) 2000, 2001
  * ActiveState Tool Corp.  All Rights Reserved.
  *
- * Contributor(s): Mark Hammond <MarkH@ActiveState.com> (original author)
+ * Contributor(s): Mark Hammond <mhammond@skippinet.com.au> (original author)
  *
  */
 
@@ -63,6 +63,7 @@ PyXPCOM_INTERFACE_DEFINE(Py_nsISimpleEnumerator, nsISimpleEnumerator, PyMethods_
 PyXPCOM_INTERFACE_DEFINE(Py_nsIInterfaceInfo, nsIInterfaceInfo, PyMethods_IInterfaceInfo)
 PyXPCOM_INTERFACE_DEFINE(Py_nsIInputStream, nsIInputStream, PyMethods_IInputStream)
 PyXPCOM_INTERFACE_DEFINE(Py_nsIClassInfo, nsIClassInfo, PyMethods_IClassInfo)
+PyXPCOM_INTERFACE_DEFINE(Py_nsIVariant, nsIVariant, PyMethods_IVariant)
 
 ////////////////////////////////////////////////////////////
 // This is the main entry point called by the Python component
@@ -594,6 +595,7 @@ init_xpcom() {
 	Py_nsIInterfaceInfo::InitType(dict);
 	Py_nsIInputStream::InitType(dict);
 	Py_nsIClassInfo::InitType(dict);
+	Py_nsIVariant::InitType(dict);
 
 	// yet another 
 	{ // temp scope nsIComponentManagerObsolete hack :(

@@ -82,6 +82,7 @@ CPPSRCS= \
 	PyIInterfaceInfoManager.cpp \
 	PyISimpleEnumerator.cpp \
 	PyISupports.cpp \
+	PyIVariant.cpp \
 	Pyxpt_info.cpp \
 	TypeObject.cpp \
 	VariantUtils.cpp \

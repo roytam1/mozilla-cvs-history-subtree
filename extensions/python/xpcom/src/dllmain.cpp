@@ -13,7 +13,7 @@
  * Portions created by ActiveState Tool Corp. are Copyright (C) 2000, 2001
  * ActiveState Tool Corp.  All Rights Reserved.
  *
- * Contributor(s): Mark Hammond <MarkH@ActiveState.com> (original author)
+ * Contributor(s): Mark Hammond <mhammond@skippinet.com.au> (original author)
  *
  */
 
@@ -86,7 +86,7 @@ PRBool PyXPCOM_ThreadState_Ensure()
 		if (PyXPCOM_InterpreterState==NULL) {
 				Py_FatalError("Can not setup thread state, as have no interpreter state");
 		}
-		pData = (ThreadData *)nsAllocator::Alloc(sizeof(ThreadData));
+		pData = (ThreadData *)nsMemory::Alloc(sizeof(ThreadData));
 		if (!pData)
 			Py_FatalError("Out of memory allocating thread state.");
 		memset(pData, 0, sizeof(*pData));
@@ -128,7 +128,7 @@ void PyXPCOM_ThreadState_Free()
 	PyThreadState *thisThreadState = pData->ts;
 	PyThreadState_Delete(thisThreadState);
 	PR_SetThreadPrivate(tlsIndex, NULL);
-	nsAllocator::Free(pData);
+	nsMemory::Free(pData);
 }
 
 void PyXPCOM_ThreadState_Clear()
