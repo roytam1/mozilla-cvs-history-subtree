@@ -44,9 +44,17 @@ jsj_HashJavaObject(const void *key, void* env)
 
     java_obj = (jobject)key;
     jEnv = (JNIEnv*) env;
+    JS_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
     hash_code = (*jEnv)->CallStaticIntMethod(jEnv, jlSystem,
                                              jlSystem_identityHashCode, java_obj);
-    JS_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
+
+#ifdef DEBUG
+    if ((*jEnv)->ExceptionOccurred(jEnv)) {
+        (*jEnv)->ExceptionDescribe(jEnv);
+        JS_ASSERT(0);
+    }
+#endif
+
     return hash_code;
 }
 
