@@ -277,9 +277,9 @@ const char * nsSmtpProtocol::GetUserDomainName()
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsSmtpProtocol::OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsSmtpProtocol::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
-	nsMsgProtocol::OnStopRequest(ctxt, aStatus, aMsg);
+	nsMsgProtocol::OnStopRequest(nsnull, ctxt, aStatus, aMsg);
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
@@ -500,13 +500,9 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
                                             nsCOMTypeInfo<nsIMsgHeaderParser>::GetIID(),
                                             getter_AddRefs(parser));
 
-		 // mscott -- big hack alert...remove this once we have a mime header parser!!!
-		 char * s = PL_strdup(userAddress);
-#if 0
 		 char * s = nsnull;
 		 if (parser)
 			 parser->MakeFullAddress(nsnull, nsnull, userAddress, &s);
-#endif
 		 if (!s)
 		 {
 			nsCOMPtr<nsIMsgMailNewsUrl> url = do_QueryInterface(m_runningURL);
@@ -1240,7 +1236,6 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 			//m_runningURL->GetAllRecipients(&addresses);
 			m_runningURL->GetAllRecipients(&m_addresses);
 
-#if 0
 			if (NS_SUCCEEDED(rv) && parser)
 			{
 				parser->RemoveDuplicateAddresses(nsnull, addresses, nsnull, PR_FALSE, &addrs1);
@@ -1270,7 +1265,6 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 				m_addresses = m_addressCopy;
 				PR_FREEIF(addresses); // free our original addresses string...
 			} // if parser
-#endif
 		} // if post message
 		
 		rv = nsMsgProtocol::LoadUrl(aURL);
