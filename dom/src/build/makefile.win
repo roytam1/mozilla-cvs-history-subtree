@@ -51,7 +51,6 @@ LLIBS=							\
 	$(DIST)\lib\gkgfxwin.lib			\
 	$(DIST)\lib\js32$(VERSION_NUMBER).lib		\
 	$(DIST)\lib\xpcom.lib				\
-	$(DIST)\lib\caps.lib				\
 	$(LIBNSPR)
 
 include <$(DEPTH)\config\rules.mak>
