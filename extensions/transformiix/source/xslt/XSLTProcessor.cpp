@@ -920,7 +920,7 @@ void XSLTProcessor::processAction
                 else {
                     String ns = actionElement->getAttribute(NAMESPACE_ATTR);
                     //-- process name as an AttributeValueTemplate
-                    String name;
+                    DOMString name;
                     processAttrValueTemplate(attr->getValue(),name,node,ps);
                     Attr* newAttr = 0;
                     //-- check name validity
@@ -1042,7 +1042,7 @@ void XSLTProcessor::processAction
                 else {
                     String ns = actionElement->getAttribute(NAMESPACE_ATTR);
                     //-- process name as an AttributeValueTemplate
-                    String name;
+                    DOMString name;
                     processAttrValueTemplate(attr->getValue(),name,node,ps);
                     Element* element = 0;
                     //-- check name validity
@@ -1169,7 +1169,7 @@ void XSLTProcessor::processAction
                 else {
                     String ns = actionElement->getAttribute(NAMESPACE_ATTR);
                     //-- process name as an AttributeValueTemplate
-                    String name;
+                    DOMString name;
                     processAttrValueTemplate(attr->getValue(),name,node,ps);
                     //-- check name validity
                     if ( !XMLUtils::isValidQName(name)) {
@@ -1309,7 +1309,7 @@ void XSLTProcessor::processAction
                         Attr* attr = (Attr*) nonXSLAtts.get(i);
                         Attr* newAttr = resultDoc->createAttribute(attr->getName());
                         //-- process Attribute Value Templates
-                        String value;
+                        DOMString value;
                         processAttrValueTemplate(attr->getValue(), value, node, ps);
                         newAttr->setValue(value);
                         ps->addToResultTree(newAttr);
